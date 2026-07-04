@@ -4,7 +4,7 @@ Projeto de TCC do IFSP Birigui
 Numeração seguindo a ordem de dependência das FKs no DDL (tabela sem dependência primeiro, depois quem referencia ela, técnicos/transversais por último: resources, auth, mail).
 
 Exemplo: 
-
+```
 crowdacademico/                          (repo único na Organization)
 │
 ├── nest_academico/
@@ -90,6 +90,7 @@ crowdacademico/                          (repo único na Organization)
         │   ├── dash-pesquisador/
         │   └── admin/
         └── services/router/
+```
 
 # Prefixo do DDL (tudo em maiúsculo, SNAKE_CASE [scriptDoBanco.sql])
 
@@ -103,6 +104,7 @@ CRW_PERMISSAO
 # Vamos tentar usar Branch em vez de mexer direto no Main
 
 - O padrão é usar é branch por feature/tarefa, de vida curta, algo como:
+```
 main                              ← sempre estável, o que está "funcionando"
 ├── feat/backend-usuario-crud
 ├── feat/frontend-home-vitrine
@@ -110,6 +112,7 @@ main                              ← sempre estável, o que está "funcionando"
 ├── fix/checkout-validacao-valor-minimo
 └── chore/config-swagger
 ...
+```
 
 - Mas ia ser um saco, então, a gente pode usar algo como: git checkout frontend e git checkout backend
 
