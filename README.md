@@ -101,6 +101,12 @@ CRW_PAPEL
 CRW_PERMISSAO
 ...
 
+# Sobre main vs branches
+
+Agora no começo não precisa se preocupar, a gente pode jogar tudo na 'main' e já sincronizar para agilizar, espero que o espírito ancestral dos programadores de verdade não leia isto que eu escrevi
+
+Mas no futuro e pro final, quando já estiver em fazer de implantação, com tela, coisa rodando e funcionnando.
+
 # Vamos tentar usar Branch em vez de mexer direto no Main
 
 - O padrão é usar é branch por feature/tarefa, de vida curta, algo como:
