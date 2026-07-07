@@ -80,7 +80,7 @@ CREATE TABLE papel_permissao (
 CREATE TABLE tipo_link (
     id_tipolink  SERIAL PRIMARY KEY,
     nome         VARCHAR(100) NOT NULL,
-    ativo        BOOLEAN      DEFAULT FALSE,
+    ativo        BOOLEAN      DEFAULT TRUE,
     regex        TEXT,
     dominio      VARCHAR(255)
 );
@@ -132,7 +132,7 @@ CREATE TABLE usuario (
     senha_hash       VARCHAR(255),             -- [R10] opcional
     id_supabase      UUID UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
     id_imagem_perfil INT,                     
-    data_cadastro    TIMESTAMP    DEFAULT NOW(),
+    criado_em    TIMESTAMP    DEFAULT NOW(),
     deletado         BOOLEAN      DEFAULT FALSE
 );
 
