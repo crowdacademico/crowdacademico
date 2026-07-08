@@ -1,7 +1,44 @@
 # crowdacademico
 Projeto de TCC do IFSP Birigui
 
-Numeração seguindo a ordem de dependência das FKs no DDL (tabela sem dependência primeiro, depois quem referencia ela, técnicos/transversais por último: resources, auth, mail).
+
+# EXEMPLO do código que já pronto com SCREAMING_SNAKE_CASE, CONSTRAINTS nomeados fácil de achar e INDEX
+```
+-- ============================================================
+--  CRW_SEGUIR_PESQUISADOR
+--  Convenção: prefixo CRW_, SCREAMING_SNAKE_CASE, constraints nomeadas
+-- ============================================================
+CREATE TABLE CRW_SEGUIR_PESQUISADOR (
+    ID_SEG_PESQUISADOR SERIAL,
+    ID_USUARIO         INT NOT NULL,
+    ID_PESQUISADOR     INT NOT NULL,
+    SEGUIDO_EM         TIMESTAMP DEFAULT NOW(),
+
+    CONSTRAINT PK_CRW_SEGUIR_PESQUISADOR
+        PRIMARY KEY (ID_SEG_PESQUISADOR),
+
+    CONSTRAINT FK_CRW_SEGUIR_PESQUISADOR_USUARIO
+        FOREIGN KEY (ID_USUARIO) REFERENCES CRW_USUARIO (ID_USUARIO)
+        ON DELETE CASCADE,
+
+    CONSTRAINT FK_CRW_SEGUIR_PESQUISADOR_PESQUISADOR
+        FOREIGN KEY (ID_PESQUISADOR) REFERENCES CRW_USUARIO (ID_USUARIO)
+        ON DELETE CASCADE,
+
+    CONSTRAINT UQ_CRW_SEGUIR_PESQUISADOR_PAR
+        UNIQUE (ID_USUARIO, ID_PESQUISADOR),
+
+    CONSTRAINT CK_CRW_SEGUIR_PESQUISADOR_NAO_AUTOSEGUIR
+        CHECK (ID_USUARIO <> ID_PESQUISADOR)
+);
+
+-- Índices seguindo o mesmo padrão de nome (cobrem as duas pontas do relacionamento)
+CREATE INDEX IDX_CRW_SEGUIR_PESQUISADOR_USUARIO     ON CRW_SEGUIR_PESQUISADOR (ID_USUARIO);
+CREATE INDEX IDX_CRW_SEGUIR_PESQUISADOR_PESQUISADOR ON CRW_SEGUIR_PESQUISADOR (ID_PESQUISADOR);
+```
+
+
+- Numeração seguindo a ordem de dependência das FKs no DDL (tabela sem dependência primeiro, depois quem referencia ela, técnicos/transversais por último: resources, auth, mail).
 
 Exemplo: 
 ```

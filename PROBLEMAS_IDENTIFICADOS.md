@@ -43,6 +43,18 @@ area_conhecimento está faltando "Multidisciplinar". RF-028 lista explicitamente
 
 5. Coisas que precisamos decidir (não são bugs, são ambiguidades de modelagem)
 
+- Sobre o DELETE ON CASCADE.
+- Problemas que podemos ter com DELETE ON CASCADE: 
+Exemplo: RNF-007: logs financeiros retidos por 5 anos. Um ON DELETE CASCADE mal colocado numa tabela de auditoria pode apagar exatamente o que a LGPD/regulação exige manter.
+
+⚠️ Ponto pra revisar: perfil_pesquisador tem ON DELETE CASCADE em usuario, e comentario.id_pesquisador tem ON DELETE CASCADE em perfil_pesquisador. Isso forma uma cadeia: apagar um usuario → apaga o perfil_pesquisador → apaga todos os comentários que essa pessoa deixou em campanhas de outras pessoas, inclusive endossos já publicados (RF-064). Se um pesquisador excluir a conta, o histórico de conversa nas campanhas de terceiros some junto — pode não ser o comportamento que vocês querem.
+
+⚠️ Detalhe curioso: denuncia.id_usuario (o denunciante) não tem ON DELETE nenhum especificado, então cai no padrão do Postgres, que é RESTRICT. Isso significa que hoje não dá pra excluir a conta de alguém que já denunciou algo, o banco bloqueia o DELETE até a denúncia ser removida antes. Mas repare que vocês já têm usuario.deletado BOOLEAN — ou seja, o plano provavelmente sempre foi soft delete (marcar como excluído via UPDATE, nunca DELETE de verdade), e nesse caso esse RESTRICT nunca chega a incomodar na prática. Vale só confirmar que ninguém no backend vai tentar um DELETE FROM usuario de verdade.
+
+- Minha recomendação de regra prática (não é dogma, é o que a maioria dos times usa): CASCADE só em tabela que é pura composição — o filho não tem sentido sem o pai e ninguém precisa dele depois (tabela de junção tipo usuario_papel, link_academico). Em qualquer tabela que carregue histórico, dinheiro, moderação ou prova de algo (contribuição, denúncia, repasse, auditoria), usar RESTRICT ou SET NULL.
+
+
+
 Status "encerrado por moderação" (RF-079/084) vs. "encerrado" comum (encerramento antecipado normal, RF-040) parecem ser conceitos diferentes na narrativa, mas o enum status_campanha só tem um valor genérico 'encerrado' pros dois casos. Vale decidir se precisa de um status novo (ex: encerrado_moderacao) ou se um campo auxiliar (ex: motivo do encerramento) resolve.
 
 configuracoes já tem a chave score_minimo_campanha (score mínimo pra criar campanha), mas nenhum RF que eu li menciona essa regra, e não existe trigger aplicando esse mínimo antes de permitir INSERT em campanha. Pode ser regra planejada mas ainda não formalizada nos RFs, ou pode ser um resquício de versão anterior. Vale confirmar se ainda é regra válida.
@@ -50,3 +62,22 @@ configuracoes já tem a chave score_minimo_campanha (score mínimo pra criar cam
 Papéis extras no seed (apoiador, moderador, revisor, curador, suporte) além dos 4 perfis documentados em RS-03 (Anônimo, Cadastrado, Pesquisador, Administrador). Não é erro, mas não está descrito em nenhum RF/RU que eu vi. Vale confirmar se são papéis internos da equipe administrativa (faz sentido pra RBAC) ou sobrou de um rascunho.
 
 RS-05 e a Etapa 1 (Planejamento) dizem "MySQL" como banco de dados, mas o schema real é Postgres/Supabase. Isso não afeta o banco em si, só é uma inconsistência textual entre o relatório do TCC e a implementação real. Se a banca ler os dois documentos, pode estranhar. Vale atualizar o texto do TCC pra "PostgreSQL (via Supabase)" antes da entrega.
+
+
+
+6. Investigação: índices
+Rodando os índices do arquivo 02 contra as consultas que os RFs pedem, achei algumas lacunas reais (não são erros que quebram nada, são gargalos de performance conforme o banco crescer):
+
+Tabela              Índice que falta    Por que importa
+
+comentario          (id_campanha)       RF-044/064: toda página pública de campanha busca comentários por campanha — hoje é table scan completo.
+
+repasse             (id_campanha)       Painel do pesquisador (RF-058/059) busca repasse por campanha.
+
+historico_rejeicao  (id_campanha)       RF-070: histórico de rejeições exibido por campanha.solicitacao_encerramento(id_campanha)RF-041: fila de solicitações, geralmente filtrada/junta por campanha.
+
+seguir_campanha     (id_campanha)       Só existe UNIQUE(id_usuario, id_campanha), cujo índice implícito começa por id_usuario — não ajuda em "notificar todos que seguem a campanha X" (RF-031).
+
+arquivo_atualizacao (id_atualizacao)    Mesmo caso: UNIQUE(id_arquivo, id_atualizacao) não serve pra buscar arquivos de uma atualização específica.
+
+campanha            (status, data_fim)  compostoO job que encerra campanha vencida (RF-037) faz WHERE status='ativo' AND data_fim < NOW() toda hora — um índice composto acelera isso bastante conforme o volume cresce.
