@@ -40,6 +40,8 @@ CREATE INDEX idx_contrib_recompensa_recompensa ON contribuicao_recompensa(id_rec
 CREATE INDEX idx_link_atualizacao_atualizacao  ON link_atualizacao(id_atualizacao);
 CREATE INDEX idx_link_atualizacao_tipolink     ON link_atualizacao(id_tipolink);
 CREATE INDEX idx_link_recompensa_recompensa    ON link_recompensa(id_recompensa);
+CREATE INDEX idx_aceite_termo_contribuicao_contribuicao ON aceite_termo_contribuicao(id_contribuicao);
+CREATE INDEX idx_aceite_termo_contribuicao_termo        ON aceite_termo_contribuicao(id_termo);
 CREATE INDEX idx_link_recompensa_tipolink      ON link_recompensa(id_tipolink);
 -- [melhoria] impede duas versões "ativo = TRUE" ao mesmo tempo —
 -- sem isso, nada no schema garante que existe só 1 termo vigente.

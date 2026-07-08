@@ -28,8 +28,8 @@ CREATE TYPE tipo_configuracao     AS ENUM ('decimal', 'inteiro', 'texto', 'boole
 CREATE TYPE status_pesquisador    AS ENUM ('ativo', 'suspenso');
 CREATE TYPE titulo_academico      AS ENUM ('graduado', 'especialista', 'mestre', 'doutor');
 CREATE TYPE modelo_campanha       AS ENUM ('all-or-nothing', 'flexivel');
--- TODO (pendente decisão da equipe): status "encerrado por moderação" ainda não foi definido; manter sem novo valor por enquanto.
-CREATE TYPE status_campanha       AS ENUM ('aguardando_aprovacao', 'ativo', 'sucesso', 'nao_atingido', 'rejeitado', 'encerrado');
+-- CORRIGIDO: status_campanha recebeu o valor encerrado_moderacao.
+CREATE TYPE status_campanha       AS ENUM ('aguardando_aprovacao', 'ativo', 'sucesso', 'nao_atingido', 'rejeitado', 'encerrado', 'encerrado_moderacao');
 -- CORRIGIDO: status_contribuicao recebeu os valores expirado e reembolso_manual.
 CREATE TYPE status_contribuicao   AS ENUM ('pendente', 'confirmado', 'repassado', 'a_devolver', 'devolvido', 'reembolsado', 'erro', 'expirado', 'reembolso_manual');
 CREATE TYPE meio_pagamento        AS ENUM ('pix', 'cartao_credito', 'cartao_debito', 'boleto');
@@ -271,9 +271,12 @@ CREATE TABLE contribuicao (
 -- ============================================================
 -- AUDITORIA FINANCEIRA
 -- ============================================================
+-- CORRIGIDO: auditoria_financeira passou a congelar valor e meio de pagamento no momento do evento.
 CREATE TABLE auditoria_financeira (
     id_auditoria    SERIAL PRIMARY KEY,
     id_contribuicao INT          NOT NULL REFERENCES contribuicao(id_contribuicao),
+    valor           DECIMAL(10,2) NOT NULL,
+    meio_pagamento  meio_pagamento,
     status_novo     VARCHAR(100) NOT NULL,
     status_anterior VARCHAR(100),
     evento          VARCHAR(200),
@@ -358,7 +361,10 @@ CREATE TABLE comentario (
     criado_em      TIMESTAMP    DEFAULT NOW(),
     ordem_endosso  INT,
     -- CORRIGIDO: comentários passaram a ter unicidade por campanha e pesquisador.
-    UNIQUE (id_campanha, id_pesquisador)
+    UNIQUE (id_campanha, id_pesquisador),
+    -- CORRIGIDO: endossado e ordem_endosso agora ficam coerentes entre si.
+    CONSTRAINT chk_comentario_endosso
+        CHECK ((endossado = TRUE AND ordem_endosso IS NOT NULL) OR (endossado = FALSE AND ordem_endosso IS NULL))
 );
 
 

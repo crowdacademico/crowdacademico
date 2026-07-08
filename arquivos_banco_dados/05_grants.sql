@@ -31,7 +31,7 @@ GRANT INSERT, UPDATE, DELETE ON
     seguir_campanha, seguir_pesquisador, link_academico, configuracoes,
     score_config, score_rotulo, historico_rejeicao, atualizacao_campanha,
     solicitacao_encerramento, usuario_papel,
-    termos_de_uso, usuario_termo, recompensa, arquivo_recompensa,
+    termos_de_uso, usuario_termo, aceite_termo_contribuicao, recompensa, arquivo_recompensa,
     contribuicao_recompensa, link_atualizacao, link_recompensa
 TO authenticated;
 

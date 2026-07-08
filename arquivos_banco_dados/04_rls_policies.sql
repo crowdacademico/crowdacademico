@@ -42,6 +42,7 @@ ALTER TABLE solicitacao_encerramento ENABLE ROW LEVEL SECURITY;
 -- Tabelas novas (termos, notificações, recompensas)
 ALTER TABLE termos_de_uso        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE usuario_termo        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE aceite_termo_contribuicao ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notificacao          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE recompensa           ENABLE ROW LEVEL SECURITY;
 ALTER TABLE arquivo_recompensa   ENABLE ROW LEVEL SECURITY;
@@ -171,6 +172,22 @@ CREATE POLICY pol_termos_update ON termos_de_uso FOR UPDATE TO authenticated USI
 -- não deve ser alterável por ninguém (nem pelo próprio usuário).
 CREATE POLICY pol_usuario_termo_select ON usuario_termo FOR SELECT TO authenticated USING (id_usuario = public.id_usuario_atual() OR public.eh_admin());
 CREATE POLICY pol_usuario_termo_insert ON usuario_termo FOR INSERT TO authenticated WITH CHECK (id_usuario = public.id_usuario_atual());
+
+-- CORRIGIDO: aceite de termos por contribuição agora tem política de leitura e escrita compatível com doação anônima.
+CREATE POLICY pol_aceite_termo_contribuicao_select ON aceite_termo_contribuicao FOR SELECT TO authenticated USING (
+    public.eh_admin() OR EXISTS (
+        SELECT 1 FROM contribuicao c
+        WHERE c.id_contribuicao = aceite_termo_contribuicao.id_contribuicao
+          AND c.id_usuario = public.id_usuario_atual()
+    )
+);
+CREATE POLICY pol_aceite_termo_contribuicao_insert ON aceite_termo_contribuicao FOR INSERT TO anon, authenticated WITH CHECK (
+    EXISTS (
+        SELECT 1 FROM contribuicao c
+        WHERE c.id_contribuicao = aceite_termo_contribuicao.id_contribuicao
+          AND (c.id_usuario IS NULL OR c.id_usuario = public.id_usuario_atual())
+    )
+);
 
 -- notificacao: só leitura das próprias notificações. Sem política de
 -- INSERT/UPDATE para authenticated de propósito — quem cria e atualiza
