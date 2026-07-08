@@ -11,6 +11,14 @@ CREATE INDEX idx_campanha_usuario           ON campanha(id_usuario);
 CREATE INDEX idx_campanha_status            ON campanha(status);
 CREATE INDEX idx_contribuicao_campanha      ON contribuicao(id_campanha);
 CREATE INDEX idx_contribuicao_usuario       ON contribuicao(id_usuario);
+-- CORRIGIDO: índices adicionados para comentários, repasses, encerramentos e campanhas.
+CREATE INDEX idx_comentario_campanha        ON comentario(id_campanha);
+CREATE INDEX idx_repasse_campanha           ON repasse(id_campanha);
+CREATE INDEX idx_historico_rejeicao_campanha ON historico_rejeicao(id_campanha);
+CREATE INDEX idx_sol_encerramento_campanha  ON solicitacao_encerramento(id_campanha);
+CREATE INDEX idx_seguir_campanha_campanha   ON seguir_campanha(id_campanha);
+CREATE INDEX idx_arquivo_atualizacao_atualizacao ON arquivo_atualizacao(id_atualizacao);
+CREATE INDEX idx_campanha_status_data_fim   ON campanha(status, data_fim);
 CREATE INDEX idx_denuncia_alvo_campanha     ON denuncia(id_campanha_alvo);
 CREATE INDEX idx_denuncia_alvo_pesq         ON denuncia(id_pesquisador_alvo);
 CREATE INDEX idx_score_pesq_usuario         ON score_pesquisador(id_usuario);

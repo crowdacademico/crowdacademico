@@ -28,8 +28,10 @@ CREATE TYPE tipo_configuracao     AS ENUM ('decimal', 'inteiro', 'texto', 'boole
 CREATE TYPE status_pesquisador    AS ENUM ('ativo', 'suspenso');
 CREATE TYPE titulo_academico      AS ENUM ('graduado', 'especialista', 'mestre', 'doutor');
 CREATE TYPE modelo_campanha       AS ENUM ('all-or-nothing', 'flexivel');
+-- TODO (pendente decisão da equipe): status "encerrado por moderação" ainda não foi definido; manter sem novo valor por enquanto.
 CREATE TYPE status_campanha       AS ENUM ('aguardando_aprovacao', 'ativo', 'sucesso', 'nao_atingido', 'rejeitado', 'encerrado');
-CREATE TYPE status_contribuicao   AS ENUM ('pendente', 'confirmado', 'repassado', 'a_devolver', 'devolvido', 'reembolsado', 'erro');
+-- CORRIGIDO: status_contribuicao recebeu os valores expirado e reembolso_manual.
+CREATE TYPE status_contribuicao   AS ENUM ('pendente', 'confirmado', 'repassado', 'a_devolver', 'devolvido', 'reembolsado', 'erro', 'expirado', 'reembolso_manual');
 CREATE TYPE meio_pagamento        AS ENUM ('pix', 'cartao_credito', 'cartao_debito', 'boleto');
 CREATE TYPE fase_atualizacao      AS ENUM ('andamento', 'resultado_preliminar', 'resultado_final');
 CREATE TYPE tipo_atualizacao      AS ENUM ('texto', 'imagem', 'pdf', 'linkexterno');
@@ -118,7 +120,9 @@ CREATE TABLE motivo_denuncia (
     id_motivo SERIAL PRIMARY KEY,
     codigo    VARCHAR(20)          NOT NULL UNIQUE,
     descricao VARCHAR(255),
-    tipo      tipo_motivo_denuncia NOT NULL
+    tipo      tipo_motivo_denuncia NOT NULL,
+    -- CORRIGIDO: motivo_denuncia passou a ter indicador ativo/inativo.
+    ativo     BOOLEAN             NOT NULL DEFAULT TRUE
 );
 
 
@@ -213,6 +217,7 @@ CREATE TABLE campanha (
     valor_bruto_arrecadado DECIMAL(10,2) DEFAULT 0,
     taxa_plataforma      DECIMAL(5,2),
     descricao            TEXT,
+    -- TODO (pendente decisão da equipe): prazo mínimo/máximo da campanha (RF-045) ainda não definido; manter sem CHECK por enquanto.
     data_inicio          TIMESTAMP,
     data_fim             TIMESTAMP,
     status               status_campanha NOT NULL DEFAULT 'aguardando_aprovacao',
@@ -253,7 +258,8 @@ CREATE TABLE contribuicao (
     id_contribuicao  SERIAL PRIMARY KEY,
     id_campanha      INT                 NOT NULL REFERENCES campanha(id_campanha),
     id_usuario       INT                          REFERENCES usuario(id_usuario) ON DELETE SET NULL,
-    valor            DECIMAL(10,2)       NOT NULL,
+    -- CORRIGIDO: valor mínimo de contribuição definido em R$ 5,00.
+    valor            DECIMAL(10,2)       NOT NULL CHECK (valor >= 5.00),
     meio_pagamento   meio_pagamento      NOT NULL,
     status           status_contribuicao NOT NULL DEFAULT 'pendente',
     anonima          BOOLEAN             DEFAULT FALSE,
@@ -346,11 +352,13 @@ CREATE TABLE historico_rejeicao (
 CREATE TABLE comentario (
     id_comentario  SERIAL PRIMARY KEY,
     id_campanha    INT          NOT NULL REFERENCES campanha(id_campanha)              ON DELETE CASCADE,
-    id_pesquisador INT          NOT NULL REFERENCES perfil_pesquisador(id_usuario)     ON DELETE CASCADE,
+    id_pesquisador INT          REFERENCES perfil_pesquisador(id_usuario) ON DELETE SET NULL,
     conteudo       VARCHAR(500) NOT NULL,
     endossado      BOOLEAN      DEFAULT FALSE,
     criado_em      TIMESTAMP    DEFAULT NOW(),
-    ordem_endosso  INT
+    ordem_endosso  INT,
+    -- CORRIGIDO: comentários passaram a ter unicidade por campanha e pesquisador.
+    UNIQUE (id_campanha, id_pesquisador)
 );
 
 
@@ -364,9 +372,168 @@ CREATE TABLE denuncia (
     id_pesquisador_alvo INT           REFERENCES usuario(id_usuario)   ON DELETE SET NULL,
     id_motivo           INT  NOT NULL REFERENCES motivo_denuncia(id_motivo),
     status              status_denuncia NOT NULL DEFAULT 'pendente',
-    criado_em           TIMESTAMP    DEFAULT NOW()
+    criado_em           TIMESTAMP    DEFAULT NOW(),
+    -- CORRIGIDO: denúncias passaram a ter unicidade por alvo e limite de taxa temporal.
+    UNIQUE (id_usuario, id_campanha_alvo),
+    UNIQUE (id_usuario, id_pesquisador_alvo)
 );
 
+
+-- ============================================================
+-- TRIGGERS E FUNÇÕES DE REGRAS DE NEGÓCIO
+-- ============================================================
+CREATE OR REPLACE FUNCTION validar_contribuicao_all_or_nothing()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_modelo campanha.modelo%TYPE;
+BEGIN
+    SELECT modelo INTO v_modelo
+    FROM campanha
+    WHERE id_campanha = NEW.id_campanha;
+
+    IF FOUND AND v_modelo = 'all-or-nothing' AND NEW.meio_pagamento <> 'pix' THEN
+        RAISE EXCEPTION 'Campanhas all-or-nothing aceitam apenas contribuições via PIX';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trg_contribuicao_all_or_nothing_pix
+BEFORE INSERT ON contribuicao
+FOR EACH ROW
+EXECUTE FUNCTION validar_contribuicao_all_or_nothing();
+
+CREATE OR REPLACE FUNCTION validar_limite_campanhas_pesquisador()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_count integer;
+BEGIN
+    IF NEW.status IN ('aguardando_aprovacao', 'ativo') THEN
+        SELECT COUNT(*) INTO v_count
+        FROM campanha
+        WHERE id_usuario = NEW.id_usuario
+          AND status IN ('aguardando_aprovacao', 'ativo')
+          AND id_campanha <> COALESCE(NEW.id_campanha, -1);
+
+        IF v_count >= 2 THEN
+            RAISE EXCEPTION 'Pesquisador já possui o limite máximo de 2 campanhas ativas ou aguardando aprovação';
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trg_campanha_limite_simultaneo
+BEFORE INSERT OR UPDATE ON campanha
+FOR EACH ROW
+EXECUTE FUNCTION validar_limite_campanhas_pesquisador();
+
+CREATE OR REPLACE FUNCTION validar_atualizacao_campanha()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_status status_campanha;
+BEGIN
+    SELECT status INTO v_status
+    FROM campanha
+    WHERE id_campanha = NEW.id_campanha;
+
+    IF FOUND AND v_status NOT IN ('ativo', 'sucesso', 'nao_atingido') THEN
+        RAISE EXCEPTION 'Atualizações de campanha só são permitidas para campanhas ativas, com sucesso ou não atingidas';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trg_atualizacao_campanha_status
+BEFORE INSERT ON atualizacao_campanha
+FOR EACH ROW
+EXECUTE FUNCTION validar_atualizacao_campanha();
+
+CREATE OR REPLACE FUNCTION validar_comentario_endosso()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_count integer;
+BEGIN
+    IF NEW.ordem_endosso IS NOT NULL THEN
+        SELECT COUNT(*) INTO v_count
+        FROM comentario
+        WHERE id_campanha = NEW.id_campanha
+          AND ordem_endosso IS NOT NULL
+          AND id_comentario <> COALESCE(NEW.id_comentario, -1);
+
+        IF v_count >= 4 THEN
+            RAISE EXCEPTION 'Campanha já atingiu o limite máximo de 4 endossos ativos';
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trg_comentario_limite_endosso
+BEFORE INSERT OR UPDATE ON comentario
+FOR EACH ROW
+EXECUTE FUNCTION validar_comentario_endosso();
+
+CREATE OR REPLACE FUNCTION validar_comentario_autor()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_id_usuario integer;
+BEGIN
+    SELECT id_usuario INTO v_id_usuario
+    FROM campanha
+    WHERE id_campanha = NEW.id_campanha;
+
+    IF FOUND AND v_id_usuario = NEW.id_pesquisador THEN
+        RAISE EXCEPTION 'Pesquisador não pode comentar em sua própria campanha';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trg_comentario_sem_autoria
+BEFORE INSERT ON comentario
+FOR EACH ROW
+EXECUTE FUNCTION validar_comentario_autor();
+
+CREATE OR REPLACE FUNCTION validar_denuncia_frequencia()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_count integer;
+BEGIN
+    SELECT COUNT(*) INTO v_count
+    FROM denuncia
+    WHERE id_usuario = NEW.id_usuario
+      AND criado_em >= NOW() - INTERVAL '24 hours';
+
+    IF v_count >= 5 THEN
+        RAISE EXCEPTION 'Usuário já atingiu o limite de 5 denúncias nas últimas 24 horas';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trg_denuncia_limite_taxa
+BEFORE INSERT ON denuncia
+FOR EACH ROW
+EXECUTE FUNCTION validar_denuncia_frequencia();
 
 -- ============================================================
 -- SCORE

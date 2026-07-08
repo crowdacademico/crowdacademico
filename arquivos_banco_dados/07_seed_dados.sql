@@ -112,19 +112,21 @@ WHERE (p.nome, perm.nome) IN (
 -- ============================================================
 -- TIPO_LINK
 -- ============================================================
+-- CORRIGIDO: tipo_link ajustado para a allowlist fechada definida pela equipe.
 INSERT INTO tipo_link (nome, ativo, regex, dominio) VALUES
-('Lattes',        TRUE,  '^https?://lattes\.cnpq\.br/\d+$',                   'lattes.cnpq.br'),
-('ORCID',         TRUE,  '^https?://orcid\.org/\d{4}-\d{4}-\d{4}-\d{3}[\dX]$','orcid.org'),
-('LinkedIn',      TRUE,  '^https?://(www\.)?linkedin\.com/in/[\w\-]+/?$',      'linkedin.com'),
-('ResearchGate',  TRUE,  '^https?://(www\.)?researchgate\.net/profile/[\w\-]+$','researchgate.net'),
-('Academia.edu',  TRUE,  '^https?://([\w]+\.)?academia\.edu/[\w\-]+$',         'academia.edu'),
-('Google Scholar',TRUE,  '^https?://scholar\.google\.com\.br/citations\?.*$',  'scholar.google.com.br'),
-('Site Pessoal',  FALSE, NULL,                                                  NULL);
+('Lattes',            TRUE,  '^https?://lattes\.cnpq\.br/\d+$',                   'lattes.cnpq.br'),
+('ORCID',             TRUE,  '^https?://orcid\.org/\d{4}-\d{4}-\d{4}-\d{3}[\dX]$', 'orcid.org'),
+('ResearchGate',      TRUE,  '^https?://(www\.)?researchgate\.net/profile/[\w\-]+$', 'researchgate.net'),
+('LinkedIn',          TRUE,  '^https?://(www\.)?linkedin\.com/in/[\w\-]+/?$',      'linkedin.com'),
+('GitHub',            TRUE,  '^https?://(www\.)?github\.com/[\w\-]+/?$',          'github.com'),
+('Site Institucional', TRUE,  '^https?://(www\.)?[\w\-\.]+/?$',                     NULL),
+('Outro',             TRUE,  NULL,                                                  NULL);
 
 
 -- ============================================================
 -- AREA_CONHECIMENTO
 -- ============================================================
+-- CORRIGIDO: área de conhecimento adicionada para o valor Multidisciplinar.
 INSERT INTO area_conhecimento (codigo_cnpq, nome, ativo) VALUES
 ('1.00.00.00-0', 'Ciências Exatas e da Terra',          TRUE),
 ('2.00.00.00-6', 'Ciências Biológicas',                 TRUE),
@@ -133,7 +135,8 @@ INSERT INTO area_conhecimento (codigo_cnpq, nome, ativo) VALUES
 ('5.00.00.00-2', 'Ciências Agrárias',                   TRUE),
 ('6.00.00.00-8', 'Ciências Sociais Aplicadas',          TRUE),
 ('7.00.00.00-3', 'Ciências Humanas',                    TRUE),
-('8.00.00.00-9', 'Linguística, Letras e Artes',         TRUE);
+('8.00.00.00-9', 'Linguística, Letras e Artes',         TRUE),
+('9.00.00.00-0', 'Multidisciplinar',                    TRUE);
 
 
 -- ============================================================
@@ -169,7 +172,8 @@ INSERT INTO arquivo (url, nome_original, tipo_mime, tamanho_bytes) VALUES
 -- ============================================================
 -- USUARIO
 -- ============================================================
-INSERT INTO usuario (nome, email, senha_hash, id_imagem_perfil, data_cadastro) VALUES
+-- CORRIGIDO: seed de usuário passou a usar criado_em.
+INSERT INTO usuario (nome, email, senha_hash, id_imagem_perfil, criado_em) VALUES
 ('Ana Beatriz Santos',    'ana.santos@usp.br',          '$2b$12$hashed_ana001',    1, '2024-01-10 09:00:00'),
 ('Carlos Eduardo Melo',   'carlos.melo@unicamp.br',     '$2b$12$hashed_carlos002', 2, '2024-01-15 10:30:00'),
 ('Beatriz Lima Alves',    'beatriz.lima@ufmg.br',       '$2b$12$hashed_bea003',    3, '2024-02-01 08:45:00'),
@@ -207,6 +211,7 @@ JOIN papel p ON p.nome = v.papel_nome;
 INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo) VALUES
 (NULL, 'taxa_plataforma_padrao',     '5.00',  'decimal',  'Taxa padrão cobrada pela plataforma (%)',              TRUE),
 (NULL, 'prazo_maximo_campanha_dias', '90',    'inteiro',  'Duração máxima permitida de uma campanha em dias',     TRUE),
+-- TODO (pendente decisão da equipe): regra de score mínimo para campanha ainda não confirmada; manter sem trigger por enquanto.
 (NULL, 'score_minimo_campanha',      '25.00', 'decimal',  'Score mínimo para criar campanha',                     TRUE),
 (NULL, 'permitir_campanha_anonima',  'false', 'booleano', 'Permite contribuições anônimas nas campanhas',         TRUE),
 (NULL, 'email_suporte',              'suporte@crowdacademico.com.br', 'texto', 'E-mail de suporte ao usuário',   TRUE),
@@ -235,14 +240,15 @@ ON CONFLICT (chave) DO NOTHING;
 -- ============================================================
 -- PERFIL_PESQUISADOR
 -- ============================================================
+-- CORRIGIDO: valores de score do seed arredondados para inteiro.
 INSERT INTO perfil_pesquisador (id_usuario, cpf_criptografado, vinculo_institucional, titulo_academico, status_pesquisador, ativado_em, suspenso, score_atual, score_atualizado_em) VALUES
-(1, 'enc_cpf_001', 'Universidade de São Paulo (USP)',                   'doutor',     'ativo', '2024-01-10 09:05:00', FALSE, 85.50, '2025-05-01 00:00:00'),
-(2, 'enc_cpf_002', 'Universidade Estadual de Campinas (UNICAMP)',       'mestre',      'ativo', '2024-01-15 10:35:00', FALSE, 72.00, '2025-05-01 00:00:00'),
-(3, 'enc_cpf_003', 'Universidade Federal de Minas Gerais (UFMG)',       'doutor',      'ativo', '2024-02-01 08:50:00', FALSE, 91.20, '2025-05-01 00:00:00'),
-(4, 'enc_cpf_004', 'Universidade Federal do Rio de Janeiro (UFRJ)',     'especialista','ativo', '2024-02-10 14:10:00', FALSE, 48.30, '2025-05-01 00:00:00'),
-(5, 'enc_cpf_005', 'Universidade Federal de Santa Catarina (UFSC)',     'mestre',      'ativo', '2024-03-05 11:25:00', FALSE, 61.75, '2025-05-01 00:00:00'),
-(6, 'enc_cpf_006', 'Universidade Estadual Paulista (UNESP)',            'graduado',    'ativo', '2024-03-12 16:05:00', FALSE, 32.00, '2025-05-01 00:00:00'),
-(7, 'enc_cpf_007', 'Universidade Federal de São Paulo (UNIFESP)',       'doutor',      'ativo', '2024-04-01 09:35:00', FALSE, 77.40, '2025-05-01 00:00:00');
+(1, 'enc_cpf_001', 'Universidade de São Paulo (USP)',                   'doutor',     'ativo', '2024-01-10 09:05:00', FALSE, 86, '2025-05-01 00:00:00'),
+(2, 'enc_cpf_002', 'Universidade Estadual de Campinas (UNICAMP)',       'mestre',      'ativo', '2024-01-15 10:35:00', FALSE, 72, '2025-05-01 00:00:00'),
+(3, 'enc_cpf_003', 'Universidade Federal de Minas Gerais (UFMG)',       'doutor',      'ativo', '2024-02-01 08:50:00', FALSE, 91, '2025-05-01 00:00:00'),
+(4, 'enc_cpf_004', 'Universidade Federal do Rio de Janeiro (UFRJ)',     'especialista','ativo', '2024-02-10 14:10:00', FALSE, 48, '2025-05-01 00:00:00'),
+(5, 'enc_cpf_005', 'Universidade Federal de Santa Catarina (UFSC)',     'mestre',      'ativo', '2024-03-05 11:25:00', FALSE, 62, '2025-05-01 00:00:00'),
+(6, 'enc_cpf_006', 'Universidade Estadual Paulista (UNESP)',            'graduado',    'ativo', '2024-03-12 16:05:00', FALSE, 32, '2025-05-01 00:00:00'),
+(7, 'enc_cpf_007', 'Universidade Federal de São Paulo (UNIFESP)',       'doutor',      'ativo', '2024-04-01 09:35:00', FALSE, 77, '2025-05-01 00:00:00');
 
 
 -- ============================================================
