@@ -217,16 +217,15 @@ CREATE TABLE campanha (
     valor_bruto_arrecadado DECIMAL(10,2) DEFAULT 0,
     taxa_plataforma      DECIMAL(5,2),
     descricao            TEXT,
-    -- TODO (pendente decisão da equipe): prazo mínimo/máximo da campanha (RF-045) ainda não definido; manter sem CHECK por enquanto.
     data_inicio          TIMESTAMP,
     data_fim             TIMESTAMP,
     status               status_campanha NOT NULL DEFAULT 'aguardando_aprovacao',
     aprovado_em          TIMESTAMP,
     criado_em            TIMESTAMP       DEFAULT NOW(),
-    -- PROVISÓRIO (equipe ainda decidindo entre 60 e 90 dias como prazo máximo, por causa da janela de estorno do PIX/BCB de até 90 dias da conciliação — usar 60 dias evita que campanhas fiquem fora dessa janela quando somado o tempo de moderação; revisar quando a equipe decidir definitivamente):
+    -- DEFINIDO PELA EQUIPE: prazo mínimo de 15 dias e máximo de 90 dias corridos, contados a partir da aprovação da campanha (RF-045).
     CONSTRAINT chk_prazo_campanha CHECK (
         data_fim IS NULL OR data_inicio IS NULL OR
-        (data_fim - data_inicio) BETWEEN INTERVAL '15 days' AND INTERVAL '60 days'
+        (data_fim - data_inicio) BETWEEN INTERVAL '15 days' AND INTERVAL '90 days'
     )
 );
 
@@ -346,7 +345,10 @@ BEGIN
     FROM campanha
     WHERE id_campanha = NEW.id_campanha;
 
-    IF v_modelo = 'all-or-nothing' AND v_arrecadado < v_meta THEN
+    -- CORRIGIDO: só bloqueia se houver tentativa real de liberar
+    -- dinheiro (valor_liquido > 0); registro de "nada repassado" 
+    -- (RF-038, valor_liquido = 0) continua permitido.
+    IF v_modelo = 'all-or-nothing' AND v_arrecadado < v_meta AND NEW.valor_liquido > 0 THEN
         RAISE EXCEPTION 'Repasse bloqueado: campanhas all-or-nothing só podem repassar valores se a meta financeira for atingida.';
     END IF;
 
@@ -404,6 +406,30 @@ CREATE TABLE comentario (
         CHECK ((endossado = TRUE AND ordem_endosso IS NOT NULL) OR (endossado = FALSE AND ordem_endosso IS NULL))
 );
 
+-- CORRIGIDO: trigger que bloqueia novos comentários em campanhas
+-- que foram rejeitadas ou banidas pela moderação.
+CREATE OR REPLACE FUNCTION fn_valida_comentario_campanha_ativa()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_status status_campanha;
+BEGIN
+    SELECT status INTO v_status
+    FROM campanha
+    WHERE id_campanha = NEW.id_campanha;
+
+    IF v_status IN ('rejeitado', 'encerrado_moderacao') THEN
+        RAISE EXCEPTION 'Operação bloqueada: não é possível comentar em campanhas rejeitadas ou sob moderação.';
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_valida_comentario_status
+BEFORE INSERT ON comentario
+FOR EACH ROW
+EXECUTE FUNCTION fn_valida_comentario_campanha_ativa();
+
 
 -- ============================================================
 -- DENUNCIA
@@ -448,6 +474,35 @@ CREATE TRIGGER trg_contribuicao_all_or_nothing_pix
 BEFORE INSERT ON contribuicao
 FOR EACH ROW
 EXECUTE FUNCTION validar_contribuicao_all_or_nothing();
+
+-- CORRIGIDO: trigger que impede a alteração de regras financeiras
+-- após a campanha ser aprovada/lançada (status 'ativo' em diante,
+-- incluindo encerramento por moderação).
+CREATE OR REPLACE FUNCTION fn_congela_regras_campanha()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF OLD.status IN ('ativo', 'sucesso', 'nao_atingido', 'encerrado', 'encerrado_moderacao') THEN
+        IF NEW.meta_financeira <> OLD.meta_financeira THEN
+            RAISE EXCEPTION 'Fraude bloqueada: não é permitido alterar a meta financeira após a aprovação da campanha.';
+        END IF;
+
+        IF NEW.modelo <> OLD.modelo THEN
+            RAISE EXCEPTION 'Fraude bloqueada: não é permitido alterar o modelo de financiamento após a aprovação da campanha.';
+        END IF;
+
+        IF NEW.taxa_plataforma <> OLD.taxa_plataforma THEN
+            RAISE EXCEPTION 'Operação bloqueada: a taxa da plataforma não pode ser alterada após o congelamento.';
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_congela_regras_campanha
+BEFORE UPDATE ON campanha
+FOR EACH ROW
+EXECUTE FUNCTION fn_congela_regras_campanha();
 
 -- CORRIGIDO: trigger que bloqueia contribuição em campanha que não
 -- está ativa (status) ou cujo prazo já expirou (data_fim).

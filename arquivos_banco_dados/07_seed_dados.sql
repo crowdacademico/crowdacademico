@@ -270,11 +270,11 @@ INSERT INTO link_academico (id_usuario, id_tipolink, ordem, url) VALUES
 INSERT INTO campanha (id_usuario, id_admin, id_area_conhecimento, titulo, modelo, meta_financeira, valor_bruto_arrecadado, taxa_plataforma, descricao, data_inicio, data_fim, status, aprovado_em, criado_em) VALUES
 (1, 8, 1, 'Desenvolvimento de Algoritmo para Diagnóstico Precoce de Alzheimer por IA',      'all-or-nothing', 50000.00, 52300.00, 5.00, 'Pesquisa aplicada em inteligência artificial para detecção precoce da doença de Alzheimer usando redes neurais convolucionais.',                          '2024-02-01', '2024-04-01', 'sucesso',             '2024-02-01', '2024-01-20 10:00:00'),
 (2, 8, 3, 'Prótese de Baixo Custo com Impressão 3D para Amputados do SUS',                  'flexivel',       35000.00, 28500.00, 5.00, 'Projeto de engenharia biomédica para fabricação de próteses funcionais de membros superiores a custo acessível para o sistema público.',                '2024-02-15', '2024-05-01', 'sucesso',             '2024-02-15', '2024-02-05 11:30:00'),
-(3, 8, 2, 'Bioprospecção de Fungos da Caatinga com Potencial Antibiótico',                  'all-or-nothing', 40000.00, 40000.00, 5.00, 'Coleta e análise de fungos endofíticos da Caatinga para identificação de compostos com atividade antibacteriana frente a superbactérias.',              '2024-03-01', '2024-06-01', 'sucesso',             '2024-03-01', '2024-02-20 09:15:00'),
+(3, 8, 2, 'Bioprospecção de Fungos da Caatinga com Potencial Antibiótico',                  'all-or-nothing', 40000.00, 40000.00, 5.00, 'Coleta e análise de fungos endofíticos da Caatinga para identificação de compostos com atividade antibacteriana frente a superbactérias.',              '2024-03-01', '2024-05-30', 'sucesso',             '2024-03-01', '2024-02-20 09:15:00'),
 (4, 8, 4, 'Estudo Epidemiológico do Impacto da Dengue na Baixada Fluminense 2024',          'all-or-nothing', 25000.00,  8000.00, 5.00, 'Levantamento epidemiológico detalhado dos casos de dengue em municípios da Baixada Fluminense durante o surto de 2024.',                                 '2024-03-10', '2024-04-24', 'nao_atingido',        '2024-03-10', '2024-03-01 14:00:00'),
 (5, 8, 6, 'Mapeamento Socioeconômico de Comunidades Quilombolas de Santa Catarina',         'flexivel',       30000.00, 22000.00, 5.00, 'Pesquisa quantitativa e qualitativa sobre indicadores socioeconômicos, acesso a direitos e identidade cultural em quilombos catarinenses.',              '2024-04-01', '2024-06-01', 'sucesso',             '2024-04-01', '2024-03-20 08:00:00'),
 (6, NULL, 7, 'Análise Discursiva das Fake News sobre Vacinas no Twitter (2022–2024)',       'all-or-nothing', 15000.00,  0.00,    5.00, 'Estudo linguístico-computacional sobre estratégias discursivas de desinformação vacinal em redes sociais brasileiras.',                                  NULL,          NULL,         'aguardando_aprovacao', NULL,        '2025-04-10 16:00:00'),
-(7, 8, 4, 'Eficácia de Probióticos na Redução de Infecções Hospitalares em UTI Neonatal',  'all-or-nothing', 45000.00, 45000.00, 5.00, 'Ensaio clínico randomizado avaliando o uso de probióticos na microbiota intestinal de neonatos para prevenção de sepse hospitalar.',                    '2024-05-01', '2024-08-01', 'encerrado',           '2024-05-01', '2024-04-15 10:00:00');
+(7, 8, 4, 'Eficácia de Probióticos na Redução de Infecções Hospitalares em UTI Neonatal',  'all-or-nothing', 45000.00, 45000.00, 5.00, 'Ensaio clínico randomizado avaliando o uso de probióticos na microbiota intestinal de neonatos para prevenção de sepse hospitalar.',                    '2024-05-01', '2024-07-30', 'encerrado',           '2024-05-01', '2024-04-15 10:00:00');
 
 
 -- ============================================================
@@ -306,6 +306,12 @@ INSERT INTO seguir_pesquisador (id_usuario, id_pesquisador) VALUES
 -- ============================================================
 -- CONTRIBUICAO
 -- ============================================================
+-- CORRIGIDO: seed representa dados históricos já concluídos, então
+-- os triggers de proteção (pensados para tráfego em tempo real)
+-- são desligados só durante a carga do seed e religados em seguida.
+ALTER TABLE contribuicao DISABLE TRIGGER trg_valida_status_contribuicao;
+ALTER TABLE contribuicao DISABLE TRIGGER trg_contribuicao_all_or_nothing_pix;
+
 INSERT INTO contribuicao (id_campanha, id_usuario, valor, meio_pagamento, status, anonima, id_transacao_api, criado_em) VALUES
 (1, 2, 5000.00, 'pix',            'repassado',  FALSE, 'TXN-PIX-0001', '2024-02-10 10:00:00'),
 (1, 3, 2300.00, 'cartao_credito', 'repassado',  FALSE, 'TXN-CC-0002',  '2024-02-12 14:30:00'),
@@ -314,6 +320,9 @@ INSERT INTO contribuicao (id_campanha, id_usuario, valor, meio_pagamento, status
 (5, 4, 2200.00, 'cartao_debito',  'repassado',  FALSE, 'TXN-CD-0005',  '2024-04-10 15:00:00'),
 (7, 6,  500.00, 'pix',            'repassado',  TRUE,  'TXN-PIX-0006', '2024-05-10 08:00:00'),
 (4, 7,  800.00, 'cartao_credito', 'a_devolver', FALSE, 'TXN-CC-0007',  '2024-03-15 12:00:00');
+
+ALTER TABLE contribuicao ENABLE TRIGGER trg_valida_status_contribuicao;
+ALTER TABLE contribuicao ENABLE TRIGGER trg_contribuicao_all_or_nothing_pix;
 
 
 -- ============================================================
@@ -358,6 +367,8 @@ INSERT INTO arquivo_atualizacao (id_arquivo, id_atualizacao) VALUES
 -- ============================================================
 -- REPASSE
 -- ============================================================
+ALTER TABLE repasse DISABLE TRIGGER trg_valida_repasse;
+
 INSERT INTO repasse (id_campanha, valor_bruto, valor_liquido, meta_atingida, repassado_em, taxa_relativa, status) VALUES
 (1, 52300.00, 49685.00, TRUE,  '2024-04-05 10:00:00', 5.00, 'concluido'),
 (2, 28500.00, 27075.00, FALSE, '2024-05-10 10:00:00', 5.00, 'concluido'),
@@ -366,6 +377,8 @@ INSERT INTO repasse (id_campanha, valor_bruto, valor_liquido, meta_atingida, rep
 (7, 45000.00, 42750.00, TRUE,  '2024-08-10 10:00:00', 5.00, 'concluido'),
 (4,  8000.00,  0.00,    FALSE, NULL,                   5.00, 'a_devolver'),
 (2, 28500.00,    0.00,  FALSE, NULL,                   5.00, 'parcial_processando');
+
+ALTER TABLE repasse ENABLE TRIGGER trg_valida_repasse;
 
 
 -- ============================================================
