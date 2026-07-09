@@ -119,8 +119,6 @@ INSERT INTO tipo_link (nome, ativo, regex, dominio) VALUES
 ('ResearchGate',      TRUE,  '^https?://(www\.)?researchgate\.net/profile/[\w\-]+$', 'researchgate.net'),
 ('LinkedIn',          TRUE,  '^https?://(www\.)?linkedin\.com/in/[\w\-]+/?$',      'linkedin.com'),
 ('GitHub',            TRUE,  '^https?://(www\.)?github\.com/[\w\-]+/?$',          'github.com'),
-('Site Institucional', TRUE,  '^https?://(www\.)?[\w\-\.]+/?$',                     NULL),
-('Outro',             TRUE,  NULL,                                                  NULL);
 
 
 -- ============================================================
