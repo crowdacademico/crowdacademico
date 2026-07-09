@@ -82,7 +82,18 @@ CREATE POLICY pol_contribuicao_insert ON contribuicao FOR INSERT TO anon, authen
     id_usuario IS NULL OR id_usuario = public.id_usuario_atual()
 );
 
-CREATE POLICY pol_comentario_select ON comentario FOR SELECT USING (TRUE);
+-- CORRIGIDO: comentários não endossados deixam de ser públicos;
+-- só o autor, o dono da campanha ou o admin podem ver o que não
+-- está endossado. Comentários endossados continuam públicos.
+CREATE POLICY pol_comentario_select ON comentario FOR SELECT USING (
+    endossado = TRUE
+    OR id_pesquisador = public.id_usuario_atual()
+    OR EXISTS (
+        SELECT 1 FROM campanha
+        WHERE id_campanha = comentario.id_campanha
+          AND (id_usuario = public.id_usuario_atual() OR public.eh_admin())
+    )
+);
 CREATE POLICY pol_comentario_insert ON comentario FOR INSERT TO authenticated WITH CHECK (
     id_pesquisador = public.id_usuario_atual()
     AND EXISTS (SELECT 1 FROM perfil_pesquisador WHERE id_usuario = public.id_usuario_atual() AND status_pesquisador = 'ativo')

@@ -133,3 +133,36 @@ Problema 3 — Hardening opcional: anti-enumeração em contribuicao (melhoria, 
 Hoje qualquer anon pode ler qualquer linha com id_usuario IS NULL, o que permite varrer sequencialmente id_contribuicao e ver valor/id_transacao_api de doações de terceiros.
 Solução: coluna token_sessao UUID, e a leitura anônima passa a exigir o token certo em vez de qualquer ID sequencial.
 Script inicial do Gemini estava incompleto: ele adicionava a política nova do token, mas não removia anon da política antiga (pol_contribuicao_select) — como o Postgres RLS combina políticas permissivas com OR, a política antiga (mais aberta) continuaria valendo e o token não bloquearia nada na prática.
+
+
+# AAAAAAAAAAAAAAAA
+
+
+Lista detalhada dos problemas desta rodada
+1. Prazo da campanha — decisão fechada agora: 90 dias, não mais provisório
+Vocês decidiram: o limite máximo passa de 60 para 90 dias. É só trocar o valor no CHECK e atualizar o comentário (deixar de ser "PROVISÓRIO").
+2. Mesmo com 90 dias, 2 campanhas do seed ainda violam o CHECK
+Calculei de novo com o novo limite: subir pra 90 dias resolve 2 das 4 violações que eu tinha achado (campanha 2 = 76 dias e campanha 5 = 61 dias ficam OK), mas campanha 3 e campanha 7 têm exatamente 92 dias cada — ainda estourariam mesmo com 90. Precisam ter a data_fim ajustada.
+3. Seed de contribuicao é bloqueado 100% pelo trg_valida_status_contribuicao
+Todas as 7 linhas do seed referenciam campanhas com status terminal (sucesso/nao_atingido/encerrado), nunca 'ativo'. O trigger que adicionamos pra proteger produção também bloqueia a carga de dados históricos de teste.
+4. Achado novo, bug preexistente desde a 1ª rodada: 3 linhas do seed de contribuicao usam pagamento não-PIX em campanha all-or-nothing
+Isso viola o trg_contribuicao_all_or_nothing_pix (que já existe desde a rodada 1) — ninguém tinha reparado que o próprio seed nunca respeitou essa regra desde que ela foi criada.
+5. Falha de lógica no trg_valida_repasse (afeta produção, não só o seed)
+O trigger bloqueia qualquer INSERT em repasse quando all-or-nothing não bate meta — inclusive o registro legítimo de "nada foi liberado, marcar a_devolver" (exigido pelo RF-038). Precisa só bloquear quando valor_liquido > 0.
+6. Trigger de congelamento de regras da campanha (Gemini) incompleto
+Falta 'encerrado_moderacao' na lista de status protegidos contra alteração de meta_financeira/modelo/taxa_plataforma.
+7. Trigger de comentário bloqueando campanha rejeitada/moderada (Gemini)
+Está correto como veio, só falta aplicar.
+
+
+
+# 1
+
+Lista de problemas desta rodada
+Só 1 problema novo e real surgiu nessa rodada (o documento do Gemini era repetido, e os outros pontos do Grok eram falsos positivos ou já resolvidos):
+1. RLS de comentario expõe comentários privados/não endossados publicamente
+
+Arquivo: 04_rls_policies.sql
+pol_comentario_select ON comentario FOR SELECT USING (TRUE) libera leitura de qualquer comentário, endossado ou não.
+Contradiz RF-061 (comentário vai só pro painel privado do dono da campanha) e RF-064 (comentário não endossado nunca deve ser visível a visitante externo).
+Correção: só deve ser público o que está endossado = TRUE; o autor do comentário continua vendo o próprio (pra poder editar, RF-065); o dono da campanha vê tudo que recebeu (RF-062); admin vê tudo.
