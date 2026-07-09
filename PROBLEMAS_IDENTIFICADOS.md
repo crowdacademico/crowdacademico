@@ -1,4 +1,6 @@
 
+# PROBLEMAS RESOLVIDOS JÁ DIA 08-07-2026
+
 # Duas inconsistências reais que encontrei, verificar com seu Claude:
 
 usuario.criado_em foi criada com esse nome no DDL (arquivo 01), mas tanto o INSERT do seed (arquivo 07) quanto o GRANT SELECT (arquivo 05) usam data_cadastro enquanto que na coluna que não existe. Isso quebraria na hora de rodar.
@@ -81,3 +83,25 @@ seguir_campanha     (id_campanha)       Só existe UNIQUE(id_usuario, id_campanh
 arquivo_atualizacao (id_atualizacao)    Mesmo caso: UNIQUE(id_arquivo, id_atualizacao) não serve pra buscar arquivos de uma atualização específica.
 
 campanha            (status, data_fim)  compostoO job que encerra campanha vencida (RF-037) faz WHERE status='ativo' AND data_fim < NOW() toda hora — um índice composto acelera isso bastante conforme o volume cresce.
+
+
+
+
+
+
+
+
+# NOVOS PROBLEMAS IDENTIFICADOS:
+
+2. Novos achados da releitura (schema pós-fix vs. requisitos)
+Boa notícia: a maior parte do que os requisitos pedem já está coberta (status_denuncia, status_encerramento, notificacao — bateram certinho com RF-077, RF-040/041 e RF-085). Mas essa segunda passada, cruzando o texto final e mais detalhado do requisitos em formato.md com o .sql já corrigido, achou 3 coisas novas que meu texto anterior não tinha pego (os .docx que eu li antes eram menos explícitos nesses pontos):
+a) status_campanha — a "ambiguidade" virou fato concreto, não é mais decisão em aberto
+O RF-029 agora deixa isso explícito, é literal no texto: "Os status possíveis de uma campanha são: aguardando aprovação, ativa, sucesso, não atingida, rejeitada e encerrada por moderação." Isso são 6 valores nomeados — e nenhum deles é o genérico 'encerrado' que está no enum hoje. Reli todos os RFs de encerramento (RF-037 a RF-040) e nenhum deles usa a palavra "encerrado" sozinha como status final — só usam sucesso/nao_atingido (mesmo no encerramento antecipado do RF-040). Ou seja: o 'encerrado' do enum atual não corresponde a nada nos requisitos, e falta o valor que RF-079/RF-084 realmente pedem (encerrado_moderacao ou nome parecido). Isso não é mais "vocês decidam depois" — o próprio documento já decidiu, só o .sql que ainda não foi atualizado.
+b) Falta uma tabela/registro pra aceite de termos por transação (RF-054/RF-055)
+Esses dois RFs pedem, com bastante ênfase (inclusive citando proteção contra chargeback), um registro imutável de aceite de termos vinculado ao ID da transação, separado do aceite geral de cadastro — e que precisa funcionar até para contribuinte anônimo (que não tem id_usuario). Hoje só existe usuario_termo, que exige id_usuario NOT NULL — não serve pra isso. Falta algo como uma tabela aceite_termo_contribuicao (id_contribuicao, id_termo, aceito_em) .
+c) auditoria_financeira está sem duas colunas que o RNF-007 exige por nome
+O RNF-007 lista textualmente o que cada log financeiro precisa conter: "timestamp, identificador da transação, valor, meio de pagamento, status anterior e novo status." A tabela atual tem id_contribuicao, status_anterior, status_novo, evento, timestamp — mas não tem valor nem meio_pagamento. Como é log de auditoria imutável (retenção de 5 anos), o valor da transação precisa estar congelado ali também, não só referenciado via id_contribuicao (que pode mudar de status depois).
+d) (menor) comentario.endossado e comentario.ordem_endosso não têm nenhuma trava entre si
+Reparei que o trigger novo do limite de 4 endossos (que a IA implementou certinho) conta usando ordem_endosso IS NOT NULL, mas quem sinaliza "isso é um endosso" pro resto do sistema é o campo booleano endossado. Nada impede hoje endossado = TRUE com ordem_endosso = NULL (furando o limite) ou o inverso. Um CHECK simples resolve:
+sqlCHECK ((endossado = TRUE AND ordem_endosso IS NOT NULL) OR (endossado = FALSE AND ordem_endosso IS NULL))
+

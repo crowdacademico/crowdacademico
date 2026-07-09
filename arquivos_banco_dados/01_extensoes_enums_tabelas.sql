@@ -738,3 +738,20 @@ CREATE TABLE link_recompensa (
     ordem              INT,
     url                VARCHAR(500) NOT NULL
 );
+
+
+
+
+-- ============================================================
+-- ACEITE_TERMO_CONTRIBUICAO
+-- ============================================================
+-- CORRIGIDO: nova tabela para registrar o aceite de termos por
+-- transação (RF-054/RF-055), inclusive para contribuinte anônimo.
+CREATE TABLE aceite_termo_contribuicao (
+    id_aceite_contrib SERIAL PRIMARY KEY,
+    id_contribuicao   INT NOT NULL REFERENCES contribuicao(id_contribuicao) ON DELETE CASCADE,
+    id_termo          INT NOT NULL REFERENCES termos_de_uso(id_termo)       ON DELETE RESTRICT,
+    aceito_em         TIMESTAMP DEFAULT NOW(),
+    ip_aceite         VARCHAR(45),
+    UNIQUE (id_contribuicao)
+);
