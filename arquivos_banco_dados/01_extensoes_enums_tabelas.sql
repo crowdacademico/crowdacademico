@@ -533,6 +533,38 @@ BEFORE INSERT ON contribuicao
 FOR EACH ROW
 EXECUTE FUNCTION fn_valida_contribuicao_campanha_ativa();
 
+-- CORRIGIDO: trigger que sincroniza o valor bruto arrecadado da campanha
+-- sempre que houver alteração nas contribuições da campanha.
+CREATE OR REPLACE FUNCTION fn_sincroniza_arrecadado_campanha()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_id_campanha INT;
+    v_total       DECIMAL(10,2);
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        v_id_campanha := OLD.id_campanha;
+    ELSE
+        v_id_campanha := NEW.id_campanha;
+    END IF;
+
+    SELECT COALESCE(SUM(valor), 0)
+    INTO v_total
+    FROM contribuicao
+    WHERE id_campanha = v_id_campanha;
+
+    UPDATE campanha
+    SET valor_bruto_arrecadado = COALESCE(v_total, 0)
+    WHERE id_campanha = v_id_campanha;
+
+    RETURN COALESCE(NEW, OLD);
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_sincroniza_arrecadado_campanha
+AFTER INSERT OR UPDATE OR DELETE ON contribuicao
+FOR EACH ROW
+EXECUTE FUNCTION fn_sincroniza_arrecadado_campanha();
+
 CREATE OR REPLACE FUNCTION validar_limite_campanhas_pesquisador()
 RETURNS trigger
 LANGUAGE plpgsql
