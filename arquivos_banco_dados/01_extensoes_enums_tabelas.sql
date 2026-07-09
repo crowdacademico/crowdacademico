@@ -222,7 +222,12 @@ CREATE TABLE campanha (
     data_fim             TIMESTAMP,
     status               status_campanha NOT NULL DEFAULT 'aguardando_aprovacao',
     aprovado_em          TIMESTAMP,
-    criado_em            TIMESTAMP       DEFAULT NOW()
+    criado_em            TIMESTAMP       DEFAULT NOW(),
+    -- PROVISÓRIO (equipe ainda decidindo entre 60 e 90 dias como prazo máximo, por causa da janela de estorno do PIX/BCB de até 90 dias da conciliação — usar 60 dias evita que campanhas fiquem fora dessa janela quando somado o tempo de moderação; revisar quando a equipe decidir definitivamente):
+    CONSTRAINT chk_prazo_campanha CHECK (
+        data_fim IS NULL OR data_inicio IS NULL OR
+        (data_fim - data_inicio) BETWEEN INTERVAL '15 days' AND INTERVAL '60 days'
+    )
 );
 
 
@@ -275,6 +280,8 @@ CREATE TABLE contribuicao (
 CREATE TABLE auditoria_financeira (
     id_auditoria    SERIAL PRIMARY KEY,
     id_contribuicao INT          NOT NULL REFERENCES contribuicao(id_contribuicao),
+    -- CORRIGIDO: auditoria financeira agora registra também o usuário/processo responsável pelo evento.
+    id_usuario_responsavel INT REFERENCES usuario(id_usuario) ON DELETE SET NULL,
     valor           DECIMAL(10,2) NOT NULL,
     meio_pagamento  meio_pagamento,
     status_novo     VARCHAR(100) NOT NULL,
