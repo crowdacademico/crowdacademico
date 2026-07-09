@@ -547,10 +547,13 @@ BEGIN
         v_id_campanha := NEW.id_campanha;
     END IF;
 
+    -- CORRIGIDO: só entram na soma contribuições efetivamente
+    -- confirmadas ou já repassadas ao projeto.
     SELECT COALESCE(SUM(valor), 0)
     INTO v_total
     FROM contribuicao
-    WHERE id_campanha = v_id_campanha;
+    WHERE id_campanha = v_id_campanha
+      AND status IN ('confirmado', 'repassado');
 
     UPDATE campanha
     SET valor_bruto_arrecadado = COALESCE(v_total, 0)
