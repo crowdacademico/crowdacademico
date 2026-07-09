@@ -105,3 +105,31 @@ d) (menor) comentario.endossado e comentario.ordem_endosso não têm nenhuma tra
 Reparei que o trigger novo do limite de 4 endossos (que a IA implementou certinho) conta usando ordem_endosso IS NOT NULL, mas quem sinaliza "isso é um endosso" pro resto do sistema é o campo booleano endossado. Nada impede hoje endossado = TRUE com ordem_endosso = NULL (furando o limite) ou o inverso. Um CHECK simples resolve:
 sqlCHECK ((endossado = TRUE AND ordem_endosso IS NOT NULL) OR (endossado = FALSE AND ordem_endosso IS NULL))
 
+
+
+## POLICIES
+
+Lista detalhada dos problemas desta rodada (pro seu documento)
+Problema 1 — Falta trigger de integridade financeira em repasse (crítico)
+
+Não existe nenhum gatilho de banco impedindo a criação de um registro de repasse para campanha all-or-nothing que não atingiu a meta.
+Risco: bug no backend ou chamada direta à API libera dinheiro indevidamente.
+Script inicial sugerido pelo Gemini tinha erro: usava modelo_financiamento e valor_arrecadado, colunas que não existem no schema (os nomes reais são modelo e valor_bruto_arrecadado). Corrigido abaixo.
+
+Problema 2 — Falta trigger impedindo contribuição em campanha inativa/vencida (crítico)
+
+Não existe gatilho validando status = 'ativo' nem data_fim antes de aceitar INSERT em contribuicao.
+Risco: POST direto na API insere doação numa campanha já encerrada, rejeitada ou com prazo vencido.
+Script inicial do Gemini tinha 3 erros:
+
+Coluna prazo_dias não existe (campo real é data_fim TIMESTAMP);
+A checagem de prazo vencido ficou comentada, faltando metade da regra (RF-037/RF-045);
+Erro grave de valor de ENUM: usou 'ativa', mas o valor real é 'ativo' — se colado sem correção, bloquearia toda contribuição em toda campanha ativa da plataforma, silenciosamente.
+
+
+
+Problema 3 — Hardening opcional: anti-enumeração em contribuicao (melhoria, não bloqueia nada hoje)
+
+Hoje qualquer anon pode ler qualquer linha com id_usuario IS NULL, o que permite varrer sequencialmente id_contribuicao e ver valor/id_transacao_api de doações de terceiros.
+Solução: coluna token_sessao UUID, e a leitura anônima passa a exigir o token certo em vez de qualquer ID sequencial.
+Script inicial do Gemini estava incompleto: ele adicionava a política nova do token, mas não removia anon da política antiga (pol_contribuicao_select) — como o Postgres RLS combina políticas permissivas com OR, a política antiga (mais aberta) continuaria valendo e o token não bloquearia nada na prática.

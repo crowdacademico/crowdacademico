@@ -68,11 +68,15 @@ CREATE POLICY pol_campanha_select ON campanha FOR SELECT USING (
 CREATE POLICY pol_campanha_insert ON campanha FOR INSERT TO authenticated WITH CHECK (id_usuario = public.id_usuario_atual());
 CREATE POLICY pol_campanha_update ON campanha FOR UPDATE TO authenticated USING (id_usuario = public.id_usuario_atual() OR public.eh_admin());
 
--- CORRIGIDO: contribuições anônimas agora podem ser inseridas e lidas por anon/authenticated conforme o requisito central de contribuição sem conta.
-CREATE POLICY pol_contribuicao_select ON contribuicao FOR SELECT TO anon, authenticated USING (
+-- CORRIGIDO: anon passou a exigir token_sessao; leitura de
+-- contribuicao por usuário autenticado continua igual.
+DROP POLICY IF EXISTS pol_contribuicao_select ON contribuicao;
+CREATE POLICY pol_contribuicao_select ON contribuicao FOR SELECT TO authenticated USING (
+    id_usuario = public.id_usuario_atual() OR public.eh_admin()
+);
+CREATE POLICY pol_contribuicao_anon_select ON contribuicao FOR SELECT TO anon USING (
     id_usuario IS NULL
-    OR id_usuario = public.id_usuario_atual()
-    OR public.eh_admin()
+    AND token_sessao::text = current_setting('request.headers', true)::json->>'x-session-token'
 );
 CREATE POLICY pol_contribuicao_insert ON contribuicao FOR INSERT TO anon, authenticated WITH CHECK (
     id_usuario IS NULL OR id_usuario = public.id_usuario_atual()

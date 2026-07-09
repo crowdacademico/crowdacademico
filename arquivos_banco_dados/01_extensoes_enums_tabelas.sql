@@ -272,6 +272,9 @@ CREATE TABLE contribuicao (
     criado_em        TIMESTAMP           DEFAULT NOW()
 );
 
+-- CORRIGIDO: token de sessão para evitar que contribuições anônimas sejam enumeradas sequencialmente por terceiros.
+ALTER TABLE contribuicao ADD COLUMN token_sessao UUID DEFAULT gen_random_uuid();
+
 
 -- ============================================================
 -- AUDITORIA FINANCEIRA
@@ -328,6 +331,33 @@ CREATE TABLE repasse (
     taxa_relativa DECIMAL(5,2),
     status        VARCHAR(100)
 );
+
+-- CORRIGIDO: trigger que bloqueia repasse indevido em campanha
+-- all-or-nothing que não atingiu a meta financeira.
+CREATE OR REPLACE FUNCTION fn_valida_repasse_all_or_nothing()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_modelo     modelo_campanha;
+    v_meta       DECIMAL;
+    v_arrecadado DECIMAL;
+BEGIN
+    SELECT modelo, meta_financeira, valor_bruto_arrecadado
+    INTO v_modelo, v_meta, v_arrecadado
+    FROM campanha
+    WHERE id_campanha = NEW.id_campanha;
+
+    IF v_modelo = 'all-or-nothing' AND v_arrecadado < v_meta THEN
+        RAISE EXCEPTION 'Repasse bloqueado: campanhas all-or-nothing só podem repassar valores se a meta financeira for atingida.';
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_valida_repasse
+BEFORE INSERT ON repasse
+FOR EACH ROW
+EXECUTE FUNCTION fn_valida_repasse_all_or_nothing();
 
 
 -- ============================================================
@@ -418,6 +448,35 @@ CREATE TRIGGER trg_contribuicao_all_or_nothing_pix
 BEFORE INSERT ON contribuicao
 FOR EACH ROW
 EXECUTE FUNCTION validar_contribuicao_all_or_nothing();
+
+-- CORRIGIDO: trigger que bloqueia contribuição em campanha que não
+-- está ativa (status) ou cujo prazo já expirou (data_fim).
+CREATE OR REPLACE FUNCTION fn_valida_contribuicao_campanha_ativa()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_status   status_campanha;
+    v_data_fim TIMESTAMP;
+BEGIN
+    SELECT status, data_fim INTO v_status, v_data_fim
+    FROM campanha
+    WHERE id_campanha = NEW.id_campanha;
+
+    IF v_status <> 'ativo' THEN
+        RAISE EXCEPTION 'Contribuição bloqueada: a campanha não está ativa no momento (status atual: %)', v_status;
+    END IF;
+
+    IF v_data_fim IS NOT NULL AND NOW() > v_data_fim THEN
+        RAISE EXCEPTION 'Contribuição bloqueada: o prazo da campanha já foi encerrado.';
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_valida_status_contribuicao
+BEFORE INSERT ON contribuicao
+FOR EACH ROW
+EXECUTE FUNCTION fn_valida_contribuicao_campanha_ativa();
 
 CREATE OR REPLACE FUNCTION validar_limite_campanhas_pesquisador()
 RETURNS trigger
