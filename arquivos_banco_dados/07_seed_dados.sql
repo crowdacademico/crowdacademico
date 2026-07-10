@@ -257,7 +257,6 @@ INSERT INTO link_academico (id_usuario, id_tipolink, ordem, url) VALUES
 (1, 2, 2, 'https://orcid.org/0000-0001-2345-6789'),
 (2, 1, 1, 'http://lattes.cnpq.br/9876543210987654'),
 (3, 1, 1, 'http://lattes.cnpq.br/1111222233334444'),
-(3, 6, 2, 'https://scholar.google.com.br/citations?user=beatriz_ufmg'),
 (5, 4, 1, 'https://www.researchgate.net/profile/Juliana-Ferreira-Paz'),
 (7, 2, 1, 'https://orcid.org/0000-0002-9876-5432');
 
