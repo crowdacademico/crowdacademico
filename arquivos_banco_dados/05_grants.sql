@@ -22,7 +22,8 @@ GRANT USAGE ON SCHEMA public TO anon, authenticated;
 GRANT SELECT ON ALL TABLES IN SCHEMA public TO anon, authenticated;
 
 REVOKE SELECT ON public.usuario FROM anon, authenticated;
-GRANT SELECT (id_usuario, nome, email, id_imagem_perfil, data_cadastro, deletado, id_supabase)
+-- CORRIGIDO: coluna de cadastro corrigida para criado_em.
+GRANT SELECT (id_usuario, nome, email, id_imagem_perfil, criado_em, deletado, id_supabase)
     ON public.usuario TO anon, authenticated;
 
 GRANT INSERT, UPDATE, DELETE ON
@@ -30,7 +31,7 @@ GRANT INSERT, UPDATE, DELETE ON
     seguir_campanha, seguir_pesquisador, link_academico, configuracoes,
     score_config, score_rotulo, historico_rejeicao, atualizacao_campanha,
     solicitacao_encerramento, usuario_papel,
-    termos_de_uso, usuario_termo, recompensa, arquivo_recompensa,
+    termos_de_uso, usuario_termo, aceite_termo_contribuicao, recompensa, arquivo_recompensa,
     contribuicao_recompensa, link_atualizacao, link_recompensa
 TO authenticated;
 

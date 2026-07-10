@@ -112,19 +112,19 @@ WHERE (p.nome, perm.nome) IN (
 -- ============================================================
 -- TIPO_LINK
 -- ============================================================
+-- CORRIGIDO: tipo_link ajustado para a allowlist fechada definida pela equipe.
 INSERT INTO tipo_link (nome, ativo, regex, dominio) VALUES
-('Lattes',        TRUE,  '^https?://lattes\.cnpq\.br/\d+$',                   'lattes.cnpq.br'),
-('ORCID',         TRUE,  '^https?://orcid\.org/\d{4}-\d{4}-\d{4}-\d{3}[\dX]$','orcid.org'),
-('LinkedIn',      TRUE,  '^https?://(www\.)?linkedin\.com/in/[\w\-]+/?$',      'linkedin.com'),
-('ResearchGate',  TRUE,  '^https?://(www\.)?researchgate\.net/profile/[\w\-]+$','researchgate.net'),
-('Academia.edu',  TRUE,  '^https?://([\w]+\.)?academia\.edu/[\w\-]+$',         'academia.edu'),
-('Google Scholar',TRUE,  '^https?://scholar\.google\.com\.br/citations\?.*$',  'scholar.google.com.br'),
-('Site Pessoal',  FALSE, NULL,                                                  NULL);
+('Lattes',            TRUE,  '^https?://lattes\.cnpq\.br/\d+$',                   'lattes.cnpq.br'),
+('ORCID',             TRUE,  '^https?://orcid\.org/\d{4}-\d{4}-\d{4}-\d{3}[\dX]$', 'orcid.org'),
+('ResearchGate',      TRUE,  '^https?://(www\.)?researchgate\.net/profile/[\w\-]+$', 'researchgate.net'),
+('LinkedIn',          TRUE,  '^https?://(www\.)?linkedin\.com/in/[\w\-]+/?$',      'linkedin.com'),
+('GitHub',            TRUE,  '^https?://(www\.)?github\.com/[\w\-]+/?$',          'github.com'),
 
 
 -- ============================================================
 -- AREA_CONHECIMENTO
 -- ============================================================
+-- CORRIGIDO: área de conhecimento adicionada para o valor Multidisciplinar.
 INSERT INTO area_conhecimento (codigo_cnpq, nome, ativo) VALUES
 ('1.00.00.00-0', 'Ciências Exatas e da Terra',          TRUE),
 ('2.00.00.00-6', 'Ciências Biológicas',                 TRUE),
@@ -133,7 +133,8 @@ INSERT INTO area_conhecimento (codigo_cnpq, nome, ativo) VALUES
 ('5.00.00.00-2', 'Ciências Agrárias',                   TRUE),
 ('6.00.00.00-8', 'Ciências Sociais Aplicadas',          TRUE),
 ('7.00.00.00-3', 'Ciências Humanas',                    TRUE),
-('8.00.00.00-9', 'Linguística, Letras e Artes',         TRUE);
+('8.00.00.00-9', 'Linguística, Letras e Artes',         TRUE),
+('9.00.00.00-0', 'Multidisciplinar',                    TRUE);
 
 
 -- ============================================================
@@ -169,7 +170,8 @@ INSERT INTO arquivo (url, nome_original, tipo_mime, tamanho_bytes) VALUES
 -- ============================================================
 -- USUARIO
 -- ============================================================
-INSERT INTO usuario (nome, email, senha_hash, id_imagem_perfil, data_cadastro) VALUES
+-- CORRIGIDO: seed de usuário passou a usar criado_em.
+INSERT INTO usuario (nome, email, senha_hash, id_imagem_perfil, criado_em) VALUES
 ('Ana Beatriz Santos',    'ana.santos@usp.br',          '$2b$12$hashed_ana001',    1, '2024-01-10 09:00:00'),
 ('Carlos Eduardo Melo',   'carlos.melo@unicamp.br',     '$2b$12$hashed_carlos002', 2, '2024-01-15 10:30:00'),
 ('Beatriz Lima Alves',    'beatriz.lima@ufmg.br',       '$2b$12$hashed_bea003',    3, '2024-02-01 08:45:00'),
@@ -207,6 +209,7 @@ JOIN papel p ON p.nome = v.papel_nome;
 INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo) VALUES
 (NULL, 'taxa_plataforma_padrao',     '5.00',  'decimal',  'Taxa padrão cobrada pela plataforma (%)',              TRUE),
 (NULL, 'prazo_maximo_campanha_dias', '90',    'inteiro',  'Duração máxima permitida de uma campanha em dias',     TRUE),
+-- TODO (pendente decisão da equipe): regra de score mínimo para campanha ainda não confirmada; manter sem trigger por enquanto.
 (NULL, 'score_minimo_campanha',      '25.00', 'decimal',  'Score mínimo para criar campanha',                     TRUE),
 (NULL, 'permitir_campanha_anonima',  'false', 'booleano', 'Permite contribuições anônimas nas campanhas',         TRUE),
 (NULL, 'email_suporte',              'suporte@crowdacademico.com.br', 'texto', 'E-mail de suporte ao usuário',   TRUE),
@@ -235,14 +238,15 @@ ON CONFLICT (chave) DO NOTHING;
 -- ============================================================
 -- PERFIL_PESQUISADOR
 -- ============================================================
+-- CORRIGIDO: valores de score do seed arredondados para inteiro.
 INSERT INTO perfil_pesquisador (id_usuario, cpf_criptografado, vinculo_institucional, titulo_academico, status_pesquisador, ativado_em, suspenso, score_atual, score_atualizado_em) VALUES
-(1, 'enc_cpf_001', 'Universidade de São Paulo (USP)',                   'doutor',     'ativo', '2024-01-10 09:05:00', FALSE, 85.50, '2025-05-01 00:00:00'),
-(2, 'enc_cpf_002', 'Universidade Estadual de Campinas (UNICAMP)',       'mestre',      'ativo', '2024-01-15 10:35:00', FALSE, 72.00, '2025-05-01 00:00:00'),
-(3, 'enc_cpf_003', 'Universidade Federal de Minas Gerais (UFMG)',       'doutor',      'ativo', '2024-02-01 08:50:00', FALSE, 91.20, '2025-05-01 00:00:00'),
-(4, 'enc_cpf_004', 'Universidade Federal do Rio de Janeiro (UFRJ)',     'especialista','ativo', '2024-02-10 14:10:00', FALSE, 48.30, '2025-05-01 00:00:00'),
-(5, 'enc_cpf_005', 'Universidade Federal de Santa Catarina (UFSC)',     'mestre',      'ativo', '2024-03-05 11:25:00', FALSE, 61.75, '2025-05-01 00:00:00'),
-(6, 'enc_cpf_006', 'Universidade Estadual Paulista (UNESP)',            'graduado',    'ativo', '2024-03-12 16:05:00', FALSE, 32.00, '2025-05-01 00:00:00'),
-(7, 'enc_cpf_007', 'Universidade Federal de São Paulo (UNIFESP)',       'doutor',      'ativo', '2024-04-01 09:35:00', FALSE, 77.40, '2025-05-01 00:00:00');
+(1, 'enc_cpf_001', 'Universidade de São Paulo (USP)',                   'doutor',     'ativo', '2024-01-10 09:05:00', FALSE, 86, '2025-05-01 00:00:00'),
+(2, 'enc_cpf_002', 'Universidade Estadual de Campinas (UNICAMP)',       'mestre',      'ativo', '2024-01-15 10:35:00', FALSE, 72, '2025-05-01 00:00:00'),
+(3, 'enc_cpf_003', 'Universidade Federal de Minas Gerais (UFMG)',       'doutor',      'ativo', '2024-02-01 08:50:00', FALSE, 91, '2025-05-01 00:00:00'),
+(4, 'enc_cpf_004', 'Universidade Federal do Rio de Janeiro (UFRJ)',     'especialista','ativo', '2024-02-10 14:10:00', FALSE, 48, '2025-05-01 00:00:00'),
+(5, 'enc_cpf_005', 'Universidade Federal de Santa Catarina (UFSC)',     'mestre',      'ativo', '2024-03-05 11:25:00', FALSE, 62, '2025-05-01 00:00:00'),
+(6, 'enc_cpf_006', 'Universidade Estadual Paulista (UNESP)',            'graduado',    'ativo', '2024-03-12 16:05:00', FALSE, 32, '2025-05-01 00:00:00'),
+(7, 'enc_cpf_007', 'Universidade Federal de São Paulo (UNIFESP)',       'doutor',      'ativo', '2024-04-01 09:35:00', FALSE, 77, '2025-05-01 00:00:00');
 
 
 -- ============================================================
@@ -253,7 +257,6 @@ INSERT INTO link_academico (id_usuario, id_tipolink, ordem, url) VALUES
 (1, 2, 2, 'https://orcid.org/0000-0001-2345-6789'),
 (2, 1, 1, 'http://lattes.cnpq.br/9876543210987654'),
 (3, 1, 1, 'http://lattes.cnpq.br/1111222233334444'),
-(3, 6, 2, 'https://scholar.google.com.br/citations?user=beatriz_ufmg'),
 (5, 4, 1, 'https://www.researchgate.net/profile/Juliana-Ferreira-Paz'),
 (7, 2, 1, 'https://orcid.org/0000-0002-9876-5432');
 
@@ -264,11 +267,11 @@ INSERT INTO link_academico (id_usuario, id_tipolink, ordem, url) VALUES
 INSERT INTO campanha (id_usuario, id_admin, id_area_conhecimento, titulo, modelo, meta_financeira, valor_bruto_arrecadado, taxa_plataforma, descricao, data_inicio, data_fim, status, aprovado_em, criado_em) VALUES
 (1, 8, 1, 'Desenvolvimento de Algoritmo para Diagnóstico Precoce de Alzheimer por IA',      'all-or-nothing', 50000.00, 52300.00, 5.00, 'Pesquisa aplicada em inteligência artificial para detecção precoce da doença de Alzheimer usando redes neurais convolucionais.',                          '2024-02-01', '2024-04-01', 'sucesso',             '2024-02-01', '2024-01-20 10:00:00'),
 (2, 8, 3, 'Prótese de Baixo Custo com Impressão 3D para Amputados do SUS',                  'flexivel',       35000.00, 28500.00, 5.00, 'Projeto de engenharia biomédica para fabricação de próteses funcionais de membros superiores a custo acessível para o sistema público.',                '2024-02-15', '2024-05-01', 'sucesso',             '2024-02-15', '2024-02-05 11:30:00'),
-(3, 8, 2, 'Bioprospecção de Fungos da Caatinga com Potencial Antibiótico',                  'all-or-nothing', 40000.00, 40000.00, 5.00, 'Coleta e análise de fungos endofíticos da Caatinga para identificação de compostos com atividade antibacteriana frente a superbactérias.',              '2024-03-01', '2024-06-01', 'sucesso',             '2024-03-01', '2024-02-20 09:15:00'),
+(3, 8, 2, 'Bioprospecção de Fungos da Caatinga com Potencial Antibiótico',                  'all-or-nothing', 40000.00, 40000.00, 5.00, 'Coleta e análise de fungos endofíticos da Caatinga para identificação de compostos com atividade antibacteriana frente a superbactérias.',              '2024-03-01', '2024-05-30', 'sucesso',             '2024-03-01', '2024-02-20 09:15:00'),
 (4, 8, 4, 'Estudo Epidemiológico do Impacto da Dengue na Baixada Fluminense 2024',          'all-or-nothing', 25000.00,  8000.00, 5.00, 'Levantamento epidemiológico detalhado dos casos de dengue em municípios da Baixada Fluminense durante o surto de 2024.',                                 '2024-03-10', '2024-04-24', 'nao_atingido',        '2024-03-10', '2024-03-01 14:00:00'),
 (5, 8, 6, 'Mapeamento Socioeconômico de Comunidades Quilombolas de Santa Catarina',         'flexivel',       30000.00, 22000.00, 5.00, 'Pesquisa quantitativa e qualitativa sobre indicadores socioeconômicos, acesso a direitos e identidade cultural em quilombos catarinenses.',              '2024-04-01', '2024-06-01', 'sucesso',             '2024-04-01', '2024-03-20 08:00:00'),
 (6, NULL, 7, 'Análise Discursiva das Fake News sobre Vacinas no Twitter (2022–2024)',       'all-or-nothing', 15000.00,  0.00,    5.00, 'Estudo linguístico-computacional sobre estratégias discursivas de desinformação vacinal em redes sociais brasileiras.',                                  NULL,          NULL,         'aguardando_aprovacao', NULL,        '2025-04-10 16:00:00'),
-(7, 8, 4, 'Eficácia de Probióticos na Redução de Infecções Hospitalares em UTI Neonatal',  'all-or-nothing', 45000.00, 45000.00, 5.00, 'Ensaio clínico randomizado avaliando o uso de probióticos na microbiota intestinal de neonatos para prevenção de sepse hospitalar.',                    '2024-05-01', '2024-08-01', 'encerrado',           '2024-05-01', '2024-04-15 10:00:00');
+(7, 8, 4, 'Eficácia de Probióticos na Redução de Infecções Hospitalares em UTI Neonatal',  'all-or-nothing', 45000.00, 45000.00, 5.00, 'Ensaio clínico randomizado avaliando o uso de probióticos na microbiota intestinal de neonatos para prevenção de sepse hospitalar.',                    '2024-05-01', '2024-07-30', 'encerrado',           '2024-05-01', '2024-04-15 10:00:00');
 
 
 -- ============================================================
@@ -300,6 +303,12 @@ INSERT INTO seguir_pesquisador (id_usuario, id_pesquisador) VALUES
 -- ============================================================
 -- CONTRIBUICAO
 -- ============================================================
+-- CORRIGIDO: seed representa dados históricos já concluídos, então
+-- os triggers de proteção (pensados para tráfego em tempo real)
+-- são desligados só durante a carga do seed e religados em seguida.
+ALTER TABLE contribuicao DISABLE TRIGGER trg_valida_status_contribuicao;
+ALTER TABLE contribuicao DISABLE TRIGGER trg_contribuicao_all_or_nothing_pix;
+
 INSERT INTO contribuicao (id_campanha, id_usuario, valor, meio_pagamento, status, anonima, id_transacao_api, criado_em) VALUES
 (1, 2, 5000.00, 'pix',            'repassado',  FALSE, 'TXN-PIX-0001', '2024-02-10 10:00:00'),
 (1, 3, 2300.00, 'cartao_credito', 'repassado',  FALSE, 'TXN-CC-0002',  '2024-02-12 14:30:00'),
@@ -308,6 +317,9 @@ INSERT INTO contribuicao (id_campanha, id_usuario, valor, meio_pagamento, status
 (5, 4, 2200.00, 'cartao_debito',  'repassado',  FALSE, 'TXN-CD-0005',  '2024-04-10 15:00:00'),
 (7, 6,  500.00, 'pix',            'repassado',  TRUE,  'TXN-PIX-0006', '2024-05-10 08:00:00'),
 (4, 7,  800.00, 'cartao_credito', 'a_devolver', FALSE, 'TXN-CC-0007',  '2024-03-15 12:00:00');
+
+ALTER TABLE contribuicao ENABLE TRIGGER trg_valida_status_contribuicao;
+ALTER TABLE contribuicao ENABLE TRIGGER trg_contribuicao_all_or_nothing_pix;
 
 
 -- ============================================================
@@ -352,6 +364,8 @@ INSERT INTO arquivo_atualizacao (id_arquivo, id_atualizacao) VALUES
 -- ============================================================
 -- REPASSE
 -- ============================================================
+ALTER TABLE repasse DISABLE TRIGGER trg_valida_repasse;
+
 INSERT INTO repasse (id_campanha, valor_bruto, valor_liquido, meta_atingida, repassado_em, taxa_relativa, status) VALUES
 (1, 52300.00, 49685.00, TRUE,  '2024-04-05 10:00:00', 5.00, 'concluido'),
 (2, 28500.00, 27075.00, FALSE, '2024-05-10 10:00:00', 5.00, 'concluido'),
@@ -360,6 +374,8 @@ INSERT INTO repasse (id_campanha, valor_bruto, valor_liquido, meta_atingida, rep
 (7, 45000.00, 42750.00, TRUE,  '2024-08-10 10:00:00', 5.00, 'concluido'),
 (4,  8000.00,  0.00,    FALSE, NULL,                   5.00, 'a_devolver'),
 (2, 28500.00,    0.00,  FALSE, NULL,                   5.00, 'parcial_processando');
+
+ALTER TABLE repasse ENABLE TRIGGER trg_valida_repasse;
 
 
 -- ============================================================

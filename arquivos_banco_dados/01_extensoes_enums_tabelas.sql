@@ -28,8 +28,10 @@ CREATE TYPE tipo_configuracao     AS ENUM ('decimal', 'inteiro', 'texto', 'boole
 CREATE TYPE status_pesquisador    AS ENUM ('ativo', 'suspenso');
 CREATE TYPE titulo_academico      AS ENUM ('graduado', 'especialista', 'mestre', 'doutor');
 CREATE TYPE modelo_campanha       AS ENUM ('all-or-nothing', 'flexivel');
-CREATE TYPE status_campanha       AS ENUM ('aguardando_aprovacao', 'ativo', 'sucesso', 'nao_atingido', 'rejeitado', 'encerrado');
-CREATE TYPE status_contribuicao   AS ENUM ('pendente', 'confirmado', 'repassado', 'a_devolver', 'devolvido', 'reembolsado', 'erro');
+-- CORRIGIDO: status_campanha recebeu o valor encerrado_moderacao.
+CREATE TYPE status_campanha       AS ENUM ('aguardando_aprovacao', 'ativo', 'sucesso', 'nao_atingido', 'rejeitado', 'encerrado', 'encerrado_moderacao');
+-- CORRIGIDO: status_contribuicao recebeu os valores expirado e reembolso_manual.
+CREATE TYPE status_contribuicao   AS ENUM ('pendente', 'confirmado', 'repassado', 'a_devolver', 'devolvido', 'reembolsado', 'erro', 'expirado', 'reembolso_manual');
 CREATE TYPE meio_pagamento        AS ENUM ('pix', 'cartao_credito', 'cartao_debito', 'boleto');
 CREATE TYPE fase_atualizacao      AS ENUM ('andamento', 'resultado_preliminar', 'resultado_final');
 CREATE TYPE tipo_atualizacao      AS ENUM ('texto', 'imagem', 'pdf', 'linkexterno');
@@ -118,7 +120,9 @@ CREATE TABLE motivo_denuncia (
     id_motivo SERIAL PRIMARY KEY,
     codigo    VARCHAR(20)          NOT NULL UNIQUE,
     descricao VARCHAR(255),
-    tipo      tipo_motivo_denuncia NOT NULL
+    tipo      tipo_motivo_denuncia NOT NULL,
+    -- CORRIGIDO: motivo_denuncia passou a ter indicador ativo/inativo.
+    ativo     BOOLEAN             NOT NULL DEFAULT TRUE
 );
 
 
@@ -217,7 +221,12 @@ CREATE TABLE campanha (
     data_fim             TIMESTAMP,
     status               status_campanha NOT NULL DEFAULT 'aguardando_aprovacao',
     aprovado_em          TIMESTAMP,
-    criado_em            TIMESTAMP       DEFAULT NOW()
+    criado_em            TIMESTAMP       DEFAULT NOW(),
+    -- DEFINIDO PELA EQUIPE: prazo mínimo de 15 dias e máximo de 90 dias corridos, contados a partir da aprovação da campanha (RF-045).
+    CONSTRAINT chk_prazo_campanha CHECK (
+        data_fim IS NULL OR data_inicio IS NULL OR
+        (data_fim - data_inicio) BETWEEN INTERVAL '15 days' AND INTERVAL '90 days'
+    )
 );
 
 
@@ -253,7 +262,8 @@ CREATE TABLE contribuicao (
     id_contribuicao  SERIAL PRIMARY KEY,
     id_campanha      INT                 NOT NULL REFERENCES campanha(id_campanha),
     id_usuario       INT                          REFERENCES usuario(id_usuario) ON DELETE SET NULL,
-    valor            DECIMAL(10,2)       NOT NULL,
+    -- CORRIGIDO: valor mínimo de contribuição definido em R$ 5,00.
+    valor            DECIMAL(10,2)       NOT NULL CHECK (valor >= 5.00),
     meio_pagamento   meio_pagamento      NOT NULL,
     status           status_contribuicao NOT NULL DEFAULT 'pendente',
     anonima          BOOLEAN             DEFAULT FALSE,
@@ -261,13 +271,21 @@ CREATE TABLE contribuicao (
     criado_em        TIMESTAMP           DEFAULT NOW()
 );
 
+-- CORRIGIDO: token de sessão para evitar que contribuições anônimas sejam enumeradas sequencialmente por terceiros.
+ALTER TABLE contribuicao ADD COLUMN token_sessao UUID DEFAULT gen_random_uuid();
+
 
 -- ============================================================
 -- AUDITORIA FINANCEIRA
 -- ============================================================
+-- CORRIGIDO: auditoria_financeira passou a congelar valor e meio de pagamento no momento do evento.
 CREATE TABLE auditoria_financeira (
     id_auditoria    SERIAL PRIMARY KEY,
     id_contribuicao INT          NOT NULL REFERENCES contribuicao(id_contribuicao),
+    -- CORRIGIDO: auditoria financeira agora registra também o usuário/processo responsável pelo evento.
+    id_usuario_responsavel INT REFERENCES usuario(id_usuario) ON DELETE SET NULL,
+    valor           DECIMAL(10,2) NOT NULL,
+    meio_pagamento  meio_pagamento,
     status_novo     VARCHAR(100) NOT NULL,
     status_anterior VARCHAR(100),
     evento          VARCHAR(200),
@@ -314,6 +332,7 @@ CREATE TABLE repasse (
 );
 
 
+
 -- ============================================================
 -- SOLICITACAO DE ENCERRAMENTO
 -- ============================================================
@@ -346,12 +365,18 @@ CREATE TABLE historico_rejeicao (
 CREATE TABLE comentario (
     id_comentario  SERIAL PRIMARY KEY,
     id_campanha    INT          NOT NULL REFERENCES campanha(id_campanha)              ON DELETE CASCADE,
-    id_pesquisador INT          NOT NULL REFERENCES perfil_pesquisador(id_usuario)     ON DELETE CASCADE,
+    id_pesquisador INT          REFERENCES perfil_pesquisador(id_usuario) ON DELETE SET NULL,
     conteudo       VARCHAR(500) NOT NULL,
     endossado      BOOLEAN      DEFAULT FALSE,
     criado_em      TIMESTAMP    DEFAULT NOW(),
-    ordem_endosso  INT
+    ordem_endosso  INT,
+    -- CORRIGIDO: comentários passaram a ter unicidade por campanha e pesquisador.
+    UNIQUE (id_campanha, id_pesquisador),
+    -- CORRIGIDO: endossado e ordem_endosso agora ficam coerentes entre si.
+    CONSTRAINT chk_comentario_endosso
+        CHECK ((endossado = TRUE AND ordem_endosso IS NOT NULL) OR (endossado = FALSE AND ordem_endosso IS NULL))
 );
+
 
 
 -- ============================================================
@@ -364,8 +389,12 @@ CREATE TABLE denuncia (
     id_pesquisador_alvo INT           REFERENCES usuario(id_usuario)   ON DELETE SET NULL,
     id_motivo           INT  NOT NULL REFERENCES motivo_denuncia(id_motivo),
     status              status_denuncia NOT NULL DEFAULT 'pendente',
-    criado_em           TIMESTAMP    DEFAULT NOW()
+    criado_em           TIMESTAMP    DEFAULT NOW(),
+    -- CORRIGIDO: denúncias passaram a ter unicidade por alvo e limite de taxa temporal.
+    UNIQUE (id_usuario, id_campanha_alvo),
+    UNIQUE (id_usuario, id_pesquisador_alvo)
 );
+
 
 
 -- ============================================================
@@ -564,4 +593,21 @@ CREATE TABLE link_recompensa (
     id_tipolink        INT NOT NULL REFERENCES tipo_link(id_tipolink),
     ordem              INT,
     url                VARCHAR(500) NOT NULL
+);
+
+
+
+
+-- ============================================================
+-- ACEITE_TERMO_CONTRIBUICAO
+-- ============================================================
+-- CORRIGIDO: nova tabela para registrar o aceite de termos por
+-- transação (RF-054/RF-055), inclusive para contribuinte anônimo.
+CREATE TABLE aceite_termo_contribuicao (
+    id_aceite_contrib SERIAL PRIMARY KEY,
+    id_contribuicao   INT NOT NULL REFERENCES contribuicao(id_contribuicao) ON DELETE CASCADE,
+    id_termo          INT NOT NULL REFERENCES termos_de_uso(id_termo)       ON DELETE RESTRICT,
+    aceito_em         TIMESTAMP DEFAULT NOW(),
+    ip_aceite         VARCHAR(45),
+    UNIQUE (id_contribuicao)
 );

@@ -1,0 +1,10 @@
+# Este gitignore é impedir de mandar coisas desnecessárias minhas (Lucas) para o repositório.
+
+# Pastas e arquivos locais do projeto
+informacoes/
+outros/
+
+# Arquivos temporários
+*.log
+.DS_Store
+Thumbs.db

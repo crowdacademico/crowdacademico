@@ -42,6 +42,7 @@ ALTER TABLE solicitacao_encerramento ENABLE ROW LEVEL SECURITY;
 -- Tabelas novas (termos, notificações, recompensas)
 ALTER TABLE termos_de_uso        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE usuario_termo        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE aceite_termo_contribuicao ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notificacao          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE recompensa           ENABLE ROW LEVEL SECURITY;
 ALTER TABLE arquivo_recompensa   ENABLE ROW LEVEL SECURITY;
@@ -51,20 +52,48 @@ ALTER TABLE link_recompensa       ENABLE ROW LEVEL SECURITY;
 
 
 -- Políticas existentes (mantidas)
-CREATE POLICY pol_usuario_select ON usuario FOR SELECT TO anon, authenticated USING (true);
+-- CORRIGIDO: usuário agora fica invisível quando marcado como deletado, salvo para admin.
+CREATE POLICY pol_usuario_select ON usuario FOR SELECT TO anon, authenticated USING (deletado = FALSE OR public.eh_admin());
 CREATE POLICY pol_usuario_update ON usuario FOR UPDATE TO authenticated USING (id_supabase = auth.uid());
 
 CREATE POLICY pol_perfil_select ON perfil_pesquisador FOR SELECT USING (TRUE);
 CREATE POLICY pol_perfil_update ON perfil_pesquisador FOR UPDATE TO authenticated USING (id_usuario = public.id_usuario_atual());
 
-CREATE POLICY pol_campanha_select ON campanha FOR SELECT USING (TRUE);
+-- CORRIGIDO: campanhas públicas agora expõem apenas os status permitidos, preservando as demais para dono/admin.
+CREATE POLICY pol_campanha_select ON campanha FOR SELECT USING (
+    status IN ('ativo', 'sucesso', 'nao_atingido', 'encerrado')
+    OR id_usuario = public.id_usuario_atual()
+    OR public.eh_admin()
+);
 CREATE POLICY pol_campanha_insert ON campanha FOR INSERT TO authenticated WITH CHECK (id_usuario = public.id_usuario_atual());
 CREATE POLICY pol_campanha_update ON campanha FOR UPDATE TO authenticated USING (id_usuario = public.id_usuario_atual() OR public.eh_admin());
 
-CREATE POLICY pol_contribuicao_select ON contribuicao FOR SELECT TO authenticated USING (id_usuario = public.id_usuario_atual());
-CREATE POLICY pol_contribuicao_insert ON contribuicao FOR INSERT TO authenticated WITH CHECK (id_usuario = public.id_usuario_atual());
+-- CORRIGIDO: anon passou a exigir token_sessao; leitura de
+-- contribuicao por usuário autenticado continua igual.
+DROP POLICY IF EXISTS pol_contribuicao_select ON contribuicao;
+CREATE POLICY pol_contribuicao_select ON contribuicao FOR SELECT TO authenticated USING (
+    id_usuario = public.id_usuario_atual() OR public.eh_admin()
+);
+CREATE POLICY pol_contribuicao_anon_select ON contribuicao FOR SELECT TO anon USING (
+    id_usuario IS NULL
+    AND token_sessao::text = current_setting('request.headers', true)::json->>'x-session-token'
+);
+CREATE POLICY pol_contribuicao_insert ON contribuicao FOR INSERT TO anon, authenticated WITH CHECK (
+    id_usuario IS NULL OR id_usuario = public.id_usuario_atual()
+);
 
-CREATE POLICY pol_comentario_select ON comentario FOR SELECT USING (TRUE);
+-- CORRIGIDO: comentários não endossados deixam de ser públicos;
+-- só o autor, o dono da campanha ou o admin podem ver o que não
+-- está endossado. Comentários endossados continuam públicos.
+CREATE POLICY pol_comentario_select ON comentario FOR SELECT USING (
+    endossado = TRUE
+    OR id_pesquisador = public.id_usuario_atual()
+    OR EXISTS (
+        SELECT 1 FROM campanha
+        WHERE id_campanha = comentario.id_campanha
+          AND (id_usuario = public.id_usuario_atual() OR public.eh_admin())
+    )
+);
 CREATE POLICY pol_comentario_insert ON comentario FOR INSERT TO authenticated WITH CHECK (
     id_pesquisador = public.id_usuario_atual()
     AND EXISTS (SELECT 1 FROM perfil_pesquisador WHERE id_usuario = public.id_usuario_atual() AND status_pesquisador = 'ativo')
@@ -172,6 +201,22 @@ CREATE POLICY pol_termos_update ON termos_de_uso FOR UPDATE TO authenticated USI
 CREATE POLICY pol_usuario_termo_select ON usuario_termo FOR SELECT TO authenticated USING (id_usuario = public.id_usuario_atual() OR public.eh_admin());
 CREATE POLICY pol_usuario_termo_insert ON usuario_termo FOR INSERT TO authenticated WITH CHECK (id_usuario = public.id_usuario_atual());
 
+-- CORRIGIDO: aceite de termos por contribuição agora tem política de leitura e escrita compatível com doação anônima.
+CREATE POLICY pol_aceite_termo_contribuicao_select ON aceite_termo_contribuicao FOR SELECT TO authenticated USING (
+    public.eh_admin() OR EXISTS (
+        SELECT 1 FROM contribuicao c
+        WHERE c.id_contribuicao = aceite_termo_contribuicao.id_contribuicao
+          AND c.id_usuario = public.id_usuario_atual()
+    )
+);
+CREATE POLICY pol_aceite_termo_contribuicao_insert ON aceite_termo_contribuicao FOR INSERT TO anon, authenticated WITH CHECK (
+    EXISTS (
+        SELECT 1 FROM contribuicao c
+        WHERE c.id_contribuicao = aceite_termo_contribuicao.id_contribuicao
+          AND (c.id_usuario IS NULL OR c.id_usuario = public.id_usuario_atual())
+    )
+);
+
 -- notificacao: só leitura das próprias notificações. Sem política de
 -- INSERT/UPDATE para authenticated de propósito — quem cria e atualiza
 -- notificação é o backend (via service_role, que ignora RLS), nunca o
@@ -190,7 +235,19 @@ CREATE POLICY pol_recompensa_update ON recompensa FOR UPDATE TO authenticated US
 
 -- arquivo_recompensa: leitura pública; escrita só por quem é dono da
 -- campanha dona da recompensa (ou admin) — mesmo padrão de arquivo_atualizacao.
-CREATE POLICY pol_arqrecompensa_select ON arquivo_recompensa FOR SELECT USING (TRUE);
+-- CORRIGIDO: arquivos de recompensa agora ficam acessíveis apenas ao dono da campanha, admin ou comprador da recompensa.
+CREATE POLICY pol_arqrecompensa_select ON arquivo_recompensa FOR SELECT TO authenticated USING (
+    EXISTS (
+        SELECT 1 FROM recompensa r JOIN campanha c ON c.id_campanha = r.id_campanha
+        WHERE r.id_recompensa = arquivo_recompensa.id_recompensa
+          AND (c.id_usuario = public.id_usuario_atual() OR public.eh_admin())
+    )
+    OR EXISTS (
+        SELECT 1 FROM contribuicao_recompensa cr JOIN contribuicao co ON co.id_contribuicao = cr.id_contribuicao
+        WHERE cr.id_recompensa = arquivo_recompensa.id_recompensa
+          AND co.id_usuario = public.id_usuario_atual()
+    )
+);
 CREATE POLICY pol_arqrecompensa_insert ON arquivo_recompensa FOR INSERT TO authenticated WITH CHECK (
     EXISTS (
         SELECT 1 FROM recompensa r JOIN campanha c ON c.id_campanha = r.id_campanha
@@ -228,7 +285,19 @@ CREATE POLICY pol_link_atualizacao_insert ON link_atualizacao FOR INSERT TO auth
 
 -- link_recompensa: leitura pública; só o dono da campanha (ou admin)
 -- adiciona links de resgate/download da recompensa.
-CREATE POLICY pol_link_recompensa_select ON link_recompensa FOR SELECT USING (TRUE);
+-- CORRIGIDO: links de recompensa agora ficam acessíveis apenas ao dono da campanha, admin ou comprador da recompensa.
+CREATE POLICY pol_link_recompensa_select ON link_recompensa FOR SELECT TO authenticated USING (
+    EXISTS (
+        SELECT 1 FROM recompensa r JOIN campanha c ON c.id_campanha = r.id_campanha
+        WHERE r.id_recompensa = link_recompensa.id_recompensa
+          AND (c.id_usuario = public.id_usuario_atual() OR public.eh_admin())
+    )
+    OR EXISTS (
+        SELECT 1 FROM contribuicao_recompensa cr JOIN contribuicao co ON co.id_contribuicao = cr.id_contribuicao
+        WHERE cr.id_recompensa = link_recompensa.id_recompensa
+          AND co.id_usuario = public.id_usuario_atual()
+    )
+);
 CREATE POLICY pol_link_recompensa_insert ON link_recompensa FOR INSERT TO authenticated WITH CHECK (
     EXISTS (
         SELECT 1 FROM recompensa r JOIN campanha c ON c.id_campanha = r.id_campanha

@@ -1,4 +1,6 @@
 
+# PROBLEMAS RESOLVIDOS JÁ DIA 08-07-2026
+
 # Duas inconsistências reais que encontrei, verificar com seu Claude:
 
 usuario.criado_em foi criada com esse nome no DDL (arquivo 01), mas tanto o INSERT do seed (arquivo 07) quanto o GRANT SELECT (arquivo 05) usam data_cadastro enquanto que na coluna que não existe. Isso quebraria na hora de rodar.
@@ -81,3 +83,86 @@ seguir_campanha     (id_campanha)       Só existe UNIQUE(id_usuario, id_campanh
 arquivo_atualizacao (id_atualizacao)    Mesmo caso: UNIQUE(id_arquivo, id_atualizacao) não serve pra buscar arquivos de uma atualização específica.
 
 campanha            (status, data_fim)  compostoO job que encerra campanha vencida (RF-037) faz WHERE status='ativo' AND data_fim < NOW() toda hora — um índice composto acelera isso bastante conforme o volume cresce.
+
+
+
+
+
+
+
+
+# NOVOS PROBLEMAS IDENTIFICADOS:
+
+2. Novos achados da releitura (schema pós-fix vs. requisitos)
+Boa notícia: a maior parte do que os requisitos pedem já está coberta (status_denuncia, status_encerramento, notificacao — bateram certinho com RF-077, RF-040/041 e RF-085). Mas essa segunda passada, cruzando o texto final e mais detalhado do requisitos em formato.md com o .sql já corrigido, achou 3 coisas novas que meu texto anterior não tinha pego (os .docx que eu li antes eram menos explícitos nesses pontos):
+a) status_campanha — a "ambiguidade" virou fato concreto, não é mais decisão em aberto
+O RF-029 agora deixa isso explícito, é literal no texto: "Os status possíveis de uma campanha são: aguardando aprovação, ativa, sucesso, não atingida, rejeitada e encerrada por moderação." Isso são 6 valores nomeados — e nenhum deles é o genérico 'encerrado' que está no enum hoje. Reli todos os RFs de encerramento (RF-037 a RF-040) e nenhum deles usa a palavra "encerrado" sozinha como status final — só usam sucesso/nao_atingido (mesmo no encerramento antecipado do RF-040). Ou seja: o 'encerrado' do enum atual não corresponde a nada nos requisitos, e falta o valor que RF-079/RF-084 realmente pedem (encerrado_moderacao ou nome parecido). Isso não é mais "vocês decidam depois" — o próprio documento já decidiu, só o .sql que ainda não foi atualizado.
+b) Falta uma tabela/registro pra aceite de termos por transação (RF-054/RF-055)
+Esses dois RFs pedem, com bastante ênfase (inclusive citando proteção contra chargeback), um registro imutável de aceite de termos vinculado ao ID da transação, separado do aceite geral de cadastro — e que precisa funcionar até para contribuinte anônimo (que não tem id_usuario). Hoje só existe usuario_termo, que exige id_usuario NOT NULL — não serve pra isso. Falta algo como uma tabela aceite_termo_contribuicao (id_contribuicao, id_termo, aceito_em) .
+c) auditoria_financeira está sem duas colunas que o RNF-007 exige por nome
+O RNF-007 lista textualmente o que cada log financeiro precisa conter: "timestamp, identificador da transação, valor, meio de pagamento, status anterior e novo status." A tabela atual tem id_contribuicao, status_anterior, status_novo, evento, timestamp — mas não tem valor nem meio_pagamento. Como é log de auditoria imutável (retenção de 5 anos), o valor da transação precisa estar congelado ali também, não só referenciado via id_contribuicao (que pode mudar de status depois).
+d) (menor) comentario.endossado e comentario.ordem_endosso não têm nenhuma trava entre si
+Reparei que o trigger novo do limite de 4 endossos (que a IA implementou certinho) conta usando ordem_endosso IS NOT NULL, mas quem sinaliza "isso é um endosso" pro resto do sistema é o campo booleano endossado. Nada impede hoje endossado = TRUE com ordem_endosso = NULL (furando o limite) ou o inverso. Um CHECK simples resolve:
+sqlCHECK ((endossado = TRUE AND ordem_endosso IS NOT NULL) OR (endossado = FALSE AND ordem_endosso IS NULL))
+
+
+
+## POLICIES
+
+Lista detalhada dos problemas desta rodada (pro seu documento)
+Problema 1 — Falta trigger de integridade financeira em repasse (crítico)
+
+Não existe nenhum gatilho de banco impedindo a criação de um registro de repasse para campanha all-or-nothing que não atingiu a meta.
+Risco: bug no backend ou chamada direta à API libera dinheiro indevidamente.
+Script inicial sugerido pelo Gemini tinha erro: usava modelo_financiamento e valor_arrecadado, colunas que não existem no schema (os nomes reais são modelo e valor_bruto_arrecadado). Corrigido abaixo.
+
+Problema 2 — Falta trigger impedindo contribuição em campanha inativa/vencida (crítico)
+
+Não existe gatilho validando status = 'ativo' nem data_fim antes de aceitar INSERT em contribuicao.
+Risco: POST direto na API insere doação numa campanha já encerrada, rejeitada ou com prazo vencido.
+Script inicial do Gemini tinha 3 erros:
+
+Coluna prazo_dias não existe (campo real é data_fim TIMESTAMP);
+A checagem de prazo vencido ficou comentada, faltando metade da regra (RF-037/RF-045);
+Erro grave de valor de ENUM: usou 'ativa', mas o valor real é 'ativo' — se colado sem correção, bloquearia toda contribuição em toda campanha ativa da plataforma, silenciosamente.
+
+
+
+Problema 3 — Hardening opcional: anti-enumeração em contribuicao (melhoria, não bloqueia nada hoje)
+
+Hoje qualquer anon pode ler qualquer linha com id_usuario IS NULL, o que permite varrer sequencialmente id_contribuicao e ver valor/id_transacao_api de doações de terceiros.
+Solução: coluna token_sessao UUID, e a leitura anônima passa a exigir o token certo em vez de qualquer ID sequencial.
+Script inicial do Gemini estava incompleto: ele adicionava a política nova do token, mas não removia anon da política antiga (pol_contribuicao_select) — como o Postgres RLS combina políticas permissivas com OR, a política antiga (mais aberta) continuaria valendo e o token não bloquearia nada na prática.
+
+
+# AAAAAAAAAAAAAAAA
+
+
+Lista detalhada dos problemas desta rodada
+1. Prazo da campanha — decisão fechada agora: 90 dias, não mais provisório
+Vocês decidiram: o limite máximo passa de 60 para 90 dias. É só trocar o valor no CHECK e atualizar o comentário (deixar de ser "PROVISÓRIO").
+2. Mesmo com 90 dias, 2 campanhas do seed ainda violam o CHECK
+Calculei de novo com o novo limite: subir pra 90 dias resolve 2 das 4 violações que eu tinha achado (campanha 2 = 76 dias e campanha 5 = 61 dias ficam OK), mas campanha 3 e campanha 7 têm exatamente 92 dias cada — ainda estourariam mesmo com 90. Precisam ter a data_fim ajustada.
+3. Seed de contribuicao é bloqueado 100% pelo trg_valida_status_contribuicao
+Todas as 7 linhas do seed referenciam campanhas com status terminal (sucesso/nao_atingido/encerrado), nunca 'ativo'. O trigger que adicionamos pra proteger produção também bloqueia a carga de dados históricos de teste.
+4. Achado novo, bug preexistente desde a 1ª rodada: 3 linhas do seed de contribuicao usam pagamento não-PIX em campanha all-or-nothing
+Isso viola o trg_contribuicao_all_or_nothing_pix (que já existe desde a rodada 1) — ninguém tinha reparado que o próprio seed nunca respeitou essa regra desde que ela foi criada.
+5. Falha de lógica no trg_valida_repasse (afeta produção, não só o seed)
+O trigger bloqueia qualquer INSERT em repasse quando all-or-nothing não bate meta — inclusive o registro legítimo de "nada foi liberado, marcar a_devolver" (exigido pelo RF-038). Precisa só bloquear quando valor_liquido > 0.
+6. Trigger de congelamento de regras da campanha (Gemini) incompleto
+Falta 'encerrado_moderacao' na lista de status protegidos contra alteração de meta_financeira/modelo/taxa_plataforma.
+7. Trigger de comentário bloqueando campanha rejeitada/moderada (Gemini)
+Está correto como veio, só falta aplicar.
+
+
+
+# 1
+
+Lista de problemas desta rodada
+Só 1 problema novo e real surgiu nessa rodada (o documento do Gemini era repetido, e os outros pontos do Grok eram falsos positivos ou já resolvidos):
+1. RLS de comentario expõe comentários privados/não endossados publicamente
+
+Arquivo: 04_rls_policies.sql
+pol_comentario_select ON comentario FOR SELECT USING (TRUE) libera leitura de qualquer comentário, endossado ou não.
+Contradiz RF-061 (comentário vai só pro painel privado do dono da campanha) e RF-064 (comentário não endossado nunca deve ser visível a visitante externo).
+Correção: só deve ser público o que está endossado = TRUE; o autor do comentário continua vendo o próprio (pra poder editar, RF-065); o dono da campanha vê tudo que recebeu (RF-062); admin vê tudo.
