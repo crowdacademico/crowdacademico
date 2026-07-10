@@ -1,16 +1,16 @@
 -- ============================================================
---  CrowdAcadêmico — 06: MOTOR DE CÁLCULO DE SCORE E TRIGGERS
+--  CrowdAcadêmico — 06b: MOTOR DE SCORE + REGRAS DE NEGÓCIO (triggers)
 --  Depende de: 01_extensoes_enums_tabelas.sql, 05_grants.sql
---  (as funções aqui não dependem de dados, só de tabelas/colunas;
---   mas o GRANT EXECUTE que libera a RPC pro app já foi feito no
---   arquivo 05, por isso ele deve rodar antes)
 --  Próximo arquivo: 07_seed_dados.sql
 --
---  NOTA DE REORGANIZAÇÃO: a constraint UNIQUE defensiva e o seed
---  das constantes de "configuracoes" que originalmente estavam no
---  meio deste bloco (em artificios.sql) foram movidos para
---  01_extensoes_enums_tabelas.sql e 07_seed_dados.sql, respectivamente,
---  para manter este arquivo só com lógica (funções e triggers).
+--  Este arquivo concentra TODA lógica baseada em trigger/função do
+--  projeto: o motor de cálculo de score e as regras de negócio que
+--  um CHECK simples não alcança (congelamento de campanha, limite
+--  de campanhas simultâneas, validação de repasse, etc.). Antes as
+--  regras de negócio estavam misturadas com CREATE TABLE em
+--  01_extensoes_enums_tabelas.sql — movidas pra cá pra manter o
+--  arquivo 01 só com DDL puro. Nenhuma lógica foi alterada, só o
+--  local do arquivo.
 -- ============================================================
 
 -- ============================================================
@@ -633,3 +633,312 @@ CREATE TRIGGER trg_link_recompensa_valida_tipo
     BEFORE INSERT OR UPDATE ON link_recompensa
     FOR EACH ROW
     EXECUTE FUNCTION public.trg_valida_escopo_tipolink();
+
+-- ============================================================
+-- 11. REGRAS DE NEGÓCIO ADICIONAIS (movidas de 01_extensoes_enums_tabelas.sql)
+-- Estavam misturadas com CREATE TABLE — movidas pra cá pra manter
+-- o arquivo 01 só com DDL puro (extensões/enums/tabelas), igual
+-- combinado. Nenhuma lógica foi alterada, só o local do arquivo.
+-- ============================================================
+-- CORRIGIDO: trigger que bloqueia repasse indevido em campanha
+-- all-or-nothing que não atingiu a meta financeira.
+CREATE OR REPLACE FUNCTION fn_valida_repasse_all_or_nothing()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_modelo     modelo_campanha;
+    v_meta       DECIMAL;
+    v_arrecadado DECIMAL;
+BEGIN
+    SELECT modelo, meta_financeira, valor_bruto_arrecadado
+    INTO v_modelo, v_meta, v_arrecadado
+    FROM campanha
+    WHERE id_campanha = NEW.id_campanha;
+
+    -- CORRIGIDO: só bloqueia se houver tentativa real de liberar
+    -- dinheiro (valor_liquido > 0); registro de "nada repassado" 
+    -- (RF-038, valor_liquido = 0) continua permitido.
+    IF v_modelo = 'all-or-nothing' AND v_arrecadado < v_meta AND NEW.valor_liquido > 0 THEN
+        RAISE EXCEPTION 'Repasse bloqueado: campanhas all-or-nothing só podem repassar valores se a meta financeira for atingida.';
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_valida_repasse
+BEFORE INSERT ON repasse
+FOR EACH ROW
+EXECUTE FUNCTION fn_valida_repasse_all_or_nothing();
+
+-- CORRIGIDO: trigger que bloqueia novos comentários em campanhas
+-- que foram rejeitadas ou banidas pela moderação.
+CREATE OR REPLACE FUNCTION fn_valida_comentario_campanha_ativa()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_status status_campanha;
+BEGIN
+    SELECT status INTO v_status
+    FROM campanha
+    WHERE id_campanha = NEW.id_campanha;
+
+    IF v_status IN ('rejeitado', 'encerrado_moderacao') THEN
+        RAISE EXCEPTION 'Operação bloqueada: não é possível comentar em campanhas rejeitadas ou sob moderação.';
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_valida_comentario_status
+BEFORE INSERT ON comentario
+FOR EACH ROW
+EXECUTE FUNCTION fn_valida_comentario_campanha_ativa();
+
+-- ============================================================
+-- TRIGGERS E FUNÇÕES DE REGRAS DE NEGÓCIO
+-- ============================================================
+CREATE OR REPLACE FUNCTION validar_contribuicao_all_or_nothing()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_modelo campanha.modelo%TYPE;
+BEGIN
+    SELECT modelo INTO v_modelo
+    FROM campanha
+    WHERE id_campanha = NEW.id_campanha;
+
+    IF FOUND AND v_modelo = 'all-or-nothing' AND NEW.meio_pagamento <> 'pix' THEN
+        RAISE EXCEPTION 'Campanhas all-or-nothing aceitam apenas contribuições via PIX';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trg_contribuicao_all_or_nothing_pix
+BEFORE INSERT ON contribuicao
+FOR EACH ROW
+EXECUTE FUNCTION validar_contribuicao_all_or_nothing();
+
+-- CORRIGIDO: trigger que impede a alteração de regras financeiras
+-- após a campanha ser aprovada/lançada (status 'ativo' em diante,
+-- incluindo encerramento por moderação).
+CREATE OR REPLACE FUNCTION fn_congela_regras_campanha()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF OLD.status IN ('ativo', 'sucesso', 'nao_atingido', 'encerrado', 'encerrado_moderacao') THEN
+        IF NEW.meta_financeira <> OLD.meta_financeira THEN
+            RAISE EXCEPTION 'Fraude bloqueada: não é permitido alterar a meta financeira após a aprovação da campanha.';
+        END IF;
+
+        IF NEW.modelo <> OLD.modelo THEN
+            RAISE EXCEPTION 'Fraude bloqueada: não é permitido alterar o modelo de financiamento após a aprovação da campanha.';
+        END IF;
+
+        IF NEW.taxa_plataforma <> OLD.taxa_plataforma THEN
+            RAISE EXCEPTION 'Operação bloqueada: a taxa da plataforma não pode ser alterada após o congelamento.';
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_congela_regras_campanha
+BEFORE UPDATE ON campanha
+FOR EACH ROW
+EXECUTE FUNCTION fn_congela_regras_campanha();
+
+-- CORRIGIDO: trigger que bloqueia contribuição em campanha que não
+-- está ativa (status) ou cujo prazo já expirou (data_fim).
+CREATE OR REPLACE FUNCTION fn_valida_contribuicao_campanha_ativa()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_status   status_campanha;
+    v_data_fim TIMESTAMP;
+BEGIN
+    SELECT status, data_fim INTO v_status, v_data_fim
+    FROM campanha
+    WHERE id_campanha = NEW.id_campanha;
+
+    IF v_status <> 'ativo' THEN
+        RAISE EXCEPTION 'Contribuição bloqueada: a campanha não está ativa no momento (status atual: %)', v_status;
+    END IF;
+
+    IF v_data_fim IS NOT NULL AND NOW() > v_data_fim THEN
+        RAISE EXCEPTION 'Contribuição bloqueada: o prazo da campanha já foi encerrado.';
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_valida_status_contribuicao
+BEFORE INSERT ON contribuicao
+FOR EACH ROW
+EXECUTE FUNCTION fn_valida_contribuicao_campanha_ativa();
+
+-- CORRIGIDO: trigger que sincroniza o valor bruto arrecadado da campanha
+-- sempre que houver alteração nas contribuições da campanha.
+CREATE OR REPLACE FUNCTION fn_sincroniza_arrecadado_campanha()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_id_campanha INT;
+    v_total       DECIMAL(10,2);
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        v_id_campanha := OLD.id_campanha;
+    ELSE
+        v_id_campanha := NEW.id_campanha;
+    END IF;
+
+    -- CORRIGIDO: só entram na soma contribuições efetivamente
+    -- confirmadas ou já repassadas ao projeto.
+    SELECT COALESCE(SUM(valor), 0)
+    INTO v_total
+    FROM contribuicao
+    WHERE id_campanha = v_id_campanha
+      AND status IN ('confirmado', 'repassado');
+
+    UPDATE campanha
+    SET valor_bruto_arrecadado = COALESCE(v_total, 0)
+    WHERE id_campanha = v_id_campanha;
+
+    RETURN COALESCE(NEW, OLD);
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_sincroniza_arrecadado_campanha
+AFTER INSERT OR UPDATE OR DELETE ON contribuicao
+FOR EACH ROW
+EXECUTE FUNCTION fn_sincroniza_arrecadado_campanha();
+
+CREATE OR REPLACE FUNCTION validar_limite_campanhas_pesquisador()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_count integer;
+BEGIN
+    IF NEW.status IN ('aguardando_aprovacao', 'ativo') THEN
+        SELECT COUNT(*) INTO v_count
+        FROM campanha
+        WHERE id_usuario = NEW.id_usuario
+          AND status IN ('aguardando_aprovacao', 'ativo')
+          AND id_campanha <> COALESCE(NEW.id_campanha, -1);
+
+        IF v_count >= 2 THEN
+            RAISE EXCEPTION 'Pesquisador já possui o limite máximo de 2 campanhas ativas ou aguardando aprovação';
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trg_campanha_limite_simultaneo
+BEFORE INSERT OR UPDATE ON campanha
+FOR EACH ROW
+EXECUTE FUNCTION validar_limite_campanhas_pesquisador();
+
+CREATE OR REPLACE FUNCTION validar_atualizacao_campanha()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_status status_campanha;
+BEGIN
+    SELECT status INTO v_status
+    FROM campanha
+    WHERE id_campanha = NEW.id_campanha;
+
+    IF FOUND AND v_status NOT IN ('ativo', 'sucesso', 'nao_atingido') THEN
+        RAISE EXCEPTION 'Atualizações de campanha só são permitidas para campanhas ativas, com sucesso ou não atingidas';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trg_atualizacao_campanha_status
+BEFORE INSERT ON atualizacao_campanha
+FOR EACH ROW
+EXECUTE FUNCTION validar_atualizacao_campanha();
+
+CREATE OR REPLACE FUNCTION validar_comentario_endosso()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_count integer;
+BEGIN
+    IF NEW.ordem_endosso IS NOT NULL THEN
+        SELECT COUNT(*) INTO v_count
+        FROM comentario
+        WHERE id_campanha = NEW.id_campanha
+          AND ordem_endosso IS NOT NULL
+          AND id_comentario <> COALESCE(NEW.id_comentario, -1);
+
+        IF v_count >= 4 THEN
+            RAISE EXCEPTION 'Campanha já atingiu o limite máximo de 4 endossos ativos';
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trg_comentario_limite_endosso
+BEFORE INSERT OR UPDATE ON comentario
+FOR EACH ROW
+EXECUTE FUNCTION validar_comentario_endosso();
+
+CREATE OR REPLACE FUNCTION validar_comentario_autor()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_id_usuario integer;
+BEGIN
+    SELECT id_usuario INTO v_id_usuario
+    FROM campanha
+    WHERE id_campanha = NEW.id_campanha;
+
+    IF FOUND AND v_id_usuario = NEW.id_pesquisador THEN
+        RAISE EXCEPTION 'Pesquisador não pode comentar em sua própria campanha';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trg_comentario_sem_autoria
+BEFORE INSERT ON comentario
+FOR EACH ROW
+EXECUTE FUNCTION validar_comentario_autor();
+
+CREATE OR REPLACE FUNCTION validar_denuncia_frequencia()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_count integer;
+BEGIN
+    SELECT COUNT(*) INTO v_count
+    FROM denuncia
+    WHERE id_usuario = NEW.id_usuario
+      AND criado_em >= NOW() - INTERVAL '24 hours';
+
+    IF v_count >= 5 THEN
+        RAISE EXCEPTION 'Usuário já atingiu o limite de 5 denúncias nas últimas 24 horas';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trg_denuncia_limite_taxa
+BEFORE INSERT ON denuncia
+FOR EACH ROW
+EXECUTE FUNCTION validar_denuncia_frequencia();
