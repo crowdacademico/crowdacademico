@@ -129,15 +129,24 @@ CREATE TABLE motivo_denuncia (
 -- ============================================================
 -- USUARIO
 -- ============================================================
+-- Autenticação própria (não usa mais Supabase Auth/auth.users).
 CREATE TABLE usuario (
     id_usuario       SERIAL PRIMARY KEY,
     nome             VARCHAR(150) NOT NULL,
     email            VARCHAR(255) NOT NULL UNIQUE,
-    senha_hash       VARCHAR(255),             -- [R10] opcional
-    id_supabase      UUID UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
-    id_imagem_perfil INT,                     
-    criado_em    TIMESTAMP    DEFAULT NOW(),
-    deletado         BOOLEAN      DEFAULT FALSE
+    senha_hash       VARCHAR(255) NOT NULL,     -- ALTERADO: era opcional [R10], agora obrigatório (único método de login)
+    id_imagem_perfil INT,
+    criado_em        TIMESTAMP    DEFAULT NOW(),
+    deletado         BOOLEAN      DEFAULT FALSE,
+
+    -- NOVO: controle de verificação de e-mail (tokens em verificacao_email, ver 09_auth_propria.sql)
+    email_verificado         BOOLEAN   NOT NULL DEFAULT FALSE,
+
+    -- NOVO: proteção contra brute-force de login
+    tentativas_login_falhas  INT       NOT NULL DEFAULT 0,
+    bloqueado_ate            TIMESTAMP,
+    ultimo_login_em          TIMESTAMP,
+    ultimo_login_ip          VARCHAR(45)
 );
 
 ALTER TABLE configuracoes
@@ -611,3 +620,71 @@ CREATE TABLE aceite_termo_contribuicao (
     ip_aceite         VARCHAR(45),
     UNIQUE (id_contribuicao)
 );
+
+
+-- ============================================================
+--  CrowdAcadêmico — 09: AUTENTICAÇÃO PRÓPRIA (tabelas de suporte)
+--  Depende de: 01_extensoes_enums_tabelas.sql (tabela usuario)
+--  Próximo arquivo: nenhum (último da sequência de auth)
+-- ============================================================
+--
+--  NOVO: estas três tabelas substituem funcionalidades que antes
+--  eram resolvidas pelo Supabase Auth (GoTrue) e que agora passam a
+--  ser responsabilidade do NestJS + Postgres.
+-- ============================================================
+
+
+-- ============================================================
+-- VERIFICACAO_EMAIL
+-- ============================================================
+-- Confirmação de e-mail no cadastro. Tabela própria (em vez de
+-- coluna solta em usuario) porque pode haver mais de um pedido de
+-- confirmação (usuário perde o e-mail, pede de novo) e cada token
+-- antigo precisa poder ser invalidado sem apagar histórico.
+-- A flag usuario.email_verificado (ver 01) é o que o resto do
+-- sistema consulta; esta tabela guarda só o processo de chegar lá.
+CREATE TABLE verificacao_email (
+    id_verificacao SERIAL PRIMARY KEY,
+    id_usuario     INT NOT NULL REFERENCES usuario(id_usuario) ON DELETE CASCADE,
+    token_hash     VARCHAR(255) NOT NULL,   -- nunca gravar o token em texto puro
+    criado_em      TIMESTAMP NOT NULL DEFAULT NOW(),
+    expira_em      TIMESTAMP NOT NULL,
+    confirmado_em  TIMESTAMP
+);
+
+
+-- ============================================================
+-- RECUPERACAO_SENHA
+-- ============================================================
+-- "Esqueci minha senha": gera token, envia e-mail, valida, troca a
+-- senha e invalida o token. Antes era resolvido pelo fluxo nativo
+-- do Supabase Auth.
+CREATE TABLE recuperacao_senha (
+    id_recuperacao SERIAL PRIMARY KEY,
+    id_usuario     INT NOT NULL REFERENCES usuario(id_usuario) ON DELETE CASCADE,
+    token_hash     VARCHAR(255) NOT NULL,
+    criado_em      TIMESTAMP NOT NULL DEFAULT NOW(),
+    expira_em      TIMESTAMP NOT NULL,     -- recomendado: expiração curta, 15-30 min
+    usado_em       TIMESTAMP
+);
+
+
+-- ============================================================
+-- SESSAO (refresh tokens)
+-- ============================================================
+-- Sem o Supabase Auth, quem emite e assina o JWT é o próprio NestJS.
+-- Para suportar "sair", "sair de todos os dispositivos" e revogar um
+-- token comprometido, os refresh tokens emitidos precisam ser
+-- persistidos aqui (um JWT sozinho, stateless, não permite revogação).
+CREATE TABLE sessao (
+    id_sessao          SERIAL PRIMARY KEY,
+    id_usuario         INT NOT NULL REFERENCES usuario(id_usuario) ON DELETE CASCADE,
+    refresh_token_hash VARCHAR(255) NOT NULL,
+    criado_em          TIMESTAMP NOT NULL DEFAULT NOW(),
+    expira_em          TIMESTAMP NOT NULL,
+    revogado_em        TIMESTAMP,
+    ip                 VARCHAR(45),
+    user_agent         TEXT
+);
+
+

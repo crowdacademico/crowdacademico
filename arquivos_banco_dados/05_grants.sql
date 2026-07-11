@@ -22,8 +22,8 @@ GRANT USAGE ON SCHEMA public TO anon, authenticated;
 GRANT SELECT ON ALL TABLES IN SCHEMA public TO anon, authenticated;
 
 REVOKE SELECT ON public.usuario FROM anon, authenticated;
--- CORRIGIDO: coluna de cadastro corrigida para criado_em.
-GRANT SELECT (id_usuario, nome, email, id_imagem_perfil, criado_em, deletado, id_supabase)
+-- ALTERADO: coluna id_supabase removida da tabela usuario (autenticação própria).
+GRANT SELECT (id_usuario, nome, email, id_imagem_perfil, criado_em, deletado)
     ON public.usuario TO anon, authenticated;
 
 GRANT INSERT, UPDATE, DELETE ON

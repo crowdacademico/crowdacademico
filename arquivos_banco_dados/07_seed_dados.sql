@@ -118,7 +118,7 @@ INSERT INTO tipo_link (nome, ativo, regex, dominio) VALUES
 ('ORCID',             TRUE,  '^https?://orcid\.org/\d{4}-\d{4}-\d{4}-\d{3}[\dX]$', 'orcid.org'),
 ('ResearchGate',      TRUE,  '^https?://(www\.)?researchgate\.net/profile/[\w\-]+$', 'researchgate.net'),
 ('LinkedIn',          TRUE,  '^https?://(www\.)?linkedin\.com/in/[\w\-]+/?$',      'linkedin.com'),
-('GitHub',            TRUE,  '^https?://(www\.)?github\.com/[\w\-]+/?$',          'github.com'),
+('GitHub',            TRUE,  '^https?://(www\.)?github\.com/[\w\-]+/?$',          'github.com');
 
 
 -- ============================================================
