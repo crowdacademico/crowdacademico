@@ -8,6 +8,11 @@
 -- ============================================================
 -- FUNÇÕES HELPER PARA RLS
 -- ============================================================
+-- ALTERADO: não usa mais auth.uid() (Supabase Auth). O NestJS, após
+-- validar o JWT próprio, executa `SET LOCAL app.id_usuario_atual = '<id>'`
+-- no início da transação, e esta função lê esse valor da sessão.
+-- `current_setting(..., true)` com o 2º argumento true não lança erro
+-- caso a variável não tenha sido definida (retorna NULL).
 CREATE OR REPLACE FUNCTION public.id_usuario_atual()
 RETURNS INT
 LANGUAGE sql
@@ -15,7 +20,7 @@ STABLE
 SECURITY DEFINER
 SET search_path = public
 AS $$
-    SELECT id_usuario FROM public.usuario WHERE id_supabase = auth.uid();
+    SELECT current_setting('app.id_usuario_atual', true)::INT;
 $$;
 
 CREATE OR REPLACE FUNCTION public.eh_admin()
