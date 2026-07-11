@@ -50,6 +50,21 @@ ALTER TABLE contribuicao_recompensa ENABLE ROW LEVEL SECURITY;
 ALTER TABLE link_atualizacao      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE link_recompensa       ENABLE ROW LEVEL SECURITY;
 
+-- ============================================================
+-- RLS destas três tabelas
+-- ============================================================
+-- Mesmo padrão já usado para "notificacao" em 04/05: quem grava e lê
+-- token_hash de verificação/recuperação e refresh tokens é só o
+-- backend (NestJS), nunca o usuário final diretamente. Por isso RLS
+-- fica habilitada e SEM NENHUMA policy — ninguém além do dono da
+-- tabela (ou de um role com BYPASSRLS) consegue acessar, o que é o
+-- comportamento desejado aqui. Não se cria GRANT para anon/authenticated
+-- nestas tabelas.
+ALTER TABLE verificacao_email ENABLE ROW LEVEL SECURITY;
+ALTER TABLE recuperacao_senha ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sessao            ENABLE ROW LEVEL SECURITY;
+
+
 
 -- Políticas existentes (mantidas)
 -- CORRIGIDO: usuário agora fica invisível quando marcado como deletado, salvo para admin.
