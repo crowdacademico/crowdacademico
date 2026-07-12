@@ -139,7 +139,7 @@ CREATE TABLE usuario (
     criado_em        TIMESTAMP    DEFAULT NOW(),
     deletado         BOOLEAN      DEFAULT FALSE,
 
-    -- NOVO: controle de verificação de e-mail (tokens em verificacao_email, ver 09_auth_propria.sql)
+    -- NOVO: controle de verificação de e-mail (tokens em verificacao_email, tabela definida mais abaixo)
     email_verificado         BOOLEAN   NOT NULL DEFAULT FALSE,
 
     -- NOVO: proteção contra brute-force de login
@@ -649,7 +649,9 @@ CREATE TABLE verificacao_email (
     token_hash     VARCHAR(255) NOT NULL,   -- nunca gravar o token em texto puro
     criado_em      TIMESTAMP NOT NULL DEFAULT NOW(),
     expira_em      TIMESTAMP NOT NULL,
-    confirmado_em  TIMESTAMP
+    confirmado_em  TIMESTAMP,
+    -- NOVO: garante que o token não nasça já expirado (erro de geração no backend)
+    CONSTRAINT chk_verificacao_email_expira CHECK (expira_em > criado_em)
 );
 
 
@@ -665,8 +667,18 @@ CREATE TABLE recuperacao_senha (
     token_hash     VARCHAR(255) NOT NULL,
     criado_em      TIMESTAMP NOT NULL DEFAULT NOW(),
     expira_em      TIMESTAMP NOT NULL,     -- recomendado: expiração curta, 15-30 min
-    usado_em       TIMESTAMP
+    usado_em       TIMESTAMP,
+    -- NOVO: garante que o token não nasça já expirado (erro de geração no backend)
+    CONSTRAINT chk_recuperacao_senha_expira CHECK (expira_em > criado_em)
 );
+
+-- NOVO: só pode existir 1 token de recuperação "ativo" (ainda não usado)
+-- por usuário ao mesmo tempo. Pedir "esqueci minha senha" de novo deve
+-- invalidar o anterior no app antes de inserir um novo, e este índice
+-- garante isso mesmo se o backend esquecer de invalidar.
+CREATE UNIQUE INDEX ux_recuperacao_senha_ativo_por_usuario
+    ON recuperacao_senha (id_usuario)
+    WHERE usado_em IS NULL;
 
 
 -- ============================================================
@@ -684,7 +696,7 @@ CREATE TABLE sessao (
     expira_em          TIMESTAMP NOT NULL,
     revogado_em        TIMESTAMP,
     ip                 VARCHAR(45),
-    user_agent         TEXT
+    user_agent         TEXT,
+    -- NOVO: garante que o refresh token não nasça já expirado
+    CONSTRAINT chk_sessao_expira CHECK (expira_em > criado_em)
 );
-
-

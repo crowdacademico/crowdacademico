@@ -18,7 +18,8 @@
 --       (nome, email, senha_hash);
 --    2) atribuir o papel padrão (função auxiliar abaixo);
 --    3) criar o registro em verificacao_email e disparar o e-mail
---       de confirmação (ver 09_auth_propria.sql).
+--       de confirmação (módulo de auth do NestJS — ver
+--       PLANO_AUTENTICACAO_PROPRIA.md para o desenho do fluxo).
 --
 --  A única parte deste arquivo original que ainda vale a pena manter
 --  como está — "atribuir o papel padrão 'usuario' a quem acabou de
@@ -45,3 +46,10 @@ BEGIN
     END IF;
 END;
 $$;
+
+-- CORRIGIDO: faltava GRANT EXECUTE. O NestJS chama esta função logo
+-- após o INSERT em usuario, no fluxo de signup — sem o GRANT, a
+-- chamada tomaria "permission denied" (erro 42501), o mesmo problema
+-- que as funções de score já tiveram e que motivou o GRANT EXECUTE
+-- explícito delas em 05_grants.sql.
+GRANT EXECUTE ON FUNCTION public.atribuir_papel_padrao(INT) TO app_nestjs;

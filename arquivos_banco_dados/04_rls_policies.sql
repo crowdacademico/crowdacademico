@@ -53,26 +53,41 @@ ALTER TABLE link_recompensa       ENABLE ROW LEVEL SECURITY;
 -- ============================================================
 -- RLS destas três tabelas
 -- ============================================================
--- Mesmo padrão já usado para "notificacao" em 04/05: quem grava e lê
--- token_hash de verificação/recuperação e refresh tokens é só o
--- backend (NestJS), nunca o usuário final diretamente. Por isso RLS
--- fica habilitada e SEM NENHUMA policy — ninguém além do dono da
--- tabela (ou de um role com BYPASSRLS) consegue acessar, o que é o
--- comportamento desejado aqui. Não se cria GRANT para anon/authenticated
--- nestas tabelas.
+-- CORRIGIDO: a versão anterior deixava RLS ligada e SEM NENHUMA
+-- policy, presumindo que só um role com BYPASSRLS (ex.: service_role
+-- do Supabase) acessaria estas tabelas. Esse role não existe mais
+-- no projeto — o NestJS conecta como "app_nestjs" (role normal, sem
+-- bypass), então RLS sem policy bloquearia 100% do acesso e quebraria
+-- verificação de e-mail, recuperação de senha e sessão inteiras.
+--
+-- Além disso, boa parte desses fluxos acontece ANTES do usuário estar
+-- autenticado (confirmar e-mail, "esqueci minha senha") — não dá pra
+-- restringir por id_usuario_atual(), porque ainda não existe sessão.
+-- Quem valida a posse do token (comparando o hash) é o próprio NestJS
+-- na aplicação; a policy aqui só garante que NENHUM outro role além
+-- de app_nestjs consegue tocar nessas tabelas.
 ALTER TABLE verificacao_email ENABLE ROW LEVEL SECURITY;
 ALTER TABLE recuperacao_senha ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sessao            ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY pol_verificacao_email_all ON verificacao_email
+    FOR ALL TO app_nestjs USING (true) WITH CHECK (true);
+
+CREATE POLICY pol_recuperacao_senha_all ON recuperacao_senha
+    FOR ALL TO app_nestjs USING (true) WITH CHECK (true);
+
+CREATE POLICY pol_sessao_all ON sessao
+    FOR ALL TO app_nestjs USING (true) WITH CHECK (true);
 
 
 
 -- Políticas existentes (mantidas)
 -- CORRIGIDO: usuário agora fica invisível quando marcado como deletado, salvo para admin.
-CREATE POLICY pol_usuario_select ON usuario FOR SELECT TO anon, authenticated USING (deletado = FALSE OR public.eh_admin());
-CREATE POLICY pol_usuario_update ON usuario FOR UPDATE TO authenticated USING (id_usuario = public.id_usuario_atual());
+CREATE POLICY pol_usuario_select ON usuario FOR SELECT TO app_nestjs USING (deletado = FALSE OR public.eh_admin());
+CREATE POLICY pol_usuario_update ON usuario FOR UPDATE TO app_nestjs USING (id_usuario = public.id_usuario_atual());
 
 CREATE POLICY pol_perfil_select ON perfil_pesquisador FOR SELECT USING (TRUE);
-CREATE POLICY pol_perfil_update ON perfil_pesquisador FOR UPDATE TO authenticated USING (id_usuario = public.id_usuario_atual());
+CREATE POLICY pol_perfil_update ON perfil_pesquisador FOR UPDATE TO app_nestjs USING (id_usuario = public.id_usuario_atual());
 
 -- CORRIGIDO: campanhas públicas agora expõem apenas os status permitidos, preservando as demais para dono/admin.
 CREATE POLICY pol_campanha_select ON campanha FOR SELECT USING (
@@ -80,20 +95,20 @@ CREATE POLICY pol_campanha_select ON campanha FOR SELECT USING (
     OR id_usuario = public.id_usuario_atual()
     OR public.eh_admin()
 );
-CREATE POLICY pol_campanha_insert ON campanha FOR INSERT TO authenticated WITH CHECK (id_usuario = public.id_usuario_atual());
-CREATE POLICY pol_campanha_update ON campanha FOR UPDATE TO authenticated USING (id_usuario = public.id_usuario_atual() OR public.eh_admin());
+CREATE POLICY pol_campanha_insert ON campanha FOR INSERT TO app_nestjs WITH CHECK (id_usuario = public.id_usuario_atual());
+CREATE POLICY pol_campanha_update ON campanha FOR UPDATE TO app_nestjs USING (id_usuario = public.id_usuario_atual() OR public.eh_admin());
 
 -- CORRIGIDO: anon passou a exigir token_sessao; leitura de
 -- contribuicao por usuário autenticado continua igual.
 DROP POLICY IF EXISTS pol_contribuicao_select ON contribuicao;
-CREATE POLICY pol_contribuicao_select ON contribuicao FOR SELECT TO authenticated USING (
+CREATE POLICY pol_contribuicao_select ON contribuicao FOR SELECT TO app_nestjs USING (
     id_usuario = public.id_usuario_atual() OR public.eh_admin()
 );
-CREATE POLICY pol_contribuicao_anon_select ON contribuicao FOR SELECT TO anon USING (
+CREATE POLICY pol_contribuicao_anon_select ON contribuicao FOR SELECT TO app_nestjs USING (
     id_usuario IS NULL
     AND token_sessao::text = current_setting('request.headers', true)::json->>'x-session-token'
 );
-CREATE POLICY pol_contribuicao_insert ON contribuicao FOR INSERT TO anon, authenticated WITH CHECK (
+CREATE POLICY pol_contribuicao_insert ON contribuicao FOR INSERT TO app_nestjs WITH CHECK (
     id_usuario IS NULL OR id_usuario = public.id_usuario_atual()
 );
 
@@ -109,36 +124,36 @@ CREATE POLICY pol_comentario_select ON comentario FOR SELECT USING (
           AND (id_usuario = public.id_usuario_atual() OR public.eh_admin())
     )
 );
-CREATE POLICY pol_comentario_insert ON comentario FOR INSERT TO authenticated WITH CHECK (
+CREATE POLICY pol_comentario_insert ON comentario FOR INSERT TO app_nestjs WITH CHECK (
     id_pesquisador = public.id_usuario_atual()
     AND EXISTS (SELECT 1 FROM perfil_pesquisador WHERE id_usuario = public.id_usuario_atual() AND status_pesquisador = 'ativo')
 );
 
-CREATE POLICY pol_denuncia_select ON denuncia FOR SELECT TO authenticated USING (id_usuario = public.id_usuario_atual() OR public.eh_admin());
-CREATE POLICY pol_denuncia_insert ON denuncia FOR INSERT TO authenticated WITH CHECK (id_usuario = public.id_usuario_atual());
-CREATE POLICY pol_denuncia_update ON denuncia FOR UPDATE TO authenticated USING (public.eh_admin());
+CREATE POLICY pol_denuncia_select ON denuncia FOR SELECT TO app_nestjs USING (id_usuario = public.id_usuario_atual() OR public.eh_admin());
+CREATE POLICY pol_denuncia_insert ON denuncia FOR INSERT TO app_nestjs WITH CHECK (id_usuario = public.id_usuario_atual());
+CREATE POLICY pol_denuncia_update ON denuncia FOR UPDATE TO app_nestjs USING (public.eh_admin());
 
-CREATE POLICY pol_seg_campanha_select ON seguir_campanha FOR SELECT TO authenticated USING (id_usuario = public.id_usuario_atual());
-CREATE POLICY pol_seg_campanha_insert ON seguir_campanha FOR INSERT TO authenticated WITH CHECK (id_usuario = public.id_usuario_atual());
+CREATE POLICY pol_seg_campanha_select ON seguir_campanha FOR SELECT TO app_nestjs USING (id_usuario = public.id_usuario_atual());
+CREATE POLICY pol_seg_campanha_insert ON seguir_campanha FOR INSERT TO app_nestjs WITH CHECK (id_usuario = public.id_usuario_atual());
 
-CREATE POLICY pol_seg_pesq_select ON seguir_pesquisador FOR SELECT TO authenticated USING (id_usuario = public.id_usuario_atual());
-CREATE POLICY pol_seg_pesq_insert ON seguir_pesquisador FOR INSERT TO authenticated WITH CHECK (id_usuario = public.id_usuario_atual());
-CREATE POLICY pol_seg_pesq_delete ON seguir_pesquisador FOR DELETE TO authenticated USING (id_usuario = public.id_usuario_atual());
+CREATE POLICY pol_seg_pesq_select ON seguir_pesquisador FOR SELECT TO app_nestjs USING (id_usuario = public.id_usuario_atual());
+CREATE POLICY pol_seg_pesq_insert ON seguir_pesquisador FOR INSERT TO app_nestjs WITH CHECK (id_usuario = public.id_usuario_atual());
+CREATE POLICY pol_seg_pesq_delete ON seguir_pesquisador FOR DELETE TO app_nestjs USING (id_usuario = public.id_usuario_atual());
 
 CREATE POLICY pol_link_select ON link_academico FOR SELECT USING (TRUE);
-CREATE POLICY pol_link_insert ON link_academico FOR INSERT TO authenticated WITH CHECK (id_usuario = public.id_usuario_atual());
+CREATE POLICY pol_link_insert ON link_academico FOR INSERT TO app_nestjs WITH CHECK (id_usuario = public.id_usuario_atual());
 
 CREATE POLICY pol_arquivo_select ON arquivo FOR SELECT USING (TRUE);
 
 CREATE POLICY pol_score_select ON score_pesquisador FOR SELECT USING (TRUE);
 
-CREATE POLICY pol_config_select ON configuracoes FOR SELECT TO anon, authenticated USING (id_usuario IS NULL OR id_usuario = public.id_usuario_atual());
+CREATE POLICY pol_config_select ON configuracoes FOR SELECT TO app_nestjs USING (id_usuario IS NULL OR id_usuario = public.id_usuario_atual());
 
-CREATE POLICY "pol_score_config_select" ON public.score_config FOR SELECT TO anon, authenticated USING (true);
-CREATE POLICY pol_score_config_update ON public.score_config FOR UPDATE TO authenticated USING (public.eh_admin());
+CREATE POLICY "pol_score_config_select" ON public.score_config FOR SELECT TO app_nestjs USING (true);
+CREATE POLICY pol_score_config_update ON public.score_config FOR UPDATE TO app_nestjs USING (public.eh_admin());
 
-CREATE POLICY "pol_score_rotulo_select" ON public.score_rotulo FOR SELECT TO anon, authenticated USING (true);
-CREATE POLICY pol_score_rotulo_update ON public.score_rotulo FOR UPDATE TO authenticated USING (public.eh_admin());
+CREATE POLICY "pol_score_rotulo_select" ON public.score_rotulo FOR SELECT TO app_nestjs USING (true);
+CREATE POLICY pol_score_rotulo_update ON public.score_rotulo FOR UPDATE TO app_nestjs USING (public.eh_admin());
 
 
 -- =============================================
@@ -154,15 +169,15 @@ CREATE POLICY pol_permissao_select ON permissao FOR SELECT USING (true);
 CREATE POLICY pol_papelperm_select ON papel_permissao FOR SELECT USING (true);
 
 -- usuario_papel
-CREATE POLICY pol_usuariopapel_select ON usuario_papel FOR SELECT TO authenticated USING (id_usuario = public.id_usuario_atual() OR public.eh_admin());
-CREATE POLICY pol_usuariopapel_insert ON usuario_papel FOR INSERT TO authenticated WITH CHECK (public.eh_admin());
+CREATE POLICY pol_usuariopapel_select ON usuario_papel FOR SELECT TO app_nestjs USING (id_usuario = public.id_usuario_atual() OR public.eh_admin());
+CREATE POLICY pol_usuariopapel_insert ON usuario_papel FOR INSERT TO app_nestjs WITH CHECK (public.eh_admin());
 
 -- atualizacao_campanha
 CREATE POLICY pol_atualizacao_select ON atualizacao_campanha FOR SELECT USING (TRUE);
-CREATE POLICY pol_atualizacao_insert ON atualizacao_campanha FOR INSERT TO authenticated WITH CHECK (
+CREATE POLICY pol_atualizacao_insert ON atualizacao_campanha FOR INSERT TO app_nestjs WITH CHECK (
     EXISTS (SELECT 1 FROM campanha WHERE id_campanha = atualizacao_campanha.id_campanha AND id_usuario = public.id_usuario_atual())
 );
-CREATE POLICY pol_atualizacao_update ON atualizacao_campanha FOR UPDATE TO authenticated USING (
+CREATE POLICY pol_atualizacao_update ON atualizacao_campanha FOR UPDATE TO app_nestjs USING (
     EXISTS (SELECT 1 FROM campanha WHERE id_campanha = atualizacao_campanha.id_campanha AND (id_usuario = public.id_usuario_atual() OR public.eh_admin()))
 );
 
@@ -170,7 +185,7 @@ CREATE POLICY pol_atualizacao_update ON atualizacao_campanha FOR UPDATE TO authe
 CREATE POLICY pol_arqatu_select ON arquivo_atualizacao FOR SELECT USING (TRUE);
 
 -- auditoria_financeira
-CREATE POLICY pol_auditoria_select ON auditoria_financeira FOR SELECT TO authenticated USING (
+CREATE POLICY pol_auditoria_select ON auditoria_financeira FOR SELECT TO app_nestjs USING (
     public.eh_admin() OR EXISTS (
         SELECT 1 FROM contribuicao c 
         WHERE c.id_contribuicao = auditoria_financeira.id_contribuicao 
@@ -179,25 +194,25 @@ CREATE POLICY pol_auditoria_select ON auditoria_financeira FOR SELECT TO authent
 );
 
 -- historico_rejeicao
-CREATE POLICY pol_historicorej_select ON historico_rejeicao FOR SELECT TO authenticated USING (public.eh_admin());
+CREATE POLICY pol_historicorej_select ON historico_rejeicao FOR SELECT TO app_nestjs USING (public.eh_admin());
 
 -- repasse
-CREATE POLICY pol_repasse_select ON repasse FOR SELECT TO authenticated USING (
+CREATE POLICY pol_repasse_select ON repasse FOR SELECT TO app_nestjs USING (
     public.eh_admin() OR EXISTS (
         SELECT 1 FROM campanha WHERE id_campanha = repasse.id_campanha AND id_usuario = public.id_usuario_atual()
     )
 );
 
 -- solicitacao_encerramento
-CREATE POLICY pol_solicitacao_select ON solicitacao_encerramento FOR SELECT TO authenticated USING (
+CREATE POLICY pol_solicitacao_select ON solicitacao_encerramento FOR SELECT TO app_nestjs USING (
     public.eh_admin() OR EXISTS (
         SELECT 1 FROM campanha WHERE id_campanha = solicitacao_encerramento.id_campanha AND id_usuario = public.id_usuario_atual()
     )
 );
-CREATE POLICY pol_solicitacao_insert ON solicitacao_encerramento FOR INSERT TO authenticated WITH CHECK (
+CREATE POLICY pol_solicitacao_insert ON solicitacao_encerramento FOR INSERT TO app_nestjs WITH CHECK (
     EXISTS (SELECT 1 FROM campanha WHERE id_campanha = solicitacao_encerramento.id_campanha AND id_usuario = public.id_usuario_atual())
 );
-CREATE POLICY pol_solicitacao_update ON solicitacao_encerramento FOR UPDATE TO authenticated USING (public.eh_admin());
+CREATE POLICY pol_solicitacao_update ON solicitacao_encerramento FOR UPDATE TO app_nestjs USING (public.eh_admin());
 
 
 -- =============================================
@@ -206,25 +221,25 @@ CREATE POLICY pol_solicitacao_update ON solicitacao_encerramento FOR UPDATE TO a
 
 -- termos_de_uso: leitura pública (precisa ser lido até por quem ainda
 -- não tem conta, na tela de cadastro); só admin cria/edita uma versão.
-CREATE POLICY pol_termos_select ON termos_de_uso FOR SELECT TO anon, authenticated USING (true);
-CREATE POLICY pol_termos_insert ON termos_de_uso FOR INSERT TO authenticated WITH CHECK (public.eh_admin());
-CREATE POLICY pol_termos_update ON termos_de_uso FOR UPDATE TO authenticated USING (public.eh_admin());
+CREATE POLICY pol_termos_select ON termos_de_uso FOR SELECT TO app_nestjs USING (true);
+CREATE POLICY pol_termos_insert ON termos_de_uso FOR INSERT TO app_nestjs WITH CHECK (public.eh_admin());
+CREATE POLICY pol_termos_update ON termos_de_uso FOR UPDATE TO app_nestjs USING (public.eh_admin());
 
 -- usuario_termo: cada usuário só vê e registra o próprio aceite.
 -- Sem política de UPDATE/DELETE: aceite é um registro de auditoria,
 -- não deve ser alterável por ninguém (nem pelo próprio usuário).
-CREATE POLICY pol_usuario_termo_select ON usuario_termo FOR SELECT TO authenticated USING (id_usuario = public.id_usuario_atual() OR public.eh_admin());
-CREATE POLICY pol_usuario_termo_insert ON usuario_termo FOR INSERT TO authenticated WITH CHECK (id_usuario = public.id_usuario_atual());
+CREATE POLICY pol_usuario_termo_select ON usuario_termo FOR SELECT TO app_nestjs USING (id_usuario = public.id_usuario_atual() OR public.eh_admin());
+CREATE POLICY pol_usuario_termo_insert ON usuario_termo FOR INSERT TO app_nestjs WITH CHECK (id_usuario = public.id_usuario_atual());
 
 -- CORRIGIDO: aceite de termos por contribuição agora tem política de leitura e escrita compatível com doação anônima.
-CREATE POLICY pol_aceite_termo_contribuicao_select ON aceite_termo_contribuicao FOR SELECT TO authenticated USING (
+CREATE POLICY pol_aceite_termo_contribuicao_select ON aceite_termo_contribuicao FOR SELECT TO app_nestjs USING (
     public.eh_admin() OR EXISTS (
         SELECT 1 FROM contribuicao c
         WHERE c.id_contribuicao = aceite_termo_contribuicao.id_contribuicao
           AND c.id_usuario = public.id_usuario_atual()
     )
 );
-CREATE POLICY pol_aceite_termo_contribuicao_insert ON aceite_termo_contribuicao FOR INSERT TO anon, authenticated WITH CHECK (
+CREATE POLICY pol_aceite_termo_contribuicao_insert ON aceite_termo_contribuicao FOR INSERT TO app_nestjs WITH CHECK (
     EXISTS (
         SELECT 1 FROM contribuicao c
         WHERE c.id_contribuicao = aceite_termo_contribuicao.id_contribuicao
@@ -236,22 +251,22 @@ CREATE POLICY pol_aceite_termo_contribuicao_insert ON aceite_termo_contribuicao 
 -- INSERT/UPDATE para authenticated de propósito — quem cria e atualiza
 -- notificação é o backend (via service_role, que ignora RLS), nunca o
 -- cliente direto; senão qualquer usuário poderia forjar notificações.
-CREATE POLICY pol_notificacao_select ON notificacao FOR SELECT TO authenticated USING (id_usuario = public.id_usuario_atual() OR public.eh_admin());
+CREATE POLICY pol_notificacao_select ON notificacao FOR SELECT TO app_nestjs USING (id_usuario = public.id_usuario_atual() OR public.eh_admin());
 
 -- recompensa: leitura pública (aparece na página da campanha); só o
 -- dono da campanha (ou admin) pode criar/editar as recompensas dela.
 CREATE POLICY pol_recompensa_select ON recompensa FOR SELECT USING (TRUE);
-CREATE POLICY pol_recompensa_insert ON recompensa FOR INSERT TO authenticated WITH CHECK (
+CREATE POLICY pol_recompensa_insert ON recompensa FOR INSERT TO app_nestjs WITH CHECK (
     EXISTS (SELECT 1 FROM campanha WHERE id_campanha = recompensa.id_campanha AND id_usuario = public.id_usuario_atual())
 );
-CREATE POLICY pol_recompensa_update ON recompensa FOR UPDATE TO authenticated USING (
+CREATE POLICY pol_recompensa_update ON recompensa FOR UPDATE TO app_nestjs USING (
     EXISTS (SELECT 1 FROM campanha WHERE id_campanha = recompensa.id_campanha AND (id_usuario = public.id_usuario_atual() OR public.eh_admin()))
 );
 
 -- arquivo_recompensa: leitura pública; escrita só por quem é dono da
 -- campanha dona da recompensa (ou admin) — mesmo padrão de arquivo_atualizacao.
 -- CORRIGIDO: arquivos de recompensa agora ficam acessíveis apenas ao dono da campanha, admin ou comprador da recompensa.
-CREATE POLICY pol_arqrecompensa_select ON arquivo_recompensa FOR SELECT TO authenticated USING (
+CREATE POLICY pol_arqrecompensa_select ON arquivo_recompensa FOR SELECT TO app_nestjs USING (
     EXISTS (
         SELECT 1 FROM recompensa r JOIN campanha c ON c.id_campanha = r.id_campanha
         WHERE r.id_recompensa = arquivo_recompensa.id_recompensa
@@ -263,7 +278,7 @@ CREATE POLICY pol_arqrecompensa_select ON arquivo_recompensa FOR SELECT TO authe
           AND co.id_usuario = public.id_usuario_atual()
     )
 );
-CREATE POLICY pol_arqrecompensa_insert ON arquivo_recompensa FOR INSERT TO authenticated WITH CHECK (
+CREATE POLICY pol_arqrecompensa_insert ON arquivo_recompensa FOR INSERT TO app_nestjs WITH CHECK (
     EXISTS (
         SELECT 1 FROM recompensa r JOIN campanha c ON c.id_campanha = r.id_campanha
         WHERE r.id_recompensa = arquivo_recompensa.id_recompensa
@@ -275,7 +290,7 @@ CREATE POLICY pol_arqrecompensa_insert ON arquivo_recompensa FOR INSERT TO authe
 -- aquisições; o dono da campanha (ou admin) também pode ver, pra
 -- organizar o envio/entrega das recompensas. Sem UPDATE/DELETE:
 -- uma vez adquirida, é um registro de compra, não deve ser editável.
-CREATE POLICY pol_contrib_recompensa_select ON contribuicao_recompensa FOR SELECT TO authenticated USING (
+CREATE POLICY pol_contrib_recompensa_select ON contribuicao_recompensa FOR SELECT TO app_nestjs USING (
     EXISTS (SELECT 1 FROM contribuicao WHERE id_contribuicao = contribuicao_recompensa.id_contribuicao AND id_usuario = public.id_usuario_atual())
     OR EXISTS (
         SELECT 1 FROM recompensa r JOIN campanha c ON c.id_campanha = r.id_campanha
@@ -283,14 +298,14 @@ CREATE POLICY pol_contrib_recompensa_select ON contribuicao_recompensa FOR SELEC
     )
     OR public.eh_admin()
 );
-CREATE POLICY pol_contrib_recompensa_insert ON contribuicao_recompensa FOR INSERT TO authenticated WITH CHECK (
+CREATE POLICY pol_contrib_recompensa_insert ON contribuicao_recompensa FOR INSERT TO app_nestjs WITH CHECK (
     EXISTS (SELECT 1 FROM contribuicao WHERE id_contribuicao = contribuicao_recompensa.id_contribuicao AND id_usuario = public.id_usuario_atual())
 );
 
 -- link_atualizacao: leitura pública (a atualização em si já é pública);
 -- só o dono da campanha (ou admin) adiciona links.
 CREATE POLICY pol_link_atualizacao_select ON link_atualizacao FOR SELECT USING (TRUE);
-CREATE POLICY pol_link_atualizacao_insert ON link_atualizacao FOR INSERT TO authenticated WITH CHECK (
+CREATE POLICY pol_link_atualizacao_insert ON link_atualizacao FOR INSERT TO app_nestjs WITH CHECK (
     EXISTS (
         SELECT 1 FROM atualizacao_campanha a JOIN campanha c ON c.id_campanha = a.id_campanha
         WHERE a.id_atualizacao = link_atualizacao.id_atualizacao
@@ -301,7 +316,7 @@ CREATE POLICY pol_link_atualizacao_insert ON link_atualizacao FOR INSERT TO auth
 -- link_recompensa: leitura pública; só o dono da campanha (ou admin)
 -- adiciona links de resgate/download da recompensa.
 -- CORRIGIDO: links de recompensa agora ficam acessíveis apenas ao dono da campanha, admin ou comprador da recompensa.
-CREATE POLICY pol_link_recompensa_select ON link_recompensa FOR SELECT TO authenticated USING (
+CREATE POLICY pol_link_recompensa_select ON link_recompensa FOR SELECT TO app_nestjs USING (
     EXISTS (
         SELECT 1 FROM recompensa r JOIN campanha c ON c.id_campanha = r.id_campanha
         WHERE r.id_recompensa = link_recompensa.id_recompensa
@@ -313,7 +328,7 @@ CREATE POLICY pol_link_recompensa_select ON link_recompensa FOR SELECT TO authen
           AND co.id_usuario = public.id_usuario_atual()
     )
 );
-CREATE POLICY pol_link_recompensa_insert ON link_recompensa FOR INSERT TO authenticated WITH CHECK (
+CREATE POLICY pol_link_recompensa_insert ON link_recompensa FOR INSERT TO app_nestjs WITH CHECK (
     EXISTS (
         SELECT 1 FROM recompensa r JOIN campanha c ON c.id_campanha = r.id_campanha
         WHERE r.id_recompensa = link_recompensa.id_recompensa

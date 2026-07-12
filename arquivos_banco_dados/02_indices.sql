@@ -48,3 +48,17 @@ CREATE INDEX idx_link_recompensa_tipolink      ON link_recompensa(id_tipolink);
 CREATE UNIQUE INDEX uq_termos_uso_ativo ON termos_de_uso (ativo) WHERE ativo = TRUE;
 -- [melhoria] só pode existir 1 imagem "principal" por recompensa
 CREATE UNIQUE INDEX uq_arquivo_recompensa_principal ON arquivo_recompensa (id_recompensa) WHERE principal = TRUE;
+
+-- ============================================================
+-- Índices das tabelas de autenticação própria (verificação de
+-- e-mail, recuperação de senha, sessão/refresh token). Sem eles,
+-- toda validação de token — que é o caminho mais quente desses
+-- fluxos, disparado a cada clique em link de e-mail e a cada
+-- refresh de sessão — faz sequential scan na tabela inteira.
+-- ============================================================
+CREATE INDEX idx_verificacao_email_token   ON verificacao_email(token_hash);
+CREATE INDEX idx_verificacao_email_usuario ON verificacao_email(id_usuario);
+CREATE INDEX idx_recuperacao_senha_token   ON recuperacao_senha(token_hash);
+CREATE INDEX idx_recuperacao_senha_usuario ON recuperacao_senha(id_usuario);
+CREATE INDEX idx_sessao_refresh_token      ON sessao(refresh_token_hash);
+CREATE INDEX idx_sessao_usuario            ON sessao(id_usuario);

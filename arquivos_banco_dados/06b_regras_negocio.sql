@@ -793,7 +793,18 @@ BEGIN
         v_id_campanha := NEW.id_campanha;
     END IF;
 
-    -- CORRIGIDO: só entram na soma contribuições efetivamente
+    -- CORRIGIDO: trava a linha da campanha ANTES de recalcular o SUM.
+    -- Sem isso, duas contribuições confirmadas ao mesmo tempo (dois
+    -- triggers concorrentes) podem cada uma fazer o SELECT SUM sem
+    -- enxergar a linha commitada pela outra ainda, e o UPDATE que
+    -- "vence a corrida" por último sobrescreve o total — uma
+    -- contribuição confirmada some do valor arrecadado (lost update).
+    -- O FOR UPDATE serializa: a segunda transação espera a primeira
+    -- commitar antes de fazer o próprio SELECT SUM, então já enxerga
+    -- a contribuição da primeira somada.
+    PERFORM 1 FROM campanha WHERE id_campanha = v_id_campanha FOR UPDATE;
+
+    -- só entram na soma contribuições efetivamente
     -- confirmadas ou já repassadas ao projeto.
     SELECT COALESCE(SUM(valor), 0)
     INTO v_total
