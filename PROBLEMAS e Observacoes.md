@@ -3,6 +3,8 @@
 
 # Lista completa e atual (nada mudou, nada foi corrigido ainda)
 
+# CORRIGIDOS na branch AUTH:
+
 🔴 1. Condição de corrida em fn_sincroniza_arrecadado_campanha (novo, achado do Gemini nesta última rodada)
 
 Precisa de SELECT ... FOR UPDATE na linha da campanha antes de recalcular o SUM, senão duas contribuições confirmadas ao mesmo tempo podem "sumir" uma com a outra no total.
@@ -13,6 +15,8 @@ Precisa de SELECT ... FOR UPDATE na linha da campanha antes de recalcular o SUM,
 🔴 4. atribuir_papel_padrao(INT) sem GRANT EXECUTE (pendência antiga, continua aberta)
 
 🟡 5. Faltam índices em token_hash/refresh_token_hash (pendência antiga, continua aberta)
+
+# PENDENTES
 
 🟡 6. Comentários fantasmas, como o referenciando 09_auth_propria.sql, arquivo que não existe (pendência antiga, continua aberta)
 
