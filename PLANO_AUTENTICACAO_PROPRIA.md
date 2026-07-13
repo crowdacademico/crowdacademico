@@ -207,4 +207,4 @@ O detalhe fino de "quem pode ver o quê" deixa de ser resolvido por dois roles d
 
 ---
 
-*Documento gerado para discussão técnica — próximo passo, se aprovado, é a implementação dos scripts SQL (`09_auth_propria.sql`) e do módulo de auth no NestJS.*
+*Documento gerado para discussão técnica — próximo passo, se aprovado, é a implementação dos scripts SQL do fluxo de autenticação próprio e do módulo de auth no NestJS.*

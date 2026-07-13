@@ -18,7 +18,7 @@ Precisa de SELECT ... FOR UPDATE na linha da campanha antes de recalcular o SUM,
 
 # PENDENTES
 
-🟡 6. Comentários fantasmas, como o referenciando 09_auth_propria.sql, arquivo que não existe (pendência antiga, continua aberta)
+🟡 6. Comentários que ainda precisam de alinhamento com a documentação atual do fluxo de auth, sem apontar para arquivos que não existem (pendência antiga, continua aberta)
 
 💡 7. Melhorias opcionais, não bloqueiam nada:
 
