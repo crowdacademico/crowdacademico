@@ -20,9 +20,10 @@ Usa current_setting('request.headers', true)::json->>'x-session-token', que só 
 Depois da migração pra auth própria (padrão SET LOCAL app.id_usuario_atual documentado no PLANO_AUTENTICACAO_PROPRIA.md), essa policy específica ficou para trás e não foi adaptada ao novo padrão.
 Impacto: contribuição anônima (RU-03/RU-04, um dos pilares do projeto) pode não conseguir ser consultada pelo próprio contribuinte anônimo depois.
 
+
+
+
 Ponto real, mas só documentação (baixa prioridade)
-
-
 
 4. Comentários de cabeçalho "Próximo arquivo" desatualizados
 
