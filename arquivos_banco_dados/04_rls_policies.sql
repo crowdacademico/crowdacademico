@@ -104,12 +104,17 @@ DROP POLICY IF EXISTS pol_contribuicao_select ON contribuicao;
 CREATE POLICY pol_contribuicao_select ON contribuicao FOR SELECT TO app_nestjs USING (
     id_usuario = public.id_usuario_atual() OR public.eh_admin()
 );
+-- CORRIGIDO: a policy anônima passou a usar a variável de sessão do NestJS.
 CREATE POLICY pol_contribuicao_anon_select ON contribuicao FOR SELECT TO app_nestjs USING (
     id_usuario IS NULL
-    AND token_sessao::text = current_setting('request.headers', true)::json->>'x-session-token'
+    AND token_sessao::text = current_setting('app.token_sessao_atual', true)
 );
 CREATE POLICY pol_contribuicao_insert ON contribuicao FOR INSERT TO app_nestjs WITH CHECK (
     id_usuario IS NULL OR id_usuario = public.id_usuario_atual()
+);
+-- CORRIGIDO: o webhook de pagamento precisa atualizar o status da contribuição sem depender do dono da contribuição.
+CREATE POLICY pol_contribuicao_update ON contribuicao FOR UPDATE TO app_nestjs USING (
+    true
 );
 
 -- CORRIGIDO: comentários não endossados deixam de ser públicos;
@@ -144,6 +149,13 @@ CREATE POLICY pol_link_select ON link_academico FOR SELECT USING (TRUE);
 CREATE POLICY pol_link_insert ON link_academico FOR INSERT TO app_nestjs WITH CHECK (id_usuario = public.id_usuario_atual());
 
 CREATE POLICY pol_arquivo_select ON arquivo FOR SELECT USING (TRUE);
+-- CORRIGIDO: o fluxo de upload precisa permitir criar e substituir arquivos usados por perfil, atualização e recompensa.
+CREATE POLICY pol_arquivo_insert ON arquivo FOR INSERT TO app_nestjs WITH CHECK (
+    TRUE
+);
+CREATE POLICY pol_arquivo_update ON arquivo FOR UPDATE TO app_nestjs USING (
+    TRUE
+);
 
 CREATE POLICY pol_score_select ON score_pesquisador FOR SELECT USING (TRUE);
 
@@ -183,6 +195,12 @@ CREATE POLICY pol_atualizacao_update ON atualizacao_campanha FOR UPDATE TO app_n
 
 -- arquivo_atualizacao
 CREATE POLICY pol_arqatu_select ON arquivo_atualizacao FOR SELECT USING (TRUE);
+CREATE POLICY pol_arqatu_insert ON arquivo_atualizacao FOR INSERT TO app_nestjs WITH CHECK (
+    TRUE
+);
+CREATE POLICY pol_arqatu_update ON arquivo_atualizacao FOR UPDATE TO app_nestjs USING (
+    TRUE
+);
 
 -- auditoria_financeira
 CREATE POLICY pol_auditoria_select ON auditoria_financeira FOR SELECT TO app_nestjs USING (
