@@ -149,12 +149,31 @@ CREATE POLICY pol_link_select ON link_academico FOR SELECT USING (TRUE);
 CREATE POLICY pol_link_insert ON link_academico FOR INSERT TO app_nestjs WITH CHECK (id_usuario = public.id_usuario_atual());
 
 CREATE POLICY pol_arquivo_select ON arquivo FOR SELECT USING (TRUE);
--- CORRIGIDO: o fluxo de upload precisa permitir criar e substituir arquivos usados por perfil, atualização e recompensa.
-CREATE POLICY pol_arquivo_insert ON arquivo FOR INSERT TO app_nestjs WITH CHECK (
-    TRUE
-);
+-- CORRIGIDO: o primeiro passo do upload de arquivo fica liberado; a posse real é garantida ao vincular em arquivo_atualizacao/arquivo_recompensa.
+DROP POLICY IF EXISTS pol_arquivo_insert ON arquivo;
+CREATE POLICY pol_arquivo_insert ON arquivo FOR INSERT TO app_nestjs WITH CHECK (TRUE);
+DROP POLICY IF EXISTS pol_arquivo_update ON arquivo;
 CREATE POLICY pol_arquivo_update ON arquivo FOR UPDATE TO app_nestjs USING (
-    TRUE
+    public.eh_admin()
+    OR EXISTS (
+        SELECT 1 FROM usuario u
+        WHERE u.id_usuario = public.id_usuario_atual()
+          AND u.id_imagem_perfil = arquivo.id_arquivo
+    )
+    OR EXISTS (
+        SELECT 1 FROM arquivo_atualizacao aa
+        JOIN atualizacao_campanha ac ON ac.id_atualizacao = aa.id_atualizacao
+        JOIN campanha c ON c.id_campanha = ac.id_campanha
+        WHERE aa.id_arquivo = arquivo.id_arquivo
+          AND (c.id_usuario = public.id_usuario_atual() OR public.eh_admin())
+    )
+    OR EXISTS (
+        SELECT 1 FROM arquivo_recompensa ar
+        JOIN recompensa r ON r.id_recompensa = ar.id_recompensa
+        JOIN campanha c ON c.id_campanha = r.id_campanha
+        WHERE ar.id_arquivo = arquivo.id_arquivo
+          AND (c.id_usuario = public.id_usuario_atual() OR public.eh_admin())
+    )
 );
 
 CREATE POLICY pol_score_select ON score_pesquisador FOR SELECT USING (TRUE);
@@ -195,11 +214,24 @@ CREATE POLICY pol_atualizacao_update ON atualizacao_campanha FOR UPDATE TO app_n
 
 -- arquivo_atualizacao
 CREATE POLICY pol_arqatu_select ON arquivo_atualizacao FOR SELECT USING (TRUE);
+-- CORRIGIDO: a ligação de arquivos a atualizações agora exige dono da campanha ou admin.
+DROP POLICY IF EXISTS pol_arqatu_insert ON arquivo_atualizacao;
 CREATE POLICY pol_arqatu_insert ON arquivo_atualizacao FOR INSERT TO app_nestjs WITH CHECK (
-    TRUE
+    EXISTS (
+        SELECT 1 FROM atualizacao_campanha ac
+        JOIN campanha c ON c.id_campanha = ac.id_campanha
+        WHERE ac.id_atualizacao = arquivo_atualizacao.id_atualizacao
+          AND (c.id_usuario = public.id_usuario_atual() OR public.eh_admin())
+    )
 );
+DROP POLICY IF EXISTS pol_arqatu_update ON arquivo_atualizacao;
 CREATE POLICY pol_arqatu_update ON arquivo_atualizacao FOR UPDATE TO app_nestjs USING (
-    TRUE
+    EXISTS (
+        SELECT 1 FROM atualizacao_campanha ac
+        JOIN campanha c ON c.id_campanha = ac.id_campanha
+        WHERE ac.id_atualizacao = arquivo_atualizacao.id_atualizacao
+          AND (c.id_usuario = public.id_usuario_atual() OR public.eh_admin())
+    )
 );
 
 -- auditoria_financeira
@@ -318,6 +350,20 @@ CREATE POLICY pol_contrib_recompensa_select ON contribuicao_recompensa FOR SELEC
 );
 CREATE POLICY pol_contrib_recompensa_insert ON contribuicao_recompensa FOR INSERT TO app_nestjs WITH CHECK (
     EXISTS (SELECT 1 FROM contribuicao WHERE id_contribuicao = contribuicao_recompensa.id_contribuicao AND id_usuario = public.id_usuario_atual())
+);
+-- CORRIGIDO: a atualização de aquisição de recompensa agora respeita o dono da contribuição ou o admin.
+CREATE POLICY pol_contrib_recompensa_update ON contribuicao_recompensa FOR UPDATE TO app_nestjs USING (
+    EXISTS (
+        SELECT 1 FROM contribuicao c
+        WHERE c.id_contribuicao = contribuicao_recompensa.id_contribuicao
+          AND (c.id_usuario = public.id_usuario_atual() OR public.eh_admin())
+    )
+) WITH CHECK (
+    EXISTS (
+        SELECT 1 FROM contribuicao c
+        WHERE c.id_contribuicao = contribuicao_recompensa.id_contribuicao
+          AND (c.id_usuario = public.id_usuario_atual() OR public.eh_admin())
+    )
 );
 
 -- link_atualizacao: leitura pública (a atualização em si já é pública);
