@@ -351,7 +351,9 @@ CREATE POLICY pol_arqrecompensa_insert ON arquivo_recompensa FOR INSERT TO app_n
         WHERE r.id_recompensa = arquivo_recompensa.id_recompensa
           AND (c.id_usuario = public.id_usuario_atual() OR public.eh_admin())
     )
-);DROP POLICY IF EXISTS pol_link_recompensa_update ON link_recompensa;
+);
+
+DROP POLICY IF EXISTS pol_link_recompensa_update ON link_recompensa;
 CREATE POLICY pol_link_recompensa_update ON link_recompensa FOR UPDATE TO app_nestjs USING (
     EXISTS (
         SELECT 1 FROM recompensa r JOIN campanha c ON c.id_campanha = r.id_campanha
