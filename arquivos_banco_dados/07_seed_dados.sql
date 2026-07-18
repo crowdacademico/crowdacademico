@@ -12,8 +12,8 @@
 --  Ordem respeitando dependências de FK
 -- ============================================================
 
--- Seed dos papéis básicos usados pelo app (ver AuthContext.tsx / eh_admin())
-INSERT INTO papel (nome) VALUES ('admin'), ('pesquisador'), ('usuario')
+-- CORRIGIDO: os papéis básicos agora incluem os três níveis de administrador para o RBAC hierárquico.
+INSERT INTO papel (nome) VALUES ('admin'), ('administrador_1'), ('administrador_2'), ('administrador_3'), ('pesquisador'), ('usuario')
 ON CONFLICT (nome) DO NOTHING;
 
 -- Inserção das dimensões raiz
@@ -67,6 +67,9 @@ INSERT INTO score_rotulo (rotulo, descricao, score_minimo, score_maximo) VALUES
 -- ============================================================
 INSERT INTO papel (nome) VALUES
 ('admin'),
+('administrador_1'),
+('administrador_2'),
+('administrador_3'),
 ('pesquisador'),
 ('apoiador'),
 ('moderador'),
@@ -79,14 +82,30 @@ ON CONFLICT (nome) DO NOTHING;
 -- ============================================================
 -- PERMISSAO
 -- ============================================================
+-- CORRIGIDO: o rename das permissões agora acontece antes do insert das entradas genuinamente novas, evitando conflito de UNIQUE em bancos já populados.
+UPDATE permissao SET nome = 'campanha_aprovar' WHERE nome = 'aprovar_campanha';
+UPDATE permissao SET nome = 'campanha_rejeitar' WHERE nome = 'rejeitar_campanha';
+UPDATE permissao SET nome = 'usuario_suspender' WHERE nome = 'suspender_usuario';
+UPDATE permissao SET nome = 'relatorio_visualizar' WHERE nome = 'visualizar_relatorios';
+UPDATE permissao SET nome = 'configuracao_gerenciar' WHERE nome = 'gerenciar_configuracoes';
+UPDATE permissao SET nome = 'denuncia_responder' WHERE nome = 'responder_denuncia';
+UPDATE permissao SET nome = 'score_editar' WHERE nome = 'editar_score';
+
+-- CORRIGIDO: o insert agora reintroduz as permissões completas, preservando a idempotência para bancos já populados e garantindo a instalação do zero.
 INSERT INTO permissao (nome) VALUES
-('aprovar_campanha'),
-('rejeitar_campanha'),
-('suspender_usuario'),
-('visualizar_relatorios'),
-('gerenciar_configuracoes'),
-('responder_denuncia'),
-('editar_score');
+('campanha_aprovar'),
+('campanha_rejeitar'),
+('usuario_suspender'),
+('relatorio_visualizar'),
+('configuracao_gerenciar'),
+('denuncia_responder'),
+('score_editar'),
+('campanha_editar'),
+('solicitacao_encerramento_decidir'),
+('termos_uso_gerenciar'),
+('papel_atribuir'),
+('tipolink_gerenciar')
+ON CONFLICT (nome) DO NOTHING;
 
 
 -- ============================================================
@@ -94,18 +113,48 @@ INSERT INTO permissao (nome) VALUES
 -- Resolvido por nome (não por número fixo), já que os IDs de "papel"
 -- não são previsíveis depois do ON CONFLICT DO NOTHING acima.
 -- ============================================================
+-- CORRIGIDO: os níveis de administrador agora recebem permissões por hierarquia, com o nível 3 como o mais completo.
 INSERT INTO papel_permissao (id_papel, id_permissao)
 SELECT p.id_papel, perm.id_permissao
 FROM papel p
 JOIN permissao perm ON TRUE
 WHERE (p.nome, perm.nome) IN (
-    ('admin', 'aprovar_campanha'),
-    ('admin', 'rejeitar_campanha'),
-    ('admin', 'suspender_usuario'),
-    ('admin', 'visualizar_relatorios'),
-    ('admin', 'gerenciar_configuracoes'),
-    ('moderador', 'responder_denuncia'),
-    ('revisor', 'editar_score')
+    ('admin', 'campanha_aprovar'),
+    ('admin', 'campanha_rejeitar'),
+    ('admin', 'usuario_suspender'),
+    ('admin', 'relatorio_visualizar'),
+    ('admin', 'configuracao_gerenciar'),
+    ('admin', 'denuncia_responder'),
+    ('admin', 'score_editar'),
+    ('admin', 'campanha_editar'),
+    ('admin', 'solicitacao_encerramento_decidir'),
+    ('admin', 'termos_uso_gerenciar'),
+    ('admin', 'papel_atribuir'),
+    ('admin', 'tipolink_gerenciar'),
+    ('administrador_1', 'campanha_aprovar'),
+    ('administrador_1', 'campanha_rejeitar'),
+    ('administrador_1', 'campanha_editar'),
+    ('administrador_2', 'campanha_aprovar'),
+    ('administrador_2', 'campanha_rejeitar'),
+    ('administrador_2', 'usuario_suspender'),
+    ('administrador_2', 'denuncia_responder'),
+    ('administrador_2', 'score_editar'),
+    ('administrador_2', 'solicitacao_encerramento_decidir'),
+    ('administrador_2', 'termos_uso_gerenciar'),
+    ('administrador_3', 'campanha_aprovar'),
+    ('administrador_3', 'campanha_rejeitar'),
+    ('administrador_3', 'usuario_suspender'),
+    ('administrador_3', 'relatorio_visualizar'),
+    ('administrador_3', 'configuracao_gerenciar'),
+    ('administrador_3', 'denuncia_responder'),
+    ('administrador_3', 'score_editar'),
+    ('administrador_3', 'campanha_editar'),
+    ('administrador_3', 'solicitacao_encerramento_decidir'),
+    ('administrador_3', 'termos_uso_gerenciar'),
+    ('administrador_3', 'papel_atribuir'),
+    ('administrador_3', 'tipolink_gerenciar'),
+    ('moderador', 'denuncia_responder'),
+    ('revisor', 'score_editar')
 );
 
 
@@ -188,19 +237,27 @@ INSERT INTO usuario (nome, email, senha_hash, id_imagem_perfil, criado_em) VALUE
 -- os IDs 1-8 abaixo batem com a ordem de inserção acima). id_papel é
 -- resolvido por nome pelo mesmo motivo da seção PAPEL_PERMISSAO.
 -- ============================================================
+-- CORRIGIDO: o usuário de exemplo do admin agora usa o nível 3, e os níveis 1 e 2 passam a ter exemplos funcionais no seed.
+DELETE FROM usuario_papel
+WHERE id_usuario = 8
+  AND id_papel = (SELECT id_papel FROM papel WHERE nome = 'admin');
+
 INSERT INTO usuario_papel (id_usuario, id_papel)
 SELECT v.id_usuario, p.id_papel
 FROM (VALUES
     (1, 'pesquisador'), -- Ana
+    (1, 'administrador_1'), -- Ana também como exemplo de nível 1
     (2, 'pesquisador'), -- Carlos
+    (2, 'administrador_2'), -- Carlos também como exemplo de nível 2
     (3, 'pesquisador'), -- Beatriz
     (4, 'pesquisador'), -- Rafael
     (5, 'pesquisador'), -- Juliana
     (6, 'pesquisador'), -- Marcos
     (7, 'pesquisador'), -- Patrícia
-    (8, 'admin')        -- Admin
+    (8, 'administrador_3') -- Admin de exemplo no nível 3
 ) AS v(id_usuario, papel_nome)
-JOIN papel p ON p.nome = v.papel_nome;
+JOIN papel p ON p.nome = v.papel_nome
+ON CONFLICT DO NOTHING;
 
 
 -- ============================================================

@@ -35,6 +35,23 @@ AS $$
         FROM usuario_papel up
         JOIN papel p ON p.id_papel = up.id_papel
         WHERE up.id_usuario = public.id_usuario_atual()
-          AND p.nome = 'admin'
+          AND p.nome IN ('admin', 'administrador_1', 'administrador_2', 'administrador_3')
+    );
+$$;
+
+CREATE OR REPLACE FUNCTION public.tem_permissao(p_permissao TEXT)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT EXISTS (
+        SELECT 1
+        FROM usuario_papel up
+        JOIN papel_permissao pp ON pp.id_papel = up.id_papel
+        JOIN permissao pm ON pm.id_permissao = pp.id_permissao
+        WHERE up.id_usuario = public.id_usuario_atual()
+          AND pm.nome = p_permissao
     );
 $$;
