@@ -55,7 +55,7 @@ GRANT INSERT, UPDATE, DELETE ON
     usuario, perfil_pesquisador, campanha, contribuicao, comentario, denuncia,
     seguir_campanha, seguir_pesquisador, link_academico, configuracoes,
     score_config, score_rotulo, historico_rejeicao, atualizacao_campanha,
-    solicitacao_encerramento, usuario_papel,
+    arquivo, arquivo_atualizacao, solicitacao_encerramento, usuario_papel,
     termos_de_uso, usuario_termo, aceite_termo_contribuicao, recompensa, arquivo_recompensa,
     contribuicao_recompensa, link_atualizacao, link_recompensa
 TO app_nestjs;
