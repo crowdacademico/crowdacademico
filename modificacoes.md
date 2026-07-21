@@ -159,23 +159,6 @@ conteúdo do comentário) fica no endpoint específico de endosso do NestJS, nã
 na RLS — consistente com o resto do projeto, onde a RLS é defesa em
 profundidade e a autorização "de verdade" mora na aplicação.
 
----
-
-## 7. O que **não** foi mexido (decisões já tomadas antes, ver `PROBLEMAS e Observacoes.md`)
-
-Para não reabrir discussão já fechada em rodadas anteriores:
-- `pol_contribuicao_update USING (true)` continua largo de propósito — o
-  webhook de pagamento age como processo de sistema, sem "dono" no sentido de
-  `id_usuario_atual()`; o controle real fica no código do NestJS.
-- `arquivo` INSERT continua com `WITH CHECK (TRUE)` de propósito — resolve uma
-  trava circular do upload; posse real é garantida ao vincular em
-  `arquivo_atualizacao`/`arquivo_recompensa`.
-- Falta de `DROP POLICY IF EXISTS` nas ~70 policies que já existiam antes de
-  qualquer correção nossa não é regressão desta rodada — é assim desde o
-  arquivo original, e é de baixa prioridade a menos que o projeto passe a
-  reexecutar os scripts de bootstrap em CI/staging.
-
----
 
 ## 8. Pontos do `RBAC-pontos-discutidos.md` que seguem em aberto
 
