@@ -143,11 +143,32 @@ CREATE POLICY pol_comentario_insert ON comentario FOR INSERT TO app_nestjs WITH 
 -- ADICIONADO: soft delete de comentário. O autor pode desativar o próprio
 -- comentário; moderação (papel com permissão comentario_moderar) ou admin
 -- podem desativar qualquer um.
+-- CORRIGIDO: "endossar comentário" (setar endossado/ordem_endosso) nunca
+-- teve política de UPDATE que cobrisse essa ação — no `main` não existia
+-- NENHUMA policy de UPDATE em comentario, e o UPDATE acrescentado nesta
+-- rodada (soft delete) só liberava o próprio autor ou moderação, nunca o
+-- dono da campanha. Só quem endossa é o dono da campanha, sobre um
+-- comentário de outra pessoa, então sem essa condição o endosso continuava
+-- impossível na prática. A restrição de que o dono da campanha só deve
+-- mexer em endossado/ordem_endosso (e não no conteúdo do comentário) fica
+-- a cargo do endpoint específico de endosso no NestJS, não da RLS.
 DROP POLICY IF EXISTS pol_comentario_update ON comentario;
 CREATE POLICY pol_comentario_update ON comentario FOR UPDATE TO app_nestjs USING (
-    id_pesquisador = public.id_usuario_atual() OR public.tem_permissao('comentario_moderar')
+    id_pesquisador = public.id_usuario_atual()
+    OR public.tem_permissao('comentario_moderar')
+    OR EXISTS (
+        SELECT 1 FROM campanha
+        WHERE id_campanha = comentario.id_campanha
+          AND id_usuario = public.id_usuario_atual()
+    )
 ) WITH CHECK (
-    id_pesquisador = public.id_usuario_atual() OR public.tem_permissao('comentario_moderar')
+    id_pesquisador = public.id_usuario_atual()
+    OR public.tem_permissao('comentario_moderar')
+    OR EXISTS (
+        SELECT 1 FROM campanha
+        WHERE id_campanha = comentario.id_campanha
+          AND id_usuario = public.id_usuario_atual()
+    )
 );
 
 CREATE POLICY pol_denuncia_select ON denuncia FOR SELECT TO app_nestjs USING (id_usuario = public.id_usuario_atual() OR public.eh_admin());

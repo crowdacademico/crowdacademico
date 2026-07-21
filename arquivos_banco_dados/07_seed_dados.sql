@@ -4,17 +4,15 @@
 --  Depende de: 01 a 06 (precisa das tabelas, RLS, grants e das
 --  funções de score já criadas — o INSERT final desta seção chama
 --  public.recalcular_todos_os_scores(), definida em 06)
---  Próximo arquivo (opcional/manual): 08_passo_manual_admin.sql
+--  Próximo arquivo (opcional/manual): 08_trigger_signup_usuario.sql
 -- ============================================================
 
--- ============================================================
---  CrowdAcadêmico — SEED DE DADOS (mínimo 7 registros por tabela)
---  Ordem respeitando dependências de FK
--- ============================================================
-
--- Seed dos papéis básicos usados pelo app (ver AuthContext.tsx / eh_admin())
-INSERT INTO papel (nome) VALUES ('admin'), ('pesquisador'), ('usuario')
-ON CONFLICT (nome) DO NOTHING;
+-- CORRIGIDO: este INSERT era um resquício de uma versão anterior do seed
+-- (comentário citava "AuthContext.tsx", do fluxo antigo com Supabase Auth) e
+-- duplicava parcialmente o INSERT INTO papel mais completo logo abaixo, na
+-- seção PAPEL. Os papéis 'admin', 'pesquisador' e 'usuario' continuam
+-- seedados ali — só juntamos num único lugar para não ficar com dois
+-- blocos de INSERT INTO papel espalhados pelo arquivo.
 
 -- Inserção das dimensões raiz
 INSERT INTO score_config (nome, descricao, peso, id_pai) VALUES
@@ -59,11 +57,14 @@ INSERT INTO score_rotulo (rotulo, descricao, score_minimo, score_maximo) VALUES
 
 -- ============================================================
 -- PAPEL
--- 'admin' e 'pesquisador' já existem (seed do script de schema, usado
--- por eh_admin()) — ON CONFLICT DO NOTHING evita o erro de duplicidade.
--- Os demais papéis (moderador, revisor, curador, suporte)
--- são inseridos normalmente. Não fixamos os IDs resultantes em nenhum
--- lugar: papel_permissao e usuario_papel resolvem por nome (ver abaixo).
+-- 7 papéis seedados de uma vez só: 'admin' e 'pesquisador' (usados por
+-- eh_admin() e pela regra de dono de campanha), 'usuario' (papel padrão
+-- atribuído a todo novo cadastro por atribuir_papel_padrao(), ver
+-- 08_trigger_signup_usuario.sql), e 'moderador'/'revisor'/'curador'/
+-- 'suporte' (RBAC granular via papel_permissao, ver seção seguinte).
+-- ON CONFLICT DO NOTHING evita erro de duplicidade se o script rodar
+-- mais de uma vez. Não fixamos os IDs resultantes em nenhum lugar:
+-- papel_permissao e usuario_papel resolvem por nome (ver abaixo).
 -- CORRIGIDO: removido o papel 'apoiador' — contribuir financeiramente
 -- não é uma ação restrita a um papel específico, qualquer usuário
 -- autenticado (papel 'usuario' ou 'pesquisador') pode fazer isso.
@@ -71,6 +72,7 @@ INSERT INTO score_rotulo (rotulo, descricao, score_minimo, score_maximo) VALUES
 INSERT INTO papel (nome) VALUES
 ('admin'),
 ('pesquisador'),
+('usuario'),
 ('moderador'),
 ('revisor'),
 ('curador'),
@@ -85,13 +87,6 @@ ON CONFLICT (nome) DO NOTHING;
 -- INSERT das novas, para não colidir com o UNIQUE em bancos já
 -- populados, e mantém idempotência via ON CONFLICT DO NOTHING.
 -- ============================================================
-UPDATE permissao SET nome = 'campanha_aprovar'      WHERE nome = 'aprovar_campanha';
-UPDATE permissao SET nome = 'campanha_rejeitar'      WHERE nome = 'rejeitar_campanha';
-UPDATE permissao SET nome = 'usuario_suspender'      WHERE nome = 'suspender_usuario';
-UPDATE permissao SET nome = 'relatorio_visualizar'   WHERE nome = 'visualizar_relatorios';
-UPDATE permissao SET nome = 'configuracao_gerenciar' WHERE nome = 'gerenciar_configuracoes';
-UPDATE permissao SET nome = 'denuncia_responder'     WHERE nome = 'responder_denuncia';
-UPDATE permissao SET nome = 'score_editar'           WHERE nome = 'editar_score';
 
 INSERT INTO permissao (nome) VALUES
 ('campanha_aprovar'),
@@ -502,10 +497,16 @@ INSERT INTO denuncia (id_usuario, id_campanha_alvo, id_pesquisador_alvo, id_moti
 
 
 -- ============================================================
--- Para logar no app, crie um usuário real em:
---   Supabase → Authentication → Users → Add user → Auto Confirm User
--- O trigger on_auth_user_created cria o registro em usuario automaticamente.
--- O papel admin é atribuído pelo schema (veja crowd_academico_schema.sql).
+-- CORRIGIDO: esta nota ainda descrevia o fluxo antigo via Supabase Auth
+-- (contradizia 08_trigger_signup_usuario.sql, que já documenta esse
+-- caminho como obsoleto). Com autenticação própria, para logar no app:
+--   1) cadastre o usuário pelo endpoint de signup do NestJS (gera o
+--      senha_hash e chama public.atribuir_papel_padrao(id_usuario), que
+--      atribui o papel 'usuario' — ver 08_trigger_signup_usuario.sql);
+--   2) o papel 'admin' não é atribuído automaticamente por nada disso —
+--      depois do signup, dê o papel a um usuário manualmente:
+--      INSERT INTO usuario_papel (id_usuario, id_papel)
+--      SELECT <id_usuario>, id_papel FROM papel WHERE nome = 'admin';
 -- ============================================================
 
 -- ============================================================
