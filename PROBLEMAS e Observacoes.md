@@ -1,0 +1,12 @@
+
+## CLAUDE ultima revisão:
+
+Os itens 1 e 2 não são achados novos — são decisões que já tomamos, conscientemente
+1. pol_contribuicao_update USING (true) — confirmado que ainda está assim, mas isso não é descoberta: foi decisão deliberada da rodada 2, porque o webhook de pagamento age como processo de sistema, sem "dono" no sentido de id_usuario_atual(). Já discutimos isso e concordamos que fazia sentido dado que o banco não tem como distinguir "chamada de sistema" de "chamada de usuário" sem uma variável de sessão extra — o controle de fato fica no código do NestJS, não no RLS. A IA está certa que é "amplo", mas já era esperado e aceito.
+2. arquivo INSERT aberto (WITH CHECK (TRUE)) — mesma coisa: foi a correção da rodada 3, exatamente pra resolver a trava circular. Eu já tinha anotado essa mesma ressalva (arquivo órfão / limpeza futura de storage) na resposta anterior. Não é item novo, é a mesma observação reaparecendo.
+Nenhum dos dois é falso, mas apresentá-los como "3 pontos que encontrei" sem contexto passa a impressão de descoberta nova quando na verdade são trade-offs já assumidos por nós de propósito.
+Item 3 (idempotência) — real, mas não é bug do banco, é característica do projeto inteiro
+Conferi: 75 CREATE POLICY no arquivo, só 5 com DROP POLICY IF EXISTS antes (justamente as que mexemos nas rodadas 1-3). As outras 70, que já existiam desde antes de qualquer correção nossa, também não têm essa proteção — então, tecnicamente, ela está certa: rodar o script duas vezes num banco já populado dá erro de "policy already exists" em qualquer uma das 70, não só nas que corrigimos.
+Mas isso não é um problema introduzido pelas nossas correções — é assim desde o arquivo original, e é consistente com o resto do projeto (01 a 08 são scripts de bootstrap, feitos pra rodar uma vez, não migrações versionadas reexecutáveis). É uma observação de prática de deploy válida, mas de prioridade baixa a menos que vocês pretendam ter um fluxo de "rodar o script de novo" no futuro (staging, CI, etc.) — nesse caso, sim, vale padronizar DROP POLICY IF EXISTS em todas, não só nas 5 que mexemos.
+Resumo
+Nada crítico novo. É uma revisão correta tecnicamente, mas 2 dos 3 pontos são retrabalho de decisões já tomadas, e o terceiro é real porém de baixa prioridade e pré-existente ao nosso trabalho. Quer que eu padronize o DROP POLICY IF EXISTS nas 70 restantes agora, ou deixamos isso pra quando entrarem numa etapa de deploy/CI de verdade?

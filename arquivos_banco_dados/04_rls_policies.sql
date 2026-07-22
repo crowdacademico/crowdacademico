@@ -420,11 +420,6 @@ CREATE POLICY pol_contrib_recompensa_select ON contribuicao_recompensa FOR SELEC
 CREATE POLICY pol_contrib_recompensa_insert ON contribuicao_recompensa FOR INSERT TO app_nestjs WITH CHECK (
     EXISTS (SELECT 1 FROM contribuicao WHERE id_contribuicao = contribuicao_recompensa.id_contribuicao AND id_usuario = public.id_usuario_atual())
 );
--- CORRIGIDO: removida a policy de UPDATE que havia sido adicionada aqui, pois
--- contradizia o comentário de design acima ("sem UPDATE/DELETE... não deve
--- ser editável"). Registro de aquisição de recompensa permanece imutável
--- após a criação — sem policy de UPDATE ou DELETE para app_nestjs.
-DROP POLICY IF EXISTS pol_contrib_recompensa_update ON contribuicao_recompensa;
 
 -- link_atualizacao: leitura pública (a atualização em si já é pública);
 -- só o dono da campanha (ou admin) adiciona links.
