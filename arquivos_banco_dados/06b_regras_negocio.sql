@@ -264,8 +264,13 @@ BEGIN
         v_duracao_meses := GREATEST(1, EXTRACT(EPOCH FROM (COALESCE(rec.data_fim, NOW()) - rec.data_inicio)) / 2629800.0);
         v_esperadas_campanha := v_duracao_meses * v_frequencia_mensal;
 
+        -- CORRIGIDO: atualizacao_campanha ganhou soft delete (coluna "ativo",
+        -- ver 01_extensoes_enums_tabelas.sql) para atualizações ocultadas por
+        -- moderação. Essa contagem não filtrava por "ativo", então uma
+        -- atualização removida por moderação continuava inflando o score de
+        -- regularidade do pesquisador.
         SELECT count(*) INTO v_realizadas_campanha FROM atualizacao_campanha 
-        WHERE id_campanha = rec.id_campanha;
+        WHERE id_campanha = rec.id_campanha AND ativo = TRUE;
 
         v_qtd_campanhas := v_qtd_campanhas + 1;
         v_soma_esperadas := v_soma_esperadas + v_esperadas_campanha;
@@ -885,10 +890,15 @@ DECLARE
     v_count integer;
 BEGIN
     IF NEW.ordem_endosso IS NOT NULL THEN
+        -- CORRIGIDO: comentario ganhou soft delete (coluna "ativo") para
+        -- remoção por moderação. Sem o filtro abaixo, um comentário
+        -- endossado que foi removido por moderação continuava ocupando
+        -- para sempre uma das 4 vagas de endosso da campanha.
         SELECT COUNT(*) INTO v_count
         FROM comentario
         WHERE id_campanha = NEW.id_campanha
           AND ordem_endosso IS NOT NULL
+          AND ativo = TRUE
           AND id_comentario <> COALESCE(NEW.id_comentario, -1);
 
         IF v_count >= 4 THEN
