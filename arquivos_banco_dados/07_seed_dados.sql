@@ -4,9 +4,10 @@
 --  Depende de: 01 a 06 (precisa das tabelas, RLS, grants e das
 --  funções de score já criadas — o INSERT final desta seção chama
 --  public.recalcular_todos_os_scores(), definida em 06)
---  Próximo arquivo (opcional/manual): 08_passo_manual_admin.sql
+--  Próximo arquivo (opcional/manual): 08_trigger_signup_usuario.sql
 -- ============================================================
 
+<<<<<<< HEAD
 -- ============================================================
 --  CrowdAcadêmico — SEED DE DADOS (mínimo 7 registros por tabela)
 --  Ordem respeitando dependências de FK
@@ -15,6 +16,14 @@
 -- CORRIGIDO: os papéis básicos agora incluem os três níveis de administrador para o RBAC hierárquico.
 INSERT INTO papel (nome) VALUES ('admin'), ('administrador_1'), ('administrador_2'), ('administrador_3'), ('pesquisador'), ('usuario')
 ON CONFLICT (nome) DO NOTHING;
+=======
+-- CORRIGIDO: este INSERT era um resquício de uma versão anterior do seed
+-- (comentário citava "AuthContext.tsx", do fluxo antigo com Supabase Auth) e
+-- duplicava parcialmente o INSERT INTO papel mais completo logo abaixo, na
+-- seção PAPEL. Os papéis 'admin', 'pesquisador' e 'usuario' continuam
+-- seedados ali — só juntamos num único lugar para não ficar com dois
+-- blocos de INSERT INTO papel espalhados pelo arquivo.
+>>>>>>> origin/main
 
 -- Inserção das dimensões raiz
 INSERT INTO score_config (nome, descricao, peso, id_pai) VALUES
@@ -59,11 +68,17 @@ INSERT INTO score_rotulo (rotulo, descricao, score_minimo, score_maximo) VALUES
 
 -- ============================================================
 -- PAPEL
--- 'admin' e 'pesquisador' já existem (seed do script de schema, usado
--- por eh_admin()) — ON CONFLICT DO NOTHING evita o erro de duplicidade.
--- Os demais papéis (apoiador, moderador, revisor, curador, suporte)
--- são inseridos normalmente. Não fixamos os IDs resultantes em nenhum
--- lugar: papel_permissao e usuario_papel resolvem por nome (ver abaixo).
+-- 7 papéis seedados de uma vez só: 'admin' e 'pesquisador' (usados por
+-- eh_admin() e pela regra de dono de campanha), 'usuario' (papel padrão
+-- atribuído a todo novo cadastro por atribuir_papel_padrao(), ver
+-- 08_trigger_signup_usuario.sql), e 'moderador'/'revisor'/'curador'/
+-- 'suporte' (RBAC granular via papel_permissao, ver seção seguinte).
+-- ON CONFLICT DO NOTHING evita erro de duplicidade se o script rodar
+-- mais de uma vez. Não fixamos os IDs resultantes em nenhum lugar:
+-- papel_permissao e usuario_papel resolvem por nome (ver abaixo).
+-- CORRIGIDO: removido o papel 'apoiador' — contribuir financeiramente
+-- não é uma ação restrita a um papel específico, qualquer usuário
+-- autenticado (papel 'usuario' ou 'pesquisador') pode fazer isso.
 -- ============================================================
 INSERT INTO papel (nome) VALUES
 ('admin'),
@@ -71,7 +86,7 @@ INSERT INTO papel (nome) VALUES
 ('administrador_2'),
 ('administrador_3'),
 ('pesquisador'),
-('apoiador'),
+('usuario'),
 ('moderador'),
 ('revisor'),
 ('curador'),
@@ -81,7 +96,12 @@ ON CONFLICT (nome) DO NOTHING;
 
 -- ============================================================
 -- PERMISSAO
+-- CORRIGIDO: nomes padronizados no formato "entidade_acao" (ver
+-- RBAC-pontos-discutidos.md). Renomeia as permissões antigas antes do
+-- INSERT das novas, para não colidir com o UNIQUE em bancos já
+-- populados, e mantém idempotência via ON CONFLICT DO NOTHING.
 -- ============================================================
+<<<<<<< HEAD
 -- CORRIGIDO: o rename das permissões agora acontece antes do insert das entradas genuinamente novas, evitando conflito de UNIQUE em bancos já populados.
 UPDATE permissao SET nome = 'campanha_aprovar' WHERE nome = 'aprovar_campanha';
 UPDATE permissao SET nome = 'campanha_rejeitar' WHERE nome = 'rejeitar_campanha';
@@ -96,15 +116,44 @@ INSERT INTO permissao (nome) VALUES
 ('campanha_aprovar'),
 ('campanha_rejeitar'),
 ('usuario_suspender'),
+=======
+
+INSERT INTO permissao (nome) VALUES
+('campanha_aprovar'),
+('campanha_rejeitar'),
+('campanha_editar'),
+('campanha_encerrar'),
+('usuario_suspender'),
+('usuario_visualizar_sensivel'),
+('perfil_pesquisador_visualizar_sensivel'),
+('contribuicao_visualizar_sensivel'),
+>>>>>>> origin/main
 ('relatorio_visualizar'),
 ('configuracao_gerenciar'),
 ('denuncia_responder'),
 ('score_editar'),
+<<<<<<< HEAD
 ('campanha_editar'),
 ('solicitacao_encerramento_decidir'),
 ('termos_uso_gerenciar'),
 ('papel_atribuir'),
 ('tipolink_gerenciar')
+=======
+('solicitacao_encerramento_decidir'),
+('termos_uso_gerenciar'),
+('papel_atribuir'),
+('papel_gerenciar'),
+('tipolink_gerenciar'),
+('area_conhecimento_gerenciar'),
+('motivo_denuncia_gerenciar'),
+('comentario_moderar'),
+('atualizacao_moderar'),
+('repasse_aprovar'),
+('auditoria_financeira_visualizar'),
+('sessao_revogar'),
+('recuperacao_senha_revogar'),
+('verificacao_email_reenviar')
+>>>>>>> origin/main
 ON CONFLICT (nome) DO NOTHING;
 
 
@@ -121,11 +170,21 @@ JOIN permissao perm ON TRUE
 WHERE (p.nome, perm.nome) IN (
     ('admin', 'campanha_aprovar'),
     ('admin', 'campanha_rejeitar'),
+<<<<<<< HEAD
     ('admin', 'usuario_suspender'),
+=======
+    ('admin', 'campanha_editar'),
+    ('admin', 'campanha_encerrar'),
+    ('admin', 'usuario_suspender'),
+    ('admin', 'usuario_visualizar_sensivel'),
+    ('admin', 'perfil_pesquisador_visualizar_sensivel'),
+    ('admin', 'contribuicao_visualizar_sensivel'),
+>>>>>>> origin/main
     ('admin', 'relatorio_visualizar'),
     ('admin', 'configuracao_gerenciar'),
     ('admin', 'denuncia_responder'),
     ('admin', 'score_editar'),
+<<<<<<< HEAD
     ('admin', 'campanha_editar'),
     ('admin', 'solicitacao_encerramento_decidir'),
     ('admin', 'termos_uso_gerenciar'),
@@ -156,6 +215,39 @@ WHERE (p.nome, perm.nome) IN (
     ('moderador', 'denuncia_responder'),
     ('revisor', 'score_editar')
 );
+=======
+    ('admin', 'solicitacao_encerramento_decidir'),
+    ('admin', 'termos_uso_gerenciar'),
+    ('admin', 'papel_atribuir'),
+    ('admin', 'papel_gerenciar'),
+    ('admin', 'tipolink_gerenciar'),
+    ('admin', 'area_conhecimento_gerenciar'),
+    ('admin', 'motivo_denuncia_gerenciar'),
+    ('admin', 'comentario_moderar'),
+    ('admin', 'atualizacao_moderar'),
+    ('admin', 'repasse_aprovar'),
+    ('admin', 'auditoria_financeira_visualizar'),
+    ('admin', 'sessao_revogar'),
+    ('admin', 'recuperacao_senha_revogar'),
+    ('admin', 'verificacao_email_reenviar'),
+    -- moderador: cuida da moderação de conteúdo e denúncias.
+    ('moderador', 'denuncia_responder'),
+    ('moderador', 'comentario_moderar'),
+    ('moderador', 'atualizacao_moderar'),
+    -- revisor: cuida só do critério/configuração de score.
+    ('revisor', 'score_editar'),
+    -- curador: cuida dos catálogos que dão suporte ao conteúdo da plataforma.
+    ('curador', 'tipolink_gerenciar'),
+    ('curador', 'area_conhecimento_gerenciar'),
+    ('curador', 'motivo_denuncia_gerenciar'),
+    ('curador', 'termos_uso_gerenciar'),
+    -- suporte: atendimento de conta, sem acesso a dados sensíveis ou financeiros.
+    ('suporte', 'sessao_revogar'),
+    ('suporte', 'recuperacao_senha_revogar'),
+    ('suporte', 'verificacao_email_reenviar')
+)
+ON CONFLICT DO NOTHING;
+>>>>>>> origin/main
 
 
 -- ============================================================
@@ -395,14 +487,14 @@ INSERT INTO auditoria_financeira (id_contribuicao, status_novo, status_anterior,
 -- ============================================================
 -- ATUALIZACAO_CAMPANHA
 -- ============================================================
-INSERT INTO atualizacao_campanha (id_campanha, conteudo, publicado_em, fase, tipo) VALUES
-(1, 'Iniciamos a coleta de dados clínicos com parceria do Hospital das Clínicas. Primeiros 200 exames de neuroimagem analisados.', '2024-02-20 10:00:00', 'andamento',          'texto'),
-(1, 'Modelo de deep learning atingiu acurácia de 89% na base de validação. Aguardamos revisão por pares..',                        '2024-03-15 14:00:00', 'resultado_preliminar','texto'),
-(2, 'Primeiros 10 protótipos de prótese impressos e testados por voluntários. Ajustes ergonômicos em andamento.',                  '2024-03-05 09:30:00', 'andamento',          'imagem'),
-(3, 'Coleta de amostras concluída em 5 biomas. 120 espécies de fungos catalogadas para análise laboratorial.',                     '2024-04-01 11:00:00', 'andamento',          'texto'),
-(5, 'Questionários aplicados em 12 comunidades quilombolas. Dados sendo sistematizados para análise estatística.',                  '2024-05-01 08:00:00', 'andamento',          'texto'),
-(7, 'Ensaio clínico concluído. Grupo probiótico apresentou redução de 34% nas taxas de sepse versus controle.',                    '2024-09-01 10:00:00', 'resultado_final',    'pdf'),
-(1, 'Artigo submetido ao periódico Nature Medicine. Código e dataset disponibilizados em repositório público.',                     '2024-04-10 16:00:00', 'resultado_final',    'linkexterno');
+INSERT INTO atualizacao_campanha (id_campanha, titulo, conteudo, publicado_em, fase, tipo) VALUES
+(1, 'Início da coleta de dados clínicos',        'Iniciamos a coleta de dados clínicos com parceria do Hospital das Clínicas. Primeiros 200 exames de neuroimagem analisados.', '2024-02-20 10:00:00', 'andamento',          'texto'),
+(1, 'Modelo atinge 89% de acurácia',             'Modelo de deep learning atingiu acurácia de 89% na base de validação. Aguardamos revisão por pares..',                        '2024-03-15 14:00:00', 'resultado_preliminar','texto'),
+(2, 'Primeiros protótipos testados',             'Primeiros 10 protótipos de prótese impressos e testados por voluntários. Ajustes ergonômicos em andamento.',                  '2024-03-05 09:30:00', 'andamento',          'imagem'),
+(3, 'Coleta de amostras concluída',              'Coleta de amostras concluída em 5 biomas. 120 espécies de fungos catalogadas para análise laboratorial.',                     '2024-04-01 11:00:00', 'andamento',          'texto'),
+(5, 'Questionários aplicados nas comunidades',   'Questionários aplicados em 12 comunidades quilombolas. Dados sendo sistematizados para análise estatística.',                  '2024-05-01 08:00:00', 'andamento',          'texto'),
+(7, 'Ensaio clínico concluído',                  'Ensaio clínico concluído. Grupo probiótico apresentou redução de 34% nas taxas de sepse versus controle.',                    '2024-09-01 10:00:00', 'resultado_final',    'pdf'),
+(1, 'Artigo submetido à Nature Medicine',        'Artigo submetido ao periódico Nature Medicine. Código e dataset disponibilizados em repositório público.',                     '2024-04-10 16:00:00', 'resultado_final',    'linkexterno');
 
 
 -- ============================================================
@@ -489,10 +581,16 @@ INSERT INTO denuncia (id_usuario, id_campanha_alvo, id_pesquisador_alvo, id_moti
 
 
 -- ============================================================
--- Para logar no app, crie um usuário real em:
---   Supabase → Authentication → Users → Add user → Auto Confirm User
--- O trigger on_auth_user_created cria o registro em usuario automaticamente.
--- O papel admin é atribuído pelo schema (veja crowd_academico_schema.sql).
+-- CORRIGIDO: esta nota ainda descrevia o fluxo antigo via Supabase Auth
+-- (contradizia 08_trigger_signup_usuario.sql, que já documenta esse
+-- caminho como obsoleto). Com autenticação própria, para logar no app:
+--   1) cadastre o usuário pelo endpoint de signup do NestJS (gera o
+--      senha_hash e chama public.atribuir_papel_padrao(id_usuario), que
+--      atribui o papel 'usuario' — ver 08_trigger_signup_usuario.sql);
+--   2) o papel 'admin' não é atribuído automaticamente por nada disso —
+--      depois do signup, dê o papel a um usuário manualmente:
+--      INSERT INTO usuario_papel (id_usuario, id_papel)
+--      SELECT <id_usuario>, id_papel FROM papel WHERE nome = 'admin';
 -- ============================================================
 
 -- ============================================================

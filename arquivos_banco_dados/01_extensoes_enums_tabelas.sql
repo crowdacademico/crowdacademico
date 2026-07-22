@@ -308,10 +308,15 @@ CREATE TABLE auditoria_financeira (
 CREATE TABLE atualizacao_campanha (
     id_atualizacao SERIAL PRIMARY KEY,
     id_campanha    INT              NOT NULL REFERENCES campanha(id_campanha) ON DELETE CASCADE,
+    -- ADICIONADO: título da atualização, exibido em listagens antes do conteúdo completo.
+    titulo         VARCHAR(150)     NOT NULL,
     conteudo       TEXT             NOT NULL,
     publicado_em   TIMESTAMP        DEFAULT NOW(),
     fase           fase_atualizacao,
-    tipo           tipo_atualizacao
+    tipo           tipo_atualizacao,
+    -- ADICIONADO: soft delete/moderação. Atualização ocultada por moderação
+    -- não é apagada (mantém histórico), só deixa de ser exibida publicamente.
+    ativo          BOOLEAN          NOT NULL DEFAULT TRUE
 );
 
 
@@ -379,6 +384,9 @@ CREATE TABLE comentario (
     endossado      BOOLEAN      DEFAULT FALSE,
     criado_em      TIMESTAMP    DEFAULT NOW(),
     ordem_endosso  INT,
+    -- ADICIONADO: soft delete. Comentário moderado/removido não é apagado
+    -- de fato (mantém histórico/auditoria), só deixa de ser exibido.
+    ativo          BOOLEAN      NOT NULL DEFAULT TRUE,
     -- CORRIGIDO: comentários passaram a ter unicidade por campanha e pesquisador.
     UNIQUE (id_campanha, id_pesquisador),
     -- CORRIGIDO: endossado e ordem_endosso agora ficam coerentes entre si.

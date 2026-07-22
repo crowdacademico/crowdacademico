@@ -48,8 +48,16 @@ GRANT SELECT ON ALL TABLES IN SCHEMA public TO app_nestjs;
 
 REVOKE SELECT ON public.usuario FROM app_nestjs;
 -- ALTERADO: coluna id_supabase removida da tabela usuario (autenticação própria).
-GRANT SELECT (id_usuario, nome, email, id_imagem_perfil, criado_em, deletado)
-    ON public.usuario TO app_nestjs;
+-- CORRIGIDO: faltavam as colunas usadas pelo próprio fluxo de login/auth
+-- (senha_hash, tentativas_login_falhas, bloqueado_ate, ultimo_login_em,
+-- ultimo_login_ip). Sem elas aqui, o GRANT de coluna barra o SELECT antes
+-- mesmo de a RLS ser avaliada, e o NestJS não consegue nem checar a senha
+-- no login nem aplicar a proteção de brute-force.
+GRANT SELECT (
+    id_usuario, nome, email, id_imagem_perfil, criado_em, deletado,
+    senha_hash, tentativas_login_falhas, bloqueado_ate,
+    ultimo_login_em, ultimo_login_ip
+) ON public.usuario TO app_nestjs;
 
 GRANT INSERT, UPDATE, DELETE ON
     usuario, perfil_pesquisador, campanha, contribuicao, comentario, denuncia,
@@ -71,6 +79,16 @@ TO app_nestjs;
 -- correspondente, senão RLS libera mas falta permissão de tabela e
 -- vice-versa (os dois níveis são exigidos juntos pelo Postgres).
 GRANT SELECT, INSERT, UPDATE ON verificacao_email, recuperacao_senha, sessao TO app_nestjs;
+
+-- CORRIGIDO: tipo_link ganhou pol_tipolink_insert/pol_tipolink_update em 04
+-- (permissão tipolink_gerenciar), mas faltava o GRANT de tabela correspondente.
+-- Sem isso, mesmo curador/admin com a permissão certa recebia "permission
+-- denied for table tipo_link" antes de a RLS ser avaliada — o cadastro de um
+-- novo tipo de link (ex.: "TikTok") continuava impossível na prática, que
+-- era exatamente o problema descrito no RBAC-pontos-discutidos.md (seção 6.3).
+-- Sem DELETE de propósito: tipo_link já tem coluna "ativo" para desativação
+-- (soft delete via UPDATE), não precisa apagar linha.
+GRANT INSERT, UPDATE ON tipo_link TO app_nestjs;
 
 -- ------------------------------------------------------------
 -- GRANT nas sequências (movido do arquivo de seed / DML)

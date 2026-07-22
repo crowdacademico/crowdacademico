@@ -55,3 +55,25 @@ AS $$
           AND pm.nome = p_permissao
     );
 $$;
+
+-- ADICIONADO: checagem de permissão granular, para RBAC de verdade (não
+-- só admin/não-admin). Nunca referencia nome de papel — só permissão.
+-- Papel é puramente um "pacote de permissões" guardado em papel_permissao;
+-- trocar, renomear ou dividir papéis no futuro não exige tocar nesta
+-- função nem em nenhuma policy que a utilize.
+CREATE OR REPLACE FUNCTION public.tem_permissao(p_permissao TEXT)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT EXISTS (
+        SELECT 1
+        FROM usuario_papel up
+        JOIN papel_permissao pp ON pp.id_papel = up.id_papel
+        JOIN permissao pm ON pm.id_permissao = pp.id_permissao
+        WHERE up.id_usuario = public.id_usuario_atual()
+          AND pm.nome = p_permissao
+    );
+$$;
