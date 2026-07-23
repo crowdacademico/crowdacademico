@@ -83,7 +83,7 @@ CREATE POLICY pol_sessao_all ON sessao
 
 -- Políticas existentes (mantidas)
 -- CORRIGIDO: usuário agora fica invisível quando marcado como deletado, salvo para admin.
-CREATE POLICY pol_usuario_select ON usuario FOR SELECT TO app_nestjs USING (deletado = FALSE OR public.eh_admin());
+CREATE POLICY pol_usuario_select ON usuario FOR SELECT TO app_nestjs USING (deletado = FALSE OR public.tem_permissao('usuario_visualizar_sensivel'));
 -- CORRIGIDO: suspensão de usuário passa a aceitar permissão específica além do próprio dono.
 DROP POLICY IF EXISTS pol_usuario_update ON usuario;
 CREATE POLICY pol_usuario_update ON usuario FOR UPDATE TO app_nestjs USING (id_usuario = public.id_usuario_atual() OR public.tem_permissao('usuario_suspender'));
@@ -95,7 +95,7 @@ CREATE POLICY pol_perfil_update ON perfil_pesquisador FOR UPDATE TO app_nestjs U
 CREATE POLICY pol_campanha_select ON campanha FOR SELECT USING (
     status IN ('ativo', 'sucesso', 'nao_atingido', 'encerrado')
     OR id_usuario = public.id_usuario_atual()
-    OR public.eh_admin()
+    OR public.tem_permissao('relatorio_visualizar')
 );
 CREATE POLICY pol_campanha_insert ON campanha FOR INSERT TO app_nestjs WITH CHECK (id_usuario = public.id_usuario_atual());
 -- CORRIGIDO: edição administrativa de campanha passa a depender de permissão específica, preservando a regra de dono da campanha.
@@ -106,7 +106,7 @@ CREATE POLICY pol_campanha_update ON campanha FOR UPDATE TO app_nestjs USING (id
 -- contribuicao por usuário autenticado continua igual.
 DROP POLICY IF EXISTS pol_contribuicao_select ON contribuicao;
 CREATE POLICY pol_contribuicao_select ON contribuicao FOR SELECT TO app_nestjs USING (
-    id_usuario = public.id_usuario_atual() OR public.eh_admin()
+    id_usuario = public.id_usuario_atual() OR public.tem_permissao('contribuicao_visualizar_sensivel')
 );
 -- CORRIGIDO: a policy anônima passou a usar a variável de sessão do NestJS.
 CREATE POLICY pol_contribuicao_anon_select ON contribuicao FOR SELECT TO app_nestjs USING (
@@ -133,7 +133,7 @@ CREATE POLICY pol_comentario_select ON comentario FOR SELECT USING (
     OR EXISTS (
         SELECT 1 FROM campanha
         WHERE id_campanha = comentario.id_campanha
-          AND (id_usuario = public.id_usuario_atual() OR public.eh_admin())
+          AND (id_usuario = public.id_usuario_atual() OR public.tem_permissao('comentario_moderar'))
     )
 );
 CREATE POLICY pol_comentario_insert ON comentario FOR INSERT TO app_nestjs WITH CHECK (
@@ -171,7 +171,7 @@ CREATE POLICY pol_comentario_update ON comentario FOR UPDATE TO app_nestjs USING
     )
 );
 
-CREATE POLICY pol_denuncia_select ON denuncia FOR SELECT TO app_nestjs USING (id_usuario = public.id_usuario_atual() OR public.eh_admin());
+CREATE POLICY pol_denuncia_select ON denuncia FOR SELECT TO app_nestjs USING (id_usuario = public.id_usuario_atual() OR public.tem_permissao('denuncia_responder'));
 CREATE POLICY pol_denuncia_insert ON denuncia FOR INSERT TO app_nestjs WITH CHECK (id_usuario = public.id_usuario_atual());
 -- CORRIGIDO: gestão de denúncias passa a ser controlada por permissão específica, não pelo papel genérico de admin.
 DROP POLICY IF EXISTS pol_denuncia_update ON denuncia;
@@ -188,9 +188,9 @@ CREATE POLICY pol_link_select ON link_academico FOR SELECT USING (TRUE);
 CREATE POLICY pol_link_insert ON link_academico FOR INSERT TO app_nestjs WITH CHECK (id_usuario = public.id_usuario_atual());
 -- ADICIONADO: links de perfil passam a aceitar edição e remoção pelo dono do perfil ou pelo admin.
 DROP POLICY IF EXISTS pol_link_update ON link_academico;
-CREATE POLICY pol_link_update ON link_academico FOR UPDATE TO app_nestjs USING (id_usuario = public.id_usuario_atual() OR public.eh_admin()) WITH CHECK (id_usuario = public.id_usuario_atual() OR public.eh_admin());
+CREATE POLICY pol_link_update ON link_academico FOR UPDATE TO app_nestjs USING (id_usuario = public.id_usuario_atual() OR public.tem_permissao('link_academico_gerenciar')) WITH CHECK (id_usuario = public.id_usuario_atual() OR public.tem_permissao('link_academico_gerenciar'));
 DROP POLICY IF EXISTS pol_link_delete ON link_academico;
-CREATE POLICY pol_link_delete ON link_academico FOR DELETE TO app_nestjs USING (id_usuario = public.id_usuario_atual() OR public.eh_admin());
+CREATE POLICY pol_link_delete ON link_academico FOR DELETE TO app_nestjs USING (id_usuario = public.id_usuario_atual() OR public.tem_permissao('link_academico_gerenciar'));
 
 CREATE POLICY pol_arquivo_select ON arquivo FOR SELECT USING (TRUE);
 -- CORRIGIDO: o primeiro passo do upload de arquivo fica liberado; a posse real é garantida ao vincular em arquivo_atualizacao/arquivo_recompensa.
@@ -198,7 +198,7 @@ DROP POLICY IF EXISTS pol_arquivo_insert ON arquivo;
 CREATE POLICY pol_arquivo_insert ON arquivo FOR INSERT TO app_nestjs WITH CHECK (TRUE);
 DROP POLICY IF EXISTS pol_arquivo_update ON arquivo;
 CREATE POLICY pol_arquivo_update ON arquivo FOR UPDATE TO app_nestjs USING (
-    public.eh_admin()
+    public.tem_permissao('arquivo_gerenciar')
     OR EXISTS (
         SELECT 1 FROM usuario u
         WHERE u.id_usuario = public.id_usuario_atual()
@@ -209,14 +209,14 @@ CREATE POLICY pol_arquivo_update ON arquivo FOR UPDATE TO app_nestjs USING (
         JOIN atualizacao_campanha ac ON ac.id_atualizacao = aa.id_atualizacao
         JOIN campanha c ON c.id_campanha = ac.id_campanha
         WHERE aa.id_arquivo = arquivo.id_arquivo
-          AND (c.id_usuario = public.id_usuario_atual() OR public.eh_admin())
+          AND (c.id_usuario = public.id_usuario_atual() OR public.tem_permissao('atualizacao_moderar'))
     )
     OR EXISTS (
         SELECT 1 FROM arquivo_recompensa ar
         JOIN recompensa r ON r.id_recompensa = ar.id_recompensa
         JOIN campanha c ON c.id_campanha = r.id_campanha
         WHERE ar.id_arquivo = arquivo.id_arquivo
-          AND (c.id_usuario = public.id_usuario_atual() OR public.eh_admin())
+          AND (c.id_usuario = public.id_usuario_atual() OR public.tem_permissao('campanha_editar'))
     )
 );
 
@@ -252,7 +252,7 @@ CREATE POLICY pol_permissao_select ON permissao FOR SELECT USING (true);
 CREATE POLICY pol_papelperm_select ON papel_permissao FOR SELECT USING (true);
 
 -- usuario_papel
-CREATE POLICY pol_usuariopapel_select ON usuario_papel FOR SELECT TO app_nestjs USING (id_usuario = public.id_usuario_atual() OR public.eh_admin());
+CREATE POLICY pol_usuariopapel_select ON usuario_papel FOR SELECT TO app_nestjs USING (id_usuario = public.id_usuario_atual() OR public.tem_permissao('papel_gerenciar'));
 DROP POLICY IF EXISTS pol_usuariopapel_insert ON usuario_papel;
 CREATE POLICY pol_usuariopapel_insert ON usuario_papel FOR INSERT TO app_nestjs WITH CHECK (public.tem_permissao('papel_atribuir'));
 
@@ -262,14 +262,15 @@ CREATE POLICY pol_usuariopapel_insert ON usuario_papel FOR INSERT TO app_nestjs 
 DROP POLICY IF EXISTS pol_atualizacao_select ON atualizacao_campanha;
 CREATE POLICY pol_atualizacao_select ON atualizacao_campanha FOR SELECT USING (
     ativo = TRUE
-    OR EXISTS (SELECT 1 FROM campanha WHERE id_campanha = atualizacao_campanha.id_campanha AND (id_usuario = public.id_usuario_atual() OR public.eh_admin()))
+    OR EXISTS (SELECT 1 FROM campanha WHERE id_campanha = atualizacao_campanha.id_campanha AND (id_usuario = public.id_usuario_atual() OR public.tem_permissao('atualizacao_moderar')))
 );
 CREATE POLICY pol_atualizacao_insert ON atualizacao_campanha FOR INSERT TO app_nestjs WITH CHECK (
     EXISTS (SELECT 1 FROM campanha WHERE id_campanha = atualizacao_campanha.id_campanha AND id_usuario = public.id_usuario_atual())
 );
 -- CORRIGIDO: dono da campanha continua podendo editar o conteúdo da própria
 -- atualização; ocultar (moderar) uma atualização de terceiro passa a exigir
--- a permissão específica atualizacao_moderar em vez de eh_admin() genérico.
+-- a permissão específica atualizacao_moderar em vez do antigo eh_admin() genérico
+-- (eh_admin() foi removido de vez de todas as policies, ver 03_funcoes_seguranca.sql).
 DROP POLICY IF EXISTS pol_atualizacao_update ON atualizacao_campanha;
 CREATE POLICY pol_atualizacao_update ON atualizacao_campanha FOR UPDATE TO app_nestjs USING (
     EXISTS (SELECT 1 FROM campanha WHERE id_campanha = atualizacao_campanha.id_campanha AND id_usuario = public.id_usuario_atual())
@@ -285,7 +286,7 @@ CREATE POLICY pol_arqatu_insert ON arquivo_atualizacao FOR INSERT TO app_nestjs 
         SELECT 1 FROM atualizacao_campanha ac
         JOIN campanha c ON c.id_campanha = ac.id_campanha
         WHERE ac.id_atualizacao = arquivo_atualizacao.id_atualizacao
-          AND (c.id_usuario = public.id_usuario_atual() OR public.eh_admin())
+          AND (c.id_usuario = public.id_usuario_atual() OR public.tem_permissao('atualizacao_moderar'))
     )
 );
 DROP POLICY IF EXISTS pol_arqatu_update ON arquivo_atualizacao;
@@ -294,13 +295,13 @@ CREATE POLICY pol_arqatu_update ON arquivo_atualizacao FOR UPDATE TO app_nestjs 
         SELECT 1 FROM atualizacao_campanha ac
         JOIN campanha c ON c.id_campanha = ac.id_campanha
         WHERE ac.id_atualizacao = arquivo_atualizacao.id_atualizacao
-          AND (c.id_usuario = public.id_usuario_atual() OR public.eh_admin())
+          AND (c.id_usuario = public.id_usuario_atual() OR public.tem_permissao('atualizacao_moderar'))
     )
 );
 
 -- auditoria_financeira
 CREATE POLICY pol_auditoria_select ON auditoria_financeira FOR SELECT TO app_nestjs USING (
-    public.eh_admin() OR EXISTS (
+    public.tem_permissao('auditoria_financeira_visualizar') OR EXISTS (
         SELECT 1 FROM contribuicao c 
         WHERE c.id_contribuicao = auditoria_financeira.id_contribuicao 
           AND c.id_usuario = public.id_usuario_atual()
@@ -308,18 +309,18 @@ CREATE POLICY pol_auditoria_select ON auditoria_financeira FOR SELECT TO app_nes
 );
 
 -- historico_rejeicao
-CREATE POLICY pol_historicorej_select ON historico_rejeicao FOR SELECT TO app_nestjs USING (public.eh_admin());
+CREATE POLICY pol_historicorej_select ON historico_rejeicao FOR SELECT TO app_nestjs USING (public.tem_permissao('campanha_rejeitar'));
 
 -- repasse
 CREATE POLICY pol_repasse_select ON repasse FOR SELECT TO app_nestjs USING (
-    public.eh_admin() OR EXISTS (
+    public.tem_permissao('repasse_aprovar') OR EXISTS (
         SELECT 1 FROM campanha WHERE id_campanha = repasse.id_campanha AND id_usuario = public.id_usuario_atual()
     )
 );
 
 -- solicitacao_encerramento
 CREATE POLICY pol_solicitacao_select ON solicitacao_encerramento FOR SELECT TO app_nestjs USING (
-    public.eh_admin() OR EXISTS (
+    public.tem_permissao('solicitacao_encerramento_decidir') OR EXISTS (
         SELECT 1 FROM campanha WHERE id_campanha = solicitacao_encerramento.id_campanha AND id_usuario = public.id_usuario_atual()
     )
 );
@@ -347,12 +348,12 @@ CREATE POLICY pol_termos_update ON termos_de_uso FOR UPDATE TO app_nestjs USING 
 -- usuario_termo: cada usuário só vê e registra o próprio aceite.
 -- Sem política de UPDATE/DELETE: aceite é um registro de auditoria,
 -- não deve ser alterável por ninguém (nem pelo próprio usuário).
-CREATE POLICY pol_usuario_termo_select ON usuario_termo FOR SELECT TO app_nestjs USING (id_usuario = public.id_usuario_atual() OR public.eh_admin());
+CREATE POLICY pol_usuario_termo_select ON usuario_termo FOR SELECT TO app_nestjs USING (id_usuario = public.id_usuario_atual() OR public.tem_permissao('usuario_visualizar_sensivel'));
 CREATE POLICY pol_usuario_termo_insert ON usuario_termo FOR INSERT TO app_nestjs WITH CHECK (id_usuario = public.id_usuario_atual());
 
 -- CORRIGIDO: aceite de termos por contribuição agora tem política de leitura e escrita compatível com doação anônima.
 CREATE POLICY pol_aceite_termo_contribuicao_select ON aceite_termo_contribuicao FOR SELECT TO app_nestjs USING (
-    public.eh_admin() OR EXISTS (
+    public.tem_permissao('contribuicao_visualizar_sensivel') OR EXISTS (
         SELECT 1 FROM contribuicao c
         WHERE c.id_contribuicao = aceite_termo_contribuicao.id_contribuicao
           AND c.id_usuario = public.id_usuario_atual()
@@ -370,7 +371,7 @@ CREATE POLICY pol_aceite_termo_contribuicao_insert ON aceite_termo_contribuicao 
 -- INSERT/UPDATE para authenticated de propósito — quem cria e atualiza
 -- notificação é o backend (via service_role, que ignora RLS), nunca o
 -- cliente direto; senão qualquer usuário poderia forjar notificações.
-CREATE POLICY pol_notificacao_select ON notificacao FOR SELECT TO app_nestjs USING (id_usuario = public.id_usuario_atual() OR public.eh_admin());
+CREATE POLICY pol_notificacao_select ON notificacao FOR SELECT TO app_nestjs USING (id_usuario = public.id_usuario_atual() OR public.tem_permissao('usuario_visualizar_sensivel'));
 
 -- recompensa: leitura pública (aparece na página da campanha); só o
 -- dono da campanha (ou admin) pode criar/editar as recompensas dela.
@@ -379,7 +380,7 @@ CREATE POLICY pol_recompensa_insert ON recompensa FOR INSERT TO app_nestjs WITH 
     EXISTS (SELECT 1 FROM campanha WHERE id_campanha = recompensa.id_campanha AND id_usuario = public.id_usuario_atual())
 );
 CREATE POLICY pol_recompensa_update ON recompensa FOR UPDATE TO app_nestjs USING (
-    EXISTS (SELECT 1 FROM campanha WHERE id_campanha = recompensa.id_campanha AND (id_usuario = public.id_usuario_atual() OR public.eh_admin()))
+    EXISTS (SELECT 1 FROM campanha WHERE id_campanha = recompensa.id_campanha AND (id_usuario = public.id_usuario_atual() OR public.tem_permissao('campanha_editar')))
 );
 
 -- arquivo_recompensa: leitura pública; escrita só por quem é dono da
@@ -389,7 +390,7 @@ CREATE POLICY pol_arqrecompensa_select ON arquivo_recompensa FOR SELECT TO app_n
     EXISTS (
         SELECT 1 FROM recompensa r JOIN campanha c ON c.id_campanha = r.id_campanha
         WHERE r.id_recompensa = arquivo_recompensa.id_recompensa
-          AND (c.id_usuario = public.id_usuario_atual() OR public.eh_admin())
+          AND (c.id_usuario = public.id_usuario_atual() OR public.tem_permissao('campanha_editar'))
     )
     OR EXISTS (
         SELECT 1 FROM contribuicao_recompensa cr JOIN contribuicao co ON co.id_contribuicao = cr.id_contribuicao
@@ -401,7 +402,7 @@ CREATE POLICY pol_arqrecompensa_insert ON arquivo_recompensa FOR INSERT TO app_n
     EXISTS (
         SELECT 1 FROM recompensa r JOIN campanha c ON c.id_campanha = r.id_campanha
         WHERE r.id_recompensa = arquivo_recompensa.id_recompensa
-          AND (c.id_usuario = public.id_usuario_atual() OR public.eh_admin())
+          AND (c.id_usuario = public.id_usuario_atual() OR public.tem_permissao('campanha_editar'))
     )
 );
 
@@ -415,16 +416,11 @@ CREATE POLICY pol_contrib_recompensa_select ON contribuicao_recompensa FOR SELEC
         SELECT 1 FROM recompensa r JOIN campanha c ON c.id_campanha = r.id_campanha
         WHERE r.id_recompensa = contribuicao_recompensa.id_recompensa AND c.id_usuario = public.id_usuario_atual()
     )
-    OR public.eh_admin()
+    OR public.tem_permissao('contribuicao_visualizar_sensivel')
 );
 CREATE POLICY pol_contrib_recompensa_insert ON contribuicao_recompensa FOR INSERT TO app_nestjs WITH CHECK (
     EXISTS (SELECT 1 FROM contribuicao WHERE id_contribuicao = contribuicao_recompensa.id_contribuicao AND id_usuario = public.id_usuario_atual())
 );
--- CORRIGIDO: removida a policy de UPDATE que havia sido adicionada aqui, pois
--- contradizia o comentário de design acima ("sem UPDATE/DELETE... não deve
--- ser editável"). Registro de aquisição de recompensa permanece imutável
--- após a criação — sem policy de UPDATE ou DELETE para app_nestjs.
-DROP POLICY IF EXISTS pol_contrib_recompensa_update ON contribuicao_recompensa;
 
 -- link_atualizacao: leitura pública (a atualização em si já é pública);
 -- só o dono da campanha (ou admin) adiciona links.
@@ -433,7 +429,7 @@ CREATE POLICY pol_link_atualizacao_insert ON link_atualizacao FOR INSERT TO app_
     EXISTS (
         SELECT 1 FROM atualizacao_campanha a JOIN campanha c ON c.id_campanha = a.id_campanha
         WHERE a.id_atualizacao = link_atualizacao.id_atualizacao
-          AND (c.id_usuario = public.id_usuario_atual() OR public.eh_admin())
+          AND (c.id_usuario = public.id_usuario_atual() OR public.tem_permissao('atualizacao_moderar'))
     )
 );
 -- ADICIONADO: edição e remoção de link de atualização, restritas ao dono da campanha ou admin (mesma regra do INSERT).
@@ -442,13 +438,13 @@ CREATE POLICY pol_link_atualizacao_update ON link_atualizacao FOR UPDATE TO app_
     EXISTS (
         SELECT 1 FROM atualizacao_campanha a JOIN campanha c ON c.id_campanha = a.id_campanha
         WHERE a.id_atualizacao = link_atualizacao.id_atualizacao
-          AND (c.id_usuario = public.id_usuario_atual() OR public.eh_admin())
+          AND (c.id_usuario = public.id_usuario_atual() OR public.tem_permissao('atualizacao_moderar'))
     )
 ) WITH CHECK (
     EXISTS (
         SELECT 1 FROM atualizacao_campanha a JOIN campanha c ON c.id_campanha = a.id_campanha
         WHERE a.id_atualizacao = link_atualizacao.id_atualizacao
-          AND (c.id_usuario = public.id_usuario_atual() OR public.eh_admin())
+          AND (c.id_usuario = public.id_usuario_atual() OR public.tem_permissao('atualizacao_moderar'))
     )
 );
 DROP POLICY IF EXISTS pol_link_atualizacao_delete ON link_atualizacao;
@@ -456,7 +452,7 @@ CREATE POLICY pol_link_atualizacao_delete ON link_atualizacao FOR DELETE TO app_
     EXISTS (
         SELECT 1 FROM atualizacao_campanha a JOIN campanha c ON c.id_campanha = a.id_campanha
         WHERE a.id_atualizacao = link_atualizacao.id_atualizacao
-          AND (c.id_usuario = public.id_usuario_atual() OR public.eh_admin())
+          AND (c.id_usuario = public.id_usuario_atual() OR public.tem_permissao('atualizacao_moderar'))
     )
 );
 
@@ -467,7 +463,7 @@ CREATE POLICY pol_link_recompensa_select ON link_recompensa FOR SELECT TO app_ne
     EXISTS (
         SELECT 1 FROM recompensa r JOIN campanha c ON c.id_campanha = r.id_campanha
         WHERE r.id_recompensa = link_recompensa.id_recompensa
-          AND (c.id_usuario = public.id_usuario_atual() OR public.eh_admin())
+          AND (c.id_usuario = public.id_usuario_atual() OR public.tem_permissao('campanha_editar'))
     )
     OR EXISTS (
         SELECT 1 FROM contribuicao_recompensa cr JOIN contribuicao co ON co.id_contribuicao = cr.id_contribuicao
@@ -479,7 +475,7 @@ CREATE POLICY pol_link_recompensa_insert ON link_recompensa FOR INSERT TO app_ne
     EXISTS (
         SELECT 1 FROM recompensa r JOIN campanha c ON c.id_campanha = r.id_campanha
         WHERE r.id_recompensa = link_recompensa.id_recompensa
-          AND (c.id_usuario = public.id_usuario_atual() OR public.eh_admin())
+          AND (c.id_usuario = public.id_usuario_atual() OR public.tem_permissao('campanha_editar'))
     )
 );
 -- ADICIONADO: edição e remoção de link de recompensa. Só o dono da campanha
@@ -491,13 +487,13 @@ CREATE POLICY pol_link_recompensa_update ON link_recompensa FOR UPDATE TO app_ne
     EXISTS (
         SELECT 1 FROM recompensa r JOIN campanha c ON c.id_campanha = r.id_campanha
         WHERE r.id_recompensa = link_recompensa.id_recompensa
-          AND (c.id_usuario = public.id_usuario_atual() OR public.eh_admin())
+          AND (c.id_usuario = public.id_usuario_atual() OR public.tem_permissao('campanha_editar'))
     )
 ) WITH CHECK (
     EXISTS (
         SELECT 1 FROM recompensa r JOIN campanha c ON c.id_campanha = r.id_campanha
         WHERE r.id_recompensa = link_recompensa.id_recompensa
-          AND (c.id_usuario = public.id_usuario_atual() OR public.eh_admin())
+          AND (c.id_usuario = public.id_usuario_atual() OR public.tem_permissao('campanha_editar'))
     )
 );
 DROP POLICY IF EXISTS pol_link_recompensa_delete ON link_recompensa;
@@ -505,6 +501,6 @@ CREATE POLICY pol_link_recompensa_delete ON link_recompensa FOR DELETE TO app_ne
     EXISTS (
         SELECT 1 FROM recompensa r JOIN campanha c ON c.id_campanha = r.id_campanha
         WHERE r.id_recompensa = link_recompensa.id_recompensa
-          AND (c.id_usuario = public.id_usuario_atual() OR public.eh_admin())
+          AND (c.id_usuario = public.id_usuario_atual() OR public.tem_permissao('campanha_editar'))
     )
 );

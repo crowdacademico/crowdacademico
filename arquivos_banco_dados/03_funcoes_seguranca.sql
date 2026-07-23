@@ -23,21 +23,17 @@ AS $$
     SELECT current_setting('app.id_usuario_atual', true)::INT;
 $$;
 
-CREATE OR REPLACE FUNCTION public.eh_admin()
-RETURNS BOOLEAN
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path = public
-AS $$
-    SELECT EXISTS (
-        SELECT 1
-        FROM usuario_papel up
-        JOIN papel p ON p.id_papel = up.id_papel
-        WHERE up.id_usuario = public.id_usuario_atual()
-          AND p.nome = 'admin'
-    );
-$$;
+-- REMOVIDO: eh_admin() checava p.nome = 'admin' — um nome de papel
+-- hardcoded em código, o mesmo problema estrutural que o RBAC (papel/
+-- permissão/N:N) foi criado para resolver ("RBAC de enfeite": a
+-- modelagem existe, mas o enforcement ignorava ela). Toda policy que
+-- usava eh_admin() foi migrada para tem_permissao(...) (ver
+-- 04_rls_policies.sql), e trg_permissao_auto_admin
+-- (06b_regras_negocio.sql) garante que 'admin' recebe automaticamente
+-- toda permissão nova, então não há perda de acesso na troca.
+-- O DROP abaixo é só para manter o script idempotente em bancos onde
+-- a função antiga já existia de uma versão anterior.
+DROP FUNCTION IF EXISTS public.eh_admin();
 
 -- ADICIONADO: checagem de permissão granular, para RBAC de verdade (não
 -- só admin/não-admin). Nunca referencia nome de papel — só permissão.

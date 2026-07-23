@@ -963,3 +963,29 @@ CREATE TRIGGER trg_denuncia_limite_taxa
 BEFORE INSERT ON denuncia
 FOR EACH ROW
 EXECUTE FUNCTION validar_denuncia_frequencia();
+
+-- ============================================================
+-- ADICIONADO: rede de segurança para a remoção de eh_admin() das RLS
+-- policies (ver RBAC-pontos-discutidos.md e 04_rls_policies.sql).
+-- Toda policy passou a checar tem_permissao('x') em vez de eh_admin().
+-- Sem esta trigger, toda permissão nova criada exigiria lembrar de
+-- também inserir a linha correspondente em papel_permissao para
+-- 'admin' manualmente — e um esquecimento faria o admin perder acesso
+-- a algo que antes tinha de graça via eh_admin(). Com a trigger, toda
+-- permissão nova já nasce atribuída ao papel 'admin' automaticamente,
+-- tornando tem_permissao(...) um substituto 100% seguro do bypass antigo.
+-- ============================================================
+CREATE OR REPLACE FUNCTION public.trg_admin_recebe_toda_permissao()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+    INSERT INTO papel_permissao (id_papel, id_permissao)
+    SELECT p.id_papel, NEW.id_permissao
+    FROM papel p WHERE p.nome = 'admin'
+    ON CONFLICT DO NOTHING;
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trg_permissao_auto_admin
+AFTER INSERT ON permissao
+FOR EACH ROW EXECUTE FUNCTION public.trg_admin_recebe_toda_permissao();
