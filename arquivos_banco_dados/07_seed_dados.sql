@@ -57,8 +57,9 @@ INSERT INTO score_rotulo (rotulo, descricao, score_minimo, score_maximo) VALUES
 
 -- ============================================================
 -- PAPEL
--- 7 papéis seedados de uma vez só: 'admin' e 'pesquisador' (usados por
--- eh_admin() e pela regra de dono de campanha), 'usuario' (papel padrão
+-- 7 papéis seedados de uma vez só: 'admin' (recebe automaticamente toda
+-- permissão nova via trg_permissao_auto_admin, ver 06b_regras_negocio.sql)
+-- e 'pesquisador' (usado pela regra de dono de campanha), 'usuario' (papel padrão
 -- atribuído a todo novo cadastro por atribuir_papel_padrao(), ver
 -- 08_trigger_signup_usuario.sql), e 'moderador'/'revisor'/'curador'/
 -- 'suporte' (RBAC granular via papel_permissao, ver seção seguinte).
@@ -114,7 +115,11 @@ INSERT INTO permissao (nome) VALUES
 ('auditoria_financeira_visualizar'),
 ('sessao_revogar'),
 ('recuperacao_senha_revogar'),
-('verificacao_email_reenviar')
+('verificacao_email_reenviar'),
+-- ADICIONADO: as duas únicas permissões que faltavam para remover
+-- eh_admin() de 100% das RLS policies (ver RBAC-pontos-discutidos.md).
+('link_academico_gerenciar'),
+('arquivo_gerenciar')
 ON CONFLICT (nome) DO NOTHING;
 
 
@@ -122,6 +127,14 @@ ON CONFLICT (nome) DO NOTHING;
 -- PAPEL_PERMISSAO
 -- Resolvido por nome (não por número fixo), já que os IDs de "papel"
 -- não são previsíveis depois do ON CONFLICT DO NOTHING acima.
+--
+-- NOTA: como trg_permissao_auto_admin (06b_regras_negocio.sql, executado
+-- antes deste arquivo) já dispara em todo INSERT em "permissao" e atribui
+-- a permissão nova ao papel 'admin' automaticamente, as linhas ('admin', ...)
+-- abaixo já seriam preenchidas sozinhas pela trigger. Foram mantidas
+-- explícitas mesmo assim, só por clareza de leitura (documentam a
+-- intenção "admin tem tudo" sem depender de abrir outro arquivo para
+-- confirmar) — o ON CONFLICT DO NOTHING garante que não há duplicidade.
 -- ============================================================
 INSERT INTO papel_permissao (id_papel, id_permissao)
 SELECT p.id_papel, perm.id_permissao
@@ -154,6 +167,8 @@ WHERE (p.nome, perm.nome) IN (
     ('admin', 'sessao_revogar'),
     ('admin', 'recuperacao_senha_revogar'),
     ('admin', 'verificacao_email_reenviar'),
+    ('admin', 'link_academico_gerenciar'),
+    ('admin', 'arquivo_gerenciar'),
     -- moderador: cuida da moderação de conteúdo e denúncias.
     ('moderador', 'denuncia_responder'),
     ('moderador', 'comentario_moderar'),
