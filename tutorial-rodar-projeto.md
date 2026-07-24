@@ -13,6 +13,7 @@ Siga na ordem. Não pule etapas mesmo que pareçam óbvias.
 | PostgreSQL | o banco de dados de verdade (não é o do XAMPP) | https://www.postgresql.org/download/ |
 | DBeaver | você já tem — cliente para rodar os `.sql` | (já instalado) |
 | Node.js (versão LTS) | roda tanto o backend quanto o frontend | https://nodejs.org |
+| Git | controla versões e facilita o fluxo de trabalho | https://git-scm.com |
 | VS Code (opcional, mas recomendo) | editor de código | https://code.visualstudio.com |
 
 **Esqueça o XAMPP para este projeto.** Ele instala MySQL/MariaDB, e todo o seu schema (`CREATE EXTENSION`, `ENUM`, `ROW LEVEL SECURITY`, funções `plpgsql`) é PostgreSQL puro. São bancos incompatíveis — não dá pra rodar seus `.sql` nele.
@@ -42,18 +43,22 @@ Pronto, o Postgres já fica rodando sozinho em segundo plano (como um serviço d
 
 ## Parte 3 — rodar os arquivos SQL (ordem corrigida)
 
-Abra o **SQL Editor** do DBeaver conectado ao banco `crowdacademico` e rode os arquivos **nesta ordem exata** — repare que a ordem numérica normal (01→08) tem um problema que expliquei antes: o `05` usa duas funções que só existem depois do `06b`. Por isso a ordem certa é:
+Abra o **SQL Editor** do DBeaver conectado ao banco `crowdacademico` e rode os arquivos **nesta ordem exata**:
 
 ```
 1. 01_extensoes_enums_tabelas.sql
 2. 02_indices.sql
 3. 03_funcoes_seguranca.sql
 4. 04_rls_policies.sql
-5. 06b_regras_negocio.sql   ← rode ANTES do 05
-6. 05_grants.sql            ← agora sim, as funções já existem
+5. 05_regras_negocio.sql
+6. 06_grants.sql
 7. 07_seed_dados.sql
 8. 08_trigger_signup_usuario.sql
 ```
+
+Essa é a ordem atual do projeto e já foi consolidada no repositório. A criação da role `app_nestjs` foi antecipada no início do arquivo `01`, então a sequência `01 → 02 → 03 → 04 → 05 → 06 → 07 → 08` já pode ser executada sem esse workaround manual.
+
+Depois disso, siga normalmente com os arquivos `04`, `05`, `06`, `07` e `08`.
 
 **Como rodar cada um:** abra o arquivo `.sql`, selecione todo o conteúdo (Ctrl+A), e execute como script (no DBeaver geralmente é o botão de "Execute SQL Script", ou `Alt+X` — não use "Execute SQL Statement", que roda só um comando por vez). Faça um arquivo de cada vez, confira se não deu erro vermelho no log antes de ir pro próximo.
 
@@ -61,7 +66,7 @@ Se algum arquivo der erro na primeira linha por já existir algo (ex. rodou duas
 
 ### Depois de rodar tudo, troque a senha do usuário da aplicação
 
-O `05_grants.sql` cria um usuário chamado `app_nestjs` com uma senha provisória escrita no próprio arquivo. Troque por uma sua, rodando isso no SQL Editor:
+O `06_grants.sql` trabalha com o role `app_nestjs` já criado no início do processo. Troque a senha provisória por uma sua, rodando isso no SQL Editor:
 
 ```sql
 ALTER ROLE app_nestjs PASSWORD 'escolha-uma-senha-aqui';
@@ -76,17 +81,17 @@ Anote essa senha — é ela que o backend vai usar pra se conectar (não a senha
 Abra um terminal (pode ser o do VS Code: menu **Terminal → New Terminal**) numa pasta onde você quer guardar o projeto, e rode:
 
 ```bash
-npm install -g @nestjs/cli
-nest new backend
+npx @nestjs/cli new backend
 ```
 
-Escolha `npm` como gerenciador de pacotes quando ele perguntar. Isso cria uma pasta `backend` com um projeto Nest funcionando (mesmo sem banco, ele já sobe).
+Escolha `npm` como gerenciador de pacotes quando ele perguntar. Isso cria uma pasta `backend` com um projeto Nest funcionando (mesmo sem banco, ele já sobe). Se você estiver no Windows/PowerShell e tiver erro de política de execução, prefira esse comando com `npx` em vez de instalar o CLI globalmente.
 
 Entre na pasta e instale o driver do Postgres:
 
 ```bash
 cd backend
 npm install pg
+npm install @types/pg --save-dev
 ```
 
 ### Arquivo de configuração da conexão
@@ -97,7 +102,7 @@ Crie um arquivo `.env` na raiz da pasta `backend`:
 DATABASE_URL=postgresql://app_nestjs:escolha-uma-senha-aqui@localhost:5432/crowdacademico
 ```
 
-(troque `escolha-uma-senha-aqui` pela senha que você definiu na Parte 3).
+(troque `escolha-uma-senha-aqui` pela senha que você definiu na Parte 3). Se a senha tiver caracteres especiais como `@`, `#`, `:` ou `%`, a `DATABASE_URL` pode precisar de escaping; para evitar problemas em ambiente local, prefira usar uma senha só com letras e números.
 
 Instale também o pacote pra ler o `.env`:
 
@@ -105,9 +110,17 @@ Instale também o pacote pra ler o `.env`:
 npm install @nestjs/config
 ```
 
+Depois de editar o `.env`, reinicie o backend. O Nest não recarrega as variáveis automaticamente só porque você salvou o arquivo.
+
 ### Um endpoint simples, só pra provar que está tudo ligado
 
-Vamos criar uma rota bem simples que busca as áreas de conhecimento (uma tabela que já é pública, sem exigir login — ótimo pra um primeiro teste, porque evita mexer em RLS por enquanto).
+Antes de abrir o endpoint no navegador, faça um teste isolado de conexão no banco para separar “o banco conecta” de “o endpoint funciona”. No DBeaver ou no terminal do PostgreSQL, rode:
+
+```sql
+SELECT NOW();
+```
+
+Se isso retornar a data/hora, o banco está acessível. Depois disso, vamos criar uma rota bem simples que busca as áreas de conhecimento (uma tabela que já é pública, sem exigir login — ótimo pra um primeiro teste, porque evita mexer em RLS por enquanto).
 
 Edite `src/app.module.ts` para ficar assim:
 
@@ -136,10 +149,15 @@ export class AppService {
   private pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
   async getAreas() {
-    const result = await this.pool.query(
-      'SELECT id_area_conhecimento, nome FROM area_conhecimento WHERE ativo = TRUE ORDER BY nome',
-    );
-    return result.rows;
+    try {
+      const result = await this.pool.query(
+        'SELECT id_area_conhecimento, nome FROM area_conhecimento WHERE ativo = TRUE ORDER BY nome',
+      );
+      return result.rows;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Erro desconhecido';
+      throw new Error(`Falha ao buscar áreas de conhecimento: ${message}`);
+    }
   }
 }
 ```
@@ -159,6 +177,12 @@ export class AppController {
     return this.appService.getAreas();
   }
 }
+```
+
+Antes de subir o backend, adicione CORS no `src/main.ts`, logo após a criação do app:
+
+```typescript
+app.enableCors();
 ```
 
 Suba o backend:
@@ -190,21 +214,32 @@ import { useEffect, useState } from 'react';
 
 function App() {
   const [areas, setAreas] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [erro, setErro] = useState('');
 
   useEffect(() => {
     fetch('http://localhost:3000/areas')
-      .then((res) => res.json())
-      .then((data) => setAreas(data));
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then((data) => setAreas(data))
+      .catch((err) => setErro(err.message || 'Não foi possível carregar as áreas'))
+      .finally(() => setLoading(false));
   }, []);
 
   return (
     <div>
       <h1>Áreas de Conhecimento — CrowdAcadêmico</h1>
-      <ul>
-        {areas.map((a) => (
-          <li key={a.id_area_conhecimento}>{a.nome}</li>
-        ))}
-      </ul>
+      {loading && <p>Carregando...</p>}
+      {erro && <p role="alert">{erro}</p>}
+      {!loading && !erro && (
+        <ul>
+          {areas.map((a) => (
+            <li key={a.id_area_conhecimento}>{a.nome}</li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
@@ -233,4 +268,4 @@ Isso aqui te deixa com o "hello world" rodando, mas os problemas que já te avis
 
 1. **Login/autenticação real** vai exigir que, a cada requisição de um usuário logado, o backend rode `SET LOCAL app.id_usuario_atual = '<id>'` dentro de uma transação antes de consultar tabelas protegidas por RLS (tudo que não seja tabela de leitura pública como `area_conhecimento`). Isso é código a mais que ainda não existe — quando for fazer login/cadastro, avise que a gente monta esse pedaço com calma.
 2. Confirme sempre que o backend conecta como `app_nestjs`, nunca como `postgres` — senão a RLS é ignorada silenciosamente e parece que "está tudo funcionando" sem estar de verdade protegido.
-3. A branch `auth` tem permissões novas (`area_conhecimento_gerenciar`, `papel_gerenciar` etc.) seedadas mas ainda sem policy de RLS que as use — mencionei isso na análise anterior, ainda vale resolver antes de contar com elas no admin.
+3. O modelo ainda tem algumas permissões seedadas que merecem revisão de clareza e uso no RBAC/RLS, principalmente: `campanha_encerrar`, `perfil_pesquisador_visualizar_sensivel`, `sessao_revogar`, `recuperacao_senha_revogar` e `verificacao_email_reenviar`. Essas não são um bloqueio imediato para o tutorial, mas convém revisar antes de usar esse conjunto de permissões em fluxos mais complexos do admin.

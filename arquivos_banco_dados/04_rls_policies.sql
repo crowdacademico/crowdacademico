@@ -9,46 +9,86 @@
 -- ============================================================
 
 -- Habilitar RLS em TODAS as tabelas
+-- COMENTÁRIO DE ALTERAÇÃO:
+-- Ativamos FORCE ROW LEVEL SECURITY nas tabelas principais para garantir
+-- que a proteção não seja contornada pelo próprio dono da tabela. Isso
+-- reforça o enforcement da RLS mesmo em cenários de desenvolvimento local.
 ALTER TABLE usuario              ENABLE ROW LEVEL SECURITY;
+ALTER TABLE usuario              FORCE ROW LEVEL SECURITY;
 ALTER TABLE perfil_pesquisador   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE perfil_pesquisador   FORCE ROW LEVEL SECURITY;
 ALTER TABLE campanha             ENABLE ROW LEVEL SECURITY;
+ALTER TABLE campanha             FORCE ROW LEVEL SECURITY;
 ALTER TABLE contribuicao         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE contribuicao         FORCE ROW LEVEL SECURITY;
 ALTER TABLE comentario           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE comentario           FORCE ROW LEVEL SECURITY;
 ALTER TABLE denuncia             ENABLE ROW LEVEL SECURITY;
+ALTER TABLE denuncia             FORCE ROW LEVEL SECURITY;
 ALTER TABLE seguir_campanha      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE seguir_campanha      FORCE ROW LEVEL SECURITY;
 ALTER TABLE seguir_pesquisador   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE seguir_pesquisador   FORCE ROW LEVEL SECURITY;
 ALTER TABLE link_academico       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE link_academico       FORCE ROW LEVEL SECURITY;
 ALTER TABLE arquivo              ENABLE ROW LEVEL SECURITY;
+ALTER TABLE arquivo              FORCE ROW LEVEL SECURITY;
 ALTER TABLE score_pesquisador    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE score_pesquisador    FORCE ROW LEVEL SECURITY;
 ALTER TABLE configuracoes        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE configuracoes        FORCE ROW LEVEL SECURITY;
 ALTER TABLE score_config         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE score_config         FORCE ROW LEVEL SECURITY;
 ALTER TABLE score_rotulo         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE score_rotulo         FORCE ROW LEVEL SECURITY;
 
 -- Tabelas de referência e auxiliares (novas)
 ALTER TABLE area_conhecimento    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE area_conhecimento    FORCE ROW LEVEL SECURITY;
 ALTER TABLE tipo_link            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tipo_link            FORCE ROW LEVEL SECURITY;
 ALTER TABLE motivo_denuncia      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE motivo_denuncia      FORCE ROW LEVEL SECURITY;
 ALTER TABLE papel                ENABLE ROW LEVEL SECURITY;
+ALTER TABLE papel                FORCE ROW LEVEL SECURITY;
 ALTER TABLE permissao            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE permissao            FORCE ROW LEVEL SECURITY;
 ALTER TABLE papel_permissao      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE papel_permissao      FORCE ROW LEVEL SECURITY;
 ALTER TABLE usuario_papel        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE usuario_papel        FORCE ROW LEVEL SECURITY;
 ALTER TABLE atualizacao_campanha ENABLE ROW LEVEL SECURITY;
+ALTER TABLE atualizacao_campanha FORCE ROW LEVEL SECURITY;
 ALTER TABLE arquivo_atualizacao  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE arquivo_atualizacao  FORCE ROW LEVEL SECURITY;
 ALTER TABLE auditoria_financeira ENABLE ROW LEVEL SECURITY;
+ALTER TABLE auditoria_financeira FORCE ROW LEVEL SECURITY;
 ALTER TABLE historico_rejeicao   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE historico_rejeicao   FORCE ROW LEVEL SECURITY;
 ALTER TABLE repasse              ENABLE ROW LEVEL SECURITY;
+ALTER TABLE repasse              FORCE ROW LEVEL SECURITY;
 ALTER TABLE solicitacao_encerramento ENABLE ROW LEVEL SECURITY;
+ALTER TABLE solicitacao_encerramento FORCE ROW LEVEL SECURITY;
 
 -- Tabelas novas (termos, notificações, recompensas)
 ALTER TABLE termos_de_uso        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE termos_de_uso        FORCE ROW LEVEL SECURITY;
 ALTER TABLE usuario_termo        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE usuario_termo        FORCE ROW LEVEL SECURITY;
 ALTER TABLE aceite_termo_contribuicao ENABLE ROW LEVEL SECURITY;
+ALTER TABLE aceite_termo_contribuicao FORCE ROW LEVEL SECURITY;
 ALTER TABLE notificacao          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notificacao          FORCE ROW LEVEL SECURITY;
 ALTER TABLE recompensa           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE recompensa           FORCE ROW LEVEL SECURITY;
 ALTER TABLE arquivo_recompensa   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE arquivo_recompensa   FORCE ROW LEVEL SECURITY;
 ALTER TABLE contribuicao_recompensa ENABLE ROW LEVEL SECURITY;
+ALTER TABLE contribuicao_recompensa FORCE ROW LEVEL SECURITY;
 ALTER TABLE link_atualizacao      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE link_atualizacao      FORCE ROW LEVEL SECURITY;
 ALTER TABLE link_recompensa       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE link_recompensa       FORCE ROW LEVEL SECURITY;
 
 -- ============================================================
 -- RLS destas três tabelas
@@ -67,8 +107,11 @@ ALTER TABLE link_recompensa       ENABLE ROW LEVEL SECURITY;
 -- na aplicação; a policy aqui só garante que NENHUM outro role além
 -- de app_nestjs consegue tocar nessas tabelas.
 ALTER TABLE verificacao_email ENABLE ROW LEVEL SECURITY;
+ALTER TABLE verificacao_email FORCE ROW LEVEL SECURITY;
 ALTER TABLE recuperacao_senha ENABLE ROW LEVEL SECURITY;
+ALTER TABLE recuperacao_senha FORCE ROW LEVEL SECURITY;
 ALTER TABLE sessao            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sessao            FORCE ROW LEVEL SECURITY;
 
 CREATE POLICY pol_verificacao_email_all ON verificacao_email
     FOR ALL TO app_nestjs USING (true) WITH CHECK (true);
@@ -88,7 +131,15 @@ CREATE POLICY pol_usuario_select ON usuario FOR SELECT TO app_nestjs USING (dele
 DROP POLICY IF EXISTS pol_usuario_update ON usuario;
 CREATE POLICY pol_usuario_update ON usuario FOR UPDATE TO app_nestjs USING (id_usuario = public.id_usuario_atual() OR public.tem_permissao('usuario_suspender'));
 
+-- COMENTÁRIO DE ALTERAÇÃO:
+-- Adicionamos a policy de INSERT em perfil_pesquisador para permitir o fluxo
+-- de upgrade de usuário cadastrado para pesquisador. Sem essa policy, a RLS
+-- bloqueia a operação mesmo com o GRANT de tabela em 06_grants.sql.
 CREATE POLICY pol_perfil_select ON perfil_pesquisador FOR SELECT USING (TRUE);
+DROP POLICY IF EXISTS pol_perfil_insert ON perfil_pesquisador;
+CREATE POLICY pol_perfil_insert ON perfil_pesquisador FOR INSERT TO app_nestjs WITH CHECK (
+    id_usuario = public.id_usuario_atual()
+);
 CREATE POLICY pol_perfil_update ON perfil_pesquisador FOR UPDATE TO app_nestjs USING (id_usuario = public.id_usuario_atual());
 
 -- CORRIGIDO: campanhas públicas agora expõem apenas os status permitidos, preservando as demais para dono/admin.
@@ -225,11 +276,22 @@ CREATE POLICY pol_score_select ON score_pesquisador FOR SELECT USING (TRUE);
 CREATE POLICY pol_config_select ON configuracoes FOR SELECT TO app_nestjs USING (id_usuario IS NULL OR id_usuario = public.id_usuario_atual());
 
 CREATE POLICY "pol_score_config_select" ON public.score_config FOR SELECT TO app_nestjs USING (true);
+-- COMENTÁRIO DE ALTERAÇÃO:
+-- Adicionamos a policy de INSERT para score_config para permitir que o
+-- painel administrativo crie novas dimensões de score sem depender de
+-- uma regra de bypass da RLS.
+DROP POLICY IF EXISTS pol_score_config_insert ON public.score_config;
+CREATE POLICY pol_score_config_insert ON public.score_config FOR INSERT TO app_nestjs WITH CHECK (public.tem_permissao('score_editar'));
 -- CORRIGIDO: acesso à configuração de score passa a depender de permissão específica.
 DROP POLICY IF EXISTS pol_score_config_update ON public.score_config;
 CREATE POLICY pol_score_config_update ON public.score_config FOR UPDATE TO app_nestjs USING (public.tem_permissao('score_editar'));
 
 CREATE POLICY "pol_score_rotulo_select" ON public.score_rotulo FOR SELECT TO app_nestjs USING (true);
+-- COMENTÁRIO DE ALTERAÇÃO:
+-- Adicionamos a policy de INSERT para score_rotulo para permitir a criação
+-- de novos rótulos de score pelo fluxo administrativo com a permissão certa.
+DROP POLICY IF EXISTS pol_score_rotulo_insert ON public.score_rotulo;
+CREATE POLICY pol_score_rotulo_insert ON public.score_rotulo FOR INSERT TO app_nestjs WITH CHECK (public.tem_permissao('score_editar'));
 DROP POLICY IF EXISTS pol_score_rotulo_update ON public.score_rotulo;
 CREATE POLICY pol_score_rotulo_update ON public.score_rotulo FOR UPDATE TO app_nestjs USING (public.tem_permissao('score_editar'));
 
@@ -240,6 +302,13 @@ CREATE POLICY pol_score_rotulo_update ON public.score_rotulo FOR UPDATE TO app_n
 
 -- Tabelas de referência (leitura pública)
 CREATE POLICY pol_area_select ON area_conhecimento FOR SELECT USING (true);
+-- COMENTÁRIO DE ALTERAÇÃO:
+-- Adicionamos policies de escrita para area_conhecimento para que a gestão
+-- de catálogos funcione corretamente junto com o GRANT já concedido.
+DROP POLICY IF EXISTS pol_area_insert ON area_conhecimento;
+CREATE POLICY pol_area_insert ON area_conhecimento FOR INSERT TO app_nestjs WITH CHECK (public.tem_permissao('area_conhecimento_gerenciar'));
+DROP POLICY IF EXISTS pol_area_update ON area_conhecimento;
+CREATE POLICY pol_area_update ON area_conhecimento FOR UPDATE TO app_nestjs USING (public.tem_permissao('area_conhecimento_gerenciar')) WITH CHECK (public.tem_permissao('area_conhecimento_gerenciar'));
 CREATE POLICY pol_tipolink_select ON tipo_link FOR SELECT USING (true);
 -- ADICIONADO: cadastro e edição de tipos de link passam a depender de permissão específica para gestão administrativa.
 DROP POLICY IF EXISTS pol_tipolink_insert ON tipo_link;
@@ -247,6 +316,14 @@ CREATE POLICY pol_tipolink_insert ON tipo_link FOR INSERT TO app_nestjs WITH CHE
 DROP POLICY IF EXISTS pol_tipolink_update ON tipo_link;
 CREATE POLICY pol_tipolink_update ON tipo_link FOR UPDATE TO app_nestjs USING (public.tem_permissao('tipolink_gerenciar')) WITH CHECK (public.tem_permissao('tipolink_gerenciar'));
 CREATE POLICY pol_motivo_select ON motivo_denuncia FOR SELECT USING (true);
+-- COMENTÁRIO DE ALTERAÇÃO:
+-- Adicionamos policies de escrita para motivo_denuncia para completar a
+-- correção iniciada no GRANT de tabela e garantir que o fluxo de curadoria
+-- funcione com o RBAC esperado.
+DROP POLICY IF EXISTS pol_motivo_insert ON motivo_denuncia;
+CREATE POLICY pol_motivo_insert ON motivo_denuncia FOR INSERT TO app_nestjs WITH CHECK (public.tem_permissao('motivo_denuncia_gerenciar'));
+DROP POLICY IF EXISTS pol_motivo_update ON motivo_denuncia;
+CREATE POLICY pol_motivo_update ON motivo_denuncia FOR UPDATE TO app_nestjs USING (public.tem_permissao('motivo_denuncia_gerenciar')) WITH CHECK (public.tem_permissao('motivo_denuncia_gerenciar'));
 CREATE POLICY pol_papel_select ON papel FOR SELECT USING (true);
 CREATE POLICY pol_permissao_select ON permissao FOR SELECT USING (true);
 CREATE POLICY pol_papelperm_select ON papel_permissao FOR SELECT USING (true);
@@ -255,6 +332,11 @@ CREATE POLICY pol_papelperm_select ON papel_permissao FOR SELECT USING (true);
 CREATE POLICY pol_usuariopapel_select ON usuario_papel FOR SELECT TO app_nestjs USING (id_usuario = public.id_usuario_atual() OR public.tem_permissao('papel_gerenciar'));
 DROP POLICY IF EXISTS pol_usuariopapel_insert ON usuario_papel;
 CREATE POLICY pol_usuariopapel_insert ON usuario_papel FOR INSERT TO app_nestjs WITH CHECK (public.tem_permissao('papel_atribuir'));
+-- COMENTÁRIO DE ALTERAÇÃO:
+-- Adicionamos a policy de DELETE para usuario_papel para permitir que o
+-- painel revogue papéis atribuídos sem depender de um bypass de RLS.
+DROP POLICY IF EXISTS pol_usuariopapel_delete ON usuario_papel;
+CREATE POLICY pol_usuariopapel_delete ON usuario_papel FOR DELETE TO app_nestjs USING (public.tem_permissao('papel_gerenciar'));
 
 -- atualizacao_campanha
 -- CORRIGIDO: atualização inativa (ocultada por moderação) só continua
@@ -307,9 +389,33 @@ CREATE POLICY pol_auditoria_select ON auditoria_financeira FOR SELECT TO app_nes
           AND c.id_usuario = public.id_usuario_atual()
     )
 );
+-- COMENTÁRIO DE ALTERAÇÃO:
+-- Adicionamos políticas de escrita para auditoria_financeira para permitir
+-- o registro de eventos financeiros e auditoria do fluxo de contribuição.
+DROP POLICY IF EXISTS pol_auditoria_insert ON auditoria_financeira;
+CREATE POLICY pol_auditoria_insert ON auditoria_financeira FOR INSERT TO app_nestjs WITH CHECK (true);
+DROP POLICY IF EXISTS pol_auditoria_update ON auditoria_financeira;
+CREATE POLICY pol_auditoria_update ON auditoria_financeira FOR UPDATE TO app_nestjs USING (true) WITH CHECK (true);
 
 -- historico_rejeicao
 CREATE POLICY pol_historicorej_select ON historico_rejeicao FOR SELECT TO app_nestjs USING (public.tem_permissao('campanha_rejeitar'));
+-- COMENTÁRIO DE ALTERAÇÃO:
+-- Adicionamos políticas de escrita para historico_rejeicao para permitir
+-- o registro de rejeições de campanha pelo fluxo de moderação.
+DROP POLICY IF EXISTS pol_historicorej_insert ON historico_rejeicao;
+CREATE POLICY pol_historicorej_insert ON historico_rejeicao FOR INSERT TO app_nestjs WITH CHECK (true);
+DROP POLICY IF EXISTS pol_historicorej_update ON historico_rejeicao;
+CREATE POLICY pol_historicorej_update ON historico_rejeicao FOR UPDATE TO app_nestjs USING (true) WITH CHECK (true);
+
+-- COMENTÁRIO DE ALTERAÇÃO:
+-- Adicionamos políticas de escrita para repasse porque esse fluxo é
+-- gerado pelo backend a partir da consolidação financeira da campanha.
+-- Sem isso, a RLS bloqueia a criação e atualização do registro mesmo com
+-- o GRANT de tabela correto.
+DROP POLICY IF EXISTS pol_repasse_insert ON repasse;
+CREATE POLICY pol_repasse_insert ON repasse FOR INSERT TO app_nestjs WITH CHECK (true);
+DROP POLICY IF EXISTS pol_repasse_update ON repasse;
+CREATE POLICY pol_repasse_update ON repasse FOR UPDATE TO app_nestjs USING (true) WITH CHECK (true);
 
 -- repasse
 CREATE POLICY pol_repasse_select ON repasse FOR SELECT TO app_nestjs USING (
@@ -367,11 +473,16 @@ CREATE POLICY pol_aceite_termo_contribuicao_insert ON aceite_termo_contribuicao 
     )
 );
 
--- notificacao: só leitura das próprias notificações. Sem política de
--- INSERT/UPDATE para authenticated de propósito — quem cria e atualiza
--- notificação é o backend (via service_role, que ignora RLS), nunca o
--- cliente direto; senão qualquer usuário poderia forjar notificações.
+-- notificacao: leitura das próprias notificações e escrita controlada pelo
+-- backend da aplicação. Como agora o projeto não depende de service_role
+-- para ignorar RLS, adicionamos políticas de INSERT/UPDATE mínimas para
+-- permitir a criação e atualização de notificações sem abrir o acesso para
+-- qualquer usuário falsificar registros.
 CREATE POLICY pol_notificacao_select ON notificacao FOR SELECT TO app_nestjs USING (id_usuario = public.id_usuario_atual() OR public.tem_permissao('usuario_visualizar_sensivel'));
+DROP POLICY IF EXISTS pol_notificacao_insert ON notificacao;
+CREATE POLICY pol_notificacao_insert ON notificacao FOR INSERT TO app_nestjs WITH CHECK (id_usuario = public.id_usuario_atual());
+DROP POLICY IF EXISTS pol_notificacao_update ON notificacao;
+CREATE POLICY pol_notificacao_update ON notificacao FOR UPDATE TO app_nestjs USING (id_usuario = public.id_usuario_atual()) WITH CHECK (id_usuario = public.id_usuario_atual());
 
 -- recompensa: leitura pública (aparece na página da campanha); só o
 -- dono da campanha (ou admin) pode criar/editar as recompensas dela.
@@ -399,6 +510,23 @@ CREATE POLICY pol_arqrecompensa_select ON arquivo_recompensa FOR SELECT TO app_n
     )
 );
 CREATE POLICY pol_arqrecompensa_insert ON arquivo_recompensa FOR INSERT TO app_nestjs WITH CHECK (
+    EXISTS (
+        SELECT 1 FROM recompensa r JOIN campanha c ON c.id_campanha = r.id_campanha
+        WHERE r.id_recompensa = arquivo_recompensa.id_recompensa
+          AND (c.id_usuario = public.id_usuario_atual() OR public.tem_permissao('campanha_editar'))
+    )
+);
+-- COMENTÁRIO DE ALTERAÇÃO:
+-- Adicionamos a policy de UPDATE para arquivo_recompensa para permitir
+-- trocar a imagem principal da recompensa quando a campanha for editada.
+DROP POLICY IF EXISTS pol_arqrecompensa_update ON arquivo_recompensa;
+CREATE POLICY pol_arqrecompensa_update ON arquivo_recompensa FOR UPDATE TO app_nestjs USING (
+    EXISTS (
+        SELECT 1 FROM recompensa r JOIN campanha c ON c.id_campanha = r.id_campanha
+        WHERE r.id_recompensa = arquivo_recompensa.id_recompensa
+          AND (c.id_usuario = public.id_usuario_atual() OR public.tem_permissao('campanha_editar'))
+    )
+) WITH CHECK (
     EXISTS (
         SELECT 1 FROM recompensa r JOIN campanha c ON c.id_campanha = r.id_campanha
         WHERE r.id_recompensa = arquivo_recompensa.id_recompensa

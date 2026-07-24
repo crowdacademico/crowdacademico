@@ -15,29 +15,8 @@
 -- ============================================================
 
 -- ============================================================
--- ROLE DO BACKEND (NestJS)
+-- Role criada no 01; este arquivo só concede permissões.
 -- ============================================================
--- CORRIGIDO: o projeto usava os roles "anon"/"authenticated" do
--- modelo Supabase/PostgREST (o cliente conectava direto no Postgres
--- e o Postgres decidia o role pela presença de JWT). Sem o Supabase
--- Auth/PostgREST no meio, quem conecta no banco é só o NestJS, com
--- uma única credencial de aplicação — a distinção anon/authenticated
--- deixou de fazer sentido como role de conexão. A partir de agora,
--- todo GRANT e toda policy usam um único role "app_nestjs"; a
--- diferença entre "visitante" e "usuário logado" é resolvida dentro
--- das próprias policies via id_usuario_atual() (que retorna NULL
--- quando o NestJS não fez o SET LOCAL, i.e. requisição sem sessão).
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'app_nestjs') THEN
-        CREATE ROLE app_nestjs LOGIN PASSWORD 'TROCAR_NO_AMBIENTE_REAL';
-    END IF;
-END
-$$;
--- NOTA: a senha acima é só placeholder para o CREATE ROLE não falhar
--- em ambiente novo. Em produção/homologação, a senha real deve vir de
--- variável de ambiente/secret manager e ser trocada com ALTER ROLE,
--- nunca ficar em texto puro neste arquivo versionado.
 
 -- ============================================================
 -- GRANTS E PROTEÇÃO DE COLUNAS
@@ -46,7 +25,12 @@ GRANT USAGE ON SCHEMA public TO app_nestjs;
 
 GRANT SELECT ON ALL TABLES IN SCHEMA public TO app_nestjs;
 
+-- COMENTÁRIO DE ALTERAÇÃO:
+-- O acesso público à tabela usuario e à tabela perfil_pesquisador foi
+-- reduzido no nível de GRANT para evitar que o role app_nestjs tenha acesso
+-- indiscriminado a dados sensíveis antes da avaliação das policies RLS.
 REVOKE SELECT ON public.usuario FROM app_nestjs;
+REVOKE SELECT ON public.perfil_pesquisador FROM app_nestjs;
 -- ALTERADO: coluna id_supabase removida da tabela usuario (autenticação própria).
 -- CORRIGIDO: faltavam as colunas usadas pelo próprio fluxo de login/auth
 -- (senha_hash, tentativas_login_falhas, bloqueado_ate, ultimo_login_em,
@@ -65,8 +49,21 @@ GRANT INSERT, UPDATE, DELETE ON
     score_config, score_rotulo, historico_rejeicao, atualizacao_campanha,
     arquivo, arquivo_atualizacao, solicitacao_encerramento, usuario_papel,
     termos_de_uso, usuario_termo, aceite_termo_contribuicao, recompensa, arquivo_recompensa,
-    contribuicao_recompensa, link_atualizacao, link_recompensa
+    contribuicao_recompensa, link_atualizacao, link_recompensa, repasse,
+    auditoria_financeira
 TO app_nestjs;
+
+-- COMENTÁRIO DE ALTERAÇÃO:
+-- Foram concedidos apenas os GRANTs mínimos necessários para que as
+-- políticas RLS possam funcionar corretamente para gestão de catálogos e
+-- leitura controlada de perfil_pesquisador. Isso preserva o princípio de
+-- privilégio mínimo e evita permissões amplas desnecessárias.
+GRANT INSERT, UPDATE ON area_conhecimento, motivo_denuncia TO app_nestjs;
+
+GRANT SELECT (
+    id_usuario, vinculo_institucional, titulo_academico, status_pesquisador,
+    ativado_em, suspenso, score_atual, score_atualizado_em
+) ON public.perfil_pesquisador TO app_nestjs;
 
 -- NOTA: "notificacao" fica de fora desta lista de propósito. Ela só
 -- tem política de SELECT (arquivo 04) — quem grava nela é o próprio

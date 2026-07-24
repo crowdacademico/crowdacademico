@@ -4,17 +4,21 @@
 --  Próximo arquivo: 02_indices.sql
 -- ============================================================
 
+-- [01-A] CONTEXTO DO SCRIPT BASE E REVISÃO
+-- [01-B] ROLE APP_NESTJS E ORDEM DE CRIAÇÃO
 -- ============================================================
---  CrowdAcadêmico — PARTE 1: TABELAS (extensões, enums, tabelas, índices)
---  Gerado a partir de crowd_academico_revisado.sql
+-- ROLE DO BACKEND (NestJS)
 -- ============================================================
+-- [01-C] ROLE APP_NESTJS E AUTENTICAÇÃO DO BACKEND
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'app_nestjs') THEN
+        CREATE ROLE app_nestjs LOGIN PASSWORD 'TROCAR_NO_AMBIENTE_REAL';
+    END IF;
+END
+$$;
+-- [01-D] PLACEHOLDER DE SENHA DA ROLE APP_NESTJS
 
--- ============================================================
---  CrowdAcadêmico — Script revisado COMPLETO (Supabase/PostgreSQL)
---  Inclui todas as correções de RLS para tabelas faltantes
--- ============================================================
-
--- [O conteúdo original completo vai aqui - mantido intacto]
 -- ============================================================
 -- EXTENSÕES
 -- ============================================================
@@ -28,9 +32,8 @@ CREATE TYPE tipo_configuracao     AS ENUM ('decimal', 'inteiro', 'texto', 'boole
 CREATE TYPE status_pesquisador    AS ENUM ('ativo', 'suspenso');
 CREATE TYPE titulo_academico      AS ENUM ('graduado', 'especialista', 'mestre', 'doutor');
 CREATE TYPE modelo_campanha       AS ENUM ('all-or-nothing', 'flexivel');
--- CORRIGIDO: status_campanha recebeu o valor encerrado_moderacao.
+-- [01-E] STATUS DE CAMPANHA E CONTRIBUIÇÃO
 CREATE TYPE status_campanha       AS ENUM ('aguardando_aprovacao', 'ativo', 'sucesso', 'nao_atingido', 'rejeitado', 'encerrado', 'encerrado_moderacao');
--- CORRIGIDO: status_contribuicao recebeu os valores expirado e reembolso_manual.
 CREATE TYPE status_contribuicao   AS ENUM ('pendente', 'confirmado', 'repassado', 'a_devolver', 'devolvido', 'reembolsado', 'erro', 'expirado', 'reembolso_manual');
 CREATE TYPE meio_pagamento        AS ENUM ('pix', 'cartao_credito', 'cartao_debito', 'boleto');
 CREATE TYPE fase_atualizacao      AS ENUM ('andamento', 'resultado_preliminar', 'resultado_final');
@@ -87,13 +90,7 @@ CREATE TABLE tipo_link (
     dominio      VARCHAR(255)
 );
 
--- [melhoria] tipo_link agora é compartilhado por 3 contextos: perfil
--- acadêmico (Orcid, Lattes...), atualizações de campanha e recompensas.
--- Cada linha declara em quais contextos pode ser usada — assim "Orcid"
--- e "Lattes" continuam só para perfil, enquanto "YouTube"/"Site"/
--- "Google Drive" podem valer pra atualização e/ou recompensa também.
--- DEFAULT TRUE em permite_perfil preserva o comportamento das linhas
--- já existentes (todas eram, até então, só de perfil acadêmico).
+-- [01-F] AJUSTE DE ESCOPO DO TIPO_LINK
 ALTER TABLE tipo_link
     ADD COLUMN permite_perfil       BOOLEAN NOT NULL DEFAULT TRUE,
     ADD COLUMN permite_atualizacao  BOOLEAN NOT NULL DEFAULT FALSE,
@@ -121,7 +118,7 @@ CREATE TABLE motivo_denuncia (
     codigo    VARCHAR(20)          NOT NULL UNIQUE,
     descricao VARCHAR(255),
     tipo      tipo_motivo_denuncia NOT NULL,
-    -- CORRIGIDO: motivo_denuncia passou a ter indicador ativo/inativo.
+    -- [01-G] INDICADOR ATIVO/INATIVO NO MOTIVO DE DENÚNCIA
     ativo     BOOLEAN             NOT NULL DEFAULT TRUE
 );
 
@@ -129,20 +126,18 @@ CREATE TABLE motivo_denuncia (
 -- ============================================================
 -- USUARIO
 -- ============================================================
--- Autenticação própria (não usa mais Supabase Auth/auth.users).
+-- [01-H] AUTENTICAÇÃO PRÓPRIA DO USUÁRIO
 CREATE TABLE usuario (
     id_usuario       SERIAL PRIMARY KEY,
     nome             VARCHAR(150) NOT NULL,
     email            VARCHAR(255) NOT NULL UNIQUE,
-    senha_hash       VARCHAR(255) NOT NULL,     -- ALTERADO: era opcional [R10], agora obrigatório (único método de login)
+    senha_hash       VARCHAR(255) NOT NULL,     -- [01-I] SENHA HASH OBRIGATÓRIA PARA LOGIN PRÓPRIO
     id_imagem_perfil INT,
     criado_em        TIMESTAMP    DEFAULT NOW(),
     deletado         BOOLEAN      DEFAULT FALSE,
 
-    -- NOVO: controle de verificação de e-mail (tokens em verificacao_email, tabela definida mais abaixo)
+    -- [01-J] VERIFICAÇÃO DE E-MAIL E PROTEÇÃO CONTRA BRUTE-FORCE
     email_verificado         BOOLEAN   NOT NULL DEFAULT FALSE,
-
-    -- NOVO: proteção contra brute-force de login
     tentativas_login_falhas  INT       NOT NULL DEFAULT 0,
     bloqueado_ate            TIMESTAMP,
     ultimo_login_em          TIMESTAMP,
@@ -175,7 +170,7 @@ CREATE TABLE perfil_pesquisador (
     status_pesquisador    status_pesquisador DEFAULT 'ativo',
     ativado_em            TIMESTAMP,
     suspenso              BOOLEAN            DEFAULT FALSE,
-    -- cache do score (agora em inteiro)
+    -- [01-K] CACHE DO SCORE EM INTEIRO
     score_atual           INTEGER            DEFAULT 0,
     score_atualizado_em   TIMESTAMP
 );
@@ -231,7 +226,7 @@ CREATE TABLE campanha (
     status               status_campanha NOT NULL DEFAULT 'aguardando_aprovacao',
     aprovado_em          TIMESTAMP,
     criado_em            TIMESTAMP       DEFAULT NOW(),
-    -- DEFINIDO PELA EQUIPE: prazo mínimo de 15 dias e máximo de 90 dias corridos, contados a partir da aprovação da campanha (RF-045).
+    -- [01-L] PRAZO MÍNIMO E MÁXIMO DA CAMPANHA
     CONSTRAINT chk_prazo_campanha CHECK (
         data_fim IS NULL OR data_inicio IS NULL OR
         (data_fim - data_inicio) BETWEEN INTERVAL '15 days' AND INTERVAL '90 days'
@@ -271,7 +266,7 @@ CREATE TABLE contribuicao (
     id_contribuicao  SERIAL PRIMARY KEY,
     id_campanha      INT                 NOT NULL REFERENCES campanha(id_campanha),
     id_usuario       INT                          REFERENCES usuario(id_usuario) ON DELETE SET NULL,
-    -- CORRIGIDO: valor mínimo de contribuição definido em R$ 5,00.
+    -- [01-M] VALOR MÍNIMO DA CONTRIBUIÇÃO
     valor            DECIMAL(10,2)       NOT NULL CHECK (valor >= 5.00),
     meio_pagamento   meio_pagamento      NOT NULL,
     status           status_contribuicao NOT NULL DEFAULT 'pendente',
@@ -280,18 +275,17 @@ CREATE TABLE contribuicao (
     criado_em        TIMESTAMP           DEFAULT NOW()
 );
 
--- CORRIGIDO: token de sessão para evitar que contribuições anônimas sejam enumeradas sequencialmente por terceiros.
+-- [01-N] TOKEN DE SESSÃO PARA CONTRIBUIÇÃO ANÔNIMA
 ALTER TABLE contribuicao ADD COLUMN token_sessao UUID DEFAULT gen_random_uuid();
 
 
 -- ============================================================
--- AUDITORIA FINANCEIRA
+-- [01-O] AUDITORIA FINANCEIRA
 -- ============================================================
--- CORRIGIDO: auditoria_financeira passou a congelar valor e meio de pagamento no momento do evento.
 CREATE TABLE auditoria_financeira (
     id_auditoria    SERIAL PRIMARY KEY,
     id_contribuicao INT          NOT NULL REFERENCES contribuicao(id_contribuicao),
-    -- CORRIGIDO: auditoria financeira agora registra também o usuário/processo responsável pelo evento.
+    -- [01-P] RESPONSÁVEL PELO EVENTO NA AUDITORIA FINANCEIRA
     id_usuario_responsavel INT REFERENCES usuario(id_usuario) ON DELETE SET NULL,
     valor           DECIMAL(10,2) NOT NULL,
     meio_pagamento  meio_pagamento,
@@ -308,14 +302,13 @@ CREATE TABLE auditoria_financeira (
 CREATE TABLE atualizacao_campanha (
     id_atualizacao SERIAL PRIMARY KEY,
     id_campanha    INT              NOT NULL REFERENCES campanha(id_campanha) ON DELETE CASCADE,
-    -- ADICIONADO: título da atualização, exibido em listagens antes do conteúdo completo.
+    -- [01-Q] TÍTULO DA ATUALIZAÇÃO DE CAMPANHA
     titulo         VARCHAR(150)     NOT NULL,
     conteudo       TEXT             NOT NULL,
     publicado_em   TIMESTAMP        DEFAULT NOW(),
     fase           fase_atualizacao,
     tipo           tipo_atualizacao,
-    -- ADICIONADO: soft delete/moderação. Atualização ocultada por moderação
-    -- não é apagada (mantém histórico), só deixa de ser exibida publicamente.
+    -- [01-R] SOFT DELETE E MODERAÇÃO DAS ATUALIZAÇÕES
     ativo          BOOLEAN          NOT NULL DEFAULT TRUE
 );
 
@@ -344,7 +337,6 @@ CREATE TABLE repasse (
     taxa_relativa DECIMAL(5,2),
     status        VARCHAR(100)
 );
-
 
 
 -- ============================================================
@@ -384,12 +376,11 @@ CREATE TABLE comentario (
     endossado      BOOLEAN      DEFAULT FALSE,
     criado_em      TIMESTAMP    DEFAULT NOW(),
     ordem_endosso  INT,
-    -- ADICIONADO: soft delete. Comentário moderado/removido não é apagado
-    -- de fato (mantém histórico/auditoria), só deixa de ser exibido.
+    -- [01-S] SOFT DELETE DOS COMENTÁRIOS
     ativo          BOOLEAN      NOT NULL DEFAULT TRUE,
-    -- CORRIGIDO: comentários passaram a ter unicidade por campanha e pesquisador.
+    -- [01-T] UNICIDADE DE COMENTÁRIO POR CAMPANHA E PESQUISADOR
     UNIQUE (id_campanha, id_pesquisador),
-    -- CORRIGIDO: endossado e ordem_endosso agora ficam coerentes entre si.
+    -- [01-U] COERÊNCIA ENTRE ENDOSSADO E ORDEM_ENDOSSO
     CONSTRAINT chk_comentario_endosso
         CHECK ((endossado = TRUE AND ordem_endosso IS NOT NULL) OR (endossado = FALSE AND ordem_endosso IS NULL))
 );
@@ -397,7 +388,7 @@ CREATE TABLE comentario (
 
 
 -- ============================================================
--- DENUNCIA
+-- [01-V] DENUNCIA
 -- ============================================================
 CREATE TABLE denuncia (
     id_denuncia         SERIAL PRIMARY KEY,
@@ -407,7 +398,6 @@ CREATE TABLE denuncia (
     id_motivo           INT  NOT NULL REFERENCES motivo_denuncia(id_motivo),
     status              status_denuncia NOT NULL DEFAULT 'pendente',
     criado_em           TIMESTAMP    DEFAULT NOW(),
-    -- CORRIGIDO: denúncias passaram a ter unicidade por alvo e limite de taxa temporal.
     UNIQUE (id_usuario, id_campanha_alvo),
     UNIQUE (id_usuario, id_pesquisador_alvo)
 );
@@ -462,18 +452,7 @@ CREATE TABLE score_pesquisador (
 
 
 -- ============================================================
--- NOTA DE REORGANIZAÇÃO (movido de artificios.sql):
--- O bloco abaixo apenas garante, de forma defensiva/idempotente,
--- a mesma UNIQUE constraint que a tabela score_pesquisador já
--- declara acima (uq_score_pesquisador_usuario_config). Hoje ele é
--- redundante (não faz nada, pois a constraint já existe desde a
--- criação da tabela) — mantido aqui por segurança/histórico, mas
--- pode ser removido com segurança em uma limpeza futura.
--- ============================================================
--- ============================================================
--- 1. MELHORIA NO BANCO: índice único pra permitir UPSERT
---    score_pesquisador não tinha como saber "essa linha já existe
---    pra esse usuário+dimensão" — impossível fazer UPSERT sem isso.
+-- [01-W] REORGANIZAÇÃO DEFENSIVA DO SCORE E UPSERT
 -- ============================================================
 DO $$
 BEGIN
@@ -487,15 +466,8 @@ BEGIN
     END IF;
 END $$;
 
-
 -- ============================================================
--- NOVAS TABELAS (acrescentadas em 2026-07 — presentes só no diagrama)
--- Todas referenciam tabelas já criadas acima, então podem ficar
--- no fim do arquivo sem quebrar a ordem de dependência de FKs.
--- ============================================================
-
--- ============================================================
--- TERMOS_DE_USO
+-- [01-X] TERMOS_DE_USO
 -- ============================================================
 CREATE TABLE termos_de_uso (
     id_termo  SERIAL PRIMARY KEY,
@@ -569,8 +541,7 @@ CREATE TABLE arquivo_recompensa (
 
 
 -- ============================================================
--- CONTRIBUICAO_RECOMPENSA (acrescentada em 2026-07)
--- Permite que uma mesma contribuição adquira várias recompensas.
+-- [01-Y] CONTRIBUIÇÃO_RECOMPENSA
 -- ============================================================
 CREATE TABLE contribuicao_recompensa (
     id_contrib_recompensa SERIAL PRIMARY KEY,
@@ -584,10 +555,7 @@ CREATE TABLE contribuicao_recompensa (
 
 
 -- ============================================================
--- LINK_ATUALIZACAO (acrescentada em 2026-07)
--- Reaproveita tipo_link para os links de uma atualização de campanha
--- (ex.: link pro artigo publicado, vídeo, planilha de resultado).
--- Mesmo formato de link_academico.
+-- [01-Z] TABELA DE LINKS PARA ATUALIZAÇÕES DE CAMPANHA
 -- ============================================================
 CREATE TABLE link_atualizacao (
     id_link_atualizacao SERIAL PRIMARY KEY,
@@ -599,10 +567,7 @@ CREATE TABLE link_atualizacao (
 
 
 -- ============================================================
--- LINK_RECOMPENSA (acrescentada em 2026-07)
--- Reaproveita tipo_link para os links de uma recompensa
--- (ex.: link de download digital, loja externa, formulário de resgate).
--- Mesmo formato de link_academico.
+-- [01-AA] TABELA DE LINKS PARA RECOMPENSAS
 -- ============================================================
 CREATE TABLE link_recompensa (
     id_link_recompensa SERIAL PRIMARY KEY,
@@ -616,10 +581,8 @@ CREATE TABLE link_recompensa (
 
 
 -- ============================================================
--- ACEITE_TERMO_CONTRIBUICAO
+-- [01-AB] ACEITE_TERMO_CONTRIBUICAO
 -- ============================================================
--- CORRIGIDO: nova tabela para registrar o aceite de termos por
--- transação (RF-054/RF-055), inclusive para contribuinte anônimo.
 CREATE TABLE aceite_termo_contribuicao (
     id_aceite_contrib SERIAL PRIMARY KEY,
     id_contribuicao   INT NOT NULL REFERENCES contribuicao(id_contribuicao) ON DELETE CASCADE,
@@ -631,26 +594,12 @@ CREATE TABLE aceite_termo_contribuicao (
 
 
 -- ============================================================
---  CrowdAcadêmico — 09: AUTENTICAÇÃO PRÓPRIA (tabelas de suporte)
---  Depende de: 01_extensoes_enums_tabelas.sql (tabela usuario)
---  Próximo arquivo: nenhum (último da sequência de auth)
--- ============================================================
---
---  NOVO: estas três tabelas substituem funcionalidades que antes
---  eram resolvidas pelo Supabase Auth (GoTrue) e que agora passam a
---  ser responsabilidade do NestJS + Postgres.
+-- [01-AC] TABELAS DE SUPORTE PARA AUTENTICAÇÃO PRÓPRIA
 -- ============================================================
 
-
 -- ============================================================
--- VERIFICACAO_EMAIL
+-- [01-AD] VERIFICACAO_EMAIL
 -- ============================================================
--- Confirmação de e-mail no cadastro. Tabela própria (em vez de
--- coluna solta em usuario) porque pode haver mais de um pedido de
--- confirmação (usuário perde o e-mail, pede de novo) e cada token
--- antigo precisa poder ser invalidado sem apagar histórico.
--- A flag usuario.email_verificado (ver 01) é o que o resto do
--- sistema consulta; esta tabela guarda só o processo de chegar lá.
 CREATE TABLE verificacao_email (
     id_verificacao SERIAL PRIMARY KEY,
     id_usuario     INT NOT NULL REFERENCES usuario(id_usuario) ON DELETE CASCADE,
@@ -664,11 +613,8 @@ CREATE TABLE verificacao_email (
 
 
 -- ============================================================
--- RECUPERACAO_SENHA
+-- [01-AE] RECUPERACAO_SENHA
 -- ============================================================
--- "Esqueci minha senha": gera token, envia e-mail, valida, troca a
--- senha e invalida o token. Antes era resolvido pelo fluxo nativo
--- do Supabase Auth.
 CREATE TABLE recuperacao_senha (
     id_recuperacao SERIAL PRIMARY KEY,
     id_usuario     INT NOT NULL REFERENCES usuario(id_usuario) ON DELETE CASCADE,
@@ -680,22 +626,15 @@ CREATE TABLE recuperacao_senha (
     CONSTRAINT chk_recuperacao_senha_expira CHECK (expira_em > criado_em)
 );
 
--- NOVO: só pode existir 1 token de recuperação "ativo" (ainda não usado)
--- por usuário ao mesmo tempo. Pedir "esqueci minha senha" de novo deve
--- invalidar o anterior no app antes de inserir um novo, e este índice
--- garante isso mesmo se o backend esquecer de invalidar.
+-- [01-AF] ÍNDICE DE RECUPERAÇÃO DE SENHA ATIVO POR USUÁRIO
 CREATE UNIQUE INDEX ux_recuperacao_senha_ativo_por_usuario
     ON recuperacao_senha (id_usuario)
     WHERE usado_em IS NULL;
 
 
 -- ============================================================
--- SESSAO (refresh tokens)
+-- [01-AG]SESSAO (refresh tokens) - PERSISTÊNCIA DE REFRESH TOKENS PARA SESSÕES DO NESTJS
 -- ============================================================
--- Sem o Supabase Auth, quem emite e assina o JWT é o próprio NestJS.
--- Para suportar "sair", "sair de todos os dispositivos" e revogar um
--- token comprometido, os refresh tokens emitidos precisam ser
--- persistidos aqui (um JWT sozinho, stateless, não permite revogação).
 CREATE TABLE sessao (
     id_sessao          SERIAL PRIMARY KEY,
     id_usuario         INT NOT NULL REFERENCES usuario(id_usuario) ON DELETE CASCADE,
