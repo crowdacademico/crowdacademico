@@ -23,17 +23,6 @@ AS $$
     SELECT current_setting('app.id_usuario_atual', true)::INT;
 $$;
 
--- REMOVIDO: eh_admin() checava p.nome = 'admin' — um nome de papel
--- hardcoded em código, o mesmo problema estrutural que o RBAC (papel/
--- permissão/N:N) foi criado para resolver ("RBAC de enfeite": a
--- modelagem existe, mas o enforcement ignorava ela). Toda policy que
--- usava eh_admin() foi migrada para tem_permissao(...) (ver
--- 04_rls_policies.sql), e trg_permissao_auto_admin
--- (06b_regras_negocio.sql) garante que 'admin' recebe automaticamente
--- toda permissão nova, então não há perda de acesso na troca.
--- O DROP abaixo é só para manter o script idempotente em bancos onde
--- a função antiga já existia de uma versão anterior.
-
 -- ADICIONADO: checagem de permissão granular, para RBAC de verdade (não
 -- só admin/não-admin). Nunca referencia nome de papel — só permissão.
 -- Papel é puramente um "pacote de permissões" guardado em papel_permissao;

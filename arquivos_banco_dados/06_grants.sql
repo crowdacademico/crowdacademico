@@ -65,11 +65,13 @@ GRANT SELECT (
     ativado_em, suspenso, score_atual, score_atualizado_em
 ) ON public.perfil_pesquisador TO app_nestjs;
 
--- NOTA: "notificacao" fica de fora desta lista de propósito. Ela só
--- tem política de SELECT (arquivo 04) — quem grava nela é o próprio
--- backend através de código de aplicação que roda fora do contexto
--- de request do usuário (job/worker), então liberar INSERT/UPDATE
--- aqui só adicionaria uma permissão morta do ponto de vista de RLS.
+-- CORRIGIDO: "notificacao" tinha ganhado pol_notificacao_insert/update em
+-- 04_rls_policies.sql (o backend passou a gravar notificação através do
+-- próprio app_nestjs, não mais via um role que ignorasse RLS), mas o GRANT
+-- de tabela correspondente não tinha sido adicionado aqui — sem os dois
+-- níveis juntos (RLS + GRANT), toda tentativa de INSERT/UPDATE falhava com
+-- "permission denied for table notificacao" mesmo com a policy liberando.
+GRANT INSERT, UPDATE ON notificacao TO app_nestjs;
 
 -- CORRIGIDO: verificacao_email, recuperacao_senha e sessao agora têm
 -- policy real em 04 (TO app_nestjs USING true) — precisam do GRANT

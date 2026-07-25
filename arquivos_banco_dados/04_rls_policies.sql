@@ -150,8 +150,21 @@ CREATE POLICY pol_campanha_select ON campanha FOR SELECT USING (
 );
 CREATE POLICY pol_campanha_insert ON campanha FOR INSERT TO app_nestjs WITH CHECK (id_usuario = public.id_usuario_atual());
 -- CORRIGIDO: edição administrativa de campanha passa a depender de permissão específica, preservando a regra de dono da campanha.
+-- CORRIGIDO: campanha_aprovar e campanha_rejeitar estavam seedadas mas
+-- não usadas em policy nenhuma — só campanha_editar liberava UPDATE em
+-- campanha, então um papel com só "aprovar" ou só "rejeitar" (sem o
+-- "editar" genérico) não conseguia de fato aprovar/rejeitar nada. A RLS
+-- de linha não distingue qual coluna está sendo alterada (isso exigiria
+-- um trigger comparando OLD/NEW), então na prática qualquer uma das três
+-- permissões libera o UPDATE — a app decide, por regra de negócio, quais
+-- campos cada fluxo (aprovar/rejeitar/editar) de fato manda alterar.
 DROP POLICY IF EXISTS pol_campanha_update ON campanha;
-CREATE POLICY pol_campanha_update ON campanha FOR UPDATE TO app_nestjs USING (id_usuario = public.id_usuario_atual() OR public.tem_permissao('campanha_editar'));
+CREATE POLICY pol_campanha_update ON campanha FOR UPDATE TO app_nestjs USING (
+    id_usuario = public.id_usuario_atual()
+    OR public.tem_permissao('campanha_editar')
+    OR public.tem_permissao('campanha_aprovar')
+    OR public.tem_permissao('campanha_rejeitar')
+);
 
 -- CORRIGIDO: anon passou a exigir token_sessao; leitura de
 -- contribuicao por usuário autenticado continua igual.
@@ -274,6 +287,30 @@ CREATE POLICY pol_arquivo_update ON arquivo FOR UPDATE TO app_nestjs USING (
 CREATE POLICY pol_score_select ON score_pesquisador FOR SELECT USING (TRUE);
 
 CREATE POLICY pol_config_select ON configuracoes FOR SELECT TO app_nestjs USING (id_usuario IS NULL OR id_usuario = public.id_usuario_atual());
+-- ADICIONADO: configuracoes tinha só policy de SELECT — nenhuma escrita era
+-- possível via RLS (nem pra config de sistema, nem pra preferência de
+-- usuário), e a permissão configuracao_gerenciar, já seedada, não era usada
+-- em lugar nenhum. Segue o mesmo critério do SELECT: linha de sistema
+-- (id_usuario NULL) só quem tem configuracao_gerenciar mexe; linha de
+-- preferência do próprio usuário (id_usuario = dono) ele mesmo mexe.
+DROP POLICY IF EXISTS pol_config_insert ON configuracoes;
+CREATE POLICY pol_config_insert ON configuracoes FOR INSERT TO app_nestjs WITH CHECK (
+    (id_usuario IS NULL AND public.tem_permissao('configuracao_gerenciar'))
+    OR id_usuario = public.id_usuario_atual()
+);
+DROP POLICY IF EXISTS pol_config_update ON configuracoes;
+CREATE POLICY pol_config_update ON configuracoes FOR UPDATE TO app_nestjs USING (
+    (id_usuario IS NULL AND public.tem_permissao('configuracao_gerenciar'))
+    OR id_usuario = public.id_usuario_atual()
+) WITH CHECK (
+    (id_usuario IS NULL AND public.tem_permissao('configuracao_gerenciar'))
+    OR id_usuario = public.id_usuario_atual()
+);
+DROP POLICY IF EXISTS pol_config_delete ON configuracoes;
+CREATE POLICY pol_config_delete ON configuracoes FOR DELETE TO app_nestjs USING (
+    (id_usuario IS NULL AND public.tem_permissao('configuracao_gerenciar'))
+    OR id_usuario = public.id_usuario_atual()
+);
 
 CREATE POLICY "pol_score_config_select" ON public.score_config FOR SELECT TO app_nestjs USING (true);
 -- COMENTÁRIO DE ALTERAÇÃO:
