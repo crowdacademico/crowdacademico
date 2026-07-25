@@ -3,13 +3,10 @@
 --  Execução: 1º arquivo a rodar (sem dependências externas).
 --  Próximo arquivo: 02_indices.sql
 -- ============================================================
-
--- [01-A] CONTEXTO DO SCRIPT BASE E REVISÃO
--- [01-B] ROLE APP_NESTJS E ORDEM DE CRIAÇÃO
+-- [01-A] CONTEXTO E REVISÃO
 -- ============================================================
--- ROLE DO BACKEND (NestJS)
+-- [01-B] ROLE DO BACKEND (NestJS) E AUTENTICAÇÃO DO BACKEND
 -- ============================================================
--- [01-C] ROLE APP_NESTJS E AUTENTICAÇÃO DO BACKEND
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'app_nestjs') THEN
@@ -17,14 +14,10 @@ BEGIN
     END IF;
 END
 $$;
--- [01-D] PLACEHOLDER DE SENHA DA ROLE APP_NESTJS
-
 -- ============================================================
--- EXTENSÕES
+-- [01-C] EXTENSÕES
 -- ============================================================
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
-
-
 -- ============================================================
 -- ENUMS
 -- ============================================================
@@ -32,7 +25,6 @@ CREATE TYPE tipo_configuracao     AS ENUM ('decimal', 'inteiro', 'texto', 'boole
 CREATE TYPE status_pesquisador    AS ENUM ('ativo', 'suspenso');
 CREATE TYPE titulo_academico      AS ENUM ('graduado', 'especialista', 'mestre', 'doutor');
 CREATE TYPE modelo_campanha       AS ENUM ('all-or-nothing', 'flexivel');
--- [01-E] STATUS DE CAMPANHA E CONTRIBUIÇÃO
 CREATE TYPE status_campanha       AS ENUM ('aguardando_aprovacao', 'ativo', 'sucesso', 'nao_atingido', 'rejeitado', 'encerrado', 'encerrado_moderacao');
 CREATE TYPE status_contribuicao   AS ENUM ('pendente', 'confirmado', 'repassado', 'a_devolver', 'devolvido', 'reembolsado', 'erro', 'expirado', 'reembolso_manual');
 CREATE TYPE meio_pagamento        AS ENUM ('pix', 'cartao_credito', 'cartao_debito', 'boleto');
@@ -44,9 +36,10 @@ CREATE TYPE tipo_motivo_denuncia  AS ENUM ('campanha', 'perfil');
 CREATE TYPE status_notificacao    AS ENUM ('pendente', 'enviado', 'falhou', 'cancelado');
 CREATE TYPE tipo_recompensa       AS ENUM ('fisica', 'digital', 'reconhecimento', 'acesso_antecipado', 'outro');
 
-
 -- ============================================================
--- CONFIGURACOES (sistema)
+-- TABELAS
+-- ============================================================
+-- [01-D] CONFIGURACOES (sistema)
 -- ============================================================
 CREATE TABLE configuracoes (
     id_config   SERIAL PRIMARY KEY,
@@ -58,9 +51,8 @@ CREATE TABLE configuracoes (
     ativo       BOOLEAN DEFAULT TRUE
 );
 
-
 -- ============================================================
--- PAPEL / PERMISSAO / RBAC
+-- [01-E] PAPEL / PERMISSAO / RBAC
 -- ============================================================
 CREATE TABLE papel (
     id_papel SERIAL PRIMARY KEY,
@@ -80,7 +72,7 @@ CREATE TABLE papel_permissao (
 
 
 -- ============================================================
--- TIPO DE LINK ACADÊMICO
+-- [01-F] TIPO DE LINK ACADÊMICO
 -- ============================================================
 CREATE TABLE tipo_link (
     id_tipolink  SERIAL PRIMARY KEY,
@@ -90,7 +82,6 @@ CREATE TABLE tipo_link (
     dominio      VARCHAR(255)
 );
 
--- [01-F] AJUSTE DE ESCOPO DO TIPO_LINK
 ALTER TABLE tipo_link
     ADD COLUMN permite_perfil       BOOLEAN NOT NULL DEFAULT TRUE,
     ADD COLUMN permite_atualizacao  BOOLEAN NOT NULL DEFAULT FALSE,
@@ -118,15 +109,14 @@ CREATE TABLE motivo_denuncia (
     codigo    VARCHAR(20)          NOT NULL UNIQUE,
     descricao VARCHAR(255),
     tipo      tipo_motivo_denuncia NOT NULL,
-    -- [01-G] INDICADOR ATIVO/INATIVO NO MOTIVO DE DENÚNCIA
+
     ativo     BOOLEAN             NOT NULL DEFAULT TRUE
 );
 
 
 -- ============================================================
--- USUARIO
+-- [01-G] USUARIO
 -- ============================================================
--- [01-H] AUTENTICAÇÃO PRÓPRIA DO USUÁRIO
 CREATE TABLE usuario (
     id_usuario       SERIAL PRIMARY KEY,
     nome             VARCHAR(150) NOT NULL,
@@ -136,7 +126,6 @@ CREATE TABLE usuario (
     criado_em        TIMESTAMP    DEFAULT NOW(),
     deletado         BOOLEAN      DEFAULT FALSE,
 
-    -- [01-J] VERIFICAÇÃO DE E-MAIL E PROTEÇÃO CONTRA BRUTE-FORCE
     email_verificado         BOOLEAN   NOT NULL DEFAULT FALSE,
     tentativas_login_falhas  INT       NOT NULL DEFAULT 0,
     bloqueado_ate            TIMESTAMP,
@@ -170,7 +159,6 @@ CREATE TABLE perfil_pesquisador (
     status_pesquisador    status_pesquisador DEFAULT 'ativo',
     ativado_em            TIMESTAMP,
     suspenso              BOOLEAN            DEFAULT FALSE,
-    -- [01-K] CACHE DO SCORE EM INTEIRO
     score_atual           INTEGER            DEFAULT 0,
     score_atualizado_em   TIMESTAMP
 );
@@ -208,7 +196,7 @@ ALTER TABLE usuario
 
 
 -- ============================================================
--- CAMPANHA
+-- [01-H] CAMPANHA
 -- ============================================================
 CREATE TABLE campanha (
     id_campanha          SERIAL PRIMARY KEY,
@@ -226,7 +214,7 @@ CREATE TABLE campanha (
     status               status_campanha NOT NULL DEFAULT 'aguardando_aprovacao',
     aprovado_em          TIMESTAMP,
     criado_em            TIMESTAMP       DEFAULT NOW(),
-    -- [01-L] PRAZO MÍNIMO E MÁXIMO DA CAMPANHA
+
     CONSTRAINT chk_prazo_campanha CHECK (
         data_fim IS NULL OR data_inicio IS NULL OR
         (data_fim - data_inicio) BETWEEN INTERVAL '15 days' AND INTERVAL '90 days'
@@ -260,13 +248,12 @@ CREATE TABLE seguir_pesquisador (
 
 
 -- ============================================================
--- CONTRIBUICAO
+-- [01-I] CONTRIBUICAO
 -- ============================================================
 CREATE TABLE contribuicao (
     id_contribuicao  SERIAL PRIMARY KEY,
     id_campanha      INT                 NOT NULL REFERENCES campanha(id_campanha),
     id_usuario       INT                          REFERENCES usuario(id_usuario) ON DELETE SET NULL,
-    -- [01-M] VALOR MÍNIMO DA CONTRIBUIÇÃO
     valor            DECIMAL(10,2)       NOT NULL CHECK (valor >= 5.00),
     meio_pagamento   meio_pagamento      NOT NULL,
     status           status_contribuicao NOT NULL DEFAULT 'pendente',
@@ -275,12 +262,12 @@ CREATE TABLE contribuicao (
     criado_em        TIMESTAMP           DEFAULT NOW()
 );
 
--- [01-N] TOKEN DE SESSÃO PARA CONTRIBUIÇÃO ANÔNIMA
+-- [01-I] TOKEN DE SESSÃO PARA CONTRIBUIÇÃO ANÔNIMA
 ALTER TABLE contribuicao ADD COLUMN token_sessao UUID DEFAULT gen_random_uuid();
 
 
 -- ============================================================
--- [01-O] AUDITORIA FINANCEIRA
+-- [01-J] AUDITORIA FINANCEIRA
 -- ============================================================
 CREATE TABLE auditoria_financeira (
     id_auditoria    SERIAL PRIMARY KEY,
