@@ -1,7 +1,7 @@
 -- ============================================================
 --  CrowdAcadêmico — 06b: MOTOR DE SCORE + REGRAS DE NEGÓCIO (triggers)
 --  Depende de: 01_extensoes_enums_tabelas.sql, 05_grants.sql
---  Próximo arquivo: 07_seed_dados.sql
+--  Próximo arquivo: 06_grants.sql
 --
 --  Este arquivo concentra TODA lógica baseada em trigger/função do
 --  projeto: o motor de cálculo de score e as regras de negócio que

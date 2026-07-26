@@ -197,3 +197,65 @@ Ambas as funções utilizam os modificadores de segurança essenciais:
 * **Comportamento para Desconectados:** Caso `public.id_usuario_atual()` retorne `NULL` (usuário anônimo ou sessão sem token), o *subselect* falha na condição de igualdade e a função retorna `FALSE` de forma determinística.
 
 
+---
+
+## 04. ROW LEVEL SECURITY E POLÍTICAS DE ACESSO (`04_rls_policies.sql`)
+
+---
+
+### Visão Geral de Arquitetura
+
+O arquivo `04_rls_policies.sql` estabelece a camada de defesa em nível de linha (*Row Level Security* — RLS) para o banco de dados. Todas as 39 tabelas do schema possuem RLS ativada e forçada.
+
+#### Princípios Fundamentais de Segurança
+1. **Ativação Universal (`ENABLE` + `FORCE ROW LEVEL SECURITY`):**
+   * O uso do `FORCE ROW LEVEL SECURITY` garante que até mesmo o dono das tabelas (*table owner*) fique sujeito às regras de RLS, eliminando brechas em ambientes de execução local ou microsserviços.
+2. **Modelo Non-Bypass (`app_nestjs`):**
+   * A aplicação conecta via papel sem privilégio de `BYPASSRLS`. Toda e qualquer instrução SQL (`SELECT`, `INSERT`, `UPDATE`, `DELETE`) é filtrada dinamicamente pela sessão do usuário (`public.id_usuario_atual()`).
+3. **Isolamento de Tabelas de Infraestrutura/Autenticação:**
+   * Tabelas como `verificacao_email`, `recuperacao_senha` e `sessao` são acessadas antes do estabelecimento da sessão do usuário. Elas possuem RLS restrita especificamente ao papel da aplicação (`TO app_nestjs USING (true)`), deixando a validação de hashes sob responsabilidade do backend NestJS.
+
+---
+
+### Estrutura por Domínio de Dados
+
+O arquivo é organizado em 8 blocos conceituais que espelham literalmente os títulos e a ordem dos arquivos de criação (`01`) e dados (`02`):
+
+#### [04-B] RBAC
+* **Tabelas:** `papel`, `permissao`, `papel_permissao`.
+* **Regra:** Tabelas de catálogo de controle de acesso possuem leitura pública (`FOR SELECT USING (true)`), permitindo que a função `public.tem_permissao()` resolva as checagens de autorização sem bloqueios recursivos.
+
+#### [04-C] CONFIG
+* **Tabelas:** `configuracoes`, `area_conhecimento`, `tipo_link`, `motivo_denuncia`, `arquivo`.
+* **Regra:** Leitura pública para catálogos e arquivos básicos. Operações de escrita e alteração de parâmetros de sistema (`id_usuario IS NULL`) exigem permissão explícita (ex: `'configuracao_gerenciar'`).
+
+#### [04-D] USUÁRIO
+* **Tabelas:** `usuario`, `perfil_pesquisador`, `usuario_papel`, `termos_de_uso`, `usuario_termo`, `notificacao`, `verificacao_email`, `recuperacao_senha`, `sessao`, `seguir_pesquisador`.
+* **Regra:** Usuários enxergam apenas os próprios dados sensíveis ou perfis não deletados. A atribuição de papéis (`usuario_papel`) exige a permissão `'papel_atribuir'`.
+
+#### [04-E] CAMPANHA
+* **Tabelas:** `campanha`, `atualizacao_campanha`, `comentario`, `denuncia`, `recompensa`, `seguir_campanha`, `solicitacao_encerramento`, `historico_rejeicao`, `repasse`.
+* **Regra:** Campanhas visíveis publicamente apenas em status liberados (`ativo`, `sucesso`, `nao_atingido`, `encerrado`). Moderações e edições dependem de ser dono do recurso ou possuir permissões específicas (`'campanha_editar'`, `'campanha_aprovar'`, `'campanha_rejeitar'`, `'comentario_moderar'`).
+
+> ⚠️ **Notas de Arquitetura & Débitos Técnicos ([04-E]):**
+> * **Tabela `repasse`:** As políticas `pol_repasse_insert` e `pol_repasse_update` utilizam `WITH CHECK (true)` / `USING (true)`. A validação de quem pode gerar ou alterar um repasse é delegada integralmente ao backend NestJS.
+> * **Permissão Órfã:** A permissão `campanha_encerrar` (presente no seed) não é consumida diretamente por nenhuma política de RLS neste arquivo (o encerramento é intermediado via `solicitacao_encerramento` e regras da aplicação).
+
+#### [04-F] LINK
+* **Tabelas:** `link_academico`, `link_atualizacao`, `link_recompensa`.
+* **Regra:** Links de perfil e campanhas podem ser criados, editados ou removidos pelo próprio autor/pesquisador ou por usuários com papéis moderadores.
+
+#### [04-G] ARQUIVO
+* **Tabelas:** `arquivo_atualizacao`, `arquivo_recompensa`.
+* **Regra:** O vínculo de arquivos de mídia a atualizações e recompensas é restrito aos proprietários da campanha vinculada ou administradores.
+
+#### [04-H] CONTRIBUIÇÃO
+* **Tabelas:** `contribuicao`, `auditoria_financeira`, `contribuicao_recompensa`, `aceite_termo_contribuicao`.
+* **Regra:** Suporte a doações anônimas via validação do `app.token_sessao_atual`. Usuários autenticados visualizam apenas o seu próprio histórico financeiro ou via permissão `'contribuicao_visualizar_sensivel'`.
+
+> ⚠️ **Nota de Arquitetura & Débito Técnico ([04-H]):**
+> * **Tabela `auditoria_financeira`:** As políticas `pol_auditoria_insert` e `pol_auditoria_update` estão abertas para o papel `app_nestjs` (`USING (true) WITH CHECK (true)`), deixando a integridade da escrita sob responsabilidade do serviço de backend.
+
+#### [04-I] SCORE
+* **Tabelas:** `score_config`, `score_rotulo`, `score_pesquisador`.
+* **Regra:** Leitura pública dos scores e parâmetros. Alterações em matrizes e rótulos de score são restritas à permissão `'score_editar'`.
