@@ -346,6 +346,7 @@ INSERT INTO seguir_pesquisador (id_usuario, id_pesquisador) VALUES
 -- são desligados só durante a carga do seed e religados em seguida.
 ALTER TABLE contribuicao DISABLE TRIGGER trg_valida_status_contribuicao;
 ALTER TABLE contribuicao DISABLE TRIGGER trg_contribuicao_all_or_nothing_pix;
+ALTER TABLE contribuicao DISABLE TRIGGER trg_sincroniza_arrecadado_campanha;
 
 INSERT INTO contribuicao (id_campanha, id_usuario, valor, meio_pagamento, status, anonima, id_transacao_api, criado_em) VALUES
 (1, 2, 5000.00, 'pix',            'repassado',  FALSE, 'TXN-PIX-0001', '2024-02-10 10:00:00'),
@@ -358,6 +359,7 @@ INSERT INTO contribuicao (id_campanha, id_usuario, valor, meio_pagamento, status
 
 ALTER TABLE contribuicao ENABLE TRIGGER trg_valida_status_contribuicao;
 ALTER TABLE contribuicao ENABLE TRIGGER trg_contribuicao_all_or_nothing_pix;
+ALTER TABLE contribuicao ENABLE TRIGGER trg_sincroniza_arrecadado_campanha;
 
 
 -- [07-H-2] auditoria_financeira
