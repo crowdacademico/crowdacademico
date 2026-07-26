@@ -12,11 +12,11 @@
 --  NestJS e o mecanismo de RLS do PostgreSQL: identificação do usuário
 --  atual na sessão, e checagem granular de permissão via RBAC.
 -- ============================================================
--- [03-A] CONTEXTO DE SESSÃO E IDENTIFICAÇÃO DE USUÁRIO
+-- [03-J] CONTEXTO DE SESSÃO E IDENTIFICAÇÃO DE USUÁRIO
 -- ============================================================
 -- Função:     id_usuario_atual
 -- Assinatura: () -> INT
--- Bloco:      [03-A]
+-- Bloco:      [03-J]
 -- Regra:      Lê o id do usuário autenticado a partir da variável de sessão
 --             app.id_usuario_atual, definida pelo NestJS via SET LOCAL logo
 --             no início da transação, após validar o JWT. O segundo

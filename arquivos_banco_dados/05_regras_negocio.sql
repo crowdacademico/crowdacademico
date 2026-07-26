@@ -17,14 +17,19 @@
 --  - 23 Triggers (Todas idempotentes com DROP TRIGGER IF EXISTS)
 -- ----------------------------------------------------------------------------
 --  SUMÁRIO DOS BLOCOS DE CÓDIGO
+--  (letras seguem o índice global de DOCUMENTACAO_BD.md — I = SCORE,
+--  K = Regras de Negócio Transversais; ver cabeçalho desse arquivo)
 -- ----------------------------------------------------------------------------
---  [05-A] HELPERS E UTILITÁRIOS
---  [05-B] MOTOR DE SCORE — CÁLCULO DAS DIMENSÕES
---  [05-C] MOTOR DE SCORE — ORQUESTRAÇÃO E CÁLCULO GERAL
---  [05-D] MOTOR DE SCORE — TRIGGERS E FUNÇÕES DE AUTOMAÇÃO
---  [05-E] REGRAS DE NEGÓCIO — INTEGRIDADE E ESCOPO
---  [05-F] REGRAS DE NEGÓCIO — CAMPANHAS E FINANCEIRO
---  [05-G] REGRAS DE NEGÓCIO — COMUNIDADE, ENGAJAMENTO E RBAC
+--  [I]  SCORE — motor de cálculo e automação de pontuação
+--       [05-I-1] Helpers e Utilitários
+--       [05-I-2] Cálculo das Dimensões
+--       [05-I-3] Orquestração e Cálculo Geral
+--       [05-I-4] Triggers e Funções de Automação
+--  [K]  REGRAS DE NEGÓCIO TRANSVERSAIS — validações que atravessam mais de
+--       um domínio de dado ao mesmo tempo
+--       [05-K-1] Integridade e Escopo
+--       [05-K-2] Campanhas e Financeiro
+--       [05-K-3] Comunidade, Engajamento e RBAC
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
@@ -49,7 +54,7 @@
 
 
 -- ============================================================================
---  [05-A] HELPERS E UTILITÁRIOS
+--  [05-I-1] SCORE — HELPERS E UTILITÁRIOS
 --  Descrição: Funções de suporte geral para leitura de configurações do sistema
 --             e fallbacks operacionais.
 -- ============================================================================
@@ -57,7 +62,7 @@
 -- ----------------------------------------------------------------------------
 -- Função:     config_numero
 -- Assinatura: (p_chave TEXT, p_padrao DECIMAL) -> DECIMAL
--- Bloco:      [05-A]
+-- Bloco:      [05-I-1]
 -- Regra:      Lê uma constante numérica da tabela configuracoes com fallback
 --             seguro — nunca retorna NULL/erro mesmo se a chave ainda não
 --             existir, evitando NaN nos cálculos de score.
@@ -77,7 +82,7 @@ $$;
 
 
 -- ============================================================================
---  [05-B] MOTOR DE SCORE — CÁLCULO DAS DIMENSÕES
+--  [05-I-2] SCORE — CÁLCULO DAS DIMENSÕES
 --  Descrição: Funções puras de cálculo de pontuação por dimensão.
 --             Recebem o ID do usuário (p_id_usuario INT) e retornam NUMERIC.
 -- ============================================================================
@@ -85,7 +90,7 @@ $$;
 -- ----------------------------------------------------------------------------
 -- Função:     calcular_score_perfil_academico
 -- Assinatura: (p_id_usuario INT) -> INTEGER
--- Bloco:      [05-B]
+-- Bloco:      [05-I-2]
 -- Regra:      Dimensão 1 — Perfil Acadêmico Declarado. Soma os pesos (vindos
 --             de score_config, subitens do pai 'perfil_academico') de: link
 --             Lattes, link ORCID, outro link acadêmico (LinkedIn/ResearchGate/
@@ -155,7 +160,7 @@ $$;
 -- ----------------------------------------------------------------------------
 -- Função:     calcular_score_historico
 -- Assinatura: (p_id_usuario INT) -> INTEGER
--- Bloco:      [05-B]
+-- Bloco:      [05-I-2]
 -- Regra:      Dimensão 2 — Histórico na Plataforma. conclusao = (campanhas
 --             concluídas com sucesso / total encerradas) * peso_conclusao;
 --             aprovacao = (aprovadas pela moderação / total submetidas) *
@@ -238,7 +243,7 @@ $$;
 -- ----------------------------------------------------------------------------
 -- Função:     calcular_score_atualizacao
 -- Assinatura: (p_id_usuario INT) -> INTEGER
--- Bloco:      [05-B]
+-- Bloco:      [05-I-2]
 -- Regra:      Dimensão 3 — Atualização da Campanha. regularidade =
 --             SUM(realizadas)/SUM(esperadas) * peso_regularidade;
 --             tempestividade = (% de campanhas em que realizadas >=
@@ -324,7 +329,7 @@ $$;
 -- ----------------------------------------------------------------------------
 -- Função:     calcular_score_reputacao
 -- Assinatura: (p_id_usuario INT) -> INTEGER
--- Bloco:      [05-B]
+-- Bloco:      [05-I-2]
 -- Regra:      Dimensão 4 — Reputação da Comunidade. reputacaoScore =
 --             peso_raiz - totalDenuncias*custo - totalProcedentes*custo_procedente.
 -- ----------------------------------------------------------------------------
@@ -360,7 +365,7 @@ $$;
 
 
 -- ============================================================================
---  [05-C] MOTOR DE SCORE — ORQUESTRAÇÃO E CÁLCULO GERAL
+--  [05-I-3] SCORE — ORQUESTRAÇÃO E CÁLCULO GERAL
 --  Descrição: Funções consolidadoras (SECURITY DEFINER) para salvar resultados
 --             nas tabelas score_pesquisador e perfil_pesquisador.
 -- ============================================================================
@@ -368,7 +373,7 @@ $$;
 -- ----------------------------------------------------------------------------
 -- Função:     recalcular_score_pesquisador
 -- Assinatura: (p_id_usuario INT) -> INTEGER
--- Bloco:      [05-C]
+-- Bloco:      [05-I-3]
 -- Regra:      Recalcula as 4 dimensões de um pesquisador, grava em
 --             score_pesquisador (UPSERT) e atualiza o cache em
 --             perfil_pesquisador.score_atual. SECURITY DEFINER: precisa poder
@@ -437,7 +442,7 @@ $$;
 -- ----------------------------------------------------------------------------
 -- Função:     recalcular_todos_os_scores
 -- Assinatura: () -> INT
--- Bloco:      [05-C]
+-- Bloco:      [05-I-3]
 -- Regra:      Recalcula TODOS os pesquisadores de uma vez (botão "Recalcular"
 --             no Painel Admin, ou pra rodar uma vez depois de mudar
 --             pesos/constantes em massa). Retorna a quantidade recalculada.
@@ -462,7 +467,7 @@ $$;
 
 
 -- ============================================================================
---  [05-D] MOTOR DE SCORE — TRIGGERS E FUNÇÕES DE AUTOMAÇÃO
+--  [05-I-4] SCORE — TRIGGERS E FUNÇÕES DE AUTOMAÇÃO
 --  Descrição: Funções de apoio (trg_recalcular_por_*) e triggers atreladas
 --             a tabelas de impacto para recalcular o score em tempo real.
 --             Isso é o que torna o sistema "flexível pra novos registros":
@@ -474,7 +479,7 @@ $$;
 -- ----------------------------------------------------------------------------
 -- Função:     trg_recalcular_por_campanha
 -- Assinatura: () -> TRIGGER
--- Bloco:      [05-D]
+-- Bloco:      [05-I-4]
 -- Uso:        Invocada por trg_campanha_recalcula_score
 -- Regra:      campanha afeta histórico e atualização — recalcula o score do
 --             id_usuario dono da campanha (NEW, ou OLD em caso de DELETE).
@@ -496,7 +501,7 @@ $$;
 -- Tabela:    campanha
 -- Momento:   AFTER INSERT OR UPDATE OR DELETE
 -- Função:    trg_recalcular_por_campanha()
--- Bloco:     [05-D]
+-- Bloco:     [05-I-4]
 -- Regra:     Dispara o recálculo de score do pesquisador dono da campanha
 --            a cada inserção, alteração ou remoção.
 -- ----------------------------------------------------------------------------
@@ -509,7 +514,7 @@ CREATE TRIGGER trg_campanha_recalcula_score
 -- ----------------------------------------------------------------------------
 -- Função:     trg_recalcular_por_denuncia
 -- Assinatura: () -> TRIGGER
--- Bloco:      [05-D]
+-- Bloco:      [05-I-4]
 -- Uso:        Invocada por trg_denuncia_recalcula_score
 -- Regra:      denuncia afeta reputação — recalcula o score de
 --             id_pesquisador_alvo (quem foi denunciado), quando preenchido.
@@ -535,7 +540,7 @@ $$;
 -- Tabela:    denuncia
 -- Momento:   AFTER INSERT OR UPDATE OR DELETE
 -- Função:    trg_recalcular_por_denuncia()
--- Bloco:     [05-D]
+-- Bloco:     [05-I-4]
 -- Regra:     Dispara o recálculo de score do pesquisador denunciado a cada
 --            inserção, alteração ou remoção de denúncia.
 -- ----------------------------------------------------------------------------
@@ -548,7 +553,7 @@ CREATE TRIGGER trg_denuncia_recalcula_score
 -- ----------------------------------------------------------------------------
 -- Função:     trg_recalcular_por_atualizacao
 -- Assinatura: () -> TRIGGER
--- Bloco:      [05-D]
+-- Bloco:      [05-I-4]
 -- Uso:        Invocada por trg_atualizacao_recalcula_score
 -- Regra:      atualizacao_campanha afeta a dimensão Atualização — busca o
 --             dono da campanha (via id_campanha) e recalcula o score dele.
@@ -572,7 +577,7 @@ $$;
 -- Tabela:    atualizacao_campanha
 -- Momento:   AFTER INSERT OR UPDATE OR DELETE
 -- Função:    trg_recalcular_por_atualizacao()
--- Bloco:     [05-D]
+-- Bloco:     [05-I-4]
 -- Regra:     Dispara o recálculo de score do dono da campanha a cada
 --            inserção, alteração ou remoção de atualização.
 -- ----------------------------------------------------------------------------
@@ -585,7 +590,7 @@ CREATE TRIGGER trg_atualizacao_recalcula_score
 -- ----------------------------------------------------------------------------
 -- Função:     trg_recalcular_por_link
 -- Assinatura: () -> TRIGGER
--- Bloco:      [05-D]
+-- Bloco:      [05-I-4]
 -- Uso:        Invocada por trg_link_recalcula_score
 -- Regra:      link_academico afeta a dimensão Perfil Acadêmico — recalcula o
 --             score do dono do link.
@@ -607,7 +612,7 @@ $$;
 -- Tabela:    link_academico
 -- Momento:   AFTER INSERT OR UPDATE OR DELETE
 -- Função:    trg_recalcular_por_link()
--- Bloco:     [05-D]
+-- Bloco:     [05-I-4]
 -- Regra:     Dispara o recálculo de score do dono do link acadêmico a cada
 --            inserção, alteração ou remoção.
 -- ----------------------------------------------------------------------------
@@ -620,7 +625,7 @@ CREATE TRIGGER trg_link_recalcula_score
 -- ----------------------------------------------------------------------------
 -- Função:     trg_recalcular_por_perfil
 -- Assinatura: () -> TRIGGER
--- Bloco:      [05-D]
+-- Bloco:      [05-I-4]
 -- Uso:        Invocada por trg_perfil_recalcula_score e
 --             trg_perfil_update_recalcula_score
 -- Regra:      Recalcula o score do próprio perfil_pesquisador que mudou. No
@@ -641,7 +646,7 @@ $$;
 -- Tabela:    perfil_pesquisador
 -- Momento:   AFTER INSERT
 -- Função:    trg_recalcular_por_perfil()
--- Bloco:     [05-D]
+-- Bloco:     [05-I-4]
 -- Regra:     Calcula o score inicial assim que um perfil de pesquisador é
 --            criado.
 -- ----------------------------------------------------------------------------
@@ -656,7 +661,7 @@ CREATE TRIGGER trg_perfil_recalcula_score
 -- Momento:   AFTER UPDATE (somente quando vinculo_institucional ou
 --            titulo_academico mudam de valor)
 -- Função:    trg_recalcular_por_perfil()
--- Bloco:     [05-D]
+-- Bloco:     [05-I-4]
 -- Regra:     Recalcula o score quando os dados acadêmicos declarados mudam.
 -- ----------------------------------------------------------------------------
 DROP TRIGGER IF EXISTS trg_perfil_update_recalcula_score ON perfil_pesquisador;
@@ -673,7 +678,7 @@ CREATE TRIGGER trg_perfil_update_recalcula_score
 -- ----------------------------------------------------------------------------
 -- Função:     trg_recalcular_por_score_config
 -- Assinatura: () -> TRIGGER
--- Bloco:      [05-D]
+-- Bloco:      [05-I-4]
 -- Uso:        Invocada por trg_score_config_recalcula_todos
 -- Regra:      Quando um peso de score_config muda, recalcula TODOS os
 --             pesquisadores (o peso novo afeta todo mundo, não só um).
@@ -691,7 +696,7 @@ $$;
 -- Tabela:    score_config
 -- Momento:   AFTER UPDATE OF peso (somente quando o peso muda de valor)
 -- Função:    trg_recalcular_por_score_config()
--- Bloco:     [05-D]
+-- Bloco:     [05-I-4]
 -- Regra:     Recalcula o score de todos os pesquisadores quando um peso é
 --            editado no Painel Admin.
 -- ----------------------------------------------------------------------------
@@ -704,7 +709,7 @@ CREATE TRIGGER trg_score_config_recalcula_todos
 
 
 -- ============================================================================
---  [05-E] REGRAS DE NEGÓCIO — INTEGRIDADE E ESCOPO
+--  [05-K-1] REGRAS TRANSVERSAIS — INTEGRIDADE E ESCOPO
 --  Descrição: Validações de consistência cruzada entre tabelas e verificação
 --             de pertencimento em tabelas polimórficas (link_academico, etc).
 -- ============================================================================
@@ -712,7 +717,7 @@ CREATE TRIGGER trg_score_config_recalcula_todos
 -- ----------------------------------------------------------------------------
 -- Função:     trg_valida_contribuicao_recompensa
 -- Assinatura: () -> TRIGGER
--- Bloco:      [05-E]
+-- Bloco:      [05-K-1]
 -- Uso:        Invocada por trg_contrib_recompensa_valida
 -- Regra:      Garante que (1) a recompensa escolhida pertence à MESMA
 --             campanha da contribuição (ninguém resgata recompensa de
@@ -756,7 +761,7 @@ $$;
 -- Tabela:    contribuicao_recompensa
 -- Momento:   BEFORE INSERT OR UPDATE
 -- Função:    trg_valida_contribuicao_recompensa()
--- Bloco:     [05-E]
+-- Bloco:     [05-K-1]
 -- Regra:     Bloqueia a gravação se a recompensa não pertencer à campanha da
 --            contribuição, ou se o estoque disponível for insuficiente.
 -- ----------------------------------------------------------------------------
@@ -770,7 +775,7 @@ CREATE TRIGGER trg_contrib_recompensa_valida
 -- ----------------------------------------------------------------------------
 -- Função:     trg_valida_escopo_tipolink
 -- Assinatura: () -> TRIGGER
--- Bloco:      [05-E]
+-- Bloco:      [05-K-1]
 -- Uso:        Invocada por trg_link_academico_valida_tipo,
 --             trg_link_atualizacao_valida_tipo e trg_link_recompensa_valida_tipo
 -- Regra:      tipo_link é compartilhado por 3 tabelas (link_academico,
@@ -807,7 +812,7 @@ $$;
 -- Tabela:    link_academico
 -- Momento:   BEFORE INSERT OR UPDATE
 -- Função:    trg_valida_escopo_tipolink()
--- Bloco:     [05-E]
+-- Bloco:     [05-K-1]
 -- Regra:     Só aceita id_tipolink com permite_perfil = TRUE.
 -- ----------------------------------------------------------------------------
 DROP TRIGGER IF EXISTS trg_link_academico_valida_tipo ON link_academico;
@@ -821,7 +826,7 @@ CREATE TRIGGER trg_link_academico_valida_tipo
 -- Tabela:    link_atualizacao
 -- Momento:   BEFORE INSERT OR UPDATE
 -- Função:    trg_valida_escopo_tipolink()
--- Bloco:     [05-E]
+-- Bloco:     [05-K-1]
 -- Regra:     Só aceita id_tipolink com permite_atualizacao = TRUE.
 -- ----------------------------------------------------------------------------
 DROP TRIGGER IF EXISTS trg_link_atualizacao_valida_tipo ON link_atualizacao;
@@ -835,7 +840,7 @@ CREATE TRIGGER trg_link_atualizacao_valida_tipo
 -- Tabela:    link_recompensa
 -- Momento:   BEFORE INSERT OR UPDATE
 -- Função:    trg_valida_escopo_tipolink()
--- Bloco:     [05-E]
+-- Bloco:     [05-K-1]
 -- Regra:     Só aceita id_tipolink com permite_recompensa = TRUE.
 -- ----------------------------------------------------------------------------
 DROP TRIGGER IF EXISTS trg_link_recompensa_valida_tipo ON link_recompensa;
@@ -846,7 +851,7 @@ CREATE TRIGGER trg_link_recompensa_valida_tipo
 
 
 -- ============================================================================
---  [05-F] REGRAS DE NEGÓCIO — CAMPANHAS E FINANCEIRO
+--  [05-K-2] REGRAS TRANSVERSAIS — CAMPANHAS E FINANCEIRO
 --  Descrição: Proteções de fluxo financeiro, congelamento de regras pós-aprovação
 --             e sincronização de saldos de campanha.
 -- ============================================================================
@@ -854,7 +859,7 @@ CREATE TRIGGER trg_link_recompensa_valida_tipo
 -- ----------------------------------------------------------------------------
 -- Função:     fn_valida_repasse_all_or_nothing
 -- Assinatura: () -> TRIGGER
--- Bloco:      [05-F]
+-- Bloco:      [05-K-2]
 -- Regra:      Bloqueia repasse indevido em campanha all-or-nothing que não
 --             atingiu a meta financeira. Só bloqueia se houver tentativa real
 --             de liberar dinheiro (valor_liquido > 0); registro de "nada
@@ -885,7 +890,7 @@ $$ LANGUAGE plpgsql;
 -- Tabela:    repasse
 -- Momento:   BEFORE INSERT
 -- Função:    fn_valida_repasse_all_or_nothing()
--- Bloco:     [05-F]
+-- Bloco:     [05-K-2]
 -- Regra:     Impede repasse com valor em campanha all-or-nothing sem meta
 --            atingida.
 -- ----------------------------------------------------------------------------
@@ -899,7 +904,7 @@ EXECUTE FUNCTION fn_valida_repasse_all_or_nothing();
 -- ----------------------------------------------------------------------------
 -- Função:     validar_contribuicao_all_or_nothing
 -- Assinatura: () -> TRIGGER
--- Bloco:      [05-F]
+-- Bloco:      [05-K-2]
 -- Regra:      Campanhas all-or-nothing aceitam apenas contribuições via PIX
 --             (nenhum outro meio de pagamento é permitido nesse modelo).
 -- ----------------------------------------------------------------------------
@@ -927,7 +932,7 @@ $$;
 -- Tabela:    contribuicao
 -- Momento:   BEFORE INSERT
 -- Função:    validar_contribuicao_all_or_nothing()
--- Bloco:     [05-F]
+-- Bloco:     [05-K-2]
 -- Regra:     Bloqueia contribuição com meio de pagamento diferente de PIX em
 --            campanha all-or-nothing.
 -- ----------------------------------------------------------------------------
@@ -941,7 +946,7 @@ EXECUTE FUNCTION validar_contribuicao_all_or_nothing();
 -- ----------------------------------------------------------------------------
 -- Função:     fn_congela_regras_campanha
 -- Assinatura: () -> TRIGGER
--- Bloco:      [05-F]
+-- Bloco:      [05-K-2]
 -- Regra:      Impede a alteração de meta financeira, modelo de financiamento
 --             ou taxa da plataforma após a campanha ser aprovada/lançada
 --             (status 'ativo' em diante, incluindo encerramento por
@@ -973,7 +978,7 @@ $$ LANGUAGE plpgsql;
 -- Tabela:    campanha
 -- Momento:   BEFORE UPDATE
 -- Função:    fn_congela_regras_campanha()
--- Bloco:     [05-F]
+-- Bloco:     [05-K-2]
 -- Regra:     Bloqueia UPDATE que altere meta, modelo ou taxa depois que a
 --            campanha já está aprovada/em andamento.
 -- ----------------------------------------------------------------------------
@@ -987,7 +992,7 @@ EXECUTE FUNCTION fn_congela_regras_campanha();
 -- ----------------------------------------------------------------------------
 -- Função:     fn_valida_contribuicao_campanha_ativa
 -- Assinatura: () -> TRIGGER
--- Bloco:      [05-F]
+-- Bloco:      [05-K-2]
 -- Regra:      Bloqueia contribuição em campanha que não está com status
 --             'ativo' no momento, ou cujo prazo (data_fim) já expirou.
 -- ----------------------------------------------------------------------------
@@ -1018,7 +1023,7 @@ $$ LANGUAGE plpgsql;
 -- Tabela:    contribuicao
 -- Momento:   BEFORE INSERT
 -- Função:    fn_valida_contribuicao_campanha_ativa()
--- Bloco:     [05-F]
+-- Bloco:     [05-K-2]
 -- Regra:     Impede nova contribuição em campanha inativa ou com prazo
 --            expirado.
 -- ----------------------------------------------------------------------------
@@ -1032,7 +1037,7 @@ EXECUTE FUNCTION fn_valida_contribuicao_campanha_ativa();
 -- ----------------------------------------------------------------------------
 -- Função:     fn_sincroniza_arrecadado_campanha
 -- Assinatura: () -> TRIGGER
--- Bloco:      [05-F]
+-- Bloco:      [05-K-2]
 -- Regra:      Sincroniza campanha.valor_bruto_arrecadado somando as
 --             contribuições com status 'confirmado' ou 'repassado' sempre
 --             que uma contribuição é inserida, alterada ou removida.
@@ -1081,7 +1086,7 @@ $$ LANGUAGE plpgsql;
 -- Tabela:    contribuicao
 -- Momento:   AFTER INSERT OR UPDATE OR DELETE
 -- Função:    fn_sincroniza_arrecadado_campanha()
--- Bloco:     [05-F]
+-- Bloco:     [05-K-2]
 -- Regra:     Mantém campanha.valor_bruto_arrecadado sempre sincronizado com
 --            a soma real das contribuições confirmadas/repassadas.
 -- ----------------------------------------------------------------------------
@@ -1095,7 +1100,7 @@ EXECUTE FUNCTION fn_sincroniza_arrecadado_campanha();
 -- ----------------------------------------------------------------------------
 -- Função:     validar_limite_campanhas_pesquisador
 -- Assinatura: () -> TRIGGER
--- Bloco:      [05-F]
+-- Bloco:      [05-K-2]
 -- Regra:      Um pesquisador não pode ter mais de 2 campanhas simultâneas
 --             nos status 'aguardando_aprovacao' ou 'ativo'.
 -- ----------------------------------------------------------------------------
@@ -1127,7 +1132,7 @@ $$;
 -- Tabela:    campanha
 -- Momento:   BEFORE INSERT OR UPDATE
 -- Função:    validar_limite_campanhas_pesquisador()
--- Bloco:     [05-F]
+-- Bloco:     [05-K-2]
 -- Regra:     Bloqueia nova campanha além do limite de 2 simultâneas por
 --            pesquisador.
 -- ----------------------------------------------------------------------------
@@ -1141,7 +1146,7 @@ EXECUTE FUNCTION validar_limite_campanhas_pesquisador();
 -- ----------------------------------------------------------------------------
 -- Função:     validar_atualizacao_campanha
 -- Assinatura: () -> TRIGGER
--- Bloco:      [05-F]
+-- Bloco:      [05-K-2]
 -- Regra:      Atualizações de campanha só são permitidas para campanhas com
 --             status 'ativo', 'sucesso' ou 'nao_atingido'.
 -- ----------------------------------------------------------------------------
@@ -1169,7 +1174,7 @@ $$;
 -- Tabela:    atualizacao_campanha
 -- Momento:   BEFORE INSERT
 -- Função:    validar_atualizacao_campanha()
--- Bloco:     [05-F]
+-- Bloco:     [05-K-2]
 -- Regra:     Bloqueia nova atualização em campanha fora dos status
 --            permitidos.
 -- ----------------------------------------------------------------------------
@@ -1181,7 +1186,7 @@ EXECUTE FUNCTION validar_atualizacao_campanha();
 
 
 -- ============================================================================
---  [05-G] REGRAS DE NEGÓCIO — COMUNIDADE, ENGAJAMENTO E RBAC
+--  [05-K-3] REGRAS TRANSVERSAIS — COMUNIDADE, ENGAJAMENTO E RBAC
 --  Descrição: Regras de interação social (comentários, denúncias) e concessão
 --             automática de permissões administrativas.
 -- ============================================================================
@@ -1189,7 +1194,7 @@ EXECUTE FUNCTION validar_atualizacao_campanha();
 -- ----------------------------------------------------------------------------
 -- Função:     fn_valida_comentario_campanha_ativa
 -- Assinatura: () -> TRIGGER
--- Bloco:      [05-G]
+-- Bloco:      [05-K-3]
 -- Regra:      Bloqueia novos comentários em campanhas que foram rejeitadas
 --             ou banidas pela moderação (status 'rejeitado' ou
 --             'encerrado_moderacao').
@@ -1216,7 +1221,7 @@ $$ LANGUAGE plpgsql;
 -- Tabela:    comentario
 -- Momento:   BEFORE INSERT
 -- Função:    fn_valida_comentario_campanha_ativa()
--- Bloco:     [05-G]
+-- Bloco:     [05-K-3]
 -- Regra:     Impede novo comentário em campanha rejeitada ou encerrada por
 --            moderação.
 -- ----------------------------------------------------------------------------
@@ -1230,7 +1235,7 @@ EXECUTE FUNCTION fn_valida_comentario_campanha_ativa();
 -- ----------------------------------------------------------------------------
 -- Função:     validar_comentario_endosso
 -- Assinatura: () -> TRIGGER
--- Bloco:      [05-G]
+-- Bloco:      [05-K-3]
 -- Regra:      Uma campanha não pode ter mais de 4 endossos ativos
 --             simultaneamente (ordem_endosso preenchida).
 -- ----------------------------------------------------------------------------
@@ -1267,7 +1272,7 @@ $$;
 -- Tabela:    comentario
 -- Momento:   BEFORE INSERT OR UPDATE
 -- Função:    validar_comentario_endosso()
--- Bloco:     [05-G]
+-- Bloco:     [05-K-3]
 -- Regra:     Bloqueia o 5º endosso simultâneo numa mesma campanha.
 -- ----------------------------------------------------------------------------
 DROP TRIGGER IF EXISTS trg_comentario_limite_endosso ON comentario;
@@ -1280,7 +1285,7 @@ EXECUTE FUNCTION validar_comentario_endosso();
 -- ----------------------------------------------------------------------------
 -- Função:     validar_comentario_autor
 -- Assinatura: () -> TRIGGER
--- Bloco:      [05-G]
+-- Bloco:      [05-K-3]
 -- Regra:      Pesquisador não pode comentar em sua própria campanha (RF-066).
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION validar_comentario_autor()
@@ -1307,7 +1312,7 @@ $$;
 -- Tabela:    comentario
 -- Momento:   BEFORE INSERT
 -- Função:    validar_comentario_autor()
--- Bloco:     [05-G]
+-- Bloco:     [05-K-3]
 -- Regra:     Impede que o dono da campanha comente na própria campanha.
 -- ----------------------------------------------------------------------------
 DROP TRIGGER IF EXISTS trg_comentario_sem_autoria ON comentario;
@@ -1320,7 +1325,7 @@ EXECUTE FUNCTION validar_comentario_autor();
 -- ----------------------------------------------------------------------------
 -- Função:     validar_denuncia_frequencia
 -- Assinatura: () -> TRIGGER
--- Bloco:      [05-G]
+-- Bloco:      [05-K-3]
 -- Regra:      Um usuário não pode registrar mais de 5 denúncias (campanha +
 --             perfil somadas) em 24 horas.
 -- ----------------------------------------------------------------------------
@@ -1349,7 +1354,7 @@ $$;
 -- Tabela:    denuncia
 -- Momento:   BEFORE INSERT
 -- Função:    validar_denuncia_frequencia()
--- Bloco:     [05-G]
+-- Bloco:     [05-K-3]
 -- Regra:     Bloqueia a 6ª denúncia de um mesmo usuário dentro de 24 horas.
 -- ----------------------------------------------------------------------------
 DROP TRIGGER IF EXISTS trg_denuncia_limite_taxa ON denuncia;
@@ -1362,7 +1367,7 @@ EXECUTE FUNCTION validar_denuncia_frequencia();
 -- ----------------------------------------------------------------------------
 -- Função:     trg_admin_recebe_toda_permissao
 -- Assinatura: () -> TRIGGER
--- Bloco:      [05-G]
+-- Bloco:      [05-K-3]
 -- Uso:        Invocada por trg_permissao_auto_admin
 -- Regra:      Rede de segurança para a remoção de eh_admin() das RLS
 --             policies (ver RBAC-pontos-discutidos.md e 04_rls_policies.sql).
@@ -1391,7 +1396,7 @@ $$;
 -- Tabela:    permissao
 -- Momento:   AFTER INSERT
 -- Função:    trg_admin_recebe_toda_permissao()
--- Bloco:     [05-G]
+-- Bloco:     [05-K-3]
 -- Regra:     Atribui automaticamente toda permissão nova ao papel 'admin'.
 -- ----------------------------------------------------------------------------
 DROP TRIGGER IF EXISTS trg_permissao_auto_admin ON permissao;

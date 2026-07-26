@@ -2,6 +2,30 @@
 
 Este documento centraliza as explicações de arquitetura, regras de negócio e decisões de modelagem do PostgreSQL. Seu objetivo é manter os scripts `.sql` enxutos, sem poluição de comentários extensos inline.
 
+Os marcadores usados nos comentários dos `.sql` seguem o formato `[NN-Y]` (arquivo-letra) ou `[NN-Y-N]` (arquivo-letra-item), onde **NN** é o número do arquivo (`01` a `08`) e **Y** é a letra do bloco. A letra é a mesma em qualquer arquivo onde aparecer — ver índice abaixo.
+
+---
+
+## 🔤 Índice Global de Letras
+
+Cada letra tem exatamente um significado, do `01` ao `08`. Se você está procurando tudo que existe sobre um assunto (tabela, índice, policy, grant, regra de negócio), procure pela mesma letra em qualquer arquivo.
+
+| Letra | Domínio | Onde aparece |
+|---|---|---|
+| **A** | Visão Geral & Configuração Inicial (o ROOT) | `01-A` (bootstrap/role/extensões/enums), `04-A` (RLS geral) |
+| **B** | RBAC (Papéis, Permissões e Vinculação) | `01-B`, `02` *(sem bloco — PK/UNIQUE já bastam)*, `03-B` (`tem_permissao()`), `04-B`, `06-B` *(sem grant adicional)* |
+| **C** | CONFIG (Configurações, Catálogos e Arquivo Base) | `01-C`, `02` *(sem bloco)*, `04-C`, `06-C` |
+| **D** | USUÁRIO (Contas, Perfis, Autenticação, Termos e Sessões) | `01-D`, `02-D`, `04-D`, `06-D` |
+| **E** | CAMPANHA (Campanhas, Atualizações, Comentários, Denúncias, Recompensas) | `01-E`, `02-E`, `04-E`, `06-E` |
+| **F** | LINK (Vinculação de URLs Externas) | `01-F`, `02-F`, `04-F`, `06-F` |
+| **G** | ARQUIVO (Vinculação de Mídias) | `01-G`, `02-G`, `04-G`, `06-G` |
+| **H** | CONTRIBUIÇÃO (Apoios, Auditoria e Termos Financeiros) | `01-H`, `02-H`, `04-H`, `06-H` |
+| **I** | SCORE (Parâmetros, Rótulos, e todo o motor de cálculo/pontuação) | `01-I`, `02-I`, `04-I`, `05-I-1` a `05-I-4` (motor de score), `06-I` |
+| **J** | Segurança & Contexto de Sessão (`id_usuario_atual()`) | `03-J` |
+| **K** | Regras de Negócio Transversais (validações que cruzam mais de um domínio ao mesmo tempo) | `05-K-1` a `05-K-3` |
+
+> 📌 Por que `J` e `K` existem: nem tudo no banco pertence a um domínio de dado único. `id_usuario_atual()` (`03`) não é sobre nenhuma tabela específica — é infraestrutura de sessão usada por tudo. E várias triggers de `05` (ex.: validar repasse financeiro de uma campanha, ou impedir denúncia excessiva) mexem em mais de uma tabela de domínios diferentes ao mesmo tempo — forçá-las dentro de uma letra só (`E` ou `H`, por exemplo) esconderia que elas são regras de fronteira entre domínios, não de um domínio só. Por isso ganham letras próprias em vez de reaproveitar `A`-`I` com um significado diferente do já estabelecido.
+
 ---
 
 ## 01. EXTENSÕES, ENUMS E TABELAS (`01_extensoes_enums_tabelas.sql`)
@@ -184,7 +208,7 @@ Ambas as funções utilizam os modificadores de segurança essenciais:
 
 ---
 
-### [03-A] CONTEXTO DE SESSÃO (`id_usuario_atual`)
+### [03-J] SEGURANÇA & CONTEXTO DE SESSÃO (`id_usuario_atual`)
 
 * **Mecanismo de Transação:** O NestJS, ao autenticar o JWT e abrir uma transação com o PostgreSQL, executa o comando `SET LOCAL app.id_usuario_atual = '<id>'`.
 * **Leitura Segura:** A função lê a variável customizada da sessão do PostgreSQL via `current_setting('app.id_usuario_atual', true)`.
@@ -304,19 +328,19 @@ O arquivo é organizado em 8 blocos conceituais que espelham literalmente os tí
 
 ### Visão Geral
 
-Este é o arquivo mais denso do banco: 27 funções e 23 triggers, organizados em 7 blocos (`[05-A]` a `[05-G]`) que espelham a estrutura de marcadores já usada em `01`-`04`. Ele concentra toda regra que um `CHECK` simples não alcança — porque depende de **consultar outra tabela** (ex.: será que essa campanha está ativa?) ou de **recalcular algo automaticamente** quando um dado relacionado muda.
+Este é o arquivo mais denso do banco: 27 funções e 23 triggers, organizados em 7 blocos que usam duas letras do índice global — `I` (SCORE, blocos `[05-I-1]` a `[05-I-4]`) e `K` (Regras de Negócio Transversais, blocos `[05-K-1]` a `[05-K-3]`), ver "Índice Global de Letras" no topo deste documento. Ele concentra toda regra que um `CHECK` simples não alcança — porque depende de **consultar outra tabela** (ex.: será que essa campanha está ativa?) ou de **recalcular algo automaticamente** quando um dado relacionado muda.
 
 > 📌 **Por que o motor de score existe:** antes deste arquivo, `perfil_pesquisador.score_atual` e `score_pesquisador.pontos_obtidos` eram só valores fixos digitados no seed — nada calculava o score de verdade a partir de campanhas, denúncias, links acadêmicos ou do perfil. A tela de detalhes de pontuação no front lia campos que nem existiam no tipo real de dimensões de score, e a conta virava `NaN`. A solução foi mover o cálculo inteiro para dentro do banco, com o resultado guardado em cache (`perfil_pesquisador.score_atual` e `score_pesquisador`) e atualizado sozinho via trigger sempre que um dado relevante muda — funciona para qualquer registro novo, sem que o backend precise lembrar de chamar nada. Todos os pesos vêm de `score_config.peso` (nenhum número fixo no código): editar o peso no Painel Admin já recalcula o score de todo mundo.
 
 ---
 
-### [05-A] Helpers e Utilitários
+### [05-I-1] Score — Helpers e Utilitários
 
 * **`config_numero(p_chave, p_padrao)`:** lê uma constante numérica de `configuracoes` com fallback seguro — nunca retorna `NULL`/erro mesmo que a chave ainda não exista, o que evitaria `NaN` se algum peso ou penalidade não estivesse cadastrado.
 
 ---
 
-### [05-B] Motor de Score — Cálculo das Dimensões
+### [05-I-2] Score — Cálculo das Dimensões
 
 Quatro funções puras (`STABLE`, sem efeito colateral), uma por dimensão do score. Todas recebem `p_id_usuario INT` e devolvem um `INTEGER` já limitado entre `0` e o peso-raiz da dimensão (`LEAST/GREATEST`).
 
@@ -333,14 +357,14 @@ Quatro funções puras (`STABLE`, sem efeito colateral), uma por dimensão do sc
 
 ---
 
-### [05-C] Motor de Score — Orquestração e Cálculo Geral
+### [05-I-3] Score — Orquestração e Cálculo Geral
 
-* **`recalcular_score_pesquisador(p_id_usuario)`:** chama as 4 funções de `[05-B]`, soma o total, resolve o `id_rotulo` correspondente em `score_rotulo`, grava em `score_pesquisador` (via `UPSERT` — `ON CONFLICT (id_usuario, id_score_config) DO UPDATE`) e atualiza o cache em `perfil_pesquisador.score_atual`. É `SECURITY DEFINER` de propósito: precisa poder escrever no perfil de **qualquer** pesquisador (ex.: quando um admin resolve uma denúncia contra outra pessoa), não só de quem disparou a ação.
-* **`recalcular_todos_os_scores()`:** roda `recalcular_score_pesquisador` para todo mundo. Usada pelo botão "Recalcular" do Painel Admin e disparada automaticamente quando um peso de `score_config` muda (ver `[05-D]`).
+* **`recalcular_score_pesquisador(p_id_usuario)`:** chama as 4 funções de `[05-I-2]`, soma o total, resolve o `id_rotulo` correspondente em `score_rotulo`, grava em `score_pesquisador` (via `UPSERT` — `ON CONFLICT (id_usuario, id_score_config) DO UPDATE`) e atualiza o cache em `perfil_pesquisador.score_atual`. É `SECURITY DEFINER` de propósito: precisa poder escrever no perfil de **qualquer** pesquisador (ex.: quando um admin resolve uma denúncia contra outra pessoa), não só de quem disparou a ação.
+* **`recalcular_todos_os_scores()`:** roda `recalcular_score_pesquisador` para todo mundo. Usada pelo botão "Recalcular" do Painel Admin e disparada automaticamente quando um peso de `score_config` muda (ver `[05-I-4]`).
 
 ---
 
-### [05-D] Motor de Score — Triggers e Funções de Automação
+### [05-I-4] Score — Triggers e Funções de Automação
 
 Cada trigger observa uma tabela que alimenta alguma dimensão do score e recalcula automaticamente quem foi afetado — ninguém no backend precisa lembrar de chamar `recalcular_score_pesquisador` manualmente.
 
@@ -358,7 +382,7 @@ Cada trigger observa uma tabela que alimenta alguma dimensão do score e recalcu
 
 ---
 
-### [05-E] Regras de Negócio — Integridade e Escopo
+### [05-K-1] Regras Transversais — Integridade e Escopo
 
 | Tabela | Função | Trigger | Regra |
 |---|---|---|---|
@@ -371,7 +395,7 @@ Cada trigger observa uma tabela que alimenta alguma dimensão do score e recalcu
 
 ---
 
-### [05-F] Regras de Negócio — Campanhas e Financeiro
+### [05-K-2] Regras Transversais — Campanhas e Financeiro
 
 | Tabela | Função | Trigger | Regra |
 |---|---|---|---|
@@ -387,7 +411,7 @@ Cada trigger observa uma tabela que alimenta alguma dimensão do score e recalcu
 
 ---
 
-### [05-G] Regras de Negócio — Comunidade, Engajamento e RBAC
+### [05-K-3] Regras Transversais — Comunidade, Engajamento e RBAC
 
 | Tabela | Função | Trigger | Regra |
 |---|---|---|---|
