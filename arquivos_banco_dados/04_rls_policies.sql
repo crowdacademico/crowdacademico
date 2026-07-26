@@ -646,7 +646,7 @@ DROP POLICY IF EXISTS pol_score_select ON score_pesquisador;
 CREATE POLICY pol_score_select ON score_pesquisador FOR SELECT USING (TRUE);
 
 DROP POLICY IF EXISTS pol_score_config_select ON public.score_config;
-CREATE POLICY "pol_score_config_select" ON public.score_config FOR SELECT TO app_nestjs USING (true);
+CREATE POLICY pol_score_config_select ON public.score_config FOR SELECT TO app_nestjs USING (true);
 -- [04-I-1] score_config: por que existe a policy de INSERT (ver DOCUMENTACAO_BD.md)
 DROP POLICY IF EXISTS pol_score_config_insert ON public.score_config;
 CREATE POLICY pol_score_config_insert ON public.score_config FOR INSERT TO app_nestjs WITH CHECK (public.tem_permissao('score_editar'));
@@ -655,7 +655,7 @@ DROP POLICY IF EXISTS pol_score_config_update ON public.score_config;
 CREATE POLICY pol_score_config_update ON public.score_config FOR UPDATE TO app_nestjs USING (public.tem_permissao('score_editar'));
 
 DROP POLICY IF EXISTS pol_score_rotulo_select ON public.score_rotulo;
-CREATE POLICY "pol_score_rotulo_select" ON public.score_rotulo FOR SELECT TO app_nestjs USING (true);
+CREATE POLICY pol_score_rotulo_select ON public.score_rotulo FOR SELECT TO app_nestjs USING (true);
 -- [04-I-2] score_rotulo: por que existe a policy de INSERT (ver DOCUMENTACAO_BD.md)
 DROP POLICY IF EXISTS pol_score_rotulo_insert ON public.score_rotulo;
 CREATE POLICY pol_score_rotulo_insert ON public.score_rotulo FOR INSERT TO app_nestjs WITH CHECK (public.tem_permissao('score_editar'));
