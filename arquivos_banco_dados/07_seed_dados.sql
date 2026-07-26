@@ -1,27 +1,52 @@
--- ============================================================
---  CrowdAcadêmico — 07: SEED DE DADOS (mínimo 7 registros por tabela)
---  Ordem respeitando dependências de FK
---  Depende de: 01 a 06 (precisa das tabelas, RLS, grants e das
---  funções de score já criadas — o INSERT final desta seção chama
---  public.recalcular_todos_os_scores(), definida em 06)
---  Próximo arquivo (opcional/manual): 08_trigger_signup_usuario.sql
--- ============================================================
+-- ============================================================================
+--  CROWDACADÊMICO — SISTEMA DE CROWDFUNDING PARA PESQUISA CIENTÍFICA
+-- ============================================================================
+--  Arquivo:     07_seed_dados.sql
+--  Módulo:      Seed de Dados (mínimo 7 registros por tabela)
+--  Depende de:  01 a 06 (precisa das tabelas, RLS, grants e das funções de
+--               score já criadas — o INSERT final chama
+--               public.recalcular_todos_os_scores(), definida em 05)
+--  Próximo:     08_trigger_signup_usuario.sql (opcional/manual)
+-- ----------------------------------------------------------------------------
+--  Descrição:
+--  Povoa o banco com dados de demonstração/teste, na ordem física exigida
+--  pelas dependências de Foreign Key — que NÃO é a mesma ordem alfabética
+--  do índice global de letras (ver DOCUMENTACAO_BD.md). Alguns blocos são
+--  intercalados de propósito: por exemplo, o seed de `configuracoes`
+--  (letra C) só roda depois do de `usuario` (letra D) porque duas de suas
+--  linhas referenciam o usuário admin. Os marcadores `[07-X]` abaixo
+--  indicam a que domínio cada bloco pertence, mesmo fora de ordem.
+--
+--  Inventário Mapeado: 26 blocos de INSERT cobrindo as 39 tabelas com
+--  dados obrigatórios de seed (tabelas só de associação/log ficam vazias
+--  até o primeiro uso real da aplicação).
+-- ----------------------------------------------------------------------------
+--  SUMÁRIO DOS BLOCOS DE CÓDIGO (ordem de execução, não alfabética)
+-- ----------------------------------------------------------------------------
+--  [07-I] score_config, score_rotulo
+--  [07-B] papel, permissao, papel_permissao
+--  [07-C] tipo_link, area_conhecimento, motivo_denuncia, arquivo
+--  [07-D] usuario, usuario_papel
+--  [07-C] configuracoes (vem depois de D de propósito — ver nota acima)
+--  [07-D] perfil_pesquisador
+--  [07-F] link_academico
+--  [07-E] campanha, seguir_campanha
+--  [07-D] seguir_pesquisador
+--  [07-H] contribuicao, auditoria_financeira
+--  [07-E] atualizacao_campanha
+--  [07-G] arquivo_atualizacao
+--  [07-E] repasse, solicitacao_encerramento, historico_rejeicao,
+--         comentario, denuncia
+-- ============================================================================
 
--- CORRIGIDO: este INSERT era um resquício de uma versão anterior do seed
--- (comentário citava "AuthContext.tsx", do fluxo antigo com Supabase Auth) e
--- duplicava parcialmente o INSERT INTO papel mais completo logo abaixo, na
--- seção PAPEL. Os papéis 'admin', 'pesquisador' e 'usuario' continuam
--- seedados ali — só juntamos num único lugar para não ficar com dois
--- blocos de INSERT INTO papel espalhados pelo arquivo.
-
--- Inserção das dimensões raiz
+-- [07-I-1] score_config: dimensões raiz e subitens do motor de pontuação
 INSERT INTO score_config (nome, descricao, peso, id_pai) VALUES
     ('perfil_academico',     'Perfil Acadêmico Declarado',  30, NULL),
     ('historico_plataforma', 'Histórico na Plataforma',     25, NULL),
     ('atualizacao_campanha', 'Atualização da Campanha',     20, NULL),
     ('reputacao_comunidade', 'Reputação da Comunidade',     25, NULL);
 
--- Subitens (mantido igual)
+-- Subitens
 INSERT INTO score_config (nome, descricao, peso, id_pai)
 SELECT 'lattes',      'Currículo Lattes válido informado',  8, id_score_config FROM score_config WHERE nome = 'perfil_academico';
 INSERT INTO score_config (nome, descricao, peso, id_pai)
@@ -55,21 +80,7 @@ INSERT INTO score_rotulo (rotulo, descricao, score_minimo, score_maximo) VALUES
 ('Referência',    'Pesquisador com excelente reputação e alto engajamento',      75, 100);
 
 
--- ============================================================
--- PAPEL
--- 7 papéis seedados de uma vez só: 'admin' (recebe automaticamente toda
--- permissão nova via trg_permissao_auto_admin, ver 06b_regras_negocio.sql)
--- e 'pesquisador' (usado pela regra de dono de campanha), 'usuario' (papel padrão
--- atribuído a todo novo cadastro por atribuir_papel_padrao(), ver
--- 08_trigger_signup_usuario.sql), e 'moderador'/'revisor'/'curador'/
--- 'suporte' (RBAC granular via papel_permissao, ver seção seguinte).
--- ON CONFLICT DO NOTHING evita erro de duplicidade se o script rodar
--- mais de uma vez. Não fixamos os IDs resultantes em nenhum lugar:
--- papel_permissao e usuario_papel resolvem por nome (ver abaixo).
--- CORRIGIDO: removido o papel 'apoiador' — contribuir financeiramente
--- não é uma ação restrita a um papel específico, qualquer usuário
--- autenticado (papel 'usuario' ou 'pesquisador') pode fazer isso.
--- ============================================================
+-- [07-B-1] papel: por que estes 7 papéis e por que os IDs não são fixados (ver DOCUMENTACAO_BD.md)
 INSERT INTO papel (nome) VALUES
 ('admin'),
 ('pesquisador'),
@@ -81,13 +92,7 @@ INSERT INTO papel (nome) VALUES
 ON CONFLICT (nome) DO NOTHING;
 
 
--- ============================================================
--- PERMISSAO
--- CORRIGIDO: nomes padronizados no formato "entidade_acao" (ver
--- RBAC-pontos-discutidos.md). Renomeia as permissões antigas antes do
--- INSERT das novas, para não colidir com o UNIQUE em bancos já
--- populados, e mantém idempotência via ON CONFLICT DO NOTHING.
--- ============================================================
+-- [07-B-2] permissao: por que o formato "entidade_acao" (ver DOCUMENTACAO_BD.md)
 
 INSERT INTO permissao (nome) VALUES
 ('campanha_aprovar'),
@@ -123,19 +128,7 @@ INSERT INTO permissao (nome) VALUES
 ON CONFLICT (nome) DO NOTHING;
 
 
--- ============================================================
--- PAPEL_PERMISSAO
--- Resolvido por nome (não por número fixo), já que os IDs de "papel"
--- não são previsíveis depois do ON CONFLICT DO NOTHING acima.
---
--- NOTA: como trg_permissao_auto_admin (06b_regras_negocio.sql, executado
--- antes deste arquivo) já dispara em todo INSERT em "permissao" e atribui
--- a permissão nova ao papel 'admin' automaticamente, as linhas ('admin', ...)
--- abaixo já seriam preenchidas sozinhas pela trigger. Foram mantidas
--- explícitas mesmo assim, só por clareza de leitura (documentam a
--- intenção "admin tem tudo" sem depender de abrir outro arquivo para
--- confirmar) — o ON CONFLICT DO NOTHING garante que não há duplicidade.
--- ============================================================
+-- [07-B-3] papel_permissao: por que as linhas ('admin', ...) estão explícitas mesmo sendo redundantes com a trigger (ver DOCUMENTACAO_BD.md)
 INSERT INTO papel_permissao (id_papel, id_permissao)
 SELECT p.id_papel, perm.id_permissao
 FROM papel p
@@ -188,9 +181,7 @@ WHERE (p.nome, perm.nome) IN (
 ON CONFLICT DO NOTHING;
 
 
--- ============================================================
--- TIPO_LINK
--- ============================================================
+-- [07-C-1] tipo_link
 -- CORRIGIDO: tipo_link ajustado para a allowlist fechada definida pela equipe.
 INSERT INTO tipo_link (nome, ativo, regex, dominio) VALUES
 ('Lattes',            TRUE,  '^https?://lattes\.cnpq\.br/\d+$',                   'lattes.cnpq.br'),
@@ -200,9 +191,7 @@ INSERT INTO tipo_link (nome, ativo, regex, dominio) VALUES
 ('GitHub',            TRUE,  '^https?://(www\.)?github\.com/[\w\-]+/?$',          'github.com');
 
 
--- ============================================================
--- AREA_CONHECIMENTO
--- ============================================================
+-- [07-C-2] area_conhecimento
 -- CORRIGIDO: área de conhecimento adicionada para o valor Multidisciplinar.
 INSERT INTO area_conhecimento (codigo_cnpq, nome, ativo) VALUES
 ('1.00.00.00-0', 'Ciências Exatas e da Terra',          TRUE),
@@ -216,9 +205,7 @@ INSERT INTO area_conhecimento (codigo_cnpq, nome, ativo) VALUES
 ('9.00.00.00-0', 'Multidisciplinar',                    TRUE);
 
 
--- ============================================================
--- MOTIVO_DENUNCIA
--- ============================================================
+-- [07-C-3] motivo_denuncia
 INSERT INTO motivo_denuncia (codigo, descricao, tipo) VALUES
 ('CAMP-001', 'Campanha com informações falsas ou enganosas',           'campanha'),
 ('CAMP-002', 'Campanha duplicada ou já existente',                     'campanha'),
@@ -229,9 +216,7 @@ INSERT INTO motivo_denuncia (codigo, descricao, tipo) VALUES
 ('PERF-003', 'Usurpação de identidade de pesquisador real',            'perfil');
 
 
--- ============================================================
--- ARQUIVO (imagens de perfil — sem FK ainda ativa no INSERT)
--- ============================================================
+-- [07-C-4] arquivo (imagens de perfil — sem FK ainda ativa no INSERT)
 -- ativo omitido: DEFAULT TRUE aplicado automaticamente
 -- URLs do Pravatar (CC0, fotos reais que carregam de fato — feito
 -- exatamente pra preencher dados de teste/demo como este).
@@ -246,9 +231,7 @@ INSERT INTO arquivo (url, nome_original, tipo_mime, tamanho_bytes) VALUES
 ('https://cdn.crowdacademico.com.br/docs/relatorio_q1.pdf',       'relatorio_q1.pdf',     'application/pdf', 512000);
 
 
--- ============================================================
--- USUARIO
--- ============================================================
+-- [07-D-1] usuario
 -- CORRIGIDO: seed de usuário passou a usar criado_em.
 INSERT INTO usuario (nome, email, senha_hash, id_imagem_perfil, criado_em) VALUES
 ('Ana Beatriz Santos',    'ana.santos@usp.br',          '$2b$12$hashed_ana001',    1, '2024-01-10 09:00:00'),
@@ -261,12 +244,10 @@ INSERT INTO usuario (nome, email, senha_hash, id_imagem_perfil, criado_em) VALUE
 ('Admin Sistema',         'admin@crowdacademico.com.br','$2b$12$hashed_admin008',  NULL,'2024-01-01 00:00:00');
 
 
--- ============================================================
--- USUARIO_PAPEL
+-- [07-D-2] usuario_papel
 -- id_usuario é fixo (tabela usuario está vazia antes deste seed, então
 -- os IDs 1-8 abaixo batem com a ordem de inserção acima). id_papel é
--- resolvido por nome pelo mesmo motivo da seção PAPEL_PERMISSAO.
--- ============================================================
+-- resolvido por nome pelo mesmo motivo do bloco [07-B-3].
 INSERT INTO usuario_papel (id_usuario, id_papel)
 SELECT v.id_usuario, p.id_papel
 FROM (VALUES
@@ -283,9 +264,7 @@ JOIN papel p ON p.nome = v.papel_nome
 ON CONFLICT DO NOTHING;
 
 
--- ============================================================
--- CONFIGURACOES
--- ============================================================
+-- [07-C-5] configuracoes: por que este bloco vem depois de usuario (ver DOCUMENTACAO_BD.md)
 INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo) VALUES
 (NULL, 'taxa_plataforma_padrao',     '5.00',  'decimal',  'Taxa padrão cobrada pela plataforma (%)',              TRUE),
 (NULL, 'prazo_maximo_campanha_dias', '90',    'inteiro',  'Duração máxima permitida de uma campanha em dias',     TRUE),
@@ -296,16 +275,7 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo) VAL
 (8,   'notificar_novas_campanhas',   'true',  'booleano', 'Admin recebe e-mail sobre novas campanhas',            TRUE),
 (8,   'limite_denuncias_suspensao',  '5',     'inteiro',  'Nº de denúncias procedentes que suspendem o perfil',   TRUE);
 
--- ------------------------------------------------------------
--- Constantes do motor de score (movidas de artificios.sql, onde
--- estavam misturadas com as funções de cálculo). São dados, não
--- lógica — por isso ficam aqui junto do resto do seed.
--- ------------------------------------------------------------
--- ============================================================
--- 2. MELHORIA NO BANCO: constantes do cálculo ficam em "configuracoes"
---    (não hardcoded no código) — assim o admin pode ajustar a régua
---    de penalidades sem precisar editar SQL/app.
--- ============================================================
+-- [07-I-2] configuracoes: constantes do motor de score (ver DOCUMENTACAO_BD.md)
 INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo) VALUES
 (NULL, 'score_custo_denuncia',              '1',  'decimal', 'Pontos descontados por denúncia recebida (qualquer status), na dimensão Reputação', TRUE),
 (NULL, 'score_custo_denuncia_procedente',   '3',  'decimal', 'Pontos extras descontados por denúncia confirmada (status=resolvida), na dimensão Reputação', TRUE),
@@ -315,9 +285,7 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo) VAL
 ON CONFLICT (chave) DO NOTHING;
 
 
--- ============================================================
--- PERFIL_PESQUISADOR
--- ============================================================
+-- [07-D-3] perfil_pesquisador
 -- CORRIGIDO: valores de score do seed arredondados para inteiro.
 INSERT INTO perfil_pesquisador (id_usuario, cpf_criptografado, vinculo_institucional, titulo_academico, status_pesquisador, ativado_em, suspenso, score_atual, score_atualizado_em) VALUES
 (1, 'enc_cpf_001', 'Universidade de São Paulo (USP)',                   'doutor',     'ativo', '2024-01-10 09:05:00', FALSE, 86, '2025-05-01 00:00:00'),
@@ -329,9 +297,7 @@ INSERT INTO perfil_pesquisador (id_usuario, cpf_criptografado, vinculo_instituci
 (7, 'enc_cpf_007', 'Universidade Federal de São Paulo (UNIFESP)',       'doutor',      'ativo', '2024-04-01 09:35:00', FALSE, 77, '2025-05-01 00:00:00');
 
 
--- ============================================================
--- LINK_ACADEMICO
--- ============================================================
+-- [07-F-1] link_academico
 INSERT INTO link_academico (id_usuario, id_tipolink, ordem, url) VALUES
 (1, 1, 1, 'http://lattes.cnpq.br/1234567890123456'),
 (1, 2, 2, 'https://orcid.org/0000-0001-2345-6789'),
@@ -341,9 +307,7 @@ INSERT INTO link_academico (id_usuario, id_tipolink, ordem, url) VALUES
 (7, 2, 1, 'https://orcid.org/0000-0002-9876-5432');
 
 
--- ============================================================
--- CAMPANHA
--- ============================================================
+-- [07-E-1] campanha
 INSERT INTO campanha (id_usuario, id_admin, id_area_conhecimento, titulo, modelo, meta_financeira, valor_bruto_arrecadado, taxa_plataforma, descricao, data_inicio, data_fim, status, aprovado_em, criado_em) VALUES
 (1, 8, 1, 'Desenvolvimento de Algoritmo para Diagnóstico Precoce de Alzheimer por IA',      'all-or-nothing', 50000.00, 52300.00, 5.00, 'Pesquisa aplicada em inteligência artificial para detecção precoce da doença de Alzheimer usando redes neurais convolucionais.',                          '2024-02-01', '2024-04-01', 'sucesso',             '2024-02-01', '2024-01-20 10:00:00'),
 (2, 8, 3, 'Prótese de Baixo Custo com Impressão 3D para Amputados do SUS',                  'flexivel',       35000.00, 28500.00, 5.00, 'Projeto de engenharia biomédica para fabricação de próteses funcionais de membros superiores a custo acessível para o sistema público.',                '2024-02-15', '2024-05-01', 'sucesso',             '2024-02-15', '2024-02-05 11:30:00'),
@@ -354,9 +318,7 @@ INSERT INTO campanha (id_usuario, id_admin, id_area_conhecimento, titulo, modelo
 (7, 8, 4, 'Eficácia de Probióticos na Redução de Infecções Hospitalares em UTI Neonatal',  'all-or-nothing', 45000.00, 45000.00, 5.00, 'Ensaio clínico randomizado avaliando o uso de probióticos na microbiota intestinal de neonatos para prevenção de sepse hospitalar.',                    '2024-05-01', '2024-07-30', 'encerrado',           '2024-05-01', '2024-04-15 10:00:00');
 
 
--- ============================================================
--- SEGUIR_CAMPANHA
--- ============================================================
+-- [07-E-2] seguir_campanha
 INSERT INTO seguir_campanha (id_usuario, id_campanha) VALUES
 (2, 1),
 (3, 1),
@@ -367,9 +329,7 @@ INSERT INTO seguir_campanha (id_usuario, id_campanha) VALUES
 (1, 7);
 
 
--- ============================================================
--- SEGUIR_PESQUISADOR
--- ============================================================
+-- [07-D-4] seguir_pesquisador
 INSERT INTO seguir_pesquisador (id_usuario, id_pesquisador) VALUES
 (2, 1),
 (3, 1),
@@ -380,9 +340,7 @@ INSERT INTO seguir_pesquisador (id_usuario, id_pesquisador) VALUES
 (1, 5);
 
 
--- ============================================================
--- CONTRIBUICAO
--- ============================================================
+-- [07-H-1] contribuicao
 -- CORRIGIDO: seed representa dados históricos já concluídos, então
 -- os triggers de proteção (pensados para tráfego em tempo real)
 -- são desligados só durante a carga do seed e religados em seguida.
@@ -402,9 +360,7 @@ ALTER TABLE contribuicao ENABLE TRIGGER trg_valida_status_contribuicao;
 ALTER TABLE contribuicao ENABLE TRIGGER trg_contribuicao_all_or_nothing_pix;
 
 
--- ============================================================
--- AUDITORIA_FINANCEIRA
--- ============================================================
+-- [07-H-2] auditoria_financeira
 INSERT INTO auditoria_financeira (id_contribuicao, status_novo, status_anterior, evento, timestamp) VALUES
 (1, 'confirmado', 'pendente',   'pagamento_confirmado_gateway',   '2024-02-10 10:05:00'),
 (1, 'repassado',  'confirmado', 'meta_atingida_repasse_efetuado', '2024-04-05 10:00:00'),
@@ -415,9 +371,7 @@ INSERT INTO auditoria_financeira (id_contribuicao, status_novo, status_anterior,
 (7, 'a_devolver', 'confirmado', 'meta_nao_atingida_devolucao',    '2024-04-25 00:00:00');
 
 
--- ============================================================
--- ATUALIZACAO_CAMPANHA
--- ============================================================
+-- [07-E-3] atualizacao_campanha
 INSERT INTO atualizacao_campanha (id_campanha, titulo, conteudo, publicado_em, fase, tipo) VALUES
 (1, 'Início da coleta de dados clínicos',        'Iniciamos a coleta de dados clínicos com parceria do Hospital das Clínicas. Primeiros 200 exames de neuroimagem analisados.', '2024-02-20 10:00:00', 'andamento',          'texto'),
 (1, 'Modelo atinge 89% de acurácia',             'Modelo de deep learning atingiu acurácia de 89% na base de validação. Aguardamos revisão por pares..',                        '2024-03-15 14:00:00', 'resultado_preliminar','texto'),
@@ -428,9 +382,7 @@ INSERT INTO atualizacao_campanha (id_campanha, titulo, conteudo, publicado_em, f
 (1, 'Artigo submetido à Nature Medicine',        'Artigo submetido ao periódico Nature Medicine. Código e dataset disponibilizados em repositório público.',                     '2024-04-10 16:00:00', 'resultado_final',    'linkexterno');
 
 
--- ============================================================
--- ARQUIVO_ATUALIZACAO
--- ============================================================
+-- [07-G-1] arquivo_atualizacao
 INSERT INTO arquivo_atualizacao (id_arquivo, id_atualizacao) VALUES
 (3, 3),
 (8, 6),
@@ -441,9 +393,7 @@ INSERT INTO arquivo_atualizacao (id_arquivo, id_atualizacao) VALUES
 (6, 7);
 
 
--- ============================================================
--- REPASSE
--- ============================================================
+-- [07-E-4] repasse
 ALTER TABLE repasse DISABLE TRIGGER trg_valida_repasse;
 
 INSERT INTO repasse (id_campanha, valor_bruto, valor_liquido, meta_atingida, repassado_em, taxa_relativa, status) VALUES
@@ -458,9 +408,7 @@ INSERT INTO repasse (id_campanha, valor_bruto, valor_liquido, meta_atingida, rep
 ALTER TABLE repasse ENABLE TRIGGER trg_valida_repasse;
 
 
--- ============================================================
--- SOLICITACAO_ENCERRAMENTO
--- ============================================================
+-- [07-E-5] solicitacao_encerramento
 INSERT INTO solicitacao_encerramento (id_campanha, id_admin, justificativa_pesquisador, status, solicitado_em, avaliado_em) VALUES
 (7, 8,   'Todos os objetivos do ensaio clínico foram atingidos e resultados publicados. Solicito encerramento formal.', 'aprovado',  '2024-08-05 09:00:00', '2024-08-06 11:00:00'),
 (1, 8,   'Artigo publicado e resultados divulgados à comunidade. Encerrando ciclo da campanha.',                         'aprovado',  '2024-04-12 10:00:00', '2024-04-13 09:00:00'),
@@ -471,9 +419,7 @@ INSERT INTO solicitacao_encerramento (id_campanha, id_admin, justificativa_pesqu
 (6, NULL,'Desejo encerrar a campanha antes da aprovação por motivos pessoais de agenda.',                                'cancelado', '2025-04-15 12:00:00', NULL);
 
 
--- ============================================================
--- HISTORICO_REJEICAO
--- ============================================================
+-- [07-E-6] historico_rejeicao
 INSERT INTO historico_rejeicao (id_campanha, id_admin, justificativa, rejeitado_em) VALUES
 (4, 8, 'Campanha não apresentou metodologia clara nem parecer de comitê de ética em pesquisa.',               '2024-03-08 10:00:00'),
 (6, 8, 'Escopo da pesquisa não enquadrado como pesquisa acadêmica financiável pela plataforma.',              '2024-04-12 11:00:00'),
@@ -484,9 +430,7 @@ INSERT INTO historico_rejeicao (id_campanha, id_admin, justificativa, rejeitado_
 (7, 8, 'Protocolo de ensaio clínico incompleto. Aprovação pelo CEP obrigatória antes de prosseguir.',        '2024-04-17 11:00:00');
 
 
--- ============================================================
--- COMENTARIO
--- ============================================================
+-- [07-E-7] comentario
 INSERT INTO comentario (id_campanha, id_pesquisador, conteudo, endossado, criado_em, ordem_endosso) VALUES
 (1, 2, 'Pesquisa extremamente relevante! A detecção precoce de Alzheimer pode mudar vidas. Apoio totalmente.',          TRUE,  '2024-02-15 10:00:00', 1),
 (1, 3, 'Parabéns pela metodologia robusta com redes neurais. Seria interessante publicar o dataset aberto.',            TRUE,  '2024-02-18 14:00:00', 2),
@@ -497,9 +441,7 @@ INSERT INTO comentario (id_campanha, id_pesquisador, conteudo, endossado, criado
 (7, 2, 'Ensaio clínico com resultado impressionante de 34% de redução de sepse. Esse trabalho merece publicação top.', TRUE,  '2024-09-05 10:00:00', 1);
 
 
--- ============================================================
--- DENUNCIA
--- ============================================================
+-- [07-E-8] denuncia
 INSERT INTO denuncia (id_usuario, id_campanha_alvo, id_pesquisador_alvo, id_motivo, status, criado_em) VALUES
 (2, 6,    NULL, 1, 'improcedente', '2025-04-11 09:00:00'),
 (3, NULL, 6,    5, 'pendente',     '2025-04-12 10:00:00'),
@@ -511,43 +453,7 @@ INSERT INTO denuncia (id_usuario, id_campanha_alvo, id_pesquisador_alvo, id_moti
 
 
 
--- ============================================================
--- CORRIGIDO: esta nota ainda descrevia o fluxo antigo via Supabase Auth
--- (contradizia 08_trigger_signup_usuario.sql, que já documenta esse
--- caminho como obsoleto). Com autenticação própria, para logar no app:
---   1) cadastre o usuário pelo endpoint de signup do NestJS (gera o
---      senha_hash e chama public.atribuir_papel_padrao(id_usuario), que
---      atribui o papel 'usuario' — ver 08_trigger_signup_usuario.sql);
---   2) o papel 'admin' não é atribuído automaticamente por nada disso —
---      depois do signup, dê o papel a um usuário manualmente:
---      INSERT INTO usuario_papel (id_usuario, id_papel)
---      SELECT <id_usuario>, id_papel FROM papel WHERE nome = 'admin';
--- ============================================================
+-- [07-D-5] Como logar no app depois deste seed (autenticação própria, ver DOCUMENTACAO_BD.md)
 
--- ============================================================
---  FIX — permission denied for sequence ..._seq
--- ============================================================
---  Causa: GRANT INSERT numa tabela não libera automaticamente o uso
---  da sequência por trás de uma coluna SERIAL/IDENTITY. Sem USAGE na
---  sequência, o Postgres não consegue gerar o próximo ID no INSERT,
---  mesmo a tabela já tendo GRANT INSERT — daí o erro 42501.
---
---  Isso afeta TODA tabela que recebeu GRANT INSERT pra "authenticated"
---  no script anterior (seguir_pesquisador, campanha, contribuicao,
---  comentario, denuncia, seguir_campanha, link_academico, etc.) — não
---  só seguir_pesquisador. Esta linha resolve pra todas de uma vez.
--- ============================================================
-
--- ------------------------------------------------------------
--- NOTA DE REORGANIZAÇÃO: o GRANT nas sequências que originalmente
--- ficava aqui (fix avulso de "permission denied for sequence")
--- foi movido para 05_grants.sql, junto dos demais GRANTs.
--- ------------------------------------------------------------
-
-
--- ============================================================
--- 10. BACKFILL — recalcula os 7 pesquisadores do seed agora, trocando
---     os valores fixos (digitados à mão) pelos valores calculados de
---     verdade a partir dos dados que já existem no banco.
--- ============================================================
+-- [07-I-3] Backfill: recalcula o score dos 7 pesquisadores do seed com os valores de verdade
 SELECT public.recalcular_todos_os_scores();

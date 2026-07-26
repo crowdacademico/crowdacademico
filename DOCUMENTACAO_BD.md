@@ -510,4 +510,72 @@ Nenhum GRANT adicional. `papel`, `permissao` e `papel_permissao` só têm policy
 **Detalhamento por grant:**
 * **[06-I-1] Funções do motor de score:** precisam de `GRANT EXECUTE` para que o app possa chamar `recalcular_todos_os_scores()` via RPC (botão "Recalcular" do Painel Admin) e `recalcular_score_pesquisador()`.
 
+---
+
+## 07. SEED DE DADOS (`07_seed_dados.sql`)
+
+---
+
+### Visão Geral
+
+Povoa o banco com dados de demonstração/teste (mínimo 7 registros por tabela relevante). É o único arquivo em que a **ordem física não segue a ordem alfabética do índice global de letras** — ela segue estritamente a ordem de dependência de Foreign Key, porque aqui (diferente de `04`/`06`) a ordem das instruções importa de verdade: uma tabela filha só pode receber `INSERT` depois que a linha da tabela pai já existe.
+
+> ⚠️ **Por que a ordem não é alfabética:** o exemplo mais claro é `configuracoes` (letra C). Duas das suas linhas de seed (`notificar_novas_campanhas`, `limite_denuncias_suspensao`) referenciam o usuário admin pelo `id_usuario`. Por isso o `INSERT` em `configuracoes` só pode rodar **depois** do `INSERT` em `usuario` (letra D) — o arquivo intercala C e D de propósito, e isso já estava correto antes desta reorganização. Reordenar cegamente para "C sempre antes de D" quebraria o script.
+
+### Ordem de Execução (com a letra de cada bloco)
+
+| Ordem física | Bloco | Letra | Marcador |
+|---|---|---|---|
+| 1 | `score_config` (dimensões + subitens) | SCORE | `[07-I-1]` |
+| 2 | `score_rotulo` | SCORE | `[07-I-1]` |
+| 3 | `papel` | RBAC | `[07-B-1]` |
+| 4 | `permissao` | RBAC | `[07-B-2]` |
+| 5 | `papel_permissao` | RBAC | `[07-B-3]` |
+| 6 | `tipo_link` | CONFIG | `[07-C-1]` |
+| 7 | `area_conhecimento` | CONFIG | `[07-C-2]` |
+| 8 | `motivo_denuncia` | CONFIG | `[07-C-3]` |
+| 9 | `arquivo` | CONFIG | `[07-C-4]` |
+| 10 | `usuario` | USUÁRIO | `[07-D-1]` |
+| 11 | `usuario_papel` | USUÁRIO | `[07-D-2]` |
+| 12 | `configuracoes` (parâmetros de sistema + 2 preferências do admin) | CONFIG | `[07-C-5]` |
+| 13 | `configuracoes` (constantes do motor de score) | SCORE¹ | `[07-I-2]` |
+| 14 | `perfil_pesquisador` | USUÁRIO | `[07-D-3]` |
+| 15 | `link_academico` | LINK | `[07-F-1]` |
+| 16 | `campanha` | CAMPANHA | `[07-E-1]` |
+| 17 | `seguir_campanha` | CAMPANHA | `[07-E-2]` |
+| 18 | `seguir_pesquisador` | USUÁRIO | `[07-D-4]` |
+| 19 | `contribuicao` | CONTRIBUIÇÃO | `[07-H-1]` |
+| 20 | `auditoria_financeira` | CONTRIBUIÇÃO | `[07-H-2]` |
+| 21 | `atualizacao_campanha` | CAMPANHA | `[07-E-3]` |
+| 22 | `arquivo_atualizacao` | ARQUIVO | `[07-G-1]` |
+| 23 | `repasse` | CAMPANHA | `[07-E-4]` |
+| 24 | `solicitacao_encerramento` | CAMPANHA | `[07-E-5]` |
+| 25 | `historico_rejeicao` | CAMPANHA | `[07-E-6]` |
+| 26 | `comentario` | CAMPANHA | `[07-E-7]` |
+| 27 | `denuncia` | CAMPANHA | `[07-E-8]` |
+| — | Nota sobre como logar após o seed | USUÁRIO | `[07-D-5]` |
+| 28 | Backfill (`recalcular_todos_os_scores()`) | SCORE | `[07-I-3]` |
+
+¹ A *tabela* `configuracoes` é do domínio CONFIG (`01-C`), mas este bloco específico só contém constantes usadas pelo motor de cálculo de score — por isso foi arquivado sob a letra `I`, junto com o resto do que envolve pontuação. É a mesma tabela, mas o **conteúdo** desse bloco pertence a outro domínio; ver nota abaixo.
+
+---
+
+### Detalhamento (blocos com histórico ou decisão de design)
+
+* **[07-I-1] `score_config` / `score_rotulo`:** este `INSERT` era originalmente um resquício de uma versão anterior do seed (o comentário antigo citava `AuthContext.tsx`, do fluxo de autenticação via Supabase que não existe mais) e duplicava parcialmente o `INSERT INTO papel` mais completo do bloco `[07-B-1]`. Os papéis `'admin'`, `'pesquisador'` e `'usuario'` continuam seedados só em `[07-B-1]`; aqui ficou só a inserção de verdade das dimensões e subitens de score.
+
+* **[07-B-1] `papel`:** 7 papéis seedados de uma vez: `'admin'` (recebe automaticamente toda permissão nova via `trg_permissao_auto_admin`, ver `05_regras_negocio.sql`), `'pesquisador'` (usado pela regra de dono de campanha), `'usuario'` (papel padrão atribuído a todo novo cadastro por `atribuir_papel_padrao()`, ver `08_trigger_signup_usuario.sql`), e `'moderador'`/`'revisor'`/`'curador'`/`'suporte'` (RBAC granular via `papel_permissao`, ver `[07-B-3]`). `ON CONFLICT DO NOTHING` evita erro de duplicidade se o script rodar mais de uma vez; os IDs resultantes não são fixados em lugar nenhum — `papel_permissao` e `usuario_papel` sempre resolvem por nome. O papel `'apoiador'` foi removido deliberadamente: contribuir financeiramente não é uma ação restrita a um papel específico, qualquer usuário autenticado (`'usuario'` ou `'pesquisador'`) pode fazer isso.
+
+* **[07-B-2] `permissao`:** nomes padronizados no formato `"entidade_acao"` (ver `RBAC-pontos-discutidos.md`). Mantém idempotência via `ON CONFLICT (nome) DO NOTHING`.
+
+* **[07-B-3] `papel_permissao`:** resolvido por nome (não por número fixo), já que os IDs de `papel` não são previsíveis depois do `ON CONFLICT DO NOTHING` de `[07-B-1]`. Como `trg_permissao_auto_admin` (`05_regras_negocio.sql`, executado antes deste arquivo) já dispara em todo `INSERT` em `permissao` e atribui a permissão nova ao papel `'admin'` automaticamente, as linhas `('admin', ...)` deste bloco já seriam preenchidas sozinhas pela trigger — foram mantidas explícitas mesmo assim só por clareza de leitura (documentam a intenção "admin tem tudo" sem depender de abrir outro arquivo para confirmar). `ON CONFLICT DO NOTHING` garante que não há duplicidade.
+
+* **[07-C-5] `configuracoes` (parâmetros de sistema):** este bloco só pode rodar depois de `[07-D-1]` (`usuario`) porque duas das suas 7 linhas (`notificar_novas_campanhas`, `limite_denuncias_suspensao`) têm `id_usuario = 8`, referenciando o usuário Admin do seed.
+
+* **[07-I-2] `configuracoes` (constantes do motor de score):** dados (não lógica) que alimentam as fórmulas de `05_regras_negocio.sql` — `score_custo_denuncia`, `score_penalidade_abandono`, etc. Ficam em `configuracoes` (não hardcoded no código) exatamente para que o admin possa ajustar a régua de penalidades pelo Painel Admin sem precisar editar SQL/app.
+
+* **[07-D-5] Como logar no app após o seed:** com autenticação própria, o fluxo é: 1) cadastrar o usuário pelo endpoint de signup do NestJS (gera o `senha_hash` e chama `public.atribuir_papel_padrao(id_usuario)`, que atribui o papel `'usuario'` — ver `08_trigger_signup_usuario.sql`); 2) o papel `'admin'` **não** é atribuído automaticamente por nada disso — depois do signup, é preciso dar o papel a um usuário manualmente com `INSERT INTO usuario_papel (id_usuario, id_papel) SELECT <id_usuario>, id_papel FROM papel WHERE nome = 'admin'`.
+
+> 🗑️ **Dois blocos removidos por estarem 100% obsoletos** (não só migrados — de fato apagados, sem equivalente aqui): um "FIX — permission denied for sequence" que descrevia um problema já resolvido, e uma "NOTA DE REORGANIZAÇÃO" que apontava para um arquivo `05_grants.sql` que nunca existiu de verdade (o nome correto sempre foi `06_grants.sql`). Ambos descreviam o `GRANT USAGE, SELECT ON ALL SEQUENCES`, que já vive e já está plenamente documentado em `06_grants.sql` (`[06-A-1]`) — mantê-los aqui seria pura duplicação desatualizada.
+
 > 📌 **Por que `atribuir_papel_padrao()` não aparece aqui:** o `GRANT EXECUTE` dessa função fica junto dela mesma em `08_trigger_signup_usuario.sql`, porque `06` roda **antes** do `08` na ordem de dependência — a função ainda não existiria neste ponto da execução se o grant estivesse aqui.
