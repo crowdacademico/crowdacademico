@@ -3,15 +3,12 @@
 --  Depende de: 01_extensoes_enums_tabelas.sql
 --  Próximo arquivo: 03_funcoes_seguranca.sql
 -- ============================================================
-
--- ============================================================
--- ÍNDICES
+-- [02-A] ÍNDICES
 -- ============================================================
 CREATE INDEX idx_campanha_usuario           ON campanha(id_usuario);
 CREATE INDEX idx_campanha_status            ON campanha(status);
 CREATE INDEX idx_contribuicao_campanha      ON contribuicao(id_campanha);
 CREATE INDEX idx_contribuicao_usuario       ON contribuicao(id_usuario);
--- CORRIGIDO: índices adicionados para comentários, repasses, encerramentos e campanhas.
 CREATE INDEX idx_comentario_campanha        ON comentario(id_campanha);
 CREATE INDEX idx_repasse_campanha           ON repasse(id_campanha);
 CREATE INDEX idx_historico_rejeicao_campanha ON historico_rejeicao(id_campanha);
@@ -27,15 +24,11 @@ CREATE INDEX idx_atualizacao_campanha       ON atualizacao_campanha(id_campanha)
 CREATE INDEX idx_link_academico_usuario     ON link_academico(id_usuario);
 CREATE INDEX idx_seguir_pesquisador_usuario ON seguir_pesquisador(id_usuario);
 CREATE INDEX idx_seguir_pesquisador_alvo    ON seguir_pesquisador(id_pesquisador);
-
--- Índices das tabelas novas (termos_de_uso, notificacao, recompensa)
 CREATE INDEX idx_usuario_termo_termo        ON usuario_termo(id_termo);
 CREATE INDEX idx_notificacao_usuario        ON notificacao(id_usuario);
 CREATE INDEX idx_notificacao_status         ON notificacao(status);          -- acelera a fila "pendente" que o worker de envio consulta
 CREATE INDEX idx_recompensa_campanha        ON recompensa(id_campanha);
 CREATE INDEX idx_arquivo_recompensa_arquivo ON arquivo_recompensa(id_arquivo);
-
--- Índices das tabelas de contribuicao_recompensa / links reaproveitados
 CREATE INDEX idx_contrib_recompensa_recompensa ON contribuicao_recompensa(id_recompensa);
 CREATE INDEX idx_link_atualizacao_atualizacao  ON link_atualizacao(id_atualizacao);
 CREATE INDEX idx_link_atualizacao_tipolink     ON link_atualizacao(id_tipolink);

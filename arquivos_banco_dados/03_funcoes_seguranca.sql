@@ -4,9 +4,7 @@
 --  Usado por: 04_rls_policies.sql
 --  Próximo arquivo: 04_rls_policies.sql
 -- ============================================================
-
--- ============================================================
--- FUNÇÕES HELPER PARA RLS
+-- [03-A] FUNÇÕES HELPER PARA RLS
 -- ============================================================
 -- ALTERADO: não usa mais auth.uid() (Supabase Auth). O NestJS, após
 -- validar o JWT próprio, executa `SET LOCAL app.id_usuario_atual = '<id>'`

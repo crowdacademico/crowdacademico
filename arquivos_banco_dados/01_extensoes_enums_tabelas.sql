@@ -3,9 +3,7 @@
 --  Execução: 1º arquivo a rodar (sem dependências externas).
 --  Próximo arquivo: 02_indices.sql
 -- ============================================================
--- [01-A] CONTEXTO E REVISÃO
--- ============================================================
--- [01-B] ROLE DO BACKEND (NestJS) E AUTENTICAÇÃO DO BACKEND
+-- [01-A] Bootstrap, Extensões e ENUMs
 -- ============================================================
 DO $$
 BEGIN
@@ -15,7 +13,7 @@ BEGIN
 END
 $$;
 -- ============================================================
--- [01-C] EXTENSÕES
+-- EXTENSÕES
 -- ============================================================
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- ============================================================
@@ -37,22 +35,7 @@ CREATE TYPE status_notificacao    AS ENUM ('pendente', 'enviado', 'falhou', 'can
 CREATE TYPE tipo_recompensa       AS ENUM ('fisica', 'digital', 'reconhecimento', 'acesso_antecipado', 'outro');
 
 -- ============================================================
--- TABELAS
--- ============================================================
--- [01-D] CONFIGURACOES (sistema)
--- ============================================================
-CREATE TABLE configuracoes (
-    id_config   SERIAL PRIMARY KEY,
-    id_usuario  INT,                          -- FK adicionada após criação de usuario
-    chave       VARCHAR(255) NOT NULL UNIQUE, -- [R11] UNIQUE necessário pro upsert(onConflict:'chave')
-    valor       VARCHAR(100),
-    tipo        tipo_configuracao NOT NULL,
-    descricao   VARCHAR(255),
-    ativo       BOOLEAN DEFAULT TRUE
-);
-
--- ============================================================
--- [01-E] PAPEL / PERMISSAO / RBAC
+-- [01-B] RBAC (3 tabelas)
 -- ============================================================
 CREATE TABLE papel (
     id_papel SERIAL PRIMARY KEY,
@@ -70,10 +53,19 @@ CREATE TABLE papel_permissao (
     PRIMARY KEY (id_papel, id_permissao)
 );
 
+-- ============================================================
+-- [01-C] CONFIG (5 tabelas + ALTER)
+-- ============================================================
+CREATE TABLE configuracoes (
+    id_config   SERIAL PRIMARY KEY,
+    id_usuario  INT,                          -- FK adicionada após criação de usuario
+    chave       VARCHAR(255) NOT NULL UNIQUE, -- [R11] UNIQUE necessário pro upsert(onConflict:'chave')
+    valor       VARCHAR(100),
+    tipo        tipo_configuracao NOT NULL,
+    descricao   VARCHAR(255),
+    ativo       BOOLEAN DEFAULT TRUE
+);
 
--- ============================================================
--- [01-F] TIPO DE LINK ACADÊMICO
--- ============================================================
 CREATE TABLE tipo_link (
     id_tipolink  SERIAL PRIMARY KEY,
     nome         VARCHAR(100) NOT NULL,
@@ -87,12 +79,9 @@ ALTER TABLE tipo_link
     ADD COLUMN permite_atualizacao  BOOLEAN NOT NULL DEFAULT FALSE,
     ADD COLUMN permite_recompensa   BOOLEAN NOT NULL DEFAULT FALSE,
     ADD CONSTRAINT chk_tipolink_algum_escopo
-        CHECK (permite_perfil OR permite_atualizacao OR permite_recompensa);
+        CHECK (permite_perfil OR permite_atualizacao OR permite_recompensa
+);
 
-
--- ============================================================
--- AREA DE CONHECIMENTO
--- ============================================================
 CREATE TABLE area_conhecimento (
     id_area_conhecimento SERIAL PRIMARY KEY,
     codigo_cnpq          VARCHAR(20)  NOT NULL UNIQUE,
@@ -100,10 +89,6 @@ CREATE TABLE area_conhecimento (
     ativo                BOOLEAN      DEFAULT TRUE
 );
 
-
--- ============================================================
--- MOTIVO DE DENÚNCIA
--- ============================================================
 CREATE TABLE motivo_denuncia (
     id_motivo SERIAL PRIMARY KEY,
     codigo    VARCHAR(20)          NOT NULL UNIQUE,
@@ -113,9 +98,19 @@ CREATE TABLE motivo_denuncia (
     ativo     BOOLEAN             NOT NULL DEFAULT TRUE
 );
 
+CREATE TABLE arquivo (
+    id_arquivo    SERIAL PRIMARY KEY,
+    url           TEXT         NOT NULL,
+    nome_original TEXT         NOT NULL,
+    tipo_mime     VARCHAR(255),
+    tamanho_bytes INT,
+    criado_em     TIMESTAMP    DEFAULT NOW(),
+    ativo         BOOLEAN      DEFAULT TRUE,
+    desativado_em TIMESTAMP
+);
 
 -- ============================================================
--- [01-G] USUARIO
+-- [01-D] USUÁRIO (10 tabelas + ALTERs + Índices)
 -- ============================================================
 CREATE TABLE usuario (
     id_usuario       SERIAL PRIMARY KEY,
@@ -132,25 +127,19 @@ CREATE TABLE usuario (
     ultimo_login_em          TIMESTAMP,
     ultimo_login_ip          VARCHAR(45)
 );
-
 ALTER TABLE configuracoes
     ADD CONSTRAINT fk_config_usuario
     FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE SET NULL;
+ALTER TABLE usuario
+    ADD CONSTRAINT fk_usuario_imagem
+    FOREIGN KEY (id_imagem_perfil) REFERENCES arquivo(id_arquivo) ON DELETE SET NULL;
 
-
--- ============================================================
--- USUARIO_PAPEL
--- ============================================================
-CREATE TABLE usuario_papel (
+CREATE TABLE usuario_papel (  -- fica aqui por depender de usuario; documentada no RBAC
     id_usuario INT NOT NULL REFERENCES usuario(id_usuario) ON DELETE CASCADE,
     id_papel   INT NOT NULL REFERENCES papel(id_papel)     ON DELETE CASCADE,
     PRIMARY KEY (id_usuario, id_papel)
 );
 
-
--- ============================================================
--- PERFIL PESQUISADOR
--- ============================================================
 CREATE TABLE perfil_pesquisador (
     id_usuario            INT PRIMARY KEY REFERENCES usuario(id_usuario) ON DELETE CASCADE,
     cpf_criptografado     VARCHAR(255),
@@ -163,40 +152,86 @@ CREATE TABLE perfil_pesquisador (
     score_atualizado_em   TIMESTAMP
 );
 
-
--- ============================================================
--- LINK ACADEMICO
--- ============================================================
-CREATE TABLE link_academico (
-    id_link_academico SERIAL PRIMARY KEY,
-    id_usuario        INT  NOT NULL REFERENCES usuario(id_usuario) ON DELETE CASCADE,
-    id_tipolink       INT  NOT NULL REFERENCES tipo_link(id_tipolink),
-    ordem             INT,
-    url               VARCHAR(500) NOT NULL
+CREATE TABLE seguir_pesquisador (
+    id_seg_pesquisador SERIAL PRIMARY KEY,
+    id_usuario         INT NOT NULL REFERENCES usuario(id_usuario) ON DELETE CASCADE,
+    id_pesquisador     INT NOT NULL REFERENCES usuario(id_usuario) ON DELETE CASCADE,
+    seguido_em         TIMESTAMP DEFAULT NOW(),
+    UNIQUE (id_usuario, id_pesquisador),
+    CONSTRAINT chk_nao_seguir_si_mesmo CHECK (id_usuario <> id_pesquisador)
 );
 
-
--- ============================================================
--- ARQUIVO
--- ============================================================
-CREATE TABLE arquivo (
-    id_arquivo    SERIAL PRIMARY KEY,
-    url           TEXT         NOT NULL,
-    nome_original TEXT         NOT NULL,
-    tipo_mime     VARCHAR(255),
-    tamanho_bytes INT,
-    criado_em     TIMESTAMP    DEFAULT NOW(),
-    ativo         BOOLEAN      DEFAULT TRUE,
-    desativado_em TIMESTAMP
+CREATE TABLE termos_de_uso (
+    id_termo  SERIAL PRIMARY KEY,
+    versao    VARCHAR(20) NOT NULL UNIQUE,   -- ex: "2026-07-01", "v3" — precisa ser única
+    conteudo  TEXT        NOT NULL,
+    ativo     BOOLEAN     DEFAULT TRUE,
+    criado_em TIMESTAMP   DEFAULT NOW()      -- [melhoria] registra quando cada versão entrou em vigor
 );
 
-ALTER TABLE usuario
-    ADD CONSTRAINT fk_usuario_imagem
-    FOREIGN KEY (id_imagem_perfil) REFERENCES arquivo(id_arquivo) ON DELETE SET NULL;
+CREATE TABLE usuario_termo (
+    id_usuario_termo SERIAL PRIMARY KEY,
+    id_usuario       INT NOT NULL REFERENCES usuario(id_usuario)     ON DELETE CASCADE,
+    id_termo         INT NOT NULL REFERENCES termos_de_uso(id_termo) ON DELETE RESTRICT, -- não deixa apagar um termo já aceito por alguém
+    aceito_em        TIMESTAMP DEFAULT NOW(),
+    ip_aceite        VARCHAR(45),            -- [melhoria] trilha de auditoria (LGPD): IPv4/IPv6 de quem aceitou
+    UNIQUE (id_usuario, id_termo)            -- [melhoria] mesmo usuário não aceita a mesma versão duas vezes
+);
 
+CREATE TABLE notificacao (
+    id_notificacao     SERIAL PRIMARY KEY,
+    id_usuario         INT REFERENCES usuario(id_usuario) ON DELETE SET NULL, -- mantém o histórico de envio mesmo se o usuário for removido
+    email_destinatario VARCHAR(255)       NOT NULL,          -- snapshot do e-mail no momento do envio (usuário pode trocar o e-mail depois)
+    tipo_evento        VARCHAR(100)       NOT NULL,          -- ex: 'campanha_aprovada', 'doacao_recebida' — texto livre, como "evento" em auditoria_financeira
+    status             status_notificacao NOT NULL DEFAULT 'pendente',
+    tentativas         INT                NOT NULL DEFAULT 0,
+    criado_em          TIMESTAMP          DEFAULT NOW(),
+    enviado_em         TIMESTAMP,                             -- [melhoria] quando o envio de fato teve sucesso (NULL até lá)
+    ultimo_erro        TEXT,                                  -- [melhoria] guarda o motivo da última falha, útil pra debugar retentativas
+    CONSTRAINT chk_notificacao_tentativas CHECK (tentativas >= 0)
+);
+
+CREATE TABLE verificacao_email (
+    id_verificacao SERIAL PRIMARY KEY,
+    id_usuario     INT NOT NULL REFERENCES usuario(id_usuario) ON DELETE CASCADE,
+    token_hash     VARCHAR(255) NOT NULL,   -- nunca gravar o token em texto puro
+    criado_em      TIMESTAMP NOT NULL DEFAULT NOW(),
+    expira_em      TIMESTAMP NOT NULL,
+    confirmado_em  TIMESTAMP,
+
+    CONSTRAINT chk_verificacao_email_expira CHECK (expira_em > criado_em) -- garante que o token não nasça já expirado (erro de geração no backend)
+);
+
+CREATE TABLE recuperacao_senha (
+    id_recuperacao SERIAL PRIMARY KEY,
+    id_usuario     INT NOT NULL REFERENCES usuario(id_usuario) ON DELETE CASCADE,
+    token_hash     VARCHAR(255) NOT NULL,
+    criado_em      TIMESTAMP NOT NULL DEFAULT NOW(),
+    expira_em      TIMESTAMP NOT NULL,     -- recomendado: expiração curta, 15-30 min
+    usado_em       TIMESTAMP,
+
+    CONSTRAINT chk_recuperacao_senha_expira CHECK (expira_em > criado_em) -- garante que o token não nasça já expirado (erro de geração no backend)
+);
+CREATE UNIQUE INDEX ux_recuperacao_senha_ativo_por_usuario
+    ON recuperacao_senha (id_usuario)
+    WHERE usado_em IS NULL;
+
+
+CREATE TABLE sessao (
+    id_sessao          SERIAL PRIMARY KEY,
+    id_usuario         INT NOT NULL REFERENCES usuario(id_usuario) ON DELETE CASCADE,
+    refresh_token_hash VARCHAR(255) NOT NULL,
+    criado_em          TIMESTAMP NOT NULL DEFAULT NOW(),
+    expira_em          TIMESTAMP NOT NULL,
+    revogado_em        TIMESTAMP,
+    ip                 VARCHAR(45),
+    user_agent         TEXT,
+
+    CONSTRAINT chk_sessao_expira CHECK (expira_em > criado_em) -- garante que o refresh token não nasça já expirado
+);
 
 -- ============================================================
--- [01-H] CAMPANHA
+-- [01-E] CAMPANHA (9 tabelas)
 -- ============================================================
 CREATE TABLE campanha (
     id_campanha          SERIAL PRIMARY KEY,
@@ -221,10 +256,6 @@ CREATE TABLE campanha (
     )
 );
 
-
--- ============================================================
--- SEGUIR CAMPANHA
--- ============================================================
 CREATE TABLE seguir_campanha (
     id_seg_campanha SERIAL PRIMARY KEY,
     id_usuario      INT NOT NULL REFERENCES usuario(id_usuario)   ON DELETE CASCADE,
@@ -233,87 +264,17 @@ CREATE TABLE seguir_campanha (
     UNIQUE (id_usuario, id_campanha)
 );
 
-
--- ============================================================
--- SEGUIR PESQUISADOR
--- ============================================================
-CREATE TABLE seguir_pesquisador (
-    id_seg_pesquisador SERIAL PRIMARY KEY,
-    id_usuario         INT NOT NULL REFERENCES usuario(id_usuario) ON DELETE CASCADE,
-    id_pesquisador     INT NOT NULL REFERENCES usuario(id_usuario) ON DELETE CASCADE,
-    seguido_em         TIMESTAMP DEFAULT NOW(),
-    UNIQUE (id_usuario, id_pesquisador),
-    CONSTRAINT chk_nao_seguir_si_mesmo CHECK (id_usuario <> id_pesquisador)
-);
-
-
--- ============================================================
--- [01-I] CONTRIBUICAO
--- ============================================================
-CREATE TABLE contribuicao (
-    id_contribuicao  SERIAL PRIMARY KEY,
-    id_campanha      INT                 NOT NULL REFERENCES campanha(id_campanha),
-    id_usuario       INT                          REFERENCES usuario(id_usuario) ON DELETE SET NULL,
-    valor            DECIMAL(10,2)       NOT NULL CHECK (valor >= 5.00),
-    meio_pagamento   meio_pagamento      NOT NULL,
-    status           status_contribuicao NOT NULL DEFAULT 'pendente',
-    anonima          BOOLEAN             DEFAULT FALSE,
-    id_transacao_api VARCHAR(255),
-    criado_em        TIMESTAMP           DEFAULT NOW()
-);
-
--- [01-I] TOKEN DE SESSÃO PARA CONTRIBUIÇÃO ANÔNIMA
-ALTER TABLE contribuicao ADD COLUMN token_sessao UUID DEFAULT gen_random_uuid();
-
-
--- ============================================================
--- [01-J] AUDITORIA FINANCEIRA
--- ============================================================
-CREATE TABLE auditoria_financeira (
-    id_auditoria    SERIAL PRIMARY KEY,
-    id_contribuicao INT          NOT NULL REFERENCES contribuicao(id_contribuicao),
-    -- [01-P] RESPONSÁVEL PELO EVENTO NA AUDITORIA FINANCEIRA
-    id_usuario_responsavel INT REFERENCES usuario(id_usuario) ON DELETE SET NULL,
-    valor           DECIMAL(10,2) NOT NULL,
-    meio_pagamento  meio_pagamento,
-    status_novo     VARCHAR(100) NOT NULL,
-    status_anterior VARCHAR(100),
-    evento          VARCHAR(200),
-    timestamp       TIMESTAMP    DEFAULT NOW()
-);
-
-
--- ============================================================
--- ATUALIZACAO CAMPANHA
--- ============================================================
 CREATE TABLE atualizacao_campanha (
     id_atualizacao SERIAL PRIMARY KEY,
     id_campanha    INT              NOT NULL REFERENCES campanha(id_campanha) ON DELETE CASCADE,
-    -- [01-Q] TÍTULO DA ATUALIZAÇÃO DE CAMPANHA
     titulo         VARCHAR(150)     NOT NULL,
     conteudo       TEXT             NOT NULL,
     publicado_em   TIMESTAMP        DEFAULT NOW(),
     fase           fase_atualizacao,
     tipo           tipo_atualizacao,
-    -- [01-R] SOFT DELETE E MODERAÇÃO DAS ATUALIZAÇÕES
-    ativo          BOOLEAN          NOT NULL DEFAULT TRUE
+    ativo          BOOLEAN          NOT NULL DEFAULT TRUE -- SOFT DELETE E MODERAÇÃO DAS ATUALIZAÇÕES
 );
 
-
--- ============================================================
--- ARQUIVO_ATUALIZACAO
--- ============================================================
-CREATE TABLE arquivo_atualizacao (
-    id_arq_atu     SERIAL PRIMARY KEY,
-    id_arquivo     INT NOT NULL REFERENCES arquivo(id_arquivo)                  ON DELETE CASCADE,
-    id_atualizacao INT NOT NULL REFERENCES atualizacao_campanha(id_atualizacao) ON DELETE CASCADE,
-    UNIQUE (id_arquivo, id_atualizacao)
-);
-
-
--- ============================================================
--- REPASSE
--- ============================================================
 CREATE TABLE repasse (
     id_repasse    SERIAL PRIMARY KEY,
     id_campanha   INT           NOT NULL REFERENCES campanha(id_campanha),
@@ -325,10 +286,6 @@ CREATE TABLE repasse (
     status        VARCHAR(100)
 );
 
-
--- ============================================================
--- SOLICITACAO DE ENCERRAMENTO
--- ============================================================
 CREATE TABLE solicitacao_encerramento (
     id_solicitacao_encerramento SERIAL PRIMARY KEY,
     id_campanha                 INT                 NOT NULL REFERENCES campanha(id_campanha),
@@ -339,10 +296,6 @@ CREATE TABLE solicitacao_encerramento (
     avaliado_em                 TIMESTAMP
 );
 
-
--- ============================================================
--- HISTORICO REJEICAO
--- ============================================================
 CREATE TABLE historico_rejeicao (
     id_rejeicao   SERIAL PRIMARY KEY,
     id_campanha   INT  NOT NULL REFERENCES campanha(id_campanha),
@@ -351,10 +304,6 @@ CREATE TABLE historico_rejeicao (
     rejeitado_em  TIMESTAMP DEFAULT NOW()
 );
 
-
--- ============================================================
--- COMENTARIO
--- ============================================================
 CREATE TABLE comentario (
     id_comentario  SERIAL PRIMARY KEY,
     id_campanha    INT          NOT NULL REFERENCES campanha(id_campanha)              ON DELETE CASCADE,
@@ -363,20 +312,14 @@ CREATE TABLE comentario (
     endossado      BOOLEAN      DEFAULT FALSE,
     criado_em      TIMESTAMP    DEFAULT NOW(),
     ordem_endosso  INT,
-    -- [01-S] SOFT DELETE DOS COMENTÁRIOS
-    ativo          BOOLEAN      NOT NULL DEFAULT TRUE,
-    -- [01-T] UNICIDADE DE COMENTÁRIO POR CAMPANHA E PESQUISADOR
+    ativo          BOOLEAN      NOT NULL DEFAULT TRUE, -- SOFT DELETE DOS COMENTÁRIOS
+
     UNIQUE (id_campanha, id_pesquisador),
-    -- [01-U] COERÊNCIA ENTRE ENDOSSADO E ORDEM_ENDOSSO
+
     CONSTRAINT chk_comentario_endosso
         CHECK ((endossado = TRUE AND ordem_endosso IS NOT NULL) OR (endossado = FALSE AND ordem_endosso IS NULL))
 );
 
-
-
--- ============================================================
--- [01-V] DENUNCIA
--- ============================================================
 CREATE TABLE denuncia (
     id_denuncia         SERIAL PRIMARY KEY,
     id_usuario          INT  NOT NULL REFERENCES usuario(id_usuario),
@@ -389,115 +332,6 @@ CREATE TABLE denuncia (
     UNIQUE (id_usuario, id_pesquisador_alvo)
 );
 
-
-
--- ============================================================
--- SCORE
--- ============================================================
-CREATE TABLE score_config (
-    id_score_config SERIAL PRIMARY KEY,
-    nome            VARCHAR(100) NOT NULL,
-    descricao       VARCHAR(255),
-    peso            DECIMAL(5,2) NOT NULL,
-    id_pai          INT          REFERENCES score_config(id_score_config) ON DELETE SET NULL,
-    ativo           BOOLEAN      DEFAULT TRUE,
-    criado_em       TIMESTAMP    DEFAULT NOW(),
-    atualizado_em   TIMESTAMP    DEFAULT NOW()
-);
-
--- ============================================================
--- SCORE — rótulos (com INTEGER)
--- ============================================================
-CREATE TABLE score_rotulo (
-    id_rotulo     SERIAL PRIMARY KEY,
-    rotulo        VARCHAR(50)  NOT NULL,
-    descricao     VARCHAR(255),
-    score_minimo  INTEGER      NOT NULL,
-    score_maximo  INTEGER      NOT NULL,
-    ativo         BOOLEAN      DEFAULT TRUE,
-    criado_em     TIMESTAMP    DEFAULT NOW(),
-    atualizado_em TIMESTAMP    DEFAULT NOW(),
-    CONSTRAINT chk_faixa CHECK (score_minimo < score_maximo)
-);
-
--- ============================================================
--- SCORE — histórico de pontuação por pesquisador (INTEGER)
--- ============================================================
-CREATE TABLE score_pesquisador (
-    id_score_pesq   SERIAL PRIMARY KEY,
-    id_usuario      INT          NOT NULL REFERENCES usuario(id_usuario) ON DELETE CASCADE,
-    id_score_config INT          NOT NULL REFERENCES score_config(id_score_config),
-    id_rotulo       INT                   REFERENCES score_rotulo(id_rotulo) ON DELETE SET NULL,
-    pontos_obtidos  INTEGER      NOT NULL,
-    score_total     INTEGER,
-    calculado_em    TIMESTAMP    DEFAULT NOW(),
-    motivo          VARCHAR(255),
-    
-    CONSTRAINT uq_score_pesquisador_usuario_config 
-        UNIQUE (id_usuario, id_score_config)
-);
-
-
--- ============================================================
--- [01-W] REORGANIZAÇÃO DEFENSIVA DO SCORE E UPSERT
--- ============================================================
-DO $$
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint 
-        WHERE conname = 'uq_score_pesquisador_usuario_config'
-    ) THEN
-        ALTER TABLE score_pesquisador
-            ADD CONSTRAINT uq_score_pesquisador_usuario_config 
-            UNIQUE (id_usuario, id_score_config);
-    END IF;
-END $$;
-
--- ============================================================
--- [01-X] TERMOS_DE_USO
--- ============================================================
-CREATE TABLE termos_de_uso (
-    id_termo  SERIAL PRIMARY KEY,
-    versao    VARCHAR(20) NOT NULL UNIQUE,   -- ex: "2026-07-01", "v3" — precisa ser única
-    conteudo  TEXT        NOT NULL,
-    ativo     BOOLEAN     DEFAULT TRUE,
-    criado_em TIMESTAMP   DEFAULT NOW()      -- [melhoria] registra quando cada versão entrou em vigor
-);
-
-
--- ============================================================
--- USUARIO_TERMO
--- ============================================================
-CREATE TABLE usuario_termo (
-    id_usuario_termo SERIAL PRIMARY KEY,
-    id_usuario       INT NOT NULL REFERENCES usuario(id_usuario)     ON DELETE CASCADE,
-    id_termo         INT NOT NULL REFERENCES termos_de_uso(id_termo) ON DELETE RESTRICT, -- não deixa apagar um termo já aceito por alguém
-    aceito_em        TIMESTAMP DEFAULT NOW(),
-    ip_aceite        VARCHAR(45),            -- [melhoria] trilha de auditoria (LGPD): IPv4/IPv6 de quem aceitou
-    UNIQUE (id_usuario, id_termo)            -- [melhoria] mesmo usuário não aceita a mesma versão duas vezes
-);
-
-
--- ============================================================
--- NOTIFICACAO
--- ============================================================
-CREATE TABLE notificacao (
-    id_notificacao     SERIAL PRIMARY KEY,
-    id_usuario         INT REFERENCES usuario(id_usuario) ON DELETE SET NULL, -- mantém o histórico de envio mesmo se o usuário for removido
-    email_destinatario VARCHAR(255)       NOT NULL,          -- snapshot do e-mail no momento do envio (usuário pode trocar o e-mail depois)
-    tipo_evento        VARCHAR(100)       NOT NULL,          -- ex: 'campanha_aprovada', 'doacao_recebida' — texto livre, como "evento" em auditoria_financeira
-    status             status_notificacao NOT NULL DEFAULT 'pendente',
-    tentativas         INT                NOT NULL DEFAULT 0,
-    criado_em          TIMESTAMP          DEFAULT NOW(),
-    enviado_em         TIMESTAMP,                             -- [melhoria] quando o envio de fato teve sucesso (NULL até lá)
-    ultimo_erro        TEXT,                                  -- [melhoria] guarda o motivo da última falha, útil pra debugar retentativas
-    CONSTRAINT chk_notificacao_tentativas CHECK (tentativas >= 0)
-);
-
-
--- ============================================================
--- RECOMPENSA
--- ============================================================
 CREATE TABLE recompensa (
     id_recompensa         SERIAL PRIMARY KEY,
     id_campanha           INT             NOT NULL REFERENCES campanha(id_campanha) ON DELETE CASCADE,
@@ -512,10 +346,43 @@ CREATE TABLE recompensa (
     CONSTRAINT chk_recompensa_quantidade   CHECK (quantidade_disponivel IS NULL OR quantidade_disponivel >= 0)
 );
 
+-- ============================================================
+-- [01-F] LINK (3 tabelas de associação)
+-- ============================================================
+CREATE TABLE link_academico (
+    id_link_academico SERIAL PRIMARY KEY,
+    id_usuario        INT  NOT NULL REFERENCES usuario(id_usuario) ON DELETE CASCADE,
+    id_tipolink       INT  NOT NULL REFERENCES tipo_link(id_tipolink),
+    ordem             INT,
+    url               VARCHAR(500) NOT NULL
+);
+
+CREATE TABLE link_atualizacao (
+    id_link_atualizacao SERIAL PRIMARY KEY,
+    id_atualizacao      INT NOT NULL REFERENCES atualizacao_campanha(id_atualizacao) ON DELETE CASCADE,
+    id_tipolink         INT NOT NULL REFERENCES tipo_link(id_tipolink),
+    ordem               INT,
+    url                 VARCHAR(500) NOT NULL
+);
+
+CREATE TABLE link_recompensa (
+    id_link_recompensa SERIAL PRIMARY KEY,
+    id_recompensa      INT NOT NULL REFERENCES recompensa(id_recompensa) ON DELETE CASCADE,
+    id_tipolink        INT NOT NULL REFERENCES tipo_link(id_tipolink),
+    ordem              INT,
+    url                VARCHAR(500) NOT NULL
+);
 
 -- ============================================================
--- ARQUIVO_RECOMPENSA
+-- [01-G] ARQUIVO (2 tabelas de associação) 
 -- ============================================================
+CREATE TABLE arquivo_atualizacao (
+    id_arq_atu     SERIAL PRIMARY KEY,
+    id_arquivo     INT NOT NULL REFERENCES arquivo(id_arquivo)                  ON DELETE CASCADE,
+    id_atualizacao INT NOT NULL REFERENCES atualizacao_campanha(id_atualizacao) ON DELETE CASCADE,
+    UNIQUE (id_arquivo, id_atualizacao)
+);
+
 CREATE TABLE arquivo_recompensa (
     id_arq_recompensa SERIAL PRIMARY KEY,
     id_recompensa     INT NOT NULL REFERENCES recompensa(id_recompensa) ON DELETE CASCADE,
@@ -525,11 +392,34 @@ CREATE TABLE arquivo_recompensa (
     UNIQUE (id_recompensa, id_arquivo)
 );
 
-
-
 -- ============================================================
--- [01-Y] CONTRIBUIÇÃO_RECOMPENSA
+-- [01-H] CONTRIBUIÇÃO (4 tabelas + ALTER)
 -- ============================================================
+CREATE TABLE contribuicao (
+    id_contribuicao  SERIAL PRIMARY KEY,
+    id_campanha      INT                 NOT NULL REFERENCES campanha(id_campanha),
+    id_usuario       INT                          REFERENCES usuario(id_usuario) ON DELETE SET NULL,
+    valor            DECIMAL(10,2)       NOT NULL CHECK (valor >= 5.00),
+    meio_pagamento   meio_pagamento      NOT NULL,
+    status           status_contribuicao NOT NULL DEFAULT 'pendente',
+    anonima          BOOLEAN             DEFAULT FALSE,
+    id_transacao_api VARCHAR(255),
+    criado_em        TIMESTAMP           DEFAULT NOW()
+);
+ALTER TABLE contribuicao ADD COLUMN token_sessao UUID DEFAULT gen_random_uuid();
+
+CREATE TABLE auditoria_financeira (
+    id_auditoria    SERIAL PRIMARY KEY,
+    id_contribuicao INT          NOT NULL REFERENCES contribuicao(id_contribuicao),
+    id_usuario_responsavel INT REFERENCES usuario(id_usuario) ON DELETE SET NULL,
+    valor           DECIMAL(10,2) NOT NULL,
+    meio_pagamento  meio_pagamento,
+    status_novo     VARCHAR(100) NOT NULL,
+    status_anterior VARCHAR(100),
+    evento          VARCHAR(200),
+    timestamp       TIMESTAMP    DEFAULT NOW()
+);
+
 CREATE TABLE contribuicao_recompensa (
     id_contrib_recompensa SERIAL PRIMARY KEY,
     id_contribuicao       INT NOT NULL REFERENCES contribuicao(id_contribuicao) ON DELETE CASCADE,
@@ -540,36 +430,6 @@ CREATE TABLE contribuicao_recompensa (
     UNIQUE (id_contribuicao, id_recompensa) -- 1 linha por par; quantidade acumula em vez de duplicar linha
 );
 
-
--- ============================================================
--- [01-Z] TABELA DE LINKS PARA ATUALIZAÇÕES DE CAMPANHA
--- ============================================================
-CREATE TABLE link_atualizacao (
-    id_link_atualizacao SERIAL PRIMARY KEY,
-    id_atualizacao      INT NOT NULL REFERENCES atualizacao_campanha(id_atualizacao) ON DELETE CASCADE,
-    id_tipolink         INT NOT NULL REFERENCES tipo_link(id_tipolink),
-    ordem               INT,
-    url                 VARCHAR(500) NOT NULL
-);
-
-
--- ============================================================
--- [01-AA] TABELA DE LINKS PARA RECOMPENSAS
--- ============================================================
-CREATE TABLE link_recompensa (
-    id_link_recompensa SERIAL PRIMARY KEY,
-    id_recompensa      INT NOT NULL REFERENCES recompensa(id_recompensa) ON DELETE CASCADE,
-    id_tipolink        INT NOT NULL REFERENCES tipo_link(id_tipolink),
-    ordem              INT,
-    url                VARCHAR(500) NOT NULL
-);
-
-
-
-
--- ============================================================
--- [01-AB] ACEITE_TERMO_CONTRIBUICAO
--- ============================================================
 CREATE TABLE aceite_termo_contribuicao (
     id_aceite_contrib SERIAL PRIMARY KEY,
     id_contribuicao   INT NOT NULL REFERENCES contribuicao(id_contribuicao) ON DELETE CASCADE,
@@ -579,58 +439,54 @@ CREATE TABLE aceite_termo_contribuicao (
     UNIQUE (id_contribuicao)
 );
 
-
 -- ============================================================
--- [01-AC] TABELAS DE SUPORTE PARA AUTENTICAÇÃO PRÓPRIA
+-- [01-I] SCORE (3 tabelas + Bloco DO)
 -- ============================================================
-
--- ============================================================
--- [01-AD] VERIFICACAO_EMAIL
--- ============================================================
-CREATE TABLE verificacao_email (
-    id_verificacao SERIAL PRIMARY KEY,
-    id_usuario     INT NOT NULL REFERENCES usuario(id_usuario) ON DELETE CASCADE,
-    token_hash     VARCHAR(255) NOT NULL,   -- nunca gravar o token em texto puro
-    criado_em      TIMESTAMP NOT NULL DEFAULT NOW(),
-    expira_em      TIMESTAMP NOT NULL,
-    confirmado_em  TIMESTAMP,
-    -- NOVO: garante que o token não nasça já expirado (erro de geração no backend)
-    CONSTRAINT chk_verificacao_email_expira CHECK (expira_em > criado_em)
+CREATE TABLE score_config (
+    id_score_config SERIAL PRIMARY KEY,
+    nome            VARCHAR(100) NOT NULL,
+    descricao       VARCHAR(255),
+    peso            DECIMAL(5,2) NOT NULL,
+    id_pai          INT          REFERENCES score_config(id_score_config) ON DELETE SET NULL,
+    ativo           BOOLEAN      DEFAULT TRUE,
+    criado_em       TIMESTAMP    DEFAULT NOW(),
+    atualizado_em   TIMESTAMP    DEFAULT NOW()
 );
 
-
--- ============================================================
--- [01-AE] RECUPERACAO_SENHA
--- ============================================================
-CREATE TABLE recuperacao_senha (
-    id_recuperacao SERIAL PRIMARY KEY,
-    id_usuario     INT NOT NULL REFERENCES usuario(id_usuario) ON DELETE CASCADE,
-    token_hash     VARCHAR(255) NOT NULL,
-    criado_em      TIMESTAMP NOT NULL DEFAULT NOW(),
-    expira_em      TIMESTAMP NOT NULL,     -- recomendado: expiração curta, 15-30 min
-    usado_em       TIMESTAMP,
-    -- NOVO: garante que o token não nasça já expirado (erro de geração no backend)
-    CONSTRAINT chk_recuperacao_senha_expira CHECK (expira_em > criado_em)
+CREATE TABLE score_rotulo (
+    id_rotulo     SERIAL PRIMARY KEY,
+    rotulo        VARCHAR(50)  NOT NULL,
+    descricao     VARCHAR(255),
+    score_minimo  INTEGER      NOT NULL,
+    score_maximo  INTEGER      NOT NULL,
+    ativo         BOOLEAN      DEFAULT TRUE,
+    criado_em     TIMESTAMP    DEFAULT NOW(),
+    atualizado_em TIMESTAMP    DEFAULT NOW(),
+    CONSTRAINT chk_faixa CHECK (score_minimo < score_maximo)
 );
 
--- [01-AF] ÍNDICE DE RECUPERAÇÃO DE SENHA ATIVO POR USUÁRIO
-CREATE UNIQUE INDEX ux_recuperacao_senha_ativo_por_usuario
-    ON recuperacao_senha (id_usuario)
-    WHERE usado_em IS NULL;
-
-
--- ============================================================
--- [01-AG]SESSAO (refresh tokens) - PERSISTÊNCIA DE REFRESH TOKENS PARA SESSÕES DO NESTJS
--- ============================================================
-CREATE TABLE sessao (
-    id_sessao          SERIAL PRIMARY KEY,
-    id_usuario         INT NOT NULL REFERENCES usuario(id_usuario) ON DELETE CASCADE,
-    refresh_token_hash VARCHAR(255) NOT NULL,
-    criado_em          TIMESTAMP NOT NULL DEFAULT NOW(),
-    expira_em          TIMESTAMP NOT NULL,
-    revogado_em        TIMESTAMP,
-    ip                 VARCHAR(45),
-    user_agent         TEXT,
-    -- NOVO: garante que o refresh token não nasça já expirado
-    CONSTRAINT chk_sessao_expira CHECK (expira_em > criado_em)
+CREATE TABLE score_pesquisador (
+    id_score_pesq   SERIAL PRIMARY KEY,
+    id_usuario      INT          NOT NULL REFERENCES usuario(id_usuario) ON DELETE CASCADE,
+    id_score_config INT          NOT NULL REFERENCES score_config(id_score_config),
+    id_rotulo       INT                   REFERENCES score_rotulo(id_rotulo) ON DELETE SET NULL,
+    pontos_obtidos  INTEGER      NOT NULL,
+    score_total     INTEGER,
+    calculado_em    TIMESTAMP    DEFAULT NOW(),
+    motivo          VARCHAR(255),
+    
+    CONSTRAINT uq_score_pesquisador_usuario_config 
+        UNIQUE (id_usuario, id_score_config)
 );
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint 
+        WHERE conname = 'uq_score_pesquisador_usuario_config'
+    ) THEN
+        ALTER TABLE score_pesquisador
+            ADD CONSTRAINT uq_score_pesquisador_usuario_config 
+            UNIQUE (id_usuario, id_score_config);
+    END IF;
+END $$;
