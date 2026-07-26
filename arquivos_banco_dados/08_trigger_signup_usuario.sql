@@ -1,33 +1,35 @@
--- ============================================================
---  CrowdAcadêmico — 08: (OBSOLETO) Trigger de signup via Supabase Auth
---  Depende de: 01_extensoes_enums_tabelas.sql
--- ============================================================
+-- ============================================================================
+--  CROWDACADÊMICO — SISTEMA DE CROWDFUNDING PARA PESQUISA CIENTÍFICA
+-- ============================================================================
+--  Arquivo:     08_trigger_signup_usuario.sql
+--  Módulo:      Atribuição de Papel Padrão no Signup
+--  Depende de:  01_extensoes_enums_tabelas.sql
+--  Usado por:   endpoint de signup do NestJS (chamado logo após o INSERT em usuario)
+--  Próximo:     (nenhum — último arquivo da sequência; execução opcional/manual,
+--               responsabilidade do backend, não parte do bootstrap 01→07)
+-- ----------------------------------------------------------------------------
+--  Descrição:
+--  Substitui o antigo trigger de signup via Supabase Auth (ver histórico em
+--  DOCUMENTACAO_BD.md). Com autenticação própria, nunca mais existe um INSERT
+--  em auth.users para disparar um trigger — o NestJS chama esta função
+--  manualmente, dentro da mesma transação do signup, logo após inserir a
+--  linha em usuario.
 --
---  ALTERADO: este arquivo continha um trigger em auth.users
---  (on_auth_user_created / handle_new_user) que criava a linha em
---  public.usuario automaticamente quando o Supabase Auth cadastrava
---  um usuário novo.
---
---  Com a saída do Supabase Auth do fluxo, nunca mais existe um
---  INSERT em auth.users — esse trigger não tem mais como disparar
---  e por isso foi removido daqui.
---
---  O que faz as vezes dele agora: o endpoint de signup do NestJS,
---  dentro de uma única transação, deve:
---    1) gerar o hash da senha (bcrypt/argon2) e inserir em usuario
---       (nome, email, senha_hash);
---    2) atribuir o papel padrão (função auxiliar abaixo);
---    3) criar o registro em verificacao_email e disparar o e-mail
---       de confirmação (módulo de auth do NestJS — ver
---       PLANO_AUTENTICACAO_PROPRIA.md para o desenho do fluxo).
---
---  A única parte deste arquivo original que ainda vale a pena manter
---  como está — "atribuir o papel padrão 'usuario' a quem acabou de
---  se cadastrar" — foi reaproveitada abaixo como função chamável pelo
---  NestJS logo após o INSERT em usuario, em vez de ficar presa a um
---  trigger de tabela que não existe mais.
--- ============================================================
+--  [08-D-1] atribuir_papel_padrao() — atribui o papel 'usuario' ao cadastro novo
+-- ============================================================================
 
+-- ----------------------------------------------------------------------------
+-- Função:     atribuir_papel_padrao
+-- Assinatura: (p_id_usuario INT) -> VOID
+-- Bloco:      [08-D-1]
+-- Regra:      Atribui o papel 'usuario' (padrão de todo cadastro novo) ao
+--             usuário recém-criado. Chamada pelo NestJS logo após o INSERT
+--             em usuario, dentro da mesma transação de signup. SECURITY
+--             DEFINER: precisa gravar em usuario_papel antes de o usuário
+--             ter qualquer permissão — pol_usuariopapel_insert (04) exige a
+--             permissão 'papel_atribuir', que ninguém tem no primeiro
+--             segundo de vida da conta.
+-- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.atribuir_papel_padrao(p_id_usuario INT)
 RETURNS VOID
 LANGUAGE plpgsql
@@ -51,5 +53,5 @@ $$;
 -- após o INSERT em usuario, no fluxo de signup — sem o GRANT, a
 -- chamada tomaria "permission denied" (erro 42501), o mesmo problema
 -- que as funções de score já tiveram e que motivou o GRANT EXECUTE
--- explícito delas em 05_grants.sql.
+-- explícito delas em 06_grants.sql.
 GRANT EXECUTE ON FUNCTION public.atribuir_papel_padrao(INT) TO app_nestjs;

@@ -13,14 +13,14 @@ Cada letra tem exatamente um significado, do `01` ao `08`. Se você está procur
 | Letra | Domínio | Onde aparece |
 |---|---|---|
 | **A** | Visão Geral & Configuração Inicial (o ROOT) | `01-A` (bootstrap/role/extensões/enums), `04-A` (RLS geral) |
-| **B** | RBAC (Papéis, Permissões e Vinculação) | `01-B`, `02` *(sem bloco — PK/UNIQUE já bastam)*, `03-B` (`tem_permissao()`), `04-B`, `06-B` *(sem grant adicional)* |
-| **C** | CONFIG (Configurações, Catálogos e Arquivo Base) | `01-C`, `02` *(sem bloco)*, `04-C`, `06-C` |
-| **D** | USUÁRIO (Contas, Perfis, Autenticação, Termos e Sessões) | `01-D`, `02-D`, `04-D`, `06-D` |
-| **E** | CAMPANHA (Campanhas, Atualizações, Comentários, Denúncias, Recompensas) | `01-E`, `02-E`, `04-E`, `06-E` |
-| **F** | LINK (Vinculação de URLs Externas) | `01-F`, `02-F`, `04-F`, `06-F` |
-| **G** | ARQUIVO (Vinculação de Mídias) | `01-G`, `02-G`, `04-G`, `06-G` |
-| **H** | CONTRIBUIÇÃO (Apoios, Auditoria e Termos Financeiros) | `01-H`, `02-H`, `04-H`, `06-H` |
-| **I** | SCORE (Parâmetros, Rótulos, e todo o motor de cálculo/pontuação) | `01-I`, `02-I`, `04-I`, `05-I-1` a `05-I-4` (motor de score), `06-I` |
+| **B** | RBAC (Papéis, Permissões e Vinculação) | `01-B`, `02` *(sem bloco — PK/UNIQUE já bastam)*, `03-B` (`tem_permissao()`), `04-B`, `06-B` *(sem grant adicional)*, `07-B` (seed de papel/permissao/papel_permissao) |
+| **C** | CONFIG (Configurações, Catálogos e Arquivo Base) | `01-C`, `02` *(sem bloco)*, `04-C`, `06-C`, `07-C` (seed de catálogos e configuracoes) |
+| **D** | USUÁRIO (Contas, Perfis, Autenticação, Termos e Sessões) | `01-D`, `02-D`, `04-D`, `06-D`, `07-D` (seed de usuario/perfil/seguir_pesquisador), `08-D-1` (`atribuir_papel_padrao()`) |
+| **E** | CAMPANHA (Campanhas, Atualizações, Comentários, Denúncias, Recompensas) | `01-E`, `02-E`, `04-E`, `06-E`, `07-E` (seed de campanha e tabelas dependentes) |
+| **F** | LINK (Vinculação de URLs Externas) | `01-F`, `02-F`, `04-F`, `06-F`, `07-F` (seed de link_academico) |
+| **G** | ARQUIVO (Vinculação de Mídias) | `01-G`, `02-G`, `04-G`, `06-G`, `07-G` (seed de arquivo_atualizacao) |
+| **H** | CONTRIBUIÇÃO (Apoios, Auditoria e Termos Financeiros) | `01-H`, `02-H`, `04-H`, `06-H`, `07-H` (seed de contribuicao/auditoria_financeira) |
+| **I** | SCORE (Parâmetros, Rótulos, e todo o motor de cálculo/pontuação) | `01-I`, `02-I`, `04-I`, `05-I-1` a `05-I-4` (motor de score), `06-I`, `07-I` (seed de score_config/rotulo + constantes + backfill) |
 | **J** | Segurança & Contexto de Sessão (`id_usuario_atual()`) | `03-J` |
 | **K** | Regras de Negócio Transversais (validações que cruzam mais de um domínio ao mesmo tempo) | `05-K-1` a `05-K-3` |
 
@@ -577,5 +577,24 @@ Povoa o banco com dados de demonstração/teste (mínimo 7 registros por tabela 
 * **[07-D-5] Como logar no app após o seed:** com autenticação própria, o fluxo é: 1) cadastrar o usuário pelo endpoint de signup do NestJS (gera o `senha_hash` e chama `public.atribuir_papel_padrao(id_usuario)`, que atribui o papel `'usuario'` — ver `08_trigger_signup_usuario.sql`); 2) o papel `'admin'` **não** é atribuído automaticamente por nada disso — depois do signup, é preciso dar o papel a um usuário manualmente com `INSERT INTO usuario_papel (id_usuario, id_papel) SELECT <id_usuario>, id_papel FROM papel WHERE nome = 'admin'`.
 
 > 🗑️ **Dois blocos removidos por estarem 100% obsoletos** (não só migrados — de fato apagados, sem equivalente aqui): um "FIX — permission denied for sequence" que descrevia um problema já resolvido, e uma "NOTA DE REORGANIZAÇÃO" que apontava para um arquivo `05_grants.sql` que nunca existiu de verdade (o nome correto sempre foi `06_grants.sql`). Ambos descreviam o `GRANT USAGE, SELECT ON ALL SEQUENCES`, que já vive e já está plenamente documentado em `06_grants.sql` (`[06-A-1]`) — mantê-los aqui seria pura duplicação desatualizada.
+
+---
+
+## 08. ATRIBUIÇÃO DE PAPEL PADRÃO NO SIGNUP (`08_trigger_signup_usuario.sql`)
+
+---
+
+### Visão Geral
+
+O menor arquivo do banco: 1 função + 1 `GRANT`. Apesar do nome do arquivo ainda dizer "trigger", **não existe mais nenhuma trigger aqui** — é histórico do nome, mantido porque o projeto já decidiu não renomear arquivos (ver regras de edição). O conteúdo real é uma função chamável, não uma trigger de tabela.
+
+> 📌 **Por que o nome do arquivo menciona "trigger" mas o conteúdo não tem nenhuma:** a versão original deste arquivo continha um trigger em `auth.users` (`on_auth_user_created`/`handle_new_user`) que criava a linha em `public.usuario` automaticamente quando o Supabase Auth cadastrava alguém. Com a saída do Supabase Auth do fluxo (autenticação própria), nunca mais existe um `INSERT` em `auth.users` — esse trigger não tinha mais como disparar e foi removido. A única parte que ainda valia a pena manter — "atribuir o papel padrão `'usuario'` a quem acabou de se cadastrar" — foi reaproveitada como uma função chamável pelo NestJS, em vez de ficar presa a um trigger de tabela que não existe mais.
+
+### [08-D-1] `atribuir_papel_padrao(p_id_usuario)`
+
+* **Quando roda:** chamada pelo NestJS manualmente, dentro da mesma transação do signup, logo após o `INSERT` em `usuario`. O fluxo completo de signup é: 1) gerar o hash da senha e inserir em `usuario`; 2) chamar esta função; 3) criar o registro em `verificacao_email` e disparar o e-mail de confirmação (ver `PLANO_AUTENTICACAO_PROPRIA.md`).
+* **Por que é `SECURITY DEFINER`:** a policy `pol_usuariopapel_insert` (`04`) exige a permissão `'papel_atribuir'` para inserir em `usuario_papel` — mas um usuário que acabou de se cadastrar não tem nenhuma permissão ainda (nem papel nenhum). A função roda com os privilégios de quem a criou, contornando esse problema de "ovo e galinha" só para esta gravação específica (atribuir o papel `'usuario'` — nunca `'admin'`, que continua exigindo atribuição manual, ver `[07-D-5]`).
+* **`ON CONFLICT DO NOTHING`:** protege contra chamar a função duas vezes para o mesmo usuário (ex.: retry de rede) sem gerar erro de duplicidade.
+* **`GRANT EXECUTE`:** sem ele, a chamada do NestJS falharia com `permission denied` (erro `42501`) — o mesmo problema que as funções de score já tiveram, resolvido da mesma forma (ver `[06-I-1]`).
 
 > 📌 **Por que `atribuir_papel_padrao()` não aparece aqui:** o `GRANT EXECUTE` dessa função fica junto dela mesma em `08_trigger_signup_usuario.sql`, porque `06` roda **antes** do `08` na ordem de dependência — a função ainda não existiria neste ponto da execução se o grant estivesse aqui.
