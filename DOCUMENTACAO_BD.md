@@ -404,3 +404,86 @@ Cada trigger observa uma tabela que alimenta alguma dimensão do score e recalcu
 ### Idempotência
 
 As 23 triggers deste arquivo têm `DROP TRIGGER IF EXISTS` imediatamente antes do `CREATE TRIGGER` correspondente — o arquivo pode ser reaplicado sozinho num banco de desenvolvimento já existente, sem precisar resetar tudo do zero (mesmo padrão já aplicado em `04_rls_policies.sql`).
+
+---
+
+## 06. GRANTS (`06_grants.sql`)
+
+---
+
+### Visão Geral
+
+Este arquivo concede à role `app_nestjs` (criada em `01`) exatamente os privilégios que a RLS (`04`) pressupõe. RLS e GRANT são duas checagens **independentes** que o Postgres exige em conjunto: mesmo com uma policy liberando o acesso, se o GRANT de tabela/coluna não existir, a operação falha antes com `permission denied` — a policy nunca chega a ser avaliada. O arquivo segue a mesma ordem de blocos de domínio do `01`.
+
+> 📌 **Por que os GRANTs ficam consolidados aqui:** antes, esses privilégios estavam espalhados — o bloco principal de schema/tabela/coluna vinha de um arquivo à parte de "artifícios", o GRANT nas sequências vinha do fim do arquivo de seed (como correção avulsa, provavelmente depois que alguém esbarrou no erro 42501 ao tentar inserir), e o GRANT `EXECUTE` das funções de score também vinha do arquivo de artifícios. Consolidado aqui, nenhum GRANT corre mais o risco de ficar esquecido num outro arquivo.
+
+---
+
+### [06-A] Geral (Schema e Sequências)
+
+* **`GRANT USAGE ON SCHEMA public`** e **`GRANT SELECT ON ALL TABLES`:** acesso de base ao schema e leitura geral — depois refinada por `REVOKE`/GRANT de coluna nas tabelas sensíveis (`[06-D]`).
+* **[06-A-1] `GRANT USAGE, SELECT ON ALL SEQUENCES`:** sem isso, `GRANT INSERT` sozinho não é suficiente — o Postgres não consegue gerar o próximo valor de uma coluna `SERIAL`/`IDENTITY` sem `USAGE` na sequência por trás dela (erro `42501`). Afeta toda tabela com `GRANT INSERT` neste arquivo; resolvido de uma vez para todas com um único `GRANT` sobre todas as sequências do schema.
+
+---
+
+### [06-B] RBAC
+
+Nenhum GRANT adicional. `papel`, `permissao` e `papel_permissao` só têm policy de `SELECT` em `04_rls_policies.sql` (leitura pública), já coberta pelo `GRANT SELECT ON ALL TABLES` de `[06-A]`. A gestão dessas 3 tabelas acontece via seed/migração direta, não pela aplicação.
+
+---
+
+### [06-C] CONFIG
+
+* **Tabelas:** `configuracoes`, `arquivo` (INSERT/UPDATE/DELETE completos), `area_conhecimento`, `motivo_denuncia`, `tipo_link` (só INSERT/UPDATE).
+
+**Detalhamento por grant:**
+* **[06-C-1] `area_conhecimento` / `motivo_denuncia`:** receberam apenas os GRANTs mínimos necessários para que as policies de RLS funcionem na gestão de catálogos — princípio de privilégio mínimo, evitando permissões amplas desnecessárias.
+* **[06-C-2] `tipo_link`:** ganhou `pol_tipolink_insert`/`pol_tipolink_update` em `04` (permissão `tipolink_gerenciar`), mas faltava o GRANT de tabela correspondente — sem ele, mesmo um curador/admin com a permissão certa recebia `permission denied for table tipo_link` antes de a RLS ser avaliada, e cadastrar um novo tipo de link (ex.: "TikTok") continuava impossível na prática (mesmo problema descrito em `RBAC-pontos-discutidos.md`, seção 6.3). Sem `DELETE` de propósito: `tipo_link` já tem coluna `ativo` para desativação lógica (soft delete via `UPDATE`), não precisa apagar linha.
+
+---
+
+### [06-D] USUÁRIO
+
+* **Tabelas:** `usuario`, `perfil_pesquisador`, `usuario_papel`, `termos_de_uso`, `usuario_termo`, `seguir_pesquisador` (INSERT/UPDATE/DELETE completos); `notificacao` (só INSERT/UPDATE); `verificacao_email`/`recuperacao_senha`/`sessao` (SELECT/INSERT/UPDATE).
+
+**Detalhamento por grant:**
+* **[06-D-1] `usuario` / `perfil_pesquisador` — SELECT geral revogado:** o acesso público a essas duas tabelas foi reduzido no nível de GRANT para evitar que `app_nestjs` tenha acesso indiscriminado a dados sensíveis antes mesmo da avaliação das policies de RLS.
+* **[06-D-2] `usuario` — colunas de autenticação no GRANT de coluna:** faltavam as colunas usadas pelo próprio fluxo de login (`senha_hash`, `tentativas_login_falhas`, `bloqueado_ate`, `ultimo_login_em`, `ultimo_login_ip`). Sem elas, o GRANT de coluna barra o `SELECT` antes mesmo de a RLS ser avaliada, e o NestJS não consegue checar a senha no login nem aplicar a proteção contra brute-force.
+* **[06-D-3] `notificacao`:** ganhou `pol_notificacao_insert`/`pol_notificacao_update` em `04` (o backend passou a gravar notificação através do próprio `app_nestjs`, não mais via um role que ignorasse RLS), mas faltava o GRANT de tabela correspondente — sem os dois níveis juntos (RLS + GRANT), toda tentativa de `INSERT`/`UPDATE` falhava com `permission denied for table notificacao`, mesmo com a policy liberando.
+* **[06-D-4] `verificacao_email` / `recuperacao_senha` / `sessao`:** têm policy real em `04` (`TO app_nestjs USING (true)`) e precisam do GRANT correspondente — RLS libera mas falta permissão de tabela, e vice-versa; os dois níveis são exigidos juntos pelo Postgres.
+
+---
+
+### [06-E] CAMPANHA
+
+* **Tabelas:** `campanha`, `seguir_campanha`, `atualizacao_campanha`, `repasse`, `solicitacao_encerramento`, `historico_rejeicao`, `comentario`, `denuncia`, `recompensa` — todas com INSERT/UPDATE/DELETE completos.
+
+---
+
+### [06-F] LINK
+
+* **Tabelas:** `link_academico`, `link_atualizacao`, `link_recompensa` — INSERT/UPDATE/DELETE completos.
+
+---
+
+### [06-G] ARQUIVO
+
+* **Tabelas:** `arquivo_atualizacao`, `arquivo_recompensa` — INSERT/UPDATE/DELETE completos.
+
+---
+
+### [06-H] CONTRIBUIÇÃO
+
+* **Tabelas:** `contribuicao`, `auditoria_financeira`, `contribuicao_recompensa`, `aceite_termo_contribuicao` — INSERT/UPDATE/DELETE completos.
+
+---
+
+### [06-I] SCORE
+
+* **Tabelas:** `score_config`, `score_rotulo` — INSERT/UPDATE/DELETE completos.
+* **`score_pesquisador` não recebe GRANT de tabela direto:** toda escrita passa pela função `recalcular_score_pesquisador()` (`SECURITY DEFINER`, ver `05_regras_negocio.sql`), que grava com os privilégios de quem criou a função, não com os de `app_nestjs`.
+
+**Detalhamento por grant:**
+* **[06-I-1] Funções do motor de score:** precisam de `GRANT EXECUTE` para que o app possa chamar `recalcular_todos_os_scores()` via RPC (botão "Recalcular" do Painel Admin) e `recalcular_score_pesquisador()`.
+
+> 📌 **Por que `atribuir_papel_padrao()` não aparece aqui:** o `GRANT EXECUTE` dessa função fica junto dela mesma em `08_trigger_signup_usuario.sql`, porque `06` roda **antes** do `08` na ordem de dependência — a função ainda não existiria neste ponto da execução se o grant estivesse aqui.
