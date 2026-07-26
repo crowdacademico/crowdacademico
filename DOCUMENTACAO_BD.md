@@ -166,18 +166,34 @@ Os índices explícitos criados neste script foram projetados para três cenári
 
 ### Arquivo 03_funcoes_seguranca.sql
 
-# [03-A] FUNÇÕES HELPER PARA RLS
+---
+
+## 03. FUNÇÕES HELPER DE SEGURANÇA (`03_funcoes_seguranca.sql`)
+
+---
+
+### Visão Geral de Arquitetura
+
+As funções helper atuam como a ponte de contexto de segurança entre o backend NestJS e o mecanismo de RLS do PostgreSQL. Elas eliminam a dependência de frameworks externos (como Supabase Auth / `auth.uid()`) e viabilizam um modelo de autorização stateless nativo no banco de dados.
+
+Ambas as funções utilizam os modificadores de segurança essenciais:
+* **`STABLE`:** Informa ao otimizador do PostgreSQL que a função não altera o banco e retorna o mesmo resultado dentro da mesma transação SQL.
+* **`SECURITY DEFINER` + `SET search_path = public`:** Executa a função com privilégios do criador da função, blindando-a contra ataques de sequestro de caminho de busca (*search path hijacking*).
+
+---
+
+### [03-A] CONTEXTO DE SESSÃO (`id_usuario_atual`)
+
+* **Mecanismo de Transação:** O NestJS, ao autenticar o JWT e abrir uma transação com o PostgreSQL, executa o comando `SET LOCAL app.id_usuario_atual = '<id>'`.
+* **Leitura Segura:** A função lê a variável customizada da sessão do PostgreSQL via `current_setting('app.id_usuario_atual', true)`.
+* **Tratamento de Nulos:** O segundo argumento `true` impede que o PostgreSQL lance uma exceção fatal caso a variável não tenha sido configurada na sessão, retornando `NULL` de forma segura.
+
+---
+
+### [03-B] CONTROLE DE ACESSO GRANULAR (`tem_permissao`)
+
+* **Autorização por Capacidade (*Capability-Based*):** Em vez de verificar nomes de papéis (como "admin" ou "pesquisador"), a função valida a existência de uma permissão específica (ex: `'campanha_aprovar'`).
+* **Descolamento Múltiplo:** Permite alterar, renomear, dividir ou criar novos papéis na tabela `papel` sem a necessidade de alterar nenhuma política de RLS (`04_rls_policies.sql`) ou recriar funções no banco de dados.
+* **Comportamento para Desconectados:** Caso `public.id_usuario_atual()` retorne `NULL` (usuário anônimo ou sessão sem token), o *subselect* falha na condição de igualdade e a função retorna `FALSE` de forma determinística.
 
 
--- ALTERADO: não usa mais auth.uid() (Supabase Auth). O NestJS, após
--- validar o JWT próprio, executa `SET LOCAL app.id_usuario_atual = '<id>'`
--- no início da transação, e esta função lê esse valor da sessão.
--- `current_setting(..., true)` com o 2º argumento true não lança erro
--- caso a variável não tenha sido definida (retorna NULL).
-
-
--- ADICIONADO: checagem de permissão granular, para RBAC de verdade (não
--- só admin/não-admin). Nunca referencia nome de papel — só permissão.
--- Papel é puramente um "pacote de permissões" guardado em papel_permissao;
--- trocar, renomear ou dividir papéis no futuro não exige tocar nesta
--- função nem em nenhuma policy que a utilize.

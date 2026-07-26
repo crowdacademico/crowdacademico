@@ -1,16 +1,12 @@
 -- ============================================================
 --  CrowdAcadêmico — 03: FUNÇÕES HELPER DE SEGURANÇA (RLS)
---  Depende de: 01_extensoes_enums_tabelas.sql (tabela usuario, usuario_papel, papel)
+--  Depende de: 01_extensoes_enums_tabelas.sql
 --  Usado por: 04_rls_policies.sql
 --  Próximo arquivo: 04_rls_policies.sql
 -- ============================================================
--- [03-A] FUNÇÕES HELPER PARA RLS
+-- [03-A] CONTEXTO DE SESSÃO E IDENTIFICAÇÃO DE USUÁRIO
 -- ============================================================
--- ALTERADO: não usa mais auth.uid() (Supabase Auth). O NestJS, após
--- validar o JWT próprio, executa `SET LOCAL app.id_usuario_atual = '<id>'`
--- no início da transação, e esta função lê esse valor da sessão.
--- `current_setting(..., true)` com o 2º argumento true não lança erro
--- caso a variável não tenha sido definida (retorna NULL).
+
 CREATE OR REPLACE FUNCTION public.id_usuario_atual()
 RETURNS INT
 LANGUAGE sql
@@ -21,11 +17,10 @@ AS $$
     SELECT current_setting('app.id_usuario_atual', true)::INT;
 $$;
 
--- ADICIONADO: checagem de permissão granular, para RBAC de verdade (não
--- só admin/não-admin). Nunca referencia nome de papel — só permissão.
--- Papel é puramente um "pacote de permissões" guardado em papel_permissao;
--- trocar, renomear ou dividir papéis no futuro não exige tocar nesta
--- função nem em nenhuma policy que a utilize.
+-- ============================================================
+-- [03-B] CONTROLE DE ACESSO GRANULAR (RBAC)
+-- ============================================================
+
 CREATE OR REPLACE FUNCTION public.tem_permissao(p_permissao TEXT)
 RETURNS BOOLEAN
 LANGUAGE sql
