@@ -1,56 +1,67 @@
--- ============================================================
---  CrowdAcadêmico — 06b: MOTOR DE SCORE + REGRAS DE NEGÓCIO (triggers)
---  Depende de: 01_extensoes_enums_tabelas.sql, 05_grants.sql
---  Próximo arquivo: 06_grants.sql
+-- ============================================================================
+--  CROWDACADÊMICO — SISTEMA DE CROWDFUNDING PARA PESQUISA CIENTÍFICA
+-- ============================================================================
+--  Arquivo:     05_regras_negocio.sql
+--  Módulo:      Motor de Score & Regras de Negócio (Triggers e Funções)
+--  Depende de:  01_extensoes_enums_tabelas.sql
+--  Próximo:     06_grants.sql
+-- ----------------------------------------------------------------------------
+--  Descrição:
+--  Concentra toda a inteligência operacional e regras de consistência do banco:
+--  1. Motor de cálculo, orquestração e automação do Score do Pesquisador (INT).
+--  2. Validações de integridade, escopo polimórfico e regras financeiras.
+--  3. Regras de moderação de comunidade, engajamento e automação RBAC.
 --
---  Este arquivo concentra TODA lógica baseada em trigger/função do
---  projeto: o motor de cálculo de score e as regras de negócio que
---  um CHECK simples não alcança (congelamento de campanha, limite
---  de campanhas simultâneas, validação de repasse, etc.). Antes as
---  regras de negócio estavam misturadas com CREATE TABLE em
---  01_extensoes_enums_tabelas.sql — movidas pra cá pra manter o
---  arquivo 01 só com DDL puro. Nenhuma lógica foi alterada, só o
---  local do arquivo.
--- ============================================================
+--  Inventário Mapeado:
+--  - 27 Funções (Helpers, Cálculo, Orquestração e Triggers)
+--  - 23 Triggers (Todas idempotentes com DROP TRIGGER IF EXISTS)
+-- ----------------------------------------------------------------------------
+--  SUMÁRIO DOS BLOCOS DE CÓDIGO
+-- ----------------------------------------------------------------------------
+--  [05-A] HELPERS E UTILITÁRIOS
+--  [05-B] MOTOR DE SCORE — CÁLCULO DAS DIMENSÕES
+--  [05-C] MOTOR DE SCORE — ORQUESTRAÇÃO E CÁLCULO GERAL
+--  [05-D] MOTOR DE SCORE — TRIGGERS E FUNÇÕES DE AUTOMAÇÃO
+--  [05-E] REGRAS DE NEGÓCIO — INTEGRIDADE E ESCOPO
+--  [05-F] REGRAS DE NEGÓCIO — CAMPANHAS E FINANCEIRO
+--  [05-G] REGRAS DE NEGÓCIO — COMUNIDADE, ENGAJAMENTO E RBAC
+-- ============================================================================
 
--- ============================================================
---  CrowdAcadêmico — MOTOR DE CÁLCULO DO SCORE (real, no banco)
---  Implementa as fórmulas de Score_Serasa_Pesquisador.docx
+-- ----------------------------------------------------------------------------
+-- Contexto histórico do motor de score (por que ele existe):
+-- perfil_pesquisador.score_atual e score_pesquisador.pontos_obtidos eram só
+-- valores fixos digitados no seed — nada no app realmente calculava o score
+-- a partir de campanha/denuncia/link_academico/perfil. 5 dos 7 pesquisadores
+-- nem tinham linha em score_pesquisador. No app, a tela de detalhes de
+-- pontuação lia campos que não existem no tipo real de dimensões de score
+-- (que só tem perfil_academico, historico_plataforma, atualizacao_campanha,
+-- reputacao_comunidade), então toda conta vinha undefined * peso = NaN.
 --
---  POR QUE ISSO ESTAVA DANDO NaN / valores falsos:
---  perfil_pesquisador.score_atual e score_pesquisador.pontos_obtidos
---  eram só valores fixos digitados no seed — nada no app realmente
---  calculava o score a partir de campanha/denuncia/link_academico/perfil.
---  5 dos 7 pesquisadores nem tinham linha em score_pesquisador.
---  No app, screens/07-DetalhesPontuacao.tsx lia dimensions.perfil /
---  .historico / .entrega / .engajamento (campos que não existem no
---  tipo DimensoesScore real — que só tem perfil_academico,
---  historico_plataforma, atualizacao_campanha, reputacao_comunidade),
---  então toda conta vinha undefined * peso = NaN.
---
---  ESTRATÉGIA:
---  Calcular tudo dentro do banco (não no app), e manter o resultado
---  em cache em perfil_pesquisador.score_atual / score_pesquisador,
---  atualizado automaticamente por TRIGGER sempre que campanha,
---  denuncia, atualizacao_campanha, link_academico, perfil_pesquisador
---  ou score_config mudarem — assim funciona pra QUALQUER registro novo,
---  sem precisar lembrar de chamar nada no app.
---
---  Todos os pesos vêm de score_config.peso (não há nenhum número
---  "mágico" fixo no código) — editar o peso no Painel Admin já
---  recalcula o score de todo mundo automaticamente.
--- ============================================================
+-- Estratégia: calcular tudo dentro do banco (não no app), manter o resultado
+-- em cache em perfil_pesquisador.score_atual / score_pesquisador, atualizado
+-- automaticamente por TRIGGER sempre que campanha, denuncia,
+-- atualizacao_campanha, link_academico, perfil_pesquisador ou score_config
+-- mudarem — assim funciona pra QUALQUER registro novo, sem precisar lembrar
+-- de chamar nada no app. Todos os pesos vêm de score_config.peso (não há
+-- número "mágico" fixo no código) — editar o peso no Painel Admin já
+-- recalcula o score de todo mundo automaticamente.
+-- ----------------------------------------------------------------------------
 
 
+-- ============================================================================
+--  [05-A] HELPERS E UTILITÁRIOS
+--  Descrição: Funções de suporte geral para leitura de configurações do sistema
+--             e fallbacks operacionais.
+-- ============================================================================
 
--- ============================================================
--- (constraint defensiva e seed de constantes de configuracoes
---  movidos para 01_extensoes_enums_tabelas.sql e 07_seed_dados.sql)
--- ============================================================
-
-
--- Helper: lê uma constante numérica de configuracoes com fallback seguro
--- (nunca retorna NULL/erro mesmo se a chave não existir ainda — evita NaN)
+-- ----------------------------------------------------------------------------
+-- Função:     config_numero
+-- Assinatura: (p_chave TEXT, p_padrao DECIMAL) -> DECIMAL
+-- Bloco:      [05-A]
+-- Regra:      Lê uma constante numérica da tabela configuracoes com fallback
+--             seguro — nunca retorna NULL/erro mesmo se a chave ainda não
+--             existir, evitando NaN nos cálculos de score.
+-- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.config_numero(p_chave TEXT, p_padrao DECIMAL)
 RETURNS DECIMAL
 LANGUAGE sql
@@ -65,11 +76,22 @@ AS $$
 $$;
 
 
--- ============================================================
--- 3. DIMENSÃO 1 — Perfil Acadêmico Declarado
---    +lattes +orcid +linkedin/site +instituição +título
---    Pesos vêm de score_config (subitens do pai 'perfil_academico').
--- ============================================================
+-- ============================================================================
+--  [05-B] MOTOR DE SCORE — CÁLCULO DAS DIMENSÕES
+--  Descrição: Funções puras de cálculo de pontuação por dimensão.
+--             Recebem o ID do usuário (p_id_usuario INT) e retornam NUMERIC.
+-- ============================================================================
+
+-- ----------------------------------------------------------------------------
+-- Função:     calcular_score_perfil_academico
+-- Assinatura: (p_id_usuario INT) -> INTEGER
+-- Bloco:      [05-B]
+-- Regra:      Dimensão 1 — Perfil Acadêmico Declarado. Soma os pesos (vindos
+--             de score_config, subitens do pai 'perfil_academico') de: link
+--             Lattes, link ORCID, outro link acadêmico (LinkedIn/ResearchGate/
+--             Academia/Scholar/site), vínculo institucional preenchido e
+--             título acadêmico informado no perfil_pesquisador.
+-- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.calcular_score_perfil_academico(p_id_usuario INT)
 RETURNS INTEGER
 LANGUAGE plpgsql
@@ -109,18 +131,18 @@ BEGIN
     END IF;
 
     IF EXISTS (SELECT 1 FROM link_academico la JOIN tipo_link tl ON tl.id_tipolink = la.id_tipolink
-               WHERE la.id_usuario = p_id_usuario AND 
-                     (tl.nome ILIKE '%linkedin%' OR tl.nome ILIKE '%researchgate%' OR 
+               WHERE la.id_usuario = p_id_usuario AND
+                     (tl.nome ILIKE '%linkedin%' OR tl.nome ILIKE '%researchgate%' OR
                       tl.nome ILIKE '%academia%' OR tl.nome ILIKE '%scholar%' OR tl.nome ILIKE '%site%')) THEN
         v_total := v_total + v_peso_site;
     END IF;
 
-    IF EXISTS (SELECT 1 FROM perfil_pesquisador WHERE id_usuario = p_id_usuario 
+    IF EXISTS (SELECT 1 FROM perfil_pesquisador WHERE id_usuario = p_id_usuario
                AND vinculo_institucional IS NOT NULL AND btrim(vinculo_institucional) <> '') THEN
         v_total := v_total + v_peso_inst;
     END IF;
 
-    IF EXISTS (SELECT 1 FROM perfil_pesquisador WHERE id_usuario = p_id_usuario 
+    IF EXISTS (SELECT 1 FROM perfil_pesquisador WHERE id_usuario = p_id_usuario
                AND titulo_academico IS NOT NULL) THEN
         v_total := v_total + v_peso_titulo;
     END IF;
@@ -130,21 +152,17 @@ END;
 $$;
 
 
--- ============================================================
--- 4. DIMENSÃO 2 — Histórico na Plataforma
---    conclusao = (concluidasComSucesso / totalEncerradas) * peso_conclusao
---    aprovacao = (aprovadasPelaModeracao / totalSubmetidas) * peso_aprovacao
---    - penalidade_abandono * abandonadas - penalidade_sem_justificativa * naoAtingidasSemJustificativa
---
---    Mapeamento pros dados reais (documentado por não haver status
---    "abandonada" explícito no enum status_campanha):
---      totalEncerradas        = status IN ('sucesso','nao_atingido','rejeitado','encerrado')
---      concluidasComSucesso   = status IN ('sucesso','encerrado')
---      totalSubmetidas        = TODAS as campanhas já criadas
---      aprovadasPelaModeracao = aprovado_em IS NOT NULL
---      abandonada              = status='nao_atingido' e NUNCA pediu encerramento
---      sem justificativa       = status='nao_atingido', pediu encerramento, mas sem justificativa
--- ============================================================
+-- ----------------------------------------------------------------------------
+-- Função:     calcular_score_historico
+-- Assinatura: (p_id_usuario INT) -> INTEGER
+-- Bloco:      [05-B]
+-- Regra:      Dimensão 2 — Histórico na Plataforma. conclusao = (campanhas
+--             concluídas com sucesso / total encerradas) * peso_conclusao;
+--             aprovacao = (aprovadas pela moderação / total submetidas) *
+--             peso_aprovacao; desconta penalidade_abandono por campanha
+--             abandonada e penalidade_sem_justificativa por campanha não
+--             atingida sem justificativa na solicitação de encerramento.
+-- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.calcular_score_historico(p_id_usuario INT)
 RETURNS INTEGER
 LANGUAGE plpgsql
@@ -182,11 +200,15 @@ BEGIN
 
     SELECT count(*) INTO v_total_submetidas FROM campanha WHERE id_usuario = p_id_usuario;
     SELECT count(*) INTO v_aprovadas FROM campanha WHERE id_usuario = p_id_usuario AND aprovado_em IS NOT NULL;
-    SELECT count(*) INTO v_total_encerradas FROM campanha WHERE id_usuario = p_id_usuario 
+    SELECT count(*) INTO v_total_encerradas FROM campanha WHERE id_usuario = p_id_usuario
         AND status IN ('sucesso','nao_atingido','rejeitado','encerrado');
-    SELECT count(*) INTO v_concluidas_sucesso FROM campanha WHERE id_usuario = p_id_usuario 
+    SELECT count(*) INTO v_concluidas_sucesso FROM campanha WHERE id_usuario = p_id_usuario
         AND status IN ('sucesso','encerrado');
 
+    -- Mapeamento pros dados reais (documentado por não haver status
+    -- "abandonada" explícito no enum status_campanha):
+    --   abandonada        = status='nao_atingido' e NUNCA pediu encerramento
+    --   sem justificativa = status='nao_atingido', pediu encerramento, mas sem justificativa
     SELECT count(*) INTO v_abandonadas FROM campanha c
     WHERE c.id_usuario = p_id_usuario AND c.status = 'nao_atingido'
       AND NOT EXISTS (SELECT 1 FROM solicitacao_encerramento se WHERE se.id_campanha = c.id_campanha);
@@ -204,7 +226,7 @@ BEGIN
         v_aprovacao := (v_aprovadas::DECIMAL / v_total_submetidas) * v_peso_aprovacao;
     END IF;
 
-    v_total := v_conclusao + v_aprovacao 
+    v_total := v_conclusao + v_aprovacao
                - (v_abandonadas * v_penalidade_abandono)
                - (v_sem_justificativa * v_penalidade_sem_just);
 
@@ -213,13 +235,18 @@ END;
 $$;
 
 
--- ============================================================
--- 5. DIMENSÃO 3 — Atualização da Campanha
---    regularidade = SUM(realizadas)/SUM(esperadas) * peso_regularidade
---    tempestividade = (% de campanhas em que realizadas >= esperadas) * peso_tempestividade
---    Considera campanhas que já começaram (ativo/sucesso/nao_atingido/encerrado).
---    atualizacoesEsperadas = duracaoEmMeses * frequencia_esperada_mensal (configurável)
--- ============================================================
+-- ----------------------------------------------------------------------------
+-- Função:     calcular_score_atualizacao
+-- Assinatura: (p_id_usuario INT) -> INTEGER
+-- Bloco:      [05-B]
+-- Regra:      Dimensão 3 — Atualização da Campanha. regularidade =
+--             SUM(realizadas)/SUM(esperadas) * peso_regularidade;
+--             tempestividade = (% de campanhas em que realizadas >=
+--             esperadas) * peso_tempestividade. Considera campanhas que já
+--             começaram (ativo/sucesso/nao_atingido/encerrado).
+--             atualizacoesEsperadas = duracaoEmMeses * frequencia_esperada_mensal
+--             (configurável via score_frequencia_esperada_mensal).
+-- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.calcular_score_atualizacao(p_id_usuario INT)
 RETURNS INTEGER
 LANGUAGE plpgsql
@@ -269,7 +296,7 @@ BEGIN
         -- moderação. Essa contagem não filtrava por "ativo", então uma
         -- atualização removida por moderação continuava inflando o score de
         -- regularidade do pesquisador.
-        SELECT count(*) INTO v_realizadas_campanha FROM atualizacao_campanha 
+        SELECT count(*) INTO v_realizadas_campanha FROM atualizacao_campanha
         WHERE id_campanha = rec.id_campanha AND ativo = TRUE;
 
         v_qtd_campanhas := v_qtd_campanhas + 1;
@@ -294,10 +321,13 @@ END;
 $$;
 
 
--- ============================================================
--- 6. DIMENSÃO 4 — Reputação da Comunidade
---    reputacaoScore = peso_raiz - totalDenuncias*custo - totalProcedentes*custo_procedente
--- ============================================================
+-- ----------------------------------------------------------------------------
+-- Função:     calcular_score_reputacao
+-- Assinatura: (p_id_usuario INT) -> INTEGER
+-- Bloco:      [05-B]
+-- Regra:      Dimensão 4 — Reputação da Comunidade. reputacaoScore =
+--             peso_raiz - totalDenuncias*custo - totalProcedentes*custo_procedente.
+-- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.calcular_score_reputacao(p_id_usuario INT)
 RETURNS INTEGER
 LANGUAGE plpgsql
@@ -329,14 +359,23 @@ END;
 $$;
 
 
--- ============================================================
--- 7. ORQUESTRADOR — recalcula as 4 dimensões de um pesquisador,
---    grava em score_pesquisador (UPSERT) e atualiza o cache em
---    perfil_pesquisador.score_atual. SECURITY DEFINER: precisa
---    poder escrever no perfil de QUALQUER pesquisador (ex: quando
---    um admin resolve uma denúncia contra outra pessoa), não só
---    no perfil de quem disparou a ação.
--- ============================================================
+-- ============================================================================
+--  [05-C] MOTOR DE SCORE — ORQUESTRAÇÃO E CÁLCULO GERAL
+--  Descrição: Funções consolidadoras (SECURITY DEFINER) para salvar resultados
+--             nas tabelas score_pesquisador e perfil_pesquisador.
+-- ============================================================================
+
+-- ----------------------------------------------------------------------------
+-- Função:     recalcular_score_pesquisador
+-- Assinatura: (p_id_usuario INT) -> INTEGER
+-- Bloco:      [05-C]
+-- Regra:      Recalcula as 4 dimensões de um pesquisador, grava em
+--             score_pesquisador (UPSERT) e atualiza o cache em
+--             perfil_pesquisador.score_atual. SECURITY DEFINER: precisa poder
+--             escrever no perfil de QUALQUER pesquisador (ex: quando um admin
+--             resolve uma denúncia contra outra pessoa), não só no perfil de
+--             quem disparou a ação.
+-- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.recalcular_score_pesquisador(p_id_usuario INT)
 RETURNS INTEGER
 LANGUAGE plpgsql
@@ -359,7 +398,7 @@ BEGIN
     v_historico   := public.calcular_score_historico(p_id_usuario);
     v_atualizacao := public.calcular_score_atualizacao(p_id_usuario);
     v_reputacao   := public.calcular_score_reputacao(p_id_usuario);
-    
+
     v_total := v_perfil + v_historico + v_atualizacao + v_reputacao;
 
     SELECT id_rotulo INTO v_id_rotulo
@@ -394,8 +433,15 @@ BEGIN
 END;
 $$;
 
--- Recalcula TODOS os pesquisadores de uma vez (botão "Recalcular" no admin,
--- ou pra rodar uma vez depois de mudar pesos/constantes em massa)
+
+-- ----------------------------------------------------------------------------
+-- Função:     recalcular_todos_os_scores
+-- Assinatura: () -> INT
+-- Bloco:      [05-C]
+-- Regra:      Recalcula TODOS os pesquisadores de uma vez (botão "Recalcular"
+--             no Painel Admin, ou pra rodar uma vez depois de mudar
+--             pesos/constantes em massa). Retorna a quantidade recalculada.
+-- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.recalcular_todos_os_scores()
 RETURNS INT
 LANGUAGE plpgsql
@@ -414,15 +460,25 @@ BEGIN
 END;
 $$;
 
--- ============================================================
--- 8. TRIGGERS — recalcula automaticamente quando os dados que
---    alimentam o score mudam. Isso é o que torna o sistema
---    "flexível pra novos registros": ninguém no app precisa lembrar
---    de chamar recalcular_score_pesquisador depois de inserir uma
---    campanha, denúncia, atualização, link ou editar o perfil.
--- ============================================================
 
--- campanha → afeta histórico e atualização (id_usuario é o dono)
+-- ============================================================================
+--  [05-D] MOTOR DE SCORE — TRIGGERS E FUNÇÕES DE AUTOMAÇÃO
+--  Descrição: Funções de apoio (trg_recalcular_por_*) e triggers atreladas
+--             a tabelas de impacto para recalcular o score em tempo real.
+--             Isso é o que torna o sistema "flexível pra novos registros":
+--             ninguém no app precisa lembrar de chamar
+--             recalcular_score_pesquisador depois de inserir uma campanha,
+--             denúncia, atualização, link ou editar o perfil.
+-- ============================================================================
+
+-- ----------------------------------------------------------------------------
+-- Função:     trg_recalcular_por_campanha
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-D]
+-- Uso:        Invocada por trg_campanha_recalcula_score
+-- Regra:      campanha afeta histórico e atualização — recalcula o score do
+--             id_usuario dono da campanha (NEW, ou OLD em caso de DELETE).
+-- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.trg_recalcular_por_campanha()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN
@@ -435,12 +491,29 @@ BEGIN
 END;
 $$;
 
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_campanha_recalcula_score
+-- Tabela:    campanha
+-- Momento:   AFTER INSERT OR UPDATE OR DELETE
+-- Função:    trg_recalcular_por_campanha()
+-- Bloco:     [05-D]
+-- Regra:     Dispara o recálculo de score do pesquisador dono da campanha
+--            a cada inserção, alteração ou remoção.
+-- ----------------------------------------------------------------------------
 DROP TRIGGER IF EXISTS trg_campanha_recalcula_score ON campanha;
 CREATE TRIGGER trg_campanha_recalcula_score
     AFTER INSERT OR UPDATE OR DELETE ON campanha
     FOR EACH ROW EXECUTE FUNCTION public.trg_recalcular_por_campanha();
 
--- denuncia → afeta reputação (id_pesquisador_alvo é quem foi denunciado)
+
+-- ----------------------------------------------------------------------------
+-- Função:     trg_recalcular_por_denuncia
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-D]
+-- Uso:        Invocada por trg_denuncia_recalcula_score
+-- Regra:      denuncia afeta reputação — recalcula o score de
+--             id_pesquisador_alvo (quem foi denunciado), quando preenchido.
+-- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.trg_recalcular_por_denuncia()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN
@@ -457,12 +530,29 @@ BEGIN
 END;
 $$;
 
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_denuncia_recalcula_score
+-- Tabela:    denuncia
+-- Momento:   AFTER INSERT OR UPDATE OR DELETE
+-- Função:    trg_recalcular_por_denuncia()
+-- Bloco:     [05-D]
+-- Regra:     Dispara o recálculo de score do pesquisador denunciado a cada
+--            inserção, alteração ou remoção de denúncia.
+-- ----------------------------------------------------------------------------
 DROP TRIGGER IF EXISTS trg_denuncia_recalcula_score ON denuncia;
 CREATE TRIGGER trg_denuncia_recalcula_score
     AFTER INSERT OR UPDATE OR DELETE ON denuncia
     FOR EACH ROW EXECUTE FUNCTION public.trg_recalcular_por_denuncia();
 
--- atualizacao_campanha → afeta a dimensão Atualização (busca o dono via campanha)
+
+-- ----------------------------------------------------------------------------
+-- Função:     trg_recalcular_por_atualizacao
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-D]
+-- Uso:        Invocada por trg_atualizacao_recalcula_score
+-- Regra:      atualizacao_campanha afeta a dimensão Atualização — busca o
+--             dono da campanha (via id_campanha) e recalcula o score dele.
+-- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.trg_recalcular_por_atualizacao()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
 DECLARE
@@ -477,12 +567,29 @@ BEGIN
 END;
 $$;
 
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_atualizacao_recalcula_score
+-- Tabela:    atualizacao_campanha
+-- Momento:   AFTER INSERT OR UPDATE OR DELETE
+-- Função:    trg_recalcular_por_atualizacao()
+-- Bloco:     [05-D]
+-- Regra:     Dispara o recálculo de score do dono da campanha a cada
+--            inserção, alteração ou remoção de atualização.
+-- ----------------------------------------------------------------------------
 DROP TRIGGER IF EXISTS trg_atualizacao_recalcula_score ON atualizacao_campanha;
 CREATE TRIGGER trg_atualizacao_recalcula_score
     AFTER INSERT OR UPDATE OR DELETE ON atualizacao_campanha
     FOR EACH ROW EXECUTE FUNCTION public.trg_recalcular_por_atualizacao();
 
--- link_academico → afeta a dimensão Perfil Acadêmico
+
+-- ----------------------------------------------------------------------------
+-- Função:     trg_recalcular_por_link
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-D]
+-- Uso:        Invocada por trg_link_recalcula_score
+-- Regra:      link_academico afeta a dimensão Perfil Acadêmico — recalcula o
+--             score do dono do link.
+-- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.trg_recalcular_por_link()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN
@@ -495,14 +602,32 @@ BEGIN
 END;
 $$;
 
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_link_recalcula_score
+-- Tabela:    link_academico
+-- Momento:   AFTER INSERT OR UPDATE OR DELETE
+-- Função:    trg_recalcular_por_link()
+-- Bloco:     [05-D]
+-- Regra:     Dispara o recálculo de score do dono do link acadêmico a cada
+--            inserção, alteração ou remoção.
+-- ----------------------------------------------------------------------------
 DROP TRIGGER IF EXISTS trg_link_recalcula_score ON link_academico;
 CREATE TRIGGER trg_link_recalcula_score
     AFTER INSERT OR UPDATE OR DELETE ON link_academico
     FOR EACH ROW EXECUTE FUNCTION public.trg_recalcular_por_link();
 
--- perfil_pesquisador → só recalcula se vinculo_institucional/titulo_academico
--- mudaram (e NÃO quando o próprio recalculo atualiza score_atual — a
--- condição WHEN evita loop infinito).
+
+-- ----------------------------------------------------------------------------
+-- Função:     trg_recalcular_por_perfil
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-D]
+-- Uso:        Invocada por trg_perfil_recalcula_score e
+--             trg_perfil_update_recalcula_score
+-- Regra:      Recalcula o score do próprio perfil_pesquisador que mudou. No
+--             UPDATE, só dispara se vinculo_institucional/titulo_academico
+--             mudaram de verdade (condição WHEN na trigger, evita loop
+--             infinito com o próprio recalculo que atualiza score_atual).
+-- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.trg_recalcular_por_perfil()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN
@@ -511,11 +636,29 @@ BEGIN
 END;
 $$;
 
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_perfil_recalcula_score
+-- Tabela:    perfil_pesquisador
+-- Momento:   AFTER INSERT
+-- Função:    trg_recalcular_por_perfil()
+-- Bloco:     [05-D]
+-- Regra:     Calcula o score inicial assim que um perfil de pesquisador é
+--            criado.
+-- ----------------------------------------------------------------------------
 DROP TRIGGER IF EXISTS trg_perfil_recalcula_score ON perfil_pesquisador;
 CREATE TRIGGER trg_perfil_recalcula_score
     AFTER INSERT ON perfil_pesquisador
     FOR EACH ROW EXECUTE FUNCTION public.trg_recalcular_por_perfil();
 
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_perfil_update_recalcula_score
+-- Tabela:    perfil_pesquisador
+-- Momento:   AFTER UPDATE (somente quando vinculo_institucional ou
+--            titulo_academico mudam de valor)
+-- Função:    trg_recalcular_por_perfil()
+-- Bloco:     [05-D]
+-- Regra:     Recalcula o score quando os dados acadêmicos declarados mudam.
+-- ----------------------------------------------------------------------------
 DROP TRIGGER IF EXISTS trg_perfil_update_recalcula_score ON perfil_pesquisador;
 CREATE TRIGGER trg_perfil_update_recalcula_score
     AFTER UPDATE ON perfil_pesquisador
@@ -526,7 +669,15 @@ CREATE TRIGGER trg_perfil_update_recalcula_score
     )
     EXECUTE FUNCTION public.trg_recalcular_por_perfil();
 
--- score_config (pesos mudaram) → recalcula todo mundo
+
+-- ----------------------------------------------------------------------------
+-- Função:     trg_recalcular_por_score_config
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-D]
+-- Uso:        Invocada por trg_score_config_recalcula_todos
+-- Regra:      Quando um peso de score_config muda, recalcula TODOS os
+--             pesquisadores (o peso novo afeta todo mundo, não só um).
+-- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.trg_recalcular_por_score_config()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN
@@ -535,6 +686,15 @@ BEGIN
 END;
 $$;
 
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_score_config_recalcula_todos
+-- Tabela:    score_config
+-- Momento:   AFTER UPDATE OF peso (somente quando o peso muda de valor)
+-- Função:    trg_recalcular_por_score_config()
+-- Bloco:     [05-D]
+-- Regra:     Recalcula o score de todos os pesquisadores quando um peso é
+--            editado no Painel Admin.
+-- ----------------------------------------------------------------------------
 DROP TRIGGER IF EXISTS trg_score_config_recalcula_todos ON score_config;
 CREATE TRIGGER trg_score_config_recalcula_todos
     AFTER UPDATE OF peso ON score_config
@@ -543,17 +703,22 @@ CREATE TRIGGER trg_score_config_recalcula_todos
     EXECUTE FUNCTION public.trg_recalcular_por_score_config();
 
 
--- ============================================================
--- 10. TRIGGERS DE INTEGRIDADE (acrescentadas em 2026-07)
---     Não fazem parte do motor de score, mas ficam aqui por serem
---     a mesma categoria de "regra de negócio que o CHECK simples
---     não consegue expressar" (CHECK não enxerga outras tabelas).
--- ============================================================
+-- ============================================================================
+--  [05-E] REGRAS DE NEGÓCIO — INTEGRIDADE E ESCOPO
+--  Descrição: Validações de consistência cruzada entre tabelas e verificação
+--             de pertencimento em tabelas polimórficas (link_academico, etc).
+-- ============================================================================
 
--- contribuicao_recompensa: garante que (1) a recompensa escolhida
--- pertence à MESMA campanha da contribuição (ninguém resgata
--- recompensa de campanha diferente da que doou) e (2) respeita o
--- estoque de quantidade_disponivel da recompensa.
+-- ----------------------------------------------------------------------------
+-- Função:     trg_valida_contribuicao_recompensa
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-E]
+-- Uso:        Invocada por trg_contrib_recompensa_valida
+-- Regra:      Garante que (1) a recompensa escolhida pertence à MESMA
+--             campanha da contribuição (ninguém resgata recompensa de
+--             campanha diferente da que doou) e (2) respeita o estoque de
+--             quantidade_disponivel da recompensa.
+-- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.trg_valida_contribuicao_recompensa()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
 DECLARE
@@ -586,6 +751,15 @@ BEGIN
 END;
 $$;
 
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_contrib_recompensa_valida
+-- Tabela:    contribuicao_recompensa
+-- Momento:   BEFORE INSERT OR UPDATE
+-- Função:    trg_valida_contribuicao_recompensa()
+-- Bloco:     [05-E]
+-- Regra:     Bloqueia a gravação se a recompensa não pertencer à campanha da
+--            contribuição, ou se o estoque disponível for insuficiente.
+-- ----------------------------------------------------------------------------
 DROP TRIGGER IF EXISTS trg_contrib_recompensa_valida ON contribuicao_recompensa;
 CREATE TRIGGER trg_contrib_recompensa_valida
     BEFORE INSERT OR UPDATE ON contribuicao_recompensa
@@ -593,11 +767,18 @@ CREATE TRIGGER trg_contrib_recompensa_valida
     EXECUTE FUNCTION public.trg_valida_contribuicao_recompensa();
 
 
--- tipo_link agora é compartilhado por 3 tabelas (link_academico,
--- link_atualizacao, link_recompensa). Esta trigger única impede que
--- alguém associe, por exemplo, "Orcid" (permite_perfil=TRUE apenas)
--- a uma recompensa ou atualização — a FK sozinha não bloquearia isso,
--- só a existência do id_tipolink, não o contexto de uso.
+-- ----------------------------------------------------------------------------
+-- Função:     trg_valida_escopo_tipolink
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-E]
+-- Uso:        Invocada por trg_link_academico_valida_tipo,
+--             trg_link_atualizacao_valida_tipo e trg_link_recompensa_valida_tipo
+-- Regra:      tipo_link é compartilhado por 3 tabelas (link_academico,
+--             link_atualizacao, link_recompensa). Impede que alguém associe,
+--             por exemplo, "Orcid" (permite_perfil=TRUE apenas) a uma
+--             recompensa ou atualização — a FK sozinha não bloquearia isso,
+--             só a existência do id_tipolink, não o contexto de uso.
+-- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.trg_valida_escopo_tipolink()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
 DECLARE
@@ -621,32 +802,64 @@ BEGIN
 END;
 $$;
 
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_link_academico_valida_tipo
+-- Tabela:    link_academico
+-- Momento:   BEFORE INSERT OR UPDATE
+-- Função:    trg_valida_escopo_tipolink()
+-- Bloco:     [05-E]
+-- Regra:     Só aceita id_tipolink com permite_perfil = TRUE.
+-- ----------------------------------------------------------------------------
 DROP TRIGGER IF EXISTS trg_link_academico_valida_tipo ON link_academico;
 CREATE TRIGGER trg_link_academico_valida_tipo
     BEFORE INSERT OR UPDATE ON link_academico
     FOR EACH ROW
     EXECUTE FUNCTION public.trg_valida_escopo_tipolink();
 
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_link_atualizacao_valida_tipo
+-- Tabela:    link_atualizacao
+-- Momento:   BEFORE INSERT OR UPDATE
+-- Função:    trg_valida_escopo_tipolink()
+-- Bloco:     [05-E]
+-- Regra:     Só aceita id_tipolink com permite_atualizacao = TRUE.
+-- ----------------------------------------------------------------------------
 DROP TRIGGER IF EXISTS trg_link_atualizacao_valida_tipo ON link_atualizacao;
 CREATE TRIGGER trg_link_atualizacao_valida_tipo
     BEFORE INSERT OR UPDATE ON link_atualizacao
     FOR EACH ROW
     EXECUTE FUNCTION public.trg_valida_escopo_tipolink();
 
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_link_recompensa_valida_tipo
+-- Tabela:    link_recompensa
+-- Momento:   BEFORE INSERT OR UPDATE
+-- Função:    trg_valida_escopo_tipolink()
+-- Bloco:     [05-E]
+-- Regra:     Só aceita id_tipolink com permite_recompensa = TRUE.
+-- ----------------------------------------------------------------------------
 DROP TRIGGER IF EXISTS trg_link_recompensa_valida_tipo ON link_recompensa;
 CREATE TRIGGER trg_link_recompensa_valida_tipo
     BEFORE INSERT OR UPDATE ON link_recompensa
     FOR EACH ROW
     EXECUTE FUNCTION public.trg_valida_escopo_tipolink();
 
--- ============================================================
--- 11. REGRAS DE NEGÓCIO ADICIONAIS (movidas de 01_extensoes_enums_tabelas.sql)
--- Estavam misturadas com CREATE TABLE — movidas pra cá pra manter
--- o arquivo 01 só com DDL puro (extensões/enums/tabelas), igual
--- combinado. Nenhuma lógica foi alterada, só o local do arquivo.
--- ============================================================
--- CORRIGIDO: trigger que bloqueia repasse indevido em campanha
--- all-or-nothing que não atingiu a meta financeira.
+
+-- ============================================================================
+--  [05-F] REGRAS DE NEGÓCIO — CAMPANHAS E FINANCEIRO
+--  Descrição: Proteções de fluxo financeiro, congelamento de regras pós-aprovação
+--             e sincronização de saldos de campanha.
+-- ============================================================================
+
+-- ----------------------------------------------------------------------------
+-- Função:     fn_valida_repasse_all_or_nothing
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-F]
+-- Regra:      Bloqueia repasse indevido em campanha all-or-nothing que não
+--             atingiu a meta financeira. Só bloqueia se houver tentativa real
+--             de liberar dinheiro (valor_liquido > 0); registro de "nada
+--             repassado" (RF-038, valor_liquido = 0) continua permitido.
+-- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION fn_valida_repasse_all_or_nothing()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -659,9 +872,6 @@ BEGIN
     FROM campanha
     WHERE id_campanha = NEW.id_campanha;
 
-    -- CORRIGIDO: só bloqueia se houver tentativa real de liberar
-    -- dinheiro (valor_liquido > 0); registro de "nada repassado" 
-    -- (RF-038, valor_liquido = 0) continua permitido.
     IF v_modelo = 'all-or-nothing' AND v_arrecadado < v_meta AND NEW.valor_liquido > 0 THEN
         RAISE EXCEPTION 'Repasse bloqueado: campanhas all-or-nothing só podem repassar valores se a meta financeira for atingida.';
     END IF;
@@ -670,38 +880,29 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_valida_repasse
+-- Tabela:    repasse
+-- Momento:   BEFORE INSERT
+-- Função:    fn_valida_repasse_all_or_nothing()
+-- Bloco:     [05-F]
+-- Regra:     Impede repasse com valor em campanha all-or-nothing sem meta
+--            atingida.
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_valida_repasse ON repasse;
 CREATE TRIGGER trg_valida_repasse
 BEFORE INSERT ON repasse
 FOR EACH ROW
 EXECUTE FUNCTION fn_valida_repasse_all_or_nothing();
 
--- CORRIGIDO: trigger que bloqueia novos comentários em campanhas
--- que foram rejeitadas ou banidas pela moderação.
-CREATE OR REPLACE FUNCTION fn_valida_comentario_campanha_ativa()
-RETURNS TRIGGER AS $$
-DECLARE
-    v_status status_campanha;
-BEGIN
-    SELECT status INTO v_status
-    FROM campanha
-    WHERE id_campanha = NEW.id_campanha;
 
-    IF v_status IN ('rejeitado', 'encerrado_moderacao') THEN
-        RAISE EXCEPTION 'Operação bloqueada: não é possível comentar em campanhas rejeitadas ou sob moderação.';
-    END IF;
-
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER trg_valida_comentario_status
-BEFORE INSERT ON comentario
-FOR EACH ROW
-EXECUTE FUNCTION fn_valida_comentario_campanha_ativa();
-
--- ============================================================
--- TRIGGERS E FUNÇÕES DE REGRAS DE NEGÓCIO
--- ============================================================
+-- ----------------------------------------------------------------------------
+-- Função:     validar_contribuicao_all_or_nothing
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-F]
+-- Regra:      Campanhas all-or-nothing aceitam apenas contribuições via PIX
+--             (nenhum outro meio de pagamento é permitido nesse modelo).
+-- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION validar_contribuicao_all_or_nothing()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -721,14 +922,31 @@ BEGIN
 END;
 $$;
 
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_contribuicao_all_or_nothing_pix
+-- Tabela:    contribuicao
+-- Momento:   BEFORE INSERT
+-- Função:    validar_contribuicao_all_or_nothing()
+-- Bloco:     [05-F]
+-- Regra:     Bloqueia contribuição com meio de pagamento diferente de PIX em
+--            campanha all-or-nothing.
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_contribuicao_all_or_nothing_pix ON contribuicao;
 CREATE TRIGGER trg_contribuicao_all_or_nothing_pix
 BEFORE INSERT ON contribuicao
 FOR EACH ROW
 EXECUTE FUNCTION validar_contribuicao_all_or_nothing();
 
--- CORRIGIDO: trigger que impede a alteração de regras financeiras
--- após a campanha ser aprovada/lançada (status 'ativo' em diante,
--- incluindo encerramento por moderação).
+
+-- ----------------------------------------------------------------------------
+-- Função:     fn_congela_regras_campanha
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-F]
+-- Regra:      Impede a alteração de meta financeira, modelo de financiamento
+--             ou taxa da plataforma após a campanha ser aprovada/lançada
+--             (status 'ativo' em diante, incluindo encerramento por
+--             moderação) — proteção contra fraude/alteração retroativa.
+-- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION fn_congela_regras_campanha()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -750,13 +968,29 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_congela_regras_campanha
+-- Tabela:    campanha
+-- Momento:   BEFORE UPDATE
+-- Função:    fn_congela_regras_campanha()
+-- Bloco:     [05-F]
+-- Regra:     Bloqueia UPDATE que altere meta, modelo ou taxa depois que a
+--            campanha já está aprovada/em andamento.
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_congela_regras_campanha ON campanha;
 CREATE TRIGGER trg_congela_regras_campanha
 BEFORE UPDATE ON campanha
 FOR EACH ROW
 EXECUTE FUNCTION fn_congela_regras_campanha();
 
--- CORRIGIDO: trigger que bloqueia contribuição em campanha que não
--- está ativa (status) ou cujo prazo já expirou (data_fim).
+
+-- ----------------------------------------------------------------------------
+-- Função:     fn_valida_contribuicao_campanha_ativa
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-F]
+-- Regra:      Bloqueia contribuição em campanha que não está com status
+--             'ativo' no momento, ou cujo prazo (data_fim) já expirou.
+-- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION fn_valida_contribuicao_campanha_ativa()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -779,13 +1013,30 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_valida_status_contribuicao
+-- Tabela:    contribuicao
+-- Momento:   BEFORE INSERT
+-- Função:    fn_valida_contribuicao_campanha_ativa()
+-- Bloco:     [05-F]
+-- Regra:     Impede nova contribuição em campanha inativa ou com prazo
+--            expirado.
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_valida_status_contribuicao ON contribuicao;
 CREATE TRIGGER trg_valida_status_contribuicao
 BEFORE INSERT ON contribuicao
 FOR EACH ROW
 EXECUTE FUNCTION fn_valida_contribuicao_campanha_ativa();
 
--- CORRIGIDO: trigger que sincroniza o valor bruto arrecadado da campanha
--- sempre que houver alteração nas contribuições da campanha.
+
+-- ----------------------------------------------------------------------------
+-- Função:     fn_sincroniza_arrecadado_campanha
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-F]
+-- Regra:      Sincroniza campanha.valor_bruto_arrecadado somando as
+--             contribuições com status 'confirmado' ou 'repassado' sempre
+--             que uma contribuição é inserida, alterada ou removida.
+-- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION fn_sincroniza_arrecadado_campanha()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -825,11 +1076,29 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_sincroniza_arrecadado_campanha
+-- Tabela:    contribuicao
+-- Momento:   AFTER INSERT OR UPDATE OR DELETE
+-- Função:    fn_sincroniza_arrecadado_campanha()
+-- Bloco:     [05-F]
+-- Regra:     Mantém campanha.valor_bruto_arrecadado sempre sincronizado com
+--            a soma real das contribuições confirmadas/repassadas.
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_sincroniza_arrecadado_campanha ON contribuicao;
 CREATE TRIGGER trg_sincroniza_arrecadado_campanha
 AFTER INSERT OR UPDATE OR DELETE ON contribuicao
 FOR EACH ROW
 EXECUTE FUNCTION fn_sincroniza_arrecadado_campanha();
 
+
+-- ----------------------------------------------------------------------------
+-- Função:     validar_limite_campanhas_pesquisador
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-F]
+-- Regra:      Um pesquisador não pode ter mais de 2 campanhas simultâneas
+--             nos status 'aguardando_aprovacao' ou 'ativo'.
+-- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION validar_limite_campanhas_pesquisador()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -853,11 +1122,29 @@ BEGIN
 END;
 $$;
 
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_campanha_limite_simultaneo
+-- Tabela:    campanha
+-- Momento:   BEFORE INSERT OR UPDATE
+-- Função:    validar_limite_campanhas_pesquisador()
+-- Bloco:     [05-F]
+-- Regra:     Bloqueia nova campanha além do limite de 2 simultâneas por
+--            pesquisador.
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_campanha_limite_simultaneo ON campanha;
 CREATE TRIGGER trg_campanha_limite_simultaneo
 BEFORE INSERT OR UPDATE ON campanha
 FOR EACH ROW
 EXECUTE FUNCTION validar_limite_campanhas_pesquisador();
 
+
+-- ----------------------------------------------------------------------------
+-- Função:     validar_atualizacao_campanha
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-F]
+-- Regra:      Atualizações de campanha só são permitidas para campanhas com
+--             status 'ativo', 'sucesso' ou 'nao_atingido'.
+-- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION validar_atualizacao_campanha()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -877,11 +1164,76 @@ BEGIN
 END;
 $$;
 
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_atualizacao_campanha_status
+-- Tabela:    atualizacao_campanha
+-- Momento:   BEFORE INSERT
+-- Função:    validar_atualizacao_campanha()
+-- Bloco:     [05-F]
+-- Regra:     Bloqueia nova atualização em campanha fora dos status
+--            permitidos.
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_atualizacao_campanha_status ON atualizacao_campanha;
 CREATE TRIGGER trg_atualizacao_campanha_status
 BEFORE INSERT ON atualizacao_campanha
 FOR EACH ROW
 EXECUTE FUNCTION validar_atualizacao_campanha();
 
+
+-- ============================================================================
+--  [05-G] REGRAS DE NEGÓCIO — COMUNIDADE, ENGAJAMENTO E RBAC
+--  Descrição: Regras de interação social (comentários, denúncias) e concessão
+--             automática de permissões administrativas.
+-- ============================================================================
+
+-- ----------------------------------------------------------------------------
+-- Função:     fn_valida_comentario_campanha_ativa
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-G]
+-- Regra:      Bloqueia novos comentários em campanhas que foram rejeitadas
+--             ou banidas pela moderação (status 'rejeitado' ou
+--             'encerrado_moderacao').
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION fn_valida_comentario_campanha_ativa()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_status status_campanha;
+BEGIN
+    SELECT status INTO v_status
+    FROM campanha
+    WHERE id_campanha = NEW.id_campanha;
+
+    IF v_status IN ('rejeitado', 'encerrado_moderacao') THEN
+        RAISE EXCEPTION 'Operação bloqueada: não é possível comentar em campanhas rejeitadas ou sob moderação.';
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_valida_comentario_status
+-- Tabela:    comentario
+-- Momento:   BEFORE INSERT
+-- Função:    fn_valida_comentario_campanha_ativa()
+-- Bloco:     [05-G]
+-- Regra:     Impede novo comentário em campanha rejeitada ou encerrada por
+--            moderação.
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_valida_comentario_status ON comentario;
+CREATE TRIGGER trg_valida_comentario_status
+BEFORE INSERT ON comentario
+FOR EACH ROW
+EXECUTE FUNCTION fn_valida_comentario_campanha_ativa();
+
+
+-- ----------------------------------------------------------------------------
+-- Função:     validar_comentario_endosso
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-G]
+-- Regra:      Uma campanha não pode ter mais de 4 endossos ativos
+--             simultaneamente (ordem_endosso preenchida).
+-- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION validar_comentario_endosso()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -910,11 +1262,27 @@ BEGIN
 END;
 $$;
 
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_comentario_limite_endosso
+-- Tabela:    comentario
+-- Momento:   BEFORE INSERT OR UPDATE
+-- Função:    validar_comentario_endosso()
+-- Bloco:     [05-G]
+-- Regra:     Bloqueia o 5º endosso simultâneo numa mesma campanha.
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_comentario_limite_endosso ON comentario;
 CREATE TRIGGER trg_comentario_limite_endosso
 BEFORE INSERT OR UPDATE ON comentario
 FOR EACH ROW
 EXECUTE FUNCTION validar_comentario_endosso();
 
+
+-- ----------------------------------------------------------------------------
+-- Função:     validar_comentario_autor
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-G]
+-- Regra:      Pesquisador não pode comentar em sua própria campanha (RF-066).
+-- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION validar_comentario_autor()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -934,11 +1302,28 @@ BEGIN
 END;
 $$;
 
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_comentario_sem_autoria
+-- Tabela:    comentario
+-- Momento:   BEFORE INSERT
+-- Função:    validar_comentario_autor()
+-- Bloco:     [05-G]
+-- Regra:     Impede que o dono da campanha comente na própria campanha.
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_comentario_sem_autoria ON comentario;
 CREATE TRIGGER trg_comentario_sem_autoria
 BEFORE INSERT ON comentario
 FOR EACH ROW
 EXECUTE FUNCTION validar_comentario_autor();
 
+
+-- ----------------------------------------------------------------------------
+-- Função:     validar_denuncia_frequencia
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-G]
+-- Regra:      Um usuário não pode registrar mais de 5 denúncias (campanha +
+--             perfil somadas) em 24 horas.
+-- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION validar_denuncia_frequencia()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -959,22 +1344,37 @@ BEGIN
 END;
 $$;
 
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_denuncia_limite_taxa
+-- Tabela:    denuncia
+-- Momento:   BEFORE INSERT
+-- Função:    validar_denuncia_frequencia()
+-- Bloco:     [05-G]
+-- Regra:     Bloqueia a 6ª denúncia de um mesmo usuário dentro de 24 horas.
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_denuncia_limite_taxa ON denuncia;
 CREATE TRIGGER trg_denuncia_limite_taxa
 BEFORE INSERT ON denuncia
 FOR EACH ROW
 EXECUTE FUNCTION validar_denuncia_frequencia();
 
--- ============================================================
--- ADICIONADO: rede de segurança para a remoção de eh_admin() das RLS
--- policies (ver RBAC-pontos-discutidos.md e 04_rls_policies.sql).
--- Toda policy passou a checar tem_permissao('x') em vez de eh_admin().
--- Sem esta trigger, toda permissão nova criada exigiria lembrar de
--- também inserir a linha correspondente em papel_permissao para
--- 'admin' manualmente — e um esquecimento faria o admin perder acesso
--- a algo que antes tinha de graça via eh_admin(). Com a trigger, toda
--- permissão nova já nasce atribuída ao papel 'admin' automaticamente,
--- tornando tem_permissao(...) um substituto 100% seguro do bypass antigo.
--- ============================================================
+
+-- ----------------------------------------------------------------------------
+-- Função:     trg_admin_recebe_toda_permissao
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-G]
+-- Uso:        Invocada por trg_permissao_auto_admin
+-- Regra:      Rede de segurança para a remoção de eh_admin() das RLS
+--             policies (ver RBAC-pontos-discutidos.md e 04_rls_policies.sql).
+--             Toda policy passou a checar tem_permissao('x') em vez de
+--             eh_admin(). Sem esta trigger, toda permissão nova criada
+--             exigiria lembrar de também inserir a linha correspondente em
+--             papel_permissao para 'admin' manualmente — e um esquecimento
+--             faria o admin perder acesso a algo que antes tinha de graça
+--             via eh_admin(). Com a trigger, toda permissão nova já nasce
+--             atribuída ao papel 'admin' automaticamente, tornando
+--             tem_permissao(...) um substituto 100% seguro do bypass antigo.
+-- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.trg_admin_recebe_toda_permissao()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN
@@ -986,6 +1386,15 @@ BEGIN
 END;
 $$;
 
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_permissao_auto_admin
+-- Tabela:    permissao
+-- Momento:   AFTER INSERT
+-- Função:    trg_admin_recebe_toda_permissao()
+-- Bloco:     [05-G]
+-- Regra:     Atribui automaticamente toda permissão nova ao papel 'admin'.
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_permissao_auto_admin ON permissao;
 CREATE TRIGGER trg_permissao_auto_admin
 AFTER INSERT ON permissao
 FOR EACH ROW EXECUTE FUNCTION public.trg_admin_recebe_toda_permissao();

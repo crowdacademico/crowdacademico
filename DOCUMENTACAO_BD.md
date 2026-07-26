@@ -40,7 +40,8 @@ Este documento centraliza as explicações de arquitetura, regras de negócio e 
 
 * **`usuario`:** Tabela central de contas.
   * `senha_hash`: Campo obrigatório (`NOT NULL`) para armazenar o hash Bcrypt/Argon2.
-  * **Proteção Anti-Brute-Force e Auditoria:** As colunas `email_verificado`, `tentativas_login_falhas`, `bloqueado_ate`, `ultimo_login_em` e `ultimo_login_ip` controlam o bloqueio temporário de conta após falhas sucessivas.
+  * **Proteção Anti-Brute-Force:** As colunas `tentativas_login_falhas`, `bloqueado_ate`, `ultimo_login_em` e `ultimo_login_ip` controlam o bloqueio temporário de conta após falhas sucessivas de login.
+  * **Verificação de E-mail:** `email_verificado` é uma flag independente — indica se o usuário confirmou o e-mail, não tem relação com bloqueio por tentativas de login.
 * **`usuario_papel`:** Relacionamento N:N entre usuários e papéis. Localizada fisicamente neste bloco por depender de `usuario`, mas documentada conceitualmente sob o domínio de RBAC.
 * **`perfil_pesquisador`:** Dados acadêmicos do pesquisador. O campo `score_atual` é mantido como inteiro para otimizar leituras e atualizações do algoritmo de pontuação.
 * **`termos_de_uso` e `usuario_termo`:** Controle de versionamento de termos (LGPD). Guarda a trilha de auditoria (IPv4/IPv6 e timestamp de aceite).
@@ -57,8 +58,9 @@ Este documento centraliza as explicações de arquitetura, regras de negócio e 
   * `chk_prazo_campanha`: Constraint que valida a duração da campanha entre 15 e 90 dias.
 * **`atualizacao_campanha`:** Postagens de acompanhamento do projeto. O campo `ativo` permite o *soft delete* e a ocultação por moderação sem perda do histórico.
 * **`comentario`:** Interações da comunidade.
-  * Unicidade: Regra restringe a um comentário ativo por pesquisador em cada campanha.
+  * Unicidade: `UNIQUE (id_campanha, id_pesquisador)` restringe a **um comentário por pesquisador por campanha, para sempre** — a constraint não é condicionada por `ativo`. Ou seja, se o comentário for ocultado por moderação (`ativo = FALSE`), o pesquisador não consegue enviar um comentário novo para aquela campanha; ele só pode reeditar o registro já existente.
   * `chk_comentario_endosso`: Constraint garante coerência matemática entre o booleano `endossado` e a sua ordem de exibição (`ordem_endosso`).
+  * ⚠️ **Achado (2026-07):** a policy `pol_comentario_update` (`04_rls_policies.sql`) libera `UPDATE` para o próprio autor (`id_pesquisador = id_usuario_atual()`) sem restringir quais colunas podem mudar. Isso significa que, hoje, o autor de um comentário ocultado por moderação (`ativo = FALSE`) pode reativá-lo sozinho, revertendo a moderação, bastando um `UPDATE ... SET ativo = TRUE`. É o mesmo tipo de limitação já aceito para `campanha_aprovar`/`campanha_rejeitar` (RLS não distingue qual coluna está sendo alterada), mas neste caso ainda não há registro de que a equipe tenha decidido conscientemente aceitar esse risco — vale uma decisão explícita (aceitar, ou restringir via trigger que impeça o próprio autor de alterar `ativo`).
 * **`denuncia`:** Registro de incidentes apontados por usuários, vinculados a um motivo do catálogo.
 * **`recompensa`:** Recompensas oferecidas pelos pesquisadores. Possui validações para garantir `valor_minimo > 0` e quantidade disponível não negativa.
 
@@ -293,3 +295,112 @@ O arquivo é organizado em 8 blocos conceituais que espelham literalmente os tí
 **Detalhamento por policy:**
 * **[04-I-1] `score_config` (INSERT):** a policy de `INSERT` permite que o painel administrativo crie novas dimensões de score sem depender de uma regra de bypass da RLS.
 * **[04-I-2] `score_rotulo` (INSERT):** a policy de `INSERT` permite a criação de novos rótulos de score pelo fluxo administrativo, com a permissão certa.
+
+---
+
+## 05. MOTOR DE SCORE + REGRAS DE NEGÓCIO (`05_regras_negocio.sql`)
+
+---
+
+### Visão Geral
+
+Este é o arquivo mais denso do banco: 27 funções e 23 triggers, organizados em 7 blocos (`[05-A]` a `[05-G]`) que espelham a estrutura de marcadores já usada em `01`-`04`. Ele concentra toda regra que um `CHECK` simples não alcança — porque depende de **consultar outra tabela** (ex.: será que essa campanha está ativa?) ou de **recalcular algo automaticamente** quando um dado relacionado muda.
+
+> 📌 **Por que o motor de score existe:** antes deste arquivo, `perfil_pesquisador.score_atual` e `score_pesquisador.pontos_obtidos` eram só valores fixos digitados no seed — nada calculava o score de verdade a partir de campanhas, denúncias, links acadêmicos ou do perfil. A tela de detalhes de pontuação no front lia campos que nem existiam no tipo real de dimensões de score, e a conta virava `NaN`. A solução foi mover o cálculo inteiro para dentro do banco, com o resultado guardado em cache (`perfil_pesquisador.score_atual` e `score_pesquisador`) e atualizado sozinho via trigger sempre que um dado relevante muda — funciona para qualquer registro novo, sem que o backend precise lembrar de chamar nada. Todos os pesos vêm de `score_config.peso` (nenhum número fixo no código): editar o peso no Painel Admin já recalcula o score de todo mundo.
+
+---
+
+### [05-A] Helpers e Utilitários
+
+* **`config_numero(p_chave, p_padrao)`:** lê uma constante numérica de `configuracoes` com fallback seguro — nunca retorna `NULL`/erro mesmo que a chave ainda não exista, o que evitaria `NaN` se algum peso ou penalidade não estivesse cadastrado.
+
+---
+
+### [05-B] Motor de Score — Cálculo das Dimensões
+
+Quatro funções puras (`STABLE`, sem efeito colateral), uma por dimensão do score. Todas recebem `p_id_usuario INT` e devolvem um `INTEGER` já limitado entre `0` e o peso-raiz da dimensão (`LEAST/GREATEST`).
+
+| Função | Dimensão | Fórmula |
+|---|---|---|
+| `calcular_score_perfil_academico` | Perfil Acadêmico Declarado | Soma os pesos (de `score_config`, filhos de `'perfil_academico'`) de: link Lattes, link ORCID, outro link acadêmico (LinkedIn/ResearchGate/Academia/Scholar/site), vínculo institucional preenchido e título acadêmico informado. |
+| `calcular_score_historico` | Histórico na Plataforma | `conclusao = (concluídas com sucesso / total encerradas) × peso_conclusao`; `aprovacao = (aprovadas pela moderação / total submetidas) × peso_aprovacao`; desconta `penalidade_abandono` por campanha `nao_atingido` que nunca teve solicitação de encerramento, e `penalidade_sem_justificativa` por campanha `nao_atingido` cuja solicitação não tem justificativa. |
+| `calcular_score_atualizacao` | Atualização da Campanha | `regularidade = SUM(realizadas)/SUM(esperadas) × peso_regularidade`; `tempestividade = (% de campanhas em dia) × peso_tempestividade`. Só conta campanhas já iniciadas (`ativo`/`sucesso`/`nao_atingido`/`encerrado`); esperadas = duração em meses × `score_frequencia_esperada_mensal`. |
+| `calcular_score_reputacao` | Reputação da Comunidade | `peso_raiz − (total de denúncias × custo) − (denúncias procedentes × custo_procedente)`. |
+
+> ⚠️ **Não existe status "abandonada" no enum `status_campanha`.** `calcular_score_historico` deduz isso na consulta: campanha `nao_atingido` **sem nenhuma** `solicitacao_encerramento` conta como abandonada; campanha `nao_atingido` **com** solicitação mas sem `justificativa_pesquisador` preenchida conta como "sem justificativa". Essa dedução está comentada diretamente no corpo da função, junto às consultas que ela afeta.
+
+> ⚠️ **`calcular_score_atualizacao` filtra por `atualizacao_campanha.ativo = TRUE`.** Sem esse filtro, uma atualização ocultada por moderação (soft delete) continuaria contando a favor da regularidade do pesquisador — foi uma correção aplicada depois da criação da coluna `ativo` em `01`.
+
+---
+
+### [05-C] Motor de Score — Orquestração e Cálculo Geral
+
+* **`recalcular_score_pesquisador(p_id_usuario)`:** chama as 4 funções de `[05-B]`, soma o total, resolve o `id_rotulo` correspondente em `score_rotulo`, grava em `score_pesquisador` (via `UPSERT` — `ON CONFLICT (id_usuario, id_score_config) DO UPDATE`) e atualiza o cache em `perfil_pesquisador.score_atual`. É `SECURITY DEFINER` de propósito: precisa poder escrever no perfil de **qualquer** pesquisador (ex.: quando um admin resolve uma denúncia contra outra pessoa), não só de quem disparou a ação.
+* **`recalcular_todos_os_scores()`:** roda `recalcular_score_pesquisador` para todo mundo. Usada pelo botão "Recalcular" do Painel Admin e disparada automaticamente quando um peso de `score_config` muda (ver `[05-D]`).
+
+---
+
+### [05-D] Motor de Score — Triggers e Funções de Automação
+
+Cada trigger observa uma tabela que alimenta alguma dimensão do score e recalcula automaticamente quem foi afetado — ninguém no backend precisa lembrar de chamar `recalcular_score_pesquisador` manualmente.
+
+| Tabela observada | Função de apoio | Trigger | Quem é recalculado |
+|---|---|---|---|
+| `campanha` | `trg_recalcular_por_campanha()` | `trg_campanha_recalcula_score` | o dono da campanha (`id_usuario`) |
+| `denuncia` | `trg_recalcular_por_denuncia()` | `trg_denuncia_recalcula_score` | o pesquisador denunciado (`id_pesquisador_alvo`, se preenchido) |
+| `atualizacao_campanha` | `trg_recalcular_por_atualizacao()` | `trg_atualizacao_recalcula_score` | o dono da campanha da atualização (busca via `id_campanha`) |
+| `link_academico` | `trg_recalcular_por_link()` | `trg_link_recalcula_score` | o dono do link (`id_usuario`) |
+| `perfil_pesquisador` (INSERT) | `trg_recalcular_por_perfil()` | `trg_perfil_recalcula_score` | o próprio perfil recém-criado |
+| `perfil_pesquisador` (UPDATE) | `trg_recalcular_por_perfil()` | `trg_perfil_update_recalcula_score` | o próprio perfil, só quando `vinculo_institucional` ou `titulo_academico` mudam |
+| `score_config` (UPDATE de `peso`) | `trg_recalcular_por_score_config()` | `trg_score_config_recalcula_todos` | **todos** os pesquisadores |
+
+> 📌 **Por que `trg_perfil_update_recalcula_score` tem uma condição `WHEN`:** sem ela, o próprio `UPDATE` que o recálculo faz em `perfil_pesquisador.score_atual` disparia a trigger de novo — um loop infinito. A condição `WHEN (OLD.vinculo_institucional IS DISTINCT FROM NEW.vinculo_institucional OR OLD.titulo_academico IS DISTINCT FROM NEW.titulo_academico)` garante que só um UPDATE nos dados acadêmicos declarados (não no cache do score) dispare o recálculo.
+
+---
+
+### [05-E] Regras de Negócio — Integridade e Escopo
+
+| Tabela | Função | Trigger | Regra |
+|---|---|---|---|
+| `contribuicao_recompensa` | `trg_valida_contribuicao_recompensa()` | `trg_contrib_recompensa_valida` | A recompensa escolhida precisa pertencer à **mesma campanha** da contribuição (a FK sozinha não garante isso — só garante que o `id_recompensa` existe em algum lugar), e a soma reservada não pode ultrapassar `quantidade_disponivel`. |
+| `link_academico` | `trg_valida_escopo_tipolink()` | `trg_link_academico_valida_tipo` | Só aceita `id_tipolink` com `permite_perfil = TRUE`. |
+| `link_atualizacao` | `trg_valida_escopo_tipolink()` | `trg_link_atualizacao_valida_tipo` | Só aceita `id_tipolink` com `permite_atualizacao = TRUE`. |
+| `link_recompensa` | `trg_valida_escopo_tipolink()` | `trg_link_recompensa_valida_tipo` | Só aceita `id_tipolink` com `permite_recompensa = TRUE`. |
+
+> 📌 **Uma função, três triggers:** `tipo_link` é compartilhado pelas 3 tabelas de link (`01-F`), então uma única função genérica (`trg_valida_escopo_tipolink`) resolve, via `TG_TABLE_NAME`, qual coluna booleana de `tipo_link` checar em cada caso — evita, por exemplo, associar "Currículo Lattes" (que só tem `permite_perfil = TRUE`) a uma recompensa.
+
+---
+
+### [05-F] Regras de Negócio — Campanhas e Financeiro
+
+| Tabela | Função | Trigger | Regra |
+|---|---|---|---|
+| `repasse` | `fn_valida_repasse_all_or_nothing()` | `trg_valida_repasse` | Bloqueia repasse com `valor_liquido > 0` em campanha `all-or-nothing` que não atingiu a meta. Repasse "zerado" (RF-038, `valor_liquido = 0`, registrando que nada foi repassado) continua permitido. |
+| `contribuicao` | `validar_contribuicao_all_or_nothing()` | `trg_contribuicao_all_or_nothing_pix` | Campanhas `all-or-nothing` só aceitam contribuição via PIX. |
+| `campanha` | `fn_congela_regras_campanha()` | `trg_congela_regras_campanha` | A partir do status `ativo` em diante (inclusive `encerrado`/`encerrado_moderacao`), bloqueia `UPDATE` que altere `meta_financeira`, `modelo` ou `taxa_plataforma` — proteção contra alterar as regras do jogo depois que a campanha já está no ar. |
+| `contribuicao` | `fn_valida_contribuicao_campanha_ativa()` | `trg_valida_status_contribuicao` | Bloqueia nova contribuição se a campanha não estiver com status `ativo`, ou se o prazo (`data_fim`) já tiver passado. |
+| `contribuicao` | `fn_sincroniza_arrecadado_campanha()` | `trg_sincroniza_arrecadado_campanha` | Recalcula `campanha.valor_bruto_arrecadado` somando as contribuições `confirmado`/`repassado`, a cada INSERT/UPDATE/DELETE em `contribuicao`. |
+| `campanha` | `validar_limite_campanhas_pesquisador()` | `trg_campanha_limite_simultaneo` | Um pesquisador não pode ter mais de **2 campanhas simultâneas** em `aguardando_aprovacao` ou `ativo`. |
+| `atualizacao_campanha` | `validar_atualizacao_campanha()` | `trg_atualizacao_campanha_status` | Só permite publicar atualização em campanha `ativo`, `sucesso` ou `nao_atingido`. |
+
+> ⚠️ **`trg_sincroniza_arrecadado_campanha` usa `SELECT ... FOR UPDATE` antes de somar.** Isso trava a linha da campanha durante o recálculo — sem essa trava, duas contribuições confirmadas ao mesmo tempo poderiam cada uma somar sem enxergar a outra ainda commitada, e a que "vence a corrida" por último sobrescreveria o total (uma contribuição confirmada "sumiria" do valor arrecadado). Esse comentário está preservado no corpo da função, por ser justamente o tipo de detalhe que importa entender antes de mexer nessa trigger.
+
+---
+
+### [05-G] Regras de Negócio — Comunidade, Engajamento e RBAC
+
+| Tabela | Função | Trigger | Regra |
+|---|---|---|---|
+| `comentario` | `fn_valida_comentario_campanha_ativa()` | `trg_valida_comentario_status` | Bloqueia novo comentário em campanha `rejeitado` ou `encerrado_moderacao`. |
+| `comentario` | `validar_comentario_endosso()` | `trg_comentario_limite_endosso` | No máximo **4 endossos ativos** simultâneos por campanha (conta só `ordem_endosso IS NOT NULL AND ativo = TRUE` — um endosso removido por moderação libera a vaga). |
+| `comentario` | `validar_comentario_autor()` | `trg_comentario_sem_autoria` | O dono da campanha não pode comentar na própria campanha (RF-066). |
+| `denuncia` | `validar_denuncia_frequencia()` | `trg_denuncia_limite_taxa` | No máximo **5 denúncias por usuário a cada 24 horas**. |
+| `permissao` | `trg_admin_recebe_toda_permissao()` | `trg_permissao_auto_admin` | Toda permissão nova criada em `permissao` é automaticamente atribuída ao papel `admin` em `papel_permissao`. |
+
+> 📌 **Por que `trg_permissao_auto_admin` existe:** é a rede de segurança da remoção do antigo `eh_admin()` das RLS policies (todas as policies do `04` passaram a checar `tem_permissao('x')` em vez de um bypass genérico de admin — ver `RBAC-pontos-discutidos.md`). Sem esta trigger, toda permissão nova criada exigiria lembrar de inserir manualmente a linha correspondente em `papel_permissao` para `'admin'` — e um esquecimento faria o admin perder acesso a algo que antes vinha de graça via `eh_admin()`. Com a trigger, toda permissão nova já nasce atribuída ao papel `admin` automaticamente.
+
+---
+
+### Idempotência
+
+As 23 triggers deste arquivo têm `DROP TRIGGER IF EXISTS` imediatamente antes do `CREATE TRIGGER` correspondente — o arquivo pode ser reaplicado sozinho num banco de desenvolvimento já existente, sem precisar resetar tudo do zero (mesmo padrão já aplicado em `04_rls_policies.sql`).
