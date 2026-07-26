@@ -1,8 +1,34 @@
--- ============================================================
---  CrowdAcadêmico — 04: ROW LEVEL SECURITY (RLS) E POLICIES
---  Depende de: 01_extensoes_enums_tabelas.sql, 03_funcoes_seguranca.sql
---  Próximo arquivo: 05_regras_negocio.sql
--- ============================================================
+-- ============================================================================
+--  CROWDACADÊMICO — SISTEMA DE CROWDFUNDING PARA PESQUISA CIENTÍFICA
+-- ============================================================================
+--  Arquivo:     04_rls_policies.sql
+--  Módulo:      Row Level Security (RLS) e Policies
+--  Depende de:  01_extensoes_enums_tabelas.sql, 03_funcoes_seguranca.sql
+--  Próximo:     05_regras_negocio.sql
+-- ----------------------------------------------------------------------------
+--  Descrição:
+--  Ativa FORCE ROW LEVEL SECURITY em todas as tabelas do schema e define
+--  as policies de acesso, agrupadas por domínio na mesma ordem do arquivo
+--  01 — ENABLE/FORCE e as próprias policies de cada tabela ficam juntos,
+--  em vez de um bloco de ENABLE no topo separado das policies.
+--
+--  Inventário Mapeado:
+--  - 39 Tabelas com RLS ativada e forçada (78 instruções ALTER TABLE)
+--  - 105 Policies (100% idempotentes — toda CREATE POLICY tem
+--    DROP POLICY IF EXISTS correspondente)
+-- ----------------------------------------------------------------------------
+--  SUMÁRIO DOS BLOCOS DE CÓDIGO
+-- ----------------------------------------------------------------------------
+--  [04-A] Visão geral (FORCE ROW LEVEL SECURITY)
+--  [04-B] RBAC (3 tabelas)
+--  [04-C] CONFIG (5 tabelas)
+--  [04-D] USUÁRIO (10 tabelas)
+--  [04-E] CAMPANHA (9 tabelas)
+--  [04-F] LINK (3 tabelas)
+--  [04-G] ARQUIVO (2 tabelas)
+--  [04-H] CONTRIBUIÇÃO (4 tabelas)
+--  [04-I] SCORE (3 tabelas)
+-- ============================================================================
 
 -- ============================================================
 -- ROW LEVEL SECURITY (RLS) — COMPLETO

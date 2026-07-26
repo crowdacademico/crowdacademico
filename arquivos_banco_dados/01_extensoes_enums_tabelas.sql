@@ -1,8 +1,35 @@
--- ============================================================
---  CrowdAcadêmico — 01: EXTENSÕES, ENUMS E TABELAS
---  Execução: 1º arquivo a rodar (sem dependências externas).
---  Próximo arquivo: 02_indices.sql
--- ============================================================
+-- ============================================================================
+--  CROWDACADÊMICO — SISTEMA DE CROWDFUNDING PARA PESQUISA CIENTÍFICA
+-- ============================================================================
+--  Arquivo:     01_extensoes_enums_tabelas.sql
+--  Módulo:      Extensões, ENUMs e Tabelas (DDL)
+--  Depende de:  (nenhum — 1º arquivo a rodar, sem dependências externas)
+--  Próximo:     02_indices.sql
+-- ----------------------------------------------------------------------------
+--  Descrição:
+--  Define toda a estrutura de dados do banco: a role de aplicação, a
+--  extensão pgcrypto, os tipos ENUM usados pelas colunas de status, e as 39
+--  tabelas do schema — organizadas por domínio, na ordem exata de
+--  dependência de Foreign Key, para permitir rodar o script do zero sem
+--  erro de referência.
+--
+--  Inventário Mapeado:
+--  - 1 Role de aplicação (app_nestjs) + 1 Extensão (pgcrypto)
+--  - 14 Tipos ENUM
+--  - 39 Tabelas em 8 blocos de domínio
+-- ----------------------------------------------------------------------------
+--  SUMÁRIO DOS BLOCOS DE CÓDIGO
+-- ----------------------------------------------------------------------------
+--  [01-A] BOOTSTRAP, EXTENSÕES E ENUMS
+--  [01-B] RBAC (3 tabelas)
+--  [01-C] CONFIG (5 tabelas + ALTER)
+--  [01-D] USUÁRIO (10 tabelas + ALTERs + Índices)
+--  [01-E] CAMPANHA (9 tabelas)
+--  [01-F] LINK (3 tabelas de associação)
+--  [01-G] ARQUIVO (2 tabelas de associação)
+--  [01-H] CONTRIBUIÇÃO (4 tabelas + ALTER)
+--  [01-I] SCORE (3 tabelas + Bloco DO)
+-- ============================================================================
 -- [01-A] Bootstrap, Extensões e ENUMs
 -- ============================================================
 DO $$

@@ -1,8 +1,29 @@
--- ============================================================
---  CrowdAcadêmico — 02: ÍNDICES
---  Depende de: 01_extensoes_enums_tabelas.sql
---  Próximo arquivo: 03_funcoes_seguranca.sql
--- ============================================================
+-- ============================================================================
+--  CROWDACADÊMICO — SISTEMA DE CROWDFUNDING PARA PESQUISA CIENTÍFICA
+-- ============================================================================
+--  Arquivo:     02_indices.sql
+--  Módulo:      Índices de Performance
+--  Depende de:  01_extensoes_enums_tabelas.sql
+--  Próximo:     03_funcoes_seguranca.sql
+-- ----------------------------------------------------------------------------
+--  Descrição:
+--  Cria os índices explícitos de aceleração de consulta, acompanhando a
+--  mesma ordem de blocos de domínio do arquivo 01. RBAC e CONFIG não têm
+--  bloco próprio aqui porque as chaves primárias e UNIQUE já criam índice
+--  automático suficiente para as consultas dessas tabelas.
+--
+--  Inventário Mapeado:
+--  - 39 Índices (CREATE INDEX / CREATE UNIQUE INDEX) em 6 blocos de domínio
+-- ----------------------------------------------------------------------------
+--  SUMÁRIO DOS BLOCOS DE CÓDIGO
+-- ----------------------------------------------------------------------------
+--  [02-D] USUÁRIO
+--  [02-E] CAMPANHA
+--  [02-F] LINK
+--  [02-G] ARQUIVO
+--  [02-H] CONTRIBUIÇÃO
+--  [02-I] SCORE
+-- ============================================================================
 -- [02-D] USUÁRIO
 -- ============================================================
 CREATE INDEX idx_seguir_pesquisador_usuario ON seguir_pesquisador(id_usuario);
