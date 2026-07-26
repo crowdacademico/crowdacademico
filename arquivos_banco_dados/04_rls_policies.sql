@@ -8,11 +8,7 @@
 -- ROW LEVEL SECURITY (RLS) — COMPLETO
 -- ============================================================
 
--- Habilitar RLS em TODAS as tabelas
--- COMENTÁRIO DE ALTERAÇÃO:
--- Ativamos FORCE ROW LEVEL SECURITY nas tabelas principais para garantir
--- que a proteção não seja contornada pelo próprio dono da tabela. Isso
--- reforça o enforcement da RLS mesmo em cenários de desenvolvimento local.
+-- [04-A] Visão geral: por que FORCE ROW LEVEL SECURITY em todas as tabelas (ver DOCUMENTACAO_BD.md)
 
 -- ============================================================
 -- [04-B] RBAC (3 tabelas)
@@ -47,12 +43,7 @@ ALTER TABLE arquivo              FORCE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS pol_config_select ON configuracoes;
 CREATE POLICY pol_config_select ON configuracoes FOR SELECT TO app_nestjs USING (id_usuario IS NULL OR id_usuario = public.id_usuario_atual());
--- ADICIONADO: configuracoes tinha só policy de SELECT — nenhuma escrita era
--- possível via RLS (nem pra config de sistema, nem pra preferência de
--- usuário), e a permissão configuracao_gerenciar, já seedada, não era usada
--- em lugar nenhum. Segue o mesmo critério do SELECT: linha de sistema
--- (id_usuario NULL) só quem tem configuracao_gerenciar mexe; linha de
--- preferência do próprio usuário (id_usuario = dono) ele mesmo mexe.
+-- [04-C-1] configuracoes: por que existem policies de escrita (ver DOCUMENTACAO_BD.md)
 DROP POLICY IF EXISTS pol_config_insert ON configuracoes;
 CREATE POLICY pol_config_insert ON configuracoes FOR INSERT TO app_nestjs WITH CHECK (
     (id_usuario IS NULL AND public.tem_permissao('configuracao_gerenciar'))
@@ -74,9 +65,7 @@ CREATE POLICY pol_config_delete ON configuracoes FOR DELETE TO app_nestjs USING 
 
 DROP POLICY IF EXISTS pol_area_select ON area_conhecimento;
 CREATE POLICY pol_area_select ON area_conhecimento FOR SELECT USING (true);
--- COMENTÁRIO DE ALTERAÇÃO:
--- Adicionamos policies de escrita para area_conhecimento para que a gestão
--- de catálogos funcione corretamente junto com o GRANT já concedido.
+-- [04-C-2] area_conhecimento: por que existem policies de escrita (ver DOCUMENTACAO_BD.md)
 DROP POLICY IF EXISTS pol_area_insert ON area_conhecimento;
 CREATE POLICY pol_area_insert ON area_conhecimento FOR INSERT TO app_nestjs WITH CHECK (public.tem_permissao('area_conhecimento_gerenciar'));
 DROP POLICY IF EXISTS pol_area_update ON area_conhecimento;
@@ -92,10 +81,7 @@ CREATE POLICY pol_tipolink_update ON tipo_link FOR UPDATE TO app_nestjs USING (p
 
 DROP POLICY IF EXISTS pol_motivo_select ON motivo_denuncia;
 CREATE POLICY pol_motivo_select ON motivo_denuncia FOR SELECT USING (true);
--- COMENTÁRIO DE ALTERAÇÃO:
--- Adicionamos policies de escrita para motivo_denuncia para completar a
--- correção iniciada no GRANT de tabela e garantir que o fluxo de curadoria
--- funcione com o RBAC esperado.
+-- [04-C-3] motivo_denuncia: por que existem policies de escrita (ver DOCUMENTACAO_BD.md)
 DROP POLICY IF EXISTS pol_motivo_insert ON motivo_denuncia;
 CREATE POLICY pol_motivo_insert ON motivo_denuncia FOR INSERT TO app_nestjs WITH CHECK (public.tem_permissao('motivo_denuncia_gerenciar'));
 DROP POLICY IF EXISTS pol_motivo_update ON motivo_denuncia;
@@ -146,22 +132,7 @@ ALTER TABLE usuario_termo        FORCE ROW LEVEL SECURITY;
 ALTER TABLE notificacao          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notificacao          FORCE ROW LEVEL SECURITY;
 
--- ============================================================
--- RLS destas três tabelas
--- ============================================================
--- CORRIGIDO: a versão anterior deixava RLS ligada e SEM NENHUMA
--- policy, presumindo que só um role com BYPASSRLS (ex.: service_role
--- do Supabase) acessaria estas tabelas. Esse role não existe mais
--- no projeto — o NestJS conecta como "app_nestjs" (role normal, sem
--- bypass), então RLS sem policy bloquearia 100% do acesso e quebraria
--- verificação de e-mail, recuperação de senha e sessão inteiras.
---
--- Além disso, boa parte desses fluxos acontece ANTES do usuário estar
--- autenticado (confirmar e-mail, "esqueci minha senha") — não dá pra
--- restringir por id_usuario_atual(), porque ainda não existe sessão.
--- Quem valida a posse do token (comparando o hash) é o próprio NestJS
--- na aplicação; a policy aqui só garante que NENHUM outro role além
--- de app_nestjs consegue tocar nessas tabelas.
+-- [04-D-1] verificacao_email / recuperacao_senha / sessao: por que RLS sem policy por usuário (ver DOCUMENTACAO_BD.md)
 ALTER TABLE verificacao_email ENABLE ROW LEVEL SECURITY;
 ALTER TABLE verificacao_email FORCE ROW LEVEL SECURITY;
 ALTER TABLE recuperacao_senha ENABLE ROW LEVEL SECURITY;
@@ -169,8 +140,6 @@ ALTER TABLE recuperacao_senha FORCE ROW LEVEL SECURITY;
 ALTER TABLE sessao            ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sessao            FORCE ROW LEVEL SECURITY;
 
--- ADICIONADO: DROP POLICY IF EXISTS pra permitir reexecução segura do
--- script num banco que já tenha essas 3 policies criadas.
 DROP POLICY IF EXISTS pol_verificacao_email_all ON verificacao_email;
 CREATE POLICY pol_verificacao_email_all ON verificacao_email
     FOR ALL TO app_nestjs USING (true) WITH CHECK (true);
@@ -189,23 +158,14 @@ ALTER TABLE seguir_pesquisador   FORCE ROW LEVEL SECURITY;
 -- CORRIGIDO: usuário agora fica invisível quando marcado como deletado, salvo para admin.
 DROP POLICY IF EXISTS pol_usuario_select ON usuario;
 CREATE POLICY pol_usuario_select ON usuario FOR SELECT TO app_nestjs USING (deletado = FALSE OR public.tem_permissao('usuario_visualizar_sensivel'));
--- ADICIONADO: faltava a policy de INSERT em usuario. O fluxo de signup
--- (08_trigger_signup_usuario.sql) já prevê o NestJS inserindo direto em
--- usuario dentro da própria transação, antes de existir qualquer sessão
--- — não há id_usuario_atual() pra checar nesse momento, então WITH
--- CHECK(true) é a única condição possível aqui; e-mail duplicado já é
--- barrado pelo UNIQUE em usuario.email (01), e validação de formato/força
--- de senha é responsabilidade do NestJS antes do INSERT.
+-- [04-D-2] usuario: por que o INSERT usa WITH CHECK(true) (ver DOCUMENTACAO_BD.md)
 DROP POLICY IF EXISTS pol_usuario_insert ON usuario;
 CREATE POLICY pol_usuario_insert ON usuario FOR INSERT TO app_nestjs WITH CHECK (true);
 -- CORRIGIDO: suspensão de usuário passa a aceitar permissão específica além do próprio dono.
 DROP POLICY IF EXISTS pol_usuario_update ON usuario;
 CREATE POLICY pol_usuario_update ON usuario FOR UPDATE TO app_nestjs USING (id_usuario = public.id_usuario_atual() OR public.tem_permissao('usuario_suspender'));
 
--- COMENTÁRIO DE ALTERAÇÃO:
--- Adicionamos a policy de INSERT em perfil_pesquisador para permitir o fluxo
--- de upgrade de usuário cadastrado para pesquisador. Sem essa policy, a RLS
--- bloqueia a operação mesmo com o GRANT de tabela em 06_grants.sql.
+-- [04-D-3] perfil_pesquisador: por que existe a policy de INSERT (ver DOCUMENTACAO_BD.md)
 DROP POLICY IF EXISTS pol_perfil_select ON perfil_pesquisador;
 CREATE POLICY pol_perfil_select ON perfil_pesquisador FOR SELECT USING (TRUE);
 DROP POLICY IF EXISTS pol_perfil_insert ON perfil_pesquisador;
@@ -215,14 +175,11 @@ CREATE POLICY pol_perfil_insert ON perfil_pesquisador FOR INSERT TO app_nestjs W
 DROP POLICY IF EXISTS pol_perfil_update ON perfil_pesquisador;
 CREATE POLICY pol_perfil_update ON perfil_pesquisador FOR UPDATE TO app_nestjs USING (id_usuario = public.id_usuario_atual());
 
--- usuario_papel
 DROP POLICY IF EXISTS pol_usuariopapel_select ON usuario_papel;
 CREATE POLICY pol_usuariopapel_select ON usuario_papel FOR SELECT TO app_nestjs USING (id_usuario = public.id_usuario_atual() OR public.tem_permissao('papel_gerenciar'));
 DROP POLICY IF EXISTS pol_usuariopapel_insert ON usuario_papel;
 CREATE POLICY pol_usuariopapel_insert ON usuario_papel FOR INSERT TO app_nestjs WITH CHECK (public.tem_permissao('papel_atribuir'));
--- COMENTÁRIO DE ALTERAÇÃO:
--- Adicionamos a policy de DELETE para usuario_papel para permitir que o
--- painel revogue papéis atribuídos sem depender de um bypass de RLS.
+-- [04-D-4] usuario_papel: por que existe a policy de DELETE (ver DOCUMENTACAO_BD.md)
 DROP POLICY IF EXISTS pol_usuariopapel_delete ON usuario_papel;
 CREATE POLICY pol_usuariopapel_delete ON usuario_papel FOR DELETE TO app_nestjs USING (public.tem_permissao('papel_gerenciar'));
 
@@ -244,11 +201,7 @@ CREATE POLICY pol_usuario_termo_select ON usuario_termo FOR SELECT TO app_nestjs
 DROP POLICY IF EXISTS pol_usuario_termo_insert ON usuario_termo;
 CREATE POLICY pol_usuario_termo_insert ON usuario_termo FOR INSERT TO app_nestjs WITH CHECK (id_usuario = public.id_usuario_atual());
 
--- notificacao: leitura das próprias notificações e escrita controlada pelo
--- backend da aplicação. Como agora o projeto não depende de service_role
--- para ignorar RLS, adicionamos políticas de INSERT/UPDATE mínimas para
--- permitir a criação e atualização de notificações sem abrir o acesso para
--- qualquer usuário falsificar registros.
+-- [04-D-5] notificacao: por que existem policies de INSERT/UPDATE (ver DOCUMENTACAO_BD.md)
 DROP POLICY IF EXISTS pol_notificacao_select ON notificacao;
 CREATE POLICY pol_notificacao_select ON notificacao FOR SELECT TO app_nestjs USING (id_usuario = public.id_usuario_atual() OR public.tem_permissao('usuario_visualizar_sensivel'));
 DROP POLICY IF EXISTS pol_notificacao_insert ON notificacao;
@@ -294,15 +247,7 @@ CREATE POLICY pol_campanha_select ON campanha FOR SELECT USING (
 );
 DROP POLICY IF EXISTS pol_campanha_insert ON campanha;
 CREATE POLICY pol_campanha_insert ON campanha FOR INSERT TO app_nestjs WITH CHECK (id_usuario = public.id_usuario_atual());
--- CORRIGIDO: edição administrativa de campanha passa a depender de permissão específica, preservando a regra de dono da campanha.
--- CORRIGIDO: campanha_aprovar e campanha_rejeitar estavam seedadas mas
--- não usadas em policy nenhuma — só campanha_editar liberava UPDATE em
--- campanha, então um papel com só "aprovar" ou só "rejeitar" (sem o
--- "editar" genérico) não conseguia de fato aprovar/rejeitar nada. A RLS
--- de linha não distingue qual coluna está sendo alterada (isso exigiria
--- um trigger comparando OLD/NEW), então na prática qualquer uma das três
--- permissões libera o UPDATE — a app decide, por regra de negócio, quais
--- campos cada fluxo (aprovar/rejeitar/editar) de fato manda alterar.
+-- [04-E-1] campanha: por que campanha_aprovar/campanha_rejeitar liberam o UPDATE (ver DOCUMENTACAO_BD.md)
 DROP POLICY IF EXISTS pol_campanha_update ON campanha;
 CREATE POLICY pol_campanha_update ON campanha FOR UPDATE TO app_nestjs USING (
     id_usuario = public.id_usuario_atual()
@@ -311,7 +256,6 @@ CREATE POLICY pol_campanha_update ON campanha FOR UPDATE TO app_nestjs USING (
     OR public.tem_permissao('campanha_rejeitar')
 );
 
--- atualizacao_campanha
 -- CORRIGIDO: atualização inativa (ocultada por moderação) só continua
 -- visível para o dono da campanha ou admin; o público só vê as ativas.
 DROP POLICY IF EXISTS pol_atualizacao_select ON atualizacao_campanha;
@@ -323,21 +267,14 @@ DROP POLICY IF EXISTS pol_atualizacao_insert ON atualizacao_campanha;
 CREATE POLICY pol_atualizacao_insert ON atualizacao_campanha FOR INSERT TO app_nestjs WITH CHECK (
     EXISTS (SELECT 1 FROM campanha WHERE id_campanha = atualizacao_campanha.id_campanha AND id_usuario = public.id_usuario_atual())
 );
--- CORRIGIDO: dono da campanha continua podendo editar o conteúdo da própria
--- atualização; ocultar (moderar) uma atualização de terceiro passa a exigir
--- a permissão específica atualizacao_moderar em vez do antigo eh_admin() genérico
--- (eh_admin() foi removido de vez de todas as policies, ver 03_funcoes_seguranca.sql).
+-- [04-E-2] atualizacao_campanha: substituição do antigo eh_admin() (ver DOCUMENTACAO_BD.md)
 DROP POLICY IF EXISTS pol_atualizacao_update ON atualizacao_campanha;
 CREATE POLICY pol_atualizacao_update ON atualizacao_campanha FOR UPDATE TO app_nestjs USING (
     EXISTS (SELECT 1 FROM campanha WHERE id_campanha = atualizacao_campanha.id_campanha AND id_usuario = public.id_usuario_atual())
     OR public.tem_permissao('atualizacao_moderar')
 );
 
--- CORRIGIDO: comentários não endossados deixam de ser públicos;
--- só o autor, o dono da campanha ou o admin podem ver o que não
--- está endossado. Comentários endossados continuam públicos.
--- ADICIONADO: comentário inativo (removido por moderação) só continua
--- visível para o próprio autor, o dono da campanha ou o admin.
+-- [04-E-3] comentario: regras de visibilidade de comentário não endossado/inativo (ver DOCUMENTACAO_BD.md)
 DROP POLICY IF EXISTS pol_comentario_select ON comentario;
 CREATE POLICY pol_comentario_select ON comentario FOR SELECT USING (
     (ativo = TRUE AND endossado = TRUE)
@@ -353,18 +290,7 @@ CREATE POLICY pol_comentario_insert ON comentario FOR INSERT TO app_nestjs WITH 
     id_pesquisador = public.id_usuario_atual()
     AND EXISTS (SELECT 1 FROM perfil_pesquisador WHERE id_usuario = public.id_usuario_atual() AND status_pesquisador = 'ativo')
 );
--- ADICIONADO: soft delete de comentário. O autor pode desativar o próprio
--- comentário; moderação (papel com permissão comentario_moderar) ou admin
--- podem desativar qualquer um.
--- CORRIGIDO: "endossar comentário" (setar endossado/ordem_endosso) nunca
--- teve política de UPDATE que cobrisse essa ação — no `main` não existia
--- NENHUMA policy de UPDATE em comentario, e o UPDATE acrescentado nesta
--- rodada (soft delete) só liberava o próprio autor ou moderação, nunca o
--- dono da campanha. Só quem endossa é o dono da campanha, sobre um
--- comentário de outra pessoa, então sem essa condição o endosso continuava
--- impossível na prática. A restrição de que o dono da campanha só deve
--- mexer em endossado/ordem_endosso (e não no conteúdo do comentário) fica
--- a cargo do endpoint específico de endosso no NestJS, não da RLS.
+-- [04-E-4] comentario: histórico do bug de UPDATE (endosso) (ver DOCUMENTACAO_BD.md)
 DROP POLICY IF EXISTS pol_comentario_update ON comentario;
 CREATE POLICY pol_comentario_update ON comentario FOR UPDATE TO app_nestjs USING (
     id_pesquisador = public.id_usuario_atual()
@@ -409,13 +335,10 @@ DROP POLICY IF EXISTS pol_seg_campanha_select ON seguir_campanha;
 CREATE POLICY pol_seg_campanha_select ON seguir_campanha FOR SELECT TO app_nestjs USING (id_usuario = public.id_usuario_atual());
 DROP POLICY IF EXISTS pol_seg_campanha_insert ON seguir_campanha;
 CREATE POLICY pol_seg_campanha_insert ON seguir_campanha FOR INSERT TO app_nestjs WITH CHECK (id_usuario = public.id_usuario_atual());
--- ADICIONADO: faltava a policy de DELETE — sem ela, "deixar de seguir
--- campanha" (RF-009) ficava bloqueado pela RLS, mesmo já existindo o
--- equivalente para seguir_pesquisador (pol_seg_pesq_delete).
+-- [04-E-5] seguir_campanha: por que existe a policy de DELETE (RF-009) (ver DOCUMENTACAO_BD.md)
 DROP POLICY IF EXISTS pol_seg_campanha_delete ON seguir_campanha;
 CREATE POLICY pol_seg_campanha_delete ON seguir_campanha FOR DELETE TO app_nestjs USING (id_usuario = public.id_usuario_atual());
 
--- solicitacao_encerramento
 DROP POLICY IF EXISTS pol_solicitacao_select ON solicitacao_encerramento;
 CREATE POLICY pol_solicitacao_select ON solicitacao_encerramento FOR SELECT TO app_nestjs USING (
     public.tem_permissao('solicitacao_encerramento_decidir') OR EXISTS (
@@ -430,28 +353,20 @@ CREATE POLICY pol_solicitacao_insert ON solicitacao_encerramento FOR INSERT TO a
 DROP POLICY IF EXISTS pol_solicitacao_update ON solicitacao_encerramento;
 CREATE POLICY pol_solicitacao_update ON solicitacao_encerramento FOR UPDATE TO app_nestjs USING (public.tem_permissao('solicitacao_encerramento_decidir'));
 
--- historico_rejeicao
 DROP POLICY IF EXISTS pol_historicorej_select ON historico_rejeicao;
 CREATE POLICY pol_historicorej_select ON historico_rejeicao FOR SELECT TO app_nestjs USING (public.tem_permissao('campanha_rejeitar'));
--- COMENTÁRIO DE ALTERAÇÃO:
--- Adicionamos políticas de escrita para historico_rejeicao para permitir
--- o registro de rejeições de campanha pelo fluxo de moderação.
+-- [04-E-6] historico_rejeicao: por que existem policies de escrita (ver DOCUMENTACAO_BD.md)
 DROP POLICY IF EXISTS pol_historicorej_insert ON historico_rejeicao;
 CREATE POLICY pol_historicorej_insert ON historico_rejeicao FOR INSERT TO app_nestjs WITH CHECK (true);
 DROP POLICY IF EXISTS pol_historicorej_update ON historico_rejeicao;
 CREATE POLICY pol_historicorej_update ON historico_rejeicao FOR UPDATE TO app_nestjs USING (true) WITH CHECK (true);
 
--- COMENTÁRIO DE ALTERAÇÃO:
--- Adicionamos políticas de escrita para repasse porque esse fluxo é
--- gerado pelo backend a partir da consolidação financeira da campanha.
--- Sem isso, a RLS bloqueia a criação e atualização do registro mesmo com
--- o GRANT de tabela correto.
+-- [04-E-7] repasse: por que existem policies de escrita (ver DOCUMENTACAO_BD.md)
 DROP POLICY IF EXISTS pol_repasse_insert ON repasse;
 CREATE POLICY pol_repasse_insert ON repasse FOR INSERT TO app_nestjs WITH CHECK (true);
 DROP POLICY IF EXISTS pol_repasse_update ON repasse;
 CREATE POLICY pol_repasse_update ON repasse FOR UPDATE TO app_nestjs USING (true) WITH CHECK (true);
 
--- repasse
 DROP POLICY IF EXISTS pol_repasse_select ON repasse;
 CREATE POLICY pol_repasse_select ON repasse FOR SELECT TO app_nestjs USING (
     public.tem_permissao('repasse_aprovar') OR EXISTS (
@@ -539,10 +454,7 @@ CREATE POLICY pol_link_recompensa_insert ON link_recompensa FOR INSERT TO app_ne
           AND (c.id_usuario = public.id_usuario_atual() OR public.tem_permissao('campanha_editar'))
     )
 );
--- ADICIONADO: edição e remoção de link de recompensa. Só o dono da campanha
--- ou admin — de propósito SEM o comprador aqui (diferente do SELECT acima):
--- o link é fornecido pelo pesquisador para entrega da recompensa, então só
--- quem fornece pode alterá-lo ou removê-lo; o comprador só pode ler.
+-- [04-F-1] link_recompensa: assimetria proposital entre SELECT e UPDATE (ver DOCUMENTACAO_BD.md)
 DROP POLICY IF EXISTS pol_link_recompensa_update ON link_recompensa;
 CREATE POLICY pol_link_recompensa_update ON link_recompensa FOR UPDATE TO app_nestjs USING (
     EXISTS (
@@ -574,7 +486,6 @@ ALTER TABLE arquivo_atualizacao  FORCE ROW LEVEL SECURITY;
 ALTER TABLE arquivo_recompensa   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE arquivo_recompensa   FORCE ROW LEVEL SECURITY;
 
--- arquivo_atualizacao
 DROP POLICY IF EXISTS pol_arqatu_select ON arquivo_atualizacao;
 CREATE POLICY pol_arqatu_select ON arquivo_atualizacao FOR SELECT USING (TRUE);
 -- CORRIGIDO: a ligação de arquivos a atualizações agora exige dono da campanha ou admin.
@@ -621,9 +532,7 @@ CREATE POLICY pol_arqrecompensa_insert ON arquivo_recompensa FOR INSERT TO app_n
           AND (c.id_usuario = public.id_usuario_atual() OR public.tem_permissao('campanha_editar'))
     )
 );
--- COMENTÁRIO DE ALTERAÇÃO:
--- Adicionamos a policy de UPDATE para arquivo_recompensa para permitir
--- trocar a imagem principal da recompensa quando a campanha for editada.
+-- [04-G-1] arquivo_recompensa: por que existe a policy de UPDATE (ver DOCUMENTACAO_BD.md)
 DROP POLICY IF EXISTS pol_arqrecompensa_update ON arquivo_recompensa;
 CREATE POLICY pol_arqrecompensa_update ON arquivo_recompensa FOR UPDATE TO app_nestjs USING (
     EXISTS (
@@ -673,7 +582,6 @@ CREATE POLICY pol_contribuicao_update ON contribuicao FOR UPDATE TO app_nestjs U
     true
 );
 
--- auditoria_financeira
 DROP POLICY IF EXISTS pol_auditoria_select ON auditoria_financeira;
 CREATE POLICY pol_auditoria_select ON auditoria_financeira FOR SELECT TO app_nestjs USING (
     public.tem_permissao('auditoria_financeira_visualizar') OR EXISTS (
@@ -682,9 +590,7 @@ CREATE POLICY pol_auditoria_select ON auditoria_financeira FOR SELECT TO app_nes
           AND c.id_usuario = public.id_usuario_atual()
     )
 );
--- COMENTÁRIO DE ALTERAÇÃO:
--- Adicionamos políticas de escrita para auditoria_financeira para permitir
--- o registro de eventos financeiros e auditoria do fluxo de contribuição.
+-- [04-H-1] auditoria_financeira: por que existem policies de escrita (ver DOCUMENTACAO_BD.md)
 DROP POLICY IF EXISTS pol_auditoria_insert ON auditoria_financeira;
 CREATE POLICY pol_auditoria_insert ON auditoria_financeira FOR INSERT TO app_nestjs WITH CHECK (true);
 DROP POLICY IF EXISTS pol_auditoria_update ON auditoria_financeira;
@@ -741,10 +647,7 @@ CREATE POLICY pol_score_select ON score_pesquisador FOR SELECT USING (TRUE);
 
 DROP POLICY IF EXISTS pol_score_config_select ON public.score_config;
 CREATE POLICY "pol_score_config_select" ON public.score_config FOR SELECT TO app_nestjs USING (true);
--- COMENTÁRIO DE ALTERAÇÃO:
--- Adicionamos a policy de INSERT para score_config para permitir que o
--- painel administrativo crie novas dimensões de score sem depender de
--- uma regra de bypass da RLS.
+-- [04-I-1] score_config: por que existe a policy de INSERT (ver DOCUMENTACAO_BD.md)
 DROP POLICY IF EXISTS pol_score_config_insert ON public.score_config;
 CREATE POLICY pol_score_config_insert ON public.score_config FOR INSERT TO app_nestjs WITH CHECK (public.tem_permissao('score_editar'));
 -- CORRIGIDO: acesso à configuração de score passa a depender de permissão específica.
@@ -753,9 +656,7 @@ CREATE POLICY pol_score_config_update ON public.score_config FOR UPDATE TO app_n
 
 DROP POLICY IF EXISTS pol_score_rotulo_select ON public.score_rotulo;
 CREATE POLICY "pol_score_rotulo_select" ON public.score_rotulo FOR SELECT TO app_nestjs USING (true);
--- COMENTÁRIO DE ALTERAÇÃO:
--- Adicionamos a policy de INSERT para score_rotulo para permitir a criação
--- de novos rótulos de score pelo fluxo administrativo com a permissão certa.
+-- [04-I-2] score_rotulo: por que existe a policy de INSERT (ver DOCUMENTACAO_BD.md)
 DROP POLICY IF EXISTS pol_score_rotulo_insert ON public.score_rotulo;
 CREATE POLICY pol_score_rotulo_insert ON public.score_rotulo FOR INSERT TO app_nestjs WITH CHECK (public.tem_permissao('score_editar'));
 DROP POLICY IF EXISTS pol_score_rotulo_update ON public.score_rotulo;

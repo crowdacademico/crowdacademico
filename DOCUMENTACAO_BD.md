@@ -208,7 +208,7 @@ Ambas as funções utilizam os modificadores de segurança essenciais:
 O arquivo `04_rls_policies.sql` estabelece a camada de defesa em nível de linha (*Row Level Security* — RLS) para o banco de dados. Todas as 39 tabelas do schema possuem RLS ativada e forçada.
 
 #### Princípios Fundamentais de Segurança
-1. **Ativação Universal (`ENABLE` + `FORCE ROW LEVEL SECURITY`):**
+1. **[04-A] Ativação Universal (`ENABLE` + `FORCE ROW LEVEL SECURITY`):**
    * O uso do `FORCE ROW LEVEL SECURITY` garante que até mesmo o dono das tabelas (*table owner*) fique sujeito às regras de RLS, eliminando brechas em ambientes de execução local ou microsserviços.
 2. **Modelo Non-Bypass (`app_nestjs`):**
    * A aplicação conecta via papel sem privilégio de `BYPASSRLS`. Toda e qualquer instrução SQL (`SELECT`, `INSERT`, `UPDATE`, `DELETE`) é filtrada dinamicamente pela sessão do usuário (`public.id_usuario_atual()`).
@@ -229,9 +229,21 @@ O arquivo é organizado em 8 blocos conceituais que espelham literalmente os tí
 * **Tabelas:** `configuracoes`, `area_conhecimento`, `tipo_link`, `motivo_denuncia`, `arquivo`.
 * **Regra:** Leitura pública para catálogos e arquivos básicos. Operações de escrita e alteração de parâmetros de sistema (`id_usuario IS NULL`) exigem permissão explícita (ex: `'configuracao_gerenciar'`).
 
+**Detalhamento por policy:**
+* **[04-C-1] `configuracoes`:** originalmente só existia policy de `SELECT` — nenhuma escrita era possível via RLS (nem para configuração de sistema, nem para preferência de usuário), e a permissão `configuracao_gerenciar` (já seedada) não era usada em lugar nenhum. As policies de `INSERT`/`UPDATE`/`DELETE` seguem o mesmo critério do `SELECT`: linha de sistema (`id_usuario IS NULL`) só quem tem `configuracao_gerenciar` mexe; linha de preferência do próprio usuário (`id_usuario` = dono) ele mesmo mexe.
+* **[04-C-2] `area_conhecimento`:** as policies de escrita (`INSERT`/`UPDATE`) foram adicionadas para que a gestão de catálogos funcione corretamente junto com o `GRANT` de tabela já concedido em `06_grants.sql`.
+* **[04-C-3] `motivo_denuncia`:** as policies de escrita foram adicionadas para completar a correção iniciada no `GRANT` de tabela e garantir que o fluxo de curadoria funcione com o RBAC esperado.
+
 #### [04-D] USUÁRIO
 * **Tabelas:** `usuario`, `perfil_pesquisador`, `usuario_papel`, `termos_de_uso`, `usuario_termo`, `notificacao`, `verificacao_email`, `recuperacao_senha`, `sessao`, `seguir_pesquisador`.
 * **Regra:** Usuários enxergam apenas os próprios dados sensíveis ou perfis não deletados. A atribuição de papéis (`usuario_papel`) exige a permissão `'papel_atribuir'`.
+
+**Detalhamento por policy:**
+* **[04-D-1] `verificacao_email` / `recuperacao_senha` / `sessao`:** a versão anterior deixava RLS ligada e **sem nenhuma policy**, presumindo que só um role com `BYPASSRLS` (ex.: `service_role` do Supabase) acessaria estas tabelas. Esse role não existe mais no projeto — o NestJS conecta como `app_nestjs` (role normal, sem bypass), então RLS sem policy bloquearia 100% do acesso e quebraria verificação de e-mail, recuperação de senha e sessão inteiras. Além disso, boa parte desses fluxos acontece **antes** do usuário estar autenticado (confirmar e-mail, "esqueci minha senha") — não dá para restringir por `id_usuario_atual()`, porque ainda não existe sessão. Quem valida a posse do token (comparando o hash) é o próprio NestJS na aplicação; a policy `FOR ALL TO app_nestjs USING (true)` aqui só garante que nenhum outro role além de `app_nestjs` consegue tocar nessas tabelas.
+* **[04-D-2] `usuario` (INSERT):** faltava a policy de `INSERT` em `usuario`. O fluxo de signup (`08_trigger_signup_usuario.sql`) já prevê o NestJS inserindo direto em `usuario` dentro da própria transação, antes de existir qualquer sessão — não há `id_usuario_atual()` para checar nesse momento, então `WITH CHECK (true)` é a única condição logicamente possível aqui. E-mail duplicado já é barrado pelo `UNIQUE` em `usuario.email` (`01`), e validação de formato/força de senha é responsabilidade do NestJS antes do `INSERT`.
+* **[04-D-3] `perfil_pesquisador` (INSERT):** a policy de `INSERT` permite o fluxo de upgrade de usuário cadastrado para pesquisador. Sem ela, a RLS bloqueia a operação mesmo com o `GRANT` de tabela em `06_grants.sql`.
+* **[04-D-4] `usuario_papel` (DELETE):** a policy de `DELETE` permite que o painel administrativo revogue papéis já atribuídos, sem depender de um bypass de RLS.
+* **[04-D-5] `notificacao`:** leitura restrita às próprias notificações; escrita controlada pelo backend da aplicação. Como o projeto não depende mais de `service_role` para ignorar RLS, as policies de `INSERT`/`UPDATE` foram adicionadas no mínimo necessário para permitir a criação e atualização de notificações sem abrir o acesso para qualquer usuário falsificar registros.
 
 #### [04-E] CAMPANHA
 * **Tabelas:** `campanha`, `atualizacao_campanha`, `comentario`, `denuncia`, `recompensa`, `seguir_campanha`, `solicitacao_encerramento`, `historico_rejeicao`, `repasse`.
@@ -241,13 +253,28 @@ O arquivo é organizado em 8 blocos conceituais que espelham literalmente os tí
 > * **Tabela `repasse`:** As políticas `pol_repasse_insert` e `pol_repasse_update` utilizam `WITH CHECK (true)` / `USING (true)`. A validação de quem pode gerar ou alterar um repasse é delegada integralmente ao backend NestJS.
 > * **Permissão Órfã:** A permissão `campanha_encerrar` (presente no seed) não é consumida diretamente por nenhuma política de RLS neste arquivo (o encerramento é intermediado via `solicitacao_encerramento` e regras da aplicação).
 
+**Detalhamento por policy:**
+* **[04-E-1] `campanha` (UPDATE):** `campanha_aprovar` e `campanha_rejeitar` estavam seedadas mas não eram usadas em nenhuma policy — só `campanha_editar` liberava `UPDATE` em `campanha`, então um papel com só "aprovar" ou só "rejeitar" (sem o "editar" genérico) não conseguia de fato aprovar/rejeitar nada. A RLS de linha não distingue qual coluna está sendo alterada (isso exigiria um trigger comparando `OLD`/`NEW`), então na prática qualquer uma das três permissões libera o `UPDATE` — a aplicação decide, por regra de negócio, quais campos cada fluxo (aprovar/rejeitar/editar) de fato manda alterar.
+* **[04-E-2] `atualizacao_campanha` (UPDATE):** o dono da campanha continua podendo editar o conteúdo da própria atualização; ocultar (moderar) uma atualização de terceiro passa a exigir a permissão específica `atualizacao_moderar`, em vez do antigo `eh_admin()` genérico (`eh_admin()` foi removido de vez de todas as policies — ver `03_funcoes_seguranca.sql`).
+* **[04-E-3] `comentario` (SELECT):** comentários não endossados deixaram de ser públicos — só o autor, o dono da campanha ou quem tem `comentario_moderar` podem ver o que não está endossado; comentários endossados continuam públicos. Comentário inativo (removido por moderação) só continua visível para o próprio autor, o dono da campanha ou moderação.
+* **[04-E-4] `comentario` (UPDATE) — histórico do bug de endosso:** o soft delete de comentário permite que o autor desative o próprio comentário, e que moderação/admin desativem qualquer um. Só que "endossar comentário" (setar `endossado`/`ordem_endosso`) nunca teve policy de `UPDATE` que cobrisse essa ação — não existia nenhuma policy de `UPDATE` em `comentario` antes disso, e a primeira versão do `UPDATE` (criada junto com o soft delete) só liberava o próprio autor ou moderação, nunca o dono da campanha. Como só quem endossa é o dono da campanha, sobre um comentário de outra pessoa, sem essa condição o endosso continuava impossível na prática. A restrição de que o dono da campanha só deve mexer em `endossado`/`ordem_endosso` (e não no conteúdo do comentário) fica a cargo do endpoint específico de endosso no NestJS, não da RLS.
+* **[04-E-5] `seguir_campanha` (DELETE):** faltava a policy de `DELETE` — sem ela, "deixar de seguir campanha" (RF-009) ficava bloqueado pela RLS, mesmo já existindo o equivalente para `seguir_pesquisador` (`pol_seg_pesq_delete`).
+* **[04-E-6] `historico_rejeicao`:** as policies de escrita foram adicionadas para permitir o registro de rejeições de campanha pelo fluxo de moderação.
+* **[04-E-7] `repasse`:** as policies de escrita foram adicionadas porque esse fluxo é gerado pelo backend a partir da consolidação financeira da campanha — sem elas, a RLS bloqueia a criação e atualização do registro mesmo com o `GRANT` de tabela correto (ver nota de débito técnico acima).
+
 #### [04-F] LINK
 * **Tabelas:** `link_academico`, `link_atualizacao`, `link_recompensa`.
 * **Regra:** Links de perfil e campanhas podem ser criados, editados ou removidos pelo próprio autor/pesquisador ou por usuários com papéis moderadores.
 
+**Detalhamento por policy:**
+* **[04-F-1] `link_recompensa` (UPDATE) — assimetria proposital:** edição e remoção de link de recompensa são restritas ao dono da campanha ou a quem tem `campanha_editar` — de propósito **sem** o comprador aqui, diferente do `SELECT` (onde o comprador pode ler). O link é fornecido pelo pesquisador para entrega da recompensa, então só quem fornece pode alterá-lo ou removê-lo; o comprador só pode ler.
+
 #### [04-G] ARQUIVO
 * **Tabelas:** `arquivo_atualizacao`, `arquivo_recompensa`.
 * **Regra:** O vínculo de arquivos de mídia a atualizações e recompensas é restrito aos proprietários da campanha vinculada ou administradores.
+
+**Detalhamento por policy:**
+* **[04-G-1] `arquivo_recompensa` (UPDATE):** a policy de `UPDATE` permite trocar a imagem principal da recompensa quando a campanha for editada.
 
 #### [04-H] CONTRIBUIÇÃO
 * **Tabelas:** `contribuicao`, `auditoria_financeira`, `contribuicao_recompensa`, `aceite_termo_contribuicao`.
@@ -256,6 +283,13 @@ O arquivo é organizado em 8 blocos conceituais que espelham literalmente os tí
 > ⚠️ **Nota de Arquitetura & Débito Técnico ([04-H]):**
 > * **Tabela `auditoria_financeira`:** As políticas `pol_auditoria_insert` e `pol_auditoria_update` estão abertas para o papel `app_nestjs` (`USING (true) WITH CHECK (true)`), deixando a integridade da escrita sob responsabilidade do serviço de backend.
 
+**Detalhamento por policy:**
+* **[04-H-1] `auditoria_financeira`:** as policies de escrita foram adicionadas para permitir o registro de eventos financeiros e auditoria do fluxo de contribuição (ver nota de débito técnico acima).
+
 #### [04-I] SCORE
 * **Tabelas:** `score_config`, `score_rotulo`, `score_pesquisador`.
 * **Regra:** Leitura pública dos scores e parâmetros. Alterações em matrizes e rótulos de score são restritas à permissão `'score_editar'`.
+
+**Detalhamento por policy:**
+* **[04-I-1] `score_config` (INSERT):** a policy de `INSERT` permite que o painel administrativo crie novas dimensões de score sem depender de uma regra de bypass da RLS.
+* **[04-I-2] `score_rotulo` (INSERT):** a policy de `INSERT` permite a criação de novos rótulos de score pelo fluxo administrativo, com a permissão certa.
