@@ -139,8 +139,8 @@ CREATE TABLE arquivo (
     id_arquivo    SERIAL,
     url           TEXT         NOT NULL,
     nome_original TEXT         NOT NULL,
-    tipo_mime     VARCHAR(255),
-    tamanho_bytes INT,
+    tipo_mime     VARCHAR(255) NOT NULL,
+    tamanho_bytes INT NOT NULL,
     criado_em     TIMESTAMP    DEFAULT NOW(),
     ativo         BOOLEAN      DEFAULT TRUE,
     desativado_em TIMESTAMP,
@@ -202,13 +202,13 @@ CREATE TABLE usuario_papel (  -- fica aqui por depender de usuario; documentada 
 -- duas fontes de verdade que podiam divergir); só status_pesquisador era de fato lido
 -- em algum lugar (pol_comentario_insert, 04).
 CREATE TABLE perfil_pesquisador (
-    id_usuario            INT,
-    cpf_criptografado     VARCHAR(255),
-    vinculo_institucional VARCHAR(255),
-    titulo_academico      titulo_academico,
-    status_pesquisador    status_pesquisador DEFAULT 'ativo',
+    id_usuario            INT NOT NULL,
+    cpf_criptografado     VARCHAR(255) NOT NULL,
+    vinculo_institucional VARCHAR(255) NOT NULL,
+    titulo_academico      titulo_academico NOT NULL,
+    status_pesquisador    status_pesquisador NOT NULL DEFAULT 'ativo',
     ativado_em            TIMESTAMP,
-    score_atual           INTEGER            DEFAULT 0,
+    score_atual           INTEGER    NOT NULL  DEFAULT 0,
     score_atualizado_em   TIMESTAMP,
 
     CONSTRAINT "PK_PERFIL_PESQUISADOR" PRIMARY KEY (id_usuario),
