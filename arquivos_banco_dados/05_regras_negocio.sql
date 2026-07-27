@@ -13,8 +13,8 @@
 --  3. Regras de moderação de comunidade, engajamento e automação RBAC.
 --
 --  Inventário Mapeado:
---  - 27 Funções (Helpers, Cálculo, Orquestração e Triggers)
---  - 23 Triggers (Todas idempotentes com DROP TRIGGER IF EXISTS)
+--  - 28 Funções (Helpers, Cálculo, Orquestração e Triggers)
+--  - 24 Triggers (Todas idempotentes com DROP TRIGGER IF EXISTS)
 -- ----------------------------------------------------------------------------
 --  SUMÁRIO DOS BLOCOS DE CÓDIGO
 --  (letras seguem o índice global de DOCUMENTACAO_BD.md — I = SCORE,
@@ -1320,6 +1320,46 @@ CREATE TRIGGER trg_comentario_sem_autoria
 BEFORE INSERT ON comentario
 FOR EACH ROW
 EXECUTE FUNCTION validar_comentario_autor();
+
+
+-- ----------------------------------------------------------------------------
+-- Função:     fn_bloqueia_reversao_moderacao_comentario
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-K-3]
+-- Regra:      Só quem tem a permissão 'comentario_moderar' pode reverter
+--             (ativo FALSE -> TRUE) um comentário que a moderação ocultou.
+--             O autor continua podendo editar o próprio texto e ocultar
+--             (ativo TRUE -> FALSE) o próprio comentário normalmente — só a
+--             reversão da moderação é bloqueada. (Achado 4, CLAUDE-CODE-
+--             DESCOBERTAS.md / DOCUMENTACAO_BD.md [04-E-3]/[05-K-3]).
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION fn_bloqueia_reversao_moderacao_comentario()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF OLD.ativo = FALSE AND NEW.ativo = TRUE AND NOT public.tem_permissao('comentario_moderar') THEN
+        RAISE EXCEPTION 'Operação bloqueada: só a moderação pode reverter um comentário ocultado.';
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_comentario_bloqueia_reversao_moderacao
+-- Tabela:    comentario
+-- Momento:   BEFORE UPDATE
+-- Função:    fn_bloqueia_reversao_moderacao_comentario()
+-- Bloco:     [05-K-3]
+-- Regra:     Fecha a brecha em que pol_comentario_update (04) libera UPDATE
+--            pro autor sem restringir coluna — sem esta trigger, o autor
+--            conseguia desfazer sozinho uma moderação (voltar ativo pra
+--            TRUE) com um UPDATE direto, sem passar por moderador/admin.
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_comentario_bloqueia_reversao_moderacao ON comentario;
+CREATE TRIGGER trg_comentario_bloqueia_reversao_moderacao
+BEFORE UPDATE ON comentario
+FOR EACH ROW
+EXECUTE FUNCTION fn_bloqueia_reversao_moderacao_comentario();
 
 
 -- ----------------------------------------------------------------------------

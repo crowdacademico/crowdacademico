@@ -13,7 +13,9 @@
 --  automático suficiente para as consultas dessas tabelas.
 --
 --  Inventário Mapeado:
---  - 39 Índices (CREATE INDEX / CREATE UNIQUE INDEX) em 6 blocos de domínio
+--  - 36 Índices (CREATE INDEX / CREATE UNIQUE INDEX) em 6 blocos de domínio
+--  (3 índices redundantes removidos — ver [PENDENCIAS e correcoes.md],
+--  item sobre índices redundantes, para o detalhamento de cada um)
 -- ----------------------------------------------------------------------------
 --  SUMÁRIO DOS BLOCOS DE CÓDIGO
 -- ----------------------------------------------------------------------------
@@ -26,7 +28,6 @@
 -- ============================================================================
 -- [02-D] USUÁRIO
 -- ============================================================
-CREATE INDEX idx_seguir_pesquisador_usuario ON seguir_pesquisador(id_usuario);
 CREATE INDEX idx_seguir_pesquisador_alvo    ON seguir_pesquisador(id_pesquisador);
 
 -- Garante no máximo 1 versão de termo ativa/vigente no sistema
@@ -84,11 +85,9 @@ CREATE UNIQUE INDEX uq_arquivo_recompensa_principal ON arquivo_recompensa (id_re
 CREATE INDEX idx_contribuicao_campanha      ON contribuicao(id_campanha);
 CREATE INDEX idx_contribuicao_usuario       ON contribuicao(id_usuario);
 CREATE INDEX idx_contrib_recompensa_recompensa ON contribuicao_recompensa(id_recompensa);
-CREATE INDEX idx_aceite_termo_contribuicao_contribuicao ON aceite_termo_contribuicao(id_contribuicao);
 CREATE INDEX idx_aceite_termo_contribuicao_termo        ON aceite_termo_contribuicao(id_termo);
 
 -- ============================================================
 -- [02-I] SCORE
 -- ============================================================
 CREATE INDEX idx_score_config_pai           ON score_config(id_pai);
-CREATE INDEX idx_score_pesq_usuario         ON score_pesquisador(id_usuario);
