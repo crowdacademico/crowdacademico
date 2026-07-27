@@ -44,6 +44,7 @@ A campanha é `modelo = 'flexivel'` (repasse abaixo da meta é esperado e corret
 
 Pode ser um resquício de teste/copy-paste no seed, ou pode representar um cenário proposital (ex.: tentativa de repasse que falhou e foi reprocessada). Não mexi em nada, só sinalizando pra nós decidirmos se é lixo de seed pra remover ou um cenário de teste válido pra manter (e, nesse caso, talvez valha um comentário explicando a intenção).
 
+> *** SUGESTÃO DO MEU CLADE: *** blablablá... 
 
 ---
 
@@ -88,6 +89,26 @@ Garantir que a conexão do backend use sempre `app_nestjs`, nunca superusuário 
 ### 11. Pool direto no Service
 
 Só nota de melhoria futura, não urgente.
+
+
+---
+---
+---
+
+
+# 🟡 OBSERVAÇÕES (achadas na auditoria, não valem a pena mexer agora)
+
+*(Coisas fora do "padrão ideal", mas 100% inofensivas — registradas só pra não parecerem esquecidas se alguém notar depois)*
+
+
+## Duas divisões `ALTER TABLE` que poderiam ser inline (não recomendado mexer)
+
+Auditoria física do `01_extensoes_enums_tabelas.sql` (conferindo se cada tabela respeita a ordem de dependência de FK) encontrou 2 colunas que ganham a FK/definição via `ALTER TABLE` separado, sem um motivo técnico real pra não estarem dentro do `CREATE TABLE` original:
+
+- **`usuario.id_imagem_perfil`** ganha a FK via `ALTER TABLE usuario ADD CONSTRAINT fk_usuario_imagem ...` (linha ~160). A tabela `arquivo` (de onde vem essa FK) já existe **antes** de `usuario` ser criada — dava pra ter sido declarada direto dentro do `CREATE TABLE usuario`. É diferente do caso vizinho `configuracoes → usuario` (linha ~157), que é uma referência circular de verdade e *precisa* do `ALTER` depois (isso está certo, não mexer).
+- **`contribuicao.token_sessao`** é adicionada via `ALTER TABLE contribuicao ADD COLUMN token_sessao UUID DEFAULT gen_random_uuid();` logo após o `CREATE TABLE` (linha ~436), sem nenhum motivo técnico pra não estar inline.
+
+**Por que não recomendo mexer:** não é bug, não muda nenhum comportamento — só uma coluna "fora do lugar ideal" esteticamente. Juntar de volta no `CREATE TABLE` é mexer em texto por puro gosto, sem ganho prático, com risco desnecessário de erro de digitação numa tabela grande. Deixado documentado aqui só pra registro.
 
 
 ---
@@ -255,3 +276,73 @@ A regra é **cirúrgica**: só entra em ação exatamente na transição `ativo`
 `07_seed_dados.sql` não desligava a trigger `trg_sincroniza_arrecadado_campanha` ao inserir o histórico de `contribuicao` — ela recalculava e sobrescrevia os valores de `valor_bruto_arrecadado` digitados a mão no seed (ex.: campanha 1 caía de 52.300 pra 7.300).
 
 Já corrigido: a trigger agora é desligada/religada junto das outras duas do mesmo bloco `[07-H-1]`.
+
+
+---
+
+
+## `ALTER TABLE` morto que nunca executava (`01`, tabela `score_pesquisador`) — **[CORRIGIDO]**
+
+Auditoria física de `01_extensoes_enums_tabelas.sql` encontrou um bloco de código que nunca fazia nada:
+
+```sql
+CREATE TABLE score_pesquisador (
+    ...
+    CONSTRAINT uq_score_pesquisador_usuario_config
+        UNIQUE (id_usuario, id_score_config)   -- já cria a constraint aqui dentro
+);
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'uq_score_pesquisador_usuario_config') THEN
+        ALTER TABLE score_pesquisador ADD CONSTRAINT uq_score_pesquisador_usuario_config UNIQUE (...);
+    END IF;
+END $$;
+```
+
+A constraint já nasce dentro do próprio `CREATE TABLE`, duas linhas acima. O bloco `DO $$...` fica checando "se a constraint não existir, cria" — mas ela **sempre** já existe nesse ponto (acabou de ser criada no comando anterior), então o `IF` nunca é verdadeiro e o `ALTER TABLE` nunca chega a rodar. Parece sobra de uma versão antiga do arquivo, de antes de a constraint virar inline.
+
+**O que foi feito:** o bloco `DO $$...` inteiro (11 linhas) foi removido. A constraint continua existindo exatamente igual, só que agora sem o código morto por baixo. Zero mudança de comportamento — só limpeza.
+
+
+---
+
+
+## Índice morando no arquivo errado (`ux_recuperacao_senha_ativo_por_usuario`) — **[CORRIGIDO]**
+
+Esse índice parcial ("só 1 token de recuperação de senha ativo por usuário") estava dentro do `01_extensoes_enums_tabelas.sql`, logo depois da `CREATE TABLE recuperacao_senha`. O problema: existem **dois outros índices do mesmo tipo** no projeto (parcial, "só 1 X ativo por vez") — `uq_termos_uso_ativo` e `uq_arquivo_recompensa_principal` — e **os dois moram em `02_indices.sql`**, nunca em `01`. Esse era o único fora desse padrão.
+
+**O que foi feito:** o índice foi movido de `01_extensoes_enums_tabelas.sql` para `02_indices.sql`, ficando junto dos outros índices de `recuperacao_senha` (`idx_recuperacao_senha_token`, `idx_recuperacao_senha_usuario`), no mesmo lugar onde os outros 2 índices "só 1 ativo" já vivem. Contagem de índices em `02` foi de 36 para 37 (o índice não sumiu, só mudou de arquivo). Nenhuma tabela, coluna ou lógica foi alterada — a tabela `recuperacao_senha` já existe desde o `01`, então o índice continua sendo criado exatamente no mesmo estado do banco, só que 1 arquivo depois.
+
+
+
+
+
+
+
+
+
+
+
+
+# OPNIÃO DO CLAUDE SOBRE NOSSO SISTEMA:
+
+Vou ser direto, porque você pediu opinião real, não elogio.
+
+O sistema está estruturalmente sólido — RBAC bem desenhado, RLS consistente, seed rica, e a documentação que construímos juntos deixa tudo rastreável. Mas revisando o conjunto todo (não peça por peça), tem 3 coisas que eu faria diferente, e elas vêm exatamente dos 3 documentos que você citou.
+
+1. RLS como "defesa em profundidade" está custando caro pra dois devs não-programadores.
+
+O próprio PLANO_AUTENTICACAO_PROPRIA.md (seção 4.1) já avisava isso na época: "Estritamente, [manter RLS] não é necessário", já que o NestJS é o único client do banco — a recomendação foi manter mesmo assim, como camada extra. Isso significa que toda regra de autorização precisa ser escrita duas vezes: uma vez em policy SQL, outra vez em guard/service do NestJS (o próprio RBAC-pontos-discutidos.md, seção 2.3, já previa isso). Hoje isso já é ~105 policies + 24 triggers só de regra — pra duas pessoas mantendo sozinhas, esse é o tipo de coisa que droga com o tempo (uma trava muda na aplicação e ninguém lembra de espelhar no banco, ou vice-versa). Não é errado ter feito assim, é uma escolha de segurança válida — só que é bom vocês saberem que estão pagando esse preço conscientemente, não de graça.
+
+2. Toda vez que apareceu uma regra "só essa coluna, não a linha toda", a solução foi outra trigger nova.
+
+Reparei nisso revisando hoje: RLS não sabe distinguir coluna, só linha — então toda vez que precisou (campanha_aprovar vs campanha_editar, e agora o comentario/ativo que resolvemos), a saída foi escrever mais uma trigger comparando OLD/NEW. Isso é um padrão que vai se repetir conforme o sistema cresce — é bom já esperar que vão aparecer mais casos desses, não é uma coisa pontual que já acabou.
+
+3. O motor de score é desproporcionalmente grande pra um MVP de TCC.
+
+05_regras_negocio.sql sozinho tem 28 funções/24 triggers — e uma fatia enorme disso é o motor de pontuação (4 dimensões, pesos configuráveis, recálculo em cascata). É bem construído, mas se eu estivesse desenhando do zero pra uma banca de TCC, eu teria começado com um score bem mais simples (ou até só um número editável manualmente) e sofisticado depois, em vez de já nascer com esse nível de engenharia. Não é "não devia existir" — é mais "talvez tenha vindo cedo demais, antes de o resto do produto (front, fluxo de contribuição de verdade) existir".
+
+O que eu realmente cortaria, se pudesse: nada do que já existe é lixo ou redundante hoje — a campanha_encerrar que removemos era exatamente esse tipo de coisa, e já foi. O que eu adicionaria, isso sim, é algum teste automatizado (mesmo que simples, tipo um script que insere dado de teste e confere se a RLS bloqueia o que deveria bloquear). Quase todo bug que achamos nessas últimas sessões (trigger não desligada, comentario revertendo moderação, índices redundantes) só apareceu porque eu vasculhei manualmente — nada no projeto teria pego isso sozinho antes de ir pra produção.
+
+> sugestão do CLAUDE: Sobre o Playwright: ele testa o que aparece na tela (clica em botão, preenche formulário, confere texto) — ele nunca fala com o Postgres diretamente. Ele é perfeito pra testar o React+NestJS depois que existirem, mas não cobre nada do .sql (RLS, triggers, constraints). Pra isso, o equivalente seria *** pgTAP *** (framework de teste que roda dentro do próprio Postgres) ou testes de integração no NestJS que sobem um banco de teste real e conferem se a RLS bloqueia o que deveria. São duas camadas de teste diferentes — vocês vão precisar das duas eventualmente, mas por enquanto nenhuma existe.

@@ -239,10 +239,6 @@ CREATE TABLE recuperacao_senha (
 
     CONSTRAINT chk_recuperacao_senha_expira CHECK (expira_em > criado_em) -- garante que o token não nasça já expirado (erro de geração no backend)
 );
-CREATE UNIQUE INDEX ux_recuperacao_senha_ativo_por_usuario
-    ON recuperacao_senha (id_usuario)
-    WHERE usado_em IS NULL;
-
 
 CREATE TABLE sessao (
     id_sessao          SERIAL PRIMARY KEY,
@@ -502,18 +498,6 @@ CREATE TABLE score_pesquisador (
     calculado_em    TIMESTAMP    DEFAULT NOW(),
     motivo          VARCHAR(255),
     
-    CONSTRAINT uq_score_pesquisador_usuario_config 
+    CONSTRAINT uq_score_pesquisador_usuario_config
         UNIQUE (id_usuario, id_score_config)
 );
-
-DO $$
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint 
-        WHERE conname = 'uq_score_pesquisador_usuario_config'
-    ) THEN
-        ALTER TABLE score_pesquisador
-            ADD CONSTRAINT uq_score_pesquisador_usuario_config 
-            UNIQUE (id_usuario, id_score_config);
-    END IF;
-END $$;

@@ -13,9 +13,9 @@
 --  automático suficiente para as consultas dessas tabelas.
 --
 --  Inventário Mapeado:
---  - 36 Índices (CREATE INDEX / CREATE UNIQUE INDEX) em 6 blocos de domínio
---  (3 índices redundantes removidos — ver [PENDENCIAS e correcoes.md],
---  item sobre índices redundantes, para o detalhamento de cada um)
+--  - 37 Índices (CREATE INDEX / CREATE UNIQUE INDEX) em 6 blocos de domínio
+--  (3 índices redundantes removidos, 1 movido do 01 pra cá — ver
+--  [PENDENCIAS e correcoes.md] pro detalhamento de cada um)
 -- ----------------------------------------------------------------------------
 --  SUMÁRIO DOS BLOCOS DE CÓDIGO
 -- ----------------------------------------------------------------------------
@@ -42,6 +42,11 @@ CREATE INDEX idx_verificacao_email_token   ON verificacao_email(token_hash);
 CREATE INDEX idx_verificacao_email_usuario ON verificacao_email(id_usuario);
 CREATE INDEX idx_recuperacao_senha_token   ON recuperacao_senha(token_hash);
 CREATE INDEX idx_recuperacao_senha_usuario ON recuperacao_senha(id_usuario);
+
+-- Garante no máximo 1 token de recuperação ativo (não usado) por usuário
+CREATE UNIQUE INDEX ux_recuperacao_senha_ativo_por_usuario
+    ON recuperacao_senha (id_usuario)
+    WHERE usado_em IS NULL;
 CREATE INDEX idx_sessao_refresh_token      ON sessao(refresh_token_hash);
 CREATE INDEX idx_sessao_usuario            ON sessao(id_usuario);
 
