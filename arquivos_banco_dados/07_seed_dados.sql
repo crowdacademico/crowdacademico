@@ -448,7 +448,7 @@ INSERT INTO solicitacao_encerramento (id_campanha, id_admin, justificativa_pesqu
 -- [07-E-6] historico_rejeicao
 INSERT INTO historico_rejeicao (id_campanha, id_admin, justificativa, rejeitado_em) VALUES
 (4, 8, 'Campanha não apresentou metodologia clara nem parecer de comitê de ética em pesquisa.',               '2024-03-08 10:00:00'),
-(6, 8, 'Escopo da pesquisa não enquadrado como pesquisa acadêmica financiável pela plataforma.',              '2024-04-12 11:00:00'),
+(6, 8, 'Escopo da pesquisa não enquadrado como pesquisa acadêmica financiável pela plataforma.',              '2025-04-12 11:00:00'),
 (1, 8, 'Versão inicial sem descrição detalhada dos dados utilizados. Resubmissão solicitada.',                '2024-01-25 09:00:00'),
 (2, 8, 'Faltou anexar declaração institucional da UNICAMP. Campanha devolvida para ajuste.',                  '2024-02-08 14:00:00'),
 (3, 8, 'Meta financeira considerada excessiva sem justificativa de custos detalhada. Ajuste e reenvio.',      '2024-02-22 10:00:00'),

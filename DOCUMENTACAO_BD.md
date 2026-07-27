@@ -97,12 +97,12 @@ Cada letra tem exatamente um significado, do `01` ao `08`. Se você está procur
 ### [01-E] CAMPANHA (Campanhas, Moderação e Recompensas)
 
 * **`campanha`:** Tabela principal de projetos de financiamento.
-  * `chk_prazo_campanha`: Constraint que valida a duração da campanha entre 15 e 90 dias.
+  * `CK_CAMPANHA_PRAZO`: Constraint que valida a duração da campanha entre 15 e 90 dias.
 * **`atualizacao_campanha`:** Postagens de acompanhamento do projeto. O campo `ativo` permite o *soft delete* e a ocultação por moderação sem perda do histórico.
 * **`comentario`:** Interações da comunidade.
   * Unicidade: `UNIQUE (id_campanha, id_pesquisador)` restringe a **um comentário por pesquisador por campanha, para sempre** — a constraint não é condicionada por `ativo`. Ou seja, se o comentário for ocultado por moderação (`ativo = FALSE`), o pesquisador não consegue enviar um comentário novo para aquela campanha; ele só pode reeditar o registro já existente.
-  * `chk_comentario_endosso`: Constraint garante coerência matemática entre o booleano `endossado` e a sua ordem de exibição (`ordem_endosso`).
-  * ⚠️ **Achado (2026-07):** a policy `pol_comentario_update` (`04_rls_policies.sql`) libera `UPDATE` para o próprio autor (`id_pesquisador = id_usuario_atual()`) sem restringir quais colunas podem mudar. Isso significa que, hoje, o autor de um comentário ocultado por moderação (`ativo = FALSE`) pode reativá-lo sozinho, revertendo a moderação, bastando um `UPDATE ... SET ativo = TRUE`. É o mesmo tipo de limitação já aceito para `campanha_aprovar`/`campanha_rejeitar` (RLS não distingue qual coluna está sendo alterada), mas neste caso ainda não há registro de que a equipe tenha decidido conscientemente aceitar esse risco — vale uma decisão explícita (aceitar, ou restringir via trigger que impeça o próprio autor de alterar `ativo`).
+  * `CK_COMENTARIO_ENDOSSO`: Constraint garante coerência matemática entre o booleano `endossado` e a sua ordem de exibição (`ordem_endosso`).
+  * A policy `pol_comentario_update` (`04_rls_policies.sql`) libera `UPDATE` para o próprio autor sem restringir quais colunas podem mudar — isso já permitiu, no passado, que o autor revertesse sozinho uma moderação (`ativo = FALSE → TRUE`). Já corrigido por trigger; ver `[04-E-4]` mais abaixo para o histórico completo.
 * **`denuncia`:** Registro de incidentes apontados por usuários, vinculados a um motivo do catálogo.
 * **`recompensa`:** Recompensas oferecidas pelos pesquisadores. Possui validações para garantir `valor_minimo > 0` e quantidade disponível não negativa.
 
@@ -135,7 +135,7 @@ Cada letra tem exatamente um significado, do `01` ao `08`. Se você está procur
 ### [01-I] SCORE (Configuração e Cálculo de Pontuação)
 
 * **`score_config`, `score_rotulo` e `score_pesquisador`:** Estrutura para gamificação e aferição de reputação dos pesquisadores na plataforma.
-* **Integridade de Score:** A tabela `score_pesquisador` possui a constraint `uq_score_pesquisador_usuario_config` para impedir duplicidade de pontuação para o mesmo parâmetro e usuário.
+* **Integridade de Score:** A tabela `score_pesquisador` possui a constraint `UK_SCORE_PESQUISADOR_USUARIO_SCORE_CONFIG` para impedir duplicidade de pontuação para o mesmo parâmetro e usuário.
 * **Bloco `DO $$`:** Mantido ao final da tabela como verificação defensiva de legado para validar a existência da constraint de unicidade.
 
 ---
@@ -157,7 +157,7 @@ Os índices explícitos criados neste script foram projetados para três cenári
 
 ### [02-D] USUÁRIO
 
-* **Rede de Pesquisadores:** `idx_seguir_pesquisador_usuario` e `idx_seguir_pesquisador_alvo` aceleram as consultas das redes de seguidores e seguidos.
+* **Rede de Pesquisadores:** `idx_seguir_pesquisador_alvo` acelera a consulta de quem segue um pesquisador (a ponta `id_usuario` já é coberta pelo índice automático do `UK_SEGUIR_PESQUISADOR_USUARIO_PESQUISADOR`, ver `[02-I]` mais abaixo para o mesmo raciocínio aplicado a `score_pesquisador`).
 * **Termo Vigente Único (`uq_termos_uso_ativo`):** Índice parcial `UNIQUE` que assegura no banco a existência de no máximo uma versão ativa de termos de uso por vez (`WHERE ativo = TRUE`).
 * **Fila de Notificações (`idx_notificacao_status`):** Acelera a consulta do *worker* de background ao buscar mensagens com status `pendente`.
 * **Autenticação e Sessão (*Hot Paths*):**
@@ -193,7 +193,7 @@ Os índices explícitos criados neste script foram projetados para três cenári
 
 ### [02-I] SCORE
 
-* **Hierarquia e Histórico:** `idx_score_config_pai` otimiza a montagem das árvores de critérios de pontuação e `idx_score_pesq_usuario` acelera a consulta do histórico de pontuação do pesquisador.
+* **Hierarquia:** `idx_score_config_pai` otimiza a montagem das árvores de critérios de pontuação. `score_pesquisador` não tem índice próprio por `id_usuario` porque a `UK_SCORE_PESQUISADOR_USUARIO_SCORE_CONFIG` (`01`) já cria um índice automático cobrindo essa busca (mesma lógica do `idx_seguir_pesquisador_usuario` removido em `[02-D]`).
 
 ---
 

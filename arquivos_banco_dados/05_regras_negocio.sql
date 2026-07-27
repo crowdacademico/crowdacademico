@@ -3,7 +3,8 @@
 -- ============================================================================
 --  Arquivo:     05_regras_negocio.sql
 --  Módulo:      Motor de Score & Regras de Negócio (Triggers e Funções)
---  Depende de:  01_extensoes_enums_tabelas.sql
+--  Depende de:  01_extensoes_enums_tabelas.sql, 03_funcoes_seguranca.sql
+--               (fn_bloqueia_reversao_moderacao_comentario chama public.tem_permissao())
 --  Próximo:     06_grants.sql
 -- ----------------------------------------------------------------------------
 --  Descrição:

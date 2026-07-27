@@ -3,7 +3,8 @@
 -- ============================================================================
 --  Arquivo:     06_grants.sql
 --  Módulo:      Grants (Permissões de Schema/Tabela/Coluna/Função)
---  Depende de:  01_extensoes_enums_tabelas.sql, 04_rls_policies.sql
+--  Depende de:  01_extensoes_enums_tabelas.sql, 04_rls_policies.sql,
+--               05_regras_negocio.sql (GRANT EXECUTE nas funções do motor de score)
 --  Próximo:     07_seed_dados.sql
 -- ----------------------------------------------------------------------------
 --  Descrição:
