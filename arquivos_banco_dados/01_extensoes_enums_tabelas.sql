@@ -28,7 +28,7 @@
 --  [01-A] BOOTSTRAP, EXTENSÕES E ENUMS
 --  [01-B] RBAC (3 tabelas)
 --  [01-C] CONFIG (5 tabelas)
---  [01-D] USUÁRIO (10 tabelas + ALTER + Índices)
+--  [01-D] USUÁRIO (10 tabelas + Índices)
 --  [01-E] CAMPANHA (9 tabelas)
 --  [01-F] LINK (3 tabelas de associação)
 --  [01-G] ARQUIVO (2 tabelas de associação)
@@ -95,21 +95,9 @@ CREATE TABLE papel_permissao (
 );
 
 -- ============================================================
--- [01-C] CONFIG (5 tabelas + ALTER)
+-- [01-C] CONFIG (5 tabelas)
 -- ============================================================
-CREATE TABLE configuracoes (
-    id_config   SERIAL,
-    id_usuario  INT,                          -- FK adicionada após criação de usuario
-    chave       VARCHAR(255) NOT NULL,        -- [R11] UNIQUE necessário pro upsert(onConflict:'chave')
-    valor       VARCHAR(100),
-    tipo        tipo_configuracao NOT NULL,
-    descricao   VARCHAR(255),
-    ativo       BOOLEAN DEFAULT TRUE,
-
-    CONSTRAINT "PK_CONFIGURACOES" PRIMARY KEY (id_config),
-    CONSTRAINT "UK_CONFIGURACOES_CHAVE" UNIQUE (chave)
-);
-
+-- (`configuracoes` está fisicamente após `usuario`, letra D — ver nota lá)
 CREATE TABLE tipo_link (
     id_tipolink         SERIAL,
     nome                VARCHAR(100) NOT NULL,
@@ -161,7 +149,7 @@ CREATE TABLE arquivo (
 );
 
 -- ============================================================
--- [01-D] USUÁRIO (10 tabelas + ALTERs + Índices)
+-- [01-D] USUÁRIO (10 tabelas + Índices)
 -- ============================================================
 CREATE TABLE usuario (
     id_usuario       SERIAL,
@@ -182,9 +170,24 @@ CREATE TABLE usuario (
     CONSTRAINT "UK_USUARIO_EMAIL" UNIQUE (email),
     CONSTRAINT "FK_USUARIO_IMAGEM" FOREIGN KEY (id_imagem_perfil) REFERENCES arquivo(id_arquivo) ON DELETE SET NULL
 );
-ALTER TABLE configuracoes
-    ADD CONSTRAINT "FK_CONFIGURACOES_USUARIO"
-    FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE SET NULL;
+
+-- [01-C] configuracoes — movido de CONFIG devido à ordem de criação
+-- necessária para o funcionamento das tabelas: duas linhas do seed de
+-- configuracoes referenciam o usuário admin (id_usuario), então esta
+-- tabela só pode ser criada depois de `usuario` já existir.
+CREATE TABLE configuracoes (
+    id_config   SERIAL,
+    id_usuario  INT,
+    chave       VARCHAR(255) NOT NULL,        -- [R11] UNIQUE necessário pro upsert(onConflict:'chave')
+    valor       VARCHAR(100),
+    tipo        tipo_configuracao NOT NULL,
+    descricao   VARCHAR(255),
+    ativo       BOOLEAN DEFAULT TRUE,
+
+    CONSTRAINT "PK_CONFIGURACOES" PRIMARY KEY (id_config),
+    CONSTRAINT "UK_CONFIGURACOES_CHAVE" UNIQUE (chave),
+    CONSTRAINT "FK_CONFIGURACOES_USUARIO" FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE SET NULL
+);
 
 CREATE TABLE usuario_papel (  -- fica aqui por depender de usuario; documentada no RBAC
     id_usuario INT NOT NULL,
@@ -520,7 +523,7 @@ CREATE TABLE arquivo_recompensa (
 );
 
 -- ============================================================
--- [01-H] CONTRIBUIÇÃO (4 tabelas + ALTER)
+-- [01-H] CONTRIBUIÇÃO (4 tabelas)
 -- ============================================================
 CREATE TABLE contribuicao (
     id_contribuicao  SERIAL,

@@ -17,10 +17,14 @@
 
 Senha placeholder `'TROCAR_NO_AMBIENTE_REAL'` na criação da role `app_nestjs` em `01_extensoes_enums_tabelas.sql`. Só é risco fora do ambiente local — lembrar de trocar quando for pra produção.
 
+> Sugestão do *** CLAUDE ***: não mexeria no `.sql` em si — o placeholder faz sentido continuar aí pro ambiente local. O que eu faria é transformar isso num passo obrigatório de checklist de deploy (já existe um rascunho disso no `tutorial-rodar-projeto.md`, na parte de "troque a senha"): a senha de produção não devia nunca ficar em nenhum arquivo versionado, nem provisória — o ideal é gerar ela automaticamente (`openssl rand` ou equivalente) no momento do deploy e guardar só num gerenciador de segredos (variável de ambiente do provedor de hospedagem, nunca num `.env` versionado no Git). Isso se resolve sozinho quando chegar a hora de colocar em produção — não precisa de decisão de equipe agora, só não esquecer depois.
+
 
 ### 2. Debate `tipo_link` / `contexto_link`
 
 Debate sobre criar 2 tabelas novas (`tipo_link` e `contexto_link` reformulados) — **adiado, não mexer sem pedir**. Assunto que você e sua parceira ainda estão discutindo sobre como modelar.
+
+> Sugestão do *** CLAUDE ***: olhando Catarse e Experiment, os dois têm um conjunto de contextos de link bem pequeno e estável (perfil do criador, página do projeto, atualizações) — não é algo que cresce toda hora na prática. Isso favorece o modelo atual (3 flags booleanas: `permite_perfil`, `permite_atualizacao`, `permite_recompensa`), que é mais simples de ler e de mexer no dia a dia. Eu só migraria pra uma tabela `contexto_link` dinâmica (como o `RBAC-pontos-discutidos.md`, seção 6.5, já esboça) se vocês já tiverem um plano concreto de adicionar um 4º ou 5º contexto em breve (ex.: link em denúncia, em perfil de instituição) — sem esse plano concreto, a complexidade extra da tabela nova não se paga ainda. Minha recomendação: manter como está por enquanto, e só revisitar quando um novo contexto for realmente necessário (não antes, por precaução).
 
 
 ### 3. `score_minimo_campanha` seedado mas nunca aplicado
@@ -33,6 +37,8 @@ Conferido em `05_regras_negocio.sql`: não existe nenhuma trigger que leia essa 
 
 Se sim, é uma trigger pequena em `05` (tipo `trg_campanha_limite_simultaneo`, mas checando score em vez de contagem) que bloqueia `INSERT` em `campanha` se `perfil_pesquisador.score_atual < config_numero('score_minimo_campanha', ...)`.
 
+> Sugestão do *** CLAUDE ***: nem Catarse nem Experiment bloqueiam a criação de campanha por um "score de reputação" acumulado na plataforma — os dois confiam na aprovação manual de um curador/admin (que este projeto já tem, via `status = 'aguardando_aprovacao'`) como o filtro de confiança real, não em histórico de uso do sistema. Faz sentido: um pesquisador cadastrado ontem, com score 0, pode ser totalmente legítimo (é só novo na plataforma) — travar ele automaticamente prejudicaria exatamente quem uma plataforma de crowdfunding científico mais precisa atrair, que são pesquisadores novos por ali. Minha recomendação: - não implementar a trigger de bloqueio automático -. Em vez disso, usar `score_minimo_campanha` só como um - sinal de apoio pra revisão manual - — por exemplo, o painel do admin pode destacar/sinalizar campanhas de pesquisadores com score abaixo do mínimo pra receberem uma revisão mais cuidadosa antes de aprovar, sem bloquear ninguém de forma automática e definitiva.
+
 
 ### 4. Possível linha duplicada em `repasse` (campanha 2)
 
@@ -44,9 +50,15 @@ A campanha é `modelo = 'flexivel'` (repasse abaixo da meta é esperado e corret
 
 Pode ser um resquício de teste/copy-paste no seed, ou pode representar um cenário proposital (ex.: tentativa de repasse que falhou e foi reprocessada). Não mexi em nada, só sinalizando pra nós decidirmos se é lixo de seed pra remover ou um cenário de teste válido pra manter (e, nesse caso, talvez valha um comentário explicando a intenção).
 
-> *** SUGESTÃO DO MEU CLADE: *** blablablá... 
+> Sugestão do *** CLAUDE ***: olhando os dois valores, isso não parece um cenário real intencional — se fosse um segundo repasse de verdade (ex.: mais dinheiro arrecadado depois do primeiro repasse), o `valor_bruto` da segunda linha seria diferente (incremental), não idêntico ao da primeira. Minha recomendação: remover a linha `'parcial_processando'` duplicada e manter só a `'concluido'`, que é a que reflete corretamente uma campanha `flexivel` já finalizada. Se no futuro vocês quiserem um exemplo de seed mostrando "uma tentativa de repasse que falhou e foi reprocessada" (um cenário de teste legítimo), eu recriaria isso com valores e datas claramente diferentes entre as duas linhas, mais um comentário explicando a intenção — do jeito que está hoje, sem essa diferença, é fácil confundir com lixo de teste.
 
 ---
+
+
+
+
+
+
 
 
 ## Só resolve em código Nest/React (ainda não existem)
@@ -56,25 +68,35 @@ Pode ser um resquício de teste/copy-paste no seed, ou pode representar um cená
 
 `SET LOCAL app.id_usuario_atual` por requisição (dentro de uma transação, usando um `Client` específico da pool).
 
+> Sugestão do *** CLAUDE ***: implementar como um interceptor/middleware global do NestJS (não espalhado controller por controller) — assim fica impossível esquecer o `SET LOCAL` numa rota nova que alguém criar depois. Vale também um teste de integração simples que tenta acessar dado de outro usuário sem esse `SET LOCAL` e confirma que a RLS realmente bloqueia.
+
 
 -  6. Fluxo de autenticação completo
 
 Signup, login, verificação de e-mail, recuperação de senha, refresh token.
+
+> Sugestão do *** CLAUDE ***: os prazos que já estão documentados no `01` (token de recuperação de senha com expiração de 15-30 min, ver comentário da tabela) já batem com o padrão que plataformas como Catarse/Experiment usam pra esse tipo de fluxo — não mudaria nada aí. Um reforço que vale considerar: rate-limit de tentativa de login (mesmo simples, tipo "5 tentativas por IP a cada 15 min") é algo que sistemas de referência têm e que ainda não está no escopo — vale colocar na lista quando for implementar.
 
 
 - 7. Guards/interceptors no NestJS
 
 Espelhando `tem_permissao()` do banco no lado da aplicação.
 
+> Sugestão do *** CLAUDE ***: pra não correr o risco de as duas camadas (banco e NestJS) divergirem com o tempo, eu geraria a lista de permissões que o guard do NestJS reconhece - a partir da própria tabela `permissao` - (uma consulta na subida da aplicação, ou um script que gera uma constante/enum automaticamente), em vez de digitar a lista de novo à mão no código do backend. Assim, toda permissão nova só precisa ser criada uma vez, no banco.
+
 
 - 8. Conexão sempre como `app_nestjs`
 
 Garantir que a conexão do backend use sempre `app_nestjs`, nunca superusuário (senão a RLS é ignorada silenciosamente).
 
+> Sugestão do *** CLAUDE ***: um health-check simples na subida do NestJS (`SELECT current_user`) que impede a aplicação de subir se a conexão não for exatamente `app_nestjs` — evita o erro silencioso de rodar com superusuário sem ninguém perceber, o que faria a RLS inteira parecer que "funciona" em teste mas não proteger nada de verdade.
+
 
 - 9. Validação de escrevibilidade financeira
 
 `auditoria_financeira` e `repasse` têm policies de escrita `USING (true)` — a RLS não valida quem grava aí, fica 100% a cargo do serviço do NestJS.
+
+> Sugestão do *** CLAUDE ***: seguindo o padrão de qualquer plataforma de pagamento séria (inclusive Catarse/Experiment, que também dependem de gateway externo pra processar pagamento), eu isolaria a escrita em `auditoria_financeira`/`repasse` dentro de um único serviço interno do NestJS, chamado só pelo webhook do gateway de pagamento — nunca exposto como um endpoint CRUD genérico que outra parte do app possa chamar por engano.
 
 
 ---
@@ -83,34 +105,20 @@ Garantir que a conexão do backend use sempre `app_nestjs`, nunca superusuário 
 ## Decisões que precisamos tomar, não bugs
 
 
-### 10. React em JavaScript ou TypeScript
+- 10. React em JavaScript ou TypeScript
+
+> Sugestão do *** CLAUDE ***: TypeScript. O NestJS já é TypeScript por padrão — manter o front em JavaScript puro cria uma costura inconsistente entre as duas pontas, e vocês perdem a chance de compartilhar tipos entre back e front (ex.: o formato de uma campanha, de uma contribuição). Pra quem ainda está aprendendo, o TypeScript pega em tempo de compilação exatamente o tipo de erro bobo (nome de campo errado, tipo trocado) que sem ele só aparece rodando o app — é uma rede de segurança a mais, não só "código chato de escrever a mais".
 
 
-### 11. Pool direto no Service
+- 11. Pool direto no Service
 
 Só nota de melhoria futura, não urgente.
 
+> Sugestão do *** CLAUDE ***: usar o padrão de injeção de dependência do próprio NestJS — registrar o `Pool` do `pg` como um provider único do módulo e injetar ele nos services, em vez de cada service criar sua própria instância de `Pool`. É o jeito idiomático do framework e evita vazamento de conexão (vários pools abertos sem necessidade).
+
 
 ---
 ---
----
-
-
-# 🟡 OBSERVAÇÕES (achadas na auditoria, não valem a pena mexer agora)
-
-*(Coisas fora do "padrão ideal", mas 100% inofensivas — registradas só pra não parecerem esquecidas se alguém notar depois)*
-
-
-## Duas divisões `ALTER TABLE` que poderiam ser inline (não recomendado mexer)
-
-Auditoria física do `01_extensoes_enums_tabelas.sql` (conferindo se cada tabela respeita a ordem de dependência de FK) encontrou 2 colunas que ganham a FK/definição via `ALTER TABLE` separado, sem um motivo técnico real pra não estarem dentro do `CREATE TABLE` original:
-
-- **`usuario.id_imagem_perfil`** ganha a FK via `ALTER TABLE usuario ADD CONSTRAINT fk_usuario_imagem ...` (linha ~160). A tabela `arquivo` (de onde vem essa FK) já existe **antes** de `usuario` ser criada — dava pra ter sido declarada direto dentro do `CREATE TABLE usuario`. É diferente do caso vizinho `configuracoes → usuario` (linha ~157), que é uma referência circular de verdade e *precisa* do `ALTER` depois (isso está certo, não mexer).
-- **`contribuicao.token_sessao`** é adicionada via `ALTER TABLE contribuicao ADD COLUMN token_sessao UUID DEFAULT gen_random_uuid();` logo após o `CREATE TABLE` (linha ~436), sem nenhum motivo técnico pra não estar inline.
-
-**Por que não recomendo mexer:** não é bug, não muda nenhum comportamento — só uma coluna "fora do lugar ideal" esteticamente. Juntar de volta no `CREATE TABLE` é mexer em texto por puro gosto, sem ganho prático, com risco desnecessário de erro de digitação numa tabela grande. Deixado documentado aqui só pra registro.
-
-
 ---
 ---
 ---
@@ -315,6 +323,32 @@ Esse índice parcial ("só 1 token de recuperação de senha ativo por usuário"
 **O que foi feito:** o índice foi movido de `01_extensoes_enums_tabelas.sql` para `02_indices.sql`, ficando junto dos outros índices de `recuperacao_senha` (`idx_recuperacao_senha_token`, `idx_recuperacao_senha_usuario`), no mesmo lugar onde os outros 2 índices "só 1 ativo" já vivem. Contagem de índices em `02` foi de 36 para 37 (o índice não sumiu, só mudou de arquivo). Nenhuma tabela, coluna ou lógica foi alterada — a tabela `recuperacao_senha` já existe desde o `01`, então o índice continua sendo criado exatamente no mesmo estado do banco, só que 1 arquivo depois.
 
 
+---
+
+
+## Os 4 `ALTER TABLE` de `01_extensoes_enums_tabelas.sql` foram eliminados — **[CORRIGIDO]**
+
+O arquivo tinha 4 `ALTER TABLE`. 3 deles não tinham motivo técnico real e foram simplesmente juntados de volta no `CREATE TABLE` original: `tipo_link` (3 colunas + `CHECK`), `usuario` (FK da foto de perfil) e `contribuicao` (`token_sessao`).
+
+O 4º — `configuracoes` ganhando a FK de `usuario` via `ALTER` — parecia inevitável à primeira vista: `configuracoes` é letra `C`, `usuario` é letra `D`, e o arquivo mantinha todo o bloco `C` fisicamente antes de todo o bloco `D`. Como `configuracoes.id_usuario` aponta pra `usuario`, que ainda não existia naquele ponto do arquivo, a FK só podia vir depois, via `ALTER TABLE`.
+
+**A solução (sugerida pela Alexia):** mover o `CREATE TABLE configuracoes` fisicamente pra logo depois do `CREATE TABLE usuario` (deixando de ficar fisicamente agrupado com o resto da letra `C`), com um comentário no novo local explicando o motivo:
+
+```sql
+-- [01-C] configuracoes — movido de CONFIG devido à ordem de criação
+-- necessária para o funcionamento das tabelas: duas linhas do seed de
+-- configuracoes referenciam o usuário admin (id_usuario), então esta
+-- tabela só pode ser criada depois de `usuario` já existir.
+CREATE TABLE configuracoes ( ... FK inline ... );
+```
+
+Com isso, a FK nasce direto dentro do `CREATE TABLE`, sem `ALTER` nenhum. `configuracoes` continua marcada como `[01-C]` no comentário (a letra não muda, só a posição física) — no lugar antigo, ficou uma nota de uma linha avisando onde ela foi parar, pra ninguém procurar e não achar.
+
+**Resultado final: zero `ALTER TABLE` no arquivo inteiro.**
+
+**Prova de que nada quebrou:** 39 tabelas, 39 `PK_`, 55 `FK_`, 18 `UK_`, 13 `CK_` — todos os números batem com antes da mudança. Comparei o conjunto completo de colunas do arquivo antes/depois: idêntico. Parênteses balanceados.
+
+
 
 
 
@@ -345,4 +379,4 @@ Reparei nisso revisando hoje: RLS não sabe distinguir coluna, só linha — ent
 
 O que eu realmente cortaria, se pudesse: nada do que já existe é lixo ou redundante hoje — a campanha_encerrar que removemos era exatamente esse tipo de coisa, e já foi. O que eu adicionaria, isso sim, é algum teste automatizado (mesmo que simples, tipo um script que insere dado de teste e confere se a RLS bloqueia o que deveria bloquear). Quase todo bug que achamos nessas últimas sessões (trigger não desligada, comentario revertendo moderação, índices redundantes) só apareceu porque eu vasculhei manualmente — nada no projeto teria pego isso sozinho antes de ir pra produção.
 
-> sugestão do CLAUDE: Sobre o Playwright: ele testa o que aparece na tela (clica em botão, preenche formulário, confere texto) — ele nunca fala com o Postgres diretamente. Ele é perfeito pra testar o React+NestJS depois que existirem, mas não cobre nada do .sql (RLS, triggers, constraints). Pra isso, o equivalente seria *** pgTAP *** (framework de teste que roda dentro do próprio Postgres) ou testes de integração no NestJS que sobem um banco de teste real e conferem se a RLS bloqueia o que deveria. São duas camadas de teste diferentes — vocês vão precisar das duas eventualmente, mas por enquanto nenhuma existe.
+> sugestão do CLAUDE : Sobre o Playwright: ele testa o que aparece na tela (clica em botão, preenche formulário, confere texto) — ele nunca fala com o Postgres diretamente. Ele é perfeito pra testar o React+NestJS depois que existirem, mas não cobre nada do .sql (RLS, triggers, constraints). Pra isso, o equivalente seria *** pgTAP *** (framework de teste que roda dentro do próprio Postgres) ou testes de integração no NestJS que sobem um banco de teste real e conferem se a RLS bloqueia o que deveria. São duas camadas de teste diferentes — vocês vão precisar das duas eventualmente, mas por enquanto nenhuma existe.
