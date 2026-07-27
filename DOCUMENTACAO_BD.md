@@ -51,12 +51,23 @@ Cada letra tem exatamente um significado, do `01` ao `08`. Se você está procur
 
 ---
 
-### [01-C] CONFIG (Configurações e Catálogos Globais)
+### [01-C] CONFIG (Configurações, Catálogos e Arquivo Base)
 
 * **`configuracoes`:** Permite armazenar parâmetros globais do sistema (`id_usuario IS NULL`) e preferências individuais de usuários (`id_usuario` preenchido). Possui constraint `UNIQUE` na coluna `chave` para suportar operações de *upsert*.
 * **`tipo_link`:** Catálogo centralizador de redes e links externos. Os campos booleanos `permite_perfil`, `permite_atualizacao` e `permite_recompensa` definem o escopo de uso de cada tipo.
 * **`motivo_denuncia`:** Catálogo de razões para denúncia com flag `ativo` para permitir desativação lógica sem apagar registros históricos.
 * **`arquivo`:** Tabela base de metadados para upload de mídias (URLs, MIME type e tamanho).
+
+> 📌 **Por que `tipo_link` e `arquivo` moram em CONFIG, e não em LINK/ARQUIVO:** a letra `C` não é só "Configurações" — o nome completo do domínio já é **"Configurações, Catálogos e Arquivo Base"** (ver título acima e o "Índice Global de Letras" no topo deste documento). A regra que organiza isso: **o catálogo/recurso compartilhado mora em `C`, e quem *usa* esse catálogo para algo específico ganha sua própria letra.**
+>
+> Esse padrão se repete 3 vezes no projeto, sempre com a mesma lógica:
+> | Catálogo / recurso base (mora em `C`) | Quem usa (mora na letra própria) |
+> |---|---|
+> | `tipo_link` — catálogo de tipos de link (Lattes, ORCID, LinkedIn...) | `link_academico`, `link_atualizacao`, `link_recompensa` → letra **F** (LINK) |
+> | `arquivo` — tabela base de metadados de mídia (URL, MIME, tamanho) | `arquivo_atualizacao`, `arquivo_recompensa` → letra **G** (ARQUIVO) |
+> | `motivo_denuncia` — catálogo de motivos de denúncia | `denuncia` (a denúncia em si) → letra **E** (CAMPANHA) |
+>
+> Ou seja, `arquivo` não está "esquecido" em `C` por engano: ele é a tabela-base genérica (qualquer mídia enviada ao sistema — incluindo a foto de perfil do usuário, `usuario.id_imagem_perfil`), e as tabelas que a *associam* a um contexto específico (atualização de campanha, recompensa) é que ganham letra própria em `G`. O mesmo raciocínio vale para `tipo_link`/`F` e `motivo_denuncia`/`E`.
 
 ---
 

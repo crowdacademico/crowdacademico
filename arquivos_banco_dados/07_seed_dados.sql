@@ -21,22 +21,48 @@
 --  dados obrigatórios de seed (tabelas só de associação/log ficam vazias
 --  até o primeiro uso real da aplicação).
 -- ----------------------------------------------------------------------------
+--  CAMADAS DE DEPENDÊNCIA (o critério real por trás da ordem abaixo)
+-- ----------------------------------------------------------------------------
+--  Camada 1 — Tabelas-base: não dependem de nenhuma linha inserida por este
+--  arquivo, só das tabelas fixas do 01 (ENUMs, etc). Podem ser inseridas em
+--  qualquer ordem entre si.
+--    score_config, score_rotulo, papel, permissao, papel_permissao,
+--    tipo_link, area_conhecimento, motivo_denuncia, arquivo, usuario
+--
+--  Camada 2 — Dependem de uma linha da Camada 1 já existir (o `usuario`
+--  admin, sobretudo): usuario_papel, configuracoes, perfil_pesquisador,
+--  link_academico, campanha, seguir_pesquisador
+--
+--  Camada 3 — Dependem de uma linha da Camada 2 (principalmente de
+--  `campanha` ou `contribuicao` já existirem): seguir_campanha,
+--  contribuicao, auditoria_financeira, atualizacao_campanha,
+--  arquivo_atualizacao, repasse, solicitacao_encerramento,
+--  historico_rejeicao, comentario, denuncia
+--
+--  Por isso o arquivo não segue a ordem alfabética do índice global de
+--  letras (ver DOCUMENTACAO_BD.md) — a ordem física real é por camada de
+--  dependência, e uma letra pode aparecer em mais de uma camada (ex.:
+--  `configuracoes`, letra C, só entra na Camada 2 porque duas de suas
+--  linhas referenciam o usuário admin).
+-- ----------------------------------------------------------------------------
 --  SUMÁRIO DOS BLOCOS DE CÓDIGO (ordem de execução, não alfabética)
 -- ----------------------------------------------------------------------------
---  [07-I] score_config, score_rotulo
---  [07-B] papel, permissao, papel_permissao
---  [07-C] tipo_link, area_conhecimento, motivo_denuncia, arquivo
---  [07-D] usuario, usuario_papel
---  [07-C] configuracoes (vem depois de D de propósito — ver nota acima)
---  [07-D] perfil_pesquisador
---  [07-F] link_academico
---  [07-E] campanha, seguir_campanha
---  [07-D] seguir_pesquisador
---  [07-H] contribuicao, auditoria_financeira
---  [07-E] atualizacao_campanha
---  [07-G] arquivo_atualizacao
+--  [07-I] score_config, score_rotulo                    (Camada 1)
+--  [07-B] papel, permissao, papel_permissao              (Camada 1)
+--  [07-C] tipo_link, area_conhecimento, motivo_denuncia,
+--         arquivo                                        (Camada 1)
+--  [07-D] usuario, usuario_papel                (Camada 1, Camada 2)
+--  [07-C] configuracoes (vem depois de D de propósito — ver acima) (Camada 2)
+--  [07-D] perfil_pesquisador                              (Camada 2)
+--  [07-F] link_academico                                  (Camada 2)
+--  [07-E] campanha                                        (Camada 2)
+--  [07-E] seguir_campanha                                 (Camada 3)
+--  [07-D] seguir_pesquisador                              (Camada 2)
+--  [07-H] contribuicao, auditoria_financeira              (Camada 3)
+--  [07-E] atualizacao_campanha                            (Camada 3)
+--  [07-G] arquivo_atualizacao                             (Camada 3)
 --  [07-E] repasse, solicitacao_encerramento, historico_rejeicao,
---         comentario, denuncia
+--         comentario, denuncia                            (Camada 3)
 -- ============================================================================
 
 -- [07-I-1] score_config: dimensões raiz e subitens do motor de pontuação
