@@ -1330,8 +1330,8 @@ EXECUTE FUNCTION validar_comentario_autor();
 --             (ativo FALSE -> TRUE) um comentário que a moderação ocultou.
 --             O autor continua podendo editar o próprio texto e ocultar
 --             (ativo TRUE -> FALSE) o próprio comentário normalmente — só a
---             reversão da moderação é bloqueada. (Achado 4, CLAUDE-CODE-
---             DESCOBERTAS.md / DOCUMENTACAO_BD.md [04-E-3]/[05-K-3]).
+--             reversão da moderação é bloqueada. (Ver DOCUMENTACAO_BD.md
+--             [04-E-3]/[05-K-3]).
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION fn_bloqueia_reversao_moderacao_comentario()
 RETURNS TRIGGER AS $$

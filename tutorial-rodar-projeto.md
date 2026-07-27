@@ -268,4 +268,19 @@ Isso aqui te deixa com o "hello world" rodando, mas os problemas que já te avis
 
 1. **Login/autenticação real** vai exigir que, a cada requisição de um usuário logado, o backend rode `SET LOCAL app.id_usuario_atual = '<id>'` dentro de uma transação antes de consultar tabelas protegidas por RLS (tudo que não seja tabela de leitura pública como `area_conhecimento`). Isso é código a mais que ainda não existe — quando for fazer login/cadastro, avise que a gente monta esse pedaço com calma.
 2. Confirme sempre que o backend conecta como `app_nestjs`, nunca como `postgres` — senão a RLS é ignorada silenciosamente e parece que "está tudo funcionando" sem estar de verdade protegido.
-3. O modelo ainda tem algumas permissões seedadas que merecem revisão de clareza e uso no RBAC/RLS, principalmente: `campanha_encerrar`, `perfil_pesquisador_visualizar_sensivel`, `sessao_revogar`, `recuperacao_senha_revogar` e `verificacao_email_reenviar`. Essas não são um bloqueio imediato para o tutorial, mas convém revisar antes de usar esse conjunto de permissões em fluxos mais complexos do admin.
+3. O modelo ainda tem algumas permissões seedadas que merecem revisão de clareza e uso no RBAC/RLS, principalmente: `perfil_pesquisador_visualizar_sensivel`, `sessao_revogar`, `recuperacao_senha_revogar` e `verificacao_email_reenviar`. Essas não são um bloqueio imediato para o tutorial, mas convém revisar antes de usar esse conjunto de permissões em fluxos mais complexos do admin.
+
+---
+
+### Atualização (26/07/2026) — decisão tomada sobre `campanha_encerrar`
+
+A permissão `campanha_encerrar`, que aparecia na lista acima, foi **removida do banco** (não existe mais em `07_seed_dados.sql`). Ela nunca tinha sido usada por nenhuma regra de acesso (RLS) — ou seja, não fazia nada na prática, só ficava "no papel".
+
+Existiam duas opções: (a) implementar de verdade, criando um atalho pra admin encerrar campanha direto, sem passar por nenhuma aprovação formal; ou (b) remover, já que o sistema já tem um jeito de encerrar campanha antes do prazo — o fluxo de `solicitacao_encerramento` (o pesquisador pede, um admin decide, e fica registrado o motivo).
+
+Decidimos remover, olhando como plataformas de referência do projeto (Catarse, Experiment) fazem isso: nenhuma delas dá a um admin um botão de "encerrar na marra" sem justificativa, porque tem dinheiro de apoiador envolvido.
+
+**Benefícios da decisão:**
+- **Menos confusão:** não fica uma permissão "fantasma" no sistema, que existe mas não faz nada — quem olhar o banco não perde tempo tentando descobrir onde ela é usada.
+- **Mais segurança e rastreabilidade:** todo encerramento antecipado de campanha continua exigindo justificativa registrada (via `solicitacao_encerramento`), sem atalho que pule essa etapa.
+- **Menos trabalho no RBAC:** uma permissão a menos pra manter, documentar e lembrar de testar.
