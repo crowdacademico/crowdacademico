@@ -2,7 +2,16 @@
 
 Este documento centraliza as explicações de arquitetura, regras de negócio e decisões de modelagem do PostgreSQL. Seu objetivo é manter os scripts `.sql` enxutos, sem poluição de comentários extensos inline.
 
-Os marcadores usados nos comentários dos `.sql` seguem o formato `[NN-Y]` (arquivo-letra) ou `[NN-Y-N]` (arquivo-letra-item), onde **NN** é o número do arquivo (`01` a `08`) e **Y** é a letra do bloco. A letra é a mesma em qualquer arquivo onde aparecer — ver índice abaixo.
+Os marcadores usados nos comentários dos `.sql` seguem o formato `[NN-Y]` (arquivo-letra) ou `[NN-Y-N]` (arquivo-letra-item), onde `NN` é o número do arquivo (`01` a `08`) e `Y` é a letra do bloco. A letra é a mesma em qualquer arquivo onde aparecer — ver índice abaixo.
+
+### Legenda dos símbolos usados neste documento
+
+| Símbolo | Significado |
+|---|---|
+| 📌 | Nota explicativa — o porquê de uma decisão de modelagem |
+| ⚠️ | Ponto de atenção / débito técnico — funciona, mas vale revisar no futuro |
+| 🗑️ | Algo que foi removido |
+| 🗑️➡️✅ | Algo que foi removido *e* trocado por uma correção |
 
 ---
 
@@ -30,8 +39,6 @@ Cada letra tem exatamente um significado, do `01` ao `08`. Se você está procur
 
 ## 01. EXTENSÕES, ENUMS E TABELAS (`01_extensoes_enums_tabelas.sql`)
 
----
-
 ### [01-A] Bootstrap, Extensões e ENUMs
 
 * **Transição de Autenticação (Supabase $\rightarrow$ NestJS Próprio):** O projeto migrou do modelo de autenticação delegada (Supabase Auth/PostgREST) para uma arquitetura com backend próprio em NestJS.
@@ -58,7 +65,7 @@ Cada letra tem exatamente um significado, do `01` ao `08`. Se você está procur
 * **`motivo_denuncia`:** Catálogo de razões para denúncia com flag `ativo` para permitir desativação lógica sem apagar registros históricos.
 * **`arquivo`:** Tabela base de metadados para upload de mídias (URLs, MIME type e tamanho).
 
-> 📌 **Por que `tipo_link` e `arquivo` moram em CONFIG, e não em LINK/ARQUIVO:** a letra `C` não é só "Configurações" — o nome completo do domínio já é **"Configurações, Catálogos e Arquivo Base"** (ver título acima e o "Índice Global de Letras" no topo deste documento). A regra que organiza isso: **o catálogo/recurso compartilhado mora em `C`, e quem *usa* esse catálogo para algo específico ganha sua própria letra.**
+> 📌 **Por que `tipo_link` e `arquivo` moram em CONFIG, e não em LINK/ARQUIVO:** a letra `C` não é só "Configurações" — o nome completo do domínio já é "Configurações, Catálogos e Arquivo Base" (ver título acima e o "Índice Global de Letras" no topo deste documento). A regra que organiza isso: o catálogo/recurso compartilhado mora em `C`, e quem *usa* esse catálogo para algo específico ganha sua própria letra.
 >
 > Esse padrão se repete 3 vezes no projeto, sempre com a mesma lógica:
 > | Catálogo / recurso base (mora em `C`) | Quem usa (mora na letra própria) |
@@ -82,7 +89,7 @@ Cada letra tem exatamente um significado, do `01` ao `08`. Se você está procur
 * **`termos_de_uso` e `usuario_termo`:** Controle de versionamento de termos (LGPD). Guarda a trilha de auditoria (IPv4/IPv6 e timestamp de aceite).
 * **`notificacao`:** Fila/Histórico de envios de e-mail. Armazena o snapshot do e-mail do destinatário, contagem de tentativas e o texto do último erro retornado para depuração.
 * **`verificacao_email` e `recuperacao_senha`:** Gerenciamento de tokens curtos e temporários para confirmação de conta e redefinição de senha.
-  * **Índice Parcial:** O índice `ux_recuperacao_senha_ativo_por_usuario` garante que exista apenas **um token de recuperação ativo** por usuário de cada vez.
+  * **Índice Parcial:** O índice `ux_recuperacao_senha_ativo_por_usuario` garante que exista apenas um token de recuperação ativo por usuário de cada vez.
 * **`sessao`:** Persistência de *Refresh Tokens* hashed. Necessária para permitir o logout seguro, revogação de sessões e controle de múltiplos dispositivos em arquiteturas JWT *stateless*.
 
 ---
@@ -103,13 +110,13 @@ Cada letra tem exatamente um significado, do `01` ao `08`. Se você está procur
 
 ### [01-F] LINK (Tabelas de Associação de Links)
 
-* **`link_academico`**, **`link_atualizacao`** e **`link_recompensa`:** Reutilizam o catálogo `tipo_link` para associar URLs externas a perfis de pesquisadores, atualizações de campanha e recompensas digitais.
+* **`link_academico`, `link_atualizacao` e `link_recompensa`:** Reutilizam o catálogo `tipo_link` para associar URLs externas a perfis de pesquisadores, atualizações de campanha e recompensas digitais.
 
 ---
 
 ### [01-G] ARQUIVO (Tabelas de Associação de Mídias)
 
-* **`arquivo_atualizacao`** e **`arquivo_recompensa`:** Estabelecem o vinculo N:N entre a tabela base `arquivo` e as entidades de atualização/recompensa.
+* **`arquivo_atualizacao` e `arquivo_recompensa`:** Estabelecem o vinculo N:N entre a tabela base `arquivo` e as entidades de atualização/recompensa.
 
 ---
 
@@ -127,22 +134,13 @@ Cada letra tem exatamente um significado, do `01` ao `08`. Se você está procur
 
 ### [01-I] SCORE (Configuração e Cálculo de Pontuação)
 
-* **`score_config`**, **`score_rotulo`** e **`score_pesquisador`:** Estrutura para gamificação e aferição de reputação dos pesquisadores na plataforma.
+* **`score_config`, `score_rotulo` e `score_pesquisador`:** Estrutura para gamificação e aferição de reputação dos pesquisadores na plataforma.
 * **Integridade de Score:** A tabela `score_pesquisador` possui a constraint `uq_score_pesquisador_usuario_config` para impedir duplicidade de pontuação para o mesmo parâmetro e usuário.
 * **Bloco `DO $$`:** Mantido ao final da tabela como verificação defensiva de legado para validar a existência da constraint de unicidade.
-
-
-
-
----
-
-### Arquivo 02_indices.sql
 
 ---
 
 ## 02. ÍNDICES (`02_indices.sql`)
-
----
 
 ### Visão Geral de Performance
 
@@ -160,7 +158,7 @@ Os índices explícitos criados neste script foram projetados para três cenári
 ### [02-D] USUÁRIO
 
 * **Rede de Pesquisadores:** `idx_seguir_pesquisador_usuario` e `idx_seguir_pesquisador_alvo` aceleram as consultas das redes de seguidores e seguidos.
-* **Termo Vigente Único (`uq_termos_uso_ativo`):** Índice parcial `UNIQUE` que assegura no banco a existência de **no máximo uma versão ativa** de termos de uso por vez (`WHERE ativo = TRUE`).
+* **Termo Vigente Único (`uq_termos_uso_ativo`):** Índice parcial `UNIQUE` que assegura no banco a existência de no máximo uma versão ativa de termos de uso por vez (`WHERE ativo = TRUE`).
 * **Fila de Notificações (`idx_notificacao_status`):** Acelera a consulta do *worker* de background ao buscar mensagens com status `pendente`.
 * **Autenticação e Sessão (*Hot Paths*):**
   * `verificacao_email`, `recuperacao_senha` e `sessao`: Índices sobre `token_hash`, `refresh_token_hash` e `id_usuario` previnem chamadas lentas a cada validação de link recebido por e-mail ou *refresh* de token JWT.
@@ -183,7 +181,7 @@ Os índices explícitos criados neste script foram projetados para três cenári
 ### [02-G] ARQUIVO
 
 * **Vínculos de Mídia:** Índices de junção em `arquivo_atualizacao` e `arquivo_recompensa`.
-* **Imagem Principal da Recompensa (`uq_arquivo_recompensa_principal`):** Índice parcial `UNIQUE` que assegura que cada recompensa possua **no máximo uma mídia marcada como principal** (`WHERE principal = TRUE`).
+* **Imagem Principal da Recompensa (`uq_arquivo_recompensa_principal`):** Índice parcial `UNIQUE` que assegura que cada recompensa possua no máximo uma mídia marcada como principal (`WHERE principal = TRUE`).
 
 ---
 
@@ -197,17 +195,9 @@ Os índices explícitos criados neste script foram projetados para três cenári
 
 * **Hierarquia e Histórico:** `idx_score_config_pai` otimiza a montagem das árvores de critérios de pontuação e `idx_score_pesq_usuario` acelera a consulta do histórico de pontuação do pesquisador.
 
-
---- 
-
-
-### Arquivo 03_funcoes_seguranca.sql
-
 ---
 
 ## 03. FUNÇÕES HELPER DE SEGURANÇA (`03_funcoes_seguranca.sql`)
-
----
 
 ### Visão Geral de Arquitetura
 
@@ -233,12 +223,9 @@ Ambas as funções utilizam os modificadores de segurança essenciais:
 * **Descolamento Múltiplo:** Permite alterar, renomear, dividir ou criar novos papéis na tabela `papel` sem a necessidade de alterar nenhuma política de RLS (`04_rls_policies.sql`) ou recriar funções no banco de dados.
 * **Comportamento para Desconectados:** Caso `public.id_usuario_atual()` retorne `NULL` (usuário anônimo ou sessão sem token), o *subselect* falha na condição de igualdade e a função retorna `FALSE` de forma determinística.
 
-
 ---
 
 ## 04. ROW LEVEL SECURITY E POLÍTICAS DE ACESSO (`04_rls_policies.sql`)
-
----
 
 ### Visão Geral de Arquitetura
 
@@ -276,7 +263,7 @@ O arquivo é organizado em 8 blocos conceituais que espelham literalmente os tí
 * **Regra:** Usuários enxergam apenas os próprios dados sensíveis ou perfis não deletados. A atribuição de papéis (`usuario_papel`) exige a permissão `'papel_atribuir'`.
 
 **Detalhamento por policy:**
-* **[04-D-1] `verificacao_email` / `recuperacao_senha` / `sessao`:** a versão anterior deixava RLS ligada e **sem nenhuma policy**, presumindo que só um role com `BYPASSRLS` (ex.: `service_role` do Supabase) acessaria estas tabelas. Esse role não existe mais no projeto — o NestJS conecta como `app_nestjs` (role normal, sem bypass), então RLS sem policy bloquearia 100% do acesso e quebraria verificação de e-mail, recuperação de senha e sessão inteiras. Além disso, boa parte desses fluxos acontece **antes** do usuário estar autenticado (confirmar e-mail, "esqueci minha senha") — não dá para restringir por `id_usuario_atual()`, porque ainda não existe sessão. Quem valida a posse do token (comparando o hash) é o próprio NestJS na aplicação; a policy `FOR ALL TO app_nestjs USING (true)` aqui só garante que nenhum outro role além de `app_nestjs` consegue tocar nessas tabelas.
+* **[04-D-1] `verificacao_email` / `recuperacao_senha` / `sessao`:** a versão anterior deixava RLS ligada e sem nenhuma policy, presumindo que só um role com `BYPASSRLS` (ex.: `service_role` do Supabase) acessaria estas tabelas. Esse role não existe mais no projeto — o NestJS conecta como `app_nestjs` (role normal, sem bypass), então RLS sem policy bloquearia 100% do acesso e quebraria verificação de e-mail, recuperação de senha e sessão inteiras. Além disso, boa parte desses fluxos acontece antes do usuário estar autenticado (confirmar e-mail, "esqueci minha senha") — não dá para restringir por `id_usuario_atual()`, porque ainda não existe sessão. Quem valida a posse do token (comparando o hash) é o próprio NestJS na aplicação; a policy `FOR ALL TO app_nestjs USING (true)` aqui só garante que nenhum outro role além de `app_nestjs` consegue tocar nessas tabelas.
 * **[04-D-2] `usuario` (INSERT):** faltava a policy de `INSERT` em `usuario`. O fluxo de signup (`08_trigger_signup_usuario.sql`) já prevê o NestJS inserindo direto em `usuario` dentro da própria transação, antes de existir qualquer sessão — não há `id_usuario_atual()` para checar nesse momento, então `WITH CHECK (true)` é a única condição logicamente possível aqui. E-mail duplicado já é barrado pelo `UNIQUE` em `usuario.email` (`01`), e validação de formato/força de senha é responsabilidade do NestJS antes do `INSERT`.
 * **[04-D-3] `perfil_pesquisador` (INSERT):** a policy de `INSERT` permite o fluxo de upgrade de usuário cadastrado para pesquisador. Sem ela, a RLS bloqueia a operação mesmo com o `GRANT` de tabela em `06_grants.sql`.
 * **[04-D-4] `usuario_papel` (DELETE):** a policy de `DELETE` permite que o painel administrativo revogue papéis já atribuídos, sem depender de um bypass de RLS.
@@ -303,9 +290,9 @@ O arquivo é organizado em 8 blocos conceituais que espelham literalmente os tí
 * **[04-E-4] `comentario` (UPDATE) — histórico do bug de endosso:** o soft delete de comentário permite que o autor desative o próprio comentário, e que moderação/admin desativem qualquer um. Só que "endossar comentário" (setar `endossado`/`ordem_endosso`) nunca teve policy de `UPDATE` que cobrisse essa ação — não existia nenhuma policy de `UPDATE` em `comentario` antes disso, e a primeira versão do `UPDATE` (criada junto com o soft delete) só liberava o próprio autor ou moderação, nunca o dono da campanha. Como só quem endossa é o dono da campanha, sobre um comentário de outra pessoa, sem essa condição o endosso continuava impossível na prática. A restrição de que o dono da campanha só deve mexer em `endossado`/`ordem_endosso` (e não no conteúdo do comentário) fica a cargo do endpoint específico de endosso no NestJS, não da RLS.
 
 > 🗑️➡️✅ **[04-E-4] Correção adicional — autor conseguia reverter a própria moderação (Achado 4).**
-> - **Como era:** `pol_comentario_update` libera `UPDATE` para o próprio autor (`id_pesquisador = id_usuario_atual()`) **na linha inteira**, sem restringir qual coluna pode mudar — isso é uma limitação da RLS em si (RLS de linha nunca sabe distinguir *qual coluna* está sendo alterada, só *quem* está alterando; o mesmo já acontecia em `[04-E-1]` para `campanha_aprovar`/`campanha_rejeitar`). Na prática, isso significava que um comentário ocultado por moderação (`ativo = FALSE`) podia ser reativado pelo próprio autor com um simples `UPDATE comentario SET ativo = TRUE WHERE id_comentario = ...` — a moderação virava decorativa, porque quem foi moderado conseguia desfazer a moderação sozinho.
-> - **Por que a RLS sozinha não resolve:** dar à RLS o poder de saber "essa coluna específica só pode mudar por certas mãos" exigiria reescrever a policy pra checar coluna por coluna dentro do `USING`/`WITH CHECK`, o que o Postgres não faz de forma nativa — o jeito correto é uma trigger, que **compara `OLD` com `NEW`** antes de aceitar o `UPDATE`.
-> - **Como ficou:** nova função `fn_bloqueia_reversao_moderacao_comentario()` + trigger `trg_comentario_bloqueia_reversao_moderacao` (`BEFORE UPDATE`, `05_regras_negocio.sql`, bloco `[05-K-3]` — ver detalhamento na seção 05 deste documento). A regra é cirúrgica: só bloqueia a transição específica `ativo: FALSE → TRUE` quando quem está alterando **não** tem a permissão `comentario_moderar`. Todo o resto continua exatamente igual a antes:
+> - **Como era:** `pol_comentario_update` libera `UPDATE` para o próprio autor (`id_pesquisador = id_usuario_atual()`) na linha inteira, sem restringir qual coluna pode mudar — isso é uma limitação da RLS em si (RLS de linha nunca sabe distinguir *qual coluna* está sendo alterada, só *quem* está alterando; o mesmo já acontecia em `[04-E-1]` para `campanha_aprovar`/`campanha_rejeitar`). Na prática, isso significava que um comentário ocultado por moderação (`ativo = FALSE`) podia ser reativado pelo próprio autor com um simples `UPDATE comentario SET ativo = TRUE WHERE id_comentario = ...` — a moderação virava decorativa, porque quem foi moderado conseguia desfazer a moderação sozinho.
+> - **Por que a RLS sozinha não resolve:** dar à RLS o poder de saber "essa coluna específica só pode mudar por certas mãos" exigiria reescrever a policy pra checar coluna por coluna dentro do `USING`/`WITH CHECK`, o que o Postgres não faz de forma nativa — o jeito correto é uma trigger, que compara `OLD` com `NEW` antes de aceitar o `UPDATE`.
+> - **Como ficou:** nova função `fn_bloqueia_reversao_moderacao_comentario()` + trigger `trg_comentario_bloqueia_reversao_moderacao` (`BEFORE UPDATE`, `05_regras_negocio.sql`, bloco `[05-K-3]` — ver detalhamento na seção 05 deste documento). A regra é cirúrgica: só bloqueia a transição específica `ativo: FALSE → TRUE` quando quem está alterando não tem a permissão `comentario_moderar`. Todo o resto continua exatamente igual a antes:
 >   - O autor continua podendo editar o texto do próprio comentário livremente.
 >   - O autor continua podendo ocultar (`ativo: TRUE → FALSE`) o próprio comentário — isso nunca foi o problema, e continua liberado.
 >   - Quem tem `comentario_moderar` (moderador/admin) continua podendo reverter (`FALSE → TRUE`) normalmente — a trigger só barra quem **não** tem essa permissão.
@@ -319,7 +306,7 @@ O arquivo é organizado em 8 blocos conceituais que espelham literalmente os tí
 * **Regra:** Links de perfil e campanhas podem ser criados, editados ou removidos pelo próprio autor/pesquisador ou por usuários com papéis moderadores.
 
 **Detalhamento por policy:**
-* **[04-F-1] `link_recompensa` (UPDATE) — assimetria proposital:** edição e remoção de link de recompensa são restritas ao dono da campanha ou a quem tem `campanha_editar` — de propósito **sem** o comprador aqui, diferente do `SELECT` (onde o comprador pode ler). O link é fornecido pelo pesquisador para entrega da recompensa, então só quem fornece pode alterá-lo ou removê-lo; o comprador só pode ler.
+* **[04-F-1] `link_recompensa` (UPDATE) — assimetria proposital:** edição e remoção de link de recompensa são restritas ao dono da campanha ou a quem tem `campanha_editar` — de propósito sem o comprador aqui, diferente do `SELECT` (onde o comprador pode ler). O link é fornecido pelo pesquisador para entrega da recompensa, então só quem fornece pode alterá-lo ou removê-lo; o comprador só pode ler.
 
 #### [04-G] ARQUIVO
 * **Tabelas:** `arquivo_atualizacao`, `arquivo_recompensa`.
@@ -350,11 +337,9 @@ O arquivo é organizado em 8 blocos conceituais que espelham literalmente os tí
 
 ## 05. MOTOR DE SCORE + REGRAS DE NEGÓCIO (`05_regras_negocio.sql`)
 
----
-
 ### Visão Geral
 
-Este é o arquivo mais denso do banco: 28 funções e 24 triggers, organizados em 7 blocos que usam duas letras do índice global — `I` (SCORE, blocos `[05-I-1]` a `[05-I-4]`) e `K` (Regras de Negócio Transversais, blocos `[05-K-1]` a `[05-K-3]`), ver "Índice Global de Letras" no topo deste documento. Ele concentra toda regra que um `CHECK` simples não alcança — porque depende de **consultar outra tabela** (ex.: será que essa campanha está ativa?) ou de **recalcular algo automaticamente** quando um dado relacionado muda.
+Este é o arquivo mais denso do banco: 28 funções e 24 triggers, organizados em 7 blocos que usam duas letras do índice global — `I` (SCORE, blocos `[05-I-1]` a `[05-I-4]`) e `K` (Regras de Negócio Transversais, blocos `[05-K-1]` a `[05-K-3]`), ver "Índice Global de Letras" no topo deste documento. Ele concentra toda regra que um `CHECK` simples não alcança — porque depende de consultar outra tabela (ex.: será que essa campanha está ativa?) ou de recalcular algo automaticamente quando um dado relacionado muda.
 
 > 📌 **Por que o motor de score existe:** antes deste arquivo, `perfil_pesquisador.score_atual` e `score_pesquisador.pontos_obtidos` eram só valores fixos digitados no seed — nada calculava o score de verdade a partir de campanhas, denúncias, links acadêmicos ou do perfil. A tela de detalhes de pontuação no front lia campos que nem existiam no tipo real de dimensões de score, e a conta virava `NaN`. A solução foi mover o cálculo inteiro para dentro do banco, com o resultado guardado em cache (`perfil_pesquisador.score_atual` e `score_pesquisador`) e atualizado sozinho via trigger sempre que um dado relevante muda — funciona para qualquer registro novo, sem que o backend precise lembrar de chamar nada. Todos os pesos vêm de `score_config.peso` (nenhum número fixo no código): editar o peso no Painel Admin já recalcula o score de todo mundo.
 
@@ -377,7 +362,7 @@ Quatro funções puras (`STABLE`, sem efeito colateral), uma por dimensão do sc
 | `calcular_score_atualizacao` | Atualização da Campanha | `regularidade = SUM(realizadas)/SUM(esperadas) × peso_regularidade`; `tempestividade = (% de campanhas em dia) × peso_tempestividade`. Só conta campanhas já iniciadas (`ativo`/`sucesso`/`nao_atingido`/`encerrado`); esperadas = duração em meses × `score_frequencia_esperada_mensal`. |
 | `calcular_score_reputacao` | Reputação da Comunidade | `peso_raiz − (total de denúncias × custo) − (denúncias procedentes × custo_procedente)`. |
 
-> ⚠️ **Não existe status "abandonada" no enum `status_campanha`.** `calcular_score_historico` deduz isso na consulta: campanha `nao_atingido` **sem nenhuma** `solicitacao_encerramento` conta como abandonada; campanha `nao_atingido` **com** solicitação mas sem `justificativa_pesquisador` preenchida conta como "sem justificativa". Essa dedução está comentada diretamente no corpo da função, junto às consultas que ela afeta.
+> ⚠️ **Não existe status "abandonada" no enum `status_campanha`.** `calcular_score_historico` deduz isso na consulta: campanha `nao_atingido` sem nenhuma `solicitacao_encerramento` conta como abandonada; campanha `nao_atingido` com solicitação mas sem `justificativa_pesquisador` preenchida conta como "sem justificativa". Essa dedução está comentada diretamente no corpo da função, junto às consultas que ela afeta.
 
 > ⚠️ **`calcular_score_atualizacao` filtra por `atualizacao_campanha.ativo = TRUE`.** Sem esse filtro, uma atualização ocultada por moderação (soft delete) continuaria contando a favor da regularidade do pesquisador — foi uma correção aplicada depois da criação da coluna `ativo` em `01`.
 
@@ -385,7 +370,7 @@ Quatro funções puras (`STABLE`, sem efeito colateral), uma por dimensão do sc
 
 ### [05-I-3] Score — Orquestração e Cálculo Geral
 
-* **`recalcular_score_pesquisador(p_id_usuario)`:** chama as 4 funções de `[05-I-2]`, soma o total, resolve o `id_rotulo` correspondente em `score_rotulo`, grava em `score_pesquisador` (via `UPSERT` — `ON CONFLICT (id_usuario, id_score_config) DO UPDATE`) e atualiza o cache em `perfil_pesquisador.score_atual`. É `SECURITY DEFINER` de propósito: precisa poder escrever no perfil de **qualquer** pesquisador (ex.: quando um admin resolve uma denúncia contra outra pessoa), não só de quem disparou a ação.
+* **`recalcular_score_pesquisador(p_id_usuario)`:** chama as 4 funções de `[05-I-2]`, soma o total, resolve o `id_rotulo` correspondente em `score_rotulo`, grava em `score_pesquisador` (via `UPSERT` — `ON CONFLICT (id_usuario, id_score_config) DO UPDATE`) e atualiza o cache em `perfil_pesquisador.score_atual`. É `SECURITY DEFINER` de propósito: precisa poder escrever no perfil de qualquer pesquisador (ex.: quando um admin resolve uma denúncia contra outra pessoa), não só de quem disparou a ação.
 * **`recalcular_todos_os_scores()`:** roda `recalcular_score_pesquisador` para todo mundo. Usada pelo botão "Recalcular" do Painel Admin e disparada automaticamente quando um peso de `score_config` muda (ver `[05-I-4]`).
 
 ---
@@ -460,8 +445,6 @@ As 24 triggers deste arquivo têm `DROP TRIGGER IF EXISTS` imediatamente antes d
 
 ## 06. GRANTS (`06_grants.sql`)
 
----
-
 ### Visão Geral
 
 Este arquivo concede à role `app_nestjs` (criada em `01`) exatamente os privilégios que a RLS (`04`) pressupõe. RLS e GRANT são duas checagens **independentes** que o Postgres exige em conjunto: mesmo com uma policy liberando o acesso, se o GRANT de tabela/coluna não existir, a operação falha antes com `permission denied` — a policy nunca chega a ser avaliada. O arquivo segue a mesma ordem de blocos de domínio do `01`.
@@ -472,7 +455,7 @@ Este arquivo concede à role `app_nestjs` (criada em `01`) exatamente os privil�
 
 ### [06-A] Geral (Schema e Sequências)
 
-* **`GRANT USAGE ON SCHEMA public`** e **`GRANT SELECT ON ALL TABLES`:** acesso de base ao schema e leitura geral — depois refinada por `REVOKE`/GRANT de coluna nas tabelas sensíveis (`[06-D]`).
+* **`GRANT USAGE ON SCHEMA public` e `GRANT SELECT ON ALL TABLES`:** acesso de base ao schema e leitura geral — depois refinada por `REVOKE`/GRANT de coluna nas tabelas sensíveis (`[06-D]`).
 * **[06-A-1] `GRANT USAGE, SELECT ON ALL SEQUENCES`:** sem isso, `GRANT INSERT` sozinho não é suficiente — o Postgres não consegue gerar o próximo valor de uma coluna `SERIAL`/`IDENTITY` sem `USAGE` na sequência por trás dela (erro `42501`). Afeta toda tabela com `GRANT INSERT` neste arquivo; resolvido de uma vez para todas com um único `GRANT` sobre todas as sequências do schema.
 
 ---
@@ -541,13 +524,11 @@ Nenhum GRANT adicional. `papel`, `permissao` e `papel_permissao` só têm policy
 
 ## 07. SEED DE DADOS (`07_seed_dados.sql`)
 
----
-
 ### Visão Geral
 
 Povoa o banco com dados de demonstração/teste (mínimo 7 registros por tabela relevante). É o único arquivo em que a **ordem física não segue a ordem alfabética do índice global de letras** — ela segue estritamente a ordem de dependência de Foreign Key, porque aqui (diferente de `04`/`06`) a ordem das instruções importa de verdade: uma tabela filha só pode receber `INSERT` depois que a linha da tabela pai já existe.
 
-> ⚠️ **Por que a ordem não é alfabética:** o exemplo mais claro é `configuracoes` (letra C). Duas das suas linhas de seed (`notificar_novas_campanhas`, `limite_denuncias_suspensao`) referenciam o usuário admin pelo `id_usuario`. Por isso o `INSERT` em `configuracoes` só pode rodar **depois** do `INSERT` em `usuario` (letra D) — o arquivo intercala C e D de propósito, e isso já estava correto antes desta reorganização. Reordenar cegamente para "C sempre antes de D" quebraria o script.
+> ⚠️ **Por que a ordem não é alfabética:** o exemplo mais claro é `configuracoes` (letra C). Duas das suas linhas de seed (`notificar_novas_campanhas`, `limite_denuncias_suspensao`) referenciam o usuário admin pelo `id_usuario`. Por isso o `INSERT` em `configuracoes` só pode rodar depois do `INSERT` em `usuario` (letra D) — o arquivo intercala C e D de propósito, e isso já estava correto antes desta reorganização. Reordenar cegamente para "C sempre antes de D" quebraria o script.
 
 ### Ordem de Execução (com a letra de cada bloco)
 
@@ -603,15 +584,13 @@ Povoa o banco com dados de demonstração/teste (mínimo 7 registros por tabela 
 
 * **[07-I-2] `configuracoes` (constantes do motor de score):** dados (não lógica) que alimentam as fórmulas de `05_regras_negocio.sql` — `score_custo_denuncia`, `score_penalidade_abandono`, etc. Ficam em `configuracoes` (não hardcoded no código) exatamente para que o admin possa ajustar a régua de penalidades pelo Painel Admin sem precisar editar SQL/app.
 
-* **[07-D-5] Como logar no app após o seed:** com autenticação própria, o fluxo é: 1) cadastrar o usuário pelo endpoint de signup do NestJS (gera o `senha_hash` e chama `public.atribuir_papel_padrao(id_usuario)`, que atribui o papel `'usuario'` — ver `08_trigger_signup_usuario.sql`); 2) o papel `'admin'` **não** é atribuído automaticamente por nada disso — depois do signup, é preciso dar o papel a um usuário manualmente com `INSERT INTO usuario_papel (id_usuario, id_papel) SELECT <id_usuario>, id_papel FROM papel WHERE nome = 'admin'`.
+* **[07-D-5] Como logar no app após o seed:** com autenticação própria, o fluxo é: 1) cadastrar o usuário pelo endpoint de signup do NestJS (gera o `senha_hash` e chama `public.atribuir_papel_padrao(id_usuario)`, que atribui o papel `'usuario'` — ver `08_trigger_signup_usuario.sql`); 2) o papel `'admin'` não é atribuído automaticamente por nada disso — depois do signup, é preciso dar o papel a um usuário manualmente com `INSERT INTO usuario_papel (id_usuario, id_papel) SELECT <id_usuario>, id_papel FROM papel WHERE nome = 'admin'`.
 
 > 🗑️ **Dois blocos removidos por estarem 100% obsoletos** (não só migrados — de fato apagados, sem equivalente aqui): um "FIX — permission denied for sequence" que descrevia um problema já resolvido, e uma "NOTA DE REORGANIZAÇÃO" que apontava para um arquivo `05_grants.sql` que nunca existiu de verdade (o nome correto sempre foi `06_grants.sql`). Ambos descreviam o `GRANT USAGE, SELECT ON ALL SEQUENCES`, que já vive e já está plenamente documentado em `06_grants.sql` (`[06-A-1]`) — mantê-los aqui seria pura duplicação desatualizada.
 
 ---
 
 ## 08. ATRIBUIÇÃO DE PAPEL PADRÃO NO SIGNUP (`08_trigger_signup_usuario.sql`)
-
----
 
 ### Visão Geral
 
@@ -626,4 +605,4 @@ O menor arquivo do banco: 1 função + 1 `GRANT`. Apesar do nome do arquivo aind
 * **`ON CONFLICT DO NOTHING`:** protege contra chamar a função duas vezes para o mesmo usuário (ex.: retry de rede) sem gerar erro de duplicidade.
 * **`GRANT EXECUTE`:** sem ele, a chamada do NestJS falharia com `permission denied` (erro `42501`) — o mesmo problema que as funções de score já tiveram, resolvido da mesma forma (ver `[06-I-1]`).
 
-> 📌 **Por que `atribuir_papel_padrao()` não aparece aqui:** o `GRANT EXECUTE` dessa função fica junto dela mesma em `08_trigger_signup_usuario.sql`, porque `06` roda **antes** do `08` na ordem de dependência — a função ainda não existiria neste ponto da execução se o grant estivesse aqui.
+> 📌 **Por que `atribuir_papel_padrao()` não aparece aqui:** o `GRANT EXECUTE` dessa função fica junto dela mesma em `08_trigger_signup_usuario.sql`, porque `06` roda antes do `08` na ordem de dependência — a função ainda não existiria neste ponto da execução se o grant estivesse aqui.
