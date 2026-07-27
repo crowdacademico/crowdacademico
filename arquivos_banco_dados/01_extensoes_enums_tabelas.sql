@@ -327,6 +327,10 @@ CREATE TABLE campanha (
     data_fim             TIMESTAMP,
     status               status_campanha NOT NULL DEFAULT 'aguardando_aprovacao',
     aprovado_em          TIMESTAMP,
+    -- CORRIGIDO: data_fim é a promessa (congelada por fn_congela_regras_campanha,
+    -- 05); faltava onde registrar quando a campanha de fato terminou (natural,
+    -- antecipado ou por moderação) — sem isso o RF-042/RF-058 não tinham onde gravar.
+    encerrado_em         TIMESTAMP,
     criado_em            TIMESTAMP       DEFAULT NOW(),
 
     CONSTRAINT "PK_CAMPANHA" PRIMARY KEY (id_campanha),

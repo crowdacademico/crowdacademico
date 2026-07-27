@@ -158,7 +158,13 @@ INSERT INTO permissao (nome) VALUES
 -- ADICIONADO: as duas únicas permissões que faltavam para remover
 -- eh_admin() de 100% das RLS policies (ver RBAC-pontos-discutidos.md).
 ('link_academico_gerenciar'),
-('arquivo_gerenciar')
+('arquivo_gerenciar'),
+-- CORRIGIDO: o worker de envio de notificação precisava de uma permissão pra ler
+-- a fila (pol_notificacao_select, 04) — antes disso, só dava pra rodar o worker
+-- emprestando 'usuario_visualizar_sensivel', que não tem nada a ver com fila de
+-- notificação e quebraria o envio de e-mail se alguém restringisse essa permissão
+-- por motivo de privacidade no futuro sem perceber a dependência.
+('notificacao_processar')
 ON CONFLICT (nome) DO NOTHING;
 
 
@@ -195,6 +201,7 @@ WHERE (p.nome, perm.nome) IN (
     ('admin', 'verificacao_email_reenviar'),
     ('admin', 'link_academico_gerenciar'),
     ('admin', 'arquivo_gerenciar'),
+    ('admin', 'notificacao_processar'),
     -- moderador: cuida da moderação de conteúdo e denúncias.
     ('moderador', 'denuncia_responder'),
     ('moderador', 'comentario_moderar'),
@@ -397,17 +404,27 @@ ALTER TABLE contribuicao ENABLE TRIGGER trg_sincroniza_arrecadado_campanha;
 
 
 -- [07-H-2] auditoria_financeira
-INSERT INTO auditoria_financeira (id_contribuicao, status_novo, status_anterior, evento, timestamp) VALUES
-(1, 'confirmado', 'pendente',   'pagamento_confirmado_gateway',   '2024-02-10 10:05:00'),
-(1, 'repassado',  'confirmado', 'meta_atingida_repasse_efetuado', '2024-04-05 10:00:00'),
-(2, 'confirmado', 'pendente',   'pagamento_confirmado_gateway',   '2024-02-12 14:35:00'),
-(3, 'confirmado', 'pendente',   'pagamento_confirmado_gateway',   '2024-02-20 09:10:00'),
-(4, 'confirmado', 'pendente',   'pagamento_confirmado_gateway',   '2024-03-05 11:15:00'),
-(7, 'confirmado', 'pendente',   'pagamento_confirmado_gateway',   '2024-03-15 12:10:00'),
-(7, 'a_devolver', 'confirmado', 'meta_nao_atingida_devolucao',    '2024-04-25 00:00:00');
+-- CORRIGIDO: faltava a coluna "valor" (NOT NULL em 01) — o INSERT inteiro falhava
+-- com "null value in column valor violates not-null constraint". Valor de cada
+-- linha é o mesmo da contribuicao correspondente (id_contribuicao).
+INSERT INTO auditoria_financeira (id_contribuicao, valor, status_novo, status_anterior, evento, timestamp) VALUES
+(1, 5000.00, 'confirmado', 'pendente',   'pagamento_confirmado_gateway',   '2024-02-10 10:05:00'),
+(1, 5000.00, 'repassado',  'confirmado', 'meta_atingida_repasse_efetuado', '2024-04-05 10:00:00'),
+(2, 2300.00, 'confirmado', 'pendente',   'pagamento_confirmado_gateway',   '2024-02-12 14:35:00'),
+(3, 1500.00, 'confirmado', 'pendente',   'pagamento_confirmado_gateway',   '2024-02-20 09:10:00'),
+(4, 8000.00, 'confirmado', 'pendente',   'pagamento_confirmado_gateway',   '2024-03-05 11:15:00'),
+(7,  800.00, 'confirmado', 'pendente',   'pagamento_confirmado_gateway',   '2024-03-15 12:10:00'),
+(7,  800.00, 'a_devolver', 'confirmado', 'meta_nao_atingida_devolucao',    '2024-04-25 00:00:00');
 
 
 -- [07-E-3] atualizacao_campanha
+-- CORRIGIDO: a campanha 7 já está 'encerrado' neste ponto do seed (ver [07-E-1]), e
+-- validar_atualizacao_campanha() só aceita 'ativo'/'sucesso'/'nao_atingido' — o INSERT
+-- inteiro (7 linhas, uma transação) falhava por causa da linha da campanha 7. Mesmo
+-- raciocínio do bloco [07-H-1]: dado histórico de campanha já concluída, trigger
+-- desligada só durante a carga do seed.
+ALTER TABLE atualizacao_campanha DISABLE TRIGGER trg_atualizacao_campanha_status;
+
 INSERT INTO atualizacao_campanha (id_campanha, titulo, conteudo, publicado_em, fase, tipo) VALUES
 (1, 'Início da coleta de dados clínicos',        'Iniciamos a coleta de dados clínicos com parceria do Hospital das Clínicas. Primeiros 200 exames de neuroimagem analisados.', '2024-02-20 10:00:00', 'andamento',          'texto'),
 (1, 'Modelo atinge 89% de acurácia',             'Modelo de deep learning atingiu acurácia de 89% na base de validação. Aguardamos revisão por pares..',                        '2024-03-15 14:00:00', 'resultado_preliminar','texto'),
@@ -416,6 +433,8 @@ INSERT INTO atualizacao_campanha (id_campanha, titulo, conteudo, publicado_em, f
 (5, 'Questionários aplicados nas comunidades',   'Questionários aplicados em 12 comunidades quilombolas. Dados sendo sistematizados para análise estatística.',                  '2024-05-01 08:00:00', 'andamento',          'texto'),
 (7, 'Ensaio clínico concluído',                  'Ensaio clínico concluído. Grupo probiótico apresentou redução de 34% nas taxas de sepse versus controle.',                    '2024-09-01 10:00:00', 'resultado_final',    'pdf'),
 (1, 'Artigo submetido à Nature Medicine',        'Artigo submetido ao periódico Nature Medicine. Código e dataset disponibilizados em repositório público.',                     '2024-04-10 16:00:00', 'resultado_final',    'linkexterno');
+
+ALTER TABLE atualizacao_campanha ENABLE TRIGGER trg_atualizacao_campanha_status;
 
 
 -- [07-G-1] arquivo_atualizacao
