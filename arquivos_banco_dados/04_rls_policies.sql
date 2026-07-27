@@ -229,8 +229,15 @@ DROP POLICY IF EXISTS pol_usuario_termo_insert ON usuario_termo;
 CREATE POLICY pol_usuario_termo_insert ON usuario_termo FOR INSERT TO app_nestjs WITH CHECK (id_usuario = public.id_usuario_atual());
 
 -- [04-D-5] notificacao: por que existem policies de INSERT/UPDATE (ver DOCUMENTACAO_BD.md)
+-- CORRIGIDO: acrescentada 'notificacao_processar' — o worker de envio de e-mail
+-- precisava ler a fila de pendentes, e antes só existia 'usuario_visualizar_sensivel'
+-- pra isso, uma permissão sem nenhuma relação semântica com processar notificação.
 DROP POLICY IF EXISTS pol_notificacao_select ON notificacao;
-CREATE POLICY pol_notificacao_select ON notificacao FOR SELECT TO app_nestjs USING (id_usuario = public.id_usuario_atual() OR public.tem_permissao('usuario_visualizar_sensivel'));
+CREATE POLICY pol_notificacao_select ON notificacao FOR SELECT TO app_nestjs USING (
+    id_usuario = public.id_usuario_atual()
+    OR public.tem_permissao('usuario_visualizar_sensivel')
+    OR public.tem_permissao('notificacao_processar')
+);
 -- CORRIGIDO: exigia id_usuario = id_usuario_atual() pra criar/atualizar — mas toda
 -- notificação real do sistema é pra um terceiro (admin aprova -> avisa pesquisador;
 -- sistema avisa doadores), e nem o worker de envio (sem usuário logado) conseguia ler
@@ -401,8 +408,15 @@ CREATE POLICY pol_solicitacao_update ON solicitacao_encerramento FOR UPDATE TO a
     OR EXISTS (SELECT 1 FROM campanha WHERE id_campanha = solicitacao_encerramento.id_campanha AND id_usuario = public.id_usuario_atual())
 );
 
+-- CORRIGIDO: faltava o dono da campanha enxergar a própria rejeição — diferente
+-- de solicitacao_encerramento e repasse (tabelas irmãs), que já liberam o dono via
+-- OR EXISTS. Sem isso, o RF-070 (pesquisador edita e reenvia campanha rejeitada)
+-- deixava o motivo da rejeição só acessível por e-mail (RF-071), nunca pela própria plataforma.
 DROP POLICY IF EXISTS pol_historicorej_select ON historico_rejeicao;
-CREATE POLICY pol_historicorej_select ON historico_rejeicao FOR SELECT TO app_nestjs USING (public.tem_permissao('campanha_rejeitar'));
+CREATE POLICY pol_historicorej_select ON historico_rejeicao FOR SELECT TO app_nestjs USING (
+    public.tem_permissao('campanha_rejeitar')
+    OR EXISTS (SELECT 1 FROM campanha WHERE id_campanha = historico_rejeicao.id_campanha AND id_usuario = public.id_usuario_atual())
+);
 -- [04-E-6] historico_rejeicao: por que existem policies de escrita (ver DOCUMENTACAO_BD.md)
 DROP POLICY IF EXISTS pol_historicorej_insert ON historico_rejeicao;
 CREATE POLICY pol_historicorej_insert ON historico_rejeicao FOR INSERT TO app_nestjs WITH CHECK (true);

@@ -910,6 +910,14 @@ CREATE TRIGGER trg_denuncia_valida_tipo_motivo
 --             atingiu a meta financeira. Só bloqueia se houver tentativa real
 --             de liberar dinheiro (valor_liquido > 0); registro de "nada
 --             repassado" (RF-038, valor_liquido = 0) continua permitido.
+-- CORRIGIDO: a versão anterior comparava só NEW.valor_liquido > 0, então depois que
+-- a A3 passou a validar também em UPDATE, um repasse já feito ficava impossível de
+-- corrigir (status, data) se a campanha tivesse sido revertida (contribuições
+-- devolvidas derrubando valor_bruto_arrecadado abaixo da meta). Agora só bloqueia
+-- quando o valor liberado está de fato AUMENTANDO em relação ao que já era antes —
+-- reduzir, zerar ou só mudar status/data nunca deveria travar. TG_OP = 'UPDATE'
+-- guarda o acesso a OLD porque, num INSERT, o registro OLD não existe (referenciar
+-- OLD.coluna nesse caso lança "record OLD is not assigned yet").
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION fn_valida_repasse_all_or_nothing()
 RETURNS TRIGGER AS $$
@@ -917,13 +925,21 @@ DECLARE
     v_modelo     modelo_campanha;
     v_meta       DECIMAL;
     v_arrecadado DECIMAL;
+    v_valor_liquido_anterior DECIMAL;
 BEGIN
     SELECT modelo, meta_financeira, valor_bruto_arrecadado
     INTO v_modelo, v_meta, v_arrecadado
     FROM campanha
     WHERE id_campanha = NEW.id_campanha;
 
-    IF v_modelo = 'all-or-nothing' AND v_arrecadado < v_meta AND NEW.valor_liquido > 0 THEN
+    IF TG_OP = 'UPDATE' THEN
+        v_valor_liquido_anterior := OLD.valor_liquido;
+    ELSE
+        v_valor_liquido_anterior := 0;
+    END IF;
+
+    IF v_modelo = 'all-or-nothing' AND v_arrecadado < v_meta
+       AND NEW.valor_liquido > COALESCE(v_valor_liquido_anterior, 0) THEN
         RAISE EXCEPTION 'Repasse bloqueado: campanhas all-or-nothing só podem repassar valores se a meta financeira for atingida.';
     END IF;
 
@@ -985,12 +1001,35 @@ $$;
 -- Regra:     Bloqueia contribuição com meio de pagamento diferente de PIX em
 --            campanha all-or-nothing.
 -- ----------------------------------------------------------------------------
--- CORRIGIDO: mesma falha do trg_valida_repasse — só validava no INSERT, um UPDATE
--- posterior em meio_pagamento não era revalidado.
 DROP TRIGGER IF EXISTS trg_contribuicao_all_or_nothing_pix ON contribuicao;
 CREATE TRIGGER trg_contribuicao_all_or_nothing_pix
-BEFORE INSERT OR UPDATE ON contribuicao
+BEFORE INSERT ON contribuicao
 FOR EACH ROW
+EXECUTE FUNCTION validar_contribuicao_all_or_nothing();
+
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_contribuicao_all_or_nothing_pix_update
+-- Tabela:    contribuicao
+-- Momento:   BEFORE UPDATE (só quando meio_pagamento ou id_campanha mudam de valor)
+-- Função:    validar_contribuicao_all_or_nothing()
+-- Bloco:     [05-K-2]
+-- Regra:     CORRIGIDO — a versão anterior (BEFORE INSERT OR UPDATE sem WHEN)
+--            revalidava meio_pagamento em TODO UPDATE, mesmo quando só o status
+--            mudava (exatamente o que o webhook de confirmação de pagamento faz).
+--            Isso congelava para sempre qualquer contribuição não-PIX que já
+--            existisse numa campanha all-or-nothing (ex.: dado histórico do seed,
+--            carregado com a trigger desligada). A cláusula WHEN restringe a
+--            revalidação para quando o que de fato importa muda, sem abrir mão
+--            de impedir trocar o meio de pagamento por baixo dos panos depois.
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_contribuicao_all_or_nothing_pix_update ON contribuicao;
+CREATE TRIGGER trg_contribuicao_all_or_nothing_pix_update
+BEFORE UPDATE ON contribuicao
+FOR EACH ROW
+WHEN (
+    NEW.meio_pagamento IS DISTINCT FROM OLD.meio_pagamento
+    OR NEW.id_campanha IS DISTINCT FROM OLD.id_campanha
+)
 EXECUTE FUNCTION validar_contribuicao_all_or_nothing();
 
 
@@ -1035,6 +1074,13 @@ BEGIN
 
         IF NEW.data_fim IS DISTINCT FROM OLD.data_fim THEN
             RAISE EXCEPTION 'Operação bloqueada: o prazo da campanha não pode ser alterado após o congelamento.';
+        END IF;
+
+        -- CORRIGIDO (regressão do B2): data_inicio tinha ficado de fora — dava pra
+        -- recuar a data de início e mudar a duração da campanha pelo outro lado,
+        -- sem nenhum bloqueio, mesmo com data_fim já congelado.
+        IF NEW.data_inicio IS DISTINCT FROM OLD.data_inicio THEN
+            RAISE EXCEPTION 'Operação bloqueada: a data de início da campanha não pode ser alterada após o congelamento.';
         END IF;
     END IF;
 

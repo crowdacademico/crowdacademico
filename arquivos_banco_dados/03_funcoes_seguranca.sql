@@ -23,6 +23,12 @@
 --             no início da transação, após validar o JWT. O segundo
 --             argumento true de current_setting() evita erro fatal quando a
 --             variável não foi definida (sessão anônima), retornando NULL.
+-- CORRIGIDO (bug crítico): `, true` só cobre "variável nunca definida" — não cobre
+-- "definida como string vazia", e '' :: INT lança exceção. Como tem_permissao() chama
+-- esta função e aparece em 89 das 105 policies, uma sessão anônima onde o NestJS
+-- interpola algo como `${usuario?.id ?? ''}` derrubava QUALQUER consulta a tabela
+-- protegida, inclusive a listagem pública de campanhas. NULLIF(..., '') trata os dois
+-- casos (não definida e definida vazia) como a mesma coisa: usuário anônimo, NULL.
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.id_usuario_atual()
 RETURNS INT
@@ -31,7 +37,7 @@ STABLE
 SECURITY DEFINER
 SET search_path = public
 AS $$
-    SELECT current_setting('app.id_usuario_atual', true)::INT;
+    SELECT NULLIF(current_setting('app.id_usuario_atual', true), '')::INT;
 $$;
 
 -- ============================================================

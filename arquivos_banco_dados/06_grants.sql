@@ -102,8 +102,13 @@ GRANT SELECT (
 
 -- CORRIGIDO: usuario, perfil_pesquisador, termos_de_uso e usuario_termo tinham DELETE
 -- sem nenhuma policy de DELETE correspondente (ver [06-D] no DOCUMENTACAO_BD.md).
-GRANT INSERT, UPDATE ON usuario, perfil_pesquisador, termos_de_uso, usuario_termo TO app_nestjs;
-GRANT INSERT, UPDATE, DELETE ON usuario_papel, seguir_pesquisador TO app_nestjs;
+GRANT INSERT, UPDATE ON usuario, perfil_pesquisador, termos_de_uso TO app_nestjs;
+-- CORRIGIDO: usuario_termo também tinha UPDATE sem nenhuma policy de UPDATE — é
+-- registro de aceite de termo, nunca deveria ser editável depois de criado.
+GRANT INSERT ON usuario_termo TO app_nestjs;
+-- CORRIGIDO: usuario_papel e seguir_pesquisador tinham UPDATE sem nenhuma policy de
+-- UPDATE — as duas só têm operação de inserir/apagar, não existe "editar" nelas.
+GRANT INSERT, DELETE ON usuario_papel, seguir_pesquisador TO app_nestjs;
 
 -- [06-D-3] notificacao: por que precisou de GRANT de INSERT/UPDATE (ver DOCUMENTACAO_BD.md)
 GRANT INSERT, UPDATE ON notificacao TO app_nestjs;
@@ -121,7 +126,9 @@ GRANT INSERT, UPDATE ON
     solicitacao_encerramento, historico_rejeicao, comentario, denuncia,
     recompensa
 TO app_nestjs;
-GRANT INSERT, UPDATE, DELETE ON seguir_campanha TO app_nestjs;
+-- CORRIGIDO: seguir_campanha também tinha UPDATE sem nenhuma policy de UPDATE —
+-- só existe inserir/apagar "seguir campanha", não faz sentido "editar" essa linha.
+GRANT INSERT, DELETE ON seguir_campanha TO app_nestjs;
 
 -- ============================================================================
 --  [06-F] LINK
@@ -142,10 +149,11 @@ TO app_nestjs;
 --  [06-H] CONTRIBUIÇÃO
 -- ============================================================================
 -- CORRIGIDO: nenhuma das quatro tem policy de DELETE (ver [06-H] no DOCUMENTACAO_BD.md).
-GRANT INSERT, UPDATE ON
-    contribuicao, auditoria_financeira, contribuicao_recompensa,
-    aceite_termo_contribuicao
-TO app_nestjs;
+GRANT INSERT, UPDATE ON contribuicao, auditoria_financeira TO app_nestjs;
+-- CORRIGIDO: contribuicao_recompensa e aceite_termo_contribuicao também tinham UPDATE
+-- sem nenhuma policy de UPDATE — os comentários do 04 já dizem que os dois são
+-- registro de auditoria/aquisição, não deveriam ser editáveis depois de criados.
+GRANT INSERT ON contribuicao_recompensa, aceite_termo_contribuicao TO app_nestjs;
 
 -- ============================================================================
 --  [06-I] SCORE

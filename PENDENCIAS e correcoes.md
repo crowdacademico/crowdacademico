@@ -46,11 +46,11 @@
 
 **Prova mecânica de que nada quebrou (Lista A + B juntas):** 39 tabelas (igual); `PK_`=39, `FK_`=55, `UK_`=18 (iguais); `CK_` foi de 13 pra 14 (a nova `CK_DENUNCIA_ALVO_XOR`); parênteses balanceados em `01`. Policies: 105 `CREATE POLICY` / 105 `DROP POLICY`, continua 100% idempotente. Triggers foram de 24 pra 26 (`trg_denuncia_valida_tipo_motivo`, `trg_valida_transicao_solicitacao`); funções de `05` foram de 28 pra 30, e `03` de 2 pra 3 (`usuario_visivel`) — cabeçalhos de inventário atualizados nos arquivos correspondentes. Reconferi linha a linha o seed inteiro (`denuncia`, `perfil_pesquisador`) contra as constraints/triggers novas — todas as linhas já existentes continuam passando sem precisar mudar nenhum valor do seed.
 
-### 🗓️ 27-07-2026 (parte 2) — o que rodar de verdade encontrou (ainda NÃO corrigido)
+### 🗓️ 27-07-2026 (parte 2) — o que rodar de verdade encontrou
 
-*(Diferente de tudo acima: estes dois itens vieram de alguém que instalou um Postgres de teste e executou os 8 arquivos de verdade, não só leu. Eu conferi cada afirmação técnica direto contra o `.sql` atual — as duas são reais. Mas por pedido seu, nada foi corrigido ainda: só documentado, esperando você decidir a forma de consertar.)*
+*(Estes dois itens vieram de alguém que instalou um Postgres de teste e executou os 8 arquivos de verdade, não só leu. Eu conferi cada afirmação técnica direto contra o `.sql` atual — as duas são reais.)*
 
-🔴 **21. `07_seed_dados.sql` não roda até o fim do jeito que está — 3 erros em cascata**
+🟢 **21. `07_seed_dados.sql` não roda até o fim do jeito que está — 3 erros em cascata — CORRIGIDO em 27-07-2026**
 
 Conferido linha a linha, os três são reais:
 - **`auditoria_financeira`**: a coluna `valor` é `DECIMAL(10,2) NOT NULL`, sem valor padrão, e o `INSERT INTO auditoria_financeira (id_contribuicao, status_novo, status_anterior, evento, timestamp)` do seed nunca informa essa coluna. As 7 linhas falham com `null value in column "valor" violates not-null constraint`.
@@ -59,7 +59,9 @@ Conferido linha a linha, os três são reais:
 
 Isso significa que a afirmação anterior de que o banco "roda do zero sem erro" nunca tinha sido testada por execução real — só por leitura estática (contagens, comparação de arquivo, simulação manual). Os arquivos `01` a `06` e o `08` continuam passando sem nenhum erro.
 
-> Sugestão do *** CLAUDE ***: os três têm o mesmo tipo de correção, mecânica e sem decisão de negócio envolvida — não escrevi ainda porque você pediu pra eu só documentar por enquanto. `auditoria_financeira` precisa de um valor em `valor` em cada uma das 7 linhas (dá pra usar o mesmo valor da `contribuicao` correspondente). Já `atualizacao_campanha`/`arquivo_atualizacao` têm duas saídas possíveis: ou o bloco `[07-H-1]` (que já desliga `trg_valida_status_contribuicao`/`trg_contribuicao_all_or_nothing_pix`/`trg_sincroniza_arrecadado_campanha` "porque o seed representa dados históricos já concluídos") ganha `trg_atualizacao_campanha_status` na mesma lista de triggers desligadas temporariamente, ou a atualização da campanha 7 é reordenada pra rodar num momento em que a campanha ainda esteja com status permitido. A primeira é mais simples e seguem exatamente o mesmo raciocínio que o comentário do `[07-H-1]` já usa pras outras três.
+> Sugestão do *** CLAUDE ***: os três têm o mesmo tipo de correção, mecânica e sem decisão de negócio envolvida. `auditoria_financeira` precisa de um valor em `valor` em cada uma das 7 linhas (dá pra usar o mesmo valor da `contribuicao` correspondente). Já `atualizacao_campanha`/`arquivo_atualizacao` têm duas saídas possíveis: ou o bloco ganha uma trigger desligada temporariamente, ou a atualização da campanha 7 é reordenada pra rodar num momento em que a campanha ainda esteja com status permitido.
+
+**Corrigido:** `auditoria_financeira` ganhou a coluna `valor` no `INSERT` (mesmo valor da `contribuicao` correspondente, em cada uma das 7 linhas). `atualizacao_campanha` ganhou `ALTER TABLE atualizacao_campanha DISABLE/ENABLE TRIGGER trg_atualizacao_campanha_status` envolvendo o `INSERT` (mesmo raciocínio do `[07-H-1]`, campanha 7 é dado histórico já concluído). `arquivo_atualizacao` se resolveu sozinho como consequência. Prova: os 7 `INSERT` continuam com os mesmos dados, só ganharam a coluna/trigger que faltava.
 
 🔴 **22. O seed só roda com superusuário ou papel com `BYPASSRLS` — isso nunca foi escrito em lugar nenhum**
 
@@ -68,6 +70,86 @@ Isso significa que a afirmação anterior de que o banco "roda do zero sem erro"
 Isso importa porque o banco vai rodar no Supabase, e lá você executa SQL pelo papel que o próprio Supabase fornece no editor deles — não necessariamente um superusuário local. Se esse papel não tiver `BYPASSRLS`, o seed falha lá do mesmo jeito, mesmo já tendo funcionado na sua máquina.
 
 > Sugestão do *** CLAUDE ***: duas coisas, nenhuma delas é mudar o `.sql`. Primeiro, confirmar no próprio Supabase se o papel usado no SQL Editor deles (geralmente `postgres`) tem `BYPASSRLS` — normalmente tem, mas vale confirmar antes de contar com isso, não depois de um deploy dar errado. Segundo, o `tutorial-rodar-projeto.md` merece uma linha explícita dizendo isso: "o `07` (e qualquer re-execução do seed) precisa rodar como superusuário ou papel com `BYPASSRLS` — nunca como `app_nestjs`".
+
+## 🗓️ 27-07-2026 (parte 3) — a Lista A/B foi testada de novo, executando: 3 regressões + 1 bug crítico novo — **todos 🟢 corrigidos no mesmo dia**
+
+*(Depois de aplicar a Lista A/B, alguém rodou os 8 arquivos de novo num Postgres 16 de teste e testou cenário por cenário — não só leu. Confirmei cada afirmação abaixo direto contra o `.sql` atual. As regressões nasceram de correções minhas (A3 e B2) que resolveram o problema original mas foram calibradas rápido demais.)*
+
+🟢 **23. BUG CRÍTICO — `id_usuario_atual()` derruba o sistema inteiro se a variável de sessão vier como texto vazio, não só "não definida" — CORRIGIDO**
+
+`current_setting('app.id_usuario_atual', true)::INT` — o segundo argumento `true` só protege contra a variável nunca ter sido definida (retorna `NULL` nesse caso, como o comentário da função já dizia). Ele **não** protege contra a variável estar definida como string vazia `''`. Testado direto no banco:
+```sql
+SELECT set_config('app.id_usuario_atual', '', false);
+SELECT public.id_usuario_atual();        -- ERROR: invalid input syntax for type integer: ""
+SELECT public.tem_permissao('campanha_aprovar');  -- mesmo erro
+SELECT count(*) FROM campanha;           -- mesmo erro, inclusive na listagem pública
+```
+Como `tem_permissao()` chama `id_usuario_atual()` por baixo, e `tem_permissao()` aparece em 89 das 105 policies, uma única sessão com essa variável vazia (em vez de simplesmente não definida) derruba qualquer consulta a qualquer tabela protegida — **inclusive a página pública de campanhas, que nem exige login**. E o gatilho é banal: é exatamente o que acontece em JavaScript quando alguém escreve algo como `` `${usuario?.id ?? ''}` `` pra um visitante anônimo, ou quando alguém "limpa" a variável ao final de uma requisição em vez de deixar o `SET LOCAL` expirar sozinho com o fim da transação — ou seja, é o erro mais provável de acontecer bem na hora de implementar a pendência 5 (contexto de sessão por requisição), antes mesmo de existir uma rota de login.
+
+> Sugestão do *** CLAUDE ***: `SELECT NULLIF(current_setting('app.id_usuario_atual', true), '')::INT;` — uma palavra (`NULLIF`) resolve os três casos (não definida, definida vazia, definida com valor) corretamente.
+
+**Corrigido:** `id_usuario_atual()` (`03`) agora usa `NULLIF(current_setting(...), '')::INT`, com comentário explicando a pegadinha. Prova: string vazia e "nunca definida" agora se comportam de forma idêntica (`NULL`), e `tem_permissao()`/qualquer policy que dependa dela volta a funcionar em ambos os casos.
+
+🟢 **24. Regressão da A3 — o webhook de pagamento não consegue confirmar 3 das 7 contribuições do seed — CORRIGIDO**
+
+A correção da A3 (`BEFORE INSERT` → `BEFORE INSERT OR UPDATE` em `trg_contribuicao_all_or_nothing_pix`) foi aplicada literalmente, mas `validar_contribuicao_all_or_nothing()` revalida `meio_pagamento` **mesmo quando essa coluna não está sendo alterada**. O seed tem 3 contribuições não-PIX em campanhas `all-or-nothing` (`id_contribuicao` 2 e 7 em cartão de crédito, 4 em boleto — entraram porque a trigger estava desligada durante a carga, ver bloco `[07-H-1]`). Testado:
+```sql
+UPDATE contribuicao SET status='confirmado' WHERE id_contribuicao=4;
+-- ERROR: Campanhas all-or-nothing aceitam apenas contribuições via PIX
+```
+Um `UPDATE` que só muda `status` (exatamente o que um webhook de confirmação de pagamento faz o tempo todo) é bloqueado. Essas 3 linhas ficam permanentemente congeladas — e o mesmo aconteceria com qualquer linha futura que, por algum motivo, fique fora da regra.
+
+> Sugestão do *** CLAUDE ***: separar a trigger em duas — uma `BEFORE INSERT` sem condição (comportamento original) e outra `BEFORE UPDATE` com uma cláusula `WHEN (NEW.meio_pagamento IS DISTINCT FROM OLD.meio_pagamento OR NEW.id_campanha IS DISTINCT FROM OLD.id_campanha)`, só revalidando quando o que importa de fato muda. Isso mantém a proteção que a A3 queria (impedir trocar o meio de pagamento por baixo dos panos) sem travar o fluxo normal de confirmação.
+
+**Corrigido:** exatamente essa separação foi feita em `05` — `trg_contribuicao_all_or_nothing_pix` (`BEFORE INSERT`, sem condição) e `trg_contribuicao_all_or_nothing_pix_update` (`BEFORE UPDATE`, com o `WHEN` sugerido). As 3 contribuições não-PIX do seed continuam existindo como estavam (não mexi no seed pra "corrigir" o dado histórico — isso ficou só como observação, não é bug de código) e agora aceitam `UPDATE` de `status` numa boa. Prova: a trigger nova aparece na contagem (`05` foi de 26 para 27 triggers).
+
+🟢 **25. Regressão da A3 — o repasse fica intocável depois que o dinheiro é devolvido — CORRIGIDO**
+
+Mesmo mecanismo, em `fn_valida_repasse_all_or_nothing()`. Fluxo do RF-038 testado numa campanha `all-or-nothing` que bateu a meta, teve repasse registrado, e depois teve as contribuições revertidas pra `'a_devolver'` (derrubando `valor_bruto_arrecadado` pra 0):
+```sql
+UPDATE repasse SET status='devolvido' WHERE id_campanha=7;
+-- ERROR: Repasse bloqueado: campanhas all-or-nothing só podem repassar
+--        valores se a meta financeira for atingida.
+```
+A trigger relê `valor_bruto_arrecadado` (agora zero) e bloqueia — mesmo o `UPDATE` não estando liberando nenhum dinheiro novo, só corrigindo status/data de um repasse que já tinha acontecido.
+
+> Sugestão do *** CLAUDE ***: só validar quando o valor liberado está de fato aumentando: `NEW.valor_liquido > COALESCE(OLD.valor_liquido, 0)`. No `INSERT`, `OLD` não existe e a expressão se comporta igual a hoje (`NEW.valor_liquido > 0`); no `UPDATE`, só bloqueia quem tenta liberar mais dinheiro do que já tinha sido liberado antes — reduzir, zerar ou só mudar status/data nunca deveria travar.
+
+**Corrigido:** `fn_valida_repasse_all_or_nothing()` agora usa `TG_OP = 'UPDATE'` pra decidir se olha `OLD.valor_liquido` (só faz sentido acessar `OLD` num `UPDATE` — num `INSERT` o registro `OLD` nem existe, e tentar ler ele quebraria com "record OLD is not assigned yet"). A comparação final ficou `NEW.valor_liquido > COALESCE(v_valor_liquido_anterior, 0)`, exatamente a lógica sugerida.
+
+🟢 **26. Regressão da B2 — congelar `data_fim` tirou o lugar de registrar quando a campanha realmente terminou, e `data_inicio` ficou de fora por engano — CORRIGIDO**
+
+Testado o fluxo do RF-042 (admin aprova encerramento antecipado):
+```sql
+UPDATE campanha SET status='encerrado', data_fim=NOW() WHERE id_campanha=5;
+-- ERROR: Operação bloqueada: o prazo da campanha não pode ser alterado após o congelamento.
+```
+Congelar `data_fim` continua certo — é a data prometida a quem doou, mudar depois é exatamente o que o congelamento deveria impedir. O problema é que não existe nenhuma coluna pra registrar a data real de encerramento (natural, antecipado ou por moderação) — `data_fim` é a promessa, não o fato. E tem uma assimetria: `data_inicio` **não** foi incluído no congelamento do B2 — dá pra mover a data de início de uma campanha aprovada livremente, e a duração dela muda por esse lado sem nenhum bloqueio (testado: recuar `data_inicio` em 10 dias fez a duração pular de 60 pra 70 dias sem erro nenhum).
+
+> Sugestão do *** CLAUDE ***: manter `data_fim` congelado, adicionar `data_inicio` na mesma lista de campos protegidos do B2 (mesma trigger, mesmo padrão), e criar uma coluna nova `encerrado_em TIMESTAMP` em `campanha`, preenchida em qualquer tipo de encerramento. Isso também serve ao RF-058 (data do repasse no painel) e à auditoria em geral.
+
+**Corrigido:** `data_inicio` entrou na mesma trigger `fn_congela_regras_campanha` (`05`), junto de `titulo`/`descricao`/`data_fim`. A coluna `encerrado_em TIMESTAMP` foi criada em `campanha` (`01`), nullable, sem valor padrão — não é congelada de propósito (é justamente o campo que deve poder ser preenchido no momento do encerramento). O seed não referencia essa coluna pelo nome, então as 7 linhas continuam inserindo normal, só com `encerrado_em = NULL`. Ainda não existe uma trigger que preencha `encerrado_em` sozinha — quem grava esse valor, por enquanto, é quem faz o `UPDATE` de status (fica pro NestJS, ou pra uma trigger futura se decidirem automatizar).
+
+### Achados menores desta rodada
+
+🟢 **27. `GRANT UPDATE` sem policy de `UPDATE` em 6 tabelas — CORRIGIDO** — mesmo problema do A7 (que só cobriu `DELETE`), agora do lado do `UPDATE`: `aceite_termo_contribuicao`, `contribuicao_recompensa`, `usuario_termo`, `seguir_campanha`, `seguir_pesquisador`, `usuario_papel` tinham `GRANT UPDATE` sem nenhuma policy correspondente. Nas 3 primeiras é proposital (comentários do `04` já dizem isso: "aceite/aquisição é registro de auditoria, não deve ser editável"); nas outras 3 (`seguir_*`, `usuario_papel`) a operação real é inserir e apagar, não tem o que atualizar. **Corrigido:** `UPDATE` removido do `GRANT` das 6, em `06_grants.sql`.
+
+🔴 **28. O inverso do 27 — `verificacao_email`/`recuperacao_senha`/`sessao` não conseguem `DELETE`, mesmo a policy permitindo** — as 3 têm policy `FOR ALL` (que cobre `DELETE`), mas o `GRANT` (`06`) é só `SELECT, INSERT, UPDATE` — falta `DELETE`. `app_nestjs` nunca consegue apagar sessão expirada ou token já consumido; essas 3 tabelas só crescem. Provavelmente proposital (revogar é só marcar `revogado_em`/`usado_em`, nunca apagar linha) — mas aí a política de retenção de dado precisa estar escrita em algum lugar, porque o RNF-003 fala em guardar dado pessoal só pelo tempo mínimo necessário, e sessão antiga com IP e user-agent é dado pessoal.
+
+🟢 **29. Dono da campanha não vê por que ela foi rejeitada — CORRIGIDO** — `pol_historicorej_select` só liberava quem tem `campanha_rejeitar`; diferente de `solicitacao_encerramento` e `repasse` (as duas tabelas irmãs), que corretamente liberam também `EXISTS (... id_usuario = id_usuario_atual())` pro dono. O RF-070 prevê o pesquisador editar e reenviar campanha rejeitada — sem ver o motivo na própria plataforma, ele dependia só do e-mail do RF-071. **Corrigido:** acrescentado o mesmo `OR EXISTS (...)` que as duas tabelas irmãs já usavam.
+
+🟢 **30. Worker de notificação dependia de uma permissão com nome enganoso — CORRIGIDO** — o A4 destravou a escrita (o mais grave), mas o `SELECT` continuava exigindo ser o dono da notificação ou ter `usuario_visualizar_sensivel` — funcionava, mas criava acoplamento estranho: o worker de e-mail precisava rodar autenticado com uma permissão cujo nome diz "ver dado sensível de usuário", não "processar fila de notificação". **Corrigido:** nova permissão `notificacao_processar` (seedada em `07`, atribuída ao `admin`), acrescentada como mais uma opção em `pol_notificacao_select` (`04`), ao lado da condição de dono e de `usuario_visualizar_sensivel` — nada que já funcionava foi removido, só uma opção nova.
+
+🔴 **31. `score_pesquisador` de usuário deletado continua público** — mesmo gap do A9 (que cobriu só `perfil_pesquisador` e `link_academico`, como pedido); `pol_score_select` continua `USING (TRUE)`. Não mexido de propósito — o score está na Lista C aguardando decisão de escopo (itens 12-13); se ele ficar, entra na mesma correção do `usuario_visivel()`.
+
+🔴 **32. 15 das 39 tabelas ficam vazias depois do seed** — separando por motivo:
+- **Vazias porque o seed quebra** (somem quando os 3 erros do item 21 forem corrigidos): `atualizacao_campanha`, `arquivo_atualizacao`, `auditoria_financeira`.
+- **Vazias porque o seed simplesmente não escreve nelas:** `termos_de_uso`, `usuario_termo`, `aceite_termo_contribuicao`, `notificacao`. Esta é a que preocupa mais: `termos_de_uso` sem nenhuma linha significa que o RF-011 (aceite obrigatório no cadastro), RF-054 e RF-055 (aceite por transação, prova documental contra chargeback) não têm nenhum dado de exemplo, e o índice `uq_termos_uso_ativo` nunca é exercitado — é justamente a trilha de auditoria que a Etapa 2 descreve como defesa principal da plataforma numa disputa com operadora de cartão.
+- **Vazias por escopo** (Lista C, não mexer): a família `recompensa` e a família `link_atualizacao`/`link_recompensa`, mais as tabelas de runtime de autenticação (normal nascerem vazias).
+
+**Confirmado que a Lista A/B em si está correta** (nenhum item foi revertido) — as regressões 24-26 são efeito colateral de uma correção real, não a correção em si estando errada. A auto-correção anterior sobre "105 vs 106 policies" também foi reconfirmada como engano de contagem (a contagem certa sempre foi 105, batendo com o cabeçalho do `04`) — nada a mudar aí.
+
+**Prova mecânica de que nada quebrou (itens 21, 23-27, 29-30 juntos):** 39 tabelas (igual, só ganhou a coluna `encerrado_em` em `campanha`); `PK_`=39, `FK_`=55, `UK_`=18, `CK_`=14 (todos iguais). Parênteses balanceados em `01`. Policies: continua 105 `CREATE POLICY` / 105 `DROP POLICY` (só editei policies existentes, nenhuma nova). Triggers foram de 26 para 27 (`trg_contribuicao_all_or_nothing_pix_update`, a única trigger nova). Funções: 30 em `05` e 3 em `03`, sem mudança de contagem (só corpo de função existente foi alterado). Reconferi o seed inteiro linha a linha depois das mudanças — as 7 linhas de `auditoria_financeira`, as 7 de `atualizacao_campanha` e as 7 de `campanha` continuam com os mesmos dados de antes, só ganhando a coluna/trigger que faltava.
 
 ### Lista C — travado até vocês dois decidirem (nada mexido aqui)
 
