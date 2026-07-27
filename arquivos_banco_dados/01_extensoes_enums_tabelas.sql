@@ -198,6 +198,9 @@ CREATE TABLE usuario_papel (  -- fica aqui por depender de usuario; documentada 
     CONSTRAINT "FK_USUARIO_PAPEL_PAPEL" FOREIGN KEY (id_papel) REFERENCES papel(id_papel) ON DELETE CASCADE
 );
 
+-- CORRIGIDO: coluna "suspenso" removida — duplicava status_pesquisador (mesmo estado,
+-- duas fontes de verdade que podiam divergir); só status_pesquisador era de fato lido
+-- em algum lugar (pol_comentario_insert, 04).
 CREATE TABLE perfil_pesquisador (
     id_usuario            INT,
     cpf_criptografado     VARCHAR(255),
@@ -205,7 +208,6 @@ CREATE TABLE perfil_pesquisador (
     titulo_academico      titulo_academico,
     status_pesquisador    status_pesquisador DEFAULT 'ativo',
     ativado_em            TIMESTAMP,
-    suspenso              BOOLEAN            DEFAULT FALSE,
     score_atual           INTEGER            DEFAULT 0,
     score_atualizado_em   TIMESTAMP,
 
@@ -432,11 +434,19 @@ CREATE TABLE denuncia (
 
     CONSTRAINT "PK_DENUNCIA" PRIMARY KEY (id_denuncia),
     CONSTRAINT "FK_DENUNCIA_USUARIO" FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario),
-    CONSTRAINT "FK_DENUNCIA_CAMPANHA_ALVO" FOREIGN KEY (id_campanha_alvo) REFERENCES campanha(id_campanha) ON DELETE SET NULL,
-    CONSTRAINT "FK_DENUNCIA_PESQUISADOR_ALVO" FOREIGN KEY (id_pesquisador_alvo) REFERENCES usuario(id_usuario) ON DELETE SET NULL,
+    -- CORRIGIDO (B1): SET NULL -> RESTRICT — denúncia é registro de moderação; um alvo
+    -- virando NULL sozinho com o tempo destruiria rastro de auditoria. Na prática não
+    -- muda nada hoje (nem campanha nem usuario têm policy de DELETE, ver 06_grants.sql).
+    CONSTRAINT "FK_DENUNCIA_CAMPANHA_ALVO" FOREIGN KEY (id_campanha_alvo) REFERENCES campanha(id_campanha) ON DELETE RESTRICT,
+    CONSTRAINT "FK_DENUNCIA_PESQUISADOR_ALVO" FOREIGN KEY (id_pesquisador_alvo) REFERENCES usuario(id_usuario) ON DELETE RESTRICT,
     CONSTRAINT "FK_DENUNCIA_MOTIVO" FOREIGN KEY (id_motivo) REFERENCES motivo_denuncia(id_motivo),
     CONSTRAINT "UK_DENUNCIA_USUARIO_CAMPANHA_ALVO" UNIQUE (id_usuario, id_campanha_alvo),
-    CONSTRAINT "UK_DENUNCIA_USUARIO_PESQUISADOR_ALVO" UNIQUE (id_usuario, id_pesquisador_alvo)
+    CONSTRAINT "UK_DENUNCIA_USUARIO_PESQUISADOR_ALVO" UNIQUE (id_usuario, id_pesquisador_alvo),
+    -- CORRIGIDO: nada garantia exatamente um alvo preenchido (dava pra ter os dois ou nenhum).
+    CONSTRAINT "CK_DENUNCIA_ALVO_XOR" CHECK (
+        (id_campanha_alvo IS NOT NULL AND id_pesquisador_alvo IS NULL)
+        OR (id_campanha_alvo IS NULL AND id_pesquisador_alvo IS NOT NULL)
+    )
 );
 
 CREATE TABLE recompensa (

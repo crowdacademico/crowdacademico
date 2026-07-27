@@ -192,8 +192,9 @@ DROP POLICY IF EXISTS pol_usuario_update ON usuario;
 CREATE POLICY pol_usuario_update ON usuario FOR UPDATE TO app_nestjs USING (id_usuario = public.id_usuario_atual() OR public.tem_permissao('usuario_suspender'));
 
 -- [04-D-3] perfil_pesquisador: por que existe a policy de INSERT (ver DOCUMENTACAO_BD.md)
+-- CORRIGIDO: era USING (TRUE) sem checar se o dono da conta está deletado.
 DROP POLICY IF EXISTS pol_perfil_select ON perfil_pesquisador;
-CREATE POLICY pol_perfil_select ON perfil_pesquisador FOR SELECT USING (TRUE);
+CREATE POLICY pol_perfil_select ON perfil_pesquisador FOR SELECT USING (public.usuario_visivel(id_usuario));
 DROP POLICY IF EXISTS pol_perfil_insert ON perfil_pesquisador;
 CREATE POLICY pol_perfil_insert ON perfil_pesquisador FOR INSERT TO app_nestjs WITH CHECK (
     id_usuario = public.id_usuario_atual()
@@ -230,10 +231,15 @@ CREATE POLICY pol_usuario_termo_insert ON usuario_termo FOR INSERT TO app_nestjs
 -- [04-D-5] notificacao: por que existem policies de INSERT/UPDATE (ver DOCUMENTACAO_BD.md)
 DROP POLICY IF EXISTS pol_notificacao_select ON notificacao;
 CREATE POLICY pol_notificacao_select ON notificacao FOR SELECT TO app_nestjs USING (id_usuario = public.id_usuario_atual() OR public.tem_permissao('usuario_visualizar_sensivel'));
+-- CORRIGIDO: exigia id_usuario = id_usuario_atual() pra criar/atualizar — mas toda
+-- notificação real do sistema é pra um terceiro (admin aprova -> avisa pesquisador;
+-- sistema avisa doadores), e nem o worker de envio (sem usuário logado) conseguia ler
+-- a fila de pendentes. Mesmo padrão já usado em verificacao_email/recuperacao_senha/sessao:
+-- escrita liberada pro app_nestjs, controle fica na aplicação; leitura continua restrita ao dono.
 DROP POLICY IF EXISTS pol_notificacao_insert ON notificacao;
-CREATE POLICY pol_notificacao_insert ON notificacao FOR INSERT TO app_nestjs WITH CHECK (id_usuario = public.id_usuario_atual());
+CREATE POLICY pol_notificacao_insert ON notificacao FOR INSERT TO app_nestjs WITH CHECK (true);
 DROP POLICY IF EXISTS pol_notificacao_update ON notificacao;
-CREATE POLICY pol_notificacao_update ON notificacao FOR UPDATE TO app_nestjs USING (id_usuario = public.id_usuario_atual()) WITH CHECK (id_usuario = public.id_usuario_atual());
+CREATE POLICY pol_notificacao_update ON notificacao FOR UPDATE TO app_nestjs USING (true) WITH CHECK (true);
 
 DROP POLICY IF EXISTS pol_seg_pesq_select ON seguir_pesquisador;
 CREATE POLICY pol_seg_pesq_select ON seguir_pesquisador FOR SELECT TO app_nestjs USING (id_usuario = public.id_usuario_atual());
@@ -271,8 +277,13 @@ CREATE POLICY pol_campanha_select ON campanha FOR SELECT USING (
     OR id_usuario = public.id_usuario_atual()
     OR public.tem_permissao('relatorio_visualizar')
 );
+-- CORRIGIDO (B3): faltava checar se o pesquisador está suspenso — nada impedia
+-- pesquisador com status_pesquisador = 'suspenso' de submeter campanha nova.
 DROP POLICY IF EXISTS pol_campanha_insert ON campanha;
-CREATE POLICY pol_campanha_insert ON campanha FOR INSERT TO app_nestjs WITH CHECK (id_usuario = public.id_usuario_atual());
+CREATE POLICY pol_campanha_insert ON campanha FOR INSERT TO app_nestjs WITH CHECK (
+    id_usuario = public.id_usuario_atual()
+    AND EXISTS (SELECT 1 FROM perfil_pesquisador WHERE id_usuario = public.id_usuario_atual() AND status_pesquisador = 'ativo')
+);
 -- [04-E-1] campanha: por que campanha_aprovar/campanha_rejeitar liberam o UPDATE (ver DOCUMENTACAO_BD.md)
 DROP POLICY IF EXISTS pol_campanha_update ON campanha;
 CREATE POLICY pol_campanha_update ON campanha FOR UPDATE TO app_nestjs USING (
@@ -289,9 +300,12 @@ CREATE POLICY pol_atualizacao_select ON atualizacao_campanha FOR SELECT USING (
     ativo = TRUE
     OR EXISTS (SELECT 1 FROM campanha WHERE id_campanha = atualizacao_campanha.id_campanha AND (id_usuario = public.id_usuario_atual() OR public.tem_permissao('atualizacao_moderar')))
 );
+-- CORRIGIDO (B3): mesma checagem de status_pesquisador = 'ativo' do pol_campanha_insert —
+-- pesquisador suspenso não podia ser impedido de publicar atualização de campanha.
 DROP POLICY IF EXISTS pol_atualizacao_insert ON atualizacao_campanha;
 CREATE POLICY pol_atualizacao_insert ON atualizacao_campanha FOR INSERT TO app_nestjs WITH CHECK (
     EXISTS (SELECT 1 FROM campanha WHERE id_campanha = atualizacao_campanha.id_campanha AND id_usuario = public.id_usuario_atual())
+    AND EXISTS (SELECT 1 FROM perfil_pesquisador WHERE id_usuario = public.id_usuario_atual() AND status_pesquisador = 'ativo')
 );
 -- [04-E-2] atualizacao_campanha: substituição do antigo eh_admin() (ver DOCUMENTACAO_BD.md)
 DROP POLICY IF EXISTS pol_atualizacao_update ON atualizacao_campanha;
@@ -376,8 +390,16 @@ CREATE POLICY pol_solicitacao_insert ON solicitacao_encerramento FOR INSERT TO a
     EXISTS (SELECT 1 FROM campanha WHERE id_campanha = solicitacao_encerramento.id_campanha AND id_usuario = public.id_usuario_atual())
 );
 -- CORRIGIDO: decisão sobre encerramento de campanha passa a depender de permissão específica.
+-- CORRIGIDO (2): faltava o dono da campanha conseguir UPDATE — sem isso, o valor 'cancelado'
+-- do ENUM status_encerramento (pesquisador desiste da própria solicitação) era inalcançável,
+-- já que quem tem a permissão de decidir só aprova/rejeita, nunca cancela solicitação alheia.
+-- A trigger trg_valida_transicao_solicitacao (05) restringe o dono só à transição
+-- pendente -> cancelado, sem tocar em mais nenhuma coluna.
 DROP POLICY IF EXISTS pol_solicitacao_update ON solicitacao_encerramento;
-CREATE POLICY pol_solicitacao_update ON solicitacao_encerramento FOR UPDATE TO app_nestjs USING (public.tem_permissao('solicitacao_encerramento_decidir'));
+CREATE POLICY pol_solicitacao_update ON solicitacao_encerramento FOR UPDATE TO app_nestjs USING (
+    public.tem_permissao('solicitacao_encerramento_decidir')
+    OR EXISTS (SELECT 1 FROM campanha WHERE id_campanha = solicitacao_encerramento.id_campanha AND id_usuario = public.id_usuario_atual())
+);
 
 DROP POLICY IF EXISTS pol_historicorej_select ON historico_rejeicao;
 CREATE POLICY pol_historicorej_select ON historico_rejeicao FOR SELECT TO app_nestjs USING (public.tem_permissao('campanha_rejeitar'));
@@ -410,8 +432,9 @@ ALTER TABLE link_atualizacao      FORCE ROW LEVEL SECURITY;
 ALTER TABLE link_recompensa       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE link_recompensa       FORCE ROW LEVEL SECURITY;
 
+-- CORRIGIDO: era USING (TRUE) sem checar se o dono do link está deletado.
 DROP POLICY IF EXISTS pol_link_select ON link_academico;
-CREATE POLICY pol_link_select ON link_academico FOR SELECT USING (TRUE);
+CREATE POLICY pol_link_select ON link_academico FOR SELECT USING (public.usuario_visivel(id_usuario));
 DROP POLICY IF EXISTS pol_link_insert ON link_academico;
 CREATE POLICY pol_link_insert ON link_academico FOR INSERT TO app_nestjs WITH CHECK (id_usuario = public.id_usuario_atual());
 -- ADICIONADO: links de perfil passam a aceitar edição e remoção pelo dono do perfil ou pelo admin.

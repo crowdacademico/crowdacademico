@@ -8,9 +8,10 @@
 --  Próximo:     04_rls_policies.sql
 -- ----------------------------------------------------------------------------
 --  Descrição:
---  Duas funções puras que fazem a ponte de contexto de segurança entre o
+--  Funções puras que fazem a ponte de contexto de segurança entre o
 --  NestJS e o mecanismo de RLS do PostgreSQL: identificação do usuário
---  atual na sessão, e checagem granular de permissão via RBAC.
+--  atual na sessão, checagem granular de permissão via RBAC, e checagem
+--  de visibilidade de conta (usuário "deletado" via soft delete).
 -- ============================================================
 -- [03-J] CONTEXTO DE SESSÃO E IDENTIFICAÇÃO DE USUÁRIO
 -- ============================================================
@@ -61,4 +62,28 @@ AS $$
         WHERE up.id_usuario = public.id_usuario_atual()
           AND pm.nome = p_permissao
     );
+$$;
+
+-- ============================================================
+-- [03-D] VISIBILIDADE DE CONTA (SOFT DELETE)
+-- ============================================================
+-- Função:     usuario_visivel
+-- Assinatura: (p_id INT) -> BOOLEAN
+-- Bloco:      [03-D]
+-- Regra:      CORRIGIDO — pol_usuario_select (04) já escondia usuario.deletado = TRUE,
+--             mas pol_perfil_select e pol_link_select eram USING (TRUE) sem olhar
+--             pra esse flag: perfil acadêmico e links de uma conta "excluída"
+--             continuavam públicos. Centralizar a checagem numa função (mesmo
+--             padrão de tem_permissao) evita que a próxima policy pública nasça
+--             com o mesmo furo. Se o usuário não existir (não deveria acontecer,
+--             FK garante), o padrão é considerar invisível.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.usuario_visivel(p_id INT)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT NOT COALESCE((SELECT deletado FROM usuario WHERE id_usuario = p_id), TRUE);
 $$;

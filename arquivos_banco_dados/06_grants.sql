@@ -68,7 +68,9 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO app_nestjs;
 -- ============================================================================
 --  [06-C] CONFIG
 -- ============================================================================
-GRANT INSERT, UPDATE, DELETE ON configuracoes, arquivo TO app_nestjs;
+-- CORRIGIDO: arquivo tinha DELETE sem nenhuma policy de DELETE (ver [06-C] no DOCUMENTACAO_BD.md).
+GRANT INSERT, UPDATE, DELETE ON configuracoes TO app_nestjs;
+GRANT INSERT, UPDATE ON arquivo TO app_nestjs;
 
 -- [06-C-1] area_conhecimento / motivo_denuncia: por que só INSERT/UPDATE (ver DOCUMENTACAO_BD.md)
 GRANT INSERT, UPDATE ON area_conhecimento, motivo_denuncia TO app_nestjs;
@@ -85,21 +87,23 @@ REVOKE SELECT ON public.perfil_pesquisador FROM app_nestjs;
 
 -- ALTERADO: coluna id_supabase removida da tabela usuario (autenticação própria).
 -- [06-D-2] usuario: por que estas colunas específicas de auth precisam estar no GRANT (ver DOCUMENTACAO_BD.md)
+-- CORRIGIDO: faltava email_verificado na lista (coluna existe desde o 01, nunca tinha GRANT).
 GRANT SELECT (
     id_usuario, nome, email, id_imagem_perfil, criado_em, deletado,
-    senha_hash, tentativas_login_falhas, bloqueado_ate,
+    email_verificado, senha_hash, tentativas_login_falhas, bloqueado_ate,
     ultimo_login_em, ultimo_login_ip
 ) ON public.usuario TO app_nestjs;
 
+-- CORRIGIDO: coluna suspenso removida da tabela (01) — tirada da lista também.
 GRANT SELECT (
     id_usuario, vinculo_institucional, titulo_academico, status_pesquisador,
-    ativado_em, suspenso, score_atual, score_atualizado_em
+    ativado_em, score_atual, score_atualizado_em
 ) ON public.perfil_pesquisador TO app_nestjs;
 
-GRANT INSERT, UPDATE, DELETE ON
-    usuario, perfil_pesquisador, usuario_papel, termos_de_uso, usuario_termo,
-    seguir_pesquisador
-TO app_nestjs;
+-- CORRIGIDO: usuario, perfil_pesquisador, termos_de_uso e usuario_termo tinham DELETE
+-- sem nenhuma policy de DELETE correspondente (ver [06-D] no DOCUMENTACAO_BD.md).
+GRANT INSERT, UPDATE ON usuario, perfil_pesquisador, termos_de_uso, usuario_termo TO app_nestjs;
+GRANT INSERT, UPDATE, DELETE ON usuario_papel, seguir_pesquisador TO app_nestjs;
 
 -- [06-D-3] notificacao: por que precisou de GRANT de INSERT/UPDATE (ver DOCUMENTACAO_BD.md)
 GRANT INSERT, UPDATE ON notificacao TO app_nestjs;
@@ -110,11 +114,14 @@ GRANT SELECT, INSERT, UPDATE ON verificacao_email, recuperacao_senha, sessao TO 
 -- ============================================================================
 --  [06-E] CAMPANHA
 -- ============================================================================
-GRANT INSERT, UPDATE, DELETE ON
-    campanha, seguir_campanha, atualizacao_campanha, repasse,
+-- CORRIGIDO: só seguir_campanha tem policy de DELETE nesse bloco; as demais tinham
+-- DELETE concedido sem nenhuma policy correspondente (ver [06-E] no DOCUMENTACAO_BD.md).
+GRANT INSERT, UPDATE ON
+    campanha, atualizacao_campanha, repasse,
     solicitacao_encerramento, historico_rejeicao, comentario, denuncia,
     recompensa
 TO app_nestjs;
+GRANT INSERT, UPDATE, DELETE ON seguir_campanha TO app_nestjs;
 
 -- ============================================================================
 --  [06-F] LINK
@@ -126,14 +133,16 @@ TO app_nestjs;
 -- ============================================================================
 --  [06-G] ARQUIVO
 -- ============================================================================
-GRANT INSERT, UPDATE, DELETE ON
+-- CORRIGIDO: nenhuma das duas tem policy de DELETE (ver [06-G] no DOCUMENTACAO_BD.md).
+GRANT INSERT, UPDATE ON
     arquivo_atualizacao, arquivo_recompensa
 TO app_nestjs;
 
 -- ============================================================================
 --  [06-H] CONTRIBUIÇÃO
 -- ============================================================================
-GRANT INSERT, UPDATE, DELETE ON
+-- CORRIGIDO: nenhuma das quatro tem policy de DELETE (ver [06-H] no DOCUMENTACAO_BD.md).
+GRANT INSERT, UPDATE ON
     contribuicao, auditoria_financeira, contribuicao_recompensa,
     aceite_termo_contribuicao
 TO app_nestjs;
@@ -141,7 +150,8 @@ TO app_nestjs;
 -- ============================================================================
 --  [06-I] SCORE
 -- ============================================================================
-GRANT INSERT, UPDATE, DELETE ON score_config, score_rotulo TO app_nestjs;
+-- CORRIGIDO: nenhuma das duas tem policy de DELETE (ver [06-I] no DOCUMENTACAO_BD.md).
+GRANT INSERT, UPDATE ON score_config, score_rotulo TO app_nestjs;
 
 -- NOTA: score_pesquisador não recebe GRANT de tabela direto — toda escrita
 -- passa pela função recalcular_score_pesquisador() (SECURITY DEFINER, ver

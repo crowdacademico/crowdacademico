@@ -126,6 +126,10 @@ INSERT INTO permissao (nome) VALUES
 ('campanha_editar'),
 ('usuario_suspender'),
 ('usuario_visualizar_sensivel'),
+-- NOTA: hoje nenhuma policy usa esta permissão pra liberar nada — cpf_criptografado
+-- não está no GRANT SELECT de perfil_pesquisador (06), então nenhuma policy de RLS
+-- consegue liberar acesso a uma coluna que a aplicação nem consegue ler. Ou o CPF
+-- entra no GRANT sob controle desta permissão, ou ela pode ser removida.
 ('perfil_pesquisador_visualizar_sensivel'),
 ('contribuicao_visualizar_sensivel'),
 ('relatorio_visualizar'),
@@ -143,6 +147,11 @@ INSERT INTO permissao (nome) VALUES
 ('atualizacao_moderar'),
 ('repasse_aprovar'),
 ('auditoria_financeira_visualizar'),
+-- NOTA: estas 3 são propositalmente sem policy de RLS — verificacao_email,
+-- recuperacao_senha e sessao já têm policy FOR ALL USING(true) de propósito (o
+-- projeto decidiu que a autorização desses fluxos fica no NestJS, não na RLS,
+-- porque acontecem antes de existir sessão de usuário). Criar policy pra elas
+-- seria redundante.
 ('sessao_revogar'),
 ('recuperacao_senha_revogar'),
 ('verificacao_email_reenviar'),
@@ -311,14 +320,15 @@ ON CONFLICT (chave) DO NOTHING;
 
 -- [07-D-3] perfil_pesquisador
 -- CORRIGIDO: valores de score do seed arredondados para inteiro.
-INSERT INTO perfil_pesquisador (id_usuario, cpf_criptografado, vinculo_institucional, titulo_academico, status_pesquisador, ativado_em, suspenso, score_atual, score_atualizado_em) VALUES
-(1, 'enc_cpf_001', 'Universidade de São Paulo (USP)',                   'doutor',     'ativo', '2024-01-10 09:05:00', FALSE, 86, '2025-05-01 00:00:00'),
-(2, 'enc_cpf_002', 'Universidade Estadual de Campinas (UNICAMP)',       'mestre',      'ativo', '2024-01-15 10:35:00', FALSE, 72, '2025-05-01 00:00:00'),
-(3, 'enc_cpf_003', 'Universidade Federal de Minas Gerais (UFMG)',       'doutor',      'ativo', '2024-02-01 08:50:00', FALSE, 91, '2025-05-01 00:00:00'),
-(4, 'enc_cpf_004', 'Universidade Federal do Rio de Janeiro (UFRJ)',     'especialista','ativo', '2024-02-10 14:10:00', FALSE, 48, '2025-05-01 00:00:00'),
-(5, 'enc_cpf_005', 'Universidade Federal de Santa Catarina (UFSC)',     'mestre',      'ativo', '2024-03-05 11:25:00', FALSE, 62, '2025-05-01 00:00:00'),
-(6, 'enc_cpf_006', 'Universidade Estadual Paulista (UNESP)',            'graduado',    'ativo', '2024-03-12 16:05:00', FALSE, 32, '2025-05-01 00:00:00'),
-(7, 'enc_cpf_007', 'Universidade Federal de São Paulo (UNIFESP)',       'doutor',      'ativo', '2024-04-01 09:35:00', FALSE, 77, '2025-05-01 00:00:00');
+-- CORRIGIDO: coluna suspenso removida da tabela (01) — tirada do INSERT também.
+INSERT INTO perfil_pesquisador (id_usuario, cpf_criptografado, vinculo_institucional, titulo_academico, status_pesquisador, ativado_em, score_atual, score_atualizado_em) VALUES
+(1, 'enc_cpf_001', 'Universidade de São Paulo (USP)',                   'doutor',     'ativo', '2024-01-10 09:05:00', 86, '2025-05-01 00:00:00'),
+(2, 'enc_cpf_002', 'Universidade Estadual de Campinas (UNICAMP)',       'mestre',      'ativo', '2024-01-15 10:35:00', 72, '2025-05-01 00:00:00'),
+(3, 'enc_cpf_003', 'Universidade Federal de Minas Gerais (UFMG)',       'doutor',      'ativo', '2024-02-01 08:50:00', 91, '2025-05-01 00:00:00'),
+(4, 'enc_cpf_004', 'Universidade Federal do Rio de Janeiro (UFRJ)',     'especialista','ativo', '2024-02-10 14:10:00', 48, '2025-05-01 00:00:00'),
+(5, 'enc_cpf_005', 'Universidade Federal de Santa Catarina (UFSC)',     'mestre',      'ativo', '2024-03-05 11:25:00', 62, '2025-05-01 00:00:00'),
+(6, 'enc_cpf_006', 'Universidade Estadual Paulista (UNESP)',            'graduado',    'ativo', '2024-03-12 16:05:00', 32, '2025-05-01 00:00:00'),
+(7, 'enc_cpf_007', 'Universidade Federal de São Paulo (UNIFESP)',       'doutor',      'ativo', '2024-04-01 09:35:00', 77, '2025-05-01 00:00:00');
 
 
 -- [07-F-1] link_academico

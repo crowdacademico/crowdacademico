@@ -10,6 +10,55 @@
 # 🔴 PENDÊNCIAS (ainda em aberto — precisam de decisão)
 
 
+## 🗓️ 27-07-2026 — Nova rodada (banco comparado com os requisitos do TCC)
+
+*(Itens encontrados e descritos pelo CLAUDE nesta data — separados de propósito das pendências mais antigas abaixo, pra não confundir uma coisa com a outra. 🔴 = ainda pendente. 🟢 = já corrigido nesta mesma data, com prova de que nada quebrou.)*
+
+### Lista A — bugs mecânicos, o próprio `.sql` se contradizendo (não precisavam de decisão de negócio) — **todos 🟢 corrigidos em 27-07-2026**
+
+🟢 **A1. `usuario.email_verificado` fora do `GRANT`** — `06_grants.sql` `[06-D-2]`: a coluna existe na tabela mas não estava na lista do `GRANT SELECT` por coluna — `app_nestjs` não conseguia ler, quebrava o fluxo de verificação de e-mail. **Corrigido:** coluna adicionada à lista.
+
+🟢 **A2. `fn_congela_regras_campanha` não bloqueava o que diz bloquear** — `05_regras_negocio.sql` `[05-K-2]`: usava `<>` em vez de `IS DISTINCT FROM`; como `taxa_plataforma` é nullable, comparar contra `NULL` nunca dava `TRUE`, e dava pra definir a taxa numa campanha já aprovada. **Corrigido:** as 3 comparações trocadas pra `IS DISTINCT FROM`.
+
+🟢 **A3. Regras financeiras que só valiam no `INSERT`** — `trg_valida_repasse` e `trg_contribuicao_all_or_nothing_pix` (`05`, `[05-K-2]`) eram `BEFORE INSERT` só — um `INSERT` com valor zerado seguido de `UPDATE` pro valor real furava as duas regras. **Corrigido:** as duas agora são `BEFORE INSERT OR UPDATE`. *(Conferi as outras 2 triggers do mesmo bloco — `trg_valida_status_contribuicao` e `trg_atualizacao_campanha_status` — e decidi NÃO estender essas duas: elas validam o status da campanha no momento de criar um registro filho novo; se disparassem em UPDATE também, bloqueariam operações legítimas como confirmar um pagamento ou moderar uma atualização depois que a campanha já encerrou — teria criado um bug novo em vez de corrigir um.)*
+
+🟢 **A4. Fila de notificação não podia ser processada por ninguém** — `04_rls_policies.sql` `[04-D-5]`: as policies de `notificacao` exigiam `id_usuario = id_usuario_atual()`, inclusive pra criar — mas toda notificação real do sistema é pra um terceiro. **Corrigido:** `INSERT`/`UPDATE` liberados pro `app_nestjs` (`WITH CHECK (true)`/`USING (true)`, mesmo padrão de `verificacao_email`/`recuperacao_senha`/`sessao`); o `SELECT` continua restrito ao dono.
+
+🟢 **A5. `denuncia` aceitava alvo incoerente** — nada impedia os dois alvos preenchidos, os dois nulos, ou um motivo do tipo errado pro alvo escolhido. **Corrigido:** `CHECK "CK_DENUNCIA_ALVO_XOR"` novo em `01` (exatamente um alvo preenchido) + trigger nova `trg_denuncia_valida_tipo_motivo` em `05` (cruza `motivo_denuncia.tipo` com qual coluna foi preenchida). Conferido que as 7 linhas do seed já passavam nas duas regras sem alteração nenhuma.
+
+🟢 **A6. O valor `'cancelado'` do ENUM `status_encerramento` era inalcançável** — só quem tinha `solicitacao_encerramento_decidir` (o admin) conseguia `UPDATE`; o pesquisador nunca conseguia cancelar a própria solicitação. **Corrigido:** `pol_solicitacao_update` (`04`) passou a liberar também o dono da campanha; trigger nova `trg_valida_transicao_solicitacao` (`05`) restringe o dono só à transição `pendente → cancelado`, sem tocar em `id_admin`/`justificativa_pesquisador`.
+
+🟢 **A7. 21 tabelas com `GRANT DELETE` que nunca funcionava** — contagem exata conferida (28 tabelas com `GRANT DELETE`, só 7 com policy de `DELETE` de verdade). **Corrigido:** `DELETE` removido do `GRANT` das 21 tabelas sem policy; mantido só em `configuracoes`, `usuario_papel`, `seguir_pesquisador`, `seguir_campanha`, `link_academico`, `link_atualizacao`, `link_recompensa`.
+
+🟢 **A8. Coluna `suspenso` duplicada e morta** — `perfil_pesquisador` tinha `suspenso BOOLEAN` e `status_pesquisador ENUM` pro mesmo estado, e só o segundo era de fato lido em algum lugar. **Corrigido:** coluna `suspenso` removida de `01` (tabela), `06` (grant) e `07` (seed) — conferido que os 7 valores por linha continuam alinhados com as colunas depois da remoção.
+
+🟢 **A9. Perfil e links de usuário deletado continuavam públicos** — `pol_perfil_select` e `pol_link_select` eram `USING (TRUE)`, sem checar `usuario.deletado`. **Corrigido:** função nova `usuario_visivel(p_id INT)` em `03` (mesmo padrão de `tem_permissao`), aplicada nas duas policies. `pol_campanha_select` fica de fora de propósito — ver Lista C.
+
+🟢 **A10. Comentários/permissões órfãs sem explicação** — **Corrigido:** comentário novo em `07` explicando que `recuperacao_senha_revogar`/`sessao_revogar`/`verificacao_email_reenviar` são propositalmente sem policy (camada NestJS), e que `perfil_pesquisador_visualizar_sensivel` hoje não tem efeito nenhum (`cpf_criptografado` nem está no `GRANT SELECT`). *(A contagem de 105 policies no cabeçalho do `04` já estava certa — conferido com `grep`, não havia 106 como uma das revisões cogitou; nada foi mudado aí.)*
+
+### Lista B — decisão de uma linha (você deu o OK) — **todos 🟢 aplicados em 27-07-2026**
+
+🟢 **B1. FKs de alvo em `denuncia`: `SET NULL` → `RESTRICT`** — mais correto pra um registro de moderação não virar órfão sozinho com o tempo. **Aplicado** — não muda nada na prática hoje, já que nem `campanha` nem `usuario` têm policy de `DELETE`.
+
+🟢 **B2. Congelamento anti-fraude estendido pra `titulo`, `descricao` e `data_fim`** — trocar a descrição de um projeto já financiado era o vetor de fraude mais óbvio, e nada bloqueava. **Aplicado** na mesma `fn_congela_regras_campanha` do A2. Conferido que nada no `05`/`07` escreve em `data_fim` depois da criação — não afeta o seed.
+
+🟢 **B3. Pesquisador suspenso agora é barrado de criar campanha/publicar atualização** — replicado o mesmo padrão que já existia só em `pol_comentario_insert` (`status_pesquisador = 'ativo'`) pras policies de `INSERT` de `campanha` e `atualizacao_campanha`. **Aplicado.** Como o seed roda como superusuário (bypassa RLS) e todos os 7 pesquisadores seedados já são `'ativo'`, o seed continua rodando sem nenhuma mudança.
+
+**Prova mecânica de que nada quebrou (Lista A + B juntas):** 39 tabelas (igual); `PK_`=39, `FK_`=55, `UK_`=18 (iguais); `CK_` foi de 13 pra 14 (a nova `CK_DENUNCIA_ALVO_XOR`); parênteses balanceados em `01`. Policies: 105 `CREATE POLICY` / 105 `DROP POLICY`, continua 100% idempotente. Triggers foram de 24 pra 26 (`trg_denuncia_valida_tipo_motivo`, `trg_valida_transicao_solicitacao`); funções de `05` foram de 28 pra 30, e `03` de 2 pra 3 (`usuario_visivel`) — cabeçalhos de inventário atualizados nos arquivos correspondentes. Reconferi linha a linha o seed inteiro (`denuncia`, `perfil_pesquisador`) contra as constraints/triggers novas — todas as linhas já existentes continuam passando sem precisar mudar nenhum valor do seed.
+
+### Lista C — travado até vocês dois decidirem (nada mexido aqui)
+
+- Score inteiro (pesos não lidos, denúncia improcedente penalizando, GitHub sem pontuar, campanha rejeitada punida 2x, recálculo em cascata) — depende de manter/tornar interno/congelar o motor de score.
+- Domínio de recompensa inteiro + os flags de `tipo_link` que impedem `link_atualizacao`/`link_recompensa` de funcionar — mesma decisão de escopo do score.
+- Limites hardcoded vs. configuráveis (prazo de campanha, 2 campanhas simultâneas, 4 endossos, 5 denúncias/24h) — ligado à discussão em aberto de 90→60 dias.
+- `campanha` de usuário deletado continuar pública (a metade de negócio do A9).
+- `idx_seguir_pesquisador_alvo` — só faz sentido manter se vocês quiserem um contador público de seguidores por pesquisador (mudaria a RLS).
+- Colunas novas ligadas aos requisitos (`rotulo` em `link_academico`, `descricao` em `denuncia`, `url_video` em `campanha`, `justificativa_admin` em `solicitacao_encerramento`) e a allowlist de `tipo_link` (5 vs. 7 tipos) — aguardando a revisão dos `.docx`.
+- Carimbar `taxa_plataforma` automaticamente a partir de `configuracoes.taxa_plataforma_padrao` na aprovação — o A2 conserta o congelamento, mas criar esse carimbo é funcionalidade nova, não bug.
+
+---
+
+
 ## No `.sql`
 
 

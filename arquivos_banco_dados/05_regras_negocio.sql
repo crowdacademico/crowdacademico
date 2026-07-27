@@ -14,8 +14,8 @@
 --  3. Regras de moderação de comunidade, engajamento e automação RBAC.
 --
 --  Inventário Mapeado:
---  - 28 Funções (Helpers, Cálculo, Orquestração e Triggers)
---  - 24 Triggers (Todas idempotentes com DROP TRIGGER IF EXISTS)
+--  - 30 Funções (Helpers, Cálculo, Orquestração e Triggers)
+--  - 26 Triggers (Todas idempotentes com DROP TRIGGER IF EXISTS)
 -- ----------------------------------------------------------------------------
 --  SUMÁRIO DOS BLOCOS DE CÓDIGO
 --  (letras seguem o índice global de DOCUMENTACAO_BD.md — I = SCORE,
@@ -851,6 +851,51 @@ CREATE TRIGGER trg_link_recompensa_valida_tipo
     EXECUTE FUNCTION public.trg_valida_escopo_tipolink();
 
 
+-- ----------------------------------------------------------------------------
+-- Função:     trg_valida_tipo_motivo_denuncia
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-K-1]
+-- Uso:        Invocada por trg_denuncia_valida_tipo_motivo
+-- Regra:      CORRIGIDO — a constraint CK_DENUNCIA_ALVO_XOR (01) já garante que
+--             exatamente um alvo está preenchido; esta trigger garante que o
+--             motivo escolhido é do tipo certo pro alvo escolhido (denunciar uma
+--             campanha com um motivo cadastrado como 'perfil', ou vice-versa,
+--             não fazia sentido e nada impedia).
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.trg_valida_tipo_motivo_denuncia()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+DECLARE
+    v_tipo tipo_motivo_denuncia;
+BEGIN
+    SELECT tipo INTO v_tipo FROM motivo_denuncia WHERE id_motivo = NEW.id_motivo;
+
+    IF NEW.id_campanha_alvo IS NOT NULL AND v_tipo <> 'campanha' THEN
+        RAISE EXCEPTION 'O motivo selecionado não é válido para denúncia de campanha.';
+    END IF;
+
+    IF NEW.id_pesquisador_alvo IS NOT NULL AND v_tipo <> 'perfil' THEN
+        RAISE EXCEPTION 'O motivo selecionado não é válido para denúncia de perfil.';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_denuncia_valida_tipo_motivo
+-- Tabela:    denuncia
+-- Momento:   BEFORE INSERT OR UPDATE
+-- Função:    trg_valida_tipo_motivo_denuncia()
+-- Bloco:     [05-K-1]
+-- Regra:     Bloqueia denúncia cujo motivo não bate com o tipo do alvo escolhido.
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_denuncia_valida_tipo_motivo ON denuncia;
+CREATE TRIGGER trg_denuncia_valida_tipo_motivo
+    BEFORE INSERT OR UPDATE ON denuncia
+    FOR EACH ROW
+    EXECUTE FUNCTION public.trg_valida_tipo_motivo_denuncia();
+
+
 -- ============================================================================
 --  [05-K-2] REGRAS TRANSVERSAIS — CAMPANHAS E FINANCEIRO
 --  Descrição: Proteções de fluxo financeiro, congelamento de regras pós-aprovação
@@ -895,9 +940,12 @@ $$ LANGUAGE plpgsql;
 -- Regra:     Impede repasse com valor em campanha all-or-nothing sem meta
 --            atingida.
 -- ----------------------------------------------------------------------------
+-- CORRIGIDO: era BEFORE INSERT só — um INSERT com valor_liquido = 0 (permitido, RF-038)
+-- seguido de UPDATE pro valor cheio furava a regra all-or-nothing sem revalidar nada,
+-- já que pol_repasse_update é USING(true) de propósito (item 9 da PENDENCIAS).
 DROP TRIGGER IF EXISTS trg_valida_repasse ON repasse;
 CREATE TRIGGER trg_valida_repasse
-BEFORE INSERT ON repasse
+BEFORE INSERT OR UPDATE ON repasse
 FOR EACH ROW
 EXECUTE FUNCTION fn_valida_repasse_all_or_nothing();
 
@@ -937,9 +985,11 @@ $$;
 -- Regra:     Bloqueia contribuição com meio de pagamento diferente de PIX em
 --            campanha all-or-nothing.
 -- ----------------------------------------------------------------------------
+-- CORRIGIDO: mesma falha do trg_valida_repasse — só validava no INSERT, um UPDATE
+-- posterior em meio_pagamento não era revalidado.
 DROP TRIGGER IF EXISTS trg_contribuicao_all_or_nothing_pix ON contribuicao;
 CREATE TRIGGER trg_contribuicao_all_or_nothing_pix
-BEFORE INSERT ON contribuicao
+BEFORE INSERT OR UPDATE ON contribuicao
 FOR EACH ROW
 EXECUTE FUNCTION validar_contribuicao_all_or_nothing();
 
@@ -957,16 +1007,34 @@ CREATE OR REPLACE FUNCTION fn_congela_regras_campanha()
 RETURNS TRIGGER AS $$
 BEGIN
     IF OLD.status IN ('ativo', 'sucesso', 'nao_atingido', 'encerrado', 'encerrado_moderacao') THEN
-        IF NEW.meta_financeira <> OLD.meta_financeira THEN
+        -- CORRIGIDO: taxa_plataforma é nullable; "<>" contra NULL nunca dá TRUE, deixando
+        -- a taxa mudar sem bloqueio numa campanha aprovada com taxa ainda não preenchida.
+        -- IS DISTINCT FROM trata NULL corretamente nos três casos.
+        IF NEW.meta_financeira IS DISTINCT FROM OLD.meta_financeira THEN
             RAISE EXCEPTION 'Fraude bloqueada: não é permitido alterar a meta financeira após a aprovação da campanha.';
         END IF;
 
-        IF NEW.modelo <> OLD.modelo THEN
+        IF NEW.modelo IS DISTINCT FROM OLD.modelo THEN
             RAISE EXCEPTION 'Fraude bloqueada: não é permitido alterar o modelo de financiamento após a aprovação da campanha.';
         END IF;
 
-        IF NEW.taxa_plataforma <> OLD.taxa_plataforma THEN
+        IF NEW.taxa_plataforma IS DISTINCT FROM OLD.taxa_plataforma THEN
             RAISE EXCEPTION 'Operação bloqueada: a taxa da plataforma não pode ser alterada após o congelamento.';
+        END IF;
+
+        -- CORRIGIDO (B2): título, descrição e prazo não eram protegidos — trocar a
+        -- descrição de um projeto já financiado é o vetor de fraude mais óbvio que
+        -- existe numa plataforma de doação. Mesma trigger, mesmos campos protegidos.
+        IF NEW.titulo IS DISTINCT FROM OLD.titulo THEN
+            RAISE EXCEPTION 'Fraude bloqueada: não é permitido alterar o título após a aprovação da campanha.';
+        END IF;
+
+        IF NEW.descricao IS DISTINCT FROM OLD.descricao THEN
+            RAISE EXCEPTION 'Fraude bloqueada: não é permitido alterar a descrição após a aprovação da campanha.';
+        END IF;
+
+        IF NEW.data_fim IS DISTINCT FROM OLD.data_fim THEN
+            RAISE EXCEPTION 'Operação bloqueada: o prazo da campanha não pode ser alterado após o congelamento.';
         END IF;
     END IF;
 
@@ -988,6 +1056,51 @@ CREATE TRIGGER trg_congela_regras_campanha
 BEFORE UPDATE ON campanha
 FOR EACH ROW
 EXECUTE FUNCTION fn_congela_regras_campanha();
+
+
+-- ----------------------------------------------------------------------------
+-- Função:     fn_valida_transicao_solicitacao
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-K-2]
+-- Regra:      CORRIGIDO — pol_solicitacao_update (04) passou a liberar UPDATE
+--             também pro dono da campanha (não só quem decide), pra destravar o
+--             valor 'cancelado' do ENUM status_encerramento. Esta trigger garante
+--             que o dono só consegue fazer exatamente uma coisa: cancelar a
+--             própria solicitação enquanto ainda está 'pendente' — nenhuma outra
+--             coluna, nem outra transição de status. Quem tem
+--             solicitacao_encerramento_decidir continua sem nenhuma restrição.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_valida_transicao_solicitacao()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+    IF NOT public.tem_permissao('solicitacao_encerramento_decidir') THEN
+        IF OLD.status <> 'pendente' OR NEW.status <> 'cancelado' THEN
+            RAISE EXCEPTION 'O pesquisador só pode cancelar a própria solicitação enquanto ela estiver pendente.';
+        END IF;
+
+        IF NEW.id_admin IS DISTINCT FROM OLD.id_admin
+           OR NEW.justificativa_pesquisador IS DISTINCT FROM OLD.justificativa_pesquisador THEN
+            RAISE EXCEPTION 'Só é permitido alterar o status para cancelado.';
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_valida_transicao_solicitacao
+-- Tabela:    solicitacao_encerramento
+-- Momento:   BEFORE UPDATE
+-- Função:    fn_valida_transicao_solicitacao()
+-- Bloco:     [05-K-2]
+-- Regra:     Restringe o dono da campanha à transição pendente -> cancelado.
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_valida_transicao_solicitacao ON solicitacao_encerramento;
+CREATE TRIGGER trg_valida_transicao_solicitacao
+BEFORE UPDATE ON solicitacao_encerramento
+FOR EACH ROW
+EXECUTE FUNCTION fn_valida_transicao_solicitacao();
 
 
 -- ----------------------------------------------------------------------------
