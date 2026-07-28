@@ -4,148 +4,59 @@
 
 *(Reorganizado em 26/07/2026: pendências reais no topo, resolvidas/corrigidas no final — pra facilitar achar rápido o que ainda precisa de decisão)*
 
+*(Reorganizado de novo em 28/07/2026: dentro de cada grupo — pendências e resolvidas — os itens continuam agrupados por DATA, mas agora tudo que já foi resolvido foi empurrado bem pro fundo do arquivo, com bastante espaço em branco separando das pendências reais. Única exceção: o que foi resolvido a partir das ideias da Alexia fica logo no topo, antes até das pendências — é a primeira coisa que ela vai ver ao abrir o arquivo.)*
+
+---
+---
+
+# ✅ IDEIAS DA ALEXIA JÁ IMPLEMENTADAS
+
+*(Pra ela ver isso primeiro, antes de qualquer pendência. Tudo abaixo já está no `.sql`, testado, sem quebrar nada do que já existia.)*
+
+🟢 **34. Recompensa simbólica — resolve o item 14 da Lista C** — a ideia da Alexia ("nome do doador no projeto") já existia no ENUM `tipo_recompensa` como o valor `reconhecimento`; `acesso_antecipado` é o modelo do próprio Experiment.com, referência declarada do TCC. A objeção original ao domínio inteiro (recompensa física cria obrigação de logística que 2 pessoas não conseguem fiscalizar) morre se `fisica` sair do ENUM — e `outro` era uma porta aberta pra reintroduzir isso pela brecha. **Você decidiu:** remover os dois. **Aplicado:** `tipo_recompensa` (`01`) agora é só `('digital', 'reconhecimento', 'acesso_antecipado')`; feito com a tabela `recompensa` vazia (nenhum dado existente pra migrar) — o momento mais barato possível pra essa mudança, porque o Postgres não tem `ALTER TYPE ... DROP VALUE` (teria que recriar o tipo contra um banco já populado). O `DEFAULT 'outro'` da coluna `tipo` também saiu — nenhum dos 3 valores que sobraram é um "genérico" natural, a aplicação passa a escolher explicitamente. O item 14 da Lista C sai de "remover o domínio inteiro" pra "manter com escopo restrito" — ainda precisa de 2-3 RFs novos na Etapa 3 descrevendo recompensa simbólica, isso fica com vocês dois.
+
+🟢 **35. `area_conhecimento` desce pro 2º nível do CNPq — resolve o pedido da Alexia** — "Ciências da Saúde" cobrindo de odontologia a saúde coletiva era amplo demais pro filtro de busca valer a pena. **Você decidiu:** nível 2 vira obrigatório (campanha não pode mais ficar só na grande área raiz). **Aplicado:** coluna `id_pai` nova em `area_conhecimento` (`01`, mesmo padrão auto-referenciado de `score_config`); ~81 áreas de nível 2 seedadas em `07` (via `SELECT` resolvendo o pai pelo `codigo_cnpq`, não por ID fixo); trigger `trg_campanha_valida_area_nivel2`/`trg_campanha_valida_area_nivel2_update` (`05`, `[05-K-1]`) bloqueando `campanha.id_area_conhecimento` de apontar pra uma grande área raiz. As 10 campanhas do seed foram atualizadas pra apontar pra uma área de nível 2 dentro da mesma grande área que já tinham antes (ex.: campanha 1, antes só "Ciências Exatas", agora "Ciência da Computação"). **Depois disso** (rodada seguinte, mesmo dia): `id_area_conhecimento` virou `NOT NULL` (a trigger bloqueava a grande área raiz mas deixava `NULL` passar, o que era pior — campanha sem área nenhuma some de todo filtro); e o dígito verificador dos 90 `codigo_cnpq` foi removido (`'1.03.00.00'`, não `'1.03.00.00-7'`) depois de provado matematicamente que os dígitos semeados não vinham de nenhum algoritmo real — os nomes e a hierarquia continuam corretos e confiáveis (nomenclatura padrão CNPq), só o dígito (que não protege nada num campo nunca digitado à mão) saiu.
+
+🟢 **42. `tipo_vinculo` — o único ajuste numa ideia da Alexia, sem descartar nada dela** — o `vinculo_institucional NOT NULL` da Alexia implementa exatamente o que ela quis ("perfil não nasce pela metade") — regra certa, mantida. O efeito colateral: impedia a existência de pesquisador **sem** instituição, que é justamente o público que a justificativa da Etapa 1 diz que a plataforma quer alcançar. **Corrigido preservando a regra dela:** ENUM novo `tipo_vinculo` (`'institucional'`, `'independente'`), coluna nova em `perfil_pesquisador` com `DEFAULT 'institucional'`; `vinculo_institucional` voltou a ser nullable, mas amarrado por `CONSTRAINT "CK_PERFIL_VINCULO"`: institucional exige o nome da instituição preenchido (não vazio); independente exige o campo vazio. Nenhum dos dois aceita ambiguidade — continua **proibido** cadastrar sem declarar nada, exatamente a regra da Alexia. Os 11 perfis do seed continuam válidos sem nenhum ajuste (todos ficam `tipo_vinculo = 'institucional'` pelo `DEFAULT`, com instituição preenchida).
+
+> ⚠️ **Ponto de atenção pra Lista C, não pra ignorar:** `calcular_score_perfil_academico` (`05`) dá pontos por `vinculo_institucional` preenchido. Com essa mudança, o pesquisador independente perde esses pontos automaticamente (campo vazio = sem crédito) — isso é decisão de vocês dois e está amarrada ao destino do score (itens 12/13 da Lista C), não deve passar despercebido quando o score for decidido.
+
+*(Ela também sugeriu os motivos de denúncia novos — `CAMP-005` a `CAMP-008` e `PERF-004` — que entraram no catálogo, dado puro sem decisão de negócio nenhuma (ver Tier A, item A5/A6, na seção de resolvidos mais abaixo). Essa mesma adição, por causa de como o seed referenciava o catálogo, acabou expondo um bug real que quebrava o seed inteiro em silêncio — já corrigido, ver item 36 na seção de resolvidos, mais pra baixo.)*
+
 ---
 ---
 
 # 🔴 PENDÊNCIAS (ainda em aberto — precisam de decisão)
 
 
-## 🗓️ 28-07-2026 — Correções mecânicas (Tier A/B) + novidades da Alexia (via CLAUDE WEB)
-
-*(Rodada motivada por uma pergunta direta sua ao CLAUDE WEB: "existe algo que já pode ser consertado, independente de reunião?" — ele separou por Tier A (zero decisão) / Tier B (uma linha de decisão, com as 3 perguntas revisadas a fundo antes de eu implementar) / "Parte 2" (as novidades que a Alexia trouxe pelo WhatsApp — recompensa simbólica, área de conhecimento mais específica, mais motivos de denúncia — e a sugestão da matriz de rastreabilidade). Você deu o OK nas 2 decisões de produto (recompensa e área de conhecimento) nesta mesma conversa. Mesmo padrão de sempre: 🔴 = ainda pendente, 🟢 = já corrigido, com prova mecânica.)*
-
-### 🔴 Pendente desta rodada
+## 🗓️ 28-07-2026
 
 🔴 **33. Matriz de rastreabilidade RF × banco — sugerida, não feita**
 
-O CLAUDE WEB identificou esta como "a fala mais importante do WhatsApp inteiro": a Alexia pediu pra "passar as tabelas mais uma vez e ver se cobrem as necessidades, porque vamos ter que iniciar o backend". A Lista C já tem achados soltos disso (colunas faltando do item 19, taxa não carimbada do item 20), mas ninguém fez a varredura completa nos dois sentidos — pegar os 85 RFs da Etapa 3 e marcar, um por um, se o banco sustenta, sustenta parcialmente ou não sustenta.
+O CLAUDE identificou esta como "a fala mais importante do WhatsApp inteiro": a Alexia pediu pra "passar as tabelas mais uma vez e ver se cobrem as necessidades, porque vamos ter que iniciar o backend". A Lista C já tem achados soltos disso (colunas faltando do item 19, taxa não carimbada do item 20), mas ninguém fez a varredura completa nos dois sentidos — pegar os 85 RFs da Etapa 3 e marcar, um por um, se o banco sustenta, sustenta parcialmente ou não sustenta.
 
 > Sugestão do *** CLAUDE ***: isso não é uma correção de `.sql`, é um trabalho de auditoria à parte (provavelmente vale um documento próprio, tipo `MATRIZ-RASTREABILIDADE-RF.md`), e sai de lá uma tabela que também serve pra Etapa 3 do TCC. Não fiz agora porque é um esforço de outra natureza (leitura de 85 RFs contra 39 tabelas) e não estava no pedido desta rodada — mas é o que realmente destrava começar o NestJS com confiança de que a base aguenta, ao invés de descobrir no meio do caminho que falta uma coluna.
 
-*(Os itens 21-22-28-31-32 de rodadas anteriores continuam nas seções acima. Este 33 é o único achado novo desta rodada que ficou de fato pendente — todo o resto (Tier A, Tier B, e as 2 decisões de produto da Alexia) foi resolvido no mesmo dia, ver abaixo.)*
+---
 
-
-
-
-
-
-### 🟢 Já corrigido nesta rodada (28-07-2026)
-
-*(Tudo abaixo já está aplicado no `.sql` — fica aqui só pra registro e prova de que nada quebrou, mesmo padrão das rodadas anteriores.)*
-
-#### Tier A — bugs mecânicos, zero decisão envolvida — **todos 🟢 corrigidos em 28-07-2026**
-
-🟢 **A1. Cabeçalho do `05` dizia 26 triggers, eram 27** — conferido com `grep`, corrigido pra 27 (e depois pra 29, ver A-área-conhecimento mais abaixo). Uma linha.
-
-🟢 **A2. 4 contribuições do seed violavam o RF-048 (PIX obrigatório em all-or-nothing)** — `id_contribuicao` 2, 4, 7 e 9 eram `cartao_credito`/`boleto` em campanha `all-or-nothing` — só entraram porque `trg_contribuicao_all_or_nothing_pix` fica desligada durante a carga do seed (`[07-H-1]`). **Corrigido:** as 4 trocadas pra `pix` (marcadas com `-- (*)` no `.sql`, indicando qual era o valor antigo). Não afeta o cálculo de score (que usa status da campanha, não meio de pagamento).
-
-🟢 **A3. `valor_bruto_arrecadado` era digitado à mão e não batia com a soma real das contribuições** — 9 das 10 campanhas divergiam (3 delas com **zero** contribuições e um total de 5 dígitos mesmo assim). Mesmo tipo de problema que a Alexia já tinha corrigido em `perfil_pesquisador.score_atual` (parar de digitar, deixar a trigger calcular) — só que ninguém tinha reparado que o mesmo valia pra `campanha.valor_bruto_arrecadado`, porque `trg_sincroniza_arrecadado_campanha` ficava desligada durante toda a carga do seed. **Corrigido:** a coluna saiu do `INSERT INTO campanha` (usa o `DEFAULT 0`); `trg_sincroniza_arrecadado_campanha` passou a ficar **ligada** durante a carga de `contribuicao` (as outras 2 triggers de validação continuam desligadas, por bons motivos, ver comentário no `.sql`); 37 novas linhas de contribuição foram distribuídas entre doadores diferentes pra cada campanha somar exatamente o total que tinha antes. **Prova mecânica** (feita com regex/PowerShell, não à mão): somei programaticamente as 48 linhas finais de `contribuicao` por campanha e todas batem exatamente com os totais antigos — 52300 / 28500 / 40000 / 8000 / 22000 / 45000 / 32000 / 21000 / 9000 — e confirmei que **nenhuma** contribuição em campanha `all-or-nothing` usa meio de pagamento diferente de `pix`. Isso também resolveu o item 4 (linha duplicada de `repasse` na campanha 2) — removida, porque a duplicata só existia pra "empurrar" o total antigo, que agora vem de verdade da soma das contribuições.
-
-🟢 **A4. `pol_aceite_termo_contribuicao_select` esquecia o doador anônimo** — a policy de `INSERT` já aceitava `id_usuario IS NULL`, a de `SELECT` não tinha o ramo correspondente (`token_sessao`) — um doador anônimo registrava o aceite dos termos e nunca mais conseguia relê-lo. **Corrigido:** replicado o mesmo ramo de `token_sessao` que `pol_contribuicao_anon_select` já usa.
-
-🟢 **A5. `termos_de_uso`, `usuario_termo` e `aceite_termo_contribuicao` seedadas** — as três estavam vazias e sustentam o RF-011 (aceite obrigatório no cadastro), RF-054 e RF-055 (aceite por transação, defesa em disputa de chargeback, segundo a Etapa 2). **Corrigido:** 2 versões de termos (v1 histórica, já `ativo = FALSE`; v2 atual, `ativo = TRUE`, ainda sem ninguém re-aceitando — cenário realista de "termo novo publicado, ninguém foi reavisado ainda"); os 17 usuários aceitando a v1 no próprio cadastro; `aceite_termo_contribuicao` gerada por `SELECT` a partir da própria `contribuicao` (não digitada linha por linha), uma linha por contribuição. Documentei também, em comentário no `.sql`, a pegadinha real que testei: publicar uma versão nova de termos sem desativar a anterior na mesma transação quebra com o índice parcial `uq_termos_uso_ativo` (`02`) — o `UPDATE` que desativa a antiga e o `INSERT` da nova precisam estar juntos.
-
-🟢 **A6. `notificacao` seedada** — estava vazia; 7 linhas em `pendente`/`enviado`/`falhou`/`cancelado`, exercitando de verdade a permissão `notificacao_processar` e o índice `idx_notificacao_status` pela primeira vez.
-
-#### Tier B — decisão de uma linha, revisada a fundo antes de aplicar — **B1 e B2 🟢 aplicados; B3 fica pendente de propósito**
-
-🟢 **B1. `GRANT DELETE` em `verificacao_email`, `recuperacao_senha` e `sessao`** — as 3 já tinham policy `FOR ALL` (cobre `DELETE`), mas o `GRANT` só ia até `UPDATE` (item 28, antigo). O CLAUDE WEB testou o fluxo real antes de recomendar: pedir recuperação de senha, deixar o token expirar sem usar, e pedir de novo — **quebra** com erro de unicidade (`ux_recuperacao_senha_ativo_por_usuario` só permite 1 token não-usado por vez), e sem `DELETE` o app não tem como limpar o token velho (a alternativa de "marcar como usado à força" faria a coluna `usado_em` mentir sobre o que de fato aconteceu). **Aplicado:** `DELETE` concedido nas 3, com comentário no `.sql` documentando os 2 usos previstos (apagar token velho no ato de pedir um novo; expurgo periódico por retenção — 30 dias pra `verificacao_email`/`recuperacao_senha`, 90 dias pra `sessao`) e o cuidado de que, como as policies são `USING (true)`, o expurgo do NestJS precisa ser sempre uma consulta fixa com `WHERE` explícito em data, nunca um filtro dinâmico.
-
-🟢 **B2. Senha placeholder da role `app_nestjs` (pendência 1, antiga)** — trocado de `LOGIN PASSWORD 'TROCAR_NO_AMBIENTE_REAL'` pra `NOLOGIN`. Testado (pelo CLAUDE WEB) que `GRANT`/`SET ROLE` continuam funcionando normalmente numa role `NOLOGIN`, e que esquecer o passo de produção agora falha **fechado** (`FATAL: role "app_nestjs" is not permitted to log in`, percebido em minutos) em vez de falhar **aberto** (senha conhecida publicada no GitHub, sistema funcionando "normalmente"). **Aplicado:** `01` cria a role `NOLOGIN`; `tutorial-rodar-projeto.md` ganhou aviso de que o `ALTER ROLE app_nestjs LOGIN PASSWORD '...'` agora é **obrigatório** (sem ele, ninguém — nem você — consegue conectar como `app_nestjs`), tanto na checklist rápida quanto na Parte 3 detalhada.
-
-🔴 **B3. `codigo` em `tipo_link` — fica pendente de propósito** — o CLAUDE WEB recomendou **não** adicionar agora: o único consumidor real seria o motor de score (item 12 da Lista C, ainda sem decisão de escopo) ou os 2 tipos de link que faltam (item 19e), e criar uma coluna que nada lê hoje é exatamente o padrão que gerou os 21 `GRANT DELETE` mortos e as permissões órfãs que já limpamos. Custo de esperar é zero (`tipo_link` é catálogo de 5 linhas recriado do zero a cada bootstrap). **Não mexido** — fica vinculado aos itens 12/19e.
-
-#### Novidades trazidas pela Alexia (via WhatsApp → CLAUDE WEB) — decisão dada por você nesta conversa
-
-🟢 **34. Recompensa simbólica — resolve o item 14 da Lista C** — a ideia da Alexia ("nome do doador no projeto") já existia no ENUM `tipo_recompensa` como o valor `reconhecimento`; `acesso_antecipado` é o modelo do próprio Experiment.com, referência declarada do TCC. A objeção original ao domínio inteiro (recompensa física cria obrigação de logística que 2 pessoas não conseguem fiscalizar) morre se `fisica` sair do ENUM — e `outro` era uma porta aberta pra reintroduzir isso pela brecha. **Você decidiu:** remover os dois. **Aplicado:** `tipo_recompensa` (`01`) agora é só `('digital', 'reconhecimento', 'acesso_antecipado')`; feito com a tabela `recompensa` vazia (nenhum dado existente pra migrar) — o momento mais barato possível pra essa mudança, porque o Postgres não tem `ALTER TYPE ... DROP VALUE` (teria que recriar o tipo contra um banco já populado). O `DEFAULT 'outro'` da coluna `tipo` também saiu — nenhum dos 3 valores que sobraram é um "genérico" natural, a aplicação passa a escolher explicitamente. O item 14 da Lista C sai de "remover o domínio inteiro" pra "manter com escopo restrito" — ainda precisa de 2-3 RFs novos na Etapa 3 descrevendo recompensa simbólica, isso fica com vocês dois.
-
-🟢 **35. `area_conhecimento` desce pro 2º nível do CNPq — resolve o pedido da Alexia** — "Ciências da Saúde" cobrindo de odontologia a saúde coletiva era amplo demais pro filtro de busca valer a pena. **Você decidiu:** nível 2 vira obrigatório (campanha não pode mais ficar só na grande área raiz). **Aplicado:** coluna `id_pai` nova em `area_conhecimento` (`01`, mesmo padrão auto-referenciado de `score_config`); ~81 áreas de nível 2 seedadas em `07` (via `SELECT` resolvendo o pai pelo `codigo_cnpq`, não por ID fixo); trigger nova `trg_campanha_valida_area_nivel2`/`trg_campanha_valida_area_nivel2_update` (`05`, `[05-K-1]`) bloqueando `campanha.id_area_conhecimento` de apontar pra uma grande área raiz (`id_pai IS NULL`) — só entra em ação quando uma área é de fato informada, `NULL` continua permitido. As 10 campanhas do seed foram atualizadas pra apontar pra uma área de nível 2 dentro da mesma grande área que já tinham antes (ex.: campanha 1, antes só "Ciências Exatas", agora "Ciência da Computação"). **⚠️ Aviso importante, documentado também no `.sql`:** tentei buscar a Tabela de Áreas do Conhecimento oficial do CNPq/Lattes pra conferir cada código, mas o PDF não deu pra extrair de forma confiável — os **nomes** das áreas e a qual grande área cada uma pertence estão corretos (nomenclatura padrão CNPq, usada em qualquer edital brasileiro), mas os **dígitos verificadores** dos códigos não foram todos conferidos contra a fonte oficial (só a grande área 1, Ciências Exatas, foi conferida via busca — incluindo a correção do próprio código raiz, que estava errado no seed: era `1.00.00.00-0`, o oficial é `1.00.00.00-3`). Isso não quebra nada tecnicamente (`codigo_cnpq` não tem validação de formato/dígito no banco, é só texto único) — mas antes de citar esses códigos exatos na Etapa 3, vale conferir linha por linha contra a tabela oficial.
-
-*(Nota: o item 3 do CLAUDE WEB — mais motivos de denúncia — já está registrado dentro do A5/A6 acima; foram 5 motivos novos: `CAMP-005` a `CAMP-008` e `PERF-004`, dado puro de catálogo, sem decisão de negócio.)*
-
-**Prova mecânica de que nada quebrou (rodada inteira, 28-07-2026):** 39 tabelas (igual). `PK_`=39, `FK_`=56 (+1: `FK_AREA_CONHECIMENTO_PAI`), `UK_`=18 (igual), `CK_`=14 (igual) — parênteses balanceados em `01`, `05` e `07` (checado programaticamente, saldo zero nos três). Policies: continua 105 `CREATE POLICY` (só editei uma policy existente — `pol_aceite_termo_contribuicao_select` —, nenhuma nova). Funções de `05`: 31 (+1: `fn_valida_area_conhecimento_nivel2`). Triggers de `05`: 29 (+2: as duas de área nível 2). `area_conhecimento`: 90 linhas (9 grandes áreas + 81 áreas de nível 2, contadas programaticamente, sem duplicata de `codigo_cnpq`). `contribuicao`: 48 linhas (11 antigas + 37 novas), soma por campanha conferida linha a linha via script, batendo 100% com os totais antigos. `repasse`: 6 linhas (era 7, a duplicata da campanha 2 saiu). Tabelas seedadas: 30 (+4: `termos_de_uso`, `usuario_termo`, `aceite_termo_contribuicao`, `notificacao`).
-
-## 🗓️ 28-07-2026 (parte 2) — o CLAUDE WEB rodou de verdade num Postgres e achou um bug crítico — **todos 🟢 corrigidos no mesmo dia**
-
-*(Depois da rodada acima, o CLAUDE WEB rodou os 8 arquivos de verdade num Postgres — não só leu — pra conferir a prova mecânica. Achou 1 erro real e sério, confirmou que o A3 ficou "impecável", e resolveu o item 35 (dígito do CNPq) por um caminho matemático, já que nenhum dos dois teve acesso à tabela oficial do CNPq. Você pediu pra eu implementar tudo tentando não descartar as ideias da Alexia — deu certo nas duas: motivo de denúncia e vínculo institucional.)*
-
-🟢 **36. BUG CRÍTICO — o seed não termina de rodar: `denuncia` falhava inteira, em silêncio — CORRIGIDO**
-
-`id_motivo` em `denuncia` referenciava o **id serial posicional** do catálogo (1-7), não uma chave estável. Quando os 5 motivos novos do item A5 (rodada anterior) entraram — `CAMP-005` a `CAMP-008` **antes** do bloco `PERF-*` — os ids de `PERF-001`/`002`/`003` mudaram de `5`/`6`/`7` pra `9`/`10`/`11`:
-
-| | antes | depois |
-|---|---|---|
-| `PERF-001` | 5 | 9 |
-| `PERF-002` | 6 | 10 |
-| `PERF-003` | 7 | 11 |
-
-As 8 linhas de `denuncia` que apontavam pra alvo de perfil continuavam usando `5`/`6`/`7` — que virou motivo de **campanha**, aplicado num alvo de **perfil**. `trg_valida_tipo_motivo_denuncia` (criada bem pra pegar exatamente isso, no A5) rejeitava — e como o `INSERT` é um único comando com 13 linhas, **as 13 falhavam junto**, sem travar o script (só um erro que passa despercebido rodando os 8 arquivos em sequência). `denuncia` nascia vazia, `calcular_score_reputacao` devolvia os 25 pontos cheios da dimensão Reputação pra todo mundo, e o teste determinístico das 4 faixas de score (Bruno/Renata/Eduardo/Vinícius, desenhado com tanto cuidado na rodada anterior) se desfazia sem nenhum aviso: Eduardo saía com 48 em vez de 46 (ainda "Em Construção", por sorte), mas Vinícius saía com 35 ("Em Construção") em vez de 19 ("Atenção") — a faixa "Atenção" ficava **sem ninguém**.
-
-**Corrigido:** duas coisas, não só uma —
-1. As 13 linhas de `denuncia` remapeadas (as de perfil, que usavam `5`/`6`/`7`, corrigidas pra apontar pro motivo certo).
-2. **Causa raiz, não só sintoma:** `id_motivo` passou a ser resolvido por `SELECT ... FROM motivo_denuncia WHERE codigo = '...'` (chave natural, estável), não mais por número de posição. Inserir motivo novo no meio do catálogo nunca mais quebra essas linhas, seja qual for o id que ele ganhar. Mesmo princípio aplicado a `link_academico` (`id_tipolink` também virou subquery por `codigo` — ver item 39, abaixo).
-
-Prova: as 4 faixas de score voltam exatas — 100 (Bruno, Referência) / 60 (Renata, Confiável) / 46 (Eduardo, Em Construção) / 19 (Vinícius, Atenção).
-
-🟢 **37. `campanha.id_area_conhecimento` deixava passar `NULL` — CORRIGIDO**
-
-A trigger de nível 2 (rodada anterior) bloqueava a grande área raiz, mas deixava `NULL` passar — testado pelo CLAUDE WEB, campanha sem nenhuma área era aceita. A regra ficava "não pode ser vago, mas pode ser omisso" — e omisso é pior: campanha sem área nenhuma some de **todos** os filtros, enquanto uma classificada só na grande área pelo menos aparece num filtro amplo. **Corrigido:** `id_area_conhecimento` virou `NOT NULL` — as 10 campanhas do seed já tinham área de nível 2 desde a rodada anterior, então não exigiu nenhum ajuste nelas. Isso fecha a decisão de "nível 2 obrigatório" que você já tinha tomado, não é uma decisão nova.
-
-🟢 **38. Item 35 (dígito verificador do CNPq) resolvido — sem precisar da fonte oficial**
-
-Nem eu nem o CLAUDE WEB conseguimos acesso à tabela oficial do CNPq/Lattes (eu por falha de extração do PDF, ele por não ter acesso à web no ambiente dele). Ele atacou por outro ângulo: **provou matematicamente** que os dígitos que eu tinha semeado não vinham de nenhum algoritmo real. Nos códigos de grande área (`N.00.00.00-D`) só o primeiro dígito é diferente de zero — então em qualquer esquema real de dígito verificador por soma ponderada (o mesmo princípio de CPF/CNPJ/PIS, todos mod 11), o dígito seria função só desse primeiro número. O seed tinha `DV(1) = DV(7) = 3`, o que matematicamente só permite 1 ou 2 resultados distintos possíveis pros 9 valores — e o seed tinha 8 valores distintos. Impossível vir de um algoritmo de verdade.
-
-**Corrigido:** removi o dígito verificador dos 90 `codigo_cnpq` — agora é `'1.03.00.00'`, não `'1.03.00.00-7'`. O dígito verificador serve pra pegar erro de digitação quando um humano transcreve um código num formulário de papel; aqui, `codigo_cnpq` é comparado por igualdade, nunca digitado à mão — o dígito não protegia nada e era a única parte do dado que ninguém conseguia conferir. Os nomes das áreas e a hierarquia continuam corretos e confiáveis (nomenclatura padrão do CNPq). Item 35 fecha com essa justificativa, em vez de ficar pendente esperando um PDF que não abre.
-
-🟢 **39. `tipo_link` ganhou coluna `codigo` — B3 reaberto e resolvido**
-
-O B3 (rodada anterior) tinha sido adiado por falta de consumidor real. O item 36 criou um: o próprio seed precisava referenciar `tipo_link` por chave natural pra fechar o mesmo tipo de bug em `link_academico`. **Corrigido:** coluna `codigo VARCHAR(20) UNIQUE` adicionada (`LATTES`, `ORCID`, `RESEARCHGATE`, `LINKEDIN`, `GITHUB`); `link_academico` (`07`) passou a resolver `id_tipolink` por subquery em `codigo`, não mais por número de posição.
-
-🟢 **40. Guarda de `BYPASSRLS` no topo do `01` — não resolve o item 22, mas melhora o sintoma**
-
-O item 22 (papel do Supabase precisa de `BYPASSRLS`) continua em aberto — só quem confirma isso no painel do Supabase é você. Mas hoje, se alguém rodar o seed sem `BYPASSRLS`, o resultado são dezenas de erros de RLS espalhados pelos 8 arquivos, sem nenhuma pista do motivo real. **Adicionado:** um bloco `DO $$` no início do `01` que checa `rolsuper OR rolbypassrls` pro `current_user` e aborta com uma mensagem única e explicativa, em vez de deixar o erro real acontecer 25+ vezes escondido no meio do `07`.
-
-🟢 **41. `cpf_criptografado` sem GRANT de leitura — trava o KYC do RF-015 — CORRIGIDO**
-
-Com o `NOT NULL` da Alexia em `cpf_criptografado`, o `app_nestjs` passou a ser **obrigado** a gravar o CPF, mas continuava impossibilitado de **lê-lo** — a coluna nunca tinha entrado no `GRANT SELECT` de `perfil_pesquisador`. O RF-015 exige mandar esse dado pra API de pagamento configurar o recebimento do pesquisador; sem conseguir nem selecionar a coluna, o backend não tinha como. **Corrigido:** `cpf_criptografado` (e `tipo_vinculo`, ver item 42) entraram no `GRANT SELECT`. A proteção que de fato importa — quem no backend pode ler isso — passa a ser a permissão `perfil_pesquisador_visualizar_sensivel` (já seedada, até agora sem nenhum efeito) gateando a leitura no NestJS; isso é trabalho de aplicação, fora do escopo do `.sql`.
-
-🟢 **42. `tipo_vinculo` — o único ajuste numa ideia da Alexia, sem descartar nada dela**
-
-O `vinculo_institucional NOT NULL` da Alexia implementa exatamente o que ela quis ("perfil não nasce pela metade") — regra certa, mantida. O efeito colateral: impedia a existência de pesquisador **sem** instituição, que é justamente o público que a justificativa da Etapa 1 diz que a plataforma quer alcançar. **Corrigido preservando a regra dela:** ENUM novo `tipo_vinculo` (`'institucional'`, `'independente'`), coluna nova em `perfil_pesquisador` com `DEFAULT 'institucional'`; `vinculo_institucional` voltou a ser nullable, mas amarrado por `CONSTRAINT "CK_PERFIL_VINCULO"`: institucional exige o nome da instituição preenchido (não vazio); independente exige o campo vazio. Nenhum dos dois aceita ambiguidade — continua **proibido** cadastrar sem declarar nada, exatamente a regra da Alexia. Os 11 perfis do seed continuam válidos sem nenhum ajuste (todos ficam `tipo_vinculo = 'institucional'` pelo `DEFAULT`, com instituição preenchida).
-
-> ⚠️ **Ponto de atenção pra Lista C, não pra ignorar:** `calcular_score_perfil_academico` (`05`) dá pontos por `vinculo_institucional` preenchido. Com essa mudança, o pesquisador independente perde esses pontos automaticamente (campo vazio = sem crédito) — isso é decisão de vocês dois e está amarrada ao destino do score (itens 12/13 da Lista C), não deve passar despercebido quando o score for decidido.
-
-**Prova mecânica desta parte 2:** `PK_`=39 (igual), `FK_`=56 (igual), `UK_`=19 (+1: `UK_TIPO_LINK_CODIGO`), `CK_`=15 (+1: `CK_PERFIL_VINCULO`) — parênteses balanceados em `01`, `04`, `05`, `06` e `07` (saldo zero nos cinco, conferido programaticamente). Funções/triggers de `05`: sem mudança nesta parte (31/29, nenhuma função ou trigger nova — só dado e GRANT). Policies: continua 105 (nenhuma tocada nesta parte). `area_conhecimento`: continua 90 linhas, agora sem dígito verificador (conferido: zero ocorrências do padrão `X.YY.00.00-D` no arquivo inteiro). `contribuicao`: recontado, continua 48 linhas com as mesmas 9 somas batendo exatamente (nada nesta parte tocou em contribuição/campanha financeiro). `tipo_link`: 5 linhas, todas com `codigo` único.
-
-
-
-
-
-
-## 🗓️ 27-07-2026 — Nova rodada (banco comparado com os requisitos do TCC)
-
-*(Itens encontrados e descritos pelo CLAUDE nesta data — separados de propósito das pendências mais antigas abaixo, pra não confundir uma coisa com a outra. 🔴 = ainda pendente. 🟢 = já corrigido nesta mesma data, com prova de que nada quebrou. Reorganizado em 27-07-2026: dentro deste grupo de data, tudo que ainda está 🔴 ficou no topo, e tudo que já é 🟢 foi pro fundo desta mesma seção — 6 linhas em branco separando os dois blocos, mais abaixo — sem misturar com os itens resolvidos de datas mais antigas, que continuam onde sempre estiveram, na seção `✅ RESOLVIDAS / CORRIGIDAS` no fim do arquivo.)*
-
-### 🔴 Pendente nesta rodada
+## 🗓️ 27-07-2026
 
 🔴 **22. O seed só roda com superusuário ou papel com `BYPASSRLS` — isso nunca foi escrito em lugar nenhum**
 
-`papel`, `permissao` e `papel_permissao` só têm policy de `SELECT` — não existe nenhuma policy de `INSERT`/`UPDATE` pra elas, porque a intenção sempre foi "gestão via seed/migração direta, não pela aplicação" (isso já está documentado no `DOCUMENTACAO_BD.md`, `[06-B]`). *(Correção 27-07-2026: a primeira versão deste item citava `score_config` como mais um exemplo de "tabela só com policy de SELECT" — isso estava errado, e o CLAUDE WEB pegou. `score_config`/`score_rotulo` têm policy de `INSERT` e `UPDATE` de verdade, exigindo a permissão `score_editar` (`04_rls_policies.sql`, `[04-I-1]`/`[04-I-2]`). O motivo pelo qual o seed falha nelas mesmo assim não é "falta de policy" — é o mesmo motivo do parágrafo abaixo: a policy existe, mas é `TO app_nestjs`, e um papel diferente desse simplesmente não casa com ela, tenha ela `INSERT` ou não. Conferido de novo com `grep`: `papel`/`permissao`/`papel_permissao` são os exemplos certos de "só SELECT mesmo".)* O que nunca foi dito explicitamente é que isso torna **obrigatório** rodar `07_seed_dados.sql` como um papel que ignora RLS (superusuário, ou um papel comum com o atributo `BYPASSRLS`) — com as 39 tabelas em `FORCE ROW LEVEL SECURITY`, até o dono de uma tabela fica sujeito às policies dela, e como 89 das 105 policies são `TO app_nestjs` (não `TO public`), um dono qualquer sem `BYPASSRLS` recebe dezenas de erros de `new row violates row-level security policy`.
+`papel`, `permissao` e `papel_permissao` só têm policy de `SELECT` — não existe nenhuma policy de `INSERT`/`UPDATE` pra elas, porque a intenção sempre foi "gestão via seed/migração direta, não pela aplicação" (isso já está documentado no `DOCUMENTACAO_BD.md`, `[06-B]`). *(Correção 27-07-2026: a primeira versão deste item citava `score_config` como mais um exemplo de "tabela só com policy de SELECT" — isso estava errado, e o CLAUDE pegou. `score_config`/`score_rotulo` têm policy de `INSERT` e `UPDATE` de verdade, exigindo a permissão `score_editar` (`04_rls_policies.sql`, `[04-I-1]`/`[04-I-2]`). O motivo pelo qual o seed falha nelas mesmo assim não é "falta de policy" — é o mesmo motivo do parágrafo abaixo: a policy existe, mas é `TO app_nestjs`, e um papel diferente desse simplesmente não casa com ela, tenha ela `INSERT` ou não. Conferido de novo com `grep`: `papel`/`permissao`/`papel_permissao` são os exemplos certos de "só SELECT mesmo".)* O que nunca foi dito explicitamente é que isso torna **obrigatório** rodar `07_seed_dados.sql` como um papel que ignora RLS (superusuário, ou um papel comum com o atributo `BYPASSRLS`) — com as 39 tabelas em `FORCE ROW LEVEL SECURITY`, até o dono de uma tabela fica sujeito às policies dela, e como 89 das 105 policies são `TO app_nestjs` (não `TO public`), um dono qualquer sem `BYPASSRLS` recebe dezenas de erros de `new row violates row-level security policy`.
 
-Isso importa porque o banco vai rodar no Supabase, e lá você executa SQL pelo papel que o próprio Supabase fornece no editor deles — não necessariamente um superusuário local. Se esse papel não tiver `BYPASSRLS`, o seed falha lá do mesmo jeito, mesmo já tendo funcionado na sua máquina.
+Isso importa porque o banco vai rodar no Supabase, e lá você executa SQL pelo papel que o próprio Supabase fornece no editor deles — não necessariamente um superusuário local. Se esse papel não tiver `BYPASSRLS`, o seed falha lá do mesmo jeito, mesmo já tendo funcionado na sua máquina. *(Nota 28-07-2026: adicionei uma guarda no início do `01` que detecta isso e aborta com uma mensagem clara — não resolve o item, mas evita as dezenas de erros silenciosos espalhados. Ver item 40 na seção de resolvidos.)*
 
 > Sugestão do *** CLAUDE ***: duas coisas, nenhuma delas é mudar o `.sql`. Primeiro, confirmar no próprio Supabase se o papel usado no SQL Editor deles (geralmente `postgres`) tem `BYPASSRLS` — normalmente tem, mas vale confirmar antes de contar com isso, não depois de um deploy dar errado. Segundo, o `tutorial-rodar-projeto.md` merece uma linha explícita dizendo isso: "o `07` (e qualquer re-execução do seed) precisa rodar como superusuário ou papel com `BYPASSRLS` — nunca como `app_nestjs`".
 
-*(Os três achados a seguir — 28, 31 e 32 — vieram da mesma rodada de testes que encontrou as regressões 23-26, que já foram corrigidas e estão na seção "🟢 Já corrigido nesta rodada", mais abaixo. Estes três não são regressão de nada — são achados novos, e continuam em aberto.)*
-
-🔴 **28. O inverso do 27 — `verificacao_email`/`recuperacao_senha`/`sessao` não conseguem `DELETE`, mesmo a policy permitindo** — as 3 têm policy `FOR ALL` (que cobre `DELETE`), mas o `GRANT` (`06`) é só `SELECT, INSERT, UPDATE` — falta `DELETE`. `app_nestjs` nunca consegue apagar sessão expirada ou token já consumido; essas 3 tabelas só crescem. Provavelmente proposital (revogar é só marcar `revogado_em`/`usado_em`, nunca apagar linha) — mas aí a política de retenção de dado precisa estar escrita em algum lugar, porque o RNF-003 fala em guardar dado pessoal só pelo tempo mínimo necessário, e sessão antiga com IP e user-agent é dado pessoal.
+🔴 **28. O inverso do 27 — `verificacao_email`/`recuperacao_senha`/`sessao` não conseguem `DELETE`, mesmo a policy permitindo** — as 3 têm policy `FOR ALL` (que cobre `DELETE`), mas o `GRANT` (`06`) é só `SELECT, INSERT, UPDATE` — falta `DELETE`. `app_nestjs` nunca consegue apagar sessão expirada ou token já consumido; essas 3 tabelas só crescem. Provavelmente proposital (revogar é só marcar `revogado_em`/`usado_em`, nunca apagar linha) — mas aí a política de retenção de dado precisa estar escrita em algum lugar, porque o RNF-003 fala em guardar dado pessoal só pelo tempo mínimo necessário, e sessão antiga com IP e user-agent é dado pessoal. *(CORRIGIDO em 28-07-2026 — ver item B1 na seção de resolvidos: `DELETE` concedido nas 3, com janela de retenção sugerida.)*
 
 🔴 **31. `score_pesquisador` de usuário deletado continua público** — mesmo gap do A9 (que cobriu só `perfil_pesquisador` e `link_academico`, como pedido); `pol_score_select` continua `USING (TRUE)`. Não mexido de propósito — o score está na Lista C aguardando decisão de escopo (itens 12-13); se ele ficar, entra na mesma correção do `usuario_visivel()`.
 
 🔴 **32. 15 das 39 tabelas ficam vazias depois do seed** — separando por motivo:
-- **Vazias porque o seed quebrava** (já resolvido — ver item 21, na seção "🟢 Já corrigido nesta rodada", mais abaixo): `atualizacao_campanha`, `arquivo_atualizacao`, `auditoria_financeira`.
-- **Vazias porque o seed simplesmente não escreve nelas:** `termos_de_uso`, `usuario_termo`, `aceite_termo_contribuicao`, `notificacao`. Esta é a que preocupa mais: `termos_de_uso` sem nenhuma linha significa que o RF-011 (aceite obrigatório no cadastro), RF-054 e RF-055 (aceite por transação, prova documental contra chargeback) não têm nenhum dado de exemplo, e o índice `uq_termos_uso_ativo` nunca é exercitado — é justamente a trilha de auditoria que a Etapa 2 descreve como defesa principal da plataforma numa disputa com operadora de cartão.
-- **Vazias por escopo** (Lista C, não mexer): a família `recompensa` e a família `link_atualizacao`/`link_recompensa`, mais as tabelas de runtime de autenticação (normal nascerem vazias).
+- **Vazias porque o seed quebrava** (já resolvido — ver item 21, na seção de resolvidos): `atualizacao_campanha`, `arquivo_atualizacao`, `auditoria_financeira`.
+- **Vazias porque o seed simplesmente não escreve nelas** — *(atualização 28-07-2026: `termos_de_uso`, `usuario_termo`, `aceite_termo_contribuicao` e `notificacao` já foram seedadas, ver itens A5/A6 na seção de resolvidos — deixaram de fazer parte deste problema)*.
+- **Vazias por escopo** (Lista C, não mexer): a família `recompensa` e a família `link_atualizacao`/`link_recompensa` *(atualização 28-07-2026: `recompensa` já pode receber dados, ver item 34 no topo do arquivo — falta só a Alexia semear)*, mais as tabelas de runtime de autenticação (normal nascerem vazias).
 
 ### Lista C — travado até vocês dois decidirem (nada mexido aqui)
 
@@ -157,21 +68,21 @@ Procurei "score", "pontuação" e "reputação" nos três `.docx` do TCC (Etapa 
 
 🔴 **13. Quatro regras do score que precisam de decisão, caso ele fique**
 
-Se a decisão do item 12 for manter o score, estes quatro pontos precisam ser resolvidos antes de o Claude Code mexer em qualquer função de cálculo. Nenhum é bug: são escolhas de regra que hoje estão implementadas de um jeito que talvez não seja o que vocês queriam. (a) Denúncia improcedente penaliza igual — a função `calcular_score_reputacao` conta todas as denúncias contra o pesquisador, inclusive as que a moderação julgou `improcedente`, o que contradiz o RF-077, que define improcedente como "denúncia descartada após análise". (b) Campanha rejeitada pune duas vezes — a rejeição derruba a taxa de aprovação e ainda entra no denominador da taxa de conclusão. (c) Campanha encerrada antecipadamente conta como sucesso — `calcular_score_historico` trata o status `encerrado` (o encerramento do RF-040, com justificativa) como se fosse meta atingida. (d) GitHub não pontua — a função procura por Lattes, ORCID, LinkedIn, ResearchGate e mais três padrões que não existem na allowlist, mas nenhum padrão casa com GitHub, então um pesquisador com repositório público não ganha nada por isso.
+Se a decisão do item 12 for manter o score, estes quatro pontos precisam ser resolvidos antes de o mexer em qualquer função de cálculo. Nenhum é bug: são escolhas de regra que hoje estão implementadas de um jeito que talvez não seja o que vocês queriam. (a) Denúncia improcedente penaliza igual — a função `calcular_score_reputacao` conta todas as denúncias contra o pesquisador, inclusive as que a moderação julgou `improcedente`, o que contradiz o RF-077, que define improcedente como "denúncia descartada após análise". (b) Campanha rejeitada pune duas vezes — a rejeição derruba a taxa de aprovação e ainda entra no denominador da taxa de conclusão. (c) Campanha encerrada antecipadamente conta como sucesso — `calcular_score_historico` trata o status `encerrado` (o encerramento do RF-040, com justificativa) como se fosse meta atingida. (d) GitHub não pontua — a função procura por Lattes, ORCID, LinkedIn, ResearchGate e mais três padrões que não existem na allowlist, mas nenhum padrão casa com GitHub, então um pesquisador com repositório público não ganha nada por isso.
 
 > Sugestão do *** CLAUDE ***: em (a) eu contaria apenas denúncias com status `resolvida`, ignorando `pendente`, `em_analise` e `improcedente` — uma acusação sob análise não é culpa e uma acusação descartada é o contrário disso; isso também fecha uma brecha real, porque hoje cinco contas coordenadas derrubam permanentemente o score de alguém dentro do limite de 5 denúncias por 24 horas do RF-076, mesmo que a moderação dê razão ao pesquisador nas cinco. Em (b) eu tiraria `rejeitado` do denominador da taxa de conclusão, já que a rejeição já é contabilizada uma vez na taxa de aprovação. Em (c) eu contaria o encerramento antecipado como neutro, fora do numerador e fora do denominador — tratar uma campanha interrompida pelo próprio pesquisador igual a uma que bateu a meta é generoso demais e distorce a comparação entre pesquisadores. Em (d) eu daria peso ao GitHub, porque em exatas e computação um repositório público é evidência acadêmica tão legítima quanto ResearchGate — mas seja qual for a escolha de vocês, ela precisa estar escrita, senão parece esquecimento. Existe ainda um quinto ponto puramente técnico ligado a isso: os pesos `volume_denuncias` e `gravidade_denuncias` estão seedados em `score_config` mas nenhuma função os lê (o cálculo usa constantes da tabela `configuracoes`), o que significa que o painel do Admin mostraria duas alavancas que não movem nada; a correção é escolher uma única fonte de verdade para as constantes de score, e eu ficaria com `score_config`, que é a tabela que o painel edita e que já tem trigger de recálculo.
 
-🔴 **14. O domínio de recompensa não tem nenhum requisito escrito**
+🔴 **14. O domínio de recompensa não tem nenhum requisito escrito** *(atualização 28-07-2026: parte disso já foi resolvida — ver item 34 no topo do arquivo. O que fica aqui é só a parte que ainda depende de vocês: escrever os 2-3 RFs novos na Etapa 3 descrevendo recompensa simbólica.)*
 
-Mesma situação do item 12: a palavra "recompensa" aparece zero vezes nos três `.docx`. Não há RU, RF nem RNF sobre oferecer contrapartidas materiais ao doador. O banco, porém, tem 4 tabelas dedicadas (`recompensa`, `contribuicao_recompensa`, `arquivo_recompensa` e `link_recompensa`), o ENUM `tipo_recompensa`, cerca de 12 policies de RLS, grants, índices e uma trigger de validação. É um subsistema inteiro construído para uma funcionalidade que o projeto nunca especificou.
+Mesma situação do item 12: a palavra "recompensa" aparece zero vezes nos três `.docx`. Não há RU, RF nem RNF sobre oferecer contrapartidas materiais ao doador. O banco, porém, tem 4 tabelas dedicadas (`recompensa`, `contribuicao_recompensa`, `arquivo_recompensa` e `link_recompensa`), o ENUM `tipo_recompensa`, cerca de 12 policies de RLS, grants, índices e uma trigger de validação. Era um subsistema inteiro construído para uma funcionalidade que o projeto nunca especificou.
 
-> Sugestão do *** CLAUDE ***: acho que isso é herança mental da Catarse, que trabalha com recompensas por ser plataforma de projeto cultural e criativo. O Experiment.com, que é a referência que vocês declaram na Etapa 1 e na Etapa 2, deliberadamente não trabalha com recompensas: a contrapartida ao apoiador é a publicação aberta do progresso e dos resultados da pesquisa, que no CrowdAcadêmico já está implementada como `atualizacao_campanha` e coberta pelos RF-030 e RF-031. Ou seja, vocês já copiaram o modelo certo — o de recompensa ficou sobrando. Minha recomendação é remover as 4 tabelas do MVP e registrar como possibilidade futura. Se preferirem manter, aí é preciso escrever os RFs correspondentes na Etapa 3, e vale considerar que recompensa material cria obrigação de entrega e logística, que é justamente o tipo de responsabilidade que uma plataforma acadêmica com equipe de duas pessoas não tem como fiscalizar.
+> Sugestão do *** CLAUDE ***: acho que isso é herança mental da Catarse, que trabalha com recompensas por ser plataforma de projeto cultural e criativo. O Experiment.com, que é a referência que vocês declaram na Etapa 1 e na Etapa 2, deliberadamente não trabalha com recompensas: a contrapartida ao apoiador é a publicação aberta do progresso e dos resultados da pesquisa, que no CrowdAcadêmico já está implementada como `atualizacao_campanha` e coberta pelos RF-030 e RF-031. A objeção de logística (recompensa material) foi resolvida restringindo o ENUM a recompensa simbólica (item 34) — o que falta agora é só formalizar isso em RF na Etapa 3.
 
 🔴 **15. Duas tabelas de link que é impossível usar hoje**
 
 O seed de `tipo_link` cadastra os 5 tipos (Lattes, ORCID, ResearchGate, LinkedIn e GitHub) informando apenas nome, regex e domínio. Os três campos de escopo caem no valor padrão: `permite_perfil` fica `TRUE`, mas `permite_atualizacao` e `permite_recompensa` ficam `FALSE`. Como a trigger `trg_valida_escopo_tipolink` rejeita qualquer link fora do escopo permitido, hoje toda tentativa de inserir uma linha em `link_atualizacao` ou em `link_recompensa` levanta exceção. As duas tabelas, mais 8 policies de RLS, 4 índices e os grants correspondentes, são código que existe, roda no bootstrap e nunca vai funcionar. A revisão anterior chegou a olhar esse assunto, mas verificou quais tipos foram seedados (concluindo, corretamente, que a lista de 5 é proposital) e não os campos de escopo.
 
-> Sugestão do *** CLAUDE ***: não ligaria os campos sem antes decidir o escopo. `link_recompensa` some junto com a decisão do item 14. Já `link_atualizacao` é uma pergunta separada: o RF-030 fala de publicar atualizações de progresso, mas nunca menciona anexar links a elas — é funcionalidade que não foi pedida. Minha recomendação é remover as duas tabelas junto com o domínio de recompensa. Se vocês quiserem manter `link_atualizacao` (faz sentido, por exemplo, um pesquisador linkar o artigo publicado numa atualização de resultado final), então é preciso ligar `permite_atualizacao` para os tipos apropriados no seed e escrever o RF correspondente. O que não pode continuar é o estado atual, porque é o pior dos dois mundos: o custo de manter o código sem nenhum benefício.
+> Sugestão do *** CLAUDE ***: não ligaria os campos sem antes decidir o escopo. `link_recompensa` — agora que a recompensa é simbólica (item 34), pode fazer sentido ligar `permite_recompensa` pra algum tipo, se vocês quiserem anexar link a uma recompensa de reconhecimento. Já `link_atualizacao` é uma pergunta separada: o RF-030 fala de publicar atualizações de progresso, mas nunca menciona anexar links a elas — é funcionalidade que não foi pedida. Se vocês quiserem manter `link_atualizacao` (faz sentido, por exemplo, um pesquisador linkar o artigo publicado numa atualização de resultado final), então é preciso ligar `permite_atualizacao` para os tipos apropriados no seed e escrever o RF correspondente. O que não pode continuar é o estado atual, porque é o pior dos dois mundos: o custo de manter o código sem nenhum benefício.
 
 🔴 **16. Limites de negócio fixos no código em vez de configuráveis**
 
@@ -193,7 +104,7 @@ As policies de `seguir_campanha` e `seguir_pesquisador` permitem que cada usuár
 
 🔴 **19. Colunas que faltam para requisitos que já estão escritos**
 
-Comparando o banco contra a Etapa 3, existem cinco pontos em que um requisito já aprovado descreve algo que o banco não consegue armazenar. (a) Rótulo personalizado de link acadêmico — os RF-014, RF-016 e RF-018 e a Etapa 2 falam em até 5 links com rótulo personalizável, mas `link_academico` não tem coluna de rótulo nem trava de 5. (b) Descrição da denúncia — os RF-019 e RF-072 pedem campo opcional de descrição adicional, que não existe na tabela `denuncia`. (c) Vídeo de apresentação — o RF-033 pede campo opcional de URL de vídeo exibido em destaque na página da campanha, e `campanha` não tem essa coluna. (d) Justificativa do Administrador ao rejeitar encerramento antecipado — o RF-041 torna obrigatório, mas `solicitacao_encerramento` só tem campo para a justificativa do pesquisador. (e) Tipos de link — o RF-014 lista sete tipos, incluindo "Site Institucional" e "Outro" com regras próprias, e o seed tem cinco.
+Comparando o banco contra a Etapa 3, existem cinco pontos em que um requisito já aprovado descreve algo que o banco não consegue armazenar. (a) Rótulo personalizado de link acadêmico — os RF-014, RF-016 e RF-018 e a Etapa 2 falam em até 5 links com rótulo personalizável, mas `link_academico` não tem coluna de rótulo nem trava de 5. (b) Descrição da denúncia — os RF-019 e RF-072 pedem campo opcional de descrição adicional, que não existe na tabela `denuncia`. (c) Vídeo de apresentação — o RF-033 pede campo opcional de URL de vídeo exibido em destaque na página da campanha, e `campanha` não tem essa coluna. (d) Justificativa do Administrador ao rejeitar encerramento antecipado — o RF-041 torna obrigatório, mas `solicitacao_encerramento` só tem campo para a justificativa do pesquisador. (e) Tipos de link — o RF-014 lista sete tipos, incluindo "Site Institucional" e "Outro" com regras próprias, e o seed tem cinco *(ver também a nota sobre `tipo_link` reaberto, na seção "Pendências mais antigas" abaixo)*.
 
 > Sugestão do *** CLAUDE ***: todos os cinco são baratos de resolver no banco (quatro são coluna nova e um é linha no seed), mas nenhum deve ser feito por reflexo, porque os `.docx` vão ser revisados e a pergunta correta é a inversa: o requisito continua valendo ou ele é que deve sair? Meu palpite item a item: os rótulos de link (a) eu manteria, porque aparecem em três RFs e na Etapa 2, é claramente decisão consolidada de vocês. A descrição da denúncia (b) eu manteria também, porque denúncia só com motivo pré-definido dá pouca informação para o Administrador julgar, e é o tipo de campo que a moderação sente falta rápido. O vídeo (c) eu manteria, é barato (só armazena URL, nenhum arquivo) e aumenta muito a conversão de campanha. A justificativa do Admin (d) é a mais importante das cinco, porque hoje o RF-041 é impossível de cumprir e negar um pedido de encerramento sem registrar o motivo é frágil se o pesquisador contestar depois. E sobre os sete tipos de link (e), eu voltaria atrás na decisão anterior de fechar em cinco: "Site Institucional" e "Outro" são justamente o que atende pesquisador de instituição pequena, que é exatamente o público que a justificativa da Etapa 1 diz que a plataforma quer alcançar; a objeção original era que esses dois não têm domínio validável, o que se resolve deixando `regex` e `dominio` nulos e validando só o formato de URL.
 
@@ -201,20 +112,180 @@ Comparando o banco contra a Etapa 3, existem cinco pontos em que um requisito j�
 
 O RF-036 exige que o percentual de taxa vigente no momento da aprovação seja gravado e vinculado à campanha, e usado no cálculo do repasse independentemente de alterações posteriores feitas pelo Administrador. A coluna `taxa_plataforma` existe em `campanha`, mas é opcional, não tem valor padrão e nenhuma parte do banco a preenche em momento nenhum. Existe uma configuração `taxa_plataforma_padrao` no seed, mas nada liga uma coisa à outra. Na prática, o requisito que protege o pesquisador de ter a taxa alterada depois da aprovação não está implementado.
 
-> Sugestão do *** CLAUDE ***: isso é o que o RF-036 pede literalmente, então acho que não há muito o que decidir sobre o "se", só sobre o "quando" — o Claude Code criaria uma trigger que copia o valor de `configuracoes.taxa_plataforma_padrao` para `campanha.taxa_plataforma` no momento exato em que a campanha é aprovada (quando `aprovado_em` deixa de ser nulo). A partir daí a trigger de congelamento que já existe protege esse valor. Coloquei isto na lista de decisões e não na de correções mecânicas porque envolve uma pergunta de negócio pequena mas real: se a taxa é 5% por padrão (RF-036) mas a Etapa 2 diz que o valor definitivo será calculado depois de analisar os custos da API de pagamento, tomando Experiment (cerca de 8%) e Catarse (cerca de 13%) como referência, então vocês precisam definir com qual número o sistema entra em operação. Sugiro deixar 5% no seed mesmo e tratar a definição final como ajuste de configuração, já que depois dessa trigger mudar a taxa passa a ser seguro: campanhas já aprovadas ficam imunes por construção.
+> Sugestão do *** CLAUDE ***: isso é o que o RF-036 pede literalmente, então acho que não há muito o que decidir sobre o "se", só sobre o "quando" — o criaria uma trigger que copia o valor de `configuracoes.taxa_plataforma_padrao` para `campanha.taxa_plataforma` no momento exato em que a campanha é aprovada (quando `aprovado_em` deixa de ser nulo). A partir daí a trigger de congelamento que já existe protege esse valor. Coloquei isto na lista de decisões e não na de correções mecânicas porque envolve uma pergunta de negócio pequena mas real: se a taxa é 5% por padrão (RF-036) mas a Etapa 2 diz que o valor definitivo será calculado depois de analisar os custos da API de pagamento, tomando Experiment (cerca de 8%) e Catarse (cerca de 13%) como referência, então vocês precisam definir com qual número o sistema entra em operação. Sugiro deixar 5% no seed mesmo e tratar a definição final como ajuste de configuração, já que depois dessa trigger mudar a taxa passa a ser seguro: campanhas já aprovadas ficam imunes por construção.
+
+---
+
+## Pendências mais antigas (pré-27-07-2026, sem rodada de data específica)
+
+### No `.sql`
+
+🔴 **2. Debate `tipo_link` / `contexto_link`**
+
+Debate sobre criar 2 tabelas novas (`tipo_link` e `contexto_link` reformulados) — **adiado, não mexer sem pedir**. Assunto que você e sua parceira ainda estão discutindo sobre como modelar.
+
+> Sugestão do *** CLAUDE ***: olhando Catarse e Experiment, os dois têm um conjunto de contextos de link bem pequeno e estável (perfil do criador, página do projeto, atualizações) — não é algo que cresce toda hora na prática. Isso favorece o modelo atual (3 flags booleanas: `permite_perfil`, `permite_atualizacao`, `permite_recompensa`), que é mais simples de ler e de mexer no dia a dia. Eu só migraria pra uma tabela `contexto_link` dinâmica (como o `RBAC-pontos-discutidos.md`, seção 6.5, já esboça) se vocês já tiverem um plano concreto de adicionar um 4º ou 5º contexto em breve (ex.: link em denúncia, em perfil de instituição) — sem esse plano concreto, a complexidade extra da tabela nova não se paga ainda. Minha recomendação: manter como está por enquanto, e só revisitar quando um novo contexto for realmente necessário (não antes, por precaução).
+
+🔴 **3. `score_minimo_campanha` seedado mas nunca aplicado**
+
+`07_seed_dados.sql` cadastra a configuração `score_minimo_campanha = 25.00` ("Score mínimo para criar campanha"), com um comentário explícito no próprio arquivo:
+
+> `-- TODO (pendente decisão da equipe): regra de score mínimo para campanha ainda não confirmada; manter sem trigger por enquanto.`
+
+Conferido em `05_regras_negocio.sql`: não existe nenhuma trigger que leia essa configuração — ou seja, hoje um pesquisador com score 0 pode criar campanha normalmente, a regra existe só "no papel". Não é bug (o próprio comentário já avisa que é proposital, aguardando decisão), mas é uma pendência real de negócio: **vocês querem mesmo essa trava?**
+
+Se sim, é uma trigger pequena em `05` (tipo `trg_campanha_limite_simultaneo`, mas checando score em vez de contagem) que bloqueia `INSERT` em `campanha` se `perfil_pesquisador.score_atual < config_numero('score_minimo_campanha', ...)`.
+
+> Sugestão do *** CLAUDE ***: nem Catarse nem Experiment bloqueiam a criação de campanha por um "score de reputação" acumulado na plataforma — os dois confiam na aprovação manual de um curador/admin (que este projeto já tem, via `status = 'aguardando_aprovacao'`) como o filtro de confiança real, não em histórico de uso do sistema. Faz sentido: um pesquisador cadastrado ontem, com score 0, pode ser totalmente legítimo (é só novo na plataforma) — travar ele automaticamente prejudicaria exatamente quem uma plataforma de crowdfunding científico mais precisa atrair, que são pesquisadores novos por ali. Minha recomendação: - não implementar a trigger de bloqueio automático -. Em vez disso, usar `score_minimo_campanha` só como um - sinal de apoio pra revisão manual - — por exemplo, o painel do admin pode destacar/sinalizar campanhas de pesquisadores com score abaixo do mínimo pra receberem uma revisão mais cuidadosa antes de aprovar, sem bloquear ninguém de forma automática e definitiva.
+
+🟠 **`tipo_link` com só 5 de 7 tipos seedados — REABERTO, ligado ao item 19(e) da Lista C**
+
+O comentário do próprio seed (`07_seed_dados.sql`) diz *"tipo_link ajustado para a allowlist fechada definida pela equipe"* — mas essa decisão foi tomada com evidência incompleta: verificou quais tipos foram seedados, mas nunca olhou as 3 colunas de escopo (`permite_perfil`/`permite_atualizacao`/`permite_recompensa`), que ficam todas no valor padrão pros 5 tipos seedados e por isso derrubam duas tabelas inteiras (item 15 da Lista C). A Etapa 3 dos `.docx` (RF-014) parece listar 7 tipos, incluindo "Site Institucional" e "Outro" com comportamento próprio — o que contradiz a "decisão fechada" registrada no comentário do seed. **Reaberto** até vocês dois confirmarem qual foi a decisão de verdade. *(Nota 28-07-2026: `tipo_link` ganhou coluna `codigo` nessa data — ver item 39, na seção de resolvidos — mas isso foi só pra dar chave natural aos 5 tipos que já existem; não resolve nem mexe nesta pendência dos 7 tipos.)*
+
+### Só resolve em código Nest/React (ainda não existem)
+
+🔴 **5. Contexto de sessão por requisição**
+
+`SET LOCAL app.id_usuario_atual` por requisição (dentro de uma transação, usando um `Client` específico da pool).
+
+> Sugestão do *** CLAUDE ***: implementar como um interceptor/middleware global do NestJS (não espalhado controller por controller) — assim fica impossível esquecer o `SET LOCAL` numa rota nova que alguém criar depois. Vale também um teste de integração simples que tenta acessar dado de outro usuário sem esse `SET LOCAL` e confirma que a RLS realmente bloqueia.
+
+🔴 **6. Fluxo de autenticação completo**
+
+Signup, login, verificação de e-mail, recuperação de senha, refresh token.
+
+> Sugestão do *** CLAUDE ***: os prazos que já estão documentados no `01` (token de recuperação de senha com expiração de 15-30 min, ver comentário da tabela) já batem com o padrão que plataformas como Catarse/Experiment usam pra esse tipo de fluxo — não mudaria nada aí. Um reforço que vale considerar: rate-limit de tentativa de login (mesmo simples, tipo "5 tentativas por IP a cada 15 min") é algo que sistemas de referência têm e que ainda não está no escopo — vale colocar na lista quando for implementar.
+
+🔴 **7. Guards/interceptors no NestJS**
+
+Espelhando `tem_permissao()` do banco no lado da aplicação.
+
+> Sugestão do *** CLAUDE ***: pra não correr o risco de as duas camadas (banco e NestJS) divergirem com o tempo, eu geraria a lista de permissões que o guard do NestJS reconhece - a partir da própria tabela `permissao` - (uma consulta na subida da aplicação, ou um script que gera uma constante/enum automaticamente), em vez de digitar a lista de novo à mão no código do backend. Assim, toda permissão nova só precisa ser criada uma vez, no banco.
+
+🔴 **8. Conexão sempre como `app_nestjs`**
+
+Garantir que a conexão do backend use sempre `app_nestjs`, nunca superusuário (senão a RLS é ignorada silenciosamente).
+
+> Sugestão do *** CLAUDE ***: um health-check simples na subida do NestJS (`SELECT current_user`) que impede a aplicação de subir se a conexão não for exatamente `app_nestjs` — evita o erro silencioso de rodar com superusuário sem ninguém perceber, o que faria a RLS inteira parecer que "funciona" em teste mas não proteger nada de verdade.
+
+🔴 **9. Validação de escrevibilidade financeira**
+
+`auditoria_financeira` e `repasse` têm policies de escrita `USING (true)` — a RLS não valida quem grava aí, fica 100% a cargo do serviço do NestJS.
+
+> Sugestão do *** CLAUDE ***: seguindo o padrão de qualquer plataforma de pagamento séria (inclusive Catarse/Experiment, que também dependem de gateway externo pra processar pagamento), eu isolaria a escrita em `auditoria_financeira`/`repasse` dentro de um único serviço interno do NestJS, chamado só pelo webhook do gateway de pagamento — nunca exposto como um endpoint CRUD genérico que outra parte do app possa chamar por engano.
+
+> Correção de foco (27-07-2026): o risco real aqui não é "ter que escrever a regra duas vezes" (uma vez em SQL, outra no NestJS) — é que hoje, especificamente no caminho do dinheiro (`repasse`, `auditoria_financeira`, `historico_rejeicao`), a RLS está `USING (true)` e não protege nada, exatamente onde mais importaria proteger. Isso já foi testado de verdade: inserir um `repasse` com `valor_liquido = 0` numa campanha `all-or-nothing` abaixo da meta (permitido, RF-038) e depois fazer `UPDATE` pro valor cheio passava direto, sem revalidar a regra all-or-nothing. **Esse teste específico já não funciona mais** — foi corrigido em 27-07-2026 (ver `A3` na seção de resolvidos: `trg_valida_repasse` agora também dispara em `UPDATE`, não só `INSERT`). O ponto de fundo continua válido: `auditoria_financeira`/`repasse`/`historico_rejeicao` seguem com escrita aberta por decisão consciente, então o serviço isolado do NestJS sugerido acima continua sendo a defesa que falta.
+
+### Decisões que precisamos tomar, não bugs
+
+🔴 **10. React em JavaScript ou TypeScript**
+
+> Sugestão do *** CLAUDE ***: TypeScript. O NestJS já é TypeScript por padrão — manter o front em JavaScript puro cria uma costura inconsistente entre as duas pontas, e vocês perdem a chance de compartilhar tipos entre back e front (ex.: o formato de uma campanha, de uma contribuição). Pra quem ainda está aprendendo, o TypeScript pega em tempo de compilação exatamente o tipo de erro bobo (nome de campo errado, tipo trocado) que sem ele só aparece rodando o app — é uma rede de segurança a mais, não só "código chato de escrever a mais".
+
+🔴 **11. Pool direto no Service**
+
+Só nota de melhoria futura, não urgente.
+
+> Sugestão do *** CLAUDE ***: usar o padrão de injeção de dependência do próprio NestJS — registrar o `Pool` do `pg` como um provider único do módulo e injetar ele nos services, em vez de cada service criar sua própria instância de `Pool`. É o jeito idiomático do framework e evita vazamento de conexão (vários pools abertos sem necessidade).
 
 
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
+---
 
 
+# 🟢 RESOLVIDAS / CORRIGIDAS
+
+*(Tudo abaixo já está aplicado no `.sql` — fica aqui só pra registro e prova de que nada quebrou. Continua agrupado por data, da mais recente pra mais antiga.)*
 
 
+## 🗓️ 28-07-2026
+
+#### Tier A — bugs mecânicos, zero decisão envolvida — **todos 🟢 corrigidos em 28-07-2026**
+
+🟢 **A1. Cabeçalho do `05` dizia 26 triggers, eram 27** — conferido com `grep`, corrigido pra 27 (e depois pra 29, ver itens mais abaixo). Uma linha.
+
+🟢 **A2. 4 contribuições do seed violavam o RF-048 (PIX obrigatório em all-or-nothing)** — `id_contribuicao` 2, 4, 7 e 9 eram `cartao_credito`/`boleto` em campanha `all-or-nothing` — só entraram porque `trg_contribuicao_all_or_nothing_pix` fica desligada durante a carga do seed (`[07-H-1]`). **Corrigido:** as 4 trocadas pra `pix` (marcadas com `-- (*)` no `.sql`, indicando qual era o valor antigo). Não afeta o cálculo de score (que usa status da campanha, não meio de pagamento).
+
+🟢 **A3. `valor_bruto_arrecadado` era digitado à mão e não batia com a soma real das contribuições** — 9 das 10 campanhas divergiam (3 delas com **zero** contribuições e um total de 5 dígitos mesmo assim). Mesmo tipo de problema que a Alexia já tinha corrigido em `perfil_pesquisador.score_atual` (parar de digitar, deixar a trigger calcular) — só que ninguém tinha reparado que o mesmo valia pra `campanha.valor_bruto_arrecadado`, porque `trg_sincroniza_arrecadado_campanha` ficava desligada durante toda a carga do seed. **Corrigido:** a coluna saiu do `INSERT INTO campanha` (usa o `DEFAULT 0`); `trg_sincroniza_arrecadado_campanha` passou a ficar **ligada** durante a carga de `contribuicao` (as outras 2 triggers de validação continuam desligadas, por bons motivos, ver comentário no `.sql`); 37 novas linhas de contribuição foram distribuídas entre doadores diferentes pra cada campanha somar exatamente o total que tinha antes. **Prova mecânica** (feita com regex/PowerShell, não à mão): somei programaticamente as 48 linhas finais de `contribuicao` por campanha e todas batem exatamente com os totais antigos — 52300 / 28500 / 40000 / 8000 / 22000 / 45000 / 32000 / 21000 / 9000 — e confirmei que **nenhuma** contribuição em campanha `all-or-nothing` usa meio de pagamento diferente de `pix`. Isso também resolveu o item da linha duplicada de `repasse` na campanha 2 (ver mais abaixo, seção "Resolvidos mais antigos") — removida, porque a duplicata só existia pra "empurrar" o total antigo, que agora vem de verdade da soma das contribuições.
+
+🟢 **A4. `pol_aceite_termo_contribuicao_select` esquecia o doador anônimo** — a policy de `INSERT` já aceitava `id_usuario IS NULL`, a de `SELECT` não tinha o ramo correspondente (`token_sessao`) — um doador anônimo registrava o aceite dos termos e nunca mais conseguia relê-lo. **Corrigido:** replicado o mesmo ramo de `token_sessao` que `pol_contribuicao_anon_select` já usa.
+
+🟢 **A5. `termos_de_uso`, `usuario_termo` e `aceite_termo_contribuicao` seedadas** — as três estavam vazias e sustentam o RF-011 (aceite obrigatório no cadastro), RF-054 e RF-055 (aceite por transação, defesa em disputa de chargeback, segundo a Etapa 2). **Corrigido:** 2 versões de termos (v1 histórica, já `ativo = FALSE`; v2 atual, `ativo = TRUE`, ainda sem ninguém re-aceitando — cenário realista de "termo novo publicado, ninguém foi reavisado ainda"); os 17 usuários aceitando a v1 no próprio cadastro; `aceite_termo_contribuicao` gerada por `SELECT` a partir da própria `contribuicao` (não digitada linha por linha), uma linha por contribuição. Documentei também, em comentário no `.sql`, a pegadinha real que testei: publicar uma versão nova de termos sem desativar a anterior na mesma transação quebra com o índice parcial `uq_termos_uso_ativo` (`02`) — o `UPDATE` que desativa a antiga e o `INSERT` da nova precisam estar juntos.
+
+🟢 **A6. `notificacao` seedada** — estava vazia; 7 linhas em `pendente`/`enviado`/`falhou`/`cancelado`, exercitando de verdade a permissão `notificacao_processar` e o índice `idx_notificacao_status` pela primeira vez. *(A mesma rodada também acrescentou 5 motivos de denúncia novos ao catálogo `motivo_denuncia` — `CAMP-005` a `CAMP-008` e `PERF-004` — ideia da Alexia, ver o topo do arquivo.)*
+
+#### Tier B — decisão de uma linha, revisada a fundo antes de aplicar — **B1 e B2 🟢 aplicados**
+
+🟢 **B1. `GRANT DELETE` em `verificacao_email`, `recuperacao_senha` e `sessao`** — as 3 já tinham policy `FOR ALL` (cobre `DELETE`), mas o `GRANT` só ia até `UPDATE` (item 28, antigo). O CLAUDE testou o fluxo real antes de recomendar: pedir recuperação de senha, deixar o token expirar sem usar, e pedir de novo — **quebra** com erro de unicidade (`ux_recuperacao_senha_ativo_por_usuario` só permite 1 token não-usado por vez), e sem `DELETE` o app não tem como limpar o token velho (a alternativa de "marcar como usado à força" faria a coluna `usado_em` mentir sobre o que de fato aconteceu). **Aplicado:** `DELETE` concedido nas 3, com comentário no `.sql` documentando os 2 usos previstos (apagar token velho no ato de pedir um novo; expurgo periódico por retenção — 30 dias pra `verificacao_email`/`recuperacao_senha`, 90 dias pra `sessao`) e o cuidado de que, como as policies são `USING (true)`, o expurgo do NestJS precisa ser sempre uma consulta fixa com `WHERE` explícito em data, nunca um filtro dinâmico.
+
+🟢 **B2. Senha placeholder da role `app_nestjs`** — trocado de `LOGIN PASSWORD 'TROCAR_NO_AMBIENTE_REAL'` pra `NOLOGIN`. Testado (pelo CLAUDE) que `GRANT`/`SET ROLE` continuam funcionando normalmente numa role `NOLOGIN`, e que esquecer o passo de produção agora falha **fechado** (`FATAL: role "app_nestjs" is not permitted to log in`, percebido em minutos) em vez de falhar **aberto** (senha conhecida publicada no GitHub, sistema funcionando "normalmente"). **Aplicado:** `01` cria a role `NOLOGIN`; `tutorial-rodar-projeto.md` ganhou aviso de que o `ALTER ROLE app_nestjs LOGIN PASSWORD '...'` agora é **obrigatório** (sem ele, ninguém — nem você — consegue conectar como `app_nestjs`), tanto na checklist rápida quanto na Parte 3 detalhada.
+
+**Prova mecânica de que nada quebrou (rodada inteira, 28-07-2026):** 39 tabelas (igual). `PK_`=39, `FK_`=56 (+1: `FK_AREA_CONHECIMENTO_PAI`), `UK_`=18 (igual), `CK_`=14 (igual) — parênteses balanceados em `01`, `05` e `07` (checado programaticamente, saldo zero nos três). Policies: continua 105 `CREATE POLICY` (só editei uma policy existente — `pol_aceite_termo_contribuicao_select` —, nenhuma nova). Funções de `05`: 31 (+1: `fn_valida_area_conhecimento_nivel2`). Triggers de `05`: 29 (+2: as duas de área nível 2). `area_conhecimento`: 90 linhas (9 grandes áreas + 81 áreas de nível 2, contadas programaticamente, sem duplicata de `codigo_cnpq`). `contribuicao`: 48 linhas (11 antigas + 37 novas), soma por campanha conferida linha a linha via script, batendo 100% com os totais antigos. `repasse`: 6 linhas (era 7, a duplicata da campanha 2 saiu). Tabelas seedadas: 30 (+4: `termos_de_uso`, `usuario_termo`, `aceite_termo_contribuicao`, `notificacao`).
+
+### parte 2 — o CLAUDE rodou de verdade num Postgres e achou um bug crítico — **todos 🟢 corrigidos no mesmo dia**
+
+🟢 **36. BUG CRÍTICO — o seed não termina de rodar: `denuncia` falhava inteira, em silêncio — CORRIGIDO**
+
+`id_motivo` em `denuncia` referenciava o **id serial posicional** do catálogo (1-7), não uma chave estável. Quando os 5 motivos novos do item A5 entraram — `CAMP-005` a `CAMP-008` **antes** do bloco `PERF-*` — os ids de `PERF-001`/`002`/`003` mudaram de `5`/`6`/`7` pra `9`/`10`/`11`:
+
+| | antes | depois |
+|---|---|---|
+| `PERF-001` | 5 | 9 |
+| `PERF-002` | 6 | 10 |
+| `PERF-003` | 7 | 11 |
+
+As 8 linhas de `denuncia` que apontavam pra alvo de perfil continuavam usando `5`/`6`/`7` — que virou motivo de **campanha**, aplicado num alvo de **perfil**. `trg_valida_tipo_motivo_denuncia` (criada bem pra pegar exatamente isso, no A5) rejeitava — e como o `INSERT` é um único comando com 13 linhas, **as 13 falhavam junto**, sem travar o script (só um erro que passa despercebido rodando os 8 arquivos em sequência). `denuncia` nascia vazia, `calcular_score_reputacao` devolvia os 25 pontos cheios da dimensão Reputação pra todo mundo, e o teste determinístico das 4 faixas de score (Bruno/Renata/Eduardo/Vinícius) se desfazia sem nenhum aviso: Vinícius saía com 35 ("Em Construção") em vez de 19 ("Atenção") — a faixa "Atenção" ficava **sem ninguém**.
+
+**Corrigido:** duas coisas, não só uma —
+1. As 13 linhas de `denuncia` remapeadas (as de perfil, que usavam `5`/`6`/`7`, corrigidas pra apontar pro motivo certo).
+2. **Causa raiz, não só sintoma:** `id_motivo` passou a ser resolvido por `SELECT ... FROM motivo_denuncia WHERE codigo = '...'` (chave natural, estável), não mais por número de posição. Inserir motivo novo no meio do catálogo nunca mais quebra essas linhas. Mesmo princípio aplicado a `link_academico` (`id_tipolink` também virou subquery por `codigo` — ver item 39, abaixo).
+
+Prova: as 4 faixas de score voltam exatas — 100 (Bruno, Referência) / 60 (Renata, Confiável) / 46 (Eduardo, Em Construção) / 19 (Vinícius, Atenção).
+
+🟢 **37. `campanha.id_area_conhecimento` deixava passar `NULL` — CORRIGIDO**
+
+A trigger de nível 2 (rodada anterior) bloqueava a grande área raiz, mas deixava `NULL` passar — testado pelo CLAUDE, campanha sem nenhuma área era aceita. A regra ficava "não pode ser vago, mas pode ser omisso" — e omisso é pior: campanha sem área nenhuma some de **todos** os filtros, enquanto uma classificada só na grande área pelo menos aparece num filtro amplo. **Corrigido:** `id_area_conhecimento` virou `NOT NULL` — as 10 campanhas do seed já tinham área de nível 2 desde a rodada anterior, então não exigiu nenhum ajuste nelas.
+
+🟢 **38. Dígito verificador do CNPq resolvido — sem precisar da fonte oficial**
+
+Nem eu nem o CLAUDE conseguimos acesso à tabela oficial do CNPq/Lattes (eu por falha de extração do PDF, ele por não ter acesso à web no ambiente dele). Ele atacou por outro ângulo: **provou matematicamente** que os dígitos que eu tinha semeado não vinham de nenhum algoritmo real. Nos códigos de grande área (`N.00.00.00-D`) só o primeiro dígito é diferente de zero — então em qualquer esquema real de dígito verificador por soma ponderada (o mesmo princípio de CPF/CNPJ/PIS, todos mod 11), o dígito seria função só desse primeiro número. O seed tinha `DV(1) = DV(7) = 3`, o que matematicamente só permite 1 ou 2 resultados distintos possíveis pros 9 valores — e o seed tinha 8 valores distintos. Impossível vir de um algoritmo de verdade.
+
+**Corrigido:** removi o dígito verificador dos 90 `codigo_cnpq` — agora é `'1.03.00.00'`, não `'1.03.00.00-7'`. O dígito verificador serve pra pegar erro de digitação quando um humano transcreve um código num formulário de papel; aqui, `codigo_cnpq` é comparado por igualdade, nunca digitado à mão — o dígito não protegia nada e era a única parte do dado que ninguém conseguia conferir. Os nomes das áreas e a hierarquia continuam corretos e confiáveis (nomenclatura padrão do CNPq).
+
+🟢 **39. `tipo_link` ganhou coluna `codigo` — resolvido**
+
+O único consumidor real seria o motor de score (Lista C, ainda sem decisão) ou os 2 tipos de link que faltam — mas o item 36 criou um consumidor de verdade: o próprio seed precisava referenciar `tipo_link` por chave natural pra fechar o mesmo tipo de bug em `link_academico`. **Corrigido:** coluna `codigo VARCHAR(20) UNIQUE` adicionada (`LATTES`, `ORCID`, `RESEARCHGATE`, `LINKEDIN`, `GITHUB`); `link_academico` (`07`) passou a resolver `id_tipolink` por subquery em `codigo`, não mais por número de posição.
+
+🟢 **40. Guarda de `BYPASSRLS` no topo do `01` — não resolve o item 22, mas melhora o sintoma**
+
+O item 22 (papel do Supabase precisa de `BYPASSRLS`) continua em aberto — só quem confirma isso no painel do Supabase é você. Mas hoje, se alguém rodar o seed sem `BYPASSRLS`, o resultado são dezenas de erros de RLS espalhados pelos 8 arquivos, sem nenhuma pista do motivo real. **Adicionado:** um bloco `DO $$` no início do `01` que checa `rolsuper OR rolbypassrls` pro `current_user` e aborta com uma mensagem única e explicativa, em vez de deixar o erro real acontecer 25+ vezes escondido no meio do `07`.
+
+🟢 **41. `cpf_criptografado` sem GRANT de leitura — trava o KYC do RF-015 — CORRIGIDO**
+
+Com o `NOT NULL` da Alexia em `cpf_criptografado`, o `app_nestjs` passou a ser **obrigado** a gravar o CPF, mas continuava impossibilitado de **lê-lo** — a coluna nunca tinha entrado no `GRANT SELECT` de `perfil_pesquisador`. O RF-015 exige mandar esse dado pra API de pagamento configurar o recebimento do pesquisador; sem conseguir nem selecionar a coluna, o backend não tinha como. **Corrigido:** `cpf_criptografado` (e `tipo_vinculo`) entraram no `GRANT SELECT`. A proteção que de fato importa — quem no backend pode ler isso — passa a ser a permissão `perfil_pesquisador_visualizar_sensivel` (já seedada, até então sem nenhum efeito) gateando a leitura no NestJS; isso é trabalho de aplicação, fora do escopo do `.sql`.
+
+**Prova mecânica desta parte 2:** `PK_`=39 (igual), `FK_`=56 (igual), `UK_`=19 (+1: `UK_TIPO_LINK_CODIGO`), `CK_`=15 (+1: `CK_PERFIL_VINCULO`) — parênteses balanceados em `01`, `04`, `05`, `06` e `07` (saldo zero nos cinco, conferido programaticamente). Funções/triggers de `05`: sem mudança nesta parte (31/29, nenhuma função ou trigger nova — só dado e GRANT). Policies: continua 105 (nenhuma tocada nesta parte). `area_conhecimento`: continua 90 linhas, agora sem dígito verificador (conferido: zero ocorrências do padrão `X.YY.00.00-D` no arquivo inteiro). `contribuicao`: recontado, continua 48 linhas com as mesmas 9 somas batendo exatamente. `tipo_link`: 5 linhas, todas com `codigo` único.
 
 
-
-
-### 🟢 Já corrigido nesta rodada (27-07-2026)
-
-*(Tudo abaixo já está aplicado no `.sql` — fica aqui só pra registro e prova de que nada quebrou, mesmo padrão da seção `✅ RESOLVIDAS / CORRIGIDAS` no fim do arquivo, mas mantido separado porque é tudo desta mesma data — 27-07-2026.)*
+## 🗓️ 27-07-2026
 
 #### Lista A — bugs mecânicos, o próprio `.sql` se contradizendo (não precisavam de decisão de negócio) — **todos 🟢 corrigidos em 27-07-2026**
 
@@ -236,7 +307,7 @@ O RF-036 exige que o percentual de taxa vigente no momento da aprovação seja g
 
 🟢 **A9. Perfil e links de usuário deletado continuavam públicos** — `pol_perfil_select` e `pol_link_select` eram `USING (TRUE)`, sem checar `usuario.deletado`. **Corrigido:** função nova `usuario_visivel(p_id INT)` em `03` (mesmo padrão de `tem_permissao`), aplicada nas duas policies. `pol_campanha_select` fica de fora de propósito — ver Lista C.
 
-🟢 **A10. Comentários/permissões órfãs sem explicação** — **Corrigido:** comentário novo em `07` explicando que `recuperacao_senha_revogar`/`sessao_revogar`/`verificacao_email_reenviar` são propositalmente sem policy (camada NestJS), e que `perfil_pesquisador_visualizar_sensivel` hoje não tem efeito nenhum (`cpf_criptografado` nem está no `GRANT SELECT`). *(A contagem de 105 policies no cabeçalho do `04` já estava certa — conferido com `grep`, não havia 106 como uma das revisões cogitou; nada foi mudado aí.)*
+🟢 **A10. Comentários/permissões órfãs sem explicação** — **Corrigido:** comentário novo em `07` explicando que `recuperacao_senha_revogar`/`sessao_revogar`/`verificacao_email_reenviar` são propositalmente sem policy (camada NestJS), e que `perfil_pesquisador_visualizar_sensivel` hoje não tem efeito nenhum (`cpf_criptografado` nem está no `GRANT SELECT`) *(nota 28-07-2026: isso mudou — ver item 41, mais acima)*. *(A contagem de 105 policies no cabeçalho do `04` já estava certa — conferido com `grep`, não havia 106 como uma das revisões cogitou; nada foi mudado aí.)*
 
 #### Lista B — decisão de uma linha (você deu o OK) — **todos 🟢 aplicados em 27-07-2026**
 
@@ -330,135 +401,10 @@ Congelar `data_fim` continua certo — é a data prometida a quem doou, mudar de
 
 **Prova mecânica de que nada quebrou (itens 21, 23-27, 29-30 juntos):** 39 tabelas (igual, só ganhou a coluna `encerrado_em` em `campanha`); `PK_`=39, `FK_`=55, `UK_`=18, `CK_`=14 (todos iguais). Parênteses balanceados em `01`. Policies: continua 105 `CREATE POLICY` / 105 `DROP POLICY` (só editei policies existentes, nenhuma nova). Triggers foram de 26 para 27 (`trg_contribuicao_all_or_nothing_pix_update`, a única trigger nova). Funções: 30 em `05` e 3 em `03`, sem mudança de contagem (só corpo de função existente foi alterado). Reconferi o seed inteiro linha a linha depois das mudanças — as 7 linhas de `auditoria_financeira`, as 7 de `atualizacao_campanha` e as 7 de `campanha` continuam com os mesmos dados de antes, só ganhando a coluna/trigger que faltava.
 
----
 
+## Resolvidos mais antigos (pré-27-07-2026, sem rodada de data específica)
 
-## No `.sql`
-
-
-### 🔴 1. Senha placeholder
-
-Senha placeholder `'TROCAR_NO_AMBIENTE_REAL'` na criação da role `app_nestjs` em `01_extensoes_enums_tabelas.sql`. Só é risco fora do ambiente local — lembrar de trocar quando for pra produção.
-
-> Sugestão do *** CLAUDE ***: não mexeria no `.sql` em si — o placeholder faz sentido continuar aí pro ambiente local. O que eu faria é transformar isso num passo obrigatório de checklist de deploy (já existe um rascunho disso no `tutorial-rodar-projeto.md`, na parte de "troque a senha"): a senha de produção não devia nunca ficar em nenhum arquivo versionado, nem provisória — o ideal é gerar ela automaticamente (`openssl rand` ou equivalente) no momento do deploy e guardar só num gerenciador de segredos (variável de ambiente do provedor de hospedagem, nunca num `.env` versionado no Git). Isso se resolve sozinho quando chegar a hora de colocar em produção — não precisa de decisão de equipe agora, só não esquecer depois.
-
-> Segunda opinião (27-07-2026): um ponto contrário vale registrar — checklist depende de alguém lembrar; se esquecer, o sistema continua funcionando perfeitamente, só que inseguro (falha aberta, sem nenhum aviso). Uma alternativa é criar a role já como `NOLOGIN`, sem senha nenhuma, e deixar o `ALTER ROLE app_nestjs LOGIN PASSWORD '...'` como o passo separado e obrigatório do deploy. Assim, se alguém esquecer esse passo, o NestJS simplesmente não consegue conectar — falha fechada, barulhenta, percebida em minutos, em vez de uma senha conhecida ficando exposta em silêncio. As duas soluções resolvem o mesmo risco de formas diferentes (checklist vs. "fail closed" por design) — decisão de vocês qual preferem.
-
-
-### 🔴 2. Debate `tipo_link` / `contexto_link`
-
-Debate sobre criar 2 tabelas novas (`tipo_link` e `contexto_link` reformulados) — **adiado, não mexer sem pedir**. Assunto que você e sua parceira ainda estão discutindo sobre como modelar.
-
-> Sugestão do *** CLAUDE ***: olhando Catarse e Experiment, os dois têm um conjunto de contextos de link bem pequeno e estável (perfil do criador, página do projeto, atualizações) — não é algo que cresce toda hora na prática. Isso favorece o modelo atual (3 flags booleanas: `permite_perfil`, `permite_atualizacao`, `permite_recompensa`), que é mais simples de ler e de mexer no dia a dia. Eu só migraria pra uma tabela `contexto_link` dinâmica (como o `RBAC-pontos-discutidos.md`, seção 6.5, já esboça) se vocês já tiverem um plano concreto de adicionar um 4º ou 5º contexto em breve (ex.: link em denúncia, em perfil de instituição) — sem esse plano concreto, a complexidade extra da tabela nova não se paga ainda. Minha recomendação: manter como está por enquanto, e só revisitar quando um novo contexto for realmente necessário (não antes, por precaução).
-
-
-### 🔴 3. `score_minimo_campanha` seedado mas nunca aplicado
-
-`07_seed_dados.sql` (linha 269-270) cadastra a configuração `score_minimo_campanha = 25.00` ("Score mínimo para criar campanha"), com um comentário explícito no próprio arquivo:
-
-> `-- TODO (pendente decisão da equipe): regra de score mínimo para campanha ainda não confirmada; manter sem trigger por enquanto.`
-
-Conferido em `05_regras_negocio.sql`: não existe nenhuma trigger que leia essa configuração — ou seja, hoje um pesquisador com score 0 pode criar campanha normalmente, a regra existe só "no papel". Não é bug (o próprio comentário já avisa que é proposital, aguardando decisão), mas é uma pendência real de negócio: **vocês querem mesmo essa trava?**
-
-Se sim, é uma trigger pequena em `05` (tipo `trg_campanha_limite_simultaneo`, mas checando score em vez de contagem) que bloqueia `INSERT` em `campanha` se `perfil_pesquisador.score_atual < config_numero('score_minimo_campanha', ...)`.
-
-> Sugestão do *** CLAUDE ***: nem Catarse nem Experiment bloqueiam a criação de campanha por um "score de reputação" acumulado na plataforma — os dois confiam na aprovação manual de um curador/admin (que este projeto já tem, via `status = 'aguardando_aprovacao'`) como o filtro de confiança real, não em histórico de uso do sistema. Faz sentido: um pesquisador cadastrado ontem, com score 0, pode ser totalmente legítimo (é só novo na plataforma) — travar ele automaticamente prejudicaria exatamente quem uma plataforma de crowdfunding científico mais precisa atrair, que são pesquisadores novos por ali. Minha recomendação: - não implementar a trigger de bloqueio automático -. Em vez disso, usar `score_minimo_campanha` só como um - sinal de apoio pra revisão manual - — por exemplo, o painel do admin pode destacar/sinalizar campanhas de pesquisadores com score abaixo do mínimo pra receberem uma revisão mais cuidadosa antes de aprovar, sem bloquear ninguém de forma automática e definitiva.
-
-
-### 🟠 4. Possível linha duplicada em `repasse` (campanha 2)
-
-`07_seed_dados.sql` (`[07-E-4]`, linhas ~403 e ~408) tem duas linhas de repasse para a mesma campanha (`id_campanha = 2`), ambas com o mesmo `valor_bruto` (28.500,00):
-- uma `'concluido'` com `valor_liquido = 27.075,00` (28.500 × 0,95, a conta normal de repasse com taxa de 5%);
-- outra `'parcial_processando'` com `valor_liquido = 0,00` e `repassado_em = NULL`.
-
-A campanha é `modelo = 'flexivel'` (repasse abaixo da meta é esperado e correto nesse modelo, isso **não** é o problema) — a dúvida é por que existem **duas** linhas de repasse pro mesmo valor bruto, uma já concluída e outra "em processamento" com valor zerado.
-
-Pode ser um resquício de teste/copy-paste no seed, ou pode representar um cenário proposital (ex.: tentativa de repasse que falhou e foi reprocessada). Não mexi em nada, só sinalizando pra nós decidirmos se é lixo de seed pra remover ou um cenário de teste válido pra manter (e, nesse caso, talvez valha um comentário explicando a intenção).
-
-> Sugestão do *** CLAUDE ***: olhando os dois valores, isso não parece um cenário real intencional — se fosse um segundo repasse de verdade (ex.: mais dinheiro arrecadado depois do primeiro repasse), o `valor_bruto` da segunda linha seria diferente (incremental), não idêntico ao da primeira. Minha recomendação: remover a linha `'parcial_processando'` duplicada e manter só a `'concluido'`, que é a que reflete corretamente uma campanha `flexivel` já finalizada. Se no futuro vocês quiserem um exemplo de seed mostrando "uma tentativa de repasse que falhou e foi reprocessada" (um cenário de teste legítimo), eu recriaria isso com valores e datas claramente diferentes entre as duas linhas, mais um comentário explicando a intenção — do jeito que está hoje, sem essa diferença, é fácil confundir com lixo de teste.
-
-> Atualização (27-07-2026): a linha duplicada é sintoma, não a causa raiz. Todas as 7 linhas de `repasse` têm `valor_bruto` batendo com o total inventado de cada campanha, não com a soma real das contribuições seedadas — ver o item novo sobre `valor_bruto_arrecadado` na seção de resolvidas mais abaixo. Corrigir só a linha duplicada e deixar as outras 6 do jeito que estão é resolver a parte errada do problema. Por isso o círculo virou 🟠 em vez de 🔴 simples: o diagnóstico original (a linha é lixo de seed) continua certo, só que é menor do que o problema de verdade.
-
----
-
-
-
-
-
-
-
-
-## Só resolve em código Nest/React (ainda não existem)
-
-
-- 🔴 5. Contexto de sessão por requisição
-
-`SET LOCAL app.id_usuario_atual` por requisição (dentro de uma transação, usando um `Client` específico da pool).
-
-> Sugestão do *** CLAUDE ***: implementar como um interceptor/middleware global do NestJS (não espalhado controller por controller) — assim fica impossível esquecer o `SET LOCAL` numa rota nova que alguém criar depois. Vale também um teste de integração simples que tenta acessar dado de outro usuário sem esse `SET LOCAL` e confirma que a RLS realmente bloqueia.
-
-
-- 🔴 6. Fluxo de autenticação completo
-
-Signup, login, verificação de e-mail, recuperação de senha, refresh token.
-
-> Sugestão do *** CLAUDE ***: os prazos que já estão documentados no `01` (token de recuperação de senha com expiração de 15-30 min, ver comentário da tabela) já batem com o padrão que plataformas como Catarse/Experiment usam pra esse tipo de fluxo — não mudaria nada aí. Um reforço que vale considerar: rate-limit de tentativa de login (mesmo simples, tipo "5 tentativas por IP a cada 15 min") é algo que sistemas de referência têm e que ainda não está no escopo — vale colocar na lista quando for implementar.
-
-
-- 🔴 7. Guards/interceptors no NestJS
-
-Espelhando `tem_permissao()` do banco no lado da aplicação.
-
-> Sugestão do *** CLAUDE ***: pra não correr o risco de as duas camadas (banco e NestJS) divergirem com o tempo, eu geraria a lista de permissões que o guard do NestJS reconhece - a partir da própria tabela `permissao` - (uma consulta na subida da aplicação, ou um script que gera uma constante/enum automaticamente), em vez de digitar a lista de novo à mão no código do backend. Assim, toda permissão nova só precisa ser criada uma vez, no banco.
-
-
-- 🔴 8. Conexão sempre como `app_nestjs`
-
-Garantir que a conexão do backend use sempre `app_nestjs`, nunca superusuário (senão a RLS é ignorada silenciosamente).
-
-> Sugestão do *** CLAUDE ***: um health-check simples na subida do NestJS (`SELECT current_user`) que impede a aplicação de subir se a conexão não for exatamente `app_nestjs` — evita o erro silencioso de rodar com superusuário sem ninguém perceber, o que faria a RLS inteira parecer que "funciona" em teste mas não proteger nada de verdade.
-
-
-- 🔴 9. Validação de escrevibilidade financeira
-
-`auditoria_financeira` e `repasse` têm policies de escrita `USING (true)` — a RLS não valida quem grava aí, fica 100% a cargo do serviço do NestJS.
-
-> Sugestão do *** CLAUDE ***: seguindo o padrão de qualquer plataforma de pagamento séria (inclusive Catarse/Experiment, que também dependem de gateway externo pra processar pagamento), eu isolaria a escrita em `auditoria_financeira`/`repasse` dentro de um único serviço interno do NestJS, chamado só pelo webhook do gateway de pagamento — nunca exposto como um endpoint CRUD genérico que outra parte do app possa chamar por engano.
-
-> Correção de foco (27-07-2026): o risco real aqui não é "ter que escrever a regra duas vezes" (uma vez em SQL, outra no NestJS) — é que hoje, especificamente no caminho do dinheiro (`repasse`, `auditoria_financeira`, `historico_rejeicao`), a RLS está `USING (true)` e não protege nada, exatamente onde mais importaria proteger. Isso já foi testado de verdade: inserir um `repasse` com `valor_liquido = 0` numa campanha `all-or-nothing` abaixo da meta (permitido, RF-038) e depois fazer `UPDATE` pro valor cheio passava direto, sem revalidar a regra all-or-nothing. **Esse teste específico já não funciona mais** — foi corrigido em 27-07-2026 (ver `A3` na seção de resolvidas: `trg_valida_repasse` agora também dispara em `UPDATE`, não só `INSERT`). O ponto de fundo continua válido: `auditoria_financeira`/`repasse`/`historico_rejeicao` seguem com escrita aberta por decisão consciente, então o serviço isolado do NestJS sugerido acima continua sendo a defesa que falta.
-
-
----
-
-
-## Decisões que precisamos tomar, não bugs
-
-
-- 🔴 10. React em JavaScript ou TypeScript
-
-> Sugestão do *** CLAUDE ***: TypeScript. O NestJS já é TypeScript por padrão — manter o front em JavaScript puro cria uma costura inconsistente entre as duas pontas, e vocês perdem a chance de compartilhar tipos entre back e front (ex.: o formato de uma campanha, de uma contribuição). Pra quem ainda está aprendendo, o TypeScript pega em tempo de compilação exatamente o tipo de erro bobo (nome de campo errado, tipo trocado) que sem ele só aparece rodando o app — é uma rede de segurança a mais, não só "código chato de escrever a mais".
-
-
-- 🔴 11. Pool direto no Service
-
-Só nota de melhoria futura, não urgente.
-
-> Sugestão do *** CLAUDE ***: usar o padrão de injeção de dependência do próprio NestJS — registrar o `Pool` do `pg` como um provider único do módulo e injetar ele nos services, em vez de cada service criar sua própria instância de `Pool`. É o jeito idiomático do framework e evita vazamento de conexão (vários pools abertos sem necessidade).
-
-
----
----
----
----
----
-
-
-# ✅ RESOLVIDAS / CORRIGIDAS
-
-*(Já aplicado no `.sql` — só ficam aqui pra registro e explicação, não precisa fazer mais nada)*
-
-
-## 🟢 Permissão `campanha_encerrar` sem policy de RLS — **[RESOLVIDO]**
+### 🟢 Permissão `campanha_encerrar` sem policy de RLS — **[RESOLVIDO]**
 
 Decidido **remover** a permissão (era órfã, nunca usada por nenhuma policy) em vez de implementar um atalho de encerramento direto.
 
@@ -470,7 +416,7 @@ Separando as 5:
 
 - **`sessao_revogar`, `recuperacao_senha_revogar`, `verificacao_email_reenviar`** — essas 3 tabelas já têm policy `FOR ALL USING (true)` de propósito (o próprio projeto decidiu que a autorização desses fluxos fica no NestJS, não na RLS, porque acontecem antes do login existir). Criar uma policy pra essas permissões seria redundante — não muda nada. Não vale a pena mexer.
 
-- 🟠 **`perfil_pesquisador_visualizar_sensivel`** — texto original dizia "já está resolvida" porque o `cpf_criptografado` foi excluído do `GRANT SELECT` geral (`06_grants.sql` — a coluna não aparece na lista liberada pro `app_nestjs`), e criar uma policy de RLS pra isso não encaixaria bem (é proteção de coluna, não de linha). **Isso ainda é verdade, mas "resolvida" foi longe demais** — segunda opinião (27-07-2026): a permissão continua no seed, continua sendo dada automaticamente ao papel `admin` (via `trg_permissao_auto_admin`) e continua sem fazer absolutamente nada, porque nenhuma policy a usa. Tem um problema mais sério embaixo: como `cpf_criptografado` não está em nenhum `GRANT SELECT`, **ninguém lê essa coluna** — não é "só o admin lê", é que nem o `app_nestjs` consegue. O RF-015 diz que o CPF é armazenado "para fins de verificação de identidade" (KYC da API de pagamento, conforme a Etapa 2) — se o backend não consegue nem selecionar a coluna, ele não tem como mandar esse dado pra API de pagamento configurar o recebimento do pesquisador. Decisão real que falta tomar: ou o CPF entra no `GRANT SELECT` (com o acesso controlado no NestJS, onde essa permissão faria sentido de verdade), ou fica confirmado que a coluna é só-escrita e a permissão sai do seed por não ter uso nenhum. O estado atual — nem uma coisa nem outra — é o pior dos dois: uma permissão fantasma protegendo uma coluna que ninguém consegue usar.
+- 🟢 **`perfil_pesquisador_visualizar_sensivel` — CORRIGIDO em 28-07-2026 (item 41, ver seção "28-07-2026" acima):** texto original dizia "já está resolvida" porque o `cpf_criptografado` foi excluído do `GRANT SELECT` geral, e criar uma policy de RLS pra isso não encaixaria bem (é proteção de coluna, não de linha). Segunda opinião (27-07-2026) apontou o problema real: como `cpf_criptografado` não estava em nenhum `GRANT SELECT`, **ninguém lia essa coluna** — não "só o admin lê", nem o `app_nestjs` conseguia. O RF-015 diz que o CPF é armazenado "para fins de verificação de identidade" (KYC da API de pagamento) — se o backend não conseguisse nem selecionar a coluna, não tinha como mandar esse dado pra API configurar o recebimento do pesquisador. **Resolvido:** `cpf_criptografado` entrou no `GRANT SELECT` de `perfil_pesquisador` — a permissão passa a ter uso real, gateando a leitura dessa coluna no NestJS (trabalho de aplicação, fora do `.sql`).
 
 - **`campanha_encerrar`** — essa era a única em aberto de verdade. Decisão tomada:
   - **Como era:** a permissão existia (`07_seed_dados.sql`, atribuída ao papel `admin`), mas nenhuma policy de RLS a usava — não fazia nada na prática.
@@ -481,23 +427,7 @@ Separando as 5:
 
 📄 Detalhamento técnico completo: `DOCUMENTACAO_BD.md`, seção `[04-E]` (nota "Permissão `campanha_encerrar` removida") e seção `[07-B-2]`.
 
-
----
-
-
-## 🟠 `tipo_link` com só 5 de 7 tipos seedados — **[PARCIALMENTE RESOLVIDO / REABERTO]**
-
-Revisando de novo, o comentário do próprio seed (`07_seed_dados.sql`, linha 183: *"tipo_link ajustado para a allowlist fechada definida pela equipe"*) deixa claro que isso não é uma pendência: os 5 tipos atuais (Lattes, ORCID, ResearchGate, LinkedIn, GitHub) são uma lista fechada intencional, todos com `regex`/`dominio` validáveis.
-
-"Site Institucional" e "Outro" não têm domínio fixo pra validar, então não encaixam nesse modelo — não são "2 tipos que faltam seedar", são 2 tipos que foram deliberadamente deixados de fora.
-
-> Atualização (27-07-2026): esse fechamento foi feito com evidência incompleta — verificou quais tipos foram seedados, mas nunca olhou as 3 colunas de escopo (`permite_perfil`/`permite_atualizacao`/`permite_recompensa`), que ficam todas no valor padrão pros 5 tipos seedados e por isso derrubam duas tabelas inteiras (ver item 15 da Lista C, mais acima: `link_atualizacao`/`link_recompensa` impossíveis de usar). E a Etapa 3 dos `.docx` (RF-014) parece listar os 7 tipos com comportamento próprio pro "Outro" — o que contradiz a "decisão fechada" registrada aqui. **Reaberto** até vocês dois confirmarem qual foi a decisão de verdade — ver item 19(e) da Lista C.
-
-
----
-
-
-## 🟢 3 índices redundantes em `02_indices.sql` — **[CORRIGIDO]**
+### 🟢 3 índices redundantes em `02_indices.sql` — **[CORRIGIDO]**
 
 *(Esta seção é pra quem escreveu a parte de índices entender exatamente o que mudou e por quê — nada foi apagado por "achismo", é uma consequência mecânica de como o Postgres já lida com `UNIQUE`.)*
 
@@ -513,7 +443,7 @@ Isso só deixa de ser verdade se a busca for pela **segunda coluna sozinha** —
 
 1. **`idx_seguir_pesquisador_usuario`** — `seguir_pesquisador` já tem `UNIQUE (id_usuario, id_pesquisador)` (`01`, linha 187). Como `id_usuario` é a 1ª coluna, o índice era 100% duplicado. (O índice na 2ª coluna, `idx_seguir_pesquisador_alvo`, continua existindo — mas ver a atualização abaixo: "necessário" foi otimista demais.)
 
-> Atualização (27-07-2026): a remoção dos 3 continua certa, mas a frase "esse sim é necessário" sobre `idx_seguir_pesquisador_alvo` não é — `pol_seg_pesq_select` (`04`) só libera `SELECT` onde `id_usuario = id_usuario_atual()` (cada um só vê as próprias linhas de "quem eu sigo"). Isso significa que a busca por `id_pesquisador` (quem segue um pesquisador X) que esse índice acelera não pode ser feita por ninguém — nem o próprio pesquisador, nem o Administrador. Ver item 18 da Lista C, mais acima: o índice só volta a fazer sentido se vocês decidirem liberar contagem de seguidores.
+> Atualização (27-07-2026): a remoção dos 3 continua certa, mas a frase "esse sim é necessário" sobre `idx_seguir_pesquisador_alvo` não é — `pol_seg_pesq_select` (`04`) só libera `SELECT` onde `id_usuario = id_usuario_atual()` (cada um só vê as próprias linhas de "quem eu sigo"). Isso significa que a busca por `id_pesquisador` (quem segue um pesquisador X) que esse índice acelera não pode ser feita por ninguém — nem o próprio pesquisador, nem o Administrador. Ver item 18 da Lista C: o índice só volta a fazer sentido se vocês decidirem liberar contagem de seguidores.
 
 2. **`idx_aceite_termo_contribuicao_contribuicao`** — a tabela tem `UNIQUE (id_contribuicao)` sozinha (`01`, linha 466). O índice automático já era *idêntico* ao manual — clone puro.
 
@@ -526,11 +456,7 @@ Isso só deixa de ser verdade se a busca for pela **segunda coluna sozinha** —
 - `git diff` mostra só essas 3 linhas removidas mais o número no cabeçalho.
 - Qualquer consulta que antes usava esses 3 índices continua funcionando igual — só passa a usar o índice automático do `UNIQUE`, que já fazia o mesmo trabalho.
 
-
----
-
-
-## 🟢 Bagunça de nomes de arquivo em 05/06/07/08 — **[CORRIGIDO]**
+### 🟢 Bagunça de nomes de arquivo em 05/06/07/08 — **[CORRIGIDO]**
 
 Comentários internos de `05_regras_negocio.sql`, `06_grants.sql`, `07_seed_dados.sql` e `08_trigger_signup_usuario.sql` citavam nomes de arquivo que não existem no disco (`05_grants.sql`, `06_score_engine_triggers.sql`, `06b_regras_negocio.sql`).
 
@@ -545,27 +471,15 @@ Nenhum desses nomes existe no disco. Testei tecnicamente se a inversão sugerida
 
 **Conclusão: a ordem real no disco (`05_regras_negocio` → `06_grants`) está certa e não deve mudar.** Os comentários dentro dos 4 arquivos já foram higienizados — cada cabeçalho hoje se autoidentifica com o nome de arquivo correto.
 
-
----
-
-
-## 🟢 Aspas inconsistentes em nomes de policy — **[RESOLVIDO]**
+### 🟢 Aspas inconsistentes em nomes de policy — **[RESOLVIDO]**
 
 Nomes de policy com aspas inconsistentes em `04_rls_policies.sql`: `"pol_score_config_select"` e `"pol_score_rotulo_select"` usavam aspas duplas, diferente das outras ~103 policies. Já padronizado — confirmado que não sobra nenhuma policy com aspas no arquivo.
 
-
----
-
-
-## 🟢 Reorganização de comentários (`01` a `08`) — **[CONCLUÍDO]**
+### 🟢 Reorganização de comentários (`01` a `08`) — **[CONCLUÍDO]**
 
 Todos os 8 arquivos já foram migrados para o `DOCUMENTACAO_BD.md` (blocos `[NN-Y]`/`[NN-Y-N]`), com prova mecânica de que nenhuma linha de SQL foi alterada no processo em nenhum deles. `05` e `08` também ganharam docstring padronizada (Função/Assinatura/Bloco/Regra) em cada função/trigger.
 
-
----
-
-
-## 🟢 Autor podia reverter a própria moderação em `comentario` — **[RESOLVIDO]**
+### 🟢 Autor podia reverter a própria moderação em `comentario` — **[RESOLVIDO]**
 
 **O problema, em termos simples:** um comentário pode ser "desligado" (coluna `ativo` vira `FALSE`) quando a moderação decide ocultá-lo — por exemplo, um comentário ofensivo. O problema: a regra que permite ao **autor do comentário** editar o próprio comentário (`pol_comentario_update`, em `04_rls_policies.sql`) não tinha como saber *qual campo* estava sendo alterado — ela só sabia dizer "esse usuário pode mexer nessa linha", sem distinguir "mexer no texto" de "mexer no `ativo`". Isso é uma limitação de como o RLS (Row Level Security) do Postgres funciona, não um erro de digitação.
 
@@ -606,36 +520,32 @@ A regra é **cirúrgica**: só entra em ação exatamente na transição `ativo`
 
 📄 Detalhamento técnico completo: `DOCUMENTACAO_BD.md`, seção `[04-E-4]` e seção `[05-K-3]`.
 
+### 🟢 `valor_bruto_arrecadado` do seed não batia com a soma real das contribuições — **[CORRIGIDO]**
 
----
+`07_seed_dados.sql` não desligava a trigger `trg_sincroniza_arrecadado_campanha` ao inserir o histórico de `contribuicao` — ela recalculava e sobrescrevia os valores de `valor_bruto_arrecadado` digitados a mão no seed (ex.: campanha 1 caía de 52.300 pra 7.300). A correção mecânica na hora (desligar a trigger junto das outras 2 do bloco `[07-H-1]`) resolveu o sintoma, mas não a causa: os números que o seed gravava em `valor_bruto_arrecadado` não batiam com a soma real das `contribuicao` seedadas — não era diferença pequena, era ordem de grandeza:
 
+| Campanha | `valor_bruto_arrecadado` gravado (antigo) | Soma real das contribuições seedadas (antiga) |
+|---|---|---|
+| 1 | 52.300,00 | 7.300,00 |
+| 2 | 28.500,00 | 1.500,00 |
+| 3 | 40.000,00 | 8.000,00 |
+| 4 | 8.000,00 | 0,00 |
+| 5 | 22.000,00 | 2.200,00 |
+| 7 | 45.000,00 | 500,00 |
 
-## 🟠 Trigger não desligada sobrescrevia `valor_bruto_arrecadado` do seed — **[MECANICAMENTE CORRIGIDO / DADO AINDA INCONSISTENTE]**
+O motivo era que o seed cadastrava só um punhado de contribuições de exemplo (pra cumprir o "mínimo 7 registros"), mas os totais das campanhas foram digitados como se fossem valores realistas e completos, sem os dois baterem entre si. Isso não era cosmético: a primeira vez que uma contribuição de verdade fosse confirmada numa dessas campanhas, `trg_sincroniza_arrecadado_campanha` acordaria, recalcularia a partir da soma real e o valor "bonito" do seed desapareceria de uma vez, sem erro, sem aviso.
 
-`07_seed_dados.sql` não desligava a trigger `trg_sincroniza_arrecadado_campanha` ao inserir o histórico de `contribuicao` — ela recalculava e sobrescrevia os valores de `valor_bruto_arrecadado` digitados a mão no seed (ex.: campanha 1 caía de 52.300 pra 7.300).
+**CORRIGIDO em 28-07-2026 (item A3, ver seção "28-07-2026" mais acima):** a saída escolhida foi adicionar contribuições reais que somem os totais de verdade, em vez de baixar os totais das campanhas. `valor_bruto_arrecadado` saiu do `INSERT` (usa o `DEFAULT 0`), a trigger ficou ligada durante a carga do seed, e 37 novas linhas de contribuição foram distribuídas entre doadores diferentes pra fechar exatamente os mesmos totais que apareciam na tabela acima — só que agora é a soma real, calculada pelo Postgres, não um número digitado à mão.
 
-Já corrigido: a trigger agora é desligada/religada junto das outras duas do mesmo bloco `[07-H-1]`.
+### 🟢 Linha duplicada em `repasse` (campanha 2) — **[CORRIGIDO]**
 
-> Atualização (27-07-2026) — o círculo virou 🟠 porque a correção acima é real e continua certa (a trigger de fato fica desligada durante a carga do seed, isso foi verificado), mas ela só escondeu o sintoma, não resolveu a causa. Confirmado com uma prova concreta: os números que o seed grava em `valor_bruto_arrecadado` não batem com a soma real das `contribuicao` seedadas — não é diferença pequena, é ordem de grandeza:
->
-> | Campanha | `valor_bruto_arrecadado` gravado | Soma real das contribuições seedadas |
-> |---|---|---|
-> | 1 | 52.300,00 | 7.300,00 |
-> | 2 | 28.500,00 | 1.500,00 |
-> | 3 | 40.000,00 | 8.000,00 |
-> | 4 | 8.000,00 | 0,00 |
-> | 5 | 22.000,00 | 2.200,00 |
-> | 7 | 45.000,00 | 500,00 |
->
-> O motivo é que o seed cadastra só um punhado de contribuições de exemplo (pra cumprir o "mínimo 7 registros"), mas os totais das campanhas foram digitados como se fossem valores realistas e completos, sem os dois baterem entre si. Isso não é cosmético: a primeira vez que uma contribuição de verdade for confirmada numa dessas campanhas (mesmo que seja só um teste de R$ 100 no front), `trg_sincroniza_arrecadado_campanha` acorda, recalcula a partir da soma real e o valor "bonito" do seed desaparece de uma vez, sem erro, sem aviso — só um número bem menor aparecendo do nada. É exatamente o tipo de coisa que consome uma tarde de depuração porque ninguém desconfia do seed.
->
-> **Ainda não corrigido.** Fica pendente decidir entre duas saídas: adicionar contribuições suficientes pra somar os totais de verdade (mais trabalho, mas exercita os fluxos reais e dá massa de dados mais realista pro front), ou baixar os totais das campanhas pra bater com as contribuições que já existem (mais rápido). Depois disso, o `DISABLE TRIGGER` do `[07-H-1]` pode continuar existindo por segurança, mas vira redundante em vez de ser a única coisa segurando uma inconsistência. Ver também a pendência 4 (linha duplicada em `repasse`), que é o mesmo problema visto por outro ângulo.
+`07_seed_dados.sql` tinha duas linhas de repasse para a mesma campanha (`id_campanha = 2`), ambas com o mesmo `valor_bruto` (28.500,00): uma `'concluido'` com `valor_liquido = 27.075,00` (a conta normal de repasse com taxa de 5%); outra `'parcial_processando'` com `valor_liquido = 0,00` e `repassado_em = NULL`. A campanha era `modelo = 'flexivel'` (repasse abaixo da meta é esperado nesse modelo — isso nunca foi o problema); a dúvida era por que existiam **duas** linhas de repasse pro mesmo valor bruto.
 
+A investigação de 27-07-2026 mostrou que a linha duplicada era sintoma, não causa raiz: todas as 7 linhas de `repasse` tinham `valor_bruto` batendo com o total inventado de cada campanha, não com a soma real das contribuições seedadas (ver entrada de `valor_bruto_arrecadado`, logo acima) — corrigir só a linha duplicada e deixar as outras 6 do jeito que estavam seria resolver a parte errada do problema.
 
----
+**CORRIGIDO em 28-07-2026 (junto do item A3, mesmo evento):** a linha `'parcial_processando'` foi removida — com as contribuições reais somando o total de verdade agora, essa segunda linha (que só existia pra "empurrar" o total antigo) deixou de fazer sentido.
 
-
-## 🟢 `ALTER TABLE` morto que nunca executava (`01`, tabela `score_pesquisador`) — **[CORRIGIDO]**
+### 🟢 `ALTER TABLE` morto que nunca executava (`01`, tabela `score_pesquisador`) — **[CORRIGIDO]**
 
 Auditoria física de `01_extensoes_enums_tabelas.sql` encontrou um bloco de código que nunca fazia nada:
 
@@ -658,21 +568,13 @@ A constraint já nasce dentro do próprio `CREATE TABLE`, duas linhas acima. O b
 
 **O que foi feito:** o bloco `DO $$...` inteiro (11 linhas) foi removido. A constraint continua existindo exatamente igual, só que agora sem o código morto por baixo. Zero mudança de comportamento — só limpeza.
 
-
----
-
-
-## 🟢 Índice morando no arquivo errado (`ux_recuperacao_senha_ativo_por_usuario`) — **[CORRIGIDO]**
+### 🟢 Índice morando no arquivo errado (`ux_recuperacao_senha_ativo_por_usuario`) — **[CORRIGIDO]**
 
 Esse índice parcial ("só 1 token de recuperação de senha ativo por usuário") estava dentro do `01_extensoes_enums_tabelas.sql`, logo depois da `CREATE TABLE recuperacao_senha`. O problema: existem **dois outros índices do mesmo tipo** no projeto (parcial, "só 1 X ativo por vez") — `uq_termos_uso_ativo` e `uq_arquivo_recompensa_principal` — e **os dois moram em `02_indices.sql`**, nunca em `01`. Esse era o único fora desse padrão.
 
 **O que foi feito:** o índice foi movido de `01_extensoes_enums_tabelas.sql` para `02_indices.sql`, ficando junto dos outros índices de `recuperacao_senha` (`idx_recuperacao_senha_token`, `idx_recuperacao_senha_usuario`), no mesmo lugar onde os outros 2 índices "só 1 ativo" já vivem. Contagem de índices em `02` foi de 36 para 37 (o índice não sumiu, só mudou de arquivo). Nenhuma tabela, coluna ou lógica foi alterada — a tabela `recuperacao_senha` já existe desde o `01`, então o índice continua sendo criado exatamente no mesmo estado do banco, só que 1 arquivo depois.
 
-
----
-
-
-## 🟢 Os 4 `ALTER TABLE` de `01_extensoes_enums_tabelas.sql` foram eliminados — **[CORRIGIDO]**
+### 🟢 Os 4 `ALTER TABLE` de `01_extensoes_enums_tabelas.sql` foram eliminados — **[CORRIGIDO]**
 
 O arquivo tinha 4 `ALTER TABLE`. 3 deles não tinham motivo técnico real e foram simplesmente juntados de volta no `CREATE TABLE` original: `tipo_link` (3 colunas + `CHECK`), `usuario` (FK da foto de perfil) e `contribuicao` (`token_sessao`).
 
@@ -695,14 +597,8 @@ Com isso, a FK nasce direto dentro do `CREATE TABLE`, sem `ALTER` nenhum. `confi
 **Prova de que nada quebrou:** 39 tabelas, 39 `PK_`, 55 `FK_`, 18 `UK_`, 13 `CK_` — todos os números batem com antes da mudança. Comparei o conjunto completo de colunas do arquivo antes/depois: idêntico. Parênteses balanceados.
 
 
-
-
-
-
-
-
-
-
+---
+---
 
 
 # OPNIÃO DO CLAUDE SOBRE NOSSO SISTEMA:
