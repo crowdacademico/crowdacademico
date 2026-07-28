@@ -85,7 +85,7 @@ Cada letra tem exatamente um significado, do `01` ao `08`. Se você está procur
   * **Proteção Anti-Brute-Force:** As colunas `tentativas_login_falhas`, `bloqueado_ate`, `ultimo_login_em` e `ultimo_login_ip` controlam o bloqueio temporário de conta após falhas sucessivas de login.
   * **Verificação de E-mail:** `email_verificado` é uma flag independente — indica se o usuário confirmou o e-mail, não tem relação com bloqueio por tentativas de login.
 * **`usuario_papel`:** Relacionamento N:N entre usuários e papéis. Localizada fisicamente neste bloco por depender de `usuario`, mas documentada conceitualmente sob o domínio de RBAC.
-* **`perfil_pesquisador`:** Dados acadêmicos do pesquisador. O campo `score_atual` é mantido como inteiro para otimizar leituras e atualizações do algoritmo de pontuação.
+* **`perfil_pesquisador`:** Dados acadêmicos do pesquisador. O campo `score_atual` é mantido como inteiro para otimizar leituras e atualizações do algoritmo de pontuação. 🗑️ **Coluna `suspenso BOOLEAN` removida (27-07-2026):** duplicava o mesmo estado que `status_pesquisador ENUM` já representa, e só o segundo era de fato lido em algum lugar do banco — removida de `01` (tabela), `06` (grant de coluna) e `07` (seed).
 * **`termos_de_uso` e `usuario_termo`:** Controle de versionamento de termos (LGPD). Guarda a trilha de auditoria (IPv4/IPv6 e timestamp de aceite).
 * **`notificacao`:** Fila/Histórico de envios de e-mail. Armazena o snapshot do e-mail do destinatário, contagem de tentativas e o texto do último erro retornado para depuração.
 * **`verificacao_email` e `recuperacao_senha`:** Gerenciamento de tokens curtos e temporários para confirmação de conta e redefinição de senha.
@@ -98,12 +98,15 @@ Cada letra tem exatamente um significado, do `01` ao `08`. Se você está procur
 
 * **`campanha`:** Tabela principal de projetos de financiamento.
   * `CK_CAMPANHA_PRAZO`: Constraint que valida a duração da campanha entre 15 e 90 dias.
+  * 🗑️➡️✅ **`encerrado_em TIMESTAMP` — coluna nova (27-07-2026):** nullable, sem valor padrão, **não** é congelada por `fn_congela_regras_campanha()` (é justamente o campo que precisa poder ser preenchido no momento do encerramento). Registra a data real de encerramento (natural, antecipado via RF-042 ou por moderação) — algo que `data_fim` deixou de conseguir representar depois de virar uma promessa congelada (ver `[05-K-2]`). Ainda não existe trigger que preencha essa coluna sozinha; quem grava o valor, por enquanto, é quem faz o `UPDATE` de status.
 * **`atualizacao_campanha`:** Postagens de acompanhamento do projeto. O campo `ativo` permite o *soft delete* e a ocultação por moderação sem perda do histórico.
 * **`comentario`:** Interações da comunidade.
   * Unicidade: `UNIQUE (id_campanha, id_pesquisador)` restringe a **um comentário por pesquisador por campanha, para sempre** — a constraint não é condicionada por `ativo`. Ou seja, se o comentário for ocultado por moderação (`ativo = FALSE`), o pesquisador não consegue enviar um comentário novo para aquela campanha; ele só pode reeditar o registro já existente.
   * `CK_COMENTARIO_ENDOSSO`: Constraint garante coerência matemática entre o booleano `endossado` e a sua ordem de exibição (`ordem_endosso`).
   * A policy `pol_comentario_update` (`04_rls_policies.sql`) libera `UPDATE` para o próprio autor sem restringir quais colunas podem mudar — isso já permitiu, no passado, que o autor revertesse sozinho uma moderação (`ativo = FALSE → TRUE`). Já corrigido por trigger; ver `[04-E-4]` mais abaixo para o histórico completo.
 * **`denuncia`:** Registro de incidentes apontados por usuários, vinculados a um motivo do catálogo.
+  * 🗑️➡️✅ **`CK_DENUNCIA_ALVO_XOR` — constraint nova (27-07-2026):** antes, nada impedia os dois alvos (`id_campanha_alvo`/`id_pesquisador_alvo`) preenchidos ao mesmo tempo, ou os dois nulos. A constraint exige exatamente um dos dois preenchido. Trabalha em conjunto com a trigger `trg_denuncia_valida_tipo_motivo` (`05`, ver `[05-K-1]`), que garante que o motivo escolhido bate com o alvo.
+  * 🗑️➡️✅ **`FK_DENUNCIA_CAMPANHA_ALVO` / `FK_DENUNCIA_PESQUISADOR_ALVO`: `ON DELETE SET NULL` → `ON DELETE RESTRICT` (27-07-2026):** um registro de moderação virar órfão sozinho (o alvo apagado e a denúncia continuando sem saber apontar pra nada) não é o comportamento correto pra um dado de auditoria; `RESTRICT` impede a exclusão do alvo enquanto a denúncia existir. Não muda nada na prática hoje, já que nem `campanha` nem `usuario` têm policy de `DELETE`.
 * **`recompensa`:** Recompensas oferecidas pelos pesquisadores. Possui validações para garantir `valor_minimo > 0` e quantidade disponível não negativa.
 
 ---
@@ -203,7 +206,7 @@ Os índices explícitos criados neste script foram projetados para três cenári
 
 As funções helper atuam como a ponte de contexto de segurança entre o backend NestJS e o mecanismo de RLS do PostgreSQL. Elas eliminam a dependência de frameworks externos (como Supabase Auth / `auth.uid()`) e viabilizam um modelo de autorização stateless nativo no banco de dados.
 
-Ambas as funções utilizam os modificadores de segurança essenciais:
+As três funções utilizam os modificadores de segurança essenciais:
 * **`STABLE`:** Informa ao otimizador do PostgreSQL que a função não altera o banco e retorna o mesmo resultado dentro da mesma transação SQL.
 * **`SECURITY DEFINER` + `SET search_path = public`:** Executa a função com privilégios do criador da função, blindando-a contra ataques de sequestro de caminho de busca (*search path hijacking*).
 
@@ -213,7 +216,16 @@ Ambas as funções utilizam os modificadores de segurança essenciais:
 
 * **Mecanismo de Transação:** O NestJS, ao autenticar o JWT e abrir uma transação com o PostgreSQL, executa o comando `SET LOCAL app.id_usuario_atual = '<id>'`.
 * **Leitura Segura:** A função lê a variável customizada da sessão do PostgreSQL via `current_setting('app.id_usuario_atual', true)`.
-* **Tratamento de Nulos:** O segundo argumento `true` impede que o PostgreSQL lance uma exceção fatal caso a variável não tenha sido configurada na sessão, retornando `NULL` de forma segura.
+* 🗑️➡️✅ **Tratamento de Nulos — CORRIGIDO (bug crítico, 27-07-2026):** o segundo argumento `true` de `current_setting()` só cobre o caso "variável nunca foi definida" (sessão anônima), retornando `NULL` nesse caso. Ele **não** cobre o caso "variável definida como string vazia `''`" — e `''::INT` lança uma exceção fatal (`invalid input syntax for type integer`), em vez de retornar `NULL`. Como `tem_permissao()` chama esta função por baixo e aparece em 89 das 105 policies de `04_rls_policies.sql`, uma única sessão anônima onde o NestJS interpola algo como `` `${usuario?.id ?? ''}` `` (em vez de simplesmente nunca setar a variável) derrubava **qualquer** consulta a qualquer tabela protegida — inclusive a listagem pública de campanhas, que nem exige login. A correção: `SELECT NULLIF(current_setting('app.id_usuario_atual', true), '')::INT;` — o `NULLIF` trata "não definida" e "definida vazia" como a mesma coisa (`NULL`) antes mesmo de tentar o `::INT`, então os dois casos agora se comportam de forma idêntica e segura.
+
+---
+
+### [03-D] VISIBILIDADE DE CONTA (`usuario_visivel`)
+
+* **Por que existe:** `pol_usuario_select` (`04`) já escondia `usuario.deletado = TRUE` do resultado, mas `pol_perfil_select` e `pol_link_select` eram `USING (TRUE)` sem checar esse flag em nenhum momento — o perfil acadêmico e os links de uma conta "excluída" continuavam 100% públicos, mesmo com a conta marcada como deletada.
+* **O que faz:** `usuario_visivel(p_id INT) RETURNS BOOLEAN` — nega a visibilidade se a conta estiver `deletado = TRUE`; se o `id_usuario` não existir (não deveria acontecer, a FK garante), o padrão é considerar invisível (`COALESCE(..., TRUE)` antes do `NOT`).
+* **Onde é usada:** `pol_perfil_select` e `pol_link_select` (`04_rls_policies.sql`, `[04-D]`/`[04-F]`), no lugar do antigo `USING (TRUE)`. `pol_campanha_select` e `pol_score_select` ficam de fora de propósito, por decisão ainda em aberto — ver `PENDENCIAS e correcoes.md`, itens 17 e 31.
+* **Mesmo padrão de `tem_permissao()`:** função pura, `STABLE`, `SECURITY DEFINER`, centralizando a checagem num único lugar — evita que a próxima policy pública nasça com o mesmo furo.
 
 ---
 
@@ -267,7 +279,9 @@ O arquivo é organizado em 8 blocos conceituais que espelham literalmente os tí
 * **[04-D-2] `usuario` (INSERT):** faltava a policy de `INSERT` em `usuario`. O fluxo de signup (`08_trigger_signup_usuario.sql`) já prevê o NestJS inserindo direto em `usuario` dentro da própria transação, antes de existir qualquer sessão — não há `id_usuario_atual()` para checar nesse momento, então `WITH CHECK (true)` é a única condição logicamente possível aqui. E-mail duplicado já é barrado pelo `UNIQUE` em `usuario.email` (`01`), e validação de formato/força de senha é responsabilidade do NestJS antes do `INSERT`.
 * **[04-D-3] `perfil_pesquisador` (INSERT):** a policy de `INSERT` permite o fluxo de upgrade de usuário cadastrado para pesquisador. Sem ela, a RLS bloqueia a operação mesmo com o `GRANT` de tabela em `06_grants.sql`.
 * **[04-D-4] `usuario_papel` (DELETE):** a policy de `DELETE` permite que o painel administrativo revogue papéis já atribuídos, sem depender de um bypass de RLS.
-* **[04-D-5] `notificacao`:** leitura restrita às próprias notificações; escrita controlada pelo backend da aplicação. Como o projeto não depende mais de `service_role` para ignorar RLS, as policies de `INSERT`/`UPDATE` foram adicionadas no mínimo necessário para permitir a criação e atualização de notificações sem abrir o acesso para qualquer usuário falsificar registros.
+* 🗑️➡️✅ **[04-D-6] `perfil_pesquisador` (SELECT) — CORRIGIDO (27-07-2026):** `pol_perfil_select` era `USING (TRUE)`, sem checar `usuario.deletado` — o perfil acadêmico de uma conta excluída continuava 100% público. Passou a usar `public.usuario_visivel(id_usuario)` (`03`, ver `[03-D]`). `pol_campanha_select` e `pol_score_select` ficam de fora de propósito por enquanto — ver `PENDENCIAS e correcoes.md`, itens 17 e 31.
+* **[04-D-5] `notificacao`:** 🗑️➡️✅ **CORRIGIDO (27-07-2026) — a primeira versão das policies de `INSERT`/`UPDATE` exigia `id_usuario = id_usuario_atual()`, inclusive pra criar.** Isso bloqueava toda notificação real do sistema, porque quem cria uma notificação nunca é o próprio destinatário (admin aprova campanha → avisa o pesquisador; sistema avisa quem doou) — e o *worker* de envio de e-mail, que roda sem usuário logado, também não conseguia ler a fila de pendentes. Ficou assim: `pol_notificacao_insert` é `WITH CHECK (true)`, `pol_notificacao_update` é `USING (true) WITH CHECK (true)` — mesmo padrão já usado em `verificacao_email`/`recuperacao_senha`/`sessao` (escrita liberada pro `app_nestjs`, controle de quem pode gravar o quê fica na aplicação). O `SELECT` continua restrito: dono da notificação, **ou** `usuario_visualizar_sensivel`, **ou** a permissão nova `notificacao_processar` (ver nota abaixo).
+* 🗑️➡️✅ **`pol_notificacao_select` ganhou uma terceira condição — permissão `notificacao_processar` (27-07-2026):** antes, o *worker* de e-mail (que precisa ler a fila de notificações pendentes pra enviar) só tinha `usuario_visualizar_sensivel` como caminho de acesso — uma permissão cujo nome não tem nenhuma relação semântica com "processar fila de notificação", criando um acoplamento estranho e confuso de manter. Permissão nova `notificacao_processar` (seedada em `07`, atribuída ao papel `admin`) virou mais uma opção no `OR` da policy, ao lado das duas condições que já existiam — nada que já funcionava foi removido.
 
 #### [04-E] CAMPANHA
 * **Tabelas:** `campanha`, `atualizacao_campanha`, `comentario`, `denuncia`, `recompensa`, `seguir_campanha`, `solicitacao_encerramento`, `historico_rejeicao`, `repasse`.
@@ -298,14 +312,16 @@ O arquivo é organizado em 8 blocos conceituais que espelham literalmente os tí
 >   - Quem tem `comentario_moderar` (moderador/admin) continua podendo reverter (`FALSE → TRUE`) normalmente — a trigger só barra quem **não** tem essa permissão.
 > - **Por que essa opção e não um fluxo de "recurso":** plataformas de referência (Catarse, Experiment) não dão ao autor um botão de "desfazer moderação" — qualquer contestação acontece fora do sistema (suporte/e-mail), não como feature codificada. Manter o escopo pequeno aqui é a escolha certa para o estágio atual do projeto; um fluxo de recurso formal (autor pede revisão, moderador decide) pode virar uma feature nova no futuro, se um dia for necessário — mas isso é adição de funcionalidade, não correção de bug.
 * **[04-E-5] `seguir_campanha` (DELETE):** faltava a policy de `DELETE` — sem ela, "deixar de seguir campanha" (RF-009) ficava bloqueado pela RLS, mesmo já existindo o equivalente para `seguir_pesquisador` (`pol_seg_pesq_delete`).
-* **[04-E-6] `historico_rejeicao`:** as policies de escrita foram adicionadas para permitir o registro de rejeições de campanha pelo fluxo de moderação.
+* **[04-E-6] `historico_rejeicao`:** as policies de escrita foram adicionadas para permitir o registro de rejeições de campanha pelo fluxo de moderação. 🗑️➡️✅ **`pol_historicorej_select` — CORRIGIDO (27-07-2026):** só liberava quem tem `campanha_rejeitar`, diferente das duas tabelas irmãs (`solicitacao_encerramento`, `repasse`), que corretamente liberam também o dono da campanha via `EXISTS (... id_usuario = id_usuario_atual())`. Sem isso, o dono de uma campanha rejeitada não conseguia ver o motivo pela própria plataforma (RF-070 prevê editar e reenviar) — dependia só do e-mail (RF-071). Acrescentado o mesmo `OR EXISTS (...)` que as tabelas irmãs já usavam.
 * **[04-E-7] `repasse`:** as policies de escrita foram adicionadas porque esse fluxo é gerado pelo backend a partir da consolidação financeira da campanha — sem elas, a RLS bloqueia a criação e atualização do registro mesmo com o `GRANT` de tabela correto (ver nota de débito técnico acima).
+* 🗑️➡️✅ **[04-E-8] `campanha` / `atualizacao_campanha` (INSERT) — pesquisador suspenso passa a ser barrado — CORRIGIDO (27-07-2026):** `pol_comentario_insert` já checava `status_pesquisador = 'ativo'` antes de liberar `INSERT`, mas `pol_campanha_insert` e `pol_atualizacao_insert` não tinham essa mesma checagem — um pesquisador suspenso ainda conseguia criar campanha nova ou publicar atualização. As duas policies passaram a exigir `EXISTS (SELECT 1 FROM perfil_pesquisador WHERE id_usuario = public.id_usuario_atual() AND status_pesquisador = 'ativo')`, replicando o padrão que já existia só em `comentario`. Como o seed roda como superusuário (*bypassa* RLS) e todos os 7 pesquisadores seedados já são `'ativo'`, nada mudou na carga do `07`.
 
 #### [04-F] LINK
 * **Tabelas:** `link_academico`, `link_atualizacao`, `link_recompensa`.
 * **Regra:** Links de perfil e campanhas podem ser criados, editados ou removidos pelo próprio autor/pesquisador ou por usuários com papéis moderadores.
 
 **Detalhamento por policy:**
+* 🗑️➡️✅ **[04-F-2] `link_academico` (SELECT) — CORRIGIDO (27-07-2026):** mesmo problema e mesma correção do `[04-D-6]` — `pol_link_select` era `USING (TRUE)`, sem checar `usuario.deletado`. Passou a usar `public.usuario_visivel(id_usuario)` (`03`, ver `[03-D]`).
 * **[04-F-1] `link_recompensa` (UPDATE) — assimetria proposital:** edição e remoção de link de recompensa são restritas ao dono da campanha ou a quem tem `campanha_editar` — de propósito sem o comprador aqui, diferente do `SELECT` (onde o comprador pode ler). O link é fornecido pelo pesquisador para entrega da recompensa, então só quem fornece pode alterá-lo ou removê-lo; o comprador só pode ler.
 
 #### [04-G] ARQUIVO
@@ -339,7 +355,7 @@ O arquivo é organizado em 8 blocos conceituais que espelham literalmente os tí
 
 ### Visão Geral
 
-Este é o arquivo mais denso do banco: 28 funções e 24 triggers, organizados em 7 blocos que usam duas letras do índice global — `I` (SCORE, blocos `[05-I-1]` a `[05-I-4]`) e `K` (Regras de Negócio Transversais, blocos `[05-K-1]` a `[05-K-3]`), ver "Índice Global de Letras" no topo deste documento. Ele concentra toda regra que um `CHECK` simples não alcança — porque depende de consultar outra tabela (ex.: será que essa campanha está ativa?) ou de recalcular algo automaticamente quando um dado relacionado muda.
+Este é o arquivo mais denso do banco: 30 funções e 27 triggers, organizados em 7 blocos que usam duas letras do índice global — `I` (SCORE, blocos `[05-I-1]` a `[05-I-4]`) e `K` (Regras de Negócio Transversais, blocos `[05-K-1]` a `[05-K-3]`), ver "Índice Global de Letras" no topo deste documento. Ele concentra toda regra que um `CHECK` simples não alcança — porque depende de consultar outra tabela (ex.: será que essa campanha está ativa?) ou de recalcular algo automaticamente quando um dado relacionado muda.
 
 > 📌 **Por que o motor de score existe:** antes deste arquivo, `perfil_pesquisador.score_atual` e `score_pesquisador.pontos_obtidos` eram só valores fixos digitados no seed — nada calculava o score de verdade a partir de campanhas, denúncias, links acadêmicos ou do perfil. A tela de detalhes de pontuação no front lia campos que nem existiam no tipo real de dimensões de score, e a conta virava `NaN`. A solução foi mover o cálculo inteiro para dentro do banco, com o resultado guardado em cache (`perfil_pesquisador.score_atual` e `score_pesquisador`) e atualizado sozinho via trigger sempre que um dado relevante muda — funciona para qualquer registro novo, sem que o backend precise lembrar de chamar nada. Todos os pesos vêm de `score_config.peso` (nenhum número fixo no código): editar o peso no Painel Admin já recalcula o score de todo mundo.
 
@@ -401,6 +417,7 @@ Cada trigger observa uma tabela que alimenta alguma dimensão do score e recalcu
 | `link_academico` | `trg_valida_escopo_tipolink()` | `trg_link_academico_valida_tipo` | Só aceita `id_tipolink` com `permite_perfil = TRUE`. |
 | `link_atualizacao` | `trg_valida_escopo_tipolink()` | `trg_link_atualizacao_valida_tipo` | Só aceita `id_tipolink` com `permite_atualizacao = TRUE`. |
 | `link_recompensa` | `trg_valida_escopo_tipolink()` | `trg_link_recompensa_valida_tipo` | Só aceita `id_tipolink` com `permite_recompensa = TRUE`. |
+| `denuncia` | `trg_valida_tipo_motivo_denuncia()` | `trg_denuncia_valida_tipo_motivo` | 🗑️➡️✅ **Nova (27-07-2026).** `BEFORE INSERT OR UPDATE`: cruza `motivo_denuncia.tipo` com qual coluna de alvo foi preenchida (`id_campanha_alvo` ou `id_pesquisador_alvo`) — motivo de tipo "campanha" não pode ser usado numa denúncia contra pesquisador, e vice-versa. Trabalha em conjunto com a constraint `CK_DENUNCIA_ALVO_XOR` (`01`, ver `[01-E]`), que garante que exatamente um dos dois alvos está preenchido; esta trigger garante que o motivo escolhido bate com esse alvo. |
 
 > 📌 **Uma função, três triggers:** `tipo_link` é compartilhado pelas 3 tabelas de link (`01-F`), então uma única função genérica (`trg_valida_escopo_tipolink`) resolve, via `TG_TABLE_NAME`, qual coluna booleana de `tipo_link` checar em cada caso — evita, por exemplo, associar "Currículo Lattes" (que só tem `permite_perfil = TRUE`) a uma recompensa.
 
@@ -410,13 +427,14 @@ Cada trigger observa uma tabela que alimenta alguma dimensão do score e recalcu
 
 | Tabela | Função | Trigger | Regra |
 |---|---|---|---|
-| `repasse` | `fn_valida_repasse_all_or_nothing()` | `trg_valida_repasse` | Bloqueia repasse com `valor_liquido > 0` em campanha `all-or-nothing` que não atingiu a meta. Repasse "zerado" (RF-038, `valor_liquido = 0`, registrando que nada foi repassado) continua permitido. |
-| `contribuicao` | `validar_contribuicao_all_or_nothing()` | `trg_contribuicao_all_or_nothing_pix` | Campanhas `all-or-nothing` só aceitam contribuição via PIX. |
-| `campanha` | `fn_congela_regras_campanha()` | `trg_congela_regras_campanha` | A partir do status `ativo` em diante (inclusive `encerrado`/`encerrado_moderacao`), bloqueia `UPDATE` que altere `meta_financeira`, `modelo` ou `taxa_plataforma` — proteção contra alterar as regras do jogo depois que a campanha já está no ar. |
+| `repasse` | `fn_valida_repasse_all_or_nothing()` | `trg_valida_repasse` | `BEFORE INSERT OR UPDATE`. Bloqueia repasse com `valor_liquido > 0` em campanha `all-or-nothing` que não atingiu a meta. Repasse "zerado" (RF-038, `valor_liquido = 0`, registrando que nada foi repassado) continua permitido. 🗑️➡️✅ **CORRIGIDO (27-07-2026):** a versão anterior comparava sempre contra `0`, então um `UPDATE` que só corrigia status/data de um repasse já concluído (ex.: reverter pra `'devolvido'` depois que a meta caiu por um reembolso) era bloqueado do mesmo jeito que um repasse novo indevido — mesmo sem estar liberando nenhum valor novo. Agora usa `TG_OP = 'UPDATE'` para só acessar `OLD.valor_liquido` quando faz sentido (no `INSERT`, `OLD` não existe) e compara `NEW.valor_liquido > COALESCE(v_valor_liquido_anterior, 0)` — só bloqueia quem tenta liberar **mais** dinheiro do que já tinha sido liberado antes. |
+| `contribuicao` | `validar_contribuicao_all_or_nothing()` | `trg_contribuicao_all_or_nothing_pix` (`BEFORE INSERT`) + `trg_contribuicao_all_or_nothing_pix_update` (`BEFORE UPDATE`, nova em 27-07-2026) | Campanhas `all-or-nothing` só aceitam contribuição via PIX. 🗑️➡️✅ **A trigger de `UPDATE` é nova e tem uma cláusula `WHEN`:** a primeira tentativa de fechar essa regra também no `UPDATE` (ver `A3` no histórico de `PENDENCIAS e correcoes.md`) revalidava `meio_pagamento` em todo `UPDATE`, mesmo quando só o `status` mudava — travando pra sempre as contribuições não-PIX que já existiam em campanhas `all-or-nothing` (dado histórico do seed) e bloqueando o próprio webhook de confirmação de pagamento. A trigger nova só revalida quando `meio_pagamento` ou `id_campanha` de fato mudam (`WHEN (NEW.meio_pagamento IS DISTINCT FROM OLD.meio_pagamento OR NEW.id_campanha IS DISTINCT FROM OLD.id_campanha)`). |
+| `campanha` | `fn_congela_regras_campanha()` | `trg_congela_regras_campanha` | A partir do status `ativo` em diante (inclusive `encerrado`/`encerrado_moderacao`), bloqueia `UPDATE` que altere `meta_financeira`, `modelo`, `taxa_plataforma`, `titulo`, `descricao`, `data_fim` **ou `data_inicio`** — proteção contra alterar as regras do jogo (ou reescrever o projeto/prazo) depois que a campanha já está no ar. 🗑️➡️✅ **`titulo`/`descricao`/`data_fim` e, depois, `data_inicio` foram adicionados em 27-07-2026** (trocar a descrição de um projeto já financiado, ou mexer no prazo, era o vetor de fraude mais óbvio que ainda não estava coberto — `data_inicio` entrou por último, depois de um teste real mostrar que dava pra mudar a duração da campanha só mexendo na data de início, já que só `data_fim` tinha sido congelado antes). Ver também a coluna nova `campanha.encerrado_em` (`[01-E]`), criada na mesma rodada para registrar a data real de encerramento — que `data_fim` (a promessa) deixou de conseguir fazer depois de congelada. |
 | `contribuicao` | `fn_valida_contribuicao_campanha_ativa()` | `trg_valida_status_contribuicao` | Bloqueia nova contribuição se a campanha não estiver com status `ativo`, ou se o prazo (`data_fim`) já tiver passado. |
 | `contribuicao` | `fn_sincroniza_arrecadado_campanha()` | `trg_sincroniza_arrecadado_campanha` | Recalcula `campanha.valor_bruto_arrecadado` somando as contribuições `confirmado`/`repassado`, a cada INSERT/UPDATE/DELETE em `contribuicao`. |
 | `campanha` | `validar_limite_campanhas_pesquisador()` | `trg_campanha_limite_simultaneo` | Um pesquisador não pode ter mais de **2 campanhas simultâneas** em `aguardando_aprovacao` ou `ativo`. |
 | `atualizacao_campanha` | `validar_atualizacao_campanha()` | `trg_atualizacao_campanha_status` | Só permite publicar atualização em campanha `ativo`, `sucesso` ou `nao_atingido`. |
+| `solicitacao_encerramento` | `fn_valida_transicao_solicitacao()` | `trg_valida_transicao_solicitacao` | 🗑️➡️✅ **Nova (27-07-2026).** `BEFORE UPDATE`: quem não tem `solicitacao_encerramento_decidir` só pode fazer a transição `pendente → cancelado`, sem tocar em `id_admin`/`justificativa_pesquisador` — companheira da liberação de `pol_solicitacao_update` (`04`) pro dono da campanha cancelar a própria solicitação (antes, só o admin conseguia mexer nessa tabela via `UPDATE`; ver `[04-E]`). |
 
 > ⚠️ **`trg_sincroniza_arrecadado_campanha` usa `SELECT ... FOR UPDATE` antes de somar.** Isso trava a linha da campanha durante o recálculo — sem essa trava, duas contribuições confirmadas ao mesmo tempo poderiam cada uma somar sem enxergar a outra ainda commitada, e a que "vence a corrida" por último sobrescreveria o total (uma contribuição confirmada "sumiria" do valor arrecadado). Esse comentário está preservado no corpo da função, por ser justamente o tipo de detalhe que importa entender antes de mexer nessa trigger.
 
@@ -439,7 +457,7 @@ Cada trigger observa uma tabela que alimenta alguma dimensão do score e recalcu
 
 ### Idempotência
 
-As 24 triggers deste arquivo têm `DROP TRIGGER IF EXISTS` imediatamente antes do `CREATE TRIGGER` correspondente — o arquivo pode ser reaplicado sozinho num banco de desenvolvimento já existente, sem precisar resetar tudo do zero (mesmo padrão já aplicado em `04_rls_policies.sql`).
+As 27 triggers deste arquivo têm `DROP TRIGGER IF EXISTS` imediatamente antes do `CREATE TRIGGER` correspondente — o arquivo pode ser reaplicado sozinho num banco de desenvolvimento já existente, sem precisar resetar tudo do zero (mesmo padrão já aplicado em `04_rls_policies.sql`).
 
 ---
 
@@ -468,9 +486,10 @@ Nenhum GRANT adicional. `papel`, `permissao` e `papel_permissao` só têm policy
 
 ### [06-C] CONFIG
 
-* **Tabelas:** `configuracoes`, `arquivo` (INSERT/UPDATE/DELETE completos), `area_conhecimento`, `motivo_denuncia`, `tipo_link` (só INSERT/UPDATE).
+* **Tabelas:** `configuracoes` (INSERT/UPDATE/DELETE completos), `arquivo` (INSERT/UPDATE, sem `DELETE`), `area_conhecimento`, `motivo_denuncia` (INSERT/UPDATE), `tipo_link` (só INSERT/UPDATE).
 
 **Detalhamento por grant:**
+* 🗑️➡️✅ **[06-C-0] `arquivo` — `DELETE` removido — CORRIGIDO (27-07-2026):** nenhuma policy de RLS de `DELETE` existe pra essa tabela (só `configuracoes`, do mesmo bloco, tem policy de `DELETE` de verdade) — o `GRANT DELETE` que existia nunca funcionava, só dava a falsa impressão de que a operação era possível. Faz parte da limpeza mais ampla de 21 tabelas nesse mesmo estado — ver nota geral em `[06-D]`, mais abaixo, e `PENDENCIAS e correcoes.md`, item `A7`.
 * **[06-C-1] `area_conhecimento` / `motivo_denuncia`:** receberam apenas os GRANTs mínimos necessários para que as policies de RLS funcionem na gestão de catálogos — princípio de privilégio mínimo, evitando permissões amplas desnecessárias.
 * **[06-C-2] `tipo_link`:** ganhou `pol_tipolink_insert`/`pol_tipolink_update` em `04` (permissão `tipolink_gerenciar`), mas faltava o GRANT de tabela correspondente — sem ele, mesmo um curador/admin com a permissão certa recebia `permission denied for table tipo_link` antes de a RLS ser avaliada, e cadastrar um novo tipo de link (ex.: "TikTok") continuava impossível na prática (mesmo problema descrito em `RBAC-pontos-discutidos.md`, seção 6.3). Sem `DELETE` de propósito: `tipo_link` já tem coluna `ativo` para desativação lógica (soft delete via `UPDATE`), não precisa apagar linha.
 
@@ -478,19 +497,21 @@ Nenhum GRANT adicional. `papel`, `permissao` e `papel_permissao` só têm policy
 
 ### [06-D] USUÁRIO
 
-* **Tabelas:** `usuario`, `perfil_pesquisador`, `usuario_papel`, `termos_de_uso`, `usuario_termo`, `seguir_pesquisador` (INSERT/UPDATE/DELETE completos); `notificacao` (só INSERT/UPDATE); `verificacao_email`/`recuperacao_senha`/`sessao` (SELECT/INSERT/UPDATE).
+* **Tabelas:** `usuario`, `perfil_pesquisador`, `termos_de_uso` (INSERT/UPDATE, sem `DELETE`); `usuario_termo` (só INSERT); `usuario_papel`, `seguir_pesquisador` (INSERT/DELETE, sem `UPDATE`); `notificacao` (INSERT/UPDATE); `verificacao_email`/`recuperacao_senha`/`sessao` (SELECT/INSERT/UPDATE).
 
 **Detalhamento por grant:**
 * **[06-D-1] `usuario` / `perfil_pesquisador` — SELECT geral revogado:** o acesso público a essas duas tabelas foi reduzido no nível de GRANT para evitar que `app_nestjs` tenha acesso indiscriminado a dados sensíveis antes mesmo da avaliação das policies de RLS.
-* **[06-D-2] `usuario` — colunas de autenticação no GRANT de coluna:** faltavam as colunas usadas pelo próprio fluxo de login (`senha_hash`, `tentativas_login_falhas`, `bloqueado_ate`, `ultimo_login_em`, `ultimo_login_ip`). Sem elas, o GRANT de coluna barra o `SELECT` antes mesmo de a RLS ser avaliada, e o NestJS não consegue checar a senha no login nem aplicar a proteção contra brute-force.
+* **[06-D-2] `usuario` — colunas de autenticação no GRANT de coluna:** faltavam as colunas usadas pelo próprio fluxo de login (`senha_hash`, `tentativas_login_falhas`, `bloqueado_ate`, `ultimo_login_em`, `ultimo_login_ip`). Sem elas, o GRANT de coluna barra o `SELECT` antes mesmo de a RLS ser avaliada, e o NestJS não consegue checar a senha no login nem aplicar a proteção contra brute-force. 🗑️➡️✅ **`email_verificado` — CORRIGIDO (27-07-2026):** a coluna existe desde `01`, mas nunca tinha entrado nessa lista — sem ela, o fluxo de verificação de e-mail não conseguia nem ler a própria flag. 🗑️ **`suspenso` removida da lista do GRANT de `perfil_pesquisador` (27-07-2026):** consequência direta da coluna ter sido removida da tabela em `01` — ver `[01-D]`.
+* 🗑️➡️✅ **[06-D-8] `DELETE`/`UPDATE` mortos removidos de vários GRANTs — CORRIGIDO (27-07-2026):** dois achados separados, mesmo padrão nos dois — um `GRANT` sem nenhuma policy de RLS correspondente pra aquela operação nunca funcionava de verdade, só dava a falsa impressão de que era possível. **`DELETE`** foi removido de 21 tabelas que não tinham policy de `DELETE` (mantido só onde a policy existe: `configuracoes`, `usuario_papel`, `seguir_pesquisador`, `seguir_campanha`, `link_academico`, `link_atualizacao`, `link_recompensa`) — neste bloco, isso tirou `DELETE` de `usuario`, `perfil_pesquisador` e `termos_de_uso`. **`UPDATE`** foi removido de 6 tabelas que não tinham policy de `UPDATE` — neste bloco, `usuario_termo` (registro de aceite de termo, não deveria ser editável depois de criado) e `usuario_papel`/`seguir_pesquisador` (só existe inserir/apagar essas relações, não faz sentido "editar"). Ver `PENDENCIAS e correcoes.md`, itens `A7` e `27`, pra contagem completa nos 8 arquivos e pra prova de que nada quebrou.
 * **[06-D-3] `notificacao`:** ganhou `pol_notificacao_insert`/`pol_notificacao_update` em `04` (o backend passou a gravar notificação através do próprio `app_nestjs`, não mais via um role que ignorasse RLS), mas faltava o GRANT de tabela correspondente — sem os dois níveis juntos (RLS + GRANT), toda tentativa de `INSERT`/`UPDATE` falhava com `permission denied for table notificacao`, mesmo com a policy liberando.
-* **[06-D-4] `verificacao_email` / `recuperacao_senha` / `sessao`:** têm policy real em `04` (`TO app_nestjs USING (true)`) e precisam do GRANT correspondente — RLS libera mas falta permissão de tabela, e vice-versa; os dois níveis são exigidos juntos pelo Postgres.
+* **[06-D-4] `verificacao_email` / `recuperacao_senha` / `sessao`:** têm policy real em `04` (`TO app_nestjs USING (true)`) e precisam do GRANT correspondente — RLS libera mas falta permissão de tabela, e vice-versa; os dois níveis são exigidos juntos pelo Postgres. ⚠️ **As 3 continuam sem `DELETE` no GRANT, mesmo a policy sendo `FOR ALL` (cobre `DELETE`)** — `app_nestjs` nunca consegue apagar sessão expirada ou token já consumido, essas tabelas só crescem. Provavelmente proposital (revogar é só marcar `revogado_em`/`usado_em`), mas falta decidir e escrever a política de retenção — ver `PENDENCIAS e correcoes.md`, item `28` (ainda em aberto).
 
 ---
 
 ### [06-E] CAMPANHA
 
-* **Tabelas:** `campanha`, `seguir_campanha`, `atualizacao_campanha`, `repasse`, `solicitacao_encerramento`, `historico_rejeicao`, `comentario`, `denuncia`, `recompensa` — todas com INSERT/UPDATE/DELETE completos.
+* **Tabelas:** `campanha`, `atualizacao_campanha`, `repasse`, `solicitacao_encerramento`, `historico_rejeicao`, `comentario`, `denuncia`, `recompensa` (INSERT/UPDATE, sem `DELETE`); `seguir_campanha` (INSERT/DELETE, sem `UPDATE`).
+* 🗑️➡️✅ **`DELETE` removido das 8 primeiras — CORRIGIDO (27-07-2026):** nenhuma delas tem policy de `DELETE` em `04` — só `seguir_campanha` tem (`pol_seg_campanha_delete`, RF-009 "deixar de seguir"). `UPDATE` também não faz sentido pra `seguir_campanha` (só existe seguir/deixar de seguir), por isso ficou com `INSERT`/`DELETE` em vez de `INSERT`/`UPDATE`. Mesma limpeza geral do `A7`/`27` — ver `[06-D-8]`, mais acima, e `PENDENCIAS e correcoes.md`.
 
 ---
 
@@ -502,19 +523,20 @@ Nenhum GRANT adicional. `papel`, `permissao` e `papel_permissao` só têm policy
 
 ### [06-G] ARQUIVO
 
-* **Tabelas:** `arquivo_atualizacao`, `arquivo_recompensa` — INSERT/UPDATE/DELETE completos.
+* **Tabelas:** `arquivo_atualizacao`, `arquivo_recompensa` — INSERT/UPDATE, sem `DELETE`. 🗑️➡️✅ **CORRIGIDO (27-07-2026):** nenhuma das duas tem policy de `DELETE` em `04` — mesma limpeza geral do `A7`, ver `[06-D-8]`.
 
 ---
 
 ### [06-H] CONTRIBUIÇÃO
 
-* **Tabelas:** `contribuicao`, `auditoria_financeira`, `contribuicao_recompensa`, `aceite_termo_contribuicao` — INSERT/UPDATE/DELETE completos.
+* **Tabelas:** `contribuicao`, `auditoria_financeira` (INSERT/UPDATE, sem `DELETE`); `contribuicao_recompensa`, `aceite_termo_contribuicao` (só INSERT).
+* 🗑️➡️✅ **CORRIGIDO (27-07-2026):** nenhuma das quatro tem policy de `DELETE` em `04` (mesma limpeza geral do `A7`, ver `[06-D-8]`). `contribuicao_recompensa`/`aceite_termo_contribuicao` também perderam `UPDATE` — os comentários do `04` já diziam que os dois são registro de auditoria/aquisição, não deveriam ser editáveis depois de criados (mesmo raciocínio do `27`).
 
 ---
 
 ### [06-I] SCORE
 
-* **Tabelas:** `score_config`, `score_rotulo` — INSERT/UPDATE/DELETE completos.
+* **Tabelas:** `score_config`, `score_rotulo` — INSERT/UPDATE, sem `DELETE`. 🗑️➡️✅ **CORRIGIDO (27-07-2026):** nenhuma das duas tem policy de `DELETE` em `04` — mesma limpeza geral do `A7`, ver `[06-D-8]`.
 * **`score_pesquisador` não recebe GRANT de tabela direto:** toda escrita passa pela função `recalcular_score_pesquisador()` (`SECURITY DEFINER`, ver `05_regras_negocio.sql`), que grava com os privilégios de quem criou a função, não com os de `app_nestjs`.
 
 **Detalhamento por grant:**
