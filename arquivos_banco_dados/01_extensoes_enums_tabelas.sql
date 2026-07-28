@@ -423,9 +423,21 @@ CREATE TABLE campanha (
     CONSTRAINT "FK_CAMPANHA_USUARIO" FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario),
     CONSTRAINT "FK_CAMPANHA_ADMIN" FOREIGN KEY (id_admin) REFERENCES usuario(id_usuario),
     CONSTRAINT "FK_CAMPANHA_AREA_CONHECIMENTO" FOREIGN KEY (id_area_conhecimento) REFERENCES area_conhecimento(id_area_conhecimento),
+    -- CORRIGIDO (28-07-2026, item 16 da Lista C): esta constraint tinha 15-90 dias
+    -- hardcoded — o mesmo número que o RF-045 já está discutindo mudar pra 60
+    -- (janela de estorno do PIX do Banco Central). Critério aplicado: se o número
+    -- está escrito num RF, é regra de negócio (mora em configuracoes, validada por
+    -- trigger, ver trg_campanha_valida_prazo_negocio em 05_regras_negocio.sql);
+    -- se existe só pra impedir dado absurdo, é limite técnico (mora aqui). A
+    -- constraint virou um limite absoluto largo — só barra erro grosseiro (data_fim
+    -- antes de data_inicio, ou uma campanha de anos) — a regra real de 15-90 dias
+    -- (por enquanto) é aplicada pela trigger, lendo configuracoes.
+    -- prazo_minimo_campanha_dias/prazo_maximo_campanha_dias. Isso não decide 90 vs
+    -- 60 dias — só transforma essa decisão futura num UPDATE de uma linha, em vez
+    -- de uma migração de constraint num banco já com dados.
     CONSTRAINT "CK_CAMPANHA_PRAZO" CHECK (
         data_fim IS NULL OR data_inicio IS NULL OR
-        (data_fim - data_inicio) BETWEEN INTERVAL '15 days' AND INTERVAL '90 days'
+        (data_fim - data_inicio) BETWEEN INTERVAL '1 day' AND INTERVAL '365 days'
     )
 );
 
@@ -474,6 +486,11 @@ CREATE TABLE solicitacao_encerramento (
     id_campanha                 INT                 NOT NULL,
     id_admin                    INT,
     justificativa_pesquisador   TEXT,
+    -- ADICIONADO (28-07-2026, item 19(d) da Lista C — RF-041): não existia campo
+    -- pra registrar o motivo do Administrador ao REJEITAR um pedido de
+    -- encerramento antecipado — o RF-041 torna essa justificativa obrigatória, e
+    -- negar sem registrar o motivo é indefensável se o pesquisador contestar.
+    justificativa_admin         TEXT,
     status                      status_encerramento NOT NULL DEFAULT 'pendente',
     solicitado_em               TIMESTAMP           DEFAULT NOW(),
     avaliado_em                 TIMESTAMP,
@@ -519,6 +536,11 @@ CREATE TABLE denuncia (
     id_campanha_alvo    INT,
     id_pesquisador_alvo INT,
     id_motivo           INT  NOT NULL,
+    -- ADICIONADO (28-07-2026, item 19(b) da Lista C — RF-019/RF-072): campo opcional
+    -- de descrição adicional pro denunciante detalhar o caso além do motivo
+    -- pré-definido do catálogo. Chamado "relato", não "descricao", de propósito —
+    -- pra não colidir com motivo_denuncia.descricao (o rótulo do motivo escolhido).
+    relato              TEXT,
     status              status_denuncia NOT NULL DEFAULT 'pendente',
     criado_em           TIMESTAMP    DEFAULT NOW(),
 

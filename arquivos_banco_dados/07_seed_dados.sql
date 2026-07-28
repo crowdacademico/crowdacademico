@@ -103,10 +103,17 @@ SELECT 'regularidade_atualizacoes',   'Regularidade de atualizações de progres
 INSERT INTO score_config (nome, descricao, peso, id_pai)
 SELECT 'tempestividade_atualizacoes', 'Qualidade e tempestividade das atualizações',   12, id_score_config FROM score_config WHERE nome = 'atualizacao_campanha';
 
+-- CORRIGIDO (28-07-2026, item 13-quinto-ponto da Lista C — consolidação de
+-- constantes): peso mudou de 10/15 pra 1/3. Antes, esses pesos não eram lidos
+-- por nenhuma função (calcular_score_reputacao usava score_custo_denuncia/
+-- score_custo_denuncia_procedente, duas chaves soltas em configuracoes, com
+-- valores 1 e 3) — o Painel Admin editando estes dois "pesos" aqui não movia
+-- nada de verdade. Agora calcular_score_reputacao lê 1 e 3 daqui — os mesmos
+-- valores de sempre, só que de uma fonte que o painel realmente controla.
 INSERT INTO score_config (nome, descricao, peso, id_pai)
-SELECT 'volume_denuncias',    'Volume baixo de denúncias',                         10, id_score_config FROM score_config WHERE nome = 'reputacao_comunidade';
+SELECT 'volume_denuncias',    'Custo por denúncia confirmada (pontos descontados por denúncia)', 1, id_score_config FROM score_config WHERE nome = 'reputacao_comunidade';
 INSERT INTO score_config (nome, descricao, peso, id_pai)
-SELECT 'gravidade_denuncias', 'Gravidade e procedência das denúncias confirmadas', 15, id_score_config FROM score_config WHERE nome = 'reputacao_comunidade';
+SELECT 'gravidade_denuncias', 'Custo extra por denúncia confirmada procedente',                  3, id_score_config FROM score_config WHERE nome = 'reputacao_comunidade';
 
 INSERT INTO score_rotulo (rotulo, descricao, score_minimo, score_maximo) VALUES
 ('Atenção',       'Pesquisador com perfil incompleto ou histórico problemático',  0,  24),
@@ -135,10 +142,11 @@ INSERT INTO permissao (nome) VALUES
 ('campanha_editar'),
 ('usuario_suspender'),
 ('usuario_visualizar_sensivel'),
--- NOTA: hoje nenhuma policy usa esta permissão pra liberar nada — cpf_criptografado
--- não está no GRANT SELECT de perfil_pesquisador (06), então nenhuma policy de RLS
--- consegue liberar acesso a uma coluna que a aplicação nem consegue ler. Ou o CPF
--- entra no GRANT sob controle desta permissão, ou ela pode ser removida.
+-- ATUALIZADO (28-07-2026): cpf_criptografado entrou no GRANT SELECT de
+-- perfil_pesquisador (06) — a coluna já pode ser lida pelo app_nestjs. Esta
+-- permissão passa a ser o gate real de quem, na camada NestJS, pode de fato
+-- pedir esse dado (não existe policy de RLS pra proteção de coluna — RLS só
+-- filtra linha; o controle de "quem lê o CPF" é responsabilidade da aplicação).
 ('perfil_pesquisador_visualizar_sensivel'),
 ('contribuicao_visualizar_sensivel'),
 ('relatorio_visualizar'),
@@ -173,7 +181,11 @@ INSERT INTO permissao (nome) VALUES
 -- emprestando 'usuario_visualizar_sensivel', que não tem nada a ver com fila de
 -- notificação e quebraria o envio de e-mail se alguém restringisse essa permissão
 -- por motivo de privacidade no futuro sem perceber a dependência.
-('notificacao_processar')
+('notificacao_processar'),
+-- ADICIONADO (28-07-2026, item 12 da Lista C — score deixa de ser público):
+-- pol_score_select (04) passou a exigir esta permissão pra ver score de
+-- terceiros; o próprio pesquisador continua vendo o próprio score sem ela.
+('score_visualizar')
 ON CONFLICT (nome) DO NOTHING;
 
 
@@ -211,17 +223,24 @@ WHERE (p.nome, perm.nome) IN (
     ('admin', 'link_academico_gerenciar'),
     ('admin', 'arquivo_gerenciar'),
     ('admin', 'notificacao_processar'),
-    -- moderador: cuida da moderação de conteúdo e denúncias.
+    ('admin', 'score_visualizar'),
+    -- moderador: cuida da moderação de conteúdo e denúncias. score_visualizar
+    -- ajuda a priorizar fila de moderação (sinal de apoio, não bloqueio).
     ('moderador', 'denuncia_responder'),
     ('moderador', 'comentario_moderar'),
     ('moderador', 'atualizacao_moderar'),
-    -- revisor: cuida só do critério/configuração de score.
+    ('moderador', 'score_visualizar'),
+    -- revisor: cuida só do critério/configuração de score — precisa ver o
+    -- score de todo mundo pra calibrar peso/regra com dado real.
     ('revisor', 'score_editar'),
+    ('revisor', 'score_visualizar'),
     -- curador: cuida dos catálogos que dão suporte ao conteúdo da plataforma.
+    -- score_visualizar apoia a curadoria manual de aprovação de campanha.
     ('curador', 'tipolink_gerenciar'),
     ('curador', 'area_conhecimento_gerenciar'),
     ('curador', 'motivo_denuncia_gerenciar'),
     ('curador', 'termos_uso_gerenciar'),
+    ('curador', 'score_visualizar'),
     -- suporte: atendimento de conta, sem acesso a dados sensíveis ou financeiros.
     ('suporte', 'sessao_revogar'),
     ('suporte', 'recuperacao_senha_revogar'),
@@ -539,9 +558,19 @@ FROM usuario;
 
 
 -- [07-C-5] configuracoes: por que este bloco vem depois de usuario (ver DOCUMENTACAO_BD.md)
+-- ADICIONADO (28-07-2026, item 16 da Lista C): prazo_minimo_campanha_dias e os
+-- 3 limites de negócio (campanhas simultâneas, endossos, denúncias/24h) que
+-- antes estavam fixos no corpo das triggers (05) — ver comentário no header
+-- deste bloco e nas funções correspondentes. Valores idênticos aos que já
+-- estavam hardcoded (15, 2, 4, 5) — nada muda no comportamento hoje, só o
+-- lugar de onde o número é lido.
 INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo) VALUES
 (NULL, 'taxa_plataforma_padrao',     '5.00',  'decimal',  'Taxa padrão cobrada pela plataforma (%)',              TRUE),
+(NULL, 'prazo_minimo_campanha_dias', '15',    'inteiro',  'Duração mínima permitida de uma campanha em dias',     TRUE),
 (NULL, 'prazo_maximo_campanha_dias', '90',    'inteiro',  'Duração máxima permitida de uma campanha em dias',     TRUE),
+(NULL, 'limite_campanhas_simultaneas','2',    'inteiro',  'Nº máximo de campanhas simultâneas (aguardando_aprovacao/ativo) por pesquisador (RF-029)', TRUE),
+(NULL, 'limite_endossos_campanha',   '4',     'inteiro',  'Nº máximo de endossos ativos simultâneos por campanha (RF-063)', TRUE),
+(NULL, 'limite_denuncias_24h',       '5',     'inteiro',  'Nº máximo de denúncias por usuário a cada 24 horas (RF-076)', TRUE),
 -- TODO (pendente decisão da equipe): regra de score mínimo para campanha ainda não confirmada; manter sem trigger por enquanto.
 (NULL, 'score_minimo_campanha',      '25.00', 'decimal',  'Score mínimo para criar campanha',                     TRUE),
 (NULL, 'permitir_campanha_anonima',  'false', 'booleano', 'Permite contribuições anônimas nas campanhas',         TRUE),
@@ -550,9 +579,13 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo) VAL
 (8,   'limite_denuncias_suspensao',  '5',     'inteiro',  'Nº de denúncias procedentes que suspendem o perfil',   TRUE);
 
 -- [07-I-2] configuracoes: constantes do motor de score (ver DOCUMENTACAO_BD.md)
+-- CORRIGIDO (28-07-2026, item 13-quinto-ponto da Lista C): score_custo_denuncia/
+-- score_custo_denuncia_procedente saíram daqui — migraram pra score_config
+-- (nome='volume_denuncias'/'gravidade_denuncias', ver [07-I-1]), que é a tabela
+-- que o Painel Admin realmente edita e que já tem trigger de recálculo. Manter
+-- as 2 chaves aqui, sem nenhuma função lendo, recriaria o mesmo problema que
+-- estamos corrigindo (constante seedada que não move nada).
 INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo) VALUES
-(NULL, 'score_custo_denuncia',              '1',  'decimal', 'Pontos descontados por denúncia recebida (qualquer status), na dimensão Reputação', TRUE),
-(NULL, 'score_custo_denuncia_procedente',   '3',  'decimal', 'Pontos extras descontados por denúncia confirmada (status=resolvida), na dimensão Reputação', TRUE),
 (NULL, 'score_penalidade_abandono',         '3',  'decimal', 'Pontos descontados por campanha não atingida e nunca encerrada formalmente (sem solicitação de encerramento)', TRUE),
 (NULL, 'score_penalidade_sem_justificativa','2',  'decimal', 'Pontos descontados por campanha não atingida cuja solicitação de encerramento não tem justificativa', TRUE),
 (NULL, 'score_frequencia_esperada_mensal',  '1',  'decimal', 'Nº de atualizações de campanha esperadas por mês de duração, usado na dimensão Atualização da Campanha', TRUE)

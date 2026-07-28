@@ -14,8 +14,8 @@
 --  3. Regras de moderação de comunidade, engajamento e automação RBAC.
 --
 --  Inventário Mapeado:
---  - 31 Funções (Helpers, Cálculo, Orquestração e Triggers)
---  - 29 Triggers (Todas idempotentes com DROP TRIGGER IF EXISTS)
+--  - 33 Funções (Helpers, Cálculo, Orquestração e Triggers)
+--  - 32 Triggers (Todas idempotentes com DROP TRIGGER IF EXISTS)
 -- ----------------------------------------------------------------------------
 --  SUMÁRIO DOS BLOCOS DE CÓDIGO
 --  (letras seguem o índice global de DOCUMENTACAO_BD.md — I = SCORE,
@@ -206,8 +206,13 @@ BEGIN
 
     SELECT count(*) INTO v_total_submetidas FROM campanha WHERE id_usuario = p_id_usuario;
     SELECT count(*) INTO v_aprovadas FROM campanha WHERE id_usuario = p_id_usuario AND aprovado_em IS NOT NULL;
+    -- CORRIGIDO (28-07-2026, item 13(b) da Lista C — erro aritmético, não decisão de
+    -- negócio): 'rejeitado' saiu do denominador da taxa de conclusão. Contar a mesma
+    -- rejeição duas vezes (uma vez derrubando a taxa de aprovação, outra vez entrando
+    -- no denominador da taxa de conclusão sem nunca poder entrar no numerador) penaliza
+    -- o mesmo fato duas vezes.
     SELECT count(*) INTO v_total_encerradas FROM campanha WHERE id_usuario = p_id_usuario
-        AND status IN ('sucesso','nao_atingido','rejeitado','encerrado');
+        AND status IN ('sucesso','nao_atingido','encerrado');
     SELECT count(*) INTO v_concluidas_sucesso FROM campanha WHERE id_usuario = p_id_usuario
         AND status IN ('sucesso','encerrado');
 
@@ -333,6 +338,28 @@ $$;
 -- Bloco:      [05-I-2]
 -- Regra:      Dimensão 4 — Reputação da Comunidade. reputacaoScore =
 --             peso_raiz - totalDenuncias*custo - totalProcedentes*custo_procedente.
+-- CORRIGIDO (28-07-2026, item 13(a) da Lista C — conformidade com RF-077, não
+-- decisão de negócio): antes, v_total_denuncias contava QUALQUER denúncia
+-- contra o pesquisador (inclusive 'pendente', 'em_analise' e 'improcedente'),
+-- penalizando mesmo uma acusação ainda sob análise ou já descartada. O RF-077
+-- define 'improcedente' como "denúncia descartada após análise" — contar isso
+-- como se fosse culpa contradiz o próprio requisito. Agora só denúncias com
+-- status 'resolvida' (= procedente, confirmada pela moderação) penalizam,
+-- tanto no custo base quanto no custo extra de procedência. Testado: não muda
+-- a faixa de nenhum dos 4 pesquisadores desenhados pro teste determinístico
+-- (Eduardo, cujas 2 denúncias são 'pendente', sai de 23 pra 25 na dimensão —
+-- 46→48 no total, continua "Em Construção"; Vinícius, cujas 4 denúncias já
+-- eram todas 'resolvida', não muda — 19, continua "Atenção").
+-- CORRIGIDO junto (item 13, quinto ponto — consolidação de constantes): os
+-- pesos volume_denuncias/gravidade_denuncias já existiam em score_config
+-- (a tabela que o Painel Admin edita, com trigger de recálculo automático),
+-- mas nenhuma função os lia — o cálculo usava score_custo_denuncia/
+-- score_custo_denuncia_procedente, duas chaves soltas em configuracoes, sem
+-- nenhuma ligação com o score_config. Isso fazia o painel mostrar 2 alavancas
+-- (volume_denuncias, gravidade_denuncias) que não moviam nada. Migrado: os
+-- valores (1 e 3) agora vivem em score_config (nome='volume_denuncias'/
+-- 'gravidade_denuncias', ver [07-I-1]), e as 2 chaves em configuracoes saíram
+-- do seed (ver [07-I-2]) — score_config passa a ser a única fonte de verdade.
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.calcular_score_reputacao(p_id_usuario INT)
 RETURNS INTEGER
@@ -343,19 +370,22 @@ SET search_path = public
 AS $$
 DECLARE
     v_peso_raiz         DECIMAL;
+    v_id_pai            INT;
     v_total_denuncias   INT := 0;
     v_total_procedentes INT := 0;
     v_custo             DECIMAL;
     v_custo_procedente  DECIMAL;
     v_total             DECIMAL;
 BEGIN
-    SELECT peso INTO v_peso_raiz FROM score_config WHERE nome = 'reputacao_comunidade' AND ativo = TRUE;
+    SELECT id_score_config, peso INTO v_id_pai, v_peso_raiz FROM score_config WHERE nome = 'reputacao_comunidade' AND ativo = TRUE;
     IF v_peso_raiz IS NULL THEN RETURN 0; END IF;
 
-    v_custo            := public.config_numero('score_custo_denuncia', 1);
-    v_custo_procedente := public.config_numero('score_custo_denuncia_procedente', 3);
+    SELECT COALESCE(peso, 1) INTO v_custo            FROM score_config WHERE id_pai = v_id_pai AND nome = 'volume_denuncias'    AND ativo = TRUE;
+    SELECT COALESCE(peso, 3) INTO v_custo_procedente  FROM score_config WHERE id_pai = v_id_pai AND nome = 'gravidade_denuncias' AND ativo = TRUE;
 
-    SELECT count(*) INTO v_total_denuncias   FROM denuncia WHERE id_pesquisador_alvo = p_id_usuario;
+    -- só denúncias 'resolvida' (= procedente) penalizam — 'pendente',
+    -- 'em_analise' e 'improcedente' não contam (RF-077).
+    SELECT count(*) INTO v_total_denuncias   FROM denuncia WHERE id_pesquisador_alvo = p_id_usuario AND status = 'resolvida';
     SELECT count(*) INTO v_total_procedentes FROM denuncia WHERE id_pesquisador_alvo = p_id_usuario AND status = 'resolvida';
 
     v_total := v_peso_raiz - (v_total_denuncias * v_custo) - (v_total_procedentes * v_custo_procedente);
@@ -1160,6 +1190,109 @@ BEFORE UPDATE ON campanha
 FOR EACH ROW
 EXECUTE FUNCTION fn_congela_regras_campanha();
 
+-- ----------------------------------------------------------------------------
+-- Função:     fn_carimba_taxa_plataforma_aprovacao
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-K-2]
+-- Regra:      ADICIONADO (28-07-2026, item 20 da Lista C — o que o RF-036 pede
+--             literalmente, não decisão de negócio sobre "se"). taxa_plataforma
+--             existia mas nada nunca a preenchia — o requisito que protege o
+--             pesquisador de ter a taxa alterada depois da aprovação não estava
+--             implementado (só existia a trigger de congelamento, protegendo um
+--             valor que nunca chegava a ser gravado). No momento em que
+--             aprovado_em deixa de ser NULL, copia configuracoes.
+--             taxa_plataforma_padrao pra campanha.taxa_plataforma — só se ainda
+--             não tiver um valor explícito (não sobrescreve uma taxa customizada
+--             que porventura já tenha sido definida). Daí em diante, a trigger de
+--             congelamento (acima) já protege esse valor contra alteração.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION fn_carimba_taxa_plataforma_aprovacao()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.aprovado_em IS NOT NULL AND OLD.aprovado_em IS NULL AND NEW.taxa_plataforma IS NULL THEN
+        NEW.taxa_plataforma := public.config_numero('taxa_plataforma_padrao', 5.00);
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_campanha_carimba_taxa
+-- Tabela:    campanha
+-- Momento:   BEFORE UPDATE (só quando aprovado_em muda)
+-- Função:    fn_carimba_taxa_plataforma_aprovacao()
+-- Bloco:     [05-K-2]
+-- Regra:     Grava taxa_plataforma no momento exato da aprovação, se ainda
+--            não tiver valor.
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_campanha_carimba_taxa ON campanha;
+CREATE TRIGGER trg_campanha_carimba_taxa
+BEFORE UPDATE ON campanha
+FOR EACH ROW
+WHEN (NEW.aprovado_em IS DISTINCT FROM OLD.aprovado_em)
+EXECUTE FUNCTION fn_carimba_taxa_plataforma_aprovacao();
+
+-- ----------------------------------------------------------------------------
+-- Função:     fn_valida_prazo_campanha_negocio
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-K-2]
+-- Regra:      ADICIONADO (28-07-2026, item 16 da Lista C): a regra de negócio
+--             real de duração de campanha (hoje 15-90 dias) sai da constraint
+--             (que virou só um limite técnico largo, ver CK_CAMPANHA_PRAZO em
+--             01) e passa a ler configuracoes.prazo_minimo_campanha_dias/
+--             prazo_maximo_campanha_dias — mudar a política de prazo (RF-045
+--             está discutindo 90 vs 60) vira um UPDATE numa linha, não uma
+--             migração de estrutura.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION fn_valida_prazo_campanha_negocio()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_prazo_minimo INT;
+    v_prazo_maximo INT;
+    v_duracao_dias DECIMAL;
+BEGIN
+    IF NEW.data_fim IS NULL OR NEW.data_inicio IS NULL THEN
+        RETURN NEW;
+    END IF;
+
+    v_prazo_minimo := public.config_numero('prazo_minimo_campanha_dias', 15);
+    v_prazo_maximo := public.config_numero('prazo_maximo_campanha_dias', 90);
+    -- EXTRACT(EPOCH FROM intervalo) / 86400 dá o total de dias corridos, sem o
+    -- risco de EXTRACT(DAY FROM ...) ler só o componente "dias" de um intervalo
+    -- que também tenha meses (mesmo padrão já usado em calcular_score_atualizacao).
+    v_duracao_dias := EXTRACT(EPOCH FROM (NEW.data_fim - NEW.data_inicio)) / 86400;
+
+    IF v_duracao_dias < v_prazo_minimo OR v_duracao_dias > v_prazo_maximo THEN
+        RAISE EXCEPTION 'A duração da campanha precisa estar entre % e % dias (configuracoes).', v_prazo_minimo, v_prazo_maximo;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_campanha_valida_prazo_negocio
+-- Tabela:    campanha
+-- Momento:   BEFORE INSERT OR UPDATE (só quando data_inicio/data_fim mudam)
+-- Função:    fn_valida_prazo_campanha_negocio()
+-- Bloco:     [05-K-2]
+-- Regra:     Aplica o limite de prazo de negócio (configuracoes), separado
+--            do limite técnico (constraint em 01).
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_campanha_valida_prazo_negocio ON campanha;
+CREATE TRIGGER trg_campanha_valida_prazo_negocio
+BEFORE INSERT ON campanha
+FOR EACH ROW
+EXECUTE FUNCTION fn_valida_prazo_campanha_negocio();
+
+DROP TRIGGER IF EXISTS trg_campanha_valida_prazo_negocio_update ON campanha;
+CREATE TRIGGER trg_campanha_valida_prazo_negocio_update
+BEFORE UPDATE ON campanha
+FOR EACH ROW
+WHEN (NEW.data_inicio IS DISTINCT FROM OLD.data_inicio OR NEW.data_fim IS DISTINCT FROM OLD.data_fim)
+EXECUTE FUNCTION fn_valida_prazo_campanha_negocio();
+
 
 -- ----------------------------------------------------------------------------
 -- Função:     fn_valida_transicao_solicitacao
@@ -1318,8 +1451,13 @@ EXECUTE FUNCTION fn_sincroniza_arrecadado_campanha();
 -- Função:     validar_limite_campanhas_pesquisador
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-2]
--- Regra:      Um pesquisador não pode ter mais de 2 campanhas simultâneas
---             nos status 'aguardando_aprovacao' ou 'ativo'.
+-- Regra:      Um pesquisador não pode ter mais campanhas simultâneas (nos
+--             status 'aguardando_aprovacao' ou 'ativo') do que
+--             configuracoes.limite_campanhas_simultaneas (RF-029).
+-- CORRIGIDO (28-07-2026, item 16 da Lista C): limite de 2 estava hardcoded
+-- no corpo da função — mudar exigia editar e reaplicar o arquivo inteiro.
+-- Passou a ler configuracoes (mesmo valor de hoje, 2, como DEFAULT de
+-- segurança caso a chave não exista).
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION validar_limite_campanhas_pesquisador()
 RETURNS trigger
@@ -1327,16 +1465,19 @@ LANGUAGE plpgsql
 AS $$
 DECLARE
     v_count integer;
+    v_limite integer;
 BEGIN
     IF NEW.status IN ('aguardando_aprovacao', 'ativo') THEN
+        v_limite := public.config_numero('limite_campanhas_simultaneas', 2);
+
         SELECT COUNT(*) INTO v_count
         FROM campanha
         WHERE id_usuario = NEW.id_usuario
           AND status IN ('aguardando_aprovacao', 'ativo')
           AND id_campanha <> COALESCE(NEW.id_campanha, -1);
 
-        IF v_count >= 2 THEN
-            RAISE EXCEPTION 'Pesquisador já possui o limite máximo de 2 campanhas ativas ou aguardando aprovação';
+        IF v_count >= v_limite THEN
+            RAISE EXCEPTION 'Pesquisador já possui o limite máximo de % campanhas ativas ou aguardando aprovação', v_limite;
         END IF;
     END IF;
 
@@ -1453,8 +1594,12 @@ EXECUTE FUNCTION fn_valida_comentario_campanha_ativa();
 -- Função:     validar_comentario_endosso
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-3]
--- Regra:      Uma campanha não pode ter mais de 4 endossos ativos
---             simultaneamente (ordem_endosso preenchida).
+-- Regra:      Uma campanha não pode ter mais endossos ativos simultâneos
+--             (ordem_endosso preenchida) do que
+--             configuracoes.limite_endossos_campanha (RF-063).
+-- CORRIGIDO (28-07-2026, item 16 da Lista C): limite de 4 estava hardcoded
+-- no corpo da função. Passou a ler configuracoes (mesmo valor de hoje, 4,
+-- como DEFAULT de segurança caso a chave não exista).
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION validar_comentario_endosso()
 RETURNS trigger
@@ -1462,12 +1607,15 @@ LANGUAGE plpgsql
 AS $$
 DECLARE
     v_count integer;
+    v_limite integer;
 BEGIN
     IF NEW.ordem_endosso IS NOT NULL THEN
+        v_limite := public.config_numero('limite_endossos_campanha', 4);
+
         -- CORRIGIDO: comentario ganhou soft delete (coluna "ativo") para
         -- remoção por moderação. Sem o filtro abaixo, um comentário
         -- endossado que foi removido por moderação continuava ocupando
-        -- para sempre uma das 4 vagas de endosso da campanha.
+        -- para sempre uma das vagas de endosso da campanha.
         SELECT COUNT(*) INTO v_count
         FROM comentario
         WHERE id_campanha = NEW.id_campanha
@@ -1475,8 +1623,8 @@ BEGIN
           AND ativo = TRUE
           AND id_comentario <> COALESCE(NEW.id_comentario, -1);
 
-        IF v_count >= 4 THEN
-            RAISE EXCEPTION 'Campanha já atingiu o limite máximo de 4 endossos ativos';
+        IF v_count >= v_limite THEN
+            RAISE EXCEPTION 'Campanha já atingiu o limite máximo de % endossos ativos', v_limite;
         END IF;
     END IF;
 
@@ -1583,8 +1731,12 @@ EXECUTE FUNCTION fn_bloqueia_reversao_moderacao_comentario();
 -- Função:     validar_denuncia_frequencia
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-3]
--- Regra:      Um usuário não pode registrar mais de 5 denúncias (campanha +
---             perfil somadas) em 24 horas.
+-- Regra:      Um usuário não pode registrar mais denúncias (campanha + perfil
+--             somadas) em 24 horas do que
+--             configuracoes.limite_denuncias_24h (RF-076).
+-- CORRIGIDO (28-07-2026, item 16 da Lista C): limite de 5 estava hardcoded
+-- no corpo da função. Passou a ler configuracoes (mesmo valor de hoje, 5,
+-- como DEFAULT de segurança caso a chave não exista).
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION validar_denuncia_frequencia()
 RETURNS trigger
@@ -1592,14 +1744,17 @@ LANGUAGE plpgsql
 AS $$
 DECLARE
     v_count integer;
+    v_limite integer;
 BEGIN
+    v_limite := public.config_numero('limite_denuncias_24h', 5);
+
     SELECT COUNT(*) INTO v_count
     FROM denuncia
     WHERE id_usuario = NEW.id_usuario
       AND criado_em >= NOW() - INTERVAL '24 hours';
 
-    IF v_count >= 5 THEN
-        RAISE EXCEPTION 'Usuário já atingiu o limite de 5 denúncias nas últimas 24 horas';
+    IF v_count >= v_limite THEN
+        RAISE EXCEPTION 'Usuário já atingiu o limite de % denúncias nas últimas 24 horas', v_limite;
     END IF;
 
     RETURN NEW;

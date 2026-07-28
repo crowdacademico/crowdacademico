@@ -714,8 +714,21 @@ ALTER TABLE score_config         FORCE ROW LEVEL SECURITY;
 ALTER TABLE score_rotulo         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE score_rotulo         FORCE ROW LEVEL SECURITY;
 
+-- CORRIGIDO (28-07-2026, item 12 da Lista C — score deixa de ser público): era
+-- USING (TRUE), sem sequer TO app_nestjs — qualquer um via qualquer role via
+-- selecionar essa tabela, e um juízo automatizado sobre pesquisador identificado
+-- ficava exposto publicamente, sem previsão de contestação (risco de LGPD, ver
+-- PENDENCIAS e correcoes.md). Passa a valer: o próprio pesquisador continua
+-- vendo a própria quebra por dimensão (é acionável, não só o rótulo — esconder
+-- dele um juízo automatizado sobre ele mesmo seria pior, na linha do Art. 9 da
+-- LGPD); quem tem 'score_visualizar' (admin/curador/revisor/moderador, ver
+-- [07-B-3]) vê de todo mundo, pra apoiar curadoria manual; ninguém mais vê
+-- nada. Isso também fecha o item 31 (usuário deletado): sem policy pública,
+-- o score de um perfil deletado já não aparece pra mais ninguém.
 DROP POLICY IF EXISTS pol_score_select ON score_pesquisador;
-CREATE POLICY pol_score_select ON score_pesquisador FOR SELECT USING (TRUE);
+CREATE POLICY pol_score_select ON score_pesquisador FOR SELECT TO app_nestjs USING (
+    id_usuario = public.id_usuario_atual() OR public.tem_permissao('score_visualizar')
+);
 
 DROP POLICY IF EXISTS pol_score_config_select ON public.score_config;
 CREATE POLICY pol_score_config_select ON public.score_config FOR SELECT TO app_nestjs USING (true);

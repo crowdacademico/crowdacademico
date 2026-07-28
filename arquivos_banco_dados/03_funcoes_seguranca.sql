@@ -10,8 +10,9 @@
 --  Descrição:
 --  Funções puras que fazem a ponte de contexto de segurança entre o
 --  NestJS e o mecanismo de RLS do PostgreSQL: identificação do usuário
---  atual na sessão, checagem granular de permissão via RBAC, e checagem
---  de visibilidade de conta (usuário "deletado" via soft delete).
+--  atual na sessão, checagem granular de permissão via RBAC, checagem
+--  de visibilidade de conta (usuário "deletado" via soft delete), e
+--  contagem agregada de seguidores sem expor identidade de quem segue.
 -- ============================================================
 -- [03-J] CONTEXTO DE SESSÃO E IDENTIFICAÇÃO DE USUÁRIO
 -- ============================================================
@@ -92,4 +93,43 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
     SELECT NOT COALESCE((SELECT deletado FROM usuario WHERE id_usuario = p_id), TRUE);
+$$;
+
+-- ============================================================
+-- [03-E] CONTAGEM AGREGADA DE SEGUIDORES (item 18 da Lista C)
+-- ============================================================
+-- Função:     contar_seguidores_pesquisador / contar_seguidores_campanha
+-- Assinatura: (p_id INT) -> INT
+-- Bloco:      [03-E]
+-- Regra:      ADICIONADO (28-07-2026) — pol_seg_pesq_select/pol_seg_campanha_select
+--             (04) só liberam SELECT das próprias linhas de "quem eu sigo"; ninguém
+--             consegue contar quantos seguidores um pesquisador/campanha tem, nem o
+--             próprio dono. Não dá pra resolver isso com uma policy: RLS filtra
+--             LINHA, então `SELECT count(*)` sempre soma só o que a sessão já
+--             enxerga — liberar a policy pra "contar" também exporia as linhas
+--             (e as identidades de quem segue) junto. O caminho é uma função
+--             SECURITY DEFINER que devolve só o número (mesmo padrão de
+--             usuario_visivel/tem_permissao) — contagem pública, identidade
+--             privada, igual Catarse/Experiment fazem com apoiador.
+--             Efeito colateral: idx_seguir_pesquisador_alvo (02) deixa de ser
+--             índice morto — passa a ser exatamente o que esta função usa.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.contar_seguidores_pesquisador(p_id INT)
+RETURNS INT
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT count(*)::INT FROM seguir_pesquisador WHERE id_pesquisador = p_id;
+$$;
+
+CREATE OR REPLACE FUNCTION public.contar_seguidores_campanha(p_id INT)
+RETURNS INT
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT count(*)::INT FROM seguir_campanha WHERE id_campanha = p_id;
 $$;

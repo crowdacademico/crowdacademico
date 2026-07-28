@@ -104,9 +104,20 @@ GRANT SELECT (
 -- perfil_pesquisador_visualizar_sensivel (seedada, hoje sem nenhum efeito porque
 -- nada a usava) gateando a leitura no NestJS — não a coluna ficar inacessível
 -- pro próprio backend.
+-- CORRIGIDO (28-07-2026, item 12 da Lista C — score deixa de ser público):
+-- score_atual/score_atualizado_em saíram da lista abaixo. A policy de RLS de
+-- score_pesquisador (04) foi corrigida pra parar de expor score publicamente,
+-- mas essas 2 colunas aqui em perfil_pesquisador eram uma porta dos fundos —
+-- um GRANT de coluna comum (sem RLS de coluna, que o Postgres não tem)
+-- deixava o app_nestjs ler o cache do score de qualquer perfil por essa
+-- tabela, mesmo com a policy de score_pesquisador já restrita. O valor
+-- continua acessível de onde já era acessível de propósito: o próprio
+-- pesquisador e quem tem 'score_visualizar', via score_pesquisador.score_total
+-- (a policy corrigida, ver [04-I]) — a leitura via perfil_pesquisador não
+-- tinha nenhuma dessas duas checagens, então precisava sair.
 GRANT SELECT (
     id_usuario, cpf_criptografado, tipo_vinculo, vinculo_institucional,
-    titulo_academico, status_pesquisador, ativado_em, score_atual, score_atualizado_em
+    titulo_academico, status_pesquisador, ativado_em
 ) ON public.perfil_pesquisador TO app_nestjs;
 
 -- CORRIGIDO: usuario, perfil_pesquisador, termos_de_uso e usuario_termo tinham DELETE
@@ -192,6 +203,16 @@ GRANT INSERT, UPDATE ON score_config, score_rotulo TO app_nestjs;
 -- [06-I-1] Funções do motor de score: por que precisam de GRANT EXECUTE (ver DOCUMENTACAO_BD.md)
 GRANT EXECUTE ON FUNCTION public.recalcular_score_pesquisador(INT) TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.recalcular_todos_os_scores()     TO app_nestjs;
+
+-- ADICIONADO (28-07-2026, item 18 da Lista C): contagem agregada de seguidores,
+-- chamada diretamente pelo NestJS pra exibir "N seguidores" sem expor quem segue
+-- (ver [03-E]). Tecnicamente redundante com o padrão default do Postgres (EXECUTE
+-- em função nova já é PUBLIC por padrão, é por isso que usuario_visivel/
+-- tem_permissao não aparecem aqui) — mantido explícito pelo mesmo motivo do
+-- GRANT acima: são funções chamadas diretamente como RPC pela aplicação, não só
+-- usadas dentro de policy.
+GRANT EXECUTE ON FUNCTION public.contar_seguidores_pesquisador(INT) TO app_nestjs;
+GRANT EXECUTE ON FUNCTION public.contar_seguidores_campanha(INT)    TO app_nestjs;
 
 -- NOTA: o GRANT EXECUTE de atribuir_papel_padrao() fica junto da
 -- própria função em 08_trigger_signup_usuario.sql, não aqui — esse
