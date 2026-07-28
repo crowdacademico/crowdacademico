@@ -281,7 +281,16 @@ INSERT INTO usuario (nome, email, senha_hash, id_imagem_perfil, criado_em) VALUE
 ('Juliana Ferreira Paz',  'juliana.ferreira@ufsc.br',   '$2b$12$hashed_jul005',    5, '2024-03-05 11:20:00'),
 ('Marcos Oliveira Ramos', 'marcos.oliveira@unesp.br',   '$2b$12$hashed_mar006',    6, '2024-03-12 16:00:00'),
 ('Patrícia Rocha Silva',  'patricia.rocha@unifesp.br',  '$2b$12$hashed_pat007',    7, '2024-04-01 09:30:00'),
-('Admin Sistema',         'admin@crowdacademico.com.br','$2b$12$hashed_admin008',  NULL,'2024-01-01 00:00:00');
+('Admin Sistema',         'admin@crowdacademico.com.br','$2b$12$hashed_admin008',  NULL,'2024-01-01 00:00:00'),
+('Fernanda Souza Lima',   'fernanda.souza@gmail.com',            '$2b$12$hashed_fer009', NULL, '2024-04-10 10:00:00'), -- usuario comum (apoiador, nunca virou pesquisador)
+('Diego Martins Alves',   'diego.martins@crowdacademico.com.br', '$2b$12$hashed_die010', NULL, '2024-01-05 09:00:00'), -- moderador
+('Camila Nunes Barros',   'camila.nunes@crowdacademico.com.br',  '$2b$12$hashed_cam011', NULL, '2024-01-05 09:00:00'), -- revisor
+('Thiago Almeida Rocha',  'thiago.almeida@crowdacademico.com.br','$2b$12$hashed_thi012', NULL, '2024-01-05 09:00:00'), -- curador
+('Larissa Pinto Gomes',   'larissa.pinto@crowdacademico.com.br', '$2b$12$hashed_lar013', NULL, '2024-01-05 09:00:00'), -- suporte
+('Bruno Tavares Costa',    'bruno.tavares@ufrgs.br',    '$2b$12$hashed_bru014', NULL, '2024-05-20 09:00:00'),
+('Renata Vasconcelos Dias','renata.vasconcelos@ufpr.br','$2b$12$hashed_ren015', NULL, '2024-05-22 09:00:00'),
+('Eduardo Barbosa Nogueira','eduardo.barbosa@ufba.br',  '$2b$12$hashed_edu016', NULL, '2024-05-25 09:00:00'),
+('Vinícius Almeida Ferraz','vinicius.ferraz@ufc.br',    '$2b$12$hashed_vin017', NULL, '2024-05-28 09:00:00');
 
 
 -- [07-D-2] usuario_papel
@@ -298,7 +307,16 @@ FROM (VALUES
     (5, 'pesquisador'), -- Juliana
     (6, 'pesquisador'), -- Marcos
     (7, 'pesquisador'), -- Patrícia
-    (8, 'admin')        -- Admin
+    (8, 'admin'),       -- Admin
+    (9, 'usuario'),     -- Fernanda (apoiador comum)
+    (10, 'moderador'),  -- Diego
+    (11, 'revisor'),    -- Camila
+    (12, 'curador'),    -- Thiago
+    (13, 'suporte'),    -- Larissa
+    (14, 'pesquisador'), -- Bruno
+    (15, 'pesquisador'), -- Renata
+    (16, 'pesquisador'), -- Eduardo
+    (17, 'pesquisador')  -- Vinícius
 ) AS v(id_usuario, papel_nome)
 JOIN papel p ON p.nome = v.papel_nome
 ON CONFLICT DO NOTHING;
@@ -326,26 +344,48 @@ ON CONFLICT (chave) DO NOTHING;
 
 
 -- [07-D-3] perfil_pesquisador
--- CORRIGIDO: valores de score do seed arredondados para inteiro.
--- CORRIGIDO: coluna suspenso removida da tabela (01) — tirada do INSERT também.
-INSERT INTO perfil_pesquisador (id_usuario, cpf_criptografado, vinculo_institucional, titulo_academico, status_pesquisador, ativado_em, score_atual, score_atualizado_em) VALUES
-(1, 'enc_cpf_001', 'Universidade de São Paulo (USP)',                   'doutor',     'ativo', '2024-01-10 09:05:00', 86, '2025-05-01 00:00:00'),
-(2, 'enc_cpf_002', 'Universidade Estadual de Campinas (UNICAMP)',       'mestre',      'ativo', '2024-01-15 10:35:00', 72, '2025-05-01 00:00:00'),
-(3, 'enc_cpf_003', 'Universidade Federal de Minas Gerais (UFMG)',       'doutor',      'ativo', '2024-02-01 08:50:00', 91, '2025-05-01 00:00:00'),
-(4, 'enc_cpf_004', 'Universidade Federal do Rio de Janeiro (UFRJ)',     'especialista','ativo', '2024-02-10 14:10:00', 48, '2025-05-01 00:00:00'),
-(5, 'enc_cpf_005', 'Universidade Federal de Santa Catarina (UFSC)',     'mestre',      'ativo', '2024-03-05 11:25:00', 62, '2025-05-01 00:00:00'),
-(6, 'enc_cpf_006', 'Universidade Estadual Paulista (UNESP)',            'graduado',    'ativo', '2024-03-12 16:05:00', 32, '2025-05-01 00:00:00'),
-(7, 'enc_cpf_007', 'Universidade Federal de São Paulo (UNIFESP)',       'doutor',      'ativo', '2024-04-01 09:35:00', 77, '2025-05-01 00:00:00');
+-- ALTERADO: score_atual e score_atualizado_em removidos do INSERT de propósito.
+-- Cadastrar esses dois direto não fazia sentido: a tabela tem trg_perfil_recalcula_score
+-- (AFTER INSERT), que já dispara recalcular_score_pesquisador() sozinha assim que a linha
+-- é criada. Qualquer valor digitado aqui seria sobrescrito no mesmo instante pelo cálculo
+-- real (dimensões de perfil acadêmico, histórico, atualização e reputação — ver 05). O
+-- score de cada um agora é 100% produto dos dados reais inseridos nos blocos abaixo
+-- (link_academico, campanha, atualizacao_campanha, denuncia), não de um número fixo aqui.
+INSERT INTO perfil_pesquisador (id_usuario, cpf_criptografado, vinculo_institucional, titulo_academico, status_pesquisador, ativado_em) VALUES
+(1, 'enc_cpf_001', 'Universidade de São Paulo (USP)',                   'doutor',     'ativo', '2024-01-10 09:05:00'),
+(2, 'enc_cpf_002', 'Universidade Estadual de Campinas (UNICAMP)',       'mestre',      'ativo', '2024-01-15 10:35:00'),
+(3, 'enc_cpf_003', 'Universidade Federal de Minas Gerais (UFMG)',       'doutor',      'ativo', '2024-02-01 08:50:00'),
+(4, 'enc_cpf_004', 'Universidade Federal do Rio de Janeiro (UFRJ)',     'especialista','ativo', '2024-02-10 14:10:00'),
+(5, 'enc_cpf_005', 'Universidade Federal de Santa Catarina (UFSC)',     'mestre',      'ativo', '2024-03-05 11:25:00'),
+(6, 'enc_cpf_006', 'Universidade Estadual Paulista (UNESP)',            'graduado',    'ativo', '2024-03-12 16:05:00'),
+(7, 'enc_cpf_007', 'Universidade Federal de São Paulo (UNIFESP)',       'doutor',      'ativo', '2024-04-01 09:35:00'),
+-- ADICIONADO: 4 pesquisadores novos, desenhados de propósito pra cobrir as 4 faixas de
+-- score_rotulo (Atenção/Em Construção/Confiável/Referência) de forma DETERMINÍSTICA —
+-- ou seja, o resultado depende só da fórmula real em 05_regras_negocio.sql, não de sorte.
+-- Ver comentário completo logo depois do bloco de denuncia sobre como cada um chega
+-- na faixa esperada.
+(14, 'enc_cpf_014', 'Universidade Federal do Rio Grande do Sul (UFRGS)', 'doutor',   'ativo', '2024-05-20 09:00:00'), -- Bruno:    alvo = Referência
+(15, 'enc_cpf_015', 'Universidade Federal do Paraná (UFPR)',             'mestre',   'ativo', '2024-05-22 09:00:00'), -- Renata:   alvo = Confiável
+(16, 'enc_cpf_016', 'Universidade Federal da Bahia (UFBA)',              'mestre',   'ativo', '2024-05-25 09:00:00'), -- Eduardo:  alvo = Em Construção
+(17, 'enc_cpf_017', 'Universidade Federal do Ceará (UFC)',               'graduado', 'ativo', '2024-05-28 09:00:00'); -- Vinícius: alvo = Atenção
 
 
 -- [07-F-1] link_academico
+-- ADICIONADO: Bruno (14) recebe os 3 links que a fórmula de score realmente soma
+-- (calcular_score_perfil_academico, 05) — Lattes, ORCID e um "outro link" que bate no
+-- ILIKE '%linkedin%'. É o único dos 4 novos pesquisadores com link_academico de propósito,
+-- pra ele ser o único a fechar os 30/30 pontos possíveis nessa dimensão.
 INSERT INTO link_academico (id_usuario, id_tipolink, ordem, url) VALUES
 (1, 1, 1, 'http://lattes.cnpq.br/1234567890123456'),
 (1, 2, 2, 'https://orcid.org/0000-0001-2345-6789'),
 (2, 1, 1, 'http://lattes.cnpq.br/9876543210987654'),
 (3, 1, 1, 'http://lattes.cnpq.br/1111222233334444'),
-(5, 4, 1, 'https://www.researchgate.net/profile/Juliana-Ferreira-Paz'),
-(7, 2, 1, 'https://orcid.org/0000-0002-9876-5432');
+-- CORRIGIDO: era id_tipolink=4 (LinkedIn), mas a URL sempre foi do ResearchGate (id 3).
+(5, 3, 1, 'https://www.researchgate.net/profile/Juliana-Ferreira-Paz'),
+(7, 2, 1, 'https://orcid.org/0000-0002-9876-5432'),
+(14, 1, 1, 'http://lattes.cnpq.br/1122334455667788'),
+(14, 2, 2, 'https://orcid.org/0000-0003-1234-5678'),
+(14, 4, 3, 'https://www.linkedin.com/in/bruno-tavares-costa');
 
 
 -- [07-E-1] campanha
@@ -356,7 +396,13 @@ INSERT INTO campanha (id_usuario, id_admin, id_area_conhecimento, titulo, modelo
 (4, 8, 4, 'Estudo Epidemiológico do Impacto da Dengue na Baixada Fluminense 2024',          'all-or-nothing', 25000.00,  8000.00, 5.00, 'Levantamento epidemiológico detalhado dos casos de dengue em municípios da Baixada Fluminense durante o surto de 2024.',                                 '2024-03-10', '2024-04-24', 'nao_atingido',        '2024-03-10', '2024-03-01 14:00:00'),
 (5, 8, 6, 'Mapeamento Socioeconômico de Comunidades Quilombolas de Santa Catarina',         'flexivel',       30000.00, 22000.00, 5.00, 'Pesquisa quantitativa e qualitativa sobre indicadores socioeconômicos, acesso a direitos e identidade cultural em quilombos catarinenses.',              '2024-04-01', '2024-06-01', 'sucesso',             '2024-04-01', '2024-03-20 08:00:00'),
 (6, NULL, 7, 'Análise Discursiva das Fake News sobre Vacinas no Twitter (2022–2024)',       'all-or-nothing', 15000.00,  0.00,    5.00, 'Estudo linguístico-computacional sobre estratégias discursivas de desinformação vacinal em redes sociais brasileiras.',                                  NULL,          NULL,         'aguardando_aprovacao', NULL,        '2025-04-10 16:00:00'),
-(7, 8, 4, 'Eficácia de Probióticos na Redução de Infecções Hospitalares em UTI Neonatal',  'all-or-nothing', 45000.00, 45000.00, 5.00, 'Ensaio clínico randomizado avaliando o uso de probióticos na microbiota intestinal de neonatos para prevenção de sepse hospitalar.',                    '2024-05-01', '2024-07-30', 'encerrado',           '2024-05-01', '2024-04-15 10:00:00');
+(7, 8, 4, 'Eficácia de Probióticos na Redução de Infecções Hospitalares em UTI Neonatal',  'all-or-nothing', 45000.00, 45000.00, 5.00, 'Ensaio clínico randomizado avaliando o uso de probióticos na microbiota intestinal de neonatos para prevenção de sepse hospitalar.',                    '2024-05-01', '2024-07-30', 'encerrado',           '2024-05-01', '2024-04-15 10:00:00'),
+-- ADICIONADO: 3 campanhas novas (ids 8, 9, 10 nesta ordem de inserção), uma para cada
+-- pesquisador novo que precisa de histórico real — ver o comentário completo depois do
+-- bloco de denuncia sobre por que cada uma dá o resultado de score esperado.
+(14, 8, 1, 'Nova Plataforma de Diagnóstico por Imagem com Machine Learning',              'all-or-nothing', 30000.00, 32000.00, 5.00, 'Sistema de apoio ao diagnóstico radiológico baseado em visão computacional, validado com dados de dois hospitais universitários.',                      '2024-06-01', '2024-07-16', 'sucesso',             '2024-06-01', '2024-05-20 10:00:00'),
+(15, 8, 4, 'Estudo sobre Microbiota Intestinal em Pacientes Oncológicos',                 'flexivel',       20000.00, 21000.00, 5.00, 'Caracterização da microbiota intestinal e sua relação com resposta a quimioterapia em pacientes com câncer colorretal.',                                '2024-06-01', '2024-07-21', 'sucesso',             '2024-06-01', '2024-05-22 09:30:00'),
+(16, 8, 2, 'Levantamento de Espécies Invasoras em Ecossistemas Costeiros',                'all-or-nothing', 25000.00,  9000.00, 5.00, 'Mapeamento de espécies exóticas invasoras em restingas e manguezais do litoral nordestino e seu impacto na fauna nativa.',                              '2024-06-01', '2024-08-20', 'ativo',               '2024-06-01', '2024-05-25 08:30:00');
 
 
 -- [07-E-2] seguir_campanha
@@ -396,7 +442,17 @@ INSERT INTO contribuicao (id_campanha, id_usuario, valor, meio_pagamento, status
 (3, 5, 8000.00, 'boleto',         'repassado',  FALSE, 'TXN-BOL-0004', '2024-03-05 11:00:00'),
 (5, 4, 2200.00, 'cartao_debito',  'repassado',  FALSE, 'TXN-CD-0005',  '2024-04-10 15:00:00'),
 (7, 6,  500.00, 'pix',            'repassado',  TRUE,  'TXN-PIX-0006', '2024-05-10 08:00:00'),
-(4, 7,  800.00, 'cartao_credito', 'a_devolver', FALSE, 'TXN-CC-0007',  '2024-03-15 12:00:00');
+(4, 7,  800.00, 'cartao_credito', 'a_devolver', FALSE, 'TXN-CC-0007',  '2024-03-15 12:00:00'),
+-- ADICIONADO: contribuições de usuários com papéis diferentes de 'pesquisador',
+-- pra mostrar que qualquer usuário logado pode apoiar campanha, não só pesquisadores.
+(3, 9,  50.00,  'pix',            'repassado',  FALSE, 'TXN-PIX-0008', '2024-02-25 09:00:00'), -- Fernanda, usuario comum, contribuição pública
+(1, 10, 300.00, 'cartao_credito', 'repassado',  TRUE,  'TXN-CC-0009',  '2024-02-28 10:00:00'), -- Diego, moderador, contribuição anônima (anonima=TRUE mas id_usuario preservado p/ auditoria)
+(5, 12, 150.00, 'pix',            'repassado',  FALSE, 'TXN-PIX-0010', '2024-04-12 09:00:00'), -- Thiago, curador, contribuição pública
+-- ADICIONADO: contribuição de verdade anônima — sem nenhum usuário vinculado
+-- (id_usuario NULL, coluna é nullable justamente pra cobrir doador sem conta/
+-- ON DELETE SET NULL). Diferente das linhas com anonima=TRUE acima, que só
+-- escondem a identidade da exibição pública mas mantêm o vínculo interno.
+(2, NULL, 75.00, 'pix',            'repassado',  TRUE,  'TXN-PIX-0011', '2024-03-02 10:00:00');
 
 ALTER TABLE contribuicao ENABLE TRIGGER trg_valida_status_contribuicao;
 ALTER TABLE contribuicao ENABLE TRIGGER trg_contribuicao_all_or_nothing_pix;
@@ -432,7 +488,10 @@ INSERT INTO atualizacao_campanha (id_campanha, titulo, conteudo, publicado_em, f
 (3, 'Coleta de amostras concluída',              'Coleta de amostras concluída em 5 biomas. 120 espécies de fungos catalogadas para análise laboratorial.',                     '2024-04-01 11:00:00', 'andamento',          'texto'),
 (5, 'Questionários aplicados nas comunidades',   'Questionários aplicados em 12 comunidades quilombolas. Dados sendo sistematizados para análise estatística.',                  '2024-05-01 08:00:00', 'andamento',          'texto'),
 (7, 'Ensaio clínico concluído',                  'Ensaio clínico concluído. Grupo probiótico apresentou redução de 34% nas taxas de sepse versus controle.',                    '2024-09-01 10:00:00', 'resultado_final',    'pdf'),
-(1, 'Artigo submetido à Nature Medicine',        'Artigo submetido ao periódico Nature Medicine. Código e dataset disponibilizados em repositório público.',                     '2024-04-10 16:00:00', 'resultado_final',    'linkexterno');
+(1, 'Artigo submetido à Nature Medicine',        'Artigo submetido ao periódico Nature Medicine. Código e dataset disponibilizados em repositório público.',                     '2024-04-10 16:00:00', 'resultado_final',    'linkexterno'),
+(8,  'Modelo de visão computacional treinado',    'Primeira versão do modelo treinada com 15 mil exames anotados por 2 hospitais parceiros. Acurácia inicial de 91% em validação.', '2024-06-20 10:00:00', 'andamento',          'texto'),
+(8,  'Validação clínica concluída',               'Validação prospectiva concluída com radiologistas de referência. Resultados finais submetidos para publicação.',                  '2024-07-10 14:00:00', 'resultado_final',    'texto'),
+(10, 'Primeiras trilhas de campo mapeadas',        'Concluído o mapeamento de 3 das 8 trilhas previstas em restingas do litoral. Catalogação de espécies em andamento.',             '2024-07-05 09:00:00', 'andamento',          'texto');
 
 ALTER TABLE atualizacao_campanha ENABLE TRIGGER trg_atualizacao_campanha_status;
 
@@ -504,11 +563,58 @@ INSERT INTO denuncia (id_usuario, id_campanha_alvo, id_pesquisador_alvo, id_moti
 (5, NULL, 4,    6, 'em_analise',   '2024-03-20 14:00:00'),
 (6, 2,    NULL, 2, 'improcedente', '2024-03-02 08:00:00'),
 (7, NULL, 6,    7, 'pendente',     '2025-04-13 15:00:00'),
-(1, 6,    NULL, 4, 'pendente',     '2025-04-14 10:00:00');
+(1, 6,    NULL, 4, 'pendente',     '2025-04-14 10:00:00'),
+-- ADICIONADO: denúncias que alimentam de propósito a dimensão Reputação da Comunidade
+-- (calcular_score_reputacao, 05: 25 − total_denuncias×1 − total_procedentes×3) dos 2
+-- pesquisadores novos que precisam de reputação imperfeita.
+-- Eduardo (16): 2 denúncias 'pendente' (ainda não procedentes) — custam só 1 ponto cada
+-- (25 → 23), o suficiente pra tirar um pouco de reputação sem zerar a dimensão, já que
+-- ele só precisa ficar em "Em Construção" (25–49), não em "Atenção".
+(2,  NULL, 16, 5, 'pendente',     '2024-06-10 09:00:00'), 
+(9,  NULL, 16, 6, 'pendente',     '2024-06-12 10:00:00'),
+-- Vinícius (17): 4 denúncias 'resolvida' (= procedente) de 4 denunciantes diferentes
+-- (a UNIQUE de denuncia é por par usuário/alvo, por isso não repito denunciante) —
+-- cada uma custa 1+3=4 pontos (25 → 9), derrubando a reputação o bastante pra, somada
+-- ao resto do perfil dele (sem link, sem campanha), garantir a faixa "Atenção" (0–24).
+(1,  NULL, 17, 5, 'resolvida',    '2024-06-01 09:00:00'),
+(4,  NULL, 17, 6, 'resolvida',    '2024-06-02 10:00:00'),
+(11, NULL, 17, 7, 'resolvida',    '2024-06-03 11:00:00'),
+(13, NULL, 17, 5, 'resolvida',    '2024-06-04 12:00:00');
 
+
+-- ----------------------------------------------------------------------------
+-- RESUMO: por que cada um dos 4 pesquisadores novos cai na faixa de
+-- score_rotulo esperada, tudo calculado por trg_perfil_recalcula_score /
+-- trg_link_recalcula_score / trg_campanha_recalcula_score / trg_atualizacao_
+-- recalcula_score / trg_denuncia_recalcula_score (05) — nenhum número foi
+-- digitado à mão em score_atual.
+--
+--                    Perfil acad. Histórico Atualização Reputação  Total  Faixa
+-- Bruno    (14)          30          25          20         25     100  Referência (75-100)
+-- Renata   (15)          10          25           0         25      60  Confiável  (50-74)
+-- Eduardo  (16)          10          10           3         23      46  Em Construção (25-49)
+-- Vinícius (17)          10           0           0          9      19  Atenção    (0-24)
+--
+-- Perfil acadêmico: Bruno tem Lattes+ORCID+LinkedIn+instituição+título (8+8+4+5+5=30);
+--   os outros 3 só têm instituição+título (5+5=10, obrigatório desde que a coluna virou
+--   NOT NULL — não dá pra zerar essa dimensão de propósito).
+-- Histórico: Bruno e Renata têm campanha 'sucesso' e aprovada (15+10=25); Eduardo tem
+--   campanha 'ativo' aprovada mas ainda não encerrada (só os 10 da aprovação); Vinícius
+--   não tem nenhuma campanha (0).
+-- Atualização: Bruno publicou 2 atualizações numa campanha curta = crédito cheio (20);
+--   Eduardo publicou 1 numa campanha mais longa = crédito parcial (3); Renata e Vinícius
+--   não têm nenhuma atualização (0).
+-- Reputação: Bruno e Renata não têm denúncia (25); Eduardo tem 2 pendentes (25−2=23);
+--   Vinícius tem 4 procedentes (25−4×4=9).
+-- ----------------------------------------------------------------------------
 
 
 -- [07-D-5] Como logar no app depois deste seed (autenticação própria, ver DOCUMENTACAO_BD.md)
 
--- [07-I-3] Backfill: recalcula o score dos 7 pesquisadores do seed com os valores de verdade
+-- [07-I-3] Backfill de segurança: cada INSERT acima (perfil_pesquisador, link_academico,
+-- campanha, atualizacao_campanha, denuncia) já dispara sua própria trigger de recálculo
+-- (ver [07-J] acima), então quando o seed chega aqui os scores dos 11 pesquisadores já
+-- deveriam estar corretos. Esta chamada existe só como rede de segurança — reprocessa
+-- todo mundo do zero, caso alguma trigger seja desligada/alterada no futuro e alguém
+-- esqueça de rodar isso manualmente depois.
 SELECT public.recalcular_todos_os_scores();
