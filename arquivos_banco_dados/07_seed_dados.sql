@@ -655,11 +655,6 @@ JOIN tipo_link tl ON tl.codigo = v.tipolink_codigo;
 -- Agora essa trigger específica fica ligada durante o INSERT de contribuicao, e o
 -- valor final é 100% produto das contribuições reais inseridas logo abaixo — não
 -- de um número digitado aqui.
--- CORRIGIDO (27-07-2026): id_area_conhecimento não pode mais apontar pra grande
--- área raiz (ver trigger trg_campanha_valida_area_nivel2, 05, [05-K-1]) — cada
--- campanha passou a apontar pra uma área de nível 2 dentro da mesma grande área
--- que já tinha antes (resolvida por codigo_cnpq via subquery, não por ID fixo,
--- porque a ordem de inserção das áreas novas em [07-C-2] poderia mudar o número).
 INSERT INTO campanha (id_usuario, id_admin, id_area_conhecimento, titulo, modelo, meta_financeira, taxa_plataforma, descricao, data_inicio, data_fim, status, aprovado_em, criado_em) VALUES
 (1, 8, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '1.03.00.00'), 'Desenvolvimento de Algoritmo para Diagnóstico Precoce de Alzheimer por IA',      'all-or-nothing', 50000.00, 5.00, 'Pesquisa aplicada em inteligência artificial para detecção precoce da doença de Alzheimer usando redes neurais convolucionais.',                          '2024-02-01', '2024-04-01', 'sucesso',             '2024-02-01', '2024-01-20 10:00:00'),
 (2, 8, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '3.13.00.00'), 'Prótese de Baixo Custo com Impressão 3D para Amputados do SUS',                  'flexivel',       35000.00, 5.00, 'Projeto de engenharia biomédica para fabricação de próteses funcionais de membros superiores a custo acessível para o sistema público.',                '2024-02-15', '2024-05-01', 'sucesso',             '2024-02-15', '2024-02-05 11:30:00'),
@@ -810,9 +805,6 @@ FROM contribuicao;
 
 
 -- [07-H-2] auditoria_financeira
--- CORRIGIDO: faltava a coluna "valor" (NOT NULL em 01) — o INSERT inteiro falhava
--- com "null value in column valor violates not-null constraint". Valor de cada
--- linha é o mesmo da contribuicao correspondente (id_contribuicao).
 INSERT INTO auditoria_financeira (id_contribuicao, valor, status_novo, status_anterior, evento, timestamp) VALUES
 (1, 5000.00, 'confirmado', 'pendente',   'pagamento_confirmado_gateway',   '2024-02-10 10:05:00'),
 (1, 5000.00, 'repassado',  'confirmado', 'meta_atingida_repasse_efetuado', '2024-04-05 10:00:00'),
@@ -824,11 +816,6 @@ INSERT INTO auditoria_financeira (id_contribuicao, valor, status_novo, status_an
 
 
 -- [07-E-3] atualizacao_campanha
--- CORRIGIDO: a campanha 7 já está 'encerrado' neste ponto do seed (ver [07-E-1]), e
--- validar_atualizacao_campanha() só aceita 'ativo'/'sucesso'/'nao_atingido' — o INSERT
--- inteiro (7 linhas, uma transação) falhava por causa da linha da campanha 7. Mesmo
--- raciocínio do bloco [07-H-1]: dado histórico de campanha já concluída, trigger
--- desligada só durante a carga do seed.
 ALTER TABLE atualizacao_campanha DISABLE TRIGGER trg_atualizacao_campanha_status;
 
 INSERT INTO atualizacao_campanha (id_campanha, titulo, conteudo, publicado_em, fase, tipo) VALUES
@@ -858,13 +845,6 @@ INSERT INTO arquivo_atualizacao (id_arquivo, id_atualizacao) VALUES
 
 
 -- [07-E-4] repasse
--- CORRIGIDO (27-07-2026): removida a 2ª linha de repasse pra campanha 2
--- ('parcial_processando', valor_bruto idêntico ao repasse 'concluido' já existente
--- pra mesma campanha) — era lixo de seed (duas linhas de repasse pro mesmo valor
--- bruto não fazia sentido) e ficou ainda mais evidente depois da correção do A3,
--- logo abaixo: agora valor_bruto_arrecadado de cada campanha é a soma real das
--- contribuições, então uma segunda linha de repasse "fantasma" quebraria essa
--- consistência de propósito.
 ALTER TABLE repasse DISABLE TRIGGER trg_valida_repasse;
 
 INSERT INTO repasse (id_campanha, valor_bruto, valor_liquido, meta_atingida, repassado_em, taxa_relativa, status) VALUES
@@ -912,22 +892,6 @@ INSERT INTO comentario (id_campanha, id_pesquisador, conteudo, endossado, criado
 
 
 -- [07-E-8] denuncia
--- CORRIGIDO (bug crítico, 28-07-2026): id_motivo referenciava o id serial posicional
--- do catálogo (1-7) — quando os 5 motivos novos do A5 entraram (CAMP-005 a 008 ANTES
--- do bloco PERF-*, ver [07-C-3]), os ids de PERF-001/002/003 mudaram de 5/6/7 pra
--- 9/10/11. As denúncias de perfil abaixo continuaram apontando pro 5/6/7 antigo —
--- que agora são motivos de CAMPANHA — e trg_valida_tipo_motivo_denuncia (05,
--- criada bem pra pegar exatamente isso) rejeitava as 13 linhas do INSERT inteiro
--- (é um único comando). A tabela denuncia nascia vazia, sem erro visível no psql
--- (só um WARNING que passa despercebido rodando script inteiro), e o teste
--- determinístico das 4 faixas de score da Alexia se desfazia em silêncio (Eduardo e
--- Vinícius, sem nenhuma denúncia contando contra eles, saíam nos 25 pontos cheios
--- de Reputação em vez do valor calculado). Encontrado rodando os 8 arquivos de
--- verdade num Postgres — nenhuma leitura estática pegaria isso.
--- CORRIGIDO junto (raiz do problema, não só o sintoma): id_motivo passou a ser
--- resolvido por subquery em motivo_denuncia.codigo (chave natural, estável), não
--- mais por número de posição no catálogo — inserir motivo novo no meio da lista
--- nunca mais quebra estas linhas, seja qual for o id que ele ganhar.
 INSERT INTO denuncia (id_usuario, id_campanha_alvo, id_pesquisador_alvo, id_motivo, status, criado_em)
 SELECT v.id_usuario, v.id_campanha_alvo, v.id_pesquisador_alvo, md.id_motivo, v.status::status_denuncia, v.criado_em::timestamp
 FROM (VALUES
