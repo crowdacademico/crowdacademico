@@ -678,12 +678,21 @@ CREATE POLICY pol_contrib_recompensa_insert ON contribuicao_recompensa FOR INSER
 );
 
 -- CORRIGIDO: aceite de termos por contribuição agora tem política de leitura e escrita compatível com doação anônima.
+-- CORRIGIDO (27-07-2026): faltava o mesmo ramo de doador anônimo que pol_contribuicao_anon_select
+-- já usa (token_sessao) — o INSERT já aceitava c.id_usuario IS NULL, mas o SELECT não tinha
+-- nenhum jeito de um doador anônimo relogar o próprio aceite depois de registrado.
 DROP POLICY IF EXISTS pol_aceite_termo_contribuicao_select ON aceite_termo_contribuicao;
 CREATE POLICY pol_aceite_termo_contribuicao_select ON aceite_termo_contribuicao FOR SELECT TO app_nestjs USING (
     public.tem_permissao('contribuicao_visualizar_sensivel') OR EXISTS (
         SELECT 1 FROM contribuicao c
         WHERE c.id_contribuicao = aceite_termo_contribuicao.id_contribuicao
-          AND c.id_usuario = public.id_usuario_atual()
+          AND (
+              c.id_usuario = public.id_usuario_atual()
+              OR (
+                  c.id_usuario IS NULL
+                  AND c.token_sessao::text = current_setting('app.token_sessao_atual', true)
+              )
+          )
     )
 );
 DROP POLICY IF EXISTS pol_aceite_termo_contribuicao_insert ON aceite_termo_contribuicao;

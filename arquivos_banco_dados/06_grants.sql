@@ -95,9 +95,18 @@ GRANT SELECT (
 ) ON public.usuario TO app_nestjs;
 
 -- CORRIGIDO: coluna suspenso removida da tabela (01) — tirada da lista também.
+-- CORRIGIDO (28-07-2026): cpf_criptografado adicionada — a coluna é NOT NULL
+-- (Alexia), então o app_nestjs já era obrigado a GRAVAR o CPF, mas continuava
+-- impossibilitado de LÊ-LO (mesma coluna fora do GRANT SELECT), o que travava o
+-- KYC do RF-015 (a API de pagamento precisa do CPF pra configurar o recebimento
+-- do pesquisador, e o backend não tinha como enviar um dado que nem conseguia
+-- selecionar). A proteção que de fato importa passa a ser a permissão
+-- perfil_pesquisador_visualizar_sensivel (seedada, hoje sem nenhum efeito porque
+-- nada a usava) gateando a leitura no NestJS — não a coluna ficar inacessível
+-- pro próprio backend.
 GRANT SELECT (
-    id_usuario, vinculo_institucional, titulo_academico, status_pesquisador,
-    ativado_em, score_atual, score_atualizado_em
+    id_usuario, cpf_criptografado, tipo_vinculo, vinculo_institucional,
+    titulo_academico, status_pesquisador, ativado_em, score_atual, score_atualizado_em
 ) ON public.perfil_pesquisador TO app_nestjs;
 
 -- CORRIGIDO: usuario, perfil_pesquisador, termos_de_uso e usuario_termo tinham DELETE
@@ -114,7 +123,21 @@ GRANT INSERT, DELETE ON usuario_papel, seguir_pesquisador TO app_nestjs;
 GRANT INSERT, UPDATE ON notificacao TO app_nestjs;
 
 -- [06-D-4] verificacao_email / recuperacao_senha / sessao: por que têm GRANT próprio (ver DOCUMENTACAO_BD.md)
-GRANT SELECT, INSERT, UPDATE ON verificacao_email, recuperacao_senha, sessao TO app_nestjs;
+-- CORRIGIDO (27-07-2026): faltava DELETE, mesmo a policy das 3 sendo FOR ALL (item 28).
+-- Sem ele, um token de recuperação de senha expirado nunca sai da tabela — e o índice
+-- parcial uq_recuperacao_senha_ativo_por_usuario (02) só permite 1 token não usado por
+-- vez, então quem pede recuperação, não usa o link e pede de novo trava com erro de
+-- unicidade, sem nenhum jeito de o app limpar o token velho antes. Dois usos previstos
+-- pra este GRANT: (1) apagar o token de recuperação anterior no ato, quando um novo é
+-- pedido (não marcar usado_em à força — isso faria a coluna mentir sobre o que de fato
+-- aconteceu); (2) expurgo periódico por retenção (RNF-003: dado pessoal só pelo tempo
+-- necessário — sessao guarda IP/user-agent). Como as policies são USING (true), o
+-- DELETE vale pra qualquer linha de qualquer usuário — o expurgo do NestJS precisa ser
+-- sempre uma consulta fixa com WHERE explícito em data (nunca um filtro dinâmico),
+-- sugestão de janela: verificacao_email/recuperacao_senha, 30 dias após confirmado/
+-- usado/expirado; sessao, 90 dias após revogado/expirado (margem pra investigar
+-- incidente de segurança).
+GRANT SELECT, INSERT, UPDATE, DELETE ON verificacao_email, recuperacao_senha, sessao TO app_nestjs;
 
 -- ============================================================================
 --  [06-E] CAMPANHA

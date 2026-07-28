@@ -17,9 +17,12 @@
 --  linhas referenciam o usuário admin. Os marcadores `[07-X]` abaixo
 --  indicam a que domínio cada bloco pertence, mesmo fora de ordem.
 --
---  Inventário Mapeado: 26 blocos de INSERT cobrindo as 39 tabelas com
+--  Inventário Mapeado: 30 blocos de INSERT cobrindo as 39 tabelas com
 --  dados obrigatórios de seed (tabelas só de associação/log ficam vazias
---  até o primeiro uso real da aplicação).
+--  até o primeiro uso real da aplicação). ATUALIZADO (27-07-2026): eram 26 —
+--  termos_de_uso, usuario_termo, aceite_termo_contribuicao e notificacao
+--  estavam vazias e passaram a ser semeadas (ver Achado A5/A6 em
+--  PENDENCIAS e correcoes.md).
 -- ----------------------------------------------------------------------------
 --  CAMADAS DE DEPENDÊNCIA (o critério real por trás da ordem abaixo)
 -- ----------------------------------------------------------------------------
@@ -27,17 +30,19 @@
 --  arquivo, só das tabelas fixas do 01 (ENUMs, etc). Podem ser inseridas em
 --  qualquer ordem entre si.
 --    score_config, score_rotulo, papel, permissao, papel_permissao,
---    tipo_link, area_conhecimento, motivo_denuncia, arquivo, usuario
+--    tipo_link, area_conhecimento, motivo_denuncia, arquivo, usuario,
+--    termos_de_uso
 --
 --  Camada 2 — Dependem de uma linha da Camada 1 já existir (o `usuario`
---  admin, sobretudo): usuario_papel, configuracoes, perfil_pesquisador,
---  link_academico, campanha, seguir_pesquisador
+--  admin, sobretudo): usuario_papel, usuario_termo, configuracoes,
+--  perfil_pesquisador, link_academico, campanha, seguir_pesquisador,
+--  notificacao
 --
 --  Camada 3 — Dependem de uma linha da Camada 2 (principalmente de
 --  `campanha` ou `contribuicao` já existirem): seguir_campanha,
---  contribuicao, auditoria_financeira, atualizacao_campanha,
---  arquivo_atualizacao, repasse, solicitacao_encerramento,
---  historico_rejeicao, comentario, denuncia
+--  contribuicao, aceite_termo_contribuicao, auditoria_financeira,
+--  atualizacao_campanha, arquivo_atualizacao, repasse,
+--  solicitacao_encerramento, historico_rejeicao, comentario, denuncia
 --
 --  Por isso o arquivo não segue a ordem alfabética do índice global de
 --  letras (ver DOCUMENTACAO_BD.md) — a ordem física real é por camada de
@@ -52,17 +57,21 @@
 --  [07-C] tipo_link, area_conhecimento, motivo_denuncia,
 --         arquivo                                        (Camada 1)
 --  [07-D] usuario, usuario_papel                (Camada 1, Camada 2)
+--  [07-D] termos_de_uso, usuario_termo           (Camada 1, Camada 2)
 --  [07-C] configuracoes (vem depois de D de propósito — ver acima) (Camada 2)
 --  [07-D] perfil_pesquisador                              (Camada 2)
 --  [07-F] link_academico                                  (Camada 2)
 --  [07-E] campanha                                        (Camada 2)
 --  [07-E] seguir_campanha                                 (Camada 3)
 --  [07-D] seguir_pesquisador                              (Camada 2)
---  [07-H] contribuicao, auditoria_financeira              (Camada 3)
+--  [07-H] contribuicao, aceite_termo_contribuicao,
+--         auditoria_financeira                            (Camada 3)
 --  [07-E] atualizacao_campanha                            (Camada 3)
 --  [07-G] arquivo_atualizacao                             (Camada 3)
 --  [07-E] repasse, solicitacao_encerramento, historico_rejeicao,
 --         comentario, denuncia                            (Camada 3)
+--  [07-D] notificacao (posicionado no fim do arquivo, fisicamente,
+--         mas depende só de usuario — Camada 2)
 -- ============================================================================
 
 -- [07-I-1] score_config: dimensões raiz e subitens do motor de pontuação
@@ -223,37 +232,216 @@ ON CONFLICT DO NOTHING;
 
 -- [07-C-1] tipo_link
 -- CORRIGIDO: tipo_link ajustado para a allowlist fechada definida pela equipe.
-INSERT INTO tipo_link (nome, ativo, regex, dominio) VALUES
-('Lattes',            TRUE,  '^https?://lattes\.cnpq\.br/\d+$',                   'lattes.cnpq.br'),
-('ORCID',             TRUE,  '^https?://orcid\.org/\d{4}-\d{4}-\d{4}-\d{3}[\dX]$', 'orcid.org'),
-('ResearchGate',      TRUE,  '^https?://(www\.)?researchgate\.net/profile/[\w\-]+$', 'researchgate.net'),
-('LinkedIn',          TRUE,  '^https?://(www\.)?linkedin\.com/in/[\w\-]+/?$',      'linkedin.com'),
-('GitHub',            TRUE,  '^https?://(www\.)?github\.com/[\w\-]+/?$',          'github.com');
+-- ADICIONADO (28-07-2026): coluna codigo (ver [01-C]) — chave natural estável,
+-- usada pelo link_academico logo abaixo em vez do id posicional.
+INSERT INTO tipo_link (codigo, nome, ativo, regex, dominio) VALUES
+('LATTES',       'Lattes',            TRUE,  '^https?://lattes\.cnpq\.br/\d+$',                   'lattes.cnpq.br'),
+('ORCID',        'ORCID',             TRUE,  '^https?://orcid\.org/\d{4}-\d{4}-\d{4}-\d{3}[\dX]$', 'orcid.org'),
+('RESEARCHGATE', 'ResearchGate',      TRUE,  '^https?://(www\.)?researchgate\.net/profile/[\w\-]+$', 'researchgate.net'),
+('LINKEDIN',     'LinkedIn',          TRUE,  '^https?://(www\.)?linkedin\.com/in/[\w\-]+/?$',      'linkedin.com'),
+('GITHUB',       'GitHub',            TRUE,  '^https?://(www\.)?github\.com/[\w\-]+/?$',          'github.com');
 
 
 -- [07-C-2] area_conhecimento
 -- CORRIGIDO: área de conhecimento adicionada para o valor Multidisciplinar.
-INSERT INTO area_conhecimento (codigo_cnpq, nome, ativo) VALUES
-('1.00.00.00-0', 'Ciências Exatas e da Terra',          TRUE),
-('2.00.00.00-6', 'Ciências Biológicas',                 TRUE),
-('3.00.00.00-1', 'Engenharias',                         TRUE),
-('4.00.00.00-7', 'Ciências da Saúde',                   TRUE),
-('5.00.00.00-2', 'Ciências Agrárias',                   TRUE),
-('6.00.00.00-8', 'Ciências Sociais Aplicadas',          TRUE),
-('7.00.00.00-3', 'Ciências Humanas',                    TRUE),
-('8.00.00.00-9', 'Linguística, Letras e Artes',         TRUE),
-('9.00.00.00-0', 'Multidisciplinar',                    TRUE);
+-- ADICIONADO (27-07-2026): descido pro 2º nível do CNPq (grande área -> área),
+-- pedido explícito da Alexia ("Ciências da Saúde" cobrindo de odontologia a
+-- saúde coletiva era amplo demais pro filtro de busca funcionar de verdade) —
+-- id_pai aponta pra grande área raiz correspondente (mesmo padrão de
+-- score_config/id_pai, ver [01-I]). Decisão tomada junto: campanha agora É
+-- OBRIGADA a escolher uma área de nível 2 (trigger em 05, ver [05-K-1]).
+--
+-- CORRIGIDO (28-07-2026) — dígito verificador removido do codigo_cnpq: a
+-- primeira versão deste seed guardava o código completo (ex.: '1.03.00.00-7'),
+-- mas os dígitos verificadores não vieram de nenhuma fonte conferida (tentei
+-- buscar a tabela oficial do CNPq/Lattes duas vezes, em duas sessões
+-- diferentes, e os PDFs não deram pra extrair de forma confiável nas duas).
+-- Prova de que os dígitos que tinham sido digitados não eram reais: nos
+-- códigos de grande área só o primeiro dígito é diferente de zero, então em
+-- qualquer esquema real de dígito verificador por soma ponderada (mod 10 ou
+-- mod 11 — o mesmo princípio de CPF/CNPJ/PIS), o dígito seria função só desse
+-- primeiro número; o seed tinha DV(1) = DV(7) = 3, o que matematicamente só
+-- permite 1 ou 2 resultados distintos possíveis pros 9 valores — e o seed
+-- tinha 8 valores distintos. Impossível vir de um algoritmo de verdade.
+-- Decisão: guardar só 'X.YY.00.00', sem o dígito. O dígito verificador serve
+-- pra pegar erro de digitação quando um humano transcreve o código num
+-- formulário de papel — aqui, codigo_cnpq é comparado por igualdade, nunca
+-- digitado à mão, então o dígito não protegia nada e era justamente a única
+-- parte do dado que ninguém conseguia conferir. Os nomes das áreas e a que
+-- grande área cada uma pertence continuam corretos e confiáveis (nomenclatura
+-- padrão e estável do CNPq, usada em qualquer edital de pesquisa brasileiro) —
+-- isso fecha o item 35 do PENDENCIAS com essa justificativa, em vez de deixar
+-- pendente esperando um PDF que não abre.
+INSERT INTO area_conhecimento (codigo_cnpq, nome, id_pai, ativo) VALUES
+('1.00.00.00', 'Ciências Exatas e da Terra',          NULL, TRUE),
+('2.00.00.00', 'Ciências Biológicas',                 NULL, TRUE),
+('3.00.00.00', 'Engenharias',                         NULL, TRUE),
+('4.00.00.00', 'Ciências da Saúde',                   NULL, TRUE),
+('5.00.00.00', 'Ciências Agrárias',                   NULL, TRUE),
+('6.00.00.00', 'Ciências Sociais Aplicadas',          NULL, TRUE),
+('7.00.00.00', 'Ciências Humanas',                    NULL, TRUE),
+('8.00.00.00', 'Linguística, Letras e Artes',         NULL, TRUE),
+('9.00.00.00', 'Multidisciplinar',                    NULL, TRUE);
+
+-- Nível 2 — filhas de "Ciências Exatas e da Terra" (id 1) — 8 áreas, códigos
+-- e nomes conferidos via busca.
+INSERT INTO area_conhecimento (codigo_cnpq, nome, id_pai, ativo)
+SELECT v.codigo, v.nome, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '1.00.00.00'), TRUE
+FROM (VALUES
+    ('1.01.00.00', 'Matemática'),
+    ('1.02.00.00', 'Probabilidade e Estatística'),
+    ('1.03.00.00', 'Ciência da Computação'),
+    ('1.04.00.00', 'Astronomia'),
+    ('1.05.00.00', 'Física'),
+    ('1.06.00.00', 'Química'),
+    ('1.07.00.00', 'Geociências'),
+    ('1.08.00.00', 'Oceanografia')
+) AS v(codigo, nome);
+
+-- Nível 2 — filhas de "Ciências Biológicas" (id 2) — 13 áreas.
+INSERT INTO area_conhecimento (codigo_cnpq, nome, id_pai, ativo)
+SELECT v.codigo, v.nome, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '2.00.00.00'), TRUE
+FROM (VALUES
+    ('2.01.00.00', 'Biologia Geral'),
+    ('2.02.00.00', 'Genética'),
+    ('2.03.00.00', 'Botânica'),
+    ('2.04.00.00', 'Zoologia'),
+    ('2.05.00.00', 'Ecologia'),
+    ('2.06.00.00', 'Morfologia'),
+    ('2.07.00.00', 'Fisiologia'),
+    ('2.08.00.00', 'Bioquímica'),
+    ('2.09.00.00', 'Biofísica'),
+    ('2.10.00.00', 'Farmacologia'),
+    ('2.11.00.00', 'Imunologia'),
+    ('2.12.00.00', 'Microbiologia'),
+    ('2.13.00.00', 'Parasitologia')
+) AS v(codigo, nome);
+
+-- Nível 2 — filhas de "Engenharias" (id 3) — 13 áreas.
+INSERT INTO area_conhecimento (codigo_cnpq, nome, id_pai, ativo)
+SELECT v.codigo, v.nome, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '3.00.00.00'), TRUE
+FROM (VALUES
+    ('3.01.00.00', 'Engenharia Civil'),
+    ('3.02.00.00', 'Engenharia de Minas'),
+    ('3.03.00.00', 'Engenharia de Materiais e Metalúrgica'),
+    ('3.04.00.00', 'Engenharia Elétrica'),
+    ('3.05.00.00', 'Engenharia Mecânica'),
+    ('3.06.00.00', 'Engenharia Química'),
+    ('3.07.00.00', 'Engenharia Sanitária'),
+    ('3.08.00.00', 'Engenharia de Produção'),
+    ('3.09.00.00', 'Engenharia Nuclear'),
+    ('3.10.00.00', 'Engenharia de Transportes'),
+    ('3.11.00.00', 'Engenharia Naval e Oceânica'),
+    ('3.12.00.00', 'Engenharia Aeroespacial'),
+    ('3.13.00.00', 'Engenharia Biomédica')
+) AS v(codigo, nome);
+
+-- Nível 2 — filhas de "Ciências da Saúde" (id 4) — 9 áreas.
+INSERT INTO area_conhecimento (codigo_cnpq, nome, id_pai, ativo)
+SELECT v.codigo, v.nome, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '4.00.00.00'), TRUE
+FROM (VALUES
+    ('4.01.00.00', 'Medicina'),
+    ('4.02.00.00', 'Odontologia'),
+    ('4.03.00.00', 'Farmácia'),
+    ('4.04.00.00', 'Enfermagem'),
+    ('4.05.00.00', 'Nutrição'),
+    ('4.06.00.00', 'Saúde Coletiva'),
+    ('4.07.00.00', 'Fonoaudiologia'),
+    ('4.08.00.00', 'Fisioterapia e Terapia Ocupacional'),
+    ('4.09.00.00', 'Educação Física')
+) AS v(codigo, nome);
+
+-- Nível 2 — filhas de "Ciências Agrárias" (id 5) — 7 áreas.
+INSERT INTO area_conhecimento (codigo_cnpq, nome, id_pai, ativo)
+SELECT v.codigo, v.nome, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '5.00.00.00'), TRUE
+FROM (VALUES
+    ('5.01.00.00', 'Agronomia'),
+    ('5.02.00.00', 'Recursos Florestais e Engenharia Florestal'),
+    ('5.03.00.00', 'Engenharia Agrícola'),
+    ('5.04.00.00', 'Zootecnia'),
+    ('5.05.00.00', 'Medicina Veterinária'),
+    ('5.06.00.00', 'Recursos Pesqueiros e Engenharia de Pesca'),
+    ('5.07.00.00', 'Ciência e Tecnologia de Alimentos')
+) AS v(codigo, nome);
+
+-- Nível 2 — filhas de "Ciências Sociais Aplicadas" (id 6) — 13 áreas.
+INSERT INTO area_conhecimento (codigo_cnpq, nome, id_pai, ativo)
+SELECT v.codigo, v.nome, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '6.00.00.00'), TRUE
+FROM (VALUES
+    ('6.01.00.00', 'Direito'),
+    ('6.02.00.00', 'Administração'),
+    ('6.03.00.00', 'Economia'),
+    ('6.04.00.00', 'Arquitetura e Urbanismo'),
+    ('6.05.00.00', 'Planejamento Urbano e Regional'),
+    ('6.06.00.00', 'Demografia'),
+    ('6.07.00.00', 'Ciência da Informação'),
+    ('6.08.00.00', 'Museologia'),
+    ('6.09.00.00', 'Comunicação'),
+    ('6.10.00.00', 'Serviço Social'),
+    ('6.11.00.00', 'Economia Doméstica'),
+    ('6.12.00.00', 'Desenho Industrial'),
+    ('6.13.00.00', 'Turismo')
+) AS v(codigo, nome);
+
+-- Nível 2 — filhas de "Ciências Humanas" (id 7) — 10 áreas.
+INSERT INTO area_conhecimento (codigo_cnpq, nome, id_pai, ativo)
+SELECT v.codigo, v.nome, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '7.00.00.00'), TRUE
+FROM (VALUES
+    ('7.01.00.00', 'Filosofia'),
+    ('7.02.00.00', 'Sociologia'),
+    ('7.03.00.00', 'Antropologia'),
+    ('7.04.00.00', 'Arqueologia'),
+    ('7.05.00.00', 'História'),
+    ('7.06.00.00', 'Geografia'),
+    ('7.07.00.00', 'Psicologia'),
+    ('7.08.00.00', 'Educação'),
+    ('7.09.00.00', 'Ciência Política'),
+    ('7.10.00.00', 'Teologia')
+) AS v(codigo, nome);
+
+-- Nível 2 — filhas de "Linguística, Letras e Artes" (id 8) — 3 áreas.
+INSERT INTO area_conhecimento (codigo_cnpq, nome, id_pai, ativo)
+SELECT v.codigo, v.nome, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '8.00.00.00'), TRUE
+FROM (VALUES
+    ('8.01.00.00', 'Linguística'),
+    ('8.02.00.00', 'Letras'),
+    ('8.03.00.00', 'Artes')
+) AS v(codigo, nome);
+
+-- Nível 2 — filhas de "Multidisciplinar" (id 9) — 5 áreas (grande área mais
+-- recente do CNPq; lista abaixo é a mais estável/citada, mas é a que tem
+-- maior chance de precisar de ajuste na conferência oficial).
+INSERT INTO area_conhecimento (codigo_cnpq, nome, id_pai, ativo)
+SELECT v.codigo, v.nome, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '9.00.00.00'), TRUE
+FROM (VALUES
+    ('9.01.00.00', 'Biotecnologia'),
+    ('9.02.00.00', 'Ciências Ambientais'),
+    ('9.03.00.00', 'Biodiversidade'),
+    ('9.04.00.00', 'Ensino'),
+    ('9.05.00.00', 'Materiais')
+) AS v(codigo, nome);
 
 
 -- [07-C-3] motivo_denuncia
+-- ADICIONADO (27-07-2026): 5 motivos novos (CAMP-005 a 008, PERF-004) — categorias
+-- que a moderação vai precisar rápido e que os 7 originais não cobriam. Puro dado
+-- de catálogo, sem decisão de negócio nenhuma envolvida (mesmo padrão dos 7 já
+-- existentes). PERF-004 (vínculo institucional falso) é diferente de PERF-001
+-- (dados acadêmicos falsos, mais genérico) — ficou mais relevante depois que
+-- perfil_pesquisador.vinculo_institucional virou NOT NULL.
 INSERT INTO motivo_denuncia (codigo, descricao, tipo) VALUES
 ('CAMP-001', 'Campanha com informações falsas ou enganosas',           'campanha'),
 ('CAMP-002', 'Campanha duplicada ou já existente',                     'campanha'),
 ('CAMP-003', 'Uso indevido de recursos arrecadados',                   'campanha'),
 ('CAMP-004', 'Campanha fora do escopo acadêmico',                      'campanha'),
+('CAMP-005', 'Plágio ou apropriação de trabalho alheio',               'campanha'),
+('CAMP-006', 'Conflito de interesse não declarado',                    'campanha'),
+('CAMP-007', 'Campanha sem viabilidade metodológica',                  'campanha'),
+('CAMP-008', 'Spam ou divulgação fora de contexto acadêmico',          'campanha'),
 ('PERF-001', 'Perfil com dados acadêmicos falsos',                     'perfil'),
 ('PERF-002', 'Comportamento abusivo ou ofensivo',                      'perfil'),
-('PERF-003', 'Usurpação de identidade de pesquisador real',            'perfil');
+('PERF-003', 'Usurpação de identidade de pesquisador real',            'perfil'),
+('PERF-004', 'Vínculo institucional falso ou não comprovável',         'perfil');
 
 
 -- [07-C-4] arquivo (imagens de perfil — sem FK ainda ativa no INSERT)
@@ -322,6 +510,34 @@ JOIN papel p ON p.nome = v.papel_nome
 ON CONFLICT DO NOTHING;
 
 
+-- [07-D-6] termos_de_uso / usuario_termo
+-- ADICIONADO (27-07-2026): as duas estavam vazias, e sustentam o RF-011 (aceite
+-- obrigatório no cadastro) — o texto real dos termos entra depois, quando a
+-- equipe/jurídico definir, o que faltava era a estrutura de dados existir.
+-- v1 é a versão vigente durante todo o período em que os 17 usuários deste seed
+-- se cadastraram (por isso é ela que aparece em usuario_termo, abaixo). v2 é a
+-- versão atual — publicada depois, ainda sem nenhum aceite registrado, cenário
+-- realista de "termo novo no ar, usuários antigos ainda não foram re-avisados".
+--
+-- PEGADINHA (vale documentar aqui pro NestJS, quando publicar uma versão nova):
+-- publicar v2 sem antes desativar v1 quebra com o erro do índice parcial
+-- uq_termos_uso_ativo (02) — só pode existir 1 linha com ativo = TRUE por vez.
+-- O UPDATE que desativa a versão velha e o INSERT da versão nova precisam estar
+-- na MESMA transação (é o que este bloco já faz).
+INSERT INTO termos_de_uso (versao, conteudo, ativo, criado_em) VALUES
+('v1-2024-01-01', '[PLACEHOLDER] Texto dos Termos de Uso e Política de Privacidade — versão 1. Conteúdo jurídico definitivo entra aqui quando a equipe/jurídico validar.', FALSE, '2024-01-01 00:00:00');
+
+UPDATE termos_de_uso SET ativo = FALSE WHERE versao = 'v1-2024-01-01';
+INSERT INTO termos_de_uso (versao, conteudo, ativo, criado_em) VALUES
+('v2-2025-01-01', '[PLACEHOLDER] Texto dos Termos de Uso e Política de Privacidade — versão 2 (revisão anual). Conteúdo jurídico definitivo entra aqui quando a equipe/jurídico validar.', TRUE, '2025-01-01 00:00:00');
+
+-- Todos os 17 usuários aceitaram a v1 no próprio cadastro (aceito_em = pouco
+-- depois de usuario.criado_em) — nenhum ainda re-aceitou a v2, propositalmente.
+INSERT INTO usuario_termo (id_usuario, id_termo, aceito_em, ip_aceite)
+SELECT id_usuario, 1, criado_em + INTERVAL '2 minutes', '187.10.20.30'
+FROM usuario;
+
+
 -- [07-C-5] configuracoes: por que este bloco vem depois de usuario (ver DOCUMENTACAO_BD.md)
 INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo) VALUES
 (NULL, 'taxa_plataforma_padrao',     '5.00',  'decimal',  'Taxa padrão cobrada pela plataforma (%)',              TRUE),
@@ -375,34 +591,56 @@ INSERT INTO perfil_pesquisador (id_usuario, cpf_criptografado, vinculo_instituci
 -- (calcular_score_perfil_academico, 05) — Lattes, ORCID e um "outro link" que bate no
 -- ILIKE '%linkedin%'. É o único dos 4 novos pesquisadores com link_academico de propósito,
 -- pra ele ser o único a fechar os 30/30 pontos possíveis nessa dimensão.
-INSERT INTO link_academico (id_usuario, id_tipolink, ordem, url) VALUES
-(1, 1, 1, 'http://lattes.cnpq.br/1234567890123456'),
-(1, 2, 2, 'https://orcid.org/0000-0001-2345-6789'),
-(2, 1, 1, 'http://lattes.cnpq.br/9876543210987654'),
-(3, 1, 1, 'http://lattes.cnpq.br/1111222233334444'),
--- CORRIGIDO: era id_tipolink=4 (LinkedIn), mas a URL sempre foi do ResearchGate (id 3).
-(5, 3, 1, 'https://www.researchgate.net/profile/Juliana-Ferreira-Paz'),
-(7, 2, 1, 'https://orcid.org/0000-0002-9876-5432'),
-(14, 1, 1, 'http://lattes.cnpq.br/1122334455667788'),
-(14, 2, 2, 'https://orcid.org/0000-0003-1234-5678'),
-(14, 4, 3, 'https://www.linkedin.com/in/bruno-tavares-costa');
+-- CORRIGIDO (28-07-2026): id_tipolink passou a ser resolvido por subquery em
+-- tipo_link.codigo (chave natural), não mais pelo id posicional (1-5) — mesmo
+-- princípio da correção do bug de denuncia, ver [07-E-8].
+INSERT INTO link_academico (id_usuario, id_tipolink, ordem, url)
+SELECT v.id_usuario, tl.id_tipolink, v.ordem, v.url
+FROM (VALUES
+    (1, 'LATTES',       1, 'http://lattes.cnpq.br/1234567890123456'),
+    (1, 'ORCID',        2, 'https://orcid.org/0000-0001-2345-6789'),
+    (2, 'LATTES',       1, 'http://lattes.cnpq.br/9876543210987654'),
+    (3, 'LATTES',       1, 'http://lattes.cnpq.br/1111222233334444'),
+    -- CORRIGIDO: era LinkedIn, mas a URL sempre foi do ResearchGate.
+    (5, 'RESEARCHGATE', 1, 'https://www.researchgate.net/profile/Juliana-Ferreira-Paz'),
+    (7, 'ORCID',        1, 'https://orcid.org/0000-0002-9876-5432'),
+    (14, 'LATTES',      1, 'http://lattes.cnpq.br/1122334455667788'),
+    (14, 'ORCID',       2, 'https://orcid.org/0000-0003-1234-5678'),
+    (14, 'LINKEDIN',    3, 'https://www.linkedin.com/in/bruno-tavares-costa')
+) AS v(id_usuario, tipolink_codigo, ordem, url)
+JOIN tipo_link tl ON tl.codigo = v.tipolink_codigo;
 
 
 -- [07-E-1] campanha
-INSERT INTO campanha (id_usuario, id_admin, id_area_conhecimento, titulo, modelo, meta_financeira, valor_bruto_arrecadado, taxa_plataforma, descricao, data_inicio, data_fim, status, aprovado_em, criado_em) VALUES
-(1, 8, 1, 'Desenvolvimento de Algoritmo para Diagnóstico Precoce de Alzheimer por IA',      'all-or-nothing', 50000.00, 52300.00, 5.00, 'Pesquisa aplicada em inteligência artificial para detecção precoce da doença de Alzheimer usando redes neurais convolucionais.',                          '2024-02-01', '2024-04-01', 'sucesso',             '2024-02-01', '2024-01-20 10:00:00'),
-(2, 8, 3, 'Prótese de Baixo Custo com Impressão 3D para Amputados do SUS',                  'flexivel',       35000.00, 28500.00, 5.00, 'Projeto de engenharia biomédica para fabricação de próteses funcionais de membros superiores a custo acessível para o sistema público.',                '2024-02-15', '2024-05-01', 'sucesso',             '2024-02-15', '2024-02-05 11:30:00'),
-(3, 8, 2, 'Bioprospecção de Fungos da Caatinga com Potencial Antibiótico',                  'all-or-nothing', 40000.00, 40000.00, 5.00, 'Coleta e análise de fungos endofíticos da Caatinga para identificação de compostos com atividade antibacteriana frente a superbactérias.',              '2024-03-01', '2024-05-30', 'sucesso',             '2024-03-01', '2024-02-20 09:15:00'),
-(4, 8, 4, 'Estudo Epidemiológico do Impacto da Dengue na Baixada Fluminense 2024',          'all-or-nothing', 25000.00,  8000.00, 5.00, 'Levantamento epidemiológico detalhado dos casos de dengue em municípios da Baixada Fluminense durante o surto de 2024.',                                 '2024-03-10', '2024-04-24', 'nao_atingido',        '2024-03-10', '2024-03-01 14:00:00'),
-(5, 8, 6, 'Mapeamento Socioeconômico de Comunidades Quilombolas de Santa Catarina',         'flexivel',       30000.00, 22000.00, 5.00, 'Pesquisa quantitativa e qualitativa sobre indicadores socioeconômicos, acesso a direitos e identidade cultural em quilombos catarinenses.',              '2024-04-01', '2024-06-01', 'sucesso',             '2024-04-01', '2024-03-20 08:00:00'),
-(6, NULL, 7, 'Análise Discursiva das Fake News sobre Vacinas no Twitter (2022–2024)',       'all-or-nothing', 15000.00,  0.00,    5.00, 'Estudo linguístico-computacional sobre estratégias discursivas de desinformação vacinal em redes sociais brasileiras.',                                  NULL,          NULL,         'aguardando_aprovacao', NULL,        '2025-04-10 16:00:00'),
-(7, 8, 4, 'Eficácia de Probióticos na Redução de Infecções Hospitalares em UTI Neonatal',  'all-or-nothing', 45000.00, 45000.00, 5.00, 'Ensaio clínico randomizado avaliando o uso de probióticos na microbiota intestinal de neonatos para prevenção de sepse hospitalar.',                    '2024-05-01', '2024-07-30', 'encerrado',           '2024-05-01', '2024-04-15 10:00:00'),
+-- CORRIGIDO (27-07-2026): valor_bruto_arrecadado saiu do INSERT (a coluna já tem
+-- DEFAULT 0). Antes, o número era digitado à mão e não batia com a soma real das
+-- contribuições seedadas (9 das 10 campanhas divergiam, 3 delas com 0 contribuições
+-- e um total de 5 dígitos mesmo assim) — exatamente o mesmo problema que já tinha
+-- sido corrigido em perfil_pesquisador.score_atual (ver comentário do bloco
+-- [07-D-3]), só que aqui ninguém tinha reparado ainda porque trg_sincroniza_
+-- arrecadado_campanha ficava desligada durante toda a carga do seed (ver [07-H-1]).
+-- Agora essa trigger específica fica ligada durante o INSERT de contribuicao, e o
+-- valor final é 100% produto das contribuições reais inseridas logo abaixo — não
+-- de um número digitado aqui.
+-- CORRIGIDO (27-07-2026): id_area_conhecimento não pode mais apontar pra grande
+-- área raiz (ver trigger trg_campanha_valida_area_nivel2, 05, [05-K-1]) — cada
+-- campanha passou a apontar pra uma área de nível 2 dentro da mesma grande área
+-- que já tinha antes (resolvida por codigo_cnpq via subquery, não por ID fixo,
+-- porque a ordem de inserção das áreas novas em [07-C-2] poderia mudar o número).
+INSERT INTO campanha (id_usuario, id_admin, id_area_conhecimento, titulo, modelo, meta_financeira, taxa_plataforma, descricao, data_inicio, data_fim, status, aprovado_em, criado_em) VALUES
+(1, 8, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '1.03.00.00'), 'Desenvolvimento de Algoritmo para Diagnóstico Precoce de Alzheimer por IA',      'all-or-nothing', 50000.00, 5.00, 'Pesquisa aplicada em inteligência artificial para detecção precoce da doença de Alzheimer usando redes neurais convolucionais.',                          '2024-02-01', '2024-04-01', 'sucesso',             '2024-02-01', '2024-01-20 10:00:00'),
+(2, 8, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '3.13.00.00'), 'Prótese de Baixo Custo com Impressão 3D para Amputados do SUS',                  'flexivel',       35000.00, 5.00, 'Projeto de engenharia biomédica para fabricação de próteses funcionais de membros superiores a custo acessível para o sistema público.',                '2024-02-15', '2024-05-01', 'sucesso',             '2024-02-15', '2024-02-05 11:30:00'),
+(3, 8, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '2.12.00.00'), 'Bioprospecção de Fungos da Caatinga com Potencial Antibiótico',                  'all-or-nothing', 40000.00, 5.00, 'Coleta e análise de fungos endofíticos da Caatinga para identificação de compostos com atividade antibacteriana frente a superbactérias.',              '2024-03-01', '2024-05-30', 'sucesso',             '2024-03-01', '2024-02-20 09:15:00'),
+(4, 8, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '4.06.00.00'), 'Estudo Epidemiológico do Impacto da Dengue na Baixada Fluminense 2024',          'all-or-nothing', 25000.00, 5.00, 'Levantamento epidemiológico detalhado dos casos de dengue em municípios da Baixada Fluminense durante o surto de 2024.',                                 '2024-03-10', '2024-04-24', 'nao_atingido',        '2024-03-10', '2024-03-01 14:00:00'),
+(5, 8, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '6.06.00.00'), 'Mapeamento Socioeconômico de Comunidades Quilombolas de Santa Catarina',         'flexivel',       30000.00, 5.00, 'Pesquisa quantitativa e qualitativa sobre indicadores socioeconômicos, acesso a direitos e identidade cultural em quilombos catarinenses.',              '2024-04-01', '2024-06-01', 'sucesso',             '2024-04-01', '2024-03-20 08:00:00'),
+(6, NULL, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '7.02.00.00'), 'Análise Discursiva das Fake News sobre Vacinas no Twitter (2022–2024)',       'all-or-nothing', 15000.00, 5.00, 'Estudo linguístico-computacional sobre estratégias discursivas de desinformação vacinal em redes sociais brasileiras.',                                  NULL,          NULL,         'aguardando_aprovacao', NULL,        '2025-04-10 16:00:00'),
+(7, 8, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '4.01.00.00'), 'Eficácia de Probióticos na Redução de Infecções Hospitalares em UTI Neonatal',  'all-or-nothing', 45000.00, 5.00, 'Ensaio clínico randomizado avaliando o uso de probióticos na microbiota intestinal de neonatos para prevenção de sepse hospitalar.',                    '2024-05-01', '2024-07-30', 'encerrado',           '2024-05-01', '2024-04-15 10:00:00'),
 -- ADICIONADO: 3 campanhas novas (ids 8, 9, 10 nesta ordem de inserção), uma para cada
 -- pesquisador novo que precisa de histórico real — ver o comentário completo depois do
 -- bloco de denuncia sobre por que cada uma dá o resultado de score esperado.
-(14, 8, 1, 'Nova Plataforma de Diagnóstico por Imagem com Machine Learning',              'all-or-nothing', 30000.00, 32000.00, 5.00, 'Sistema de apoio ao diagnóstico radiológico baseado em visão computacional, validado com dados de dois hospitais universitários.',                      '2024-06-01', '2024-07-16', 'sucesso',             '2024-06-01', '2024-05-20 10:00:00'),
-(15, 8, 4, 'Estudo sobre Microbiota Intestinal em Pacientes Oncológicos',                 'flexivel',       20000.00, 21000.00, 5.00, 'Caracterização da microbiota intestinal e sua relação com resposta a quimioterapia em pacientes com câncer colorretal.',                                '2024-06-01', '2024-07-21', 'sucesso',             '2024-06-01', '2024-05-22 09:30:00'),
-(16, 8, 2, 'Levantamento de Espécies Invasoras em Ecossistemas Costeiros',                'all-or-nothing', 25000.00,  9000.00, 5.00, 'Mapeamento de espécies exóticas invasoras em restingas e manguezais do litoral nordestino e seu impacto na fauna nativa.',                              '2024-06-01', '2024-08-20', 'ativo',               '2024-06-01', '2024-05-25 08:30:00');
+(14, 8, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '1.03.00.00'), 'Nova Plataforma de Diagnóstico por Imagem com Machine Learning',              'all-or-nothing', 30000.00, 5.00, 'Sistema de apoio ao diagnóstico radiológico baseado em visão computacional, validado com dados de dois hospitais universitários.',                      '2024-06-01', '2024-07-16', 'sucesso',             '2024-06-01', '2024-05-20 10:00:00'),
+(15, 8, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '4.05.00.00'), 'Estudo sobre Microbiota Intestinal em Pacientes Oncológicos',                 'flexivel',       20000.00, 5.00, 'Caracterização da microbiota intestinal e sua relação com resposta a quimioterapia em pacientes com câncer colorretal.',                                '2024-06-01', '2024-07-21', 'sucesso',             '2024-06-01', '2024-05-22 09:30:00'),
+(16, 8, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '2.05.00.00'), 'Levantamento de Espécies Invasoras em Ecossistemas Costeiros',                'all-or-nothing', 25000.00, 5.00, 'Mapeamento de espécies exóticas invasoras em restingas e manguezais do litoral nordestino e seu impacto na fauna nativa.',                              '2024-06-01', '2024-08-20', 'ativo',               '2024-06-01', '2024-05-25 08:30:00');
 
 
 -- [07-E-2] seguir_campanha
@@ -428,35 +666,114 @@ INSERT INTO seguir_pesquisador (id_usuario, id_pesquisador) VALUES
 
 
 -- [07-H-1] contribuicao
--- CORRIGIDO: seed representa dados históricos já concluídos, então
--- os triggers de proteção (pensados para tráfego em tempo real)
--- são desligados só durante a carga do seed e religados em seguida.
+-- CORRIGIDO: seed representa dados históricos já concluídos, então os dois
+-- triggers de VALIDAÇÃO (pensados para tráfego em tempo real, que rejeitariam
+-- inserir contribuição numa campanha que já não está mais 'ativo') são
+-- desligados só durante a carga do seed e religados em seguida.
+-- trg_sincroniza_arrecadado_campanha, diferente dos outros dois, não valida nada —
+-- só soma — então fica LIGADA de propósito durante esta carga: é ela quem calcula
+-- campanha.valor_bruto_arrecadado (ver [07-E-1]), em vez de alguém digitar o total
+-- à mão e correr o risco de errar a conta ou deixar o número desatualizado.
 ALTER TABLE contribuicao DISABLE TRIGGER trg_valida_status_contribuicao;
 ALTER TABLE contribuicao DISABLE TRIGGER trg_contribuicao_all_or_nothing_pix;
-ALTER TABLE contribuicao DISABLE TRIGGER trg_sincroniza_arrecadado_campanha;
 
+-- CORRIGIDO (RF-048): as 4 contribuições marcadas com (*) eram cartao_credito/boleto
+-- em campanha all-or-nothing — a própria trg_contribuicao_all_or_nothing_pix existe
+-- pra impedir exatamente isso, só entraram porque essa trigger fica desligada
+-- durante a carga. Trocadas pra pix; não afeta o cálculo de score (que usa o status
+-- da campanha, não o meio de pagamento da contribuição).
 INSERT INTO contribuicao (id_campanha, id_usuario, valor, meio_pagamento, status, anonima, id_transacao_api, criado_em) VALUES
-(1, 2, 5000.00, 'pix',            'repassado',  FALSE, 'TXN-PIX-0001', '2024-02-10 10:00:00'),
-(1, 3, 2300.00, 'cartao_credito', 'repassado',  FALSE, 'TXN-CC-0002',  '2024-02-12 14:30:00'),
-(2, 1, 1500.00, 'pix',            'repassado',  TRUE,  'TXN-PIX-0003', '2024-02-20 09:00:00'),
-(3, 5, 8000.00, 'boleto',         'repassado',  FALSE, 'TXN-BOL-0004', '2024-03-05 11:00:00'),
+(1, 2, 5000.00, 'pix', 'repassado',  FALSE, 'TXN-PIX-0001', '2024-02-10 10:00:00'),
+(1, 3, 2300.00, 'pix', 'repassado',  FALSE, 'TXN-PIX-0002', '2024-02-12 14:30:00'), -- (*) era cartao_credito
+(2, 1, 1500.00, 'pix', 'repassado',  TRUE,  'TXN-PIX-0003', '2024-02-20 09:00:00'),
+(3, 5, 8000.00, 'pix', 'repassado',  FALSE, 'TXN-PIX-0004', '2024-03-05 11:00:00'), -- (*) era boleto
 (5, 4, 2200.00, 'cartao_debito',  'repassado',  FALSE, 'TXN-CD-0005',  '2024-04-10 15:00:00'),
 (7, 6,  500.00, 'pix',            'repassado',  TRUE,  'TXN-PIX-0006', '2024-05-10 08:00:00'),
-(4, 7,  800.00, 'cartao_credito', 'a_devolver', FALSE, 'TXN-CC-0007',  '2024-03-15 12:00:00'),
+(4, 7,  800.00, 'pix', 'a_devolver', FALSE, 'TXN-PIX-0007', '2024-03-15 12:00:00'), -- (*) era cartao_credito
 -- ADICIONADO: contribuições de usuários com papéis diferentes de 'pesquisador',
 -- pra mostrar que qualquer usuário logado pode apoiar campanha, não só pesquisadores.
 (3, 9,  50.00,  'pix',            'repassado',  FALSE, 'TXN-PIX-0008', '2024-02-25 09:00:00'), -- Fernanda, usuario comum, contribuição pública
-(1, 10, 300.00, 'cartao_credito', 'repassado',  TRUE,  'TXN-CC-0009',  '2024-02-28 10:00:00'), -- Diego, moderador, contribuição anônima (anonima=TRUE mas id_usuario preservado p/ auditoria)
+(1, 10, 300.00, 'pix', 'repassado',  TRUE,  'TXN-PIX-0009',  '2024-02-28 10:00:00'), -- (*) era cartao_credito. Diego, moderador, contribuição anônima (anonima=TRUE mas id_usuario preservado p/ auditoria)
 (5, 12, 150.00, 'pix',            'repassado',  FALSE, 'TXN-PIX-0010', '2024-04-12 09:00:00'), -- Thiago, curador, contribuição pública
 -- ADICIONADO: contribuição de verdade anônima — sem nenhum usuário vinculado
 -- (id_usuario NULL, coluna é nullable justamente pra cobrir doador sem conta/
 -- ON DELETE SET NULL). Diferente das linhas com anonima=TRUE acima, que só
 -- escondem a identidade da exibição pública mas mantêm o vínculo interno.
-(2, NULL, 75.00, 'pix',            'repassado',  TRUE,  'TXN-PIX-0011', '2024-03-02 10:00:00');
+(2, NULL, 75.00, 'pix',            'repassado',  TRUE,  'TXN-PIX-0011', '2024-03-02 10:00:00'),
+-- ADICIONADO (27-07-2026): o resto de cada campanha, distribuído em várias
+-- contribuições de doadores diferentes, pra chegar exatamente no total que a
+-- campanha correspondente costumava ter digitado à mão em valor_bruto_arrecadado
+-- (ver comentário do [07-E-1]) — agora é a soma real dessas linhas, calculada
+-- pela trigger, que decide o total, não o contrário. Campanha 'all-or-nothing'
+-- só recebe pix; o resto pode usar qualquer meio de pagamento, igual antes.
+(1, 4,  15000.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0012', '2024-02-14 10:00:00'),
+(1, 5,  12000.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0013', '2024-02-16 11:00:00'),
+(1, 7,  10000.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0014', '2024-02-18 09:00:00'),
+(1, 9,   5000.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0015', '2024-03-01 14:00:00'),
+(1, 11,  2700.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0016', '2024-03-05 10:00:00'),
+
+(2, 3,  8000.00, 'pix',            'repassado', FALSE, 'TXN-PIX-0017', '2024-03-10 10:00:00'),
+(2, 4,  7000.00, 'cartao_credito', 'repassado', FALSE, 'TXN-CC-0018',  '2024-03-15 11:00:00'),
+(2, 6,  6000.00, 'boleto',         'repassado', FALSE, 'TXN-BOL-0019', '2024-03-20 09:00:00'),
+(2, 9,  3925.00, 'pix',            'repassado', FALSE, 'TXN-PIX-0020', '2024-03-25 10:00:00'),
+(2, 13, 2000.00, 'cartao_debito',  'repassado', FALSE, 'TXN-CD-0021',  '2024-04-01 14:00:00'),
+
+(3, 2,  12000.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0022', '2024-03-08 10:00:00'),
+(3, 4,   9000.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0023', '2024-03-12 11:00:00'),
+(3, 6,   6000.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0024', '2024-03-18 09:00:00'),
+(3, 7,   4950.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0025', '2024-03-22 10:00:00'),
+
+-- Campanha 4 (nao_atingido): estas 3 ficam 'confirmado', não 'repassado' — a
+-- campanha não bateu a meta, então nada foi repassado ao pesquisador. Junto com a
+-- linha 'a_devolver' já existente acima (id_usuario=7), representam o instantâneo
+-- de quando a campanha foi marcada nao_atingido: uma parte já entrou no fluxo de
+-- devolução, o resto ainda esperando o processamento do reembolso em lote.
+(4, 1, 3000.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0026', '2024-03-12 10:00:00'),
+(4, 2, 2500.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0027', '2024-03-14 11:00:00'),
+(4, 3, 2500.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0028', '2024-03-16 09:00:00'),
+
+(5, 1, 8000.00, 'pix',            'repassado', FALSE, 'TXN-PIX-0029', '2024-04-15 10:00:00'),
+(5, 6, 6000.00, 'cartao_credito', 'repassado', FALSE, 'TXN-CC-0030',  '2024-04-18 11:00:00'),
+(5, 7, 3000.00, 'boleto',         'repassado', FALSE, 'TXN-BOL-0031', '2024-04-22 09:00:00'),
+(5, 9, 2650.00, 'cartao_debito',  'repassado', FALSE, 'TXN-CD-0032',  '2024-04-25 10:00:00'),
+
+(7, 1, 15000.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0033', '2024-05-15 10:00:00'),
+(7, 2, 12000.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0034', '2024-05-20 11:00:00'),
+(7, 4, 10000.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0035', '2024-05-25 09:00:00'),
+(7, 5,  7500.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0036', '2024-06-01 10:00:00'),
+
+-- Campanhas 8 e 9 (sucesso, sem linha em repasse ainda — ver [07-E-4]): 'confirmado'
+-- em vez de 'repassado', pra não sugerir um repasse que ainda não foi registrado.
+(8, 1,  12000.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0037', '2024-06-05 10:00:00'),
+(8, 2,  10000.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0038', '2024-06-08 11:00:00'),
+(8, 3,   6000.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0039', '2024-06-12 09:00:00'),
+(8, 4,   4000.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0040', '2024-06-15 10:00:00'),
+
+(9, 5, 8000.00,  'pix',            'confirmado', FALSE, 'TXN-PIX-0041', '2024-06-05 10:00:00'),
+(9, 6, 6000.00,  'cartao_credito', 'confirmado', FALSE, 'TXN-CC-0042',  '2024-06-10 11:00:00'),
+(9, 7, 4000.00,  'boleto',         'confirmado', FALSE, 'TXN-BOL-0043', '2024-06-15 09:00:00'),
+(9, 9, 3000.00,  'cartao_debito',  'confirmado', FALSE, 'TXN-CD-0044',  '2024-06-20 10:00:00'),
+
+-- Campanha 10 ('ativo', em andamento): 'confirmado', ainda não há repasse porque
+-- a campanha nem terminou.
+(10, 1, 3000.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0045', '2024-06-10 10:00:00'),
+(10, 2, 2500.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0046', '2024-06-15 11:00:00'),
+(10, 3, 2000.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0047', '2024-06-20 09:00:00'),
+(10, 4, 1500.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0048', '2024-06-25 10:00:00');
 
 ALTER TABLE contribuicao ENABLE TRIGGER trg_valida_status_contribuicao;
 ALTER TABLE contribuicao ENABLE TRIGGER trg_contribuicao_all_or_nothing_pix;
-ALTER TABLE contribuicao ENABLE TRIGGER trg_sincroniza_arrecadado_campanha;
+
+-- [07-H-3] aceite_termo_contribuicao
+-- ADICIONADO (27-07-2026): estava vazia, e sustenta o RF-054/RF-055 — a Etapa 2
+-- descreve essa trilha (aceite dos termos por transação) como a defesa principal
+-- da plataforma numa disputa de chargeback com operadora de cartão. Gerado a
+-- partir da própria tabela contribuicao (não digitado linha por linha) — cada
+-- contribuição aceitou a versão de termos vigente na época (v1, id_termo=1; ver
+-- [07-D-6]), no mesmo instante da contribuição.
+INSERT INTO aceite_termo_contribuicao (id_contribuicao, id_termo, aceito_em, ip_aceite)
+SELECT id_contribuicao, 1, criado_em, '187.10.20.30'
+FROM contribuicao;
 
 
 -- [07-H-2] auditoria_financeira
@@ -508,6 +825,13 @@ INSERT INTO arquivo_atualizacao (id_arquivo, id_atualizacao) VALUES
 
 
 -- [07-E-4] repasse
+-- CORRIGIDO (27-07-2026): removida a 2ª linha de repasse pra campanha 2
+-- ('parcial_processando', valor_bruto idêntico ao repasse 'concluido' já existente
+-- pra mesma campanha) — era lixo de seed (duas linhas de repasse pro mesmo valor
+-- bruto não fazia sentido) e ficou ainda mais evidente depois da correção do A3,
+-- logo abaixo: agora valor_bruto_arrecadado de cada campanha é a soma real das
+-- contribuições, então uma segunda linha de repasse "fantasma" quebraria essa
+-- consistência de propósito.
 ALTER TABLE repasse DISABLE TRIGGER trg_valida_repasse;
 
 INSERT INTO repasse (id_campanha, valor_bruto, valor_liquido, meta_atingida, repassado_em, taxa_relativa, status) VALUES
@@ -516,8 +840,7 @@ INSERT INTO repasse (id_campanha, valor_bruto, valor_liquido, meta_atingida, rep
 (3, 40000.00, 38000.00, TRUE,  '2024-06-10 10:00:00', 5.00, 'concluido'),
 (5, 22000.00, 20900.00, FALSE, '2024-06-10 10:00:00', 5.00, 'concluido'),
 (7, 45000.00, 42750.00, TRUE,  '2024-08-10 10:00:00', 5.00, 'concluido'),
-(4,  8000.00,  0.00,    FALSE, NULL,                   5.00, 'a_devolver'),
-(2, 28500.00,    0.00,  FALSE, NULL,                   5.00, 'parcial_processando');
+(4,  8000.00,  0.00,    FALSE, NULL,                   5.00, 'a_devolver');
 
 ALTER TABLE repasse ENABLE TRIGGER trg_valida_repasse;
 
@@ -556,30 +879,68 @@ INSERT INTO comentario (id_campanha, id_pesquisador, conteudo, endossado, criado
 
 
 -- [07-E-8] denuncia
-INSERT INTO denuncia (id_usuario, id_campanha_alvo, id_pesquisador_alvo, id_motivo, status, criado_em) VALUES
-(2, 6,    NULL, 1, 'improcedente', '2025-04-11 09:00:00'),
-(3, NULL, 6,    5, 'pendente',     '2025-04-12 10:00:00'),
-(4, 4,    NULL, 1, 'resolvida',    '2024-03-16 11:00:00'),
-(5, NULL, 4,    6, 'em_analise',   '2024-03-20 14:00:00'),
-(6, 2,    NULL, 2, 'improcedente', '2024-03-02 08:00:00'),
-(7, NULL, 6,    7, 'pendente',     '2025-04-13 15:00:00'),
-(1, 6,    NULL, 4, 'pendente',     '2025-04-14 10:00:00'),
--- ADICIONADO: denúncias que alimentam de propósito a dimensão Reputação da Comunidade
--- (calcular_score_reputacao, 05: 25 − total_denuncias×1 − total_procedentes×3) dos 2
--- pesquisadores novos que precisam de reputação imperfeita.
--- Eduardo (16): 2 denúncias 'pendente' (ainda não procedentes) — custam só 1 ponto cada
--- (25 → 23), o suficiente pra tirar um pouco de reputação sem zerar a dimensão, já que
--- ele só precisa ficar em "Em Construção" (25–49), não em "Atenção".
-(2,  NULL, 16, 5, 'pendente',     '2024-06-10 09:00:00'), 
-(9,  NULL, 16, 6, 'pendente',     '2024-06-12 10:00:00'),
--- Vinícius (17): 4 denúncias 'resolvida' (= procedente) de 4 denunciantes diferentes
--- (a UNIQUE de denuncia é por par usuário/alvo, por isso não repito denunciante) —
--- cada uma custa 1+3=4 pontos (25 → 9), derrubando a reputação o bastante pra, somada
--- ao resto do perfil dele (sem link, sem campanha), garantir a faixa "Atenção" (0–24).
-(1,  NULL, 17, 5, 'resolvida',    '2024-06-01 09:00:00'),
-(4,  NULL, 17, 6, 'resolvida',    '2024-06-02 10:00:00'),
-(11, NULL, 17, 7, 'resolvida',    '2024-06-03 11:00:00'),
-(13, NULL, 17, 5, 'resolvida',    '2024-06-04 12:00:00');
+-- CORRIGIDO (bug crítico, 28-07-2026): id_motivo referenciava o id serial posicional
+-- do catálogo (1-7) — quando os 5 motivos novos do A5 entraram (CAMP-005 a 008 ANTES
+-- do bloco PERF-*, ver [07-C-3]), os ids de PERF-001/002/003 mudaram de 5/6/7 pra
+-- 9/10/11. As denúncias de perfil abaixo continuaram apontando pro 5/6/7 antigo —
+-- que agora são motivos de CAMPANHA — e trg_valida_tipo_motivo_denuncia (05,
+-- criada bem pra pegar exatamente isso) rejeitava as 13 linhas do INSERT inteiro
+-- (é um único comando). A tabela denuncia nascia vazia, sem erro visível no psql
+-- (só um WARNING que passa despercebido rodando script inteiro), e o teste
+-- determinístico das 4 faixas de score da Alexia se desfazia em silêncio (Eduardo e
+-- Vinícius, sem nenhuma denúncia contando contra eles, saíam nos 25 pontos cheios
+-- de Reputação em vez do valor calculado). Encontrado rodando os 8 arquivos de
+-- verdade num Postgres — nenhuma leitura estática pegaria isso.
+-- CORRIGIDO junto (raiz do problema, não só o sintoma): id_motivo passou a ser
+-- resolvido por subquery em motivo_denuncia.codigo (chave natural, estável), não
+-- mais por número de posição no catálogo — inserir motivo novo no meio da lista
+-- nunca mais quebra estas linhas, seja qual for o id que ele ganhar.
+INSERT INTO denuncia (id_usuario, id_campanha_alvo, id_pesquisador_alvo, id_motivo, status, criado_em)
+SELECT v.id_usuario, v.id_campanha_alvo, v.id_pesquisador_alvo, md.id_motivo, v.status::status_denuncia, v.criado_em::timestamp
+FROM (VALUES
+    (2, 6,    NULL::int, 'CAMP-001', 'improcedente', '2025-04-11 09:00:00'),
+    (3, NULL, 6,         'PERF-001', 'pendente',     '2025-04-12 10:00:00'),
+    (4, 4,    NULL,      'CAMP-001', 'resolvida',    '2024-03-16 11:00:00'),
+    (5, NULL, 4,         'PERF-002', 'em_analise',   '2024-03-20 14:00:00'),
+    (6, 2,    NULL,      'CAMP-002', 'improcedente', '2024-03-02 08:00:00'),
+    (7, NULL, 6,         'PERF-003', 'pendente',     '2025-04-13 15:00:00'),
+    (1, 6,    NULL,      'CAMP-004', 'pendente',     '2025-04-14 10:00:00'),
+    -- ADICIONADO: denúncias que alimentam de propósito a dimensão Reputação da
+    -- Comunidade (calcular_score_reputacao, 05: 25 − total_denuncias×1 −
+    -- total_procedentes×3) dos 2 pesquisadores novos que precisam de reputação
+    -- imperfeita.
+    -- Eduardo (16): 2 denúncias 'pendente' (ainda não procedentes) — custam só 1
+    -- ponto cada (25 → 23), o suficiente pra tirar um pouco de reputação sem zerar
+    -- a dimensão, já que ele só precisa ficar em "Em Construção" (25-49), não em
+    -- "Atenção".
+    (2,  NULL, 16, 'PERF-001', 'pendente',  '2024-06-10 09:00:00'),
+    (9,  NULL, 16, 'PERF-002', 'pendente',  '2024-06-12 10:00:00'),
+    -- Vinícius (17): 4 denúncias 'resolvida' (= procedente) de 4 denunciantes
+    -- diferentes (a UNIQUE de denuncia é por par usuário/alvo, por isso não repito
+    -- denunciante) — cada uma custa 1+3=4 pontos (25 → 9), derrubando a reputação
+    -- o bastante pra, somada ao resto do perfil dele (sem link, sem campanha),
+    -- garantir a faixa "Atenção" (0-24).
+    (1,  NULL, 17, 'PERF-001', 'resolvida', '2024-06-01 09:00:00'),
+    (4,  NULL, 17, 'PERF-002', 'resolvida', '2024-06-02 10:00:00'),
+    (11, NULL, 17, 'PERF-003', 'resolvida', '2024-06-03 11:00:00'),
+    (13, NULL, 17, 'PERF-001', 'resolvida', '2024-06-04 12:00:00')
+) AS v(id_usuario, id_campanha_alvo, id_pesquisador_alvo, motivo_codigo, status, criado_em)
+JOIN motivo_denuncia md ON md.codigo = v.motivo_codigo;
+
+
+-- [07-D-7] notificacao
+-- ADICIONADO (27-07-2026): estava vazia. 7 linhas em estados diferentes, pra
+-- exercitar de verdade a permissão notificacao_processar (recém-criada, ver A4
+-- em PENDENCIAS e correcoes.md) e o índice idx_notificacao_status (02) — até
+-- aqui, nenhum dos dois nunca tinha rodado contra nenhuma linha real.
+INSERT INTO notificacao (id_usuario, email_destinatario, tipo_evento, status, tentativas, criado_em, enviado_em, ultimo_erro) VALUES
+(1, 'ana.santos@usp.br',           'campanha_aprovada',                  'enviado',  1, '2024-02-01 10:05:00', '2024-02-01 10:05:30', NULL),
+(2, 'carlos.melo@unicamp.br',      'doacao_recebida',                    'enviado',  1, '2024-02-10 10:00:30', '2024-02-10 10:01:00', NULL),
+(4, 'rafael.costa@ufrj.br',        'campanha_rejeitada',                 'pendente', 0, '2024-01-25 09:00:10', NULL,                   NULL),
+(6, 'marcos.oliveira@unesp.br',    'solicitacao_encerramento_aprovada',  'pendente', 0, '2024-05-13 10:00:05', NULL,                   NULL),
+(3, 'beatriz.lima@ufmg.br',        'denuncia_recebida_contra_perfil',    'falhou',   3, '2024-03-20 08:00:10', NULL,                   'SMTP timeout: gateway de e-mail não respondeu após 3 tentativas'),
+(9, 'fernanda.souza@gmail.com',    'doacao_confirmada',                  'falhou',   2, '2024-02-25 09:00:10', NULL,                   'Endereço de e-mail rejeitado pelo servidor de destino (550 mailbox not found)'),
+(5, 'juliana.ferreira@ufsc.br',    'campanha_proxima_do_prazo',          'cancelado',0, '2024-05-20 08:00:00', NULL,                   'Cancelada: campanha encerrada antes do envio programado');
 
 
 -- ----------------------------------------------------------------------------

@@ -37,13 +37,47 @@
 -- ============================================================================
 -- [01-A] Bootstrap, Extensões e ENUMs
 -- ============================================================
+-- CORRIGIDO (27-07-2026): role nasce NOLOGIN, sem senha nenhuma. A versão anterior
+-- criava a role já com LOGIN e uma senha placeholder ('TROCAR_NO_AMBIENTE_REAL') —
+-- esquecer de trocar isso em produção falha ABERTO (o sistema funciona perfeitamente
+-- com uma senha conhecida publicada no GitHub, sem nenhum aviso). Com NOLOGIN,
+-- esquecer o passo abaixo falha FECHADO: o NestJS simplesmente não consegue conectar
+-- (FATAL: role "app_nestjs" is not permitted to log in), erro percebido em minutos,
+-- não uma falha de segurança silenciosa. GRANT e SET ROLE continuam funcionando
+-- normalmente numa role NOLOGIN — só LOGIN direto (usuário/senha) é que fica bloqueado.
+-- PASSO OBRIGATÓRIO DE INSTALAÇÃO (rodar uma vez, fora deste arquivo, com a senha
+-- real de cada ambiente — local ou produção — nunca versionada em texto puro):
+--     ALTER ROLE app_nestjs LOGIN PASSWORD 'a_senha_que_voce_vai_por_no_.env';
+-- (ver tutorial-rodar-projeto.md, que já tem esse passo numerado logo após o 01).
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'app_nestjs') THEN
-        CREATE ROLE app_nestjs LOGIN PASSWORD 'TROCAR_NO_AMBIENTE_REAL';
+        CREATE ROLE app_nestjs NOLOGIN;
     END IF;
 END
 $$;
+
+-- ADICIONADO (28-07-2026) — guarda de BYPASSRLS: não resolve sozinho o item 22 do
+-- PENDENCIAS (ainda é preciso confirmar se o papel usado no SQL Editor do Supabase
+-- tem BYPASSRLS antes do deploy), mas transforma uma falha silenciosa em uma parada
+-- única e autoexplicativa. Sem esta guarda, rodar os arquivos 04-07 como um papel
+-- sem BYPASSRLS (nem superusuário) produz dezenas de erros de "new row violates
+-- row-level security policy" espalhados pelos INSERTs do 07 — 89 das 105 policies
+-- são TO app_nestjs, então qualquer outro papel (dono da tabela incluído, por causa
+-- do FORCE ROW LEVEL SECURITY do 04) fica bloqueado silenciosamente em quase tudo.
+-- Com a guarda, o erro é um só, no início, e explica exatamente o que fazer.
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_roles
+        WHERE rolname = current_user
+          AND (rolsuper OR rolbypassrls)
+    ) THEN
+        RAISE EXCEPTION 'Bootstrap abortado: o papel "%" nao ignora RLS. Como as 39 tabelas usam FORCE ROW LEVEL SECURITY e 89 das 105 policies sao TO app_nestjs, o seed falharia em silencio (dezenas de erros espalhados). Rode como superusuario, ou peca BYPASSRLS pro papel, ou use o papel indicado no tutorial-rodar-projeto.md.', current_user;
+    END IF;
+END
+$$;
+
 -- ============================================================
 -- EXTENSÕES
 -- ============================================================
@@ -53,6 +87,10 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- ============================================================
 CREATE TYPE tipo_configuracao     AS ENUM ('decimal', 'inteiro', 'texto', 'booleano');
 CREATE TYPE status_pesquisador    AS ENUM ('ativo', 'suspenso');
+-- ADICIONADO (28-07-2026): ver CK_PERFIL_VINCULO em perfil_pesquisador, mais abaixo,
+-- pro raciocínio completo — preserva a regra da Alexia (perfil não nasce incompleto)
+-- sem impedir a existência de pesquisador sem vínculo institucional.
+CREATE TYPE tipo_vinculo          AS ENUM ('institucional', 'independente');
 CREATE TYPE titulo_academico      AS ENUM ('graduado', 'especialista', 'mestre', 'doutor');
 CREATE TYPE modelo_campanha       AS ENUM ('all-or-nothing', 'flexivel');
 CREATE TYPE status_campanha       AS ENUM ('aguardando_aprovacao', 'ativo', 'sucesso', 'nao_atingido', 'rejeitado', 'encerrado', 'encerrado_moderacao');
@@ -64,7 +102,19 @@ CREATE TYPE status_denuncia       AS ENUM ('pendente', 'em_analise', 'resolvida'
 CREATE TYPE status_encerramento   AS ENUM ('pendente', 'aprovado', 'rejeitado', 'cancelado');
 CREATE TYPE tipo_motivo_denuncia  AS ENUM ('campanha', 'perfil');
 CREATE TYPE status_notificacao    AS ENUM ('pendente', 'enviado', 'falhou', 'cancelado');
-CREATE TYPE tipo_recompensa       AS ENUM ('fisica', 'digital', 'reconhecimento', 'acesso_antecipado', 'outro');
+-- CORRIGIDO (27-07-2026): 'fisica' e 'outro' removidos — recompensa física cria
+-- obrigação de entrega/logística que uma plataforma tocada por 2 pessoas não tem
+-- como fiscalizar, e 'outro' era uma porta aberta pra reintroduzir isso pela
+-- brecha. Os 3 valores que sobraram (digital, reconhecimento, acesso_antecipado)
+-- não têm frete, prazo de envio nem disputa de "não recebi" — reconhecimento é
+-- literalmente "nome do doador no projeto" (ideia trazida pela Alexia) e
+-- acesso_antecipado é o modelo do Experiment.com, referência declarada do TCC.
+-- Feito agora porque a tabela recompensa está vazia no seed (nenhum dado
+-- existente pra migrar) — é o momento mais barato possível pra essa mudança.
+-- Nota pra qualquer migração futura contra um banco já em produção com dado
+-- real: o Postgres não tem ALTER TYPE ... DROP VALUE — o caminho lá seria
+-- converter a coluna pra TEXT, recriar o tipo, e converter de volta.
+CREATE TYPE tipo_recompensa       AS ENUM ('digital', 'reconhecimento', 'acesso_antecipado');
 
 -- ============================================================
 -- [01-B] RBAC (3 tabelas)
@@ -98,8 +148,16 @@ CREATE TABLE papel_permissao (
 -- [01-C] CONFIG (5 tabelas)
 -- ============================================================
 -- (`configuracoes` está fisicamente após `usuario`, letra D — ver nota lá)
+-- ADICIONADO (28-07-2026, item B3 reaberto): coluna codigo — motivo_denuncia e
+-- area_conhecimento já tinham chave natural estável (codigo/codigo_cnpq), tipo_link
+-- era a única tabela de catálogo do projeto sem uma. Isso deixou de ser só uma
+-- inconsistência cosmética quando o seed passou a referenciar catálogo por chave
+-- natural em vez de id posicional (ver [07-F-1]) — sem codigo, tipo_link ficaria
+-- de fora dessa proteção e sujeito ao mesmo tipo de bug que quebrou o seed de
+-- denuncia (ver PENDENCIAS e correcoes.md, item 36).
 CREATE TABLE tipo_link (
     id_tipolink         SERIAL,
+    codigo              VARCHAR(20)  NOT NULL,
     nome                VARCHAR(100) NOT NULL,
     ativo               BOOLEAN      DEFAULT TRUE,
     regex               TEXT,
@@ -109,18 +167,25 @@ CREATE TABLE tipo_link (
     permite_recompensa  BOOLEAN NOT NULL DEFAULT FALSE,
 
     CONSTRAINT "PK_TIPO_LINK" PRIMARY KEY (id_tipolink),
+    CONSTRAINT "UK_TIPO_LINK_CODIGO" UNIQUE (codigo),
     CONSTRAINT "CK_TIPO_LINK_ALGUM_ESCOPO"
         CHECK (permite_perfil OR permite_atualizacao OR permite_recompensa)
 );
 
+-- ADICIONADO (27-07-2026): id_pai auto-referenciado — mesmo padrão já usado em
+-- score_config (ver [01-I]) — pra suportar a hierarquia de 2 níveis do CNPq
+-- (grande área -> área). Antes, as 9 linhas eram só as grandes áreas; ver seed
+-- em 07_seed_dados.sql para as áreas de nível 2 (filhas) e o motivo da mudança.
 CREATE TABLE area_conhecimento (
     id_area_conhecimento SERIAL,
     codigo_cnpq          VARCHAR(20)  NOT NULL,
     nome                 VARCHAR(100) NOT NULL,
+    id_pai                INT,
     ativo                BOOLEAN      DEFAULT TRUE,
 
     CONSTRAINT "PK_AREA_CONHECIMENTO" PRIMARY KEY (id_area_conhecimento),
-    CONSTRAINT "UK_AREA_CONHECIMENTO_CODIGO_CNPQ" UNIQUE (codigo_cnpq)
+    CONSTRAINT "UK_AREA_CONHECIMENTO_CODIGO_CNPQ" UNIQUE (codigo_cnpq),
+    CONSTRAINT "FK_AREA_CONHECIMENTO_PAI" FOREIGN KEY (id_pai) REFERENCES area_conhecimento(id_area_conhecimento) ON DELETE SET NULL
 );
 
 CREATE TABLE motivo_denuncia (
@@ -201,10 +266,18 @@ CREATE TABLE usuario_papel (  -- fica aqui por depender de usuario; documentada 
 -- CORRIGIDO: coluna "suspenso" removida — duplicava status_pesquisador (mesmo estado,
 -- duas fontes de verdade que podiam divergir); só status_pesquisador era de fato lido
 -- em algum lugar (pol_comentario_insert, 04).
+-- CORRIGIDO (28-07-2026): vinculo_institucional era NOT NULL (Alexia), pra impedir
+-- perfil incompleto — regra certa, mas o efeito colateral era impedir a existência
+-- de pesquisador SEM instituição, que é justamente o público que a justificativa da
+-- Etapa 1 diz que a plataforma quer alcançar. tipo_vinculo preserva a regra dela
+-- (ver CK_PERFIL_VINCULO abaixo: continua proibido cadastrar sem declarar nada) e
+-- abre a porta pro pesquisador independente declarar isso explicitamente, em vez de
+-- não conseguir se cadastrar.
 CREATE TABLE perfil_pesquisador (
     id_usuario            INT NOT NULL,
     cpf_criptografado     VARCHAR(255) NOT NULL,
-    vinculo_institucional VARCHAR(255) NOT NULL,
+    tipo_vinculo          tipo_vinculo NOT NULL DEFAULT 'institucional',
+    vinculo_institucional VARCHAR(255),
     titulo_academico      titulo_academico NOT NULL,
     status_pesquisador    status_pesquisador NOT NULL DEFAULT 'ativo',
     ativado_em            TIMESTAMP,
@@ -212,7 +285,14 @@ CREATE TABLE perfil_pesquisador (
     score_atualizado_em   TIMESTAMP,
 
     CONSTRAINT "PK_PERFIL_PESQUISADOR" PRIMARY KEY (id_usuario),
-    CONSTRAINT "FK_PERFIL_PESQUISADOR_USUARIO" FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE CASCADE
+    CONSTRAINT "FK_PERFIL_PESQUISADOR_USUARIO" FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE CASCADE,
+    -- Institucional exige o nome da instituição preenchido (não vazio); independente
+    -- exige que o campo fique vazio (não é "esqueceram de preencher", é um fato
+    -- declarado). Nenhum dos dois estados aceita ambiguidade.
+    CONSTRAINT "CK_PERFIL_VINCULO" CHECK (
+        (tipo_vinculo = 'institucional' AND vinculo_institucional IS NOT NULL AND btrim(vinculo_institucional) <> '')
+        OR (tipo_vinculo = 'independente' AND vinculo_institucional IS NULL)
+    )
 );
 
 CREATE TABLE seguir_pesquisador (
@@ -316,7 +396,13 @@ CREATE TABLE campanha (
     id_campanha          SERIAL,
     id_usuario           INT             NOT NULL,
     id_admin             INT,
-    id_area_conhecimento INT,
+    -- CORRIGIDO (28-07-2026): virou NOT NULL — a trigger trg_campanha_valida_area_nivel2
+    -- (05, [05-K-1]) já bloqueava apontar pra grande área raiz, mas deixava NULL passar,
+    -- criando a regra invertida "não pode ser vago, mas pode ser omisso" (campanha sem
+    -- nenhuma área some de todo filtro, o que é pior que aparecer só na grande área).
+    -- Fecha a decisão de nível-2-obrigatório já tomada; as 10 campanhas do seed já
+    -- tinham área de nível 2 antes desta mudança, então não exigiu nenhum ajuste nelas.
+    id_area_conhecimento INT             NOT NULL,
     titulo               VARCHAR(255)    NOT NULL,
     modelo               modelo_campanha NOT NULL DEFAULT 'all-or-nothing',
     meta_financeira      DECIMAL(10,2)   NOT NULL,
@@ -460,7 +546,11 @@ CREATE TABLE recompensa (
     descricao             TEXT,
     valor_minimo          DECIMAL(10,2)   NOT NULL,          -- contribuição mínima pra desbloquear essa recompensa
     quantidade_disponivel INT,                                -- NULL = ilimitada
-    tipo                  tipo_recompensa NOT NULL DEFAULT 'outro',
+    -- CORRIGIDO (27-07-2026): DEFAULT 'outro' removido junto do valor do ENUM (ver
+    -- tipo_recompensa acima) — nenhum dos 3 valores que sobraram é um "genérico"
+    -- óbvio o bastante pra ser o padrão silencioso; a aplicação passa a ser
+    -- obrigada a escolher o tipo explicitamente ao criar a recompensa.
+    tipo                  tipo_recompensa NOT NULL,
     ativo                 BOOLEAN         DEFAULT TRUE,
     criado_em             TIMESTAMP       DEFAULT NOW(),      -- [melhoria]
 

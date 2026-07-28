@@ -14,8 +14,8 @@
 --  3. Regras de moderação de comunidade, engajamento e automação RBAC.
 --
 --  Inventário Mapeado:
---  - 30 Funções (Helpers, Cálculo, Orquestração e Triggers)
---  - 26 Triggers (Todas idempotentes com DROP TRIGGER IF EXISTS)
+--  - 31 Funções (Helpers, Cálculo, Orquestração e Triggers)
+--  - 29 Triggers (Todas idempotentes com DROP TRIGGER IF EXISTS)
 -- ----------------------------------------------------------------------------
 --  SUMÁRIO DOS BLOCOS DE CÓDIGO
 --  (letras seguem o índice global de DOCUMENTACAO_BD.md — I = SCORE,
@@ -849,6 +849,63 @@ CREATE TRIGGER trg_link_recompensa_valida_tipo
     BEFORE INSERT OR UPDATE ON link_recompensa
     FOR EACH ROW
     EXECUTE FUNCTION public.trg_valida_escopo_tipolink();
+
+-- ----------------------------------------------------------------------------
+-- Função:     fn_valida_area_conhecimento_nivel2
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-K-1]
+-- Regra:      ADICIONADO (27-07-2026) — area_conhecimento ganhou hierarquia de
+--             2 níveis (grande área -> área, id_pai em 01) pra dar granularidade
+--             de busca de verdade — "Ciências da Saúde" cobrindo de odontologia
+--             a saúde coletiva era amplo demais pra filtro funcionar. Decisão
+--             tomada junto (27-07-2026): campanha é obrigada a escolher uma área
+--             de nível 2 (folha), nunca a grande área raiz — senão a granularidade
+--             nova fica decorativa, ninguém é obrigado a usar. Não dá pra fazer
+--             isso com CHECK simples (precisa consultar outra tabela), por isso
+--             é trigger, não constraint.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_valida_area_conhecimento_nivel2()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_id_pai INT;
+BEGIN
+    -- campanha.id_area_conhecimento é nullable (01) — NULL continua permitido,
+    -- esta trigger só entra em ação quando uma área É informada, garantindo que,
+    -- quando informada, seja de nível 2 (nunca a grande área raiz).
+    IF NEW.id_area_conhecimento IS NULL THEN
+        RETURN NEW;
+    END IF;
+
+    SELECT id_pai INTO v_id_pai FROM area_conhecimento WHERE id_area_conhecimento = NEW.id_area_conhecimento;
+
+    IF v_id_pai IS NULL THEN
+        RAISE EXCEPTION 'Escolha uma área de conhecimento específica (nível 2), não a grande área raiz.';
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_campanha_valida_area_nivel2
+-- Tabela:    campanha
+-- Momento:   BEFORE INSERT OR UPDATE (só quando id_area_conhecimento muda)
+-- Função:    fn_valida_area_conhecimento_nivel2()
+-- Bloco:     [05-K-1]
+-- Regra:     Bloqueia campanha vinculada a uma grande área raiz (id_pai NULL).
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_campanha_valida_area_nivel2 ON campanha;
+CREATE TRIGGER trg_campanha_valida_area_nivel2
+    BEFORE INSERT ON campanha
+    FOR EACH ROW
+    EXECUTE FUNCTION public.fn_valida_area_conhecimento_nivel2();
+
+DROP TRIGGER IF EXISTS trg_campanha_valida_area_nivel2_update ON campanha;
+CREATE TRIGGER trg_campanha_valida_area_nivel2_update
+    BEFORE UPDATE ON campanha
+    FOR EACH ROW
+    WHEN (NEW.id_area_conhecimento IS DISTINCT FROM OLD.id_area_conhecimento)
+    EXECUTE FUNCTION public.fn_valida_area_conhecimento_nivel2();
 
 
 -- ----------------------------------------------------------------------------

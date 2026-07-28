@@ -29,7 +29,7 @@ Se travar em algum item, procure a parte correspondente mais abaixo — ela tem 
 - [ ] Abrir DBeaver → conectar em `localhost:5432`, usuário `postgres`, senha `postgres123`
 - [ ] Criar o banco `crowdacademico` (Parte 2)
 - [ ] Rodar os 8 arquivos `.sql`, **um de cada vez**, nesta ordem, como "Execute SQL Script": `01 → 02 → 03 → 04 → 05 → 06 → 07 → 08` (Parte 3)
-- [ ] `ALTER ROLE app_nestjs PASSWORD 'app_nestjs123';`
+- [ ] `ALTER ROLE app_nestjs LOGIN PASSWORD 'app_nestjs123';` — **obrigatório, não opcional** (o `01` cria a role sem conseguir logar; sem este passo o backend não conecta de jeito nenhum)
 - [ ] `git clone` do seu próprio repositório (backend e frontend) — **nunca** `npx @nestjs/cli new` / `npm create vite` de novo depois da primeira vez
 - [ ] Backend: `cd backend` → `npm install` → criar o `.env` (ele não vem do `git clone`, precisa recriar todo dia) com `DATABASE_URL=postgresql://app_nestjs:app_nestjs123@localhost:5432/crowdacademico` → `npm run start:dev`
 - [ ] Frontend: `cd frontend` → `npm install` → `npm run dev`
@@ -96,15 +96,15 @@ Depois disso, siga normalmente com os arquivos `04`, `05`, `06`, `07` e `08`.
 
 Se algum arquivo der erro na primeira linha por já existir algo (ex. rodou duas vezes sem querer), o mais simples é apagar o banco `crowdacademico` inteiro e criar de novo (Parte 2, passo 4) e recomeçar a sequência.
 
-### Depois de rodar tudo, troque a senha do usuário da aplicação
+### Depois de rodar tudo, dê login e senha pro usuário da aplicação (passo obrigatório)
 
-O `06_grants.sql` trabalha com o role `app_nestjs` já criado no início do processo. Troque a senha provisória, rodando isso no SQL Editor:
+O `01_extensoes_enums_tabelas.sql` cria a role `app_nestjs` como `NOLOGIN` — de propósito, é mais seguro que nascer com uma senha provisória conhecida (ver `Como dropar o sistema-todas-as-formas.md`/`PENDENCIAS e correcoes.md` se quiser o motivo completo). Isso significa que, sem este passo, **ninguém consegue conectar como `app_nestjs`, nem você** — não é uma senha fraca esperando ser trocada, é uma role que literalmente não sabe fazer login ainda. Rode isto no SQL Editor:
 
 ```sql
-ALTER ROLE app_nestjs PASSWORD 'app_nestjs123';
+ALTER ROLE app_nestjs LOGIN PASSWORD 'app_nestjs123';
 ```
 
-Use `app_nestjs123` (a mesma senha usada em todo este tutorial) — é ela que o backend vai usar pra se conectar (não a senha do `postgres`).
+Use `app_nestjs123` (a mesma senha usada em todo este tutorial) — é ela que o backend vai usar pra se conectar (não a senha do `postgres`). Se esquecer este passo, o sintoma é claro: o backend não sobe, e o erro do Postgres diz literalmente `FATAL: role "app_nestjs" is not permitted to log in`.
 
 ---
 
