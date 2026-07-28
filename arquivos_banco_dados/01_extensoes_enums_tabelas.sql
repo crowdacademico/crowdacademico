@@ -87,9 +87,6 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- ============================================================
 CREATE TYPE tipo_configuracao     AS ENUM ('decimal', 'inteiro', 'texto', 'booleano');
 CREATE TYPE status_pesquisador    AS ENUM ('ativo', 'suspenso');
--- ADICIONADO (28-07-2026): ver CK_PERFIL_VINCULO em perfil_pesquisador, mais abaixo,
--- pro raciocínio completo — preserva a regra da Alexia (perfil não nasce incompleto)
--- sem impedir a existência de pesquisador sem vínculo institucional.
 CREATE TYPE tipo_vinculo          AS ENUM ('institucional', 'independente');
 CREATE TYPE titulo_academico      AS ENUM ('graduado', 'especialista', 'mestre', 'doutor');
 CREATE TYPE modelo_campanha       AS ENUM ('all-or-nothing', 'flexivel');
@@ -102,18 +99,6 @@ CREATE TYPE status_denuncia       AS ENUM ('pendente', 'em_analise', 'resolvida'
 CREATE TYPE status_encerramento   AS ENUM ('pendente', 'aprovado', 'rejeitado', 'cancelado');
 CREATE TYPE tipo_motivo_denuncia  AS ENUM ('campanha', 'perfil');
 CREATE TYPE status_notificacao    AS ENUM ('pendente', 'enviado', 'falhou', 'cancelado');
--- CORRIGIDO (27-07-2026): 'fisica' e 'outro' removidos — recompensa física cria
--- obrigação de entrega/logística que uma plataforma tocada por 2 pessoas não tem
--- como fiscalizar, e 'outro' era uma porta aberta pra reintroduzir isso pela
--- brecha. Os 3 valores que sobraram (digital, reconhecimento, acesso_antecipado)
--- não têm frete, prazo de envio nem disputa de "não recebi" — reconhecimento é
--- literalmente "nome do doador no projeto" (ideia trazida pela Alexia) e
--- acesso_antecipado é o modelo do Experiment.com, referência declarada do TCC.
--- Feito agora porque a tabela recompensa está vazia no seed (nenhum dado
--- existente pra migrar) — é o momento mais barato possível pra essa mudança.
--- Nota pra qualquer migração futura contra um banco já em produção com dado
--- real: o Postgres não tem ALTER TYPE ... DROP VALUE — o caminho lá seria
--- converter a coluna pra TEXT, recriar o tipo, e converter de volta.
 CREATE TYPE tipo_recompensa       AS ENUM ('digital', 'reconhecimento', 'acesso_antecipado');
 
 -- ============================================================
@@ -263,16 +248,7 @@ CREATE TABLE usuario_papel (  -- fica aqui por depender de usuario; documentada 
     CONSTRAINT "FK_USUARIO_PAPEL_PAPEL" FOREIGN KEY (id_papel) REFERENCES papel(id_papel) ON DELETE CASCADE
 );
 
--- CORRIGIDO: coluna "suspenso" removida — duplicava status_pesquisador (mesmo estado,
--- duas fontes de verdade que podiam divergir); só status_pesquisador era de fato lido
--- em algum lugar (pol_comentario_insert, 04).
--- CORRIGIDO (28-07-2026): vinculo_institucional era NOT NULL (Alexia), pra impedir
--- perfil incompleto — regra certa, mas o efeito colateral era impedir a existência
--- de pesquisador SEM instituição, que é justamente o público que a justificativa da
--- Etapa 1 diz que a plataforma quer alcançar. tipo_vinculo preserva a regra dela
--- (ver CK_PERFIL_VINCULO abaixo: continua proibido cadastrar sem declarar nada) e
--- abre a porta pro pesquisador independente declarar isso explicitamente, em vez de
--- não conseguir se cadastrar.
+
 CREATE TABLE perfil_pesquisador (
     id_usuario            INT NOT NULL,
     cpf_criptografado     VARCHAR(255) NOT NULL,
