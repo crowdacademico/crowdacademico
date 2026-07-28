@@ -132,14 +132,7 @@ CREATE TABLE papel_permissao (
 -- ============================================================
 -- [01-C] CONFIG (5 tabelas)
 -- ============================================================
--- (`configuracoes` está fisicamente após `usuario`, letra D — ver nota lá)
--- ADICIONADO (28-07-2026, item B3 reaberto): coluna codigo — motivo_denuncia e
--- area_conhecimento já tinham chave natural estável (codigo/codigo_cnpq), tipo_link
--- era a única tabela de catálogo do projeto sem uma. Isso deixou de ser só uma
--- inconsistência cosmética quando o seed passou a referenciar catálogo por chave
--- natural em vez de id posicional (ver [07-F-1]) — sem codigo, tipo_link ficaria
--- de fora dessa proteção e sujeito ao mesmo tipo de bug que quebrou o seed de
--- denuncia (ver PENDENCIAS e correcoes.md, item 36).
+
 CREATE TABLE tipo_link (
     id_tipolink         SERIAL,
     codigo              VARCHAR(20)  NOT NULL,
@@ -372,12 +365,6 @@ CREATE TABLE campanha (
     id_campanha          SERIAL,
     id_usuario           INT             NOT NULL,
     id_admin             INT,
-    -- CORRIGIDO (28-07-2026): virou NOT NULL — a trigger trg_campanha_valida_area_nivel2
-    -- (05, [05-K-1]) já bloqueava apontar pra grande área raiz, mas deixava NULL passar,
-    -- criando a regra invertida "não pode ser vago, mas pode ser omisso" (campanha sem
-    -- nenhuma área some de todo filtro, o que é pior que aparecer só na grande área).
-    -- Fecha a decisão de nível-2-obrigatório já tomada; as 10 campanhas do seed já
-    -- tinham área de nível 2 antes desta mudança, então não exigiu nenhum ajuste nelas.
     id_area_conhecimento INT             NOT NULL,
     titulo               VARCHAR(255)    NOT NULL,
     modelo               modelo_campanha NOT NULL DEFAULT 'all-or-nothing',
@@ -462,10 +449,6 @@ CREATE TABLE solicitacao_encerramento (
     id_campanha                 INT                 NOT NULL,
     id_admin                    INT,
     justificativa_pesquisador   TEXT,
-    -- ADICIONADO (28-07-2026, item 19(d) da Lista C — RF-041): não existia campo
-    -- pra registrar o motivo do Administrador ao REJEITAR um pedido de
-    -- encerramento antecipado — o RF-041 torna essa justificativa obrigatória, e
-    -- negar sem registrar o motivo é indefensável se o pesquisador contestar.
     justificativa_admin         TEXT,
     status                      status_encerramento NOT NULL DEFAULT 'pendente',
     solicitado_em               TIMESTAMP           DEFAULT NOW(),
@@ -544,10 +527,6 @@ CREATE TABLE recompensa (
     descricao             TEXT,
     valor_minimo          DECIMAL(10,2)   NOT NULL,          -- contribuição mínima pra desbloquear essa recompensa
     quantidade_disponivel INT,                                -- NULL = ilimitada
-    -- CORRIGIDO (27-07-2026): DEFAULT 'outro' removido junto do valor do ENUM (ver
-    -- tipo_recompensa acima) — nenhum dos 3 valores que sobraram é um "genérico"
-    -- óbvio o bastante pra ser o padrão silencioso; a aplicação passa a ser
-    -- obrigada a escolher o tipo explicitamente ao criar a recompensa.
     tipo                  tipo_recompensa NOT NULL,
     ativo                 BOOLEAN         DEFAULT TRUE,
     criado_em             TIMESTAMP       DEFAULT NOW(),      -- [melhoria]
