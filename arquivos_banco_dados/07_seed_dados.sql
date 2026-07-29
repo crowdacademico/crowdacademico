@@ -185,7 +185,16 @@ INSERT INTO permissao (nome) VALUES
 -- ADICIONADO (28-07-2026, item 12 da Lista C — score deixa de ser público):
 -- pol_score_select (04) passou a exigir esta permissão pra ver score de
 -- terceiros; o próprio pesquisador continua vendo o próprio score sem ela.
-('score_visualizar')
+('score_visualizar'),
+-- ADICIONADO (28-07-2026, Claude Web — "Problema 1" da 2ª auditoria de segurança):
+-- excluir_conta_usuario/liberar_bloqueio_login (03, [03-F]) são SECURITY DEFINER —
+-- desligam a RLS, então a checagem de "quem pode agir sobre a conta de outra
+-- pessoa" precisa estar dentro da própria função. usuario_excluir gateia excluir
+-- a conta de OUTRO usuário (a própria sempre é permitida, sem a permissão);
+-- usuario_desbloquear gateia liberar_bloqueio_login por inteiro — é sempre ação
+-- de suporte/admin sobre a conta de outra pessoa, nunca do próprio usuário.
+('usuario_excluir'),
+('usuario_desbloquear')
 ON CONFLICT (nome) DO NOTHING;
 
 
@@ -224,6 +233,8 @@ WHERE (p.nome, perm.nome) IN (
     ('admin', 'arquivo_gerenciar'),
     ('admin', 'notificacao_processar'),
     ('admin', 'score_visualizar'),
+    ('admin', 'usuario_excluir'),
+    ('admin', 'usuario_desbloquear'),
     -- moderador: cuida da moderação de conteúdo e denúncias. score_visualizar
     -- ajuda a priorizar fila de moderação (sinal de apoio, não bloqueio).
     ('moderador', 'denuncia_responder'),
@@ -244,7 +255,15 @@ WHERE (p.nome, perm.nome) IN (
     -- suporte: atendimento de conta, sem acesso a dados sensíveis ou financeiros.
     ('suporte', 'sessao_revogar'),
     ('suporte', 'recuperacao_senha_revogar'),
-    ('suporte', 'verificacao_email_reenviar')
+    ('suporte', 'verificacao_email_reenviar'),
+    -- ADICIONADO (28-07-2026): desbloquear login é atendimento de conta — mesmo
+    -- escopo das outras 3 permissões de 'suporte' acima.
+    -- CORRIGIDO (28-07-2026, Claude Web — 4ª auditoria, decisão de produto):
+    -- usuario_excluir NÃO fica com 'suporte' — Catarse/Experiment tratam
+    -- exclusão de conta como auto-serviço do titular (que já funciona sem
+    -- nenhuma permissão, ver excluir_conta_usuario em 03, [03-F]); suporte abre
+    -- chamado, não executa. Só o admin mantém a permissão.
+    ('suporte', 'usuario_desbloquear')
 )
 ON CONFLICT DO NOTHING;
 

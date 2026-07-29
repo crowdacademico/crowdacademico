@@ -4,7 +4,9 @@
 --  Arquivo:     05_regras_negocio.sql
 --  Módulo:      Motor de Score & Regras de Negócio (Triggers e Funções)
 --  Depende de:  01_extensoes_enums_tabelas.sql, 03_funcoes_seguranca.sql
---               (fn_bloqueia_reversao_moderacao_comentario chama public.tem_permissao())
+--               (fn_bloqueia_reversao_moderacao_comentario chama public.tem_permissao();
+--               praticamente todo o arquivo chama public.config_numero(), que
+--               mora em 03 desde 28-07-2026 — ver [03-C])
 --  Próximo:     06_grants.sql
 -- ----------------------------------------------------------------------------
 --  Descrição:
@@ -14,8 +16,8 @@
 --  3. Regras de moderação de comunidade, engajamento e automação RBAC.
 --
 --  Inventário Mapeado:
---  - 37 Funções (Helpers, Cálculo, Orquestração e Triggers)
---  - 40 Triggers (Todas idempotentes com DROP TRIGGER IF EXISTS)
+--  - 36 Funções (Helpers, Cálculo, Orquestração e Triggers)
+--  - 41 Triggers (Todas idempotentes com DROP TRIGGER IF EXISTS)
 -- ----------------------------------------------------------------------------
 --  SUMÁRIO DOS BLOCOS DE CÓDIGO
 --  (letras seguem o índice global de DOCUMENTACAO_BD.md — I = SCORE,
@@ -58,28 +60,16 @@
 --  [05-I-1] SCORE — HELPERS E UTILITÁRIOS
 --  Descrição: Funções de suporte geral para leitura de configurações do sistema
 --             e fallbacks operacionais.
+-- MOVIDO (28-07-2026, Claude Web — "três pontas menores"): config_numero()
+-- morava aqui, mas 03_funcoes_seguranca.sql (que roda ANTES deste arquivo) já
+-- tinha uma função nova (registrar_falha_login, [03-F]) chamando config_numero —
+-- funcionava só porque, no bootstrap completo, nada CHAMA a função antes da
+-- hora; rodar 01→03 isolado e invocar registrar_falha_login já dava
+-- "function public.config_numero(unknown, integer) does not exist". config_numero
+-- é helper de leitura de configuração, encaixa melhor em 03 (que também virou o
+-- lugar das funções de autenticação) do que aqui — movida pra
+-- 03_funcoes_seguranca.sql, [03-C]. Este bloco continua com fn_precisa_revisao_score.
 -- ============================================================================
-
--- ----------------------------------------------------------------------------
--- Função:     config_numero
--- Assinatura: (p_chave TEXT, p_padrao DECIMAL) -> DECIMAL
--- Bloco:      [05-I-1]
--- Regra:      Lê uma constante numérica da tabela configuracoes com fallback
---             seguro — nunca retorna NULL/erro mesmo se a chave ainda não
---             existir, evitando NaN nos cálculos de score.
--- ----------------------------------------------------------------------------
-CREATE OR REPLACE FUNCTION public.config_numero(p_chave TEXT, p_padrao DECIMAL)
-RETURNS DECIMAL
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path = public
-AS $$
-    SELECT COALESCE(
-        (SELECT valor::DECIMAL FROM configuracoes WHERE chave = p_chave AND ativo = TRUE LIMIT 1),
-        p_padrao
-    );
-$$;
 
 -- ----------------------------------------------------------------------------
 -- Função:     fn_precisa_revisao_score
@@ -568,18 +558,42 @@ END;
 $$;
 
 -- ----------------------------------------------------------------------------
--- Trigger:   trg_campanha_recalcula_score
+-- Trigger:   trg_campanha_recalcula_score / trg_campanha_recalcula_score_update
 -- Tabela:    campanha
--- Momento:   AFTER INSERT OR UPDATE OR DELETE
+-- Momento:   AFTER INSERT OR DELETE (a 1ª) / AFTER UPDATE com WHEN (a 2ª)
 -- Função:    trg_recalcular_por_campanha()
 -- Bloco:     [05-I-4]
--- Regra:     Dispara o recálculo de score do pesquisador dono da campanha
---            a cada inserção, alteração ou remoção.
+-- Regra:     Dispara o recálculo de score do pesquisador dono da campanha.
+-- CORRIGIDO (28-07-2026, Claude Web — "Problema 2", item #10 da 1ª análise dele,
+-- nunca corrigido até agora): a trigger original era AFTER INSERT OR UPDATE OR
+-- DELETE sem nenhuma cláusula WHEN — todo UPDATE em campanha recalculava as 4
+-- dimensões inteiras, mesmo quando nenhuma delas usa a coluna que mudou. A cadeia
+-- contribuicao -> trg_sincroniza_arrecadado_campanha -> UPDATE campanha
+-- (valor_bruto_arrecadado) -> esta trigger disparava um recálculo completo POR
+-- DOAÇÃO — medido: 5 doações confirmadas = 20 gravações em score_pesquisador (4
+-- por doação), todas produzindo o mesmo número, porque valor_bruto_arrecadado não
+-- entra em nenhuma das 4 dimensões. Numa campanha com 500 doações, seriam 500
+-- recálculos completos serializando o FOR UPDATE da linha da campanha — risco
+-- direto pro RNF-006 (confirmação de pagamento refletida em até 30s). Postgres
+-- não aceita TG_OP dentro de WHEN, então não dá pra resolver numa trigger só:
+-- precisa de duas, mesmo padrão já usado em trg_perfil_update_recalcula_score.
+-- Medido depois da correção: 0 gravações de score por doação (era 4); recálculo
+-- ao aprovar/encerrar/rejeitar campanha continua disparando normalmente.
 -- ----------------------------------------------------------------------------
 DROP TRIGGER IF EXISTS trg_campanha_recalcula_score ON campanha;
 CREATE TRIGGER trg_campanha_recalcula_score
-    AFTER INSERT OR UPDATE OR DELETE ON campanha
+    AFTER INSERT OR DELETE ON campanha
     FOR EACH ROW EXECUTE FUNCTION public.trg_recalcular_por_campanha();
+
+DROP TRIGGER IF EXISTS trg_campanha_recalcula_score_update ON campanha;
+CREATE TRIGGER trg_campanha_recalcula_score_update
+    AFTER UPDATE ON campanha
+    FOR EACH ROW
+    WHEN (   OLD.status      IS DISTINCT FROM NEW.status
+          OR OLD.data_fim    IS DISTINCT FROM NEW.data_fim
+          OR OLD.aprovado_em IS DISTINCT FROM NEW.aprovado_em
+          OR OLD.id_usuario  IS DISTINCT FROM NEW.id_usuario)
+    EXECUTE FUNCTION public.trg_recalcular_por_campanha();
 
 
 -- ----------------------------------------------------------------------------

@@ -88,8 +88,13 @@ REVOKE SELECT ON public.perfil_pesquisador FROM app_nestjs;
 -- ALTERADO: coluna id_supabase removida da tabela usuario (autenticação própria).
 -- [06-D-2] usuario: por que estas colunas específicas de auth precisam estar no GRANT (ver DOCUMENTACAO_BD.md)
 -- CORRIGIDO: faltava email_verificado na lista (coluna existe desde o 01, nunca tinha GRANT).
+-- ADICIONADO (28-07-2026, Claude Web — 4ª auditoria): deletado_em/deletado_por —
+-- só leitura aqui (não estão no GRANT UPDATE, [06-D-9] abaixo; só mudam via
+-- excluir_conta_usuario, 03, [03-F]), pro Admin conseguir ver quem excluiu e
+-- quando (a trilha que faltava pro Art. 37 da LGPD).
 GRANT SELECT (
     id_usuario, nome, email, id_imagem_perfil, criado_em, deletado,
+    deletado_em, deletado_por,
     email_verificado, senha_hash, tentativas_login_falhas, bloqueado_ate,
     ultimo_login_em, ultimo_login_ip
 ) ON public.usuario TO app_nestjs;
@@ -156,7 +161,19 @@ GRANT UPDATE (nome, id_imagem_perfil, senha_hash) ON public.usuario TO app_nestj
 -- [06-D-2b] Funções de autenticação (ver [03-F] em 03_funcoes_seguranca.sql):
 -- único jeito de mudar email_verificado, tentativas_login_falhas, bloqueado_ate,
 -- ultimo_login_em, ultimo_login_ip e deletado agora que saíram do GRANT direto acima.
-GRANT EXECUTE ON FUNCTION public.confirmar_email_usuario(INT)             TO app_nestjs;
+-- CORRIGIDO (28-07-2026, Claude Web — higiene): função nova no Postgres já nasce
+-- com EXECUTE liberado pra PUBLIC por padrão (mesmo motivo por trás do comentário
+-- em [06-I-1] sobre usuario_visivel/tem_permissao) — pra função que apaga conta ou
+-- muda estado de autenticação, isso é folga desnecessária. REVOKE explícito antes
+-- do GRANT, nas 5, mesmo não sendo hoje explorável (só app_nestjs conecta ao
+-- banco). confirmar_email_usuario(INT) foi substituída por
+-- confirmar_email_por_token(TEXT) — ver [03-F].
+REVOKE EXECUTE ON FUNCTION public.confirmar_email_por_token(TEXT)         FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.registrar_falha_login(INT)              FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.liberar_bloqueio_login(INT)             FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.registrar_login_sucesso(INT, TEXT)      FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.excluir_conta_usuario(INT)              FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.confirmar_email_por_token(TEXT)          TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.registrar_falha_login(INT)               TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.liberar_bloqueio_login(INT)              TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.registrar_login_sucesso(INT, TEXT)       TO app_nestjs;
@@ -239,6 +256,14 @@ GRANT INSERT, UPDATE ON score_config, score_rotulo TO app_nestjs;
 -- função, não com os de app_nestjs.
 
 -- [06-I-1] Funções do motor de score: por que precisam de GRANT EXECUTE (ver DOCUMENTACAO_BD.md)
+-- CORRIGIDO (28-07-2026, Claude Web — 4ª auditoria): as duas escrevem
+-- (score_pesquisador/perfil_pesquisador) — recalcular_todos_os_scores() em
+-- especial, sem custo de chamada nenhum pra quem chama, era negação de serviço
+-- barata deixada aberta pra PUBLIC (percorre todos os pesquisadores a cada
+-- chamada). REVOKE explícito, mesmo padrão das 5 funções de [03-F] e de
+-- atribuir_papel_padrao (08).
+REVOKE EXECUTE ON FUNCTION public.recalcular_score_pesquisador(INT) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.recalcular_todos_os_scores()     FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.recalcular_score_pesquisador(INT) TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.recalcular_todos_os_scores()     TO app_nestjs;
 

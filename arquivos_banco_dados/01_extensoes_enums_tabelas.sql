@@ -202,6 +202,15 @@ CREATE TABLE usuario (
     id_imagem_perfil INT,
     criado_em        TIMESTAMP    DEFAULT NOW(),
     deletado         BOOLEAN      DEFAULT FALSE,
+    -- ADICIONADAS (28-07-2026, Claude Web — "o único ponto onde a LGPD ainda tem
+    -- uma ponta solta"): excluir_conta_usuario() (03, [03-F]) gravava deletado =
+    -- TRUE e nada mais — sem quem fez nem quando, o Art. 37 da LGPD (registro das
+    -- operações de tratamento, exclusão sendo a mais sensível de todas) ficava
+    -- sem trilha. Preenchidas pela própria função (deletado_por =
+    -- id_usuario_atual()) — nunca pelo app diretamente, mesma proteção das
+    -- outras colunas de auth que saíram do GRANT UPDATE direto.
+    deletado_em      TIMESTAMP,
+    deletado_por     INT,
 
     email_verificado         BOOLEAN   NOT NULL DEFAULT FALSE,
     tentativas_login_falhas  INT       NOT NULL DEFAULT 0,
@@ -211,7 +220,8 @@ CREATE TABLE usuario (
 
     CONSTRAINT "PK_USUARIO" PRIMARY KEY (id_usuario),
     CONSTRAINT "UK_USUARIO_EMAIL" UNIQUE (email),
-    CONSTRAINT "FK_USUARIO_IMAGEM" FOREIGN KEY (id_imagem_perfil) REFERENCES arquivo(id_arquivo) ON DELETE SET NULL
+    CONSTRAINT "FK_USUARIO_IMAGEM" FOREIGN KEY (id_imagem_perfil) REFERENCES arquivo(id_arquivo) ON DELETE SET NULL,
+    CONSTRAINT "FK_USUARIO_DELETADO_POR" FOREIGN KEY (deletado_por) REFERENCES usuario(id_usuario)
 );
 
 -- [01-C] configuracoes — movido de CONFIG devido à ordem de criação
