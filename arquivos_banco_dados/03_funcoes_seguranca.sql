@@ -13,6 +13,9 @@
 --  atual na sessão, checagem granular de permissão via RBAC, checagem
 --  de visibilidade de conta (usuário "deletado" via soft delete), e
 --  contagem agregada de seguidores sem expor identidade de quem segue.
+--  Também concentra as operações de autenticação sobre `usuario` que não
+--  têm mais GRANT UPDATE direto ([03-F]) — cada uma é SECURITY DEFINER,
+--  ponto único e auditável, em vez de UPDATE aberto.
 -- ============================================================
 -- [03-J] CONTEXTO DE SESSÃO E IDENTIFICAÇÃO DE USUÁRIO
 -- ============================================================
@@ -132,4 +135,138 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
     SELECT count(*)::INT FROM seguir_campanha WHERE id_campanha = p_id;
+$$;
+
+-- ============================================================
+-- [03-F] OPERAÇÕES DE AUTENTICAÇÃO (item "Problema 1" — Claude Web, 28-07-2026)
+-- Descrição: email_verificado, tentativas_login_falhas, bloqueado_ate,
+--            ultimo_login_em, ultimo_login_ip e deletado saíram do GRANT UPDATE
+--            de usuario (06, [06-D-2]) — restringir só por coluna não bastava,
+--            porque é o MESMO app_nestjs que atende o endpoint genérico de
+--            "editar meu perfil" e o fluxo de autenticação; nenhuma lista de
+--            colunas separa os dois papéis. Testado (Claude Web) como usuário
+--            comum, via UPDATE direto: auto-verificar o próprio e-mail sem
+--            clicar no link (bypass permanente), limpar o próprio bloqueio de
+--            login, e "ressuscitar" a própria conta excluída. As 5 funções
+--            abaixo são o único jeito de mudar essas colunas dali em diante —
+--            mesmo padrão de atribuir_papel_padrao/recalcular_score_pesquisador:
+--            SECURITY DEFINER, ponto único e auditável por operação nomeada, em
+--            vez de UPDATE aberto.
+-- ============================================================
+
+-- ----------------------------------------------------------------------------
+-- Função:     confirmar_email_usuario
+-- Assinatura: (p_id_usuario INT) -> VOID
+-- Bloco:      [03-F]
+-- Regra:      Marca o e-mail como verificado. Chamada pelo NestJS depois de
+--             validar o token em verificacao_email — esta função não valida o
+--             token, só aplica o resultado já validado.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.confirmar_email_usuario(p_id_usuario INT)
+RETURNS VOID
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    UPDATE usuario SET email_verificado = TRUE WHERE id_usuario = p_id_usuario;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Função:     registrar_falha_login
+-- Assinatura: (p_id_usuario INT) -> VOID
+-- Bloco:      [03-F]
+-- Regra:      Incrementa tentativas_login_falhas; ao atingir
+--             configuracoes.limite_tentativas_login, bloqueia a conta por
+--             configuracoes.bloqueio_login_minutos (nenhum número fixo — os
+--             dois são configuráveis pelo Painel Admin, mesmo padrão dos
+--             outros limites do item 16 da Lista C).
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.registrar_falha_login(p_id_usuario INT)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_tentativas INT;
+    v_limite     INT;
+    v_minutos    INT;
+BEGIN
+    v_limite  := public.config_numero('limite_tentativas_login', 5);
+    v_minutos := public.config_numero('bloqueio_login_minutos', 15);
+
+    UPDATE usuario
+    SET tentativas_login_falhas = tentativas_login_falhas + 1
+    WHERE id_usuario = p_id_usuario
+    RETURNING tentativas_login_falhas INTO v_tentativas;
+
+    IF v_tentativas >= v_limite THEN
+        UPDATE usuario
+        SET bloqueado_ate = NOW() + (v_minutos || ' minutes')::INTERVAL
+        WHERE id_usuario = p_id_usuario;
+    END IF;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Função:     liberar_bloqueio_login
+-- Assinatura: (p_id_usuario INT) -> VOID
+-- Bloco:      [03-F]
+-- Regra:      Zera tentativas_login_falhas e limpa bloqueado_ate. Uso previsto:
+--             desbloqueio manual (suporte/admin) antes do próximo login bem
+--             sucedido — registrar_login_sucesso() já faz o mesmo reset
+--             automaticamente quando o login dá certo.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.liberar_bloqueio_login(p_id_usuario INT)
+RETURNS VOID
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    UPDATE usuario
+    SET tentativas_login_falhas = 0, bloqueado_ate = NULL
+    WHERE id_usuario = p_id_usuario;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Função:     registrar_login_sucesso
+-- Assinatura: (p_id_usuario INT, p_ip TEXT) -> VOID
+-- Bloco:      [03-F]
+-- Regra:      Grava ultimo_login_em/ultimo_login_ip e zera o estado de falha
+--             (tentativas_login_falhas, bloqueado_ate) — um login bem sucedido
+--             sempre limpa o histórico de tentativas anteriores. p_ip é TEXT
+--             (não VARCHAR(45), o tipo da coluna) de propósito — evita
+--             ambiguidade de modificador de tipo na assinatura da função
+--             usada por GRANT EXECUTE; o cast pra VARCHAR(45) da coluna
+--             acontece implicitamente no UPDATE.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.registrar_login_sucesso(p_id_usuario INT, p_ip TEXT)
+RETURNS VOID
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    UPDATE usuario
+    SET ultimo_login_em = NOW(), ultimo_login_ip = p_ip,
+        tentativas_login_falhas = 0, bloqueado_ate = NULL
+    WHERE id_usuario = p_id_usuario;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Função:     excluir_conta_usuario
+-- Assinatura: (p_id_usuario INT) -> VOID
+-- Bloco:      [03-F]
+-- Regra:      RNF-003 (LGPD) — marca a conta como deletado = TRUE. Ponto único
+--             de exclusão de propósito: não existe função equivalente pra
+--             reverter (deletado = FALSE) — a exclusão é deliberadamente uma
+--             via de mão única, coerente com o desenho de anonimização já
+--             existente (usuario_visivel(), item 17 em PENDENCIAS.md).
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.excluir_conta_usuario(p_id_usuario INT)
+RETURNS VOID
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    UPDATE usuario SET deletado = TRUE WHERE id_usuario = p_id_usuario;
 $$;

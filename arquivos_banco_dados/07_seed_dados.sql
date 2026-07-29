@@ -253,12 +253,34 @@ ON CONFLICT DO NOTHING;
 -- CORRIGIDO: tipo_link ajustado para a allowlist fechada definida pela equipe.
 -- ADICIONADO (28-07-2026): coluna codigo (ver [01-C]) — chave natural estável,
 -- usada pelo link_academico logo abaixo em vez do id posicional.
-INSERT INTO tipo_link (codigo, nome, ativo, regex, dominio) VALUES
-('LATTES',       'Lattes',            TRUE,  '^https?://lattes\.cnpq\.br/\d+$',                   'lattes.cnpq.br'),
-('ORCID',        'ORCID',             TRUE,  '^https?://orcid\.org/\d{4}-\d{4}-\d{4}-\d{3}[\dX]$', 'orcid.org'),
-('RESEARCHGATE', 'ResearchGate',      TRUE,  '^https?://(www\.)?researchgate\.net/profile/[\w\-]+$', 'researchgate.net'),
-('LINKEDIN',     'LinkedIn',          TRUE,  '^https?://(www\.)?linkedin\.com/in/[\w\-]+/?$',      'linkedin.com'),
-('GITHUB',       'GitHub',            TRUE,  '^https?://(www\.)?github\.com/[\w\-]+/?$',          'github.com');
+-- ATUALIZADO (28-07-2026, item 15 da Lista C — decisão da Alexia, "mantém, e
+-- configura"): link_atualizacao/link_recompensa ficavam impossíveis de usar
+-- porque os 3 campos de escopo caíam todos no DEFAULT (só permite_perfil=TRUE).
+-- GITHUB ganhou permite_atualizacao/permite_recompensa=TRUE — exemplo dela:
+-- repositório de código como prova de progresso numa atualização, ou como
+-- acesso antecipado (tipo_recompensa='acesso_antecipado') a um repo privado.
+-- Os outros 4 tipos continuam só permite_perfil (são links de identidade
+-- profissional — Lattes/ORCID/ResearchGate/LinkedIn não fazem tanto sentido
+-- anexados a uma atualização de progresso ou a uma recompensa). Ampliar pra
+-- mais tipos, ou criar um tipo novo (ex.: vídeo/YouTube, que a Alexia citou
+-- como exemplo mas que não existe no catálogo hoje), fica pra quando isso for
+-- decidido — ver a nota sobre `tipo_link` reaberto em PENDENCIAS e correcoes.md.
+-- REABERTO E RESOLVIDO (28-07-2026): a allowlist tinha ficado fechada em 5
+-- tipos com base numa checagem incompleta (só olhou quais foram seedados, não
+-- os RF-014 que listam 7). SITE_INSTITUCIONAL e OUTRO voltam ao catálogo —
+-- regex/dominio NULL de propósito (não têm domínio fixo pra validar), a
+-- aplicação (NestJS) valida só o formato genérico de URL pra esses dois.
+-- Resolve também o item 19(e). Só permite_perfil=TRUE pros dois, mesmo escopo
+-- inicial dos outros 4 tipos de identidade (LATTES/ORCID/RESEARCHGATE/
+-- LINKEDIN) antes do GITHUB abrir escopo pra atualização/recompensa.
+INSERT INTO tipo_link (codigo, nome, ativo, regex, dominio, permite_perfil, permite_atualizacao, permite_recompensa) VALUES
+('LATTES',             'Lattes',               TRUE,  '^https?://lattes\.cnpq\.br/\d+$',                   'lattes.cnpq.br',    TRUE, FALSE, FALSE),
+('ORCID',              'ORCID',                TRUE,  '^https?://orcid\.org/\d{4}-\d{4}-\d{4}-\d{3}[\dX]$', 'orcid.org',         TRUE, FALSE, FALSE),
+('RESEARCHGATE',       'ResearchGate',         TRUE,  '^https?://(www\.)?researchgate\.net/profile/[\w\-]+$', 'researchgate.net', TRUE, FALSE, FALSE),
+('LINKEDIN',           'LinkedIn',             TRUE,  '^https?://(www\.)?linkedin\.com/in/[\w\-]+/?$',      'linkedin.com',      TRUE, FALSE, FALSE),
+('GITHUB',             'GitHub',               TRUE,  '^https?://(www\.)?github\.com/[\w\-]+/?$',          'github.com',        TRUE, TRUE,  TRUE),
+('SITE_INSTITUCIONAL', 'Site Institucional',   TRUE,  NULL,                                                 NULL,                TRUE, FALSE, FALSE),
+('OUTRO',              'Outro',                TRUE,  NULL,                                                 NULL,                TRUE, FALSE, FALSE);
 
 
 -- [07-C-2] area_conhecimento
@@ -567,16 +589,48 @@ FROM usuario;
 INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo) VALUES
 (NULL, 'taxa_plataforma_padrao',     '5.00',  'decimal',  'Taxa padrão cobrada pela plataforma (%)',              TRUE),
 (NULL, 'prazo_minimo_campanha_dias', '15',    'inteiro',  'Duração mínima permitida de uma campanha em dias',     TRUE),
-(NULL, 'prazo_maximo_campanha_dias', '90',    'inteiro',  'Duração máxima permitida de uma campanha em dias',     TRUE),
+-- ATUALIZADO (28-07-2026): 90 → 60. Decisão tomada direto por você e pela
+-- Alexia (não ficou mais em aberto entre "90 ou 60", ver item 16 da Lista C).
+(NULL, 'prazo_maximo_campanha_dias', '60',    'inteiro',  'Duração máxima permitida de uma campanha em dias',     TRUE),
 (NULL, 'limite_campanhas_simultaneas','2',    'inteiro',  'Nº máximo de campanhas simultâneas (aguardando_aprovacao/ativo) por pesquisador (RF-029)', TRUE),
 (NULL, 'limite_endossos_campanha',   '4',     'inteiro',  'Nº máximo de endossos ativos simultâneos por campanha (RF-063)', TRUE),
 (NULL, 'limite_denuncias_24h',       '5',     'inteiro',  'Nº máximo de denúncias por usuário a cada 24 horas (RF-076)', TRUE),
--- TODO (pendente decisão da equipe): regra de score mínimo para campanha ainda não confirmada; manter sem trigger por enquanto.
-(NULL, 'score_minimo_campanha',      '25.00', 'decimal',  'Score mínimo para criar campanha',                     TRUE),
-(NULL, 'permitir_campanha_anonima',  'false', 'booleano', 'Permite contribuições anônimas nas campanhas',         TRUE),
-(NULL, 'email_suporte',              'suporte@crowdacademico.com.br', 'texto', 'E-mail de suporte ao usuário',   TRUE),
-(8,   'notificar_novas_campanhas',   'true',  'booleano', 'Admin recebe e-mail sobre novas campanhas',            TRUE),
-(8,   'limite_denuncias_suspensao',  '5',     'inteiro',  'Nº de denúncias procedentes que suspendem o perfil',   TRUE);
+(NULL, 'limite_links_academicos_perfil', '5', 'inteiro',  'Nº máximo de links acadêmicos por pesquisador (RF-014/016/018)', TRUE),
+(NULL, 'limite_tentativas_login',    '5',     'inteiro',  'Nº de tentativas de login falhas antes de bloquear a conta',    TRUE),
+(NULL, 'bloqueio_login_minutos',     '15',    'inteiro',  'Duração do bloqueio de login após exceder o limite de tentativas (minutos)', TRUE),
+-- ADICIONADO (28-07-2026, Claude Web — "Problema 2"): limite de negócio (menor,
+-- configurável) por cima do limite técnico largo das colunas (01) — mesmo padrão
+-- config + trigger do prazo de campanha (item 16).
+(NULL, 'limite_caracteres_descricao_campanha',     '5000', 'inteiro', 'Nº máximo de caracteres em campanha.descricao (RF)',                        TRUE),
+(NULL, 'limite_caracteres_conteudo_atualizacao',   '5000', 'inteiro', 'Nº máximo de caracteres em atualizacao_campanha.conteudo',                  TRUE),
+(NULL, 'limite_caracteres_relato_denuncia',        '1000', 'inteiro', 'Nº máximo de caracteres em denuncia.relato (sugestão do Claude Web)',       TRUE),
+(NULL, 'limite_caracteres_justificativa_encerramento', '2000', 'inteiro', 'Nº máximo de caracteres em solicitacao_encerramento.justificativa_pesquisador/justificativa_admin', TRUE),
+(NULL, 'limite_caracteres_descricao_recompensa',   '2000', 'inteiro', 'Nº máximo de caracteres em recompensa.descricao',                            TRUE),
+-- DECIDIDO (28-07-2026, item 3 da lista de pendências): score NUNCA bloqueia
+-- criação de campanha (nem Catarse nem Experiment fazem isso; o filtro real é
+-- a aprovação manual do Admin). Este número vira só sinal pro painel do Admin
+-- destacar, na fila de aprovação, campanhas de pesquisador abaixo do mínimo
+-- pra receberem revisão mais cuidadosa — ver public.fn_precisa_revisao_score()
+-- em 05_regras_negocio.sql, [05-I-1]. De propósito, sem trigger de bloqueio.
+(NULL, 'score_minimo_campanha',      '25.00', 'decimal',  'Score mínimo para criar campanha (sinal de revisão manual, nunca bloqueio automático)', TRUE),
+-- REVISADO (28-07-2026, Claude Web — "Problema 3", varredura inversa: pra cada chave
+-- em configuracoes, quantas vezes ela aparece lida em algum dos 8 arquivos). 4 chaves
+-- não tinham NENHUM consumidor — "alavancas fantasma": o Admin muda no painel e nada
+-- acontece, o que é pior que um valor fixo no código (porque parece que devia
+-- funcionar). Duas ganharam comentário explicando quem lê (NestJS, não o banco); duas
+-- saíram do seed — ver motivo em cada uma, abaixo de onde estavam.
+(NULL, 'email_suporte',              'suporte@crowdacademico.com.br', 'texto', 'E-mail de suporte ao usuário',   TRUE), -- lida pelo NestJS (rodapé/e-mails transacionais), não pelo banco — nenhum .sql precisa dela
+(8,   'notificar_novas_campanhas',   'true',  'booleano', 'Admin recebe e-mail sobre novas campanhas',            TRUE); -- lida pelo worker de notificação do NestJS, não pelo banco — nenhuma trigger/função a consulta
+-- REMOVIDA (era 'permitir_campanha_anonima', booleano, default 'false'): não fazia
+-- sentido no modelo atual — campanha.id_usuario é NOT NULL (01), toda campanha SEMPRE
+-- tem um pesquisador identificado, é o que a curadoria (RF-068/069) exige. Contribuição
+-- anônima já existe e funciona (contribuicao.token_sessao) — essa chave nunca
+-- correspondeu a nenhuma funcionalidade real, e nenhuma trigger a lia.
+-- REMOVIDA (era 'limite_denuncias_suspensao', inteiro, default '5'): nenhuma trigger
+-- suspende perfil automaticamente por denúncias procedentes — não existe hoje (e não
+-- deveria, pelo mesmo raciocínio já aplicado ao score no item 3/12: suspensão é decisão
+-- do Admin via curadoria manual, não automação por contador). Se um dia isso mudar, a
+-- chave volta junto com a trigger que a usa — não antes.
 
 -- [07-I-2] configuracoes: constantes do motor de score (ver DOCUMENTACAO_BD.md)
 -- CORRIGIDO (28-07-2026, item 13-quinto-ponto da Lista C): score_custo_denuncia/
@@ -655,20 +709,36 @@ JOIN tipo_link tl ON tl.codigo = v.tipolink_codigo;
 -- Agora essa trigger específica fica ligada durante o INSERT de contribuicao, e o
 -- valor final é 100% produto das contribuições reais inseridas logo abaixo — não
 -- de um número digitado aqui.
-INSERT INTO campanha (id_usuario, id_admin, id_area_conhecimento, titulo, modelo, meta_financeira, taxa_plataforma, descricao, data_inicio, data_fim, status, aprovado_em, criado_em) VALUES
-(1, 8, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '1.03.00.00'), 'Desenvolvimento de Algoritmo para Diagnóstico Precoce de Alzheimer por IA',      'all-or-nothing', 50000.00, 5.00, 'Pesquisa aplicada em inteligência artificial para detecção precoce da doença de Alzheimer usando redes neurais convolucionais.',                          '2024-02-01', '2024-04-01', 'sucesso',             '2024-02-01', '2024-01-20 10:00:00'),
-(2, 8, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '3.13.00.00'), 'Prótese de Baixo Custo com Impressão 3D para Amputados do SUS',                  'flexivel',       35000.00, 5.00, 'Projeto de engenharia biomédica para fabricação de próteses funcionais de membros superiores a custo acessível para o sistema público.',                '2024-02-15', '2024-05-01', 'sucesso',             '2024-02-15', '2024-02-05 11:30:00'),
-(3, 8, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '2.12.00.00'), 'Bioprospecção de Fungos da Caatinga com Potencial Antibiótico',                  'all-or-nothing', 40000.00, 5.00, 'Coleta e análise de fungos endofíticos da Caatinga para identificação de compostos com atividade antibacteriana frente a superbactérias.',              '2024-03-01', '2024-05-30', 'sucesso',             '2024-03-01', '2024-02-20 09:15:00'),
-(4, 8, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '4.06.00.00'), 'Estudo Epidemiológico do Impacto da Dengue na Baixada Fluminense 2024',          'all-or-nothing', 25000.00, 5.00, 'Levantamento epidemiológico detalhado dos casos de dengue em municípios da Baixada Fluminense durante o surto de 2024.',                                 '2024-03-10', '2024-04-24', 'nao_atingido',        '2024-03-10', '2024-03-01 14:00:00'),
-(5, 8, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '6.06.00.00'), 'Mapeamento Socioeconômico de Comunidades Quilombolas de Santa Catarina',         'flexivel',       30000.00, 5.00, 'Pesquisa quantitativa e qualitativa sobre indicadores socioeconômicos, acesso a direitos e identidade cultural em quilombos catarinenses.',              '2024-04-01', '2024-06-01', 'sucesso',             '2024-04-01', '2024-03-20 08:00:00'),
-(6, NULL, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '7.02.00.00'), 'Análise Discursiva das Fake News sobre Vacinas no Twitter (2022–2024)',       'all-or-nothing', 15000.00, 5.00, 'Estudo linguístico-computacional sobre estratégias discursivas de desinformação vacinal em redes sociais brasileiras.',                                  NULL,          NULL,         'aguardando_aprovacao', NULL,        '2025-04-10 16:00:00'),
-(7, 8, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '4.01.00.00'), 'Eficácia de Probióticos na Redução de Infecções Hospitalares em UTI Neonatal',  'all-or-nothing', 45000.00, 5.00, 'Ensaio clínico randomizado avaliando o uso de probióticos na microbiota intestinal de neonatos para prevenção de sepse hospitalar.',                    '2024-05-01', '2024-07-30', 'encerrado',           '2024-05-01', '2024-04-15 10:00:00'),
+-- CORRIGIDO (28-07-2026): trg_campanha_valida_prazo_negocio desligada só durante
+-- esta carga — o prazo de negócio caiu de 90 pra 60 dias nesta mesma data (ver
+-- [07-C-5]), e várias destas campanhas são dado histórico anterior à decisão
+-- (algumas com mais de 60 dias de duração, ex.: campanha 3 tem 90). Mesmo
+-- raciocínio já aplicado às triggers de contribuicao em [07-H-1]: dado histórico
+-- não deveria ser barrado por uma regra que só passou a valer depois dele existir.
+ALTER TABLE campanha DISABLE TRIGGER trg_campanha_valida_prazo_negocio;
+
+-- CORRIGIDO (28-07-2026): encerrado_em explícito na campanha 7 (única com
+-- status 'encerrado' no seed) — a trigger nova (fn_preenche_encerramento_campanha)
+-- só dispara em UPDATE, não em INSERT, então um dado histórico que já nasce
+-- 'encerrado' precisa do valor explícito aqui. Usei o mesmo avaliado_em da
+-- solicitacao_encerramento correspondente ([07-E-5]) — o momento em que o
+-- encerramento foi de fato decidido.
+INSERT INTO campanha (id_usuario, id_admin, id_area_conhecimento, titulo, modelo, meta_financeira, taxa_plataforma, descricao, data_inicio, data_fim, status, aprovado_em, criado_em, encerrado_em) VALUES
+(1, 8, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '1.03.00.00'), 'Desenvolvimento de Algoritmo para Diagnóstico Precoce de Alzheimer por IA',      'all-or-nothing', 50000.00, 5.00, 'Pesquisa aplicada em inteligência artificial para detecção precoce da doença de Alzheimer usando redes neurais convolucionais.',                          '2024-02-01', '2024-04-01', 'sucesso',             '2024-02-01', '2024-01-20 10:00:00', NULL),
+(2, 8, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '3.13.00.00'), 'Prótese de Baixo Custo com Impressão 3D para Amputados do SUS',                  'flexivel',       35000.00, 5.00, 'Projeto de engenharia biomédica para fabricação de próteses funcionais de membros superiores a custo acessível para o sistema público.',                '2024-02-15', '2024-05-01', 'sucesso',             '2024-02-15', '2024-02-05 11:30:00', NULL),
+(3, 8, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '2.12.00.00'), 'Bioprospecção de Fungos da Caatinga com Potencial Antibiótico',                  'all-or-nothing', 40000.00, 5.00, 'Coleta e análise de fungos endofíticos da Caatinga para identificação de compostos com atividade antibacteriana frente a superbactérias.',              '2024-03-01', '2024-05-30', 'sucesso',             '2024-03-01', '2024-02-20 09:15:00', NULL),
+(4, 8, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '4.06.00.00'), 'Estudo Epidemiológico do Impacto da Dengue na Baixada Fluminense 2024',          'all-or-nothing', 25000.00, 5.00, 'Levantamento epidemiológico detalhado dos casos de dengue em municípios da Baixada Fluminense durante o surto de 2024.',                                 '2024-03-10', '2024-04-24', 'nao_atingido',        '2024-03-10', '2024-03-01 14:00:00', NULL),
+(5, 8, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '6.06.00.00'), 'Mapeamento Socioeconômico de Comunidades Quilombolas de Santa Catarina',         'flexivel',       30000.00, 5.00, 'Pesquisa quantitativa e qualitativa sobre indicadores socioeconômicos, acesso a direitos e identidade cultural em quilombos catarinenses.',              '2024-04-01', '2024-06-01', 'sucesso',             '2024-04-01', '2024-03-20 08:00:00', NULL),
+(6, NULL, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '7.02.00.00'), 'Análise Discursiva das Fake News sobre Vacinas no Twitter (2022–2024)',       'all-or-nothing', 15000.00, 5.00, 'Estudo linguístico-computacional sobre estratégias discursivas de desinformação vacinal em redes sociais brasileiras.',                                  NULL,          NULL,         'aguardando_aprovacao', NULL,        '2025-04-10 16:00:00', NULL),
+(7, 8, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '4.01.00.00'), 'Eficácia de Probióticos na Redução de Infecções Hospitalares em UTI Neonatal',  'all-or-nothing', 45000.00, 5.00, 'Ensaio clínico randomizado avaliando o uso de probióticos na microbiota intestinal de neonatos para prevenção de sepse hospitalar.',                    '2024-05-01', '2024-07-30', 'encerrado',           '2024-05-01', '2024-04-15 10:00:00', '2024-08-06 11:00:00'),
 -- ADICIONADO: 3 campanhas novas (ids 8, 9, 10 nesta ordem de inserção), uma para cada
 -- pesquisador novo que precisa de histórico real — ver o comentário completo depois do
 -- bloco de denuncia sobre por que cada uma dá o resultado de score esperado.
-(14, 8, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '1.03.00.00'), 'Nova Plataforma de Diagnóstico por Imagem com Machine Learning',              'all-or-nothing', 30000.00, 5.00, 'Sistema de apoio ao diagnóstico radiológico baseado em visão computacional, validado com dados de dois hospitais universitários.',                      '2024-06-01', '2024-07-16', 'sucesso',             '2024-06-01', '2024-05-20 10:00:00'),
-(15, 8, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '4.05.00.00'), 'Estudo sobre Microbiota Intestinal em Pacientes Oncológicos',                 'flexivel',       20000.00, 5.00, 'Caracterização da microbiota intestinal e sua relação com resposta a quimioterapia em pacientes com câncer colorretal.',                                '2024-06-01', '2024-07-21', 'sucesso',             '2024-06-01', '2024-05-22 09:30:00'),
-(16, 8, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '2.05.00.00'), 'Levantamento de Espécies Invasoras em Ecossistemas Costeiros',                'all-or-nothing', 25000.00, 5.00, 'Mapeamento de espécies exóticas invasoras em restingas e manguezais do litoral nordestino e seu impacto na fauna nativa.',                              '2024-06-01', '2024-08-20', 'ativo',               '2024-06-01', '2024-05-25 08:30:00');
+(14, 8, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '1.03.00.00'), 'Nova Plataforma de Diagnóstico por Imagem com Machine Learning',              'all-or-nothing', 30000.00, 5.00, 'Sistema de apoio ao diagnóstico radiológico baseado em visão computacional, validado com dados de dois hospitais universitários.',                      '2024-06-01', '2024-07-16', 'sucesso',             '2024-06-01', '2024-05-20 10:00:00', NULL),
+(15, 8, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '4.05.00.00'), 'Estudo sobre Microbiota Intestinal em Pacientes Oncológicos',                 'flexivel',       20000.00, 5.00, 'Caracterização da microbiota intestinal e sua relação com resposta a quimioterapia em pacientes com câncer colorretal.',                                '2024-06-01', '2024-07-21', 'sucesso',             '2024-06-01', '2024-05-22 09:30:00', NULL),
+(16, 8, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '2.05.00.00'), 'Levantamento de Espécies Invasoras em Ecossistemas Costeiros',                'all-or-nothing', 25000.00, 5.00, 'Mapeamento de espécies exóticas invasoras em restingas e manguezais do litoral nordestino e seu impacto na fauna nativa.',                              '2024-06-01', '2024-08-20', 'ativo',               '2024-06-01', '2024-05-25 08:30:00', NULL);
+
+ALTER TABLE campanha ENABLE TRIGGER trg_campanha_valida_prazo_negocio;
 
 
 -- [07-E-2] seguir_campanha

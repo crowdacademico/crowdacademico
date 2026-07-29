@@ -122,7 +122,45 @@ GRANT SELECT (
 
 -- CORRIGIDO: usuario, perfil_pesquisador, termos_de_uso e usuario_termo tinham DELETE
 -- sem nenhuma policy de DELETE correspondente (ver [06-D] no DOCUMENTACAO_BD.md).
-GRANT INSERT, UPDATE ON usuario, perfil_pesquisador, termos_de_uso TO app_nestjs;
+GRANT INSERT ON usuario, perfil_pesquisador, termos_de_uso TO app_nestjs;
+GRANT UPDATE ON termos_de_uso TO app_nestjs;
+
+-- CORRIGIDO (28-07-2026, achado pelo Claude Web): GRANT UPDATE de TABELA INTEIRA em
+-- usuario/perfil_pesquisador era uma porta dos fundos grave — o GRANT SELECT já é
+-- restrito por coluna (ver [06-D-2] acima), mas o UPDATE não era, e é o MESMO
+-- app_nestjs que atende tanto um endpoint genérico de "editar meu perfil" quanto o
+-- fluxo de autenticação. Testado como usuário comum autenticado, via UPDATE direto:
+-- forjar o próprio score_atual pra 100, auto-marcar email_verificado = TRUE (bypass
+-- permanente da verificação de e-mail — só precisa de um PATCH genérico no backend),
+-- limpar o próprio bloqueio de login, e "ressuscitar" a própria conta excluída
+-- (deletado = FALSE). Os 4 ataques funcionavam antes desta correção.
+--
+-- perfil_pesquisador: GRANT UPDATE por coluna, mesma lista do SELECT ([06-D-2] acima)
+-- MENOS score_atual/score_atualizado_em — essas 2 só podem mudar via
+-- recalcular_score_pesquisador() (SECURITY DEFINER, 05), nunca por UPDATE direto.
+GRANT UPDATE (
+    cpf_criptografado, tipo_vinculo, vinculo_institucional,
+    titulo_academico, status_pesquisador, ativado_em
+) ON public.perfil_pesquisador TO app_nestjs;
+
+-- usuario: restrição por coluna sozinha não bastava aqui — email_verificado,
+-- tentativas_login_falhas, bloqueado_ate, ultimo_login_em, ultimo_login_ip e deletado
+-- são todos escritos LEGITIMAMENTE pelo mesmo app_nestjs que atende o endpoint de
+-- perfil, então nenhuma lista de colunas separa "edição de perfil" de "operação de
+-- autenticação" nesse nível. Solução: essas 6 colunas saem do GRANT por completo e só
+-- mudam via função SECURITY DEFINER dedicada (mesmo padrão de atribuir_papel_padrao/
+-- recalcular_score_pesquisador) — ver [03-F] em 03_funcoes_seguranca.sql. O GRANT
+-- direto sobra só pro que é edição de perfil de verdade.
+GRANT UPDATE (nome, id_imagem_perfil, senha_hash) ON public.usuario TO app_nestjs;
+
+-- [06-D-2b] Funções de autenticação (ver [03-F] em 03_funcoes_seguranca.sql):
+-- único jeito de mudar email_verificado, tentativas_login_falhas, bloqueado_ate,
+-- ultimo_login_em, ultimo_login_ip e deletado agora que saíram do GRANT direto acima.
+GRANT EXECUTE ON FUNCTION public.confirmar_email_usuario(INT)             TO app_nestjs;
+GRANT EXECUTE ON FUNCTION public.registrar_falha_login(INT)               TO app_nestjs;
+GRANT EXECUTE ON FUNCTION public.liberar_bloqueio_login(INT)              TO app_nestjs;
+GRANT EXECUTE ON FUNCTION public.registrar_login_sucesso(INT, TEXT)       TO app_nestjs;
+GRANT EXECUTE ON FUNCTION public.excluir_conta_usuario(INT)               TO app_nestjs;
 -- CORRIGIDO: usuario_termo também tinha UPDATE sem nenhuma policy de UPDATE — é
 -- registro de aceite de termo, nunca deveria ser editável depois de criado.
 GRANT INSERT ON usuario_termo TO app_nestjs;
@@ -213,6 +251,7 @@ GRANT EXECUTE ON FUNCTION public.recalcular_todos_os_scores()     TO app_nestjs;
 -- usadas dentro de policy.
 GRANT EXECUTE ON FUNCTION public.contar_seguidores_pesquisador(INT) TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.contar_seguidores_campanha(INT)    TO app_nestjs;
+GRANT EXECUTE ON FUNCTION public.fn_precisa_revisao_score(INT)      TO app_nestjs;
 
 -- NOTA: o GRANT EXECUTE de atribuir_papel_padrao() fica junto da
 -- própria função em 08_trigger_signup_usuario.sql, não aqui — esse

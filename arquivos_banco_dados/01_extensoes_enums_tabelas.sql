@@ -380,6 +380,10 @@ CREATE TABLE campanha (
     -- 05); faltava onde registrar quando a campanha de fato terminou (natural,
     -- antecipado ou por moderação) — sem isso o RF-042/RF-058 não tinham onde gravar.
     encerrado_em         TIMESTAMP,
+    -- ADICIONADO (28-07-2026, item 19(c)): RF-033 pede vídeo de apresentação
+    -- opcional em destaque na página da campanha. Só a URL (ex.: YouTube/
+    -- Vimeo) — o arquivo de vídeo em si não é armazenado pela plataforma.
+    video_apresentacao_url VARCHAR(500),
     criado_em            TIMESTAMP       DEFAULT NOW(),
 
     CONSTRAINT "PK_CAMPANHA" PRIMARY KEY (id_campanha),
@@ -389,7 +393,12 @@ CREATE TABLE campanha (
     CONSTRAINT "CK_CAMPANHA_PRAZO" CHECK (
         data_fim IS NULL OR data_inicio IS NULL OR
         (data_fim - data_inicio) BETWEEN INTERVAL '1 day' AND INTERVAL '365 days'
-    )
+    ),
+    -- ADICIONADO (28-07-2026, Claude Web — "Problema 2"): campo de texto livre sem
+    -- limite nenhum. Mesmo padrão do prazo (item 16): CHECK aqui é só limite técnico
+    -- largo (barra absurdo tipo upload de megabytes de texto); o limite de negócio de
+    -- verdade (menor, configurável) mora em configuracoes + trigger, ver [05-K-1].
+    CONSTRAINT "CK_CAMPANHA_DESCRICAO_TAMANHO" CHECK (descricao IS NULL OR char_length(descricao) <= 20000)
 );
 
 CREATE TABLE seguir_campanha (
@@ -415,7 +424,11 @@ CREATE TABLE atualizacao_campanha (
     ativo          BOOLEAN          NOT NULL DEFAULT TRUE, -- SOFT DELETE E MODERAÇÃO DAS ATUALIZAÇÕES
 
     CONSTRAINT "PK_ATUALIZACAO_CAMPANHA" PRIMARY KEY (id_atualizacao),
-    CONSTRAINT "FK_ATUALIZACAO_CAMPANHA_CAMPANHA" FOREIGN KEY (id_campanha) REFERENCES campanha(id_campanha) ON DELETE CASCADE
+    CONSTRAINT "FK_ATUALIZACAO_CAMPANHA_CAMPANHA" FOREIGN KEY (id_campanha) REFERENCES campanha(id_campanha) ON DELETE CASCADE,
+    -- ADICIONADO (28-07-2026, Claude Web — "Problema 2"): mesmo raciocínio de
+    -- CK_CAMPANHA_DESCRICAO_TAMANHO — limite técnico largo aqui, limite de negócio
+    -- configurável via trigger, ver [05-K-1].
+    CONSTRAINT "CK_ATUALIZACAO_CAMPANHA_CONTEUDO_TAMANHO" CHECK (char_length(conteudo) <= 20000)
 );
 
 CREATE TABLE repasse (
@@ -444,7 +457,12 @@ CREATE TABLE solicitacao_encerramento (
 
     CONSTRAINT "PK_SOLICITACAO_ENCERRAMENTO" PRIMARY KEY (id_solicitacao_encerramento),
     CONSTRAINT "FK_SOLICITACAO_ENCERRAMENTO_CAMPANHA" FOREIGN KEY (id_campanha) REFERENCES campanha(id_campanha),
-    CONSTRAINT "FK_SOLICITACAO_ENCERRAMENTO_ADMIN" FOREIGN KEY (id_admin) REFERENCES usuario(id_usuario)
+    CONSTRAINT "FK_SOLICITACAO_ENCERRAMENTO_ADMIN" FOREIGN KEY (id_admin) REFERENCES usuario(id_usuario),
+    -- ADICIONADO (28-07-2026, Claude Web — "Problema 2"): mesmo raciocínio de
+    -- CK_CAMPANHA_DESCRICAO_TAMANHO, pros dois campos de justificativa — limite
+    -- técnico largo aqui, limite de negócio configurável via trigger, ver [05-K-1].
+    CONSTRAINT "CK_SOLICITACAO_JUSTIFICATIVA_PESQ_TAMANHO" CHECK (justificativa_pesquisador IS NULL OR char_length(justificativa_pesquisador) <= 10000),
+    CONSTRAINT "CK_SOLICITACAO_JUSTIFICATIVA_ADMIN_TAMANHO" CHECK (justificativa_admin IS NULL OR char_length(justificativa_admin) <= 10000)
 );
 
 CREATE TABLE historico_rejeicao (
@@ -505,7 +523,14 @@ CREATE TABLE denuncia (
     CONSTRAINT "CK_DENUNCIA_ALVO_XOR" CHECK (
         (id_campanha_alvo IS NOT NULL AND id_pesquisador_alvo IS NULL)
         OR (id_campanha_alvo IS NULL AND id_pesquisador_alvo IS NOT NULL)
-    )
+    ),
+    -- ADICIONADO (28-07-2026, Claude Web — "Problema 2", a Alexia já tinha avisado no
+    -- WhatsApp antes mesmo da coluna existir: "relato como text pode dar problema, tem
+    -- que ver depois se dá pra restringir o tamanho"): sem limite nenhum, um campo de
+    -- denúncia pública virava vetor de abuso (o limite de 5 denúncias/24h não impede
+    -- megabytes de texto POR denúncia). Limite técnico largo aqui; limite de negócio
+    -- configurável via trigger, ver [05-K-1].
+    CONSTRAINT "CK_DENUNCIA_RELATO_TAMANHO" CHECK (relato IS NULL OR char_length(relato) <= 5000)
 );
 
 CREATE TABLE recompensa (
@@ -522,7 +547,11 @@ CREATE TABLE recompensa (
     CONSTRAINT "PK_RECOMPENSA" PRIMARY KEY (id_recompensa),
     CONSTRAINT "FK_RECOMPENSA_CAMPANHA" FOREIGN KEY (id_campanha) REFERENCES campanha(id_campanha) ON DELETE CASCADE,
     CONSTRAINT "CK_RECOMPENSA_VALOR_MINIMO" CHECK (valor_minimo > 0),
-    CONSTRAINT "CK_RECOMPENSA_QUANTIDADE"   CHECK (quantidade_disponivel IS NULL OR quantidade_disponivel >= 0)
+    CONSTRAINT "CK_RECOMPENSA_QUANTIDADE"   CHECK (quantidade_disponivel IS NULL OR quantidade_disponivel >= 0),
+    -- ADICIONADO (28-07-2026, Claude Web — "Problema 2"): mesma categoria de texto
+    -- livre sem limite, mesmo raciocínio de CK_CAMPANHA_DESCRICAO_TAMANHO. Limite
+    -- técnico largo aqui; limite de negócio configurável via trigger, ver [05-K-1].
+    CONSTRAINT "CK_RECOMPENSA_DESCRICAO_TAMANHO" CHECK (descricao IS NULL OR char_length(descricao) <= 10000)
 );
 
 -- ============================================================
@@ -534,6 +563,11 @@ CREATE TABLE link_academico (
     id_tipolink       INT  NOT NULL,
     ordem             INT,
     url               VARCHAR(500) NOT NULL,
+    -- ADICIONADO (28-07-2026, item 19(a)): RF-014/RF-016/RF-018 e a Etapa 2
+    -- falam em rótulo personalizável por link ("meu repositório do projeto X",
+    -- em vez de só o nome genérico do tipo_link). Opcional — sem rótulo, o
+    -- front cai pro nome do tipo_link.
+    rotulo             VARCHAR(100),
 
     CONSTRAINT "PK_LINK_ACADEMICO" PRIMARY KEY (id_link_academico),
     CONSTRAINT "FK_LINK_ACADEMICO_USUARIO" FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE CASCADE,

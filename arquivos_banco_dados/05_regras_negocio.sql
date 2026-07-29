@@ -14,8 +14,8 @@
 --  3. Regras de moderação de comunidade, engajamento e automação RBAC.
 --
 --  Inventário Mapeado:
---  - 33 Funções (Helpers, Cálculo, Orquestração e Triggers)
---  - 32 Triggers (Todas idempotentes com DROP TRIGGER IF EXISTS)
+--  - 37 Funções (Helpers, Cálculo, Orquestração e Triggers)
+--  - 40 Triggers (Todas idempotentes com DROP TRIGGER IF EXISTS)
 -- ----------------------------------------------------------------------------
 --  SUMÁRIO DOS BLOCOS DE CÓDIGO
 --  (letras seguem o índice global de DOCUMENTACAO_BD.md — I = SCORE,
@@ -81,6 +81,34 @@ AS $$
     );
 $$;
 
+-- ----------------------------------------------------------------------------
+-- Função:     fn_precisa_revisao_score
+-- Assinatura: (p_id_usuario INT) -> BOOLEAN
+-- Bloco:      [05-I-1]
+-- Regra:      Resolve o item 3 da Lista de Pendências (28-07-2026) — o score
+--             NUNCA bloqueia a criação de campanha (nem Catarse nem Experiment
+--             fazem isso; o filtro de confiança real é a aprovação manual do
+--             Admin, via status='aguardando_aprovacao'). 'configuracoes.
+--             score_minimo_campanha' vira só um SINAL pro painel do Admin
+--             destacar, na fila de aprovação, campanhas de pesquisadores com
+--             score abaixo do mínimo pra receberem uma revisão mais cuidadosa
+--             — nunca uma trava automática e definitiva. SECURITY DEFINER
+--             porque expõe só um booleano, sem vazar o valor real do score
+--             (pol_score_select restringe score_atual ao próprio dono).
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_precisa_revisao_score(p_id_usuario INT)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT COALESCE(
+        (SELECT score_atual FROM perfil_pesquisador WHERE id_usuario = p_id_usuario),
+        0
+    ) < public.config_numero('score_minimo_campanha', 25);
+$$;
+
 
 -- ============================================================================
 --  [05-I-2] SCORE — CÁLCULO DAS DIMENSÕES
@@ -94,9 +122,18 @@ $$;
 -- Bloco:      [05-I-2]
 -- Regra:      Dimensão 1 — Perfil Acadêmico Declarado. Soma os pesos (vindos
 --             de score_config, subitens do pai 'perfil_academico') de: link
---             Lattes, link ORCID, outro link acadêmico (LinkedIn/ResearchGate/
---             Academia/Scholar/site), vínculo institucional preenchido e
+--             Lattes, link ORCID, outro link acadêmico (qualquer tipo_link que
+--             não seja Lattes/ORCID), vínculo institucional preenchido e
 --             título acadêmico informado no perfil_pesquisador.
+-- CORRIGIDO (28-07-2026, item 13(d) da Lista C — "GitHub não pontua"): o
+-- reconhecimento de link era por ILIKE no NOME de exibição do tipo_link
+-- ('%linkedin%', '%researchgate%', '%academia%', '%scholar%', '%site%') —
+-- hardcoded, frágil (rename de exibição quebra silenciosamente) e nunca incluía
+-- GitHub, mesmo o tipo já existindo no catálogo. Passou a comparar por
+-- tipo_link.codigo (chave estável, ver [01-C]) em vez do nome, e "outro link
+-- acadêmico" virou "qualquer tipo_link cadastrado que não seja Lattes/ORCID" —
+-- reconhece GitHub automaticamente, e qualquer tipo novo que entrar no catálogo
+-- no futuro (sem precisar editar esta função de novo).
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.calcular_score_perfil_academico(p_id_usuario INT)
 RETURNS INTEGER
@@ -127,19 +164,17 @@ BEGIN
     SELECT COALESCE(peso,0) INTO v_peso_titulo FROM score_config WHERE id_pai = v_id_pai AND nome = 'titulo'      AND ativo = TRUE;
 
     IF EXISTS (SELECT 1 FROM link_academico la JOIN tipo_link tl ON tl.id_tipolink = la.id_tipolink
-               WHERE la.id_usuario = p_id_usuario AND tl.nome ILIKE '%lattes%') THEN
+               WHERE la.id_usuario = p_id_usuario AND tl.codigo = 'LATTES') THEN
         v_total := v_total + v_peso_lattes;
     END IF;
 
     IF EXISTS (SELECT 1 FROM link_academico la JOIN tipo_link tl ON tl.id_tipolink = la.id_tipolink
-               WHERE la.id_usuario = p_id_usuario AND tl.nome ILIKE '%orcid%') THEN
+               WHERE la.id_usuario = p_id_usuario AND tl.codigo = 'ORCID') THEN
         v_total := v_total + v_peso_orcid;
     END IF;
 
     IF EXISTS (SELECT 1 FROM link_academico la JOIN tipo_link tl ON tl.id_tipolink = la.id_tipolink
-               WHERE la.id_usuario = p_id_usuario AND
-                     (tl.nome ILIKE '%linkedin%' OR tl.nome ILIKE '%researchgate%' OR
-                      tl.nome ILIKE '%academia%' OR tl.nome ILIKE '%scholar%' OR tl.nome ILIKE '%site%')) THEN
+               WHERE la.id_usuario = p_id_usuario AND tl.codigo NOT IN ('LATTES', 'ORCID')) THEN
         v_total := v_total + v_peso_site;
     END IF;
 
@@ -211,10 +246,15 @@ BEGIN
     -- rejeição duas vezes (uma vez derrubando a taxa de aprovação, outra vez entrando
     -- no denominador da taxa de conclusão sem nunca poder entrar no numerador) penaliza
     -- o mesmo fato duas vezes.
+    -- CORRIGIDO (28-07-2026, item 13(c) da Lista C — decisão da Alexia, "pode ser"):
+    -- 'encerrado' (encerramento antecipado com justificativa, RF-040/RF-042) contava
+    -- como sucesso pleno no numerador. Virou neutro: sai também do denominador, não
+    -- só do numerador — uma campanha interrompida pelo próprio pesquisador não é
+    -- premiada nem punida, só não conta pra taxa de conclusão.
     SELECT count(*) INTO v_total_encerradas FROM campanha WHERE id_usuario = p_id_usuario
-        AND status IN ('sucesso','nao_atingido','encerrado');
+        AND status IN ('sucesso','nao_atingido');
     SELECT count(*) INTO v_concluidas_sucesso FROM campanha WHERE id_usuario = p_id_usuario
-        AND status IN ('sucesso','encerrado');
+        AND status = 'sucesso';
 
     -- Mapeamento pros dados reais (documentado por não haver status
     -- "abandonada" explícito no enum status_campanha):
@@ -853,6 +893,134 @@ CREATE TRIGGER trg_link_academico_valida_tipo
     EXECUTE FUNCTION public.trg_valida_escopo_tipolink();
 
 -- ----------------------------------------------------------------------------
+-- Função:     fn_valida_limite_link_academico
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-K-1]
+-- Regra:      RESOLVE o item 19(a) da lista de pendências (28-07-2026) — os
+--             RF-014/RF-016/RF-018 e a Etapa 2 falam em até 5 links por
+--             pesquisador; a tabela nunca teve trava nenhuma. Limite lido de
+--             configuracoes.limite_links_academicos_perfil (mesmo padrão dos
+--             outros limites desta lista — campanhas simultâneas, endossos,
+--             denúncias/24h), não hardcoded.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_valida_limite_link_academico()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+DECLARE
+    v_count  INT;
+    v_limite INT;
+BEGIN
+    v_limite := public.config_numero('limite_links_academicos_perfil', 5);
+
+    SELECT COUNT(*) INTO v_count
+    FROM link_academico
+    WHERE id_usuario = NEW.id_usuario
+      AND id_link_academico <> COALESCE(NEW.id_link_academico, -1);
+
+    IF v_count >= v_limite THEN
+        RAISE EXCEPTION 'Limite de % links acadêmicos por perfil atingido', v_limite;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_link_academico_valida_limite
+-- Tabela:    link_academico
+-- Momento:   BEFORE INSERT
+-- Função:    fn_valida_limite_link_academico()
+-- Bloco:     [05-K-1]
+-- Regra:     Bloqueia o 6º link acadêmico (ou o valor configurado) de um
+--            mesmo pesquisador. Só em INSERT — trocar a URL/rótulo de um link
+--            já existente (UPDATE) nunca aumenta a contagem.
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_link_academico_valida_limite ON link_academico;
+CREATE TRIGGER trg_link_academico_valida_limite
+    BEFORE INSERT ON link_academico
+    FOR EACH ROW
+    EXECUTE FUNCTION public.fn_valida_limite_link_academico();
+
+-- ----------------------------------------------------------------------------
+-- Função:     fn_valida_limite_texto_livre
+-- Assinatura: () -> TRIGGER (genérica, recebe 2 argumentos via TG_ARGV)
+-- Bloco:      [05-K-1]
+-- Regra:      RESOLVE o "Problema 2" apontado pelo Claude Web (28-07-2026) —
+--             vários campos de texto livre preenchidos por usuário (denuncia.
+--             relato, campanha.descricao, atualizacao_campanha.conteudo,
+--             solicitacao_encerramento.justificativa_pesquisador/admin,
+--             recompensa.descricao) não tinham NENHUM limite de tamanho — a
+--             Alexia já tinha avisado disso no WhatsApp sobre o relato, antes
+--             mesmo da coluna existir. Uma função genérica em vez de 6 quase
+--             idênticas: TG_ARGV[0] é o nome da coluna a checar (lida via
+--             to_jsonb(NEW), já que plpgsql não permite acesso dinâmico a
+--             campo de um RECORD por nome), TG_ARGV[1] é a chave em
+--             configuracoes, TG_ARGV[2] é o valor padrão caso a chave não
+--             exista. O limite técnico largo (bem maior, fixo) já mora na
+--             CHECK de cada coluna (01) — esta trigger é só o limite de
+--             negócio, menor e configurável pelo Painel Admin.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_valida_limite_texto_livre()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+DECLARE
+    v_coluna TEXT    := TG_ARGV[0];
+    v_chave  TEXT    := TG_ARGV[1];
+    v_padrao DECIMAL := TG_ARGV[2]::DECIMAL;
+    v_limite INT;
+    v_valor  TEXT;
+BEGIN
+    v_limite := public.config_numero(v_chave, v_padrao)::INT;
+    v_valor  := to_jsonb(NEW) ->> v_coluna;
+
+    IF v_valor IS NOT NULL AND char_length(v_valor) > v_limite THEN
+        RAISE EXCEPTION 'Campo % excede o limite de % caracteres (configuracoes.%)', v_coluna, v_limite, v_chave;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Triggers: trg_*_valida_limite_texto (6 instâncias da mesma função acima)
+-- Momento:  BEFORE INSERT OR UPDATE
+-- Bloco:    [05-K-1]
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_campanha_valida_limite_texto ON campanha;
+CREATE TRIGGER trg_campanha_valida_limite_texto
+    BEFORE INSERT OR UPDATE ON campanha
+    FOR EACH ROW
+    EXECUTE FUNCTION public.fn_valida_limite_texto_livre('descricao', 'limite_caracteres_descricao_campanha', '5000');
+
+DROP TRIGGER IF EXISTS trg_atualizacao_campanha_valida_limite_texto ON atualizacao_campanha;
+CREATE TRIGGER trg_atualizacao_campanha_valida_limite_texto
+    BEFORE INSERT OR UPDATE ON atualizacao_campanha
+    FOR EACH ROW
+    EXECUTE FUNCTION public.fn_valida_limite_texto_livre('conteudo', 'limite_caracteres_conteudo_atualizacao', '5000');
+
+DROP TRIGGER IF EXISTS trg_denuncia_valida_limite_texto ON denuncia;
+CREATE TRIGGER trg_denuncia_valida_limite_texto
+    BEFORE INSERT OR UPDATE ON denuncia
+    FOR EACH ROW
+    EXECUTE FUNCTION public.fn_valida_limite_texto_livre('relato', 'limite_caracteres_relato_denuncia', '1000');
+
+DROP TRIGGER IF EXISTS trg_solicitacao_valida_limite_texto_pesq ON solicitacao_encerramento;
+CREATE TRIGGER trg_solicitacao_valida_limite_texto_pesq
+    BEFORE INSERT OR UPDATE ON solicitacao_encerramento
+    FOR EACH ROW
+    EXECUTE FUNCTION public.fn_valida_limite_texto_livre('justificativa_pesquisador', 'limite_caracteres_justificativa_encerramento', '2000');
+
+DROP TRIGGER IF EXISTS trg_solicitacao_valida_limite_texto_admin ON solicitacao_encerramento;
+CREATE TRIGGER trg_solicitacao_valida_limite_texto_admin
+    BEFORE INSERT OR UPDATE ON solicitacao_encerramento
+    FOR EACH ROW
+    EXECUTE FUNCTION public.fn_valida_limite_texto_livre('justificativa_admin', 'limite_caracteres_justificativa_encerramento', '2000');
+
+DROP TRIGGER IF EXISTS trg_recompensa_valida_limite_texto ON recompensa;
+CREATE TRIGGER trg_recompensa_valida_limite_texto
+    BEFORE INSERT OR UPDATE ON recompensa
+    FOR EACH ROW
+    EXECUTE FUNCTION public.fn_valida_limite_texto_livre('descricao', 'limite_caracteres_descricao_recompensa', '2000');
+
+-- ----------------------------------------------------------------------------
 -- Trigger:   trg_link_atualizacao_valida_tipo
 -- Tabela:    link_atualizacao
 -- Momento:   BEFORE INSERT OR UPDATE
@@ -1124,10 +1292,13 @@ EXECUTE FUNCTION validar_contribuicao_all_or_nothing();
 -- Função:     fn_congela_regras_campanha
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-2]
--- Regra:      Impede a alteração de meta financeira, modelo de financiamento
---             ou taxa da plataforma após a campanha ser aprovada/lançada
---             (status 'ativo' em diante, incluindo encerramento por
---             moderação) — proteção contra fraude/alteração retroativa.
+-- Regra:      Impede a alteração de meta financeira, modelo de financiamento,
+--             taxa, título ou descrição após a campanha ser aprovada (status
+--             'ativo' em diante, incluindo encerramento por moderação) —
+--             proteção contra fraude/alteração retroativa. data_fim/
+--             data_inicio têm regra própria: só congelam quando a campanha
+--             já começou de fato (data_inicio no passado) — ver comentário
+--             mais abaixo, no corpo da função (feature "Em breve").
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION fn_congela_regras_campanha()
 RETURNS TRIGGER AS $$
@@ -1159,15 +1330,25 @@ BEGIN
             RAISE EXCEPTION 'Fraude bloqueada: não é permitido alterar a descrição após a aprovação da campanha.';
         END IF;
 
-        IF NEW.data_fim IS DISTINCT FROM OLD.data_fim THEN
-            RAISE EXCEPTION 'Operação bloqueada: o prazo da campanha não pode ser alterado após o congelamento.';
-        END IF;
+        -- ADICIONADO (28-07-2026) — feature "Em breve": data_fim/data_inicio só
+        -- congelam quando a campanha JÁ COMEÇOU de fato (data_inicio no passado),
+        -- não no momento da aprovação. Enquanto a campanha está "Em breve"
+        -- (aprovada, pública, mas com data_inicio no futuro — ver
+        -- fn_valida_contribuicao_campanha_ativa), o pesquisador pode reagendar o
+        -- início livremente (precisa de mais tempo de divulgação, por exemplo).
+        -- meta/modelo/taxa/título/descrição continuam congelados desde a aprovação
+        -- — só as datas ganharam esse período de carência.
+        IF OLD.data_inicio IS NOT NULL AND OLD.data_inicio <= NOW() THEN
+            IF NEW.data_fim IS DISTINCT FROM OLD.data_fim THEN
+                RAISE EXCEPTION 'Operação bloqueada: o prazo da campanha não pode ser alterado depois que ela começa de verdade.';
+            END IF;
 
-        -- CORRIGIDO (regressão do B2): data_inicio tinha ficado de fora — dava pra
-        -- recuar a data de início e mudar a duração da campanha pelo outro lado,
-        -- sem nenhum bloqueio, mesmo com data_fim já congelado.
-        IF NEW.data_inicio IS DISTINCT FROM OLD.data_inicio THEN
-            RAISE EXCEPTION 'Operação bloqueada: a data de início da campanha não pode ser alterada após o congelamento.';
+            -- CORRIGIDO (regressão do B2): data_inicio tinha ficado de fora — dava pra
+            -- recuar a data de início e mudar a duração da campanha pelo outro lado,
+            -- sem nenhum bloqueio, mesmo com data_fim já congelado.
+            IF NEW.data_inicio IS DISTINCT FROM OLD.data_inicio THEN
+                RAISE EXCEPTION 'Operação bloqueada: a data de início da campanha não pode ser alterada depois que ela começa de verdade.';
+            END IF;
         END IF;
     END IF;
 
@@ -1189,6 +1370,49 @@ CREATE TRIGGER trg_congela_regras_campanha
 BEFORE UPDATE ON campanha
 FOR EACH ROW
 EXECUTE FUNCTION fn_congela_regras_campanha();
+
+-- ----------------------------------------------------------------------------
+-- Função:     fn_preenche_encerramento_campanha
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-K-2]
+-- Regra:      ADICIONADO (28-07-2026) — bug real encontrado pelo Claude da
+--             Alexia: a coluna encerrado_em (`[01-E]`, criada em 27-07-2026
+--             pro RF-042/RF-058) nunca era preenchida por nada — nem trigger,
+--             nem UPDATE algum no `.sql`. Nascia e ficava NULL pra sempre,
+--             mesmo em campanha já encerrada. Esta trigger fecha o buraco:
+--             quando o status entra em 'encerrado' ou 'encerrado_moderacao'
+--             (vindo de qualquer outro status), grava NOW() automaticamente,
+--             sem depender do backend lembrar de fazer isso em toda rota que
+--             muda status. Só grava se ainda não tiver um valor (não
+--             sobrescreve um encerrado_em já registrado).
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION fn_preenche_encerramento_campanha()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.status IN ('encerrado', 'encerrado_moderacao')
+       AND OLD.status NOT IN ('encerrado', 'encerrado_moderacao')
+       AND NEW.encerrado_em IS NULL THEN
+        NEW.encerrado_em := NOW();
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_campanha_preenche_encerramento
+-- Tabela:    campanha
+-- Momento:   BEFORE UPDATE (só quando status muda)
+-- Função:    fn_preenche_encerramento_campanha()
+-- Bloco:     [05-K-2]
+-- Regra:     Grava a data real de encerramento automaticamente.
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_campanha_preenche_encerramento ON campanha;
+CREATE TRIGGER trg_campanha_preenche_encerramento
+BEFORE UPDATE ON campanha
+FOR EACH ROW
+WHEN (NEW.status IS DISTINCT FROM OLD.status)
+EXECUTE FUNCTION fn_preenche_encerramento_campanha();
 
 -- ----------------------------------------------------------------------------
 -- Função:     fn_carimba_taxa_plataforma_aprovacao
@@ -1238,12 +1462,14 @@ EXECUTE FUNCTION fn_carimba_taxa_plataforma_aprovacao();
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-2]
 -- Regra:      ADICIONADO (28-07-2026, item 16 da Lista C): a regra de negócio
---             real de duração de campanha (hoje 15-90 dias) sai da constraint
---             (que virou só um limite técnico largo, ver CK_CAMPANHA_PRAZO em
---             01) e passa a ler configuracoes.prazo_minimo_campanha_dias/
---             prazo_maximo_campanha_dias — mudar a política de prazo (RF-045
---             está discutindo 90 vs 60) vira um UPDATE numa linha, não uma
---             migração de estrutura.
+--             real de duração de campanha sai da constraint (que virou só um
+--             limite técnico largo, ver CK_CAMPANHA_PRAZO em 01) e passa a ler
+--             configuracoes.prazo_minimo_campanha_dias/
+--             prazo_maximo_campanha_dias — mudar a política de prazo vira um
+--             UPDATE numa linha, não uma migração de estrutura.
+-- ATUALIZADO (28-07-2026, mesma data): decisão tomada por você e pela Alexia,
+-- direto — prazo agora é 15 a 60 dias (não mais 15-90). O RF-045 (janela de
+-- estorno do PIX do Banco Central) fica satisfeito com folga.
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION fn_valida_prazo_campanha_negocio()
 RETURNS TRIGGER AS $$
@@ -1257,7 +1483,7 @@ BEGIN
     END IF;
 
     v_prazo_minimo := public.config_numero('prazo_minimo_campanha_dias', 15);
-    v_prazo_maximo := public.config_numero('prazo_maximo_campanha_dias', 90);
+    v_prazo_maximo := public.config_numero('prazo_maximo_campanha_dias', 60);
     -- EXTRACT(EPOCH FROM intervalo) / 86400 dá o total de dias corridos, sem o
     -- risco de EXTRACT(DAY FROM ...) ler só o componente "dias" de um intervalo
     -- que também tenha meses (mesmo padrão já usado em calcular_score_atualizacao).
@@ -1344,20 +1570,33 @@ EXECUTE FUNCTION fn_valida_transicao_solicitacao();
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-2]
 -- Regra:      Bloqueia contribuição em campanha que não está com status
---             'ativo' no momento, ou cujo prazo (data_fim) já expirou.
+--             'ativo' no momento, cujo prazo (data_fim) já expirou, ou que
+--             ainda está "Em breve" (data_inicio no futuro).
+-- ADICIONADO (28-07-2026) — feature "Em breve"/rascunho agendado: o pesquisador
+-- pode aprovar a campanha e escolher lançar na hora ou agendar um início futuro
+-- (mesma ideia do Catarse, contador regressivo no front). A campanha já fica
+-- pública assim que aprovada (pol_campanha_select, 04, libera por status —
+-- ver [04-E]), mas não pode receber nenhuma doação antes de data_inicio
+-- chegar. Não precisa de status novo nem de job/cron pra "virar ativa" —
+-- data_inicio no passado já é o suficiente, comparado em tempo real aqui.
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION fn_valida_contribuicao_campanha_ativa()
 RETURNS TRIGGER AS $$
 DECLARE
-    v_status   status_campanha;
-    v_data_fim TIMESTAMP;
+    v_status      status_campanha;
+    v_data_inicio TIMESTAMP;
+    v_data_fim    TIMESTAMP;
 BEGIN
-    SELECT status, data_fim INTO v_status, v_data_fim
+    SELECT status, data_inicio, data_fim INTO v_status, v_data_inicio, v_data_fim
     FROM campanha
     WHERE id_campanha = NEW.id_campanha;
 
     IF v_status <> 'ativo' THEN
         RAISE EXCEPTION 'Contribuição bloqueada: a campanha não está ativa no momento (status atual: %)', v_status;
+    END IF;
+
+    IF v_data_inicio IS NOT NULL AND NOW() < v_data_inicio THEN
+        RAISE EXCEPTION 'Contribuição bloqueada: a campanha ainda não começou (Em breve — início em %).', v_data_inicio;
     END IF;
 
     IF v_data_fim IS NOT NULL AND NOW() > v_data_fim THEN
