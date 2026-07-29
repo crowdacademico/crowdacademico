@@ -409,9 +409,7 @@ CREATE TABLE campanha (
     -- largo (barra absurdo tipo upload de megabytes de texto); o limite de negócio de
     -- verdade (menor, configurável) mora em configuracoes + trigger, ver [05-K-1].
     CONSTRAINT "CK_CAMPANHA_DESCRICAO_TAMANHO" CHECK (descricao IS NULL OR char_length(descricao) <= 20000),
-    -- ADICIONADO (28-07-2026, Claude Web — 5ª auditoria, "meta_financeira sem
-    -- mínimo"): campanha com meta 0.00 era aceita (reproduzido) — numa
-    -- all-or-nothing, meta zero é sucesso instantâneo. Mesmo padrão do prazo
+    -- campanha com meta 0.00 era aceita (reproduzido). Mesmo padrão do prazo
     -- (item 16): CHECK aqui é só limite técnico largo (> 0, barra só o absurdo
     -- matemático); o mínimo de negócio de verdade (configurável, maior que 0)
     -- mora em configuracoes.meta_minima_campanha + trigger, ver [05-K-2].
@@ -518,17 +516,13 @@ CREATE TABLE denuncia (
     id_campanha_alvo    INT,
     id_pesquisador_alvo INT,
     id_motivo           INT  NOT NULL,
-    -- ADICIONADO (28-07-2026, item 19(b) da Lista C — RF-019/RF-072): campo opcional
-    -- de descrição adicional pro denunciante detalhar o caso além do motivo
-    -- pré-definido do catálogo. Chamado "relato", não "descricao", de propósito —
-    -- pra não colidir com motivo_denuncia.descricao (o rótulo do motivo escolhido).
-    relato              TEXT,
+    relato              TEXT,-- descrição adicional pro denunciante.
     status              status_denuncia NOT NULL DEFAULT 'pendente',
     criado_em           TIMESTAMP    DEFAULT NOW(),
 
     CONSTRAINT "PK_DENUNCIA" PRIMARY KEY (id_denuncia),
     CONSTRAINT "FK_DENUNCIA_USUARIO" FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario),
-    -- CORRIGIDO (B1): SET NULL -> RESTRICT — denúncia é registro de moderação; um alvo
+    -- SET NULL -> RESTRICT — denúncia é registro de moderação; um alvo
     -- virando NULL sozinho com o tempo destruiria rastro de auditoria. Na prática não
     -- muda nada hoje (nem campanha nem usuario têm policy de DELETE, ver 06_grants.sql).
     CONSTRAINT "FK_DENUNCIA_CAMPANHA_ALVO" FOREIGN KEY (id_campanha_alvo) REFERENCES campanha(id_campanha) ON DELETE RESTRICT,
@@ -536,7 +530,7 @@ CREATE TABLE denuncia (
     CONSTRAINT "FK_DENUNCIA_MOTIVO" FOREIGN KEY (id_motivo) REFERENCES motivo_denuncia(id_motivo),
     CONSTRAINT "UK_DENUNCIA_USUARIO_CAMPANHA_ALVO" UNIQUE (id_usuario, id_campanha_alvo),
     CONSTRAINT "UK_DENUNCIA_USUARIO_PESQUISADOR_ALVO" UNIQUE (id_usuario, id_pesquisador_alvo),
-    -- CORRIGIDO: nada garantia exatamente um alvo preenchido (dava pra ter os dois ou nenhum).
+    -- Nada garantia exatamente um alvo preenchido (dava pra ter os dois ou nenhum).
     CONSTRAINT "CK_DENUNCIA_ALVO_XOR" CHECK (
         (id_campanha_alvo IS NOT NULL AND id_pesquisador_alvo IS NULL)
         OR (id_campanha_alvo IS NULL AND id_pesquisador_alvo IS NOT NULL)
