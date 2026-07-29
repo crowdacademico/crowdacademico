@@ -210,11 +210,19 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON verificacao_email, recuperacao_senha, se
 -- ============================================================================
 -- CORRIGIDO: só seguir_campanha tem policy de DELETE nesse bloco; as demais tinham
 -- DELETE concedido sem nenhuma policy correspondente (ver [06-E] no DOCUMENTACAO_BD.md).
+-- CORRIGIDO (28-07-2026, Claude Web — 5ª auditoria): repasse saiu daqui — mesmo
+-- raciocínio de contribuicao (acima, [06-H]), é dinheiro saindo e
+-- pol_repasse_update (04) também é USING(true). status/repassado_em só mudam
+-- via atualizar_status_repasse() (05, SECURITY DEFINER, [05-K-2]).
 GRANT INSERT, UPDATE ON
-    campanha, atualizacao_campanha, repasse,
+    campanha, atualizacao_campanha,
     solicitacao_encerramento, historico_rejeicao, comentario, denuncia,
     recompensa
 TO app_nestjs;
+GRANT INSERT ON repasse TO app_nestjs;
+
+REVOKE EXECUTE ON FUNCTION public.atualizar_status_repasse(INT, VARCHAR, TIMESTAMP) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.atualizar_status_repasse(INT, VARCHAR, TIMESTAMP) TO app_nestjs;
 -- CORRIGIDO: seguir_campanha também tinha UPDATE sem nenhuma policy de UPDATE —
 -- só existe inserir/apagar "seguir campanha", não faz sentido "editar" essa linha.
 GRANT INSERT, DELETE ON seguir_campanha TO app_nestjs;
@@ -238,7 +246,21 @@ TO app_nestjs;
 --  [06-H] CONTRIBUIÇÃO
 -- ============================================================================
 -- CORRIGIDO: nenhuma das quatro tem policy de DELETE (ver [06-H] no DOCUMENTACAO_BD.md).
-GRANT INSERT, UPDATE ON contribuicao, auditoria_financeira TO app_nestjs;
+-- CORRIGIDO (28-07-2026, Claude Web — 5ª auditoria, "qualquer usuário confirma
+-- qualquer contribuição"): contribuicao saiu daqui — GRANT UPDATE de tabela
+-- inteira + pol_contribuicao_update USING(true) (04) deixava qualquer usuário
+-- confirmar a própria doação (ou a de qualquer um) direto por UPDATE.
+-- Reproduzido: fraudador doa pra própria campanha, confirma sozinho, a página
+-- pública passa a exibir o valor arrecadado sem pagamento real nenhum. Dali em
+-- diante, status/id_transacao_api só mudam via atualizar_status_contribuicao()
+-- (05, SECURITY DEFINER, [05-K-2]) — ver GRANT EXECUTE mais abaixo.
+-- auditoria_financeira continua com GRANT UPDATE de tabela inteira, de
+-- propósito (item 9 da PENDENCIAS — decisão consciente, ainda em aberto).
+GRANT INSERT ON contribuicao TO app_nestjs;
+GRANT INSERT, UPDATE ON auditoria_financeira TO app_nestjs;
+
+REVOKE EXECUTE ON FUNCTION public.atualizar_status_contribuicao(INT, status_contribuicao, VARCHAR) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.atualizar_status_contribuicao(INT, status_contribuicao, VARCHAR) TO app_nestjs;
 -- CORRIGIDO: contribuicao_recompensa e aceite_termo_contribuicao também tinham UPDATE
 -- sem nenhuma policy de UPDATE — os comentários do 04 já dizem que os dois são
 -- registro de auditoria/aquisição, não deveriam ser editáveis depois de criados.

@@ -408,7 +408,14 @@ CREATE TABLE campanha (
     -- limite nenhum. Mesmo padrão do prazo (item 16): CHECK aqui é só limite técnico
     -- largo (barra absurdo tipo upload de megabytes de texto); o limite de negócio de
     -- verdade (menor, configurável) mora em configuracoes + trigger, ver [05-K-1].
-    CONSTRAINT "CK_CAMPANHA_DESCRICAO_TAMANHO" CHECK (descricao IS NULL OR char_length(descricao) <= 20000)
+    CONSTRAINT "CK_CAMPANHA_DESCRICAO_TAMANHO" CHECK (descricao IS NULL OR char_length(descricao) <= 20000),
+    -- ADICIONADO (28-07-2026, Claude Web — 5ª auditoria, "meta_financeira sem
+    -- mínimo"): campanha com meta 0.00 era aceita (reproduzido) — numa
+    -- all-or-nothing, meta zero é sucesso instantâneo. Mesmo padrão do prazo
+    -- (item 16): CHECK aqui é só limite técnico largo (> 0, barra só o absurdo
+    -- matemático); o mínimo de negócio de verdade (configurável, maior que 0)
+    -- mora em configuracoes.meta_minima_campanha + trigger, ver [05-K-2].
+    CONSTRAINT "CK_CAMPANHA_META_FINANCEIRA_POSITIVA" CHECK (meta_financeira > 0)
 );
 
 CREATE TABLE seguir_campanha (

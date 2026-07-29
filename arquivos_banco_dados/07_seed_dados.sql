@@ -625,6 +625,11 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo) VAL
 (NULL, 'limite_caracteres_relato_denuncia',        '1000', 'inteiro', 'Nº máximo de caracteres em denuncia.relato (sugestão do Claude Web)',       TRUE),
 (NULL, 'limite_caracteres_justificativa_encerramento', '2000', 'inteiro', 'Nº máximo de caracteres em solicitacao_encerramento.justificativa_pesquisador/justificativa_admin', TRUE),
 (NULL, 'limite_caracteres_descricao_recompensa',   '2000', 'inteiro', 'Nº máximo de caracteres em recompensa.descricao',                            TRUE),
+-- ADICIONADO (28-07-2026, Claude Web — 5ª auditoria): meta 0.00 era aceita
+-- (campanha all-or-nothing com meta zero é sucesso instantâneo). Mesmo padrão
+-- do prazo (item 16): limite técnico largo na constraint (01, > 0), mínimo de
+-- negócio de verdade aqui.
+(NULL, 'meta_minima_campanha',       '500.00', 'decimal',  'Valor mínimo de meta financeira aceito para uma campanha (RF)',            TRUE),
 -- DECIDIDO (28-07-2026, item 3 da lista de pendências): score NUNCA bloqueia
 -- criação de campanha (nem Catarse nem Experiment fazem isso; o filtro real é
 -- a aprovação manual do Admin). Este número vira só sinal pro painel do Admin
@@ -1058,9 +1063,15 @@ INSERT INTO notificacao (id_usuario, email_destinatario, tipo_evento, status, te
 
 -- [07-D-5] Como logar no app depois deste seed (autenticação própria, ver DOCUMENTACAO_BD.md)
 
+-- CORRIGIDO (28-07-2026, Claude Web — 5ª auditoria): a referência "[07-J] acima"
+-- era uma referência quebrada — nunca existiu bloco [07-J] neste arquivo (o
+-- Claude Web encontrou isso comparando .sql contra DOCUMENTACAO_BD.md, que
+-- também não tinha nenhum capítulo [07-J]). O que a frase queria apontar são as
+-- triggers de recálculo automático de score, que ficam em 05_regras_negocio.sql,
+-- [05-I-4] — corrigido pra apontar pro lugar certo.
 -- [07-I-3] Backfill de segurança: cada INSERT acima (perfil_pesquisador, link_academico,
 -- campanha, atualizacao_campanha, denuncia) já dispara sua própria trigger de recálculo
--- (ver [07-J] acima), então quando o seed chega aqui os scores dos 11 pesquisadores já
+-- (ver 05_regras_negocio.sql, [05-I-4]), então quando o seed chega aqui os scores dos 11 pesquisadores já
 -- deveriam estar corretos. Esta chamada existe só como rede de segurança — reprocessa
 -- todo mundo do zero, caso alguma trigger seja desligada/alterada no futuro e alguém
 -- esqueça de rodar isso manualmente depois.

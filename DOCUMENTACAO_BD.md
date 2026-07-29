@@ -109,6 +109,7 @@ Cada letra tem exatamente um significado, do `01` ao `08`. Se você está procur
   * 🗑️➡️✅ **`taxa_plataforma` passou a ser carimbada na aprovação (28-07-2026, item 20 da Lista C — RF-036):** a coluna existia mas nada nunca a preenchia — testado direto (criar campanha, aprovar): nascia `NULL` e continuava `NULL`. Trigger nova `fn_carimba_taxa_plataforma_aprovacao`/`trg_campanha_carimba_taxa` (`05`, ver `[05-K-2]`) copia `configuracoes.taxa_plataforma_padrao` no momento exato em que `aprovado_em` deixa de ser `NULL`, só se ainda não houver um valor customizado. Dali em diante a trigger de congelamento (`[05-K-2]`) já protege o valor.
   * 🗑️➡️✅ **`video_apresentacao_url VARCHAR(500)` — coluna nova (28-07-2026, item 19(c) da lista de pendências — RF-033):** vídeo de apresentação opcional em destaque na página da campanha. Só a URL (ex.: YouTube/Vimeo) — o arquivo de vídeo em si não é armazenado pela plataforma. Nullable, sem regra de congelamento própria (não está na lista de `fn_congela_regras_campanha`, então pode ser trocado a qualquer momento, diferente de título/descrição).
   * 🗑️➡️✅ **`CK_CAMPANHA_DESCRICAO_TAMANHO` — constraint nova (28-07-2026, achado do Claude Web):** `descricao` era `TEXT` sem limite nenhum. Limite técnico largo aqui (20.000 caracteres, só pra barrar absurdo); o limite de negócio de verdade (5.000, configurável) mora em `configuracoes.limite_caracteres_descricao_campanha` + trigger (`05`, `[05-K-1]`).
+  * 🗑️➡️✅ **`CK_CAMPANHA_META_FINANCEIRA_POSITIVA` — constraint nova (28-07-2026, Claude Web — 5ª auditoria, MÉDIO 3):** `meta_financeira = 0.00` era aceita (reproduzido) — numa `all-or-nothing`, meta zero é sucesso instantâneo. Mesmo padrão do prazo: limite técnico largo aqui (só `> 0`); o mínimo de negócio de verdade (500,00, configurável) mora em `configuracoes.meta_minima_campanha` + trigger (`05`, `[05-K-2]`).
 * **`atualizacao_campanha`:** Postagens de acompanhamento do projeto. O campo `ativo` permite o *soft delete* e a ocultação por moderação sem perda do histórico. 🗑️➡️✅ **`CK_ATUALIZACAO_CAMPANHA_CONTEUDO_TAMANHO` — constraint nova (28-07-2026, achado do Claude Web):** mesmo raciocínio de `CK_CAMPANHA_DESCRICAO_TAMANHO` — limite técnico largo aqui (20.000), limite de negócio configurável (5.000, `configuracoes.limite_caracteres_conteudo_atualizacao`) via trigger.
 * **`comentario`:** Interações da comunidade.
   * Unicidade: `UNIQUE (id_campanha, id_pesquisador)` restringe a **um comentário por pesquisador por campanha, para sempre** — a constraint não é condicionada por `ativo`. Ou seja, se o comentário for ocultado por moderação (`ativo = FALSE`), o pesquisador não consegue enviar um comentário novo para aquela campanha; ele só pode reeditar o registro já existente.
@@ -413,7 +414,7 @@ O arquivo é organizado em 8 blocos conceituais que espelham literalmente os tí
 
 ### Visão Geral
 
-Este é o arquivo mais denso do banco: 36 funções e 41 triggers, organizados em 7 blocos que usam duas letras do índice global — `I` (SCORE, blocos `[05-I-1]` a `[05-I-4]`) e `K` (Regras de Negócio Transversais, blocos `[05-K-1]` a `[05-K-3]`), ver "Índice Global de Letras" no topo deste documento. Ele concentra toda regra que um `CHECK` simples não alcança — porque depende de consultar outra tabela (ex.: será que essa campanha está ativa?) ou de recalcular algo automaticamente quando um dado relacionado muda.
+Este é o arquivo mais denso do banco: 42 funções e 46 triggers, organizados em 7 blocos que usam duas letras do índice global — `I` (SCORE, blocos `[05-I-1]` a `[05-I-4]`) e `K` (Regras de Negócio Transversais, blocos `[05-K-1]` a `[05-K-3]`), ver "Índice Global de Letras" no topo deste documento. Ele concentra toda regra que um `CHECK` simples não alcança — porque depende de consultar outra tabela (ex.: será que essa campanha está ativa?) ou de recalcular algo automaticamente quando um dado relacionado muda.
 
 > 📌 **Por que o motor de score existe:** antes deste arquivo, `perfil_pesquisador.score_atual` e `score_pesquisador.pontos_obtidos` eram só valores fixos digitados no seed — nada calculava o score de verdade a partir de campanhas, denúncias, links acadêmicos ou do perfil. A tela de detalhes de pontuação no front lia campos que nem existiam no tipo real de dimensões de score, e a conta virava `NaN`. A solução foi mover o cálculo inteiro para dentro do banco, com o resultado guardado em cache (`perfil_pesquisador.score_atual` e `score_pesquisador`) e atualizado sozinho via trigger sempre que um dado relevante muda — funciona para qualquer registro novo, sem que o backend precise lembrar de chamar nada. Todos os pesos vêm de `score_config.peso` (nenhum número fixo no código): editar o peso no Painel Admin já recalcula o score de todo mundo.
 
@@ -502,6 +503,10 @@ Cada trigger observa uma tabela que alimenta alguma dimensão do score e recalcu
 | `campanha` | `fn_valida_prazo_campanha_negocio()` | `trg_campanha_valida_prazo_negocio` (`BEFORE INSERT`) + `_update` (`BEFORE UPDATE`, só quando `data_inicio`/`data_fim` mudam) | 🗑️➡️✅ **Nova (28-07-2026, item 16 da Lista C).** A regra de negócio de prazo saiu de `CK_CAMPANHA_PRAZO` (que virou só um limite técnico largo, ver `[01-E]`) e passou pra cá, lendo `configuracoes.prazo_minimo_campanha_dias`/`prazo_maximo_campanha_dias` — mudar a política de prazo vira um `UPDATE`, não uma migração de constraint. **Valores decididos na mesma data: 15 a 60 dias** (não 90). |
 | `campanha` | `fn_carimba_taxa_plataforma_aprovacao()` | `trg_campanha_carimba_taxa` | 🗑️➡️✅ **Nova (28-07-2026, item 20 da Lista C — RF-036).** `BEFORE UPDATE`, só quando `aprovado_em` muda de `NULL` pra um valor: copia `configuracoes.taxa_plataforma_padrao` pra `campanha.taxa_plataforma`, se ainda não houver valor customizado. Sem esta trigger, `taxa_plataforma` nunca era preenchida — testado (criar e aprovar campanha real): nascia e continuava `NULL`. |
 | `campanha` | `fn_preenche_encerramento_campanha()` | `trg_campanha_preenche_encerramento` | 🗑️➡️✅ **Nova (28-07-2026) — bug achado pelo Claude da Alexia.** `BEFORE UPDATE`, só quando `status` muda: grava `campanha.encerrado_em = NOW()` automaticamente ao entrar em `'encerrado'`/`'encerrado_moderacao'`, se ainda não tiver valor. A coluna (`[01-E]`) nascia e ficava `NULL` pra sempre — nenhum mecanismo gravava nela antes desta trigger. |
+| `campanha` | `fn_valida_transicao_campanha()` | `trg_campanha_valida_transicao` | 🗑️➡️✅ **Nova (28-07-2026, CRÍTICO 1 — 5ª auditoria do Claude Web, achado simulando jornada de usuário mal-intencionado).** `BEFORE UPDATE`. `pol_campanha_update` (`04`) libera `UPDATE` pro dono, e `fn_congela_regras_campanha` só protege a partir de `OLD.status` já congelado — `'aguardando_aprovacao'` não estava nessa lista. Reproduzido: dono comum fazia `UPDATE campanha SET status='ativo', aprovado_em=NOW(), id_admin=<próprio>` e funcionava, com `trg_campanha_carimba_taxa` carimbando a taxa sozinha — campanha fraudulenta indistinguível de uma aprovada. Libera, em ordem: nenhum dos 3 campos sensíveis (`status`/`aprovado_em`/`id_admin`) mudou; quem tem `campanha_aprovar`/`campanha_rejeitar`/`solicitacao_encerramento_decidir`; encerramento por prazo vencido **autoverificável** (confere `valor_bruto_arrecadado` vs `meta_financeira` contra o próprio dado — impossível de mentir, sem depender de permissão ou "usuário de sistema"); dono reenviando campanha rejeitada (RF-070). Qualquer outra transição: bloqueada. |
+| `campanha` | `fn_valida_meta_campanha_negocio()` | `trg_campanha_valida_meta_negocio` (`BEFORE INSERT`) + `_update` (`BEFORE UPDATE`, só quando `meta_financeira` muda) | 🗑️➡️✅ **Nova (28-07-2026, MÉDIO 3 — 5ª auditoria).** Campanha com `meta_financeira = 0.00` era aceita (numa `all-or-nothing`, meta zero é sucesso instantâneo). Mesmo padrão do prazo (`fn_valida_prazo_campanha_negocio`, acima): limite técnico largo na `CHECK` (`01`, só `> 0`); mínimo de negócio de verdade lido de `configuracoes.meta_minima_campanha` (500,00). |
+| `contribuicao` | `atualizar_status_contribuicao()` | *(não é trigger — chamada direta, RPC)* | 🗑️➡️✅ **Nova (28-07-2026, CRÍTICO 2 — 5ª auditoria, cadeia de fraude parte 2/2).** `SECURITY DEFINER`. `pol_contribuicao_update` (`04`) é `USING(true)` com `GRANT UPDATE` de tabela inteira — qualquer usuário confirmava a própria contribuição direto por `UPDATE` (reproduzido: doar pra própria campanha, se auto-confirmar, ver o valor arrecadado público subir sem pagamento real). `status`/`id_transacao_api` saíram do `GRANT UPDATE` (`06`, `[06-H]`); só mudam por esta função — pré-autorização (webhook do gateway, sem sessão), mesma categoria de `registrar_falha_login`/`registrar_login_sucesso` (`[03-F]`). |
+| `repasse` | `atualizar_status_repasse()` | *(não é trigger — chamada direta, RPC)* | 🗑️➡️✅ **Nova (28-07-2026, extensão do CRÍTICO 2 — "também é dinheiro saindo").** Mesmo padrão de `atualizar_status_contribuicao`, pra `pol_repasse_update` (também `USING(true)`). `trg_valida_repasse` continua rodando por baixo normalmente (RLS é bypassada, trigger não). |
 
 > ⚠️ **`trg_sincroniza_arrecadado_campanha` usa `SELECT ... FOR UPDATE` antes de somar.** Isso trava a linha da campanha durante o recálculo — sem essa trava, duas contribuições confirmadas ao mesmo tempo poderiam cada uma somar sem enxergar a outra ainda commitada, e a que "vence a corrida" por último sobrescreveria o total (uma contribuição confirmada "sumiria" do valor arrecadado). Esse comentário está preservado no corpo da função, por ser justamente o tipo de detalhe que importa entender antes de mexer nessa trigger.
 
@@ -516,7 +521,9 @@ Cada trigger observa uma tabela que alimenta alguma dimensão do score e recalcu
 | `comentario` | `validar_comentario_autor()` | `trg_comentario_sem_autoria` | O dono da campanha não pode comentar na própria campanha (RF-066). |
 | `comentario` | `fn_bloqueia_reversao_moderacao_comentario()` | `trg_comentario_bloqueia_reversao_moderacao` | Bloqueia a transição `ativo: FALSE → TRUE` (reverter uma moderação) por quem não tem a permissão `comentario_moderar`. Fecha a brecha em que `pol_comentario_update` (`04`) libera `UPDATE` para o autor sem restringir coluna — ver `[04-E-4]`. |
 | `denuncia` | `validar_denuncia_frequencia()` | `trg_denuncia_limite_taxa` | No máximo `configuracoes.limite_denuncias_24h` denúncias por usuário a cada 24 horas (RF-076). 🗑️➡️✅ **CORRIGIDO (28-07-2026, item 16 da Lista C):** limite (5) estava hardcoded; passou a ler `configuracoes`, mesmo valor de hoje como `DEFAULT`. |
+| `denuncia` | `fn_valida_denuncia_sem_autojulgamento()` | `trg_denuncia_sem_autojulgamento` | 🗑️➡️✅ **Nova (28-07-2026, MENOR 5 — 5ª auditoria).** `BEFORE UPDATE`, só quando `status` muda. Reproduzido: um moderador criou denúncia contra um pesquisador e a marcou como `'resolvida'` (custa 4 pontos de score ao alvo) — `pol_denuncia_update` checa a permissão, mas não checa se quem julga é o próprio denunciante. Mesmo conflito de interesse que `validar_comentario_autor()` já bloqueia pra auto-endosso. Bloqueia qualquer transição de status feita pelo próprio `id_usuario` da denúncia. |
 | `permissao` | `trg_admin_recebe_toda_permissao()` | `trg_permissao_auto_admin` | Toda permissão nova criada em `permissao` é automaticamente atribuída ao papel `admin` em `papel_permissao`. |
+| `perfil_pesquisador` (INSERT) | `fn_atribuir_papel_pesquisador()` | `trg_perfil_atribui_papel_pesquisador` | 🗑️➡️✅ **Nova (28-07-2026, MÉDIO 4 — 5ª auditoria, achado na jornada "mestre vira pesquisador").** `SECURITY DEFINER` (mesmo "ovo e galinha" de `atribuir_papel_padrao`, `08` — quem está criando o perfil ainda não tem `papel_atribuir`). O papel `'pesquisador'` nunca era atribuído pelo app (só pelo seed, aos 11 semeados) — mantém o invariante "tem `perfil_pesquisador` ⇔ tem o papel `'pesquisador'`". |
 
 > 📌 **Por que `trg_permissao_auto_admin` existe:** é a rede de segurança da remoção do antigo `eh_admin()` das RLS policies (todas as policies do `04` passaram a checar `tem_permissao('x')` em vez de um bypass genérico de admin — ver `RBAC-pontos-discutidos.md`). Sem esta trigger, toda permissão nova criada exigiria lembrar de inserir manualmente a linha correspondente em `papel_permissao` para `'admin'` — e um esquecimento faria o admin perder acesso a algo que antes vinha de graça via `eh_admin()`. Com a trigger, toda permissão nova já nasce atribuída ao papel `admin` automaticamente.
 
@@ -524,7 +531,7 @@ Cada trigger observa uma tabela que alimenta alguma dimensão do score e recalcu
 
 ### Idempotência
 
-As 33 triggers deste arquivo têm `DROP TRIGGER IF EXISTS` imediatamente antes do `CREATE TRIGGER` correspondente — o arquivo pode ser reaplicado sozinho num banco de desenvolvimento já existente, sem precisar resetar tudo do zero (mesmo padrão já aplicado em `04_rls_policies.sql`).
+As 46 triggers deste arquivo têm `DROP TRIGGER IF EXISTS` imediatamente antes do `CREATE TRIGGER` correspondente — o arquivo pode ser reaplicado sozinho num banco de desenvolvimento já existente, sem precisar resetar tudo do zero (mesmo padrão já aplicado em `04_rls_policies.sql`). *(Nota 28-07-2026: esta linha tinha ficado presa numa contagem antiga — 33 — enquanto a Visão Geral, no topo deste mesmo capítulo, já dizia o número certo. Achado pelo Claude Web na 5ª auditoria; agora as duas contagens do capítulo estão sincronizadas.)*
 
 ---
 
@@ -578,8 +585,9 @@ Nenhum GRANT adicional. `papel`, `permissao` e `papel_permissao` só têm policy
 
 ### [06-E] CAMPANHA
 
-* **Tabelas:** `campanha`, `atualizacao_campanha`, `repasse`, `solicitacao_encerramento`, `historico_rejeicao`, `comentario`, `denuncia`, `recompensa` (INSERT/UPDATE, sem `DELETE`); `seguir_campanha` (INSERT/DELETE, sem `UPDATE`).
+* **Tabelas:** `campanha`, `atualizacao_campanha`, `solicitacao_encerramento`, `historico_rejeicao`, `comentario`, `denuncia`, `recompensa` (INSERT/UPDATE, sem `DELETE`); `seguir_campanha` (INSERT/DELETE, sem `UPDATE`); `repasse` (só INSERT, ver nota abaixo).
 * 🗑️➡️✅ **`DELETE` removido das 8 primeiras — CORRIGIDO (27-07-2026):** nenhuma delas tem policy de `DELETE` em `04` — só `seguir_campanha` tem (`pol_seg_campanha_delete`, RF-009 "deixar de seguir"). `UPDATE` também não faz sentido pra `seguir_campanha` (só existe seguir/deixar de seguir), por isso ficou com `INSERT`/`DELETE` em vez de `INSERT`/`UPDATE`. Mesma limpeza geral do `A7`/`27` — ver `[06-D-8]`, mais acima, e `PENDENCIAS e correcoes.md`.
+* 🗑️➡️✅ **`repasse` perdeu `UPDATE` de tabela inteira — CORRIGIDO (28-07-2026, Claude Web — 5ª auditoria, extensão do CRÍTICO 2):** `pol_repasse_update` (`04`) é `USING(true)` — é dinheiro saindo, mesmo raciocínio de `contribuicao` (`[06-H]`, abaixo). `status`/`repassado_em` só mudam via `atualizar_status_repasse()` (`05`, `SECURITY DEFINER`, `[05-K-2]`).
 
 ---
 
@@ -597,8 +605,9 @@ Nenhum GRANT adicional. `papel`, `permissao` e `papel_permissao` só têm policy
 
 ### [06-H] CONTRIBUIÇÃO
 
-* **Tabelas:** `contribuicao`, `auditoria_financeira` (INSERT/UPDATE, sem `DELETE`); `contribuicao_recompensa`, `aceite_termo_contribuicao` (só INSERT).
+* **Tabelas:** `auditoria_financeira` (INSERT/UPDATE, sem `DELETE`); `contribuicao_recompensa`, `aceite_termo_contribuicao` (só INSERT); `contribuicao` (só INSERT, ver nota abaixo).
 * 🗑️➡️✅ **CORRIGIDO (27-07-2026):** nenhuma das quatro tem policy de `DELETE` em `04` (mesma limpeza geral do `A7`, ver `[06-D-8]`). `contribuicao_recompensa`/`aceite_termo_contribuicao` também perderam `UPDATE` — os comentários do `04` já diziam que os dois são registro de auditoria/aquisição, não deveriam ser editáveis depois de criados (mesmo raciocínio do `27`).
+* 🗑️➡️✅ **`contribuicao` perdeu `UPDATE` de tabela inteira — CORRIGIDO (28-07-2026, Claude Web — 5ª auditoria, CRÍTICO 2):** `pol_contribuicao_update` era `USING(true)` — reproduzido: fraudador doava pra própria campanha e se auto-confirmava por `UPDATE` direto, inflando `campanha.valor_bruto_arrecadado` publicamente sem pagamento real. `status`/`id_transacao_api` só mudam via `atualizar_status_contribuicao()` (`05`, `SECURITY DEFINER`, `[05-K-2]`) — pré-autorização (webhook do gateway), mesma categoria das funções de `[03-F]`. `auditoria_financeira` continua com `UPDATE` de tabela inteira, de propósito (item 9 da `PENDENCIAS`, ainda em aberto).
 
 ---
 
@@ -618,9 +627,11 @@ Nenhum GRANT adicional. `papel`, `permissao` e `papel_permissao` só têm policy
 
 Povoa o banco com dados de demonstração/teste (mínimo 7 registros por tabela relevante). É o único arquivo em que a **ordem física não segue a ordem alfabética do índice global de letras** — ela segue estritamente a ordem de dependência de Foreign Key, porque aqui (diferente de `04`/`06`) a ordem das instruções importa de verdade: uma tabela filha só pode receber `INSERT` depois que a linha da tabela pai já existe.
 
-> ⚠️ **Por que a ordem não é alfabética:** o exemplo mais claro é `configuracoes` (letra C). Duas das suas linhas de seed (`notificar_novas_campanhas`, `limite_denuncias_suspensao`) referenciam o usuário admin pelo `id_usuario`. Por isso o `INSERT` em `configuracoes` só pode rodar depois do `INSERT` em `usuario` (letra D) — o arquivo intercala C e D de propósito, e isso já estava correto antes desta reorganização. Reordenar cegamente para "C sempre antes de D" quebraria o script.
+> ⚠️ **Por que a ordem não é alfabética:** o exemplo mais claro é `configuracoes` (letra C). Uma das suas linhas de seed (`notificar_novas_campanhas`) referencia o usuário admin pelo `id_usuario`. Por isso o `INSERT` em `configuracoes` só pode rodar depois do `INSERT` em `usuario` (letra D) — o arquivo intercala C e D de propósito, e isso já estava correto antes desta reorganização. Reordenar cegamente para "C sempre antes de D" quebraria o script. *(Correção 28-07-2026: esta nota citava também `limite_denuncias_suspensao` como segundo exemplo — a chave foi removida do seed numa rodada anterior, ver "🟢 Já corrigido" em `PENDENCIAS e correcoes.md`, item 45; a nota ficou desatualizada e só foi pega agora, na 5ª auditoria do Claude Web.)*
 
 ### Ordem de Execução (com a letra de cada bloco)
+
+*(Correção 28-07-2026, achado pela 5ª auditoria do Claude Web: 3 blocos que existem de verdade no `.sql` — `[07-D-6]`, `[07-D-7]` e `[07-H-3]` — não apareciam nesta tabela nem no detalhamento abaixo. São justamente os blocos de termos de uso e aceite por contribuição, a trilha que sustenta o RF-011/054/055. Adicionados agora, na posição física correta.)*
 
 | Ordem física | Bloco | Letra | Marcador |
 |---|---|---|---|
@@ -635,24 +646,27 @@ Povoa o banco com dados de demonstração/teste (mínimo 7 registros por tabela 
 | 9 | `arquivo` | CONFIG | `[07-C-4]` |
 | 10 | `usuario` | USUÁRIO | `[07-D-1]` |
 | 11 | `usuario_papel` | USUÁRIO | `[07-D-2]` |
-| 12 | `configuracoes` (parâmetros de sistema + 2 preferências do admin) | CONFIG | `[07-C-5]` |
-| 13 | `configuracoes` (constantes do motor de score) | SCORE¹ | `[07-I-2]` |
-| 14 | `perfil_pesquisador` | USUÁRIO | `[07-D-3]` |
-| 15 | `link_academico` | LINK | `[07-F-1]` |
-| 16 | `campanha` | CAMPANHA | `[07-E-1]` |
-| 17 | `seguir_campanha` | CAMPANHA | `[07-E-2]` |
-| 18 | `seguir_pesquisador` | USUÁRIO | `[07-D-4]` |
-| 19 | `contribuicao` | CONTRIBUIÇÃO | `[07-H-1]` |
-| 20 | `auditoria_financeira` | CONTRIBUIÇÃO | `[07-H-2]` |
-| 21 | `atualizacao_campanha` | CAMPANHA | `[07-E-3]` |
-| 22 | `arquivo_atualizacao` | ARQUIVO | `[07-G-1]` |
-| 23 | `repasse` | CAMPANHA | `[07-E-4]` |
-| 24 | `solicitacao_encerramento` | CAMPANHA | `[07-E-5]` |
-| 25 | `historico_rejeicao` | CAMPANHA | `[07-E-6]` |
-| 26 | `comentario` | CAMPANHA | `[07-E-7]` |
-| 27 | `denuncia` | CAMPANHA | `[07-E-8]` |
+| 12 | `termos_de_uso` / `usuario_termo` | USUÁRIO | `[07-D-6]` |
+| 13 | `configuracoes` (parâmetros de sistema + preferências do admin) | CONFIG | `[07-C-5]` |
+| 14 | `configuracoes` (constantes do motor de score) | SCORE¹ | `[07-I-2]` |
+| 15 | `perfil_pesquisador` | USUÁRIO | `[07-D-3]` |
+| 16 | `link_academico` | LINK | `[07-F-1]` |
+| 17 | `campanha` | CAMPANHA | `[07-E-1]` |
+| 18 | `seguir_campanha` | CAMPANHA | `[07-E-2]` |
+| 19 | `seguir_pesquisador` | USUÁRIO | `[07-D-4]` |
+| 20 | `contribuicao` | CONTRIBUIÇÃO | `[07-H-1]` |
+| 21 | `aceite_termo_contribuicao` | CONTRIBUIÇÃO | `[07-H-3]` |
+| 22 | `auditoria_financeira` | CONTRIBUIÇÃO | `[07-H-2]` |
+| 23 | `atualizacao_campanha` | CAMPANHA | `[07-E-3]` |
+| 24 | `arquivo_atualizacao` | ARQUIVO | `[07-G-1]` |
+| 25 | `repasse` | CAMPANHA | `[07-E-4]` |
+| 26 | `solicitacao_encerramento` | CAMPANHA | `[07-E-5]` |
+| 27 | `historico_rejeicao` | CAMPANHA | `[07-E-6]` |
+| 28 | `comentario` | CAMPANHA | `[07-E-7]` |
+| 29 | `denuncia` | CAMPANHA | `[07-E-8]` |
+| 30 | `notificacao` | USUÁRIO | `[07-D-7]` |
 | — | Nota sobre como logar após o seed | USUÁRIO | `[07-D-5]` |
-| 28 | Backfill (`recalcular_todos_os_scores()`) | SCORE | `[07-I-3]` |
+| 31 | Backfill (`recalcular_todos_os_scores()`) | SCORE | `[07-I-3]` |
 
 ¹ A *tabela* `configuracoes` é do domínio CONFIG (`01-C`), mas este bloco específico só contém constantes usadas pelo motor de cálculo de score — por isso foi arquivado sob a letra `I`, junto com o resto do que envolve pontuação. É a mesma tabela, mas o **conteúdo** desse bloco pertence a outro domínio; ver nota abaixo.
 
@@ -670,10 +684,13 @@ Povoa o banco com dados de demonstração/teste (mínimo 7 registros por tabela 
 * **[07-B-3] `papel_permissao`:** resolvido por nome (não por número fixo), já que os IDs de `papel` não são previsíveis depois do `ON CONFLICT DO NOTHING` de `[07-B-1]`. Como `trg_permissao_auto_admin` (`05_regras_negocio.sql`, executado antes deste arquivo) já dispara em todo `INSERT` em `permissao` e atribui a permissão nova ao papel `'admin'` automaticamente, as linhas `('admin', ...)` deste bloco já seriam preenchidas sozinhas pela trigger — foram mantidas explícitas mesmo assim só por clareza de leitura (documentam a intenção "admin tem tudo" sem depender de abrir outro arquivo para confirmar). `ON CONFLICT DO NOTHING` garante que não há duplicidade.
   - 🗑️ **`('admin', 'campanha_encerrar')` removida junto** — consequência direta de `campanha_encerrar` ter saído de `[07-B-2]`; sem a permissão existir, essa atribuição não faria sentido.
 
-* **[07-C-5] `configuracoes` (parâmetros de sistema):** este bloco só pode rodar depois de `[07-D-1]` (`usuario`) porque duas das suas 7 linhas (`notificar_novas_campanhas`, `limite_denuncias_suspensao`) têm `id_usuario = 8`, referenciando o usuário Admin do seed.
+* 🗑️➡️✅ **[07-D-6] `termos_de_uso` / `usuario_termo` — não aparecia neste capítulo (achado da 5ª auditoria do Claude Web):** sustenta o RF-011 (aceite obrigatório no cadastro). Duas versões: `v1-2024-01-01` (vigente durante todo o cadastro dos 17 usuários do seed, por isso é ela que aparece em `usuario_termo`) e `v2-2025-01-01` (versão atual, publicada depois, ainda sem nenhum aceite — cenário realista de "termo novo no ar, usuários antigos não foram re-avisados"). Texto real é `[PLACEHOLDER]` — a estrutura existe, o conteúdo jurídico definitivo entra quando a equipe/jurídico validar. **Pegadinha documentada no próprio `.sql`:** publicar uma v2 sem desativar a v1 antes quebra o índice parcial `uq_termos_uso_ativo` (`02`, só 1 versão `ativo=TRUE` por vez) — o `UPDATE` que desativa a velha e o `INSERT` da nova precisam estar na mesma transação.
+* **[07-C-5] `configuracoes` (parâmetros de sistema):** este bloco só pode rodar depois de `[07-D-1]` (`usuario`) porque uma das suas linhas (`notificar_novas_campanhas`) tem `id_usuario = 8`, referenciando o usuário Admin do seed.
 
 * **[07-I-2] `configuracoes` (constantes do motor de score):** dados (não lógica) que alimentam as fórmulas de `05_regras_negocio.sql` — `score_custo_denuncia`, `score_penalidade_abandono`, etc. Ficam em `configuracoes` (não hardcoded no código) exatamente para que o admin possa ajustar a régua de penalidades pelo Painel Admin sem precisar editar SQL/app.
 
+* 🗑️➡️✅ **[07-H-3] `aceite_termo_contribuicao` — não aparecia neste capítulo (achado da 5ª auditoria do Claude Web):** sustenta o RF-054/RF-055 — a Etapa 2 descreve essa trilha (aceite dos termos por transação) como a defesa principal da plataforma numa disputa de chargeback com operadora de cartão. Gerado por `SELECT` a partir da própria `contribuicao` (não digitado linha por linha) — cada contribuição aceitou a versão de termos vigente na época (`v1`, `id_termo=1`, ver `[07-D-6]`), no mesmo instante da contribuição.
+* 🗑️➡️✅ **[07-D-7] `notificacao` — não aparecia neste capítulo (achado da 5ª auditoria do Claude Web):** estava vazia; 7 linhas em estados diferentes (`enviado`/`pendente`/`falhou`/`cancelado`) pra exercitar de verdade a permissão `notificacao_processar` e o índice `idx_notificacao_status` (`02`) — até então, nenhum dos dois tinha rodado contra nenhuma linha real.
 * **[07-D-5] Como logar no app após o seed:** com autenticação própria, o fluxo é: 1) cadastrar o usuário pelo endpoint de signup do NestJS (gera o `senha_hash` e chama `public.atribuir_papel_padrao(id_usuario)`, que atribui o papel `'usuario'` — ver `08_trigger_signup_usuario.sql`); 2) o papel `'admin'` não é atribuído automaticamente por nada disso — depois do signup, é preciso dar o papel a um usuário manualmente com `INSERT INTO usuario_papel (id_usuario, id_papel) SELECT <id_usuario>, id_papel FROM papel WHERE nome = 'admin'`.
 
 > 🗑️ **Dois blocos removidos por estarem 100% obsoletos** (não só migrados — de fato apagados, sem equivalente aqui): um "FIX — permission denied for sequence" que descrevia um problema já resolvido, e uma "NOTA DE REORGANIZAÇÃO" que apontava para um arquivo `05_grants.sql` que nunca existiu de verdade (o nome correto sempre foi `06_grants.sql`). Ambos descreviam o `GRANT USAGE, SELECT ON ALL SEQUENCES`, que já vive e já está plenamente documentado em `06_grants.sql` (`[06-A-1]`) — mantê-los aqui seria pura duplicação desatualizada.

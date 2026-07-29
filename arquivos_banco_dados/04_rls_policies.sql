@@ -426,6 +426,11 @@ CREATE POLICY pol_historicorej_update ON historico_rejeicao FOR UPDATE TO app_ne
 -- [04-E-7] repasse: por que existem policies de escrita (ver DOCUMENTACAO_BD.md)
 DROP POLICY IF EXISTS pol_repasse_insert ON repasse;
 CREATE POLICY pol_repasse_insert ON repasse FOR INSERT TO app_nestjs WITH CHECK (true);
+-- SUPERADA (28-07-2026, Claude Web — 5ª auditoria, "estender o mesmo tratamento a
+-- repasse — também é dinheiro saindo"): mesmo raciocínio de pol_contribuicao_update
+-- acima. GRANT UPDATE saiu (06, [06-E]); status/repassado_em só mudam via
+-- atualizar_status_repasse() (05, SECURITY DEFINER, [05-K-2]). Mantida por
+-- documentação/histórico, sem efeito prático pro app_nestjs.
 DROP POLICY IF EXISTS pol_repasse_update ON repasse;
 CREATE POLICY pol_repasse_update ON repasse FOR UPDATE TO app_nestjs USING (true) WITH CHECK (true);
 
@@ -640,6 +645,13 @@ CREATE POLICY pol_contribuicao_insert ON contribuicao FOR INSERT TO app_nestjs W
     id_usuario IS NULL OR id_usuario = public.id_usuario_atual()
 );
 -- CORRIGIDO: o webhook de pagamento precisa atualizar o status da contribuição sem depender do dono da contribuição.
+-- SUPERADA (28-07-2026, Claude Web — 5ª auditoria): USING(true) + GRANT UPDATE de
+-- tabela inteira permitia qualquer usuário confirmar a própria contribuição
+-- direto por UPDATE (fraude reproduzida: doar pra própria campanha e se
+-- auto-confirmar). O GRANT UPDATE saiu (06, [06-H]) — dali em diante o único
+-- caminho é atualizar_status_contribuicao() (05, SECURITY DEFINER, [05-K-2]),
+-- que bypassa RLS. Esta policy fica sem efeito prático pro app_nestjs (não tem
+-- mais GRANT UPDATE pra exercitá-la), mantida só por documentação/histórico.
 DROP POLICY IF EXISTS pol_contribuicao_update ON contribuicao;
 CREATE POLICY pol_contribuicao_update ON contribuicao FOR UPDATE TO app_nestjs USING (
     true

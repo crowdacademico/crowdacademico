@@ -16,8 +16,8 @@
 --  3. Regras de moderação de comunidade, engajamento e automação RBAC.
 --
 --  Inventário Mapeado:
---  - 36 Funções (Helpers, Cálculo, Orquestração e Triggers)
---  - 41 Triggers (Todas idempotentes com DROP TRIGGER IF EXISTS)
+--  - 42 Funções (Helpers, Cálculo, Orquestração e Triggers)
+--  - 46 Triggers (Todas idempotentes com DROP TRIGGER IF EXISTS)
 -- ----------------------------------------------------------------------------
 --  SUMÁRIO DOS BLOCOS DE CÓDIGO
 --  (letras seguem o índice global de DOCUMENTACAO_BD.md — I = SCORE,
@@ -1234,6 +1234,39 @@ BEFORE INSERT OR UPDATE ON repasse
 FOR EACH ROW
 EXECUTE FUNCTION fn_valida_repasse_all_or_nothing();
 
+-- ----------------------------------------------------------------------------
+-- Função:     atualizar_status_repasse
+-- Assinatura: (p_id_repasse INT, p_status VARCHAR, p_repassado_em TIMESTAMP DEFAULT NULL) -> VOID
+-- Bloco:      [05-K-2]
+-- Regra:      CRÍTICO 2 (extensão) — 5ª auditoria do Claude Web: "estender o
+--             mesmo tratamento a repasse, que também é dinheiro saindo".
+--             `pol_repasse_update` (04) é `USING (true)` de propósito (item 9
+--             da PENDENCIAS) — o `GRANT UPDATE` de tabela inteira que isso
+--             exigia saiu (`06`); dali em diante o único jeito de mudar
+--             `status`/`repassado_em` é por aqui. `SECURITY DEFINER`, mas
+--             `trg_valida_repasse` continua rodando normalmente por baixo (RLS
+--             é bypassada, trigger não) — a regra all-or-nothing continua
+--             protegida mesmo passando por esta função.
+-- SEM AUTORIZAÇÃO DE PROPÓSITO — pré-autenticação: chamada pelo webhook do
+-- gateway de pagamento/repasse, sem sessão de usuário (mesma categoria de
+-- registrar_falha_login/registrar_login_sucesso, [03-F]). De confiança do
+-- backend: o endpoint que chama esta função precisa validar a assinatura do
+-- webhook antes, nunca aceitar a chamada de uma rota pública qualquer.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.atualizar_status_repasse(
+    p_id_repasse INT, p_status VARCHAR, p_repassado_em TIMESTAMP DEFAULT NULL
+)
+RETURNS VOID
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    UPDATE repasse
+    SET status = p_status,
+        repassado_em = COALESCE(p_repassado_em, repassado_em)
+    WHERE id_repasse = p_id_repasse;
+$$;
+
 
 -- ----------------------------------------------------------------------------
 -- Função:     validar_contribuicao_all_or_nothing
@@ -1386,6 +1419,99 @@ FOR EACH ROW
 EXECUTE FUNCTION fn_congela_regras_campanha();
 
 -- ----------------------------------------------------------------------------
+-- Função:     fn_valida_transicao_campanha
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-K-2]
+-- Regra:      CRÍTICO 1 — 5ª auditoria do Claude Web, achado simulando a
+--             jornada de um usuário mal-intencionado (não por leitura de
+--             código): `pol_campanha_update` (04) libera UPDATE pro próprio
+--             dono (`id_usuario = id_usuario_atual()`), e `fn_congela_regras_
+--             campanha` só passa a proteger a linha a partir do momento em que
+--             `OLD.status` já está em `('ativo','sucesso','nao_atingido',
+--             'encerrado','encerrado_moderacao')` — `'aguardando_aprovacao'`
+--             não está nessa lista. Reproduzido: um pesquisador comum, dono da
+--             própria campanha em `aguardando_aprovacao`, executava
+--             `UPDATE campanha SET status='ativo', aprovado_em=NOW(),
+--             id_admin=<ele mesmo>` e funcionava — a campanha saía do ar como
+--             se um Administrador tivesse aprovado, e `trg_campanha_carimba_
+--             taxa` ainda carimbava `taxa_plataforma=5.00` sozinha, deixando a
+--             campanha fraudulenta indistinguível de uma aprovada de verdade.
+--             Nenhuma das triggers existentes protegia especificamente QUEM
+--             pode mudar `status`/`aprovado_em`/`id_admin` — só o valor final
+--             dos outros campos, depois que a campanha já estava aprovada.
+-- Regras de transição permitidas, nesta ordem (a primeira que bater libera):
+--   1. Nenhum dos 3 campos sensíveis mudou (edição normal de outro campo,
+--      já coberta por fn_congela_regras_campanha) — sai cedo.
+--   2. Quem tem 'campanha_aprovar', 'campanha_rejeitar' ou
+--      'solicitacao_encerramento_decidir' pode fazer qualquer transição — é o
+--      Administrador/curador de verdade.
+--   3. Encerramento por prazo vencido — AUTOVERIFICÁVEL, sem precisar de
+--      permissão nem de um "usuário de sistema": só passa se o prazo já
+--      venceu (`data_fim <= NOW()`) E o novo status bate matematicamente com
+--      `valor_bruto_arrecadado` vs `meta_financeira` (sucesso só se atingiu a
+--      meta, nao_atingido só se não atingiu) — impossível mentir o resultado,
+--      porque a condição confere o próprio dado contra si mesma.
+--   4. Dono reenviando campanha rejeitada pra nova avaliação (RF-070):
+--      só a transição rejeitado -> aguardando_aprovacao, sem tocar
+--      aprovado_em/id_admin.
+--   Qualquer outra tentativa de mudar status/aprovado_em/id_admin: bloqueada.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_valida_transicao_campanha()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+    IF NEW.status      IS NOT DISTINCT FROM OLD.status
+       AND NEW.aprovado_em IS NOT DISTINCT FROM OLD.aprovado_em
+       AND NEW.id_admin    IS NOT DISTINCT FROM OLD.id_admin THEN
+        RETURN NEW;
+    END IF;
+
+    IF public.tem_permissao('campanha_aprovar')
+       OR public.tem_permissao('campanha_rejeitar')
+       OR public.tem_permissao('solicitacao_encerramento_decidir') THEN
+        RETURN NEW;
+    END IF;
+
+    IF OLD.status = 'ativo'
+       AND OLD.data_fim IS NOT NULL AND OLD.data_fim <= NOW()
+       AND NEW.aprovado_em IS NOT DISTINCT FROM OLD.aprovado_em
+       AND (
+            (NEW.status = 'sucesso'      AND NEW.valor_bruto_arrecadado >= NEW.meta_financeira)
+         OR (NEW.status = 'nao_atingido' AND NEW.valor_bruto_arrecadado <  NEW.meta_financeira)
+       )
+    THEN
+        RETURN NEW;
+    END IF;
+
+    IF NEW.id_usuario = public.id_usuario_atual()
+       AND OLD.status = 'rejeitado' AND NEW.status = 'aguardando_aprovacao'
+       AND NEW.aprovado_em IS NOT DISTINCT FROM OLD.aprovado_em
+       AND NEW.id_admin    IS NOT DISTINCT FROM OLD.id_admin
+    THEN
+        RETURN NEW;
+    END IF;
+
+    RAISE EXCEPTION 'Transição de status de campanha não autorizada.';
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_campanha_valida_transicao
+-- Tabela:    campanha
+-- Momento:   BEFORE UPDATE
+-- Função:    fn_valida_transicao_campanha()
+-- Bloco:     [05-K-2]
+-- Regra:     Bloqueia auto-aprovação/auto-rejeição/forjar id_admin. Libera
+--            aprovação/rejeição real (Admin), encerramento automático por
+--            prazo (autoverificável) e reenvio de campanha rejeitada pelo
+--            próprio dono (RF-070).
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_campanha_valida_transicao ON campanha;
+CREATE TRIGGER trg_campanha_valida_transicao
+BEFORE UPDATE ON campanha
+FOR EACH ROW
+EXECUTE FUNCTION fn_valida_transicao_campanha();
+
+-- ----------------------------------------------------------------------------
 -- Função:     fn_preenche_encerramento_campanha
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-2]
@@ -1532,6 +1658,59 @@ BEFORE UPDATE ON campanha
 FOR EACH ROW
 WHEN (NEW.data_inicio IS DISTINCT FROM OLD.data_inicio OR NEW.data_fim IS DISTINCT FROM OLD.data_fim)
 EXECUTE FUNCTION fn_valida_prazo_campanha_negocio();
+
+-- ----------------------------------------------------------------------------
+-- Função:     fn_valida_meta_campanha_negocio
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-K-2]
+-- Regra:      MÉDIO 3 — 5ª auditoria do Claude Web: campanha com
+--             `meta_financeira = 0.00` era aceita (reproduzido, existia uma no
+--             banco de teste) — sem `CHECK` e sem chave de configuração. Numa
+--             campanha `all-or-nothing`, meta zero é sucesso instantâneo (a
+--             primeira contribuição confirmada já bate a meta). Mesmo padrão
+--             do prazo (item 16): o limite técnico (`meta_financeira > 0`) já
+--             mora na `CHECK` (01); esta trigger aplica o mínimo de negócio de
+--             verdade, maior e configurável, via
+--             `configuracoes.meta_minima_campanha` — mudar o valor mínimo
+--             aceito vira um `UPDATE` numa linha, não uma migração de
+--             constraint.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION fn_valida_meta_campanha_negocio()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_meta_minima DECIMAL;
+BEGIN
+    v_meta_minima := public.config_numero('meta_minima_campanha', 500.00);
+
+    IF NEW.meta_financeira < v_meta_minima THEN
+        RAISE EXCEPTION 'A meta financeira precisa ser de pelo menos % (configuracoes.meta_minima_campanha).', v_meta_minima;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_campanha_valida_meta_negocio / trg_campanha_valida_meta_negocio_update
+-- Tabela:    campanha
+-- Momento:   BEFORE INSERT / BEFORE UPDATE (só quando meta_financeira muda)
+-- Função:    fn_valida_meta_campanha_negocio()
+-- Bloco:     [05-K-2]
+-- Regra:     Aplica o mínimo de negócio da meta financeira (configuracoes),
+--            separado do limite técnico (constraint em 01).
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_campanha_valida_meta_negocio ON campanha;
+CREATE TRIGGER trg_campanha_valida_meta_negocio
+BEFORE INSERT ON campanha
+FOR EACH ROW
+EXECUTE FUNCTION fn_valida_meta_campanha_negocio();
+
+DROP TRIGGER IF EXISTS trg_campanha_valida_meta_negocio_update ON campanha;
+CREATE TRIGGER trg_campanha_valida_meta_negocio_update
+BEFORE UPDATE ON campanha
+FOR EACH ROW
+WHEN (NEW.meta_financeira IS DISTINCT FROM OLD.meta_financeira)
+EXECUTE FUNCTION fn_valida_meta_campanha_negocio();
 
 
 -- ----------------------------------------------------------------------------
@@ -1698,6 +1877,46 @@ CREATE TRIGGER trg_sincroniza_arrecadado_campanha
 AFTER INSERT OR UPDATE OR DELETE ON contribuicao
 FOR EACH ROW
 EXECUTE FUNCTION fn_sincroniza_arrecadado_campanha();
+
+-- ----------------------------------------------------------------------------
+-- Função:     atualizar_status_contribuicao
+-- Assinatura: (p_id INT, p_status status_contribuicao, p_id_transacao VARCHAR DEFAULT NULL) -> VOID
+-- Bloco:      [05-K-2]
+-- Regra:      CRÍTICO 2 — 5ª auditoria do Claude Web, achado simulando a
+--             jornada de um usuário mal-intencionado: `pol_contribuicao_update`
+--             (04) era `USING (true)` com `GRANT UPDATE` de tabela inteira —
+--             qualquer usuário confirmava a própria contribuição (ou a de
+--             qualquer um) direto por `UPDATE`. Reproduzido: fraudador doa
+--             R$ 9.000 pra própria campanha (`status='pendente'`), executa
+--             `UPDATE contribuicao SET status='confirmado'`, e
+--             `trg_sincroniza_arrecadado_campanha` (acima) soma o valor de
+--             verdade em `campanha.valor_bruto_arrecadado` — a página pública
+--             passa a exibir R$ 9.000 arrecadados sem nenhum pagamento real
+--             ter acontecido. Corrigido no mesmo padrão de `[03-F]`: a
+--             coluna `status` (e `id_transacao_api`) sai do `GRANT UPDATE`
+--             (`06`) e só muda por aqui — `SECURITY DEFINER`, mas
+--             `trg_sincroniza_arrecadado_campanha` e as triggers de validação
+--             all-or-nothing continuam rodando por baixo normalmente (RLS é
+--             bypassada, trigger não).
+-- SEM AUTORIZAÇÃO DE PROPÓSITO — pré-autenticação: chamada pelo webhook do
+-- gateway de pagamento, sem sessão de usuário (mesma categoria de
+-- registrar_falha_login/registrar_login_sucesso, [03-F]). De confiança do
+-- backend: o endpoint que chama esta função precisa validar a assinatura do
+-- webhook do gateway antes, nunca expor isso como rota pública genérica.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.atualizar_status_contribuicao(
+    p_id INT, p_status status_contribuicao, p_id_transacao VARCHAR DEFAULT NULL
+)
+RETURNS VOID
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    UPDATE contribuicao
+    SET status = p_status,
+        id_transacao_api = COALESCE(p_id_transacao, id_transacao_api)
+    WHERE id_contribuicao = p_id;
+$$;
 
 
 -- ----------------------------------------------------------------------------
@@ -2028,6 +2247,49 @@ BEFORE INSERT ON denuncia
 FOR EACH ROW
 EXECUTE FUNCTION validar_denuncia_frequencia();
 
+-- ----------------------------------------------------------------------------
+-- Função:     fn_valida_denuncia_sem_autojulgamento
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-K-3]
+-- Regra:      MENOR 5 — 5ª auditoria do Claude Web, reproduzido: um moderador
+--             (Diego, id 10) criou uma denúncia contra um pesquisador e depois
+--             marcou a própria denúncia como 'resolvida' — o que custa 4
+--             pontos de score ao alvo (calcular_score_reputacao, [05-I-2]).
+--             `pol_denuncia_update` (04) já checa a permissão
+--             `denuncia_responder`, mas não checa se quem julga é o mesmo que
+--             denunciou — mesmo tipo de conflito de interesse que
+--             `validar_comentario_autor()` já bloqueia pra auto-endosso
+--             (`[05-K-3]`, acima). Bloqueia qualquer transição de `status`
+--             feita pelo próprio denunciante, não só pra 'resolvida' — também
+--             não faz sentido o denunciante marcar a própria denúncia como
+--             'improcedente'.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_valida_denuncia_sem_autojulgamento()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+    IF OLD.id_usuario = public.id_usuario_atual() THEN
+        RAISE EXCEPTION 'Quem registrou a denúncia não pode julgar a própria denúncia.';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_denuncia_sem_autojulgamento
+-- Tabela:    denuncia
+-- Momento:   BEFORE UPDATE (só quando status muda)
+-- Função:    fn_valida_denuncia_sem_autojulgamento()
+-- Bloco:     [05-K-3]
+-- Regra:     Impede que o autor da denúncia julgue (mude o status) da própria denúncia.
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_denuncia_sem_autojulgamento ON denuncia;
+CREATE TRIGGER trg_denuncia_sem_autojulgamento
+BEFORE UPDATE ON denuncia
+FOR EACH ROW
+WHEN (NEW.status IS DISTINCT FROM OLD.status)
+EXECUTE FUNCTION fn_valida_denuncia_sem_autojulgamento();
+
 
 -- ----------------------------------------------------------------------------
 -- Função:     trg_admin_recebe_toda_permissao
@@ -2068,3 +2330,60 @@ DROP TRIGGER IF EXISTS trg_permissao_auto_admin ON permissao;
 CREATE TRIGGER trg_permissao_auto_admin
 AFTER INSERT ON permissao
 FOR EACH ROW EXECUTE FUNCTION public.trg_admin_recebe_toda_permissao();
+
+-- ----------------------------------------------------------------------------
+-- Função:     fn_atribuir_papel_pesquisador
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-K-3]
+-- Regra:      MÉDIO 4 — 5ª auditoria do Claude Web, achado na jornada "usuário
+--             com mestrado vira pesquisador": quando o app cria o
+--             `perfil_pesquisador` (upgrade de conta), o usuário fica só com o
+--             papel `'usuario'` — o papel `'pesquisador'` nunca é atribuído
+--             por ninguém. O seed atribui `'pesquisador'` aos 11 pesquisadores
+--             semeados (dado histórico), mas o fluxo real do app não replica
+--             isso. Hoje não quebra nada (o papel `'pesquisador'` nasce com 0
+--             permissões, e as policies checam a existência do
+--             `perfil_pesquisador`, não o papel) — mas cria duas realidades
+--             diferentes no banco, e vira bug silencioso no dia em que alguém
+--             conceder a primeira permissão ao papel `'pesquisador'`, que é a
+--             coisa mais natural do mundo de acontecer num RBAC dinâmico.
+--             Mantém o invariante "tem perfil <=> tem o papel" — mesmo
+--             espírito de `atribuir_papel_padrao()` (08) e de
+--             `trg_admin_recebe_toda_permissao()` (acima): `SECURITY DEFINER`
+--             porque o usuário que está virando pesquisador ainda não tem
+--             `'papel_atribuir'` (mesmo problema de "ovo e galinha").
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_atribuir_papel_pesquisador()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_id_papel_pesquisador INT;
+BEGIN
+    SELECT id_papel INTO v_id_papel_pesquisador FROM papel WHERE nome = 'pesquisador';
+
+    IF v_id_papel_pesquisador IS NOT NULL THEN
+        INSERT INTO usuario_papel (id_usuario, id_papel)
+        VALUES (NEW.id_usuario, v_id_papel_pesquisador)
+        ON CONFLICT DO NOTHING;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_perfil_atribui_papel_pesquisador
+-- Tabela:    perfil_pesquisador
+-- Momento:   AFTER INSERT
+-- Função:    fn_atribuir_papel_pesquisador()
+-- Bloco:     [05-K-3]
+-- Regra:     Toda vez que um perfil de pesquisador é criado, o papel
+--            'pesquisador' é atribuído automaticamente ao mesmo usuário.
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_perfil_atribui_papel_pesquisador ON perfil_pesquisador;
+CREATE TRIGGER trg_perfil_atribui_papel_pesquisador
+AFTER INSERT ON perfil_pesquisador
+FOR EACH ROW EXECUTE FUNCTION public.fn_atribuir_papel_pesquisador();
