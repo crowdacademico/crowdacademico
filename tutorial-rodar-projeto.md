@@ -311,6 +311,11 @@ Isso aqui te deixa com o "hello world" rodando, mas os problemas que já te avis
 5. **Números (`DECIMAL`) chegam como texto no Node, não como number.** O driver `pg` devolve colunas tipo `meta_financeira`, `valor`, `taxa_plataforma` como string (ex.: `"50000.00"`) por padrão — somar sem converter primeiro vira concatenação de texto ou `NaN`. Configure o `types.setTypeParser` do `pg`, ou converta (`Number(...)`/`parseFloat(...)`) antes de fazer conta.
 6. **Cadastro de usuário não é só um `INSERT`.** Depois de inserir em `usuario`, o backend precisa chamar `public.atribuir_papel_padrao(id_usuario)` (ver `08_trigger_signup_usuario.sql`) na mesma transação, pra o usuário novo receber o papel `'usuario'`. O papel `'admin'` nunca é atribuído automaticamente — sempre manual.
 7. **Doação sem conta (anônima)** usa uma segunda variável de sessão, `app.token_sessao_atual` (mesma ideia do `SET LOCAL` do item 1, só que pra identificar quem doou sem login, via `contribuicao.token_sessao`).
+8. **Manutenção manual e trabalhos de fundo (cron/worker) também precisam de identidade — achado na 6ª auditoria do Claude Web.** Depois que `pol_campanha_update` (RLS) passou a exigir dono ou permissão real, um `UPDATE` rodado **sem** `SET LOCAL app.id_usuario_atual` definido — por exemplo, você corrigindo um dado manualmente no SQL Editor, logado como `postgres` — simplesmente não afeta nenhuma linha (`UPDATE 0`, **sem erro nenhum**). É o comportamento correto (toda aprovação/rejeição de campanha precisa ser atribuível a alguém), mas o jeito de errar aqui é silencioso, então documentando: antes de qualquer `UPDATE` manual em `campanha` (ou em qualquer tabela protegida por RLS), rode antes, na mesma sessão:
+   ```sql
+   SET app.id_usuario_atual = '<id de um usuário com a permissão necessária, ex.: o admin>';
+   ```
+   O mesmo vale pro **worker de notificação** (`notificacao`) e pro **job de encerramento automático de campanha vencida** (RF-037) — este último já tem uma função pronta pra isso, `public.encerrar_campanhas_vencidas()` (`05_regras_negocio.sql`), que já é `SECURITY DEFINER` (bypassa a RLS por dentro) — o job só precisa chamá-la (ex.: via `@Cron` do NestJS), sem precisar montar nenhum `SET LOCAL` manualmente pra esse caso específico.
 
 ---
 

@@ -16,7 +16,7 @@
 --  3. Regras de moderação de comunidade, engajamento e automação RBAC.
 --
 --  Inventário Mapeado:
---  - 42 Funções (Helpers, Cálculo, Orquestração e Triggers)
+--  - 43 Funções (Helpers, Cálculo, Orquestração e Triggers)
 --  - 46 Triggers (Todas idempotentes com DROP TRIGGER IF EXISTS)
 -- ----------------------------------------------------------------------------
 --  SUMÁRIO DOS BLOCOS DE CÓDIGO
@@ -53,6 +53,24 @@
 -- de chamar nada no app. Todos os pesos vêm de score_config.peso (não há
 -- número "mágico" fixo no código) — editar o peso no Painel Admin já
 -- recalcula o score de todo mundo automaticamente.
+-- ----------------------------------------------------------------------------
+
+-- ----------------------------------------------------------------------------
+-- ATENÇÃO (28-07-2026, Claude Web — 6ª auditoria, "manutenção e trabalhos de
+-- fundo precisam de identidade"): depois de trg_campanha_valida_transicao
+-- ([05-K-2]) e de pol_campanha_update (04) exigirem dono ou permissão real,
+-- QUALQUER UPDATE em campanha rodado sem app.id_usuario_atual definido na
+-- sessão — inclusive por um superusuário corrigindo dado manualmente no SQL
+-- Editor — não afeta nenhuma linha (RLS filtra tudo antes da trigger sequer
+-- avaliar) e devolve "UPDATE 0" SEM ERRO NENHUM. É o comportamento correto
+-- (aprovação/rejeição de campanha precisa ser atribuível a alguém), mas o modo
+-- de falhar é silencioso. Antes de qualquer UPDATE manual em campanha, rode:
+--     SET app.id_usuario_atual = '<id de um usuário com a permissão certa>';
+-- Mesmo tema pro worker de notificação (precisa de sessão com
+-- notificacao_processar) e pro encerramento automático de campanha vencida —
+-- este último já tem função pronta pra isso, encerrar_campanhas_vencidas()
+-- ([05-K-2]), SECURITY DEFINER, chamada por agendamento sem precisar de
+-- SET LOCAL manual. Documentado também em tutorial-rodar-projeto.md, item 8.
 -- ----------------------------------------------------------------------------
 
 
@@ -1525,12 +1543,22 @@ EXECUTE FUNCTION fn_valida_transicao_campanha();
 --             sem depender do backend lembrar de fazer isso em toda rota que
 --             muda status. Só grava se ainda não tiver um valor (não
 --             sobrescreve um encerrado_em já registrado).
+-- CORRIGIDO (28-07-2026, Claude Web — 6ª auditoria, ao implementar
+-- encerrar_campanhas_vencidas() logo abaixo): o comentário original da coluna
+-- (`[01-E]`) já dizia "registra a data real de encerramento (natural,
+-- antecipado ou por moderação)" — mas esta trigger só cobria "antecipado"
+-- (`encerrado`) e "por moderação" (`encerrado_moderacao`); faltava o
+-- encerramento "natural" de verdade, `'sucesso'`/`'nao_atingido'` (campanha que
+-- chega no fim do prazo por conta própria). Ninguém tinha percebido porque,
+-- até agora, nada no `.sql` fazia essa transição via `UPDATE` (o seed grava o
+-- status final direto no `INSERT`) — só apareceu ao dar ao encerramento
+-- automático um caminho de verdade.
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION fn_preenche_encerramento_campanha()
 RETURNS TRIGGER AS $$
 BEGIN
-    IF NEW.status IN ('encerrado', 'encerrado_moderacao')
-       AND OLD.status NOT IN ('encerrado', 'encerrado_moderacao')
+    IF NEW.status IN ('sucesso', 'nao_atingido', 'encerrado', 'encerrado_moderacao')
+       AND OLD.status NOT IN ('sucesso', 'nao_atingido', 'encerrado', 'encerrado_moderacao')
        AND NEW.encerrado_em IS NULL THEN
         NEW.encerrado_em := NOW();
     END IF;
@@ -1553,6 +1581,63 @@ BEFORE UPDATE ON campanha
 FOR EACH ROW
 WHEN (NEW.status IS DISTINCT FROM OLD.status)
 EXECUTE FUNCTION fn_preenche_encerramento_campanha();
+
+-- ----------------------------------------------------------------------------
+-- Função:     encerrar_campanhas_vencidas
+-- Assinatura: () -> INT
+-- Bloco:      [05-K-2]
+-- Regra:      ÚNICO ACHADO — 6ª auditoria do Claude Web, achado simulando o
+--             cron do RF-037 rodando de verdade: um job de fundo roda como
+--             app_nestjs SEM sessão de usuário (`id_usuario_atual()` é `NULL`).
+--             `pol_campanha_update` (04) exige ser dono OU ter
+--             `campanha_editar`/`campanha_aprovar`/`campanha_rejeitar` — um job
+--             não é nenhum dos dois, então a RLS não deixa NENHUMA linha
+--             visível pra ele. Reproduzido: `UPDATE campanha SET status=
+--             'sucesso' WHERE <vencida, meta batida>` devolvia `UPDATE 0` — SEM
+--             erro nenhum. Falha silenciosa, a pior categoria: um cron
+--             reportaria "ok" todo dia sem encerrar nenhuma campanha vencida,
+--             que ficaria `'ativo'` pra sempre — página pública anunciando
+--             campanha aberta com contador regressivo negativo, enquanto
+--             `fn_valida_contribuicao_campanha_ativa` já rejeitaria doações
+--             novas com "o prazo já foi encerrado". O doador veria uma
+--             campanha aberta recusando o próprio dinheiro. Importante: a
+--             causa NÃO é `trg_campanha_valida_transicao` (`[05-K-2]`, acima)
+--             — o ramo autoverificável dela está certo (testado rodando como
+--             superusuário: passa nos dois casos legítimos, bloqueia a
+--             mentira) — é a RLS que barra antes da trigger sequer avaliar.
+-- Solução, mesmo padrão de atualizar_status_contribuicao/atualizar_status_
+-- repasse: `SECURITY DEFINER` bypassa a RLS (não a trigger — `trg_campanha_
+-- valida_transicao` continua rodando por baixo e validando cada transição pelo
+-- mesmo ramo autoverificável de sempre; não afrouxa nem a trigger nem a
+-- policy). Chamada por agendamento (@Cron no NestJS), sem sessão de usuário —
+-- mesma categoria pré-autorização de registrar_falha_login/registrar_login_
+-- sucesso ([03-F]) e do webhook de atualizar_status_contribuicao. Retorna a
+-- quantidade de campanhas encerradas, pro job poder logar de verdade (em vez
+-- de silêncio) quantas mudaram.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.encerrar_campanhas_vencidas()
+RETURNS INT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_encerradas INT;
+BEGIN
+    UPDATE campanha
+    SET status = CASE
+        WHEN valor_bruto_arrecadado >= meta_financeira THEN 'sucesso'
+        ELSE 'nao_atingido'
+    END
+    WHERE status = 'ativo'
+      AND data_fim IS NOT NULL
+      AND data_fim <= NOW();
+
+    GET DIAGNOSTICS v_encerradas = ROW_COUNT;
+
+    RETURN v_encerradas;
+END;
+$$;
 
 -- ----------------------------------------------------------------------------
 -- Função:     fn_carimba_taxa_plataforma_aprovacao

@@ -223,6 +223,13 @@ GRANT INSERT ON repasse TO app_nestjs;
 
 REVOKE EXECUTE ON FUNCTION public.atualizar_status_repasse(INT, VARCHAR, TIMESTAMP) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.atualizar_status_repasse(INT, VARCHAR, TIMESTAMP) TO app_nestjs;
+
+-- ADICIONADO (28-07-2026, Claude Web — 6ª auditoria): encerrar_campanhas_vencidas()
+-- é chamada por agendamento (@Cron no NestJS), sem sessão de usuário — mesma
+-- categoria de higiene das outras funções pré-autorizadas ([03-F],
+-- atualizar_status_contribuicao/atualizar_status_repasse, acima).
+REVOKE EXECUTE ON FUNCTION public.encerrar_campanhas_vencidas() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.encerrar_campanhas_vencidas() TO app_nestjs;
 -- CORRIGIDO: seguir_campanha também tinha UPDATE sem nenhuma policy de UPDATE —
 -- só existe inserir/apagar "seguir campanha", não faz sentido "editar" essa linha.
 GRANT INSERT, DELETE ON seguir_campanha TO app_nestjs;
