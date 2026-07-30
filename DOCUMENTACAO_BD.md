@@ -708,9 +708,113 @@ O menor arquivo do banco: 1 função + 1 `GRANT`. Apesar do nome do arquivo aind
 
 ### [08-D-1] `atribuir_papel_padrao(p_id_usuario)`
 
-* **Quando roda:** chamada pelo NestJS manualmente, dentro da mesma transação do signup, logo após o `INSERT` em `usuario`. O fluxo completo de signup é: 1) gerar o hash da senha e inserir em `usuario`; 2) chamar esta função; 3) criar o registro em `verificacao_email` e disparar o e-mail de confirmação (ver `PLANO_AUTENTICACAO_PROPRIA.md`).
+* **Quando roda:** chamada pelo NestJS manualmente, dentro da mesma transação do signup, logo após o `INSERT` em `usuario`. O fluxo completo de signup é: 1) gerar o hash da senha e inserir em `usuario`; 2) chamar esta função; 3) criar o registro em `verificacao_email` e disparar o e-mail de confirmação (ver Anexo A, no final deste documento).
 * **Por que é `SECURITY DEFINER`:** a policy `pol_usuariopapel_insert` (`04`) exige a permissão `'papel_atribuir'` para inserir em `usuario_papel` — mas um usuário que acabou de se cadastrar não tem nenhuma permissão ainda (nem papel nenhum). A função roda com os privilégios de quem a criou, contornando esse problema de "ovo e galinha" só para esta gravação específica (atribuir o papel `'usuario'` — nunca `'admin'`, que continua exigindo atribuição manual, ver `[07-D-5]`).
 * **`ON CONFLICT DO NOTHING`:** protege contra chamar a função duas vezes para o mesmo usuário (ex.: retry de rede) sem gerar erro de duplicidade.
 * **`GRANT EXECUTE`:** sem ele, a chamada do NestJS falharia com `permission denied` (erro `42501`) — o mesmo problema que as funções de score já tiveram, resolvido da mesma forma (ver `[06-I-1]`). 🗑️➡️✅ **`REVOKE EXECUTE ... FROM PUBLIC` antes do `GRANT` — CORRIGIDO (28-07-2026, Claude Web — 3ª auditoria):** a função escreve em `usuario_papel`; mesmo padrão de higiene já aplicado às funções de `[03-F]` e às de score (`[06-I-1]`).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+---
+
+# 📎 ANEXOS — conteúdo consolidado de `PLANO_AUTENTICACAO_PROPRIA.md` e `RBAC-pontos-discutidos.md` (28-07-2026)
+
+> Os dois arquivos de origem eram documentos de **discussão técnica escritos antes da implementação** (plano de migração para autenticação própria; diagnóstico e decisões do RBAC granular). Quase tudo que eles propunham já foi implementado — e já está documentado nos capítulos `03`, `04`, `06` e `08` acima, com muito mais detalhe e já refletindo o código real. Este anexo existe só para não perder duas coisas que os capítulos numerados não cobrem: **o raciocínio de arquitetura por trás de decisões já tomadas** (o "por quê", não só o "o quê") e **os pontos que os próprios documentos originais já marcavam como em aberto** — pra não sumirem quando os arquivos forem apagados.
+
+---
+
+## Anexo A — Por que a autenticação própria funciona do jeito que funciona
+
+*(Consolidado de `PLANO_AUTENTICACAO_PROPRIA.md` — o plano que tirou o sistema do Supabase Auth.)*
+
+* **Contexto histórico:** o sistema nasceu usando o Supabase Auth (GoTrue) pra login/cadastro/recuperação de senha, com o frontend falando direto com o Postgres via PostgREST. A decisão foi trocar por autenticação própria no NestJS, com a arquitetura confirmada **React → NestJS → Postgres** (o frontend nunca mais fala direto com o banco). Isso muda a forma como a RLS precisa ser pensada — ver abaixo.
+* **`id_usuario_atual()` não usa mais `auth.uid()`:** no modelo Supabase, essa função existia só porque o GoTrue injetava o JWT dele diretamente na sessão do Postgres via PostgREST. Sem PostgREST no meio, não existe mais esse JWT automático — quem valida o JWT agora é o próprio NestJS, que define `SET LOCAL app.id_usuario_atual = '<id>'` no início de cada transação, depois de validar o token. `SET LOCAL` é escopado à transação atual (some sozinho no `COMMIT`/`ROLLBACK`), o que é seguro mesmo com pool de conexões compartilhado entre requests — é por isso que o mesmo mecanismo tem que ser um `Client` retirado do pool dentro de uma transação, nunca um `pool.query(...)` solto (ver `tutorial-rodar-projeto.md`, item 1).
+* **`id_supabase UUID REFERENCES auth.users(id)` foi removida de `usuario` de propósito:** essa coluna só fazia sentido enquanto o GoTrue populava `auth.users`. Sem ele, não sobra nada pra essa FK apontar — mantê-la travaria todo cadastro novo. Se um dia entrar SSO/OAuth como método *adicional* (não substituindo login por senha), a coluna pode voltar, sem FK e nullable.
+* **O trigger de signup em `auth.users` foi substituído por lógica explícita no NestJS:** antes, um trigger `AFTER INSERT ON auth.users` criava a linha em `usuario` automaticamente. Sem Supabase Auth, esse `INSERT` nunca mais acontece — o trigger simplesmente para de disparar. A criação do usuário (hash de senha, papel padrão via `atribuir_papel_padrao()`, disparo do e-mail de verificação) virou um passo explícito dentro do endpoint de signup do NestJS, na mesma transação — o que é até uma vantagem: fica tudo num lugar só, mais fácil de testar e logar erro (ver `08_trigger_signup_usuario.sql`).
+* **Por que a RLS continua existindo mesmo não sendo mais "estritamente necessária":** como o NestJS é o único client do Postgres, toda autorização já poderia — e deveria — ser aplicada em código antes da query chegar no banco (guards, interceptors, checagem de dono no service layer). A RLS deixou de ser a *única* barreira (como era no modelo Supabase, onde o frontend batia direto no PostgREST) e virou **defesa em profundidade**: se um dia um service esquecer um `WHERE id_usuario = ...`, tiver uma falha de SQL injection, ou uma credencial vazar, a RLS ainda impede um usuário de ler/alterar dado de outro. O custo de manter é baixo porque a maior parte de `04_rls_policies.sql` já é regra de negócio pura (dono vê o próprio recurso, campanha aprovada é pública) — só a peça que identifica "quem é o usuário atual" precisou trocar.
+* **Ponto de atenção sobre portabilidade, se um dia trocarem de banco:** RLS é sintaxe específica do Postgres — não migra pra outro SGBD. Por isso a autorização "de verdade" sempre deve morar no NestJS (isso sim é portável). A RLS fica como camada extra de segurança no Postgres, não como algo que o sistema *depende* pra funcionar corretamente — trocar de banco no futuro perderia essa camada redundante (recriável ou não na tecnologia nova), mas nenhuma regra crítica de negócio se perderia junto, porque essa mora no NestJS.
+
+---
+
+## Anexo B — Por que o RBAC é 100% orientado a dado, nunca a nome de papel
+
+*(Consolidado de `RBAC-pontos-discutidos.md` — o diagnóstico que resultou no `tem_permissao()` atual.)*
+
+* **O problema histórico que motivou o redesenho — "RBAC de enfeite":** existia uma função `eh_admin()` que checava o **nome do papel** (`'admin'`) diretamente, usada em 35 lugares de `04_rls_policies.sql` como bypass genérico de "admin vê/mexe em tudo". Isso criava dois vocabulários de autorização ao mesmo tempo (nome de papel vs. permissão): mesmo que o NestJS implementasse corretamente "usuário com permissão X pode fazer Y", a RLS rejeitava a operação mesmo assim, porque só sabia distinguir admin de não-admin — os papéis `moderador`/`revisor`/`curador`/`suporte` nunca eram respeitados por nenhuma policy que usasse `eh_admin()`.
+* **Decisão tomada (já aplicada, é o estado atual do banco):** `eh_admin()` foi removida por completo, e as 35 ocorrências migraram para `tem_permissao(...)` (`03_funcoes_seguranca.sql`, `[03-B]`) — hoje é o único mecanismo de autorização usado em RLS, nenhuma policy referencia nome de papel. A rede de segurança contra "admin perde acesso sozinho ao esquecerem de atribuir uma permissão nova a ele" é a trigger `trg_permissao_auto_admin` (`05_regras_negocio.sql`, `[05-K-3]`): toda permissão nova já nasce atribuída ao papel `admin` automaticamente.
+* **Critério usado pra mapear os bypasses antigos pra permissões novas:** reaproveitar uma permissão já existente e semanticamente equivalente sempre que havia uma (`denuncia_responder`, `repasse_aprovar`, etc.); quando o bypass cobria uma entidade filha de outra já coberta (arquivo/link de atualização ou de recompensa), reaproveitar a permissão da entidade-mãe (`atualizacao_moderar`, `campanha_editar`) em vez de criar uma permissão nova por tabela; e só criar permissão nova quando não havia nenhuma equivalente razoável — foi o caso de só duas, `link_academico_gerenciar` e `arquivo_gerenciar`.
+* **Convenção de nomenclatura das permissões em uso — `entidade_acao`, minúsculo, sem acento:** o raciocínio por trás, pra quem for criar permissão nova no futuro: CRUD genérico (create/read/update/delete) ficaria em inglês, porque mapeia 1:1 com verbo HTTP (permite um guard genérico no NestJS que deriva a ação da rota, sem tradução manual); já uma ação de negócio específica que não é um CRUD (ex.: "aprovar") fica em português, com o mesmo nome usado no segmento da URL (`POST /campanhas/:id/aprovar` → `campanha_aprovar`) — facilita auditoria porque o nome da permissão bate literalmente com a rota. E o mais importante: **CRUD do próprio dono sobre o próprio recurso não vira permissão nenhuma** — continua resolvido só pela RLS de posse (`id_usuario = id_usuario_atual()`). Só viram permissão as ações administrativas sobre recurso de terceiro, ou ações que não pertencem ao dono de forma alguma (aprovar, moderar, estornar, atribuir papel).
+* **Reforço pro dia do guard no NestJS:** RLS e NestJS devem sempre checar a **mesma string de permissão**, nunca nome de papel — as duas camadas precisam falar o mesmo vocabulário, ou elas divergem silenciosamente com o tempo.
+
+---
+
+## Anexo C — Pontos que já eram "em aberto" nos documentos originais e ainda merecem uma linha de decisão
+
+1. **`tipo_link.regex`/`tipo_link.dominio` nunca foram validados por nenhuma trigger.** As duas colunas existem e são preenchidas no seed (sugerindo validação de formato de URL — ex.: Orcid bater com `orcid.org`), mas nenhuma função no `.sql` de fato confere a `url` inserida contra elas. Hoje qualquer URL passa, desde que o tipo de link seja permitido no contexto (`permite_perfil`/`permite_atualizacao`/`permite_recompensa`). **Ainda não decidido:** essa validação fica só no NestJS (as colunas viram fonte de verdade pro backend buscar o padrão) ou o banco também valida (reaproveitando o padrão dinâmico já usado em `trg_valida_escopo_tipolink`)? Continua genuinamente em aberto — não foi resolvido em nenhuma das rodadas de auditoria posteriores.
+2. **Endosso de comentário — é ação de curadoria ou só o dono da campanha?** Nunca foi confirmado se "endossar comentário" deveria virar uma permissão dedicada (curadoria por papel específico) ou se continua sendo só o dono da campanha endossando um comentário recebido na própria campanha (nesse caso, RLS de posse, sem permissão nenhuma — é como está hoje). Vale confirmar antes do NestJS implementar a tela de endosso, pra não modelar guard nenhum que a regra de negócio real não pede.
+3. **Papel `pesquisador` seguiu sem permissões próprias** — isso já foi confirmado, em rodada bem posterior a estes dois documentos, como não sendo mais um problema de "enfeite": as policies checam a existência do `perfil_pesquisador`, não o papel; o papel em si existe pra granularidade futura, caso um dia precise de uma permissão específica de pesquisador que não dependa de ter perfil. (O item relacionado — o papel nunca era atribuído automaticamente pelo app — já foi corrigido, ver a trigger `trg_perfil_atribui_papel_pesquisador` no capítulo `05`.)
+
+---
+
+## Anexo D — Proposta de `contexto_link` (documento original completo — ligada ao item 2 do `PENDENCIAS e correcoes.md`)
+
+Esta é a proposta técnica completa por trás do item 2 ("Debate `tipo_link`/`contexto_link`", ainda **adiado, não mexer sem pedir**) — preservada aqui na íntegra porque tem o desenho de schema e a análise de prós/contras que vão ser necessários no dia em que essa decisão for tomada.
+
+**Motivação original:** os contextos de link já cresceram uma vez na prática — `link_atualizacao` e `link_recompensa` foram acrescentadas depois de `link_academico` já existir com as 3 flags booleanas (`permite_perfil`, `permite_atualizacao`, `permite_recompensa`). Isso sugere que "quais entidades podem ter link" é uma dimensão que muda ao longo do tempo — e hoje mudar isso exige alterar schema (`ALTER TABLE tipo_link ADD COLUMN`) e código (o `CASE` dentro de `trg_valida_escopo_tipolink`), não só dado.
+
+**Modelo proposto, caso a decisão seja migrar:**
+```sql
+CREATE TABLE contexto_link (
+    id_contexto SERIAL PRIMARY KEY,
+    nome        VARCHAR(50) NOT NULL UNIQUE,  -- 'perfil', 'atualizacao', 'recompensa'
+    tabela      VARCHAR(63) NOT NULL UNIQUE   -- nome real da tabela alvo: 'link_academico', etc.
+);
+
+CREATE TABLE tipolink_contexto (
+    id_tipolink INT NOT NULL REFERENCES tipo_link(id_tipolink)     ON DELETE CASCADE,
+    id_contexto INT NOT NULL REFERENCES contexto_link(id_contexto) ON DELETE CASCADE,
+    PRIMARY KEY (id_tipolink, id_contexto)
+);
+```
+A trigger de validação deixaria de ter qualquer `CASE`/nome de contexto hardcoded, virando um `EXISTS` genérico contra `tipolink_contexto` + `contexto_link`, filtrando por `TG_TABLE_NAME` — mesmo espírito do resto do banco (comportamento guiado por dado, não por string fixa em código).
+
+**Prós:** adicionar um contexto novo no futuro (ex.: link em denúncia, em perfil de instituição, ou o "vídeo/YouTube" que a Alexia citou como exemplo — ver item 15 do `PENDENCIAS`) vira só dado, sem `ALTER TABLE` nem editar a função da trigger; abre espaço pra regras por contexto que um booleano não expressa (ex.: uma coluna `obrigatorio` ou `regex_override` em `tipolink_contexto`, caso um tipo de link precise de validação diferente dependendo de onde é usado).
+
+**Contras:** mais um `JOIN` pra validar cada insert/update de link (custo desprezível no tamanho atual das tabelas, mas uma indireção a mais pra quem lê o schema pela primeira vez); com só 3 contextos conhecidos hoje, o ganho imediato é menor do que parece — 3 booleanos também são fáceis de ler direto num `SELECT * FROM tipo_link`; é trabalho de migração agora (ainda que mais barato fazer sem dado em produção do que depois).
+
+**A decisão que falta:** se vocês têm expectativa razoável de mais contextos de link aparecerem, vale migrar agora, antes do NestJS modelar as entities em cima do formato atual. Se o modelo for considerado fechado nesses 3 contextos, manter os booleanos é aceitável e mais simples — é exatamente a decisão pendente no item 2 do `PENDENCIAS e correcoes.md`.
 
 > 📌 **Por que `atribuir_papel_padrao()` não aparece aqui:** o `GRANT EXECUTE` dessa função fica junto dela mesma em `08_trigger_signup_usuario.sql`, porque `06` roda antes do `08` na ordem de dependência — a função ainda não existiria neste ponto da execução se o grant estivesse aqui.
