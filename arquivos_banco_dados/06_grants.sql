@@ -109,20 +109,20 @@ GRANT SELECT (
 -- perfil_pesquisador_visualizar_sensivel (seedada, hoje sem nenhum efeito porque
 -- nada a usava) gateando a leitura no NestJS — não a coluna ficar inacessível
 -- pro próprio backend.
--- CORRIGIDO (28-07-2026, item 12 da Lista C — score deixa de ser público):
--- score_atual/score_atualizado_em saíram da lista abaixo. A policy de RLS de
--- score_pesquisador (04) foi corrigida pra parar de expor score publicamente,
--- mas essas 2 colunas aqui em perfil_pesquisador eram uma porta dos fundos —
--- um GRANT de coluna comum (sem RLS de coluna, que o Postgres não tem)
--- deixava o app_nestjs ler o cache do score de qualquer perfil por essa
--- tabela, mesmo com a policy de score_pesquisador já restrita. O valor
--- continua acessível de onde já era acessível de propósito: o próprio
--- pesquisador e quem tem 'score_visualizar', via score_pesquisador.score_total
--- (a policy corrigida, ver [04-I]) — a leitura via perfil_pesquisador não
--- tinha nenhuma dessas duas checagens, então precisava sair.
+-- SUPERADA (30-07-2026): a correção de 28-07-2026 (item 12 da Lista C) tinha
+-- tirado score_atual/score_atualizado_em desta lista, porque era uma porta dos
+-- fundos pra ler o score de qualquer perfil por aqui mesmo com a policy de
+-- score_pesquisador (04) já restrita. Como pol_score_select (04) voltou a ser
+-- pública (decisão de produto — ver nota lá e em PENDENCIAS e correcoes.md),
+-- não existe mais porta dos fundos a fechar: as 2 colunas voltam pra cá, só
+-- por conveniência (evita join com score_pesquisador pra montar a página
+-- pública de perfil do pesquisador). GRANT UPDATE continua sem essas 2
+-- colunas ([06-D-2b] mais abaixo) — isso é integridade de escrita, não
+-- privacidade, e não muda com esta decisão.
 GRANT SELECT (
     id_usuario, cpf_criptografado, tipo_vinculo, vinculo_institucional,
-    titulo_academico, status_pesquisador, ativado_em
+    titulo_academico, status_pesquisador, ativado_em,
+    score_atual, score_atualizado_em
 ) ON public.perfil_pesquisador TO app_nestjs;
 
 -- CORRIGIDO: usuario, perfil_pesquisador, termos_de_uso e usuario_termo tinham DELETE
@@ -143,9 +143,15 @@ GRANT UPDATE ON termos_de_uso TO app_nestjs;
 -- perfil_pesquisador: GRANT UPDATE por coluna, mesma lista do SELECT ([06-D-2] acima)
 -- MENOS score_atual/score_atualizado_em — essas 2 só podem mudar via
 -- recalcular_score_pesquisador() (SECURITY DEFINER, 05), nunca por UPDATE direto.
+-- CORRIGIDO (30-07-2026, [03-G]): status_pesquisador também saiu daqui. Antes,
+-- pol_perfil_update (04) só libera UPDATE pro próprio dono — combinado com
+-- este GRANT, o único jeito de status_pesquisador mudar de verdade era o
+-- próprio pesquisador se auto-suspender/reativar, o que não faz sentido, e não
+-- existia caminho nenhum pra moderação suspender outra pessoa. Agora só muda
+-- via suspender_pesquisador() (SECURITY DEFINER, 03, [03-G]).
 GRANT UPDATE (
     cpf_criptografado, tipo_vinculo, vinculo_institucional,
-    titulo_academico, status_pesquisador, ativado_em
+    titulo_academico, ativado_em
 ) ON public.perfil_pesquisador TO app_nestjs;
 
 -- usuario: restrição por coluna sozinha não bastava aqui — email_verificado,
@@ -173,11 +179,16 @@ REVOKE EXECUTE ON FUNCTION public.registrar_falha_login(INT)              FROM P
 REVOKE EXECUTE ON FUNCTION public.liberar_bloqueio_login(INT)             FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.registrar_login_sucesso(INT, TEXT)      FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.excluir_conta_usuario(INT)              FROM PUBLIC;
+-- suspender_pesquisador(INT) — ver [03-G]. Mesma higiene das demais funções
+-- privilegiadas: nasce com EXECUTE liberado pra PUBLIC por padrão, precisa ser
+-- revogado antes do GRANT explícito.
+REVOKE EXECUTE ON FUNCTION public.suspender_pesquisador(INT)              FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.confirmar_email_por_token(TEXT)          TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.registrar_falha_login(INT)               TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.liberar_bloqueio_login(INT)              TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.registrar_login_sucesso(INT, TEXT)       TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.excluir_conta_usuario(INT)               TO app_nestjs;
+GRANT EXECUTE ON FUNCTION public.suspender_pesquisador(INT)               TO app_nestjs;
 -- CORRIGIDO: usuario_termo também tinha UPDATE sem nenhuma policy de UPDATE — é
 -- registro de aceite de termo, nunca deveria ser editável depois de criado.
 GRANT INSERT ON usuario_termo TO app_nestjs;

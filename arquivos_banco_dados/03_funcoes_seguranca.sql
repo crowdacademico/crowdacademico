@@ -399,3 +399,68 @@ BEGIN
     WHERE id_usuario = p_id_usuario;
 END;
 $$;
+
+-- ============================================================
+-- [03-G] MODERAÇÃO SOBRE PESQUISADOR — SUSPENSÃO EM CASCATA (RF-084)
+-- ============================================================
+-- ----------------------------------------------------------------------------
+-- Função:     suspender_pesquisador
+-- Assinatura: (p_id_usuario INT) -> BOOLEAN
+-- Bloco:      [03-G]
+-- Regra:      30-07-2026 — RF-084 dizia que suspender um pesquisador encerra
+--             automaticamente as campanhas ativas dele e rejeita as
+--             pendentes, mas não existia NENHUM caminho no banco pra
+--             suspender alguém: `pol_perfil_update` (04) só libera UPDATE em
+--             perfil_pesquisador pro próprio dono (id_usuario =
+--             id_usuario_atual()) — ou seja, `status_pesquisador` só podia
+--             mudar por auto-serviço, nunca por ação de moderação. Esta
+--             função é o caminho que faltava: exige a permissão
+--             'usuario_suspender' — que já existia seedada (só pro admin) e
+--             já era referenciada em `pol_usuario_update` (04), mas nunca
+--             tinha uma escrita de verdade atrás dela (mesma classe de
+--             "alavanca fantasma" já achada uma vez neste projeto, ver item
+--             13 quinto ponto em PENDENCIAS.md — permissão existia, nada a
+--             lia pra decidir algo). Passa a ganhar um uso real aqui. Marca o
+--             perfil como suspenso e, na mesma transação, aplica a cascata do
+--             RF-084. SECURITY DEFINER bypassa a RLS de campanha
+--             (pol_campanha_update não libera pra quem só tem
+--             'usuario_suspender'), mas NÃO bypassa `trg_campanha_valida_transicao`
+--             (05) — a trigger continua rodando e só deixa passar porque
+--             ganhou um ramo autoverificável novo pra este caso exato (ver [05-K-2]),
+--             mesmo padrão já usado pro prazo vencido e pro cron de
+--             encerramento (item 58, PENDENCIAS.md, parte 10). Retorna FALSE
+--             sem fazer nada se o pesquisador já estava suspenso (idempotente).
+--             Não existe função simétrica de reativação ainda — ver item 60
+--             em PENDENCIAS e correcoes.md.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.suspender_pesquisador(p_id_usuario INT)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_linhas INT;
+BEGIN
+    IF NOT public.tem_permissao('usuario_suspender') THEN
+        RAISE EXCEPTION 'Sem permissão para suspender pesquisador.';
+    END IF;
+
+    UPDATE perfil_pesquisador
+    SET status_pesquisador = 'suspenso'
+    WHERE id_usuario = p_id_usuario AND status_pesquisador <> 'suspenso';
+
+    GET DIAGNOSTICS v_linhas = ROW_COUNT;
+    IF v_linhas = 0 THEN
+        RETURN FALSE;
+    END IF;
+
+    UPDATE campanha SET status = 'encerrado_moderacao'
+    WHERE id_usuario = p_id_usuario AND status = 'ativo';
+
+    UPDATE campanha SET status = 'rejeitado'
+    WHERE id_usuario = p_id_usuario AND status = 'aguardando_aprovacao';
+
+    RETURN TRUE;
+END;
+$$;

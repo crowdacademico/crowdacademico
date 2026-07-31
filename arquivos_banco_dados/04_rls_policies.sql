@@ -726,20 +726,20 @@ ALTER TABLE score_config         FORCE ROW LEVEL SECURITY;
 ALTER TABLE score_rotulo         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE score_rotulo         FORCE ROW LEVEL SECURITY;
 
--- CORRIGIDO (28-07-2026, item 12 da Lista C — score deixa de ser público): era
--- USING (TRUE), sem sequer TO app_nestjs — qualquer um via qualquer role via
--- selecionar essa tabela, e um juízo automatizado sobre pesquisador identificado
--- ficava exposto publicamente, sem previsão de contestação (risco de LGPD, ver
--- PENDENCIAS e correcoes.md). Passa a valer: o próprio pesquisador continua
--- vendo a própria quebra por dimensão (é acionável, não só o rótulo — esconder
--- dele um juízo automatizado sobre ele mesmo seria pior, na linha do Art. 9 da
--- LGPD); quem tem 'score_visualizar' (admin/curador/revisor/moderador, ver
--- [07-B-3]) vê de todo mundo, pra apoiar curadoria manual; ninguém mais vê
--- nada. Isso também fecha o item 31 (usuário deletado): sem policy pública,
--- o score de um perfil deletado já não aparece pra mais ninguém.
+-- SUPERADA (30-07-2026, decisão de produto): a correção de 28-07-2026 (item 12
+-- da Lista C) tinha fechado o score pro público, citando risco de LGPD (juízo
+-- automatizado sobre pessoa identificada, exposto sem previsão de contestação,
+-- Art. 9). Reaberta de propósito: o score volta a ser público porque é a base
+-- de um segundo app do projeto ("Serasa do Pesquisador" — consulta pública de
+-- reputação de pesquisadores cadastrados), decisão consciente de Lucas, não
+-- descuido. O risco de LGPD apontado em 28-07 continua real e não foi
+-- resolvido, só aceito — ver PENDENCIAS e correcoes.md pela nota completa.
+-- Mantido: score de usuário deletado continua invisível (reaproveita
+-- usuario_visivel(), 03_funcoes_seguranca.sql, [03-D], mesma função usada por
+-- pol_perfil_select/pol_link_select — não reintroduz o USING(TRUE) cru de antes).
 DROP POLICY IF EXISTS pol_score_select ON score_pesquisador;
 CREATE POLICY pol_score_select ON score_pesquisador FOR SELECT TO app_nestjs USING (
-    id_usuario = public.id_usuario_atual() OR public.tem_permissao('score_visualizar')
+    public.usuario_visivel(id_usuario)
 );
 
 DROP POLICY IF EXISTS pol_score_config_select ON public.score_config;

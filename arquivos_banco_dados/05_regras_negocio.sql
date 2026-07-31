@@ -1472,6 +1472,15 @@ EXECUTE FUNCTION fn_congela_regras_campanha();
 --   4. Dono reenviando campanha rejeitada pra nova avaliação (RF-070):
 --      só a transição rejeitado -> aguardando_aprovacao, sem tocar
 --      aprovado_em/id_admin.
+--   5. Cascata de suspensão do pesquisador (RF-084, 30-07-2026) —
+--      AUTOVERIFICÁVEL, mesmo espírito do item 3: só passa se o dono da
+--      campanha (NEW.id_usuario) está HOJE com status_pesquisador =
+--      'suspenso' em perfil_pesquisador, E a transição é exatamente uma das
+--      duas que a suspensão prevê (ativo -> encerrado_moderacao ou
+--      aguardando_aprovacao -> rejeitado). Não depende de permissão de quem
+--      está executando — só do fato, que ninguém consegue forjar por fora de
+--      suspender_pesquisador() (03_funcoes_seguranca.sql, [03-G]), o único
+--      caminho que escreve status_pesquisador='suspenso'.
 --   Qualquer outra tentativa de mudar status/aprovado_em/id_admin: bloqueada.
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_valida_transicao_campanha()
@@ -1504,6 +1513,20 @@ BEGIN
        AND OLD.status = 'rejeitado' AND NEW.status = 'aguardando_aprovacao'
        AND NEW.aprovado_em IS NOT DISTINCT FROM OLD.aprovado_em
        AND NEW.id_admin    IS NOT DISTINCT FROM OLD.id_admin
+    THEN
+        RETURN NEW;
+    END IF;
+
+    IF NEW.aprovado_em IS NOT DISTINCT FROM OLD.aprovado_em
+       AND NEW.id_admin IS NOT DISTINCT FROM OLD.id_admin
+       AND (
+            (OLD.status = 'ativo'               AND NEW.status = 'encerrado_moderacao')
+         OR (OLD.status = 'aguardando_aprovacao' AND NEW.status = 'rejeitado')
+       )
+       AND EXISTS (
+           SELECT 1 FROM perfil_pesquisador pp
+           WHERE pp.id_usuario = NEW.id_usuario AND pp.status_pesquisador = 'suspenso'
+       )
     THEN
         RETURN NEW;
     END IF;
