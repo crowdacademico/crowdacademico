@@ -183,12 +183,14 @@ REVOKE EXECUTE ON FUNCTION public.excluir_conta_usuario(INT)              FROM P
 -- privilegiadas: nasce com EXECUTE liberado pra PUBLIC por padrão, precisa ser
 -- revogado antes do GRANT explícito.
 REVOKE EXECUTE ON FUNCTION public.suspender_pesquisador(INT)              FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.reativar_pesquisador(INT)               FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.confirmar_email_por_token(TEXT)          TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.registrar_falha_login(INT)               TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.liberar_bloqueio_login(INT)              TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.registrar_login_sucesso(INT, TEXT)       TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.excluir_conta_usuario(INT)               TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.suspender_pesquisador(INT)               TO app_nestjs;
+GRANT EXECUTE ON FUNCTION public.reativar_pesquisador(INT)                TO app_nestjs;
 -- CORRIGIDO: usuario_termo também tinha UPDATE sem nenhuma policy de UPDATE — é
 -- registro de aceite de termo, nunca deveria ser editável depois de criado.
 GRANT INSERT ON usuario_termo TO app_nestjs;

@@ -654,7 +654,14 @@ CREATE TABLE contribuicao (
     CONSTRAINT "PK_CONTRIBUICAO" PRIMARY KEY (id_contribuicao),
     CONSTRAINT "FK_CONTRIBUICAO_CAMPANHA" FOREIGN KEY (id_campanha) REFERENCES campanha(id_campanha),
     CONSTRAINT "FK_CONTRIBUICAO_USUARIO" FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE SET NULL,
-    CONSTRAINT "CK_CONTRIBUICAO_VALOR_MINIMO" CHECK (valor >= 5.00)
+    -- ALTERADO (30-07-2026, RF-056, mesmo padrão do item 16 da Lista C):
+    -- CK_CONTRIBUICAO_VALOR_MINIMO era `>= 5.00` direto na constraint — hardcoded,
+    -- igual o prazo e a meta financeira estavam antes de virarem configuráveis.
+    -- Vira só limite técnico largo (`> 0`, barra só erro grosseiro tipo valor
+    -- zero/negativo); o mínimo de negócio de verdade (5.00, configurável pelo
+    -- Painel Admin) mora em configuracoes.valor_minimo_contribuicao + trigger,
+    -- ver [05-K-2] em 05_regras_negocio.sql.
+    CONSTRAINT "CK_CONTRIBUICAO_VALOR_MINIMO" CHECK (valor > 0)
 );
 
 CREATE TABLE auditoria_financeira (

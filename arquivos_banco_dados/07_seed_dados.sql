@@ -630,6 +630,13 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo) VAL
 -- do prazo (item 16): limite técnico largo na constraint (01, > 0), mínimo de
 -- negócio de verdade aqui.
 (NULL, 'meta_minima_campanha',       '500.00', 'decimal',  'Valor mínimo de meta financeira aceito para uma campanha (RF)',            TRUE),
+-- ADICIONADO (30-07-2026, RF-056 — sugestão do Claude Web, confirmada pelo
+-- Lucas): mesmo padrão do item 16/meta_minima_campanha, acima. R$5,00 estava
+-- hardcoded numa CHECK (01) — não é piso do gateway de pagamento (o PIX em si
+-- não impõe mínimo), é política de negócio da própria plataforma, então
+-- precisa ser configurável igual as outras. Valor idêntico ao que já estava
+-- fixo (5.00) — nada muda no comportamento hoje, só o lugar de onde vem.
+(NULL, 'valor_minimo_contribuicao',  '5.00',  'decimal',  'Valor mínimo aceito por contribuição, em R$ (RF-056)',                       TRUE),
 -- DECIDIDO (28-07-2026, item 3 da lista de pendências): score NUNCA bloqueia
 -- criação de campanha (nem Catarse nem Experiment fazem isso; o filtro real é
 -- a aprovação manual do Admin). Este número vira só sinal pro painel do Admin

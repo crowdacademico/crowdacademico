@@ -1923,6 +1923,52 @@ BEFORE INSERT ON contribuicao
 FOR EACH ROW
 EXECUTE FUNCTION fn_valida_contribuicao_campanha_ativa();
 
+-- ----------------------------------------------------------------------------
+-- Função:     fn_valida_contribuicao_valor_minimo
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-K-2]
+-- Regra:      30-07-2026 (RF-056, sugestão do Claude Web). R$5,00 estava
+--             hardcoded direto na CHECK CK_CONTRIBUICAO_VALOR_MINIMO (01) —
+--             não é piso do gateway de pagamento (PIX em si não impõe
+--             mínimo), é política de negócio da plataforma. Mesmo padrão do
+--             prazo/meta financeira (item 16): o limite técnico
+--             (`valor > 0`) já mora na CHECK; esta trigger aplica o mínimo de
+--             negócio de verdade, configurável, via
+--             configuracoes.valor_minimo_contribuicao.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION fn_valida_contribuicao_valor_minimo()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_valor_minimo DECIMAL;
+BEGIN
+    v_valor_minimo := public.config_numero('valor_minimo_contribuicao', 5.00);
+
+    IF NEW.valor < v_valor_minimo THEN
+        RAISE EXCEPTION 'O valor da contribuição precisa ser de pelo menos % (configuracoes.valor_minimo_contribuicao).', v_valor_minimo;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_contribuicao_valida_valor_minimo
+-- Tabela:    contribuicao
+-- Momento:   BEFORE INSERT
+-- Função:    fn_valida_contribuicao_valor_minimo()
+-- Bloco:     [05-K-2]
+-- Regra:     Aplica o mínimo de negócio do valor de contribuição
+--            (configuracoes), separado do limite técnico (constraint em 01).
+--            Só BEFORE INSERT — valor de contribuição não é alterado depois
+--            de criada (status/id_transacao_api mudam via
+--            atualizar_status_contribuicao, 03, nunca o valor em si).
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_contribuicao_valida_valor_minimo ON contribuicao;
+CREATE TRIGGER trg_contribuicao_valida_valor_minimo
+BEFORE INSERT ON contribuicao
+FOR EACH ROW
+EXECUTE FUNCTION fn_valida_contribuicao_valor_minimo();
+
 
 -- ----------------------------------------------------------------------------
 -- Função:     fn_sincroniza_arrecadado_campanha

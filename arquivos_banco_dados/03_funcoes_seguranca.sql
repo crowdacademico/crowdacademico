@@ -464,3 +464,44 @@ BEGIN
     RETURN TRUE;
 END;
 $$;
+
+-- ----------------------------------------------------------------------------
+-- Função:     reativar_pesquisador
+-- Assinatura: (p_id_usuario INT) -> BOOLEAN
+-- Bloco:      [03-G]
+-- Regra:      30-07-2026 (item 60, PENDENCIAS.md — recomendação do Claude Web,
+--             confirmada pelo Lucas). Só devolve status_pesquisador pra
+--             'ativo' — devolve a capacidade do pesquisador de criar campanha
+--             nova. NÃO toca em nenhuma linha de campanha, de propósito:
+--             quando suspender_pesquisador() rodou, o dinheiro das campanhas
+--             fechadas já começou a se mexer (devolução ao doador no
+--             all-or-nothing, ou repasse já liberado no flexível) — esse
+--             movimento acontece no NestJS/gateway, fora do banco, reagindo à
+--             mudança para 'encerrado_moderacao'. Reabrir a campanha depois
+--             seria prometer algo que a plataforma não consegue cumprir (o
+--             dinheiro já foi ou está indo embora). Campanha suspensa fica
+--             fechada para sempre, mesmo após reativação — só campanha NOVA,
+--             criada depois de reativado, é afetada. Mesma permissão de
+--             suspender_pesquisador() (quem pode suspender pode reverter).
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.reativar_pesquisador(p_id_usuario INT)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_linhas INT;
+BEGIN
+    IF NOT public.tem_permissao('usuario_suspender') THEN
+        RAISE EXCEPTION 'Sem permissão para reativar pesquisador.';
+    END IF;
+
+    UPDATE perfil_pesquisador
+    SET status_pesquisador = 'ativo'
+    WHERE id_usuario = p_id_usuario AND status_pesquisador <> 'ativo';
+
+    GET DIAGNOSTICS v_linhas = ROW_COUNT;
+    RETURN v_linhas > 0;
+END;
+$$;
