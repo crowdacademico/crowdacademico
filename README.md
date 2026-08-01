@@ -38,41 +38,59 @@ CREATE INDEX IDX_CRW_SEGUIR_PESQUISADOR_PESQUISADOR ON CRW_SEGUIR_PESQUISADOR (I
 ```
 
 
-- Numeração seguindo a ordem de dependência das FKs no DDL (tabela sem dependência primeiro, depois quem referencia ela, técnicos/transversais por último: resources, auth, mail).
+- Numeração seguindo **afinidade de uso** (onde eu esperaria achar a pasta procurando o problema), não a ordem de dependência de FK do `.sql` — as duas divergem porque o `.sql` agrupa por "quem referencia quem" (ex.: `sessao`/`recuperacao_senha`/`verificacao_email` vivem dentro do bloco `USUÁRIO` do banco só porque têm FK pra `usuario`, mas na prática **são** o módulo `auth`, não perfil de usuário). 5 clusters, nesta ordem:
+  1. **Identidade** — quem é a pessoa e como ela entra (usuario → RBAC → auth → mail → termo de uso → perfil de pesquisador → seus links).
+  2. **Catálogos** — dado de apoio que existe independente de campanha (área de conhecimento, tipo de link, motivo de denúncia, configurações).
+  3. **Núcleo** — a trilha de vida de uma campanha, em ordem de fluxo: cria → orçamento/cronograma → publica atualização → engajamento social → recompensa → moderação (denúncia/encerramento).
+  4. **Financeiro** — dinheiro (contribuição, repasse, auditoria).
+  5. **Infra transversal** — usado por todo mundo, dono de ninguém (arquivo, notificação, resources).
+- `score_config`/`score_rotulo`/`score_pesquisador` (banco) não têm módulo próprio — dobrados dentro de `6-perfil-pesquisador`, porque score é característica calculada do pesquisador, sem tela própria de criar/editar.
 
 Exemplo: 
 ```
 crowdacademico/                          (repo único na Organization)
 │
-├── nest_academico/
+├── nest/
 │   └── src/
 │       ├── app/
 │       ├── commons/
 │       │
+│       │   --- Cluster 1: Identidade ---
 │       ├── 1-usuario/
 │       ├── 2-papel-permissao/            (papel, permissao, usuario_papel, papel_permissao)
-│       ├── 3-termo-uso/                  (termo_de_uso, usuario_termo)
-│       ├── 4-area-conhecimento/
-│       ├── 5-tipo-link/
-│       ├── 6-perfil-pesquisador/
+│       ├── 3-auth/                       (sessao, recuperacao_senha, verificacao_email)
+│       ├── 4-mail/
+│       ├── 5-termo-uso/                  (termo_de_uso, usuario_termo)
+│       ├── 6-perfil-pesquisador/         (+ score_config/score_rotulo/score_pesquisador)
 │       ├── 7-link-academico/
-│       ├── 8-motivo-denuncia/
-│       ├── 9-campanha/
-│       ├── 10-seguir-campanha/
-│       ├── 11-atualizacao-campanha/      (+ arquivo_atualizacao)
-│       ├── 12-comentario/
-│       ├── 13-contribuicao/
-│       ├── 14-repasse/
-│       ├── 15-denuncia/
-│       ├── 16-solicitacao-encerramento/
-│       ├── 17-historico-rejeicao/
-│       ├── 18-notificacao/
-│       ├── 19-auditoria-financeira/
-│       ├── 20-arquivo/
-│       ├── 21-configuracoes/
-│       ├── 22-resources/
-│       ├── 23-auth/
-│       └── 24-mail/
+│       │
+│       │   --- Cluster 2: Catálogos ---
+│       ├── 8-area-conhecimento/
+│       ├── 9-tipo-link/
+│       ├── 10-motivo-denuncia/
+│       ├── 11-configuracoes/
+│       │
+│       │   --- Cluster 3: Núcleo (campanha) ---
+│       ├── 12-campanha/
+│       ├── 13-orcamento-campanha/
+│       ├── 14-marco-cronograma/
+│       ├── 15-atualizacao-campanha/      (+ arquivo_atualizacao)
+│       ├── 16-seguir-campanha/
+│       ├── 17-comentario/
+│       ├── 18-recompensa/                (+ contribuicao_recompensa, arquivo_recompensa, link_recompensa)
+│       ├── 19-denuncia/
+│       ├── 20-solicitacao-encerramento/
+│       ├── 21-historico-rejeicao/
+│       │
+│       │   --- Cluster 4: Financeiro ---
+│       ├── 22-contribuicao/
+│       ├── 23-repasse/
+│       ├── 24-auditoria-financeira/
+│       │
+│       │   --- Cluster 5: Infra transversal ---
+│       ├── 25-arquivo/
+│       ├── 26-notificacao/
+│       └── 27-resources/
 │
 │       (padrão interno de cada módulo N-nome/, igual ao modelo):
 │       │   ├── constants/
@@ -95,38 +113,40 @@ crowdacademico/                          (repo único na Organization)
 │       │   │   └── <nome>.service.remove.ts
 │       │   └── <nome>.module.ts
 │
-└── react_academico/
+└── react/
     └── src/
+        │   (pasta que tem par no nest/ usa o MESMO número — nunca cria número
+        │   novo aqui; pasta sem par no nest fica sem número, tipo router/)
         ├── components/
-        │   ├── auth/
+        │   ├── 3-auth/
         │   ├── input/
         │   ├── layout/
         │   ├── pagination/
         │   └── search/
         ├── services/
-        │   ├── auth/
-        │   ├── usuario/
-        │   ├── perfil-pesquisador/
-        │   ├── area-conhecimento/
-        │   ├── link-academico/
-        │   ├── campanha/
-        │   ├── contribuicao/
-        │   ├── repasse/
-        │   ├── comentario/
-        │   ├── denuncia/
-        │   ├── notificacao/
+        │   ├── 1-usuario/
+        │   ├── 3-auth/
+        │   ├── 6-perfil-pesquisador/
+        │   ├── 7-link-academico/
+        │   ├── 8-area-conhecimento/
+        │   ├── 12-campanha/
+        │   ├── 17-comentario/
+        │   ├── 19-denuncia/
+        │   ├── 22-contribuicao/
+        │   ├── 23-repasse/
+        │   ├── 26-notificacao/
         │   ├── admin/
-        │   └── constant/
-        │       (cada um com api/, constants/, hook/, type/ — igual ao modelo)
-        ├── views/
-        │   ├── auth/
-        │   ├── usuario/
-        │   ├── campanha/
-        │   ├── checkout/
-        │   ├── dash-doador/
-        │   ├── dash-pesquisador/
-        │   └── admin/
-        └── services/router/
+        │   ├── constant/
+        │   └── router/
+        │       (cada um dos numerados com api/, constants/, hook/, type/ — igual ao modelo)
+        └── views/
+            ├── 1-usuario/
+            ├── 3-auth/
+            ├── 12-campanha/
+            ├── admin/
+            ├── checkout/
+            ├── dash-doador/
+            └── dash-pesquisador/
 ```
 
 # Prefixo do DDL (tudo em maiúsculo, SNAKE_CASE [scriptDoBanco.sql])
@@ -165,4 +185,3 @@ Mas em ambos estes casos, é sempre necessário fazer as testagem após acabar d
 Fechou uma parte e testou → abre o Pull Request no GitHub (frontend → main ou backend → main), e o outro aprova o merge.
 
 Vamos tentar manter a main protegida, principalmente nos estágios finais
-
