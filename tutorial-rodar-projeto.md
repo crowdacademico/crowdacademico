@@ -329,7 +329,7 @@ Não é só "ver o CRUD funcionando" — é provar que duas sessões, ao mesmo t
 4. Na aba do admin, a mesma operação deve funcionar.
 5. Alterne rápido entre as duas abas fazendo requisições intercaladas (listar, criar, editar) — é esse padrão de uso concorrente que expõe um bug de pool/SET LOCAL, se ele ainda existisse. Se as permissões continuarem certas mesmo intercalando (comum nunca consegue o que só admin pode, e vice-versa nunca é bloqueado por engano), a fundação está sólida.
 
-Isso não foi testado ao vivo por mim (Claude Code) nesta rodada — o ambiente onde rodei não tem Postgres nem Docker disponíveis, só o código. `npm run build`/`lint`/`test` passam limpos nos dois projetos, mas o comportamento em tempo de execução (bootstrap, login, RLS de verdade) precisa ser conferido aqui, localmente.
+Isso não foi testado ao vivo pelo Claude Code (o ambiente onde ele roda não tem Postgres nem Docker) — mas o Claude Web tinha Postgres disponível e rodou exatamente este cenário no mesmo dia: 15 requisições concorrentes de cada usuário contra a mesma rota protegida, isolamento perfeito (ver `PENDENCIAS e correcoes.md`, item 5). Ainda assim, vale repetir aqui na sua máquina antes de confiar de olhos fechados — ambiente diferente, sempre bom conferir de novo.
 
 ---
 
