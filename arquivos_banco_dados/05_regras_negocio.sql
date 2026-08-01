@@ -1586,16 +1586,30 @@ EXECUTE FUNCTION public.fn_valida_limite_max_orcamento_campanha();
 -- raciocínio de fn_congela_orcamento_campanha (acima) — o SELECT data_inicio
 -- FROM campanha abaixo ficaria sujeito à RLS de quem executa, silenciosamente
 -- inerte pra quem tem só 'campanha_editar' sem 'relatorio_visualizar'.
+-- CORRIGIDO (01-08-2026, achado pelo Claude Web em auditoria): a checagem só
+-- olhava data_inicio <= NOW(), sem olhar o status da campanha — diferente de
+-- fn_congela_regras_campanha e fn_congela_orcamento_campanha, que só travam
+-- com a campanha JÁ aprovada (status IN ('ativo', ...)). Isso travava o
+-- cadastro dos marcos obrigatórios ainda em 'aguardando_aprovacao': um
+-- pesquisador que cria a campanha com data_inicio = agora (sem usar "Em
+-- breve") tem o cronograma congelado assim que o relógio passa de
+-- data_inicio, mesmo a campanha nunca tendo sido aprovada — e sem os 3
+-- marcos mínimos, fn_valida_completude_campanha_aprovacao nunca deixa
+-- aprovar (trava circular). Corrigido acrescentando a mesma condição de
+-- status usada nas outras duas funções irmãs: só congela se a campanha JÁ
+-- estiver aprovada em diante E data_inicio já tiver passado.
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_congela_marco_cronograma()
 RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE
     v_id_campanha INT := COALESCE(NEW.id_campanha, OLD.id_campanha);
+    v_status      status_campanha;
     v_data_inicio TIMESTAMP;
 BEGIN
-    SELECT data_inicio INTO v_data_inicio FROM campanha WHERE id_campanha = v_id_campanha;
+    SELECT status, data_inicio INTO v_status, v_data_inicio FROM campanha WHERE id_campanha = v_id_campanha;
 
-    IF v_data_inicio IS NOT NULL AND v_data_inicio <= NOW() THEN
+    IF v_status IN ('ativo', 'sucesso', 'nao_atingido', 'encerrado', 'encerrado_moderacao')
+       AND v_data_inicio IS NOT NULL AND v_data_inicio <= NOW() THEN
         RAISE EXCEPTION 'Operação bloqueada: o cronograma não pode ser alterado depois que a campanha começa de verdade.';
     END IF;
 
