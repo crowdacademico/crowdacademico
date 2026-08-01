@@ -1,5 +1,11 @@
 import { useState } from 'react';
 
+// Widget compacto, embutido no cabeçalho do dashboard — não é mais um
+// portão de tela cheia. A tela inteira (tabelas, criar usuário) fica
+// visível mesmo sem login: criar o primeiro usuário (POST /usuario) não
+// exige sessão nenhuma, então travar tudo atrás de um login era um
+// problema do ovo-e-a-galinha (sem usuário, não dava pra logar; sem logar,
+// não dava pra criar usuário).
 export function LoginForm({ login }) {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
@@ -20,13 +26,8 @@ export function LoginForm({ login }) {
   };
 
   return (
-    <form onSubmit={aoEnviar} className="devtools-login">
-      <h1>CrowdAcadêmico — devtools</h1>
-      <p>
-        Ferramenta interna só pra testar CRUD + RLS (usuário, papel/permissão,
-        configurações). Não é a tela de admin de verdade.
-      </p>
-      {erro && <p className="devtools-erro">{erro}</p>}
+    <form onSubmit={aoEnviar} className="devtools-login-inline">
+      {erro && <span className="devtools-erro">{erro}</span>}
       <input
         type="email"
         placeholder="email"

@@ -37,21 +37,29 @@ export function DevDashboard() {
     [auth.authFetch],
   );
 
-  if (auth.carregando) {
-    return <p>Carregando sessão...</p>;
-  }
-
-  if (!auth.autenticado) {
-    return <LoginForm login={auth.login} />;
-  }
-
   return (
     <div className="devtools-dashboard">
       <header className="devtools-header">
         <div>
-          <strong>{auth.usuario?.nome ?? 'logado'}</strong> ({auth.usuario?.email})
+          <strong>CrowdAcadêmico — devtools</strong>
+          <p className="devtools-subtitulo">
+            Ferramenta interna só pra testar CRUD + RLS. Não é a tela de admin de
+            verdade. Sem usuário ainda? Crie um no bloco "Usuários" abaixo (não
+            exige login) e depois logue aqui.
+          </p>
         </div>
-        <button onClick={auth.logout}>Sair</button>
+        {auth.carregando ? (
+          <span>Carregando sessão...</span>
+        ) : auth.autenticado ? (
+          <div className="devtools-sessao">
+            <span>
+              <strong>{auth.usuario?.nome ?? 'logado'}</strong> ({auth.usuario?.email})
+            </span>
+            <button onClick={auth.logout}>Sair</button>
+          </div>
+        ) : (
+          <LoginForm login={auth.login} />
+        )}
       </header>
 
       <GenericTable

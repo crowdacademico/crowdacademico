@@ -13,10 +13,38 @@
 .devtools-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  gap: 1rem;
   padding-bottom: 1rem;
   margin-bottom: 1.5rem;
   border-bottom: 2px solid #334155;
+}
+
+.devtools-subtitulo {
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+  color: #475569;
+  max-width: 480px;
+}
+
+.devtools-sessao {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  white-space: nowrap;
+}
+
+.devtools-login-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.devtools-login-inline input {
+  padding: 0.35rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
 }
 
 .devtools-secao {
@@ -65,17 +93,3 @@
   border-radius: 4px;
 }
 
-.devtools-login {
-  max-width: 360px;
-  margin: 4rem auto;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  font-family: system-ui, sans-serif;
-}
-
-.devtools-login input {
-  padding: 0.5rem;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-}
