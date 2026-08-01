@@ -1052,6 +1052,20 @@ CREATE TRIGGER trg_recompensa_valida_limite_texto
     FOR EACH ROW
     EXECUTE FUNCTION public.fn_valida_limite_texto_livre('descricao', 'limite_caracteres_descricao_recompensa', '2000');
 
+-- ADICIONADO (31-07-2026, Alexia): orcamento_campanha.descricao e marco_cronograma.descricao
+-- entram na mesma função genérica acima, em vez de criar duas funções quase idênticas.
+DROP TRIGGER IF EXISTS trg_orcamento_campanha_valida_limite_texto ON orcamento_campanha;
+CREATE TRIGGER trg_orcamento_campanha_valida_limite_texto
+    BEFORE INSERT OR UPDATE ON orcamento_campanha
+    FOR EACH ROW
+    EXECUTE FUNCTION public.fn_valida_limite_texto_livre('descricao', 'limite_caracteres_descricao_orcamento', '2000');
+
+DROP TRIGGER IF EXISTS trg_marco_cronograma_valida_limite_texto ON marco_cronograma;
+CREATE TRIGGER trg_marco_cronograma_valida_limite_texto
+    BEFORE INSERT OR UPDATE ON marco_cronograma
+    FOR EACH ROW
+    EXECUTE FUNCTION public.fn_valida_limite_texto_livre('descricao', 'limite_caracteres_descricao_marco', '2000');
+
 -- ----------------------------------------------------------------------------
 -- Trigger:   trg_link_atualizacao_valida_tipo
 -- Tabela:    link_atualizacao
@@ -1437,6 +1451,264 @@ FOR EACH ROW
 EXECUTE FUNCTION fn_congela_regras_campanha();
 
 -- ----------------------------------------------------------------------------
+-- Função:     fn_congela_orcamento_campanha
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-K-2]
+-- Regra:      ADICIONADO (31-07-2026, Alexia) — orçamento estruturado da campanha
+--             (01, [01-E]). Congela na MESMA condição de fn_congela_regras_
+--             campanha (status já aprovado em diante) — diferente do
+--             cronograma abaixo, que só trava quando a campanha começa de
+--             fato. Faz sentido serem diferentes: a soma do orçamento precisa
+--             bater EXATAMENTE com meta_financeira (fn_valida_completude_
+--             campanha_aprovacao, mais abaixo), e meta_financeira já está
+--             congelada desde a aprovação — deixar o orçamento editável até o
+--             início de fato permitiria trocar os itens sem nunca quebrar
+--             essa igualdade, o que ainda assim seria alteração retroativa de
+--             informação já aprovada/exibida publicamente. Cobre INSERT/
+--             UPDATE/DELETE porque adicionar ou remover um item depois de
+--             aprovado é tão problemático quanto editar o valor de um
+--             existente.
+-- CORRIGIDO (01-08-2026, achado em revisão): faltava SECURITY DEFINER. Sem
+-- isso, o SELECT status FROM campanha abaixo fica sujeito à RLS de quem está
+-- executando — pol_campanha_select (04) não inclui 'campanha_editar' entre
+-- suas condições, só status/dono/'relatorio_visualizar'. Pro dono da campanha
+-- (o caso de longe mais comum) isso nunca foi problema, porque o próprio
+-- id_usuario=self já satisfaz a policy. Mas alguém com só 'campanha_editar'
+-- (sem 'relatorio_visualizar') mexendo no orçamento de campanha de outra
+-- pessoa ainda não aprovada enxergaria v_status = NULL (RLS filtra a linha) e
+-- o `IF v_status IN (...)` nunca dispararia — a trava de congelamento ficaria
+-- silenciosamente inerte. Mesmo raciocínio de fn_valida_completude_campanha_
+-- aprovacao (abaixo, no mesmo bloco), onde este padrão foi detalhado.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_congela_orcamento_campanha()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+    v_id_campanha INT := COALESCE(NEW.id_campanha, OLD.id_campanha);
+    v_status      status_campanha;
+BEGIN
+    SELECT status INTO v_status FROM campanha WHERE id_campanha = v_id_campanha;
+
+    IF v_status IN ('ativo', 'sucesso', 'nao_atingido', 'encerrado', 'encerrado_moderacao') THEN
+        RAISE EXCEPTION 'Fraude bloqueada: não é permitido alterar o orçamento após a aprovação da campanha.';
+    END IF;
+
+    IF TG_OP = 'DELETE' THEN
+        RETURN OLD;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_orcamento_campanha_congela
+-- Tabela:    orcamento_campanha
+-- Momento:   BEFORE INSERT OR UPDATE OR DELETE
+-- Função:    fn_congela_orcamento_campanha()
+-- Bloco:     [05-K-2]
+-- Regra:     Bloqueia qualquer alteração no orçamento depois que a campanha
+--            já está aprovada/em andamento.
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_orcamento_campanha_congela ON orcamento_campanha;
+CREATE TRIGGER trg_orcamento_campanha_congela
+BEFORE INSERT OR UPDATE OR DELETE ON orcamento_campanha
+FOR EACH ROW
+EXECUTE FUNCTION public.fn_congela_orcamento_campanha();
+
+-- ----------------------------------------------------------------------------
+-- Função:     fn_valida_limite_max_orcamento_campanha
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-K-2]
+-- Regra:      ADICIONADO (01-08-2026, correção do que a Alexia mandou em
+--             31-07-2026): ela tinha misturado o número que devia ser TETO
+--             (10) com o de PISO (que devia ser bem menor, 3) dentro da MESMA
+--             chave `orcamento_min_itens`. Separado em duas chaves:
+--             `orcamento_min_itens` (3, checado na aprovação, ver
+--             fn_valida_completude_campanha_aprovacao) e `orcamento_max_itens`
+--             (10, checado aqui). Checar o máximo no INSERT — não só na
+--             aprovação — dá feedback imediato pro pesquisador no item 11,
+--             em vez de deixar ele descobrir só quando a campanha for
+--             recusada na moderação.
+-- CORRIGIDO (01-08-2026, achado em revisão): faltava SECURITY DEFINER. O
+-- COUNT(*) abaixo é sobre a própria orcamento_campanha, sujeito à sua RLS de
+-- SELECT (pol_orcamento_campanha_select, 04) — que passou pra quem tem
+-- permissão de INSERT (dono ou 'campanha_editar') mas não necessariamente
+-- pra SELECT (só status/dono/'relatorio_visualizar'). Pro dono, nunca foi
+-- problema; pra quem só tem 'campanha_editar', o COUNT ficaria sempre 0,
+-- deixando o teto inerte em vez de bloquear — mesmo raciocínio de
+-- fn_congela_orcamento_campanha (acima).
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_valida_limite_max_orcamento_campanha()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+    v_max INT;
+    v_qtd INT;
+BEGIN
+    v_max := public.config_numero('orcamento_max_itens', 10)::INT;
+
+    SELECT COUNT(*) INTO v_qtd FROM orcamento_campanha WHERE id_campanha = NEW.id_campanha;
+
+    IF v_qtd >= v_max THEN
+        RAISE EXCEPTION 'A campanha já atingiu o limite de % itens de orçamento (configuracoes.orcamento_max_itens).', v_max;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_orcamento_campanha_valida_limite_max
+-- Tabela:    orcamento_campanha
+-- Momento:   BEFORE INSERT
+-- Função:    fn_valida_limite_max_orcamento_campanha()
+-- Bloco:     [05-K-2]
+-- Regra:     Impede adicionar item de orçamento além do máximo configurado.
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_orcamento_campanha_valida_limite_max ON orcamento_campanha;
+CREATE TRIGGER trg_orcamento_campanha_valida_limite_max
+BEFORE INSERT ON orcamento_campanha
+FOR EACH ROW
+EXECUTE FUNCTION public.fn_valida_limite_max_orcamento_campanha();
+
+-- ----------------------------------------------------------------------------
+-- Função:     fn_congela_marco_cronograma
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-K-2]
+-- Regra:      ADICIONADO (31-07-2026, Alexia) — cronograma estruturado da campanha
+--             (01, [01-E]). Diferente do orçamento (acima), o cronograma NÃO
+--             trava na aprovação — trava só quando a campanha já começou de
+--             fato (campanha.data_inicio <= NOW()), mesma janela de carência
+--             já usada pra campanha.data_inicio/data_fim em fn_congela_
+--             regras_campanha ("Em breve"): entre aprovar e o início real, o
+--             pesquisador pode legitimamente precisar reorganizar datas do
+--             plano. Cobre INSERT/UPDATE/DELETE pelo mesmo motivo do
+--             orçamento.
+-- CORRIGIDO (01-08-2026, achado em revisão): faltava SECURITY DEFINER, mesmo
+-- raciocínio de fn_congela_orcamento_campanha (acima) — o SELECT data_inicio
+-- FROM campanha abaixo ficaria sujeito à RLS de quem executa, silenciosamente
+-- inerte pra quem tem só 'campanha_editar' sem 'relatorio_visualizar'.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_congela_marco_cronograma()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+    v_id_campanha INT := COALESCE(NEW.id_campanha, OLD.id_campanha);
+    v_data_inicio TIMESTAMP;
+BEGIN
+    SELECT data_inicio INTO v_data_inicio FROM campanha WHERE id_campanha = v_id_campanha;
+
+    IF v_data_inicio IS NOT NULL AND v_data_inicio <= NOW() THEN
+        RAISE EXCEPTION 'Operação bloqueada: o cronograma não pode ser alterado depois que a campanha começa de verdade.';
+    END IF;
+
+    IF TG_OP = 'DELETE' THEN
+        RETURN OLD;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_marco_cronograma_congela
+-- Tabela:    marco_cronograma
+-- Momento:   BEFORE INSERT OR UPDATE OR DELETE
+-- Função:    fn_congela_marco_cronograma()
+-- Bloco:     [05-K-2]
+-- Regra:     Bloqueia qualquer alteração no cronograma depois que a campanha
+--            já começou de fato.
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_marco_cronograma_congela ON marco_cronograma;
+CREATE TRIGGER trg_marco_cronograma_congela
+BEFORE INSERT OR UPDATE OR DELETE ON marco_cronograma
+FOR EACH ROW
+EXECUTE FUNCTION public.fn_congela_marco_cronograma();
+
+-- ----------------------------------------------------------------------------
+-- Função:     fn_valida_data_marco_cronograma
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-K-2]
+-- Regra:      ADICIONADO (31-07-2026, Alexia) — a data prevista de um marco pode
+--             ultrapassar campanha.data_fim sem problema (um marco de
+--             divulgação de resultado, por exemplo, é comum acontecer depois
+--             do prazo de arrecadação), mas não pode ser anterior a
+--             campanha.data_inicio — não faz sentido planejar algo "antes da
+--             campanha começar". Sai cedo se data_inicio ainda não foi
+--             definida (mesmo padrão de fn_valida_prazo_campanha_negocio):
+--             sem data_inicio não há o que comparar.
+-- CORRIGIDO (01-08-2026, achado em revisão): faltava SECURITY DEFINER, mesmo
+-- raciocínio de fn_congela_orcamento_campanha (acima).
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_valida_data_marco_cronograma()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+    v_data_inicio TIMESTAMP;
+BEGIN
+    SELECT data_inicio INTO v_data_inicio FROM campanha WHERE id_campanha = NEW.id_campanha;
+
+    IF v_data_inicio IS NOT NULL AND NEW.data_prevista < v_data_inicio THEN
+        RAISE EXCEPTION 'A data prevista de um marco do cronograma não pode ser anterior à data de início da campanha.';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_marco_cronograma_valida_data
+-- Tabela:    marco_cronograma
+-- Momento:   BEFORE INSERT OR UPDATE
+-- Função:    fn_valida_data_marco_cronograma()
+-- Bloco:     [05-K-2]
+-- Regra:     Impede marco com data_prevista anterior ao início da campanha.
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_marco_cronograma_valida_data ON marco_cronograma;
+CREATE TRIGGER trg_marco_cronograma_valida_data
+BEFORE INSERT OR UPDATE ON marco_cronograma
+FOR EACH ROW
+EXECUTE FUNCTION public.fn_valida_data_marco_cronograma();
+
+-- ----------------------------------------------------------------------------
+-- Função:     fn_valida_limite_max_marco_cronograma
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-K-2]
+-- Regra:      ADICIONADO (01-08-2026) — mesmo raciocínio de
+--             fn_valida_limite_max_orcamento_campanha (acima): checa
+--             configuracoes.cronograma_max_marcos (20) no INSERT, feedback
+--             imediato em vez de só na aprovação.
+-- CORRIGIDO (01-08-2026, achado em revisão): faltava SECURITY DEFINER, mesmo
+-- raciocínio de fn_valida_limite_max_orcamento_campanha (acima).
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_valida_limite_max_marco_cronograma()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+    v_max INT;
+    v_qtd INT;
+BEGIN
+    v_max := public.config_numero('cronograma_max_marcos', 20)::INT;
+
+    SELECT COUNT(*) INTO v_qtd FROM marco_cronograma WHERE id_campanha = NEW.id_campanha;
+
+    IF v_qtd >= v_max THEN
+        RAISE EXCEPTION 'A campanha já atingiu o limite de % marcos de cronograma (configuracoes.cronograma_max_marcos).', v_max;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_marco_cronograma_valida_limite_max
+-- Tabela:    marco_cronograma
+-- Momento:   BEFORE INSERT
+-- Função:    fn_valida_limite_max_marco_cronograma()
+-- Bloco:     [05-K-2]
+-- Regra:     Impede adicionar marco de cronograma além do máximo configurado.
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_marco_cronograma_valida_limite_max ON marco_cronograma;
+CREATE TRIGGER trg_marco_cronograma_valida_limite_max
+BEFORE INSERT ON marco_cronograma
+FOR EACH ROW
+EXECUTE FUNCTION public.fn_valida_limite_max_marco_cronograma();
+
+-- ----------------------------------------------------------------------------
 -- Função:     fn_valida_transicao_campanha
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-2]
@@ -1551,6 +1823,107 @@ CREATE TRIGGER trg_campanha_valida_transicao
 BEFORE UPDATE ON campanha
 FOR EACH ROW
 EXECUTE FUNCTION fn_valida_transicao_campanha();
+
+-- ----------------------------------------------------------------------------
+-- Função:     fn_valida_completude_campanha_aprovacao
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-K-2]
+-- Regra:      ADICIONADO (31-07-2026, Alexia) — orçamento e cronograma estruturados
+--             (01, [01-E]) são obrigatórios, e a moderação da campanha (Admin
+--             aprovando, ou seja, a transição para 'ativo') é o momento
+--             combinado pra checar isso, junto com o resto — não existe
+--             moderação separada pros itens. Três condições, todas
+--             configuráveis via `configuracoes` (mesmo padrão de meta_minima_
+--             campanha/limite_*, acima nesta seção):
+--               1. Pelo menos configuracoes.orcamento_min_itens itens de orçamento;
+--               2. Pelo menos configuracoes.cronograma_min_marcos marcos de cronograma;
+--               3. SUM(orcamento_campanha.valor) = campanha.meta_financeira, EXATO
+--                  (não "no máximo", não "aproximado" — bate certinho).
+--             O TETO de itens/marcos (10/20) é responsabilidade de
+--             fn_valida_limite_max_orcamento_campanha/fn_valida_limite_max_
+--             marco_cronograma (acima), checado já no INSERT — aqui só o PISO,
+--             que só dá pra confirmar no momento da aprovação (antes disso o
+--             pesquisador ainda pode estar adicionando itens). Roda em toda
+--             transição PARA 'ativo' vinda de qualquer outro status
+--             (normalmente aguardando_aprovacao -> ativo, via campanha_
+--             aprovar) — se OLD.status já era 'ativo', não passou por aqui de
+--             novo (WHEN abaixo). fn_valida_transicao_campanha (acima) já
+--             garantiu QUEM pode fazer essa transição; esta função garante
+--             que a campanha está de fato completa antes de ir ao ar.
+-- CORRIGIDO (01-08-2026): os defaults de fallback do config_numero() abaixo
+-- eram 10/20 (a Alexia tinha confundido min com max) — corrigidos pra 3/3,
+-- coerente com as chaves *_min_itens/*_min_marcos agora seedadas com 3 (ver
+-- 07_seed_dados.sql). O comportamento de verdade sempre vem da chave em
+-- configuracoes; o fallback só entra em ação se a linha sumir do banco.
+-- CORRIGIDO (01-08-2026, achado em revisão, antes do commit): faltava
+-- SECURITY DEFINER. Sem isso, os SELECT COUNT(*)/SUM() abaixo, contra
+-- orcamento_campanha/marco_cronograma, ficam sujeitos à RLS de QUEM está
+-- aprovando — e pol_orcamento_campanha_select/pol_marco_cronograma_select (04)
+-- só liberam leitura por status/dono/'relatorio_visualizar', nenhum dos quais
+-- vale ainda quando a campanha está 'aguardando_aprovacao'. Hoje só 'admin'
+-- tem 'campanha_aprovar', e 'admin' também tem 'relatorio_visualizar' —
+-- mascarou o bug por acidente. Se um dia outro papel ganhar 'campanha_aprovar'/
+-- 'campanha_rejeitar'/'solicitacao_encerramento_decidir' sem também ter
+-- 'relatorio_visualizar' (é literalmente a decisão em aberto do item 57), a
+-- contagem enxergaria sempre 0 linhas e bloquearia toda aprovação, mesmo com
+-- orçamento/cronograma completos — falha silenciosa, sem erro nenhum. Mesmo
+-- raciocínio já usado em contar_seguidores_pesquisador()/encerrar_campanhas_
+-- vencidas() (03/05): agregado precisa enxergar o total real, não só o que a
+-- sessão de quem chama consegue ver linha a linha.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_valida_completude_campanha_aprovacao()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+    v_min_orcamento  INT;
+    v_min_marcos     INT;
+    v_qtd_orcamento  INT;
+    v_qtd_marcos     INT;
+    v_soma_orcamento DECIMAL(10,2);
+BEGIN
+    v_min_orcamento := public.config_numero('orcamento_min_itens', 3)::INT;
+    v_min_marcos    := public.config_numero('cronograma_min_marcos', 3)::INT;
+
+    SELECT COUNT(*), COALESCE(SUM(valor), 0)
+      INTO v_qtd_orcamento, v_soma_orcamento
+      FROM orcamento_campanha
+      WHERE id_campanha = NEW.id_campanha;
+
+    SELECT COUNT(*)
+      INTO v_qtd_marcos
+      FROM marco_cronograma
+      WHERE id_campanha = NEW.id_campanha;
+
+    IF v_qtd_orcamento < v_min_orcamento THEN
+        RAISE EXCEPTION 'A campanha precisa de pelo menos % itens de orçamento para ser aprovada (tem %).', v_min_orcamento, v_qtd_orcamento;
+    END IF;
+
+    IF v_qtd_marcos < v_min_marcos THEN
+        RAISE EXCEPTION 'A campanha precisa de pelo menos % marcos de cronograma para ser aprovada (tem %).', v_min_marcos, v_qtd_marcos;
+    END IF;
+
+    IF v_soma_orcamento <> NEW.meta_financeira THEN
+        RAISE EXCEPTION 'A soma dos itens de orçamento (%) precisa ser exatamente igual à meta financeira (%) para a campanha ser aprovada.', v_soma_orcamento, NEW.meta_financeira;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_campanha_valida_completude_aprovacao
+-- Tabela:    campanha
+-- Momento:   BEFORE UPDATE (só quando status entra em 'ativo')
+-- Função:    fn_valida_completude_campanha_aprovacao()
+-- Bloco:     [05-K-2]
+-- Regra:     Bloqueia aprovação de campanha sem orçamento/cronograma completos
+--            e com a soma do orçamento batendo exatamente com a meta.
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_campanha_valida_completude_aprovacao ON campanha;
+CREATE TRIGGER trg_campanha_valida_completude_aprovacao
+BEFORE UPDATE ON campanha
+FOR EACH ROW
+WHEN (NEW.status = 'ativo' AND OLD.status IS DISTINCT FROM 'ativo')
+EXECUTE FUNCTION public.fn_valida_completude_campanha_aprovacao();
 
 -- ----------------------------------------------------------------------------
 -- Função:     fn_preenche_encerramento_campanha

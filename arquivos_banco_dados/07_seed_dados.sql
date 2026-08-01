@@ -625,6 +625,22 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo) VAL
 (NULL, 'limite_caracteres_relato_denuncia',        '1000', 'inteiro', 'Nº máximo de caracteres em denuncia.relato (sugestão do Claude Web)',       TRUE),
 (NULL, 'limite_caracteres_justificativa_encerramento', '2000', 'inteiro', 'Nº máximo de caracteres em solicitacao_encerramento.justificativa_pesquisador/justificativa_admin', TRUE),
 (NULL, 'limite_caracteres_descricao_recompensa',   '2000', 'inteiro', 'Nº máximo de caracteres em recompensa.descricao',                            TRUE),
+-- ADICIONADO (31-07-2026, Alexia; valores corrigidos 01-08-2026): orçamento e
+-- cronograma estruturados (01, [01-E]). Mesmo padrão config + trigger de tudo
+-- acima nesta seção — mudar o mínimo/máximo exigido, ou o limite de texto,
+-- vira um UPDATE nesta tabela, não uma migração. Ver
+-- fn_valida_completude_campanha_aprovacao e fn_valida_limite_max_orcamento_
+-- campanha/fn_valida_limite_max_marco_cronograma (05, [05-K-2]).
+-- CORRIGIDO (01-08-2026): a Alexia confundiu min/max na primeira versão — os
+-- valores 10/20 eram pra ser o TETO (nº máximo permitido por campanha), não o
+-- piso obrigatório pra aprovar. Mínimo virou 3 pros dois (meio-termo da faixa
+-- que ela sugeriu, 2 a 5 — ajustável livremente depois, sem migração).
+(NULL, 'orcamento_min_itens',                      '3',    'inteiro', 'Nº mínimo de itens de orçamento exigido para aprovar uma campanha',         TRUE),
+(NULL, 'orcamento_max_itens',                      '10',   'inteiro', 'Nº máximo de itens de orçamento permitido por campanha',                    TRUE),
+(NULL, 'cronograma_min_marcos',                    '3',    'inteiro', 'Nº mínimo de marcos de cronograma exigido para aprovar uma campanha',       TRUE),
+(NULL, 'cronograma_max_marcos',                    '20',   'inteiro', 'Nº máximo de marcos de cronograma permitido por campanha',                  TRUE),
+(NULL, 'limite_caracteres_descricao_orcamento',    '2000', 'inteiro', 'Nº máximo de caracteres em orcamento_campanha.descricao',                    TRUE),
+(NULL, 'limite_caracteres_descricao_marco',        '2000', 'inteiro', 'Nº máximo de caracteres em marco_cronograma.descricao',                      TRUE),
 -- ADICIONADO (28-07-2026, Claude Web — 5ª auditoria): meta 0.00 era aceita
 -- (campanha all-or-nothing com meta zero é sucesso instantâneo). Mesmo padrão
 -- do prazo (item 16): limite técnico largo na constraint (01, > 0), mínimo de

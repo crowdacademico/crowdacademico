@@ -13,8 +13,8 @@
 --  em vez de um bloco de ENABLE no topo separado das policies.
 --
 --  Inventário Mapeado:
---  - 39 Tabelas com RLS ativada e forçada (78 instruções ALTER TABLE)
---  - 105 Policies (100% idempotentes — toda CREATE POLICY tem
+--  - 41 Tabelas com RLS ativada e forçada (82 instruções ALTER TABLE)
+--  - 113 Policies (100% idempotentes — toda CREATE POLICY tem
 --    DROP POLICY IF EXISTS correspondente)
 -- ----------------------------------------------------------------------------
 --  SUMÁRIO DOS BLOCOS DE CÓDIGO
@@ -23,7 +23,7 @@
 --  [04-B] RBAC (3 tabelas)
 --  [04-C] CONFIG (5 tabelas)
 --  [04-D] USUÁRIO (10 tabelas)
---  [04-E] CAMPANHA (9 tabelas)
+--  [04-E] CAMPANHA (11 tabelas)
 --  [04-F] LINK (3 tabelas)
 --  [04-G] ARQUIVO (2 tabelas)
 --  [04-H] CONTRIBUIÇÃO (4 tabelas)
@@ -256,12 +256,16 @@ DROP POLICY IF EXISTS pol_seg_pesq_delete ON seguir_pesquisador;
 CREATE POLICY pol_seg_pesq_delete ON seguir_pesquisador FOR DELETE TO app_nestjs USING (id_usuario = public.id_usuario_atual());
 
 -- ============================================================
--- [04-E] CAMPANHA (9 tabelas)
+-- [04-E] CAMPANHA (11 tabelas)
 -- ============================================================
 ALTER TABLE campanha             ENABLE ROW LEVEL SECURITY;
 ALTER TABLE campanha             FORCE ROW LEVEL SECURITY;
 ALTER TABLE atualizacao_campanha ENABLE ROW LEVEL SECURITY;
 ALTER TABLE atualizacao_campanha FORCE ROW LEVEL SECURITY;
+ALTER TABLE orcamento_campanha   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE orcamento_campanha   FORCE ROW LEVEL SECURITY;
+ALTER TABLE marco_cronograma     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE marco_cronograma     FORCE ROW LEVEL SECURITY;
 ALTER TABLE comentario           ENABLE ROW LEVEL SECURITY;
 ALTER TABLE comentario           FORCE ROW LEVEL SECURITY;
 ALTER TABLE denuncia             ENABLE ROW LEVEL SECURITY;
@@ -319,6 +323,71 @@ DROP POLICY IF EXISTS pol_atualizacao_update ON atualizacao_campanha;
 CREATE POLICY pol_atualizacao_update ON atualizacao_campanha FOR UPDATE TO app_nestjs USING (
     EXISTS (SELECT 1 FROM campanha WHERE id_campanha = atualizacao_campanha.id_campanha AND id_usuario = public.id_usuario_atual())
     OR public.tem_permissao('atualizacao_moderar')
+);
+
+-- ADICIONADO (31-07-2026, Alexia): orçamento e cronograma estruturados. Leitura segue
+-- a MESMA visibilidade de campanha (pol_campanha_select) — decisão consciente
+-- de NÃO copiar o padrão "SELECT USING (TRUE)" de pol_recompensa_select: expor
+-- o orçamento/plano de uma campanha que ainda nem foi aprovada (aguardando_
+-- aprovacao) pra qualquer visitante não tem por quê, e o dono/admin já
+-- enxergam por fora dessa condição. Escrita: só o dono da campanha (ou
+-- campanha_editar); o congelamento por status/data_inicio é responsabilidade
+-- da trigger em 05 (mesmo desenho de recompensa — RLS controla QUEM, trigger
+-- controla QUANDO).
+DROP POLICY IF EXISTS pol_orcamento_campanha_select ON orcamento_campanha;
+CREATE POLICY pol_orcamento_campanha_select ON orcamento_campanha FOR SELECT USING (
+    EXISTS (
+        SELECT 1 FROM campanha
+        WHERE id_campanha = orcamento_campanha.id_campanha
+          AND (
+              status IN ('ativo', 'sucesso', 'nao_atingido', 'encerrado')
+              OR id_usuario = public.id_usuario_atual()
+              OR public.tem_permissao('relatorio_visualizar')
+          )
+    )
+);
+DROP POLICY IF EXISTS pol_orcamento_campanha_insert ON orcamento_campanha;
+CREATE POLICY pol_orcamento_campanha_insert ON orcamento_campanha FOR INSERT TO app_nestjs WITH CHECK (
+    EXISTS (SELECT 1 FROM campanha WHERE id_campanha = orcamento_campanha.id_campanha AND id_usuario = public.id_usuario_atual())
+    OR public.tem_permissao('campanha_editar')
+);
+DROP POLICY IF EXISTS pol_orcamento_campanha_update ON orcamento_campanha;
+CREATE POLICY pol_orcamento_campanha_update ON orcamento_campanha FOR UPDATE TO app_nestjs USING (
+    EXISTS (SELECT 1 FROM campanha WHERE id_campanha = orcamento_campanha.id_campanha AND id_usuario = public.id_usuario_atual())
+    OR public.tem_permissao('campanha_editar')
+);
+DROP POLICY IF EXISTS pol_orcamento_campanha_delete ON orcamento_campanha;
+CREATE POLICY pol_orcamento_campanha_delete ON orcamento_campanha FOR DELETE TO app_nestjs USING (
+    EXISTS (SELECT 1 FROM campanha WHERE id_campanha = orcamento_campanha.id_campanha AND id_usuario = public.id_usuario_atual())
+    OR public.tem_permissao('campanha_editar')
+);
+
+DROP POLICY IF EXISTS pol_marco_cronograma_select ON marco_cronograma;
+CREATE POLICY pol_marco_cronograma_select ON marco_cronograma FOR SELECT USING (
+    EXISTS (
+        SELECT 1 FROM campanha
+        WHERE id_campanha = marco_cronograma.id_campanha
+          AND (
+              status IN ('ativo', 'sucesso', 'nao_atingido', 'encerrado')
+              OR id_usuario = public.id_usuario_atual()
+              OR public.tem_permissao('relatorio_visualizar')
+          )
+    )
+);
+DROP POLICY IF EXISTS pol_marco_cronograma_insert ON marco_cronograma;
+CREATE POLICY pol_marco_cronograma_insert ON marco_cronograma FOR INSERT TO app_nestjs WITH CHECK (
+    EXISTS (SELECT 1 FROM campanha WHERE id_campanha = marco_cronograma.id_campanha AND id_usuario = public.id_usuario_atual())
+    OR public.tem_permissao('campanha_editar')
+);
+DROP POLICY IF EXISTS pol_marco_cronograma_update ON marco_cronograma;
+CREATE POLICY pol_marco_cronograma_update ON marco_cronograma FOR UPDATE TO app_nestjs USING (
+    EXISTS (SELECT 1 FROM campanha WHERE id_campanha = marco_cronograma.id_campanha AND id_usuario = public.id_usuario_atual())
+    OR public.tem_permissao('campanha_editar')
+);
+DROP POLICY IF EXISTS pol_marco_cronograma_delete ON marco_cronograma;
+CREATE POLICY pol_marco_cronograma_delete ON marco_cronograma FOR DELETE TO app_nestjs USING (
+    EXISTS (SELECT 1 FROM campanha WHERE id_campanha = marco_cronograma.id_campanha AND id_usuario = public.id_usuario_atual())
+    OR public.tem_permissao('campanha_editar')
 );
 
 -- [04-E-3] comentario: regras de visibilidade de comentário não endossado/inativo (ver DOCUMENTACAO_BD.md)

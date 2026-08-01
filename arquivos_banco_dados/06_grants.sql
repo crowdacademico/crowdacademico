@@ -234,6 +234,13 @@ GRANT INSERT, UPDATE ON
 TO app_nestjs;
 GRANT INSERT ON repasse TO app_nestjs;
 
+-- ADICIONADO (31-07-2026, Alexia): orçamento e cronograma estruturados (01, [01-E]).
+-- Diferente da maioria acima, ganham DELETE também — o pesquisador precisa
+-- poder remover um item de orçamento/marco antes de reenviar a campanha pra
+-- aprovação (as policies de DELETE em 04 já existem; sem este GRANT, a
+-- policy nunca chega a ser avaliada e o DELETE falha com "permission denied").
+GRANT INSERT, UPDATE, DELETE ON orcamento_campanha, marco_cronograma TO app_nestjs;
+
 REVOKE EXECUTE ON FUNCTION public.atualizar_status_repasse(INT, VARCHAR, TIMESTAMP) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.atualizar_status_repasse(INT, VARCHAR, TIMESTAMP) TO app_nestjs;
 

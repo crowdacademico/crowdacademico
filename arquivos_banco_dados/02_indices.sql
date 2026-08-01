@@ -14,7 +14,7 @@
 --  area_conhecimento.id_pai (ver [02-C]), adicionado em 28-07-2026.
 --
 --  Inventário Mapeado:
---  - 42 Índices (CREATE INDEX / CREATE UNIQUE INDEX) em 7 blocos de domínio
+--  - 44 Índices (CREATE INDEX / CREATE UNIQUE INDEX) em 7 blocos de domínio
 --  (3 índices redundantes removidos, 1 movido do 01 pra cá; +5 em 28-07-2026,
 --  achado do Claude Web — Postgres não cria índice automático em FK, e 16 das
 --  56 estavam sem — ver [PENDENCIAS e correcoes.md] pro detalhamento de cada um)
@@ -75,6 +75,11 @@ CREATE INDEX idx_campanha_status_data_fim   ON campanha(status, data_fim);
 CREATE INDEX idx_campanha_area_conhecimento ON campanha(id_area_conhecimento);
 CREATE INDEX idx_seguir_campanha_campanha   ON seguir_campanha(id_campanha);
 CREATE INDEX idx_atualizacao_campanha       ON atualizacao_campanha(id_campanha);
+-- ADICIONADO (31-07-2026, Alexia): orçamento e cronograma estruturados (01, [01-E]) —
+-- mesma justificativa das demais tabelas-filha de campanha acima: toda leitura
+-- da página pública de uma campanha busca esses itens por id_campanha.
+CREATE INDEX idx_orcamento_campanha         ON orcamento_campanha(id_campanha);
+CREATE INDEX idx_marco_cronograma_campanha  ON marco_cronograma(id_campanha);
 CREATE INDEX idx_repasse_campanha           ON repasse(id_campanha);
 CREATE INDEX idx_sol_encerramento_campanha  ON solicitacao_encerramento(id_campanha);
 CREATE INDEX idx_historico_rejeicao_campanha ON historico_rejeicao(id_campanha);

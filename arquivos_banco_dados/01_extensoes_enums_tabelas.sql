@@ -21,7 +21,7 @@
 --  Inventário Mapeado:
 --  - 1 Role de aplicação (app_nestjs) + 1 Extensão (pgcrypto)
 --  - 14 Tipos ENUM
---  - 39 Tabelas em 8 blocos de domínio
+--  - 41 Tabelas em 8 blocos de domínio
 -- ----------------------------------------------------------------------------
 --  SUMÁRIO DOS BLOCOS DE CÓDIGO
 -- ----------------------------------------------------------------------------
@@ -29,7 +29,7 @@
 --  [01-B] RBAC (3 tabelas)
 --  [01-C] CONFIG (5 tabelas)
 --  [01-D] USUÁRIO (10 tabelas + Índices)
---  [01-E] CAMPANHA (9 tabelas)
+--  [01-E] CAMPANHA (11 tabelas)
 --  [01-F] LINK (3 tabelas de associação)
 --  [01-G] ARQUIVO (2 tabelas de associação)
 --  [01-H] CONTRIBUIÇÃO (4 tabelas)
@@ -73,7 +73,7 @@ BEGIN
         WHERE rolname = current_user
           AND (rolsuper OR rolbypassrls)
     ) THEN
-        RAISE EXCEPTION 'Bootstrap abortado: o papel "%" nao ignora RLS. Como as 39 tabelas usam FORCE ROW LEVEL SECURITY e 89 das 105 policies sao TO app_nestjs, o seed falharia em silencio (dezenas de erros espalhados). Rode como superusuario, ou peca BYPASSRLS pro papel, ou use o papel indicado no tutorial-rodar-projeto.md.', current_user;
+        RAISE EXCEPTION 'Bootstrap abortado: o papel "%" nao ignora RLS. Como as 41 tabelas usam FORCE ROW LEVEL SECURITY e a maioria das policies sao TO app_nestjs, o seed falharia em silencio (dezenas de erros espalhados). Rode como superusuario, ou peca BYPASSRLS pro papel, ou use o papel indicado no tutorial-rodar-projeto.md.', current_user;
     END IF;
 END
 $$;
@@ -369,7 +369,7 @@ CREATE TABLE sessao (
 );
 
 -- ============================================================
--- [01-E] CAMPANHA (9 tabelas)
+-- [01-E] CAMPANHA (11 tabelas)
 -- ============================================================
 CREATE TABLE campanha (
     id_campanha          SERIAL,
@@ -444,6 +444,66 @@ CREATE TABLE atualizacao_campanha (
     -- CK_CAMPANHA_DESCRICAO_TAMANHO — limite técnico largo aqui, limite de negócio
     -- configurável via trigger, ver [05-K-1].
     CONSTRAINT "CK_ATUALIZACAO_CAMPANHA_CONTEUDO_TAMANHO" CHECK (char_length(conteudo) <= 20000)
+);
+
+-- ADICIONADO (31-07-2026, Alexia): orçamento estruturado da campanha (itens de gasto
+-- com categoria + valor), inspirado na estrutura de campanha do Experiment.com
+-- (pedido do time via Claude Web). Substitui a antiga prática de descrever o
+-- orçamento só em texto livre dentro de campanha.descricao — aqui vira dado
+-- estruturado, que dá pra somar, validar contra meta_financeira e renderizar
+-- em gráfico de pizza na página da campanha (o cálculo do percentual de cada
+-- fatia fica pra depois — SUM(valor)/meta_financeira*100 é feito na consulta,
+-- não armazenado). RN: soma de todos os itens de uma campanha precisa bater
+-- EXATAMENTE com campanha.meta_financeira, e a quantidade de itens fica entre
+-- configuracoes.orcamento_min_itens e configuracoes.orcamento_max_itens — ambas
+-- checadas na aprovação/inserção, ver fn_valida_completude_campanha_aprovacao e
+-- fn_valida_limite_max_orcamento_campanha (05, [05-K-2]). Congela junto com o
+-- resto da campanha (mesma condição de status de fn_congela_regras_campanha),
+-- porque mexer nos itens depois de aprovado quebraria a igualdade com uma
+-- meta_financeira que já está congelada.
+CREATE TABLE orcamento_campanha (
+    id_orcamento SERIAL,
+    id_campanha  INT           NOT NULL,
+    categoria    VARCHAR(150)  NOT NULL,
+    descricao    TEXT,
+    valor        DECIMAL(10,2) NOT NULL,
+    ordem        SMALLINT      NOT NULL DEFAULT 0,
+    criado_em    TIMESTAMP     DEFAULT NOW(),
+
+    CONSTRAINT "PK_ORCAMENTO_CAMPANHA" PRIMARY KEY (id_orcamento),
+    CONSTRAINT "FK_ORCAMENTO_CAMPANHA_CAMPANHA" FOREIGN KEY (id_campanha) REFERENCES campanha(id_campanha) ON DELETE CASCADE,
+    CONSTRAINT "CK_ORCAMENTO_CAMPANHA_VALOR_POSITIVO" CHECK (valor > 0),
+    -- Mesmo padrão de CK_CAMPANHA_DESCRICAO_TAMANHO: limite técnico largo aqui
+    -- (barra só o absurdo), limite de negócio configurável via trigger, ver [05-K-1].
+    CONSTRAINT "CK_ORCAMENTO_CAMPANHA_DESCRICAO_TAMANHO" CHECK (descricao IS NULL OR char_length(descricao) <= 20000)
+);
+
+-- ADICIONADO (31-07-2026, Alexia): cronograma estruturado da campanha (marcos com
+-- título, descrição e data prevista), mesmo pedido/origem de orcamento_campanha
+-- acima. Diferente de atualizacao_campanha (que registra o que JÁ aconteceu,
+-- publicado durante a execução), marco_cronograma é o PLANO anunciado antes
+-- da campanha começar a ser financiada — plano esse que trava assim que a
+-- campanha efetivamente começa (campanha.data_inicio <= NOW()), mesma janela
+-- de carência que campanha.data_inicio/data_fim já tinham (fn_congela_regras_
+-- campanha, 05, feature "Em breve") — não trava já na aprovação, porque entre
+-- aprovar e começar de fato o pesquisador pode legitimamente precisar
+-- reorganizar datas. RN: a quantidade de marcos fica entre
+-- configuracoes.cronograma_min_marcos e configuracoes.cronograma_max_marcos
+-- (checadas na aprovação/inserção, mesmas funções de orcamento_campanha) e
+-- cada data_prevista precisa ser >= campanha.data_inicio (pode ultrapassar
+-- data_fim sem problema — ver fn_valida_data_marco_cronograma, 05, [05-K-2]).
+CREATE TABLE marco_cronograma (
+    id_marco      SERIAL,
+    id_campanha   INT           NOT NULL,
+    titulo        VARCHAR(150)  NOT NULL,
+    descricao     TEXT,
+    data_prevista TIMESTAMP     NOT NULL,
+    ordem         SMALLINT      NOT NULL DEFAULT 0,
+    criado_em     TIMESTAMP     DEFAULT NOW(),
+
+    CONSTRAINT "PK_MARCO_CRONOGRAMA" PRIMARY KEY (id_marco),
+    CONSTRAINT "FK_MARCO_CRONOGRAMA_CAMPANHA" FOREIGN KEY (id_campanha) REFERENCES campanha(id_campanha) ON DELETE CASCADE,
+    CONSTRAINT "CK_MARCO_CRONOGRAMA_DESCRICAO_TAMANHO" CHECK (descricao IS NULL OR char_length(descricao) <= 20000)
 );
 
 CREATE TABLE repasse (
