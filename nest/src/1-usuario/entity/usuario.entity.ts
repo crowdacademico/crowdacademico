@@ -1,17 +1,10 @@
-// Espelha a linha de `usuario` como o Postgres devolve (snake_case, igual à
-// coluna) — nunca inclui senha_hash aqui de propósito, ver constants/.
-export class UsuarioEntity {
-  id_usuario: number;
-  nome: string;
-  email: string;
-  id_imagem_perfil: number | null;
-  criado_em: Date;
-  deletado: boolean;
-  deletado_em: Date | null;
-  deletado_por: number | null;
-  email_verificado: boolean;
-  tentativas_login_falhas: number;
-  bloqueado_ate: Date | null;
-  ultimo_login_em: Date | null;
-  ultimo_login_ip: string | null;
-}
+import { Selectable } from 'kysely';
+import { UsuarioTable } from '../../commons/database/db.types';
+
+// Era uma classe escrita à mão espelhando a tabela; agora que o módulo usa
+// Kysely, a fonte da verdade da forma da linha é UsuarioTable
+// (commons/database/db.types.ts) — isto só reexporta com o nome que
+// converter/dto já esperavam, pra não precisar tocar em mais arquivos.
+// Continua nunca incluindo senha_hash pelos mesmos motivos de sempre (ver
+// USUARIO_COLUNAS_SELECT, constants/usuario.constants.ts).
+export type UsuarioEntity = Selectable<UsuarioTable>;

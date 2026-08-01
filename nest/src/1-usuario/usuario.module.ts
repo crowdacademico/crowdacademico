@@ -25,5 +25,9 @@ import { UsuarioServiceUpdate } from './service/usuario.service.update';
     UsuarioServiceUpdate,
     UsuarioServiceRemove,
   ],
+  // UsuarioServiceFindOne exportado pra 3-auth reaproveitar (devolver o
+  // usuário público no corpo da resposta de login) em vez de duplicar a
+  // mesma query/converter.
+  exports: [UsuarioServiceFindOne],
 })
 export class UsuarioModule {}

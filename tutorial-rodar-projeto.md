@@ -134,7 +134,11 @@ Crie um arquivo `.env` na raiz da pasta `backend`:  ... app_nestjs:escolha-uma-s
 
 ```
 DATABASE_URL=postgresql://app_nestjs:app_nestjs123@localhost:5432/crowdacademico
+JWT_SECRET=segredo-dev-tcc-trocar-antes-de-producao
+JWT_ACCESS_EXPIRES_IN=15m
 ```
+
+`JWT_SECRET`/`JWT_ACCESS_EXPIRES_IN` só existem a partir de quando o módulo `3-auth` (login/token) foi implementado — sem eles o backend nem sobe (o `JwtModule` exige `JWT_SECRET`). Qualquer valor serve em dev; troque por algo gerado (`openssl rand -hex 32`) antes de qualquer coisa que se pareça com produção de verdade.
 
 O `.env` normalmente **não vem** de um `git clone` (fica de fora do repositório de propósito, mesmo sendo uma senha de teste) — então esse arquivo precisa ser recriado à mão toda vez que você clonar o projeto num computador novo, inclusive na escola. Copiar a linha acima exatamente como está resolve isso em 10 segundos.
 
@@ -298,14 +302,43 @@ Abra o link que aparecer no terminal (geralmente **http://localhost:5173**). Se 
 
 ---
 
+---
+
+## Parte 6 — testando os módulos novos (usuário + login + RBAC + configurações)
+
+Depois da Parte 5, com backend (`npm run start:dev`) e frontend (`npm run dev`) rodando, o React não mostra mais a página de exemplo do Vite — ele abre direto numa tela de devtools (login + 5 blocos de CRUD: usuários, papéis, permissões, papel×permissão, papéis-de-um-usuário, configurações). Essa tela é **só uma ferramenta interna** pra testar o backend, não a tela de admin de verdade (essa vem bem mais na frente).
+
+### Criar o primeiro usuário e logar
+
+1. Ainda não tem tela de cadastro na devtools — use o próprio bloco "Usuários" da tela: preencha nome/email/senha no formulário "Criar" e clique. Isso já chama `POST /usuario`, que já atribui o papel `usuario` sozinho (`atribuir_papel_padrao`).
+2. Saia e volte pra tela — ela vai pedir login. Entre com o e-mail/senha que você acabou de criar.
+3. Se aparecer erro de RLS tentando editar/criar configuração, é esperado: seu usuário novo só tem o papel `usuario`, sem `configuracao_gerenciar`. Pra testar como admin, dê o papel `admin` a ele direto no banco (SQL Editor, como `postgres`):
+   ```sql
+   INSERT INTO usuario_papel (id_usuario, id_papel)
+   VALUES (<id_usuario>, (SELECT id_papel FROM papel WHERE nome = 'admin'));
+   ```
+   Depois disso, é só deslogar e logar de novo na devtools (o token antigo não sabe do papel novo).
+
+### O teste que realmente prova que a Pendência 5 (SET LOCAL) está resolvida
+
+Não é só "ver o CRUD funcionando" — é provar que duas sessões, ao mesmo tempo, continuam isoladas uma da outra (ver "Probleminha-chan.md" e `PENDENCIAS e correcoes.md`, parte mais recente):
+
+1. Crie 2 usuários (ex.: um comum, um com papel `admin` pelo passo acima).
+2. Abra duas abas do navegador (uma pode ser anônima/privada, pra não compartilhar `localStorage`) e logue com um usuário em cada.
+3. Na aba do usuário comum, tente criar uma configuração global (marque a chave sem preencher nada especial — o service decide `id_usuario = NULL` só quando você mandar `global: true`; a tela de devtools atual sempre cria como pessoal, então pra este teste específico é mais fácil testar direto via `curl`/Postman com `"global": true` no corpo). Deve vir 403.
+4. Na aba do admin, a mesma operação deve funcionar.
+5. Alterne rápido entre as duas abas fazendo requisições intercaladas (listar, criar, editar) — é esse padrão de uso concorrente que expõe um bug de pool/SET LOCAL, se ele ainda existisse. Se as permissões continuarem certas mesmo intercalando (comum nunca consegue o que só admin pode, e vice-versa nunca é bloqueado por engano), a fundação está sólida.
+
+Isso não foi testado ao vivo por mim (Claude Code) nesta rodada — o ambiente onde rodei não tem Postgres nem Docker disponíveis, só o código. `npm run build`/`lint`/`test` passam limpos nos dois projetos, mas o comportamento em tempo de execução (bootstrap, login, RLS de verdade) precisa ser conferido aqui, localmente.
+
+---
+
 ## O que fica pendente pra depois (não esqueça)
 
 Isso aqui te deixa com o "hello world" rodando, mas os problemas que já te avisei antes continuam valendo conforme o projeto crescer:
 
-1. **Login/autenticação real** vai exigir que, a cada requisição de um usuário logado, o backend rode `SET LOCAL app.id_usuario_atual = '<id>'` dentro de uma transação antes de consultar tabelas protegidas por RLS (tudo que não seja tabela de leitura pública como `area_conhecimento`). Isso é código a mais que ainda não existe — quando for fazer login/cadastro, avise que a gente monta esse pedaço com calma.
-   - Detalhe técnico que vai importar nessa hora: isso **não** funciona com um `pool.query(...)` solto igual o `getAreas()` da Parte 4 — precisa ser um `Client` retirado do pool, dentro de uma transação, porque o `SET LOCAL` só vale pra transação que o define. O jeito certo é um interceptor/middleware global do NestJS que abre a transação, roda o `SET LOCAL` e só depois passa a query adiante — não algo repetido rota por rota (fácil de esquecer numa rota nova).
-2. Confirme sempre que o backend conecta como `app_nestjs`, nunca como `postgres` — senão a RLS é ignorada silenciosamente e parece que "está tudo funcionando" sem estar de verdade protegido.
-   - Vale um health-check simples na subida do NestJS (`SELECT current_user`) que impede a aplicação de subir se a conexão não for exatamente `app_nestjs` — evita descobrir isso tarde demais.
+1. ~~**Login/autenticação real** vai exigir...~~ **RESOLVIDO (01-08-2026, módulo `3-auth`):** existe `GlobalDbInterceptor` (`commons/database/`), registrado globalmente, que abre um `Client` dedicado por requisição (nunca `pool.query()` solto), roda `BEGIN`, seta `app.id_usuario_atual` via `set_config()` parametrizado e só então libera a query — commit/rollback automático no fim. `POST /auth/login` (email+senha) devolve um access token JWT (15min) + refresh token (30 dias, guardado em `sessao`); `POST /auth/refresh` renova os dois (rotação); `POST /auth/logout` revoga. Ver `PENDENCIAS e correcoes.md` pra prova mecânica completa desta rodada.
+2. ~~Confirme sempre que o backend conecta como `app_nestjs`...~~ **RESOLVIDO:** `DatabaseModule.onModuleInit()` roda `SELECT current_user` na subida e derruba a aplicação (erro alto, não silencioso) se a conexão não for exatamente `app_nestjs`.
 3. O modelo ainda tem algumas permissões seedadas que merecem revisão de clareza e uso no RBAC/RLS, principalmente: `perfil_pesquisador_visualizar_sensivel`, `sessao_revogar`, `recuperacao_senha_revogar` e `verificacao_email_reenviar`. Essas não são um bloqueio imediato para o tutorial, mas convém revisar antes de usar esse conjunto de permissões em fluxos mais complexos do admin.
 4. **`SELECT *` em `usuario` ou `perfil_pesquisador` vai dar erro de permissão.** O `GRANT` (`06_grants.sql`) libera só um conjunto específico de colunas nessas duas tabelas (proteção de dado sensível, ex.: `cpf_criptografado` fica de fora) — sempre liste as colunas explicitamente na query em vez de pedir todas.
 5. **Números (`DECIMAL`) chegam como texto no Node, não como number.** O driver `pg` devolve colunas tipo `meta_financeira`, `valor`, `taxa_plataforma` como string (ex.: `"50000.00"`) por padrão — somar sem converter primeiro vira concatenação de texto ou `NaN`. Configure o `types.setTypeParser` do `pg`, ou converta (`Number(...)`/`parseFloat(...)`) antes de fazer conta.

@@ -1,25 +1,26 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { Pool } from 'pg';
-import { PG_POOL } from '../../commons/database/database.constants';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { DatabaseService } from '../../commons/database/database.service';
 import { USUARIO_COLUNAS_SELECT } from '../constants/usuario.constants';
 import { UsuarioConverter } from '../dto/converter/usuario.converter';
 import { UsuarioResponseDto } from '../dto/response/usuario.response.dto';
-import { UsuarioEntity } from '../entity/usuario.entity';
 
 @Injectable()
 export class UsuarioServiceFindOne {
-  constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
+  constructor(private readonly database: DatabaseService) {}
 
   async executar(idUsuario: number): Promise<UsuarioResponseDto> {
-    const resultado = await this.pool.query<UsuarioEntity>(
-      `SELECT ${USUARIO_COLUNAS_SELECT} FROM usuario WHERE id_usuario = $1 AND deletado = FALSE`,
-      [idUsuario],
-    );
+    const usuario = await this.database
+      .getDb()
+      .selectFrom('usuario')
+      .select(USUARIO_COLUNAS_SELECT)
+      .where('id_usuario', '=', idUsuario)
+      .where('deletado', '=', false)
+      .executeTakeFirst();
 
-    if (resultado.rows.length === 0) {
+    if (!usuario) {
       throw new NotFoundException(`Usuário ${idUsuario} não encontrado`);
     }
 
-    return UsuarioConverter.paraResponseDto(resultado.rows[0]);
+    return UsuarioConverter.paraResponseDto(usuario);
   }
 }

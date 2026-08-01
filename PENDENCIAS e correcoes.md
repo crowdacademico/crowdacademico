@@ -158,29 +158,37 @@ O comentário do próprio seed (`07_seed_dados.sql`) dizia *"tipo_link ajustado 
 
 ### Só resolve em código Nest/React (ainda não existem)
 
-🔴 **5. Contexto de sessão por requisição**
+🟢 **5. Contexto de sessão por requisição — RESOLVIDO (01-08-2026)**
 
 `SET LOCAL app.id_usuario_atual` por requisição (dentro de uma transação, usando um `Client` específico da pool).
 
-> Sugestão do *** CLAUDE ***: implementar como um interceptor/middleware global do NestJS (não espalhado controller por controller) — assim fica impossível esquecer o `SET LOCAL` numa rota nova que alguém criar depois. Vale também um teste de integração simples que tenta acessar dado de outro usuário sem esse `SET LOCAL` e confirma que a RLS realmente bloqueia.
+> Sugestão do *** CLAUDE *** (aplicada): implementar como um interceptor/middleware global do NestJS (não espalhado controller por controller) — assim fica impossível esquecer o `SET LOCAL` numa rota nova que alguém criar depois.
 
-🔴 **6. Fluxo de autenticação completo**
+**Implementado exatamente como sugerido, com um refinamento do Claude Web** (ver "Probleminha-chan.md"): não usei `Scope.REQUEST` do Nest (propagaria escopo request-scoped pra toda a árvore de injeção que toca banco — 27 módulos futuros teriam que lembrar de marcar isso certo). Usei `nestjs-cls` (`AsyncLocalStorage`) — o contexto viaja "por fora", nenhum service precisa saber que existe. `GlobalDbInterceptor` (`nest/src/commons/database/global-db.interceptor.ts`) roda em toda requisição: abre um `Client` do pool, `BEGIN`, `SELECT set_config('app.id_usuario_atual', ...)` parametrizado (nunca string interpolada), cria um Kysely vinculado a ESSE client específico (`kysely-single-connection.dialect.ts` — um Driver/Dialect customizado, transação já gerenciada por fora, então `beginTransaction`/`commitTransaction` do Kysely são no-op de propósito) e guarda no CLS; COMMIT/ROLLBACK + `client.release()` sempre, nos dois casos. `DatabaseService.getDb()` é o único ponto que qualquer service usa. Teste de integração de verdade (rodar duas sessões concorrentes e provar isolamento) ainda **não foi feito** — ver Parte 6 de `tutorial-rodar-projeto.md`, escrita pra alguém rodar localmente (este ambiente não tem Postgres nem Docker disponível, só o código).
+
+🟡 **6. Fluxo de autenticação completo — PARCIALMENTE RESOLVIDO (01-08-2026)**
 
 Signup, login, verificação de e-mail, recuperação de senha, refresh token.
 
 > Sugestão do *** CLAUDE ***: os prazos que já estão documentados no `01` (token de recuperação de senha com expiração de 15-30 min, ver comentário da tabela) já batem com o padrão que plataformas como Catarse/Experiment usam pra esse tipo de fluxo — não mudaria nada aí. Um reforço que vale considerar: rate-limit de tentativa de login (mesmo simples, tipo "5 tentativas por IP a cada 15 min") é algo que sistemas de referência têm e que ainda não está no escopo — vale colocar na lista quando for implementar.
 
-🔴 **7. Guards/interceptors no NestJS**
+**O que ficou pronto:** signup (já existia, módulo `1-usuario`), login, refresh (com rotação — token antigo é revogado a cada renovação) e logout (módulo `3-auth`), usando as funções que já existiam em `03_funcoes_seguranca.sql` (`registrar_falha_login`, `registrar_login_sucesso`, `liberar_bloqueio_login` — nenhuma função nova precisou ser criada no banco pra isso). **O que continua faltando:** verificação de e-mail e recuperação de senha (dependem do módulo `4-mail`, ainda não construído) e o rate-limit de tentativa de login por IP (a trava por CONTA já existe via `registrar_falha_login`/`configuracoes.limite_tentativas_login`; por IP, não).
+
+🟡 **7. Guards/interceptors no NestJS — DECISÃO DIFERENTE DA SUGESTÃO ORIGINAL (01-08-2026)**
 
 Espelhando `tem_permissao()` do banco no lado da aplicação.
 
-> Sugestão do *** CLAUDE ***: pra não correr o risco de as duas camadas (banco e NestJS) divergirem com o tempo, eu geraria a lista de permissões que o guard do NestJS reconhece - a partir da própria tabela `permissao` - (uma consulta na subida da aplicação, ou um script que gera uma constante/enum automaticamente), em vez de digitar a lista de novo à mão no código do backend. Assim, toda permissão nova só precisa ser criada uma vez, no banco.
+> Sugestão do *** CLAUDE *** (não seguida à risca): pra não correr o risco de as duas camadas (banco e NestJS) divergirem com o tempo, eu geraria a lista de permissões que o guard do NestJS reconhece - a partir da própria tabela `permissao` - (uma consulta na subida da aplicação, ou um script que gera uma constante/enum automaticamente), em vez de digitar a lista de novo à mão no código do backend.
 
-🔴 **8. Conexão sempre como `app_nestjs`**
+**O que foi feito em vez disso:** nenhum guard do NestJS verifica permissão nenhuma por nome (nem hardcoded, nem gerada). `JwtAuthGuard` (global) só resolve QUEM está logado; `RequireAuthGuard` (por rota) só bloqueia anônimo. A autorização por permissão (`tem_permissao('configuracao_gerenciar')`, `'papel_atribuir'`, etc.) continua 100% do lado do Postgres via RLS — o service só traduz o erro que a RLS já devolve (`código 42501`/0 linhas afetadas) em `403 ForbiddenException`. Motivo da mudança: espelhar seria criar exatamente a segunda fonte de verdade que a sugestão original tentava evitar — mesmo gerando a lista automaticamente na subida, ainda existiriam DOIS pontos decidindo "pode ou não pode" (o guard E a policy), e o guard rodaria ANTES de saber se a condição extra da policy (dono, status da campanha, etc.) se aplica — a RLS quase nunca é só "tem a permissão X", quase sempre é "tem a permissão X OU é o dono OU outra condição de negócio". Deixar só o banco decidir era o único jeito de garantir que as duas camadas nunca divergem, ao custo de descobrir uma negação só na hora da query (mitigado pelo `RequireAuthGuard` pegando o caso mais comum — nem logado — antes disso).
+
+🟢 **8. Conexão sempre como `app_nestjs` — RESOLVIDO (01-08-2026)**
 
 Garantir que a conexão do backend use sempre `app_nestjs`, nunca superusuário (senão a RLS é ignorada silenciosamente).
 
-> Sugestão do *** CLAUDE ***: um health-check simples na subida do NestJS (`SELECT current_user`) que impede a aplicação de subir se a conexão não for exatamente `app_nestjs` — evita o erro silencioso de rodar com superusuário sem ninguém perceber, o que faria a RLS inteira parecer que "funciona" em teste mas não proteger nada de verdade.
+> Sugestão do *** CLAUDE *** (aplicada): um health-check simples na subida do NestJS (`SELECT current_user`) que impede a aplicação de subir se a conexão não for exatamente `app_nestjs` — evita o erro silencioso de rodar com superusuário sem ninguém perceber, o que faria a RLS inteira parecer que "funciona" em teste mas não proteger nada de verdade.
+
+**Implementado em `DatabaseModule.onModuleInit()`** (`nest/src/commons/database/database.module.ts`) — roda `SELECT current_user` na subida e lança erro (derruba a aplicação) se não for `app_nestjs`. Não testado ao vivo nesta rodada (sem Postgres disponível no ambiente onde rodei) — só compilado.
 
 🔴 **9. Validação de escrevibilidade financeira**
 
@@ -608,6 +616,38 @@ A versão da parte 14 (`fn_congela_marco_cronograma`, `05`, `[05-K-2]`) só chec
 *(Na mesma auditoria, o Claude Web conferiu — sem achar problema — que os 3 `.docx` de requisitos (Etapa 1/2/3) já batem com o código atual: RS-05 em PostgreSQL, RNF-015 e RF-024 sobre score automatizado presentes, RF-032 a RF-036 cobrindo orçamento/cronograma exatamente como implementado, e que "MySQL" não aparece mais em nenhum dos dois documentos de etapa anterior. Esse lado é trabalho do Lucas + Claude Web no `.docx` — não mexi nele.)*
 
 **Prova mecânica desta parte 15:** nenhuma tabela/constraint/policy/índice/permissão/config nova — só o corpo de uma função existente mudou (`fn_congela_marco_cronograma`), mais uma variável `DECLARE` nova (`v_status status_campanha`) dentro dela. Todos os totais continuam idênticos à parte 14: 41 tabelas, `PK_`=41/`FK_`=59/`UK_`=19/`CK_`=25, 113 policies, 44 índices, 31 permissões, 27 `configuracoes`, 50 funções e 55 triggers em `05`, 13 funções em `03`. Parênteses balanceados em `05` (saldo zero, conferido). Teste mental: campanha em `aguardando_aprovacao` com `data_inicio = NOW() - 1 segundo` → `INSERT` de 3 marcos passa normalmente; a mesma campanha, depois de aprovada (`status = 'ativo'`) e com `data_inicio` já no passado → `INSERT`/`UPDATE`/`DELETE` em `marco_cronograma` bloqueado, como sempre foi a intenção.
+
+### parte 16 — primeiros módulos de Nest de verdade: fundação SET LOCAL/Kysely + 3-auth + 2-papel-permissao + 11-configuracoes + devtools no React — **01-08-2026**
+
+*(Lucas pediu pro Claude Web opinar sobre a stack (Node/Nest/React/Postgres) — ele validou e destacou dois pontos técnicos ("Probleminha-chan.md"): como resolver SET LOCAL + pool de conexão (Pendência 5) sem `Scope.REQUEST`, e Kysely+kysely-codegen como ORM. Lucas pediu pra implementar os módulos que o próprio Claude Web recomendou como primeiro entregável: `1-usuario` (já existia), `3-auth`, `2-papel-permissao`, `11-configuracoes` — e uma tela mínima de devtools no React, só pra ver CRUD + RLS funcionando, sem construir o site ainda.)*
+
+🟢 **Fundação: `GlobalDbInterceptor` + Kysely — Pendência 5 e item 8 resolvidos**
+
+Ver detalhamento completo nos itens 5 e 8, mais acima nesta mesma seção. Resumo: `nest/src/commons/database/` ganhou `global-db.interceptor.ts` (interceptor global, `AsyncLocalStorage` via `nestjs-cls`, BEGIN/set_config/COMMIT-ROLLBACK por requisição), `kysely-single-connection.dialect.ts` (Driver/Dialect do Kysely vinculado ao client específico da requisição, transação gerenciada por fora), `database.service.ts` (`DatabaseService.getDb()`, único ponto de acesso ao banco pra qualquer service) e `db.types.ts` (tipos do Kysely escritos à mão pras 7 tabelas que os módulos abaixo tocam — **não gerados por `kysely-codegen`**: o ambiente onde rodei não tem Postgres nem Docker disponível, só o código; `npm run db:codegen` já está configurado em `package.json` pra gerar o resto quando alguém rodar isso com o banco de pé).
+
+🟢 **`1-usuario` — refatorado de `pg.Pool` cru pra Kysely via `DatabaseService`**
+
+As 5 services (create/findall/findone/update/remove) trocaram `pool.query()`/`pool.connect()` manual por `this.database.getDb()` — a transação por requisição já vem de graça do interceptor, então `usuario.service.create.ts` não precisa mais abrir `BEGIN`/`COMMIT` própria pra INSERT+`atribuir_papel_padrao()` (ganho direto da fundação acima). `usuario.controller.update.ts`/`.remove.ts` ganharam `@UseGuards(RequireAuthGuard)` — as duas tinham comentário "OBSERVAÇÃO: vai mudar assim que o módulo de auth existir", removido porque agora existe. **Corrigido durante a implementação:** `usuario.service.update.ts` e `configuracao.service.update.ts` (abaixo) faziam `.set({...campos condicionais...})` — se um PATCH chegasse sem nenhum campo preenchido, viraria `UPDATE ... SET WHERE ...` (SQL inválido). Adicionado guard explícito: corpo vazio → `400 BadRequestException`, nunca chega a montar a query.
+
+🟢 **`3-auth` — login, refresh (com rotação), logout**
+
+Não precisou de nenhuma função nova em `03_funcoes_seguranca.sql` — `registrar_falha_login`/`registrar_login_sucesso`/`liberar_bloqueio_login` já existiam prontas desde antes (SECURITY DEFINER, pré-autenticação) e só faltava o Nest chamar. Refresh token no formato `"<id_sessao>.<segredo>"` — `id_sessao` só acelera o lookup (PK), a validade de verdade é sempre `bcrypt.compare` do segredo contra `sessao.refresh_token_hash`; cada refresh REVOGA a sessão antiga e cria uma nova (rotação — token usado uma vez não serve de novo). `JwtAuthGuard` (global, via `APP_GUARD`) resolve `request.user` quando existe Bearer token válido, sem bloquear rota nenhuma sozinho — quem bloqueia é `RequireAuthGuard` (por rota) ou a RLS. Ver item 6 (auth) e item 7 (guards) mais acima nesta seção pro porquê de NÃO ter sido implementado um mirror de `tem_permissao()` no lado do Nest — decisão consciente, não esquecimento.
+
+🟢 **`2-papel-permissao` — descoberta importante: não é CRUD, é catálogo read-only + gestão de vínculo**
+
+Antes de escrever qualquer controller, conferi `06_grants.sql`: `papel`/`permissao`/`papel_permissao` **não têm nenhum GRANT de escrita** pro `app_nestjs` — só SELECT. Ou seja, criar/editar/excluir papel ou permissão pela API nunca foi uma opção real, é uma decisão de design já tomada (RBAC gerenciado direto no banco, evita escalar privilégio criando papel/permissão pela aplicação). O módulo virou: `GET /papel`, `GET /permissao`, `GET /papel-permissao` (só leitura, público) + `GET/POST/DELETE /usuario-papel` (atribuir/revogar papel de um usuário, gated por `'papel_atribuir'`/`'papel_gerenciar'` via RLS). Não segue o padrão de 5 operações do README à risca — documentado no topo do `papel-permissao.module.ts` o porquê.
+
+🟢 **`11-configuracoes` — CRUD completo**
+
+`GET` sem guard (RLS já filtra: global ou próprio); `POST`/`PATCH`/`DELETE` com `RequireAuthGuard`. `id_usuario` da linha **nunca vem do corpo da requisição** — o service decide `NULL` (global, exige `'configuracao_gerenciar'`) ou o próprio usuário logado, a partir de um flag `global: boolean` no DTO — aceitar um `id_usuario` direto do cliente teria permitido tentar criar "preferência pessoal" em nome de outro (a RLS bloquearia, mas nem deveria chegar nesse ponto).
+
+🟢 **React — tela única de devtools (`views/dev/`), sem router, substituindo a página de exemplo do Vite**
+
+Login (email/senha) + 5 blocos: usuários (CRUD completo), papéis/permissões/papel×permissão (só leitura), papéis-de-um-usuário (widget separado — atribuir/revogar), configurações (CRUD completo). Um único componente genérico (`components/devtools/generic-table.jsx`) configurado por colunas — cada módulo novo do Nest vira uma entrada nova aqui, não uma tela nova. `use-auth.js` guarda access token só em memória (nunca localStorage) e refresh token em localStorage, com renovação automática em qualquer 401. Pastas novas espelhando números que já existiam no Nest (`services/2-papel-permissao/`, `services/11-configuracoes/`), sem inventar número novo — mesma regra da reorganização anterior. Estilo mínimo de propósito (`devtools.css`) — não tentei imitar o Projeto de Interface real (Catarse/Experiment.com); o Lucas foi claro que isso é ferramenta descartável, não a tela de admin de verdade.
+
+**O que NÃO foi possível testar nesta rodada:** este ambiente (sandbox do Claude Code) não tem Postgres nem Docker disponível — só o código. `npm run build`/`npm run lint`/`npm run test` passam limpos nos dois projetos (nest/ e react/), mas o comportamento em tempo de execução (bootstrap real, login de verdade, e principalmente o teste de duas sessões concorrentes que prova RLS/SET LOCAL isolando direito) precisa ser conferido localmente — roteiro completo na Parte 6 nova de `tutorial-rodar-projeto.md`.
+
+**Prova mecânica desta parte 16:** nenhuma tabela/constraint/policy/config nova no banco (zero arquivo `.sql` tocado nesta rodada). Do lado do código: `nest/` ganhou 3 pacotes (`nestjs-cls`, `kysely`, `@nestjs/jwt`) + 1 devDependency (`kysely-codegen`); 4 módulos com código real agora (`1-usuario` refatorado, `3-auth`, `2-papel-permissao`, `11-configuracoes` novos) — os outros 23 continuam só `.gitkeep`. `react/` ganhou a primeira tela de verdade do projeto. `npm run build`, `npm run lint` (0 erros nos dois projetos) e `npm test` (nest, 1/1 suites) confirmados limpos nesta máquina. `dist/` do React gerado e apagado de novo depois do teste de build (não fica sujando o repo).
 
 
 ## 🗓️ 27-07-2026

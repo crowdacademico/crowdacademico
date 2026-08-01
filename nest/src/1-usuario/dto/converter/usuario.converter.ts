@@ -1,8 +1,23 @@
 import { UsuarioEntity } from '../../entity/usuario.entity';
 import { UsuarioResponseDto } from '../response/usuario.response.dto';
 
+// Pick, não UsuarioEntity inteiro: services nunca selecionam senha_hash (só
+// auth.service.login.ts faz isso, isolado, e nem passa por este converter),
+// então exigir a entity completa aqui quebraria a tipagem em toda query que
+// usa USUARIO_COLUNAS_SELECT. Isto aceita qualquer objeto que tenha PELO
+// MENOS estes 6 campos — a query pode devolver mais colunas, sem problema.
+type UsuarioParaConverter = Pick<
+  UsuarioEntity,
+  | 'id_usuario'
+  | 'nome'
+  | 'email'
+  | 'id_imagem_perfil'
+  | 'criado_em'
+  | 'email_verificado'
+>;
+
 export class UsuarioConverter {
-  static paraResponseDto(entity: UsuarioEntity): UsuarioResponseDto {
+  static paraResponseDto(entity: UsuarioParaConverter): UsuarioResponseDto {
     return {
       idUsuario: entity.id_usuario,
       nome: entity.nome,
