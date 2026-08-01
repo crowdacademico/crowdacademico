@@ -1,0 +1,126 @@
+/* ========= PAINEL ADMIN: MENU LATERAL FIXO + CONTEÚDO =========
+   Mesmo padrão do Projeto de Interface real (estilos.css: .admin-shell/
+   .admin-sidebar/.admin-content-area/.admin-sidebar-nav-item) — grid de 2
+   colunas, sidebar fixa (sticky) à esquerda, conteúdo rolável à direita.
+   Ver views/admin/admin-sidebar.jsx e views/admin/admin-dashboard.jsx. */
+
+.admin-pagina {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+  width: 100%;
+  flex-grow: 1;
+}
+
+.admin-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2rem;
+  width: 100%;
+  align-items: start;
+}
+
+.admin-sidebar {
+  background-color: var(--color-white);
+  border: 1px solid var(--color-slate-200);
+  border-radius: var(--radius-xl);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.admin-sidebar__titulo {
+  font-family: var(--font-sans);
+  font-weight: 900;
+  font-size: var(--font-size-sm);
+  color: var(--color-dark);
+}
+
+.admin-sidebar__subtitulo {
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-slate-400);
+}
+
+.admin-sidebar__separador {
+  border: none;
+  border-bottom: 1px solid var(--color-slate-200);
+  margin: 1rem 0;
+}
+
+.admin-sidebar__grupo-titulo {
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-slate-400);
+  margin: 0.5rem 0 0.5rem 0.5rem;
+}
+
+.admin-sidebar__item {
+  width: 100%;
+  text-align: left;
+  padding: 0.625rem 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  background: none;
+  color: var(--color-slate-600);
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  transition: var(--transition-normal);
+}
+
+.admin-sidebar__item:hover:not(.admin-sidebar__item--desabilitado) {
+  background-color: var(--color-slate-50);
+}
+
+.admin-sidebar__item--ativo {
+  background-color: rgba(15, 155, 88, 0.1);
+  color: var(--color-primary-dark);
+}
+
+.admin-sidebar__item--desabilitado {
+  background-color: var(--color-slate-100);
+  color: var(--color-slate-400);
+  border-color: var(--color-slate-200);
+  cursor: not-allowed;
+}
+
+.admin-content-area {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.admin-content-painel {
+  background-color: var(--color-white);
+  border: 1px solid var(--color-slate-200);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 2rem;
+}
+
+.admin-aviso {
+  margin-bottom: 1rem;
+  color: var(--color-slate-500);
+  font-size: var(--font-size-sm);
+}
+
+@media (min-width: 1024px) {
+  .admin-shell {
+    grid-template-columns: 260px minmax(0, 1fr);
+  }
+
+  .admin-sidebar {
+    position: sticky;
+    top: 5.5rem;
+    align-self: start;
+    max-height: calc(100vh - 6rem);
+    overflow-y: auto;
+  }
+}

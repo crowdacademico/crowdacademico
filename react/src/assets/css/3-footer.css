@@ -1,0 +1,57 @@
+/* ========= RODAPÉ =========
+   Versão simplificada do footer.html real — o original tem colunas de
+   links (Explore Projetos, Para Pesquisadores, Segurança/Pagamentos) que
+   apontam pra telas que ainda não existem neste React. Fica só marca +
+   crédito por enquanto; as colunas de link entram quando as telas delas
+   existirem de verdade — nada de link morto só pra "parecer completo". */
+
+.site-footer {
+  background-color: var(--color-dark);
+  color: var(--color-slate-400);
+  padding: 2rem 1.5rem;
+  margin-top: auto;
+  border-top: 1px solid var(--color-slate-800);
+}
+
+.site-footer__conteudo {
+  max-width: 1280px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.site-footer__marca {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.site-footer__logo {
+  width: 2rem;
+  height: 2rem;
+  background-color: var(--color-primary);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-white);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.site-footer__nome {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: var(--font-size-lg);
+  color: var(--color-white);
+}
+
+.site-footer__creditos {
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-slate-500);
+  border-top: 1px solid var(--color-slate-800);
+  padding-top: 1rem;
+}

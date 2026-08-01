@@ -26,8 +26,8 @@ export function LoginForm({ login }) {
   };
 
   return (
-    <form onSubmit={aoEnviar} className="devtools-login-inline">
-      {erro && <span className="devtools-erro">{erro}</span>}
+    <form onSubmit={aoEnviar} className="site-header__login">
+      {erro && <span className="site-header__login-erro">{erro}</span>}
       <input
         type="email"
         placeholder="email"

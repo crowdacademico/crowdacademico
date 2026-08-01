@@ -1,10 +1,11 @@
-import { DevDashboard } from './views/dev/dev-dashboard';
+import { AdminDashboard } from './views/admin/admin-dashboard';
 
-// Só a tela de devtools por enquanto, de propósito (pedido do Lucas): sem
-// router, sem site público ainda — "básico do básico" pra ver CRUD +
-// autenticação + RLS funcionando antes de qualquer tela de verdade.
+// Só o painel admin por enquanto, de propósito (pedido do Lucas): sem
+// router, sem site público ainda — este É o painel de admin de verdade
+// (não uma ferramenta descartável à parte), com header/footer fixos e
+// menu lateral, prontos pra crescer junto com o resto do site.
 function App() {
-  return <DevDashboard />;
+  return <AdminDashboard />;
 }
 
 export default App;
