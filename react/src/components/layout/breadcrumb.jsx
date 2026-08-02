@@ -1,25 +1,22 @@
 import { Link, useLocation } from 'react-router';
-import { ROTAS } from '../../services/router/rotas.constants';
+import { ROTAS, ROTAS_ADMIN } from '../../services/router/rotas.constants';
 
-// Rótulos vêm de services/router/rotas.constants.js — mesma fonte que
-// App.jsx usa pras rotas, nunca uma lista own separada (era assim antes;
-// duas listas cresciam juntas só se alguém lembrasse dos dois lugares).
-const ROTULOS_ROTA = Object.fromEntries(
-  ROTAS.filter((rota) => rota.rotuloBreadcrumb).map((rota) => [rota.caminho, rota.rotuloBreadcrumb]),
-);
+// Rótulos vêm de services/router/rotas.constants.js (ROTAS + ROTAS_ADMIN)
+// — mesma fonte que App.jsx usa pras rotas e admin-menu.constants.js usa
+// pro menu lateral, nunca uma lista própria separada.
+const TODAS_AS_ROTAS = [...ROTAS, ...ROTAS_ADMIN];
 
-// Aparece embaixo do cabeçalho em toda página que NÃO for a home (o
-// painel admin, temporariamente) — só um jeito rápido de voltar. Escondido
-// de propósito na home, senão ficaria um "Início" apontando pra própria
-// página que já está aberta.
+// Aparece embaixo do cabeçalho em toda página cujo rotuloBreadcrumb não
+// seja null — só um jeito rápido de voltar. A aba padrão do admin
+// (/admin/usuarios) tem rotuloBreadcrumb: null de propósito: mostrar
+// "Início > Usuários" ali seria redundante com o próprio link "Início".
 export function Breadcrumb() {
   const location = useLocation();
 
-  if (location.pathname === '/') {
+  const rota = TODAS_AS_ROTAS.find((r) => r.caminho === location.pathname);
+  if (!rota?.rotuloBreadcrumb) {
     return null;
   }
-
-  const rotulo = ROTULOS_ROTA[location.pathname] ?? location.pathname;
 
   return (
     <nav className="bg-slate-100 border-b border-slate-200">
@@ -28,7 +25,7 @@ export function Breadcrumb() {
           Início
         </Link>
         <i className="fa-solid fa-chevron-right text-slate-400 text-xs"></i>
-        <span className="text-slate-600 font-medium">{rotulo}</span>
+        <span className="text-slate-600 font-medium">{rota.rotuloBreadcrumb}</span>
       </div>
     </nav>
   );

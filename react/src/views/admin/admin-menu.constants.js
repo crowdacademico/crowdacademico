@@ -1,24 +1,27 @@
+import { ROTAS_ADMIN } from '../../services/router/rotas.constants';
+
 // Grupos do menu lateral — mesma ideia do Projeto de Interface real
 // (informacoes/Sem-Node-Projeto-de-Interface-CrowdAcademico/telas/admin/admin.data.js,
-// adminMenuGroups), só que com os módulos que JÁ existem no Nest ativos e
-// os que ainda não têm rota nenhuma marcados `desabilitado: true` — mostra
-// a forma do painel completo sem fingir que uma tela que não existe funciona.
+// adminMenuGroups). CADASTROS vem direto de ROTAS_ADMIN (rotas.constants.js)
+// — não é mais uma lista própria: antes existiam 2 listas (esta e ROTAS)
+// descrevendo as mesmas 3 abas, com risco de desalinhar. MODERAÇÃO continua
+// escrita à mão porque esses itens não têm rota nenhuma ainda — são só o
+// desenho do painel completo, sem fingir que uma tela que não existe funciona.
 export const GRUPOS_MENU_ADMIN = [
   {
     titulo: 'CADASTROS',
-    itens: [
-      { aba: 'usuarios', rotulo: 'Usuários' },
-      { aba: 'papeis', rotulo: 'Papéis & Permissões' },
-      { aba: 'configuracoes', rotulo: 'Configurações' },
-    ],
+    itens: ROTAS_ADMIN.map((rota) => ({
+      caminho: rota.caminho,
+      rotulo: rota.rotuloMenu,
+    })),
   },
   {
     titulo: 'MODERAÇÃO',
     itens: [
-      { aba: 'aprovar', rotulo: 'Aprovar Campanhas', desabilitado: true },
-      { aba: 'denuncias', rotulo: 'Denúncias', desabilitado: true },
-      { aba: 'solicitacoes', rotulo: 'Solicitações', desabilitado: true },
-      { aba: 'encerramentos', rotulo: 'Enc. Antecipados', desabilitado: true },
+      { rotulo: 'Aprovar Campanhas', desabilitado: true },
+      { rotulo: 'Denúncias', desabilitado: true },
+      { rotulo: 'Solicitações', desabilitado: true },
+      { rotulo: 'Enc. Antecipados', desabilitado: true },
     ],
   },
 ];

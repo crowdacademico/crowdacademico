@@ -5,7 +5,7 @@
    flutuando com margem, o menu é uma coluna quadrada que encosta no
    cabeçalho, na parede esquerda e no rodapé — grid de 2 colunas, sem
    sticky (rola junto com a página).
-   Ver views/admin/admin-sidebar.jsx e views/admin/admin-dashboard.jsx. */
+   Ver views/admin/admin-sidebar.jsx e views/admin/admin-layout.jsx. */
 
 /* O bug que a gente tinha: .admin-pagina levava max-width+margin:auto, o
    que centralizava o GRUPO INTEIRO (sidebar+conteúdo) como um bloco só —
@@ -74,6 +74,7 @@
 .admin-sidebar__item {
   width: 100%;
   text-align: left;
+  text-decoration: none;
   padding: 0.625rem 0.75rem;
   display: flex;
   align-items: center;

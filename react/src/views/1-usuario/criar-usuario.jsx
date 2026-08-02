@@ -7,9 +7,9 @@ import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 // (criar/alterar/consultar/excluir), não formulário embutido dentro da
 // listagem — mesmo padrão do modelo de referência (hotel: Criar.tsx/
 // Alterar.tsx/Consultar.tsx/Excluir.tsx, um arquivo por operação). Alterar/
-// consultar/excluir de usuário continuam por enquanto na tabela do painel
-// (views/admin/admin-dashboard.jsx) — só "criar" virou view própria nesta
-// rodada; o resto vem depois, seguindo o mesmo modelo.
+// consultar/excluir de usuário continuam por enquanto na tabela da listagem
+// (views/1-usuario/listar-usuarios.jsx) — só "criar" virou view própria
+// nesta rodada; o resto vem depois, seguindo o mesmo modelo.
 export function CriarUsuario({ auth }) {
   const navigate = useNavigate();
   const { mostrar } = useToast();

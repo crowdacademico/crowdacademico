@@ -1,22 +1,39 @@
-import { Route, Routes } from 'react-router';
+import { Navigate, Route, Routes } from 'react-router';
 import { Layout } from './components/layout/layout';
 import { useAuth } from './services/3-auth/hook/use-auth';
-import { ROTAS } from './services/router/rotas.constants';
+import { ROTAS, ROTAS_ADMIN } from './services/router/rotas.constants';
+import { AdminLayout } from './views/admin/admin-layout';
 
 // useAuth() chamado uma vez só, aqui em cima — Header (dentro de Layout) e
 // cada página recebem o mesmo `auth` por prop, nunca cada um com sua
-// própria sessão. As rotas em si vêm de services/router/rotas.constants.js
-// (fonte única, compartilhada com o breadcrumb) — adicionar uma página
-// nova é só acrescentar uma linha lá, não mexer aqui.
+// própria sessão. Rotas vêm de services/router/rotas.constants.js (fonte
+// única, compartilhada com o breadcrumb e o menu lateral) — adicionar uma
+// página nova é só acrescentar uma linha lá, não mexer aqui.
+//
+// "/" redireciona pra /admin/usuarios (a aba padrão) — antes era a própria
+// home; virou redirect porque as abas do painel agora são rotas de
+// verdade, não dava mais pra "/" ser as três ao mesmo tempo.
 function App() {
   const auth = useAuth();
 
   return (
     <Routes>
       <Route element={<Layout auth={auth} />}>
+        <Route path="/" element={<Navigate to="/admin/usuarios" replace />} />
+
         {ROTAS.map(({ caminho, elemento: Elemento }) => (
           <Route key={caminho} path={caminho} element={<Elemento auth={auth} />} />
         ))}
+
+        <Route path="/admin" element={<AdminLayout />}>
+          {ROTAS_ADMIN.map(({ caminhoRelativo, elemento: Elemento }) => (
+            <Route
+              key={caminhoRelativo}
+              path={caminhoRelativo}
+              element={<Elemento auth={auth} />}
+            />
+          ))}
+        </Route>
       </Route>
     </Routes>
   );

@@ -619,40 +619,6 @@ A versão da parte 14 (`fn_congela_marco_cronograma`, `05`, `[05-K-2]`) só chec
 
 **Prova mecânica desta parte 15:** nenhuma tabela/constraint/policy/índice/permissão/config nova — só o corpo de uma função existente mudou (`fn_congela_marco_cronograma`), mais uma variável `DECLARE` nova (`v_status status_campanha`) dentro dela. Todos os totais continuam idênticos à parte 14: 41 tabelas, `PK_`=41/`FK_`=59/`UK_`=19/`CK_`=25, 113 policies, 44 índices, 31 permissões, 27 `configuracoes`, 50 funções e 55 triggers em `05`, 13 funções em `03`. Parênteses balanceados em `05` (saldo zero, conferido). Teste mental: campanha em `aguardando_aprovacao` com `data_inicio = NOW() - 1 segundo` → `INSERT` de 3 marcos passa normalmente; a mesma campanha, depois de aprovada (`status = 'ativo'`) e com `data_inicio` já no passado → `INSERT`/`UPDATE`/`DELETE` em `marco_cronograma` bloqueado, como sempre foi a intenção.
 
-### parte 16 — primeiros módulos de Nest de verdade: fundação SET LOCAL/Kysely + 3-auth + 2-papel-permissao + 11-configuracoes + devtools no React — **01-08-2026**
-
-*(Lucas pediu pro Claude Web opinar sobre a stack (Node/Nest/React/Postgres) — ele validou e destacou dois pontos técnicos ("Probleminha-chan.md"): como resolver SET LOCAL + pool de conexão (Pendência 5) sem `Scope.REQUEST`, e Kysely+kysely-codegen como ORM. Lucas pediu pra implementar os módulos que o próprio Claude Web recomendou como primeiro entregável: `1-usuario` (já existia), `3-auth`, `2-papel-permissao`, `11-configuracoes` — e uma tela mínima de devtools no React, só pra ver CRUD + RLS funcionando, sem construir o site ainda.)*
-
-🟢 **Fundação: `GlobalDbInterceptor` + Kysely — Pendência 5 e item 8 resolvidos**
-
-Ver detalhamento completo nos itens 5 e 8, mais acima nesta mesma seção. Resumo: `nest/src/commons/database/` ganhou `global-db.interceptor.ts` (interceptor global, `AsyncLocalStorage` via `nestjs-cls`, BEGIN/set_config/COMMIT-ROLLBACK por requisição), `kysely-single-connection.dialect.ts` (Driver/Dialect do Kysely vinculado ao client específico da requisição, transação gerenciada por fora), `database.service.ts` (`DatabaseService.getDb()`, único ponto de acesso ao banco pra qualquer service) e `db.types.ts` (tipos do Kysely escritos à mão pras 7 tabelas que os módulos abaixo tocam — **não gerados por `kysely-codegen`**: o ambiente onde rodei não tem Postgres nem Docker disponível, só o código; `npm run db:codegen` já está configurado em `package.json` pra gerar o resto quando alguém rodar isso com o banco de pé).
-
-🟢 **`1-usuario` — refatorado de `pg.Pool` cru pra Kysely via `DatabaseService`**
-
-As 5 services (create/findall/findone/update/remove) trocaram `pool.query()`/`pool.connect()` manual por `this.database.getDb()` — a transação por requisição já vem de graça do interceptor, então `usuario.service.create.ts` não precisa mais abrir `BEGIN`/`COMMIT` própria pra INSERT+`atribuir_papel_padrao()` (ganho direto da fundação acima). `usuario.controller.update.ts`/`.remove.ts` ganharam `@UseGuards(RequireAuthGuard)` — as duas tinham comentário "OBSERVAÇÃO: vai mudar assim que o módulo de auth existir", removido porque agora existe. **Corrigido durante a implementação:** `usuario.service.update.ts` e `configuracao.service.update.ts` (abaixo) faziam `.set({...campos condicionais...})` — se um PATCH chegasse sem nenhum campo preenchido, viraria `UPDATE ... SET WHERE ...` (SQL inválido). Adicionado guard explícito: corpo vazio → `400 BadRequestException`, nunca chega a montar a query.
-
-🟢 **`3-auth` — login, refresh (com rotação), logout**
-
-Não precisou de nenhuma função nova em `03_funcoes_seguranca.sql` — `registrar_falha_login`/`registrar_login_sucesso`/`liberar_bloqueio_login` já existiam prontas desde antes (SECURITY DEFINER, pré-autenticação) e só faltava o Nest chamar. Refresh token no formato `"<id_sessao>.<segredo>"` — `id_sessao` só acelera o lookup (PK), a validade de verdade é sempre `bcrypt.compare` do segredo contra `sessao.refresh_token_hash`; cada refresh REVOGA a sessão antiga e cria uma nova (rotação — token usado uma vez não serve de novo). `JwtAuthGuard` (global, via `APP_GUARD`) resolve `request.user` quando existe Bearer token válido, sem bloquear rota nenhuma sozinho — quem bloqueia é `RequireAuthGuard` (por rota) ou a RLS. Ver item 6 (auth) e item 7 (guards) mais acima nesta seção pro porquê de NÃO ter sido implementado um mirror de `tem_permissao()` no lado do Nest — decisão consciente, não esquecimento.
-
-🟢 **`2-papel-permissao` — descoberta importante: não é CRUD, é catálogo read-only + gestão de vínculo**
-
-Antes de escrever qualquer controller, conferi `06_grants.sql`: `papel`/`permissao`/`papel_permissao` **não têm nenhum GRANT de escrita** pro `app_nestjs` — só SELECT. Ou seja, criar/editar/excluir papel ou permissão pela API nunca foi uma opção real, é uma decisão de design já tomada (RBAC gerenciado direto no banco, evita escalar privilégio criando papel/permissão pela aplicação). O módulo virou: `GET /papel`, `GET /permissao`, `GET /papel-permissao` (só leitura, público) + `GET/POST/DELETE /usuario-papel` (atribuir/revogar papel de um usuário, gated por `'papel_atribuir'`/`'papel_gerenciar'` via RLS). Não segue o padrão de 5 operações do README à risca — documentado no topo do `papel-permissao.module.ts` o porquê.
-
-🟢 **`11-configuracoes` — CRUD completo**
-
-`GET` sem guard (RLS já filtra: global ou próprio); `POST`/`PATCH`/`DELETE` com `RequireAuthGuard`. `id_usuario` da linha **nunca vem do corpo da requisição** — o service decide `NULL` (global, exige `'configuracao_gerenciar'`) ou o próprio usuário logado, a partir de um flag `global: boolean` no DTO — aceitar um `id_usuario` direto do cliente teria permitido tentar criar "preferência pessoal" em nome de outro (a RLS bloquearia, mas nem deveria chegar nesse ponto).
-
-🟢 **React — tela única de devtools (`views/dev/`), sem router, substituindo a página de exemplo do Vite**
-
-Login (email/senha) + 5 blocos: usuários (CRUD completo), papéis/permissões/papel×permissão (só leitura), papéis-de-um-usuário (widget separado — atribuir/revogar), configurações (CRUD completo). Um único componente genérico (`components/devtools/generic-table.jsx`) configurado por colunas — cada módulo novo do Nest vira uma entrada nova aqui, não uma tela nova. `use-auth.js` guarda access token só em memória (nunca localStorage) e refresh token em localStorage, com renovação automática em qualquer 401. Pastas novas espelhando números que já existiam no Nest (`services/2-papel-permissao/`, `services/11-configuracoes/`), sem inventar número novo — mesma regra da reorganização anterior. Estilo mínimo de propósito (`devtools.css`) — não tentei imitar o Projeto de Interface real (Catarse/Experiment.com); o Lucas foi claro que isso é ferramenta descartável, não a tela de admin de verdade.
-
-**O que não foi possível testar nesta rodada (pelo Claude Code):** este ambiente (sandbox do Claude Code) não tem Postgres nem Docker disponível — só o código. `npm run build`/`npm run lint`/`npm run test` passam limpos nos dois projetos (nest/ e react/), mas o comportamento em tempo de execução ficou pendente.
-
-**Atualização no mesmo dia — o Claude Web tinha Postgres disponível e rodou o teste real:** backend subiu de primeira contra o Postgres de verdade, health-check (`app_nestjs`) passou, login funcionou com 2 usuários reais, e o teste de concorrência (15 requisições simultâneas de cada usuário contra a mesma rota protegida) confirmou isolamento perfeito — ver item 5 mais acima nesta mesma seção pro detalhe completo. Único imprevisto: um erro do próprio Claude Web tentando trocar senha via `psql -c` com hash bcrypt interpolado direto no shell (o `$` do hash foi engolido como variável de posição) — não é bug do projeto, só ruído de shell, resolvido escrevendo o `UPDATE` num `.sql` em vez de interpolar na linha de comando.
-
-**Prova mecânica desta parte 16:** nenhuma tabela/constraint/policy/config nova no banco (zero arquivo `.sql` tocado nesta rodada). Do lado do código: `nest/` ganhou 3 pacotes (`nestjs-cls`, `kysely`, `@nestjs/jwt`) + 1 devDependency (`kysely-codegen`); 4 módulos com código real agora (`1-usuario` refatorado, `3-auth`, `2-papel-permissao`, `11-configuracoes` novos) — os outros 23 continuam só `.gitkeep`. `react/` ganhou a primeira tela de verdade do projeto. `npm run build`, `npm run lint` (0 erros nos dois projetos) e `npm test` (nest, 1/1 suites) confirmados limpos nesta máquina. `dist/` do React gerado e apagado de novo depois do teste de build (não fica sujando o repo).
-
 
 ## 🗓️ 27-07-2026
 
@@ -993,3 +959,90 @@ O que eu realmente cortaria, se pudesse: nada do que já existe é lixo ou redun
 > sugestão do CLAUDE : Sobre o Playwright: ele testa o que aparece na tela (clica em botão, preenche formulário, confere texto) — ele nunca fala com o Postgres diretamente. Ele é perfeito pra testar o React+NestJS depois que existirem, mas não cobre nada do .sql (RLS, triggers, constraints). Pra isso, o equivalente seria *** pgTAP *** (framework de teste que roda dentro do próprio Postgres) ou testes de integração no NestJS que sobem um banco de teste real e conferem se a RLS bloqueia o que deveria. São duas camadas de teste diferentes — vocês vão precisar das duas eventualmente, mas por enquanto nenhuma existe.
 
 > Segunda opinião (27-07-2026) sobre a frase "nada do que já existe é lixo ou redundante hoje": não concordo mais, e a lista é concreta — `link_atualizacao`/`link_recompensa` inalcançáveis, a coluna `suspenso` que ninguém lia, os 21 `GRANT DELETE` que nunca funcionavam, os pesos `volume_denuncias`/`gravidade_denuncias` que nenhuma função consultava, e as permissões órfãs. A maior parte disso já foi corrigida (ver Lista A, mais acima) — mas a frase original estava errada quando foi escrita, não é crítica ao trabalho em si, é sobre o método: ler arquivo por arquivo com cuidado não é a mesma coisa que executar. E a sugestão de pgTAP acabou de se provar sozinha: os 3 erros de execução do item 21 (mais acima) estavam esperando o tempo todo — um teste que só rodasse os 8 arquivos numa base limpa e checasse o código de saída já teria pego os três, sem precisar de nenhuma revisão manual.
+
+
+
+
+---
+---
+
+
+
+# PENDÊNCIAS E CORREÇÕES DO NEST E DO REACT
+
+Tudo acima desta linha é sobre o banco (`arquivos_banco_dados/*.sql`) — separado de propósito, a pedido do Lucas (01-08-2026), pra não misturar assunto de banco com assunto de Nest/React no mesmo bloco. Pendências e correções de código (backend NestJS, frontend React) entram aqui embaixo, daqui pra frente.
+
+*(A "parte 16" e a "parte 17" — implementação dos módulos `1-usuario`/`3-auth`/`2-papel-permissao`/`11-configuracoes` no Nest e do painel admin no React — foram realocadas pra cá (01-08-2026), de onde estavam misturadas na numeração de partes do banco. A numeração delas (16, 17) é a mesma de antes, só a posição física mudou — mantém a referência cruzada de quem já leu/linkou pra elas.)*
+
+### parte 16 — primeiros módulos de Nest de verdade: fundação SET LOCAL/Kysely + 3-auth + 2-papel-permissao + 11-configuracoes + devtools no React — **01-08-2026**
+
+*(Lucas pediu pro Claude Web opinar sobre a stack (Node/Nest/React/Postgres) — ele validou e destacou dois pontos técnicos ("Probleminha-chan.md"): como resolver SET LOCAL + pool de conexão (Pendência 5) sem `Scope.REQUEST`, e Kysely+kysely-codegen como ORM. Lucas pediu pra implementar os módulos que o próprio Claude Web recomendou como primeiro entregável: `1-usuario` (já existia), `3-auth`, `2-papel-permissao`, `11-configuracoes` — e uma tela mínima de devtools no React, só pra ver CRUD + RLS funcionando, sem construir o site ainda.)*
+
+🟢 **Fundação: `GlobalDbInterceptor` + Kysely — Pendência 5 e item 8 resolvidos**
+
+Ver detalhamento completo nos itens 5 e 8, na seção do banco (acima da linha de separação Nest/React). Resumo: `nest/src/commons/database/` ganhou `global-db.interceptor.ts` (interceptor global, `AsyncLocalStorage` via `nestjs-cls`, BEGIN/set_config/COMMIT-ROLLBACK por requisição), `kysely-single-connection.dialect.ts` (Driver/Dialect do Kysely vinculado ao client específico da requisição, transação gerenciada por fora), `database.service.ts` (`DatabaseService.getDb()`, único ponto de acesso ao banco pra qualquer service) e `db.types.ts` (tipos do Kysely escritos à mão pras 7 tabelas que os módulos abaixo tocam — **não gerados por `kysely-codegen`**: o ambiente onde rodei não tem Postgres nem Docker disponível, só o código; `npm run db:codegen` já está configurado em `package.json` pra gerar o resto quando alguém rodar isso com o banco de pé).
+
+🟢 **`1-usuario` — refatorado de `pg.Pool` cru pra Kysely via `DatabaseService`**
+
+As 5 services (create/findall/findone/update/remove) trocaram `pool.query()`/`pool.connect()` manual por `this.database.getDb()` — a transação por requisição já vem de graça do interceptor, então `usuario.service.create.ts` não precisa mais abrir `BEGIN`/`COMMIT` própria pra INSERT+`atribuir_papel_padrao()` (ganho direto da fundação acima). `usuario.controller.update.ts`/`.remove.ts` ganharam `@UseGuards(RequireAuthGuard)` — as duas tinham comentário "OBSERVAÇÃO: vai mudar assim que o módulo de auth existir", removido porque agora existe. **Corrigido durante a implementação:** `usuario.service.update.ts` e `configuracao.service.update.ts` (abaixo) faziam `.set({...campos condicionais...})` — se um PATCH chegasse sem nenhum campo preenchido, viraria `UPDATE ... SET WHERE ...` (SQL inválido). Adicionado guard explícito: corpo vazio → `400 BadRequestException`, nunca chega a montar a query.
+
+🟢 **`3-auth` — login, refresh (com rotação), logout**
+
+Não precisou de nenhuma função nova em `03_funcoes_seguranca.sql` — `registrar_falha_login`/`registrar_login_sucesso`/`liberar_bloqueio_login` já existiam prontas desde antes (SECURITY DEFINER, pré-autenticação) e só faltava o Nest chamar. Refresh token no formato `"<id_sessao>.<segredo>"` — `id_sessao` só acelera o lookup (PK), a validade de verdade é sempre `bcrypt.compare` do segredo contra `sessao.refresh_token_hash`; cada refresh REVOGA a sessão antiga e cria uma nova (rotação — token usado uma vez não serve de novo). `JwtAuthGuard` (global, via `APP_GUARD`) resolve `request.user` quando existe Bearer token válido, sem bloquear rota nenhuma sozinho — quem bloqueia é `RequireAuthGuard` (por rota) ou a RLS. Ver item 6 (auth) e item 7 (guards) na seção do banco (acima da linha de separação Nest/React) pro porquê de NÃO ter sido implementado um mirror de `tem_permissao()` no lado do Nest — decisão consciente, não esquecimento.
+
+🟢 **`2-papel-permissao` — descoberta importante: não é CRUD, é catálogo read-only + gestão de vínculo**
+
+Antes de escrever qualquer controller, conferi `06_grants.sql`: `papel`/`permissao`/`papel_permissao` **não têm nenhum GRANT de escrita** pro `app_nestjs` — só SELECT. Ou seja, criar/editar/excluir papel ou permissão pela API nunca foi uma opção real, é uma decisão de design já tomada (RBAC gerenciado direto no banco, evita escalar privilégio criando papel/permissão pela aplicação). O módulo virou: `GET /papel`, `GET /permissao`, `GET /papel-permissao` (só leitura, público) + `GET/POST/DELETE /usuario-papel` (atribuir/revogar papel de um usuário, gated por `'papel_atribuir'`/`'papel_gerenciar'` via RLS). Não segue o padrão de 5 operações do README à risca — documentado no topo do `papel-permissao.module.ts` o porquê.
+
+🟢 **`11-configuracoes` — CRUD completo**
+
+`GET` sem guard (RLS já filtra: global ou próprio); `POST`/`PATCH`/`DELETE` com `RequireAuthGuard`. `id_usuario` da linha **nunca vem do corpo da requisição** — o service decide `NULL` (global, exige `'configuracao_gerenciar'`) ou o próprio usuário logado, a partir de um flag `global: boolean` no DTO — aceitar um `id_usuario` direto do cliente teria permitido tentar criar "preferência pessoal" em nome de outro (a RLS bloquearia, mas nem deveria chegar nesse ponto).
+
+🟢 **React — tela única de devtools (`views/dev/`), sem router, substituindo a página de exemplo do Vite**
+
+Login (email/senha) + 5 blocos: usuários (CRUD completo), papéis/permissões/papel×permissão (só leitura), papéis-de-um-usuário (widget separado — atribuir/revogar), configurações (CRUD completo). Um único componente genérico (`components/devtools/generic-table.jsx`) configurado por colunas — cada módulo novo do Nest vira uma entrada nova aqui, não uma tela nova. `use-auth.js` guarda access token só em memória (nunca localStorage) e refresh token em localStorage, com renovação automática em qualquer 401. Pastas novas espelhando números que já existiam no Nest (`services/2-papel-permissao/`, `services/11-configuracoes/`), sem inventar número novo — mesma regra da reorganização anterior. Estilo mínimo de propósito (`devtools.css`) — não tentei imitar o Projeto de Interface real (Catarse/Experiment.com); o Lucas foi claro que isso é ferramenta descartável, não a tela de admin de verdade.
+
+> 🗑️➡️✅ **Superado (01-08-2026, parte 17):** o Lucas decidiu, logo depois, que este painel NÃO é descartável — vira o admin de verdade. "Devtools" virou "crud" em tudo (pasta, CSS, nomes), e a tela ganhou Tailwind, header/footer reais, roteamento e menu lateral de verdade. Ver parte 17.
+
+**O que não foi possível testar nesta rodada (pelo Claude Code):** este ambiente (sandbox do Claude Code) não tem Postgres nem Docker disponível — só o código. `npm run build`/`npm run lint`/`npm run test` passam limpos nos dois projetos (nest/ e react/), mas o comportamento em tempo de execução ficou pendente.
+
+**Atualização no mesmo dia — o Claude Web tinha Postgres disponível e rodou o teste real:** backend subiu de primeira contra o Postgres de verdade, health-check (`app_nestjs`) passou, login funcionou com 2 usuários reais, e o teste de concorrência (15 requisições simultâneas de cada usuário contra a mesma rota protegida) confirmou isolamento perfeito — ver item 5 na seção do banco (acima da linha de separação Nest/React) pro detalhe completo. Único imprevisto: um erro do próprio Claude Web tentando trocar senha via `psql -c` com hash bcrypt interpolado direto no shell (o `$` do hash foi engolido como variável de posição) — não é bug do projeto, só ruído de shell, resolvido escrevendo o `UPDATE` num `.sql` em vez de interpolar na linha de comando.
+
+**Prova mecânica desta parte 16:** nenhuma tabela/constraint/policy/config nova no banco (zero arquivo `.sql` tocado nesta rodada). Do lado do código: `nest/` ganhou 3 pacotes (`nestjs-cls`, `kysely`, `@nestjs/jwt`) + 1 devDependency (`kysely-codegen`); 4 módulos com código real agora (`1-usuario` refatorado, `3-auth`, `2-papel-permissao`, `11-configuracoes` novos) — os outros 23 continuam só `.gitkeep`. `react/` ganhou a primeira tela de verdade do projeto. `npm run build`, `npm run lint` (0 erros nos dois projetos) e `npm test` (nest, 1/1 suites) confirmados limpos nesta máquina. `dist/` do React gerado e apagado de novo depois do teste de build (não fica sujando o repo).
+
+### parte 17 — o painel "devtools" virou o admin de verdade: Tailwind, header/footer reais, menu lateral, roteamento — **01-08-2026**
+
+*(Sequência de pedidos do Lucas, todos no mesmo dia, cada um construindo em cima do anterior: painel sem portão de login → identidade visual do Projeto de Interface real → menu lateral colado nas bordas → tela de criar usuário com toast → o Claude Web revisou tudo e achou uma pergunta de arquitetura real, que o Lucas decidiu resolver na hora.)*
+
+🟢 **Login deixou de bloquear a tela inteira**
+
+Primeira versão exigia login antes de mostrar qualquer coisa — problema do ovo-e-a-galinha (criar o 1º usuário não exige login, mas a tela inteira ficava atrás do portão). Corrigido: painel sempre visível, login vira um widget compacto no cabeçalho.
+
+🟢 **Identidade visual real, com Tailwind CDN (decisão consciente, não gambiarra)**
+
+Header/Footer viraram cópia fiel de `componentes/header.html`/`footer.html` do Projeto de Interface real (mesmo Tailwind CDN + config de cores do `index.html` de lá: `primary #0F9B58`, `dark #0F172A`, fontes Inter/DM Serif Display). Decisão perguntada explicitamente ao Lucas antes de aplicar (Tailwind vs. traduzir tudo à mão pro CSS numerado) — escolheu Tailwind, porque toda tela futura portada do Projeto de Interface vira cópia de classe, não recriação manual com risco de divergir do original. CSS numerado próprio (`assets/css/0-style.css` em diante) continua existindo só pro que não vem do Projeto de Interface (menu lateral, tabelas de CRUD).
+
+🟢 **Menu lateral: bug de centralização + forma "coluna quadrada"**
+
+Achado real, não só estético: `.admin-pagina` tinha `max-width+margin:auto`, centralizando o GRUPO INTEIRO (menu+conteúdo) em vez de só o conteúdo — o menu nunca encostava na borda real da tela. Corrigido (grid full-width, só o conteúdo centraliza dentro do espaço que sobra). Depois, a pedido do Lucas, o menu virou uma coluna quadrada (sem `border-radius`, sem `box-shadow`, sem sticky) esticada do cabeçalho até o rodapé.
+
+🟢 **Botão "Criar" e mensagem de erro reposicionados 2 vezes até acertar**
+
+Lucas corrigiu minha posição 2 vezes até o layout final: título sozinho → botão "Criar" numa linha própria (nem colado no título, nem acima de tudo) → tabela → mensagem de erro (movida de cima pra baixo — "se não tem dado, a mensagem faz mais sentido perto de onde o vazio apareceria").
+
+🟢 **Primeira view própria de operação: `/usuarios/criar`, com toast reaproveitável**
+
+Criado `ToastProvider`/`useToast()` (Context) — pensado pra alterar/consultar/excluir (que ainda não existem) reaproveitarem, não recriarem um sistema de toast cada um. `views/1-usuario/criar-usuario.jsx` é a primeira de um padrão que vai se repetir por módulo (ver hotel: `Criar.tsx`/`Alterar.tsx`/`Consultar.tsx`/`Excluir.tsx`).
+
+🟢 **Auditoria do Claude Web + pergunta de arquitetura: abas viravam URL ou ficavam como estado?**
+
+Pedi pro Claude Web revisar a rodada de CSS/UX (skeleton de carregamento, "Nenhum registro" vs. erro, drawer mobile, rename devtools→crud, build/lint) — confirmou as 5 alegações rodando o código, não só lendo. Achado dele: eu tinha dito "uma lista só, App.jsx e breadcrumb.jsx leem dela" mas **não** incluí `admin-menu.constants.js` nessa unificação — o menu lateral (Usuários/Papéis/Configurações) continuava sendo abas via `useState`, sem URL própria. Consequência real: sem link direto pra uma aba, botão Voltar não navegava entre abas, F5 sempre voltava pra "Usuários". Com mais 24 módulos por vir, o Claude Web perguntou se isso devia virar rota de verdade agora ou ficar como estava. **Perguntei ao Lucas — decidiu unificar agora.**
+
+Implementado: cada aba virou rota de verdade (`/admin/usuarios`, `/admin/papeis`, `/admin/configuracoes`), `/` redireciona pra `/admin/usuarios`. `services/router/rotas.constants.js` ganhou `ROTAS_ADMIN` — a MESMA lista que `App.jsx` usa pras rotas, `breadcrumb.jsx` usa pro rótulo, e `admin-menu.constants.js` usa pro menu lateral (3 lugares lendo 1 lista, não 3 listas separadas). Sidebar trocou de `onClick`+`useState` pra `NavLink` de verdade (item ativo decidido pela própria URL). Conteúdo de cada aba virou view própria, movida pra pasta do módulo correspondente: `views/1-usuario/listar-usuarios.jsx`, `views/2-papel-permissao/listar-papeis.jsx` (+ `usuario-papel-widget.jsx`, também movido), `views/11-configuracoes/listar-configuracoes.jsx` — `views/admin/` ficou só com a casca (`admin-layout.jsx`, `admin-sidebar.jsx`, `admin-menu.constants.js`), sem conteúdo de módulo nenhum.
+
+🟢 **De quebra: 3 melhorias que o Claude Code pesquisou e o Lucas aprovou implementar**
+
+Pedido explícito do Lucas: "revise o que fizemos, depois pesquise como melhorar um painel admin". Pesquisa (web) confirmou: sidebar 240-280px (a nossa já tinha 260px, ok), esqueleto de carregamento em vez de texto (padrão Linear/Stripe/Vercel), e sidebar devia virar gaveta abaixo de ~768-1024px em vez de empilhar acima do conteúdo. Implementado: (1) skeleton com `animate-pulse` do Tailwind no lugar de "Carregando...", (2) `<GenericTable>` não mostra mais "Nenhum registro." junto com uma mensagem de erro ativa, (3) menu vira gaveta com botão de hambúrguer abaixo de 1024px (overlay escuro, fecha ao clicar fora ou ao navegar). Rename `devtools`→`crud` (pasta, CSS, classes, chave do `localStorage`) também entrou nessa limpeza.
+
+**Prova mecânica desta parte 17:** nenhuma mudança no banco (zero `.sql` tocado). `react/` ganhou `react-router` (não `react-router-dom` — está travada numa versão 7.x com vulnerabilidade alta conhecida (RSC Mode CSRF Bypass); fomos direto pro pacote `react-router` v8.3.0, que já inclui os bindings de DOM e está fora do intervalo vulnerável — `npm audit` limpo). `npm run build`/`npm run lint` confirmados limpos a cada etapa (unificação de rotas, drawer mobile, skeleton, rename, e de novo depois da conversão abas→rotas). Nenhum teste automatizado no React ainda (só `nest/` tem `npm test`) — verificação é só build+lint, comportamento real (drawer abrindo/fechando, navegação entre abas) não foi visto rodando num navegador de verdade nesta rodada.
+
