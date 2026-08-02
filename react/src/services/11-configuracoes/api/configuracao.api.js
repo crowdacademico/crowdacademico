@@ -9,6 +9,7 @@ export const configuracaoApi = {
   // (campanha, home), que roda fora de <ConfiguracoesProvider> autenticado.
   buscarPublicas: () =>
     fetch(`${API_BASE_URL}/configuracoes`).then(tratarResposta),
+  buscar: (authFetch, id) => authFetch(`/configuracoes/${id}`).then(tratarResposta),
   criar: (authFetch, dados) =>
     authFetch('/configuracoes', {
       method: 'POST',

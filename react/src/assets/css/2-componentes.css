@@ -100,4 +100,52 @@
     background-color: var(--color-slate-100);
     color: var(--color-slate-500);
   }
+
+  /* Tooltip (components/layout/tooltip.jsx) — ícone "ⓘ" que revela uma
+     explicação curta ao passar o mouse ou focar via teclado. CSS puro
+     (:hover/:focus), sem JS controlando abrir/fechar. */
+  .tooltip {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 0.35rem;
+    color: var(--color-slate-400);
+    cursor: help;
+  }
+
+  .tooltip:hover,
+  .tooltip:focus {
+    color: var(--color-primary);
+    outline: none;
+  }
+
+  .tooltip__texto {
+    position: absolute;
+    bottom: 135%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--color-dark);
+    color: var(--color-white);
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-xs);
+    font-weight: 500;
+    line-height: 1.4;
+    text-align: left;
+    width: max-content;
+    max-width: 16rem;
+    box-shadow: var(--shadow-md);
+    opacity: 0;
+    visibility: hidden;
+    transition: var(--transition-normal);
+    pointer-events: none;
+    z-index: 20;
+  }
+
+  .tooltip:hover .tooltip__texto,
+  .tooltip:focus .tooltip__texto {
+    opacity: 1;
+    visibility: visible;
+  }
 }

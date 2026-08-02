@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Tooltip } from '../../components/layout/tooltip';
 import { usuarioPapelApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
 
 // Não cabe no GenericTable — não é "lista tudo", é "lista os papéis DE UM
@@ -42,28 +43,46 @@ export function UsuarioPapelWidget({ authFetch }) {
 
   return (
     <section className="crud-secao">
-      <h2>Papéis de um usuário (usuario_papel)</h2>
-      {erro && <p className="crud-erro">{erro}</p>}
-      <div className="crud-form-criar">
-        <input
-          placeholder="id do usuário"
-          value={idUsuario}
-          onChange={(evento) => setIdUsuario(evento.target.value)}
+      <h2 className="flex items-center">
+        Papéis de um usuário (usuario_papel)
+        <Tooltip
+          texto="Normalmente estas 3 ações (ver, atribuir, revogar) exigem login, porque a regra de acesso é: só o próprio dono ou quem tem a permissão 'papel_gerenciar' pode ver ou mudar papel de outro usuário. Está desativado agora só para facilitar o desenvolvimento."
         />
-        <button onClick={buscar} disabled={!idUsuario}>
+      </h2>
+      {erro && <p className="crud-erro">{erro}</p>}
+
+      <div className="crud-form-criar">
+        <label className="flex flex-col gap-1 text-xs font-semibold text-slate-600">
+          Id do usuário
+          <input
+            className="input-padrao"
+            value={idUsuario}
+            onChange={(evento) => setIdUsuario(evento.target.value)}
+          />
+        </label>
+        <button className="btn btn-primary" onClick={buscar} disabled={!idUsuario}>
           Ver papéis
         </button>
-        <input
-          placeholder="id do papel pra atribuir"
-          value={idPapel}
-          onChange={(evento) => setIdPapel(evento.target.value)}
-        />
-        <button onClick={atribuir} disabled={!idUsuario || !idPapel}>
+
+        <label className="flex flex-col gap-1 text-xs font-semibold text-slate-600">
+          Id do papel pra atribuir
+          <input
+            className="input-padrao"
+            value={idPapel}
+            onChange={(evento) => setIdPapel(evento.target.value)}
+          />
+        </label>
+        <button
+          className="btn btn-primary"
+          onClick={atribuir}
+          disabled={!idUsuario || !idPapel}
+        >
           Atribuir
         </button>
       </div>
+
       {papeis && (
-        <table className="crud-tabela">
+        <table className="crud-tabela mt-3">
           <thead>
             <tr>
               <th>id_papel</th>
@@ -77,7 +96,9 @@ export function UsuarioPapelWidget({ authFetch }) {
                 <td>{papel.idPapel}</td>
                 <td>{papel.nomePapel}</td>
                 <td>
-                  <button onClick={() => revogar(papel)}>Revogar</button>
+                  <button className="btn btn-danger" onClick={() => revogar(papel)}>
+                    Revogar
+                  </button>
                 </td>
               </tr>
             ))}

@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router';
 
-const TAMANHO_PAGINA = 10;
+const TAMANHOS_PAGINA = [10, 20, 30, 'todos'];
+const LIMIAR_FILTRO = 5;
 
 // Valor booleano vira badge colorido (Sim/Não), não o texto cru "true"/
 // "false" — muito mais legível numa lista (achado do Claude Web, rodando
@@ -17,55 +19,38 @@ function celulaValor(valor) {
   return String(valor ?? '');
 }
 
-// Tabela genérica de CRUD, usada pelo painel admin (views/admin) — cada
-// módulo novo do Nest com listagem simples vira só uma entrada de colunas
-// aqui, não uma tela nova escrita do zero.
+// Tabela genérica de LISTAGEM (leitura, filtro, ordenação, paginação) usada
+// pelo painel admin — cada módulo novo do Nest com listagem simples vira só
+// uma entrada de colunas aqui, não uma tela nova escrita do zero.
 //
-// campoRotulo (opcional): qual coluna mostrar na confirmação de exclusão
-// (ex.: "nome") — sem isso, cai pra chavePrimaria (ex.: excluir "8" em vez
-// de excluir "Admin Sistema", bem menos claro).
-//
-// camposCriar[i].tipo: 'texto' (padrão) ou 'select' + `opcoes: [{valor,
-// rotulo}]` — campo de conjunto fechado (ex.: tipo de configuração) vira
-// <select>, não texto livre.
-export function GenericTable({
-  titulo,
-  acaoTopo,
-  colunas,
-  chavePrimaria,
-  campoRotulo,
-  listar,
-  criar,
-  camposCriar,
-  atualizar,
-  remover,
-}) {
+// Criar/Alterar/Excluir NÃO acontecem mais aqui dentro (pedido do Lucas,
+// 02-08-2026: "tudo que faz parte do CRUD precisa de view própria" — mesmo
+// padrão já usado em views/1-usuario/criar-usuario.jsx). Passando
+// `rotaBase` (ex.: "/usuarios"), cada linha ganha "Alterar"/"Excluir"
+// apontando pra `${rotaBase}/${id}/alterar` e `/excluir` — páginas de
+// verdade, com sua própria URL, não formulário/confirm() embutido na
+// tabela. Sem `rotaBase` (catálogos só-leitura como Papéis/Permissões),
+// não aparece coluna de Ações nenhuma.
+export function GenericTable({ titulo, acaoTopo, colunas, chavePrimaria, listar, rotaBase }) {
   const [linhas, setLinhas] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState('');
-  const [novoRegistro, setNovoRegistro] = useState({});
-  const [editandoChave, setEditandoChave] = useState(null);
-  const [edicao, setEdicao] = useState({});
   const [filtro, setFiltro] = useState('');
   const [pagina, setPagina] = useState(1);
   const [ordenacao, setOrdenacao] = useState({ chave: null, direcao: 'asc' });
-
-  const recarregar = () => {
-    setCarregando(true);
-    setErro('');
-    listar()
-      .then(setLinhas)
-      .catch((erroRequisicao) => setErro(erroRequisicao.message))
-      .finally(() => setCarregando(false));
-  };
+  const [tamanhoPagina, setTamanhoPagina] = useState(TAMANHOS_PAGINA[0]);
 
   useEffect(() => {
     // Padrão comum de "buscar dado ao montar/quando a query mudar" (mesmo
     // exemplo dos docs do React) — a regra nova react-hooks/set-state-in-effect
     // marca a chamada de setCarregando/setErro como suspeita mesmo assim.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    recarregar();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setCarregando(true);
+    setErro('');
+    listar()
+      .then(setLinhas)
+      .catch((erroRequisicao) => setErro(erroRequisicao.message))
+      .finally(() => setCarregando(false));
   }, [listar]);
 
   // Filtro é só client-side (a lista inteira já veio do backend) — resolve
@@ -108,18 +93,26 @@ export function GenericTable({
         return (valorA - valorB) * sinal;
       }
       if (tipo === 'boolean') {
-        return ((valorA === valorB ? 0 : valorA ? 1 : -1)) * sinal;
+        return (valorA === valorB ? 0 : valorA ? 1 : -1) * sinal;
       }
       return String(valorA ?? '').localeCompare(String(valorB ?? ''), 'pt-BR') * sinal;
     });
   }, [linhasFiltradas, linhas, ordenacao]);
 
-  const totalPaginas = Math.max(1, Math.ceil(linhasOrdenadas.length / TAMANHO_PAGINA));
+  // "todos" (pedido do Lucas: opção de ver 10/20/30/todos os registros,
+  // além de Anterior/Próxima) vira 1 página só, com a lista inteira.
+  const totalPaginas =
+    tamanhoPagina === 'todos'
+      ? 1
+      : Math.max(1, Math.ceil(linhasOrdenadas.length / tamanhoPagina));
   const paginaAtual = Math.min(pagina, totalPaginas);
-  const linhasPagina = linhasOrdenadas.slice(
-    (paginaAtual - 1) * TAMANHO_PAGINA,
-    paginaAtual * TAMANHO_PAGINA,
-  );
+  const linhasPagina =
+    tamanhoPagina === 'todos'
+      ? linhasOrdenadas
+      : linhasOrdenadas.slice(
+          (paginaAtual - 1) * tamanhoPagina,
+          paginaAtual * tamanhoPagina,
+        );
 
   const aoClicarColuna = (chave) => {
     setOrdenacao((atual) =>
@@ -132,54 +125,12 @@ export function GenericTable({
     setPagina(1);
   };
 
-  const aoCriar = async (evento) => {
-    evento.preventDefault();
-    setErro('');
-    try {
-      await criar(novoRegistro);
-      setNovoRegistro({});
-      recarregar();
-    } catch (erroRequisicao) {
-      setErro(erroRequisicao.message);
-    }
-  };
-
-  const iniciarEdicao = (linha) => {
-    setEditandoChave(linha[chavePrimaria]);
-    setEdicao({ ...linha });
-  };
-
-  const salvarEdicao = async () => {
-    setErro('');
-    try {
-      await atualizar(editandoChave, edicao);
-      setEditandoChave(null);
-      recarregar();
-    } catch (erroRequisicao) {
-      setErro(erroRequisicao.message);
-    }
-  };
-
-  const excluir = async (linha) => {
-    const rotulo = campoRotulo ? linha[campoRotulo] : linha[chavePrimaria];
-    if (!window.confirm(`Excluir "${rotulo}"?`)) {
-      return;
-    }
-    setErro('');
-    try {
-      await remover(linha[chavePrimaria]);
-      recarregar();
-    } catch (erroRequisicao) {
-      setErro(erroRequisicao.message);
-    }
-  };
-
   return (
     <section className="crud-secao">
       <h2>{titulo}</h2>
       {acaoTopo && <div className="crud-secao__acao-topo">{acaoTopo}</div>}
 
-      {!carregando && linhas.length > TAMANHO_PAGINA / 2 && (
+      {!carregando && linhas.length > LIMIAR_FILTRO && (
         <input
           type="search"
           placeholder="Filtrar..."
@@ -204,7 +155,7 @@ export function GenericTable({
               {colunas.map((coluna) => (
                 <th key={coluna.chave}>{coluna.rotulo}</th>
               ))}
-              {(atualizar || remover) && <th>Ações</th>}
+              {rotaBase && <th>Ações</th>}
             </tr>
           </thead>
           <tbody>
@@ -215,7 +166,7 @@ export function GenericTable({
                     <div className="h-3.5 bg-slate-200 rounded"></div>
                   </td>
                 ))}
-                {(atualizar || remover) && (
+                {rotaBase && (
                   <td>
                     <div className="h-3.5 bg-slate-200 rounded"></div>
                   </td>
@@ -239,57 +190,29 @@ export function GenericTable({
                     {ordenacao.chave === coluna.chave && (ordenacao.direcao === 'asc' ? ' ▲' : ' ▼')}
                   </th>
                 ))}
-                {(atualizar || remover) && <th>Ações</th>}
+                {rotaBase && <th>Ações</th>}
               </tr>
             </thead>
             <tbody>
               {linhasPagina.map((linha) => (
                 <tr key={linha[chavePrimaria]}>
                   {colunas.map((coluna) => (
-                    <td key={coluna.chave}>
-                      {editandoChave === linha[chavePrimaria] && coluna.editavel ? (
-                        <input
-                          value={edicao[coluna.chave] ?? ''}
-                          onChange={(evento) =>
-                            setEdicao({ ...edicao, [coluna.chave]: evento.target.value })
-                          }
-                        />
-                      ) : (
-                        celulaValor(linha[coluna.chave])
-                      )}
-                    </td>
+                    <td key={coluna.chave}>{celulaValor(linha[coluna.chave])}</td>
                   ))}
-                  {(atualizar || remover) && (
+                  {rotaBase && (
                     <td>
-                      {editandoChave === linha[chavePrimaria] ? (
-                        <>
-                          <button className="btn btn-primary" onClick={salvarEdicao}>
-                            Salvar
-                          </button>
-                          <button
-                            className="btn btn-secondary"
-                            onClick={() => setEditandoChave(null)}
-                          >
-                            Cancelar
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          {atualizar && (
-                            <button
-                              className="btn btn-secondary"
-                              onClick={() => iniciarEdicao(linha)}
-                            >
-                              Editar
-                            </button>
-                          )}
-                          {remover && (
-                            <button className="btn btn-danger" onClick={() => excluir(linha)}>
-                              Excluir
-                            </button>
-                          )}
-                        </>
-                      )}
+                      <Link
+                        className="btn btn-secondary"
+                        to={`${rotaBase}/${linha[chavePrimaria]}/alterar`}
+                      >
+                        Alterar
+                      </Link>
+                      <Link
+                        className="btn btn-danger"
+                        to={`${rotaBase}/${linha[chavePrimaria]}/excluir`}
+                      >
+                        Excluir
+                      </Link>
                     </td>
                   )}
                 </tr>
@@ -304,26 +227,46 @@ export function GenericTable({
             </tbody>
           </table>
 
-          {totalPaginas > 1 && (
-            <div className="flex items-center justify-between mt-3 text-sm text-slate-600">
+          {linhasOrdenadas.length > TAMANHOS_PAGINA[0] && (
+            <div className="flex items-center justify-between flex-wrap gap-3 mt-3 text-sm text-slate-600">
               <span>
                 Página {paginaAtual} de {totalPaginas} ({linhasOrdenadas.length} registros)
               </span>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setPagina((p) => Math.max(1, p - 1))}
-                  disabled={paginaAtual === 1}
-                  className="btn btn-secondary"
-                >
-                  Anterior
-                </button>
-                <button
-                  onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
-                  disabled={paginaAtual === totalPaginas}
-                  className="btn btn-secondary"
-                >
-                  Próxima
-                </button>
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+                  Mostrar
+                  <select
+                    value={tamanhoPagina}
+                    onChange={(evento) => {
+                      const valor = evento.target.value;
+                      setTamanhoPagina(valor === 'todos' ? 'todos' : Number(valor));
+                      setPagina(1);
+                    }}
+                    className="border border-slate-200 rounded-md bg-slate-50 py-1 px-2 text-xs outline-none focus:border-primary"
+                  >
+                    {TAMANHOS_PAGINA.map((tamanho) => (
+                      <option key={tamanho} value={tamanho}>
+                        {tamanho === 'todos' ? 'Todos' : tamanho}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setPagina((p) => Math.max(1, p - 1))}
+                    disabled={paginaAtual === 1}
+                    className="btn btn-secondary"
+                  >
+                    Anterior
+                  </button>
+                  <button
+                    onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
+                    disabled={paginaAtual === totalPaginas}
+                    className="btn btn-secondary"
+                  >
+                    Próxima
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -331,43 +274,6 @@ export function GenericTable({
       )}
 
       {erro && <p className="crud-erro">{erro}</p>}
-
-      {criar && camposCriar && (
-        <form onSubmit={aoCriar} className="crud-form-criar">
-          {camposCriar.map((campo) => (
-            <label key={campo.chave} className="flex flex-col gap-1 text-xs font-semibold text-slate-600">
-              {campo.rotulo}
-              {campo.tipo === 'select' ? (
-                <select
-                  value={novoRegistro[campo.chave] ?? ''}
-                  onChange={(evento) =>
-                    setNovoRegistro({ ...novoRegistro, [campo.chave]: evento.target.value })
-                  }
-                >
-                  <option value="" disabled>
-                    Selecione...
-                  </option>
-                  {campo.opcoes.map((opcao) => (
-                    <option key={opcao.valor} value={opcao.valor}>
-                      {opcao.rotulo}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <input
-                  value={novoRegistro[campo.chave] ?? ''}
-                  onChange={(evento) =>
-                    setNovoRegistro({ ...novoRegistro, [campo.chave]: evento.target.value })
-                  }
-                />
-              )}
-            </label>
-          ))}
-          <button type="submit" className="btn btn-primary">
-            Criar
-          </button>
-        </form>
-      )}
     </section>
   );
 }

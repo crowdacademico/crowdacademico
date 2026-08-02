@@ -1,7 +1,12 @@
 import { LoginPage } from '../../views/3-auth/login-page';
 import { CriarUsuario } from '../../views/1-usuario/criar-usuario';
+import { AlterarUsuario } from '../../views/1-usuario/alterar-usuario';
+import { ExcluirUsuario } from '../../views/1-usuario/excluir-usuario';
 import { ListarUsuarios } from '../../views/1-usuario/listar-usuarios';
 import { ListarPapeis } from '../../views/2-papel-permissao/listar-papeis';
+import { CriarConfiguracao } from '../../views/11-configuracoes/criar-configuracao';
+import { AlterarConfiguracao } from '../../views/11-configuracoes/alterar-configuracao';
+import { ExcluirConfiguracao } from '../../views/11-configuracoes/excluir-configuracao';
 import { ListarConfiguracoes } from '../../views/11-configuracoes/listar-configuracoes';
 
 // Fonte única de verdade pra "quais páginas existem" — App.jsx monta as
@@ -24,6 +29,31 @@ import { ListarConfiguracoes } from '../../views/11-configuracoes/listar-configu
 export const ROTAS = [
   { caminho: '/login', elemento: LoginPage, rotuloBreadcrumb: 'Login' },
   { caminho: '/usuarios/criar', elemento: CriarUsuario, rotuloBreadcrumb: 'Criar Usuário' },
+  {
+    caminho: '/usuarios/:id/alterar',
+    elemento: AlterarUsuario,
+    rotuloBreadcrumb: 'Alterar Usuário',
+  },
+  {
+    caminho: '/usuarios/:id/excluir',
+    elemento: ExcluirUsuario,
+    rotuloBreadcrumb: 'Excluir Usuário',
+  },
+  {
+    caminho: '/configuracoes/criar',
+    elemento: CriarConfiguracao,
+    rotuloBreadcrumb: 'Criar Configuração',
+  },
+  {
+    caminho: '/configuracoes/:id/alterar',
+    elemento: AlterarConfiguracao,
+    rotuloBreadcrumb: 'Alterar Configuração',
+  },
+  {
+    caminho: '/configuracoes/:id/excluir',
+    elemento: ExcluirConfiguracao,
+    rotuloBreadcrumb: 'Excluir Configuração',
+  },
 ];
 
 export const ROTAS_ADMIN = [

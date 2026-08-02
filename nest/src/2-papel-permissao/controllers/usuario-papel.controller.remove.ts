@@ -4,9 +4,8 @@ import {
   HttpCode,
   Param,
   ParseIntPipe,
-  UseGuards,
 } from '@nestjs/common';
-import { RequireAuthGuard } from '../../3-auth/guards/require-auth.guard';
+// import { RequireAuthGuard } from '../../3-auth/guards/require-auth.guard';
 import { UsuarioPapelServiceRemove } from '../service/usuario-papel.service.remove';
 
 @Controller('usuario-papel')
@@ -15,7 +14,9 @@ export class UsuarioPapelControllerRemove {
 
   @Delete(':idUsuario/:idPapel')
   @HttpCode(204)
-  @UseGuards(RequireAuthGuard)
+  // ⚠️ SUSPENSO PARA DESENVOLVIMENTO (02-08-2026) — ver temp_Nest_React.md,
+  // seção "Login suspenso para dev". Reativar antes de qualquer uso real.
+  // @UseGuards(RequireAuthGuard)
   remover(
     @Param('idUsuario', ParseIntPipe) idUsuario: number,
     @Param('idPapel', ParseIntPipe) idPapel: number,

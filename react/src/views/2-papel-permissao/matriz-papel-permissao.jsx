@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Tooltip } from '../../components/layout/tooltip';
 import { papelPermissaoApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
 
 // Substituiu a antiga tabela "Papel × Permissão" (linhas repetindo
@@ -7,6 +8,12 @@ import { papelPermissaoApi } from '../../services/2-papel-permissao/api/papel-pe
 // um formato fundamentalmente diferente (matriz, não lista de linha+ações),
 // só leitura, sem criar/editar/excluir (RBAC continua gerenciado direto no
 // banco, ver 2-papel-permissao/papel-permissao.module.ts no Nest).
+const TEXTO_TOOLTIP_MATRIZ =
+  "Só aparecem papéis com pelo menos 1 permissão concedida diretamente. " +
+  "'usuario' e 'pesquisador' não têm nenhuma permissão nomeada (por isso " +
+  'não aparecem aqui): o acesso deles é decidido por serem donos do ' +
+  "próprio dado, não por permissão. Não é erro, é assim de propósito.";
+
 export function MatrizPapelPermissao({ authFetch }) {
   const [linhas, setLinhas] = useState([]);
   const [carregando, setCarregando] = useState(true);
@@ -23,7 +30,10 @@ export function MatrizPapelPermissao({ authFetch }) {
   if (carregando) {
     return (
       <section className="crud-secao">
-        <h2>Papel × Permissão</h2>
+        <h2 className="flex items-center">
+          Papel × Permissão
+          <Tooltip texto={TEXTO_TOOLTIP_MATRIZ} />
+        </h2>
         <div className="animate-pulse h-32 bg-slate-100 rounded"></div>
       </section>
     );
@@ -32,7 +42,10 @@ export function MatrizPapelPermissao({ authFetch }) {
   if (erro) {
     return (
       <section className="crud-secao">
-        <h2>Papel × Permissão</h2>
+        <h2 className="flex items-center">
+          Papel × Permissão
+          <Tooltip texto={TEXTO_TOOLTIP_MATRIZ} />
+        </h2>
         <p className="crud-erro">{erro}</p>
       </section>
     );
