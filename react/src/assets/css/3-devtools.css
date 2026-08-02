@@ -8,11 +8,25 @@
   margin-bottom: 0;
 }
 
+.devtools-secao__cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+/* Reaproveita a escala de tamanhos já definida em 1-base.css (--font-size-*)
+   — nenhum valor novo criado aqui. "Título de seção" (Usuários, Papéis,
+   Configurações...) usa --font-size-2xl; se um dia precisar de um nível
+   "supertítulo" (página inteira) ou "subtítulo" (dentro da seção), a
+   escala já tem --font-size-3xl/xl/lg prontos, é só usar a variável certa
+   — não inventar um valor solto. */
 .devtools-secao h2 {
   font-family: var(--font-sans);
-  font-size: var(--font-size-lg);
+  font-size: var(--font-size-2xl);
+  font-weight: 800;
   color: var(--color-dark);
-  margin-bottom: 0.75rem;
 }
 
 .devtools-erro {

@@ -3,12 +3,15 @@
    e da convenção de numeração já usada no hotel (informacoes/modelo em
    MySQL_.../react_academic/src/assets/css/0-style.css): um arquivo por
    responsabilidade, importado aqui em ordem, e só ESTE arquivo é importado
-   direto no main.jsx. Cada tela nova que precisar de CSS próprio ganha um
-   número novo aqui, não um <style> solto espalhado pelo JSX. */
+   direto no main.jsx.
+
+   Header/Footer NÃO têm arquivo aqui — são cópia fiel do Projeto de
+   Interface real e usam só classes do Tailwind (CDN configurado no
+   index.html), não CSS próprio. O que sobra aqui é o que eu escrevi à mão
+   pro admin (menu lateral, tabelas de CRUD) — ver components/layout/ pro
+   Header/Footer. */
 
 @import url('./1-base.css');
-@import url('./2-header.css');
-@import url('./3-footer.css');
-@import url('./4-admin-shell.css');
-@import url('./5-devtools.css');
-@import url('./6-responsividade.css');
+@import url('./2-admin-shell.css');
+@import url('./3-devtools.css');
+@import url('./4-responsividade.css');

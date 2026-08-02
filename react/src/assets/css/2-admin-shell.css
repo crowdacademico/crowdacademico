@@ -1,0 +1,150 @@
+/* ========= PAINEL ADMIN: MENU LATERAL + CONTEÚDO =========
+   Inspirado no Projeto de Interface real (estilos.css: .admin-shell/
+   .admin-sidebar/.admin-content-area/.admin-sidebar-nav-item), mas com
+   visual próprio a pedido do Lucas: em vez de cartão arredondado
+   flutuando com margem, o menu é uma coluna quadrada que encosta no
+   cabeçalho, na parede esquerda e no rodapé — grid de 2 colunas, sem
+   sticky (rola junto com a página).
+   Ver views/admin/admin-sidebar.jsx e views/admin/admin-dashboard.jsx. */
+
+/* O bug que a gente tinha: .admin-pagina levava max-width+margin:auto, o
+   que centralizava o GRUPO INTEIRO (sidebar+conteúdo) como um bloco só —
+   sobrava espaço em branco simétrico dos dois lados do grupo, e o menu
+   nunca encostava na borda real da tela (só na borda do bloco centralizado).
+   Fix: .admin-pagina/.admin-shell agora ocupam 100% da largura da viewport,
+   sem max-width nem margin:auto nenhum — a sidebar fica de fato grudada na
+   borda esquerda real. Quem centraliza é só .admin-content-area (a coluna
+   da direita), e centraliza só DENTRO do espaço que sobra depois da
+   sidebar — .admin-content-area__inner é quem carrega o max-width.
+
+   Sidebar virou uma coluna vertical de verdade: sem padding/gap ao redor
+   (nada de "flutuar" com margem), cantos quadrados, esticada pra tocar o
+   cabeçalho em cima, a parede esquerda, e o rodapé embaixo. Pra isso, quem
+   ganha padding próprio agora é .admin-content-area (não mais
+   .admin-pagina inteira), e .admin-shell precisa esticar por toda a
+   altura disponível entre header/footer — display:flex em .admin-pagina +
+   align-items:stretch (padrão do flex) força isso. */
+.admin-pagina {
+  width: 100%;
+  flex-grow: 1;
+  display: flex;
+}
+
+.admin-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  width: 100%;
+}
+
+.admin-sidebar {
+  background-color: var(--color-white);
+  border-bottom: 1px solid var(--color-slate-200);
+  padding: 1.5rem;
+}
+
+.admin-sidebar__titulo {
+  font-family: var(--font-sans);
+  font-weight: 900;
+  font-size: var(--font-size-sm);
+  color: var(--color-dark);
+}
+
+.admin-sidebar__subtitulo {
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-slate-400);
+}
+
+.admin-sidebar__separador {
+  border: none;
+  border-bottom: 1px solid var(--color-slate-200);
+  margin: 1rem 0;
+}
+
+.admin-sidebar__grupo-titulo {
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-slate-400);
+  margin: 0.5rem 0 0.5rem 0.5rem;
+}
+
+.admin-sidebar__item {
+  width: 100%;
+  text-align: left;
+  padding: 0.625rem 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  background: none;
+  color: var(--color-slate-600);
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  transition: var(--transition-normal);
+}
+
+.admin-sidebar__item:hover:not(.admin-sidebar__item--desabilitado) {
+  background-color: var(--color-slate-50);
+}
+
+.admin-sidebar__item--ativo {
+  background-color: rgba(15, 155, 88, 0.1);
+  color: var(--color-primary-dark);
+}
+
+.admin-sidebar__item--desabilitado {
+  background-color: var(--color-slate-100);
+  color: var(--color-slate-400);
+  border-color: var(--color-slate-200);
+  cursor: not-allowed;
+}
+
+.admin-content-area {
+  min-width: 0;
+  padding: 1.5rem;
+  /* Centraliza o __inner só dentro do espaço que sobra à direita da
+     sidebar — nunca a página inteira. Se a tela for mais larga que o
+     max-width do __inner, a folga fica só aqui, à direita da sidebar. */
+  display: flex;
+  justify-content: center;
+}
+
+.admin-content-area__inner {
+  /* width:100% é quem faz a adaptação de verdade: em tela pequena (notebook
+     da faculdade, monitor da escola), preenche 100% do espaço que sobrou
+     da sidebar, sem sobrar nem faltar nada. max-width só entra pra não
+     deixar a tabela virar uma linha esparsa gigante num monitor muito
+     largo (ultrawide/4K) — 1600px é bem mais espaço que os 900px de antes,
+     mas ainda é um teto, não um valor fixo que ignora a tela pequena. */
+  width: 100%;
+  max-width: 1600px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.admin-content-painel {
+  background-color: var(--color-white);
+  border: 1px solid var(--color-slate-200);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 2rem;
+}
+
+@media (min-width: 1024px) {
+  .admin-shell {
+    grid-template-columns: 260px minmax(0, 1fr);
+  }
+
+  .admin-sidebar {
+    /* Lado a lado com o conteúdo agora — a borda de baixo (empilhado no
+       mobile) vira borda da direita (a "parede" entre coluna e conteúdo). */
+    border-bottom: none;
+    border-right: 1px solid var(--color-slate-200);
+  }
+}

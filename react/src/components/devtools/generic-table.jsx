@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 // novo módulo do Nest vira só uma entrada nova aqui, não uma tela nova.
 export function GenericTable({
   titulo,
+  acaoTopo,
   colunas,
   chavePrimaria,
   listar,
@@ -83,7 +84,10 @@ export function GenericTable({
 
   return (
     <section className="devtools-secao">
-      <h2>{titulo}</h2>
+      <div className="devtools-secao__cabecalho">
+        <h2>{titulo}</h2>
+        {acaoTopo}
+      </div>
       {erro && <p className="devtools-erro">{erro}</p>}
       {carregando ? (
         <p>Carregando...</p>

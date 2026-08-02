@@ -1,6 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Footer } from '../../components/layout/footer';
-import { Header } from '../../components/layout/header';
+import { Link } from 'react-router';
 import { GenericTable } from '../../components/devtools/generic-table';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import {
@@ -9,18 +8,19 @@ import {
   permissaoApi,
 } from '../../services/2-papel-permissao/api/papel-permissao.api';
 import { configuracaoApi } from '../../services/11-configuracoes/api/configuracao.api';
-import { useAuth } from '../../services/3-auth/hook/use-auth';
 import { AdminSidebar } from './admin-sidebar';
 import { UsuarioPapelWidget } from './usuario-papel-widget';
 
-// Painel administrativo — Header/Footer fixos (components/layout), menu
-// lateral fixo à esquerda (admin-sidebar.jsx) e um painel de conteúdo à
-// direita por aba selecionada. Só 3 abas têm conteúdo real hoje (Usuários,
-// Papéis & Permissões, Configurações — os módulos que já existem no Nest);
-// o resto do menu aparece desabilitado, mostrando a forma do painel
-// completo sem fingir que uma tela que não existe funciona.
-export function AdminDashboard() {
-  const auth = useAuth();
+// Painel administrativo — menu lateral fixo à esquerda (admin-sidebar.jsx)
+// e um painel de conteúdo à direita por aba selecionada. Header/Footer
+// vêm de fora (components/layout/layout.jsx, via App.jsx) — esta é só a
+// página em si, renderizada dentro do <Outlet/> da rota "/". `auth` também
+// vem de fora (useAuth chamado uma vez só em App.jsx). Só 3 abas têm
+// conteúdo real hoje (Usuários, Papéis & Permissões, Configurações — os
+// módulos que já existem no Nest); o resto do menu aparece desabilitado,
+// mostrando a forma do painel completo sem fingir que uma tela que não
+// existe funciona.
+export function AdminDashboard({ auth }) {
   const [abaAtiva, setAbaAtiva] = useState('usuarios');
 
   // useCallback aqui não é sobre performance — é porque GenericTable usa a
@@ -42,22 +42,24 @@ export function AdminDashboard() {
   );
 
   return (
-    <>
-      <Header auth={auth} />
+    <main className="admin-pagina">
+      <div className="admin-shell">
+        <AdminSidebar abaAtiva={abaAtiva} aoSelecionar={setAbaAtiva} />
 
-      <main className="admin-pagina">
-        <div className="admin-shell">
-          <AdminSidebar abaAtiva={abaAtiva} aoSelecionar={setAbaAtiva} />
-
-          <div className="admin-content-area">
+        <div className="admin-content-area">
+          <div className="admin-content-area__inner">
             {abaAtiva === 'usuarios' && (
               <div className="admin-content-painel">
-                <p className="admin-aviso">
-                  Sem usuário ainda? Crie um aqui embaixo — não exige login — e
-                  depois entre pelo campo no cabeçalho.
-                </p>
                 <GenericTable
                   titulo="Usuários"
+                  acaoTopo={
+                    <Link
+                      to="/usuarios/criar"
+                      className="bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-lg font-semibold text-sm transition-colors"
+                    >
+                      Criar
+                    </Link>
+                  }
                   colunas={[
                     { chave: 'idUsuario', rotulo: 'id' },
                     { chave: 'nome', rotulo: 'nome', editavel: true },
@@ -66,12 +68,6 @@ export function AdminDashboard() {
                   ]}
                   chavePrimaria="idUsuario"
                   listar={listarUsuarios}
-                  criar={(dados) => usuarioApi.criar(auth.authFetch, dados)}
-                  camposCriar={[
-                    { chave: 'nome', rotulo: 'nome' },
-                    { chave: 'email', rotulo: 'email' },
-                    { chave: 'senha', rotulo: 'senha' },
-                  ]}
                   atualizar={(id, dados) => usuarioApi.atualizar(auth.authFetch, id, dados)}
                   remover={(id) => usuarioApi.remover(auth.authFetch, id)}
                 />
@@ -148,9 +144,7 @@ export function AdminDashboard() {
             )}
           </div>
         </div>
-      </main>
-
-      <Footer />
-    </>
+      </div>
+    </main>
   );
 }
