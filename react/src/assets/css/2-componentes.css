@@ -61,6 +61,19 @@
     color: var(--color-white);
   }
 
+  /* Azulado, só pra "Alterar" (GenericTable) se diferenciar visualmente de
+     "Consultar" (.btn-secondary, cinza) e "Excluir" (.btn-danger, vermelho)
+     — pedido do Lucas, 02-08-2026. */
+  .btn-info {
+    background-color: var(--color-blue-100);
+    color: var(--color-blue-600);
+  }
+
+  .btn-info:hover:not(:disabled) {
+    background-color: var(--color-blue-600);
+    color: var(--color-white);
+  }
+
   /* Input/select de formulário fora da tabela de CRUD (login, criar
      usuário) — mesma moldura em todo lugar: borda, fundo levemente cinza,
      foco em verde. */
@@ -79,6 +92,14 @@
     outline: none;
     border-color: var(--color-primary);
     background-color: var(--color-white);
+  }
+
+  /* Tela "Consultar" (campo-textbox-consulta.jsx) — deixa claro visualmente
+     que o campo é só leitura, não é só um input esquecido sem onChange. */
+  .input-padrao:disabled {
+    background-color: var(--color-slate-100);
+    color: var(--color-slate-600);
+    cursor: not-allowed;
   }
 
   /* Badge Sim/Não (GenericTable, coluna booleana) */

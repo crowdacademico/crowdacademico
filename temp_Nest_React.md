@@ -115,6 +115,10 @@ Todas seguem o mesmo fluxo: carrega o registro (`buscar`/`buscarPorId`), confirm
 
 🟢 **Ordenação clicando no cabeçalho da coluna** (rodada anterior, mantido aqui pra registro): número → menor/maior, texto → A-Z/Z-A (`localeCompare` pt-BR), booleano → Sim/Não agrupados; sempre ordena a lista inteira filtrada antes de paginar, nunca só a página visível — é o jeito clássico desse recurso "bugar com paginação" que o Lucas avisou pra tomar cuidado.
 
+🟢 **"Consultar" novo, entre Alterar e Excluir** (pedido do Lucas, mesma rodada) — 3ª ação por linha agora, sempre que `rotaBase` é passado: `/${rotaBase}/${id}/consultar`. Mostra TODOS os campos do `ResponseDto` (não só as colunas visíveis na tabela — ex.: `idImagemPerfil`/`criadoEm` de usuário aparecem aqui mesmo sem coluna própria na listagem) em `<input disabled>` (`components/crud/campo-textbox-consulta.jsx`, novo) — nunca um `<p>`, textbox mesmo, fica vazio sozinho quando o valor é nulo. Só um botão "Voltar" no fim (não salva nada, não tem confirmar). Novas views: `views/1-usuario/consultar-usuario.jsx`, `views/11-configuracoes/consultar-configuracao.jsx`.
+
+🟢 **Botão "Alterar" ganhou cor própria (`.btn-info`, azul)** pra diferenciar de "Consultar" (`.btn-secondary`, cinza) e "Excluir" (`.btn-danger`, vermelho) — reaproveitou `--color-blue-100`/`--color-blue-600` que já existiam em `1-base.css` (usados antes só em texto solto, nunca em botão).
+
 🟢 **Cor do cabeçalho da tabela escurecida** (rodada anterior, mantido aqui pra registro): `--color-slate-500` → `--color-slate-700` em `.crud-tabela th` (`4-crud.css`) — o Lucas achou o tom antigo "quase apagado" no monitor dele.
 
 🟢 **`Tooltip` novo (`components/layout/tooltip.jsx`)** — ícone ⓘ que mostra uma explicação curta ao passar o mouse ou focar via teclado (CSS puro, `:hover`/`:focus`, sem estado de React). Dois usos até agora:

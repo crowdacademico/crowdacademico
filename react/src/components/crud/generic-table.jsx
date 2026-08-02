@@ -202,10 +202,16 @@ export function GenericTable({ titulo, acaoTopo, colunas, chavePrimaria, listar,
                   {rotaBase && (
                     <td>
                       <Link
-                        className="btn btn-secondary"
+                        className="btn btn-info"
                         to={`${rotaBase}/${linha[chavePrimaria]}/alterar`}
                       >
                         Alterar
+                      </Link>
+                      <Link
+                        className="btn btn-secondary"
+                        to={`${rotaBase}/${linha[chavePrimaria]}/consultar`}
+                      >
+                        Consultar
                       </Link>
                       <Link
                         className="btn btn-danger"

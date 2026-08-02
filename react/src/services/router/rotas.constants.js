@@ -1,11 +1,13 @@
 import { LoginPage } from '../../views/3-auth/login-page';
 import { CriarUsuario } from '../../views/1-usuario/criar-usuario';
 import { AlterarUsuario } from '../../views/1-usuario/alterar-usuario';
+import { ConsultarUsuario } from '../../views/1-usuario/consultar-usuario';
 import { ExcluirUsuario } from '../../views/1-usuario/excluir-usuario';
 import { ListarUsuarios } from '../../views/1-usuario/listar-usuarios';
 import { ListarPapeis } from '../../views/2-papel-permissao/listar-papeis';
 import { CriarConfiguracao } from '../../views/11-configuracoes/criar-configuracao';
 import { AlterarConfiguracao } from '../../views/11-configuracoes/alterar-configuracao';
+import { ConsultarConfiguracao } from '../../views/11-configuracoes/consultar-configuracao';
 import { ExcluirConfiguracao } from '../../views/11-configuracoes/excluir-configuracao';
 import { ListarConfiguracoes } from '../../views/11-configuracoes/listar-configuracoes';
 
@@ -35,6 +37,11 @@ export const ROTAS = [
     rotuloBreadcrumb: 'Alterar Usuário',
   },
   {
+    caminho: '/usuarios/:id/consultar',
+    elemento: ConsultarUsuario,
+    rotuloBreadcrumb: 'Consultar Usuário',
+  },
+  {
     caminho: '/usuarios/:id/excluir',
     elemento: ExcluirUsuario,
     rotuloBreadcrumb: 'Excluir Usuário',
@@ -48,6 +55,11 @@ export const ROTAS = [
     caminho: '/configuracoes/:id/alterar',
     elemento: AlterarConfiguracao,
     rotuloBreadcrumb: 'Alterar Configuração',
+  },
+  {
+    caminho: '/configuracoes/:id/consultar',
+    elemento: ConsultarConfiguracao,
+    rotuloBreadcrumb: 'Consultar Configuração',
   },
   {
     caminho: '/configuracoes/:id/excluir',
