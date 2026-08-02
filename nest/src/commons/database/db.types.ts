@@ -64,7 +64,16 @@ export interface SessaoTable {
 }
 
 // CREATE TYPE tipo_configuracao AS ENUM ('decimal','inteiro','texto','booleano') — 01
-export type TipoConfiguracao = 'decimal' | 'inteiro' | 'texto' | 'booleano';
+// Array em runtime (não só o tipo) pra CriarConfiguracaoRequestDto validar
+// com @IsIn(TIPOS_CONFIGURACAO) sem duplicar a lista de novo — um hardcoded
+// só, o tipo é derivado dele, não o contrário.
+export const TIPOS_CONFIGURACAO = [
+  'decimal',
+  'inteiro',
+  'texto',
+  'booleano',
+] as const;
+export type TipoConfiguracao = (typeof TIPOS_CONFIGURACAO)[number];
 
 export interface ConfiguracoesTable {
   id_config: Generated<number>;

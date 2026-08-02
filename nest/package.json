@@ -27,6 +27,8 @@
     "@nestjs/jwt": "^11.0.2",
     "@nestjs/platform-express": "^11.0.1",
     "bcrypt": "^6.0.0",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.15.1",
     "kysely": "^0.29.4",
     "nestjs-cls": "^6.2.1",
     "pg": "^8.22.0",

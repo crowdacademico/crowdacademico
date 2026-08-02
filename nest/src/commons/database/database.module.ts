@@ -1,11 +1,12 @@
 import { Global, Inject, Logger, Module, OnModuleInit } from '@nestjs/common';
-import { APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ClsModule } from 'nestjs-cls';
 import { Pool } from 'pg';
 import { PG_POOL } from './database.constants';
 import { DatabaseService } from './database.service';
 import { GlobalDbInterceptor } from './global-db.interceptor';
+import { PostgresExceptionFilter } from './postgres-exception.filter';
 
 // Módulo global: qualquer módulo do app pode injetar o Pool com
 // @Inject(PG_POOL), ou (preferível, ver DatabaseService) usar
@@ -38,6 +39,8 @@ import { GlobalDbInterceptor } from './global-db.interceptor';
     // banco" num lugar só. Nest reconhece APP_INTERCEPTOR como token global
     // independente de qual módulo o declara.
     { provide: APP_INTERCEPTOR, useClass: GlobalDbInterceptor },
+    // Mesma lógica: erro de Postgres é "conexão com banco", fica junto.
+    { provide: APP_FILTER, useClass: PostgresExceptionFilter },
   ],
   exports: [PG_POOL, DatabaseService],
 })
