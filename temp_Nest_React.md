@@ -9,6 +9,7 @@ Convenção: 🟢 corrigido | 🟡 real mas fora do escopo do Nest/React (é do 
 ## Índice
 
 - [Achados do Claude da Alexia (02-08-2026)](#achados-do-claude-da-alexia-02-08-2026)
+- [⚠️ Seed tinha senha_hash falso — ninguém conseguia logar](#️-seed-tinha-senha_hash-falso--ninguém-conseguia-logar)
 - [React — bugs já encontrados e corrigidos](#react--bugs-já-encontrados-e-corrigidos-contexto-de-rodadas-anteriores-pra-não-repetir)
 - [⚠️ Login suspenso para dev (8 rotas) — REATIVAR antes de qualquer uso real](#️-login-suspenso-para-dev-8-rotas--reativar-antes-de-qualquer-uso-real)
 - [Painel admin — CRUD virou view própria, tooltips, ordenação, paginação](#painel-admin--crud-virou-view-própria-tooltips-ordenação-paginação-02-08-2026)
@@ -42,6 +43,30 @@ Corrigido com uma rede de segurança global, não duplicando o que já existia l
 ~40 `RAISE EXCEPTION 'mensagem'` sem código próprio caem todos no `P0001` (código padrão do Postgres pra isso). Isso deixa o `usuario.service.remove.ts` com um catch-all `ForbiddenException((erro as Error).message || ...)` que hoje está correto (a única função que ele chama, `excluir_conta_usuario()`, só lança exceção por causa de permissão) mas seria impreciso se reaproveitado em outra função que lançasse por outro motivo (validação de negócio, por exemplo). Não mexi em `usuario.service.remove.ts` — está certo pro caso de uso dele. O `PostgresExceptionFilter` novo (achado 2, acima) já trata `P0001` genericamente como 400 com a mensagem original, então o comportamento caso-a-caso já está coberto na rede global; só falta, do lado do `.sql`, dar `ERRCODE` próprio pras exceções de negócio (ex.: uma faixa customizada tipo `'CA001'`...`'CA0NN'`) pra poder diferenciar 400 de 403 de 409 sem depender só do texto da mensagem. **Isso é trabalho da Alexia, ela já se comprometeu a fazer.**
 
 > **Nota do Claude Web (02-08-2026), depois de rodar o projeto de verdade (Postgres + Nest no ar):** confirmou as 3 correções acima funcionando com requisições HTTP reais (e-mail inválido → 400 PT-BR; senha curta → 400; campo extra `deletado` → 400 pelo `whitelist`; e-mail duplicado → 409, era 500). Sobre o achado 3, reforçou que hoje as 42 exceções sem `ERRCODE` (confirmado: são 42, 0 têm código próprio) misturam categorias bem diferentes — "campanha não está ativa" (400 faz sentido), "transição de status não autorizada" (deveria ser 403), "limite atingido" (deveria ser 409) — e todas viram 400 igual hoje no filtro. Não quebra nada agora, mas quando o front começar a tratar erro por status HTTP (mostrar alerta de campo vs. mensagem de acesso negado), essa diferença vai importar. Continua sendo trabalho da Alexia no `.sql`; quando ela adicionar `ERRCODE`s próprios, dá pra refinar o `switch` do `PostgresExceptionFilter` pra não jogar tudo em 400.
+
+---
+
+## ⚠️ Seed tinha `senha_hash` falso — ninguém conseguia logar
+
+*(02-08-2026 — achado testando o painel admin de verdade: Lucas foi editar um usuário, tomou "Sem permissão para editar este usuário.", e pediu pra investigar. Junto, pediu uma forma de logar como qualquer conta do seed pra testar login.)*
+
+**Achado 1 — "Sem permissão para editar este usuário." não é bug.** É a RLS (`pol_usuario_update`, `04_rls_policies.sql`) fazendo exatamente o que foi desenhada pra fazer: só o próprio dono pode editar a própria conta, a menos que quem edita tenha a permissão `usuario_suspender` (só `admin` tem). Não tem relação com a suspensão do `RequireAuthGuard` (seção acima) — a suspensão só tira a checagem RÁPIDA de "está logado?"; o Postgres continua exigindo uma identidade de verdade pro `UPDATE` valer. Editar a conta de outra pessoa sem ser admin sempre vai bloquear — é a regra certa.
+
+**Achado 2 — por que o e-mail não aparece pra editar: não é falha da tela nova, é limitação real do banco.** `GRANT UPDATE (nome, id_imagem_perfil, senha_hash) ON public.usuario` (`06_grants.sql`, `[06-D-2]`) nunca incluiu a coluna `email`. Diferente das 6 colunas sensíveis (`email_verificado`, `tentativas_login_falhas`, etc.), que saíram do GRANT mas ganharam função `SECURITY DEFINER` própria, `email` não tem NENHUM caminho pra mudar hoje — nem GRANT direto, nem função dedicada. Trocar e-mail de conta normalmente exige um fluxo de reconfirmação (pra não virar sequestro de conta por erro de digitação/má-fé) que ainda não foi construído. `alterar-usuario.jsx` já reflete isso certo (e-mail some como campo só-leitura) — nada a corrigir aí.
+
+**Achado 3 (o mais sério, motivou o Lucas pedir "mostrar a senha na tela") — os 17 `senha_hash` do seed eram FALSOS.** `07_seed_dados.sql` tinha strings tipo `'$2b$12$hashed_admin008'` — nunca gerados pelo bcrypt de verdade. Resultado prático: **nenhum usuário do seed conseguia logar**, nem sabendo a senha certa, porque não existia senha nenhuma por trás daquilo. Isso não tinha relação nenhuma com a suspensão do login (achado 1 desta seção) — era impossível logar como qualquer um desses 17 mesmo com tudo mais funcionando.
+
+Considerei a alternativa que o Lucas pediu primeiro (mostrar `senha_hash` na tela de Consultar) e desaconselhei: senha em texto puro **nunca existe** em lugar nenhum do sistema (bcrypt é de mão única, de propósito) — só dava pra mostrar o hash, que não serve pra logar (não é a senha, é o resultado irreversível dela) e ainda assim é dado sensível o suficiente pra não valer a pena expor casualmente numa resposta HTTP, mesmo marcado como dev-only. Perguntei o que ele realmente precisava, e era "conseguir logar como qualquer conta pra testar" — problema diferente, resolvido direto na causa.
+
+**Correção aplicada:**
+- `07_seed_dados.sql`, bloco `[07-D-1]`: os 17 `senha_hash` viraram todos o MESMO hash bcrypt real (custo 10, gerado com `bcrypt.hash('DevTcc123!', 10)`, conferido com `bcrypt.compare()` antes de entrar no arquivo). **Senha de qualquer usuário do seed agora: `DevTcc123!`.** Resolve pra qualquer ambiente que rodar o seed do zero a partir de agora.
+- Pro banco que já estava seedado no Supabase do Lucas (rodou o `07` antes desta correção): rodar uma vez, no SQL Editor —
+  ```sql
+  UPDATE usuario SET senha_hash = '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG';
+  ```
+  (mesmo hash, mesma senha `DevTcc123!` — atualiza os 17 usuários que já existem lá.)
+
+Com isso, logar como `admin@crowdacademico.com.br` / `DevTcc123!` dá o papel `admin` (`usuario_suspender` incluída) — resolve o achado 1 desta seção também, pra quem quiser editar a conta de outra pessoa pelo painel.
 
 ---
 
@@ -157,6 +182,7 @@ Se isso sozinho não resolver em outra máquina, o próximo passo (não precisou
 - Infra nova no React pra nenhuma tela nova escrever taxa/valor mínimo/prazo direto no HTML: `useConfiguracoes()` (lê as configs globais do banco) + `formatarMoeda`/`formatarPercentual` (formatação pt-BR única). Motivo: os protótipos do Projeto de Interface (Gemini) tinham `R$ 5,00`/`5%` fixos no HTML, e esses valores já existem em `configuracoes` — quando as telas públicas (campanha, home) forem portadas pro React de verdade, é pra usar essa infra, não repetir o hardcoded do protótipo.
 - **Dá pra rodar o projeto inteiro sem instalar Postgres nem DBeaver**, usando o Supabase gratuito — ver `tutorial-rodar-projeto.md` (seção nova "🌐 Alternativa: usar o Supabase") e a seção logo acima neste arquivo pra 2 erros meio escondidos que apareceram testando isso (senha/host do `.env` e certificado TLS). Pode valer a pena pra ela também, se não quiser instalar Postgres na máquina dela.
 - **O painel admin mudou de padrão:** Alterar/Excluir de Usuário e Configuração (e o Criar de Configuração) agora são páginas próprias com URL (ex.: `/usuarios/8/alterar`), não mais formulário/edição dentro da própria tabela. Se ela estiver testando o painel: os botões da tabela levam pra essas páginas novas, com confirmação e cancelar no fim.
+- **Se ela rodar o seed (`07_seed_dados.sql`) do zero, já vai vir certo**: os `senha_hash` dos 17 usuários eram falsos, ninguém conseguia logar. Corrigido — senha de qualquer usuário do seed agora é `DevTcc123!` (mesmo hash pra todo mundo, só dev). Se o banco dela já estava seedado ANTES desta correção, precisa rodar o `UPDATE usuario SET senha_hash = '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG';` uma vez (ver seção acima, achado 3).
 - **Login está TEMPORARIAMENTE suspenso em 8 rotas** (só pra facilitar testar sem logar toda hora) — ver seção "⚠️ Login suspenso para dev" acima. Se ela notar alguma rota aceitando ação sem estar logada, é esperado por enquanto, não é bug novo.
 
 ---

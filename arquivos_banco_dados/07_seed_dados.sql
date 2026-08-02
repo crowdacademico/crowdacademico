@@ -521,24 +521,36 @@ INSERT INTO arquivo (url, nome_original, tipo_mime, tamanho_bytes) VALUES
 
 -- [07-D-1] usuario
 -- CORRIGIDO: seed de usuário passou a usar criado_em.
+-- CORRIGIDO (02-08-2026, achado do Lucas testando o painel admin): os 17
+-- senha_hash abaixo eram placeholders FALSOS (tipo '$2b$12$hashed_ana001'),
+-- nunca gerados pelo bcrypt de verdade — ou seja, NENHUM usuário do seed
+-- conseguia logar, nem sabendo a senha certa, porque não existia senha
+-- nenhuma por trás. Trocado por um hash bcrypt de verdade (custo 10, igual
+-- CUSTO_BCRYPT em usuario.service.create.ts/update.ts), o MESMO pra
+-- TODOS os 17 — só pra dev/seed, nunca em produção:
+--   senha de todo mundo no seed = DevTcc123!
+-- Gerado com `bcrypt.hash('DevTcc123!', 10)` e conferido com
+-- `bcrypt.compare()` antes de entrar aqui. Serve pra logar como qualquer
+-- papel (admin, moderador, pesquisador, usuario comum etc.) só trocando o
+-- e-mail — ver a lista de e-mail/papel logo abaixo, em usuario_papel.
 INSERT INTO usuario (nome, email, senha_hash, id_imagem_perfil, criado_em) VALUES
-('Ana Beatriz Santos',    'ana.santos@usp.br',          '$2b$12$hashed_ana001',    1, '2024-01-10 09:00:00'),
-('Carlos Eduardo Melo',   'carlos.melo@unicamp.br',     '$2b$12$hashed_carlos002', 2, '2024-01-15 10:30:00'),
-('Beatriz Lima Alves',    'beatriz.lima@ufmg.br',       '$2b$12$hashed_bea003',    3, '2024-02-01 08:45:00'),
-('Rafael Costa Nunes',    'rafael.costa@ufrj.br',       '$2b$12$hashed_raf004',    4, '2024-02-10 14:00:00'),
-('Juliana Ferreira Paz',  'juliana.ferreira@ufsc.br',   '$2b$12$hashed_jul005',    5, '2024-03-05 11:20:00'),
-('Marcos Oliveira Ramos', 'marcos.oliveira@unesp.br',   '$2b$12$hashed_mar006',    6, '2024-03-12 16:00:00'),
-('Patrícia Rocha Silva',  'patricia.rocha@unifesp.br',  '$2b$12$hashed_pat007',    7, '2024-04-01 09:30:00'),
-('Admin Sistema',         'admin@crowdacademico.com.br','$2b$12$hashed_admin008',  NULL,'2024-01-01 00:00:00'),
-('Fernanda Souza Lima',   'fernanda.souza@gmail.com',            '$2b$12$hashed_fer009', NULL, '2024-04-10 10:00:00'), -- usuario comum (apoiador, nunca virou pesquisador)
-('Diego Martins Alves',   'diego.martins@crowdacademico.com.br', '$2b$12$hashed_die010', NULL, '2024-01-05 09:00:00'), -- moderador
-('Camila Nunes Barros',   'camila.nunes@crowdacademico.com.br',  '$2b$12$hashed_cam011', NULL, '2024-01-05 09:00:00'), -- revisor
-('Thiago Almeida Rocha',  'thiago.almeida@crowdacademico.com.br','$2b$12$hashed_thi012', NULL, '2024-01-05 09:00:00'), -- curador
-('Larissa Pinto Gomes',   'larissa.pinto@crowdacademico.com.br', '$2b$12$hashed_lar013', NULL, '2024-01-05 09:00:00'), -- suporte
-('Bruno Tavares Costa',    'bruno.tavares@ufrgs.br',    '$2b$12$hashed_bru014', NULL, '2024-05-20 09:00:00'),
-('Renata Vasconcelos Dias','renata.vasconcelos@ufpr.br','$2b$12$hashed_ren015', NULL, '2024-05-22 09:00:00'),
-('Eduardo Barbosa Nogueira','eduardo.barbosa@ufba.br',  '$2b$12$hashed_edu016', NULL, '2024-05-25 09:00:00'),
-('Vinícius Almeida Ferraz','vinicius.ferraz@ufc.br',    '$2b$12$hashed_vin017', NULL, '2024-05-28 09:00:00');
+('Ana Beatriz Santos',    'ana.santos@usp.br',          '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG',    1, '2024-01-10 09:00:00'),
+('Carlos Eduardo Melo',   'carlos.melo@unicamp.br',     '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', 2, '2024-01-15 10:30:00'),
+('Beatriz Lima Alves',    'beatriz.lima@ufmg.br',       '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG',    3, '2024-02-01 08:45:00'),
+('Rafael Costa Nunes',    'rafael.costa@ufrj.br',       '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG',    4, '2024-02-10 14:00:00'),
+('Juliana Ferreira Paz',  'juliana.ferreira@ufsc.br',   '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG',    5, '2024-03-05 11:20:00'),
+('Marcos Oliveira Ramos', 'marcos.oliveira@unesp.br',   '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG',    6, '2024-03-12 16:00:00'),
+('Patrícia Rocha Silva',  'patricia.rocha@unifesp.br',  '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG',    7, '2024-04-01 09:30:00'),
+('Admin Sistema',         'admin@crowdacademico.com.br','$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG',  NULL,'2024-01-01 00:00:00'),
+('Fernanda Souza Lima',   'fernanda.souza@gmail.com',            '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-04-10 10:00:00'), -- usuario comum (apoiador, nunca virou pesquisador)
+('Diego Martins Alves',   'diego.martins@crowdacademico.com.br', '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-01-05 09:00:00'), -- moderador
+('Camila Nunes Barros',   'camila.nunes@crowdacademico.com.br',  '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-01-05 09:00:00'), -- revisor
+('Thiago Almeida Rocha',  'thiago.almeida@crowdacademico.com.br','$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-01-05 09:00:00'), -- curador
+('Larissa Pinto Gomes',   'larissa.pinto@crowdacademico.com.br', '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-01-05 09:00:00'), -- suporte
+('Bruno Tavares Costa',    'bruno.tavares@ufrgs.br',    '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-05-20 09:00:00'),
+('Renata Vasconcelos Dias','renata.vasconcelos@ufpr.br','$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-05-22 09:00:00'),
+('Eduardo Barbosa Nogueira','eduardo.barbosa@ufba.br',  '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-05-25 09:00:00'),
+('Vinícius Almeida Ferraz','vinicius.ferraz@ufc.br',    '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-05-28 09:00:00');
 
 
 -- [07-D-2] usuario_papel
