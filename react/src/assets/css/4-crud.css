@@ -64,8 +64,22 @@
     font-size: var(--font-size-xs);
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: var(--color-slate-500);
+    /* ERA --color-slate-500 — o Lucas achou fraco demais no monitor dele
+       (02-08-2026). slate-700 é o mesmo tom usado no corpo do texto (ver
+       1-base.css, body { color: var(--color-slate-800) }), só um degrau
+       mais claro — continua "discreto" o suficiente pra ser cabeçalho, sem
+       ficar quase apagado. */
+    color: var(--color-slate-700);
     font-weight: 800;
+  }
+
+  .crud-tabela th.crud-tabela__ordenavel {
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .crud-tabela th.crud-tabela__ordenavel:hover {
+    color: var(--color-primary-dark);
   }
 
   /* Botões de linha (Editar/Salvar/Cancelar/Excluir) são menores que o

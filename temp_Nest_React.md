@@ -2,7 +2,17 @@
 
 **O que é este arquivo:** registro TEMPORÁRIO e rápido, escrito pra qualquer IA (Claude Code, Claude Web) entender em poucos minutos o que já foi encontrado e corrigido no NestJS e no React, sem precisar reler a sessão inteira. **NÃO é a documentação oficial** — isso continua sendo `DOCUMENTACAO_BD.md` (banco) e `PENDENCIAS e correcoes.md` (banco/produto). Este arquivo é só sobre o código do backend (Nest) e do frontend (React) em si. Objetivo único: evitar que uma IA nova reintroduza um problema que já foi corrigido, ou re-investigue algo que já foi confirmado como não-problema.
 
-Convenção: 🟢 corrigido | 🟡 real mas fora do escopo do Nest/React (é do `.sql`, é decisão de produto, etc.) | 🔴 ainda pendente.
+Convenção: 🟢 corrigido | 🟡 real mas fora do escopo do Nest/React (é do `.sql`, é decisão de produto, etc.) | 🔴 ainda pendente | ⚠️ armadilha/coisa difícil de achar sozinho, merece atenção extra.
+
+*(Nota: este arquivo vai virar aos poucos uma mistura de documentação + pendências/correções, sem separação rígida ainda — é de propósito, enquanto ele é pequeno. Quando crescer demais pra ler de uma vez, separamos em arquivos por assunto. Por enquanto, usar bastante `##`/`###`/`>` pra manter tudo bem demarcado dentro do arquivo único.)*
+
+## Índice
+
+- [Achados do Claude da Alexia (02-08-2026)](#achados-do-claude-da-alexia-02-08-2026)
+- [React — bugs já encontrados e corrigidos](#react--bugs-já-encontrados-e-corrigidos-contexto-de-rodadas-anteriores-pra-não-repetir)
+- [⚠️ Rodando o backend contra o Supabase (em vez de Postgres local)](#️-rodando-o-backend-contra-o-supabase-em-vez-de-postgres-local)
+- [📣 Novidades pra Alexia](#-novidades-pra-alexia)
+- [Pendências que ainda restam](#pendências-que-ainda-restam-deste-lado-nestreact-não-do-banco)
 
 ---
 
@@ -50,6 +60,36 @@ Corrigido com uma rede de segurança global, não duplicando o que já existia l
 🟢 **`useConfiguracoes()` — infraestrutura nova pra nenhuma tela futura escrever valor de negócio na mão** (motivado pelo Claude Web analisando o Projeto de Interface: `R$ 5,00`, `5%` de taxa etc. hardcoded no HTML do protótipo, quando `valor_minimo_contribuicao`/`taxa_plataforma_padrao` já existem em `configuracoes`). Trio `services/11-configuracoes/context/provider/hook` (mesmo padrão do `toast-context`/`toast-provider`/`use-toast`, por causa do Fast Refresh); `configuracaoApi.buscarPublicas()` chama o `GET /configuracoes` já existente com `fetch` puro (sem `authFetch`) — a RLS (`pol_config_select`) já libera as configs globais pra anônimo, então não precisou de endpoint novo nem mudança no Nest. `ConfiguracoesProvider` monta em `main.jsx`, acima do `ToastProvider`/`App` — disponível pra qualquer tela futura, autenticada ou pública. Uso: `const { obterConfiguracao, carregando } = useConfiguracoes(); obterConfiguracao('taxa_plataforma_padrao', 5)` (2º argumento é o fallback enquanto carrega ou se a chave não existir/estiver inativa).
 
 🟢 **`formatarMoeda`/`formatarPercentual`** — `services/constant/utils/formatacao.util.js`, pt-BR (`Intl.NumberFormat`). Mesmo motivo do item acima: no protótipo cada tela formatava dinheiro à mão, jeito garantido de gerar inconsistência (vírgula vs. ponto, `R$` em lugares diferentes).
+
+---
+
+## ⚠️ Rodando o backend contra o Supabase (em vez de Postgres local)
+
+*(02-08-2026 — o Lucas testou rodar `npm run start:dev` contra o banco no Supabase gratuito, em vez de instalar Postgres/DBeaver local. Funcionou, mas passou por 2 erros nada óbvios de achar sozinho — registrado aqui com destaque, porque quem repetir esse caminho (Alexia, ou o próprio Lucas num computador novo) vai bater nos dois exatamente na mesma ordem.)*
+
+O caminho completo (Supabase, SQL Editor no navegador em vez de DBeaver, sem instalar Postgres local) já está documentado passo a passo em `tutorial-rodar-projeto.md`, seção **"🌐 Alternativa: usar o Supabase..."** — o que segue aqui é só o que deu errado na prática e não estava previsto.
+
+⚠️ **Erro 1 — `ECONNREFUSED ::1:5432` / `127.0.0.1:5432` mesmo depois de configurar o Supabase certinho.**
+Causa: rodar o `ALTER ROLE app_nestjs LOGIN PASSWORD '...'` no SQL Editor do Supabase não muda nada no `.env` do projeto local — o `nest/.env` continua com a linha antiga (`DATABASE_URL=...@localhost:5432/crowdacademico`, o padrão de quando se usa Postgres local), então o backend nem tenta chegar no Supabase, tenta conectar nele mesmo. **Correção:** editar a `DATABASE_URL` do `.env` pra apontar pro host do Supabase (pegue em **Connect** → aba **Postgres** → **Direct connection**, não em "Project Settings" — a Supabase mudou o lugar disso na interface e não fica mais dentro de Settings), trocando o usuário `postgres` por `app_nestjs` e a senha pela que foi definida no `ALTER ROLE`. Depois de editar `.env`, sempre reiniciar o `npm run start:dev` (Nest não recarrega variável de ambiente sozinho, só com o processo inteiro reiniciado).
+
+⚠️ **Erro 2 — `Error: self-signed certificate in certificate chain` (`SELF_SIGNED_CERT_IN_CHAIN`), só depois de já ter o host certo.**
+Esse é o chato de verdade: mesmo com host/usuário/senha certos, o driver `pg` recusa a conexão porque não confia na cadeia de certificado TLS. Causa mais provável: antivírus com "inspeção de HTTPS" ligada (Kaspersky, Avast, ESET — comum em notebook pessoal) ou proxy de rede de escola/faculdade reassinando certificados com uma raiz que o **Node** não conhece (o Node usa sua própria lista de certificados confiáveis, diferente da lista que o Windows/navegador usa — por isso o navegador acessa o painel do Supabase numa boa, mas o `node`/`pg` não confia na mesma conexão). Isso não é exclusivo do Supabase — qualquer conexão TLS feita por um `node` nesse tipo de rede pode cair nisso. **Correção aplicada:** acrescentar `&uselibpqcompat=true` na `DATABASE_URL`, junto do `sslmode=require` que já estava lá (sugestão do próprio aviso que o `pg` imprime) — isso volta o comportamento de validação de certificado pro padrão `libpq` (conecta criptografado, sem exigir validação estrita da cadeia), meio-termo razoável pra ambiente de dev/TCC. String final que funcionou:
+```
+DATABASE_URL=postgresql://app_nestjs:SENHA@db.<ref>.supabase.co:5432/postgres?sslmode=require&uselibpqcompat=true
+```
+Se isso sozinho não resolver em outra máquina, o próximo passo (não precisou desta vez) seria configurar `ssl: { rejectUnauthorized: false }` explicitamente na criação do `Pool` em `database.module.ts`, em vez de via string de conexão.
+
+> Resultado depois das duas correções: `[DatabaseModule] Conectado ao Postgres como app_nestjs — RLS ativa.` e `Nest application successfully started` — igual ao que aparece com Postgres local, só que o banco é o do Supabase.
+
+---
+
+## 📣 Novidades pra Alexia
+
+*(Seção pra copiar/resumir rápido quando for atualizar ela — evita ela ter que ler o WhatsApp inteiro de novo.)*
+
+- As 3 coisas que o Claude dela encontrou (sem `ValidationPipe`, erro de e-mail duplicado virando 500, `RAISE EXCEPTION` sem `ERRCODE`) foram todas confirmadas reais. As 2 primeiras já estão corrigidas — inclusive testadas de verdade pelo Claude Web rodando o servidor e mandando requisições HTTP reais (não só lendo código). A 3ª (`ERRCODE` customizado nos ~40/42 `RAISE EXCEPTION` de `05_regras_negocio.sql`) continua sendo a parte dela — ver achado 3, mais acima neste arquivo, com o detalhe extra que o Claude Web levantou (hoje tudo vira 400, mas algumas dessas exceções deveriam ser 403 ou 409 quando ela adicionar os códigos).
+- Infra nova no React pra nenhuma tela nova escrever taxa/valor mínimo/prazo direto no HTML: `useConfiguracoes()` (lê as configs globais do banco) + `formatarMoeda`/`formatarPercentual` (formatação pt-BR única). Motivo: os protótipos do Projeto de Interface (Gemini) tinham `R$ 5,00`/`5%` fixos no HTML, e esses valores já existem em `configuracoes` — quando as telas públicas (campanha, home) forem portadas pro React de verdade, é pra usar essa infra, não repetir o hardcoded do protótipo.
+- **Dá pra rodar o projeto inteiro sem instalar Postgres nem DBeaver**, usando o Supabase gratuito — ver `tutorial-rodar-projeto.md` (seção nova "🌐 Alternativa: usar o Supabase") e a seção logo acima neste arquivo pra 2 erros meio escondidos que apareceram testando isso (senha/host do `.env` e certificado TLS). Pode valer a pena pra ela também, se não quiser instalar Postgres na máquina dela.
 
 ---
 

@@ -48,6 +48,7 @@ export function GenericTable({
   const [edicao, setEdicao] = useState({});
   const [filtro, setFiltro] = useState('');
   const [pagina, setPagina] = useState(1);
+  const [ordenacao, setOrdenacao] = useState({ chave: null, direcao: 'asc' });
 
   const recarregar = () => {
     setCarregando(true);
@@ -82,12 +83,54 @@ export function GenericTable({
     );
   }, [linhas, filtro, colunas]);
 
-  const totalPaginas = Math.max(1, Math.ceil(linhasFiltradas.length / TAMANHO_PAGINA));
+  // Ordena a lista FILTRADA inteira, antes de paginar — nunca a página
+  // atual sozinha. Ordenar só a fatia visível é o jeito clássico desse tipo
+  // de recurso "bugar com paginação" (linha some da vista ao virar página,
+  // ordem parece errada entre páginas). Tipo da coluna vem do próprio dado
+  // (typeof do primeiro valor não-nulo achado), não de uma config nova por
+  // coluna — funciona pra number (id), string (nome/email) e boolean
+  // (email verificado) sem precisar declarar isso em cada tela que usa
+  // GenericTable.
+  const linhasOrdenadas = useMemo(() => {
+    if (!ordenacao.chave) {
+      return linhasFiltradas;
+    }
+    const linhaComValor = linhas.find(
+      (linha) => linha[ordenacao.chave] !== null && linha[ordenacao.chave] !== undefined,
+    );
+    const tipo = typeof linhaComValor?.[ordenacao.chave];
+    const sinal = ordenacao.direcao === 'asc' ? 1 : -1;
+
+    return [...linhasFiltradas].sort((a, b) => {
+      const valorA = a[ordenacao.chave];
+      const valorB = b[ordenacao.chave];
+      if (tipo === 'number') {
+        return (valorA - valorB) * sinal;
+      }
+      if (tipo === 'boolean') {
+        return ((valorA === valorB ? 0 : valorA ? 1 : -1)) * sinal;
+      }
+      return String(valorA ?? '').localeCompare(String(valorB ?? ''), 'pt-BR') * sinal;
+    });
+  }, [linhasFiltradas, linhas, ordenacao]);
+
+  const totalPaginas = Math.max(1, Math.ceil(linhasOrdenadas.length / TAMANHO_PAGINA));
   const paginaAtual = Math.min(pagina, totalPaginas);
-  const linhasPagina = linhasFiltradas.slice(
+  const linhasPagina = linhasOrdenadas.slice(
     (paginaAtual - 1) * TAMANHO_PAGINA,
     paginaAtual * TAMANHO_PAGINA,
   );
+
+  const aoClicarColuna = (chave) => {
+    setOrdenacao((atual) =>
+      atual.chave === chave
+        ? { chave, direcao: atual.direcao === 'asc' ? 'desc' : 'asc' }
+        : { chave, direcao: 'asc' },
+    );
+    // Senão a pessoa pode ficar "presa" na página 3 depois de reordenar,
+    // vendo um pedaço que não corresponde mais ao topo da lista nova.
+    setPagina(1);
+  };
 
   const aoCriar = async (evento) => {
     evento.preventDefault();
@@ -187,7 +230,14 @@ export function GenericTable({
             <thead>
               <tr>
                 {colunas.map((coluna) => (
-                  <th key={coluna.chave}>{coluna.rotulo}</th>
+                  <th
+                    key={coluna.chave}
+                    className="crud-tabela__ordenavel"
+                    onClick={() => aoClicarColuna(coluna.chave)}
+                  >
+                    {coluna.rotulo}
+                    {ordenacao.chave === coluna.chave && (ordenacao.direcao === 'asc' ? ' ▲' : ' ▼')}
+                  </th>
                 ))}
                 {(atualizar || remover) && <th>Ações</th>}
               </tr>
@@ -257,7 +307,7 @@ export function GenericTable({
           {totalPaginas > 1 && (
             <div className="flex items-center justify-between mt-3 text-sm text-slate-600">
               <span>
-                Página {paginaAtual} de {totalPaginas} ({linhasFiltradas.length} registros)
+                Página {paginaAtual} de {totalPaginas} ({linhasOrdenadas.length} registros)
               </span>
               <div className="flex gap-2">
                 <button

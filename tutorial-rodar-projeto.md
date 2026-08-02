@@ -52,6 +52,27 @@ Se travar em algum item, procure a parte correspondente mais abaixo — ela tem 
 
 ---
 
+## 🌐 Alternativa: usar o Supabase em vez de instalar Postgres/DBeaver (substitui as Partes 1, 2 e 3)
+
+Se preferir não instalar o PostgreSQL nem o DBeaver, dá pra fazer tudo isso pelo navegador, no plano gratuito do Supabase (https://supabase.com) — é um Postgres de verdade, só hospedado por eles; todo o `.sql` do projeto (extensões, `ENUM`, RLS, funções `plpgsql`) roda igual, sem adaptação nenhuma. Depois de terminar esta seção, pule direto pra **Parte 4** — o resto do tutorial funciona igual, só o `DATABASE_URL` do `.env` muda.
+
+1. Crie uma conta grátis em supabase.com e um projeto novo (ele vai pedir uma senha pro banco — anote em algum lugar, é a senha do usuário `postgres` lá, o superusuário deles).
+2. No painel do projeto, abra o **SQL Editor** (menu lateral) — é o substituto do DBeaver: cole o conteúdo de cada `.sql` e rode como script, na mesma ordem da Parte 3 (`01 → 02 → 03 → 04 → 05 → 06 → 07 → 08`, um arquivo de cada vez, conferindo que não deu erro antes de ir pro próximo).
+3. Depois de rodar o `01`, rode também o passo "Depois de rodar tudo" da Parte 3 (`ALTER ROLE app_nestjs LOGIN PASSWORD '...'`) — escolha sua própria senha aqui; o valor fixo `app_nestjs123` deste tutorial existe só pra facilitar decorar no Postgres local, no Supabase guarde a senha real que você escolher em algum lugar seguro.
+4. Pegue a connection string em **Project Settings → Database → Connection string** (modo "URI"). Troque o usuário `postgres` por `app_nestjs` e a senha pela que você definiu no passo 3 — o nome do banco continua `postgres` (não `crowdacademico`; no Supabase o banco do projeto já nasce com esse nome, não precisa criar um novo).
+5. Acrescente `?sslmode=require` no final da URL — o Supabase exige conexão criptografada; sem isso a conexão é recusada. Fica assim:
+   ```
+   DATABASE_URL=postgresql://app_nestjs:SUA-SENHA-AQUI@db.xxxxxxxxxxxx.supabase.co:5432/postgres?sslmode=require
+   ```
+6. Use essa linha no `.env` do backend (Parte 4) no lugar de `postgresql://app_nestjs:app_nestjs123@localhost:5432/crowdacademico`. Nada mais muda — Parte 4 em diante segue idêntico.
+
+Duas coisas que só existem nesse caminho, e não no Postgres local (Partes 1-3):
+
+- **Sem internet, o backend não conecta em lugar nenhum**, mesmo com tudo certo no código — o oposto do cuidado que já tomamos com o Tailwind (tirar a dependência de rede pro build funcionar offline). Pra rede de escola bloqueada ou dia de apresentação sem internet garantida, o Postgres local continua sendo o caminho mais seguro; o Supabase é ótimo pra praticidade no dia a dia, não pra esse cenário específico.
+- **Projeto gratuito "dorme" depois de ~1 semana sem uso** — a próxima conexão depois disso demora mais ou falha até você reativar manualmente (botão "Resume" no painel do Supabase). Vale abrir o painel de vez em quando, mesmo sem mexer em nada, principalmente perto de datas importantes.
+
+---
+
 ## Parte 1 — instalar o PostgreSQL
 
 1. Baixe o instalador em postgresql.org (escolha a versão mais recente estável, ex. 16 ou 17).
