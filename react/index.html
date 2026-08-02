@@ -6,12 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CrowdAcadêmico</title>
 
-    <!-- Mesmo stack visual do Projeto de Interface real
-         (informacoes/Sem-Node-Projeto-de-Interface-CrowdAcademico/index.html):
-         Tailwind via CDN + config de cores idêntica, Google Fonts, Font
-         Awesome — pra Header/Footer (e telas futuras portadas de lá) serem
-         cópia fiel, não reinterpretação. -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts + Font Awesome continuam via CDN (achado do Claude
+         Web, 02-08-2026: degradam suave se a rede falhar — ícone some,
+         fonte cai pro fallback do sistema — diferente do Tailwind, que
+         quebrava a página inteira sem CDN). Tailwind saiu daqui: agora é
+         dependência real do Vite (ver vite.config.js, assets/css/1-base.css). -->
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=DM+Serif+Display&display=swap"
       rel="stylesheet"
@@ -20,16 +19,6 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
     />
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            fontFamily: { sans: ['Inter', 'sans-serif'], serif: ['DM Serif Display', 'serif'] },
-            colors: { primary: '#0F9B58', 'primary-dark': '#0B7A45', surface: '#F8FAFC', dark: '#0F172A' },
-          },
-        },
-      };
-    </script>
   </head>
   <body>
     <div id="root"></div>

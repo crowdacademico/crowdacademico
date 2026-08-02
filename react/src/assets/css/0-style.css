@@ -2,14 +2,9 @@
    (informacoes/Sem-Node-Projeto-de-Interface-CrowdAcademico/css/estilos.css)
    e da convenção de numeração já usada no hotel (informacoes/modelo em
    MySQL_.../react_academic/src/assets/css/0-style.css): um arquivo por
-   responsabilidade, importado aqui em ordem, e só ESTE arquivo é importado
-   direto no main.jsx.
-
-   Header/Footer NÃO têm arquivo aqui — são cópia fiel do Projeto de
-   Interface real e usam só classes do Tailwind (CDN configurado no
-   index.html), não CSS próprio. O que sobra aqui é o que eu escrevi à mão
-   pro admin (menu lateral, tabelas de CRUD) — ver components/layout/ pro
-   Header/Footer. */
+   responsabilidade, importado aqui em ordem. main.jsx importa este arquivo
+   + tailwind-theme.css (esse fica separado, ver o comentário lá pro
+   porquê). */
 
 @import url('./1-base.css');
 @import url('./2-admin-shell.css');

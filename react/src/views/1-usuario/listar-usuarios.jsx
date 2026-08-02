@@ -32,6 +32,7 @@ export function ListarUsuarios({ auth }) {
           { chave: 'emailVerificado', rotulo: 'e-mail verificado' },
         ]}
         chavePrimaria="idUsuario"
+        campoRotulo="nome"
         listar={listarUsuarios}
         atualizar={(id, dados) => usuarioApi.atualizar(auth.authFetch, id, dados)}
         remover={(id) => usuarioApi.remover(auth.authFetch, id)}

@@ -1,10 +1,7 @@
 import { useCallback } from 'react';
 import { GenericTable } from '../../components/crud/generic-table';
-import {
-  papelApi,
-  papelPermissaoApi,
-  permissaoApi,
-} from '../../services/2-papel-permissao/api/papel-permissao.api';
+import { papelApi, permissaoApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
+import { MatrizPapelPermissao } from './matriz-papel-permissao';
 import { UsuarioPapelWidget } from './usuario-papel-widget';
 
 // Aba "Papéis & Permissões" do painel admin — rota /admin/papeis. Reúne 4
@@ -15,10 +12,6 @@ export function ListarPapeis({ auth }) {
   const listarPapeis = useCallback(() => papelApi.listar(auth.authFetch), [auth.authFetch]);
   const listarPermissoes = useCallback(
     () => permissaoApi.listar(auth.authFetch),
-    [auth.authFetch],
-  );
-  const listarPapelPermissao = useCallback(
-    () => papelPermissaoApi.listar(auth.authFetch),
     [auth.authFetch],
   );
 
@@ -47,17 +40,7 @@ export function ListarPapeis({ auth }) {
         />
       </div>
       <div className="admin-content-painel">
-        <GenericTable
-          titulo="Papel × Permissão (catálogo, só leitura)"
-          colunas={[
-            { chave: 'idPapel', rotulo: 'id_papel' },
-            { chave: 'nomePapel', rotulo: 'papel' },
-            { chave: 'idPermissao', rotulo: 'id_permissao' },
-            { chave: 'nomePermissao', rotulo: 'permissão' },
-          ]}
-          chavePrimaria="idPermissao"
-          listar={listarPapelPermissao}
-        />
+        <MatrizPapelPermissao authFetch={auth.authFetch} />
       </div>
       <div className="admin-content-painel">
         <UsuarioPapelWidget authFetch={auth.authFetch} />

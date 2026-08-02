@@ -82,18 +82,27 @@
   background: var(--color-slate-200);
 }
 
+/* Cada campo agora é um <label> (texto do rótulo + input/select dentro) —
+   achado do Claude Web: só placeholder some quando a pessoa digita e ela
+   perde a referência de qual campo é qual. align-items: flex-end porque o
+   botão "Criar" (sem rótulo acima) precisa alinhar com a base dos campos,
+   não com o topo. */
 .crud-form-criar {
   margin-top: 1rem;
   display: flex;
-  gap: 0.5rem;
+  gap: 0.75rem;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-end;
 }
 
-.crud-form-criar input {
+.crud-form-criar input,
+.crud-form-criar select {
   padding: 0.45rem 0.6rem;
   border: 1px solid var(--color-slate-200);
   border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  font-weight: 400;
+  color: var(--color-slate-800);
 }
 
 .crud-form-criar button {

@@ -1,18 +1,15 @@
-/* Fonte (Inter/DM Serif Display) carregada via <link> no index.html — igual
-   ao Projeto de Interface real — não duplicar aqui com @import.
+/* Tailwind (import + @theme com as cores/fontes) vive em 0-style.css, não
+   aqui — @import só pode ser a primeira coisa num arquivo CSS, e 0-style.css
+   é quem o main.jsx importa direto. Ver o comentário lá pro porquê.
 
-   ========= VARIÁVEIS GLOBAIS =========
-   Mesma paleta do Projeto de Interface real
-   (informacoes/Sem-Node-Projeto-de-Interface-CrowdAcademico/index.html,
-   tailwind.config: colors.primary/primary-dark/surface/dark). Usado pelo
-   CSS próprio (menu lateral do admin, tabelas de CRUD) — Header/Footer e
-   qualquer tela portada direto do Projeto de Interface usam as classes do
-   Tailwind (bg-primary, text-dark etc.), configuradas com os mesmos valores
-   no index.html — duas formas de acessar a mesma paleta, não duas paletas. */
+   ========= VARIÁVEIS GLOBAIS (CSS próprio, não Tailwind) =========
+   `--color-primary`/`--color-primary-dark`/`--color-surface`/`--color-dark`/
+   `--font-sans`/`--font-serif` NÃO são redeclaradas aqui — o `@theme`
+   acima já expõe elas como variável CSS normal em `:root`, disponível pra
+   qualquer regra do projeto (Tailwind v4 faz isso automaticamente). Aqui
+   só entra o que o `@theme` não cobre: tamanhos de fonte, tons de slate/
+   status, raio de borda, sombra. */
 :root {
-  --font-sans: 'Inter', system-ui, sans-serif;
-  --font-serif: 'DM Serif Display', serif;
-
   --font-size-xs: 0.75rem;
   --font-size-sm: 0.875rem;
   --font-size-base: 1rem;
@@ -21,10 +18,6 @@
   --font-size-2xl: 1.5rem;
   --font-size-3xl: 1.875rem;
 
-  --color-primary: #0f9b58;
-  --color-primary-dark: #0b7a45;
-  --color-surface: #f8fafc;
-  --color-dark: #0f172a;
   --color-white: #ffffff;
 
   --color-slate-50: #f8fafc;

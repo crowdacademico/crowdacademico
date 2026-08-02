@@ -21,13 +21,25 @@ export function ListarConfiguracoes({ auth }) {
           { chave: 'ativo', rotulo: 'ativo' },
         ]}
         chavePrimaria="idConfig"
+        campoRotulo="chave"
         listar={listarConfiguracoes}
         criar={(dados) => configuracaoApi.criar(auth.authFetch, dados)}
         camposCriar={[
-          { chave: 'chave', rotulo: 'chave' },
-          { chave: 'valor', rotulo: 'valor' },
-          { chave: 'tipo', rotulo: 'tipo (decimal/inteiro/texto/booleano)' },
-          { chave: 'descricao', rotulo: 'descrição' },
+          { chave: 'chave', rotulo: 'Chave' },
+          { chave: 'valor', rotulo: 'Valor' },
+          {
+            chave: 'tipo',
+            rotulo: 'Tipo',
+            tipo: 'select',
+            // Mesmo conjunto fechado de CREATE TYPE tipo_configuracao (01_extensoes_enums_tabelas.sql)
+            opcoes: [
+              { valor: 'decimal', rotulo: 'Decimal' },
+              { valor: 'inteiro', rotulo: 'Inteiro' },
+              { valor: 'texto', rotulo: 'Texto' },
+              { valor: 'booleano', rotulo: 'Booleano' },
+            ],
+          },
+          { chave: 'descricao', rotulo: 'Descrição' },
         ]}
         atualizar={(id, dados) => configuracaoApi.atualizar(auth.authFetch, id, dados)}
         remover={(id) => configuracaoApi.remover(auth.authFetch, id)}
