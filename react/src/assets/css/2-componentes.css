@@ -1,0 +1,103 @@
+/* ========= COMPONENTES REAPROVEITÁVEIS =========
+   Pedido do Lucas (02-08-2026): "constante pra botões, tirando o máximo
+   possível de hardcoded" — mesma ideia já aplicada no banco (valor de
+   negócio vira linha em `configuracoes`, não número solto no `.sql`).
+   Aqui o equivalente é uma classe CSS: o botão "Criar"/"Entrar"/"Salvar"
+   em qualquer tela nova usa `className="btn btn-primary"`, não uma string
+   gigante de utilitários Tailwind copiada e colada — muda o estilo do
+   botão primário do projeto inteiro num lugar só, aqui.
+
+   @layer components: mesmo motivo do 3-admin-shell.css/4-crud.css — sem
+   isso, estas classes ganhariam de QUALQUER utilitário do Tailwind
+   colocado do lado (`className="btn btn-primary w-full"` — o `w-full`
+   precisa poder vencer, senão a composição classe+utilitário não funciona
+   igual ao resto do Tailwind funciona). */
+@layer components {
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1.25rem;
+    border-radius: var(--radius-md);
+    font-weight: 700;
+    font-size: var(--font-size-sm);
+    transition: var(--transition-normal);
+    border: 1px solid transparent;
+    cursor: pointer;
+  }
+
+  .btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .btn-primary {
+    background-color: var(--color-primary);
+    color: var(--color-white);
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background-color: var(--color-primary-dark);
+  }
+
+  .btn-secondary {
+    background-color: var(--color-slate-100);
+    border-color: var(--color-slate-200);
+    color: var(--color-slate-700);
+  }
+
+  .btn-secondary:hover:not(:disabled) {
+    background-color: var(--color-slate-200);
+  }
+
+  .btn-danger {
+    background-color: var(--color-red-100);
+    color: var(--color-red-600);
+  }
+
+  .btn-danger:hover:not(:disabled) {
+    background-color: var(--color-red-600);
+    color: var(--color-white);
+  }
+
+  /* Input/select de formulário fora da tabela de CRUD (login, criar
+     usuário) — mesma moldura em todo lugar: borda, fundo levemente cinza,
+     foco em verde. */
+  .input-padrao {
+    width: 100%;
+    background-color: var(--color-slate-50);
+    border: 2px solid var(--color-slate-200);
+    border-radius: var(--radius-lg);
+    padding: 0.875rem;
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    transition: var(--transition-normal);
+  }
+
+  .input-padrao:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    background-color: var(--color-white);
+  }
+
+  /* Badge Sim/Não (GenericTable, coluna booleana) */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.125rem 0.6rem;
+    border-radius: var(--radius-full);
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+  }
+
+  .badge-sucesso {
+    background-color: var(--color-emerald-100);
+    color: var(--color-emerald-600);
+  }
+
+  .badge-neutro {
+    background-color: var(--color-slate-100);
+    color: var(--color-slate-500);
+  }
+}

@@ -1,11 +1,11 @@
-/* Tailwind (import + @theme com as cores/fontes) vive em 0-style.css, não
-   aqui — @import só pode ser a primeira coisa num arquivo CSS, e 0-style.css
-   é quem o main.jsx importa direto. Ver o comentário lá pro porquê.
+/* Tailwind (import + @theme com as cores/fontes) vive em tailwind-theme.css,
+   não aqui — @import só pode ser a primeira coisa num arquivo CSS. Ver o
+   comentário lá pro porquê.
 
    ========= VARIÁVEIS GLOBAIS (CSS próprio, não Tailwind) =========
    `--color-primary`/`--color-primary-dark`/`--color-surface`/`--color-dark`/
    `--font-sans`/`--font-serif` NÃO são redeclaradas aqui — o `@theme`
-   acima já expõe elas como variável CSS normal em `:root`, disponível pra
+   já expõe elas como variável CSS normal em `:root`, disponível pra
    qualquer regra do projeto (Tailwind v4 faz isso automaticamente). Aqui
    só entra o que o `@theme` não cobre: tamanhos de fonte, tons de slate/
    status, raio de borda, sombra. */
@@ -54,51 +54,67 @@
   --transition-normal: all 0.2s ease;
 }
 
-/* ========= RESET ========= */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+/* ========= RESET =========
+   BUG REAL achado pelo Lucas rodando o painel (02-08-2026), depois da
+   migração do Tailwind pro build de verdade: cabeçalho/rodapé desalinhados,
+   breadcrumb colado na borda, botões "feios". Causa: este reset (e o resto
+   deste arquivo) vivia FORA de qualquer @layer. Regra da cascata de CSS:
+   estilo sem @layer sempre GANHA de qualquer estilo QUE ESTEJA em @layer,
+   não importa a especificidade — e o Tailwind v4 embrulha TUDO que ele gera
+   (`.mx-auto`, `.px-4`, `.py-2` etc.) dentro de `@layer utilities`. Ou seja,
+   o `margin:0; padding:0` universal abaixo estava silenciosamente vencendo
+   `.mx-auto`/`.px-4`/`.py-10` de QUALQUER elemento no projeto inteiro —
+   funcionava certinho antes só porque o Tailwind vinha por <script> CDN,
+   que não usa @layer do jeito que o import físico usa.
+   Fix: declarar @layer base (mesmo nome que o Tailwind já declara) — as
+   regras se juntam na posição certa, antes de @layer utilities, e o
+   `.mx-auto` volta a ganhar do reset. */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
 
-html,
-body,
-#root {
-  min-height: 100vh;
-}
+  html,
+  body,
+  #root {
+    min-height: 100vh;
+  }
 
-body {
-  font-family: var(--font-sans);
-  font-size: var(--font-size-sm);
-  line-height: 1.5;
-  background-color: var(--color-surface);
-  color: var(--color-slate-800);
-  -webkit-font-smoothing: antialiased;
-}
+  body {
+    font-family: var(--font-sans);
+    font-size: var(--font-size-sm);
+    line-height: 1.5;
+    background-color: var(--color-surface);
+    color: var(--color-slate-800);
+    -webkit-font-smoothing: antialiased;
+  }
 
-#root {
-  display: flex;
-  flex-direction: column;
-}
+  #root {
+    display: flex;
+    flex-direction: column;
+  }
 
-h1,
-h2,
-h3 {
-  font-family: var(--font-serif);
-  color: var(--color-dark);
-  font-weight: 700;
-}
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-serif);
+    color: var(--color-dark);
+    font-weight: 700;
+  }
 
-button {
-  font-family: inherit;
-  cursor: pointer;
-}
+  button {
+    font-family: inherit;
+    cursor: pointer;
+  }
 
-input,
-select,
-textarea {
-  font-family: inherit;
-  font-size: var(--font-size-sm);
+  input,
+  select,
+  textarea {
+    font-family: inherit;
+    font-size: var(--font-size-sm);
+  }
 }

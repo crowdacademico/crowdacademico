@@ -16,7 +16,7 @@ export function AdminLayout() {
   return (
     <main className="admin-pagina">
       {/* Só aparece <1024px — em telas maiores o menu já é uma coluna fixa
-          (ver .admin-sidebar em 2-admin-shell.css), não precisa de botão. */}
+          (ver .admin-sidebar em 3-admin-shell.css), não precisa de botão. */}
       <button
         type="button"
         onClick={() => setMenuAberto(true)}

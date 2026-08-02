@@ -60,7 +60,7 @@ export function LoginPage({ auth }) {
               value={email}
               onChange={(evento) => setEmail(evento.target.value)}
               required
-              className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl p-3.5 outline-none focus:border-primary focus:bg-white text-sm font-medium transition-colors"
+              className="input-padrao"
               placeholder="seu@email.com"
             />
           </div>
@@ -83,7 +83,7 @@ export function LoginPage({ auth }) {
               value={senha}
               onChange={(evento) => setSenha(evento.target.value)}
               required
-              className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl p-3.5 outline-none focus:border-primary focus:bg-white text-sm font-medium transition-colors"
+              className="input-padrao"
               placeholder="••••••••"
             />
           </div>

@@ -2,7 +2,7 @@ import { NavLink } from 'react-router';
 import { GRUPOS_MENU_ADMIN } from './admin-menu.constants';
 
 // Menu lateral — coluna fixa em telas >=1024px (grid em .admin-shell,
-// 2-admin-shell.css), gaveta (drawer) por cima do conteúdo em telas
+// 3-admin-shell.css), gaveta (drawer) por cima do conteúdo em telas
 // menores. Itens com `caminho` são NavLink de verdade (URL muda, dá pra
 // linkar direto, botão Voltar funciona, F5 mantém a aba) — item ativo é
 // quem o próprio NavLink decide, comparando com a URL atual, não um

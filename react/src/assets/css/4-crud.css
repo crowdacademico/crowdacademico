@@ -1,0 +1,102 @@
+/* ========= BLOCOS DE CRUD (tabela genérica) =========
+   Usado por components/crud/generic-table.jsx dentro do painel admin.
+   Migrado do antigo devtools.css (cores hardcoded) pras variáveis de
+   1-base.css — mesma ideia de "tirar o hardcoded" já aplicada no banco
+   (configuracoes em vez de valor fixo no .sql). Botões daqui usam as
+   classes de 2-componentes.css (.btn/.btn-secondary/.btn-danger) — não
+   têm mais estilo próprio de botão redeclarado neste arquivo. */
+@layer components {
+  .crud-secao {
+    margin-bottom: 0;
+  }
+
+  /* Reaproveita a escala de tamanhos já definida em 1-base.css (--font-size-*)
+     — nenhum valor novo criado aqui. "Título de seção" (Usuários, Papéis,
+     Configurações...) usa --font-size-2xl; se um dia precisar de um nível
+     "supertítulo" (página inteira) ou "subtítulo" (dentro da seção), a
+     escala já tem --font-size-3xl/xl/lg prontos, é só usar a variável certa
+     — não inventar um valor solto. */
+  .crud-secao h2 {
+    font-family: var(--font-sans);
+    font-size: var(--font-size-2xl);
+    font-weight: 800;
+    color: var(--color-dark);
+    margin-bottom: 0.75rem;
+  }
+
+  /* Linha própria do botão de ação (ex.: "Criar"), embaixo do título, acima
+     da tabela — "o lugar normal", não colado no título nem flutuando acima
+     de tudo. */
+  .crud-secao__acao-topo {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 0.75rem;
+  }
+
+  /* Embaixo da tabela, não em cima — se não tem dado (por erro ou por estar
+     vazio mesmo), a mensagem faz mais sentido perto de onde o "vazio"
+     apareceria, não lá no topo antes de qualquer coisa. */
+  .crud-erro {
+    color: var(--color-red-600);
+    background: var(--color-red-100);
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-sm);
+    display: inline-block;
+    margin-top: 0.75rem;
+  }
+
+  .crud-tabela {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: var(--font-size-sm);
+  }
+
+  .crud-tabela th,
+  .crud-tabela td {
+    border: 1px solid var(--color-slate-200);
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+  }
+
+  .crud-tabela th {
+    background: var(--color-slate-50);
+    font-size: var(--font-size-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-slate-500);
+    font-weight: 800;
+  }
+
+  /* Botões de linha (Editar/Salvar/Cancelar/Excluir) são menores que o
+     .btn padrão — só ajusta tamanho/espaçamento aqui, cor/fundo continuam
+     vindo de .btn-secondary/.btn-danger (aplicadas no JSX). */
+  .crud-tabela .btn {
+    padding: 0.3rem 0.6rem;
+    font-size: var(--font-size-xs);
+    margin-right: 0.35rem;
+  }
+
+  /* Cada campo agora é um <label> (texto do rótulo + input/select dentro) —
+     achado do Claude Web: só placeholder some quando a pessoa digita e ela
+     perde a referência de qual campo é qual. align-items: flex-end porque o
+     botão "Criar" (sem rótulo acima) precisa alinhar com a base dos campos,
+     não com o topo. */
+  .crud-form-criar {
+    margin-top: 1rem;
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    align-items: flex-end;
+  }
+
+  .crud-form-criar input,
+  .crud-form-criar select {
+    padding: 0.45rem 0.6rem;
+    border: 1px solid var(--color-slate-200);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-sm);
+    font-weight: 400;
+    color: var(--color-slate-800);
+  }
+}

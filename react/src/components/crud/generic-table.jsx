@@ -9,12 +9,7 @@ const TAMANHO_PAGINA = 10;
 function celulaValor(valor) {
   if (typeof valor === 'boolean') {
     return (
-      <span
-        className={
-          'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold ' +
-          (valor ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500')
-        }
-      >
+      <span className={'badge ' + (valor ? 'badge-sucesso' : 'badge-neutro')}>
         {valor ? 'Sim' : 'Não'}
       </span>
     );
@@ -218,15 +213,31 @@ export function GenericTable({
                     <td>
                       {editandoChave === linha[chavePrimaria] ? (
                         <>
-                          <button onClick={salvarEdicao}>Salvar</button>
-                          <button onClick={() => setEditandoChave(null)}>Cancelar</button>
+                          <button className="btn btn-primary" onClick={salvarEdicao}>
+                            Salvar
+                          </button>
+                          <button
+                            className="btn btn-secondary"
+                            onClick={() => setEditandoChave(null)}
+                          >
+                            Cancelar
+                          </button>
                         </>
                       ) : (
                         <>
                           {atualizar && (
-                            <button onClick={() => iniciarEdicao(linha)}>Editar</button>
+                            <button
+                              className="btn btn-secondary"
+                              onClick={() => iniciarEdicao(linha)}
+                            >
+                              Editar
+                            </button>
                           )}
-                          {remover && <button onClick={() => excluir(linha)}>Excluir</button>}
+                          {remover && (
+                            <button className="btn btn-danger" onClick={() => excluir(linha)}>
+                              Excluir
+                            </button>
+                          )}
                         </>
                       )}
                     </td>
@@ -252,14 +263,14 @@ export function GenericTable({
                 <button
                   onClick={() => setPagina((p) => Math.max(1, p - 1))}
                   disabled={paginaAtual === 1}
-                  className="px-3 py-1 rounded-md border border-slate-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="btn btn-secondary"
                 >
                   Anterior
                 </button>
                 <button
                   onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
                   disabled={paginaAtual === totalPaginas}
-                  className="px-3 py-1 rounded-md border border-slate-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="btn btn-secondary"
                 >
                   Próxima
                 </button>
@@ -302,7 +313,9 @@ export function GenericTable({
               )}
             </label>
           ))}
-          <button type="submit">Criar</button>
+          <button type="submit" className="btn btn-primary">
+            Criar
+          </button>
         </form>
       )}
     </section>

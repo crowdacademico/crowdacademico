@@ -18,10 +18,7 @@ export function ListarUsuarios({ auth }) {
       <GenericTable
         titulo="Usuários"
         acaoTopo={
-          <Link
-            to="/usuarios/criar"
-            className="bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-lg font-semibold text-sm transition-colors"
-          >
+          <Link to="/usuarios/criar" className="btn btn-primary">
             Criar
           </Link>
         }

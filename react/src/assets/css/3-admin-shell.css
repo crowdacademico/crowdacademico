@@ -23,7 +23,12 @@
    ganha padding próprio agora é .admin-content-area (não mais
    .admin-pagina inteira), e .admin-shell precisa esticar por toda a
    altura disponível entre header/footer — display:flex em .admin-pagina +
-   align-items:stretch (padrão do flex) força isso. */
+   align-items:stretch (padrão do flex) força isso.
+
+   Tudo dentro de @layer components: sem isso, estas regras (fora de
+   qualquer @layer) ganhariam de QUALQUER utilitário do Tailwind sozinhas,
+   não importa a especificidade — mesmo bug do reset em 1-base.css. */
+@layer components {
 .admin-pagina {
   width: 100%;
   flex-grow: 1;
@@ -149,3 +154,4 @@
     border-right: 1px solid var(--color-slate-200);
   }
 }
+} /* fim @layer components */
