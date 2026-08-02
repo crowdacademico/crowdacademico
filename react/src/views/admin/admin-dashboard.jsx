@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { Link } from 'react-router';
-import { GenericTable } from '../../components/devtools/generic-table';
+import { GenericTable } from '../../components/crud/generic-table';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import {
   papelApi,
@@ -11,8 +11,9 @@ import { configuracaoApi } from '../../services/11-configuracoes/api/configuraca
 import { AdminSidebar } from './admin-sidebar';
 import { UsuarioPapelWidget } from './usuario-papel-widget';
 
-// Painel administrativo — menu lateral fixo à esquerda (admin-sidebar.jsx)
-// e um painel de conteúdo à direita por aba selecionada. Header/Footer
+// Painel administrativo — menu lateral (admin-sidebar.jsx): coluna fixa à
+// esquerda em telas >=1024px, gaveta com hambúrguer em telas menores. Um
+// painel de conteúdo à direita por aba selecionada. Header/Footer
 // vêm de fora (components/layout/layout.jsx, via App.jsx) — esta é só a
 // página em si, renderizada dentro do <Outlet/> da rota "/". `auth` também
 // vem de fora (useAuth chamado uma vez só em App.jsx). Só 3 abas têm
@@ -22,6 +23,7 @@ import { UsuarioPapelWidget } from './usuario-papel-widget';
 // existe funciona.
 export function AdminDashboard({ auth }) {
   const [abaAtiva, setAbaAtiva] = useState('usuarios');
+  const [menuAberto, setMenuAberto] = useState(false);
 
   // useCallback aqui não é sobre performance — é porque GenericTable usa a
   // função em `useEffect([listar])`; sem isso, cada render criaria uma
@@ -43,8 +45,23 @@ export function AdminDashboard({ auth }) {
 
   return (
     <main className="admin-pagina">
+      {/* Só aparece <1024px — em telas maiores o menu já é uma coluna fixa
+          (ver .admin-sidebar em 2-admin-shell.css), não precisa de botão. */}
+      <button
+        type="button"
+        onClick={() => setMenuAberto(true)}
+        className="lg:hidden flex items-center gap-2 px-4 py-3 bg-white border-b border-slate-200 font-semibold text-sm text-slate-700 w-full"
+      >
+        <i className="fa-solid fa-bars"></i> Menu
+      </button>
+
       <div className="admin-shell">
-        <AdminSidebar abaAtiva={abaAtiva} aoSelecionar={setAbaAtiva} />
+        <AdminSidebar
+          abaAtiva={abaAtiva}
+          aoSelecionar={setAbaAtiva}
+          aberto={menuAberto}
+          aoFechar={() => setMenuAberto(false)}
+        />
 
         <div className="admin-content-area">
           <div className="admin-content-area__inner">

@@ -1,10 +1,8 @@
 import { useEffect, useState } from 'react';
 
-// Tabela genérica de CRUD — "o mínimo que prova que backend+RLS funcionam",
-// não uma tela bonita (ver views/dev/dev-dashboard.jsx e o relatório desta
-// rodada: isto é ferramenta interna descartável de propósito, não o admin
-// de verdade que vem bem mais na frente). Configurada por colunas — cada
-// novo módulo do Nest vira só uma entrada nova aqui, não uma tela nova.
+// Tabela genérica de CRUD, usada pelo painel admin (views/admin) — cada
+// módulo novo do Nest com listagem simples vira só uma entrada de colunas
+// aqui, não uma tela nova escrita do zero.
 export function GenericTable({
   titulo,
   acaoTopo,
@@ -83,16 +81,43 @@ export function GenericTable({
   };
 
   return (
-    <section className="devtools-secao">
-      <div className="devtools-secao__cabecalho">
-        <h2>{titulo}</h2>
-        {acaoTopo}
-      </div>
-      {erro && <p className="devtools-erro">{erro}</p>}
+    <section className="crud-secao">
+      <h2>{titulo}</h2>
+      {acaoTopo && <div className="crud-secao__acao-topo">{acaoTopo}</div>}
       {carregando ? (
-        <p>Carregando...</p>
+        // Esqueleto em vez de texto "Carregando..." — padrão comum em
+        // painel admin (Linear, Stripe, Vercel): já mostra o formato da
+        // tabela (mesmas colunas) enquanto os dados reais não chegam, em
+        // vez de um texto solto que faz a tela "pular" quando os dados
+        // aparecem.
+        <table className="crud-tabela">
+          <thead>
+            <tr>
+              {colunas.map((coluna) => (
+                <th key={coluna.chave}>{coluna.rotulo}</th>
+              ))}
+              {(atualizar || remover) && <th>Ações</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {[0, 1, 2, 3].map((indice) => (
+              <tr key={indice} className="animate-pulse">
+                {colunas.map((coluna) => (
+                  <td key={coluna.chave}>
+                    <div className="h-3.5 bg-slate-200 rounded"></div>
+                  </td>
+                ))}
+                {(atualizar || remover) && (
+                  <td>
+                    <div className="h-3.5 bg-slate-200 rounded"></div>
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       ) : (
-        <table className="devtools-tabela">
+        <table className="crud-tabela">
           <thead>
             <tr>
               {colunas.map((coluna) => (
@@ -137,7 +162,7 @@ export function GenericTable({
                 )}
               </tr>
             ))}
-            {linhas.length === 0 && (
+            {linhas.length === 0 && !erro && (
               <tr>
                 <td colSpan={colunas.length + 1}>Nenhum registro.</td>
               </tr>
@@ -145,8 +170,9 @@ export function GenericTable({
           </tbody>
         </table>
       )}
+      {erro && <p className="crud-erro">{erro}</p>}
       {criar && camposCriar && (
-        <form onSubmit={aoCriar} className="devtools-form-criar">
+        <form onSubmit={aoCriar} className="crud-form-criar">
           {camposCriar.map((campo) => (
             <input
               key={campo.chave}

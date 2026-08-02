@@ -1,19 +1,11 @@
 /* ========= BLOCOS DE CRUD (tabela genérica) =========
-   Usado por components/devtools/generic-table.jsx dentro do painel admin.
-   Migrado de views/dev/devtools.css (cores hardcoded) pras variáveis de
+   Usado por components/crud/generic-table.jsx dentro do painel admin.
+   Migrado do antigo devtools.css (cores hardcoded) pras variáveis de
    1-base.css — mesma ideia de "tirar o hardcoded" já aplicada no banco
    (configuracoes em vez de valor fixo no .sql). */
 
-.devtools-secao {
+.crud-secao {
   margin-bottom: 0;
-}
-
-.devtools-secao__cabecalho {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 0.75rem;
 }
 
 /* Reaproveita a escala de tamanhos já definida em 1-base.css (--font-size-*)
@@ -22,37 +14,50 @@
    "supertítulo" (página inteira) ou "subtítulo" (dentro da seção), a
    escala já tem --font-size-3xl/xl/lg prontos, é só usar a variável certa
    — não inventar um valor solto. */
-.devtools-secao h2 {
+.crud-secao h2 {
   font-family: var(--font-sans);
   font-size: var(--font-size-2xl);
   font-weight: 800;
   color: var(--color-dark);
+  margin-bottom: 0.75rem;
 }
 
-.devtools-erro {
+/* Linha própria do botão de ação (ex.: "Criar"), embaixo do título, acima
+   da tabela — "o lugar normal", não colado no título nem flutuando acima
+   de tudo. */
+.crud-secao__acao-topo {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.75rem;
+}
+
+/* Embaixo da tabela, não em cima — se não tem dado (por erro ou por estar
+   vazio mesmo), a mensagem faz mais sentido perto de onde o "vazio"
+   apareceria, não lá no topo antes de qualquer coisa. */
+.crud-erro {
   color: var(--color-red-600);
   background: var(--color-red-100);
   padding: 0.5rem 0.75rem;
   border-radius: var(--radius-sm);
   font-size: var(--font-size-sm);
   display: inline-block;
-  margin-bottom: 0.75rem;
+  margin-top: 0.75rem;
 }
 
-.devtools-tabela {
+.crud-tabela {
   border-collapse: collapse;
   width: 100%;
   font-size: var(--font-size-sm);
 }
 
-.devtools-tabela th,
-.devtools-tabela td {
+.crud-tabela th,
+.crud-tabela td {
   border: 1px solid var(--color-slate-200);
   padding: 0.5rem 0.75rem;
   text-align: left;
 }
 
-.devtools-tabela th {
+.crud-tabela th {
   background: var(--color-slate-50);
   font-size: var(--font-size-xs);
   text-transform: uppercase;
@@ -61,7 +66,7 @@
   font-weight: 800;
 }
 
-.devtools-tabela button {
+.crud-tabela button {
   background: var(--color-slate-100);
   border: 1px solid var(--color-slate-200);
   border-radius: var(--radius-sm);
@@ -73,11 +78,11 @@
   transition: var(--transition-normal);
 }
 
-.devtools-tabela button:hover {
+.crud-tabela button:hover {
   background: var(--color-slate-200);
 }
 
-.devtools-form-criar {
+.crud-form-criar {
   margin-top: 1rem;
   display: flex;
   gap: 0.5rem;
@@ -85,13 +90,13 @@
   align-items: center;
 }
 
-.devtools-form-criar input {
+.crud-form-criar input {
   padding: 0.45rem 0.6rem;
   border: 1px solid var(--color-slate-200);
   border-radius: var(--radius-sm);
 }
 
-.devtools-form-criar button {
+.crud-form-criar button {
   background: var(--color-primary);
   color: var(--color-white);
   border: none;
@@ -101,6 +106,6 @@
   transition: var(--transition-normal);
 }
 
-.devtools-form-criar button:hover {
+.crud-form-criar button:hover {
   background: var(--color-primary-dark);
 }

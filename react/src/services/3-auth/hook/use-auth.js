@@ -2,15 +2,14 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { API_BASE_URL } from '../../constant/constants/api.constants';
 import * as authApi from '../api/auth.api';
 
-const CHAVE_REFRESH_TOKEN = 'crowdacademico.devtools.refreshToken';
+const CHAVE_REFRESH_TOKEN = 'crowdacademico.refreshToken';
 
-// Hook único de autenticação da tela de devtools (views/dev). Guarda o
-// accessToken só em memória (nunca localStorage — some ao fechar a aba, de
-// propósito) e o refreshToken em localStorage (pra não precisar logar nas
-// vezes que ficar recarregando a página testando). Nada disso é o desenho
-// final de auth do site de verdade — isto é só a ferramenta interna pra
-// provar CRUD + RLS funcionando (ver Probleminha-chan.md / relatório desta
-// rodada).
+// Hook único de autenticação do painel admin (views/admin, views/3-auth,
+// views/1-usuario) — useAuth() é chamado uma vez em App.jsx e o resultado
+// desce por prop pra Header, Breadcrumb (indiretamente) e cada página.
+// Guarda o accessToken só em memória (nunca localStorage — some ao fechar
+// a aba, de propósito) e o refreshToken em localStorage (pra não precisar
+// logar de novo a cada F5).
 export function useAuth() {
   const [accessToken, setAccessToken] = useState(null);
   const [usuario, setUsuario] = useState(null);
@@ -72,8 +71,8 @@ export function useAuth() {
 
   // authFetch: SEMPRE manda Bearer quando tem accessToken. Se a resposta vier
   // 401 (access token expirado — dura só 15min), tenta renovar UMA vez com o
-  // refresh token e repete a chamada original. Isso é o que a tela de
-  // devtools usa pra todo CRUD — nunca fetch() cru direto.
+  // refresh token e repete a chamada original. Isso é o que todo o painel
+  // admin usa pra falar com a API — nunca fetch() cru direto.
   const authFetch = useCallback(
     async (caminho, opcoes = {}) => {
       const montarHeaders = (token) => ({

@@ -1,14 +1,17 @@
 import { Link, useLocation } from 'react-router';
+import { ROTAS } from '../../services/router/rotas.constants';
+
+// Rótulos vêm de services/router/rotas.constants.js — mesma fonte que
+// App.jsx usa pras rotas, nunca uma lista own separada (era assim antes;
+// duas listas cresciam juntas só se alguém lembrasse dos dois lugares).
+const ROTULOS_ROTA = Object.fromEntries(
+  ROTAS.filter((rota) => rota.rotuloBreadcrumb).map((rota) => [rota.caminho, rota.rotuloBreadcrumb]),
+);
 
 // Aparece embaixo do cabeçalho em toda página que NÃO for a home (o
 // painel admin, temporariamente) — só um jeito rápido de voltar. Escondido
 // de propósito na home, senão ficaria um "Início" apontando pra própria
 // página que já está aberta.
-const ROTULOS_ROTA = {
-  '/login': 'Login',
-  '/usuarios/criar': 'Criar Usuário',
-};
-
 export function Breadcrumb() {
   const location = useLocation();
 

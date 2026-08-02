@@ -1,17 +1,7 @@
 /* ========= RESPONSIVIDADE ========= */
 
 @media (max-width: 640px) {
-  .site-header__conteudo {
-    height: auto;
-    flex-wrap: wrap;
-    padding: 0.75rem 1rem;
-  }
-
-  .site-header__sessao {
-    width: 100%;
-  }
-
-  .admin-pagina {
+  .admin-content-area {
     padding: 1rem;
   }
 
@@ -19,7 +9,7 @@
     padding: 1.25rem;
   }
 
-  .devtools-tabela {
+  .crud-tabela {
     font-size: var(--font-size-xs);
   }
 }

@@ -41,10 +41,10 @@ export function UsuarioPapelWidget({ authFetch }) {
   };
 
   return (
-    <section className="devtools-secao">
+    <section className="crud-secao">
       <h2>Papéis de um usuário (usuario_papel)</h2>
-      {erro && <p className="devtools-erro">{erro}</p>}
-      <div className="devtools-form-criar">
+      {erro && <p className="crud-erro">{erro}</p>}
+      <div className="crud-form-criar">
         <input
           placeholder="id do usuário"
           value={idUsuario}
@@ -63,7 +63,7 @@ export function UsuarioPapelWidget({ authFetch }) {
         </button>
       </div>
       {papeis && (
-        <table className="devtools-tabela">
+        <table className="crud-tabela">
           <thead>
             <tr>
               <th>id_papel</th>
