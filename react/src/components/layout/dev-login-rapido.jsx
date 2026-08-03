@@ -36,7 +36,7 @@ export function DevLoginRapido({ auth }) {
 
   return (
     <div
-      className="relative ml-8"
+      className="relative ml-20"
       onBlur={(evento) => {
         if (!evento.currentTarget.contains(evento.relatedTarget)) {
           setMenuAberto(false);
