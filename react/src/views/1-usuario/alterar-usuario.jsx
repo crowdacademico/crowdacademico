@@ -4,6 +4,13 @@ import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura
 import { useToast } from '../../components/layout/use-toast';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 
+// Precisa bater com o hash seedado em arquivos_banco_dados/07_seed_dados.sql
+// ([07-D-1]) — se alguém trocar a senha de dev do seed, troca aqui também.
+// Só existe pra dar um jeito rápido de voltar a ter uma senha CONHECIDA pra
+// testar login depois que a senha real de alguém foi trocada/esquecida —
+// nunca em produção (ver selo <dev> no botão abaixo).
+const SENHA_DEV = 'DevTcc123!';
+
 // Segunda view do padrão "uma página por operação de CRUD" (a primeira foi
 // criar-usuario.jsx) — pedido do Lucas, 02-08-2026: Alterar/Excluir saem de
 // dentro da tabela (GenericTable) e viram rota própria, com todos os dados
@@ -19,6 +26,7 @@ export function AlterarUsuario({ auth }) {
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState('');
   const [enviando, setEnviando] = useState(false);
+  const [redefinindoSenhaDev, setRedefinindoSenhaDev] = useState(false);
 
   useEffect(() => {
     usuarioApi
@@ -48,6 +56,19 @@ export function AlterarUsuario({ auth }) {
       setErro(erroRequisicao.message);
     } finally {
       setEnviando(false);
+    }
+  };
+
+  const aoRedefinirSenhaDev = async () => {
+    setErro('');
+    setRedefinindoSenhaDev(true);
+    try {
+      await usuarioApi.atualizar(auth.authFetch, id, { novaSenha: SENHA_DEV });
+      mostrar(`Senha redefinida para a senha de desenvolvimento (${SENHA_DEV}).`);
+    } catch (erroRequisicao) {
+      setErro(erroRequisicao.message);
+    } finally {
+      setRedefinindoSenhaDev(false);
     }
   };
 
@@ -103,6 +124,24 @@ export function AlterarUsuario({ auth }) {
                 className="input-padrao"
                 placeholder="••••••••"
               />
+            </div>
+
+            <div className="flex items-center justify-between gap-3 rounded-lg border border-dashed border-purple-300 bg-purple-50 p-3">
+              <div>
+                <span className="badge badge-dev">&lt;dev&gt;</span>
+                <p className="text-xs text-slate-500 mt-1">
+                  Redefine a senha direto pra "{SENHA_DEV}", sem digitar nada. Só pra testar
+                  login.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={aoRedefinirSenhaDev}
+                disabled={redefinindoSenhaDev}
+                className="btn btn-secondary shrink-0"
+              >
+                {redefinindoSenhaDev ? 'Redefinindo...' : 'Redefinir senha dev'}
+              </button>
             </div>
 
             <div className="flex gap-3 pt-2">

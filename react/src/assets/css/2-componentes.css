@@ -122,6 +122,45 @@
     color: var(--color-slate-500);
   }
 
+  /* Selo <dev> — marca qualquer recurso que existe só pra facilitar
+     desenvolvimento/teste (ex.: redefinir senha pra um valor conhecido),
+     nunca pra ficar disponível em produção de verdade. Roxo + monoespaçada
+     de propósito: nenhuma outra cor/fonte do projeto usa essa combinação,
+     então é visualmente inconfundível com o resto da interface. */
+  .badge-dev {
+    background-color: var(--color-purple-100);
+    color: var(--color-purple-600);
+    font-family: var(--font-mono-dev);
+  }
+
+  /* components/layout/dev-login-rapido.jsx — feio DE PROPÓSITO (roxo
+     sólido, borda tracejada, fonte monoespaçada): pedido explícito do
+     Lucas, "roxo feio e em destaque, claramente mostrando que não vai
+     ficar ali". Não é refinamento esquecido, é sinalização visual. */
+  .btn-dev {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 0.9rem;
+    background-color: var(--color-purple-600);
+    color: var(--color-white);
+    font-family: var(--font-mono-dev);
+    font-weight: 700;
+    font-size: var(--font-size-xs);
+    border: 2px dashed var(--color-purple-100);
+    cursor: pointer;
+    transition: var(--transition-normal);
+  }
+
+  .btn-dev:hover {
+    background-color: var(--color-purple-700);
+  }
+
+  .btn-dev--seta {
+    padding: 0.5rem 0.55rem;
+    border-left: none;
+  }
+
   /* Tooltip (components/layout/tooltip.jsx) — ícone "ⓘ" que revela uma
      explicação curta ao passar o mouse ou focar via teclado. CSS puro
      (:hover/:focus), sem JS controlando abrir/fechar. */

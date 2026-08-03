@@ -40,6 +40,15 @@
   --color-red-600: #dc2626;
   --color-blue-100: #dbeafe;
   --color-blue-600: #2563eb;
+  --color-purple-100: #ede9fe;
+  --color-purple-600: #7c3aed;
+  --color-purple-700: #6d28d9;
+
+  /* Fonte só pro selo <dev> (.badge-dev, 2-componentes.css) — pedido do
+     Lucas, 03-08-2026: qualquer coisa marcada como "só pra desenvolvimento"
+     usa essa combinação (roxo + monoespaçada), nunca hardcoded caso a
+     caso. */
+  --font-mono-dev: 'Courier New', monospace;
 
   --radius-sm: 0.25rem;
   --radius-md: 0.5rem;

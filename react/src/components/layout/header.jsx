@@ -1,4 +1,5 @@
 import { Link } from 'react-router';
+import { DevLoginRapido } from './dev-login-rapido';
 
 // Cópia fiel de componentes/header.html do Projeto de Interface real
 // (mesmas classes Tailwind, mesma estrutura) — único em toda tela
@@ -84,12 +85,15 @@ export function Header({ auth }) {
               </button>
             </>
           ) : (
-            <Link
-              to="/login"
-              className="text-slate-600 hover:text-dark font-semibold text-sm transition-colors"
-            >
-              Entrar
-            </Link>
+            <>
+              <Link
+                to="/login"
+                className="text-slate-600 hover:text-dark font-semibold text-sm transition-colors"
+              >
+                Entrar
+              </Link>
+              <DevLoginRapido auth={auth} />
+            </>
           )}
         </div>
       </div>

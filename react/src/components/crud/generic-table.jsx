@@ -127,8 +127,10 @@ export function GenericTable({ titulo, acaoTopo, colunas, chavePrimaria, listar,
 
   return (
     <section className="crud-secao">
-      <h2>{titulo}</h2>
-      {acaoTopo && <div className="crud-secao__acao-topo">{acaoTopo}</div>}
+      <div className="crud-secao__cabecalho">
+        <h2>{titulo}</h2>
+        {acaoTopo && <div className="crud-secao__acao-topo">{acaoTopo}</div>}
+      </div>
 
       {!carregando && linhas.length > LIMIAR_FILTRO && (
         <input
@@ -139,7 +141,7 @@ export function GenericTable({ titulo, acaoTopo, colunas, chavePrimaria, listar,
             setFiltro(evento.target.value);
             setPagina(1);
           }}
-          className="w-full sm:w-64 border border-slate-200 rounded-lg bg-slate-50 py-2 px-3 text-sm outline-none focus:border-primary mb-3"
+          className="w-full sm:w-64 border border-slate-400 rounded-lg bg-slate-50 py-2 px-3 text-sm outline-none focus:border-primary mb-3"
         />
       )}
 

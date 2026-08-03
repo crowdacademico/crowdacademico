@@ -11,7 +11,7 @@ Convenção: 🟢 corrigido | 🟡 real mas fora do escopo do Nest/React (é do 
 - [Achados do Claude da Alexia (02-08-2026)](#achados-do-claude-da-alexia-02-08-2026)
 - [⚠️ Seed tinha senha_hash falso — ninguém conseguia logar](#️-seed-tinha-senha_hash-falso--ninguém-conseguia-logar)
 - [React — bugs já encontrados e corrigidos](#react--bugs-já-encontrados-e-corrigidos-contexto-de-rodadas-anteriores-pra-não-repetir)
-- [⚠️ Login suspenso para dev (8 rotas) — REATIVAR antes de qualquer uso real](#️-login-suspenso-para-dev-8-rotas--reativar-antes-de-qualquer-uso-real)
+- [🟢 Login suspenso para dev (8 rotas) — REATIVADO](#-login-suspenso-para-dev-8-rotas--reativado-03-08-2026)
 - [Painel admin — CRUD virou view própria, tooltips, ordenação, paginação](#painel-admin--crud-virou-view-própria-tooltips-ordenação-paginação-02-08-2026)
 - [⚠️ Rodando o backend contra o Supabase (em vez de Postgres local)](#️-rodando-o-backend-contra-o-supabase-em-vez-de-postgres-local)
 - [📣 Novidades pra Alexia](#-novidades-pra-alexia)
@@ -90,11 +90,11 @@ Com isso, logar como `admin@crowdacademico.com.br` / `DevTcc123!` dá o papel `a
 
 ---
 
-## ⚠️ Login suspenso para dev (8 rotas) — REATIVAR antes de qualquer uso real
+## 🟢 Login suspenso para dev (8 rotas) — REATIVADO (03-08-2026)
 
-*(02-08-2026, pedido explícito do Lucas: "investigue tudo que precisa de LOGIN para funcionar e vamos suspender, sim, suspender, isto significa que vc vamos colocar o código em comentário". Motivo: o widget "Papéis de um usuário" (`usuario-papel-widget.jsx`) só mostrava `"Esta rota exige login."` sem estar logado — não era bug, era o `RequireAuthGuard` funcionando certo, mas atrapalhava testar o painel sem ficar logando o tempo todo durante o desenvolvimento.)*
+*(02-08-2026: suspenso a pedido do Lucas — "investigue tudo que precisa de LOGIN para funcionar e vamos suspender, sim, suspender" — porque o widget "Papéis de um usuário" só mostrava `"Esta rota exige login."` sem estar logado, e ficar logando toda hora pra testar era chato. 03-08-2026: **reativado de novo**, no mesmo dia em que criamos o `<dev> Entrar como Admin` no Header (ver seção "Painel admin", abaixo) — com login de admin a um clique, não tem mais motivo pra deixar essas 8 rotas sem a checagem. Registrado aqui só pra não reinvestigar do zero se o assunto voltar.)*
 
-**As 8 rotas com `@UseGuards(RequireAuthGuard)` comentado (import comentado junto, pra não sobrar import morto):**
+As 8 rotas que tiveram `@UseGuards(RequireAuthGuard)` comentado e depois restaurado:
 1. `1-usuario/controllers/usuario.controller.update.ts` (`PATCH /usuario/:id`)
 2. `1-usuario/controllers/usuario.controller.remove.ts` (`DELETE /usuario/:id`)
 3. `11-configuracoes/controllers/configuracao.controller.create.ts` (`POST /configuracoes`)
@@ -104,11 +104,7 @@ Com isso, logar como `admin@crowdacademico.com.br` / `DevTcc123!` dá o papel `a
 7. `2-papel-permissao/controllers/usuario-papel.controller.create.ts` (`POST /usuario-papel`)
 8. `2-papel-permissao/controllers/usuario-papel.controller.remove.ts` (`DELETE /usuario-papel/:idUsuario/:idPapel`)
 
-**O que isso significa na prática:** essas 8 rotas aceitam requisição de QUALQUER UM agora, logado ou não — a RLS do Postgres continua valendo por baixo (`id_usuario_atual()` vira `NULL` pra requisição anônima, então a maioria das policies ainda bloqueia certo), mas a checagem rápida "nem tentou logar" que o `RequireAuthGuard` fazia ANTES de chegar no banco não existe mais enquanto isso durar. `configuracao.controller.create.ts` é o caso mais frágil: sem `request.user`, `request.user!.idUsuario` quebra com erro cru (não um 401 limpo) se alguém chamar sem estar logado e sem `dto.global: true` — comportamento aceito de propósito por enquanto, não corrigido, porque a ideia é reativar o guard, não sustentar esse caminho.
-
-**Reativar é só:** em cada um dos 8 arquivos, tirar o `//` de `@UseGuards(RequireAuthGuard)` e do `import { RequireAuthGuard } from ...` logo acima. Procurar por `SUSPENSO PARA DESENVOLVIMENTO` no projeto acha os 8 de uma vez.
-
-Como lembrete visual pra quem usa o painel (não só quem lê código): o widget "Papéis de um usuário" ganhou um ⓘ (tooltip, ver seção abaixo) avisando que aquelas ações normalmente exigem login.
+Todas de volta ao normal: `@UseGuards(RequireAuthGuard)` ativo, import descomentado. Pra usar o widget "Papéis de um usuário" (ou editar/excluir usuário e configuração) agora, é só clicar `<dev> Entrar como Admin` no cabeçalho primeiro — um clique, sem digitar nada.
 
 ---
 
@@ -143,6 +139,16 @@ Todas seguem o mesmo fluxo: carrega o registro (`buscar`/`buscarPorId`), confirm
 🟢 **"Consultar" novo, entre Alterar e Excluir** (pedido do Lucas, mesma rodada) — 3ª ação por linha agora, sempre que `rotaBase` é passado: `/${rotaBase}/${id}/consultar`. Mostra TODOS os campos do `ResponseDto` (não só as colunas visíveis na tabela — ex.: `idImagemPerfil`/`criadoEm` de usuário aparecem aqui mesmo sem coluna própria na listagem) em `<input disabled>` (`components/crud/campo-textbox-consulta.jsx`, novo) — nunca um `<p>`, textbox mesmo, fica vazio sozinho quando o valor é nulo. Só um botão "Voltar" no fim (não salva nada, não tem confirmar). Novas views: `views/1-usuario/consultar-usuario.jsx`, `views/11-configuracoes/consultar-configuracao.jsx`.
 
 🟢 **Botão "Alterar" ganhou cor própria (`.btn-info`, azul)** pra diferenciar de "Consultar" (`.btn-secondary`, cinza) e "Excluir" (`.btn-danger`, vermelho) — reaproveitou `--color-blue-100`/`--color-blue-600` que já existiam em `1-base.css` (usados antes só em texto solto, nunca em botão).
+
+🟢 **Título e botão "Criar" foram pra mesma linha** (`.crud-secao__cabecalho`, `4-crud.css`) — antes o botão ficava numa linha própria embaixo do `<h2>`; agora os dois dividem uma linha `flex` com `justify-content: space-between` (título na esquerda, botão na direita, mesma posição de antes).
+
+🟢 **Borda do campo "Filtrar..." escurecida** — `border-slate-200` → `border-slate-400` (Tailwind direto na className, não é uma das nossas variáveis `--color-*`, então não tem constante nova aqui — só troca de tom).
+
+🟢 **Selo `<dev>` — constante nova pra marcar recurso só de desenvolvimento.** `.badge-dev` (`2-componentes.css`, reaproveita a base de `.badge`) + `--color-purple-100`/`--color-purple-600`/`--font-mono-dev` (`'Courier New', monospace`) novos em `1-base.css` — roxo + fonte monoespaçada, combinação que mais nenhum outro elemento do projeto usa, pra ficar visualmente inconfundível. Primeiro uso: botão "Redefinir senha dev" em `alterar-usuario.jsx`, dentro de um quadro tracejado roxo (`border-dashed border-purple-300 bg-purple-50`), chama `usuarioApi.atualizar(..., { novaSenha: SENHA_DEV })` direto — sem precisar digitar nada — pra sempre voltar a ter uma senha conhecida (`DevTcc123!`) numa conta de teste, mesmo depois de alguém ter trocado a senha real dela. **`SENHA_DEV` (constante local no topo de `alterar-usuario.jsx`) precisa bater com o hash seedado em `07_seed_dados.sql` `[07-D-1]`** (ver seção "⚠️ Seed tinha senha_hash falso", acima) — se um dia trocar a senha de dev do seed, troca nos dois lugares. Reutilizável: qualquer recurso futuro "só pra facilitar dev" usa o mesmo `.badge-dev`.
+
+🟢 **`<dev> Entrar como Admin` no Header, do lado do "Entrar"** (`components/layout/dev-login-rapido.jsx`, novo) — pedido do Lucas: logar como admin toda vez pra testar era chato. Clique no rótulo faz login instantâneo com `admin@crowdacademico.com.br` / `DevTcc123!` (conta que já existe no seed, senha de dev de sempre — **não cria usuário nem senha nova**) e manda pra `/`. A seta ao lado abre um dropdown pequeno — hoje só com "Admin", já preparado (array `CONTAS_DEV`) pra crescer com outros papéis do seed (moderador, pesquisador, usuario comum...) sem precisar redesenhar nada, só adicionar item no array. Reaproveita `.btn-dev`/`.btn-dev--seta` novos (`2-componentes.css`, mesma família visual do `.badge-dev` — roxo sólido, borda tracejada, fonte monoespaçada) — **feio de propósito**, pedido explícito do Lucas ("claramente mostrando que não vai ficar ali").
+
+> ⚠️ **Por que este é diferente (e mais seguro) do que foi recusado antes:** o Lucas primeiro pediu um botão que resetasse a senha de QUALQUER usuário sem estar logado — isso foi recusado (ver conversa) porque furaria a RLS de verdade, virando uma porta de sequestro de conta pra qualquer um, autenticado ou não. Este botão aqui é diferente: ele não pula nenhuma autorização — só chama o `POST /auth/login` normal, com uma credencial que já é pública dentro deste projeto (a senha de dev do seed, documentada em `07_seed_dados.sql` e no `temp_Nest_React.md`). Não abre nenhum caminho que não existisse já; só evita digitar.
 
 🟢 **Cor do cabeçalho da tabela escurecida** (rodada anterior, mantido aqui pra registro): `--color-slate-500` → `--color-slate-700` em `.crud-tabela th` (`4-crud.css`) — o Lucas achou o tom antigo "quase apagado" no monitor dele.
 
@@ -183,13 +189,13 @@ Se isso sozinho não resolver em outra máquina, o próximo passo (não precisou
 - **Dá pra rodar o projeto inteiro sem instalar Postgres nem DBeaver**, usando o Supabase gratuito — ver `tutorial-rodar-projeto.md` (seção nova "🌐 Alternativa: usar o Supabase") e a seção logo acima neste arquivo pra 2 erros meio escondidos que apareceram testando isso (senha/host do `.env` e certificado TLS). Pode valer a pena pra ela também, se não quiser instalar Postgres na máquina dela.
 - **O painel admin mudou de padrão:** Alterar/Excluir de Usuário e Configuração (e o Criar de Configuração) agora são páginas próprias com URL (ex.: `/usuarios/8/alterar`), não mais formulário/edição dentro da própria tabela. Se ela estiver testando o painel: os botões da tabela levam pra essas páginas novas, com confirmação e cancelar no fim.
 - **Se ela rodar o seed (`07_seed_dados.sql`) do zero, já vai vir certo**: os `senha_hash` dos 17 usuários eram falsos, ninguém conseguia logar. Corrigido — senha de qualquer usuário do seed agora é `DevTcc123!` (mesmo hash pra todo mundo, só dev). Se o banco dela já estava seedado ANTES desta correção, precisa rodar o `UPDATE usuario SET senha_hash = '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG';` uma vez (ver seção acima, achado 3).
-- **Login está TEMPORARIAMENTE suspenso em 8 rotas** (só pra facilitar testar sem logar toda hora) — ver seção "⚠️ Login suspenso para dev" acima. Se ela notar alguma rota aceitando ação sem estar logada, é esperado por enquanto, não é bug novo.
+- **Tem um botão `<dev> Entrar como Admin` no cabeçalho agora** (ao lado do "Entrar") — loga como admin do seed com um clique, sem digitar nada. Só existe pra facilitar teste, some antes de qualquer apresentação/deploy real.
 
 ---
 
 ## Pendências que ainda restam (deste lado Nest/React, não do banco)
 
-⚠️ **REATIVAR o `RequireAuthGuard` nas 8 rotas suspensas antes de qualquer coisa que não seja "só eu testando no meu computador"** — ver seção "⚠️ Login suspenso para dev", acima, com a lista completa e como reverter (procurar `SUSPENSO PARA DESENVOLVIMENTO`). É a pendência mais importante deste arquivo agora — mais fácil de esquecer do que parece, porque o painel continua funcionando normal com ela suspensa, nada quebra visualmente pra lembrar de reativar.
+⚠️ **TIRAR o botão `<dev> Entrar como Admin` do Header (`dev-login-rapido.jsx`) antes de qualquer apresentação/deploy real** — mesma categoria da pendência acima. Hoje ele só usa uma credencial de seed já documentada, sem furar nenhuma regra nova, mas deixa o login de admin um clique de distância, sem senha nenhuma digitada, bem visível no cabeçalho. Enquanto o `senha_hash` de todo mundo no seed continuar sendo `DevTcc123!`, isso é conveniência de dev; no dia que qualquer conta desse banco passar a importar de verdade (defesa, demonstração pra alguém de fora, deploy), esse botão precisa sumir.
 
 🔴 **`GET /configuracoes` expõe TODAS as configs globais (`id_usuario IS NULL`) pra qualquer um, sem distinguir "pública" de "interna"** — isso já era assim antes desta rodada (decisão original documentada no comentário do `configuracao.service.findall.ts`: "Anônimo só enxerga as globais"), não é uma regressão nova. O Claude Web notou, analisando o Projeto de Interface, que algumas chaves fazem sentido expor amplamente (`taxa_plataforma_padrao`, `valor_minimo_contribuicao`, `prazo_minimo_campanha_dias`) enquanto outras são mais internas (`limite_tentativas_login`, `bloqueio_login_minutos`, `limite_caracteres_relato_denuncia`) e hoje saem juntas no mesmo `GET`. Não mexi nisso agora — é decisão de produto/segurança (criar uma coluna tipo `configuracoes.publica boolean`? separar num endpoint `/configuracoes/publicas` curado por uma lista de chaves? deixar como está?), não uma correção técnica óbvia. Fica registrado pro Lucas e pra Alexia decidirem quando quiserem — o `useConfiguracoes()` novo (item acima) funciona igual não importa qual caminho escolherem depois, só troca a URL que `buscarPublicas()` chama.
 
