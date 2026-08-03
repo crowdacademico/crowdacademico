@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { CampoTextboxConsulta } from '../../components/crud/campo-textbox-consulta';
 import { configuracaoApi } from '../../services/11-configuracoes/api/configuracao.api';
+import { traduzirErro } from '../../services/constant/api/traduzir-erro.util';
 
 // "Consultar" — botão do meio entre Alterar e Excluir (GenericTable).
 // idUsuario fica vazio naturalmente quando é NULL (configuração global).
@@ -16,7 +17,7 @@ export function ConsultarConfiguracao({ auth }) {
     configuracaoApi
       .buscar(auth.authFetch, id)
       .then(setConfiguracao)
-      .catch((erroRequisicao) => setErro(erroRequisicao.message))
+      .catch((erroRequisicao) => setErro(traduzirErro(erroRequisicao)))
       .finally(() => setCarregando(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);

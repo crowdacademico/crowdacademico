@@ -33,6 +33,7 @@
 --  [06-G] ARQUIVO
 --  [06-H] CONTRIBUIÇÃO
 --  [06-I] SCORE
+--  [06-J] LOG DE AUDITORIA (só SELECT — ADICIONADO 03-08-2026)
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
@@ -334,3 +335,17 @@ GRANT EXECUTE ON FUNCTION public.fn_precisa_revisao_score(INT)      TO app_nestj
 -- própria função em 08_trigger_signup_usuario.sql, não aqui — esse
 -- arquivo roda ANTES do 08 (ver ordem de dependência no cabeçalho),
 -- e a função ainda não existiria neste ponto da execução.
+
+-- ============================================================
+-- [06-J] LOG DE AUDITORIA
+-- ============================================================
+-- ADICIONADO (03-08-2026) — ver 01_extensoes_enums_tabelas.sql [01-J].
+-- SÓ SELECT, DE PROPÓSITO: sem GRANT INSERT/UPDATE/DELETE nenhum, pra
+-- ninguém, nunca (nem admin) — quem grava é a trigger SECURITY DEFINER
+-- fn_log_auditoria() (05_regras_negocio.sql [05-L]), que não precisa de
+-- GRANT nenhum pra app_nestjs porque roda com o privilégio de quem CRIOU a
+-- função, não de quem disparou o UPDATE/INSERT/DELETE que a acionou. Um
+-- log que a própria aplicação consegue alterar ou apagar não serve como
+-- prova de nada — a proteção real está em NÃO EXISTIR o caminho, não em a
+-- RLS bloquear um caminho que existe.
+GRANT SELECT ON log_auditoria TO app_nestjs;

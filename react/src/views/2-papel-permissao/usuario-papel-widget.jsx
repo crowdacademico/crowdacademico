@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Tooltip } from '../../components/layout/tooltip';
 import { usuarioPapelApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
+import { traduzirErro } from '../../services/constant/api/traduzir-erro.util';
 
 // Não cabe no GenericTable — não é "lista tudo", é "lista os papéis DE UM
 // usuário específico" (pol_usuariopapel_select: só o próprio dono ou quem
@@ -17,7 +18,7 @@ export function UsuarioPapelWidget({ authFetch }) {
       const resultado = await usuarioPapelApi.listarPorUsuario(authFetch, idUsuario);
       setPapeis(resultado);
     } catch (erroRequisicao) {
-      setErro(erroRequisicao.message);
+      setErro(traduzirErro(erroRequisicao));
     }
   };
 
@@ -27,7 +28,7 @@ export function UsuarioPapelWidget({ authFetch }) {
       await usuarioPapelApi.atribuir(authFetch, Number(idUsuario), Number(idPapel));
       buscar();
     } catch (erroRequisicao) {
-      setErro(erroRequisicao.message);
+      setErro(traduzirErro(erroRequisicao));
     }
   };
 
@@ -37,7 +38,7 @@ export function UsuarioPapelWidget({ authFetch }) {
       await usuarioPapelApi.remover(authFetch, Number(idUsuario), papel.idPapel);
       buscar();
     } catch (erroRequisicao) {
-      setErro(erroRequisicao.message);
+      setErro(traduzirErro(erroRequisicao));
     }
   };
 

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router';
 import { CampoTextboxConsulta } from '../../components/crud/campo-textbox-consulta';
 import { usuarioPapelApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
+import { traduzirErro } from '../../services/constant/api/traduzir-erro.util';
 
 // "Consultar" — botão do meio entre Alterar e Excluir (GenericTable).
 // Mostra TODOS os dados do usuário ligados ao banco (UsuarioResponseDto
@@ -31,7 +32,7 @@ export function ConsultarUsuario({ auth }) {
         setUsuario(dadosUsuario);
         setPapeis(papeisUsuario);
       })
-      .catch((erroRequisicao) => setErro(erroRequisicao.message))
+      .catch((erroRequisicao) => setErro(traduzirErro(erroRequisicao)))
       .finally(() => setCarregando(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);

@@ -194,7 +194,15 @@ INSERT INTO permissao (nome) VALUES
 -- usuario_desbloquear gateia liberar_bloqueio_login por inteiro — é sempre ação
 -- de suporte/admin sobre a conta de outra pessoa, nunca do próprio usuário.
 ('usuario_excluir'),
-('usuario_desbloquear')
+('usuario_desbloquear'),
+-- ADICIONADO (03-08-2026): gate de SELECT em log_auditoria (ver
+-- pol_log_auditoria_select, 04_rls_policies.sql [04-J]) — sem esta
+-- permissão, ninguém (nem admin, até este INSERT rodar) consegue ler o
+-- histórico de quem alterou o quê. trg_permissao_auto_admin (05,
+-- [05-K-3]) já concede ela ao papel 'admin' sozinho assim que a linha
+-- abaixo é inserida — a linha explícita em [07-B-3] é só documentação,
+-- mesmo padrão das outras permissões desta lista.
+('log_visualizar')
 ON CONFLICT (nome) DO NOTHING;
 
 
@@ -235,6 +243,7 @@ WHERE (p.nome, perm.nome) IN (
     ('admin', 'score_visualizar'),
     ('admin', 'usuario_excluir'),
     ('admin', 'usuario_desbloquear'),
+    ('admin', 'log_visualizar'),
     -- moderador: cuida da moderação de conteúdo e denúncias. score_visualizar
     -- ajuda a priorizar fila de moderação (sinal de apoio, não bloqueio).
     ('moderador', 'denuncia_responder'),

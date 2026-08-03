@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router';
 import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
 import { useToast } from '../../components/layout/use-toast';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
+import { traduzirErro } from '../../services/constant/api/traduzir-erro.util';
 
 // Terceira view do padrão "uma página por operação de CRUD" — mostra os
 // dados de verdade antes de excluir (em vez do window.confirm() genérico
@@ -20,7 +21,7 @@ export function ExcluirUsuario({ auth }) {
     usuarioApi
       .buscar(auth.authFetch, id)
       .then(setUsuario)
-      .catch((erroRequisicao) => setErro(erroRequisicao.message))
+      .catch((erroRequisicao) => setErro(traduzirErro(erroRequisicao)))
       .finally(() => setCarregando(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
@@ -33,7 +34,7 @@ export function ExcluirUsuario({ auth }) {
       mostrar('Usuário excluído com sucesso.', `ID: ${id} foi excluído`);
       navigate(-1);
     } catch (erroRequisicao) {
-      setErro(erroRequisicao.message);
+      setErro(traduzirErro(erroRequisicao));
       setExcluindo(false);
     }
   };

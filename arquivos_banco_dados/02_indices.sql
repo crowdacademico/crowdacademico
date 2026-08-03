@@ -128,3 +128,14 @@ CREATE INDEX idx_auditoria_financeira_contribuicao ON auditoria_financeira(id_co
 -- [02-I] SCORE
 -- ============================================================
 CREATE INDEX idx_score_config_pai           ON score_config(id_pai);
+
+-- ============================================================
+-- [02-J] LOG DE AUDITORIA
+-- ============================================================
+-- ADICIONADO (03-08-2026): as duas consultas que a tela de "Histórico de
+-- alterações" (futura) vai fazer o tempo todo — "tudo que mudou neste
+-- registro" (tabela+identidade) e "tudo que este usuário mexeu" (dono da
+-- FK). Sem estes dois, qualquer uma das duas vira sequential scan na
+-- tabela de log inteira conforme ela cresce.
+CREATE INDEX idx_log_auditoria_registro    ON log_auditoria(tabela, identidade_registro);
+CREATE INDEX idx_log_auditoria_responsavel ON log_auditoria(id_usuario_responsavel);

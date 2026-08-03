@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule, JwtSignOptions } from '@nestjs/jwt';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { UsuarioModule } from '../1-usuario/usuario.module';
 import { AuthControllerLogin } from './controllers/auth.controller.login';
 import { AuthControllerLogout } from './controllers/auth.controller.logout';
@@ -15,6 +16,21 @@ import { AuthServiceRefresh } from './service/auth.service.refresh';
   imports: [
     UsuarioModule,
     ConfigModule,
+    // Achado do Claude Web (03-08-2026): bcrypt é lento DE PROPÓSITO
+    // (~100ms por verificação, ver auth.service.login.ts) — sem limite
+    // nenhum, é fácil derrubar o servidor só de CPU mandando muitas
+    // tentativas de login em paralelo, mesmo com senha errada e sem
+    // precisar de conta válida (DoS barato). 5 tentativas por 60s por IP
+    // (aplicado só em POST /auth/login, ver `@UseGuards(ThrottlerGuard)`
+    // em auth.controller.login.ts) — generoso o bastante pra alguém
+    // errando a senha de verdade, apertado o bastante pra travar um
+    // script tentando muitas senhas seguidas. Isto é ALÉM do
+    // `limite_tentativas_login` do banco (03_funcoes_seguranca.sql), que
+    // já bloqueia POR CONTA depois de N falhas — o throttler aqui protege
+    // o SERVIDOR (CPU/rede), não uma conta específica; um ataque
+    // espalhado por várias contas diferentes não aciona o bloqueio do
+    // banco, mas aciona este.
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 5 }]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

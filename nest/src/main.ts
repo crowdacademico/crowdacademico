@@ -1,5 +1,6 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import helmet from 'helmet';
 import { AppModule } from './app/app.module';
 
 async function bootstrap() {
@@ -7,6 +8,15 @@ async function bootstrap() {
   // Necessário pro front (Vite, outra origem) conseguir chamar a API —
   // tutorial-rodar-projeto.md já avisava disso desde o "hello world".
   app.enableCors();
+  // helmet (achado do Claude Web, 03-08-2026): não muda nenhuma resposta,
+  // só ACRESCENTA um conjunto de cabeçalhos HTTP de segurança que o
+  // Express não manda sozinho (Strict-Transport-Security,
+  // X-Content-Type-Options, X-Frame-Options, Content-Security-Policy
+  // básico etc.) — ver o comentário detalhado sobre cada um em
+  // temp_Nest_React.md (pra explicar pra Alexia). Uma linha, sem
+  // configuração nenhuma pro caso de uso de vocês (API pura, sem servir
+  // HTML) — os padrões do pacote já cobrem isso.
+  app.use(helmet());
   // Achado do Claude da Alexia (02-08-2026): nenhum DTO tinha decorator de
   // validação e não existia ValidationPipe nenhum — e-mail vazio, senha de
   // 1 caractere, tudo passava direto pro Postgres. `whitelist` descarta

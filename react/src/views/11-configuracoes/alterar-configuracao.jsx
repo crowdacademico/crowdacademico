@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router';
 import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
 import { useToast } from '../../components/layout/use-toast';
 import { configuracaoApi } from '../../services/11-configuracoes/api/configuracao.api';
+import { traduzirErro } from '../../services/constant/api/traduzir-erro.util';
 
 // `chave`/`tipo` não aparecem no formulário (só leitura) porque
 // AtualizarConfiguracaoRequestDto (Nest) não os aceita — são imutáveis
@@ -28,7 +29,7 @@ export function AlterarConfiguracao({ auth }) {
         setDescricao(dados.descricao ?? '');
         setAtivo(dados.ativo);
       })
-      .catch((erroRequisicao) => setErro(erroRequisicao.message))
+      .catch((erroRequisicao) => setErro(traduzirErro(erroRequisicao)))
       .finally(() => setCarregando(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
@@ -42,7 +43,7 @@ export function AlterarConfiguracao({ auth }) {
       mostrar('Configuração alterada com sucesso.', `ID: ${id} foi alterada`);
       navigate(-1);
     } catch (erroRequisicao) {
-      setErro(erroRequisicao.message);
+      setErro(traduzirErro(erroRequisicao));
     } finally {
       setEnviando(false);
     }

@@ -586,6 +586,18 @@ Tabela completa (código → função/trigger → tabela → mensagem, as 42 lin
 
 ---
 
+### `log_auditoria` — quem alterou o quê e quando (03-08-2026, sugestão do Claude Web)
+
+Registro genérico de INSERT/UPDATE/DELETE, pensado pra fechar um buraco real: os dois logs que já existiam no banco (`auditoria_financeira` e `historico_rejeicao`) são pontuais — nenhum dos dois cobre uma ação administrativa comum, tipo "admin editou o nome de um usuário" ou "admin revogou uma permissão pela matriz". Detalhamento técnico completo (motivação, as 4 decisões de design, exemplo de query) em `temp_Nest_React.md`, seção "Rodada do Claude Web 'esforço alto'" — aqui só o resumo oficial.
+
+- **Tabela** (`01_extensoes_enums_tabelas.sql` `[01-J]`): `log_auditoria(id_log, tabela, identidade_registro, operacao, id_usuario_responsavel, campos_alterados, dados_anteriores, dados_novos, ocorrido_em)`. `identidade_registro` é `TEXT` (não `INT`) de propósito — cobre PK simples (`'42'`) e PK composta (`usuario_papel`/`papel_permissao`, sem coluna `id_X` própria — vira `'8,3'`).
+- **Função + triggers** (`05_regras_negocio.sql` `[05-L]`): `fn_log_auditoria()`, `SECURITY DEFINER`, aplicada via `EXECUTE FUNCTION fn_log_auditoria('coluna_pk'[, 'coluna_pk_2'])` em `usuario`, `perfil_pesquisador`, `configuracoes`, `usuario_papel`, `papel_permissao`, `motivo_denuncia`, `area_conhecimento`, `tipo_link`, `termos_de_uso` (completo) e em `campanha`/`denuncia` só na transição de `status` (`WHEN (OLD.status IS DISTINCT FROM NEW.status)`).
+- **Redação de coluna sensível**: `senha_hash`/`cpf_criptografado` nunca entram em `dados_anteriores`/`dados_novos` (removidas do JSONB antes de gravar) — mas o NOME da coluna continua aparecendo em `campos_alterados` quando muda, porque saber QUE mudou é auditoria válida.
+- **À prova do próprio admin** (`04_rls_policies.sql` `[04-J]` + `06_grants.sql` `[06-J]`): só existe policy/GRANT de SELECT (atrás da permissão nova `log_visualizar`) — sem INSERT/UPDATE/DELETE pra ninguém, nunca. Só a trigger `SECURITY DEFINER` grava.
+- **Não é feature de tela ainda** — só a fundação (tabela + triggers + permissão) existe por enquanto; uma tela de "Histórico de alterações" no painel fica pra quando for priorizada.
+
+---
+
 ## 06. GRANTS (`06_grants.sql`)
 
 ### Visão Geral

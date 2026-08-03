@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router';
 import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
 import { useToast } from '../../components/layout/use-toast';
 import { configuracaoApi } from '../../services/11-configuracoes/api/configuracao.api';
+import { traduzirErro } from '../../services/constant/api/traduzir-erro.util';
 
 export function ExcluirConfiguracao({ auth }) {
   const { id } = useParams();
@@ -17,7 +18,7 @@ export function ExcluirConfiguracao({ auth }) {
     configuracaoApi
       .buscar(auth.authFetch, id)
       .then(setConfiguracao)
-      .catch((erroRequisicao) => setErro(erroRequisicao.message))
+      .catch((erroRequisicao) => setErro(traduzirErro(erroRequisicao)))
       .finally(() => setCarregando(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
@@ -30,7 +31,7 @@ export function ExcluirConfiguracao({ auth }) {
       mostrar('Configuração excluída com sucesso.', `ID: ${id} foi excluída`);
       navigate(-1);
     } catch (erroRequisicao) {
-      setErro(erroRequisicao.message);
+      setErro(traduzirErro(erroRequisicao));
       setExcluindo(false);
     }
   };

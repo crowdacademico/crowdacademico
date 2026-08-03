@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
+import { traduzirErro } from '../../services/constant/api/traduzir-erro.util';
 
 // Cópia fiel de telas/login/login.html do Projeto de Interface real —
 // com uma mudança deliberada em relação ao original, não só estética:
@@ -28,7 +29,7 @@ export function LoginPage({ auth }) {
       await auth.login(email, senha);
       navigate('/');
     } catch (erroRequisicao) {
-      setErro(erroRequisicao.message);
+      setErro(traduzirErro(erroRequisicao));
     } finally {
       setEnviando(false);
     }

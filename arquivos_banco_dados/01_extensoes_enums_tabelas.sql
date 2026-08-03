@@ -21,7 +21,7 @@
 --  Inventário Mapeado:
 --  - 1 Role de aplicação (app_nestjs) + 1 Extensão (pgcrypto)
 --  - 14 Tipos ENUM
---  - 41 Tabelas em 8 blocos de domínio
+--  - 42 Tabelas em 9 blocos de domínio
 -- ----------------------------------------------------------------------------
 --  SUMÁRIO DOS BLOCOS DE CÓDIGO
 -- ----------------------------------------------------------------------------
@@ -34,6 +34,7 @@
 --  [01-G] ARQUIVO (2 tabelas de associação)
 --  [01-H] CONTRIBUIÇÃO (4 tabelas)
 --  [01-I] SCORE (3 tabelas + Bloco DO)
+--  [01-J] LOG DE AUDITORIA (1 tabela — ADICIONADO 03-08-2026)
 -- ============================================================================
 -- [01-A] Bootstrap, Extensões e ENUMs
 -- ============================================================
@@ -813,4 +814,48 @@ CREATE TABLE score_pesquisador (
     CONSTRAINT "FK_SCORE_PESQUISADOR_SCORE_CONFIG" FOREIGN KEY (id_score_config) REFERENCES score_config(id_score_config),
     CONSTRAINT "FK_SCORE_PESQUISADOR_ROTULO" FOREIGN KEY (id_rotulo) REFERENCES score_rotulo(id_rotulo) ON DELETE SET NULL,
     CONSTRAINT "UK_SCORE_PESQUISADOR_USUARIO_SCORE_CONFIG" UNIQUE (id_usuario, id_score_config)
+);
+
+-- ============================================================
+-- [01-J] LOG DE AUDITORIA (log_auditoria)
+-- ============================================================
+-- ADICIONADO (03-08-2026, sugestão do Claude Web, esforço alto, pedido do
+-- Lucas: "algo que registre o que, quem e quando algo foi alterado"):
+-- registro genérico de INSERT/UPDATE/DELETE nas tabelas mais sensíveis do
+-- painel admin (RBAC, usuario, perfil_pesquisador, configuracoes) e nos
+-- catálogos que o admin edita — ver a função `fn_log_auditoria()` e as
+-- triggers que a usam em 05_regras_negocio.sql ([05-L]), as policies em
+-- 04_rls_policies.sql ([04-J]) e o GRANT em 06_grants.sql ([06-J]).
+--
+-- `identidade_registro` é TEXT (não INT) de propósito: cobre tanto tabela
+-- com PK simples (ex.: '42') quanto PK composta, como usuario_papel/
+-- papel_permissao (ex.: '8,3' = id_usuario 8, id_papel 3) — um único
+-- desenho serve pra qualquer tabela logada, sem precisar de uma coluna
+-- id_registro por tipo.
+--
+-- `campos_alterados` guarda os NOMES das colunas que mudaram num UPDATE
+-- (não os valores) — inclui colunas sensíveis (ex.: 'senha_hash') quando
+-- elas mudam, porque SABER que a senha mudou é um fato de auditoria válido
+-- (ex.: detectar troca de senha não solicitada). Os VALORES sensíveis em si
+-- é que nunca entram em dados_anteriores/dados_novos — `fn_log_auditoria()`
+-- remove essas chaves do JSONB antes de gravar (ver comentário na função).
+--
+-- Sem UPDATE nem DELETE liberados pra ninguém (nem admin) — ver 04/06: um
+-- log que o próprio auditado consegue editar não prova nada. INSERT só
+-- acontece via trigger SECURITY DEFINER, nunca por um INSERT direto de
+-- app_nestjs (sem GRANT INSERT — ver 06_grants.sql [06-J]).
+CREATE TABLE log_auditoria (
+    id_log                 BIGSERIAL,
+    tabela                 TEXT        NOT NULL,
+    identidade_registro    TEXT        NOT NULL,
+    operacao               TEXT        NOT NULL,
+    id_usuario_responsavel INT,                    -- NULL = sistema (seed, migração, trigger sem sessão HTTP)
+    campos_alterados       TEXT[],                 -- só em UPDATE; nomes das colunas que mudaram
+    dados_anteriores       JSONB,                  -- NULL em INSERT
+    dados_novos            JSONB,                  -- NULL em DELETE
+    ocorrido_em            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT "PK_LOG_AUDITORIA" PRIMARY KEY (id_log),
+    CONSTRAINT "FK_LOG_AUDITORIA_USUARIO" FOREIGN KEY (id_usuario_responsavel) REFERENCES usuario(id_usuario) ON DELETE SET NULL,
+    CONSTRAINT "CK_LOG_AUDITORIA_OPERACAO" CHECK (operacao IN ('INSERT', 'UPDATE', 'DELETE'))
 );

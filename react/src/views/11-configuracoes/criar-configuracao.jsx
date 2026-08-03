@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useToast } from '../../components/layout/use-toast';
 import { configuracaoApi } from '../../services/11-configuracoes/api/configuracao.api';
+import { traduzirErro } from '../../services/constant/api/traduzir-erro.util';
 
 // Antes era um formulário embutido no fim da tabela de Configurações
 // (GenericTable). Virou view própria (pedido do Lucas, 02-08-2026),
@@ -33,7 +34,7 @@ export function CriarConfiguracao({ auth }) {
       );
       navigate(-1);
     } catch (erroRequisicao) {
-      setErro(erroRequisicao.message);
+      setErro(traduzirErro(erroRequisicao));
     } finally {
       setEnviando(false);
     }

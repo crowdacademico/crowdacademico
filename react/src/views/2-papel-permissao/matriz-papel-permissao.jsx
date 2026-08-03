@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Tooltip } from '../../components/layout/tooltip';
 import { useToast } from '../../components/layout/use-toast';
+import { traduzirErro } from '../../services/constant/api/traduzir-erro.util';
 import {
   papelApi,
   papelPermissaoApi,
@@ -84,7 +85,7 @@ export function MatrizPapelPermissao({ authFetch }) {
         setPermissoes([...listaPermissoes].sort((a, b) => a.nome.localeCompare(b.nome)));
         setConcedidos(new Set(vinculos.map((v) => `${v.idPapel}-${v.idPermissao}`)));
       })
-      .catch((erroRequisicao) => setErro(erroRequisicao.message))
+      .catch((erroRequisicao) => setErro(traduzirErro(erroRequisicao)))
       .finally(() => setCarregando(false));
   }, [authFetch]);
 
@@ -113,7 +114,7 @@ export function MatrizPapelPermissao({ authFetch }) {
       }
       recarregar();
     } catch (erroRequisicao) {
-      setErro(erroRequisicao.message);
+      setErro(traduzirErro(erroRequisicao));
     } finally {
       setCelulaAlterando(null);
     }

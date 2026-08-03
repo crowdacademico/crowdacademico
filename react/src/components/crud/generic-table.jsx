@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
+import { traduzirErro } from '../../services/constant/api/traduzir-erro.util';
 
 const TAMANHOS_PAGINA = [10, 20, 30, 'todos'];
 const LIMIAR_FILTRO = 5;
@@ -49,7 +50,7 @@ export function GenericTable({ titulo, acaoTopo, colunas, chavePrimaria, listar,
     setErro('');
     listar()
       .then(setLinhas)
-      .catch((erroRequisicao) => setErro(erroRequisicao.message))
+      .catch((erroRequisicao) => setErro(traduzirErro(erroRequisicao)))
       .finally(() => setCarregando(false));
   }, [listar]);
 

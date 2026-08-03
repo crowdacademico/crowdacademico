@@ -3004,3 +3004,186 @@ DROP TRIGGER IF EXISTS trg_perfil_atribui_papel_pesquisador ON perfil_pesquisado
 CREATE TRIGGER trg_perfil_atribui_papel_pesquisador
 AFTER INSERT ON perfil_pesquisador
 FOR EACH ROW EXECUTE FUNCTION public.fn_atribuir_papel_pesquisador();
+
+-- ============================================================
+-- [05-L] LOG DE AUDITORIA (log_auditoria)
+-- ============================================================
+-- ADICIONADO (03-08-2026, sugestão do Claude Web) — ver comentário
+-- completo em 01_extensoes_enums_tabelas.sql [01-J]. Uma função genérica,
+-- aplicada em N tabelas via CREATE TRIGGER ... EXECUTE FUNCTION
+-- fn_log_auditoria('coluna_pk_1'[, 'coluna_pk_2']) — os argumentos são os
+-- nomes da(s) coluna(s) de PRIMARY KEY daquela tabela específica (1 pra PK
+-- simples, 2 pra PK composta como usuario_papel/papel_permissao).
+-- ----------------------------------------------------------------------------
+-- Função:     fn_log_auditoria
+-- Assinatura: (VARIADIC coluna_pk TEXT[]) -> TRIGGER
+-- Bloco:      [05-L]
+-- Regra:      Grava em log_auditoria quem (id_usuario_atual()), o quê
+--             (tabela + identidade do registro) e quando (ocorrido_em,
+--             default NOW()) qualquer INSERT/UPDATE/DELETE nas tabelas com
+--             a trigger abaixo aplicada.
+--
+--             SECURITY DEFINER: pol_log_auditoria_select (04) não tem
+--             policy de INSERT — ninguém, nem app_nestjs, tem GRANT INSERT
+--             nesta tabela (06). A trigger só consegue gravar porque roda
+--             com o privilégio de quem A CRIOU (SECURITY DEFINER), não de
+--             quem disparou o UPDATE/INSERT/DELETE que a acionou.
+--
+--             REDAÇÃO DE COLUNA SENSÍVEL: 'senha_hash' (usuario) e
+--             'cpf_criptografado' (perfil_pesquisador) nunca entram em
+--             dados_anteriores/dados_novos — removidas do JSONB (operador
+--             `-`) DEPOIS de calcular campos_alterados (por isso o nome da
+--             coluna ainda aparece em campos_alterados quando ela muda —
+--             saber QUE a senha mudou é auditoria válida; o HASH em si,
+--             não). Se uma tabela nova entrar na lista de triggers abaixo
+--             e tiver outra coluna sensível (ex.: token_hash, se um dia
+--             verificacao_email/recuperacao_senha entrarem pra este log),
+--             adicione um `- 'nome_da_coluna'` a mais nas duas linhas de
+--             v_antigos/v_novos.
+--
+--             UPDATE que não muda nenhum valor de verdade (ex.: um SET
+--             igual ao que já estava) não gera linha nenhuma — v_campos
+--             fica NULL e a função retorna cedo, antes do INSERT em
+--             log_auditoria.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_log_auditoria()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+    v_antigos_completo JSONB;
+    v_novos_completo   JSONB;
+    v_antigos          JSONB;
+    v_novos            JSONB;
+    v_campos           TEXT[];
+    v_coluna           TEXT;
+    v_partes           TEXT[] := ARRAY[]::TEXT[];
+    v_identidade       TEXT;
+BEGIN
+    -- v_identidade é montada DENTRO de cada ramo (não antes, com um
+    -- COALESCE(NEW, OLD) genérico) de propósito: NEW não existe em DELETE
+    -- e OLD não existe em INSERT — cada ramo só referencia a variável que
+    -- o Postgres garante estar preenchida naquele TG_OP.
+    IF TG_OP = 'INSERT' THEN
+        FOREACH v_coluna IN ARRAY TG_ARGV LOOP
+            v_partes := v_partes || (to_jsonb(NEW) ->> v_coluna);
+        END LOOP;
+        v_identidade := array_to_string(v_partes, ',');
+
+        v_novos := to_jsonb(NEW) - 'senha_hash' - 'cpf_criptografado';
+        INSERT INTO log_auditoria (tabela, identidade_registro, operacao, id_usuario_responsavel, dados_novos)
+        VALUES (TG_TABLE_NAME, v_identidade, TG_OP, public.id_usuario_atual(), v_novos);
+        RETURN NEW;
+
+    ELSIF TG_OP = 'UPDATE' THEN
+        FOREACH v_coluna IN ARRAY TG_ARGV LOOP
+            v_partes := v_partes || (to_jsonb(NEW) ->> v_coluna);
+        END LOOP;
+        v_identidade := array_to_string(v_partes, ',');
+
+        v_antigos_completo := to_jsonb(OLD);
+        v_novos_completo   := to_jsonb(NEW);
+
+        SELECT array_agg(chave) INTO v_campos
+        FROM jsonb_object_keys(v_novos_completo) AS chave
+        WHERE v_antigos_completo -> chave IS DISTINCT FROM v_novos_completo -> chave;
+
+        IF v_campos IS NULL THEN
+            RETURN NEW;
+        END IF;
+
+        v_antigos := v_antigos_completo - 'senha_hash' - 'cpf_criptografado';
+        v_novos   := v_novos_completo - 'senha_hash' - 'cpf_criptografado';
+
+        INSERT INTO log_auditoria (tabela, identidade_registro, operacao, id_usuario_responsavel, campos_alterados, dados_anteriores, dados_novos)
+        VALUES (TG_TABLE_NAME, v_identidade, TG_OP, public.id_usuario_atual(), v_campos, v_antigos, v_novos);
+        RETURN NEW;
+
+    ELSIF TG_OP = 'DELETE' THEN
+        FOREACH v_coluna IN ARRAY TG_ARGV LOOP
+            v_partes := v_partes || (to_jsonb(OLD) ->> v_coluna);
+        END LOOP;
+        v_identidade := array_to_string(v_partes, ',');
+
+        v_antigos := to_jsonb(OLD) - 'senha_hash' - 'cpf_criptografado';
+        INSERT INTO log_auditoria (tabela, identidade_registro, operacao, id_usuario_responsavel, dados_anteriores)
+        VALUES (TG_TABLE_NAME, v_identidade, TG_OP, public.id_usuario_atual(), v_antigos);
+        RETURN OLD;
+    END IF;
+
+    RETURN NULL;
+END;
+$$;
+
+-- Tabelas com PK simples (1 argumento) — lista escolhida com o Claude Web,
+-- não é "logar tudo": só o que o painel admin já edita hoje via
+-- RBAC/usuário/config, mais os catálogos que o admin também edita
+-- (motivo_denuncia, area_conhecimento, tipo_link, termos_de_uso).
+-- contribuicao já tem a tabela auditoria_financeira (01_extensoes_enums_tabelas.sql,
+-- bloco [01-H]) — duplicar aqui seria redundante, de propósito NÃO está na lista.
+DROP TRIGGER IF EXISTS trg_log_auditoria_usuario ON usuario;
+CREATE TRIGGER trg_log_auditoria_usuario
+AFTER INSERT OR UPDATE OR DELETE ON usuario
+FOR EACH ROW EXECUTE FUNCTION public.fn_log_auditoria('id_usuario');
+
+DROP TRIGGER IF EXISTS trg_log_auditoria_perfil_pesquisador ON perfil_pesquisador;
+CREATE TRIGGER trg_log_auditoria_perfil_pesquisador
+AFTER INSERT OR UPDATE OR DELETE ON perfil_pesquisador
+FOR EACH ROW EXECUTE FUNCTION public.fn_log_auditoria('id_usuario');
+
+DROP TRIGGER IF EXISTS trg_log_auditoria_configuracoes ON configuracoes;
+CREATE TRIGGER trg_log_auditoria_configuracoes
+AFTER INSERT OR UPDATE OR DELETE ON configuracoes
+FOR EACH ROW EXECUTE FUNCTION public.fn_log_auditoria('id_config');
+
+DROP TRIGGER IF EXISTS trg_log_auditoria_motivo_denuncia ON motivo_denuncia;
+CREATE TRIGGER trg_log_auditoria_motivo_denuncia
+AFTER INSERT OR UPDATE OR DELETE ON motivo_denuncia
+FOR EACH ROW EXECUTE FUNCTION public.fn_log_auditoria('id_motivo');
+
+DROP TRIGGER IF EXISTS trg_log_auditoria_area_conhecimento ON area_conhecimento;
+CREATE TRIGGER trg_log_auditoria_area_conhecimento
+AFTER INSERT OR UPDATE OR DELETE ON area_conhecimento
+FOR EACH ROW EXECUTE FUNCTION public.fn_log_auditoria('id_area_conhecimento');
+
+DROP TRIGGER IF EXISTS trg_log_auditoria_tipo_link ON tipo_link;
+CREATE TRIGGER trg_log_auditoria_tipo_link
+AFTER INSERT OR UPDATE OR DELETE ON tipo_link
+FOR EACH ROW EXECUTE FUNCTION public.fn_log_auditoria('id_tipolink');
+
+DROP TRIGGER IF EXISTS trg_log_auditoria_termos_de_uso ON termos_de_uso;
+CREATE TRIGGER trg_log_auditoria_termos_de_uso
+AFTER INSERT OR UPDATE OR DELETE ON termos_de_uso
+FOR EACH ROW EXECUTE FUNCTION public.fn_log_auditoria('id_termo');
+
+-- Tabelas com PK COMPOSTA (2 argumentos) — usuario_papel/papel_permissao
+-- são exatamente as duas tabelas que a matriz Papel × Permissão e o widget
+-- "Papéis de um usuário" tornaram editáveis pelo painel (03-08-2026) —
+-- ver RBAC virou editável, em temp_Nest_React.md.
+DROP TRIGGER IF EXISTS trg_log_auditoria_usuario_papel ON usuario_papel;
+CREATE TRIGGER trg_log_auditoria_usuario_papel
+AFTER INSERT OR UPDATE OR DELETE ON usuario_papel
+FOR EACH ROW EXECUTE FUNCTION public.fn_log_auditoria('id_usuario', 'id_papel');
+
+DROP TRIGGER IF EXISTS trg_log_auditoria_papel_permissao ON papel_permissao;
+CREATE TRIGGER trg_log_auditoria_papel_permissao
+AFTER INSERT OR UPDATE OR DELETE ON papel_permissao
+FOR EACH ROW EXECUTE FUNCTION public.fn_log_auditoria('id_papel', 'id_permissao');
+
+-- campanha/denuncia: só a TRANSIÇÃO DE STATUS, não qualquer edição (pedido
+-- do Claude Web: registrar toda alteração de título/descrição/etc de
+-- campanha seria ruído — o que importa pra auditoria é "quem aprovou/
+-- rejeitou/suspendeu o quê e quando"). Por isso é AFTER UPDATE ... WHEN,
+-- sem INSERT nem DELETE (nenhuma das duas tabelas tem DELETE liberado
+-- hoje, ver 06_grants.sql, e o INSERT em si não é uma "mudança de status").
+DROP TRIGGER IF EXISTS trg_log_auditoria_campanha_status ON campanha;
+CREATE TRIGGER trg_log_auditoria_campanha_status
+AFTER UPDATE ON campanha
+FOR EACH ROW
+WHEN (OLD.status IS DISTINCT FROM NEW.status)
+EXECUTE FUNCTION public.fn_log_auditoria('id_campanha');
+
+DROP TRIGGER IF EXISTS trg_log_auditoria_denuncia_status ON denuncia;
+CREATE TRIGGER trg_log_auditoria_denuncia_status
+AFTER UPDATE ON denuncia
+FOR EACH ROW
+WHEN (OLD.status IS DISTINCT FROM NEW.status)
+EXECUTE FUNCTION public.fn_log_auditoria('id_denuncia');

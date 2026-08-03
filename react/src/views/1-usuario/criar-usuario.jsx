@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useToast } from '../../components/layout/use-toast';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
+import { traduzirErro } from '../../services/constant/api/traduzir-erro.util';
 
 // Primeira de um padrão que vai se repetir: view própria por operação
 // (criar/alterar/consultar/excluir), não formulário embutido dentro da
@@ -31,7 +32,7 @@ export function CriarUsuario({ auth }) {
       );
       navigate('/');
     } catch (erroRequisicao) {
-      setErro(erroRequisicao.message);
+      setErro(traduzirErro(erroRequisicao));
     } finally {
       setEnviando(false);
     }

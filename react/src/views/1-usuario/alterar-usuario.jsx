@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router';
 import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
 import { useToast } from '../../components/layout/use-toast';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
+import { traduzirErro } from '../../services/constant/api/traduzir-erro.util';
 
 // Precisa bater com o hash seedado em arquivos_banco_dados/07_seed_dados.sql
 // ([07-D-1]) — se alguém trocar a senha de dev do seed, troca aqui também.
@@ -35,7 +36,7 @@ export function AlterarUsuario({ auth }) {
         setUsuario(dados);
         setNome(dados.nome);
       })
-      .catch((erroRequisicao) => setErro(erroRequisicao.message))
+      .catch((erroRequisicao) => setErro(traduzirErro(erroRequisicao)))
       .finally(() => setCarregando(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
@@ -53,7 +54,7 @@ export function AlterarUsuario({ auth }) {
       mostrar('Usuário alterado com sucesso.', `ID: ${id} foi alterado`);
       navigate(-1);
     } catch (erroRequisicao) {
-      setErro(erroRequisicao.message);
+      setErro(traduzirErro(erroRequisicao));
     } finally {
       setEnviando(false);
     }
@@ -66,7 +67,7 @@ export function AlterarUsuario({ auth }) {
       await usuarioApi.atualizar(auth.authFetch, id, { novaSenha: SENHA_DEV });
       mostrar('Senha redefinida com sucesso.', `ID: ${id} teve a senha redefinida para "${SENHA_DEV}"`);
     } catch (erroRequisicao) {
-      setErro(erroRequisicao.message);
+      setErro(traduzirErro(erroRequisicao));
     } finally {
       setRedefinindoSenhaDev(false);
     }
