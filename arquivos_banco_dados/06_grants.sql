@@ -59,11 +59,14 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO app_nestjs;
 
 -- ============================================================================
 --  [06-B] RBAC
---  Nenhum GRANT adicional: papel, permissao e papel_permissao só têm
---  policy de SELECT em 04_rls_policies.sql (leitura pública), já coberta
---  pelo GRANT SELECT ON ALL TABLES acima. Gestão dessas 3 tabelas acontece
---  via seed/migração direta, não pela aplicação.
+--  papel e permissao continuam só-leitura (GRANT SELECT ON ALL TABLES já
+--  cobre) — criar papel/permissão nova continua sendo via seed/migração
+--  direta, de propósito. papel_permissao ganhou INSERT/DELETE (03-08-2026,
+--  ver [04-B-1] em 04_rls_policies.sql): admin agora consegue conceder ou
+--  revogar uma permissão de um papel já existente pelo Painel Admin
+--  (matriz Papel × Permissão), sem precisar mexer direto no banco.
 -- ============================================================================
+GRANT INSERT, DELETE ON papel_permissao TO app_nestjs;
 
 -- ============================================================================
 --  [06-C] CONFIG

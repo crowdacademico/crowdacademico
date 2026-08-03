@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { CampoTextboxConsulta } from '../../components/crud/campo-textbox-consulta';
+import { usuarioPapelApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 
 // "Consultar" — botão do meio entre Alterar e Excluir (GenericTable).
@@ -11,17 +12,31 @@ export function ConsultarUsuario({ auth }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const [usuario, setUsuario] = useState(null);
+  const [papeis, setPapeis] = useState(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState('');
 
   useEffect(() => {
-    usuarioApi
-      .buscar(auth.authFetch, id)
-      .then(setUsuario)
+    Promise.all([
+      usuarioApi.buscar(auth.authFetch, id),
+      // Não existe (nem deveria existir) uma coluna "é pesquisador" em
+      // usuario — isso já é decidido pelo RBAC (usuario_papel), então é
+      // isso que a consulta usa, sem duplicar a informação em outro
+      // lugar. Se um dia o módulo 6-perfil-pesquisador for construído, o
+      // perfil completo (vínculo institucional, título acadêmico, links
+      // etc.) entra aqui do mesmo jeito, sem precisar de coluna nova.
+      usuarioPapelApi.listarPorUsuario(auth.authFetch, id).catch(() => []),
+    ])
+      .then(([dadosUsuario, papeisUsuario]) => {
+        setUsuario(dadosUsuario);
+        setPapeis(papeisUsuario);
+      })
       .catch((erroRequisicao) => setErro(erroRequisicao.message))
       .finally(() => setCarregando(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  const ehPesquisador = papeis?.some((papel) => papel.nomePapel === 'pesquisador');
 
   return (
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 bg-surface">
@@ -50,6 +65,14 @@ export function ConsultarUsuario({ auth }) {
             <CampoTextboxConsulta
               rotulo="Criado em"
               valor={usuario.criadoEm && new Date(usuario.criadoEm).toLocaleString('pt-BR')}
+            />
+            <CampoTextboxConsulta
+              rotulo="É pesquisador?"
+              valor={papeis === null ? '' : ehPesquisador ? 'Sim' : 'Não'}
+            />
+            <CampoTextboxConsulta
+              rotulo="Papéis"
+              valor={papeis?.map((papel) => papel.nomePapel).join(', ')}
             />
 
             <button

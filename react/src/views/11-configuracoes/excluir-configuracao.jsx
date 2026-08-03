@@ -27,7 +27,7 @@ export function ExcluirConfiguracao({ auth }) {
     setExcluindo(true);
     try {
       await configuracaoApi.remover(auth.authFetch, id);
-      mostrar('Configuração excluída com sucesso.');
+      mostrar('Configuração excluída com sucesso.', `ID: ${id} foi excluída`);
       navigate(-1);
     } catch (erroRequisicao) {
       setErro(erroRequisicao.message);

@@ -39,7 +39,7 @@ export function AlterarConfiguracao({ auth }) {
     setEnviando(true);
     try {
       await configuracaoApi.atualizar(auth.authFetch, id, { valor, descricao, ativo });
-      mostrar('Configuração atualizada com sucesso.');
+      mostrar('Configuração alterada com sucesso.', `ID: ${id} foi alterada`);
       navigate(-1);
     } catch (erroRequisicao) {
       setErro(erroRequisicao.message);

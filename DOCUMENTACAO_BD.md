@@ -565,6 +565,27 @@ As 55 triggers deste arquivo têm `DROP TRIGGER IF EXISTS` imediatamente antes d
 
 ---
 
+### ERRCODE customizado — 90xxx/91xxx/92xxx/93xxx
+
+🗑️➡️✅ **CORRIGIDO (03-08-2026, Alexia + Claude Web — pendência apontada pelo Claude da Alexia em 02-08-2026):** as 42 `RAISE EXCEPTION` deste arquivo caíam todas no SQLSTATE genérico do Postgres pra exceção sem código explícito (`P0001`) — o NestJS não tinha como diferenciar "sem permissão" de "dado inválido" de "estado conflitante" olhando só o código do erro, só o texto da mensagem (frágil: qualquer reformulação de mensagem quebraria a distinção). Cada uma das 42 ganhou `USING ERRCODE = '<código>'` — mudança puramente aditiva, nenhuma mensagem/lógica/trigger foi alterada (conferido linha a linha no diff).
+
+**4 faixas, sem colidir com nenhum SQLSTATE nativo do Postgres já tratado em `postgres-exception.filter.ts` (`23505`, `23503`, `23502`, `23514`, `42501`, `P0001`):**
+
+| Faixa | Categoria | HTTP |
+|---|---|---|
+| `90001`–`90999` | Validação de dado/negócio (formato, limite de tamanho, mínimo, campo obrigatório fora do CHECK técnico) | 400 |
+| `91001`–`91999` | Conflito de estado/regra de negócio (campanha congelada após aprovação, transição inválida, limite atingido) | 409 |
+| `92001`–`92999` | Autorização negada por regra de negócio (checada via `tem_permissao()` dentro da trigger, ou conflito de interesse — dono/autor/denunciante agindo sobre o próprio registro) — **não é RLS**, é checagem procedural dentro da própria função/trigger | 403 |
+| `93001`–`93999` | Limite de taxa (rate limit) | 429 |
+
+Tabela completa (código → função/trigger → tabela → mensagem, as 42 linhas) fica em **`DOCUMENTACAO_ERRCODE.md`**, na raiz do projeto — não duplicada aqui pra este arquivo (já grande) não crescer mais, e pra ter um lugar só de onde tirar a lista quando uma regra nova entrar.
+
+**Lado Nest (fechando o ciclo, mesma data):** `commons/database/postgres-exception.filter.ts` ganhou uma checagem pelo prefixo de 2 dígitos do código (`90`/`91`/`92`/`93`) antes do `switch` dos SQLSTATE nativos, mapeando pra 400/409/403/429 automaticamente, com a mensagem original da função (já em português, já específica) — nenhuma tradução manual código-a-código do lado do Nest, só a faixa.
+
+**Ponto em aberto, não deste arquivo:** `excluir_conta_usuario()` (`03_funcoes_seguranca.sql`, `[03-F]`) ainda lança `RAISE EXCEPTION` sem ERRCODE customizado — hoje sem problema prático (nenhuma trigger de `05` está ligada à tabela `usuario`, então o catch-all de `usuario.service.remove.ts` não tem como confundir um erro de validação com um de permissão), mas se um dia uma trigger de `05` passar a valer sobre `usuario`, vale revisitar com o mesmo padrão de faixa daqui.
+
+---
+
 ## 06. GRANTS (`06_grants.sql`)
 
 ### Visão Geral

@@ -30,7 +30,7 @@ export function ExcluirUsuario({ auth }) {
     setExcluindo(true);
     try {
       await usuarioApi.remover(auth.authFetch, id);
-      mostrar('Usuário excluído com sucesso.');
+      mostrar('Usuário excluído com sucesso.', `ID: ${id} foi excluído`);
       navigate(-1);
     } catch (erroRequisicao) {
       setErro(erroRequisicao.message);

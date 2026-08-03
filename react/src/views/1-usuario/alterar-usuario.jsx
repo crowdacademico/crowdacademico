@@ -50,7 +50,7 @@ export function AlterarUsuario({ auth }) {
         dados.novaSenha = novaSenha;
       }
       await usuarioApi.atualizar(auth.authFetch, id, dados);
-      mostrar('Usuário atualizado com sucesso.');
+      mostrar('Usuário alterado com sucesso.', `ID: ${id} foi alterado`);
       navigate(-1);
     } catch (erroRequisicao) {
       setErro(erroRequisicao.message);
@@ -64,7 +64,7 @@ export function AlterarUsuario({ auth }) {
     setRedefinindoSenhaDev(true);
     try {
       await usuarioApi.atualizar(auth.authFetch, id, { novaSenha: SENHA_DEV });
-      mostrar(`Senha redefinida para a senha de desenvolvimento (${SENHA_DEV}).`);
+      mostrar('Senha redefinida com sucesso.', `ID: ${id} teve a senha redefinida para "${SENHA_DEV}"`);
     } catch (erroRequisicao) {
       setErro(erroRequisicao.message);
     } finally {

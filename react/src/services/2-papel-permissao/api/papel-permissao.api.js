@@ -1,9 +1,10 @@
 import { tratarResposta } from '../../constant/api/http.util';
 
-// Espelha 2-papel-permissao (nest): papel/permissao/papel_permissao são só
-// leitura (sem GRANT de escrita no banco — catálogo de RBAC gerenciado
-// direto no Postgres, nunca pela API, de propósito). Só usuario_papel tem
-// criar/remover (atribuir/revogar papel de um usuário).
+// Espelha 2-papel-permissao (nest): papel/permissao continuam só leitura
+// (catálogo gerenciado via seed/migração direta, de propósito — criar
+// papel/permissão nova é decisão maior, fora de escopo aqui).
+// papel_permissao ganhou atribuir/remover (03-08-2026) — a matriz Papel ×
+// Permissão virou editável pra admin, mesmo padrão de usuarioPapelApi.
 export const papelApi = {
   listar: (authFetch) => authFetch('/papel').then(tratarResposta),
 };
@@ -14,6 +15,15 @@ export const permissaoApi = {
 
 export const papelPermissaoApi = {
   listar: (authFetch) => authFetch('/papel-permissao').then(tratarResposta),
+  atribuir: (authFetch, idPapel, idPermissao) =>
+    authFetch('/papel-permissao', {
+      method: 'POST',
+      body: JSON.stringify({ idPapel, idPermissao }),
+    }).then(tratarResposta),
+  remover: (authFetch, idPapel, idPermissao) =>
+    authFetch(`/papel-permissao/${idPapel}/${idPermissao}`, {
+      method: 'DELETE',
+    }).then(tratarResposta),
 };
 
 export const usuarioPapelApi = {

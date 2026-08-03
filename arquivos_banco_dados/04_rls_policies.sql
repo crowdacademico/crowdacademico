@@ -53,6 +53,28 @@ CREATE POLICY pol_permissao_select ON permissao FOR SELECT USING (true);
 DROP POLICY IF EXISTS pol_papelperm_select ON papel_permissao;
 CREATE POLICY pol_papelperm_select ON papel_permissao FOR SELECT USING (true);
 
+-- [04-B-1] papel_permissao: escrita liberada pro Painel Admin (03-08-2026,
+-- pedido do Lucas — "o administrador precisa ter poder absoluto pelo
+-- painel admin, nunca mais precisará acessar o banco depois"). Antes,
+-- papel/permissao/papel_permissao eram só-leitura de propósito ("gestão
+-- via seed/migração direta, não pela aplicação" — ver comentário antigo em
+-- papel-permissao.module.ts). Decisão revista: TOGGLE de permissão em
+-- papel já existente (a matriz Papel × Permissão) agora é possível pelo
+-- painel, gated pela mesma permissão que já gateia enxergar/gerenciar
+-- vínculo usuário-papel (`papel_gerenciar`, ver pol_usuariopapel_delete
+-- acima). `papel` e `permissao` continuam só-leitura — CRIAR um papel ou
+-- permissão nova (não só conceder uma combinação já existente) fica de
+-- fora de propósito nesta rodada, é decisão maior (mexe no catálogo em
+-- si, não só nos vínculos entre catálogo).
+DROP POLICY IF EXISTS pol_papelperm_insert ON papel_permissao;
+CREATE POLICY pol_papelperm_insert ON papel_permissao FOR INSERT TO app_nestjs WITH CHECK (
+    public.tem_permissao('papel_gerenciar')
+);
+DROP POLICY IF EXISTS pol_papelperm_delete ON papel_permissao;
+CREATE POLICY pol_papelperm_delete ON papel_permissao FOR DELETE TO app_nestjs USING (
+    public.tem_permissao('papel_gerenciar')
+);
+
 -- ============================================================
 -- [04-C] CONFIG (5 tabelas)
 -- ============================================================

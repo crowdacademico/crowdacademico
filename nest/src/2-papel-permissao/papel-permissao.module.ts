@@ -1,28 +1,36 @@
 import { Module } from '@nestjs/common';
+import { PapelPermissaoControllerCreate } from './controllers/papel-permissao.controller.create';
 import { PapelPermissaoControllerFindAll } from './controllers/papel-permissao.controller.findall';
+import { PapelPermissaoControllerRemove } from './controllers/papel-permissao.controller.remove';
 import { PapelControllerFindAll } from './controllers/papel.controller.findall';
 import { PermissaoControllerFindAll } from './controllers/permissao.controller.findall';
 import { UsuarioPapelControllerCreate } from './controllers/usuario-papel.controller.create';
 import { UsuarioPapelControllerFindAll } from './controllers/usuario-papel.controller.findall';
 import { UsuarioPapelControllerRemove } from './controllers/usuario-papel.controller.remove';
+import { PapelPermissaoServiceCreate } from './service/papel-permissao.service.create';
 import { PapelPermissaoServiceFindAll } from './service/papel-permissao.service.findall';
+import { PapelPermissaoServiceRemove } from './service/papel-permissao.service.remove';
 import { PapelServiceFindAll } from './service/papel.service.findall';
 import { PermissaoServiceFindAll } from './service/permissao.service.findall';
 import { UsuarioPapelServiceCreate } from './service/usuario-papel.service.create';
 import { UsuarioPapelServiceFindAll } from './service/usuario-papel.service.findall';
 import { UsuarioPapelServiceRemove } from './service/usuario-papel.service.remove';
 
-// Não segue o padrão de 5 operações por entidade (create/findall/findone/
-// update/remove) do README à risca: `papel`/`permissao`/`papel_permissao`
-// só têm SELECT (sem GRANT de escrita nenhum, 06_grants.sql — catálogo de
-// RBAC gerenciado direto no banco, nunca pela API, de propósito). Só
-// `usuario_papel` tem escrita, e só insert/delete (não existe "editar" um
-// vínculo usuário-papel, só atribuir ou remover).
+// `papel`/`permissao` continuam só-leitura (catálogo gerenciado via seed/
+// migração direta, de propósito — criar um papel ou permissão nova é
+// decisão maior, fora de escopo aqui). `papel_permissao` ganhou
+// insert/delete (03-08-2026, pedido do Lucas: admin precisa conseguir
+// conceder/revogar permissão de um papel já existente pelo Painel Admin,
+// sem acessar o banco — ver [04-B-1] em 04_rls_policies.sql). Mesmo padrão
+// de `usuario_papel`: só insert/delete, não existe "editar" um vínculo,
+// só atribuir ou remover.
 @Module({
   controllers: [
     PapelControllerFindAll,
     PermissaoControllerFindAll,
     PapelPermissaoControllerFindAll,
+    PapelPermissaoControllerCreate,
+    PapelPermissaoControllerRemove,
     UsuarioPapelControllerFindAll,
     UsuarioPapelControllerCreate,
     UsuarioPapelControllerRemove,
@@ -31,6 +39,8 @@ import { UsuarioPapelServiceRemove } from './service/usuario-papel.service.remov
     PapelServiceFindAll,
     PermissaoServiceFindAll,
     PapelPermissaoServiceFindAll,
+    PapelPermissaoServiceCreate,
+    PapelPermissaoServiceRemove,
     UsuarioPapelServiceFindAll,
     UsuarioPapelServiceCreate,
     UsuarioPapelServiceRemove,

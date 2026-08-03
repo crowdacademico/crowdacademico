@@ -12,9 +12,23 @@ const CODIGO_PG_NOT_NULL_VIOLATION = '23502';
 const CODIGO_PG_CHECK_VIOLATION = '23514';
 const CODIGO_PG_RLS_VIOLATION = '42501';
 // Código padrão que o Postgres usa pra qualquer `RAISE EXCEPTION 'mensagem'`
-// sem ERRCODE customizado (05_regras_negocio.sql tem ~40 desses ainda sem
-// ERRCODE — pendência declarada da Alexia, não deste filtro).
+// sem ERRCODE customizado. Só sobra pra função de fora de 05_regras_negocio.sql
+// que ainda não ganhou ERRCODE próprio (ex.: excluir_conta_usuario(), em
+// 03_funcoes_seguranca.sql — ver DOCUMENTACAO_ERRCODE.md, seção final).
 const CODIGO_PG_RAISE_EXCEPTION_SEM_ERRCODE = 'P0001';
+
+// ERRCODE customizado nas 42 RAISE EXCEPTION de 05_regras_negocio.sql
+// (Alexia + Claude Web, 03-08-2026 — ver DOCUMENTACAO_ERRCODE.md pra tabela
+// completa código -> função -> mensagem, e DOCUMENTACAO_BD.md, seção "05",
+// pro resumo oficial). 4 faixas, pelo prefixo de 2 dígitos do código:
+// 90xxx validação de dado/negócio, 91xxx conflito de estado, 92xxx
+// autorização negada (regra de negócio, não RLS), 93xxx limite de taxa.
+const FAIXA_ERRCODE_REGRA_NEGOCIO: Record<string, HttpStatus> = {
+  '90': HttpStatus.BAD_REQUEST,
+  '91': HttpStatus.CONFLICT,
+  '92': HttpStatus.FORBIDDEN,
+  '93': HttpStatus.TOO_MANY_REQUESTS,
+};
 
 interface ErroPostgres extends Error {
   code?: string;
@@ -40,6 +54,14 @@ export class PostgresExceptionFilter extends BaseExceptionFilter {
   }
 
   private traduzir(erro: ErroPostgres): HttpException | null {
+    const prefixoNegocio = erro?.code?.slice(0, 2);
+    if (prefixoNegocio && prefixoNegocio in FAIXA_ERRCODE_REGRA_NEGOCIO) {
+      return new HttpException(
+        erro.message || 'Operação não permitida pelas regras de negócio.',
+        FAIXA_ERRCODE_REGRA_NEGOCIO[prefixoNegocio],
+      );
+    }
+
     switch (erro?.code) {
       case CODIGO_PG_UNIQUE_VIOLATION:
         return new HttpException(

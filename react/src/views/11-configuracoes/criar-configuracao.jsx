@@ -21,8 +21,16 @@ export function CriarConfiguracao({ auth }) {
     setErro('');
     setEnviando(true);
     try {
-      await configuracaoApi.criar(auth.authFetch, { chave, valor, tipo, descricao });
-      mostrar('Configuração criada com sucesso.');
+      const configuracaoCriada = await configuracaoApi.criar(auth.authFetch, {
+        chave,
+        valor,
+        tipo,
+        descricao,
+      });
+      mostrar(
+        'Configuração cadastrada com sucesso.',
+        `A nova configuração possui o ID: ${configuracaoCriada.idConfig}`,
+      );
       navigate(-1);
     } catch (erroRequisicao) {
       setErro(erroRequisicao.message);

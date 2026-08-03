@@ -24,8 +24,11 @@ export function CriarUsuario({ auth }) {
     setErro('');
     setEnviando(true);
     try {
-      await usuarioApi.criar(auth.authFetch, { nome, email, senha });
-      mostrar('Usuário criado com sucesso.');
+      const usuarioCriado = await usuarioApi.criar(auth.authFetch, { nome, email, senha });
+      mostrar(
+        'Usuário cadastrado com sucesso.',
+        `O novo usuário possui o ID: ${usuarioCriado.idUsuario}`,
+      );
       navigate('/');
     } catch (erroRequisicao) {
       setErro(erroRequisicao.message);
