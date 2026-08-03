@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { traduzirErro } from '../../services/constant/api/traduzir-erro.util';
+import { LogAuditoriaPainel } from './log-auditoria-painel';
 
 const TAMANHOS_PAGINA = [10, 20, 30, 'todos'];
 const LIMIAR_FILTRO = 5;
@@ -32,7 +33,15 @@ function celulaValor(valor) {
 // verdade, com sua própria URL, não formulário/confirm() embutido na
 // tabela. Sem `rotaBase` (catálogos só-leitura como Papéis/Permissões),
 // não aparece coluna de Ações nenhuma.
-export function GenericTable({ titulo, acaoTopo, colunas, chavePrimaria, listar, rotaBase }) {
+//
+// `buscarLog` (opcional, pedido do Lucas 03-08-2026: "um botão no fundo de
+// cada tabela pra ver a última alteração") — mesma convenção de `listar`:
+// função já pré-amarrada (authFetch + nome físico da tabela) pelo
+// componente pai (ver listar-usuarios.jsx/listar-configuracoes.jsx). Sem
+// essa prop, o botão "Ver log" nem aparece — nem toda tabela tem
+// log_auditoria aplicado (só as que passam por `fn_log_auditoria()`, ver
+// 05_regras_negocio.sql [05-L]).
+export function GenericTable({ titulo, acaoTopo, colunas, chavePrimaria, listar, rotaBase, buscarLog }) {
   const [linhas, setLinhas] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState('');
@@ -40,6 +49,9 @@ export function GenericTable({ titulo, acaoTopo, colunas, chavePrimaria, listar,
   const [pagina, setPagina] = useState(1);
   const [ordenacao, setOrdenacao] = useState({ chave: null, direcao: 'asc' });
   const [tamanhoPagina, setTamanhoPagina] = useState(TAMANHOS_PAGINA[0]);
+  // Só busca quando abre (não em toda carga da tabela) — a maioria das
+  // visitas a uma listagem não vai clicar em "Ver log".
+  const [logAberto, setLogAberto] = useState(false);
 
   useEffect(() => {
     // Padrão comum de "buscar dado ao montar/quando a query mudar" (mesmo
@@ -283,6 +295,19 @@ export function GenericTable({ titulo, acaoTopo, colunas, chavePrimaria, listar,
       )}
 
       {erro && <p className="crud-erro">{erro}</p>}
+
+      {buscarLog && (
+        <>
+          <button
+            type="button"
+            onClick={() => setLogAberto((atual) => !atual)}
+            className="btn btn-secondary mt-4"
+          >
+            {logAberto ? 'Esconder log' : 'Ver log'}
+          </button>
+          {logAberto && <LogAuditoriaPainel buscar={buscarLog} />}
+        </>
+      )}
     </section>
   );
 }

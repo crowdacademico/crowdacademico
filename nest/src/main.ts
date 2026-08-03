@@ -1,5 +1,6 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import type { Express } from 'express';
 import helmet from 'helmet';
 import { AppModule } from './app/app.module';
 
@@ -8,6 +9,22 @@ async function bootstrap() {
   // Necessário pro front (Vite, outra origem) conseguir chamar a API —
   // tutorial-rodar-projeto.md já avisava disso desde o "hello world".
   app.enableCors();
+  // ADICIONADO (03-08-2026, achado do Claude Web em revisão): sem isto, em
+  // produção — atrás de QUALQUER proxy reverso (Render, Railway, Fly,
+  // Cloudflare) — o Express enxerga o IP do PROXY em toda requisição, não
+  // o do usuário de verdade. Dois efeitos ruins, silenciosos em localhost
+  // (onde não há proxy, então nunca aparece testando aqui):
+  // 1. ThrottlerGuard (auth.module.ts) passaria a contar TODO MUNDO como o
+  //    mesmo IP — o limite de 5/60s vira global (uma pessoa tentando logar
+  //    trava login pra todo mundo), e um atacante sozinho consegue travar
+  //    a plataforma inteira com só 5 requisições.
+  // 2. `sessao.ip`/`usuario.ultimo_login_ip` (registrados em
+  //    auth.controller.login.ts via `request.ip`) gravariam sempre o IP do
+  //    proxy, nunca o do usuário — auditoria de login ficaria inútil.
+  // `1` = confia só no primeiro salto (o proxy imediato) — ajustar pra um
+  // número maior só se o deploy final tiver mais de um proxy encadeado
+  // (ex.: Cloudflare na frente de outro proxy).
+  (app.getHttpAdapter().getInstance() as Express).set('trust proxy', 1);
   // helmet (achado do Claude Web, 03-08-2026): não muda nenhuma resposta,
   // só ACRESCENTA um conjunto de cabeçalhos HTTP de segurança que o
   // Express não manda sozinho (Strict-Transport-Security,

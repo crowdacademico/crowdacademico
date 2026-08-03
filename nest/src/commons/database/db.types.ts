@@ -85,6 +85,24 @@ export interface ConfiguracoesTable {
   ativo: Generated<boolean>;
 }
 
+// ADICIONADA (03-08-2026) — espelha 01_extensoes_enums_tabelas.sql [01-J].
+// `id_log` é `Generated<string>`, não `<number>`: é BIGSERIAL (bigint), e o
+// driver `pg` devolve bigint como STRING por padrão (evita perda de
+// precisão em valores acima de 2^53) — convertido pra `number` só na hora
+// de montar o ResponseDto (log-auditoria.converter.ts), mesmo cuidado já
+// tomado com `COUNT(*)` em paginacao.util.ts.
+export interface LogAuditoriaTable {
+  id_log: Generated<string>;
+  tabela: string;
+  identidade_registro: string;
+  operacao: string;
+  id_usuario_responsavel: number | null;
+  campos_alterados: string[] | null;
+  dados_anteriores: Record<string, unknown> | null;
+  dados_novos: Record<string, unknown> | null;
+  ocorrido_em: Generated<Date>;
+}
+
 export interface DB {
   usuario: UsuarioTable;
   papel: PapelTable;
@@ -93,4 +111,5 @@ export interface DB {
   usuario_papel: UsuarioPapelTable;
   sessao: SessaoTable;
   configuracoes: ConfiguracoesTable;
+  log_auditoria: LogAuditoriaTable;
 }

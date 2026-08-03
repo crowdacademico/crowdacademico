@@ -3090,6 +3090,21 @@ BEGIN
             RETURN NEW;
         END IF;
 
+        -- CORRIGIDO (03-08-2026, achado do Claude Web em revisão): score_atual/
+        -- score_atualizado_em (perfil_pesquisador) mudam SOZINHOS toda vez que
+        -- recalcular_score_pesquisador() roda (05, [05-I-4] — disparado por
+        -- qualquer trigger que mexa em campanha/comentário/etc., não por ação
+        -- direta de ninguém sobre o PRÓPRIO perfil_pesquisador). Sem este
+        -- filtro, isso virava a maioria das linhas do log (49 de 282 só no
+        -- seed) — ruído de motor automático afogando o que o log existe pra
+        -- mostrar: ação ADMINISTRATIVA de alguém. Se as ÚNICAS colunas que
+        -- mudaram forem essas duas, não registra. Qualquer outra mudança em
+        -- perfil_pesquisador (status_pesquisador, tipo_vinculo...) continua
+        -- registrando normalmente, mesmo que score também tenha mudado junto.
+        IF TG_TABLE_NAME = 'perfil_pesquisador' AND v_campos <@ ARRAY['score_atual', 'score_atualizado_em'] THEN
+            RETURN NEW;
+        END IF;
+
         v_antigos := v_antigos_completo - 'senha_hash' - 'cpf_criptografado';
         v_novos   := v_novos_completo - 'senha_hash' - 'cpf_criptografado';
 
