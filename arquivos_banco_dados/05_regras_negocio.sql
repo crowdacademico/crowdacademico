@@ -73,6 +73,40 @@
 -- SET LOCAL manual. Documentado também em tutorial-rodar-projeto.md, item 8.
 -- ----------------------------------------------------------------------------
 
+-- ----------------------------------------------------------------------------
+-- ERRCODE CUSTOMIZADO (02-08-2026, Claude Web — pendência apontada pela
+-- Alexia): as 42 `RAISE EXCEPTION` deste arquivo passaram a carregar
+-- `USING ERRCODE = '<código>'`. Antes disso, todas caíam no SQLSTATE genérico
+-- `P0001` (qualquer `RAISE EXCEPTION` sem ERRCODE explícito), e o Nest não
+-- tinha como diferenciar "sem permissão" de "dado inválido" de "estado
+-- conflitante" — usuario.service.remove.ts, por exemplo, tratava QUALQUER
+-- erro de excluir_conta_usuario() como 403, mesmo que a causa real fosse uma
+-- trigger de validação de dado (não de permissão) disparada por tabela
+-- relacionada.
+--
+-- Faixas usadas (nenhuma colide com os SQLSTATE nativos do Postgres já
+-- tratados em nest/src/commons/database/postgres-exception.filter.ts:
+-- 23505, 23503, 23502, 23514, 42501, P0001):
+--   90001-90999  VALIDAÇÃO DE DADO/NEGÓCIO      -> HTTP 400 Bad Request
+--                (formato, limite de tamanho, mínimo, campo obrigatório
+--                fora do CHECK técnico, etc — nada de permissão envolvida)
+--   91001-91999  CONFLITO DE ESTADO/REGRA        -> HTTP 409 Conflict
+--                (campanha "congelada" após aprovação, transição de status
+--                inválida, limite de recursos atingido, estoque insuficiente,
+--                ação incompatível com o status atual do registro)
+--   92001-92999  AUTORIZAÇÃO NEGADA (regra de negócio, não RLS) -> HTTP 403
+--                (checagem feita via tem_permissao() dentro da trigger, ou
+--                restrição por identidade/conflito de interesse — dono, autor,
+--                denunciante agindo sobre o próprio registro)
+--   93001-93999  LIMITE DE TAXA (rate limit)     -> HTTP 429 Too Many Requests
+--
+-- Cada código é único neste arquivo (ver DOCUMENTACAO_ERRCODE.md, gerado
+-- junto desta mudança, para a lista completa código -> origem -> mensagem).
+-- Mapeamento em HttpException fica por conta do Nest (ver
+-- postgres-exception.filter.ts) — este arquivo só declara o SQLSTATE, não
+-- decide o status HTTP.
+-- ----------------------------------------------------------------------------
+
 
 -- ============================================================================
 --  [05-I-1] SCORE — HELPERS E UTILITÁRIOS
@@ -840,7 +874,8 @@ BEGIN
         FROM recompensa WHERE id_recompensa = NEW.id_recompensa;
 
     IF v_campanha_contrib IS DISTINCT FROM v_campanha_recomp THEN
-        RAISE EXCEPTION 'A recompensa % não pertence à campanha da contribuição %', NEW.id_recompensa, NEW.id_contribuicao;
+        RAISE EXCEPTION 'A recompensa % não pertence à campanha da contribuição %', NEW.id_recompensa, NEW.id_contribuicao
+            USING ERRCODE = '90001';
     END IF;
 
     IF v_disponivel IS NOT NULL THEN
@@ -851,7 +886,8 @@ BEGIN
 
         IF v_ja_reservado + NEW.quantidade > v_disponivel THEN
             RAISE EXCEPTION 'Estoque insuficiente para a recompensa % (disponível: %, já reservado: %, solicitado: %)',
-                NEW.id_recompensa, v_disponivel, v_ja_reservado, NEW.quantidade;
+                NEW.id_recompensa, v_disponivel, v_ja_reservado, NEW.quantidade
+                USING ERRCODE = '91001';
         END IF;
     END IF;
 
@@ -903,7 +939,8 @@ BEGIN
         INTO v_permitido USING NEW.id_tipolink;
 
     IF NOT COALESCE(v_permitido, FALSE) THEN
-        RAISE EXCEPTION 'Este tipo de link não é permitido para %', TG_TABLE_NAME;
+        RAISE EXCEPTION 'Este tipo de link não é permitido para %', TG_TABLE_NAME
+            USING ERRCODE = '90002';
     END IF;
 
     RETURN NEW;
@@ -949,7 +986,8 @@ BEGIN
       AND id_link_academico <> COALESCE(NEW.id_link_academico, -1);
 
     IF v_count >= v_limite THEN
-        RAISE EXCEPTION 'Limite de % links acadêmicos por perfil atingido', v_limite;
+        RAISE EXCEPTION 'Limite de % links acadêmicos por perfil atingido', v_limite
+            USING ERRCODE = '91002';
     END IF;
 
     RETURN NEW;
@@ -1004,7 +1042,8 @@ BEGIN
     v_valor  := to_jsonb(NEW) ->> v_coluna;
 
     IF v_valor IS NOT NULL AND char_length(v_valor) > v_limite THEN
-        RAISE EXCEPTION 'Campo % excede o limite de % caracteres (configuracoes.%)', v_coluna, v_limite, v_chave;
+        RAISE EXCEPTION 'Campo % excede o limite de % caracteres (configuracoes.%)', v_coluna, v_limite, v_chave
+            USING ERRCODE = '90003';
     END IF;
 
     RETURN NEW;
@@ -1123,7 +1162,8 @@ BEGIN
     SELECT id_pai INTO v_id_pai FROM area_conhecimento WHERE id_area_conhecimento = NEW.id_area_conhecimento;
 
     IF v_id_pai IS NULL THEN
-        RAISE EXCEPTION 'Escolha uma área de conhecimento específica (nível 2), não a grande área raiz.';
+        RAISE EXCEPTION 'Escolha uma área de conhecimento específica (nível 2), não a grande área raiz.'
+            USING ERRCODE = '90004';
     END IF;
 
     RETURN NEW;
@@ -1171,11 +1211,13 @@ BEGIN
     SELECT tipo INTO v_tipo FROM motivo_denuncia WHERE id_motivo = NEW.id_motivo;
 
     IF NEW.id_campanha_alvo IS NOT NULL AND v_tipo <> 'campanha' THEN
-        RAISE EXCEPTION 'O motivo selecionado não é válido para denúncia de campanha.';
+        RAISE EXCEPTION 'O motivo selecionado não é válido para denúncia de campanha.'
+            USING ERRCODE = '90005';
     END IF;
 
     IF NEW.id_pesquisador_alvo IS NOT NULL AND v_tipo <> 'perfil' THEN
-        RAISE EXCEPTION 'O motivo selecionado não é válido para denúncia de perfil.';
+        RAISE EXCEPTION 'O motivo selecionado não é válido para denúncia de perfil.'
+            USING ERRCODE = '90006';
     END IF;
 
     RETURN NEW;
@@ -1241,7 +1283,8 @@ BEGIN
 
     IF v_modelo = 'all-or-nothing' AND v_arrecadado < v_meta
        AND NEW.valor_liquido > COALESCE(v_valor_liquido_anterior, 0) THEN
-        RAISE EXCEPTION 'Repasse bloqueado: campanhas all-or-nothing só podem repassar valores se a meta financeira for atingida.';
+        RAISE EXCEPTION 'Repasse bloqueado: campanhas all-or-nothing só podem repassar valores se a meta financeira for atingida.'
+            USING ERRCODE = '91003';
     END IF;
 
     RETURN NEW;
@@ -1319,7 +1362,8 @@ BEGIN
     WHERE id_campanha = NEW.id_campanha;
 
     IF FOUND AND v_modelo = 'all-or-nothing' AND NEW.meio_pagamento <> 'pix' THEN
-        RAISE EXCEPTION 'Campanhas all-or-nothing aceitam apenas contribuições via PIX';
+        RAISE EXCEPTION 'Campanhas all-or-nothing aceitam apenas contribuições via PIX'
+            USING ERRCODE = '90007';
     END IF;
 
     RETURN NEW;
@@ -1387,26 +1431,31 @@ BEGIN
         -- a taxa mudar sem bloqueio numa campanha aprovada com taxa ainda não preenchida.
         -- IS DISTINCT FROM trata NULL corretamente nos três casos.
         IF NEW.meta_financeira IS DISTINCT FROM OLD.meta_financeira THEN
-            RAISE EXCEPTION 'Fraude bloqueada: não é permitido alterar a meta financeira após a aprovação da campanha.';
+            RAISE EXCEPTION 'Fraude bloqueada: não é permitido alterar a meta financeira após a aprovação da campanha.'
+                USING ERRCODE = '91004';
         END IF;
 
         IF NEW.modelo IS DISTINCT FROM OLD.modelo THEN
-            RAISE EXCEPTION 'Fraude bloqueada: não é permitido alterar o modelo de financiamento após a aprovação da campanha.';
+            RAISE EXCEPTION 'Fraude bloqueada: não é permitido alterar o modelo de financiamento após a aprovação da campanha.'
+                USING ERRCODE = '91005';
         END IF;
 
         IF NEW.taxa_plataforma IS DISTINCT FROM OLD.taxa_plataforma THEN
-            RAISE EXCEPTION 'Operação bloqueada: a taxa da plataforma não pode ser alterada após o congelamento.';
+            RAISE EXCEPTION 'Operação bloqueada: a taxa da plataforma não pode ser alterada após o congelamento.'
+                USING ERRCODE = '91006';
         END IF;
 
         -- CORRIGIDO (B2): título, descrição e prazo não eram protegidos — trocar a
         -- descrição de um projeto já financiado é o vetor de fraude mais óbvio que
         -- existe numa plataforma de doação. Mesma trigger, mesmos campos protegidos.
         IF NEW.titulo IS DISTINCT FROM OLD.titulo THEN
-            RAISE EXCEPTION 'Fraude bloqueada: não é permitido alterar o título após a aprovação da campanha.';
+            RAISE EXCEPTION 'Fraude bloqueada: não é permitido alterar o título após a aprovação da campanha.'
+                USING ERRCODE = '91007';
         END IF;
 
         IF NEW.descricao IS DISTINCT FROM OLD.descricao THEN
-            RAISE EXCEPTION 'Fraude bloqueada: não é permitido alterar a descrição após a aprovação da campanha.';
+            RAISE EXCEPTION 'Fraude bloqueada: não é permitido alterar a descrição após a aprovação da campanha.'
+                USING ERRCODE = '91008';
         END IF;
 
         -- ADICIONADO (28-07-2026) — feature "Em breve": data_fim/data_inicio só
@@ -1419,14 +1468,16 @@ BEGIN
         -- — só as datas ganharam esse período de carência.
         IF OLD.data_inicio IS NOT NULL AND OLD.data_inicio <= NOW() THEN
             IF NEW.data_fim IS DISTINCT FROM OLD.data_fim THEN
-                RAISE EXCEPTION 'Operação bloqueada: o prazo da campanha não pode ser alterado depois que ela começa de verdade.';
+                RAISE EXCEPTION 'Operação bloqueada: o prazo da campanha não pode ser alterado depois que ela começa de verdade.'
+                    USING ERRCODE = '91009';
             END IF;
 
             -- CORRIGIDO (regressão do B2): data_inicio tinha ficado de fora — dava pra
             -- recuar a data de início e mudar a duração da campanha pelo outro lado,
             -- sem nenhum bloqueio, mesmo com data_fim já congelado.
             IF NEW.data_inicio IS DISTINCT FROM OLD.data_inicio THEN
-                RAISE EXCEPTION 'Operação bloqueada: a data de início da campanha não pode ser alterada depois que ela começa de verdade.';
+                RAISE EXCEPTION 'Operação bloqueada: a data de início da campanha não pode ser alterada depois que ela começa de verdade.'
+                    USING ERRCODE = '91010';
             END IF;
         END IF;
     END IF;
@@ -1489,7 +1540,8 @@ BEGIN
     SELECT status INTO v_status FROM campanha WHERE id_campanha = v_id_campanha;
 
     IF v_status IN ('ativo', 'sucesso', 'nao_atingido', 'encerrado', 'encerrado_moderacao') THEN
-        RAISE EXCEPTION 'Fraude bloqueada: não é permitido alterar o orçamento após a aprovação da campanha.';
+        RAISE EXCEPTION 'Fraude bloqueada: não é permitido alterar o orçamento após a aprovação da campanha.'
+            USING ERRCODE = '91011';
     END IF;
 
     IF TG_OP = 'DELETE' THEN
@@ -1548,7 +1600,8 @@ BEGIN
     SELECT COUNT(*) INTO v_qtd FROM orcamento_campanha WHERE id_campanha = NEW.id_campanha;
 
     IF v_qtd >= v_max THEN
-        RAISE EXCEPTION 'A campanha já atingiu o limite de % itens de orçamento (configuracoes.orcamento_max_itens).', v_max;
+        RAISE EXCEPTION 'A campanha já atingiu o limite de % itens de orçamento (configuracoes.orcamento_max_itens).', v_max
+            USING ERRCODE = '91012';
     END IF;
 
     RETURN NEW;
@@ -1610,7 +1663,8 @@ BEGIN
 
     IF v_status IN ('ativo', 'sucesso', 'nao_atingido', 'encerrado', 'encerrado_moderacao')
        AND v_data_inicio IS NOT NULL AND v_data_inicio <= NOW() THEN
-        RAISE EXCEPTION 'Operação bloqueada: o cronograma não pode ser alterado depois que a campanha começa de verdade.';
+        RAISE EXCEPTION 'Operação bloqueada: o cronograma não pode ser alterado depois que a campanha começa de verdade.'
+            USING ERRCODE = '91013';
     END IF;
 
     IF TG_OP = 'DELETE' THEN
@@ -1658,7 +1712,8 @@ BEGIN
     SELECT data_inicio INTO v_data_inicio FROM campanha WHERE id_campanha = NEW.id_campanha;
 
     IF v_data_inicio IS NOT NULL AND NEW.data_prevista < v_data_inicio THEN
-        RAISE EXCEPTION 'A data prevista de um marco do cronograma não pode ser anterior à data de início da campanha.';
+        RAISE EXCEPTION 'A data prevista de um marco do cronograma não pode ser anterior à data de início da campanha.'
+            USING ERRCODE = '90008';
     END IF;
 
     RETURN NEW;
@@ -1701,7 +1756,8 @@ BEGIN
     SELECT COUNT(*) INTO v_qtd FROM marco_cronograma WHERE id_campanha = NEW.id_campanha;
 
     IF v_qtd >= v_max THEN
-        RAISE EXCEPTION 'A campanha já atingiu o limite de % marcos de cronograma (configuracoes.cronograma_max_marcos).', v_max;
+        RAISE EXCEPTION 'A campanha já atingiu o limite de % marcos de cronograma (configuracoes.cronograma_max_marcos).', v_max
+            USING ERRCODE = '91014';
     END IF;
 
     RETURN NEW;
@@ -1817,7 +1873,8 @@ BEGIN
         RETURN NEW;
     END IF;
 
-    RAISE EXCEPTION 'Transição de status de campanha não autorizada.';
+    RAISE EXCEPTION 'Transição de status de campanha não autorizada.'
+        USING ERRCODE = '92001';
 END;
 $$;
 
@@ -1908,15 +1965,18 @@ BEGIN
       WHERE id_campanha = NEW.id_campanha;
 
     IF v_qtd_orcamento < v_min_orcamento THEN
-        RAISE EXCEPTION 'A campanha precisa de pelo menos % itens de orçamento para ser aprovada (tem %).', v_min_orcamento, v_qtd_orcamento;
+        RAISE EXCEPTION 'A campanha precisa de pelo menos % itens de orçamento para ser aprovada (tem %).', v_min_orcamento, v_qtd_orcamento
+            USING ERRCODE = '90009';
     END IF;
 
     IF v_qtd_marcos < v_min_marcos THEN
-        RAISE EXCEPTION 'A campanha precisa de pelo menos % marcos de cronograma para ser aprovada (tem %).', v_min_marcos, v_qtd_marcos;
+        RAISE EXCEPTION 'A campanha precisa de pelo menos % marcos de cronograma para ser aprovada (tem %).', v_min_marcos, v_qtd_marcos
+            USING ERRCODE = '90010';
     END IF;
 
     IF v_soma_orcamento <> NEW.meta_financeira THEN
-        RAISE EXCEPTION 'A soma dos itens de orçamento (%) precisa ser exatamente igual à meta financeira (%) para a campanha ser aprovada.', v_soma_orcamento, NEW.meta_financeira;
+        RAISE EXCEPTION 'A soma dos itens de orçamento (%) precisa ser exatamente igual à meta financeira (%) para a campanha ser aprovada.', v_soma_orcamento, NEW.meta_financeira
+            USING ERRCODE = '90011';
     END IF;
 
     RETURN NEW;
@@ -2125,7 +2185,8 @@ BEGIN
     v_duracao_dias := EXTRACT(EPOCH FROM (NEW.data_fim - NEW.data_inicio)) / 86400;
 
     IF v_duracao_dias < v_prazo_minimo OR v_duracao_dias > v_prazo_maximo THEN
-        RAISE EXCEPTION 'A duração da campanha precisa estar entre % e % dias (configuracoes).', v_prazo_minimo, v_prazo_maximo;
+        RAISE EXCEPTION 'A duração da campanha precisa estar entre % e % dias (configuracoes).', v_prazo_minimo, v_prazo_maximo
+            USING ERRCODE = '90012';
     END IF;
 
     RETURN NEW;
@@ -2178,7 +2239,8 @@ BEGIN
     v_meta_minima := public.config_numero('meta_minima_campanha', 500.00);
 
     IF NEW.meta_financeira < v_meta_minima THEN
-        RAISE EXCEPTION 'A meta financeira precisa ser de pelo menos % (configuracoes.meta_minima_campanha).', v_meta_minima;
+        RAISE EXCEPTION 'A meta financeira precisa ser de pelo menos % (configuracoes.meta_minima_campanha).', v_meta_minima
+            USING ERRCODE = '90013';
     END IF;
 
     RETURN NEW;
@@ -2225,12 +2287,14 @@ RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN
     IF NOT public.tem_permissao('solicitacao_encerramento_decidir') THEN
         IF OLD.status <> 'pendente' OR NEW.status <> 'cancelado' THEN
-            RAISE EXCEPTION 'O pesquisador só pode cancelar a própria solicitação enquanto ela estiver pendente.';
+            RAISE EXCEPTION 'O pesquisador só pode cancelar a própria solicitação enquanto ela estiver pendente.'
+                USING ERRCODE = '92002';
         END IF;
 
         IF NEW.id_admin IS DISTINCT FROM OLD.id_admin
            OR NEW.justificativa_pesquisador IS DISTINCT FROM OLD.justificativa_pesquisador THEN
-            RAISE EXCEPTION 'Só é permitido alterar o status para cancelado.';
+            RAISE EXCEPTION 'Só é permitido alterar o status para cancelado.'
+                USING ERRCODE = '92003';
         END IF;
     END IF;
 
@@ -2280,15 +2344,18 @@ BEGIN
     WHERE id_campanha = NEW.id_campanha;
 
     IF v_status <> 'ativo' THEN
-        RAISE EXCEPTION 'Contribuição bloqueada: a campanha não está ativa no momento (status atual: %)', v_status;
+        RAISE EXCEPTION 'Contribuição bloqueada: a campanha não está ativa no momento (status atual: %)', v_status
+            USING ERRCODE = '91015';
     END IF;
 
     IF v_data_inicio IS NOT NULL AND NOW() < v_data_inicio THEN
-        RAISE EXCEPTION 'Contribuição bloqueada: a campanha ainda não começou (Em breve — início em %).', v_data_inicio;
+        RAISE EXCEPTION 'Contribuição bloqueada: a campanha ainda não começou (Em breve — início em %).', v_data_inicio
+            USING ERRCODE = '91016';
     END IF;
 
     IF v_data_fim IS NOT NULL AND NOW() > v_data_fim THEN
-        RAISE EXCEPTION 'Contribuição bloqueada: o prazo da campanha já foi encerrado.';
+        RAISE EXCEPTION 'Contribuição bloqueada: o prazo da campanha já foi encerrado.'
+            USING ERRCODE = '91017';
     END IF;
 
     RETURN NEW;
@@ -2331,7 +2398,8 @@ BEGIN
     v_valor_minimo := public.config_numero('valor_minimo_contribuicao', 5.00);
 
     IF NEW.valor < v_valor_minimo THEN
-        RAISE EXCEPTION 'O valor da contribuição precisa ser de pelo menos % (configuracoes.valor_minimo_contribuicao).', v_valor_minimo;
+        RAISE EXCEPTION 'O valor da contribuição precisa ser de pelo menos % (configuracoes.valor_minimo_contribuicao).', v_valor_minimo
+            USING ERRCODE = '90014';
     END IF;
 
     RETURN NEW;
@@ -2490,7 +2558,8 @@ BEGIN
           AND id_campanha <> COALESCE(NEW.id_campanha, -1);
 
         IF v_count >= v_limite THEN
-            RAISE EXCEPTION 'Pesquisador já possui o limite máximo de % campanhas ativas ou aguardando aprovação', v_limite;
+            RAISE EXCEPTION 'Pesquisador já possui o limite máximo de % campanhas ativas ou aguardando aprovação', v_limite
+                USING ERRCODE = '91018';
         END IF;
     END IF;
 
@@ -2533,7 +2602,8 @@ BEGIN
     WHERE id_campanha = NEW.id_campanha;
 
     IF FOUND AND v_status NOT IN ('ativo', 'sucesso', 'nao_atingido') THEN
-        RAISE EXCEPTION 'Atualizações de campanha só são permitidas para campanhas ativas, com sucesso ou não atingidas';
+        RAISE EXCEPTION 'Atualizações de campanha só são permitidas para campanhas ativas, com sucesso ou não atingidas'
+            USING ERRCODE = '91019';
     END IF;
 
     RETURN NEW;
@@ -2580,7 +2650,8 @@ BEGIN
     WHERE id_campanha = NEW.id_campanha;
 
     IF v_status IN ('rejeitado', 'encerrado_moderacao') THEN
-        RAISE EXCEPTION 'Operação bloqueada: não é possível comentar em campanhas rejeitadas ou sob moderação.';
+        RAISE EXCEPTION 'Operação bloqueada: não é possível comentar em campanhas rejeitadas ou sob moderação.'
+            USING ERRCODE = '91020';
     END IF;
 
     RETURN NEW;
@@ -2637,7 +2708,8 @@ BEGIN
           AND id_comentario <> COALESCE(NEW.id_comentario, -1);
 
         IF v_count >= v_limite THEN
-            RAISE EXCEPTION 'Campanha já atingiu o limite máximo de % endossos ativos', v_limite;
+            RAISE EXCEPTION 'Campanha já atingiu o limite máximo de % endossos ativos', v_limite
+                USING ERRCODE = '91021';
         END IF;
     END IF;
 
@@ -2678,7 +2750,8 @@ BEGIN
     WHERE id_campanha = NEW.id_campanha;
 
     IF FOUND AND v_id_usuario = NEW.id_pesquisador THEN
-        RAISE EXCEPTION 'Pesquisador não pode comentar em sua própria campanha';
+        RAISE EXCEPTION 'Pesquisador não pode comentar em sua própria campanha'
+            USING ERRCODE = '92004';
     END IF;
 
     RETURN NEW;
@@ -2715,7 +2788,8 @@ CREATE OR REPLACE FUNCTION fn_bloqueia_reversao_moderacao_comentario()
 RETURNS TRIGGER AS $$
 BEGIN
     IF OLD.ativo = FALSE AND NEW.ativo = TRUE AND NOT public.tem_permissao('comentario_moderar') THEN
-        RAISE EXCEPTION 'Operação bloqueada: só a moderação pode reverter um comentário ocultado.';
+        RAISE EXCEPTION 'Operação bloqueada: só a moderação pode reverter um comentário ocultado.'
+            USING ERRCODE = '92005';
     END IF;
 
     RETURN NEW;
@@ -2767,7 +2841,8 @@ BEGIN
       AND criado_em >= NOW() - INTERVAL '24 hours';
 
     IF v_count >= v_limite THEN
-        RAISE EXCEPTION 'Usuário já atingiu o limite de % denúncias nas últimas 24 horas', v_limite;
+        RAISE EXCEPTION 'Usuário já atingiu o limite de % denúncias nas últimas 24 horas', v_limite
+            USING ERRCODE = '93001';
     END IF;
 
     RETURN NEW;
@@ -2809,7 +2884,8 @@ CREATE OR REPLACE FUNCTION public.fn_valida_denuncia_sem_autojulgamento()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN
     IF OLD.id_usuario = public.id_usuario_atual() THEN
-        RAISE EXCEPTION 'Quem registrou a denúncia não pode julgar a própria denúncia.';
+        RAISE EXCEPTION 'Quem registrou a denúncia não pode julgar a própria denúncia.'
+            USING ERRCODE = '92006';
     END IF;
 
     RETURN NEW;
