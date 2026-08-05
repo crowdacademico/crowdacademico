@@ -33,7 +33,7 @@
 --  [06-G] ARQUIVO
 --  [06-H] CONTRIBUIÇÃO
 --  [06-I] SCORE
---  [06-J] LOG DE AUDITORIA (só SELECT — ADICIONADO 03-08-2026)
+--  [06-L] LOG DE AUDITORIA (só SELECT — ADICIONADO 03-08-2026)
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
@@ -337,9 +337,9 @@ GRANT EXECUTE ON FUNCTION public.fn_precisa_revisao_score(INT)      TO app_nestj
 -- e a função ainda não existiria neste ponto da execução.
 
 -- ============================================================
--- [06-J] LOG DE AUDITORIA
+-- [06-L] LOG DE AUDITORIA
 -- ============================================================
--- ADICIONADO (03-08-2026) — ver 01_extensoes_enums_tabelas.sql [01-J].
+-- ADICIONADO (03-08-2026) — ver 01_extensoes_enums_tabelas.sql [01-L].
 -- SÓ SELECT, DE PROPÓSITO: sem GRANT INSERT/UPDATE/DELETE nenhum, pra
 -- ninguém, nunca (nem admin) — quem grava é a trigger SECURITY DEFINER
 -- fn_log_auditoria() (05_regras_negocio.sql [05-L]), que não precisa de

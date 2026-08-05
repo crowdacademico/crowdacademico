@@ -3020,7 +3020,7 @@ FOR EACH ROW EXECUTE FUNCTION public.fn_atribuir_papel_pesquisador();
 -- [05-L] LOG DE AUDITORIA (log_auditoria)
 -- ============================================================
 -- ADICIONADO (03-08-2026, sugestão do Claude Web) — ver comentário
--- completo em 01_extensoes_enums_tabelas.sql [01-J]. Uma função genérica,
+-- completo em 01_extensoes_enums_tabelas.sql [01-L]. Uma função genérica,
 -- aplicada em N tabelas via CREATE TRIGGER ... EXECUTE FUNCTION
 -- fn_log_auditoria('coluna_pk_1'[, 'coluna_pk_2']) — os argumentos são os
 -- nomes da(s) coluna(s) de PRIMARY KEY daquela tabela específica (1 pra PK

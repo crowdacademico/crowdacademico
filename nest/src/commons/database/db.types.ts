@@ -89,7 +89,7 @@ export interface ConfiguracoesTable {
   ativo: Generated<boolean>;
 }
 
-// ADICIONADA (03-08-2026) — espelha 01_extensoes_enums_tabelas.sql [01-J].
+// ADICIONADA (03-08-2026) — espelha 01_extensoes_enums_tabelas.sql [01-L].
 // `id_log` é `Generated<string>`, não `<number>`: é BIGSERIAL (bigint), e o
 // driver `pg` devolve bigint como STRING por padrão (evita perda de
 // precisão em valores acima de 2^53) — convertido pra `number` só na hora

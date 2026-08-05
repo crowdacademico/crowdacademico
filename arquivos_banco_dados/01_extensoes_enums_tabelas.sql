@@ -8,7 +8,7 @@
 -- ----------------------------------------------------------------------------
 --  Descrição:
 --  Define toda a estrutura de dados do banco: a role de aplicação, a
---  extensão pgcrypto, os tipos ENUM usados pelas colunas de status, e as 39
+--  extensão pgcrypto, os tipos ENUM usados pelas colunas de status, e as 42
 --  tabelas do schema — organizadas por domínio, na ordem exata de
 --  dependência de Foreign Key, para permitir rodar o script do zero sem
 --  erro de referência.
@@ -34,7 +34,7 @@
 --  [01-G] ARQUIVO (2 tabelas de associação)
 --  [01-H] CONTRIBUIÇÃO (4 tabelas)
 --  [01-I] SCORE (3 tabelas + Bloco DO)
---  [01-J] LOG DE AUDITORIA (1 tabela — ADICIONADO 03-08-2026)
+--  [01-L] LOG DE AUDITORIA (1 tabela — ADICIONADO 03-08-2026)
 -- ============================================================================
 -- [01-A] Bootstrap, Extensões e ENUMs
 -- ============================================================
@@ -63,7 +63,7 @@ $$;
 -- tem BYPASSRLS antes do deploy), mas transforma uma falha silenciosa em uma parada
 -- única e autoexplicativa. Sem esta guarda, rodar os arquivos 04-07 como um papel
 -- sem BYPASSRLS (nem superusuário) produz dezenas de erros de "new row violates
--- row-level security policy" espalhados pelos INSERTs do 07 — 89 das 105 policies
+-- row-level security policy" espalhados pelos INSERTs do 07 — 99 das 116 policies
 -- são TO app_nestjs, então qualquer outro papel (dono da tabela incluído, por causa
 -- do FORCE ROW LEVEL SECURITY do 04) fica bloqueado silenciosamente em quase tudo.
 -- Com a guarda, o erro é um só, no início, e explica exatamente o que fazer.
@@ -74,7 +74,7 @@ BEGIN
         WHERE rolname = current_user
           AND (rolsuper OR rolbypassrls)
     ) THEN
-        RAISE EXCEPTION 'Bootstrap abortado: o papel "%" nao ignora RLS. Como as 41 tabelas usam FORCE ROW LEVEL SECURITY e a maioria das policies sao TO app_nestjs, o seed falharia em silencio (dezenas de erros espalhados). Rode como superusuario, ou peca BYPASSRLS pro papel, ou use o papel indicado no tutorial-rodar-projeto.md.', current_user;
+        RAISE EXCEPTION 'Bootstrap abortado: o papel "%" nao ignora RLS. Como as 42 tabelas usam FORCE ROW LEVEL SECURITY e a maioria das policies sao TO app_nestjs, o seed falharia em silencio (dezenas de erros espalhados). Rode como superusuario, ou peca BYPASSRLS pro papel, ou use o papel indicado no tutorial-rodar-projeto.md.', current_user;
     END IF;
 END
 $$;
@@ -838,7 +838,7 @@ CREATE TABLE score_pesquisador (
 );
 
 -- ============================================================
--- [01-J] LOG DE AUDITORIA (log_auditoria)
+-- [01-L] LOG DE AUDITORIA (log_auditoria)
 -- ============================================================
 -- ADICIONADO (03-08-2026), --
 -- `identidade_registro` é TEXT (não INT) de propósito: cobre tanto tabela
@@ -857,7 +857,7 @@ CREATE TABLE score_pesquisador (
 -- Sem UPDATE nem DELETE liberados pra ninguém (nem admin) — ver 04/06: um
 -- log que o próprio auditado consegue editar não prova nada. INSERT só
 -- acontece via trigger SECURITY DEFINER, nunca por um INSERT direto de
--- app_nestjs (sem GRANT INSERT — ver 06_grants.sql [06-J]).
+-- app_nestjs (sem GRANT INSERT — ver 06_grants.sql [06-L]).
 CREATE TABLE log_auditoria (
     id_log                 BIGSERIAL,
     tabela                 TEXT        NOT NULL,

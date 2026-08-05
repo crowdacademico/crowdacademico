@@ -3,7 +3,7 @@ import { LogAuditoriaControllerFindAll } from './controllers/log-auditoria.contr
 import { LogAuditoriaServiceFindAll } from './service/log-auditoria.service.findall';
 
 // Só leitura, de propósito — ninguém escreve em log_auditoria pela API
-// (nem teria GRANT: ver 06_grants.sql [06-J]), só a trigger SECURITY
+// (nem teria GRANT: ver 06_grants.sql [06-L]), só a trigger SECURITY
 // DEFINER grava (05_regras_negocio.sql [05-L]).
 @Module({
   controllers: [LogAuditoriaControllerFindAll],

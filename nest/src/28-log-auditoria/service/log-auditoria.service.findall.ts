@@ -22,7 +22,7 @@ export class LogAuditoriaServiceFindAll {
   async executar(
     query: LogAuditoriaQueryDto,
   ): Promise<ResultadoPaginado<LogAuditoriaResponseDto>> {
-    // pol_log_auditoria_select (04_rls_policies.sql [04-J]) já exige
+    // pol_log_auditoria_select (04_rls_policies.sql [04-L]) já exige
     // tem_permissao('log_visualizar') — sem ela, a query abaixo volta
     // vazia (RLS filtra a nível de linha), não dá erro.
     const consulta = this.database

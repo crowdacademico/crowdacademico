@@ -28,7 +28,7 @@
 --  [04-G] ARQUIVO (2 tabelas)
 --  [04-H] CONTRIBUIÇÃO (4 tabelas)
 --  [04-I] SCORE (3 tabelas)
---  [04-J] LOG DE AUDITORIA (1 tabela — ADICIONADO 03-08-2026)
+--  [04-L] LOG DE AUDITORIA (1 tabela — ADICIONADO 03-08-2026)
 -- ============================================================================
 
 -- ============================================================
@@ -852,13 +852,13 @@ DROP POLICY IF EXISTS pol_score_rotulo_update ON public.score_rotulo;
 CREATE POLICY pol_score_rotulo_update ON public.score_rotulo FOR UPDATE TO app_nestjs USING (public.tem_permissao('score_editar'));
 
 -- ============================================================
--- [04-J] LOG DE AUDITORIA (log_auditoria)
+-- [04-L] LOG DE AUDITORIA (log_auditoria)
 -- ============================================================
 -- ADICIONADO (03-08-2026) — ver comentário completo em
--- 01_extensoes_enums_tabelas.sql [01-J]. Só SELECT tem policy aqui DE
+-- 01_extensoes_enums_tabelas.sql [01-L]. Só SELECT tem policy aqui DE
 -- PROPÓSITO: não existe pol_log_auditoria_insert/update/delete porque
 -- app_nestjs não tem (e nunca deve ter) GRANT nenhum além de SELECT nesta
--- tabela (ver 06_grants.sql [06-J]) — sem o GRANT, uma policy de INSERT
+-- tabela (ver 06_grants.sql [06-L]) — sem o GRANT, uma policy de INSERT
 -- aqui não abriria nada mesmo, então nem existe, pra não sugerir uma porta
 -- que não existe. Quem grava é só a trigger `fn_log_auditoria()`
 -- (SECURITY DEFINER, 05_regras_negocio.sql [05-L]), que roda com o

@@ -32,8 +32,9 @@ Cada letra tem exatamente um significado, do `01` ao `08`. Se você está procur
 | **I** | SCORE (Parâmetros, Rótulos, e todo o motor de cálculo/pontuação) | `01-I`, `02-I`, `04-I`, `05-I-1` a `05-I-4` (motor de score), `06-I`, `07-I` (seed de score_config/rotulo + constantes + backfill) |
 | **J** | Segurança & Contexto de Sessão (`id_usuario_atual()`) | `03-J` |
 | **K** | Regras de Negócio Transversais (validações que cruzam mais de um domínio ao mesmo tempo) | `05-K-1` a `05-K-3` |
+| **L** | LOG DE AUDITORIA (quem alterou o quê e quando — `log_auditoria`) | `01-L`, `02` *(sem bloco — índice já documentado junto da tabela)*, `04-L`, `05-L`, `06-L` |
 
-> 📌 Por que `J` e `K` existem: nem tudo no banco pertence a um domínio de dado único. `id_usuario_atual()` (`03`) não é sobre nenhuma tabela específica — é infraestrutura de sessão usada por tudo. E várias triggers de `05` (ex.: validar repasse financeiro de uma campanha, ou impedir denúncia excessiva) mexem em mais de uma tabela de domínios diferentes ao mesmo tempo — forçá-las dentro de uma letra só (`E` ou `H`, por exemplo) esconderia que elas são regras de fronteira entre domínios, não de um domínio só. Por isso ganham letras próprias em vez de reaproveitar `A`-`I` com um significado diferente do já estabelecido.
+> 📌 Por que `J` e `K` existem: nem tudo no banco pertence a um domínio de dado único. `id_usuario_atual()` (`03`) não é sobre nenhuma tabela específica — é infraestrutura de sessão usada por tudo. E várias triggers de `05` (ex.: validar repasse financeiro de uma campanha, ou impedir denúncia excessiva) mexem em mais de uma tabela de domínios diferentes ao mesmo tempo — forçá-las dentro de uma letra só (`E` ou `H`, por exemplo) esconderia que elas são regras de fronteira entre domínios, não de um domínio só. Por isso ganham letras próprias em vez de reaproveitar `A`-`I` com um significado diferente do já estabelecido. `L` (log de auditoria, 03-08-2026) segue a mesma lógica: não pertence a nenhum domínio específico (a mesma trigger genérica se aplica a `usuario`, `perfil_pesquisador`, `configuracoes`, RBAC e vários catálogos ao mesmo tempo).
 
 ---
 
@@ -44,7 +45,7 @@ Cada letra tem exatamente um significado, do `01` ao `08`. Se você está procur
 * **Transição de Autenticação (Supabase $\rightarrow$ NestJS Próprio):** O projeto migrou do modelo de autenticação delegada (Supabase Auth/PostgREST) para uma arquitetura com backend próprio em NestJS.
 * **Role `app_nestjs`:** O sistema utiliza uma única role de aplicação para gerenciar a conexão da API com o PostgreSQL. A criação dessa role é executada via bloco `DO $$` no topo do script 01 para garantir sua existência antes da criação de qualquer política de RLS (arquivo 04).
 * 🗑️➡️✅ **Senha Placeholder — CORRIGIDO (28-07-2026):** a role nasce `NOLOGIN`, sem senha nenhuma — não mais com `LOGIN PASSWORD 'TROCAR_NO_AMBIENTE_REAL'`. A versão anterior falhava **aberta**: esquecer de trocar a senha em produção deixava o sistema funcionando normalmente com uma credencial conhecida publicada no próprio repositório Git, sem nenhum aviso. Com `NOLOGIN`, esquecer o passo de instalação falha **fechada**: o NestJS simplesmente não consegue conectar (`FATAL: role "app_nestjs" is not permitted to log in`), erro percebido em minutos. `GRANT` e `SET ROLE` continuam funcionando normalmente numa role `NOLOGIN` — só o login direto fica bloqueado até alguém rodar `ALTER ROLE app_nestjs LOGIN PASSWORD '...'`, passo obrigatório de instalação documentado em `tutorial-rodar-projeto.md`.
-* 🗑️➡️✅ **Guarda de `BYPASSRLS` — ADICIONADO (28-07-2026):** bloco `DO $$` logo após a criação da role, que verifica se `current_user` tem `rolsuper` ou `rolbypassrls` e aborta o bootstrap com uma mensagem única e explicativa se não tiver. Não resolve sozinho a pendência de confirmar se o papel do SQL Editor do Supabase tem `BYPASSRLS` (ver `PENDENCIAS e correcoes.md`, item 22, ainda em aberto) — mas transforma uma falha silenciosa (dezenas de erros de RLS espalhados pelos arquivos `04`-`07`, já que 89 das 105 policies são `TO app_nestjs` e as 39 tabelas têm `FORCE ROW LEVEL SECURITY`) numa parada única e autoexplicativa logo no início.
+* 🗑️➡️✅ **Guarda de `BYPASSRLS` — ADICIONADO (28-07-2026):** bloco `DO $$` logo após a criação da role, que verifica se `current_user` tem `rolsuper` ou `rolbypassrls` e aborta o bootstrap com uma mensagem única e explicativa se não tiver. Não resolve sozinho a pendência de confirmar se o papel do SQL Editor do Supabase tem `BYPASSRLS` (ver `PENDENCIAS e correcoes.md`, item 22, ainda em aberto) — mas transforma uma falha silenciosa (dezenas de erros de RLS espalhados pelos arquivos `04`-`07`, já que 99 das 116 policies são `TO app_nestjs` e as 42 tabelas têm `FORCE ROW LEVEL SECURITY`) numa parada única e autoexplicativa logo no início. *(Números atualizados em 03-08-2026 — auditoria do Claude Web encontrou o inventário desatualizado em vários pontos deste documento; ver seção "Como conferir este inventário", ao final, pra sempre recontar em vez de confiar em número fixo.)*
 * **Extensão `pgcrypto`:** Ativada no início do script para fornecer suporte a funções criptográficas, como a geração de UUIDs (`gen_random_uuid()`).
 * **Evolução dos ENUMs:**
   * `status_campanha` e `status_contribuicao`: Incluem estados para tratar fluxos de moderação, rejeição, expiração e reembolsos manuais.
@@ -251,7 +252,7 @@ As três funções utilizam os modificadores de segurança essenciais:
 
 * **Mecanismo de Transação:** O NestJS, ao autenticar o JWT e abrir uma transação com o PostgreSQL, executa o comando `SET LOCAL app.id_usuario_atual = '<id>'`.
 * **Leitura Segura:** A função lê a variável customizada da sessão do PostgreSQL via `current_setting('app.id_usuario_atual', true)`.
-* 🗑️➡️✅ **Tratamento de Nulos — CORRIGIDO (bug crítico, 27-07-2026):** o segundo argumento `true` de `current_setting()` só cobre o caso "variável nunca foi definida" (sessão anônima), retornando `NULL` nesse caso. Ele **não** cobre o caso "variável definida como string vazia `''`" — e `''::INT` lança uma exceção fatal (`invalid input syntax for type integer`), em vez de retornar `NULL`. Como `tem_permissao()` chama esta função por baixo e aparece em 89 das 105 policies de `04_rls_policies.sql`, uma única sessão anônima onde o NestJS interpola algo como `` `${usuario?.id ?? ''}` `` (em vez de simplesmente nunca setar a variável) derrubava **qualquer** consulta a qualquer tabela protegida — inclusive a listagem pública de campanhas, que nem exige login. A correção: `SELECT NULLIF(current_setting('app.id_usuario_atual', true), '')::INT;` — o `NULLIF` trata "não definida" e "definida vazia" como a mesma coisa (`NULL`) antes mesmo de tentar o `::INT`, então os dois casos agora se comportam de forma idêntica e segura.
+* 🗑️➡️✅ **Tratamento de Nulos — CORRIGIDO (bug crítico, 27-07-2026):** o segundo argumento `true` de `current_setting()` só cobre o caso "variável nunca foi definida" (sessão anônima), retornando `NULL` nesse caso. Ele **não** cobre o caso "variável definida como string vazia `''`" — e `''::INT` lança uma exceção fatal (`invalid input syntax for type integer`), em vez de retornar `NULL`. Como `tem_permissao()` chama esta função por baixo e aparece em 65 das 116 policies de `04_rls_policies.sql`, uma única sessão anônima onde o NestJS interpola algo como `` `${usuario?.id ?? ''}` `` (em vez de simplesmente nunca setar a variável) derrubava **qualquer** consulta a qualquer tabela protegida — inclusive a listagem pública de campanhas, que nem exige login. A correção: `SELECT NULLIF(current_setting('app.id_usuario_atual', true), '')::INT;` — o `NULLIF` trata "não definida" e "definida vazia" como a mesma coisa (`NULL`) antes mesmo de tentar o `::INT`, então os dois casos agora se comportam de forma idêntica e segura.
 
 ---
 
@@ -319,7 +320,7 @@ As três funções utilizam os modificadores de segurança essenciais:
 
 ### Visão Geral de Arquitetura
 
-O arquivo `04_rls_policies.sql` estabelece a camada de defesa em nível de linha (*Row Level Security* — RLS) para o banco de dados. Todas as 41 tabelas do schema possuem RLS ativada e forçada.
+O arquivo `04_rls_policies.sql` estabelece a camada de defesa em nível de linha (*Row Level Security* — RLS) para o banco de dados. Todas as 42 tabelas do schema possuem RLS ativada e forçada.
 
 #### Princípios Fundamentais de Segurança
 1. **[04-A] Ativação Universal (`ENABLE` + `FORCE ROW LEVEL SECURITY`):**
@@ -435,7 +436,7 @@ O arquivo é organizado em 8 blocos conceituais que espelham literalmente os tí
 
 ### Visão Geral
 
-Este é o arquivo mais denso do banco: 50 funções e 55 triggers, organizados em 7 blocos que usam duas letras do índice global — `I` (SCORE, blocos `[05-I-1]` a `[05-I-4]`) e `K` (Regras de Negócio Transversais, blocos `[05-K-1]` a `[05-K-3]`), ver "Índice Global de Letras" no topo deste documento. Ele concentra toda regra que um `CHECK` simples não alcança — porque depende de consultar outra tabela (ex.: será que essa campanha está ativa?) ou de recalcular algo automaticamente quando um dado relacionado muda.
+Este é o arquivo mais denso do banco: 51 funções e 66 triggers, organizados em 7 blocos que usam duas letras do índice global — `I` (SCORE, blocos `[05-I-1]` a `[05-I-4]`) e `K` (Regras de Negócio Transversais, blocos `[05-K-1]` a `[05-K-3]`), ver "Índice Global de Letras" no topo deste documento. Ele concentra toda regra que um `CHECK` simples não alcança — porque depende de consultar outra tabela (ex.: será que essa campanha está ativa?) ou de recalcular algo automaticamente quando um dado relacionado muda.
 
 > 📌 **Por que o motor de score existe:** antes deste arquivo, `perfil_pesquisador.score_atual` e `score_pesquisador.pontos_obtidos` eram só valores fixos digitados no seed — nada calculava o score de verdade a partir de campanhas, denúncias, links acadêmicos ou do perfil. A tela de detalhes de pontuação no front lia campos que nem existiam no tipo real de dimensões de score, e a conta virava `NaN`. A solução foi mover o cálculo inteiro para dentro do banco, com o resultado guardado em cache (`perfil_pesquisador.score_atual` e `score_pesquisador`) e atualizado sozinho via trigger sempre que um dado relevante muda — funciona para qualquer registro novo, sem que o backend precise lembrar de chamar nada. Todos os pesos vêm de `score_config.peso` (nenhum número fixo no código): editar o peso no Painel Admin já recalcula o score de todo mundo.
 
@@ -562,7 +563,7 @@ Cada trigger observa uma tabela que alimenta alguma dimensão do score e recalcu
 
 ### Idempotência
 
-As 55 triggers deste arquivo têm `DROP TRIGGER IF EXISTS` imediatamente antes do `CREATE TRIGGER` correspondente — o arquivo pode ser reaplicado sozinho num banco de desenvolvimento já existente, sem precisar resetar tudo do zero (mesmo padrão já aplicado em `04_rls_policies.sql`). *(Nota 28-07-2026: esta linha tinha ficado presa numa contagem antiga — 33 — enquanto a Visão Geral, no topo deste mesmo capítulo, já dizia o número certo. Achado pelo Claude Web na 5ª auditoria; agora as duas contagens do capítulo estão sincronizadas.)*
+As 66 triggers deste arquivo têm `DROP TRIGGER IF EXISTS` imediatamente antes do `CREATE TRIGGER` correspondente — o arquivo pode ser reaplicado sozinho num banco de desenvolvimento já existente, sem precisar resetar tudo do zero (mesmo padrão já aplicado em `04_rls_policies.sql`). *(Nota 28-07-2026: esta linha tinha ficado presa numa contagem antiga — 33 — enquanto a Visão Geral, no topo deste mesmo capítulo, já dizia o número certo. Achado pelo Claude Web na 5ª auditoria; as duas contagens do capítulo foram sincronizadas de novo em 03-08-2026, depois de mais uma rodada de auditoria — ver "Como conferir este inventário", ao final do documento.)*
 
 ---
 
@@ -591,10 +592,10 @@ Tabela completa (código → função/trigger → tabela → mensagem, as 42 lin
 
 Registro genérico de INSERT/UPDATE/DELETE, pensado pra fechar um buraco real: os dois logs que já existiam no banco (`auditoria_financeira` e `historico_rejeicao`) são pontuais — nenhum dos dois cobre uma ação administrativa comum, tipo "admin editou o nome de um usuário" ou "admin revogou uma permissão pela matriz". Detalhamento técnico completo (motivação, as 4 decisões de design, exemplo de query) em `temp_Nest_React.md`, seção "Rodada do Claude Web 'esforço alto'" — aqui só o resumo oficial.
 
-- **Tabela** (`01_extensoes_enums_tabelas.sql` `[01-J]`): `log_auditoria(id_log, tabela, identidade_registro, operacao, id_usuario_responsavel, campos_alterados, dados_anteriores, dados_novos, ocorrido_em)`. `identidade_registro` é `TEXT` (não `INT`) de propósito — cobre PK simples (`'42'`) e PK composta (`usuario_papel`/`papel_permissao`, sem coluna `id_X` própria — vira `'8,3'`).
+- **Tabela** (`01_extensoes_enums_tabelas.sql` `[01-L]`): `log_auditoria(id_log, tabela, identidade_registro, operacao, id_usuario_responsavel, campos_alterados, dados_anteriores, dados_novos, ocorrido_em)`. `identidade_registro` é `TEXT` (não `INT`) de propósito — cobre PK simples (`'42'`) e PK composta (`usuario_papel`/`papel_permissao`, sem coluna `id_X` própria — vira `'8,3'`).
 - **Função + triggers** (`05_regras_negocio.sql` `[05-L]`): `fn_log_auditoria()`, `SECURITY DEFINER`, aplicada via `EXECUTE FUNCTION fn_log_auditoria('coluna_pk'[, 'coluna_pk_2'])` em `usuario`, `perfil_pesquisador`, `configuracoes`, `usuario_papel`, `papel_permissao`, `motivo_denuncia`, `area_conhecimento`, `tipo_link`, `termos_de_uso` (completo) e em `campanha`/`denuncia` só na transição de `status` (`WHEN (OLD.status IS DISTINCT FROM NEW.status)`).
 - **Redação de coluna sensível**: `senha_hash`/`cpf_criptografado` nunca entram em `dados_anteriores`/`dados_novos` (removidas do JSONB antes de gravar) — mas o NOME da coluna continua aparecendo em `campos_alterados` quando muda, porque saber QUE mudou é auditoria válida.
-- **À prova do próprio admin** (`04_rls_policies.sql` `[04-J]` + `06_grants.sql` `[06-J]`): só existe policy/GRANT de SELECT (atrás da permissão nova `log_visualizar`) — sem INSERT/UPDATE/DELETE pra ninguém, nunca. Só a trigger `SECURITY DEFINER` grava.
+- **À prova do próprio admin** (`04_rls_policies.sql` `[04-L]` + `06_grants.sql` `[06-L]`): só existe policy/GRANT de SELECT (atrás da permissão nova `log_visualizar`) — sem INSERT/UPDATE/DELETE pra ninguém, nunca. Só a trigger `SECURITY DEFINER` grava.
 - **Não é feature de tela ainda** — só a fundação (tabela + triggers + permissão) existe por enquanto; uma tela de "Histórico de alterações" no painel fica pra quando for priorizada.
 
 ---
@@ -881,3 +882,26 @@ A trigger de validação deixaria de ter qualquer `CASE`/nome de contexto hardco
 **A decisão que falta:** se vocês têm expectativa razoável de mais contextos de link aparecerem, vale migrar agora, antes do NestJS modelar as entities em cima do formato atual. Se o modelo for considerado fechado nesses 3 contextos, manter os booleanos é aceitável e mais simples — é exatamente a decisão pendente no item 2 do `PENDENCIAS e correcoes.md`.
 
 > 📌 **Por que `atribuir_papel_padrao()` não aparece aqui:** o `GRANT EXECUTE` dessa função fica junto dela mesma em `08_trigger_signup_usuario.sql`, porque `06` roda antes do `08` na ordem de dependência — a função ainda não existiria neste ponto da execução se o grant estivesse aqui.
+
+---
+
+## Como conferir este inventário
+
+*(Adicionado 03-08-2026, sugestão do Claude Web depois de auditar a documentação e achar 4 números desatualizados neste arquivo — tabelas, policies, triggers e funções não tinham sido atualizados nas últimas 3 rodadas, apesar de `log_auditoria`/`orcamento_campanha`/`marco_cronograma` terem sido adicionadas. Em vez de outra pessoa ter que contar `CREATE TABLE`/`CREATE POLICY`/`CREATE TRIGGER` na mão (ou confiar de olho num número escrito num comentário), estas 4 queries dizem a verdade direto do banco — rode no SQL Editor do Supabase sempre que for atualizar os números deste documento.)*
+
+```sql
+-- Tabelas (público, sem contar as internas do Postgres/extensões)
+SELECT count(*) FROM pg_tables WHERE schemaname = 'public';
+
+-- Policies de RLS
+SELECT count(*) FROM pg_policies WHERE schemaname = 'public';
+
+-- Triggers (NOT tgisinternal exclui as triggers automáticas de FK —
+-- senão o número vem inflado com coisa que ninguém escreveu à mão)
+SELECT count(*) FROM pg_trigger WHERE NOT tgisinternal;
+
+-- Funções/procedures no schema public (soma tudo: 03 + 05 + 08)
+SELECT count(*) FROM pg_proc WHERE pronamespace = 'public'::regnamespace;
+```
+
+**Números confirmados em 03-08-2026** (contados também por fora, via `grep -c` nos `.sql`, batendo com as 4 queries acima): **42 tabelas**, **116 policies** (99 `TO app_nestjs`, 65 chamam `tem_permissao()`), **66 triggers** (todas em `05`), **65 funções** (51 em `05` + 13 em `03` + 1 em `08`, `atribuir_papel_padrao()`).

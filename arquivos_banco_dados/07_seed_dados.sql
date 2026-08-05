@@ -200,7 +200,7 @@ INSERT INTO permissao (nome) VALUES
 ('usuario_excluir'),
 ('usuario_desbloquear'),
 -- ADICIONADO (03-08-2026): gate de SELECT em log_auditoria (ver
--- pol_log_auditoria_select, 04_rls_policies.sql [04-J]) — sem esta
+-- pol_log_auditoria_select, 04_rls_policies.sql [04-L]) — sem esta
 -- permissão, ninguém (nem admin, até este INSERT rodar) consegue ler o
 -- histórico de quem alterou o quê. trg_permissao_auto_admin (05,
 -- [05-K-3]) já concede ela ao papel 'admin' sozinho assim que a linha
