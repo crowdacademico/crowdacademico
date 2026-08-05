@@ -225,7 +225,21 @@ export function AlterarUsuario({ auth }) {
                 ))}
               </div>
 
-              {papeisDisponiveis.length > 0 && (
+              {papeisDisponiveis.length === 0 ? (
+                // ANTES (achado do Lucas, 03-08-2026: "não consigo atribuir
+                // papel pra ninguém"): este bloco inteiro só existia
+                // `{papeisDisponiveis.length > 0 && (...)}` — quando não
+                // sobrava nenhum papel pra atribuir (ex.: catálogo ainda não
+                // carregou, ou o usuário já tem todos), o seletor E o botão
+                // simplesmente SUMIAM da tela, sem nenhuma mensagem
+                // explicando por quê — parecia "atribuir não funciona", não
+                // "não há nada pra atribuir agora". Corrigido: sempre mostra
+                // alguma coisa, nunca um vazio sem explicação.
+                <p className="text-xs text-slate-500">
+                  Nenhum papel adicional disponível pra atribuir (o catálogo ainda
+                  está carregando, ou este usuário já tem todos os papéis existentes).
+                </p>
+              ) : (
                 <div className="flex gap-2">
                   <select
                     value={idPapelParaAtribuir}

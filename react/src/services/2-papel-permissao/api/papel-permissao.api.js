@@ -27,6 +27,10 @@ export const papelPermissaoApi = {
 };
 
 export const usuarioPapelApi = {
+  // Sem filtro — todos os vínculos usuário↔papel de uma vez (RLS decide
+  // sozinha quem vê o quê). Usado pela coluna "papel" na listagem de
+  // Usuários, pra não disparar uma requisição por linha da tabela.
+  listarTudo: (authFetch) => authFetch('/usuario-papel').then(tratarResposta),
   listarPorUsuario: (authFetch, idUsuario) =>
     authFetch(`/usuario-papel/${idUsuario}`).then(tratarResposta),
   atribuir: (authFetch, idUsuario, idPapel) =>
