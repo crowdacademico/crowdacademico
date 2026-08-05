@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router';
 import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
 import { useToast } from '../../components/layout/use-toast';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
+import { papelApi, usuarioPapelApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
 import { traduzirErro } from '../../services/constant/api/traduzir-erro.util';
 
 // Precisa bater com o hash seedado em arquivos_banco_dados/07_seed_dados.sql
@@ -17,6 +18,14 @@ const SENHA_DEV = 'DevTcc123!';
 // dentro da tabela (GenericTable) e viram rota própria, com todos os dados
 // visíveis e um botão de confirmar/cancelar no fim, em vez de edição em
 // linha misturada com a listagem.
+//
+// Seção "Papéis" (03-08-2026) reaproveita os mesmos endpoints do widget
+// "Papéis de um usuário" (usuario-papel-widget.jsx) — não é módulo novo,
+// só uma UI melhor pro mesmo caso de uso (id_usuario já vem da URL, papel
+// escolhido por nome num <select>, não digitado por ID). O widget antigo
+// continua existindo, não foi removido — serve pra testar qualquer
+// combinação usuário/papel sem navegar até a página de um usuário
+// específico.
 export function AlterarUsuario({ auth }) {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -28,18 +37,79 @@ export function AlterarUsuario({ auth }) {
   const [erro, setErro] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [redefinindoSenhaDev, setRedefinindoSenhaDev] = useState(false);
+  // Papéis do usuário — pedido do Lucas (03-08-2026): "criar um usuário e
+  // promover ele a um cargo, incluindo o de administrador", pela interface,
+  // não digitando ID cru (o widget "Papéis de um usuário" já fazia isso,
+  // mas pedindo o id_usuario na mão — aqui já se sabe de quem é).
+  const [papeisAtuais, setPapeisAtuais] = useState([]);
+  const [catalogoPapeis, setCatalogoPapeis] = useState([]);
+  const [idPapelParaAtribuir, setIdPapelParaAtribuir] = useState('');
+  const [atribuindoPapel, setAtribuindoPapel] = useState(false);
+  const [revogandoPapel, setRevogandoPapel] = useState(null);
 
   useEffect(() => {
-    usuarioApi
-      .buscar(auth.authFetch, id)
-      .then((dados) => {
-        setUsuario(dados);
-        setNome(dados.nome);
+    Promise.all([
+      usuarioApi.buscar(auth.authFetch, id),
+      usuarioPapelApi.listarPorUsuario(auth.authFetch, id).catch(() => []),
+      papelApi.listar(auth.authFetch),
+    ])
+      .then(([dadosUsuario, papeisDoUsuario, catalogo]) => {
+        setUsuario(dadosUsuario);
+        setNome(dadosUsuario.nome);
+        setPapeisAtuais(papeisDoUsuario);
+        setCatalogoPapeis(catalogo);
       })
       .catch((erroRequisicao) => setErro(traduzirErro(erroRequisicao)))
       .finally(() => setCarregando(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  // Só os papéis que este usuário AINDA não tem — evita tentar atribuir de
+  // novo um papel que já está na lista de cima (o backend recusaria com
+  // 409, mas nem oferecer a opção é mais claro que deixar tentar e falhar).
+  const papeisDisponiveis = catalogoPapeis.filter(
+    (papel) => !papeisAtuais.some((atual) => atual.idPapel === papel.idPapel),
+  );
+
+  const aoAtribuirPapel = async () => {
+    if (!idPapelParaAtribuir) {
+      return;
+    }
+    setErro('');
+    setAtribuindoPapel(true);
+    try {
+      const papelEscolhido = catalogoPapeis.find(
+        (papel) => papel.idPapel === Number(idPapelParaAtribuir),
+      );
+      await usuarioPapelApi.atribuir(auth.authFetch, id, Number(idPapelParaAtribuir));
+      const papeisAtualizados = await usuarioPapelApi.listarPorUsuario(auth.authFetch, id);
+      setPapeisAtuais(papeisAtualizados);
+      setIdPapelParaAtribuir('');
+      mostrar(
+        'Papel atribuído com sucesso.',
+        `ID: ${id} agora tem o papel "${papelEscolhido?.nome}"`,
+      );
+    } catch (erroRequisicao) {
+      setErro(traduzirErro(erroRequisicao));
+    } finally {
+      setAtribuindoPapel(false);
+    }
+  };
+
+  const aoRevogarPapel = async (papel) => {
+    setErro('');
+    setRevogandoPapel(papel.idPapel);
+    try {
+      await usuarioPapelApi.remover(auth.authFetch, id, papel.idPapel);
+      const papeisAtualizados = await usuarioPapelApi.listarPorUsuario(auth.authFetch, id);
+      setPapeisAtuais(papeisAtualizados);
+      mostrar('Papel revogado com sucesso.', `ID: ${id} perdeu o papel "${papel.nomePapel}"`);
+    } catch (erroRequisicao) {
+      setErro(traduzirErro(erroRequisicao));
+    } finally {
+      setRevogandoPapel(null);
+    }
+  };
 
   const aoSalvar = async (evento) => {
     evento.preventDefault();
@@ -125,6 +195,60 @@ export function AlterarUsuario({ auth }) {
                 className="input-padrao"
                 placeholder="••••••••"
               />
+            </div>
+
+            <div className="rounded-lg border border-slate-200 p-3">
+              <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">
+                Papéis
+              </label>
+
+              <div className="flex flex-wrap gap-2 mb-3">
+                {papeisAtuais.length === 0 && (
+                  <p className="text-xs text-slate-500">Nenhum papel atribuído ainda.</p>
+                )}
+                {papeisAtuais.map((papel) => (
+                  <span
+                    key={papel.idPapel}
+                    className="badge badge-neutro flex items-center gap-2"
+                  >
+                    {papel.nomePapel}
+                    <button
+                      type="button"
+                      onClick={() => aoRevogarPapel(papel)}
+                      disabled={revogandoPapel === papel.idPapel}
+                      className="text-red-600 font-bold hover:text-red-800 disabled:opacity-50"
+                      title={`Revogar "${papel.nomePapel}"`}
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+
+              {papeisDisponiveis.length > 0 && (
+                <div className="flex gap-2">
+                  <select
+                    value={idPapelParaAtribuir}
+                    onChange={(evento) => setIdPapelParaAtribuir(evento.target.value)}
+                    className="input-padrao flex-1"
+                  >
+                    <option value="">Selecione um papel...</option>
+                    {papeisDisponiveis.map((papel) => (
+                      <option key={papel.idPapel} value={papel.idPapel}>
+                        {papel.nome}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={aoAtribuirPapel}
+                    disabled={!idPapelParaAtribuir || atribuindoPapel}
+                    className="btn btn-primary shrink-0"
+                  >
+                    {atribuindoPapel ? 'Atribuindo...' : 'Atribuir'}
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="flex items-center justify-between gap-3 rounded-lg border border-dashed border-purple-300 bg-purple-50 p-3">

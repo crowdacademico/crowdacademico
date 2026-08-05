@@ -105,12 +105,33 @@ CREATE TYPE tipo_recompensa       AS ENUM ('digital', 'reconhecimento', 'acesso_
 -- ============================================================
 -- [01-B] RBAC (3 tabelas)
 -- ============================================================
+-- ADICIONADO (03-08-2026, achado de uma revisão externa — outra IA, não o
+-- Claude Web — pedida pelo Lucas pra pensar em "poder absoluto da
+-- modularidade": `codigo` versus `nome`, mesmo padrão já usado em
+-- `tipo_link.codigo`/`motivo_denuncia.codigo`. Motivo: 3 pontos deste banco
+-- reconheciam papel especial pelo TEXTO do nome, literal, sem nenhuma trava
+-- (`trg_admin_recebe_toda_permissao` procura `WHERE nome = 'admin'`,
+-- `fn_atribuir_papel_pesquisador` procura `WHERE nome = 'pesquisador'`,
+-- `atribuir_papel_padrao` (08) procura `WHERE nome = 'usuario'`). O achado
+-- foi confirmado rodando de verdade (renomear 'admin' e criar uma
+-- permissão nova: ela parava de ser auto-concedida, sem erro nenhum —
+-- falha silenciosa). Isso não é um bug ativo hoje (não existe tela nem
+-- endpoint pra renomear um papel ainda), mas o Lucas avisou que uma tela
+-- de editar papel está vindo — `codigo` entra ANTES dela, não depois, pra
+-- nunca existir uma janela em que renomear um papel pelo painel quebre
+-- RBAC de admin/pesquisador/cadastro em silêncio. `nome` continua sendo o
+-- único campo editável (rótulo livre); `codigo` nunca é exposto em nenhum
+-- formulário de edição — ver 05_regras_negocio.sql (as 3 triggers
+-- corrigidas) e 07_seed_dados.sql ([07-B-1], `codigo` seedado igual ao
+-- `nome` atual dos 7 papéis).
 CREATE TABLE papel (
     id_papel SERIAL,
     nome     VARCHAR(50) NOT NULL,
+    codigo   VARCHAR(20) NOT NULL,
 
     CONSTRAINT "PK_PAPEL" PRIMARY KEY (id_papel),
-    CONSTRAINT "UK_PAPEL_NOME" UNIQUE (nome)
+    CONSTRAINT "UK_PAPEL_NOME" UNIQUE (nome),
+    CONSTRAINT "UK_PAPEL_CODIGO" UNIQUE (codigo)
 );
 
 CREATE TABLE permissao (
@@ -203,7 +224,7 @@ CREATE TABLE usuario (
     id_imagem_perfil INT,
     criado_em        TIMESTAMP    DEFAULT NOW(),
     deletado         BOOLEAN      DEFAULT FALSE,
-    -- ADICIONADAS (28-07-2026, Claude Web — "o único ponto onde a LGPD ainda tem
+    -- ADICIONADAS (28-07-2026, Claude,"o único ponto onde a LGPD ainda tem
     -- uma ponta solta"): excluir_conta_usuario() (03, [03-F]) gravava deletado =
     -- TRUE e nada mais — sem quem fez nem quando, o Art. 37 da LGPD (registro das
     -- operações de tratamento, exclusão sendo a mais sensível de todas) ficava
@@ -405,7 +426,7 @@ CREATE TABLE campanha (
         data_fim IS NULL OR data_inicio IS NULL OR
         (data_fim - data_inicio) BETWEEN INTERVAL '1 day' AND INTERVAL '365 days'
     ),
-    -- ADICIONADO (28-07-2026, Claude Web — "Problema 2"): campo de texto livre sem
+    -- ADICIONADO (28-07-2026, "Problema 2"): campo de texto livre sem
     -- limite nenhum. Mesmo padrão do prazo (item 16): CHECK aqui é só limite técnico
     -- largo (barra absurdo tipo upload de megabytes de texto); o limite de negócio de
     -- verdade (menor, configurável) mora em configuracoes + trigger, ver [05-K-1].
@@ -441,7 +462,7 @@ CREATE TABLE atualizacao_campanha (
 
     CONSTRAINT "PK_ATUALIZACAO_CAMPANHA" PRIMARY KEY (id_atualizacao),
     CONSTRAINT "FK_ATUALIZACAO_CAMPANHA_CAMPANHA" FOREIGN KEY (id_campanha) REFERENCES campanha(id_campanha) ON DELETE CASCADE,
-    -- ADICIONADO (28-07-2026, Claude Web — "Problema 2"): mesmo raciocínio de
+    -- ADICIONADO (28-07-2026, "Problema 2"): mesmo raciocínio de
     -- CK_CAMPANHA_DESCRICAO_TAMANHO — limite técnico largo aqui, limite de negócio
     -- configurável via trigger, ver [05-K-1].
     CONSTRAINT "CK_ATUALIZACAO_CAMPANHA_CONTEUDO_TAMANHO" CHECK (char_length(conteudo) <= 20000)
@@ -449,7 +470,7 @@ CREATE TABLE atualizacao_campanha (
 
 -- ADICIONADO (31-07-2026, Alexia): orçamento estruturado da campanha (itens de gasto
 -- com categoria + valor), inspirado na estrutura de campanha do Experiment.com
--- (pedido do time via Claude Web). Substitui a antiga prática de descrever o
+-- (pedido do time via Claude). Substitui a antiga prática de descrever o
 -- orçamento só em texto livre dentro de campanha.descricao — aqui vira dado
 -- estruturado, que dá pra somar, validar contra meta_financeira e renderizar
 -- em gráfico de pizza na página da campanha (o cálculo do percentual de cada
@@ -534,7 +555,7 @@ CREATE TABLE solicitacao_encerramento (
     CONSTRAINT "PK_SOLICITACAO_ENCERRAMENTO" PRIMARY KEY (id_solicitacao_encerramento),
     CONSTRAINT "FK_SOLICITACAO_ENCERRAMENTO_CAMPANHA" FOREIGN KEY (id_campanha) REFERENCES campanha(id_campanha),
     CONSTRAINT "FK_SOLICITACAO_ENCERRAMENTO_ADMIN" FOREIGN KEY (id_admin) REFERENCES usuario(id_usuario),
-    -- ADICIONADO (28-07-2026, Claude Web — "Problema 2"): mesmo raciocínio de
+    -- ADICIONADO (28-07-2026, Claude — "Problema 2"): mesmo raciocínio de
     -- CK_CAMPANHA_DESCRICAO_TAMANHO, pros dois campos de justificativa — limite
     -- técnico largo aqui, limite de negócio configurável via trigger, ver [05-K-1].
     CONSTRAINT "CK_SOLICITACAO_JUSTIFICATIVA_PESQ_TAMANHO" CHECK (justificativa_pesquisador IS NULL OR char_length(justificativa_pesquisador) <= 10000),
@@ -596,7 +617,7 @@ CREATE TABLE denuncia (
         (id_campanha_alvo IS NOT NULL AND id_pesquisador_alvo IS NULL)
         OR (id_campanha_alvo IS NULL AND id_pesquisador_alvo IS NOT NULL)
     ),
-    -- ADICIONADO (28-07-2026, Claude Web — "Problema 2", a Alexia já tinha avisado no
+    -- ADICIONADO (28-07-2026, Claude — "Problema 2", a Alexia já tinha avisado no
     -- WhatsApp antes mesmo da coluna existir: "relato como text pode dar problema, tem
     -- que ver depois se dá pra restringir o tamanho"): sem limite nenhum, um campo de
     -- denúncia pública virava vetor de abuso (o limite de 5 denúncias/24h não impede
@@ -620,7 +641,7 @@ CREATE TABLE recompensa (
     CONSTRAINT "FK_RECOMPENSA_CAMPANHA" FOREIGN KEY (id_campanha) REFERENCES campanha(id_campanha) ON DELETE CASCADE,
     CONSTRAINT "CK_RECOMPENSA_VALOR_MINIMO" CHECK (valor_minimo > 0),
     CONSTRAINT "CK_RECOMPENSA_QUANTIDADE"   CHECK (quantidade_disponivel IS NULL OR quantidade_disponivel >= 0),
-    -- ADICIONADO (28-07-2026, Claude Web — "Problema 2"): mesma categoria de texto
+    -- ADICIONADO (28-07-2026, Claude — "Problema 2"): mesma categoria de texto
     -- livre sem limite, mesmo raciocínio de CK_CAMPANHA_DESCRICAO_TAMANHO. Limite
     -- técnico largo aqui; limite de negócio configurável via trigger, ver [05-K-1].
     CONSTRAINT "CK_RECOMPENSA_DESCRICAO_TAMANHO" CHECK (descricao IS NULL OR char_length(descricao) <= 10000)
@@ -819,14 +840,7 @@ CREATE TABLE score_pesquisador (
 -- ============================================================
 -- [01-J] LOG DE AUDITORIA (log_auditoria)
 -- ============================================================
--- ADICIONADO (03-08-2026, sugestão do Claude Web, esforço alto, pedido do
--- Lucas: "algo que registre o que, quem e quando algo foi alterado"):
--- registro genérico de INSERT/UPDATE/DELETE nas tabelas mais sensíveis do
--- painel admin (RBAC, usuario, perfil_pesquisador, configuracoes) e nos
--- catálogos que o admin edita — ver a função `fn_log_auditoria()` e as
--- triggers que a usam em 05_regras_negocio.sql ([05-L]), as policies em
--- 04_rls_policies.sql ([04-J]) e o GRANT em 06_grants.sql ([06-J]).
---
+-- ADICIONADO (03-08-2026), --
 -- `identidade_registro` é TEXT (não INT) de propósito: cobre tanto tabela
 -- com PK simples (ex.: '42') quanto PK composta, como usuario_papel/
 -- papel_permissao (ex.: '8,3' = id_usuario 8, id_papel 3) — um único

@@ -29,6 +29,12 @@
 --             ter qualquer permissão — pol_usuariopapel_insert (04) exige a
 --             permissão 'papel_atribuir', que ninguém tem no primeiro
 --             segundo de vida da conta.
+-- CORRIGIDO (03-08-2026, achado de revisão externa): lia `WHERE nome =
+-- 'usuario'` — esta é a função mais crítica das 3 corrigidas nesta rodada,
+-- porque roda em TODO cadastro real (não só num fluxo de upgrade como as
+-- outras duas). Renomear o papel 'usuario' pelo painel faria todo cadastro
+-- novo nascer sem papel nenhum, em silêncio, sem erro nenhum. Agora lê
+-- `codigo` (01_extensoes_enums_tabelas.sql [01-B]).
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.atribuir_papel_padrao(p_id_usuario INT)
 RETURNS VOID
@@ -39,7 +45,7 @@ AS $$
 DECLARE
     v_id_papel_usuario INT;
 BEGIN
-    SELECT id_papel INTO v_id_papel_usuario FROM papel WHERE nome = 'usuario';
+    SELECT id_papel INTO v_id_papel_usuario FROM papel WHERE codigo = 'usuario';
 
     IF v_id_papel_usuario IS NOT NULL THEN
         INSERT INTO usuario_papel (id_usuario, id_papel)

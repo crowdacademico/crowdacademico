@@ -2923,13 +2923,20 @@ EXECUTE FUNCTION fn_valida_denuncia_sem_autojulgamento();
 --             via eh_admin(). Com a trigger, toda permissão nova já nasce
 --             atribuída ao papel 'admin' automaticamente, tornando
 --             tem_permissao(...) um substituto 100% seguro do bypass antigo.
+-- CORRIGIDO (03-08-2026, achado de revisão externa): lia `WHERE p.nome =
+-- 'admin'` — o admin é reconhecido pelo TEXTO do rótulo editável, então
+-- renomear o papel 'admin' pelo painel (dia que essa tela existir) faria
+-- toda permissão nova parar de ser auto-concedida, em silêncio, sem erro
+-- nenhum (testado e confirmado antes de corrigir). Agora lê `codigo`
+-- (01_extensoes_enums_tabelas.sql [01-B]), coluna que nunca é exposta pra
+-- edição — só `nome` (o rótulo) pode mudar.
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.trg_admin_recebe_toda_permissao()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN
     INSERT INTO papel_permissao (id_papel, id_permissao)
     SELECT p.id_papel, NEW.id_permissao
-    FROM papel p WHERE p.nome = 'admin'
+    FROM papel p WHERE p.codigo = 'admin'
     ON CONFLICT DO NOTHING;
     RETURN NEW;
 END;
@@ -2969,6 +2976,10 @@ FOR EACH ROW EXECUTE FUNCTION public.trg_admin_recebe_toda_permissao();
 --             `trg_admin_recebe_toda_permissao()` (acima): `SECURITY DEFINER`
 --             porque o usuário que está virando pesquisador ainda não tem
 --             `'papel_atribuir'` (mesmo problema de "ovo e galinha").
+-- CORRIGIDO (03-08-2026, achado de revisão externa): lia `WHERE nome =
+-- 'pesquisador'` — mesmo risco de `trg_admin_recebe_toda_permissao`
+-- (acima): renomear o papel pelo painel faria completar o perfil de
+-- pesquisador parar de atribuir o papel, em silêncio. Agora lê `codigo`.
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_atribuir_papel_pesquisador()
 RETURNS TRIGGER
@@ -2979,7 +2990,7 @@ AS $$
 DECLARE
     v_id_papel_pesquisador INT;
 BEGIN
-    SELECT id_papel INTO v_id_papel_pesquisador FROM papel WHERE nome = 'pesquisador';
+    SELECT id_papel INTO v_id_papel_pesquisador FROM papel WHERE codigo = 'pesquisador';
 
     IF v_id_papel_pesquisador IS NOT NULL THEN
         INSERT INTO usuario_papel (id_usuario, id_papel)

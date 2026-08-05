@@ -123,14 +123,18 @@ INSERT INTO score_rotulo (rotulo, descricao, score_minimo, score_maximo) VALUES
 
 
 -- [07-B-1] papel: por que estes 7 papéis e por que os IDs não são fixados (ver DOCUMENTACAO_BD.md)
-INSERT INTO papel (nome) VALUES
-('admin'),
-('pesquisador'),
-('usuario'),
-('moderador'),
-('revisor'),
-('curador'),
-('suporte')
+-- ATUALIZADO (03-08-2026): `codigo` novo (01, [01-B]) — seedado igual ao
+-- `nome` de cada papel, de propósito (o texto que as 3 triggers já
+-- procuravam continua sendo o mesmo, só que agora numa coluna que `nome`
+-- nunca mais pode acidentalmente deixar de bater).
+INSERT INTO papel (nome, codigo) VALUES
+('admin', 'admin'),
+('pesquisador', 'pesquisador'),
+('usuario', 'usuario'),
+('moderador', 'moderador'),
+('revisor', 'revisor'),
+('curador', 'curador'),
+('suporte', 'suporte')
 ON CONFLICT (nome) DO NOTHING;
 
 

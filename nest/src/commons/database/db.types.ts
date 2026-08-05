@@ -35,6 +35,10 @@ export interface UsuarioTable {
 export interface PapelTable {
   id_papel: Generated<number>;
   nome: string;
+  // ADICIONADA (03-08-2026) — espelha 01_extensoes_enums_tabelas.sql [01-B].
+  // Estável, nunca editável pela API (diferente de `nome`) — ver comentário
+  // completo lá sobre por que existe.
+  codigo: string;
 }
 
 export interface PermissaoTable {

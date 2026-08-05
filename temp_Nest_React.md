@@ -15,6 +15,7 @@ Convenção: 🟢 corrigido | 🟡 real mas fora do escopo do Nest/React (é do 
 - [Painel admin — CRUD virou view própria, tooltips, ordenação, paginação](#painel-admin--crud-virou-view-própria-tooltips-ordenação-paginação-02-08-2026)
 - [RBAC virou editável pelo Painel Admin + identificação de pesquisador](#rbac-virou-editável-pelo-painel-admin--identificação-de-pesquisador-03-08-2026)
 - [Rodada do Claude Web "esforço alto" — modularidade, log de auditoria, itens de sistema moderno](#rodada-do-claude-web-esforço-alto--modularidade-log-de-auditoria-itens-de-sistema-moderno-03-08-2026)
+- [papel.codigo + tela de atribuir papel — achado de revisão externa](#papelcodigo--tela-de-atribuir-papel--achado-de-revisão-externa-03-08-2026)
 - [⚠️ Rodando o backend contra o Supabase (em vez de Postgres local)](#️-rodando-o-backend-contra-o-supabase-em-vez-de-postgres-local)
 - [📣 Novidades pra Alexia](#-novidades-pra-alexia)
 - [Pendências que ainda restam](#pendências-que-ainda-restam-deste-lado-nestreact-não-do-banco)
@@ -253,6 +254,32 @@ Implementado: `consultar-usuario.jsx` agora busca `usuarioPapelApi.listarPorUsua
   - **Backup do Supabase** — não é código, é configuração de conta/plano — fica de recado pro Lucas conferir no painel do Supabase.
   - **Exportação de dados do usuário (LGPD Art. 18, portabilidade)** e **Request ID por requisição (`nestjs-cls`, já instalado)** — reais e de baixo risco técnico, mas não entraram nesta rodada por tempo — ficam de sugestão pra próxima rodada, não estão bloqueados por nada.
   - **Padronizar a estrutura de pastas `services/1-usuario` vs `services/11-configuracoes`** (uma tem `api/constants/hook/type`, outra tem `api/context/hook/provider`) — decisão de convenção, não teve como decidir sozinho; fica de pergunta pro Lucas/Alexia.
+
+## `papel.codigo` + tela de atribuir papel — achado de revisão externa (03-08-2026)
+
+*(Diferente da rodada anterior, este achado NÃO veio do Claude Web — o Lucas mandou o `.zip` do projeto pra outra IA, pedindo ideias sobre "o poder absoluto da modularidade" (ele estava pensando em construir uma tela de renomear papel) e um plano de teste pra promover usuário a admin/pesquisador pela interface. Verifiquei os 3 achados técnicos direto no código antes de implementar qualquer coisa — os 3 bateram exatamente.)*
+
+🟢 **1. `papel.codigo` — separar o rótulo editável do identificador que o `.sql` lê.** Achado real, confirmado por grep direto: 3 pontos do banco reconheciam um papel especial pelo TEXTO de `papel.nome`, sem nenhuma trava:
+- `trg_admin_recebe_toda_permissao()` (05, `[05-K-3]`): `FROM papel p WHERE p.nome = 'admin'` — auto-concede toda permissão nova ao admin.
+- `fn_atribuir_papel_pesquisador()` (05, `[05-K-3]`): `WHERE nome = 'pesquisador'` — auto-atribui o papel ao completar o perfil de pesquisador.
+- `atribuir_papel_padrao()` (08, `[08-D-1]`): `WHERE nome = 'usuario'` — **roda em TODO cadastro real**, atribui o papel padrão. A mais crítica das 3.
+
+**Nuance que valia deixar clara pro Lucas (a mensagem da outra IA não deixava isso óbvio):** hoje não existe NENHUMA tela nem endpoint pra renomear um papel (`papel` só tem `findall` no Nest) — então isso não é um bug ativo agora, é um risco adormecido que vira ativo no dia em que a tela de "editar papel" (que o Lucas mencionou querer construir) existir. Corrigir agora, antes dela, é a ordem certa.
+
+**Correção** (mesmo padrão já usado em `tipo_link.codigo`/`motivo_denuncia.codigo`):
+- `01_extensoes_enums_tabelas.sql` (`[01-B]`): `papel` ganhou `codigo VARCHAR(20) NOT NULL UNIQUE` — estável, nunca exposto em nenhum formulário de edição. `nome` continua sendo o único campo editável (o rótulo livre).
+- `07_seed_dados.sql` (`[07-B-1]`): `codigo` seedado IGUAL ao `nome` atual dos 7 papéis (`admin`, `pesquisador`, `usuario`, `moderador`, `revisor`, `curador`, `suporte`) — o texto que as triggers já procuravam continua sendo o mesmo, só que numa coluna protegida.
+- `05_regras_negocio.sql`/`08_trigger_signup_usuario.sql`: as 3 funções acima passaram a ler `WHERE codigo = '...'`.
+- **Nest**: `db.types.ts` (`PapelTable`) ganhou o campo `codigo` (só pra tipagem bater com o banco — `papel.service.findall.ts` já selecionava colunas explícitas (`id_papel`, `nome`), não `codigo`, e continua assim: não tem nenhum consumidor hoje, não faz sentido expor no `PapelResponseDto` até existir uma tela que precise mostrar/usar isso).
+- **Nada muda de comportamento pra ninguém** — os valores de `codigo` nasceram idênticos aos `nome` de hoje, então as 3 automações continuam funcionando exatamente igual; só ficaram protegidas contra o dia em que `nome` mudar.
+
+🟢 **2. Seção "Papéis" dentro de Alterar Usuário — atribuir/revogar papel pela interface, incluindo admin.** Confirmado antes de construir: o backend já funcionava 100% (`POST`/`DELETE /usuario-papel`, protegido por `papel_atribuir`/`papel_gerenciar`, sem trava nenhuma contra promover especificamente a admin) — faltava só UI decente. `alterar-usuario.jsx` ganhou uma seção nova:
+- Lista os papéis atuais do usuário como badges, cada um com um "×" pra revogar.
+- Um `<select>` com os papéis que este usuário AINDA não tem (por nome, não por ID) + botão "Atribuir".
+- Reaproveita 100% dos endpoints que já existiam (`usuarioPapelApi.atribuir/remover/listarPorUsuario`, `papelApi.listar`) — zero mudança de backend, zero mudança de RLS/permissão.
+- **O widget antigo "Papéis de um usuário" (`usuario-papel-widget.jsx`) não foi removido** — continua existindo pra testar qualquer combinação usuário/papel sem precisar navegar até a página de alguém específico (ex.: testar um ID que talvez nem exista ainda). A tela nova é o caminho principal agora pro fluxo real ("promover ESTE usuário").
+
+🟡 **3. Módulo `6-perfil-pesquisador` + CPFs de teste — NÃO implementado, por pedido explícito do Lucas.** A outra IA sugeriu gerar uma lista de CPFs sintaticamente válidos (dígito verificador correto, não sequência repetida) pra destravar o teste de "promover a pesquisador" — a análise técnica dela estava certa (CPF repetido tipo `111.111.111-11` passa hoje porque não existe validação nenhuma ainda, mas todo validador de mercado rejeita sequência repetida por convenção, então testar com isso quebraria no dia em que o validador de verdade entrasse). Mesmo assim, o Lucas pediu explicitamente pra NÃO fazer isso agora — "vou pensar em algo melhor". Nada foi criado (nem o módulo, nem a lista de CPF, nem `SEED_CPFS_TESTE.md`). Registrado aqui só pra o motivo de não estar feito ficar claro pra quem ler depois — não é esquecimento, é decisão do Lucas, em aberto.
 
 ## ⚠️ Rodando o backend contra o Supabase (em vez de Postgres local)
 

@@ -57,6 +57,7 @@ Cada letra tem exatamente um significado, do `01` ao `08`. Se você está procur
 
 * **Estrutura:** Composta pelas tabelas `papel`, `permissao` e a tabela de ligação `papel_permissao`.
 * **Desvinculação do Banco:** As permissões granulares são checadas dinamicamente na aplicação NestJS e na função `public.tem_permissao()`.
+* 🗑️➡️✅ **`papel.codigo` — coluna nova (03-08-2026, achado de revisão externa):** `papel` só tinha `nome` (o rótulo, editável) — e 3 pontos do banco reconheciam um papel especial pelo TEXTO desse rótulo, sem trava nenhuma: `trg_admin_recebe_toda_permissao()` (`05`, `WHERE p.nome = 'admin'`), `fn_atribuir_papel_pesquisador()` (`05`, `WHERE nome = 'pesquisador'`) e `atribuir_papel_padrao()` (`08`, `WHERE nome = 'usuario'` — roda em todo cadastro real). Renomear qualquer um dos três pelo painel (não existe essa tela ainda, mas está a caminho) pararia essas 3 automações em silêncio, sem erro nenhum — testado e confirmado antes de corrigir. Mesmo padrão já usado em `tipo_link.codigo`/`motivo_denuncia.codigo` (`[01-C]`): `codigo VARCHAR(20) NOT NULL UNIQUE`, estável, nunca exposto pra edição — seedado (`07`, `[07-B-1]`) igual ao `nome` atual dos 7 papéis, então nada muda de comportamento hoje. As 3 funções passaram a ler `WHERE codigo = '...'`. Detalhamento completo (por que não é um bug ativo ainda, já que não existe endpoint de editar papel) em `temp_Nest_React.md`.
 
 ---
 
