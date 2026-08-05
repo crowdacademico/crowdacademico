@@ -73,6 +73,26 @@ Duas coisas que só existem nesse caminho, e não no Postgres local (Partes 1-3)
 
 ---
 
+## 🗂️ Aplicando os `.sql` sem colar no SQL Editor (recomendado a partir de 03-08-2026)
+
+O passo 2 da seção acima ("cole o conteúdo de cada `.sql` e rode como script") funciona, mas tem um problema real: nada registra QUAL arquivo já rodou em QUAL banco. Com duas pessoas (Lucas e Alexia) cada uma com seu próprio projeto Supabase, isso já causou dúvida sobre se os dois bancos estavam no mesmo estado.
+
+Existe agora um script que resolve isso — `src/commons/database/aplicar-migrations.script.ts`, rodado via `npm run db:migrate` (dentro de `nest/`). Ele lê os 8 arquivos na ordem certa, guarda um registro (tabela `schema_migrations`, criada sozinha) de quais já rodaram, e só aplica o que for novo. Detalhe técnico completo em `temp_Nest_React.md`.
+
+**Passo único, pra cada banco que já tem tudo aplicado manualmente até hoje (o caso do Lucas e da Alexia agora):**
+
+1. No `.env` do backend, adicione uma SEGUNDA linha de conexão, além da `DATABASE_URL` normal:
+   ```
+   DATABASE_URL_MIGRATIONS=postgresql://postgres:SENHA-DO-SUPERUSUARIO@db.xxxxxxxxxxxx.supabase.co:5432/postgres?sslmode=require
+   ```
+   Repare: usuário `postgres` (o superusuário do Supabase), **não** `app_nestjs` — é a MESMA credencial que você já usa quando entra no SQL Editor pelo navegador (Connect → Postgres → Direct connection). `DATABASE_URL` (a do app_nestjs) continua existindo do lado dela, sem mudar em nada — são duas linhas diferentes, dois propósitos diferentes.
+2. Rode, uma única vez: `npm run db:migrate:adotar`. Isso NÃO executa nenhum `.sql` de novo — só registra "os 8 arquivos já estão aplicados", porque de fato já estão (foi assim que o banco chegou até aqui). É seguro rodar mais de uma vez.
+3. A partir daqui, qualquer mudança nova nos arquivos `.sql` (uma trigger corrigida, uma tabela nova) se aplica com `npm run db:migrate` — ele detecta sozinho o que ainda não rodou nesse banco específico e aplica só isso. Continua dando pra colar manualmente no SQL Editor se preferir num caso específico — só não vai ficar registrado em `schema_migrations` se fizer isso, então o hábito recomendado agora é sempre passar pelo `db:migrate`.
+
+**Pra um banco Supabase novo, do zero** (situação diferente — nunca rodou nada ainda): não precisa mais colar os 8 arquivos um por um no SQL Editor. Só define os dois `DATABASE_URL*` no `.env` e roda `npm run db:migrate` direto — ele aplica os 8 na ordem certa sozinho, e já sai com o registro completo.
+
+---
+
 ## Parte 1 — instalar o PostgreSQL
 
 1. Baixe o instalador em postgresql.org (escolha a versão mais recente estável, ex. 16 ou 17).

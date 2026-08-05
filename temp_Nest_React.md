@@ -16,6 +16,7 @@ Convenção: 🟢 corrigido | 🟡 real mas fora do escopo do Nest/React (é do 
 - [RBAC virou editável pelo Painel Admin + identificação de pesquisador](#rbac-virou-editável-pelo-painel-admin--identificação-de-pesquisador-03-08-2026)
 - [Rodada do Claude Web "esforço alto" — modularidade, log de auditoria, itens de sistema moderno](#rodada-do-claude-web-esforço-alto--modularidade-log-de-auditoria-itens-de-sistema-moderno-03-08-2026)
 - [papel.codigo + tela de atribuir papel — achado de revisão externa](#papelcodigo--tela-de-atribuir-papel--achado-de-revisão-externa-03-08-2026)
+- [Sistema de migrations — schema_migrations + npm run db:migrate](#sistema-de-migrations--schema_migrations--npm-run-dbmigrate-03-08-2026)
 - [⚠️ Rodando o backend contra o Supabase (em vez de Postgres local)](#️-rodando-o-backend-contra-o-supabase-em-vez-de-postgres-local)
 - [📣 Novidades pra Alexia](#-novidades-pra-alexia)
 - [Pendências que ainda restam](#pendências-que-ainda-restam-deste-lado-nestreact-não-do-banco)
@@ -280,6 +281,22 @@ Implementado: `consultar-usuario.jsx` agora busca `usuarioPapelApi.listarPorUsua
 - **O widget antigo "Papéis de um usuário" (`usuario-papel-widget.jsx`) não foi removido** — continua existindo pra testar qualquer combinação usuário/papel sem precisar navegar até a página de alguém específico (ex.: testar um ID que talvez nem exista ainda). A tela nova é o caminho principal agora pro fluxo real ("promover ESTE usuário").
 
 🟡 **3. Módulo `6-perfil-pesquisador` + CPFs de teste — NÃO implementado, por pedido explícito do Lucas.** A outra IA sugeriu gerar uma lista de CPFs sintaticamente válidos (dígito verificador correto, não sequência repetida) pra destravar o teste de "promover a pesquisador" — a análise técnica dela estava certa (CPF repetido tipo `111.111.111-11` passa hoje porque não existe validação nenhuma ainda, mas todo validador de mercado rejeita sequência repetida por convenção, então testar com isso quebraria no dia em que o validador de verdade entrasse). Mesmo assim, o Lucas pediu explicitamente pra NÃO fazer isso agora — "vou pensar em algo melhor". Nada foi criado (nem o módulo, nem a lista de CPF, nem `SEED_CPFS_TESTE.md`). Registrado aqui só pra o motivo de não estar feito ficar claro pra quem ler depois — não é esquecimento, é decisão do Lucas, em aberto.
+
+## Sistema de migrations — `schema_migrations` + `npm run db:migrate` (03-08-2026)
+
+*(Origem: proposta da Alexia depois de pesquisar sobre "quem deve comandar o sistema" — banco ou back-end — motivada por uma mensagem genérica que ela recebeu (não sobre o nosso projeto). Ela identificou 2 problemas: 1) regra de produto demais misturada com invariante de verdade dentro de trigger (registrado como decisão em `PROXIMOS_PASSOS.md`, item 1 — trabalho gradual, não desta rodada); 2) os 8 arquivos `.sql` são aplicados manualmente, sem controle de versão nenhum. O Claude Web validou o problema 2 como real e urgente ("dois bancos Supabase divergindo, sem ninguém saber, já é problema hoje") e definiu o escopo MÍNIMO certo: não converter os 8 arquivos pra nenhum formato novo, só adicionar uma tabela de controle e um script por cima.)*
+
+🟢 **`src/commons/database/aplicar-migrations.script.ts` — script standalone, não é provider do Nest.** Rodado só via `npm run db:migrate` (ou `npm run db:migrate:adotar`), nunca importado por nenhum módulo, nunca roda sozinho na subida do servidor.
+
+- **O que resolve:** hoje não existe registro de qual dos 8 arquivos já rodou em qual banco. Com Lucas e Alexia em projetos Supabase separados, colar manualmente não garante que os dois bancos ficam iguais.
+- **Tabela `schema_migrations`** (criada pelo próprio script, `CREATE TABLE IF NOT EXISTS` — não é um dos 8 arquivos numerados de propósito, porque ela precisa existir ANTES de qualquer um deles ser rastreado): `nome_arquivo` (PK), `hash` (SHA-256 do conteúdo do arquivo no momento em que rodou), `aplicado_em`, `aplicado_por`.
+- **Dois modos:**
+  - `npm run db:migrate:adotar` — não executa nada, só registra que os 8 arquivos atuais já foram aplicados (assumindo que o banco já tem tudo, que é o caso de um banco já em uso hoje). Passo único, rodado por Lucas e pela Alexia, cada um no próprio banco.
+  - `npm run db:migrate` — modo normal: aplica o que ainda não tem registro, avisa (sem aplicar sozinho) se o hash de um arquivo já registrado mudou desde a última vez, pula o que já está em dia.
+- **Conexão SEPARADA da `app_nestjs`** (`DATABASE_URL_MIGRATIONS`, nova variável no `.env`, usa a credencial de superusuário que já era usada manualmente no SQL Editor) — `app_nestjs` é propositalmente sem privilégio de DDL, é o que garante que a RLS vale pra ela em runtime; misturar as duas conexões destruiria essa garantia.
+- **Executa via `pg.Pool` direto, não via Kysely `.selectFrom()`/etc.** Decisão deliberada: não tem nada "pra construir" aqui — são arquivos `.sql` inteiros, prontos, com bloco `$$...$$` de função/trigger. Mandar o texto inteiro pro driver `pg` de uma vez (sem parâmetro nenhum, o que ativa o "simple query protocol" do Postgres) é o jeito mais confiável de rodar múltiplas instruções separadas por `;` numa chamada só — testado e confirmado rodando o script de verdade (sem banco disponível neste ambiente pra testar a aplicação de fato, mas a leitura de `.env`, a checagem de credencial ausente e o encerramento gracioso foram confirmados rodando via `ts-node`).
+- **O que NÃO muda:** os 8 arquivos `.sql` continuam exatamente como estão, texto puro, sem formato de migration nenhum. `07_seed_dados.sql` continua idempotente (`ON CONFLICT DO NOTHING`) do jeito que já era — o script de migration não precisa de nada especial pra isso, só herda a idempotência que os arquivos já tinham.
+- **Passo a passo completo pra Lucas/Alexia** (`DATABASE_URL_MIGRATIONS`, `db:migrate:adotar`) documentado em `tutorial-rodar-projeto.md`, nova seção "Aplicando os `.sql` sem colar no SQL Editor".
 
 ## ⚠️ Rodando o backend contra o Supabase (em vez de Postgres local)
 
