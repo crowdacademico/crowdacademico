@@ -3,6 +3,7 @@ import { PapelPermissaoControllerCreate } from './controllers/papel-permissao.co
 import { PapelPermissaoControllerFindAll } from './controllers/papel-permissao.controller.findall';
 import { PapelPermissaoControllerRemove } from './controllers/papel-permissao.controller.remove';
 import { PapelControllerFindAll } from './controllers/papel.controller.findall';
+import { PapelControllerUpdate } from './controllers/papel.controller.update';
 import { PermissaoControllerFindAll } from './controllers/permissao.controller.findall';
 import { UsuarioPapelControllerCreate } from './controllers/usuario-papel.controller.create';
 import { UsuarioPapelControllerFindAll } from './controllers/usuario-papel.controller.findall';
@@ -12,23 +13,34 @@ import { PapelPermissaoServiceCreate } from './service/papel-permissao.service.c
 import { PapelPermissaoServiceFindAll } from './service/papel-permissao.service.findall';
 import { PapelPermissaoServiceRemove } from './service/papel-permissao.service.remove';
 import { PapelServiceFindAll } from './service/papel.service.findall';
+import { PapelServiceUpdate } from './service/papel.service.update';
 import { PermissaoServiceFindAll } from './service/permissao.service.findall';
 import { UsuarioPapelServiceCreate } from './service/usuario-papel.service.create';
 import { UsuarioPapelServiceFindAll } from './service/usuario-papel.service.findall';
 import { UsuarioPapelServiceFindAllGeral } from './service/usuario-papel.service.findall-geral';
 import { UsuarioPapelServiceRemove } from './service/usuario-papel.service.remove';
 
-// `papel`/`permissao` continuam só-leitura (catálogo gerenciado via seed/
-// migração direta, de propósito — criar um papel ou permissão nova é
-// decisão maior, fora de escopo aqui). `papel_permissao` ganhou
+// `papel`/`permissao` continuam quase todo só-leitura (catálogo gerenciado
+// via seed/migração direta, de propósito — CRIAR um papel ou permissão
+// nova continua fora de escopo, decisão maior). `papel_permissao` ganhou
 // insert/delete (03-08-2026, pedido do Lucas: admin precisa conseguir
 // conceder/revogar permissão de um papel já existente pelo Painel Admin,
 // sem acessar o banco — ver [04-B-1] em 04_rls_policies.sql). Mesmo padrão
 // de `usuario_papel`: só insert/delete, não existe "editar" um vínculo,
 // só atribuir ou remover.
+//
+// `papel` ganhou UPDATE (só de `nome`, 03-08-2026) — renomear um papel já
+// existente (ex.: 'admin' → 'Administrador') virou seguro depois de
+// `papel.codigo` existir (01_extensoes_enums_tabelas.sql [01-B]): as
+// triggers de RBAC leem `codigo`, nunca `nome`, então renomear pelo painel
+// não quebra mais nada em silêncio. `permissao` continua sem nenhum
+// caminho de escrita — renomear uma permissão exigiria também atualizar
+// qualquer lugar que a referencie por nome (não é o caso de `papel`, cujas
+// 3 dependências por nome foram todas movidas pra `codigo`).
 @Module({
   controllers: [
     PapelControllerFindAll,
+    PapelControllerUpdate,
     PermissaoControllerFindAll,
     PapelPermissaoControllerFindAll,
     PapelPermissaoControllerCreate,
@@ -40,6 +52,7 @@ import { UsuarioPapelServiceRemove } from './service/usuario-papel.service.remov
   ],
   providers: [
     PapelServiceFindAll,
+    PapelServiceUpdate,
     PermissaoServiceFindAll,
     PapelPermissaoServiceFindAll,
     PapelPermissaoServiceCreate,

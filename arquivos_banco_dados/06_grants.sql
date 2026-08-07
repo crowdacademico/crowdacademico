@@ -25,7 +25,7 @@
 --  SUMÁRIO DOS BLOCOS DE CÓDIGO
 -- ----------------------------------------------------------------------------
 --  [06-A] GERAL (schema, sequências)
---  [06-B] RBAC (sem grant adicional)
+--  [06-B] RBAC
 --  [06-C] CONFIG
 --  [06-D] USUÁRIO
 --  [06-E] CAMPANHA
@@ -60,14 +60,22 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO app_nestjs;
 
 -- ============================================================================
 --  [06-B] RBAC
---  papel e permissao continuam só-leitura (GRANT SELECT ON ALL TABLES já
---  cobre) — criar papel/permissão nova continua sendo via seed/migração
---  direta, de propósito. papel_permissao ganhou INSERT/DELETE (03-08-2026,
---  ver [04-B-1] em 04_rls_policies.sql): admin agora consegue conceder ou
+--  permissao continua só-leitura (GRANT SELECT ON ALL TABLES já cobre) —
+--  criar uma permissão nova continua sendo via seed/migração direta, de
+--  propósito. papel_permissao ganhou INSERT/DELETE (03-08-2026, ver
+--  [04-B-1] em 04_rls_policies.sql): admin agora consegue conceder ou
 --  revogar uma permissão de um papel já existente pelo Painel Admin
 --  (matriz Papel × Permissão), sem precisar mexer direto no banco.
+--  papel ganhou UPDATE (só a coluna `nome`, 03-08-2026, ver [04-B-1b] em
+--  04_rls_policies.sql) — renomear um papel já existente virou seguro
+--  depois de `papel.codigo` existir (01_extensoes_enums_tabelas.sql
+--  [01-B]): as 3 triggers de RBAC que reconheciam papel especial por
+--  nome foram todas migradas pra ler `codigo`, que não tem GRANT nenhum
+--  aqui — só `nome` (o rótulo) é uma coluna que a API pode escrever.
+--  CRIAR um papel novo do zero continua fora de escopo.
 -- ============================================================================
 GRANT INSERT, DELETE ON papel_permissao TO app_nestjs;
+GRANT UPDATE (nome) ON papel TO app_nestjs;
 
 -- ============================================================================
 --  [06-C] CONFIG

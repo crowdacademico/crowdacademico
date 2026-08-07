@@ -22,7 +22,7 @@ export class ConfiguracaoServiceFindAll {
       .getDb()
       .selectFrom('configuracoes')
       .selectAll()
-      .orderBy('chave');
+      .orderBy('id_config');
 
     const resultado = await paginar(query, paginacao);
     return {

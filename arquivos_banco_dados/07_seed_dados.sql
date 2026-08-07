@@ -127,14 +127,19 @@ INSERT INTO score_rotulo (rotulo, descricao, score_minimo, score_maximo) VALUES
 -- `nome` de cada papel, de propósito (o texto que as 3 triggers já
 -- procuravam continua sendo o mesmo, só que agora numa coluna que `nome`
 -- nunca mais pode acidentalmente deixar de bater).
+-- Ordem = maior poder -> menor poder (mesma ordem de ORDEM_PAPEIS_POR_PODER,
+-- matriz-papel-permissao.jsx) só para os IDs saírem bonitinhos (1=admin...
+-- 7=usuario) num banco novo. Não referenciado por número em nenhum lugar
+-- (papel_permissao e usuario_papel, abaixo, buscam papel por `nome`), então
+-- reordenar aqui é seguro e não quebra nada além do id_papel gerado.
 INSERT INTO papel (nome, codigo) VALUES
 ('admin', 'admin'),
-('pesquisador', 'pesquisador'),
-('usuario', 'usuario'),
 ('moderador', 'moderador'),
 ('revisor', 'revisor'),
+('suporte', 'suporte'),
 ('curador', 'curador'),
-('suporte', 'suporte')
+('pesquisador', 'pesquisador'),
+('usuario', 'usuario')
 ON CONFLICT (nome) DO NOTHING;
 
 

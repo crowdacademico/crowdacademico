@@ -9,10 +9,12 @@ export class UsuarioPapelServiceFindAllGeral {
   // Sem filtro de id_usuario — pedido do Lucas (03-08-2026): coluna "papel"
   // na listagem de Usuários precisa do vínculo de TODO MUNDO de uma vez,
   // não um por vez (evita a listagem disparar N requisições, uma por
-  // linha). pol_usuariopapel_select (04) já resolve sozinha quem vê o
-  // quê: id_usuario_atual() = dono OU tem_permissao('papel_gerenciar') —
-  // admin (quem acessa a listagem) vê tudo; qualquer outra sessão só
-  // veria a própria linha, sem precisar filtrar nada aqui.
+  // linha). pol_usuariopapel_select (04) decide quem vê o quê — desde
+  // 07-08-2026 é USING(true) TEMPORARIAMENTE (pedido do Lucas: qualquer
+  // sessão logada vê o papel de todo mundo, pra agilizar teste manual
+  // enquanto o sistema está em construção; a ideia original era só
+  // dono OU tem_permissao('papel_gerenciar') — ver comentário na policy
+  // pra reverter quando o RBAC de verdade entrar em vigor).
   async executar(): Promise<UsuarioPapelResponseDto[]> {
     const linhas = await this.database
       .getDb()

@@ -49,6 +49,13 @@ ALTER TABLE papel_permissao      FORCE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS pol_papel_select ON papel;
 CREATE POLICY pol_papel_select ON papel FOR SELECT USING (true);
+-- [04-B-1b] papel: UPDATE liberado (03-08-2026) — só o rótulo (`nome`)
+-- pode mudar (GRANT UPDATE (nome), 06_grants.sql [06-B]); `codigo`, a
+-- coluna estável que as triggers de RBAC leem (01_extensoes_enums_tabelas.sql
+-- [01-B]), não tem GRANT nenhum, então nem chega a ser possível tentar
+-- mudá-la por aqui — é isso que torna seguro abrir esta policy.
+DROP POLICY IF EXISTS pol_papel_update ON papel;
+CREATE POLICY pol_papel_update ON papel FOR UPDATE TO app_nestjs USING (public.tem_permissao('papel_gerenciar'));
 DROP POLICY IF EXISTS pol_permissao_select ON permissao;
 CREATE POLICY pol_permissao_select ON permissao FOR SELECT USING (true);
 DROP POLICY IF EXISTS pol_papelperm_select ON papel_permissao;
@@ -225,8 +232,16 @@ CREATE POLICY pol_perfil_insert ON perfil_pesquisador FOR INSERT TO app_nestjs W
 DROP POLICY IF EXISTS pol_perfil_update ON perfil_pesquisador;
 CREATE POLICY pol_perfil_update ON perfil_pesquisador FOR UPDATE TO app_nestjs USING (id_usuario = public.id_usuario_atual());
 
+-- TEMPORÁRIO (pedido do Lucas, 07-08-2026): USING(true) em vez de "só o
+-- dono OU quem tem papel_gerenciar" — a coluna "papel" da listagem de
+-- Usuários (listar-usuarios.jsx) precisa mostrar o papel de TODO MUNDO
+-- pra QUALQUER sessão logada, não só admin, enquanto o sistema ainda está
+-- em construção (agiliza teste manual pelas 7 contas do <dev> "Entrar
+-- como"). Quando o RBAC de verdade estiver pronto (cada papel só vendo o
+-- que lhe cabe), REVERTER pra: USING (id_usuario = public.id_usuario_atual()
+-- OR public.tem_permissao('papel_gerenciar')).
 DROP POLICY IF EXISTS pol_usuariopapel_select ON usuario_papel;
-CREATE POLICY pol_usuariopapel_select ON usuario_papel FOR SELECT TO app_nestjs USING (id_usuario = public.id_usuario_atual() OR public.tem_permissao('papel_gerenciar'));
+CREATE POLICY pol_usuariopapel_select ON usuario_papel FOR SELECT TO app_nestjs USING (true);
 DROP POLICY IF EXISTS pol_usuariopapel_insert ON usuario_papel;
 CREATE POLICY pol_usuariopapel_insert ON usuario_papel FOR INSERT TO app_nestjs WITH CHECK (public.tem_permissao('papel_atribuir'));
 -- [04-D-4] usuario_papel: por que existe a policy de DELETE (ver DOCUMENTACAO_BD.md)

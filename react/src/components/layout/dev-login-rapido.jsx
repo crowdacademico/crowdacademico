@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
+import { traduzirErro } from '../../services/constant/api/traduzir-erro.util';
 
 // <dev> — login instantâneo com uma conta que JÁ existe no seed
 // (07_seed_dados.sql, [07-D-1]), sem digitar nada. Existe só porque logar
@@ -7,28 +8,42 @@ import { useNavigate } from 'react-router';
 // 03-08-2026) — não cria conta nem senha nova, só reaproveita a senha de
 // dev que já é a mesma pros 17 usuários seedados (ver
 // temp_Nest_React.md, "Seed tinha senha_hash falso"). Clique no rótulo:
-// entra como Admin direto. Seta: abre a lista de contas — só Admin por
-// enquanto, mas já pronta pra crescer (pesquisador, moderador...) sem
-// precisar redesenhar nada.
+// entra como Admin direto (continua sendo o atalho mais usado). Seta:
+// abre a lista com os outros 6 papéis (03-08-2026, pedido do Lucas: "pra
+// eu ir testando") — mesma ordem de poder de ORDEM_PAPEIS_POR_PODER
+// (matriz-papel-permissao.jsx), um e-mail seedado por papel, escolhido
+// direto de usuario_papel ([07-D-2]).
 const CONTAS_DEV = [
   { rotulo: 'Admin', email: 'admin@crowdacademico.com.br', senha: 'DevTcc123!' },
+  { rotulo: 'Moderador', email: 'diego.martins@crowdacademico.com.br', senha: 'DevTcc123!' },
+  { rotulo: 'Revisor', email: 'camila.nunes@crowdacademico.com.br', senha: 'DevTcc123!' },
+  { rotulo: 'Suporte', email: 'larissa.pinto@crowdacademico.com.br', senha: 'DevTcc123!' },
+  { rotulo: 'Curador', email: 'thiago.almeida@crowdacademico.com.br', senha: 'DevTcc123!' },
+  { rotulo: 'Pesquisador', email: 'ana.santos@usp.br', senha: 'DevTcc123!' },
+  { rotulo: 'Usuário comum', email: 'fernanda.souza@gmail.com', senha: 'DevTcc123!' },
 ];
 
 export function DevLoginRapido({ auth }) {
   const navigate = useNavigate();
   const [menuAberto, setMenuAberto] = useState(false);
   const [entrando, setEntrando] = useState(false);
+  const [erro, setErro] = useState(null);
 
+  // ACHADO (07-08-2026): erro era engolido em silêncio ("atalho de dev,
+  // não vale poluir a tela") — só que isso escondeu um bug real (limite
+  // de 5 login/60s por IP, auth.module.ts, estourando ao testar 6+ contas
+  // do dropdown rápido) atrás de um botão que parecia só "travado", sem
+  // pista nenhuma do motivo. Ainda não trava a tela (sem alert/modal), só
+  // mostra o texto do erro embaixo do botão.
   const entrarComo = async (conta) => {
     setMenuAberto(false);
     setEntrando(true);
+    setErro(null);
     try {
       await auth.login(conta.email, conta.senha);
       navigate('/');
-    } catch {
-      // Silencioso de propósito — é atalho de dev, não vale poluir a tela
-      // com erro se a senha do seed tiver sido trocada por alguém; a
-      // pessoa simplesmente continua deslogada, pode entrar do jeito normal.
+    } catch (erroRequisicao) {
+      setErro(traduzirErro(erroRequisicao));
     } finally {
       setEntrando(false);
     }
@@ -75,6 +90,12 @@ export function DevLoginRapido({ auth }) {
               <span className="block text-slate-400 text-xs">{conta.email}</span>
             </button>
           ))}
+        </div>
+      )}
+
+      {erro && (
+        <div className="absolute right-0 mt-1 w-56 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg shadow-lg z-50 px-3 py-2">
+          {erro}
         </div>
       )}
     </div>

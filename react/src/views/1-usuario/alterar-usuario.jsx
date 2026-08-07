@@ -46,6 +46,7 @@ export function AlterarUsuario({ auth }) {
   const [idPapelParaAtribuir, setIdPapelParaAtribuir] = useState('');
   const [atribuindoPapel, setAtribuindoPapel] = useState(false);
   const [revogandoPapel, setRevogandoPapel] = useState(null);
+  const [desbloqueando, setDesbloqueando] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -81,7 +82,14 @@ export function AlterarUsuario({ auth }) {
       const papelEscolhido = catalogoPapeis.find(
         (papel) => papel.idPapel === Number(idPapelParaAtribuir),
       );
-      await usuarioPapelApi.atribuir(auth.authFetch, id, Number(idPapelParaAtribuir));
+      // `id` vem de useParams() — SEMPRE string, mesmo quando a URL só tem
+      // dígitos (ex.: "/usuarios/8/alterar" → id === "8", não 8). O corpo
+      // desta requisição é validado por AtribuirPapelRequestDto com
+      // `@IsInt()` de verdade (diferente da URL de baixo, em
+      // aoRevogarPapel, onde o Nest converte sozinho via ParseIntPipe) —
+      // sem o Number() aqui, "idUsuario" chegava como texto e a validação
+      // rejeitava com "idUsuario must be an integer number".
+      await usuarioPapelApi.atribuir(auth.authFetch, Number(id), Number(idPapelParaAtribuir));
       const papeisAtualizados = await usuarioPapelApi.listarPorUsuario(auth.authFetch, id);
       setPapeisAtuais(papeisAtualizados);
       setIdPapelParaAtribuir('');
@@ -127,6 +135,27 @@ export function AlterarUsuario({ auth }) {
       setErro(traduzirErro(erroRequisicao));
     } finally {
       setEnviando(false);
+    }
+  };
+
+  // liberar_bloqueio_login() (03_funcoes_seguranca.sql) existia no banco
+  // desde sempre, mas nenhum endpoint chamava ela — achado ao investigar
+  // "o que falta no painel admin" (03-08-2026, pedido do Lucas): uma
+  // conta bloqueada por excesso de tentativas de login não tinha NENHUM
+  // jeito de ser desbloqueada pelo painel, só direto no banco. Botão
+  // sempre visível (não é recurso <dev> — é uma ação administrativa de
+  // verdade); clicar numa conta que não está bloqueada é inofensivo (só
+  // zera campos que já estavam zerados).
+  const aoDesbloquear = async () => {
+    setErro('');
+    setDesbloqueando(true);
+    try {
+      await usuarioApi.desbloquear(auth.authFetch, id);
+      mostrar('Login desbloqueado com sucesso.', `ID: ${id} pode tentar logar novamente`);
+    } catch (erroRequisicao) {
+      setErro(traduzirErro(erroRequisicao));
+    } finally {
+      setDesbloqueando(false);
     }
   };
 
@@ -263,6 +292,23 @@ export function AlterarUsuario({ auth }) {
                   </button>
                 </div>
               )}
+            </div>
+
+            <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 p-3">
+              <div>
+                <p className="text-xs text-slate-500">
+                  Zera o contador de tentativas de login falhas e libera a conta,
+                  caso esteja bloqueada temporariamente.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={aoDesbloquear}
+                disabled={desbloqueando}
+                className="btn btn-secondary shrink-0"
+              >
+                {desbloqueando ? 'Desbloqueando...' : 'Desbloquear login'}
+              </button>
             </div>
 
             <div className="flex items-center justify-between gap-3 rounded-lg border border-dashed border-purple-300 bg-purple-50 p-3">

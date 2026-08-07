@@ -57,6 +57,16 @@ export function ListarUsuarios({ auth }) {
 
   return (
     <div className="admin-content-painel">
+      {/* TEMPORÁRIO (pedido do Lucas, 07-08-2026): coluna "papel" mostra o
+          papel de QUALQUER usuário pra QUALQUER sessão logada (pol_usuariopapel_select
+          virou USING(true) enquanto o sistema está em construção) — nota
+          visível de propósito, pra não passar a impressão de que isto já é
+          o comportamento final. */}
+      <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
+        A coluna <strong>papel</strong> está visível para todos temporariamente,
+        só para facilitar os testes durante o desenvolvimento. No futuro, cada
+        papel só vai conseguir visualizar o que lhe couber.
+      </p>
       <GenericTable
         titulo="Usuários"
         acaoTopo={

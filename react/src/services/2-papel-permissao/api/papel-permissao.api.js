@@ -7,6 +7,13 @@ import { tratarResposta } from '../../constant/api/http.util';
 // Permissão virou editável pra admin, mesmo padrão de usuarioPapelApi.
 export const papelApi = {
   listar: (authFetch) => authFetch('/papel').then(tratarResposta),
+  // Só `nome` é aceito (03-08-2026) — o `codigo` estável que o RBAC lê
+  // nunca é exposto nem editável por aqui, de propósito.
+  atualizar: (authFetch, idPapel, dados) =>
+    authFetch(`/papel/${idPapel}`, {
+      method: 'PATCH',
+      body: JSON.stringify(dados),
+    }).then(tratarResposta),
 };
 
 export const permissaoApi = {

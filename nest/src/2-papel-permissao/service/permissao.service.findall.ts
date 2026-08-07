@@ -13,7 +13,7 @@ export class PermissaoServiceFindAll {
       .getDb()
       .selectFrom('permissao')
       .select(['id_permissao', 'nome'])
-      .orderBy('nome')
+      .orderBy('id_permissao')
       .execute();
 
     return permissoes.map((p) => ({

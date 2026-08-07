@@ -41,7 +41,24 @@ function celulaValor(valor) {
 // essa prop, o botão "Ver log" nem aparece — nem toda tabela tem
 // log_auditoria aplicado (só as que passam por `fn_log_auditoria()`, ver
 // 05_regras_negocio.sql [05-L]).
-export function GenericTable({ titulo, acaoTopo, colunas, chavePrimaria, listar, rotaBase, buscarLog }) {
+const ACOES_PADRAO = ['alterar', 'consultar', 'excluir'];
+
+export function GenericTable({
+  titulo,
+  acaoTopo,
+  colunas,
+  chavePrimaria,
+  listar,
+  rotaBase,
+  buscarLog,
+  // Quais dos 3 botões padrão aparecem, quando `rotaBase` está presente
+  // (03-08-2026, pedido do Lucas: Papéis precisa só de "Alterar" — sem
+  // Consultar (a tabela já mostra tudo, mesma decisão já tomada pra
+  // Usuário/Configuração) e sem Excluir (apagar um papel usado em RBAC é
+  // decisão maior, fora de escopo). Default preserva o comportamento de
+  // sempre (todo `rotaBase` já existente continua com os 3 botões).
+  acoes = ACOES_PADRAO,
+}) {
   const [linhas, setLinhas] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState('');
@@ -216,24 +233,30 @@ export function GenericTable({ titulo, acaoTopo, colunas, chavePrimaria, listar,
                   ))}
                   {rotaBase && (
                     <td>
-                      <Link
-                        className="btn btn-info"
-                        to={`${rotaBase}/${linha[chavePrimaria]}/alterar`}
-                      >
-                        Alterar
-                      </Link>
-                      <Link
-                        className="btn btn-secondary"
-                        to={`${rotaBase}/${linha[chavePrimaria]}/consultar`}
-                      >
-                        Consultar
-                      </Link>
-                      <Link
-                        className="btn btn-danger"
-                        to={`${rotaBase}/${linha[chavePrimaria]}/excluir`}
-                      >
-                        Excluir
-                      </Link>
+                      {acoes.includes('alterar') && (
+                        <Link
+                          className="btn btn-info"
+                          to={`${rotaBase}/${linha[chavePrimaria]}/alterar`}
+                        >
+                          Alterar
+                        </Link>
+                      )}
+                      {acoes.includes('consultar') && (
+                        <Link
+                          className="btn btn-secondary"
+                          to={`${rotaBase}/${linha[chavePrimaria]}/consultar`}
+                        >
+                          Consultar
+                        </Link>
+                      )}
+                      {acoes.includes('excluir') && (
+                        <Link
+                          className="btn btn-danger"
+                          to={`${rotaBase}/${linha[chavePrimaria]}/excluir`}
+                        >
+                          Excluir
+                        </Link>
+                      )}
                     </td>
                   )}
                 </tr>

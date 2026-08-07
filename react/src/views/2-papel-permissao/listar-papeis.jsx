@@ -19,13 +19,15 @@ export function ListarPapeis({ auth }) {
     <>
       <div className="admin-content-painel">
         <GenericTable
-          titulo="Papéis (catálogo, só leitura)"
+          titulo="Papéis"
           colunas={[
             { chave: 'idPapel', rotulo: 'id' },
             { chave: 'nome', rotulo: 'nome' },
           ]}
           chavePrimaria="idPapel"
           listar={listarPapeis}
+          rotaBase="/papeis"
+          acoes={['alterar']}
         />
       </div>
       <div className="admin-content-painel">

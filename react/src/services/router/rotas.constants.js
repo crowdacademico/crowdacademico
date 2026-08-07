@@ -5,6 +5,7 @@ import { ConsultarUsuario } from '../../views/1-usuario/consultar-usuario';
 import { ExcluirUsuario } from '../../views/1-usuario/excluir-usuario';
 import { ListarUsuarios } from '../../views/1-usuario/listar-usuarios';
 import { ListarPapeis } from '../../views/2-papel-permissao/listar-papeis';
+import { AlterarPapel } from '../../views/2-papel-permissao/alterar-papel';
 import { CriarConfiguracao } from '../../views/11-configuracoes/criar-configuracao';
 import { AlterarConfiguracao } from '../../views/11-configuracoes/alterar-configuracao';
 import { ConsultarConfiguracao } from '../../views/11-configuracoes/consultar-configuracao';
@@ -45,6 +46,11 @@ export const ROTAS = [
     caminho: '/usuarios/:id/excluir',
     elemento: ExcluirUsuario,
     rotuloBreadcrumb: 'Excluir Usuário',
+  },
+  {
+    caminho: '/papeis/:id/alterar',
+    elemento: AlterarPapel,
+    rotuloBreadcrumb: 'Alterar Papel',
   },
   {
     caminho: '/configuracoes/criar',

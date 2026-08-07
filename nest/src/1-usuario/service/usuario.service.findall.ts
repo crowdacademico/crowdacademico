@@ -23,7 +23,7 @@ export class UsuarioServiceFindAll {
       .selectFrom('usuario')
       .select(USUARIO_COLUNAS_SELECT)
       .where('deletado', '=', false)
-      .orderBy('nome');
+      .orderBy('id_usuario');
 
     const resultado = await paginar(query, paginacao);
     return {

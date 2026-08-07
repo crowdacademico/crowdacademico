@@ -1,18 +1,17 @@
 import { API_BASE_URL } from '../../constant/constants/api.constants';
+import { tratarResposta } from '../../constant/api/http.util';
 
 // Espelha 3-auth/controllers do nest (login/refresh/logout). Sem header
 // Authorization aqui de propósito — login/refresh/logout são as únicas 3
 // rotas que nunca precisam dele (é justamente o que elas emitem).
-async function tratarResposta(resposta) {
-  if (!resposta.ok) {
-    const corpo = await resposta.json().catch(() => null);
-    throw new Error(corpo?.message || `Erro HTTP ${resposta.status}`);
-  }
-  if (resposta.status === 204) {
-    return undefined;
-  }
-  return resposta.json();
-}
+//
+// CORRIGIDO (07-08-2026): este arquivo tinha um `tratarResposta` próprio,
+// que lançava `Error` comum em vez do `ErroHttp` (com `.status`) do
+// http.util.js compartilhado — `traduzirErro()` (usado por login-page.jsx,
+// feito de propósito pra reconhecer 429 do ThrottlerGuard) precisa de
+// `erro instanceof ErroHttp` pra funcionar; com o `Error` comum, todo erro
+// de login (incluindo o 429 de "Muitas tentativas") caía sempre na
+// mensagem genérica de "não foi possível falar com o servidor".
 
 export async function login(email, senha) {
   const resposta = await fetch(`${API_BASE_URL}/auth/login`, {
