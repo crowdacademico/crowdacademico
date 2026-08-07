@@ -3159,7 +3159,7 @@ $$;
 -- Tabelas com PK simples (1 argumento) — lista escolhida com o Claude Web,
 -- não é "logar tudo": só o que o painel admin já edita hoje via
 -- RBAC/usuário/config, mais os catálogos que o admin também edita
--- (motivo_denuncia, area_conhecimento, tipo_link, termos_de_uso).
+-- (motivo_denuncia, area_conhecimento, tipo_link, termos_de_uso, papel).
 -- contribuicao já tem a tabela auditoria_financeira (01_extensoes_enums_tabelas.sql,
 -- bloco [01-H]) — duplicar aqui seria redundante, de propósito NÃO está na lista.
 DROP TRIGGER IF EXISTS trg_log_auditoria_usuario ON usuario;
@@ -3176,6 +3176,18 @@ DROP TRIGGER IF EXISTS trg_log_auditoria_configuracoes ON configuracoes;
 CREATE TRIGGER trg_log_auditoria_configuracoes
 AFTER INSERT OR UPDATE OR DELETE ON configuracoes
 FOR EACH ROW EXECUTE FUNCTION public.fn_log_auditoria('id_config');
+
+-- ADICIONADO (07-08-2026, pedido do Lucas: "renomear papel precisa
+-- registrar quem e quando, nome antigo e novo"): mesmo mecanismo genérico
+-- de todo o resto — fn_log_auditoria já grava campos_alterados/
+-- dados_anteriores/dados_novos sozinha, não precisou de nada especial só
+-- pra 'nome'. INSERT/DELETE incluídos pelo mesmo motivo dos outros
+-- catálogos acima (a API não oferece essas ações hoje, mas se um dia
+-- alguém mexer direto no banco, fica registrado do mesmo jeito).
+DROP TRIGGER IF EXISTS trg_log_auditoria_papel ON papel;
+CREATE TRIGGER trg_log_auditoria_papel
+AFTER INSERT OR UPDATE OR DELETE ON papel
+FOR EACH ROW EXECUTE FUNCTION public.fn_log_auditoria('id_papel');
 
 DROP TRIGGER IF EXISTS trg_log_auditoria_motivo_denuncia ON motivo_denuncia;
 CREATE TRIGGER trg_log_auditoria_motivo_denuncia

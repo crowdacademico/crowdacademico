@@ -31,4 +31,8 @@ export const usuarioApi = {
   // pelo painel).
   desbloquear: (authFetch, id) =>
     authFetch(`/usuario/${id}/desbloquear`, { method: 'POST' }).then(tratarResposta),
+  // Histórico de login (07-08-2026) — cada linha de `sessao` já É um login,
+  // não precisou de tabela nova; mais recente primeiro.
+  listarLogins: (authFetch, id) =>
+    authFetch(`/usuario/${id}/logins`).then(tratarResposta),
 };

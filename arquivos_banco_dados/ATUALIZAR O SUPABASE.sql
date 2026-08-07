@@ -291,6 +291,20 @@ $$;
 
 
 -- ============================================================================
+-- 07-08-2026 — tabela `papel` passa a ter log de auditoria (quem, quando,
+-- nome antigo e novo) — pedido do Lucas: renomear papel precisa ficar
+-- registrado, igual o resto do sistema. Mesmo mecanismo genérico de
+-- sempre (fn_log_auditoria), só a trigger nova.
+-- Seguro rodar de novo quantas vezes quiser (DROP TRIGGER IF EXISTS antes).
+-- ============================================================================
+
+DROP TRIGGER IF EXISTS trg_log_auditoria_papel ON papel;
+CREATE TRIGGER trg_log_auditoria_papel
+AFTER INSERT OR UPDATE OR DELETE ON papel
+FOR EACH ROW EXECUTE FUNCTION public.fn_log_auditoria('id_papel');
+
+
+-- ============================================================================
 -- NÃO ENTRA NESTE ARQUIVO (registrado aqui só pra não se perder)
 -- ============================================================================
 

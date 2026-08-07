@@ -16,6 +16,13 @@ export function ConsultarUsuario({ auth }) {
   const [papeis, setPapeis] = useState(null);
   const [carregando, setCarregando] = useState(true);
   const { erro, reportarErro } = useErroToast();
+  // Histórico de login (07-08-2026, pedido do Lucas: "uma setinha que
+  // liste todos os últimos logins, exceto o último") — só busca quando
+  // clica (mesma convenção de LogAuditoriaPainel: não vale gastar
+  // requisição em quem nunca vai abrir). `null` = ainda não buscou.
+  const [logins, setLogins] = useState(null);
+  const [carregandoLogins, setCarregandoLogins] = useState(false);
+  const [loginsAbertos, setLoginsAbertos] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -38,6 +45,31 @@ export function ConsultarUsuario({ auth }) {
   }, [id]);
 
   const ehPesquisador = papeis?.some((papel) => papel.nomePapel === 'pesquisador');
+
+  const aoAlternarLogins = async () => {
+    if (loginsAbertos) {
+      setLoginsAbertos(false);
+      return;
+    }
+    setLoginsAbertos(true);
+    if (logins !== null) {
+      return;
+    }
+    setCarregandoLogins(true);
+    try {
+      const resultado = await usuarioApi.listarLogins(auth.authFetch, id);
+      setLogins(resultado);
+    } catch (erroRequisicao) {
+      reportarErro(erroRequisicao);
+    } finally {
+      setCarregandoLogins(false);
+    }
+  };
+
+  // Lista vem mais recente primeiro (backend) — o [0] é o MESMO login que
+  // já aparece no textbox "Último login em" acima, então some daqui pra
+  // não duplicar (pedido do Lucas: "exceto o último").
+  const loginsAnteriores = logins?.slice(1) ?? [];
 
   return (
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 bg-surface">
@@ -70,14 +102,63 @@ export function ConsultarUsuario({ auth }) {
             {/* Tirado do log de auditoria de propósito (07-08-2026, pedido do
                 Lucas: login bem-sucedido lotava o log com uma linha por
                 login) — mora só aqui agora, não no log. */}
-            <CampoTextboxConsulta
-              rotulo="Último login em"
-              valor={
-                usuario.ultimoLoginEm
-                  ? new Date(usuario.ultimoLoginEm).toLocaleString('pt-BR')
-                  : 'Nunca'
-              }
-            />
+            <div>
+              <div className="flex items-end gap-2">
+                <div className="flex-1">
+                  <CampoTextboxConsulta
+                    rotulo="Último login em"
+                    valor={
+                      usuario.ultimoLoginEm
+                        ? new Date(usuario.ultimoLoginEm).toLocaleString('pt-BR')
+                        : 'Nunca'
+                    }
+                  />
+                </div>
+                {/* Setinha (07-08-2026, pedido do Lucas) — histórico completo
+                    de login vem de `sessao` (cada login já É uma sessão,
+                    não precisou de tabela nova). Só aparece se já teve
+                    login registrado. */}
+                {usuario.ultimoLoginEm && (
+                  <button
+                    type="button"
+                    onClick={aoAlternarLogins}
+                    aria-label="Ver logins anteriores"
+                    title="Ver logins anteriores"
+                    className="btn btn-secondary shrink-0"
+                    style={{ padding: '0.875rem' }}
+                  >
+                    <i
+                      className={
+                        'fa-solid fa-chevron-down transition-transform' +
+                        (loginsAbertos ? ' rotate-180' : '')
+                      }
+                    ></i>
+                  </button>
+                )}
+              </div>
+
+              {loginsAbertos && (
+                <div className="mt-2 rounded-lg border border-slate-300 bg-slate-50 p-3 text-sm">
+                  {carregandoLogins ? (
+                    <p className="text-slate-600">Carregando...</p>
+                  ) : loginsAnteriores.length === 0 ? (
+                    <p className="text-slate-600">Nenhum login anterior registrado.</p>
+                  ) : (
+                    <ul className="space-y-1">
+                      {loginsAnteriores.map((login, indice) => (
+                        // criado_em não é único por usuário (chave melhor não
+                        // existe aqui — a resposta não traz id_sessao de
+                        // propósito, é histórico de login, não uma entidade
+                        // gerenciável pelo painel).
+                        <li key={indice} className="text-slate-700">
+                          {new Date(login.logadoEm).toLocaleString('pt-BR')}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+            </div>
             <CampoTextboxConsulta
               rotulo="É pesquisador?"
               valor={papeis === null ? '' : ehPesquisador ? 'Sim' : 'Não'}

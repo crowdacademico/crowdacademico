@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { GenericTable } from '../../components/crud/generic-table';
 import { papelApi, permissaoApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
+import { logAuditoriaApi } from '../../services/28-log-auditoria/api/log-auditoria.api';
 import { MatrizPapelPermissao } from './matriz-papel-permissao';
 
 // Aba "Papéis & Permissões" do painel admin — rota /admin/papeis. Reúne 3
@@ -20,6 +21,13 @@ export function ListarPapeis({ auth }) {
     () => permissaoApi.listar(auth.authFetch),
     [auth.authFetch],
   );
+  // 'papel' é o nome FÍSICO da tabela no Postgres (bate com TG_TABLE_NAME
+  // em fn_log_auditoria(), trg_log_auditoria_papel, 07-08-2026) — mesma
+  // convenção de buscarLogUsuario em listar-usuarios.jsx.
+  const buscarLogPapel = useCallback(
+    () => logAuditoriaApi.listarPorTabela(auth.authFetch, 'papel'),
+    [auth.authFetch],
+  );
 
   return (
     <>
@@ -34,6 +42,7 @@ export function ListarPapeis({ auth }) {
           listar={listarPapeis}
           rotaBase="/papeis"
           acoes={['alterar']}
+          buscarLog={buscarLogPapel}
         />
       </div>
       <div className="admin-content-painel">
