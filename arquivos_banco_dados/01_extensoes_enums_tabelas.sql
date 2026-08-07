@@ -206,9 +206,9 @@ CREATE TABLE arquivo (
     nome_original TEXT         NOT NULL,
     tipo_mime     VARCHAR(255) NOT NULL,
     tamanho_bytes INT NOT NULL,
-    criado_em     TIMESTAMP    DEFAULT NOW(),
+    criado_em     TIMESTAMPTZ    DEFAULT NOW(),
     ativo         BOOLEAN      DEFAULT TRUE,
-    desativado_em TIMESTAMP,
+    desativado_em TIMESTAMPTZ,
 
     CONSTRAINT "PK_ARQUIVO" PRIMARY KEY (id_arquivo)
 );
@@ -222,7 +222,7 @@ CREATE TABLE usuario (
     email            VARCHAR(255) NOT NULL,
     senha_hash       VARCHAR(255) NOT NULL,     -- [01-I] SENHA HASH OBRIGATÓRIA PARA LOGIN PRÓPRIO
     id_imagem_perfil INT,
-    criado_em        TIMESTAMP    DEFAULT NOW(),
+    criado_em        TIMESTAMPTZ    DEFAULT NOW(),
     deletado         BOOLEAN      DEFAULT FALSE,
     -- ADICIONADAS (28-07-2026, Claude,"o único ponto onde a LGPD ainda tem
     -- uma ponta solta"): excluir_conta_usuario() (03, [03-F]) gravava deletado =
@@ -231,13 +231,13 @@ CREATE TABLE usuario (
     -- sem trilha. Preenchidas pela própria função (deletado_por =
     -- id_usuario_atual()) — nunca pelo app diretamente, mesma proteção das
     -- outras colunas de auth que saíram do GRANT UPDATE direto.
-    deletado_em      TIMESTAMP,
+    deletado_em      TIMESTAMPTZ,
     deletado_por     INT,
 
     email_verificado         BOOLEAN   NOT NULL DEFAULT FALSE,
     tentativas_login_falhas  INT       NOT NULL DEFAULT 0,
-    bloqueado_ate            TIMESTAMP,
-    ultimo_login_em          TIMESTAMP,
+    bloqueado_ate            TIMESTAMPTZ,
+    ultimo_login_em          TIMESTAMPTZ,
     ultimo_login_ip          VARCHAR(45),
 
     CONSTRAINT "PK_USUARIO" PRIMARY KEY (id_usuario),
@@ -281,9 +281,9 @@ CREATE TABLE perfil_pesquisador (
     vinculo_institucional VARCHAR(255),
     titulo_academico      titulo_academico NOT NULL,
     status_pesquisador    status_pesquisador NOT NULL DEFAULT 'ativo',
-    ativado_em            TIMESTAMP,
+    ativado_em            TIMESTAMPTZ,
     score_atual           INTEGER    NOT NULL  DEFAULT 0,
-    score_atualizado_em   TIMESTAMP,
+    score_atualizado_em   TIMESTAMPTZ,
 
     CONSTRAINT "PK_PERFIL_PESQUISADOR" PRIMARY KEY (id_usuario),
     CONSTRAINT "FK_PERFIL_PESQUISADOR_USUARIO" FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE CASCADE,
@@ -300,7 +300,7 @@ CREATE TABLE seguir_pesquisador (
     id_seg_pesquisador SERIAL,
     id_usuario         INT NOT NULL,
     id_pesquisador     INT NOT NULL,
-    seguido_em         TIMESTAMP DEFAULT NOW(),
+    seguido_em         TIMESTAMPTZ DEFAULT NOW(),
 
     CONSTRAINT "PK_SEGUIR_PESQUISADOR" PRIMARY KEY (id_seg_pesquisador),
     CONSTRAINT "FK_SEGUIR_PESQUISADOR_USUARIO" FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE CASCADE,
@@ -314,7 +314,7 @@ CREATE TABLE termos_de_uso (
     versao    VARCHAR(20) NOT NULL,   -- ex: "2026-07-01", "v3" — precisa ser única
     conteudo  TEXT        NOT NULL,
     ativo     BOOLEAN     DEFAULT TRUE,
-    criado_em TIMESTAMP   DEFAULT NOW(),      -- [melhoria] registra quando cada versão entrou em vigor
+    criado_em TIMESTAMPTZ   DEFAULT NOW(),      -- [melhoria] registra quando cada versão entrou em vigor
 
     CONSTRAINT "PK_TERMOS_DE_USO" PRIMARY KEY (id_termo),
     CONSTRAINT "UK_TERMOS_DE_USO_VERSAO" UNIQUE (versao)
@@ -324,7 +324,7 @@ CREATE TABLE usuario_termo (
     id_usuario_termo SERIAL,
     id_usuario       INT NOT NULL,
     id_termo         INT NOT NULL,
-    aceito_em        TIMESTAMP DEFAULT NOW(),
+    aceito_em        TIMESTAMPTZ DEFAULT NOW(),
     ip_aceite        VARCHAR(45),            -- [melhoria] trilha de auditoria (LGPD): IPv4/IPv6 de quem aceitou
 
     CONSTRAINT "PK_USUARIO_TERMO" PRIMARY KEY (id_usuario_termo),
@@ -340,8 +340,8 @@ CREATE TABLE notificacao (
     tipo_evento        VARCHAR(100)       NOT NULL,          -- ex: 'campanha_aprovada', 'doacao_recebida' — texto livre, como "evento" em auditoria_financeira
     status             status_notificacao NOT NULL DEFAULT 'pendente',
     tentativas         INT                NOT NULL DEFAULT 0,
-    criado_em          TIMESTAMP          DEFAULT NOW(),
-    enviado_em         TIMESTAMP,                             -- [melhoria] quando o envio de fato teve sucesso (NULL até lá)
+    criado_em          TIMESTAMPTZ          DEFAULT NOW(),
+    enviado_em         TIMESTAMPTZ,                             -- [melhoria] quando o envio de fato teve sucesso (NULL até lá)
     ultimo_erro        TEXT,                                  -- [melhoria] guarda o motivo da última falha, útil pra debugar retentativas
 
     CONSTRAINT "PK_NOTIFICACAO" PRIMARY KEY (id_notificacao),
@@ -353,9 +353,9 @@ CREATE TABLE verificacao_email (
     id_verificacao SERIAL,
     id_usuario     INT NOT NULL,
     token_hash     VARCHAR(255) NOT NULL,   -- nunca gravar o token em texto puro
-    criado_em      TIMESTAMP NOT NULL DEFAULT NOW(),
-    expira_em      TIMESTAMP NOT NULL,
-    confirmado_em  TIMESTAMP,
+    criado_em      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    expira_em      TIMESTAMPTZ NOT NULL,
+    confirmado_em  TIMESTAMPTZ,
 
     CONSTRAINT "PK_VERIFICACAO_EMAIL" PRIMARY KEY (id_verificacao),
     CONSTRAINT "FK_VERIFICACAO_EMAIL_USUARIO" FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE CASCADE,
@@ -366,9 +366,9 @@ CREATE TABLE recuperacao_senha (
     id_recuperacao SERIAL,
     id_usuario     INT NOT NULL,
     token_hash     VARCHAR(255) NOT NULL,
-    criado_em      TIMESTAMP NOT NULL DEFAULT NOW(),
-    expira_em      TIMESTAMP NOT NULL,     -- recomendado: expiração curta, 15-30 min
-    usado_em       TIMESTAMP,
+    criado_em      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    expira_em      TIMESTAMPTZ NOT NULL,     -- recomendado: expiração curta, 15-30 min
+    usado_em       TIMESTAMPTZ,
 
     CONSTRAINT "PK_RECUPERACAO_SENHA" PRIMARY KEY (id_recuperacao),
     CONSTRAINT "FK_RECUPERACAO_SENHA_USUARIO" FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE CASCADE,
@@ -379,9 +379,9 @@ CREATE TABLE sessao (
     id_sessao          SERIAL,
     id_usuario         INT NOT NULL,
     refresh_token_hash VARCHAR(255) NOT NULL,
-    criado_em          TIMESTAMP NOT NULL DEFAULT NOW(),
-    expira_em          TIMESTAMP NOT NULL,
-    revogado_em        TIMESTAMP,
+    criado_em          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    expira_em          TIMESTAMPTZ NOT NULL,
+    revogado_em        TIMESTAMPTZ,
     ip                 VARCHAR(45),
     user_agent         TEXT,
 
@@ -404,19 +404,19 @@ CREATE TABLE campanha (
     valor_bruto_arrecadado DECIMAL(10,2) DEFAULT 0,
     taxa_plataforma      DECIMAL(5,2),
     descricao            TEXT,
-    data_inicio          TIMESTAMP,
-    data_fim             TIMESTAMP,
+    data_inicio          TIMESTAMPTZ,
+    data_fim             TIMESTAMPTZ,
     status               status_campanha NOT NULL DEFAULT 'aguardando_aprovacao',
-    aprovado_em          TIMESTAMP,
+    aprovado_em          TIMESTAMPTZ,
     -- CORRIGIDO: data_fim é a promessa (congelada por fn_congela_regras_campanha,
     -- 05); faltava onde registrar quando a campanha de fato terminou (natural,
     -- antecipado ou por moderação) — sem isso o RF-042/RF-058 não tinham onde gravar.
-    encerrado_em         TIMESTAMP,
+    encerrado_em         TIMESTAMPTZ,
     -- ADICIONADO (28-07-2026, item 19(c)): RF-033 pede vídeo de apresentação
     -- opcional em destaque na página da campanha. Só a URL (ex.: YouTube/
     -- Vimeo) — o arquivo de vídeo em si não é armazenado pela plataforma.
     video_apresentacao_url VARCHAR(500),
-    criado_em            TIMESTAMP       DEFAULT NOW(),
+    criado_em            TIMESTAMPTZ       DEFAULT NOW(),
 
     CONSTRAINT "PK_CAMPANHA" PRIMARY KEY (id_campanha),
     CONSTRAINT "FK_CAMPANHA_USUARIO" FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario),
@@ -442,7 +442,7 @@ CREATE TABLE seguir_campanha (
     id_seg_campanha SERIAL,
     id_usuario      INT NOT NULL,
     id_campanha     INT NOT NULL,
-    seguido_em      TIMESTAMP DEFAULT NOW(),
+    seguido_em      TIMESTAMPTZ DEFAULT NOW(),
 
     CONSTRAINT "PK_SEGUIR_CAMPANHA" PRIMARY KEY (id_seg_campanha),
     CONSTRAINT "FK_SEGUIR_CAMPANHA_USUARIO" FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE CASCADE,
@@ -455,7 +455,7 @@ CREATE TABLE atualizacao_campanha (
     id_campanha    INT              NOT NULL,
     titulo         VARCHAR(150)     NOT NULL,
     conteudo       TEXT             NOT NULL,
-    publicado_em   TIMESTAMP        DEFAULT NOW(),
+    publicado_em   TIMESTAMPTZ        DEFAULT NOW(),
     fase           fase_atualizacao,
     tipo           tipo_atualizacao,
     ativo          BOOLEAN          NOT NULL DEFAULT TRUE, -- SOFT DELETE E MODERAÇÃO DAS ATUALIZAÇÕES
@@ -490,7 +490,7 @@ CREATE TABLE orcamento_campanha (
     descricao    TEXT,
     valor        DECIMAL(10,2) NOT NULL,
     ordem        SMALLINT      NOT NULL DEFAULT 0,
-    criado_em    TIMESTAMP     DEFAULT NOW(),
+    criado_em    TIMESTAMPTZ     DEFAULT NOW(),
 
     CONSTRAINT "PK_ORCAMENTO_CAMPANHA" PRIMARY KEY (id_orcamento),
     CONSTRAINT "FK_ORCAMENTO_CAMPANHA_CAMPANHA" FOREIGN KEY (id_campanha) REFERENCES campanha(id_campanha) ON DELETE CASCADE,
@@ -519,9 +519,9 @@ CREATE TABLE marco_cronograma (
     id_campanha   INT           NOT NULL,
     titulo        VARCHAR(150)  NOT NULL,
     descricao     TEXT,
-    data_prevista TIMESTAMP     NOT NULL,
+    data_prevista TIMESTAMPTZ     NOT NULL,
     ordem         SMALLINT      NOT NULL DEFAULT 0,
-    criado_em     TIMESTAMP     DEFAULT NOW(),
+    criado_em     TIMESTAMPTZ     DEFAULT NOW(),
 
     CONSTRAINT "PK_MARCO_CRONOGRAMA" PRIMARY KEY (id_marco),
     CONSTRAINT "FK_MARCO_CRONOGRAMA_CAMPANHA" FOREIGN KEY (id_campanha) REFERENCES campanha(id_campanha) ON DELETE CASCADE,
@@ -534,7 +534,7 @@ CREATE TABLE repasse (
     valor_bruto   DECIMAL(10,2) NOT NULL,
     valor_liquido DECIMAL(10,2) NOT NULL,
     meta_atingida BOOLEAN       DEFAULT FALSE,
-    repassado_em  TIMESTAMP,
+    repassado_em  TIMESTAMPTZ,
     taxa_relativa DECIMAL(5,2),
     status        VARCHAR(100),
 
@@ -549,8 +549,8 @@ CREATE TABLE solicitacao_encerramento (
     justificativa_pesquisador   TEXT,
     justificativa_admin         TEXT,
     status                      status_encerramento NOT NULL DEFAULT 'pendente',
-    solicitado_em               TIMESTAMP           DEFAULT NOW(),
-    avaliado_em                 TIMESTAMP,
+    solicitado_em               TIMESTAMPTZ           DEFAULT NOW(),
+    avaliado_em                 TIMESTAMPTZ,
 
     CONSTRAINT "PK_SOLICITACAO_ENCERRAMENTO" PRIMARY KEY (id_solicitacao_encerramento),
     CONSTRAINT "FK_SOLICITACAO_ENCERRAMENTO_CAMPANHA" FOREIGN KEY (id_campanha) REFERENCES campanha(id_campanha),
@@ -567,7 +567,7 @@ CREATE TABLE historico_rejeicao (
     id_campanha   INT  NOT NULL,
     id_admin      INT,
     justificativa TEXT,
-    rejeitado_em  TIMESTAMP DEFAULT NOW(),
+    rejeitado_em  TIMESTAMPTZ DEFAULT NOW(),
 
     CONSTRAINT "PK_HISTORICO_REJEICAO" PRIMARY KEY (id_rejeicao),
     CONSTRAINT "FK_HISTORICO_REJEICAO_CAMPANHA" FOREIGN KEY (id_campanha) REFERENCES campanha(id_campanha),
@@ -580,7 +580,7 @@ CREATE TABLE comentario (
     id_pesquisador INT,
     conteudo       VARCHAR(500) NOT NULL,
     endossado      BOOLEAN      DEFAULT FALSE,
-    criado_em      TIMESTAMP    DEFAULT NOW(),
+    criado_em      TIMESTAMPTZ    DEFAULT NOW(),
     ordem_endosso  INT,
     ativo          BOOLEAN      NOT NULL DEFAULT TRUE, -- SOFT DELETE DOS COMENTÁRIOS
 
@@ -600,7 +600,7 @@ CREATE TABLE denuncia (
     id_motivo           INT  NOT NULL,
     relato              TEXT,-- descrição adicional pro denunciante.
     status              status_denuncia NOT NULL DEFAULT 'pendente',
-    criado_em           TIMESTAMP    DEFAULT NOW(),
+    criado_em           TIMESTAMPTZ    DEFAULT NOW(),
 
     CONSTRAINT "PK_DENUNCIA" PRIMARY KEY (id_denuncia),
     CONSTRAINT "FK_DENUNCIA_USUARIO" FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario),
@@ -635,7 +635,7 @@ CREATE TABLE recompensa (
     quantidade_disponivel INT,                                -- NULL = ilimitada
     tipo                  tipo_recompensa NOT NULL,
     ativo                 BOOLEAN         DEFAULT TRUE,
-    criado_em             TIMESTAMP       DEFAULT NOW(),      -- [melhoria]
+    criado_em             TIMESTAMPTZ       DEFAULT NOW(),      -- [melhoria]
 
     CONSTRAINT "PK_RECOMPENSA" PRIMARY KEY (id_recompensa),
     CONSTRAINT "FK_RECOMPENSA_CAMPANHA" FOREIGN KEY (id_campanha) REFERENCES campanha(id_campanha) ON DELETE CASCADE,
@@ -730,7 +730,7 @@ CREATE TABLE contribuicao (
     status           status_contribuicao NOT NULL DEFAULT 'pendente',
     anonima          BOOLEAN             DEFAULT FALSE,
     id_transacao_api VARCHAR(255),
-    criado_em        TIMESTAMP           DEFAULT NOW(),
+    criado_em        TIMESTAMPTZ           DEFAULT NOW(),
     token_sessao     UUID                DEFAULT gen_random_uuid(),
 
     CONSTRAINT "PK_CONTRIBUICAO" PRIMARY KEY (id_contribuicao),
@@ -755,7 +755,7 @@ CREATE TABLE auditoria_financeira (
     status_novo     VARCHAR(100) NOT NULL,
     status_anterior VARCHAR(100),
     evento          VARCHAR(200),
-    timestamp       TIMESTAMP    DEFAULT NOW(),
+    timestamp       TIMESTAMPTZ    DEFAULT NOW(),
 
     CONSTRAINT "PK_AUDITORIA_FINANCEIRA" PRIMARY KEY (id_auditoria),
     CONSTRAINT "FK_AUDITORIA_FINANCEIRA_CONTRIBUICAO" FOREIGN KEY (id_contribuicao) REFERENCES contribuicao(id_contribuicao),
@@ -767,7 +767,7 @@ CREATE TABLE contribuicao_recompensa (
     id_contribuicao       INT NOT NULL,
     id_recompensa         INT NOT NULL,
     quantidade            INT NOT NULL DEFAULT 1,          -- [melhoria] mesma recompensa pode ser levada em mais de 1 unidade
-    adquirida_em          TIMESTAMP DEFAULT NOW(),
+    adquirida_em          TIMESTAMPTZ DEFAULT NOW(),
 
     CONSTRAINT "PK_CONTRIBUICAO_RECOMPENSA" PRIMARY KEY (id_contrib_recompensa),
     CONSTRAINT "FK_CONTRIBUICAO_RECOMPENSA_CONTRIBUICAO" FOREIGN KEY (id_contribuicao) REFERENCES contribuicao(id_contribuicao) ON DELETE CASCADE,
@@ -780,7 +780,7 @@ CREATE TABLE aceite_termo_contribuicao (
     id_aceite_contrib SERIAL,
     id_contribuicao   INT NOT NULL,
     id_termo          INT NOT NULL,
-    aceito_em         TIMESTAMP DEFAULT NOW(),
+    aceito_em         TIMESTAMPTZ DEFAULT NOW(),
     ip_aceite         VARCHAR(45),
 
     CONSTRAINT "PK_ACEITE_TERMO_CONTRIBUICAO" PRIMARY KEY (id_aceite_contrib),
@@ -799,8 +799,8 @@ CREATE TABLE score_config (
     peso            DECIMAL(5,2) NOT NULL,
     id_pai          INT,
     ativo           BOOLEAN      DEFAULT TRUE,
-    criado_em       TIMESTAMP    DEFAULT NOW(),
-    atualizado_em   TIMESTAMP    DEFAULT NOW(),
+    criado_em       TIMESTAMPTZ    DEFAULT NOW(),
+    atualizado_em   TIMESTAMPTZ    DEFAULT NOW(),
 
     CONSTRAINT "PK_SCORE_CONFIG" PRIMARY KEY (id_score_config),
     CONSTRAINT "FK_SCORE_CONFIG_PAI" FOREIGN KEY (id_pai) REFERENCES score_config(id_score_config) ON DELETE SET NULL
@@ -813,8 +813,8 @@ CREATE TABLE score_rotulo (
     score_minimo  INTEGER      NOT NULL,
     score_maximo  INTEGER      NOT NULL,
     ativo         BOOLEAN      DEFAULT TRUE,
-    criado_em     TIMESTAMP    DEFAULT NOW(),
-    atualizado_em TIMESTAMP    DEFAULT NOW(),
+    criado_em     TIMESTAMPTZ    DEFAULT NOW(),
+    atualizado_em TIMESTAMPTZ    DEFAULT NOW(),
 
     CONSTRAINT "PK_SCORE_ROTULO" PRIMARY KEY (id_rotulo),
     CONSTRAINT "CK_SCORE_ROTULO_FAIXA" CHECK (score_minimo < score_maximo)
@@ -827,7 +827,7 @@ CREATE TABLE score_pesquisador (
     id_rotulo       INT,
     pontos_obtidos  INTEGER      NOT NULL,
     score_total     INTEGER,
-    calculado_em    TIMESTAMP    DEFAULT NOW(),
+    calculado_em    TIMESTAMPTZ    DEFAULT NOW(),
     motivo          VARCHAR(255),
 
     CONSTRAINT "PK_SCORE_PESQUISADOR" PRIMARY KEY (id_score_pesq),

@@ -1040,7 +1040,7 @@ INSERT INTO comentario (id_campanha, id_pesquisador, conteudo, endossado, criado
 
 -- [07-E-8] denuncia
 INSERT INTO denuncia (id_usuario, id_campanha_alvo, id_pesquisador_alvo, id_motivo, status, criado_em)
-SELECT v.id_usuario, v.id_campanha_alvo, v.id_pesquisador_alvo, md.id_motivo, v.status::status_denuncia, v.criado_em::timestamp
+SELECT v.id_usuario, v.id_campanha_alvo, v.id_pesquisador_alvo, md.id_motivo, v.status::status_denuncia, v.criado_em::timestamptz
 FROM (VALUES
     (2, 6,    NULL::int, 'CAMP-001', 'improcedente', '2025-04-11 09:00:00'),
     (3, NULL, 6,         'PERF-001', 'pendente',     '2025-04-12 10:00:00'),
