@@ -43,7 +43,7 @@
 
   .btn-secondary {
     background-color: var(--color-slate-100);
-    border-color: var(--color-slate-200);
+    border-color: var(--color-slate-300);
     color: var(--color-slate-700);
   }
 
@@ -80,7 +80,7 @@
   .input-padrao {
     width: 100%;
     background-color: var(--color-slate-50);
-    border: 2px solid var(--color-slate-200);
+    border: 2px solid var(--color-slate-300);
     border-radius: var(--radius-lg);
     padding: 0.875rem;
     font-size: var(--font-size-sm);
@@ -119,7 +119,7 @@
 
   .badge-neutro {
     background-color: var(--color-slate-100);
-    color: var(--color-slate-500);
+    color: var(--color-slate-600);
   }
 
   /* Selo <dev> — marca qualquer recurso que existe só pra facilitar
@@ -170,7 +170,7 @@
     align-items: center;
     justify-content: center;
     margin-left: 0.35rem;
-    color: var(--color-slate-400);
+    color: var(--color-slate-500);
     cursor: help;
   }
 

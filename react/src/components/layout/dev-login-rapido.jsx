@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { traduzirErro } from '../../services/constant/api/traduzir-erro.util';
+import { useErroToast } from './use-erro-toast';
 
 // <dev> — login instantâneo com uma conta que JÁ existe no seed
 // (07_seed_dados.sql, [07-D-1]), sem digitar nada. Existe só porque logar
@@ -10,9 +10,9 @@ import { traduzirErro } from '../../services/constant/api/traduzir-erro.util';
 // temp_Nest_React.md, "Seed tinha senha_hash falso"). Clique no rótulo:
 // entra como Admin direto (continua sendo o atalho mais usado). Seta:
 // abre a lista com os outros 6 papéis (03-08-2026, pedido do Lucas: "pra
-// eu ir testando") — mesma ordem de poder de ORDEM_PAPEIS_POR_PODER
-// (matriz-papel-permissao.jsx), um e-mail seedado por papel, escolhido
-// direto de usuario_papel ([07-D-2]).
+// eu ir testando") — mesma ordem de poder do seed (07_seed_dados.sql
+// [07-B-1], id_papel 1=admin...7=usuario), um e-mail seedado por papel,
+// escolhido direto de usuario_papel ([07-D-2]).
 const CONTAS_DEV = [
   { rotulo: 'Admin', email: 'admin@crowdacademico.com.br', senha: 'DevTcc123!' },
   { rotulo: 'Moderador', email: 'diego.martins@crowdacademico.com.br', senha: 'DevTcc123!' },
@@ -27,23 +27,23 @@ export function DevLoginRapido({ auth }) {
   const navigate = useNavigate();
   const [menuAberto, setMenuAberto] = useState(false);
   const [entrando, setEntrando] = useState(false);
-  const [erro, setErro] = useState(null);
+  const { erro, reportarErro, limparErro } = useErroToast();
 
   // ACHADO (07-08-2026): erro era engolido em silêncio ("atalho de dev,
   // não vale poluir a tela") — só que isso escondeu um bug real (limite
   // de 5 login/60s por IP, auth.module.ts, estourando ao testar 6+ contas
   // do dropdown rápido) atrás de um botão que parecia só "travado", sem
   // pista nenhuma do motivo. Ainda não trava a tela (sem alert/modal), só
-  // mostra o texto do erro embaixo do botão.
+  // mostra o texto do erro embaixo do botão (+ o toast, ver use-erro-toast.js).
   const entrarComo = async (conta) => {
     setMenuAberto(false);
     setEntrando(true);
-    setErro(null);
+    limparErro();
     try {
       await auth.login(conta.email, conta.senha);
       navigate('/');
     } catch (erroRequisicao) {
-      setErro(traduzirErro(erroRequisicao));
+      reportarErro(erroRequisicao);
     } finally {
       setEntrando(false);
     }
@@ -87,7 +87,7 @@ export function DevLoginRapido({ auth }) {
               className="w-full text-left px-3 py-2 text-sm hover:bg-purple-50"
             >
               {conta.rotulo}
-              <span className="block text-slate-400 text-xs">{conta.email}</span>
+              <span className="block text-slate-500 text-xs">{conta.email}</span>
             </button>
           ))}
         </div>

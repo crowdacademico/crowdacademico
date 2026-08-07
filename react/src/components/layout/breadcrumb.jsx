@@ -33,7 +33,7 @@ export function Breadcrumb() {
         <Link to="/" className="text-primary font-bold hover:underline">
           Início
         </Link>
-        <i className="fa-solid fa-chevron-right text-slate-400 text-xs"></i>
+        <i className="fa-solid fa-chevron-right text-slate-500 text-xs"></i>
         <span className="text-slate-600 font-medium">{rota.rotuloBreadcrumb}</span>
       </div>
     </nav>

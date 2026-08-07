@@ -206,6 +206,91 @@ ALTER TABLE score_pesquisador
 
 
 -- ============================================================================
+-- 07-08-2026 — log de auditoria não registra mais login bem-sucedido comum
+-- (ultimo_login_em/ultimo_login_ip mudando sozinhos) — pedido do Lucas: "a
+-- tabela de log tá lotando disso". Esse dado não sumiu, só saiu do log:
+-- ultimo_login_em agora aparece em Consultar Usuário (GET /usuario/:id).
+-- Seguro rodar de novo quantas vezes quiser (CREATE OR REPLACE FUNCTION).
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION public.fn_log_auditoria()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+    v_antigos_completo JSONB;
+    v_novos_completo   JSONB;
+    v_antigos          JSONB;
+    v_novos            JSONB;
+    v_campos           TEXT[];
+    v_coluna           TEXT;
+    v_partes           TEXT[] := ARRAY[]::TEXT[];
+    v_identidade       TEXT;
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        FOREACH v_coluna IN ARRAY TG_ARGV LOOP
+            v_partes := v_partes || (to_jsonb(NEW) ->> v_coluna);
+        END LOOP;
+        v_identidade := array_to_string(v_partes, ',');
+
+        v_novos := to_jsonb(NEW) - 'senha_hash' - 'cpf_criptografado';
+        INSERT INTO log_auditoria (tabela, identidade_registro, operacao, id_usuario_responsavel, dados_novos)
+        VALUES (TG_TABLE_NAME, v_identidade, TG_OP, public.id_usuario_atual(), v_novos);
+        RETURN NEW;
+
+    ELSIF TG_OP = 'UPDATE' THEN
+        FOREACH v_coluna IN ARRAY TG_ARGV LOOP
+            v_partes := v_partes || (to_jsonb(NEW) ->> v_coluna);
+        END LOOP;
+        v_identidade := array_to_string(v_partes, ',');
+
+        v_antigos_completo := to_jsonb(OLD);
+        v_novos_completo   := to_jsonb(NEW);
+
+        SELECT array_agg(chave) INTO v_campos
+        FROM jsonb_object_keys(v_novos_completo) AS chave
+        WHERE v_antigos_completo -> chave IS DISTINCT FROM v_novos_completo -> chave;
+
+        IF v_campos IS NULL THEN
+            RETURN NEW;
+        END IF;
+
+        IF TG_TABLE_NAME = 'perfil_pesquisador' AND v_campos <@ ARRAY['score_atual', 'score_atualizado_em'] THEN
+            RETURN NEW;
+        END IF;
+
+        -- NOVO (07-08-2026): mesmo padrão do filtro de score acima, agora
+        -- pra login bem-sucedido comum. tentativas_login_falhas/bloqueado_ate
+        -- ficam DE FORA desta lista de propósito — se um login limpa um
+        -- bloqueio anterior, ou um admin desbloqueia manualmente, isso
+        -- continua no log.
+        IF TG_TABLE_NAME = 'usuario' AND v_campos <@ ARRAY['ultimo_login_em', 'ultimo_login_ip'] THEN
+            RETURN NEW;
+        END IF;
+
+        v_antigos := v_antigos_completo - 'senha_hash' - 'cpf_criptografado';
+        v_novos   := v_novos_completo - 'senha_hash' - 'cpf_criptografado';
+
+        INSERT INTO log_auditoria (tabela, identidade_registro, operacao, id_usuario_responsavel, campos_alterados, dados_anteriores, dados_novos)
+        VALUES (TG_TABLE_NAME, v_identidade, TG_OP, public.id_usuario_atual(), v_campos, v_antigos, v_novos);
+        RETURN NEW;
+
+    ELSIF TG_OP = 'DELETE' THEN
+        FOREACH v_coluna IN ARRAY TG_ARGV LOOP
+            v_partes := v_partes || (to_jsonb(OLD) ->> v_coluna);
+        END LOOP;
+        v_identidade := array_to_string(v_partes, ',');
+
+        v_antigos := to_jsonb(OLD) - 'senha_hash' - 'cpf_criptografado';
+        INSERT INTO log_auditoria (tabela, identidade_registro, operacao, id_usuario_responsavel, dados_anteriores)
+        VALUES (TG_TABLE_NAME, v_identidade, TG_OP, public.id_usuario_atual(), v_antigos);
+        RETURN OLD;
+    END IF;
+
+    RETURN NULL;
+END;
+$$;
+
+
+-- ============================================================================
 -- NÃO ENTRA NESTE ARQUIVO (registrado aqui só pra não se perder)
 -- ============================================================================
 

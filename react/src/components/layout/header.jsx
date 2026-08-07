@@ -48,13 +48,13 @@ export function Header({ auth }) {
           </button>
           <button
             onClick={placeholder('Seção "Como Funciona" simulada para o protótipo.')}
-            className="text-slate-500 hover:text-dark font-medium h-full flex items-center transition-colors"
+            className="text-slate-600 hover:text-dark font-medium h-full flex items-center transition-colors"
           >
             Como Funciona
           </button>
           <button
             onClick={placeholder('Seção "Transparência LGPD" simulada para o protótipo.')}
-            className="text-slate-500 hover:text-dark font-medium h-full flex items-center transition-colors"
+            className="text-slate-600 hover:text-dark font-medium h-full flex items-center transition-colors"
           >
             Transparência LGPD
           </button>
@@ -70,11 +70,11 @@ export function Header({ auth }) {
           </button>
 
           {auth.carregando ? (
-            <span className="text-sm text-slate-500">Carregando sessão...</span>
+            <span className="text-sm text-slate-600">Carregando sessão...</span>
           ) : auth.autenticado ? (
             <>
               <span className="bg-slate-100 border border-slate-200 text-slate-800 px-4 py-2.5 rounded-lg font-semibold text-sm flex items-center gap-2">
-                <i className="fa-solid fa-circle-user text-slate-500"></i>
+                <i className="fa-solid fa-circle-user text-slate-600"></i>
                 {auth.usuario?.nome ?? 'Meu Painel'}
               </span>
               <button

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
-import { traduzirErro } from '../../services/constant/api/traduzir-erro.util';
+import { useErroToast } from '../layout/use-erro-toast';
 import { LogAuditoriaPainel } from './log-auditoria-painel';
 
 const TAMANHOS_PAGINA = [10, 20, 30, 'todos'];
@@ -61,7 +61,7 @@ export function GenericTable({
 }) {
   const [linhas, setLinhas] = useState([]);
   const [carregando, setCarregando] = useState(true);
-  const [erro, setErro] = useState('');
+  const { erro, reportarErro, limparErro } = useErroToast();
   const [filtro, setFiltro] = useState('');
   const [pagina, setPagina] = useState(1);
   const [ordenacao, setOrdenacao] = useState({ chave: null, direcao: 'asc' });
@@ -76,11 +76,12 @@ export function GenericTable({
     // marca a chamada de setCarregando/setErro como suspeita mesmo assim.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setCarregando(true);
-    setErro('');
+    limparErro();
     listar()
       .then(setLinhas)
-      .catch((erroRequisicao) => setErro(traduzirErro(erroRequisicao)))
+      .catch(reportarErro)
       .finally(() => setCarregando(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listar]);
 
   // Filtro é só client-side (a lista inteira já veio do backend) — resolve

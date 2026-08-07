@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
+import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
-import { traduzirErro } from '../../services/constant/api/traduzir-erro.util';
 
 // Primeira de um padrão que vai se repetir: view própria por operação
 // (criar/alterar/consultar/excluir), não formulário embutido dentro da
@@ -14,15 +14,15 @@ import { traduzirErro } from '../../services/constant/api/traduzir-erro.util';
 export function CriarUsuario({ auth }) {
   const navigate = useNavigate();
   const { mostrar } = useToast();
+  const { erro, reportarErro, limparErro } = useErroToast();
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
-  const [erro, setErro] = useState('');
   const [enviando, setEnviando] = useState(false);
 
   const aoCriar = async (evento) => {
     evento.preventDefault();
-    setErro('');
+    limparErro();
     setEnviando(true);
     try {
       const usuarioCriado = await usuarioApi.criar(auth.authFetch, { nome, email, senha });
@@ -32,7 +32,7 @@ export function CriarUsuario({ auth }) {
       );
       navigate('/');
     } catch (erroRequisicao) {
-      setErro(traduzirErro(erroRequisicao));
+      reportarErro(erroRequisicao);
     } finally {
       setEnviando(false);
     }
@@ -46,16 +46,16 @@ export function CriarUsuario({ auth }) {
             <i className="fa-solid fa-user-plus"></i>
           </div>
           <h2 className="text-3xl font-serif font-bold text-dark mb-2">Criar Usuário</h2>
-          <p className="text-sm text-slate-500 font-medium">
+          <p className="text-sm text-slate-600 font-medium">
             Preencha os dados abaixo para cadastrar um novo usuário.
           </p>
         </div>
 
         <form onSubmit={aoCriar} className="p-10 space-y-6">
-          {erro && <p className="text-red-600 text-sm font-bold text-center">{erro}</p>}
+          {erro && <p className="text-red-700 text-sm font-bold text-center">{erro}</p>}
 
           <div>
-            <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">
+            <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">
               Nome
             </label>
             <input
@@ -69,7 +69,7 @@ export function CriarUsuario({ auth }) {
           </div>
 
           <div>
-            <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">
+            <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">
               E-mail
             </label>
             <input
@@ -83,7 +83,7 @@ export function CriarUsuario({ auth }) {
           </div>
 
           <div>
-            <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">
+            <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">
               Senha
             </label>
             <input

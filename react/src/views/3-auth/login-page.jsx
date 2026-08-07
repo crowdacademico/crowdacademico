@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { traduzirErro } from '../../services/constant/api/traduzir-erro.util';
+import { useErroToast } from '../../components/layout/use-erro-toast';
 
 // Cópia fiel de telas/login/login.html do Projeto de Interface real —
 // com uma mudança deliberada em relação ao original, não só estética:
@@ -18,18 +18,18 @@ export function LoginPage({ auth }) {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
-  const [erro, setErro] = useState('');
   const [enviando, setEnviando] = useState(false);
+  const { erro, reportarErro, limparErro } = useErroToast();
 
   const aoEntrar = async (evento) => {
     evento.preventDefault();
-    setErro('');
+    limparErro();
     setEnviando(true);
     try {
       await auth.login(email, senha);
       navigate('/');
     } catch (erroRequisicao) {
-      setErro(traduzirErro(erroRequisicao));
+      reportarErro(erroRequisicao);
     } finally {
       setEnviando(false);
     }
@@ -44,16 +44,16 @@ export function LoginPage({ auth }) {
             <i className="fa-solid fa-flask"></i>
           </div>
           <h2 className="text-3xl font-serif font-bold text-dark mb-2 relative z-10">Bem-vindo(a)</h2>
-          <p className="text-sm text-slate-500 font-medium relative z-10">
+          <p className="text-sm text-slate-600 font-medium relative z-10">
             Acesse sua conta para apoiar a ciência brasileira.
           </p>
         </div>
 
         <form onSubmit={aoEntrar} className="p-10 space-y-6">
-          {erro && <p className="text-red-600 text-sm font-bold text-center">{erro}</p>}
+          {erro && <p className="text-red-700 text-sm font-bold text-center">{erro}</p>}
 
           <div>
-            <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">
+            <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">
               Seu E-mail
             </label>
             <input
@@ -68,7 +68,7 @@ export function LoginPage({ auth }) {
 
           <div>
             <div className="flex justify-between items-center mb-2">
-              <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest">
+              <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest">
                 Sua Senha
               </label>
               <button

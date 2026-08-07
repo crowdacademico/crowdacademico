@@ -6,7 +6,7 @@
 export function CampoTextboxConsulta({ rotulo, valor }) {
   return (
     <div>
-      <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">
+      <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">
         {rotulo}
       </label>
       <input type="text" value={valor ?? ''} disabled readOnly className="input-padrao" />

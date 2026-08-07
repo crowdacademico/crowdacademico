@@ -58,7 +58,7 @@
   font-size: var(--font-size-xs);
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--color-slate-400);
+  color: var(--color-slate-500);
 }
 
 .admin-sidebar__separador {
@@ -72,7 +72,7 @@
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--color-slate-400);
+  color: var(--color-slate-500);
   margin: 0.5rem 0 0.5rem 0.5rem;
 }
 

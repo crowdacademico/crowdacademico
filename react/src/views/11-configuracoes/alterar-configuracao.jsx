@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
+import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
 import { configuracaoApi } from '../../services/11-configuracoes/api/configuracao.api';
-import { traduzirErro } from '../../services/constant/api/traduzir-erro.util';
 
 // `chave`/`tipo` não aparecem no formulário (só leitura) porque
 // AtualizarConfiguracaoRequestDto (Nest) não os aceita — são imutáveis
@@ -12,12 +12,12 @@ export function AlterarConfiguracao({ auth }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const { mostrar } = useToast();
+  const { erro, reportarErro, limparErro } = useErroToast();
   const [configuracao, setConfiguracao] = useState(null);
   const [valor, setValor] = useState('');
   const [descricao, setDescricao] = useState('');
   const [ativo, setAtivo] = useState(true);
   const [carregando, setCarregando] = useState(true);
-  const [erro, setErro] = useState('');
   const [enviando, setEnviando] = useState(false);
 
   useEffect(() => {
@@ -29,21 +29,21 @@ export function AlterarConfiguracao({ auth }) {
         setDescricao(dados.descricao ?? '');
         setAtivo(dados.ativo);
       })
-      .catch((erroRequisicao) => setErro(traduzirErro(erroRequisicao)))
+      .catch(reportarErro)
       .finally(() => setCarregando(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const aoSalvar = async (evento) => {
     evento.preventDefault();
-    setErro('');
+    limparErro();
     setEnviando(true);
     try {
       await configuracaoApi.atualizar(auth.authFetch, id, { valor, descricao, ativo });
       mostrar('Configuração alterada com sucesso.', `ID: ${id} foi alterada`);
       navigate(-1);
     } catch (erroRequisicao) {
-      setErro(traduzirErro(erroRequisicao));
+      reportarErro(erroRequisicao);
     } finally {
       setEnviando(false);
     }
@@ -60,18 +60,18 @@ export function AlterarConfiguracao({ auth }) {
         </div>
 
         {carregando ? (
-          <p className="p-10 text-center text-sm text-slate-500">Carregando...</p>
+          <p className="p-10 text-center text-sm text-slate-600">Carregando...</p>
         ) : !configuracao ? (
-          <p className="p-10 text-center text-red-600 text-sm font-bold">{erro}</p>
+          <p className="p-10 text-center text-red-700 text-sm font-bold">{erro}</p>
         ) : (
           <form onSubmit={aoSalvar} className="p-10 space-y-6">
-            {erro && <p className="text-red-600 text-sm font-bold text-center">{erro}</p>}
+            {erro && <p className="text-red-700 text-sm font-bold text-center">{erro}</p>}
 
             <CampoSomenteLeitura rotulo="Chave" valor={configuracao.chave} />
             <CampoSomenteLeitura rotulo="Tipo" valor={configuracao.tipo} />
 
             <div>
-              <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">
+              <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">
                 Valor
               </label>
               <input
@@ -83,7 +83,7 @@ export function AlterarConfiguracao({ auth }) {
             </div>
 
             <div>
-              <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">
+              <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">
                 Descrição
               </label>
               <input

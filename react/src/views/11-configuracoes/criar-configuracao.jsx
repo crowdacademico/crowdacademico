@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
+import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
 import { configuracaoApi } from '../../services/11-configuracoes/api/configuracao.api';
-import { traduzirErro } from '../../services/constant/api/traduzir-erro.util';
 
 // Antes era um formulário embutido no fim da tabela de Configurações
 // (GenericTable). Virou view própria (pedido do Lucas, 02-08-2026),
@@ -10,16 +10,16 @@ import { traduzirErro } from '../../services/constant/api/traduzir-erro.util';
 export function CriarConfiguracao({ auth }) {
   const navigate = useNavigate();
   const { mostrar } = useToast();
+  const { erro, reportarErro, limparErro } = useErroToast();
   const [chave, setChave] = useState('');
   const [valor, setValor] = useState('');
   const [tipo, setTipo] = useState('');
   const [descricao, setDescricao] = useState('');
-  const [erro, setErro] = useState('');
   const [enviando, setEnviando] = useState(false);
 
   const aoCriar = async (evento) => {
     evento.preventDefault();
-    setErro('');
+    limparErro();
     setEnviando(true);
     try {
       const configuracaoCriada = await configuracaoApi.criar(auth.authFetch, {
@@ -34,7 +34,7 @@ export function CriarConfiguracao({ auth }) {
       );
       navigate(-1);
     } catch (erroRequisicao) {
-      setErro(traduzirErro(erroRequisicao));
+      reportarErro(erroRequisicao);
     } finally {
       setEnviando(false);
     }
@@ -48,16 +48,16 @@ export function CriarConfiguracao({ auth }) {
             <i className="fa-solid fa-gear"></i>
           </div>
           <h2 className="text-3xl font-serif font-bold text-dark mb-2">Criar Configuração</h2>
-          <p className="text-sm text-slate-500 font-medium">
+          <p className="text-sm text-slate-600 font-medium">
             Preencha os dados abaixo para cadastrar uma nova configuração.
           </p>
         </div>
 
         <form onSubmit={aoCriar} className="p-10 space-y-6">
-          {erro && <p className="text-red-600 text-sm font-bold text-center">{erro}</p>}
+          {erro && <p className="text-red-700 text-sm font-bold text-center">{erro}</p>}
 
           <div>
-            <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">
+            <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">
               Chave
             </label>
             <input
@@ -70,7 +70,7 @@ export function CriarConfiguracao({ auth }) {
           </div>
 
           <div>
-            <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">
+            <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">
               Valor
             </label>
             <input
@@ -82,7 +82,7 @@ export function CriarConfiguracao({ auth }) {
           </div>
 
           <div>
-            <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">
+            <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">
               Tipo
             </label>
             <select
@@ -102,7 +102,7 @@ export function CriarConfiguracao({ auth }) {
           </div>
 
           <div>
-            <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">
+            <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">
               Descrição
             </label>
             <input

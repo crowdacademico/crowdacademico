@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Tooltip } from '../../components/layout/tooltip';
+import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
-import { traduzirErro } from '../../services/constant/api/traduzir-erro.util';
 import {
   papelApi,
   papelPermissaoApi,
@@ -35,46 +35,33 @@ const TEXTO_TOOLTIP_MATRIZ =
   'precisar). Clique numa célula pra conceder ou revogar.';
 
 // Colunas em ordem de poder (maior pro menor), não alfabética — pedido do
-// Lucas, 03-08-2026. Papel que não estiver nesta lista (ex.: um papel novo
-// criado direto no banco, já que `papel` continua só-leitura pela API) cai
-// no fim, em ordem alfabética entre si — nunca some da matriz.
-const ORDEM_PAPEIS_POR_PODER = [
-  'admin',
-  'moderador',
-  'revisor',
-  'suporte',
-  'curador',
-  'pesquisador',
-  'usuario',
-];
-
+// Lucas, 03-08-2026.
+//
+// CORRIGIDO (07-08-2026, achado do Lucas: "renomeei 'admin' pra 'admin
+// teste' e a coluna pulou pro fim da matriz"): a ordenação comparava o
+// NOME contra uma lista fixa de nomes esperados — assim que o admin usa o
+// recurso de renomear papel (alterar-papel.jsx, também 07-08-2026), o nome
+// novo não bate com nada da lista e a coluna cai pro fim. `id_papel` nunca
+// muda (só `nome` é editável) e, desde a reordenação do seed
+// (07_seed_dados.sql [07-B-1], mesma data), já nasce na ordem de poder
+// certa num banco novo — ordenar por ele resolve os dois problemas de
+// uma vez, sem precisar de lista nenhuma pra manter sincronizada.
 function ordenarPapeisPorPoder(a, b) {
-  const indiceA = ORDEM_PAPEIS_POR_PODER.indexOf(a.nome);
-  const indiceB = ORDEM_PAPEIS_POR_PODER.indexOf(b.nome);
-  if (indiceA === -1 && indiceB === -1) {
-    return a.nome.localeCompare(b.nome);
-  }
-  if (indiceA === -1) {
-    return 1;
-  }
-  if (indiceB === -1) {
-    return -1;
-  }
-  return indiceA - indiceB;
+  return a.idPapel - b.idPapel;
 }
 
 export function MatrizPapelPermissao({ authFetch }) {
   const { mostrar } = useToast();
+  const { erro, reportarErro, limparErro } = useErroToast();
   const [papeis, setPapeis] = useState([]);
   const [permissoes, setPermissoes] = useState([]);
   const [concedidos, setConcedidos] = useState(new Set());
   const [carregando, setCarregando] = useState(true);
-  const [erro, setErro] = useState('');
   const [celulaAlterando, setCelulaAlterando] = useState(null);
 
   const recarregar = useCallback(() => {
     setCarregando(true);
-    setErro('');
+    limparErro();
     Promise.all([
       papelApi.listar(authFetch),
       permissaoApi.listar(authFetch),
@@ -85,8 +72,9 @@ export function MatrizPapelPermissao({ authFetch }) {
         setPermissoes([...listaPermissoes].sort((a, b) => a.nome.localeCompare(b.nome)));
         setConcedidos(new Set(vinculos.map((v) => `${v.idPapel}-${v.idPermissao}`)));
       })
-      .catch((erroRequisicao) => setErro(traduzirErro(erroRequisicao)))
+      .catch(reportarErro)
       .finally(() => setCarregando(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authFetch]);
 
   useEffect(() => {
@@ -96,7 +84,7 @@ export function MatrizPapelPermissao({ authFetch }) {
 
   const alternar = async (idPapel, nomePapel, idPermissao, nomePermissao, concedidoAtual) => {
     const chave = `${idPapel}-${idPermissao}`;
-    setErro('');
+    limparErro();
     setCelulaAlterando(chave);
     try {
       if (concedidoAtual) {
@@ -114,7 +102,7 @@ export function MatrizPapelPermissao({ authFetch }) {
       }
       recarregar();
     } catch (erroRequisicao) {
-      setErro(traduzirErro(erroRequisicao));
+      reportarErro(erroRequisicao);
     } finally {
       setCelulaAlterando(null);
     }
@@ -172,7 +160,7 @@ export function MatrizPapelPermissao({ authFetch }) {
                             'w-7 h-7 rounded-md font-bold transition-colors disabled:opacity-50 disabled:cursor-wait ' +
                             (temPermissao
                               ? 'text-emerald-600 hover:bg-emerald-100'
-                              : 'text-slate-300 hover:bg-slate-100 hover:text-slate-400')
+                              : 'text-slate-300 hover:bg-slate-100 hover:text-slate-500')
                           }
                         >
                           {celulaAlterando === chave ? '…' : temPermissao ? '✓' : '—'}

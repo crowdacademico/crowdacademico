@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
+import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
 import { papelApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
-import { traduzirErro } from '../../services/constant/api/traduzir-erro.util';
 
 // Só existe (03-08-2026) porque `papel.codigo` (ver 01_extensoes_enums_
 // tabelas.sql [01-B]) tornou seguro renomear um papel pelo painel — antes,
@@ -18,9 +18,9 @@ export function AlterarPapel({ auth }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const { mostrar } = useToast();
+  const { erro, reportarErro, limparErro } = useErroToast();
   const [nome, setNome] = useState('');
   const [carregando, setCarregando] = useState(true);
-  const [erro, setErro] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [encontrado, setEncontrado] = useState(false);
 
@@ -37,21 +37,21 @@ export function AlterarPapel({ auth }) {
           setEncontrado(true);
         }
       })
-      .catch((erroRequisicao) => setErro(traduzirErro(erroRequisicao)))
+      .catch(reportarErro)
       .finally(() => setCarregando(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const aoSalvar = async (evento) => {
     evento.preventDefault();
-    setErro('');
+    limparErro();
     setEnviando(true);
     try {
       await papelApi.atualizar(auth.authFetch, id, { nome });
       mostrar('Papel alterado com sucesso.', `ID: ${id} foi alterado`);
       navigate(-1);
     } catch (erroRequisicao) {
-      setErro(traduzirErro(erroRequisicao));
+      reportarErro(erroRequisicao);
     } finally {
       setEnviando(false);
     }
@@ -65,31 +65,31 @@ export function AlterarPapel({ auth }) {
             <i className="fa-solid fa-user-tag"></i>
           </div>
           <h2 className="text-3xl font-serif font-bold text-dark mb-2">Alterar Papel</h2>
-          <p className="text-sm text-slate-500 font-medium">
+          <p className="text-sm text-slate-600 font-medium">
             Só o nome exibido muda — o identificador interno usado pelas regras do
             sistema nunca é afetado.
           </p>
         </div>
 
         {carregando ? (
-          <p className="p-10 text-center text-sm text-slate-500">Carregando...</p>
+          <p className="p-10 text-center text-sm text-slate-600">Carregando...</p>
         ) : !encontrado ? (
-          <p className="p-10 text-center text-red-600 text-sm font-bold">
+          <p className="p-10 text-center text-red-700 text-sm font-bold">
             {erro || `Papel ${id} não encontrado.`}
           </p>
         ) : (
           <form onSubmit={aoSalvar} className="p-10 space-y-6">
-            {erro && <p className="text-red-600 text-sm font-bold text-center">{erro}</p>}
+            {erro && <p className="text-red-700 text-sm font-bold text-center">{erro}</p>}
 
             <div>
-              <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">
+              <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">
                 id
               </label>
               <input type="text" value={id} disabled className="input-padrao opacity-60" />
             </div>
 
             <div>
-              <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">
+              <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">
                 Nome
               </label>
               <input

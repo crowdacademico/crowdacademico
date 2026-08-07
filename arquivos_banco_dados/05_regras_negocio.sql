@@ -3116,6 +3116,23 @@ BEGIN
             RETURN NEW;
         END IF;
 
+        -- ADICIONADO (07-08-2026, achado do Lucas: "a tabela de log tá
+        -- lotando de ultimo_login_em"): registrar_login_sucesso()
+        -- (03_funcoes_seguranca.sql [03-F]) roda em TODO login bem
+        -- sucedido, sempre mudando ultimo_login_em/ultimo_login_ip — mesmo
+        -- motivo/mesmo padrão do filtro de score_atual acima (motor
+        -- automático, não ação administrativa de alguém). tentativas_login_
+        -- falhas/bloqueado_ate (zerados pela mesma função) DE PROPÓSITO
+        -- ficam FORA desta lista: se um login limpa um bloqueio anterior,
+        -- ou se um admin desbloqueia manualmente (usuario.service.
+        -- desbloquear.ts), isso é um evento que vale ficar no log — só o
+        -- "logou normalmente" é ruído. O dado em si não sumiu, só saiu do
+        -- log — ultimo_login_em agora mora em UsuarioResponseDto/Consultar
+        -- Usuário (ultimo_login_ip continua nunca exposto pela API).
+        IF TG_TABLE_NAME = 'usuario' AND v_campos <@ ARRAY['ultimo_login_em', 'ultimo_login_ip'] THEN
+            RETURN NEW;
+        END IF;
+
         v_antigos := v_antigos_completo - 'senha_hash' - 'cpf_criptografado';
         v_novos   := v_novos_completo - 'senha_hash' - 'cpf_criptografado';
 

@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { CampoTextboxConsulta } from '../../components/crud/campo-textbox-consulta';
+import { useErroToast } from '../../components/layout/use-erro-toast';
 import { configuracaoApi } from '../../services/11-configuracoes/api/configuracao.api';
-import { traduzirErro } from '../../services/constant/api/traduzir-erro.util';
 
 // "Consultar" — botão do meio entre Alterar e Excluir (GenericTable).
 // idUsuario fica vazio naturalmente quando é NULL (configuração global).
@@ -11,13 +11,13 @@ export function ConsultarConfiguracao({ auth }) {
   const navigate = useNavigate();
   const [configuracao, setConfiguracao] = useState(null);
   const [carregando, setCarregando] = useState(true);
-  const [erro, setErro] = useState('');
+  const { erro, reportarErro } = useErroToast();
 
   useEffect(() => {
     configuracaoApi
       .buscar(auth.authFetch, id)
       .then(setConfiguracao)
-      .catch((erroRequisicao) => setErro(traduzirErro(erroRequisicao)))
+      .catch(reportarErro)
       .finally(() => setCarregando(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
@@ -33,9 +33,9 @@ export function ConsultarConfiguracao({ auth }) {
         </div>
 
         {carregando ? (
-          <p className="p-10 text-center text-sm text-slate-500">Carregando...</p>
+          <p className="p-10 text-center text-sm text-slate-600">Carregando...</p>
         ) : !configuracao ? (
-          <p className="p-10 text-center text-red-600 text-sm font-bold">{erro}</p>
+          <p className="p-10 text-center text-red-700 text-sm font-bold">{erro}</p>
         ) : (
           <div className="p-10 space-y-6">
             <CampoTextboxConsulta rotulo="id" valor={configuracao.idConfig} />

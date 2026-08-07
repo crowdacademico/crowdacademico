@@ -17,7 +17,15 @@ export class RequireAuthGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest<Request>();
     if (!request.user) {
-      throw new UnauthorizedException('Esta rota exige login.');
+      // Mensagem melhorada (07-08-2026, pedido do Lucas): "Esta rota exige
+      // login." estava tecnicamente certo mas não dizia o que fazer. Este
+      // guard só confere SE existe sessão, não qual permissão ela tem
+      // (isso é RLS, ver comentário acima) — por isso a mensagem fala em
+      // "logado", não em "administrador": quem já está logado mas sem a
+      // permissão certa nunca cai aqui, cai num 403 vindo da RLS.
+      throw new UnauthorizedException(
+        'Você precisa estar logado para fazer isso.',
+      );
     }
     return true;
   }

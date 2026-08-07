@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
+import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
-import { traduzirErro } from '../../services/constant/api/traduzir-erro.util';
 
 // Terceira view do padrão "uma página por operação de CRUD" — mostra os
 // dados de verdade antes de excluir (em vez do window.confirm() genérico
@@ -12,29 +12,29 @@ export function ExcluirUsuario({ auth }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const { mostrar } = useToast();
+  const { erro, reportarErro, limparErro } = useErroToast();
   const [usuario, setUsuario] = useState(null);
   const [carregando, setCarregando] = useState(true);
-  const [erro, setErro] = useState('');
   const [excluindo, setExcluindo] = useState(false);
 
   useEffect(() => {
     usuarioApi
       .buscar(auth.authFetch, id)
       .then(setUsuario)
-      .catch((erroRequisicao) => setErro(traduzirErro(erroRequisicao)))
+      .catch(reportarErro)
       .finally(() => setCarregando(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const aoConfirmar = async () => {
-    setErro('');
+    limparErro();
     setExcluindo(true);
     try {
       await usuarioApi.remover(auth.authFetch, id);
       mostrar('Usuário excluído com sucesso.', `ID: ${id} foi excluído`);
       navigate(-1);
     } catch (erroRequisicao) {
-      setErro(traduzirErro(erroRequisicao));
+      reportarErro(erroRequisicao);
       setExcluindo(false);
     }
   };
@@ -47,16 +47,16 @@ export function ExcluirUsuario({ auth }) {
             <i className="fa-solid fa-triangle-exclamation"></i>
           </div>
           <h2 className="text-3xl font-serif font-bold text-dark mb-2">Excluir Usuário</h2>
-          <p className="text-sm text-slate-500 font-medium">Esta ação não pode ser desfeita.</p>
+          <p className="text-sm text-slate-600 font-medium">Esta ação não pode ser desfeita.</p>
         </div>
 
         {carregando ? (
-          <p className="p-10 text-center text-sm text-slate-500">Carregando...</p>
+          <p className="p-10 text-center text-sm text-slate-600">Carregando...</p>
         ) : !usuario ? (
-          <p className="p-10 text-center text-red-600 text-sm font-bold">{erro}</p>
+          <p className="p-10 text-center text-red-700 text-sm font-bold">{erro}</p>
         ) : (
           <div className="p-10 space-y-6">
-            {erro && <p className="text-red-600 text-sm font-bold text-center">{erro}</p>}
+            {erro && <p className="text-red-700 text-sm font-bold text-center">{erro}</p>}
 
             <CampoSomenteLeitura rotulo="id" valor={usuario.idUsuario} />
             <CampoSomenteLeitura rotulo="Nome" valor={usuario.nome} />

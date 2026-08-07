@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { traduzirErro } from '../../services/constant/api/traduzir-erro.util';
+import { useErroToast } from '../layout/use-erro-toast';
 
 const ROTULO_OPERACAO = {
   INSERT: 'Criado',
@@ -20,19 +20,20 @@ export function LogAuditoriaPainel({ buscar }) {
   const [linhas, setLinhas] = useState([]);
   const [total, setTotal] = useState(0);
   const [carregando, setCarregando] = useState(true);
-  const [erro, setErro] = useState('');
+  const { erro, reportarErro, limparErro } = useErroToast();
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setCarregando(true);
-    setErro('');
+    limparErro();
     buscar()
       .then((resposta) => {
         setLinhas(resposta.dados);
         setTotal(resposta.total);
       })
-      .catch((erroRequisicao) => setErro(traduzirErro(erroRequisicao)))
+      .catch(reportarErro)
       .finally(() => setCarregando(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [buscar]);
 
   return (
@@ -41,7 +42,7 @@ export function LogAuditoriaPainel({ buscar }) {
         Últimas alterações {total > 0 && `(${total} no total)`}
       </h3>
 
-      {carregando && <p className="text-sm text-slate-500">Carregando...</p>}
+      {carregando && <p className="text-sm text-slate-600">Carregando...</p>}
       {erro && <p className="crud-erro">{erro}</p>}
 
       {!carregando && !erro && (

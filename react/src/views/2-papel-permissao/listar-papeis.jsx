@@ -2,12 +2,18 @@ import { useCallback } from 'react';
 import { GenericTable } from '../../components/crud/generic-table';
 import { papelApi, permissaoApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
 import { MatrizPapelPermissao } from './matriz-papel-permissao';
-import { UsuarioPapelWidget } from './usuario-papel-widget';
 
-// Aba "Papéis & Permissões" do painel admin — rota /admin/papeis. Reúne 4
+// Aba "Papéis & Permissões" do painel admin — rota /admin/papeis. Reúne 3
 // blocos read-only/de gestão do módulo 2-papel-permissao (ver nest/src/
-// 2-papel-permissao) numa página só, porque nenhum dos 4 sozinho justifica
+// 2-papel-permissao) numa página só, porque nenhum dos 3 sozinho justifica
 // uma aba própria no menu.
+//
+// REMOVIDO (07-08-2026, pedido do Lucas: "não consigo usar, é confuso"): o
+// 4º bloco era UsuarioPapelWidget — digitar id_usuario/id_papel cru pra
+// atribuir/revogar. Redundante desde que alterar-usuario.jsx ganhou uma
+// seção "Papéis" de verdade (etiquetas + menu suspenso só com o que falta
+// atribuir) — a mesma ação, só que mais clara. Não sobrou nenhuma
+// funcionalidade órfã: tudo que o widget fazia, Alterar Usuário já faz.
 export function ListarPapeis({ auth }) {
   const listarPapeis = useCallback(() => papelApi.listar(auth.authFetch), [auth.authFetch]);
   const listarPermissoes = useCallback(
@@ -43,9 +49,6 @@ export function ListarPapeis({ auth }) {
       </div>
       <div className="admin-content-painel">
         <MatrizPapelPermissao authFetch={auth.authFetch} />
-      </div>
-      <div className="admin-content-painel">
-        <UsuarioPapelWidget authFetch={auth.authFetch} />
       </div>
     </>
   );

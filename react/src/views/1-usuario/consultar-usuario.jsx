@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { CampoTextboxConsulta } from '../../components/crud/campo-textbox-consulta';
+import { useErroToast } from '../../components/layout/use-erro-toast';
 import { usuarioPapelApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
-import { traduzirErro } from '../../services/constant/api/traduzir-erro.util';
 
 // "Consultar" — botão do meio entre Alterar e Excluir (GenericTable).
 // Mostra TODOS os dados do usuário ligados ao banco (UsuarioResponseDto
@@ -15,7 +15,7 @@ export function ConsultarUsuario({ auth }) {
   const [usuario, setUsuario] = useState(null);
   const [papeis, setPapeis] = useState(null);
   const [carregando, setCarregando] = useState(true);
-  const [erro, setErro] = useState('');
+  const { erro, reportarErro } = useErroToast();
 
   useEffect(() => {
     Promise.all([
@@ -32,7 +32,7 @@ export function ConsultarUsuario({ auth }) {
         setUsuario(dadosUsuario);
         setPapeis(papeisUsuario);
       })
-      .catch((erroRequisicao) => setErro(traduzirErro(erroRequisicao)))
+      .catch(reportarErro)
       .finally(() => setCarregando(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
@@ -50,9 +50,9 @@ export function ConsultarUsuario({ auth }) {
         </div>
 
         {carregando ? (
-          <p className="p-10 text-center text-sm text-slate-500">Carregando...</p>
+          <p className="p-10 text-center text-sm text-slate-600">Carregando...</p>
         ) : !usuario ? (
-          <p className="p-10 text-center text-red-600 text-sm font-bold">{erro}</p>
+          <p className="p-10 text-center text-red-700 text-sm font-bold">{erro}</p>
         ) : (
           <div className="p-10 space-y-6">
             <CampoTextboxConsulta rotulo="id" valor={usuario.idUsuario} />
@@ -66,6 +66,17 @@ export function ConsultarUsuario({ auth }) {
             <CampoTextboxConsulta
               rotulo="Criado em"
               valor={usuario.criadoEm && new Date(usuario.criadoEm).toLocaleString('pt-BR')}
+            />
+            {/* Tirado do log de auditoria de propósito (07-08-2026, pedido do
+                Lucas: login bem-sucedido lotava o log com uma linha por
+                login) — mora só aqui agora, não no log. */}
+            <CampoTextboxConsulta
+              rotulo="Último login em"
+              valor={
+                usuario.ultimoLoginEm
+                  ? new Date(usuario.ultimoLoginEm).toLocaleString('pt-BR')
+                  : 'Nunca'
+              }
             />
             <CampoTextboxConsulta
               rotulo="É pesquisador?"

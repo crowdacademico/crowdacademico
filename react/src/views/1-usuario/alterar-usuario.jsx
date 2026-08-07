@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
+import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { papelApi, usuarioPapelApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
-import { traduzirErro } from '../../services/constant/api/traduzir-erro.util';
 
 // Precisa bater com o hash seedado em arquivos_banco_dados/07_seed_dados.sql
 // ([07-D-1]) — se alguém trocar a senha de dev do seed, troca aqui também.
@@ -19,22 +19,19 @@ const SENHA_DEV = 'DevTcc123!';
 // visíveis e um botão de confirmar/cancelar no fim, em vez de edição em
 // linha misturada com a listagem.
 //
-// Seção "Papéis" (03-08-2026) reaproveita os mesmos endpoints do widget
-// "Papéis de um usuário" (usuario-papel-widget.jsx) — não é módulo novo,
-// só uma UI melhor pro mesmo caso de uso (id_usuario já vem da URL, papel
-// escolhido por nome num <select>, não digitado por ID). O widget antigo
-// continua existindo, não foi removido — serve pra testar qualquer
-// combinação usuário/papel sem navegar até a página de um usuário
-// específico.
+// Seção "Papéis" (03-08-2026) reaproveita os mesmos endpoints do antigo
+// widget "Papéis de um usuário" (usuario-papel-widget.jsx, removido em
+// 07-08-2026 por ser redundante com esta seção — id_usuario já vem da
+// URL, papel escolhido por nome num <select>, não digitado por ID).
 export function AlterarUsuario({ auth }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const { mostrar } = useToast();
+  const { erro, reportarErro, limparErro } = useErroToast();
   const [usuario, setUsuario] = useState(null);
   const [nome, setNome] = useState('');
   const [novaSenha, setNovaSenha] = useState('');
   const [carregando, setCarregando] = useState(true);
-  const [erro, setErro] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [redefinindoSenhaDev, setRedefinindoSenhaDev] = useState(false);
   // Papéis do usuário — pedido do Lucas (03-08-2026): "criar um usuário e
@@ -60,7 +57,7 @@ export function AlterarUsuario({ auth }) {
         setPapeisAtuais(papeisDoUsuario);
         setCatalogoPapeis(catalogo);
       })
-      .catch((erroRequisicao) => setErro(traduzirErro(erroRequisicao)))
+      .catch(reportarErro)
       .finally(() => setCarregando(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
@@ -76,7 +73,7 @@ export function AlterarUsuario({ auth }) {
     if (!idPapelParaAtribuir) {
       return;
     }
-    setErro('');
+    limparErro();
     setAtribuindoPapel(true);
     try {
       const papelEscolhido = catalogoPapeis.find(
@@ -98,14 +95,14 @@ export function AlterarUsuario({ auth }) {
         `ID: ${id} agora tem o papel "${papelEscolhido?.nome}"`,
       );
     } catch (erroRequisicao) {
-      setErro(traduzirErro(erroRequisicao));
+      reportarErro(erroRequisicao);
     } finally {
       setAtribuindoPapel(false);
     }
   };
 
   const aoRevogarPapel = async (papel) => {
-    setErro('');
+    limparErro();
     setRevogandoPapel(papel.idPapel);
     try {
       await usuarioPapelApi.remover(auth.authFetch, id, papel.idPapel);
@@ -113,7 +110,7 @@ export function AlterarUsuario({ auth }) {
       setPapeisAtuais(papeisAtualizados);
       mostrar('Papel revogado com sucesso.', `ID: ${id} perdeu o papel "${papel.nomePapel}"`);
     } catch (erroRequisicao) {
-      setErro(traduzirErro(erroRequisicao));
+      reportarErro(erroRequisicao);
     } finally {
       setRevogandoPapel(null);
     }
@@ -121,7 +118,7 @@ export function AlterarUsuario({ auth }) {
 
   const aoSalvar = async (evento) => {
     evento.preventDefault();
-    setErro('');
+    limparErro();
     setEnviando(true);
     try {
       const dados = { nome };
@@ -132,7 +129,7 @@ export function AlterarUsuario({ auth }) {
       mostrar('Usuário alterado com sucesso.', `ID: ${id} foi alterado`);
       navigate(-1);
     } catch (erroRequisicao) {
-      setErro(traduzirErro(erroRequisicao));
+      reportarErro(erroRequisicao);
     } finally {
       setEnviando(false);
     }
@@ -147,26 +144,26 @@ export function AlterarUsuario({ auth }) {
   // verdade); clicar numa conta que não está bloqueada é inofensivo (só
   // zera campos que já estavam zerados).
   const aoDesbloquear = async () => {
-    setErro('');
+    limparErro();
     setDesbloqueando(true);
     try {
       await usuarioApi.desbloquear(auth.authFetch, id);
       mostrar('Login desbloqueado com sucesso.', `ID: ${id} pode tentar logar novamente`);
     } catch (erroRequisicao) {
-      setErro(traduzirErro(erroRequisicao));
+      reportarErro(erroRequisicao);
     } finally {
       setDesbloqueando(false);
     }
   };
 
   const aoRedefinirSenhaDev = async () => {
-    setErro('');
+    limparErro();
     setRedefinindoSenhaDev(true);
     try {
       await usuarioApi.atualizar(auth.authFetch, id, { novaSenha: SENHA_DEV });
       mostrar('Senha redefinida com sucesso.', `ID: ${id} teve a senha redefinida para "${SENHA_DEV}"`);
     } catch (erroRequisicao) {
-      setErro(traduzirErro(erroRequisicao));
+      reportarErro(erroRequisicao);
     } finally {
       setRedefinindoSenhaDev(false);
     }
@@ -180,18 +177,18 @@ export function AlterarUsuario({ auth }) {
             <i className="fa-solid fa-user-pen"></i>
           </div>
           <h2 className="text-3xl font-serif font-bold text-dark mb-2">Alterar Usuário</h2>
-          <p className="text-sm text-slate-500 font-medium">
+          <p className="text-sm text-slate-600 font-medium">
             Deixe a senha em branco para não alterá-la.
           </p>
         </div>
 
         {carregando ? (
-          <p className="p-10 text-center text-sm text-slate-500">Carregando...</p>
+          <p className="p-10 text-center text-sm text-slate-600">Carregando...</p>
         ) : !usuario ? (
-          <p className="p-10 text-center text-red-600 text-sm font-bold">{erro}</p>
+          <p className="p-10 text-center text-red-700 text-sm font-bold">{erro}</p>
         ) : (
           <form onSubmit={aoSalvar} className="p-10 space-y-6">
-            {erro && <p className="text-red-600 text-sm font-bold text-center">{erro}</p>}
+            {erro && <p className="text-red-700 text-sm font-bold text-center">{erro}</p>}
 
             <CampoSomenteLeitura rotulo="id" valor={usuario.idUsuario} />
             <CampoSomenteLeitura rotulo="E-mail" valor={usuario.email} />
@@ -201,7 +198,7 @@ export function AlterarUsuario({ auth }) {
             />
 
             <div>
-              <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">
+              <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">
                 Nome
               </label>
               <input
@@ -214,7 +211,7 @@ export function AlterarUsuario({ auth }) {
             </div>
 
             <div>
-              <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">
+              <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">
                 Nova senha (opcional)
               </label>
               <input
@@ -227,13 +224,13 @@ export function AlterarUsuario({ auth }) {
             </div>
 
             <div className="rounded-lg border border-slate-200 p-3">
-              <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">
+              <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">
                 Papéis
               </label>
 
               <div className="flex flex-wrap gap-2 mb-3">
                 {papeisAtuais.length === 0 && (
-                  <p className="text-xs text-slate-500">Nenhum papel atribuído ainda.</p>
+                  <p className="text-xs text-slate-600">Nenhum papel atribuído ainda.</p>
                 )}
                 {papeisAtuais.map((papel) => (
                   <span
@@ -264,7 +261,7 @@ export function AlterarUsuario({ auth }) {
                 // explicando por quê — parecia "atribuir não funciona", não
                 // "não há nada pra atribuir agora". Corrigido: sempre mostra
                 // alguma coisa, nunca um vazio sem explicação.
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-slate-600">
                   Nenhum papel adicional disponível pra atribuir (o catálogo ainda
                   está carregando, ou este usuário já tem todos os papéis existentes).
                 </p>
@@ -296,7 +293,7 @@ export function AlterarUsuario({ auth }) {
 
             <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 p-3">
               <div>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-slate-600">
                   Zera o contador de tentativas de login falhas e libera a conta,
                   caso esteja bloqueada temporariamente.
                 </p>
@@ -314,7 +311,7 @@ export function AlterarUsuario({ auth }) {
             <div className="flex items-center justify-between gap-3 rounded-lg border border-dashed border-purple-300 bg-purple-50 p-3">
               <div>
                 <span className="badge badge-dev">&lt;dev&gt;</span>
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="text-xs text-slate-600 mt-1">
                   Redefine a senha direto pra "{SENHA_DEV}", sem digitar nada. Só pra testar
                   login.
                 </p>

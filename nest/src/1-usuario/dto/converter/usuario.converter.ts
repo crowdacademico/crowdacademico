@@ -14,6 +14,7 @@ type UsuarioParaConverter = Pick<
   | 'id_imagem_perfil'
   | 'criado_em'
   | 'email_verificado'
+  | 'ultimo_login_em'
 >;
 
 export class UsuarioConverter {
@@ -25,6 +26,7 @@ export class UsuarioConverter {
       idImagemPerfil: entity.id_imagem_perfil,
       criadoEm: entity.criado_em,
       emailVerificado: entity.email_verificado,
+      ultimoLoginEm: entity.ultimo_login_em,
     };
   }
 }
