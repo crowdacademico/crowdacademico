@@ -840,7 +840,7 @@ INSERT INTO perfil_pesquisador (id_usuario, cpf_criptografado, vinculo_instituci
 
 
 -- [07-F-1] link_academico
--- ADICIONADO: Bruno (14) recebe os 3 links que a fórmula de score realmente soma
+-- ADICIONADO: Bruno (19) recebe os 3 links que a fórmula de score realmente soma
 -- (calcular_score_perfil_academico, 05) — Lattes, ORCID e um "outro link" que bate no
 -- ILIKE '%linkedin%'. É o único dos 4 novos pesquisadores com link_academico de propósito,
 -- pra ele ser o único a fechar os 30/30 pontos possíveis nessa dimensão.
