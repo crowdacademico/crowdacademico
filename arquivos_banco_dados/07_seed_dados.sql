@@ -144,11 +144,28 @@ ON CONFLICT (nome) DO NOTHING;
 
 
 -- [07-B-2] permissao: por que o formato "entidade_acao" (ver DOCUMENTACAO_BD.md)
-
+-- ORDENADO (07-08-2026, pedido do Lucas: "mesma ideia do papel, mas pras
+-- permissões"): agrupado por domínio, na mesma ordem das letras do Índice
+-- Global (ver DOCUMENTACAO_BD.md) — A, B, C, D, E, F, H, I, L (G/J/K não têm
+-- nenhuma permissão própria hoje). Só id_permissao sai bonitinho/agrupado —
+-- papel_permissao (abaixo, [07-B-3]) resolve por NOME, nunca por número,
+-- então reordenar aqui não quebra nada (mesmo raciocínio já usado pra
+-- reordenar `papel`, 03-08-2026).
 INSERT INTO permissao (nome) VALUES
-('campanha_aprovar'),
-('campanha_rejeitar'),
-('campanha_editar'),
+-- A — Visão Geral & Configuração Inicial
+('relatorio_visualizar'),
+-- B — RBAC (Papéis, Permissões e Vinculação)
+('papel_atribuir'),
+('papel_gerenciar'),
+-- C — CONFIG (Configurações, Catálogos e Arquivo Base)
+('configuracao_gerenciar'),
+('tipolink_gerenciar'),
+('area_conhecimento_gerenciar'),
+('motivo_denuncia_gerenciar'),
+-- ver nota completa em link_academico_gerenciar (grupo F) — as duas foram
+-- adicionadas juntas pra fechar 100% das RLS policies sem eh_admin().
+('arquivo_gerenciar'),
+-- D — USUÁRIO (Contas, Perfis, Autenticação, Termos e Sessões)
 ('usuario_suspender'),
 ('usuario_visualizar_sensivel'),
 -- ATUALIZADO (28-07-2026): cpf_criptografado entrou no GRANT SELECT de
@@ -157,22 +174,7 @@ INSERT INTO permissao (nome) VALUES
 -- pedir esse dado (não existe policy de RLS pra proteção de coluna — RLS só
 -- filtra linha; o controle de "quem lê o CPF" é responsabilidade da aplicação).
 ('perfil_pesquisador_visualizar_sensivel'),
-('contribuicao_visualizar_sensivel'),
-('relatorio_visualizar'),
-('configuracao_gerenciar'),
-('denuncia_responder'),
-('score_editar'),
-('solicitacao_encerramento_decidir'),
 ('termos_uso_gerenciar'),
-('papel_atribuir'),
-('papel_gerenciar'),
-('tipolink_gerenciar'),
-('area_conhecimento_gerenciar'),
-('motivo_denuncia_gerenciar'),
-('comentario_moderar'),
-('atualizacao_moderar'),
-('repasse_aprovar'),
-('auditoria_financeira_visualizar'),
 -- NOTA: estas 3 são propositalmente sem policy de RLS — verificacao_email,
 -- recuperacao_senha e sessao já têm policy FOR ALL USING(true) de propósito (o
 -- projeto decidiu que a autorização desses fluxos fica no NestJS, não na RLS,
@@ -181,20 +183,12 @@ INSERT INTO permissao (nome) VALUES
 ('sessao_revogar'),
 ('recuperacao_senha_revogar'),
 ('verificacao_email_reenviar'),
--- ADICIONADO: as duas únicas permissões que faltavam para remover
--- eh_admin() de 100% das RLS policies (ver RBAC-pontos-discutidos.md).
-('link_academico_gerenciar'),
-('arquivo_gerenciar'),
 -- CORRIGIDO: o worker de envio de notificação precisava de uma permissão pra ler
 -- a fila (pol_notificacao_select, 04) — antes disso, só dava pra rodar o worker
 -- emprestando 'usuario_visualizar_sensivel', que não tem nada a ver com fila de
 -- notificação e quebraria o envio de e-mail se alguém restringisse essa permissão
 -- por motivo de privacidade no futuro sem perceber a dependência.
 ('notificacao_processar'),
--- ADICIONADO (28-07-2026, item 12 da Lista C — score deixa de ser público):
--- pol_score_select (04) passou a exigir esta permissão pra ver score de
--- terceiros; o próprio pesquisador continua vendo o próprio score sem ela.
-('score_visualizar'),
 -- ADICIONADO (28-07-2026, Claude Web — "Problema 1" da 2ª auditoria de segurança):
 -- excluir_conta_usuario/liberar_bloqueio_login (03, [03-F]) são SECURITY DEFINER —
 -- desligam a RLS, então a checagem de "quem pode agir sobre a conta de outra
@@ -204,6 +198,30 @@ INSERT INTO permissao (nome) VALUES
 -- de suporte/admin sobre a conta de outra pessoa, nunca do próprio usuário.
 ('usuario_excluir'),
 ('usuario_desbloquear'),
+-- E — CAMPANHA (Campanhas, Atualizações, Comentários, Denúncias, Recompensas)
+('campanha_aprovar'),
+('campanha_rejeitar'),
+('campanha_editar'),
+('denuncia_responder'),
+('solicitacao_encerramento_decidir'),
+('comentario_moderar'),
+('atualizacao_moderar'),
+('repasse_aprovar'),
+-- F — LINK (Vinculação de URLs Externas)
+-- ADICIONADO: junto com arquivo_gerenciar (grupo C) — as duas únicas
+-- permissões que faltavam para remover eh_admin() de 100% das RLS policies
+-- (ver RBAC-pontos-discutidos.md).
+('link_academico_gerenciar'),
+-- H — CONTRIBUIÇÃO (Apoios, Auditoria e Termos Financeiros)
+('contribuicao_visualizar_sensivel'),
+('auditoria_financeira_visualizar'),
+-- I — SCORE (Parâmetros, Rótulos e motor de cálculo)
+('score_editar'),
+-- ADICIONADO (28-07-2026, item 12 da Lista C — score deixa de ser público):
+-- pol_score_select (04) passou a exigir esta permissão pra ver score de
+-- terceiros; o próprio pesquisador continua vendo o próprio score sem ela.
+('score_visualizar'),
+-- L — LOG DE AUDITORIA
 -- ADICIONADO (03-08-2026): gate de SELECT em log_auditoria (ver
 -- pol_log_auditoria_select, 04_rls_policies.sql [04-L]) — sem esta
 -- permissão, ninguém (nem admin, até este INSERT rodar) consegue ler o
