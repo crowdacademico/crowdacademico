@@ -234,42 +234,60 @@ ON CONFLICT (nome) DO NOTHING;
 
 
 -- [07-B-3] papel_permissao: por que as linhas ('admin', ...) estão explícitas mesmo sendo redundantes com a trigger (ver DOCUMENTACAO_BD.md)
+-- ORDENADO (07-08-2026, pedido do Lucas: "mesma lógica" do papel/permissao):
+-- dentro do admin, as 32 permissões seguem a MESMA ordem por domínio de
+-- [07-B-2] (A,B,C,D,E,F,H,I,L) — puramente cosmético, o WHERE...IN não liga
+-- pra ordem das linhas, só ajuda quem lê o arquivo a achar as coisas. Os
+-- grupos de papel também passaram a seguir a ordem de poder (admin ->
+-- moderador -> revisor -> suporte -> curador — mesma de ORDEM_PAPEIS_POR_
+-- PODER, matriz-papel-permissao.jsx); moderador/revisor/curador/suporte já
+-- vinham naturalmente agrupados por domínio, não precisaram de reordenação
+-- interna.
 INSERT INTO papel_permissao (id_papel, id_permissao)
 SELECT p.id_papel, perm.id_permissao
 FROM papel p
 JOIN permissao perm ON TRUE
 WHERE (p.nome, perm.nome) IN (
-    ('admin', 'campanha_aprovar'),
-    ('admin', 'campanha_rejeitar'),
-    ('admin', 'campanha_editar'),
-    ('admin', 'usuario_suspender'),
-    ('admin', 'usuario_visualizar_sensivel'),
-    ('admin', 'perfil_pesquisador_visualizar_sensivel'),
-    ('admin', 'contribuicao_visualizar_sensivel'),
+    -- A
     ('admin', 'relatorio_visualizar'),
-    ('admin', 'configuracao_gerenciar'),
-    ('admin', 'denuncia_responder'),
-    ('admin', 'score_editar'),
-    ('admin', 'solicitacao_encerramento_decidir'),
-    ('admin', 'termos_uso_gerenciar'),
+    -- B
     ('admin', 'papel_atribuir'),
     ('admin', 'papel_gerenciar'),
+    -- C
+    ('admin', 'configuracao_gerenciar'),
     ('admin', 'tipolink_gerenciar'),
     ('admin', 'area_conhecimento_gerenciar'),
     ('admin', 'motivo_denuncia_gerenciar'),
-    ('admin', 'comentario_moderar'),
-    ('admin', 'atualizacao_moderar'),
-    ('admin', 'repasse_aprovar'),
-    ('admin', 'auditoria_financeira_visualizar'),
+    ('admin', 'arquivo_gerenciar'),
+    -- D
+    ('admin', 'usuario_suspender'),
+    ('admin', 'usuario_visualizar_sensivel'),
+    ('admin', 'perfil_pesquisador_visualizar_sensivel'),
+    ('admin', 'termos_uso_gerenciar'),
     ('admin', 'sessao_revogar'),
     ('admin', 'recuperacao_senha_revogar'),
     ('admin', 'verificacao_email_reenviar'),
-    ('admin', 'link_academico_gerenciar'),
-    ('admin', 'arquivo_gerenciar'),
     ('admin', 'notificacao_processar'),
-    ('admin', 'score_visualizar'),
     ('admin', 'usuario_excluir'),
     ('admin', 'usuario_desbloquear'),
+    -- E
+    ('admin', 'campanha_aprovar'),
+    ('admin', 'campanha_rejeitar'),
+    ('admin', 'campanha_editar'),
+    ('admin', 'denuncia_responder'),
+    ('admin', 'solicitacao_encerramento_decidir'),
+    ('admin', 'comentario_moderar'),
+    ('admin', 'atualizacao_moderar'),
+    ('admin', 'repasse_aprovar'),
+    -- F
+    ('admin', 'link_academico_gerenciar'),
+    -- H
+    ('admin', 'contribuicao_visualizar_sensivel'),
+    ('admin', 'auditoria_financeira_visualizar'),
+    -- I
+    ('admin', 'score_editar'),
+    ('admin', 'score_visualizar'),
+    -- L
     ('admin', 'log_visualizar'),
     -- moderador: cuida da moderação de conteúdo e denúncias. score_visualizar
     -- ajuda a priorizar fila de moderação (sinal de apoio, não bloqueio).
@@ -281,13 +299,6 @@ WHERE (p.nome, perm.nome) IN (
     -- score de todo mundo pra calibrar peso/regra com dado real.
     ('revisor', 'score_editar'),
     ('revisor', 'score_visualizar'),
-    -- curador: cuida dos catálogos que dão suporte ao conteúdo da plataforma.
-    -- score_visualizar apoia a curadoria manual de aprovação de campanha.
-    ('curador', 'tipolink_gerenciar'),
-    ('curador', 'area_conhecimento_gerenciar'),
-    ('curador', 'motivo_denuncia_gerenciar'),
-    ('curador', 'termos_uso_gerenciar'),
-    ('curador', 'score_visualizar'),
     -- suporte: atendimento de conta, sem acesso a dados sensíveis ou financeiros.
     ('suporte', 'sessao_revogar'),
     ('suporte', 'recuperacao_senha_revogar'),
@@ -299,7 +310,14 @@ WHERE (p.nome, perm.nome) IN (
     -- exclusão de conta como auto-serviço do titular (que já funciona sem
     -- nenhuma permissão, ver excluir_conta_usuario em 03, [03-F]); suporte abre
     -- chamado, não executa. Só o admin mantém a permissão.
-    ('suporte', 'usuario_desbloquear')
+    ('suporte', 'usuario_desbloquear'),
+    -- curador: cuida dos catálogos que dão suporte ao conteúdo da plataforma.
+    -- score_visualizar apoia a curadoria manual de aprovação de campanha.
+    ('curador', 'tipolink_gerenciar'),
+    ('curador', 'area_conhecimento_gerenciar'),
+    ('curador', 'motivo_denuncia_gerenciar'),
+    ('curador', 'termos_uso_gerenciar'),
+    ('curador', 'score_visualizar')
 )
 ON CONFLICT DO NOTHING;
 
@@ -684,13 +702,34 @@ FROM usuario;
 
 
 -- [07-C-5] configuracoes: por que este bloco vem depois de usuario (ver DOCUMENTACAO_BD.md)
+-- ORDENADO (07-08-2026, pedido do Lucas: "mesma lógica" do papel/permissao):
+-- agrupado por domínio (A,D,E,F,H,I — mesma ordem de [07-B-2]), já que
+-- configuracao.service.findall.ts ordena por id_config, então a ordem do
+-- INSERT aqui embaixo é a ordem que a tela realmente mostra. Puramente
+-- cosmético pra CADA CHAVE em si: `chave` é UNIQUE e toda leitura (NestJS)
+-- busca por nome, nunca por posição/id_config.
+--
+-- REVISADO (28-07-2026, Claude Web — "Problema 3", varredura inversa: pra cada chave
+-- em configuracoes, quantas vezes ela aparece lida em algum dos 8 arquivos). 4 chaves
+-- não tinham NENHUM consumidor — "alavancas fantasma": o Admin muda no painel e nada
+-- acontece, o que é pior que um valor fixo no código (porque parece que devia
+-- funcionar). Duas (email_suporte, notificar_novas_campanhas, mais abaixo) ganharam
+-- comentário explicando quem lê (NestJS, não o banco); duas saíram do seed — ver
+-- motivo em cada uma, no final deste bloco.
+INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo) VALUES
+-- A
+(NULL, 'email_suporte',              'suporte@crowdacademico.com.br', 'texto', 'E-mail de suporte ao usuário',   TRUE), -- lida pelo NestJS (rodapé/e-mails transacionais), não pelo banco — nenhum .sql precisa dela
+-- D
+(NULL, 'limite_tentativas_login',    '5',     'inteiro',  'Nº de tentativas de login falhas antes de bloquear a conta',    TRUE),
+(NULL, 'bloqueio_login_minutos',     '15',    'inteiro',  'Duração do bloqueio de login após exceder o limite de tentativas (minutos)', TRUE),
+(1,   'notificar_novas_campanhas',   'true',  'booleano', 'Admin recebe e-mail sobre novas campanhas',            TRUE), -- lida pelo worker de notificação do NestJS, não pelo banco — nenhuma trigger/função a consulta
+-- E
 -- ADICIONADO (28-07-2026, item 16 da Lista C): prazo_minimo_campanha_dias e os
 -- 3 limites de negócio (campanhas simultâneas, endossos, denúncias/24h) que
 -- antes estavam fixos no corpo das triggers (05) — ver comentário no header
 -- deste bloco e nas funções correspondentes. Valores idênticos aos que já
 -- estavam hardcoded (15, 2, 4, 5) — nada muda no comportamento hoje, só o
 -- lugar de onde o número é lido.
-INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo) VALUES
 (NULL, 'taxa_plataforma_padrao',     '5.00',  'decimal',  'Taxa padrão cobrada pela plataforma (%)',              TRUE),
 (NULL, 'prazo_minimo_campanha_dias', '15',    'inteiro',  'Duração mínima permitida de uma campanha em dias',     TRUE),
 -- ATUALIZADO (28-07-2026): 90 → 60. Decisão tomada direto por você e pela
@@ -699,9 +738,6 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo) VAL
 (NULL, 'limite_campanhas_simultaneas','2',    'inteiro',  'Nº máximo de campanhas simultâneas (aguardando_aprovacao/ativo) por pesquisador (RF-029)', TRUE),
 (NULL, 'limite_endossos_campanha',   '4',     'inteiro',  'Nº máximo de endossos ativos simultâneos por campanha (RF-063)', TRUE),
 (NULL, 'limite_denuncias_24h',       '5',     'inteiro',  'Nº máximo de denúncias por usuário a cada 24 horas (RF-076)', TRUE),
-(NULL, 'limite_links_academicos_perfil', '5', 'inteiro',  'Nº máximo de links acadêmicos por pesquisador (RF-014/016/018)', TRUE),
-(NULL, 'limite_tentativas_login',    '5',     'inteiro',  'Nº de tentativas de login falhas antes de bloquear a conta',    TRUE),
-(NULL, 'bloqueio_login_minutos',     '15',    'inteiro',  'Duração do bloqueio de login após exceder o limite de tentativas (minutos)', TRUE),
 -- ADICIONADO (28-07-2026, Claude Web — "Problema 2"): limite de negócio (menor,
 -- configurável) por cima do limite técnico largo das colunas (01) — mesmo padrão
 -- config + trigger do prazo de campanha (item 16).
@@ -731,6 +767,9 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo) VAL
 -- do prazo (item 16): limite técnico largo na constraint (01, > 0), mínimo de
 -- negócio de verdade aqui.
 (NULL, 'meta_minima_campanha',       '500.00', 'decimal',  'Valor mínimo de meta financeira aceito para uma campanha (RF)',            TRUE),
+-- F
+(NULL, 'limite_links_academicos_perfil', '5', 'inteiro',  'Nº máximo de links acadêmicos por pesquisador (RF-014/016/018)', TRUE),
+-- H
 -- ADICIONADO (30-07-2026, RF-056 — sugestão do Claude Web, confirmada pelo
 -- Lucas): mesmo padrão do item 16/meta_minima_campanha, acima. R$5,00 estava
 -- hardcoded numa CHECK (01) — não é piso do gateway de pagamento (o PIX em si
@@ -738,21 +777,14 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo) VAL
 -- precisa ser configurável igual as outras. Valor idêntico ao que já estava
 -- fixo (5.00) — nada muda no comportamento hoje, só o lugar de onde vem.
 (NULL, 'valor_minimo_contribuicao',  '5.00',  'decimal',  'Valor mínimo aceito por contribuição, em R$ (RF-056)',                       TRUE),
+-- I
 -- DECIDIDO (28-07-2026, item 3 da lista de pendências): score NUNCA bloqueia
 -- criação de campanha (nem Catarse nem Experiment fazem isso; o filtro real é
 -- a aprovação manual do Admin). Este número vira só sinal pro painel do Admin
 -- destacar, na fila de aprovação, campanhas de pesquisador abaixo do mínimo
 -- pra receberem revisão mais cuidadosa — ver public.fn_precisa_revisao_score()
 -- em 05_regras_negocio.sql, [05-I-1]. De propósito, sem trigger de bloqueio.
-(NULL, 'score_minimo_campanha',      '25.00', 'decimal',  'Score mínimo para criar campanha (sinal de revisão manual, nunca bloqueio automático)', TRUE),
--- REVISADO (28-07-2026, Claude Web — "Problema 3", varredura inversa: pra cada chave
--- em configuracoes, quantas vezes ela aparece lida em algum dos 8 arquivos). 4 chaves
--- não tinham NENHUM consumidor — "alavancas fantasma": o Admin muda no painel e nada
--- acontece, o que é pior que um valor fixo no código (porque parece que devia
--- funcionar). Duas ganharam comentário explicando quem lê (NestJS, não o banco); duas
--- saíram do seed — ver motivo em cada uma, abaixo de onde estavam.
-(NULL, 'email_suporte',              'suporte@crowdacademico.com.br', 'texto', 'E-mail de suporte ao usuário',   TRUE), -- lida pelo NestJS (rodapé/e-mails transacionais), não pelo banco — nenhum .sql precisa dela
-(1,   'notificar_novas_campanhas',   'true',  'booleano', 'Admin recebe e-mail sobre novas campanhas',            TRUE); -- lida pelo worker de notificação do NestJS, não pelo banco — nenhuma trigger/função a consulta
+(NULL, 'score_minimo_campanha',      '25.00', 'decimal',  'Score mínimo para criar campanha (sinal de revisão manual, nunca bloqueio automático)', TRUE);
 -- REMOVIDA (era 'permitir_campanha_anonima', booleano, default 'false'): não fazia
 -- sentido no modelo atual — campanha.id_usuario é NOT NULL (01), toda campanha SEMPRE
 -- tem um pesquisador identificado, é o que a curadoria (RF-068/069) exige. Contribuição
@@ -765,6 +797,8 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo) VAL
 -- chave volta junto com a trigger que a usa — não antes.
 
 -- [07-I-2] configuracoes: constantes do motor de score (ver DOCUMENTACAO_BD.md)
+-- Continua o grupo "I" de [07-C-5] (que termina em score_minimo_campanha,
+-- logo acima) — id_config sai em sequência, sem interrupção de domínio.
 -- CORRIGIDO (28-07-2026, item 13-quinto-ponto da Lista C): score_custo_denuncia/
 -- score_custo_denuncia_procedente saíram daqui — migraram pra score_config
 -- (nome='volume_denuncias'/'gravidade_denuncias', ver [07-I-1]), que é a tabela
