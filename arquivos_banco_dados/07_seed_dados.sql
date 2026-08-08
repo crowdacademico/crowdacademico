@@ -539,19 +539,48 @@ INSERT INTO arquivo (url, nome_original, tipo_mime, tamanho_bytes) VALUES
 
 -- [07-D-1] usuario
 -- CORRIGIDO: seed de usuário passou a usar criado_em.
--- CORRIGIDO (02-08-2026, achado do Lucas testando o painel admin): os 17
+-- CORRIGIDO (02-08-2026, achado do Lucas testando o painel admin): os
 -- senha_hash abaixo eram placeholders FALSOS (tipo '$2b$12$hashed_ana001'),
 -- nunca gerados pelo bcrypt de verdade — ou seja, NENHUM usuário do seed
 -- conseguia logar, nem sabendo a senha certa, porque não existia senha
 -- nenhuma por trás. Trocado por um hash bcrypt de verdade (custo 10, igual
 -- CUSTO_BCRYPT em usuario.service.create.ts/update.ts), o MESMO pra
--- TODOS os 17 — só pra dev/seed, nunca em produção:
+-- TODOS — só pra dev/seed, nunca em produção:
 --   senha de todo mundo no seed = DevTcc123!
 -- Gerado com `bcrypt.hash('DevTcc123!', 10)` e conferido com
 -- `bcrypt.compare()` antes de entrar aqui. Serve pra logar como qualquer
 -- papel (admin, moderador, pesquisador, usuario comum etc.) só trocando o
 -- e-mail — ver a lista de e-mail/papel logo abaixo, em usuario_papel.
+--
+-- REORGANIZADO (07-08-2026, pedido do Lucas: "queria ver admin com o id
+-- 1"): ordem agora é por poder (admin -> moderador -> revisor -> suporte
+-- -> curador -> pesquisador -> usuario), igual já foi feito em `papel`
+-- (03-08-2026). De quebra, corrige uma inconsistência que já existia no
+-- arquivo: Admin estava na 1ª posição aqui, mas usuario_papel/perfil_
+-- pesquisador/campanha/etc. (mais abaixo) ainda assumiam a ordem ANTIGA
+-- (Ana=1...Admin=8) — um resquício de reorganização parcial de antes desta
+-- sessão, nunca propagada pro resto do arquivo. Esta rodada corrigiu TODOS
+-- os IDs numéricos do arquivo pra baterem com a ordem nova.
+--
+-- NOVO (07-08-2026, pedido do Lucas): "Admin Sistema 2" — segundo admin de
+-- teste, pra sempre ter um admin de reserva se o primeiro fizer alguma
+-- besteira só outro admin consegue desfazer. E 5 contas "Sistema" (uma por
+-- papel, além de admin) — testes rápidos e intuitivos, sem nome de gente,
+-- pra somar ao <dev> "Entrar como" (dev-login-rapido.jsx).
 INSERT INTO usuario (nome, email, senha_hash, id_imagem_perfil, criado_em) VALUES
+('Admin Sistema',          'admin@crowdacademico.com.br',            '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-01-01 00:00:00'),
+('Admin Sistema 2',        'admin2@crowdacademico.com.br',           '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-01-01 00:00:01'),
+('Moderador Sistema',      'moderador@crowdacademico.com.br',        '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-01-01 00:00:02'),
+('Revisor Sistema',        'revisor@crowdacademico.com.br',          '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-01-01 00:00:03'),
+('Suporte Sistema',        'suporte.sistema@crowdacademico.com.br',  '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-01-01 00:00:04'),
+('Curador Sistema',        'curador@crowdacademico.com.br',          '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-01-01 00:00:05'),
+('Pesquisador Sistema',    'pesquisador@crowdacademico.com.br',      '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-01-01 00:00:06'),
+
+('Diego Martins Alves',   'diego.martins@crowdacademico.com.br', '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-01-05 09:00:00'), -- moderador
+('Camila Nunes Barros',   'camila.nunes@crowdacademico.com.br',  '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-01-05 09:00:00'), -- revisor
+('Thiago Almeida Rocha',  'thiago.almeida@crowdacademico.com.br','$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-01-05 09:00:00'), -- curador
+('Larissa Pinto Gomes',   'larissa.pinto@crowdacademico.com.br', '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-01-05 09:00:00'), -- suporte
+
 ('Ana Beatriz Santos',    'ana.santos@usp.br',          '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG',    1, '2024-01-10 09:00:00'),
 ('Carlos Eduardo Melo',   'carlos.melo@unicamp.br',     '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', 2, '2024-01-15 10:30:00'),
 ('Beatriz Lima Alves',    'beatriz.lima@ufmg.br',       '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG',    3, '2024-02-01 08:45:00'),
@@ -559,42 +588,50 @@ INSERT INTO usuario (nome, email, senha_hash, id_imagem_perfil, criado_em) VALUE
 ('Juliana Ferreira Paz',  'juliana.ferreira@ufsc.br',   '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG',    5, '2024-03-05 11:20:00'),
 ('Marcos Oliveira Ramos', 'marcos.oliveira@unesp.br',   '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG',    6, '2024-03-12 16:00:00'),
 ('Patrícia Rocha Silva',  'patricia.rocha@unifesp.br',  '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG',    7, '2024-04-01 09:30:00'),
-('Admin Sistema',         'admin@crowdacademico.com.br','$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG',  NULL,'2024-01-01 00:00:00'),
-('Fernanda Souza Lima',   'fernanda.souza@gmail.com',            '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-04-10 10:00:00'), -- usuario comum (apoiador, nunca virou pesquisador)
-('Diego Martins Alves',   'diego.martins@crowdacademico.com.br', '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-01-05 09:00:00'), -- moderador
-('Camila Nunes Barros',   'camila.nunes@crowdacademico.com.br',  '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-01-05 09:00:00'), -- revisor
-('Thiago Almeida Rocha',  'thiago.almeida@crowdacademico.com.br','$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-01-05 09:00:00'), -- curador
-('Larissa Pinto Gomes',   'larissa.pinto@crowdacademico.com.br', '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-01-05 09:00:00'), -- suporte
+-- Continuam pesquisadores (confirmado com o Lucas, 07-08-2026): já têm um
+-- "laboratório de teste" inteiro montado (perfil, campanha, denúncias,
+-- links) desenhado pra cobrir as 4 faixas de score_rotulo — virar "usuario
+-- comum" apagaria tudo isso. Só a posição/ID mudou, pra ficarem agrupados
+-- com o resto dos pesquisadores.
 ('Bruno Tavares Costa',    'bruno.tavares@ufrgs.br',    '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-05-20 09:00:00'),
 ('Renata Vasconcelos Dias','renata.vasconcelos@ufpr.br','$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-05-22 09:00:00'),
 ('Eduardo Barbosa Nogueira','eduardo.barbosa@ufba.br',  '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-05-25 09:00:00'),
-('Vinícius Almeida Ferraz','vinicius.ferraz@ufc.br',    '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-05-28 09:00:00');
+('Vinícius Almeida Ferraz','vinicius.ferraz@ufc.br',    '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-05-28 09:00:00'),
+
+('Fernanda Souza Lima',   'fernanda.souza@gmail.com',            '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-04-10 10:00:00'); -- usuario comum (apoiador, nunca virou pesquisador)
 
 
 -- [07-D-2] usuario_papel
 -- id_usuario é fixo (tabela usuario está vazia antes deste seed, então
--- os IDs 1-8 abaixo batem com a ordem de inserção acima). id_papel é
--- resolvido por nome pelo mesmo motivo do bloco [07-B-3].
+-- os IDs abaixo batem com a ordem de inserção acima, atualizada
+-- 07-08-2026 — ver comentário completo em [07-D-1]). id_papel é resolvido
+-- por nome pelo mesmo motivo do bloco [07-B-3].
 INSERT INTO usuario_papel (id_usuario, id_papel)
 SELECT v.id_usuario, p.id_papel
 FROM (VALUES
-    (1, 'pesquisador'), -- Ana
-    (2, 'pesquisador'), -- Carlos
-    (3, 'pesquisador'), -- Beatriz
-    (4, 'pesquisador'), -- Rafael
-    (5, 'pesquisador'), -- Juliana
-    (6, 'pesquisador'), -- Marcos
-    (7, 'pesquisador'), -- Patrícia
-    (8, 'admin'),       -- Admin
-    (9, 'usuario'),     -- Fernanda (apoiador comum)
-    (10, 'moderador'),  -- Diego
-    (11, 'revisor'),    -- Camila
-    (12, 'curador'),    -- Thiago
-    (13, 'suporte'),    -- Larissa
-    (14, 'pesquisador'), -- Bruno
-    (15, 'pesquisador'), -- Renata
-    (16, 'pesquisador'), -- Eduardo
-    (17, 'pesquisador')  -- Vinícius
+    (1, 'admin'),        -- Admin Sistema
+    (2, 'admin'),        -- Admin Sistema 2
+    (3, 'moderador'),    -- Moderador Sistema
+    (4, 'revisor'),      -- Revisor Sistema
+    (5, 'suporte'),      -- Suporte Sistema
+    (6, 'curador'),      -- Curador Sistema
+    (7, 'pesquisador'),  -- Pesquisador Sistema
+    (8, 'moderador'),    -- Diego
+    (9, 'revisor'),      -- Camila
+    (10, 'curador'),     -- Thiago
+    (11, 'suporte'),     -- Larissa
+    (12, 'pesquisador'), -- Ana
+    (13, 'pesquisador'), -- Carlos
+    (14, 'pesquisador'), -- Beatriz
+    (15, 'pesquisador'), -- Rafael
+    (16, 'pesquisador'), -- Juliana
+    (17, 'pesquisador'), -- Marcos
+    (18, 'pesquisador'), -- Patrícia
+    (19, 'pesquisador'), -- Bruno
+    (20, 'pesquisador'), -- Renata
+    (21, 'pesquisador'), -- Eduardo
+    (22, 'pesquisador'), -- Vinícius
+    (23, 'usuario')      -- Fernanda (apoiador comum)
 ) AS v(id_usuario, papel_nome)
 JOIN papel p ON p.nome = v.papel_nome
 ON CONFLICT DO NOTHING;
@@ -604,7 +641,7 @@ ON CONFLICT DO NOTHING;
 -- ADICIONADO (27-07-2026): as duas estavam vazias, e sustentam o RF-011 (aceite
 -- obrigatório no cadastro) — o texto real dos termos entra depois, quando a
 -- equipe/jurídico definir, o que faltava era a estrutura de dados existir.
--- v1 é a versão vigente durante todo o período em que os 17 usuários deste seed
+-- v1 é a versão vigente durante todo o período em que os usuários deste seed
 -- se cadastraram (por isso é ela que aparece em usuario_termo, abaixo). v2 é a
 -- versão atual — publicada depois, ainda sem nenhum aceite registrado, cenário
 -- realista de "termo novo no ar, usuários antigos ainda não foram re-avisados".
@@ -621,7 +658,7 @@ UPDATE termos_de_uso SET ativo = FALSE WHERE versao = 'v1-2024-01-01';
 INSERT INTO termos_de_uso (versao, conteudo, ativo, criado_em) VALUES
 ('v2-2025-01-01', '[PLACEHOLDER] Texto dos Termos de Uso e Política de Privacidade — versão 2 (revisão anual). Conteúdo jurídico definitivo entra aqui quando a equipe/jurídico validar.', TRUE, '2025-01-01 00:00:00');
 
--- Todos os 17 usuários aceitaram a v1 no próprio cadastro (aceito_em = pouco
+-- Todos os usuários aceitaram a v1 no próprio cadastro (aceito_em = pouco
 -- depois de usuario.criado_em) — nenhum ainda re-aceitou a v2, propositalmente.
 INSERT INTO usuario_termo (id_usuario, id_termo, aceito_em, ip_aceite)
 SELECT id_usuario, 1, criado_em + INTERVAL '2 minutes', '187.10.20.30'
@@ -697,7 +734,7 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo) VAL
 -- funcionar). Duas ganharam comentário explicando quem lê (NestJS, não o banco); duas
 -- saíram do seed — ver motivo em cada uma, abaixo de onde estavam.
 (NULL, 'email_suporte',              'suporte@crowdacademico.com.br', 'texto', 'E-mail de suporte ao usuário',   TRUE), -- lida pelo NestJS (rodapé/e-mails transacionais), não pelo banco — nenhum .sql precisa dela
-(8,   'notificar_novas_campanhas',   'true',  'booleano', 'Admin recebe e-mail sobre novas campanhas',            TRUE); -- lida pelo worker de notificação do NestJS, não pelo banco — nenhuma trigger/função a consulta
+(1,   'notificar_novas_campanhas',   'true',  'booleano', 'Admin recebe e-mail sobre novas campanhas',            TRUE); -- lida pelo worker de notificação do NestJS, não pelo banco — nenhuma trigger/função a consulta
 -- REMOVIDA (era 'permitir_campanha_anonima', booleano, default 'false'): não fazia
 -- sentido no modelo atual — campanha.id_usuario é NOT NULL (01), toda campanha SEMPRE
 -- tem um pesquisador identificado, é o que a curadoria (RF-068/069) exige. Contribuição
@@ -732,22 +769,22 @@ ON CONFLICT (chave) DO NOTHING;
 -- score de cada um agora é 100% produto dos dados reais inseridos nos blocos abaixo
 -- (link_academico, campanha, atualizacao_campanha, denuncia), não de um número fixo aqui.
 INSERT INTO perfil_pesquisador (id_usuario, cpf_criptografado, vinculo_institucional, titulo_academico, status_pesquisador, ativado_em) VALUES
-(1, 'enc_cpf_001', 'Universidade de São Paulo (USP)',                   'doutor',     'ativo', '2024-01-10 09:05:00'),
-(2, 'enc_cpf_002', 'Universidade Estadual de Campinas (UNICAMP)',       'mestre',      'ativo', '2024-01-15 10:35:00'),
-(3, 'enc_cpf_003', 'Universidade Federal de Minas Gerais (UFMG)',       'doutor',      'ativo', '2024-02-01 08:50:00'),
-(4, 'enc_cpf_004', 'Universidade Federal do Rio de Janeiro (UFRJ)',     'especialista','ativo', '2024-02-10 14:10:00'),
-(5, 'enc_cpf_005', 'Universidade Federal de Santa Catarina (UFSC)',     'mestre',      'ativo', '2024-03-05 11:25:00'),
-(6, 'enc_cpf_006', 'Universidade Estadual Paulista (UNESP)',            'graduado',    'ativo', '2024-03-12 16:05:00'),
-(7, 'enc_cpf_007', 'Universidade Federal de São Paulo (UNIFESP)',       'doutor',      'ativo', '2024-04-01 09:35:00'),
+(12, 'enc_cpf_001', 'Universidade de São Paulo (USP)',                   'doutor',     'ativo', '2024-01-10 09:05:00'),
+(13, 'enc_cpf_002', 'Universidade Estadual de Campinas (UNICAMP)',       'mestre',      'ativo', '2024-01-15 10:35:00'),
+(14, 'enc_cpf_003', 'Universidade Federal de Minas Gerais (UFMG)',       'doutor',      'ativo', '2024-02-01 08:50:00'),
+(15, 'enc_cpf_004', 'Universidade Federal do Rio de Janeiro (UFRJ)',     'especialista','ativo', '2024-02-10 14:10:00'),
+(16, 'enc_cpf_005', 'Universidade Federal de Santa Catarina (UFSC)',     'mestre',      'ativo', '2024-03-05 11:25:00'),
+(17, 'enc_cpf_006', 'Universidade Estadual Paulista (UNESP)',            'graduado',    'ativo', '2024-03-12 16:05:00'),
+(18, 'enc_cpf_007', 'Universidade Federal de São Paulo (UNIFESP)',       'doutor',      'ativo', '2024-04-01 09:35:00'),
 -- ADICIONADO: 4 pesquisadores novos, desenhados de propósito pra cobrir as 4 faixas de
 -- score_rotulo (Atenção/Em Construção/Confiável/Referência) de forma DETERMINÍSTICA —
 -- ou seja, o resultado depende só da fórmula real em 05_regras_negocio.sql, não de sorte.
 -- Ver comentário completo logo depois do bloco de denuncia sobre como cada um chega
 -- na faixa esperada.
-(14, 'enc_cpf_014', 'Universidade Federal do Rio Grande do Sul (UFRGS)', 'doutor',   'ativo', '2024-05-20 09:00:00'), -- Bruno:    alvo = Referência
-(15, 'enc_cpf_015', 'Universidade Federal do Paraná (UFPR)',             'mestre',   'ativo', '2024-05-22 09:00:00'), -- Renata:   alvo = Confiável
-(16, 'enc_cpf_016', 'Universidade Federal da Bahia (UFBA)',              'mestre',   'ativo', '2024-05-25 09:00:00'), -- Eduardo:  alvo = Em Construção
-(17, 'enc_cpf_017', 'Universidade Federal do Ceará (UFC)',               'graduado', 'ativo', '2024-05-28 09:00:00'); -- Vinícius: alvo = Atenção
+(19, 'enc_cpf_014', 'Universidade Federal do Rio Grande do Sul (UFRGS)', 'doutor',   'ativo', '2024-05-20 09:00:00'), -- Bruno:    alvo = Referência
+(20, 'enc_cpf_015', 'Universidade Federal do Paraná (UFPR)',             'mestre',   'ativo', '2024-05-22 09:00:00'), -- Renata:   alvo = Confiável
+(21, 'enc_cpf_016', 'Universidade Federal da Bahia (UFBA)',              'mestre',   'ativo', '2024-05-25 09:00:00'), -- Eduardo:  alvo = Em Construção
+(22, 'enc_cpf_017', 'Universidade Federal do Ceará (UFC)',               'graduado', 'ativo', '2024-05-28 09:00:00'); -- Vinícius: alvo = Atenção
 
 
 -- [07-F-1] link_academico
@@ -761,16 +798,16 @@ INSERT INTO perfil_pesquisador (id_usuario, cpf_criptografado, vinculo_instituci
 INSERT INTO link_academico (id_usuario, id_tipolink, ordem, url)
 SELECT v.id_usuario, tl.id_tipolink, v.ordem, v.url
 FROM (VALUES
-    (1, 'LATTES',       1, 'http://lattes.cnpq.br/1234567890123456'),
-    (1, 'ORCID',        2, 'https://orcid.org/0000-0001-2345-6789'),
-    (2, 'LATTES',       1, 'http://lattes.cnpq.br/9876543210987654'),
-    (3, 'LATTES',       1, 'http://lattes.cnpq.br/1111222233334444'),
+    (12, 'LATTES',      1, 'http://lattes.cnpq.br/1234567890123456'),
+    (12, 'ORCID',       2, 'https://orcid.org/0000-0001-2345-6789'),
+    (13, 'LATTES',      1, 'http://lattes.cnpq.br/9876543210987654'),
+    (14, 'LATTES',      1, 'http://lattes.cnpq.br/1111222233334444'),
     -- CORRIGIDO: era LinkedIn, mas a URL sempre foi do ResearchGate.
-    (5, 'RESEARCHGATE', 1, 'https://www.researchgate.net/profile/Juliana-Ferreira-Paz'),
-    (7, 'ORCID',        1, 'https://orcid.org/0000-0002-9876-5432'),
-    (14, 'LATTES',      1, 'http://lattes.cnpq.br/1122334455667788'),
-    (14, 'ORCID',       2, 'https://orcid.org/0000-0003-1234-5678'),
-    (14, 'LINKEDIN',    3, 'https://www.linkedin.com/in/bruno-tavares-costa')
+    (16, 'RESEARCHGATE', 1, 'https://www.researchgate.net/profile/Juliana-Ferreira-Paz'),
+    (18, 'ORCID',       1, 'https://orcid.org/0000-0002-9876-5432'),
+    (19, 'LATTES',      1, 'http://lattes.cnpq.br/1122334455667788'),
+    (19, 'ORCID',       2, 'https://orcid.org/0000-0003-1234-5678'),
+    (19, 'LINKEDIN',    3, 'https://www.linkedin.com/in/bruno-tavares-costa')
 ) AS v(id_usuario, tipolink_codigo, ordem, url)
 JOIN tipo_link tl ON tl.codigo = v.tipolink_codigo;
 
@@ -801,43 +838,43 @@ ALTER TABLE campanha DISABLE TRIGGER trg_campanha_valida_prazo_negocio;
 -- solicitacao_encerramento correspondente ([07-E-5]) — o momento em que o
 -- encerramento foi de fato decidido.
 INSERT INTO campanha (id_usuario, id_admin, id_area_conhecimento, titulo, modelo, meta_financeira, taxa_plataforma, descricao, data_inicio, data_fim, status, aprovado_em, criado_em, encerrado_em) VALUES
-(1, 8, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '1.03.00.00'), 'Desenvolvimento de Algoritmo para Diagnóstico Precoce de Alzheimer por IA',      'all-or-nothing', 50000.00, 5.00, 'Pesquisa aplicada em inteligência artificial para detecção precoce da doença de Alzheimer usando redes neurais convolucionais.',                          '2024-02-01', '2024-04-01', 'sucesso',             '2024-02-01', '2024-01-20 10:00:00', NULL),
-(2, 8, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '3.13.00.00'), 'Prótese de Baixo Custo com Impressão 3D para Amputados do SUS',                  'flexivel',       35000.00, 5.00, 'Projeto de engenharia biomédica para fabricação de próteses funcionais de membros superiores a custo acessível para o sistema público.',                '2024-02-15', '2024-05-01', 'sucesso',             '2024-02-15', '2024-02-05 11:30:00', NULL),
-(3, 8, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '2.12.00.00'), 'Bioprospecção de Fungos da Caatinga com Potencial Antibiótico',                  'all-or-nothing', 40000.00, 5.00, 'Coleta e análise de fungos endofíticos da Caatinga para identificação de compostos com atividade antibacteriana frente a superbactérias.',              '2024-03-01', '2024-05-30', 'sucesso',             '2024-03-01', '2024-02-20 09:15:00', NULL),
-(4, 8, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '4.06.00.00'), 'Estudo Epidemiológico do Impacto da Dengue na Baixada Fluminense 2024',          'all-or-nothing', 25000.00, 5.00, 'Levantamento epidemiológico detalhado dos casos de dengue em municípios da Baixada Fluminense durante o surto de 2024.',                                 '2024-03-10', '2024-04-24', 'nao_atingido',        '2024-03-10', '2024-03-01 14:00:00', NULL),
-(5, 8, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '6.06.00.00'), 'Mapeamento Socioeconômico de Comunidades Quilombolas de Santa Catarina',         'flexivel',       30000.00, 5.00, 'Pesquisa quantitativa e qualitativa sobre indicadores socioeconômicos, acesso a direitos e identidade cultural em quilombos catarinenses.',              '2024-04-01', '2024-06-01', 'sucesso',             '2024-04-01', '2024-03-20 08:00:00', NULL),
-(6, NULL, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '7.02.00.00'), 'Análise Discursiva das Fake News sobre Vacinas no Twitter (2022–2024)',       'all-or-nothing', 15000.00, 5.00, 'Estudo linguístico-computacional sobre estratégias discursivas de desinformação vacinal em redes sociais brasileiras.',                                  NULL,          NULL,         'aguardando_aprovacao', NULL,        '2025-04-10 16:00:00', NULL),
-(7, 8, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '4.01.00.00'), 'Eficácia de Probióticos na Redução de Infecções Hospitalares em UTI Neonatal',  'all-or-nothing', 45000.00, 5.00, 'Ensaio clínico randomizado avaliando o uso de probióticos na microbiota intestinal de neonatos para prevenção de sepse hospitalar.',                    '2024-05-01', '2024-07-30', 'encerrado',           '2024-05-01', '2024-04-15 10:00:00', '2024-08-06 11:00:00'),
+(12, 1, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '1.03.00.00'), 'Desenvolvimento de Algoritmo para Diagnóstico Precoce de Alzheimer por IA',      'all-or-nothing', 50000.00, 5.00, 'Pesquisa aplicada em inteligência artificial para detecção precoce da doença de Alzheimer usando redes neurais convolucionais.',                          '2024-02-01', '2024-04-01', 'sucesso',             '2024-02-01', '2024-01-20 10:00:00', NULL),
+(13, 1, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '3.13.00.00'), 'Prótese de Baixo Custo com Impressão 3D para Amputados do SUS',                  'flexivel',       35000.00, 5.00, 'Projeto de engenharia biomédica para fabricação de próteses funcionais de membros superiores a custo acessível para o sistema público.',                '2024-02-15', '2024-05-01', 'sucesso',             '2024-02-15', '2024-02-05 11:30:00', NULL),
+(14, 1, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '2.12.00.00'), 'Bioprospecção de Fungos da Caatinga com Potencial Antibiótico',                  'all-or-nothing', 40000.00, 5.00, 'Coleta e análise de fungos endofíticos da Caatinga para identificação de compostos com atividade antibacteriana frente a superbactérias.',              '2024-03-01', '2024-05-30', 'sucesso',             '2024-03-01', '2024-02-20 09:15:00', NULL),
+(15, 1, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '4.06.00.00'), 'Estudo Epidemiológico do Impacto da Dengue na Baixada Fluminense 2024',          'all-or-nothing', 25000.00, 5.00, 'Levantamento epidemiológico detalhado dos casos de dengue em municípios da Baixada Fluminense durante o surto de 2024.',                                 '2024-03-10', '2024-04-24', 'nao_atingido',        '2024-03-10', '2024-03-01 14:00:00', NULL),
+(16, 1, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '6.06.00.00'), 'Mapeamento Socioeconômico de Comunidades Quilombolas de Santa Catarina',         'flexivel',       30000.00, 5.00, 'Pesquisa quantitativa e qualitativa sobre indicadores socioeconômicos, acesso a direitos e identidade cultural em quilombos catarinenses.',              '2024-04-01', '2024-06-01', 'sucesso',             '2024-04-01', '2024-03-20 08:00:00', NULL),
+(17, NULL, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '7.02.00.00'), 'Análise Discursiva das Fake News sobre Vacinas no Twitter (2022–2024)',       'all-or-nothing', 15000.00, 5.00, 'Estudo linguístico-computacional sobre estratégias discursivas de desinformação vacinal em redes sociais brasileiras.',                                  NULL,          NULL,         'aguardando_aprovacao', NULL,        '2025-04-10 16:00:00', NULL),
+(18, 1, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '4.01.00.00'), 'Eficácia de Probióticos na Redução de Infecções Hospitalares em UTI Neonatal',  'all-or-nothing', 45000.00, 5.00, 'Ensaio clínico randomizado avaliando o uso de probióticos na microbiota intestinal de neonatos para prevenção de sepse hospitalar.',                    '2024-05-01', '2024-07-30', 'encerrado',           '2024-05-01', '2024-04-15 10:00:00', '2024-08-06 11:00:00'),
 -- ADICIONADO: 3 campanhas novas (ids 8, 9, 10 nesta ordem de inserção), uma para cada
 -- pesquisador novo que precisa de histórico real — ver o comentário completo depois do
 -- bloco de denuncia sobre por que cada uma dá o resultado de score esperado.
-(14, 8, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '1.03.00.00'), 'Nova Plataforma de Diagnóstico por Imagem com Machine Learning',              'all-or-nothing', 30000.00, 5.00, 'Sistema de apoio ao diagnóstico radiológico baseado em visão computacional, validado com dados de dois hospitais universitários.',                      '2024-06-01', '2024-07-16', 'sucesso',             '2024-06-01', '2024-05-20 10:00:00', NULL),
-(15, 8, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '4.05.00.00'), 'Estudo sobre Microbiota Intestinal em Pacientes Oncológicos',                 'flexivel',       20000.00, 5.00, 'Caracterização da microbiota intestinal e sua relação com resposta a quimioterapia em pacientes com câncer colorretal.',                                '2024-06-01', '2024-07-21', 'sucesso',             '2024-06-01', '2024-05-22 09:30:00', NULL),
-(16, 8, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '2.05.00.00'), 'Levantamento de Espécies Invasoras em Ecossistemas Costeiros',                'all-or-nothing', 25000.00, 5.00, 'Mapeamento de espécies exóticas invasoras em restingas e manguezais do litoral nordestino e seu impacto na fauna nativa.',                              '2024-06-01', '2024-08-20', 'ativo',               '2024-06-01', '2024-05-25 08:30:00', NULL);
+(19, 1, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '1.03.00.00'), 'Nova Plataforma de Diagnóstico por Imagem com Machine Learning',              'all-or-nothing', 30000.00, 5.00, 'Sistema de apoio ao diagnóstico radiológico baseado em visão computacional, validado com dados de dois hospitais universitários.',                      '2024-06-01', '2024-07-16', 'sucesso',             '2024-06-01', '2024-05-20 10:00:00', NULL),
+(20, 1, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '4.05.00.00'), 'Estudo sobre Microbiota Intestinal em Pacientes Oncológicos',                 'flexivel',       20000.00, 5.00, 'Caracterização da microbiota intestinal e sua relação com resposta a quimioterapia em pacientes com câncer colorretal.',                                '2024-06-01', '2024-07-21', 'sucesso',             '2024-06-01', '2024-05-22 09:30:00', NULL),
+(21, 1, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '2.05.00.00'), 'Levantamento de Espécies Invasoras em Ecossistemas Costeiros',                'all-or-nothing', 25000.00, 5.00, 'Mapeamento de espécies exóticas invasoras em restingas e manguezais do litoral nordestino e seu impacto na fauna nativa.',                              '2024-06-01', '2024-08-20', 'ativo',               '2024-06-01', '2024-05-25 08:30:00', NULL);
 
 ALTER TABLE campanha ENABLE TRIGGER trg_campanha_valida_prazo_negocio;
 
 
 -- [07-E-2] seguir_campanha
 INSERT INTO seguir_campanha (id_usuario, id_campanha) VALUES
-(2, 1),
-(3, 1),
-(4, 2),
-(5, 3),
-(6, 3),
-(7, 5),
-(1, 7);
+(13, 1),
+(14, 1),
+(15, 2),
+(16, 3),
+(17, 3),
+(18, 5),
+(12, 7);
 
 
 -- [07-D-4] seguir_pesquisador
 INSERT INTO seguir_pesquisador (id_usuario, id_pesquisador) VALUES
-(2, 1),
-(3, 1),
-(4, 3),
-(5, 2),
-(6, 7),
-(7, 3),
-(1, 5);
+(13, 12),
+(14, 12),
+(15, 14),
+(16, 13),
+(17, 18),
+(18, 14),
+(12, 16);
 
 
 -- [07-H-1] contribuicao
@@ -858,18 +895,18 @@ ALTER TABLE contribuicao DISABLE TRIGGER trg_contribuicao_all_or_nothing_pix;
 -- durante a carga. Trocadas pra pix; não afeta o cálculo de score (que usa o status
 -- da campanha, não o meio de pagamento da contribuição).
 INSERT INTO contribuicao (id_campanha, id_usuario, valor, meio_pagamento, status, anonima, id_transacao_api, criado_em) VALUES
-(1, 2, 5000.00, 'pix', 'repassado',  FALSE, 'TXN-PIX-0001', '2024-02-10 10:00:00'),
-(1, 3, 2300.00, 'pix', 'repassado',  FALSE, 'TXN-PIX-0002', '2024-02-12 14:30:00'), -- (*) era cartao_credito
-(2, 1, 1500.00, 'pix', 'repassado',  TRUE,  'TXN-PIX-0003', '2024-02-20 09:00:00'),
-(3, 5, 8000.00, 'pix', 'repassado',  FALSE, 'TXN-PIX-0004', '2024-03-05 11:00:00'), -- (*) era boleto
-(5, 4, 2200.00, 'cartao_debito',  'repassado',  FALSE, 'TXN-CD-0005',  '2024-04-10 15:00:00'),
-(7, 6,  500.00, 'pix',            'repassado',  TRUE,  'TXN-PIX-0006', '2024-05-10 08:00:00'),
-(4, 7,  800.00, 'pix', 'a_devolver', FALSE, 'TXN-PIX-0007', '2024-03-15 12:00:00'), -- (*) era cartao_credito
+(1, 13, 5000.00, 'pix', 'repassado',  FALSE, 'TXN-PIX-0001', '2024-02-10 10:00:00'),
+(1, 14, 2300.00, 'pix', 'repassado',  FALSE, 'TXN-PIX-0002', '2024-02-12 14:30:00'), -- (*) era cartao_credito
+(2, 12, 1500.00, 'pix', 'repassado',  TRUE,  'TXN-PIX-0003', '2024-02-20 09:00:00'),
+(3, 16, 8000.00, 'pix', 'repassado',  FALSE, 'TXN-PIX-0004', '2024-03-05 11:00:00'), -- (*) era boleto
+(5, 15, 2200.00, 'cartao_debito',  'repassado',  FALSE, 'TXN-CD-0005',  '2024-04-10 15:00:00'),
+(7, 17,  500.00, 'pix',            'repassado',  TRUE,  'TXN-PIX-0006', '2024-05-10 08:00:00'),
+(4, 18,  800.00, 'pix', 'a_devolver', FALSE, 'TXN-PIX-0007', '2024-03-15 12:00:00'), -- (*) era cartao_credito
 -- ADICIONADO: contribuições de usuários com papéis diferentes de 'pesquisador',
 -- pra mostrar que qualquer usuário logado pode apoiar campanha, não só pesquisadores.
-(3, 9,  50.00,  'pix',            'repassado',  FALSE, 'TXN-PIX-0008', '2024-02-25 09:00:00'), -- Fernanda, usuario comum, contribuição pública
-(1, 10, 300.00, 'pix', 'repassado',  TRUE,  'TXN-PIX-0009',  '2024-02-28 10:00:00'), -- (*) era cartao_credito. Diego, moderador, contribuição anônima (anonima=TRUE mas id_usuario preservado p/ auditoria)
-(5, 12, 150.00, 'pix',            'repassado',  FALSE, 'TXN-PIX-0010', '2024-04-12 09:00:00'), -- Thiago, curador, contribuição pública
+(3, 23,  50.00,  'pix',            'repassado',  FALSE, 'TXN-PIX-0008', '2024-02-25 09:00:00'), -- Fernanda, usuario comum, contribuição pública
+(1, 8, 300.00, 'pix', 'repassado',  TRUE,  'TXN-PIX-0009',  '2024-02-28 10:00:00'), -- (*) era cartao_credito. Diego, moderador, contribuição anônima (anonima=TRUE mas id_usuario preservado p/ auditoria)
+(5, 10, 150.00, 'pix',            'repassado',  FALSE, 'TXN-PIX-0010', '2024-04-12 09:00:00'), -- Thiago, curador, contribuição pública
 -- ADICIONADO: contribuição de verdade anônima — sem nenhum usuário vinculado
 -- (id_usuario NULL, coluna é nullable justamente pra cobrir doador sem conta/
 -- ON DELETE SET NULL). Diferente das linhas com anonima=TRUE acima, que só
@@ -881,60 +918,60 @@ INSERT INTO contribuicao (id_campanha, id_usuario, valor, meio_pagamento, status
 -- (ver comentário do [07-E-1]) — agora é a soma real dessas linhas, calculada
 -- pela trigger, que decide o total, não o contrário. Campanha 'all-or-nothing'
 -- só recebe pix; o resto pode usar qualquer meio de pagamento, igual antes.
-(1, 4,  15000.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0012', '2024-02-14 10:00:00'),
-(1, 5,  12000.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0013', '2024-02-16 11:00:00'),
-(1, 7,  10000.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0014', '2024-02-18 09:00:00'),
-(1, 9,   5000.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0015', '2024-03-01 14:00:00'),
-(1, 11,  2700.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0016', '2024-03-05 10:00:00'),
+(1, 15,  15000.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0012', '2024-02-14 10:00:00'),
+(1, 16,  12000.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0013', '2024-02-16 11:00:00'),
+(1, 18,  10000.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0014', '2024-02-18 09:00:00'),
+(1, 23,   5000.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0015', '2024-03-01 14:00:00'),
+(1, 9,  2700.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0016', '2024-03-05 10:00:00'),
 
-(2, 3,  8000.00, 'pix',            'repassado', FALSE, 'TXN-PIX-0017', '2024-03-10 10:00:00'),
-(2, 4,  7000.00, 'cartao_credito', 'repassado', FALSE, 'TXN-CC-0018',  '2024-03-15 11:00:00'),
-(2, 6,  6000.00, 'boleto',         'repassado', FALSE, 'TXN-BOL-0019', '2024-03-20 09:00:00'),
-(2, 9,  3925.00, 'pix',            'repassado', FALSE, 'TXN-PIX-0020', '2024-03-25 10:00:00'),
-(2, 13, 2000.00, 'cartao_debito',  'repassado', FALSE, 'TXN-CD-0021',  '2024-04-01 14:00:00'),
+(2, 14,  8000.00, 'pix',            'repassado', FALSE, 'TXN-PIX-0017', '2024-03-10 10:00:00'),
+(2, 15,  7000.00, 'cartao_credito', 'repassado', FALSE, 'TXN-CC-0018',  '2024-03-15 11:00:00'),
+(2, 17,  6000.00, 'boleto',         'repassado', FALSE, 'TXN-BOL-0019', '2024-03-20 09:00:00'),
+(2, 23,  3925.00, 'pix',            'repassado', FALSE, 'TXN-PIX-0020', '2024-03-25 10:00:00'),
+(2, 11, 2000.00, 'cartao_debito',  'repassado', FALSE, 'TXN-CD-0021',  '2024-04-01 14:00:00'),
 
-(3, 2,  12000.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0022', '2024-03-08 10:00:00'),
-(3, 4,   9000.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0023', '2024-03-12 11:00:00'),
-(3, 6,   6000.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0024', '2024-03-18 09:00:00'),
-(3, 7,   4950.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0025', '2024-03-22 10:00:00'),
+(3, 13,  12000.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0022', '2024-03-08 10:00:00'),
+(3, 15,   9000.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0023', '2024-03-12 11:00:00'),
+(3, 17,   6000.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0024', '2024-03-18 09:00:00'),
+(3, 18,   4950.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0025', '2024-03-22 10:00:00'),
 
 -- Campanha 4 (nao_atingido): estas 3 ficam 'confirmado', não 'repassado' — a
 -- campanha não bateu a meta, então nada foi repassado ao pesquisador. Junto com a
--- linha 'a_devolver' já existente acima (id_usuario=7), representam o instantâneo
+-- linha 'a_devolver' já existente acima (id_usuario=18), representam o instantâneo
 -- de quando a campanha foi marcada nao_atingido: uma parte já entrou no fluxo de
 -- devolução, o resto ainda esperando o processamento do reembolso em lote.
-(4, 1, 3000.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0026', '2024-03-12 10:00:00'),
-(4, 2, 2500.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0027', '2024-03-14 11:00:00'),
-(4, 3, 2500.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0028', '2024-03-16 09:00:00'),
+(4, 12, 3000.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0026', '2024-03-12 10:00:00'),
+(4, 13, 2500.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0027', '2024-03-14 11:00:00'),
+(4, 14, 2500.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0028', '2024-03-16 09:00:00'),
 
-(5, 1, 8000.00, 'pix',            'repassado', FALSE, 'TXN-PIX-0029', '2024-04-15 10:00:00'),
-(5, 6, 6000.00, 'cartao_credito', 'repassado', FALSE, 'TXN-CC-0030',  '2024-04-18 11:00:00'),
-(5, 7, 3000.00, 'boleto',         'repassado', FALSE, 'TXN-BOL-0031', '2024-04-22 09:00:00'),
-(5, 9, 2650.00, 'cartao_debito',  'repassado', FALSE, 'TXN-CD-0032',  '2024-04-25 10:00:00'),
+(5, 12, 8000.00, 'pix',            'repassado', FALSE, 'TXN-PIX-0029', '2024-04-15 10:00:00'),
+(5, 17, 6000.00, 'cartao_credito', 'repassado', FALSE, 'TXN-CC-0030',  '2024-04-18 11:00:00'),
+(5, 18, 3000.00, 'boleto',         'repassado', FALSE, 'TXN-BOL-0031', '2024-04-22 09:00:00'),
+(5, 23, 2650.00, 'cartao_debito',  'repassado', FALSE, 'TXN-CD-0032',  '2024-04-25 10:00:00'),
 
-(7, 1, 15000.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0033', '2024-05-15 10:00:00'),
-(7, 2, 12000.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0034', '2024-05-20 11:00:00'),
-(7, 4, 10000.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0035', '2024-05-25 09:00:00'),
-(7, 5,  7500.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0036', '2024-06-01 10:00:00'),
+(7, 12, 15000.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0033', '2024-05-15 10:00:00'),
+(7, 13, 12000.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0034', '2024-05-20 11:00:00'),
+(7, 15, 10000.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0035', '2024-05-25 09:00:00'),
+(7, 16,  7500.00, 'pix', 'repassado', FALSE, 'TXN-PIX-0036', '2024-06-01 10:00:00'),
 
 -- Campanhas 8 e 9 (sucesso, sem linha em repasse ainda — ver [07-E-4]): 'confirmado'
 -- em vez de 'repassado', pra não sugerir um repasse que ainda não foi registrado.
-(8, 1,  12000.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0037', '2024-06-05 10:00:00'),
-(8, 2,  10000.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0038', '2024-06-08 11:00:00'),
-(8, 3,   6000.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0039', '2024-06-12 09:00:00'),
-(8, 4,   4000.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0040', '2024-06-15 10:00:00'),
+(8, 12,  12000.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0037', '2024-06-05 10:00:00'),
+(8, 13,  10000.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0038', '2024-06-08 11:00:00'),
+(8, 14,   6000.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0039', '2024-06-12 09:00:00'),
+(8, 15,   4000.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0040', '2024-06-15 10:00:00'),
 
-(9, 5, 8000.00,  'pix',            'confirmado', FALSE, 'TXN-PIX-0041', '2024-06-05 10:00:00'),
-(9, 6, 6000.00,  'cartao_credito', 'confirmado', FALSE, 'TXN-CC-0042',  '2024-06-10 11:00:00'),
-(9, 7, 4000.00,  'boleto',         'confirmado', FALSE, 'TXN-BOL-0043', '2024-06-15 09:00:00'),
-(9, 9, 3000.00,  'cartao_debito',  'confirmado', FALSE, 'TXN-CD-0044',  '2024-06-20 10:00:00'),
+(9, 16, 8000.00,  'pix',            'confirmado', FALSE, 'TXN-PIX-0041', '2024-06-05 10:00:00'),
+(9, 17, 6000.00,  'cartao_credito', 'confirmado', FALSE, 'TXN-CC-0042',  '2024-06-10 11:00:00'),
+(9, 18, 4000.00,  'boleto',         'confirmado', FALSE, 'TXN-BOL-0043', '2024-06-15 09:00:00'),
+(9, 23, 3000.00,  'cartao_debito',  'confirmado', FALSE, 'TXN-CD-0044',  '2024-06-20 10:00:00'),
 
 -- Campanha 10 ('ativo', em andamento): 'confirmado', ainda não há repasse porque
 -- a campanha nem terminou.
-(10, 1, 3000.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0045', '2024-06-10 10:00:00'),
-(10, 2, 2500.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0046', '2024-06-15 11:00:00'),
-(10, 3, 2000.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0047', '2024-06-20 09:00:00'),
-(10, 4, 1500.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0048', '2024-06-25 10:00:00');
+(10, 12, 3000.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0045', '2024-06-10 10:00:00'),
+(10, 13, 2500.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0046', '2024-06-15 11:00:00'),
+(10, 14, 2000.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0047', '2024-06-20 09:00:00'),
+(10, 15, 1500.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0048', '2024-06-25 10:00:00');
 
 ALTER TABLE contribuicao ENABLE TRIGGER trg_valida_status_contribuicao;
 ALTER TABLE contribuicao ENABLE TRIGGER trg_contribuicao_all_or_nothing_pix;
@@ -1007,67 +1044,67 @@ ALTER TABLE repasse ENABLE TRIGGER trg_valida_repasse;
 
 -- [07-E-5] solicitacao_encerramento
 INSERT INTO solicitacao_encerramento (id_campanha, id_admin, justificativa_pesquisador, status, solicitado_em, avaliado_em) VALUES
-(7, 8,   'Todos os objetivos do ensaio clínico foram atingidos e resultados publicados. Solicito encerramento formal.', 'aprovado',  '2024-08-05 09:00:00', '2024-08-06 11:00:00'),
-(1, 8,   'Artigo publicado e resultados divulgados à comunidade. Encerrando ciclo da campanha.',                         'aprovado',  '2024-04-12 10:00:00', '2024-04-13 09:00:00'),
-(3, 8,   'Análises laboratoriais concluídas e relatório final entregue. Solicito encerramento.',                         'aprovado',  '2024-06-15 14:00:00', '2024-06-16 10:00:00'),
-(4, 8,   'Meta financeira não atingida. Solicitando encerramento e devolução de valores aos apoiadores.',                'aprovado',  '2024-04-25 00:00:00', '2024-04-25 08:00:00'),
-(5, 8,   'Relatório de pesquisa entregue à UFSC e comunidades. Encerrando formalmente a campanha.',                     'aprovado',  '2024-06-12 11:00:00', '2024-06-13 09:00:00'),
-(2, 8,   'Distribuição das próteses concluída. Solicito encerramento e repasse dos valores arrecadados.',               'aprovado',  '2024-05-12 08:00:00', '2024-05-13 10:00:00'),
+(7, 1,   'Todos os objetivos do ensaio clínico foram atingidos e resultados publicados. Solicito encerramento formal.', 'aprovado',  '2024-08-05 09:00:00', '2024-08-06 11:00:00'),
+(1, 1,   'Artigo publicado e resultados divulgados à comunidade. Encerrando ciclo da campanha.',                         'aprovado',  '2024-04-12 10:00:00', '2024-04-13 09:00:00'),
+(3, 1,   'Análises laboratoriais concluídas e relatório final entregue. Solicito encerramento.',                         'aprovado',  '2024-06-15 14:00:00', '2024-06-16 10:00:00'),
+(4, 1,   'Meta financeira não atingida. Solicitando encerramento e devolução de valores aos apoiadores.',                'aprovado',  '2024-04-25 00:00:00', '2024-04-25 08:00:00'),
+(5, 1,   'Relatório de pesquisa entregue à UFSC e comunidades. Encerrando formalmente a campanha.',                     'aprovado',  '2024-06-12 11:00:00', '2024-06-13 09:00:00'),
+(2, 1,   'Distribuição das próteses concluída. Solicito encerramento e repasse dos valores arrecadados.',               'aprovado',  '2024-05-12 08:00:00', '2024-05-13 10:00:00'),
 (6, NULL,'Desejo encerrar a campanha antes da aprovação por motivos pessoais de agenda.',                                'cancelado', '2025-04-15 12:00:00', NULL);
 
 
 -- [07-E-6] historico_rejeicao
 INSERT INTO historico_rejeicao (id_campanha, id_admin, justificativa, rejeitado_em) VALUES
-(4, 8, 'Campanha não apresentou metodologia clara nem parecer de comitê de ética em pesquisa.',               '2024-03-08 10:00:00'),
-(6, 8, 'Escopo da pesquisa não enquadrado como pesquisa acadêmica financiável pela plataforma.',              '2025-04-12 11:00:00'),
-(1, 8, 'Versão inicial sem descrição detalhada dos dados utilizados. Resubmissão solicitada.',                '2024-01-25 09:00:00'),
-(2, 8, 'Faltou anexar declaração institucional da UNICAMP. Campanha devolvida para ajuste.',                  '2024-02-08 14:00:00'),
-(3, 8, 'Meta financeira considerada excessiva sem justificativa de custos detalhada. Ajuste e reenvio.',      '2024-02-22 10:00:00'),
-(5, 8, 'Necessidade de inclusão de termo de consentimento das comunidades quilombolas no projeto.',           '2024-03-22 13:00:00'),
-(7, 8, 'Protocolo de ensaio clínico incompleto. Aprovação pelo CEP obrigatória antes de prosseguir.',        '2024-04-17 11:00:00');
+(4, 1, 'Campanha não apresentou metodologia clara nem parecer de comitê de ética em pesquisa.',               '2024-03-08 10:00:00'),
+(6, 1, 'Escopo da pesquisa não enquadrado como pesquisa acadêmica financiável pela plataforma.',              '2025-04-12 11:00:00'),
+(1, 1, 'Versão inicial sem descrição detalhada dos dados utilizados. Resubmissão solicitada.',                '2024-01-25 09:00:00'),
+(2, 1, 'Faltou anexar declaração institucional da UNICAMP. Campanha devolvida para ajuste.',                  '2024-02-08 14:00:00'),
+(3, 1, 'Meta financeira considerada excessiva sem justificativa de custos detalhada. Ajuste e reenvio.',      '2024-02-22 10:00:00'),
+(5, 1, 'Necessidade de inclusão de termo de consentimento das comunidades quilombolas no projeto.',           '2024-03-22 13:00:00'),
+(7, 1, 'Protocolo de ensaio clínico incompleto. Aprovação pelo CEP obrigatória antes de prosseguir.',        '2024-04-17 11:00:00');
 
 
 -- [07-E-7] comentario
 INSERT INTO comentario (id_campanha, id_pesquisador, conteudo, endossado, criado_em, ordem_endosso) VALUES
-(1, 2, 'Pesquisa extremamente relevante! A detecção precoce de Alzheimer pode mudar vidas. Apoio totalmente.',          TRUE,  '2024-02-15 10:00:00', 1),
-(1, 3, 'Parabéns pela metodologia robusta com redes neurais. Seria interessante publicar o dataset aberto.',            TRUE,  '2024-02-18 14:00:00', 2),
-(1, 7, 'Acompanhei cada etapa desta campanha. Exemplo de transparência e rigor científico.',                           TRUE,  '2024-04-12 13:00:00', 3),
-(2, 1, 'Iniciativa incrível de engenharia aplicada. A parceria com o SUS é essencial para o impacto real.',            FALSE, '2024-03-01 09:00:00', NULL),
-(3, 5, 'Bioprospecção da Caatinga é subutilizada. Fico feliz em ver investimento nessa área tão rica.',                TRUE,  '2024-03-10 11:00:00', 1),
-(5, 7, 'Estudo importantíssimo para as comunidades quilombolas. A metodologia participativa é um diferencial.',         FALSE, '2024-04-15 16:00:00', NULL),
-(7, 2, 'Ensaio clínico com resultado impressionante de 34% de redução de sepse. Esse trabalho merece publicação top.', TRUE,  '2024-09-05 10:00:00', 1);
+(1, 13, 'Pesquisa extremamente relevante! A detecção precoce de Alzheimer pode mudar vidas. Apoio totalmente.',          TRUE,  '2024-02-15 10:00:00', 1),
+(1, 14, 'Parabéns pela metodologia robusta com redes neurais. Seria interessante publicar o dataset aberto.',            TRUE,  '2024-02-18 14:00:00', 2),
+(1, 18, 'Acompanhei cada etapa desta campanha. Exemplo de transparência e rigor científico.',                           TRUE,  '2024-04-12 13:00:00', 3),
+(2, 12, 'Iniciativa incrível de engenharia aplicada. A parceria com o SUS é essencial para o impacto real.',            FALSE, '2024-03-01 09:00:00', NULL),
+(3, 16, 'Bioprospecção da Caatinga é subutilizada. Fico feliz em ver investimento nessa área tão rica.',                TRUE,  '2024-03-10 11:00:00', 1),
+(5, 18, 'Estudo importantíssimo para as comunidades quilombolas. A metodologia participativa é um diferencial.',         FALSE, '2024-04-15 16:00:00', NULL),
+(7, 13, 'Ensaio clínico com resultado impressionante de 34% de redução de sepse. Esse trabalho merece publicação top.', TRUE,  '2024-09-05 10:00:00', 1);
 
 
 -- [07-E-8] denuncia
 INSERT INTO denuncia (id_usuario, id_campanha_alvo, id_pesquisador_alvo, id_motivo, status, criado_em)
 SELECT v.id_usuario, v.id_campanha_alvo, v.id_pesquisador_alvo, md.id_motivo, v.status::status_denuncia, v.criado_em::timestamptz
 FROM (VALUES
-    (2, 6,    NULL::int, 'CAMP-001', 'improcedente', '2025-04-11 09:00:00'),
-    (3, NULL, 6,         'PERF-001', 'pendente',     '2025-04-12 10:00:00'),
-    (4, 4,    NULL,      'CAMP-001', 'resolvida',    '2024-03-16 11:00:00'),
-    (5, NULL, 4,         'PERF-002', 'em_analise',   '2024-03-20 14:00:00'),
-    (6, 2,    NULL,      'CAMP-002', 'improcedente', '2024-03-02 08:00:00'),
-    (7, NULL, 6,         'PERF-003', 'pendente',     '2025-04-13 15:00:00'),
-    (1, 6,    NULL,      'CAMP-004', 'pendente',     '2025-04-14 10:00:00'),
+    (13, 6,    NULL::int, 'CAMP-001', 'improcedente', '2025-04-11 09:00:00'),
+    (14, NULL, 17,        'PERF-001', 'pendente',     '2025-04-12 10:00:00'),
+    (15, 4,    NULL,      'CAMP-001', 'resolvida',    '2024-03-16 11:00:00'),
+    (16, NULL, 15,        'PERF-002', 'em_analise',   '2024-03-20 14:00:00'),
+    (17, 2,    NULL,      'CAMP-002', 'improcedente', '2024-03-02 08:00:00'),
+    (18, NULL, 17,        'PERF-003', 'pendente',     '2025-04-13 15:00:00'),
+    (12, 6,    NULL,      'CAMP-004', 'pendente',     '2025-04-14 10:00:00'),
     -- ADICIONADO: denúncias que alimentam de propósito a dimensão Reputação da
     -- Comunidade (calcular_score_reputacao, 05: 25 − total_denuncias×1 −
     -- total_procedentes×3) dos 2 pesquisadores novos que precisam de reputação
     -- imperfeita.
-    -- Eduardo (16): 2 denúncias 'pendente' (ainda não procedentes) — custam só 1
+    -- Eduardo (21): 2 denúncias 'pendente' (ainda não procedentes) — custam só 1
     -- ponto cada (25 → 23), o suficiente pra tirar um pouco de reputação sem zerar
     -- a dimensão, já que ele só precisa ficar em "Em Construção" (25-49), não em
     -- "Atenção".
-    (2,  NULL, 16, 'PERF-001', 'pendente',  '2024-06-10 09:00:00'),
-    (9,  NULL, 16, 'PERF-002', 'pendente',  '2024-06-12 10:00:00'),
-    -- Vinícius (17): 4 denúncias 'resolvida' (= procedente) de 4 denunciantes
+    (13, NULL, 21, 'PERF-001', 'pendente',  '2024-06-10 09:00:00'),
+    (23, NULL, 21, 'PERF-002', 'pendente',  '2024-06-12 10:00:00'),
+    -- Vinícius (22): 4 denúncias 'resolvida' (= procedente) de 4 denunciantes
     -- diferentes (a UNIQUE de denuncia é por par usuário/alvo, por isso não repito
     -- denunciante) — cada uma custa 1+3=4 pontos (25 → 9), derrubando a reputação
     -- o bastante pra, somada ao resto do perfil dele (sem link, sem campanha),
     -- garantir a faixa "Atenção" (0-24).
-    (1,  NULL, 17, 'PERF-001', 'resolvida', '2024-06-01 09:00:00'),
-    (4,  NULL, 17, 'PERF-002', 'resolvida', '2024-06-02 10:00:00'),
-    (11, NULL, 17, 'PERF-003', 'resolvida', '2024-06-03 11:00:00'),
-    (13, NULL, 17, 'PERF-001', 'resolvida', '2024-06-04 12:00:00')
+    (12, NULL, 22, 'PERF-001', 'resolvida', '2024-06-01 09:00:00'),
+    (15, NULL, 22, 'PERF-002', 'resolvida', '2024-06-02 10:00:00'),
+    (9,  NULL, 22, 'PERF-003', 'resolvida', '2024-06-03 11:00:00'),
+    (11, NULL, 22, 'PERF-001', 'resolvida', '2024-06-04 12:00:00')
 ) AS v(id_usuario, id_campanha_alvo, id_pesquisador_alvo, motivo_codigo, status, criado_em)
 JOIN motivo_denuncia md ON md.codigo = v.motivo_codigo;
 
@@ -1078,13 +1115,13 @@ JOIN motivo_denuncia md ON md.codigo = v.motivo_codigo;
 -- em PENDENCIAS e correcoes.md) e o índice idx_notificacao_status (02) — até
 -- aqui, nenhum dos dois nunca tinha rodado contra nenhuma linha real.
 INSERT INTO notificacao (id_usuario, email_destinatario, tipo_evento, status, tentativas, criado_em, enviado_em, ultimo_erro) VALUES
-(1, 'ana.santos@usp.br',           'campanha_aprovada',                  'enviado',  1, '2024-02-01 10:05:00', '2024-02-01 10:05:30', NULL),
-(2, 'carlos.melo@unicamp.br',      'doacao_recebida',                    'enviado',  1, '2024-02-10 10:00:30', '2024-02-10 10:01:00', NULL),
-(4, 'rafael.costa@ufrj.br',        'campanha_rejeitada',                 'pendente', 0, '2024-01-25 09:00:10', NULL,                   NULL),
-(6, 'marcos.oliveira@unesp.br',    'solicitacao_encerramento_aprovada',  'pendente', 0, '2024-05-13 10:00:05', NULL,                   NULL),
-(3, 'beatriz.lima@ufmg.br',        'denuncia_recebida_contra_perfil',    'falhou',   3, '2024-03-20 08:00:10', NULL,                   'SMTP timeout: gateway de e-mail não respondeu após 3 tentativas'),
-(9, 'fernanda.souza@gmail.com',    'doacao_confirmada',                  'falhou',   2, '2024-02-25 09:00:10', NULL,                   'Endereço de e-mail rejeitado pelo servidor de destino (550 mailbox not found)'),
-(5, 'juliana.ferreira@ufsc.br',    'campanha_proxima_do_prazo',          'cancelado',0, '2024-05-20 08:00:00', NULL,                   'Cancelada: campanha encerrada antes do envio programado');
+(12, 'ana.santos@usp.br',           'campanha_aprovada',                  'enviado',  1, '2024-02-01 10:05:00', '2024-02-01 10:05:30', NULL),
+(13, 'carlos.melo@unicamp.br',      'doacao_recebida',                    'enviado',  1, '2024-02-10 10:00:30', '2024-02-10 10:01:00', NULL),
+(15, 'rafael.costa@ufrj.br',        'campanha_rejeitada',                 'pendente', 0, '2024-01-25 09:00:10', NULL,                   NULL),
+(17, 'marcos.oliveira@unesp.br',    'solicitacao_encerramento_aprovada',  'pendente', 0, '2024-05-13 10:00:05', NULL,                   NULL),
+(14, 'beatriz.lima@ufmg.br',        'denuncia_recebida_contra_perfil',    'falhou',   3, '2024-03-20 08:00:10', NULL,                   'SMTP timeout: gateway de e-mail não respondeu após 3 tentativas'),
+(23, 'fernanda.souza@gmail.com',    'doacao_confirmada',                  'falhou',   2, '2024-02-25 09:00:10', NULL,                   'Endereço de e-mail rejeitado pelo servidor de destino (550 mailbox not found)'),
+(16, 'juliana.ferreira@ufsc.br',    'campanha_proxima_do_prazo',          'cancelado',0, '2024-05-20 08:00:00', NULL,                   'Cancelada: campanha encerrada antes do envio programado');
 
 
 -- ----------------------------------------------------------------------------
@@ -1095,10 +1132,10 @@ INSERT INTO notificacao (id_usuario, email_destinatario, tipo_evento, status, te
 -- digitado à mão em score_atual.
 --
 --                    Perfil acad. Histórico Atualização Reputação  Total  Faixa
--- Bruno    (14)          30          25          20         25     100  Referência (75-100)
--- Renata   (15)          10          25           0         25      60  Confiável  (50-74)
--- Eduardo  (16)          10          10           3         23      46  Em Construção (25-49)
--- Vinícius (17)          10           0           0          9      19  Atenção    (0-24)
+-- Bruno    (19)          30          25          20         25     100  Referência (75-100)
+-- Renata   (20)          10          25           0         25      60  Confiável  (50-74)
+-- Eduardo  (21)          10          10           3         23      46  Em Construção (25-49)
+-- Vinícius (22)          10           0           0          9      19  Atenção    (0-24)
 --
 -- Perfil acadêmico: Bruno tem Lattes+ORCID+LinkedIn+instituição+título (8+8+4+5+5=30);
 --   os outros 3 só têm instituição+título (5+5=10, obrigatório desde que a coluna virou

@@ -305,6 +305,22 @@ FOR EACH ROW EXECUTE FUNCTION public.fn_log_auditoria('id_papel');
 
 
 -- ============================================================================
+-- 07-08-2026 — coluna `sessao.origem` ('login' ou 'refresh') — achado do
+-- Lucas: a tela de "logins anteriores" (Consultar Usuário) estava contando
+-- toda renovação silenciosa de token (a cada ~15min de uso normal) como se
+-- fosse um login novo, porque as duas coisas viravam linha em `sessao` sem
+-- distinção nenhuma. Linhas ANTIGAS (de antes desta coluna existir) ficam
+-- como 'refresh' por padrão — de propósito, pra sumirem da tela de login
+-- em vez de aparecerem como login sem ter sido.
+-- Seguro rodar de novo quantas vezes quiser.
+-- ============================================================================
+
+ALTER TABLE sessao ADD COLUMN IF NOT EXISTS origem VARCHAR(20) NOT NULL DEFAULT 'refresh';
+ALTER TABLE sessao DROP CONSTRAINT IF EXISTS "CK_SESSAO_ORIGEM";
+ALTER TABLE sessao ADD CONSTRAINT "CK_SESSAO_ORIGEM" CHECK (origem IN ('login', 'refresh'));
+
+
+-- ============================================================================
 -- NÃO ENTRA NESTE ARQUIVO (registrado aqui só pra não se perder)
 -- ============================================================================
 

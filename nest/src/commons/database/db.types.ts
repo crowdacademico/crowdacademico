@@ -65,6 +65,9 @@ export interface SessaoTable {
   revogado_em: Date | null;
   ip: string | null;
   user_agent: string | null;
+  // 'login' (senha digitada) ou 'refresh' (renovação silenciosa do token de
+  // acesso, a cada ~15min de uso) — 07-08-2026, ver auth.service.login.ts.
+  origem: Generated<'login' | 'refresh'>;
 }
 
 // CREATE TYPE tipo_configuracao AS ENUM ('decimal','inteiro','texto','booleano') — 01

@@ -18,6 +18,8 @@ export function useAuth() {
   // Promise compartilhada entre chamadas simultâneas de authFetch — ver
   // renovarSessao() logo abaixo.
   const refreshEmAndamentoRef = useRef(null);
+  // GETs em voo, por caminho — ver comentário em authFetch mais abaixo.
+  const requisicoesEmAndamentoRef = useRef(new Map());
 
   const salvarSessao = useCallback((resultado) => {
     setAccessToken(resultado.accessToken);
@@ -106,8 +108,8 @@ export function useAuth() {
   // 401 (access token expirado — dura só 15min), tenta renovar UMA vez com o
   // refresh token e repete a chamada original. Isso é o que todo o painel
   // admin usa pra falar com a API — nunca fetch() cru direto.
-  const authFetch = useCallback(
-    async (caminho, opcoes = {}) => {
+  const executarFetch = useCallback(
+    async (caminho, opcoes) => {
       const montarHeaders = (token) => ({
         'Content-Type': 'application/json',
         ...(opcoes.headers ?? {}),
@@ -134,6 +136,42 @@ export function useAuth() {
       return resposta;
     },
     [accessToken, renovarSessao, limparSessao],
+  );
+
+  const authFetch = useCallback(
+    (caminho, opcoes = {}) => {
+      const metodo = (opcoes.method ?? 'GET').toUpperCase();
+
+      // DEDUP DE GET EM VOO (07-08-2026, achado do Lucas: toast de erro
+      // duplicado — "Você precisa estar logado" aparecendo 2x). Causa: o
+      // <StrictMode> do React (main.jsx) dispara todo useEffect 2 vezes DE
+      // PROPÓSITO em desenvolvimento, pra pegar bug de efeito sem limpeza —
+      // e nenhuma das nossas buscas cancelava a anterior. Resultado: toda
+      // tela que busca dado ao abrir (a maioria — listagem, log, consultar)
+      // virava 2 requisições reais pro servidor; se falhava, 2 toasts.
+      //
+      // Só GET é deduplicado (create/update/remove nunca são, de propósito —
+      // aqueles são sempre 1 clique = 1 ação, nunca disparados por
+      // useEffect). Duas chamadas pro MESMO caminho ao mesmo tempo dividem
+      // a mesma resposta em vez de virarem 2 idas ao servidor — `.clone()`
+      // porque o corpo de um Response só pode ser lido uma vez; cada quem
+      // pediu precisa da própria cópia pra poder chamar `.json()`/`.text()`
+      // sem pisar no outro.
+      if (metodo !== 'GET') {
+        return executarFetch(caminho, opcoes);
+      }
+
+      let promessa = requisicoesEmAndamentoRef.current.get(caminho);
+      if (!promessa) {
+        promessa = executarFetch(caminho, opcoes);
+        requisicoesEmAndamentoRef.current.set(caminho, promessa);
+        promessa.finally(() => {
+          requisicoesEmAndamentoRef.current.delete(caminho);
+        });
+      }
+      return promessa.then((resposta) => resposta.clone());
+    },
+    [executarFetch],
   );
 
   return {

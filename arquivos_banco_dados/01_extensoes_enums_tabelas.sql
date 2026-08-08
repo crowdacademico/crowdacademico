@@ -384,10 +384,20 @@ CREATE TABLE sessao (
     revogado_em        TIMESTAMPTZ,
     ip                 VARCHAR(45),
     user_agent         TEXT,
+    -- ADICIONADO (07-08-2026, achado do Lucas: "não fiz tantos logs de
+    -- login assim"): toda renovação silenciosa do token de acesso (a cada
+    -- ~15min de uso) também gera uma linha aqui, sempre gerou — sem esta
+    -- coluna não dava pra separar "login de verdade" de "token se
+    -- renovando sozinho" na tela de histórico. DEFAULT 'refresh' (não
+    -- 'login') de propósito: linhas antigas (de antes desta coluna
+    -- existir) ficam invisíveis na tela de login em vez de aparecerem
+    -- como login sem ser.
+    origem              VARCHAR(20) NOT NULL DEFAULT 'refresh',
 
     CONSTRAINT "PK_SESSAO" PRIMARY KEY (id_sessao),
     CONSTRAINT "FK_SESSAO_USUARIO" FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE CASCADE,
-    CONSTRAINT "CK_SESSAO_EXPIRA" CHECK (expira_em > criado_em) -- garante que o refresh token não nasça já expirado
+    CONSTRAINT "CK_SESSAO_EXPIRA" CHECK (expira_em > criado_em), -- garante que o refresh token não nasça já expirado
+    CONSTRAINT "CK_SESSAO_ORIGEM" CHECK (origem IN ('login', 'refresh'))
 );
 
 -- ============================================================

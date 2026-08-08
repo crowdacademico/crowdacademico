@@ -69,6 +69,7 @@ export class AuthServiceLogin {
       usuario.id_usuario,
       ip,
       userAgent,
+      'login',
     );
 
     const usuarioResponse = await this.usuarioServiceFindOne.executar(
@@ -80,10 +81,20 @@ export class AuthServiceLogin {
 
   // Reaproveitado por AuthServiceRefresh (rotação de refresh token) — mesma
   // lógica de emitir o par access+refresh, só muda de onde é chamado.
+  //
+  // `origem` (07-08-2026, achado do Lucas: "não fiz tantos logs de login
+  // assim"): toda RENOVAÇÃO silenciosa (a cada ~15min de uso, token de
+  // acesso vencendo) também passa por aqui e também cria uma linha em
+  // `sessao` — sempre criou, desde o início. A tela de "logins anteriores"
+  // (consultar-usuario.jsx) lia `sessao` inteira, sem diferenciar renovação
+  // de login de verdade, então mostrava dezenas de "logins" que eram só o
+  // token se renovando sozinho em segundo plano. `origem` marca qual é
+  // qual; usuario.service.listar-logins.ts agora só mostra 'login'.
   async emitirTokens(
     idUsuario: number,
     ip: string | undefined,
     userAgent: string | undefined,
+    origem: 'login' | 'refresh',
   ): Promise<{ accessToken: string; refreshToken: string }> {
     const db = this.database.getDb();
     const segredo = randomBytes(32).toString('hex');
@@ -103,6 +114,7 @@ export class AuthServiceLogin {
         expira_em: expiraEm,
         ip: ip ?? null,
         user_agent: userAgent ?? null,
+        origem,
       })
       .returning('id_sessao')
       .executeTakeFirstOrThrow();
