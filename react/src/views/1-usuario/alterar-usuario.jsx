@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
 import { CartaoFormulario } from '../../components/crud/cartao-formulario';
+import { useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
 import { SecaoFicha } from '../../components/crud/ficha-consulta';
 import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { papelApi, usuarioPapelApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
+import { SecaoModeracao } from './secao-moderacao';
 
 // Precisa bater com o hash seedado em arquivos_banco_dados/07_seed_dados.sql
 // ([07-D-1]) — se alguém trocar a senha de dev do seed, troca aqui também.
@@ -73,6 +75,20 @@ export function AlterarUsuario({ auth }) {
     (papel) => !papeisAtuais.some((atual) => atual.idPapel === papel.idPapel),
   );
 
+  // "sujo" (09-08-2026, Bloco I do prompt do Claude Web) — só compara os
+  // campos que o próprio <form> salva (nome/senha); atribuir/revogar papel
+  // já salva na hora (cada clique é sua própria requisição), não faz
+  // parte do "salvar" deste formulário.
+  const sujo = usuario !== null && (nome !== usuario.nome || novaSenha !== '');
+  useAvisoAlteracaoNaoSalva(sujo);
+
+  const aoCancelar = () => {
+    if (sujo && !window.confirm('Você tem alterações não salvas. Sair mesmo assim?')) {
+      return;
+    }
+    navigate(-1);
+  };
+
   const aoAtribuirPapel = async () => {
     if (!idPapelParaAtribuir) {
       return;
@@ -102,6 +118,53 @@ export function AlterarUsuario({ auth }) {
       reportarErro(erroRequisicao);
     } finally {
       setAtribuindoPapel(false);
+    }
+  };
+
+  // Suspender/reativar UM papel por um tempo (09-08-2026, Bloco G) — em vez
+  // de remover (aoRevogarPapel, abaixo): preserva quando foi atribuído,
+  // volta sozinho no prazo. `papelSuspendendoId` só controla qual badge
+  // está mostrando o mini-seletor de dias, não dispara nada sozinho.
+  const [papelSuspendendoId, setPapelSuspendendoId] = useState(null);
+  const [enviandoSuspensaoPapel, setEnviandoSuspensaoPapel] = useState(null);
+  const [reativandoPapel, setReativandoPapel] = useState(null);
+
+  const aoSuspenderPapel = async (papel, dias) => {
+    limparErro();
+    setEnviandoSuspensaoPapel(papel.idPapel);
+    try {
+      // Só roda dentro do clique (indireto via onClick={() =>
+      // aoSuspenderPapel(papel, dias)}), nunca durante render; a regra não
+      // segue a indireção da 2ª função inline pra confirmar isso sozinha.
+      // eslint-disable-next-line react-hooks/purity
+      const ate = new Date(Date.now() + dias * 24 * 60 * 60 * 1000).toISOString();
+      await usuarioPapelApi.suspender(auth.authFetch, id, papel.idPapel, ate);
+      const papeisAtualizados = await usuarioPapelApi.listarPorUsuario(auth.authFetch, id);
+      setPapeisAtuais(papeisAtualizados);
+      setPapelSuspendendoId(null);
+      mostrar(
+        'Papel suspenso com sucesso.',
+        `"${papel.nomePapel}" suspenso até ${new Date(ate).toLocaleDateString('pt-BR')}`,
+      );
+    } catch (erroRequisicao) {
+      reportarErro(erroRequisicao);
+    } finally {
+      setEnviandoSuspensaoPapel(null);
+    }
+  };
+
+  const aoReativarPapel = async (papel) => {
+    limparErro();
+    setReativandoPapel(papel.idPapel);
+    try {
+      await usuarioPapelApi.revogarSuspensao(auth.authFetch, id, papel.idPapel);
+      const papeisAtualizados = await usuarioPapelApi.listarPorUsuario(auth.authFetch, id);
+      setPapeisAtuais(papeisAtualizados);
+      mostrar('Papel reativado com sucesso.', `"${papel.nomePapel}" voltou a valer normalmente`);
+    } catch (erroRequisicao) {
+      reportarErro(erroRequisicao);
+    } finally {
+      setReativandoPapel(null);
     }
   };
 
@@ -178,14 +241,46 @@ export function AlterarUsuario({ auth }) {
       icone="fa-user-pen"
       titulo="Alterar Usuário"
       subtitulo="Deixe a senha em branco para não alterá-la."
+      rodape={
+        usuario && (
+          <div className="flex gap-3">
+            <button type="button" onClick={aoCancelar} className="btn btn-secondary flex-1">
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              form="form-alterar-usuario"
+              disabled={enviando || !sujo}
+              className="btn btn-primary flex-1"
+            >
+              {enviando ? 'Salvando...' : 'Salvar'}
+            </button>
+          </div>
+        )
+      }
     >
       {carregando ? (
-        <p className="p-10 text-center text-sm text-slate-600">Carregando...</p>
+        <p className="p-10 text-center text-sm texto-fraco">Carregando...</p>
       ) : !usuario ? (
         <p className="p-10 text-center text-red-700 text-sm font-bold">{erro}</p>
       ) : (
-        <form onSubmit={aoSalvar} className="p-10 space-y-6">
+        <form id="form-alterar-usuario" onSubmit={aoSalvar} className="p-10 space-y-6">
           {erro && <p className="text-red-700 text-sm font-bold text-center">{erro}</p>}
+
+          {/* Cabeçalho de identidade (09-08-2026, Bloco I: "a pessoa
+              precisa saber QUEM está editando") — mesmo espírito do
+              cabeçalho de FichaConsulta, mas dentro do corpo rolável
+              (o cabeçalho fixo do card já usa o espaço pro título
+              genérico "Alterar Usuário"). */}
+          <div className="flex items-center gap-3 pb-4 border-b borda-padrao">
+            <div className="w-11 h-11 rounded-full bg-primary text-white flex items-center justify-center font-bold text-lg shrink-0">
+              {usuario.nome?.[0]?.toUpperCase() ?? '?'}
+            </div>
+            <div className="min-w-0">
+              <p className="font-bold texto-forte truncate">{usuario.nome}</p>
+              <p className="text-xs texto-fraco truncate">{usuario.email}</p>
+            </div>
+          </div>
 
           <SecaoFicha titulo="Dados da conta">
             <CampoSomenteLeitura rotulo="id" valor={usuario.idUsuario} />
@@ -195,7 +290,7 @@ export function AlterarUsuario({ auth }) {
               valor={usuario.emailVerificado ? 'Sim' : 'Não'}
             />
             <div>
-              <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">
+              <label className="rotulo-campo">
                 Nome
               </label>
               <input
@@ -210,7 +305,7 @@ export function AlterarUsuario({ auth }) {
 
           <SecaoFicha titulo="Acesso">
             <div className="sm:col-span-2">
-              <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">
+              <label className="rotulo-campo">
                 Nova senha (opcional)
               </label>
               <input
@@ -222,8 +317,8 @@ export function AlterarUsuario({ auth }) {
               />
             </div>
 
-            <div className="sm:col-span-2 flex items-center justify-between gap-3 rounded-lg border border-slate-300 p-3">
-              <p className="text-xs text-slate-600">
+            <div className="sm:col-span-2 flex items-center justify-between gap-3 rounded-lg border borda-forte p-3">
+              <p className="text-xs texto-fraco">
                 Zera o contador de tentativas de login falhas e libera a conta, caso esteja
                 bloqueada temporariamente.
               </p>
@@ -240,7 +335,7 @@ export function AlterarUsuario({ auth }) {
             <div className="sm:col-span-2 flex items-center justify-between gap-3 rounded-lg border border-dashed border-purple-300 bg-purple-50 p-3">
               <div>
                 <span className="badge badge-dev">&lt;dev&gt;</span>
-                <p className="text-xs text-slate-600 mt-1">
+                <p className="text-xs texto-fraco mt-1">
                   Redefine a senha direto pra "{SENHA_DEV}", sem digitar nada. Só pra testar
                   login.
                 </p>
@@ -256,29 +351,80 @@ export function AlterarUsuario({ auth }) {
             </div>
           </SecaoFicha>
 
+          <SecaoModeracao auth={auth} idUsuario={usuario.idUsuario} />
+
           <SecaoFicha titulo="Papéis">
             <div className="sm:col-span-2">
               <div className="flex flex-wrap gap-2 mb-3">
                 {papeisAtuais.length === 0 && (
-                  <p className="text-xs text-slate-600">Nenhum papel atribuído ainda.</p>
+                  <p className="text-xs texto-fraco">Nenhum papel atribuído ainda.</p>
                 )}
-                {papeisAtuais.map((papel) => (
-                  <span
-                    key={papel.idPapel}
-                    className="badge badge-neutro flex items-center gap-2"
-                  >
-                    {papel.nomePapel}
-                    <button
-                      type="button"
-                      onClick={() => aoRevogarPapel(papel)}
-                      disabled={revogandoPapel === papel.idPapel}
-                      className="text-red-600 font-bold hover:text-red-800 disabled:opacity-50"
-                      title={`Revogar "${papel.nomePapel}"`}
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
+                {papeisAtuais.map((papel) => {
+                  const suspenso = papel.suspensoAte && new Date(papel.suspensoAte) > new Date();
+                  return (
+                    <span key={papel.idPapel} className="inline-flex flex-col items-start gap-1">
+                      <span
+                        className={
+                          'badge flex items-center gap-2 ' +
+                          (suspenso ? 'fundo-aviso texto-aviso' : 'badge-neutro')
+                        }
+                      >
+                        {papel.nomePapel}
+                        {suspenso && <i className="fa-solid fa-clock text-[10px]"></i>}
+                        {suspenso ? (
+                          <button
+                            type="button"
+                            onClick={() => aoReativarPapel(papel)}
+                            disabled={reativandoPapel === papel.idPapel}
+                            className="font-bold hover:underline disabled:opacity-50"
+                            title="Reativar agora"
+                          >
+                            {reativandoPapel === papel.idPapel ? '…' : 'reativar'}
+                          </button>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setPapelSuspendendoId((atual) =>
+                                  atual === papel.idPapel ? null : papel.idPapel,
+                                )
+                              }
+                              className="texto-fraco hover-texto-forte"
+                              title={`Suspender "${papel.nomePapel}" por um tempo`}
+                            >
+                              <i className="fa-solid fa-clock text-[10px]"></i>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => aoRevogarPapel(papel)}
+                              disabled={revogandoPapel === papel.idPapel}
+                              className="text-red-600 font-bold hover:text-red-800 disabled:opacity-50"
+                              title={`Revogar "${papel.nomePapel}"`}
+                            >
+                              ×
+                            </button>
+                          </>
+                        )}
+                      </span>
+                      {papelSuspendendoId === papel.idPapel && (
+                        <span className="flex gap-1 fundo-cartao border borda-forte rounded-lg p-1.5">
+                          {[1, 7, 30].map((dias) => (
+                            <button
+                              key={dias}
+                              type="button"
+                              onClick={() => aoSuspenderPapel(papel, dias)}
+                              disabled={enviandoSuspensaoPapel === papel.idPapel}
+                              className="text-[10px] font-bold texto-padrao hover-fundo-sutil px-1.5 py-0.5 rounded"
+                            >
+                              {dias}d
+                            </button>
+                          ))}
+                        </span>
+                      )}
+                    </span>
+                  );
+                })}
               </div>
 
               {papeisDisponiveis.length === 0 ? (
@@ -291,7 +437,7 @@ export function AlterarUsuario({ auth }) {
                 // explicando por quê — parecia "atribuir não funciona", não
                 // "não há nada pra atribuir agora". Corrigido: sempre mostra
                 // alguma coisa, nunca um vazio sem explicação.
-                <p className="text-xs text-slate-600">
+                <p className="text-xs texto-fraco">
                   Nenhum papel adicional disponível pra atribuir (o catálogo ainda
                   está carregando, ou este usuário já tem todos os papéis existentes).
                 </p>
@@ -321,19 +467,6 @@ export function AlterarUsuario({ auth }) {
               )}
             </div>
           </SecaoFicha>
-
-          <div className="flex gap-3 pt-2">
-            <button
-              type="button"
-              onClick={() => navigate(-1)}
-              className="btn btn-secondary flex-1"
-            >
-              Cancelar
-            </button>
-            <button type="submit" disabled={enviando} className="btn btn-primary flex-1">
-              {enviando ? 'Salvando...' : 'Salvar'}
-            </button>
-          </div>
         </form>
       )}
     </CartaoFormulario>

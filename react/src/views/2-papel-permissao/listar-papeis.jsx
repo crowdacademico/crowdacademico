@@ -1,9 +1,10 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { GenericTable } from '../../components/crud/generic-table';
 import { papelApi, permissaoApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
-import { nomeAmigavelPermissao } from '../../services/2-papel-permissao/constants/permissao-nomes-amigaveis';
+import { detalhePermissao } from '../../services/2-papel-permissao/constants/permissao-nomes-amigaveis';
 import { logAuditoriaApi } from '../../services/28-log-auditoria/api/log-auditoria.api';
 import { MatrizPapelPermissao } from './matriz-papel-permissao';
+import { ModalDetalhePermissao } from './modal-detalhe-permissao';
 
 // Aba "Papéis & Permissões" do painel admin — rota /admin/papeis. Reúne 3
 // blocos read-only/de gestão do módulo 2-papel-permissao (ver nest/src/
@@ -18,20 +19,22 @@ import { MatrizPapelPermissao } from './matriz-papel-permissao';
 // funcionalidade órfã: tudo que o widget fazia, Alterar Usuário já faz.
 export function ListarPapeis({ auth }) {
   const listarPapeis = useCallback(() => papelApi.listar(auth.authFetch), [auth.authFetch]);
-  // Nome amigável (09-08-2026, pedido do Lucas: "campanha_aprovar parece
-  // linha de código, pq é linha de código") — tradução 100% no frontend
-  // (ver permissao-nomes-amigaveis.js), o `nome` cru do banco não muda em
-  // lugar nenhum, só ganha uma 2ª coluna "chave" pra quem precisa do
-  // valor literal.
+  // Nome amigável + descrição (09-08-2026, pedido do Lucas: "campanha_
+  // aprovar parece linha de código, pq é linha de código") — tradução
+  // 100% no frontend (ver permissao-nomes-amigaveis.js), o `nome` cru do
+  // banco não muda em lugar nenhum, só ganha uma 2ª coluna "chave" pra
+  // quem precisa do valor literal.
   const listarPermissoes = useCallback(
     () =>
-      permissaoApi
-        .listar(auth.authFetch)
-        .then((permissoes) =>
-          permissoes.map((p) => ({ ...p, nomeAmigavel: nomeAmigavelPermissao(p.nome) })),
-        ),
+      permissaoApi.listar(auth.authFetch).then((permissoes) =>
+        permissoes.map((p) => {
+          const detalhe = detalhePermissao(p.nome);
+          return { ...p, nomeAmigavel: detalhe.nome, resumo: detalhe.resumo };
+        }),
+      ),
     [auth.authFetch],
   );
+  const [permissaoDetalhada, setPermissaoDetalhada] = useState(null);
   // 'papel' é o nome FÍSICO da tabela no Postgres (bate com TG_TABLE_NAME
   // em fn_log_auditoria(), trg_log_auditoria_papel, 07-08-2026) — mesma
   // convenção de buscarLogUsuario em listar-usuarios.jsx.
@@ -67,15 +70,40 @@ export function ListarPapeis({ auth }) {
           colunas={[
             { chave: 'idPermissao', rotulo: 'id' },
             { chave: 'nomeAmigavel', rotulo: 'nome' },
+            { chave: 'resumo', rotulo: 'descrição' },
             { chave: 'nome', rotulo: 'chave' },
           ]}
           chavePrimaria="idPermissao"
           listar={listarPermissoes}
+          // Botão "ⓘ" (09-08-2026, Bloco F do prompt do Claude Web) — abre
+          // o modal de detalhe (o que faz, por que existe, quem tem hoje).
+          colunaExtra={{
+            rotulo: '',
+            renderizar: (linha) => (
+              <button
+                type="button"
+                onClick={() => setPermissaoDetalhada(linha)}
+                aria-label={`Detalhes de "${linha.nomeAmigavel}"`}
+                title="Ver detalhes"
+                className="texto-fraco hover-texto-forte"
+              >
+                <i className="fa-solid fa-circle-info"></i>
+              </button>
+            ),
+          }}
         />
       </div>
       <div className="admin-content-painel">
         <MatrizPapelPermissao authFetch={auth.authFetch} />
       </div>
+
+      {permissaoDetalhada && (
+        <ModalDetalhePermissao
+          permissao={permissaoDetalhada}
+          authFetch={auth.authFetch}
+          aoFechar={() => setPermissaoDetalhada(null)}
+        />
+      )}
     </>
   );
 }

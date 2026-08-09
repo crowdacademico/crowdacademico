@@ -14,14 +14,14 @@
 // </FichaConsulta>
 export function FichaConsulta({ titulo, subtitulo, badges, acoes, children }) {
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex items-start justify-center p-4 sm:p-8 bg-surface">
-      <div className="max-w-2xl w-full bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden">
+    <div className="min-h-[calc(100vh-4rem)] flex items-start justify-center p-4 sm:p-8 fundo-pagina">
+      <div className="max-w-2xl w-full fundo-cartao rounded-2xl shadow-lg border borda-padrao overflow-hidden">
         {/* Cabeçalho: nome grande + e-mail abaixo, badges à direita — nada
             de campo de formulário aqui, de propósito. */}
-        <div className="px-8 py-6 border-b border-slate-100 bg-slate-50 flex items-start justify-between gap-4 flex-wrap">
+        <div className="px-8 py-6 border-b borda-padrao fundo-sutil flex items-start justify-between gap-4 flex-wrap">
           <div className="min-w-0">
-            <h2 className="text-2xl font-serif font-bold text-dark truncate">{titulo}</h2>
-            {subtitulo && <p className="text-sm text-slate-500 mt-1">{subtitulo}</p>}
+            <h2 className="text-2xl font-serif font-bold texto-forte truncate">{titulo}</h2>
+            {subtitulo && <p className="text-sm texto-fraco mt-1">{subtitulo}</p>}
           </div>
           {badges && badges.length > 0 && (
             <div className="flex flex-wrap gap-1.5 justify-end shrink-0">{badges}</div>
@@ -30,7 +30,7 @@ export function FichaConsulta({ titulo, subtitulo, badges, acoes, children }) {
 
         <div className="px-8 py-6 space-y-6">{children}</div>
 
-        {acoes && <div className="px-8 py-5 border-t border-slate-100 bg-slate-50">{acoes}</div>}
+        {acoes && <div className="px-8 py-5 border-t borda-padrao fundo-sutil">{acoes}</div>}
       </div>
     </div>
   );
@@ -42,7 +42,7 @@ export function FichaConsulta({ titulo, subtitulo, badges, acoes, children }) {
 export function SecaoFicha({ titulo, children }) {
   return (
     <div>
-      <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-3 pb-2 border-b border-slate-100">
+      <h3 className="text-xs font-bold uppercase tracking-widest texto-fraco mb-3 pb-2 border-b borda-padrao">
         {titulo}
       </h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">{children}</div>
@@ -65,11 +65,13 @@ export function CampoFicha({ rotulo, valor, largura, acao, children }) {
 
   return (
     <div className={largura === 'cheia' ? 'sm:col-span-2' : undefined}>
-      <div className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1">
+      <div className="text-[11px] font-bold texto-fraco uppercase tracking-widest mb-1">
         {rotulo}
       </div>
       <div className="flex items-center justify-between gap-2">
-        <span className={'text-sm ' + (temValor ? 'font-medium text-slate-800' : 'text-slate-300')}>
+        <span
+          className={'text-sm ' + (temValor ? 'font-medium texto-forte' : 'texto-fraco opacity-50')}
+        >
           {temValor ? valor : '—'}
         </span>
         {acao}

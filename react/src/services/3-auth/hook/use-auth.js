@@ -13,6 +13,12 @@ const CHAVE_REFRESH_TOKEN = 'crowdacademico.refreshToken';
 export function useAuth() {
   const [accessToken, setAccessToken] = useState(null);
   const [usuario, setUsuario] = useState(null);
+  // Nomes dos papéis da sessão atual (09-08-2026, Bloco B/C: dropdown do
+  // cabeçalho precisa saber se mostra "Painel Admin"). Vem de dentro de
+  // LoginResponseDto/RefreshResponseDto agora (nest/src/3-auth) — não é
+  // uma checagem de permissão de verdade, só decide o que aparece na UI;
+  // toda ação real continua validada pelo backend/RLS a cada requisição.
+  const [papeis, setPapeis] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const refreshTokenRef = useRef(localStorage.getItem(CHAVE_REFRESH_TOKEN));
   // Promise compartilhada entre chamadas simultâneas de authFetch — ver
@@ -28,11 +34,15 @@ export function useAuth() {
     if (resultado.usuario) {
       setUsuario(resultado.usuario);
     }
+    if (resultado.papeis) {
+      setPapeis(resultado.papeis);
+    }
   }, []);
 
   const limparSessao = useCallback(() => {
     setAccessToken(null);
     setUsuario(null);
+    setPapeis([]);
     refreshTokenRef.current = null;
     localStorage.removeItem(CHAVE_REFRESH_TOKEN);
   }, []);
@@ -57,6 +67,17 @@ export function useAuth() {
   const login = useCallback(
     async (email, senha) => {
       const resultado = await authApi.login(email, senha);
+      salvarSessao(resultado);
+      return resultado;
+    },
+    [salvarSessao],
+  );
+
+  // Cadastro público (09-08-2026, Bloco D) — mesmo formato de resultado do
+  // login (accessToken/refreshToken/usuario/papeis), termina já logado.
+  const cadastrar = useCallback(
+    async (nome, email, senha, aceiteTermos) => {
+      const resultado = await authApi.cadastro(nome, email, senha, aceiteTermos);
       salvarSessao(resultado);
       return resultado;
     },
@@ -177,10 +198,17 @@ export function useAuth() {
   return {
     accessToken,
     usuario,
+    papeis,
+    ehAdmin: papeis.includes('admin'),
     carregando,
     autenticado: accessToken !== null,
     login,
+    cadastrar,
     logout,
     authFetch,
+    // Minha Conta (09-08-2026, Bloco E) usa isto depois de PATCH /usuario/:id
+    // com o próprio id — atualiza o nome/etc mostrado no cabeçalho na hora,
+    // sem precisar de um refresh de token só pra refletir a mudança.
+    atualizarUsuarioLocal: setUsuario,
   };
 }

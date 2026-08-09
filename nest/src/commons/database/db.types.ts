@@ -30,6 +30,12 @@ export interface UsuarioTable {
   bloqueado_ate: Date | null;
   ultimo_login_em: Date | null;
   ultimo_login_ip: string | null;
+  // ADICIONADAS (09-08-2026) — espelham 01_extensoes_enums_tabelas.sql
+  // [01-D]. Suspensão de MODERAÇÃO (manual, com motivo) — diferente de
+  // `bloqueado_ate` acima (automático, por senha errada).
+  suspenso_ate: Date | null;
+  motivo_suspensao: string | null;
+  suspenso_por: number | null;
 }
 
 export interface PapelTable {
@@ -54,6 +60,9 @@ export interface PapelPermissaoTable {
 export interface UsuarioPapelTable {
   id_usuario: number;
   id_papel: number;
+  // ADICIONADA (09-08-2026) — espelha 01_extensoes_enums_tabelas.sql
+  // [01-B]. NULL = papel valendo normalmente.
+  suspenso_ate: Date | null;
 }
 
 export interface SessaoTable {
@@ -110,6 +119,40 @@ export interface LogAuditoriaTable {
   ocorrido_em: Generated<Date>;
 }
 
+// ADICIONADAS (09-08-2026) — espelham 01_extensoes_enums_tabelas.sql, tabelas
+// termos_de_uso/usuario_termo, tocadas pela 1ª vez pelo módulo 5-termo-uso
+// (Bloco D do prompt do Claude Web sobre cadastro público).
+export interface TermosDeUsoTable {
+  id_termo: Generated<number>;
+  versao: string;
+  conteudo: string;
+  ativo: Generated<boolean>;
+  criado_em: Generated<Date>;
+}
+
+export interface UsuarioTermoTable {
+  id_usuario_termo: Generated<number>;
+  id_usuario: number;
+  id_termo: number;
+  aceito_em: Generated<Date>;
+  ip_aceite: string | null;
+}
+
+export interface VerificacaoEmailTable {
+  id_verificacao: Generated<number>;
+  id_usuario: number;
+  // Apesar do nome da coluna, NÃO é bcrypt (que teria salt aleatório por
+  // linha — impossível de achar por igualdade direta). É um hash
+  // determinístico (SHA-256) do token em texto puro que só existe no link
+  // enviado — confirmar_email_por_token() (03_funcoes_seguranca.sql,
+  // [03-F]) faz `WHERE token_hash = p_token_hash`, igualdade simples, só
+  // funciona com hash determinístico.
+  token_hash: string;
+  criado_em: Generated<Date>;
+  expira_em: Date;
+  confirmado_em: Date | null;
+}
+
 export interface DB {
   usuario: UsuarioTable;
   papel: PapelTable;
@@ -119,4 +162,7 @@ export interface DB {
   sessao: SessaoTable;
   configuracoes: ConfiguracoesTable;
   log_auditoria: LogAuditoriaTable;
+  termos_de_uso: TermosDeUsoTable;
+  usuario_termo: UsuarioTermoTable;
+  verificacao_email: VerificacaoEmailTable;
 }

@@ -1,6 +1,21 @@
 import { useEffect, useState } from 'react';
 import { useErroToast } from '../../components/layout/use-erro-toast';
 import { dashboardApi } from '../../services/admin/api/dashboard.api';
+import { DashboardIdentidadeVisual } from './dashboard-identidade-visual';
+import { DashboardRegrasNegocio } from './dashboard-regras-negocio';
+import { DashboardSaude } from './dashboard-saude';
+
+// Abas (09-08-2026, Bloco H do prompt do Claude Web: Dashboard como painel
+// global) — cuidado explícito do Claude Web contra virar "tela onde tudo
+// cabe": estrutura em abas em vez de empilhar seção atrás de seção. "Visão
+// Geral" é o que já existia (cards + prévia de notificações); as outras 3
+// são novas.
+const ABAS = [
+  { chave: 'visao-geral', rotulo: 'Visão Geral', icone: 'fa-gauge' },
+  { chave: 'regras', rotulo: 'Regras do Negócio', icone: 'fa-sliders' },
+  { chave: 'identidade', rotulo: 'Identidade Visual', icone: 'fa-image' },
+  { chave: 'saude', rotulo: 'Saúde', icone: 'fa-heart-pulse' },
+];
 
 // Card de total (item "a" do pedido do Lucas, 08-08-2026): só rótulo
 // pequeno em cinza maiúsculo + número grande, sem ícone/fundo colorido —
@@ -11,13 +26,13 @@ import { dashboardApi } from '../../services/admin/api/dashboard.api';
 // pedido do Lucas (09-08-2026), mesmo tom já usado nas bordas de tabela.
 function CardMetrica({ rotulo, valor }) {
   return (
-    <div className="bg-white border border-slate-300 rounded-xl shadow-sm p-5">
-      <div className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1">
+    <div className="fundo-cartao border borda-forte rounded-xl shadow-sm p-5">
+      <div className="text-[11px] font-bold texto-fraco uppercase tracking-widest mb-1">
         {rotulo}
       </div>
       <div
         className={
-          'text-3xl font-extrabold ' + (valor === null ? 'text-slate-300' : 'text-dark')
+          'text-3xl font-extrabold ' + (valor === null ? 'texto-fraco opacity-50' : 'texto-forte')
         }
       >
         {valor === null ? '—' : valor}
@@ -39,6 +54,7 @@ export function Dashboard({ auth }) {
   const [resumo, setResumo] = useState(null);
   const [carregandoResumo, setCarregandoResumo] = useState(true);
   const [bancoConectado, setBancoConectado] = useState(null); // null = ainda verificando
+  const [abaAtiva, setAbaAtiva] = useState('visao-geral');
   const { erro, reportarErro } = useErroToast();
 
   useEffect(() => {
@@ -67,72 +83,99 @@ export function Dashboard({ auth }) {
     // com o padding do .admin-content-area (1.5rem), por isso ganha um
     // respiro extra só aqui.
     <div className="space-y-6 pt-6">
-      <h2 className="text-3xl font-serif font-bold text-dark">Dashboard</h2>
+      <h2 className="text-3xl font-serif font-bold texto-forte">Dashboard</h2>
 
-      {/* (b) Faixa de saúde — sempre renderiza, mesmo se o resumo abaixo
-          falhar (é precisamente aí que ela mais importa). */}
-      <div className="bg-white border border-slate-300 rounded-xl shadow-sm p-5 flex flex-wrap items-center gap-x-8 gap-y-3 text-sm">
-        <span className="flex items-center gap-2 font-semibold text-slate-700">
-          <span
+      <div className="flex gap-1 border-b borda-padrao overflow-x-auto">
+        {ABAS.map((aba) => (
+          <button
+            key={aba.chave}
+            type="button"
+            onClick={() => setAbaAtiva(aba.chave)}
             className={
-              'inline-block w-2.5 h-2.5 rounded-full ' +
-              (bancoConectado === null
-                ? 'bg-slate-300'
-                : bancoConectado
-                  ? 'bg-emerald-500'
-                  : 'bg-red-500')
+              'px-4 py-2.5 text-sm font-semibold flex items-center gap-2 border-b-2 -mb-px whitespace-nowrap transition-colors ' +
+              (abaAtiva === aba.chave
+                ? 'border-primary text-primary'
+                : 'border-transparent texto-fraco hover-texto-forte')
             }
-          ></span>
-          {bancoConectado === null
-            ? 'Verificando banco...'
-            : bancoConectado
-              ? 'Banco conectado'
-              : 'Banco sem conexão'}
-        </span>
-        <span className="text-slate-600">
-          <strong className="text-slate-800">
-            {resumo ? resumo.sessoesAtivas : '—'}
-          </strong>{' '}
-          sessões ativas agora
-        </span>
-        <span className="text-slate-600">
-          <strong className="text-slate-800">
-            {resumo?.notificacoesPendentes === null || resumo === null
-              ? '—'
-              : resumo.notificacoesPendentes}
-          </strong>{' '}
-          notificações pendentes
-        </span>
+          >
+            <i className={'fa-solid ' + aba.icone}></i>
+            {aba.rotulo}
+          </button>
+        ))}
       </div>
 
-      {/* (a) Cards de total */}
-      {carregandoResumo ? (
-        <p className="text-sm text-slate-600">Carregando métricas...</p>
-      ) : !resumo ? (
-        <p className="crud-erro">{erro ?? 'Não foi possível carregar as métricas.'}</p>
-      ) : (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <CardMetrica rotulo="Usuários" valor={resumo.totalUsuarios} />
-          <CardMetrica rotulo="Pesquisadores" valor={resumo.totalPesquisadores} />
-          <CardMetrica rotulo="Papéis" valor={resumo.totalPapeis} />
-          <CardMetrica rotulo="Permissões" valor={resumo.totalPermissoes} />
-          <CardMetrica rotulo="Configurações" valor={resumo.totalConfiguracoes} />
-          <CardMetrica rotulo="Campanhas" valor={resumo.totalCampanhas} />
+      {abaAtiva === 'visao-geral' && (
+        <div className="space-y-6">
+          {/* (b) Faixa de saúde — sempre renderiza, mesmo se o resumo abaixo
+              falhar (é precisamente aí que ela mais importa). */}
+          <div className="fundo-cartao border borda-forte rounded-xl shadow-sm p-5 flex flex-wrap items-center gap-x-8 gap-y-3 text-sm">
+            <span className="flex items-center gap-2 font-semibold texto-padrao">
+              <span
+                className={
+                  'inline-block w-2.5 h-2.5 rounded-full ' +
+                  (bancoConectado === null
+                    ? 'bg-slate-300'
+                    : bancoConectado
+                      ? 'bg-emerald-500'
+                      : 'bg-red-500')
+                }
+              ></span>
+              {bancoConectado === null
+                ? 'Verificando banco...'
+                : bancoConectado
+                  ? 'Banco conectado'
+                  : 'Banco sem conexão'}
+            </span>
+            <span className="texto-fraco">
+              <strong className="texto-forte">
+                {resumo ? resumo.sessoesAtivas : '—'}
+              </strong>{' '}
+              sessões ativas agora
+            </span>
+            <span className="texto-fraco">
+              <strong className="texto-forte">
+                {resumo?.notificacoesPendentes === null || resumo === null
+                  ? '—'
+                  : resumo.notificacoesPendentes}
+              </strong>{' '}
+              notificações pendentes
+            </span>
+          </div>
+
+          {/* (a) Cards de total */}
+          {carregandoResumo ? (
+            <p className="text-sm texto-fraco">Carregando métricas...</p>
+          ) : !resumo ? (
+            <p className="crud-erro">{erro ?? 'Não foi possível carregar as métricas.'}</p>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <CardMetrica rotulo="Usuários" valor={resumo.totalUsuarios} />
+              <CardMetrica rotulo="Pesquisadores" valor={resumo.totalPesquisadores} />
+              <CardMetrica rotulo="Papéis" valor={resumo.totalPapeis} />
+              <CardMetrica rotulo="Permissões" valor={resumo.totalPermissoes} />
+              <CardMetrica rotulo="Configurações" valor={resumo.totalConfiguracoes} />
+              <CardMetrica rotulo="Campanhas" valor={resumo.totalCampanhas} />
+            </div>
+          )}
+
+          {/* (c) Prévia — NOTIFICAÇÕES, não log de auditoria (correção do
+              Lucas, 08-08-2026: log de auditoria já tem painel próprio, "Ver
+              log", embaixo de cada tabela). Módulo 26-notificacao ainda não
+              existe (nem tabela mapeada no Kysely, nem controller) — mostra
+              isso honestamente em vez de inventar dado. */}
+          <div className="fundo-cartao border borda-forte rounded-xl shadow-sm p-5">
+            <h3 className="text-sm font-bold texto-padrao mb-2">Notificações</h3>
+            <p className="text-sm texto-fraco">
+              Módulo de notificações ainda não foi implementado — esta prévia vai listar as
+              pendências assim que existir.
+            </p>
+          </div>
         </div>
       )}
 
-      {/* (c) Prévia — NOTIFICAÇÕES, não log de auditoria (correção do
-          Lucas, 08-08-2026: log de auditoria já tem painel próprio, "Ver
-          log", embaixo de cada tabela). Módulo 26-notificacao ainda não
-          existe (nem tabela mapeada no Kysely, nem controller) — mostra
-          isso honestamente em vez de inventar dado. */}
-      <div className="bg-white border border-slate-300 rounded-xl shadow-sm p-5">
-        <h3 className="text-sm font-bold text-slate-700 mb-2">Notificações</h3>
-        <p className="text-sm text-slate-500">
-          Módulo de notificações ainda não foi implementado — esta prévia vai listar as
-          pendências assim que existir.
-        </p>
-      </div>
+      {abaAtiva === 'regras' && <DashboardRegrasNegocio auth={auth} />}
+      {abaAtiva === 'identidade' && <DashboardIdentidadeVisual />}
+      {abaAtiva === 'saude' && <DashboardSaude bancoConectado={bancoConectado} resumo={resumo} />}
     </div>
   );
 }

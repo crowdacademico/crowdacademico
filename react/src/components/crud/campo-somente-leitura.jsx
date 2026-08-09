@@ -6,10 +6,8 @@
 export function CampoSomenteLeitura({ rotulo, valor }) {
   return (
     <div>
-      <span className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">
-        {rotulo}
-      </span>
-      <p className="text-sm font-semibold text-slate-800">{String(valor ?? '')}</p>
+      <span className="rotulo-campo">{rotulo}</span>
+      <p className="text-sm font-semibold texto-forte">{String(valor ?? '')}</p>
     </div>
   );
 }

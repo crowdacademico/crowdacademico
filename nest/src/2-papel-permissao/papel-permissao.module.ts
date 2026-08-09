@@ -9,6 +9,7 @@ import { UsuarioPapelControllerCreate } from './controllers/usuario-papel.contro
 import { UsuarioPapelControllerFindAll } from './controllers/usuario-papel.controller.findall';
 import { UsuarioPapelControllerFindAllGeral } from './controllers/usuario-papel.controller.findall-geral';
 import { UsuarioPapelControllerRemove } from './controllers/usuario-papel.controller.remove';
+import { UsuarioPapelControllerSuspender } from './controllers/usuario-papel.controller.suspender';
 import { PapelPermissaoServiceCreate } from './service/papel-permissao.service.create';
 import { PapelPermissaoServiceFindAll } from './service/papel-permissao.service.findall';
 import { PapelPermissaoServiceRemove } from './service/papel-permissao.service.remove';
@@ -19,6 +20,7 @@ import { UsuarioPapelServiceCreate } from './service/usuario-papel.service.creat
 import { UsuarioPapelServiceFindAll } from './service/usuario-papel.service.findall';
 import { UsuarioPapelServiceFindAllGeral } from './service/usuario-papel.service.findall-geral';
 import { UsuarioPapelServiceRemove } from './service/usuario-papel.service.remove';
+import { UsuarioPapelServiceSuspender } from './service/usuario-papel.service.suspender';
 
 // `papel`/`permissao` continuam quase todo só-leitura (catálogo gerenciado
 // via seed/migração direta, de propósito — CRIAR um papel ou permissão
@@ -49,6 +51,7 @@ import { UsuarioPapelServiceRemove } from './service/usuario-papel.service.remov
     UsuarioPapelControllerFindAllGeral,
     UsuarioPapelControllerCreate,
     UsuarioPapelControllerRemove,
+    UsuarioPapelControllerSuspender,
   ],
   providers: [
     PapelServiceFindAll,
@@ -61,6 +64,7 @@ import { UsuarioPapelServiceRemove } from './service/usuario-papel.service.remov
     UsuarioPapelServiceFindAllGeral,
     UsuarioPapelServiceCreate,
     UsuarioPapelServiceRemove,
+    UsuarioPapelServiceSuspender,
   ],
 })
 export class PapelPermissaoModule {}

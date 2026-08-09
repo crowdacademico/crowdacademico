@@ -78,7 +78,7 @@ export function DevLoginRapido({ auth }) {
       </div>
 
       {menuAberto && (
-        <div className="absolute right-0 mt-1 w-56 bg-white border-2 border-dashed border-purple-300 rounded-lg shadow-lg z-50 overflow-hidden">
+        <div className="absolute right-0 mt-1 w-56 fundo-cartao border-2 border-dashed border-purple-300 rounded-lg shadow-lg z-50 overflow-hidden">
           {CONTAS_DEV.map((conta) => (
             <button
               key={conta.email}
@@ -87,7 +87,7 @@ export function DevLoginRapido({ auth }) {
               className="w-full text-left px-3 py-2 text-sm hover:bg-purple-50"
             >
               {conta.rotulo}
-              <span className="block text-slate-500 text-xs">{conta.email}</span>
+              <span className="block texto-fraco text-xs">{conta.email}</span>
             </button>
           ))}
         </div>

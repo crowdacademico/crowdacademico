@@ -17,6 +17,12 @@ export function ExcluirUsuario({ auth }) {
   const [usuario, setUsuario] = useState(null);
   const [carregando, setCarregando] = useState(true);
   const [excluindo, setExcluindo] = useState(false);
+  // Confirmação por digitação (09-08-2026, Bloco I do prompt do Claude Web:
+  // exclusão de USUÁRIO exige digitar o e-mail — configuração, mais abaixo
+  // em excluir-configuracao.jsx, fica só com confirmação simples, é um
+  // dado técnico, não a conta de uma pessoa).
+  const [confirmacao, setConfirmacao] = useState('');
+  const confirmado = usuario !== null && confirmacao.trim().toLowerCase() === usuario.email.toLowerCase();
 
   useEffect(() => {
     usuarioApi
@@ -44,11 +50,35 @@ export function ExcluirUsuario({ auth }) {
     <CartaoFormulario
       icone="fa-triangle-exclamation"
       titulo="Excluir Usuário"
-      subtitulo="Esta ação não pode ser desfeita."
+      subtitulo="Não existe botão de desfazer no painel."
       variante="perigo"
+      rodape={
+        usuario && (
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="btn btn-secondary flex-1"
+            >
+              Cancelar
+            </button>
+            {/* Vermelho só aqui, no final — nunca no topo da tela, depois
+                da pessoa ter lido o que vai acontecer (09-08-2026, Bloco
+                I). */}
+            <button
+              type="button"
+              onClick={aoConfirmar}
+              disabled={excluindo || !confirmado}
+              className="btn btn-danger flex-1"
+            >
+              {excluindo ? 'Excluindo...' : 'Confirmar exclusão'}
+            </button>
+          </div>
+        )
+      }
     >
       {carregando ? (
-        <p className="p-10 text-center text-sm text-slate-600">Carregando...</p>
+        <p className="p-10 text-center text-sm texto-fraco">Carregando...</p>
       ) : !usuario ? (
         <p className="p-10 text-center text-red-700 text-sm font-bold">{erro}</p>
       ) : (
@@ -65,22 +95,35 @@ export function ExcluirUsuario({ auth }) {
             />
           </div>
 
-          <div className="flex gap-3 pt-2">
-            <button
-              type="button"
-              onClick={() => navigate(-1)}
-              className="btn btn-secondary flex-1"
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              onClick={aoConfirmar}
-              disabled={excluindo}
-              className="btn btn-danger flex-1"
-            >
-              {excluindo ? 'Excluindo...' : 'Confirmar exclusão'}
-            </button>
+          {/* Consequência real (09-08-2026, Bloco I: explicar o que
+              acontece de verdade, não só "não pode ser desfeita") — é
+              exclusão LÓGICA (usuario.deletado = TRUE via
+              excluir_conta_usuario(), 03_funcoes_seguranca.sql [03-F]):
+              nada é apagado do banco, só marcado e escondido. */}
+          <div className="rounded-lg border borda-forte fundo-aviso p-4 text-sm texto-aviso">
+            <p className="font-bold mb-1">
+              <i className="fa-solid fa-circle-info mr-1"></i> O que acontece de verdade
+            </p>
+            <p>
+              A conta é marcada como excluída (exclusão lógica), não apagada do banco: o login
+              deixa de funcionar e o perfil some do público na hora, mas o registro continua
+              existindo pra auditoria e conformidade com a LGPD. Não existe um botão de
+              "restaurar" no painel — reverter isso hoje exige acesso direto ao banco.
+            </p>
+          </div>
+
+          <div>
+            <label className="rotulo-campo">
+              Digite o e-mail "{usuario.email}" pra confirmar
+            </label>
+            <input
+              type="text"
+              value={confirmacao}
+              onChange={(evento) => setConfirmacao(evento.target.value)}
+              className="input-padrao"
+              placeholder={usuario.email}
+              autoComplete="off"
+            />
           </div>
         </div>
       )}

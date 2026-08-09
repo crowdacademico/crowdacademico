@@ -49,4 +49,16 @@ export const usuarioPapelApi = {
     authFetch(`/usuario-papel/${idUsuario}/${idPapel}`, {
       method: 'DELETE',
     }).then(tratarResposta),
+  // Suspender/revogar UM papel por um tempo (09-08-2026, Bloco G) — em vez
+  // de remover o vínculo: preserva quando foi atribuído, volta sozinho no
+  // prazo. `ate` é ISO string.
+  suspender: (authFetch, idUsuario, idPapel, ate) =>
+    authFetch(`/usuario-papel/${idUsuario}/${idPapel}/suspender`, {
+      method: 'POST',
+      body: JSON.stringify({ ate }),
+    }).then(tratarResposta),
+  revogarSuspensao: (authFetch, idUsuario, idPapel) =>
+    authFetch(`/usuario-papel/${idUsuario}/${idPapel}/revogar-suspensao`, {
+      method: 'POST',
+    }).then(tratarResposta),
 };

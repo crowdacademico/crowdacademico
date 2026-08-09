@@ -26,7 +26,7 @@ export function AdminLayout({ auth }) {
       <button
         type="button"
         onClick={() => setMenuAberto(true)}
-        className="lg:hidden flex items-center gap-2 px-4 py-3 bg-white border-b border-slate-200 font-semibold text-sm text-slate-700 w-full"
+        className="lg:hidden flex items-center gap-2 px-4 py-3 fundo-cartao border-b borda-padrao font-semibold text-sm texto-padrao w-full"
       >
         <i className="fa-solid fa-bars"></i> Menu
       </button>

@@ -16,12 +16,12 @@ const DURACAO_MS = { sucesso: 4000, erro: 5000 };
 const CONFIG_TIPO = {
   sucesso: {
     corBarra: 'bg-emerald-500',
-    corIcone: 'text-emerald-600',
+    corIcone: 'texto-sucesso',
     icone: 'fa-solid fa-circle-check',
   },
   erro: {
     corBarra: 'bg-red-500',
-    corIcone: 'text-red-600',
+    corIcone: 'texto-erro',
     icone: 'fa-solid fa-circle-exclamation',
   },
 };
@@ -71,7 +71,7 @@ export function ToastProvider({ children }) {
           return (
             <div
               key={toast.id}
-              className="pointer-events-auto w-full flex bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden"
+              className="pointer-events-auto w-full flex fundo-cartao rounded-xl shadow-lg border borda-padrao overflow-hidden"
             >
               <div className={'w-1 shrink-0 ' + config.corBarra}></div>
               <div className="flex-1 flex items-start gap-3 pl-3 pr-2 py-3">
@@ -80,9 +80,9 @@ export function ToastProvider({ children }) {
                     numa caixa larga é mais difícil de ler e não é o padrão de
                     painel profissional (Experiment/Catarse usam à esquerda). */}
                 <div className="flex-1 min-w-0 text-left">
-                  <p className="text-sm font-bold text-slate-800">{toast.titulo}</p>
+                  <p className="text-sm font-bold texto-forte">{toast.titulo}</p>
                   {toast.descricao && (
-                    <p className="text-sm text-slate-600 mt-0.5">{toast.descricao}</p>
+                    <p className="text-sm texto-fraco mt-0.5">{toast.descricao}</p>
                   )}
                 </div>
                 {/* Botão de fechar — pedido do Lucas, 08-08-2026: erro que a
@@ -92,7 +92,7 @@ export function ToastProvider({ children }) {
                   type="button"
                   onClick={() => remover(toast.id)}
                   aria-label="Fechar aviso"
-                  className="shrink-0 -mr-1 -mt-1 p-1.5 text-slate-400 hover:text-slate-600 transition-colors"
+                  className="shrink-0 -mr-1 -mt-1 p-1.5 texto-fraco hover-texto-forte transition-colors"
                 >
                   <i className="fa-solid fa-xmark"></i>
                 </button>

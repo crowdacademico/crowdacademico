@@ -39,3 +39,24 @@ export async function logout(refreshToken) {
   });
   return tratarResposta(resposta);
 }
+
+// Cadastro público (09-08-2026, Bloco D) — mesma forma de resposta do
+// login (accessToken/refreshToken/usuario/papeis), mais
+// tokenVerificacaoEmailDev (só fora de produção).
+export async function cadastro(nome, email, senha, aceiteTermos) {
+  const resposta = await fetch(`${API_BASE_URL}/auth/cadastro`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nome, email, senha, aceiteTermos }),
+  });
+  return tratarResposta(resposta);
+}
+
+export async function verificarEmail(token) {
+  const resposta = await fetch(`${API_BASE_URL}/auth/verificar-email`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token }),
+  });
+  return tratarResposta(resposta);
+}

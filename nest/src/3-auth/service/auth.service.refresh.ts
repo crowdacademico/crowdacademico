@@ -2,6 +2,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { AuthServiceLogin } from './auth.service.login';
 import { DatabaseService } from '../../commons/database/database.service';
+import { UsuarioServiceFindOne } from '../../1-usuario/service/usuario.service.findone';
 import { RefreshTokenRequestDto } from '../dto/request/refresh-token.request.dto';
 import { RefreshResponseDto } from '../dto/response/refresh.response.dto';
 import { parseRefreshToken } from './refresh-token.util';
@@ -11,6 +12,7 @@ export class AuthServiceRefresh {
   constructor(
     private readonly database: DatabaseService,
     private readonly authServiceLogin: AuthServiceLogin,
+    private readonly usuarioServiceFindOne: UsuarioServiceFindOne,
   ) {}
 
   async executar(
@@ -77,11 +79,18 @@ export class AuthServiceRefresh {
       .where('id_sessao', '=', sessao.id_sessao)
       .execute();
 
-    return this.authServiceLogin.emitirTokens(
+    const { accessToken, refreshToken } =
+      await this.authServiceLogin.emitirTokens(
+        sessao.id_usuario,
+        ip,
+        userAgent,
+        'refresh',
+      );
+    const usuario = await this.usuarioServiceFindOne.executar(
       sessao.id_usuario,
-      ip,
-      userAgent,
-      'refresh',
     );
+    const papeis = await this.authServiceLogin.listarPapeis(sessao.id_usuario);
+
+    return { accessToken, refreshToken, usuario, papeis };
   }
 }

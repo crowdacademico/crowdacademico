@@ -51,7 +51,7 @@ export function CriarConfiguracao({ auth }) {
         {erro && <p className="text-red-700 text-sm font-bold text-center">{erro}</p>}
 
         <div>
-          <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">
+          <label className="rotulo-campo">
             Chave
           </label>
           <input
@@ -64,7 +64,7 @@ export function CriarConfiguracao({ auth }) {
         </div>
 
         <div>
-          <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">
+          <label className="rotulo-campo">
             Valor
           </label>
           <input
@@ -76,7 +76,7 @@ export function CriarConfiguracao({ auth }) {
         </div>
 
         <div>
-          <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">
+          <label className="rotulo-campo">
             Tipo
           </label>
           <select
@@ -96,7 +96,7 @@ export function CriarConfiguracao({ auth }) {
         </div>
 
         <div>
-          <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">
+          <label className="rotulo-campo">
             Descrição
           </label>
           <input

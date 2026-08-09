@@ -28,13 +28,13 @@ export function Breadcrumb() {
     // 16 = 4rem = a altura do <Header> (h-16), que também é sticky top-0;
     // z-40 (menor que o z-50 do Header) garante que o cabeçalho sempre fica
     // por cima quando os dois grudam juntos no topo.
-    <nav className="bg-slate-100 border-b border-slate-200 sticky top-16 z-40">
+    <nav className="fundo-sutil border-b borda-padrao sticky top-16 z-40">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center gap-2 text-sm">
         <Link to="/" className="text-primary font-bold hover:underline">
           Início
         </Link>
-        <i className="fa-solid fa-chevron-right text-slate-500 text-xs"></i>
-        <span className="text-slate-600 font-medium">{rota.rotuloBreadcrumb}</span>
+        <i className="fa-solid fa-chevron-right texto-fraco text-xs"></i>
+        <span className="texto-padrao font-medium">{rota.rotuloBreadcrumb}</span>
       </div>
     </nav>
   );

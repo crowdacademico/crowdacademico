@@ -25,6 +25,21 @@ import { PoolClient } from 'pg';
 // desfazer algo no meio de uma operação, use RAISE EXCEPTION no banco (mesmo
 // padrão que 05_regras_negocio.sql já usa em todo lugar) — o
 // GlobalDbInterceptor faz o ROLLBACK de verdade da transação inteira.
+//
+// ⚠️ CORRIGINDO O QUE O PARÁGRAFO ACIMA NÃO DIZIA (bug real, achado e
+// corrigido 09-08-2026, ver auth.service.login.ts/listarPapeis): um erro de
+// Postgres deixa a TRANSAÇÃO INTEIRA "abortada" até um ROLLBACK de verdade —
+// pegar a exceção com try/catch NO LADO DO JAVASCRIPT e seguir chamando mais
+// queries no MESMO `db` NÃO desfaz isso. As próximas queries até podem
+// "funcionar" sem lançar erro (o driver não necessariamente recusa na hora),
+// mas o COMMIT final do GlobalDbInterceptor vira silenciosamente um ROLLBACK
+// (é o que o próprio Postgres faz quando pede COMMIT numa transação já
+// abortada) — TUDO que a requisição gravou antes do erro some junto, mesmo a
+// resposta HTTP tendo voltado 200 com dado que parecia certo (lido de dentro
+// da transação, antes dela abortar). Se um service PRECISA tentar algo que
+// pode falhar e continuar mesmo assim, tem que envolver só aquele trecho com
+// SAVEPOINT/ROLLBACK TO SAVEPOINT via `sql` cru (não db.transaction(), que
+// não suporta isso aqui) — nunca um try/catch pelado em volta de uma query.
 class SingleConnection implements DatabaseConnection {
   constructor(private readonly client: PoolClient) {}
 

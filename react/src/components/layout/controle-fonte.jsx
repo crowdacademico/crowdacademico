@@ -35,7 +35,7 @@ export function ControleFonte() {
 
   return (
     <div
-      className="flex items-center border border-slate-300 rounded-lg overflow-hidden"
+      className="flex items-center border borda-forte rounded-lg overflow-hidden"
       role="group"
       aria-label="Tamanho da fonte"
     >
@@ -45,7 +45,7 @@ export function ControleFonte() {
         disabled={escala <= ESCALA_MINIMA}
         aria-label="Diminuir fonte"
         title="Diminuir fonte"
-        className="px-2.5 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+        className="px-2.5 py-1.5 text-xs font-bold texto-padrao hover-fundo-sutil transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
       >
         A-
       </button>
@@ -55,7 +55,7 @@ export function ControleFonte() {
         disabled={escala >= ESCALA_MAXIMA}
         aria-label="Aumentar fonte"
         title="Aumentar fonte"
-        className="px-2.5 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors border-l border-slate-300 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+        className="px-2.5 py-1.5 text-xs font-bold texto-padrao hover-fundo-sutil transition-colors border-l borda-forte disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
       >
         A+
       </button>

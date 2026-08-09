@@ -21,7 +21,7 @@
     font-family: var(--font-sans);
     font-size: var(--font-size-2xl);
     font-weight: 800;
-    color: var(--color-dark);
+    color: var(--cor-texto-forte);
   }
 
   /* Título e botão de ação (ex.: "Criar") na MESMA linha — pedido do Lucas,
@@ -41,8 +41,8 @@
      vazio mesmo), a mensagem faz mais sentido perto de onde o "vazio"
      apareceria, não lá no topo antes de qualquer coisa. */
   .crud-erro {
-    color: var(--color-red-600);
-    background: var(--color-red-100);
+    color: var(--cor-texto-erro);
+    background: var(--cor-fundo-erro);
     padding: 0.5rem 0.75rem;
     border-radius: var(--radius-sm);
     font-size: var(--font-size-sm);
@@ -71,7 +71,7 @@
   /* Linha fina entre linhas do corpo (não grade completa) — ERA border em
      TODA célula (th e td, todos os lados). */
   .crud-tabela tbody tr {
-    border-bottom: 1px solid var(--color-slate-100);
+    border-bottom: 1px solid var(--cor-borda);
   }
 
   .crud-tabela tbody tr:last-child {
@@ -81,7 +81,7 @@
   /* ERA --cor-fundo-sutil (slate-50) — mesmo pedido do Lucas (09-08-2026):
      hover mais escuro em todo o painel, não só no menu lateral. */
   .crud-tabela tbody tr:hover {
-    background-color: var(--color-slate-100);
+    background-color: var(--cor-fundo-hover);
   }
 
   .crud-tabela th {
@@ -95,7 +95,7 @@
        mais forte (2px) fazendo o mesmo trabalho de "separar do corpo" que
        antes dependia só da cor do texto, então dá pra aliviar o texto de
        novo sem perder legibilidade. */
-    color: var(--color-slate-600);
+    color: var(--cor-texto);
     font-weight: 800;
     border-bottom: 2px solid var(--cor-borda-forte);
   }
@@ -142,17 +142,17 @@
      só o ícone, o texto continua neutro (--cor-texto-fraco) nos dois
      casos. Azul-marinho/vermelho-tinto translúcidos (não os tons vivos de
      --color-blue-600/--color-red-600 de antes) — mais saturado no hover. */
-  /* ERA 0.55 de opacidade — o Lucas achou que ainda parecia cinza
-     (09-08-2026): num ícone pequeno, azul marinho translúcido demais
-     dessatura até ficar perto do cinza mesmo. 0.8 continua "fraquinho"
-     (não é o azul vivo --color-blue-600 de antes), mas dá pra reconhecer
-     como azul de verdade. */
+  /* ERA azul-marinho rgba(30,58,138) — o Lucas pediu um azul mais claro e
+     brilhante (09-08-2026), não só mais opaco. Trocado pro azul vivo
+     --color-blue-600/500 (mesma família já usada nos badges/tooltip do
+     projeto), mantendo o mesmo padrão de sempre: fraquinho parado,
+     cheio no hover. */
   .crud-tabela__acao--alterar i {
-    color: rgba(30, 58, 138, 0.8); /* azul marinho fraquinho */
+    color: rgba(37, 99, 235, 0.85); /* azul vivo, fraquinho */
   }
 
   .crud-tabela__acao--alterar:hover i {
-    color: rgb(30, 58, 138); /* azul marinho cheio */
+    color: rgb(59, 130, 246); /* azul vivo, cheio e mais claro */
   }
 
   /* Mesmo ajuste de opacidade do ícone de Alterar acima (0.55 pra 0.8) —

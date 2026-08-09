@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
 import { CartaoFormulario } from '../../components/crud/cartao-formulario';
+import { useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
 import { SecaoFicha } from '../../components/crud/ficha-consulta';
 import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
@@ -36,6 +37,20 @@ export function AlterarConfiguracao({ auth }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
+  const sujo =
+    configuracao !== null &&
+    (valor !== (configuracao.valor ?? '') ||
+      descricao !== (configuracao.descricao ?? '') ||
+      ativo !== configuracao.ativo);
+  useAvisoAlteracaoNaoSalva(sujo);
+
+  const aoCancelar = () => {
+    if (sujo && !window.confirm('Você tem alterações não salvas. Sair mesmo assim?')) {
+      return;
+    }
+    navigate(-1);
+  };
+
   const aoSalvar = async (evento) => {
     evento.preventDefault();
     limparErro();
@@ -52,14 +67,46 @@ export function AlterarConfiguracao({ auth }) {
   };
 
   return (
-    <CartaoFormulario icone="fa-gear" titulo="Alterar Configuração">
+    <CartaoFormulario
+      icone="fa-gear"
+      titulo="Alterar Configuração"
+      rodape={
+        configuracao && (
+          <div className="flex gap-3">
+            <button type="button" onClick={aoCancelar} className="btn btn-secondary flex-1">
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              form="form-alterar-configuracao"
+              disabled={enviando || !sujo}
+              className="btn btn-primary flex-1"
+            >
+              {enviando ? 'Salvando...' : 'Salvar'}
+            </button>
+          </div>
+        )
+      }
+    >
       {carregando ? (
-        <p className="p-10 text-center text-sm text-slate-600">Carregando...</p>
+        <p className="p-10 text-center text-sm texto-fraco">Carregando...</p>
       ) : !configuracao ? (
         <p className="p-10 text-center text-red-700 text-sm font-bold">{erro}</p>
       ) : (
-        <form onSubmit={aoSalvar} className="p-10 space-y-6">
+        <form id="form-alterar-configuracao" onSubmit={aoSalvar} className="p-10 space-y-6">
           {erro && <p className="text-red-700 text-sm font-bold text-center">{erro}</p>}
+
+          <div className="flex items-center gap-3 pb-4 border-b borda-padrao">
+            <div className="w-11 h-11 rounded-full bg-primary text-white flex items-center justify-center shrink-0">
+              <i className="fa-solid fa-gear"></i>
+            </div>
+            <div className="min-w-0">
+              <p className="font-bold texto-forte truncate font-mono text-sm">
+                {configuracao.chave}
+              </p>
+              <p className="text-xs texto-fraco">Configuração #{configuracao.idConfig}</p>
+            </div>
+          </div>
 
           <SecaoFicha titulo="Dados">
             <CampoSomenteLeitura rotulo="Chave" valor={configuracao.chave} />
@@ -68,7 +115,7 @@ export function AlterarConfiguracao({ auth }) {
 
           <SecaoFicha titulo="Editar">
             <div className="sm:col-span-2">
-              <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">
+              <label className="rotulo-campo">
                 Valor
               </label>
               <input
@@ -80,7 +127,7 @@ export function AlterarConfiguracao({ auth }) {
             </div>
 
             <div className="sm:col-span-2">
-              <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">
+              <label className="rotulo-campo">
                 Descrição
               </label>
               <input
@@ -91,7 +138,7 @@ export function AlterarConfiguracao({ auth }) {
               />
             </div>
 
-            <label className="sm:col-span-2 flex items-center gap-2 text-sm font-semibold text-slate-700">
+            <label className="sm:col-span-2 flex items-center gap-2 text-sm font-semibold texto-padrao">
               <input
                 type="checkbox"
                 checked={ativo}
@@ -100,19 +147,6 @@ export function AlterarConfiguracao({ auth }) {
               Ativo
             </label>
           </SecaoFicha>
-
-          <div className="flex gap-3 pt-2">
-            <button
-              type="button"
-              onClick={() => navigate(-1)}
-              className="btn btn-secondary flex-1"
-            >
-              Cancelar
-            </button>
-            <button type="submit" disabled={enviando} className="btn btn-primary flex-1">
-              {enviando ? 'Salvando...' : 'Salvar'}
-            </button>
-          </div>
         </form>
       )}
     </CartaoFormulario>

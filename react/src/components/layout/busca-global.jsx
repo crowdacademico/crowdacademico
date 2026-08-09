@@ -199,11 +199,11 @@ export function BuscaGlobal({ auth }) {
       onClick={fechar}
     >
       <div
-        className="w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-300 overflow-hidden"
+        className="w-full max-w-lg fundo-elevado rounded-2xl shadow-2xl border borda-forte overflow-hidden"
         onClick={(evento) => evento.stopPropagation()}
       >
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-200">
-          <i className="fa-solid fa-magnifying-glass text-slate-400"></i>
+        <div className="flex items-center gap-3 px-4 py-3 border-b borda-padrao">
+          <i className="fa-solid fa-magnifying-glass texto-fraco"></i>
           <input
             ref={inputRef}
             type="text"
@@ -211,21 +211,21 @@ export function BuscaGlobal({ auth }) {
             onChange={(evento) => setTermo(evento.target.value)}
             onKeyDown={aoTeclarInput}
             placeholder="Buscar usuário, papel, permissão, configuração..."
-            className="flex-1 outline-none text-sm text-slate-800 placeholder:text-slate-400"
+            className="flex-1 outline-none text-sm texto-forte bg-transparent placeholder:texto-fraco"
           />
-          <kbd className="text-[10px] font-bold text-slate-400 border border-slate-300 rounded px-1.5 py-0.5">
+          <kbd className="text-[10px] font-bold texto-fraco border borda-forte rounded px-1.5 py-0.5">
             Esc
           </kbd>
         </div>
 
         <div className="max-h-96 overflow-y-auto py-2">
-          {carregando && <p className="px-4 py-3 text-sm text-slate-500">Carregando...</p>}
+          {carregando && <p className="px-4 py-3 text-sm texto-fraco">Carregando...</p>}
           {!carregando && resultados.length === 0 && (
-            <p className="px-4 py-3 text-sm text-slate-500">Nada encontrado para "{termo}".</p>
+            <p className="px-4 py-3 text-sm texto-fraco">Nada encontrado para "{termo}".</p>
           )}
           {grupos.map((grupo) => (
             <div key={grupo.categoria}>
-              <div className="px-4 pt-2 pb-1 text-[11px] font-bold uppercase tracking-widest text-slate-400">
+              <div className="px-4 pt-2 pb-1 text-[11px] font-bold uppercase tracking-widest texto-fraco">
                 {grupo.categoria}
               </div>
               {grupo.itens.map((item) => {
@@ -239,18 +239,18 @@ export function BuscaGlobal({ auth }) {
                     onMouseEnter={() => setIndiceSelecionado(indice)}
                     className={
                       'w-full flex items-center gap-3 px-4 py-2 text-left text-sm ' +
-                      (selecionado ? 'bg-slate-100' : '')
+                      (selecionado ? 'fundo-realce' : '')
                     }
                   >
                     <i
-                      className={'fa-solid ' + (item.icone ?? 'fa-circle') + ' text-slate-400 w-4'}
+                      className={'fa-solid ' + (item.icone ?? 'fa-circle') + ' texto-fraco w-4'}
                     ></i>
                     <span className="flex-1 min-w-0">
-                      <span className="block text-slate-800 font-medium truncate">
+                      <span className="block texto-forte font-medium truncate">
                         {item.rotulo}
                       </span>
                       {item.subtitulo && (
-                        <span className="block text-xs text-slate-500 truncate">
+                        <span className="block text-xs texto-fraco truncate">
                           {item.subtitulo}
                         </span>
                       )}

@@ -360,6 +360,216 @@ GRANT EXECUTE ON FUNCTION public.contar_metricas_dashboard() TO app_nestjs;
 
 
 -- ============================================================================
+-- 09-08-2026 — função listar_papeis_usuario(p_id_usuario) ([03-B]) — usada
+-- por login/refresh (3-auth) pra saber se o dropdown do cabeçalho mostra
+-- "Painel Admin". SECURITY DEFINER porque, no momento do login/refresh, a
+-- sessão que autorizaria a leitura normal de usuario_papel ainda está sendo
+-- criada NESTA MESMA requisição (id_usuario_atual() ainda é NULL ali).
+-- Seguro rodar de novo quantas vezes quiser (CREATE OR REPLACE).
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION public.listar_papeis_usuario(p_id_usuario INT)
+RETURNS SETOF TEXT
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT p.codigo
+    FROM usuario_papel up
+    JOIN papel p ON p.id_papel = up.id_papel
+    WHERE up.id_usuario = p_id_usuario
+    ORDER BY p.codigo;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.listar_papeis_usuario(INT) TO app_nestjs;
+
+
+-- ============================================================================
+-- 09-08-2026 — amplia pol_log_auditoria_select ([04-L]) pro sino "Atividade
+-- recente" do cabeçalho: além de quem tem 'log_visualizar', o próprio autor
+-- de uma linha (id_usuario_responsavel = id_usuario_atual()) também passa a
+-- ver ela. Estritamente aditivo (OR novo, nada removido). Seguro rodar de
+-- novo quantas vezes quiser (CREATE OR REPLACE via DROP+CREATE POLICY).
+-- ============================================================================
+
+DROP POLICY IF EXISTS pol_log_auditoria_select ON public.log_auditoria;
+CREATE POLICY pol_log_auditoria_select ON public.log_auditoria FOR SELECT TO app_nestjs USING (
+    public.tem_permissao('log_visualizar') OR id_usuario_responsavel = public.id_usuario_atual()
+);
+
+
+-- ============================================================================
+-- 09-08-2026 — função registrar_aceite_termo(p_id_usuario, p_id_termo, p_ip)
+-- ([03-D-1]) — usada pelo cadastro público (POST /auth/cadastro, 3-auth) pra
+-- gravar o aceite dos Termos de Uso no mesmo instante em que a conta é
+-- criada, quando ainda não existe sessão (id_usuario_atual() é NULL).
+-- Seguro rodar de novo quantas vezes quiser (CREATE OR REPLACE).
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION public.registrar_aceite_termo(p_id_usuario INT, p_id_termo INT, p_ip TEXT)
+RETURNS VOID
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    INSERT INTO usuario_termo (id_usuario, id_termo, ip_aceite)
+    VALUES (p_id_usuario, p_id_termo, p_ip)
+    ON CONFLICT (id_usuario, id_termo) DO NOTHING;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.registrar_aceite_termo(INT, INT, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.registrar_aceite_termo(INT, INT, TEXT) TO app_nestjs;
+
+
+-- ============================================================================
+-- 09-08-2026 — Bloco G do prompt do Claude Web: moderação/suspensão de
+-- CONTA (bloqueia login) e de UM PAPEL específico (usuário continua
+-- logado, só perde as permissões daquele papel). NÃO EXISTE função de
+-- reverter uma ALTER TABLE já rodada — este bloco, diferente da maioria
+-- deste arquivo, só é seguro colar UMA VEZ (as ADD COLUMN/ADD CONSTRAINT
+-- falham na 2ª vez com "column already exists"/"constraint already
+-- exists" — inofensivo, só pare no primeiro erro e pule pro CREATE
+-- FUNCTION abaixo, que esses sim são idempotentes).
+-- ============================================================================
+
+ALTER TABLE usuario
+    ADD COLUMN suspenso_ate     TIMESTAMPTZ,
+    ADD COLUMN motivo_suspensao TEXT,
+    ADD COLUMN suspenso_por     INT REFERENCES usuario(id_usuario);
+
+ALTER TABLE usuario
+    ADD CONSTRAINT "CK_USUARIO_SUSPENSAO" CHECK (
+        (suspenso_ate IS NULL AND motivo_suspensao IS NULL)
+        OR (suspenso_ate IS NOT NULL AND motivo_suspensao IS NOT NULL)
+    );
+
+ALTER TABLE usuario_papel
+    ADD COLUMN suspenso_ate TIMESTAMPTZ;
+
+-- tem_permissao() ampliada — ignora vínculo usuario_papel suspenso.
+CREATE OR REPLACE FUNCTION public.tem_permissao(p_permissao TEXT)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT EXISTS (
+        SELECT 1
+        FROM usuario_papel up
+        JOIN papel_permissao pp ON pp.id_papel = up.id_papel
+        JOIN permissao pm ON pm.id_permissao = pp.id_permissao
+        WHERE up.id_usuario = public.id_usuario_atual()
+          AND pm.nome = p_permissao
+          AND (up.suspenso_ate IS NULL OR up.suspenso_ate <= now())
+    );
+$$;
+
+CREATE OR REPLACE FUNCTION public.suspender_usuario(p_id_usuario INT, p_ate TIMESTAMPTZ, p_motivo TEXT)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    IF NOT public.tem_permissao('usuario_suspender') THEN
+        RAISE EXCEPTION 'Sem permissão para suspender usuário.';
+    END IF;
+    IF p_motivo IS NULL OR btrim(p_motivo) = '' THEN
+        RAISE EXCEPTION 'Motivo da suspensão é obrigatório.';
+    END IF;
+
+    UPDATE usuario
+    SET suspenso_ate = p_ate,
+        motivo_suspensao = p_motivo,
+        suspenso_por = public.id_usuario_atual()
+    WHERE id_usuario = p_id_usuario;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.revogar_suspensao_usuario(p_id_usuario INT)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    IF NOT public.tem_permissao('usuario_suspender') THEN
+        RAISE EXCEPTION 'Sem permissão para revogar suspensão de usuário.';
+    END IF;
+
+    UPDATE usuario
+    SET suspenso_ate = NULL, motivo_suspensao = NULL, suspenso_por = NULL
+    WHERE id_usuario = p_id_usuario;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.suspender_papel_usuario(p_id_usuario INT, p_id_papel INT, p_ate TIMESTAMPTZ)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    IF NOT public.tem_permissao('papel_gerenciar') THEN
+        RAISE EXCEPTION 'Sem permissão para suspender papel de usuário.';
+    END IF;
+
+    UPDATE usuario_papel
+    SET suspenso_ate = p_ate
+    WHERE id_usuario = p_id_usuario AND id_papel = p_id_papel;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.revogar_suspensao_papel_usuario(p_id_usuario INT, p_id_papel INT)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    IF NOT public.tem_permissao('papel_gerenciar') THEN
+        RAISE EXCEPTION 'Sem permissão para revogar suspensão de papel de usuário.';
+    END IF;
+
+    UPDATE usuario_papel
+    SET suspenso_ate = NULL
+    WHERE id_usuario = p_id_usuario AND id_papel = p_id_papel;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.suspender_usuario(INT, TIMESTAMPTZ, TEXT)         FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.revogar_suspensao_usuario(INT)                    FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.suspender_papel_usuario(INT, INT, TIMESTAMPTZ)    FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.revogar_suspensao_papel_usuario(INT, INT)         FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.suspender_usuario(INT, TIMESTAMPTZ, TEXT)          TO app_nestjs;
+GRANT EXECUTE ON FUNCTION public.revogar_suspensao_usuario(INT)                     TO app_nestjs;
+GRANT EXECUTE ON FUNCTION public.suspender_papel_usuario(INT, INT, TIMESTAMPTZ)     TO app_nestjs;
+GRANT EXECUTE ON FUNCTION public.revogar_suspensao_papel_usuario(INT, INT)          TO app_nestjs;
+
+GRANT SELECT (
+    id_usuario, nome, email, id_imagem_perfil, criado_em, deletado,
+    deletado_em, deletado_por,
+    email_verificado, senha_hash, tentativas_login_falhas, bloqueado_ate,
+    ultimo_login_em, ultimo_login_ip,
+    suspenso_ate, motivo_suspensao, suspenso_por
+) ON public.usuario TO app_nestjs;
+
+-- Opções de prazo pro seletor do painel (texto livre também disponível na
+-- tela) — nada fixo no código, ver DOCUMENTACAO_BD.md.
+INSERT INTO configuracoes (chave, valor, tipo, descricao, ativo)
+VALUES (
+    'suspensao_usuario_opcoes_dias',
+    '1,3,7,30',
+    'texto',
+    'Opções de prazo (em dias) sugeridas no seletor de suspensão de usuário — lista separada por vírgula.',
+    TRUE
+)
+ON CONFLICT (chave) DO NOTHING;
+
+
+-- ============================================================================
 -- NÃO ENTRA NESTE ARQUIVO (registrado aqui só pra não se perder)
 -- ============================================================================
 

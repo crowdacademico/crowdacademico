@@ -42,7 +42,7 @@
 }
 
 .admin-sidebar {
-  background-color: var(--color-white);
+  background-color: var(--cor-fundo-cartao);
   border-bottom: 1px solid var(--cor-borda);
   padding: 1.5rem;
 }
@@ -88,7 +88,7 @@
   border-radius: var(--radius-md);
   border: 1px solid transparent;
   background: none;
-  color: var(--color-slate-600);
+  color: var(--cor-texto);
   font-weight: 600;
   font-size: var(--font-size-sm);
   transition: var(--transition-normal);
@@ -108,7 +108,7 @@
    inset em vez de border-left: desenha a barra sem empurrar o padding do
    item (border-left somaria largura extra e desalinharia do item normal). */
 .admin-sidebar__item--ativo {
-  background-color: var(--color-slate-100);
+  background-color: var(--cor-fundo-hover);
   box-shadow: inset 3px 0 0 var(--color-primary);
   color: var(--cor-texto-forte);
   font-weight: 800;
@@ -119,12 +119,12 @@
    sozinha) — perdia a barra/aparência de "selecionado" enquanto o mouse
    estava em cima. */
 .admin-sidebar__item--ativo:hover {
-  background-color: var(--color-slate-200);
+  background-color: var(--cor-borda);
 }
 
 .admin-sidebar__item--desabilitado {
-  background-color: var(--color-slate-100);
-  color: var(--color-slate-400);
+  background-color: var(--cor-fundo-hover);
+  color: var(--cor-texto-fraco);
   border-color: var(--cor-borda);
   cursor: not-allowed;
 }
@@ -154,7 +154,7 @@
 }
 
 .admin-content-painel {
-  background-color: var(--color-white);
+  background-color: var(--cor-fundo-cartao);
   border: 1px solid var(--cor-borda);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);

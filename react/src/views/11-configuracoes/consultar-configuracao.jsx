@@ -23,17 +23,17 @@ export function ConsultarConfiguracao({ auth }) {
   }, [id]);
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 bg-surface">
-      <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
-        <div className="p-10 text-center border-b border-slate-100 bg-slate-50">
+    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 fundo-pagina">
+      <div className="max-w-md w-full fundo-cartao rounded-3xl shadow-2xl border borda-padrao overflow-hidden">
+        <div className="p-10 text-center border-b borda-padrao fundo-sutil">
           <div className="w-14 h-14 bg-primary rounded-2xl mx-auto flex items-center justify-center text-white font-bold text-2xl mb-5 shadow-lg">
             <i className="fa-solid fa-gear"></i>
           </div>
-          <h2 className="text-3xl font-serif font-bold text-dark mb-2">Consultar Configuração</h2>
+          <h2 className="text-3xl font-serif font-bold texto-forte mb-2">Consultar Configuração</h2>
         </div>
 
         {carregando ? (
-          <p className="p-10 text-center text-sm text-slate-600">Carregando...</p>
+          <p className="p-10 text-center text-sm texto-fraco">Carregando...</p>
         ) : !configuracao ? (
           <p className="p-10 text-center text-red-700 text-sm font-bold">{erro}</p>
         ) : (

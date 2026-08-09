@@ -11,14 +11,25 @@
 // cartão é idêntico, não é um componente "de exclusão" separado.
 const VARIANTES_ICONE = {
   padrao: 'bg-primary text-white',
-  perigo: 'bg-red-100 text-red-600',
+  perigo: 'fundo-erro texto-erro',
 };
 
-export function CartaoFormulario({ icone, titulo, subtitulo, variante = 'padrao', children }) {
+// `rodape` (09-08-2026, Bloco I do prompt do Claude Web sobre Alterar/
+// Excluir) — separa as ações finais (Salvar/Cancelar, Confirmar exclusão)
+// do corpo do formulário: o card ganha altura MÁXIMA (não mais só
+// "cresce o quanto precisar") e vira flex-column com 3 fatias —
+// cabeçalho fixo, corpo com scroll próprio, rodapé fixo. Sem isso, um
+// formulário longo (Alterar Usuário, com Dados/Acesso/Papéis) empurrava
+// o botão Salvar pra fora da tela em telas baixas, obrigando rolar a
+// PÁGINA inteira só pra achar o botão — problema clássico de formulário
+// modal sem rodapé fixo (Notion/Linear resolvem assim). Opcional: quem
+// não passa `rodape` (telas de Criar, mais curtas) continua exatamente
+// como antes, sem nenhuma mudança visual.
+export function CartaoFormulario({ icone, titulo, subtitulo, variante = 'padrao', rodape, children }) {
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 bg-surface">
-      <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl border border-slate-300 overflow-hidden">
-        <div className="p-10 text-center border-b border-slate-100 bg-slate-50">
+    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 fundo-pagina">
+      <div className="max-w-md w-full max-h-[calc(100vh-2rem)] fundo-cartao rounded-3xl shadow-2xl border borda-forte overflow-hidden flex flex-col">
+        <div className="p-10 text-center border-b borda-padrao fundo-sutil shrink-0">
           <div
             className={
               'w-14 h-14 rounded-2xl mx-auto flex items-center justify-center font-bold text-2xl mb-5 shadow-lg ' +
@@ -27,11 +38,15 @@ export function CartaoFormulario({ icone, titulo, subtitulo, variante = 'padrao'
           >
             <i className={'fa-solid ' + icone}></i>
           </div>
-          <h2 className="text-3xl font-serif font-bold text-dark mb-2">{titulo}</h2>
-          {subtitulo && <p className="text-sm text-slate-600 font-medium">{subtitulo}</p>}
+          <h2 className="text-3xl font-serif font-bold texto-forte mb-2">{titulo}</h2>
+          {subtitulo && <p className="text-sm texto-padrao font-medium">{subtitulo}</p>}
         </div>
 
-        {children}
+        <div className="overflow-y-auto min-h-0 flex-1">{children}</div>
+
+        {rodape && (
+          <div className="p-6 border-t borda-padrao fundo-cartao shrink-0">{rodape}</div>
+        )}
       </div>
     </div>
   );

@@ -70,7 +70,7 @@ export function ConsultarUsuario({ auth }) {
   const loginsAnteriores = logins?.slice(1) ?? [];
 
   if (carregando) {
-    return <p className="p-10 text-center text-sm text-slate-600">Carregando...</p>;
+    return <p className="p-10 text-center text-sm texto-fraco">Carregando...</p>;
   }
 
   if (!usuario) {
@@ -124,7 +124,7 @@ export function ConsultarUsuario({ auth }) {
                 onClick={aoAlternarLogins}
                 aria-label="Ver logins anteriores"
                 title="Ver logins anteriores"
-                className="text-slate-400 hover:text-slate-600 transition-colors shrink-0"
+                className="texto-fraco hover-texto-forte transition-colors shrink-0"
               >
                 <i
                   className={
@@ -137,11 +137,11 @@ export function ConsultarUsuario({ auth }) {
           }
         >
           {loginsAbertos && (
-            <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm">
+            <div className="mt-2 rounded-lg border borda-padrao fundo-sutil p-3 text-sm">
               {carregandoLogins ? (
-                <p className="text-slate-600">Carregando...</p>
+                <p className="texto-fraco">Carregando...</p>
               ) : loginsAnteriores.length === 0 ? (
-                <p className="text-slate-600">Nenhum login anterior registrado.</p>
+                <p className="texto-fraco">Nenhum login anterior registrado.</p>
               ) : (
                 <ul className="space-y-1">
                   {loginsAnteriores.map((login, indice) => (
@@ -149,7 +149,7 @@ export function ConsultarUsuario({ auth }) {
                     // existe aqui — a resposta não traz id_sessao de
                     // propósito, é histórico de login, não uma entidade
                     // gerenciável pelo painel).
-                    <li key={indice} className="text-slate-700">
+                    <li key={indice} className="texto-padrao">
                       {new Date(login.logadoEm).toLocaleString('pt-BR')}
                     </li>
                   ))}

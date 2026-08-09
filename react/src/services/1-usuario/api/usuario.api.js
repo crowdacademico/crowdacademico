@@ -35,4 +35,17 @@ export const usuarioApi = {
   // não precisou de tabela nova; mais recente primeiro.
   listarLogins: (authFetch, id) =>
     authFetch(`/usuario/${id}/logins`).then(tratarResposta),
+  // Suspensão de MODERAÇÃO (09-08-2026, Bloco G) — diferente de
+  // `desbloquear` acima (aquele é bloqueio automático por senha errada).
+  // `ate` é ISO string. "Reduzir a pena" é chamar `suspender` de novo com
+  // uma data mais próxima, não existe endpoint separado pra isso.
+  buscarSuspensao: (authFetch, id) =>
+    authFetch(`/usuario/${id}/suspensao`).then(tratarResposta),
+  suspender: (authFetch, id, ate, motivo) =>
+    authFetch(`/usuario/${id}/suspender`, {
+      method: 'POST',
+      body: JSON.stringify({ ate, motivo }),
+    }).then(tratarResposta),
+  revogarSuspensao: (authFetch, id) =>
+    authFetch(`/usuario/${id}/revogar-suspensao`, { method: 'POST' }).then(tratarResposta),
 };

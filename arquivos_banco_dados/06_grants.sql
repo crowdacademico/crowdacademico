@@ -77,6 +77,10 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO app_nestjs;
 GRANT INSERT, DELETE ON papel_permissao TO app_nestjs;
 GRANT UPDATE (nome) ON papel TO app_nestjs;
 
+-- listar_papeis_usuario (03, [03-B], 09-08-2026) — usada por login/refresh
+-- (03-auth) pra saber se mostra "Painel Admin" no dropdown do cabeçalho.
+GRANT EXECUTE ON FUNCTION public.listar_papeis_usuario(INT) TO app_nestjs;
+
 -- ============================================================================
 --  [06-C] CONFIG
 -- ============================================================================
@@ -104,11 +108,17 @@ REVOKE SELECT ON public.perfil_pesquisador FROM app_nestjs;
 -- só leitura aqui (não estão no GRANT UPDATE, [06-D-9] abaixo; só mudam via
 -- excluir_conta_usuario, 03, [03-F]), pro Admin conseguir ver quem excluiu e
 -- quando (a trilha que faltava pro Art. 37 da LGPD).
+-- suspenso_ate/motivo_suspensao/suspenso_por (09-08-2026, [03-N]) — leitura
+-- liberada pra Consultar Usuário mostrar o estado de suspensão e pro login
+-- (3-auth) checar suspenso_ate antes de emitir token. Escrita continua só
+-- via suspender_usuario()/revogar_suspensao_usuario() (SECURITY DEFINER),
+-- nunca por este GRANT — mesma proteção das outras colunas de moderação.
 GRANT SELECT (
     id_usuario, nome, email, id_imagem_perfil, criado_em, deletado,
     deletado_em, deletado_por,
     email_verificado, senha_hash, tentativas_login_falhas, bloqueado_ate,
-    ultimo_login_em, ultimo_login_ip
+    ultimo_login_em, ultimo_login_ip,
+    suspenso_ate, motivo_suspensao, suspenso_por
 ) ON public.usuario TO app_nestjs;
 
 -- CORRIGIDO: coluna suspenso removida da tabela (01) — tirada da lista também.
@@ -191,18 +201,33 @@ REVOKE EXECUTE ON FUNCTION public.registrar_falha_login(INT)              FROM P
 REVOKE EXECUTE ON FUNCTION public.liberar_bloqueio_login(INT)             FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.registrar_login_sucesso(INT, TEXT)      FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.excluir_conta_usuario(INT)              FROM PUBLIC;
+-- registrar_aceite_termo(INT, INT, TEXT) — ver [03-D-1], usada pelo cadastro
+-- público (POST /auth/cadastro, 3-auth) pra gravar o aceite de termo no
+-- mesmo instante em que a conta é criada, sem sessão ainda existindo.
+REVOKE EXECUTE ON FUNCTION public.registrar_aceite_termo(INT, INT, TEXT)  FROM PUBLIC;
 -- suspender_pesquisador(INT) — ver [03-G]. Mesma higiene das demais funções
 -- privilegiadas: nasce com EXECUTE liberado pra PUBLIC por padrão, precisa ser
 -- revogado antes do GRANT explícito.
 REVOKE EXECUTE ON FUNCTION public.suspender_pesquisador(INT)              FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.reativar_pesquisador(INT)               FROM PUBLIC;
+-- suspender_usuario/revogar_suspensao_usuario/suspender_papel_usuario/
+-- revogar_suspensao_papel_usuario — ver [03-N]. Mesma higiene.
+REVOKE EXECUTE ON FUNCTION public.suspender_usuario(INT, TIMESTAMPTZ, TEXT)         FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.revogar_suspensao_usuario(INT)                    FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.suspender_papel_usuario(INT, INT, TIMESTAMPTZ)    FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.revogar_suspensao_papel_usuario(INT, INT)         FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.confirmar_email_por_token(TEXT)          TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.registrar_falha_login(INT)               TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.liberar_bloqueio_login(INT)              TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.registrar_login_sucesso(INT, TEXT)       TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.excluir_conta_usuario(INT)               TO app_nestjs;
+GRANT EXECUTE ON FUNCTION public.registrar_aceite_termo(INT, INT, TEXT)   TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.suspender_pesquisador(INT)               TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.reativar_pesquisador(INT)                TO app_nestjs;
+GRANT EXECUTE ON FUNCTION public.suspender_usuario(INT, TIMESTAMPTZ, TEXT)      TO app_nestjs;
+GRANT EXECUTE ON FUNCTION public.revogar_suspensao_usuario(INT)                 TO app_nestjs;
+GRANT EXECUTE ON FUNCTION public.suspender_papel_usuario(INT, INT, TIMESTAMPTZ) TO app_nestjs;
+GRANT EXECUTE ON FUNCTION public.revogar_suspensao_papel_usuario(INT, INT)      TO app_nestjs;
 -- CORRIGIDO: usuario_termo também tinha UPDATE sem nenhuma policy de UPDATE — é
 -- registro de aceite de termo, nunca deveria ser editável depois de criado.
 GRANT INSERT ON usuario_termo TO app_nestjs;

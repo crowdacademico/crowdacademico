@@ -38,12 +38,12 @@ export function AdminSidebar({ aberto, aoFechar }) {
         <button
           type="button"
           onClick={abrirBuscaGlobal}
-          className="w-full flex items-center justify-between gap-2 px-3 py-2 my-3 rounded-md border border-slate-300 bg-slate-50 text-sm text-slate-500 hover:bg-slate-200 transition-colors"
+          className="w-full flex items-center justify-between gap-2 px-3 py-2 my-3 rounded-md border borda-forte fundo-sutil text-sm texto-fraco hover-fundo-sutil transition-colors"
         >
           <span className="flex items-center gap-2">
             <i className="fa-solid fa-magnifying-glass"></i> Buscar
           </span>
-          <kbd className="text-[10px] font-bold border border-slate-300 rounded px-1.5 py-0.5 bg-white">
+          <kbd className="text-[10px] font-bold border borda-forte rounded px-1.5 py-0.5 fundo-cartao">
             Ctrl K
           </kbd>
         </button>

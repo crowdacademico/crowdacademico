@@ -43,24 +43,9 @@ export function ExcluirConfiguracao({ auth }) {
       titulo="Excluir Configuração"
       subtitulo="Esta ação não pode ser desfeita."
       variante="perigo"
-    >
-      {carregando ? (
-        <p className="p-10 text-center text-sm text-slate-600">Carregando...</p>
-      ) : !configuracao ? (
-        <p className="p-10 text-center text-red-700 text-sm font-bold">{erro}</p>
-      ) : (
-        <div className="p-10 space-y-6">
-          {erro && <p className="text-red-700 text-sm font-bold text-center">{erro}</p>}
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-            <CampoSomenteLeitura rotulo="Chave" valor={configuracao.chave} />
-            <CampoSomenteLeitura rotulo="Valor" valor={configuracao.valor} />
-            <CampoSomenteLeitura rotulo="Tipo" valor={configuracao.tipo} />
-            <CampoSomenteLeitura rotulo="Ativo" valor={configuracao.ativo ? 'Sim' : 'Não'} />
-            <CampoSomenteLeitura rotulo="Descrição" valor={configuracao.descricao} />
-          </div>
-
-          <div className="flex gap-3 pt-2">
+      rodape={
+        configuracao && (
+          <div className="flex gap-3">
             <button
               type="button"
               onClick={() => navigate(-1)}
@@ -76,6 +61,42 @@ export function ExcluirConfiguracao({ auth }) {
             >
               {excluindo ? 'Excluindo...' : 'Confirmar exclusão'}
             </button>
+          </div>
+        )
+      }
+    >
+      {carregando ? (
+        <p className="p-10 text-center text-sm texto-fraco">Carregando...</p>
+      ) : !configuracao ? (
+        <p className="p-10 text-center text-red-700 text-sm font-bold">{erro}</p>
+      ) : (
+        <div className="p-10 space-y-6">
+          {erro && <p className="text-red-700 text-sm font-bold text-center">{erro}</p>}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+            <CampoSomenteLeitura rotulo="Chave" valor={configuracao.chave} />
+            <CampoSomenteLeitura rotulo="Valor" valor={configuracao.valor} />
+            <CampoSomenteLeitura rotulo="Tipo" valor={configuracao.tipo} />
+            <CampoSomenteLeitura rotulo="Ativo" valor={configuracao.ativo ? 'Sim' : 'Não'} />
+            <CampoSomenteLeitura rotulo="Descrição" valor={configuracao.descricao} />
+          </div>
+
+          {/* Diferente de Excluir Usuário: configuração não tem exclusão
+              lógica (sem coluna `deletado`) — remover aqui é DELETE de
+              verdade na tabela `configuracoes` (09-08-2026, Bloco I).
+              Confirmação simples (não por digitação) porque não é a conta
+              de uma pessoa, mas o aviso precisa ser honesto sobre a
+              diferença. */}
+          <div className="rounded-lg border borda-forte fundo-erro p-4 text-sm texto-erro">
+            <p className="font-bold mb-1">
+              <i className="fa-solid fa-circle-info mr-1"></i> O que acontece de verdade
+            </p>
+            <p>
+              Diferente de excluir um usuário, esta linha some do banco pra sempre — não é
+              exclusão lógica. Se algum código ainda ler a chave "{configuracao.chave}", ele
+              vai passar a receber o valor padrão dele (ou dar erro, dependendo de como foi
+              escrito). Confira se ela não está mais em uso antes de confirmar.
+            </p>
           </div>
         </div>
       )}

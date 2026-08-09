@@ -19,4 +19,13 @@ export class AtualizarUsuarioRequestDto {
   @IsString()
   @MinLength(8, { message: 'Senha precisa ter pelo menos 8 caracteres.' })
   novaSenha?: string;
+
+  // Opcional (09-08-2026, Bloco E — "Alterar senha (exigindo a atual)" em
+  // Minha Conta): quando presente, o service exige bcrypt.compare contra
+  // a senha atual antes de aceitar `novaSenha`. Ausente = comportamento de
+  // sempre (reset administrativo, quem tem `usuario_suspender` não precisa
+  // saber a senha antiga de outra pessoa) — mesmo endpoint, dois usos.
+  @IsOptional()
+  @IsString()
+  senhaAtual?: string;
 }

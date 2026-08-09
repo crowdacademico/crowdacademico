@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
@@ -49,6 +53,28 @@ export class AuthServiceLogin {
       );
     }
 
+    // Suspensão de MODERAÇÃO (09-08-2026, Bloco G) — conceito diferente de
+    // bloqueado_ate acima (ver comentário completo em usuario.suspenso_ate,
+    // 01_extensoes_enums_tabelas.sql [01-D]). 403, não 401: a pessoa não
+    // errou credencial nenhuma, a CONTA é que está impedida — precisa saber
+    // por quê, diferente do "Credenciais inválidas" deliberadamente vago.
+    //
+    // ⚠️ Consulta separada (não junto do SELECT acima) e protegida por
+    // SAVEPOINT de propósito — mesmo bug já corrigido uma vez neste mesmo
+    // arquivo (ver comentário grande em listarPapeis, embaixo): as colunas
+    // suspenso_ate/motivo_suspensao só existem de verdade depois de alguém
+    // colar ATUALIZAR O SUPABASE.sql no SQL Editor (Bloco G, PENDENCIAS e
+    // correcoes.md item 22). Até lá, um SELECT direto nelas quebraria
+    // LOGIN INTEIRO com 500 — confirmado ao vivo (09-08-2026) tentando
+    // logar antes da migração ter rodado. Falha graciosamente: sem as
+    // colunas, ninguém está suspenso (mesma coisa que sempre foi).
+    const suspensao = await this.buscarSuspensao(usuario.id_usuario);
+    if (suspensao.suspensoAte && suspensao.suspensoAte > new Date()) {
+      throw new ForbiddenException(
+        `Conta suspensa até ${suspensao.suspensoAte.toISOString()}. Motivo: ${suspensao.motivoSuspensao}`,
+      );
+    }
+
     const senhaValida = await bcrypt.compare(dto.senha, usuario.senha_hash);
     if (!senhaValida) {
       // SECURITY DEFINER (03_funcoes_seguranca.sql) — roda antes de existir
@@ -75,8 +101,72 @@ export class AuthServiceLogin {
     const usuarioResponse = await this.usuarioServiceFindOne.executar(
       usuario.id_usuario,
     );
+    const papeis = await this.listarPapeis(usuario.id_usuario);
 
-    return { accessToken, refreshToken, usuario: usuarioResponse };
+    return { accessToken, refreshToken, usuario: usuarioResponse, papeis };
+  }
+
+  // Ver comentário de chamada em executar() acima — SAVEPOINT protege o
+  // resto da transação (tokens, sessao) de um erro "coluna não existe"
+  // enquanto a migração do Bloco G não rodou no banco de produção.
+  async buscarSuspensao(
+    idUsuario: number,
+  ): Promise<{ suspensoAte: Date | null; motivoSuspensao: string | null }> {
+    const db = this.database.getDb();
+    await sql`SAVEPOINT sp_buscar_suspensao`.execute(db);
+    try {
+      const linha = await sql<{
+        suspenso_ate: Date | null;
+        motivo_suspensao: string | null;
+      }>`SELECT suspenso_ate, motivo_suspensao FROM usuario WHERE id_usuario = ${idUsuario}`.execute(
+        db,
+      );
+      return {
+        suspensoAte: linha.rows[0]?.suspenso_ate ?? null,
+        motivoSuspensao: linha.rows[0]?.motivo_suspensao ?? null,
+      };
+    } catch {
+      await sql`ROLLBACK TO SAVEPOINT sp_buscar_suspensao`.execute(db);
+      return { suspensoAte: null, motivoSuspensao: null };
+    }
+  }
+
+  // Reaproveitado por AuthServiceRefresh — mesmo raciocínio de emitirTokens
+  // logo abaixo: um lugar só pra essa consulta, chamada tanto no login
+  // quanto na renovação silenciosa.
+  //
+  // ⚠️ BUG REAL achado e corrigido no mesmo dia (09-08-2026): a 1ª versão
+  // disto era um try/catch simples devolvendo [] se listar_papeis_usuario()
+  // não existisse (ver PENDENCIAS e correcoes.md, item 22 — a função só
+  // existe de verdade depois de alguém colar ATUALIZAR O SUPABASE.sql no
+  // SQL Editor). Isso pareceu funcionar (login voltava 200 com papeis: [])
+  // mas SILENCIOSAMENTE FAZIA O LOGIN INTEIRO NÃO PERSISTIR NADA: um erro
+  // de Postgres deixa a TRANSAÇÃO inteira "abortada" até um ROLLBACK de
+  // verdade — pegar a exceção em JavaScript não desfaz isso. O
+  // client.query('COMMIT') do GlobalDbInterceptor, chamado depois, virava
+  // silenciosamente um ROLLBACK (Postgres troca COMMIT por ROLLBACK sozinho
+  // numa transação abortada) — sessao/ultimo_login_em, tudo que a mesma
+  // requisição tinha gravado antes, sumia, mesmo a resposta HTTP voltando
+  // 200 com dado que parecia certo (lido DENTRO da transação, antes dela
+  // abortar). Só descobri rodando um GET /auth/sessoes logo depois de um
+  // login e vendo a lista vazia, e confirmei instrumentando o interceptor.
+  // Fix de verdade: SAVEPOINT ao redor SÓ desta chamada arriscada — se
+  // listar_papeis_usuario() falhar, ROLLBACK TO SAVEPOINT desfaz só ela,
+  // sem abortar a transação inteira (KyselySingleConnectionDialect não tem
+  // db.transaction() com savepoint, por isso é SQL cru aqui, não o Kysely
+  // .transaction()).
+  async listarPapeis(idUsuario: number): Promise<string[]> {
+    const db = this.database.getDb();
+    await sql`SAVEPOINT sp_listar_papeis`.execute(db);
+    try {
+      const resultado = await sql<{
+        listar_papeis_usuario: string;
+      }>`SELECT * FROM listar_papeis_usuario(${idUsuario})`.execute(db);
+      return resultado.rows.map((linha) => linha.listar_papeis_usuario);
+    } catch {
+      await sql`ROLLBACK TO SAVEPOINT sp_listar_papeis`.execute(db);
+      return [];
+    }
   }
 
   // Reaproveitado por AuthServiceRefresh (rotação de refresh token) — mesma
@@ -119,7 +209,18 @@ export class AuthServiceLogin {
       .returning('id_sessao')
       .executeTakeFirstOrThrow();
 
-    const accessToken = this.jwtService.sign({ sub: idUsuario });
+    // `sid` (09-08-2026, Bloco E — Sessões Ativas em Minha Conta): sem isso
+    // não tinha como saber qual sessao.id_sessao corresponde à aba atual,
+    // pra marcar "sessão atual" na lista e excluí-la de "encerrar todas as
+    // outras" (ver usuario-autenticado.interface.ts). Continua consistente
+    // depois de uma renovação silenciosa: refresh chama esta MESMA função,
+    // que cria uma sessao NOVA e devolve um accessToken novo com o `sid`
+    // atualizado — o cliente sempre troca o token inteiro (salvarSessao),
+    // nunca fica com um `sid` velho apontando pra uma sessao já revogada.
+    const accessToken = this.jwtService.sign({
+      sub: idUsuario,
+      sid: sessao.id_sessao,
+    });
     const refreshToken = `${sessao.id_sessao}${REFRESH_TOKEN_SEPARADOR}${segredo}`;
 
     return { accessToken, refreshToken };

@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { DatabaseService } from '../../commons/database/database.service';
@@ -21,10 +22,28 @@ export class UsuarioServiceUpdate {
     idUsuario: number,
     dto: AtualizarUsuarioRequestDto,
   ): Promise<UsuarioResponseDto> {
+    const db = this.database.getDb();
+
+    // `senhaAtual` presente = troca autoatendida (Minha Conta > Segurança) —
+    // exige conferir a senha de verdade antes de trocar (09-08-2026, Bloco
+    // E). Ausente = reset administrativo (AlterarUsuario, painel admin),
+    // comportamento de sempre, sem essa checagem.
+    if (dto.senhaAtual !== undefined) {
+      const atual = await db
+        .selectFrom('usuario')
+        .select('senha_hash')
+        .where('id_usuario', '=', idUsuario)
+        .executeTakeFirst();
+      const confere =
+        atual && (await bcrypt.compare(dto.senhaAtual, atual.senha_hash));
+      if (!confere) {
+        throw new UnauthorizedException('Senha atual incorreta.');
+      }
+    }
+
     const senhaHash = dto.novaSenha
       ? await bcrypt.hash(dto.novaSenha, CUSTO_BCRYPT)
       : undefined;
-    const db = this.database.getDb();
 
     const campos = {
       ...(dto.nome !== undefined ? { nome: dto.nome } : {}),

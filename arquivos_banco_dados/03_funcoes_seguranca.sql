@@ -91,6 +91,16 @@ $$;
 --             não encontra nenhuma linha e a função retorna FALSE de forma
 --             determinística, sem tratamento especial de NULL necessário.
 -- ----------------------------------------------------------------------------
+-- AMPLIADA (09-08-2026, Bloco G do prompt do Claude Web — moderação):
+-- passou a ignorar vínculo usuario_papel com suspenso_ate no futuro (ver
+-- [01-B]) — um papel suspenso não concede mais nenhuma permissão dele
+-- enquanto durar a suspensão, sem precisar remover o vínculo (volta
+-- sozinho quando o prazo passa). Escopo desta mudança: só ignora PAPEL
+-- suspenso, não checa suspensão de CONTA (usuario.suspenso_ate) — isso é
+-- barrado no LOGIN (3-auth), mesmo raciocínio já usado pra bloqueado_ate;
+-- um access token emitido pouco antes de uma suspensão de conta continua
+-- válido até expirar (15min, JWT_ACCESS_EXPIRES_IN), risco residual aceito
+-- de propósito, coerente com o resto do desenho de sessão do projeto.
 CREATE OR REPLACE FUNCTION public.tem_permissao(p_permissao TEXT)
 RETURNS BOOLEAN
 LANGUAGE sql
@@ -105,7 +115,45 @@ AS $$
         JOIN permissao pm ON pm.id_permissao = pp.id_permissao
         WHERE up.id_usuario = public.id_usuario_atual()
           AND pm.nome = p_permissao
+          AND (up.suspenso_ate IS NULL OR up.suspenso_ate <= now())
     );
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Função:     listar_papeis_usuario
+-- Assinatura: (p_id_usuario INT) -> SETOF TEXT
+-- Bloco:      [03-B]
+-- Regra:      SECURITY DEFINER de propósito (09-08-2026, Bloco B/C do prompt
+--             do Claude Web sobre cabeçalho/avatar) — devolve o CÓDIGO
+--             (`papel.codigo`, não `papel.nome`) dos papéis de um usuário
+--             pra login/refresh (03-auth) decidirem se mostram "Painel
+--             Admin" no dropdown do cabeçalho. `codigo`, não `nome`, pelo
+--             mesmo motivo já documentado em [01-B]/alterar-papel.jsx: o
+--             RÓTULO exibido (`nome`) é editável pelo painel — se essa
+--             checagem lesse `nome`, renomear o papel "admin" pra outra
+--             coisa quebraria silenciosamente a condição "é admin?" no
+--             frontend. `codigo` nunca é exposto/editável, só `nome`.
+--             Chamada de DENTRO do próprio login/refresh, onde
+--             id_usuario_atual() ainda é NULL (a sessão que autorizaria
+--             esse usuário está sendo criada NESTA MESMA requisição) —
+--             pol_usuariopapel_select (04) exige id_usuario_atual() =
+--             idUsuario OU tem_permissao('papel_gerenciar'), nenhum dos
+--             dois é verdade ainda nesse momento; sem SECURITY DEFINER a
+--             RLS devolveria 0 linhas sempre, mesmo pro dono da própria
+--             sessão.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.listar_papeis_usuario(p_id_usuario INT)
+RETURNS SETOF TEXT
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT p.codigo
+    FROM usuario_papel up
+    JOIN papel p ON p.id_papel = up.id_papel
+    WHERE up.id_usuario = p_id_usuario
+    ORDER BY p.codigo;
 $$;
 
 -- ============================================================
@@ -130,6 +178,41 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
     SELECT NOT COALESCE((SELECT deletado FROM usuario WHERE id_usuario = p_id), TRUE);
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Função:     registrar_aceite_termo
+-- Assinatura: (p_id_usuario INT, p_id_termo INT, p_ip TEXT) -> VOID
+-- Bloco:      [03-D-1]
+-- Regra:      SECURITY DEFINER de propósito (09-08-2026, Bloco D do prompt do
+--             Claude Web sobre cadastro público) — grava o aceite dos Termos
+--             de Uso (usuario_termo) no MOMENTO do cadastro, quando a conta
+--             acabou de ser criada NESTA MESMA requisição e ainda não existe
+--             sessão nenhuma (id_usuario_atual() é NULL). pol_usuario_termo_
+--             insert (04) exige id_usuario = id_usuario_atual() — verdade
+--             pra alguém JÁ logado aceitando um termo novo depois, mas nunca
+--             verdade durante o próprio cadastro. Mesmo raciocínio de
+--             atribuir_papel_padrao() (08_bootstrap_final.sql, [08-D-1]),
+--             chamada no mesmo instante do mesmo jeito.
+--             Sem checagem de autorização própria (diferente de
+--             excluir_conta_usuario, [03-F]) porque quem decide QUAL
+--             p_id_usuario passar é sempre o código do backend (o id do
+--             usuário RECÉM-CRIADO na mesma transação, nunca um valor vindo
+--             direto do corpo da requisição) — não existe caminho pelo qual
+--             um cliente influencie esse parâmetro pra forjar aceite em nome
+--             de outra conta. ON CONFLICT DO NOTHING: mesma trava de
+--             UK_USUARIO_TERMO_USUARIO_TERMO (01), idempotente se chamada
+--             de novo por engano.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.registrar_aceite_termo(p_id_usuario INT, p_id_termo INT, p_ip TEXT)
+RETURNS VOID
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    INSERT INTO usuario_termo (id_usuario, id_termo, ip_aceite)
+    VALUES (p_id_usuario, p_id_termo, p_ip)
+    ON CONFLICT (id_usuario, id_termo) DO NOTHING;
 $$;
 
 -- ============================================================
@@ -503,6 +586,136 @@ BEGIN
 
     GET DIAGNOSTICS v_linhas = ROW_COUNT;
     RETURN v_linhas > 0;
+END;
+$$;
+
+-- ============================================================
+-- [03-N] MODERAÇÃO SOBRE CONTA — SUSPENSÃO DE USUÁRIO E DE PAPEL (09-08-2026)
+-- ============================================================
+-- Descrição: Bloco G do prompt do Claude Web sobre cabeçalho/moderação —
+-- diferente de [03-G] (suspende o PERFIL DE PESQUISADOR, com cascata sobre
+-- campanhas, RF-084): aqui é suspensão de CONTA (bloqueia login) e
+-- suspensão de UM PAPEL específico (usuario continua logado, só perde as
+-- permissões daquele papel enquanto durar). NÃO reaproveita `bloqueado_ate`
+-- (bloqueio automático por senha errada, [03-F]) — ver comentário completo
+-- em `usuario.suspenso_ate` (01, [01-D]).
+--
+-- ⚠️ Letra `N`, não `F`/`G`: [03-F] ("OPERAÇÕES DE AUTENTICAÇÃO") e [03-G]
+-- ("MODERAÇÃO SOBRE PESQUISADOR") já existiam ANTES desta rodada reaproveitando
+-- letras que o Índice Global (topo de DOCUMENTACAO_BD.md) atribui a outros
+-- domínios (`F`=LINK, `G`=ARQUIVO) — colisão do mesmo tipo já corrigida uma
+-- vez neste projeto (`[03-K]`→`[03-M]`, 09-08-2026), só que mais antiga e
+-- ainda não corrigida. Não mexi nela agora (mudar [03-F]/[03-G] estabelecidos
+-- é um refactor à parte, fora do escopo deste bloco) — só evitei criar uma
+-- 3ª colisão nova escolhendo `N`, que está livre. Registrado como pendência
+-- em PENDENCIAS e correcoes.md.
+-- ----------------------------------------------------------------------------
+-- Função:     suspender_usuario
+-- Assinatura: (p_id_usuario INT, p_ate TIMESTAMPTZ, p_motivo TEXT) -> VOID
+-- Bloco:      [03-N]
+-- Regra:      Exige 'usuario_suspender' (mesma permissão de
+--             suspender_pesquisador, [03-G] — é a mesma categoria de ação
+--             administrativa). Motivo é OBRIGATÓRIO (RAISE EXCEPTION se
+--             vazio) — reforça em código o que a CK_USUARIO_SUSPENSAO (01)
+--             já garante no schema, com uma mensagem melhor que o erro cru
+--             de CHECK constraint. "Reduzir a pena" usa esta MESMA função
+--             de novo, com uma p_ate mais próxima — não existe uma função
+--             separada só pra isso, suspender de novo já sobrescreve.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.suspender_usuario(p_id_usuario INT, p_ate TIMESTAMPTZ, p_motivo TEXT)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    IF NOT public.tem_permissao('usuario_suspender') THEN
+        RAISE EXCEPTION 'Sem permissão para suspender usuário.';
+    END IF;
+    IF p_motivo IS NULL OR btrim(p_motivo) = '' THEN
+        RAISE EXCEPTION 'Motivo da suspensão é obrigatório.';
+    END IF;
+
+    UPDATE usuario
+    SET suspenso_ate = p_ate,
+        motivo_suspensao = p_motivo,
+        suspenso_por = public.id_usuario_atual()
+    WHERE id_usuario = p_id_usuario;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Função:     revogar_suspensao_usuario
+-- Assinatura: (p_id_usuario INT) -> VOID
+-- Bloco:      [03-N]
+-- Regra:      Desbanir — limpa os 3 campos de uma vez (CK_USUARIO_SUSPENSAO,
+--             01, exige isso: os 3 juntos ou nenhum). Mesma permissão de
+--             suspender (quem pode suspender pode reverter).
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.revogar_suspensao_usuario(p_id_usuario INT)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    IF NOT public.tem_permissao('usuario_suspender') THEN
+        RAISE EXCEPTION 'Sem permissão para revogar suspensão de usuário.';
+    END IF;
+
+    UPDATE usuario
+    SET suspenso_ate = NULL,
+        motivo_suspensao = NULL,
+        suspenso_por = NULL
+    WHERE id_usuario = p_id_usuario;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Função:     suspender_papel_usuario / revogar_suspensao_papel_usuario
+-- Assinatura: (p_id_usuario INT, p_id_papel INT, p_ate TIMESTAMPTZ) -> VOID /
+--             (p_id_usuario INT, p_id_papel INT) -> VOID
+-- Bloco:      [03-N]
+-- Regra:      Exige 'papel_gerenciar' (não 'usuario_suspender') — suspender
+--             UM papel é decisão de RBAC (o que aquela pessoa pode fazer),
+--             não de moderação de conta inteira; mesma permissão que já
+--             governa a matriz Papel × Permissão. Preferível a REMOVER o
+--             vínculo (usuario_papel_service.remove) porque preserva
+--             quando foi atribuído e volta sozinho no prazo — tem_permissao()
+--             ([03-B], ampliada nesta mesma rodada) passa a ignorar papel
+--             com suspenso_ate no futuro.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.suspender_papel_usuario(p_id_usuario INT, p_id_papel INT, p_ate TIMESTAMPTZ)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    IF NOT public.tem_permissao('papel_gerenciar') THEN
+        RAISE EXCEPTION 'Sem permissão para suspender papel de usuário.';
+    END IF;
+
+    UPDATE usuario_papel
+    SET suspenso_ate = p_ate
+    WHERE id_usuario = p_id_usuario AND id_papel = p_id_papel;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.revogar_suspensao_papel_usuario(p_id_usuario INT, p_id_papel INT)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    IF NOT public.tem_permissao('papel_gerenciar') THEN
+        RAISE EXCEPTION 'Sem permissão para revogar suspensão de papel de usuário.';
+    END IF;
+
+    UPDATE usuario_papel
+    SET suspenso_ate = NULL
+    WHERE id_usuario = p_id_usuario AND id_papel = p_id_papel;
 END;
 $$;
 

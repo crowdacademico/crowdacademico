@@ -48,12 +48,12 @@ export function LogAuditoriaPainel({ buscar, campoRenomeio }) {
   }, [buscar]);
 
   return (
-    <div className="mt-4 border-t border-slate-200 pt-4">
-      <h3 className="text-sm font-bold text-slate-700 mb-2">
+    <div className="mt-4 border-t borda-padrao pt-4">
+      <h3 className="text-sm font-bold texto-padrao mb-2">
         Últimas alterações {total > 0 && `(${total} no total)`}
       </h3>
 
-      {carregando && <p className="text-sm text-slate-600">Carregando...</p>}
+      {carregando && <p className="text-sm texto-fraco">Carregando...</p>}
       {erro && <p className="crud-erro">{erro}</p>}
 
       {!carregando && !erro && (

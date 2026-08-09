@@ -60,6 +60,52 @@
   --cor-borda-forte: var(--color-slate-300); /* divisória de cabeçalho */
   --cor-fundo-sutil: var(--color-slate-50); /* hover, fundo de seção */
 
+  /* Tokens de FUNDO (09-08-2026, fundação do dark mode — análise do Claude
+     Web sobre o prompt de cabeçalho/conta): faltavam pra completar o
+     mecanismo de tema, porque até aqui o fundo branco das telas/cartões
+     estava implícito (bg-white do Tailwind direto no JSX), e é exatamente
+     o que precisa inverter no escuro. Cada um marca uma "camada" de
+     profundidade: página (mais fundo) < cartão < elevado (dropdown/modal,
+     precisa se destacar do cartão que está atrás dele). */
+  --cor-fundo-pagina: var(--color-surface);
+  --cor-fundo-cartao: var(--color-white);
+  --cor-fundo-elevado: var(--color-white);
+  --cor-fundo-hover: var(--color-slate-100);
+
+  /* Tokens de STATUS (mesma rodada): badge/alerta de sucesso/erro/aviso/
+     info. Existiam direto como --color-emerald-100/--color-red-100 etc.
+     espalhados pelo CSS — motivo de existirem à parte dos tokens de texto
+     e fundo genéricos acima: sucesso/erro têm significado próprio (não é
+     "texto fraco", é "isto deu certo/errado"), então precisam de override
+     próprio no escuro (fundo pastel claro fica praticamente ilegível em
+     tema escuro — vira 15 por cento de opacidade sobre a cor sólida, não
+     um tom pastel). */
+  --cor-fundo-sucesso: var(--color-emerald-100);
+  --cor-texto-sucesso: var(--color-emerald-600);
+  --cor-fundo-erro: var(--color-red-100);
+  --cor-texto-erro: var(--color-red-600);
+  --cor-fundo-aviso: var(--color-amber-100);
+  --cor-texto-aviso: var(--color-amber-600);
+  --cor-fundo-info: var(--color-blue-100);
+  --cor-texto-info: var(--color-blue-600);
+
+  /* Paleta do avatar-iniciais (09-08-2026, Bloco B/C: bolinha com a
+     inicial do nome quando não há foto) — cor de fundo DETERMINÍSTICA a
+     partir do nome (hash simples → índice aqui, ver avatar-usuario.jsx),
+     nunca aleatória: a mesma pessoa precisa sempre cair na mesma cor, em
+     qualquer tela. Token em vez de hardcoded no componente, pra poder
+     ajustar a paleta inteira num lugar só. Tons -600 de propósito: contraste
+     alto o bastante pra texto branco em cima, em claro e escuro igual (não
+     precisa de bloco de tema separado — é uma cor de acento, não de
+     superfície). */
+  --cor-avatar-1: #dc2626;
+  --cor-avatar-2: #ea580c;
+  --cor-avatar-3: #16a34a;
+  --cor-avatar-4: #0d9488;
+  --cor-avatar-5: #2563eb;
+  --cor-avatar-6: #7c3aed;
+  --cor-avatar-7: #db2777;
+
   /* Fonte só pro selo <dev> (.badge-dev, 2-componentes.css) — pedido do
      Lucas, 03-08-2026: qualquer coisa marcada como "só pra desenvolvimento"
      usa essa combinação (roxo + monoespaçada), nunca hardcoded caso a
@@ -93,6 +139,67 @@
      Padrão 1 = 100% (nenhuma mudança) — só existe pra ControleFonte ter
      algo pra ler/escrever; qualquer CSS aqui pode ignorá-la de propósito. */
   --escala-fonte: 1;
+}
+
+/* ========= TEMA ESCURO (09-08-2026) =========
+   components/layout/controle-tema.jsx escreve data-tema="claro"/"escuro"/
+   "sistema" em <html> (mesmo padrão do --escala-fonte: lazy initializer +
+   localStorage['crowdacademico.tema'], pra não piscar no primeiro render).
+   Só redefine os MESMOS nomes de token já usados no projeto inteiro —
+   nenhum componente/CSS precisa saber que o tema mudou, eles só leem
+   var(--cor-texto-forte) etc. e o valor certo já está lá. Dois blocos
+   porque "sistema" precisa reagir a prefers-color-scheme (media query),
+   enquanto "escuro"/"claro" são escolha explícita do usuário (atributo,
+   sem media query) — duplicar os valores aqui é mais simples e mais fácil
+   de auditar do que indexar um nível de variável extra.
+   "claro" não precisa de bloco próprio: é o valor do :root de cima, já é
+   o padrão do projeto inteiro. */
+:root[data-tema='escuro'] {
+  --cor-texto-forte: #f1f5f9;
+  --cor-texto: #cbd5e1;
+  --cor-texto-fraco: #94a3b8;
+  --cor-borda: #334155;
+  --cor-borda-forte: #475569;
+  --cor-fundo-sutil: #1e2836;
+
+  --cor-fundo-pagina: #0f172a;
+  --cor-fundo-cartao: #1e293b;
+  --cor-fundo-elevado: #263349;
+  --cor-fundo-hover: #29394f;
+
+  --cor-fundo-sucesso: rgba(16, 185, 129, 0.16);
+  --cor-texto-sucesso: #34d399;
+  --cor-fundo-erro: rgba(239, 68, 68, 0.16);
+  --cor-texto-erro: #f87171;
+  --cor-fundo-aviso: rgba(217, 119, 6, 0.18);
+  --cor-texto-aviso: #fbbf24;
+  --cor-fundo-info: rgba(37, 99, 235, 0.18);
+  --cor-texto-info: #60a5fa;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-tema='sistema'] {
+    --cor-texto-forte: #f1f5f9;
+    --cor-texto: #cbd5e1;
+    --cor-texto-fraco: #94a3b8;
+    --cor-borda: #334155;
+    --cor-borda-forte: #475569;
+    --cor-fundo-sutil: #1e2836;
+
+    --cor-fundo-pagina: #0f172a;
+    --cor-fundo-cartao: #1e293b;
+    --cor-fundo-elevado: #263349;
+    --cor-fundo-hover: #29394f;
+
+    --cor-fundo-sucesso: rgba(16, 185, 129, 0.16);
+    --cor-texto-sucesso: #34d399;
+    --cor-fundo-erro: rgba(239, 68, 68, 0.16);
+    --cor-texto-erro: #f87171;
+    --cor-fundo-aviso: rgba(217, 119, 6, 0.18);
+    --cor-texto-aviso: #fbbf24;
+    --cor-fundo-info: rgba(37, 99, 235, 0.18);
+    --cor-texto-info: #60a5fa;
+  }
 }
 
 /* ========= RESET =========
@@ -133,13 +240,17 @@
     font-family: var(--font-sans);
     font-size: var(--font-size-sm);
     line-height: 1.5;
-    background-color: var(--color-surface);
+    /* ERA --color-surface direto — precisa ser o token de tema
+       (--cor-fundo-pagina) pra inverter junto com o resto no escuro; hoje
+       os dois valem o mesmo no tema claro, então nada muda visualmente. */
+    background-color: var(--cor-fundo-pagina);
     /* --cor-texto-forte (não --cor-texto) — o corpo do texto já era
        slate-800 antes dos tokens existirem (achado do Lucas, escurecido de
        propósito pra monitor não calibrado); manter o token que bate com o
        valor de HOJE, não com o rótulo "corpo" ao pé da letra. */
     color: var(--cor-texto-forte);
     -webkit-font-smoothing: antialiased;
+    transition: background-color 0.15s ease, color 0.15s ease;
   }
 
   #root {
@@ -151,7 +262,12 @@
   h2,
   h3 {
     font-family: var(--font-serif);
-    color: var(--color-dark);
+    /* ERA --color-dark direto (#0f172a fixo) — em tema escuro isso ficaria
+       quase invisível (texto quase preto sobre fundo quase preto). Token
+       de tema em vez de cor fixa, mesmo valor no claro (--cor-texto-forte
+       = slate-800, próximo o bastante de --color-dark pra não mudar nada
+       visualmente hoje). */
+    color: var(--cor-texto-forte);
     font-weight: 700;
   }
 
@@ -165,5 +281,116 @@
   textarea {
     font-family: inherit;
     font-size: var(--font-size-sm);
+  }
+}
+
+/* ========= UTILITÁRIOS DE TEMA =========
+   Substitutos das classes Tailwind cruas de cor (bg-white, text-slate-600,
+   border-slate-200...) espalhadas pelo JSX — aquelas não respondem a
+   data-tema porque são cor FIXA do Tailwind, não var(--cor-*). Nome em
+   português de propósito: não colide com nenhum utilitário nativo do
+   Tailwind (bg, text, border dele continuam existindo pra tamanho,
+   espaçamento, etc. — só cor de tema migra pra cá). Não usam @utility do
+   Tailwind v4 (não teriam efeito aqui: este arquivo não passa pelo mesmo
+   pipeline de tailwind-theme.css, que é quem tem @import 'tailwindcss') —
+   por isso hover vem embutido na própria classe, não como variante
+   hover:. */
+@layer components {
+  .fundo-pagina {
+    background-color: var(--cor-fundo-pagina);
+  }
+
+  .fundo-cartao {
+    background-color: var(--cor-fundo-cartao);
+  }
+
+  .fundo-elevado {
+    background-color: var(--cor-fundo-elevado);
+  }
+
+  .fundo-sutil {
+    background-color: var(--cor-fundo-sutil);
+  }
+
+  .hover-fundo-sutil:hover {
+    background-color: var(--cor-fundo-hover);
+  }
+
+  /* Estático (não só :hover) — item selecionado por teclado/mouse em
+     lista (ex.: busca-global.jsx), não só passagem do mouse. */
+  .fundo-realce {
+    background-color: var(--cor-fundo-hover);
+  }
+
+  .texto-forte {
+    color: var(--cor-texto-forte);
+  }
+
+  .texto-padrao {
+    color: var(--cor-texto);
+  }
+
+  .texto-fraco {
+    color: var(--cor-texto-fraco);
+  }
+
+  .hover-texto-forte:hover {
+    color: var(--cor-texto-forte);
+  }
+
+  .borda-padrao {
+    border-color: var(--cor-borda);
+  }
+
+  .borda-forte {
+    border-color: var(--cor-borda-forte);
+  }
+
+  .fundo-sucesso {
+    background-color: var(--cor-fundo-sucesso);
+  }
+
+  .texto-sucesso {
+    color: var(--cor-texto-sucesso);
+  }
+
+  .fundo-erro {
+    background-color: var(--cor-fundo-erro);
+  }
+
+  .texto-erro {
+    color: var(--cor-texto-erro);
+  }
+
+  .fundo-aviso {
+    background-color: var(--cor-fundo-aviso);
+  }
+
+  .texto-aviso {
+    color: var(--cor-texto-aviso);
+  }
+
+  .fundo-info {
+    background-color: var(--cor-fundo-info);
+  }
+
+  .texto-info {
+    color: var(--cor-texto-info);
+  }
+
+  /* Rótulo de campo (label pequeno maiúsculo) — mesma string Tailwind
+     repetida em quase toda tela de Criar/Alterar (achado nesta auditoria):
+     "text-[11px] font-black text-slate-500 uppercase tracking-widest
+     mb-2". Centralizar aqui em vez de deixar 15 cópias cruas facilita
+     tanto o dark mode (troca 1 lugar, não 15) quanto qualquer ajuste
+     futuro de estilo do rótulo. */
+  .rotulo-campo {
+    display: block;
+    font-size: 11px;
+    font-weight: 900;
+    color: var(--cor-texto-fraco);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
   }
 }

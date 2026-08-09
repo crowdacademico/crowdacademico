@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
+import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
 import { CartaoFormulario } from '../../components/crud/cartao-formulario';
+import { useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
 import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
 import { papelApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
@@ -21,6 +23,7 @@ export function AlterarPapel({ auth }) {
   const { mostrar } = useToast();
   const { erro, reportarErro, limparErro } = useErroToast();
   const [nome, setNome] = useState('');
+  const [nomeOriginal, setNomeOriginal] = useState('');
   const [carregando, setCarregando] = useState(true);
   const [enviando, setEnviando] = useState(false);
   const [encontrado, setEncontrado] = useState(false);
@@ -35,6 +38,7 @@ export function AlterarPapel({ auth }) {
         const papel = papeis.find((p) => String(p.idPapel) === id);
         if (papel) {
           setNome(papel.nome);
+          setNomeOriginal(papel.nome);
           setEncontrado(true);
         }
       })
@@ -42,6 +46,16 @@ export function AlterarPapel({ auth }) {
       .finally(() => setCarregando(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  const sujo = encontrado && nome !== nomeOriginal;
+  useAvisoAlteracaoNaoSalva(sujo);
+
+  const aoCancelar = () => {
+    if (sujo && !window.confirm('Você tem alterações não salvas. Sair mesmo assim?')) {
+      return;
+    }
+    navigate(-1);
+  };
 
   const aoSalvar = async (evento) => {
     evento.preventDefault();
@@ -63,26 +77,38 @@ export function AlterarPapel({ auth }) {
       icone="fa-user-tag"
       titulo="Alterar Papel"
       subtitulo="Só o nome exibido muda — o identificador interno usado pelas regras do sistema nunca é afetado."
+      rodape={
+        encontrado && (
+          <div className="flex gap-3">
+            <button type="button" onClick={aoCancelar} className="btn btn-secondary flex-1">
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              form="form-alterar-papel"
+              disabled={enviando || !sujo}
+              className="btn btn-primary flex-1"
+            >
+              {enviando ? 'Salvando...' : 'Salvar'}
+            </button>
+          </div>
+        )
+      }
     >
       {carregando ? (
-        <p className="p-10 text-center text-sm text-slate-600">Carregando...</p>
+        <p className="p-10 text-center text-sm texto-fraco">Carregando...</p>
       ) : !encontrado ? (
         <p className="p-10 text-center text-red-700 text-sm font-bold">
           {erro || `Papel ${id} não encontrado.`}
         </p>
       ) : (
-        <form onSubmit={aoSalvar} className="p-10 space-y-6">
+        <form id="form-alterar-papel" onSubmit={aoSalvar} className="p-10 space-y-6">
           {erro && <p className="text-red-700 text-sm font-bold text-center">{erro}</p>}
 
-          <div>
-            <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">
-              id
-            </label>
-            <input type="text" value={id} disabled className="input-padrao opacity-60" />
-          </div>
+          <CampoSomenteLeitura rotulo="id" valor={id} />
 
           <div>
-            <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">
+            <label className="rotulo-campo">
               Nome
             </label>
             <input
@@ -93,19 +119,6 @@ export function AlterarPapel({ auth }) {
               maxLength={50}
               className="input-padrao"
             />
-          </div>
-
-          <div className="flex gap-3 pt-2">
-            <button
-              type="button"
-              onClick={() => navigate(-1)}
-              className="btn btn-secondary flex-1"
-            >
-              Cancelar
-            </button>
-            <button type="submit" disabled={enviando} className="btn btn-primary flex-1">
-              {enviando ? 'Salvando...' : 'Salvar'}
-            </button>
           </div>
         </form>
       )}

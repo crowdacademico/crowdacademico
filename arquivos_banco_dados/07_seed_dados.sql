@@ -722,6 +722,10 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo) VAL
 -- D
 (NULL, 'limite_tentativas_login',    '5',     'inteiro',  'Nº de tentativas de login falhas antes de bloquear a conta',    TRUE),
 (NULL, 'bloqueio_login_minutos',     '15',    'inteiro',  'Duração do bloqueio de login após exceder o limite de tentativas (minutos)', TRUE),
+-- ADICIONADA (09-08-2026, Bloco G — moderação/suspensão): opções de prazo
+-- sugeridas no seletor de "Suspender Usuário" do painel; lida pelo React
+-- (minha-conta/alterar-usuario), não por nenhuma trigger/função do banco.
+(NULL, 'suspensao_usuario_opcoes_dias', '1,3,7,30', 'texto', 'Opções de prazo (em dias) sugeridas no seletor de suspensão de usuário — lista separada por vírgula.', TRUE),
 (1,   'notificar_novas_campanhas',   'true',  'booleano', 'Admin recebe e-mail sobre novas campanhas',            TRUE), -- lida pelo worker de notificação do NestJS, não pelo banco — nenhuma trigger/função a consulta
 -- E
 -- ADICIONADO (28-07-2026, item 16 da Lista C): prazo_minimo_campanha_dias e os

@@ -124,7 +124,7 @@ export function MatrizPapelPermissao({ authFetch }) {
       </h2>
 
       {carregando ? (
-        <div className="animate-pulse h-32 bg-slate-100 rounded"></div>
+        <div className="animate-pulse h-32 fundo-sutil rounded"></div>
       ) : (
         <div className="overflow-x-auto">
           <table className="crud-tabela">
@@ -171,8 +171,8 @@ export function MatrizPapelPermissao({ authFetch }) {
                           className={
                             'w-7 h-7 rounded-md font-bold transition-colors disabled:opacity-50 disabled:cursor-wait ' +
                             (temPermissao
-                              ? 'text-emerald-600 hover:bg-emerald-100'
-                              : 'text-slate-300 hover:bg-slate-100 hover:text-slate-500')
+                              ? 'texto-sucesso hover:bg-emerald-100'
+                              : 'texto-fraco opacity-50 hover-fundo-sutil hover:opacity-100')
                           }
                         >
                           {celulaAlterando === chave ? '…' : temPermissao ? '✓' : '—'}

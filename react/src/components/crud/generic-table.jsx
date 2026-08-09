@@ -62,6 +62,13 @@ export function GenericTable({
   // decisão maior, fora de escopo). Default preserva o comportamento de
   // sempre (todo `rotaBase` já existente continua com os 3 botões).
   acoes = ACOES_PADRAO,
+  // Coluna adicional genérica (09-08-2026, Bloco F: botão "ⓘ" que abre um
+  // modal de detalhe por linha, na tabela Permissões) — `{ rotulo,
+  // renderizar(linha) }`. Existe separada de `colunas` (que só espera
+  // valor de dado bruto) porque esta pode renderizar QUALQUER coisa
+  // (botão, ícone, badge composto), não só `String(valor)`. Independe de
+  // `rotaBase`/`acoes` — tabelas só-leitura (sem Ações) também podem usar.
+  colunaExtra,
 }) {
   const [linhas, setLinhas] = useState([]);
   const [carregando, setCarregando] = useState(true);
@@ -176,7 +183,7 @@ export function GenericTable({
             setFiltro(evento.target.value);
             setPagina(1);
           }}
-          className="w-full sm:w-64 border border-slate-400 rounded-lg bg-slate-50 py-2 px-3 text-sm outline-none focus:border-primary mb-3"
+          className="w-full sm:w-64 border borda-forte rounded-lg fundo-sutil py-2 px-3 text-sm outline-none focus:border-primary mb-3"
         />
       )}
 
@@ -192,6 +199,7 @@ export function GenericTable({
               {colunas.map((coluna) => (
                 <th key={coluna.chave}>{coluna.rotulo}</th>
               ))}
+              {colunaExtra && <th>{colunaExtra.rotulo}</th>}
               {rotaBase && <th>Ações</th>}
             </tr>
           </thead>
@@ -200,12 +208,17 @@ export function GenericTable({
               <tr key={indice} className="animate-pulse">
                 {colunas.map((coluna) => (
                   <td key={coluna.chave}>
-                    <div className="h-3.5 bg-slate-200 rounded"></div>
+                    <div className="h-3.5 fundo-sutil rounded"></div>
                   </td>
                 ))}
+                {colunaExtra && (
+                  <td>
+                    <div className="h-3.5 fundo-sutil rounded"></div>
+                  </td>
+                )}
                 {rotaBase && (
                   <td>
-                    <div className="h-3.5 bg-slate-200 rounded"></div>
+                    <div className="h-3.5 fundo-sutil rounded"></div>
                   </td>
                 )}
               </tr>
@@ -227,6 +240,7 @@ export function GenericTable({
                     {ordenacao.chave === coluna.chave && (ordenacao.direcao === 'asc' ? ' ▲' : ' ▼')}
                   </th>
                 ))}
+                {colunaExtra && <th>{colunaExtra.rotulo}</th>}
                 {rotaBase && <th>Ações</th>}
               </tr>
             </thead>
@@ -236,6 +250,7 @@ export function GenericTable({
                   {colunas.map((coluna) => (
                     <td key={coluna.chave}>{celulaValor(linha[coluna.chave])}</td>
                   ))}
+                  {colunaExtra && <td>{colunaExtra.renderizar(linha)}</td>}
                   {rotaBase && (
                     <td>
                       {/* Texto/ícone discreto, não botão sólido (08-08-2026).
@@ -276,7 +291,7 @@ export function GenericTable({
               ))}
               {linhasPagina.length === 0 && !erro && (
                 <tr>
-                  <td colSpan={colunas.length + 1}>
+                  <td colSpan={colunas.length + (colunaExtra ? 1 : 0) + (rotaBase ? 1 : 0)}>
                     {filtro ? 'Nenhum registro bate com o filtro.' : 'Nenhum registro.'}
                   </td>
                 </tr>
@@ -285,12 +300,12 @@ export function GenericTable({
           </table>
 
           {linhasOrdenadas.length > TAMANHOS_PAGINA[0] && (
-            <div className="flex items-center justify-between flex-wrap gap-3 mt-3 text-sm text-slate-600">
+            <div className="flex items-center justify-between flex-wrap gap-3 mt-3 text-sm texto-padrao">
               <span>
                 Página {paginaAtual} de {totalPaginas} ({linhasOrdenadas.length} registros)
               </span>
               <div className="flex items-center gap-3">
-                <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+                <label className="flex items-center gap-2 text-xs font-semibold texto-padrao">
                   Mostrar
                   <select
                     value={tamanhoPagina}
@@ -299,7 +314,7 @@ export function GenericTable({
                       setTamanhoPagina(valor === 'todos' ? 'todos' : Number(valor));
                       setPagina(1);
                     }}
-                    className="border border-slate-200 rounded-md bg-slate-50 py-1 px-2 text-xs outline-none focus:border-primary"
+                    className="border borda-padrao rounded-md fundo-sutil py-1 px-2 text-xs outline-none focus:border-primary"
                   >
                     {TAMANHOS_PAGINA.map((tamanho) => (
                       <option key={tamanho} value={tamanho}>

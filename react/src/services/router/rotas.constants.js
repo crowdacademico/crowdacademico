@@ -1,4 +1,7 @@
 import { LoginPage } from '../../views/3-auth/login-page';
+import { CadastroPage } from '../../views/3-auth/cadastro-page';
+import { VerificarEmailPage } from '../../views/3-auth/verificar-email-page';
+import { MinhaConta } from '../../views/3-auth/minha-conta-page';
 import { Dashboard } from '../../views/admin/dashboard';
 import { CriarUsuario } from '../../views/1-usuario/criar-usuario';
 import { AlterarUsuario } from '../../views/1-usuario/alterar-usuario';
@@ -39,6 +42,13 @@ import { ListarConfiguracoes } from '../../views/11-configuracoes/listar-configu
 // ROTAS_ADMIN por este campo em vez de jogar tudo dentro de CADASTROS.
 export const ROTAS = [
   { caminho: '/login', elemento: LoginPage, rotuloBreadcrumb: 'Login' },
+  { caminho: '/cadastro', elemento: CadastroPage, rotuloBreadcrumb: 'Criar conta' },
+  {
+    caminho: '/verificar-email',
+    elemento: VerificarEmailPage,
+    rotuloBreadcrumb: 'Verificar e-mail',
+  },
+  { caminho: '/minha-conta', elemento: MinhaConta, rotuloBreadcrumb: 'Minha Conta' },
   { caminho: '/usuarios/criar', elemento: CriarUsuario, rotuloBreadcrumb: 'Criar Usuário' },
   {
     caminho: '/usuarios/:id/alterar',

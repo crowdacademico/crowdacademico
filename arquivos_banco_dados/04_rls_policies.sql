@@ -882,7 +882,15 @@ CREATE POLICY pol_score_rotulo_update ON public.score_rotulo FOR UPDATE TO app_n
 -- ser avaliada pra esse caminho.
 ALTER TABLE log_auditoria ENABLE ROW LEVEL SECURITY;
 
+-- AMPLIADA (09-08-2026, Bloco B/C do prompt do Claude Web — sino "Atividade
+-- recente" no cabeçalho): além de quem tem 'log_visualizar' (visão
+-- administrativa, qualquer linha), o próprio AUTOR de uma linha agora
+-- também enxerga ela — "minhas últimas ações", não é uma visão nova de
+-- moderação, é autoatendimento (mesmo espírito de usuario poder ver/editar
+-- a própria conta sem precisar de permissão nenhuma). Estritamente
+-- aditivo: ninguém que via algo antes deixou de ver, só passou a existir
+-- um segundo caminho de visibilidade além de log_visualizar.
 DROP POLICY IF EXISTS pol_log_auditoria_select ON public.log_auditoria;
 CREATE POLICY pol_log_auditoria_select ON public.log_auditoria FOR SELECT TO app_nestjs USING (
-    public.tem_permissao('log_visualizar')
+    public.tem_permissao('log_visualizar') OR id_usuario_responsavel = public.id_usuario_atual()
 );

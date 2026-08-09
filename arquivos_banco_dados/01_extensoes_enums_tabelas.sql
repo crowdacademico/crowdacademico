@@ -240,10 +240,30 @@ CREATE TABLE usuario (
     ultimo_login_em          TIMESTAMPTZ,
     ultimo_login_ip          VARCHAR(45),
 
+    -- ADICIONADAS (09-08-2026, Bloco G do prompt do Claude Web —
+    -- moderação/suspensão): CONCEITO DIFERENTE de `bloqueado_ate` acima —
+    -- aquele é bloqueio AUTOMÁTICO por senha errada repetida
+    -- (registrar_falha_login/liberar_bloqueio_login, [03-F]); este é
+    -- suspensão MANUAL de moderação, decidida por um admin, com motivo
+    -- obrigatório. Reaproveitar `bloqueado_ate` pros dois casos faria
+    -- `liberar_bloqueio_login()` apagar sem querer uma suspensão de 30
+    -- dias, e um login bem-sucedido (que zera `bloqueado_ate`) reverteria
+    -- uma suspensão de moderação sozinho — dois conceitos, duas colunas.
+    suspenso_ate             TIMESTAMPTZ,
+    motivo_suspensao         TEXT,
+    suspenso_por             INT,
+
     CONSTRAINT "PK_USUARIO" PRIMARY KEY (id_usuario),
     CONSTRAINT "UK_USUARIO_EMAIL" UNIQUE (email),
     CONSTRAINT "FK_USUARIO_IMAGEM" FOREIGN KEY (id_imagem_perfil) REFERENCES arquivo(id_arquivo) ON DELETE SET NULL,
-    CONSTRAINT "FK_USUARIO_DELETADO_POR" FOREIGN KEY (deletado_por) REFERENCES usuario(id_usuario)
+    CONSTRAINT "FK_USUARIO_DELETADO_POR" FOREIGN KEY (deletado_por) REFERENCES usuario(id_usuario),
+    CONSTRAINT "FK_USUARIO_SUSPENSO_POR" FOREIGN KEY (suspenso_por) REFERENCES usuario(id_usuario),
+    -- Motivo obrigatório sempre que há suspensão ativa, e vice-versa — nunca
+    -- suspenso_ate preenchido com motivo NULL (ou o contrário).
+    CONSTRAINT "CK_USUARIO_SUSPENSAO" CHECK (
+        (suspenso_ate IS NULL AND motivo_suspensao IS NULL)
+        OR (suspenso_ate IS NOT NULL AND motivo_suspensao IS NOT NULL)
+    )
 );
 
 -- [01-C] configuracoes — movido de CONFIG devido à ordem de criação
@@ -265,8 +285,15 @@ CREATE TABLE configuracoes (
 );
 
 CREATE TABLE usuario_papel (  -- fica aqui por depender de usuario; documentada no RBAC
-    id_usuario INT NOT NULL,
-    id_papel   INT NOT NULL,
+    id_usuario   INT NOT NULL,
+    id_papel     INT NOT NULL,
+    -- ADICIONADA (09-08-2026, Bloco G — "suspender só um papel específico
+    -- por um tempo, em vez de remover") — NULL = papel valendo normalmente.
+    -- Preferível a DELETE porque preserva o histórico (quando o papel foi
+    -- atribuído) e volta sozinho no prazo, sem precisar reatribuir manual.
+    -- tem_permissao() (03, [03-B]) passa a ignorar papel com suspenso_ate
+    -- no futuro.
+    suspenso_ate TIMESTAMPTZ,
 
     CONSTRAINT "PK_USUARIO_PAPEL" PRIMARY KEY (id_usuario, id_papel),
     CONSTRAINT "FK_USUARIO_PAPEL_USUARIO" FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE CASCADE,

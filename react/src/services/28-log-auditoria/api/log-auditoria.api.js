@@ -8,4 +8,8 @@ import { tratarResposta } from '../../constant/api/http.util';
 export const logAuditoriaApi = {
   listarPorTabela: (authFetch, tabela) =>
     authFetch(`/log-auditoria?tabela=${encodeURIComponent(tabela)}`).then(tratarResposta),
+  // Últimas ações do PRÓPRIO usuário logado, de qualquer tabela — usado
+  // pelo sino "Atividade recente" do cabeçalho (09-08-2026). Já vem como
+  // array pronto (sem paginação — o sino só mostra as últimas N).
+  minhaAtividade: (authFetch) => authFetch('/log-auditoria/minha-atividade').then(tratarResposta),
 };
