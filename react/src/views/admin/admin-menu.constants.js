@@ -4,6 +4,7 @@ function itensDoGrupo(grupoMenu) {
   return ROTAS_ADMIN.filter((rota) => rota.grupoMenu === grupoMenu).map((rota) => ({
     caminho: rota.caminho,
     rotulo: rota.rotuloMenu,
+    icone: rota.icone,
   }));
 }
 

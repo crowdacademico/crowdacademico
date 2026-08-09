@@ -1,26 +1,22 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
+import { ROTAS_ADMIN } from '../../services/router/rotas.constants';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { papelApi, permissaoApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
 import { configuracaoApi } from '../../services/11-configuracoes/api/configuracao.api';
 import { EVENTO_ABRIR_BUSCA_GLOBAL as EVENTO_ABRIR } from './busca-global-evento';
 
-const NAVEGACAO = [
-  { categoria: 'Navegação', rotulo: 'Dashboard', caminho: '/admin/dashboard', icone: 'fa-gauge' },
-  { categoria: 'Navegação', rotulo: 'Usuários', caminho: '/admin/usuarios', icone: 'fa-users' },
-  {
-    categoria: 'Navegação',
-    rotulo: 'Papéis & Permissões',
-    caminho: '/admin/papeis',
-    icone: 'fa-user-shield',
-  },
-  {
-    categoria: 'Navegação',
-    rotulo: 'Configurações',
-    caminho: '/admin/configuracoes',
-    icone: 'fa-sliders',
-  },
-];
+// Derivado de ROTAS_ADMIN (09-08-2026), não mais uma lista à mão — era uma
+// cópia manual das 4 abas que podia desalinhar (mesmo problema que
+// ROTAS_ADMIN/GRUPOS_MENU_ADMIN já resolveram uma vez pro menu lateral).
+// Ícone aqui é o MESMO que aparece no menu lateral (rota.icone) — pedido
+// do Lucas ao ver a busca: "coloca estes exatos ícones no menu também".
+const NAVEGACAO = ROTAS_ADMIN.map((rota) => ({
+  categoria: 'Navegação',
+  rotulo: rota.rotuloMenu,
+  caminho: rota.caminho,
+  icone: rota.icone,
+}));
 
 // Catálogos pequenos hoje (dezenas de linhas) — busca 100% no navegador,
 // não justifica endpoint de busca no backend ainda (mesmo raciocínio de

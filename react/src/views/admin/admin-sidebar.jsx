@@ -77,6 +77,15 @@ export function AdminSidebar({ aberto, aoFechar }) {
                   }
                 >
                   <span>{item.rotulo}</span>
+                  {/* Mesmos ícones da busca global (09-08-2026, pedido do
+                      Lucas) — à direita, não à esquerda como lá: o item já
+                      usa justify-content: space-between
+                      (3-admin-shell.css), então o ícone cai sozinho na
+                      borda direita de cada botão, alinhado verticalmente
+                      com os outros (mesma largura de coluna). Cor vem de
+                      herdar o `color` do item (cinza no normal, escuro no
+                      ativo) — sem classe própria. */}
+                  {item.icone && <i className={'fa-solid ' + item.icone}></i>}
                 </NavLink>
               ),
             )}

@@ -92,6 +92,7 @@ export const ROTAS_ADMIN = [
     // "Início > Dashboard" seria redundante com o próprio link "Início".
     rotuloBreadcrumb: null,
     grupoMenu: null,
+    icone: 'fa-gauge',
   },
   {
     caminho: '/admin/usuarios',
@@ -101,6 +102,7 @@ export const ROTAS_ADMIN = [
     // ERA null (era a aba padrão) — o Dashboard assumiu esse posto acima.
     rotuloBreadcrumb: 'Usuários',
     grupoMenu: 'CADASTROS',
+    icone: 'fa-users',
   },
   {
     caminho: '/admin/papeis',
@@ -109,6 +111,7 @@ export const ROTAS_ADMIN = [
     rotuloMenu: 'Papéis & Permissões',
     rotuloBreadcrumb: 'Papéis & Permissões',
     grupoMenu: 'CADASTROS',
+    icone: 'fa-user-shield',
   },
   {
     caminho: '/admin/configuracoes',
@@ -117,5 +120,6 @@ export const ROTAS_ADMIN = [
     rotuloMenu: 'Configurações',
     rotuloBreadcrumb: 'Configurações',
     grupoMenu: 'CADASTROS',
+    icone: 'fa-sliders',
   },
 ];

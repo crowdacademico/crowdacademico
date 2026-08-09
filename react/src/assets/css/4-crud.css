@@ -142,16 +142,24 @@
      só o ícone, o texto continua neutro (--cor-texto-fraco) nos dois
      casos. Azul-marinho/vermelho-tinto translúcidos (não os tons vivos de
      --color-blue-600/--color-red-600 de antes) — mais saturado no hover. */
+  /* ERA 0.55 de opacidade — o Lucas achou que ainda parecia cinza
+     (09-08-2026): num ícone pequeno, azul marinho translúcido demais
+     dessatura até ficar perto do cinza mesmo. 0.8 continua "fraquinho"
+     (não é o azul vivo --color-blue-600 de antes), mas dá pra reconhecer
+     como azul de verdade. */
   .crud-tabela__acao--alterar i {
-    color: rgba(30, 58, 138, 0.55); /* azul marinho fraquinho */
+    color: rgba(30, 58, 138, 0.8); /* azul marinho fraquinho */
   }
 
   .crud-tabela__acao--alterar:hover i {
     color: rgb(30, 58, 138); /* azul marinho cheio */
   }
 
+  /* Mesmo ajuste de opacidade do ícone de Alterar acima (0.55 pra 0.8) —
+     não esperei o Lucas reclamar deste também, mesma causa técnica (cor
+     translúcida demais dessatura num ícone pequeno). */
   .crud-tabela__acao--excluir i {
-    color: rgba(127, 29, 29, 0.55); /* vermelho tinto fraquinho */
+    color: rgba(127, 29, 29, 0.8); /* vermelho tinto fraquinho */
   }
 
   .crud-tabela__acao--excluir:hover {
