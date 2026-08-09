@@ -248,7 +248,15 @@ export function GenericTable({
               {linhasPagina.map((linha) => (
                 <tr key={linha[chavePrimaria]}>
                   {colunas.map((coluna) => (
-                    <td key={coluna.chave}>{celulaValor(linha[coluna.chave])}</td>
+                    <td key={coluna.chave}>
+                      {/* `renderizar` (09-08-2026, tabela Permissões: botão
+                          "Saiba mais" no lugar do valor cru) — opcional, só
+                          uma coluna especial precisa disso, as outras
+                          continuam mostrando o dado normal. */}
+                      {coluna.renderizar
+                        ? coluna.renderizar(linha)
+                        : celulaValor(linha[coluna.chave])}
+                    </td>
                   ))}
                   {colunaExtra && <td>{colunaExtra.renderizar(linha)}</td>}
                   {rotaBase && (

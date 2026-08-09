@@ -87,6 +87,11 @@
   gap: 0.5rem;
   border-radius: var(--radius-md);
   border: 1px solid transparent;
+  /* 4px reservado pra TODOS os itens, ativo ou não (09-08-2026) — ver
+     comentário completo em --ativo, abaixo, sobre por que a barra virou
+     border-left em vez de box-shadow. Reservar aqui, na base, é o que
+     evita o item pular/desalinhar 3px quando fica ativo. */
+  border-left-width: 4px;
   background: none;
   color: var(--cor-texto);
   font-weight: 600;
@@ -104,12 +109,21 @@
 /* Cor como ACENTO, não preenchimento (pedido do Lucas, 08-08-2026, rodada
    Experiment.com/Catarse: "quando tudo é verde, nada se destaca" — era um
    fundo verde translúcido cobrindo o item inteiro, virou fundo neutro +
-   barra de 3px na esquerda, mesmo padrão adotado no toast). box-shadow
-   inset em vez de border-left: desenha a barra sem empurrar o padding do
-   item (border-left somaria largura extra e desalinharia do item normal). */
+   barra de 4px na esquerda, mesmo padrão adotado no toast).
+   CORRIGIDO (09-08-2026, achado do Lucas: "parte colorida no cantinho e
+   parte branca atrás", mesmo artefato do toast) — ERA box-shadow inset,
+   escolhido de propósito pra não empurrar o padding do item, mas um
+   box-shadow inset num elemento com border-radius às vezes deixa uma
+   frestinha sub-pixel no cantinho arredondado (dependendo de navegador/
+   zoom) — a borda propriamente dita não tem esse problema, SEMPRE
+   acompanha a curva do border-radius sem costura. Trocado pra
+   border-left-color (a LARGURA de 4px já é reservada pra todo item, ativo
+   ou não, ver `.admin-sidebar__item` acima) — resolve o artefato E
+   preserva a propriedade original (nenhum item pula/desalinha ao ficar
+   ativo). */
 .admin-sidebar__item--ativo {
   background-color: var(--cor-fundo-hover);
-  box-shadow: inset 3px 0 0 var(--color-primary);
+  border-left-color: var(--color-primary);
   color: var(--cor-texto-forte);
   font-weight: 800;
 }

@@ -70,27 +70,29 @@ export function ListarPapeis({ auth }) {
           colunas={[
             { chave: 'idPermissao', rotulo: 'id' },
             { chave: 'nomeAmigavel', rotulo: 'nome' },
-            { chave: 'resumo', rotulo: 'descrição' },
+            // Botão de verdade, não ícone/tooltip no canto (09-08-2026,
+            // correção do Lucas sobre o Bloco F) — a coluna "descrição" não
+            // mostra o resumo em texto, mostra um botão "Saiba mais" que
+            // abre o modal de detalhe (o que faz, por que existe, quem tem
+            // hoje). `resumo` continua no dado (não usado aqui, mas o
+            // filtro de texto da tabela ainda busca nele).
+            {
+              chave: 'resumo',
+              rotulo: 'descrição',
+              renderizar: (linha) => (
+                <button
+                  type="button"
+                  onClick={() => setPermissaoDetalhada(linha)}
+                  className="btn btn-secondary text-xs py-1.5 px-3"
+                >
+                  <i className="fa-solid fa-circle-info"></i> Saiba mais
+                </button>
+              ),
+            },
             { chave: 'nome', rotulo: 'chave' },
           ]}
           chavePrimaria="idPermissao"
           listar={listarPermissoes}
-          // Botão "ⓘ" (09-08-2026, Bloco F do prompt do Claude Web) — abre
-          // o modal de detalhe (o que faz, por que existe, quem tem hoje).
-          colunaExtra={{
-            rotulo: '',
-            renderizar: (linha) => (
-              <button
-                type="button"
-                onClick={() => setPermissaoDetalhada(linha)}
-                aria-label={`Detalhes de "${linha.nomeAmigavel}"`}
-                title="Ver detalhes"
-                className="texto-fraco hover-texto-forte"
-              >
-                <i className="fa-solid fa-circle-info"></i>
-              </button>
-            ),
-          }}
         />
       </div>
       <div className="admin-content-painel">

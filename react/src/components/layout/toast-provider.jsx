@@ -13,14 +13,24 @@ const DURACAO_MS = { sucesso: 4000, erro: 5000 };
 // a cor vira ACENTO (a barra/ícone), não fundo. Texto sempre escuro
 // (nunca branco sobre colorido) resolve de vez o problema de legibilidade
 // em monitor não calibrado já relatado antes pro toast de erro.
+//
+// CORRIGIDO (09-08-2026, achado do Lucas: "parte colorida no cantinho e
+// parte branca atrás", mesmo artefato do item ativo do menu lateral) — a
+// barra ERA uma <div> quadrada separada, irmã do conteúdo, dentro de um
+// pai com `overflow-hidden` + `rounded-xl` esperando que o corte arredondasse
+// ela junto. Em vez de contar com o clipping pra arredondar um retângulo
+// reto exatamente no raio do cantinho (sub-pixel, some browsers/zoom
+// deixam uma frestinha), a cor virou `border-left` do próprio cartão — uma
+// borda SEMPRE acompanha o border-radius do elemento dela, sem costura
+// nenhuma, não depende de overflow cortar nada.
 const CONFIG_TIPO = {
   sucesso: {
-    corBarra: 'bg-emerald-500',
+    corBorda: 'border-emerald-500',
     corIcone: 'texto-sucesso',
     icone: 'fa-solid fa-circle-check',
   },
   erro: {
-    corBarra: 'bg-red-500',
+    corBorda: 'border-red-500',
     corIcone: 'texto-erro',
     icone: 'fa-solid fa-circle-exclamation',
   },
@@ -71,9 +81,11 @@ export function ToastProvider({ children }) {
           return (
             <div
               key={toast.id}
-              className="pointer-events-auto w-full flex fundo-cartao rounded-xl shadow-lg border borda-padrao overflow-hidden"
+              className={
+                'pointer-events-auto w-full flex fundo-cartao rounded-xl shadow-lg border borda-padrao border-l-4 overflow-hidden ' +
+                config.corBorda
+              }
             >
-              <div className={'w-1 shrink-0 ' + config.corBarra}></div>
               <div className="flex-1 flex items-start gap-3 pl-3 pr-2 py-3">
                 <i className={config.icone + ' ' + config.corIcone + ' text-lg mt-0.5 shrink-0'}></i>
                 {/* Alinhado à esquerda (não centralizado) — texto centralizado

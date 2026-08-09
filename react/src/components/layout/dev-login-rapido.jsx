@@ -51,7 +51,13 @@ export function DevLoginRapido({ auth }) {
 
   return (
     <div
-      className="relative ml-20"
+      // ERA "relative ml-20" — o `ml-20` empurrava o grupo inteiro do
+      // cabeçalho quando este componente ainda vivia dentro dele
+      // (09-08-2026, achado do Lucas: "ícone de login sobrou no meio da
+      // tela"). Agora quem posiciona pra direita é o wrapper absoluto em
+      // header.jsx — aqui só precisa do `relative`, pro dropdown/erro
+      // internos (absolute right-0) continuarem ancorados neste componente.
+      className="relative"
       onBlur={(evento) => {
         if (!evento.currentTarget.contains(evento.relatedTarget)) {
           setMenuAberto(false);
