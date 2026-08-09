@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Outlet } from 'react-router';
+import { BuscaGlobal } from '../../components/layout/busca-global';
 import { AdminSidebar } from './admin-sidebar';
 
 // Casca do painel administrativo — menu lateral (admin-sidebar.jsx: coluna
@@ -7,10 +8,15 @@ import { AdminSidebar } from './admin-sidebar';
 // menores) + área de conteúdo. Cada aba (Usuários/Papéis/Configurações) é
 // uma rota de verdade dentro de /admin/* (ver services/router/
 // rotas.constants.js, ROTAS_ADMIN) e renderiza aqui dentro do <Outlet/> —
-// esta casca não sabe qual aba está ativa, só monta a moldura. `auth` não
-// precisa descer por Outlet context: App.jsx já passa `auth` direto pra
-// cada elemento de rota (mesmo padrão de LoginPage/CriarUsuario).
-export function AdminLayout() {
+// esta casca não sabe qual aba está ativa, só monta a moldura.
+//
+// `auth` (09-08-2026) passou a ser recebido direto — precisou pra montar
+// <BuscaGlobal/> aqui (o Ctrl+K precisa de authFetch pra buscar nos 4
+// catálogos). Continua vindo explícito por prop de App.jsx, não por
+// Outlet context — mesmo padrão de sempre, só que agora AdminLayout
+// também usa, não só repassa pros filhos do <Outlet/> (que continuam
+// recebendo `auth` direto de App.jsx, sem mudança).
+export function AdminLayout({ auth }) {
   const [menuAberto, setMenuAberto] = useState(false);
 
   return (
@@ -34,6 +40,8 @@ export function AdminLayout() {
           </div>
         </div>
       </div>
+
+      <BuscaGlobal auth={auth} />
     </main>
   );
 }

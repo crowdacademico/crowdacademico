@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router';
+import { abrirBuscaGlobal } from '../../components/layout/busca-global-evento';
 import { GRUPOS_MENU_ADMIN } from './admin-menu.constants';
 
 // Menu lateral — coluna fixa em telas >=1024px (grid em .admin-shell,
@@ -29,6 +30,24 @@ export function AdminSidebar({ aberto, aoFechar }) {
       >
         <div className="admin-sidebar__titulo">Painel Administrativo</div>
         <div className="admin-sidebar__subtitulo">CrowdAcadêmico</div>
+
+        {/* Busca global (09-08-2026) — Ctrl+K abre de qualquer lugar, mas
+            um atalho sozinho não é descobrível; este botão é a pista
+            visível de que ele existe (ver components/layout/
+            busca-global.jsx). */}
+        <button
+          type="button"
+          onClick={abrirBuscaGlobal}
+          className="w-full flex items-center justify-between gap-2 px-3 py-2 my-3 rounded-md border border-slate-300 bg-slate-50 text-sm text-slate-500 hover:bg-slate-200 transition-colors"
+        >
+          <span className="flex items-center gap-2">
+            <i className="fa-solid fa-magnifying-glass"></i> Buscar
+          </span>
+          <kbd className="text-[10px] font-bold border border-slate-300 rounded px-1.5 py-0.5 bg-white">
+            Ctrl K
+          </kbd>
+        </button>
+
         <hr className="admin-sidebar__separador" />
 
         {GRUPOS_MENU_ADMIN.map((grupo) => (

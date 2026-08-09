@@ -60,8 +60,11 @@ export function LogAuditoriaPainel({ buscar, campoRenomeio }) {
         <table className="crud-tabela">
           <thead>
             <tr>
-              <th>Ação</th>
+              {/* Registro antes de Ação (09-08-2026, pedido do Lucas: "fica
+                  mais bonito o registro vindo primeiro") — mesma ordem nos
+                  dois <tr>, cabeçalho e corpo. */}
               <th>Registro</th>
+              <th>Ação</th>
               {campoRenomeio ? (
                 <>
                   <th>De</th>
@@ -77,8 +80,8 @@ export function LogAuditoriaPainel({ buscar, campoRenomeio }) {
           <tbody>
             {linhas.map((linha) => (
               <tr key={linha.idLog}>
-                <td>{ROTULO_OPERACAO[linha.operacao] ?? linha.operacao}</td>
                 <td>{linha.identidadeRegistro}</td>
+                <td>{ROTULO_OPERACAO[linha.operacao] ?? linha.operacao}</td>
                 {campoRenomeio ? (
                   <>
                     <td>{linha.dadosAnteriores?.[campoRenomeio] ?? '—'}</td>

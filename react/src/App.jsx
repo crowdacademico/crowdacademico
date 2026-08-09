@@ -26,7 +26,7 @@ function App() {
           <Route key={caminho} path={caminho} element={<Elemento auth={auth} />} />
         ))}
 
-        <Route path="/admin" element={<AdminLayout />}>
+        <Route path="/admin" element={<AdminLayout auth={auth} />}>
           {ROTAS_ADMIN.map(({ caminhoRelativo, elemento: Elemento }) => (
             <Route
               key={caminhoRelativo}
