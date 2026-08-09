@@ -37,6 +37,12 @@ export function ListarConfiguracoes({ auth }) {
         listar={listarConfiguracoes}
         rotaBase="/configuracoes"
         buscarLog={buscarLogConfiguracoes}
+        // "De"/"Para" no VALOR (09-08-2026, pedido do Lucas) — é a coluna
+        // que mais importa aqui: configuracoes existe pra tirar regra de
+        // negócio hardcoded do .sql, então ver o valor antigo/novo de uma
+        // mudança (ex.: taxa, limite, prazo) é mais útil que "chave"/
+        // "descricao"/"ativo" mudaram.
+        campoRenomeioLog="valor"
       />
     </div>
   );

@@ -44,6 +44,22 @@
   --color-purple-600: #7c3aed;
   --color-purple-700: #6d28d9;
 
+  /* Tokens SEMÂNTICOS (pedido do Lucas, 08-08-2026, rodada de redesenho
+     "Experiment.com/Catarse"): em vez de cada CSS novo escolher um tom de
+     slate na mão (--color-slate-700? -800? -600?), usa o papel que a cor
+     está cumprindo — some com a ambiguidade pros próximos ~24 módulos que
+     ainda vão escrever CSS aqui. Continuam sendo só apelidos pros mesmos
+     tons de slate acima (nenhum valor novo, nenhuma paleta nova) — só dão
+     nome ao USO, não trocam a cor em si. Migrado neste dia em
+     2/3-componentes.css, 3-admin-shell.css, 4-crud.css; qualquer CSS novo
+     de painel deve preferir estes em vez de --color-slate-* direto. */
+  --cor-texto-forte: var(--color-slate-800); /* título, valor de dado */
+  --cor-texto: var(--color-slate-700); /* corpo */
+  --cor-texto-fraco: var(--color-slate-500); /* rótulo, texto auxiliar */
+  --cor-borda: var(--color-slate-200); /* borda padrão */
+  --cor-borda-forte: var(--color-slate-300); /* divisória de cabeçalho */
+  --cor-fundo-sutil: var(--color-slate-50); /* hover, fundo de seção */
+
   /* Fonte só pro selo <dev> (.badge-dev, 2-componentes.css) — pedido do
      Lucas, 03-08-2026: qualquer coisa marcada como "só pra desenvolvimento"
      usa essa combinação (roxo + monoespaçada), nunca hardcoded caso a
@@ -98,7 +114,11 @@
     font-size: var(--font-size-sm);
     line-height: 1.5;
     background-color: var(--color-surface);
-    color: var(--color-slate-800);
+    /* --cor-texto-forte (não --cor-texto) — o corpo do texto já era
+       slate-800 antes dos tokens existirem (achado do Lucas, escurecido de
+       propósito pra monitor não calibrado); manter o token que bate com o
+       valor de HOJE, não com o rótulo "corpo" ao pé da letra. */
+    color: var(--cor-texto-forte);
     -webkit-font-smoothing: antialiased;
   }
 

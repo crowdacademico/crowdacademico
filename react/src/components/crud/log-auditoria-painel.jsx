@@ -16,7 +16,18 @@ const ROTULO_OPERACAO = {
 // primeiro — não filtra por registro específico ainda (isso seria um 2º
 // botão, "Ver log deste registro", dentro de Consultar — fica pra quando
 // o Lucas quiser essa granularidade).
-export function LogAuditoriaPainel({ buscar }) {
+//
+// `campoRenomeio` (09-08-2026, pedido do Lucas: "log da tabela Papéis com
+// duas colunas, nome antigo e nome atual") — opt-in, não específico de
+// papel: quando informado (ex.: "nome"), troca a coluna genérica "Campos
+// alterados" por duas colunas de verdade ("De"/"Para") lendo o valor
+// daquele campo em `dadosAnteriores`/`dadosNovos` (o log_auditoria já
+// grava a linha inteira antes/depois, não precisou de coluna nova no
+// banco — só o React passou a ler o que já existia). Lucas comentou que
+// esse conceito serve pra outros logs no futuro — qualquer tela que
+// passe `buscarLog`/`campoRenomeioLog` pro GenericTable ganha o mesmo
+// recurso de graça, não é hardcoded pra papel.
+export function LogAuditoriaPainel({ buscar, campoRenomeio }) {
   const [linhas, setLinhas] = useState([]);
   const [total, setTotal] = useState(0);
   const [carregando, setCarregando] = useState(true);
@@ -51,7 +62,14 @@ export function LogAuditoriaPainel({ buscar }) {
             <tr>
               <th>Ação</th>
               <th>Registro</th>
-              <th>Campos alterados</th>
+              {campoRenomeio ? (
+                <>
+                  <th>De</th>
+                  <th>Para</th>
+                </>
+              ) : (
+                <th>Campos alterados</th>
+              )}
               <th>Quem</th>
               <th>Quando</th>
             </tr>
@@ -61,14 +79,21 @@ export function LogAuditoriaPainel({ buscar }) {
               <tr key={linha.idLog}>
                 <td>{ROTULO_OPERACAO[linha.operacao] ?? linha.operacao}</td>
                 <td>{linha.identidadeRegistro}</td>
-                <td>{linha.camposAlterados ? linha.camposAlterados.join(', ') : ''}</td>
+                {campoRenomeio ? (
+                  <>
+                    <td>{linha.dadosAnteriores?.[campoRenomeio] ?? '—'}</td>
+                    <td>{linha.dadosNovos?.[campoRenomeio] ?? '—'}</td>
+                  </>
+                ) : (
+                  <td>{linha.camposAlterados ? linha.camposAlterados.join(', ') : ''}</td>
+                )}
                 <td>{linha.nomeResponsavel ?? 'Sistema'}</td>
                 <td>{new Date(linha.ocorridoEm).toLocaleString('pt-BR')}</td>
               </tr>
             ))}
             {linhas.length === 0 && (
               <tr>
-                <td colSpan={5}>Nenhuma alteração registrada ainda.</td>
+                <td colSpan={campoRenomeio ? 6 : 5}>Nenhuma alteração registrada ainda.</td>
               </tr>
             )}
           </tbody>

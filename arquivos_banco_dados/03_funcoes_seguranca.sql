@@ -505,3 +505,60 @@ BEGIN
     RETURN v_linhas > 0;
 END;
 $$;
+
+-- ============================================================
+-- [03-K] DASHBOARD ADMIN — MÉTRICAS AGREGADAS (08-08-2026)
+-- ============================================================
+-- ----------------------------------------------------------------------------
+-- Função:     contar_metricas_dashboard
+-- Assinatura: () -> TABLE(total_usuarios INT, total_pesquisadores INT,
+--             total_papeis INT, total_permissoes INT, total_configuracoes INT,
+--             sessoes_ativas INT)
+-- Bloco:      [03-K]
+-- Regra:      08-08-2026 — GET /dashboard/resumo (nest/src/29-dashboard)
+--             precisa de totais confiáveis pros cards da tela inicial do
+--             painel. RLS filtra LINHA e não é uniforme entre as tabelas
+--             envolvidas: `usuario` só libera não-deletado (ou quem tem
+--             'usuario_visualizar_sensivel'), `configuracoes` só libera a
+--             linha global ou a da própria sessão — um COUNT direto de
+--             app_nestjs devolveria um número DIFERENTE dependendo de quem
+--             está logado, o que é errado pra um card de "total do
+--             sistema" (mesmo raciocínio de
+--             contar_seguidores_pesquisador/campanha, acima em [03-E]).
+--             Uma função só devolvendo TABLE (não 6 funções separadas)
+--             porque o NestJS sempre pede os 6 números juntos numa
+--             chamada só — não faz sentido virar 6 idas ao Postgres.
+--             `pesquisadores` conta usuario_papel/papel direto (RLS
+--             permissiva nas duas, USING(true)) — não precisa de
+--             SECURITY DEFINER pra essa coluna especificamente, mas entra
+--             na mesma função porque é pedida junto.
+--             SEM contagem de log_auditoria de propósito (correção do
+--             Lucas no mesmo dia: a prévia da tela era pra ser sobre
+--             notificação pendente, não log — log_auditoria já tem seu
+--             próprio painel "Ver log" embaixo de cada tabela).
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.contar_metricas_dashboard()
+RETURNS TABLE (
+    total_usuarios      INT,
+    total_pesquisadores INT,
+    total_papeis        INT,
+    total_permissoes    INT,
+    total_configuracoes INT,
+    sessoes_ativas      INT
+)
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT
+        (SELECT count(*)::INT FROM usuario WHERE deletado = FALSE),
+        (SELECT count(DISTINCT up.id_usuario)::INT
+           FROM usuario_papel up
+           JOIN papel p ON p.id_papel = up.id_papel
+          WHERE p.nome = 'pesquisador'),
+        (SELECT count(*)::INT FROM papel),
+        (SELECT count(*)::INT FROM permissao),
+        (SELECT count(*)::INT FROM configuracoes),
+        (SELECT count(*)::INT FROM sessao WHERE revogado_em IS NULL AND expira_em > now());
+$$;

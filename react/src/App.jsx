@@ -10,16 +10,17 @@ import { AdminLayout } from './views/admin/admin-layout';
 // única, compartilhada com o breadcrumb e o menu lateral) — adicionar uma
 // página nova é só acrescentar uma linha lá, não mexer aqui.
 //
-// "/" redireciona pra /admin/usuarios (a aba padrão) — antes era a própria
-// home; virou redirect porque as abas do painel agora são rotas de
-// verdade, não dava mais pra "/" ser as três ao mesmo tempo.
+// "/" redireciona pra /admin/dashboard (a aba padrão, 08-08-2026 — ERA
+// /admin/usuarios até o Dashboard existir) — antes era a própria home;
+// virou redirect porque as abas do painel agora são rotas de verdade, não
+// dava mais pra "/" ser todas ao mesmo tempo.
 function App() {
   const auth = useAuth();
 
   return (
     <Routes>
       <Route element={<Layout auth={auth} />}>
-        <Route path="/" element={<Navigate to="/admin/usuarios" replace />} />
+        <Route path="/" element={<Navigate to="/admin/dashboard" replace />} />
 
         {ROTAS.map(({ caminho, elemento: Elemento }) => (
           <Route key={caminho} path={caminho} element={<Elemento auth={auth} />} />

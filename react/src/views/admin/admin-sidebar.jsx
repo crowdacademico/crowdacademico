@@ -32,8 +32,11 @@ export function AdminSidebar({ aberto, aoFechar }) {
         <hr className="admin-sidebar__separador" />
 
         {GRUPOS_MENU_ADMIN.map((grupo) => (
-          <div key={grupo.titulo}>
-            <div className="admin-sidebar__grupo-titulo">{grupo.titulo}</div>
+          <div key={grupo.titulo ?? 'sem-titulo'}>
+            {/* Dashboard (08-08-2026) é um grupo sem título — item solo,
+                não uma seção de cadastro — só ganha a linha divisória
+                embaixo (divisorApos), não o rótulo maiúsculo de grupo. */}
+            {grupo.titulo && <div className="admin-sidebar__grupo-titulo">{grupo.titulo}</div>}
             {grupo.itens.map((item) =>
               item.desabilitado ? (
                 <button
@@ -58,6 +61,7 @@ export function AdminSidebar({ aberto, aoFechar }) {
                 </NavLink>
               ),
             )}
+            {grupo.divisorApos && <hr className="admin-sidebar__separador" />}
           </div>
         ))}
       </aside>

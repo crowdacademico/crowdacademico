@@ -6,6 +6,7 @@ import { PapelPermissaoModule } from '../2-papel-permissao/papel-permissao.modul
 import { AuthModule } from '../3-auth/auth.module';
 import { ConfiguracoesModule } from '../11-configuracoes/configuracoes.module';
 import { LogAuditoriaModule } from '../28-log-auditoria/log-auditoria.module';
+import { DashboardModule } from '../29-dashboard/dashboard.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { HealthController } from './health.controller';
@@ -19,6 +20,7 @@ import { HealthController } from './health.controller';
     AuthModule,
     ConfiguracoesModule,
     LogAuditoriaModule,
+    DashboardModule,
   ],
   controllers: [AppController, HealthController],
   providers: [AppService],

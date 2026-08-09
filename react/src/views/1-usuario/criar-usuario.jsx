@@ -30,7 +30,13 @@ export function CriarUsuario({ auth }) {
         'Usuário cadastrado com sucesso.',
         `O novo usuário possui o ID: ${usuarioCriado.idUsuario}`,
       );
-      navigate('/');
+      // ERA navigate('/') (08-08-2026, achado do Lucas: depois que "/"
+      // passou a redirecionar pra /admin/dashboard em vez de
+      // /admin/usuarios, criar um usuário mandava pra tela errada — o
+      // "sucesso" ficava esquisito, sem a pessoa criada nem aparecer).
+      // navigate(-1) volta pra onde a pessoa realmente veio (a listagem de
+      // Usuários), mesmo padrão já usado por alterar/excluir-usuario.jsx.
+      navigate(-1);
     } catch (erroRequisicao) {
       reportarErro(erroRequisicao);
     } finally {

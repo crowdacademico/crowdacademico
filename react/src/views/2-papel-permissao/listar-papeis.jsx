@@ -43,6 +43,11 @@ export function ListarPapeis({ auth }) {
           rotaBase="/papeis"
           acoes={['alterar']}
           buscarLog={buscarLogPapel}
+          // "De"/"Para" em vez de "Campos alterados" (09-08-2026, pedido
+          // do Lucas) — só "nome" muda em papel hoje (codigo é fixo), mas
+          // o recurso é genérico (ver LogAuditoriaPainel), não hardcoded
+          // aqui além do nome do campo.
+          campoRenomeioLog="nome"
         />
       </div>
       <div className="admin-content-painel">

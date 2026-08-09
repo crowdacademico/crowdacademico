@@ -5,6 +5,27 @@ import { ToastContext } from './toast-context';
 // sucesso — dá mais tempo pra notar/ler antes de sumir).
 const DURACAO_MS = { sucesso: 4000, erro: 5000 };
 
+// Redesenho (08-08-2026, rodada Experiment.com/Catarse): sucesso e erro
+// tinham estruturas DIFERENTES (sucesso era um bloco verde sólido com
+// texto branco; erro era translúcido com borda vermelha grossa) — cada um
+// evoluído em rodada separada, sem desenho conjunto. Unificados na mesma
+// estrutura (cartão branco + barra colorida de 4px na esquerda + ícone) —
+// a cor vira ACENTO (a barra/ícone), não fundo. Texto sempre escuro
+// (nunca branco sobre colorido) resolve de vez o problema de legibilidade
+// em monitor não calibrado já relatado antes pro toast de erro.
+const CONFIG_TIPO = {
+  sucesso: {
+    corBarra: 'bg-emerald-500',
+    corIcone: 'text-emerald-600',
+    icone: 'fa-solid fa-circle-check',
+  },
+  erro: {
+    corBarra: 'bg-red-500',
+    corIcone: 'text-red-600',
+    icone: 'fa-solid fa-circle-exclamation',
+  },
+};
+
 // Confirmação visual reaproveitável — pedida pro fluxo de criar usuário,
 // mas pensada pra servir alterar/consultar/excluir também (e qualquer
 // módulo futuro): qualquer componente chama `useToast().mostrar(titulo,
@@ -19,61 +40,66 @@ export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);
   const proximoId = useRef(0);
 
-  const mostrar = useCallback((titulo, descricao, tipo = 'sucesso') => {
-    const id = proximoId.current++;
-    setToasts((atuais) => [...atuais, { id, titulo, descricao, tipo }]);
-    setTimeout(() => {
-      setToasts((atuais) => atuais.filter((toast) => toast.id !== id));
-    }, DURACAO_MS[tipo] ?? DURACAO_MS.sucesso);
+  const remover = useCallback((id) => {
+    setToasts((atuais) => atuais.filter((toast) => toast.id !== id));
   }, []);
+
+  const mostrar = useCallback(
+    (titulo, descricao, tipo = 'sucesso') => {
+      const id = proximoId.current++;
+      setToasts((atuais) => [...atuais, { id, titulo, descricao, tipo }]);
+      setTimeout(() => remover(id), DURACAO_MS[tipo] ?? DURACAO_MS.sucesso);
+    },
+    [remover],
+  );
 
   return (
     <ToastContext.Provider value={{ mostrar }}>
       {children}
-      {/* top-32 (8rem, era top-28): pedido do Lucas (07-08-2026) pra descer
-          um pouco — ainda limpa o Header (h-16) e o Breadcrumb (sticky
-          top-16) sem encostar. pointer-events-none no container (não deve
-          bloquear clique fora do toast em si — só o toast individual, mais
-          abaixo, reativa com pointer-events-auto). max-w-lg (era max-w-md)
-          pra caber o toast de erro maior. */}
-      <div className="fixed top-32 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-3 items-center w-full max-w-lg px-4 pointer-events-none">
-        {toasts.map((toast) =>
-          toast.tipo === 'erro' ? (
-            // Estilo separado do de sucesso, de propósito (pedido do Lucas,
-            // 07-08-2026): mais claro/translúcido em vez de um bloco
-            // vermelho sólido — para AVISAR sem competir com a mensagem
-            // vermelha que já existe no formulário (esta é só um empurrão
-            // pra notar o erro mais rápido, não a explicação principal).
-            // Ajustado de novo no mesmo dia (maior, mais transparente,
-            // borda mais escura e mais grossa) depois do 1º teste do Lucas.
+      {/* top-32 (8rem): pedido do Lucas (07-08-2026) pra descer um pouco —
+          ainda limpa o Header (h-16) e o Breadcrumb (sticky top-16) sem
+          encostar. pointer-events-none no container (não deve bloquear
+          clique fora do toast em si — só o toast individual, mais abaixo,
+          reativa com pointer-events-auto). max-w-lg pra caber confortável
+          com ícone + botão de fechar. items-stretch (não items-center):
+          cada toast ocupa a largura cheia do container, senão a barra
+          lateral colorida fica "flutuando" com tamanhos diferentes por
+          toast. */}
+      <div className="fixed top-32 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-3 items-stretch w-full max-w-lg px-4 pointer-events-none">
+        {toasts.map((toast) => {
+          const config = CONFIG_TIPO[toast.tipo] ?? CONFIG_TIPO.sucesso;
+          return (
             <div
               key={toast.id}
-              className="pointer-events-auto w-full px-8 py-6 rounded-xl shadow-xl text-red-900 bg-red-50/60 border-2 border-red-500/80 backdrop-blur-sm"
+              className="pointer-events-auto w-full flex bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden"
             >
-              <p className="text-lg font-bold text-center">{toast.titulo}</p>
-              {toast.descricao && (
-                // ERA text-red-800/80 (pedido do Lucas, 07-08-2026: texto
-                // claro demais em monitor não calibrado/projetor) — texto
-                // agora 100% opaco, só o FUNDO do toast continua translúcido.
-                <p className="text-sm font-medium text-red-900 mt-1 text-center">
-                  {toast.descricao}
-                </p>
-              )}
+              <div className={'w-1 shrink-0 ' + config.corBarra}></div>
+              <div className="flex-1 flex items-start gap-3 pl-3 pr-2 py-3">
+                <i className={config.icone + ' ' + config.corIcone + ' text-lg mt-0.5 shrink-0'}></i>
+                {/* Alinhado à esquerda (não centralizado) — texto centralizado
+                    numa caixa larga é mais difícil de ler e não é o padrão de
+                    painel profissional (Experiment/Catarse usam à esquerda). */}
+                <div className="flex-1 min-w-0 text-left">
+                  <p className="text-sm font-bold text-slate-800">{toast.titulo}</p>
+                  {toast.descricao && (
+                    <p className="text-sm text-slate-600 mt-0.5">{toast.descricao}</p>
+                  )}
+                </div>
+                {/* Botão de fechar — pedido do Lucas, 08-08-2026: erro que a
+                    pessoa já leu deveria poder sair na hora, não só esperar o
+                    tempo passar (5s no erro). */}
+                <button
+                  type="button"
+                  onClick={() => remover(toast.id)}
+                  aria-label="Fechar aviso"
+                  className="shrink-0 -mr-1 -mt-1 p-1.5 text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  <i className="fa-solid fa-xmark"></i>
+                </button>
+              </div>
             </div>
-          ) : (
-            <div
-              key={toast.id}
-              className="pointer-events-auto w-full px-6 py-4 rounded-xl shadow-2xl text-white bg-primary/90 backdrop-blur-sm"
-            >
-              <p className="text-base font-bold text-center">{toast.titulo}</p>
-              {toast.descricao && (
-                <p className="text-sm font-medium text-white mt-1 text-center">
-                  {toast.descricao}
-                </p>
-              )}
-            </div>
-          ),
-        )}
+          );
+        })}
       </div>
     </ToastContext.Provider>
   );

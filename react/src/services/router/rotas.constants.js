@@ -1,4 +1,5 @@
 import { LoginPage } from '../../views/3-auth/login-page';
+import { Dashboard } from '../../views/admin/dashboard';
 import { CriarUsuario } from '../../views/1-usuario/criar-usuario';
 import { AlterarUsuario } from '../../views/1-usuario/alterar-usuario';
 import { ConsultarUsuario } from '../../views/1-usuario/consultar-usuario';
@@ -29,6 +30,13 @@ import { ListarConfiguracoes } from '../../views/11-configuracoes/listar-configu
 // admin-menu.constants.js) — é a MESMA lista, não uma 3ª cópia: antes o
 // menu lateral (GRUPOS_MENU_ADMIN) e as rotas eram duas listas separadas
 // que podiam desalinhar; agora o menu lê ROTAS_ADMIN direto.
+//
+// grupoMenu (08-08-2026, pedido do Lucas: Dashboard fora do grupo
+// CADASTROS, com divisória própria) diz a admin-menu.constants.js em qual
+// grupo do menu lateral o item entra — `null` = fora de qualquer grupo
+// (item solo, sem título de seção acima dele). Continua sendo a ÚNICA
+// lista (nenhuma lista paralela nova): admin-menu.constants.js só FILTRA
+// ROTAS_ADMIN por este campo em vez de jogar tudo dentro de CADASTROS.
 export const ROTAS = [
   { caminho: '/login', elemento: LoginPage, rotuloBreadcrumb: 'Login' },
   { caminho: '/usuarios/criar', elemento: CriarUsuario, rotuloBreadcrumb: 'Criar Usuário' },
@@ -76,13 +84,23 @@ export const ROTAS = [
 
 export const ROTAS_ADMIN = [
   {
+    caminho: '/admin/dashboard',
+    caminhoRelativo: 'dashboard',
+    elemento: Dashboard,
+    rotuloMenu: 'Dashboard',
+    // null: agora é a aba padrão (o que "/" redireciona pra ela) — mostrar
+    // "Início > Dashboard" seria redundante com o próprio link "Início".
+    rotuloBreadcrumb: null,
+    grupoMenu: null,
+  },
+  {
     caminho: '/admin/usuarios',
     caminhoRelativo: 'usuarios',
     elemento: ListarUsuarios,
     rotuloMenu: 'Usuários',
-    // null: esta é a aba padrão (o que "/" redireciona pra ela) — mostrar
-    // "Início > Usuários" seria redundante com o próprio link "Início".
-    rotuloBreadcrumb: null,
+    // ERA null (era a aba padrão) — o Dashboard assumiu esse posto acima.
+    rotuloBreadcrumb: 'Usuários',
+    grupoMenu: 'CADASTROS',
   },
   {
     caminho: '/admin/papeis',
@@ -90,6 +108,7 @@ export const ROTAS_ADMIN = [
     elemento: ListarPapeis,
     rotuloMenu: 'Papéis & Permissões',
     rotuloBreadcrumb: 'Papéis & Permissões',
+    grupoMenu: 'CADASTROS',
   },
   {
     caminho: '/admin/configuracoes',
@@ -97,5 +116,6 @@ export const ROTAS_ADMIN = [
     elemento: ListarConfiguracoes,
     rotuloMenu: 'Configurações',
     rotuloBreadcrumb: 'Configurações',
+    grupoMenu: 'CADASTROS',
   },
 ];

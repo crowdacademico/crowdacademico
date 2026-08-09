@@ -43,12 +43,14 @@
 
   .btn-secondary {
     background-color: var(--color-slate-100);
-    border-color: var(--color-slate-300);
-    color: var(--color-slate-700);
+    border-color: var(--cor-borda-forte);
+    color: var(--cor-texto);
   }
 
+  /* ERA --cor-borda (slate-200) — hover mais escuro, mesmo pedido do
+     Lucas (09-08-2026) aplicado em todos os hovers do painel. */
   .btn-secondary:hover:not(:disabled) {
-    background-color: var(--color-slate-200);
+    background-color: var(--cor-borda-forte);
   }
 
   .btn-danger {
@@ -61,26 +63,18 @@
     color: var(--color-white);
   }
 
-  /* Azulado, só pra "Alterar" (GenericTable) se diferenciar visualmente de
-     "Consultar" (.btn-secondary, cinza) e "Excluir" (.btn-danger, vermelho)
-     — pedido do Lucas, 02-08-2026. */
-  .btn-info {
-    background-color: var(--color-blue-100);
-    color: var(--color-blue-600);
-  }
-
-  .btn-info:hover:not(:disabled) {
-    background-color: var(--color-blue-600);
-    color: var(--color-white);
-  }
+  /* .btn-info (azulado, só pra "Alterar" em GenericTable) removido
+     08-08-2026: a coluna Ações da tabela trocou botão sólido por
+     texto/ícone discreto (.crud-tabela__acao, 4-crud.css) — perdeu a
+     única razão de existir. */
 
   /* Input/select de formulário fora da tabela de CRUD (login, criar
      usuário) — mesma moldura em todo lugar: borda, fundo levemente cinza,
      foco em verde. */
   .input-padrao {
     width: 100%;
-    background-color: var(--color-slate-50);
-    border: 2px solid var(--color-slate-300);
+    background-color: var(--cor-fundo-sutil);
+    border: 2px solid var(--cor-borda-forte);
     border-radius: var(--radius-lg);
     padding: 0.875rem;
     font-size: var(--font-size-sm);
@@ -170,7 +164,7 @@
     align-items: center;
     justify-content: center;
     margin-left: 0.35rem;
-    color: var(--color-slate-500);
+    color: var(--cor-texto-fraco);
     cursor: help;
   }
 

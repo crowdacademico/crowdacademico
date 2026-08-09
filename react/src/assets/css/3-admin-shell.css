@@ -43,7 +43,7 @@
 
 .admin-sidebar {
   background-color: var(--color-white);
-  border-bottom: 1px solid var(--color-slate-200);
+  border-bottom: 1px solid var(--cor-borda);
   padding: 1.5rem;
 }
 
@@ -58,12 +58,12 @@
   font-size: var(--font-size-xs);
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--color-slate-500);
+  color: var(--cor-texto-fraco);
 }
 
 .admin-sidebar__separador {
   border: none;
-  border-bottom: 1px solid var(--color-slate-200);
+  border-bottom: 1px solid var(--cor-borda);
   margin: 1rem 0;
 }
 
@@ -72,7 +72,7 @@
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--color-slate-500);
+  color: var(--cor-texto-fraco);
   margin: 0.5rem 0 0.5rem 0.5rem;
 }
 
@@ -94,19 +94,38 @@
   transition: var(--transition-normal);
 }
 
+/* ERA --cor-fundo-sutil (slate-50) — o Lucas achou o hover fraco demais
+   (09-08-2026), quase imperceptível. slate-200 dá um contraste bem mais
+   visível contra o fundo branco da sidebar. */
 .admin-sidebar__item:hover:not(.admin-sidebar__item--desabilitado) {
-  background-color: var(--color-slate-50);
+  background-color: var(--cor-borda);
 }
 
+/* Cor como ACENTO, não preenchimento (pedido do Lucas, 08-08-2026, rodada
+   Experiment.com/Catarse: "quando tudo é verde, nada se destaca" — era um
+   fundo verde translúcido cobrindo o item inteiro, virou fundo neutro +
+   barra de 3px na esquerda, mesmo padrão adotado no toast). box-shadow
+   inset em vez de border-left: desenha a barra sem empurrar o padding do
+   item (border-left somaria largura extra e desalinharia do item normal). */
 .admin-sidebar__item--ativo {
-  background-color: rgba(15, 155, 88, 0.1);
-  color: var(--color-primary-dark);
+  background-color: var(--color-slate-100);
+  box-shadow: inset 3px 0 0 var(--color-primary);
+  color: var(--cor-texto-forte);
+  font-weight: 800;
+}
+
+/* Sem isso, passar o mouse no item ATIVO trocava o fundo pro hover comum
+   (a regra de cima tem mais especificidade que .admin-sidebar__item--ativo
+   sozinha) — perdia a barra/aparência de "selecionado" enquanto o mouse
+   estava em cima. */
+.admin-sidebar__item--ativo:hover {
+  background-color: var(--color-slate-200);
 }
 
 .admin-sidebar__item--desabilitado {
   background-color: var(--color-slate-100);
   color: var(--color-slate-400);
-  border-color: var(--color-slate-200);
+  border-color: var(--cor-borda);
   cursor: not-allowed;
 }
 
@@ -136,7 +155,7 @@
 
 .admin-content-painel {
   background-color: var(--color-white);
-  border: 1px solid var(--color-slate-200);
+  border: 1px solid var(--cor-borda);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   padding: 2rem;
@@ -151,7 +170,7 @@
     /* Lado a lado com o conteúdo agora — a borda de baixo (empilhado no
        mobile) vira borda da direita (a "parede" entre coluna e conteúdo). */
     border-bottom: none;
-    border-right: 1px solid var(--color-slate-200);
+    border-right: 1px solid var(--cor-borda);
   }
 }
 } /* fim @layer components */

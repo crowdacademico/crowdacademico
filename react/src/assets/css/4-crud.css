@@ -2,9 +2,10 @@
    Usado por components/crud/generic-table.jsx dentro do painel admin.
    Migrado do antigo devtools.css (cores hardcoded) pras variáveis de
    1-base.css — mesma ideia de "tirar o hardcoded" já aplicada no banco
-   (configuracoes em vez de valor fixo no .sql). Botões daqui usam as
-   classes de 2-componentes.css (.btn/.btn-secondary/.btn-danger) — não
-   têm mais estilo próprio de botão redeclarado neste arquivo. */
+   (configuracoes em vez de valor fixo no .sql). Paginação/rodapé da tabela
+   ainda usa as classes de 2-componentes.css (.btn/.btn-secondary); a
+   coluna Ações de cada linha tem estilo próprio aqui (.crud-tabela__acao,
+   08-08-2026) — texto/ícone discreto, não botão sólido. */
 @layer components {
   .crud-secao {
     margin-bottom: 0;
@@ -49,6 +50,12 @@
     margin-top: 0.75rem;
   }
 
+  /* Redesenho (08-08-2026, rodada Experiment.com/Catarse): era uma grade
+     completa (borda em toda célula, cabeçalho verde sólido) — o
+     diagnóstico do Lucas foi que cor demais em tudo faz nada se destacar.
+     Virou: sem grade vertical, só linha fina embaixo de cada linha (menos
+     "planilha", mais "lista"), cabeçalho neutro (sem verde) com uma borda
+     inferior mais forte separando do corpo, mais respiro vertical. */
   .crud-tabela {
     border-collapse: collapse;
     width: 100%;
@@ -57,26 +64,40 @@
 
   .crud-tabela th,
   .crud-tabela td {
-    /* ERA --color-slate-200 (pedido do Lucas, 07-08-2026: "escurecer um
-       pouquinho mais as bordas das tabelas" — some em monitor não
-       calibrado/projetor). */
-    border: 1px solid var(--color-slate-300);
-    padding: 0.5rem 0.75rem;
+    padding: 0.85rem 0.75rem;
     text-align: left;
   }
 
+  /* Linha fina entre linhas do corpo (não grade completa) — ERA border em
+     TODA célula (th e td, todos os lados). */
+  .crud-tabela tbody tr {
+    border-bottom: 1px solid var(--color-slate-100);
+  }
+
+  .crud-tabela tbody tr:last-child {
+    border-bottom: none;
+  }
+
+  /* ERA --cor-fundo-sutil (slate-50) — mesmo pedido do Lucas (09-08-2026):
+     hover mais escuro em todo o painel, não só no menu lateral. */
+  .crud-tabela tbody tr:hover {
+    background-color: var(--color-slate-100);
+  }
+
   .crud-tabela th {
-    background: var(--color-slate-50);
+    background: var(--cor-fundo-sutil);
     font-size: var(--font-size-xs);
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    /* ERA --color-slate-500 — o Lucas achou fraco demais no monitor dele
-       (02-08-2026). slate-700 é o mesmo tom usado no corpo do texto (ver
-       1-base.css, body { color: var(--color-slate-800) }), só um degrau
-       mais claro — continua "discreto" o suficiente pra ser cabeçalho, sem
-       ficar quase apagado. */
-    color: var(--color-slate-700);
+    /* ERA --cor-texto (slate-700, escurecido em 02-08-2026 porque -500
+       "sumia" no monitor do Lucas) — voltou pra slate-600 nesta rodada
+       (08-08-2026): agora o cabeçalho também ganhou uma borda inferior
+       mais forte (2px) fazendo o mesmo trabalho de "separar do corpo" que
+       antes dependia só da cor do texto, então dá pra aliviar o texto de
+       novo sem perder legibilidade. */
+    color: var(--color-slate-600);
     font-weight: 800;
+    border-bottom: 2px solid var(--cor-borda-forte);
   }
 
   .crud-tabela th.crud-tabela__ordenavel {
@@ -88,13 +109,57 @@
     color: var(--color-primary-dark);
   }
 
-  /* Botões de linha (Editar/Salvar/Cancelar/Excluir) são menores que o
-     .btn padrão — só ajusta tamanho/espaçamento aqui, cor/fundo continuam
-     vindo de .btn-secondary/.btn-danger (aplicadas no JSX). */
-  .crud-tabela .btn {
-    padding: 0.3rem 0.6rem;
+  /* Coluna Ações — texto/ícone discreto, não botão sólido (pedido do
+     Lucas, 08-08-2026: "só a ação destrutiva ganha cor, e só no hover").
+     Substitui o antigo .btn/.btn-info/.btn-secondary/.btn-danger AQUI
+     dentro da tabela — essas classes continuam existindo e sendo usadas
+     em botões de verdade fora da tabela (ex.: "Voltar" em Consultar,
+     confirmar exclusão), não foram removidas, só não fazem mais sentido
+     pra uma linha de listagem cheia de cor. */
+  .crud-tabela__acoes {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .crud-tabela__acao {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--cor-texto-fraco);
     font-size: var(--font-size-xs);
-    margin-right: 0.35rem;
+    font-weight: 700;
+    text-decoration: none;
+    transition: var(--transition-normal);
+  }
+
+  .crud-tabela__acao:hover {
+    color: var(--cor-texto-forte);
+  }
+
+  /* Cor de volta no ÍCONE, fraquinha (09-08-2026, pedido do Lucas: "voltar
+     a dar as cores das ações... mais fraquinho, só pra dar mais vida") —
+     só o ícone, o texto continua neutro (--cor-texto-fraco) nos dois
+     casos. Azul-marinho/vermelho-tinto translúcidos (não os tons vivos de
+     --color-blue-600/--color-red-600 de antes) — mais saturado no hover. */
+  .crud-tabela__acao--alterar i {
+    color: rgba(30, 58, 138, 0.55); /* azul marinho fraquinho */
+  }
+
+  .crud-tabela__acao--alterar:hover i {
+    color: rgb(30, 58, 138); /* azul marinho cheio */
+  }
+
+  .crud-tabela__acao--excluir i {
+    color: rgba(127, 29, 29, 0.55); /* vermelho tinto fraquinho */
+  }
+
+  .crud-tabela__acao--excluir:hover {
+    color: var(--color-red-600);
+  }
+
+  .crud-tabela__acao--excluir:hover i {
+    color: rgb(127, 29, 29); /* vermelho tinto cheio */
   }
 
   /* Cada campo agora é um <label> (texto do rótulo + input/select dentro) —
@@ -113,10 +178,10 @@
   .crud-form-criar input,
   .crud-form-criar select {
     padding: 0.45rem 0.6rem;
-    border: 1px solid var(--color-slate-300);
+    border: 1px solid var(--cor-borda-forte);
     border-radius: var(--radius-sm);
     font-size: var(--font-size-sm);
     font-weight: 400;
-    color: var(--color-slate-800);
+    color: var(--cor-texto-forte);
   }
 }

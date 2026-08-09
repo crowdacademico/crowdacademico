@@ -51,6 +51,10 @@ export function GenericTable({
   listar,
   rotaBase,
   buscarLog,
+  // Repassado direto pro LogAuditoriaPainel (09-08-2026, ver comentário lá)
+  // — troca a coluna genérica "Campos alterados" por "De"/"Para" lendo
+  // esse campo específico de dadosAnteriores/dadosNovos.
+  campoRenomeioLog,
   // Quais dos 3 botões padrão aparecem, quando `rotaBase` está presente
   // (03-08-2026, pedido do Lucas: Papéis precisa só de "Alterar" — sem
   // Consultar (a tabela já mostra tudo, mesma decisão já tomada pra
@@ -234,30 +238,38 @@ export function GenericTable({
                   ))}
                   {rotaBase && (
                     <td>
-                      {acoes.includes('alterar') && (
-                        <Link
-                          className="btn btn-info"
-                          to={`${rotaBase}/${linha[chavePrimaria]}/alterar`}
-                        >
-                          Alterar
-                        </Link>
-                      )}
-                      {acoes.includes('consultar') && (
-                        <Link
-                          className="btn btn-secondary"
-                          to={`${rotaBase}/${linha[chavePrimaria]}/consultar`}
-                        >
-                          Consultar
-                        </Link>
-                      )}
-                      {acoes.includes('excluir') && (
-                        <Link
-                          className="btn btn-danger"
-                          to={`${rotaBase}/${linha[chavePrimaria]}/excluir`}
-                        >
-                          Excluir
-                        </Link>
-                      )}
+                      {/* Texto/ícone discreto, não botão sólido (08-08-2026).
+                          Ícone com uma cor fraquinha (09-08-2026, pedido do
+                          Lucas: "voltar a dar as cores das ações... mas mais
+                          fraquinho, só pra dar mais vida") — ver
+                          .crud-tabela__acao--alterar/--excluir em
+                          4-crud.css. Texto continua neutro nos dois casos. */}
+                      <div className="crud-tabela__acoes">
+                        {acoes.includes('alterar') && (
+                          <Link
+                            className="crud-tabela__acao crud-tabela__acao--alterar"
+                            to={`${rotaBase}/${linha[chavePrimaria]}/alterar`}
+                          >
+                            <i className="fa-solid fa-pen"></i> Alterar
+                          </Link>
+                        )}
+                        {acoes.includes('consultar') && (
+                          <Link
+                            className="crud-tabela__acao"
+                            to={`${rotaBase}/${linha[chavePrimaria]}/consultar`}
+                          >
+                            <i className="fa-solid fa-eye"></i> Consultar
+                          </Link>
+                        )}
+                        {acoes.includes('excluir') && (
+                          <Link
+                            className="crud-tabela__acao crud-tabela__acao--excluir"
+                            to={`${rotaBase}/${linha[chavePrimaria]}/excluir`}
+                          >
+                            <i className="fa-solid fa-trash"></i> Excluir
+                          </Link>
+                        )}
+                      </div>
                     </td>
                   )}
                 </tr>
@@ -329,7 +341,9 @@ export function GenericTable({
           >
             {logAberto ? 'Esconder log' : 'Ver log'}
           </button>
-          {logAberto && <LogAuditoriaPainel buscar={buscarLog} />}
+          {logAberto && (
+            <LogAuditoriaPainel buscar={buscarLog} campoRenomeio={campoRenomeioLog} />
+          )}
         </>
       )}
     </section>

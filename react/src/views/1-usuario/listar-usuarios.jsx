@@ -75,6 +75,12 @@ export function ListarUsuarios({ auth }) {
         listar={listarUsuarios}
         rotaBase="/usuarios"
         buscarLog={buscarLogUsuario}
+        // "De"/"Para" (09-08-2026, pedido do Lucas depois de ver isso em
+        // Papéis) — "nome" é o único campo de texto editável de usuario
+        // que faz sentido rastrear assim (senha nunca entra no log, ver
+        // fn_log_auditoria() [strip de senha_hash]; e-mail não é editável
+        // pelo painel).
+        campoRenomeioLog="nome"
       />
     </div>
   );

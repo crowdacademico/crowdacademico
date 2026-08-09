@@ -321,6 +321,45 @@ ALTER TABLE sessao ADD CONSTRAINT "CK_SESSAO_ORIGEM" CHECK (origem IN ('login', 
 
 
 -- ============================================================================
+-- 08-08-2026 — função contar_metricas_dashboard() ([03-K]) — usada pelo
+-- GET /dashboard/resumo (Dashboard novo do painel admin): totais de
+-- usuário/pesquisador/papel/permissão/configuração/sessão ativa/log
+-- recente, num número só que não varia dependendo de quem chamou (RLS
+-- filtra linha diferente em cada tabela — sem isso, o card "total" mentiria
+-- pra quem não tem 'log_visualizar' ou 'usuario_visualizar_sensivel').
+-- Seguro rodar de novo quantas vezes quiser (CREATE OR REPLACE).
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION public.contar_metricas_dashboard()
+RETURNS TABLE (
+    total_usuarios      INT,
+    total_pesquisadores INT,
+    total_papeis        INT,
+    total_permissoes    INT,
+    total_configuracoes INT,
+    sessoes_ativas      INT
+)
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT
+        (SELECT count(*)::INT FROM usuario WHERE deletado = FALSE),
+        (SELECT count(DISTINCT up.id_usuario)::INT
+           FROM usuario_papel up
+           JOIN papel p ON p.id_papel = up.id_papel
+          WHERE p.nome = 'pesquisador'),
+        (SELECT count(*)::INT FROM papel),
+        (SELECT count(*)::INT FROM permissao),
+        (SELECT count(*)::INT FROM configuracoes),
+        (SELECT count(*)::INT FROM sessao WHERE revogado_em IS NULL AND expira_em > now());
+$$;
+
+GRANT EXECUTE ON FUNCTION public.contar_metricas_dashboard() TO app_nestjs;
+
+
+-- ============================================================================
 -- NÃO ENTRA NESTE ARQUIVO (registrado aqui só pra não se perder)
 -- ============================================================================
 

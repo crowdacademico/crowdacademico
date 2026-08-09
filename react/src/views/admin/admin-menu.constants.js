@@ -1,5 +1,12 @@
 import { ROTAS_ADMIN } from '../../services/router/rotas.constants';
 
+function itensDoGrupo(grupoMenu) {
+  return ROTAS_ADMIN.filter((rota) => rota.grupoMenu === grupoMenu).map((rota) => ({
+    caminho: rota.caminho,
+    rotulo: rota.rotuloMenu,
+  }));
+}
+
 // Grupos do menu lateral — mesma ideia do Projeto de Interface real
 // (informacoes/Sem-Node-Projeto-de-Interface-CrowdAcademico/telas/admin/admin.data.js,
 // adminMenuGroups). CADASTROS vem direto de ROTAS_ADMIN (rotas.constants.js)
@@ -7,13 +14,20 @@ import { ROTAS_ADMIN } from '../../services/router/rotas.constants';
 // descrevendo as mesmas 3 abas, com risco de desalinhar. MODERAÇÃO continua
 // escrita à mão porque esses itens não têm rota nenhuma ainda — são só o
 // desenho do painel completo, sem fingir que uma tela que não existe funciona.
+//
+// O 1º grupo (Dashboard, 08-08-2026) não tem `titulo` — é navegação de
+// outro nível, não mais um cadastro (pedido do Lucas), então não ganha um
+// cabeçalho "CADASTROS"-like acima dele; `divisorApos` desenha só a linha
+// fina que separa ele do resto (ver admin-sidebar.jsx).
 export const GRUPOS_MENU_ADMIN = [
   {
+    titulo: null,
+    divisorApos: true,
+    itens: itensDoGrupo(null),
+  },
+  {
     titulo: 'CADASTROS',
-    itens: ROTAS_ADMIN.map((rota) => ({
-      caminho: rota.caminho,
-      rotulo: rota.rotuloMenu,
-    })),
+    itens: itensDoGrupo('CADASTROS'),
   },
   {
     titulo: 'MODERAÇÃO',
