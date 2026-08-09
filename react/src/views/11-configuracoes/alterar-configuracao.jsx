@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
+import { CartaoFormulario } from '../../components/crud/cartao-formulario';
+import { SecaoFicha } from '../../components/crud/ficha-consulta';
 import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
 import { configuracaoApi } from '../../services/11-configuracoes/api/configuracao.api';
@@ -50,27 +52,22 @@ export function AlterarConfiguracao({ auth }) {
   };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 bg-surface">
-      <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
-        <div className="p-10 text-center border-b border-slate-100 bg-slate-50">
-          <div className="w-14 h-14 bg-primary rounded-2xl mx-auto flex items-center justify-center text-white font-bold text-2xl mb-5 shadow-lg">
-            <i className="fa-solid fa-gear"></i>
-          </div>
-          <h2 className="text-3xl font-serif font-bold text-dark mb-2">Alterar Configuração</h2>
-        </div>
+    <CartaoFormulario icone="fa-gear" titulo="Alterar Configuração">
+      {carregando ? (
+        <p className="p-10 text-center text-sm text-slate-600">Carregando...</p>
+      ) : !configuracao ? (
+        <p className="p-10 text-center text-red-700 text-sm font-bold">{erro}</p>
+      ) : (
+        <form onSubmit={aoSalvar} className="p-10 space-y-6">
+          {erro && <p className="text-red-700 text-sm font-bold text-center">{erro}</p>}
 
-        {carregando ? (
-          <p className="p-10 text-center text-sm text-slate-600">Carregando...</p>
-        ) : !configuracao ? (
-          <p className="p-10 text-center text-red-700 text-sm font-bold">{erro}</p>
-        ) : (
-          <form onSubmit={aoSalvar} className="p-10 space-y-6">
-            {erro && <p className="text-red-700 text-sm font-bold text-center">{erro}</p>}
-
+          <SecaoFicha titulo="Dados">
             <CampoSomenteLeitura rotulo="Chave" valor={configuracao.chave} />
             <CampoSomenteLeitura rotulo="Tipo" valor={configuracao.tipo} />
+          </SecaoFicha>
 
-            <div>
+          <SecaoFicha titulo="Editar">
+            <div className="sm:col-span-2">
               <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">
                 Valor
               </label>
@@ -82,7 +79,7 @@ export function AlterarConfiguracao({ auth }) {
               />
             </div>
 
-            <div>
+            <div className="sm:col-span-2">
               <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">
                 Descrição
               </label>
@@ -94,7 +91,7 @@ export function AlterarConfiguracao({ auth }) {
               />
             </div>
 
-            <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+            <label className="sm:col-span-2 flex items-center gap-2 text-sm font-semibold text-slate-700">
               <input
                 type="checkbox"
                 checked={ativo}
@@ -102,22 +99,22 @@ export function AlterarConfiguracao({ auth }) {
               />
               Ativo
             </label>
+          </SecaoFicha>
 
-            <div className="flex gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => navigate(-1)}
-                className="btn btn-secondary flex-1"
-              >
-                Cancelar
-              </button>
-              <button type="submit" disabled={enviando} className="btn btn-primary flex-1">
-                {enviando ? 'Salvando...' : 'Salvar'}
-              </button>
-            </div>
-          </form>
-        )}
-      </div>
-    </div>
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="btn btn-secondary flex-1"
+            >
+              Cancelar
+            </button>
+            <button type="submit" disabled={enviando} className="btn btn-primary flex-1">
+              {enviando ? 'Salvando...' : 'Salvar'}
+            </button>
+          </div>
+        </form>
+      )}
+    </CartaoFormulario>
   );
 }

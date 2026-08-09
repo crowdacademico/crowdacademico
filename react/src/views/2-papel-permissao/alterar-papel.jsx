@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
+import { CartaoFormulario } from '../../components/crud/cartao-formulario';
 import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
 import { papelApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
@@ -58,65 +59,56 @@ export function AlterarPapel({ auth }) {
   };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 bg-surface">
-      <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
-        <div className="p-10 text-center border-b border-slate-100 bg-slate-50">
-          <div className="w-14 h-14 bg-primary rounded-2xl mx-auto flex items-center justify-center text-white font-bold text-2xl mb-5 shadow-lg">
-            <i className="fa-solid fa-user-tag"></i>
+    <CartaoFormulario
+      icone="fa-user-tag"
+      titulo="Alterar Papel"
+      subtitulo="Só o nome exibido muda — o identificador interno usado pelas regras do sistema nunca é afetado."
+    >
+      {carregando ? (
+        <p className="p-10 text-center text-sm text-slate-600">Carregando...</p>
+      ) : !encontrado ? (
+        <p className="p-10 text-center text-red-700 text-sm font-bold">
+          {erro || `Papel ${id} não encontrado.`}
+        </p>
+      ) : (
+        <form onSubmit={aoSalvar} className="p-10 space-y-6">
+          {erro && <p className="text-red-700 text-sm font-bold text-center">{erro}</p>}
+
+          <div>
+            <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">
+              id
+            </label>
+            <input type="text" value={id} disabled className="input-padrao opacity-60" />
           </div>
-          <h2 className="text-3xl font-serif font-bold text-dark mb-2">Alterar Papel</h2>
-          <p className="text-sm text-slate-600 font-medium">
-            Só o nome exibido muda — o identificador interno usado pelas regras do
-            sistema nunca é afetado.
-          </p>
-        </div>
 
-        {carregando ? (
-          <p className="p-10 text-center text-sm text-slate-600">Carregando...</p>
-        ) : !encontrado ? (
-          <p className="p-10 text-center text-red-700 text-sm font-bold">
-            {erro || `Papel ${id} não encontrado.`}
-          </p>
-        ) : (
-          <form onSubmit={aoSalvar} className="p-10 space-y-6">
-            {erro && <p className="text-red-700 text-sm font-bold text-center">{erro}</p>}
+          <div>
+            <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">
+              Nome
+            </label>
+            <input
+              type="text"
+              value={nome}
+              onChange={(evento) => setNome(evento.target.value)}
+              required
+              maxLength={50}
+              className="input-padrao"
+            />
+          </div>
 
-            <div>
-              <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">
-                id
-              </label>
-              <input type="text" value={id} disabled className="input-padrao opacity-60" />
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">
-                Nome
-              </label>
-              <input
-                type="text"
-                value={nome}
-                onChange={(evento) => setNome(evento.target.value)}
-                required
-                maxLength={50}
-                className="input-padrao"
-              />
-            </div>
-
-            <div className="flex gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => navigate(-1)}
-                className="btn btn-secondary flex-1"
-              >
-                Cancelar
-              </button>
-              <button type="submit" disabled={enviando} className="btn btn-primary flex-1">
-                {enviando ? 'Salvando...' : 'Salvar'}
-              </button>
-            </div>
-          </form>
-        )}
-      </div>
-    </div>
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="btn btn-secondary flex-1"
+            >
+              Cancelar
+            </button>
+            <button type="submit" disabled={enviando} className="btn btn-primary flex-1">
+              {enviando ? 'Salvando...' : 'Salvar'}
+            </button>
+          </div>
+        </form>
+      )}
+    </CartaoFormulario>
   );
 }

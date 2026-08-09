@@ -4,7 +4,7 @@ import { DatabaseService } from '../../commons/database/database.service';
 import { DashboardResumoResponseDto } from '../dto/response/dashboard-resumo.response.dto';
 
 // Shape da linha devolvida por contar_metricas_dashboard() (03_funcoes_
-// seguranca.sql [03-K]) — mesmo raciocínio de qualquer outra função
+// seguranca.sql [03-M]) — mesmo raciocínio de qualquer outra função
 // SECURITY DEFINER chamada via `sql` template (Kysely não tipa chamada de
 // função de banco automaticamente, só SELECT/INSERT/UPDATE/DELETE normais).
 interface LinhaMetricasDashboard {

@@ -2,39 +2,41 @@
 Projeto de TCC do IFSP Birigui
 
 
-# EXEMPLO do código que já pronto com SCREAMING_SNAKE_CASE, CONSTRAINTS nomeados fácil de achar e INDEX
+# EXEMPLO real do código já pronto (tabela `seguir_pesquisador`), com CONSTRAINTS nomeados fácil de achar e INDEX
+*(Atualizado nesta revisão — a versão anterior deste exemplo usava prefixo `CRW_` e `SCREAMING_SNAKE_CASE` pra tabela/coluna; essa convenção nunca chegou a ser adotada no `.sql` de verdade. A convenção que o projeto usa desde o início é: tabelas/colunas em `snake_case` minúsculo, sem prefixo, com constraints nomeados em `"SCREAMING_SNAKE_CASE"` entre aspas duplas (`"PK_..."`/`"FK_..."`/`"UK_..."`/`"CK_..."`) e índices em `idx_snake_case` minúsculo — exatamente como está em `arquivos_banco_dados/01_extensoes_enums_tabelas.sql` e `02_indices.sql` hoje.)*
 ```
 -- ============================================================
---  CRW_SEGUIR_PESQUISADOR
---  Convenção: prefixo CRW_, SCREAMING_SNAKE_CASE, constraints nomeadas
+--  seguir_pesquisador
+--  Convenção real do projeto: snake_case minúsculo (tabela/coluna),
+--  constraints nomeados entre aspas em SCREAMING_SNAKE_CASE
 -- ============================================================
-CREATE TABLE CRW_SEGUIR_PESQUISADOR (
-    ID_SEG_PESQUISADOR SERIAL,
-    ID_USUARIO         INT NOT NULL,
-    ID_PESQUISADOR     INT NOT NULL,
-    SEGUIDO_EM         TIMESTAMP DEFAULT NOW(),
+CREATE TABLE seguir_pesquisador (
+    id_seg_pesquisador SERIAL,
+    id_usuario         INT NOT NULL,
+    id_pesquisador     INT NOT NULL,
+    seguido_em         TIMESTAMPTZ DEFAULT NOW(),
 
-    CONSTRAINT PK_CRW_SEGUIR_PESQUISADOR
-        PRIMARY KEY (ID_SEG_PESQUISADOR),
+    CONSTRAINT "PK_SEGUIR_PESQUISADOR"
+        PRIMARY KEY (id_seg_pesquisador),
 
-    CONSTRAINT FK_CRW_SEGUIR_PESQUISADOR_USUARIO
-        FOREIGN KEY (ID_USUARIO) REFERENCES CRW_USUARIO (ID_USUARIO)
+    CONSTRAINT "FK_SEGUIR_PESQUISADOR_USUARIO"
+        FOREIGN KEY (id_usuario) REFERENCES usuario (id_usuario)
         ON DELETE CASCADE,
 
-    CONSTRAINT FK_CRW_SEGUIR_PESQUISADOR_PESQUISADOR
-        FOREIGN KEY (ID_PESQUISADOR) REFERENCES CRW_USUARIO (ID_USUARIO)
+    CONSTRAINT "FK_SEGUIR_PESQUISADOR_PESQUISADOR"
+        FOREIGN KEY (id_pesquisador) REFERENCES usuario (id_usuario)
         ON DELETE CASCADE,
 
-    CONSTRAINT UK_CRW_SEGUIR_PESQUISADOR_PAR
-        UNIQUE (ID_USUARIO, ID_PESQUISADOR),
+    CONSTRAINT "UK_SEGUIR_PESQUISADOR_USUARIO_PESQUISADOR"
+        UNIQUE (id_usuario, id_pesquisador),
 
-    CONSTRAINT CK_CRW_SEGUIR_PESQUISADOR_NAO_AUTOSEGUIR
-        CHECK (ID_USUARIO <> ID_PESQUISADOR)
+    CONSTRAINT "CK_SEGUIR_PESQUISADOR_NAO_AUTOSEGUIR"
+        CHECK (id_usuario <> id_pesquisador)
 );
 
--- Índices seguindo o mesmo padrão de nome (cobrem as duas pontas do relacionamento)
-CREATE INDEX IDX_CRW_SEGUIR_PESQUISADOR_USUARIO     ON CRW_SEGUIR_PESQUISADOR (ID_USUARIO);
-CREATE INDEX IDX_CRW_SEGUIR_PESQUISADOR_PESQUISADOR ON CRW_SEGUIR_PESQUISADOR (ID_PESQUISADOR);
+-- Índice cobrindo a ponta que a UNIQUE acima não cobre sozinha
+-- (id_usuario já vem coberto de graça pelo índice automático da UNIQUE)
+CREATE INDEX idx_seguir_pesquisador_alvo ON seguir_pesquisador(id_pesquisador);
 ```
 
 
@@ -90,7 +92,9 @@ crowdacademico/                          (repo único na Organization)
 │       │   --- Cluster 5: Infra transversal ---
 │       ├── 25-arquivo/
 │       ├── 26-notificacao/
-│       └── 27-resources/
+│       ├── 27-resources/
+│       ├── 28-log-auditoria/        (log_auditoria — só leitura, GET /log-auditoria)
+│       └── 29-dashboard/            (métricas agregadas do painel — GET /dashboard/resumo)
 │
 │       (padrão interno de cada módulo N-nome/, igual ao modelo):
 │       │   ├── constants/
@@ -135,7 +139,8 @@ crowdacademico/                          (repo único na Organization)
         │   ├── 22-contribuicao/
         │   ├── 23-repasse/
         │   ├── 26-notificacao/
-        │   ├── admin/
+        │   ├── 28-log-auditoria/    (consumido pelo componente "Ver log" do GenericTable)
+        │   ├── admin/                (inclui a busca de métricas do 29-dashboard — sem pasta numerada própria aqui)
         │   ├── constant/
         │   └── router/
         │       (cada um dos numerados com api/, constants/, hook/, type/ — igual ao modelo)
@@ -149,13 +154,13 @@ crowdacademico/                          (repo único na Organization)
             └── dash-pesquisador/
 ```
 
-# Prefixo do DDL (tudo em maiúsculo, SNAKE_CASE [scriptDoBanco.sql])
+# Nomenclatura do DDL (`arquivos_banco_dados/*.sql`)
 
-Exemplo com CRW, usando nome fi
+*(Atualizado nesta revisão — esta seção descrevia um prefixo `CRW_` em maiúsculo que nunca foi adotado. A convenção real, usada desde o `01_extensoes_enums_tabelas.sql`: tabela e coluna em `snake_case` minúsculo, sem prefixo — só os nomes de CONSTRAINT ficam em `"SCREAMING_SNAKE_CASE"` entre aspas duplas, ver exemplo de `seguir_pesquisador` acima.)*
 
-CRW_USUARIO
-CRW_PAPEL
-CRW_PERMISSAO
+usuario
+papel
+permissao
 ...
 
 # Sobre main vs branches

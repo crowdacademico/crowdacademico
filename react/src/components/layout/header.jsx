@@ -1,4 +1,5 @@
 import { Link } from 'react-router';
+import { ControleFonte } from './controle-fonte';
 import { DevLoginRapido } from './dev-login-rapido';
 
 // Cópia fiel de componentes/header.html do Projeto de Interface real
@@ -62,6 +63,8 @@ export function Header({ auth }) {
         */}
 
         <div className="flex items-center gap-4">
+          <ControleFonte />
+
           <button
             onClick={placeholder('Submeter Pesquisa ainda não existe neste protótipo.')}
             className="bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-lg font-bold transition-all text-sm shadow-md hidden lg:block"

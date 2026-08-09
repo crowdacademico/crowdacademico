@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
+import { CartaoFormulario } from '../../components/crud/cartao-formulario';
+import { SecaoFicha } from '../../components/crud/ficha-consulta';
 import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
@@ -19,10 +21,12 @@ const SENHA_DEV = 'DevTcc123!';
 // visíveis e um botão de confirmar/cancelar no fim, em vez de edição em
 // linha misturada com a listagem.
 //
-// Seção "Papéis" (03-08-2026) reaproveita os mesmos endpoints do antigo
-// widget "Papéis de um usuário" (usuario-papel-widget.jsx, removido em
-// 07-08-2026 por ser redundante com esta seção — id_usuario já vem da
-// URL, papel escolhido por nome num <select>, não digitado por ID).
+// Seções via <SecaoFicha> (09-08-2026, "mesmo estilo que já usei em
+// Consultar" — pedido do Lucas) — reaproveita o MESMO componente de
+// ficha-consulta.jsx aqui, mesmo sendo formulário editável: o "estilo" que
+// o Lucas gostou (título pequeno maiúsculo separando blocos) não é
+// exclusivo de campo somente-leitura, serve pra organizar qualquer grupo
+// de campos.
 export function AlterarUsuario({ auth }) {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -170,33 +174,26 @@ export function AlterarUsuario({ auth }) {
   };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 bg-surface">
-      <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
-        <div className="p-10 text-center border-b border-slate-100 bg-slate-50">
-          <div className="w-14 h-14 bg-primary rounded-2xl mx-auto flex items-center justify-center text-white font-bold text-2xl mb-5 shadow-lg">
-            <i className="fa-solid fa-user-pen"></i>
-          </div>
-          <h2 className="text-3xl font-serif font-bold text-dark mb-2">Alterar Usuário</h2>
-          <p className="text-sm text-slate-600 font-medium">
-            Deixe a senha em branco para não alterá-la.
-          </p>
-        </div>
+    <CartaoFormulario
+      icone="fa-user-pen"
+      titulo="Alterar Usuário"
+      subtitulo="Deixe a senha em branco para não alterá-la."
+    >
+      {carregando ? (
+        <p className="p-10 text-center text-sm text-slate-600">Carregando...</p>
+      ) : !usuario ? (
+        <p className="p-10 text-center text-red-700 text-sm font-bold">{erro}</p>
+      ) : (
+        <form onSubmit={aoSalvar} className="p-10 space-y-6">
+          {erro && <p className="text-red-700 text-sm font-bold text-center">{erro}</p>}
 
-        {carregando ? (
-          <p className="p-10 text-center text-sm text-slate-600">Carregando...</p>
-        ) : !usuario ? (
-          <p className="p-10 text-center text-red-700 text-sm font-bold">{erro}</p>
-        ) : (
-          <form onSubmit={aoSalvar} className="p-10 space-y-6">
-            {erro && <p className="text-red-700 text-sm font-bold text-center">{erro}</p>}
-
+          <SecaoFicha titulo="Dados da conta">
             <CampoSomenteLeitura rotulo="id" valor={usuario.idUsuario} />
             <CampoSomenteLeitura rotulo="E-mail" valor={usuario.email} />
             <CampoSomenteLeitura
               rotulo="E-mail verificado"
               valor={usuario.emailVerificado ? 'Sim' : 'Não'}
             />
-
             <div>
               <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">
                 Nome
@@ -209,8 +206,10 @@ export function AlterarUsuario({ auth }) {
                 className="input-padrao"
               />
             </div>
+          </SecaoFicha>
 
-            <div>
+          <SecaoFicha titulo="Acesso">
+            <div className="sm:col-span-2">
               <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">
                 Nova senha (opcional)
               </label>
@@ -223,11 +222,42 @@ export function AlterarUsuario({ auth }) {
               />
             </div>
 
-            <div className="rounded-lg border border-slate-200 p-3">
-              <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">
-                Papéis
-              </label>
+            <div className="sm:col-span-2 flex items-center justify-between gap-3 rounded-lg border border-slate-300 p-3">
+              <p className="text-xs text-slate-600">
+                Zera o contador de tentativas de login falhas e libera a conta, caso esteja
+                bloqueada temporariamente.
+              </p>
+              <button
+                type="button"
+                onClick={aoDesbloquear}
+                disabled={desbloqueando}
+                className="btn btn-secondary shrink-0"
+              >
+                {desbloqueando ? 'Desbloqueando...' : 'Desbloquear login'}
+              </button>
+            </div>
 
+            <div className="sm:col-span-2 flex items-center justify-between gap-3 rounded-lg border border-dashed border-purple-300 bg-purple-50 p-3">
+              <div>
+                <span className="badge badge-dev">&lt;dev&gt;</span>
+                <p className="text-xs text-slate-600 mt-1">
+                  Redefine a senha direto pra "{SENHA_DEV}", sem digitar nada. Só pra testar
+                  login.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={aoRedefinirSenhaDev}
+                disabled={redefinindoSenhaDev}
+                className="btn btn-secondary shrink-0"
+              >
+                {redefinindoSenhaDev ? 'Redefinindo...' : 'Redefinir senha dev'}
+              </button>
+            </div>
+          </SecaoFicha>
+
+          <SecaoFicha titulo="Papéis">
+            <div className="sm:col-span-2">
               <div className="flex flex-wrap gap-2 mb-3">
                 {papeisAtuais.length === 0 && (
                   <p className="text-xs text-slate-600">Nenhum papel atribuído ainda.</p>
@@ -290,57 +320,22 @@ export function AlterarUsuario({ auth }) {
                 </div>
               )}
             </div>
+          </SecaoFicha>
 
-            <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 p-3">
-              <div>
-                <p className="text-xs text-slate-600">
-                  Zera o contador de tentativas de login falhas e libera a conta,
-                  caso esteja bloqueada temporariamente.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={aoDesbloquear}
-                disabled={desbloqueando}
-                className="btn btn-secondary shrink-0"
-              >
-                {desbloqueando ? 'Desbloqueando...' : 'Desbloquear login'}
-              </button>
-            </div>
-
-            <div className="flex items-center justify-between gap-3 rounded-lg border border-dashed border-purple-300 bg-purple-50 p-3">
-              <div>
-                <span className="badge badge-dev">&lt;dev&gt;</span>
-                <p className="text-xs text-slate-600 mt-1">
-                  Redefine a senha direto pra "{SENHA_DEV}", sem digitar nada. Só pra testar
-                  login.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={aoRedefinirSenhaDev}
-                disabled={redefinindoSenhaDev}
-                className="btn btn-secondary shrink-0"
-              >
-                {redefinindoSenhaDev ? 'Redefinindo...' : 'Redefinir senha dev'}
-              </button>
-            </div>
-
-            <div className="flex gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => navigate(-1)}
-                className="btn btn-secondary flex-1"
-              >
-                Cancelar
-              </button>
-              <button type="submit" disabled={enviando} className="btn btn-primary flex-1">
-                {enviando ? 'Salvando...' : 'Salvar'}
-              </button>
-            </div>
-          </form>
-        )}
-      </div>
-    </div>
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="btn btn-secondary flex-1"
+            >
+              Cancelar
+            </button>
+            <button type="submit" disabled={enviando} className="btn btn-primary flex-1">
+              {enviando ? 'Salvando...' : 'Salvar'}
+            </button>
+          </div>
+        </form>
+      )}
+    </CartaoFormulario>
   );
 }

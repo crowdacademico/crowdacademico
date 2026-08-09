@@ -77,6 +77,22 @@
   --shadow-lg: 0 18px 45px rgba(15, 23, 42, 0.08);
 
   --transition-normal: all 0.2s ease;
+
+  /* Controle de fonte (09-08-2026, pedido do Lucas: acessibilidade,
+     "botão de aumentar e diminuir fonte") — components/layout/
+     controle-fonte.jsx muda este valor via
+     document.documentElement.style.setProperty(). Aplicado no `html`
+     (ver @layer base abaixo), não em cada elemento: como o projeto
+     inteiro é rem-based (Tailwind v4 por padrão, mais as variáveis de
+     tamanho de fonte, raio de borda e sombra já existentes aqui em cima),
+     mudar o font-size da RAIZ reescala texto E espaçamento juntos, com
+     uma variável só — reescalar só o texto, sem o resto, quebraria layout
+     (botão menor que o próprio texto dentro dele). Mesmo princípio do
+     "zoom" que a maioria dos sites de verdade usa pra esse tipo de
+     controle.
+     Padrão 1 = 100% (nenhuma mudança) — só existe pra ControleFonte ter
+     algo pra ler/escrever; qualquer CSS aqui pode ignorá-la de propósito. */
+  --escala-fonte: 1;
 }
 
 /* ========= RESET =========
@@ -107,6 +123,10 @@
   body,
   #root {
     min-height: 100vh;
+  }
+
+  html {
+    font-size: calc(16px * var(--escala-fonte));
   }
 
   body {

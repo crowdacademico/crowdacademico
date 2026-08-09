@@ -5,7 +5,7 @@ import { DashboardServiceResumo } from '../service/dashboard.service.resumo';
 // usuario-papel findall: este painel só é alcançado por admin, em nenhum
 // fluxo do sistema um usuario/pesquisador chega perto de /admin/*. A
 // autorização de verdade dos números individuais continua vindo da RLS
-// (log_auditoria) e da SECURITY DEFINER (o resto, ver [03-K]).
+// (log_auditoria) e da SECURITY DEFINER (o resto, ver [03-M]).
 @Controller('dashboard')
 export class DashboardControllerResumo {
   constructor(private readonly service: DashboardServiceResumo) {}

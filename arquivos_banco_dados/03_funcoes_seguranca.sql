@@ -507,14 +507,14 @@ END;
 $$;
 
 -- ============================================================
--- [03-K] DASHBOARD ADMIN — MÉTRICAS AGREGADAS (08-08-2026)
+-- [03-M] DASHBOARD ADMIN — MÉTRICAS AGREGADAS (08-08-2026)
 -- ============================================================
 -- ----------------------------------------------------------------------------
 -- Função:     contar_metricas_dashboard
 -- Assinatura: () -> TABLE(total_usuarios INT, total_pesquisadores INT,
 --             total_papeis INT, total_permissoes INT, total_configuracoes INT,
 --             sessoes_ativas INT)
--- Bloco:      [03-K]
+-- Bloco:      [03-M]
 -- Regra:      08-08-2026 — GET /dashboard/resumo (nest/src/29-dashboard)
 --             precisa de totais confiáveis pros cards da tela inicial do
 --             painel. RLS filtra LINHA e não é uniforme entre as tabelas

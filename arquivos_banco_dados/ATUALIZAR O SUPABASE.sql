@@ -321,7 +321,7 @@ ALTER TABLE sessao ADD CONSTRAINT "CK_SESSAO_ORIGEM" CHECK (origem IN ('login', 
 
 
 -- ============================================================================
--- 08-08-2026 — função contar_metricas_dashboard() ([03-K]) — usada pelo
+-- 08-08-2026 — função contar_metricas_dashboard() ([03-M]) — usada pelo
 -- GET /dashboard/resumo (Dashboard novo do painel admin): totais de
 -- usuário/pesquisador/papel/permissão/configuração/sessão ativa/log
 -- recente, num número só que não varia dependendo de quem chamou (RLS

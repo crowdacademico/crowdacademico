@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { GenericTable } from '../../components/crud/generic-table';
 import { papelApi, permissaoApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
+import { nomeAmigavelPermissao } from '../../services/2-papel-permissao/constants/permissao-nomes-amigaveis';
 import { logAuditoriaApi } from '../../services/28-log-auditoria/api/log-auditoria.api';
 import { MatrizPapelPermissao } from './matriz-papel-permissao';
 
@@ -17,8 +18,18 @@ import { MatrizPapelPermissao } from './matriz-papel-permissao';
 // funcionalidade órfã: tudo que o widget fazia, Alterar Usuário já faz.
 export function ListarPapeis({ auth }) {
   const listarPapeis = useCallback(() => papelApi.listar(auth.authFetch), [auth.authFetch]);
+  // Nome amigável (09-08-2026, pedido do Lucas: "campanha_aprovar parece
+  // linha de código, pq é linha de código") — tradução 100% no frontend
+  // (ver permissao-nomes-amigaveis.js), o `nome` cru do banco não muda em
+  // lugar nenhum, só ganha uma 2ª coluna "chave" pra quem precisa do
+  // valor literal.
   const listarPermissoes = useCallback(
-    () => permissaoApi.listar(auth.authFetch),
+    () =>
+      permissaoApi
+        .listar(auth.authFetch)
+        .then((permissoes) =>
+          permissoes.map((p) => ({ ...p, nomeAmigavel: nomeAmigavelPermissao(p.nome) })),
+        ),
     [auth.authFetch],
   );
   // 'papel' é o nome FÍSICO da tabela no Postgres (bate com TG_TABLE_NAME
@@ -55,7 +66,8 @@ export function ListarPapeis({ auth }) {
           titulo="Permissões (catálogo, só leitura)"
           colunas={[
             { chave: 'idPermissao', rotulo: 'id' },
-            { chave: 'nome', rotulo: 'nome' },
+            { chave: 'nomeAmigavel', rotulo: 'nome' },
+            { chave: 'nome', rotulo: 'chave' },
           ]}
           chavePrimaria="idPermissao"
           listar={listarPermissoes}

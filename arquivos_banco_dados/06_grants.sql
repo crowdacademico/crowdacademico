@@ -339,7 +339,7 @@ GRANT EXECUTE ON FUNCTION public.contar_seguidores_pesquisador(INT) TO app_nestj
 GRANT EXECUTE ON FUNCTION public.contar_seguidores_campanha(INT)    TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.fn_precisa_revisao_score(INT)      TO app_nestjs;
 
--- ADICIONADO (08-08-2026) — contar_metricas_dashboard() ([03-K]), mesmo
+-- ADICIONADO (08-08-2026) — contar_metricas_dashboard() ([03-M]), mesmo
 -- motivo do GRANT acima: RPC chamada direto pelo GET /dashboard/resumo.
 GRANT EXECUTE ON FUNCTION public.contar_metricas_dashboard() TO app_nestjs;
 

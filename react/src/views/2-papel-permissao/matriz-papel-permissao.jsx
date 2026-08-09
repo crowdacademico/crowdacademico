@@ -7,6 +7,7 @@ import {
   papelPermissaoApi,
   permissaoApi,
 } from '../../services/2-papel-permissao/api/papel-permissao.api';
+import { nomeAmigavelPermissao } from '../../services/2-papel-permissao/constants/permissao-nomes-amigaveis';
 
 // Substituiu a antiga tabela "Papel × Permissão" (linhas repetindo
 // "admin | admin | ..." — achado do Claude Web: ~40 linhas pra mostrar o
@@ -69,7 +70,14 @@ export function MatrizPapelPermissao({ authFetch }) {
     ])
       .then(([listaPapeis, listaPermissoes, vinculos]) => {
         setPapeis([...listaPapeis].sort(ordenarPapeisPorPoder));
-        setPermissoes([...listaPermissoes].sort((a, b) => a.nome.localeCompare(b.nome)));
+        // Ordena pelo nome AMIGÁVEL (09-08-2026), não pelo código cru — é
+        // o que aparece na tela, então é o que precisa estar em ordem
+        // alfabética visível pra quem lê.
+        setPermissoes(
+          [...listaPermissoes].sort((a, b) =>
+            nomeAmigavelPermissao(a.nome).localeCompare(nomeAmigavelPermissao(b.nome)),
+          ),
+        );
         setConcedidos(new Set(vinculos.map((v) => `${v.idPapel}-${v.idPermissao}`)));
       })
       .catch(reportarErro)
@@ -133,7 +141,11 @@ export function MatrizPapelPermissao({ authFetch }) {
             <tbody>
               {permissoes.map((permissao) => (
                 <tr key={permissao.idPermissao}>
-                  <td>{permissao.nome}</td>
+                  {/* title com o código cru (09-08-2026) — a matriz é
+                      estreita demais pra uma coluna "chave" própria (igual
+                      a listagem de Permissões abaixo); hover cobre o
+                      mesmo caso de uso pra quem precisa do valor literal. */}
+                  <td title={permissao.nome}>{nomeAmigavelPermissao(permissao.nome)}</td>
                   {papeis.map((papel) => {
                     const chave = `${papel.idPapel}-${permissao.idPermissao}`;
                     const temPermissao = concedidos.has(chave);
@@ -146,7 +158,7 @@ export function MatrizPapelPermissao({ authFetch }) {
                               papel.idPapel,
                               papel.nome,
                               permissao.idPermissao,
-                              permissao.nome,
+                              nomeAmigavelPermissao(permissao.nome),
                               temPermissao,
                             )
                           }
