@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import { CampoTextboxConsulta } from '../../components/crud/campo-textbox-consulta';
+import { CampoFicha, FichaConsulta, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { useErroToast } from '../../components/layout/use-erro-toast';
 import { configuracaoApi } from '../../services/11-configuracoes/api/configuracao.api';
 
 // "Consultar" — botão do meio entre Alterar e Excluir (GenericTable).
+// Migrada pro mesmo estilo de FichaConsulta usado em ConsultarUsuario
+// (09-08-2026, pedido do Lucas: era a última tela ainda na caixinha
+// CampoTextboxConsulta antiga) — mesmo dado de sempre, só o layout mudou.
 // idUsuario fica vazio naturalmente quando é NULL (configuração global).
 export function ConsultarConfiguracao({ auth }) {
   const { id } = useParams();
@@ -22,40 +25,43 @@ export function ConsultarConfiguracao({ auth }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
+  if (carregando) {
+    return <p className="p-10 text-center text-sm texto-fraco">Carregando...</p>;
+  }
+
+  if (!configuracao) {
+    return <p className="p-10 text-center text-red-700 text-sm font-bold">{erro}</p>;
+  }
+
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 fundo-pagina">
-      <div className="max-w-md w-full fundo-cartao rounded-3xl shadow-2xl border borda-padrao overflow-hidden">
-        <div className="p-10 text-center border-b borda-padrao fundo-sutil">
-          <div className="w-14 h-14 bg-primary rounded-2xl mx-auto flex items-center justify-center text-white font-bold text-2xl mb-5 shadow-lg">
-            <i className="fa-solid fa-gear"></i>
-          </div>
-          <h2 className="text-3xl font-serif font-bold texto-forte mb-2">Consultar Configuração</h2>
-        </div>
-
-        {carregando ? (
-          <p className="p-10 text-center text-sm texto-fraco">Carregando...</p>
-        ) : !configuracao ? (
-          <p className="p-10 text-center text-red-700 text-sm font-bold">{erro}</p>
-        ) : (
-          <div className="p-10 space-y-6">
-            <CampoTextboxConsulta rotulo="id" valor={configuracao.idConfig} />
-            <CampoTextboxConsulta rotulo="Id do usuário (vazio = global)" valor={configuracao.idUsuario} />
-            <CampoTextboxConsulta rotulo="Chave" valor={configuracao.chave} />
-            <CampoTextboxConsulta rotulo="Valor" valor={configuracao.valor} />
-            <CampoTextboxConsulta rotulo="Tipo" valor={configuracao.tipo} />
-            <CampoTextboxConsulta rotulo="Descrição" valor={configuracao.descricao} />
-            <CampoTextboxConsulta rotulo="Ativo" valor={configuracao.ativo ? 'Sim' : 'Não'} />
-
-            <button
-              type="button"
-              onClick={() => navigate(-1)}
-              className="btn btn-secondary w-full"
-            >
-              Voltar
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
+    <FichaConsulta
+      titulo={configuracao.chave}
+      subtitulo={configuracao.descricao}
+      badges={[
+        <span
+          key="ativo"
+          className={'badge ' + (configuracao.ativo ? 'badge-sucesso' : 'badge-neutro')}
+        >
+          {configuracao.ativo ? 'Ativo' : 'Inativo'}
+        </span>,
+      ]}
+      acoes={
+        <button type="button" onClick={() => navigate(-1)} className="btn btn-secondary w-full">
+          Voltar
+        </button>
+      }
+    >
+      <SecaoFicha titulo="Dados">
+        <CampoFicha rotulo="id" valor={configuracao.idConfig} />
+        <CampoFicha rotulo="Tipo" valor={configuracao.tipo} />
+        <CampoFicha
+          rotulo="Id do usuário"
+          valor={configuracao.idUsuario}
+          largura="cheia"
+        />
+        <CampoFicha rotulo="Valor" valor={configuracao.valor} largura="cheia" />
+        <CampoFicha rotulo="Descrição" valor={configuracao.descricao} largura="cheia" />
+      </SecaoFicha>
+    </FichaConsulta>
   );
 }

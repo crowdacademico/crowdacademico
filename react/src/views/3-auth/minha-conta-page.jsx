@@ -332,7 +332,7 @@ function SecaoMeusPapeis({ auth }) {
 
 // 5. PRIVACIDADE — exportar dados (LGPD Art. 18) ainda não existe (fica
 // registrado honestamente, não fingido); excluir conta reaproveita
-// excluir_conta_usuario() (03_funcoes_seguranca.sql, [03-F]), que já
+// excluir_conta_usuario() (03_funcoes_seguranca.sql, [03-O]), que já
 // valida que só o próprio dono (ou quem tem usuario_excluir) pode chamar.
 function SecaoPrivacidade({ auth }) {
   const navigate = useNavigate();

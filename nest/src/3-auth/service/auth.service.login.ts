@@ -17,6 +17,26 @@ import {
 import { LoginRequestDto } from '../dto/request/login.request.dto';
 import { LoginResponseDto } from '../dto/response/login.response.dto';
 
+// toISOString() cru ("...T00:28:27.382Z") não significa nada pra quem não
+// programa (pedido do Lucas, 09-08-2026: "eu não sei o que significa T ou
+// Z") — as duas mensagens de bloqueio/suspensão abaixo são as únicas do
+// projeto que embutem uma data DENTRO de uma frase de erro (todo resto do
+// app formata no React com toLocaleString('pt-BR'), mas aqui a data já
+// precisa estar pronta dentro do texto do throw). timeZone explícito (não
+// o padrão do processo Node) porque o servidor pode rodar em UTC mesmo o
+// público sendo brasileiro.
+function formatarDataHoraBr(data: Date): string {
+  const dataFormatada = data.toLocaleDateString('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+  });
+  const horaFormatada = data.toLocaleTimeString('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+  return `${dataFormatada} - ${horaFormatada}`;
+}
+
 @Injectable()
 export class AuthServiceLogin {
   constructor(
@@ -49,7 +69,7 @@ export class AuthServiceLogin {
 
     if (usuario.bloqueado_ate && usuario.bloqueado_ate > new Date()) {
       throw new UnauthorizedException(
-        `Conta temporariamente bloqueada por excesso de tentativas. Tente novamente após ${usuario.bloqueado_ate.toISOString()}.`,
+        `Conta temporariamente bloqueada por excesso de tentativas. Tente novamente após ${formatarDataHoraBr(usuario.bloqueado_ate)}.`,
       );
     }
 
@@ -71,7 +91,7 @@ export class AuthServiceLogin {
     const suspensao = await this.buscarSuspensao(usuario.id_usuario);
     if (suspensao.suspensoAte && suspensao.suspensoAte > new Date()) {
       throw new ForbiddenException(
-        `Conta suspensa até ${suspensao.suspensoAte.toISOString()}. Motivo: ${suspensao.motivoSuspensao}`,
+        `Conta suspensa até ${formatarDataHoraBr(suspensao.suspensoAte)}\n\nMotivo: ${suspensao.motivoSuspensao}`,
       );
     }
 

@@ -14,7 +14,7 @@
 --  de visibilidade de conta (usuário "deletado" via soft delete), e
 --  contagem agregada de seguidores sem expor identidade de quem segue.
 --  Também concentra as operações de autenticação sobre `usuario` que não
---  têm mais GRANT UPDATE direto ([03-F]) — cada uma é SECURITY DEFINER,
+--  têm mais GRANT UPDATE direto ([03-O]) — cada uma é SECURITY DEFINER,
 --  ponto único e auditável, em vez de UPDATE aberto.
 -- ============================================================
 -- [03-C] CONFIG — HELPER DE LEITURA
@@ -27,10 +27,10 @@
 --             seguro — nunca retorna NULL/erro mesmo se a chave ainda não
 --             existir. Usada por praticamente todo o resto do banco (score,
 --             limites de negócio em 05, e as funções de autenticação de
---             [03-F], neste mesmo arquivo).
+--             [03-O], neste mesmo arquivo).
 -- MOVIDO (28-07-2026, Claude Web — "três pontas menores"): morava em
 -- 05_regras_negocio.sql, mas 03 (este arquivo, que roda ANTES do 05) já tinha
--- uma função chamando config_numero (registrar_falha_login, [03-F]) — o
+-- uma função chamando config_numero (registrar_falha_login, [03-O]) — o
 -- bootstrap completo funcionava só porque nada CHAMA a função antes da hora;
 -- rodar 01→03 isolado e invocar registrar_falha_login já dava "function
 -- public.config_numero(unknown, integer) does not exist". Movida pra cá —
@@ -195,7 +195,7 @@ $$;
 --             atribuir_papel_padrao() (08_bootstrap_final.sql, [08-D-1]),
 --             chamada no mesmo instante do mesmo jeito.
 --             Sem checagem de autorização própria (diferente de
---             excluir_conta_usuario, [03-F]) porque quem decide QUAL
+--             excluir_conta_usuario, [03-O]) porque quem decide QUAL
 --             p_id_usuario passar é sempre o código do backend (o id do
 --             usuário RECÉM-CRIADO na mesma transação, nunca um valor vindo
 --             direto do corpo da requisição) — não existe caminho pelo qual
@@ -255,7 +255,7 @@ AS $$
 $$;
 
 -- ============================================================
--- [03-F] OPERAÇÕES DE AUTENTICAÇÃO (item "Problema 1" — Claude Web, 28-07-2026)
+-- [03-O] OPERAÇÕES DE AUTENTICAÇÃO (item "Problema 1" — Claude Web, 28-07-2026)
 -- Descrição: email_verificado, tentativas_login_falhas, bloqueado_ate,
 --            ultimo_login_em, ultimo_login_ip e deletado saíram do GRANT UPDATE
 --            de usuario (06, [06-D-2]) — restringir só por coluna não bastava,
@@ -302,7 +302,7 @@ $$;
 -- ----------------------------------------------------------------------------
 -- Função:     confirmar_email_por_token
 -- Assinatura: (p_token_hash TEXT) -> BOOLEAN
--- Bloco:      [03-F]
+-- Bloco:      [03-O]
 -- Regra:      SUBSTITUI confirmar_email_usuario(p_id_usuario) — em vez de confiar
 --             num id vindo de fora (que o NestJS resolvia depois de validar o
 --             token, mas a função em si aceitava qualquer id), a função recebe o
@@ -342,7 +342,7 @@ $$;
 -- ----------------------------------------------------------------------------
 -- Função:     registrar_falha_login
 -- Assinatura: (p_id_usuario INT) -> VOID
--- Bloco:      [03-F]
+-- Bloco:      [03-O]
 -- Regra:      Incrementa tentativas_login_falhas; ao atingir
 --             configuracoes.limite_tentativas_login, bloqueia a conta por
 --             configuracoes.bloqueio_login_minutos (nenhum número fixo — os
@@ -386,7 +386,7 @@ $$;
 -- ----------------------------------------------------------------------------
 -- Função:     liberar_bloqueio_login
 -- Assinatura: (p_id_usuario INT) -> VOID
--- Bloco:      [03-F]
+-- Bloco:      [03-O]
 -- Regra:      Zera tentativas_login_falhas e limpa bloqueado_ate. SEMPRE ação de
 --             suporte/admin sobre a conta de outra pessoa — nunca do próprio
 --             usuário (quem está bloqueado não consegue logar pra chamar nada; e
@@ -415,7 +415,7 @@ $$;
 -- ----------------------------------------------------------------------------
 -- Função:     registrar_login_sucesso
 -- Assinatura: (p_id_usuario INT, p_ip TEXT) -> VOID
--- Bloco:      [03-F]
+-- Bloco:      [03-O]
 -- Regra:      Grava ultimo_login_em/ultimo_login_ip e zera o estado de falha
 --             (tentativas_login_falhas, bloqueado_ate) — um login bem sucedido
 --             sempre limpa o histórico de tentativas anteriores. p_ip é TEXT
@@ -444,7 +444,7 @@ $$;
 -- ----------------------------------------------------------------------------
 -- Função:     excluir_conta_usuario
 -- Assinatura: (p_id_usuario INT) -> VOID
--- Bloco:      [03-F]
+-- Bloco:      [03-O]
 -- Regra:      RNF-003 (LGPD) — marca a conta como deletado = TRUE. Ponto único
 --             de exclusão de propósito: não existe função equivalente pra
 --             reverter (deletado = FALSE) — a exclusão é deliberadamente uma
@@ -484,12 +484,12 @@ END;
 $$;
 
 -- ============================================================
--- [03-G] MODERAÇÃO SOBRE PESQUISADOR — SUSPENSÃO EM CASCATA (RF-084)
+-- [03-P] MODERAÇÃO SOBRE PESQUISADOR — SUSPENSÃO EM CASCATA (RF-084)
 -- ============================================================
 -- ----------------------------------------------------------------------------
 -- Função:     suspender_pesquisador
 -- Assinatura: (p_id_usuario INT) -> BOOLEAN
--- Bloco:      [03-G]
+-- Bloco:      [03-P]
 -- Regra:      30-07-2026 — RF-084 dizia que suspender um pesquisador encerra
 --             automaticamente as campanhas ativas dele e rejeita as
 --             pendentes, mas não existia NENHUM caminho no banco pra
@@ -551,7 +551,7 @@ $$;
 -- ----------------------------------------------------------------------------
 -- Função:     reativar_pesquisador
 -- Assinatura: (p_id_usuario INT) -> BOOLEAN
--- Bloco:      [03-G]
+-- Bloco:      [03-P]
 -- Regra:      30-07-2026 (item 60, PENDENCIAS.md — recomendação do Claude Web,
 --             confirmada pelo Lucas). Só devolve status_pesquisador pra
 --             'ativo' — devolve a capacidade do pesquisador de criar campanha
@@ -593,28 +593,29 @@ $$;
 -- [03-N] MODERAÇÃO SOBRE CONTA — SUSPENSÃO DE USUÁRIO E DE PAPEL (09-08-2026)
 -- ============================================================
 -- Descrição: Bloco G do prompt do Claude Web sobre cabeçalho/moderação —
--- diferente de [03-G] (suspende o PERFIL DE PESQUISADOR, com cascata sobre
+-- diferente de [03-P] (suspende o PERFIL DE PESQUISADOR, com cascata sobre
 -- campanhas, RF-084): aqui é suspensão de CONTA (bloqueia login) e
 -- suspensão de UM PAPEL específico (usuario continua logado, só perde as
 -- permissões daquele papel enquanto durar). NÃO reaproveita `bloqueado_ate`
--- (bloqueio automático por senha errada, [03-F]) — ver comentário completo
+-- (bloqueio automático por senha errada, [03-O]) — ver comentário completo
 -- em `usuario.suspenso_ate` (01, [01-D]).
 --
--- ⚠️ Letra `N`, não `F`/`G`: [03-F] ("OPERAÇÕES DE AUTENTICAÇÃO") e [03-G]
--- ("MODERAÇÃO SOBRE PESQUISADOR") já existiam ANTES desta rodada reaproveitando
--- letras que o Índice Global (topo de DOCUMENTACAO_BD.md) atribui a outros
--- domínios (`F`=LINK, `G`=ARQUIVO) — colisão do mesmo tipo já corrigida uma
--- vez neste projeto (`[03-K]`→`[03-M]`, 09-08-2026), só que mais antiga e
--- ainda não corrigida. Não mexi nela agora (mudar [03-F]/[03-G] estabelecidos
--- é um refactor à parte, fora do escopo deste bloco) — só evitei criar uma
--- 3ª colisão nova escolhendo `N`, que está livre. Registrado como pendência
--- em PENDENCIAS e correcoes.md.
+-- ⚠️ Letra `N`, não `F`/`G`: quando este bloco foi escrito, [03-O]
+-- ("OPERAÇÕES DE AUTENTICAÇÃO") e [03-P] ("MODERAÇÃO SOBRE PESQUISADOR")
+-- ainda se chamavam `[03-F]`/`[03-G]`, reaproveitando por engano letras que
+-- o Índice Global (topo de DOCUMENTACAO_BD.md) já atribuía a outros domínios
+-- (`F`=LINK, `G`=ARQUIVO) — colisão do mesmo tipo já corrigida uma vez neste
+-- projeto (`[03-K]`→`[03-M]`). Corrigida em 09-08-2026 (renomeadas pra
+-- `O`/`P`, livres) — ver PENDENCIAS e correcoes.md, item 51. `N` continua
+-- sendo a letra deste bloco (nunca colidiu com nada); não voltou a ser `D`
+-- porque a letra própria não é mais necessária pra evitar colisão, mas
+-- trocar de novo agora só criaria churn sem ganho.
 -- ----------------------------------------------------------------------------
 -- Função:     suspender_usuario
 -- Assinatura: (p_id_usuario INT, p_ate TIMESTAMPTZ, p_motivo TEXT) -> VOID
 -- Bloco:      [03-N]
 -- Regra:      Exige 'usuario_suspender' (mesma permissão de
---             suspender_pesquisador, [03-G] — é a mesma categoria de ação
+--             suspender_pesquisador, [03-P] — é a mesma categoria de ação
 --             administrativa). Motivo é OBRIGATÓRIO (RAISE EXCEPTION se
 --             vazio) — reforça em código o que a CK_USUARIO_SUSPENSAO (01)
 --             já garante no schema, com uma mensagem melhor que o erro cru

@@ -145,7 +145,7 @@ export interface VerificacaoEmailTable {
   // linha — impossível de achar por igualdade direta). É um hash
   // determinístico (SHA-256) do token em texto puro que só existe no link
   // enviado — confirmar_email_por_token() (03_funcoes_seguranca.sql,
-  // [03-F]) faz `WHERE token_hash = p_token_hash`, igualdade simples, só
+  // [03-O]) faz `WHERE token_hash = p_token_hash`, igualdade simples, só
   // funciona com hash determinístico.
   token_hash: string;
   criado_em: Generated<Date>;

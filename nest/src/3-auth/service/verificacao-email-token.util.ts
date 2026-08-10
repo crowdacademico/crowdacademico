@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from 'crypto';
 
 // Par (token em texto puro pro link, hash determinístico pra gravar) — SHA-256,
-// não bcrypt: confirmar_email_por_token() (03_funcoes_seguranca.sql, [03-F])
+// não bcrypt: confirmar_email_por_token() (03_funcoes_seguranca.sql, [03-O])
 // busca por IGUALDADE (`WHERE token_hash = p_token_hash`), o que só funciona
 // com hash determinístico (bcrypt teria salt aleatório por chamada, nunca
 // bateria igual duas vezes pro mesmo token). Função pura, mesmo espírito de

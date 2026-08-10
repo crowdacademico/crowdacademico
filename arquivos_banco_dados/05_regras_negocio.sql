@@ -114,7 +114,7 @@
 --             e fallbacks operacionais.
 -- MOVIDO (28-07-2026, Claude Web — "três pontas menores"): config_numero()
 -- morava aqui, mas 03_funcoes_seguranca.sql (que roda ANTES deste arquivo) já
--- tinha uma função nova (registrar_falha_login, [03-F]) chamando config_numero —
+-- tinha uma função nova (registrar_falha_login, [03-O]) chamando config_numero —
 -- funcionava só porque, no bootstrap completo, nada CHAMA a função antes da
 -- hora; rodar 01→03 isolado e invocar registrar_falha_login já dava
 -- "function public.config_numero(unknown, integer) does not exist". config_numero
@@ -1324,7 +1324,7 @@ EXECUTE FUNCTION fn_valida_repasse_all_or_nothing();
 --             protegida mesmo passando por esta função.
 -- SEM AUTORIZAÇÃO DE PROPÓSITO — pré-autenticação: chamada pelo webhook do
 -- gateway de pagamento/repasse, sem sessão de usuário (mesma categoria de
--- registrar_falha_login/registrar_login_sucesso, [03-F]). De confiança do
+-- registrar_falha_login/registrar_login_sucesso, [03-O]). De confiança do
 -- backend: o endpoint que chama esta função precisa validar a assinatura do
 -- webhook antes, nunca aceitar a chamada de uma rota pública qualquer.
 -- ----------------------------------------------------------------------------
@@ -1821,7 +1821,7 @@ EXECUTE FUNCTION public.fn_valida_limite_max_marco_cronograma();
 --      duas que a suspensão prevê (ativo -> encerrado_moderacao ou
 --      aguardando_aprovacao -> rejeitado). Não depende de permissão de quem
 --      está executando — só do fato, que ninguém consegue forjar por fora de
---      suspender_pesquisador() (03_funcoes_seguranca.sql, [03-G]), o único
+--      suspender_pesquisador() (03_funcoes_seguranca.sql, [03-P]), o único
 --      caminho que escreve status_pesquisador='suspenso'.
 --   Qualquer outra tentativa de mudar status/aprovado_em/id_admin: bloqueada.
 -- ----------------------------------------------------------------------------
@@ -2081,7 +2081,7 @@ EXECUTE FUNCTION fn_preenche_encerramento_campanha();
 -- mesmo ramo autoverificável de sempre; não afrouxa nem a trigger nem a
 -- policy). Chamada por agendamento (@Cron no NestJS), sem sessão de usuário —
 -- mesma categoria pré-autorização de registrar_falha_login/registrar_login_
--- sucesso ([03-F]) e do webhook de atualizar_status_contribuicao. Retorna a
+-- sucesso ([03-O]) e do webhook de atualizar_status_contribuicao. Retorna a
 -- quantidade de campanhas encerradas, pro job poder logar de verdade (em vez
 -- de silêncio) quantas mudaram.
 -- ----------------------------------------------------------------------------
@@ -2501,7 +2501,7 @@ EXECUTE FUNCTION fn_sincroniza_arrecadado_campanha();
 --             `trg_sincroniza_arrecadado_campanha` (acima) soma o valor de
 --             verdade em `campanha.valor_bruto_arrecadado` — a página pública
 --             passa a exibir R$ 9.000 arrecadados sem nenhum pagamento real
---             ter acontecido. Corrigido no mesmo padrão de `[03-F]`: a
+--             ter acontecido. Corrigido no mesmo padrão de `[03-O]`: a
 --             coluna `status` (e `id_transacao_api`) sai do `GRANT UPDATE`
 --             (`06`) e só muda por aqui — `SECURITY DEFINER`, mas
 --             `trg_sincroniza_arrecadado_campanha` e as triggers de validação
@@ -2509,7 +2509,7 @@ EXECUTE FUNCTION fn_sincroniza_arrecadado_campanha();
 --             bypassada, trigger não).
 -- SEM AUTORIZAÇÃO DE PROPÓSITO — pré-autenticação: chamada pelo webhook do
 -- gateway de pagamento, sem sessão de usuário (mesma categoria de
--- registrar_falha_login/registrar_login_sucesso, [03-F]). De confiança do
+-- registrar_falha_login/registrar_login_sucesso, [03-O]). De confiança do
 -- backend: o endpoint que chama esta função precisa validar a assinatura do
 -- webhook do gateway antes, nunca expor isso como rota pública genérica.
 -- ----------------------------------------------------------------------------
@@ -3118,7 +3118,7 @@ BEGIN
 
         -- ADICIONADO (07-08-2026, achado do Lucas: "a tabela de log tá
         -- lotando de ultimo_login_em"): registrar_login_sucesso()
-        -- (03_funcoes_seguranca.sql [03-F]) roda em TODO login bem
+        -- (03_funcoes_seguranca.sql [03-O]) roda em TODO login bem
         -- sucedido, sempre mudando ultimo_login_em/ultimo_login_ip — mesmo
         -- motivo/mesmo padrão do filtro de score_atual acima (motor
         -- automático, não ação administrativa de alguém). tentativas_login_

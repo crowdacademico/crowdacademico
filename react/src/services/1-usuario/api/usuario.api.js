@@ -25,7 +25,7 @@ export const usuarioApi = {
   remover: (authFetch, id) =>
     authFetch(`/usuario/${id}`, { method: 'DELETE' }).then(tratarResposta),
   // Zera tentativas de login falhas + bloqueado_ate (liberar_bloqueio_login,
-  // 03_funcoes_seguranca.sql [03-F]) — existia no banco desde sempre, mas
+  // 03_funcoes_seguranca.sql [03-O]) — existia no banco desde sempre, mas
   // nenhum endpoint chamava (achado 03-08-2026: conta bloqueada por
   // excesso de tentativas de login não tinha NENHUM jeito de desbloquear
   // pelo painel).

@@ -62,7 +62,7 @@ $$;
 -- explícito delas em 06_grants.sql.
 -- CORRIGIDO (28-07-2026, Claude Web — 4ª auditoria, "três funções privilegiadas
 -- ainda executáveis por PUBLIC"): esta função escreve em usuario_papel — mesma
--- categoria das 5 de [03-F] que já saíram do EXECUTE-pra-PUBLIC padrão do
+-- categoria das 5 de [03-O] que já saíram do EXECUTE-pra-PUBLIC padrão do
 -- Postgres. REVOKE explícito antes do GRANT, por consistência (não é hoje
 -- explorável, só app_nestjs conecta ao banco).
 REVOKE EXECUTE ON FUNCTION public.atribuir_papel_padrao(INT) FROM PUBLIC;

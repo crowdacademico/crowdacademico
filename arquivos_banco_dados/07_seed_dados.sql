@@ -190,7 +190,7 @@ INSERT INTO permissao (nome) VALUES
 -- por motivo de privacidade no futuro sem perceber a dependência.
 ('notificacao_processar'),
 -- ADICIONADO (28-07-2026, Claude Web — "Problema 1" da 2ª auditoria de segurança):
--- excluir_conta_usuario/liberar_bloqueio_login (03, [03-F]) são SECURITY DEFINER —
+-- excluir_conta_usuario/liberar_bloqueio_login (03, [03-O]) são SECURITY DEFINER —
 -- desligam a RLS, então a checagem de "quem pode agir sobre a conta de outra
 -- pessoa" precisa estar dentro da própria função. usuario_excluir gateia excluir
 -- a conta de OUTRO usuário (a própria sempre é permitida, sem a permissão);
@@ -308,7 +308,7 @@ WHERE (p.nome, perm.nome) IN (
     -- CORRIGIDO (28-07-2026, Claude Web — 4ª auditoria, decisão de produto):
     -- usuario_excluir NÃO fica com 'suporte' — Catarse/Experiment tratam
     -- exclusão de conta como auto-serviço do titular (que já funciona sem
-    -- nenhuma permissão, ver excluir_conta_usuario em 03, [03-F]); suporte abre
+    -- nenhuma permissão, ver excluir_conta_usuario em 03, [03-O]); suporte abre
     -- chamado, não executa. Só o admin mantém a permissão.
     ('suporte', 'usuario_desbloquear'),
     -- curador: cuida dos catálogos que dão suporte ao conteúdo da plataforma.

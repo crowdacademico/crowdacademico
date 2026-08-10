@@ -225,7 +225,7 @@ CREATE TABLE usuario (
     criado_em        TIMESTAMPTZ    DEFAULT NOW(),
     deletado         BOOLEAN      DEFAULT FALSE,
     -- ADICIONADAS (28-07-2026, Claude,"o único ponto onde a LGPD ainda tem
-    -- uma ponta solta"): excluir_conta_usuario() (03, [03-F]) gravava deletado =
+    -- uma ponta solta"): excluir_conta_usuario() (03, [03-O]) gravava deletado =
     -- TRUE e nada mais — sem quem fez nem quando, o Art. 37 da LGPD (registro das
     -- operações de tratamento, exclusão sendo a mais sensível de todas) ficava
     -- sem trilha. Preenchidas pela própria função (deletado_por =
@@ -243,7 +243,7 @@ CREATE TABLE usuario (
     -- ADICIONADAS (09-08-2026, Bloco G do prompt do Claude Web —
     -- moderação/suspensão): CONCEITO DIFERENTE de `bloqueado_ate` acima —
     -- aquele é bloqueio AUTOMÁTICO por senha errada repetida
-    -- (registrar_falha_login/liberar_bloqueio_login, [03-F]); este é
+    -- (registrar_falha_login/liberar_bloqueio_login, [03-O]); este é
     -- suspensão MANUAL de moderação, decidida por um admin, com motivo
     -- obrigatório. Reaproveitar `bloqueado_ate` pros dois casos faria
     -- `liberar_bloqueio_login()` apagar sem querer uma suspensão de 30

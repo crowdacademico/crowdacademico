@@ -50,7 +50,11 @@ export function LoginPage({ auth }) {
         </div>
 
         <form onSubmit={aoEntrar} className="p-10 space-y-6">
-          {erro && <p className="text-red-700 text-sm font-bold text-center">{erro}</p>}
+          {erro && (
+            <p className="text-red-700 text-sm font-bold text-center whitespace-pre-line">
+              {erro}
+            </p>
+          )}
 
           <div>
             <label className="rotulo-campo">Seu E-mail</label>

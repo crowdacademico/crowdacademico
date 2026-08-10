@@ -98,7 +98,7 @@ export function ExcluirUsuario({ auth }) {
           {/* Consequência real (09-08-2026, Bloco I: explicar o que
               acontece de verdade, não só "não pode ser desfeita") — é
               exclusão LÓGICA (usuario.deletado = TRUE via
-              excluir_conta_usuario(), 03_funcoes_seguranca.sql [03-F]):
+              excluir_conta_usuario(), 03_funcoes_seguranca.sql [03-O]):
               nada é apagado do banco, só marcado e escondido. */}
           <div className="rounded-lg border borda-forte fundo-aviso p-4 text-sm texto-aviso">
             <p className="font-bold mb-1">

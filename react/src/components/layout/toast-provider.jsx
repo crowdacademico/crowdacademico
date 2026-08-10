@@ -92,9 +92,18 @@ export function ToastProvider({ children }) {
                     numa caixa larga é mais difícil de ler e não é o padrão de
                     painel profissional (Experiment/Catarse usam à esquerda). */}
                 <div className="flex-1 min-w-0 text-left">
-                  <p className="text-sm font-bold texto-forte">{toast.titulo}</p>
+                  {/* whitespace-pre-line (09-08-2026): a mensagem de conta
+                      suspensa/bloqueada embute \n\n pra separar a data do
+                      "Motivo:" — sem isto, <p> normal colapsa quebra de
+                      linha num espaço só. Inofensivo pra todo o resto (só
+                      afeta strings que já têm \n de propósito). */}
+                  <p className="text-sm font-bold texto-forte whitespace-pre-line">
+                    {toast.titulo}
+                  </p>
                   {toast.descricao && (
-                    <p className="text-sm texto-fraco mt-0.5">{toast.descricao}</p>
+                    <p className="text-sm texto-fraco mt-0.5 whitespace-pre-line">
+                      {toast.descricao}
+                    </p>
                   )}
                 </div>
                 {/* Botão de fechar — pedido do Lucas, 08-08-2026: erro que a

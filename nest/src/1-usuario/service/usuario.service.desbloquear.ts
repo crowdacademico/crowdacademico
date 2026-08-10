@@ -6,7 +6,7 @@ import { DatabaseService } from '../../commons/database/database.service';
 export class UsuarioServiceDesbloquear {
   constructor(private readonly database: DatabaseService) {}
 
-  // liberar_bloqueio_login() (03_funcoes_seguranca.sql, [03-F]) zera
+  // liberar_bloqueio_login() (03_funcoes_seguranca.sql, [03-O]) zera
   // tentativas_login_falhas e bloqueado_ate — SECURITY DEFINER, exige a
   // permissão 'usuario_desbloquear' internamente (checagem própria da
   // função, não RLS). A função existia no banco desde sempre, mas nenhum

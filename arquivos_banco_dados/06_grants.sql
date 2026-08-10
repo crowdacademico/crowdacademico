@@ -106,7 +106,7 @@ REVOKE SELECT ON public.perfil_pesquisador FROM app_nestjs;
 -- CORRIGIDO: faltava email_verificado na lista (coluna existe desde o 01, nunca tinha GRANT).
 -- ADICIONADO (28-07-2026, Claude Web — 4ª auditoria): deletado_em/deletado_por —
 -- só leitura aqui (não estão no GRANT UPDATE, [06-D-9] abaixo; só mudam via
--- excluir_conta_usuario, 03, [03-F]), pro Admin conseguir ver quem excluiu e
+-- excluir_conta_usuario, 03, [03-O]), pro Admin conseguir ver quem excluiu e
 -- quando (a trilha que faltava pro Art. 37 da LGPD).
 -- suspenso_ate/motivo_suspensao/suspenso_por (09-08-2026, [03-N]) — leitura
 -- liberada pra Consultar Usuário mostrar o estado de suspensão e pro login
@@ -165,12 +165,12 @@ GRANT UPDATE ON termos_de_uso TO app_nestjs;
 -- perfil_pesquisador: GRANT UPDATE por coluna, mesma lista do SELECT ([06-D-2] acima)
 -- MENOS score_atual/score_atualizado_em — essas 2 só podem mudar via
 -- recalcular_score_pesquisador() (SECURITY DEFINER, 05), nunca por UPDATE direto.
--- CORRIGIDO (30-07-2026, [03-G]): status_pesquisador também saiu daqui. Antes,
+-- CORRIGIDO (30-07-2026, [03-P]): status_pesquisador também saiu daqui. Antes,
 -- pol_perfil_update (04) só libera UPDATE pro próprio dono — combinado com
 -- este GRANT, o único jeito de status_pesquisador mudar de verdade era o
 -- próprio pesquisador se auto-suspender/reativar, o que não faz sentido, e não
 -- existia caminho nenhum pra moderação suspender outra pessoa. Agora só muda
--- via suspender_pesquisador() (SECURITY DEFINER, 03, [03-G]).
+-- via suspender_pesquisador() (SECURITY DEFINER, 03, [03-P]).
 GRANT UPDATE (
     cpf_criptografado, tipo_vinculo, vinculo_institucional,
     titulo_academico, ativado_em
@@ -182,11 +182,11 @@ GRANT UPDATE (
 -- perfil, então nenhuma lista de colunas separa "edição de perfil" de "operação de
 -- autenticação" nesse nível. Solução: essas 6 colunas saem do GRANT por completo e só
 -- mudam via função SECURITY DEFINER dedicada (mesmo padrão de atribuir_papel_padrao/
--- recalcular_score_pesquisador) — ver [03-F] em 03_funcoes_seguranca.sql. O GRANT
+-- recalcular_score_pesquisador) — ver [03-O] em 03_funcoes_seguranca.sql. O GRANT
 -- direto sobra só pro que é edição de perfil de verdade.
 GRANT UPDATE (nome, id_imagem_perfil, senha_hash) ON public.usuario TO app_nestjs;
 
--- [06-D-2b] Funções de autenticação (ver [03-F] em 03_funcoes_seguranca.sql):
+-- [06-D-2b] Funções de autenticação (ver [03-O] em 03_funcoes_seguranca.sql):
 -- único jeito de mudar email_verificado, tentativas_login_falhas, bloqueado_ate,
 -- ultimo_login_em, ultimo_login_ip e deletado agora que saíram do GRANT direto acima.
 -- CORRIGIDO (28-07-2026, Claude Web — higiene): função nova no Postgres já nasce
@@ -195,7 +195,7 @@ GRANT UPDATE (nome, id_imagem_perfil, senha_hash) ON public.usuario TO app_nestj
 -- muda estado de autenticação, isso é folga desnecessária. REVOKE explícito antes
 -- do GRANT, nas 5, mesmo não sendo hoje explorável (só app_nestjs conecta ao
 -- banco). confirmar_email_usuario(INT) foi substituída por
--- confirmar_email_por_token(TEXT) — ver [03-F].
+-- confirmar_email_por_token(TEXT) — ver [03-O].
 REVOKE EXECUTE ON FUNCTION public.confirmar_email_por_token(TEXT)         FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.registrar_falha_login(INT)              FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.liberar_bloqueio_login(INT)             FROM PUBLIC;
@@ -205,7 +205,7 @@ REVOKE EXECUTE ON FUNCTION public.excluir_conta_usuario(INT)              FROM P
 -- público (POST /auth/cadastro, 3-auth) pra gravar o aceite de termo no
 -- mesmo instante em que a conta é criada, sem sessão ainda existindo.
 REVOKE EXECUTE ON FUNCTION public.registrar_aceite_termo(INT, INT, TEXT)  FROM PUBLIC;
--- suspender_pesquisador(INT) — ver [03-G]. Mesma higiene das demais funções
+-- suspender_pesquisador(INT) — ver [03-P]. Mesma higiene das demais funções
 -- privilegiadas: nasce com EXECUTE liberado pra PUBLIC por padrão, precisa ser
 -- revogado antes do GRANT explícito.
 REVOKE EXECUTE ON FUNCTION public.suspender_pesquisador(INT)              FROM PUBLIC;
@@ -283,7 +283,7 @@ GRANT EXECUTE ON FUNCTION public.atualizar_status_repasse(INT, VARCHAR, TIMESTAM
 
 -- ADICIONADO (28-07-2026, Claude Web — 6ª auditoria): encerrar_campanhas_vencidas()
 -- é chamada por agendamento (@Cron no NestJS), sem sessão de usuário — mesma
--- categoria de higiene das outras funções pré-autorizadas ([03-F],
+-- categoria de higiene das outras funções pré-autorizadas ([03-O],
 -- atualizar_status_contribuicao/atualizar_status_repasse, acima).
 REVOKE EXECUTE ON FUNCTION public.encerrar_campanhas_vencidas() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.encerrar_campanhas_vencidas() TO app_nestjs;
@@ -346,7 +346,7 @@ GRANT INSERT, UPDATE ON score_config, score_rotulo TO app_nestjs;
 -- (score_pesquisador/perfil_pesquisador) — recalcular_todos_os_scores() em
 -- especial, sem custo de chamada nenhum pra quem chama, era negação de serviço
 -- barata deixada aberta pra PUBLIC (percorre todos os pesquisadores a cada
--- chamada). REVOKE explícito, mesmo padrão das 5 funções de [03-F] e de
+-- chamada). REVOKE explícito, mesmo padrão das 5 funções de [03-O] e de
 -- atribuir_papel_padrao (08).
 REVOKE EXECUTE ON FUNCTION public.recalcular_score_pesquisador(INT) FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.recalcular_todos_os_scores()     FROM PUBLIC;
