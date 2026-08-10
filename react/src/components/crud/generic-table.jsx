@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { useErroToast } from '../layout/use-erro-toast';
 import { LogAuditoriaPainel } from './log-auditoria-painel';
@@ -69,6 +69,19 @@ export function GenericTable({
   // (botão, ícone, badge composto), não só `String(valor)`. Independe de
   // `rotaBase`/`acoes` — tabelas só-leitura (sem Ações) também podem usar.
   colunaExtra,
+  // Filtro por facetas (09-08-2026, pedido do Lucas: filtro de papel na
+  // tabela Usuários) — `{ chave, rotulo, ordem? }`. Genérico: funciona pra
+  // QUALQUER coluna com valores discretos, não só "papel" — as opções do
+  // dropdown são derivadas sozinhas a partir dos valores que já aparecem em
+  // `linha[chave]` (célula com vários valores separada por ", ", mesma
+  // convenção já usada pela coluna "papel" de ListarUsuarios; célula de
+  // valor único também funciona, vira uma lista de 1 token). Padrão é
+  // "Todos" (nenhuma opção marcada = sem filtro nenhum, mostra tudo).
+  // `ordem` (opcional) — lista com a ordem exata desejada (ex.: papel do
+  // menor pro maior poder); sem isso, cai no alfabético (pt-BR). Valor que
+  // aparecer nos dados mas não estiver em `ordem` vai pro final da lista,
+  // não desaparece.
+  filtroFacetado,
 }) {
   const [linhas, setLinhas] = useState([]);
   const [carregando, setCarregando] = useState(true);
@@ -80,6 +93,33 @@ export function GenericTable({
   // Só busca quando abre (não em toda carga da tabela) — a maioria das
   // visitas a uma listagem não vai clicar em "Ver log".
   const [logAberto, setLogAberto] = useState(false);
+  const [facetaAberta, setFacetaAberta] = useState(false);
+  const [facetaSelecionados, setFacetaSelecionados] = useState([]);
+  const facetaRef = useRef(null);
+
+  // Fechar ao clicar fora (09-08-2026) — ERA onBlur+relatedTarget (mesmo
+  // padrão do DevLoginRapido), mas com checkbox dentro de <label> isso
+  // fecha o dropdown ANTES do clique completar: o mousedown num elemento
+  // não-focável (o texto do <label>) dispara blur no botão que abriu o
+  // dropdown com relatedTarget ainda nulo (o navegador só decide o próximo
+  // foco depois), o guard via de que "saiu do container" e fecha — achado
+  // ao vivo pelo Lucas ("clico em qualquer coisa que não seja o
+  // quadradinho, o filtro fecha e não faz nada"). Listener de mousedown no
+  // document, comparando o alvo do clique com o container por `contains()`,
+  // não depende de foco nenhum — fecha só quando o clique é
+  // GEOMETRICAMENTE fora do dropdown, sem essa corrida.
+  useEffect(() => {
+    if (!facetaAberta) {
+      return undefined;
+    }
+    const aoClicarFora = (evento) => {
+      if (facetaRef.current && !facetaRef.current.contains(evento.target)) {
+        setFacetaAberta(false);
+      }
+    };
+    document.addEventListener('mousedown', aoClicarFora);
+    return () => document.removeEventListener('mousedown', aoClicarFora);
+  }, [facetaAberta]);
 
   useEffect(() => {
     // Padrão comum de "buscar dado ao montar/quando a query mudar" (mesmo
@@ -95,20 +135,63 @@ export function GenericTable({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listar]);
 
+  // Opções do dropdown de faceta — derivadas dos dados que já chegaram
+  // (não da lista FILTRADA, senão as opções desapareceriam/reapareceriam
+  // conforme a pessoa digita no campo de busca, confuso). Sempre a partir
+  // de `linhas` inteira. Com `filtroFacetado.ordem`, respeita essa ordem
+  // (ex.: papel do menor pro maior poder); sem isso, alfabético (pt-BR).
+  const opcoesFaceta = useMemo(() => {
+    if (!filtroFacetado) {
+      return [];
+    }
+    const valores = new Set();
+    linhas.forEach((linha) => {
+      String(linha[filtroFacetado.chave] ?? '')
+        .split(',')
+        .map((valor) => valor.trim())
+        .filter(Boolean)
+        .forEach((valor) => valores.add(valor));
+    });
+    const lista = [...valores];
+    const ordem = filtroFacetado.ordem;
+    if (ordem) {
+      const posicao = (valor) => {
+        const indice = ordem.indexOf(valor);
+        return indice === -1 ? ordem.length : indice;
+      };
+      return lista.sort((a, b) => posicao(a) - posicao(b) || a.localeCompare(b, 'pt-BR'));
+    }
+    return lista.sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  }, [linhas, filtroFacetado]);
+
   // Filtro é só client-side (a lista inteira já veio do backend) — resolve
   // "achar uma linha no meio de 28" (Configurações já tem esse tanto), mas
   // não resolve buscar num universo de milhares sem baixar tudo primeiro —
   // isso exigiria busca no próprio backend (LIMIT/OFFSET + WHERE), fora do
   // escopo desta rodada.
   const linhasFiltradas = useMemo(() => {
+    let base = linhas;
+
+    // Faceta primeiro (nenhuma marcada = "Todos", sem filtro nenhum — o
+    // padrão pedido pelo Lucas), texto depois — os dois se combinam com E,
+    // não é um ou outro.
+    if (filtroFacetado && facetaSelecionados.length > 0) {
+      base = base.filter((linha) => {
+        const valoresDaLinha = String(linha[filtroFacetado.chave] ?? '')
+          .split(',')
+          .map((valor) => valor.trim());
+        return valoresDaLinha.some((valor) => facetaSelecionados.includes(valor));
+      });
+    }
+
     const termo = filtro.trim().toLowerCase();
     if (!termo) {
-      return linhas;
+      return base;
     }
-    return linhas.filter((linha) =>
+    return base.filter((linha) =>
       colunas.some((coluna) => String(linha[coluna.chave] ?? '').toLowerCase().includes(termo)),
     );
-  }, [linhas, filtro, colunas]);
+  }, [linhas, filtro, colunas, filtroFacetado, facetaSelecionados]);
 
   // Ordena a lista FILTRADA inteira, antes de paginar — nunca a página
   // atual sozinha. Ordenar só a fatia visível é o jeito clássico desse tipo
@@ -174,17 +257,106 @@ export function GenericTable({
         {acaoTopo && <div className="crud-secao__acao-topo">{acaoTopo}</div>}
       </div>
 
-      {!carregando && linhas.length > LIMIAR_FILTRO && (
-        <input
-          type="search"
-          placeholder="Filtrar..."
-          value={filtro}
-          onChange={(evento) => {
-            setFiltro(evento.target.value);
-            setPagina(1);
-          }}
-          className="w-full sm:w-64 border borda-forte rounded-lg fundo-sutil py-2 px-3 text-sm outline-none focus:border-primary mb-3"
-        />
+      {!carregando && (linhas.length > LIMIAR_FILTRO || (filtroFacetado && opcoesFaceta.length > 1)) && (
+        <div className="flex items-center gap-3 flex-wrap mb-3">
+          {linhas.length > LIMIAR_FILTRO && (
+            <input
+              type="search"
+              placeholder="Filtrar..."
+              value={filtro}
+              onChange={(evento) => {
+                setFiltro(evento.target.value);
+                setPagina(1);
+              }}
+              className="w-full sm:w-64 border borda-forte rounded-lg fundo-sutil py-2 px-3 text-sm outline-none focus:border-primary"
+            />
+          )}
+
+          {/* Filtro por faceta (09-08-2026) — só aparece se houver mais de 1
+              valor possível (com 1 só, filtrar não faria diferença
+              nenhuma). Fechar ao clicar fora via facetaRef (ver useEffect
+              acima) — não é onBlur (esse dava problema com o checkbox). */}
+          {filtroFacetado && opcoesFaceta.length > 1 && (
+            <div className="relative" ref={facetaRef}>
+              <button
+                type="button"
+                onClick={() => setFacetaAberta((atual) => !atual)}
+                className="btn btn-secondary text-sm flex items-center gap-2"
+              >
+                <i className="fa-solid fa-filter"></i>
+                {filtroFacetado.rotulo}
+                {facetaSelecionados.length > 0 ? (
+                  <span className="badge badge-sucesso">{facetaSelecionados.length}</span>
+                ) : (
+                  <span className="texto-fraco font-normal">(Todos)</span>
+                )}
+                <i className="fa-solid fa-chevron-down text-xs"></i>
+              </button>
+
+              {facetaAberta && (
+                <div className="absolute left-0 mt-1 w-56 fundo-cartao border borda-padrao rounded-lg shadow-lg z-20 overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFacetaSelecionados([]);
+                      setPagina(1);
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm font-bold hover:bg-primary/10 border-b borda-padrao flex items-center justify-between"
+                  >
+                    Todos
+                    {facetaSelecionados.length === 0 && <i className="fa-solid fa-check texto-sucesso"></i>}
+                  </button>
+                  <div className="max-h-64 overflow-y-auto">
+                    {opcoesFaceta.map((opcao) => {
+                      const marcado = facetaSelecionados.includes(opcao);
+                      const alternar = () => {
+                        setFacetaSelecionados((atuais) =>
+                          marcado
+                            ? atuais.filter((valor) => valor !== opcao)
+                            : [...atuais, opcao],
+                        );
+                        setPagina(1);
+                      };
+                      return (
+                        // Clique na linha toda alterna, não só na caixinha
+                        // (09-08-2026, achado do Lucas: "clico em qualquer
+                        // coisa que não seja o quadradinho e não faz nada").
+                        // 2 casos, tratados diferente de propósito: clique
+                        // DIRETO na caixinha deixa o navegador fazer o que
+                        // já sabe fazer sozinho (onChange do <input>, ver
+                        // abaixo) — é o jeito mais confiável de manter o
+                        // visual sincronizado, sem gambiarra. Clique no
+                        // TEXTO (o alvo não é o <input>) chama `alternar()`
+                        // aqui e cancela o encaminhamento nativo pro
+                        // <input> por baixo (preventDefault) — sem isso, o
+                        // clique alternaria a caixinha 2x (uma vez aqui,
+                        // outra pelo encaminhamento) e cancelaria a
+                        // mudança. Achado ao vivo (09-08-2026): fazer TUDO
+                        // manual (preventDefault sempre + <input readOnly>
+                        // sem onChange) até funcionava no filtro por
+                        // baixo, mas deixava a caixinha visualmente
+                        // "esquecida" quando o clique era nela mesma.
+                        <label
+                          key={opcao}
+                          className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-primary/10 cursor-pointer"
+                          onClick={(evento) => {
+                            if (evento.target.tagName !== 'INPUT') {
+                              evento.preventDefault();
+                              alternar();
+                            }
+                          }}
+                        >
+                          <input type="checkbox" checked={marcado} onChange={alternar} />
+                          {opcao}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       )}
 
       {carregando ? (
@@ -300,7 +472,9 @@ export function GenericTable({
               {linhasPagina.length === 0 && !erro && (
                 <tr>
                   <td colSpan={colunas.length + (colunaExtra ? 1 : 0) + (rotaBase ? 1 : 0)}>
-                    {filtro ? 'Nenhum registro bate com o filtro.' : 'Nenhum registro.'}
+                    {filtro || facetaSelecionados.length > 0
+                      ? 'Nenhum registro bate com o filtro.'
+                      : 'Nenhum registro.'}
                   </td>
                 </tr>
               )}

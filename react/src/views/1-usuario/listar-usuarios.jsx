@@ -8,9 +8,24 @@ import { logAuditoriaApi } from '../../services/28-log-auditoria/api/log-auditor
 // Papel que TODO cadastro já ganha automaticamente (atribuir_papel_padrao,
 // 08_trigger_signup_usuario.sql) — mostrar ele na coluna "papel" seria
 // ruído (é o mesmo texto em toda linha da tabela). Só os papéis ALÉM do
-// padrão aparecem na coluna; sem nenhum, mostra "-".
+// padrão aparecem na coluna; sem nenhum, mostra "usuário" (ERA "-",
+// 09-08-2026, pedido do Lucas: "fica melhor assim" — mais claro no filtro
+// por papel também, em vez de um traço sem explicação nenhuma).
 const PAPEL_PADRAO = 'usuario';
-const SEM_PAPEL_EXTRA = '-';
+const SEM_PAPEL_EXTRA = 'usuário';
+
+// Ordem de poder (do menor pro maior), pro filtro por papel — mesma ordem
+// já usada em DevLoginRapido/CONTAS_DEV, só invertida (lá é do maior pro
+// menor). id_papel 7=usuario ... 1=admin (07_seed_dados.sql [07-B-1]).
+const ORDEM_PODER_PAPEL = [
+  SEM_PAPEL_EXTRA,
+  'pesquisador',
+  'curador',
+  'suporte',
+  'revisor',
+  'moderador',
+  'admin',
+];
 
 // Aba "Usuários" do painel admin — vive na rota /admin/usuarios (ver
 // services/router/rotas.constants.js, ROTAS_ADMIN). Renderizada dentro do
@@ -74,6 +89,12 @@ export function ListarUsuarios({ auth }) {
         chavePrimaria="idUsuario"
         listar={listarUsuarios}
         rotaBase="/usuarios"
+        // Botão de filtro por papel (09-08-2026, pedido do Lucas), na mesma
+        // linha do filtro de texto — padrão "Todos" (nenhum papel marcado),
+        // marcar um ou mais esconde o resto. Opções vêm sozinhas dos
+        // valores que já aparecem na coluna "papel" (ver GenericTable);
+        // `ordem` só reordena (menor pro maior poder), não filtra nada.
+        filtroFacetado={{ chave: 'papel', rotulo: 'Papel', ordem: ORDEM_PODER_PAPEL }}
         buscarLog={buscarLogUsuario}
         // "De"/"Para" (09-08-2026, pedido do Lucas depois de ver isso em
         // Papéis) — "nome" é o único campo de texto editável de usuario

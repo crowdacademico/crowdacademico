@@ -27,7 +27,13 @@ export const GRUPOS_MENU_ADMIN = [
     itens: itensDoGrupo(null),
   },
   {
-    titulo: 'CADASTROS',
+    // ERA "CADASTROS" (09-08-2026, pedido do Lucas: "não me parece a
+    // palavra mais ideal") — o grupo é gestão de conta/acesso/config do
+    // sistema (Usuários, Papéis & Permissões, Configurações), não cadastro
+    // de dado de negócio. `grupoMenu: 'CADASTROS'` em rotas.constants.js
+    // continua com o nome antigo de propósito — é só a CHAVE interna que
+    // liga rota↔grupo, não aparece na tela; só o rótulo visível mudou.
+    titulo: 'GESTÃO DE ACESSO E SISTEMA',
     itens: itensDoGrupo('CADASTROS'),
   },
   {
