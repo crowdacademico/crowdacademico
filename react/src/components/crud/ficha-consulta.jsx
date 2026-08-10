@@ -72,7 +72,7 @@ export function CampoFicha({ rotulo, valor, largura, acao, children }) {
         <span
           className={'text-sm ' + (temValor ? 'font-medium texto-forte' : 'texto-fraco opacity-50')}
         >
-          {temValor ? valor : '—'}
+          {temValor ? valor : '-'}
         </span>
         {acao}
       </div>

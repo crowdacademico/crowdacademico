@@ -25,9 +25,9 @@ export const DETALHE_PERMISSAO = {
     nome: 'Visualizar Relatórios',
     resumo: 'Acesso a relatórios agregados do sistema.',
     oQueFaz:
-      'Libera acesso a relatórios com números consolidados (contagens, totais) — nunca o dado individual de uma pessoa só.',
+      'Libera acesso a relatórios com números consolidados (contagens, totais), nunca o dado individual de uma pessoa só.',
     porQueExiste:
-      'Dá visibilidade gerencial sem exigir acesso a cada registro individual — o relatório já vem agregado.',
+      'Dá visibilidade gerencial sem exigir acesso a cada registro individual, o relatório já vem agregado.',
     impacto: 'baixo',
   },
   // B — RBAC
@@ -36,7 +36,7 @@ export const DETALHE_PERMISSAO = {
     resumo: 'Dar um papel (ex.: moderador) a um usuário já cadastrado.',
     oQueFaz: 'Permite atribuir um papel existente a um usuário já cadastrado no sistema.',
     porQueExiste:
-      'É o mecanismo de promover alguém a uma função de confiança — precisa ser restrito, senão qualquer pessoa poderia se autopromover.',
+      'É o mecanismo de promover alguém a uma função de confiança, precisa ser restrito, senão qualquer pessoa poderia se autopromover.',
     impacto: 'alto',
   },
   papel_gerenciar: {
@@ -45,7 +45,7 @@ export const DETALHE_PERMISSAO = {
     oQueFaz:
       'Permite renomear papéis existentes e conceder/revogar permissões de um papel na matriz Papel × Permissão.',
     porQueExiste:
-      'É o controle central do RBAC — quem tem essa permissão decide o que cada papel PODE fazer no sistema inteiro.',
+      'É o controle central do RBAC, quem tem essa permissão decide o que cada papel PODE fazer no sistema inteiro.',
     impacto: 'alto',
   },
   // C — CONFIG
@@ -55,7 +55,7 @@ export const DETALHE_PERMISSAO = {
     oQueFaz:
       'Permite criar, editar e excluir os valores globais que controlam regras de negócio (prazos, limites, taxas).',
     porQueExiste:
-      'Essas configurações afetam o sistema inteiro de uma vez — mudar uma tem efeito imediato pra todo mundo.',
+      'Essas configurações afetam o sistema inteiro de uma vez, mudar uma tem efeito imediato pra todo mundo.',
     impacto: 'alto',
   },
   tipolink_gerenciar: {
@@ -64,7 +64,7 @@ export const DETALHE_PERMISSAO = {
     oQueFaz:
       'Permite cadastrar/editar os tipos de link acadêmico aceitos no perfil (ex.: Lattes, ORCID, LinkedIn).',
     porQueExiste:
-      'Catálogo de apoio — cresce conforme surgem novas redes/plataformas acadêmicas relevantes.',
+      'Catálogo de apoio, cresce conforme surgem novas redes/plataformas acadêmicas relevantes.',
     impacto: 'baixo',
   },
   area_conhecimento_gerenciar: {
@@ -73,7 +73,7 @@ export const DETALHE_PERMISSAO = {
     oQueFaz:
       'Permite cadastrar/editar as áreas de conhecimento (ex.: Biologia, Engenharia) usadas pra classificar pesquisadores e campanhas.',
     porQueExiste:
-      'Catálogo de apoio à busca e organização — sem ele, não dá pra filtrar campanhas por área.',
+      'Catálogo de apoio à busca e organização, sem ele, não dá pra filtrar campanhas por área.',
     impacto: 'baixo',
   },
   motivo_denuncia_gerenciar: {
@@ -82,7 +82,7 @@ export const DETALHE_PERMISSAO = {
     oQueFaz:
       'Permite cadastrar/editar os motivos disponíveis ao denunciar uma campanha ou perfil.',
     porQueExiste:
-      'Padroniza denúncias em categorias conhecidas, em vez de texto livre — facilita a triagem de quem modera.',
+      'Padroniza denúncias em categorias conhecidas, em vez de texto livre, facilita a triagem de quem modera.',
     impacto: 'baixo',
   },
   arquivo_gerenciar: {
@@ -108,7 +108,7 @@ export const DETALHE_PERMISSAO = {
     resumo: 'Ver dados normalmente ocultos de uma conta (ex.: IP).',
     oQueFaz: 'Libera a visualização de dados normalmente ocultos de um usuário (ex.: histórico de login, IP).',
     porQueExiste:
-      'Investigação de fraude/abuso às vezes exige ver dado que ninguém mais enxerga de outra conta — fica restrito e auditável.',
+      'Investigação de fraude/abuso às vezes exige ver dado que ninguém mais enxerga de outra conta, fica restrito e auditável.',
     impacto: 'alto',
   },
   perfil_pesquisador_visualizar_sensivel: {
@@ -116,7 +116,7 @@ export const DETALHE_PERMISSAO = {
     resumo: 'Ver dados sensíveis do perfil acadêmico de um pesquisador.',
     oQueFaz: 'Mesma ideia da permissão anterior, mas para dados sensíveis do perfil acadêmico de um pesquisador.',
     porQueExiste:
-      'O perfil de pesquisador tem campos que não deveriam ser públicos por padrão — só quem investiga precisa ver.',
+      'O perfil de pesquisador tem campos que não deveriam ser públicos por padrão, só quem investiga precisa ver.',
     impacto: 'alto',
   },
   termos_uso_gerenciar: {
@@ -124,7 +124,7 @@ export const DETALHE_PERMISSAO = {
     resumo: 'Publicar uma nova versão dos Termos de Uso.',
     oQueFaz: 'Permite publicar uma nova versão dos Termos de Uso do sistema.',
     porQueExiste:
-      'Termos de uso têm peso jurídico — só quem tem essa permissão pode "trocar o contrato" que todo mundo aceita.',
+      'Termos de uso têm peso jurídico, só quem tem essa permissão pode "trocar o contrato" que todo mundo aceita.',
     impacto: 'alto',
   },
   sessao_revogar: {
@@ -147,14 +147,14 @@ export const DETALHE_PERMISSAO = {
     nome: 'Reenviar Verificação de E-mail',
     resumo: 'Disparar de novo o e-mail de confirmação de conta.',
     oQueFaz: 'Permite disparar de novo o e-mail de confirmação de conta pra um usuário que ainda não verificou.',
-    porQueExiste: 'Ação de suporte comum — e-mail que não chegou, foi pro spam, ou o link expirou.',
+    porQueExiste: 'Ação de suporte comum, e-mail que não chegou, foi pro spam, ou o link expirou.',
     impacto: 'baixo',
   },
   notificacao_processar: {
     nome: 'Processar Notificações',
     resumo: 'Marcar notificações do sistema como processadas/enviadas.',
     oQueFaz: 'Permite marcar notificações do sistema como processadas/enviadas.',
-    porQueExiste: 'Suporte técnico da fila de notificações — garantir que nada fique parado sem ser entregue.',
+    porQueExiste: 'Suporte técnico da fila de notificações, garantir que nada fique parado sem ser entregue.',
     impacto: 'baixo',
   },
   usuario_excluir: {
@@ -162,7 +162,7 @@ export const DETALHE_PERMISSAO = {
     resumo: 'Excluir (logicamente) a conta de outra pessoa.',
     oQueFaz: 'Permite excluir, de forma lógica (reversível só via banco), a conta de outra pessoa.',
     porQueExiste:
-      'Normalmente é autoatendimento — cada um exclui a própria conta; esta permissão existe só pra quando é preciso agir sobre a conta de outra pessoa.',
+      'Normalmente é autoatendimento, cada um exclui a própria conta; esta permissão existe só pra quando é preciso agir sobre a conta de outra pessoa.',
     impacto: 'alto',
   },
   usuario_desbloquear: {
@@ -170,7 +170,7 @@ export const DETALHE_PERMISSAO = {
     resumo: 'Zerar o bloqueio de login por tentativas erradas.',
     oQueFaz: 'Permite zerar o bloqueio de login causado por excesso de tentativas erradas de senha.',
     porQueExiste:
-      'Ação de suporte recorrente — a pessoa errou demais a senha e precisa de alguém pra liberar o acesso de novo.',
+      'Ação de suporte recorrente, a pessoa errou demais a senha e precisa de alguém pra liberar o acesso de novo.',
     impacto: 'médio',
   },
   // E — CAMPANHA
@@ -185,7 +185,7 @@ export const DETALHE_PERMISSAO = {
     nome: 'Rejeitar Campanha',
     resumo: 'Recusar uma campanha submetida, com justificativa.',
     oQueFaz: 'Permite recusar uma campanha submetida, sempre com uma justificativa.',
-    porQueExiste: 'Contraparte da aprovação — nem toda submissão deve virar campanha pública.',
+    porQueExiste: 'Contraparte da aprovação, nem toda submissão deve virar campanha pública.',
     impacto: 'alto',
   },
   campanha_editar: {
@@ -200,7 +200,7 @@ export const DETALHE_PERMISSAO = {
     resumo: 'Dar um veredito oficial a uma denúncia registrada.',
     oQueFaz: 'Permite dar um veredito/resposta oficial a uma denúncia registrada por outro usuário.',
     porQueExiste:
-      'Toda denúncia precisa de um desfecho visível — sem isso, viraria fila sem fim, sem retorno pra quem denunciou.',
+      'Toda denúncia precisa de um desfecho visível, sem isso, viraria fila sem fim, sem retorno pra quem denunciou.',
     impacto: 'médio',
   },
   solicitacao_encerramento_decidir: {
@@ -208,7 +208,7 @@ export const DETALHE_PERMISSAO = {
     resumo: 'Aprovar/recusar pedido de encerrar campanha antes do prazo.',
     oQueFaz:
       'Permite aprovar ou recusar o pedido de um pesquisador pra encerrar a própria campanha antes do prazo original.',
-    porQueExiste: 'Encerrar antes do prazo mexe com a expectativa de quem já contribuiu — não pode ser decisão unilateral do autor.',
+    porQueExiste: 'Encerrar antes do prazo mexe com a expectativa de quem já contribuiu, não pode ser decisão unilateral do autor.',
     impacto: 'alto',
   },
   comentario_moderar: {
@@ -216,7 +216,7 @@ export const DETALHE_PERMISSAO = {
     resumo: 'Ocultar/remover comentários publicados numa campanha.',
     oQueFaz: 'Permite ocultar/remover comentários publicados numa campanha.',
     porQueExiste:
-      'Moderação de conteúdo básica — comentário ofensivo, spam ou fora de contexto precisa de alguém que possa agir.',
+      'Moderação de conteúdo básica, comentário ofensivo, spam ou fora de contexto precisa de alguém que possa agir.',
     impacto: 'médio',
   },
   atualizacao_moderar: {
@@ -230,7 +230,7 @@ export const DETALHE_PERMISSAO = {
     nome: 'Aprovar Repasse',
     resumo: 'Liberar a transferência do dinheiro arrecadado.',
     oQueFaz: 'Permite liberar a transferência de dinheiro arrecadado pra conta do pesquisador.',
-    porQueExiste: 'É o ponto onde dinheiro de verdade sai do sistema — exige aprovação explícita, nunca automático.',
+    porQueExiste: 'É o ponto onde dinheiro de verdade sai do sistema, exige aprovação explícita, nunca automático.',
     impacto: 'alto',
   },
   // F — LINK
@@ -246,7 +246,7 @@ export const DETALHE_PERMISSAO = {
     nome: 'Ver Dados Sensíveis da Contribuição',
     resumo: 'Ver dados financeiros detalhados de uma contribuição.',
     oQueFaz: 'Libera a visualização de dados financeiros detalhados de uma contribuição individual.',
-    porQueExiste: 'Dado financeiro de terceiro é sensível por padrão — só quem precisa investigar/auditar deveria ver o detalhe.',
+    porQueExiste: 'Dado financeiro de terceiro é sensível por padrão, só quem precisa investigar/auditar deveria ver o detalhe.',
     impacto: 'alto',
   },
   auditoria_financeira_visualizar: {
@@ -254,7 +254,7 @@ export const DETALHE_PERMISSAO = {
     resumo: 'Ver o histórico completo de eventos financeiros.',
     oQueFaz:
       'Libera acesso ao histórico completo de eventos financeiros do sistema (repasses, estornos, mudanças de status).',
-    porQueExiste: 'É a trilha de auditoria do dinheiro que passa pela plataforma — só quem responde por isso deveria enxergar tudo.',
+    porQueExiste: 'É a trilha de auditoria do dinheiro que passa pela plataforma, só quem responde por isso deveria enxergar tudo.',
     impacto: 'alto',
   },
   // I — SCORE
@@ -271,15 +271,15 @@ export const DETALHE_PERMISSAO = {
     resumo: 'Ver o score de reputação de qualquer pesquisador.',
     oQueFaz: 'Permite ver o score de reputação de um pesquisador mesmo fora das regras padrão de visibilidade.',
     porQueExiste:
-      'Hoje o score já é público pra qualquer sessão (decisão de produto, ver DOCUMENTACAO_BD.md) — esta permissão fica como reforço, caso a visibilidade pública seja revista no futuro.',
+      'Hoje o score já é público pra qualquer sessão (decisão de produto, ver DOCUMENTACAO_BD.md), esta permissão fica como reforço, caso a visibilidade pública seja revista no futuro.',
     impacto: 'baixo',
   },
   // L — LOG
   log_visualizar: {
     nome: 'Ver Log de Auditoria',
     resumo: 'Ver o histórico de alterações de qualquer tabela.',
-    oQueFaz: 'Permite ver o histórico de alterações (log de auditoria) de qualquer tabela do sistema — quem mudou o quê e quando.',
-    porQueExiste: 'É a trilha de auditoria geral do sistema inteiro — acesso amplo, por isso reservado a quem realmente precisa investigar.',
+    oQueFaz: 'Permite ver o histórico de alterações (log de auditoria) de qualquer tabela do sistema, quem mudou o quê e quando.',
+    porQueExiste: 'É a trilha de auditoria geral do sistema inteiro, acesso amplo, por isso reservado a quem realmente precisa investigar.',
     impacto: 'alto',
   },
 };

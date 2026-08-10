@@ -6,7 +6,8 @@ import {
 } from '../../services/2-papel-permissao/api/papel-permissao.api';
 import { detalhePermissao } from '../../services/2-papel-permissao/constants/permissao-nomes-amigaveis';
 
-// "Quem tem hoje" (09-08-2026, Bloco F do prompt do Claude Web) — lido AO
+// "Papéis com esta permissão" (09-08-2026, Bloco F do prompt do Claude
+// Web; rótulo renomeado no mesmo dia, ERA "Quem tem hoje") — lido AO
 // VIVO da matriz Papel × Permissão (mesmas 2 chamadas de
 // matriz-papel-permissao.jsx), nunca do dicionário estático: o dicionário
 // só sabe o que a permissão FAZ, não quem tem ela agora — isso muda toda
@@ -38,7 +39,10 @@ export function ModalDetalhePermissao({ permissao, authFetch, aoFechar }) {
         { titulo: 'O que faz', conteudo: detalhe.oQueFaz },
         { titulo: 'Por que existe', conteudo: detalhe.porQueExiste },
         {
-          titulo: 'Quem tem hoje',
+          // ERA "Quem tem hoje" (09-08-2026, achado do Lucas: "fica
+          // esquisito" — frase solta em cima de só "admin" soava cortada).
+          // Frase-rótulo (tipo campo de formulário) combina melhor.
+          titulo: 'Papéis com esta permissão',
           conteudo:
             papeisComEla === null ? (
               'Carregando...'

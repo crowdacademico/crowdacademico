@@ -222,6 +222,24 @@ CREATE TABLE usuario (
     email            VARCHAR(255) NOT NULL,
     senha_hash       VARCHAR(255) NOT NULL,     -- [01-I] SENHA HASH OBRIGATÓRIA PARA LOGIN PRÓPRIO
     id_imagem_perfil INT,
+
+    -- ADICIONADAS (10-08-2026, pedido do Lucas: "gostei tanto do filtro...
+    -- mas as preferências não guardam por conta") — tema/tamanho de fonte
+    -- do cabeçalho viviam só no localStorage do navegador (preferência de
+    -- APARELHO, não de CONTA): sobrevivia a logout e não trocava ao logar
+    -- com outra pessoa no mesmo navegador, o oposto do que ele esperava.
+    -- NULL = sem preferência salva ainda, aplica o padrão do app (mesmo
+    -- valor que o app já usava antes de logar). Cogitado guardar em
+    -- `configuracoes` (id_usuario preenchido, já suporta preferência
+    -- pessoal via RLS) — descartado: `chave` tem UNIQUE GLOBAL
+    -- (`UK_CONFIGURACOES_CHAVE`), não por usuário, e essas linhas
+    -- vazariam pra tela admin de Configurações (que hoje só mostra
+    -- configuração de sistema de verdade). Direto em `usuario`, junto de
+    -- `id_imagem_perfil`, é o mesmo padrão de "dado pessoal de perfil"
+    -- já estabelecido.
+    tema_preferido           VARCHAR(10),
+    escala_fonte_preferida   DECIMAL(4,3),
+
     criado_em        TIMESTAMPTZ    DEFAULT NOW(),
     deletado         BOOLEAN      DEFAULT FALSE,
     -- ADICIONADAS (28-07-2026, Claude,"o único ponto onde a LGPD ainda tem
@@ -263,6 +281,16 @@ CREATE TABLE usuario (
     CONSTRAINT "CK_USUARIO_SUSPENSAO" CHECK (
         (suspenso_ate IS NULL AND motivo_suspensao IS NULL)
         OR (suspenso_ate IS NOT NULL AND motivo_suspensao IS NOT NULL)
+    ),
+    -- Mesmos 3 valores que ControleTema (React) já usa — NULL (sem
+    -- preferência salva) sempre permitido.
+    CONSTRAINT "CK_USUARIO_TEMA_PREFERIDO" CHECK (
+        tema_preferido IS NULL OR tema_preferido IN ('claro', 'escuro', 'sistema')
+    ),
+    -- Mesma faixa que ControleFonte (React) já usa (ESCALA_MINIMA/MAXIMA).
+    CONSTRAINT "CK_USUARIO_ESCALA_FONTE_PREFERIDA" CHECK (
+        escala_fonte_preferida IS NULL
+        OR (escala_fonte_preferida >= 0.875 AND escala_fonte_preferida <= 1.25)
     )
 );
 

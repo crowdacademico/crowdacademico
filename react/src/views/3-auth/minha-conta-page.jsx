@@ -28,7 +28,7 @@ export function MinhaConta({ auth }) {
 
       <SecaoPerfil auth={auth} />
       <SecaoSeguranca auth={auth} />
-      <SecaoPreferencias />
+      <SecaoPreferencias auth={auth} />
       <SecaoMeusPapeis auth={auth} />
       <SecaoPrivacidade auth={auth} />
       <SecaoPerfilAcademico />
@@ -96,7 +96,7 @@ function SecaoPerfil({ auth }) {
           <label className="rotulo-campo">E-mail</label>
           <input type="email" value={auth.usuario?.email ?? ''} disabled className="input-padrao" />
           <p className="text-xs texto-fraco mt-1">
-            Trocar o e-mail ainda não é possível neste protótipo — exigiria reverificação, que
+            Trocar o e-mail ainda não é possível neste protótipo, exigiria reverificação, que
             depende do módulo de e-mail.
           </p>
         </div>
@@ -270,23 +270,24 @@ function SecaoSeguranca({ auth }) {
 // 3. PREFERÊNCIAS — tema/fonte já existem soltas no cabeçalho
 // (acessibilidade não deve exigir dois cliques, recomendação do Claude
 // Web) — aqui é só o mesmo controle, visível e explicado, não uma cópia
-// duplicada de estado (os dois componentes leem/escrevem o mesmo
-// localStorage, ficam sincronizados sozinhos).
-function SecaoPreferencias() {
+// duplicada de estado (os dois componentes recebem o mesmo `auth`, ficam
+// sincronizados sozinhos — ver comentário completo em controle-tema.jsx
+// sobre a preferência agora ser POR CONTA, não só localStorage).
+function SecaoPreferencias({ auth }) {
   return (
     <Painel
       icone="fa-sliders"
       titulo="Preferências"
-      subtitulo="Os mesmos controles do cabeçalho — mudar aqui ou lá dá no mesmo."
+      subtitulo="Os mesmos controles do cabeçalho, mudar aqui ou lá dá no mesmo."
     >
       <div className="flex items-center gap-6">
         <div>
           <p className="rotulo-campo mb-2">Tema</p>
-          <ControleTema />
+          <ControleTema auth={auth} />
         </div>
         <div>
           <p className="rotulo-campo mb-2">Tamanho da fonte</p>
-          <ControleFonte />
+          <ControleFonte auth={auth} />
         </div>
       </div>
     </Painel>
@@ -311,7 +312,7 @@ function SecaoMeusPapeis({ auth }) {
     <Painel
       icone="fa-user-tag"
       titulo="Meus papéis"
-      subtitulo="O que você é na plataforma — só leitura aqui."
+      subtitulo="O que você é na plataforma, só leitura aqui."
     >
       {papeis === null ? (
         <p className="text-sm texto-fraco">Carregando...</p>
@@ -361,7 +362,7 @@ function SecaoPrivacidade({ auth }) {
         <div>
           <p className="text-sm font-semibold texto-padrao">Exportar meus dados</p>
           <p className="text-xs texto-fraco">
-            Direito de portabilidade (LGPD Art. 18) — ainda não implementado neste protótipo.
+            Direito de portabilidade (LGPD Art. 18), ainda não implementado neste protótipo.
           </p>
         </div>
         <button type="button" disabled className="btn btn-secondary opacity-50 cursor-not-allowed">
@@ -372,7 +373,7 @@ function SecaoPrivacidade({ auth }) {
       <div className="rounded-lg border borda-forte fundo-erro p-4">
         <p className="text-sm font-bold texto-erro mb-2">Excluir minha conta</p>
         <p className="text-xs texto-erro mb-3">
-          Marca sua conta como excluída (exclusão lógica) — o login para de funcionar na hora.
+          Marca sua conta como excluída (exclusão lógica), o login para de funcionar na hora.
           Não existe desfazer pelo painel.
         </p>
         {erro && <p className="text-xs texto-erro mb-2 font-bold">{erro}</p>}
@@ -404,7 +405,7 @@ function SecaoPerfilAcademico() {
   return (
     <Painel icone="fa-graduation-cap" titulo="Perfil acadêmico">
       <p className="text-sm texto-fraco">
-        Módulo de perfil de pesquisador ainda não foi implementado — quando existir, aparece
+        Módulo de perfil de pesquisador ainda não foi implementado, quando existir, aparece
         aqui pra quem tiver o papel "pesquisador".
       </p>
     </Painel>

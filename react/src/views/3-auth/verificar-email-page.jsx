@@ -15,7 +15,7 @@ export function VerificarEmailPage() {
   // chegar lá.
   const [estado, setEstado] = useState(() => (token ? 'carregando' : 'erro')); // carregando | ok | erro
   const [mensagemErro, setMensagemErro] = useState(() =>
-    token ? '' : 'Link sem token — confira se copiou o endereço completo.',
+    token ? '' : 'Link sem token, confira se copiou o endereço completo.',
   );
 
   useEffect(() => {

@@ -54,7 +54,13 @@ export function ModalDetalhe({ titulo, chave, badgeImpacto, secoes, aoFechar }) 
               <h4 className="text-xs font-bold uppercase tracking-widest texto-fraco mb-1.5">
                 {secao.titulo}
               </h4>
-              <div className="text-sm texto-padrao">{secao.conteudo}</div>
+              {/* ERA texto-padrao (slate-700) — muito claro pro corpo
+                  principal do modal (09-08-2026, achado do Lucas: "o texto
+                  deste dialogbox está muito cinza"). texto-forte é o mesmo
+                  tom do título (slate-800/quase-branco no escuro), sem
+                  perder a hierarquia com o rótulo da seção (que continua
+                  texto-fraco, acima). */}
+              <div className="text-sm texto-forte">{secao.conteudo}</div>
             </div>
           ))}
         </div>

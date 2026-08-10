@@ -99,7 +99,7 @@ export function CadastroPage({ auth }) {
           </div>
           <h2 className="text-3xl font-serif font-bold texto-forte mb-2">Criar conta</h2>
           <p className="text-sm texto-fraco font-medium">
-            Leva menos de um minuto — o resto você completa depois, em Minha Conta.
+            Leva menos de um minuto, o resto você completa depois, em Minha Conta.
           </p>
         </div>
 

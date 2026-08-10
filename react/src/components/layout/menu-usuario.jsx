@@ -78,7 +78,7 @@ export function MenuUsuario({ auth }) {
                 icone="fa-bell"
                 rotulo="Notificações"
                 onClick={placeholder(
-                  'Módulo de notificações ainda não existe — veja "Atividade recente" no sino ao lado.',
+                  'Módulo de notificações ainda não existe, veja "Atividade recente" no sino ao lado.',
                 )}
               />
 

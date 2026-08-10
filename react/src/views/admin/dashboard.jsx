@@ -1,9 +1,20 @@
 import { useEffect, useState } from 'react';
+import { Tooltip } from '../../components/layout/tooltip';
 import { useErroToast } from '../../components/layout/use-erro-toast';
 import { dashboardApi } from '../../services/admin/api/dashboard.api';
 import { DashboardIdentidadeVisual } from './dashboard-identidade-visual';
 import { DashboardRegrasNegocio } from './dashboard-regras-negocio';
 import { DashboardSaude } from './dashboard-saude';
+
+// Texto do tooltip de "sessões ativas" (10-08-2026, pedido do Lucas) —
+// exportado porque a aba Saúde (dashboard-saude.jsx) mostra a MESMA
+// métrica e precisa do MESMO texto, não uma 2ª cópia que poderia divergir.
+// "Sessões ativas agora" sugere gente online neste instante, mas
+// `contar_metricas_dashboard()` conta sessão não-revogada dentro da
+// validade de 30 dias (REFRESH_TOKEN_DIAS_VALIDADE) — sobe rápido em
+// ambiente de teste, sem ninguém "online" de verdade.
+export const TEXTO_TOOLTIP_SESSOES_ATIVAS =
+  'Contagem de sessões não-revogadas em 30 dias, não gente online.';
 
 // Abas (09-08-2026, Bloco H do prompt do Claude Web: Dashboard como painel
 // global) — cuidado explícito do Claude Web contra virar "tela onde tudo
@@ -35,7 +46,7 @@ function CardMetrica({ rotulo, valor }) {
           'text-3xl font-extrabold ' + (valor === null ? 'texto-fraco opacity-50' : 'texto-forte')
         }
       >
-        {valor === null ? '—' : valor}
+        {valor === null ? '-' : valor}
       </div>
     </div>
   );
@@ -128,14 +139,15 @@ export function Dashboard({ auth }) {
             </span>
             <span className="texto-fraco">
               <strong className="texto-forte">
-                {resumo ? resumo.sessoesAtivas : '—'}
+                {resumo ? resumo.sessoesAtivas : '-'}
               </strong>{' '}
               sessões ativas agora
+              <Tooltip texto={TEXTO_TOOLTIP_SESSOES_ATIVAS} />
             </span>
             <span className="texto-fraco">
               <strong className="texto-forte">
                 {resumo?.notificacoesPendentes === null || resumo === null
-                  ? '—'
+                  ? '-'
                   : resumo.notificacoesPendentes}
               </strong>{' '}
               notificações pendentes
@@ -166,7 +178,7 @@ export function Dashboard({ auth }) {
           <div className="fundo-cartao border borda-forte rounded-xl shadow-sm p-5">
             <h3 className="text-sm font-bold texto-padrao mb-2">Notificações</h3>
             <p className="text-sm texto-fraco">
-              Módulo de notificações ainda não foi implementado — esta prévia vai listar as
+              Módulo de notificações ainda não foi implementado, esta prévia vai listar as
               pendências assim que existir.
             </p>
           </div>

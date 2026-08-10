@@ -51,6 +51,12 @@ export class UsuarioServiceUpdate {
         ? { id_imagem_perfil: dto.idImagemPerfil }
         : {}),
       ...(senhaHash !== undefined ? { senha_hash: senhaHash } : {}),
+      ...(dto.temaPreferido !== undefined
+        ? { tema_preferido: dto.temaPreferido }
+        : {}),
+      ...(dto.escalaFontePreferida !== undefined
+        ? { escala_fonte_preferida: dto.escalaFontePreferida }
+        : {}),
     };
     if (Object.keys(campos).length === 0) {
       // `UPDATE usuario SET WHERE ...` sem coluna nenhuma é SQL inválido —

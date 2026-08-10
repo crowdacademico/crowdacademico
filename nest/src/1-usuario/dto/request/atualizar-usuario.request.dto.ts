@@ -1,7 +1,22 @@
-import { IsInt, IsOptional, IsString, MinLength } from 'class-validator';
+import {
+  IsIn,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+  MinLength,
+} from 'class-validator';
+
+// Mesmos 3 valores que ControleTema (React) usa.
+const TEMAS_VALIDOS = ['claro', 'escuro', 'sistema'] as const;
+// Mesma faixa que ControleFonte (React) usa (ESCALA_MINIMA/ESCALA_MAXIMA).
+const ESCALA_FONTE_MINIMA = 0.875;
+const ESCALA_FONTE_MAXIMA = 1.25;
 
 export class AtualizarUsuarioRequestDto {
-  // Só estes 3 campos existem no GRANT UPDATE de `usuario` (06_grants.sql,
+  // Só estes campos existem no GRANT UPDATE de `usuario` (06_grants.sql,
   // [06-D-2]) — email_verificado, tentativas_login_falhas, bloqueado_ate,
   // deletado etc. só mudam via função do banco (03_funcoes_seguranca.sql,
   // [03-O]), nunca por UPDATE direto. Não adianta adicionar mais campos aqui
@@ -14,6 +29,20 @@ export class AtualizarUsuarioRequestDto {
   @IsOptional()
   @IsInt()
   idImagemPerfil?: number;
+
+  // Preferência POR CONTA (10-08-2026) — antes só vivia no localStorage do
+  // navegador (preferência de aparelho, não de conta); ver comentário
+  // completo em usuario.tema_preferido (01_extensoes_enums_tabelas.sql
+  // [01-D]).
+  @IsOptional()
+  @IsIn(TEMAS_VALIDOS, { message: `temaPreferido precisa ser um de: ${TEMAS_VALIDOS.join(', ')}` })
+  temaPreferido?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(ESCALA_FONTE_MINIMA)
+  @Max(ESCALA_FONTE_MAXIMA)
+  escalaFontePreferida?: number;
 
   @IsOptional()
   @IsString()

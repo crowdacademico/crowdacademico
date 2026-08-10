@@ -16,4 +16,8 @@ export class UsuarioResponseDto {
   criadoEm: Date;
   emailVerificado: boolean;
   ultimoLoginEm: Date | null;
+  // Preferência de tema/tamanho de fonte POR CONTA (10-08-2026) — NULL =
+  // sem preferência salva ainda, o cliente aplica o padrão do app.
+  temaPreferido: string | null;
+  escalaFontePreferida: number | null;
 }

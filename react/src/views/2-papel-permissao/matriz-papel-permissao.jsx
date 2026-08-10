@@ -31,7 +31,7 @@ import { nomeAmigavelPermissao } from '../../services/2-papel-permissao/constant
 const TEXTO_TOOLTIP_MATRIZ =
   'Todo papel e toda permissão cadastrados aparecem aqui, mesmo sem ' +
   "nenhum vínculo ainda (ex.: 'usuario'/'pesquisador' começam sem nenhuma " +
-  'permissão nomeada — o acesso deles normalmente é por serem donos do ' +
+  'permissão nomeada, o acesso deles normalmente é por serem donos do ' +
   'próprio dado, não por permissão, mas nada impede conceder uma se ' +
   'precisar). Clique numa célula pra conceder ou revogar.';
 
@@ -175,7 +175,7 @@ export function MatrizPapelPermissao({ authFetch }) {
                               : 'texto-fraco opacity-50 hover-fundo-sutil hover:opacity-100')
                           }
                         >
-                          {celulaAlterando === chave ? '…' : temPermissao ? '✓' : '—'}
+                          {celulaAlterando === chave ? '…' : temPermissao ? '✓' : '-'}
                         </button>
                       </td>
                     );

@@ -84,8 +84,8 @@ export function LogAuditoriaPainel({ buscar, campoRenomeio }) {
                 <td>{ROTULO_OPERACAO[linha.operacao] ?? linha.operacao}</td>
                 {campoRenomeio ? (
                   <>
-                    <td>{linha.dadosAnteriores?.[campoRenomeio] ?? '—'}</td>
-                    <td>{linha.dadosNovos?.[campoRenomeio] ?? '—'}</td>
+                    <td>{linha.dadosAnteriores?.[campoRenomeio] ?? '-'}</td>
+                    <td>{linha.dadosNovos?.[campoRenomeio] ?? '-'}</td>
                   </>
                 ) : (
                   <td>{linha.camposAlterados ? linha.camposAlterados.join(', ') : ''}</td>

@@ -42,7 +42,7 @@ export function DashboardRegrasNegocio({ auth }) {
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
                   <span className="text-sm font-bold texto-forte">
-                    {config.valor ?? '—'}
+                    {config.valor ?? '-'}
                   </span>
                   <Link
                     to={`/configuracoes/${config.idConfig}/alterar`}

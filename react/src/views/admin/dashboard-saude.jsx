@@ -1,3 +1,6 @@
+import { Tooltip } from '../../components/layout/tooltip';
+import { TEXTO_TOOLTIP_SESSOES_ATIVAS } from './dashboard';
+
 // Aba "Saúde" (09-08-2026, Bloco H do prompt do Claude Web) — recebe o
 // mesmo estado que a faixa de saúde da Visão Geral já calcula (não refaz a
 // requisição). Claude Web sugeriu mostrar "última migration aplicada"
@@ -38,7 +41,9 @@ export function DashboardSaude({ bancoConectado, resumo }) {
         {resumo ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
             <p className="texto-fraco">
-              Sessões ativas <strong className="texto-forte block">{resumo.sessoesAtivas}</strong>
+              Sessões ativas
+              <Tooltip texto={TEXTO_TOOLTIP_SESSOES_ATIVAS} />
+              <strong className="texto-forte block">{resumo.sessoesAtivas}</strong>
             </p>
             <p className="texto-fraco">
               Usuários <strong className="texto-forte block">{resumo.totalUsuarios}</strong>
@@ -56,7 +61,7 @@ export function DashboardSaude({ bancoConectado, resumo }) {
         <p className="text-xs texto-fraco">
           <i className="fa-solid fa-circle-info mr-1"></i>
           Rastreamento de versão de schema (última migration aplicada, divergência de hash)
-          ainda não existe neste projeto — o histórico de mudança de banco vive nos arquivos
+          ainda não existe neste projeto, o histórico de mudança de banco vive nos arquivos
           numerados (01-08) e em "ATUALIZAR O SUPABASE.sql", não numa tabela de controle
           formal.
         </p>

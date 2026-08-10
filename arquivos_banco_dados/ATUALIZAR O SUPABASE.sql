@@ -570,6 +570,40 @@ ON CONFLICT (chave) DO NOTHING;
 
 
 -- ============================================================================
+-- 10-08-2026 — tema/tamanho de fonte por CONTA, não só localStorage do
+-- navegador (pedido do Lucas: "loguei com outra conta... continuaram com o
+-- que já estava marcado"). Só é seguro colar UMA VEZ (as ADD COLUMN falham
+-- na 2ª vez com "column already exists" — inofensivo, só pare no primeiro
+-- erro e pule pro GRANT abaixo, esse sim idempotente).
+-- ============================================================================
+
+ALTER TABLE usuario
+    ADD COLUMN tema_preferido         VARCHAR(10),
+    ADD COLUMN escala_fonte_preferida DECIMAL(4,3);
+
+ALTER TABLE usuario
+    ADD CONSTRAINT "CK_USUARIO_TEMA_PREFERIDO" CHECK (
+        tema_preferido IS NULL OR tema_preferido IN ('claro', 'escuro', 'sistema')
+    ),
+    ADD CONSTRAINT "CK_USUARIO_ESCALA_FONTE_PREFERIDA" CHECK (
+        escala_fonte_preferida IS NULL
+        OR (escala_fonte_preferida >= 0.875 AND escala_fonte_preferida <= 1.25)
+    );
+
+GRANT SELECT (
+    id_usuario, nome, email, id_imagem_perfil, criado_em, deletado,
+    deletado_em, deletado_por,
+    email_verificado, senha_hash, tentativas_login_falhas, bloqueado_ate,
+    ultimo_login_em, ultimo_login_ip,
+    suspenso_ate, motivo_suspensao, suspenso_por,
+    tema_preferido, escala_fonte_preferida
+) ON public.usuario TO app_nestjs;
+
+GRANT UPDATE (nome, id_imagem_perfil, senha_hash, tema_preferido, escala_fonte_preferida)
+    ON public.usuario TO app_nestjs;
+
+
+-- ============================================================================
 -- NÃO ENTRA NESTE ARQUIVO (registrado aqui só pra não se perder)
 -- ============================================================================
 

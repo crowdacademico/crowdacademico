@@ -24,7 +24,7 @@ export function traduzirErro(erro) {
     return 'Não foi possível falar com o servidor. Verifique sua internet e tente de novo.';
   }
   if (erro.status === 429) {
-    return 'Muitas tentativas em pouco tempo — aguarde um instante e tente de novo.';
+    return 'Muitas tentativas em pouco tempo, aguarde um instante e tente de novo.';
   }
   return erro.message || `Erro inesperado (HTTP ${erro.status}).`;
 }

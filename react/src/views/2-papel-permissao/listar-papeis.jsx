@@ -1,10 +1,22 @@
 import { useCallback, useState } from 'react';
 import { GenericTable } from '../../components/crud/generic-table';
-import { papelApi, permissaoApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
+import {
+  papelApi,
+  papelPermissaoApi,
+  permissaoApi,
+} from '../../services/2-papel-permissao/api/papel-permissao.api';
+import { ORDEM_PODER_PAPEL } from '../../services/2-papel-permissao/constants/papel-ordem-poder';
 import { detalhePermissao } from '../../services/2-papel-permissao/constants/permissao-nomes-amigaveis';
 import { logAuditoriaApi } from '../../services/28-log-auditoria/api/log-auditoria.api';
 import { MatrizPapelPermissao } from './matriz-papel-permissao';
 import { ModalDetalhePermissao } from './modal-detalhe-permissao';
+
+// Impacto sem entrada no dicionário (permissão nova, ainda não documentada
+// em permissao-nomes-amigaveis.js) — precisa de um valor de verdade pra
+// aparecer no filtro por impacto, "null" bruto viraria uma opção sem
+// rótulo nenhum no dropdown.
+const IMPACTO_NAO_CLASSIFICADO = 'não classificado';
+const ORDEM_IMPACTO = ['alto', 'médio', 'baixo', IMPACTO_NAO_CLASSIFICADO];
 
 // Aba "Papéis & Permissões" do painel admin — rota /admin/papeis. Reúne 3
 // blocos read-only/de gestão do módulo 2-papel-permissao (ver nest/src/
@@ -24,14 +36,44 @@ export function ListarPapeis({ auth }) {
   // 100% no frontend (ver permissao-nomes-amigaveis.js), o `nome` cru do
   // banco não muda em lugar nenhum, só ganha uma 2ª coluna "chave" pra
   // quem precisa do valor literal.
+  //
+  // `papeis`/`impacto` (09-08-2026, pedido do Lucas: filtro duplo, mesmo
+  // espírito do filtro de papel em ListarUsuarios) — não viram coluna
+  // nova na tabela (só dado extra pra faceta filtrar), por isso não
+  // aparecem em `colunas` abaixo. `papeis` é lido AO VIVO da matriz Papel
+  // × Permissão (mesma fonte do ModalDetalhePermissao, "quem tem hoje"),
+  // não hardcoded — desatualizaria sozinho toda vez que alguém conceder/
+  // revogar pela matriz.
   const listarPermissoes = useCallback(
     () =>
-      permissaoApi.listar(auth.authFetch).then((permissoes) =>
-        permissoes.map((p) => {
+      Promise.all([
+        permissaoApi.listar(auth.authFetch),
+        papelApi.listar(auth.authFetch),
+        papelPermissaoApi.listar(auth.authFetch),
+      ]).then(([permissoes, papeis, vinculos]) => {
+        const nomePapelPorId = new Map(papeis.map((papel) => [papel.idPapel, papel.nome]));
+        const papeisPorPermissao = new Map();
+        vinculos.forEach((vinculo) => {
+          const nomePapel = nomePapelPorId.get(vinculo.idPapel);
+          if (!nomePapel) {
+            return;
+          }
+          const atuais = papeisPorPermissao.get(vinculo.idPermissao) ?? [];
+          atuais.push(nomePapel);
+          papeisPorPermissao.set(vinculo.idPermissao, atuais);
+        });
+
+        return permissoes.map((p) => {
           const detalhe = detalhePermissao(p.nome);
-          return { ...p, nomeAmigavel: detalhe.nome, resumo: detalhe.resumo };
-        }),
-      ),
+          return {
+            ...p,
+            nomeAmigavel: detalhe.nome,
+            resumo: detalhe.resumo,
+            impacto: detalhe.impacto ?? IMPACTO_NAO_CLASSIFICADO,
+            papeis: (papeisPorPermissao.get(p.idPermissao) ?? []).join(', '),
+          };
+        });
+      }),
     [auth.authFetch],
   );
   const [permissaoDetalhada, setPermissaoDetalhada] = useState(null);
@@ -93,6 +135,15 @@ export function ListarPapeis({ auth }) {
           ]}
           chavePrimaria="idPermissao"
           listar={listarPermissoes}
+          // 2 facetas lado a lado (09-08-2026, pedido do Lucas: "gostei
+          // tanto do filtro de usuário... duas colunas, que funcionassem
+          // juntos ou individualmente") — funcionam de forma independente
+          // (marcar um papel não mexe no impacto e vice-versa) e se
+          // combinam com E entre si (GenericTable já cuida disso sozinho).
+          filtrosFacetados={[
+            { chave: 'papeis', rotulo: 'Papel', ordem: ORDEM_PODER_PAPEL },
+            { chave: 'impacto', rotulo: 'Impacto', ordem: ORDEM_IMPACTO },
+          ]}
         />
       </div>
       <div className="admin-content-painel">

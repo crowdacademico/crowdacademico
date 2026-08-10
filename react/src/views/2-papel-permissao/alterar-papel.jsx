@@ -76,7 +76,7 @@ export function AlterarPapel({ auth }) {
     <CartaoFormulario
       icone="fa-user-tag"
       titulo="Alterar Papel"
-      subtitulo="Só o nome exibido muda — o identificador interno usado pelas regras do sistema nunca é afetado."
+      subtitulo="Só o nome exibido muda, o identificador interno usado pelas regras do sistema nunca é afetado."
       rodape={
         encontrado && (
           <div className="flex gap-3">
