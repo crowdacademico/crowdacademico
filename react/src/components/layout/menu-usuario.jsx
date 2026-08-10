@@ -67,7 +67,7 @@ export function MenuUsuario({ auth }) {
               </div>
 
               <Link
-                to="/minha-conta"
+                to="/admin/minha-conta"
                 onClick={() => setAberto(false)}
                 className="flex items-center gap-3 px-4 py-2.5 text-sm font-semibold texto-padrao hover-fundo-sutil transition-colors"
               >

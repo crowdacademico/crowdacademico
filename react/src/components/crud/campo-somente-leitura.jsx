@@ -7,7 +7,11 @@ export function CampoSomenteLeitura({ rotulo, valor }) {
   return (
     <div>
       <span className="rotulo-campo">{rotulo}</span>
-      <p className="text-sm font-semibold texto-forte">{String(valor ?? '')}</p>
+      {/* break-words (10-08-2026, achado do Lucas: e-mail comprido saindo
+          pra fora do card "Metadados", coluna lateral estreita) — sem
+          isso, um valor sem espaço nenhum (e-mail, token) não tem onde
+          quebrar linha sozinho e estica o card na horizontal. */}
+      <p className="text-sm font-semibold texto-forte break-words">{String(valor ?? '')}</p>
     </div>
   );
 }

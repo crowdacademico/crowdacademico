@@ -96,7 +96,7 @@ export function ListarPapeis({ auth }) {
           ]}
           chavePrimaria="idPapel"
           listar={listarPapeis}
-          rotaBase="/papeis"
+          rotaBase="/admin/papeis"
           acoes={['alterar']}
           buscarLog={buscarLogPapel}
           // "De"/"Para" em vez de "Campos alterados" (09-08-2026, pedido

@@ -114,7 +114,7 @@ export function BuscaGlobal({ auth }) {
             categoria: 'Usuários',
             rotulo: u.nome,
             subtitulo: u.email,
-            caminho: `/usuarios/${u.idUsuario}/consultar`,
+            caminho: `/admin/usuarios/${u.idUsuario}/consultar`,
             icone: 'fa-user',
           })),
         ...dados.papeis
@@ -123,7 +123,7 @@ export function BuscaGlobal({ auth }) {
           .map((p) => ({
             categoria: 'Papéis',
             rotulo: p.nome,
-            caminho: `/papeis/${p.idPapel}/alterar`,
+            caminho: `/admin/papeis/${p.idPapel}/alterar`,
             icone: 'fa-user-shield',
           })),
         // Permissão não tem tela própria (catálogo só-leitura) — manda pra
@@ -144,7 +144,7 @@ export function BuscaGlobal({ auth }) {
             categoria: 'Configurações',
             rotulo: c.chave,
             subtitulo: c.descricao,
-            caminho: `/configuracoes/${c.idConfig}/consultar`,
+            caminho: `/admin/configuracoes/${c.idConfig}/consultar`,
             icone: 'fa-sliders',
           })),
       );

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
 import { CartaoFormulario } from '../../components/crud/cartao-formulario';
+import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
@@ -85,15 +85,21 @@ export function ExcluirUsuario({ auth }) {
         <div className="p-10 space-y-6">
           {erro && <p className="text-red-700 text-sm font-bold text-center">{erro}</p>}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-            <CampoSomenteLeitura rotulo="id" valor={usuario.idUsuario} />
-            <CampoSomenteLeitura rotulo="Nome" valor={usuario.nome} />
-            <CampoSomenteLeitura rotulo="E-mail" valor={usuario.email} />
-            <CampoSomenteLeitura
+          {/* SecaoFicha/CampoFicha (10-08-2026, rodada Claude Web
+              "embelezar o painel", item 3: "usar FichaConsulta INTEIRA em
+              modo leitura mostrando o que será excluído, em vez de repetir
+              campos") — mesmos blocos que Consultar Usuário usa pro mesmo
+              dado, zero componente duplicado (CampoSomenteLeitura, a
+              versão antiga de "campo desabilitado", saiu daqui). */}
+          <SecaoFicha titulo="O que será excluído">
+            <CampoFicha rotulo="id" valor={usuario.idUsuario} />
+            <CampoFicha rotulo="Nome" valor={usuario.nome} />
+            <CampoFicha rotulo="E-mail" valor={usuario.email} largura="cheia" />
+            <CampoFicha
               rotulo="E-mail verificado"
               valor={usuario.emailVerificado ? 'Sim' : 'Não'}
             />
-          </div>
+          </SecaoFicha>
 
           {/* Consequência real (09-08-2026, Bloco I: explicar o que
               acontece de verdade, não só "não pode ser desfeita") — é

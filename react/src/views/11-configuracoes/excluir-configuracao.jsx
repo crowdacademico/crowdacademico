@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
 import { CartaoFormulario } from '../../components/crud/cartao-formulario';
+import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
 import { configuracaoApi } from '../../services/11-configuracoes/api/configuracao.api';
@@ -73,13 +73,16 @@ export function ExcluirConfiguracao({ auth }) {
         <div className="p-10 space-y-6">
           {erro && <p className="text-red-700 text-sm font-bold text-center">{erro}</p>}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-            <CampoSomenteLeitura rotulo="Chave" valor={configuracao.chave} />
-            <CampoSomenteLeitura rotulo="Valor" valor={configuracao.valor} />
-            <CampoSomenteLeitura rotulo="Tipo" valor={configuracao.tipo} />
-            <CampoSomenteLeitura rotulo="Ativo" valor={configuracao.ativo ? 'Sim' : 'Não'} />
-            <CampoSomenteLeitura rotulo="Descrição" valor={configuracao.descricao} />
-          </div>
+          {/* SecaoFicha/CampoFicha (10-08-2026, mesma rodada do item 3 em
+              Excluir Usuário) — mesmos blocos que Consultar usa, zero
+              componente duplicado. */}
+          <SecaoFicha titulo="O que será excluído">
+            <CampoFicha rotulo="Chave" valor={configuracao.chave} largura="cheia" />
+            <CampoFicha rotulo="Valor" valor={configuracao.valor} />
+            <CampoFicha rotulo="Tipo" valor={configuracao.tipo} />
+            <CampoFicha rotulo="Ativo" valor={configuracao.ativo ? 'Sim' : 'Não'} />
+            <CampoFicha rotulo="Descrição" valor={configuracao.descricao} largura="cheia" />
+          </SecaoFicha>
 
           {/* Diferente de Excluir Usuário: configuração não tem exclusão
               lógica (sem coluna `deletado`) — remover aqui é DELETE de

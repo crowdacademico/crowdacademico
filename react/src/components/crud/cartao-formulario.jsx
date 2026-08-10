@@ -52,8 +52,16 @@ export function CartaoFormulario({
   return (
     <div className="p-4 sm:p-8 fundo-pagina">
       <div className={'mx-auto w-full ' + LARGURAS[largura]}>
-        <div className="fundo-cartao rounded-3xl shadow-2xl border borda-forte overflow-hidden">
-          <div className="p-10 text-center border-b borda-padrao fundo-sutil">
+        {/* SEM overflow-hidden no cartão inteiro (10-08-2026, achado
+            corrigindo o mesmo problema em ficha-consulta.jsx) —
+            overflow-hidden cria um contexto de scroll que o `sticky` do
+            rodapé não atravessa (ele simplesmente nunca gruda). Cada
+            pedaço arredonda o PRÓPRIO canto (`rounded-t-3xl`/
+            `rounded-b-3xl`) em vez de depender de recorte do pai — mesma
+            lição do artefato de cantinho já corrigido em toast-provider/
+            admin-sidebar nesta sessão. */}
+        <div className="fundo-cartao rounded-3xl shadow-2xl border borda-forte">
+          <div className="p-10 text-center border-b borda-padrao fundo-sutil rounded-t-3xl">
             <div
               className={
                 'w-14 h-14 rounded-2xl mx-auto flex items-center justify-center font-bold text-2xl mb-5 shadow-lg ' +
@@ -69,7 +77,9 @@ export function CartaoFormulario({
           {children}
 
           {rodape && (
-            <div className="p-6 border-t borda-padrao fundo-cartao sticky bottom-0">{rodape}</div>
+            <div className="p-6 border-t borda-padrao fundo-cartao rounded-b-3xl sticky bottom-0">
+              {rodape}
+            </div>
           )}
         </div>
       </div>

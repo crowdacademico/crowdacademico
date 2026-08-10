@@ -21,25 +21,33 @@ import { ListarConfiguracoes } from '../../views/11-configuracoes/listar-configu
 // rotuloBreadcrumb: null = não aparece no breadcrumb.
 //
 // Duas listas, não uma, porque descrevem coisas diferentes: ROTAS são
-// páginas soltas (Header/Breadcrumb/Footer, sem sidebar); ROTAS_ADMIN são
-// as abas do painel — cada uma virou rota de verdade (/admin/usuarios,
-// /admin/papeis, /admin/configuracoes) precisamente pra sumir com o
-// problema que a gente tinha antes (abas eram só estado local, sem URL:
-// sem link direto, botão Voltar não funcionava, F5 sempre voltava pra
-// "Usuários"). Renderizadas dentro do <Outlet/> de
+// páginas PÚBLICAS/pré-login (Header/Breadcrumb/Footer, sem sidebar) —
+// login, cadastro, verificar e-mail. ROTAS_ADMIN é TUDO que precisa do
+// menu lateral (10-08-2026, pedido do Lucas: "não tem pq o menu lateral
+// sumir" em Alterar/Consultar/Excluir/Minha Conta — antes essas telas
+// viviam em ROTAS, por isso perdiam o menu E o breadcrumb não sabia de
+// qual listagem elas vieram). Renderizadas dentro do <Outlet/> de
 // views/admin/admin-layout.jsx (sidebar + área de conteúdo compartilhadas).
 //
-// rotuloMenu é o que aparece no menu lateral (admin-sidebar.jsx via
-// admin-menu.constants.js) — é a MESMA lista, não uma 3ª cópia: antes o
-// menu lateral (GRUPOS_MENU_ADMIN) e as rotas eram duas listas separadas
-// que podiam desalinhar; agora o menu lê ROTAS_ADMIN direto.
+// rotuloMenu (só nas 3 abas de verdade) é o que aparece no menu lateral
+// (admin-sidebar.jsx via admin-menu.constants.js) — é a MESMA lista, não
+// uma 3ª cópia. As rotas de detalhe (Alterar/Consultar/Excluir/Criar/
+// Minha Conta) NÃO têm rotuloMenu/grupoMenu de propósito — admin-menu.
+// constants.js só lista item com grupoMenu preenchido, então elas nunca
+// viram um botão clicável no menu, só ganham a moldura (sidebar visível,
+// com a aba "pai" destacada sozinha pelo NavLink — a URL aninhada, ex.:
+// /admin/usuarios/8/alterar, já COMEÇA com /admin/usuarios, então o
+// próprio NavLink de "Usuários" já marca "ativo" sem código nenhum extra).
+//
+// `paiCaminho` (10-08-2026) — só nas rotas de detalhe: o `caminho`
+// absoluto da listagem "dona" delas, pro breadcrumb montar a cadeia
+// completa (Início > Usuários > Alterar Usuário), não só o último nível.
 //
 // grupoMenu (08-08-2026, pedido do Lucas: Dashboard fora do grupo
 // CADASTROS, com divisória própria) diz a admin-menu.constants.js em qual
 // grupo do menu lateral o item entra — `null` = fora de qualquer grupo
-// (item solo, sem título de seção acima dele). Continua sendo a ÚNICA
-// lista (nenhuma lista paralela nova): admin-menu.constants.js só FILTRA
-// ROTAS_ADMIN por este campo em vez de jogar tudo dentro de CADASTROS.
+// (item solo, sem título de seção acima dele); ausente (undefined) = nem
+// aparece no menu (rotas de detalhe).
 export const ROTAS = [
   { caminho: '/login', elemento: LoginPage, rotuloBreadcrumb: 'Login' },
   { caminho: '/cadastro', elemento: CadastroPage, rotuloBreadcrumb: 'Criar conta' },
@@ -47,48 +55,6 @@ export const ROTAS = [
     caminho: '/verificar-email',
     elemento: VerificarEmailPage,
     rotuloBreadcrumb: 'Verificar e-mail',
-  },
-  { caminho: '/minha-conta', elemento: MinhaConta, rotuloBreadcrumb: 'Minha Conta' },
-  { caminho: '/usuarios/criar', elemento: CriarUsuario, rotuloBreadcrumb: 'Criar Usuário' },
-  {
-    caminho: '/usuarios/:id/alterar',
-    elemento: AlterarUsuario,
-    rotuloBreadcrumb: 'Alterar Usuário',
-  },
-  {
-    caminho: '/usuarios/:id/consultar',
-    elemento: ConsultarUsuario,
-    rotuloBreadcrumb: 'Consultar Usuário',
-  },
-  {
-    caminho: '/usuarios/:id/excluir',
-    elemento: ExcluirUsuario,
-    rotuloBreadcrumb: 'Excluir Usuário',
-  },
-  {
-    caminho: '/papeis/:id/alterar',
-    elemento: AlterarPapel,
-    rotuloBreadcrumb: 'Alterar Papel',
-  },
-  {
-    caminho: '/configuracoes/criar',
-    elemento: CriarConfiguracao,
-    rotuloBreadcrumb: 'Criar Configuração',
-  },
-  {
-    caminho: '/configuracoes/:id/alterar',
-    elemento: AlterarConfiguracao,
-    rotuloBreadcrumb: 'Alterar Configuração',
-  },
-  {
-    caminho: '/configuracoes/:id/consultar',
-    elemento: ConsultarConfiguracao,
-    rotuloBreadcrumb: 'Consultar Configuração',
-  },
-  {
-    caminho: '/configuracoes/:id/excluir',
-    elemento: ExcluirConfiguracao,
-    rotuloBreadcrumb: 'Excluir Configuração',
   },
 ];
 
@@ -131,5 +97,82 @@ export const ROTAS_ADMIN = [
     rotuloBreadcrumb: 'Configurações',
     grupoMenu: 'CADASTROS',
     icone: 'fa-sliders',
+  },
+
+  // Minha Conta (10-08-2026) — dentro do painel agora (sidebar visível),
+  // mas sem rotuloMenu/grupoMenu: não é uma aba clicável do menu (o
+  // acesso continua sendo pelo dropdown do cabeçalho), só ganha a
+  // moldura. Sem paiCaminho — não é filha de nenhuma listagem, o
+  // breadcrumb já fica correto como "Início > Minha Conta".
+  { caminho: '/admin/minha-conta', caminhoRelativo: 'minha-conta', elemento: MinhaConta, rotuloBreadcrumb: 'Minha Conta' },
+
+  // Usuário — filhas de /admin/usuarios (paiCaminho), mesmo padrão pras
+  // outras 2 seções abaixo.
+  {
+    caminho: '/admin/usuarios/criar',
+    caminhoRelativo: 'usuarios/criar',
+    elemento: CriarUsuario,
+    rotuloBreadcrumb: 'Criar Usuário',
+    paiCaminho: '/admin/usuarios',
+  },
+  {
+    caminho: '/admin/usuarios/:id/alterar',
+    caminhoRelativo: 'usuarios/:id/alterar',
+    elemento: AlterarUsuario,
+    rotuloBreadcrumb: 'Alterar Usuário',
+    paiCaminho: '/admin/usuarios',
+  },
+  {
+    caminho: '/admin/usuarios/:id/consultar',
+    caminhoRelativo: 'usuarios/:id/consultar',
+    elemento: ConsultarUsuario,
+    rotuloBreadcrumb: 'Consultar Usuário',
+    paiCaminho: '/admin/usuarios',
+  },
+  {
+    caminho: '/admin/usuarios/:id/excluir',
+    caminhoRelativo: 'usuarios/:id/excluir',
+    elemento: ExcluirUsuario,
+    rotuloBreadcrumb: 'Excluir Usuário',
+    paiCaminho: '/admin/usuarios',
+  },
+
+  // Papel — filha de /admin/papeis.
+  {
+    caminho: '/admin/papeis/:id/alterar',
+    caminhoRelativo: 'papeis/:id/alterar',
+    elemento: AlterarPapel,
+    rotuloBreadcrumb: 'Alterar Papel',
+    paiCaminho: '/admin/papeis',
+  },
+
+  // Configuração — filhas de /admin/configuracoes.
+  {
+    caminho: '/admin/configuracoes/criar',
+    caminhoRelativo: 'configuracoes/criar',
+    elemento: CriarConfiguracao,
+    rotuloBreadcrumb: 'Criar Configuração',
+    paiCaminho: '/admin/configuracoes',
+  },
+  {
+    caminho: '/admin/configuracoes/:id/alterar',
+    caminhoRelativo: 'configuracoes/:id/alterar',
+    elemento: AlterarConfiguracao,
+    rotuloBreadcrumb: 'Alterar Configuração',
+    paiCaminho: '/admin/configuracoes',
+  },
+  {
+    caminho: '/admin/configuracoes/:id/consultar',
+    caminhoRelativo: 'configuracoes/:id/consultar',
+    elemento: ConsultarConfiguracao,
+    rotuloBreadcrumb: 'Consultar Configuração',
+    paiCaminho: '/admin/configuracoes',
+  },
+  {
+    caminho: '/admin/configuracoes/:id/excluir',
+    caminhoRelativo: 'configuracoes/:id/excluir',
+    elemento: ExcluirConfiguracao,
+    rotuloBreadcrumb: 'Excluir Configuração',
+    paiCaminho: '/admin/configuracoes',
   },
 ];

@@ -63,7 +63,7 @@ export function ListarUsuarios({ auth }) {
       <GenericTable
         titulo="Usuários"
         acaoTopo={
-          <Link to="/usuarios/criar" className="btn btn-primary">
+          <Link to="/admin/usuarios/criar" className="btn btn-primary">
             Criar
           </Link>
         }
@@ -76,7 +76,7 @@ export function ListarUsuarios({ auth }) {
         ]}
         chavePrimaria="idUsuario"
         listar={listarUsuarios}
-        rotaBase="/usuarios"
+        rotaBase="/admin/usuarios"
         // Botão de filtro por papel (09-08-2026, pedido do Lucas), na mesma
         // linha do filtro de texto, padrão "Todos" (nenhum papel marcado),
         // marcar um ou mais esconde o resto. Opções vêm sozinhas dos

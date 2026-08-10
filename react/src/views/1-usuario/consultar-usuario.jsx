@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router';
+import { Link, useNavigate, useParams } from 'react-router';
 import { CampoFicha, FichaConsulta, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { useErroToast } from '../../components/layout/use-erro-toast';
 import { usuarioPapelApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
@@ -81,98 +81,135 @@ export function ConsultarUsuario({ auth }) {
     <FichaConsulta
       titulo={usuario.nome}
       subtitulo={usuario.email}
+      largura="larga"
       badges={papeis?.map((papel) => (
         <span key={papel.nomePapel} className="badge badge-neutro">
           {papel.nomePapel}
         </span>
       ))}
+      // Botão "Alterar" no topo (10-08-2026, item 4: "fluxo consultar→
+      // alterar é o mais comum em painel admin", hoje só dava pra editar
+      // voltando pra listagem primeiro).
+      acaoTopo={
+        <Link to={`/admin/usuarios/${usuario.idUsuario}/alterar`} className="btn btn-primary">
+          <i className="fa-solid fa-pen"></i> Alterar
+        </Link>
+      }
       acoes={
         <button type="button" onClick={() => navigate(-1)} className="btn btn-secondary w-full">
           Voltar
         </button>
       }
     >
-      <SecaoFicha titulo="Dados da conta">
-        <CampoFicha rotulo="id" valor={usuario.idUsuario} />
-        <CampoFicha rotulo="Id da imagem de perfil" valor={usuario.idImagemPerfil} />
-        <CampoFicha
-          rotulo="Criado em"
-          valor={usuario.criadoEm && new Date(usuario.criadoEm).toLocaleString('pt-BR')}
-        />
-        <CampoFicha
-          rotulo="E-mail verificado"
-          valor={usuario.emailVerificado ? 'Sim' : 'Não'}
-        />
-      </SecaoFicha>
+      {/* 2 colunas a partir de lg (10-08-2026, item 4, mesmo padrão de
+          Alterar Usuário) — principal (2/3): dados de verdade da conta.
+          Lateral (1/3): Papéis. "Sessões ativas" NÃO entra aqui (mesma
+          decisão do Alterar Usuário — não existe endpoint do admin ver
+          sessão de outra pessoa, só o histórico de login já existente
+          abaixo, que já é colapsado por padrão desde sempre). */}
+      <div className="grid lg:grid-cols-3 gap-6 items-start">
+        <div className="lg:col-span-2 space-y-6">
+          <SecaoFicha titulo="Dados da conta">
+            <CampoFicha rotulo="id" valor={usuario.idUsuario} />
+            <CampoFicha rotulo="Id da imagem de perfil" valor={usuario.idImagemPerfil} />
+            <CampoFicha
+              rotulo="Criado em"
+              valor={usuario.criadoEm && new Date(usuario.criadoEm).toLocaleString('pt-BR')}
+            />
+            <CampoFicha
+              rotulo="E-mail verificado"
+              valor={usuario.emailVerificado ? 'Sim' : 'Não'}
+            />
+          </SecaoFicha>
 
-      <SecaoFicha titulo="Acesso">
-        {/* Tirado do log de auditoria de propósito (07-08-2026, pedido do
-            Lucas: login bem-sucedido lotava o log com uma linha por
-            login) — mora só aqui agora, não no log. */}
-        <CampoFicha
-          rotulo="Último login em"
-          largura="cheia"
-          valor={
-            usuario.ultimoLoginEm
-              ? new Date(usuario.ultimoLoginEm).toLocaleString('pt-BR')
-              : 'Nunca'
-          }
-          acao={
-            usuario.ultimoLoginEm && (
-              <button
-                type="button"
-                onClick={aoAlternarLogins}
-                aria-label="Ver logins anteriores"
-                title="Ver logins anteriores"
-                className="texto-fraco hover-texto-forte transition-colors shrink-0"
-              >
-                <i
-                  className={
-                    'fa-solid fa-chevron-down transition-transform' +
-                    (loginsAbertos ? ' rotate-180' : '')
-                  }
-                ></i>
-              </button>
-            )
-          }
-        >
-          {loginsAbertos && (
-            <div className="mt-2 rounded-lg border borda-padrao fundo-sutil p-3 text-sm">
-              {carregandoLogins ? (
-                <p className="texto-fraco">Carregando...</p>
-              ) : loginsAnteriores.length === 0 ? (
-                <p className="texto-fraco">Nenhum login anterior registrado.</p>
-              ) : (
-                <ul className="space-y-1">
-                  {loginsAnteriores.map((login, indice) => (
-                    // criado_em não é único por usuário (chave melhor não
-                    // existe aqui — a resposta não traz id_sessao de
-                    // propósito, é histórico de login, não uma entidade
-                    // gerenciável pelo painel).
-                    <li key={indice} className="texto-padrao">
-                      {new Date(login.logadoEm).toLocaleString('pt-BR')}
-                    </li>
-                  ))}
-                </ul>
+          <SecaoFicha titulo="Acesso">
+            {/* Tirado do log de auditoria de propósito (07-08-2026, pedido
+                do Lucas: login bem-sucedido lotava o log com uma linha por
+                login) — mora só aqui agora, não no log. Colapsado por
+                padrão desde que existe (loginsAbertos começa false). */}
+            <CampoFicha
+              rotulo="Último login em"
+              largura="cheia"
+              valor={
+                usuario.ultimoLoginEm
+                  ? new Date(usuario.ultimoLoginEm).toLocaleString('pt-BR')
+                  : 'Nunca'
+              }
+              acao={
+                usuario.ultimoLoginEm && (
+                  <button
+                    type="button"
+                    onClick={aoAlternarLogins}
+                    aria-label="Ver logins anteriores"
+                    title="Ver logins anteriores"
+                    className="texto-fraco hover-texto-forte transition-colors shrink-0"
+                  >
+                    <i
+                      className={
+                        'fa-solid fa-chevron-down transition-transform' +
+                        (loginsAbertos ? ' rotate-180' : '')
+                      }
+                    ></i>
+                  </button>
+                )
+              }
+            >
+              {loginsAbertos && (
+                <div className="mt-2 rounded-lg border borda-padrao fundo-sutil p-3 text-sm max-h-64 overflow-y-auto">
+                  {carregandoLogins ? (
+                    <p className="texto-fraco">Carregando...</p>
+                  ) : loginsAnteriores.length === 0 ? (
+                    <p className="texto-fraco">Nenhum login anterior registrado.</p>
+                  ) : (
+                    <ul className="space-y-1">
+                      {loginsAnteriores.map((login, indice) => (
+                        // criado_em não é único por usuário (chave melhor
+                        // não existe aqui — a resposta não traz id_sessao
+                        // de propósito, é histórico de login, não uma
+                        // entidade gerenciável pelo painel).
+                        <li key={indice} className="texto-padrao">
+                          {new Date(login.logadoEm).toLocaleString('pt-BR')}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               )}
-            </div>
-          )}
-        </CampoFicha>
-      </SecaoFicha>
+            </CampoFicha>
+          </SecaoFicha>
 
-      <SecaoFicha titulo="Papéis">
-        <CampoFicha
-          rotulo="Papéis atribuídos"
-          largura="cheia"
-          valor={
-            papeis === null
-              ? undefined
-              : papeis.length === 0
-                ? null
-                : papeis.map((papel) => papel.nomePapel).join(', ')
-          }
-        />
-      </SecaoFicha>
+          {/* Perfil de Pesquisador (10-08-2026, item 4: "mostrar CPF
+              mascarado e links acadêmicos... como 'não informado' enquanto
+              o módulo não existir") — mesmo aviso honesto da versão
+              editável em Alterar Usuário, aqui só leitura. */}
+          <SecaoFicha titulo="Perfil de Pesquisador">
+            <div className="sm:col-span-2 flex items-start gap-2 rounded-lg fundo-info texto-info p-3">
+              <i className="fa-solid fa-circle-info mt-0.5 shrink-0"></i>
+              <p className="text-xs">
+                Módulo de Perfil de Pesquisador ainda não foi implementado.
+              </p>
+            </div>
+            <CampoFicha rotulo="CPF" valor="Não informado (módulo inexistente)" />
+            <CampoFicha rotulo="Link acadêmico" valor="Não informado (módulo inexistente)" />
+          </SecaoFicha>
+        </div>
+
+        <div className="space-y-6">
+          <SecaoFicha titulo="Papéis">
+            <CampoFicha
+              rotulo="Papéis atribuídos"
+              largura="cheia"
+              valor={
+                papeis === null
+                  ? undefined
+                  : papeis.length === 0
+                    ? null
+                    : papeis.map((papel) => papel.nomePapel).join(', ')
+              }
+            />
+          </SecaoFicha>
+        </div>
+      </div>
     </FichaConsulta>
   );
 }

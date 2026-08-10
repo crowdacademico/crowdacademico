@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
+import { IconeGoogle } from '../../components/3-auth/icone-google';
 import { useErroToast } from '../../components/layout/use-erro-toast';
 
 // Cópia fiel de telas/login/login.html do Projeto de Interface real —
@@ -107,18 +108,34 @@ export function LoginPage({ auth }) {
             <div className="flex-grow border-t-2 borda-padrao"></div>
           </div>
 
+          {/* Botão do Google (10-08-2026, achado do Claude Web: o ícone
+              era `fa-brands fa-google text-red-500`, um G vermelho
+              chapado — nada parecido com o que Google/GitHub/qualquer
+              site usa). Logo oficial de 4 cores via SVG (icone-google.jsx),
+              texto "Continuar com Google" (era só "Google"). Cores do
+              fundo/borda continuam nos tokens de tema (fundo-cartao/
+              borda-padrao), não fixas em branco — diferente da diretriz
+              oficial (que é sempre branca), mas consistente com o app
+              inteiro já reagir ao tema escuro; um botão sempre branco
+              destoaria numa tela escura. */}
           <button
             type="button"
             onClick={() => window.alert('Login social com Google simulado no protótipo.')}
-            className="w-full border-2 borda-padrao texto-forte font-bold py-3.5 rounded-xl hover-fundo-sutil transition flex items-center justify-center gap-3 text-sm"
+            className="w-full border-2 borda-padrao fundo-cartao texto-forte font-bold py-3.5 rounded-xl hover-fundo-sutil transition flex items-center justify-center gap-3 text-sm"
           >
-            <i className="fa-brands fa-google text-red-500 text-lg"></i> Google
+            <IconeGoogle /> Continuar com Google
           </button>
 
-          <p className="text-xs texto-fraco text-center">
-            Não tem conta?{' '}
+          {/* Chamada de cadastro (10-08-2026, achado do Claude Web:
+              "pequeno demais pro que é a segunda ação mais importante da
+              tela") — text-xs → text-sm, mais respiro acima, separador ">
+              antes de sumir dentro do "ou acesse com". Continua sendo
+              link, não um 2º botão cheio (dois botões grandes competiriam
+              entre si). */}
+          <p className="text-sm texto-fraco text-center pt-2">
+            Ainda não tem cadastro?{' '}
             <Link to="/cadastro" className="text-primary font-bold underline">
-              Cadastre-se
+              Clique aqui
             </Link>
           </p>
         </form>

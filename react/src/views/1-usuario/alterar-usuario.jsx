@@ -6,6 +6,7 @@ import { useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-n
 import { SecaoFicha } from '../../components/crud/ficha-consulta';
 import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
+import { formatarCpf } from '../../services/constant/utils/formatacao.util';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { papelApi, usuarioPapelApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
 import { SecaoModeracao } from './secao-moderacao';
@@ -332,11 +333,73 @@ export function AlterarUsuario({ auth }) {
                 </div>
               </SecaoFicha>
 
+              {/* Perfil de Pesquisador (10-08-2026, rodada Claude Web
+                  "embelezar o painel", item 2, pedido explícito do Lucas:
+                  "já peça só para criar o campo textbox para o CPF... e um
+                  campo de link acadêmico", mesmo sem o módulo
+                  6-perfil-pesquisador existir ainda). DEMONSTRATIVO de
+                  propósito — desabilitado, com aviso honesto no topo, mesma
+                  linguagem visual dos placeholders do Dashboard (aba
+                  Identidade Visual/Notificações): nada de campo que parece
+                  funcionar e não salva. `formatarCpf`/`mascararCpf` (novo
+                  util em formatacao.util.js) já existem prontos pro dia
+                  que o backend real chegar — só trocar `disabled` por
+                  estado de verdade, nada de reescrever a máscara. */}
+              <SecaoFicha titulo="Perfil de Pesquisador">
+                <div className="sm:col-span-2 flex items-start gap-2 rounded-lg fundo-info texto-info p-3">
+                  <i className="fa-solid fa-circle-info mt-0.5 shrink-0"></i>
+                  <p className="text-xs">
+                    Módulo de Perfil de Pesquisador ainda não foi implementado. Estes campos
+                    são demonstrativos, não salvam nada ainda.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="rotulo-campo">CPF</label>
+                  <input
+                    type="text"
+                    disabled
+                    placeholder={formatarCpf('12345678900')}
+                    className="input-padrao opacity-60 cursor-not-allowed"
+                  />
+                </div>
+                <div>
+                  <label className="rotulo-campo">Tipo de link</label>
+                  <select disabled className="input-padrao opacity-60 cursor-not-allowed">
+                    <option>Lattes</option>
+                  </select>
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="rotulo-campo">URL do link acadêmico</label>
+                  <input
+                    type="text"
+                    disabled
+                    placeholder="https://lattes.cnpq.br/0000000000000000"
+                    className="input-padrao opacity-60 cursor-not-allowed"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <button
+                    type="button"
+                    disabled
+                    className="btn btn-secondary opacity-60 cursor-not-allowed"
+                  >
+                    <i className="fa-solid fa-plus"></i> Adicionar link
+                  </button>
+                </div>
+              </SecaoFicha>
+
               <SecaoModeracao auth={auth} idUsuario={usuario.idUsuario} />
             </div>
 
             <div className="space-y-6">
-              <SecaoFicha titulo="Metadados">
+              {/* colunas={1} (10-08-2026, achado do Lucas: "1 2 / 3 4"
+                  ficava apertado numa coluna lateral estreita, e-mail
+                  comprido esbarrava na borda) — empilhado (1/2/3/4),
+                  igual ele pediu. */}
+              <SecaoFicha titulo="Metadados" colunas={1}>
                 <CampoSomenteLeitura rotulo="id" valor={usuario.idUsuario} />
                 <CampoSomenteLeitura rotulo="E-mail" valor={usuario.email} />
                 <CampoSomenteLeitura

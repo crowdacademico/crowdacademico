@@ -22,7 +22,7 @@ export function ListarConfiguracoes({ auth }) {
       <GenericTable
         titulo="Configurações"
         acaoTopo={
-          <Link to="/configuracoes/criar" className="btn btn-primary">
+          <Link to="/admin/configuracoes/criar" className="btn btn-primary">
             Criar
           </Link>
         }
@@ -35,7 +35,7 @@ export function ListarConfiguracoes({ auth }) {
         ]}
         chavePrimaria="idConfig"
         listar={listarConfiguracoes}
-        rotaBase="/configuracoes"
+        rotaBase="/admin/configuracoes"
         buscarLog={buscarLogConfiguracoes}
         // "De"/"Para" no VALOR (09-08-2026, pedido do Lucas) — é a coluna
         // que mais importa aqui: configuracoes existe pra tirar regra de
