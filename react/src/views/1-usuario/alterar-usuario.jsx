@@ -241,9 +241,10 @@ export function AlterarUsuario({ auth }) {
       icone="fa-user-pen"
       titulo="Alterar Usuário"
       subtitulo="Deixe a senha em branco para não alterá-la."
+      largura="larga"
       rodape={
         usuario && (
-          <div className="flex gap-3">
+          <div className="flex gap-3 max-w-sm ml-auto">
             <button type="button" onClick={aoCancelar} className="btn btn-secondary flex-1">
               Cancelar
             </button>
@@ -264,15 +265,14 @@ export function AlterarUsuario({ auth }) {
       ) : !usuario ? (
         <p className="p-10 text-center text-red-700 text-sm font-bold">{erro}</p>
       ) : (
-        <form id="form-alterar-usuario" onSubmit={aoSalvar} className="p-10 space-y-6">
-          {erro && <p className="text-red-700 text-sm font-bold text-center">{erro}</p>}
+        <form id="form-alterar-usuario" onSubmit={aoSalvar} className="p-6 sm:p-10">
+          {erro && <p className="text-red-700 text-sm font-bold text-center mb-6">{erro}</p>}
 
           {/* Cabeçalho de identidade (09-08-2026, Bloco I: "a pessoa
               precisa saber QUEM está editando") — mesmo espírito do
-              cabeçalho de FichaConsulta, mas dentro do corpo rolável
-              (o cabeçalho fixo do card já usa o espaço pro título
-              genérico "Alterar Usuário"). */}
-          <div className="flex items-center gap-3 pb-4 border-b borda-padrao">
+              cabeçalho de FichaConsulta, largura cheia acima das 2
+              colunas. */}
+          <div className="flex items-center gap-3 pb-6 mb-6 border-b borda-padrao">
             <div className="w-11 h-11 rounded-full bg-primary text-white flex items-center justify-center font-bold text-lg shrink-0">
               {usuario.nome?.[0]?.toUpperCase() ?? '?'}
             </div>
@@ -282,191 +282,215 @@ export function AlterarUsuario({ auth }) {
             </div>
           </div>
 
-          <SecaoFicha titulo="Dados da conta">
-            <CampoSomenteLeitura rotulo="id" valor={usuario.idUsuario} />
-            <CampoSomenteLeitura rotulo="E-mail" valor={usuario.email} />
-            <CampoSomenteLeitura
-              rotulo="E-mail verificado"
-              valor={usuario.emailVerificado ? 'Sim' : 'Não'}
-            />
-            <div>
-              <label className="rotulo-campo">
-                Nome
-              </label>
-              <input
-                type="text"
-                value={nome}
-                onChange={(evento) => setNome(evento.target.value)}
-                required
-                className="input-padrao"
-              />
-            </div>
-          </SecaoFicha>
+          {/* 2 colunas a partir de lg (10-08-2026, rodada Claude Web
+              "embelezar o painel" — causa raiz era CartaoFormulario
+              estreito demais, ver comentário lá). Principal (2/3): o que
+              se edita. Lateral (1/3): contexto/consulta + ações
+              administrativas — mesmo padrão de Stripe/Linear/Vercel pra
+              tela de edição de registro. Empilha em 1 coluna abaixo de
+              lg, igual sempre foi no celular. */}
+          <div className="grid lg:grid-cols-3 gap-6 items-start">
+            <div className="lg:col-span-2 space-y-6">
+              <SecaoFicha titulo="Dados da conta">
+                <div className="sm:col-span-2">
+                  <label className="rotulo-campo">Nome</label>
+                  <input
+                    type="text"
+                    value={nome}
+                    onChange={(evento) => setNome(evento.target.value)}
+                    required
+                    className="input-padrao"
+                  />
+                </div>
+              </SecaoFicha>
 
-          <SecaoFicha titulo="Acesso">
-            <div className="sm:col-span-2">
-              <label className="rotulo-campo">
-                Nova senha (opcional)
-              </label>
-              <input
-                type="password"
-                value={novaSenha}
-                onChange={(evento) => setNovaSenha(evento.target.value)}
-                className="input-padrao"
-                placeholder="••••••••"
-              />
+              <SecaoFicha titulo="Acesso">
+                <div className="sm:col-span-2">
+                  <label className="rotulo-campo">Nova senha (opcional)</label>
+                  <input
+                    type="password"
+                    value={novaSenha}
+                    onChange={(evento) => setNovaSenha(evento.target.value)}
+                    className="input-padrao"
+                    placeholder="••••••••"
+                  />
+                </div>
+
+                <div className="sm:col-span-2 flex items-center justify-between gap-3 rounded-lg border borda-forte p-3">
+                  <p className="text-xs texto-fraco">
+                    Zera o contador de tentativas de login falhas e libera a conta, caso esteja
+                    bloqueada temporariamente.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={aoDesbloquear}
+                    disabled={desbloqueando}
+                    className="btn btn-secondary shrink-0"
+                  >
+                    {desbloqueando ? 'Desbloqueando...' : 'Desbloquear login'}
+                  </button>
+                </div>
+              </SecaoFicha>
+
+              <SecaoModeracao auth={auth} idUsuario={usuario.idUsuario} />
             </div>
 
-            <div className="sm:col-span-2 flex items-center justify-between gap-3 rounded-lg border borda-forte p-3">
-              <p className="text-xs texto-fraco">
-                Zera o contador de tentativas de login falhas e libera a conta, caso esteja
-                bloqueada temporariamente.
-              </p>
-              <button
-                type="button"
-                onClick={aoDesbloquear}
-                disabled={desbloqueando}
-                className="btn btn-secondary shrink-0"
-              >
-                {desbloqueando ? 'Desbloqueando...' : 'Desbloquear login'}
-              </button>
-            </div>
+            <div className="space-y-6">
+              <SecaoFicha titulo="Metadados">
+                <CampoSomenteLeitura rotulo="id" valor={usuario.idUsuario} />
+                <CampoSomenteLeitura rotulo="E-mail" valor={usuario.email} />
+                <CampoSomenteLeitura
+                  rotulo="E-mail verificado"
+                  valor={usuario.emailVerificado ? 'Sim' : 'Não'}
+                />
+                <CampoSomenteLeitura
+                  rotulo="Criado em"
+                  valor={usuario.criadoEm && new Date(usuario.criadoEm).toLocaleDateString('pt-BR')}
+                />
+              </SecaoFicha>
 
-            <div className="sm:col-span-2 flex items-center justify-between gap-3 rounded-lg border border-dashed border-purple-300 bg-purple-50 p-3">
-              <div>
+              <SecaoFicha titulo="Papéis">
+                <div className="sm:col-span-2">
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {papeisAtuais.length === 0 && (
+                      <p className="text-xs texto-fraco">Nenhum papel atribuído ainda.</p>
+                    )}
+                    {papeisAtuais.map((papel) => {
+                      const suspenso =
+                        papel.suspensoAte && new Date(papel.suspensoAte) > new Date();
+                      return (
+                        <span key={papel.idPapel} className="inline-flex flex-col items-start gap-1">
+                          <span
+                            className={
+                              'badge flex items-center gap-2 ' +
+                              (suspenso ? 'fundo-aviso texto-aviso' : 'badge-neutro')
+                            }
+                          >
+                            {papel.nomePapel}
+                            {suspenso && <i className="fa-solid fa-clock text-[10px]"></i>}
+                            {suspenso ? (
+                              <button
+                                type="button"
+                                onClick={() => aoReativarPapel(papel)}
+                                disabled={reativandoPapel === papel.idPapel}
+                                className="font-bold hover:underline disabled:opacity-50"
+                                title="Reativar agora"
+                              >
+                                {reativandoPapel === papel.idPapel ? '…' : 'reativar'}
+                              </button>
+                            ) : (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setPapelSuspendendoId((atual) =>
+                                      atual === papel.idPapel ? null : papel.idPapel,
+                                    )
+                                  }
+                                  className="texto-fraco hover-texto-forte"
+                                  title={`Suspender "${papel.nomePapel}" por um tempo`}
+                                >
+                                  <i className="fa-solid fa-clock text-[10px]"></i>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => aoRevogarPapel(papel)}
+                                  disabled={revogandoPapel === papel.idPapel}
+                                  className="text-red-600 font-bold hover:text-red-800 disabled:opacity-50"
+                                  title={`Revogar "${papel.nomePapel}"`}
+                                >
+                                  ×
+                                </button>
+                              </>
+                            )}
+                          </span>
+                          {papelSuspendendoId === papel.idPapel && (
+                            <span className="flex gap-1 fundo-cartao border borda-forte rounded-lg p-1.5">
+                              {[1, 7, 30].map((dias) => (
+                                <button
+                                  key={dias}
+                                  type="button"
+                                  onClick={() => aoSuspenderPapel(papel, dias)}
+                                  disabled={enviandoSuspensaoPapel === papel.idPapel}
+                                  className="text-[10px] font-bold texto-padrao hover-fundo-sutil px-1.5 py-0.5 rounded"
+                                >
+                                  {dias}d
+                                </button>
+                              ))}
+                            </span>
+                          )}
+                        </span>
+                      );
+                    })}
+                  </div>
+
+                  {papeisDisponiveis.length === 0 ? (
+                    // ANTES (achado do Lucas, 03-08-2026: "não consigo
+                    // atribuir papel pra ninguém"): este bloco inteiro só
+                    // existia `{papeisDisponiveis.length > 0 && (...)}` —
+                    // quando não sobrava nenhum papel pra atribuir (ex.:
+                    // catálogo ainda não carregou, ou o usuário já tem
+                    // todos), o seletor E o botão simplesmente SUMIAM da
+                    // tela, sem nenhuma mensagem explicando por quê —
+                    // parecia "atribuir não funciona", não "não há nada pra
+                    // atribuir agora". Corrigido: sempre mostra alguma
+                    // coisa, nunca um vazio sem explicação.
+                    <p className="text-xs texto-fraco">
+                      Nenhum papel adicional disponível pra atribuir (o catálogo ainda
+                      está carregando, ou este usuário já tem todos os papéis existentes).
+                    </p>
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      <select
+                        value={idPapelParaAtribuir}
+                        onChange={(evento) => setIdPapelParaAtribuir(evento.target.value)}
+                        className="input-padrao"
+                      >
+                        <option value="">Selecione um papel...</option>
+                        {papeisDisponiveis.map((papel) => (
+                          <option key={papel.idPapel} value={papel.idPapel}>
+                            {papel.nome}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={aoAtribuirPapel}
+                        disabled={!idPapelParaAtribuir || atribuindoPapel}
+                        className="btn btn-primary"
+                      >
+                        {atribuindoPapel ? 'Atribuindo...' : 'Atribuir'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </SecaoFicha>
+
+              {/* Ferramentas de desenvolvimento (10-08-2026, pedido do
+                  Lucas: "tem uns botões temporários de desenvolvimento
+                  dentro, e que devem continuar lá ainda") — agrupadas num
+                  card próprio, marcadas com .badge-dev, pra ficar claro
+                  que somem antes de qualquer apresentação/deploy real (ver
+                  pendência em temp_Nest_React.md). Desbloquear login NÃO
+                  entra aqui — é ação administrativa de verdade, fica em
+                  "Acesso" na coluna principal. */}
+              <div className="fundo-cartao border border-dashed border-purple-300 bg-purple-50 rounded-xl p-4">
                 <span className="badge badge-dev">&lt;dev&gt;</span>
-                <p className="text-xs texto-fraco mt-1">
+                <p className="text-xs texto-fraco mt-2 mb-3">
                   Redefine a senha direto pra "{SENHA_DEV}", sem digitar nada. Só pra testar
                   login.
                 </p>
+                <button
+                  type="button"
+                  onClick={aoRedefinirSenhaDev}
+                  disabled={redefinindoSenhaDev}
+                  className="btn btn-secondary w-full"
+                >
+                  {redefinindoSenhaDev ? 'Redefinindo...' : 'Redefinir senha dev'}
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={aoRedefinirSenhaDev}
-                disabled={redefinindoSenhaDev}
-                className="btn btn-secondary shrink-0"
-              >
-                {redefinindoSenhaDev ? 'Redefinindo...' : 'Redefinir senha dev'}
-              </button>
             </div>
-          </SecaoFicha>
-
-          <SecaoModeracao auth={auth} idUsuario={usuario.idUsuario} />
-
-          <SecaoFicha titulo="Papéis">
-            <div className="sm:col-span-2">
-              <div className="flex flex-wrap gap-2 mb-3">
-                {papeisAtuais.length === 0 && (
-                  <p className="text-xs texto-fraco">Nenhum papel atribuído ainda.</p>
-                )}
-                {papeisAtuais.map((papel) => {
-                  const suspenso = papel.suspensoAte && new Date(papel.suspensoAte) > new Date();
-                  return (
-                    <span key={papel.idPapel} className="inline-flex flex-col items-start gap-1">
-                      <span
-                        className={
-                          'badge flex items-center gap-2 ' +
-                          (suspenso ? 'fundo-aviso texto-aviso' : 'badge-neutro')
-                        }
-                      >
-                        {papel.nomePapel}
-                        {suspenso && <i className="fa-solid fa-clock text-[10px]"></i>}
-                        {suspenso ? (
-                          <button
-                            type="button"
-                            onClick={() => aoReativarPapel(papel)}
-                            disabled={reativandoPapel === papel.idPapel}
-                            className="font-bold hover:underline disabled:opacity-50"
-                            title="Reativar agora"
-                          >
-                            {reativandoPapel === papel.idPapel ? '…' : 'reativar'}
-                          </button>
-                        ) : (
-                          <>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setPapelSuspendendoId((atual) =>
-                                  atual === papel.idPapel ? null : papel.idPapel,
-                                )
-                              }
-                              className="texto-fraco hover-texto-forte"
-                              title={`Suspender "${papel.nomePapel}" por um tempo`}
-                            >
-                              <i className="fa-solid fa-clock text-[10px]"></i>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => aoRevogarPapel(papel)}
-                              disabled={revogandoPapel === papel.idPapel}
-                              className="text-red-600 font-bold hover:text-red-800 disabled:opacity-50"
-                              title={`Revogar "${papel.nomePapel}"`}
-                            >
-                              ×
-                            </button>
-                          </>
-                        )}
-                      </span>
-                      {papelSuspendendoId === papel.idPapel && (
-                        <span className="flex gap-1 fundo-cartao border borda-forte rounded-lg p-1.5">
-                          {[1, 7, 30].map((dias) => (
-                            <button
-                              key={dias}
-                              type="button"
-                              onClick={() => aoSuspenderPapel(papel, dias)}
-                              disabled={enviandoSuspensaoPapel === papel.idPapel}
-                              className="text-[10px] font-bold texto-padrao hover-fundo-sutil px-1.5 py-0.5 rounded"
-                            >
-                              {dias}d
-                            </button>
-                          ))}
-                        </span>
-                      )}
-                    </span>
-                  );
-                })}
-              </div>
-
-              {papeisDisponiveis.length === 0 ? (
-                // ANTES (achado do Lucas, 03-08-2026: "não consigo atribuir
-                // papel pra ninguém"): este bloco inteiro só existia
-                // `{papeisDisponiveis.length > 0 && (...)}` — quando não
-                // sobrava nenhum papel pra atribuir (ex.: catálogo ainda não
-                // carregou, ou o usuário já tem todos), o seletor E o botão
-                // simplesmente SUMIAM da tela, sem nenhuma mensagem
-                // explicando por quê — parecia "atribuir não funciona", não
-                // "não há nada pra atribuir agora". Corrigido: sempre mostra
-                // alguma coisa, nunca um vazio sem explicação.
-                <p className="text-xs texto-fraco">
-                  Nenhum papel adicional disponível pra atribuir (o catálogo ainda
-                  está carregando, ou este usuário já tem todos os papéis existentes).
-                </p>
-              ) : (
-                <div className="flex gap-2">
-                  <select
-                    value={idPapelParaAtribuir}
-                    onChange={(evento) => setIdPapelParaAtribuir(evento.target.value)}
-                    className="input-padrao flex-1"
-                  >
-                    <option value="">Selecione um papel...</option>
-                    {papeisDisponiveis.map((papel) => (
-                      <option key={papel.idPapel} value={papel.idPapel}>
-                        {papel.nome}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    onClick={aoAtribuirPapel}
-                    disabled={!idPapelParaAtribuir || atribuindoPapel}
-                    className="btn btn-primary shrink-0"
-                  >
-                    {atribuindoPapel ? 'Atribuindo...' : 'Atribuir'}
-                  </button>
-                </div>
-              )}
-            </div>
-          </SecaoFicha>
+          </div>
         </form>
       )}
     </CartaoFormulario>

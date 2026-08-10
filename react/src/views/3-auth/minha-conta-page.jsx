@@ -15,24 +15,114 @@ import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 // salva por conta própria. Ordem seguida: Perfil, Segurança (recomendação
 // do Claude Web — "Sessões Ativas é o item de maior impacto percebido"),
 // Preferências, Meus Papéis, Privacidade, Perfil Acadêmico.
+//
+// REESTRUTURADO (10-08-2026, pedido do Lucas, sem o Claude Web desta vez:
+// "tem um problema parecido que o Alterar sofria, são vários card um
+// embaixo do outro, como pra tela de celular") — mesma causa raiz do
+// Alterar Usuário (a rodada anterior, essa sim com o Claude Web): tudo
+// empilhado numa coluna só de 672px, mesmo em monitor grande. Virou 2
+// colunas a partir de `lg`: principal (2/3) com as seções de sempre,
+// sem tirar NENHUMA; lateral (1/3) com um cartão de perfil ("tipo
+// portfólio", pedido dele) — foto grande, nome, e-mail, papéis e data de
+// criação, tudo que já existia espalhado, só reunido num resumo visual.
+// `order-1 lg:order-2` / `order-2 lg:order-1` (ver comentário em
+// CartaoPerfil) — no celular o cartão de perfil aparece PRIMEIRO (faz
+// sentido ver "quem eu sou" antes de editar), no desktop ele vai pra
+// direita sem mudar nada no HTML, só a ordem visual.
 export function MinhaConta({ auth }) {
   return (
-    <div className="max-w-2xl mx-auto p-4 sm:p-8 space-y-6">
-      <div className="flex items-center gap-4">
-        <AvatarUsuario nome={auth.usuario?.nome} tamanho="lg" />
-        <div className="min-w-0">
-          <h2 className="text-2xl font-serif font-bold texto-forte truncate">Minha Conta</h2>
-          <p className="text-sm texto-fraco truncate">{auth.usuario?.email}</p>
+    <div className="max-w-5xl mx-auto p-4 sm:p-8">
+      <h2 className="text-2xl font-serif font-bold texto-forte mb-6">Minha Conta</h2>
+
+      <div className="grid lg:grid-cols-3 gap-6 items-start">
+        <div className="order-2 lg:order-1 lg:col-span-2 space-y-6">
+          <SecaoPerfil auth={auth} />
+          <SecaoSeguranca auth={auth} />
+          <SecaoPreferencias auth={auth} />
+          <SecaoMeusPapeis auth={auth} />
+          <SecaoPrivacidade auth={auth} />
+          <SecaoPerfilAcademico />
+        </div>
+
+        <div className="order-1 lg:order-2">
+          <CartaoPerfil auth={auth} />
         </div>
       </div>
-
-      <SecaoPerfil auth={auth} />
-      <SecaoSeguranca auth={auth} />
-      <SecaoPreferencias auth={auth} />
-      <SecaoMeusPapeis auth={auth} />
-      <SecaoPrivacidade auth={auth} />
-      <SecaoPerfilAcademico />
     </div>
+  );
+}
+
+// Cartão de perfil da lateral (10-08-2026) — "tipo portfólio", resumo
+// visual de quem é a conta, não substitui nenhuma seção existente (Meus
+// Papéis continua tendo sua própria seção completa; aqui é só o resumo
+// rápido, mesmo espírito de um cartão de visita). Busca papéis por conta
+// própria (mesma chamada que SecaoMeusPapeis já faz) — duplicar essa
+// requisição pequena é mais simples e mais seguro do que subir estado
+// pro componente pai, e o catálogo de papéis de uma pessoa é minúsculo.
+function CartaoPerfil({ auth }) {
+  const usuario = auth.usuario;
+  const [papeis, setPapeis] = useState(null);
+
+  useEffect(() => {
+    if (!usuario) {
+      return;
+    }
+    usuarioPapelApi
+      .listarPorUsuario(auth.authFetch, usuario.idUsuario)
+      .then(setPapeis)
+      .catch(() => setPapeis([]));
+  }, [auth.authFetch, usuario]);
+
+  return (
+    <section className="fundo-cartao border borda-padrao rounded-xl overflow-hidden lg:sticky lg:top-20">
+      <div className="p-6 text-center border-b borda-padrao fundo-sutil">
+        <div className="flex justify-center mb-4">
+          <AvatarUsuario nome={usuario?.nome} tamanho="xl" forma="quadrado" />
+        </div>
+        <p className="font-bold text-lg texto-forte truncate">{usuario?.nome}</p>
+        <p className="text-sm texto-fraco truncate">{usuario?.email}</p>
+      </div>
+
+      <div className="p-6 space-y-4">
+        <div>
+          <p className="text-[11px] font-bold texto-fraco uppercase tracking-widest mb-1.5">
+            Papéis
+          </p>
+          {papeis === null ? (
+            <p className="text-xs texto-fraco">Carregando...</p>
+          ) : papeis.length === 0 ? (
+            <p className="text-xs texto-fraco">Nenhum papel atribuído.</p>
+          ) : (
+            <div className="flex flex-wrap gap-1.5">
+              {papeis.map((papel) => (
+                <span key={papel.idPapel} className="badge badge-neutro">
+                  {papel.nomePapel}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 pt-3 border-t borda-padrao">
+          <div>
+            <p className="text-[11px] font-bold texto-fraco uppercase tracking-widest mb-1">
+              E-mail verificado
+            </p>
+            <span className={'badge ' + (usuario?.emailVerificado ? 'badge-sucesso' : 'badge-neutro')}>
+              {usuario?.emailVerificado ? 'Sim' : 'Não'}
+            </span>
+          </div>
+          <div>
+            <p className="text-[11px] font-bold texto-fraco uppercase tracking-widest mb-1">
+              Na plataforma desde
+            </p>
+            <p className="text-sm font-semibold texto-padrao">
+              {usuario?.criadoEm ? new Date(usuario.criadoEm).toLocaleDateString('pt-BR') : '-'}
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -139,6 +229,13 @@ function SecaoSeguranca({ auth }) {
   const [sessoes, setSessoes] = useState(null);
   const [encerrando, setEncerrando] = useState(null);
   const [encerrandoTodas, setEncerrandoTodas] = useState(false);
+  // Colapsada por padrão (10-08-2026, achado do Lucas: "imagina se o
+  // usuário tiver 10, 20, 30 sessões abertas" — vinha sempre expandida,
+  // uma lista longa empurrando o resto da tela pra baixo sem motivo, já
+  // que a maioria nunca precisa olhar isso). Expandida, a lista ainda
+  // ganha scroll próprio (max-h-64) — nunca empurra a página, mesmo com
+  // dezenas de sessões.
+  const [sessoesAbertas, setSessoesAbertas] = useState(false);
 
   const carregarSessoes = () => {
     sessaoApi
@@ -212,8 +309,21 @@ function SecaoSeguranca({ auth }) {
 
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h4 className="text-sm font-bold texto-padrao">Sessões ativas</h4>
-          {sessoes && sessoes.length > 1 && (
+          <button
+            type="button"
+            onClick={() => setSessoesAbertas((atual) => !atual)}
+            className="flex items-center gap-2 text-sm font-bold texto-padrao"
+          >
+            Sessões ativas
+            {sessoes && <span className="texto-fraco font-normal">({sessoes.length})</span>}
+            <i
+              className={
+                'fa-solid fa-chevron-down text-xs texto-fraco transition-transform' +
+                (sessoesAbertas ? ' rotate-180' : '')
+              }
+            ></i>
+          </button>
+          {sessoesAbertas && sessoes && sessoes.length > 1 && (
             <button
               type="button"
               onClick={aoEncerrarTodas}
@@ -225,43 +335,44 @@ function SecaoSeguranca({ auth }) {
           )}
         </div>
 
-        {sessoes === null ? (
-          <p className="text-sm texto-fraco">Carregando...</p>
-        ) : sessoes.length === 0 ? (
-          <p className="text-sm texto-fraco">Nenhuma sessão ativa encontrada.</p>
-        ) : (
-          <ul className="space-y-2">
-            {sessoes.map((sessao) => (
-              <li
-                key={sessao.idSessao}
-                className="flex items-center justify-between gap-3 rounded-lg border borda-padrao p-3 text-sm"
-              >
-                <div className="min-w-0">
-                  <p className="texto-forte truncate">
-                    {sessao.userAgent ?? 'Dispositivo desconhecido'}
-                    {sessao.atual && (
-                      <span className="ml-2 badge badge-sucesso">Esta sessão</span>
-                    )}
-                  </p>
-                  <p className="text-xs texto-fraco">
-                    {sessao.ip ?? 'IP desconhecido'} · desde{' '}
-                    {new Date(sessao.criadoEm).toLocaleString('pt-BR')}
-                  </p>
-                </div>
-                {!sessao.atual && (
-                  <button
-                    type="button"
-                    onClick={() => aoEncerrarUma(sessao.idSessao)}
-                    disabled={encerrando === sessao.idSessao}
-                    className="text-xs font-bold texto-erro hover:underline shrink-0"
-                  >
-                    {encerrando === sessao.idSessao ? 'Encerrando...' : 'Encerrar'}
-                  </button>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
+        {sessoesAbertas &&
+          (sessoes === null ? (
+            <p className="text-sm texto-fraco">Carregando...</p>
+          ) : sessoes.length === 0 ? (
+            <p className="text-sm texto-fraco">Nenhuma sessão ativa encontrada.</p>
+          ) : (
+            <ul className="space-y-2 max-h-64 overflow-y-auto pr-1">
+              {sessoes.map((sessao) => (
+                <li
+                  key={sessao.idSessao}
+                  className="flex items-center justify-between gap-3 rounded-lg border borda-padrao p-3 text-sm"
+                >
+                  <div className="min-w-0">
+                    <p className="texto-forte truncate">
+                      {sessao.userAgent ?? 'Dispositivo desconhecido'}
+                      {sessao.atual && (
+                        <span className="ml-2 badge badge-sucesso">Esta sessão</span>
+                      )}
+                    </p>
+                    <p className="text-xs texto-fraco">
+                      {sessao.ip ?? 'IP desconhecido'} · desde{' '}
+                      {new Date(sessao.criadoEm).toLocaleString('pt-BR')}
+                    </p>
+                  </div>
+                  {!sessao.atual && (
+                    <button
+                      type="button"
+                      onClick={() => aoEncerrarUma(sessao.idSessao)}
+                      disabled={encerrando === sessao.idSessao}
+                      className="text-xs font-bold texto-erro hover:underline shrink-0"
+                    >
+                      {encerrando === sessao.idSessao ? 'Encerrando...' : 'Encerrar'}
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          ))}
       </div>
     </Painel>
   );

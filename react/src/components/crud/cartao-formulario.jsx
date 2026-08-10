@@ -7,6 +7,27 @@
 // "mesmo estilo que já usei em Consultar" (pedido do Lucas): um lugar só
 // pra ajustar o visual do "cartão de formulário" inteiro do painel.
 //
+// REFEITO (10-08-2026, rodada Claude Web "embelezar o painel" — causa raiz
+// do "Alterar parece um monte de card empilhado, confuso"): a versão
+// anterior tinha `max-w-md` (448px) + `min-h-[...] flex items-center
+// justify-center` + `max-h-[...] overflow-hidden` — MEDIDA E COMPORTAMENTO
+// DE MODAL (centralizado na tela, altura travada com scroll próprio),
+// mesmo sendo usado como PÁGINA em todo lugar (nenhum dos 7 usos é um
+// modal de verdade). Um formulário como Alterar Usuário, com várias
+// seções, ficava 33% mais estreito que Consultar (FichaConsulta,
+// max-w-2xl) e ainda cortado em altura — daí a sensação de "empilhado e
+// confuso". Agora é uma página normal: sem centralização vertical, sem
+// trava de altura, rodapé `sticky bottom-0` (mesmo padrão Notion/Linear)
+// em vez de "flex-column com scroll interno" pra manter Salvar/Cancelar
+// visível.
+//
+// `largura` — 2 medidas canônicas (pedido indireto do Claude Web: "definir
+// larguras canônicas em vez de cada tela escolher a sua"): 'media'
+// (max-w-2xl, MESMA largura de FichaConsulta — consistência visual entre
+// Consultar e um Alterar/Criar/Excluir simples de 1-2 campos) e 'larga'
+// (max-w-5xl — só pra formulário grande o bastante pra virar 2 colunas,
+// hoje só Alterar Usuário).
+//
 // `variante="perigo"` é só o ícone (vermelho, pra Excluir) — o resto do
 // cartão é idêntico, não é um componente "de exclusão" separado.
 const VARIANTES_ICONE = {
@@ -14,39 +35,43 @@ const VARIANTES_ICONE = {
   perigo: 'fundo-erro texto-erro',
 };
 
-// `rodape` (09-08-2026, Bloco I do prompt do Claude Web sobre Alterar/
-// Excluir) — separa as ações finais (Salvar/Cancelar, Confirmar exclusão)
-// do corpo do formulário: o card ganha altura MÁXIMA (não mais só
-// "cresce o quanto precisar") e vira flex-column com 3 fatias —
-// cabeçalho fixo, corpo com scroll próprio, rodapé fixo. Sem isso, um
-// formulário longo (Alterar Usuário, com Dados/Acesso/Papéis) empurrava
-// o botão Salvar pra fora da tela em telas baixas, obrigando rolar a
-// PÁGINA inteira só pra achar o botão — problema clássico de formulário
-// modal sem rodapé fixo (Notion/Linear resolvem assim). Opcional: quem
-// não passa `rodape` (telas de Criar, mais curtas) continua exatamente
-// como antes, sem nenhuma mudança visual.
-export function CartaoFormulario({ icone, titulo, subtitulo, variante = 'padrao', rodape, children }) {
+const LARGURAS = {
+  media: 'max-w-2xl',
+  larga: 'max-w-5xl',
+};
+
+export function CartaoFormulario({
+  icone,
+  titulo,
+  subtitulo,
+  variante = 'padrao',
+  largura = 'media',
+  rodape,
+  children,
+}) {
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 fundo-pagina">
-      <div className="max-w-md w-full max-h-[calc(100vh-2rem)] fundo-cartao rounded-3xl shadow-2xl border borda-forte overflow-hidden flex flex-col">
-        <div className="p-10 text-center border-b borda-padrao fundo-sutil shrink-0">
-          <div
-            className={
-              'w-14 h-14 rounded-2xl mx-auto flex items-center justify-center font-bold text-2xl mb-5 shadow-lg ' +
-              VARIANTES_ICONE[variante]
-            }
-          >
-            <i className={'fa-solid ' + icone}></i>
+    <div className="p-4 sm:p-8 fundo-pagina">
+      <div className={'mx-auto w-full ' + LARGURAS[largura]}>
+        <div className="fundo-cartao rounded-3xl shadow-2xl border borda-forte overflow-hidden">
+          <div className="p-10 text-center border-b borda-padrao fundo-sutil">
+            <div
+              className={
+                'w-14 h-14 rounded-2xl mx-auto flex items-center justify-center font-bold text-2xl mb-5 shadow-lg ' +
+                VARIANTES_ICONE[variante]
+              }
+            >
+              <i className={'fa-solid ' + icone}></i>
+            </div>
+            <h2 className="text-3xl font-serif font-bold texto-forte mb-2">{titulo}</h2>
+            {subtitulo && <p className="text-sm texto-padrao font-medium">{subtitulo}</p>}
           </div>
-          <h2 className="text-3xl font-serif font-bold texto-forte mb-2">{titulo}</h2>
-          {subtitulo && <p className="text-sm texto-padrao font-medium">{subtitulo}</p>}
+
+          {children}
+
+          {rodape && (
+            <div className="p-6 border-t borda-padrao fundo-cartao sticky bottom-0">{rodape}</div>
+          )}
         </div>
-
-        <div className="overflow-y-auto min-h-0 flex-1">{children}</div>
-
-        {rodape && (
-          <div className="p-6 border-t borda-padrao fundo-cartao shrink-0">{rodape}</div>
-        )}
       </div>
     </div>
   );

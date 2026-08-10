@@ -27,10 +27,27 @@ const CLASSE_TAMANHO = {
   sm: 'w-8 h-8 text-xs',
   md: 'w-9 h-9 text-sm',
   lg: 'w-14 h-14 text-xl',
+  // 'xl' (10-08-2026, card de perfil largo do Minha Conta) — grande o
+  // bastante pra ser o elemento visual principal de um card lateral, sem
+  // exigir upload de foto de verdade pra já parecer "de gente grande"
+  // (a inicial colorida já resolve isso, mesma lógica do resto do app).
+  xl: 'w-24 h-24 text-4xl',
 };
 
-export function AvatarUsuario({ nome, foto, tamanho = 'md' }) {
+// 'quadrado' (10-08-2026, pedido do Lucas: "o quadradinho da imagem",
+// card de perfil parecido com portfólio) — rounded-2xl, não rounded-lg
+// nem cantos retos: seguem o mesmo raio generoso já usado nos cartões do
+// painel (cartao-formulario.jsx usa rounded-3xl), só um degrau abaixo.
+// 'circulo' continua sendo o padrão em todo o resto do app (cabeçalho,
+// tabelas, dropdown) — não muda nada pra quem já usa o componente.
+const CLASSE_FORMA = {
+  circulo: 'rounded-full',
+  quadrado: 'rounded-2xl',
+};
+
+export function AvatarUsuario({ nome, foto, tamanho = 'md', forma = 'circulo' }) {
   const classeTamanho = CLASSE_TAMANHO[tamanho] ?? CLASSE_TAMANHO.md;
+  const classeForma = CLASSE_FORMA[forma] ?? CLASSE_FORMA.circulo;
   const nomeSeguro = nome?.trim() || '?';
 
   if (foto) {
@@ -38,7 +55,7 @@ export function AvatarUsuario({ nome, foto, tamanho = 'md' }) {
       <img
         src={foto}
         alt={nomeSeguro}
-        className={classeTamanho + ' rounded-full object-cover shrink-0'}
+        className={classeTamanho + ' ' + classeForma + ' object-cover shrink-0'}
       />
     );
   }
@@ -47,7 +64,9 @@ export function AvatarUsuario({ nome, foto, tamanho = 'md' }) {
     <div
       className={
         classeTamanho +
-        ' rounded-full flex items-center justify-center font-bold text-white shrink-0'
+        ' ' +
+        classeForma +
+        ' flex items-center justify-center font-bold text-white shrink-0'
       }
       style={{ backgroundColor: corPorNome(nomeSeguro) }}
       aria-hidden="true"
