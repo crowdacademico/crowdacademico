@@ -32,6 +32,10 @@ const CLASSE_TAMANHO = {
   // exigir upload de foto de verdade pra já parecer "de gente grande"
   // (a inicial colorida já resolve isso, mesma lógica do resto do app).
   xl: 'w-24 h-24 text-4xl',
+  // 'xxl' (11-08-2026, faixa de identidade do Minha Conta, estilo perfil
+  // acadêmico tipo ORCID/Google Acadêmico) — 112px, o maior da escala,
+  // âncora visual de uma faixa larga no topo da página.
+  xxl: 'w-28 h-28 text-5xl',
 };
 
 // 'quadrado' (10-08-2026, pedido do Lucas: "o quadradinho da imagem",

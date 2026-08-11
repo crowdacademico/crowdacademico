@@ -104,7 +104,21 @@ export const ROTAS_ADMIN = [
   // acesso continua sendo pelo dropdown do cabeçalho), só ganha a
   // moldura. Sem paiCaminho — não é filha de nenhuma listagem, o
   // breadcrumb já fica correto como "Início > Minha Conta".
-  { caminho: '/admin/minha-conta', caminhoRelativo: 'minha-conta', elemento: MinhaConta, rotuloBreadcrumb: 'Minha Conta' },
+  //
+  // `:aba` (11-08-2026, virou abas de verdade — Perfil/Segurança/Papéis/
+  // Acadêmico/Privacidade) — UMA rota parametrizada, não 5 entradas
+  // repetidas: MinhaConta lê `aba` via useParams() e decide o que
+  // renderizar por baixo da faixa de identidade (que não muda entre
+  // abas). Mesmo padrão de parâmetro já usado em
+  // '/admin/usuarios/:id/alterar' aqui embaixo. O caminho SEM `/:aba`
+  // (ex.: link antigo direto pra "/admin/minha-conta") ganha um redirect
+  // pra ".../perfil" em App.jsx — não precisa de uma 2ª entrada aqui.
+  {
+    caminho: '/admin/minha-conta/:aba',
+    caminhoRelativo: 'minha-conta/:aba',
+    elemento: MinhaConta,
+    rotuloBreadcrumb: 'Minha Conta',
+  },
 
   // Usuário — filhas de /admin/usuarios (paiCaminho), mesmo padrão pras
   // outras 2 seções abaixo.
