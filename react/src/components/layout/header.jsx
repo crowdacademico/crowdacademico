@@ -30,11 +30,15 @@ export function Header({ auth }) {
     // comentário completo perto dele).
     <header className="fundo-cartao border-b borda-padrao sticky top-0 z-50 shadow-sm relative">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        {/* w-10 h-10 / text-2xl (11-08-2026, pedido do Lucas: "mesmo
+            tamanho exato do rodapé") — era w-9 h-9/text-xl, um degrau
+            menor que o ícone+texto do <footer>; os dois títulos ficam
+            visualmente idênticos agora, só a posição (topo/rodapé) muda. */}
         <Link to="/" className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-primary rounded-lg flex items-center justify-center text-white font-bold shadow-inner">
+          <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center text-white font-bold shadow-inner">
             <i className="fa-solid fa-flask"></i>
           </div>
-          <span className="font-bold text-xl tracking-tight texto-forte hidden sm:block">
+          <span className="font-bold text-2xl tracking-tight texto-forte hidden sm:block">
             CrowdAcadêmico
           </span>
         </Link>
