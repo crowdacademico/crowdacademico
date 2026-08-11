@@ -87,8 +87,8 @@ export function Header({ auth }) {
             Submeter Pesquisa
           </button>
 
-          <ControleFonte auth={auth} />
-          <ControleTema auth={auth} />
+          <ControleFonte />
+          <ControleTema />
 
           {/* Sino só faz sentido logado — "atividade recente" é sempre de
               alguém (09-08-2026, Bloco B/C). */}

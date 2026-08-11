@@ -36,11 +36,6 @@ export interface UsuarioTable {
   suspenso_ate: Date | null;
   motivo_suspensao: string | null;
   suspenso_por: number | null;
-  // ADICIONADAS (10-08-2026) — espelham 01_extensoes_enums_tabelas.sql
-  // [01-D]. Preferência de tema/fonte POR CONTA (não mais só localStorage
-  // do navegador).
-  tema_preferido: string | null;
-  escala_fonte_preferida: number | null;
 }
 
 export interface PapelTable {

@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { AvatarUsuario } from '../../components/layout/avatar-usuario';
-import { ControleFonte } from '../../components/layout/controle-fonte';
-import { ControleTema } from '../../components/layout/controle-tema';
 import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
 import { sessaoApi } from '../../services/3-auth/api/sessao.api';
@@ -14,7 +12,15 @@ import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 // espírito de SecaoFicha: título pequeno separando blocos), cada uma
 // salva por conta própria. Ordem seguida: Perfil, Segurança (recomendação
 // do Claude Web — "Sessões Ativas é o item de maior impacto percebido"),
-// Preferências, Meus Papéis, Privacidade, Perfil Acadêmico.
+// Meus Papéis, Privacidade, Perfil Acadêmico.
+//
+// SEM SEÇÃO "Preferências" de propósito (existiu entre 09 e 10-08-2026,
+// removida no mesmo dia) — decisão do Lucas com a Alexia: preferência
+// pessoal (tema/fonte) por conta exigiria uma tabela própria pra guardar
+// isso direito, e "estamos com tabelas demais no momento". Tema/fonte
+// continuam ajustáveis, só que de novo só pelos botões do cabeçalho
+// (ControleTema/ControleFonte), preferência de DISPOSITIVO via
+// localStorage, sem ligação nenhuma com a conta logada.
 //
 // REESTRUTURADO (10-08-2026, pedido do Lucas, sem o Claude Web desta vez:
 // "tem um problema parecido que o Alterar sofria, são vários card um
@@ -38,7 +44,6 @@ export function MinhaConta({ auth }) {
         <div className="order-2 lg:order-1 lg:col-span-2 space-y-6">
           <SecaoPerfil auth={auth} />
           <SecaoSeguranca auth={auth} />
-          <SecaoPreferencias auth={auth} />
           <SecaoMeusPapeis auth={auth} />
           <SecaoPrivacidade auth={auth} />
           <SecaoPerfilAcademico />
@@ -378,34 +383,7 @@ function SecaoSeguranca({ auth }) {
   );
 }
 
-// 3. PREFERÊNCIAS — tema/fonte já existem soltas no cabeçalho
-// (acessibilidade não deve exigir dois cliques, recomendação do Claude
-// Web) — aqui é só o mesmo controle, visível e explicado, não uma cópia
-// duplicada de estado (os dois componentes recebem o mesmo `auth`, ficam
-// sincronizados sozinhos — ver comentário completo em controle-tema.jsx
-// sobre a preferência agora ser POR CONTA, não só localStorage).
-function SecaoPreferencias({ auth }) {
-  return (
-    <Painel
-      icone="fa-sliders"
-      titulo="Preferências"
-      subtitulo="Os mesmos controles do cabeçalho, mudar aqui ou lá dá no mesmo."
-    >
-      <div className="flex items-center gap-6">
-        <div>
-          <p className="rotulo-campo mb-2">Tema</p>
-          <ControleTema auth={auth} />
-        </div>
-        <div>
-          <p className="rotulo-campo mb-2">Tamanho da fonte</p>
-          <ControleFonte auth={auth} />
-        </div>
-      </div>
-    </Painel>
-  );
-}
-
-// 4. MEUS PAPÉIS — só leitura.
+// 3. MEUS PAPÉIS — só leitura.
 function SecaoMeusPapeis({ auth }) {
   const [papeis, setPapeis] = useState(null);
 
@@ -442,7 +420,7 @@ function SecaoMeusPapeis({ auth }) {
   );
 }
 
-// 5. PRIVACIDADE — exportar dados (LGPD Art. 18) ainda não existe (fica
+// 4. PRIVACIDADE — exportar dados (LGPD Art. 18) ainda não existe (fica
 // registrado honestamente, não fingido); excluir conta reaproveita
 // excluir_conta_usuario() (03_funcoes_seguranca.sql, [03-O]), que já
 // valida que só o próprio dono (ou quem tem usuario_excluir) pode chamar.
@@ -510,7 +488,7 @@ function SecaoPrivacidade({ auth }) {
   );
 }
 
-// 6. PERFIL ACADÊMICO — só relevante pra quem é pesquisador; módulo
+// 5. PERFIL ACADÊMICO — só relevante pra quem é pesquisador; módulo
 // 6-perfil-pesquisador ainda não existe (só a pasta reservada).
 function SecaoPerfilAcademico() {
   return (

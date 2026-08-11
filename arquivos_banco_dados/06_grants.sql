@@ -118,8 +118,7 @@ GRANT SELECT (
     deletado_em, deletado_por,
     email_verificado, senha_hash, tentativas_login_falhas, bloqueado_ate,
     ultimo_login_em, ultimo_login_ip,
-    suspenso_ate, motivo_suspensao, suspenso_por,
-    tema_preferido, escala_fonte_preferida
+    suspenso_ate, motivo_suspensao, suspenso_por
 ) ON public.usuario TO app_nestjs;
 
 -- CORRIGIDO: coluna suspenso removida da tabela (01) — tirada da lista também.
@@ -185,12 +184,7 @@ GRANT UPDATE (
 -- mudam via função SECURITY DEFINER dedicada (mesmo padrão de atribuir_papel_padrao/
 -- recalcular_score_pesquisador) — ver [03-O] em 03_funcoes_seguranca.sql. O GRANT
 -- direto sobra só pro que é edição de perfil de verdade.
--- tema_preferido/escala_fonte_preferida (10-08-2026) entram na mesma lista
--- de "edição de perfil de verdade" — sem risco de segurança nenhum (não é
--- flag de autenticação/moderação), qualquer um pode mudar a própria
--- preferência de tema/fonte livremente.
-GRANT UPDATE (nome, id_imagem_perfil, senha_hash, tema_preferido, escala_fonte_preferida)
-    ON public.usuario TO app_nestjs;
+GRANT UPDATE (nome, id_imagem_perfil, senha_hash) ON public.usuario TO app_nestjs;
 
 -- [06-D-2b] Funções de autenticação (ver [03-O] em 03_funcoes_seguranca.sql):
 -- único jeito de mudar email_verificado, tentativas_login_falhas, bloqueado_ate,
