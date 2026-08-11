@@ -33,6 +33,17 @@
   width: 100%;
   flex-grow: 1;
   display: flex;
+  /* flex-direction: column (11-08-2026, achado ao vivo testando o Minha
+     Conta no celular) — SEM isso, `display:flex` sozinho é `row` por
+     padrão: o botão "☰ Menu" (mobile, lg:hidden, logo abaixo no DOM) e
+     .admin-shell inteiro ficavam lado a lado dividindo a largura da tela
+     ao meio, em vez do botão empilhar ACIMA do shell. É o que fazia
+     .admin-content-area render espremido em ~metade da viewport em toda
+     página do painel no celular (Dashboard incluso, não é bug de uma
+     tela só) — .admin-shell em si já tinha grid-template-columns:
+     minmax(0, 1fr) certo (o "0" mínimo já evitava crescer por causa de
+     conteúdo), o problema era um nível acima. */
+  flex-direction: column;
 }
 
 .admin-shell {

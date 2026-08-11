@@ -741,7 +741,11 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo) VAL
 (NULL, 'prazo_maximo_campanha_dias', '60',    'inteiro',  'Duração máxima permitida de uma campanha em dias',     TRUE),
 (NULL, 'limite_campanhas_simultaneas','2',    'inteiro',  'Nº máximo de campanhas simultâneas (aguardando_aprovacao/ativo) por pesquisador (RF-029)', TRUE),
 (NULL, 'limite_endossos_campanha',   '4',     'inteiro',  'Nº máximo de endossos ativos simultâneos por campanha (RF-063)', TRUE),
-(NULL, 'limite_denuncias_24h',       '5',     'inteiro',  'Nº máximo de denúncias por usuário a cada 24 horas (RF-076)', TRUE),
+(NULL, 'limite_denuncias_24h',       '5',     'inteiro',  'Nº máximo de denúncias por usuário dentro da janela de configuracoes.janela_denuncias_horas (RF-076)', TRUE),
+-- ADICIONADO (11-08-2026, achado pela IA: metade da regra de RF-076 já era
+-- configurável desde 28-07, mas a JANELA de tempo continuava fixa em 24h no
+-- corpo da função — ver validar_denuncia_frequencia() em 05, [05-K-3]).
+(NULL, 'janela_denuncias_horas',     '24',    'inteiro',  'Janela de tempo (em horas) usada por limite_denuncias_24h (RF-076)', TRUE),
 -- ADICIONADO (28-07-2026, Claude Web — "Problema 2"): limite de negócio (menor,
 -- configurável) por cima do limite técnico largo das colunas (01) — mesmo padrão
 -- config + trigger do prazo de campanha (item 16).

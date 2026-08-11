@@ -587,6 +587,56 @@ ALTER TABLE usuario
 
 
 -- ============================================================================
+-- 11-08-2026 — janela de tempo de validar_denuncia_frequencia() (RF-076,
+-- [05-K-3]) vira configurável também. Desde 28-07-2026 a CONTAGEM (5
+-- denúncias) já vinha de configuracoes.limite_denuncias_24h, mas a JANELA
+-- (24 horas) continuava fixa em INTERVAL '24 hours' dentro da função —
+-- metade da regra configurável, metade não. Achado pela IA testando outra
+-- tela do painel, revisando 05_regras_negocio.sql em busca de números
+-- hardcoded (pedido recorrente seu). Valor padrão idêntico ao de hoje (24),
+-- nada muda no comportamento até você trocar essa chave em Configurações.
+-- Seguro rodar de novo quantas vezes quiser (INSERT com ON CONFLICT DO
+-- NOTHING + CREATE OR REPLACE FUNCTION).
+-- ============================================================================
+
+INSERT INTO configuracoes (chave, valor, tipo, descricao, ativo)
+VALUES (
+    'janela_denuncias_horas',
+    '24',
+    'inteiro',
+    'Janela de tempo (em horas) usada por limite_denuncias_24h (RF-076)',
+    TRUE
+)
+ON CONFLICT (chave) DO NOTHING;
+
+CREATE OR REPLACE FUNCTION validar_denuncia_frequencia()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_count        integer;
+    v_limite       integer;
+    v_janela_horas integer;
+BEGIN
+    v_limite       := public.config_numero('limite_denuncias_24h', 5);
+    v_janela_horas := public.config_numero('janela_denuncias_horas', 24);
+
+    SELECT COUNT(*) INTO v_count
+    FROM denuncia
+    WHERE id_usuario = NEW.id_usuario
+      AND criado_em >= NOW() - (v_janela_horas || ' hours')::INTERVAL;
+
+    IF v_count >= v_limite THEN
+        RAISE EXCEPTION 'Usuário já atingiu o limite de % denúncias nas últimas % horas', v_limite, v_janela_horas
+            USING ERRCODE = '93001';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+
+-- ============================================================================
 -- NÃO ENTRA NESTE ARQUIVO (registrado aqui só pra não se perder)
 -- ============================================================================
 

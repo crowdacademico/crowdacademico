@@ -47,23 +47,6 @@ export function useAuth() {
     localStorage.removeItem(CHAVE_REFRESH_TOKEN);
   }, []);
 
-  // Ao carregar a página: se sobrou um refresh token de uma visita
-  // anterior, tenta renovar em silêncio (senão sempre voltaria pra tela de
-  // login, mesmo com sessão ainda válida).
-  useEffect(() => {
-    const tokenSalvo = refreshTokenRef.current;
-    if (!tokenSalvo) {
-      setCarregando(false);
-      return;
-    }
-    authApi
-      .refresh(tokenSalvo)
-      .then((resultado) => salvarSessao(resultado))
-      .catch(() => limparSessao())
-      .finally(() => setCarregando(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const login = useCallback(
     async (email, senha) => {
       const resultado = await authApi.login(email, senha);
@@ -113,6 +96,36 @@ export function useAuth() {
     }
     return refreshEmAndamentoRef.current;
   }, [salvarSessao]);
+
+  // Ao carregar a página: se sobrou um refresh token de uma visita
+  // anterior, tenta renovar em silêncio (senão sempre voltaria pra tela de
+  // login, mesmo com sessão ainda válida).
+  //
+  // CORRIGIDO (11-08-2026, achado ao vivo, testado num script que dava
+  // page.goto() reto pra uma URL logo após logar): ESTE efeito chamava
+  // authApi.refresh(tokenSalvo) DIRETO, por fora do refreshEmAndamentoRef
+  // de renovarSessao() acima — ou seja, fora da proteção que o comentário
+  // de renovarSessao descreve. Se alguma tela disparasse um GET no mesmo
+  // instante (accessToken ainda null, então authFetch levava 401 e também
+  // tentava renovar, agora sim via renovarSessao), as DUAS chamadas
+  // usavam o MESMO refresh token (uso único — renovar revoga o antigo).
+  // Quem perdesse a corrida recebia "refresh token inválido"; como este
+  // efeito tratava qualquer erro com limparSessao() incondicional, ele
+  // podia apagar a sessão que a OUTRA chamada, vencedora, tinha acabado
+  // de salvar um instante antes — um F5/link direto que deveria continuar
+  // logado às vezes voltava pra tela de login sem motivo aparente.
+  // Fix: passou a chamar renovarSessao() (a MESMA promise compartilhada),
+  // então só existe UMA renovação de verdade nesta janela, não importa
+  // quantos lugares a peçam ao mesmo tempo.
+  useEffect(() => {
+    if (!refreshTokenRef.current) {
+      setCarregando(false);
+      return;
+    }
+    renovarSessao()
+      .catch(() => limparSessao())
+      .finally(() => setCarregando(false));
+  }, [renovarSessao, limparSessao]);
 
   const logout = useCallback(async () => {
     const tokenAtual = refreshTokenRef.current;

@@ -23,6 +23,7 @@ export const GRUPO_CONFIGURACAO = {
   limite_campanhas_simultaneas: 'Campanha',
   limite_endossos_campanha: 'Campanha',
   limite_denuncias_24h: 'Campanha',
+  janela_denuncias_horas: 'Campanha',
   limite_caracteres_descricao_campanha: 'Campanha',
   limite_caracteres_conteudo_atualizacao: 'Campanha',
   limite_caracteres_relato_denuncia: 'Campanha',

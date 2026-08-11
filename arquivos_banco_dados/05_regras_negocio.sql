@@ -2819,29 +2819,37 @@ EXECUTE FUNCTION fn_bloqueia_reversao_moderacao_comentario();
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-3]
 -- Regra:      Um usuário não pode registrar mais denúncias (campanha + perfil
---             somadas) em 24 horas do que
---             configuracoes.limite_denuncias_24h (RF-076).
+--             somadas) do que configuracoes.limite_denuncias_24h dentro da
+--             janela configuracoes.janela_denuncias_horas (RF-076).
 -- CORRIGIDO (28-07-2026, item 16 da Lista C): limite de 5 estava hardcoded
 -- no corpo da função. Passou a ler configuracoes (mesmo valor de hoje, 5,
 -- como DEFAULT de segurança caso a chave não exista).
+-- CORRIGIDO (11-08-2026, achado pela IA testando outra tela: só metade da
+-- regra virou configurável em 28-07 — a CONTAGEM (5) passou pra
+-- configuracoes, mas a JANELA (24 horas) continuou fixa no INTERVAL, direto
+-- no corpo da função. Agora janela_denuncias_horas também é lida de
+-- configuracoes (default 24, idêntico ao valor de hoje — nada muda no
+-- comportamento atual, só o lugar de onde o número vem).
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION validar_denuncia_frequencia()
 RETURNS trigger
 LANGUAGE plpgsql
 AS $$
 DECLARE
-    v_count integer;
-    v_limite integer;
+    v_count        integer;
+    v_limite       integer;
+    v_janela_horas integer;
 BEGIN
-    v_limite := public.config_numero('limite_denuncias_24h', 5);
+    v_limite       := public.config_numero('limite_denuncias_24h', 5);
+    v_janela_horas := public.config_numero('janela_denuncias_horas', 24);
 
     SELECT COUNT(*) INTO v_count
     FROM denuncia
     WHERE id_usuario = NEW.id_usuario
-      AND criado_em >= NOW() - INTERVAL '24 hours';
+      AND criado_em >= NOW() - (v_janela_horas || ' hours')::INTERVAL;
 
     IF v_count >= v_limite THEN
-        RAISE EXCEPTION 'Usuário já atingiu o limite de % denúncias nas últimas 24 horas', v_limite
+        RAISE EXCEPTION 'Usuário já atingiu o limite de % denúncias nas últimas % horas', v_limite, v_janela_horas
             USING ERRCODE = '93001';
     END IF;
 
@@ -2855,7 +2863,9 @@ $$;
 -- Momento:   BEFORE INSERT
 -- Função:    validar_denuncia_frequencia()
 -- Bloco:     [05-K-3]
--- Regra:     Bloqueia a 6ª denúncia de um mesmo usuário dentro de 24 horas.
+-- Regra:     Bloqueia a (limite+1)-ésima denúncia de um mesmo usuário
+--            dentro da janela — 6ª em 24h com os valores padrão de hoje,
+--            mas os dois números são configuráveis (ver função acima).
 -- ----------------------------------------------------------------------------
 DROP TRIGGER IF EXISTS trg_denuncia_limite_taxa ON denuncia;
 CREATE TRIGGER trg_denuncia_limite_taxa
