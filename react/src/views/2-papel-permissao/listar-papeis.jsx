@@ -81,7 +81,7 @@ export function ListarPapeis({ auth }) {
   // em fn_log_auditoria(), trg_log_auditoria_papel, 07-08-2026) — mesma
   // convenção de buscarLogUsuario em listar-usuarios.jsx.
   const buscarLogPapel = useCallback(
-    () => logAuditoriaApi.listarPorTabela(auth.authFetch, 'papel'),
+    (pagina) => logAuditoriaApi.listarPorTabela(auth.authFetch, 'papel', pagina),
     [auth.authFetch],
   );
 

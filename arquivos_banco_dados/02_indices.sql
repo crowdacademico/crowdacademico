@@ -138,4 +138,22 @@ CREATE INDEX idx_score_config_pai           ON score_config(id_pai);
 -- FK). Sem estes dois, qualquer uma das duas vira sequential scan na
 -- tabela de log inteira conforme ela cresce.
 CREATE INDEX idx_log_auditoria_registro    ON log_auditoria(tabela, identidade_registro);
-CREATE INDEX idx_log_auditoria_responsavel ON log_auditoria(id_usuario_responsavel);
+-- ATUALIZADO (11-08-2026, achado da parceira do Lucas: "vai virar uma
+-- listona conforme o sistema cresce") — ganhou `ocorrido_em DESC` no
+-- fim: id_usuario_responsavel sozinho não cobria o ORDER BY do sino
+-- "Atividade recente" (minha-atividade.ts), só o filtro; ainda serve
+-- sozinho pra qualquer "WHERE id_usuario_responsavel = X" que não
+-- ordene por data (prefixo à esquerda).
+CREATE INDEX idx_log_auditoria_responsavel ON log_auditoria(id_usuario_responsavel, ocorrido_em DESC);
+-- NOVO (11-08-2026, mesmo achado) — cobre o par WHERE tabela = X / ORDER
+-- BY ocorrido_em DESC que o botão "Ver log" (log-auditoria.service.
+-- findall.ts) faz o tempo todo; sem isso, o filtro por tabela até usa
+-- idx_log_auditoria_registro (prefixo em comum), mas a ordenação por
+-- data continua sem índice, cada vez mais lenta conforme a tabela cresce.
+CREATE INDEX idx_log_auditoria_tabela_ocorrido ON log_auditoria(tabela, ocorrido_em DESC);
+-- NOVO (11-08-2026, mesmo achado) — sozinho (sem tabela/usuário), pensado
+-- pra uma futura limpeza por idade ("DELETE FROM log_auditoria WHERE
+-- ocorrido_em < ..."), que não filtra por tabela nem por usuário — os
+-- dois índices acima não ajudariam essa consulta (a coluna de filtro
+-- deles vem ANTES de ocorrido_em, e aqui não há filtro nenhum sobre ela).
+CREATE INDEX idx_log_auditoria_ocorrido ON log_auditoria(ocorrido_em);

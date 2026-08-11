@@ -637,6 +637,27 @@ $$;
 
 
 -- ============================================================================
+-- 11-08-2026 — 3 índices novos/atualizados em log_auditoria (02_indices.sql
+-- [02-J]), achado da parceira do Lucas: "vai virar uma listona conforme o
+-- sistema cresce". idx_log_auditoria_responsavel ganhou ocorrido_em DESC
+-- (cobre o ORDER BY do sino "Atividade recente"); idx_log_auditoria_tabela_
+-- ocorrido é novo (cobre o botão "Ver log" de cada tabela, agora paginado
+-- de verdade no front); idx_log_auditoria_ocorrido é novo, sozinho, pensado
+-- pra uma futura limpeza por idade. Seguro rodar de novo quantas vezes
+-- quiser (DROP IF EXISTS antes de cada CREATE).
+-- ============================================================================
+
+DROP INDEX IF EXISTS idx_log_auditoria_responsavel;
+CREATE INDEX idx_log_auditoria_responsavel ON log_auditoria(id_usuario_responsavel, ocorrido_em DESC);
+
+DROP INDEX IF EXISTS idx_log_auditoria_tabela_ocorrido;
+CREATE INDEX idx_log_auditoria_tabela_ocorrido ON log_auditoria(tabela, ocorrido_em DESC);
+
+DROP INDEX IF EXISTS idx_log_auditoria_ocorrido;
+CREATE INDEX idx_log_auditoria_ocorrido ON log_auditoria(ocorrido_em);
+
+
+-- ============================================================================
 -- NÃO ENTRA NESTE ARQUIVO (registrado aqui só pra não se perder)
 -- ============================================================================
 

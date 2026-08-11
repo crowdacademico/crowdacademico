@@ -54,7 +54,7 @@ export function ListarUsuarios({ auth }) {
   // 'usuario' é o nome FÍSICO da tabela no Postgres (bate com
   // fn_log_auditoria() via TG_TABLE_NAME), não o nome da rota.
   const buscarLogUsuario = useCallback(
-    () => logAuditoriaApi.listarPorTabela(auth.authFetch, 'usuario'),
+    (pagina) => logAuditoriaApi.listarPorTabela(auth.authFetch, 'usuario', pagina),
     [auth.authFetch],
   );
 

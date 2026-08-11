@@ -30,6 +30,12 @@ const ROTULO_OPERACAO = {
 export function LogAuditoriaPainel({ buscar, campoRenomeio }) {
   const [linhas, setLinhas] = useState([]);
   const [total, setTotal] = useState(0);
+  const [tamanho, setTamanho] = useState(20);
+  // Página (11-08-2026, achado da parceira do Lucas: "vai virar aquela
+  // listona conforme o sistema cresce") — o backend já paginava de
+  // verdade (LIMIT/OFFSET), só o painel nunca pedia página nenhuma além
+  // da 1ª.
+  const [pagina, setPagina] = useState(1);
   const [carregando, setCarregando] = useState(true);
   const { erro, reportarErro, limparErro } = useErroToast();
 
@@ -37,15 +43,18 @@ export function LogAuditoriaPainel({ buscar, campoRenomeio }) {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setCarregando(true);
     limparErro();
-    buscar()
+    buscar(pagina)
       .then((resposta) => {
         setLinhas(resposta.dados);
         setTotal(resposta.total);
+        setTamanho(resposta.tamanho);
       })
       .catch(reportarErro)
       .finally(() => setCarregando(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [buscar]);
+  }, [buscar, pagina]);
+
+  const totalPaginas = Math.max(1, Math.ceil(total / tamanho));
 
   return (
     <div className="mt-4 border-t borda-padrao pt-4">
@@ -101,6 +110,32 @@ export function LogAuditoriaPainel({ buscar, campoRenomeio }) {
             )}
           </tbody>
         </table>
+      )}
+
+      {!carregando && !erro && totalPaginas > 1 && (
+        <div className="flex items-center justify-between flex-wrap gap-3 mt-3 text-sm texto-padrao">
+          <span>
+            Página {pagina} de {totalPaginas} ({total} no total)
+          </span>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setPagina((p) => Math.max(1, p - 1))}
+              disabled={pagina === 1}
+              className="btn btn-secondary"
+            >
+              Anterior
+            </button>
+            <button
+              type="button"
+              onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
+              disabled={pagina === totalPaginas}
+              className="btn btn-secondary"
+            >
+              Próxima
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

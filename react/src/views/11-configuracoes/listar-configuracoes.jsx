@@ -13,7 +13,7 @@ export function ListarConfiguracoes({ auth }) {
   // 'configuracoes' é o nome FÍSICO da tabela (plural, bate com o CREATE
   // TABLE em 01_extensoes_enums_tabelas.sql), não o nome da rota.
   const buscarLogConfiguracoes = useCallback(
-    () => logAuditoriaApi.listarPorTabela(auth.authFetch, 'configuracoes'),
+    (pagina) => logAuditoriaApi.listarPorTabela(auth.authFetch, 'configuracoes', pagina),
     [auth.authFetch],
   );
 
