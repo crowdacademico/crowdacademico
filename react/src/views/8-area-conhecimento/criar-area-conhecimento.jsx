@@ -91,7 +91,7 @@ export function CriarAreaConhecimento({ auth }) {
             </p>
           ) : (
             <p className="text-xs texto-fraco mt-1">
-              Formato oficial da tabela CNPq — grande área.área.subárea.especialidade.
+              Formato oficial segundo o CNPq — grande área.área.subárea.especialidade.
             </p>
           )}
         </div>
