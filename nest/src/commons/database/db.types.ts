@@ -153,6 +153,20 @@ export interface VerificacaoEmailTable {
   confirmado_em: Date | null;
 }
 
+// ADICIONADA — espelha 01_extensoes_enums_tabelas.sql (tabela
+// area_conhecimento), tocada pela 1ª vez pelo módulo 8-area-conhecimento.
+// `id_pai` auto-referenciado implementa a hierarquia de 2 níveis (grande
+// área -> área) explicada no comentário da própria tabela no SQL; NULL =
+// grande área raiz, preenchido = área de nível 2. Mesmo padrão já usado em
+// score_config (não modelada aqui ainda, nenhum módulo a toca).
+export interface AreaConhecimentoTable {
+  id_area_conhecimento: Generated<number>;
+  codigo_cnpq: string;
+  nome: string;
+  id_pai: number | null;
+  ativo: Generated<boolean>;
+}
+
 export interface DB {
   usuario: UsuarioTable;
   papel: PapelTable;
@@ -165,4 +179,5 @@ export interface DB {
   termos_de_uso: TermosDeUsoTable;
   usuario_termo: UsuarioTermoTable;
   verificacao_email: VerificacaoEmailTable;
+  area_conhecimento: AreaConhecimentoTable;
 }

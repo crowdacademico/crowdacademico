@@ -15,6 +15,10 @@ import { AlterarConfiguracao } from '../../views/11-configuracoes/alterar-config
 import { ConsultarConfiguracao } from '../../views/11-configuracoes/consultar-configuracao';
 import { ExcluirConfiguracao } from '../../views/11-configuracoes/excluir-configuracao';
 import { ListarConfiguracoes } from '../../views/11-configuracoes/listar-configuracoes';
+import { CriarAreaConhecimento } from '../../views/8-area-conhecimento/criar-area-conhecimento';
+import { AlterarAreaConhecimento } from '../../views/8-area-conhecimento/alterar-area-conhecimento';
+import { ConsultarAreaConhecimento } from '../../views/8-area-conhecimento/consultar-area-conhecimento';
+import { ListarAreasConhecimento } from '../../views/8-area-conhecimento/listar-areas-conhecimento';
 
 // Fonte única de verdade pra "quais páginas existem" — App.jsx monta as
 // <Route> a partir daqui, e breadcrumb.jsx monta o rótulo a partir daqui.
@@ -97,6 +101,23 @@ export const ROTAS_ADMIN = [
     rotuloBreadcrumb: 'Configurações',
     grupoMenu: 'CADASTROS',
     icone: 'fa-sliders',
+  },
+
+  // Área de Conhecimento (módulo 8-area-conhecimento) — tela pronta e
+  // funcional por URL direta (/admin/areas-conhecimento), só ainda SEM
+  // `grupoMenu` de propósito: o Lucas não decidiu em que grupo/posição do
+  // menu lateral ela entra (admin-menu.constants.js só lista item com
+  // `grupoMenu` preenchido, ver itensDoGrupo() lá). `rotuloMenu`/`icone`
+  // já deixados prontos — pra ativar no menu depois, basta acrescentar
+  // `grupoMenu: 'CADASTROS'` (ou o grupo que for decidido) aqui, 1 linha,
+  // nada mais muda.
+  {
+    caminho: '/admin/areas-conhecimento',
+    caminhoRelativo: 'areas-conhecimento',
+    elemento: ListarAreasConhecimento,
+    rotuloMenu: 'Áreas do Conhecimento',
+    rotuloBreadcrumb: 'Áreas do Conhecimento',
+    icone: 'fa-diagram-project',
   },
 
   // Minha Conta (10-08-2026) — dentro do painel agora (sidebar visível),
@@ -188,5 +209,30 @@ export const ROTAS_ADMIN = [
     elemento: ExcluirConfiguracao,
     rotuloBreadcrumb: 'Excluir Configuração',
     paiCaminho: '/admin/configuracoes',
+  },
+
+  // Área de Conhecimento — filhas de /admin/areas-conhecimento. Sem rota
+  // de excluir: backend não tem DELETE pra area_conhecimento (só
+  // INSERT/UPDATE concedidos em 06_grants.sql), só desativa via Alterar.
+  {
+    caminho: '/admin/areas-conhecimento/criar',
+    caminhoRelativo: 'areas-conhecimento/criar',
+    elemento: CriarAreaConhecimento,
+    rotuloBreadcrumb: 'Criar Área de Conhecimento',
+    paiCaminho: '/admin/areas-conhecimento',
+  },
+  {
+    caminho: '/admin/areas-conhecimento/:id/alterar',
+    caminhoRelativo: 'areas-conhecimento/:id/alterar',
+    elemento: AlterarAreaConhecimento,
+    rotuloBreadcrumb: 'Alterar Área de Conhecimento',
+    paiCaminho: '/admin/areas-conhecimento',
+  },
+  {
+    caminho: '/admin/areas-conhecimento/:id/consultar',
+    caminhoRelativo: 'areas-conhecimento/:id/consultar',
+    elemento: ConsultarAreaConhecimento,
+    rotuloBreadcrumb: 'Consultar Área de Conhecimento',
+    paiCaminho: '/admin/areas-conhecimento',
   },
 ];
