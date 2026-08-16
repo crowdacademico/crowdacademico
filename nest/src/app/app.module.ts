@@ -12,6 +12,7 @@ import { DashboardModule } from '../29-dashboard/dashboard.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { HealthController } from './health.controller';
+import { TipoLinkModule } from '../9-tipo-link/tipo-link.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { HealthController } from './health.controller';
     AuthModule,
     ConfiguracoesModule,
     AreaConhecimentoModule,
+    TipoLinkModule,
     LogAuditoriaModule,
     DashboardModule,
   ],

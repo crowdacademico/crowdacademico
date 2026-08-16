@@ -1,0 +1,25 @@
+import {
+  Body,
+  Controller,
+  Param,
+  ParseIntPipe,
+  Patch,
+  UseGuards,
+} from '@nestjs/common';
+import { RequireAuthGuard } from '../../3-auth/guards/require-auth.guard';
+import { AtualizarTipoLinkRequestDto } from '../dto/request/atualizar-tipo-link.request.dto';
+import { TipoLinkServiceUpdate } from '../service/tipo-link.service.update';
+
+@Controller('tipo-link')
+export class TipoLinkControllerUpdate {
+  constructor(private readonly service: TipoLinkServiceUpdate) {}
+
+  @Patch(':id')
+  @UseGuards(RequireAuthGuard)
+  atualizar(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: AtualizarTipoLinkRequestDto,
+  ) {
+    return this.service.executar(id, dto);
+  }
+}

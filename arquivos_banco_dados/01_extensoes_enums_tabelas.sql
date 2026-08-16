@@ -161,7 +161,7 @@ CREATE TABLE tipo_link (
     nome                VARCHAR(100) NOT NULL,
     ativo               BOOLEAN      DEFAULT TRUE,
     regex               TEXT,
-    dominio             VARCHAR(255),
+    dominio             VARCHAR(255)[] NOT NULL DEFAULT '{}',
     permite_perfil      BOOLEAN NOT NULL DEFAULT TRUE,
     permite_atualizacao BOOLEAN NOT NULL DEFAULT FALSE,
     permite_recompensa  BOOLEAN NOT NULL DEFAULT FALSE,

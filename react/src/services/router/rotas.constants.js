@@ -19,6 +19,10 @@ import { CriarAreaConhecimento } from '../../views/8-area-conhecimento/criar-are
 import { AlterarAreaConhecimento } from '../../views/8-area-conhecimento/alterar-area-conhecimento';
 import { ConsultarAreaConhecimento } from '../../views/8-area-conhecimento/consultar-area-conhecimento';
 import { ListarAreasConhecimento } from '../../views/8-area-conhecimento/listar-areas-conhecimento';
+import { CriarTipoLink } from '../../views/9-tipo-link/criar-tipo-link';
+import { AlterarTipoLink } from '../../views/9-tipo-link/alterar-tipo-link';
+import { ConsultarTipoLink } from '../../views/9-tipo-link/consultar-tipo-link';
+import { ListarTiposLink } from '../../views/9-tipo-link/listar-tipos-link';
 
 // Fonte única de verdade pra "quais páginas existem" — App.jsx monta as
 // <Route> a partir daqui, e breadcrumb.jsx monta o rótulo a partir daqui.
@@ -118,6 +122,20 @@ export const ROTAS_ADMIN = [
     rotuloMenu: 'Áreas do Conhecimento',
     rotuloBreadcrumb: 'Áreas do Conhecimento',
     icone: 'fa-diagram-project',
+  },
+
+  // Tipo de Link (módulo 9-tipo-link) — mesma situação de Área de
+  // Conhecimento logo acima: tela pronta e funcional por URL direta
+  // (/admin/tipos-link), só ainda SEM `grupoMenu` de propósito (menu
+  // lateral não definido). `rotuloMenu`/`icone` já deixados prontos —
+  // ativar no menu depois é 1 linha (`grupoMenu: 'CADASTROS'` aqui).
+  {
+    caminho: '/admin/tipos-link',
+    caminhoRelativo: 'tipos-link',
+    elemento: ListarTiposLink,
+    rotuloMenu: 'Tipos de Link',
+    rotuloBreadcrumb: 'Tipos de Link',
+    icone: 'fa-link',
   },
 
   // Minha Conta (10-08-2026) — dentro do painel agora (sidebar visível),
@@ -234,5 +252,30 @@ export const ROTAS_ADMIN = [
     elemento: ConsultarAreaConhecimento,
     rotuloBreadcrumb: 'Consultar Área de Conhecimento',
     paiCaminho: '/admin/areas-conhecimento',
+  },
+
+  // Tipo de Link — filhas de /admin/tipos-link. Sem rota de excluir:
+  // backend não tem DELETE pra tipo_link (só INSERT/UPDATE concedidos em
+  // 06_grants.sql [06-C-2]), só desativa via Alterar.
+  {
+    caminho: '/admin/tipos-link/criar',
+    caminhoRelativo: 'tipos-link/criar',
+    elemento: CriarTipoLink,
+    rotuloBreadcrumb: 'Criar Tipo de Link',
+    paiCaminho: '/admin/tipos-link',
+  },
+  {
+    caminho: '/admin/tipos-link/:id/alterar',
+    caminhoRelativo: 'tipos-link/:id/alterar',
+    elemento: AlterarTipoLink,
+    rotuloBreadcrumb: 'Alterar Tipo de Link',
+    paiCaminho: '/admin/tipos-link',
+  },
+  {
+    caminho: '/admin/tipos-link/:id/consultar',
+    caminhoRelativo: 'tipos-link/:id/consultar',
+    elemento: ConsultarTipoLink,
+    rotuloBreadcrumb: 'Consultar Tipo de Link',
+    paiCaminho: '/admin/tipos-link',
   },
 ];

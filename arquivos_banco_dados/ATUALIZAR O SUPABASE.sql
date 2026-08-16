@@ -657,6 +657,41 @@ DROP INDEX IF EXISTS idx_log_auditoria_ocorrido;
 CREATE INDEX idx_log_auditoria_ocorrido ON log_auditoria(ocorrido_em);
 
 
+-- tipo_link.dominio: VARCHAR(255) escalar -> VARCHAR(255)[] (array nativo
+-- do Postgres). NULL continua NULL; valor existente vira array de 1
+-- elemento. Seguro colar de novo: só converte se a coluna ainda não for
+-- array (sem essa guarda, colar 2x re-envolveria cada array já migrado
+-- dentro de outro array, corrompendo o dado).
+-- 16-08-2026 — domínio vira o mecanismo de validação PRINCIPAL de
+-- tipo_link, regex um complemento OPCIONAL.
+
+DO $$
+BEGIN
+    IF (
+        SELECT data_type FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'tipo_link' AND column_name = 'dominio'
+    ) <> 'ARRAY' THEN
+        ALTER TABLE tipo_link
+            ALTER COLUMN dominio TYPE VARCHAR(255)[]
+            USING (
+                CASE WHEN dominio IS NULL
+                    THEN NULL::VARCHAR(255)[]
+                    ELSE ARRAY[dominio]::VARCHAR(255)[]
+                END
+            );
+    END IF;
+END $$;
+
+-- Backfill: qualquer linha com dominio NULL vira array vazio.
+UPDATE tipo_link SET dominio = '{}' WHERE dominio IS NULL;
+
+ALTER TABLE tipo_link ALTER COLUMN dominio SET DEFAULT '{}';
+ALTER TABLE tipo_link ALTER COLUMN dominio SET NOT NULL;
+
+-- Defensivo: desfaz o regex-sentinela de uma migração anterior, se sobrou.
+UPDATE tipo_link SET regex = NULL WHERE regex = '^https?://.+$';
+
+
 -- ============================================================================
 -- NÃO ENTRA NESTE ARQUIVO (registrado aqui só pra não se perder)
 -- ============================================================================

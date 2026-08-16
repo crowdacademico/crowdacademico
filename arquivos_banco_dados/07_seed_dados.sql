@@ -329,32 +329,13 @@ ON CONFLICT DO NOTHING;
 -- ATUALIZADO (28-07-2026, item 15 da Lista C — decisão da Alexia, "mantém, e
 -- configura"): link_atualizacao/link_recompensa ficavam impossíveis de usar
 -- porque os 3 campos de escopo caíam todos no DEFAULT (só permite_perfil=TRUE).
--- GITHUB ganhou permite_atualizacao/permite_recompensa=TRUE — exemplo dela:
--- repositório de código como prova de progresso numa atualização, ou como
--- acesso antecipado (tipo_recompensa='acesso_antecipado') a um repo privado.
--- Os outros 4 tipos continuam só permite_perfil (são links de identidade
--- profissional — Lattes/ORCID/ResearchGate/LinkedIn não fazem tanto sentido
--- anexados a uma atualização de progresso ou a uma recompensa). Ampliar pra
--- mais tipos, ou criar um tipo novo (ex.: vídeo/YouTube, que a Alexia citou
--- como exemplo mas que não existe no catálogo hoje), fica pra quando isso for
--- decidido — ver a nota sobre `tipo_link` reaberto em PENDENCIAS e correcoes.md.
--- REABERTO E RESOLVIDO (28-07-2026): a allowlist tinha ficado fechada em 5
--- tipos com base numa checagem incompleta (só olhou quais foram seedados, não
--- os RF-014 que listam 7). SITE_INSTITUCIONAL e OUTRO voltam ao catálogo —
--- regex/dominio NULL de propósito (não têm domínio fixo pra validar), a
--- aplicação (NestJS) valida só o formato genérico de URL pra esses dois.
--- Resolve também o item 19(e). Só permite_perfil=TRUE pros dois, mesmo escopo
--- inicial dos outros 4 tipos de identidade (LATTES/ORCID/RESEARCHGATE/
--- LINKEDIN) antes do GITHUB abrir escopo pra atualização/recompensa.
+-- ATUALIZAÇÂO (15-08-2026):  SITE_INSTITUCIONAL/OUTRO removidos pois permitiam links sem verificação.
 INSERT INTO tipo_link (codigo, nome, ativo, regex, dominio, permite_perfil, permite_atualizacao, permite_recompensa) VALUES
-('LATTES',             'Lattes',               TRUE,  '^https?://lattes\.cnpq\.br/\d+$',                   'lattes.cnpq.br',    TRUE, FALSE, FALSE),
-('ORCID',              'ORCID',                TRUE,  '^https?://orcid\.org/\d{4}-\d{4}-\d{4}-\d{3}[\dX]$', 'orcid.org',         TRUE, FALSE, FALSE),
-('RESEARCHGATE',       'ResearchGate',         TRUE,  '^https?://(www\.)?researchgate\.net/profile/[\w\-]+$', 'researchgate.net', TRUE, FALSE, FALSE),
-('LINKEDIN',           'LinkedIn',             TRUE,  '^https?://(www\.)?linkedin\.com/in/[\w\-]+/?$',      'linkedin.com',      TRUE, FALSE, FALSE),
-('GITHUB',             'GitHub',               TRUE,  '^https?://(www\.)?github\.com/[\w\-]+/?$',          'github.com',        TRUE, TRUE,  TRUE),
-('SITE_INSTITUCIONAL', 'Site Institucional',   TRUE,  NULL,                                                 NULL,                TRUE, FALSE, FALSE),
-('OUTRO',              'Outro',                TRUE,  NULL,                                                 NULL,                TRUE, FALSE, FALSE);
-
+('LATTES',             'Lattes',               TRUE,  '^https?://lattes\.cnpq\.br/\d+$',                     '{lattes.cnpq.br}',   TRUE, FALSE, FALSE),
+('ORCID',              'ORCID',                TRUE,  '^https?://orcid\.org/\d{4}-\d{4}-\d{4}-\d{3}[\dX]$',   '{orcid.org}',        TRUE, FALSE, FALSE),
+('RESEARCHGATE',       'ResearchGate',         TRUE,  '^https?://(www\.)?researchgate\.net/profile/[\w\-]+$', '{researchgate.net}', TRUE, FALSE, FALSE),
+('LINKEDIN',           'LinkedIn',             TRUE,  '^https?://(www\.)?linkedin\.com/in/[\w\-]+/?$',        '{linkedin.com}',     TRUE, FALSE, FALSE),
+('GITHUB',             'GitHub',               TRUE,  '^https?://(www\.)?github\.com/[\w\-]+/?$',             '{github.com}',       TRUE, TRUE,  TRUE);
 
 -- [07-C-2] area_conhecimento
 -- CORRIGIDO: área de conhecimento adicionada para o valor Multidisciplinar.

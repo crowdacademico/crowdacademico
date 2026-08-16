@@ -138,6 +138,43 @@ export interface UsuarioTermoTable {
   ip_aceite: string | null;
 }
 
+// ADICIONADA — espelha 01_extensoes_enums_tabelas.sql (tabela
+// area_conhecimento), tocada pela 1ª vez pelo módulo 8-area-conhecimento.
+// `id_pai` auto-referenciado implementa a hierarquia de 2 níveis (grande
+// área -> área) explicada no comentário da própria tabela no SQL; NULL =
+// grande área raiz, preenchido = área de nível 2. Mesmo padrão já usado em
+// score_config (não modelada aqui ainda, nenhum módulo a toca).
+export interface AreaConhecimentoTable {
+  id_area_conhecimento: Generated<number>;
+  codigo_cnpq: string;
+  nome: string;
+  id_pai: number | null;
+  ativo: Generated<boolean>;
+}
+
+// ADICIONADA — espelha 01_extensoes_enums_tabelas.sql (tabela tipo_link),
+// tocada pela 1ª vez pelo módulo 9-tipo-link. `codigo` é a chave estável
+// lida por calcular_score_perfil_academico() (05_regras_negocio.sql
+// [05-I-2]); os 3 `permite_*` são os escopos de uso, com
+// CK_TIPO_LINK_ALGUM_ESCOPO garantindo pelo menos um TRUE.
+// ATUALIZADO (14-08-2026): `dominio` virou array nativo do Postgres
+// (VARCHAR(255)[] — node-postgres/Kysely já devolve isto como `string[]`
+// puro, sem parsing manual nenhum). `regex`/`dominio` continuam NULLABLE
+// de propósito (decisão revista no dia seguinte: array vazio é truthy em
+// JS/TS, então "sem restrição" fica mais seguro como ausência de valor —
+// ver comentário completo em 01_extensoes_enums_tabelas.sql [01-B]).
+export interface TipoLinkTable {
+  id_tipolink: Generated<number>;
+  codigo: string;
+  nome: string;
+  ativo: Generated<boolean>;
+  regex: string | null;
+  dominio: Generated<string[]>;
+  permite_perfil: Generated<boolean>;
+  permite_atualizacao: Generated<boolean>;
+  permite_recompensa: Generated<boolean>;
+}
+
 export interface VerificacaoEmailTable {
   id_verificacao: Generated<number>;
   id_usuario: number;
@@ -153,20 +190,6 @@ export interface VerificacaoEmailTable {
   confirmado_em: Date | null;
 }
 
-// ADICIONADA — espelha 01_extensoes_enums_tabelas.sql (tabela
-// area_conhecimento), tocada pela 1ª vez pelo módulo 8-area-conhecimento.
-// `id_pai` auto-referenciado implementa a hierarquia de 2 níveis (grande
-// área -> área) explicada no comentário da própria tabela no SQL; NULL =
-// grande área raiz, preenchido = área de nível 2. Mesmo padrão já usado em
-// score_config (não modelada aqui ainda, nenhum módulo a toca).
-export interface AreaConhecimentoTable {
-  id_area_conhecimento: Generated<number>;
-  codigo_cnpq: string;
-  nome: string;
-  id_pai: number | null;
-  ativo: Generated<boolean>;
-}
-
 export interface DB {
   usuario: UsuarioTable;
   papel: PapelTable;
@@ -180,4 +203,5 @@ export interface DB {
   usuario_termo: UsuarioTermoTable;
   verificacao_email: VerificacaoEmailTable;
   area_conhecimento: AreaConhecimentoTable;
+  tipo_link: TipoLinkTable;
 }
