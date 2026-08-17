@@ -4,7 +4,9 @@ import { GenericTable } from '../../components/crud/generic-table';
 import { configuracaoApi } from '../../services/11-configuracoes/api/configuracao.api';
 import { logAuditoriaApi } from '../../services/28-log-auditoria/api/log-auditoria.api';
 
-// Aba "Configurações" do painel admin — rota /admin/configuracoes.
+// Aba "Parâmetros do Sistema" do painel admin — rota /admin/configuracoes
+// (URL/tabela/variáveis internas continuam "configuracoes" de propósito,
+// só o nome visível na tela mudou, 11-08-2026 — ver rotas.constants.js).
 export function ListarConfiguracoes({ auth }) {
   const listarConfiguracoes = useCallback(
     () => configuracaoApi.listar(auth.authFetch),
@@ -20,7 +22,7 @@ export function ListarConfiguracoes({ auth }) {
   return (
     <div className="admin-content-painel">
       <GenericTable
-        titulo="Configurações"
+        titulo="Parâmetros do Sistema"
         acaoTopo={
           <Link to="/admin/configuracoes/criar" className="btn btn-primary">
             Criar

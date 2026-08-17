@@ -79,11 +79,17 @@
 }
 
 .admin-sidebar__grupo-titulo {
-  font-size: var(--font-size-xs);
+  /* Teste (11-08-2026, pedido do Lucas: "aumenta a fonte um pouco e deixa
+     eles preto total, pra eu ver como fica") — ERA font-size-xs +
+     cor-texto-fraco (cinza). font-size-sm (1 degrau acima) + cor-texto-
+     forte (não preto fixo — o token mais escuro/forte que já existe,
+     continua se adaptando ao tema escuro sozinho, mesmo espírito de nunca
+     hardcodar cor direto neste projeto). */
+  font-size: var(--font-size-sm);
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--cor-texto-fraco);
+  color: var(--cor-texto-forte);
   margin: 0.5rem 0 0.5rem 0.5rem;
 }
 
@@ -173,6 +179,17 @@
      mas ainda é um teto, não um valor fixo que ignora a tela pequena. */
   width: 100%;
   max-width: 1600px;
+  /* min-width: 0 (11-08-2026, achado testando a coluna de Ações) — SEM
+     isso, este `<div>` é item flex de .admin-content-area (que já tinha
+     min-width:0 pra SI MESMO, mas isso não passa pros filhos sozinho) e
+     herda o comportamento padrão min-width:auto, que nunca encolhe abaixo
+     do conteúdo mais largo lá dentro — uma tabela cheia de colunas (id,
+     nome, papel, e-mail, ações...) empurrava a PÁGINA INTEIRA pra
+     largura da tabela em vez da tabela encolher pra caber na tela, mesmo
+     mecanismo já corrigido antes em .admin-pagina (Minha Conta) e aqui
+     mesmo em w-0/min-w-full (minha-conta-page.jsx) — mesma família de
+     bug, lugar diferente. */
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;

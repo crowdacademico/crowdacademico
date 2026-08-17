@@ -48,8 +48,8 @@ export function CriarConfiguracao({ auth }) {
         descricao,
       });
       mostrar(
-        'Configuração cadastrada com sucesso.',
-        `A nova configuração possui o ID: ${configuracaoCriada.idConfig}`,
+        'Parâmetro cadastrado com sucesso.',
+        `O novo parâmetro possui o ID: ${configuracaoCriada.idConfig}`,
       );
       navigate(-1);
     } catch (erroRequisicao) {
@@ -62,8 +62,8 @@ export function CriarConfiguracao({ auth }) {
   return (
     <CartaoFormulario
       icone="fa-gear"
-      titulo="Criar Configuração"
-      subtitulo="Preencha os dados abaixo para cadastrar uma nova configuração."
+      titulo="Criar Parâmetro"
+      subtitulo="Preencha os dados abaixo para cadastrar um novo parâmetro."
     >
       <form onSubmit={aoCriar} className="p-10 space-y-6">
         {erro && <p className="text-red-700 text-sm font-bold text-center">{erro}</p>}

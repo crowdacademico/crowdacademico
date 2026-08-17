@@ -141,7 +141,7 @@ export function BuscaGlobal({ auth }) {
           .filter((c) => contem(c.chave, termoBusca) || contem(c.descricao, termoBusca))
           .slice(0, LIMITE_POR_CATEGORIA)
           .map((c) => ({
-            categoria: 'Configurações',
+            categoria: 'Parâmetros',
             rotulo: c.chave,
             subtitulo: c.descricao,
             caminho: `/admin/configuracoes/${c.idConfig}/consultar`,
@@ -210,7 +210,7 @@ export function BuscaGlobal({ auth }) {
             value={termo}
             onChange={(evento) => setTermo(evento.target.value)}
             onKeyDown={aoTeclarInput}
-            placeholder="Buscar usuário, papel, permissão, configuração..."
+            placeholder="Buscar usuário, papel, permissão, parâmetro..."
             className="flex-1 outline-none text-sm texto-forte bg-transparent placeholder:texto-fraco"
           />
           <kbd className="text-[10px] font-bold texto-fraco border borda-forte rounded px-1.5 py-0.5">

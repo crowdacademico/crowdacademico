@@ -29,7 +29,7 @@ export function ExcluirConfiguracao({ auth }) {
     setExcluindo(true);
     try {
       await configuracaoApi.remover(auth.authFetch, id);
-      mostrar('Configuração excluída com sucesso.', `ID: ${id} foi excluída`);
+      mostrar('Parâmetro excluído com sucesso.', `ID: ${id} foi excluído`);
       navigate(-1);
     } catch (erroRequisicao) {
       reportarErro(erroRequisicao);
@@ -40,7 +40,7 @@ export function ExcluirConfiguracao({ auth }) {
   return (
     <CartaoFormulario
       icone="fa-triangle-exclamation"
-      titulo="Excluir Configuração"
+      titulo="Excluir Parâmetro"
       subtitulo="Esta ação não pode ser desfeita."
       variante="perigo"
       rodape={

@@ -486,30 +486,43 @@ export function GenericTable({
                           Lucas: "voltar a dar as cores das ações... mas mais
                           fraquinho, só pra dar mais vida") — ver
                           .crud-tabela__acao--alterar/--excluir em
-                          4-crud.css. Texto continua neutro nos dois casos. */}
+                          4-crud.css. Texto continua neutro nos dois casos.
+                          Texto em <span> próprio (não solto ao lado do
+                          <i>) — precisa de um elemento pra sumir sozinho
+                          via CSS quando a coluna aperta; `aria-label` no
+                          <Link> garante que o botão continua tendo nome
+                          acessível pra leitor de tela mesmo com o texto
+                          escondido (display:none tira do texto da árvore
+                          de acessibilidade também, não só da tela). */}
                       <div className="crud-tabela__acoes">
                         {acoes.includes('alterar') && (
                           <Link
                             className="crud-tabela__acao crud-tabela__acao--alterar"
                             to={`${rotaBase}/${linha[chavePrimaria]}/alterar`}
+                            aria-label="Alterar"
                           >
-                            <i className="fa-solid fa-pen"></i> Alterar
+                            <i className="fa-solid fa-pen"></i>
+                            <span className="crud-tabela__acao-texto">Alterar</span>
                           </Link>
                         )}
                         {acoes.includes('consultar') && (
                           <Link
                             className="crud-tabela__acao"
                             to={`${rotaBase}/${linha[chavePrimaria]}/consultar`}
+                            aria-label="Consultar"
                           >
-                            <i className="fa-solid fa-eye"></i> Consultar
+                            <i className="fa-solid fa-eye"></i>
+                            <span className="crud-tabela__acao-texto">Consultar</span>
                           </Link>
                         )}
                         {acoes.includes('excluir') && (
                           <Link
                             className="crud-tabela__acao crud-tabela__acao--excluir"
                             to={`${rotaBase}/${linha[chavePrimaria]}/excluir`}
+                            aria-label="Excluir"
                           >
-                            <i className="fa-solid fa-trash"></i> Excluir
+                            <i className="fa-solid fa-trash"></i>
+                            <span className="crud-tabela__acao-texto">Excluir</span>
                           </Link>
                         )}
                       </div>

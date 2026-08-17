@@ -97,44 +97,52 @@ export const ROTAS_ADMIN = [
     grupoMenu: 'CADASTROS',
     icone: 'fa-user-shield',
   },
+  // Configurações (11-08-2026, virou seu PRÓPRIO grupo — pedido do Lucas:
+  // "ficaria esquisito" um item chamado Configurações dentro de um grupo
+  // TAMBÉM chamado Configurações). O item em si virou "Parâmetros do
+  // Sistema" (nome que descreve o que ele faz — a tabela `configuracoes`
+  // guarda os limites/taxas/prazos que o resto do banco lê via
+  // config_numero(), ver [[feedback_no_hardcoded_values]] — não é mais
+  // "Configurações dentro de Configurações"). `caminho`/`caminhoRelativo`
+  // continuam '/admin/configuracoes' de propósito — é só o RÓTULO visível
+  // que muda, a URL/tabela/API por trás continuam "configuracoes", mesmo
+  // espírito de `grupoMenu: 'CADASTROS'` nunca ter mudado de nome quando
+  // o TÍTULO do grupo mudou de "CADASTROS" pra "GESTÃO DE ACESSO E
+  // SISTEMA" (ver admin-menu.constants.js).
   {
     caminho: '/admin/configuracoes',
     caminhoRelativo: 'configuracoes',
     elemento: ListarConfiguracoes,
-    rotuloMenu: 'Configurações',
-    rotuloBreadcrumb: 'Configurações',
-    grupoMenu: 'CADASTROS',
+    rotuloMenu: 'Parâmetros do Sistema',
+    rotuloBreadcrumb: 'Parâmetros do Sistema',
+    grupoMenu: 'CONFIGURACOES',
     icone: 'fa-sliders',
   },
 
-  // Área de Conhecimento (módulo 8-area-conhecimento) — tela pronta e
-  // funcional por URL direta (/admin/areas-conhecimento), só ainda SEM
-  // `grupoMenu` de propósito: o Lucas não decidiu em que grupo/posição do
-  // menu lateral ela entra (admin-menu.constants.js só lista item com
-  // `grupoMenu` preenchido, ver itensDoGrupo() lá). `rotuloMenu`/`icone`
-  // já deixados prontos — pra ativar no menu depois, basta acrescentar
-  // `grupoMenu: 'CADASTROS'` (ou o grupo que for decidido) aqui, 1 linha,
-  // nada mais muda.
+  // Área de Conhecimento (módulo 8-area-conhecimento) — ativada no menu
+  // lateral em 11-08-2026 (antes só existia por URL direta, sem
+  // `grupoMenu`, esperando o Lucas decidir onde entrar — ver histórico
+  // git). Entrou no mesmo grupo de Usuários/Papéis (grupoMenu:
+  // 'CADASTROS', hoje rotulado "GESTÃO DO USUÁRIO").
   {
     caminho: '/admin/areas-conhecimento',
     caminhoRelativo: 'areas-conhecimento',
     elemento: ListarAreasConhecimento,
     rotuloMenu: 'Áreas do Conhecimento',
     rotuloBreadcrumb: 'Áreas do Conhecimento',
+    grupoMenu: 'CADASTROS',
     icone: 'fa-diagram-project',
   },
 
-  // Tipo de Link (módulo 9-tipo-link) — mesma situação de Área de
-  // Conhecimento logo acima: tela pronta e funcional por URL direta
-  // (/admin/tipos-link), só ainda SEM `grupoMenu` de propósito (menu
-  // lateral não definido). `rotuloMenu`/`icone` já deixados prontos —
-  // ativar no menu depois é 1 linha (`grupoMenu: 'CADASTROS'` aqui).
+  // Tipo de Link (módulo 9-tipo-link) — mesma ativação de Área de
+  // Conhecimento logo acima, mesmo grupo.
   {
     caminho: '/admin/tipos-link',
     caminhoRelativo: 'tipos-link',
     elemento: ListarTiposLink,
     rotuloMenu: 'Tipos de Link',
     rotuloBreadcrumb: 'Tipos de Link',
+    grupoMenu: 'CADASTROS',
     icone: 'fa-link',
   },
 
@@ -199,33 +207,34 @@ export const ROTAS_ADMIN = [
     paiCaminho: '/admin/papeis',
   },
 
-  // Configuração — filhas de /admin/configuracoes.
+  // Parâmetro do Sistema (nome novo) — filhas de /admin/configuracoes
+  // (caminho da URL não mudou, só o rótulo, ver comentário lá em cima).
   {
     caminho: '/admin/configuracoes/criar',
     caminhoRelativo: 'configuracoes/criar',
     elemento: CriarConfiguracao,
-    rotuloBreadcrumb: 'Criar Configuração',
+    rotuloBreadcrumb: 'Criar Parâmetro',
     paiCaminho: '/admin/configuracoes',
   },
   {
     caminho: '/admin/configuracoes/:id/alterar',
     caminhoRelativo: 'configuracoes/:id/alterar',
     elemento: AlterarConfiguracao,
-    rotuloBreadcrumb: 'Alterar Configuração',
+    rotuloBreadcrumb: 'Alterar Parâmetro',
     paiCaminho: '/admin/configuracoes',
   },
   {
     caminho: '/admin/configuracoes/:id/consultar',
     caminhoRelativo: 'configuracoes/:id/consultar',
     elemento: ConsultarConfiguracao,
-    rotuloBreadcrumb: 'Consultar Configuração',
+    rotuloBreadcrumb: 'Consultar Parâmetro',
     paiCaminho: '/admin/configuracoes',
   },
   {
     caminho: '/admin/configuracoes/:id/excluir',
     caminhoRelativo: 'configuracoes/:id/excluir',
     elemento: ExcluirConfiguracao,
-    rotuloBreadcrumb: 'Excluir Configuração',
+    rotuloBreadcrumb: 'Excluir Parâmetro',
     paiCaminho: '/admin/configuracoes',
   },
 

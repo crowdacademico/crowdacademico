@@ -27,14 +27,30 @@ export const GRUPOS_MENU_ADMIN = [
     itens: itensDoGrupo(null),
   },
   {
-    // ERA "CADASTROS" (09-08-2026, pedido do Lucas: "não me parece a
-    // palavra mais ideal") — o grupo é gestão de conta/acesso/config do
-    // sistema (Usuários, Papéis & Permissões, Configurações), não cadastro
-    // de dado de negócio. `grupoMenu: 'CADASTROS'` em rotas.constants.js
-    // continua com o nome antigo de propósito — é só a CHAVE interna que
-    // liga rota↔grupo, não aparece na tela; só o rótulo visível mudou.
-    titulo: 'GESTÃO DE ACESSO E SISTEMA',
+    // ERA "CADASTROS" (09-08-2026), depois "GESTÃO DE ACESSO E SISTEMA"
+    // (mesmo dia). Virou "GESTÃO DO USUÁRIO" em 11-08-2026 (pedido do
+    // Lucas) na mesma leva em que Configurações saiu daqui pro próprio
+    // grupo (ver logo abaixo) — sobrou só cadastro em torno de quem é o
+    // usuário e o que ele pode fazer/publicar: Usuários, Papéis &
+    // Permissões, e agora também Áreas do Conhecimento e Tipos de Link
+    // (catálogos usados pelo perfil de pesquisador/campanha). `grupoMenu:
+    // 'CADASTROS'` em rotas.constants.js continua com o nome antigo de
+    // propósito — é só a CHAVE interna que liga rota↔grupo, não aparece
+    // na tela; só o rótulo visível muda, igual já era antes.
+    titulo: 'GESTÃO DO USUÁRIO',
     itens: itensDoGrupo('CADASTROS'),
+  },
+  {
+    // NOVO (11-08-2026) — Configurações saiu do grupo acima e virou seu
+    // próprio grupo (pedido do Lucas: ficava esquisito o item
+    // "Configurações" dentro de um grupo TAMBÉM chamado Configurações
+    // quando ele virasse um grupo próprio). O item em si foi renomeado
+    // pra "Parâmetros do Sistema" (ver comentário completo em
+    // rotas.constants.js, onde o grupoMenu 'CONFIGURACOES' é definido) —
+    // por enquanto só tem 1 item, mas o grupo já nasce com o nome certo
+    // pra receber mais no futuro sem precisar renomear de novo.
+    titulo: 'Configurações',
+    itens: itensDoGrupo('CONFIGURACOES'),
   },
   {
     titulo: 'MODERAÇÃO',

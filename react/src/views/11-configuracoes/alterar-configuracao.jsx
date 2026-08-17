@@ -57,7 +57,7 @@ export function AlterarConfiguracao({ auth }) {
     setEnviando(true);
     try {
       await configuracaoApi.atualizar(auth.authFetch, id, { valor, descricao, ativo });
-      mostrar('Configuração alterada com sucesso.', `ID: ${id} foi alterada`);
+      mostrar('Parâmetro alterado com sucesso.', `ID: ${id} foi alterado`);
       navigate(-1);
     } catch (erroRequisicao) {
       reportarErro(erroRequisicao);
@@ -69,7 +69,7 @@ export function AlterarConfiguracao({ auth }) {
   return (
     <CartaoFormulario
       icone="fa-gear"
-      titulo="Alterar Configuração"
+      titulo="Alterar Parâmetro"
       rodape={
         configuracao && (
           <div className="flex gap-3">
@@ -104,7 +104,7 @@ export function AlterarConfiguracao({ auth }) {
               <p className="font-bold texto-forte truncate font-mono text-sm">
                 {configuracao.chave}
               </p>
-              <p className="text-xs texto-fraco">Configuração #{configuracao.idConfig}</p>
+              <p className="text-xs texto-fraco">Parâmetro #{configuracao.idConfig}</p>
             </div>
           </div>
 

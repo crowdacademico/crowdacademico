@@ -131,43 +131,117 @@
     font-weight: 700;
     text-decoration: none;
     transition: var(--transition-normal);
+    /* Pílula de fundo no hover (11-08-2026, pedido do Lucas: "aumentar os
+       efeitos... dar até um background em volta do ícone, quando o texto
+       sumir") — padding + margin negativa do MESMO tamanho é o truque
+       clássico: dá área/fundo maior no hover sem empurrar o layout ao
+       redor (o `<td>`/gap continuam vendo o elemento do tamanho de
+       sempre, só o fundo visualmente "vaza" pro respiro que já existia).
+       border-radius: full em vez de md — no modo ícone-só (abaixo) vira
+       um círculo perfeito ao redor do ícone; no modo com texto, vira uma
+       pílula ao redor dos dois. */
+    padding: 0.35rem 0.55rem;
+    margin: -0.35rem -0.55rem;
+    border-radius: var(--radius-full);
   }
 
+  /* Abaixo de 1400px de janela, o texto de cada ação some sozinho e fica
+     só o ícone — reaparece sozinho se a janela crescer de novo, sem JS
+     nenhum (11-08-2026, pedido do Lucas: "em PC com tela menor a coluna
+     de ação quebra, o texto sai pra fora, fica feio").
+     TENTATIVA original: container query (reagir à largura da própria
+     COLUNA, não da janela) — testado ao vivo e descartado: com
+     table-layout automático (padrão do HTML, nenhuma tabela deste
+     projeto define table-layout: fixed), o navegador NÃO comprime uma
+     coluna aos poucos até faltar espaço — a tabela inteira simplesmente
+     transborda pra largura que precisa (a coluna de Ações nunca fica
+     menor que o conteúdo dela pede), e quem rola de lado é a PÁGINA. Ou
+     seja, a coluna nunca fica "estreita" de verdade pra uma container
+     query perceber — media query no viewport é o que realmente
+     corresponde ao problema aqui.
+     ERA 900px — o Lucas testou e achou pouco sensível ("qualquer diminuir
+     do tamanho da coluna, o efeito já devia aplicar"). Subiu bem, pra
+     1400px: como a tabela nunca encolhe de verdade (parágrafo acima),
+     ícone-só passa a ser o padrão em praticamente qualquer notebook/
+     monitor menor, e o texto completo só aparece em tela bem larga —
+     tira a margem quase toda antes de qualquer risco de quebrar.
+     Ícone cresce um degrau (--font-size-xs -> --font-size-base) e o
+     espaçamento aumenta — sem o texto do lado, o alvo de clique/toque
+     fica bem menor, então precisa compensar (bom pra mobile também,
+     mesmo raciocínio: ícone maior = mais fácil de tocar com o dedo). */
+  @media (max-width: 1400px) {
+    .crud-tabela__acao-texto {
+      display: none;
+    }
+
+    .crud-tabela__acoes {
+      gap: 1.1rem;
+    }
+
+    .crud-tabela__acao {
+      font-size: var(--font-size-base);
+    }
+  }
+
+  /* Fundo neutro no hover — serve de base pra Consultar (sem cor própria)
+     e é sobrescrito pelas variantes coloridas (--alterar/--excluir)
+     abaixo. `--cor-borda` (não `--cor-fundo-hover`) de propósito
+     (11-08-2026, achado do Lucas: "a pílula do Consultar nem aparece") —
+     a LINHA da tabela já fica com `--cor-fundo-hover` assim que o mouse
+     entra nela (`.crud-tabela tbody tr:hover`, mais abaixo neste
+     arquivo), então um fundo igual por cima simplesmente some. Mesma
+     solução já usada no menu lateral pro mesmo problema (ver
+     `.admin-sidebar__item:hover` em 3-admin-shell.css: também trocou de
+     `--cor-fundo-sutil` fraco demais pra `--cor-borda`, mais visível). */
   .crud-tabela__acao:hover {
     color: var(--cor-texto-forte);
+    background-color: var(--cor-borda);
   }
 
-  /* Cor de volta no ÍCONE, fraquinha (09-08-2026, pedido do Lucas: "voltar
-     a dar as cores das ações... mais fraquinho, só pra dar mais vida") —
-     só o ícone, o texto continua neutro (--cor-texto-fraco) nos dois
-     casos. Azul-marinho/vermelho-tinto translúcidos (não os tons vivos de
-     --color-blue-600/--color-red-600 de antes) — mais saturado no hover. */
-  /* ERA azul-marinho rgba(30,58,138) — o Lucas pediu um azul mais claro e
-     brilhante (09-08-2026), não só mais opaco. Trocado pro azul vivo
-     --color-blue-600/500 (mesma família já usada nos badges/tooltip do
-     projeto), mantendo o mesmo padrão de sempre: fraquinho parado,
-     cheio no hover. */
+  /* Alterar/Excluir usam os MESMOS tokens de "informação"/"erro" já
+     usados em banner de aviso e mensagem de erro em todo o app
+     (--cor-texto-info/--cor-fundo-info, --cor-texto-erro/--cor-fundo-
+     erro — ver 1-base.css) — não mais um azul/vermelho hardcoded só
+     desta tabela. Reaproveitar o token pronto, em vez de inventar um
+     rgba() novo, foi o que o Lucas pediu (11-08-2026): esses 2 tokens já
+     têm um valor pra tema claro E um pra tema escuro (dark mode) — um
+     rgba() fixo, como estava antes, não reagia ao tema nenhum dos dois.
+     `opacity` no ícone faz o trabalho de "fraquinho parado, cheio no
+     hover" que antes precisava de 2 rgba() diferentes por cor. */
   .crud-tabela__acao--alterar i {
-    color: rgba(37, 99, 235, 0.85); /* azul vivo, fraquinho */
+    color: var(--cor-texto-info);
+    opacity: 0.75;
   }
 
   .crud-tabela__acao--alterar:hover i {
-    color: rgb(59, 130, 246); /* azul vivo, cheio e mais claro */
+    opacity: 1;
   }
 
-  /* Mesmo ajuste de opacidade do ícone de Alterar acima (0.55 pra 0.8) —
-     não esperei o Lucas reclamar deste também, mesma causa técnica (cor
-     translúcida demais dessatura num ícone pequeno). */
+  /* CORRIGIDO (11-08-2026, achado do Lucas: "o texto do Alterar não fica
+     azul no hover, só o ícone") — faltava esta regra; a base
+     `.crud-tabela__acao:hover` sozinha só deixava o texto neutro
+     (--cor-texto-forte). Pílula de fundo usa --cor-fundo-info (mesmo par
+     do texto), não precisa mais calcular opacidade própria feito antes. */
+  .crud-tabela__acao--alterar:hover {
+    color: var(--cor-texto-info);
+    background-color: var(--cor-fundo-info);
+  }
+
   .crud-tabela__acao--excluir i {
-    color: rgba(127, 29, 29, 0.8); /* vermelho tinto fraquinho */
-  }
-
-  .crud-tabela__acao--excluir:hover {
-    color: var(--color-red-600);
+    color: var(--cor-texto-erro);
+    opacity: 0.75;
   }
 
   .crud-tabela__acao--excluir:hover i {
-    color: rgb(127, 29, 29); /* vermelho tinto cheio */
+    opacity: 1;
+  }
+
+  .crud-tabela__acao--excluir:hover {
+    color: var(--cor-texto-erro);
+    /* Ação destrutiva continua sendo a única com cor de texto própria no
+       hover (não só o ícone) — reforço a mais de propósito, pra ficar
+       ainda mais difícil de confundir com as outras duas. */
+    background-color: var(--cor-fundo-erro);
   }
 
   /* Cada campo agora é um <label> (texto do rótulo + input/select dentro) —
