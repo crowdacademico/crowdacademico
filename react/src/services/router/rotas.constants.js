@@ -23,6 +23,10 @@ import { CriarTipoLink } from '../../views/9-tipo-link/criar-tipo-link';
 import { AlterarTipoLink } from '../../views/9-tipo-link/alterar-tipo-link';
 import { ConsultarTipoLink } from '../../views/9-tipo-link/consultar-tipo-link';
 import { ListarTiposLink } from '../../views/9-tipo-link/listar-tipos-link';
+import { CriarMotivoDenuncia } from '../../views/10-motivo-denuncia/criar-motivo-denuncia';
+import { AlterarMotivoDenuncia } from '../../views/10-motivo-denuncia/alterar-motivo-denuncia';
+import { ConsultarMotivoDenuncia } from '../../views/10-motivo-denuncia/consultar-motivo-denuncia';
+import { ListarMotivosDenuncia } from '../../views/10-motivo-denuncia/listar-motivos-denuncia';
 
 // Fonte única de verdade pra "quais páginas existem" — App.jsx monta as
 // <Route> a partir daqui, e breadcrumb.jsx monta o rótulo a partir daqui.
@@ -144,6 +148,14 @@ export const ROTAS_ADMIN = [
     rotuloBreadcrumb: 'Tipos de Link',
     grupoMenu: 'CADASTROS',
     icone: 'fa-link',
+  },
+  // Motivo de Denúncia (módulo 10-motivo-denuncia)
+  {
+    caminho: '/admin/motivos-denuncia',
+    caminhoRelativo: 'motivos-denuncia',
+    elemento: ListarMotivosDenuncia,
+    rotuloBreadcrumb: 'Motivos de Denúncia',
+    icone: 'fa-flag',
   },
 
   // Minha Conta (10-08-2026) — dentro do painel agora (sidebar visível),
@@ -286,5 +298,30 @@ export const ROTAS_ADMIN = [
     elemento: ConsultarTipoLink,
     rotuloBreadcrumb: 'Consultar Tipo de Link',
     paiCaminho: '/admin/tipos-link',
+  },
+
+  // Motivo de Denúncia — filhas de /admin/motivos-denuncia. Sem rota de
+  // excluir: backend não tem DELETE pra motivo_denuncia (só INSERT/UPDATE
+  // concedidos em 06_grants.sql [06-C-1]), só desativa via Alterar.
+  {
+    caminho: '/admin/motivos-denuncia/criar',
+    caminhoRelativo: 'motivos-denuncia/criar',
+    elemento: CriarMotivoDenuncia,
+    rotuloBreadcrumb: 'Criar Motivo de Denúncia',
+    paiCaminho: '/admin/motivos-denuncia',
+  },
+  {
+    caminho: '/admin/motivos-denuncia/:id/alterar',
+    caminhoRelativo: 'motivos-denuncia/:id/alterar',
+    elemento: AlterarMotivoDenuncia,
+    rotuloBreadcrumb: 'Alterar Motivo de Denúncia',
+    paiCaminho: '/admin/motivos-denuncia',
+  },
+  {
+    caminho: '/admin/motivos-denuncia/:id/consultar',
+    caminhoRelativo: 'motivos-denuncia/:id/consultar',
+    elemento: ConsultarMotivoDenuncia,
+    rotuloBreadcrumb: 'Consultar Motivo de Denúncia',
+    paiCaminho: '/admin/motivos-denuncia',
   },
 ];

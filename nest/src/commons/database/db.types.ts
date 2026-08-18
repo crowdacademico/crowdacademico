@@ -175,6 +175,31 @@ export interface TipoLinkTable {
   permite_recompensa: Generated<boolean>;
 }
 
+// CREATE TYPE tipo_motivo_denuncia AS ENUM ('campanha', 'perfil') — 01. Mesmo
+// raciocínio de TIPOS_CONFIGURACAO acima: array em runtime pra
+// CriarMotivoDenunciaRequestDto/AtualizarMotivoDenunciaRequestDto validarem
+// com @IsIn(TIPOS_MOTIVO_DENUNCIA) sem duplicar a lista, o tipo é derivado
+// dele.
+export const TIPOS_MOTIVO_DENUNCIA = ['campanha', 'perfil'] as const;
+export type TipoMotivoDenuncia = (typeof TIPOS_MOTIVO_DENUNCIA)[number];
+
+// ADICIONADA — espelha 01_extensoes_enums_tabelas.sql (tabela
+// motivo_denuncia), tocada pela 1ª vez pelo módulo 10-motivo-denuncia.
+// `codigo` é a chave estável (UK_MOTIVO_DENUNCIA_CODIGO) — mesmo padrão de
+// `tipo_link.codigo` (ver comentário em [01-B] sobre os 3 pontos do banco
+// que passaram a distinguir `codigo`/`nome`); `tipo` decide se o motivo
+// serve pra denúncia de campanha ou de perfil — trg_valida_tipo_motivo_
+// denuncia (05_regras_negocio.sql [05-K-1]) barra em denuncia.id_motivo
+// qualquer motivo cujo `tipo` não bate com o alvo escolhido (id_campanha_
+// alvo x id_pesquisador_alvo).
+export interface MotivoDenunciaTable {
+  id_motivo: Generated<number>;
+  codigo: string;
+  descricao: string | null;
+  tipo: TipoMotivoDenuncia;
+  ativo: Generated<boolean>;
+}
+
 export interface VerificacaoEmailTable {
   id_verificacao: Generated<number>;
   id_usuario: number;
@@ -204,4 +229,5 @@ export interface DB {
   verificacao_email: VerificacaoEmailTable;
   area_conhecimento: AreaConhecimentoTable;
   tipo_link: TipoLinkTable;
+  motivo_denuncia: MotivoDenunciaTable;
 }

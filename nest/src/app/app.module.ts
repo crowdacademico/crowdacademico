@@ -13,6 +13,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { HealthController } from './health.controller';
 import { TipoLinkModule } from '../9-tipo-link/tipo-link.module';
+import { MotivoDenunciaModule } from '../10-motivo-denuncia/motivo-denuncia.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { TipoLinkModule } from '../9-tipo-link/tipo-link.module';
     ConfiguracoesModule,
     AreaConhecimentoModule,
     TipoLinkModule,
+    MotivoDenunciaModule,
     LogAuditoriaModule,
     DashboardModule,
   ],
