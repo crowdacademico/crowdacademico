@@ -483,7 +483,11 @@ export function GenericTable({
           <thead>
             <tr>
               {colunas.map((coluna) => (
-                <th key={coluna.chave} className={classesColuna(coluna).trim() || undefined}>
+                <th
+                  key={coluna.chave}
+                  className={classesColuna(coluna).trim() || undefined}
+                  style={estiloColuna(coluna)}
+                >
                   {coluna.rotulo}
                 </th>
               ))}

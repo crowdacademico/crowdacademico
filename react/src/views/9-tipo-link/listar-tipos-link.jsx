@@ -28,21 +28,20 @@ export function ListarTiposLink({ auth }) {
             Criar
           </Link>
         }
+        // `largura: '9.25rem'` nas 4 booleanas (19-08-2026, pedido do
+        // Lucas: "o exato mesmo espaçamento") — sem isso, cada uma tinha
+        // uma largura diferente (table-layout: auto mede pela palavra do
+        // cabeçalho, e "Atualização"/"Recompensa" são bem mais compridas
+        // que "Perfil"/"Ativo"). 9.25rem é a medida real da mais larga
+        // ("Atualização", ~9.1rem) com uma folga pequena. Os 3 escopos
+        // (CK_TIPO_LINK_ALGUM_ESCOPO — pelo menos 1 sempre TRUE) viram
+        // badge Sim/Não sozinhos, mesmo tratamento que GenericTable já dá
+        // pra qualquer coluna booleana — não precisou de `renderizar`
+        // customizado.
         colunas={[
           { chave: 'idTipolink', rotulo: 'id' },
           { chave: 'codigo', rotulo: 'código' },
           { chave: 'nome', rotulo: 'nome' },
-          // Os 3 escopos (CK_TIPO_LINK_ALGUM_ESCOPO — pelo menos 1
-          // sempre TRUE) viram badge Sim/Não sozinhos, mesmo tratamento
-          // que GenericTable já dá pra qualquer coluna booleana — não
-          // precisou de `renderizar` customizado.
-          //
-          // `largura: '9.25rem'` nas 4 (19-08-2026, pedido do Lucas: "o
-          // exato mesmo espaçamento") — sem isso, cada uma tinha uma
-          // largura diferente (table-layout: auto mede pela palavra do
-          // cabeçalho, e "Atualização"/"Recompensa" são bem mais compridas
-          // que "Perfil"/"Ativo"). 9.25rem é a medida real da mais larga
-          // ("Atualização", ~9.1rem) com uma folga pequena.
           { chave: 'permitePerfil', rotulo: 'perfil', largura: '9.25rem' },
           { chave: 'permiteAtualizacao', rotulo: 'atualização', largura: '9.25rem' },
           { chave: 'permiteRecompensa', rotulo: 'recompensa', largura: '9.25rem' },
