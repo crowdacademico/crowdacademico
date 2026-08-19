@@ -1,6 +1,6 @@
-import { UsuarioResponseDto } from '../../../1-usuario/dto/response/usuario.response.dto';
+import { UsuarioResponse } from '../../../1-usuario/dto/response/usuario.response';
 
-export class RefreshResponseDto {
+export class AuthResponseRefresh {
   accessToken: string;
   refreshToken: string;
   // ADICIONADOS (09-08-2026, Bloco B/C do prompt do Claude Web): sem isso,
@@ -8,7 +8,7 @@ export class RefreshResponseDto {
   // de montagem) nunca preenchia `usuario` — só login "de verdade" fazia
   // isso antes, então dar F5 na página deixava o cabeçalho sem nome/avatar
   // até o usuário logar de novo manualmente. Mesmo raciocínio de `papeis`
-  // em LoginResponseDto.
-  usuario: UsuarioResponseDto;
+  // em AuthResponseLogin.
+  usuario: UsuarioResponse;
   papeis: string[];
 }

@@ -1,6 +1,6 @@
 import { IsEmail, IsString, MinLength } from 'class-validator';
 
-export class CriarUsuarioRequestDto {
+export class UsuarioRequestCreate {
   @IsString()
   @MinLength(2, { message: 'Nome precisa ter pelo menos 2 caracteres.' })
   nome: string;

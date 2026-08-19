@@ -21,7 +21,7 @@ function paraBooleano({ value }: { value: unknown }): unknown {
 // dela. Os dois ao mesmo tempo não fazem sentido juntos — `raiz=true`
 // sobrepõe `idPai` no service, porque uma grande área raiz nunca tem
 // idPai.
-export class ListarAreaConhecimentoQueryDto extends PaginacaoQueryDto {
+export class AreaConhecimentoRequestList extends PaginacaoQueryDto {
   @IsOptional()
   @Type(() => Number)
   @IsInt()

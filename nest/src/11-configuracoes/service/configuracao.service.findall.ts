@@ -6,7 +6,7 @@ import {
 } from '../../commons/database/paginacao.util';
 import { DatabaseService } from '../../commons/database/database.service';
 import { ConfiguracaoConverter } from '../dto/converter/configuracao.converter';
-import { ConfiguracaoResponseDto } from '../dto/response/configuracao.response.dto';
+import { ConfiguracaoResponse } from '../dto/response/configuracao.response';
 
 @Injectable()
 export class ConfiguracaoServiceFindAll {
@@ -14,7 +14,7 @@ export class ConfiguracaoServiceFindAll {
 
   async executar(
     paginacao?: ParametrosPaginacao,
-  ): Promise<ResultadoPaginado<ConfiguracaoResponseDto>> {
+  ): Promise<ResultadoPaginado<ConfiguracaoResponse>> {
     // pol_config_select (04): id_usuario IS NULL (config global, qualquer um
     // vê) OR id_usuario = id_usuario_atual() (a própria preferência pessoal).
     // Anônimo só enxerga as globais.

@@ -1,4 +1,4 @@
-export class TipoLinkResponseDto {
+export class TipoLinkResponse {
   idTipolink: number;
   // Chave estável (UK_TIPO_LINK_CODIGO), lida por calcular_score_perfil_
   // academico() pra reconhecer Lattes/ORCID (05_regras_negocio.sql

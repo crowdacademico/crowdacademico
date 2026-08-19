@@ -1,7 +1,7 @@
 import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import type { Request } from 'express';
-import { LoginRequestDto } from '../dto/request/login.request.dto';
+import { AuthRequestLogin } from '../dto/request/auth.request-login';
 import { AuthServiceLogin } from '../service/auth.service.login';
 
 @Controller('auth')
@@ -14,7 +14,7 @@ export class AuthControllerLogin {
   // nenhum antes. Ver comentário completo em auth.module.ts.
   @UseGuards(ThrottlerGuard)
   @Post('login')
-  login(@Body() dto: LoginRequestDto, @Req() request: Request) {
+  login(@Body() dto: AuthRequestLogin, @Req() request: Request) {
     return this.service.executar(
       dto,
       request.ip ?? request.socket.remoteAddress,

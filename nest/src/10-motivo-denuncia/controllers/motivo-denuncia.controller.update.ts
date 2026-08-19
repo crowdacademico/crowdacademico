@@ -7,7 +7,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { RequireAuthGuard } from '../../3-auth/guards/require-auth.guard';
-import { AtualizarMotivoDenunciaRequestDto } from '../dto/request/atualizar-motivo-denuncia.request.dto';
+import { MotivoDenunciaRequestUpdate } from '../dto/request/motivo-denuncia.request-update';
 import { MotivoDenunciaServiceUpdate } from '../service/motivo-denuncia.service.update';
 
 @Controller('motivo-denuncia')
@@ -18,7 +18,7 @@ export class MotivoDenunciaControllerUpdate {
   @UseGuards(RequireAuthGuard)
   atualizar(
     @Param('id', ParseIntPipe) id: number,
-    @Body() dto: AtualizarMotivoDenunciaRequestDto,
+    @Body() dto: MotivoDenunciaRequestUpdate,
   ) {
     return this.service.executar(id, dto);
   }

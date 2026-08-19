@@ -6,8 +6,8 @@ import {
 } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
 import { TipoLinkConverter } from '../dto/converter/tipo-link.converter';
-import { CriarTipoLinkRequestDto } from '../dto/request/criar-tipo-link.request.dto';
-import { TipoLinkResponseDto } from '../dto/response/tipo-link.response.dto';
+import { TipoLinkRequestCreate } from '../dto/request/tipo-link.request-create';
+import { TipoLinkResponse } from '../dto/response/tipo-link.response';
 
 const CODIGO_PG_UNIQUE_VIOLATION = '23505';
 const CODIGO_PG_RLS_VIOLATION = '42501';
@@ -16,7 +16,7 @@ const CODIGO_PG_RLS_VIOLATION = '42501';
 export class TipoLinkServiceCreate {
   constructor(private readonly database: DatabaseService) {}
 
-  async executar(dto: CriarTipoLinkRequestDto): Promise<TipoLinkResponseDto> {
+  async executar(dto: TipoLinkRequestCreate): Promise<TipoLinkResponse> {
     // Mesmos defaults do banco (01_extensoes_enums_tabelas.sql) —
     // calculados aqui (não só deixados pro DEFAULT do INSERT) porque
     // precisam entrar na checagem de CK_TIPO_LINK_ALGUM_ESCOPO logo

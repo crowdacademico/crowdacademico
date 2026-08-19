@@ -1,11 +1,11 @@
 import { Selectable } from 'kysely';
 import { ConfiguracoesTable } from '../../../commons/database/db.types';
-import { ConfiguracaoResponseDto } from '../response/configuracao.response.dto';
+import { ConfiguracaoResponse } from '../response/configuracao.response';
 
 export class ConfiguracaoConverter {
   static paraResponseDto(
     linha: Selectable<ConfiguracoesTable>,
-  ): ConfiguracaoResponseDto {
+  ): ConfiguracaoResponse {
     return {
       idConfig: linha.id_config,
       idUsuario: linha.id_usuario,

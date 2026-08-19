@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
-import { TermoAtivoResponseDto } from '../dto/response/termo-ativo.response.dto';
+import { TermoUsoResponseAtivo } from '../dto/response/termo-uso.response-ativo';
 
 // pol_termos_select (04_rls_policies.sql) é USING(true) — leitura pública de
 // propósito, precisa ser lida até por quem ainda não tem sessão nenhuma (a
@@ -11,7 +11,7 @@ import { TermoAtivoResponseDto } from '../dto/response/termo-ativo.response.dto'
 export class TermoUsoServiceAtivo {
   constructor(private readonly database: DatabaseService) {}
 
-  async executar(): Promise<TermoAtivoResponseDto> {
+  async executar(): Promise<TermoUsoResponseAtivo> {
     const termo = await this.database
       .getDb()
       .selectFrom('termos_de_uso')

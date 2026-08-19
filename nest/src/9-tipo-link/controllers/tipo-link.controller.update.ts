@@ -7,7 +7,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { RequireAuthGuard } from '../../3-auth/guards/require-auth.guard';
-import { AtualizarTipoLinkRequestDto } from '../dto/request/atualizar-tipo-link.request.dto';
+import { TipoLinkRequestUpdate } from '../dto/request/tipo-link.request-update';
 import { TipoLinkServiceUpdate } from '../service/tipo-link.service.update';
 
 @Controller('tipo-link')
@@ -18,7 +18,7 @@ export class TipoLinkControllerUpdate {
   @UseGuards(RequireAuthGuard)
   atualizar(
     @Param('id', ParseIntPipe) id: number,
-    @Body() dto: AtualizarTipoLinkRequestDto,
+    @Body() dto: TipoLinkRequestUpdate,
   ) {
     return this.service.executar(id, dto);
   }

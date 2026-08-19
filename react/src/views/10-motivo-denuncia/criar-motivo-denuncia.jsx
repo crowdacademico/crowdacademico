@@ -5,19 +5,10 @@ import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
 import { motivoDenunciaApi } from '../../services/10-motivo-denuncia/api/motivo-denuncia.api';
 
-// Convenção de código (mesma ideia de REGEX_CODIGO_VALIDO em
-// criar-tipo-link.jsx) — PREFIXO-NNN, igual todo `codigo` já seedado
-// (CAMP-001..008, PERF-001..004 — ver 07_seed_dados.sql [07-C-3]). Mais
-// permissiva que a de tipo_link.codigo (aceita hífen também) pra caber
-// esse padrão. Mesma validação de CriarMotivoDenunciaRequestDto (Nest),
-// duplicada aqui só pra dar feedback ANTES de bater no backend.
-const REGEX_CODIGO_VALIDO = /^[A-Z0-9_-]+$/;
-
 export function CriarMotivoDenuncia({ auth }) {
   const navigate = useNavigate();
   const { mostrar } = useToast();
   const { erro, reportarErro, limparErro } = useErroToast();
-  const [codigo, setCodigo] = useState('');
   const [descricao, setDescricao] = useState('');
   // tipo_motivo_denuncia NOT NULL, sem default no banco — sem opção
   // pré-selecionada aqui de propósito, pra forçar uma escolha consciente
@@ -26,16 +17,13 @@ export function CriarMotivoDenuncia({ auth }) {
   const [tipo, setTipo] = useState('');
   const [enviando, setEnviando] = useState(false);
 
-  const codigoInvalido = codigo.length > 0 && !REGEX_CODIGO_VALIDO.test(codigo);
-
   const aoCriar = async (evento) => {
     evento.preventDefault();
     limparErro();
     setEnviando(true);
     try {
       const motivoCriado = await motivoDenunciaApi.criar(auth.authFetch, {
-        codigo,
-        ...(descricao ? { descricao } : {}),
+        descricao,
         tipo,
       });
       mostrar(
@@ -60,31 +48,6 @@ export function CriarMotivoDenuncia({ auth }) {
         {erro && <p className="text-red-700 text-sm font-bold text-center">{erro}</p>}
 
         <div>
-          <label className="rotulo-campo">Código</label>
-          <input
-            type="text"
-            value={codigo}
-            onChange={(evento) => setCodigo(evento.target.value.toUpperCase())}
-            required
-            maxLength={20}
-            placeholder="ex.: CAMP-009"
-            aria-invalid={codigoInvalido}
-            className={'input-padrao font-mono' + (codigoInvalido ? ' border-red-500' : '')}
-          />
-          {codigoInvalido ? (
-            <p className="text-xs text-red-600 font-semibold mt-1">
-              Só letras maiúsculas, números, underscore e hífen — sem espaço, minúscula ou
-              acento.
-            </p>
-          ) : (
-            <p className="text-xs texto-fraco mt-1">
-              Identificador interno, nunca editável depois de criado. A descrição abaixo é o
-              texto exibido pra quem for escolher este motivo na tela de denúncia.
-            </p>
-          )}
-        </div>
-
-        <div>
           <label className="rotulo-campo">Tipo</label>
           <select
             value={tipo}
@@ -105,15 +68,20 @@ export function CriarMotivoDenuncia({ auth }) {
         </div>
 
         <div>
-          <label className="rotulo-campo">Descrição (opcional)</label>
+          <label className="rotulo-campo">Descrição</label>
           <input
             type="text"
             value={descricao}
             onChange={(evento) => setDescricao(evento.target.value)}
+            required
             maxLength={255}
             placeholder="ex.: Campanha com informações falsas ou enganosas"
             className="input-padrao"
           />
+          <p className="text-xs texto-fraco mt-1">
+            Texto exibido pra quem for escolher este motivo na tela de denúncia — é o único
+            identificador do motivo, então precisa ser claro por si só.
+          </p>
         </div>
 
         <div className="flex gap-3 pt-2">
@@ -122,7 +90,7 @@ export function CriarMotivoDenuncia({ auth }) {
           </button>
           <button
             type="submit"
-            disabled={enviando || codigoInvalido || tipo === ''}
+            disabled={enviando || descricao.trim() === '' || tipo === ''}
             className="btn btn-primary flex-1"
           >
             {enviando ? 'Criando...' : 'Criar'}

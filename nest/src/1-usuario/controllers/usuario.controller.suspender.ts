@@ -9,7 +9,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { RequireAuthGuard } from '../../3-auth/guards/require-auth.guard';
-import { SuspenderUsuarioRequestDto } from '../dto/request/suspender-usuario.request.dto';
+import { UsuarioRequestSuspend } from '../dto/request/usuario.request-suspend';
 import { UsuarioServiceSuspender } from '../service/usuario.service.suspender';
 
 @Controller('usuario')
@@ -27,7 +27,7 @@ export class UsuarioControllerSuspender {
   @UseGuards(RequireAuthGuard)
   suspender(
     @Param('id', ParseIntPipe) id: number,
-    @Body() dto: SuspenderUsuarioRequestDto,
+    @Body() dto: UsuarioRequestSuspend,
   ) {
     return this.service.suspender(id, dto.ate, dto.motivo);
   }

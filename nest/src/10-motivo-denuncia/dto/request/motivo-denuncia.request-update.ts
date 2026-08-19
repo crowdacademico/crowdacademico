@@ -1,6 +1,7 @@
 import {
   IsBoolean,
   IsIn,
+  IsNotEmpty,
   IsOptional,
   IsString,
   MaxLength,
@@ -8,23 +9,17 @@ import {
 import { TIPOS_MOTIVO_DENUNCIA } from '../../../commons/database/db.types';
 import type { TipoMotivoDenuncia } from '../../../commons/database/db.types';
 
-// Sem `codigo`, de propósito — mesma razão de `tipo_link`/`area_
-// conhecimento.codigoCnpq`: é a chave estável (UK_MOTIVO_DENUNCIA_CODIGO)
-// que identifica o motivo no catálogo (CAMP-001, PERF-004 etc.); editável
-// pela API só arriscaria confundir quem já gravou denúncias com este
-// id_motivo, sem ganho nenhum (o rótulo visível pro usuário é
-// `descricao`, não `codigo`). `descricao`, `tipo` e `ativo` podem mudar
-// sem esse risco.
-export class AtualizarMotivoDenunciaRequestDto {
-  // NULLABLE no banco — omitido = não muda; `null` explícito = limpa;
-  // string = novo texto. Mesmo tratamento de `regex` em
-  // AtualizarTipoLinkRequestDto (9-tipo-link): `@IsOptional()` do
-  // class-validator já trata `null`/`undefined` como "pula os outros
-  // validadores".
+export class MotivoDenunciaRequestUpdate {
+  // NOT NULL no banco desde 18-08-2026 (`codigo` saiu do catálogo — ver
+  // comentário em criar-motivo-denuncia.request.dto.ts — e `descricao`
+  // virou o único identificador legível do motivo). Omitido = não muda;
+  // presente = precisa ser uma string não vazia, `null` não é mais aceito
+  // aqui (diferente do padrão de `regex` em TipoLinkRequestUpdate).
   @IsOptional()
+  @IsNotEmpty()
   @IsString()
   @MaxLength(255)
-  descricao?: string | null;
+  descricao?: string;
 
   // Editável (diferente de `codigo`): não existe trigger no banco que
   // trave a troca de `tipo` depois de criado (só

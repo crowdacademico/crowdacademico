@@ -1,5 +1,5 @@
 import { Controller, Get, Query } from '@nestjs/common';
-import { ListarAreaConhecimentoQueryDto } from '../dto/request/listar-area-conhecimento.query.dto';
+import { AreaConhecimentoRequestList } from '../dto/request/area-conhecimento.request-list';
 import { AreaConhecimentoServiceFindAll } from '../service/area-conhecimento.service.findall';
 
 // Sem RequireAuthGuard, de propósito: catálogo público de leitura
@@ -10,7 +10,7 @@ export class AreaConhecimentoControllerFindAll {
   constructor(private readonly service: AreaConhecimentoServiceFindAll) {}
 
   @Get()
-  listar(@Query() filtro: ListarAreaConhecimentoQueryDto) {
+  listar(@Query() filtro: AreaConhecimentoRequestList) {
     return this.service.executar(filtro);
   }
 }

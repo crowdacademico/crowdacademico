@@ -9,8 +9,8 @@ import * as bcrypt from 'bcrypt';
 import { DatabaseService } from '../../commons/database/database.service';
 import { USUARIO_COLUNAS_SELECT } from '../constants/usuario.constants';
 import { UsuarioConverter } from '../dto/converter/usuario.converter';
-import { AtualizarUsuarioRequestDto } from '../dto/request/atualizar-usuario.request.dto';
-import { UsuarioResponseDto } from '../dto/response/usuario.response.dto';
+import { UsuarioRequestUpdate } from '../dto/request/usuario.request-update';
+import { UsuarioResponse } from '../dto/response/usuario.response';
 
 const CUSTO_BCRYPT = 10;
 
@@ -20,8 +20,8 @@ export class UsuarioServiceUpdate {
 
   async executar(
     idUsuario: number,
-    dto: AtualizarUsuarioRequestDto,
-  ): Promise<UsuarioResponseDto> {
+    dto: UsuarioRequestUpdate,
+  ): Promise<UsuarioResponse> {
     const db = this.database.getDb();
 
     // `senhaAtual` presente = troca autoatendida (Minha Conta > Segurança) —

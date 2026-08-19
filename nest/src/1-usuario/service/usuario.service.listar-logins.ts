@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
-import { LoginHistoricoResponseDto } from '../dto/response/login-historico.response.dto';
+import { UsuarioResponseLoginHistorico } from '../dto/response/usuario.response-login-historico';
 
 @Injectable()
 export class UsuarioServiceListarLogins {
@@ -14,7 +14,7 @@ export class UsuarioServiceListarLogins {
   // login assim") — sem este filtro, toda renovação silenciosa do token de
   // acesso (a cada ~15min de uso normal) também aparecia aqui como se fosse
   // um login novo. Ver comentário completo em auth.service.login.ts.
-  async executar(idUsuario: number): Promise<LoginHistoricoResponseDto[]> {
+  async executar(idUsuario: number): Promise<UsuarioResponseLoginHistorico[]> {
     const linhas = await this.database
       .getDb()
       .selectFrom('sessao')

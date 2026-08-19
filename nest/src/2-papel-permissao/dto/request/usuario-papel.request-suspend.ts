@@ -1,6 +1,6 @@
 import { IsDateString } from 'class-validator';
 
-export class SuspenderPapelUsuarioRequestDto {
+export class UsuarioPapelRequestSuspend {
   @IsDateString()
   ate: string;
 }

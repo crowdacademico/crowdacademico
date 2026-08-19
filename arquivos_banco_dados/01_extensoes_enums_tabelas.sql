@@ -188,16 +188,19 @@ CREATE TABLE area_conhecimento (
     CONSTRAINT "FK_AREA_CONHECIMENTO_PAI" FOREIGN KEY (id_pai) REFERENCES area_conhecimento(id_area_conhecimento) ON DELETE SET NULL
 );
 
+-- `codigo` removido (18-08-2026, pedido do Lucas/Alexia) — diferente de
+-- `papel.codigo`/`tipo_link.codigo` ([01-B] acima), nenhuma trigger ou
+-- função em 05_regras_negocio.sql lia este campo; era só texto
+-- informativo. `descricao` virou NOT NULL (era opcional) porque agora é
+-- o único identificador legível do motivo.
 CREATE TABLE motivo_denuncia (
     id_motivo SERIAL,
-    codigo    VARCHAR(20)          NOT NULL,
-    descricao VARCHAR(255),
+    descricao VARCHAR(255)         NOT NULL,
     tipo      tipo_motivo_denuncia NOT NULL,
 
     ativo     BOOLEAN             NOT NULL DEFAULT TRUE,
 
-    CONSTRAINT "PK_MOTIVO_DENUNCIA" PRIMARY KEY (id_motivo),
-    CONSTRAINT "UK_MOTIVO_DENUNCIA_CODIGO" UNIQUE (codigo)
+    CONSTRAINT "PK_MOTIVO_DENUNCIA" PRIMARY KEY (id_motivo)
 );
 
 CREATE TABLE arquivo (

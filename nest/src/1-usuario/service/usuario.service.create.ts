@@ -4,8 +4,8 @@ import { sql } from 'kysely';
 import { DatabaseService } from '../../commons/database/database.service';
 import { USUARIO_COLUNAS_SELECT } from '../constants/usuario.constants';
 import { UsuarioConverter } from '../dto/converter/usuario.converter';
-import { CriarUsuarioRequestDto } from '../dto/request/criar-usuario.request.dto';
-import { UsuarioResponseDto } from '../dto/response/usuario.response.dto';
+import { UsuarioRequestCreate } from '../dto/request/usuario.request-create';
+import { UsuarioResponse } from '../dto/response/usuario.response';
 
 const CUSTO_BCRYPT = 10;
 
@@ -13,7 +13,7 @@ const CUSTO_BCRYPT = 10;
 export class UsuarioServiceCreate {
   constructor(private readonly database: DatabaseService) {}
 
-  async executar(dto: CriarUsuarioRequestDto): Promise<UsuarioResponseDto> {
+  async executar(dto: UsuarioRequestCreate): Promise<UsuarioResponse> {
     const senhaHash = await bcrypt.hash(dto.senha, CUSTO_BCRYPT);
     const db = this.database.getDb();
 

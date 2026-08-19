@@ -1,14 +1,14 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { DatabaseService } from '../../commons/database/database.service';
-import { RefreshTokenRequestDto } from '../dto/request/refresh-token.request.dto';
+import { AuthRequestRefreshToken } from '../dto/request/auth.request-refresh-token';
 import { parseRefreshToken } from './refresh-token.util';
 
 @Injectable()
 export class AuthServiceLogout {
   constructor(private readonly database: DatabaseService) {}
 
-  async executar(dto: RefreshTokenRequestDto): Promise<void> {
+  async executar(dto: AuthRequestRefreshToken): Promise<void> {
     const parseado = parseRefreshToken(dto.refreshToken);
     if (!parseado) {
       throw new UnauthorizedException('Refresh token mal formado.');

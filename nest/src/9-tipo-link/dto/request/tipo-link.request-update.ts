@@ -14,7 +14,7 @@ import {
 // pra reconhecer Lattes/ORCID; editável só travaria RBAC/score em
 // silêncio se alguém renomeasse por engano. `nome` (rótulo livre) e todo
 // o resto podem mudar sem risco nenhum.
-export class AtualizarTipoLinkRequestDto {
+export class TipoLinkRequestUpdate {
   @IsOptional()
   @IsString()
   @IsNotEmpty()

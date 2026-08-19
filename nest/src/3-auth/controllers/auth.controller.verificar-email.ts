@@ -1,5 +1,5 @@
 import { Body, Controller, Post } from '@nestjs/common';
-import { VerificarEmailRequestDto } from '../dto/request/verificar-email.request.dto';
+import { AuthRequestVerifyEmail } from '../dto/request/auth.request-verify-email';
 import { AuthServiceVerificarEmail } from '../service/auth.service.verificar-email';
 
 // Sem guard de propósito — o link chega por e-mail (futuro) ou, hoje, pelo
@@ -10,7 +10,7 @@ export class AuthControllerVerificarEmail {
   constructor(private readonly service: AuthServiceVerificarEmail) {}
 
   @Post('verificar-email')
-  async verificar(@Body() dto: VerificarEmailRequestDto) {
+  async verificar(@Body() dto: AuthRequestVerifyEmail) {
     await this.service.executar(dto.token);
     return { verificado: true };
   }

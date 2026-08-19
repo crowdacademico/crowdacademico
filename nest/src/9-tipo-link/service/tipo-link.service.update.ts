@@ -6,8 +6,8 @@ import {
 } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
 import { TipoLinkConverter } from '../dto/converter/tipo-link.converter';
-import { AtualizarTipoLinkRequestDto } from '../dto/request/atualizar-tipo-link.request.dto';
-import { TipoLinkResponseDto } from '../dto/response/tipo-link.response.dto';
+import { TipoLinkRequestUpdate } from '../dto/request/tipo-link.request-update';
+import { TipoLinkResponse } from '../dto/response/tipo-link.response';
 import { validarRegex } from './tipo-link.service.create';
 
 @Injectable()
@@ -16,8 +16,8 @@ export class TipoLinkServiceUpdate {
 
   async executar(
     idTipolink: number,
-    dto: AtualizarTipoLinkRequestDto,
-  ): Promise<TipoLinkResponseDto> {
+    dto: TipoLinkRequestUpdate,
+  ): Promise<TipoLinkResponse> {
     const db = this.database.getDb();
 
     // regex é NULLABLE — `null` explícito no corpo limpa o campo (não

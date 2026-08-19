@@ -6,8 +6,8 @@ import {
 } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
 import { AreaConhecimentoConverter } from '../dto/converter/area-conhecimento.converter';
-import { CriarAreaConhecimentoRequestDto } from '../dto/request/criar-area-conhecimento.request.dto';
-import { AreaConhecimentoResponseDto } from '../dto/response/area-conhecimento.response.dto';
+import { AreaConhecimentoRequestCreate } from '../dto/request/area-conhecimento.request-create';
+import { AreaConhecimentoResponse } from '../dto/response/area-conhecimento.response';
 
 const CODIGO_PG_UNIQUE_VIOLATION = '23505';
 const CODIGO_PG_RLS_VIOLATION = '42501';
@@ -17,8 +17,8 @@ export class AreaConhecimentoServiceCreate {
   constructor(private readonly database: DatabaseService) {}
 
   async executar(
-    dto: CriarAreaConhecimentoRequestDto,
-  ): Promise<AreaConhecimentoResponseDto> {
+    dto: AreaConhecimentoRequestCreate,
+  ): Promise<AreaConhecimentoResponse> {
     const db = this.database.getDb();
 
     // Hierarquia fixa em 2 níveis (ver comentário em

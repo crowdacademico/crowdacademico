@@ -1,5 +1,5 @@
 import { Controller, Get, Query } from '@nestjs/common';
-import { ListarMotivoDenunciaQueryDto } from '../dto/request/listar-motivo-denuncia.query.dto';
+import { MotivoDenunciaRequestList } from '../dto/request/motivo-denuncia.request-list';
 import { MotivoDenunciaServiceFindAll } from '../service/motivo-denuncia.service.findall';
 
 // Sem RequireAuthGuard, de propósito: catálogo público de leitura
@@ -12,7 +12,7 @@ export class MotivoDenunciaControllerFindAll {
   constructor(private readonly service: MotivoDenunciaServiceFindAll) {}
 
   @Get()
-  listar(@Query() filtro: ListarMotivoDenunciaQueryDto) {
+  listar(@Query() filtro: MotivoDenunciaRequestList) {
     return this.service.executar(filtro);
   }
 }

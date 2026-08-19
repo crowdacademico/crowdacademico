@@ -1,9 +1,9 @@
 import { Equals, IsEmail, IsString, MinLength } from 'class-validator';
 
-// Mesmas regras de CriarUsuarioRequestDto (1-usuario) — o cadastro público
+// Mesmas regras de UsuarioRequestCreate (1-usuario) — o cadastro público
 // cria a mesma linha em `usuario`, só que auto-serviço, com um passo a
 // mais (aceite de termo) e terminando já logado.
-export class CadastroRequestDto {
+export class AuthRequestRegister {
   @IsString()
   @MinLength(2, { message: 'Nome precisa ter pelo menos 2 caracteres.' })
   nome: string;

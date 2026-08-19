@@ -88,11 +88,15 @@ GRANT EXECUTE ON FUNCTION public.listar_papeis_usuario(INT) TO app_nestjs;
 GRANT INSERT, UPDATE, DELETE ON configuracoes TO app_nestjs;
 GRANT INSERT, UPDATE ON arquivo TO app_nestjs;
 
--- [06-C-1] area_conhecimento / motivo_denuncia: por que só INSERT/UPDATE (ver DOCUMENTACAO_BD.md)
-GRANT INSERT, UPDATE ON area_conhecimento, motivo_denuncia TO app_nestjs;
-
--- [06-C-2] tipo_link: por que só INSERT/UPDATE, sem DELETE (ver DOCUMENTACAO_BD.md)
-GRANT INSERT, UPDATE ON tipo_link TO app_nestjs;
+-- [06-C-1] area_conhecimento / motivo_denuncia / tipo_link: DELETE
+-- adicionado (18-08-2026, pedido do Lucas/Alexia — botão Excluir no
+-- painel, ver pol_area_delete/pol_motivo_delete/pol_tipolink_delete em
+-- 04_rls_policies.sql). Antes era só INSERT/UPDATE, por privilégio
+-- mínimo (ver DOCUMENTACAO_BD.md) — a FK sem CASCADE que apontava pra
+-- cada uma continua de pé, então DELETE só funciona de fato quando o
+-- registro não está em uso; a RLS + o service.remove de cada módulo
+-- tratam o resto.
+GRANT INSERT, UPDATE, DELETE ON area_conhecimento, motivo_denuncia, tipo_link TO app_nestjs;
 
 -- ============================================================================
 --  [06-D] USUÁRIO

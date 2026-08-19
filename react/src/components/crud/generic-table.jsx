@@ -251,6 +251,29 @@ export function GenericTable({
     });
   }, [linhasFiltradas, linhas, ordenacao]);
 
+  // Colunas de valor curto (número ou booleano) ficam centralizadas,
+  // cabeçalho e célula — pedido da Alexia (18-08-2026: "centralizar o
+  // negócio de sim e não" + "melhorar espaçamento entre colunas", as
+  // duas juntas porque são a mesma causa: texto curto colado à esquerda
+  // deixa um vão grande e desigual à direita, sobretudo ao lado de uma
+  // coluna de texto longo como "nome"/"descrição"). Mesmo truque de
+  // sniffar o tipo pelo primeiro valor não-nulo que `linhasOrdenadas` já
+  // usa pra ordenação, então não precisa de config nova por coluna nas
+  // ~10 telas que já usam GenericTable.
+  const colunasCentralizadas = useMemo(() => {
+    const chaves = new Set();
+    colunas.forEach((coluna) => {
+      const linhaComValor = linhas.find(
+        (linha) => linha[coluna.chave] !== null && linha[coluna.chave] !== undefined,
+      );
+      const tipo = typeof linhaComValor?.[coluna.chave];
+      if (tipo === 'number' || tipo === 'boolean') {
+        chaves.add(coluna.chave);
+      }
+    });
+    return chaves;
+  }, [linhas, colunas]);
+
   // "todos" (pedido do Lucas: opção de ver 10/20/30/todos os registros,
   // além de Anterior/Próxima) vira 1 página só, com a lista inteira.
   const totalPaginas =
@@ -453,7 +476,10 @@ export function GenericTable({
                 {colunas.map((coluna) => (
                   <th
                     key={coluna.chave}
-                    className="crud-tabela__ordenavel"
+                    className={
+                      'crud-tabela__ordenavel' +
+                      (colunasCentralizadas.has(coluna.chave) ? ' crud-tabela__celula--centralizada' : '')
+                    }
                     onClick={() => aoClicarColuna(coluna.chave)}
                   >
                     {coluna.rotulo}
@@ -468,7 +494,10 @@ export function GenericTable({
               {linhasPagina.map((linha) => (
                 <tr key={linha[chavePrimaria]}>
                   {colunas.map((coluna) => (
-                    <td key={coluna.chave}>
+                    <td
+                      key={coluna.chave}
+                      className={colunasCentralizadas.has(coluna.chave) ? 'crud-tabela__celula--centralizada' : undefined}
+                    >
                       {/* `renderizar` (09-08-2026, tabela Permissões: botão
                           "Saiba mais" no lugar do valor cru) — opcional, só
                           uma coluna especial precisa disso, as outras
@@ -493,7 +522,17 @@ export function GenericTable({
                           <Link> garante que o botão continua tendo nome
                           acessível pra leitor de tela mesmo com o texto
                           escondido (display:none tira do texto da árvore
-                          de acessibilidade também, não só da tela). */}
+                          de acessibilidade também, não só da tela).
+                          `.crud-tabela__acao-dica` (18-08-2026, pedido da
+                          Alexia: "ao passar o mouse por cima dos ícones de
+                          ação, queria que aparecesse o texto da ação") —
+                          mesmo mecanismo CSS puro (:hover/:focus) do
+                          Tooltip em components/layout/tooltip.jsx, só que
+                          aplicado direto no próprio link de ação em vez de
+                          um "ⓘ" à parte (não faria sentido aqui: o ícone
+                          JÁ é o elemento clicável). Sem `title=` nativo de
+                          propósito — os dois juntos mostrariam 2 dicas
+                          sobrepostas. */}
                       <div className="crud-tabela__acoes">
                         {acoes.includes('alterar') && (
                           <Link
@@ -503,6 +542,7 @@ export function GenericTable({
                           >
                             <i className="fa-solid fa-pen"></i>
                             <span className="crud-tabela__acao-texto">Alterar</span>
+                            <span className="crud-tabela__acao-dica" role="tooltip">Alterar</span>
                           </Link>
                         )}
                         {acoes.includes('consultar') && (
@@ -513,6 +553,7 @@ export function GenericTable({
                           >
                             <i className="fa-solid fa-eye"></i>
                             <span className="crud-tabela__acao-texto">Consultar</span>
+                            <span className="crud-tabela__acao-dica" role="tooltip">Consultar</span>
                           </Link>
                         )}
                         {acoes.includes('excluir') && (
@@ -523,6 +564,7 @@ export function GenericTable({
                           >
                             <i className="fa-solid fa-trash"></i>
                             <span className="crud-tabela__acao-texto">Excluir</span>
+                            <span className="crud-tabela__acao-dica" role="tooltip">Excluir</span>
                           </Link>
                         )}
                       </div>

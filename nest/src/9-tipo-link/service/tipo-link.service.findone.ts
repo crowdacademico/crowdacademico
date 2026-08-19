@@ -1,13 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
 import { TipoLinkConverter } from '../dto/converter/tipo-link.converter';
-import { TipoLinkResponseDto } from '../dto/response/tipo-link.response.dto';
+import { TipoLinkResponse } from '../dto/response/tipo-link.response';
 
 @Injectable()
 export class TipoLinkServiceFindOne {
   constructor(private readonly database: DatabaseService) {}
 
-  async executar(idTipolink: number): Promise<TipoLinkResponseDto> {
+  async executar(idTipolink: number): Promise<TipoLinkResponse> {
     // pol_tipolink_select (04): USING(true) — mesma leitura pública do findall.
     const linha = await this.database
       .getDb()

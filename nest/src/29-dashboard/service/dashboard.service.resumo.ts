@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { sql } from 'kysely';
 import { DatabaseService } from '../../commons/database/database.service';
-import { DashboardResumoResponseDto } from '../dto/response/dashboard-resumo.response.dto';
+import { DashboardResponseSummary } from '../dto/response/dashboard.response-summary';
 
 // Shape da linha devolvida por contar_metricas_dashboard() (03_funcoes_
 // seguranca.sql [03-M]) — mesmo raciocínio de qualquer outra função
@@ -20,7 +20,7 @@ interface LinhaMetricasDashboard {
 export class DashboardServiceResumo {
   constructor(private readonly database: DatabaseService) {}
 
-  async executar(): Promise<DashboardResumoResponseDto> {
+  async executar(): Promise<DashboardResponseSummary> {
     const db = this.database.getDb();
 
     // `contar_metricas_dashboard()` é SECURITY DEFINER (bypassa a RLS

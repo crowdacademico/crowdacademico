@@ -1,6 +1,6 @@
 import { IsBoolean, IsOptional, IsString } from 'class-validator';
 
-export class AtualizarConfiguracaoRequestDto {
+export class ConfiguracaoRequestUpdate {
   @IsOptional()
   @IsString()
   valor?: string;

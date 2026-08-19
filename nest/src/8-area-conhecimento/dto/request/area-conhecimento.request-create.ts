@@ -9,7 +9,7 @@ import {
   Min,
 } from 'class-validator';
 
-export class CriarAreaConhecimentoRequestDto {
+export class AreaConhecimentoRequestCreate {
   // Formato oficial da tabela de áreas do conhecimento do CNPq: grande
   // área.área.subárea.especialidade, sempre 2 dígitos por nível (ex.:
   // '1.00.00.00' pra grande área "Ciências Exatas e da Terra',

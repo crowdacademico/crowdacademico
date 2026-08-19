@@ -524,19 +524,20 @@ FROM (VALUES
 -- existentes). PERF-004 (vínculo institucional falso) é diferente de PERF-001
 -- (dados acadêmicos falsos, mais genérico) — ficou mais relevante depois que
 -- perfil_pesquisador.vinculo_institucional virou NOT NULL.
-INSERT INTO motivo_denuncia (codigo, descricao, tipo) VALUES
-('CAMP-001', 'Campanha com informações falsas ou enganosas',           'campanha'),
-('CAMP-002', 'Campanha duplicada ou já existente',                     'campanha'),
-('CAMP-003', 'Uso indevido de recursos arrecadados',                   'campanha'),
-('CAMP-004', 'Campanha fora do escopo acadêmico',                      'campanha'),
-('CAMP-005', 'Plágio ou apropriação de trabalho alheio',               'campanha'),
-('CAMP-006', 'Conflito de interesse não declarado',                    'campanha'),
-('CAMP-007', 'Campanha sem viabilidade metodológica',                  'campanha'),
-('CAMP-008', 'Spam ou divulgação fora de contexto acadêmico',          'campanha'),
-('PERF-001', 'Perfil com dados acadêmicos falsos',                     'perfil'),
-('PERF-002', 'Comportamento abusivo ou ofensivo',                      'perfil'),
-('PERF-003', 'Usurpação de identidade de pesquisador real',            'perfil'),
-('PERF-004', 'Vínculo institucional falso ou não comprovável',         'perfil');
+-- Sem `codigo` (18-08-2026, coluna removida — ver 01_extensoes_enums_tabelas.sql)
+INSERT INTO motivo_denuncia (descricao, tipo) VALUES
+('Campanha com informações falsas ou enganosas',           'campanha'),
+('Campanha duplicada ou já existente',                     'campanha'),
+('Uso indevido de recursos arrecadados',                   'campanha'),
+('Campanha fora do escopo acadêmico',                      'campanha'),
+('Plágio ou apropriação de trabalho alheio',                'campanha'),
+('Conflito de interesse não declarado',                     'campanha'),
+('Campanha sem viabilidade metodológica',                   'campanha'),
+('Spam ou divulgação fora de contexto acadêmico',           'campanha'),
+('Perfil com dados acadêmicos falsos',                      'perfil'),
+('Comportamento abusivo ou ofensivo',                       'perfil'),
+('Usurpação de identidade de pesquisador real',              'perfil'),
+('Vínculo institucional falso ou não comprovável',           'perfil');
 
 
 -- [07-C-4] arquivo (imagens de perfil — sem FK ainda ativa no INSERT)
@@ -1117,16 +1118,21 @@ INSERT INTO comentario (id_campanha, id_pesquisador, conteudo, endossado, criado
 
 
 -- [07-E-8] denuncia
+-- Resolve o motivo por `descricao` (18-08-2026) — antes era por `codigo`
+-- (CAMP-001, PERF-001 etc.), coluna removida do catálogo (ver
+-- 01_extensoes_enums_tabelas.sql); `descricao` é única o bastante neste
+-- seed pra continuar funcionando como chave de leitura só aqui, sem
+-- precisar de id_motivo cru (frágil a depender da ordem do INSERT acima).
 INSERT INTO denuncia (id_usuario, id_campanha_alvo, id_pesquisador_alvo, id_motivo, status, criado_em)
 SELECT v.id_usuario, v.id_campanha_alvo, v.id_pesquisador_alvo, md.id_motivo, v.status::status_denuncia, v.criado_em::timestamptz
 FROM (VALUES
-    (13, 6,    NULL::int, 'CAMP-001', 'improcedente', '2025-04-11 09:00:00'),
-    (14, NULL, 17,        'PERF-001', 'pendente',     '2025-04-12 10:00:00'),
-    (15, 4,    NULL,      'CAMP-001', 'resolvida',    '2024-03-16 11:00:00'),
-    (16, NULL, 15,        'PERF-002', 'em_analise',   '2024-03-20 14:00:00'),
-    (17, 2,    NULL,      'CAMP-002', 'improcedente', '2024-03-02 08:00:00'),
-    (18, NULL, 17,        'PERF-003', 'pendente',     '2025-04-13 15:00:00'),
-    (12, 6,    NULL,      'CAMP-004', 'pendente',     '2025-04-14 10:00:00'),
+    (13, 6,    NULL::int, 'Campanha com informações falsas ou enganosas', 'improcedente', '2025-04-11 09:00:00'),
+    (14, NULL, 17,        'Perfil com dados acadêmicos falsos',           'pendente',     '2025-04-12 10:00:00'),
+    (15, 4,    NULL,      'Campanha com informações falsas ou enganosas', 'resolvida',    '2024-03-16 11:00:00'),
+    (16, NULL, 15,        'Comportamento abusivo ou ofensivo',            'em_analise',   '2024-03-20 14:00:00'),
+    (17, 2,    NULL,      'Campanha duplicada ou já existente',           'improcedente', '2024-03-02 08:00:00'),
+    (18, NULL, 17,        'Usurpação de identidade de pesquisador real',  'pendente',     '2025-04-13 15:00:00'),
+    (12, 6,    NULL,      'Campanha fora do escopo acadêmico',            'pendente',     '2025-04-14 10:00:00'),
     -- ADICIONADO: denúncias que alimentam de propósito a dimensão Reputação da
     -- Comunidade (calcular_score_reputacao, 05: 25 − total_denuncias×1 −
     -- total_procedentes×3) dos 2 pesquisadores novos que precisam de reputação
@@ -1135,19 +1141,19 @@ FROM (VALUES
     -- ponto cada (25 → 23), o suficiente pra tirar um pouco de reputação sem zerar
     -- a dimensão, já que ele só precisa ficar em "Em Construção" (25-49), não em
     -- "Atenção".
-    (13, NULL, 21, 'PERF-001', 'pendente',  '2024-06-10 09:00:00'),
-    (23, NULL, 21, 'PERF-002', 'pendente',  '2024-06-12 10:00:00'),
+    (13, NULL, 21, 'Perfil com dados acadêmicos falsos',          'pendente',  '2024-06-10 09:00:00'),
+    (23, NULL, 21, 'Comportamento abusivo ou ofensivo',           'pendente',  '2024-06-12 10:00:00'),
     -- Vinícius (22): 4 denúncias 'resolvida' (= procedente) de 4 denunciantes
     -- diferentes (a UNIQUE de denuncia é por par usuário/alvo, por isso não repito
     -- denunciante) — cada uma custa 1+3=4 pontos (25 → 9), derrubando a reputação
     -- o bastante pra, somada ao resto do perfil dele (sem link, sem campanha),
     -- garantir a faixa "Atenção" (0-24).
-    (12, NULL, 22, 'PERF-001', 'resolvida', '2024-06-01 09:00:00'),
-    (15, NULL, 22, 'PERF-002', 'resolvida', '2024-06-02 10:00:00'),
-    (9,  NULL, 22, 'PERF-003', 'resolvida', '2024-06-03 11:00:00'),
-    (11, NULL, 22, 'PERF-001', 'resolvida', '2024-06-04 12:00:00')
-) AS v(id_usuario, id_campanha_alvo, id_pesquisador_alvo, motivo_codigo, status, criado_em)
-JOIN motivo_denuncia md ON md.codigo = v.motivo_codigo;
+    (12, NULL, 22, 'Perfil com dados acadêmicos falsos',          'resolvida', '2024-06-01 09:00:00'),
+    (15, NULL, 22, 'Comportamento abusivo ou ofensivo',           'resolvida', '2024-06-02 10:00:00'),
+    (9,  NULL, 22, 'Usurpação de identidade de pesquisador real', 'resolvida', '2024-06-03 11:00:00'),
+    (11, NULL, 22, 'Perfil com dados acadêmicos falsos',          'resolvida', '2024-06-04 12:00:00')
+) AS v(id_usuario, id_campanha_alvo, id_pesquisador_alvo, motivo_descricao, status, criado_em)
+JOIN motivo_denuncia md ON md.descricao = v.motivo_descricao;
 
 
 -- [07-D-7] notificacao

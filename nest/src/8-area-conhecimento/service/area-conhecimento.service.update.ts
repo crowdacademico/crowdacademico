@@ -6,8 +6,8 @@ import {
 } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
 import { AreaConhecimentoConverter } from '../dto/converter/area-conhecimento.converter';
-import { AtualizarAreaConhecimentoRequestDto } from '../dto/request/atualizar-area-conhecimento.request.dto';
-import { AreaConhecimentoResponseDto } from '../dto/response/area-conhecimento.response.dto';
+import { AreaConhecimentoRequestUpdate } from '../dto/request/area-conhecimento.request-update';
+import { AreaConhecimentoResponse } from '../dto/response/area-conhecimento.response';
 
 @Injectable()
 export class AreaConhecimentoServiceUpdate {
@@ -15,8 +15,8 @@ export class AreaConhecimentoServiceUpdate {
 
   async executar(
     idAreaConhecimento: number,
-    dto: AtualizarAreaConhecimentoRequestDto,
-  ): Promise<AreaConhecimentoResponseDto> {
+    dto: AreaConhecimentoRequestUpdate,
+  ): Promise<AreaConhecimentoResponse> {
     const db = this.database.getDb();
 
     const campos = {

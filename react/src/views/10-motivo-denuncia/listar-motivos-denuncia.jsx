@@ -41,7 +41,6 @@ export function ListarMotivosDenuncia({ auth }) {
         }
         colunas={[
           { chave: 'idMotivo', rotulo: 'id' },
-          { chave: 'codigo', rotulo: 'código' },
           { chave: 'descricao', rotulo: 'descrição' },
           { chave: 'tipo', rotulo: 'tipo' },
           { chave: 'ativo', rotulo: 'ativo' },
@@ -49,11 +48,6 @@ export function ListarMotivosDenuncia({ auth }) {
         chavePrimaria="idMotivo"
         listar={listarMotivos}
         rotaBase="/admin/motivos-denuncia"
-        // Sem 'excluir': backend não tem DELETE pra motivo_denuncia (só
-        // INSERT/UPDATE concedidos em 06_grants.sql [06-C-1]) — só
-        // desativa via Alterar (campo "Ativo"). Mesmo padrão de
-        // ListarTiposLink.
-        acoes={['alterar', 'consultar']}
         // Filtro por faceta (campanha/perfil) — pensado pro caso de uso
         // concreto de achar rápido, entre os ~12 motivos seedados, só os
         // de um tipo (mesma ideia do filtro de papel em ListarUsuarios).

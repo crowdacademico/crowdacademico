@@ -5,16 +5,16 @@ import {
   paginar,
 } from '../../commons/database/paginacao.util';
 import { AreaConhecimentoConverter } from '../dto/converter/area-conhecimento.converter';
-import { ListarAreaConhecimentoQueryDto } from '../dto/request/listar-area-conhecimento.query.dto';
-import { AreaConhecimentoResponseDto } from '../dto/response/area-conhecimento.response.dto';
+import { AreaConhecimentoRequestList } from '../dto/request/area-conhecimento.request-list';
+import { AreaConhecimentoResponse } from '../dto/response/area-conhecimento.response';
 
 @Injectable()
 export class AreaConhecimentoServiceFindAll {
   constructor(private readonly database: DatabaseService) {}
 
   async executar(
-    filtro: ListarAreaConhecimentoQueryDto = {},
-  ): Promise<ResultadoPaginado<AreaConhecimentoResponseDto>> {
+    filtro: AreaConhecimentoRequestList = {},
+  ): Promise<ResultadoPaginado<AreaConhecimentoResponse>> {
     // pol_area_select (04_rls_policies.sql [04-C-2]) é USING(true) — catálogo
     // público, lista mesmo sem login (mesmo padrão de
     // ConfiguracaoControllerFindAll/PapelControllerFindAll).

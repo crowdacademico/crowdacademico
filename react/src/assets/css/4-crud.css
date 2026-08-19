@@ -64,8 +64,29 @@
 
   .crud-tabela th,
   .crud-tabela td {
-    padding: 0.85rem 0.75rem;
+    padding: 0.85rem 1.1rem;
     text-align: left;
+  }
+
+  /* Coluna de valor curto (id, Sim/Não) centralizada — cabeçalho e
+     célula (18-08-2026, pedido da Alexia: "centralizar o negócio de sim
+     e não" + "melhorar espaçamento entre colunas"). GenericTable decide
+     SOZINHA quais colunas ganham esta classe, sniffando o tipo do dado
+     (number/boolean) igual já fazia pra ordenação — nenhuma tela
+     precisou declarar isso a mais. `text-align: center` sozinho já
+     centraliza tanto texto solto quanto o `<span class="badge">` que
+     `celulaValor()` desenha pra booleano (ambos são conteúdo inline),
+     sem precisar de flexbox.
+     ERA padding horizontal 0.75rem — subiu pra 1.1rem: era a maior causa
+     do "espaçamento esquisito" que a Alexia notou — coluna de valor
+     curto tinha muito vão sobrando de um lado só (texto-à-esquerda numa
+     coluna larga), enquanto a coluna de texto vizinha (nome/descrição)
+     ficava com pouco respiro em comparação. Centralizar reparte o vão
+     dos dois lados; o padding maior dá o mesmo respiro extra pras
+     colunas de texto, que também reclamavam. */
+  .crud-tabela th.crud-tabela__celula--centralizada,
+  .crud-tabela td.crud-tabela__celula--centralizada {
+    text-align: center;
   }
 
   /* Linha fina entre linhas do corpo (não grade completa) — ERA border em
@@ -123,6 +144,7 @@
   }
 
   .crud-tabela__acao {
+    position: relative;
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
@@ -143,6 +165,40 @@
     padding: 0.35rem 0.55rem;
     margin: -0.35rem -0.55rem;
     border-radius: var(--radius-full);
+  }
+
+  /* Dica ao passar o mouse (18-08-2026, pedido da Alexia) — mesmo visual
+     de .tooltip__texto (components/layout/tooltip.jsx / 2-componentes.css:
+     pílula escura, acima do elemento, fade puro em CSS), reimplementada
+     aqui em vez de reaproveitar a classe: `.tooltip` tem `cursor: help` e
+     `margin-left` pensados pro ícone "ⓘ" avulso, errados pra um link de
+     ação de verdade (cursor precisa continuar `pointer`, sem margem
+     empurrando o ícone). `pointer-events: none` — sem isso, a dica ficaria
+     "no caminho" do clique quando aparece bem em cima do ícone. */
+  .crud-tabela__acao-dica {
+    position: absolute;
+    bottom: 135%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--color-dark);
+    color: var(--color-white);
+    padding: 0.35rem 0.65rem;
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-xs);
+    font-weight: 500;
+    white-space: nowrap;
+    box-shadow: var(--shadow-md);
+    opacity: 0;
+    visibility: hidden;
+    transition: var(--transition-normal);
+    pointer-events: none;
+    z-index: 20;
+  }
+
+  .crud-tabela__acao:hover .crud-tabela__acao-dica,
+  .crud-tabela__acao:focus-visible .crud-tabela__acao-dica {
+    opacity: 1;
+    visibility: visible;
   }
 
   /* Abaixo de 1400px de janela, o texto de cada ação some sozinho e fica

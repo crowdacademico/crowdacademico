@@ -1,7 +1,7 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { sql } from 'kysely';
 import { DatabaseService } from '../../commons/database/database.service';
-import { SuspensaoUsuarioResponseDto } from '../dto/response/suspensao-usuario.response.dto';
+import { UsuarioResponseSuspend } from '../dto/response/usuario.response-suspend';
 
 // suspender_usuario/revogar_suspensao_usuario (03_funcoes_seguranca.sql,
 // [03-N], 09-08-2026, Bloco G do prompt do Claude Web) — mesmo padrão de
@@ -22,9 +22,7 @@ export class UsuarioServiceSuspender {
   // sem isso, este endpoint sozinho já derrubava com 500 (o frontend tinha
   // um .catch() cobrindo isso, mas o endpoint em si devia responder certo,
   // não depender só do cliente engolir o erro).
-  async buscarSuspensao(
-    idUsuario: number,
-  ): Promise<SuspensaoUsuarioResponseDto> {
+  async buscarSuspensao(idUsuario: number): Promise<UsuarioResponseSuspend> {
     const db = this.database.getDb();
     await sql`SAVEPOINT sp_buscar_suspensao_usuario`.execute(db);
     try {

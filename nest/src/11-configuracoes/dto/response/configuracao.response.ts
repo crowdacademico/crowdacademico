@@ -1,6 +1,6 @@
 import { TipoConfiguracao } from '../../../commons/database/db.types';
 
-export class ConfiguracaoResponseDto {
+export class ConfiguracaoResponse {
   idConfig: number;
   idUsuario: number | null;
   chave: string;

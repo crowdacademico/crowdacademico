@@ -14,8 +14,9 @@
 --
 --  Inventário Mapeado:
 --  - 42 Tabelas com RLS ativada e forçada
---  - 114 Policies (100% idempotentes — toda CREATE POLICY tem
---    DROP POLICY IF EXISTS correspondente)
+--  - 117 Policies (100% idempotentes — toda CREATE POLICY tem
+--    DROP POLICY IF EXISTS correspondente) — +3 em 18-08-2026
+--    (pol_area_delete/pol_tipolink_delete/pol_motivo_delete)
 -- ----------------------------------------------------------------------------
 --  SUMÁRIO DOS BLOCOS DE CÓDIGO
 -- ----------------------------------------------------------------------------
@@ -126,6 +127,13 @@ DROP POLICY IF EXISTS pol_area_insert ON area_conhecimento;
 CREATE POLICY pol_area_insert ON area_conhecimento FOR INSERT TO app_nestjs WITH CHECK (public.tem_permissao('area_conhecimento_gerenciar'));
 DROP POLICY IF EXISTS pol_area_update ON area_conhecimento;
 CREATE POLICY pol_area_update ON area_conhecimento FOR UPDATE TO app_nestjs USING (public.tem_permissao('area_conhecimento_gerenciar')) WITH CHECK (public.tem_permissao('area_conhecimento_gerenciar'));
+-- ADICIONADO (18-08-2026, pedido do Lucas/Alexia — botão Excluir no
+-- painel): mesma permissão do update. FK_CAMPANHA_AREA_CONHECIMENTO
+-- segue sem CASCADE, então a policy libera a operação mas o banco ainda
+-- rejeita (23503) se a área estiver em uso — area-conhecimento.service.remove.ts
+-- traduz isso numa mensagem própria.
+DROP POLICY IF EXISTS pol_area_delete ON area_conhecimento;
+CREATE POLICY pol_area_delete ON area_conhecimento FOR DELETE TO app_nestjs USING (public.tem_permissao('area_conhecimento_gerenciar'));
 
 DROP POLICY IF EXISTS pol_tipolink_select ON tipo_link;
 CREATE POLICY pol_tipolink_select ON tipo_link FOR SELECT USING (true);
@@ -134,6 +142,12 @@ DROP POLICY IF EXISTS pol_tipolink_insert ON tipo_link;
 CREATE POLICY pol_tipolink_insert ON tipo_link FOR INSERT TO app_nestjs WITH CHECK (public.tem_permissao('tipolink_gerenciar'));
 DROP POLICY IF EXISTS pol_tipolink_update ON tipo_link;
 CREATE POLICY pol_tipolink_update ON tipo_link FOR UPDATE TO app_nestjs USING (public.tem_permissao('tipolink_gerenciar')) WITH CHECK (public.tem_permissao('tipolink_gerenciar'));
+-- ADICIONADO (18-08-2026, pedido do Lucas/Alexia — botão Excluir no
+-- painel): mesma permissão do update. FK_LINK_ACADEMICO_TIPOLINK/
+-- FK_LINK_ATUALIZACAO_TIPOLINK/FK_LINK_RECOMPENSA_TIPOLINK seguem sem
+-- CASCADE — tipo-link.service.remove.ts traduz o 23503 numa mensagem própria.
+DROP POLICY IF EXISTS pol_tipolink_delete ON tipo_link;
+CREATE POLICY pol_tipolink_delete ON tipo_link FOR DELETE TO app_nestjs USING (public.tem_permissao('tipolink_gerenciar'));
 
 DROP POLICY IF EXISTS pol_motivo_select ON motivo_denuncia;
 CREATE POLICY pol_motivo_select ON motivo_denuncia FOR SELECT USING (true);
@@ -142,6 +156,12 @@ DROP POLICY IF EXISTS pol_motivo_insert ON motivo_denuncia;
 CREATE POLICY pol_motivo_insert ON motivo_denuncia FOR INSERT TO app_nestjs WITH CHECK (public.tem_permissao('motivo_denuncia_gerenciar'));
 DROP POLICY IF EXISTS pol_motivo_update ON motivo_denuncia;
 CREATE POLICY pol_motivo_update ON motivo_denuncia FOR UPDATE TO app_nestjs USING (public.tem_permissao('motivo_denuncia_gerenciar')) WITH CHECK (public.tem_permissao('motivo_denuncia_gerenciar'));
+-- ADICIONADO (18-08-2026, pedido do Lucas/Alexia — botão Excluir no
+-- painel): mesma permissão do update. FK_DENUNCIA_MOTIVO segue sem
+-- CASCADE — motivo-denuncia.service.remove.ts traduz o 23503 numa
+-- mensagem própria.
+DROP POLICY IF EXISTS pol_motivo_delete ON motivo_denuncia;
+CREATE POLICY pol_motivo_delete ON motivo_denuncia FOR DELETE TO app_nestjs USING (public.tem_permissao('motivo_denuncia_gerenciar'));
 
 DROP POLICY IF EXISTS pol_arquivo_select ON arquivo;
 CREATE POLICY pol_arquivo_select ON arquivo FOR SELECT USING (TRUE);

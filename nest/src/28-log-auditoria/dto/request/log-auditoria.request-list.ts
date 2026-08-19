@@ -7,7 +7,7 @@ import { PaginacaoQueryDto } from '../../../commons/database/dto/paginacao.query
 // não precisa de @IsIn com uma lista fixa: um nome que não bate com nada
 // só devolve uma lista vazia, sem risco de injeção (sempre parametrizado
 // via Kysely, nunca SQL cru).
-export class LogAuditoriaQueryDto extends PaginacaoQueryDto {
+export class LogAuditoriaRequestList extends PaginacaoQueryDto {
   @IsString()
   @IsNotEmpty()
   tabela: string;

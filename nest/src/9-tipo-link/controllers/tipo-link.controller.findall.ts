@@ -1,5 +1,5 @@
 import { Controller, Get, Query } from '@nestjs/common';
-import { ListarTipoLinkQueryDto } from '../dto/request/listar-tipo-link.query.dto';
+import { TipoLinkRequestList } from '../dto/request/tipo-link.request-list';
 import { TipoLinkServiceFindAll } from '../service/tipo-link.service.findall';
 
 // Sem RequireAuthGuard, de propósito: catálogo público de leitura
@@ -10,7 +10,7 @@ export class TipoLinkControllerFindAll {
   constructor(private readonly service: TipoLinkServiceFindAll) {}
 
   @Get()
-  listar(@Query() filtro: ListarTipoLinkQueryDto) {
+  listar(@Query() filtro: TipoLinkRequestList) {
     return this.service.executar(filtro);
   }
 }

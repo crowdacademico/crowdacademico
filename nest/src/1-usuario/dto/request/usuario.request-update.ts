@@ -1,6 +1,6 @@
 import { IsInt, IsOptional, IsString, MinLength } from 'class-validator';
 
-export class AtualizarUsuarioRequestDto {
+export class UsuarioRequestUpdate {
   // Só estes 3 campos existem no GRANT UPDATE de `usuario` (06_grants.sql,
   // [06-D-2]) — email_verificado, tentativas_login_falhas, bloqueado_ate,
   // deletado etc. só mudam via função do banco (03_funcoes_seguranca.sql,

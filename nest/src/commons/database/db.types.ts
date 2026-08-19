@@ -80,7 +80,7 @@ export interface SessaoTable {
 }
 
 // CREATE TYPE tipo_configuracao AS ENUM ('decimal','inteiro','texto','booleano') — 01
-// Array em runtime (não só o tipo) pra CriarConfiguracaoRequestDto validar
+// Array em runtime (não só o tipo) pra ConfiguracaoRequestCreate validar
 // com @IsIn(TIPOS_CONFIGURACAO) sem duplicar a lista de novo — um hardcoded
 // só, o tipo é derivado dele, não o contrário.
 export const TIPOS_CONFIGURACAO = [
@@ -105,7 +105,7 @@ export interface ConfiguracoesTable {
 // `id_log` é `Generated<string>`, não `<number>`: é BIGSERIAL (bigint), e o
 // driver `pg` devolve bigint como STRING por padrão (evita perda de
 // precisão em valores acima de 2^53) — convertido pra `number` só na hora
-// de montar o ResponseDto (log-auditoria.converter.ts), mesmo cuidado já
+// de montar o LogAuditoriaResponse (log-auditoria.converter.ts), mesmo cuidado já
 // tomado com `COUNT(*)` em paginacao.util.ts.
 export interface LogAuditoriaTable {
   id_log: Generated<string>;
@@ -177,7 +177,7 @@ export interface TipoLinkTable {
 
 // CREATE TYPE tipo_motivo_denuncia AS ENUM ('campanha', 'perfil') — 01. Mesmo
 // raciocínio de TIPOS_CONFIGURACAO acima: array em runtime pra
-// CriarMotivoDenunciaRequestDto/AtualizarMotivoDenunciaRequestDto validarem
+// MotivoDenunciaRequestCreate/MotivoDenunciaRequestUpdate validarem
 // com @IsIn(TIPOS_MOTIVO_DENUNCIA) sem duplicar a lista, o tipo é derivado
 // dele.
 export const TIPOS_MOTIVO_DENUNCIA = ['campanha', 'perfil'] as const;
@@ -194,8 +194,11 @@ export type TipoMotivoDenuncia = (typeof TIPOS_MOTIVO_DENUNCIA)[number];
 // alvo x id_pesquisador_alvo).
 export interface MotivoDenunciaTable {
   id_motivo: Generated<number>;
-  codigo: string;
-  descricao: string | null;
+  // NOT NULL desde 18-08-2026 — `codigo` saiu do catálogo (não era lido
+  // por nenhuma trigger/função, diferente de `papel.codigo`/
+  // `tipo_link.codigo`) e `descricao` virou o único identificador
+  // legível do motivo.
+  descricao: string;
   tipo: TipoMotivoDenuncia;
   ativo: Generated<boolean>;
 }

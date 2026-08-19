@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
-import { PapelResponseDto } from '../dto/response/papel.response.dto';
+import { PapelResponse } from '../dto/response/papel.response';
 
 @Injectable()
 export class PapelServiceFindAll {
   constructor(private readonly database: DatabaseService) {}
 
-  async executar(): Promise<PapelResponseDto[]> {
+  async executar(): Promise<PapelResponse[]> {
     // pol_papel_select (04_rls_policies.sql) é USING(true) — catálogo
     // público, sem exigir login. Não existe endpoint de criar/excluir papel
     // (só UPDATE de `nome`, ver pol_papel_update/PapelServiceUpdate): RBAC

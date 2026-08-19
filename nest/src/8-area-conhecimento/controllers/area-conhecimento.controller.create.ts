@@ -1,6 +1,6 @@
 import { Body, Controller, Post, UseGuards } from '@nestjs/common';
 import { RequireAuthGuard } from '../../3-auth/guards/require-auth.guard';
-import { CriarAreaConhecimentoRequestDto } from '../dto/request/criar-area-conhecimento.request.dto';
+import { AreaConhecimentoRequestCreate } from '../dto/request/area-conhecimento.request-create';
 import { AreaConhecimentoServiceCreate } from '../service/area-conhecimento.service.create';
 
 @Controller('area-conhecimento')
@@ -9,7 +9,7 @@ export class AreaConhecimentoControllerCreate {
 
   @Post()
   @UseGuards(RequireAuthGuard)
-  criar(@Body() dto: CriarAreaConhecimentoRequestDto) {
+  criar(@Body() dto: AreaConhecimentoRequestCreate) {
     return this.service.executar(dto);
   }
 }

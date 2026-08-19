@@ -2,13 +2,13 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
 import { USUARIO_COLUNAS_SELECT } from '../constants/usuario.constants';
 import { UsuarioConverter } from '../dto/converter/usuario.converter';
-import { UsuarioResponseDto } from '../dto/response/usuario.response.dto';
+import { UsuarioResponse } from '../dto/response/usuario.response';
 
 @Injectable()
 export class UsuarioServiceFindOne {
   constructor(private readonly database: DatabaseService) {}
 
-  async executar(idUsuario: number): Promise<UsuarioResponseDto> {
+  async executar(idUsuario: number): Promise<UsuarioResponse> {
     const usuario = await this.database
       .getDb()
       .selectFrom('usuario')

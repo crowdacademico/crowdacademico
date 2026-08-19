@@ -1,5 +1,5 @@
 import { UsuarioEntity } from '../../entity/usuario.entity';
-import { UsuarioResponseDto } from '../response/usuario.response.dto';
+import { UsuarioResponse } from '../response/usuario.response';
 
 // Pick, não UsuarioEntity inteiro: services nunca selecionam senha_hash (só
 // auth.service.login.ts faz isso, isolado, e nem passa por este converter),
@@ -18,7 +18,7 @@ type UsuarioParaConverter = Pick<
 >;
 
 export class UsuarioConverter {
-  static paraResponseDto(entity: UsuarioParaConverter): UsuarioResponseDto {
+  static paraResponseDto(entity: UsuarioParaConverter): UsuarioResponse {
     return {
       idUsuario: entity.id_usuario,
       nome: entity.nome,

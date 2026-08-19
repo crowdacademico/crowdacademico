@@ -18,14 +18,17 @@ import { ListarConfiguracoes } from '../../views/11-configuracoes/listar-configu
 import { CriarAreaConhecimento } from '../../views/8-area-conhecimento/criar-area-conhecimento';
 import { AlterarAreaConhecimento } from '../../views/8-area-conhecimento/alterar-area-conhecimento';
 import { ConsultarAreaConhecimento } from '../../views/8-area-conhecimento/consultar-area-conhecimento';
+import { ExcluirAreaConhecimento } from '../../views/8-area-conhecimento/excluir-area-conhecimento';
 import { ListarAreasConhecimento } from '../../views/8-area-conhecimento/listar-areas-conhecimento';
 import { CriarTipoLink } from '../../views/9-tipo-link/criar-tipo-link';
 import { AlterarTipoLink } from '../../views/9-tipo-link/alterar-tipo-link';
 import { ConsultarTipoLink } from '../../views/9-tipo-link/consultar-tipo-link';
+import { ExcluirTipoLink } from '../../views/9-tipo-link/excluir-tipo-link';
 import { ListarTiposLink } from '../../views/9-tipo-link/listar-tipos-link';
 import { CriarMotivoDenuncia } from '../../views/10-motivo-denuncia/criar-motivo-denuncia';
 import { AlterarMotivoDenuncia } from '../../views/10-motivo-denuncia/alterar-motivo-denuncia';
 import { ConsultarMotivoDenuncia } from '../../views/10-motivo-denuncia/consultar-motivo-denuncia';
+import { ExcluirMotivoDenuncia } from '../../views/10-motivo-denuncia/excluir-motivo-denuncia';
 import { ListarMotivosDenuncia } from '../../views/10-motivo-denuncia/listar-motivos-denuncia';
 
 // Fonte única de verdade pra "quais páginas existem" — App.jsx monta as
@@ -250,9 +253,7 @@ export const ROTAS_ADMIN = [
     paiCaminho: '/admin/configuracoes',
   },
 
-  // Área de Conhecimento — filhas de /admin/areas-conhecimento. Sem rota
-  // de excluir: backend não tem DELETE pra area_conhecimento (só
-  // INSERT/UPDATE concedidos em 06_grants.sql), só desativa via Alterar.
+  // Área de Conhecimento — filhas de /admin/areas-conhecimento.
   {
     caminho: '/admin/areas-conhecimento/criar',
     caminhoRelativo: 'areas-conhecimento/criar',
@@ -274,10 +275,15 @@ export const ROTAS_ADMIN = [
     rotuloBreadcrumb: 'Consultar Área de Conhecimento',
     paiCaminho: '/admin/areas-conhecimento',
   },
+  {
+    caminho: '/admin/areas-conhecimento/:id/excluir',
+    caminhoRelativo: 'areas-conhecimento/:id/excluir',
+    elemento: ExcluirAreaConhecimento,
+    rotuloBreadcrumb: 'Excluir Área de Conhecimento',
+    paiCaminho: '/admin/areas-conhecimento',
+  },
 
-  // Tipo de Link — filhas de /admin/tipos-link. Sem rota de excluir:
-  // backend não tem DELETE pra tipo_link (só INSERT/UPDATE concedidos em
-  // 06_grants.sql [06-C-2]), só desativa via Alterar.
+  // Tipo de Link — filhas de /admin/tipos-link.
   {
     caminho: '/admin/tipos-link/criar',
     caminhoRelativo: 'tipos-link/criar',
@@ -299,10 +305,15 @@ export const ROTAS_ADMIN = [
     rotuloBreadcrumb: 'Consultar Tipo de Link',
     paiCaminho: '/admin/tipos-link',
   },
+  {
+    caminho: '/admin/tipos-link/:id/excluir',
+    caminhoRelativo: 'tipos-link/:id/excluir',
+    elemento: ExcluirTipoLink,
+    rotuloBreadcrumb: 'Excluir Tipo de Link',
+    paiCaminho: '/admin/tipos-link',
+  },
 
-  // Motivo de Denúncia — filhas de /admin/motivos-denuncia. Sem rota de
-  // excluir: backend não tem DELETE pra motivo_denuncia (só INSERT/UPDATE
-  // concedidos em 06_grants.sql [06-C-1]), só desativa via Alterar.
+  // Motivo de Denúncia — filhas de /admin/motivos-denuncia.
   {
     caminho: '/admin/motivos-denuncia/criar',
     caminhoRelativo: 'motivos-denuncia/criar',
@@ -322,6 +333,13 @@ export const ROTAS_ADMIN = [
     caminhoRelativo: 'motivos-denuncia/:id/consultar',
     elemento: ConsultarMotivoDenuncia,
     rotuloBreadcrumb: 'Consultar Motivo de Denúncia',
+    paiCaminho: '/admin/motivos-denuncia',
+  },
+  {
+    caminho: '/admin/motivos-denuncia/:id/excluir',
+    caminhoRelativo: 'motivos-denuncia/:id/excluir',
+    elemento: ExcluirMotivoDenuncia,
+    rotuloBreadcrumb: 'Excluir Motivo de Denúncia',
     paiCaminho: '/admin/motivos-denuncia',
   },
 ];

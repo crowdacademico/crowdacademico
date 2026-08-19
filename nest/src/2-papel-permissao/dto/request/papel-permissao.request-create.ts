@@ -1,6 +1,6 @@
 import { IsInt } from 'class-validator';
 
-export class AtribuirPermissaoRequestDto {
+export class PapelPermissaoRequestCreate {
   @IsInt()
   idPapel: number;
 

@@ -1,13 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
 import { MotivoDenunciaConverter } from '../dto/converter/motivo-denuncia.converter';
-import { MotivoDenunciaResponseDto } from '../dto/response/motivo-denuncia.response.dto';
+import { MotivoDenunciaResponse } from '../dto/response/motivo-denuncia.response';
 
 @Injectable()
 export class MotivoDenunciaServiceFindOne {
   constructor(private readonly database: DatabaseService) {}
 
-  async executar(idMotivo: number): Promise<MotivoDenunciaResponseDto> {
+  async executar(idMotivo: number): Promise<MotivoDenunciaResponse> {
     // pol_motivo_select (04): USING(true) — mesma leitura pública do findall.
     const linha = await this.database
       .getDb()

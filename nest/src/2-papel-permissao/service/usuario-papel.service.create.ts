@@ -4,7 +4,7 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
-import { AtribuirPapelRequestDto } from '../dto/request/atribuir-papel.request.dto';
+import { UsuarioPapelRequestCreate } from '../dto/request/usuario-papel.request-create';
 
 const CODIGO_PG_UNIQUE_VIOLATION = '23505';
 const CODIGO_PG_RLS_VIOLATION = '42501';
@@ -13,7 +13,7 @@ const CODIGO_PG_RLS_VIOLATION = '42501';
 export class UsuarioPapelServiceCreate {
   constructor(private readonly database: DatabaseService) {}
 
-  async executar(dto: AtribuirPapelRequestDto): Promise<void> {
+  async executar(dto: UsuarioPapelRequestCreate): Promise<void> {
     try {
       // pol_usuariopapel_insert (04) exige tem_permissao('papel_atribuir').
       await this.database

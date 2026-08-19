@@ -1,4 +1,4 @@
-export class TermoAtivoResponseDto {
+export class TermoUsoResponseAtivo {
   idTermo: number;
   versao: string;
   conteudo: string;

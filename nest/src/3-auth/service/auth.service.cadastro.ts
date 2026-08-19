@@ -4,8 +4,8 @@ import { UsuarioServiceCreate } from '../../1-usuario/service/usuario.service.cr
 import { TermoUsoServiceAtivo } from '../../5-termo-uso/service/termo-uso.service.ativo';
 import { DatabaseService } from '../../commons/database/database.service';
 import { VERIFICACAO_EMAIL_HORAS_VALIDADE } from '../constants/auth.constants';
-import { CadastroRequestDto } from '../dto/request/cadastro.request.dto';
-import { CadastroResponseDto } from '../dto/response/cadastro.response.dto';
+import { AuthRequestRegister } from '../dto/request/auth.request-register';
+import { AuthResponseRegister } from '../dto/response/auth.response-register';
 import { AuthServiceLogin } from './auth.service.login';
 import { gerarTokenVerificacaoEmail } from './verificacao-email-token.util';
 
@@ -26,10 +26,10 @@ export class AuthServiceCadastro {
   ) {}
 
   async executar(
-    dto: CadastroRequestDto,
+    dto: AuthRequestRegister,
     ip: string | undefined,
     userAgent: string | undefined,
-  ): Promise<CadastroResponseDto> {
+  ): Promise<AuthResponseRegister> {
     const usuario = await this.usuarioServiceCreate.executar({
       nome: dto.nome,
       email: dto.email,

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
 import { LogAuditoriaConverter } from '../dto/converter/log-auditoria.converter';
-import { LogAuditoriaResponseDto } from '../dto/response/log-auditoria.response.dto';
+import { LogAuditoriaResponse } from '../dto/response/log-auditoria.response';
 
 // Últimas N ações do PRÓPRIO usuário logado, de QUALQUER tabela — usado
 // pelo sino "Atividade recente" do cabeçalho (09-08-2026, Bloco B/C do
@@ -21,7 +21,7 @@ const LIMITE_ATIVIDADE_RECENTE = 10;
 export class LogAuditoriaServiceMinhaAtividade {
   constructor(private readonly database: DatabaseService) {}
 
-  async executar(idUsuario: number): Promise<LogAuditoriaResponseDto[]> {
+  async executar(idUsuario: number): Promise<LogAuditoriaResponse[]> {
     const linhas = await this.database
       .getDb()
       .selectFrom('log_auditoria')

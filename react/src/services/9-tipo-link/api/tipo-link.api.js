@@ -3,12 +3,11 @@ import { tratarResposta } from '../../constant/api/http.util';
 
 // Espelha nest/src/9-tipo-link — GET (listar/buscar) é PÚBLICO no backend
 // (pol_tipolink_select é USING(true), 04_rls_policies.sql [04-C-2]);
-// POST/PATCH exigem a permissão 'tipolink_gerenciar', garantida pela RLS
-// (o Nest não tem guard de permissão nenhum — só RequireAuthGuard pra
-// exigir login). Sem remover(): não existe DELETE pra tipo_link (só
-// INSERT/UPDATE concedidos em 06_grants.sql [06-C-2]) — desativar é
-// PATCH com { ativo: false }, não uma chamada própria (mesmo padrão de
-// areaConhecimentoApi).
+// POST/PATCH/DELETE exigem a permissão 'tipolink_gerenciar', garantida
+// pela RLS (o Nest não tem guard de permissão nenhum — só
+// RequireAuthGuard pra exigir login). remover() (18-08-2026) pode voltar
+// 409 se o tipo ainda estiver em uso em algum link — ver
+// tipo-link.service.remove.ts.
 function paraQueryString(filtro) {
   if (!filtro) {
     return '';
@@ -56,4 +55,6 @@ export const tipoLinkApi = {
       method: 'PATCH',
       body: JSON.stringify(dados),
     }).then(tratarResposta),
+  remover: (authFetch, id) =>
+    authFetch(`/tipo-link/${id}`, { method: 'DELETE' }).then(tratarResposta),
 };

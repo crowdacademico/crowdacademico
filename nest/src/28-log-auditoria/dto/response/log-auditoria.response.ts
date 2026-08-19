@@ -1,4 +1,4 @@
-export class LogAuditoriaResponseDto {
+export class LogAuditoriaResponse {
   idLog: number;
   tabela: string;
   identidadeRegistro: string;

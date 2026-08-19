@@ -1,6 +1,6 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { RequireAuthGuard } from '../../3-auth/guards/require-auth.guard';
-import { LogAuditoriaQueryDto } from '../dto/request/log-auditoria.query.dto';
+import { LogAuditoriaRequestList } from '../dto/request/log-auditoria.request-list';
 import { LogAuditoriaServiceFindAll } from '../service/log-auditoria.service.findall';
 
 // RequireAuthGuard aqui é só pra devolver 401 limpo pra quem não está
@@ -14,7 +14,7 @@ export class LogAuditoriaControllerFindAll {
 
   @UseGuards(RequireAuthGuard)
   @Get()
-  listar(@Query() query: LogAuditoriaQueryDto) {
+  listar(@Query() query: LogAuditoriaRequestList) {
     return this.service.executar(query);
   }
 }

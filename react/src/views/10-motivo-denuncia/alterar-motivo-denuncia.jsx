@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
 import { CartaoFormulario } from '../../components/crud/cartao-formulario';
 import { useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
 import { SecaoFicha } from '../../components/crud/ficha-consulta';
@@ -8,14 +7,11 @@ import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
 import { motivoDenunciaApi } from '../../services/10-motivo-denuncia/api/motivo-denuncia.api';
 
-// `codigo` não aparece como campo editável (só leitura) porque
-// AtualizarMotivoDenunciaRequestDto (Nest) não o aceita — é a chave
-// estável (UK_MOTIVO_DENUNCIA_CODIGO) que identifica o motivo no
-// catálogo, mesmo raciocínio de AlterarTipoLink sobre `codigo`/
-// AlterarAreaConhecimento sobre `codigoCnpq`. `tipo`, diferente de
-// `codigo`, É editável aqui: não existe trigger no banco que trave a
-// troca depois de criado (ver comentário completo em
-// atualizar-motivo-denuncia.request.dto.ts, no backend).
+// `tipo` É editável aqui: não existe trigger no banco que trave a troca
+// depois de criado (ver comentário completo em
+// atualizar-motivo-denuncia.request.dto.ts, no backend). `descricao`
+// também é editável — desde 18-08-2026 (remoção de `codigo`) é o único
+// identificador do motivo, então precisa continuar não vazia.
 export function AlterarMotivoDenuncia({ auth }) {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -60,10 +56,7 @@ export function AlterarMotivoDenuncia({ auth }) {
     setEnviando(true);
     try {
       await motivoDenunciaApi.atualizar(auth.authFetch, id, {
-        // '' vira `null` (limpa o campo) — descricao é NULLABLE e
-        // AtualizarMotivoDenunciaRequestDto (Nest) aceita `null`
-        // explícito no corpo pra isto.
-        descricao: descricao || null,
+        descricao,
         tipo,
         ativo,
       });
@@ -89,7 +82,7 @@ export function AlterarMotivoDenuncia({ auth }) {
             <button
               type="submit"
               form="form-alterar-motivo-denuncia"
-              disabled={enviando || !sujo || tipo === ''}
+              disabled={enviando || !sujo || tipo === '' || descricao.trim() === ''}
               className="btn btn-primary flex-1"
             >
               {enviando ? 'Salvando...' : 'Salvar'}
@@ -111,14 +104,10 @@ export function AlterarMotivoDenuncia({ auth }) {
               <i className="fa-solid fa-flag"></i>
             </div>
             <div className="min-w-0">
-              <p className="font-bold texto-forte truncate font-mono text-sm">{motivo.codigo}</p>
+              <p className="font-bold texto-forte truncate text-sm">{motivo.descricao}</p>
               <p className="text-xs texto-fraco">Motivo de denúncia #{motivo.idMotivo}</p>
             </div>
           </div>
-
-          <SecaoFicha titulo="Dados">
-            <CampoSomenteLeitura rotulo="Código" valor={motivo.codigo} />
-          </SecaoFicha>
 
           <SecaoFicha titulo="Editar">
             <div className="sm:col-span-2">
@@ -144,6 +133,7 @@ export function AlterarMotivoDenuncia({ auth }) {
                 type="text"
                 value={descricao}
                 onChange={(evento) => setDescricao(evento.target.value)}
+                required
                 maxLength={255}
                 className="input-padrao"
               />

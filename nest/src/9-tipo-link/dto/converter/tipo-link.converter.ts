@@ -1,11 +1,9 @@
 import { Selectable } from 'kysely';
 import { TipoLinkTable } from '../../../commons/database/db.types';
-import { TipoLinkResponseDto } from '../response/tipo-link.response.dto';
+import { TipoLinkResponse } from '../response/tipo-link.response';
 
 export class TipoLinkConverter {
-  static paraResponseDto(
-    linha: Selectable<TipoLinkTable>,
-  ): TipoLinkResponseDto {
+  static paraResponseDto(linha: Selectable<TipoLinkTable>): TipoLinkResponse {
     return {
       idTipolink: linha.id_tipolink,
       codigo: linha.codigo,

@@ -7,7 +7,7 @@ import {
 import { DatabaseService } from '../../commons/database/database.service';
 import { USUARIO_COLUNAS_SELECT } from '../constants/usuario.constants';
 import { UsuarioConverter } from '../dto/converter/usuario.converter';
-import { UsuarioResponseDto } from '../dto/response/usuario.response.dto';
+import { UsuarioResponse } from '../dto/response/usuario.response';
 
 @Injectable()
 export class UsuarioServiceFindAll {
@@ -15,7 +15,7 @@ export class UsuarioServiceFindAll {
 
   async executar(
     paginacao?: ParametrosPaginacao,
-  ): Promise<ResultadoPaginado<UsuarioResponseDto>> {
+  ): Promise<ResultadoPaginado<UsuarioResponse>> {
     // pol_usuario_select (04_rls_policies.sql) libera `deletado = FALSE`
     // pra qualquer sessão, mesmo sem login — por isso funciona pra anônimo.
     const query = this.database

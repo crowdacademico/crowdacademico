@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
 import { AreaConhecimentoConverter } from '../dto/converter/area-conhecimento.converter';
-import { AreaConhecimentoResponseDto } from '../dto/response/area-conhecimento.response.dto';
+import { AreaConhecimentoResponse } from '../dto/response/area-conhecimento.response';
 
 @Injectable()
 export class AreaConhecimentoServiceFindOne {
@@ -9,7 +9,7 @@ export class AreaConhecimentoServiceFindOne {
 
   async executar(
     idAreaConhecimento: number,
-  ): Promise<AreaConhecimentoResponseDto> {
+  ): Promise<AreaConhecimentoResponse> {
     // pol_area_select (04): USING(true) — mesma leitura pública do findall.
     const linha = await this.database
       .getDb()

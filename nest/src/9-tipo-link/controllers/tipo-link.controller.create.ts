@@ -1,6 +1,6 @@
 import { Body, Controller, Post, UseGuards } from '@nestjs/common';
 import { RequireAuthGuard } from '../../3-auth/guards/require-auth.guard';
-import { CriarTipoLinkRequestDto } from '../dto/request/criar-tipo-link.request.dto';
+import { TipoLinkRequestCreate } from '../dto/request/tipo-link.request-create';
 import { TipoLinkServiceCreate } from '../service/tipo-link.service.create';
 
 @Controller('tipo-link')
@@ -9,7 +9,7 @@ export class TipoLinkControllerCreate {
 
   @Post()
   @UseGuards(RequireAuthGuard)
-  criar(@Body() dto: CriarTipoLinkRequestDto) {
+  criar(@Body() dto: TipoLinkRequestCreate) {
     return this.service.executar(dto);
   }
 }

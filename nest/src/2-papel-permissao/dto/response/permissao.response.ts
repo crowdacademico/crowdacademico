@@ -1,4 +1,4 @@
-export class PermissaoResponseDto {
+export class PermissaoResponse {
   idPermissao: number;
   nome: string;
 }

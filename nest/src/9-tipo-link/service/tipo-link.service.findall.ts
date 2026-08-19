@@ -5,16 +5,16 @@ import {
   paginar,
 } from '../../commons/database/paginacao.util';
 import { TipoLinkConverter } from '../dto/converter/tipo-link.converter';
-import { ListarTipoLinkQueryDto } from '../dto/request/listar-tipo-link.query.dto';
-import { TipoLinkResponseDto } from '../dto/response/tipo-link.response.dto';
+import { TipoLinkRequestList } from '../dto/request/tipo-link.request-list';
+import { TipoLinkResponse } from '../dto/response/tipo-link.response';
 
 @Injectable()
 export class TipoLinkServiceFindAll {
   constructor(private readonly database: DatabaseService) {}
 
   async executar(
-    filtro: ListarTipoLinkQueryDto = {},
-  ): Promise<ResultadoPaginado<TipoLinkResponseDto>> {
+    filtro: TipoLinkRequestList = {},
+  ): Promise<ResultadoPaginado<TipoLinkResponse>> {
     // pol_tipolink_select (04_rls_policies.sql [04-C-2]) é USING(true) —
     // catálogo público, lista mesmo sem login.
     let query = this.database

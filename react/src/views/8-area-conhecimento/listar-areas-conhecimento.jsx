@@ -42,10 +42,6 @@ export function ListarAreasConhecimento({ auth }) {
         chavePrimaria="idAreaConhecimento"
         listar={listarAreas}
         rotaBase="/admin/areas-conhecimento"
-        // Sem 'excluir': backend não tem DELETE pra area_conhecimento (só
-        // INSERT/UPDATE concedidos em 06_grants.sql) — só desativa via
-        // Alterar (campo "Ativo").
-        acoes={['alterar', 'consultar']}
         buscarLog={buscarLogAreas}
         campoRenomeioLog="nome"
         // Escolher uma grande área no filtro mostra só as áreas filhas

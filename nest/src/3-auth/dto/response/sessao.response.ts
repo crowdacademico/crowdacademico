@@ -1,4 +1,4 @@
-export class SessaoResponseDto {
+export class SessaoResponse {
   idSessao: number;
   criadoEm: Date;
   expiraEm: Date;

@@ -3,14 +3,12 @@ import { tratarResposta } from '../../constant/api/http.util';
 
 // Espelha nest/src/10-motivo-denuncia — GET (listar/buscar) é PÚBLICO no
 // backend (pol_motivo_select é USING(true), 04_rls_policies.sql [04-C-3]);
-// POST/PATCH exigem a permissão 'motivo_denuncia_gerenciar', garantida
-// pela RLS (o Nest não tem guard de permissão nenhum — só
+// POST/PATCH/DELETE exigem a permissão 'motivo_denuncia_gerenciar',
+// garantida pela RLS (o Nest não tem guard de permissão nenhum — só
 // RequireAuthGuard pra exigir login; quem não tiver a permissão recebe
 // 403 do próprio Postgres, traduzido por postgres-exception.filter.ts).
-// Sem remover(): não existe DELETE pra motivo_denuncia (só INSERT/UPDATE
-// concedidos em 06_grants.sql [06-C-1]) — desativar é PATCH com
-// { ativo: false }, não uma chamada própria (mesmo padrão de
-// tipoLinkApi/areaConhecimentoApi).
+// remover() (18-08-2026) pode voltar 409 se o motivo já tiver sido usado
+// em alguma denúncia — ver motivo-denuncia.service.remove.ts.
 function paraQueryString(filtro) {
   if (!filtro) {
     return '';
@@ -50,12 +48,13 @@ export const motivoDenunciaApi = {
       method: 'POST',
       body: JSON.stringify(dados),
     }).then(tratarResposta),
-  // Só descricao/tipo/ativo são aceitos (ver
-  // AtualizarMotivoDenunciaRequestDto no backend) — codigo é imutável
-  // depois de criado.
+  // descricao/tipo/ativo são aceitos (ver AtualizarMotivoDenunciaRequestDto
+  // no backend).
   atualizar: (authFetch, id, dados) =>
     authFetch(`/motivo-denuncia/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(dados),
     }).then(tratarResposta),
+  remover: (authFetch, id) =>
+    authFetch(`/motivo-denuncia/${id}`, { method: 'DELETE' }).then(tratarResposta),
 };

@@ -1,4 +1,4 @@
-import { AreaConhecimentoResponseDto } from '../response/area-conhecimento.response.dto';
+import { AreaConhecimentoResponse } from '../response/area-conhecimento.response';
 
 // Shape aceita tanto o retorno "cru" de INSERT/UPDATE (.returningAll() em
 // area_conhecimento, sem `nome_pai` — a coluna não existe na própria
@@ -19,7 +19,7 @@ interface AreaConhecimentoParaConverter {
 export class AreaConhecimentoConverter {
   static paraResponseDto(
     linha: AreaConhecimentoParaConverter,
-  ): AreaConhecimentoResponseDto {
+  ): AreaConhecimentoResponse {
     return {
       idAreaConhecimento: linha.id_area_conhecimento,
       codigoCnpq: linha.codigo_cnpq,

@@ -3,8 +3,8 @@ import * as bcrypt from 'bcrypt';
 import { AuthServiceLogin } from './auth.service.login';
 import { DatabaseService } from '../../commons/database/database.service';
 import { UsuarioServiceFindOne } from '../../1-usuario/service/usuario.service.findone';
-import { RefreshTokenRequestDto } from '../dto/request/refresh-token.request.dto';
-import { RefreshResponseDto } from '../dto/response/refresh.response.dto';
+import { AuthRequestRefreshToken } from '../dto/request/auth.request-refresh-token';
+import { AuthResponseRefresh } from '../dto/response/auth.response-refresh';
 import { parseRefreshToken } from './refresh-token.util';
 
 @Injectable()
@@ -16,10 +16,10 @@ export class AuthServiceRefresh {
   ) {}
 
   async executar(
-    dto: RefreshTokenRequestDto,
+    dto: AuthRequestRefreshToken,
     ip: string | undefined,
     userAgent: string | undefined,
-  ): Promise<RefreshResponseDto> {
+  ): Promise<AuthResponseRefresh> {
     const parseado = parseRefreshToken(dto.refreshToken);
     if (!parseado) {
       throw new UnauthorizedException('Refresh token mal formado.');

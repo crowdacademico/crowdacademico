@@ -7,7 +7,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { RequireAuthGuard } from '../../3-auth/guards/require-auth.guard';
-import { AtualizarPapelRequestDto } from '../dto/request/atualizar-papel.request.dto';
+import { PapelRequestUpdate } from '../dto/request/papel.request-update';
 import { PapelServiceUpdate } from '../service/papel.service.update';
 
 @Controller('papel')
@@ -18,7 +18,7 @@ export class PapelControllerUpdate {
   @UseGuards(RequireAuthGuard)
   atualizar(
     @Param('id', ParseIntPipe) id: number,
-    @Body() dto: AtualizarPapelRequestDto,
+    @Body() dto: PapelRequestUpdate,
   ) {
     return this.service.executar(id, dto);
   }

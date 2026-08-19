@@ -44,10 +44,6 @@ export function ListarTiposLink({ auth }) {
         chavePrimaria="idTipolink"
         listar={listarTipos}
         rotaBase="/admin/tipos-link"
-        // Sem 'excluir': backend não tem DELETE pra tipo_link (só
-        // INSERT/UPDATE concedidos em 06_grants.sql [06-C-2]) — só
-        // desativa via Alterar (campo "Ativo").
-        acoes={['alterar', 'consultar']}
         buscarLog={buscarLogTipos}
         campoRenomeioLog="nome"
       />

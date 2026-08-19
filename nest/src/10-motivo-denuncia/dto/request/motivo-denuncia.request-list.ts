@@ -4,8 +4,8 @@ import { PaginacaoQueryDto } from '../../../commons/database/dto/paginacao.query
 import { TIPOS_MOTIVO_DENUNCIA } from '../../../commons/database/db.types';
 import type { TipoMotivoDenuncia } from '../../../commons/database/db.types';
 
-// Mesmo cuidado de ListarTipoLinkQueryDto (9-tipo-link)/
-// ListarAreaConhecimentoQueryDto (8-area-conhecimento): `@Type(() =>
+// Mesmo cuidado de TipoLinkRequestList (9-tipo-link)/
+// AreaConhecimentoRequestList (8-area-conhecimento): `@Type(() =>
 // Boolean)` sozinho converteria "false" (string não-vazia) em `true`,
 // então o `@Transform` abaixo faz a conversão certa antes do
 // class-validator rodar (precisa de `transform: true` no ValidationPipe
@@ -16,7 +16,7 @@ function paraBooleano({ value }: { value: unknown }): unknown {
   return value;
 }
 
-export class ListarMotivoDenunciaQueryDto extends PaginacaoQueryDto {
+export class MotivoDenunciaRequestList extends PaginacaoQueryDto {
   @IsOptional()
   @Transform(paraBooleano)
   @IsBoolean()

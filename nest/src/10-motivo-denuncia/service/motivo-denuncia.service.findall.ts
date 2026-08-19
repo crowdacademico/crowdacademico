@@ -5,23 +5,26 @@ import {
   paginar,
 } from '../../commons/database/paginacao.util';
 import { MotivoDenunciaConverter } from '../dto/converter/motivo-denuncia.converter';
-import { ListarMotivoDenunciaQueryDto } from '../dto/request/listar-motivo-denuncia.query.dto';
-import { MotivoDenunciaResponseDto } from '../dto/response/motivo-denuncia.response.dto';
+import { MotivoDenunciaRequestList } from '../dto/request/motivo-denuncia.request-list';
+import { MotivoDenunciaResponse } from '../dto/response/motivo-denuncia.response';
 
 @Injectable()
 export class MotivoDenunciaServiceFindAll {
   constructor(private readonly database: DatabaseService) {}
 
   async executar(
-    filtro: ListarMotivoDenunciaQueryDto = {},
-  ): Promise<ResultadoPaginado<MotivoDenunciaResponseDto>> {
+    filtro: MotivoDenunciaRequestList = {},
+  ): Promise<ResultadoPaginado<MotivoDenunciaResponse>> {
     // pol_motivo_select (04_rls_policies.sql [04-C-3]) é USING(true) —
     // catálogo público, lista mesmo sem login.
+    // ERA orderBy('codigo') — coluna removida (18-08-2026, ver
+    // criar-motivo-denuncia.request.dto.ts). `descricao` é o único
+    // identificador legível que sobrou.
     let query = this.database
       .getDb()
       .selectFrom('motivo_denuncia')
       .selectAll()
-      .orderBy('codigo');
+      .orderBy('descricao');
 
     if (filtro.ativo !== undefined) {
       query = query.where('ativo', '=', filtro.ativo);

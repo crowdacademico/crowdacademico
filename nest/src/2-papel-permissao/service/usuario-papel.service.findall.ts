@@ -1,13 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { sql } from 'kysely';
 import { DatabaseService } from '../../commons/database/database.service';
-import { UsuarioPapelResponseDto } from '../dto/response/usuario-papel.response.dto';
+import { UsuarioPapelResponse } from '../dto/response/usuario-papel.response';
 
 @Injectable()
 export class UsuarioPapelServiceFindAll {
   constructor(private readonly database: DatabaseService) {}
 
-  async executar(idUsuario: number): Promise<UsuarioPapelResponseDto[]> {
+  async executar(idUsuario: number): Promise<UsuarioPapelResponse[]> {
     // pol_usuariopapel_select (04): id_usuario_atual() = idUsuario OU
     // tem_permissao('papel_gerenciar'). Sem nenhum dos dois, a query só
     // devolve 0 linhas (RLS filtra, sem erro) — não dá pra saber se o

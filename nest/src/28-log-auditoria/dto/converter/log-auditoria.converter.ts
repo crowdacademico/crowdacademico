@@ -1,4 +1,4 @@
-import { LogAuditoriaResponseDto } from '../response/log-auditoria.response.dto';
+import { LogAuditoriaResponse } from '../response/log-auditoria.response';
 
 // Shape exata do SELECT de log-auditoria.service.findall.ts (join com
 // usuario) — não é um `Selectable<LogAuditoriaTable>` puro por causa do
@@ -19,7 +19,7 @@ interface LogAuditoriaParaConverter {
 export class LogAuditoriaConverter {
   static paraResponseDto(
     linha: LogAuditoriaParaConverter,
-  ): LogAuditoriaResponseDto {
+  ): LogAuditoriaResponse {
     return {
       // id_log vem como string do driver (BIGSERIAL/bigint) — ver
       // comentário em commons/database/db.types.ts.

@@ -1,4 +1,4 @@
-export class UsuarioPapelResponseDto {
+export class UsuarioPapelResponse {
   idUsuario: number;
   idPapel: number;
   nomePapel: string;

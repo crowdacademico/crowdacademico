@@ -9,7 +9,7 @@ import {
   MaxLength,
 } from 'class-validator';
 
-export class CriarTipoLinkRequestDto {
+export class TipoLinkRequestCreate {
   // Chave estável, nunca editável depois (ver comentário no response DTO)
   // — convenção MAIÚSCULO_COM_UNDERSCORE, igual todo `codigo` já seedado
   // (LATTES, ORCID, RESEARCHGATE, LINKEDIN, GITHUB, SITE_INSTITUCIONAL,

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { sql } from 'kysely';
 import { DatabaseService } from '../../commons/database/database.service';
-import { UsuarioPapelResponseDto } from '../dto/response/usuario-papel.response.dto';
+import { UsuarioPapelResponse } from '../dto/response/usuario-papel.response';
 
 @Injectable()
 export class UsuarioPapelServiceFindAllGeral {
@@ -19,7 +19,7 @@ export class UsuarioPapelServiceFindAllGeral {
   // espiando quem é moderador" pra proteger aqui. Reverter pra
   // "USING (id_usuario = public.id_usuario_atual() OR public.tem_permissao('papel_gerenciar'))"
   // + RequireAuthGuard de volta só se esse pressuposto mudar.
-  async executar(): Promise<UsuarioPapelResponseDto[]> {
+  async executar(): Promise<UsuarioPapelResponse[]> {
     const db = this.database.getDb();
 
     // SAVEPOINT (09-08-2026) — mesma proteção de usuario-papel.service.

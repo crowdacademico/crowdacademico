@@ -8,7 +8,7 @@
 // de auditoria (fn_log_auditoria agora ignora updates só nessas 2 colunas,
 // ver 05_regras_negocio.sql [05-L]) e mostrar a mesma informação, só que na
 // Consulta de cada usuário em vez de uma linha nova no log a cada login.
-export class UsuarioResponseDto {
+export class UsuarioResponse {
   idUsuario: number;
   nome: string;
   email: string;

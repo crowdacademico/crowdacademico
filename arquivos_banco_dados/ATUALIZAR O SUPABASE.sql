@@ -693,6 +693,55 @@ UPDATE tipo_link SET regex = NULL WHERE regex = '^https?://.+$';
 
 
 -- ============================================================================
+-- 18-08-2026 — botão Excluir em Área de Conhecimento / Tipo de Link /
+-- Motivo de Denúncia (pedido do Lucas/Alexia). GRANT + policy de DELETE
+-- pras 3 tabelas, mesma permissão que já gateia o UPDATE de cada uma. As
+-- FKs sem CASCADE continuam de pé (FK_CAMPANHA_AREA_CONHECIMENTO,
+-- FK_LINK_ACADEMICO_TIPOLINK/FK_LINK_ATUALIZACAO_TIPOLINK/
+-- FK_LINK_RECOMPENSA_TIPOLINK, FK_DENUNCIA_MOTIVO) — GRANT+policy só
+-- destravam a operação, o banco ainda rejeita se o registro estiver em
+-- uso (23503, traduzido pelo service.remove de cada módulo).
+-- Seguro rodar de novo quantas vezes quiser.
+-- ============================================================================
+
+DROP POLICY IF EXISTS pol_area_delete ON area_conhecimento;
+CREATE POLICY pol_area_delete ON area_conhecimento FOR DELETE TO app_nestjs USING (public.tem_permissao('area_conhecimento_gerenciar'));
+
+DROP POLICY IF EXISTS pol_tipolink_delete ON tipo_link;
+CREATE POLICY pol_tipolink_delete ON tipo_link FOR DELETE TO app_nestjs USING (public.tem_permissao('tipolink_gerenciar'));
+
+DROP POLICY IF EXISTS pol_motivo_delete ON motivo_denuncia;
+CREATE POLICY pol_motivo_delete ON motivo_denuncia FOR DELETE TO app_nestjs USING (public.tem_permissao('motivo_denuncia_gerenciar'));
+
+GRANT DELETE ON area_conhecimento, motivo_denuncia, tipo_link TO app_nestjs;
+
+
+-- ============================================================================
+-- 18-08-2026 — coluna `motivo_denuncia.codigo` removida (pedido do
+-- Lucas/Alexia: "remover código em motivo denúncia"). Diferente de
+-- `papel.codigo`/`tipo_link.codigo`, nenhuma trigger/função a lia — era
+-- só texto informativo (chave estável tipo CAMP-001, nunca de fato usada
+-- como chave por código nenhum de produção). `descricao` vira NOT NULL:
+-- é o único identificador legível que sobra pro motivo.
+--
+-- IMPORTANTE: diferente da maioria deste arquivo, isto só é seguro rodar
+-- MAIS DE UMA VEZ a partir da 2ª linha em diante — a 1ª (UPDATE) é um
+-- guard pra nenhuma linha existente ter `descricao` vazia antes do NOT
+-- NULL entrar em vigor (nenhuma linha do seed tem isso hoje, mas se
+-- algum registro criado manualmente tiver, o UPDATE evita que o ALTER
+-- TABLE seguinte falhe). Rodar de novo depois da 1ª vez não quebra nada,
+-- só não muda nada (DROP COLUMN/CONSTRAINT já não vão achar o que
+-- remover na 2ª vez, IF EXISTS cobre isso).
+-- ============================================================================
+
+UPDATE motivo_denuncia SET descricao = 'Sem descrição (preencher)' WHERE descricao IS NULL OR btrim(descricao) = '';
+
+ALTER TABLE motivo_denuncia ALTER COLUMN descricao SET NOT NULL;
+ALTER TABLE motivo_denuncia DROP CONSTRAINT IF EXISTS "UK_MOTIVO_DENUNCIA_CODIGO";
+ALTER TABLE motivo_denuncia DROP COLUMN IF EXISTS codigo;
+
+
+-- ============================================================================
 -- NÃO ENTRA NESTE ARQUIVO (registrado aqui só pra não se perder)
 -- ============================================================================
 

@@ -38,8 +38,7 @@ export function ConsultarMotivoDenuncia({ auth }) {
 
   return (
     <FichaConsulta
-      titulo={motivo.descricao || motivo.codigo}
-      subtitulo={motivo.codigo}
+      titulo={motivo.descricao}
       badges={[
         <span
           key="ativo"
@@ -59,7 +58,6 @@ export function ConsultarMotivoDenuncia({ auth }) {
     >
       <SecaoFicha titulo="Dados">
         <CampoFicha rotulo="id" valor={motivo.idMotivo} />
-        <CampoFicha rotulo="Código" valor={motivo.codigo} />
         <CampoFicha rotulo="Tipo" valor={ROTULO_TIPO[motivo.tipo] ?? motivo.tipo} />
         <CampoFicha rotulo="Descrição" valor={motivo.descricao} largura="cheia" />
       </SecaoFicha>

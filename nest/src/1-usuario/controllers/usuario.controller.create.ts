@@ -1,5 +1,5 @@
 import { Body, Controller, Post } from '@nestjs/common';
-import { CriarUsuarioRequestDto } from '../dto/request/criar-usuario.request.dto';
+import { UsuarioRequestCreate } from '../dto/request/usuario.request-create';
 import { UsuarioServiceCreate } from '../service/usuario.service.create';
 
 @Controller('usuario')
@@ -7,7 +7,7 @@ export class UsuarioControllerCreate {
   constructor(private readonly service: UsuarioServiceCreate) {}
 
   @Post()
-  criar(@Body() dto: CriarUsuarioRequestDto) {
+  criar(@Body() dto: UsuarioRequestCreate) {
     return this.service.executar(dto);
   }
 }

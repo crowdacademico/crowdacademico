@@ -1,6 +1,6 @@
 import { Body, Controller, Post, UseGuards } from '@nestjs/common';
 import { RequireAuthGuard } from '../../3-auth/guards/require-auth.guard';
-import { CriarMotivoDenunciaRequestDto } from '../dto/request/criar-motivo-denuncia.request.dto';
+import { MotivoDenunciaRequestCreate } from '../dto/request/motivo-denuncia.request-create';
 import { MotivoDenunciaServiceCreate } from '../service/motivo-denuncia.service.create';
 
 @Controller('motivo-denuncia')
@@ -9,7 +9,7 @@ export class MotivoDenunciaControllerCreate {
 
   @Post()
   @UseGuards(RequireAuthGuard)
-  criar(@Body() dto: CriarMotivoDenunciaRequestDto) {
+  criar(@Body() dto: MotivoDenunciaRequestCreate) {
     return this.service.executar(dto);
   }
 }

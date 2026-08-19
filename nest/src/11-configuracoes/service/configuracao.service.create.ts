@@ -5,8 +5,8 @@ import {
 } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
 import { ConfiguracaoConverter } from '../dto/converter/configuracao.converter';
-import { CriarConfiguracaoRequestDto } from '../dto/request/criar-configuracao.request.dto';
-import { ConfiguracaoResponseDto } from '../dto/response/configuracao.response.dto';
+import { ConfiguracaoRequestCreate } from '../dto/request/configuracao.request-create';
+import { ConfiguracaoResponse } from '../dto/response/configuracao.response';
 
 const CODIGO_PG_UNIQUE_VIOLATION = '23505';
 const CODIGO_PG_RLS_VIOLATION = '42501';
@@ -16,9 +16,9 @@ export class ConfiguracaoServiceCreate {
   constructor(private readonly database: DatabaseService) {}
 
   async executar(
-    dto: CriarConfiguracaoRequestDto,
+    dto: ConfiguracaoRequestCreate,
     idUsuarioAutenticado: number,
-  ): Promise<ConfiguracaoResponseDto> {
+  ): Promise<ConfiguracaoResponse> {
     // id_usuario decidido aqui, nunca aceito do corpo da requisição — pol_
     // config_insert (04) exige, pra linha global (id_usuario NULL),
     // tem_permissao('configuracao_gerenciar'); pra linha pessoal, exige

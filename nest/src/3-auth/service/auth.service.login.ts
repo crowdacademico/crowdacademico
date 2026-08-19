@@ -14,8 +14,8 @@ import {
   REFRESH_TOKEN_DIAS_VALIDADE,
   REFRESH_TOKEN_SEPARADOR,
 } from '../constants/auth.constants';
-import { LoginRequestDto } from '../dto/request/login.request.dto';
-import { LoginResponseDto } from '../dto/response/login.response.dto';
+import { AuthRequestLogin } from '../dto/request/auth.request-login';
+import { AuthResponseLogin } from '../dto/response/auth.response-login';
 
 // toISOString() cru ("...T00:28:27.382Z") não significa nada pra quem não
 // programa (pedido do Lucas, 09-08-2026: "eu não sei o que significa T ou
@@ -46,10 +46,10 @@ export class AuthServiceLogin {
   ) {}
 
   async executar(
-    dto: LoginRequestDto,
+    dto: AuthRequestLogin,
     ip: string | undefined,
     userAgent: string | undefined,
-  ): Promise<LoginResponseDto> {
+  ): Promise<AuthResponseLogin> {
     const db = this.database.getDb();
 
     // Só esta query, no módulo inteiro, lê senha_hash — de propósito, nunca

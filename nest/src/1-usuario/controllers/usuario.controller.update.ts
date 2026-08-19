@@ -7,7 +7,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { RequireAuthGuard } from '../../3-auth/guards/require-auth.guard';
-import { AtualizarUsuarioRequestDto } from '../dto/request/atualizar-usuario.request.dto';
+import { UsuarioRequestUpdate } from '../dto/request/usuario.request-update';
 import { UsuarioServiceUpdate } from '../service/usuario.service.update';
 
 @Controller('usuario')
@@ -18,7 +18,7 @@ export class UsuarioControllerUpdate {
   @UseGuards(RequireAuthGuard)
   atualizar(
     @Param('id', ParseIntPipe) id: number,
-    @Body() dto: AtualizarUsuarioRequestDto,
+    @Body() dto: UsuarioRequestUpdate,
   ) {
     return this.service.executar(id, dto);
   }

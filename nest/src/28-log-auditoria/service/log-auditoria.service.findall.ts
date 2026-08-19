@@ -5,8 +5,8 @@ import {
   ResultadoPaginado,
 } from '../../commons/database/paginacao.util';
 import { LogAuditoriaConverter } from '../dto/converter/log-auditoria.converter';
-import { LogAuditoriaQueryDto } from '../dto/request/log-auditoria.query.dto';
-import { LogAuditoriaResponseDto } from '../dto/response/log-auditoria.response.dto';
+import { LogAuditoriaRequestList } from '../dto/request/log-auditoria.request-list';
+import { LogAuditoriaResponse } from '../dto/response/log-auditoria.response';
 
 // Tamanho de página BEM menor que o teto de segurança (500) usado em
 // usuario/configuracao (paginacao.util.ts) — de propósito. Aqui não é um
@@ -20,8 +20,8 @@ export class LogAuditoriaServiceFindAll {
   constructor(private readonly database: DatabaseService) {}
 
   async executar(
-    query: LogAuditoriaQueryDto,
-  ): Promise<ResultadoPaginado<LogAuditoriaResponseDto>> {
+    query: LogAuditoriaRequestList,
+  ): Promise<ResultadoPaginado<LogAuditoriaResponse>> {
     // pol_log_auditoria_select (04_rls_policies.sql [04-L]) já exige
     // tem_permissao('log_visualizar') — sem ela, a query abaixo volta
     // vazia (RLS filtra a nível de linha), não dá erro.

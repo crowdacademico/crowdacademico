@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
-import { SessaoResponseDto } from '../dto/response/sessao.response.dto';
+import { SessaoResponse } from '../dto/response/sessao.response';
 
 // Minha Conta > Segurança > Sessões Ativas (09-08-2026, Bloco E do prompt
 // do Claude Web — "o item de maior impacto percebido nesta lista
@@ -15,7 +15,7 @@ export class AuthServiceListarSessoes {
   async executar(
     idUsuario: number,
     idSessaoAtual: number,
-  ): Promise<SessaoResponseDto[]> {
+  ): Promise<SessaoResponse[]> {
     const linhas = await this.database
       .getDb()
       .selectFrom('sessao')

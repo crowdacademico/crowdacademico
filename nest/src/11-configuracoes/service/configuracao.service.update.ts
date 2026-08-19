@@ -6,8 +6,8 @@ import {
 } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
 import { ConfiguracaoConverter } from '../dto/converter/configuracao.converter';
-import { AtualizarConfiguracaoRequestDto } from '../dto/request/atualizar-configuracao.request.dto';
-import { ConfiguracaoResponseDto } from '../dto/response/configuracao.response.dto';
+import { ConfiguracaoRequestUpdate } from '../dto/request/configuracao.request-update';
+import { ConfiguracaoResponse } from '../dto/response/configuracao.response';
 
 @Injectable()
 export class ConfiguracaoServiceUpdate {
@@ -15,8 +15,8 @@ export class ConfiguracaoServiceUpdate {
 
   async executar(
     idConfig: number,
-    dto: AtualizarConfiguracaoRequestDto,
-  ): Promise<ConfiguracaoResponseDto> {
+    dto: ConfiguracaoRequestUpdate,
+  ): Promise<ConfiguracaoResponse> {
     const db = this.database.getDb();
 
     const campos = {

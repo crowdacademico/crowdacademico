@@ -5,8 +5,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
-import { AtualizarPapelRequestDto } from '../dto/request/atualizar-papel.request.dto';
-import { PapelResponseDto } from '../dto/response/papel.response.dto';
+import { PapelRequestUpdate } from '../dto/request/papel.request-update';
+import { PapelResponse } from '../dto/response/papel.response';
 
 const CODIGO_PG_UNIQUE_VIOLATION = '23505';
 const CODIGO_PG_RLS_VIOLATION = '42501';
@@ -21,8 +21,8 @@ export class PapelServiceUpdate {
   // nem tem esse campo).
   async executar(
     idPapel: number,
-    dto: AtualizarPapelRequestDto,
-  ): Promise<PapelResponseDto> {
+    dto: PapelRequestUpdate,
+  ): Promise<PapelResponse> {
     try {
       const linha = await this.database
         .getDb()

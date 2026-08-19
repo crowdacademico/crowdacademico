@@ -6,8 +6,8 @@ import {
 } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
 import { MotivoDenunciaConverter } from '../dto/converter/motivo-denuncia.converter';
-import { AtualizarMotivoDenunciaRequestDto } from '../dto/request/atualizar-motivo-denuncia.request.dto';
-import { MotivoDenunciaResponseDto } from '../dto/response/motivo-denuncia.response.dto';
+import { MotivoDenunciaRequestUpdate } from '../dto/request/motivo-denuncia.request-update';
+import { MotivoDenunciaResponse } from '../dto/response/motivo-denuncia.response';
 
 @Injectable()
 export class MotivoDenunciaServiceUpdate {
@@ -15,8 +15,8 @@ export class MotivoDenunciaServiceUpdate {
 
   async executar(
     idMotivo: number,
-    dto: AtualizarMotivoDenunciaRequestDto,
-  ): Promise<MotivoDenunciaResponseDto> {
+    dto: MotivoDenunciaRequestUpdate,
+  ): Promise<MotivoDenunciaResponse> {
     const db = this.database.getDb();
 
     const campos = {

@@ -1,4 +1,4 @@
-export class AreaConhecimentoResponseDto {
+export class AreaConhecimentoResponse {
   idAreaConhecimento: number;
   codigoCnpq: string;
   nome: string;
