@@ -260,6 +260,15 @@ export function GenericTable({
   // sniffar o tipo pelo primeiro valor não-nulo que `linhasOrdenadas` já
   // usa pra ordenação, então não precisa de config nova por coluna nas
   // ~10 telas que já usam GenericTable.
+  //
+  // `coluna.centralizar` (19-08-2026, mesmo pedido, rodada 2) — escape
+  // manual pra quando o sniff automático não serve: a coluna "descrição"
+  // de Permissões guarda um resumo em TEXTO (sniff acharia 'string', não
+  // centralizaria por padrão), mas o que aparece na tela é um botão
+  // "Saiba mais" (`renderizar`) — curto, e olhando esquisito colado à
+  // esquerda igual os outros. `|| coluna.centralizar` é aditivo: nunca
+  // tira a centralização automática que já funcionava, só liga em mais
+  // um caso.
   const colunasCentralizadas = useMemo(() => {
     const chaves = new Set();
     colunas.forEach((coluna) => {
@@ -267,12 +276,46 @@ export function GenericTable({
         (linha) => linha[coluna.chave] !== null && linha[coluna.chave] !== undefined,
       );
       const tipo = typeof linhaComValor?.[coluna.chave];
-      if (tipo === 'number' || tipo === 'boolean') {
+      if (tipo === 'number' || tipo === 'boolean' || coluna.centralizar) {
         chaves.add(coluna.chave);
       }
     });
     return chaves;
   }, [linhas, colunas]);
+
+  // Coluna "id" com largura padrão em TODA tabela (19-08-2026, pedido do
+  // Lucas: "é uma coluna pequena, e deve suportar até 3 ou 4 dígitos sem
+  // quebra de linha... tabelas independentes, começando a alinhar a
+  // largura das colunas"). `rotulo` (não `chave`) é o que identifica —
+  // toda tela já escreve `{ chave: 'idAlgumaCoisa', rotulo: 'id' }`
+  // (mesmo texto literal em todas, minúsculo), então isto pega a coluna
+  // certa em qualquer tabela sem precisar de config nova por tela, igual
+  // `colunasCentralizadas` acima. Sem isso, a largura da coluna id
+  // dependia de quantos dígitos o PRIMEIRO registro carregado tinha
+  // (table-layout: auto) — uma tabela com id até 99 ficava mais estreita
+  // que uma com id até 9999, mesma coluna, tabelas diferentes.
+  const colunaIdChave = useMemo(
+    () => colunas.find((coluna) => coluna.rotulo.toLowerCase() === 'id')?.chave,
+    [colunas],
+  );
+
+  // Junta as duas classes opcionais acima — usado tanto no <th> quanto no
+  // <td> de cada coluna, pra não repetir a mesma composição duas vezes.
+  const classesColuna = (coluna) =>
+    (colunasCentralizadas.has(coluna.chave) ? ' crud-tabela__celula--centralizada' : '') +
+    (coluna.chave === colunaIdChave ? ' crud-tabela__coluna-id' : '');
+
+  // `coluna.largura` (19-08-2026, pedido do Lucas em Tipos de Link: "o
+  // exato mesmo espaçamento" pras 4 colunas Sim/Não da tabela — hoje cada
+  // uma tinha uma largura diferente porque table-layout: auto (padrão do
+  // HTML) mede pela PALAVRA do cabeçalho, e "Atualização"/"Recompensa"
+  // são bem mais compridas que "Perfil"/"Ativo"). Opcional, string CSS
+  // (ex.: '9.25rem') — diferente de `centralizar`/coluna-id (que a
+  // própria GenericTable decide sozinha, sniffando o dado), largura
+  // exata é uma decisão de design por tela, não dá pra inferir do dado
+  // (duas tabelas diferentes podem ter o mesmo tipo de coluna e ainda
+  // assim precisar de larguras diferentes uma da outra).
+  const estiloColuna = (coluna) => (coluna.largura ? { width: coluna.largura } : undefined);
 
   // "todos" (pedido do Lucas: opção de ver 10/20/30/todos os registros,
   // além de Anterior/Próxima) vira 1 página só, com a lista inteira.
@@ -440,10 +483,12 @@ export function GenericTable({
           <thead>
             <tr>
               {colunas.map((coluna) => (
-                <th key={coluna.chave}>{coluna.rotulo}</th>
+                <th key={coluna.chave} className={classesColuna(coluna).trim() || undefined}>
+                  {coluna.rotulo}
+                </th>
               ))}
               {colunaExtra && <th>{colunaExtra.rotulo}</th>}
-              {rotaBase && <th>Ações</th>}
+              {rotaBase && <th className="crud-tabela__celula--centralizada">Ações</th>}
             </tr>
           </thead>
           <tbody>
@@ -476,10 +521,8 @@ export function GenericTable({
                 {colunas.map((coluna) => (
                   <th
                     key={coluna.chave}
-                    className={
-                      'crud-tabela__ordenavel' +
-                      (colunasCentralizadas.has(coluna.chave) ? ' crud-tabela__celula--centralizada' : '')
-                    }
+                    className={'crud-tabela__ordenavel' + classesColuna(coluna)}
+                    style={estiloColuna(coluna)}
                     onClick={() => aoClicarColuna(coluna.chave)}
                   >
                     {coluna.rotulo}
@@ -487,7 +530,7 @@ export function GenericTable({
                   </th>
                 ))}
                 {colunaExtra && <th>{colunaExtra.rotulo}</th>}
-                {rotaBase && <th>Ações</th>}
+                {rotaBase && <th className="crud-tabela__celula--centralizada">Ações</th>}
               </tr>
             </thead>
             <tbody>
@@ -496,7 +539,8 @@ export function GenericTable({
                   {colunas.map((coluna) => (
                     <td
                       key={coluna.chave}
-                      className={colunasCentralizadas.has(coluna.chave) ? 'crud-tabela__celula--centralizada' : undefined}
+                      className={classesColuna(coluna).trim() || undefined}
+                      style={estiloColuna(coluna)}
                     >
                       {/* `renderizar` (09-08-2026, tabela Permissões: botão
                           "Saiba mais" no lugar do valor cru) — opcional, só

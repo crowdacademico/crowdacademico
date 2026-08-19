@@ -121,6 +121,12 @@ export function ListarPapeis({ auth }) {
             {
               chave: 'resumo',
               rotulo: 'descrição',
+              // 19-08-2026, pedido do Lucas: o dado por trás é texto
+              // (`resumo`, string — o sniff automático de GenericTable não
+              // centralizaria sozinho), mas o que renderiza é um botão
+              // curto ("Saiba mais"), que fica esquisito colado à esquerda
+              // igual as outras colunas de texto longo.
+              centralizar: true,
               renderizar: (linha) => (
                 <button
                   type="button"

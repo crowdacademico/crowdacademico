@@ -89,6 +89,24 @@
     text-align: center;
   }
 
+  /* Largura padrão da coluna "id" em TODA tabela (19-08-2026, pedido do
+     Lucas: "deve suportar até 3 ou 4 dígitos sem quebra de linha... uma
+     boa ideia, tabelas independentes, começando a alinhar a largura das
+     colunas"). `width` aqui é um PISO, não um teto — table-layout:
+     auto (padrão do HTML, nenhuma tabela deste projeto usa `fixed`)
+     deixa a coluna crescer se algum dia um id tiver mais de 4 dígitos,
+     só não deixa ela MURCHAR pra caber só "1" numa tabela com poucas
+     linhas e "9999" ficar apertada em outra — é essa inconsistência
+     entre tabelas (mesma coluna, larguras diferentes só por causa do
+     dado) que o pedido resolve. `white-space: nowrap` garante que 4
+     dígitos nunca quebram linha mesmo se o piso for forçado a diminuir
+     numa tela estreita. */
+  .crud-tabela th.crud-tabela__coluna-id,
+  .crud-tabela td.crud-tabela__coluna-id {
+    width: 4rem;
+    white-space: nowrap;
+  }
+
   /* Linha fina entre linhas do corpo (não grade completa) — ERA border em
      TODA célula (th e td, todos os lados). */
   .crud-tabela tbody tr {
@@ -140,6 +158,7 @@
   .crud-tabela__acoes {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 1rem;
   }
 
