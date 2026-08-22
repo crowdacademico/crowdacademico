@@ -32,8 +32,10 @@ export const GRUPOS_MENU_ADMIN = [
     // Lucas) na mesma leva em que Configurações saiu daqui pro próprio
     // grupo (ver logo abaixo) — sobrou só cadastro em torno de quem é o
     // usuário e o que ele pode fazer/publicar: Usuários, Papéis &
-    // Permissões, e agora também Áreas do Conhecimento e Tipos de Link
-    // (catálogos usados pelo perfil de pesquisador/campanha). `grupoMenu:
+    // Permissões, e agora também Áreas do Conhecimento, Tipos de Link e
+    // Motivos de Denúncia (catálogos usados pelo perfil de
+    // pesquisador/campanha/denúncia — este último ativado em 22-08-2026,
+    // ver comentário em rotas.constants.js). `grupoMenu:
     // 'CADASTROS'` em rotas.constants.js continua com o nome antigo de
     // propósito — é só a CHAVE interna que liga rota↔grupo, não aparece
     // na tela; só o rótulo visível muda, igual já era antes.

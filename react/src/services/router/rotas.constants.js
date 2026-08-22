@@ -152,12 +152,20 @@ export const ROTAS_ADMIN = [
     grupoMenu: 'CADASTROS',
     icone: 'fa-link',
   },
-  // Motivo de Denúncia (módulo 10-motivo-denuncia)
+  // Motivo de Denúncia (módulo 10-motivo-denuncia) — ativada no menu
+  // lateral em 22-08-2026 (achado do Claude Code: a rota e a página já
+  // funcionavam por URL direta desde que a Alexia terminou o módulo, mas
+  // sem `rotuloMenu`/`grupoMenu` não tinha entrada nenhuma no menu lateral
+  // — ninguém achava navegando). Mesmo grupo de Área de Conhecimento/Tipo
+  // de Link logo acima (grupoMenu: 'CADASTROS', hoje rotulado "GESTÃO DO
+  // USUÁRIO").
   {
     caminho: '/admin/motivos-denuncia',
     caminhoRelativo: 'motivos-denuncia',
     elemento: ListarMotivosDenuncia,
+    rotuloMenu: 'Motivos de Denúncia',
     rotuloBreadcrumb: 'Motivos de Denúncia',
+    grupoMenu: 'CADASTROS',
     icone: 'fa-flag',
   },
 
