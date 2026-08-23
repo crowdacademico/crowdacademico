@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router';
 import { abrirBuscaGlobal } from '../../components/layout/busca-global-evento';
+import { Tooltip } from '../../components/layout/tooltip';
 import { GRUPOS_MENU_ADMIN } from './admin-menu.constants';
 
 // Menu lateral — coluna fixa em telas >=1024px (grid em .admin-shell,
@@ -55,7 +56,15 @@ export function AdminSidebar({ aberto, aoFechar }) {
             {/* Dashboard (08-08-2026) é um grupo sem título — item solo,
                 não uma seção de cadastro — só ganha a linha divisória
                 embaixo (divisorApos), não o rótulo maiúsculo de grupo. */}
-            {grupo.titulo && <div className="admin-sidebar__grupo-titulo">{grupo.titulo}</div>}
+            {grupo.titulo && (
+              <div className="admin-sidebar__grupo-titulo">
+                <span>{grupo.titulo}</span>
+                {/* `dica` (22-08-2026, grupo "CAMPO DE TESTES") — Tooltip
+                    no lugar do ícone normal de item, só quando o grupo
+                    define uma explicação (os outros grupos não têm). */}
+                {grupo.dica && <Tooltip texto={grupo.dica} />}
+              </div>
+            )}
             {grupo.itens.map((item) =>
               item.desabilitado ? (
                 <button

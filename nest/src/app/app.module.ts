@@ -16,6 +16,12 @@ import { TipoLinkModule } from '../9-tipo-link/tipo-link.module';
 import { MotivoDenunciaModule } from '../10-motivo-denuncia/motivo-denuncia.module';
 import { PerfilPesquisadorModule } from '../6-perfil-pesquisador/perfil-pesquisador.module';
 import { LinkAcademicoModule } from '../7-link-academico/link-academico.module';
+import { CampanhaModule } from '../12-campanha/campanha.module';
+import { OrcamentoCampanhaModule } from '../13-orcamento-campanha/orcamento-campanha.module';
+import { MarcoCronogramaModule } from '../14-marco-cronograma/marco-cronograma.module';
+import { AtualizacaoCampanhaModule } from '../15-atualizacao-campanha/atualizacao-campanha.module';
+import { SeguirCampanhaModule } from '../16-seguir-campanha/seguir-campanha.module';
+import { ComentarioModule } from '../17-comentario/comentario.module';
 
 @Module({
   imports: [
@@ -31,6 +37,12 @@ import { LinkAcademicoModule } from '../7-link-academico/link-academico.module';
     MotivoDenunciaModule,
     PerfilPesquisadorModule,
     LinkAcademicoModule,
+    CampanhaModule,
+    OrcamentoCampanhaModule,
+    MarcoCronogramaModule,
+    AtualizacaoCampanhaModule,
+    SeguirCampanhaModule,
+    ComentarioModule,
     LogAuditoriaModule,
     DashboardModule,
   ],

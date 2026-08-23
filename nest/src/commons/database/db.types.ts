@@ -289,6 +289,182 @@ export interface ScorePesquisadorTable {
   motivo: string | null;
 }
 
+// ADICIONADAS (22-08-2026) — espelham 01_extensoes_enums_tabelas.sql
+// [01-E] CAMPANHA, tocadas pela 1ª vez pelos módulos 12-campanha,
+// 13-orcamento-campanha, 14-marco-cronograma, 15-atualizacao-campanha,
+// 16-seguir-campanha, 17-comentario, 18-recompensa. Campos DECIMAL (meta_
+// financeira, valor_bruto_arrecadado, taxa_plataforma, valor, valor_minimo)
+// são `string` aqui, nunca `number` — mesmo cuidado já registrado em
+// ScoreConfigTable.peso (node-postgres devolve DECIMAL como string pra não
+// perder precisão); convertidos pra number só no converter de cada módulo.
+export const MODELOS_CAMPANHA = ['all-or-nothing', 'flexivel'] as const;
+export type ModeloCampanha = (typeof MODELOS_CAMPANHA)[number];
+
+export const STATUS_CAMPANHA = [
+  'aguardando_aprovacao',
+  'ativo',
+  'sucesso',
+  'nao_atingido',
+  'rejeitado',
+  'encerrado',
+  'encerrado_moderacao',
+] as const;
+export type StatusCampanha = (typeof STATUS_CAMPANHA)[number];
+
+export const FASES_ATUALIZACAO = [
+  'andamento',
+  'resultado_preliminar',
+  'resultado_final',
+] as const;
+export type FaseAtualizacao = (typeof FASES_ATUALIZACAO)[number];
+
+export const TIPOS_ATUALIZACAO = [
+  'texto',
+  'imagem',
+  'pdf',
+  'linkexterno',
+] as const;
+export type TipoAtualizacao = (typeof TIPOS_ATUALIZACAO)[number];
+
+export const TIPOS_RECOMPENSA = [
+  'digital',
+  'reconhecimento',
+  'acesso_antecipado',
+] as const;
+export type TipoRecompensa = (typeof TIPOS_RECOMPENSA)[number];
+
+export interface CampanhaTable {
+  id_campanha: Generated<number>;
+  id_usuario: number;
+  id_admin: number | null;
+  id_area_conhecimento: number;
+  titulo: string;
+  modelo: Generated<ModeloCampanha>;
+  meta_financeira: string;
+  valor_bruto_arrecadado: Generated<string>;
+  taxa_plataforma: string | null;
+  descricao: string | null;
+  data_inicio: Date | null;
+  data_fim: Date | null;
+  status: Generated<StatusCampanha>;
+  aprovado_em: Date | null;
+  encerrado_em: Date | null;
+  video_apresentacao_url: string | null;
+  criado_em: Generated<Date>;
+}
+
+// Só o INSERT é usado por enquanto (CampanhaServiceRejeitar, 12-campanha)
+// — não tem módulo/pasta própria ainda (21-historico-rejeicao segue vazia,
+// ver ordem de prioridade combinada), mas o texto de justificativa da
+// rejeição só existe aqui, então o endpoint de rejeitar campanha precisa
+// gravar aqui mesmo sem o resto do CRUD (findall/findone) existir ainda.
+export interface HistoricoRejeicaoTable {
+  id_rejeicao: Generated<number>;
+  id_campanha: number;
+  id_admin: number | null;
+  justificativa: string | null;
+  rejeitado_em: Generated<Date>;
+}
+
+export interface SeguirCampanhaTable {
+  id_seg_campanha: Generated<number>;
+  id_usuario: number;
+  id_campanha: number;
+  seguido_em: Generated<Date>;
+}
+
+export interface AtualizacaoCampanhaTable {
+  id_atualizacao: Generated<number>;
+  id_campanha: number;
+  titulo: string;
+  conteudo: string;
+  publicado_em: Generated<Date>;
+  fase: FaseAtualizacao | null;
+  tipo: TipoAtualizacao | null;
+  ativo: Generated<boolean>;
+}
+
+export interface OrcamentoCampanhaTable {
+  id_orcamento: Generated<number>;
+  id_campanha: number;
+  categoria: string;
+  descricao: string | null;
+  valor: string;
+  ordem: Generated<number>;
+  criado_em: Generated<Date>;
+}
+
+export interface MarcoCronogramaTable {
+  id_marco: Generated<number>;
+  id_campanha: number;
+  titulo: string;
+  descricao: string | null;
+  data_prevista: Date;
+  ordem: Generated<number>;
+  criado_em: Generated<Date>;
+}
+
+export interface ComentarioTable {
+  id_comentario: Generated<number>;
+  id_campanha: number;
+  id_pesquisador: number | null;
+  conteudo: string;
+  endossado: Generated<boolean>;
+  criado_em: Generated<Date>;
+  ordem_endosso: number | null;
+  ativo: Generated<boolean>;
+}
+
+export interface RecompensaTable {
+  id_recompensa: Generated<number>;
+  id_campanha: number;
+  titulo: string;
+  descricao: string | null;
+  valor_minimo: string;
+  quantidade_disponivel: number | null;
+  tipo: TipoRecompensa;
+  ativo: Generated<boolean>;
+  criado_em: Generated<Date>;
+}
+
+// Satélites de atualizacao_campanha/recompensa (01-F/01-G) — dobrados
+// dentro dos módulos 15-atualizacao-campanha/18-recompensa (22-08-2026,
+// decisão registrada em PROXIMOS_MODULOS.md: nenhuma das 4 tem pasta
+// numerada própria, o roteiro não as lista como módulo individual).
+export interface LinkAtualizacaoTable {
+  id_link_atualizacao: Generated<number>;
+  id_atualizacao: number;
+  id_tipolink: number;
+  ordem: number | null;
+  url: string;
+}
+
+export interface LinkRecompensaTable {
+  id_link_recompensa: Generated<number>;
+  id_recompensa: number;
+  id_tipolink: number;
+  ordem: number | null;
+  url: string;
+}
+
+// id_arquivo aqui referencia uma linha que, hoje, só o módulo 25-arquivo
+// (Alexia, ainda não pronto) pode criar de verdade — os endpoints de
+// vínculo abaixo já funcionam (INSERT/UPDATE da tabela de associação em
+// si), só não há como testar de ponta a ponta até esse módulo existir.
+export interface ArquivoAtualizacaoTable {
+  id_arq_atu: Generated<number>;
+  id_arquivo: number;
+  id_atualizacao: number;
+}
+
+export interface ArquivoRecompensaTable {
+  id_arq_recompensa: Generated<number>;
+  id_recompensa: number;
+  id_arquivo: number;
+  ordem: number | null;
+  principal: Generated<boolean>;
+}
+
 export interface VerificacaoEmailTable {
   id_verificacao: Generated<number>;
   id_usuario: number;
@@ -324,4 +500,16 @@ export interface DB {
   score_config: ScoreConfigTable;
   score_rotulo: ScoreRotuloTable;
   score_pesquisador: ScorePesquisadorTable;
+  campanha: CampanhaTable;
+  historico_rejeicao: HistoricoRejeicaoTable;
+  seguir_campanha: SeguirCampanhaTable;
+  atualizacao_campanha: AtualizacaoCampanhaTable;
+  orcamento_campanha: OrcamentoCampanhaTable;
+  marco_cronograma: MarcoCronogramaTable;
+  comentario: ComentarioTable;
+  recompensa: RecompensaTable;
+  link_atualizacao: LinkAtualizacaoTable;
+  link_recompensa: LinkRecompensaTable;
+  arquivo_atualizacao: ArquivoAtualizacaoTable;
+  arquivo_recompensa: ArquivoRecompensaTable;
 }

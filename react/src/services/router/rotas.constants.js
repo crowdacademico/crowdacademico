@@ -156,16 +156,20 @@ export const ROTAS_ADMIN = [
   // lateral em 22-08-2026 (achado do Claude Code: a rota e a página já
   // funcionavam por URL direta desde que a Alexia terminou o módulo, mas
   // sem `rotuloMenu`/`grupoMenu` não tinha entrada nenhuma no menu lateral
-  // — ninguém achava navegando). Mesmo grupo de Área de Conhecimento/Tipo
-  // de Link logo acima (grupoMenu: 'CADASTROS', hoje rotulado "GESTÃO DO
-  // USUÁRIO").
+  // — ninguém achava navegando). MOVIDA (mesmo dia, pedido do Lucas) de
+  // 'CADASTROS' (GESTÃO DO USUÁRIO) pra 'MODERACAO' — faz mais sentido
+  // conceitual junto de Aprovar Campanhas/Denúncias/Solicitações/Enc.
+  // Antecipados (ainda placeholders desabilitados, ver
+  // admin-menu.constants.js) do que junto de Área de Conhecimento/Tipo de
+  // Link. Entra no TOPO do grupo MODERAÇÃO — é o único item real ali por
+  // enquanto, os outros 4 seguem desabilitados.
   {
     caminho: '/admin/motivos-denuncia',
     caminhoRelativo: 'motivos-denuncia',
     elemento: ListarMotivosDenuncia,
     rotuloMenu: 'Motivos de Denúncia',
     rotuloBreadcrumb: 'Motivos de Denúncia',
-    grupoMenu: 'CADASTROS',
+    grupoMenu: 'MODERACAO',
     icone: 'fa-flag',
   },
 

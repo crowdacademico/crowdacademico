@@ -32,10 +32,11 @@ export const GRUPOS_MENU_ADMIN = [
     // Lucas) na mesma leva em que Configurações saiu daqui pro próprio
     // grupo (ver logo abaixo) — sobrou só cadastro em torno de quem é o
     // usuário e o que ele pode fazer/publicar: Usuários, Papéis &
-    // Permissões, e agora também Áreas do Conhecimento, Tipos de Link e
-    // Motivos de Denúncia (catálogos usados pelo perfil de
-    // pesquisador/campanha/denúncia — este último ativado em 22-08-2026,
-    // ver comentário em rotas.constants.js). `grupoMenu:
+    // Permissões, e agora também Áreas do Conhecimento e Tipos de Link
+    // (catálogos usados pelo perfil de pesquisador/campanha). Motivos de
+    // Denúncia MOROU aqui também por um dia (22-08-2026), mas mudou de
+    // grupoMenu pra 'MODERACAO' no mesmo dia (pedido do Lucas) — ver
+    // comentário completo em rotas.constants.js. `grupoMenu:
     // 'CADASTROS'` em rotas.constants.js continua com o nome antigo de
     // propósito — é só a CHAVE interna que liga rota↔grupo, não aparece
     // na tela; só o rótulo visível muda, igual já era antes.
@@ -56,11 +57,32 @@ export const GRUPOS_MENU_ADMIN = [
   },
   {
     titulo: 'MODERAÇÃO',
+    // Motivos de Denúncia (22-08-2026, pedido do Lucas) — primeiro item
+    // REAL do grupo, no topo, na frente dos 4 placeholders desabilitados
+    // abaixo (que ainda não têm tela nenhuma por trás). `itensDoGrupo`
+    // devolve tudo que tiver `grupoMenu: 'MODERACAO'` em
+    // rotas.constants.js — hoje só esse item, mas cresce sozinho quando
+    // Aprovar Campanhas/Denúncias/etc. ganharem tela de verdade.
     itens: [
+      ...itensDoGrupo('MODERACAO'),
       { rotulo: 'Aprovar Campanhas', desabilitado: true },
       { rotulo: 'Denúncias', desabilitado: true },
       { rotulo: 'Solicitações', desabilitado: true },
       { rotulo: 'Enc. Antecipados', desabilitado: true },
     ],
+  },
+  {
+    // NOVO (22-08-2026, pedido do Lucas: "métodos não ortodoxos
+    // temporários") — telas administrativas pra testar, pela interface
+    // (não só por Thunder Client), módulos que hoje só fariam sentido
+    // testar pela área PÚBLICA do site (que ainda não existe em React —
+    // ver prompt-modulos-nucleo-claude-web.md). O que for criado aqui
+    // nunca aparece pro usuário final, é só ferramenta de teste interna.
+    // `dica` (só este grupo tem, por enquanto) vira um Tooltip do lado
+    // direito do título em vez do ícone normal de item — ver
+    // admin-sidebar.jsx.
+    titulo: 'CAMPO DE TESTES',
+    dica: 'Este submenu é para testar campos que só seriam possíveis na área pública. O que for criado aqui não aparece para o usuário final.',
+    itens: [],
   },
 ];

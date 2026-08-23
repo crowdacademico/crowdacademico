@@ -91,6 +91,15 @@
   letter-spacing: 0.08em;
   color: var(--cor-texto-forte);
   margin: 0.5rem 0 0.5rem 0.5rem;
+  /* flex (22-08-2026, grupo "CAMPO DE TESTES") — só entra em jogo pros
+     grupos que passam `dica` (Tooltip do lado direito, ver admin-
+     sidebar.jsx); com 1 filho só (os outros grupos, sem dica), flex não
+     muda nada do visual de antes. `padding-right` evita o ícone colar na
+     borda do menu (260px é estreito). */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-right: 0.5rem;
 }
 
 .admin-sidebar__item {

@@ -10,13 +10,13 @@ Ordem pensada por dependência de produto (o que precisa existir antes de outra 
 
 Três módulos pequenos e parecidos entre si — todos seguem o mesmo formato (uma tabela de catálogo, `findall` público + `create`/`update` protegidos por permissão administrativa). Bons pra pegar o ritmo do padrão do projeto antes de encarar algo maior.
 
-- **`8-area-conhecimento`** — grandes áreas e áreas do CNPq (hierarquia de 2 níveis). Necessário pra criar uma campanha (toda campanha precisa de uma área nível 2).
-- **`9-tipo-link`** — catálogo de tipos de link externo (Lattes, ORCID, LinkedIn, GitHub, site institucional...).
-- **`10-motivo-denuncia`** — catálogo de motivos de denúncia (campanha e perfil).
+- ✅ **`8-area-conhecimento`** — grandes áreas e áreas do CNPq (hierarquia de 2 níveis). Necessário pra criar uma campanha (toda campanha precisa de uma área nível 2).
+- ✅ **`9-tipo-link`** — catálogo de tipos de link externo (Lattes, ORCID, LinkedIn, GitHub, site institucional...).
+- ✅ **`10-motivo-denuncia`** — catálogo de motivos de denúncia (campanha e perfil).
 
 ## Grupo 2 — Perfil do pesquisador
 
-- **`6-perfil-pesquisador`** — o maior módulo pendente relacionado a usuário. Inclui: criar/editar perfil (vínculo institucional ou independente, título acadêmico), campo de CPF com validação de verdade (algoritmo com dígito verificador, não só formato), consulta do score e das dimensões. Ainda não existe nada aqui — só a pasta.
+- ✅ **`6-perfil-pesquisador`** — o maior módulo pendente relacionado a usuário. Inclui: criar/editar perfil (vínculo institucional ou independente, título acadêmico), campo de CPF com validação de verdade (algoritmo com dígito verificador, não só formato), consulta do score e das dimensões.
 
 ## Grupo 3 — Upload de arquivo
 
@@ -24,17 +24,17 @@ Três módulos pequenos e parecidos entre si — todos seguem o mesmo formato (u
 
 ## Grupo 4 — Núcleo da campanha (o mais importante do projeto)
 
-- **`12-campanha`** — CRUD completo: criar, listar, consultar, aprovar/rejeitar (fluxo de moderação), editar. É o módulo do qual praticamente tudo mais depende.
-- **`13-orcamento-campanha`** — itens de orçamento estruturado (categoria + valor), obrigatório pra aprovar uma campanha.
-- **`14-marco-cronograma`** — cronograma estruturado (marcos com data prevista), também obrigatório pra aprovar.
-- **`7-link-academico`** — links do pesquisador vinculados ao próprio perfil (Lattes, ORCID etc.), usando o catálogo do Grupo 1.
+- ✅ **`12-campanha`** — CRUD completo: criar, listar, consultar, aprovar/rejeitar (fluxo de moderação), editar. É o módulo do qual praticamente tudo mais depende.
+- ✅ **`13-orcamento-campanha`** — itens de orçamento estruturado (categoria + valor), obrigatório pra aprovar uma campanha.
+- ✅ **`14-marco-cronograma`** — cronograma estruturado (marcos com data prevista), também obrigatório pra aprovar.
+- ✅ **`7-link-academico`** — links do pesquisador vinculados ao próprio perfil (Lattes, ORCID etc.), usando o catálogo do Grupo 1.
 
 ## Grupo 5 — Engajamento numa campanha já aprovada
 
-- **`15-atualizacao-campanha`** — posts de acompanhamento do projeto (andamento, resultado preliminar, resultado final).
-- **`16-seguir-campanha`** — seguir/deixar de seguir uma campanha.
-- **`17-comentario`** — comentários e endosso, com moderação.
-- **`18-recompensa`** — recompensas oferecidas por faixa de contribuição.
+- ✅ **`15-atualizacao-campanha`** — posts de acompanhamento do projeto (andamento, resultado preliminar, resultado final). Junto: `link_atualizacao` e `arquivo_atualizacao` (satélites sem pasta própria, dobrados neste módulo — ver `db.types.ts`). O vínculo de arquivo já funciona (INSERT normal), só não é testável de ponta a ponta até `25-arquivo` existir.
+- ✅ **`16-seguir-campanha`** — seguir/deixar de seguir uma campanha.
+- ✅ **`17-comentario`** — comentários e endosso, com moderação.
+- **`18-recompensa`** — recompensas oferecidas por faixa de contribuição. Junto (mesmo raciocínio de `15`): `link_recompensa` e `arquivo_recompensa`. **Ainda não implementado** — 22-08-2026, escopo explicitamente parado em `17-comentario` nesta rodada, a pedido do Lucas.
 
 ## Grupo 6 — Moderação e encerramento
 

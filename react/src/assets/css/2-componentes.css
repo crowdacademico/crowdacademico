@@ -187,6 +187,12 @@
     font-weight: 500;
     line-height: 1.4;
     text-align: left;
+    /* Reset explícito (22-08-2026, achado usando o Tooltip dentro de
+       .admin-sidebar__grupo-titulo, que é uppercase + letter-spacing) —
+       sem isso, o TEXTO da dica herdava esses dois estilos do ancestral e
+       saía gritado em CAIXA ALTA, não só o rótulo do grupo. */
+    text-transform: none;
+    letter-spacing: normal;
     width: max-content;
     max-width: 16rem;
     box-shadow: var(--shadow-md);
