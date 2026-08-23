@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import { useErroToast } from '../layout/use-erro-toast';
 import { LogAuditoriaPainel } from './log-auditoria-painel';
 
@@ -90,20 +90,69 @@ export function GenericTable({
   const [linhas, setLinhas] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const { erro, reportarErro, limparErro } = useErroToast();
-  const [filtro, setFiltro] = useState('');
-  const [pagina, setPagina] = useState(1);
-  const [ordenacao, setOrdenacao] = useState({ chave: null, direcao: 'asc' });
-  const [tamanhoPagina, setTamanhoPagina] = useState(TAMANHOS_PAGINA[0]);
+  // Filtro/página/ordenação/faceta vivem na URL (query string), não em
+  // useState local (22-08-2026, pedido do Lucas: ao voltar de "Consultar"
+  // via navigate(-1), o filtro escolhido resetava — a página de listagem
+  // é desmontada na troca de rota, e useState não sobrevive a isso).
+  // `{ replace: true }` em toda escrita: cada clique em filtro/página/
+  // ordenação SUBSTITUI a entrada atual do histórico em vez de empilhar
+  // uma nova — só o clique em "Consultar" (Link de verdade) empilha,
+  // então o botão "Voltar" (navigate(-1), ver consultar-usuario.jsx e
+  // afins) sempre volta pro último estado de filtro, não pro passo-a-passo
+  // de cada clique dentro do dropdown.
+  // Nomes reservados na URL: q, pagina, tamanho, ordenar, dir — evitar
+  // faceta com uma dessas `chave` (nenhuma das existentes hoje usa).
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const atualizarParametros = (atualizacoes) => {
+    setSearchParams((atuais) => {
+      const novos = new URLSearchParams(atuais);
+      Object.entries(atualizacoes).forEach(([chave, valor]) => {
+        if (valor === null || valor === undefined || valor === '') {
+          novos.delete(chave);
+        } else {
+          novos.set(chave, String(valor));
+        }
+      });
+      return novos;
+    }, { replace: true });
+  };
+
+  const filtro = searchParams.get('q') ?? '';
+  const pagina = Number(searchParams.get('pagina')) || 1;
+  const tamanhoPaginaParam = searchParams.get('tamanho');
+  const tamanhoPagina =
+    tamanhoPaginaParam === 'todos' ? 'todos' : Number(tamanhoPaginaParam) || TAMANHOS_PAGINA[0];
+  // Memoizado (não objeto literal solto) — senão vira uma referência nova
+  // a cada render, e o useMemo de linhasOrdenadas (que depende disto)
+  // recalcularia sempre, mesmo sem a ordenação ter mudado de verdade.
+  const ordenacao = useMemo(
+    () => ({
+      chave: searchParams.get('ordenar') || null,
+      direcao: searchParams.get('dir') === 'desc' ? 'desc' : 'asc',
+    }),
+    [searchParams],
+  );
   // Só busca quando abre (não em toda carga da tabela) — a maioria das
-  // visitas a uma listagem não vai clicar em "Ver log".
+  // visitas a uma listagem não vai clicar em "Ver log". Fica de fora da
+  // URL de propósito — é estado de UI (painel aberto), não um filtro de
+  // QUAIS dados aparecem.
   const [logAberto, setLogAberto] = useState(false);
   // Só 1 dropdown de faceta aberto por vez (chave de qual está aberta, ou
   // null) — mais simples que um booleano por faceta, e evita 2 dropdowns
-  // abertos sobrepondo um no outro quando são vários lado a lado.
+  // abertos sobrepondo um no outro quando são vários lado a lado. Também
+  // fora da URL, mesmo motivo do `logAberto` acima.
   const [facetaAbertaChave, setFacetaAbertaChave] = useState(null);
   // Seleção de cada faceta, independente: { [chave]: string[] }. Faceta
   // sem entrada aqui (ou array vazio) = "Todos" pra ela.
-  const [selecoesPorFaceta, setSelecoesPorFaceta] = useState({});
+  const selecoesPorFaceta = useMemo(() => {
+    const resultado = {};
+    (filtrosFacetados ?? []).forEach((faceta) => {
+      const valor = searchParams.get(faceta.chave);
+      resultado[faceta.chave] = valor ? valor.split(',').filter(Boolean) : [];
+    });
+    return resultado;
+  }, [searchParams, filtrosFacetados]);
   const facetasRef = useRef(null);
 
   // Fechar ao clicar fora (09-08-2026) — ERA onBlur+relatedTarget (mesmo
@@ -333,14 +382,11 @@ export function GenericTable({
         );
 
   const aoClicarColuna = (chave) => {
-    setOrdenacao((atual) =>
-      atual.chave === chave
-        ? { chave, direcao: atual.direcao === 'asc' ? 'desc' : 'asc' }
-        : { chave, direcao: 'asc' },
-    );
+    const novaDirecao = ordenacao.chave === chave && ordenacao.direcao === 'asc' ? 'desc' : 'asc';
     // Senão a pessoa pode ficar "presa" na página 3 depois de reordenar,
     // vendo um pedaço que não corresponde mais ao topo da lista nova.
-    setPagina(1);
+    // `dir: null` quando volta pro padrão 'asc' — mantém a URL limpa.
+    atualizarParametros({ ordenar: chave, dir: novaDirecao === 'asc' ? null : 'desc', pagina: null });
   };
 
   return (
@@ -360,8 +406,7 @@ export function GenericTable({
                 placeholder="Filtrar..."
                 value={filtro}
                 onChange={(evento) => {
-                  setFiltro(evento.target.value);
-                  setPagina(1);
+                  atualizarParametros({ q: evento.target.value, pagina: null });
                 }}
                 className="w-full sm:w-64 border borda-forte rounded-lg fundo-sutil py-2 px-3 text-sm outline-none focus:border-primary"
               />
@@ -407,8 +452,7 @@ export function GenericTable({
                           <button
                             type="button"
                             onClick={() => {
-                              setSelecoesPorFaceta((atuais) => ({ ...atuais, [faceta.chave]: [] }));
-                              setPagina(1);
+                              atualizarParametros({ [faceta.chave]: null, pagina: null });
                             }}
                             className="w-full text-left px-3 py-2 text-sm font-bold hover:bg-primary/10 border-b borda-padrao flex items-center justify-between"
                           >
@@ -419,16 +463,13 @@ export function GenericTable({
                             {opcoes.map((opcao) => {
                               const marcado = selecionados.includes(opcao);
                               const alternar = () => {
-                                setSelecoesPorFaceta((atuais) => {
-                                  const atual = atuais[faceta.chave] ?? [];
-                                  return {
-                                    ...atuais,
-                                    [faceta.chave]: marcado
-                                      ? atual.filter((valor) => valor !== opcao)
-                                      : [...atual, opcao],
-                                  };
+                                const novoValor = marcado
+                                  ? selecionados.filter((valor) => valor !== opcao)
+                                  : [...selecionados, opcao];
+                                atualizarParametros({
+                                  [faceta.chave]: novoValor.length > 0 ? novoValor.join(',') : null,
+                                  pagina: null,
                                 });
-                                setPagina(1);
                               };
                               return (
                                 // Clique na linha toda alterna, não só na
@@ -644,8 +685,10 @@ export function GenericTable({
                     value={tamanhoPagina}
                     onChange={(evento) => {
                       const valor = evento.target.value;
-                      setTamanhoPagina(valor === 'todos' ? 'todos' : Number(valor));
-                      setPagina(1);
+                      atualizarParametros({
+                        tamanho: valor === String(TAMANHOS_PAGINA[0]) ? null : valor,
+                        pagina: null,
+                      });
                     }}
                     className="border borda-padrao rounded-md fundo-sutil py-1 px-2 text-xs outline-none focus:border-primary"
                   >
@@ -658,14 +701,20 @@ export function GenericTable({
                 </label>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => setPagina((p) => Math.max(1, p - 1))}
+                    onClick={() => {
+                      const alvo = Math.max(1, paginaAtual - 1);
+                      atualizarParametros({ pagina: alvo === 1 ? null : alvo });
+                    }}
                     disabled={paginaAtual === 1}
                     className="btn btn-secondary"
                   >
                     Anterior
                   </button>
                   <button
-                    onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
+                    onClick={() => {
+                      const alvo = Math.min(totalPaginas, paginaAtual + 1);
+                      atualizarParametros({ pagina: alvo === 1 ? null : alvo });
+                    }}
                     disabled={paginaAtual === totalPaginas}
                     className="btn btn-secondary"
                   >

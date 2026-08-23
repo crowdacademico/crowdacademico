@@ -174,6 +174,12 @@ INSERT INTO permissao (nome) VALUES
 -- pedir esse dado (não existe policy de RLS pra proteção de coluna — RLS só
 -- filtra linha; o controle de "quem lê o CPF" é responsabilidade da aplicação).
 ('perfil_pesquisador_visualizar_sensivel'),
+-- ADICIONADA (22-08-2026) — gate de corrigir_cpf_pesquisador() (03, [03-Q]).
+-- cpf_criptografado/cpf_hash saíram do GRANT UPDATE direto de
+-- perfil_pesquisador (06) porque o próprio pesquisador conseguia alterar o
+-- próprio CPF (contrariando o RF-017, correção só via suporte) — esta é a
+-- permissão que decide quem pode chamar a função de correção.
+('perfil_pesquisador_corrigir_cpf'),
 ('termos_uso_gerenciar'),
 -- NOTA: estas 3 são propositalmente sem policy de RLS — verificacao_email,
 -- recuperacao_senha e sessao já têm policy FOR ALL USING(true) de propósito (o
@@ -263,6 +269,7 @@ WHERE (p.nome, perm.nome) IN (
     ('admin', 'usuario_suspender'),
     ('admin', 'usuario_visualizar_sensivel'),
     ('admin', 'perfil_pesquisador_visualizar_sensivel'),
+    ('admin', 'perfil_pesquisador_corrigir_cpf'),
     ('admin', 'termos_uso_gerenciar'),
     ('admin', 'sessao_revogar'),
     ('admin', 'recuperacao_senha_revogar'),
@@ -616,7 +623,19 @@ INSERT INTO usuario (nome, email, senha_hash, id_imagem_perfil, criado_em) VALUE
 ('Eduardo Barbosa Nogueira','eduardo.barbosa@ufba.br',  '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-05-25 09:00:00'),
 ('Vinícius Almeida Ferraz','vinicius.ferraz@ufc.br',    '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-05-28 09:00:00'),
 
-('Fernanda Souza Lima',   'fernanda.souza@gmail.com',            '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-04-10 10:00:00'); -- usuario comum (apoiador, nunca virou pesquisador)
+('Fernanda Souza Lima',   'fernanda.souza@gmail.com',            '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-04-10 10:00:00'), -- usuario comum (apoiador, nunca virou pesquisador)
+-- ADICIONADOS (22-08-2026, pedido do Lucas): mais 2 contas "usuario comum"
+-- zeradas, sem NENHUMA dependência (sem campanha, sem link, sem denúncia) —
+-- pra sempre sobrar gente pra testar fluxo de "2ª conta tentando o mesmo
+-- CPF" sem precisar mexer nos 12-21 (esses são donos de campanha no seed,
+-- e 19-22 foram desenhados a dedo pras 4 faixas de score_rotulo — ver
+-- comentário perto do bloco de campanha). Fernanda (23) sozinha não bastava
+-- pra testar duplicidade de CPF entre DUAS contas diferentes.
+('Marina Alves Torres',   'marina.torres@gmail.com',             '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-04-10 10:00:01'), -- usuario comum, zerada
+('Gabriel Souza Martins', 'gabriel.martins@gmail.com',           '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-04-10 10:00:02'), -- usuario comum, zerada
+('Camila Rocha Pereira',  'camila.rocha@gmail.com',              '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-04-10 10:00:03'), -- usuario comum, zerada
+('Rafael Costa Andrade',  'rafael.costa.andrade@gmail.com',      '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-04-10 10:00:04'), -- usuario comum, zerado
+('Larissa Mendes Cunha',  'larissa.mendes@gmail.com',            '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-04-10 10:00:05'); -- usuario comum, zerada
 
 
 -- [07-D-2] usuario_papel
@@ -649,7 +668,12 @@ FROM (VALUES
     (20, 'pesquisador'), -- Renata
     (21, 'pesquisador'), -- Eduardo
     (22, 'pesquisador'), -- Vinícius
-    (23, 'usuario')      -- Fernanda (apoiador comum)
+    (23, 'usuario'),     -- Fernanda (apoiador comum)
+    (24, 'usuario'),     -- Marina (apoiador comum, zerada)
+    (25, 'usuario'),     -- Gabriel (apoiador comum, zerado)
+    (26, 'usuario'),     -- Camila (apoiador comum, zerada)
+    (27, 'usuario'),     -- Rafael (apoiador comum, zerado)
+    (28, 'usuario')      -- Larissa (apoiador comum, zerada)
 ) AS v(id_usuario, papel_nome)
 JOIN papel p ON p.nome = v.papel_nome
 ON CONFLICT DO NOTHING;
@@ -810,23 +834,33 @@ ON CONFLICT (chave) DO NOTHING;
 -- real (dimensões de perfil acadêmico, histórico, atualização e reputação — ver 05). O
 -- score de cada um agora é 100% produto dos dados reais inseridos nos blocos abaixo
 -- (link_academico, campanha, atualizacao_campanha, denuncia), não de um número fixo aqui.
-INSERT INTO perfil_pesquisador (id_usuario, cpf_criptografado, vinculo_institucional, titulo_academico, status_pesquisador, ativado_em) VALUES
-(12, 'enc_cpf_001', 'Universidade de São Paulo (USP)',                   'doutor',     'ativo', '2024-01-10 09:05:00'),
-(13, 'enc_cpf_002', 'Universidade Estadual de Campinas (UNICAMP)',       'mestre',      'ativo', '2024-01-15 10:35:00'),
-(14, 'enc_cpf_003', 'Universidade Federal de Minas Gerais (UFMG)',       'doutor',      'ativo', '2024-02-01 08:50:00'),
-(15, 'enc_cpf_004', 'Universidade Federal do Rio de Janeiro (UFRJ)',     'especialista','ativo', '2024-02-10 14:10:00'),
-(16, 'enc_cpf_005', 'Universidade Federal de Santa Catarina (UFSC)',     'mestre',      'ativo', '2024-03-05 11:25:00'),
-(17, 'enc_cpf_006', 'Universidade Estadual Paulista (UNESP)',            'graduado',    'ativo', '2024-03-12 16:05:00'),
-(18, 'enc_cpf_007', 'Universidade Federal de São Paulo (UNIFESP)',       'doutor',      'ativo', '2024-04-01 09:35:00'),
+-- ATUALIZADO (22-08-2026): cpf_criptografado deixou de ser um placeholder de texto puro
+-- ('enc_cpf_001' e afins) — os 11 valores abaixo são CPFs FALSOS de verdade (dígito
+-- verificador válido, nenhum de dígito repetido), de fato cifrados com
+-- commons/seguranca/cpf-cifra.util.ts (AES-256-GCM, formato "v1:iv:tag:ciphertext") usando
+-- as chaves de CPF_ENCRYPTION_KEY/CPF_INDEX_KEY do .env de desenvolvimento deste projeto —
+-- ver DOCUMENTACAO_BD.md. cpf_hash é o índice cego correspondente (HMAC-SHA256). Gerados
+-- por script descartável, nunca CPF de pessoa real (ver PENDENCIAS e correcoes.md, item
+-- 745). Se algum dia CPF_ENCRYPTION_KEY/CPF_INDEX_KEY forem trocadas, estas 11 linhas
+-- passam a ser indecifráveis (mesma regra de qualquer dado cifrado com chave antiga) — pra
+-- um banco de dev/seed, basta rodar o seed de novo com uma chave nova.
+INSERT INTO perfil_pesquisador (id_usuario, cpf_criptografado, cpf_hash, vinculo_institucional, titulo_academico, status_pesquisador, ativado_em) VALUES
+(12, 'v1:mWTFzqRm8FMW14/u:iMiDqsRSTJ4KUyzcmKP18w==:bR7wgOpNkI+vSJ4=', '1610ee8b3555955f9e79eba6efa88324a4c30ced46b4bee5e6f2b6b3ed605797', 'Universidade de São Paulo (USP)',                   'doutor',     'ativo', '2024-01-10 09:05:00'),
+(13, 'v1:biXIzmT/+Z0OVzgl:y8lT16d44wlXzCKzGAsK9A==:HxBEvdcXcZk8bHY=', 'b3b4544a4ec41edae5514228ab14306250a0fce3bc3f149f8a0ed92be2536dd8', 'Universidade Estadual de Campinas (UNICAMP)',       'mestre',      'ativo', '2024-01-15 10:35:00'),
+(14, 'v1:/qWUrRI/9fzjm9Kh:uU6qNuQlvvFjghnTLVr8Og==:N5DdmozsScRBV8A=', '93d76c0ae76d371c84ead92cdc597742cd149067fe7f234552e10abe75ee5e7f', 'Universidade Federal de Minas Gerais (UFMG)',       'doutor',      'ativo', '2024-02-01 08:50:00'),
+(15, 'v1:P3LMaMpY05s3WLyr:7eDEN698asnW0mHcOs18Hw==:a51Rr8evV8QG/zw=', 'a6b7b8e7c9b4114a993ffdd74c58a4f09b2ea02a107faca711642e5f6cb4538b', 'Universidade Federal do Rio de Janeiro (UFRJ)',     'especialista','ativo', '2024-02-10 14:10:00'),
+(16, 'v1:gRfGHqP2CaS1KfN8:/Ndt5pdWu6A/ZxDBptQipQ==:XXTsLYETudrxeik=', '74fc41e2f0ea9e284b8c1d2379fcc4388988d1b4a18f53c88a626d91b5d4cbc6', 'Universidade Federal de Santa Catarina (UFSC)',     'mestre',      'ativo', '2024-03-05 11:25:00'),
+(17, 'v1:7abSMfGxUwGXdwcb:by/laHiieT6GUyoRZK5eEQ==:rlvzzxsYevmjKR4=', '3f165d5243e5fbddf4290416d712da7ba1a1129f442c866bc855fac2c19f3458', 'Universidade Estadual Paulista (UNESP)',            'graduado',    'ativo', '2024-03-12 16:05:00'),
+(18, 'v1:gH+4XLY9grNC1AAN:f0QkyT8OuWRTKwwbyHhtKQ==:/dE9nq3r7rYxs3k=', '3f022d05c183ecfb64cbb6ac2500e66ad731e684f1c9afd5e2cb801d5576d376', 'Universidade Federal de São Paulo (UNIFESP)',       'doutor',      'ativo', '2024-04-01 09:35:00'),
 -- ADICIONADO: 4 pesquisadores novos, desenhados de propósito pra cobrir as 4 faixas de
 -- score_rotulo (Atenção/Em Construção/Confiável/Referência) de forma DETERMINÍSTICA —
 -- ou seja, o resultado depende só da fórmula real em 05_regras_negocio.sql, não de sorte.
 -- Ver comentário completo logo depois do bloco de denuncia sobre como cada um chega
 -- na faixa esperada.
-(19, 'enc_cpf_014', 'Universidade Federal do Rio Grande do Sul (UFRGS)', 'doutor',   'ativo', '2024-05-20 09:00:00'), -- Bruno:    alvo = Referência
-(20, 'enc_cpf_015', 'Universidade Federal do Paraná (UFPR)',             'mestre',   'ativo', '2024-05-22 09:00:00'), -- Renata:   alvo = Confiável
-(21, 'enc_cpf_016', 'Universidade Federal da Bahia (UFBA)',              'mestre',   'ativo', '2024-05-25 09:00:00'), -- Eduardo:  alvo = Em Construção
-(22, 'enc_cpf_017', 'Universidade Federal do Ceará (UFC)',               'graduado', 'ativo', '2024-05-28 09:00:00'); -- Vinícius: alvo = Atenção
+(19, 'v1:LEFw0QnUeHqL2X91:6kAh7osqA4mnvClzmJIEpA==:YdQlSK3Dr/mdlFw=', 'a36805b35ddfe2257718bedd4035fd49afa11d5e3602285131419df0827d49f1', 'Universidade Federal do Rio Grande do Sul (UFRGS)', 'doutor',   'ativo', '2024-05-20 09:00:00'), -- Bruno:    alvo = Referência
+(20, 'v1:N0tFgAz4WUtH/Zmi:9c3av62cgJj7CVWQsTTN/Q==:1jWfrfd+IZW7NZI=', '0d491a6df2cd5e6e9fe25c47630ff59d88a6e0a6a3d85f61badb2723a22ff19c', 'Universidade Federal do Paraná (UFPR)',             'mestre',   'ativo', '2024-05-22 09:00:00'), -- Renata:   alvo = Confiável
+(21, 'v1:Irign/aW5mMCv4Ug:EQxzkR0lXxnJhmu8xAEhcw==:2lmUgJVYjExvdAM=', 'b5944441f2b1f45294195783812f36bc72c9bf38d2ef3d8a231c1a8d8f538ec5', 'Universidade Federal da Bahia (UFBA)',              'mestre',   'ativo', '2024-05-25 09:00:00'), -- Eduardo:  alvo = Em Construção
+(22, 'v1:m7z9uq+435l0syBo:wVQB6djPxdi38eWcfpnUAQ==:45Hee0oUAA3IDek=', '469f49af437e577be058f668669a27ec903aa9ddc42895750ef3e1d45f05c380', 'Universidade Federal do Ceará (UFC)',               'graduado', 'ativo', '2024-05-28 09:00:00'); -- Vinícius: alvo = Atenção
 
 
 -- [07-F-1] link_academico

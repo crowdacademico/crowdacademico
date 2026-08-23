@@ -589,6 +589,46 @@ BEGIN
 END;
 $$;
 
+-- [03-Q] corrigir_cpf_pesquisador — ADICIONADA (22-08-2026), mesmo motivo de
+-- suspender_pesquisador/reativar_pesquisador acima: GRANT UPDATE de coluna
+-- sozinho não bastava. pol_perfil_update (04) libera UPDATE pro próprio
+-- dono, e cpf_criptografado estava dentro do GRANT UPDATE — ou seja, o
+-- próprio pesquisador conseguia trocar o próprio CPF por um PATCH comum,
+-- contrariando o RF-017 (correção de CPF é só via suporte). cpf_criptografado
+-- saiu do GRANT UPDATE (06); esta função é o único caminho que resta,
+-- gateada por uma permissão nova (perfil_pesquisador_corrigir_cpf, ver 07),
+-- pensada pra ficar com o papel de suporte/admin, nunca com o próprio
+-- pesquisador. Recebe cpf_criptografado E cpf_hash já prontos (calculados no
+-- Nest, ver commons/seguranca/cpf-cifra.util.ts) — a função não sabe cifrar
+-- nem calcular HMAC, só grava o que o backend já preparou, depois de checar
+-- permissão.
+CREATE OR REPLACE FUNCTION public.corrigir_cpf_pesquisador(
+    p_id_usuario INT,
+    p_cpf_criptografado TEXT,
+    p_cpf_hash TEXT
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_linhas INT;
+BEGIN
+    IF NOT public.tem_permissao('perfil_pesquisador_corrigir_cpf') THEN
+        RAISE EXCEPTION 'Sem permissão para corrigir CPF de pesquisador.';
+    END IF;
+
+    UPDATE perfil_pesquisador
+    SET cpf_criptografado = p_cpf_criptografado,
+        cpf_hash = p_cpf_hash
+    WHERE id_usuario = p_id_usuario;
+
+    GET DIAGNOSTICS v_linhas = ROW_COUNT;
+    RETURN v_linhas > 0;
+END;
+$$;
+
 -- ============================================================
 -- [03-N] MODERAÇÃO SOBRE CONTA — SUSPENSÃO DE USUÁRIO E DE PAPEL (09-08-2026)
 -- ============================================================

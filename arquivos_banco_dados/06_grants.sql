@@ -145,8 +145,14 @@ GRANT SELECT (
 -- pública de perfil do pesquisador). GRANT UPDATE continua sem essas 2
 -- colunas ([06-D-2b] mais abaixo) — isso é integridade de escrita, não
 -- privacidade, e não muda com esta decisão.
+-- ATUALIZADO (22-08-2026): cpf_hash entrou na lista — é o índice cego (ver
+-- DOCUMENTACAO_BD.md), o backend precisa poder LER pra checar duplicidade
+-- (RF-017/suporte localizando conta por CPF) e ESCREVER na criação (grant de
+-- INSERT logo abaixo). Nunca é exposto na resposta HTTP (não é dado de
+-- exibição, é só chave de busca interna) — isso é regra de DTO/converter no
+-- Nest, o GRANT aqui só permite a leitura pelo backend.
 GRANT SELECT (
-    id_usuario, cpf_criptografado, tipo_vinculo, vinculo_institucional,
+    id_usuario, cpf_criptografado, cpf_hash, tipo_vinculo, vinculo_institucional,
     titulo_academico, status_pesquisador, ativado_em,
     score_atual, score_atualizado_em
 ) ON public.perfil_pesquisador TO app_nestjs;
@@ -175,8 +181,18 @@ GRANT UPDATE ON termos_de_uso TO app_nestjs;
 -- próprio pesquisador se auto-suspender/reativar, o que não faz sentido, e não
 -- existia caminho nenhum pra moderação suspender outra pessoa. Agora só muda
 -- via suspender_pesquisador() (SECURITY DEFINER, 03, [03-P]).
+-- CORRIGIDO (22-08-2026, achado do Claude Web analisando o módulo
+-- 6-perfil-pesquisador antes de implementar): cpf_criptografado TAMBÉM saiu
+-- daqui, mesma classe de bug — pol_perfil_update (04) libera UPDATE pro
+-- próprio dono, e esta lista incluía cpf_criptografado, então o próprio
+-- pesquisador conseguia alterar o CPF já cadastrado por um PATCH comum,
+-- contrariando o RF-017 (correção de CPF é só via suporte). cpf_hash nunca
+-- entrou aqui de propósito (teria o mesmo problema, e sempre precisa mudar
+-- em conjunto com cpf_criptografado, nunca sozinho). Agora os dois só mudam
+-- via corrigir_cpf_pesquisador() (SECURITY DEFINER, 03) — ver GRANT EXECUTE
+-- correspondente mais abaixo.
 GRANT UPDATE (
-    cpf_criptografado, tipo_vinculo, vinculo_institucional,
+    tipo_vinculo, vinculo_institucional,
     titulo_academico, ativado_em
 ) ON public.perfil_pesquisador TO app_nestjs;
 
@@ -214,6 +230,10 @@ REVOKE EXECUTE ON FUNCTION public.registrar_aceite_termo(INT, INT, TEXT)  FROM P
 -- revogado antes do GRANT explícito.
 REVOKE EXECUTE ON FUNCTION public.suspender_pesquisador(INT)              FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.reativar_pesquisador(INT)               FROM PUBLIC;
+-- corrigir_cpf_pesquisador(INT, TEXT, TEXT) — ADICIONADA (22-08-2026), ver
+-- [03-Q] em 03_funcoes_seguranca.sql e comentário do GRANT UPDATE de
+-- perfil_pesquisador logo acima. Mesma higiene.
+REVOKE EXECUTE ON FUNCTION public.corrigir_cpf_pesquisador(INT, TEXT, TEXT) FROM PUBLIC;
 -- suspender_usuario/revogar_suspensao_usuario/suspender_papel_usuario/
 -- revogar_suspensao_papel_usuario — ver [03-N]. Mesma higiene.
 REVOKE EXECUTE ON FUNCTION public.suspender_usuario(INT, TIMESTAMPTZ, TEXT)         FROM PUBLIC;
@@ -228,6 +248,7 @@ GRANT EXECUTE ON FUNCTION public.excluir_conta_usuario(INT)               TO app
 GRANT EXECUTE ON FUNCTION public.registrar_aceite_termo(INT, INT, TEXT)   TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.suspender_pesquisador(INT)               TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.reativar_pesquisador(INT)                TO app_nestjs;
+GRANT EXECUTE ON FUNCTION public.corrigir_cpf_pesquisador(INT, TEXT, TEXT) TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.suspender_usuario(INT, TIMESTAMPTZ, TEXT)      TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.revogar_suspensao_usuario(INT)                 TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.suspender_papel_usuario(INT, INT, TIMESTAMPTZ) TO app_nestjs;

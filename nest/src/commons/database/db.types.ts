@@ -203,6 +203,92 @@ export interface MotivoDenunciaTable {
   ativo: Generated<boolean>;
 }
 
+// ADICIONADA (22-08-2026) — espelha 01_extensoes_enums_tabelas.sql
+// (tabela perfil_pesquisador), tocada pela 1ª vez pelo módulo
+// 6-perfil-pesquisador. cpf_criptografado/cpf_hash são STRING aqui (Kysely
+// não sabe que um é cifra e o outro é HMAC — isso é responsabilidade de
+// commons/seguranca/cpf-cifra.util.ts, nunca do tipo da coluna). Ver
+// DOCUMENTACAO_BD.md pro raciocínio completo por trás dos dois.
+export const TIPOS_VINCULO = ['institucional', 'independente'] as const;
+export type TipoVinculo = (typeof TIPOS_VINCULO)[number];
+
+export const TITULOS_ACADEMICOS = [
+  'graduado',
+  'especialista',
+  'mestre',
+  'doutor',
+] as const;
+export type TituloAcademico = (typeof TITULOS_ACADEMICOS)[number];
+
+export const STATUS_PESQUISADOR = ['ativo', 'suspenso'] as const;
+export type StatusPesquisador = (typeof STATUS_PESQUISADOR)[number];
+
+export interface PerfilPesquisadorTable {
+  id_usuario: number;
+  cpf_criptografado: string;
+  cpf_hash: string;
+  tipo_vinculo: Generated<TipoVinculo>;
+  vinculo_institucional: string | null;
+  titulo_academico: TituloAcademico;
+  status_pesquisador: Generated<StatusPesquisador>;
+  ativado_em: Date | null;
+  // Nunca escritos por INSERT/UPDATE direto do service — cache mantido só
+  // por trg_perfil_recalcula_score/trg_perfil_update_recalcula_score (05).
+  // Selecionados normalmente (fazem parte da resposta pública de perfil),
+  // só não fazem parte de nenhum `.values()` de escrita.
+  score_atual: Generated<number>;
+  score_atualizado_em: Date | null;
+}
+
+// ADICIONADA (22-08-2026) — espelha 01_extensoes_enums_tabelas.sql (tabela
+// link_academico), tocada pela 1ª vez pelo módulo 7-link-academico.
+export interface LinkAcademicoTable {
+  id_link_academico: Generated<number>;
+  id_usuario: number;
+  id_tipolink: number;
+  ordem: number | null;
+  url: string;
+  rotulo: string | null;
+}
+
+// ADICIONADAS (22-08-2026) — espelham 01_extensoes_enums_tabelas.sql (bloco
+// [01-I] SCORE), lidas (nunca escritas diretamente) pelo módulo
+// 6-perfil-pesquisador na consulta de score/dimensões — quem ESCREVE são as
+// funções de 05_regras_negocio.sql (recalcular_score_pesquisador() e as 4
+// funções de dimensão), nunca o Nest.
+export interface ScoreConfigTable {
+  id_score_config: Generated<number>;
+  nome: string;
+  descricao: string | null;
+  peso: string; // DECIMAL(5,2) — node-postgres devolve DECIMAL como string, mesmo cuidado de LogAuditoriaTable.id_log com BIGSERIAL
+  id_pai: number | null;
+  ativo: Generated<boolean>;
+  criado_em: Generated<Date>;
+  atualizado_em: Generated<Date>;
+}
+
+export interface ScoreRotuloTable {
+  id_rotulo: Generated<number>;
+  rotulo: string;
+  descricao: string | null;
+  score_minimo: number;
+  score_maximo: number;
+  ativo: Generated<boolean>;
+  criado_em: Generated<Date>;
+  atualizado_em: Generated<Date>;
+}
+
+export interface ScorePesquisadorTable {
+  id_score_pesq: Generated<number>;
+  id_usuario: number;
+  id_score_config: number;
+  id_rotulo: number | null;
+  pontos_obtidos: number;
+  score_total: number | null;
+  calculado_em: Generated<Date>;
+  motivo: string | null;
+}
+
 export interface VerificacaoEmailTable {
   id_verificacao: Generated<number>;
   id_usuario: number;
@@ -233,4 +319,9 @@ export interface DB {
   area_conhecimento: AreaConhecimentoTable;
   tipo_link: TipoLinkTable;
   motivo_denuncia: MotivoDenunciaTable;
+  perfil_pesquisador: PerfilPesquisadorTable;
+  link_academico: LinkAcademicoTable;
+  score_config: ScoreConfigTable;
+  score_rotulo: ScoreRotuloTable;
+  score_pesquisador: ScorePesquisadorTable;
 }

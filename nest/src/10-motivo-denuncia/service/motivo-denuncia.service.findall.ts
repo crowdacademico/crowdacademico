@@ -17,14 +17,16 @@ export class MotivoDenunciaServiceFindAll {
   ): Promise<ResultadoPaginado<MotivoDenunciaResponse>> {
     // pol_motivo_select (04_rls_policies.sql [04-C-3]) é USING(true) —
     // catálogo público, lista mesmo sem login.
-    // ERA orderBy('codigo') — coluna removida (18-08-2026, ver
-    // criar-motivo-denuncia.request.dto.ts). `descricao` é o único
-    // identificador legível que sobrou.
+    // ERA orderBy('codigo') (removida, 18-08-2026), depois orderBy('descricao').
+    // Trocado pra orderBy('id_motivo') (22-08-2026, pedido do Lucas:
+    // catálogos ordenam por ID, sempre). O seed já insere todos os 8
+    // motivos de 'campanha' primeiro e depois os 4 de 'perfil', então o
+    // agrupamento por tipo continua igual, só passa a ser por id.
     let query = this.database
       .getDb()
       .selectFrom('motivo_denuncia')
       .selectAll()
-      .orderBy('descricao');
+      .orderBy('id_motivo');
 
     if (filtro.ativo !== undefined) {
       query = query.where('ativo', '=', filtro.ativo);

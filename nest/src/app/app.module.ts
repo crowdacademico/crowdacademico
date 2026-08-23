@@ -14,6 +14,8 @@ import { AppService } from './app.service';
 import { HealthController } from './health.controller';
 import { TipoLinkModule } from '../9-tipo-link/tipo-link.module';
 import { MotivoDenunciaModule } from '../10-motivo-denuncia/motivo-denuncia.module';
+import { PerfilPesquisadorModule } from '../6-perfil-pesquisador/perfil-pesquisador.module';
+import { LinkAcademicoModule } from '../7-link-academico/link-academico.module';
 
 @Module({
   imports: [
@@ -27,6 +29,8 @@ import { MotivoDenunciaModule } from '../10-motivo-denuncia/motivo-denuncia.modu
     AreaConhecimentoModule,
     TipoLinkModule,
     MotivoDenunciaModule,
+    PerfilPesquisadorModule,
+    LinkAcademicoModule,
     LogAuditoriaModule,
     DashboardModule,
   ],

@@ -742,6 +742,129 @@ ALTER TABLE motivo_denuncia DROP COLUMN IF EXISTS codigo;
 
 
 -- ============================================================================
+-- 22-08-2026 — CPF do pesquisador: cifra decidida (Node/AES-256-GCM, não
+-- Postgres/pgcrypto) + índice cego (cpf_hash) + cpf_criptografado saiu do
+-- GRANT UPDATE direto (RF-017: correção de CPF é só via suporte). Raciocínio
+-- completo em DOCUMENTACAO_BD.md, seção perfil_pesquisador — este bloco é só
+-- a parte que precisa ser colada no banco que já existe (`01`, `03`, `06` e
+-- `07` já refletem o estado final pra quem instalar do zero).
+--
+-- SEGURO RODAR DE NOVO, com UMA exceção: a 2ª parte (UPDATE de backfill das
+-- 11 linhas do seed) só faz sentido rodar UMA VEZ, com as MESMAS chaves
+-- CPF_ENCRYPTION_KEY/CPF_INDEX_KEY que o seu `.env` já usa — os valores
+-- abaixo foram cifrados com as chaves de DESENVOLVIMENTO deste projeto (ver
+-- `nest/.env`). Se você já gerou suas próprias chaves antes de colar isto,
+-- troque pelas chaves do SEU `.env` e gere os valores de novo (rodando
+-- commons/seguranca/cpf-cifra.util.ts uma vez, fora do Nest, pros 11 CPFs
+-- falsos que já estavam no seed) em vez de colar os valores literais abaixo.
+-- ============================================================================
+
+-- 01 — tipo da coluna + coluna nova
+ALTER TABLE perfil_pesquisador ALTER COLUMN cpf_criptografado TYPE TEXT;
+ALTER TABLE perfil_pesquisador ADD COLUMN IF NOT EXISTS cpf_hash TEXT;
+
+-- 07 — backfill das 11 linhas do seed (só válido se cpf_criptografado ainda
+-- estiver com o placeholder antigo tipo 'enc_cpf_001' — se você já rodou o
+-- seed novo (07_seed_dados.sql atualizado), pule este UPDATE, os valores já
+-- nascem certos).
+UPDATE perfil_pesquisador SET cpf_criptografado = 'v1:mWTFzqRm8FMW14/u:iMiDqsRSTJ4KUyzcmKP18w==:bR7wgOpNkI+vSJ4=', cpf_hash = '1610ee8b3555955f9e79eba6efa88324a4c30ced46b4bee5e6f2b6b3ed605797' WHERE id_usuario = 12;
+UPDATE perfil_pesquisador SET cpf_criptografado = 'v1:biXIzmT/+Z0OVzgl:y8lT16d44wlXzCKzGAsK9A==:HxBEvdcXcZk8bHY=', cpf_hash = 'b3b4544a4ec41edae5514228ab14306250a0fce3bc3f149f8a0ed92be2536dd8' WHERE id_usuario = 13;
+UPDATE perfil_pesquisador SET cpf_criptografado = 'v1:/qWUrRI/9fzjm9Kh:uU6qNuQlvvFjghnTLVr8Og==:N5DdmozsScRBV8A=', cpf_hash = '93d76c0ae76d371c84ead92cdc597742cd149067fe7f234552e10abe75ee5e7f' WHERE id_usuario = 14;
+UPDATE perfil_pesquisador SET cpf_criptografado = 'v1:P3LMaMpY05s3WLyr:7eDEN698asnW0mHcOs18Hw==:a51Rr8evV8QG/zw=', cpf_hash = 'a6b7b8e7c9b4114a993ffdd74c58a4f09b2ea02a107faca711642e5f6cb4538b' WHERE id_usuario = 15;
+UPDATE perfil_pesquisador SET cpf_criptografado = 'v1:gRfGHqP2CaS1KfN8:/Ndt5pdWu6A/ZxDBptQipQ==:XXTsLYETudrxeik=', cpf_hash = '74fc41e2f0ea9e284b8c1d2379fcc4388988d1b4a18f53c88a626d91b5d4cbc6' WHERE id_usuario = 16;
+UPDATE perfil_pesquisador SET cpf_criptografado = 'v1:7abSMfGxUwGXdwcb:by/laHiieT6GUyoRZK5eEQ==:rlvzzxsYevmjKR4=', cpf_hash = '3f165d5243e5fbddf4290416d712da7ba1a1129f442c866bc855fac2c19f3458' WHERE id_usuario = 17;
+UPDATE perfil_pesquisador SET cpf_criptografado = 'v1:gH+4XLY9grNC1AAN:f0QkyT8OuWRTKwwbyHhtKQ==:/dE9nq3r7rYxs3k=', cpf_hash = '3f022d05c183ecfb64cbb6ac2500e66ad731e684f1c9afd5e2cb801d5576d376' WHERE id_usuario = 18;
+UPDATE perfil_pesquisador SET cpf_criptografado = 'v1:LEFw0QnUeHqL2X91:6kAh7osqA4mnvClzmJIEpA==:YdQlSK3Dr/mdlFw=', cpf_hash = 'a36805b35ddfe2257718bedd4035fd49afa11d5e3602285131419df0827d49f1' WHERE id_usuario = 19;
+UPDATE perfil_pesquisador SET cpf_criptografado = 'v1:N0tFgAz4WUtH/Zmi:9c3av62cgJj7CVWQsTTN/Q==:1jWfrfd+IZW7NZI=', cpf_hash = '0d491a6df2cd5e6e9fe25c47630ff59d88a6e0a6a3d85f61badb2723a22ff19c' WHERE id_usuario = 20;
+UPDATE perfil_pesquisador SET cpf_criptografado = 'v1:Irign/aW5mMCv4Ug:EQxzkR0lXxnJhmu8xAEhcw==:2lmUgJVYjExvdAM=', cpf_hash = 'b5944441f2b1f45294195783812f36bc72c9bf38d2ef3d8a231c1a8d8f538ec5' WHERE id_usuario = 21;
+UPDATE perfil_pesquisador SET cpf_criptografado = 'v1:m7z9uq+435l0syBo:wVQB6djPxdi38eWcfpnUAQ==:45Hee0oUAA3IDek=', cpf_hash = '469f49af437e577be058f668669a27ec903aa9ddc42895750ef3e1d45f05c380' WHERE id_usuario = 22;
+
+-- Só depois do backfill: NOT NULL + UNIQUE (falharia antes, com linha NULL)
+ALTER TABLE perfil_pesquisador ALTER COLUMN cpf_hash SET NOT NULL;
+ALTER TABLE perfil_pesquisador DROP CONSTRAINT IF EXISTS "UK_PERFIL_PESQUISADOR_CPF_HASH";
+ALTER TABLE perfil_pesquisador ADD CONSTRAINT "UK_PERFIL_PESQUISADOR_CPF_HASH" UNIQUE (cpf_hash);
+
+-- 07 — permissão nova + concedida ao admin
+INSERT INTO permissao (nome) VALUES ('perfil_pesquisador_corrigir_cpf') ON CONFLICT (nome) DO NOTHING;
+INSERT INTO papel_permissao (id_papel, id_permissao)
+SELECT p.id_papel, perm.id_permissao
+FROM papel p JOIN permissao perm ON TRUE
+WHERE (p.nome, perm.nome) = ('admin', 'perfil_pesquisador_corrigir_cpf')
+ON CONFLICT DO NOTHING;
+
+-- 03 — função nova (corrigir_cpf_pesquisador), mesmo texto de 03_funcoes_seguranca.sql
+CREATE OR REPLACE FUNCTION public.corrigir_cpf_pesquisador(
+    p_id_usuario INT,
+    p_cpf_criptografado TEXT,
+    p_cpf_hash TEXT
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_linhas INT;
+BEGIN
+    IF NOT public.tem_permissao('perfil_pesquisador_corrigir_cpf') THEN
+        RAISE EXCEPTION 'Sem permissão para corrigir CPF de pesquisador.';
+    END IF;
+
+    UPDATE perfil_pesquisador
+    SET cpf_criptografado = p_cpf_criptografado,
+        cpf_hash = p_cpf_hash
+    WHERE id_usuario = p_id_usuario;
+
+    GET DIAGNOSTICS v_linhas = ROW_COUNT;
+    RETURN v_linhas > 0;
+END;
+$$;
+
+-- 06 — grants: cpf_hash entra no SELECT; cpf_criptografado sai do UPDATE
+-- direto (correção só via corrigir_cpf_pesquisador() acima); GRANT EXECUTE
+-- da função nova.
+GRANT SELECT (
+    id_usuario, cpf_criptografado, cpf_hash, tipo_vinculo, vinculo_institucional,
+    titulo_academico, status_pesquisador, ativado_em,
+    score_atual, score_atualizado_em
+) ON public.perfil_pesquisador TO app_nestjs;
+
+GRANT UPDATE (
+    tipo_vinculo, vinculo_institucional, titulo_academico, ativado_em
+) ON public.perfil_pesquisador TO app_nestjs;
+-- (o GRANT acima substitui o anterior por completo pra esta tabela — GRANT
+-- de coluna no Postgres não é cumulativo entre execuções diferentes do
+-- MESMO comando com listas diferentes, é a lista inteira de novo. Rodar
+-- isto de novo no futuro com uma lista MENOR não remove sozinho o que já
+-- foi concedido antes — pra isso, REVOKE explícito.)
+
+REVOKE EXECUTE ON FUNCTION public.corrigir_cpf_pesquisador(INT, TEXT, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.corrigir_cpf_pesquisador(INT, TEXT, TEXT) TO app_nestjs;
+
+
+-- ============================================================================
+-- 22-08-2026 — 2 contas "usuario comum" novas, zeradas (Marina/Gabriel),
+-- pra sempre sobrar quem testar "2ª conta tentando o mesmo CPF" sem mexer
+-- nos pesquisadores 12-21 (donos de campanha no seed) ou 19-22 (desenhados
+-- a dedo pras 4 faixas de score_rotulo). Fernanda (23) sozinha não bastava
+-- pra testar duplicidade entre DUAS contas diferentes.
+-- Seguro rodar de novo? NÃO — roda só uma vez (o e-mail não tem UNIQUE na
+-- tabela usuario hoje, então rodar 2x cria duplicata em vez de dar erro).
+-- ============================================================================
+
+WITH novos AS (
+  INSERT INTO usuario (nome, email, senha_hash, criado_em) VALUES
+  ('Marina Alves Torres',  'marina.torres@gmail.com',  '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NOW()),
+  ('Gabriel Souza Martins','gabriel.martins@gmail.com','$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NOW()),
+  ('Camila Rocha Pereira', 'camila.rocha@gmail.com',        '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NOW()),
+  ('Rafael Costa Andrade', 'rafael.costa.andrade@gmail.com','$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NOW()),
+  ('Larissa Mendes Cunha', 'larissa.mendes@gmail.com',      '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NOW())
+  RETURNING id_usuario, email
+)
+INSERT INTO usuario_papel (id_usuario, id_papel)
+SELECT n.id_usuario, p.id_papel FROM novos n JOIN papel p ON p.nome = 'usuario';
+
+-- ============================================================================
 -- NÃO ENTRA NESTE ARQUIVO (registrado aqui só pra não se perder)
 -- ============================================================================
 

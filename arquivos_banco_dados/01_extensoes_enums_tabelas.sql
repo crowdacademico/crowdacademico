@@ -306,7 +306,24 @@ CREATE TABLE usuario_papel (  -- fica aqui por depender de usuario; documentada 
 
 CREATE TABLE perfil_pesquisador (
     id_usuario            INT NOT NULL,
-    cpf_criptografado     VARCHAR(255) NOT NULL,
+    -- TEXT, não VARCHAR(255) (corrigido 22-08-2026) — o tamanho de um valor
+    -- cifrado é ditado pelo algoritmo de cifra (hoje ~61 caracteres pro
+    -- formato "v1:<iv>:<tag>:<ciphertext>", ver commons/seguranca/
+    -- cpf-cifra.util.ts no Nest), não por uma decisão de produto sobre
+    -- tamanho de campo — TEXT não fixa uma constante que não faz sentido
+    -- fixar. Ver DOCUMENTACAO_BD.md, seção perfil_pesquisador, pra todo o
+    -- raciocínio (por que cifrar no Node e não no Postgres, formato "v1:",
+    -- índice cego).
+    cpf_criptografado     TEXT NOT NULL,
+    -- Índice cego (22-08-2026) — HMAC-SHA256(cpf_normalizado, CPF_INDEX_KEY),
+    -- calculado no Nest (commons/seguranca/cpf-cifra.util.ts), nunca no
+    -- Postgres. Existe porque cpf_criptografado é cifra não-determinística
+    -- (o mesmo CPF cifrado duas vezes dá valores diferentes) e por isso
+    -- NUNCA poderia levar um UNIQUE nem ser buscado por igualdade — este
+    -- índice é quem garante "um CPF, uma conta, sempre" e permite o suporte/
+    -- curadoria localizar uma conta pelo CPF informado. Detalhe completo em
+    -- DOCUMENTACAO_BD.md.
+    cpf_hash              TEXT NOT NULL,
     tipo_vinculo          tipo_vinculo NOT NULL DEFAULT 'institucional',
     vinculo_institucional VARCHAR(255),
     titulo_academico      titulo_academico NOT NULL,
@@ -317,6 +334,7 @@ CREATE TABLE perfil_pesquisador (
 
     CONSTRAINT "PK_PERFIL_PESQUISADOR" PRIMARY KEY (id_usuario),
     CONSTRAINT "FK_PERFIL_PESQUISADOR_USUARIO" FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE CASCADE,
+    CONSTRAINT "UK_PERFIL_PESQUISADOR_CPF_HASH" UNIQUE (cpf_hash),
     -- Institucional exige o nome da instituição preenchido (não vazio); independente
     -- exige que o campo fique vazio (não é "esqueceram de preencher", é um fato
     -- declarado). Nenhum dos dois estados aceita ambiguidade.

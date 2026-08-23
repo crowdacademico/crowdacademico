@@ -31,6 +31,12 @@
 # 🔴 PENDÊNCIAS (ainda em aberto — precisam de decisão)
 
 
+## 🗓️ 22-08-2026
+
+🟢 **745. Verificação de CPF real (existência/situação na Receita) — ideia pra um futuro distante, não pra agora.** Hoje (e durante todo o desenvolvimento) o sistema só valida o **formato** do CPF (algoritmo de dígito verificador) — nunca confirma que o número corresponde a uma pessoa real, nem consulta nenhuma fonte externa. Todos os CPFs usados em desenvolvimento/seed são falsos/inventados, de propósito (decisão do Lucas, 22-08-2026): nenhum dado de pessoa real entra no sistema nesta fase. Quando o site estiver praticamente pronto pra uso real, vale procurar alguma API gratuita de verificação de CPF pra adicionar essa camada antes de aceitar cadastro de pesquisador de verdade. Sem prazo, sem decisão de qual API — só um lembrete de que existe essa lacuna, consciente e aceita por enquanto.
+
+🟢 **744. `react/.gitignore` não cobre `.env` — baixo risco hoje, mas o filtro que devia impedir isso não existe.** Achado do Claude Web enquanto revisava outra coisa, confirmado pelo Claude Code: `react/.env` está de fato commitado no git (`git ls-files` confirma), porque `react/.gitignore` nunca listou `.env` (diferente de `nest/.gitignore`, que já cobre corretamente `nest/.env` — esse aí nunca foi commitado). Marcado verde e não vermelho porque **o conteúdo de hoje é inofensivo** — `react/.env` só tem `VITE_API_URL=http://localhost:3000`, nenhuma chave, senha ou segredo. O risco é só potencial: se um dia alguém adicionar uma chave de API (comum em front-end, ex.: uma chave pública de algum serviço de terceiro) direto nesse arquivo sem lembrar de checar o `.gitignore` primeiro, ela vai pro histórico do git sem ninguém perceber, porque não existe rede de segurança pra isso hoje. Correção é trivial (uma linha `.env` no `react/.gitignore`, igual ao `nest/.gitignore` já tem) — deliberadamente **não aplicada ainda**, a pedido do Lucas, só registrada aqui como lembrete pra fazer antes que algum segredo de verdade entre nesse arquivo.
+
 ## 🗓️ 30-07-2026
 
 🔴 **59. Score público reabre risco de LGPD (Art. 9) sem mitigação — decisão consciente, mas falta a rede de segurança**
