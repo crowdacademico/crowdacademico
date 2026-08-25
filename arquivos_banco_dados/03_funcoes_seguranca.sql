@@ -767,7 +767,18 @@ $$;
 -- Função:     contar_metricas_dashboard
 -- Assinatura: () -> TABLE(total_usuarios INT, total_pesquisadores INT,
 --             total_papeis INT, total_permissoes INT, total_configuracoes INT,
---             sessoes_ativas INT)
+--             total_campanhas INT, sessoes_ativas INT)
+-- ATUALIZADA (23-08-2026): `total_campanhas` — o card "Campanhas" do
+-- Dashboard nasceu mostrando "—" (DashboardServiceResumo mandava
+-- `totalCampanhas: null` a propósito, comentário "campanha ainda não
+-- existe") porque o módulo 12-campanha nem existia quando o Dashboard foi
+-- construído (08-08-2026). Ele passou a existir em 22-08-2026, mas
+-- ninguém tinha voltado aqui pra ligar os dois — achado pelo Lucas
+-- brincando com o Campo de Testes ("por que o contador não começou a
+-- funcionar sozinho?"). `count(*)` simples, mesmo padrão de total_papeis/
+-- total_permissoes/total_configuracoes acima (conta TODAS as campanhas,
+-- não só as aprovadas — é "quantas existem no sistema", não "quantas
+-- estão no ar").
 -- Bloco:      [03-M]
 -- Regra:      08-08-2026 — GET /dashboard/resumo (nest/src/29-dashboard)
 --             precisa de totais confiáveis pros cards da tela inicial do
@@ -798,6 +809,7 @@ RETURNS TABLE (
     total_papeis        INT,
     total_permissoes    INT,
     total_configuracoes INT,
+    total_campanhas     INT,
     sessoes_ativas      INT
 )
 LANGUAGE sql
@@ -814,5 +826,6 @@ AS $$
         (SELECT count(*)::INT FROM papel),
         (SELECT count(*)::INT FROM permissao),
         (SELECT count(*)::INT FROM configuracoes),
+        (SELECT count(*)::INT FROM campanha),
         (SELECT count(*)::INT FROM sessao WHERE revogado_em IS NULL AND expira_em > now());
 $$;

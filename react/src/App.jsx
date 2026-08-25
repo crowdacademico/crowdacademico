@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router';
 import { Layout } from './components/layout/layout';
 import { useAuth } from './services/3-auth/hook/use-auth';
+import { ElencoProvider } from './services/campo-testes/context/elenco-provider';
 import { ROTAS, ROTAS_ADMIN } from './services/router/rotas.constants';
 import { AdminLayout } from './views/admin/admin-layout';
 
@@ -17,7 +18,7 @@ import { AdminLayout } from './views/admin/admin-layout';
 function App() {
   const auth = useAuth();
 
-  return (
+  const rotas = (
     <Routes>
       <Route element={<Layout auth={auth} />}>
         <Route path="/" element={<Navigate to="/admin/dashboard" replace />} />
@@ -47,6 +48,13 @@ function App() {
       </Route>
     </Routes>
   );
+
+  // ElencoProvider (Campo de Testes) só existe em build de desenvolvimento
+  // — mesmo raciocínio do `import.meta.env.DEV` em rotas.constants.js
+  // (guarda refresh token de várias contas reais, não é coisa pra existir
+  // em produção nem "de graça e inerte"). Fora disso, `rotas` renderiza
+  // igual a antes, sem nenhum provider novo por cima.
+  return import.meta.env.DEV ? <ElencoProvider>{rotas}</ElencoProvider> : rotas;
 }
 
 export default App;

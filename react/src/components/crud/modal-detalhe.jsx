@@ -11,7 +11,13 @@ const CLASSE_BADGE_IMPACTO = {
   baixo: 'fundo-info texto-info',
 };
 
-export function ModalDetalhe({ titulo, chave, badgeImpacto, secoes, aoFechar }) {
+// `rotuloAcao` (23-08-2026, Campo de Testes: "Consultar" de Link
+// Acadêmico) — cabeçalho extra, opcional, grande/centralizado/maiúsculo
+// + linha divisória, ANTES do título normal (achado do Lucas: um
+// "Consultar" precisa deixar claro de cara que ação é essa, antes de
+// entrar nos detalhes de qual registro). Sem essa prop, o modal continua
+// exatamente como sempre foi (Permissões nunca passou isso).
+export function ModalDetalhe({ titulo, chave, badgeImpacto, secoes, aoFechar, rotuloAcao }) {
   return (
     <div
       className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/40"
@@ -21,10 +27,28 @@ export function ModalDetalhe({ titulo, chave, badgeImpacto, secoes, aoFechar }) 
         className="w-full max-w-lg max-h-[85vh] fundo-elevado rounded-2xl shadow-2xl border borda-forte overflow-hidden flex flex-col"
         onClick={(evento) => evento.stopPropagation()}
       >
-        <div className="px-6 py-4 border-b borda-padrao flex items-start justify-between gap-3 shrink-0">
+        {rotuloAcao && (
+          <>
+            <div className="px-6 pt-5 pb-3 flex items-center justify-between gap-3 shrink-0">
+              <span className="w-4"></span>
+              <p className="text-center font-black uppercase tracking-widest texto-forte text-lg">{rotuloAcao}</p>
+              <button
+                type="button"
+                onClick={aoFechar}
+                aria-label="Fechar"
+                className="texto-fraco hover-texto-forte"
+              >
+                <i className="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+            <div className="border-t borda-padrao"></div>
+          </>
+        )}
+
+        <div className={'px-6 py-4 flex items-start justify-between gap-3 shrink-0' + (rotuloAcao ? '' : ' border-b borda-padrao')}>
           <div className="min-w-0">
             <p className="font-bold texto-forte truncate">{titulo}</p>
-            {chave && <p className="text-xs font-mono texto-fraco mt-0.5">{chave}</p>}
+            {chave && <p className="paragrafo-denso mt-0.5">{chave}</p>}
           </div>
           <div className="flex items-center gap-3 shrink-0">
             {badgeImpacto && (
@@ -37,14 +61,16 @@ export function ModalDetalhe({ titulo, chave, badgeImpacto, secoes, aoFechar }) 
                 Impacto {badgeImpacto}
               </span>
             )}
-            <button
-              type="button"
-              onClick={aoFechar}
-              aria-label="Fechar"
-              className="texto-fraco hover-texto-forte"
-            >
-              <i className="fa-solid fa-xmark"></i>
-            </button>
+            {!rotuloAcao && (
+              <button
+                type="button"
+                onClick={aoFechar}
+                aria-label="Fechar"
+                className="texto-fraco hover-texto-forte"
+              >
+                <i className="fa-solid fa-xmark"></i>
+              </button>
+            )}
           </div>
         </div>
 

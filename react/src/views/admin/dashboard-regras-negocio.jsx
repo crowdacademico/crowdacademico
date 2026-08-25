@@ -28,7 +28,7 @@ export function DashboardRegrasNegocio({ auth }) {
       {grupos.map(({ grupo, itens }) => (
         <div key={grupo} className="fundo-cartao border borda-forte rounded-xl shadow-sm overflow-hidden">
           <div className="px-5 py-3 border-b borda-padrao fundo-sutil">
-            <h3 className="text-sm font-bold texto-forte">{grupo}</h3>
+            <h3 className="subtitulo">{grupo}</h3>
           </div>
           <div className="divide-y divide-solid" style={{ borderColor: 'var(--cor-borda)' }}>
             {itens.map((config) => (
@@ -38,7 +38,7 @@ export function DashboardRegrasNegocio({ auth }) {
               >
                 <div className="min-w-0">
                   <p className="text-sm font-semibold texto-padrao">{config.descricao || config.chave}</p>
-                  <p className="text-xs font-mono texto-fraco truncate">{config.chave}</p>
+                  <p className="paragrafo-denso truncate">{config.chave}</p>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
                   <span className="text-sm font-bold texto-forte">

@@ -392,7 +392,7 @@ export function GenericTable({
   return (
     <section className="crud-secao">
       <div className="crud-secao__cabecalho">
-        <h2>{titulo}</h2>
+        <h2 className="titulo-secao">{titulo}</h2>
         {acaoTopo && <div className="crud-secao__acao-topo">{acaoTopo}</div>}
       </div>
 

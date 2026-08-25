@@ -176,7 +176,7 @@ export function Dashboard({ auth }) {
               existe (nem tabela mapeada no Kysely, nem controller) — mostra
               isso honestamente em vez de inventar dado. */}
           <div className="fundo-cartao border borda-forte rounded-xl shadow-sm p-5">
-            <h3 className="text-sm font-bold texto-padrao mb-2">Notificações</h3>
+            <h3 className="subtitulo mb-2">Notificações</h3>
             <p className="text-sm texto-fraco">
               Módulo de notificações ainda não foi implementado, esta prévia vai listar as
               pendências assim que existir.

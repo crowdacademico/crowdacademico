@@ -30,6 +30,13 @@ import { AlterarMotivoDenuncia } from '../../views/10-motivo-denuncia/alterar-mo
 import { ConsultarMotivoDenuncia } from '../../views/10-motivo-denuncia/consultar-motivo-denuncia';
 import { ExcluirMotivoDenuncia } from '../../views/10-motivo-denuncia/excluir-motivo-denuncia';
 import { ListarMotivosDenuncia } from '../../views/10-motivo-denuncia/listar-motivos-denuncia';
+import { ListarPesquisadores } from '../../views/6-perfil-pesquisador/listar-pesquisadores';
+import { ConsultarPesquisador } from '../../views/6-perfil-pesquisador/consultar-pesquisador';
+import { ListarCampanhas } from '../../views/12-campanha/listar-campanhas';
+import { ConsultarCampanha } from '../../views/12-campanha/consultar-campanha';
+import { BancadaPesquisador } from '../../views/campo-testes/bancada-pesquisador';
+import { BancadaCampanha } from '../../views/campo-testes/bancada-campanha';
+import { VidaCampanhaAtiva } from '../../views/campo-testes/vida-campanha-ativa';
 
 // Fonte única de verdade pra "quais páginas existem" — App.jsx monta as
 // <Route> a partir daqui, e breadcrumb.jsx monta o rótulo a partir daqui.
@@ -94,6 +101,22 @@ export const ROTAS_ADMIN = [
     rotuloBreadcrumb: 'Usuários',
     grupoMenu: 'CADASTROS',
     icone: 'fa-users',
+  },
+
+  // Pesquisadores (módulo 6-perfil-pesquisador) — ativada no menu lateral
+  // em 23-08-2026 (achado igual ao de Motivos de Denúncia: o módulo
+  // inteiro — criar, consultar, score — já estava pronto e testado desde
+  // 22-08-2026, mas sem NENHUMA entrada de menu; "algum outro que eu
+  // esqueci?"). Logo depois de Usuários — um pesquisador é um usuário com
+  // um perfil a mais, não uma entidade separada.
+  {
+    caminho: '/admin/pesquisadores',
+    caminhoRelativo: 'pesquisadores',
+    elemento: ListarPesquisadores,
+    rotuloMenu: 'Pesquisadores',
+    rotuloBreadcrumb: 'Pesquisadores',
+    grupoMenu: 'CADASTROS',
+    icone: 'fa-flask',
   },
   {
     caminho: '/admin/papeis',
@@ -171,6 +194,25 @@ export const ROTAS_ADMIN = [
     rotuloBreadcrumb: 'Motivos de Denúncia',
     grupoMenu: 'MODERACAO',
     icone: 'fa-flag',
+  },
+
+  // Campanhas (módulo 12-campanha) — ativada no menu lateral em
+  // 23-08-2026, pedido do Lucas ("tipo o Menu de Usuários"). Grupo
+  // próprio ('CAMPANHA', ver admin-menu.constants.js) — não cabia em
+  // GESTÃO DO USUÁRIO (não é sobre gerenciar quem é o usuário) nem em
+  // MODERAÇÃO (aquele grupo é especificamente sobre a FILA de aprovação/
+  // denúncia, ainda não construída — isto aqui é só "ver as campanhas que
+  // existem", mais parecido com a listagem de Usuários). Posicionado
+  // antes de MODERAÇÃO: faz sentido navegar "ver campanhas" antes de
+  // "moderar campanhas".
+  {
+    caminho: '/admin/campanhas',
+    caminhoRelativo: 'campanhas',
+    elemento: ListarCampanhas,
+    rotuloMenu: 'Campanhas',
+    rotuloBreadcrumb: 'Campanhas',
+    grupoMenu: 'CAMPANHA',
+    icone: 'fa-bullhorn',
   },
 
   // Minha Conta (10-08-2026) — dentro do painel agora (sidebar visível),
@@ -354,4 +396,71 @@ export const ROTAS_ADMIN = [
     rotuloBreadcrumb: 'Excluir Motivo de Denúncia',
     paiCaminho: '/admin/motivos-denuncia',
   },
+
+  // Campanhas — só Consultar (ver comentário da listagem, acima: sem
+  // Alterar/Excluir por enquanto).
+  {
+    caminho: '/admin/campanhas/:id/consultar',
+    caminhoRelativo: 'campanhas/:id/consultar',
+    elemento: ConsultarCampanha,
+    rotuloBreadcrumb: 'Consultar Campanha',
+    paiCaminho: '/admin/campanhas',
+  },
+
+  // Pesquisadores — mesmo raciocínio de Campanhas (só Consultar).
+  {
+    caminho: '/admin/pesquisadores/:id/consultar',
+    caminhoRelativo: 'pesquisadores/:id/consultar',
+    elemento: ConsultarPesquisador,
+    rotuloBreadcrumb: 'Consultar Pesquisador',
+    paiCaminho: '/admin/pesquisadores',
+  },
+
+  // ESTE ARQUIVO EXISTE SOLENEMENTE PARA O CAMPO DE TESTES. NÃO ESTÁ NOS
+  // REQUISITOS FUNCIONAIS E NEM ESTARÁ. — vale só pro trecho abaixo, não
+  // pro arquivo inteiro (rotas.constants.js é a fonte única de verdade de
+  // TODAS as rotas, não só as do Campo de Testes).
+  //
+  // `import.meta.env.DEV` (22-08-2026, pedido explícito da revisão do
+  // Claude Web sobre o Campo de Testes): em build de produção, este array
+  // fica vazio — a rota nem existe, o grupo some do menu (admin-menu.
+  // constants.js só mostra o que `itensDoGrupo` acha aqui). O Elenco
+  // guarda refresh token de várias contas reais ao mesmo tempo; em
+  // desenvolvimento é ferramenta, em produção seria uma porta escancarada.
+  ...(import.meta.env.DEV
+    ? [
+        {
+          caminho: '/admin/campo-testes/pesquisador',
+          caminhoRelativo: 'campo-testes/pesquisador',
+          elemento: BancadaPesquisador,
+          // "T1" (23-08-2026, renumerado — pedido do Lucas: "o primeiro
+          // não deveria ser T1?" — sim, a numeração antiga vinha de uma
+          // tela T1/Elenco já apagada; sem ela, o mais correto é começar
+          // do 1 de novo, não deixar um buraco por causa de história
+          // passada que ninguém mais vê).
+          rotuloMenu: 'T1 - Bancada do Pesquisador',
+          rotuloBreadcrumb: 'T1 - Bancada do Pesquisador',
+          grupoMenu: 'CAMPO_TESTES',
+          icone: 'fa-flask',
+        },
+        {
+          caminho: '/admin/campo-testes/campanha',
+          caminhoRelativo: 'campo-testes/campanha',
+          elemento: BancadaCampanha,
+          rotuloMenu: 'T2 - Bancada da Campanha',
+          rotuloBreadcrumb: 'T2 - Bancada da Campanha',
+          grupoMenu: 'CAMPO_TESTES',
+          icone: 'fa-bullhorn',
+        },
+        {
+          caminho: '/admin/campo-testes/vida-campanha',
+          caminhoRelativo: 'campo-testes/vida-campanha',
+          elemento: VidaCampanhaAtiva,
+          rotuloMenu: 'T3 - Vida da Campanha Ativa',
+          rotuloBreadcrumb: 'T3 - Vida da Campanha Ativa',
+          grupoMenu: 'CAMPO_TESTES',
+          icone: 'fa-comments',
+        },
+      ]
+    : []),
 ];

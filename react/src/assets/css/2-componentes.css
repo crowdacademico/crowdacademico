@@ -116,6 +116,16 @@
     color: var(--cor-texto);
   }
 
+  /* 23-08-2026 — nasceu dentro do arquivo do Campo de Testes por engano
+     (6-campo-testes.css), movida pra cá quando a listagem de Campanhas
+     (views/12-campanha) precisou do mesmo badge pra status rejeitado/
+     encerrado_moderacao — é utilitário genérico, não algo exclusivo de
+     ferramenta de teste. */
+  .badge-erro {
+    background-color: var(--cor-fundo-erro);
+    color: var(--cor-texto-erro);
+  }
+
   /* Selo <dev> — marca qualquer recurso que existe só pra facilitar
      desenvolvimento/teste (ex.: redefinir senha pra um valor conhecido),
      nunca pra ficar disponível em produção de verdade. Roxo + monoespaçada

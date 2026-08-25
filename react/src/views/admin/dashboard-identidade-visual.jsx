@@ -11,7 +11,7 @@ export function DashboardIdentidadeVisual() {
       <div className="w-14 h-14 fundo-sutil rounded-2xl mx-auto flex items-center justify-center texto-fraco text-2xl mb-4">
         <i className="fa-solid fa-image"></i>
       </div>
-      <h3 className="font-bold texto-forte mb-2">Ainda não implementado</h3>
+      <h3 className="subtitulo mb-2">Ainda não implementado</h3>
       <p className="text-sm texto-fraco max-w-md mx-auto">
         Gerenciar logo/favicon do site aqui depende do módulo de upload de arquivo
         (25-arquivo), que ainda não existe. O caminho já está desenhado — quando o upload

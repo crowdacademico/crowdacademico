@@ -102,6 +102,24 @@
   padding-right: 0.5rem;
 }
 
+/* Achado (23-08-2026, Lucas: "o menu lateral ficou com rolagem lateral")
+   — o ícone do Tooltip (components/layout/tooltip.jsx) fica encostado na
+   borda DIREITA do grupo "CAMPO DE TESTES" (padding-right acima), mas
+   .tooltip__texto (2-componentes.css) centraliza a caixa da dica embaixo
+   do ícone (`left: 50%; transform: translateX(-50%)`) — com até 16rem
+   (256px) de largura, isso jogava boa parte da caixa pra FORA da coluna
+   de 260px do menu, inflando o scrollWidth do <aside> (que já é
+   overflow-y-auto, e por regra de CSS um eixo em auto/scroll força o
+   outro a virar auto também — daí a barra horizontal). Ancorando pela
+   direita (em vez de centralizar) e reduzindo o teto de largura, a caixa
+   cresce só pra dentro do menu, nunca estoura a borda direita. */
+.admin-sidebar__grupo-titulo .tooltip__texto {
+  left: auto;
+  right: -0.25rem;
+  transform: none;
+  max-width: 11rem;
+}
+
 .admin-sidebar__item {
   width: 100%;
   text-align: left;

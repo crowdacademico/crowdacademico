@@ -393,4 +393,57 @@
     letter-spacing: 0.05em;
     margin-bottom: 0.5rem;
   }
+
+  /* Escala tipográfica única do painel (23-08-2026, auditoria completa:
+     8 padrões concorrentes fazendo o mesmo papel de título em tamanhos/
+     pesos/fontes diferentes). Mesma lógica do protótipo de interface
+     (3 títulos + 1 subtítulo + 1-2 parágrafos, ver memória
+     feedback_prototipo_constantes_rigidas), com os valores que já são
+     reais neste sistema hoje (ex.: body já é 14px, não 16px) — nenhum
+     token de tamanho/fonte novo, só nomear o que já existe. Aplicar
+     direto na tag (`className="titulo-secao"` etc.), não depender de
+     um wrapper ancestral pra "ganhar" da regra global
+     h1,h2,h3{font-family:serif} (aquilo é o que causava o bug de título
+     saindo em serif sem querer, corrigido primeiro no Campo de Testes e
+     agora nesta rodada). */
+  .titulo-pagina {
+    font-family: var(--font-serif);
+    font-size: var(--font-size-3xl);
+    font-weight: 700;
+    color: var(--cor-texto-forte);
+  }
+
+  .titulo-secao {
+    font-family: var(--font-sans);
+    font-size: var(--font-size-2xl);
+    font-weight: 800;
+    color: var(--cor-texto-forte);
+  }
+
+  .subtitulo {
+    font-family: var(--font-sans);
+    font-size: var(--font-size-xl);
+    font-weight: 700;
+    color: var(--cor-texto-forte);
+  }
+
+  .paragrafo {
+    font-family: var(--font-sans);
+    font-size: var(--font-size-sm);
+    color: var(--cor-texto-forte);
+  }
+
+  /* Texto técnico denso (chave, log, id) — já era o padrão de fato em
+     ModalDetalhe e dashboard-regras-negocio.jsx antes de virar token. */
+  .paragrafo-denso {
+    font-family: var(--font-mono-dev);
+    font-size: var(--font-size-xs);
+    color: var(--cor-texto-fraco);
+  }
+
+  .legenda {
+    font-family: var(--font-sans);
+    font-size: var(--font-size-xs);
+    color: var(--cor-texto-fraco);
+  }
 }

@@ -11,19 +11,6 @@
     margin-bottom: 0;
   }
 
-  /* Reaproveita a escala de tamanhos já definida em 1-base.css (--font-size-*)
-     — nenhum valor novo criado aqui. "Título de seção" (Usuários, Papéis,
-     Configurações...) usa --font-size-2xl; se um dia precisar de um nível
-     "supertítulo" (página inteira) ou "subtítulo" (dentro da seção), a
-     escala já tem --font-size-3xl/xl/lg prontos, é só usar a variável certa
-     — não inventar um valor solto. */
-  .crud-secao h2 {
-    font-family: var(--font-sans);
-    font-size: var(--font-size-2xl);
-    font-weight: 800;
-    color: var(--cor-texto-forte);
-  }
-
   /* Título e botão de ação (ex.: "Criar") na MESMA linha — pedido do Lucas,
      03-08-2026 (antes o botão ficava numa linha própria, embaixo do
      título). space-between empurra um pra cada ponta; wrap pra não
@@ -317,6 +304,24 @@
        hover (não só o ícone) — reforço a mais de propósito, pra ficar
        ainda mais difícil de confundir com as outras duas. */
     background-color: var(--cor-fundo-erro);
+  }
+
+  /* Verde (--cor-texto-sucesso/--cor-fundo-sucesso), mesmo padrão exato
+     de --alterar/--excluir acima — usada pelo "Escolher" do Campo de
+     Testes (23-08-2026), a 3ª cor da família Alterar=azul/Excluir=
+     vermelho. */
+  .crud-tabela__acao--escolher i {
+    color: var(--cor-texto-sucesso);
+    opacity: 0.75;
+  }
+
+  .crud-tabela__acao--escolher:hover i {
+    opacity: 1;
+  }
+
+  .crud-tabela__acao--escolher:hover {
+    color: var(--cor-texto-sucesso);
+    background-color: var(--cor-fundo-sucesso);
   }
 
   /* Cada campo agora é um <label> (texto do rótulo + input/select dentro) —

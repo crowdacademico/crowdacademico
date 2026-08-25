@@ -118,7 +118,7 @@ export function MatrizPapelPermissao({ authFetch }) {
 
   return (
     <section className="crud-secao">
-      <h2 className="flex items-center">
+      <h2 className="titulo-secao flex items-center">
         Papel × Permissão
         <Tooltip texto={TEXTO_TOOLTIP_MATRIZ} />
       </h2>

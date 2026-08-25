@@ -864,6 +864,59 @@ WITH novos AS (
 INSERT INTO usuario_papel (id_usuario, id_papel)
 SELECT n.id_usuario, p.id_papel FROM novos n JOIN papel p ON p.nome = 'usuario';
 
+
+-- ============================================================================
+-- 23-08-2026 — Dashboard: card "Campanhas" volta a funcionar sozinho
+-- Seguro rodar de novo quantas vezes quiser (DROP IF EXISTS + CREATE).
+-- ============================================================================
+-- `contar_metricas_dashboard()` (03, [03-M]) mandava `totalCampanhas: null`
+-- de propósito desde 08-08-2026, porque o módulo 12-campanha nem existia
+-- ainda. Ele passou a existir em 22-08-2026, mas a função nunca foi
+-- atualizada pra contar a tabela `campanha` — achado pelo Lucas usando o
+-- Campo de Testes. Adiciona `total_campanhas` (COUNT simples, mesma
+-- tabela toda, sem filtro de status) ao final da lista de colunas.
+--
+-- CORRIGIDO (mesma data, achado ao vivo pelo Lucas): a 1ª versão deste
+-- bloco usava só CREATE OR REPLACE e caiu no erro 42P13 do Postgres —
+-- "cannot change return type of existing function". `RETURNS TABLE(...)`
+-- é implementado por baixo com parâmetros OUT; REPLACE não deixa mudar
+-- a LISTA de colunas desses parâmetros (só o corpo), só a criação do
+-- zero permite. `DROP FUNCTION` apaga também o GRANT EXECUTE que estava
+-- amarrado à função antiga — por isso o GRANT no fim do bloco, sem ele
+-- o GET /dashboard/resumo voltaria com "permission denied for function".
+DROP FUNCTION IF EXISTS public.contar_metricas_dashboard();
+
+CREATE FUNCTION public.contar_metricas_dashboard()
+RETURNS TABLE (
+    total_usuarios      INT,
+    total_pesquisadores INT,
+    total_papeis        INT,
+    total_permissoes    INT,
+    total_configuracoes INT,
+    total_campanhas     INT,
+    sessoes_ativas      INT
+)
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT
+        (SELECT count(*)::INT FROM usuario WHERE deletado = FALSE),
+        (SELECT count(DISTINCT up.id_usuario)::INT
+           FROM usuario_papel up
+           JOIN papel p ON p.id_papel = up.id_papel
+          WHERE p.nome = 'pesquisador'),
+        (SELECT count(*)::INT FROM papel),
+        (SELECT count(*)::INT FROM permissao),
+        (SELECT count(*)::INT FROM configuracoes),
+        (SELECT count(*)::INT FROM campanha),
+        (SELECT count(*)::INT FROM sessao WHERE revogado_em IS NULL AND expira_em > now());
+$$;
+
+GRANT EXECUTE ON FUNCTION public.contar_metricas_dashboard() TO app_nestjs;
+
+
 -- ============================================================================
 -- NÃO ENTRA NESTE ARQUIVO (registrado aqui só pra não se perder)
 -- ============================================================================

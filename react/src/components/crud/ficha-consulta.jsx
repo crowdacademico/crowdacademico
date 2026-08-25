@@ -55,7 +55,7 @@ export function FichaConsulta({
             recorte de um pai. */}
         <div className="px-8 py-6 border-b borda-padrao fundo-sutil rounded-t-2xl flex items-start justify-between gap-4 flex-wrap">
           <div className="min-w-0">
-            <h2 className="text-2xl font-serif font-bold texto-forte truncate">{titulo}</h2>
+            <h2 className="titulo-secao truncate">{titulo}</h2>
             {subtitulo && <p className="text-sm texto-fraco mt-1 break-words">{subtitulo}</p>}
           </div>
           <div className="flex items-center gap-3 shrink-0">

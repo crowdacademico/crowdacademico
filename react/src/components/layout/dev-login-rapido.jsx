@@ -6,13 +6,22 @@ import { useErroToast } from './use-erro-toast';
 // (07_seed_dados.sql, [07-D-1]), sem digitar nada. Existe só porque logar
 // como admin toda hora pra testar o painel era chato (pedido do Lucas,
 // 03-08-2026) — não cria conta nem senha nova, só reaproveita a senha de
-// dev que já é a mesma pros 17 usuários seedados (ver
-// temp_Nest_React.md, "Seed tinha senha_hash falso"). Clique no rótulo:
-// entra como Admin direto (continua sendo o atalho mais usado). Seta:
-// abre a lista com os outros 6 papéis (03-08-2026, pedido do Lucas: "pra
-// eu ir testando") — mesma ordem de poder do seed (07_seed_dados.sql
-// [07-B-1], id_papel 1=admin...7=usuario), um e-mail seedado por papel,
-// escolhido direto de usuario_papel ([07-D-2]).
+// dev que já é a mesma pros usuários seedados (ver temp_Nest_React.md,
+// "Seed tinha senha_hash falso"). Clique no rótulo: entra como Admin
+// direto (continua sendo o atalho mais usado). Seta: abre a lista com os
+// outros 6 papéis (03-08-2026, pedido do Lucas: "pra eu ir testando") —
+// mesma ordem de poder do seed (07_seed_dados.sql [07-B-1], id_papel
+// 1=admin...7=usuario), um e-mail seedado por papel, escolhido direto de
+// usuario_papel ([07-D-2]).
+//
+// ERA importado de services/campo-testes/constants/atores-seed.js
+// (22-08-2026) — arquivo apagado no dia seguinte (23-08-2026, pedido do
+// Lucas: "não faz sentido estes dados falsos... parece que é mais lixo
+// que vai sujar o código"). Lista voltou a viver só aqui, autocontida —
+// este componente é uma ferramenta independente do Elenco do Campo de
+// Testes (troca de conta ÚNICA da sessão real do painel; o Elenco mantém
+// VÁRIAS ao mesmo tempo, com identidade dinâmica agora, não uma lista
+// fixa).
 const CONTAS_DEV = [
   { rotulo: 'Admin', email: 'admin@crowdacademico.com.br', senha: 'DevTcc123!' },
   { rotulo: 'Moderador', email: 'diego.martins@crowdacademico.com.br', senha: 'DevTcc123!' },

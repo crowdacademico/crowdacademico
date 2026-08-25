@@ -13,6 +13,7 @@ interface LinhaMetricasDashboard {
   total_papeis: number;
   total_permissoes: number;
   total_configuracoes: number;
+  total_campanhas: number;
   sessoes_ativas: number;
 }
 
@@ -44,8 +45,13 @@ export class DashboardServiceResumo {
       totalPapeis: metricas.total_papeis,
       totalPermissoes: metricas.total_permissoes,
       totalConfiguracoes: metricas.total_configuracoes,
-      // campanha (12-campanha) ainda não existe — ver comentário do DTO.
-      totalCampanhas: null,
+      // ERA `null` fixo (comentário "campanha ainda não existe") — o
+      // módulo 12-campanha passou a existir em 22-08-2026, e
+      // contar_metricas_dashboard() (03, [03-M]) foi atualizada em
+      // 23-08-2026 pra contar a tabela de verdade. Achado pelo Lucas
+      // usando o Campo de Testes ("por que o contador não começou a
+      // funcionar sozinho?").
+      totalCampanhas: metricas.total_campanhas,
       sessoesAtivas: metricas.sessoes_ativas,
       // notificacao (26-notificacao) ainda não existe — ver comentário do DTO.
       notificacoesPendentes: null,
