@@ -918,6 +918,29 @@ GRANT EXECUTE ON FUNCTION public.contar_metricas_dashboard() TO app_nestjs;
 
 
 -- ============================================================================
+-- 25-08-2026 — Excluir campanha (Campo de Testes: CRUD completo em T2)
+-- Seguro rodar de novo quantas vezes quiser (DROP IF EXISTS + CREATE, GRANT idempotente).
+-- ============================================================================
+-- 04_rls_policies.sql [04-E-1] — nova policy: DELETE só em campanha ainda
+-- 'aguardando_aprovacao' (mesma lógica do congelamento pós-aprovação), e só
+-- pro dono OU quem tem campanha_editar. Filhos (orcamento_campanha,
+-- marco_cronograma, atualizacao_campanha, seguir_campanha, comentario,
+-- recompensa) já são ON DELETE CASCADE (01) — nenhum deles tem linha ainda
+-- nesse status, então o DELETE nunca esbarra nas FKs RESTRICT/NO ACTION
+-- (denuncia, repasse, solicitacao_encerramento, historico_rejeicao,
+-- contribuicao_recompensa).
+DROP POLICY IF EXISTS pol_campanha_delete ON campanha;
+CREATE POLICY pol_campanha_delete ON campanha FOR DELETE TO app_nestjs USING (
+    status = 'aguardando_aprovacao'
+    AND (id_usuario = public.id_usuario_atual() OR public.tem_permissao('campanha_editar'))
+);
+
+-- 06_grants.sql [06-E] — sem este GRANT, a policy acima nunca chega a ser
+-- avaliada (Postgres barra o DELETE antes, por falta de privilégio de coluna).
+GRANT DELETE ON campanha TO app_nestjs;
+
+
+-- ============================================================================
 -- NÃO ENTRA NESTE ARQUIVO (registrado aqui só pra não se perder)
 -- ============================================================================
 

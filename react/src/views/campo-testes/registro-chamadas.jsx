@@ -5,7 +5,7 @@
 
 import { useState } from 'react';
 import { API_BASE_URL } from '../../services/constant/constants/api.constants';
-import { useElenco } from '../../services/campo-testes/hook/use-elenco';
+import { useCampoTestes } from '../../services/campo-testes/hook/use-campo-testes';
 
 // Prévia de uma linha só, pra comparar retornos direto na lista, sem
 // clicar em cada linha (23-08-2026, pedido do Lucas: ERA um painel à
@@ -36,41 +36,42 @@ function montarCurl(chamada) {
 
 // T4, gaveta recolhível, presente em toda tela do Campo de Testes.
 // Substituto direto do Thunder Client: toda chamada feita via
-// fetchComoAtor (qualquer ator, qualquer tela) aparece aqui, mais recente
-// primeiro.
+// useChamadaRegistrada (qualquer tela) aparece aqui, mais recente
+// primeiro. SEM coluna "Ator" (25-08-2026, remoção do Elenco): só existe
+// um "ator" possível agora, a sessão real logada — mostrar seria ruído.
 export function RegistroChamadas() {
-  const elenco = useElenco();
+  const { registroChamadas, limparRegistro } = useCampoTestes();
   const [aberto, setAberto] = useState(false);
   const [linhaExpandida, setLinhaExpandida] = useState(null);
   const [pagina, setPagina] = useState(1);
   const [tamanhoPagina, setTamanhoPagina] = useState(10);
 
-  const totalPaginas = tamanhoPagina === 'todos' ? 1 : Math.max(1, Math.ceil(elenco.registroChamadas.length / tamanhoPagina));
+  const totalPaginas = tamanhoPagina === 'todos' ? 1 : Math.max(1, Math.ceil(registroChamadas.length / tamanhoPagina));
   const paginaAtual = Math.min(pagina, totalPaginas);
   const registrosPagina =
     tamanhoPagina === 'todos'
-      ? elenco.registroChamadas
-      : elenco.registroChamadas.slice((paginaAtual - 1) * tamanhoPagina, paginaAtual * tamanhoPagina);
+      ? registroChamadas
+      : registroChamadas.slice((paginaAtual - 1) * tamanhoPagina, paginaAtual * tamanhoPagina);
 
   return (
     <div className="registro-chamadas">
       <button type="button" className="btn btn-secondary text-xs" onClick={() => setAberto((atual) => !atual)}>
         <i className={`fa-solid fa-chevron-${aberto ? 'down' : 'right'}`}></i> T4 - Registro de Chamadas (
-        {elenco.registroChamadas.length})
+        {registroChamadas.length})
       </button>
 
       {aberto && (
         <div className="mt-2">
-          {elenco.registroChamadas.length === 0 && (
+          {registroChamadas.length === 0 && (
             <p className="texto-fraco text-xs">Nenhuma chamada registrada ainda nesta aba.</p>
           )}
 
-          {elenco.registroChamadas.length > 0 && (
+          {registroChamadas.length > 0 && (
             <button
               type="button"
               className="btn btn-secondary text-xs mb-2"
               onClick={() => {
-                elenco.limparRegistro();
+                limparRegistro();
                 setPagina(1);
               }}
             >
@@ -78,10 +79,9 @@ export function RegistroChamadas() {
             </button>
           )}
 
-          {elenco.registroChamadas.length > 0 && (
+          {registroChamadas.length > 0 && (
             <div className="registro-chamadas__linha registro-chamadas__linha--cabecalho">
               <span>Hora</span>
-              <span>Ator</span>
               <span>Chamada</span>
               <span>Status</span>
               <span>ms</span>
@@ -96,7 +96,6 @@ export function RegistroChamadas() {
                 onClick={() => setLinhaExpandida((atual) => (atual === chamada.id ? null : chamada.id))}
               >
                 <span>{chamada.hora.toLocaleTimeString('pt-BR')}</span>
-                <span>{elenco.atores[chamada.ator]?.usuario?.nome ?? `#${chamada.ator}`}</span>
                 <span>
                   {chamada.metodo} {chamada.caminho}
                 </span>
@@ -123,10 +122,10 @@ export function RegistroChamadas() {
             </div>
           ))}
 
-          {elenco.registroChamadas.length > TAMANHOS_PAGINA[0] && (
+          {registroChamadas.length > TAMANHOS_PAGINA[0] && (
             <div className="flex items-center justify-between flex-wrap gap-3 mt-3 text-sm texto-padrao">
               <span>
-                Página {paginaAtual} de {totalPaginas} ({elenco.registroChamadas.length} registros)
+                Página {paginaAtual} de {totalPaginas} ({registroChamadas.length} registros)
               </span>
               <div className="flex items-center gap-3">
                 <label className="flex items-center gap-2 text-xs font-semibold texto-padrao">

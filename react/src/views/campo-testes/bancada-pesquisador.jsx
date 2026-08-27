@@ -8,7 +8,8 @@ import { perfilPesquisadorApi } from '../../services/6-perfil-pesquisador/api/pe
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { usuarioPapelApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
 import { ORDEM_PODER_PAPEL, PAPEL_SEM_EXTRA } from '../../services/2-papel-permissao/constants/papel-ordem-poder';
-import { useElenco } from '../../services/campo-testes/hook/use-elenco';
+import { useCampoTestes } from '../../services/campo-testes/hook/use-campo-testes';
+import { useChamadaRegistrada } from '../../services/campo-testes/hook/use-chamada-registrada';
 import { gerarCpfValido } from '../../services/campo-testes/util/gerar-cpf-valido';
 import { PESQUISADOR_BLOQUEADO, motivoBloqueioPesquisador } from '../../services/campo-testes/util/registros-bloqueados';
 import {
@@ -16,7 +17,6 @@ import {
   ROTULO_TITULO_ACADEMICO,
 } from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
 import { ModalDetalhe } from '../../components/crud/modal-detalhe';
-import { BarraElenco } from './barra-elenco';
 import { RegistroChamadas } from './registro-chamadas';
 
 const TIPOS_VINCULO = ['institucional', 'independente'];
@@ -42,17 +42,25 @@ function truncarUrl(url) {
 // T1, Bancada do Pesquisador. Trabalha em cima de REGISTROS REAIS
 // (23-08-2026, pedido do Lucas, ERA um roster de personas fixas,
 // apagado): a lista abaixo vem de GET /perfil-pesquisador de verdade
-// (mesma API da tela admin "Pesquisadores"), e o ator em foco é sempre
-// "Agindo como" (Barra do Elenco). Os 11 pesquisadores 12-22 (a "demo"
-// do próprio 07_seed_dados.sql, já têm campanha, score e links
+// (mesma API da tela admin "Pesquisadores"). Os 11 pesquisadores 12-22
+// (a "demo" do próprio 07_seed_dados.sql, já têm campanha, score e links
 // pré-montados) ficam BLOQUEADOS aqui: aparecem na lista, mas riscados,
 // com cadeado, sem botão de usar. Servem pra explorar o produto, não pra
 // virar cobaia de teste.
+//
+// SEM ELENCO (25-08-2026, pedido do Lucas: "remover de vez" o motor de
+// login-múltiplo). Selecionar uma linha aqui só marca `pesquisadorSelecionado`
+// (CampoTestesProvider) — não faz login nenhum, é sempre a sessão real do
+// painel (`auth`) quem executa toda escrita. Efeito prático: "Promover
+// Usuário → Pesquisador" e as ações de link acadêmico só têm efeito de
+// verdade quando o usuário selecionado É a própria conta logada — pra
+// qualquer outro, a RLS responde com erro de permissão (aparece em
+// `erroCriar`, já tratado). Essa é a limitação aceita pelo Lucas: o
+// Campo de Testes deixou de simular "várias contas ao mesmo tempo".
 export function BancadaPesquisador({ auth }) {
-  const elenco = useElenco();
-  const chaveFoco = elenco.atorPadrao;
-  const usuarioFoco = elenco.atores[chaveFoco]?.usuario ?? null;
-  const jaTemPerfil = elenco.atores[chaveFoco]?.temPerfilPesquisador;
+  const { pesquisadorSelecionado, selecionarPesquisador, limparPesquisadorSelecionado } = useCampoTestes();
+  const chamarERegistrar = useChamadaRegistrada(auth);
+  const chaveFoco = pesquisadorSelecionado?.idUsuario ?? null;
 
   const [pesquisadores, setPesquisadores] = useState([]);
   const [carregandoLista, setCarregandoLista] = useState(true);
@@ -93,16 +101,19 @@ export function BancadaPesquisador({ auth }) {
   const [formEdicaoLink, setFormEdicaoLink] = useState({ url: '', rotulo: '' });
   const [linkConsultado, setLinkConsultado] = useState(null);
 
-  const chavesVivasForaFoco = Object.keys(elenco.atores).filter(
-    (idUsuario) => Number(idUsuario) !== chaveFoco && elenco.atores[idUsuario].status === 'vivo',
-  );
+  // Sem probe separado (era `elenco.atores[chaveFoco].temPerfilPesquisador`,
+  // uma 2ª chamada de rede): `pesquisadores` já carrega perfil_pesquisador
+  // JUNTO com usuario (ver carregarPesquisadores abaixo), então a própria
+  // linha selecionada já diz se tem perfil ou não.
+  const perfilFoco = pesquisadores.find((perfil) => perfil.idUsuario === chaveFoco) ?? null;
+  const usuarioFoco = perfilFoco?.usuario ?? pesquisadorSelecionado ?? null;
+  const jaTemPerfil = chaveFoco === null ? undefined : Boolean(perfilFoco?.statusPesquisador);
 
   // Lista TODOS os usuários (23-08-2026, pedido do Lucas: "não deve
-  // aparecer só Pesquisadores"), não só quem já tem perfil_pesquisador,
-  // pra dar pra escolher qualquer conta real como ator sem precisar da
-  // busca "+ ator" da Barra do Elenco. Quem ainda não tem perfil mostra
-  // as colunas de pesquisador em branco, é o gancho pro formulário "Criar
-  // perfil" logo abaixo.
+  // aparecer só Pesquisadores"), não só quem já tem perfil_pesquisador —
+  // qualquer conta real dá pra selecionar. Quem ainda não tem perfil
+  // mostra as colunas de pesquisador em branco, é o gancho pro formulário
+  // "Criar perfil" logo abaixo.
   // Coluna/facet "papel" (mesma lógica de listar-usuarios.jsx): junta
   // usuario_papel de todo mundo de uma vez (1 requisição, não 1 por
   // linha), papel padrão 'usuario' não conta como "extra".
@@ -152,11 +163,11 @@ export function BancadaPesquisador({ auth }) {
     return () => document.removeEventListener('mousedown', aoClicarFora);
   }, [facetaPapelAberta]);
 
-  // Carrega score + links sempre que o ator em foco (ou quem tem perfil)
-  // mudar. A comparação "CPF visto pelo dono x visto por outro" (RF-016)
-  // não tem mais painel dedicado (23-08-2026, pedido do Lucas): as duas
-  // chamadas GET /perfil-pesquisador de atores diferentes já aparecem
-  // naturalmente no Registro de Chamadas, sem precisar duplicar a UI.
+  // Carrega score + links sempre que o pesquisador selecionado (com
+  // perfil) mudar. A comparação "CPF visto pelo dono x visto por outro"
+  // (RF-016) não tem mais painel dedicado (23-08-2026, pedido do Lucas):
+  // as chamadas GET já aparecem naturalmente no Registro de Chamadas,
+  // sem precisar duplicar a UI.
   useEffect(() => {
     if (!chaveFoco || jaTemPerfil !== true) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -164,35 +175,32 @@ export function BancadaPesquisador({ auth }) {
       setLinks([]);
       return;
     }
-    elenco.fetchComoAtor(chaveFoco, `/perfil-pesquisador/${chaveFoco}/score`).then(setScore).catch(() => {});
-    elenco.fetchComoAtor(chaveFoco, `/link-academico?idUsuario=${chaveFoco}`).then(setLinks).catch(() => {});
+    chamarERegistrar(`/perfil-pesquisador/${chaveFoco}/score`).then(setScore).catch(() => {});
+    chamarERegistrar(`/link-academico?idUsuario=${chaveFoco}`).then(setLinks).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chaveFoco, jaTemPerfil]);
 
-  // Catálogo de tipo de link, só uma vez, assim que existir QUALQUER ator
-  // vivo pra buscar (é público, mas fetchComoAtor precisa de um ator pra
-  // registrar a chamada em T4, qualquer um serve).
+  // Catálogo de tipo de link, uma vez só, ao montar — não depende mais de
+  // ninguém selecionado (era "qualquer ator vivo", só pra ter alguém pra
+  // registrar a chamada em T4; sem Elenco, a sessão real já basta).
   useEffect(() => {
-    const chaveQualquerVivo = chaveFoco ?? chavesVivasForaFoco[0];
-    if (!chaveQualquerVivo || tiposLink.length > 0) return;
-    elenco
-      .fetchComoAtor(chaveQualquerVivo, '/tipo-link?escopo=perfil&tamanho=100')
+    if (tiposLink.length > 0) return;
+    chamarERegistrar('/tipo-link?escopo=perfil&tamanho=100')
       .then((resultado) => setTiposLink(resultado.dados ?? []))
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chaveFoco]);
+  }, []);
 
-  const usarPesquisador = async (perfil) => {
+  const escolherPesquisador = (perfil) => {
     if (!perfil.usuario) return;
-    await elenco.entrarComoUsuario({ idUsuario: perfil.idUsuario, email: perfil.usuario.email });
-    elenco.selecionarAtorPadrao(perfil.idUsuario);
+    selecionarPesquisador({ idUsuario: perfil.idUsuario, nome: perfil.usuario.nome, email: perfil.usuario.email });
   };
 
   const criarPerfil = async () => {
     setCriando(true);
     setErroCriar(null);
     try {
-      await elenco.fetchComoAtor(chaveFoco, '/perfil-pesquisador', {
+      await chamarERegistrar('/perfil-pesquisador', {
         method: 'POST',
         body: JSON.stringify({
           cpf: form.cpf,
@@ -201,7 +209,6 @@ export function BancadaPesquisador({ auth }) {
           tituloAcademico: form.tituloAcademico,
         }),
       });
-      await elenco.renovarAtor(chaveFoco);
       carregarPesquisadores();
     } catch (erro) {
       setErroCriar(erro.message ?? 'Falha ao criar perfil.');
@@ -213,7 +220,7 @@ export function BancadaPesquisador({ auth }) {
   const adicionarLink = async () => {
     if (!novoLink.idTipoLink || !novoLink.url) return;
     try {
-      await elenco.fetchComoAtor(chaveFoco, '/link-academico', {
+      await chamarERegistrar('/link-academico', {
         method: 'POST',
         body: JSON.stringify({
           idTipoLink: Number(novoLink.idTipoLink),
@@ -221,7 +228,7 @@ export function BancadaPesquisador({ auth }) {
           ...(novoLink.rotulo ? { rotulo: novoLink.rotulo } : {}),
         }),
       });
-      const atualizados = await elenco.fetchComoAtor(chaveFoco, `/link-academico?idUsuario=${chaveFoco}`);
+      const atualizados = await chamarERegistrar(`/link-academico?idUsuario=${chaveFoco}`);
       setLinks(atualizados);
       setNovoLink({ idTipoLink: '', url: '', rotulo: '' });
     } catch {
@@ -236,8 +243,8 @@ export function BancadaPesquisador({ auth }) {
   // desde sempre (7-link-academico/controllers/link-academico.controller.
   // remove.ts), só nunca tinha ganhado botão aqui na tela de teste.
   const removerLink = async (idLinkAcademico) => {
-    await elenco.fetchComoAtor(chaveFoco, `/link-academico/${idLinkAcademico}`, { method: 'DELETE' }).catch(() => {});
-    const atualizados = await elenco.fetchComoAtor(chaveFoco, `/link-academico?idUsuario=${chaveFoco}`);
+    await chamarERegistrar(`/link-academico/${idLinkAcademico}`, { method: 'DELETE' }).catch(() => {});
+    const atualizados = await chamarERegistrar(`/link-academico?idUsuario=${chaveFoco}`);
     setLinks(atualizados);
   };
 
@@ -251,13 +258,11 @@ export function BancadaPesquisador({ auth }) {
   // link-academico.request-update.ts), só url/rótulo.
   const salvarEdicaoLink = async () => {
     if (!formEdicaoLink.url) return;
-    await elenco
-      .fetchComoAtor(chaveFoco, `/link-academico/${idLinkEditando}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ url: formEdicaoLink.url, ...(formEdicaoLink.rotulo ? { rotulo: formEdicaoLink.rotulo } : {}) }),
-      })
-      .catch(() => {});
-    const atualizados = await elenco.fetchComoAtor(chaveFoco, `/link-academico?idUsuario=${chaveFoco}`);
+    await chamarERegistrar(`/link-academico/${idLinkEditando}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ url: formEdicaoLink.url, ...(formEdicaoLink.rotulo ? { rotulo: formEdicaoLink.rotulo } : {}) }),
+    }).catch(() => {});
+    const atualizados = await chamarERegistrar(`/link-academico?idUsuario=${chaveFoco}`);
     setLinks(atualizados);
     setIdLinkEditando(null);
   };
@@ -302,21 +307,26 @@ export function BancadaPesquisador({ auth }) {
         <h2 className="titulo-secao">Campo de Testes - Bancada do Pesquisador</h2>
       </div>
 
-      <BarraElenco auth={auth} />
-
       <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
         <h3 className="subtitulo">Usuários</h3>
-        <label className="text-xs flex items-center gap-1.5">
-          <input
-            type="checkbox"
-            checked={ocultarBloqueados}
-            onChange={(evento) => {
-              setOcultarBloqueados(evento.target.checked);
-              setPagina(1);
-            }}
-          />
-          Ocultar bloqueados (demonstração)
-        </label>
+        <div className="flex items-center gap-3 flex-wrap">
+          {pesquisadorSelecionado && (
+            <button type="button" className="btn btn-secondary text-xs" onClick={limparPesquisadorSelecionado}>
+              <i className="fa-solid fa-xmark"></i> Limpar seleção
+            </button>
+          )}
+          <label className="text-xs flex items-center gap-1.5">
+            <input
+              type="checkbox"
+              checked={ocultarBloqueados}
+              onChange={(evento) => {
+                setOcultarBloqueados(evento.target.checked);
+                setPagina(1);
+              }}
+            />
+            Ocultar bloqueados (demonstração)
+          </label>
+        </div>
       </div>
 
       {(pesquisadores.length > LIMIAR_FILTRO || opcoesPapel.length > 1) && (
@@ -421,12 +431,9 @@ export function BancadaPesquisador({ auth }) {
           {!carregandoLista &&
             pesquisadoresPagina.map((perfil) => {
               const bloqueado = PESQUISADOR_BLOQUEADO(perfil.idUsuario);
-              // Só UM pesquisador pode estar "Agindo como" por vez (pedido
-              // do Lucas, 23-08-2026: "clicar em outro a seleção troca" —
-              // já era assim por baixo, selecionarAtorPadrao é um valor
-              // só, nunca lista; faltava só marcar visualmente QUAL linha
-              // é essa, pra ficar óbvio, não só implícito no dropdown
-              // "Agindo como" lá em cima).
+              // Só UM pesquisador selecionado por vez (pedido do Lucas,
+              // 23-08-2026: "clicar em outro a seleção troca") — usado
+              // por T2 (Bancada da Campanha) pra filtrar por dono.
               const selecionado = perfil.idUsuario === chaveFoco;
               return (
                 <tr
@@ -460,7 +467,7 @@ export function BancadaPesquisador({ auth }) {
                       <button
                         type="button"
                         className="crud-tabela__acao crud-tabela__acao--escolher"
-                        onClick={() => usarPesquisador(perfil)}
+                        onClick={() => escolherPesquisador(perfil)}
                         aria-label="Escolher"
                       >
                         <i className="fa-solid fa-user-check"></i>
@@ -525,8 +532,7 @@ export function BancadaPesquisador({ auth }) {
 
       {!chaveFoco && (
         <p className="texto-fraco">
-          Escolha um ator em <strong>Agindo como</strong> (Barra do Elenco), ou clique "Escolher" numa linha da
-          tabela acima.
+          Clique em <strong>Escolher</strong> numa linha da tabela acima.
         </p>
       )}
 

@@ -8,10 +8,10 @@ import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
 import { areaConhecimentoApi } from '../../services/8-area-conhecimento/api/area-conhecimento.api';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { tratarResposta } from '../../services/constant/api/http.util';
-import { useElenco } from '../../services/campo-testes/hook/use-elenco';
-import { CAMPANHA_BLOQUEADA, motivoBloqueioCampanha, PESQUISADOR_BLOQUEADO } from '../../services/campo-testes/util/registros-bloqueados';
+import { useCampoTestes } from '../../services/campo-testes/hook/use-campo-testes';
+import { useChamadaRegistrada } from '../../services/campo-testes/hook/use-chamada-registrada';
+import { CAMPANHA_BLOQUEADA, motivoBloqueioCampanha } from '../../services/campo-testes/util/registros-bloqueados';
 import { ModalDetalhe } from '../../components/crud/modal-detalhe';
-import { BarraElenco } from './barra-elenco';
 import { RegistroChamadas } from './registro-chamadas';
 
 // Mesmos defaults de configuracoes.orcamento_min_itens/cronograma_min_marcos
@@ -27,31 +27,29 @@ function formatarReais(valor) {
   return (valor ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
-function isoDaquiA(dias) {
-  const data = new Date();
-  data.setDate(data.getDate() + dias);
-  return data.toISOString();
-}
-
-// T2, Bancada da Campanha. Leituras de catálogo (listar campanhas,
-// áreas, detalhe/orçamento/cronograma de uma campanha) usam a sessão
-// REAL do painel (`auth`, sempre um admin, vê tudo via
-// relatorio_visualizar), não precisam de ninguém no Elenco pra
-// funcionar. Só as AÇÕES de teste (criar campanha, mexer em orçamento/
-// cronograma, aprovar/rejeitar) passam por `elenco.fetchComoAtor`, com
-// um ator específico: é isso que faz a ação ficar atribuída a alguém de
-// verdade, testável.
+// T2, Bancada da Campanha. SEM ELENCO (25-08-2026, pedido do Lucas:
+// "remover de vez" o motor de login-múltiplo — redesenho completo desta
+// tela). Toda chamada usa a sessão REAL do painel (`auth`, sempre um
+// admin): leituras sempre funcionaram assim (relatorio_visualizar vê
+// tudo); as ESCRITAS que hoje continuam fazendo sentido (Alterar,
+// orçamento/cronograma, Aprovar, Rejeitar, Excluir) também — o admin já
+// tem `campanha_editar`/`campanha_aprovar`/`campanha_rejeitar`, RLS
+// libera não importa quem seja o dono de verdade (04_rls_policies.sql,
+// pol_campanha_update). Criar campanha SAIU daqui (RLS exige
+// id_usuario = id_usuario_atual(), não dá pra "criar em nome de" um
+// pesquisador escolhido sem personificação) — o Lucas vai detalhar
+// depois como a criação pelo próprio pesquisador vai funcionar.
 //
-// "Campanha em foco" (23-08-2026, pedido do Lucas: "está feio", ERA um
-// <select>) virou tabela de verdade, mesma regra de bancada-pesquisador.
-// jsx (T1): filtro de texto, facet por status, paginação, linha
-// selecionada marcada. A escolha vive no ElencoProvider (`campanhaFoco`),
-// não aqui, é o que deixa a Vida da Campanha Ativa (T3) só continuar de
-// onde esta tela parou, sem escolher de novo.
+// `pesquisadorSelecionado` (T1, Bancada do Pesquisador, compartilhado via
+// CampoTestesProvider): se tiver alguém selecionado, a tabela abaixo só
+// mostra as campanhas DESSE pesquisador (filtro server-side, campanhaApi.
+// listar já aceita `idUsuario`). "Campanha em foco" (23-08-2026, ERA um
+// <select>, virou tabela com filtro/facet/paginação/linha selecionada,
+// mesma regra de T1) continua em `campanhaFoco`, é o que deixa a Vida da
+// Campanha Ativa (T3) só continuar de onde esta tela parou.
 export function BancadaCampanha({ auth }) {
-  const elenco = useElenco();
-  const chavesVivas = Object.keys(elenco.atores).filter((idUsuario) => elenco.atores[idUsuario].status === 'vivo');
-  const idAdminVivo = chavesVivas.find((idUsuario) => elenco.atores[idUsuario].papeis.includes('admin'));
+  const { pesquisadorSelecionado, limparPesquisadorSelecionado, campanhaFoco, selecionarCampanhaFoco } = useCampoTestes();
+  const chamarERegistrar = useChamadaRegistrada(auth);
 
   const [areas, setAreas] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
@@ -65,7 +63,6 @@ export function BancadaCampanha({ auth }) {
   const [statusSelecionados, setStatusSelecionados] = useState([]);
   const [facetaStatusAberta, setFacetaStatusAberta] = useState(false);
   const facetaStatusRef = useRef(null);
-  const [mostrarFormCriar, setMostrarFormCriar] = useState(false);
   const [campanhaConsultada, setCampanhaConsultada] = useState(null);
   const [idCampanhaEditando, setIdCampanhaEditando] = useState(null);
   const [formEdicaoCampanha, setFormEdicaoCampanha] = useState(null);
@@ -76,19 +73,18 @@ export function BancadaCampanha({ auth }) {
   const [cronograma, setCronograma] = useState([]);
   const [abaAtiva, setAbaAtiva] = useState('orcamento');
 
-  const [novaCampanha, setNovaCampanha] = useState({ dono: '', titulo: '', idAreaConhecimento: '', metaFinanceira: 10000 });
   const [novoItemOrcamento, setNovoItemOrcamento] = useState({ categoria: '', valor: '' });
   const [novoMarco, setNovoMarco] = useState({ titulo: '', dataPrevista: '' });
   const [justificativaRejeicao, setJustificativaRejeicao] = useState('');
-  const [passosReceita, setPassosReceita] = useState([]);
-  const [rodandoReceita, setRodandoReceita] = useState(false);
 
   const carregarCampanhas = () => {
-    campanhaApi.listar(auth.authFetch).then(setCampanhas).catch(() => {});
+    campanhaApi
+      .listar(auth.authFetch, pesquisadorSelecionado ? { idUsuario: pesquisadorSelecionado.idUsuario } : undefined)
+      .then(setCampanhas)
+      .catch(() => {});
   };
 
   useEffect(() => {
-    carregarCampanhas();
     areaConhecimentoApi
       .listar(auth.authFetch)
       .then((lista) => setAreas(lista.filter((area) => area.idPai !== null)))
@@ -96,6 +92,14 @@ export function BancadaCampanha({ auth }) {
     usuarioApi.listar(auth.authFetch).then(setUsuarios).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Recarrega sempre que o pesquisador selecionado em T1 mudar (filtro
+  // por dono, feito no servidor — campanhaApi.listar já aceita
+  // `idUsuario`) ou limpar (volta a mostrar todas).
+  useEffect(() => {
+    carregarCampanhas();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pesquisadorSelecionado]);
 
   // Fechar o dropdown "Status" ao clicar fora (mesmo padrão do facet
   // "Papel" de bancada-pesquisador.jsx / GenericTable).
@@ -133,9 +137,9 @@ export function BancadaCampanha({ auth }) {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    carregarDetalheCampanha(elenco.campanhaFoco);
+    carregarDetalheCampanha(campanhaFoco);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [elenco.campanhaFoco]);
+  }, [campanhaFoco]);
 
   // Opções do dropdown "Status" — só os valores que já aparecem nos
   // dados (mesmo sniff de GenericTable/bancada-pesquisador.jsx), sem
@@ -165,29 +169,10 @@ export function BancadaCampanha({ auth }) {
   const prontaParaAprovar = campanha?.status === 'aguardando_aprovacao' && orcamentoOk && cronogramaOk;
 
   const motivoAprovarDesabilitado = () => {
-    if (!idAdminVivo) return 'Um Admin precisa estar no elenco pra aprovar.';
     if (campanha?.status !== 'aguardando_aprovacao') return `Status atual é "${campanha?.status}", não dá pra aprovar.`;
     if (!orcamentoOk) return `Orçamento incompleto (${orcamento.length}/${MINIMO_ITENS_ORCAMENTO} itens, soma ${formatarReais(somaOrcamento)} de ${formatarReais(campanha?.metaFinanceira)}).`;
     if (!cronogramaOk) return `Cronograma incompleto (${cronograma.length}/${MINIMO_MARCOS_CRONOGRAMA} marcos).`;
     return null;
-  };
-
-  const criarCampanha = async () => {
-    if (!novaCampanha.dono || !novaCampanha.titulo || !novaCampanha.idAreaConhecimento) return;
-    const criada = await elenco.fetchComoAtor(Number(novaCampanha.dono), '/campanha', {
-      method: 'POST',
-      body: JSON.stringify({
-        titulo: novaCampanha.titulo,
-        idAreaConhecimento: Number(novaCampanha.idAreaConhecimento),
-        metaFinanceira: Number(novaCampanha.metaFinanceira),
-        dataInicio: isoDaquiA(1),
-        dataFim: isoDaquiA(30),
-      }),
-    });
-    setNovaCampanha({ dono: '', titulo: '', idAreaConhecimento: '', metaFinanceira: 10000 });
-    setMostrarFormCriar(false);
-    carregarCampanhas();
-    elenco.selecionarCampanhaFoco(criada.idCampanha);
   };
 
   const iniciarEdicaoCampanha = (item) => {
@@ -206,154 +191,88 @@ export function BancadaCampanha({ auth }) {
   // PATCH /campanha/:id (dono OU campanha_editar) — sem status/id_admin/
   // taxa_plataforma/modelo aqui de propósito, ver campanha.request-update.
   // ts: quem muda status são aprovar/rejeitar, nunca este PATCH genérico.
-  // Não existe DELETE /campanha/:id no backend (só create/update/aprovar/
-  // rejeitar) — "Excluir" campanha não é uma operação que o produto
-  // ofereça hoje, então esta tabela também não oferece.
   const salvarEdicaoCampanha = async () => {
-    if (!idAdminVivo || !formEdicaoCampanha.titulo) return;
-    await elenco
-      .fetchComoAtor(idAdminVivo, `/campanha/${idCampanhaEditando}`, {
-        method: 'PATCH',
-        body: JSON.stringify({
-          titulo: formEdicaoCampanha.titulo,
-          idAreaConhecimento: Number(formEdicaoCampanha.idAreaConhecimento),
-          metaFinanceira: Number(formEdicaoCampanha.metaFinanceira),
-          ...(formEdicaoCampanha.descricao ? { descricao: formEdicaoCampanha.descricao } : {}),
-          ...(formEdicaoCampanha.dataInicio ? { dataInicio: new Date(formEdicaoCampanha.dataInicio).toISOString() } : {}),
-          ...(formEdicaoCampanha.dataFim ? { dataFim: new Date(formEdicaoCampanha.dataFim).toISOString() } : {}),
-          ...(formEdicaoCampanha.videoApresentacaoUrl ? { videoApresentacaoUrl: formEdicaoCampanha.videoApresentacaoUrl } : {}),
-        }),
-      })
-      .catch(() => {});
+    if (!formEdicaoCampanha.titulo) return;
+    await chamarERegistrar(`/campanha/${idCampanhaEditando}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        titulo: formEdicaoCampanha.titulo,
+        idAreaConhecimento: Number(formEdicaoCampanha.idAreaConhecimento),
+        metaFinanceira: Number(formEdicaoCampanha.metaFinanceira),
+        ...(formEdicaoCampanha.descricao ? { descricao: formEdicaoCampanha.descricao } : {}),
+        ...(formEdicaoCampanha.dataInicio ? { dataInicio: new Date(formEdicaoCampanha.dataInicio).toISOString() } : {}),
+        ...(formEdicaoCampanha.dataFim ? { dataFim: new Date(formEdicaoCampanha.dataFim).toISOString() } : {}),
+        ...(formEdicaoCampanha.videoApresentacaoUrl ? { videoApresentacaoUrl: formEdicaoCampanha.videoApresentacaoUrl } : {}),
+      }),
+    }).catch(() => {});
     setIdCampanhaEditando(null);
     carregarCampanhas();
-    if (elenco.campanhaFoco === idCampanhaEditando) {
+    if (campanhaFoco === idCampanhaEditando) {
       carregarDetalheCampanha(idCampanhaEditando);
     }
   };
 
-  // idAdminVivo em toda escrita de orçamento/cronograma abaixo: pol_
-  // orcamento_campanha_*/pol_marco_cronograma_* (04) liberam dono OU
+  // pol_orcamento_campanha_*/pol_marco_cronograma_* (04) liberam dono OU
   // campanha_editar: admin sempre tem campanha_editar (trg_admin_
   // recebe_toda_permissao, 05), funciona não importa quem seja o dono de
   // verdade.
   const adicionarItemOrcamento = async () => {
-    if (!novoItemOrcamento.categoria || !novoItemOrcamento.valor || !idAdminVivo) return;
-    await elenco
-      .fetchComoAtor(idAdminVivo, '/orcamento-campanha', {
-        method: 'POST',
-        body: JSON.stringify({ idCampanha: elenco.campanhaFoco, categoria: novoItemOrcamento.categoria, valor: Number(novoItemOrcamento.valor) }),
-      })
-      .catch(() => {});
+    if (!novoItemOrcamento.categoria || !novoItemOrcamento.valor) return;
+    await chamarERegistrar('/orcamento-campanha', {
+      method: 'POST',
+      body: JSON.stringify({ idCampanha: campanhaFoco, categoria: novoItemOrcamento.categoria, valor: Number(novoItemOrcamento.valor) }),
+    }).catch(() => {});
     setNovoItemOrcamento({ categoria: '', valor: '' });
-    carregarDetalheCampanha(elenco.campanhaFoco);
+    carregarDetalheCampanha(campanhaFoco);
   };
 
   const removerItemOrcamento = async (idOrcamento) => {
-    if (!idAdminVivo) return;
-    await elenco.fetchComoAtor(idAdminVivo, `/orcamento-campanha/${idOrcamento}`, { method: 'DELETE' }).catch(() => {});
-    carregarDetalheCampanha(elenco.campanhaFoco);
+    await chamarERegistrar(`/orcamento-campanha/${idOrcamento}`, { method: 'DELETE' }).catch(() => {});
+    carregarDetalheCampanha(campanhaFoco);
   };
 
   const adicionarMarco = async () => {
-    if (!novoMarco.titulo || !novoMarco.dataPrevista || !idAdminVivo) return;
-    await elenco
-      .fetchComoAtor(idAdminVivo, '/marco-cronograma', {
-        method: 'POST',
-        body: JSON.stringify({ idCampanha: elenco.campanhaFoco, titulo: novoMarco.titulo, dataPrevista: new Date(novoMarco.dataPrevista).toISOString() }),
-      })
-      .catch(() => {});
+    if (!novoMarco.titulo || !novoMarco.dataPrevista) return;
+    await chamarERegistrar('/marco-cronograma', {
+      method: 'POST',
+      body: JSON.stringify({ idCampanha: campanhaFoco, titulo: novoMarco.titulo, dataPrevista: new Date(novoMarco.dataPrevista).toISOString() }),
+    }).catch(() => {});
     setNovoMarco({ titulo: '', dataPrevista: '' });
-    carregarDetalheCampanha(elenco.campanhaFoco);
+    carregarDetalheCampanha(campanhaFoco);
   };
 
   const removerMarco = async (idMarco) => {
-    if (!idAdminVivo) return;
-    await elenco.fetchComoAtor(idAdminVivo, `/marco-cronograma/${idMarco}`, { method: 'DELETE' }).catch(() => {});
-    carregarDetalheCampanha(elenco.campanhaFoco);
+    await chamarERegistrar(`/marco-cronograma/${idMarco}`, { method: 'DELETE' }).catch(() => {});
+    carregarDetalheCampanha(campanhaFoco);
   };
 
   const aprovar = async () => {
-    await elenco.fetchComoAtor(idAdminVivo, `/campanha/${elenco.campanhaFoco}/aprovar`, { method: 'POST' }).catch(() => {});
-    carregarDetalheCampanha(elenco.campanhaFoco);
+    await chamarERegistrar(`/campanha/${campanhaFoco}/aprovar`, { method: 'POST' }).catch(() => {});
+    carregarDetalheCampanha(campanhaFoco);
     carregarCampanhas();
   };
 
   const rejeitar = async () => {
-    await elenco
-      .fetchComoAtor(idAdminVivo, `/campanha/${elenco.campanhaFoco}/rejeitar`, {
-        method: 'POST',
-        body: JSON.stringify({ justificativa: justificativaRejeicao || undefined }),
-      })
-      .catch(() => {});
+    await chamarERegistrar(`/campanha/${campanhaFoco}/rejeitar`, {
+      method: 'POST',
+      body: JSON.stringify({ justificativa: justificativaRejeicao || undefined }),
+    }).catch(() => {});
     setJustificativaRejeicao('');
-    carregarDetalheCampanha(elenco.campanhaFoco);
+    carregarDetalheCampanha(campanhaFoco);
     carregarCampanhas();
   };
 
-  // "Montar campanha aprovada em 1 clique": a receita. Precisa de um
-  // Admin no elenco (aprova) e de "Agindo como" apontando pra um
-  // pesquisador de verdade, com perfil, que NÃO seja um dos bloqueados
-  // (12-22). Sem roster fixo, não dá mais pra supor "Ana e Admin",
-  // então a receita usa quem estiver escolhido em "Agindo como".
-  const montarCampanhaAprovada = async () => {
-    const idDono = elenco.atorPadrao;
-    const donoValido = idDono && elenco.atores[idDono]?.temPerfilPesquisador === true && !PESQUISADOR_BLOQUEADO(idDono);
-    if (!idAdminVivo || !donoValido) {
-      setPassosReceita([
-        {
-          texto: 'Precisa de um Admin no elenco e de um pesquisador (com perfil, não-bloqueado) selecionado em "Agindo como".',
-          ok: false,
-        },
-      ]);
-      return;
+  // Só permitido em 'aguardando_aprovacao' (RLS: pol_campanha_delete, ver
+  // 04_rls_policies.sql) — mesma lógica do congelamento pós-aprovação.
+  // Cascateia orçamento/cronograma/atualizações/seguidores/comentários
+  // (ON DELETE CASCADE, 01_extensoes_enums_tabelas.sql), sem risco: nada
+  // disso existe ainda pra uma campanha que nunca foi aprovada.
+  const excluirCampanha = async (idCampanha) => {
+    await chamarERegistrar(`/campanha/${idCampanha}`, { method: 'DELETE' }).catch(() => {});
+    if (campanhaFoco === idCampanha) {
+      selecionarCampanhaFoco(null);
     }
-    setRodandoReceita(true);
-    const passos = [];
-    const atualizarPasso = (texto, ok) => {
-      passos.push({ texto, ok });
-      setPassosReceita([...passos]);
-    };
-    try {
-      const area = areas[0];
-      const criada = await elenco.fetchComoAtor(idDono, '/campanha', {
-        method: 'POST',
-        body: JSON.stringify({
-          titulo: `Campanha de teste, receita ${new Date().toLocaleTimeString('pt-BR')}`,
-          idAreaConhecimento: area.idAreaConhecimento,
-          metaFinanceira: 9000,
-          dataInicio: isoDaquiA(1),
-          dataFim: isoDaquiA(30),
-        }),
-      });
-      atualizarPasso(`Campanha #${criada.idCampanha} criada como ${elenco.atores[idDono]?.usuario?.nome}`, true);
-
-      for (const valor of [3000, 3000, 3000]) {
-        await elenco.fetchComoAtor(idDono, '/orcamento-campanha', {
-          method: 'POST',
-          body: JSON.stringify({ idCampanha: criada.idCampanha, categoria: 'Item de teste', valor }),
-        });
-      }
-      atualizarPasso('3 itens de orçamento somando R$ 9.000,00', true);
-
-      for (let indice = 1; indice <= 3; indice += 1) {
-        await elenco.fetchComoAtor(idDono, '/marco-cronograma', {
-          method: 'POST',
-          body: JSON.stringify({ idCampanha: criada.idCampanha, titulo: `Marco ${indice}`, dataPrevista: isoDaquiA(indice * 5) }),
-        });
-      }
-      atualizarPasso('3 marcos de cronograma', true);
-
-      await elenco.fetchComoAtor(idAdminVivo, `/campanha/${criada.idCampanha}/aprovar`, { method: 'POST' });
-      atualizarPasso('Aprovada como Admin', true);
-
-      carregarCampanhas();
-      elenco.selecionarCampanhaFoco(criada.idCampanha);
-    } catch (erro) {
-      atualizarPasso(`Falhou: ${erro.message}`, false);
-    } finally {
-      setRodandoReceita(false);
-    }
+    carregarCampanhas();
   };
 
   return (
@@ -363,10 +282,33 @@ export function BancadaCampanha({ auth }) {
         <h2 className="titulo-secao">Campo de Testes - Bancada da Campanha</h2>
       </div>
 
-      <BarraElenco auth={auth} />
+      {pesquisadorSelecionado && (
+        <table className="crud-tabela mb-4">
+          <thead>
+            <tr>
+              <th>Pesquisador selecionado (T1)</th>
+              <th>E-mail</th>
+              <th className="crud-tabela__celula--centralizada">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr className="crud-tabela__linha--selecionada">
+              <td>{pesquisadorSelecionado.nome}</td>
+              <td>{pesquisadorSelecionado.email}</td>
+              <td className="crud-tabela__celula--centralizada">
+                <button type="button" className="crud-tabela__acao crud-tabela__acao--excluir" onClick={limparPesquisadorSelecionado}>
+                  <i className="fa-solid fa-xmark"></i>
+                  <span className="crud-tabela__acao-texto">Limpar seleção</span>
+                  <span className="crud-tabela__acao-dica" role="tooltip">Limpar seleção</span>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      )}
 
       <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
-        <h3 className="subtitulo">Campanhas</h3>
+        <h3 className="subtitulo">Campanhas{pesquisadorSelecionado ? ` de ${pesquisadorSelecionado.nome}` : ''}</h3>
         <label className="text-xs flex items-center gap-1.5">
           <input
             type="checkbox"
@@ -454,20 +396,7 @@ export function BancadaCampanha({ auth }) {
             </div>
           )}
 
-          <button type="button" className="btn btn-primary" disabled={rodandoReceita} onClick={montarCampanhaAprovada}>
-            <i className="fa-solid fa-wand-magic-sparkles"></i> Montar campanha aprovada em 1 clique
-          </button>
         </div>
-      )}
-
-      {passosReceita.length > 0 && (
-        <ul className="fundo-sutil rounded-md p-3 mb-4 text-xs">
-          {passosReceita.map((passo, indice) => (
-            <li key={indice} className={passo.ok ? 'texto-sucesso' : 'texto-erro'}>
-              {passo.ok ? '✓' : '✗'} {passo.texto}
-            </li>
-          ))}
-        </ul>
       )}
 
       <table className="crud-tabela mb-2">
@@ -478,19 +407,21 @@ export function BancadaCampanha({ auth }) {
             <th>status</th>
             <th>dono</th>
             <th className="crud-tabela__celula--centralizada">meta</th>
+            <th className="crud-tabela__celula--centralizada">Escolher</th>
             <th className="crud-tabela__celula--centralizada">Ações</th>
           </tr>
         </thead>
         <tbody>
           {campanhasPagina.length === 0 && (
             <tr>
-              <td colSpan={6} className="texto-fraco">{filtroTexto ? 'Nenhum registro bate com o filtro.' : 'Nenhum registro.'}</td>
+              <td colSpan={7} className="texto-fraco">{filtroTexto ? 'Nenhum registro bate com o filtro.' : 'Nenhum registro.'}</td>
             </tr>
           )}
           {campanhasPagina.map((item) => {
             const bloqueada = CAMPANHA_BLOQUEADA(item.idCampanha);
-            const selecionada = item.idCampanha === elenco.campanhaFoco;
+            const selecionada = item.idCampanha === campanhaFoco;
             const emEdicao = idCampanhaEditando === item.idCampanha;
+            const podeExcluir = item.status === 'aguardando_aprovacao';
             return (
               <Fragment key={item.idCampanha}>
                 <tr
@@ -506,26 +437,32 @@ export function BancadaCampanha({ auth }) {
                   <td className="crud-tabela__celula--centralizada">
                     {bloqueada ? (
                       <span title={motivoBloqueioCampanha()}>
+                        <i className="fa-solid fa-lock"></i>
+                      </span>
+                    ) : selecionada ? (
+                      <span className="texto-sucesso font-bold text-xs">
+                        <i className="fa-solid fa-circle-check"></i> Selecionada
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        className="crud-tabela__acao crud-tabela__acao--escolher"
+                        onClick={() => selecionarCampanhaFoco(item.idCampanha)}
+                        aria-label="Escolher"
+                      >
+                        <i className="fa-solid fa-circle-check"></i>
+                        <span className="crud-tabela__acao-texto">Escolher</span>
+                        <span className="crud-tabela__acao-dica" role="tooltip">Escolher</span>
+                      </button>
+                    )}
+                  </td>
+                  <td className="crud-tabela__celula--centralizada">
+                    {bloqueada ? (
+                      <span title={motivoBloqueioCampanha()}>
                         <i className="fa-solid fa-lock"></i> bloqueada
                       </span>
                     ) : (
                       <div className="crud-tabela__acoes">
-                        {selecionada ? (
-                          <span className="texto-sucesso font-bold text-xs">
-                            <i className="fa-solid fa-circle-check"></i> Selecionada
-                          </span>
-                        ) : (
-                          <button
-                            type="button"
-                            className="crud-tabela__acao crud-tabela__acao--escolher"
-                            onClick={() => elenco.selecionarCampanhaFoco(item.idCampanha)}
-                            aria-label="Escolher"
-                          >
-                            <i className="fa-solid fa-circle-check"></i>
-                            <span className="crud-tabela__acao-texto">Escolher</span>
-                            <span className="crud-tabela__acao-dica" role="tooltip">Escolher</span>
-                          </button>
-                        )}
                         <button
                           type="button"
                           className="crud-tabela__acao crud-tabela__acao--alterar"
@@ -546,13 +483,25 @@ export function BancadaCampanha({ auth }) {
                           <span className="crud-tabela__acao-texto">Consultar</span>
                           <span className="crud-tabela__acao-dica" role="tooltip">Consultar</span>
                         </button>
+                        <button
+                          type="button"
+                          className="crud-tabela__acao crud-tabela__acao--excluir"
+                          disabled={!podeExcluir}
+                          title={podeExcluir ? undefined : 'Só dá pra excluir campanhas que ainda não foram aprovadas.'}
+                          onClick={() => excluirCampanha(item.idCampanha)}
+                          aria-label="Excluir"
+                        >
+                          <i className="fa-solid fa-trash"></i>
+                          <span className="crud-tabela__acao-texto">Excluir</span>
+                          <span className="crud-tabela__acao-dica" role="tooltip">Excluir</span>
+                        </button>
                       </div>
                     )}
                   </td>
                 </tr>
                 {emEdicao && (
                   <tr>
-                    <td colSpan={6}>
+                    <td colSpan={7}>
                       <div className="fundo-sutil rounded-md p-3 my-1">
                         <div className="flex gap-2 items-end flex-wrap">
                           <label className="text-xs flex flex-col gap-1">
@@ -625,14 +574,13 @@ export function BancadaCampanha({ auth }) {
                               className="border-2 border-[var(--cor-texto-info)] rounded-md px-2 py-1 w-full"
                             />
                           </label>
-                          <button type="button" className="btn btn-primary text-xs" disabled={!idAdminVivo} onClick={salvarEdicaoCampanha}>
+                          <button type="button" className="btn btn-primary text-xs" onClick={salvarEdicaoCampanha}>
                             Salvar
                           </button>
                           <button type="button" className="btn btn-secondary text-xs" onClick={() => setIdCampanhaEditando(null)}>
                             Cancelar
                           </button>
                         </div>
-                        {!idAdminVivo && <p className="elenco-botao-acao__motivo mt-1">Um Admin precisa estar no elenco pra salvar.</p>}
                       </div>
                     </td>
                   </tr>
@@ -712,69 +660,11 @@ export function BancadaCampanha({ auth }) {
         </div>
       )}
 
-      <button type="button" className="btn btn-primary" onClick={() => setMostrarFormCriar((atual) => !atual)}>
-        <i className={`fa-solid fa-chevron-${mostrarFormCriar ? 'down' : 'right'}`}></i> Criar Nova Campanha (manual)
-      </button>
-
-      {mostrarFormCriar && (
-        <div className="fundo-sutil rounded-md p-3 mt-2 mb-4">
-          <div className="flex gap-2 items-end flex-wrap">
-            <label className="text-xs flex flex-col gap-1">
-              Dono
-              <select
-                value={novaCampanha.dono}
-                onChange={(evento) => setNovaCampanha({ ...novaCampanha, dono: evento.target.value })}
-                className="border borda-padrao rounded-md px-2 py-1 block"
-              >
-                <option value="">selecione...</option>
-                {chavesVivas
-                  .filter((idUsuario) => elenco.atores[idUsuario].temPerfilPesquisador)
-                  .map((idUsuario) => (
-                    <option key={idUsuario} value={idUsuario}>
-                      {elenco.atores[idUsuario].usuario?.nome ?? `#${idUsuario}`}
-                    </option>
-                  ))}
-              </select>
-            </label>
-            <label className="text-xs flex flex-col gap-1">
-              Título
-              <input
-                type="text"
-                value={novaCampanha.titulo}
-                onChange={(evento) => setNovaCampanha({ ...novaCampanha, titulo: evento.target.value })}
-                className="border borda-padrao rounded-md px-2 py-1 block"
-              />
-            </label>
-            <label className="text-xs flex flex-col gap-1">
-              Área
-              <select
-                value={novaCampanha.idAreaConhecimento}
-                onChange={(evento) => setNovaCampanha({ ...novaCampanha, idAreaConhecimento: evento.target.value })}
-                className="border borda-padrao rounded-md px-2 py-1 block"
-              >
-                <option value="">selecione...</option>
-                {areas.map((area) => (
-                  <option key={area.idAreaConhecimento} value={area.idAreaConhecimento}>
-                    {area.nome}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="text-xs flex flex-col gap-1">
-              Meta (R$)
-              <input
-                type="number"
-                value={novaCampanha.metaFinanceira}
-                onChange={(evento) => setNovaCampanha({ ...novaCampanha, metaFinanceira: evento.target.value })}
-                className="border borda-padrao rounded-md px-2 py-1 block w-28"
-              />
-            </label>
-            <button type="button" className="btn btn-secondary text-xs" onClick={criarCampanha}>
-              Criar
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Criar campanha saiu daqui (25-08-2026, remoção do Elenco): RLS
+          exige id_usuario = id_usuario_atual(), não dá mais pra "criar em
+          nome de" um pesquisador escolhido. Lucas vai detalhar depois como
+          fica a criação pelo próprio pesquisador (login como ele, ou uma
+          conta já com privilégio de pesquisador). */}
 
       <div className="border-t borda-padrao my-8"></div>
 
@@ -803,37 +693,60 @@ export function BancadaCampanha({ auth }) {
           </div>
 
           <div className="fundo-sutil rounded-md p-4 mb-4">
-            <h3 className="subtitulo mb-2">Pronta para aprovar?</h3>
-            <p className={orcamento.length >= MINIMO_ITENS_ORCAMENTO ? 'texto-sucesso' : 'texto-erro'}>
-              {orcamento.length >= MINIMO_ITENS_ORCAMENTO ? '✅' : '❌'} Orçamento: {orcamento.length} itens (mínimo {MINIMO_ITENS_ORCAMENTO})
-            </p>
-            <p className={metaBatendo ? 'texto-sucesso' : 'texto-erro'}>
-              {metaBatendo ? '✅' : '❌'} Soma × meta: {formatarReais(somaOrcamento)} de {formatarReais(campanha.metaFinanceira)}
-              {!metaBatendo && ` (faltam ${formatarReais(Number(campanha.metaFinanceira) - somaOrcamento)})`}
-            </p>
-            <p className={cronogramaOk ? 'texto-sucesso' : 'texto-erro'}>
-              {cronogramaOk ? '✅' : '❌'} Cronograma: {cronograma.length} marcos (mínimo {MINIMO_MARCOS_CRONOGRAMA})
-            </p>
+            <h3 className="subtitulo mb-3">Pronta para aprovar?</h3>
+            <table className="crud-tabela mb-3">
+              <thead>
+                <tr>
+                  <th>Critério</th>
+                  <th className="crud-tabela__celula--centralizada">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Orçamento: {orcamento.length} itens (mínimo {MINIMO_ITENS_ORCAMENTO})</td>
+                  <td className="crud-tabela__celula--centralizada">
+                    <span className={`badge ${orcamento.length >= MINIMO_ITENS_ORCAMENTO ? 'badge-sucesso' : 'badge-erro'}`}>
+                      {orcamento.length >= MINIMO_ITENS_ORCAMENTO ? 'OK' : 'Faltando'}
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    Soma × meta: {formatarReais(somaOrcamento)} de {formatarReais(campanha.metaFinanceira)}
+                    {!metaBatendo && ` (faltam ${formatarReais(Number(campanha.metaFinanceira) - somaOrcamento)})`}
+                  </td>
+                  <td className="crud-tabela__celula--centralizada">
+                    <span className={`badge ${metaBatendo ? 'badge-sucesso' : 'badge-erro'}`}>{metaBatendo ? 'OK' : 'Faltando'}</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Cronograma: {cronograma.length} marcos (mínimo {MINIMO_MARCOS_CRONOGRAMA})</td>
+                  <td className="crud-tabela__celula--centralizada">
+                    <span className={`badge ${cronogramaOk ? 'badge-sucesso' : 'badge-erro'}`}>{cronogramaOk ? 'OK' : 'Faltando'}</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
 
-            <div className="elenco-botao-acao mt-3">
+            <div className="acao-com-motivo mt-3">
               <button type="button" className="btn btn-primary" disabled={!prontaParaAprovar} onClick={aprovar}>
                 Aprovar (Admin)
               </button>
-              {!prontaParaAprovar && <span className="elenco-botao-acao__motivo">{motivoAprovarDesabilitado()}</span>}
+              {!prontaParaAprovar && <span className="acao-com-motivo__motivo">{motivoAprovarDesabilitado()}</span>}
             </div>
 
-            <div className="flex gap-2 items-center mt-3">
-              <input
-                type="text"
+            <div className="flex gap-2 items-end mt-3">
+              <textarea
                 placeholder="Justificativa da rejeição (opcional)"
                 value={justificativaRejeicao}
                 onChange={(evento) => setJustificativaRejeicao(evento.target.value)}
-                className="border borda-padrao rounded-md px-2 py-1 text-xs flex-1"
+                className="input-padrao flex-1"
+                rows={2}
               />
               <button
                 type="button"
                 className="btn btn-secondary text-xs"
-                disabled={!idAdminVivo || campanha.status !== 'aguardando_aprovacao'}
+                disabled={campanha.status !== 'aguardando_aprovacao'}
                 onClick={rejeitar}
               >
                 Rejeitar (Admin)

@@ -5,11 +5,11 @@ import { tratarResposta } from '../../constant/api/http.util';
 // 04_rls_policies.sql [04-E]); aqui sempre passamos authFetch mesmo assim
 // porque quem usa este arquivo é sempre o painel admin (logado), e o
 // admin com relatorio_visualizar enxerga todos os status, não só os
-// públicos. Sem criar()/remover() de propósito: campanha não tem POST
-// genérico nem DELETE no backend — criação e aprovação/rejeição vivem no
-// Campo de Testes hoje (views/campo-testes/bancada-campanha.jsx), e não
-// existe endpoint de exclusão (soft-delete via status, não linha
-// removida).
+// públicos. Sem criar() de propósito: campanha não tem POST genérico no
+// backend — criação vive no Campo de Testes hoje (views/campo-testes/
+// bancada-campanha.jsx). `remover()` (25-08-2026) só funciona em campanha
+// 'aguardando_aprovacao' (pol_campanha_delete, 04) — depois de aprovada,
+// só dá pra rejeitar/encerrar, nunca apagar de vez.
 function paraQueryString(filtro) {
   if (!filtro) {
     return '';
@@ -34,4 +34,5 @@ export const campanhaApi = {
       .then(tratarResposta)
       .then((resposta) => resposta.dados),
   buscar: (authFetch, id) => authFetch(`/campanha/${id}`).then(tratarResposta),
+  remover: (authFetch, id) => authFetch(`/campanha/${id}`, { method: 'DELETE' }).then(tratarResposta),
 };

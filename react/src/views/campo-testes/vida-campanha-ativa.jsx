@@ -8,8 +8,8 @@ import { Link } from 'react-router';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { tratarResposta } from '../../services/constant/api/http.util';
-import { useElenco } from '../../services/campo-testes/hook/use-elenco';
-import { BarraElenco } from './barra-elenco';
+import { useCampoTestes } from '../../services/campo-testes/hook/use-campo-testes';
+import { useChamadaRegistrada } from '../../services/campo-testes/hook/use-chamada-registrada';
 import { RegistroChamadas } from './registro-chamadas';
 
 const FASES = ['andamento', 'resultado_preliminar', 'resultado_final'];
@@ -18,16 +18,21 @@ const LIMITE_ENDOSSOS = 4; // configuracoes.limite_endossos_campanha (mesmo defa
 
 // T3, depende de uma campanha já ATIVA. Não escolhe mais a campanha por
 // conta própria (23-08-2026, pedido do Lucas: "só vai aparecer a
-// campanha que foi selecionada no T anterior"), usa direto
-// `elenco.campanhaFoco`, a mesma escolha feita na Bancada da Campanha
-// (T2), compartilhada via ElencoProvider. Sem campanha focada ainda, só
-// mostra o link pra T2. Leituras (detalhe, atualizações, comentários,
-// nomes) usam a sessão REAL do painel; só publicar atualização/comentar/
-// seguir passam por um ator específico do Elenco, é isso que precisa
-// ficar atribuído a alguém de verdade.
+// campanha que foi selecionada no T anterior"), usa `campanhaFoco`
+// (CampoTestesProvider), a mesma escolha feita na Bancada da Campanha
+// (T2). Sem campanha focada ainda, só mostra o link pra T2.
+//
+// SEM REDESENHO ainda (25-08-2026, remoção do Elenco: T1 e T2 tiveram
+// prioridade, T3 fica só "destravado" por enquanto — o redesenho de
+// verdade fica pra outra conversa, junto com a criação de campanha pelo
+// próprio pesquisador). Toda ação usa a sessão REAL do painel agora, sem
+// escolha de ator: publicar atualização e comentar só têm efeito quando
+// a própria sessão logada É o dono/o autor pretendido; "Seguidores" virou
+// um único toggle ("Eu sigo"), não dá mais pra simular vários seguidores
+// ao mesmo tempo dentro da ferramenta.
 export function VidaCampanhaAtiva({ auth }) {
-  const elenco = useElenco();
-  const chavesVivas = Object.keys(elenco.atores).filter((idUsuario) => elenco.atores[idUsuario].status === 'vivo');
+  const { campanhaFoco } = useCampoTestes();
+  const chamarERegistrar = useChamadaRegistrada(auth);
 
   const [campanha, setCampanha] = useState(null);
   const [nomesPorId, setNomesPorId] = useState(new Map());
@@ -37,9 +42,8 @@ export function VidaCampanhaAtiva({ auth }) {
 
   const [comentarios, setComentarios] = useState([]);
   const [novoComentario, setNovoComentario] = useState({ conteudo: '', endossado: false });
-  const [autorComentario, setAutorComentario] = useState('');
 
-  const [seguidores, setSeguidores] = useState([]);
+  const [euSigo, setEuSigo] = useState(false);
 
   const nomeDe = (idUsuario) => nomesPorId.get(idUsuario) ?? `usuário #${idUsuario}`;
 
@@ -57,70 +61,54 @@ export function VidaCampanhaAtiva({ auth }) {
     auth.authFetch(`/atualizacao-campanha?idCampanha=${id}&tamanho=50`).then(tratarResposta).then((r) => setAtualizacoes(r.dados ?? [])).catch(() => {});
     auth.authFetch(`/comentario?idCampanha=${id}&tamanho=50`).then(tratarResposta).then((r) => setComentarios(r.dados ?? [])).catch(() => {});
     // GET /seguir-campanha só devolve "minha lista" (pol_seg_campanha_select,
-    // 04): a única forma honesta de montar "quem segue" é perguntar a
-    // CADA ator vivo do elenco e juntar. Sem várias sessões (o Elenco),
-    // este painel simplesmente não existiria.
-    Promise.all(
-      chavesVivas.map((idUsuario) =>
-        elenco
-          .fetchComoAtor(idUsuario, '/seguir-campanha')
-          .then((lista) => (lista.some((item) => item.idCampanha === id) ? [idUsuario] : []))
-          .catch(() => []),
-      ),
-    ).then((listas) => setSeguidores(listas.flat()));
+    // 04) — sem Elenco, só dá pra saber se A PRÓPRIA sessão logada segue.
+    chamarERegistrar('/seguir-campanha')
+      .then((lista) => setEuSigo(lista.some((item) => item.idCampanha === id)))
+      .catch(() => setEuSigo(false));
   };
 
   useEffect(() => {
-    recarregarTudo(elenco.campanhaFoco);
+    recarregarTudo(campanhaFoco);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [elenco.campanhaFoco]);
+  }, [campanhaFoco]);
 
-  // Chave do Elenco é o idUsuario de verdade agora, o dono da campanha É
-  // a própria chave, sem precisar procurar em lugar nenhum.
   const donoChave = campanha?.idUsuario ?? null;
-  const donoEhOAtorFoco = donoChave && elenco.atores[donoChave]?.status === 'vivo';
+  const donoEhSessaoReal = donoChave !== null && donoChave === auth.usuario?.idUsuario;
 
   const publicarAtualizacao = async () => {
-    if (!donoEhOAtorFoco || !novaAtualizacao.titulo || !novaAtualizacao.conteudo) return;
-    await elenco
-      .fetchComoAtor(donoChave, '/atualizacao-campanha', {
-        method: 'POST',
-        body: JSON.stringify({ idCampanha: elenco.campanhaFoco, ...novaAtualizacao }),
-      })
-      .catch(() => {});
+    if (!donoEhSessaoReal || !novaAtualizacao.titulo || !novaAtualizacao.conteudo) return;
+    await chamarERegistrar('/atualizacao-campanha', {
+      method: 'POST',
+      body: JSON.stringify({ idCampanha: campanhaFoco, ...novaAtualizacao }),
+    }).catch(() => {});
     setNovaAtualizacao({ titulo: '', conteudo: '', fase: 'andamento', tipo: 'texto' });
-    recarregarTudo(elenco.campanhaFoco);
+    recarregarTudo(campanhaFoco);
   };
 
-  const idAdminVivo = chavesVivas.find((idUsuario) => elenco.atores[idUsuario].papeis.includes('admin'));
-
   const alternarAtivoAtualizacao = async (idAtualizacao, ativoAtual) => {
-    if (!idAdminVivo) return;
-    await elenco.fetchComoAtor(idAdminVivo, `/atualizacao-campanha/${idAtualizacao}`, { method: 'PATCH', body: JSON.stringify({ ativo: !ativoAtual }) }).catch(() => {});
-    recarregarTudo(elenco.campanhaFoco);
+    await chamarERegistrar(`/atualizacao-campanha/${idAtualizacao}`, { method: 'PATCH', body: JSON.stringify({ ativo: !ativoAtual }) }).catch(() => {});
+    recarregarTudo(campanhaFoco);
   };
 
   const enviarComentario = async () => {
-    if (!autorComentario || !novoComentario.conteudo) return;
-    await elenco
-      .fetchComoAtor(Number(autorComentario), '/comentario', {
-        method: 'POST',
-        body: JSON.stringify({ idCampanha: elenco.campanhaFoco, conteudo: novoComentario.conteudo, endossado: novoComentario.endossado }),
-      })
-      .catch(() => {});
+    if (!novoComentario.conteudo) return;
+    await chamarERegistrar('/comentario', {
+      method: 'POST',
+      body: JSON.stringify({ idCampanha: campanhaFoco, conteudo: novoComentario.conteudo, endossado: novoComentario.endossado }),
+    }).catch(() => {});
     setNovoComentario({ conteudo: '', endossado: false });
-    recarregarTudo(elenco.campanhaFoco);
+    recarregarTudo(campanhaFoco);
   };
 
   const endossosAtivos = comentarios.filter((c) => c.endossado && c.ativo).length;
 
-  const alternarSeguir = async (idUsuario, jaSegue) => {
-    if (jaSegue) {
-      await elenco.fetchComoAtor(idUsuario, `/seguir-campanha/${elenco.campanhaFoco}`, { method: 'DELETE' }).catch(() => {});
+  const alternarSeguir = async () => {
+    if (euSigo) {
+      await chamarERegistrar(`/seguir-campanha/${campanhaFoco}`, { method: 'DELETE' }).catch(() => {});
     } else {
-      await elenco.fetchComoAtor(idUsuario, '/seguir-campanha', { method: 'POST', body: JSON.stringify({ idCampanha: elenco.campanhaFoco }) }).catch(() => {});
+      await chamarERegistrar('/seguir-campanha', { method: 'POST', body: JSON.stringify({ idCampanha: campanhaFoco }) }).catch(() => {});
     }
-    recarregarTudo(elenco.campanhaFoco);
+    recarregarTudo(campanhaFoco);
   };
 
   return (
@@ -130,9 +118,7 @@ export function VidaCampanhaAtiva({ auth }) {
         <h2 className="titulo-secao">Campo de Testes - Vida da Campanha Ativa</h2>
       </div>
 
-      <BarraElenco auth={auth} />
-
-      {!elenco.campanhaFoco && (
+      {!campanhaFoco && (
         <p className="texto-fraco">
           Nenhuma campanha selecionada ainda.{' '}
           <Link to="/admin/campo-testes/campanha" className="texto-link">
@@ -149,7 +135,7 @@ export function VidaCampanhaAtiva({ auth }) {
           </div>
 
           <h3 className="subtitulo mb-2">Atualizações</h3>
-          <div className="elenco-botao-acao mb-2">
+          <div className="acao-com-motivo mb-2">
             <div className="flex gap-2 flex-wrap items-end">
               <input type="text" placeholder="Título" value={novaAtualizacao.titulo} onChange={(e) => setNovaAtualizacao({ ...novaAtualizacao, titulo: e.target.value })} className="border borda-padrao rounded-md px-2 py-1 text-xs" />
               <input type="text" placeholder="Conteúdo" value={novaAtualizacao.conteudo} onChange={(e) => setNovaAtualizacao({ ...novaAtualizacao, conteudo: e.target.value })} className="border borda-padrao rounded-md px-2 py-1 text-xs flex-1" />
@@ -167,11 +153,11 @@ export function VidaCampanhaAtiva({ auth }) {
                   </option>
                 ))}
               </select>
-              <button type="button" className="btn btn-secondary text-xs" disabled={!donoEhOAtorFoco} onClick={publicarAtualizacao}>
+              <button type="button" className="btn btn-secondary text-xs" disabled={!donoEhSessaoReal} onClick={publicarAtualizacao}>
                 Publicar ({donoChave ? nomeDe(donoChave) : '?'})
               </button>
             </div>
-            {!donoEhOAtorFoco && <span className="elenco-botao-acao__motivo">O dono da campanha ({nomeDe(campanha.idUsuario)}) precisa estar no elenco.</span>}
+            {!donoEhSessaoReal && <span className="acao-com-motivo__motivo">Só publica quem estiver logado como o dono da campanha ({nomeDe(campanha.idUsuario)}).</span>}
           </div>
           <table className="crud-tabela mb-4">
             <thead>
@@ -191,7 +177,7 @@ export function VidaCampanhaAtiva({ auth }) {
                     <span className={`badge ${item.ativo ? 'badge-sucesso' : 'badge-neutro'}`}>{item.ativo ? 'Sim' : 'Não'}</span>
                   </td>
                   <td>
-                    <button type="button" className="crud-tabela__acao" disabled={!idAdminVivo} onClick={() => alternarAtivoAtualizacao(item.idAtualizacao, item.ativo)}>
+                    <button type="button" className="crud-tabela__acao" onClick={() => alternarAtivoAtualizacao(item.idAtualizacao, item.ativo)}>
                       {item.ativo ? 'Ocultar' : 'Reverter'}
                     </button>
                   </td>
@@ -209,26 +195,16 @@ export function VidaCampanhaAtiva({ auth }) {
             Comentários e endossos ({endossosAtivos} de {LIMITE_ENDOSSOS} endossos ativos)
           </h3>
           <div className="flex gap-2 flex-wrap items-end mb-2">
-            <select value={autorComentario} onChange={(e) => setAutorComentario(e.target.value)} className="border borda-padrao rounded-md px-2 py-1 text-xs">
-              <option value="">autor...</option>
-              {chavesVivas
-                .filter((idUsuario) => Number(idUsuario) !== campanha.idUsuario)
-                .map((idUsuario) => (
-                  <option key={idUsuario} value={idUsuario}>
-                    {nomeDe(Number(idUsuario))}
-                  </option>
-                ))}
-            </select>
             <input type="text" placeholder="Comentário" value={novoComentario.conteudo} onChange={(e) => setNovoComentario({ ...novoComentario, conteudo: e.target.value })} className="border borda-padrao rounded-md px-2 py-1 text-xs flex-1" />
             <label className="text-xs flex items-center gap-1">
               <input type="checkbox" checked={novoComentario.endossado} onChange={(e) => setNovoComentario({ ...novoComentario, endossado: e.target.checked })} />
               endossar
             </label>
             <button type="button" className="btn btn-secondary text-xs" onClick={enviarComentario}>
-              Enviar
+              Enviar (como {auth.usuario?.nome})
             </button>
           </div>
-          <p className="texto-fraco text-xs mb-2">O dono da campanha não aparece na lista de autores. O banco bloqueia comentário na própria campanha.</p>
+          <p className="texto-fraco text-xs mb-2">Comenta sempre a sessão logada — o banco bloqueia comentário na própria campanha.</p>
           <table className="crud-tabela mb-4">
             <thead>
               <tr>
@@ -251,17 +227,14 @@ export function VidaCampanhaAtiva({ auth }) {
           <div className="border-t borda-padrao my-8"></div>
 
           <h3 className="subtitulo mb-2">Seguidores</h3>
-          <div className="flex gap-2 flex-wrap">
-            {chavesVivas.map((idUsuario) => {
-              const jaSegue = seguidores.includes(idUsuario);
-              return (
-                <button key={idUsuario} type="button" className={`btn ${jaSegue ? 'btn-primary' : 'btn-secondary'} text-xs`} onClick={() => alternarSeguir(Number(idUsuario), jaSegue)}>
-                  {jaSegue ? '✓ ' : ''}
-                  {nomeDe(Number(idUsuario))}
-                </button>
-              );
-            })}
-          </div>
+          <p className="texto-fraco text-xs mb-2">
+            Sem Elenco só dá pra simular a própria sessão logada seguindo ou não — um roster de vários
+            seguidores ao mesmo tempo fica pro redesenho de T3.
+          </p>
+          <button type="button" className={`btn ${euSigo ? 'btn-primary' : 'btn-secondary'} text-xs`} onClick={alternarSeguir}>
+            {euSigo ? '✓ ' : ''}
+            {auth.usuario?.nome} segue
+          </button>
         </>
       )}
 

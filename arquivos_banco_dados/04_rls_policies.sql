@@ -361,6 +361,19 @@ CREATE POLICY pol_campanha_update ON campanha FOR UPDATE TO app_nestjs USING (
     OR public.tem_permissao('campanha_aprovar')
     OR public.tem_permissao('campanha_rejeitar')
 );
+-- Excluir campanha (25-08-2026, Campo de Testes: CRUD completo em T2) —
+-- só em 'aguardando_aprovacao', mesma lógica do congelamento pós-
+-- aprovação (fn_congela_regras_campanha, 05): nada em orcamento_campanha/
+-- marco_cronograma/atualizacao_campanha/seguir_campanha/comentario/
+-- recompensa ainda referencia denuncia/repasse/solicitacao_encerramento/
+-- historico_rejeicao/contribuicao_recompensa nesse status (essas tabelas
+-- só ganham linha depois de aprovada), então o DELETE cascateia
+-- (ON DELETE CASCADE, 01) sem risco de travar em FK RESTRICT/NO ACTION.
+DROP POLICY IF EXISTS pol_campanha_delete ON campanha;
+CREATE POLICY pol_campanha_delete ON campanha FOR DELETE TO app_nestjs USING (
+    status = 'aguardando_aprovacao'
+    AND (id_usuario = public.id_usuario_atual() OR public.tem_permissao('campanha_editar'))
+);
 
 -- CORRIGIDO: atualização inativa (ocultada por moderação) só continua
 -- visível para o dono da campanha ou admin; o público só vê as ativas.
