@@ -1230,6 +1230,51 @@ INSERT INTO notificacao (id_usuario, email_destinatario, tipo_evento, status, te
 -- Reputação: Bruno e Renata não têm denúncia (25); Eduardo tem 2 pendentes (25−2=23);
 --   Vinícius tem 4 procedentes (25−4×4=9).
 -- ----------------------------------------------------------------------------
+-- ============================================================================
+-- 24-08-2026 — módulo 25-arquivo implementado (upload via Backblaze B2,
+-- URL pré-assinada, confirmação em 2 passos) — mudanças em
+-- 01_extensoes_enums_tabelas.sql e 02_indices.sql, e 2 chaves novas em
+-- 07_seed_dados.sql/configuracoes.
+--
+-- Seguro rodar de novo? O bloco de ALTER/CREATE INDEX sim (idempotente,
+-- ver cada instrução). O INSERT da chave de configuração usa
+-- ON CONFLICT (chave) DO NOTHING — também seguro repetir.
+--
+-- ATENÇÃO — ORDEM IMPORTA: se a tabela `arquivo` já tem linhas (mesmo que
+-- de teste) com a coluna antiga `url` preenchida, o RENAME abaixo preserva
+-- o CONTEÚDO dessas linhas na coluna `chave` — mas esse conteúdo era uma
+-- URL COMPLETA (ex. "https://dominio-antigo/arquivo.jpg"), não uma chave
+-- de objeto ("publico/uuid.jpg"). Se o banco já tinha arquivos de teste
+-- gravados por um protótipo anterior, rode
+-- `SELECT id_arquivo, chave FROM arquivo;` depois do RENAME e corrija à
+-- mão as linhas que ainda têm URL completa — o módulo novo só entende
+-- chave de objeto. Num banco sem nenhuma linha em `arquivo` ainda (mais
+-- provável, já que o módulo nunca existiu até agora), não há nada pra
+-- corrigir.
+-- ============================================================================
+
+ALTER TABLE arquivo RENAME COLUMN url TO chave;
+ALTER TABLE arquivo ADD CONSTRAINT "UK_ARQUIVO_CHAVE" UNIQUE (chave);
+ALTER TABLE arquivo ADD COLUMN IF NOT EXISTS id_usuario_upload INT;
+
+-- Só adiciona a FK se ela ainda não existir (colar este arquivo de novo
+-- não pode tentar criar a mesma constraint duas vezes).
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'FK_ARQUIVO_USUARIO_UPLOAD'
+    ) THEN
+        ALTER TABLE arquivo
+            ADD CONSTRAINT "FK_ARQUIVO_USUARIO_UPLOAD"
+            FOREIGN KEY (id_usuario_upload) REFERENCES usuario(id_usuario) ON DELETE SET NULL;
+    END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_arquivo_usuario_upload ON arquivo(id_usuario_upload);
+
+INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo) VALUES
+(NULL, 'avatar_padrao_chave', NULL, 'texto', 'Chave do objeto (no bucket) usado como avatar de quem não tem foto de perfil cadastrada — definir após a equipe escolher a imagem', TRUE)
+ON CONFLICT (chave) DO NOTHING;
 
 
 -- [07-D-5] Como logar no app depois deste seed (autenticação própria, ver DOCUMENTACAO_BD.md)

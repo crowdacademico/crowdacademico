@@ -23,6 +23,8 @@
     "db:migrate:adotar": "ts-node src/commons/database/aplicar-migrations.script.ts --adotar"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.687.0",
+    "@aws-sdk/s3-request-presigner": "^3.687.0",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.0.1",

@@ -864,57 +864,51 @@ WITH novos AS (
 INSERT INTO usuario_papel (id_usuario, id_papel)
 SELECT n.id_usuario, p.id_papel FROM novos n JOIN papel p ON p.nome = 'usuario';
 
-
 -- ============================================================================
--- 23-08-2026 — Dashboard: card "Campanhas" volta a funcionar sozinho
--- Seguro rodar de novo quantas vezes quiser (DROP IF EXISTS + CREATE).
--- ============================================================================
--- `contar_metricas_dashboard()` (03, [03-M]) mandava `totalCampanhas: null`
--- de propósito desde 08-08-2026, porque o módulo 12-campanha nem existia
--- ainda. Ele passou a existir em 22-08-2026, mas a função nunca foi
--- atualizada pra contar a tabela `campanha` — achado pelo Lucas usando o
--- Campo de Testes. Adiciona `total_campanhas` (COUNT simples, mesma
--- tabela toda, sem filtro de status) ao final da lista de colunas.
+-- 24-08-2026 — módulo 25-arquivo implementado (upload via Backblaze B2,
+-- URL pré-assinada, confirmação em 2 passos) — mudanças em
+-- 01_extensoes_enums_tabelas.sql e 02_indices.sql, e 2 chaves novas em
+-- 07_seed_dados.sql/configuracoes.
 --
--- CORRIGIDO (mesma data, achado ao vivo pelo Lucas): a 1ª versão deste
--- bloco usava só CREATE OR REPLACE e caiu no erro 42P13 do Postgres —
--- "cannot change return type of existing function". `RETURNS TABLE(...)`
--- é implementado por baixo com parâmetros OUT; REPLACE não deixa mudar
--- a LISTA de colunas desses parâmetros (só o corpo), só a criação do
--- zero permite. `DROP FUNCTION` apaga também o GRANT EXECUTE que estava
--- amarrado à função antiga — por isso o GRANT no fim do bloco, sem ele
--- o GET /dashboard/resumo voltaria com "permission denied for function".
-DROP FUNCTION IF EXISTS public.contar_metricas_dashboard();
+-- Seguro rodar de novo? O bloco de ALTER/CREATE INDEX sim (idempotente,
+-- ver cada instrução). O INSERT da chave de configuração usa
+-- ON CONFLICT (chave) DO NOTHING — também seguro repetir.
+--
+-- ATENÇÃO — ORDEM IMPORTA: se a tabela `arquivo` já tem linhas (mesmo que
+-- de teste) com a coluna antiga `url` preenchida, o RENAME abaixo preserva
+-- o CONTEÚDO dessas linhas na coluna `chave` — mas esse conteúdo era uma
+-- URL COMPLETA (ex. "https://dominio-antigo/arquivo.jpg"), não uma chave
+-- de objeto ("publico/uuid.jpg"). Se o banco já tinha arquivos de teste
+-- gravados por um protótipo anterior, rode
+-- `SELECT id_arquivo, chave FROM arquivo;` depois do RENAME e corrija à
+-- mão as linhas que ainda têm URL completa — o módulo novo só entende
+-- chave de objeto. Num banco sem nenhuma linha em `arquivo` ainda (mais
+-- provável, já que o módulo nunca existiu até agora), não há nada pra
+-- corrigir.
+-- ============================================================================
 
-CREATE FUNCTION public.contar_metricas_dashboard()
-RETURNS TABLE (
-    total_usuarios      INT,
-    total_pesquisadores INT,
-    total_papeis        INT,
-    total_permissoes    INT,
-    total_configuracoes INT,
-    total_campanhas     INT,
-    sessoes_ativas      INT
-)
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path = public
-AS $$
-    SELECT
-        (SELECT count(*)::INT FROM usuario WHERE deletado = FALSE),
-        (SELECT count(DISTINCT up.id_usuario)::INT
-           FROM usuario_papel up
-           JOIN papel p ON p.id_papel = up.id_papel
-          WHERE p.nome = 'pesquisador'),
-        (SELECT count(*)::INT FROM papel),
-        (SELECT count(*)::INT FROM permissao),
-        (SELECT count(*)::INT FROM configuracoes),
-        (SELECT count(*)::INT FROM campanha),
-        (SELECT count(*)::INT FROM sessao WHERE revogado_em IS NULL AND expira_em > now());
-$$;
+ALTER TABLE arquivo RENAME COLUMN url TO chave;
+ALTER TABLE arquivo ADD CONSTRAINT "UK_ARQUIVO_CHAVE" UNIQUE (chave);
+ALTER TABLE arquivo ADD COLUMN IF NOT EXISTS id_usuario_upload INT;
 
-GRANT EXECUTE ON FUNCTION public.contar_metricas_dashboard() TO app_nestjs;
+-- Só adiciona a FK se ela ainda não existir (colar este arquivo de novo
+-- não pode tentar criar a mesma constraint duas vezes).
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'FK_ARQUIVO_USUARIO_UPLOAD'
+    ) THEN
+        ALTER TABLE arquivo
+            ADD CONSTRAINT "FK_ARQUIVO_USUARIO_UPLOAD"
+            FOREIGN KEY (id_usuario_upload) REFERENCES usuario(id_usuario) ON DELETE SET NULL;
+    END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_arquivo_usuario_upload ON arquivo(id_usuario_upload);
+
+INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo) VALUES
+(NULL, 'avatar_padrao_chave', NULL, 'texto', 'Chave do objeto (no bucket) usado como avatar de quem não tem foto de perfil cadastrada — definir após a equipe escolher a imagem', TRUE)
+ON CONFLICT (chave) DO NOTHING;
 
 
 -- ============================================================================

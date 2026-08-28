@@ -106,6 +106,11 @@ CREATE INDEX idx_link_recompensa_tipolink      ON link_recompensa(id_tipolink);
 -- ============================================================
 -- [02-G] ARQUIVO
 -- ============================================================
+-- ADICIONADO (24-08-2026, módulo 25-arquivo): suporta tanto
+-- "GET /arquivo?meus=true" (se um dia existir) quanto a auditoria "o que
+-- esta conta enviou" (limitar upload/hora, localizar upload de conta
+-- banida) sem full scan em `arquivo`.
+CREATE INDEX idx_arquivo_usuario_upload ON arquivo(id_usuario_upload);
 CREATE INDEX idx_arquivo_atualizacao_atualizacao ON arquivo_atualizacao(id_atualizacao);
 CREATE INDEX idx_arquivo_recompensa_arquivo ON arquivo_recompensa(id_arquivo);
 

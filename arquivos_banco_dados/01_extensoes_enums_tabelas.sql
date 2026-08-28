@@ -203,17 +203,39 @@ CREATE TABLE motivo_denuncia (
     CONSTRAINT "PK_MOTIVO_DENUNCIA" PRIMARY KEY (id_motivo)
 );
 
+-- ATUALIZADA (24-08-2026, módulo 25-arquivo implementado — ver revisão de
+-- arquitetura de upload B2/R2 e ATUALIZAR O SUPABASE.sql do mesmo dia):
+-- duas mudanças pedidas na revisão:
+-- 1. `url` (endereço completo) virou `chave` (só o caminho do objeto
+--    dentro do bucket, ex. "publico/<uuid>.jpg"). A URL pública é montada
+--    em RUNTIME por commons/storage, a partir de STORAGE_PUBLIC_BASE_URL
+--    + esta coluna — trocar de domínio ou de provedor de armazenamento
+--    (Backblaze B2 hoje, Cloudflare R2 amanhã, ambos falam o protocolo
+--    S3) nunca mais precisa de UPDATE em massa aqui. UNIQUE porque o nome
+--    é sempre gerado pelo backend (randomUUID em
+--    arquivo.service.iniciar-upload.ts), nunca pelo cliente — colisão
+--    indicaria bug, não uso normal.
+-- 2. `id_usuario_upload` — a tabela não tinha dono. Sem isso não dava pra
+--    responder "quem subiu este arquivo?", limitar quantos uploads uma
+--    conta faz por hora, nem localizar o que uma conta banida enviou.
+--    Sem FK inline de propósito: `usuario` só é criada MAIS ABAIXO neste
+--    mesmo arquivo (e já referencia `arquivo` via FK_USUARIO_IMAGEM —
+--    dependência circular entre as duas tabelas). A FK
+--    FK_ARQUIVO_USUARIO_UPLOAD é adicionada por ALTER TABLE logo depois
+--    que `usuario` existe (ver comentário lá).
 CREATE TABLE arquivo (
-    id_arquivo    SERIAL,
-    url           TEXT         NOT NULL,
-    nome_original TEXT         NOT NULL,
-    tipo_mime     VARCHAR(255) NOT NULL,
-    tamanho_bytes INT NOT NULL,
-    criado_em     TIMESTAMPTZ    DEFAULT NOW(),
-    ativo         BOOLEAN      DEFAULT TRUE,
-    desativado_em TIMESTAMPTZ,
+    id_arquivo        SERIAL,
+    chave             TEXT         NOT NULL,
+    nome_original     TEXT         NOT NULL,
+    tipo_mime         VARCHAR(255) NOT NULL,
+    tamanho_bytes     INT NOT NULL,
+    id_usuario_upload INT,
+    criado_em         TIMESTAMPTZ    DEFAULT NOW(),
+    ativo             BOOLEAN      DEFAULT TRUE,
+    desativado_em     TIMESTAMPTZ,
 
-    CONSTRAINT "PK_ARQUIVO" PRIMARY KEY (id_arquivo)
+    CONSTRAINT "PK_ARQUIVO" PRIMARY KEY (id_arquivo),
+    CONSTRAINT "UK_ARQUIVO_CHAVE" UNIQUE (chave)
 );
 
 -- ============================================================
@@ -268,6 +290,16 @@ CREATE TABLE usuario (
         OR (suspenso_ate IS NOT NULL AND motivo_suspensao IS NOT NULL)
     )
 );
+
+-- ADICIONADA (24-08-2026, módulo 25-arquivo) — só agora, porque `usuario`
+-- precisa existir primeiro (ver comentário no CREATE TABLE arquivo, acima:
+-- `arquivo` é criada ANTES de `usuario` pra permitir FK_USUARIO_IMAGEM, o
+-- que impede colocar esta FK inline lá). ON DELETE SET NULL (não CASCADE):
+-- apagar/anonimizar a conta que fez o upload não deve apagar o arquivo em
+-- si — ele pode continuar em uso (ex.: imagem já publicada numa atualização
+-- de campanha de outra pessoa, ou a própria campanha).
+ALTER TABLE arquivo
+    ADD CONSTRAINT "FK_ARQUIVO_USUARIO_UPLOAD" FOREIGN KEY (id_usuario_upload) REFERENCES usuario(id_usuario) ON DELETE SET NULL;
 
 -- [01-C] configuracoes — movido de CONFIG devido à ordem de criação
 -- necessária para o funcionamento das tabelas: duas linhas do seed de

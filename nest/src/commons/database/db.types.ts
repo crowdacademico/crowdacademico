@@ -447,10 +447,31 @@ export interface LinkRecompensaTable {
   url: string;
 }
 
-// id_arquivo aqui referencia uma linha que, hoje, só o módulo 25-arquivo
-// (Alexia, ainda não pronto) pode criar de verdade — os endpoints de
-// vínculo abaixo já funcionam (INSERT/UPDATE da tabela de associação em
-// si), só não há como testar de ponta a ponta até esse módulo existir.
+// ADICIONADA (24-08-2026, módulo 25-arquivo implementado — ver
+// arquivos_banco_dados/01_extensoes_enums_tabelas.sql). `chave` (não
+// `url`): guarda só o caminho do objeto dentro do bucket
+// (ex. "publico/<uuid>.jpg"), nunca o endereço completo — a URL pública é
+// montada em runtime por commons/storage (montarUrlPublica), a partir de
+// STORAGE_PUBLIC_BASE_URL. Isso é o que permite trocar de provedor de
+// armazenamento (Backblaze B2 hoje, Cloudflare R2 antes/depois — os dois
+// falam o protocolo S3) sem nenhum UPDATE em massa nesta tabela.
+export interface ArquivoTable {
+  id_arquivo: Generated<number>;
+  chave: string;
+  nome_original: string;
+  tipo_mime: string;
+  tamanho_bytes: number;
+  id_usuario_upload: number | null;
+  criado_em: Generated<Date>;
+  ativo: Generated<boolean>;
+  desativado_em: Date | null;
+}
+
+// id_arquivo aqui referencia uma linha da tabela `arquivo` (módulo
+// 25-arquivo, implementado em 24-08-2026) — os endpoints de vínculo abaixo
+// (INSERT/UPDATE da tabela de associação em si) já podiam ser testados
+// isoladamente antes disso, mas só agora dá pra testar o fluxo de ponta a
+// ponta (upload real -> vínculo -> exibição).
 export interface ArquivoAtualizacaoTable {
   id_arq_atu: Generated<number>;
   id_arquivo: number;
@@ -510,6 +531,7 @@ export interface DB {
   recompensa: RecompensaTable;
   link_atualizacao: LinkAtualizacaoTable;
   link_recompensa: LinkRecompensaTable;
+  arquivo: ArquivoTable;
   arquivo_atualizacao: ArquivoAtualizacaoTable;
   arquivo_recompensa: ArquivoRecompensaTable;
 }

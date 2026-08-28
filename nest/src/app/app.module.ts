@@ -22,11 +22,17 @@ import { MarcoCronogramaModule } from '../14-marco-cronograma/marco-cronograma.m
 import { AtualizacaoCampanhaModule } from '../15-atualizacao-campanha/atualizacao-campanha.module';
 import { SeguirCampanhaModule } from '../16-seguir-campanha/seguir-campanha.module';
 import { ComentarioModule } from '../17-comentario/comentario.module';
+import { ArquivoModule } from '../25-arquivo/arquivo.module';
+import { StorageModule } from '../commons/storage/storage.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     DatabaseModule,
+    // Global (ver commons/storage/storage.module.ts) — registrado aqui,
+    // junto de DatabaseModule, por ser infra compartilhada por qualquer
+    // módulo, não só 25-arquivo.
+    StorageModule,
     UsuarioModule,
     TermoUsoModule,
     PapelPermissaoModule,
@@ -43,6 +49,7 @@ import { ComentarioModule } from '../17-comentario/comentario.module';
     AtualizacaoCampanhaModule,
     SeguirCampanhaModule,
     ComentarioModule,
+    ArquivoModule,
     LogAuditoriaModule,
     DashboardModule,
   ],
