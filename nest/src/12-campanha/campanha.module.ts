@@ -4,12 +4,14 @@ import { CampanhaControllerCreate } from './controllers/campanha.controller.crea
 import { CampanhaControllerFindAll } from './controllers/campanha.controller.findall';
 import { CampanhaControllerFindOne } from './controllers/campanha.controller.findone';
 import { CampanhaControllerRejeitar } from './controllers/campanha.controller.rejeitar';
+import { CampanhaControllerRemove } from './controllers/campanha.controller.remove';
 import { CampanhaControllerUpdate } from './controllers/campanha.controller.update';
 import { CampanhaServiceAprovar } from './service/campanha.service.aprovar';
 import { CampanhaServiceCreate } from './service/campanha.service.create';
 import { CampanhaServiceFindAll } from './service/campanha.service.findall';
 import { CampanhaServiceFindOne } from './service/campanha.service.findone';
 import { CampanhaServiceRejeitar } from './service/campanha.service.rejeitar';
+import { CampanhaServiceRemove } from './service/campanha.service.remove';
 import { CampanhaServiceUpdate } from './service/campanha.service.update';
 
 @Module({
@@ -20,6 +22,7 @@ import { CampanhaServiceUpdate } from './service/campanha.service.update';
     CampanhaControllerUpdate,
     CampanhaControllerAprovar,
     CampanhaControllerRejeitar,
+    CampanhaControllerRemove,
   ],
   providers: [
     CampanhaServiceCreate,
@@ -28,6 +31,7 @@ import { CampanhaServiceUpdate } from './service/campanha.service.update';
     CampanhaServiceUpdate,
     CampanhaServiceAprovar,
     CampanhaServiceRejeitar,
+    CampanhaServiceRemove,
   ],
 })
 export class CampanhaModule {}

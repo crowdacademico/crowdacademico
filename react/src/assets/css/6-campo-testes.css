@@ -3,119 +3,34 @@
    NÃO ESTÁ NOS REQUISITOS FUNCIONAIS E NEM ESTARÁ.
    ============================================================================ */
 
-/* Linha do pesquisador atualmente "Agindo como" (bancada-pesquisador.jsx,
-   23-08-2026, pedido do Lucas: "só um pesquisador selecionado por vez,
-   bem marcante") — mesma linguagem visual de .admin-sidebar__item--ativo
-   (3-admin-shell.css): fundo levemente tintado + barra de 4px na cor da
-   marca à esquerda. box-shadow inset em vez de border-left de verdade —
-   funciona igual mas não desalinha as bordas da linha (border-collapse
-   da tabela). */
+/* Linha selecionada numa tabela do Campo de Testes — o pesquisador
+   escolhido em T1, a campanha em foco em T2 (bancada-pesquisador.jsx/
+   bancada-campanha.jsx, 23-08-2026, pedido do Lucas: "só um selecionado
+   por vez, bem marcante") — mesma linguagem visual de
+   .admin-sidebar__item--ativo (3-admin-shell.css): fundo levemente
+   tintado + barra de 4px na cor da marca à esquerda. box-shadow inset em
+   vez de border-left de verdade — funciona igual mas não desalinha as
+   bordas da linha (border-collapse da tabela). */
 .crud-tabela__linha--selecionada {
   background-color: var(--cor-fundo-hover);
   box-shadow: inset 4px 0 0 var(--color-primary);
   font-weight: 700;
 }
 
-/* Visual "isto é ferramenta, não produto": mesma linguagem do .btn-dev
-   (2-componentes.css): roxo + tracejado, nunca confundível com o resto do
-   painel. */
-.elenco-barra {
-  border: 2px dashed var(--color-purple-300);
-  background-color: var(--color-purple-50);
-  border-radius: var(--radius-md);
-  padding: 0.75rem 1rem;
-  margin-bottom: 1.25rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  font-size: var(--font-size-sm);
-}
-
-.elenco-barra__rotulo {
-  font-family: var(--font-mono-dev);
-  font-weight: 700;
-  font-size: var(--font-size-xs);
-  color: var(--color-purple-600);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.elenco-barra__chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-.elenco-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.3rem 0.6rem;
-  border-radius: var(--radius-full);
-  background-color: var(--cor-fundo-cartao);
-  border: 1px solid var(--cor-borda);
-  font-size: var(--font-size-xs);
-  cursor: default;
-}
-
-.elenco-chip__bolinha {
-  width: 0.5rem;
-  height: 0.5rem;
-  border-radius: var(--radius-full);
-  flex-shrink: 0;
-}
-
-.elenco-chip__bolinha--vivo {
-  background-color: var(--cor-texto-sucesso);
-}
-
-.elenco-chip__bolinha--entrando {
-  background-color: var(--color-purple-600);
-  animation: elenco-pulsar 1s ease-in-out infinite;
-}
-
-.elenco-chip__bolinha--erro {
-  background-color: var(--cor-texto-erro);
-}
-
-@keyframes elenco-pulsar {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.35;
-  }
-}
-
-.elenco-barra__linha-acao {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.6rem;
-}
-
-.elenco-barra__select {
-  border: 1px solid var(--cor-borda);
-  border-radius: var(--radius-sm);
-  padding: 0.3rem 0.5rem;
-  font-size: var(--font-size-sm);
-  background-color: var(--cor-fundo-cartao);
-  color: var(--cor-texto);
-}
-
 /* Botão desabilitado com motivo (a "segunda metade" da solução, ver
    prompt/resposta do Claude Web sobre o Campo de Testes): sempre mostra
-   POR QUE está travado, nunca só cinza sem explicação. */
-.elenco-botao-acao {
+   POR QUE está travado, nunca só cinza sem explicação. ERA
+   .elenco-botao-acao (nome trocado 25-08-2026 na remoção do Elenco — o
+   padrão em si não tinha nada de específico de elenco, continua em uso
+   pra Aprovar/Salvar/Excluir campanha). */
+.acao-com-motivo {
   display: inline-flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 0.15rem;
 }
 
-.elenco-botao-acao__motivo {
+.acao-com-motivo__motivo {
   font-size: var(--font-size-xs);
   color: var(--cor-texto-fraco);
   max-width: 22rem;
@@ -131,7 +46,7 @@
 
 .registro-chamadas__linha {
   display: grid;
-  grid-template-columns: 5.5rem 7rem 1fr 3.5rem 3.5rem 1fr;
+  grid-template-columns: 5.5rem 1fr 3.5rem 3.5rem 1fr;
   gap: 0.5rem;
   padding: 0.3rem 0.5rem;
   font-size: var(--font-size-xs);
@@ -146,16 +61,17 @@
   white-space: nowrap;
 }
 
-/* Centralizado só nas colunas de valor curto e uniforme (Hora, Ator,
-   Status, ms) — Chamada e Recebido variam muito de tamanho linha a
-   linha, centralizar essas ficaria estranho (23-08-2026, pedido do
-   Lucas). Mesmo raciocínio de crud-tabela__celula--centralizada em
-   4-crud.css, só que por posição (nth-child) em vez de classe, porque
-   aqui é sempre a mesma coluna em toda linha, cabeçalho incluso. */
+/* Centralizado só nas colunas de valor curto e uniforme (Hora, Status,
+   ms) — Chamada e Recebido variam muito de tamanho linha a linha,
+   centralizar essas ficaria estranho (23-08-2026, pedido do Lucas).
+   Mesmo raciocínio de crud-tabela__celula--centralizada em 4-crud.css,
+   só que por posição (nth-child) em vez de classe, porque aqui é sempre
+   a mesma coluna em toda linha, cabeçalho incluso. Coluna "Ator" saiu
+   (25-08-2026, remoção do Elenco: só existe 1 ator possível agora, a
+   sessão real logada, mostrar era ruído), por isso a numeração mudou. */
 .registro-chamadas__linha > span:nth-child(1),
-.registro-chamadas__linha > span:nth-child(2),
-.registro-chamadas__linha > span:nth-child(4),
-.registro-chamadas__linha > span:nth-child(5) {
+.registro-chamadas__linha > span:nth-child(3),
+.registro-chamadas__linha > span:nth-child(4) {
   text-align: center;
 }
 

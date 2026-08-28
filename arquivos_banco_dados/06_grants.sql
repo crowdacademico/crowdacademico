@@ -290,10 +290,16 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON verificacao_email, recuperacao_senha, se
 -- pol_repasse_update (04) também é USING(true). status/repassado_em só mudam
 -- via atualizar_status_repasse() (05, SECURITY DEFINER, [05-K-2]).
 GRANT INSERT, UPDATE ON
-    campanha, atualizacao_campanha,
+    atualizacao_campanha,
     solicitacao_encerramento, historico_rejeicao, comentario, denuncia,
     recompensa
 TO app_nestjs;
+-- campanha ganha DELETE também (25-08-2026, Campo de Testes: CRUD
+-- completo em T2) — pol_campanha_delete (04) já restringe a
+-- 'aguardando_aprovacao' + dono/campanha_editar; sem este GRANT a policy
+-- nunca chega a ser avaliada, mesmo padrão do comentário de
+-- orcamento_campanha/marco_cronograma logo abaixo.
+GRANT INSERT, UPDATE, DELETE ON campanha TO app_nestjs;
 GRANT INSERT ON repasse TO app_nestjs;
 
 -- ADICIONADO (31-07-2026, Alexia): orçamento e cronograma estruturados (01, [01-E]).
