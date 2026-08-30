@@ -26,8 +26,8 @@ isso já libera leitura pública sem precisar mexer em política depois. Nenhuma
 #   suportar. NUNCA o domínio principal do site (ver comentário de
 #   segurança abaixo).
 STORAGE_ENDPOINT=https://$$$$$$$$$$$$.storage.supabase.co/storage/v1/s3
-STORAGE_ACCESS_KEY_ID= a6ea7e00701229d03b35ac22ea227f6c
-STORAGE_SECRET_ACCESS_KEY= 020e933fefd8290ca404339da8c4ac9fa0c2496c1aac472cea30e019408c96ad
+STORAGE_ACCESS_KEY_ID= 
+STORAGE_SECRET_ACCESS_KEY= 
 STORAGE_BUCKET=crowdacademico-arquivos
 STORAGE_PUBLIC_BASE_URL=//$$$$$$$$$$$$.supabase.co/storage/v1/object/public/NOME-DO-BUCKET
 STORAGE_REGION=us-east-2

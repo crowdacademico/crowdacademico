@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { CampoFicha, FichaConsulta, SecaoFicha } from '../../components/crud/ficha-consulta';
+import { AvatarUsuario } from '../../components/layout/avatar-usuario';
 import { useErroToast } from '../../components/layout/use-erro-toast';
+import { arquivoApi } from '../../services/25-arquivo/api/arquivo.api';
 import { usuarioPapelApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 
@@ -14,6 +16,13 @@ export function ConsultarUsuario({ auth }) {
   const navigate = useNavigate();
   const [usuario, setUsuario] = useState(null);
   const [papeis, setPapeis] = useState(null);
+  // Avatar (módulo 25-arquivo) — busca separada de `usuario` de propósito:
+  // GET /arquivo/avatar/:idUsuario é público (não precisa de auth.authFetch,
+  // é o próprio backend que já resolve foto-cadastrada-ou-padrão), e um
+  // erro aqui (ex.: avatar padrão ainda não configurado, url null) não deve
+  // impedir o resto da ficha de carregar — daí o .catch(() => null) igual
+  // já é feito pra `papeis` logo abaixo.
+  const [avatar, setAvatar] = useState(null);
   const [carregando, setCarregando] = useState(true);
   const { erro, reportarErro } = useErroToast();
   // Histórico de login (07-08-2026, pedido do Lucas: "uma setinha que
@@ -34,10 +43,12 @@ export function ConsultarUsuario({ auth }) {
       // perfil completo (vínculo institucional, título acadêmico, links
       // etc.) entra numa seção "Perfil acadêmico" própria, do mesmo jeito.
       usuarioPapelApi.listarPorUsuario(auth.authFetch, id).catch(() => []),
+      arquivoApi.buscarAvatarPorUsuario(id).catch(() => null),
     ])
-      .then(([dadosUsuario, papeisUsuario]) => {
+      .then(([dadosUsuario, papeisUsuario, avatarUsuario]) => {
         setUsuario(dadosUsuario);
         setPapeis(papeisUsuario);
+        setAvatar(avatarUsuario);
       })
       .catch(reportarErro)
       .finally(() => setCarregando(false));
@@ -111,7 +122,12 @@ export function ConsultarUsuario({ auth }) {
         <div className="lg:col-span-2 space-y-6">
           <SecaoFicha titulo="Dados da conta">
             <CampoFicha rotulo="id" valor={usuario.idUsuario} />
-            <CampoFicha rotulo="Id da imagem de perfil" valor={usuario.idImagemPerfil} />
+            <CampoFicha
+              rotulo="Foto de perfil"
+              largura="cheia"
+              valor={avatar?.padrao === false ? 'Foto cadastrada' : 'Avatar padrão do sistema'}
+              acao={<AvatarUsuario nome={usuario.nome} foto={avatar?.url} tamanho="md" />}
+            />
             <CampoFicha
               rotulo="Criado em"
               valor={usuario.criadoEm && new Date(usuario.criadoEm).toLocaleString('pt-BR')}

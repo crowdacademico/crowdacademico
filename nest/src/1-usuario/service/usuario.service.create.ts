@@ -23,7 +23,12 @@ export class UsuarioServiceCreate {
     // chamadas abaixo já são atômicas por construção.
     const usuario = await db
       .insertInto('usuario')
-      .values({ nome: dto.nome, email: dto.email, senha_hash: senhaHash })
+      .values({
+        nome: dto.nome,
+        email: dto.email,
+        senha_hash: senhaHash,
+        id_imagem_perfil: dto.idImagemPerfil ?? null,
+      })
       .returning(USUARIO_COLUNAS_SELECT)
       .executeTakeFirstOrThrow();
 

@@ -32,22 +32,55 @@ import type {
 // B2 e R2 documentam a própria compatibilidade S3).
 @Injectable()
 export class S3CompativelArmazenamentoService implements ArmazenamentoService {
-  private readonly client: S3Client;
-  private readonly bucket: string;
-  private readonly urlPublicaBase: string;
+  // Client/config são construídos SOB DEMANDA (getter privado abaixo), não
+  // no constructor. MOTIVO (bug real encontrado em produção, ver conversa
+  // que originou este ajuste): StorageModule é @Global() e registrado no
+  // AppModule — o Nest instancia esse provider já na INICIALIZAÇÃO do
+  // servidor, mesmo que nenhuma rota de arquivo tenha sido chamada ainda.
+  // Se as variáveis STORAGE_* faltarem no .env (ex.: time ainda decidindo
+  // entre B2/R2/Supabase Storage, como aconteceu aqui), lançar erro no
+  // construtor derrubava o processo Nest INTEIRO no boot — login, e
+  // qualquer outra rota que nada tem a ver com arquivo, parava de
+  // funcionar junto. Validação preguiçosa: só estoura (e só nesse
+  // momento) quando alguém de fato tenta usar upload/leitura de arquivo,
+  // com o resto do sistema funcionando normalmente até lá.
+  private clienteCache: S3Client | null = null;
+  private bucketCache: string | null = null;
+  private urlPublicaBaseCache: string | null = null;
 
-  constructor(private readonly config: ConfigService) {
+  constructor(private readonly config: ConfigService) {}
+
+  private get client(): S3Client {
+    this.garantirConfigurado();
+    return this.clienteCache!;
+  }
+
+  private get bucket(): string {
+    this.garantirConfigurado();
+    return this.bucketCache!;
+  }
+
+  private get urlPublicaBase(): string {
+    this.garantirConfigurado();
+    return this.urlPublicaBaseCache!;
+  }
+
+  private garantirConfigurado(): void {
+    if (this.clienteCache) {
+      return;
+    }
+
     const endpoint = this.variavelObrigatoria('STORAGE_ENDPOINT');
     const accessKeyId = this.variavelObrigatoria('STORAGE_ACCESS_KEY_ID');
     const secretAccessKey = this.variavelObrigatoria(
       'STORAGE_SECRET_ACCESS_KEY',
     );
-    this.bucket = this.variavelObrigatoria('STORAGE_BUCKET');
-    this.urlPublicaBase = this.variavelObrigatoria(
+    this.bucketCache = this.variavelObrigatoria('STORAGE_BUCKET');
+    this.urlPublicaBaseCache = this.variavelObrigatoria(
       'STORAGE_PUBLIC_BASE_URL',
     ).replace(/\/+$/, '');
 
-    this.client = new S3Client({
+    this.clienteCache = new S3Client({
       endpoint,
       // B2 e R2 não usam região de verdade (é um conceito da AWS) mas a
       // lib exige o campo — 'auto' funciona nos dois; STORAGE_REGION
@@ -144,12 +177,15 @@ export class S3CompativelArmazenamentoService implements ArmazenamentoService {
 
   async moverObjeto(chaveOrigem: string, chaveDestino: string): Promise<void> {
     // S3 (e compatíveis) não têm "mover" nativo — copy + delete é o padrão
-    // aceito pra isso. CopySource precisa do bucket embutido e
-    // URL-encoded.
+    // aceito pra isso.
+    const chaveOrigemCodificada = chaveOrigem
+      .split('/')
+      .map(encodeURIComponent)
+      .join('/');
     await this.client.send(
       new CopyObjectCommand({
         Bucket: this.bucket,
-        CopySource: `${this.bucket}/${encodeURIComponent(chaveOrigem)}`,
+        CopySource: `${this.bucket}/${chaveOrigemCodificada}`,
         Key: chaveDestino,
       }),
     );

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { CartaoFormulario } from '../../components/crud/cartao-formulario';
+import { SeletorFotoPerfil } from '../../components/input/seletor-foto-perfil';
 import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
@@ -16,6 +17,15 @@ export function CriarUsuario({ auth }) {
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
+  // Foto de perfil (módulo 25-arquivo) — OPCIONAL na criação. O upload
+  // acontece na hora (SeletorFotoPerfil já sobe e confirma o arquivo antes
+  // de devolver o id), então aqui só guardamos o id_arquivo já confirmado
+  // pra mandar junto do POST /usuario quando existir. Sem foto escolhida,
+  // idImagemPerfil fica null e o campo nem entra no corpo da requisição —
+  // usuário nasce usando o avatar padrão do sistema (ver
+  // ArquivoServiceResolverAvatar).
+  const [idImagemPerfil, setIdImagemPerfil] = useState(null);
+  const [urlImagemPerfil, setUrlImagemPerfil] = useState(null);
   const [enviando, setEnviando] = useState(false);
 
   const aoCriar = async (evento) => {
@@ -23,7 +33,12 @@ export function CriarUsuario({ auth }) {
     limparErro();
     setEnviando(true);
     try {
-      const usuarioCriado = await usuarioApi.criar(auth.authFetch, { nome, email, senha });
+      const usuarioCriado = await usuarioApi.criar(auth.authFetch, {
+        nome,
+        email,
+        senha,
+        ...(idImagemPerfil !== null ? { idImagemPerfil } : {}),
+      });
       mostrar(
         'Usuário cadastrado com sucesso.',
         `O novo usuário possui o ID: ${usuarioCriado.idUsuario}`,
@@ -50,6 +65,25 @@ export function CriarUsuario({ auth }) {
     >
       <form onSubmit={aoCriar} className="p-10 space-y-6">
         {erro && <p className="text-red-700 text-sm font-bold text-center">{erro}</p>}
+
+        {/* Centralizado, acima dos campos de texto — é o primeiro elemento
+            visual da ficha, mesmo lugar que ocupará depois em Alterar
+            Usuário. authFetch aqui é do ADMIN logado (quem está criando a
+            conta), não do usuário novo — faz sentido: o novo usuário ainda
+            nem existe no banco no momento do upload, id_usuario_upload
+            registra quem enviou o arquivo, não de quem é o perfil. */}
+        <div className="flex justify-center">
+          <SeletorFotoPerfil
+            authFetch={auth.authFetch}
+            nome={nome || 'Novo usuário'}
+            url={urlImagemPerfil}
+            tamanho="xl"
+            aoAlterar={(idArquivo, novaUrl) => {
+              setIdImagemPerfil(idArquivo);
+              setUrlImagemPerfil(novaUrl);
+            }}
+          />
+        </div>
 
         <div>
           <label className="rotulo-campo">

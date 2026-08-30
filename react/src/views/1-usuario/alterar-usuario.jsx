@@ -4,9 +4,11 @@ import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura
 import { CartaoFormulario } from '../../components/crud/cartao-formulario';
 import { useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
 import { SecaoFicha } from '../../components/crud/ficha-consulta';
+import { SeletorFotoPerfil } from '../../components/input/seletor-foto-perfil';
 import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
 import { formatarCpf } from '../../services/constant/utils/formatacao.util';
+import { arquivoApi } from '../../services/25-arquivo/api/arquivo.api';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { papelApi, usuarioPapelApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
 import { SecaoModeracao } from './secao-moderacao';
@@ -38,6 +40,15 @@ export function AlterarUsuario({ auth }) {
   const [usuario, setUsuario] = useState(null);
   const [nome, setNome] = useState('');
   const [novaSenha, setNovaSenha] = useState('');
+  // Foto de perfil (módulo 25-arquivo) — `avatarUrl` é o que existe HOJE
+  // (busca separada, ver Promise.all abaixo). `idImagemPerfilNovo`/
+  // `avatarUrlNovo` só ganham valor quando a pessoa escolhe uma foto NOVA
+  // nesta sessão de edição — o upload em si já aconteceu (SeletorFotoPerfil
+  // só chama `aoAlterar` depois de confirmar de verdade no backend), falta
+  // só mandar esse id no PATCH ao clicar Salvar (aoSalvar, abaixo).
+  const [avatarUrl, setAvatarUrl] = useState(null);
+  const [idImagemPerfilNovo, setIdImagemPerfilNovo] = useState(null);
+  const [avatarUrlNovo, setAvatarUrlNovo] = useState(null);
   const [carregando, setCarregando] = useState(true);
   const [enviando, setEnviando] = useState(false);
   const [redefinindoSenhaDev, setRedefinindoSenhaDev] = useState(false);
@@ -57,12 +68,14 @@ export function AlterarUsuario({ auth }) {
       usuarioApi.buscar(auth.authFetch, id),
       usuarioPapelApi.listarPorUsuario(auth.authFetch, id).catch(() => []),
       papelApi.listar(auth.authFetch),
+      arquivoApi.buscarAvatarPorUsuario(id).catch(() => null),
     ])
-      .then(([dadosUsuario, papeisDoUsuario, catalogo]) => {
+      .then(([dadosUsuario, papeisDoUsuario, catalogo, avatarAtual]) => {
         setUsuario(dadosUsuario);
         setNome(dadosUsuario.nome);
         setPapeisAtuais(papeisDoUsuario);
         setCatalogoPapeis(catalogo);
+        setAvatarUrl(avatarAtual?.url ?? null);
       })
       .catch(reportarErro)
       .finally(() => setCarregando(false));
@@ -77,10 +90,16 @@ export function AlterarUsuario({ auth }) {
   );
 
   // "sujo" (09-08-2026, Bloco I do prompt do Claude Web) — só compara os
-  // campos que o próprio <form> salva (nome/senha); atribuir/revogar papel
-  // já salva na hora (cada clique é sua própria requisição), não faz
-  // parte do "salvar" deste formulário.
-  const sujo = usuario !== null && (nome !== usuario.nome || novaSenha !== '');
+  // campos que o próprio <form> salva (nome/senha/foto); atribuir/revogar
+  // papel já salva na hora (cada clique é sua própria requisição), não faz
+  // parte do "salvar" deste formulário. `idImagemPerfilNovo !== null`
+  // (módulo 25-arquivo) entra aqui pelo mesmo motivo de novaSenha: o
+  // upload já aconteceu de verdade no bucket/backend, só falta o PATCH
+  // linkar — sair da página sem salvar perderia essa escolha (o arquivo
+  // fica órfão, sem problema, mas a pessoa ficaria achando que salvou).
+  const sujo =
+    usuario !== null &&
+    (nome !== usuario.nome || novaSenha !== '' || idImagemPerfilNovo !== null);
   useAvisoAlteracaoNaoSalva(sujo);
 
   const aoCancelar = () => {
@@ -193,6 +212,9 @@ export function AlterarUsuario({ auth }) {
       if (novaSenha) {
         dados.novaSenha = novaSenha;
       }
+      if (idImagemPerfilNovo !== null) {
+        dados.idImagemPerfil = idImagemPerfilNovo;
+      }
       await usuarioApi.atualizar(auth.authFetch, id, dados);
       mostrar('Usuário alterado com sucesso.', `ID: ${id} foi alterado`);
       navigate(-1);
@@ -272,11 +294,22 @@ export function AlterarUsuario({ auth }) {
           {/* Cabeçalho de identidade (09-08-2026, Bloco I: "a pessoa
               precisa saber QUEM está editando") — mesmo espírito do
               cabeçalho de FichaConsulta, largura cheia acima das 2
-              colunas. */}
+              colunas. A bolinha de inicial virou SeletorFotoPerfil
+              (módulo 25-arquivo): mesmo componente base (AvatarUsuario),
+              só que agora clicável — mostra a foto já cadastrada
+              (avatarUrl) até a pessoa trocar, e passa a mostrar a nova
+              assim que o upload confirma (avatarUrlNovo). */}
           <div className="flex items-center gap-3 pb-6 mb-6 border-b borda-padrao">
-            <div className="w-11 h-11 rounded-full bg-primary text-white flex items-center justify-center font-bold text-lg shrink-0">
-              {usuario.nome?.[0]?.toUpperCase() ?? '?'}
-            </div>
+            <SeletorFotoPerfil
+              authFetch={auth.authFetch}
+              nome={usuario.nome}
+              url={avatarUrlNovo ?? avatarUrl}
+              tamanho="lg"
+              aoAlterar={(idArquivo, novaUrl) => {
+                setIdImagemPerfilNovo(idArquivo);
+                setAvatarUrlNovo(novaUrl);
+              }}
+            />
             <div className="min-w-0">
               <p className="font-bold texto-forte truncate">{usuario.nome}</p>
               <p className="text-xs texto-fraco truncate">{usuario.email}</p>

@@ -549,17 +549,15 @@ INSERT INTO motivo_denuncia (descricao, tipo) VALUES
 
 -- [07-C-4] arquivo (imagens de perfil — sem FK ainda ativa no INSERT)
 -- ativo omitido: DEFAULT TRUE aplicado automaticamente
--- URLs do Pravatar (CC0, fotos reais que carregam de fato — feito
--- exatamente pra preencher dados de teste/demo como este).
-INSERT INTO arquivo (url, nome_original, tipo_mime, tamanho_bytes) VALUES
-('https://i.pravatar.cc/300?img=47',                              'ana_santos.jpg',       'image/jpeg',      102400),
-('https://i.pravatar.cc/300?img=33',                              'carlos_melo.jpg',      'image/jpeg',       98304),
-('https://i.pravatar.cc/300?img=44',                              'beatriz_lima.jpg',     'image/jpeg',      115200),
-('https://i.pravatar.cc/300?img=14',                              'rafael_costa.jpg',     'image/jpeg',       87040),
-('https://i.pravatar.cc/300?img=49',                              'juliana_ferreira.jpg', 'image/jpeg',      131072),
-('https://i.pravatar.cc/300?img=22',                              'marcos_oliveira.jpg',  'image/jpeg',       94208),
-('https://i.pravatar.cc/300?img=56',                              'patricia_rocha.jpg',   'image/jpeg',      109568),
-('https://cdn.crowdacademico.com.br/docs/relatorio_q1.pdf',       'relatorio_q1.pdf',     'application/pdf', 512000);
+INSERT INTO arquivo (chave, nome_original, tipo_mime, tamanho_bytes) VALUES
+('publico/seed-ana-santos.jpg',       'ana_santos.jpg',       'image/jpeg',      102400),
+('publico/seed-carlos-melo.jpg',      'carlos_melo.jpg',      'image/jpeg',       98304),
+('publico/seed-beatriz-lima.jpg',     'beatriz_lima.jpg',     'image/jpeg',      115200),
+('publico/seed-rafael-costa.jpg',     'rafael_costa.jpg',     'image/jpeg',       87040),
+('publico/seed-juliana-ferreira.jpg', 'juliana_ferreira.jpg', 'image/jpeg',      131072),
+('publico/seed-marcos-oliveira.jpg',  'marcos_oliveira.jpg',  'image/jpeg',       94208),
+('publico/seed-patricia-rocha.jpg',   'patricia_rocha.jpg',   'image/jpeg',      109568),
+('publico/seed-relatorio-q1.pdf',     'relatorio_q1.pdf',     'application/pdf', 512000);
 
 
 -- [07-D-1] usuario
@@ -725,6 +723,14 @@ FROM usuario;
 INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo) VALUES
 -- A
 (NULL, 'email_suporte',              'suporte@crowdacademico.com.br', 'texto', 'E-mail de suporte ao usuário',   TRUE), -- lida pelo NestJS (rodapé/e-mails transacionais), não pelo banco — nenhum .sql precisa dela
+-- ADICIONADA (24-08-2026, módulo 25-arquivo): chave (não URL completa) do
+-- objeto no bucket usado como foto de perfil de quem nunca cadastrou uma —
+-- lida por ArquivoServiceResolverAvatar (25-arquivo), nunca pelo banco.
+-- NULL de propósito: qual imagem usar ainda não foi decidido pelo time.
+-- Assim que decidirem, é só subir o arquivo (endpoint de upload já
+-- funciona) e colar a chave aqui pelo próprio painel Admin > Configurações
+-- — sem deploy novo.
+(NULL, 'avatar_padrao_chave',        NULL, 'texto', 'Chave do objeto (no bucket) usado como avatar de quem não tem foto de perfil cadastrada — definir após a equipe escolher a imagem', TRUE),
 -- D
 (NULL, 'limite_tentativas_login',    '5',     'inteiro',  'Nº de tentativas de login falhas antes de bloquear a conta',    TRUE),
 (NULL, 'bloqueio_login_minutos',     '15',    'inteiro',  'Duração do bloqueio de login após exceder o limite de tentativas (minutos)', TRUE),
@@ -1230,51 +1236,6 @@ INSERT INTO notificacao (id_usuario, email_destinatario, tipo_evento, status, te
 -- Reputação: Bruno e Renata não têm denúncia (25); Eduardo tem 2 pendentes (25−2=23);
 --   Vinícius tem 4 procedentes (25−4×4=9).
 -- ----------------------------------------------------------------------------
--- ============================================================================
--- 24-08-2026 — módulo 25-arquivo implementado (upload via Backblaze B2,
--- URL pré-assinada, confirmação em 2 passos) — mudanças em
--- 01_extensoes_enums_tabelas.sql e 02_indices.sql, e 2 chaves novas em
--- 07_seed_dados.sql/configuracoes.
---
--- Seguro rodar de novo? O bloco de ALTER/CREATE INDEX sim (idempotente,
--- ver cada instrução). O INSERT da chave de configuração usa
--- ON CONFLICT (chave) DO NOTHING — também seguro repetir.
---
--- ATENÇÃO — ORDEM IMPORTA: se a tabela `arquivo` já tem linhas (mesmo que
--- de teste) com a coluna antiga `url` preenchida, o RENAME abaixo preserva
--- o CONTEÚDO dessas linhas na coluna `chave` — mas esse conteúdo era uma
--- URL COMPLETA (ex. "https://dominio-antigo/arquivo.jpg"), não uma chave
--- de objeto ("publico/uuid.jpg"). Se o banco já tinha arquivos de teste
--- gravados por um protótipo anterior, rode
--- `SELECT id_arquivo, chave FROM arquivo;` depois do RENAME e corrija à
--- mão as linhas que ainda têm URL completa — o módulo novo só entende
--- chave de objeto. Num banco sem nenhuma linha em `arquivo` ainda (mais
--- provável, já que o módulo nunca existiu até agora), não há nada pra
--- corrigir.
--- ============================================================================
-
-ALTER TABLE arquivo RENAME COLUMN url TO chave;
-ALTER TABLE arquivo ADD CONSTRAINT "UK_ARQUIVO_CHAVE" UNIQUE (chave);
-ALTER TABLE arquivo ADD COLUMN IF NOT EXISTS id_usuario_upload INT;
-
--- Só adiciona a FK se ela ainda não existir (colar este arquivo de novo
--- não pode tentar criar a mesma constraint duas vezes).
-DO $$
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'FK_ARQUIVO_USUARIO_UPLOAD'
-    ) THEN
-        ALTER TABLE arquivo
-            ADD CONSTRAINT "FK_ARQUIVO_USUARIO_UPLOAD"
-            FOREIGN KEY (id_usuario_upload) REFERENCES usuario(id_usuario) ON DELETE SET NULL;
-    END IF;
-END $$;
-
-CREATE INDEX IF NOT EXISTS idx_arquivo_usuario_upload ON arquivo(id_usuario_upload);
-
-INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo) VALUES
-(NULL, 'avatar_padrao_chave', NULL, 'texto', 'Chave do objeto (no bucket) usado como avatar de quem não tem foto de perfil cadastrada — definir após a equipe escolher a imagem', TRUE)
-ON CONFLICT (chave) DO NOTHING;
 
 
 -- [07-D-5] Como logar no app depois deste seed (autenticação própria, ver DOCUMENTACAO_BD.md)
