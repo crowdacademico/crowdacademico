@@ -7,6 +7,8 @@
 --               score já criadas — o INSERT final chama
 --               public.recalcular_todos_os_scores(), definida em 05)
 --  Próximo:     08_trigger_signup_usuario.sql (opcional/manual)
+
+--  Senha de todo mundo no seed = DevTcc123!
 -- ----------------------------------------------------------------------------
 --  Descrição:
 --  Povoa o banco com dados de demonstração/teste, na ordem física exigida

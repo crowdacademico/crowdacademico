@@ -11,9 +11,13 @@ export class UsuarioRequestUpdate {
   @MinLength(2, { message: 'Nome precisa ter pelo menos 2 caracteres.' })
   nome?: string;
 
+  // `null` de propósito (25-08-2026, botão "Remover foto") — @IsOptional()
+  // já pula toda validação quando o valor é null ou undefined (comportamento
+  // documentado do class-validator), então @IsInt() só roda de verdade
+  // quando alguém manda um id numérico pra trocar de foto.
   @IsOptional()
   @IsInt()
-  idImagemPerfil?: number;
+  idImagemPerfil?: number | null;
 
   @IsOptional()
   @IsString()

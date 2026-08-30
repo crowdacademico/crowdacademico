@@ -17,16 +17,26 @@ const TAMANHO_MAXIMO_AVATAR_BYTES = 10 * 1024 * 1024;
 
 // Avatar EDITÁVEL — usa <AvatarUsuario> por baixo pra desenhar a bolinha
 // (foto ou inicial colorida, sem duplicar essa lógica), e adiciona por
-// cima: o botãozinho de câmera, o <input type="file"> escondido, e o fluxo
-// de upload de 3 passos inteiro (iniciar -> enviar pro bucket -> confirmar
-// -> devolve o novo id/URL pro componente pai via `aoAlterar`).
+// cima: o botãozinho de câmera, o <input type="file"> escondido, o botão
+// de remover (só aparece quando já existe uma foto), e o fluxo de upload
+// de 3 passos inteiro (iniciar -> enviar pro bucket -> confirmar -> devolve
+// o novo id/URL pro componente pai via `aoAlterar`).
 //
-// Este componente NUNCA salva nada em `usuario` sozinho — ele só sobe o
-// arquivo e devolve o `idArquivo` já confirmado. Quem usa isto (
-// criar-usuario.jsx, alterar-usuario.jsx) decide quando mandar esse id pro
-// backend (no create, ou no PATCH de alterar-usuario.jsx) — mesma separação
-// de responsabilidade do resto do app (componente de input nunca chama
+// Este componente NUNCA salva nada em `usuario` sozinho — ele só sobe (ou
+// sinaliza a remoção d)o arquivo e devolve o resultado pro pai via
+// `aoAlterar`. Quem usa isto (criar-usuario.jsx, alterar-usuario.jsx,
+// minha-conta-page.jsx) decide quando mandar isso pro backend (no create,
+// ou no PATCH de alterar/Minha Conta) — mesma separação de
+// responsabilidade do resto do app (componente de input nunca chama
 // usuarioApi diretamente).
+//
+// `aoAlterar(idArquivo, novaUrl)` — foto nova escolhida (upload já
+// confirmado no backend). `aoAlterar(null, null)` (25-08-2026, "Remover
+// foto") — pessoa pediu pra tirar a foto atual; quem usa este componente
+// distingue "nenhuma escolha feita ainda" (não chamou aoAlterar) de
+// "removida de propósito" (chamou com null) guardando o id como
+// `undefined` por padrão, nunca `null`, exatamente pra sobrar esse
+// terceiro estado — ver alterar-usuario.jsx/minha-conta-page.jsx.
 export function SeletorFotoPerfil({
   authFetch,
   nome,
@@ -97,6 +107,21 @@ export function SeletorFotoPerfil({
     }
   };
 
+  // Remover foto (25-08-2026, pedido do Lucas: "botão simples pra remover
+  // a foto, arquivo, tudo limpo") — não apaga nada AQUI, só sinaliza a
+  // intenção pro pai (aoAlterar(null, null)); o arquivo de verdade (linha
+  // desativada + bytes apagados do bucket) só some quando quem usa este
+  // componente salvar de fato (PATCH /usuario com idImagemPerfil: null —
+  // usuario.service.update.ts já cuida da limpeza, mesmo caminho que já
+  // desativa a foto ANTIGA ao trocar por uma nova).
+  const aoRemover = () => {
+    if (!window.confirm('Remover a foto de perfil?')) {
+      return;
+    }
+    setErroLocal('');
+    aoAlterar(null, null);
+  };
+
   return (
     <div>
       <div className="relative inline-block">
@@ -118,6 +143,19 @@ export function SeletorFotoPerfil({
             className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-dark hover:bg-black text-white flex items-center justify-center text-xs border-2 border-white shadow transition-colors disabled:opacity-60"
           >
             <i className="fa-solid fa-camera"></i>
+          </button>
+        )}
+
+        {!desabilitado && url && (
+          <button
+            type="button"
+            onClick={aoRemover}
+            disabled={enviando}
+            aria-label="Remover foto de perfil"
+            title="Remover foto de perfil"
+            className="absolute -bottom-1 -left-1 w-7 h-7 rounded-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center text-xs border-2 border-white shadow transition-colors disabled:opacity-60"
+          >
+            <i className="fa-solid fa-trash"></i>
           </button>
         )}
 

@@ -1,10 +1,18 @@
-import { ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
 import { ARMAZENAMENTO_SERVICE } from '../../commons/storage/storage.constants';
 import type { ArmazenamentoService } from '../../commons/storage/storage.service.interface';
 
 @Injectable()
 export class ArquivoServiceRemove {
+  private readonly logger = new Logger(ArquivoServiceRemove.name);
+
   constructor(
     private readonly database: DatabaseService,
     @Inject(ARMAZENAMENTO_SERVICE)
@@ -43,7 +51,13 @@ export class ArquivoServiceRemove {
       .executeTakeFirst();
 
     if (linha) {
-      await this.armazenamento.excluirObjeto(linha.chave).catch(() => undefined);
+      // LOGADO, não mais engolido em silêncio (25-08-2026, achado do
+      // Lucas: objeto órfão sobrou no bucket sem nenhum rastro do motivo).
+      await this.armazenamento.excluirObjeto(linha.chave).catch((erro) => {
+        this.logger.warn(
+          `Falha ao apagar objeto do bucket (arquivo=${idArquivo}, chave=${linha.chave}): ${(erro as Error).message}`,
+        );
+      });
       return;
     }
 

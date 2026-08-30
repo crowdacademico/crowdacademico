@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router';
 import { AvatarUsuario } from '../../components/layout/avatar-usuario';
+import { SeletorFotoPerfil } from '../../components/input/seletor-foto-perfil';
 import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
 import { SecaoFicha } from '../../components/crud/ficha-consulta';
@@ -126,7 +127,7 @@ function FaixaIdentidade({ auth }) {
             hardcoded em branco) — reage ao tema escuro sozinho, mesmos
             tokens de sempre. */}
         <div className="p-1 rounded-full fundo-cartao shadow-md shrink-0 w-fit">
-          <AvatarUsuario nome={usuario?.nome} tamanho="xxl" forma="circulo" />
+          <AvatarUsuario nome={usuario?.nome} foto={usuario?.avatarUrl} tamanho="xxl" forma="circulo" />
         </div>
 
         <div className="min-w-0 flex-1">
@@ -211,17 +212,30 @@ function AbaPerfil({ auth }) {
   const { mostrar } = useToast();
   const { erro, reportarErro, limparErro } = useErroToast();
 
-  const sujo = nome.trim() !== (auth.usuario?.nome ?? '') && nome.trim().length >= 2;
+  // Mesmo padrão de 3 estados de alterar-usuario.jsx (25-08-2026, módulo
+  // 25-arquivo + botão "Remover foto"): `undefined` = nenhuma escolha nova
+  // (mostra a foto que já existe), número = foto nova (upload já
+  // confirmado, só falta linkar no PATCH), `null` = removida de propósito.
+  const [idImagemPerfilNovo, setIdImagemPerfilNovo] = useState(undefined);
+  const [avatarUrlNovo, setAvatarUrlNovo] = useState(null);
+
+  const sujo =
+    (nome.trim() !== (auth.usuario?.nome ?? '') && nome.trim().length >= 2) ||
+    idImagemPerfilNovo !== undefined;
 
   const aoSalvar = async (evento) => {
     evento.preventDefault();
     limparErro();
     setEnviando(true);
     try {
-      const usuarioAtualizado = await usuarioApi.atualizar(auth.authFetch, auth.usuario.idUsuario, {
-        nome: nome.trim(),
-      });
+      const dados = { nome: nome.trim() };
+      if (idImagemPerfilNovo !== undefined) {
+        dados.idImagemPerfil = idImagemPerfilNovo;
+      }
+      const usuarioAtualizado = await usuarioApi.atualizar(auth.authFetch, auth.usuario.idUsuario, dados);
       auth.atualizarUsuarioLocal(usuarioAtualizado);
+      setIdImagemPerfilNovo(undefined);
+      setAvatarUrlNovo(null);
       mostrar('Perfil atualizado com sucesso.');
     } catch (erroRequisicao) {
       reportarErro(erroRequisicao);
@@ -232,9 +246,11 @@ function AbaPerfil({ auth }) {
 
   // "Cancelar" aqui não navega pra lugar nenhum (diferente de Alterar
   // Usuário) — dentro da mesma página não existe "voltar", só descartar o
-  // que foi digitado e voltar ao valor salvo.
+  // que foi digitado/escolhido e voltar ao valor salvo.
   const aoCancelar = () => {
     setNome(auth.usuario?.nome ?? '');
+    setIdImagemPerfilNovo(undefined);
+    setAvatarUrlNovo(null);
     limparErro();
   };
 
@@ -247,21 +263,20 @@ function AbaPerfil({ auth }) {
           <div className="lg:col-span-2 space-y-6">
             <SecaoFicha titulo="Foto do perfil">
               <div className="sm:col-span-2 flex items-center gap-4">
-                <AvatarUsuario nome={auth.usuario?.nome} tamanho="lg" forma="circulo" />
-                <div>
-                  <button
-                    type="button"
-                    disabled
-                    className="btn btn-secondary opacity-60 cursor-not-allowed"
-                  >
-                    <i className="fa-solid fa-camera"></i> Alterar foto
-                  </button>
-                  <p className="text-xs texto-fraco mt-2">
-                    Upload de foto ainda não foi implementado neste protótipo (depende do
-                    módulo 25-arquivo) — a inicial colorida continua sendo usada, mesma
-                    lógica do resto do app.
-                  </p>
-                </div>
+                <SeletorFotoPerfil
+                  authFetch={auth.authFetch}
+                  nome={auth.usuario?.nome}
+                  url={idImagemPerfilNovo === undefined ? auth.usuario?.avatarUrl : avatarUrlNovo}
+                  tamanho="xxl"
+                  aoAlterar={(idArquivo, novaUrl) => {
+                    setIdImagemPerfilNovo(idArquivo);
+                    setAvatarUrlNovo(novaUrl);
+                  }}
+                />
+                <p className="text-xs texto-forte">
+                  Clique no ícone de câmera pra trocar, ou no de lixeira pra remover.
+                  Lembre de clicar em "Salvar" no fim da página pra confirmar.
+                </p>
               </div>
             </SecaoFicha>
 

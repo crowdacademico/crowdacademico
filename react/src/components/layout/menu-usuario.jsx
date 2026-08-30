@@ -48,7 +48,7 @@ export function MenuUsuario({ auth }) {
         className="flex items-center gap-1.5 hover-fundo-sutil rounded-full p-0.5 transition-colors"
       >
         {auth.autenticado ? (
-          <AvatarUsuario nome={auth.usuario?.nome} />
+          <AvatarUsuario nome={auth.usuario?.nome} foto={auth.usuario?.avatarUrl} />
         ) : (
           <div className="w-9 h-9 rounded-full fundo-sutil border borda-padrao flex items-center justify-center texto-fraco">
             <i className="fa-solid fa-user"></i>

@@ -16,4 +16,10 @@ export class UsuarioResponse {
   criadoEm: Date;
   emailVerificado: boolean;
   ultimoLoginEm: Date | null;
+  // Opcional de propósito (25-08-2026, módulo 25-arquivo) — só quem busca
+  // UM usuário por vez (findOne, update) resolve isto de verdade (1 query
+  // barata a mais); findAll (a listagem) nunca preenche, pra não virar N+1
+  // resolvendo avatar de cada linha da tabela. `undefined` aqui = "não
+  // resolvido", diferente de `null` = "resolvido, é o avatar padrão/sem foto".
+  avatarUrl?: string | null;
 }

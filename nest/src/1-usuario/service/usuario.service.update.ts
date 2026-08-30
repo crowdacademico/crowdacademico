@@ -2,11 +2,13 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { ArquivoServiceRemove } from '../../25-arquivo/service/arquivo.service.remove';
+import { ArquivoServiceResolverAvatar } from '../../25-arquivo/service/arquivo.service.resolver-avatar';
 import { DatabaseService } from '../../commons/database/database.service';
 import { USUARIO_COLUNAS_SELECT } from '../constants/usuario.constants';
 import { UsuarioConverter } from '../dto/converter/usuario.converter';
@@ -17,9 +19,12 @@ const CUSTO_BCRYPT = 10;
 
 @Injectable()
 export class UsuarioServiceUpdate {
+  private readonly logger = new Logger(UsuarioServiceUpdate.name);
+
   constructor(
     private readonly database: DatabaseService,
     private readonly arquivoServiceRemove: ArquivoServiceRemove,
+    private readonly resolverAvatar: ArquivoServiceResolverAvatar,
   ) {}
 
   async executar(
@@ -73,9 +78,14 @@ export class UsuarioServiceUpdate {
         // Best-effort: um problema aqui (corrida rara, permissão, etc.)
         // não pode travar o resto da atualização — nome/senha/foto nova
         // continuam valendo mesmo que a limpeza da antiga não role agora.
-        await this.arquivoServiceRemove
-          .executar(fotoAntiga)
-          .catch(() => undefined);
+        // LOGADO, não mais engolido em silêncio (25-08-2026, achado do
+        // Lucas: arquivo órfão sobrou no bucket sem NENHUM rastro do
+        // motivo) — best-effort não é o mesmo que invisível.
+        await this.arquivoServiceRemove.executar(fotoAntiga).catch((erro) => {
+          this.logger.warn(
+            `Falha ao limpar foto antiga (id_arquivo=${fotoAntiga}) do usuário ${idUsuario}: ${(erro as Error).message}`,
+          );
+        });
       }
     }
 
@@ -119,6 +129,16 @@ export class UsuarioServiceUpdate {
       throw new ForbiddenException('Sem permissão para editar este usuário.');
     }
 
-    return UsuarioConverter.paraResponseDto(usuario);
+    // ADICIONADO (25-08-2026, módulo 25-arquivo): resposta já vem com a
+    // avatarUrl fresca — quem chama (ex.: Minha Conta > aoSalvar) só passa
+    // este objeto pra auth.atualizarUsuarioLocal() e o cabeçalho/faixa de
+    // identidade já refletem a troca na hora, sem precisar recalcular nada
+    // no lado do cliente.
+    const avatar = await this.resolverAvatar.executar(usuario.id_imagem_perfil);
+
+    return {
+      ...UsuarioConverter.paraResponseDto(usuario),
+      avatarUrl: avatar.url,
+    };
   }
 }

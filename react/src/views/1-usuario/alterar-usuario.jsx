@@ -41,13 +41,16 @@ export function AlterarUsuario({ auth }) {
   const [nome, setNome] = useState('');
   const [novaSenha, setNovaSenha] = useState('');
   // Foto de perfil (módulo 25-arquivo) — `avatarUrl` é o que existe HOJE
-  // (busca separada, ver Promise.all abaixo). `idImagemPerfilNovo`/
-  // `avatarUrlNovo` só ganham valor quando a pessoa escolhe uma foto NOVA
-  // nesta sessão de edição — o upload em si já aconteceu (SeletorFotoPerfil
-  // só chama `aoAlterar` depois de confirmar de verdade no backend), falta
-  // só mandar esse id no PATCH ao clicar Salvar (aoSalvar, abaixo).
+  // (busca separada, ver Promise.all abaixo). `idImagemPerfilNovo` tem 3
+  // estados de propósito (25-08-2026, botão "Remover foto"): `undefined` =
+  // nenhuma escolha nova ainda (mostra `avatarUrl`); um número = foto nova
+  // escolhida (upload já confirmado no backend, só falta mandar esse id no
+  // PATCH); `null` = pessoa pediu pra REMOVER a foto atual (manda
+  // idImagemPerfil: null no PATCH). `avatarUrlNovo` acompanha o mesmo
+  // estado só pra prévia (null quando removida, sem cair de volta pra
+  // `avatarUrl` antiga).
   const [avatarUrl, setAvatarUrl] = useState(null);
-  const [idImagemPerfilNovo, setIdImagemPerfilNovo] = useState(null);
+  const [idImagemPerfilNovo, setIdImagemPerfilNovo] = useState(undefined);
   const [avatarUrlNovo, setAvatarUrlNovo] = useState(null);
   const [carregando, setCarregando] = useState(true);
   const [enviando, setEnviando] = useState(false);
@@ -92,14 +95,15 @@ export function AlterarUsuario({ auth }) {
   // "sujo" (09-08-2026, Bloco I do prompt do Claude Web) — só compara os
   // campos que o próprio <form> salva (nome/senha/foto); atribuir/revogar
   // papel já salva na hora (cada clique é sua própria requisição), não faz
-  // parte do "salvar" deste formulário. `idImagemPerfilNovo !== null`
+  // parte do "salvar" deste formulário. `idImagemPerfilNovo !== undefined`
   // (módulo 25-arquivo) entra aqui pelo mesmo motivo de novaSenha: o
-  // upload já aconteceu de verdade no bucket/backend, só falta o PATCH
-  // linkar — sair da página sem salvar perderia essa escolha (o arquivo
-  // fica órfão, sem problema, mas a pessoa ficaria achando que salvou).
+  // upload (ou a remoção) já aconteceu de verdade no bucket/backend, só
+  // falta o PATCH linkar — sair da página sem salvar perderia essa escolha
+  // (o arquivo fica órfão, sem problema, mas a pessoa ficaria achando que
+  // salvou).
   const sujo =
     usuario !== null &&
-    (nome !== usuario.nome || novaSenha !== '' || idImagemPerfilNovo !== null);
+    (nome !== usuario.nome || novaSenha !== '' || idImagemPerfilNovo !== undefined);
   useAvisoAlteracaoNaoSalva(sujo);
 
   const aoCancelar = () => {
@@ -212,7 +216,7 @@ export function AlterarUsuario({ auth }) {
       if (novaSenha) {
         dados.novaSenha = novaSenha;
       }
-      if (idImagemPerfilNovo !== null) {
+      if (idImagemPerfilNovo !== undefined) {
         dados.idImagemPerfil = idImagemPerfilNovo;
       }
       await usuarioApi.atualizar(auth.authFetch, id, dados);
@@ -303,7 +307,7 @@ export function AlterarUsuario({ auth }) {
             <SeletorFotoPerfil
               authFetch={auth.authFetch}
               nome={usuario.nome}
-              url={avatarUrlNovo ?? avatarUrl}
+              url={idImagemPerfilNovo === undefined ? avatarUrl : avatarUrlNovo}
               tamanho="lg"
               aoAlterar={(idArquivo, novaUrl) => {
                 setIdImagemPerfilNovo(idArquivo);
