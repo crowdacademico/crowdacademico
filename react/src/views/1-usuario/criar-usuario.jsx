@@ -4,6 +4,7 @@ import { CartaoFormulario } from '../../components/crud/cartao-formulario';
 import { SeletorFotoPerfil } from '../../components/input/seletor-foto-perfil';
 import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
+import { arquivoApi } from '../../services/25-arquivo/api/arquivo.api';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 
 // Primeira de um padrão que vai se repetir: view própria por operação
@@ -27,6 +28,26 @@ export function CriarUsuario({ auth }) {
   const [idImagemPerfil, setIdImagemPerfil] = useState(null);
   const [urlImagemPerfil, setUrlImagemPerfil] = useState(null);
   const [enviando, setEnviando] = useState(false);
+
+  // Sem usuário criado ainda, então nem "trocar" nem "remover" (lixeira do
+  // SeletorFotoPerfil) têm um PATCH pra disparar a limpeza (esse caminho
+  // só existe em alterar-usuario.jsx/minha-conta-page.jsx, depois que a
+  // conta já existe). Sem isto, escolher uma foto, escolher outra, ou
+  // clicar na lixeira, deixava a escolha anterior (já confirmada de
+  // verdade no bucket) órfã pra sempre — achado do Lucas, 25-08-2026,
+  // limpando o Storage manualmente. Best-effort: se a limpeza falhar,
+  // não trava a experiência de criar o usuário, só sobra um objeto
+  // órfão (mesma categoria de risco já aceita no resto do módulo).
+  const aoAlterarFoto = (idArquivo, novaUrl) => {
+    const idAnterior = idImagemPerfil;
+    setIdImagemPerfil(idArquivo);
+    setUrlImagemPerfil(novaUrl);
+    if (idAnterior !== null) {
+      arquivoApi.remover(auth.authFetch, idAnterior).catch(() => {
+        console.warn(`Falha ao limpar foto de perfil não usada (id_arquivo=${idAnterior}).`);
+      });
+    }
+  };
 
   const aoCriar = async (evento) => {
     evento.preventDefault();
@@ -78,10 +99,7 @@ export function CriarUsuario({ auth }) {
             nome={nome || 'Novo usuário'}
             url={urlImagemPerfil}
             tamanho="xl"
-            aoAlterar={(idArquivo, novaUrl) => {
-              setIdImagemPerfil(idArquivo);
-              setUrlImagemPerfil(novaUrl);
-            }}
+            aoAlterar={aoAlterarFoto}
           />
         </div>
 
