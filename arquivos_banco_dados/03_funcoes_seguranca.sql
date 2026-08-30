@@ -472,14 +472,38 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $$
+DECLARE
+    v_id_imagem_perfil INT;
 BEGIN
     IF NOT (p_id_usuario = public.id_usuario_atual() OR public.tem_permissao('usuario_excluir')) THEN
         RAISE EXCEPTION 'Sem permissão para excluir a conta de outro usuário.';
     END IF;
 
+    SELECT id_imagem_perfil INTO v_id_imagem_perfil
+    FROM usuario WHERE id_usuario = p_id_usuario;
+
     UPDATE usuario
     SET deletado = TRUE, deletado_em = NOW(), deletado_por = public.id_usuario_atual()
     WHERE id_usuario = p_id_usuario;
+
+    -- ADICIONADO (30-08-2026, módulo 25-arquivo): desativa a foto de
+    -- perfil vinculada na mesma transação — sem isto, a linha em `arquivo`
+    -- ficava ativo=true pra sempre, mesmo com a conta dona já excluída.
+    -- SECURITY DEFINER bypassa pol_arquivo_update DE PROPÓSITO aqui: quem
+    -- executou a exclusão da conta já foi autorizado acima (dono OU
+    -- 'usuario_excluir') — não faz sentido também exigir 'arquivo_gerenciar'
+    -- ou posse sobre o arquivo em si só pra essa consequência automática.
+    -- Os BYTES de verdade no bucket NÃO são apagados aqui — Postgres não
+    -- fala com o provedor de armazenamento (B2/R2/Supabase Storage). Isso é
+    -- feito depois, do lado da aplicação (ver
+    -- nest/src/1-usuario/service/usuario.service.remove.ts), que lê
+    -- `arquivo.chave` (ainda intacta, só `ativo` mudou) e chama
+    -- armazenamento.excluirObjeto().
+    IF v_id_imagem_perfil IS NOT NULL THEN
+        UPDATE arquivo
+        SET ativo = FALSE, desativado_em = NOW()
+        WHERE id_arquivo = v_id_imagem_perfil;
+    END IF;
 END;
 $$;
 

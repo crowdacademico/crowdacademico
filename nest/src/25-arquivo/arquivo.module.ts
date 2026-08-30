@@ -15,9 +15,14 @@ import { ArquivoServiceResolverAvatar } from './service/arquivo.service.resolver
 // mesmo padrão de DatabaseModule/DatabaseService já usado em todos os
 // outros módulos deste projeto.
 //
-// ArquivoServiceResolverAvatar sai em `exports` — pensado pra 1-usuario
-// (ou outro módulo futuro) poder injetar direto e incluir a URL do avatar
-// já resolvida na própria resposta, sem duplicar a regra de fallback.
+// ArquivoServiceResolverAvatar e ArquivoServiceRemove saem em `exports` —
+// ArquivoServiceResolverAvatar pensado pra 1-usuario (ou outro módulo
+// futuro) poder injetar direto e incluir a URL do avatar já resolvida na
+// própria resposta, sem duplicar a regra de fallback. ArquivoServiceRemove
+// exportado (30-08-2026) especificamente pra UsuarioServiceUpdate poder
+// desativar a foto ANTERIOR quando a pessoa troca de foto — sem isso, cada
+// troca deixava a foto antiga órfã (ativa no banco, ocupando espaço no
+// bucket) pra sempre.
 @Module({
   controllers: [
     ArquivoControllerIniciarUpload,
@@ -33,6 +38,6 @@ import { ArquivoServiceResolverAvatar } from './service/arquivo.service.resolver
     ArquivoServiceRemove,
     ArquivoServiceResolverAvatar,
   ],
-  exports: [ArquivoServiceResolverAvatar],
+  exports: [ArquivoServiceResolverAvatar, ArquivoServiceRemove],
 })
 export class ArquivoModule {}

@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ArquivoModule } from '../25-arquivo/arquivo.module';
 import { UsuarioControllerCreate } from './controllers/usuario.controller.create';
 import { UsuarioControllerDesbloquear } from './controllers/usuario.controller.desbloquear';
 import { UsuarioControllerFindAll } from './controllers/usuario.controller.findall';
@@ -17,6 +18,10 @@ import { UsuarioServiceSuspender } from './service/usuario.service.suspender';
 import { UsuarioServiceUpdate } from './service/usuario.service.update';
 
 @Module({
+  // ArquivoModule importado só pra ArquivoServiceRemove (limpeza da foto
+  // de perfil ANTERIOR quando a pessoa troca — ver usuario.service.update.ts).
+  // Sem ciclo: ArquivoModule não importa UsuarioModule de volta.
+  imports: [ArquivoModule],
   controllers: [
     UsuarioControllerCreate,
     UsuarioControllerFindAll,
