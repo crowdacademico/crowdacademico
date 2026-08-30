@@ -29,6 +29,7 @@ const LARGURAS = {
 export function FichaConsulta({
   titulo,
   subtitulo,
+  avatar,
   badges,
   acaoTopo,
   acoes,
@@ -42,21 +43,29 @@ export function FichaConsulta({
           'w-full fundo-cartao rounded-2xl shadow-lg border borda-padrao ' + LARGURAS[largura]
         }
       >
-        {/* Cabeçalho: nome grande + e-mail abaixo, badges e `acaoTopo`
-            (10-08-2026, item 4: "botão Alterar no topo da ficha" — fluxo
-            consultar→alterar é o mais comum em painel admin, não fazia
-            sentido só no rodapé) à direita — nada de campo de formulário
-            aqui, de propósito. `rounded-t-2xl` aqui (não `overflow-hidden`
-            no cartão inteiro, 10-08-2026) — overflow-hidden quebraria o
-            rodapé `sticky` (cria um contexto de scroll próprio que o
-            sticky não atravessa), mesmo problema de raiz do artefato de
-            cantinho já corrigido em toast-provider/admin-sidebar nesta
-            sessão: cada pedaço arredonda o PRÓPRIO canto, não depende de
-            recorte de um pai. */}
+        {/* Cabeçalho: `avatar` (25-08-2026, módulo 25-arquivo — antes o
+            avatar era espremido dentro de um CampoFicha lá embaixo, no
+            slot `acao` pensado pra um ícone pequeno tipo a setinha de
+            login; uma foto de verdade ali ficava torta, desalinhada do
+            próprio rótulo. Mesmo lugar visual que já existe em Alterar
+            Usuário — foto ao lado do nome) + nome grande + e-mail abaixo,
+            badges e `acaoTopo` (10-08-2026, item 4: "botão Alterar no topo
+            da ficha" — fluxo consultar→alterar é o mais comum em painel
+            admin, não fazia sentido só no rodapé) à direita — nada de
+            campo de formulário aqui, de propósito. `rounded-t-2xl` aqui
+            (não `overflow-hidden` no cartão inteiro, 10-08-2026) —
+            overflow-hidden quebraria o rodapé `sticky` (cria um contexto
+            de scroll próprio que o sticky não atravessa), mesmo problema
+            de raiz do artefato de cantinho já corrigido em toast-provider/
+            admin-sidebar nesta sessão: cada pedaço arredonda o PRÓPRIO
+            canto, não depende de recorte de um pai. */}
         <div className="px-8 py-6 border-b borda-padrao fundo-sutil rounded-t-2xl flex items-start justify-between gap-4 flex-wrap">
-          <div className="min-w-0">
-            <h2 className="titulo-secao truncate">{titulo}</h2>
-            {subtitulo && <p className="text-sm texto-fraco mt-1 break-words">{subtitulo}</p>}
+          <div className="flex items-center gap-3 min-w-0">
+            {avatar}
+            <div className="min-w-0">
+              <h2 className="titulo-secao truncate">{titulo}</h2>
+              {subtitulo && <p className="text-sm texto-fraco mt-1 break-words">{subtitulo}</p>}
+            </div>
           </div>
           <div className="flex items-center gap-3 shrink-0">
             {badges && badges.length > 0 && (

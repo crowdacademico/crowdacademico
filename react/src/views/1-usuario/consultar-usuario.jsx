@@ -92,6 +92,7 @@ export function ConsultarUsuario({ auth }) {
     <FichaConsulta
       titulo={usuario.nome}
       subtitulo={usuario.email}
+      avatar={<AvatarUsuario nome={usuario.nome} foto={avatar?.url} tamanho="xl" />}
       largura="larga"
       badges={papeis?.map((papel) => (
         <span key={papel.nomePapel} className="badge badge-neutro">
@@ -124,9 +125,7 @@ export function ConsultarUsuario({ auth }) {
             <CampoFicha rotulo="id" valor={usuario.idUsuario} />
             <CampoFicha
               rotulo="Foto de perfil"
-              largura="cheia"
               valor={avatar?.padrao === false ? 'Foto cadastrada' : 'Avatar padrão do sistema'}
-              acao={<AvatarUsuario nome={usuario.nome} foto={avatar?.url} tamanho="md" />}
             />
             <CampoFicha
               rotulo="Criado em"
