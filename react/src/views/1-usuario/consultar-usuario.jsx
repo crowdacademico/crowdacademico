@@ -6,6 +6,14 @@ import { useErroToast } from '../../components/layout/use-erro-toast';
 import { arquivoApi } from '../../services/25-arquivo/api/arquivo.api';
 import { usuarioPapelApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
+import { perfilPesquisadorApi } from '../../services/6-perfil-pesquisador/api/perfil-pesquisador.api';
+import {
+  ROTULO_STATUS_PESQUISADOR,
+  ROTULO_TIPO_VINCULO,
+  ROTULO_TITULO_ACADEMICO,
+  classeBadgeStatusPesquisador,
+} from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
+import { formatarCpf } from '../../services/constant/utils/formatacao.util';
 
 // "Consultar" — botão do meio entre Alterar e Excluir (GenericTable).
 // Mostra TODOS os dados do usuário ligados ao banco (UsuarioResponseDto
@@ -23,6 +31,13 @@ export function ConsultarUsuario({ auth }) {
   // impedir o resto da ficha de carregar — daí o .catch(() => null) igual
   // já é feito pra `papeis` logo abaixo.
   const [avatar, setAvatar] = useState(null);
+  // Perfil de pesquisador (módulo 6, 25-08-2026: existe de verdade agora,
+  // o aviso "ainda não implementado" que morava aqui era só um resquício
+  // de antes do módulo existir). `null` = não é pesquisador (404, mesmo
+  // sinal já usado pra avatar/papéis acima) — a seção inteira some nesse
+  // caso, não faz sentido mostrar "não informado" pra sempre pra quem
+  // nunca vai ter esse dado.
+  const [perfilPesquisador, setPerfilPesquisador] = useState(null);
   const [carregando, setCarregando] = useState(true);
   const { erro, reportarErro } = useErroToast();
   // Histórico de login (07-08-2026, pedido do Lucas: "uma setinha que
@@ -39,16 +54,18 @@ export function ConsultarUsuario({ auth }) {
       // Não existe (nem deveria existir) uma coluna "é pesquisador" em
       // usuario — isso já é decidido pelo RBAC (usuario_papel), então é
       // isso que a consulta usa, sem duplicar a informação em outro
-      // lugar. Se um dia o módulo 6-perfil-pesquisador for construído, o
-      // perfil completo (vínculo institucional, título acadêmico, links
-      // etc.) entra numa seção "Perfil acadêmico" própria, do mesmo jeito.
+      // lugar.
       usuarioPapelApi.listarPorUsuario(auth.authFetch, id).catch(() => []),
       arquivoApi.buscarAvatarPorUsuario(id).catch(() => null),
+      // 404 = não é pesquisador, mesmo padrão de tolerância dos dois
+      // acima (não impede o resto da ficha de carregar).
+      perfilPesquisadorApi.buscar(auth.authFetch, id).catch(() => null),
     ])
-      .then(([dadosUsuario, papeisUsuario, avatarUsuario]) => {
+      .then(([dadosUsuario, papeisUsuario, avatarUsuario, perfilUsuario]) => {
         setUsuario(dadosUsuario);
         setPapeis(papeisUsuario);
         setAvatar(avatarUsuario);
+        setPerfilPesquisador(perfilUsuario);
       })
       .catch(reportarErro)
       .finally(() => setCarregando(false));
@@ -193,20 +210,32 @@ export function ConsultarUsuario({ auth }) {
             </CampoFicha>
           </SecaoFicha>
 
-          {/* Perfil de Pesquisador (10-08-2026, item 4: "mostrar CPF
-              mascarado e links acadêmicos... como 'não informado' enquanto
-              o módulo não existir") — mesmo aviso honesto da versão
-              editável em Alterar Usuário, aqui só leitura. */}
-          <SecaoFicha titulo="Perfil de Pesquisador">
-            <div className="sm:col-span-2 flex items-start gap-2 rounded-lg fundo-info texto-info p-3">
-              <i className="fa-solid fa-circle-info mt-0.5 shrink-0"></i>
-              <p className="text-xs">
-                Módulo de Perfil de Pesquisador ainda não foi implementado.
-              </p>
-            </div>
-            <CampoFicha rotulo="CPF" valor="Não informado (módulo inexistente)" />
-            <CampoFicha rotulo="Link acadêmico" valor="Não informado (módulo inexistente)" />
-          </SecaoFicha>
+          {/* Perfil de Pesquisador (25-08-2026: dado real agora, módulo 6
+              existe — some inteira pra quem não é pesquisador, em vez de
+              mostrar "não informado" pra sempre pra quem nunca vai ter
+              esse dado). CPF vem `null` de quem não tem a permissão
+              'perfil_pesquisador_visualizar_sensivel' (o backend já decide
+              isso, não é uma checagem daqui). */}
+          {perfilPesquisador && (
+            <SecaoFicha titulo="Perfil de Pesquisador">
+              <CampoFicha
+                rotulo="CPF"
+                valor={perfilPesquisador.cpf ? formatarCpf(perfilPesquisador.cpf) : null}
+              />
+              <CampoFicha
+                rotulo="Status"
+                valor={
+                  <span className={'badge ' + classeBadgeStatusPesquisador(perfilPesquisador.statusPesquisador)}>
+                    {ROTULO_STATUS_PESQUISADOR[perfilPesquisador.statusPesquisador]}
+                  </span>
+                }
+              />
+              <CampoFicha rotulo="Título acadêmico" valor={ROTULO_TITULO_ACADEMICO[perfilPesquisador.tituloAcademico]} />
+              <CampoFicha rotulo="Tipo de vínculo" valor={ROTULO_TIPO_VINCULO[perfilPesquisador.tipoVinculo]} />
+              <CampoFicha rotulo="Vínculo institucional" valor={perfilPesquisador.vinculoInstitucional} />
+              <CampoFicha rotulo="Score atual" valor={perfilPesquisador.scoreAtual} />
+            </SecaoFicha>
+          )}
         </div>
 
         <div className="space-y-6">

@@ -53,24 +53,34 @@ export async function paginar<DB, TB extends keyof DB, O>(
   // a outra. `clearSelect`/`clearOrderBy` mantêm o `where` (é só isso que a
   // contagem precisa) e descartam ORDER BY (irrelevante e mais lento pra
   // COUNT).
+  //
+  // SEQUENCIAL, não Promise.all (25-08-2026, achado do Lucas: warning do
+  // driver `pg` no boot do Nest — "Calling client.query() when the client
+  // is already executing a query is deprecated"). O banco é acessado por
+  // UMA conexão só por requisição (KyselySingleConnectionDialect, não um
+  // pool — é o que permite o SET LOCAL app.id_usuario_atual da RLS
+  // funcionar), então essas duas queries NUNCA rodavam em paralelo de
+  // verdade: o driver só enfileirava por baixo dos panos, e essa fila
+  // implícita é o comportamento que o pg vai remover numa versão futura
+  // (pg@9). `await` sequencial tem o mesmo tempo total, sem depender de
+  // comportamento que vai sumir.
+  //
   // Cast no resultado da contagem: com DB/TB genéricos (não a shape
   // concreta do banco), o TS não consegue resolver o tipo de retorno de
   // `.select(...)` encadeado em cima de `.clearSelect()` — infere uma união
   // ampla (InsertResult | DeleteResult | ...) que nunca acontece de verdade
   // aqui (a query é sempre um SELECT com uma única coluna agregada `total`).
-  const [dados, contagem] = await Promise.all([
-    query
-      .limit(tamanho)
-      .offset((pagina - 1) * tamanho)
-      .execute(),
-    query
-      .clearSelect()
-      .clearOrderBy()
-      .select((eb) => eb.fn.countAll<number>().as('total'))
-      .executeTakeFirstOrThrow() as Promise<{
-      total: number | string | bigint;
-    }>,
-  ]);
+  const dados = await query
+    .limit(tamanho)
+    .offset((pagina - 1) * tamanho)
+    .execute();
+  const contagem = (await query
+    .clearSelect()
+    .clearOrderBy()
+    .select((eb) => eb.fn.countAll<number>().as('total'))
+    .executeTakeFirstOrThrow()) as {
+    total: number | string | bigint;
+  };
 
   return {
     dados,
