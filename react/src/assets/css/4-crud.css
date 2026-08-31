@@ -84,9 +84,28 @@
     font-size: var(--font-size-sm);
   }
 
+  /* Padding horizontal responsivo em TODA coluna de TODA tabela
+     (25-08-2026, ideia do Lucas: "o respiro elástico da coluna id ficou
+     bonitinho, dá pra fazer isso em todas as colunas?") — mesmo truque
+     de `clamp(piso, Nvw, teto)` já usado só na coluna id
+     (.crud-tabela__coluna-id, mais abaixo), generalizado pra regra BASE
+     que toda th/td já usa, então cobre toda tabela do painel sem tocar
+     em nenhuma tela individual (mesma filosofia de sempre deste
+     arquivo). `1.1rem` (teto) é o valor de sempre — tela larga fica
+     idêntica a antes, nada muda visualmente aí. Abaixo de ~1173px de
+     JANELA o padding começa a encolher sozinho, até um piso de 0.6rem
+     por volta de ~640px (conta: Nvw = teto quando W = teto/N; escolhido
+     1.5vw pra começar a encolher perto de onde as colunas em geral já
+     começam a se apertar, ver comentário do @container mais abaixo).
+     Com box-sizing: border-box (1-base.css) em todo elemento, encolher
+     o padding realmente devolve espaço pro CONTEÚDO dentro do mesmo piso
+     de min-width calculado em generic-table.jsx — alivia a tabela
+     inteira de uma vez, não só a coluna id. Vertical (0.85rem) continua
+     fixo de propósito — o pedido era sobre o vão ENTRE colunas
+     (horizontal), não a altura da linha. */
   .crud-tabela th,
   .crud-tabela td {
-    padding: 0.85rem 1.1rem;
+    padding: 0.85rem clamp(0.6rem, 1.5vw, 1.1rem);
     text-align: left;
   }
 
@@ -114,21 +133,36 @@
   /* Largura padrão da coluna "id" em TODA tabela (19-08-2026, pedido do
      Lucas: "deve suportar até 3 ou 4 dígitos sem quebra de linha").
      `width` aqui é só um FALLBACK — GenericTable (25-08-2026) calcula a
-     própria largura por tabela (table-layout: fixed, teto de 8ch) e
-     sobrescreve isto via `style` inline; esta regra continua valendo
-     pra qualquer tabela que NÃO passe por esse cálculo. `white-space:
-     nowrap` garante que os dígitos nunca quebram linha mesmo numa tela
-     estreita.
+     própria largura por tabela (table-layout: auto, min-width piso de
+     8ch, ver comentário completo em generic-table.jsx) e sobrescreve
+     isto via `style` inline; esta regra continua valendo pra qualquer
+     tabela que NÃO passe por esse cálculo. `white-space: nowrap`
+     garante que os dígitos nunca quebram linha mesmo numa tela estreita.
      `padding-right` extra (25-08-2026, pedido do Lucas: "a coluna do
      lado direito de ID precisa ficar naturalmente um pouco mais
      afastada, se tiver espaço, e só se aproximar em tela pequena") —
-     `clamp()` cresce sozinho até 2rem em tela larga, mas nunca fica
-     menor que o padding padrão (1.1rem) mesmo se a tela apertar. */
+     próprio `clamp()`, deliberadamente MAIS generoso que o padding
+     horizontal padrão de toda th/td (regra base, logo acima nesta mesma
+     folha — aquele é o que inspirou este, na verdade, mesma ideia
+     aplicada primeiro só aqui, depois generalizada) — cresce sozinho até
+     2rem em tela larga, e mesmo no piso (1.1rem) continua igual ou maior
+     que o TETO do padding das outras colunas (também 1.1rem), então o
+     ID sempre mantém uma separação um pouco maior que as demais, em
+     qualquer largura de tela.
+     Coeficiente do vw (ERA 4vw, 25-08-2026 — achado do Lucas: "ID e nome
+     ainda demoram um pouquinho pra se aproximar") — a conta de onde o
+     clamp começa/termina de encolher é `largura_janela = valor_rem_em_px
+     × 100 / coeficiente`; com 4vw, a faixa de transição era só
+     440px–800px. Baixando pra 2.5vw, a mesma fórmula dá uma faixa bem
+     mais alta, ~704px–1280px — começa a encolher bem mais cedo (janela
+     ainda bem larga), sem mudar os limites (1.1rem–2rem) nem o
+     comportamento em tela bem larga ou bem estreita, só ADIANTA a
+     transição. */
   .crud-tabela th.crud-tabela__coluna-id,
   .crud-tabela td.crud-tabela__coluna-id {
     width: 4rem;
     white-space: nowrap;
-    padding-right: clamp(1.1rem, 4vw, 2rem);
+    padding-right: clamp(1.1rem, 2.5vw, 2rem);
   }
 
   /* Linha fina entre linhas do corpo (não grade completa) — ERA border em
@@ -161,6 +195,24 @@
     color: var(--cor-texto);
     font-weight: 800;
     border-bottom: 2px solid var(--cor-borda-forte);
+    /* height fixo (25-08-2026, pedido do Lucas: "quando E-mail verificado
+       quebra em 2 linhas, a linha inteira do cabeçalho cresce — queria
+       que não sofresse alteração"). Em célula de tabela, `height` é só
+       um PISO (a especificação trata como altura mínima, nunca corta
+       conteúdo que precise de mais) — reservando aqui, de propósito, uma
+       altura já grande o bastante pra caber 2 linhas de texto + padding
+       (line-height 1.3 explícito, pra a conta ficar previsível: 2 ×
+       0.75rem × 1.3 ≈ 1.95rem de texto + 1.7rem dos dois paddings
+       verticais ≈ 3.65rem, arredondado com folga pra 3.75rem), o
+       cabeçalho JÁ NASCE com esse tanto de altura sempre — uma coluna
+       quebrando pra 2 linhas só preenche um espaço que já estava
+       reservado, em vez de esticar a linha visivelmente. `vertical-align:
+       middle` (já é o padrão do navegador pra th/td, deixado explícito
+       aqui só pra documentar) centraliza o texto de 1 linha só dentro
+       dessa altura maior, em vez de grudar no topo com vão embaixo. */
+    height: 3.75rem;
+    line-height: 1.3;
+    vertical-align: middle;
   }
 
   .crud-tabela th.crud-tabela__ordenavel {
