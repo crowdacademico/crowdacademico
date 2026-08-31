@@ -53,10 +53,15 @@ export function ListarAreasConhecimento({ auth }) {
             Criar
           </Link>
         }
+        // Ordem "id, nome, ..." (25-08-2026, pedido do Lucas: padronizar
+        // com as outras tabelas — Usuários/Pesquisadores/Campanhas todas
+        // colocam "nome" logo depois de "id"; código CNPq vindo antes
+        // era a única fora do padrão) — código CNPq só trocou de lugar
+        // com nome, nenhum dado mudou.
         colunas={[
           { chave: 'idAreaConhecimento', rotulo: 'id' },
-          { chave: 'codigoCnpq', rotulo: 'código CNPq', centralizar: true },
           { chave: 'nome', rotulo: 'nome' },
+          { chave: 'codigoCnpq', rotulo: 'código CNPq', centralizar: true },
           {
             chave: 'nomePai',
             rotulo: 'grande área',

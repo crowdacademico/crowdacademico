@@ -58,13 +58,34 @@ export function ListarCampanhas({ auth }) {
     <div className="admin-content-painel">
       <GenericTable
         titulo="Campanhas"
+        // largura igual nas 4 (25-08-2026, pedido do Lucas: mesma ideia de
+        // Tipos de Link/Pesquisadores — "status"/"pesquisador"/"meta"/
+        // "arrecadado" ficando cada um com um tamanho, "arrecadado" nem
+        // tinha `centralizar` (inconsistência real com "meta", ao lado).
+        // 10rem (não 8rem como em Pesquisadores) porque "status" aqui tem
+        // valor bem mais longo que um badge normal (ex.: "Encerrado
+        // (moderação)", 22 caracteres) — ainda pode quebrar em 2 linhas
+        // nesse caso raro (nenhum white-space:nowrap forçado), só não
+        // pede uma coluna gigante à toa pros valores curtos, que são a
+        // maioria.
+        // "título" também ganhou `largura` própria (18rem, ACHADO do
+        // Lucas: sem largura nenhuma, virou a ÚNICA coluna "livre" da
+        // tabela — absorvia sozinha TODO o espaço sobrando, já que as
+        // outras 4 agora são fixas, mesmo problema que "nome"/"papel" já
+        // tinham em Usuários antes de darmos largura fixa às vizinhas).
+        // Diferente das 4 acima, sem `centralizar` — é a coluna principal
+        // de texto (o "nome" desta tabela), fica alinhada à esquerda.
+        // Texto quebra livremente dentro dos 18rem (nenhum nowrap
+        // forçado, igual qualquer outra coluna de texto) — título de
+        // campanha comprido agora ganha 2-3 linhas em vez de esticar a
+        // coluna.
         colunas={[
           { chave: 'idCampanha', rotulo: 'id' },
-          { chave: 'titulo', rotulo: 'título' },
-          { chave: 'status', rotulo: 'status', centralizar: true },
-          { chave: 'pesquisador', rotulo: 'pesquisador' },
-          { chave: 'metaFinanceira', rotulo: 'meta', centralizar: true },
-          { chave: 'valorBrutoArrecadado', rotulo: 'arrecadado' },
+          { chave: 'titulo', rotulo: 'título', largura: '28rem' },
+          { chave: 'status', rotulo: 'status', centralizar: true, largura: '10rem' },
+          { chave: 'pesquisador', rotulo: 'pesquisador', centralizar: true, largura: '10rem' },
+          { chave: 'metaFinanceira', rotulo: 'meta', centralizar: true, largura: '10rem' },
+          { chave: 'valorBrutoArrecadado', rotulo: 'arrecadado', centralizar: true, largura: '10rem' },
         ]}
         chavePrimaria="idCampanha"
         listar={listarCampanhas}

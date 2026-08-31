@@ -44,9 +44,19 @@ export function ListarPesquisadores({ auth }) {
         colunas={[
           { chave: 'idUsuario', rotulo: 'id' },
           { chave: 'nome', rotulo: 'nome' },
-          { chave: 'tituloAcademico', rotulo: 'título' },
-          { chave: 'statusPesquisador', rotulo: 'status', centralizar: true },
-          { chave: 'scoreAtual', rotulo: 'score' },
+          // largura igual nas 3 (25-08-2026, pedido do Lucas: "título,
+          // status e score, cada um de um tamanho diferente e espalhados"
+          // — mesma causa e mesmo remédio de Tipos de Link, "9.25rem"
+          // pras 4 colunas Sim/Não: sem largura fixa, table-layout: auto
+          // mede cada coluna pelo próprio maior valor ("Especialista" é
+          // bem mais comprido que "Doutor"/"Ativo"), então cada uma
+          // ficava com um tamanho diferente. `centralizar` em título
+          // também (não teria entrado sozinho — é texto, não
+          // número/booleano) pra alinhar com status/score, que já
+          // centralizavam.
+          { chave: 'tituloAcademico', rotulo: 'título', centralizar: true, largura: '8rem' },
+          { chave: 'statusPesquisador', rotulo: 'status', centralizar: true, largura: '8rem' },
+          { chave: 'scoreAtual', rotulo: 'score', largura: '8rem' },
         ]}
         chavePrimaria="idUsuario"
         listar={listarPesquisadores}

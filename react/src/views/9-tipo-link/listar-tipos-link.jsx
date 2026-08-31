@@ -38,10 +38,14 @@ export function ListarTiposLink({ auth }) {
         // badge Sim/Não sozinhos, mesmo tratamento que GenericTable já dá
         // pra qualquer coluna booleana — não precisou de `renderizar`
         // customizado.
+        // Ordem "id, nome, ..." (25-08-2026, pedido do Lucas: padronizar
+        // com as outras tabelas — código só trocou de lugar com nome,
+        // nenhum dado mudou, mesma mudança já feita em Áreas do
+        // Conhecimento).
         colunas={[
           { chave: 'idTipolink', rotulo: 'id' },
-          { chave: 'codigo', rotulo: 'código' },
           { chave: 'nome', rotulo: 'nome' },
+          { chave: 'codigo', rotulo: 'código' },
           { chave: 'permitePerfil', rotulo: 'perfil', largura: '9.25rem' },
           { chave: 'permiteAtualizacao', rotulo: 'atualização', largura: '9.25rem' },
           { chave: 'permiteRecompensa', rotulo: 'recompensa', largura: '9.25rem' },
