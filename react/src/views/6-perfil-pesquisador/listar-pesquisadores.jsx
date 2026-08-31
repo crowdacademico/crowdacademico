@@ -45,7 +45,7 @@ export function ListarPesquisadores({ auth }) {
           { chave: 'idUsuario', rotulo: 'id' },
           { chave: 'nome', rotulo: 'nome' },
           { chave: 'tituloAcademico', rotulo: 'título' },
-          { chave: 'statusPesquisador', rotulo: 'status' },
+          { chave: 'statusPesquisador', rotulo: 'status', centralizar: true },
           { chave: 'scoreAtual', rotulo: 'score' },
         ]}
         chavePrimaria="idUsuario"

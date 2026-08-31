@@ -34,7 +34,7 @@ export function ListarAreasConhecimento({ auth }) {
         }
         colunas={[
           { chave: 'idAreaConhecimento', rotulo: 'id' },
-          { chave: 'codigoCnpq', rotulo: 'código CNPq' },
+          { chave: 'codigoCnpq', rotulo: 'código CNPq', centralizar: true },
           { chave: 'nome', rotulo: 'nome' },
           { chave: 'nomePai', rotulo: 'grande área' },
           { chave: 'ativo', rotulo: 'ativo' },

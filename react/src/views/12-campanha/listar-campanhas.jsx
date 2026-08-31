@@ -61,7 +61,7 @@ export function ListarCampanhas({ auth }) {
         colunas={[
           { chave: 'idCampanha', rotulo: 'id' },
           { chave: 'titulo', rotulo: 'título' },
-          { chave: 'status', rotulo: 'status' },
+          { chave: 'status', rotulo: 'status', centralizar: true },
           { chave: 'pesquisador', rotulo: 'pesquisador' },
           { chave: 'area', rotulo: 'área' },
           { chave: 'metaFinanceira', rotulo: 'meta' },
