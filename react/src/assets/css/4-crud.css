@@ -77,21 +77,23 @@
   }
 
   /* Largura padrão da coluna "id" em TODA tabela (19-08-2026, pedido do
-     Lucas: "deve suportar até 3 ou 4 dígitos sem quebra de linha... uma
-     boa ideia, tabelas independentes, começando a alinhar a largura das
-     colunas"). `width` aqui é um PISO, não um teto — table-layout:
-     auto (padrão do HTML, nenhuma tabela deste projeto usa `fixed`)
-     deixa a coluna crescer se algum dia um id tiver mais de 4 dígitos,
-     só não deixa ela MURCHAR pra caber só "1" numa tabela com poucas
-     linhas e "9999" ficar apertada em outra — é essa inconsistência
-     entre tabelas (mesma coluna, larguras diferentes só por causa do
-     dado) que o pedido resolve. `white-space: nowrap` garante que 4
-     dígitos nunca quebram linha mesmo se o piso for forçado a diminuir
-     numa tela estreita. */
+     Lucas: "deve suportar até 3 ou 4 dígitos sem quebra de linha").
+     `width` aqui é só um FALLBACK — GenericTable (25-08-2026) calcula a
+     própria largura por tabela (table-layout: fixed, teto de 8ch) e
+     sobrescreve isto via `style` inline; esta regra continua valendo
+     pra qualquer tabela que NÃO passe por esse cálculo. `white-space:
+     nowrap` garante que os dígitos nunca quebram linha mesmo numa tela
+     estreita.
+     `padding-right` extra (25-08-2026, pedido do Lucas: "a coluna do
+     lado direito de ID precisa ficar naturalmente um pouco mais
+     afastada, se tiver espaço, e só se aproximar em tela pequena") —
+     `clamp()` cresce sozinho até 2rem em tela larga, mas nunca fica
+     menor que o padding padrão (1.1rem) mesmo se a tela apertar. */
   .crud-tabela th.crud-tabela__coluna-id,
   .crud-tabela td.crud-tabela__coluna-id {
     width: 4rem;
     white-space: nowrap;
+    padding-right: clamp(1.1rem, 4vw, 2rem);
   }
 
   /* Linha fina entre linhas do corpo (não grade completa) — ERA border em

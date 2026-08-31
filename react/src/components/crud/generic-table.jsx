@@ -365,27 +365,46 @@ export function GenericTable({
   // (duas tabelas diferentes podem ter o mesmo tipo de coluna e ainda
   // assim precisar de larguras diferentes uma da outra).
   //
-  // `largurasColunas` (25-08-2026, achado do Lucas: "as colunas dançam ao
-  // trocar de página") — table-layout: auto recalcula a largura de cada
-  // coluna com base SÓ nas linhas visíveis; trocar de página muda o
-  // conjunto visível, a largura muda junto. Calculado aqui a partir de
-  // `linhas` INTEIRA (não linhasPagina — a lista completa já está toda no
-  // navegador, ver comentário de `listar` no topo do arquivo), então só
-  // recalcula quando o dado de verdade muda (uma busca nova), nunca ao
-  // virar página. Aproximação por contagem de caractere (1ch ≈ 1
-  // caractere do maior valor da coluna, cabeçalho incluso, +2ch de
-  // respiro) — não é pixel perfeito, mas resolve a dança sem cair no
-  // corte cego de porcentagem fixa que a gente já usa em Links
-  // Acadêmicos. Teto de 40ch pra um valor isolado excepcionalmente longo
-  // não dominar a tabela inteira sozinho. `coluna.largura` continua
-  // ganhando quando existe — decisão manual explícita nunca é
-  // sobrescrita pelo cálculo automático.
-  const largurasColunas = useMemo(() => {
+  // `minLargurasColunas` (25-08-2026, achado do Lucas: "as colunas
+  // dançam ao trocar de página") — table-layout: auto recalcula a
+  // largura de cada coluna com base SÓ nas linhas visíveis; trocar de
+  // página muda o conjunto visível, a largura muda junto. Calculado aqui
+  // a partir de `linhas` INTEIRA (não linhasPagina — a lista completa já
+  // está toda no navegador, ver comentário de `listar` no topo do
+  // arquivo), então só recalcula quando o dado de verdade muda (uma
+  // busca nova), nunca ao virar página — o PISO já nasce igual ao maior
+  // valor possível em qualquer página, então nunca precisa crescer nem
+  // encolher ao trocar.
+  //
+  // `min-width`, não `width` de propósito (25-08-2026, 2ª tentativa —
+  // a 1ª usava table-layout: fixed + width, e travar TODA coluna ao
+  // mesmo tempo fazia o navegador esticar/espremer todas
+  // proporcionalmente pra preencher os 100% da tabela, incluindo em
+  // telas estreitas onde não sobra espaço — texto acabava invadindo a
+  // célula vizinha, mesmo dentro de um wrapper com overflow-x: auto,
+  // porque width:100% nunca deixava a tabela ficar mais larga que o
+  // wrapper pra ter algo de verdade pra rolar). `min-width` sob
+  // table-layout: auto (o padrão de sempre, não mudou) é só um PISO —
+  // mesma filosofia já usada em `.crud-tabela__coluna-id` (`width: 4rem`
+  // ali já funciona como piso, não teto, sob auto) — a coluna nunca
+  // fica mais estreita que isto, mas continua livre pra crescer ou (em
+  // tela apertada) a tabela inteira virar mais larga que o card e rolar
+  // de lado, exatamente como já acontecia antes de qualquer mudança de
+  // hoje. Aproximação por contagem de caractere (1ch ≈ 1 caractere do
+  // maior valor da coluna, cabeçalho incluso, +2ch de respiro) — não é
+  // pixel perfeito, mas resolve a dança sem arriscar o responsivo.
+  // Teto de 40ch (8ch pra coluna "id", pedido à parte do Lucas: "é a
+  // primeira coluna, não precisa ser muito larga") pra um valor isolado
+  // excepcionalmente longo não pedir um piso enorme sozinho. `coluna.
+  // largura` continua ganhando quando existe — decisão manual explícita
+  // nunca é sobrescrita pelo cálculo automático.
+  const minLargurasColunas = useMemo(() => {
     const resultado = {};
     colunas.forEach((coluna) => {
       if (coluna.largura) {
         return;
       }
+      const ehId = coluna.chave === colunaIdChave;
       let maiorTamanho = coluna.rotulo.length;
       linhas.forEach((linha) => {
         const tamanho = String(linha[coluna.chave] ?? '').length;
@@ -393,14 +412,16 @@ export function GenericTable({
           maiorTamanho = tamanho;
         }
       });
-      resultado[coluna.chave] = Math.min(40, maiorTamanho + 2) + 'ch';
+      const teto = ehId ? 8 : 40;
+      resultado[coluna.chave] = Math.min(teto, maiorTamanho + 2) + 'ch';
     });
     return resultado;
-  }, [linhas, colunas]);
+  }, [linhas, colunas, colunaIdChave]);
 
   // Mesmo raciocínio da coluna Ações — nunca recalculada de linhasPagina,
-  // só depende de quantos botões existem (fixo pra tela inteira).
-  const larguraAcoes = useMemo(
+  // só depende de quantos botões existem (fixo pra tela inteira). Também
+  // min-width, mesmo motivo acima.
+  const minLarguraAcoes = useMemo(
     () => (rotaBase ? Math.max(10, acoes.length * 9) + 'ch' : undefined),
     [rotaBase, acoes],
   );
@@ -408,8 +429,8 @@ export function GenericTable({
   const estiloColuna = (coluna) =>
     coluna.largura
       ? { width: coluna.largura }
-      : largurasColunas[coluna.chave]
-        ? { width: largurasColunas[coluna.chave] }
+      : minLargurasColunas[coluna.chave]
+        ? { minWidth: minLargurasColunas[coluna.chave] }
         : undefined;
 
   // "todos" (pedido do Lucas: opção de ver 10/20/30/todos os registros,
@@ -566,7 +587,7 @@ export function GenericTable({
         // tabela (mesmas colunas) enquanto os dados reais não chegam, em
         // vez de um texto solto que faz a tela "pular" quando os dados
         // aparecem.
-        <table className="crud-tabela" style={{ tableLayout: 'fixed' }}>
+        <table className="crud-tabela">
           <thead>
             <tr>
               {colunas.map((coluna) => (
@@ -580,7 +601,7 @@ export function GenericTable({
               ))}
               {colunaExtra && <th>{colunaExtra.rotulo}</th>}
               {rotaBase && (
-                <th className="crud-tabela__celula--centralizada" style={{ width: larguraAcoes }}>
+                <th className="crud-tabela__celula--centralizada" style={{ minWidth: minLarguraAcoes }}>
                   Ações
                 </th>
               )}
@@ -610,7 +631,7 @@ export function GenericTable({
         </table>
       ) : (
         <>
-          <table className="crud-tabela" style={{ tableLayout: 'fixed' }}>
+          <table className="crud-tabela">
             <thead>
               <tr>
                 {colunas.map((coluna) => (
@@ -626,7 +647,7 @@ export function GenericTable({
                 ))}
                 {colunaExtra && <th>{colunaExtra.rotulo}</th>}
                 {rotaBase && (
-                  <th className="crud-tabela__celula--centralizada" style={{ width: larguraAcoes }}>
+                  <th className="crud-tabela__celula--centralizada" style={{ minWidth: minLarguraAcoes }}>
                     Ações
                   </th>
                 )}
