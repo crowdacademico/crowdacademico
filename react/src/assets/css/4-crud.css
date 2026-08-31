@@ -7,7 +7,21 @@
    coluna Ações de cada linha tem estilo próprio aqui (.crud-tabela__acao,
    08-08-2026) — texto/ícone discreto, não botão sólido. */
 @layer components {
+  /* container-type: inline-size (25-08-2026, 4ª rodada) — habilita
+     @container mais abaixo (texto de Ações some/aparece), reagindo à
+     largura REAL do espaço disponível pra esta seção, não da janela
+     inteira. Isso só virou possível agora: a tentativa antiga de
+     container query (comentário histórico junto de @media abaixo) foi
+     descartada porque, sem o wrapper de rolagem, a tabela nunca
+     "encolhia" de verdade — table-layout: auto sempre transbordava a
+     PÁGINA em vez da coluna apertar. Com `.crud-tabela__wrapper`
+     (overflow-x: auto) contendo esse transbordo, `.crud-secao` (o pai
+     dele) agora TEM uma largura real e estável (definida pelo layout da
+     página — sidebar aberta/fechada, padding do cartão — não pelo
+     conteúdo da tabela), exatamente o que uma container query precisa
+     pra não virar um loop de "minha largura depende de mim mesma". */
   .crud-secao {
+    container-type: inline-size;
     margin-bottom: 0;
   }
 
@@ -230,31 +244,36 @@
     visibility: visible;
   }
 
-  /* Abaixo de 1400px de janela, o texto de cada ação some sozinho e fica
-     só o ícone — reaparece sozinho se a janela crescer de novo, sem JS
-     nenhum (11-08-2026, pedido do Lucas: "em PC com tela menor a coluna
-     de ação quebra, o texto sai pra fora, fica feio").
-     TENTATIVA original: container query (reagir à largura da própria
-     COLUNA, não da janela) — testado ao vivo e descartado: com
-     table-layout automático (padrão do HTML, nenhuma tabela deste
-     projeto define table-layout: fixed), o navegador NÃO comprime uma
-     coluna aos poucos até faltar espaço — a tabela inteira simplesmente
-     transborda pra largura que precisa (a coluna de Ações nunca fica
-     menor que o conteúdo dela pede), e quem rola de lado é a PÁGINA. Ou
-     seja, a coluna nunca fica "estreita" de verdade pra uma container
-     query perceber — media query no viewport é o que realmente
-     corresponde ao problema aqui.
-     ERA 900px — o Lucas testou e achou pouco sensível ("qualquer diminuir
-     do tamanho da coluna, o efeito já devia aplicar"). Subiu bem, pra
-     1400px: como a tabela nunca encolhe de verdade (parágrafo acima),
-     ícone-só passa a ser o padrão em praticamente qualquer notebook/
-     monitor menor, e o texto completo só aparece em tela bem larga —
-     tira a margem quase toda antes de qualquer risco de quebrar.
-     Ícone cresce um degrau (--font-size-xs -> --font-size-base) e o
-     espaçamento aumenta — sem o texto do lado, o alvo de clique/toque
-     fica bem menor, então precisa compensar (bom pra mobile também,
-     mesmo raciocínio: ícone maior = mais fácil de tocar com o dedo). */
-  @media (max-width: 1400px) {
+  /* Quando o espaço REAL da seção aperta, o texto de cada ação some
+     sozinho e fica só o ícone — reaparece sozinho se crescer de novo, sem
+     JS nenhum (11-08-2026, pedido do Lucas: "em PC com tela menor a
+     coluna de ação quebra, o texto sai pra fora, fica feio").
+     ERA @media (max-width) no VIEWPORT, não @container (25-08-2026, 4ª
+     rodada, achado do Lucas: "o texto de ação corta antes da hora, mas o
+     menu lateral nem colapsou ainda pra sobrar espaço") — viewport width
+     não é a mesma coisa que espaço disponível pro conteúdo: com a sidebar
+     fixa de 260px (abaixo de 1024px ela empilha, ver 3-admin-shell.css),
+     duas janelas do MESMO tamanho podem ter o conteúdo bem mais apertado
+     ou folgado dependendo só de sobrar ou não aquele tanto de sidebar —
+     media query no viewport não enxerga essa diferença, container query
+     enxerga (reage à largura de `.crud-secao`, que já reflete o espaço
+     de verdade sobrando depois da sidebar+paddings).
+     TENTATIVA original (comentário antigo, já removido): reagir à
+     largura da própria COLUNA de Ações — descartada na época porque,
+     SEM wrapper de rolagem nenhum, table-layout: auto nunca "apertava"
+     coluna nenhuma de verdade (a tabela inteira transbordava a PÁGINA em
+     vez de qualquer coluna encolher). Isso mudou nesta mesma rodada:
+     `.crud-tabela__wrapper` (overflow-x: auto) agora contém esse
+     transbordo, então `.crud-secao` (pai dele, onde mora o
+     container-type) tem uma largura real e estável de novo — é ela que a
+     query abaixo observa, não a coluna.
+     Valor (1050px) é uma ESTIMATIVA a partir do breakpoint antigo (1400px
+     de janela ≈ sidebar 260px + paddings ≈ 350px de sobra, sobrando uns
+     1050px de conteúdo) — não testado ao vivo ainda nesta forma nova,
+     pode precisar de ajuste fino olhando a tela de verdade (mesmo espírito
+     do 900px→1400px de antes: o Lucas testando ao vivo é quem calibra o
+     número certo). */
+  @container (max-width: 1150px) {
     .crud-tabela__acao-texto {
       display: none;
     }

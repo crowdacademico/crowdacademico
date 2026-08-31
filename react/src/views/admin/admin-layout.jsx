@@ -21,12 +21,13 @@ export function AdminLayout({ auth }) {
 
   return (
     <main className="admin-pagina">
-      {/* Só aparece <1024px — em telas maiores o menu já é uma coluna fixa
-          (ver .admin-sidebar em 3-admin-shell.css), não precisa de botão. */}
+      {/* Só aparece <1280px (25-08-2026, era <1024px — ver admin-sidebar.jsx)
+          — em telas maiores o menu já é uma coluna fixa (ver .admin-sidebar
+          em 3-admin-shell.css), não precisa de botão. */}
       <button
         type="button"
         onClick={() => setMenuAberto(true)}
-        className="lg:hidden flex items-center gap-2 px-4 py-3 fundo-cartao border-b borda-padrao font-semibold text-sm texto-padrao w-full"
+        className="xl:hidden flex items-center gap-2 px-4 py-3 fundo-cartao border-b borda-padrao font-semibold text-sm texto-padrao w-full"
       >
         <i className="fa-solid fa-bars"></i> Menu
       </button>

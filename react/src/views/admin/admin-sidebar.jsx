@@ -3,19 +3,26 @@ import { abrirBuscaGlobal } from '../../components/layout/busca-global-evento';
 import { Tooltip } from '../../components/layout/tooltip';
 import { GRUPOS_MENU_ADMIN } from './admin-menu.constants';
 
-// Menu lateral — coluna fixa em telas >=1024px (grid em .admin-shell,
+// Menu lateral — coluna fixa em telas >=1280px (grid em .admin-shell,
 // 3-admin-shell.css), gaveta (drawer) por cima do conteúdo em telas
-// menores. Itens com `caminho` são NavLink de verdade (URL muda, dá pra
-// linkar direto, botão Voltar funciona, F5 mantém a aba) — item ativo é
-// quem o próprio NavLink decide, comparando com a URL atual, não um
-// state comparado à mão.
+// menores. `xl:` (não `lg:`, Tailwind padrão 1280px — 25-08-2026, subido
+// de 1024px, achado do Lucas: "o menu lateral continua aberto, já
+// deveria ter sumido sozinho pra aumentar o espaço" — a coluna fixa de
+// 260px comendo espaço numa tela de notebook comum era exatamente o que
+// deixava as tabelas apertadas cedo demais). Trocado por `xl:` em vez de
+// redefinir o breakpoint `lg` do Tailwind global (que mudaria QUALQUER
+// outro `lg:` já usado pelo app inteiro, não só aqui). Itens com
+// `caminho` são NavLink de verdade (URL muda, dá pra linkar direto,
+// botão Voltar funciona, F5 mantém a aba) — item ativo é quem o próprio
+// NavLink decide, comparando com a URL atual, não um state comparado à
+// mão.
 export function AdminSidebar({ aberto, aoFechar }) {
   return (
     <>
       {/* Fundo escuro atrás da gaveta — só existe abrindo (clique fora) e só no mobile. */}
       {aberto && (
         <div
-          className="fixed inset-0 bg-black/40 z-30 lg:hidden"
+          className="fixed inset-0 bg-black/40 z-30 xl:hidden"
           onClick={aoFechar}
           aria-hidden="true"
         />
@@ -24,8 +31,8 @@ export function AdminSidebar({ aberto, aoFechar }) {
       <aside
         className={
           'admin-sidebar fixed top-16 bottom-0 left-0 z-40 w-[260px] overflow-y-auto ' +
-          'transition-transform duration-200 lg:static lg:top-auto lg:bottom-auto lg:z-auto ' +
-          'lg:w-auto lg:translate-x-0 ' +
+          'transition-transform duration-200 xl:static xl:top-auto xl:bottom-auto xl:z-auto ' +
+          'xl:w-auto xl:translate-x-0 ' +
           (aberto ? 'translate-x-0' : '-translate-x-full')
         }
       >
