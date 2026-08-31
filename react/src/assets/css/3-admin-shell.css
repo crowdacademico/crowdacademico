@@ -46,10 +46,19 @@
   flex-direction: column;
 }
 
+/* position: relative (25-08-2026) — âncora pra faixa do botão "Menu"
+   (admin-layout.jsx), que é `position: absolute` e primeiro filho daqui.
+   Sem isso, o `absolute` se posicionaria relativo à página inteira (o
+   próximo ancestral REALMENTE posicionado, que podia estar bem mais
+   longe), não relativo a este grid — `absolute inset-x-0 top-0` só cola
+   "no topo daqui" se "aqui" for uma posição de verdade. Não muda nada do
+   comportamento do grid em si (`position:relative` não interfere em
+   `display:grid`). */
 .admin-shell {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   width: 100%;
+  position: relative;
 }
 
 .admin-sidebar {
@@ -190,6 +199,20 @@
 .admin-content-area {
   min-width: 0;
   padding: 1.5rem;
+  /* padding-top extra (25-08-2026) — reserva espaço de VERDADE pra faixa
+     do botão "Menu" (admin-layout.jsx, position:absolute, primeiro
+     filho de .admin-shell), que passa POR TRÁS de tudo e só fica visível
+     aqui, na área de conteúdo (a sidebar cobre ela com o próprio fundo
+     opaco, ver comentário em admin-sidebar.jsx). 1.5rem (padding normal,
+     preservado) + ~3rem (altura natural estimada da faixa: botão em
+     text-sm/ícone ≈ 21px de conteúdo + 0.75rem de padding vertical dos
+     dois lados ≈ 45px ≈ 2.8rem, arredondado com folga) = 4.5rem no topo
+     — as outras 3 direções continuam com o 1.5rem do `padding` acima
+     (longhand só no topo, não redeclara os outros lados). Estimativa,
+     não medido ao vivo ainda nesta forma nova — se sobrar/faltar um
+     pouco de espaço entre a faixa e o topo do primeiro cartão, é aqui
+     que se ajusta. */
+  padding-top: 4.5rem;
   /* Centraliza o __inner só dentro do espaço que sobra à direita da
      sidebar — nunca a página inteira. Se a tela for mais larga que o
      max-width do __inner, a folga fica só aqui, à direita da sidebar. */

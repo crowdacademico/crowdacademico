@@ -24,6 +24,20 @@ import { GRUPOS_MENU_ADMIN } from './admin-menu.constants';
 // (URL muda, dá pra linkar direto, botão Voltar funciona, F5 mantém a
 // aba) — item ativo é quem o próprio NavLink decide, comparando com a
 // URL atual, não um state comparado à mão.
+//
+// `min-[1377px]:relative` (25-08-2026, ERA `min-[1377px]:static` — pedido
+// do Lucas: a faixa do botão "Menu" — ver admin-layout.jsx — precisa ficar
+// por BAIXO da sidebar, escondida atrás dela, não empurrando ela pra
+// baixo). `position:static` NÃO participa de z-index de jeito nenhum
+// (regra do CSS: z-index só tem efeito em elemento posicionado) — trocar
+// pra `relative` (visualmente idêntico, mesma posição no fluxo normal do
+// grid) deixa a sidebar entrar na mesma "categoria" de empilhamento da
+// faixa (position:absolute em admin-layout.jsx) e, por vir DEPOIS dela no
+// HTML (ver ordem em admin-layout.jsx), pinta por CIMA automaticamente —
+// sem precisar declarar z-index nenhum à mão, é só ordem de DOM entre dois
+// elementos posicionados. Resultado: a sidebar cobre (esconde) a faixa
+// atrás dela sozinha, só porque tem fundo opaco e está na frente — exatamente
+// o pedido do Lucas.
 export function AdminSidebar({ aberto, aoFechar }) {
   return (
     <>
@@ -39,7 +53,7 @@ export function AdminSidebar({ aberto, aoFechar }) {
       <aside
         className={
           'admin-sidebar fixed top-16 bottom-0 left-0 z-40 w-[260px] overflow-y-auto ' +
-          'transition-transform duration-200 min-[1377px]:static min-[1377px]:top-auto min-[1377px]:bottom-auto min-[1377px]:z-auto ' +
+          'transition-transform duration-200 min-[1377px]:relative min-[1377px]:top-auto min-[1377px]:bottom-auto min-[1377px]:z-auto ' +
           'min-[1377px]:w-auto min-[1377px]:translate-x-0 ' +
           (aberto ? 'translate-x-0' : '-translate-x-full')
         }

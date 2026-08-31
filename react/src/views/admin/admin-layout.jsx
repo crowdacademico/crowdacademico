@@ -23,18 +23,41 @@ export function AdminLayout({ auth }) {
 
   return (
     <main className="admin-pagina">
-      {/* Só aparece abaixo de 1377px (25-08-2026, ver admin-sidebar.jsx)
-          — em telas maiores o menu já é uma coluna fixa (ver .admin-sidebar
-          em 3-admin-shell.css), não precisa de botão. */}
-      <button
-        type="button"
-        onClick={() => setMenuAberto(true)}
-        className="min-[1377px]:hidden flex items-center gap-2 px-4 py-3 fundo-cartao border-b borda-padrao font-semibold text-sm texto-padrao w-full"
-      >
-        <i className="fa-solid fa-bars"></i> Menu
-      </button>
-
+      {/* Faixa como CAMADA DE FUNDO, não mais um elemento que empurra tudo
+          (25-08-2026, 3ª tentativa — as duas primeiras, "some/aparece" e
+          depois "sempre visível mas invisível", ambas empurravam a
+          sidebar pra baixo também, o que o Lucas NÃO queria: "a sidebar
+          sempre encostou direto no breadcrumb, quero que continue assim").
+          Ideia nova, descrita pelo próprio Lucas: a faixa mora POR TRÁS
+          de tudo (`absolute`, primeiro filho de `.admin-shell` — que
+          ganhou `position:relative` em 3-admin-shell.css só pra servir de
+          âncora pra isto), a sidebar continua no fluxo normal do grid
+          (sem ser empurrada, encosta direto no breadcrumb como sempre),
+          e é o PRÓPRIO fundo opaco dela + vir DEPOIS no HTML
+          (min-[1377px]:relative em admin-sidebar.jsx) que cobre/esconde a
+          faixa atrás dela sozinha, sem precisar de display/visibility
+          condicional nenhum aqui. Só a área de CONTEÚDO (.admin-content-
+          area, padding-top maior, ver 3-admin-shell.css) reserva espaço
+          de verdade — é onde a faixa aparece, dando aquele respiro entre
+          breadcrumb e tabela que o Lucas pediu desde o início. Bônus:
+          como o botão nunca mais é escondido via CSS (nem hidden, nem
+          invisible), ele fica sempre com a MESMA altura natural — o
+          "salto" de altura que rolou nas tentativas anteriores nem pode
+          mais acontecer, e quando a sidebar vira gaveta (abaixo de
+          1377px) e para de cobrir a faixa, o botão reaparece sozinho,
+          exposto, sem CSS nenhum decidindo isso — é simplesmente o que já
+          estava lá o tempo todo, só que agora visível. */}
       <div className="admin-shell">
+        <div className="absolute inset-x-0 top-0 flex items-center px-4 py-3 fundo-cartao border-b borda-padrao">
+          <button
+            type="button"
+            onClick={() => setMenuAberto(true)}
+            className="flex items-center gap-2 font-semibold text-sm texto-padrao"
+          >
+            <i className="fa-solid fa-bars"></i> Menu
+          </button>
+        </div>
+
         <AdminSidebar aberto={menuAberto} aoFechar={() => setMenuAberto(false)} />
 
         <div className="admin-content-area">
