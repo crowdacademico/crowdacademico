@@ -267,13 +267,25 @@
      transbordo, então `.crud-secao` (pai dele, onde mora o
      container-type) tem uma largura real e estável de novo — é ela que a
      query abaixo observa, não a coluna.
-     Valor (1050px) é uma ESTIMATIVA a partir do breakpoint antigo (1400px
-     de janela ≈ sidebar 260px + paddings ≈ 350px de sobra, sobrando uns
-     1050px de conteúdo) — não testado ao vivo ainda nesta forma nova,
-     pode precisar de ajuste fino olhando a tela de verdade (mesmo espírito
-     do 900px→1400px de antes: o Lucas testando ao vivo é quem calibra o
-     número certo). */
-  @container (max-width: 1150px) {
+     Valor (900px, ERA 1150px) — achado do Lucas testando ao vivo o novo
+     breakpoint da sidebar (xl:, ~1280-1340px de janela, ver
+     admin-sidebar.jsx): "bug esquisito, poucos centímetros antes do menu
+     lateral sumir". Causa: a sidebar ocupa ~372px de "chrome" (260px de
+     coluna + paddings ao redor) enquanto está aberta, e ZERO quando vira
+     gaveta — no exato pixel do breakpoint dela, o espaço da tabela SALTA
+     ~260px de uma vez (não encolhe suave). Um valor de @container que
+     caia DENTRO dessa faixa de salto (ex.: 1150px, quando a faixa nesse
+     teste ia de ~950 até ~1210px) faz o texto sumir um pixel antes do
+     salto (espaço ainda apertado, sidebar aberta) e reaparecer um pixel
+     depois (espaço já mais folgado, sidebar virou gaveta) — o "bug".
+     900px fica abaixo do PISO dessa faixa pra qualquer breakpoint de
+     sidebar >=1280px (piso = breakpoint_sidebar - 372px; com 1280px de
+     mínimo testado, o piso nunca fica abaixo de ~908px) — texto fica
+     visível o tempo todo enquanto a sidebar está aberta E logo depois de
+     virar gaveta, sem pular; só some de verdade bem mais adiante, quando
+     o espaço já está mesmo curto. Se o breakpoint da sidebar mudar pra
+     baixo de 1280px de novo no futuro, essa conta precisa ser refeita. */
+  @container (max-width: 1120px) {
     .crud-tabela__acao-texto {
       display: none;
     }
