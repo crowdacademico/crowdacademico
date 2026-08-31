@@ -72,7 +72,7 @@ export function ListarUsuarios({ auth }) {
           { chave: 'nome', rotulo: 'nome' },
           { chave: 'papel', rotulo: 'papel' },
           { chave: 'email', rotulo: 'email' },
-          { chave: 'emailVerificado', rotulo: 'e-mail verificado' },
+          { chave: 'emailVerificado', rotulo: 'e-mail verificado', quebrarRotulo: true },
         ]}
         chavePrimaria="idUsuario"
         listar={listarUsuarios}

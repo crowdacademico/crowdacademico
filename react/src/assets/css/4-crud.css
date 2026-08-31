@@ -215,6 +215,44 @@
     vertical-align: middle;
   }
 
+  /* `<br>` manual e controlado (25-08-2026, ver `coluna.quebrarRotulo` em
+     generic-table.jsx — o "porquê" completo está lá) — escondido por
+     padrão (nenhuma quebra, cabeçalho numa linha só, em qualquer
+     largura), e só "ligado" abaixo do breakpoint. `display: none` não
+     esconde só visualmente, remove o `<br>` da árvore de fato — sem
+     quebra nenhuma acontecendo, mesmo que o texto tecnicamente coubesse
+     ou não no espaço real da coluna (de propósito: essa quebra NÃO
+     reage ao espaço sobrando, só a este breakpoint fixo).
+     1400px — estimativa inicial (raio de onde a quebra "natural"
+     costumava acontecer antes desta mudança), ainda não calibrado ao
+     vivo nesta forma nova — mesmo espírito de sempre: ajustar olhando a
+     tela de verdade. `@media` de JANELA aqui, não `@container` de
+     propósito — um `@container` reagiria ao espaço da SEÇÃO, que pula
+     de tamanho toda vez que a sidebar ou o texto de Ações mudam de
+     estado (mesma causa da oscilação que este código resolve); a janela
+     nunca pula, só encolhe/cresce direto, então é o único critério que
+     garante UMA transição só. */
+  /* `white-space: nowrap` (25-08-2026) — impede o navegador de quebrar
+     SOZINHO no espaço antes do breakpoint escolhido acima (`nowrap` só
+     bloqueia quebra espontânea; o `<br>` explícito continua funcionando
+     normalmente quando `display` deixa de ser `none`, são mecanismos
+     independentes em CSS). Sem isto, o texto ainda podia quebrar cedo
+     demais numa tela apertada, reproduzindo a mesma oscilação que este
+     recurso inteiro existe pra evitar. */
+  .crud-tabela__rotulo-controlado {
+    white-space: nowrap;
+  }
+
+  .crud-tabela__quebra-rotulo {
+    display: none;
+  }
+
+  @media (max-width: 1400px) {
+    .crud-tabela__quebra-rotulo {
+      display: initial;
+    }
+  }
+
   .crud-tabela th.crud-tabela__ordenavel {
     cursor: pointer;
     user-select: none;

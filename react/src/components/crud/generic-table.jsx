@@ -354,6 +354,60 @@ export function GenericTable({
     (colunasCentralizadas.has(coluna.chave) ? ' crud-tabela__celula--centralizada' : '') +
     (coluna.chave === colunaIdChave ? ' crud-tabela__coluna-id' : '');
 
+  // `coluna.quebrarRotulo` (25-08-2026, pedido do Lucas: "e-mail
+  // verificado" oscilando entre quebrado/inteiro várias vezes conforme a
+  // tela diminui — "e-mail verificado" quebra pelo espaço realmente
+  // sobrando pra coluna, mas esse espaço pula toda vez que outra coisa
+  // muda por perto (Ações vira ícone, sidebar some), cruzando o limite
+  // de novo pra cada lado). Em vez de depender do espaço sobrando (o
+  // `white-space` padrão do navegador já quebra sozinho quando aperta,
+  // mas de forma instável), insere uma quebra MANUAL entre a última
+  // palavra e o resto — escondida por padrão (`display:none` em
+  // `.crud-tabela__quebra-rotulo`, ver 4-crud.css) e só "ligada" abaixo
+  // de UM breakpoint fixo de JANELA (não de espaço sobrando, de
+  // propósito — janela só encolhe numa direção, nunca pula igual o
+  // espaço da coluna pula) — muda de estado uma vez só, sempre no mesmo
+  // lugar, nunca oscila. Só entra em jogo quando a tela marca
+  // `coluna.quebrarRotulo: true` (opt-in, como `centralizar`/`largura`
+  // acima) — nenhuma outra coluna muda de comportamento.
+  // `slice(0, ultimoEspaco + 1)` (CORRIGIDO — era `ultimoEspaco`, sem o
+  // "+1") — precisa manter o próprio caractere de espaço na primeira
+  // metade. Sem ele, com o <br> escondido (`display:none`, o caso comum,
+  // tela larga) as duas metades ficavam coladas sem espaço nenhum entre
+  // si ("e-mailverificado") — e pior, sem NENHUM espaço sobrando pro
+  // navegador quebrar sozinho quando a coluna ficava apertada, ele usava
+  // o único ponto de quebra que sobrava (o hífen de "e-mail"), quebrando
+  // errado ("e-" / "mailverificado") numa largura que não tinha nada a
+  // ver com o breakpoint escolhido aqui.
+  // Classe extra só pro <th> (não pro <td> — `classesColuna` é
+  // compartilhada pelos dois, mas `quebrarRotulo` é uma decisão só do
+  // CABEÇALHO). `.crud-tabela__rotulo-controlado` trava `white-space:
+  // nowrap` (ver 4-crud.css) — sem isso, o navegador ainda podia quebrar
+  // sozinho no espaço (agora corrigido, ver comentário de rotuloColuna)
+  // antes do breakpoint escolhido, reproduzindo a mesma oscilação de
+  // antes, só que "certa" em vez de errada no hífen. `white-space:
+  // nowrap` não impede o `<br>` explícito de funcionar quando ativo —
+  // só impede quebra ESPONTÂNEA no espaço; são coisas diferentes em CSS.
+  const classesCabecalho = (coluna) =>
+    classesColuna(coluna) + (coluna.quebrarRotulo ? ' crud-tabela__rotulo-controlado' : '');
+
+  const rotuloColuna = (coluna) => {
+    if (!coluna.quebrarRotulo) {
+      return coluna.rotulo;
+    }
+    const ultimoEspaco = coluna.rotulo.lastIndexOf(' ');
+    if (ultimoEspaco === -1) {
+      return coluna.rotulo;
+    }
+    return (
+      <>
+        {coluna.rotulo.slice(0, ultimoEspaco + 1)}
+        <br className="crud-tabela__quebra-rotulo" />
+        {coluna.rotulo.slice(ultimoEspaco + 1)}
+      </>
+    );
+  };
+
   // `coluna.largura` (19-08-2026, pedido do Lucas em Tipos de Link: "o
   // exato mesmo espaçamento" pras 4 colunas Sim/Não da tabela — hoje cada
   // uma tinha uma largura diferente porque table-layout: auto (padrão do
@@ -611,10 +665,10 @@ export function GenericTable({
               {colunas.map((coluna) => (
                 <th
                   key={coluna.chave}
-                  className={classesColuna(coluna).trim() || undefined}
+                  className={classesCabecalho(coluna).trim() || undefined}
                   style={estiloColuna(coluna)}
                 >
-                  {coluna.rotulo}
+                  {rotuloColuna(coluna)}
                 </th>
               ))}
               {colunaExtra && <th>{colunaExtra.rotulo}</th>}
@@ -663,11 +717,11 @@ export function GenericTable({
                 {colunas.map((coluna) => (
                   <th
                     key={coluna.chave}
-                    className={'crud-tabela__ordenavel' + classesColuna(coluna)}
+                    className={'crud-tabela__ordenavel' + classesCabecalho(coluna)}
                     style={estiloColuna(coluna)}
                     onClick={() => aoClicarColuna(coluna.chave)}
                   >
-                    {coluna.rotulo}
+                    {rotuloColuna(coluna)}
                     {ordenacao.chave === coluna.chave && (ordenacao.direcao === 'asc' ? ' ▲' : ' ▼')}
                   </th>
                 ))}
