@@ -364,7 +364,53 @@ export function GenericTable({
   // exata é uma decisão de design por tela, não dá pra inferir do dado
   // (duas tabelas diferentes podem ter o mesmo tipo de coluna e ainda
   // assim precisar de larguras diferentes uma da outra).
-  const estiloColuna = (coluna) => (coluna.largura ? { width: coluna.largura } : undefined);
+  //
+  // `largurasColunas` (25-08-2026, achado do Lucas: "as colunas dançam ao
+  // trocar de página") — table-layout: auto recalcula a largura de cada
+  // coluna com base SÓ nas linhas visíveis; trocar de página muda o
+  // conjunto visível, a largura muda junto. Calculado aqui a partir de
+  // `linhas` INTEIRA (não linhasPagina — a lista completa já está toda no
+  // navegador, ver comentário de `listar` no topo do arquivo), então só
+  // recalcula quando o dado de verdade muda (uma busca nova), nunca ao
+  // virar página. Aproximação por contagem de caractere (1ch ≈ 1
+  // caractere do maior valor da coluna, cabeçalho incluso, +2ch de
+  // respiro) — não é pixel perfeito, mas resolve a dança sem cair no
+  // corte cego de porcentagem fixa que a gente já usa em Links
+  // Acadêmicos. Teto de 40ch pra um valor isolado excepcionalmente longo
+  // não dominar a tabela inteira sozinho. `coluna.largura` continua
+  // ganhando quando existe — decisão manual explícita nunca é
+  // sobrescrita pelo cálculo automático.
+  const largurasColunas = useMemo(() => {
+    const resultado = {};
+    colunas.forEach((coluna) => {
+      if (coluna.largura) {
+        return;
+      }
+      let maiorTamanho = coluna.rotulo.length;
+      linhas.forEach((linha) => {
+        const tamanho = String(linha[coluna.chave] ?? '').length;
+        if (tamanho > maiorTamanho) {
+          maiorTamanho = tamanho;
+        }
+      });
+      resultado[coluna.chave] = Math.min(40, maiorTamanho + 2) + 'ch';
+    });
+    return resultado;
+  }, [linhas, colunas]);
+
+  // Mesmo raciocínio da coluna Ações — nunca recalculada de linhasPagina,
+  // só depende de quantos botões existem (fixo pra tela inteira).
+  const larguraAcoes = useMemo(
+    () => (rotaBase ? Math.max(10, acoes.length * 9) + 'ch' : undefined),
+    [rotaBase, acoes],
+  );
+
+  const estiloColuna = (coluna) =>
+    coluna.largura
+      ? { width: coluna.largura }
+      : largurasColunas[coluna.chave]
+        ? { width: largurasColunas[coluna.chave] }
+        : undefined;
 
   // "todos" (pedido do Lucas: opção de ver 10/20/30/todos os registros,
   // além de Anterior/Próxima) vira 1 página só, com a lista inteira.
@@ -520,7 +566,7 @@ export function GenericTable({
         // tabela (mesmas colunas) enquanto os dados reais não chegam, em
         // vez de um texto solto que faz a tela "pular" quando os dados
         // aparecem.
-        <table className="crud-tabela">
+        <table className="crud-tabela" style={{ tableLayout: 'fixed' }}>
           <thead>
             <tr>
               {colunas.map((coluna) => (
@@ -533,7 +579,11 @@ export function GenericTable({
                 </th>
               ))}
               {colunaExtra && <th>{colunaExtra.rotulo}</th>}
-              {rotaBase && <th className="crud-tabela__celula--centralizada">Ações</th>}
+              {rotaBase && (
+                <th className="crud-tabela__celula--centralizada" style={{ width: larguraAcoes }}>
+                  Ações
+                </th>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -560,7 +610,7 @@ export function GenericTable({
         </table>
       ) : (
         <>
-          <table className="crud-tabela">
+          <table className="crud-tabela" style={{ tableLayout: 'fixed' }}>
             <thead>
               <tr>
                 {colunas.map((coluna) => (
@@ -575,7 +625,11 @@ export function GenericTable({
                   </th>
                 ))}
                 {colunaExtra && <th>{colunaExtra.rotulo}</th>}
-                {rotaBase && <th className="crud-tabela__celula--centralizada">Ações</th>}
+                {rotaBase && (
+                  <th className="crud-tabela__celula--centralizada" style={{ width: larguraAcoes }}>
+                    Ações
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody>

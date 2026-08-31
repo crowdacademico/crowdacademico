@@ -111,11 +111,10 @@ export function ConsultarUsuario({ auth }) {
       subtitulo={usuario.email}
       avatar={<AvatarUsuario nome={usuario.nome} foto={avatar?.url} tamanho="xl" />}
       largura="larga"
-      badges={papeis?.map((papel) => (
-        <span key={papel.nomePapel} className="badge badge-neutro">
-          {papel.nomePapel}
-        </span>
-      ))}
+      // Sem `badges` de propósito (25-08-2026, pedido da Alexia): os
+      // papéis já aparecem uma vez, de verdade, na seção "Papéis" mais
+      // abaixo — mostrar de novo aqui em cima, do lado de "Alterar", era
+      // duplicar a mesma informação duas vezes na mesma tela.
       // Botão "Alterar" no topo (10-08-2026, item 4: "fluxo consultar→
       // alterar é o mais comum em painel admin", hoje só dava pra editar
       // voltando pra listagem primeiro).
