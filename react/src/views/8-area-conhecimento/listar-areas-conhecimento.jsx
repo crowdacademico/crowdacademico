@@ -10,8 +10,29 @@ import { logAuditoriaApi } from '../../services/28-log-auditoria/api/log-auditor
 // Lucas não decidiu em que grupo do menu lateral ela entra) — ver
 // comentário lá pra ativar depois.
 export function ListarAreasConhecimento({ auth }) {
+  // `nomePai` vem vazio pras 9 grandes áreas de verdade (topo da hierarquia
+  // CNPq, sem pai nenhum) — "Base" (25-08-2026, pedido do Lucas) no lugar
+  // do vazio, tanto na célula quanto como opção clicável no filtro
+  // "Grande área" (ver `ordem` abaixo, pra ela aparecer primeiro).
+  //
+  // ACHADO (mesmo dia): filtrar por "Ciências Agrárias" só mostrava as
+  // FILHAS dela, não ela mesma — errado, ela também "é" Ciências Agrárias.
+  // Fix: pras 9 raízes, `nomePai` guarda os DOIS valores separados por
+  // vírgula ("Base, Ciências Agrárias") — mesmo truque multivalor que a
+  // coluna "papel" de Usuários já usa (GenericTable separa por vírgula
+  // pra achar as opções de faceta E pra decidir quem bate com o filtro
+  // ativo). Assim a própria linha aparece tanto no filtro "Base" quanto
+  // no filtro do próprio nome dela. A CÉLULA continua mostrando só "Base"
+  // (ver `renderizar` na coluna, abaixo) — a vírgula é só pro filtro
+  // enxergar, não pra pessoa ler.
   const listarAreas = useCallback(
-    () => areaConhecimentoApi.listar(auth.authFetch),
+    () =>
+      areaConhecimentoApi.listar(auth.authFetch).then((lista) =>
+        lista.map((area) => ({
+          ...area,
+          nomePai: area.idPai === null ? `Base, ${area.nome}` : area.nomePai,
+        })),
+      ),
     [auth.authFetch],
   );
   // 'area_conhecimento' é o nome FÍSICO da tabela (bate com
@@ -36,7 +57,13 @@ export function ListarAreasConhecimento({ auth }) {
           { chave: 'idAreaConhecimento', rotulo: 'id' },
           { chave: 'codigoCnpq', rotulo: 'código CNPq', centralizar: true },
           { chave: 'nome', rotulo: 'nome' },
-          { chave: 'nomePai', rotulo: 'grande área' },
+          {
+            chave: 'nomePai',
+            rotulo: 'grande área',
+            // Célula mostra só "Base" pras 9 raízes — o valor de verdade
+            // (com a vírgula, ver listarAreas acima) é só pro filtro.
+            renderizar: (linha) => (linha.idPai === null ? 'Base' : linha.nomePai),
+          },
           { chave: 'ativo', rotulo: 'ativo' },
         ]}
         chavePrimaria="idAreaConhecimento"
@@ -44,12 +71,13 @@ export function ListarAreasConhecimento({ auth }) {
         rotaBase="/admin/areas-conhecimento"
         buscarLog={buscarLogAreas}
         campoRenomeioLog="nome"
-        // Escolher uma grande área no filtro mostra só as áreas filhas
-        // dela — as próprias grandes áreas somem da lista filtrada porque
-        // não têm `nomePai` (ver GenericTable: linha sem valor pra
-        // faceta escolhida é excluída quando alguma seleção está ativa).
-        // Só aparece se houver mais de 1 valor possível.
-        filtrosFacetados={[{ chave: 'nomePai', rotulo: 'Grande área' }]}
+        // Escolher uma grande área de verdade no filtro mostra só as áreas
+        // filhas dela. "Base" (25-08-2026) é a opção especial pras 9
+        // grandes áreas em si (topo da hierarquia, sem pai) — antes elas
+        // simplesmente somiam de qualquer filtro ativo, sem nenhum jeito
+        // de isolar só elas; `ordem: ['Base']` fixa essa opção primeiro na
+        // lista, o resto continua alfabético.
+        filtrosFacetados={[{ chave: 'nomePai', rotulo: 'Grande área', ordem: ['Base'] }]}
       />
     </div>
   );

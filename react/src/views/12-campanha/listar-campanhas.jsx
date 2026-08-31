@@ -63,16 +63,21 @@ export function ListarCampanhas({ auth }) {
           { chave: 'titulo', rotulo: 'título' },
           { chave: 'status', rotulo: 'status', centralizar: true },
           { chave: 'pesquisador', rotulo: 'pesquisador' },
-          { chave: 'area', rotulo: 'área' },
-          { chave: 'metaFinanceira', rotulo: 'meta' },
+          { chave: 'metaFinanceira', rotulo: 'meta', centralizar: true },
           { chave: 'valorBrutoArrecadado', rotulo: 'arrecadado' },
         ]}
         chavePrimaria="idCampanha"
         listar={listarCampanhas}
         rotaBase="/admin/campanhas"
         acoes={['consultar']}
+        // "Área" (25-08-2026, pedido do Lucas: "tabela muito poluída") saiu
+        // das colunas visíveis e virou filtro — o dado (`linha.area`)
+        // continua vindo de listarCampanhas normalmente, filtro por faceta
+        // não depende da coluna existir na tabela, só do campo existir na
+        // linha.
         filtrosFacetados={[
           { chave: 'status', rotulo: 'Status', ordem: ORDEM_STATUS_CAMPANHA.map((s) => ROTULO_STATUS_CAMPANHA[s]) },
+          { chave: 'area', rotulo: 'Área' },
         ]}
         buscarLog={buscarLogCampanha}
       />
