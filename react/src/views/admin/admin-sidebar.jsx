@@ -3,26 +3,34 @@ import { abrirBuscaGlobal } from '../../components/layout/busca-global-evento';
 import { Tooltip } from '../../components/layout/tooltip';
 import { GRUPOS_MENU_ADMIN } from './admin-menu.constants';
 
-// Menu lateral — coluna fixa em telas >=1280px (grid em .admin-shell,
+// Menu lateral — coluna fixa a partir de 1310px (grid em .admin-shell,
 // 3-admin-shell.css), gaveta (drawer) por cima do conteúdo em telas
-// menores. `xl:` (não `lg:`, Tailwind padrão 1280px — 25-08-2026, subido
-// de 1024px, achado do Lucas: "o menu lateral continua aberto, já
-// deveria ter sumido sozinho pra aumentar o espaço" — a coluna fixa de
-// 260px comendo espaço numa tela de notebook comum era exatamente o que
-// deixava as tabelas apertadas cedo demais). Trocado por `xl:` em vez de
-// redefinir o breakpoint `lg` do Tailwind global (que mudaria QUALQUER
-// outro `lg:` já usado pelo app inteiro, não só aqui). Itens com
-// `caminho` são NavLink de verdade (URL muda, dá pra linkar direto,
-// botão Voltar funciona, F5 mantém a aba) — item ativo é quem o próprio
-// NavLink decide, comparando com a URL atual, não um state comparado à
-// mão.
+// menores. `min-[1310px]:` (25-08-2026, ERA `xl:`, Tailwind fixo em
+// 1280px) — breakpoint ARBITRÁRIO do Tailwind (não um dos padrão tipo
+// lg/xl), só pra este componente. Achado do Lucas ao vivo: com `xl:`
+// fixo em 1280px e a media query do grid (3-admin-shell.css) editada
+// separadamente pra outro valor (tentando calibrar), a faixa entre os
+// dois virava um estado quebrado ("bug da tela branca") — a sidebar já
+// tinha virado `position:static` pelo Tailwind, mas o grid ainda só
+// reservava 1 coluna, sem espaço pra ela. Tentativa de token
+// `--breakpoint-sidebar` central (@theme) não funciona aqui — este
+// componente é escaneado pelo Tailwind normalmente (JSX sempre é), mas
+// 3-admin-shell.css entra por um pipeline de CSS separado do de
+// tailwind-theme.css (ver comentário completo em 3-admin-shell.css, e o
+// mesmo problema já documentado pra @utility em 1-base.css) — `theme()`
+// não resolve lá. Por isso o número (1310px) é literal aqui E lá — ao
+// mudar um, busque pelo mesmo valor ("1310px") no projeto pra achar o
+// outro lado e trocar junto. Itens com `caminho` são NavLink de verdade
+// (URL muda, dá pra linkar direto, botão Voltar funciona, F5 mantém a
+// aba) — item ativo é quem o próprio NavLink decide, comparando com a
+// URL atual, não um state comparado à mão.
 export function AdminSidebar({ aberto, aoFechar }) {
   return (
     <>
       {/* Fundo escuro atrás da gaveta — só existe abrindo (clique fora) e só no mobile. */}
       {aberto && (
         <div
-          className="fixed inset-0 bg-black/40 z-30 xl:hidden"
+          className="fixed inset-0 bg-black/40 z-30 min-[1310px]:hidden"
           onClick={aoFechar}
           aria-hidden="true"
         />
@@ -31,8 +39,8 @@ export function AdminSidebar({ aberto, aoFechar }) {
       <aside
         className={
           'admin-sidebar fixed top-16 bottom-0 left-0 z-40 w-[260px] overflow-y-auto ' +
-          'transition-transform duration-200 xl:static xl:top-auto xl:bottom-auto xl:z-auto ' +
-          'xl:w-auto xl:translate-x-0 ' +
+          'transition-transform duration-200 min-[1310px]:static min-[1310px]:top-auto min-[1310px]:bottom-auto min-[1310px]:z-auto ' +
+          'min-[1310px]:w-auto min-[1310px]:translate-x-0 ' +
           (aberto ? 'translate-x-0' : '-translate-x-full')
         }
       >
