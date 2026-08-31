@@ -230,26 +230,31 @@
   padding: 2rem;
 }
 
-/* 1310px — PRECISA bater exato com `min-[1310px]:` em admin-sidebar.jsx/
-   admin-layout.jsx (25-08-2026, ERA `xl:` fixo de 1280px no JSX + esse
-   valor aqui editado à mão à parte — a causa exata do "bug da tela
-   branca entre 1279px e 1309px" que o Lucas achou ao vivo: com dois
-   números DIFERENTES e sem nada em comum visualmente, era fácil mudar um
-   sem notar que precisava mudar o outro junto. A sidebar já virava
-   position:static pelo Tailwind (1280px) antes do grid reservar a coluna
-   pra ela (1310px) — nessa faixa, ela tentava esticar pra ocupar a única
-   coluna do grid inteiro, empurrando o resto, tela quebrando
-   visualmente. TENTATIVA: um token `--breakpoint-sidebar` central em
-   @theme (tailwind-theme.css), lido aqui via theme() — não funciona,
-   quebra o build: este arquivo entra pela cadeia de @import de
-   0-style.css, um pipeline de CSS SEPARADO do de tailwind-theme.css (que
-   é quem tem `@import 'tailwindcss'`; ver o mesmo problema já documentado
-   pra @utility em 1-base.css linha ~293) — theme()/@utility só resolvem
-   dentro daquele pipeline. Solução: mesmo número literal (1310px) nos
-   dois lugares, escrito por extenso nos dois (não mais um `xl:` escondido
-   que não deixava óbvio que precisava bater com outro arquivo) — ao
-   mudar aqui, busque por "1310px" no projeto pra achar o outro lado. */
-@media (min-width: 1310px) {
+/* 1377px (ERA 1310px, 25-08-2026 — achado do Lucas testando ao vivo: as
+   colunas terminam de se espremer confortavelmente até 1377px, mas a
+   sidebar só sumia abaixo de 1310px — nessa faixa de ~67px a tabela já
+   estava no limite do aperto e a sidebar ainda ocupava 260px à toa).
+   PRECISA bater exato com `min-[1377px]:` em admin-sidebar.jsx/
+   admin-layout.jsx — ERA `xl:` fixo de 1280px no JSX + esse valor aqui
+   editado à mão à parte — a causa exata do "bug da tela branca entre
+   1279px e 1309px" que o Lucas achou ao vivo antes desta rodada: com
+   dois números DIFERENTES e sem nada em comum visualmente, era fácil
+   mudar um sem notar que precisava mudar o outro junto. A sidebar já
+   virava position:static pelo Tailwind (1280px) antes do grid reservar
+   a coluna pra ela (1310px, na época) — nessa faixa, ela tentava
+   esticar pra ocupar a única coluna do grid inteiro, empurrando o
+   resto, tela quebrando visualmente. TENTATIVA: um token
+   `--breakpoint-sidebar` central em @theme (tailwind-theme.css), lido
+   aqui via theme() — não funciona, quebra o build: este arquivo entra
+   pela cadeia de @import de 0-style.css, um pipeline de CSS SEPARADO do
+   de tailwind-theme.css (que é quem tem `@import 'tailwindcss'`; ver o
+   mesmo problema já documentado pra @utility em 1-base.css linha ~293)
+   — theme()/@utility só resolvem dentro daquele pipeline. Solução:
+   mesmo número literal nos dois lugares, escrito por extenso nos dois
+   (não mais um `xl:` escondido que não deixava óbvio que precisava
+   bater com outro arquivo) — ao mudar aqui, busque por "1377px" no
+   projeto pra achar o outro lado. */
+@media (min-width: 1377px) {
   .admin-shell {
     grid-template-columns: 260px minmax(0, 1fr);
   }

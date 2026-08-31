@@ -425,7 +425,19 @@ export function GenericTable({
           maiorTamanho = tamanho;
         }
       });
-      const teto = ehId ? 8 : 40;
+      // ERA 40 (25-08-2026, ajustado pra 28) — achado do Lucas testando ao
+      // vivo: com 40ch de teto, uma coluna de valor naturalmente longo
+      // (nome, email) só alcança o PRÓPRIO piso de verdade (e só aí passa
+      // a quebrar linha/apertar) numa tela já bem estreita — colunas de
+      // valor curto (papel, e-mail verificado) alcançam o piso delas bem
+      // antes, dando a sensação de que "aperta tudo, menos essas duas".
+      // min-width continua sendo só um PISO (não um teto de verdade — a
+      // coluna cresce livre numa tela larga, isso não muda em nada); 28ch
+      // só faz ela poder encolher (e por tabela, o <td> sem nowrap
+      // nenhum, QUEBRAR linha) mais cedo quando a tela aperta de verdade,
+      // em vez de segurar a largura total do maior e-mail/nome até o
+      // último instante.
+      const teto = ehId ? 8 : 28;
       resultado[coluna.chave] = Math.min(teto, maiorTamanho + 2) + 'ch';
     });
     return resultado;
