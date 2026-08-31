@@ -398,6 +398,18 @@ export function GenericTable({
   // excepcionalmente longo não pedir um piso enorme sozinho. `coluna.
   // largura` continua ganhando quando existe — decisão manual explícita
   // nunca é sobrescrita pelo cálculo automático.
+  // Coluna centralizada (número/booleano/`centralizar`) NÃO usa o rótulo do
+  // cabeçalho como piso (25-08-2026, achado do Lucas: "E-mail verificado"
+  // como cabeçalho tem 17 caracteres, mas o DADO é só "Sim"/"Não" — era o
+  // texto do título, não o valor, que forçava a coluna a ficar larga).
+  // `maiorTamanho` começa em 0 pra essas (só cresce com o valor de verdade,
+  // sempre curto: número, "Sim"/"Não", badge de status), deixando o
+  // cabeçalho livre pra quebrar em 2 linhas sozinho quando a coluna aperta
+  // — sem precisar de `<br/>` manual no rótulo nem CSS novo, é só o
+  // `white-space` padrão do navegador (nenhuma regra força nowrap em `th`
+  // fora da coluna id). Colunas de texto normal (nome, papel, email...)
+  // continuam contando o rótulo, sem mudança — a única com esse problema
+  // era uma coluna centralizada com rótulo comprido e valor curto.
   const minLargurasColunas = useMemo(() => {
     const resultado = {};
     colunas.forEach((coluna) => {
@@ -405,7 +417,8 @@ export function GenericTable({
         return;
       }
       const ehId = coluna.chave === colunaIdChave;
-      let maiorTamanho = coluna.rotulo.length;
+      const ehCentralizada = colunasCentralizadas.has(coluna.chave);
+      let maiorTamanho = ehCentralizada ? 0 : coluna.rotulo.length;
       linhas.forEach((linha) => {
         const tamanho = String(linha[coluna.chave] ?? '').length;
         if (tamanho > maiorTamanho) {
@@ -416,15 +429,7 @@ export function GenericTable({
       resultado[coluna.chave] = Math.min(teto, maiorTamanho + 2) + 'ch';
     });
     return resultado;
-  }, [linhas, colunas, colunaIdChave]);
-
-  // Mesmo raciocínio da coluna Ações — nunca recalculada de linhasPagina,
-  // só depende de quantos botões existem (fixo pra tela inteira). Também
-  // min-width, mesmo motivo acima.
-  const minLarguraAcoes = useMemo(
-    () => (rotaBase ? Math.max(10, acoes.length * 9) + 'ch' : undefined),
-    [rotaBase, acoes],
-  );
+  }, [linhas, colunas, colunaIdChave, colunasCentralizadas]);
 
   const estiloColuna = (coluna) =>
     coluna.largura
@@ -587,6 +592,7 @@ export function GenericTable({
         // tabela (mesmas colunas) enquanto os dados reais não chegam, em
         // vez de um texto solto que faz a tela "pular" quando os dados
         // aparecem.
+        <div className="crud-tabela__wrapper">
         <table className="crud-tabela">
           <thead>
             <tr>
@@ -600,11 +606,17 @@ export function GenericTable({
                 </th>
               ))}
               {colunaExtra && <th>{colunaExtra.rotulo}</th>}
-              {rotaBase && (
-                <th className="crud-tabela__celula--centralizada" style={{ minWidth: minLarguraAcoes }}>
-                  Ações
-                </th>
-              )}
+              {/* Sem min-width calculado de propósito (25-08-2026) — ao
+                  contrário das colunas de dado, Ações mostra sempre os
+                  MESMOS botões em toda linha/página (nunca "dança" ao
+                  paginar), então o piso artificial só atrapalhava: abaixo
+                  de 1400px o texto some e vira ícone-só (ver @media em
+                  4-crud.css), mas o min-width antigo (calculado pro modo
+                  COM texto) continuava travado, sobrando espaço reservado
+                  à toa e empurrando o ícone de Excluir pra fora da tela —
+                  table-layout: auto já dimensiona certo sozinho nos dois
+                  modos, sem ajuda nenhuma daqui. */}
+              {rotaBase && <th className="crud-tabela__celula--centralizada">Ações</th>}
             </tr>
           </thead>
           <tbody>
@@ -629,8 +641,10 @@ export function GenericTable({
             ))}
           </tbody>
         </table>
+        </div>
       ) : (
         <>
+          <div className="crud-tabela__wrapper">
           <table className="crud-tabela">
             <thead>
               <tr>
@@ -646,11 +660,7 @@ export function GenericTable({
                   </th>
                 ))}
                 {colunaExtra && <th>{colunaExtra.rotulo}</th>}
-                {rotaBase && (
-                  <th className="crud-tabela__celula--centralizada" style={{ minWidth: minLarguraAcoes }}>
-                    Ações
-                  </th>
-                )}
+                {rotaBase && <th className="crud-tabela__celula--centralizada">Ações</th>}
               </tr>
             </thead>
             <tbody>
@@ -747,6 +757,7 @@ export function GenericTable({
               )}
             </tbody>
           </table>
+          </div>
 
           {linhasOrdenadas.length > TAMANHOS_PAGINA[0] && (
             <div className="flex items-center justify-between flex-wrap gap-3 mt-3 text-sm texto-padrao">

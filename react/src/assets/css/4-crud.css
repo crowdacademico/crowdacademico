@@ -43,6 +43,27 @@
      Virou: sem grade vertical, só linha fina embaixo de cada linha (menos
      "planilha", mais "lista"), cabeçalho neutro (sem verde) com uma borda
      inferior mais forte separando do corpo, mais respiro vertical. */
+  /* Wrapper de rolagem (25-08-2026, 3ª tentativa) — .admin-content-area__inner
+     tem min-width: 0 (3-admin-shell.css, correção mais antiga: "a tabela
+     empurrava a PÁGINA inteira") pra permitir que o CARTÃO encolha abaixo
+     da largura da tabela em vez de esticar a página. Isso resolveu aquele
+     bug, mas trocou por outro: sem nenhum overflow definido em nenhum
+     ancestral, o excesso da tabela (table-layout: auto, várias colunas com
+     min-width) simplesmente vazava pra fora do cartão branco sem barra de
+     rolagem nenhuma — ícone de Excluir/Consultar "sumindo" era isso (achado
+     do Lucas, tela estreita). `overflow-x: auto` aqui, escopado só na
+     tabela (não a página inteira), dá um lugar de verdade pra esse excesso
+     rolar. JÁ TENTADO uma vez antes (mesma ideia) e revertido — mas
+     naquela tentativa a tabela estava em table-layout: fixed + width:100%,
+     que trava a tabela em EXATAMENTE 100% do wrapper (nunca cresce mais),
+     então não sobrava nada pra rolar de verdade. Agora, de volta em
+     table-layout: auto (width:100% aqui é só um mínimo, a tabela cresce
+     livre se o conteúdo pedir), o mesmo wrapper tem o que rolar de
+     verdade. */
+  .crud-tabela__wrapper {
+    overflow-x: auto;
+  }
+
   .crud-tabela {
     border-collapse: collapse;
     width: 100%;
