@@ -1,4 +1,5 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
+import type { Request } from 'express';
 import { RequireAuthGuard } from '../../3-auth/guards/require-auth.guard';
 import { ArquivoRequestIniciarUpload } from '../dto/request/arquivo.request-iniciar-upload';
 import { ArquivoServiceIniciarUpload } from '../service/arquivo.service.iniciar-upload';
@@ -9,7 +10,7 @@ export class ArquivoControllerIniciarUpload {
 
   @Post('iniciar')
   @UseGuards(RequireAuthGuard)
-  iniciar(@Body() dto: ArquivoRequestIniciarUpload) {
-    return this.service.executar(dto);
+  iniciar(@Body() dto: ArquivoRequestIniciarUpload, @Req() request: Request) {
+    return this.service.executar(dto, request.user!.idUsuario);
   }
 }

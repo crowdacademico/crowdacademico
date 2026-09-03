@@ -1,11 +1,13 @@
 import { randomUUID } from 'crypto';
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
+import { DatabaseService } from '../../commons/database/database.service';
 import {
   ARMAZENAMENTO_SERVICE,
   PASTA_PENDENTE,
 } from '../../commons/storage/storage.constants';
 import type { ArmazenamentoService } from '../../commons/storage/storage.service.interface';
 import {
+  COTA_BYTES_POR_USUARIO,
   EXTENSAO_POR_MIME,
   TAMANHO_MAXIMO_BYTES_POR_MIME,
   TipoMimePermitido,
@@ -16,12 +18,14 @@ import { ArquivoResponseUploadIniciado } from '../dto/response/arquivo.response-
 @Injectable()
 export class ArquivoServiceIniciarUpload {
   constructor(
+    private readonly database: DatabaseService,
     @Inject(ARMAZENAMENTO_SERVICE)
     private readonly armazenamento: ArmazenamentoService,
   ) {}
 
   async executar(
     dto: ArquivoRequestIniciarUpload,
+    idUsuario: number,
   ): Promise<ArquivoResponseUploadIniciado> {
     // class-validator (@IsIn) já garante que dto.tipoMime é um dos 4
     // valores da lista — o cast só declara isso pro TypeScript, pra poder
@@ -33,6 +37,27 @@ export class ArquivoServiceIniciarUpload {
       throw new BadRequestException(
         `Arquivo excede o tamanho máximo permitido para ${tipoMime} ` +
           `(${Math.round(tamanhoMaximo / 1024 / 1024)} MB).`,
+      );
+    }
+
+    // Checagem BARATA de cota, antes de gastar uma URL pré-assinada (a
+    // checagem de VERDADE, com o tamanho final pós-processamento, só
+    // acontece em confirmar-upload.ts — ver comentário lá). Esta aqui só
+    // evita o desperdício óbvio: alguém que já estourou a cota nem chega
+    // a receber URL de upload nenhuma.
+    const usoAtual = await this.database
+      .getDb()
+      .selectFrom('arquivo')
+      .select((eb) => eb.fn.sum<string | null>('tamanho_bytes').as('total'))
+      .where('id_usuario_upload', '=', idUsuario)
+      .where('ativo', '=', true)
+      .executeTakeFirst();
+    const bytesJaUsados = Number(usoAtual?.total ?? 0);
+    if (bytesJaUsados >= COTA_BYTES_POR_USUARIO) {
+      throw new BadRequestException(
+        `Cota de armazenamento excedida (limite de ` +
+          `${Math.round(COTA_BYTES_POR_USUARIO / 1024 / 1024)}MB por conta). ` +
+          `Remova algum arquivo antes de enviar um novo.`,
       );
     }
 

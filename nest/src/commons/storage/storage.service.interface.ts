@@ -2,12 +2,14 @@
 // aplicação (25-arquivo, e futuramente qualquer outro módulo) conhece.
 // Nenhum service fora de commons/storage deve importar diretamente
 // @aws-sdk/*, saber o nome do bucket, ou qualquer detalhe de UM provedor
-// específico — é isso que faz "trocar de Backblaze B2 pra Cloudflare R2
-// (ou de volta)" ser uma mudança de variável de ambiente, não de código.
+// específico — é isso que faz "trocar de Supabase Storage pra Cloudflare
+// R2 (ou qualquer outro compatível)" ser uma mudança de variável de
+// ambiente, não de código.
 //
 // Hoje só existe uma implementação (S3CompativelArmazenamentoService,
-// storage/s3-compativel-armazenamento.service.ts) porque B2, R2, AWS S3 e
-// MinIO falam o mesmo protocolo (S3) — um adapter genérico cobre todos.
+// storage/s3-compativel-armazenamento.service.ts) porque Supabase
+// Storage, B2, R2, AWS S3 e MinIO falam o mesmo protocolo (S3) — um
+// adapter genérico cobre todos.
 // Se um dia entrar um provedor com API genuinamente diferente (não
 // S3-compatível), a mudança é: criar uma nova classe implementando esta
 // interface e trocar o `provide` em storage.module.ts — nada em
@@ -60,6 +62,23 @@ export interface ArmazenamentoService {
    * conferir a assinatura mágica do formato (JPEG/PNG/WebP/PDF) sem
    * baixar o arquivo inteiro de volta pro servidor. */
   lerPrimeirosBytes(chave: string, quantidadeBytes: number): Promise<Buffer>;
+
+  /** Lê o objeto INTEIRO de volta pro servidor — usado só quando o
+   * conteúdo precisa ser processado antes de publicar (hoje: redimensionar
+   * e converter imagem pra WebP em confirmar-upload.ts). Não usar pra
+   * arquivo grande sem necessidade — ao contrário de lerPrimeirosBytes,
+   * isso carrega tudo em memória. */
+  lerObjetoCompleto(chave: string): Promise<Buffer>;
+
+  /** Grava um Buffer DIRETO no bucket, sem URL pré-assinada — usado só
+   * pelo próprio servidor, depois de já ter processado o conteúdo (ex.:
+   * gravar a versão redimensionada/WebP em publico/, no lugar do
+   * moverObjeto que só copiava o original sem tocar nos bytes). */
+  enviarObjeto(
+    chave: string,
+    bytes: Buffer,
+    tipoMime: string,
+  ): Promise<void>;
 
   /** "Move" o objeto de uma chave pra outra (copy + delete — S3 não tem
    * rename/move nativo). Usado pra tirar o arquivo de pendente/ e

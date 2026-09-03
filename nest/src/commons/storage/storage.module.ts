@@ -9,8 +9,9 @@ import { S3CompativelArmazenamentoService } from './s3-compativel-armazenamento.
 // no AppModule.
 //
 // TROCAR DE PROVEDOR: hoje `provide: ARMAZENAMENTO_SERVICE` aponta pra
-// S3CompativelArmazenamentoService, que já cobre Backblaze B2 (atual),
-// Cloudflare R2, AWS S3 e MinIO só com variáveis de ambiente diferentes
+// S3CompativelArmazenamentoService, que já cobre Supabase Storage (atual),
+// Cloudflare R2, Backblaze B2, AWS S3 e MinIO só com variáveis de ambiente
+// diferentes
 // (ver S3CompativelArmazenamentoService). Só troque o `useExisting`
 // abaixo por uma classe nova se um dia entrar um provedor com API
 // genuinamente incompatível com S3 — nenhum outro módulo do app precisa

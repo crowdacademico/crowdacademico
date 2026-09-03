@@ -20,7 +20,7 @@ Três módulos pequenos e parecidos entre si — todos seguem o mesmo formato (u
 
 ## Grupo 3 — Upload de arquivo
 
-- **`25-arquivo`** — upload de mídia (imagem de perfil, imagens de campanha, anexos). Vale vir cedo porque várias telas futuras (perfil, campanha, atualização de campanha) vão precisar disso pra funcionar de verdade, não só com texto.
+- ✅ **`25-arquivo`** — upload de mídia (imagem de perfil, imagens de campanha, anexos), fluxo em 2 passos (URL pré-assinada + confirmação com verificação de assinatura de bytes). **01-09-2026:** ganhou processamento server-side com `sharp` na confirmação (redimensiona + converte pra WebP + remove EXIF, por `contexto`: avatar 512px/qualidade 80, campanha/atualização 1600px/qualidade 78), cota de 50MB por usuário, e tetos de tamanho por tipo baixados pra 8MB imagem / 5MB PDF (o plano grátis do Supabase Storage, provedor atual, só tem 1GB de espaço total). Front (`seletor-foto-perfil.jsx`) também reduz a imagem no navegador antes de subir (Canvas API), como otimização de UX, não de segurança — o `sharp` no backend continua sendo a autoridade final. Detalhe pra quem for construir o upload de campanha/atualização: **hoje só o avatar chama `contexto: 'avatar'`** — a tela de Criar Campanha ainda não existe no React, então `contexto: 'campanha'`/`'atualizacao'` não tem chamador real ainda, só o perfil implementado no backend.
 
 ## Grupo 4 — Núcleo da campanha (o mais importante do projeto)
 
@@ -44,9 +44,9 @@ Três módulos pequenos e parecidos entre si — todos seguem o mesmo formato (u
 
 ## Grupo 7 — Comunicação
 
-- **`4-mail`** — envio de e-mail (verificação de conta, recuperação de senha, notificações). Hoje nada disso é enviado de verdade.
+- **`4-mail`** — envio de e-mail (verificação de conta, recuperação de senha, notificações). Hoje nada disso é enviado de verdade — é o único módulo que bloqueia outros dois RFs já prontos no banco (verificação de e-mail e recuperação de senha, ver `PENDENCIAS e correcoes.md`, item 6).
 - **`26-notificacao`** — fila/histórico de notificações (o que já existe na tabela `notificacao`, expor pelo Nest).
-- **`5-termo-uso`** — versionamento de termos de uso e aceite pelo usuário.
+- ✅ **`5-termo-uso`** — versionamento de termos de uso e aceite pelo usuário. **(esta lista tinha ficado desatualizada aqui — o módulo já existia, 4 arquivos, conferido em 01-09-2026)**
 
 ## Grupo 8 — Pagamento (por último, de propósito)
 
@@ -55,6 +55,13 @@ Esta parte só começa depois que o resto do sistema — principalmente o painel
 - **`22-contribuicao`** — registrar contribuição/doação, incluindo o recebimento da confirmação de pagamento do gateway escolhido.
 - **`23-repasse`** — repasse do dinheiro arrecadado pro pesquisador, depois da campanha aprovada/bem-sucedida.
 - **`24-auditoria-financeira`** — trilha de auditoria dos eventos financeiros (a tabela já existe e já é usada por trigger do banco; expor pelo Nest é o que falta).
+
+## Grupo 9 — Painel administrativo (não estavam nesta lista, mas já existem)
+
+Estes dois módulos ficaram de fora da lista original — construídos direto, sem passar por aqui como "próximo módulo" antes. Registrados agora (01-09-2026) só pra este documento não mentir sobre o que falta.
+
+- ✅ **`28-log-auditoria`** — trilha de auditoria administrativa (quem alterou o quê, quando, valor antes/depois — letra `L` no `DOCUMENTACAO_BD.md`). Modo somente-inclusão, ninguém edita/apaga.
+- ✅ **`29-dashboard`** — métricas agregadas do painel admin (`GET /dashboard/resumo`), usa `contar_metricas_dashboard()` (`[03-M]`, `DOCUMENTACAO_BD.md`) porque RLS normal não dá número confiável de "total do sistema".
 
 ## Ainda a mapear
 

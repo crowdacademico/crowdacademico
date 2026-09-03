@@ -12,6 +12,7 @@ import {
 } from '../../commons/storage/storage.constants';
 import type { ArmazenamentoService } from '../../commons/storage/storage.service.interface';
 import {
+  COTA_BYTES_POR_USUARIO,
   QUANTIDADE_BYTES_ASSINATURA,
   TipoMimePermitido,
 } from '../arquivo.constants';
@@ -19,6 +20,14 @@ import { ArquivoConverter } from '../dto/converter/arquivo.converter';
 import { ArquivoRequestConfirmarUpload } from '../dto/request/arquivo.request-confirmar-upload';
 import { ArquivoResponse } from '../dto/response/arquivo.response';
 import { assinaturaCorrespondeAoTipo } from '../util/arquivo.assinatura.util';
+import { processarImagem } from '../util/arquivo.processamento-imagem.util';
+
+// PDF nunca passa pelo sharp (não é imagem) — os 3 tipos abaixo, sim.
+const TIPOS_IMAGEM: readonly TipoMimePermitido[] = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+];
 
 @Injectable()
 export class ArquivoServiceConfirmarUpload {
@@ -73,17 +82,81 @@ export class ArquivoServiceConfirmarUpload {
       );
     }
 
-    const chaveDestino = dto.chave.replace(PASTA_PENDENTE, PASTA_PUBLICO);
-    await this.armazenamento.moverObjeto(dto.chave, chaveDestino);
+    // Imagem passa por sharp (redimensiona pro teto do contexto, converte
+    // pra WebP, remove EXIF de brinde — ver arquivo.processamento-imagem.
+    // util.ts); PDF nunca é tocado, sharp não lida com esse formato.
+    // Decide ANTES de gravar em publico/, porque o tamanho final (o que
+    // entra na checagem de cota abaixo) só existe depois do processamento
+    // pra imagem, mas é o mesmo tamanho declarado pra PDF.
+    const ehImagem = TIPOS_IMAGEM.includes(dto.tipoMime as TipoMimePermitido);
 
+    let tipoMimeFinal: string = dto.tipoMime;
+    let tamanhoFinal: number = dto.tamanhoBytes;
+    let bufferProcessado: Buffer | null = null;
+    let chaveDestino: string;
+
+    if (ehImagem) {
+      const bytesOriginais = await this.armazenamento.lerObjetoCompleto(
+        dto.chave,
+      );
+      bufferProcessado = await processarImagem(bytesOriginais, dto.contexto);
+      tipoMimeFinal = 'image/webp';
+      tamanhoFinal = bufferProcessado.length;
+      // Nome base é sempre um randomUUID (gerado em iniciar-upload.ts,
+      // sem ponto no meio) — trocar só a extensão final é seguro.
+      const nomeBase = dto.chave
+        .slice(PASTA_PENDENTE.length)
+        .replace(/\.[^.]+$/, '');
+      chaveDestino = `${PASTA_PUBLICO}${nomeBase}.webp`;
+    } else {
+      chaveDestino = dto.chave.replace(PASTA_PENDENTE, PASTA_PUBLICO);
+    }
+
+    // Cota por usuário (01-09-2026) — checada com o tamanho FINAL (já
+    // processado, pra imagem), nunca o declarado antes da compressão:
+    // checar antes seria injusto (rejeitaria upload que cabe de sobra
+    // depois de comprimido) e checar depois de já ter gravado em
+    // publico/ deixaria arquivo órfão pra trás se estourasse. Por isso
+    // fica bem aqui: depois de processar, antes de gravar o resultado.
     const db = this.database.getDb();
+    const usoAtual = await db
+      .selectFrom('arquivo')
+      .select((eb) => eb.fn.sum<string | null>('tamanho_bytes').as('total'))
+      .where('id_usuario_upload', '=', idUsuario)
+      .where('ativo', '=', true)
+      .executeTakeFirst();
+    // SUM de coluna integer volta bigint do Postgres, e o driver `pg`
+    // devolve bigint como STRING (evita perda de precisão silenciosa) —
+    // sem o Number() aqui, "usoAtual + tamanhoFinal" concatenaria texto
+    // em vez de somar.
+    const bytesJaUsados = Number(usoAtual?.total ?? 0);
+    if (bytesJaUsados + tamanhoFinal > COTA_BYTES_POR_USUARIO) {
+      await this.armazenamento.excluirObjeto(dto.chave).catch(() => undefined);
+      throw new BadRequestException(
+        `Cota de armazenamento excedida (limite de ` +
+          `${Math.round(COTA_BYTES_POR_USUARIO / 1024 / 1024)}MB por conta). ` +
+          `Remova algum arquivo antes de enviar um novo.`,
+      );
+    }
+
+    if (ehImagem && bufferProcessado) {
+      await this.armazenamento.enviarObjeto(
+        chaveDestino,
+        bufferProcessado,
+        tipoMimeFinal,
+      );
+      await this.armazenamento.excluirObjeto(dto.chave);
+    } else {
+      await this.armazenamento.moverObjeto(dto.chave, chaveDestino);
+    }
+
     const linha = await db
       .insertInto('arquivo')
       .values({
         chave: chaveDestino,
         nome_original: dto.nomeOriginal,
-        tipo_mime: dto.tipoMime,
-        tamanho_bytes: dto.tamanhoBytes,
+        tipo_mime: tipoMimeFinal,
+        tamanho_bytes: tamanhoFinal,
         id_usuario_upload: idUsuario,
       })
       .returningAll()

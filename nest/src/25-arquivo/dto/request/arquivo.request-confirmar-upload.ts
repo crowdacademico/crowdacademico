@@ -10,6 +10,7 @@ import {
 } from 'class-validator';
 import { PASTA_PENDENTE } from '../../../commons/storage/storage.constants';
 import {
+  CONTEXTOS_ARQUIVO,
   TAMANHO_MAXIMO_BYTES_ABSOLUTO,
   TIPOS_MIME_PERMITIDOS,
 } from '../../arquivo.constants';
@@ -41,4 +42,15 @@ export class ArquivoRequestConfirmarUpload {
   @Min(1)
   @Max(TAMANHO_MAXIMO_BYTES_ABSOLUTO)
   tamanhoBytes: number;
+
+  // Só existe pra ESCOLHER o teto de redimensionamento em confirmar-upload
+  // (avatar vs campanha vs atualização) — não é conferido contra nada
+  // físico do arquivo (ao contrário de tipo/tamanho), então mentir aqui
+  // não é risco de segurança, só faz a imagem sair maior/menor do que o
+  // ideal pro seu próprio uso. Lista fechada (ver arquivo.constants.ts) —
+  // um contexto novo precisa de decisão de produto (qual teto?), não pode
+  // vir solto do cliente.
+  @IsString()
+  @IsIn(CONTEXTOS_ARQUIVO)
+  contexto: (typeof CONTEXTOS_ARQUIVO)[number];
 }

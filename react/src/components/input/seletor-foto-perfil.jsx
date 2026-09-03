@@ -3,6 +3,7 @@ import { AvatarUsuario } from '../layout/avatar-usuario';
 import { ErroHttp } from '../../services/constant/api/http.util';
 import { traduzirErro } from '../../services/constant/api/traduzir-erro.util';
 import { arquivoApi } from '../../services/25-arquivo/api/arquivo.api';
+import { reduzirImagemNoNavegador } from '../../services/25-arquivo/util/reduzir-imagem.util';
 
 // Espelha a lista aceita no backend (nest/src/25-arquivo/arquivo.constants.ts
 // TIPOS_MIME_PERMITIDOS) — MENOS application/pdf, que não faz sentido como
@@ -12,8 +13,21 @@ import { arquivoApi } from '../../services/25-arquivo/api/arquivo.api';
 // confirmação, então errar aqui não é um risco de segurança, só uma UX
 // pior (erro só depois de enviar).
 const TIPOS_AVATAR_PERMITIDOS = ['image/jpeg', 'image/png', 'image/webp'];
-// Mesmo teto usado pelo backend pra imagens (TAMANHO_MAXIMO_BYTES_POR_MIME).
-const TAMANHO_MAXIMO_AVATAR_BYTES = 10 * 1024 * 1024;
+// Mesmo teto usado pelo backend pra imagens (TAMANHO_MAXIMO_BYTES_POR_MIME,
+// baixado de 10MB pra 8MB em 01-09-2026 — plano grátis do Supabase Storage
+// só tem 1GB de espaço total). Checado DEPOIS de reduzirImagemNoNavegador
+// (01-09-2026) — não antes: com a redução automática no cliente, uma foto
+// de celular de 10-15MB vira algumas centenas de KB, então barrar pelo
+// tamanho BRUTO derrubaria o próprio motivo de ter a redução.
+const TAMANHO_MAXIMO_AVATAR_BYTES = 8 * 1024 * 1024;
+// Teto BRUTO (antes da redução) — só pra recusar algo absurdo cedo (ex.:
+// vídeo de 300MB renomeado pra .jpg) sem gastar CPU tentando processar no
+// canvas; não tem relação com o teto real do backend acima.
+const TAMANHO_MAXIMO_BRUTO_BYTES = 30 * 1024 * 1024;
+// Mesmos números do perfil 'avatar' em PERFIL_PROCESSAMENTO_POR_CONTEXTO
+// (nest/src/25-arquivo/arquivo.constants.ts) — sem import cruzado entre
+// os repositórios, mantenha os dois em sincronia manualmente se mudar.
+const PERFIL_REDUCAO_AVATAR = { larguraMaxima: 512, qualidade: 80 };
 
 // Avatar EDITÁVEL — usa <AvatarUsuario> por baixo pra desenhar a bolinha
 // (foto ou inicial colorida, sem duplicar essa lógica), e adiciona por
@@ -49,20 +63,38 @@ export function SeletorFotoPerfil({
   const [enviando, setEnviando] = useState(false);
   const [erroLocal, setErroLocal] = useState('');
 
-  const processarArquivo = async (arquivo) => {
+  const processarArquivo = async (arquivoEscolhido) => {
     setErroLocal('');
 
-    if (!TIPOS_AVATAR_PERMITIDOS.includes(arquivo.type)) {
+    if (!TIPOS_AVATAR_PERMITIDOS.includes(arquivoEscolhido.type)) {
       setErroLocal('Formato não aceito. Envie um JPEG, PNG ou WebP.');
       return;
     }
-    if (arquivo.size > TAMANHO_MAXIMO_AVATAR_BYTES) {
-      setErroLocal('Imagem muito grande — o tamanho máximo é 10 MB.');
+    if (arquivoEscolhido.size > TAMANHO_MAXIMO_BRUTO_BYTES) {
+      setErroLocal('Imagem muito grande pra processar.');
       return;
     }
 
     setEnviando(true);
     try {
+      // Reduz no navegador ANTES de subir (Canvas API, 01-09-2026) — upload
+      // mais rápido numa conexão ruim e menos risco da URL pré-assinada (5
+      // min de validade) expirar no meio do envio. Se falhar por qualquer
+      // motivo (navegador sem suporte, etc.), devolve o arquivo original
+      // sem quebrar o fluxo — ver reduzir-imagem.util.js. O backend
+      // continua processando de novo com `sharp` de qualquer jeito, então
+      // isto é só uma otimização de UX, nunca a autoridade final.
+      const arquivo = await reduzirImagemNoNavegador(
+        arquivoEscolhido,
+        PERFIL_REDUCAO_AVATAR,
+      );
+
+      if (arquivo.size > TAMANHO_MAXIMO_AVATAR_BYTES) {
+        // `finally` abaixo cuida de setEnviando(false) neste return também.
+        setErroLocal('Imagem muito grande — o tamanho máximo é 8 MB.');
+        return;
+      }
+
       const uploadPreAssinado = await arquivoApi.iniciarUpload(authFetch, {
         nomeOriginal: arquivo.name,
         tipoMime: arquivo.type,
@@ -76,6 +108,10 @@ export function SeletorFotoPerfil({
         nomeOriginal: arquivo.name,
         tipoMime: arquivo.type,
         tamanhoBytes: arquivo.size,
+        // Diz ao backend qual teto de redimensionamento usar (512px pra
+        // avatar) — ver PERFIL_PROCESSAMENTO_POR_CONTEXTO em
+        // nest/src/25-arquivo/arquivo.constants.ts.
+        contexto: 'avatar',
       });
 
       aoAlterar(arquivoConfirmado.idArquivo, arquivoConfirmado.url);

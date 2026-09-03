@@ -453,8 +453,8 @@ export interface LinkRecompensaTable {
 // (ex. "publico/<uuid>.jpg"), nunca o endereço completo — a URL pública é
 // montada em runtime por commons/storage (montarUrlPublica), a partir de
 // STORAGE_PUBLIC_BASE_URL. Isso é o que permite trocar de provedor de
-// armazenamento (Backblaze B2 hoje, Cloudflare R2 antes/depois — os dois
-// falam o protocolo S3) sem nenhum UPDATE em massa nesta tabela.
+// armazenamento (Supabase Storage hoje, Cloudflare R2 se um dia migrar —
+// os dois falam o protocolo S3) sem nenhum UPDATE em massa nesta tabela.
 export interface ArquivoTable {
   id_arquivo: Generated<number>;
   chave: string;

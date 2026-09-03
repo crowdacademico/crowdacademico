@@ -18,13 +18,19 @@ import type {
 } from './storage.service.interface';
 
 // Implementação ÚNICA pra qualquer provedor que fale o protocolo S3 —
-// Backblaze B2 (provedor atual, ver troca de Cloudflare R2 documentada no
-// prompt que originou este módulo), Cloudflare R2, AWS S3 de verdade, ou
-// MinIO num ambiente self-hosted. Nenhum dos quatro precisa de código
-// diferente: só de variáveis de ambiente diferentes (endpoint, região,
-// bucket, credenciais). "Voltar pra Cloudflare" no futuro é isso — trocar
-// STORAGE_ENDPOINT e as credenciais no .env, sem tocar em uma linha de
-// TypeScript.
+// Supabase Storage (provedor ATUAL, ver ARQUIVO_para_configurar_modulo-
+// arquivo.md e o .env real: STORAGE_ENDPOINT aponta pro endpoint S3 do
+// Supabase), Cloudflare R2, Backblaze B2, AWS S3 de verdade, ou MinIO num
+// ambiente self-hosted. Nenhum desses precisa de código diferente: só de
+// variáveis de ambiente diferentes (endpoint, região, bucket,
+// credenciais). Migrar pra R2 no futuro (avaliado 01-09-2026: Supabase
+// free dá 1GB de storage + 5GB de egress/mês contra os 10GB de storage +
+// egress ilimitado do R2, mas a equipe decidiu ficar no Supabase por
+// enquanto, já está funcionando) é só isso — trocar STORAGE_ENDPOINT e as
+// credenciais no .env, sem tocar em uma linha de TypeScript.
+// CORRIGIDO 01-09-2026: este comentário dizia "Backblaze B2 (provedor
+// atual)" — estava desatualizado, o .env real nunca apontou pra B2 nesta
+// fase do projeto.
 //
 // Bibliotecas: @aws-sdk/client-s3 + @aws-sdk/s3-request-presigner — SDK
 // oficial da AWS, mas nada aqui é exclusivo da AWS: é o cliente HTTP que
@@ -173,6 +179,29 @@ export class S3CompativelArmazenamentoService implements ArmazenamentoService {
     );
     const bytes = await resposta.Body?.transformToByteArray();
     return Buffer.from(bytes ?? []);
+  }
+
+  async lerObjetoCompleto(chave: string): Promise<Buffer> {
+    const resposta = await this.client.send(
+      new GetObjectCommand({ Bucket: this.bucket, Key: chave }),
+    );
+    const bytes = await resposta.Body?.transformToByteArray();
+    return Buffer.from(bytes ?? []);
+  }
+
+  async enviarObjeto(
+    chave: string,
+    bytes: Buffer,
+    tipoMime: string,
+  ): Promise<void> {
+    await this.client.send(
+      new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: chave,
+        Body: bytes,
+        ContentType: tipoMime,
+      }),
+    );
   }
 
   async moverObjeto(chaveOrigem: string, chaveDestino: string): Promise<void> {
