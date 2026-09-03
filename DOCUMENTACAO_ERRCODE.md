@@ -1,10 +1,10 @@
-# ERRCODE customizado — `05_regras_negocio.sql`
+# ERRCODE customizado - `05_regras_negocio.sql`
 
-Referência rápida das 42 `RAISE EXCEPTION` do arquivo `arquivos_banco_dados/05_regras_negocio.sql`, agora todas com `USING ERRCODE = '<código>'`. Antes desta mudança, todas caíam no SQLSTATE genérico do Postgres para qualquer `RAISE EXCEPTION` sem código explícito (`P0001`) — o que impedia o Nest de diferenciar "sem permissão" de "dado inválido" de "estado conflitante".
+Referência rápida das 42 `RAISE EXCEPTION` do arquivo `arquivos_banco_dados/05_regras_negocio.sql`, agora todas com `USING ERRCODE = '<código>'`. Antes desta mudança, todas caíam no SQLSTATE genérico do Postgres para qualquer `RAISE EXCEPTION` sem código explícito (`P0001`) - o que impedia o Nest de diferenciar "sem permissão" de "dado inválido" de "estado conflitante".
 
-**Nada foi alterado além disso**: nenhuma mensagem, nenhuma lógica, nenhuma trigger foi tocada — só a cláusula `USING ERRCODE` foi adicionada ao final de cada `RAISE EXCEPTION`. O diff é puramente aditivo (conferido linha a linha).
+**Nada foi alterado além disso**: nenhuma mensagem, nenhuma lógica, nenhuma trigger foi tocada - só a cláusula `USING ERRCODE` foi adicionada ao final de cada `RAISE EXCEPTION`. O diff é puramente aditivo (conferido linha a linha).
 
-Este documento **não altera nada no Nest/React** — a ideia é que vocês (você e seu colega) decidam juntos como consumir esses códigos em `postgres-exception.filter.ts` e nos services, sem eu mexer em código que já está em implementação.
+Este documento **não altera nada no Nest/React** - a ideia é que vocês (você e seu colega) decidam juntos como consumir esses códigos em `postgres-exception.filter.ts` e nos services, sem eu mexer em código que já está em implementação.
 
 ---
 
@@ -14,14 +14,14 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 
 | Faixa | Categoria | HTTP sugerido |
 |---|---|---|
-| `90001`–`90999` | **Validação de dado/negócio** — formato, limite de tamanho, mínimo, campo obrigatório fora do CHECK técnico. Nada de permissão envolvida. | `400 Bad Request` |
-| `91001`–`91999` | **Conflito de estado/regra de negócio** — campanha "congelada" após aprovação, transição de status inválida, limite de recursos atingido, estoque insuficiente, ação incompatível com o status atual do registro. | `409 Conflict` |
-| `92001`–`92999` | **Autorização negada (regra de negócio, não RLS)** — checagem feita via `tem_permissao()` dentro da trigger, ou restrição por identidade/conflito de interesse (dono, autor, denunciante agindo sobre o próprio registro). | `403 Forbidden` |
+| `90001`–`90999` | **Validação de dado/negócio** - formato, limite de tamanho, mínimo, campo obrigatório fora do CHECK técnico. Nada de permissão envolvida. | `400 Bad Request` |
+| `91001`–`91999` | **Conflito de estado/regra de negócio** - campanha "congelada" após aprovação, transição de status inválida, limite de recursos atingido, estoque insuficiente, ação incompatível com o status atual do registro. | `409 Conflict` |
+| `92001`–`92999` | **Autorização negada (regra de negócio, não RLS)** - checagem feita via `tem_permissao()` dentro da trigger, ou restrição por identidade/conflito de interesse (dono, autor, denunciante agindo sobre o próprio registro). | `403 Forbidden` |
 | `93001`–`93999` | **Limite de taxa (rate limit)** | `429 Too Many Requests` |
 
 ---
 
-## 90xxx — Validação de dado/negócio (400)
+## 90xxx - Validação de dado/negócio (400)
 
 | Código | Função | Tabela | Mensagem |
 |---|---|---|---|
@@ -40,7 +40,7 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 90013 | `fn_valida_meta_campanha_negocio` | `campanha` | Meta financeira abaixo do mínimo configurado |
 | 90014 | `fn_valida_contribuicao_valor_minimo` | `contribuicao` | Valor da contribuição abaixo do mínimo configurado |
 
-## 91xxx — Conflito de estado/regra de negócio (409)
+## 91xxx - Conflito de estado/regra de negócio (409)
 
 | Código | Função | Tabela | Mensagem |
 |---|---|---|---|
@@ -66,7 +66,7 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 91020 | `fn_valida_comentario_campanha_ativa` | `comentario` | Não é possível comentar em campanha rejeitada/sob moderação |
 | 91021 | `validar_comentario_endosso` | `comentario` | Limite de endossos ativos atingido |
 
-## 92xxx — Autorização negada / conflito de interesse (403)
+## 92xxx - Autorização negada / conflito de interesse (403)
 
 | Código | Função | Tabela | Mensagem |
 |---|---|---|---|
@@ -77,7 +77,7 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 92005 | `fn_bloqueia_reversao_moderacao_comentario` | `comentario` | Só quem tem `comentario_moderar` pode reverter comentário ocultado |
 | 92006 | `fn_valida_denuncia_sem_autojulgamento` | `denuncia` | Quem registrou a denúncia não pode julgar a própria denúncia |
 
-## 93xxx — Limite de taxa (429)
+## 93xxx - Limite de taxa (429)
 
 | Código | Função | Tabela | Mensagem |
 |---|---|---|---|
@@ -87,6 +87,6 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 
 ## Sobre o caso que motivou isso: `usuario.service.remove.ts`
 
-`excluir_conta_usuario()` (em `03_funcoes_seguranca.sql`, **fora do escopo desta mudança** — esse arquivo não faz parte dos 40/42 apontados) ainda lança seu `RAISE EXCEPTION` de permissão sem ERRCODE customizado. Hoje ela só faz um `UPDATE` direto em `usuario`, e nenhuma trigger de `05_regras_negocio.sql` está ligada à tabela `usuario` — então, no estado atual do banco, o catch genérico do `remove.ts` não tem como pegar um erro de validação por engano.
+`excluir_conta_usuario()` (em `03_funcoes_seguranca.sql`, **fora do escopo desta mudança** - esse arquivo não faz parte dos 40/42 apontados) ainda lança seu `RAISE EXCEPTION` de permissão sem ERRCODE customizado. Hoje ela só faz um `UPDATE` direto em `usuario`, e nenhuma trigger de `05_regras_negocio.sql` está ligada à tabela `usuario` - então, no estado atual do banco, o catch genérico do `remove.ts` não tem como pegar um erro de validação por engano.
 
-Ainda assim, vale avisar seu colega: se algum dia uma trigger de `05_regras_negocio.sql` passar a existir em `usuario`, o `catch (erro) => ForbiddenException` do `remove.ts` voltaria a ficar impreciso, exatamente como ele descreveu — a essa altura, dá pra aplicar o mesmo padrão de `ERRCODE` também em `excluir_conta_usuario()` e trocar o catch por uma leitura de `erro.code` (por prefixo `90`/`91`/`92`/`93`), do mesmo jeito que este documento propõe para as regras de `05`.
+Ainda assim, vale avisar seu colega: se algum dia uma trigger de `05_regras_negocio.sql` passar a existir em `usuario`, o `catch (erro) => ForbiddenException` do `remove.ts` voltaria a ficar impreciso, exatamente como ele descreveu - a essa altura, dá pra aplicar o mesmo padrão de `ERRCODE` também em `excluir_conta_usuario()` e trocar o catch por uma leitura de `erro.code` (por prefixo `90`/`91`/`92`/`93`), do mesmo jeito que este documento propõe para as regras de `05`.

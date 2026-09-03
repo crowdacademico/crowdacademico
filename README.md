@@ -3,7 +3,7 @@ Projeto de TCC do IFSP Birigui
 
 
 # EXEMPLO real do código já pronto (tabela `seguir_pesquisador`), com CONSTRAINTS nomeados fácil de achar e INDEX
-*(Atualizado nesta revisão — a versão anterior deste exemplo usava prefixo `CRW_` e `SCREAMING_SNAKE_CASE` pra tabela/coluna; essa convenção nunca chegou a ser adotada no `.sql` de verdade. A convenção que o projeto usa desde o início é: tabelas/colunas em `snake_case` minúsculo, sem prefixo, com constraints nomeados em `"SCREAMING_SNAKE_CASE"` entre aspas duplas (`"PK_..."`/`"FK_..."`/`"UK_..."`/`"CK_..."`) e índices em `idx_snake_case` minúsculo — exatamente como está em `arquivos_banco_dados/01_extensoes_enums_tabelas.sql` e `02_indices.sql` hoje.)*
+*(Atualizado nesta revisão - a versão anterior deste exemplo usava prefixo `CRW_` e `SCREAMING_SNAKE_CASE` pra tabela/coluna; essa convenção nunca chegou a ser adotada no `.sql` de verdade. A convenção que o projeto usa desde o início é: tabelas/colunas em `snake_case` minúsculo, sem prefixo, com constraints nomeados em `"SCREAMING_SNAKE_CASE"` entre aspas duplas (`"PK_..."`/`"FK_..."`/`"UK_..."`/`"CK_..."`) e índices em `idx_snake_case` minúsculo - exatamente como está em `arquivos_banco_dados/01_extensoes_enums_tabelas.sql` e `02_indices.sql` hoje.)*
 ```
 -- ============================================================
 --  seguir_pesquisador
@@ -40,13 +40,13 @@ CREATE INDEX idx_seguir_pesquisador_alvo ON seguir_pesquisador(id_pesquisador);
 ```
 
 
-- Numeração seguindo **afinidade de uso** (onde eu esperaria achar a pasta procurando o problema), não a ordem de dependência de FK do `.sql` — as duas divergem porque o `.sql` agrupa por "quem referencia quem" (ex.: `sessao`/`recuperacao_senha`/`verificacao_email` vivem dentro do bloco `USUÁRIO` do banco só porque têm FK pra `usuario`, mas na prática **são** o módulo `auth`, não perfil de usuário). 5 clusters, nesta ordem:
-  1. **Identidade** — quem é a pessoa e como ela entra (usuario → RBAC → auth → mail → termo de uso → perfil de pesquisador → seus links).
-  2. **Catálogos** — dado de apoio que existe independente de campanha (área de conhecimento, tipo de link, motivo de denúncia, configurações).
-  3. **Núcleo** — a trilha de vida de uma campanha, em ordem de fluxo: cria → orçamento/cronograma → publica atualização → engajamento social → recompensa → moderação (denúncia/encerramento).
-  4. **Financeiro** — dinheiro (contribuição, repasse, auditoria).
-  5. **Infra transversal** — usado por todo mundo, dono de ninguém (arquivo, notificação, resources).
-- `score_config`/`score_rotulo`/`score_pesquisador` (banco) não têm módulo próprio — dobrados dentro de `6-perfil-pesquisador`, porque score é característica calculada do pesquisador, sem tela própria de criar/editar.
+- Numeração seguindo **afinidade de uso** (onde eu esperaria achar a pasta procurando o problema), não a ordem de dependência de FK do `.sql` - as duas divergem porque o `.sql` agrupa por "quem referencia quem" (ex.: `sessao`/`recuperacao_senha`/`verificacao_email` vivem dentro do bloco `USUÁRIO` do banco só porque têm FK pra `usuario`, mas na prática **são** o módulo `auth`, não perfil de usuário). 5 clusters, nesta ordem:
+  1. **Identidade** - quem é a pessoa e como ela entra (usuario → RBAC → auth → mail → termo de uso → perfil de pesquisador → seus links).
+  2. **Catálogos** - dado de apoio que existe independente de campanha (área de conhecimento, tipo de link, motivo de denúncia, configurações).
+  3. **Núcleo** - a trilha de vida de uma campanha, em ordem de fluxo: cria → orçamento/cronograma → publica atualização → engajamento social → recompensa → moderação (denúncia/encerramento).
+  4. **Financeiro** - dinheiro (contribuição, repasse, auditoria).
+  5. **Infra transversal** - usado por todo mundo, dono de ninguém (arquivo, notificação, resources).
+- `score_config`/`score_rotulo`/`score_pesquisador` (banco) não têm módulo próprio - dobrados dentro de `6-perfil-pesquisador`, porque score é característica calculada do pesquisador, sem tela própria de criar/editar.
 
 Exemplo: 
 ```
@@ -93,8 +93,8 @@ crowdacademico/                          (repo único na Organization)
 │       ├── 25-arquivo/
 │       ├── 26-notificacao/
 │       ├── 27-resources/
-│       ├── 28-log-auditoria/        (log_auditoria — só leitura, GET /log-auditoria)
-│       └── 29-dashboard/            (métricas agregadas do painel — GET /dashboard/resumo)
+│       ├── 28-log-auditoria/        (log_auditoria - só leitura, GET /log-auditoria)
+│       └── 29-dashboard/            (métricas agregadas do painel - GET /dashboard/resumo)
 │
 │       (padrão interno de cada módulo N-nome/, igual ao modelo):
 │       │   ├── constants/
@@ -119,7 +119,7 @@ crowdacademico/                          (repo único na Organization)
 │
 └── react/
     └── src/
-        │   (pasta que tem par no nest/ usa o MESMO número — nunca cria número
+        │   (pasta que tem par no nest/ usa o MESMO número - nunca cria número
         │   novo aqui; pasta sem par no nest fica sem número, tipo router/)
         ├── components/
         │   ├── 3-auth/
@@ -140,10 +140,10 @@ crowdacademico/                          (repo único na Organization)
         │   ├── 23-repasse/
         │   ├── 26-notificacao/
         │   ├── 28-log-auditoria/    (consumido pelo componente "Ver log" do GenericTable)
-        │   ├── admin/                (inclui a busca de métricas do 29-dashboard — sem pasta numerada própria aqui)
+        │   ├── admin/                (inclui a busca de métricas do 29-dashboard - sem pasta numerada própria aqui)
         │   ├── constant/
         │   └── router/
-        │       (cada um dos numerados com api/, constants/, hook/, type/ — igual ao modelo)
+        │       (cada um dos numerados com api/, constants/, hook/, type/ - igual ao modelo)
         └── views/
             ├── 1-usuario/
             ├── 3-auth/
@@ -156,7 +156,7 @@ crowdacademico/                          (repo único na Organization)
 
 # Nomenclatura do DDL (`arquivos_banco_dados/*.sql`)
 
-*(Atualizado nesta revisão — esta seção descrevia um prefixo `CRW_` em maiúsculo que nunca foi adotado. A convenção real, usada desde o `01_extensoes_enums_tabelas.sql`: tabela e coluna em `snake_case` minúsculo, sem prefixo — só os nomes de CONSTRAINT ficam em `"SCREAMING_SNAKE_CASE"` entre aspas duplas, ver exemplo de `seguir_pesquisador` acima.)*
+*(Atualizado nesta revisão - esta seção descrevia um prefixo `CRW_` em maiúsculo que nunca foi adotado. A convenção real, usada desde o `01_extensoes_enums_tabelas.sql`: tabela e coluna em `snake_case` minúsculo, sem prefixo - só os nomes de CONSTRAINT ficam em `"SCREAMING_SNAKE_CASE"` entre aspas duplas, ver exemplo de `seguir_pesquisador` acima.)*
 
 usuario
 papel
