@@ -27,7 +27,36 @@ import { formatarCpf } from '../../services/constant/utils/formatacao.util';
 // - texto-forte (não -fraco) desde o início, sem depender de :hover pra
 // ficar legível; usado em dois lugares nesta tela (ver `avatar` da
 // FichaConsulta e o campo "Foto de perfil" abaixo).
-function BotaoVerFotoPerfil({ url, tamanho = 'text-base' }) {
+// `badge` (04-09-2026, imagem editada pelo Lucas mostrando a posição
+// exata) - selo circular escuro sobreposto no canto inferior direito do
+// círculo do avatar (mesmo padrão de "editar foto" do Instagram/LinkedIn),
+// em vez do ícone solto flutuando mais abaixo/à direita da tentativa
+// anterior. `border` na cor do CARTÃO (não uma cor fixa) cria o anelzinho
+// de respiro entre o selo e a foto, e continua certo nos dois temas.
+// Sem o `title` explicando "tamanho máximo" (04-09-2026, pedido do Lucas:
+// "o olho de cima não precisa deste tooltip") - a explicação completa fica
+// só no olho de baixo, ao lado de "Foto cadastrada".
+function BotaoVerFotoPerfil({ url, tamanho = 'text-base', badge = false }) {
+  if (badge) {
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Abrir imagem em outra guia"
+        title="Abrir imagem em outra guia"
+        className="w-7 h-7 rounded-full flex items-center justify-center border-2 transition-opacity hover:opacity-80"
+        style={{
+          backgroundColor: 'var(--color-dark)',
+          borderColor: 'var(--cor-fundo-cartao)',
+          color: 'var(--color-white)',
+        }}
+      >
+        <i className="fa-solid fa-eye text-xs"></i>
+      </a>
+    );
+  }
+
   return (
     <a
       href={url}
@@ -140,16 +169,16 @@ export function ConsultarUsuario({ auth }) {
         // `relative`/`absolute` (04-09-2026, achado do Lucas: empilhar em
         // flex-col empurrava a FOTO pra cima, porque o bloco inteiro
         // ficava mais alto e `items-center` recentralizava tudo) - a foto
-        // fica exatamente onde sempre ficou, o botão só flutua por cima,
-        // no canto inferior direito, sem afetar a altura/alinhamento do
-        // cabeçalho. Deslocado (não colado no canto do círculo) pra cair
-        // um pouco abaixo e à direita do e-mail (subtítulo), sem nunca
-        // ficar centralizado embaixo dele.
+        // fica exatamente onde sempre ficou, o selo só flutua por cima,
+        // sem afetar a altura/alinhamento do cabeçalho. Posição final
+        // (imagem editada pelo Lucas, 04-09-2026): selo sobreposto no
+        // canto inferior direito do círculo, mesmo padrão "editar foto"
+        // do Instagram/LinkedIn.
         <div className="relative shrink-0">
           <AvatarUsuario nome={usuario.nome} foto={avatar?.url} tamanho="xl" />
           {avatar?.padrao === false && avatar?.url && (
-            <div className="absolute bottom-0 -right-7">
-              <BotaoVerFotoPerfil url={avatar.url} tamanho="text-lg" />
+            <div className="absolute bottom-0 right-0">
+              <BotaoVerFotoPerfil url={avatar.url} badge />
             </div>
           )}
         </div>
