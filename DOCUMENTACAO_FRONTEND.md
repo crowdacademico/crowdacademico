@@ -35,6 +35,8 @@ Este documento é o equivalente do `DOCUMENTACAO_BD.md` para o **app React** que
 12. [Campo de Testes (`campo-testes/`)](#12-campo-de-testes-campo-testes)
 13. [Dependências: o que cada uma faz e por que está aqui](#13-dependências-o-que-cada-uma-faz-e-por-que-está-aqui)
 14. [O que não existe ainda / pontos em aberto](#14-o-que-não-existe-ainda--pontos-em-aberto)
+15. [Fluxo público: cadastro, termos de uso e verificação de e-mail](#15-fluxo-público-cadastro-termos-de-uso-e-verificação-de-e-mail)
+16. [Minha Conta e moderação de conta](#16-minha-conta-e-moderação-de-conta)
 
 ---
 
@@ -372,9 +374,15 @@ Todas as telas `listar-*.jsx`: `views/1-usuario/listar-usuarios.jsx`, `views/2-p
 | `log-auditoria-painel.jsx` | painel "Ver log", embutido no rodapé da `GenericTable` |
 | `use-alteracao-nao-salva.js` | `useAvisoAlteracaoNaoSalva(sujo)` - `beforeunload` nativo |
 
+📌 **`excluir-usuario.jsx` exige confirmação por digitação do e-mail, não um `window.confirm()`.** Mostra os dados reais do usuário antes de excluir (`FichaConsulta`/`SecaoFicha`/`CampoFicha`, mesma casca de Consultar) e só habilita o botão de confirmar quando o texto digitado bate com o e-mail da conta, exatamente (case-insensitive). O comentário do arquivo explica o critério que separa este caso do de Configuração (`excluir-configuracao.jsx`, que continua com confirmação simples): *"exclusão de USUÁRIO exige digitar o e-mail - configuração é um dado técnico, não a conta de uma pessoa."*
+
 📌 **`CartaoFormulario` nasceu de duplicação real:** *"era a MESMA estrutura ... copiada e colada em 7 arquivos ..., já levemente divergente entre eles"*.
 
+📌 **`ModalDetalhe`/`ModalDetalhePermissao` - "Papéis com esta permissão" lido ao vivo, nunca de dicionário estático.** `views/2-papel-permissao/modal-detalhe-permissao.jsx` monta o modal genérico (`modal-detalhe.jsx`) com um detalhe fixo (nome amigável, o que faz, por que existe, badge de impacto - `services/2-papel-permissao/constants/permissao-nomes-amigaveis.js`, dicionário `nome → rótulo` sem coluna nova no banco) e uma lista que **não** vem desse dicionário: refaz as mesmas duas chamadas de `matriz-papel-permissao.jsx` (`papelApi.listar` + `papelPermissaoApi.listar`) para saber quem tem a permissão agora. O comentário do arquivo explica por quê: *"o dicionário só sabe o que a permissão FAZ, não quem tem ela agora - isso muda toda vez que um admin mexe na matriz."* A listagem de Permissões usa o mesmo dicionário para exibir o nome amigável como "nome" e o código cru (`permissao.nome`) como "chave".
+
 📌 **`CartaoFormulario` e `FichaConsulta` compartilham duas larguras canônicas** - `'media'` (`max-w-2xl`) e `'larga'` (`max-w-5xl`) - decisão registrada de definir larguras canônicas em vez de cada tela escolher a sua. O comentário de `cartao-formulario.jsx` explica a causa raiz do redesenho: a versão anterior tinha medida e comportamento de modal (centralizado na tela, altura travada com *scroll* próprio), mesmo sendo usada como página em todo lugar - daí a queixa de que ficava "um monte de card empilhado, confuso".
+
+📌 **Telas "Alterar" com conteúdo substancial usam 2 colunas dentro do `CartaoFormulario` largo (`largura="larga"`).** `alterar-usuario.jsx` é o exemplo: `grid lg:grid-cols-3`, coluna principal (`lg:col-span-2`) com o que se edita (Dados da conta, Acesso, Perfil de Pesquisador - este último desabilitado de propósito, campos demonstrativos até o módulo `6-perfil-pesquisador` existir), coluna lateral (1/3) com contexto/consulta e ações administrativas (Metadados, Papéis, `SecaoModeracao` - ver seção 16, card `<dev>` isolado). Empilha em 1 coluna abaixo do breakpoint `lg`, mesmo comportamento de sempre no celular. O comentário do arquivo cita o mesmo padrão usado por painéis de referência (Stripe/Linear/Vercel) para tela de edição de registro.
 
 📌 **`FichaConsulta` existe porque campo desabilitado comunica a coisa errada:** *"'campo desabilitado' é o jeito errado de comunicar 'isto nunca foi editável' (o desabilitado promete 'você poderia editar, mas não pode' - aqui nada promete isso)"*.
 
@@ -396,7 +404,7 @@ Todas as telas `listar-*.jsx`: `views/1-usuario/listar-usuarios.jsx`, `views/2-p
 
 📌 **`ToastProvider`:** duração por tipo (sucesso 4s, erro 5s - *"erro fica 1s a mais que sucesso"*). O redesenho unificou as duas estruturas, que tinham evoluído separadas: *"a cor vira ACENTO (a barra/ícone), não fundo. Texto sempre escuro (nunca branco sobre colorido) resolve de vez o problema de legibilidade em monitor não calibrado"*. A barra colorida é `border-left` do próprio cartão, não uma `<div>` irmã dependendo de `overflow-hidden` para arredondar - *"uma borda SEMPRE acompanha o `border-radius` do elemento dela, sem costura nenhuma"*.
 
-⚠️ **`DevLoginRapido` é ferramenta de desenvolvimento com senhas de seed em texto no código.** São 7 contas do `07_seed_dados.sql` (uma por papel), com a senha de dev `DevTcc123!` literal no arquivo. O comentário justifica (*"logar como admin toda hora pra testar o painel era chato"*) e afirma que não cria conta nem senha nova. Diferente do Campo de Testes, este componente **não** está protegido por `import.meta.env.DEV` - ele é renderizado pelo `Header` em qualquer build.
+📌 **`DevLoginRapido` é ferramenta de desenvolvimento com senhas de seed em texto no código.** São 7 contas do `07_seed_dados.sql` (uma por papel), com a senha de dev `DevTcc123!` literal no arquivo. O comentário justifica (*"logar como admin toda hora pra testar o painel era chato"*) e afirma que não cria conta nem senha nova. **Protegido por `import.meta.env.DEV` desde 04-09-2026** (`header.jsx`), mesmo tratamento do Campo de Testes - some sozinho em qualquer `npm run build`, continua disponível em `npm run dev`. Antes disso, o componente era renderizado pelo `Header` em qualquer build, inclusive produção; foi corrigido depois de identificado como achado em `ACHADOS_PARA_DISCUTIR.md`.
 
 ### `components/input/`
 
@@ -593,4 +601,39 @@ Sinais disso espalhados pelo código, todos coerentes entre si:
 
 ⚠️ **Telas do Campo de Testes reimplementam filtro/paginação** em vez de usar `<GenericTable>`.
 
-⚠️ **`DevLoginRapido` não é protegido por `import.meta.env.DEV`**, ao contrário do Campo de Testes, e carrega senhas de seed literais no código.
+⚠️ **`DevLoginRapido` carrega senhas de seed literais no código** (`DevTcc123!`, as mesmas 7 contas do seed) - agora protegido por `import.meta.env.DEV` (ver seção 9), mas vale lembrar que continua sendo uma ferramenta de conveniência de dev, não algo pra existir num ambiente com dado real.
+
+---
+
+## 15. Fluxo público: cadastro, termos de uso e verificação de e-mail
+
+Três rotas de `ROTAS` (seção 4, sem menu lateral) cobrem o ciclo de entrada de uma conta nova: `/login`, `/cadastro` (`views/3-auth/cadastro-page.jsx`) e `/verificar-email` (`views/3-auth/verificar-email-page.jsx`).
+
+📌 **Cadastro exige aceite de Termos de Uso, lido ao vivo do banco.** O formulário (nome, e-mail, senha, confirmar senha) tem um checkbox obrigatório de aceite; ao lado, um link "Termos de Uso" abre um modal que busca o termo **vigente** via `termoUsoApi.buscarAtivo()` (`services/5-termo-uso/api/termo-uso.api.js`), carregado só na primeira vez que o modal abre e mantido em cache pelo tempo de vida da página. O botão de cadastrar continua desabilitado até nome (≥2 caracteres), e-mail válido, senha (≥8 caracteres), confirmação batendo e o checkbox marcado.
+
+⚠️ **Verificação de e-mail funciona, mas sem enviar e-mail nenhum - o módulo `4-mail` ainda não existe.** Depois de um cadastro bem-sucedido, a tela mostra um `window.alert()` com o link de verificação completo (incluindo o token), rotulado explicitamente `"[SÓ EM DEV]"`. Em produção, esse link viraria o conteúdo de um e-mail de verdade - hoje é só exibido na tela para permitir testar o fluxo de ponta a ponta sem o módulo de e-mail.
+
+📌 **`verificar-email-page.jsx` não exige sessão nenhuma.** É uma rota pública que lê o `token` da query string (`?token=...`) e chama `verificarEmail(token)` (`services/3-auth/api/auth.api.js`) assim que monta. O comentário do arquivo justifica: *"o token em si já é a autorização"* - o backend resolve o dono do token, não recebe nenhum id vindo do cliente (mesmo padrão de `confirmar_email_por_token` no banco, ver `DOCUMENTACAO_BD.md`, bloco `[03-O]`). Token ausente na URL já nasce em estado de erro (inicializador preguiçoso do `useState`, sem passar por uma renderização de "carregando" that não corresponde à realidade).
+
+---
+
+## 16. Minha Conta e moderação de conta
+
+### `views/3-auth/minha-conta-page.jsx` - rota `/admin/minha-conta/:aba`
+
+📌 **O layout foi redesenhado duas vezes antes de chegar no formato atual.** O comentário do arquivo documenta as duas versões anteriores: a primeira (09-08-2026) era um formulário único com as seções empilhadas; a segunda (10-08-2026) virou 2 colunas com um `CartaoPerfil` pequeno na lateral tentando ancorar a tela visualmente. A versão atual (11-08-2026, pedido do Lucas: *"portfólio profissional"*, referência ORCID/ResearchGate/Google Acadêmico) substituiu as duas por uma **`FaixaIdentidade`** larga no topo (avatar grande, nome, e-mail, badge de e-mail verificado, badges de papel, "membro desde") seguida de abas de verdade - rota (`/admin/minha-conta/perfil`, `/seguranca`, `/papeis`, `/academico`, `/privacidade`), não `useState`, mesma decisão já tomada quando as abas do painel admin em si viraram rota (seção 4). O `CartaoPerfil` lateral foi eliminado por ficar redundante com a faixa.
+
+📌 **Privacidade é sempre a última aba, de propósito.** O comentário: *"o botão de excluir conta mora aqui dentro, atrás da confirmação por digitação - ação destrutiva nunca na primeira aba que a pessoa vê."*
+
+⚠️ **Não existe mais seção "Preferências" (tema/fonte por conta).** Existiu por um dia (09→10-08-2026) e foi revertida por decisão do Lucas com a Alexia - ver a nota sobre `ControleTema`/`ControleFonte` na seção 9. Tema e tamanho de fonte continuam ajustáveis, só que sempre por dispositivo (`localStorage`, botões do cabeçalho), nunca amarrados à conta logada.
+
+### `views/1-usuario/secao-moderacao.jsx` - suspender/revogar conta
+
+Seção dentro de **Alterar Usuário** (não uma tela própria - é ação sobre a mesma conta que a tela já edita), que bloqueia o login de uma conta por um prazo escolhido, com motivo obrigatório.
+
+- Opções de prazo (`1, 3, 7, 30` dias, por padrão) vêm de `configuracoes.suspensao_usuario_opcoes_dias` - nada fixo no código, mesmo padrão de outras regras configuráveis do projeto - mais um campo livre para qualquer outro número de dias.
+- Botão "Suspender usuário" só habilita com dias **e** motivo preenchidos.
+- Uma conta já suspensa mostra até quando e o motivo, com um botão "Revogar suspensão" no lugar do formulário.
+- Datas de suspensão são buscadas por `usuarioApi.buscarSuspensao()`, numa chamada separada da busca normal do usuário - ver a nota sobre `SAVEPOINT`/`USUARIO_COLUNAS_SELECT` na seção 5, mesma proteção aplicada aqui: uma coluna que só existe depois de uma migração pendente no banco nunca pode quebrar o login/consulta geral de usuário se ainda não tiver sido aplicada.
+
+📌 **As colunas de suspensão (`usuario.suspenso_ate`/`motivo_suspensao`/`suspenso_por`, `usuario_papel.suspenso_ate`) dependiam de uma migração colada manualmente no SQL Editor do Supabase (`ATUALIZAR O SUPABASE.sql`) - já aplicada.** Se algum dia um banco específico ainda não tiver rodado esse arquivo, `buscarSuspensao()` falha isolado (capturado, sem derrubar o resto da tela) e a seção some silenciosamente, em vez de quebrar o resto de Alterar Usuário - mesma proteção `SAVEPOINT` descrita na seção 5.

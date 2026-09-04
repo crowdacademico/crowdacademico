@@ -10,15 +10,13 @@ Achados pelos agentes que escreveram `DOCUMENTACAO_BACKEND.md`/`DOCUMENTACAO_FRO
 
 **Pergunta a responder:** isso devia exigir login (mesmo que qualquer papel logado sirva), ou está certo do jeito que está?
 
-## 2. `DevLoginRapido` (o `<dev>` de trocar de persona) não está protegido por `import.meta.env.DEV`
+## 2. 🟢 RESOLVIDO (04-09-2026) - `DevLoginRapido` protegido por `import.meta.env.DEV`
 
-O Campo de Testes já usa esse padrão em 3 lugares (só existe no build de desenvolvimento, some do build de produção). O `DevLoginRapido` não - vai pro bundle de produção carregando as 7 contas de seed com a senha `DevTcc123!` literal no código.
+O Campo de Testes já usava esse padrão em 3 lugares (só existe no build de desenvolvimento, some do build de produção). O `DevLoginRapido` não usava - ia pro bundle de produção carregando as 7 contas de seed com a senha `DevTcc123!` literal no código. Decisão do Lucas: proteger, mesma lógica do Campo de Testes (a conveniência em `npm run dev` não muda; só deixa de ir pro build de produção). Corrigido em `header.jsx`.
 
-**Pergunta a responder:** vale a mesma proteção (`import.meta.env.DEV`), ou esse atalho precisa continuar disponível em produção por algum motivo (ex.: demonstração pra banca sem senha de verdade)?
+## 3. 🟢 RESOLVIDO (04-09-2026) - Comentários desatualizados dizendo que upload "ainda não existe"
 
-## 3. Comentários desatualizados dizendo que upload "ainda não existe"
-
-Em `avatar-usuario.jsx` e `dashboard-identidade-visual.jsx` - os dois ainda justificam um placeholder dizendo que `25-arquivo`/upload não existe. Já existe e funciona (é o que `SeletorFotoPerfil` usa). Não é decisão nenhuma, é só atualizar o comentário - mas fica registrado aqui em vez de eu mexer sem avisar, já que a instrução da rodada era só `.md`.
+Em `avatar-usuario.jsx` e `dashboard-identidade-visual.jsx` - os dois ainda justificavam um placeholder dizendo que `25-arquivo`/upload não existia. Já existia e funcionava (é o que `SeletorFotoPerfil` usa) - não era decisão nenhuma, só comentário desatualizado. Corrigidos os dois: `avatar-usuario.jsx` agora descreve o upload como existente; `dashboard-identidade-visual.jsx` deixa claro que o que falta não é mais o upload em si, é construir a tela de gerenciar logo/favicon (ninguém pediu ainda).
 
 ## 4. `27-resources` continua sem propósito definido
 

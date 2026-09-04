@@ -107,8 +107,16 @@ export function Header({ auth }) {
           (inclusive na faixa de padding do cabeçalho) sem influenciar a
           posição de mais nada: o `justify-between` de cima só enxerga o
           grupo normal (Submeter Pesquisa...MenuUsuario), que continua
-          exatamente no canto dele, do jeito que sempre foi. */}
-      {!auth.autenticado && !auth.carregando && (
+          exatamente no canto dele, do jeito que sempre foi.
+
+          import.meta.env.DEV (04-09-2026) — mesmo tratamento do Campo de
+          Testes: some sozinho em qualquer `npm run build`, continua
+          disponível em `npm run dev`. Antes disso, o botão ia pro build
+          de produção também - qualquer link público (deploy de teste,
+          preview, demonstração pra banca) expunha login instantâneo como
+          admin com uma senha de seed conhecida, sem digitar nada. Ver
+          `DOCUMENTACAO_FRONTEND.md`, seção 9, nota sobre `DevLoginRapido`. */}
+      {import.meta.env.DEV && !auth.autenticado && !auth.carregando && (
         <div className="absolute top-1/2 -translate-y-1/2 right-1 sm:right-2">
           <DevLoginRapido auth={auth} />
         </div>

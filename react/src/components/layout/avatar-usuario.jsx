@@ -19,10 +19,9 @@ function corPorNome(nome) {
   return PALETA_AVATAR[soma % PALETA_AVATAR.length];
 }
 
-// Bolinha do cabeçalho — foto quando `usuario.idImagemPerfil` existir (o
-// upload de arquivo ainda não está implementado, ver PENDENCIAS.md; quando
-// existir, é só trocar `foto` por uma URL de verdade aqui, nada mais no
-// componente muda), inicial do primeiro nome em maiúsculo enquanto isso.
+// Bolinha do cabeçalho — foto quando `usuario.idImagemPerfil`/`foto` vier
+// preenchido (upload já existe, `25-arquivo` — é o que `SeletorFotoPerfil`
+// usa), inicial do primeiro nome em maiúsculo quando não há foto.
 const CLASSE_TAMANHO = {
   sm: 'w-8 h-8 text-xs',
   md: 'w-9 h-9 text-sm',
