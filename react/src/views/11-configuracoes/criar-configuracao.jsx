@@ -6,10 +6,10 @@ import { useToast } from '../../components/layout/use-toast';
 import { configuracaoApi } from '../../services/11-configuracoes/api/configuracao.api';
 
 // Convenção de chave (10-08-2026, rodada Claude Web "embelezar o painel",
-// item 6: "o Lucas não entendeu como usar") — minúsculas, número e
+// item 6: "o Lucas não entendeu como usar") - minúsculas, número e
 // underscore, sem espaço nem acento. Mesma convenção que TODAS as chaves
 // já cadastradas no seed seguem (07_seed_dados.sql), só nunca tinha virado
-// validação de verdade no front — antes aceitava qualquer texto livre.
+// validação de verdade no front - antes aceitava qualquer texto livre.
 const REGEX_CHAVE_VALIDA = /^[a-z0-9_]+$/;
 
 // Antes era um formulário embutido no fim da tabela de Configurações
@@ -25,7 +25,7 @@ export function CriarConfiguracao({ auth }) {
   const [descricao, setDescricao] = useState('');
   const [enviando, setEnviando] = useState(false);
 
-  // Só valida depois que a pessoa digitou alguma coisa — chave vazia não
+  // Só valida depois que a pessoa digitou alguma coisa - chave vazia não
   // é "inválida", é só "ainda não preenchida" (o `required` do <input> já
   // cuida de bloquear o envio vazio, não precisa duplicar essa mensagem).
   const chaveInvalida = chave.length > 0 && !REGEX_CHAVE_VALIDA.test(chave);
@@ -36,7 +36,7 @@ export function CriarConfiguracao({ auth }) {
     setEnviando(true);
     try {
       // Decimal aceita vírgula na digitação (convenção pt-BR, pedido do
-      // Lucas) — convertida pra ponto só aqui, na hora de enviar: o banco
+      // Lucas) - convertida pra ponto só aqui, na hora de enviar: o banco
       // lê essa string com `::DECIMAL` (config_numero(), 03_funcoes_
       // seguranca.sql), que exige notação SQL padrão (ponto), não aceita
       // vírgula.
@@ -68,7 +68,7 @@ export function CriarConfiguracao({ auth }) {
       <form onSubmit={aoCriar} className="p-10 space-y-6">
         {erro && <p className="text-red-700 text-sm font-bold text-center">{erro}</p>}
 
-        {/* Aviso honesto (10-08-2026, item 6) — a confusão do Lucas era
+        {/* Aviso honesto (10-08-2026, item 6) - a confusão do Lucas era
             achar que criar uma chave pelo painel já faz o sistema passar a
             usá-la. Não faz: só tem efeito se algum código já consultar
             essa chave específica (`obterConfiguracao('chave', padrao)`
@@ -76,7 +76,7 @@ export function CriarConfiguracao({ auth }) {
         <div className="flex items-start gap-2 rounded-lg fundo-info texto-info p-3">
           <i className="fa-solid fa-circle-info mt-0.5 shrink-0"></i>
           <p className="text-xs">
-            Criar uma chave nova aqui não faz o sistema passar a usá-la sozinho — só tem
+            Criar uma chave nova aqui não faz o sistema passar a usá-la sozinho - só tem
             efeito se algum código já consultar essa chave específica. Serve pra ajustar um
             valor que já é lido de algum lugar (taxa, limite, prazo), não pra criar
             comportamento novo.
@@ -96,7 +96,7 @@ export function CriarConfiguracao({ auth }) {
           />
           {chaveInvalida ? (
             <p className="text-xs text-red-600 font-semibold mt-1">
-              Só letras minúsculas, números e underscore — sem espaço, maiúscula ou acento.
+              Só letras minúsculas, números e underscore - sem espaço, maiúscula ou acento.
             </p>
           ) : (
             <p className="text-xs texto-fraco mt-1">
@@ -127,11 +127,11 @@ export function CriarConfiguracao({ auth }) {
         </div>
 
         {/* Campo Valor muda de cara conforme o Tipo (10-08-2026, item 6:
-            "remove a sensação de 'não sei o que digitar'") — booleano vira
+            "remove a sensação de 'não sei o que digitar'") - booleano vira
             toggle (nunca deixa digitar "sim"/"verdadeiro"/"1" por engano),
             inteiro vira number sem casa decimal, decimal aceita vírgula
             (convertida pra ponto só no envio, ver aoCriar). Sem tipo
-            escolhido ainda, fica desabilitado — não faz sentido digitar
+            escolhido ainda, fica desabilitado - não faz sentido digitar
             um valor sem saber que formato ele deveria ter. */}
         <div>
           <label className="rotulo-campo">Valor</label>

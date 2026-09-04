@@ -35,6 +35,7 @@ Este documento é o irmão do `DOCUMENTACAO_BD.md`. Ele cobre o backend em NestJ
 15. [Dependências: o que cada uma faz e por que está aqui](#15-dependências-o-que-cada-uma-faz-e-por-que-está-aqui)
 16. [Pontos de atenção consolidados](#16-pontos-de-atenção-consolidados)
 17. [Como conferir este inventário](#17-como-conferir-este-inventário)
+18. [Documentação interativa da API (Swagger/OpenAPI)](#18-documentação-interativa-da-api-swaggeropenapi)
 
 ---
 
@@ -55,8 +56,29 @@ Este documento é o irmão do `DOCUMENTACAO_BD.md`. Ele cobre o backend em NestJ
 | **`helmet`** | Cabeçalhos HTTP de segurança. |
 | **`@aws-sdk/client-s3` + `s3-request-presigner`** | Cliente S3 genérico - usado contra o Supabase Storage, não contra a AWS (ver seção 8). |
 | **`sharp`** | Processamento de imagem no servidor (redimensiona, converte pra WebP, remove EXIF). |
+| **`@nestjs/swagger`** | Documentação interativa da API (`/api`, só fora de produção) - gerada automaticamente a partir dos DTOs já existentes, ver §18. |
 
-📌 **Por que Kysely e não TypeORM/Prisma.** O banco deste projeto não é um detalhe de implementação do backend - ele é onde moram as regras de negócio (42 `RAISE EXCEPTION` em triggers, 100+ policies de RLS, funções `SECURITY DEFINER`). Um ORM que gera e migra schema sozinho brigaria com isso o tempo todo. O Kysely resolve o problema real que existe aqui - escrever SQL sem errar nome de coluna - sem tentar ser dono do schema.
+📌 **Por que Kysely e não TypeORM/Prisma, e `class-validator` em vez de Joi.** Embora nos foi ensinado no semestre passado, pelo professor Francisco, do IFSP Birigui, a usar TypeORM + Joi (nos projetos de sala de aula da disciplina de Programação para Web 2), decidimos não utilizar isso aqui devido ao seguinte:
+
+O banco deste projeto não é um detalhe de implementação do backend - ele é onde moram as regras de negócio (42 `RAISE EXCEPTION` em triggers, 100+ policies de RLS, funções `SECURITY DEFINER`, `FORCE ROW LEVEL SECURITY` em todas as 42 tabelas). Um ORM como o TypeORM parte do princípio de que a APLICAÇÃO é dona do schema - ele gera e roda migration sozinho, a partir das entidades TypeScript, e junto disso costuma trazer *lazy loading* de relacionamento e outras conveniências automáticas. Isso é ótimo pra um sistema onde toda a regra mora no código da aplicação (que era o caso dos projetos da disciplina), mas aqui o BANCO é a fonte de verdade de uma parte grande e crítica da lógica (quem pode ver/alterar o quê, transição de status válida, cálculo de score, congelamento de campanha aprovada) - se o ORM tentasse gerenciar esse schema, ele brigaria com a RLS e com as triggers o tempo todo, e um relacionamento carregado sozinho por trás das cenas poderia disparar uma consulta que a RLS bloqueia de um jeito confuso de depurar.
+
+O Kysely resolve o problema real que existe aqui - escrever SQL sem errar nome de coluna, com autocomplete e erro de tipo em tempo de compilação - **sem tentar ser dono do schema**: ele não gera migration, não tem entidade gerenciada, não decide sozinho quando rodar uma consulta. O schema continua sendo só os 8 arquivos `.sql` (`arquivos_banco_dados/`), escritos e revisados à mão, exatamente como o time (eu e a Alexia) já vinha fazendo desde antes do Nest existir no projeto - o Kysely só chegou depois pra tornar mais seguro escrever a consulta em cima desse schema, não pra substituir ele.
+
+Sobre Joi: não é bem que rejeitamos Joi - usamos `class-validator` porque ele já é o padrão mais integrado ao próprio NestJS pra esse mesmo trabalho (validar o corpo de uma requisição). Com `class-validator`, a classe do DTO (`@IsEmail()`, `@MinLength(8)` etc. direto nos campos) **é** a validação - uma coisa só. Com Joi, precisaríamos manter um *schema* de validação separado da classe/tipo que descreve o mesmo dado, duas fontes de verdade pra sincronizar à mão toda vez que um campo muda. Como o `ValidationPipe` global do Nest já foi desenhado pra ler `class-validator` nativamente (é literalmente o exemplo padrão da documentação oficial do framework), não fazia sentido introduzir uma segunda ferramenta pra fazer o mesmo trabalho de um jeito mais desacoplado.
+
+📌 **Por que não usamos HATEOAS.** Também nos foi ensinado pelo professor Francisco, do IFSP Birigui, a fazer toda resposta da API carregar um bloco `_link` (ex.: `{ listar: { href, method }, criar: { href, method }, buscar: { href, method }, alterar: { href, method }, excluir: { href, method } }`), gerado por um utilitário central (`gerarLinks(req, entidade, id)`) - o quarto nível do modelo de maturidade de Richardson, o "REST completo" segundo a disciplina. Decidimos não usar isso aqui, pelos seguintes motivos:
+
+HATEOAS ("*Hypermedia as the Engine of Application State*") resolve um problema específico: um cliente que **não conhece de antemão** a estrutura de URLs da API precisa **descobrir em tempo de execução** o que pode fazer a seguir, seguindo links que vêm dentro da própria resposta - do mesmo jeito que uma pessoa navega um site clicando em links, sem saber o endereço de cada página de cor. Isso tem valor real quando existem **vários clientes diferentes, de times diferentes, evoluindo em ritmos diferentes**, consumindo a mesma API pública (o exemplo clássico é uma API de pagamento ou uma API pública de terceiros, onde o dono da API não controla nem sabe quem está consumindo ela).
+
+**Não é o caso deste projeto.** O CrowdAcadêmico tem **um cliente só** (o painel React), escrito pela **mesma dupla** que escreve o backend, no **mesmo repositório**, evoluindo junto. Quando um endpoint novo é criado no Nest, a pessoa que cria ele já sabe a URL - não existe momento nenhum em que o frontend "descobre" uma rota em tempo de execução, porque quem escreve o `usuarioApi.buscar(authFetch, id)` (`services/1-usuario/api/usuario.api.js`, ver §6) é a mesma pessoa que acabou de escrever o `@Get(':id')` no controller. A "descoberta de rota" já acontece - só que em tempo de desenvolvimento (a pessoa lê/escreve o código), não em tempo de execução (o app perguntando pro servidor "o que posso fazer agora?").
+
+**O custo de adotar HATEOAS aqui seria puro, sem contrapartida:**
+- Todo endpoint do sistema (hoje ~100 rotas, `§1.2`) passaria a carregar um bloco `_link` a mais em toda resposta, sem nenhum consumidor real pra ler esse bloco - o React sempre chama a URL que já sabe de cor, nunca segue um link vindo de uma resposta anterior.
+- Precisaria de um utilitário central gerando esses links (equivalente ao `gerarLinks` do projeto de referência), que é **uma segunda fonte de verdade sobre quais rotas existem**, exatamente o mesmo tipo de duplicação que já evitamos ao escolher `class-validator` em vez de Joi (`§1.1`, acima) - o utilitário de link precisaria ser atualizado toda vez que uma rota mudasse, e nada garantiria que ele não ficasse desatualizado.
+- O modelo de 5 links fixos por recurso (listar/criar/buscar/alterar/excluir) não cobre a maior parte das rotas reais deste projeto - `POST /arquivo/upload/iniciar` + `POST /arquivo/upload/confirmar` (fluxo em 2 passos, `§8`), `GET /dashboard/resumo` (não é CRUD de entidade nenhuma), `POST /usuario/:id/desbloquear`, `GET /usuario/:id/logins` (`§13`). Forçar essas rotas num molde de "5 links padrão" ou exigiria inventar relações de link não-padronizadas caso a caso, ou simplesmente não documentaria essas rotas via HATEOAS de jeito nenhum - custo de manutenção alto pra um ganho que ninguém usaria.
+- A pergunta real que HATEOAS responde ("o que eu posso fazer a partir daqui?") já tem uma resposta mais forte neste projeto: a RLS/matriz de papel × permissão (`§4`, `DOCUMENTACAO_BD.md`). Um `_link` num JSON é só uma sugestão - o cliente pode ignorá-lo, forjá-lo, ou chamar a URL sem nunca ter visto o link. A autorização de verdade, aqui, é sempre reconferida pela RLS no momento da chamada, existindo o link ou não - então um `_link` de "você pode excluir isto" seria, na melhor das hipóteses, decorativo, e na pior, uma promessa que a RLS ainda poderia recusar (ex.: mostrar o link de excluir pra alguém que na prática não tem a permissão, porque o link foi gerado sem essa checagem).
+
+Nenhuma dessas três escolhas é uma crítica ao que foi ensinado - a disciplina cobre os fundamentos (Nest, TypeORM, autenticação, REST, HATEOAS) que permitem justamente entender esse tipo de troca com base real, não só copiar o padrão de sala de aula pra um projeto com exigência diferente (LGPD, dado financeiro, sete papéis de RBAC, um cliente só mantido pelo mesmo time). Pra uma API pública, com múltiplos consumidores desconhecidos evoluindo em ritmos diferentes, HATEOAS é uma escolha genuinamente valiosa - só não é a escolha certa pra este projeto específico.
 
 ### 1.2 Números do código (conferidos, não estimados)
 
@@ -667,33 +689,45 @@ sharp(bytesOriginais)
 
 📌 **Imagem não usa `moverObjeto`.** Como os bytes mudaram, o fluxo é `enviarObjeto(chaveDestino, bufferProcessado, 'image/webp')` + `excluirObjeto(chaveOriginal)`. A chave de destino troca só a extensão para `.webp` (seguro porque o nome base é sempre um `randomUUID`, sem ponto no meio), e o `tipo_mime` gravado no banco é `image/webp`, não o tipo original.
 
-### 8.6 Tetos de tamanho e cota por usuário
+### 8.6 Tetos de tamanho, cota e rate limit - todos configuráveis pelo Painel Admin
 
-**Tetos por MIME** (`TAMANHO_MAXIMO_BYTES_POR_MIME`):
+📌 **Desde 04-09-2026, nenhum destes números é mais fixo no código.** Pedido do Lucas: *"arquivo não é configurável pelo Painel Admin... o administrador deve poder estabelecer o limite mínimo e máximo do tamanho dos arquivos de upload... a quantidade upload por usuário, e o tempo de respiro entre um upload e outro"* - o mesmo princípio já aplicado a `prazo_campanha_dias`, `limite_denuncias_24h` etc.: nada de regra de negócio hardcoded quando pode morar em `configuracoes` e ser editado sem deploy.
 
-| Tipo | Teto |
-|---|---|
-| `image/jpeg`, `image/png`, `image/webp` | **8 MB** |
-| `application/pdf` | **5 MB** |
+**A peça nova que torna isso possível: `ConfiguracaoValorService`** (`commons/configuracao/configuracao-valor.service.ts`), um módulo `@Global()` com um único método, `buscarNumero(chave, valorPadrao)`. Ele lê `configuracoes` (`id_usuario IS NULL`, `ativo = true`), converte para `Number`, e cai no `valorPadrao` se a chave não existir, estiver inativa, ou vier um valor que não converte para número finito. Esta é a primeira vez que a camada Nest lê `configuracoes` diretamente para uma regra de negócio (antes, quem lia era só a `05_regras_negocio.sql` via trigger de Postgres) - o padrão existe para ser reaproveitado por qualquer módulo futuro que precise do mesmo tipo de "valor configurável com fallback seguro".
 
-📌 **Baixados de 10MB/20MB (01-09-2026).** O motivo está no comentário: o projeto roda no plano grátis do Supabase Storage, com **1 GB de espaço total** e **50 MB de teto por arquivo individual** no próprio plano. Um teto de 20MB por PDF deixava um único upload malicioso ocupar 2% da cota inteira. A imagem cai menos porque 8MB é folga de sobra para foto de celular sem tratar, e o processamento reduz o que sobra para uma fração disso. Números do plano gratuito conferidos direto na documentação oficial do Supabase (01-09-2026, não estimados): [Limits | Supabase Docs](https://supabase.com/docs/guides/storage/uploads/file-limits) e [Pricing | Supabase Docs](https://supabase.com/docs/guides/storage/pricing) - vale reconferir se algum dia a conta de "quantos arquivos cabem" precisar ser refeita, porque plano gratuito de provedor terceiro é o tipo de número que muda sem aviso.
+**As 7 chaves, todas com `tipo = 'inteiro'` em `configuracoes`, seed em `07_seed_dados.sql` bloco `[07-G]`:**
 
-**`TAMANHO_MAXIMO_BYTES_ABSOLUTO`** é o maior dos quatro, usado só como `@Max()` no DTO - validação de **forma**, para rejeitar valores absurdos (`999999999999`) antes de qualquer lógica de negócio. O teto de verdade, por tipo, é conferido no service.
+| Chave | Papel | Valor padrão (seed) |
+|---|---|---|
+| `arquivo_tamanho_minimo_bytes` | Piso de sanidade - rejeita arquivo vazio/quase vazio | 100 |
+| `arquivo_tamanho_maximo_imagem_bytes` | Teto para `image/jpeg`, `image/png`, `image/webp` | 8 388 608 (8 MB) |
+| `arquivo_tamanho_maximo_documento_bytes` | Teto para `application/pdf` | 5 242 880 (5 MB) |
+| `arquivo_cota_bytes_por_usuario` | Soma de todos os arquivos ativos de uma conta | 52 428 800 (50 MB) |
+| `arquivo_limite_uploads_janela` | Máximo de uploads confirmados dentro da janela abaixo | 20 |
+| `arquivo_janela_limite_uploads_minutos` | Tamanho da janela do limite acima | 1440 (24h) |
+| `arquivo_intervalo_minimo_segundos` | Intervalo mínimo entre um upload e o próximo | 5 |
 
-**Cota: `COTA_BYTES_POR_USUARIO = 50 MB`**, somada contra `SUM(arquivo.tamanho_bytes)` onde `id_usuario_upload = <usuário>` e `ativo = true`.
+📌 **Os valores acima são só o ponto de partida, herdado da decisão de 01-09-2026** (baixados de 10MB/20MB para 8MB/5MB - o projeto roda no plano grátis do Supabase Storage, **1 GB de espaço total** e **50 MB de teto por arquivo individual** no próprio plano; números conferidos direto na documentação oficial: [Limits | Supabase Docs](https://supabase.com/docs/guides/storage/uploads/file-limits) e [Pricing | Supabase Docs](https://supabase.com/docs/guides/storage/pricing)). O valor de **verdade**, em produção, é sempre o que estiver em `configuracoes` - o admin pode alterar qualquer um destes 7 números pelo Painel Admin (tela Configurações, já genérica, zero código novo no front) a qualquer momento, sem deploy.
 
-📌 **Por que uma cota, além dos tetos por arquivo.** Nenhum teto por arquivo protege contra alguém subindo mil arquivos pequenos. Numa base de 1GB total, isso deixa de ser preciosismo: 20 contas maliciosas com 50MB cada tomam a cota inteira.
+**`TAMANHO_MAXIMO_BYTES_ABSOLUTO` continua fixo no código, de propósito - não virou configurável.** É usado só como `@Max()` no DTO de `iniciar-upload`: uma validação **síncrona**, de forma, que roda antes de qualquer acesso a banco e não tem como ler `configuracoes`. Por isso ele é propositalmente **bem mais folgado** (100 MB) que qualquer teto real por tipo: se o admin configurar um teto maior que o padrão, a validação do DTO não pode ser o que barra isso antes mesmo do service conferir o valor de `configuracoes` de verdade. O teto de verdade, por tipo, é sempre o do service (`chaveConfigTamanhoMaximo(tipoMime)`).
 
-📌 **A cota é checada em DOIS pontos, com propósitos diferentes:**
+**A cota é checada em DOIS pontos, com propósitos diferentes** (ambos agora lendo `arquivo_cota_bytes_por_usuario` via `ConfiguracaoValorService`):
 
 | Onde | Como | Por quê |
 |---|---|---|
 | `iniciar-upload` | `bytesJaUsados >= COTA` (sem somar o novo arquivo) | Checagem **barata**, antes de gastar uma URL pré-assinada. Só evita o desperdício óbvio: quem já estourou a cota nem recebe URL. |
 | `confirmar-upload` | `bytesJaUsados + tamanhoFinal > COTA` | A checagem **de verdade**, com o tamanho real pós-processamento. |
 
-🧩 **O posicionamento exato da segunda checagem é deliberado: depois de processar, antes de gravar em `publico/`.** O comentário explica os dois erros que isso evita - checar **antes** do processamento seria injusto (rejeitaria um upload que cabe de sobra depois de comprimido); checar **depois** de já ter gravado em `publico/` deixaria arquivo órfão para trás quando estourasse. Estourou → o objeto pendente é apagado e vem 400.
+🧩 **O posicionamento exato da segunda checagem é deliberado: depois de processar, antes de gravar em `publico/`.** Checar **antes** do processamento seria injusto (rejeitaria um upload que cabe de sobra depois de comprimido); checar **depois** de já ter gravado em `publico/` deixaria arquivo órfão para trás quando estourasse. Estourou → o objeto pendente é apagado e vem 400.
 
 🧩 **`Number()` obrigatório no resultado do `SUM`.** `SUM` de coluna `integer` volta `bigint` do Postgres, e o driver `pg` devolve `bigint` como **string** (para evitar perda de precisão silenciosa). Sem o `Number()`, `usoAtual + tamanhoFinal` **concatenaria texto** em vez de somar.
+
+**Rate limit de upload - novo em 04-09-2026, duas proteções complementares** (checadas em `iniciar-upload`, contra a coluna `arquivo.criado_em` que já existia - nenhuma migração de schema foi necessária):
+
+1. **Quantidade máxima de uploads dentro de uma janela de tempo** (`arquivo_limite_uploads_janela` a cada `arquivo_janela_limite_uploads_minutos`) - evita um usuário legítimo mas descuidado, ou um script, enchendo a conta de arquivos rápido demais. Complementar à cota de bytes, que sozinha não impede *muitos* arquivos pequenos.
+2. **Intervalo mínimo entre um upload confirmado e o próximo início de upload** (`arquivo_intervalo_minimo_segundos`) - barra rajada (ex.: um script chamando `iniciar-upload` em loop) sem incomodar uso humano normal.
+
+📌 **Mesmo espírito de outros pares já existentes no projeto:** `limite_tentativas_login`/`bloqueio_login_minutos` (`03_funcoes_seguranca.sql`, `[03-O]`) e `limite_denuncias_24h` - contagem numa janela, mais um intervalo mínimo, os dois configuráveis.
 
 ### 8.7 Remoção e avatar
 
@@ -914,7 +948,7 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 
 ## 14. O que ainda não existe (pastas vazias)
 
-Conferido: as 10 pastas abaixo contêm **exatamente um arquivo `.gitkeep`** e **zero `.ts`**.
+Conferido: as 9 pastas abaixo contêm **exatamente um arquivo `.gitkeep`** e **zero `.ts`**.
 
 | Pasta | Grupo em `PROXIMOS_MODULOS.md` |
 |---|---|
@@ -927,7 +961,8 @@ Conferido: as 10 pastas abaixo contêm **exatamente um arquivo `.gitkeep`** e **
 | `23-repasse` | Pagamento |
 | `24-auditoria-financeira` | Pagamento |
 | `26-notificacao` | Comunicação |
-| `27-resources` | Propósito ainda não definido |
+
+🗑️ **`27-resources` não está mais na lista - removido em 04-09-2026.** Era sobra do esqueleto de pastas herdado do modelo da disciplina (Programação para Web 2): lá, `resources` é um catálogo estático de metadados de rota (`GET /rest/resources`, uma lista hardcoded de endpoint/verbo por entidade, consumida pelo React pra montar URL sem hardcode) - só faz sentido porque aquele sistema segue uma convenção rígida e uniforme (toda entidade com exatamente 5 endpoints: listar/criar/buscar/alterar/excluir). O CrowdAcadêmico já resolve o mesmo problema de origem (não hardcodar URL no React) de outro jeito - um arquivo `<modulo>.api.js` por módulo, com funções nomeadas - e as rotas daqui não são uniformes o bastante pra caber no molde do `resources` (upload em 2 passos, `/dashboard/resumo` sem entidade, sub-rotas como `/usuario/:id/desbloquear`). Pasta vazia (só `.gitkeep`) desde sempre, sem nenhum código ou decisão ligando ela ao produto - removida, não é lacuna.
 
 📌 **Este documento descreve o que EXISTE.** O que falta, a ordem sugerida e o porquê de cada adiamento estão em **`PROXIMOS_MODULOS.md`**, que é o dono desse assunto e está atualizado. Não duplicar aqui.
 
@@ -1074,3 +1109,68 @@ console.log('total de rotas:', out.length);
 | `ARQUIVO - Dica de Arquitetura.md` | O "doc de arquitetura" citado nos comentários de `commons/storage` e `25-arquivo` |
 | `ARQUIVO_para_configurar_modulo-arquivo.md` | Passo a passo do bucket + as variáveis `STORAGE_*` |
 | `tutorial-rodar-projeto.md` | Instalação, incluindo o `ALTER ROLE app_nestjs LOGIN PASSWORD` obrigatório |
+
+---
+
+## 18. Documentação interativa da API (Swagger/OpenAPI)
+
+Adicionado em 04-09-2026. Esta seção é propositalmente mais didática que o resto do documento - escrita pra quem não é programador conseguir entender o que isso é e pra que serve, não só o que mudou no código.
+
+### 18.1 O que é isto, em termos simples
+
+Hoje, pra saber "qual é a URL certa pra criar um usuário, e quais campos ela espera?", a única forma é abrir o código-fonte e ler o controller/DTO, ou perguntar pra quem já sabe. O Swagger (o nome popular; o padrão técnico por trás dele se chama **OpenAPI**) resolve isso gerando uma **página web navegável**, direto a partir do próprio backend, listando toda rota HTTP que existe, o que cada uma espera receber, o que cada uma devolve, e deixando **testar cada uma na hora**, pelo navegador, sem precisar do Thunder Client nem escrever nenhum `curl`.
+
+Pensa nisso como um "manual de instruções" da API que se atualiza sozinho: como ele é **gerado a partir do código de verdade** (não escrito à mão, separado), ele nunca fica desatualizado - se um campo for adicionado a um formulário no backend, a próxima vez que o servidor subir, a documentação já mostra esse campo novo, sem ninguém precisar lembrar de atualizar nada.
+
+### 18.2 Como acessar
+
+Com o backend rodando localmente (`npm run start:dev`, dentro de `nest/`), abra no navegador:
+
+```
+http://localhost:3000/api
+```
+
+Isso abre a interface visual (Swagger UI) - uma lista de todas as rotas, agrupadas por módulo, cada uma expansível. Clicar numa rota mostra os campos que ela espera (se houver corpo de requisição), os campos que ela devolve, e um botão **"Try it out"** que deixa preencher os campos na tela e disparar a requisição de verdade contra o backend rodando, direto ali.
+
+**Pra testar uma rota que exige login:** clique no botão **"Authorize"** (canto superior direito da página), cole o `accessToken` que `POST /auth/login` devolve (só o valor, sem a palavra "Bearer" na frente - a interface já cuida disso) e confirme. A partir daí, toda rota testada ali carrega esse token junto automaticamente, até você fechar a aba ou clicar em "Logout" no mesmo diálogo.
+
+Também existe uma versão só em JSON, pra ferramenta nenhuma além do navegador consumir (ex.: importar num Postman/Insomnia, ou uma ferramenta que gere um cliente de API automaticamente a partir disso):
+
+```
+http://localhost:3000/api-json
+```
+
+### 18.3 Por que existe **só fora de produção** - decisão deliberada
+
+Em `main.ts`, o bloco inteiro do Swagger está dentro de um `if (process.env.NODE_ENV !== 'production')`. Ou seja: **num deploy de produção de verdade, `/api` simplesmente não existe** - a rota não é nem registrada.
+
+Mesmo raciocínio já aplicado ao `DevLoginRapido` no React (protegido por `import.meta.env.DEV`, ver §9 do `DOCUMENTACAO_FRONTEND.md`): uma documentação interativa que deixa qualquer um ver TODA a superfície da API (inclusive nomes de rota que ninguém precisa saber existir publicamente) e testar chamada direto pelo navegador é uma ferramenta de desenvolvimento - não algo que deveria ficar exposto, sem senha nenhuma protegendo o `/api` em si, num domínio público depois do deploy. A proteção não muda nada no dia a dia local (`NODE_ENV` normalmente só vira `production` de verdade num ambiente de deploy configurado pra isso).
+
+### 18.4 Como a documentação é gerada sem escrever nada a mão
+
+Existem duas formas de fazer o Swagger funcionar num projeto NestJS:
+
+1. **Decorar cada campo de cada DTO manualmente** (`@ApiProperty({ description: '...', example: '...' })` em cima de cada propriedade de cada classe) - é o que o repositório de referência da disciplina fazia (`swagger.decorators.ts`, achado nos dois projetos de exemplo revisados em 04-09-2026). Funciona, mas exigiria adicionar isso à mão em ~79 DTOs já existentes (48 de request + 31 de response, `§1.2`), e lembrar de repetir isso em todo DTO novo dali pra frente.
+2. **Deixar o compilador do NestJS inferir tudo sozinho** - a opção escolhida aqui. Configurado em `nest-cli.json`, no plugin `@nestjs/swagger/plugin`.
+
+**Como a opção 2 funciona, tecnicamente:** o NestJS tem seu próprio compilador (`nest build`/`nest start`, não o `tsc` puro), e esse compilador aceita plugins que reescrevem o código durante a compilação. O plugin do Swagger, com a opção `classValidatorShim: true`, **lê os decorators de validação que já existem** nos DTOs (`@IsEmail()`, `@MinLength(8)`, `@IsOptional()` etc. - a mesma validação da `§6` deste documento) e gera a partir deles a informação que o Swagger precisa (tipo do campo, se é obrigatório, tamanho mínimo...), **sem precisar de nenhum decorator novo**. Testado ao vivo (04-09-2026): o DTO `UsuarioRequestCreate` (`nome`/`email`/`senha`/`idImagemPerfil`, com `@MinLength`/`@IsEmail` de sempre) apareceu no `/api-json` gerado com o schema certo, exatamente como esperado, sem eu ter tocado no arquivo do DTO.
+
+A opção `introspectComments: true`, complementar, faz o plugin usar um comentário JSDoc (`/** como este */`) escrito acima de um campo ou de uma rota como a descrição que aparece no Swagger - pra quem quiser deixar uma rota mais explicada, é só escrever um comentário desse tipo ali, não precisa aprender sintaxe de decorator nenhuma.
+
+### 18.5 ⚠️ A pegadinha de manutenção que fica pra quem criar um DTO novo
+
+Esse "ler sozinho" só funciona pro plugin **conseguir achar o arquivo do DTO em primeiro lugar** - e ele decide se um arquivo é um DTO só pelo **nome do arquivo** (não pelo conteúdo). O padrão de nomenclatura oficial do plugin é terminar em `.dto.ts` - mas este projeto nunca seguiu esse padrão (os arquivos são `usuario.request-create.ts`, `campanha.response.ts` etc., não `usuario-create.dto.ts`).
+
+**Solução aplicada:** o `nest-cli.json` lista, explicitamente, todos os sufixos de nome de arquivo já usados no projeto (`.request-create.ts`, `.response-suspend.ts`, e mais **20 outros**, um por padrão de nome já existente). Isso foi levantado programaticamente (listando todo arquivo dentro de uma pasta `dto/` e conferindo o padrão do nome), não digitado de memória.
+
+**O que isso significa na prática, pra sempre lembrar:** se um dia um módulo novo criar um DTO com um sufixo de nome **que ainda não existe** nessa lista (ex.: um dia surgir `campanha.request-aprovar.ts`, com um sufixo `request-aprovar` que hoje não está na lista), o Swagger **não vai dar erro nenhum** - a rota continua aparecendo normalmente em `/api`, só que o corpo esperado apareceria vazio/genérico, sem os campos de verdade. **Sempre que um DTO novo usar um sufixo de nome que essa lista ainda não tem, é preciso adicionar o sufixo novo em `nest-cli.json` → `compilerOptions.plugins[0].options.dtoFileNameSuffix`.** Fica registrado aqui exatamente por ser o tipo de coisa fácil de esquecer, porque o sintoma (documentação incompleta) não é um erro que trava nada.
+
+### 18.6 O que NÃO foi feito, de propósito
+
+- **Nenhum controller foi tocado.** Os ~94 controllers do projeto continuam exatamente como estavam - a autenticação exigida em cada rota (`document.security = [{ accessToken: [] }]`, aplicado uma vez só no `main.ts`) é um valor padrão de nível de documento inteiro do próprio formato OpenAPI, não uma decoração rota por rota.
+- **Nenhum `@ApiProperty`/`@ApiOperation` foi adicionado a nenhum DTO ou controller** - tudo vem do `classValidatorShim`/`introspectComments`, como explicado em `§18.4`. Se um dia uma rota específica merecer uma descrição melhor que a inferida automaticamente, dá pra escrever um comentário JSDoc nela (não precisa decorator) - opcional, não obrigatório.
+- **O padrão de decorators do repositório de referência da disciplina (`ApiPostDoc`/`ApiPutDoc`/etc., achado em `Programa-o-para-WEB-2---Completo-main`) não foi adotado.** Ele resolve um problema real (documentar sem repetir 5-6 linhas de decorator por rota), mas exigiria aplicar manualmente em cada um dos ~94 controllers existentes - mais trabalho de retrofit do que a abordagem escolhida, pro mesmo resultado final.
+
+### 18.7 Confirmação de que está funcionando (04-09-2026)
+
+Testado com o backend rodando de verdade contra o Postgres real (não só compilado): `npm run build` limpo (sem aviso do plugin), `/api` devolvendo `200`, `/api-json` com o schema do `UsuarioRequestCreate` batendo exatamente com os decorators de `class-validator` já existentes no arquivo, e `security`/`securitySchemes` do documento confirmando que o cadeado de "exige login" aparece certo em toda rota por padrão.

@@ -1,15 +1,15 @@
 /* ========= COMPONENTES REAPROVEITÁVEIS =========
    Pedido do Lucas (02-08-2026): "constante pra botões, tirando o máximo
-   possível de hardcoded" — mesma ideia já aplicada no banco (valor de
+   possível de hardcoded" - mesma ideia já aplicada no banco (valor de
    negócio vira linha em `configuracoes`, não número solto no `.sql`).
    Aqui o equivalente é uma classe CSS: o botão "Criar"/"Entrar"/"Salvar"
    em qualquer tela nova usa `className="btn btn-primary"`, não uma string
-   gigante de utilitários Tailwind copiada e colada — muda o estilo do
+   gigante de utilitários Tailwind copiada e colada - muda o estilo do
    botão primário do projeto inteiro num lugar só, aqui.
 
-   @layer components: mesmo motivo do 3-admin-shell.css/4-crud.css — sem
+   @layer components: mesmo motivo do 3-admin-shell.css/4-crud.css - sem
    isso, estas classes ganhariam de QUALQUER utilitário do Tailwind
-   colocado do lado (`className="btn btn-primary w-full"` — o `w-full`
+   colocado do lado (`className="btn btn-primary w-full"` - o `w-full`
    precisa poder vencer, senão a composição classe+utilitário não funciona
    igual ao resto do Tailwind funciona). */
 @layer components {
@@ -47,7 +47,7 @@
     color: var(--cor-texto);
   }
 
-  /* ERA --cor-borda (slate-200) — hover mais escuro, mesmo pedido do
+  /* ERA --cor-borda (slate-200) - hover mais escuro, mesmo pedido do
      Lucas (09-08-2026) aplicado em todos os hovers do painel. */
   .btn-secondary:hover:not(:disabled) {
     background-color: var(--cor-borda-forte);
@@ -65,11 +65,11 @@
 
   /* .btn-info (azulado, só pra "Alterar" em GenericTable) removido
      08-08-2026: a coluna Ações da tabela trocou botão sólido por
-     texto/ícone discreto (.crud-tabela__acao, 4-crud.css) — perdeu a
+     texto/ícone discreto (.crud-tabela__acao, 4-crud.css) - perdeu a
      única razão de existir. */
 
   /* Input/select de formulário fora da tabela de CRUD (login, criar
-     usuário) — mesma moldura em todo lugar: borda, fundo levemente cinza,
+     usuário) - mesma moldura em todo lugar: borda, fundo levemente cinza,
      foco em verde. */
   .input-padrao {
     width: 100%;
@@ -88,7 +88,7 @@
     background-color: var(--cor-fundo-cartao);
   }
 
-  /* Tela "Consultar" (campo-textbox-consulta.jsx) — deixa claro visualmente
+  /* Tela "Consultar" (campo-textbox-consulta.jsx) - deixa claro visualmente
      que o campo é só leitura, não é só um input esquecido sem onChange. */
   .input-padrao:disabled {
     background-color: var(--cor-fundo-hover);
@@ -116,17 +116,17 @@
     color: var(--cor-texto);
   }
 
-  /* 23-08-2026 — nasceu dentro do arquivo do Campo de Testes por engano
+  /* 23-08-2026 - nasceu dentro do arquivo do Campo de Testes por engano
      (6-campo-testes.css), movida pra cá quando a listagem de Campanhas
      (views/12-campanha) precisou do mesmo badge pra status rejeitado/
-     encerrado_moderacao — é utilitário genérico, não algo exclusivo de
+     encerrado_moderacao - é utilitário genérico, não algo exclusivo de
      ferramenta de teste. */
   .badge-erro {
     background-color: var(--cor-fundo-erro);
     color: var(--cor-texto-erro);
   }
 
-  /* Selo <dev> — marca qualquer recurso que existe só pra facilitar
+  /* Selo <dev> - marca qualquer recurso que existe só pra facilitar
      desenvolvimento/teste (ex.: redefinir senha pra um valor conhecido),
      nunca pra ficar disponível em produção de verdade. Roxo + monoespaçada
      de propósito: nenhuma outra cor/fonte do projeto usa essa combinação,
@@ -137,7 +137,7 @@
     font-family: var(--font-mono-dev);
   }
 
-  /* components/layout/dev-login-rapido.jsx — feio DE PROPÓSITO (roxo
+  /* components/layout/dev-login-rapido.jsx - feio DE PROPÓSITO (roxo
      sólido, borda tracejada, fonte monoespaçada): pedido explícito do
      Lucas, "roxo feio e em destaque, claramente mostrando que não vai
      ficar ali". Não é refinamento esquecido, é sinalização visual. */
@@ -165,7 +165,7 @@
     border-left: none;
   }
 
-  /* Tooltip (components/layout/tooltip.jsx) — ícone "ⓘ" que revela uma
+  /* Tooltip (components/layout/tooltip.jsx) - ícone "ⓘ" que revela uma
      explicação curta ao passar o mouse ou focar via teclado. CSS puro
      (:hover/:focus), sem JS controlando abrir/fechar. */
   .tooltip {
@@ -198,7 +198,7 @@
     line-height: 1.4;
     text-align: left;
     /* Reset explícito (22-08-2026, achado usando o Tooltip dentro de
-       .admin-sidebar__grupo-titulo, que é uppercase + letter-spacing) —
+       .admin-sidebar__grupo-titulo, que é uppercase + letter-spacing) -
        sem isso, o TEXTO da dica herdava esses dois estilos do ancestral e
        saía gritado em CAIXA ALTA, não só o rótulo do grupo. */
     text-transform: none;
@@ -217,5 +217,28 @@
   .tooltip:focus .tooltip__texto {
     opacity: 1;
     visibility: visible;
+  }
+
+  /* Variante --baixo (04-09-2026, achado no grupo "Arquivo" do dashboard
+     de Regras do Negócio): o cabeçalho do cartão de grupo fica colado no
+     topo de um container com overflow-hidden (pro rounded-xl não vazar
+     canto quadrado) - a dica padrão (pra cima) nascia cortada pela borda
+     arredondada. Esta variante abre pra baixo, dentro da área do cartão. */
+  .tooltip--baixo .tooltip__texto {
+    bottom: auto;
+    top: 135%;
+  }
+
+  /* Variante --clicavel (04-09-2026): o ícone também abre um modal ao
+     clicar (ver prop `aoClicar` em tooltip.jsx) - reset dos estilos
+     padrão de <button> (fundo, borda, fonte) pra ficar visualmente
+     idêntico à variante só-hover (<span>), só trocando o cursor de
+     "help" pra "pointer", que é o sinal certo pra algo clicável. */
+  .tooltip--clicavel {
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+    cursor: pointer;
   }
 }

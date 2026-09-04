@@ -28,7 +28,7 @@ export class MotivoDenunciaServiceCreate {
       return MotivoDenunciaConverter.paraResponseDto(linha);
     } catch (erro) {
       // Sem `codigo` (18-08-2026, ver comentário no DTO), a tabela não
-      // tem mais nenhuma UNIQUE constraint própria — 23505 não é mais um
+      // tem mais nenhuma UNIQUE constraint própria - 23505 não é mais um
       // caso possível aqui, só a checagem de RLS permanece.
       if ((erro as { code?: string }).code === CODIGO_PG_RLS_VIOLATION) {
         throw new ForbiddenException(

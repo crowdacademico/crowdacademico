@@ -2,7 +2,7 @@ import { Controller, Get, NotFoundException, Param, ParseIntPipe } from '@nestjs
 import { DatabaseService } from '../../commons/database/database.service';
 import { ArquivoServiceResolverAvatar } from '../service/arquivo.service.resolver-avatar';
 
-// Pública (sem RequireAuthGuard) de propósito — foto de perfil é conteúdo
+// Pública (sem RequireAuthGuard) de propósito - foto de perfil é conteúdo
 // público por natureza (ver doc de arquitetura: "nenhum arquivo de vocês
 // é secreto"), um visitante anônimo olhando o perfil de um pesquisador ou
 // os comentários de uma campanha precisa conseguir ver o avatar sem estar

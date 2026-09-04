@@ -1,7 +1,7 @@
 import { Link } from 'react-router';
 
 // Cópia fiel de componentes/footer.html do Projeto de Interface real (mesmas
-// classes Tailwind, mesmo conteúdo, inclusive os links das colunas — eles
+// classes Tailwind, mesmo conteúdo, inclusive os links das colunas - eles
 // apontam pra "#" no original também, são parte do protótipo visual, não
 // promessa de rota real). Único em toda tela (App.jsx). Marca agora navega
 // pra "/" (home), igual o logo do cabeçalho já fazia.

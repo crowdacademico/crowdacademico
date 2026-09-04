@@ -1,21 +1,21 @@
 -- ============================================================================
---  CROWDACADÊMICO — SISTEMA DE CROWDFUNDING PARA PESQUISA CIENTÍFICA
+--  CROWDACADÊMICO - SISTEMA DE CROWDFUNDING PARA PESQUISA CIENTÍFICA
 -- ============================================================================
 --  Arquivo:     01_extensoes_enums_tabelas.sql
 --  Módulo:      Extensões, ENUMs e Tabelas (DDL)
---  Depende de:  (nenhum — 1º arquivo a rodar, sem dependências externas)
+--  Depende de:  (nenhum - 1º arquivo a rodar, sem dependências externas)
 --  Próximo:     02_indices.sql
 -- ----------------------------------------------------------------------------
 --  Descrição:
 --  Define toda a estrutura de dados do banco: a role de aplicação, a
 --  extensão pgcrypto, os tipos ENUM usados pelas colunas de status, e as 42
---  tabelas do schema — organizadas por domínio, na ordem exata de
+--  tabelas do schema - organizadas por domínio, na ordem exata de
 --  dependência de Foreign Key, para permitir rodar o script do zero sem
 --  erro de referência.
 --
 --  Todas as constraints (PRIMARY KEY, FOREIGN KEY, UNIQUE, CHECK) são
 --  nomeadas explicitamente, entre aspas, em SCREAMING_SNAKE_CASE
---  (PK_/FK_/UK_/CK_ + nome da tabela) — facilita identificar rapidamente
+--  (PK_/FK_/UK_/CK_ + nome da tabela) - facilita identificar rapidamente
 --  qual tabela/coluna está envolvida quando o Postgres acusa um erro.
 --
 --  Inventário Mapeado:
@@ -34,20 +34,20 @@
 --  [01-G] ARQUIVO (2 tabelas de associação)
 --  [01-H] CONTRIBUIÇÃO (4 tabelas)
 --  [01-I] SCORE (3 tabelas + Bloco DO)
---  [01-L] LOG DE AUDITORIA (1 tabela — ADICIONADO 03-08-2026)
+--  [01-L] LOG DE AUDITORIA (1 tabela - ADICIONADO 03-08-2026)
 -- ============================================================================
 -- [01-A] Bootstrap, Extensões e ENUMs
 -- ============================================================
 -- CORRIGIDO (27-07-2026): role nasce NOLOGIN, sem senha nenhuma. A versão anterior
--- criava a role já com LOGIN e uma senha placeholder ('TROCAR_NO_AMBIENTE_REAL') —
+-- criava a role já com LOGIN e uma senha placeholder ('TROCAR_NO_AMBIENTE_REAL') -
 -- esquecer de trocar isso em produção falha ABERTO (o sistema funciona perfeitamente
 -- com uma senha conhecida publicada no GitHub, sem nenhum aviso). Com NOLOGIN,
 -- esquecer o passo abaixo falha FECHADO: o NestJS simplesmente não consegue conectar
 -- (FATAL: role "app_nestjs" is not permitted to log in), erro percebido em minutos,
 -- não uma falha de segurança silenciosa. GRANT e SET ROLE continuam funcionando
--- normalmente numa role NOLOGIN — só LOGIN direto (usuário/senha) é que fica bloqueado.
+-- normalmente numa role NOLOGIN - só LOGIN direto (usuário/senha) é que fica bloqueado.
 -- PASSO OBRIGATÓRIO DE INSTALAÇÃO (rodar uma vez, fora deste arquivo, com a senha
--- real de cada ambiente — local ou produção — nunca versionada em texto puro):
+-- real de cada ambiente - local ou produção - nunca versionada em texto puro):
 --     ALTER ROLE app_nestjs LOGIN PASSWORD 'a_senha_que_voce_vai_por_no_.env';
 -- (ver tutorial-rodar-projeto.md, que já tem esse passo numerado logo após o 01).
 DO $$
@@ -58,12 +58,12 @@ BEGIN
 END
 $$;
 
--- ADICIONADO (28-07-2026) — guarda de BYPASSRLS: não resolve sozinho o item 22 do
+-- ADICIONADO (28-07-2026) - guarda de BYPASSRLS: não resolve sozinho o item 22 do
 -- PENDENCIAS (ainda é preciso confirmar se o papel usado no SQL Editor do Supabase
 -- tem BYPASSRLS antes do deploy), mas transforma uma falha silenciosa em uma parada
 -- única e autoexplicativa. Sem esta guarda, rodar os arquivos 04-07 como um papel
 -- sem BYPASSRLS (nem superusuário) produz dezenas de erros de "new row violates
--- row-level security policy" espalhados pelos INSERTs do 07 — 99 das 116 policies
+-- row-level security policy" espalhados pelos INSERTs do 07 - 99 das 116 policies
 -- são TO app_nestjs, então qualquer outro papel (dono da tabela incluído, por causa
 -- do FORCE ROW LEVEL SECURITY do 04) fica bloqueado silenciosamente em quase tudo.
 -- Com a guarda, o erro é um só, no início, e explica exatamente o que fazer.
@@ -105,8 +105,8 @@ CREATE TYPE tipo_recompensa       AS ENUM ('digital', 'reconhecimento', 'acesso_
 -- ============================================================
 -- [01-B] RBAC (3 tabelas)
 -- ============================================================
--- ADICIONADO (03-08-2026, achado de uma revisão externa — outra IA, não o
--- Claude Web — pedida pelo Lucas pra pensar em "poder absoluto da
+-- ADICIONADO (03-08-2026, achado de uma revisão externa - outra IA, não o
+-- Claude Web - pedida pelo Lucas pra pensar em "poder absoluto da
 -- modularidade": `codigo` versus `nome`, mesmo padrão já usado em
 -- `tipo_link.codigo`/`motivo_denuncia.codigo`. Motivo: 3 pontos deste banco
 -- reconheciam papel especial pelo TEXTO do nome, literal, sem nenhuma trava
@@ -114,14 +114,14 @@ CREATE TYPE tipo_recompensa       AS ENUM ('digital', 'reconhecimento', 'acesso_
 -- `fn_atribuir_papel_pesquisador` procura `WHERE nome = 'pesquisador'`,
 -- `atribuir_papel_padrao` (08) procura `WHERE nome = 'usuario'`). O achado
 -- foi confirmado rodando de verdade (renomear 'admin' e criar uma
--- permissão nova: ela parava de ser auto-concedida, sem erro nenhum —
+-- permissão nova: ela parava de ser auto-concedida, sem erro nenhum -
 -- falha silenciosa). Isso não é um bug ativo hoje (não existe tela nem
 -- endpoint pra renomear um papel ainda), mas o Lucas avisou que uma tela
--- de editar papel está vindo — `codigo` entra ANTES dela, não depois, pra
+-- de editar papel está vindo - `codigo` entra ANTES dela, não depois, pra
 -- nunca existir uma janela em que renomear um papel pelo painel quebre
 -- RBAC de admin/pesquisador/cadastro em silêncio. `nome` continua sendo o
 -- único campo editável (rótulo livre); `codigo` nunca é exposto em nenhum
--- formulário de edição — ver 05_regras_negocio.sql (as 3 triggers
+-- formulário de edição - ver 05_regras_negocio.sql (as 3 triggers
 -- corrigidas) e 07_seed_dados.sql ([07-B-1], `codigo` seedado igual ao
 -- `nome` atual dos 7 papéis).
 CREATE TABLE papel (
@@ -172,8 +172,8 @@ CREATE TABLE tipo_link (
         CHECK (permite_perfil OR permite_atualizacao OR permite_recompensa)
 );
 
--- ADICIONADO (27-07-2026): id_pai auto-referenciado — mesmo padrão já usado em
--- score_config (ver [01-I]) — pra suportar a hierarquia de 2 níveis do CNPq
+-- ADICIONADO (27-07-2026): id_pai auto-referenciado - mesmo padrão já usado em
+-- score_config (ver [01-I]) - pra suportar a hierarquia de 2 níveis do CNPq
 -- (grande área -> área). Antes, as 9 linhas eram só as grandes áreas; ver seed
 -- em 07_seed_dados.sql para as áreas de nível 2 (filhas) e o motivo da mudança.
 CREATE TABLE area_conhecimento (
@@ -188,7 +188,7 @@ CREATE TABLE area_conhecimento (
     CONSTRAINT "FK_AREA_CONHECIMENTO_PAI" FOREIGN KEY (id_pai) REFERENCES area_conhecimento(id_area_conhecimento) ON DELETE SET NULL
 );
 
--- `codigo` removido (18-08-2026, pedido do Lucas/Alexia) — diferente de
+-- `codigo` removido (18-08-2026, pedido do Lucas/Alexia) - diferente de
 -- `papel.codigo`/`tipo_link.codigo` ([01-B] acima), nenhuma trigger ou
 -- função em 05_regras_negocio.sql lia este campo; era só texto
 -- informativo. `descricao` virou NOT NULL (era opcional) porque agora é
@@ -203,23 +203,23 @@ CREATE TABLE motivo_denuncia (
     CONSTRAINT "PK_MOTIVO_DENUNCIA" PRIMARY KEY (id_motivo)
 );
 
--- ATUALIZADA (24-08-2026, módulo 25-arquivo implementado — ver revisão de
+-- ATUALIZADA (24-08-2026, módulo 25-arquivo implementado - ver revisão de
 -- arquitetura de upload B2/R2 e ATUALIZAR O SUPABASE.sql do mesmo dia):
 -- duas mudanças pedidas na revisão:
 -- 1. `url` (endereço completo) virou `chave` (só o caminho do objeto
 --    dentro do bucket, ex. "publico/<uuid>.jpg"). A URL pública é montada
 --    em RUNTIME por commons/storage, a partir de STORAGE_PUBLIC_BASE_URL
---    + esta coluna — trocar de domínio ou de provedor de armazenamento
+--    + esta coluna - trocar de domínio ou de provedor de armazenamento
 --    (Backblaze B2 hoje, Cloudflare R2 amanhã, ambos falam o protocolo
 --    S3) nunca mais precisa de UPDATE em massa aqui. UNIQUE porque o nome
 --    é sempre gerado pelo backend (randomUUID em
---    arquivo.service.iniciar-upload.ts), nunca pelo cliente — colisão
+--    arquivo.service.iniciar-upload.ts), nunca pelo cliente - colisão
 --    indicaria bug, não uso normal.
--- 2. `id_usuario_upload` — a tabela não tinha dono. Sem isso não dava pra
+-- 2. `id_usuario_upload` - a tabela não tinha dono. Sem isso não dava pra
 --    responder "quem subiu este arquivo?", limitar quantos uploads uma
 --    conta faz por hora, nem localizar o que uma conta banida enviou.
 --    Sem FK inline de propósito: `usuario` só é criada MAIS ABAIXO neste
---    mesmo arquivo (e já referencia `arquivo` via FK_USUARIO_IMAGEM —
+--    mesmo arquivo (e já referencia `arquivo` via FK_USUARIO_IMAGEM -
 --    dependência circular entre as duas tabelas). A FK
 --    FK_ARQUIVO_USUARIO_UPLOAD é adicionada por ALTER TABLE logo depois
 --    que `usuario` existe (ver comentário lá).
@@ -251,10 +251,10 @@ CREATE TABLE usuario (
     deletado         BOOLEAN      DEFAULT FALSE,
     -- ADICIONADAS (28-07-2026, Claude,"o único ponto onde a LGPD ainda tem
     -- uma ponta solta"): excluir_conta_usuario() (03, [03-O]) gravava deletado =
-    -- TRUE e nada mais — sem quem fez nem quando, o Art. 37 da LGPD (registro das
+    -- TRUE e nada mais - sem quem fez nem quando, o Art. 37 da LGPD (registro das
     -- operações de tratamento, exclusão sendo a mais sensível de todas) ficava
     -- sem trilha. Preenchidas pela própria função (deletado_por =
-    -- id_usuario_atual()) — nunca pelo app diretamente, mesma proteção das
+    -- id_usuario_atual()) - nunca pelo app diretamente, mesma proteção das
     -- outras colunas de auth que saíram do GRANT UPDATE direto.
     deletado_em      TIMESTAMPTZ,
     deletado_por     INT,
@@ -265,15 +265,15 @@ CREATE TABLE usuario (
     ultimo_login_em          TIMESTAMPTZ,
     ultimo_login_ip          VARCHAR(45),
 
-    -- ADICIONADAS (09-08-2026, Bloco G do prompt do Claude Web —
-    -- moderação/suspensão): CONCEITO DIFERENTE de `bloqueado_ate` acima —
+    -- ADICIONADAS (09-08-2026, Bloco G do prompt do Claude Web -
+    -- moderação/suspensão): CONCEITO DIFERENTE de `bloqueado_ate` acima -
     -- aquele é bloqueio AUTOMÁTICO por senha errada repetida
     -- (registrar_falha_login/liberar_bloqueio_login, [03-O]); este é
     -- suspensão MANUAL de moderação, decidida por um admin, com motivo
     -- obrigatório. Reaproveitar `bloqueado_ate` pros dois casos faria
     -- `liberar_bloqueio_login()` apagar sem querer uma suspensão de 30
     -- dias, e um login bem-sucedido (que zera `bloqueado_ate`) reverteria
-    -- uma suspensão de moderação sozinho — dois conceitos, duas colunas.
+    -- uma suspensão de moderação sozinho - dois conceitos, duas colunas.
     suspenso_ate             TIMESTAMPTZ,
     motivo_suspensao         TEXT,
     suspenso_por             INT,
@@ -283,7 +283,7 @@ CREATE TABLE usuario (
     CONSTRAINT "FK_USUARIO_IMAGEM" FOREIGN KEY (id_imagem_perfil) REFERENCES arquivo(id_arquivo) ON DELETE SET NULL,
     CONSTRAINT "FK_USUARIO_DELETADO_POR" FOREIGN KEY (deletado_por) REFERENCES usuario(id_usuario),
     CONSTRAINT "FK_USUARIO_SUSPENSO_POR" FOREIGN KEY (suspenso_por) REFERENCES usuario(id_usuario),
-    -- Motivo obrigatório sempre que há suspensão ativa, e vice-versa — nunca
+    -- Motivo obrigatório sempre que há suspensão ativa, e vice-versa - nunca
     -- suspenso_ate preenchido com motivo NULL (ou o contrário).
     CONSTRAINT "CK_USUARIO_SUSPENSAO" CHECK (
         (suspenso_ate IS NULL AND motivo_suspensao IS NULL)
@@ -291,17 +291,17 @@ CREATE TABLE usuario (
     )
 );
 
--- ADICIONADA (24-08-2026, módulo 25-arquivo) — só agora, porque `usuario`
+-- ADICIONADA (24-08-2026, módulo 25-arquivo) - só agora, porque `usuario`
 -- precisa existir primeiro (ver comentário no CREATE TABLE arquivo, acima:
 -- `arquivo` é criada ANTES de `usuario` pra permitir FK_USUARIO_IMAGEM, o
 -- que impede colocar esta FK inline lá). ON DELETE SET NULL (não CASCADE):
 -- apagar/anonimizar a conta que fez o upload não deve apagar o arquivo em
--- si — ele pode continuar em uso (ex.: imagem já publicada numa atualização
+-- si - ele pode continuar em uso (ex.: imagem já publicada numa atualização
 -- de campanha de outra pessoa, ou a própria campanha).
 ALTER TABLE arquivo
     ADD CONSTRAINT "FK_ARQUIVO_USUARIO_UPLOAD" FOREIGN KEY (id_usuario_upload) REFERENCES usuario(id_usuario) ON DELETE SET NULL;
 
--- [01-C] configuracoes — movido de CONFIG devido à ordem de criação
+-- [01-C] configuracoes - movido de CONFIG devido à ordem de criação
 -- necessária para o funcionamento das tabelas: duas linhas do seed de
 -- configuracoes referenciam o usuário admin (id_usuario), então esta
 -- tabela só pode ser criada depois de `usuario` já existir.
@@ -322,8 +322,8 @@ CREATE TABLE configuracoes (
 CREATE TABLE usuario_papel (  -- fica aqui por depender de usuario; documentada no RBAC
     id_usuario   INT NOT NULL,
     id_papel     INT NOT NULL,
-    -- ADICIONADA (09-08-2026, Bloco G — "suspender só um papel específico
-    -- por um tempo, em vez de remover") — NULL = papel valendo normalmente.
+    -- ADICIONADA (09-08-2026, Bloco G - "suspender só um papel específico
+    -- por um tempo, em vez de remover") - NULL = papel valendo normalmente.
     -- Preferível a DELETE porque preserva o histórico (quando o papel foi
     -- atribuído) e volta sozinho no prazo, sem precisar reatribuir manual.
     -- tem_permissao() (03, [03-B]) passa a ignorar papel com suspenso_ate
@@ -338,20 +338,20 @@ CREATE TABLE usuario_papel (  -- fica aqui por depender de usuario; documentada 
 
 CREATE TABLE perfil_pesquisador (
     id_usuario            INT NOT NULL,
-    -- TEXT, não VARCHAR(255) (corrigido 22-08-2026) — o tamanho de um valor
+    -- TEXT, não VARCHAR(255) (corrigido 22-08-2026) - o tamanho de um valor
     -- cifrado é ditado pelo algoritmo de cifra (hoje ~61 caracteres pro
     -- formato "v1:<iv>:<tag>:<ciphertext>", ver commons/seguranca/
     -- cpf-cifra.util.ts no Nest), não por uma decisão de produto sobre
-    -- tamanho de campo — TEXT não fixa uma constante que não faz sentido
+    -- tamanho de campo - TEXT não fixa uma constante que não faz sentido
     -- fixar. Ver DOCUMENTACAO_BD.md, seção perfil_pesquisador, pra todo o
     -- raciocínio (por que cifrar no Node e não no Postgres, formato "v1:",
     -- índice cego).
     cpf_criptografado     TEXT NOT NULL,
-    -- Índice cego (22-08-2026) — HMAC-SHA256(cpf_normalizado, CPF_INDEX_KEY),
+    -- Índice cego (22-08-2026) - HMAC-SHA256(cpf_normalizado, CPF_INDEX_KEY),
     -- calculado no Nest (commons/seguranca/cpf-cifra.util.ts), nunca no
     -- Postgres. Existe porque cpf_criptografado é cifra não-determinística
     -- (o mesmo CPF cifrado duas vezes dá valores diferentes) e por isso
-    -- NUNCA poderia levar um UNIQUE nem ser buscado por igualdade — este
+    -- NUNCA poderia levar um UNIQUE nem ser buscado por igualdade - este
     -- índice é quem garante "um CPF, uma conta, sempre" e permite o suporte/
     -- curadoria localizar uma conta pelo CPF informado. Detalhe completo em
     -- DOCUMENTACAO_BD.md.
@@ -391,7 +391,7 @@ CREATE TABLE seguir_pesquisador (
 
 CREATE TABLE termos_de_uso (
     id_termo  SERIAL,
-    versao    VARCHAR(20) NOT NULL,   -- ex: "2026-07-01", "v3" — precisa ser única
+    versao    VARCHAR(20) NOT NULL,   -- ex: "2026-07-01", "v3" - precisa ser única
     conteudo  TEXT        NOT NULL,
     ativo     BOOLEAN     DEFAULT TRUE,
     criado_em TIMESTAMPTZ   DEFAULT NOW(),      -- [melhoria] registra quando cada versão entrou em vigor
@@ -417,7 +417,7 @@ CREATE TABLE notificacao (
     id_notificacao     SERIAL,
     id_usuario         INT,                                   -- mantém o histórico de envio mesmo se o usuário for removido
     email_destinatario VARCHAR(255)       NOT NULL,          -- snapshot do e-mail no momento do envio (usuário pode trocar o e-mail depois)
-    tipo_evento        VARCHAR(100)       NOT NULL,          -- ex: 'campanha_aprovada', 'doacao_recebida' — texto livre, como "evento" em auditoria_financeira
+    tipo_evento        VARCHAR(100)       NOT NULL,          -- ex: 'campanha_aprovada', 'doacao_recebida' - texto livre, como "evento" em auditoria_financeira
     status             status_notificacao NOT NULL DEFAULT 'pendente',
     tentativas         INT                NOT NULL DEFAULT 0,
     criado_em          TIMESTAMPTZ          DEFAULT NOW(),
@@ -466,7 +466,7 @@ CREATE TABLE sessao (
     user_agent         TEXT,
     -- ADICIONADO (07-08-2026, achado do Lucas: "não fiz tantos logs de
     -- login assim"): toda renovação silenciosa do token de acesso (a cada
-    -- ~15min de uso) também gera uma linha aqui, sempre gerou — sem esta
+    -- ~15min de uso) também gera uma linha aqui, sempre gerou - sem esta
     -- coluna não dava pra separar "login de verdade" de "token se
     -- renovando sozinho" na tela de histórico. DEFAULT 'refresh' (não
     -- 'login') de propósito: linhas antigas (de antes desta coluna
@@ -500,11 +500,11 @@ CREATE TABLE campanha (
     aprovado_em          TIMESTAMPTZ,
     -- CORRIGIDO: data_fim é a promessa (congelada por fn_congela_regras_campanha,
     -- 05); faltava onde registrar quando a campanha de fato terminou (natural,
-    -- antecipado ou por moderação) — sem isso o RF-042/RF-058 não tinham onde gravar.
+    -- antecipado ou por moderação) - sem isso o RF-042/RF-058 não tinham onde gravar.
     encerrado_em         TIMESTAMPTZ,
     -- ADICIONADO (28-07-2026, item 19(c)): RF-033 pede vídeo de apresentação
     -- opcional em destaque na página da campanha. Só a URL (ex.: YouTube/
-    -- Vimeo) — o arquivo de vídeo em si não é armazenado pela plataforma.
+    -- Vimeo) - o arquivo de vídeo em si não é armazenado pela plataforma.
     video_apresentacao_url VARCHAR(500),
     criado_em            TIMESTAMPTZ       DEFAULT NOW(),
 
@@ -553,7 +553,7 @@ CREATE TABLE atualizacao_campanha (
     CONSTRAINT "PK_ATUALIZACAO_CAMPANHA" PRIMARY KEY (id_atualizacao),
     CONSTRAINT "FK_ATUALIZACAO_CAMPANHA_CAMPANHA" FOREIGN KEY (id_campanha) REFERENCES campanha(id_campanha) ON DELETE CASCADE,
     -- ADICIONADO (28-07-2026, "Problema 2"): mesmo raciocínio de
-    -- CK_CAMPANHA_DESCRICAO_TAMANHO — limite técnico largo aqui, limite de negócio
+    -- CK_CAMPANHA_DESCRICAO_TAMANHO - limite técnico largo aqui, limite de negócio
     -- configurável via trigger, ver [05-K-1].
     CONSTRAINT "CK_ATUALIZACAO_CAMPANHA_CONTEUDO_TAMANHO" CHECK (char_length(conteudo) <= 20000)
 );
@@ -561,13 +561,13 @@ CREATE TABLE atualizacao_campanha (
 -- ADICIONADO (31-07-2026, Alexia): orçamento estruturado da campanha (itens de gasto
 -- com categoria + valor), inspirado na estrutura de campanha do Experiment.com
 -- (pedido do time via Claude). Substitui a antiga prática de descrever o
--- orçamento só em texto livre dentro de campanha.descricao — aqui vira dado
+-- orçamento só em texto livre dentro de campanha.descricao - aqui vira dado
 -- estruturado, que dá pra somar, validar contra meta_financeira e renderizar
 -- em gráfico de pizza na página da campanha (o cálculo do percentual de cada
--- fatia fica pra depois — SUM(valor)/meta_financeira*100 é feito na consulta,
+-- fatia fica pra depois - SUM(valor)/meta_financeira*100 é feito na consulta,
 -- não armazenado). RN: soma de todos os itens de uma campanha precisa bater
 -- EXATAMENTE com campanha.meta_financeira, e a quantidade de itens fica entre
--- configuracoes.orcamento_min_itens e configuracoes.orcamento_max_itens — ambas
+-- configuracoes.orcamento_min_itens e configuracoes.orcamento_max_itens - ambas
 -- checadas na aprovação/inserção, ver fn_valida_completude_campanha_aprovacao e
 -- fn_valida_limite_max_orcamento_campanha (05, [05-K-2]). Congela junto com o
 -- resto da campanha (mesma condição de status de fn_congela_regras_campanha),
@@ -594,16 +594,16 @@ CREATE TABLE orcamento_campanha (
 -- título, descrição e data prevista), mesmo pedido/origem de orcamento_campanha
 -- acima. Diferente de atualizacao_campanha (que registra o que JÁ aconteceu,
 -- publicado durante a execução), marco_cronograma é o PLANO anunciado antes
--- da campanha começar a ser financiada — plano esse que trava assim que a
+-- da campanha começar a ser financiada - plano esse que trava assim que a
 -- campanha efetivamente começa (campanha.data_inicio <= NOW()), mesma janela
 -- de carência que campanha.data_inicio/data_fim já tinham (fn_congela_regras_
--- campanha, 05, feature "Em breve") — não trava já na aprovação, porque entre
+-- campanha, 05, feature "Em breve") - não trava já na aprovação, porque entre
 -- aprovar e começar de fato o pesquisador pode legitimamente precisar
 -- reorganizar datas. RN: a quantidade de marcos fica entre
 -- configuracoes.cronograma_min_marcos e configuracoes.cronograma_max_marcos
 -- (checadas na aprovação/inserção, mesmas funções de orcamento_campanha) e
 -- cada data_prevista precisa ser >= campanha.data_inicio (pode ultrapassar
--- data_fim sem problema — ver fn_valida_data_marco_cronograma, 05, [05-K-2]).
+-- data_fim sem problema - ver fn_valida_data_marco_cronograma, 05, [05-K-2]).
 CREATE TABLE marco_cronograma (
     id_marco      SERIAL,
     id_campanha   INT           NOT NULL,
@@ -645,8 +645,8 @@ CREATE TABLE solicitacao_encerramento (
     CONSTRAINT "PK_SOLICITACAO_ENCERRAMENTO" PRIMARY KEY (id_solicitacao_encerramento),
     CONSTRAINT "FK_SOLICITACAO_ENCERRAMENTO_CAMPANHA" FOREIGN KEY (id_campanha) REFERENCES campanha(id_campanha),
     CONSTRAINT "FK_SOLICITACAO_ENCERRAMENTO_ADMIN" FOREIGN KEY (id_admin) REFERENCES usuario(id_usuario),
-    -- ADICIONADO (28-07-2026, Claude — "Problema 2"): mesmo raciocínio de
-    -- CK_CAMPANHA_DESCRICAO_TAMANHO, pros dois campos de justificativa — limite
+    -- ADICIONADO (28-07-2026, Claude - "Problema 2"): mesmo raciocínio de
+    -- CK_CAMPANHA_DESCRICAO_TAMANHO, pros dois campos de justificativa - limite
     -- técnico largo aqui, limite de negócio configurável via trigger, ver [05-K-1].
     CONSTRAINT "CK_SOLICITACAO_JUSTIFICATIVA_PESQ_TAMANHO" CHECK (justificativa_pesquisador IS NULL OR char_length(justificativa_pesquisador) <= 10000),
     CONSTRAINT "CK_SOLICITACAO_JUSTIFICATIVA_ADMIN_TAMANHO" CHECK (justificativa_admin IS NULL OR char_length(justificativa_admin) <= 10000)
@@ -694,7 +694,7 @@ CREATE TABLE denuncia (
 
     CONSTRAINT "PK_DENUNCIA" PRIMARY KEY (id_denuncia),
     CONSTRAINT "FK_DENUNCIA_USUARIO" FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario),
-    -- SET NULL -> RESTRICT — denúncia é registro de moderação; um alvo
+    -- SET NULL -> RESTRICT - denúncia é registro de moderação; um alvo
     -- virando NULL sozinho com o tempo destruiria rastro de auditoria. Na prática não
     -- muda nada hoje (nem campanha nem usuario têm policy de DELETE, ver 06_grants.sql).
     CONSTRAINT "FK_DENUNCIA_CAMPANHA_ALVO" FOREIGN KEY (id_campanha_alvo) REFERENCES campanha(id_campanha) ON DELETE RESTRICT,
@@ -707,7 +707,7 @@ CREATE TABLE denuncia (
         (id_campanha_alvo IS NOT NULL AND id_pesquisador_alvo IS NULL)
         OR (id_campanha_alvo IS NULL AND id_pesquisador_alvo IS NOT NULL)
     ),
-    -- ADICIONADO (28-07-2026, Claude — "Problema 2", a Alexia já tinha avisado no
+    -- ADICIONADO (28-07-2026, Claude - "Problema 2", a Alexia já tinha avisado no
     -- WhatsApp antes mesmo da coluna existir: "relato como text pode dar problema, tem
     -- que ver depois se dá pra restringir o tamanho"): sem limite nenhum, um campo de
     -- denúncia pública virava vetor de abuso (o limite de 5 denúncias/24h não impede
@@ -731,7 +731,7 @@ CREATE TABLE recompensa (
     CONSTRAINT "FK_RECOMPENSA_CAMPANHA" FOREIGN KEY (id_campanha) REFERENCES campanha(id_campanha) ON DELETE CASCADE,
     CONSTRAINT "CK_RECOMPENSA_VALOR_MINIMO" CHECK (valor_minimo > 0),
     CONSTRAINT "CK_RECOMPENSA_QUANTIDADE"   CHECK (quantidade_disponivel IS NULL OR quantidade_disponivel >= 0),
-    -- ADICIONADO (28-07-2026, Claude — "Problema 2"): mesma categoria de texto
+    -- ADICIONADO (28-07-2026, Claude - "Problema 2"): mesma categoria de texto
     -- livre sem limite, mesmo raciocínio de CK_CAMPANHA_DESCRICAO_TAMANHO. Limite
     -- técnico largo aqui; limite de negócio configurável via trigger, ver [05-K-1].
     CONSTRAINT "CK_RECOMPENSA_DESCRICAO_TAMANHO" CHECK (descricao IS NULL OR char_length(descricao) <= 10000)
@@ -748,7 +748,7 @@ CREATE TABLE link_academico (
     url               VARCHAR(500) NOT NULL,
     -- ADICIONADO (28-07-2026, item 19(a)): RF-014/RF-016/RF-018 e a Etapa 2
     -- falam em rótulo personalizável por link ("meu repositório do projeto X",
-    -- em vez de só o nome genérico do tipo_link). Opcional — sem rótulo, o
+    -- em vez de só o nome genérico do tipo_link). Opcional - sem rótulo, o
     -- front cai pro nome do tipo_link.
     rotulo             VARCHAR(100),
 
@@ -827,7 +827,7 @@ CREATE TABLE contribuicao (
     CONSTRAINT "FK_CONTRIBUICAO_CAMPANHA" FOREIGN KEY (id_campanha) REFERENCES campanha(id_campanha),
     CONSTRAINT "FK_CONTRIBUICAO_USUARIO" FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE SET NULL,
     -- ALTERADO (30-07-2026, RF-056, mesmo padrão do item 16 da Lista C):
-    -- CK_CONTRIBUICAO_VALOR_MINIMO era `>= 5.00` direto na constraint — hardcoded,
+    -- CK_CONTRIBUICAO_VALOR_MINIMO era `>= 5.00` direto na constraint - hardcoded,
     -- igual o prazo e a meta financeira estavam antes de virarem configuráveis.
     -- Vira só limite técnico largo (`> 0`, barra só erro grosseiro tipo valor
     -- zero/negativo); o mínimo de negócio de verdade (5.00, configurável pelo
@@ -933,21 +933,21 @@ CREATE TABLE score_pesquisador (
 -- ADICIONADO (03-08-2026), --
 -- `identidade_registro` é TEXT (não INT) de propósito: cobre tanto tabela
 -- com PK simples (ex.: '42') quanto PK composta, como usuario_papel/
--- papel_permissao (ex.: '8,3' = id_usuario 8, id_papel 3) — um único
+-- papel_permissao (ex.: '8,3' = id_usuario 8, id_papel 3) - um único
 -- desenho serve pra qualquer tabela logada, sem precisar de uma coluna
 -- id_registro por tipo.
 --
 -- `campos_alterados` guarda os NOMES das colunas que mudaram num UPDATE
--- (não os valores) — inclui colunas sensíveis (ex.: 'senha_hash') quando
+-- (não os valores) - inclui colunas sensíveis (ex.: 'senha_hash') quando
 -- elas mudam, porque SABER que a senha mudou é um fato de auditoria válido
 -- (ex.: detectar troca de senha não solicitada). Os VALORES sensíveis em si
--- é que nunca entram em dados_anteriores/dados_novos — `fn_log_auditoria()`
+-- é que nunca entram em dados_anteriores/dados_novos - `fn_log_auditoria()`
 -- remove essas chaves do JSONB antes de gravar (ver comentário na função).
 --
--- Sem UPDATE nem DELETE liberados pra ninguém (nem admin) — ver 04/06: um
+-- Sem UPDATE nem DELETE liberados pra ninguém (nem admin) - ver 04/06: um
 -- log que o próprio auditado consegue editar não prova nada. INSERT só
 -- acontece via trigger SECURITY DEFINER, nunca por um INSERT direto de
--- app_nestjs (sem GRANT INSERT — ver 06_grants.sql [06-L]).
+-- app_nestjs (sem GRANT INSERT - ver 06_grants.sql [06-L]).
 CREATE TABLE log_auditoria (
     id_log                 BIGSERIAL,
     tabela                 TEXT        NOT NULL,

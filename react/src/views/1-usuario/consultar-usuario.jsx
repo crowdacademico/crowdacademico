@@ -15,33 +15,60 @@ import {
 } from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
 import { formatarCpf } from '../../services/constant/utils/formatacao.util';
 
-// "Consultar" — botão do meio entre Alterar e Excluir (GenericTable).
+// Botão de olho (04-09-2026, pedido do Lucas) - abre a foto de perfil em
+// outra guia, mesmo efeito de clicar com o botão direito na imagem e
+// escolher "abrir em outra guia" (link direto, sem JS/window.open). Não
+// existe "tamanho máximo" de verdade aqui: é a MESMA url do avatar
+// pequeno do topo da ficha, já processada pelo `sharp` no upload
+// (RNF-016) e redimensionada pro teto do contexto avatar (512px, ver
+// PERFIL_PROCESSAMENTO_POR_CONTEXTO em 25-arquivo/arquivo.constants.ts) -
+// os bytes originais enviados pelo usuário nunca são guardados.
+// `tamanho` (04-09-2026, achado do Lucas: "está cinza e apagado demais")
+// - texto-forte (não -fraco) desde o início, sem depender de :hover pra
+// ficar legível; usado em dois lugares nesta tela (ver `avatar` da
+// FichaConsulta e o campo "Foto de perfil" abaixo).
+function BotaoVerFotoPerfil({ url, tamanho = 'text-base' }) {
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="Abrir imagem em outra guia"
+      title='Abrir imagem em outra guia (no tamanho "máximo" - já reduzido pelo servidor, o original não é guardado)'
+      className={'texto-forte hover:opacity-70 transition-opacity shrink-0 ' + tamanho}
+    >
+      <i className="fa-solid fa-eye"></i>
+    </a>
+  );
+}
+
+// "Consultar" - botão do meio entre Alterar e Excluir (GenericTable).
 // Mostra TODOS os dados do usuário ligados ao banco (UsuarioResponseDto
 // inteiro), em layout de ficha (08-08-2026, ver components/crud/
-// ficha-consulta.jsx — não é mais uma pilha de textbox desabilitado).
+// ficha-consulta.jsx - não é mais uma pilha de textbox desabilitado).
 export function ConsultarUsuario({ auth }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const [usuario, setUsuario] = useState(null);
   const [papeis, setPapeis] = useState(null);
-  // Avatar (módulo 25-arquivo) — busca separada de `usuario` de propósito:
+  // Avatar (módulo 25-arquivo) - busca separada de `usuario` de propósito:
   // GET /arquivo/avatar/:idUsuario é público (não precisa de auth.authFetch,
   // é o próprio backend que já resolve foto-cadastrada-ou-padrão), e um
   // erro aqui (ex.: avatar padrão ainda não configurado, url null) não deve
-  // impedir o resto da ficha de carregar — daí o .catch(() => null) igual
+  // impedir o resto da ficha de carregar - daí o .catch(() => null) igual
   // já é feito pra `papeis` logo abaixo.
   const [avatar, setAvatar] = useState(null);
   // Perfil de pesquisador (módulo 6, 25-08-2026: existe de verdade agora,
   // o aviso "ainda não implementado" que morava aqui era só um resquício
   // de antes do módulo existir). `null` = não é pesquisador (404, mesmo
-  // sinal já usado pra avatar/papéis acima) — a seção inteira some nesse
+  // sinal já usado pra avatar/papéis acima) - a seção inteira some nesse
   // caso, não faz sentido mostrar "não informado" pra sempre pra quem
   // nunca vai ter esse dado.
   const [perfilPesquisador, setPerfilPesquisador] = useState(null);
   const [carregando, setCarregando] = useState(true);
   const { erro, reportarErro } = useErroToast();
   // Histórico de login (07-08-2026, pedido do Lucas: "uma setinha que
-  // liste todos os últimos logins, exceto o último") — só busca quando
+  // liste todos os últimos logins, exceto o último") - só busca quando
   // clica (mesma convenção de LogAuditoriaPainel: não vale gastar
   // requisição em quem nunca vai abrir). `null` = ainda não buscou.
   const [logins, setLogins] = useState(null);
@@ -52,7 +79,7 @@ export function ConsultarUsuario({ auth }) {
     Promise.all([
       usuarioApi.buscar(auth.authFetch, id),
       // Não existe (nem deveria existir) uma coluna "é pesquisador" em
-      // usuario — isso já é decidido pelo RBAC (usuario_papel), então é
+      // usuario - isso já é decidido pelo RBAC (usuario_papel), então é
       // isso que a consulta usa, sem duplicar a informação em outro
       // lugar.
       usuarioPapelApi.listarPorUsuario(auth.authFetch, id).catch(() => []),
@@ -92,7 +119,7 @@ export function ConsultarUsuario({ auth }) {
     }
   };
 
-  // Lista vem mais recente primeiro (backend) — o [0] é o MESMO login que
+  // Lista vem mais recente primeiro (backend) - o [0] é o MESMO login que
   // já aparece como valor do campo "Último login em" acima, então some
   // daqui pra não duplicar (pedido do Lucas: "exceto o último").
   const loginsAnteriores = logins?.slice(1) ?? [];
@@ -109,11 +136,28 @@ export function ConsultarUsuario({ auth }) {
     <FichaConsulta
       titulo={usuario.nome}
       subtitulo={usuario.email}
-      avatar={<AvatarUsuario nome={usuario.nome} foto={avatar?.url} tamanho="xl" />}
+      avatar={
+        // `relative`/`absolute` (04-09-2026, achado do Lucas: empilhar em
+        // flex-col empurrava a FOTO pra cima, porque o bloco inteiro
+        // ficava mais alto e `items-center` recentralizava tudo) - a foto
+        // fica exatamente onde sempre ficou, o botão só flutua por cima,
+        // no canto inferior direito, sem afetar a altura/alinhamento do
+        // cabeçalho. Deslocado (não colado no canto do círculo) pra cair
+        // um pouco abaixo e à direita do e-mail (subtítulo), sem nunca
+        // ficar centralizado embaixo dele.
+        <div className="relative shrink-0">
+          <AvatarUsuario nome={usuario.nome} foto={avatar?.url} tamanho="xl" />
+          {avatar?.padrao === false && avatar?.url && (
+            <div className="absolute bottom-0 -right-7">
+              <BotaoVerFotoPerfil url={avatar.url} tamanho="text-lg" />
+            </div>
+          )}
+        </div>
+      }
       largura="larga"
       // Sem `badges` de propósito (25-08-2026, pedido da Alexia): os
       // papéis já aparecem uma vez, de verdade, na seção "Papéis" mais
-      // abaixo — mostrar de novo aqui em cima, do lado de "Alterar", era
+      // abaixo - mostrar de novo aqui em cima, do lado de "Alterar", era
       // duplicar a mesma informação duas vezes na mesma tela.
       // Botão "Alterar" no topo (10-08-2026, item 4: "fluxo consultar→
       // alterar é o mais comum em painel admin", hoje só dava pra editar
@@ -130,9 +174,9 @@ export function ConsultarUsuario({ auth }) {
       }
     >
       {/* 2 colunas a partir de lg (10-08-2026, item 4, mesmo padrão de
-          Alterar Usuário) — principal (2/3): dados de verdade da conta.
+          Alterar Usuário) - principal (2/3): dados de verdade da conta.
           Lateral (1/3): Papéis. "Sessões ativas" NÃO entra aqui (mesma
-          decisão do Alterar Usuário — não existe endpoint do admin ver
+          decisão do Alterar Usuário - não existe endpoint do admin ver
           sessão de outra pessoa, só o histórico de login já existente
           abaixo, que já é colapsado por padrão desde sempre). */}
       <div className="grid lg:grid-cols-3 gap-6 items-start">
@@ -141,7 +185,21 @@ export function ConsultarUsuario({ auth }) {
             <CampoFicha rotulo="id" valor={usuario.idUsuario} />
             <CampoFicha
               rotulo="Foto de perfil"
-              valor={avatar?.padrao === false ? 'Foto cadastrada' : 'Avatar padrão do sistema'}
+              // Botão de olho à ESQUERDA do texto (04-09-2026, pedido do
+              // Lucas) - por isso vem dentro de `valor`, não em `acao`
+              // (que sempre renderiza à direita, ver ficha-consulta.jsx).
+              // Só aparece pra quem cadastrou foto de verdade (avatar
+              // padrão do sistema não precisa disso).
+              valor={
+                avatar?.padrao === false ? (
+                  <span className="inline-flex items-center gap-2">
+                    {avatar?.url && <BotaoVerFotoPerfil url={avatar.url} />}
+                    Foto cadastrada
+                  </span>
+                ) : (
+                  'Avatar padrão do sistema'
+                )
+              }
             />
             <CampoFicha
               rotulo="Criado em"
@@ -156,7 +214,7 @@ export function ConsultarUsuario({ auth }) {
           <SecaoFicha titulo="Acesso">
             {/* Tirado do log de auditoria de propósito (07-08-2026, pedido
                 do Lucas: login bem-sucedido lotava o log com uma linha por
-                login) — mora só aqui agora, não no log. Colapsado por
+                login) - mora só aqui agora, não no log. Colapsado por
                 padrão desde que existe (loginsAbertos começa false). */}
             <CampoFicha
               rotulo="Último login em"
@@ -195,7 +253,7 @@ export function ConsultarUsuario({ auth }) {
                     <ul className="space-y-1">
                       {loginsAnteriores.map((login, indice) => (
                         // criado_em não é único por usuário (chave melhor
-                        // não existe aqui — a resposta não traz id_sessao
+                        // não existe aqui - a resposta não traz id_sessao
                         // de propósito, é histórico de login, não uma
                         // entidade gerenciável pelo painel).
                         <li key={indice} className="texto-padrao">
@@ -210,7 +268,7 @@ export function ConsultarUsuario({ auth }) {
           </SecaoFicha>
 
           {/* Perfil de Pesquisador (25-08-2026: dado real agora, módulo 6
-              existe — some inteira pra quem não é pesquisador, em vez de
+              existe - some inteira pra quem não é pesquisador, em vez de
               mostrar "não informado" pra sempre pra quem nunca vai ter
               esse dado). CPF vem `null` de quem não tem a permissão
               'perfil_pesquisador_visualizar_sensivel' (o backend já decide

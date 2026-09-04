@@ -38,36 +38,36 @@ import { BancadaPesquisador } from '../../views/campo-testes/bancada-pesquisador
 import { BancadaCampanha } from '../../views/campo-testes/bancada-campanha';
 import { VidaCampanhaAtiva } from '../../views/campo-testes/vida-campanha-ativa';
 
-// Fonte única de verdade pra "quais páginas existem" — App.jsx monta as
+// Fonte única de verdade pra "quais páginas existem" - App.jsx monta as
 // <Route> a partir daqui, e breadcrumb.jsx monta o rótulo a partir daqui.
 // rotuloBreadcrumb: null = não aparece no breadcrumb.
 //
 // Duas listas, não uma, porque descrevem coisas diferentes: ROTAS são
-// páginas PÚBLICAS/pré-login (Header/Breadcrumb/Footer, sem sidebar) —
+// páginas PÚBLICAS/pré-login (Header/Breadcrumb/Footer, sem sidebar) -
 // login, cadastro, verificar e-mail. ROTAS_ADMIN é TUDO que precisa do
 // menu lateral (10-08-2026, pedido do Lucas: "não tem pq o menu lateral
-// sumir" em Alterar/Consultar/Excluir/Minha Conta — antes essas telas
+// sumir" em Alterar/Consultar/Excluir/Minha Conta - antes essas telas
 // viviam em ROTAS, por isso perdiam o menu E o breadcrumb não sabia de
 // qual listagem elas vieram). Renderizadas dentro do <Outlet/> de
 // views/admin/admin-layout.jsx (sidebar + área de conteúdo compartilhadas).
 //
 // rotuloMenu (só nas 3 abas de verdade) é o que aparece no menu lateral
-// (admin-sidebar.jsx via admin-menu.constants.js) — é a MESMA lista, não
+// (admin-sidebar.jsx via admin-menu.constants.js) - é a MESMA lista, não
 // uma 3ª cópia. As rotas de detalhe (Alterar/Consultar/Excluir/Criar/
-// Minha Conta) NÃO têm rotuloMenu/grupoMenu de propósito — admin-menu.
+// Minha Conta) NÃO têm rotuloMenu/grupoMenu de propósito - admin-menu.
 // constants.js só lista item com grupoMenu preenchido, então elas nunca
 // viram um botão clicável no menu, só ganham a moldura (sidebar visível,
-// com a aba "pai" destacada sozinha pelo NavLink — a URL aninhada, ex.:
+// com a aba "pai" destacada sozinha pelo NavLink - a URL aninhada, ex.:
 // /admin/usuarios/8/alterar, já COMEÇA com /admin/usuarios, então o
 // próprio NavLink de "Usuários" já marca "ativo" sem código nenhum extra).
 //
-// `paiCaminho` (10-08-2026) — só nas rotas de detalhe: o `caminho`
+// `paiCaminho` (10-08-2026) - só nas rotas de detalhe: o `caminho`
 // absoluto da listagem "dona" delas, pro breadcrumb montar a cadeia
 // completa (Início > Usuários > Alterar Usuário), não só o último nível.
 //
 // grupoMenu (08-08-2026, pedido do Lucas: Dashboard fora do grupo
 // CADASTROS, com divisória própria) diz a admin-menu.constants.js em qual
-// grupo do menu lateral o item entra — `null` = fora de qualquer grupo
+// grupo do menu lateral o item entra - `null` = fora de qualquer grupo
 // (item solo, sem título de seção acima dele); ausente (undefined) = nem
 // aparece no menu (rotas de detalhe).
 export const ROTAS = [
@@ -86,7 +86,7 @@ export const ROTAS_ADMIN = [
     caminhoRelativo: 'dashboard',
     elemento: Dashboard,
     rotuloMenu: 'Dashboard',
-    // null: agora é a aba padrão (o que "/" redireciona pra ela) — mostrar
+    // null: agora é a aba padrão (o que "/" redireciona pra ela) - mostrar
     // "Início > Dashboard" seria redundante com o próprio link "Início".
     rotuloBreadcrumb: null,
     grupoMenu: null,
@@ -97,17 +97,17 @@ export const ROTAS_ADMIN = [
     caminhoRelativo: 'usuarios',
     elemento: ListarUsuarios,
     rotuloMenu: 'Usuários',
-    // ERA null (era a aba padrão) — o Dashboard assumiu esse posto acima.
+    // ERA null (era a aba padrão) - o Dashboard assumiu esse posto acima.
     rotuloBreadcrumb: 'Usuários',
     grupoMenu: 'CADASTROS',
     icone: 'fa-users',
   },
 
-  // Pesquisadores (módulo 6-perfil-pesquisador) — ativada no menu lateral
+  // Pesquisadores (módulo 6-perfil-pesquisador) - ativada no menu lateral
   // em 23-08-2026 (achado igual ao de Motivos de Denúncia: o módulo
-  // inteiro — criar, consultar, score — já estava pronto e testado desde
+  // inteiro - criar, consultar, score - já estava pronto e testado desde
   // 22-08-2026, mas sem NENHUMA entrada de menu; "algum outro que eu
-  // esqueci?"). Logo depois de Usuários — um pesquisador é um usuário com
+  // esqueci?"). Logo depois de Usuários - um pesquisador é um usuário com
   // um perfil a mais, não uma entidade separada.
   {
     caminho: '/admin/pesquisadores',
@@ -127,14 +127,14 @@ export const ROTAS_ADMIN = [
     grupoMenu: 'CADASTROS',
     icone: 'fa-user-shield',
   },
-  // Configurações (11-08-2026, virou seu PRÓPRIO grupo — pedido do Lucas:
+  // Configurações (11-08-2026, virou seu PRÓPRIO grupo - pedido do Lucas:
   // "ficaria esquisito" um item chamado Configurações dentro de um grupo
   // TAMBÉM chamado Configurações). O item em si virou "Parâmetros do
-  // Sistema" (nome que descreve o que ele faz — a tabela `configuracoes`
+  // Sistema" (nome que descreve o que ele faz - a tabela `configuracoes`
   // guarda os limites/taxas/prazos que o resto do banco lê via
-  // config_numero(), ver [[feedback_no_hardcoded_values]] — não é mais
+  // config_numero(), ver [[feedback_no_hardcoded_values]] - não é mais
   // "Configurações dentro de Configurações"). `caminho`/`caminhoRelativo`
-  // continuam '/admin/configuracoes' de propósito — é só o RÓTULO visível
+  // continuam '/admin/configuracoes' de propósito - é só o RÓTULO visível
   // que muda, a URL/tabela/API por trás continuam "configuracoes", mesmo
   // espírito de `grupoMenu: 'CADASTROS'` nunca ter mudado de nome quando
   // o TÍTULO do grupo mudou de "CADASTROS" pra "GESTÃO DE ACESSO E
@@ -149,9 +149,9 @@ export const ROTAS_ADMIN = [
     icone: 'fa-sliders',
   },
 
-  // Área de Conhecimento (módulo 8-area-conhecimento) — ativada no menu
+  // Área de Conhecimento (módulo 8-area-conhecimento) - ativada no menu
   // lateral em 11-08-2026 (antes só existia por URL direta, sem
-  // `grupoMenu`, esperando o Lucas decidir onde entrar — ver histórico
+  // `grupoMenu`, esperando o Lucas decidir onde entrar - ver histórico
   // git). Entrou no mesmo grupo de Usuários/Papéis (grupoMenu:
   // 'CADASTROS', hoje rotulado "GESTÃO DO USUÁRIO").
   {
@@ -164,7 +164,7 @@ export const ROTAS_ADMIN = [
     icone: 'fa-diagram-project',
   },
 
-  // Tipo de Link (módulo 9-tipo-link) — mesma ativação de Área de
+  // Tipo de Link (módulo 9-tipo-link) - mesma ativação de Área de
   // Conhecimento logo acima, mesmo grupo.
   {
     caminho: '/admin/tipos-link',
@@ -175,16 +175,16 @@ export const ROTAS_ADMIN = [
     grupoMenu: 'CADASTROS',
     icone: 'fa-link',
   },
-  // Motivo de Denúncia (módulo 10-motivo-denuncia) — ativada no menu
+  // Motivo de Denúncia (módulo 10-motivo-denuncia) - ativada no menu
   // lateral em 22-08-2026 (achado do Claude Code: a rota e a página já
   // funcionavam por URL direta desde que a Alexia terminou o módulo, mas
   // sem `rotuloMenu`/`grupoMenu` não tinha entrada nenhuma no menu lateral
-  // — ninguém achava navegando). MOVIDA (mesmo dia, pedido do Lucas) de
-  // 'CADASTROS' (GESTÃO DO USUÁRIO) pra 'MODERACAO' — faz mais sentido
+  // - ninguém achava navegando). MOVIDA (mesmo dia, pedido do Lucas) de
+  // 'CADASTROS' (GESTÃO DO USUÁRIO) pra 'MODERACAO' - faz mais sentido
   // conceitual junto de Aprovar Campanhas/Denúncias/Solicitações/Enc.
   // Antecipados (ainda placeholders desabilitados, ver
   // admin-menu.constants.js) do que junto de Área de Conhecimento/Tipo de
-  // Link. Entra no TOPO do grupo MODERAÇÃO — é o único item real ali por
+  // Link. Entra no TOPO do grupo MODERAÇÃO - é o único item real ali por
   // enquanto, os outros 4 seguem desabilitados.
   {
     caminho: '/admin/motivos-denuncia',
@@ -196,12 +196,12 @@ export const ROTAS_ADMIN = [
     icone: 'fa-flag',
   },
 
-  // Campanhas (módulo 12-campanha) — ativada no menu lateral em
+  // Campanhas (módulo 12-campanha) - ativada no menu lateral em
   // 23-08-2026, pedido do Lucas ("tipo o Menu de Usuários"). Grupo
-  // próprio ('CAMPANHA', ver admin-menu.constants.js) — não cabia em
+  // próprio ('CAMPANHA', ver admin-menu.constants.js) - não cabia em
   // GESTÃO DO USUÁRIO (não é sobre gerenciar quem é o usuário) nem em
   // MODERAÇÃO (aquele grupo é especificamente sobre a FILA de aprovação/
-  // denúncia, ainda não construída — isto aqui é só "ver as campanhas que
+  // denúncia, ainda não construída - isto aqui é só "ver as campanhas que
   // existem", mais parecido com a listagem de Usuários). Posicionado
   // antes de MODERAÇÃO: faz sentido navegar "ver campanhas" antes de
   // "moderar campanhas".
@@ -215,20 +215,20 @@ export const ROTAS_ADMIN = [
     icone: 'fa-bullhorn',
   },
 
-  // Minha Conta (10-08-2026) — dentro do painel agora (sidebar visível),
+  // Minha Conta (10-08-2026) - dentro do painel agora (sidebar visível),
   // mas sem rotuloMenu/grupoMenu: não é uma aba clicável do menu (o
   // acesso continua sendo pelo dropdown do cabeçalho), só ganha a
-  // moldura. Sem paiCaminho — não é filha de nenhuma listagem, o
+  // moldura. Sem paiCaminho - não é filha de nenhuma listagem, o
   // breadcrumb já fica correto como "Início > Minha Conta".
   //
-  // `:aba` (11-08-2026, virou abas de verdade — Perfil/Segurança/Papéis/
-  // Acadêmico/Privacidade) — UMA rota parametrizada, não 5 entradas
+  // `:aba` (11-08-2026, virou abas de verdade - Perfil/Segurança/Papéis/
+  // Acadêmico/Privacidade) - UMA rota parametrizada, não 5 entradas
   // repetidas: MinhaConta lê `aba` via useParams() e decide o que
   // renderizar por baixo da faixa de identidade (que não muda entre
   // abas). Mesmo padrão de parâmetro já usado em
   // '/admin/usuarios/:id/alterar' aqui embaixo. O caminho SEM `/:aba`
   // (ex.: link antigo direto pra "/admin/minha-conta") ganha um redirect
-  // pra ".../perfil" em App.jsx — não precisa de uma 2ª entrada aqui.
+  // pra ".../perfil" em App.jsx - não precisa de uma 2ª entrada aqui.
   {
     caminho: '/admin/minha-conta/:aba',
     caminhoRelativo: 'minha-conta/:aba',
@@ -236,7 +236,7 @@ export const ROTAS_ADMIN = [
     rotuloBreadcrumb: 'Minha Conta',
   },
 
-  // Usuário — filhas de /admin/usuarios (paiCaminho), mesmo padrão pras
+  // Usuário - filhas de /admin/usuarios (paiCaminho), mesmo padrão pras
   // outras 2 seções abaixo.
   {
     caminho: '/admin/usuarios/criar',
@@ -267,7 +267,7 @@ export const ROTAS_ADMIN = [
     paiCaminho: '/admin/usuarios',
   },
 
-  // Papel — filha de /admin/papeis.
+  // Papel - filha de /admin/papeis.
   {
     caminho: '/admin/papeis/:id/alterar',
     caminhoRelativo: 'papeis/:id/alterar',
@@ -276,7 +276,7 @@ export const ROTAS_ADMIN = [
     paiCaminho: '/admin/papeis',
   },
 
-  // Parâmetro do Sistema (nome novo) — filhas de /admin/configuracoes
+  // Parâmetro do Sistema (nome novo) - filhas de /admin/configuracoes
   // (caminho da URL não mudou, só o rótulo, ver comentário lá em cima).
   {
     caminho: '/admin/configuracoes/criar',
@@ -307,7 +307,7 @@ export const ROTAS_ADMIN = [
     paiCaminho: '/admin/configuracoes',
   },
 
-  // Área de Conhecimento — filhas de /admin/areas-conhecimento.
+  // Área de Conhecimento - filhas de /admin/areas-conhecimento.
   {
     caminho: '/admin/areas-conhecimento/criar',
     caminhoRelativo: 'areas-conhecimento/criar',
@@ -337,7 +337,7 @@ export const ROTAS_ADMIN = [
     paiCaminho: '/admin/areas-conhecimento',
   },
 
-  // Tipo de Link — filhas de /admin/tipos-link.
+  // Tipo de Link - filhas de /admin/tipos-link.
   {
     caminho: '/admin/tipos-link/criar',
     caminhoRelativo: 'tipos-link/criar',
@@ -367,7 +367,7 @@ export const ROTAS_ADMIN = [
     paiCaminho: '/admin/tipos-link',
   },
 
-  // Motivo de Denúncia — filhas de /admin/motivos-denuncia.
+  // Motivo de Denúncia - filhas de /admin/motivos-denuncia.
   {
     caminho: '/admin/motivos-denuncia/criar',
     caminhoRelativo: 'motivos-denuncia/criar',
@@ -397,7 +397,7 @@ export const ROTAS_ADMIN = [
     paiCaminho: '/admin/motivos-denuncia',
   },
 
-  // Campanhas — só Consultar (ver comentário da listagem, acima: sem
+  // Campanhas - só Consultar (ver comentário da listagem, acima: sem
   // Alterar/Excluir por enquanto).
   {
     caminho: '/admin/campanhas/:id/consultar',
@@ -407,7 +407,7 @@ export const ROTAS_ADMIN = [
     paiCaminho: '/admin/campanhas',
   },
 
-  // Pesquisadores — mesmo raciocínio de Campanhas (só Consultar).
+  // Pesquisadores - mesmo raciocínio de Campanhas (só Consultar).
   {
     caminho: '/admin/pesquisadores/:id/consultar',
     caminhoRelativo: 'pesquisadores/:id/consultar',
@@ -417,13 +417,13 @@ export const ROTAS_ADMIN = [
   },
 
   // ESTE ARQUIVO EXISTE SOLENEMENTE PARA O CAMPO DE TESTES. NÃO ESTÁ NOS
-  // REQUISITOS FUNCIONAIS E NEM ESTARÁ. — vale só pro trecho abaixo, não
+  // REQUISITOS FUNCIONAIS E NEM ESTARÁ. - vale só pro trecho abaixo, não
   // pro arquivo inteiro (rotas.constants.js é a fonte única de verdade de
   // TODAS as rotas, não só as do Campo de Testes).
   //
   // `import.meta.env.DEV` (22-08-2026, pedido explícito da revisão do
   // Claude Web sobre o Campo de Testes): em build de produção, este array
-  // fica vazio — a rota nem existe, o grupo some do menu (admin-menu.
+  // fica vazio - a rota nem existe, o grupo some do menu (admin-menu.
   // constants.js só mostra o que `itensDoGrupo` acha aqui). O Elenco
   // guarda refresh token de várias contas reais ao mesmo tempo; em
   // desenvolvimento é ferramenta, em produção seria uma porta escancarada.
@@ -433,8 +433,8 @@ export const ROTAS_ADMIN = [
           caminho: '/admin/campo-testes/pesquisador',
           caminhoRelativo: 'campo-testes/pesquisador',
           elemento: BancadaPesquisador,
-          // "T1" (23-08-2026, renumerado — pedido do Lucas: "o primeiro
-          // não deveria ser T1?" — sim, a numeração antiga vinha de uma
+          // "T1" (23-08-2026, renumerado - pedido do Lucas: "o primeiro
+          // não deveria ser T1?" - sim, a numeração antiga vinha de uma
           // tela T1/Elenco já apagada; sem ela, o mais correto é começar
           // do 1 de novo, não deixar um buraco por causa de história
           // passada que ninguém mais vê).

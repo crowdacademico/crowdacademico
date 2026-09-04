@@ -10,7 +10,7 @@ import { ComentarioRequestList } from '../dto/request/comentario.request-list';
 import { ComentarioResponse } from '../dto/response/comentario.response';
 
 // pol_comentario_select (04) já esconde comentário inativo/não-endossado
-// de quem não é dono/moderador — sem checagem extra aqui.
+// de quem não é dono/moderador - sem checagem extra aqui.
 @Injectable()
 export class ComentarioServiceFindAll {
   constructor(private readonly database: DatabaseService) {}

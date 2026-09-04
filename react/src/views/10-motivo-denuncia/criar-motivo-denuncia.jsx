@@ -10,7 +10,7 @@ export function CriarMotivoDenuncia({ auth }) {
   const { mostrar } = useToast();
   const { erro, reportarErro, limparErro } = useErroToast();
   const [descricao, setDescricao] = useState('');
-  // tipo_motivo_denuncia NOT NULL, sem default no banco — sem opção
+  // tipo_motivo_denuncia NOT NULL, sem default no banco - sem opção
   // pré-selecionada aqui de propósito, pra forçar uma escolha consciente
   // (diferente de permitePerfil em CriarTipoLink, que tinha um valor mais
   // comum óbvio pra vir marcado).
@@ -63,7 +63,7 @@ export function CriarMotivoDenuncia({ auth }) {
           </select>
           <p className="text-xs texto-fraco mt-1">
             Decide em qual tela de denúncia (de campanha ou de perfil) este motivo aparece como
-            opção — a validação é garantida pelo próprio banco na hora de gravar a denúncia.
+            opção - a validação é garantida pelo próprio banco na hora de gravar a denúncia.
           </p>
         </div>
 
@@ -79,7 +79,7 @@ export function CriarMotivoDenuncia({ auth }) {
             className="input-padrao"
           />
           <p className="text-xs texto-fraco mt-1">
-            Texto exibido pra quem for escolher este motivo na tela de denúncia — é o único
+            Texto exibido pra quem for escolher este motivo na tela de denúncia - é o único
             identificador do motivo, então precisa ser claro por si só.
           </p>
         </div>

@@ -36,7 +36,7 @@ export function ConsultarAreaConhecimento({ auth }) {
         <span key="ativo" className={'badge ' + (area.ativo ? 'badge-sucesso' : 'badge-neutro')}>
           {area.ativo ? 'Ativo' : 'Inativo'}
         </span>,
-        // Nível deduzido de idPai, não de um campo próprio — igual o
+        // Nível deduzido de idPai, não de um campo próprio - igual o
         // resto da UI (idPai null = grande área raiz, ver comentário no
         // response DTO do backend).
         <span key="nivel" className="badge badge-neutro">

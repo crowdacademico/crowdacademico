@@ -1,14 +1,14 @@
 import { tratarResposta } from '../../constant/api/http.util';
 
 // Espelha nest/src/12-campanha. GET é público no backend (pol_campanha_
-// select mostra status público/dono/relatorio_visualizar — ver
+// select mostra status público/dono/relatorio_visualizar - ver
 // 04_rls_policies.sql [04-E]); aqui sempre passamos authFetch mesmo assim
 // porque quem usa este arquivo é sempre o painel admin (logado), e o
 // admin com relatorio_visualizar enxerga todos os status, não só os
 // públicos. Sem criar() de propósito: campanha não tem POST genérico no
-// backend — criação vive no Campo de Testes hoje (views/campo-testes/
+// backend - criação vive no Campo de Testes hoje (views/campo-testes/
 // bancada-campanha.jsx). `remover()` (25-08-2026) só funciona em campanha
-// 'aguardando_aprovacao' (pol_campanha_delete, 04) — depois de aprovada,
+// 'aguardando_aprovacao' (pol_campanha_delete, 04) - depois de aprovada,
 // só dá pra rejeitar/encerrar, nunca apagar de vez.
 function paraQueryString(filtro) {
   if (!filtro) {
@@ -24,7 +24,7 @@ function paraQueryString(filtro) {
 }
 
 export const campanhaApi = {
-  // GET /campanha devolve { dados, total, pagina, tamanho } — `.dados`
+  // GET /campanha devolve { dados, total, pagina, tamanho } - `.dados`
   // desembrulhado aqui, mesmo padrão de usuarioApi.listar. `tamanho: 500`
   // por padrão (mesmo teto de segurança de paginacao.util.ts no backend)
   // pra GenericTable continuar paginando no navegador, como já faz em

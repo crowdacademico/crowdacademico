@@ -15,7 +15,7 @@ export class AreaConhecimentoServiceFindAll {
   async executar(
     filtro: AreaConhecimentoRequestList = {},
   ): Promise<ResultadoPaginado<AreaConhecimentoResponse>> {
-    // pol_area_select (04_rls_policies.sql [04-C-2]) é USING(true) — catálogo
+    // pol_area_select (04_rls_policies.sql [04-C-2]) é USING(true) - catálogo
     // público, lista mesmo sem login (mesmo padrão de
     // ConfiguracaoControllerFindAll/PapelControllerFindAll).
     let query = this.database
@@ -34,20 +34,20 @@ export class AreaConhecimentoServiceFindAll {
         'area.ativo',
         'pai.nome as nome_pai',
       ])
-      // ERA orderBy('area.codigo_cnpq') — trocado (22-08-2026, pedido do
+      // ERA orderBy('area.codigo_cnpq') - trocado (22-08-2026, pedido do
       // Lucas: catálogos ordenam por ID, sempre). O seed já insere as 9
       // grandes áreas primeiro (1.00-9.00, viram id 1-9) e depois cada
       // leva de filhas logo após a grande área correspondente, então
-      // ordenar por id continua "parecido" com ordenar por código — só
+      // ordenar por id continua "parecido" com ordenar por código - só
       // que agora TODAS as 9 grandes áreas aparecem primeiro (id 1-9),
       // e só depois vêm todas as filhas, agrupadas por leva de inserção
-      // (as 8 filhas de área 1, depois as 13 de área 2, etc.) — não
+      // (as 8 filhas de área 1, depois as 13 de área 2, etc.) - não
       // interlaça grande-área/filha/filha/próxima-grande-área como
       // ordenar por código fazia. Quem quer só as filhas de uma área
       // usa o filtro `idPai` (já existe, filtrosFacetados no front).
       .orderBy('area.id_area_conhecimento');
 
-    // `raiz=true` sobrepõe `idPai` — ver comentário no DTO de filtro.
+    // `raiz=true` sobrepõe `idPai` - ver comentário no DTO de filtro.
     if (filtro.raiz) {
       query = query.where('area.id_pai', 'is', null);
     } else if (filtro.idPai !== undefined) {

@@ -74,7 +74,7 @@ export function ExcluirConfiguracao({ auth }) {
           {erro && <p className="text-red-700 text-sm font-bold text-center">{erro}</p>}
 
           {/* SecaoFicha/CampoFicha (10-08-2026, mesma rodada do item 3 em
-              Excluir Usuário) — mesmos blocos que Consultar usa, zero
+              Excluir Usuário) - mesmos blocos que Consultar usa, zero
               componente duplicado. */}
           <SecaoFicha titulo="O que será excluído">
             <CampoFicha rotulo="Chave" valor={configuracao.chave} largura="cheia" />
@@ -85,7 +85,7 @@ export function ExcluirConfiguracao({ auth }) {
           </SecaoFicha>
 
           {/* Diferente de Excluir Usuário: configuração não tem exclusão
-              lógica (sem coluna `deletado`) — remover aqui é DELETE de
+              lógica (sem coluna `deletado`) - remover aqui é DELETE de
               verdade na tabela `configuracoes` (09-08-2026, Bloco I).
               Confirmação simples (não por digitação) porque não é a conta
               de uma pessoa, mas o aviso precisa ser honesto sobre a
@@ -95,7 +95,7 @@ export function ExcluirConfiguracao({ auth }) {
               <i className="fa-solid fa-circle-info mr-1"></i> O que acontece de verdade
             </p>
             <p>
-              Diferente de excluir um usuário, esta linha some do banco pra sempre — não é
+              Diferente de excluir um usuário, esta linha some do banco pra sempre - não é
               exclusão lógica. Se algum código ainda ler a chave "{configuracao.chave}", ele
               vai passar a receber o valor padrão dele (ou dar erro, dependendo de como foi
               escrito). Confira se ela não está mais em uso antes de confirmar.

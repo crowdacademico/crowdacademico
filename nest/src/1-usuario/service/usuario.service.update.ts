@@ -33,7 +33,7 @@ export class UsuarioServiceUpdate {
   ): Promise<UsuarioResponse> {
     const db = this.database.getDb();
 
-    // `senhaAtual` presente = troca autoatendida (Minha Conta > Segurança) —
+    // `senhaAtual` presente = troca autoatendida (Minha Conta > Segurança) -
     // exige conferir a senha de verdade antes de trocar (09-08-2026, Bloco
     // E). Ausente = reset administrativo (AlterarUsuario, painel admin),
     // comportamento de sempre, sem essa checagem.
@@ -54,7 +54,7 @@ export class UsuarioServiceUpdate {
       ? await bcrypt.hash(dto.novaSenha, CUSTO_BCRYPT)
       : undefined;
 
-    // ADICIONADO (módulo 25-arquivo) — limpa a foto ANTERIOR quando a
+    // ADICIONADO (módulo 25-arquivo) - limpa a foto ANTERIOR quando a
     // pessoa está trocando de foto (não apenas cadastrando pela primeira
     // vez). Sem isso, cada troca deixava a foto antiga órfã: linha
     // continuava `ativo=true` no banco e os bytes ficavam pra sempre no
@@ -62,7 +62,7 @@ export class UsuarioServiceUpdate {
     //
     // ORDEM IMPORTA: isto precisa rodar ANTES do UPDATE de usuario logo
     // abaixo, enquanto usuario.id_imagem_perfil AINDA aponta pra foto
-    // antiga — pol_arquivo_update (04_rls_policies.sql) só permite
+    // antiga - pol_arquivo_update (04_rls_policies.sql) só permite
     // desativar um arquivo enquanto esse vínculo de posse existe. Depois
     // que o UPDATE trocar o vínculo pra foto nova, ninguém sem a permissão
     // 'arquivo_gerenciar' conseguiria mais desativar a antiga.
@@ -76,11 +76,11 @@ export class UsuarioServiceUpdate {
       const fotoAntiga = usuarioAtual?.id_imagem_perfil ?? null;
       if (fotoAntiga !== null && fotoAntiga !== dto.idImagemPerfil) {
         // Best-effort: um problema aqui (corrida rara, permissão, etc.)
-        // não pode travar o resto da atualização — nome/senha/foto nova
+        // não pode travar o resto da atualização - nome/senha/foto nova
         // continuam valendo mesmo que a limpeza da antiga não role agora.
         // LOGADO, não mais engolido em silêncio (25-08-2026, achado do
         // Lucas: arquivo órfão sobrou no bucket sem NENHUM rastro do
-        // motivo) — best-effort não é o mesmo que invisível.
+        // motivo) - best-effort não é o mesmo que invisível.
         await this.arquivoServiceRemove.executar(fotoAntiga).catch((erro) => {
           this.logger.warn(
             `Falha ao limpar foto antiga (id_arquivo=${fotoAntiga}) do usuário ${idUsuario}: ${(erro as Error).message}`,
@@ -97,7 +97,7 @@ export class UsuarioServiceUpdate {
       ...(senhaHash !== undefined ? { senha_hash: senhaHash } : {}),
     };
     if (Object.keys(campos).length === 0) {
-      // `UPDATE usuario SET WHERE ...` sem coluna nenhuma é SQL inválido —
+      // `UPDATE usuario SET WHERE ...` sem coluna nenhuma é SQL inválido -
       // melhor um 400 claro do que deixar o Postgres estourar um erro de
       // sintaxe genérico.
       throw new BadRequestException('Nenhum campo para atualizar.');
@@ -115,7 +115,7 @@ export class UsuarioServiceUpdate {
       // id_usuario (dono) OU permissão 'usuario_suspender'. Controller já
       // aplica RequireAuthGuard (3-auth), então chegar aqui sem afetar
       // linha nenhuma só acontece pra quem está logado mas não é dono nem
-      // tem a permissão — RLS bloqueou o UPDATE (0 linhas, sem erro do
+      // tem a permissão - RLS bloqueou o UPDATE (0 linhas, sem erro do
       // Postgres). Diferencia de "não existe" checando a existência à parte.
       const existe = await db
         .selectFrom('usuario')
@@ -130,7 +130,7 @@ export class UsuarioServiceUpdate {
     }
 
     // ADICIONADO (25-08-2026, módulo 25-arquivo): resposta já vem com a
-    // avatarUrl fresca — quem chama (ex.: Minha Conta > aoSalvar) só passa
+    // avatarUrl fresca - quem chama (ex.: Minha Conta > aoSalvar) só passa
     // este objeto pra auth.atualizarUsuarioLocal() e o cabeçalho/faixa de
     // identidade já refletem a troca na hora, sem precisar recalcular nada
     // no lado do cliente.

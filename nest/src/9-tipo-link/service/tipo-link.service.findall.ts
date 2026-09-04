@@ -15,13 +15,13 @@ export class TipoLinkServiceFindAll {
   async executar(
     filtro: TipoLinkRequestList = {},
   ): Promise<ResultadoPaginado<TipoLinkResponse>> {
-    // pol_tipolink_select (04_rls_policies.sql [04-C-2]) é USING(true) —
+    // pol_tipolink_select (04_rls_policies.sql [04-C-2]) é USING(true) -
     // catálogo público, lista mesmo sem login.
     let query = this.database
       .getDb()
       .selectFrom('tipo_link')
       .selectAll()
-      // ERA orderBy('nome') — trocado (22-08-2026, pedido do Lucas:
+      // ERA orderBy('nome') - trocado (22-08-2026, pedido do Lucas:
       // catálogos ordenam por ID, sempre). O seed já insere na ordem
       // Lattes/ORCID/ResearchGate/LinkedIn/GitHub, então o resultado
       // visual nem muda muito, só passa a ser estável por id em vez de

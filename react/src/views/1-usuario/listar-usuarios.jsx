@@ -10,21 +10,21 @@ import {
 import { logAuditoriaApi } from '../../services/28-log-auditoria/api/log-auditoria.api';
 
 // Papel que TODO cadastro já ganha automaticamente (atribuir_papel_padrao,
-// 08_trigger_signup_usuario.sql) — mostrar ele na coluna "papel" seria
+// 08_trigger_signup_usuario.sql) - mostrar ele na coluna "papel" seria
 // ruído (é o mesmo texto em toda linha da tabela). Só os papéis ALÉM do
 // padrão aparecem na coluna; sem nenhum, mostra PAPEL_SEM_EXTRA.
 const PAPEL_PADRAO = 'usuario';
 
-// Aba "Usuários" do painel admin — vive na rota /admin/usuarios (ver
+// Aba "Usuários" do painel admin - vive na rota /admin/usuarios (ver
 // services/router/rotas.constants.js, ROTAS_ADMIN). Renderizada dentro do
 // <Outlet/> de views/admin/admin-layout.jsx (sidebar + área de conteúdo já
 // prontos por fora, esta view só cuida do próprio conteúdo).
 export function ListarUsuarios({ auth }) {
-  // useCallback aqui não é sobre performance — é porque GenericTable usa a
+  // useCallback aqui não é sobre performance - é porque GenericTable usa a
   // função em `useEffect([listar])`; sem isso, cada render criaria uma
   // função nova e recarregaria a tabela em loop.
   //
-  // Coluna "papel" (03-08-2026, pedido do Lucas) — busca a lista de
+  // Coluna "papel" (03-08-2026, pedido do Lucas) - busca a lista de
   // usuários e o vínculo usuário↔papel de TODOS de uma vez (1 requisição
   // cada, não 1-por-linha), e junta os dois no navegador antes de devolver
   // pro GenericTable. `usuarioPapelApi.listarTudo` tem `.catch(() => [])`
@@ -87,7 +87,7 @@ export function ListarUsuarios({ auth }) {
         filtrosFacetados={[{ chave: 'papel', rotulo: 'Papel', ordem: ORDEM_PODER_PAPEL }]}
         buscarLog={buscarLogUsuario}
         // "De"/"Para" (09-08-2026, pedido do Lucas depois de ver isso em
-        // Papéis) — "nome" é o único campo de texto editável de usuario
+        // Papéis) - "nome" é o único campo de texto editável de usuario
         // que faz sentido rastrear assim (senha nunca entra no log, ver
         // fn_log_auditoria() [strip de senha_hash]; e-mail não é editável
         // pelo painel).

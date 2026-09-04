@@ -1,4 +1,4 @@
-// Util único de formatação pt-BR — pedido do Claude Web ao olhar o Projeto
+// Util único de formatação pt-BR - pedido do Claude Web ao olhar o Projeto
 // de Interface (Gemini): cada tela formatava dinheiro/percentual do seu
 // jeito. Qualquer componente que precisa exibir R$ ou % chama uma função
 // daqui, nunca `valor.toFixed(2)` nem template string solto.
@@ -20,11 +20,11 @@ export function formatarPercentual(valor) {
 }
 
 // CPF (10-08-2026, rodada Claude Web "embelezar o painel", item 2: seção
-// Perfil de Pesquisador demonstrativa em Alterar Usuário) — util aqui, não
+// Perfil de Pesquisador demonstrativa em Alterar Usuário) - util aqui, não
 // inline no componente, porque vai aparecer em mais de uma tela quando o
 // módulo 6-perfil-pesquisador existir de verdade (cadastro, perfil).
 //
-// `formatarCpf` — máscara progressiva enquanto digita (000.000.000-00),
+// `formatarCpf` - máscara progressiva enquanto digita (000.000.000-00),
 // aceita colar com ou sem pontuação (`replace(/\D/g, '')` primeiro).
 export function formatarCpf(valor) {
   const digitos = String(valor ?? '')
@@ -48,7 +48,7 @@ export function formatarCpf(valor) {
   return resultado;
 }
 
-// `mascararCpf` — pra EXIBIR (Consultar), não pra digitar: esconde o meio,
+// `mascararCpf` - pra EXIBIR (Consultar), não pra digitar: esconde o meio,
 // mostra só o 1º bloco e os dígitos verificadores (ex.: "123.***.**9-00").
 // CPF incompleto/inválido volta cru, sem tentar mascarar pela metade.
 export function mascararCpf(valor) {

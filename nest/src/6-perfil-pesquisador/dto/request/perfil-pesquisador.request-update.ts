@@ -9,7 +9,7 @@ const TITULOS_ACADEMICOS_VALIDOS = [
   'doutor',
 ] as const;
 
-// Nunca inclui `cpf` de propósito — cpf_criptografado/cpf_hash saíram do
+// Nunca inclui `cpf` de propósito - cpf_criptografado/cpf_hash saíram do
 // GRANT UPDATE direto (06_grants.sql, 22-08-2026): correção de CPF é só via
 // corrigir_cpf_pesquisador() (SECURITY DEFINER), gateada por
 // perfil_pesquisador_corrigir_cpf, pensada pra suporte/admin, não pro

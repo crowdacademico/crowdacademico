@@ -10,7 +10,7 @@ import { areaConhecimentoApi } from '../../services/8-area-conhecimento/api/area
 
 // `codigoCnpq`/"Grande área (pai)" não aparecem como campo editável (só
 // leitura) porque AtualizarAreaConhecimentoRequestDto (Nest) não os
-// aceita — são imutáveis depois de criada a linha: codigoCnpq é o
+// aceita - são imutáveis depois de criada a linha: codigoCnpq é o
 // identificador estável do catálogo CNPq (mesmo raciocínio de
 // AlterarPapel sobre `papel.codigo`); idPai fica de fora por não existir
 // checagem de ciclo/hierarquia no banco (ver comentário no DTO do

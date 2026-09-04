@@ -24,15 +24,21 @@ import { SeguirCampanhaModule } from '../16-seguir-campanha/seguir-campanha.modu
 import { ComentarioModule } from '../17-comentario/comentario.module';
 import { ArquivoModule } from '../25-arquivo/arquivo.module';
 import { StorageModule } from '../commons/storage/storage.module';
+import { ConfiguracaoValorModule } from '../commons/configuracao/configuracao-valor.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     DatabaseModule,
-    // Global (ver commons/storage/storage.module.ts) — registrado aqui,
+    // Global (ver commons/storage/storage.module.ts) - registrado aqui,
     // junto de DatabaseModule, por ser infra compartilhada por qualquer
     // módulo, não só 25-arquivo.
     StorageModule,
+    // Global também (04-09-2026) - leitura de configuracoes por qualquer
+    // módulo que precisar de um número configurável pelo Painel Admin,
+    // sem precisar de trigger de banco por trás. Primeiro consumidor:
+    // 25-arquivo (limites de upload).
+    ConfiguracaoValorModule,
     UsuarioModule,
     TermoUsoModule,
     PapelPermissaoModule,

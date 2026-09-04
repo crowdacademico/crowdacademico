@@ -26,7 +26,7 @@ export class UsuarioServiceFindOne {
     }
 
     // ADICIONADO (25-08-2026, módulo 25-arquivo): resolvido aqui (busca de
-    // UM usuário só, nunca em findall/listagem) — cobre tanto GET /usuario/
+    // UM usuário só, nunca em findall/listagem) - cobre tanto GET /usuario/
     // :id (consultar-usuario.jsx, que hoje ainda busca separado, sem
     // problema, só redundante) quanto login/refresh (AuthServiceLogin/
     // Refresh chamam este mesmo service), que é o que faltava pro

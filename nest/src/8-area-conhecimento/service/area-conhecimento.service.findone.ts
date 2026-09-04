@@ -10,7 +10,7 @@ export class AreaConhecimentoServiceFindOne {
   async executar(
     idAreaConhecimento: number,
   ): Promise<AreaConhecimentoResponse> {
-    // pol_area_select (04): USING(true) — mesma leitura pública do findall.
+    // pol_area_select (04): USING(true) - mesma leitura pública do findall.
     const linha = await this.database
       .getDb()
       .selectFrom('area_conhecimento as area')

@@ -1,13 +1,13 @@
 import { tratarResposta } from '../../constant/api/http.util';
 
 // Espelha 2-papel-permissao (nest): papel/permissao continuam só leitura
-// (catálogo gerenciado via seed/migração direta, de propósito — criar
+// (catálogo gerenciado via seed/migração direta, de propósito - criar
 // papel/permissão nova é decisão maior, fora de escopo aqui).
-// papel_permissao ganhou atribuir/remover (03-08-2026) — a matriz Papel ×
+// papel_permissao ganhou atribuir/remover (03-08-2026) - a matriz Papel ×
 // Permissão virou editável pra admin, mesmo padrão de usuarioPapelApi.
 export const papelApi = {
   listar: (authFetch) => authFetch('/papel').then(tratarResposta),
-  // Só `nome` é aceito (03-08-2026) — o `codigo` estável que o RBAC lê
+  // Só `nome` é aceito (03-08-2026) - o `codigo` estável que o RBAC lê
   // nunca é exposto nem editável por aqui, de propósito.
   atualizar: (authFetch, idPapel, dados) =>
     authFetch(`/papel/${idPapel}`, {
@@ -34,7 +34,7 @@ export const papelPermissaoApi = {
 };
 
 export const usuarioPapelApi = {
-  // Sem filtro — todos os vínculos usuário↔papel de uma vez (RLS decide
+  // Sem filtro - todos os vínculos usuário↔papel de uma vez (RLS decide
   // sozinha quem vê o quê). Usado pela coluna "papel" na listagem de
   // Usuários, pra não disparar uma requisição por linha da tabela.
   listarTudo: (authFetch) => authFetch('/usuario-papel').then(tratarResposta),
@@ -49,7 +49,7 @@ export const usuarioPapelApi = {
     authFetch(`/usuario-papel/${idUsuario}/${idPapel}`, {
       method: 'DELETE',
     }).then(tratarResposta),
-  // Suspender/revogar UM papel por um tempo (09-08-2026, Bloco G) — em vez
+  // Suspender/revogar UM papel por um tempo (09-08-2026, Bloco G) - em vez
   // de remover o vínculo: preserva quando foi atribuído, volta sozinho no
   // prazo. `ate` é ISO string.
   suspender: (authFetch, idUsuario, idPapel, ate) =>

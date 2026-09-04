@@ -15,8 +15,8 @@ const CODIGO_PG_RLS_VIOLATION = '42501';
 export class PapelServiceUpdate {
   constructor(private readonly database: DatabaseService) {}
 
-  // Só `nome` é atualizável (GRANT UPDATE (nome) ON papel — 06_grants.sql
-  // [06-B] — a coluna `codigo`, que as triggers de RBAC leem, não tem
+  // Só `nome` é atualizável (GRANT UPDATE (nome) ON papel - 06_grants.sql
+  // [06-B] - a coluna `codigo`, que as triggers de RBAC leem, não tem
   // GRANT nenhum: nem chega a ser possível tentar mudá-la por aqui, o DTO
   // nem tem esse campo).
   async executar(
@@ -34,7 +34,7 @@ export class PapelServiceUpdate {
 
       if (!linha) {
         // pol_papel_update (04): exige tem_permissao('papel_gerenciar'). 0
-        // linhas afetadas sem erro é a RLS filtrando — diferencia de "não
+        // linhas afetadas sem erro é a RLS filtrando - diferencia de "não
         // existe" (só há uma condição no WHERE, o id).
         const existe = await this.database
           .getDb()

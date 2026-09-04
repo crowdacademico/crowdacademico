@@ -6,7 +6,7 @@ import { buscarAtivo } from '../../services/5-termo-uso/api/termo-uso.api';
 const REGEX_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Requisitos do medidor de força de senha (09-08-2026, Bloco D do prompt do
-// Claude Web) — só GUIA visual, o piso de verdade continua sendo o backend
+// Claude Web) - só GUIA visual, o piso de verdade continua sendo o backend
 // (CadastroRequestDto, @MinLength(8)): não faz sentido bloquear o clique
 // aqui por maiúscula/número/símbolo se o servidor aceitaria com menos.
 const REQUISITOS_SENHA = [
@@ -20,9 +20,9 @@ const REQUISITOS_SENHA = [
   },
 ];
 
-// Tela de cadastro público (09-08-2026, Bloco D do prompt do Claude Web) —
+// Tela de cadastro público (09-08-2026, Bloco D do prompt do Claude Web) -
 // primeira tela pública de verdade além de login. Só os 5 campos que
-// importam pra criar a conta (nome/e-mail/senha/confirmar/aceite) — o
+// importam pra criar a conta (nome/e-mail/senha/confirmar/aceite) - o
 // resto (foto, perfil acadêmico...) mora em Minha Conta, editável depois,
 // pra não derrubar a conversão do cadastro em si.
 export function CadastroPage({ auth }) {
@@ -72,7 +72,7 @@ export function CadastroPage({ auth }) {
     try {
       const resultado = await auth.cadastrar(nome, email, senha, aceiteTermos);
       if (resultado.tokenVerificacaoEmailDev) {
-        // Ambiente sem 4-mail ainda — link de verificação exibido direto,
+        // Ambiente sem 4-mail ainda - link de verificação exibido direto,
         // com aviso claro de que é só dev (ver auth.service.cadastro.ts).
         window.alert(
           '[SÓ EM DEV] Link de verificação de e-mail (nenhum e-mail é enviado ainda):\n\n' +
@@ -175,7 +175,7 @@ export function CadastroPage({ auth }) {
               </button>
             </div>
 
-            {/* Medidor de força — barra + requisitos marcados conforme
+            {/* Medidor de força - barra + requisitos marcados conforme
                 cumpridos, não uma mensagem de erro só depois do submit. */}
             {senha.length > 0 && (
               <div className="mt-2 space-y-1.5">
@@ -219,7 +219,7 @@ export function CadastroPage({ auth }) {
               placeholder="••••••••"
               autoComplete="new-password"
             />
-            {/* Em tempo real, não só no blur — comparar com a 1ª senha é o
+            {/* Em tempo real, não só no blur - comparar com a 1ª senha é o
                 único campo onde "digitando ainda" já vale avisar (pedido
                 explícito do Claude Web: "confirmar senha valida em tempo
                 real"). */}

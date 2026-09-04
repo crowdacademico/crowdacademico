@@ -14,22 +14,22 @@ function lerTemaSalvo() {
 }
 
 // Botão de tema no cabeçalho (09-08-2026, Bloco A do prompt do Claude Web
-// sobre dark mode) — mesmo padrão do ControleFonte: useState(lerTemaSalvo)
+// sobre dark mode) - mesmo padrão do ControleFonte: useState(lerTemaSalvo)
 // como inicializador preguiçoso (evita flash do tema errado no primeiro
 // render) + useEffect que aplica e persiste. A diferença é ONDE aplica:
-// data-tema é um ATRIBUTO em <html>, não uma custom property — 1-base.css
+// data-tema é um ATRIBUTO em <html>, não uma custom property - 1-base.css
 // tem os 3 blocos de tokens (:root = claro, :root[data-tema='escuro'],
 // @media(prefers-color-scheme:dark) + [data-tema='sistema']) que reagem a
 // esse atributo sozinhos, nenhum componente além deste precisa saber que
 // o tema mudou.
 // Ciclo claro → escuro → sistema → claro (pedido explícito do Lucas).
 //
-// Preferência POR CONTA — tentada em 10-08-2026 (usuario.tema_preferido no
+// Preferência POR CONTA - tentada em 10-08-2026 (usuario.tema_preferido no
 // banco, sincronizada com auth), REVERTIDA no mesmo dia por decisão do
 // Lucas com a Alexia: preferência pessoal deveria ficar numa tabela
 // própria se um dia existir, não colunas soltas em `usuario` ("estamos com
 // tabelas demais no momento"). Preferência de DISPOSITIVO via localStorage
-// é, de novo, a única fonte — mesmo comportamento de antes dessa tentativa.
+// é, de novo, a única fonte - mesmo comportamento de antes dessa tentativa.
 export function ControleTema() {
   const [tema, setTema] = useState(lerTemaSalvo);
 

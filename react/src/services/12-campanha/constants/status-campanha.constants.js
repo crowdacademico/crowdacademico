@@ -1,7 +1,7 @@
-// Espelha o ENUM status_campanha (01_extensoes_enums_tabelas.sql) —
+// Espelha o ENUM status_campanha (01_extensoes_enums_tabelas.sql) -
 // rótulo legível + classe de badge, compartilhado entre a listagem e a
 // consulta (services/12-campanha/*). Mesma ordem de "poder"/ciclo de
-// vida do enum, não alfabética — ajuda o filtro facetado de GenericTable
+// vida do enum, não alfabética - ajuda o filtro facetado de GenericTable
 // (`ordem`) a mostrar as opções numa sequência que faz sentido de
 // fluxo, não embaralhada.
 export const ORDEM_STATUS_CAMPANHA = [

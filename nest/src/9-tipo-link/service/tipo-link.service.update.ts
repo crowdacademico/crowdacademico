@@ -20,9 +20,9 @@ export class TipoLinkServiceUpdate {
   ): Promise<TipoLinkResponse> {
     const db = this.database.getDb();
 
-    // regex é NULLABLE — `null` explícito no corpo limpa o campo (não
+    // regex é NULLABLE - `null` explícito no corpo limpa o campo (não
     // precisa validar como regex, só passa null adiante). dominio é NOT
-    // NULL DEFAULT '{}' — não aceita `null` (ver comentário no DTO); pra
+    // NULL DEFAULT '{}' - não aceita `null` (ver comentário no DTO); pra
     // "limpar" o corpo manda array vazio, que já passa direto sem
     // validação especial nenhuma aqui.
     if (dto.regex !== undefined && dto.regex !== null) {
@@ -30,7 +30,7 @@ export class TipoLinkServiceUpdate {
     }
 
     // CK_TIPO_LINK_ALGUM_ESCOPO (01): só precisa checar o resultado FINAL
-    // se algum dos 3 campos de escopo veio no corpo — combinando com o
+    // se algum dos 3 campos de escopo veio no corpo - combinando com o
     // que já está gravado pros que não vieram, pra não deixar um UPDATE
     // parcial desligar os 3 de uma vez (ex.: PATCH só com
     // `permitePerfil: false` num tipo que já tinha os outros dois FALSE).
@@ -93,7 +93,7 @@ export class TipoLinkServiceUpdate {
 
     if (!linha) {
       // pol_tipolink_update (04): exige tem_permissao('tipolink_
-      // gerenciar'). 0 linhas afetadas sem erro é a RLS filtrando —
+      // gerenciar'). 0 linhas afetadas sem erro é a RLS filtrando -
       // diferencia de "não existe" com uma segunda consulta (SELECT já é
       // USING(true), sempre enxerga a linha se ela existir).
       const existe = await db

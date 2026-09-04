@@ -8,14 +8,14 @@ import { useToast } from '../../components/layout/use-toast';
 import { papelApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
 
 // Só existe (03-08-2026) porque `papel.codigo` (ver 01_extensoes_enums_
-// tabelas.sql [01-B]) tornou seguro renomear um papel pelo painel — antes,
+// tabelas.sql [01-B]) tornou seguro renomear um papel pelo painel - antes,
 // 3 triggers de RBAC reconheciam 'admin'/'pesquisador'/'usuario' pelo TEXTO
 // do nome, e renomear teria quebrado essas automações em silêncio. Agora
 // as triggers leem `codigo` (nunca exposto/editável aqui), então `nome` (o
 // rótulo) pode mudar livremente sem risco nenhum pro RBAC.
 //
-// Só "Alterar" existe pra papel (sem Consultar — a listagem já mostra
-// id/nome, um 3º campo não ganharia nada; sem Excluir — apagar um papel
+// Só "Alterar" existe pra papel (sem Consultar - a listagem já mostra
+// id/nome, um 3º campo não ganharia nada; sem Excluir - apagar um papel
 // usado em usuario_papel/papel_permissao é decisão maior, fora de escopo).
 export function AlterarPapel({ auth }) {
   const { id } = useParams();
@@ -29,7 +29,7 @@ export function AlterarPapel({ auth }) {
   const [encontrado, setEncontrado] = useState(false);
 
   useEffect(() => {
-    // Não existe GET /papel/:id (só findall) — a lista inteira é pequena
+    // Não existe GET /papel/:id (só findall) - a lista inteira é pequena
     // (7 papéis), buscar tudo e filtrar pelo id é mais simples que criar
     // um endpoint novo só pra isso.
     papelApi

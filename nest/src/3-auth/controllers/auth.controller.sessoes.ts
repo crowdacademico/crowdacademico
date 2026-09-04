@@ -29,7 +29,7 @@ export class AuthControllerSessoes {
     );
   }
 
-  // Sem :id — "encerrar todas as outras" (nunca a própria, sempre por
+  // Sem :id - "encerrar todas as outras" (nunca a própria, sempre por
   // exclusão de idSessao, ver auth.service.encerrar-sessao.ts).
   @Delete()
   @HttpCode(200)

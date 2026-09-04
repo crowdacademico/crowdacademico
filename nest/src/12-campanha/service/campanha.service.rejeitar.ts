@@ -10,7 +10,7 @@ import { CampanhaRequestRejeitar } from '../dto/request/campanha.request-rejeita
 import { CampanhaResponse } from '../dto/response/campanha.response';
 
 // Dois writes (UPDATE campanha + INSERT historico_rejeicao) na mesma
-// transação por requisição (GlobalDbInterceptor, ver commons/database) —
+// transação por requisição (GlobalDbInterceptor, ver commons/database) -
 // nenhum dos dois precisa de `db.transaction()` manual aqui. campanha não
 // tem coluna de motivo de rejeição; o texto mora só em historico_rejeicao
 // (01_extensoes_enums_tabelas.sql, [01-E]), por isso os dois writes.

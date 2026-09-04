@@ -1,26 +1,26 @@
 // Tradução code -> rótulo amigável (09-08-2026, pedido do Lucas: "parece
-// linha de código, pq é linha de código" — os 32 valores de
+// linha de código, pq é linha de código" - os 32 valores de
 // `permissao.nome` são o identificador estável usado por tem_permissao()
 // no banco (03_funcoes_seguranca.sql), nunca deveriam ser renomeados lá;
-// aqui é só a CAMADA DE EXIBIÇÃO. Puramente uma tabela de tradução — sem
+// aqui é só a CAMADA DE EXIBIÇÃO. Puramente uma tabela de tradução - sem
 // coluna nova no banco, sem endpoint novo: quem tem `nome`, tem o rótulo.
 // Mesma ordem por domínio de 07_seed_dados.sql [07-B-2]/[07-C-2]
 // (A,B,C,D,E,F,H,I,L), só pra facilitar achar um item aqui.
 //
 // Virou objeto (09-08-2026, Bloco F do prompt do Claude Web: coluna
-// "Descrição" na tabela Permissões + modal de detalhe por linha) — cada
+// "Descrição" na tabela Permissões + modal de detalhe por linha) - cada
 // entrada carrega, além do nome amigável, um resumo curto (pra coluna),
 // um texto mais longo dividido em "o que faz"/"por que existe" (pro
 // modal) e uma classificação de impacto (badge do modal). Propositalmente
-// NÃO carrega "quem usa hoje" aqui — isso é lido AO VIVO da matriz Papel ×
+// NÃO carrega "quem usa hoje" aqui - isso é lido AO VIVO da matriz Papel ×
 // Permissão (papelPermissaoApi), não hardcoded neste dicionário, senão
 // desatualizaria sozinho toda vez que alguém conceder/revogar pela tela.
 //
 // Se uma permissão nova nascer sem entrada aqui, todo helper abaixo cai
-// pro próprio `nome` cru (ou um objeto mínimo equivalente) — nunca quebra,
+// pro próprio `nome` cru (ou um objeto mínimo equivalente) - nunca quebra,
 // só fica menos bonito até alguém lembrar de adicionar a tradução.
 export const DETALHE_PERMISSAO = {
-  // A — Visão Geral & Configuração Inicial
+  // A - Visão Geral & Configuração Inicial
   relatorio_visualizar: {
     nome: 'Visualizar Relatórios',
     resumo: 'Acesso a relatórios agregados do sistema.',
@@ -30,7 +30,7 @@ export const DETALHE_PERMISSAO = {
       'Dá visibilidade gerencial sem exigir acesso a cada registro individual, o relatório já vem agregado.',
     impacto: 'baixo',
   },
-  // B — RBAC
+  // B - RBAC
   papel_atribuir: {
     nome: 'Atribuir Papel',
     resumo: 'Dar um papel (ex.: moderador) a um usuário já cadastrado.',
@@ -48,7 +48,7 @@ export const DETALHE_PERMISSAO = {
       'É o controle central do RBAC, quem tem essa permissão decide o que cada papel PODE fazer no sistema inteiro.',
     impacto: 'alto',
   },
-  // C — CONFIG
+  // C - CONFIG
   configuracao_gerenciar: {
     nome: 'Gerenciar Configurações',
     resumo: 'Criar/editar/excluir os valores globais de regra de negócio.',
@@ -94,7 +94,7 @@ export const DETALHE_PERMISSAO = {
       'Alguém precisa poder corrigir ou remover um arquivo problemático sem depender de quem fez o upload original.',
     impacto: 'médio',
   },
-  // D — USUÁRIO
+  // D - USUÁRIO
   usuario_suspender: {
     nome: 'Suspender Usuário',
     resumo: 'Bloquear temporariamente o acesso de uma conta.',
@@ -173,7 +173,7 @@ export const DETALHE_PERMISSAO = {
       'Ação de suporte recorrente, a pessoa errou demais a senha e precisa de alguém pra liberar o acesso de novo.',
     impacto: 'médio',
   },
-  // E — CAMPANHA
+  // E - CAMPANHA
   campanha_aprovar: {
     nome: 'Aprovar Campanha',
     resumo: 'Publicar oficialmente uma campanha submetida.',
@@ -233,7 +233,7 @@ export const DETALHE_PERMISSAO = {
     porQueExiste: 'É o ponto onde dinheiro de verdade sai do sistema, exige aprovação explícita, nunca automático.',
     impacto: 'alto',
   },
-  // F — LINK
+  // F - LINK
   link_academico_gerenciar: {
     nome: 'Gerenciar Links Acadêmicos',
     resumo: 'Editar/remover links acadêmicos de outra pessoa.',
@@ -241,7 +241,7 @@ export const DETALHE_PERMISSAO = {
     porQueExiste: 'Suporte a casos em que um link está quebrado, desatualizado ou mal cadastrado pelo próprio dono.',
     impacto: 'baixo',
   },
-  // H — CONTRIBUIÇÃO
+  // H - CONTRIBUIÇÃO
   contribuicao_visualizar_sensivel: {
     nome: 'Ver Dados Sensíveis da Contribuição',
     resumo: 'Ver dados financeiros detalhados de uma contribuição.',
@@ -257,7 +257,7 @@ export const DETALHE_PERMISSAO = {
     porQueExiste: 'É a trilha de auditoria do dinheiro que passa pela plataforma, só quem responde por isso deveria enxergar tudo.',
     impacto: 'alto',
   },
-  // I — SCORE
+  // I - SCORE
   score_editar: {
     nome: 'Editar Score',
     resumo: 'Ajustar parâmetros do motor de cálculo de reputação.',
@@ -274,7 +274,7 @@ export const DETALHE_PERMISSAO = {
       'Hoje o score já é público pra qualquer sessão (decisão de produto, ver DOCUMENTACAO_BD.md), esta permissão fica como reforço, caso a visibilidade pública seja revista no futuro.',
     impacto: 'baixo',
   },
-  // L — LOG
+  // L - LOG
   log_visualizar: {
     nome: 'Ver Log de Auditoria',
     resumo: 'Ver o histórico de alterações de qualquer tabela.',
@@ -288,7 +288,7 @@ export function nomeAmigavelPermissao(nome) {
   return DETALHE_PERMISSAO[nome]?.nome ?? nome;
 }
 
-// Sempre devolve um objeto usável (nunca null) — permissão sem entrada no
+// Sempre devolve um objeto usável (nunca null) - permissão sem entrada no
 // dicionário cai pro nome cru em todo campo, mesma filosofia de
 // nomeAmigavelPermissao: nunca quebra a tela, só fica menos rico até
 // alguém lembrar de documentar.

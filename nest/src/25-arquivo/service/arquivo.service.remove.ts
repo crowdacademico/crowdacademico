@@ -19,24 +19,24 @@ export class ArquivoServiceRemove {
     private readonly armazenamento: ArmazenamentoService,
   ) {}
 
-  // Soft delete no BANCO (ativo=false), nunca DELETE de verdade na linha —
+  // Soft delete no BANCO (ativo=false), nunca DELETE de verdade na linha -
   // 06_grants.sql só concede INSERT/UPDATE em `arquivo` (sem DELETE), e faz
   // sentido: um arquivo referenciado por arquivo_atualizacao/
   // arquivo_recompensa/usuario.id_imagem_perfil não pode simplesmente
-  // sumir do banco (quebraria FK). A linha fica, só marcada inativa — e é
+  // sumir do banco (quebraria FK). A linha fica, só marcada inativa - e é
   // por isso que ArquivoServiceResolverAvatar e qualquer outro lugar que
   // exibe arquivo já filtram por `ativo=true` antes de mostrar.
   //
   // ADICIONADO: agora TAMBÉM apaga o objeto de verdade no bucket
-  // (armazenamento.excluirObjeto) — antes só desativava no banco e o
+  // (armazenamento.excluirObjeto) - antes só desativava no banco e o
   // arquivo ficava esquecido lá pra sempre, ocupando espaço sem nenhuma
   // referência ativa apontando pra ele. Isso é seguro fazer aqui porque
   // ninguém serve o arquivo pela CHAVE direto do bucket sem passar antes
-  // pela checagem de `ativo` no banco — uma vez `ativo=false`, o dado já
+  // pela checagem de `ativo` no banco - uma vez `ativo=false`, o dado já
   // parou de aparecer em qualquer lugar do sistema, então apagar os bytes
   // não quebra nada que ainda devesse funcionar. Falha ao apagar do bucket
   // NÃO desfaz o soft delete (a linha já ficou inativa, que é o que
-  // importa pra correção do sistema) — só vira um objeto órfão no bucket,
+  // importa pra correção do sistema) - só vira um objeto órfão no bucket,
   // mesma categoria de baixo risco/baixa prioridade dos uploads
   // abandonados em pendente/.
   async executar(idArquivo: number): Promise<void> {
@@ -63,7 +63,7 @@ export class ArquivoServiceRemove {
 
     // 0 linhas afetadas: três causas possíveis, só uma delas é erro de
     // verdade. SELECT é USING(TRUE) (pol_arquivo_select), então sempre
-    // enxerga a linha se ela existir — usamos isso pra diferenciar.
+    // enxerga a linha se ela existir - usamos isso pra diferenciar.
     const atual = await db
       .selectFrom('arquivo')
       .select('ativo')
@@ -74,10 +74,10 @@ export class ArquivoServiceRemove {
       throw new NotFoundException(`Arquivo ${idArquivo} não encontrado`);
     }
     if (!atual.ativo) {
-      // Já estava inativo — idempotente, não é erro repetir a remoção. Os
+      // Já estava inativo - idempotente, não é erro repetir a remoção. Os
       // bytes no bucket já devem ter sido apagados na primeira vez (ou
       // nunca existiram, se o arquivo já tinha sido desativado antes desta
-      // mudança) — não tenta apagar de novo.
+      // mudança) - não tenta apagar de novo.
       return;
     }
     // Existe e está ativo, mas o UPDATE não pegou: pol_arquivo_update (04)

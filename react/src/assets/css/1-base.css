@@ -1,10 +1,10 @@
 /* Tailwind (import + @theme com as cores/fontes) vive em tailwind-theme.css,
-   não aqui — @import só pode ser a primeira coisa num arquivo CSS. Ver o
+   não aqui - @import só pode ser a primeira coisa num arquivo CSS. Ver o
    comentário lá pro porquê.
 
    ========= VARIÁVEIS GLOBAIS (CSS próprio, não Tailwind) =========
    `--color-primary`/`--color-primary-dark`/`--color-surface`/`--color-dark`/
-   `--font-sans`/`--font-serif` NÃO são redeclaradas aqui — o `@theme`
+   `--font-sans`/`--font-serif` NÃO são redeclaradas aqui - o `@theme`
    já expõe elas como variável CSS normal em `:root`, disponível pra
    qualquer regra do projeto (Tailwind v4 faz isso automaticamente). Aqui
    só entra o que o `@theme` não cobre: tamanhos de fonte, tons de slate/
@@ -47,9 +47,9 @@
   /* Tokens SEMÂNTICOS (pedido do Lucas, 08-08-2026, rodada de redesenho
      "Experiment.com/Catarse"): em vez de cada CSS novo escolher um tom de
      slate na mão (--color-slate-700? -800? -600?), usa o papel que a cor
-     está cumprindo — some com a ambiguidade pros próximos ~24 módulos que
+     está cumprindo - some com a ambiguidade pros próximos ~24 módulos que
      ainda vão escrever CSS aqui. Continuam sendo só apelidos pros mesmos
-     tons de slate acima (nenhum valor novo, nenhuma paleta nova) — só dão
+     tons de slate acima (nenhum valor novo, nenhuma paleta nova) - só dão
      nome ao USO, não trocam a cor em si. Migrado neste dia em
      2/3-componentes.css, 3-admin-shell.css, 4-crud.css; qualquer CSS novo
      de painel deve preferir estes em vez de --color-slate-* direto. */
@@ -60,7 +60,7 @@
   --cor-borda-forte: var(--color-slate-300); /* divisória de cabeçalho */
   --cor-fundo-sutil: var(--color-slate-50); /* hover, fundo de seção */
 
-  /* Tokens de FUNDO (09-08-2026, fundação do dark mode — análise do Claude
+  /* Tokens de FUNDO (09-08-2026, fundação do dark mode - análise do Claude
      Web sobre o prompt de cabeçalho/conta): faltavam pra completar o
      mecanismo de tema, porque até aqui o fundo branco das telas/cartões
      estava implícito (bg-white do Tailwind direto no JSX), e é exatamente
@@ -74,11 +74,11 @@
 
   /* Tokens de STATUS (mesma rodada): badge/alerta de sucesso/erro/aviso/
      info. Existiam direto como --color-emerald-100/--color-red-100 etc.
-     espalhados pelo CSS — motivo de existirem à parte dos tokens de texto
+     espalhados pelo CSS - motivo de existirem à parte dos tokens de texto
      e fundo genéricos acima: sucesso/erro têm significado próprio (não é
      "texto fraco", é "isto deu certo/errado"), então precisam de override
      próprio no escuro (fundo pastel claro fica praticamente ilegível em
-     tema escuro — vira 15 por cento de opacidade sobre a cor sólida, não
+     tema escuro - vira 15 por cento de opacidade sobre a cor sólida, não
      um tom pastel). */
   --cor-fundo-sucesso: var(--color-emerald-100);
   --cor-texto-sucesso: var(--color-emerald-600);
@@ -90,13 +90,13 @@
   --cor-texto-info: var(--color-blue-600);
 
   /* Paleta do avatar-iniciais (09-08-2026, Bloco B/C: bolinha com a
-     inicial do nome quando não há foto) — cor de fundo DETERMINÍSTICA a
+     inicial do nome quando não há foto) - cor de fundo DETERMINÍSTICA a
      partir do nome (hash simples → índice aqui, ver avatar-usuario.jsx),
      nunca aleatória: a mesma pessoa precisa sempre cair na mesma cor, em
      qualquer tela. Token em vez de hardcoded no componente, pra poder
      ajustar a paleta inteira num lugar só. Tons -600 de propósito: contraste
      alto o bastante pra texto branco em cima, em claro e escuro igual (não
-     precisa de bloco de tema separado — é uma cor de acento, não de
+     precisa de bloco de tema separado - é uma cor de acento, não de
      superfície). */
   --cor-avatar-1: #dc2626;
   --cor-avatar-2: #ea580c;
@@ -106,7 +106,7 @@
   --cor-avatar-6: #7c3aed;
   --cor-avatar-7: #db2777;
 
-  /* Fonte só pro selo <dev> (.badge-dev, 2-componentes.css) — pedido do
+  /* Fonte só pro selo <dev> (.badge-dev, 2-componentes.css) - pedido do
      Lucas, 03-08-2026: qualquer coisa marcada como "só pra desenvolvimento"
      usa essa combinação (roxo + monoespaçada), nunca hardcoded caso a
      caso. */
@@ -125,18 +125,18 @@
   --transition-normal: all 0.2s ease;
 
   /* Controle de fonte (09-08-2026, pedido do Lucas: acessibilidade,
-     "botão de aumentar e diminuir fonte") — components/layout/
+     "botão de aumentar e diminuir fonte") - components/layout/
      controle-fonte.jsx muda este valor via
      document.documentElement.style.setProperty(). Aplicado no `html`
      (ver @layer base abaixo), não em cada elemento: como o projeto
      inteiro é rem-based (Tailwind v4 por padrão, mais as variáveis de
      tamanho de fonte, raio de borda e sombra já existentes aqui em cima),
      mudar o font-size da RAIZ reescala texto E espaçamento juntos, com
-     uma variável só — reescalar só o texto, sem o resto, quebraria layout
+     uma variável só - reescalar só o texto, sem o resto, quebraria layout
      (botão menor que o próprio texto dentro dele). Mesmo princípio do
      "zoom" que a maioria dos sites de verdade usa pra esse tipo de
      controle.
-     Padrão 1 = 100% (nenhuma mudança) — só existe pra ControleFonte ter
+     Padrão 1 = 100% (nenhuma mudança) - só existe pra ControleFonte ter
      algo pra ler/escrever; qualquer CSS aqui pode ignorá-la de propósito. */
   --escala-fonte: 1;
 }
@@ -145,12 +145,12 @@
    components/layout/controle-tema.jsx escreve data-tema="claro"/"escuro"/
    "sistema" em <html> (mesmo padrão do --escala-fonte: lazy initializer +
    localStorage['crowdacademico.tema'], pra não piscar no primeiro render).
-   Só redefine os MESMOS nomes de token já usados no projeto inteiro —
+   Só redefine os MESMOS nomes de token já usados no projeto inteiro -
    nenhum componente/CSS precisa saber que o tema mudou, eles só leem
    var(--cor-texto-forte) etc. e o valor certo já está lá. Dois blocos
    porque "sistema" precisa reagir a prefers-color-scheme (media query),
    enquanto "escuro"/"claro" são escolha explícita do usuário (atributo,
-   sem media query) — duplicar os valores aqui é mais simples e mais fácil
+   sem media query) - duplicar os valores aqui é mais simples e mais fácil
    de auditar do que indexar um nível de variável extra.
    "claro" não precisa de bloco próprio: é o valor do :root de cima, já é
    o padrão do projeto inteiro. */
@@ -208,13 +208,13 @@
    breadcrumb colado na borda, botões "feios". Causa: este reset (e o resto
    deste arquivo) vivia FORA de qualquer @layer. Regra da cascata de CSS:
    estilo sem @layer sempre GANHA de qualquer estilo QUE ESTEJA em @layer,
-   não importa a especificidade — e o Tailwind v4 embrulha TUDO que ele gera
+   não importa a especificidade - e o Tailwind v4 embrulha TUDO que ele gera
    (`.mx-auto`, `.px-4`, `.py-2` etc.) dentro de `@layer utilities`. Ou seja,
    o `margin:0; padding:0` universal abaixo estava silenciosamente vencendo
-   `.mx-auto`/`.px-4`/`.py-10` de QUALQUER elemento no projeto inteiro —
+   `.mx-auto`/`.px-4`/`.py-10` de QUALQUER elemento no projeto inteiro -
    funcionava certinho antes só porque o Tailwind vinha por <script> CDN,
    que não usa @layer do jeito que o import físico usa.
-   Fix: declarar @layer base (mesmo nome que o Tailwind já declara) — as
+   Fix: declarar @layer base (mesmo nome que o Tailwind já declara) - as
    regras se juntam na posição certa, antes de @layer utilities, e o
    `.mx-auto` volta a ganhar do reset. */
 @layer base {
@@ -240,11 +240,11 @@
     font-family: var(--font-sans);
     font-size: var(--font-size-sm);
     line-height: 1.5;
-    /* ERA --color-surface direto — precisa ser o token de tema
+    /* ERA --color-surface direto - precisa ser o token de tema
        (--cor-fundo-pagina) pra inverter junto com o resto no escuro; hoje
        os dois valem o mesmo no tema claro, então nada muda visualmente. */
     background-color: var(--cor-fundo-pagina);
-    /* --cor-texto-forte (não --cor-texto) — o corpo do texto já era
+    /* --cor-texto-forte (não --cor-texto) - o corpo do texto já era
        slate-800 antes dos tokens existirem (achado do Lucas, escurecido de
        propósito pra monitor não calibrado); manter o token que bate com o
        valor de HOJE, não com o rótulo "corpo" ao pé da letra. */
@@ -262,7 +262,7 @@
   h2,
   h3 {
     font-family: var(--font-serif);
-    /* ERA --color-dark direto (#0f172a fixo) — em tema escuro isso ficaria
+    /* ERA --color-dark direto (#0f172a fixo) - em tema escuro isso ficaria
        quase invisível (texto quase preto sobre fundo quase preto). Token
        de tema em vez de cor fixa, mesmo valor no claro (--cor-texto-forte
        = slate-800, próximo o bastante de --color-dark pra não mudar nada
@@ -286,13 +286,13 @@
 
 /* ========= UTILITÁRIOS DE TEMA =========
    Substitutos das classes Tailwind cruas de cor (bg-white, text-slate-600,
-   border-slate-200...) espalhadas pelo JSX — aquelas não respondem a
+   border-slate-200...) espalhadas pelo JSX - aquelas não respondem a
    data-tema porque são cor FIXA do Tailwind, não var(--cor-*). Nome em
    português de propósito: não colide com nenhum utilitário nativo do
    Tailwind (bg, text, border dele continuam existindo pra tamanho,
-   espaçamento, etc. — só cor de tema migra pra cá). Não usam @utility do
+   espaçamento, etc. - só cor de tema migra pra cá). Não usam @utility do
    Tailwind v4 (não teriam efeito aqui: este arquivo não passa pelo mesmo
-   pipeline de tailwind-theme.css, que é quem tem @import 'tailwindcss') —
+   pipeline de tailwind-theme.css, que é quem tem @import 'tailwindcss') -
    por isso hover vem embutido na própria classe, não como variante
    hover:. */
 @layer components {
@@ -316,7 +316,7 @@
     background-color: var(--cor-fundo-hover);
   }
 
-  /* Estático (não só :hover) — item selecionado por teclado/mouse em
+  /* Estático (não só :hover) - item selecionado por teclado/mouse em
      lista (ex.: busca-global.jsx), não só passagem do mouse. */
   .fundo-realce {
     background-color: var(--cor-fundo-hover);
@@ -378,7 +378,7 @@
     color: var(--cor-texto-info);
   }
 
-  /* Rótulo de campo (label pequeno maiúsculo) — mesma string Tailwind
+  /* Rótulo de campo (label pequeno maiúsculo) - mesma string Tailwind
      repetida em quase toda tela de Criar/Alterar (achado nesta auditoria):
      "text-[11px] font-black text-slate-500 uppercase tracking-widest
      mb-2". Centralizar aqui em vez de deixar 15 cópias cruas facilita
@@ -399,7 +399,7 @@
      pesos/fontes diferentes). Mesma lógica do protótipo de interface
      (3 títulos + 1 subtítulo + 1-2 parágrafos, ver memória
      feedback_prototipo_constantes_rigidas), com os valores que já são
-     reais neste sistema hoje (ex.: body já é 14px, não 16px) — nenhum
+     reais neste sistema hoje (ex.: body já é 14px, não 16px) - nenhum
      token de tamanho/fonte novo, só nomear o que já existe. Aplicar
      direto na tag (`className="titulo-secao"` etc.), não depender de
      um wrapper ancestral pra "ganhar" da regra global
@@ -433,7 +433,7 @@
     color: var(--cor-texto-forte);
   }
 
-  /* Texto técnico denso (chave, log, id) — já era o padrão de fato em
+  /* Texto técnico denso (chave, log, id) - já era o padrão de fato em
      ModalDetalhe e dashboard-regras-negocio.jsx antes de virar token. */
   .paragrafo-denso {
     font-family: var(--font-mono-dev);

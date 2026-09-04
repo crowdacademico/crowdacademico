@@ -6,7 +6,7 @@ import { ArquivoResponse } from '../response/arquivo.response';
 export class ArquivoConverter {
   // Recebe `armazenamento` como parâmetro (diferente dos outros
   // converters do projeto, que são 100% estáticos/sem dependência) porque
-  // montar a URL pública exige saber STORAGE_PUBLIC_BASE_URL — o converter
+  // montar a URL pública exige saber STORAGE_PUBLIC_BASE_URL - o converter
   // continua sem estado próprio, só delega a montagem da URL pra quem já
   // tem essa configuração carregada (o service que o chama).
   static paraResponseDto(

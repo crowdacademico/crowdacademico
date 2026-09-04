@@ -21,10 +21,10 @@ function regexValida(padrao) {
 }
 
 // "github.com, gist.github.com" -> ['github.com', 'gist.github.com'];
-// "" (ou só espaços/vírgulas) -> [] — dominio é NOT NULL DEFAULT '{}'
+// "" (ou só espaços/vírgulas) -> [] - dominio é NOT NULL DEFAULT '{}'
 // (mecanismo de validação PRINCIPAL, desde a revisão de 16-08-2026),
 // array vazio é o único jeito de dizer "sem restrição de domínio", não
-// mais `null`. Mesma função de criar-tipo-link.jsx, duplicada aqui — cada
+// mais `null`. Mesma função de criar-tipo-link.jsx, duplicada aqui - cada
 // view deste módulo fica autocontida, mesmo padrão do resto do projeto.
 function paraDominios(texto) {
   return texto
@@ -34,7 +34,7 @@ function paraDominios(texto) {
 }
 
 // `codigo` não aparece como campo editável (só leitura) porque
-// AtualizarTipoLinkRequestDto (Nest) não o aceita — é a chave estável que
+// AtualizarTipoLinkRequestDto (Nest) não o aceita - é a chave estável que
 // calcular_score_perfil_academico() lê pra reconhecer Lattes/ORCID (mesmo
 // raciocínio de AlterarPapel sobre `papel.codigo`/AlterarAreaConhecimento
 // sobre `codigoCnpq`). Todo o resto pode mudar.
@@ -47,7 +47,7 @@ export function AlterarTipoLink({ auth }) {
   const [nome, setNome] = useState('');
   const [ativo, setAtivo] = useState(true);
   const [regex, setRegex] = useState('');
-  // Texto separado por vírgula na tela (ver paraDominios acima) —
+  // Texto separado por vírgula na tela (ver paraDominios acima) -
   // `dominio` é o mecanismo de validação PRINCIPAL (array nativo do
   // Postgres, NOT NULL DEFAULT '{}'), mas não existe componente de "tags"
   // reutilizável no projeto ainda.
@@ -88,7 +88,7 @@ export function AlterarTipoLink({ auth }) {
   useAvisoAlteracaoNaoSalva(sujo);
 
   const regexInvalida = regex.length > 0 && !regexValida(regex);
-  // CK_TIPO_LINK_ALGUM_ESCOPO (01_extensoes_enums_tabelas.sql) — mesma
+  // CK_TIPO_LINK_ALGUM_ESCOPO (01_extensoes_enums_tabelas.sql) - mesma
   // checagem de CriarTipoLink, travando o botão Salvar ANTES de bater no
   // backend.
   const nenhumEscopoMarcado = !permitePerfil && !permiteAtualizacao && !permiteRecompensa;
@@ -108,10 +108,10 @@ export function AlterarTipoLink({ auth }) {
       await tipoLinkApi.atualizar(auth.authFetch, id, {
         nome,
         ativo,
-        // '' vira `null` (limpa o campo) — regex é NULLABLE e
+        // '' vira `null` (limpa o campo) - regex é NULLABLE e
         // AtualizarTipoLinkRequestDto (Nest) aceita `null` explícito no
         // corpo pra isto. dominio NUNCA é `null` (NOT NULL DEFAULT '{}'
-        // no banco) — array vazio já é o "limpo" por natureza, sem
+        // no banco) - array vazio já é o "limpo" por natureza, sem
         // precisar de fallback nenhum.
         regex: regex || null,
         dominio: paraDominios(dominioTexto),

@@ -32,7 +32,7 @@ function formatarCpf(cpf) {
 const TAMANHO_MAXIMO_URL_NA_LINHA = 40;
 
 // Sem quebra de linha na tabela de links (pedido do Lucas, 23-08-2026:
-// "alguns links são excepcionalmente grandes") — trunca com " ..." de
+// "alguns links são excepcionalmente grandes") - trunca com " ..." de
 // verdade (texto, não elipse via CSS) e quem quiser o link inteiro clica
 // em Consultar.
 function truncarUrl(url) {
@@ -50,10 +50,10 @@ function truncarUrl(url) {
 //
 // SEM ELENCO (25-08-2026, pedido do Lucas: "remover de vez" o motor de
 // login-múltiplo). Selecionar uma linha aqui só marca `pesquisadorSelecionado`
-// (CampoTestesProvider) — não faz login nenhum, é sempre a sessão real do
+// (CampoTestesProvider) - não faz login nenhum, é sempre a sessão real do
 // painel (`auth`) quem executa toda escrita. Efeito prático: "Promover
 // Usuário → Pesquisador" e as ações de link acadêmico só têm efeito de
-// verdade quando o usuário selecionado É a própria conta logada — pra
+// verdade quando o usuário selecionado É a própria conta logada - pra
 // qualquer outro, a RLS responde com erro de permissão (aparece em
 // `erroCriar`, já tratado). Essa é a limitação aceita pelo Lucas: o
 // Campo de Testes deixou de simular "várias contas ao mesmo tempo".
@@ -76,7 +76,7 @@ export function BancadaPesquisador({ auth }) {
   const [pagina, setPagina] = useState(1);
   const [tamanhoPagina, setTamanhoPagina] = useState(10);
   // Pré-marcado com usuário/pesquisador (pedido do Lucas, 23-08-2026: "só
-  // pra adiantar os testes") — só este facet, só nesta tela; em qualquer
+  // pra adiantar os testes") - só este facet, só nesta tela; em qualquer
   // outro filtro por papel do painel (ex.: /admin/usuarios), o padrão
   // continua sendo "Todos".
   const [papeisSelecionados, setPapeisSelecionados] = useState([PAPEL_SEM_EXTRA, 'pesquisador']);
@@ -110,7 +110,7 @@ export function BancadaPesquisador({ auth }) {
   const jaTemPerfil = chaveFoco === null ? undefined : Boolean(perfilFoco?.statusPesquisador);
 
   // Lista TODOS os usuários (23-08-2026, pedido do Lucas: "não deve
-  // aparecer só Pesquisadores"), não só quem já tem perfil_pesquisador —
+  // aparecer só Pesquisadores"), não só quem já tem perfil_pesquisador -
   // qualquer conta real dá pra selecionar. Quem ainda não tem perfil
   // mostra as colunas de pesquisador em branco, é o gancho pro formulário
   // "Criar perfil" logo abaixo.
@@ -151,7 +151,7 @@ export function BancadaPesquisador({ auth }) {
   }, [carregarPesquisadores]);
 
   // Fechar o dropdown "Papel" ao clicar fora (mesmo padrão de
-  // GenericTable) — listener de mousedown, não depende de foco.
+  // GenericTable) - listener de mousedown, não depende de foco.
   useEffect(() => {
     if (!facetaPapelAberta) return undefined;
     const aoClicarFora = (evento) => {
@@ -180,7 +180,7 @@ export function BancadaPesquisador({ auth }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chaveFoco, jaTemPerfil]);
 
-  // Catálogo de tipo de link, uma vez só, ao montar — não depende mais de
+  // Catálogo de tipo de link, uma vez só, ao montar - não depende mais de
   // ninguém selecionado (era "qualquer ator vivo", só pra ter alguém pra
   // registrar a chamada em T4; sem Elenco, a sessão real já basta).
   useEffect(() => {
@@ -239,7 +239,7 @@ export function BancadaPesquisador({ auth }) {
   };
 
   // Faltava (23-08-2026, achado do Lucas: "consigo adicionar mas não
-  // consigo tirar") — o DELETE /link-academico/:id já existe e funciona
+  // consigo tirar") - o DELETE /link-academico/:id já existe e funciona
   // desde sempre (7-link-academico/controllers/link-academico.controller.
   // remove.ts), só nunca tinha ganhado botão aqui na tela de teste.
   const removerLink = async (idLinkAcademico) => {
@@ -267,7 +267,7 @@ export function BancadaPesquisador({ auth }) {
     setIdLinkEditando(null);
   };
 
-  // Opções do dropdown "Papel" — só os valores que já aparecem nos dados
+  // Opções do dropdown "Papel" - só os valores que já aparecem nos dados
   // (mesmo sniff de GenericTable), ordenados do menor pro maior poder.
   const opcoesPapel = [...new Set(pesquisadores.flatMap((perfil) => (perfil.papel ?? '').split(', ').filter(Boolean)))].sort((a, b) => {
     const posicao = (valor) => {
@@ -432,7 +432,7 @@ export function BancadaPesquisador({ auth }) {
             pesquisadoresPagina.map((perfil) => {
               const bloqueado = PESQUISADOR_BLOQUEADO(perfil.idUsuario);
               // Só UM pesquisador selecionado por vez (pedido do Lucas,
-              // 23-08-2026: "clicar em outro a seleção troca") — usado
+              // 23-08-2026: "clicar em outro a seleção troca") - usado
               // por T2 (Bancada da Campanha) pra filtrar por dono.
               const selecionado = perfil.idUsuario === chaveFoco;
               return (
@@ -754,7 +754,7 @@ export function BancadaPesquisador({ auth }) {
                         </td>
                         {/* Nada aqui embaixo de Ações de propósito (23-08-2026,
                             achado do Lucas: "+ adicionar na mesma linha ficou
-                            péssimo, aparece barra de rolagem") — o botão SÓ
+                            péssimo, aparece barra de rolagem") - o botão SÓ
                             forçava a tabela a precisar de mais espaço do que
                             a coluna tinha, empurrando tudo. Vive fora da
                             tabela agora, embaixo. */}

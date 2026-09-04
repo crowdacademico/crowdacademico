@@ -1,4 +1,4 @@
-// Consulta de score/dimensões (PROXIMOS_MODULOS.md, Grupo 2) — lê
+// Consulta de score/dimensões (PROXIMOS_MODULOS.md, Grupo 2) - lê
 // score_pesquisador + score_config + score_rotulo, todas escritas só por
 // recalcular_score_pesquisador() (05_regras_negocio.sql), nunca pelo Nest.
 export class DimensaoScoreResponse {

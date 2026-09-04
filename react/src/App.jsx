@@ -5,14 +5,14 @@ import { CampoTestesProvider } from './services/campo-testes/context/campo-teste
 import { ROTAS, ROTAS_ADMIN } from './services/router/rotas.constants';
 import { AdminLayout } from './views/admin/admin-layout';
 
-// useAuth() chamado uma vez só, aqui em cima — Header (dentro de Layout) e
+// useAuth() chamado uma vez só, aqui em cima - Header (dentro de Layout) e
 // cada página recebem o mesmo `auth` por prop, nunca cada um com sua
 // própria sessão. Rotas vêm de services/router/rotas.constants.js (fonte
-// única, compartilhada com o breadcrumb e o menu lateral) — adicionar uma
+// única, compartilhada com o breadcrumb e o menu lateral) - adicionar uma
 // página nova é só acrescentar uma linha lá, não mexer aqui.
 //
-// "/" redireciona pra /admin/dashboard (a aba padrão, 08-08-2026 — ERA
-// /admin/usuarios até o Dashboard existir) — antes era a própria home;
+// "/" redireciona pra /admin/dashboard (a aba padrão, 08-08-2026 - ERA
+// /admin/usuarios até o Dashboard existir) - antes era a própria home;
 // virou redirect porque as abas do painel agora são rotas de verdade, não
 // dava mais pra "/" ser todas ao mesmo tempo.
 function App() {
@@ -28,7 +28,7 @@ function App() {
         ))}
 
         <Route path="/admin" element={<AdminLayout auth={auth} />}>
-          {/* Redirect da rota base sem aba (11-08-2026) — mesmo espírito do
+          {/* Redirect da rota base sem aba (11-08-2026) - mesmo espírito do
               redirect de "/" pro Dashboard logo acima: "/admin/minha-conta"
               sozinho não é mais uma página própria, é só o link antigo
               (menu-usuario.jsx) apontando pra cá; a aba padrão é Perfil. */}
@@ -49,7 +49,7 @@ function App() {
     </Routes>
   );
 
-  // CampoTestesProvider só existe em build de desenvolvimento — mesmo
+  // CampoTestesProvider só existe em build de desenvolvimento - mesmo
   // raciocínio do `import.meta.env.DEV` em rotas.constants.js. Fora disso,
   // `rotas` renderiza igual a antes, sem nenhum provider novo por cima.
   return import.meta.env.DEV ? <CampoTestesProvider>{rotas}</CampoTestesProvider> : rotas;

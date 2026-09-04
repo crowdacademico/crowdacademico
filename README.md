@@ -92,7 +92,6 @@ crowdacademico/                          (repo único na Organization)
 │       │   --- Cluster 5: Infra transversal ---
 │       ├── 25-arquivo/
 │       ├── 26-notificacao/
-│       ├── 27-resources/
 │       ├── 28-log-auditoria/        (log_auditoria - só leitura, GET /log-auditoria)
 │       └── 29-dashboard/            (métricas agregadas do painel - GET /dashboard/resumo)
 │

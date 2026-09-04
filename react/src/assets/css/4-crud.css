@@ -1,23 +1,23 @@
 /* ========= BLOCOS DE CRUD (tabela genérica) =========
    Usado por components/crud/generic-table.jsx dentro do painel admin.
    Migrado do antigo devtools.css (cores hardcoded) pras variáveis de
-   1-base.css — mesma ideia de "tirar o hardcoded" já aplicada no banco
+   1-base.css - mesma ideia de "tirar o hardcoded" já aplicada no banco
    (configuracoes em vez de valor fixo no .sql). Paginação/rodapé da tabela
    ainda usa as classes de 2-componentes.css (.btn/.btn-secondary); a
    coluna Ações de cada linha tem estilo próprio aqui (.crud-tabela__acao,
-   08-08-2026) — texto/ícone discreto, não botão sólido. */
+   08-08-2026) - texto/ícone discreto, não botão sólido. */
 @layer components {
-  /* container-type: inline-size (25-08-2026, 4ª rodada) — habilita
+  /* container-type: inline-size (25-08-2026, 4ª rodada) - habilita
      @container mais abaixo (texto de Ações some/aparece), reagindo à
      largura REAL do espaço disponível pra esta seção, não da janela
      inteira. Isso só virou possível agora: a tentativa antiga de
      container query (comentário histórico junto de @media abaixo) foi
      descartada porque, sem o wrapper de rolagem, a tabela nunca
-     "encolhia" de verdade — table-layout: auto sempre transbordava a
+     "encolhia" de verdade - table-layout: auto sempre transbordava a
      PÁGINA em vez da coluna apertar. Com `.crud-tabela__wrapper`
      (overflow-x: auto) contendo esse transbordo, `.crud-secao` (o pai
      dele) agora TEM uma largura real e estável (definida pelo layout da
-     página — sidebar aberta/fechada, padding do cartão — não pelo
+     página - sidebar aberta/fechada, padding do cartão - não pelo
      conteúdo da tabela), exatamente o que uma container query precisa
      pra não virar um loop de "minha largura depende de mim mesma". */
   .crud-secao {
@@ -25,7 +25,7 @@
     margin-bottom: 0;
   }
 
-  /* Título e botão de ação (ex.: "Criar") na MESMA linha — pedido do Lucas,
+  /* Título e botão de ação (ex.: "Criar") na MESMA linha - pedido do Lucas,
      03-08-2026 (antes o botão ficava numa linha própria, embaixo do
      título). space-between empurra um pra cada ponta; wrap pra não
      quebrar feio em tela estreita. */
@@ -38,7 +38,7 @@
     margin-bottom: 0.75rem;
   }
 
-  /* Embaixo da tabela, não em cima — se não tem dado (por erro ou por estar
+  /* Embaixo da tabela, não em cima - se não tem dado (por erro ou por estar
      vazio mesmo), a mensagem faz mais sentido perto de onde o "vazio"
      apareceria, não lá no topo antes de qualquer coisa. */
   .crud-erro {
@@ -52,22 +52,22 @@
   }
 
   /* Redesenho (08-08-2026, rodada Experiment.com/Catarse): era uma grade
-     completa (borda em toda célula, cabeçalho verde sólido) — o
+     completa (borda em toda célula, cabeçalho verde sólido) - o
      diagnóstico do Lucas foi que cor demais em tudo faz nada se destacar.
      Virou: sem grade vertical, só linha fina embaixo de cada linha (menos
      "planilha", mais "lista"), cabeçalho neutro (sem verde) com uma borda
      inferior mais forte separando do corpo, mais respiro vertical. */
-  /* Wrapper de rolagem (25-08-2026, 3ª tentativa) — .admin-content-area__inner
+  /* Wrapper de rolagem (25-08-2026, 3ª tentativa) - .admin-content-area__inner
      tem min-width: 0 (3-admin-shell.css, correção mais antiga: "a tabela
      empurrava a PÁGINA inteira") pra permitir que o CARTÃO encolha abaixo
      da largura da tabela em vez de esticar a página. Isso resolveu aquele
      bug, mas trocou por outro: sem nenhum overflow definido em nenhum
      ancestral, o excesso da tabela (table-layout: auto, várias colunas com
      min-width) simplesmente vazava pra fora do cartão branco sem barra de
-     rolagem nenhuma — ícone de Excluir/Consultar "sumindo" era isso (achado
+     rolagem nenhuma - ícone de Excluir/Consultar "sumindo" era isso (achado
      do Lucas, tela estreita). `overflow-x: auto` aqui, escopado só na
      tabela (não a página inteira), dá um lugar de verdade pra esse excesso
-     rolar. JÁ TENTADO uma vez antes (mesma ideia) e revertido — mas
+     rolar. JÁ TENTADO uma vez antes (mesma ideia) e revertido - mas
      naquela tentativa a tabela estava em table-layout: fixed + width:100%,
      que trava a tabela em EXATAMENTE 100% do wrapper (nunca cresce mais),
      então não sobrava nada pra rolar de verdade. Agora, de volta em
@@ -86,12 +86,12 @@
 
   /* Padding horizontal responsivo em TODA coluna de TODA tabela
      (25-08-2026, ideia do Lucas: "o respiro elástico da coluna id ficou
-     bonitinho, dá pra fazer isso em todas as colunas?") — mesmo truque
+     bonitinho, dá pra fazer isso em todas as colunas?") - mesmo truque
      de `clamp(piso, Nvw, teto)` já usado só na coluna id
      (.crud-tabela__coluna-id, mais abaixo), generalizado pra regra BASE
      que toda th/td já usa, então cobre toda tabela do painel sem tocar
      em nenhuma tela individual (mesma filosofia de sempre deste
-     arquivo). `1.1rem` (teto) é o valor de sempre — tela larga fica
+     arquivo). `1.1rem` (teto) é o valor de sempre - tela larga fica
      idêntica a antes, nada muda visualmente aí. Abaixo de ~1173px de
      JANELA o padding começa a encolher sozinho, até um piso de 0.6rem
      por volta de ~640px (conta: Nvw = teto quando W = teto/N; escolhido
@@ -99,9 +99,9 @@
      começam a se apertar, ver comentário do @container mais abaixo).
      Com box-sizing: border-box (1-base.css) em todo elemento, encolher
      o padding realmente devolve espaço pro CONTEÚDO dentro do mesmo piso
-     de min-width calculado em generic-table.jsx — alivia a tabela
+     de min-width calculado em generic-table.jsx - alivia a tabela
      inteira de uma vez, não só a coluna id. Vertical (0.85rem) continua
-     fixo de propósito — o pedido era sobre o vão ENTRE colunas
+     fixo de propósito - o pedido era sobre o vão ENTRE colunas
      (horizontal), não a altura da linha. */
   .crud-tabela th,
   .crud-tabela td {
@@ -109,17 +109,17 @@
     text-align: left;
   }
 
-  /* Coluna de valor curto (id, Sim/Não) centralizada — cabeçalho e
+  /* Coluna de valor curto (id, Sim/Não) centralizada - cabeçalho e
      célula (18-08-2026, pedido da Alexia: "centralizar o negócio de sim
      e não" + "melhorar espaçamento entre colunas"). GenericTable decide
      SOZINHA quais colunas ganham esta classe, sniffando o tipo do dado
-     (number/boolean) igual já fazia pra ordenação — nenhuma tela
+     (number/boolean) igual já fazia pra ordenação - nenhuma tela
      precisou declarar isso a mais. `text-align: center` sozinho já
      centraliza tanto texto solto quanto o `<span class="badge">` que
      `celulaValor()` desenha pra booleano (ambos são conteúdo inline),
      sem precisar de flexbox.
-     ERA padding horizontal 0.75rem — subiu pra 1.1rem: era a maior causa
-     do "espaçamento esquisito" que a Alexia notou — coluna de valor
+     ERA padding horizontal 0.75rem - subiu pra 1.1rem: era a maior causa
+     do "espaçamento esquisito" que a Alexia notou - coluna de valor
      curto tinha muito vão sobrando de um lado só (texto-à-esquerda numa
      coluna larga), enquanto a coluna de texto vizinha (nome/descrição)
      ficava com pouco respiro em comparação. Centralizar reparte o vão
@@ -132,7 +132,7 @@
 
   /* Largura padrão da coluna "id" em TODA tabela (19-08-2026, pedido do
      Lucas: "deve suportar até 3 ou 4 dígitos sem quebra de linha").
-     `width` aqui é só um FALLBACK — GenericTable (25-08-2026) calcula a
+     `width` aqui é só um FALLBACK - GenericTable (25-08-2026) calcula a
      própria largura por tabela (table-layout: auto, min-width piso de
      8ch, ver comentário completo em generic-table.jsx) e sobrescreve
      isto via `style` inline; esta regra continua valendo pra qualquer
@@ -140,21 +140,21 @@
      garante que os dígitos nunca quebram linha mesmo numa tela estreita.
      `padding-right` extra (25-08-2026, pedido do Lucas: "a coluna do
      lado direito de ID precisa ficar naturalmente um pouco mais
-     afastada, se tiver espaço, e só se aproximar em tela pequena") —
+     afastada, se tiver espaço, e só se aproximar em tela pequena") -
      próprio `clamp()`, deliberadamente MAIS generoso que o padding
      horizontal padrão de toda th/td (regra base, logo acima nesta mesma
-     folha — aquele é o que inspirou este, na verdade, mesma ideia
-     aplicada primeiro só aqui, depois generalizada) — cresce sozinho até
+     folha - aquele é o que inspirou este, na verdade, mesma ideia
+     aplicada primeiro só aqui, depois generalizada) - cresce sozinho até
      2rem em tela larga, e mesmo no piso (1.1rem) continua igual ou maior
      que o TETO do padding das outras colunas (também 1.1rem), então o
      ID sempre mantém uma separação um pouco maior que as demais, em
      qualquer largura de tela.
-     Coeficiente do vw (ERA 4vw, 25-08-2026 — achado do Lucas: "ID e nome
-     ainda demoram um pouquinho pra se aproximar") — a conta de onde o
+     Coeficiente do vw (ERA 4vw, 25-08-2026 - achado do Lucas: "ID e nome
+     ainda demoram um pouquinho pra se aproximar") - a conta de onde o
      clamp começa/termina de encolher é `largura_janela = valor_rem_em_px
      × 100 / coeficiente`; com 4vw, a faixa de transição era só
      440px–800px. Baixando pra 2.5vw, a mesma fórmula dá uma faixa bem
-     mais alta, ~704px–1280px — começa a encolher bem mais cedo (janela
+     mais alta, ~704px–1280px - começa a encolher bem mais cedo (janela
      ainda bem larga), sem mudar os limites (1.1rem–2rem) nem o
      comportamento em tela bem larga ou bem estreita, só ADIANTA a
      transição. */
@@ -165,7 +165,7 @@
     padding-right: clamp(1.1rem, 2.5vw, 2rem);
   }
 
-  /* Linha fina entre linhas do corpo (não grade completa) — ERA border em
+  /* Linha fina entre linhas do corpo (não grade completa) - ERA border em
      TODA célula (th e td, todos os lados). */
   .crud-tabela tbody tr {
     border-bottom: 1px solid var(--cor-borda);
@@ -175,7 +175,7 @@
     border-bottom: none;
   }
 
-  /* ERA --cor-fundo-sutil (slate-50) — mesmo pedido do Lucas (09-08-2026):
+  /* ERA --cor-fundo-sutil (slate-50) - mesmo pedido do Lucas (09-08-2026):
      hover mais escuro em todo o painel, não só no menu lateral. */
   .crud-tabela tbody tr:hover {
     background-color: var(--cor-fundo-hover);
@@ -187,7 +187,7 @@
     text-transform: uppercase;
     letter-spacing: 0.05em;
     /* ERA --cor-texto (slate-700, escurecido em 02-08-2026 porque -500
-       "sumia" no monitor do Lucas) — voltou pra slate-600 nesta rodada
+       "sumia" no monitor do Lucas) - voltou pra slate-600 nesta rodada
        (08-08-2026): agora o cabeçalho também ganhou uma borda inferior
        mais forte (2px) fazendo o mesmo trabalho de "separar do corpo" que
        antes dependia só da cor do texto, então dá pra aliviar o texto de
@@ -196,15 +196,15 @@
     font-weight: 800;
     border-bottom: 2px solid var(--cor-borda-forte);
     /* height fixo (25-08-2026, pedido do Lucas: "quando E-mail verificado
-       quebra em 2 linhas, a linha inteira do cabeçalho cresce — queria
+       quebra em 2 linhas, a linha inteira do cabeçalho cresce - queria
        que não sofresse alteração"). Em célula de tabela, `height` é só
        um PISO (a especificação trata como altura mínima, nunca corta
-       conteúdo que precise de mais) — reservando aqui, de propósito, uma
+       conteúdo que precise de mais) - reservando aqui, de propósito, uma
        altura já grande o bastante pra caber 2 linhas de texto + padding
        (line-height 1.3 explícito, pra a conta ficar previsível: 2 ×
        0.75rem × 1.3 ≈ 1.95rem de texto + 1.7rem dos dois paddings
        verticais ≈ 3.65rem, arredondado com folga pra 3.75rem), o
-       cabeçalho JÁ NASCE com esse tanto de altura sempre — uma coluna
+       cabeçalho JÁ NASCE com esse tanto de altura sempre - uma coluna
        quebrando pra 2 linhas só preenche um espaço que já estava
        reservado, em vez de esticar a linha visivelmente. `vertical-align:
        middle` (já é o padrão do navegador pra th/td, deixado explícito
@@ -216,23 +216,23 @@
   }
 
   /* `<br>` manual e controlado (25-08-2026, ver `coluna.quebrarRotulo` em
-     generic-table.jsx — o "porquê" completo está lá) — escondido por
+     generic-table.jsx - o "porquê" completo está lá) - escondido por
      padrão (nenhuma quebra, cabeçalho numa linha só, em qualquer
      largura), e só "ligado" abaixo do breakpoint. `display: none` não
-     esconde só visualmente, remove o `<br>` da árvore de fato — sem
+     esconde só visualmente, remove o `<br>` da árvore de fato - sem
      quebra nenhuma acontecendo, mesmo que o texto tecnicamente coubesse
      ou não no espaço real da coluna (de propósito: essa quebra NÃO
      reage ao espaço sobrando, só a este breakpoint fixo).
-     1400px — estimativa inicial (raio de onde a quebra "natural"
+     1400px - estimativa inicial (raio de onde a quebra "natural"
      costumava acontecer antes desta mudança), ainda não calibrado ao
-     vivo nesta forma nova — mesmo espírito de sempre: ajustar olhando a
+     vivo nesta forma nova - mesmo espírito de sempre: ajustar olhando a
      tela de verdade. `@media` de JANELA aqui, não `@container` de
-     propósito — um `@container` reagiria ao espaço da SEÇÃO, que pula
+     propósito - um `@container` reagiria ao espaço da SEÇÃO, que pula
      de tamanho toda vez que a sidebar ou o texto de Ações mudam de
      estado (mesma causa da oscilação que este código resolve); a janela
      nunca pula, só encolhe/cresce direto, então é o único critério que
      garante UMA transição só. */
-  /* `white-space: nowrap` (25-08-2026) — impede o navegador de quebrar
+  /* `white-space: nowrap` (25-08-2026) - impede o navegador de quebrar
      SOZINHO no espaço antes do breakpoint escolhido acima (`nowrap` só
      bloqueia quebra espontânea; o `<br>` explícito continua funcionando
      normalmente quando `display` deixa de ser `none`, são mecanismos
@@ -262,10 +262,10 @@
     color: var(--color-primary-dark);
   }
 
-  /* Coluna Ações — texto/ícone discreto, não botão sólido (pedido do
+  /* Coluna Ações - texto/ícone discreto, não botão sólido (pedido do
      Lucas, 08-08-2026: "só a ação destrutiva ganha cor, e só no hover").
      Substitui o antigo .btn/.btn-info/.btn-secondary/.btn-danger AQUI
-     dentro da tabela — essas classes continuam existindo e sendo usadas
+     dentro da tabela - essas classes continuam existindo e sendo usadas
      em botões de verdade fora da tabela (ex.: "Voltar" em Consultar,
      confirmar exclusão), não foram removidas, só não fazem mais sentido
      pra uma linha de listagem cheia de cor. */
@@ -288,11 +288,11 @@
     transition: var(--transition-normal);
     /* Pílula de fundo no hover (11-08-2026, pedido do Lucas: "aumentar os
        efeitos... dar até um background em volta do ícone, quando o texto
-       sumir") — padding + margin negativa do MESMO tamanho é o truque
+       sumir") - padding + margin negativa do MESMO tamanho é o truque
        clássico: dá área/fundo maior no hover sem empurrar o layout ao
        redor (o `<td>`/gap continuam vendo o elemento do tamanho de
        sempre, só o fundo visualmente "vaza" pro respiro que já existia).
-       border-radius: full em vez de md — no modo ícone-só (abaixo) vira
+       border-radius: full em vez de md - no modo ícone-só (abaixo) vira
        um círculo perfeito ao redor do ícone; no modo com texto, vira uma
        pílula ao redor dos dois. */
     padding: 0.35rem 0.55rem;
@@ -300,13 +300,13 @@
     border-radius: var(--radius-full);
   }
 
-  /* Dica ao passar o mouse (18-08-2026, pedido da Alexia) — mesmo visual
+  /* Dica ao passar o mouse (18-08-2026, pedido da Alexia) - mesmo visual
      de .tooltip__texto (components/layout/tooltip.jsx / 2-componentes.css:
      pílula escura, acima do elemento, fade puro em CSS), reimplementada
      aqui em vez de reaproveitar a classe: `.tooltip` tem `cursor: help` e
      `margin-left` pensados pro ícone "ⓘ" avulso, errados pra um link de
      ação de verdade (cursor precisa continuar `pointer`, sem margem
-     empurrando o ícone). `pointer-events: none` — sem isso, a dica ficaria
+     empurrando o ícone). `pointer-events: none` - sem isso, a dica ficaria
      "no caminho" do clique quando aparece bem em cima do ícone. */
   .crud-tabela__acao-dica {
     position: absolute;
@@ -335,42 +335,42 @@
   }
 
   /* Quando o espaço REAL da seção aperta, o texto de cada ação some
-     sozinho e fica só o ícone — reaparece sozinho se crescer de novo, sem
+     sozinho e fica só o ícone - reaparece sozinho se crescer de novo, sem
      JS nenhum (11-08-2026, pedido do Lucas: "em PC com tela menor a
      coluna de ação quebra, o texto sai pra fora, fica feio").
      ERA @media (max-width) no VIEWPORT, não @container (25-08-2026, 4ª
      rodada, achado do Lucas: "o texto de ação corta antes da hora, mas o
-     menu lateral nem colapsou ainda pra sobrar espaço") — viewport width
+     menu lateral nem colapsou ainda pra sobrar espaço") - viewport width
      não é a mesma coisa que espaço disponível pro conteúdo: com a sidebar
      fixa de 260px (abaixo de 1024px ela empilha, ver 3-admin-shell.css),
      duas janelas do MESMO tamanho podem ter o conteúdo bem mais apertado
-     ou folgado dependendo só de sobrar ou não aquele tanto de sidebar —
+     ou folgado dependendo só de sobrar ou não aquele tanto de sidebar -
      media query no viewport não enxerga essa diferença, container query
      enxerga (reage à largura de `.crud-secao`, que já reflete o espaço
      de verdade sobrando depois da sidebar+paddings).
      TENTATIVA original (comentário antigo, já removido): reagir à
-     largura da própria COLUNA de Ações — descartada na época porque,
+     largura da própria COLUNA de Ações - descartada na época porque,
      SEM wrapper de rolagem nenhum, table-layout: auto nunca "apertava"
      coluna nenhuma de verdade (a tabela inteira transbordava a PÁGINA em
      vez de qualquer coluna encolher). Isso mudou nesta mesma rodada:
      `.crud-tabela__wrapper` (overflow-x: auto) agora contém esse
      transbordo, então `.crud-secao` (pai dele, onde mora o
-     container-type) tem uma largura real e estável de novo — é ela que a
+     container-type) tem uma largura real e estável de novo - é ela que a
      query abaixo observa, não a coluna.
-     Valor (900px, ERA 1150px) — achado do Lucas testando ao vivo o novo
+     Valor (900px, ERA 1150px) - achado do Lucas testando ao vivo o novo
      breakpoint da sidebar (xl:, ~1280-1340px de janela, ver
      admin-sidebar.jsx): "bug esquisito, poucos centímetros antes do menu
      lateral sumir". Causa: a sidebar ocupa ~372px de "chrome" (260px de
      coluna + paddings ao redor) enquanto está aberta, e ZERO quando vira
-     gaveta — no exato pixel do breakpoint dela, o espaço da tabela SALTA
+     gaveta - no exato pixel do breakpoint dela, o espaço da tabela SALTA
      ~260px de uma vez (não encolhe suave). Um valor de @container que
      caia DENTRO dessa faixa de salto (ex.: 1150px, quando a faixa nesse
      teste ia de ~950 até ~1210px) faz o texto sumir um pixel antes do
      salto (espaço ainda apertado, sidebar aberta) e reaparecer um pixel
-     depois (espaço já mais folgado, sidebar virou gaveta) — o "bug".
+     depois (espaço já mais folgado, sidebar virou gaveta) - o "bug".
      900px fica abaixo do PISO dessa faixa pra qualquer breakpoint de
      sidebar >=1280px (piso = breakpoint_sidebar - 372px; com 1280px de
-     mínimo testado, o piso nunca fica abaixo de ~908px) — texto fica
+     mínimo testado, o piso nunca fica abaixo de ~908px) - texto fica
      visível o tempo todo enquanto a sidebar está aberta E logo depois de
      virar gaveta, sem pular; só some de verdade bem mais adiante, quando
      o espaço já está mesmo curto. Se o breakpoint da sidebar mudar pra
@@ -389,10 +389,10 @@
     }
   }
 
-  /* Fundo neutro no hover — serve de base pra Consultar (sem cor própria)
+  /* Fundo neutro no hover - serve de base pra Consultar (sem cor própria)
      e é sobrescrito pelas variantes coloridas (--alterar/--excluir)
      abaixo. `--cor-borda` (não `--cor-fundo-hover`) de propósito
-     (11-08-2026, achado do Lucas: "a pílula do Consultar nem aparece") —
+     (11-08-2026, achado do Lucas: "a pílula do Consultar nem aparece") -
      a LINHA da tabela já fica com `--cor-fundo-hover` assim que o mouse
      entra nela (`.crud-tabela tbody tr:hover`, mais abaixo neste
      arquivo), então um fundo igual por cima simplesmente some. Mesma
@@ -407,10 +407,10 @@
   /* Alterar/Excluir usam os MESMOS tokens de "informação"/"erro" já
      usados em banner de aviso e mensagem de erro em todo o app
      (--cor-texto-info/--cor-fundo-info, --cor-texto-erro/--cor-fundo-
-     erro — ver 1-base.css) — não mais um azul/vermelho hardcoded só
+     erro - ver 1-base.css) - não mais um azul/vermelho hardcoded só
      desta tabela. Reaproveitar o token pronto, em vez de inventar um
      rgba() novo, foi o que o Lucas pediu (11-08-2026): esses 2 tokens já
-     têm um valor pra tema claro E um pra tema escuro (dark mode) — um
+     têm um valor pra tema claro E um pra tema escuro (dark mode) - um
      rgba() fixo, como estava antes, não reagia ao tema nenhum dos dois.
      `opacity` no ícone faz o trabalho de "fraquinho parado, cheio no
      hover" que antes precisava de 2 rgba() diferentes por cor. */
@@ -424,7 +424,7 @@
   }
 
   /* CORRIGIDO (11-08-2026, achado do Lucas: "o texto do Alterar não fica
-     azul no hover, só o ícone") — faltava esta regra; a base
+     azul no hover, só o ícone") - faltava esta regra; a base
      `.crud-tabela__acao:hover` sozinha só deixava o texto neutro
      (--cor-texto-forte). Pílula de fundo usa --cor-fundo-info (mesmo par
      do texto), não precisa mais calcular opacidade própria feito antes. */
@@ -445,13 +445,13 @@
   .crud-tabela__acao--excluir:hover {
     color: var(--cor-texto-erro);
     /* Ação destrutiva continua sendo a única com cor de texto própria no
-       hover (não só o ícone) — reforço a mais de propósito, pra ficar
+       hover (não só o ícone) - reforço a mais de propósito, pra ficar
        ainda mais difícil de confundir com as outras duas. */
     background-color: var(--cor-fundo-erro);
   }
 
   /* Verde (--cor-texto-sucesso/--cor-fundo-sucesso), mesmo padrão exato
-     de --alterar/--excluir acima — usada pelo "Escolher" do Campo de
+     de --alterar/--excluir acima - usada pelo "Escolher" do Campo de
      Testes (23-08-2026), a 3ª cor da família Alterar=azul/Excluir=
      vermelho. */
   .crud-tabela__acao--escolher i {
@@ -468,7 +468,7 @@
     background-color: var(--cor-fundo-sucesso);
   }
 
-  /* Cada campo agora é um <label> (texto do rótulo + input/select dentro) —
+  /* Cada campo agora é um <label> (texto do rótulo + input/select dentro) -
      achado do Claude Web: só placeholder some quando a pessoa digita e ela
      perde a referência de qual campo é qual. align-items: flex-end porque o
      botão "Criar" (sem rótulo acima) precisa alinhar com a base dos campos,

@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfiguracaoValorService } from '../../commons/configuracao/configuracao-valor.service';
 import { DatabaseService } from '../../commons/database/database.service';
 import {
   ARMAZENAMENTO_SERVICE,
@@ -12,7 +13,8 @@ import {
 } from '../../commons/storage/storage.constants';
 import type { ArmazenamentoService } from '../../commons/storage/storage.service.interface';
 import {
-  COTA_BYTES_POR_USUARIO,
+  CHAVE_CONFIG_COTA_BYTES_POR_USUARIO,
+  COTA_BYTES_POR_USUARIO_PADRAO,
   QUANTIDADE_BYTES_ASSINATURA,
   TipoMimePermitido,
 } from '../arquivo.constants';
@@ -22,7 +24,7 @@ import { ArquivoResponse } from '../dto/response/arquivo.response';
 import { assinaturaCorrespondeAoTipo } from '../util/arquivo.assinatura.util';
 import { processarImagem } from '../util/arquivo.processamento-imagem.util';
 
-// PDF nunca passa pelo sharp (não é imagem) — os 3 tipos abaixo, sim.
+// PDF nunca passa pelo sharp (não é imagem) - os 3 tipos abaixo, sim.
 const TIPOS_IMAGEM: readonly TipoMimePermitido[] = [
   'image/jpeg',
   'image/png',
@@ -33,6 +35,7 @@ const TIPOS_IMAGEM: readonly TipoMimePermitido[] = [
 export class ArquivoServiceConfirmarUpload {
   constructor(
     private readonly database: DatabaseService,
+    private readonly configuracaoValor: ConfiguracaoValorService,
     @Inject(ARMAZENAMENTO_SERVICE)
     private readonly armazenamento: ArmazenamentoService,
   ) {}
@@ -44,14 +47,14 @@ export class ArquivoServiceConfirmarUpload {
     const info = await this.armazenamento.obterInfoObjeto(dto.chave);
     if (!info.existe) {
       throw new NotFoundException(
-        'Upload não encontrado no bucket — a URL pré-assinada expira em ' +
+        'Upload não encontrado no bucket - a URL pré-assinada expira em ' +
           '5 minutos, ou o arquivo nunca chegou a ser enviado.',
       );
     }
 
     // Segunda camada de conferência de tamanho (a primeira já é o
     // Content-Length assinado na própria URL de upload, que o provedor
-    // recusa se o navegador tentar mandar mais do que isso) — barato,
+    // recusa se o navegador tentar mandar mais do que isso) - barato,
     // já fizemos o HEAD acima mesmo assim.
     if (info.tamanhoBytes !== dto.tamanhoBytes) {
       throw new BadRequestException(
@@ -59,7 +62,7 @@ export class ArquivoServiceConfirmarUpload {
       );
     }
 
-    // O tipo que o navegador declarou é uma afirmação, não um fato — só
+    // O tipo que o navegador declarou é uma afirmação, não um fato - só
     // agora, com o arquivo de verdade no bucket, dá pra conferir a
     // assinatura real dos bytes. Ver arquivo.assinatura.util.ts.
     const primeirosBytes = await this.armazenamento.lerPrimeirosBytes(
@@ -72,7 +75,7 @@ export class ArquivoServiceConfirmarUpload {
         dto.tipoMime as TipoMimePermitido,
       )
     ) {
-      // Limpeza imediata — não depende da regra de ciclo de vida do
+      // Limpeza imediata - não depende da regra de ciclo de vida do
       // bucket (que só varre pendente/ depois de até 24h, ver doc de
       // arquitetura) pra tirar um arquivo malicioso/mentiroso de lá.
       await this.armazenamento.excluirObjeto(dto.chave).catch(() => undefined);
@@ -83,7 +86,7 @@ export class ArquivoServiceConfirmarUpload {
     }
 
     // Imagem passa por sharp (redimensiona pro teto do contexto, converte
-    // pra WebP, remove EXIF de brinde — ver arquivo.processamento-imagem.
+    // pra WebP, remove EXIF de brinde - ver arquivo.processamento-imagem.
     // util.ts); PDF nunca é tocado, sharp não lida com esse formato.
     // Decide ANTES de gravar em publico/, porque o tamanho final (o que
     // entra na checagem de cota abaixo) só existe depois do processamento
@@ -103,7 +106,7 @@ export class ArquivoServiceConfirmarUpload {
       tipoMimeFinal = 'image/webp';
       tamanhoFinal = bufferProcessado.length;
       // Nome base é sempre um randomUUID (gerado em iniciar-upload.ts,
-      // sem ponto no meio) — trocar só a extensão final é seguro.
+      // sem ponto no meio) - trocar só a extensão final é seguro.
       const nomeBase = dto.chave
         .slice(PASTA_PENDENTE.length)
         .replace(/\.[^.]+$/, '');
@@ -112,7 +115,7 @@ export class ArquivoServiceConfirmarUpload {
       chaveDestino = dto.chave.replace(PASTA_PENDENTE, PASTA_PUBLICO);
     }
 
-    // Cota por usuário (01-09-2026) — checada com o tamanho FINAL (já
+    // Cota por usuário (01-09-2026) - checada com o tamanho FINAL (já
     // processado, pra imagem), nunca o declarado antes da compressão:
     // checar antes seria injusto (rejeitaria upload que cabe de sobra
     // depois de comprimido) e checar depois de já ter gravado em
@@ -126,15 +129,19 @@ export class ArquivoServiceConfirmarUpload {
       .where('ativo', '=', true)
       .executeTakeFirst();
     // SUM de coluna integer volta bigint do Postgres, e o driver `pg`
-    // devolve bigint como STRING (evita perda de precisão silenciosa) —
+    // devolve bigint como STRING (evita perda de precisão silenciosa) -
     // sem o Number() aqui, "usoAtual + tamanhoFinal" concatenaria texto
     // em vez de somar.
     const bytesJaUsados = Number(usoAtual?.total ?? 0);
-    if (bytesJaUsados + tamanhoFinal > COTA_BYTES_POR_USUARIO) {
+    const cotaBytesPorUsuario = await this.configuracaoValor.buscarNumero(
+      CHAVE_CONFIG_COTA_BYTES_POR_USUARIO,
+      COTA_BYTES_POR_USUARIO_PADRAO,
+    );
+    if (bytesJaUsados + tamanhoFinal > cotaBytesPorUsuario) {
       await this.armazenamento.excluirObjeto(dto.chave).catch(() => undefined);
       throw new BadRequestException(
         `Cota de armazenamento excedida (limite de ` +
-          `${Math.round(COTA_BYTES_POR_USUARIO / 1024 / 1024)}MB por conta). ` +
+          `${Math.round(cotaBytesPorUsuario / 1024 / 1024)}MB por conta). ` +
           `Remova algum arquivo antes de enviar um novo.`,
       );
     }

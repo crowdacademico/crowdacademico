@@ -18,7 +18,7 @@ export class UsuarioServiceCreate {
     const db = this.database.getDb();
 
     // INSERT + atribuir_papel_padrao() não precisam mais abrir transação
-    // própria aqui — a requisição inteira já roda dentro de UMA transação
+    // própria aqui - a requisição inteira já roda dentro de UMA transação
     // aberta pelo GlobalDbInterceptor (commons/database), então as duas
     // chamadas abaixo já são atômicas por construção.
     const usuario = await db
@@ -32,14 +32,14 @@ export class UsuarioServiceCreate {
       .returning(USUARIO_COLUNAS_SELECT)
       .executeTakeFirstOrThrow();
 
-    // SECURITY DEFINER (03_funcoes_seguranca.sql) — atribui o papel
+    // SECURITY DEFINER (03_funcoes_seguranca.sql) - atribui o papel
     // 'usuario' padrão. Sem isso, o cadastro fica sem nenhum papel.
     await sql`SELECT public.atribuir_papel_padrao(${usuario.id_usuario})`.execute(
       db,
     );
 
     // OBSERVAÇÃO (provavelmente vai mudar): falta criar o registro em
-    // verificacao_email e disparar o e-mail de confirmação — ficou de fora
+    // verificacao_email e disparar o e-mail de confirmação - ficou de fora
     // de propósito nesta primeira versão, porque isso é território do
     // módulo 4-mail, não deste módulo 1-usuario. `email_verificado` fica
     // FALSE (o default da coluna) até esse fluxo existir.

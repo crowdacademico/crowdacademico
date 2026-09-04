@@ -1,12 +1,12 @@
 // Agrupamento de configurações por assunto (09-08-2026, Bloco H do prompt
-// do Claude Web: Dashboard como painel global) — mesmo espírito da tradução
+// do Claude Web: Dashboard como painel global) - mesmo espírito da tradução
 // de permissões (permissao-nomes-amigaveis.js): puramente camada de
 // exibição, sem coluna nova no banco. A tabela `configuracoes` crua (28
-// linhas, todas juntas, sem contexto) virou uma lista organizada por tema —
+// linhas, todas juntas, sem contexto) virou uma lista organizada por tema -
 // um admin não deveria precisar saber o que é "prazo_maximo_campanha_dias"
 // pra entender que aquilo é sobre CAMPANHA.
 //
-// Se uma chave nova nascer sem entrada aqui, cai no grupo "Outras" — nunca
+// Se uma chave nova nascer sem entrada aqui, cai no grupo "Outras" - nunca
 // quebra a tela, só fica sem organização até alguém lembrar de classificar.
 export const GRUPO_CONFIGURACAO = {
   // Segurança
@@ -41,12 +41,25 @@ export const GRUPO_CONFIGURACAO = {
   score_penalidade_abandono: 'Score / Reputação',
   score_penalidade_sem_justificativa: 'Score / Reputação',
   score_frequencia_esperada_mensal: 'Score / Reputação',
+  // Arquivo
+  // achado (04-09-2026, varredura pra ver o que mais ficava fora dos
+  // grupos organizados): já existia desde 24-08-2026, caía em "Outras"
+  // por não ter grupo próprio ainda - mesmo domínio dos 7 de baixo.
+  avatar_padrao_chave: 'Arquivo',
+  // limites de upload configuráveis (04-09-2026)
+  arquivo_tamanho_minimo_bytes: 'Arquivo',
+  arquivo_tamanho_maximo_imagem_bytes: 'Arquivo',
+  arquivo_tamanho_maximo_documento_bytes: 'Arquivo',
+  arquivo_cota_bytes_por_usuario: 'Arquivo',
+  arquivo_limite_uploads_janela: 'Arquivo',
+  arquivo_janela_limite_uploads_minutos: 'Arquivo',
+  arquivo_intervalo_minimo_segundos: 'Arquivo',
   // Geral
   email_suporte: 'Geral',
   notificar_novas_campanhas: 'Geral',
 };
 
-const ORDEM_GRUPOS = ['Segurança', 'Financeiro', 'Campanha', 'Score / Reputação', 'Geral', 'Outras'];
+const ORDEM_GRUPOS = ['Segurança', 'Financeiro', 'Campanha', 'Score / Reputação', 'Arquivo', 'Geral', 'Outras'];
 
 export function grupoConfiguracao(chave) {
   return GRUPO_CONFIGURACAO[chave] ?? 'Outras';

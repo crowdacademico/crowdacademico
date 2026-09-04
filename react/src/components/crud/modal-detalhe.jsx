@@ -1,9 +1,9 @@
 // Modal genérico de "detalhe explicado" (09-08-2026, Bloco F do prompt do
-// Claude Web) — nasceu pra explicar uma permissão (o quê, por que existe,
+// Claude Web) - nasceu pra explicar uma permissão (o quê, por que existe,
 // quem tem hoje), mas não tem nada específico de permissão aqui: título,
 // legenda em fonte mono (a "chave" técnica), um badge opcional e uma lista
 // de seções título+conteúdo. Feito pra ser reaproveitado depois pra
-// explicar configuração, papel, status de campanha etc — quem muda é só
+// explicar configuração, papel, status de campanha etc - quem muda é só
 // o conteúdo das seções, não este componente.
 const CLASSE_BADGE_IMPACTO = {
   alto: 'fundo-erro texto-erro',
@@ -12,7 +12,7 @@ const CLASSE_BADGE_IMPACTO = {
 };
 
 // `rotuloAcao` (23-08-2026, Campo de Testes: "Consultar" de Link
-// Acadêmico) — cabeçalho extra, opcional, grande/centralizado/maiúsculo
+// Acadêmico) - cabeçalho extra, opcional, grande/centralizado/maiúsculo
 // + linha divisória, ANTES do título normal (achado do Lucas: um
 // "Consultar" precisa deixar claro de cara que ação é essa, antes de
 // entrar nos detalhes de qual registro). Sem essa prop, o modal continua
@@ -80,7 +80,7 @@ export function ModalDetalhe({ titulo, chave, badgeImpacto, secoes, aoFechar, ro
               <h4 className="text-xs font-bold uppercase tracking-widest texto-fraco mb-1.5">
                 {secao.titulo}
               </h4>
-              {/* ERA texto-padrao (slate-700) — muito claro pro corpo
+              {/* ERA texto-padrao (slate-700) - muito claro pro corpo
                   principal do modal (09-08-2026, achado do Lucas: "o texto
                   deste dialogbox está muito cinza"). texto-forte é o mesmo
                   tom do título (slate-800/quase-branco no escuro), sem

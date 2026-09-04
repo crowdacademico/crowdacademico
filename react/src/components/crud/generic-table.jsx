@@ -7,7 +7,7 @@ const TAMANHOS_PAGINA = [10, 20, 30, 'todos'];
 const LIMIAR_FILTRO = 5;
 
 // Valor booleano vira badge colorido (Sim/Não), não o texto cru "true"/
-// "false" — muito mais legível numa lista (achado do Claude Web, rodando
+// "false" - muito mais legível numa lista (achado do Claude Web, rodando
 // o painel de verdade: "E-MAIL VERIFICADO: false" não é instantâneo de
 // ler, um badge é).
 function celulaValor(valor) {
@@ -22,23 +22,23 @@ function celulaValor(valor) {
 }
 
 // Tabela genérica de LISTAGEM (leitura, filtro, ordenação, paginação) usada
-// pelo painel admin — cada módulo novo do Nest com listagem simples vira só
+// pelo painel admin - cada módulo novo do Nest com listagem simples vira só
 // uma entrada de colunas aqui, não uma tela nova escrita do zero.
 //
 // Criar/Alterar/Excluir NÃO acontecem mais aqui dentro (pedido do Lucas,
-// 02-08-2026: "tudo que faz parte do CRUD precisa de view própria" — mesmo
+// 02-08-2026: "tudo que faz parte do CRUD precisa de view própria" - mesmo
 // padrão já usado em views/1-usuario/criar-usuario.jsx). Passando
 // `rotaBase` (ex.: "/usuarios"), cada linha ganha "Alterar"/"Excluir"
-// apontando pra `${rotaBase}/${id}/alterar` e `/excluir` — páginas de
+// apontando pra `${rotaBase}/${id}/alterar` e `/excluir` - páginas de
 // verdade, com sua própria URL, não formulário/confirm() embutido na
 // tabela. Sem `rotaBase` (catálogos só-leitura como Papéis/Permissões),
 // não aparece coluna de Ações nenhuma.
 //
 // `buscarLog` (opcional, pedido do Lucas 03-08-2026: "um botão no fundo de
-// cada tabela pra ver a última alteração") — mesma convenção de `listar`:
+// cada tabela pra ver a última alteração") - mesma convenção de `listar`:
 // função já pré-amarrada (authFetch + nome físico da tabela) pelo
 // componente pai (ver listar-usuarios.jsx/listar-configuracoes.jsx). Sem
-// essa prop, o botão "Ver log" nem aparece — nem toda tabela tem
+// essa prop, o botão "Ver log" nem aparece - nem toda tabela tem
 // log_auditoria aplicado (só as que passam por `fn_log_auditoria()`, ver
 // 05_regras_negocio.sql [05-L]).
 const ACOES_PADRAO = ['alterar', 'consultar', 'excluir'];
@@ -52,36 +52,36 @@ export function GenericTable({
   rotaBase,
   buscarLog,
   // Repassado direto pro LogAuditoriaPainel (09-08-2026, ver comentário lá)
-  // — troca a coluna genérica "Campos alterados" por "De"/"Para" lendo
+  // - troca a coluna genérica "Campos alterados" por "De"/"Para" lendo
   // esse campo específico de dadosAnteriores/dadosNovos.
   campoRenomeioLog,
   // Quais dos 3 botões padrão aparecem, quando `rotaBase` está presente
-  // (03-08-2026, pedido do Lucas: Papéis precisa só de "Alterar" — sem
+  // (03-08-2026, pedido do Lucas: Papéis precisa só de "Alterar" - sem
   // Consultar (a tabela já mostra tudo, mesma decisão já tomada pra
   // Usuário/Configuração) e sem Excluir (apagar um papel usado em RBAC é
   // decisão maior, fora de escopo). Default preserva o comportamento de
   // sempre (todo `rotaBase` já existente continua com os 3 botões).
   acoes = ACOES_PADRAO,
   // Coluna adicional genérica (09-08-2026, Bloco F: botão "ⓘ" que abre um
-  // modal de detalhe por linha, na tabela Permissões) — `{ rotulo,
+  // modal de detalhe por linha, na tabela Permissões) - `{ rotulo,
   // renderizar(linha) }`. Existe separada de `colunas` (que só espera
   // valor de dado bruto) porque esta pode renderizar QUALQUER coisa
   // (botão, ícone, badge composto), não só `String(valor)`. Independe de
-  // `rotaBase`/`acoes` — tabelas só-leitura (sem Ações) também podem usar.
+  // `rotaBase`/`acoes` - tabelas só-leitura (sem Ações) também podem usar.
   colunaExtra,
   // Filtros por faceta (09-08-2026, pedido do Lucas: filtro de papel na
-  // tabela Usuários; generalizado no mesmo dia pra virar lista — tabela
-  // Permissões pediu 2 lado a lado, papel e impacto) — array de `{ chave,
+  // tabela Usuários; generalizado no mesmo dia pra virar lista - tabela
+  // Permissões pediu 2 lado a lado, papel e impacto) - array de `{ chave,
   // rotulo, ordem? }`. Genérico: funciona pra QUALQUER coluna com valores
-  // discretos, não só "papel"/"impacto" — as opções de cada dropdown são
+  // discretos, não só "papel"/"impacto" - as opções de cada dropdown são
   // derivadas sozinhas a partir dos valores que já aparecem em
   // `linha[chave]` (célula com vários valores separada por ", ", mesma
   // convenção já usada pela coluna "papel" de ListarUsuarios; célula de
   // valor único também funciona, vira uma lista de 1 token). Cada faceta é
   // independente (marcar em uma não mexe nas outras) e se combinam com E
-  // entre si (dentro da mesma faceta é OU) — padrão de cada uma é "Todos"
+  // entre si (dentro da mesma faceta é OU) - padrão de cada uma é "Todos"
   // (nenhuma opção marcada = sem filtro nenhum, mostra tudo). `ordem`
-  // (opcional, por faceta) — lista com a ordem exata desejada (ex.: papel
+  // (opcional, por faceta) - lista com a ordem exata desejada (ex.: papel
   // do menor pro maior poder); sem isso, cai no alfabético (pt-BR). Valor
   // que aparecer nos dados mas não estiver em `ordem` vai pro final da
   // lista, não desaparece.
@@ -92,15 +92,15 @@ export function GenericTable({
   const { erro, reportarErro, limparErro } = useErroToast();
   // Filtro/página/ordenação/faceta vivem na URL (query string), não em
   // useState local (22-08-2026, pedido do Lucas: ao voltar de "Consultar"
-  // via navigate(-1), o filtro escolhido resetava — a página de listagem
+  // via navigate(-1), o filtro escolhido resetava - a página de listagem
   // é desmontada na troca de rota, e useState não sobrevive a isso).
   // `{ replace: true }` em toda escrita: cada clique em filtro/página/
   // ordenação SUBSTITUI a entrada atual do histórico em vez de empilhar
-  // uma nova — só o clique em "Consultar" (Link de verdade) empilha,
+  // uma nova - só o clique em "Consultar" (Link de verdade) empilha,
   // então o botão "Voltar" (navigate(-1), ver consultar-usuario.jsx e
   // afins) sempre volta pro último estado de filtro, não pro passo-a-passo
   // de cada clique dentro do dropdown.
-  // Nomes reservados na URL: q, pagina, tamanho, ordenar, dir — evitar
+  // Nomes reservados na URL: q, pagina, tamanho, ordenar, dir - evitar
   // faceta com uma dessas `chave` (nenhuma das existentes hoje usa).
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -123,7 +123,7 @@ export function GenericTable({
   const tamanhoPaginaParam = searchParams.get('tamanho');
   const tamanhoPagina =
     tamanhoPaginaParam === 'todos' ? 'todos' : Number(tamanhoPaginaParam) || TAMANHOS_PAGINA[0];
-  // Memoizado (não objeto literal solto) — senão vira uma referência nova
+  // Memoizado (não objeto literal solto) - senão vira uma referência nova
   // a cada render, e o useMemo de linhasOrdenadas (que depende disto)
   // recalcularia sempre, mesmo sem a ordenação ter mudado de verdade.
   const ordenacao = useMemo(
@@ -133,13 +133,13 @@ export function GenericTable({
     }),
     [searchParams],
   );
-  // Só busca quando abre (não em toda carga da tabela) — a maioria das
+  // Só busca quando abre (não em toda carga da tabela) - a maioria das
   // visitas a uma listagem não vai clicar em "Ver log". Fica de fora da
-  // URL de propósito — é estado de UI (painel aberto), não um filtro de
+  // URL de propósito - é estado de UI (painel aberto), não um filtro de
   // QUAIS dados aparecem.
   const [logAberto, setLogAberto] = useState(false);
   // Só 1 dropdown de faceta aberto por vez (chave de qual está aberta, ou
-  // null) — mais simples que um booleano por faceta, e evita 2 dropdowns
+  // null) - mais simples que um booleano por faceta, e evita 2 dropdowns
   // abertos sobrepondo um no outro quando são vários lado a lado. Também
   // fora da URL, mesmo motivo do `logAberto` acima.
   const [facetaAbertaChave, setFacetaAbertaChave] = useState(null);
@@ -155,17 +155,17 @@ export function GenericTable({
   }, [searchParams, filtrosFacetados]);
   const facetasRef = useRef(null);
 
-  // Fechar ao clicar fora (09-08-2026) — ERA onBlur+relatedTarget (mesmo
+  // Fechar ao clicar fora (09-08-2026) - ERA onBlur+relatedTarget (mesmo
   // padrão do DevLoginRapido), mas com checkbox dentro de <label> isso
   // fecha o dropdown ANTES do clique completar: o mousedown num elemento
   // não-focável (o texto do <label>) dispara blur no botão que abriu o
   // dropdown com relatedTarget ainda nulo (o navegador só decide o próximo
-  // foco depois), o guard via de que "saiu do container" e fecha — achado
+  // foco depois), o guard via de que "saiu do container" e fecha - achado
   // ao vivo pelo Lucas ("clico em qualquer coisa que não seja o
   // quadradinho, o filtro fecha e não faz nada"). Listener de mousedown no
   // document, comparando o alvo do clique com o container (o ref cobre
   // TODAS as facetas juntas, não uma por vez) por `contains()`, não
-  // depende de foco nenhum — fecha só quando o clique é GEOMETRICAMENTE
+  // depende de foco nenhum - fecha só quando o clique é GEOMETRICAMENTE
   // fora de qualquer uma delas. Clicar no botão de OUTRA faceta ainda está
   // dentro do container, então só troca qual está aberta, não fecha tudo.
   useEffect(() => {
@@ -183,7 +183,7 @@ export function GenericTable({
 
   useEffect(() => {
     // Padrão comum de "buscar dado ao montar/quando a query mudar" (mesmo
-    // exemplo dos docs do React) — a regra nova react-hooks/set-state-in-effect
+    // exemplo dos docs do React) - a regra nova react-hooks/set-state-in-effect
     // marca a chamada de setCarregando/setErro como suspeita mesmo assim.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setCarregando(true);
@@ -195,7 +195,7 @@ export function GenericTable({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listar]);
 
-  // Opções de CADA dropdown de faceta — derivadas dos dados que já
+  // Opções de CADA dropdown de faceta - derivadas dos dados que já
   // chegaram (não da lista FILTRADA, senão as opções desapareceriam/
   // reapareceriam conforme a pessoa digita no campo de busca ou marca
   // outra faceta, confuso). Sempre a partir de `linhas` inteira. Com
@@ -229,22 +229,22 @@ export function GenericTable({
   }, [linhas, filtrosFacetados]);
 
   // Faceta com pelo menos 1 seleção marcada (as com array vazio/ausente
-  // contam como "Todos", não filtram nada) — usado tanto no filtro quanto
+  // contam como "Todos", não filtram nada) - usado tanto no filtro quanto
   // pra saber se deve mostrar "Nenhum registro bate com o filtro."
   const algumaFacetaAtiva = (filtrosFacetados ?? []).some(
     (faceta) => (selecoesPorFaceta[faceta.chave]?.length ?? 0) > 0,
   );
 
-  // Filtro é só client-side (a lista inteira já veio do backend) — resolve
+  // Filtro é só client-side (a lista inteira já veio do backend) - resolve
   // "achar uma linha no meio de 28" (Configurações já tem esse tanto), mas
-  // não resolve buscar num universo de milhares sem baixar tudo primeiro —
+  // não resolve buscar num universo de milhares sem baixar tudo primeiro -
   // isso exigiria busca no próprio backend (LIMIT/OFFSET + WHERE), fora do
   // escopo desta rodada.
   const linhasFiltradas = useMemo(() => {
     let base = linhas;
 
     // Facetas primeiro (nenhuma marcada em cada uma = "Todos", sem filtro
-    // nenhum — o padrão pedido pelo Lucas), texto depois. Entre facetas
+    // nenhum - o padrão pedido pelo Lucas), texto depois. Entre facetas
     // DIFERENTES é E (uma linha só sobrevive se bater em TODAS as que têm
     // seleção); dentro da MESMA faceta é OU (basta bater em uma das
     // opções marcadas).
@@ -269,12 +269,12 @@ export function GenericTable({
     );
   }, [linhas, filtro, colunas, filtrosFacetados, selecoesPorFaceta]);
 
-  // Ordena a lista FILTRADA inteira, antes de paginar — nunca a página
+  // Ordena a lista FILTRADA inteira, antes de paginar - nunca a página
   // atual sozinha. Ordenar só a fatia visível é o jeito clássico desse tipo
   // de recurso "bugar com paginação" (linha some da vista ao virar página,
   // ordem parece errada entre páginas). Tipo da coluna vem do próprio dado
   // (typeof do primeiro valor não-nulo achado), não de uma config nova por
-  // coluna — funciona pra number (id), string (nome/email) e boolean
+  // coluna - funciona pra number (id), string (nome/email) e boolean
   // (email verificado) sem precisar declarar isso em cada tela que usa
   // GenericTable.
   const linhasOrdenadas = useMemo(() => {
@@ -301,7 +301,7 @@ export function GenericTable({
   }, [linhasFiltradas, linhas, ordenacao]);
 
   // Colunas de valor curto (número ou booleano) ficam centralizadas,
-  // cabeçalho e célula — pedido da Alexia (18-08-2026: "centralizar o
+  // cabeçalho e célula - pedido da Alexia (18-08-2026: "centralizar o
   // negócio de sim e não" + "melhorar espaçamento entre colunas", as
   // duas juntas porque são a mesma causa: texto curto colado à esquerda
   // deixa um vão grande e desigual à direita, sobretudo ao lado de uma
@@ -310,11 +310,11 @@ export function GenericTable({
   // usa pra ordenação, então não precisa de config nova por coluna nas
   // ~10 telas que já usam GenericTable.
   //
-  // `coluna.centralizar` (19-08-2026, mesmo pedido, rodada 2) — escape
+  // `coluna.centralizar` (19-08-2026, mesmo pedido, rodada 2) - escape
   // manual pra quando o sniff automático não serve: a coluna "descrição"
   // de Permissões guarda um resumo em TEXTO (sniff acharia 'string', não
   // centralizaria por padrão), mas o que aparece na tela é um botão
-  // "Saiba mais" (`renderizar`) — curto, e olhando esquisito colado à
+  // "Saiba mais" (`renderizar`) - curto, e olhando esquisito colado à
   // esquerda igual os outros. `|| coluna.centralizar` é aditivo: nunca
   // tira a centralização automática que já funcionava, só liga em mais
   // um caso.
@@ -335,20 +335,20 @@ export function GenericTable({
   // Coluna "id" com largura padrão em TODA tabela (19-08-2026, pedido do
   // Lucas: "é uma coluna pequena, e deve suportar até 3 ou 4 dígitos sem
   // quebra de linha... tabelas independentes, começando a alinhar a
-  // largura das colunas"). `rotulo` (não `chave`) é o que identifica —
+  // largura das colunas"). `rotulo` (não `chave`) é o que identifica -
   // toda tela já escreve `{ chave: 'idAlgumaCoisa', rotulo: 'id' }`
   // (mesmo texto literal em todas, minúsculo), então isto pega a coluna
   // certa em qualquer tabela sem precisar de config nova por tela, igual
   // `colunasCentralizadas` acima. Sem isso, a largura da coluna id
   // dependia de quantos dígitos o PRIMEIRO registro carregado tinha
-  // (table-layout: auto) — uma tabela com id até 99 ficava mais estreita
+  // (table-layout: auto) - uma tabela com id até 99 ficava mais estreita
   // que uma com id até 9999, mesma coluna, tabelas diferentes.
   const colunaIdChave = useMemo(
     () => colunas.find((coluna) => coluna.rotulo.toLowerCase() === 'id')?.chave,
     [colunas],
   );
 
-  // Junta as duas classes opcionais acima — usado tanto no <th> quanto no
+  // Junta as duas classes opcionais acima - usado tanto no <th> quanto no
   // <td> de cada coluna, pra não repetir a mesma composição duas vezes.
   const classesColuna = (coluna) =>
     (colunasCentralizadas.has(coluna.chave) ? ' crud-tabela__celula--centralizada' : '') +
@@ -356,37 +356,37 @@ export function GenericTable({
 
   // `coluna.quebrarRotulo` (25-08-2026, pedido do Lucas: "e-mail
   // verificado" oscilando entre quebrado/inteiro várias vezes conforme a
-  // tela diminui — "e-mail verificado" quebra pelo espaço realmente
+  // tela diminui - "e-mail verificado" quebra pelo espaço realmente
   // sobrando pra coluna, mas esse espaço pula toda vez que outra coisa
   // muda por perto (Ações vira ícone, sidebar some), cruzando o limite
   // de novo pra cada lado). Em vez de depender do espaço sobrando (o
   // `white-space` padrão do navegador já quebra sozinho quando aperta,
   // mas de forma instável), insere uma quebra MANUAL entre a última
-  // palavra e o resto — escondida por padrão (`display:none` em
+  // palavra e o resto - escondida por padrão (`display:none` em
   // `.crud-tabela__quebra-rotulo`, ver 4-crud.css) e só "ligada" abaixo
   // de UM breakpoint fixo de JANELA (não de espaço sobrando, de
-  // propósito — janela só encolhe numa direção, nunca pula igual o
-  // espaço da coluna pula) — muda de estado uma vez só, sempre no mesmo
+  // propósito - janela só encolhe numa direção, nunca pula igual o
+  // espaço da coluna pula) - muda de estado uma vez só, sempre no mesmo
   // lugar, nunca oscila. Só entra em jogo quando a tela marca
   // `coluna.quebrarRotulo: true` (opt-in, como `centralizar`/`largura`
-  // acima) — nenhuma outra coluna muda de comportamento.
-  // `slice(0, ultimoEspaco + 1)` (CORRIGIDO — era `ultimoEspaco`, sem o
-  // "+1") — precisa manter o próprio caractere de espaço na primeira
+  // acima) - nenhuma outra coluna muda de comportamento.
+  // `slice(0, ultimoEspaco + 1)` (CORRIGIDO - era `ultimoEspaco`, sem o
+  // "+1") - precisa manter o próprio caractere de espaço na primeira
   // metade. Sem ele, com o <br> escondido (`display:none`, o caso comum,
   // tela larga) as duas metades ficavam coladas sem espaço nenhum entre
-  // si ("e-mailverificado") — e pior, sem NENHUM espaço sobrando pro
+  // si ("e-mailverificado") - e pior, sem NENHUM espaço sobrando pro
   // navegador quebrar sozinho quando a coluna ficava apertada, ele usava
   // o único ponto de quebra que sobrava (o hífen de "e-mail"), quebrando
   // errado ("e-" / "mailverificado") numa largura que não tinha nada a
   // ver com o breakpoint escolhido aqui.
-  // Classe extra só pro <th> (não pro <td> — `classesColuna` é
+  // Classe extra só pro <th> (não pro <td> - `classesColuna` é
   // compartilhada pelos dois, mas `quebrarRotulo` é uma decisão só do
   // CABEÇALHO). `.crud-tabela__rotulo-controlado` trava `white-space:
-  // nowrap` (ver 4-crud.css) — sem isso, o navegador ainda podia quebrar
+  // nowrap` (ver 4-crud.css) - sem isso, o navegador ainda podia quebrar
   // sozinho no espaço (agora corrigido, ver comentário de rotuloColuna)
   // antes do breakpoint escolhido, reproduzindo a mesma oscilação de
   // antes, só que "certa" em vez de errada no hífen. `white-space:
-  // nowrap` não impede o `<br>` explícito de funcionar quando ativo —
+  // nowrap` não impede o `<br>` explícito de funcionar quando ativo -
   // só impede quebra ESPONTÂNEA no espaço; são coisas diferentes em CSS.
   const classesCabecalho = (coluna) =>
     classesColuna(coluna) + (coluna.quebrarRotulo ? ' crud-tabela__rotulo-controlado' : '');
@@ -409,60 +409,60 @@ export function GenericTable({
   };
 
   // `coluna.largura` (19-08-2026, pedido do Lucas em Tipos de Link: "o
-  // exato mesmo espaçamento" pras 4 colunas Sim/Não da tabela — hoje cada
+  // exato mesmo espaçamento" pras 4 colunas Sim/Não da tabela - hoje cada
   // uma tinha uma largura diferente porque table-layout: auto (padrão do
   // HTML) mede pela PALAVRA do cabeçalho, e "Atualização"/"Recompensa"
   // são bem mais compridas que "Perfil"/"Ativo"). Opcional, string CSS
-  // (ex.: '9.25rem') — diferente de `centralizar`/coluna-id (que a
+  // (ex.: '9.25rem') - diferente de `centralizar`/coluna-id (que a
   // própria GenericTable decide sozinha, sniffando o dado), largura
   // exata é uma decisão de design por tela, não dá pra inferir do dado
   // (duas tabelas diferentes podem ter o mesmo tipo de coluna e ainda
   // assim precisar de larguras diferentes uma da outra).
   //
   // `minLargurasColunas` (25-08-2026, achado do Lucas: "as colunas
-  // dançam ao trocar de página") — table-layout: auto recalcula a
+  // dançam ao trocar de página") - table-layout: auto recalcula a
   // largura de cada coluna com base SÓ nas linhas visíveis; trocar de
   // página muda o conjunto visível, a largura muda junto. Calculado aqui
-  // a partir de `linhas` INTEIRA (não linhasPagina — a lista completa já
+  // a partir de `linhas` INTEIRA (não linhasPagina - a lista completa já
   // está toda no navegador, ver comentário de `listar` no topo do
   // arquivo), então só recalcula quando o dado de verdade muda (uma
-  // busca nova), nunca ao virar página — o PISO já nasce igual ao maior
+  // busca nova), nunca ao virar página - o PISO já nasce igual ao maior
   // valor possível em qualquer página, então nunca precisa crescer nem
   // encolher ao trocar.
   //
-  // `min-width`, não `width` de propósito (25-08-2026, 2ª tentativa —
+  // `min-width`, não `width` de propósito (25-08-2026, 2ª tentativa -
   // a 1ª usava table-layout: fixed + width, e travar TODA coluna ao
   // mesmo tempo fazia o navegador esticar/espremer todas
   // proporcionalmente pra preencher os 100% da tabela, incluindo em
-  // telas estreitas onde não sobra espaço — texto acabava invadindo a
+  // telas estreitas onde não sobra espaço - texto acabava invadindo a
   // célula vizinha, mesmo dentro de um wrapper com overflow-x: auto,
   // porque width:100% nunca deixava a tabela ficar mais larga que o
   // wrapper pra ter algo de verdade pra rolar). `min-width` sob
-  // table-layout: auto (o padrão de sempre, não mudou) é só um PISO —
+  // table-layout: auto (o padrão de sempre, não mudou) é só um PISO -
   // mesma filosofia já usada em `.crud-tabela__coluna-id` (`width: 4rem`
-  // ali já funciona como piso, não teto, sob auto) — a coluna nunca
+  // ali já funciona como piso, não teto, sob auto) - a coluna nunca
   // fica mais estreita que isto, mas continua livre pra crescer ou (em
   // tela apertada) a tabela inteira virar mais larga que o card e rolar
   // de lado, exatamente como já acontecia antes de qualquer mudança de
   // hoje. Aproximação por contagem de caractere (1ch ≈ 1 caractere do
-  // maior valor da coluna, cabeçalho incluso, +2ch de respiro) — não é
+  // maior valor da coluna, cabeçalho incluso, +2ch de respiro) - não é
   // pixel perfeito, mas resolve a dança sem arriscar o responsivo.
   // Teto de 40ch (8ch pra coluna "id", pedido à parte do Lucas: "é a
   // primeira coluna, não precisa ser muito larga") pra um valor isolado
   // excepcionalmente longo não pedir um piso enorme sozinho. `coluna.
-  // largura` continua ganhando quando existe — decisão manual explícita
+  // largura` continua ganhando quando existe - decisão manual explícita
   // nunca é sobrescrita pelo cálculo automático.
   // Coluna centralizada (número/booleano/`centralizar`) NÃO usa o rótulo do
   // cabeçalho como piso (25-08-2026, achado do Lucas: "E-mail verificado"
-  // como cabeçalho tem 17 caracteres, mas o DADO é só "Sim"/"Não" — era o
+  // como cabeçalho tem 17 caracteres, mas o DADO é só "Sim"/"Não" - era o
   // texto do título, não o valor, que forçava a coluna a ficar larga).
   // `maiorTamanho` começa em 0 pra essas (só cresce com o valor de verdade,
   // sempre curto: número, "Sim"/"Não", badge de status), deixando o
   // cabeçalho livre pra quebrar em 2 linhas sozinho quando a coluna aperta
-  // — sem precisar de `<br/>` manual no rótulo nem CSS novo, é só o
+  // - sem precisar de `<br/>` manual no rótulo nem CSS novo, é só o
   // `white-space` padrão do navegador (nenhuma regra força nowrap em `th`
   // fora da coluna id). Colunas de texto normal (nome, papel, email...)
-  // continuam contando o rótulo, sem mudança — a única com esse problema
+  // continuam contando o rótulo, sem mudança - a única com esse problema
   // era uma coluna centralizada com rótulo comprido e valor curto.
   const minLargurasColunas = useMemo(() => {
     const resultado = {};
@@ -479,13 +479,13 @@ export function GenericTable({
           maiorTamanho = tamanho;
         }
       });
-      // ERA 40 (25-08-2026, ajustado pra 28) — achado do Lucas testando ao
+      // ERA 40 (25-08-2026, ajustado pra 28) - achado do Lucas testando ao
       // vivo: com 40ch de teto, uma coluna de valor naturalmente longo
       // (nome, email) só alcança o PRÓPRIO piso de verdade (e só aí passa
-      // a quebrar linha/apertar) numa tela já bem estreita — colunas de
+      // a quebrar linha/apertar) numa tela já bem estreita - colunas de
       // valor curto (papel, e-mail verificado) alcançam o piso delas bem
       // antes, dando a sensação de que "aperta tudo, menos essas duas".
-      // min-width continua sendo só um PISO (não um teto de verdade — a
+      // min-width continua sendo só um PISO (não um teto de verdade - a
       // coluna cresce livre numa tela larga, isso não muda em nada); 28ch
       // só faz ela poder encolher (e por tabela, o <td> sem nowrap
       // nenhum, QUEBRAR linha) mais cedo quando a tela aperta de verdade,
@@ -523,7 +523,7 @@ export function GenericTable({
     const novaDirecao = ordenacao.chave === chave && ordenacao.direcao === 'asc' ? 'desc' : 'asc';
     // Senão a pessoa pode ficar "presa" na página 3 depois de reordenar,
     // vendo um pedaço que não corresponde mais ao topo da lista nova.
-    // `dir: null` quando volta pro padrão 'asc' — mantém a URL limpa.
+    // `dir: null` quando volta pro padrão 'asc' - mantém a URL limpa.
     atualizarParametros({ ordenar: chave, dir: novaDirecao === 'asc' ? null : 'desc', pagina: null });
   };
 
@@ -550,10 +550,10 @@ export function GenericTable({
               />
             )}
 
-            {/* Filtros por faceta (09-08-2026), lado a lado — 1+ dropdowns,
+            {/* Filtros por faceta (09-08-2026), lado a lado - 1+ dropdowns,
                 cada um só aparece se houver mais de 1 valor possível (com 1
                 só, filtrar não faria diferença nenhuma). O ref cobre TODAS
-                juntas (ver useEffect de clicar fora, acima) — clicar no
+                juntas (ver useEffect de clicar fora, acima) - clicar no
                 botão de uma enquanto outra está aberta só troca qual está
                 aberta, não fecha as duas. */}
             {(filtrosFacetados ?? []).length > 0 && (
@@ -617,12 +617,12 @@ export function GenericTable({
                                 // tratados diferente de propósito: clique
                                 // DIRETO na caixinha deixa o navegador fazer
                                 // o que já sabe fazer sozinho (onChange do
-                                // <input>, ver abaixo) — é o jeito mais
+                                // <input>, ver abaixo) - é o jeito mais
                                 // confiável de manter o visual sincronizado,
                                 // sem gambiarra. Clique no TEXTO (o alvo não
                                 // é o <input>) chama `alternar()` aqui e
                                 // cancela o encaminhamento nativo pro
-                                // <input> por baixo (preventDefault) — sem
+                                // <input> por baixo (preventDefault) - sem
                                 // isso, o clique alternaria a caixinha 2x
                                 // (uma vez aqui, outra pelo encaminhamento)
                                 // e cancelaria a mudança.
@@ -653,7 +653,7 @@ export function GenericTable({
         )}
 
       {carregando ? (
-        // Esqueleto em vez de texto "Carregando..." — padrão comum em
+        // Esqueleto em vez de texto "Carregando..." - padrão comum em
         // painel admin (Linear, Stripe, Vercel): já mostra o formato da
         // tabela (mesmas colunas) enquanto os dados reais não chegam, em
         // vez de um texto solto que faz a tela "pular" quando os dados
@@ -672,14 +672,14 @@ export function GenericTable({
                 </th>
               ))}
               {colunaExtra && <th>{colunaExtra.rotulo}</th>}
-              {/* Sem min-width calculado de propósito (25-08-2026) — ao
+              {/* Sem min-width calculado de propósito (25-08-2026) - ao
                   contrário das colunas de dado, Ações mostra sempre os
                   MESMOS botões em toda linha/página (nunca "dança" ao
                   paginar), então o piso artificial só atrapalhava: abaixo
                   de 1400px o texto some e vira ícone-só (ver @media em
                   4-crud.css), mas o min-width antigo (calculado pro modo
                   COM texto) continuava travado, sobrando espaço reservado
-                  à toa e empurrando o ícone de Excluir pra fora da tela —
+                  à toa e empurrando o ícone de Excluir pra fora da tela -
                   table-layout: auto já dimensiona certo sozinho nos dois
                   modos, sem ajuda nenhuma daqui. */}
               {rotaBase && <th className="crud-tabela__celula--centralizada">Ações</th>}
@@ -739,7 +739,7 @@ export function GenericTable({
                       style={estiloColuna(coluna)}
                     >
                       {/* `renderizar` (09-08-2026, tabela Permissões: botão
-                          "Saiba mais" no lugar do valor cru) — opcional, só
+                          "Saiba mais" no lugar do valor cru) - opcional, só
                           uma coluna especial precisa disso, as outras
                           continuam mostrando o dado normal. */}
                       {coluna.renderizar
@@ -753,11 +753,11 @@ export function GenericTable({
                       {/* Texto/ícone discreto, não botão sólido (08-08-2026).
                           Ícone com uma cor fraquinha (09-08-2026, pedido do
                           Lucas: "voltar a dar as cores das ações... mas mais
-                          fraquinho, só pra dar mais vida") — ver
+                          fraquinho, só pra dar mais vida") - ver
                           .crud-tabela__acao--alterar/--excluir em
                           4-crud.css. Texto continua neutro nos dois casos.
                           Texto em <span> próprio (não solto ao lado do
-                          <i>) — precisa de um elemento pra sumir sozinho
+                          <i>) - precisa de um elemento pra sumir sozinho
                           via CSS quando a coluna aperta; `aria-label` no
                           <Link> garante que o botão continua tendo nome
                           acessível pra leitor de tela mesmo com o texto
@@ -765,13 +765,13 @@ export function GenericTable({
                           de acessibilidade também, não só da tela).
                           `.crud-tabela__acao-dica` (18-08-2026, pedido da
                           Alexia: "ao passar o mouse por cima dos ícones de
-                          ação, queria que aparecesse o texto da ação") —
+                          ação, queria que aparecesse o texto da ação") -
                           mesmo mecanismo CSS puro (:hover/:focus) do
                           Tooltip em components/layout/tooltip.jsx, só que
                           aplicado direto no próprio link de ação em vez de
                           um "ⓘ" à parte (não faria sentido aqui: o ícone
                           JÁ é o elemento clicável). Sem `title=` nativo de
-                          propósito — os dois juntos mostrariam 2 dicas
+                          propósito - os dois juntos mostrariam 2 dicas
                           sobrepostas. */}
                       <div className="crud-tabela__acoes">
                         {acoes.includes('alterar') && (

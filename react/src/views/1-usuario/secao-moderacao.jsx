@@ -5,8 +5,8 @@ import { useToast } from '../../components/layout/use-toast';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { useConfiguracoes } from '../../services/11-configuracoes/hook/use-configuracoes';
 
-// Moderação — suspender/revogar CONTA (09-08-2026, Bloco G do prompt do
-// Claude Web) — dentro de Alterar Usuário porque é ação sobre a MESMA
+// Moderação - suspender/revogar CONTA (09-08-2026, Bloco G do prompt do
+// Claude Web) - dentro de Alterar Usuário porque é ação sobre a MESMA
 // conta que a tela já edita, não uma tela própria. Opções de prazo vêm de
 // `configuracoes.suspensao_usuario_opcoes_dias` (nada fixo no código) +
 // campo livre pra qualquer outro número de dias.

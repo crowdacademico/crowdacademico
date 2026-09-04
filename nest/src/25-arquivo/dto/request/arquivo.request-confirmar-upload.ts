@@ -18,14 +18,14 @@ import {
 // Repete nomeOriginal/tipoMime/tamanhoBytes de ArquivoRequestIniciarUpload
 // de propósito: o service confere os três contra o que está de verdade no
 // bucket (obterInfoObjeto + lerPrimeirosBytes) antes de gravar qualquer
-// linha em `arquivo` — nunca confia só no que o corpo desta requisição diz.
+// linha em `arquivo` - nunca confia só no que o corpo desta requisição diz.
 export class ArquivoRequestConfirmarUpload {
   @IsString()
   @IsNotEmpty()
   @Matches(new RegExp(`^${PASTA_PENDENTE}`), {
     message:
       'chave precisa ser a de um upload pendente, gerada por ' +
-      'POST /arquivo/upload/iniciar — nunca um caminho arbitrário.',
+      'POST /arquivo/upload/iniciar - nunca um caminho arbitrário.',
   })
   chave: string;
 
@@ -44,10 +44,10 @@ export class ArquivoRequestConfirmarUpload {
   tamanhoBytes: number;
 
   // Só existe pra ESCOLHER o teto de redimensionamento em confirmar-upload
-  // (avatar vs campanha vs atualização) — não é conferido contra nada
+  // (avatar vs campanha vs atualização) - não é conferido contra nada
   // físico do arquivo (ao contrário de tipo/tamanho), então mentir aqui
   // não é risco de segurança, só faz a imagem sair maior/menor do que o
-  // ideal pro seu próprio uso. Lista fechada (ver arquivo.constants.ts) —
+  // ideal pro seu próprio uso. Lista fechada (ver arquivo.constants.ts) -
   // um contexto novo precisa de decisão de produto (qual teto?), não pode
   // vir solto do cliente.
   @IsString()

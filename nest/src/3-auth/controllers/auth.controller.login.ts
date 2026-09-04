@@ -9,7 +9,7 @@ export class AuthControllerLogin {
   constructor(private readonly service: AuthServiceLogin) {}
 
   // ThrottlerModule.forRoot (auth.module.ts) define o limite (5/60s por IP)
-  // — só POST /auth/login usa o guard, de propósito: é o único endpoint
+  // - só POST /auth/login usa o guard, de propósito: é o único endpoint
   // público que dispara bcrypt.compare (custoso de CPU) sem exigir login
   // nenhum antes. Ver comentário completo em auth.module.ts.
   @UseGuards(ThrottlerGuard)

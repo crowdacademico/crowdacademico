@@ -5,7 +5,7 @@ import { SeguirCampanhaConverter } from '../dto/converter/seguir-campanha.conver
 import { SeguirCampanhaRequestCreate } from '../dto/request/seguir-campanha.request-create';
 import { SeguirCampanhaResponse } from '../dto/response/seguir-campanha.response';
 
-// UK_SEGUIR_CAMPANHA_USUARIO_CAMPANHA (01) barra seguir 2x — 23505,
+// UK_SEGUIR_CAMPANHA_USUARIO_CAMPANHA (01) barra seguir 2x - 23505,
 // traduzido pelo PostgresExceptionFilter global, não checado aqui.
 @Injectable()
 export class SeguirCampanhaServiceCreate {

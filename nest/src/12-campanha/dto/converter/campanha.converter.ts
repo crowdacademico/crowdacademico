@@ -11,7 +11,7 @@ export class CampanhaConverter {
       titulo: entity.titulo,
       modelo: entity.modelo,
       // DECIMAL vem como string do driver (mesmo cuidado de
-      // ScoreConfigTable.peso) — Number() converte pra resposta JSON, sem
+      // ScoreConfigTable.peso) - Number() converte pra resposta JSON, sem
       // risco de precisão nesta faixa de valores (crowdfunding acadêmico,
       // não trilhões).
       metaFinanceira: Number(entity.meta_financeira),

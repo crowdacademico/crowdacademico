@@ -11,7 +11,7 @@ export class UsuarioPapelServiceRemove {
 
   async executar(idUsuario: number, idPapel: number): Promise<void> {
     // pol_usuariopapel_delete (04) exige tem_permissao('papel_gerenciar').
-    // Sem a permissão, RLS filtra a linha antes do DELETE — 0 linhas
+    // Sem a permissão, RLS filtra a linha antes do DELETE - 0 linhas
     // afetadas, sem erro do Postgres. Diferencia de "não existe esse vínculo"
     // checando a existência com o mesmo Kysely (mesma sessão/transação).
     const db = this.database.getDb();

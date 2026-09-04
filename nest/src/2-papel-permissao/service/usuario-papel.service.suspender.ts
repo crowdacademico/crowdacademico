@@ -3,11 +3,11 @@ import { sql } from 'kysely';
 import { DatabaseService } from '../../commons/database/database.service';
 
 // suspender_papel_usuario/revogar_suspensao_papel_usuario
-// (03_funcoes_seguranca.sql, [03-N], 09-08-2026, Bloco G) — preferível a
+// (03_funcoes_seguranca.sql, [03-N], 09-08-2026, Bloco G) - preferível a
 // UsuarioPapelServiceRemove (DELETE) quando a ideia é temporária: preserva
 // quando o papel foi atribuído e volta sozinho no prazo. Exige
 // 'papel_gerenciar' (mesma permissão da matriz Papel × Permissão), não
-// 'usuario_suspender' — é decisão de RBAC, não de moderação de conta.
+// 'usuario_suspender' - é decisão de RBAC, não de moderação de conta.
 @Injectable()
 export class UsuarioPapelServiceSuspender {
   constructor(private readonly database: DatabaseService) {}

@@ -9,7 +9,7 @@ import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { logAuditoriaApi } from '../../services/28-log-auditoria/api/log-auditoria.api';
 
 // Aba "Pesquisadores" (23-08-2026, pedido do Lucas: "algum outro que eu
-// esqueci?" — 6-perfil-pesquisador estava pronto e testado desde
+// esqueci?" - 6-perfil-pesquisador estava pronto e testado desde
 // 22-08-2026, mas sem NENHUMA entrada de menu, igual Motivos de Denúncia
 // estava antes). Mesmo raciocínio de sem-Alterar/sem-Excluir de
 // listar-campanhas.jsx: editar campos de pesquisador tem regra própria
@@ -46,12 +46,12 @@ export function ListarPesquisadores({ auth }) {
           { chave: 'nome', rotulo: 'nome' },
           // largura igual nas 3 (25-08-2026, pedido do Lucas: "título,
           // status e score, cada um de um tamanho diferente e espalhados"
-          // — mesma causa e mesmo remédio de Tipos de Link, "9.25rem"
+          // - mesma causa e mesmo remédio de Tipos de Link, "9.25rem"
           // pras 4 colunas Sim/Não: sem largura fixa, table-layout: auto
           // mede cada coluna pelo próprio maior valor ("Especialista" é
           // bem mais comprido que "Doutor"/"Ativo"), então cada uma
           // ficava com um tamanho diferente. `centralizar` em título
-          // também (não teria entrado sozinho — é texto, não
+          // também (não teria entrado sozinho - é texto, não
           // número/booleano) pra alinhar com status/score, que já
           // centralizavam.
           { chave: 'tituloAcademico', rotulo: 'título', centralizar: true, largura: '8rem' },

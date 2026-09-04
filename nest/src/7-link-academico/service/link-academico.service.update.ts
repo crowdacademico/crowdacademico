@@ -31,7 +31,7 @@ export class LinkAcademicoServiceUpdate {
 
     if (!linha) {
       // pol_link_update (04): dono OU link_academico_gerenciar. 0 linhas sem
-      // erro é a RLS filtrando — diferencia de "não existe", mesmo padrão de
+      // erro é a RLS filtrando - diferencia de "não existe", mesmo padrão de
       // papel.service.update.ts.
       const existe = await this.database
         .getDb()

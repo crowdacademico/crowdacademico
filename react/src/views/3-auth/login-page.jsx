@@ -3,14 +3,14 @@ import { Link, useNavigate } from 'react-router';
 import { IconeGoogle } from '../../components/3-auth/icone-google';
 import { useErroToast } from '../../components/layout/use-erro-toast';
 
-// Cópia fiel de telas/login/login.html do Projeto de Interface real —
+// Cópia fiel de telas/login/login.html do Projeto de Interface real -
 // com uma mudança deliberada em relação ao original, não só estética:
 //
 // O original tem um botão único "Entrar / Criar Conta" + checkbox de
 // Termos de Uso, pensado como login/cadastro combinado. Esta tela NÃO
-// coleta nome (só e-mail/senha) — cadastro público de verdade agora é
+// coleta nome (só e-mail/senha) - cadastro público de verdade agora é
 // /cadastro (cadastro-page.jsx, 09-08-2026, Bloco D), tela própria com
-// nome/confirmação de senha/aceite de termos — link "Já tem conta? Entrar"
+// nome/confirmação de senha/aceite de termos - link "Já tem conta? Entrar"
 // dela devolve pra cá, e o link "Cadastre-se" abaixo leva pra lá. Botão
 // continua só "Entrar" porque só faz login mesmo. "Esqueceu a senha?" e o
 // login social com Google continuam só alert() de protótipo, como no
@@ -110,11 +110,11 @@ export function LoginPage({ auth }) {
 
           {/* Botão do Google (10-08-2026, achado do Claude Web: o ícone
               era `fa-brands fa-google text-red-500`, um G vermelho
-              chapado — nada parecido com o que Google/GitHub/qualquer
+              chapado - nada parecido com o que Google/GitHub/qualquer
               site usa). Logo oficial de 4 cores via SVG (icone-google.jsx),
               texto "Continuar com Google" (era só "Google"). Cores do
               fundo/borda continuam nos tokens de tema (fundo-cartao/
-              borda-padrao), não fixas em branco — diferente da diretriz
+              borda-padrao), não fixas em branco - diferente da diretriz
               oficial (que é sempre branca), mas consistente com o app
               inteiro já reagir ao tema escuro; um botão sempre branco
               destoaria numa tela escura. */}
@@ -128,7 +128,7 @@ export function LoginPage({ auth }) {
 
           {/* Chamada de cadastro (10-08-2026, achado do Claude Web:
               "pequeno demais pro que é a segunda ação mais importante da
-              tela") — text-xs → text-sm, mais respiro acima, separador ">
+              tela") - text-xs → text-sm, mais respiro acima, separador ">
               antes de sumir dentro do "ou acesse com". Continua sendo
               link, não um 2º botão cheio (dois botões grandes competiriam
               entre si). */}

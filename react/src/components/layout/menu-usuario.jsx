@@ -6,17 +6,17 @@ function placeholder(mensagem) {
   return () => window.alert(mensagem);
 }
 
-// Dropdown do cabeçalho (09-08-2026, Bloco B/C do prompt do Claude Web) —
+// Dropdown do cabeçalho (09-08-2026, Bloco B/C do prompt do Claude Web) -
 // substitui o antigo bloco solto "nome + Sair"/"Entrar". Recomendação do
 // Claude Web adotada: avatar NÃO substitui os controles soltos (fonte,
-// tema, sino) — só guarda identidade/conta, mesmo padrão GitHub/Linear/
+// tema, sino) - só guarda identidade/conta, mesmo padrão GitHub/Linear/
 // Notion.
 //
 // "Minha Conta" (09-08-2026, Bloco E) já linka pra /minha-conta de
-// verdade — a seção "Preferências" de lá cobre o que seria um item
+// verdade - a seção "Preferências" de lá cobre o que seria um item
 // "Configurações" à parte, por isso ele não existe mais aqui (item
 // duplicado sem necessidade). "Notificações" fica placeholder até
-// 26-notificacao existir — o sino ao lado já cobre "o que aconteceu
+// 26-notificacao existir - o sino ao lado já cobre "o que aconteceu
 // recentemente" nesse meio tempo.
 export function MenuUsuario({ auth }) {
   const [aberto, setAberto] = useState(false);

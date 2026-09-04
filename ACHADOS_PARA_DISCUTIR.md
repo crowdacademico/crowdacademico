@@ -4,11 +4,9 @@ Achados pelos agentes que escreveram `DOCUMENTACAO_BACKEND.md`/`DOCUMENTACAO_FRO
 
 ---
 
-## 1. `GET /dashboard/resumo` é público e ignora a RLS
+## 1. 🟢 DECIDIDO (04-09-2026) - `GET /dashboard/resumo` continua público, de propósito
 
-`SECURITY DEFINER` sem nenhum guard de autenticação na frente. Pode ser intencional (métricas agregadas gerais não são dado sensível de ninguém) ou pode ter sido um descuido - ninguém parece ter decidido isso conscientemente até onde os agentes conseguiram achar (nenhum comentário no código explicando a escolha). Ver `DOCUMENTACAO_BACKEND.md`, seção sobre `29-dashboard`.
-
-**Pergunta a responder:** isso devia exigir login (mesmo que qualquer papel logado sirva), ou está certo do jeito que está?
+`SECURITY DEFINER` sem guard de autenticação na frente - os números agregados (total de usuários, sessões ativas etc.) ficam acessíveis sem login. Chegou a ser corrigido com `@UseGuards(RequireAuthGuard)`, mas o Lucas decidiu reverter: a exigência de login atrapalha mais que ajuda durante o desenvolvimento agora, e a decisão de arquitetura de longo prazo é que o painel admin inteiro vai ficar fora do alcance do usuário comum de outra forma (não é este guard específico que vai sustentar essa fronteira). Não é esquecimento - é decisão consciente de deixar como está.
 
 ## 2. 🟢 RESOLVIDO (04-09-2026) - `DevLoginRapido` protegido por `import.meta.env.DEV`
 
@@ -18,11 +16,9 @@ O Campo de Testes já usava esse padrão em 3 lugares (só existe no build de de
 
 Em `avatar-usuario.jsx` e `dashboard-identidade-visual.jsx` - os dois ainda justificavam um placeholder dizendo que `25-arquivo`/upload não existia. Já existia e funcionava (é o que `SeletorFotoPerfil` usa) - não era decisão nenhuma, só comentário desatualizado. Corrigidos os dois: `avatar-usuario.jsx` agora descreve o upload como existente; `dashboard-identidade-visual.jsx` deixa claro que o que falta não é mais o upload em si, é construir a tela de gerenciar logo/favicon (ninguém pediu ainda).
 
-## 4. `27-resources` continua sem propósito definido
+## 4. 🟢 RESOLVIDO (04-09-2026) - `27-resources` era sobra do modelo da disciplina, removida
 
-Pasta existe (`nest/src/27-resources/`), vazia, nem código nem nenhum documento diz o que deveria morar ali.
-
-**Pergunta a responder:** o que é isso? Vale decidir antes de alguém tropeçar nela tentando implementar "o próximo módulo" e não saber o que fazer.
+O Lucas perguntou pra Alexia, ela lembrou que vinha do sistema modelo da disciplina (Programação para Web 2). Investigado nos dois repositórios de referência do curso: `resources`, lá, é um catálogo estático de rota (`GET /rest/resources`) que o React consulta pra montar URL sem hardcode - só faz sentido porque aquele sistema segue uma convenção rígida de 5 endpoints por entidade. O CrowdAcadêmico já resolve o mesmo problema de origem de outro jeito (`<modulo>.api.js` por módulo), e as rotas daqui não são uniformes o bastante pra caber nesse molde. Pasta vazia removida - detalhe completo em `DOCUMENTACAO_BACKEND.md`, seção 14 (nota 🗑️).
 
 ## 5. Constantes duplicadas à mão entre `nest/` e `react/`
 

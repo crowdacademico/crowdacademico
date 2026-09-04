@@ -19,7 +19,7 @@ export class ConfiguracaoServiceCreate {
     dto: ConfiguracaoRequestCreate,
     idUsuarioAutenticado: number,
   ): Promise<ConfiguracaoResponse> {
-    // id_usuario decidido aqui, nunca aceito do corpo da requisição — pol_
+    // id_usuario decidido aqui, nunca aceito do corpo da requisição - pol_
     // config_insert (04) exige, pra linha global (id_usuario NULL),
     // tem_permissao('configuracao_gerenciar'); pra linha pessoal, exige
     // id_usuario = id_usuario_atual() exatamente. Se o cliente pudesse

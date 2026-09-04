@@ -17,7 +17,7 @@ import type {
   UploadPreAssinado,
 } from './storage.service.interface';
 
-// Implementação ÚNICA pra qualquer provedor que fale o protocolo S3 —
+// Implementação ÚNICA pra qualquer provedor que fale o protocolo S3 -
 // Supabase Storage (provedor ATUAL, ver ARQUIVO_para_configurar_modulo-
 // arquivo.md e o .env real: STORAGE_ENDPOINT aponta pro endpoint S3 do
 // Supabase), Cloudflare R2, Backblaze B2, AWS S3 de verdade, ou MinIO num
@@ -26,13 +26,13 @@ import type {
 // credenciais). Migrar pra R2 no futuro (avaliado 01-09-2026: Supabase
 // free dá 1GB de storage + 5GB de egress/mês contra os 10GB de storage +
 // egress ilimitado do R2, mas a equipe decidiu ficar no Supabase por
-// enquanto, já está funcionando) é só isso — trocar STORAGE_ENDPOINT e as
+// enquanto, já está funcionando) é só isso - trocar STORAGE_ENDPOINT e as
 // credenciais no .env, sem tocar em uma linha de TypeScript.
 // CORRIGIDO 01-09-2026: este comentário dizia "Backblaze B2 (provedor
-// atual)" — estava desatualizado, o .env real nunca apontou pra B2 nesta
+// atual)" - estava desatualizado, o .env real nunca apontou pra B2 nesta
 // fase do projeto.
 //
-// Bibliotecas: @aws-sdk/client-s3 + @aws-sdk/s3-request-presigner — SDK
+// Bibliotecas: @aws-sdk/client-s3 + @aws-sdk/s3-request-presigner - SDK
 // oficial da AWS, mas nada aqui é exclusivo da AWS: é o cliente HTTP que
 // fala o protocolo, apontado pra QUALQUER endpoint compatível (é assim que
 // B2 e R2 documentam a própria compatibilidade S3).
@@ -41,11 +41,11 @@ export class S3CompativelArmazenamentoService implements ArmazenamentoService {
   // Client/config são construídos SOB DEMANDA (getter privado abaixo), não
   // no constructor. MOTIVO (bug real encontrado em produção, ver conversa
   // que originou este ajuste): StorageModule é @Global() e registrado no
-  // AppModule — o Nest instancia esse provider já na INICIALIZAÇÃO do
+  // AppModule - o Nest instancia esse provider já na INICIALIZAÇÃO do
   // servidor, mesmo que nenhuma rota de arquivo tenha sido chamada ainda.
   // Se as variáveis STORAGE_* faltarem no .env (ex.: time ainda decidindo
   // entre B2/R2/Supabase Storage, como aconteceu aqui), lançar erro no
-  // construtor derrubava o processo Nest INTEIRO no boot — login, e
+  // construtor derrubava o processo Nest INTEIRO no boot - login, e
   // qualquer outra rota que nada tem a ver com arquivo, parava de
   // funcionar junto. Validação preguiçosa: só estoura (e só nesse
   // momento) quando alguém de fato tenta usar upload/leitura de arquivo,
@@ -89,13 +89,13 @@ export class S3CompativelArmazenamentoService implements ArmazenamentoService {
     this.clienteCache = new S3Client({
       endpoint,
       // B2 e R2 não usam região de verdade (é um conceito da AWS) mas a
-      // lib exige o campo — 'auto' funciona nos dois; STORAGE_REGION
+      // lib exige o campo - 'auto' funciona nos dois; STORAGE_REGION
       // continua configurável pra quem apontar isto pra AWS S3 real algum
       // dia (region importa de verdade lá).
       region: this.config.get<string>('STORAGE_REGION') ?? 'auto',
       credentials: { accessKeyId, secretAccessKey },
       // path-style (endpoint/bucket/chave) em vez de virtual-hosted
-      // (bucket.endpoint/chave) — funciona sem configuração extra tanto em
+      // (bucket.endpoint/chave) - funciona sem configuração extra tanto em
       // B2 quanto em R2. Só desligar (via env) se um endpoint específico
       // exigir virtual-hosted.
       forcePathStyle:
@@ -108,7 +108,7 @@ export class S3CompativelArmazenamentoService implements ArmazenamentoService {
     const valor = this.config.get<string>(nome);
     if (!valor) {
       throw new Error(
-        `Variável de ambiente ${nome} não configurada — necessária pro ` +
+        `Variável de ambiente ${nome} não configurada - necessária pro ` +
           'módulo de armazenamento de arquivos (commons/storage). Ver ' +
           '.env.example.',
       );
@@ -124,7 +124,7 @@ export class S3CompativelArmazenamentoService implements ArmazenamentoService {
       Key: parametros.chave,
       ContentType: parametros.tipoMime,
       // Assinado junto com a URL: o navegador só consegue completar o PUT
-      // mandando exatamente este tamanho — não dá pra "prometer" 800 KB e
+      // mandando exatamente este tamanho - não dá pra "prometer" 800 KB e
       // subir 50 MB.
       ContentLength: parametros.tamanhoMaximoBytes,
       ...(parametros.contentDisposition
@@ -205,7 +205,7 @@ export class S3CompativelArmazenamentoService implements ArmazenamentoService {
   }
 
   async moverObjeto(chaveOrigem: string, chaveDestino: string): Promise<void> {
-    // S3 (e compatíveis) não têm "mover" nativo — copy + delete é o padrão
+    // S3 (e compatíveis) não têm "mover" nativo - copy + delete é o padrão
     // aceito pra isso.
     const chaveOrigemCodificada = chaveOrigem
       .split('/')

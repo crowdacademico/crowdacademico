@@ -26,23 +26,23 @@ import { AuthServiceVerificarEmail } from './service/auth.service.verificar-emai
     TermoUsoModule,
     ConfigModule,
     // Achado do Claude Web (03-08-2026): bcrypt é lento DE PROPÓSITO
-    // (~100ms por verificação, ver auth.service.login.ts) — sem limite
+    // (~100ms por verificação, ver auth.service.login.ts) - sem limite
     // nenhum, é fácil derrubar o servidor só de CPU mandando muitas
     // tentativas de login em paralelo, mesmo com senha errada e sem
     // precisar de conta válida (DoS barato). 5 tentativas por 60s por IP
     // em produção (aplicado só em POST /auth/login, ver
-    // `@UseGuards(ThrottlerGuard)` em auth.controller.login.ts) —
+    // `@UseGuards(ThrottlerGuard)` em auth.controller.login.ts) -
     // generoso o bastante pra alguém errando a senha de verdade, apertado
     // o bastante pra travar um script tentando muitas senhas seguidas.
     // Isto é ALÉM do `limite_tentativas_login` do banco
     // (03_funcoes_seguranca.sql), que já bloqueia POR CONTA depois de N
-    // falhas — o throttler aqui protege o SERVIDOR (CPU/rede), não uma
+    // falhas - o throttler aqui protege o SERVIDOR (CPU/rede), não uma
     // conta específica; um ataque espalhado por várias contas diferentes
     // não aciona o bloqueio do banco, mas aciona este.
     //
     // Limite maior fora de produção (achado 07-08-2026): o próprio
     // <dev> "Entrar como" (dev-login-rapido.jsx) dispara um POST
-    // /auth/login por clique, e tem 7 contas no dropdown — testar 6+
+    // /auth/login por clique, e tem 7 contas no dropdown - testar 6+
     // delas em menos de 1 minuto (uso normal do botão) já esbarrava nos
     // 5/60s e travava, em silêncio, TODOS os logins (o limite é por IP,
     // não por conta) pelo resto da janela. 5/60s continua valendo em
@@ -58,7 +58,7 @@ import { AuthServiceVerificarEmail } from './service/auth.service.verificar-emai
         secret: config.get<string>('JWT_SECRET'),
         signOptions: {
           // Cast: @nestjs/jwt tipa expiresIn com o StringValue "carimbado"
-          // do pacote `ms` (ex.: "15m"), não com `string` genérico — o valor
+          // do pacote `ms` (ex.: "15m"), não com `string` genérico - o valor
           // vem do .env como string comum, o formato é validado em runtime
           // pela própria lib `ms`, não em tempo de compilação.
           expiresIn: (config.get<string>('JWT_ACCESS_EXPIRES_IN') ??
@@ -83,7 +83,7 @@ import { AuthServiceVerificarEmail } from './service/auth.service.verificar-emai
     AuthServiceVerificarEmail,
     AuthServiceListarSessoes,
     AuthServiceEncerrarSessao,
-    // Global de verdade (roda em toda rota) — ver comentário em
+    // Global de verdade (roda em toda rota) - ver comentário em
     // guards/jwt-auth.guard.ts sobre por que fica ANTES do GlobalDbInterceptor
     // no pipeline do Nest.
     { provide: APP_GUARD, useClass: JwtAuthGuard },

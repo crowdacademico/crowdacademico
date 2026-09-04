@@ -37,7 +37,7 @@ export class MotivoDenunciaServiceUpdate {
 
     if (!linha) {
       // pol_motivo_update (04): exige tem_permissao('motivo_denuncia_
-      // gerenciar'). 0 linhas afetadas sem erro é a RLS filtrando —
+      // gerenciar'). 0 linhas afetadas sem erro é a RLS filtrando -
       // diferencia de "não existe" com uma segunda consulta (SELECT já é
       // USING(true), sempre enxerga a linha se ela existir).
       const existe = await db

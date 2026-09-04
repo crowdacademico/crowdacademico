@@ -1,14 +1,14 @@
 import { API_BASE_URL } from '../../constant/constants/api.constants';
 import { tratarResposta } from '../../constant/api/http.util';
 
-// Espelha nest/src/10-motivo-denuncia — GET (listar/buscar) é PÚBLICO no
+// Espelha nest/src/10-motivo-denuncia - GET (listar/buscar) é PÚBLICO no
 // backend (pol_motivo_select é USING(true), 04_rls_policies.sql [04-C-3]);
 // POST/PATCH/DELETE exigem a permissão 'motivo_denuncia_gerenciar',
-// garantida pela RLS (o Nest não tem guard de permissão nenhum — só
+// garantida pela RLS (o Nest não tem guard de permissão nenhum - só
 // RequireAuthGuard pra exigir login; quem não tiver a permissão recebe
 // 403 do próprio Postgres, traduzido por postgres-exception.filter.ts).
 // remover() (18-08-2026) pode voltar 409 se o motivo já tiver sido usado
-// em alguma denúncia — ver motivo-denuncia.service.remove.ts.
+// em alguma denúncia - ver motivo-denuncia.service.remove.ts.
 function paraQueryString(filtro) {
   if (!filtro) {
     return '';
@@ -21,10 +21,10 @@ function paraQueryString(filtro) {
 }
 
 export const motivoDenunciaApi = {
-  // GET /motivo-denuncia devolve { dados, total, pagina, tamanho } —
+  // GET /motivo-denuncia devolve { dados, total, pagina, tamanho } -
   // `.dados` desembrulhado aqui, mesmo padrão de tipoLinkApi.listar/
   // areaConhecimentoApi.listar, pra GenericTable continuar recebendo um
-  // array puro. `filtro` opcional: { ativo, tipo } — `tipo` é
+  // array puro. `filtro` opcional: { ativo, tipo } - `tipo` é
   // 'campanha' | 'perfil', mesmos valores de ListarMotivoDenunciaQueryDto
   // no backend.
   listar: (authFetch, filtro) =>
@@ -35,7 +35,7 @@ export const motivoDenunciaApi = {
   // areaConhecimentoApi.listarPublico: pol_motivo_select já libera pra
   // qualquer um, logado ou não. Ainda sem nenhuma tela pública chamando
   // isto (o formulário de denúncia, que vai precisar do combo de motivos
-  // filtrado por `tipo`, é do módulo 19-denuncia, ainda não construído) —
+  // filtrado por `tipo`, é do módulo 19-denuncia, ainda não construído) -
   // já deixado pronto pra quando existir.
   listarPublico: (filtro) =>
     fetch(`${API_BASE_URL}/motivo-denuncia${paraQueryString(filtro)}`)

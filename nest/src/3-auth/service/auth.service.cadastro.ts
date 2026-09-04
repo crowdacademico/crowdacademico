@@ -9,11 +9,11 @@ import { AuthResponseRegister } from '../dto/response/auth.response-register';
 import { AuthServiceLogin } from './auth.service.login';
 import { gerarTokenVerificacaoEmail } from './verificacao-email-token.util';
 
-// Cadastro público (09-08-2026, Bloco D do prompt do Claude Web) — reaproveita
+// Cadastro público (09-08-2026, Bloco D do prompt do Claude Web) - reaproveita
 // UsuarioServiceCreate (a MESMA criação que POST /usuario admin já usa: hash
 // de senha + INSERT + atribuir_papel_padrao()) e soma o que só faz sentido
 // aqui: gravar o aceite do termo ATIVO (nunca um id vindo do cliente), gerar
-// o token de verificação de e-mail, e já devolver tokens de sessão —
+// o token de verificação de e-mail, e já devolver tokens de sessão -
 // diferente de "admin cria um usuário pra outra pessoa" (criar-usuario.jsx),
 // aqui é a própria pessoa se cadastrando, então termina logada.
 @Injectable()
@@ -38,7 +38,7 @@ export class AuthServiceCadastro {
 
     const db = this.database.getDb();
 
-    // Resolvido pelo SERVIDOR, nunca aceito do corpo da requisição — ver
+    // Resolvido pelo SERVIDOR, nunca aceito do corpo da requisição - ver
     // comentário de registrar_aceite_termo() (03_funcoes_seguranca.sql,
     // [03-D-1]) sobre por que isso importa.
     const termoAtivo = await this.termoUsoServiceAtivo.executar();
@@ -46,10 +46,10 @@ export class AuthServiceCadastro {
       db,
     );
 
-    // Token de verificação de e-mail (09-08-2026) — gerado e gravado desde
+    // Token de verificação de e-mail (09-08-2026) - gerado e gravado desde
     // já, mesmo sem 4-mail existir pra enviar de verdade. tokenVerificacao
     // EmailDev só viaja no corpo da resposta fora de produção (ver
-    // controller) — em produção, a linha em verificacao_email existe do
+    // controller) - em produção, a linha em verificacao_email existe do
     // mesmo jeito, só que ninguém recebe o token ainda (nada de fingir que
     // um e-mail foi mandado).
     const { token, hash } = gerarTokenVerificacaoEmail();

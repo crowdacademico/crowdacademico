@@ -6,7 +6,7 @@ import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 
-// Terceira view do padrão "uma página por operação de CRUD" — mostra os
+// Terceira view do padrão "uma página por operação de CRUD" - mostra os
 // dados de verdade antes de excluir (em vez do window.confirm() genérico
 // que só mostrava o nome), com botão de confirmar/cancelar no fim.
 export function ExcluirUsuario({ auth }) {
@@ -18,7 +18,7 @@ export function ExcluirUsuario({ auth }) {
   const [carregando, setCarregando] = useState(true);
   const [excluindo, setExcluindo] = useState(false);
   // Confirmação por digitação (09-08-2026, Bloco I do prompt do Claude Web:
-  // exclusão de USUÁRIO exige digitar o e-mail — configuração, mais abaixo
+  // exclusão de USUÁRIO exige digitar o e-mail - configuração, mais abaixo
   // em excluir-configuracao.jsx, fica só com confirmação simples, é um
   // dado técnico, não a conta de uma pessoa).
   const [confirmacao, setConfirmacao] = useState('');
@@ -62,7 +62,7 @@ export function ExcluirUsuario({ auth }) {
             >
               Cancelar
             </button>
-            {/* Vermelho só aqui, no final — nunca no topo da tela, depois
+            {/* Vermelho só aqui, no final - nunca no topo da tela, depois
                 da pessoa ter lido o que vai acontecer (09-08-2026, Bloco
                 I). */}
             <button
@@ -88,7 +88,7 @@ export function ExcluirUsuario({ auth }) {
           {/* SecaoFicha/CampoFicha (10-08-2026, rodada Claude Web
               "embelezar o painel", item 3: "usar FichaConsulta INTEIRA em
               modo leitura mostrando o que será excluído, em vez de repetir
-              campos") — mesmos blocos que Consultar Usuário usa pro mesmo
+              campos") - mesmos blocos que Consultar Usuário usa pro mesmo
               dado, zero componente duplicado (CampoSomenteLeitura, a
               versão antiga de "campo desabilitado", saiu daqui). */}
           <SecaoFicha titulo="O que será excluído">
@@ -102,7 +102,7 @@ export function ExcluirUsuario({ auth }) {
           </SecaoFicha>
 
           {/* Consequência real (09-08-2026, Bloco I: explicar o que
-              acontece de verdade, não só "não pode ser desfeita") — é
+              acontece de verdade, não só "não pode ser desfeita") - é
               exclusão LÓGICA (usuario.deletado = TRUE via
               excluir_conta_usuario(), 03_funcoes_seguranca.sql [03-O]):
               nada é apagado do banco, só marcado e escondido. */}
@@ -114,7 +114,7 @@ export function ExcluirUsuario({ auth }) {
               A conta é marcada como excluída (exclusão lógica), não apagada do banco: o login
               deixa de funcionar e o perfil some do público na hora, mas o registro continua
               existindo pra auditoria e conformidade com a LGPD. Não existe um botão de
-              "restaurar" no painel — reverter isso hoje exige acesso direto ao banco.
+              "restaurar" no painel - reverter isso hoje exige acesso direto ao banco.
             </p>
           </div>
 

@@ -3,7 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { ARMAZENAMENTO_SERVICE } from './storage.constants';
 import { S3CompativelArmazenamentoService } from './s3-compativel-armazenamento.service';
 
-// Global (mesmo padrão de DatabaseModule, commons/database) — qualquer
+// Global (mesmo padrão de DatabaseModule, commons/database) - qualquer
 // módulo do app injeta @Inject(ARMAZENAMENTO_SERVICE) sem precisar
 // importar StorageModule de novo, desde que ele esteja registrado uma vez
 // no AppModule.
@@ -14,7 +14,7 @@ import { S3CompativelArmazenamentoService } from './s3-compativel-armazenamento.
 // diferentes
 // (ver S3CompativelArmazenamentoService). Só troque o `useExisting`
 // abaixo por uma classe nova se um dia entrar um provedor com API
-// genuinamente incompatível com S3 — nenhum outro módulo do app precisa
+// genuinamente incompatível com S3 - nenhum outro módulo do app precisa
 // mudar quando isso acontecer, porque todos dependem só da interface
 // ArmazenamentoService (storage.service.interface.ts), nunca da classe
 // concreta.

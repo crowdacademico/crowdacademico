@@ -1,5 +1,5 @@
 -- ============================================================================
---  CROWDACADÊMICO — SISTEMA DE CROWDFUNDING PARA PESQUISA CIENTÍFICA
+--  CROWDACADÊMICO - SISTEMA DE CROWDFUNDING PARA PESQUISA CIENTÍFICA
 -- ============================================================================
 --  Arquivo:     04_rls_policies.sql
 --  Módulo:      Row Level Security (RLS) e Policies
@@ -9,13 +9,13 @@
 --  Descrição:
 --  Ativa FORCE ROW LEVEL SECURITY em todas as tabelas do schema e define
 --  as policies de acesso, agrupadas por domínio na mesma ordem do arquivo
---  01 — ENABLE/FORCE e as próprias policies de cada tabela ficam juntos,
+--  01 - ENABLE/FORCE e as próprias policies de cada tabela ficam juntos,
 --  em vez de um bloco de ENABLE no topo separado das policies.
 --
 --  Inventário Mapeado:
 --  - 42 Tabelas com RLS ativada e forçada
---  - 117 Policies (100% idempotentes — toda CREATE POLICY tem
---    DROP POLICY IF EXISTS correspondente) — +3 em 18-08-2026
+--  - 117 Policies (100% idempotentes - toda CREATE POLICY tem
+--    DROP POLICY IF EXISTS correspondente) - +3 em 18-08-2026
 --    (pol_area_delete/pol_tipolink_delete/pol_motivo_delete)
 -- ----------------------------------------------------------------------------
 --  SUMÁRIO DOS BLOCOS DE CÓDIGO
@@ -29,11 +29,11 @@
 --  [04-G] ARQUIVO (2 tabelas)
 --  [04-H] CONTRIBUIÇÃO (4 tabelas)
 --  [04-I] SCORE (3 tabelas)
---  [04-L] LOG DE AUDITORIA (1 tabela — ADICIONADO 03-08-2026)
+--  [04-L] LOG DE AUDITORIA (1 tabela - ADICIONADO 03-08-2026)
 -- ============================================================================
 
 -- ============================================================
--- ROW LEVEL SECURITY (RLS) — COMPLETO
+-- ROW LEVEL SECURITY (RLS) - COMPLETO
 -- ============================================================
 
 -- [04-A] Visão geral: por que FORCE ROW LEVEL SECURITY em todas as tabelas (ver DOCUMENTACAO_BD.md)
@@ -50,11 +50,11 @@ ALTER TABLE papel_permissao      FORCE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS pol_papel_select ON papel;
 CREATE POLICY pol_papel_select ON papel FOR SELECT USING (true);
--- [04-B-1b] papel: UPDATE liberado (03-08-2026) — só o rótulo (`nome`)
+-- [04-B-1b] papel: UPDATE liberado (03-08-2026) - só o rótulo (`nome`)
 -- pode mudar (GRANT UPDATE (nome), 06_grants.sql [06-B]); `codigo`, a
 -- coluna estável que as triggers de RBAC leem (01_extensoes_enums_tabelas.sql
 -- [01-B]), não tem GRANT nenhum, então nem chega a ser possível tentar
--- mudá-la por aqui — é isso que torna seguro abrir esta policy.
+-- mudá-la por aqui - é isso que torna seguro abrir esta policy.
 DROP POLICY IF EXISTS pol_papel_update ON papel;
 CREATE POLICY pol_papel_update ON papel FOR UPDATE TO app_nestjs USING (public.tem_permissao('papel_gerenciar'));
 DROP POLICY IF EXISTS pol_permissao_select ON permissao;
@@ -63,15 +63,15 @@ DROP POLICY IF EXISTS pol_papelperm_select ON papel_permissao;
 CREATE POLICY pol_papelperm_select ON papel_permissao FOR SELECT USING (true);
 
 -- [04-B-1] papel_permissao: escrita liberada pro Painel Admin (03-08-2026,
--- pedido do Lucas — "o administrador precisa ter poder absoluto pelo
+-- pedido do Lucas - "o administrador precisa ter poder absoluto pelo
 -- painel admin, nunca mais precisará acessar o banco depois"). Antes,
 -- papel/permissao/papel_permissao eram só-leitura de propósito ("gestão
--- via seed/migração direta, não pela aplicação" — ver comentário antigo em
+-- via seed/migração direta, não pela aplicação" - ver comentário antigo em
 -- papel-permissao.module.ts). Decisão revista: TOGGLE de permissão em
 -- papel já existente (a matriz Papel × Permissão) agora é possível pelo
 -- painel, gated pela mesma permissão que já gateia enxergar/gerenciar
 -- vínculo usuário-papel (`papel_gerenciar`, ver pol_usuariopapel_delete
--- acima). `papel` e `permissao` continuam só-leitura — CRIAR um papel ou
+-- acima). `papel` e `permissao` continuam só-leitura - CRIAR um papel ou
 -- permissão nova (não só conceder uma combinação já existente) fica de
 -- fora de propósito nesta rodada, é decisão maior (mexe no catálogo em
 -- si, não só nos vínculos entre catálogo).
@@ -127,10 +127,10 @@ DROP POLICY IF EXISTS pol_area_insert ON area_conhecimento;
 CREATE POLICY pol_area_insert ON area_conhecimento FOR INSERT TO app_nestjs WITH CHECK (public.tem_permissao('area_conhecimento_gerenciar'));
 DROP POLICY IF EXISTS pol_area_update ON area_conhecimento;
 CREATE POLICY pol_area_update ON area_conhecimento FOR UPDATE TO app_nestjs USING (public.tem_permissao('area_conhecimento_gerenciar')) WITH CHECK (public.tem_permissao('area_conhecimento_gerenciar'));
--- ADICIONADO (18-08-2026, pedido do Lucas/Alexia — botão Excluir no
+-- ADICIONADO (18-08-2026, pedido do Lucas/Alexia - botão Excluir no
 -- painel): mesma permissão do update. FK_CAMPANHA_AREA_CONHECIMENTO
 -- segue sem CASCADE, então a policy libera a operação mas o banco ainda
--- rejeita (23503) se a área estiver em uso — area-conhecimento.service.remove.ts
+-- rejeita (23503) se a área estiver em uso - area-conhecimento.service.remove.ts
 -- traduz isso numa mensagem própria.
 DROP POLICY IF EXISTS pol_area_delete ON area_conhecimento;
 CREATE POLICY pol_area_delete ON area_conhecimento FOR DELETE TO app_nestjs USING (public.tem_permissao('area_conhecimento_gerenciar'));
@@ -142,10 +142,10 @@ DROP POLICY IF EXISTS pol_tipolink_insert ON tipo_link;
 CREATE POLICY pol_tipolink_insert ON tipo_link FOR INSERT TO app_nestjs WITH CHECK (public.tem_permissao('tipolink_gerenciar'));
 DROP POLICY IF EXISTS pol_tipolink_update ON tipo_link;
 CREATE POLICY pol_tipolink_update ON tipo_link FOR UPDATE TO app_nestjs USING (public.tem_permissao('tipolink_gerenciar')) WITH CHECK (public.tem_permissao('tipolink_gerenciar'));
--- ADICIONADO (18-08-2026, pedido do Lucas/Alexia — botão Excluir no
+-- ADICIONADO (18-08-2026, pedido do Lucas/Alexia - botão Excluir no
 -- painel): mesma permissão do update. FK_LINK_ACADEMICO_TIPOLINK/
 -- FK_LINK_ATUALIZACAO_TIPOLINK/FK_LINK_RECOMPENSA_TIPOLINK seguem sem
--- CASCADE — tipo-link.service.remove.ts traduz o 23503 numa mensagem própria.
+-- CASCADE - tipo-link.service.remove.ts traduz o 23503 numa mensagem própria.
 DROP POLICY IF EXISTS pol_tipolink_delete ON tipo_link;
 CREATE POLICY pol_tipolink_delete ON tipo_link FOR DELETE TO app_nestjs USING (public.tem_permissao('tipolink_gerenciar'));
 
@@ -156,9 +156,9 @@ DROP POLICY IF EXISTS pol_motivo_insert ON motivo_denuncia;
 CREATE POLICY pol_motivo_insert ON motivo_denuncia FOR INSERT TO app_nestjs WITH CHECK (public.tem_permissao('motivo_denuncia_gerenciar'));
 DROP POLICY IF EXISTS pol_motivo_update ON motivo_denuncia;
 CREATE POLICY pol_motivo_update ON motivo_denuncia FOR UPDATE TO app_nestjs USING (public.tem_permissao('motivo_denuncia_gerenciar')) WITH CHECK (public.tem_permissao('motivo_denuncia_gerenciar'));
--- ADICIONADO (18-08-2026, pedido do Lucas/Alexia — botão Excluir no
+-- ADICIONADO (18-08-2026, pedido do Lucas/Alexia - botão Excluir no
 -- painel): mesma permissão do update. FK_DENUNCIA_MOTIVO segue sem
--- CASCADE — motivo-denuncia.service.remove.ts traduz o 23503 numa
+-- CASCADE - motivo-denuncia.service.remove.ts traduz o 23503 numa
 -- mensagem própria.
 DROP POLICY IF EXISTS pol_motivo_delete ON motivo_denuncia;
 CREATE POLICY pol_motivo_delete ON motivo_denuncia FOR DELETE TO app_nestjs USING (public.tem_permissao('motivo_denuncia_gerenciar'));
@@ -253,7 +253,7 @@ DROP POLICY IF EXISTS pol_perfil_update ON perfil_pesquisador;
 CREATE POLICY pol_perfil_update ON perfil_pesquisador FOR UPDATE TO app_nestjs USING (id_usuario = public.id_usuario_atual());
 
 -- TEMPORÁRIO (pedido do Lucas, 07-08-2026): USING(true) em vez de "só o
--- dono OU quem tem papel_gerenciar" — a coluna "papel" da listagem de
+-- dono OU quem tem papel_gerenciar" - a coluna "papel" da listagem de
 -- Usuários (listar-usuarios.jsx) precisa mostrar o papel de TODO MUNDO
 -- pra QUALQUER sessão logada, não só admin, enquanto o sistema ainda está
 -- em construção (agiliza teste manual pelas 7 contas do <dev> "Entrar
@@ -287,7 +287,7 @@ DROP POLICY IF EXISTS pol_usuario_termo_insert ON usuario_termo;
 CREATE POLICY pol_usuario_termo_insert ON usuario_termo FOR INSERT TO app_nestjs WITH CHECK (id_usuario = public.id_usuario_atual());
 
 -- [04-D-5] notificacao: por que existem policies de INSERT/UPDATE (ver DOCUMENTACAO_BD.md)
--- CORRIGIDO: acrescentada 'notificacao_processar' — o worker de envio de e-mail
+-- CORRIGIDO: acrescentada 'notificacao_processar' - o worker de envio de e-mail
 -- precisava ler a fila de pendentes, e antes só existia 'usuario_visualizar_sensivel'
 -- pra isso, uma permissão sem nenhuma relação semântica com processar notificação.
 DROP POLICY IF EXISTS pol_notificacao_select ON notificacao;
@@ -296,7 +296,7 @@ CREATE POLICY pol_notificacao_select ON notificacao FOR SELECT TO app_nestjs USI
     OR public.tem_permissao('usuario_visualizar_sensivel')
     OR public.tem_permissao('notificacao_processar')
 );
--- CORRIGIDO: exigia id_usuario = id_usuario_atual() pra criar/atualizar — mas toda
+-- CORRIGIDO: exigia id_usuario = id_usuario_atual() pra criar/atualizar - mas toda
 -- notificação real do sistema é pra um terceiro (admin aprova -> avisa pesquisador;
 -- sistema avisa doadores), e nem o worker de envio (sem usuário logado) conseguia ler
 -- a fila de pendentes. Mesmo padrão já usado em verificacao_email/recuperacao_senha/sessao:
@@ -346,7 +346,7 @@ CREATE POLICY pol_campanha_select ON campanha FOR SELECT USING (
     OR id_usuario = public.id_usuario_atual()
     OR public.tem_permissao('relatorio_visualizar')
 );
--- CORRIGIDO (B3): faltava checar se o pesquisador está suspenso — nada impedia
+-- CORRIGIDO (B3): faltava checar se o pesquisador está suspenso - nada impedia
 -- pesquisador com status_pesquisador = 'suspenso' de submeter campanha nova.
 DROP POLICY IF EXISTS pol_campanha_insert ON campanha;
 CREATE POLICY pol_campanha_insert ON campanha FOR INSERT TO app_nestjs WITH CHECK (
@@ -361,7 +361,7 @@ CREATE POLICY pol_campanha_update ON campanha FOR UPDATE TO app_nestjs USING (
     OR public.tem_permissao('campanha_aprovar')
     OR public.tem_permissao('campanha_rejeitar')
 );
--- Excluir campanha (25-08-2026, Campo de Testes: CRUD completo em T2) —
+-- Excluir campanha (25-08-2026, Campo de Testes: CRUD completo em T2) -
 -- só em 'aguardando_aprovacao', mesma lógica do congelamento pós-
 -- aprovação (fn_congela_regras_campanha, 05): nada em orcamento_campanha/
 -- marco_cronograma/atualizacao_campanha/seguir_campanha/comentario/
@@ -382,7 +382,7 @@ CREATE POLICY pol_atualizacao_select ON atualizacao_campanha FOR SELECT USING (
     ativo = TRUE
     OR EXISTS (SELECT 1 FROM campanha WHERE id_campanha = atualizacao_campanha.id_campanha AND (id_usuario = public.id_usuario_atual() OR public.tem_permissao('atualizacao_moderar')))
 );
--- CORRIGIDO (B3): mesma checagem de status_pesquisador = 'ativo' do pol_campanha_insert —
+-- CORRIGIDO (B3): mesma checagem de status_pesquisador = 'ativo' do pol_campanha_insert -
 -- pesquisador suspenso não podia ser impedido de publicar atualização de campanha.
 DROP POLICY IF EXISTS pol_atualizacao_insert ON atualizacao_campanha;
 CREATE POLICY pol_atualizacao_insert ON atualizacao_campanha FOR INSERT TO app_nestjs WITH CHECK (
@@ -397,13 +397,13 @@ CREATE POLICY pol_atualizacao_update ON atualizacao_campanha FOR UPDATE TO app_n
 );
 
 -- ADICIONADO (31-07-2026, Alexia): orçamento e cronograma estruturados. Leitura segue
--- a MESMA visibilidade de campanha (pol_campanha_select) — decisão consciente
+-- a MESMA visibilidade de campanha (pol_campanha_select) - decisão consciente
 -- de NÃO copiar o padrão "SELECT USING (TRUE)" de pol_recompensa_select: expor
 -- o orçamento/plano de uma campanha que ainda nem foi aprovada (aguardando_
 -- aprovacao) pra qualquer visitante não tem por quê, e o dono/admin já
 -- enxergam por fora dessa condição. Escrita: só o dono da campanha (ou
 -- campanha_editar); o congelamento por status/data_inicio é responsabilidade
--- da trigger em 05 (mesmo desenho de recompensa — RLS controla QUEM, trigger
+-- da trigger em 05 (mesmo desenho de recompensa - RLS controla QUEM, trigger
 -- controla QUANDO).
 DROP POLICY IF EXISTS pol_orcamento_campanha_select ON orcamento_campanha;
 CREATE POLICY pol_orcamento_campanha_select ON orcamento_campanha FOR SELECT USING (
@@ -537,7 +537,7 @@ CREATE POLICY pol_solicitacao_insert ON solicitacao_encerramento FOR INSERT TO a
     EXISTS (SELECT 1 FROM campanha WHERE id_campanha = solicitacao_encerramento.id_campanha AND id_usuario = public.id_usuario_atual())
 );
 -- CORRIGIDO: decisão sobre encerramento de campanha passa a depender de permissão específica.
--- CORRIGIDO (2): faltava o dono da campanha conseguir UPDATE — sem isso, o valor 'cancelado'
+-- CORRIGIDO (2): faltava o dono da campanha conseguir UPDATE - sem isso, o valor 'cancelado'
 -- do ENUM status_encerramento (pesquisador desiste da própria solicitação) era inalcançável,
 -- já que quem tem a permissão de decidir só aprova/rejeita, nunca cancela solicitação alheia.
 -- A trigger trg_valida_transicao_solicitacao (05) restringe o dono só à transição
@@ -548,7 +548,7 @@ CREATE POLICY pol_solicitacao_update ON solicitacao_encerramento FOR UPDATE TO a
     OR EXISTS (SELECT 1 FROM campanha WHERE id_campanha = solicitacao_encerramento.id_campanha AND id_usuario = public.id_usuario_atual())
 );
 
--- CORRIGIDO: faltava o dono da campanha enxergar a própria rejeição — diferente
+-- CORRIGIDO: faltava o dono da campanha enxergar a própria rejeição - diferente
 -- de solicitacao_encerramento e repasse (tabelas irmãs), que já liberam o dono via
 -- OR EXISTS. Sem isso, o RF-070 (pesquisador edita e reenvia campanha rejeitada)
 -- deixava o motivo da rejeição só acessível por e-mail (RF-071), nunca pela própria plataforma.
@@ -566,8 +566,8 @@ CREATE POLICY pol_historicorej_update ON historico_rejeicao FOR UPDATE TO app_ne
 -- [04-E-7] repasse: por que existem policies de escrita (ver DOCUMENTACAO_BD.md)
 DROP POLICY IF EXISTS pol_repasse_insert ON repasse;
 CREATE POLICY pol_repasse_insert ON repasse FOR INSERT TO app_nestjs WITH CHECK (true);
--- SUPERADA (28-07-2026, Claude Web — 5ª auditoria, "estender o mesmo tratamento a
--- repasse — também é dinheiro saindo"): mesmo raciocínio de pol_contribuicao_update
+-- SUPERADA (28-07-2026, Claude Web - 5ª auditoria, "estender o mesmo tratamento a
+-- repasse - também é dinheiro saindo"): mesmo raciocínio de pol_contribuicao_update
 -- acima. GRANT UPDATE saiu (06, [06-E]); status/repassado_em só mudam via
 -- atualizar_status_repasse() (05, SECURITY DEFINER, [05-K-2]). Mantida por
 -- documentação/histórico, sem efeito prático pro app_nestjs.
@@ -717,7 +717,7 @@ CREATE POLICY pol_arqatu_update ON arquivo_atualizacao FOR UPDATE TO app_nestjs 
 );
 
 -- arquivo_recompensa: leitura pública; escrita só por quem é dono da
--- campanha dona da recompensa (ou admin) — mesmo padrão de arquivo_atualizacao.
+-- campanha dona da recompensa (ou admin) - mesmo padrão de arquivo_atualizacao.
 -- CORRIGIDO: arquivos de recompensa agora ficam acessíveis apenas ao dono da campanha, admin ou comprador da recompensa.
 DROP POLICY IF EXISTS pol_arqrecompensa_select ON arquivo_recompensa;
 CREATE POLICY pol_arqrecompensa_select ON arquivo_recompensa FOR SELECT TO app_nestjs USING (
@@ -785,10 +785,10 @@ CREATE POLICY pol_contribuicao_insert ON contribuicao FOR INSERT TO app_nestjs W
     id_usuario IS NULL OR id_usuario = public.id_usuario_atual()
 );
 -- CORRIGIDO: o webhook de pagamento precisa atualizar o status da contribuição sem depender do dono da contribuição.
--- SUPERADA (28-07-2026, Claude Web — 5ª auditoria): USING(true) + GRANT UPDATE de
+-- SUPERADA (28-07-2026, Claude Web - 5ª auditoria): USING(true) + GRANT UPDATE de
 -- tabela inteira permitia qualquer usuário confirmar a própria contribuição
 -- direto por UPDATE (fraude reproduzida: doar pra própria campanha e se
--- auto-confirmar). O GRANT UPDATE saiu (06, [06-H]) — dali em diante o único
+-- auto-confirmar). O GRANT UPDATE saiu (06, [06-H]) - dali em diante o único
 -- caminho é atualizar_status_contribuicao() (05, SECURITY DEFINER, [05-K-2]),
 -- que bypassa RLS. Esta policy fica sem efeito prático pro app_nestjs (não tem
 -- mais GRANT UPDATE pra exercitá-la), mantida só por documentação/histórico.
@@ -831,7 +831,7 @@ CREATE POLICY pol_contrib_recompensa_insert ON contribuicao_recompensa FOR INSER
 
 -- CORRIGIDO: aceite de termos por contribuição agora tem política de leitura e escrita compatível com doação anônima.
 -- CORRIGIDO (27-07-2026): faltava o mesmo ramo de doador anônimo que pol_contribuicao_anon_select
--- já usa (token_sessao) — o INSERT já aceitava c.id_usuario IS NULL, mas o SELECT não tinha
+-- já usa (token_sessao) - o INSERT já aceitava c.id_usuario IS NULL, mas o SELECT não tinha
 -- nenhum jeito de um doador anônimo relogar o próprio aceite depois de registrado.
 DROP POLICY IF EXISTS pol_aceite_termo_contribuicao_select ON aceite_termo_contribuicao;
 CREATE POLICY pol_aceite_termo_contribuicao_select ON aceite_termo_contribuicao FOR SELECT TO app_nestjs USING (
@@ -870,13 +870,13 @@ ALTER TABLE score_rotulo         FORCE ROW LEVEL SECURITY;
 -- da Lista C) tinha fechado o score pro público, citando risco de LGPD (juízo
 -- automatizado sobre pessoa identificada, exposto sem previsão de contestação,
 -- Art. 9). Reaberta de propósito: o score volta a ser público porque é a base
--- de um segundo app do projeto ("Serasa do Pesquisador" — consulta pública de
+-- de um segundo app do projeto ("Serasa do Pesquisador" - consulta pública de
 -- reputação de pesquisadores cadastrados), decisão consciente de Lucas, não
 -- descuido. O risco de LGPD apontado em 28-07 continua real e não foi
--- resolvido, só aceito — ver PENDENCIAS e correcoes.md pela nota completa.
+-- resolvido, só aceito - ver PENDENCIAS e correcoes.md pela nota completa.
 -- Mantido: score de usuário deletado continua invisível (reaproveita
 -- usuario_visivel(), 03_funcoes_seguranca.sql, [03-D], mesma função usada por
--- pol_perfil_select/pol_link_select — não reintroduz o USING(TRUE) cru de antes).
+-- pol_perfil_select/pol_link_select - não reintroduz o USING(TRUE) cru de antes).
 DROP POLICY IF EXISTS pol_score_select ON score_pesquisador;
 CREATE POLICY pol_score_select ON score_pesquisador FOR SELECT TO app_nestjs USING (
     public.usuario_visivel(id_usuario)
@@ -902,23 +902,23 @@ CREATE POLICY pol_score_rotulo_update ON public.score_rotulo FOR UPDATE TO app_n
 -- ============================================================
 -- [04-L] LOG DE AUDITORIA (log_auditoria)
 -- ============================================================
--- ADICIONADO (03-08-2026) — ver comentário completo em
+-- ADICIONADO (03-08-2026) - ver comentário completo em
 -- 01_extensoes_enums_tabelas.sql [01-L]. Só SELECT tem policy aqui DE
 -- PROPÓSITO: não existe pol_log_auditoria_insert/update/delete porque
 -- app_nestjs não tem (e nunca deve ter) GRANT nenhum além de SELECT nesta
--- tabela (ver 06_grants.sql [06-L]) — sem o GRANT, uma policy de INSERT
+-- tabela (ver 06_grants.sql [06-L]) - sem o GRANT, uma policy de INSERT
 -- aqui não abriria nada mesmo, então nem existe, pra não sugerir uma porta
 -- que não existe. Quem grava é só a trigger `fn_log_auditoria()`
 -- (SECURITY DEFINER, 05_regras_negocio.sql [05-L]), que roda com o
 -- privilégio de quem criou a função (o papel usado no SQL Editor do
--- Supabase pra rodar as migrations), não como app_nestjs — RLS nem chega a
+-- Supabase pra rodar as migrations), não como app_nestjs - RLS nem chega a
 -- ser avaliada pra esse caminho.
 ALTER TABLE log_auditoria ENABLE ROW LEVEL SECURITY;
 
--- AMPLIADA (09-08-2026, Bloco B/C do prompt do Claude Web — sino "Atividade
+-- AMPLIADA (09-08-2026, Bloco B/C do prompt do Claude Web - sino "Atividade
 -- recente" no cabeçalho): além de quem tem 'log_visualizar' (visão
 -- administrativa, qualquer linha), o próprio AUTOR de uma linha agora
--- também enxerga ela — "minhas últimas ações", não é uma visão nova de
+-- também enxerga ela - "minhas últimas ações", não é uma visão nova de
 -- moderação, é autoatendimento (mesmo espírito de usuario poder ver/editar
 -- a própria conta sem precisar de permissão nenhuma). Estritamente
 -- aditivo: ninguém que via algo antes deixou de ver, só passou a existir

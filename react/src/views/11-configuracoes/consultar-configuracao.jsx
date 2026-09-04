@@ -4,10 +4,10 @@ import { CampoFicha, FichaConsulta, SecaoFicha } from '../../components/crud/fic
 import { useErroToast } from '../../components/layout/use-erro-toast';
 import { configuracaoApi } from '../../services/11-configuracoes/api/configuracao.api';
 
-// "Consultar" — botão do meio entre Alterar e Excluir (GenericTable).
+// "Consultar" - botão do meio entre Alterar e Excluir (GenericTable).
 // Migrada pro mesmo estilo de FichaConsulta usado em ConsultarUsuario
 // (09-08-2026, pedido do Lucas: era a última tela ainda na caixinha
-// CampoTextboxConsulta antiga) — mesmo dado de sempre, só o layout mudou.
+// CampoTextboxConsulta antiga) - mesmo dado de sempre, só o layout mudou.
 // idUsuario fica vazio naturalmente quando é NULL (configuração global).
 export function ConsultarConfiguracao({ auth }) {
   const { id } = useParams();

@@ -1,17 +1,17 @@
-// aplicar-migrations.script.ts — NÃO é um provider do Nest (sem @Injectable,
+// aplicar-migrations.script.ts - NÃO é um provider do Nest (sem @Injectable,
 // nunca importado por nenhum módulo). É um script standalone, rodado à mão
 // via `npm run db:migrate` (dentro de nest/), pra resolver um problema real:
 // hoje os 8 arquivos de arquivos_banco_dados/*.sql são colados manualmente
 // no SQL Editor do Supabase, sem nenhum registro de QUAL arquivo já rodou
-// em QUAL banco — com Lucas e Alexia em bancos Supabase separados, não
+// em QUAL banco - com Lucas e Alexia em bancos Supabase separados, não
 // existe garantia nenhuma de que os dois estão no mesmo estado.
 //
 // O que este script faz, e não faz:
-// - Cria (se não existir) uma tabela `schema_migrations` — o "livro de
+// - Cria (se não existir) uma tabela `schema_migrations` - o "livro de
 //   registro" de quais arquivos já rodaram, quando, e com qual hash de
 //   conteúdo. Essa tabela é gerenciada só por este script, não faz parte
 //   do schema de negócio (por isso não está em nenhum dos 8 arquivos
-//   numerados — ela PRECISA existir antes de qualquer um deles ser
+//   numerados - ela PRECISA existir antes de qualquer um deles ser
 //   rastreado, então não pode depender de nenhum deles).
 // - Lê os 8 arquivos .sql na ordem (01 a 08), calcula um hash SHA-256 do
 //   conteúdo de cada um, e decide: nunca rodou → aplica e registra; já
@@ -19,27 +19,27 @@
 //   desde então → avisa e para, nunca reaplica sozinho (evitar rodar de
 //   novo um arquivo que já tem dado em cima seria perigoso).
 // - NÃO substitui o `07_seed_dados.sql`/os outros arquivos por um formato
-//   novo — eles continuam exatamente como estão, texto puro. Este script
+//   novo - eles continuam exatamente como estão, texto puro. Este script
 //   só adiciona o "livro de registro" por cima.
-// - NÃO converte pra Kysely query builder — os arquivos são executados
+// - NÃO converte pra Kysely query builder - os arquivos são executados
 //   como SQL bruto, verbatim, via `pg` (o driver por baixo do Kysely
 //   neste projeto), não via `.selectFrom()`/etc. Não tem nada aqui pra
-//   "construir" — são blocos de SQL já prontos, com função/trigger em
+//   "construir" - são blocos de SQL já prontos, com função/trigger em
 //   `$$...$$`, e o jeito mais confiável de rodar isso é mandar o texto
 //   inteiro pro Postgres de uma vez (protocolo "simple query" do driver
 //   pg, que suporta múltiplas instruções separadas por `;` numa
-//   chamada só — só funciona assim quando NÃO se usa parâmetro
+//   chamada só - só funciona assim quando NÃO se usa parâmetro
 //   nenhum, que é exatamente o nosso caso aqui).
 //
 // Conexão SEPARADA da app_nestjs, de propósito: DATABASE_URL_MIGRATIONS
-// (nunca DATABASE_URL) — app_nestjs é propositalmente sem privilégio de
+// (nunca DATABASE_URL) - app_nestjs é propositalmente sem privilégio de
 // DDL (CREATE TABLE/TRIGGER/POLICY), é o que garante que a RLS vale pra
 // ela em runtime (ver DatabaseModule.onModuleInit, database.module.ts).
-// Rodar migration precisa de uma credencial com privilégio de verdade —
+// Rodar migration precisa de uma credencial com privilégio de verdade -
 // a mesma que já é usada manualmente no SQL Editor do Supabase hoje.
 //
 // Nunca roda sozinho: só quando alguém digita `npm run db:migrate` (ou
-// `npm run db:migrate:adotar`) — não faz parte do boot do servidor
+// `npm run db:migrate:adotar`) - não faz parte do boot do servidor
 // (main.ts nunca importa este arquivo).
 import { createHash } from 'crypto';
 import { readFileSync, readdirSync } from 'fs';
@@ -63,7 +63,7 @@ const SQL_CRIAR_TABELA_CONTROLE = `
 function listarArquivosSqlEmOrdem(): string[] {
   return readdirSync(PASTA_ARQUIVOS_SQL)
     .filter((nome) => nome.endsWith('.sql'))
-    .sort(); // '01_...' a '08_...' — ordem alfabética já é a ordem certa (prefixo numérico com 2 dígitos)
+    .sort(); // '01_...' a '08_...' - ordem alfabética já é a ordem certa (prefixo numérico com 2 dígitos)
 }
 
 function calcularHash(conteudo: string): string {
@@ -74,7 +74,7 @@ function abrirConexaoDeMigration(): Pool {
   const connectionString = process.env.DATABASE_URL_MIGRATIONS;
   if (!connectionString) {
     console.error(
-      'DATABASE_URL_MIGRATIONS não definida no .env — precisa de uma credencial ' +
+      'DATABASE_URL_MIGRATIONS não definida no .env - precisa de uma credencial ' +
         'com privilégio de DDL (a mesma que você já usa manualmente no SQL Editor ' +
         'do Supabase), separada da DATABASE_URL normal (essa é do app_nestjs, sem ' +
         'privilégio de DDL de propósito). Ver tutorial-rodar-projeto.md.',
@@ -84,11 +84,11 @@ function abrirConexaoDeMigration(): Pool {
   return new Pool({ connectionString });
 }
 
-// `--adotar`: NÃO executa nenhum arquivo — só grava em schema_migrations
+// `--adotar`: NÃO executa nenhum arquivo - só grava em schema_migrations
 // que cada um dos 8 "já estava aplicado" (com o hash de agora), assumindo
 // que o banco já tem tudo (rodado manualmente até hoje). É o passo de
 // "dia zero": tanto Lucas quanto Alexia rodam isso UMA VEZ, cada um no
-// próprio banco, pra começar a rastrear a partir de agora — sem isso, a
+// próprio banco, pra começar a rastrear a partir de agora - sem isso, a
 // primeira chamada normal de `npm run db:migrate` tentaria recriar do
 // zero as 42 tabelas que já existem e falharia.
 async function adotar(pool: Pool): Promise<void> {
@@ -107,9 +107,9 @@ async function adotar(pool: Pool): Promise<void> {
     console.log(`Marcado como já aplicado: ${nomeArquivo}`);
   }
   console.log(
-    '\nAdoção concluída — daqui pra frente, "npm run db:migrate" só aplica o que ' +
+    '\nAdoção concluída - daqui pra frente, "npm run db:migrate" só aplica o que ' +
       'for realmente novo. Isto NÃO confere se o banco de verdade tem tudo que os ' +
-      'arquivos descrevem — só estabelece a linha de base a partir de agora.',
+      'arquivos descrevem - só estabelece a linha de base a partir de agora.',
   );
 }
 
@@ -139,12 +139,12 @@ async function aplicar(pool: Pool): Promise<void> {
         'INSERT INTO schema_migrations (nome_arquivo, hash) VALUES ($1, $2)',
         [nomeArquivo, hash],
       );
-      console.log(`  OK — aplicado e registrado.`);
+      console.log(`  OK - aplicado e registrado.`);
     } else if (resultado.rows[0].hash !== hash) {
       console.warn(
         `  ATENÇÃO: ${nomeArquivo} já foi aplicado antes, mas o conteúdo do arquivo ` +
           `mudou desde então (hash diferente do registrado). NÃO reaplicado ` +
-          `automaticamente — confira manualmente o que mudou e decida o que rodar.`,
+          `automaticamente - confira manualmente o que mudou e decida o que rodar.`,
       );
     } else {
       console.log(`${nomeArquivo}: já aplicado, sem mudança. Pulado.`);
@@ -152,7 +152,7 @@ async function aplicar(pool: Pool): Promise<void> {
   }
 
   if (!algumPendente) {
-    console.log('\nNada novo pra aplicar — banco já está em dia.');
+    console.log('\nNada novo pra aplicar - banco já está em dia.');
   }
 }
 

@@ -21,7 +21,7 @@ export class CampanhaServiceRemove {
       // pol_campanha_delete (04): status = 'aguardando_aprovacao' E (dono OU
       // campanha_editar). Mesmo padrão de campanha.service.update.ts: uma
       // campanha ainda invisível pra quem pediu (fora do alcance de
-      // pol_campanha_select também) devolve 404 aqui — não vaza que existe.
+      // pol_campanha_select também) devolve 404 aqui - não vaza que existe.
       const existe = await this.database
         .getDb()
         .selectFrom('campanha')

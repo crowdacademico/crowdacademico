@@ -4,7 +4,7 @@ import { LINK_ACADEMICO_COLUNAS_SELECT } from '../constants/link-academico.const
 import { LinkAcademicoConverter } from '../dto/converter/link-academico.converter';
 import { LinkAcademicoResponse } from '../dto/response/link-academico.response';
 
-// pol_link_select (04) é pública (usuario_visivel) — lista os links de
+// pol_link_select (04) é pública (usuario_visivel) - lista os links de
 // QUALQUER pesquisador, não só os do próprio usuário (é o que aparece no
 // perfil público). idUsuarioAlvo vem da rota (GET /link-academico?idUsuario=),
 // nunca de request.user aqui.

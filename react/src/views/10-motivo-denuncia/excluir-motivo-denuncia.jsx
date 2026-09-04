@@ -6,9 +6,9 @@ import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
 import { motivoDenunciaApi } from '../../services/10-motivo-denuncia/api/motivo-denuncia.api';
 
-// Mesmo padrão de ExcluirConfiguracao (11-configuracoes) — ver comentário
+// Mesmo padrão de ExcluirConfiguracao (11-configuracoes) - ver comentário
 // completo lá. Diferente de configuracao, motivo_denuncia é referenciado
-// por denuncia (FK_DENUNCIA_MOTIVO) sem CASCADE — se estiver em uso, o
+// por denuncia (FK_DENUNCIA_MOTIVO) sem CASCADE - se estiver em uso, o
 // backend responde 409 com uma mensagem própria (ver
 // motivo-denuncia.service.remove.ts), exibida aqui pelo useErroToast
 // normal.
@@ -91,7 +91,7 @@ export function ExcluirMotivoDenuncia({ auth }) {
             </p>
             <p>
               Se este motivo já tiver sido usado em alguma denúncia, a exclusão é bloqueada pelo
-              próprio banco — desative-o em vez de excluir. Se não estiver em uso, some do
+              próprio banco - desative-o em vez de excluir. Se não estiver em uso, some do
               catálogo pra sempre, sem exclusão lógica.
             </p>
           </div>

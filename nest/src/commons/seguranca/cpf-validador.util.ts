@@ -1,4 +1,4 @@
-// Validação de FORMATO do CPF (dígito verificador) — não confirma que o CPF
+// Validação de FORMATO do CPF (dígito verificador) - não confirma que o CPF
 // pertence a uma pessoa real, nem consulta nenhuma fonte externa. Ver
 // PENDENCIAS e correcoes.md, item 745: verificação de existência real fica
 // pra um momento futuro do projeto, fora de escopo por decisão do Lucas.
@@ -6,7 +6,7 @@ import { normalizarCpf } from './cpf-cifra.util';
 
 // Peso inicial 10 pro primeiro dígito verificador (soma multiplicando os 9
 // primeiros dígitos por 10,9,8...2), peso inicial 11 pro segundo (soma
-// multiplicando os 10 primeiros — os 9 originais + o DV1 já calculado — por
+// multiplicando os 10 primeiros - os 9 originais + o DV1 já calculado - por
 // 11,10,9...2). Mesma função serve pros dois cálculos, só muda o peso
 // inicial e a lista de dígitos de entrada.
 function calcularDigitoVerificador(
@@ -22,7 +22,7 @@ function calcularDigitoVerificador(
 }
 
 // CPFs de dígito repetido (111.111.111-11, 222.222.222-22 etc.) passam no
-// cálculo do dígito verificador normalmente — o algoritmo não os rejeita
+// cálculo do dígito verificador normalmente - o algoritmo não os rejeita
 // sozinho, precisam ser barrados à parte. Nunca são CPFs reais emitidos.
 function todosOsDigitosIguais(cpf: string): boolean {
   return /^(\d)\1{10}$/.test(cpf);

@@ -8,7 +8,7 @@ export class TipoLinkServiceFindOne {
   constructor(private readonly database: DatabaseService) {}
 
   async executar(idTipolink: number): Promise<TipoLinkResponse> {
-    // pol_tipolink_select (04): USING(true) — mesma leitura pública do findall.
+    // pol_tipolink_select (04): USING(true) - mesma leitura pública do findall.
     const linha = await this.database
       .getDb()
       .selectFrom('tipo_link')

@@ -1,10 +1,10 @@
-// Logo oficial do Google ("G" colorido, 4 cores) — SVG inline, não Font
+// Logo oficial do Google ("G" colorido, 4 cores) - SVG inline, não Font
 // Awesome (10-08-2026, achado do Claude Web: `fa-brands fa-google
 // text-red-500` era um G vermelho chapado, nada parecido com o que
 // Google/GitHub/qualquer site usa de verdade). Path oficial das
-// diretrizes de marca do Google Identity — inline em vez de vir de CDN de
+// diretrizes de marca do Google Identity - inline em vez de vir de CDN de
 // ícone: funciona igual em qualquer tema (as 4 cores são fixas, de
-// propósito, fazem parte da marca — não usam token de tema) e não depende
+// propósito, fazem parte da marca - não usam token de tema) e não depende
 // de um pacote de ícones ter ou não esse logo específico.
 export function IconeGoogle({ tamanho = 20 }) {
   return (

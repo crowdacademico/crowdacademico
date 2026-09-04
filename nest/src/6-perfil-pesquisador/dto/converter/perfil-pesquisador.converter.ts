@@ -14,7 +14,7 @@ type PerfilPesquisadorParaConverter = Pick<
 >;
 
 export class PerfilPesquisadorConverter {
-  // `cpfDecifrado`: parâmetro separado, nunca lido de dentro da entity —
+  // `cpfDecifrado`: parâmetro separado, nunca lido de dentro da entity -
   // decidir SE decifra (checar perfil_pesquisador_visualizar_sensivel) é
   // responsabilidade do service, não deste converter. `null` aqui sempre
   // vira `cpf: null` na resposta, nunca lança nem esconde o campo.

@@ -4,17 +4,17 @@ import { DatabaseService } from '../../commons/database/database.service';
 import { UsuarioResponseSuspend } from '../dto/response/usuario.response-suspend';
 
 // suspender_usuario/revogar_suspensao_usuario (03_funcoes_seguranca.sql,
-// [03-N], 09-08-2026, Bloco G do prompt do Claude Web) — mesmo padrão de
+// [03-N], 09-08-2026, Bloco G do prompt do Claude Web) - mesmo padrão de
 // UsuarioServiceDesbloquear: SECURITY DEFINER que já exige a permissão
 // internamente (não RLS), erro do Postgres vira ForbiddenException aqui.
-// "Reduzir a pena" não é um método à parte — é chamar `suspender` de novo
+// "Reduzir a pena" não é um método à parte - é chamar `suspender` de novo
 // com uma data mais próxima (a função já sobrescreve).
 @Injectable()
 export class UsuarioServiceSuspender {
   constructor(private readonly database: DatabaseService) {}
 
-  // SAVEPOINT (09-08-2026) — buscarSuspensao roda AUTOMATICAMENTE ao abrir
-  // Alterar Usuário (SecaoModeracao), não é uma ação explícita da pessoa —
+  // SAVEPOINT (09-08-2026) - buscarSuspensao roda AUTOMATICAMENTE ao abrir
+  // Alterar Usuário (SecaoModeracao), não é uma ação explícita da pessoa -
   // sem essa proteção, a tela inteira de Alterar Usuário ficava dependente
   // das colunas suspenso_ate/motivo_suspensao/suspenso_por existirem
   // (Bloco G só existe de verdade depois da migração no SQL Editor, ver

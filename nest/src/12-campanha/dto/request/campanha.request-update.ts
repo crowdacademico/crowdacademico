@@ -9,7 +9,7 @@ import {
   MaxLength,
 } from 'class-validator';
 
-// Sem status/aprovado_em/id_admin/taxa_plataforma aqui de propósito — quem
+// Sem status/aprovado_em/id_admin/taxa_plataforma aqui de propósito - quem
 // muda status são os endpoints de ação (aprovar/rejeitar), nunca este PATCH
 // genérico. trg_campanha_valida_transicao (05) já bloquearia uma tentativa
 // de mudar status por aqui mesmo que o DTO permitisse, mas nem chega a

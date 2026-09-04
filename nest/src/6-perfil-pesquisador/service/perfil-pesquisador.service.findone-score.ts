@@ -2,11 +2,11 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
 import { PerfilPesquisadorResponseScore } from '../dto/response/perfil-pesquisador.response-score';
 
-// Score/dimensões de um pesquisador — pol_score_select (04) é PÚBLICA de
+// Score/dimensões de um pesquisador - pol_score_select (04) é PÚBLICA de
 // propósito (decisão de produto revertida em 30-07-2026, ver
 // DOCUMENTACAO_BD.md/[04-I-3]: base do "Serasa do Pesquisador"), então
 // nenhuma checagem de permissão aqui, diferente do CPF. score_pesquisador
-// tem UMA LINHA POR DIMENSÃO (UNIQUE (id_usuario, id_score_config)) — cada
+// tem UMA LINHA POR DIMENSÃO (UNIQUE (id_usuario, id_score_config)) - cada
 // linha carrega score_total/id_rotulo repetidos (o mesmo valor agregado
 // carimbado em toda linha por recalcular_score_pesquisador(), 05), por isso
 // o total/rótulo da resposta vêm de qualquer uma das linhas, não de uma

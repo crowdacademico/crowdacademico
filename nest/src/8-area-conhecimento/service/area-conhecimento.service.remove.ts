@@ -40,14 +40,14 @@ export class AreaConhecimentoServiceRemove {
       }
     } catch (erro) {
       // FK_CAMPANHA_AREA_CONHECIMENTO e FK_AREA_CONHECIMENTO_PAI (esta
-      // última só bloqueia se a área filha também estiver em uso — o
+      // última só bloqueia se a área filha também estiver em uso - o
       // próprio vínculo pai->filho já é ON DELETE SET NULL, ver
       // 01_extensoes_enums_tabelas.sql) não têm CASCADE de propósito
-      // (módulo criado sem endpoint de remoção justamente por isso — ver
+      // (módulo criado sem endpoint de remoção justamente por isso - ver
       // comentário em area-conhecimento.module.ts). O filtro global
       // (postgres-exception.filter.ts) já traduz 23503 pra 400, mas com
       // uma mensagem genérica de INSERT ("registro relacionado não
-      // existe") que não faz sentido pra um DELETE bloqueado — aqui vira
+      // existe") que não faz sentido pra um DELETE bloqueado - aqui vira
       // 409 com o motivo certo.
       if (
         erro instanceof NotFoundException ||

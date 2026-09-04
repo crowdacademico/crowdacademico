@@ -6,11 +6,11 @@ import { ComentarioRequestCreate } from '../dto/request/comentario.request-creat
 import { ComentarioResponse } from '../dto/response/comentario.response';
 
 // validar_comentario_endosso (05, [05-K-3]) barra passar de
-// configuracoes.limite_endossos_campanha — não checado aqui, só o CÁLCULO
+// configuracoes.limite_endossos_campanha - não checado aqui, só o CÁLCULO
 // do próximo número (que precisa acontecer em algum lugar, a trigger não
 // inventa esse valor sozinha, só valida a contagem). Race condition
 // possível (duas pessoas endossando a mesma campanha ao mesmo tempo
-// podem calcular o mesmo próximo número) — aceitável por ora, volume
+// podem calcular o mesmo próximo número) - aceitável por ora, volume
 // baixo; se virar problema real, a solução é mover esse cálculo pra
 // dentro de uma trigger BEFORE INSERT no banco.
 @Injectable()

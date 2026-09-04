@@ -1,7 +1,7 @@
-// Decorator de class-validator pro DTO de perfil-pesquisador — primeiro
+// Decorator de class-validator pro DTO de perfil-pesquisador - primeiro
 // validador customizado do projeto (os outros módulos usavam só decorators
 // prontos do class-validator: @IsEmail, @IsString etc.). Só valida FORMATO
-// (dígito verificador), não existência real — ver cpf-validador.util.ts.
+// (dígito verificador), não existência real - ver cpf-validador.util.ts.
 import { registerDecorator, ValidationOptions } from 'class-validator';
 import { cpfEhValido } from './cpf-validador.util';
 

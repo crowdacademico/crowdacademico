@@ -1,5 +1,5 @@
 // Redimensiona/converte imagem NO NAVEGADOR antes do upload, via Canvas
-// API nativa (sem biblioteca, zero custo) — complementa, não substitui, o
+// API nativa (sem biblioteca, zero custo) - complementa, não substitui, o
 // processamento de verdade que o backend já faz com `sharp` em
 // confirmar-upload.ts (ver nest/src/25-arquivo/util/arquivo.processamento
 // -imagem.util.ts). O backend continua sendo a autoridade: o navegador
@@ -10,7 +10,7 @@
 // expirar no meio de um envio lento.
 //
 // Se qualquer coisa der errado (navegador sem suporte, imagem corrompida,
-// canvas "tainted"), cai pro arquivo ORIGINAL sem quebrar o upload — essa
+// canvas "tainted"), cai pro arquivo ORIGINAL sem quebrar o upload - essa
 // função é só uma otimização de UX, nunca deve ser o motivo de um upload
 // falhar.
 
@@ -26,7 +26,7 @@ function trocarExtensao(nomeOriginal, novaExtensao) {
   return `${semExtensao}.${novaExtensao}`;
 }
 
-// Tenta gerar o Blob no formato pedido — `canvas.toBlob` com 'image/webp'
+// Tenta gerar o Blob no formato pedido - `canvas.toBlob` com 'image/webp'
 // nem todo navegador honra (Safari mais antigo cai pra PNG em silêncio,
 // sem erro nenhum), então confere o `.type` do resultado antes de confiar
 // nele.
@@ -40,7 +40,7 @@ function paraBlob(canvas, tipoMime, qualidade) {
  * @param {File} arquivo - imagem escolhida pelo usuário
  * @param {{ larguraMaxima: number, qualidade: number }} opcoes - mesmo
  *   perfil (largura/qualidade) usado no backend pro mesmo contexto, ver
- *   PERFIL_PROCESSAMENTO_POR_CONTEXTO em arquivo.constants.ts — mantenha
+ *   PERFIL_PROCESSAMENTO_POR_CONTEXTO em arquivo.constants.ts - mantenha
  *   os dois em sincronia manualmente, não há import cruzado entre os
  *   repositórios nest/ e react/.
  * @returns {Promise<File>} o arquivo reduzido, ou o ORIGINAL se a redução
@@ -65,7 +65,7 @@ export async function reduzirImagemNoNavegador(arquivo, { larguraMaxima, qualida
 
     let blob = await paraBlob(canvas, 'image/webp', qualidade / 100);
     if (!blob || blob.type !== 'image/webp') {
-      // Navegador não codifica WebP em canvas — cai pra JPEG (ainda com
+      // Navegador não codifica WebP em canvas - cai pra JPEG (ainda com
       // qualidade ajustável, ao contrário de PNG que sempre sai sem perda
       // e, por isso, muito maior).
       blob = await paraBlob(canvas, 'image/jpeg', qualidade / 100);
@@ -73,7 +73,7 @@ export async function reduzirImagemNoNavegador(arquivo, { larguraMaxima, qualida
 
     if (!blob || blob.size >= arquivo.size) {
       // Não compensou (imagem já pequena/otimizada, ou o navegador não
-      // conseguiu comprimir de verdade) — mantém o original, o backend
+      // conseguiu comprimir de verdade) - mantém o original, o backend
       // ainda vai processar de qualquer jeito.
       return arquivo;
     }
@@ -83,7 +83,7 @@ export async function reduzirImagemNoNavegador(arquivo, { larguraMaxima, qualida
     return new File([blob], nomeReduzido, { type: blob.type });
   } catch {
     // createImageBitmap/canvas indisponível ou falhou por qualquer
-    // motivo — upload segue com o arquivo original, sem bloquear o
+    // motivo - upload segue com o arquivo original, sem bloquear o
     // usuário por causa de uma otimização que é só um bônus.
     return arquivo;
   }

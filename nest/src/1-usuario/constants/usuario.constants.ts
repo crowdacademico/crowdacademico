@@ -1,5 +1,5 @@
 // Colunas de `usuario` liberadas pra leitura pública do app_nestjs (GRANT
-// SELECT, 06_grants.sql) — só que aqui é a lista PÚBLICA, sem senha_hash de
+// SELECT, 06_grants.sql) - só que aqui é a lista PÚBLICA, sem senha_hash de
 // propósito (ver 3-auth/service/auth.service.login.ts pra onde senha_hash
 // É lido, isoladamente, só ali). Mudou lá? Muda aqui também.
 export const USUARIO_COLUNAS_SELECT = [

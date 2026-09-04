@@ -47,7 +47,7 @@ export class CampanhaServiceUpdate {
       // pol_campanha_update (04): dono OU campanha_editar/campanha_aprovar/
       // campanha_rejeitar. A existência é conferida pela MESMA sessão, então
       // uma campanha ainda invisível pra quem pediu (fora do alcance de
-      // pol_campanha_select também) devolve 404 aqui — não vaza que existe.
+      // pol_campanha_select também) devolve 404 aqui - não vaza que existe.
       const existe = await this.database
         .getDb()
         .selectFrom('campanha')

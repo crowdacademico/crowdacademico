@@ -24,7 +24,7 @@ export class AreaConhecimentoServiceCreate {
     // Hierarquia fixa em 2 níveis (ver comentário em
     // criar-area-conhecimento.request.dto.ts): se idPai veio preenchido,
     // confere aqui que ele aponta pra uma grande área raiz de verdade
-    // (id_pai IS NULL) antes do INSERT — sem essa checagem, nada no banco
+    // (id_pai IS NULL) antes do INSERT - sem essa checagem, nada no banco
     // impediria criar um 3º nível.
     if (dto.idPai !== undefined) {
       const pai = await db

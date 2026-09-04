@@ -1,7 +1,7 @@
 import { Generated } from 'kysely';
 
 // Tipos do Kysely, escritos à mão espelhando arquivos_banco_dados/01_extensoes_
-// enums_tabelas.sql — só as tabelas que os módulos 1/2/3/11 já tocam, não o
+// enums_tabelas.sql - só as tabelas que os módulos 1/2/3/11 já tocam, não o
 // banco inteiro (mesma lógica incremental da numeração de módulos: cresce
 // junto, não tudo de uma vez).
 //
@@ -9,11 +9,11 @@ import { Generated } from 'kysely';
 // já instalado em devDependencies e configurado em package.json), que
 // introspecciona o Postgres de verdade e nunca erra nome de coluna/tipo.
 // Não rodei o codegen porque este ambiente (sandbox do Claude Code) não tem
-// acesso a um Postgres rodando — só ao código. Assim que rodar localmente
+// acesso a um Postgres rodando - só ao código. Assim que rodar localmente
 // com o banco de pé, rode `npm run db:codegen` (gera
 // src/commons/database/db.types.generated.ts, TODAS as 41 tabelas) e
 // confira contra este arquivo; se divergir nas 7 tabelas que aparecem nos
-// dois, o gerado manda — este aqui foi escrito de cabeça, o gerado lê o
+// dois, o gerado manda - este aqui foi escrito de cabeça, o gerado lê o
 // catálogo real.
 export interface UsuarioTable {
   id_usuario: Generated<number>;
@@ -30,8 +30,8 @@ export interface UsuarioTable {
   bloqueado_ate: Date | null;
   ultimo_login_em: Date | null;
   ultimo_login_ip: string | null;
-  // ADICIONADAS (09-08-2026) — espelham 01_extensoes_enums_tabelas.sql
-  // [01-D]. Suspensão de MODERAÇÃO (manual, com motivo) — diferente de
+  // ADICIONADAS (09-08-2026) - espelham 01_extensoes_enums_tabelas.sql
+  // [01-D]. Suspensão de MODERAÇÃO (manual, com motivo) - diferente de
   // `bloqueado_ate` acima (automático, por senha errada).
   suspenso_ate: Date | null;
   motivo_suspensao: string | null;
@@ -41,8 +41,8 @@ export interface UsuarioTable {
 export interface PapelTable {
   id_papel: Generated<number>;
   nome: string;
-  // ADICIONADA (03-08-2026) — espelha 01_extensoes_enums_tabelas.sql [01-B].
-  // Estável, nunca editável pela API (diferente de `nome`) — ver comentário
+  // ADICIONADA (03-08-2026) - espelha 01_extensoes_enums_tabelas.sql [01-B].
+  // Estável, nunca editável pela API (diferente de `nome`) - ver comentário
   // completo lá sobre por que existe.
   codigo: string;
 }
@@ -60,7 +60,7 @@ export interface PapelPermissaoTable {
 export interface UsuarioPapelTable {
   id_usuario: number;
   id_papel: number;
-  // ADICIONADA (09-08-2026) — espelha 01_extensoes_enums_tabelas.sql
+  // ADICIONADA (09-08-2026) - espelha 01_extensoes_enums_tabelas.sql
   // [01-B]. NULL = papel valendo normalmente.
   suspenso_ate: Date | null;
 }
@@ -75,13 +75,13 @@ export interface SessaoTable {
   ip: string | null;
   user_agent: string | null;
   // 'login' (senha digitada) ou 'refresh' (renovação silenciosa do token de
-  // acesso, a cada ~15min de uso) — 07-08-2026, ver auth.service.login.ts.
+  // acesso, a cada ~15min de uso) - 07-08-2026, ver auth.service.login.ts.
   origem: Generated<'login' | 'refresh'>;
 }
 
-// CREATE TYPE tipo_configuracao AS ENUM ('decimal','inteiro','texto','booleano') — 01
+// CREATE TYPE tipo_configuracao AS ENUM ('decimal','inteiro','texto','booleano') - 01
 // Array em runtime (não só o tipo) pra ConfiguracaoRequestCreate validar
-// com @IsIn(TIPOS_CONFIGURACAO) sem duplicar a lista de novo — um hardcoded
+// com @IsIn(TIPOS_CONFIGURACAO) sem duplicar a lista de novo - um hardcoded
 // só, o tipo é derivado dele, não o contrário.
 export const TIPOS_CONFIGURACAO = [
   'decimal',
@@ -101,10 +101,10 @@ export interface ConfiguracoesTable {
   ativo: Generated<boolean>;
 }
 
-// ADICIONADA (03-08-2026) — espelha 01_extensoes_enums_tabelas.sql [01-L].
+// ADICIONADA (03-08-2026) - espelha 01_extensoes_enums_tabelas.sql [01-L].
 // `id_log` é `Generated<string>`, não `<number>`: é BIGSERIAL (bigint), e o
 // driver `pg` devolve bigint como STRING por padrão (evita perda de
-// precisão em valores acima de 2^53) — convertido pra `number` só na hora
+// precisão em valores acima de 2^53) - convertido pra `number` só na hora
 // de montar o LogAuditoriaResponse (log-auditoria.converter.ts), mesmo cuidado já
 // tomado com `COUNT(*)` em paginacao.util.ts.
 export interface LogAuditoriaTable {
@@ -119,7 +119,7 @@ export interface LogAuditoriaTable {
   ocorrido_em: Generated<Date>;
 }
 
-// ADICIONADAS (09-08-2026) — espelham 01_extensoes_enums_tabelas.sql, tabelas
+// ADICIONADAS (09-08-2026) - espelham 01_extensoes_enums_tabelas.sql, tabelas
 // termos_de_uso/usuario_termo, tocadas pela 1ª vez pelo módulo 5-termo-uso
 // (Bloco D do prompt do Claude Web sobre cadastro público).
 export interface TermosDeUsoTable {
@@ -138,7 +138,7 @@ export interface UsuarioTermoTable {
   ip_aceite: string | null;
 }
 
-// ADICIONADA — espelha 01_extensoes_enums_tabelas.sql (tabela
+// ADICIONADA - espelha 01_extensoes_enums_tabelas.sql (tabela
 // area_conhecimento), tocada pela 1ª vez pelo módulo 8-area-conhecimento.
 // `id_pai` auto-referenciado implementa a hierarquia de 2 níveis (grande
 // área -> área) explicada no comentário da própria tabela no SQL; NULL =
@@ -152,16 +152,16 @@ export interface AreaConhecimentoTable {
   ativo: Generated<boolean>;
 }
 
-// ADICIONADA — espelha 01_extensoes_enums_tabelas.sql (tabela tipo_link),
+// ADICIONADA - espelha 01_extensoes_enums_tabelas.sql (tabela tipo_link),
 // tocada pela 1ª vez pelo módulo 9-tipo-link. `codigo` é a chave estável
 // lida por calcular_score_perfil_academico() (05_regras_negocio.sql
 // [05-I-2]); os 3 `permite_*` são os escopos de uso, com
 // CK_TIPO_LINK_ALGUM_ESCOPO garantindo pelo menos um TRUE.
 // ATUALIZADO (14-08-2026): `dominio` virou array nativo do Postgres
-// (VARCHAR(255)[] — node-postgres/Kysely já devolve isto como `string[]`
+// (VARCHAR(255)[] - node-postgres/Kysely já devolve isto como `string[]`
 // puro, sem parsing manual nenhum). `regex`/`dominio` continuam NULLABLE
 // de propósito (decisão revista no dia seguinte: array vazio é truthy em
-// JS/TS, então "sem restrição" fica mais seguro como ausência de valor —
+// JS/TS, então "sem restrição" fica mais seguro como ausência de valor -
 // ver comentário completo em 01_extensoes_enums_tabelas.sql [01-B]).
 export interface TipoLinkTable {
   id_tipolink: Generated<number>;
@@ -175,7 +175,7 @@ export interface TipoLinkTable {
   permite_recompensa: Generated<boolean>;
 }
 
-// CREATE TYPE tipo_motivo_denuncia AS ENUM ('campanha', 'perfil') — 01. Mesmo
+// CREATE TYPE tipo_motivo_denuncia AS ENUM ('campanha', 'perfil') - 01. Mesmo
 // raciocínio de TIPOS_CONFIGURACAO acima: array em runtime pra
 // MotivoDenunciaRequestCreate/MotivoDenunciaRequestUpdate validarem
 // com @IsIn(TIPOS_MOTIVO_DENUNCIA) sem duplicar a lista, o tipo é derivado
@@ -183,18 +183,18 @@ export interface TipoLinkTable {
 export const TIPOS_MOTIVO_DENUNCIA = ['campanha', 'perfil'] as const;
 export type TipoMotivoDenuncia = (typeof TIPOS_MOTIVO_DENUNCIA)[number];
 
-// ADICIONADA — espelha 01_extensoes_enums_tabelas.sql (tabela
+// ADICIONADA - espelha 01_extensoes_enums_tabelas.sql (tabela
 // motivo_denuncia), tocada pela 1ª vez pelo módulo 10-motivo-denuncia.
-// `codigo` é a chave estável (UK_MOTIVO_DENUNCIA_CODIGO) — mesmo padrão de
+// `codigo` é a chave estável (UK_MOTIVO_DENUNCIA_CODIGO) - mesmo padrão de
 // `tipo_link.codigo` (ver comentário em [01-B] sobre os 3 pontos do banco
 // que passaram a distinguir `codigo`/`nome`); `tipo` decide se o motivo
-// serve pra denúncia de campanha ou de perfil — trg_valida_tipo_motivo_
+// serve pra denúncia de campanha ou de perfil - trg_valida_tipo_motivo_
 // denuncia (05_regras_negocio.sql [05-K-1]) barra em denuncia.id_motivo
 // qualquer motivo cujo `tipo` não bate com o alvo escolhido (id_campanha_
 // alvo x id_pesquisador_alvo).
 export interface MotivoDenunciaTable {
   id_motivo: Generated<number>;
-  // NOT NULL desde 18-08-2026 — `codigo` saiu do catálogo (não era lido
+  // NOT NULL desde 18-08-2026 - `codigo` saiu do catálogo (não era lido
   // por nenhuma trigger/função, diferente de `papel.codigo`/
   // `tipo_link.codigo`) e `descricao` virou o único identificador
   // legível do motivo.
@@ -203,10 +203,10 @@ export interface MotivoDenunciaTable {
   ativo: Generated<boolean>;
 }
 
-// ADICIONADA (22-08-2026) — espelha 01_extensoes_enums_tabelas.sql
+// ADICIONADA (22-08-2026) - espelha 01_extensoes_enums_tabelas.sql
 // (tabela perfil_pesquisador), tocada pela 1ª vez pelo módulo
 // 6-perfil-pesquisador. cpf_criptografado/cpf_hash são STRING aqui (Kysely
-// não sabe que um é cifra e o outro é HMAC — isso é responsabilidade de
+// não sabe que um é cifra e o outro é HMAC - isso é responsabilidade de
 // commons/seguranca/cpf-cifra.util.ts, nunca do tipo da coluna). Ver
 // DOCUMENTACAO_BD.md pro raciocínio completo por trás dos dois.
 export const TIPOS_VINCULO = ['institucional', 'independente'] as const;
@@ -232,7 +232,7 @@ export interface PerfilPesquisadorTable {
   titulo_academico: TituloAcademico;
   status_pesquisador: Generated<StatusPesquisador>;
   ativado_em: Date | null;
-  // Nunca escritos por INSERT/UPDATE direto do service — cache mantido só
+  // Nunca escritos por INSERT/UPDATE direto do service - cache mantido só
   // por trg_perfil_recalcula_score/trg_perfil_update_recalcula_score (05).
   // Selecionados normalmente (fazem parte da resposta pública de perfil),
   // só não fazem parte de nenhum `.values()` de escrita.
@@ -240,7 +240,7 @@ export interface PerfilPesquisadorTable {
   score_atualizado_em: Date | null;
 }
 
-// ADICIONADA (22-08-2026) — espelha 01_extensoes_enums_tabelas.sql (tabela
+// ADICIONADA (22-08-2026) - espelha 01_extensoes_enums_tabelas.sql (tabela
 // link_academico), tocada pela 1ª vez pelo módulo 7-link-academico.
 export interface LinkAcademicoTable {
   id_link_academico: Generated<number>;
@@ -251,16 +251,16 @@ export interface LinkAcademicoTable {
   rotulo: string | null;
 }
 
-// ADICIONADAS (22-08-2026) — espelham 01_extensoes_enums_tabelas.sql (bloco
+// ADICIONADAS (22-08-2026) - espelham 01_extensoes_enums_tabelas.sql (bloco
 // [01-I] SCORE), lidas (nunca escritas diretamente) pelo módulo
-// 6-perfil-pesquisador na consulta de score/dimensões — quem ESCREVE são as
+// 6-perfil-pesquisador na consulta de score/dimensões - quem ESCREVE são as
 // funções de 05_regras_negocio.sql (recalcular_score_pesquisador() e as 4
 // funções de dimensão), nunca o Nest.
 export interface ScoreConfigTable {
   id_score_config: Generated<number>;
   nome: string;
   descricao: string | null;
-  peso: string; // DECIMAL(5,2) — node-postgres devolve DECIMAL como string, mesmo cuidado de LogAuditoriaTable.id_log com BIGSERIAL
+  peso: string; // DECIMAL(5,2) - node-postgres devolve DECIMAL como string, mesmo cuidado de LogAuditoriaTable.id_log com BIGSERIAL
   id_pai: number | null;
   ativo: Generated<boolean>;
   criado_em: Generated<Date>;
@@ -289,12 +289,12 @@ export interface ScorePesquisadorTable {
   motivo: string | null;
 }
 
-// ADICIONADAS (22-08-2026) — espelham 01_extensoes_enums_tabelas.sql
+// ADICIONADAS (22-08-2026) - espelham 01_extensoes_enums_tabelas.sql
 // [01-E] CAMPANHA, tocadas pela 1ª vez pelos módulos 12-campanha,
 // 13-orcamento-campanha, 14-marco-cronograma, 15-atualizacao-campanha,
 // 16-seguir-campanha, 17-comentario, 18-recompensa. Campos DECIMAL (meta_
 // financeira, valor_bruto_arrecadado, taxa_plataforma, valor, valor_minimo)
-// são `string` aqui, nunca `number` — mesmo cuidado já registrado em
+// são `string` aqui, nunca `number` - mesmo cuidado já registrado em
 // ScoreConfigTable.peso (node-postgres devolve DECIMAL como string pra não
 // perder precisão); convertidos pra number só no converter de cada módulo.
 export const MODELOS_CAMPANHA = ['all-or-nothing', 'flexivel'] as const;
@@ -354,7 +354,7 @@ export interface CampanhaTable {
 }
 
 // Só o INSERT é usado por enquanto (CampanhaServiceRejeitar, 12-campanha)
-// — não tem módulo/pasta própria ainda (21-historico-rejeicao segue vazia,
+// - não tem módulo/pasta própria ainda (21-historico-rejeicao segue vazia,
 // ver ordem de prioridade combinada), mas o texto de justificativa da
 // rejeição só existe aqui, então o endpoint de rejeitar campanha precisa
 // gravar aqui mesmo sem o resto do CRUD (findall/findone) existir ainda.
@@ -427,7 +427,7 @@ export interface RecompensaTable {
   criado_em: Generated<Date>;
 }
 
-// Satélites de atualizacao_campanha/recompensa (01-F/01-G) — dobrados
+// Satélites de atualizacao_campanha/recompensa (01-F/01-G) - dobrados
 // dentro dos módulos 15-atualizacao-campanha/18-recompensa (22-08-2026,
 // decisão registrada em PROXIMOS_MODULOS.md: nenhuma das 4 tem pasta
 // numerada própria, o roteiro não as lista como módulo individual).
@@ -447,13 +447,13 @@ export interface LinkRecompensaTable {
   url: string;
 }
 
-// ADICIONADA (24-08-2026, módulo 25-arquivo implementado — ver
+// ADICIONADA (24-08-2026, módulo 25-arquivo implementado - ver
 // arquivos_banco_dados/01_extensoes_enums_tabelas.sql). `chave` (não
 // `url`): guarda só o caminho do objeto dentro do bucket
-// (ex. "publico/<uuid>.jpg"), nunca o endereço completo — a URL pública é
+// (ex. "publico/<uuid>.jpg"), nunca o endereço completo - a URL pública é
 // montada em runtime por commons/storage (montarUrlPublica), a partir de
 // STORAGE_PUBLIC_BASE_URL. Isso é o que permite trocar de provedor de
-// armazenamento (Supabase Storage hoje, Cloudflare R2 se um dia migrar —
+// armazenamento (Supabase Storage hoje, Cloudflare R2 se um dia migrar -
 // os dois falam o protocolo S3) sem nenhum UPDATE em massa nesta tabela.
 export interface ArquivoTable {
   id_arquivo: Generated<number>;
@@ -468,7 +468,7 @@ export interface ArquivoTable {
 }
 
 // id_arquivo aqui referencia uma linha da tabela `arquivo` (módulo
-// 25-arquivo, implementado em 24-08-2026) — os endpoints de vínculo abaixo
+// 25-arquivo, implementado em 24-08-2026) - os endpoints de vínculo abaixo
 // (INSERT/UPDATE da tabela de associação em si) já podiam ser testados
 // isoladamente antes disso, mas só agora dá pra testar o fluxo de ponta a
 // ponta (upload real -> vínculo -> exibição).
@@ -490,9 +490,9 @@ export interface VerificacaoEmailTable {
   id_verificacao: Generated<number>;
   id_usuario: number;
   // Apesar do nome da coluna, NÃO é bcrypt (que teria salt aleatório por
-  // linha — impossível de achar por igualdade direta). É um hash
+  // linha - impossível de achar por igualdade direta). É um hash
   // determinístico (SHA-256) do token em texto puro que só existe no link
-  // enviado — confirmar_email_por_token() (03_funcoes_seguranca.sql,
+  // enviado - confirmar_email_por_token() (03_funcoes_seguranca.sql,
   // [03-O]) faz `WHERE token_hash = p_token_hash`, igualdade simples, só
   // funciona com hash determinístico.
   token_hash: string;

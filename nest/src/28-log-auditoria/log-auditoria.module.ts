@@ -4,7 +4,7 @@ import { LogAuditoriaControllerMinhaAtividade } from './controllers/log-auditori
 import { LogAuditoriaServiceFindAll } from './service/log-auditoria.service.findall';
 import { LogAuditoriaServiceMinhaAtividade } from './service/log-auditoria.service.minha-atividade';
 
-// Só leitura, de propósito — ninguém escreve em log_auditoria pela API
+// Só leitura, de propósito - ninguém escreve em log_auditoria pela API
 // (nem teria GRANT: ver 06_grants.sql [06-L]), só a trigger SECURITY
 // DEFINER grava (05_regras_negocio.sql [05-L]).
 @Module({

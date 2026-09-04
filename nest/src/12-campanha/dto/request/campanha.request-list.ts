@@ -4,7 +4,7 @@ import { PaginacaoQueryDto } from '../../../commons/database/dto/paginacao.query
 import { STATUS_CAMPANHA } from '../../../commons/database/db.types';
 import type { StatusCampanha } from '../../../commons/database/db.types';
 
-// idUsuario (opcional) filtra "minhas campanhas" quando presente — sem
+// idUsuario (opcional) filtra "minhas campanhas" quando presente - sem
 // ele, lista o catálogo público (pol_campanha_select, 04, já restringe
 // sozinha aos status visíveis + dono + relatorio_visualizar; o filtro
 // abaixo é só conveniência de navegação, não é o que decide visibilidade).

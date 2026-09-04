@@ -41,7 +41,7 @@
 
 🟢 **746. `arquivo_atualizacao` (dentro de `15-atualizacao-campanha`) tem endpoint de criação - `25-arquivo` já existe, dá pra testar de ponta a ponta agora.** O endpoint `POST /arquivo-atualizacao` (vincula um `id_arquivo` já existente a uma atualização de campanha) foi implementado - é um `INSERT` simples na tabela de associação, RLS e grants já prontos desde antes. Quando este item foi escrito, `25-arquivo` (o módulo que gera um `id_arquivo` válido de verdade) ainda não existia - hoje existe (01-09-2026, com processamento `sharp`), então o fluxo completo (upload real → `id_arquivo` → vincular à atualização) já pode ser testado de ponta a ponta; ninguém confirmou esse teste ainda, só o endpoint em si. O mesmo vale pra `arquivo_recompensa`, ainda bloqueado porque `18-recompensa` continua não implementado.
 
-🟢 **744. `react/.gitignore` não cobre `.env` - baixo risco hoje, mas o filtro que devia impedir isso não existe.** Achado numa auditoria de IA enquanto revisava outra coisa, confirmado noutra sessão de IA: `react/.env` está de fato commitado no git (`git ls-files` confirma), porque `react/.gitignore` nunca listou `.env` (diferente de `nest/.gitignore`, que já cobre corretamente `nest/.env` - esse aí nunca foi commitado). Marcado verde e não vermelho porque **o conteúdo de hoje é inofensivo** - `react/.env` só tem `VITE_API_URL=http://localhost:3000`, nenhuma chave, senha ou segredo. O risco é só potencial: se um dia alguém adicionar uma chave de API (comum em front-end, ex.: uma chave pública de algum serviço de terceiro) direto nesse arquivo sem lembrar de checar o `.gitignore` primeiro, ela vai pro histórico do git sem ninguém perceber, porque não existe rede de segurança pra isso hoje. Correção é trivial (uma linha `.env` no `react/.gitignore`, igual ao `nest/.gitignore` já tem) - deliberadamente **não aplicada ainda**, a pedido do Lucas, só registrada aqui como lembrete pra fazer antes que algum segredo de verdade entre nesse arquivo.
+🟢 **744. `react/.gitignore` não cobre `.env` - baixo risco hoje, mas o filtro que devia impedir isso não existe.** Achado numa auditoria de IA enquanto revisava outra coisa, confirmado noutra sessão de IA: `react/.env` está de fato commitado no git (`git ls-files` confirma), porque `react/.gitignore` nunca listou `.env` (diferente de `nest/.gitignore`, que já cobre corretamente `nest/.env` - esse aí nunca foi commitado). Marcado verde e não vermelho porque **o conteúdo de hoje é inofensivo** - `react/.env` só tem `VITE_API_URL=http://localhost:3000`, nenhuma chave, senha ou segredo. O risco é só potencial: se um dia alguém adicionar uma chave de API (comum em front-end, ex.: uma chave pública de algum serviço de terceiro) direto nesse arquivo sem lembrar de checar o `.gitignore` primeiro, ela vai pro histórico do git sem ninguém perceber, porque não existe rede de segurança pra isso hoje. Correção é trivial (uma linha `.env` no `react/.gitignore`, igual ao `nest/.gitignore` já tem) - deliberadamente **não aplicada ainda**, a pedido do Lucas (confirmado de novo em 04-09-2026: "por enquanto não faz diferença, só vai atrapalhar" - o gitignore bloqueado tornaria mais chato editar o `.env` durante o desenvolvimento local). **Critério pra voltar a alertar sobre isto, também definido pelo Lucas:** só se (a) o conteúdo de `react/.env` mudar de verdade (hoje é só `VITE_API_URL=http://localhost:3000`, uma linha, nada sensível) ou (b) o sistema for pro deploy - fora esses dois gatilhos, não repetir o alerta.
 
 ## 🗓️ 30-07-2026
 
@@ -59,11 +59,11 @@ Uma auditoria de IA identificou esta como "a fala mais importante do WhatsApp in
 
 **Feita:** `MATRIZ-RASTREABILIDADE-RF.md`, cobrindo RF-001 a RF-115 (o número de RFs cresceu de 85 pra 115 desde que este item foi escrito) contra Banco e Nest, mais uma seção de RNFs e resumo executivo.
 
-🔴 **57. Só o `admin` consegue encerrar campanha por moderação (RF-079) - decisão de vocês, não bug**
+🟢 **57. Só o `admin` conseguia encerrar campanha por moderação (RF-108 na numeração nova) - RESOLVIDO (04-09-2026)**
 
-Achado na 6ª auditoria de IA, levantando quem tem as 3 permissões que `trg_campanha_valida_transicao` (`05`) aceita pra qualquer transição de status: `campanha_aprovar`, `campanha_rejeitar` e `solicitacao_encerramento_decidir` - só o papel `'admin'` tem as três. O papel `'moderador'` tem `atualizacao_moderar`, `comentario_moderar` e `denuncia_responder`, nenhuma das três de cima - ou seja, um moderador julga uma denúncia como procedente (a consequência mais séria dela sendo justamente encerrar a campanha denunciada, RF-079) e não consegue agir sobre esse julgamento; precisa pedir pro admin fazer.
+Achado na 6ª auditoria de IA, levantando quem tem as 3 permissões que `trg_campanha_valida_transicao` (`05`) aceitava pra qualquer transição de status: `campanha_aprovar`, `campanha_rejeitar` e `solicitacao_encerramento_decidir` - só o papel `'admin'` tinha as três. O papel `'moderador'` tinha `atualizacao_moderar`, `comentario_moderar` e `denuncia_responder`, nenhuma das três de cima - ou seja, um moderador julgava uma denúncia como procedente (a consequência mais séria dela sendo justamente encerrar a campanha denunciada, RF-108) e não conseguia agir sobre esse julgamento; precisava pedir pro admin fazer.
 
-> Sugestão da *** IA ***: pode ser proposital (só admin de fato encerra campanha, moderador só opina/modera conteúdo e denúncia) - nesse caso é só registrar aqui como decisão consciente. Se não for o que vocês querem, o caminho é simples: dar `campanha_rejeitar` ao papel `moderador` (reaproveitando a permissão que já existe), ou criar uma permissão nova e mais específica tipo `campanha_encerrar_moderacao` (mais granular, separa "rejeitar campanha nova" de "encerrar campanha ativa por denúncia procedente" - dois poderes com peso bem diferente). Não mexi em nada - é decisão de vocês dois, não teve nenhuma correção técnica envolvida.
+**Decisão do Lucas:** o moderador deve poder encerrar, é literalmente o papel dele. **Corrigido:** permissão nova `campanha_encerrar_moderacao` (`07`), concedida a `admin` (automático, `trg_admin_recebe_toda_permissao`) e `moderador` (explícito). `fn_valida_transicao_campanha()` (`05`, `[05-K-2]`) ganhou um 6º ramo, escopo estreito de propósito: libera só a transição `ativo → encerrado_moderacao` pra quem tem essa permissão - diferente do 2º ramo (`campanha_aprovar`/`campanha_rejeitar`/`solicitacao_encerramento_decidir`), que libera qualquer transição. Ganhar essa permissão não torna o moderador um aprovador/rejeitador de campanha nova, só dá o poder específico de executar o encerramento por moderação que ele já podia recomendar via `denuncia_responder`. Migração em `ATUALIZAR O SUPABASE.sql` (04-09-2026).
 
 ---
 
@@ -1136,3 +1136,35 @@ Causa raiz: `GlobalDbInterceptor` (commons/database) abre UMA transação por re
 Isso já era assim desde a criação do endpoint (decisão original documentada no comentário de `configuracao.service.findall.ts`: "Anônimo só enxerga as globais") - não é uma regressão nova, é uma lacuna nunca fechada. Analisando o Projeto de Interface, ficou claro que algumas chaves fazem sentido expor amplamente (`taxa_plataforma_padrao`, `valor_minimo_contribuicao`, `prazo_minimo_campanha_dias`) enquanto outras são mais internas (`limite_tentativas_login`, `bloqueio_login_minutos`, `limite_caracteres_relato_denuncia`) - hoje todas saem juntas no mesmo `GET`, sem nenhum controle de acesso além de "é uma config global ou pessoal".
 
 Não é uma correção técnica óbvia, é decisão de produto/segurança: criar uma coluna `configuracoes.publica boolean`? Separar num endpoint `/configuracoes/publicas` curado por uma lista de chaves? Deixar como está, já que nenhuma das chaves internas listadas acima é, sozinha, um segredo explorável? Fica registrado como pendência - o `useConfiguracoes()` do React funciona igual não importa qual caminho for escolhido depois, só troca a URL que `buscarPublicas()` chama.
+
+---
+
+### 🔴 Pendência aberta (lado Nest): falta o endpoint de "encerrar campanha por moderação" - só volta à tona quando `19-denuncia` nascer
+
+A autorização já está pronta no banco (item 57, acima - `campanha_encerrar_moderacao`, concedida a `admin` e `moderador`), mas não existe hoje nenhum controller/service no Nest que execute a transição `ativo → encerrado_moderacao` de verdade - `12-campanha` não tem esse endpoint, e `19-denuncia` (de onde a ação naturalmente parte, depois de uma denúncia julgada procedente) ainda é pasta vazia.
+
+Não é trabalho extra por causa da correção de hoje - é o mesmo trabalho que já estava pendente antes, só que agora, quando alguém escrever esse endpoint (em `12-campanha` ou como parte de `19-denuncia`), a parte de "quem pode fazer isso" já vai estar certa pros dois papéis, sem precisar mexer em RLS/trigger depois.
+
+---
+
+### 🔴 Pendência aberta: refresh token em cookie `HttpOnly`, em vez de `localStorage`
+
+Achado revisando um projeto de referência da disciplina (04-09-2026): hoje o CrowdAcademico guarda o refresh token no `localStorage` do navegador (`use-auth.js`, decisão já documentada - "pra não precisar logar de novo a cada F5"). Um cookie `HttpOnly` com `SameSite=Strict` faz o mesmo papel, mas com uma vantagem real de segurança: o JavaScript da página nunca consegue ler o valor do cookie, então um ataque de XSS (injeção de script malicioso) não consegue roubar o refresh token, mesmo que consiga rodar código na página - com `localStorage`, qualquer script que rode na página consegue ler o token.
+
+**Não é decisão óbvia, nem copy-paste** - trocar exigiria mexer em como o `authFetch`/`use-auth.js` renovam sessão (hoje leem o token direto do `localStorage`; um cookie `HttpOnly` é enviado automaticamente pelo navegador em toda requisição, sem o JavaScript precisar ler nem anexar nada - muda o formato da chamada) e como o backend define/lê esse cookie. Vale uma rodada de análise mais aprofundada de IA antes de decidir - não é pra implementar agora, só registrado pra não esquecer que a opção existe.
+
+---
+
+### 🔴 Pendência aberta: Autenticação em duas etapas (2FA) - vai precisar de RF novo também
+
+Toda banca de TCC de sistema hoje em dia costuma perguntar sobre segurança logo de cara, e 2FA é um dos primeiros itens que costuma vir à tona nessa conversa. Hoje o CrowdAcademico não tem nenhuma camada de 2FA (só e-mail+senha, com bloqueio por tentativas). Quando for implementar, também vai precisar de um RF novo na Etapa 3 descrevendo o requisito (não existe nenhum hoje cobrindo isso).
+
+**Só voltar a levantar este item quando todos os módulos do backend já estiverem prontos** - não é prioridade agora, é o tipo de reforço que faz mais sentido numa reta final, depois que o núcleo (campanha, contribuição, pagamento) já estiver de pé.
+
+---
+
+### 🔴 Pendência aberta: testes automatizados com Playwright no React
+
+O `react/` não tem nenhum teste automatizado hoje (só `build`+`lint`). Um projeto de referência da disciplina (`COCAO_HOTEL_DDL_DML_CRUD_ppw2-main`) tem uma estrutura de testes Playwright organizada em 7 categorias (E2E completo, aceitação/requisito funcional, integração HTTP, API pura, *data-driven*, *snapshot* visual/acessibilidade, interceptação de erro) que pode servir de referência de estrutura, não de conteúdo (os testes deles são específicos do sistema de hotel).
+
+**Vamos usar eventualmente, mas ainda é cedo.** Só voltar a levantar este item quando o sistema estiver completo (todos os módulos prontos) - implementar teste agora, com o backend ainda mudando bastante módulo a módulo, geraria mais retrabalho de manutenção de teste do que benefício.

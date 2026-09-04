@@ -14,7 +14,7 @@ export class ArquivoServiceFindOne {
   ) {}
 
   async executar(idArquivo: number): Promise<ArquivoResponse> {
-    // pol_arquivo_select (04_rls_policies.sql) é USING(TRUE) — leitura de
+    // pol_arquivo_select (04_rls_policies.sql) é USING(TRUE) - leitura de
     // arquivo é sempre pública, nenhum arquivo do sistema é secreto (ver
     // doc de arquitetura). Devolve mesmo se `ativo=false`: quem consome
     // decide o que fazer com um arquivo desativado, a API não esconde.

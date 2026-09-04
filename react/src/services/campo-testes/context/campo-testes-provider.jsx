@@ -9,7 +9,7 @@ import { CampoTestesContext } from './campo-testes-context';
 const LIMITE_REGISTRO_CHAMADAS = 200;
 
 // Substitui o antigo ElencoProvider (25-08-2026, pedido do Lucas: "remover
-// de vez" o motor de login-múltiplo — nenhum endpoint do backend aceita
+// de vez" o motor de login-múltiplo - nenhum endpoint do backend aceita
 // agir "em nome de" outro usuário, então simular vários atores ao mesmo
 // tempo não tinha mais sustentação real). Só guarda estado compartilhado
 // entre T1/T2/T3/T4, sem nenhuma sessão paralela: toda chamada de rede do
@@ -22,7 +22,7 @@ const LIMITE_REGISTRO_CHAMADAS = 200;
 // `campanhaFoco`: escolhida em T2 (coluna "Escolher"), usada por T3 (Vida
 // da Campanha Ativa) pra saber de qual campanha continuar. Mesmo conceito
 // de antes, só que sem depender do Elenco.
-// `registroChamadas`: alimentado por use-chamada-registrada.js — T4
+// `registroChamadas`: alimentado por use-chamada-registrada.js - T4
 // continua existindo, só que com um único "ator" possível agora (quem
 // estiver realmente logado).
 export function CampoTestesProvider({ children }) {

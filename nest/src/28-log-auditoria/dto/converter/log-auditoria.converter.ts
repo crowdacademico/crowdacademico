@@ -1,7 +1,7 @@
 import { LogAuditoriaResponse } from '../response/log-auditoria.response';
 
 // Shape exata do SELECT de log-auditoria.service.findall.ts (join com
-// usuario) — não é um `Selectable<LogAuditoriaTable>` puro por causa do
+// usuario) - não é um `Selectable<LogAuditoriaTable>` puro por causa do
 // `nome_responsavel` (vem de `usuario.nome`, não de log_auditoria).
 interface LogAuditoriaParaConverter {
   id_log: string;
@@ -21,7 +21,7 @@ export class LogAuditoriaConverter {
     linha: LogAuditoriaParaConverter,
   ): LogAuditoriaResponse {
     return {
-      // id_log vem como string do driver (BIGSERIAL/bigint) — ver
+      // id_log vem como string do driver (BIGSERIAL/bigint) - ver
       // comentário em commons/database/db.types.ts.
       idLog: Number(linha.id_log),
       tabela: linha.tabela,

@@ -1,7 +1,7 @@
 import { tratarResposta } from '../../constant/api/http.util';
 
 // Espelha nest/src/6-perfil-pesquisador. GET é público no backend
-// (pol_perfil_select usa usuario_visivel()) — CPF vem mascarado (`null`)
+// (pol_perfil_select usa usuario_visivel()) - CPF vem mascarado (`null`)
 // pra quem não é o próprio dono nem tem perfil_pesquisador_visualizar_
 // sensivel; o painel admin autenticado como quem tem essa permissão
 // enxerga o CPF de todo mundo. Sem criar()/remover() aqui: criação é

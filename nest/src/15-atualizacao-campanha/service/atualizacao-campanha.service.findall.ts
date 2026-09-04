@@ -10,7 +10,7 @@ import { AtualizacaoCampanhaRequestList } from '../dto/request/atualizacao-campa
 import { AtualizacaoCampanhaResponse } from '../dto/response/atualizacao-campanha.response';
 
 // pol_atualizacao_select (04) já filtra ativo=FALSE fora do alcance de
-// quem não é dono/moderador — sem checagem extra aqui.
+// quem não é dono/moderador - sem checagem extra aqui.
 @Injectable()
 export class AtualizacaoCampanhaServiceFindAll {
   constructor(private readonly database: DatabaseService) {}

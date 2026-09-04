@@ -17,7 +17,7 @@ export class TipoLinkServiceCreate {
   constructor(private readonly database: DatabaseService) {}
 
   async executar(dto: TipoLinkRequestCreate): Promise<TipoLinkResponse> {
-    // Mesmos defaults do banco (01_extensoes_enums_tabelas.sql) —
+    // Mesmos defaults do banco (01_extensoes_enums_tabelas.sql) -
     // calculados aqui (não só deixados pro DEFAULT do INSERT) porque
     // precisam entrar na checagem de CK_TIPO_LINK_ALGUM_ESCOPO logo
     // abaixo antes de gravar.
@@ -31,7 +31,7 @@ export class TipoLinkServiceCreate {
       );
     }
 
-    // regex é NULLABLE — só validado quando informado (e não nulo).
+    // regex é NULLABLE - só validado quando informado (e não nulo).
     // dominio é NOT NULL DEFAULT '{}': não precisa de validação de
     // "vazio ou não", array vazio é um valor válido (tipo aceita
     // qualquer domínio).
@@ -49,7 +49,7 @@ export class TipoLinkServiceCreate {
           ...(dto.ativo !== undefined ? { ativo: dto.ativo } : {}),
           regex: dto.regex ?? null,
           // Omitido = cai no DEFAULT '{}' do banco (mesma lógica de
-          // `ativo` acima) — dominio não aceita `null`, então não tem
+          // `ativo` acima) - dominio não aceita `null`, então não tem
           // fallback `?? null` aqui.
           ...(dto.dominio !== undefined ? { dominio: dto.dominio } : {}),
           permite_perfil: permitePerfil,
@@ -79,7 +79,7 @@ export class TipoLinkServiceCreate {
 
 // Exportada e reaproveitada por tipo-link.service.update.ts (mesma
 // checagem nos dois lugares que aceitam `regex` no corpo). Confere que a
-// string é um regex de verdade, não só um formato de texto qualquer —
+// string é um regex de verdade, não só um formato de texto qualquer -
 // sem isso, um padrão inválido gravado aqui só quebraria mais tarde,
 // longe daqui, quando 7-link-academico tentasse USAR esse regex pra
 // validar uma URL.

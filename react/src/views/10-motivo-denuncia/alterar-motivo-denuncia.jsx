@@ -10,7 +10,7 @@ import { motivoDenunciaApi } from '../../services/10-motivo-denuncia/api/motivo-
 // `tipo` É editável aqui: não existe trigger no banco que trave a troca
 // depois de criado (ver comentário completo em
 // atualizar-motivo-denuncia.request.dto.ts, no backend). `descricao`
-// também é editável — desde 18-08-2026 (remoção de `codigo`) é o único
+// também é editável - desde 18-08-2026 (remoção de `codigo`) é o único
 // identificador do motivo, então precisa continuar não vazia.
 export function AlterarMotivoDenuncia({ auth }) {
   const { id } = useParams();
@@ -122,7 +122,7 @@ export function AlterarMotivoDenuncia({ auth }) {
                 <option value="perfil">Perfil</option>
               </select>
               <p className="text-xs texto-fraco mt-1">
-                Alterar isto muda em qual tela de denúncia este motivo aparece daqui pra frente —
+                Alterar isto muda em qual tela de denúncia este motivo aparece daqui pra frente -
                 denúncias antigas que já usaram este motivo não são afetadas retroativamente.
               </p>
             </div>

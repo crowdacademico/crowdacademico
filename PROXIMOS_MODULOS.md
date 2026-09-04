@@ -63,9 +63,9 @@ Estes dois módulos ficaram de fora da lista original - construídos direto, sem
 - ✅ **`28-log-auditoria`** - trilha de auditoria administrativa (quem alterou o quê, quando, valor antes/depois - letra `L` no `DOCUMENTACAO_BD.md`). Modo somente-inclusão, ninguém edita/apaga.
 - ✅ **`29-dashboard`** - métricas agregadas do painel admin (`GET /dashboard/resumo`), usa `contar_metricas_dashboard()` (`[03-M]`, `DOCUMENTACAO_BD.md`) porque RLS normal não dá número confiável de "total do sistema".
 
-## Ainda a mapear
+## Já descartado
 
-- **`27-resources`** - pasta existe, propósito ainda não definido. Decidir o que vai aqui antes de começar.
+- 🗑️ **`27-resources`** - removido (04-09-2026). Era sobra do esqueleto de pastas herdado do modelo da disciplina, sem propósito real neste projeto - ver `DOCUMENTACAO_BACKEND.md`, seção 14, pra explicação completa.
 
 ---
 

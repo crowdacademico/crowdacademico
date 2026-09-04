@@ -18,7 +18,7 @@ export class CampanhaServiceFindOne {
 
     // pol_campanha_select (04) já filtra campanha 'aguardando_aprovacao'/
     // 'rejeitado'/'encerrado_moderacao' fora do alcance de quem não é dono
-    // nem tem relatorio_visualizar — "não encontrada" cobre tanto o caso
+    // nem tem relatorio_visualizar - "não encontrada" cobre tanto o caso
     // de não existir quanto o de existir mas estar fora da visão de quem
     // pediu (não vaza a existência de campanha ainda não aprovada).
     if (!linha) {

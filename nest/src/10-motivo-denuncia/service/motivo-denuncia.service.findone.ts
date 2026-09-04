@@ -8,7 +8,7 @@ export class MotivoDenunciaServiceFindOne {
   constructor(private readonly database: DatabaseService) {}
 
   async executar(idMotivo: number): Promise<MotivoDenunciaResponse> {
-    // pol_motivo_select (04): USING(true) — mesma leitura pública do findall.
+    // pol_motivo_select (04): USING(true) - mesma leitura pública do findall.
     const linha = await this.database
       .getDb()
       .selectFrom('motivo_denuncia')

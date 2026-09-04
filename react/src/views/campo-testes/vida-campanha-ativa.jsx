@@ -23,7 +23,7 @@ const LIMITE_ENDOSSOS = 4; // configuracoes.limite_endossos_campanha (mesmo defa
 // (T2). Sem campanha focada ainda, só mostra o link pra T2.
 //
 // SEM REDESENHO ainda (25-08-2026, remoção do Elenco: T1 e T2 tiveram
-// prioridade, T3 fica só "destravado" por enquanto — o redesenho de
+// prioridade, T3 fica só "destravado" por enquanto - o redesenho de
 // verdade fica pra outra conversa, junto com a criação de campanha pelo
 // próprio pesquisador). Toda ação usa a sessão REAL do painel agora, sem
 // escolha de ator: publicar atualização e comentar só têm efeito quando
@@ -61,7 +61,7 @@ export function VidaCampanhaAtiva({ auth }) {
     auth.authFetch(`/atualizacao-campanha?idCampanha=${id}&tamanho=50`).then(tratarResposta).then((r) => setAtualizacoes(r.dados ?? [])).catch(() => {});
     auth.authFetch(`/comentario?idCampanha=${id}&tamanho=50`).then(tratarResposta).then((r) => setComentarios(r.dados ?? [])).catch(() => {});
     // GET /seguir-campanha só devolve "minha lista" (pol_seg_campanha_select,
-    // 04) — sem Elenco, só dá pra saber se A PRÓPRIA sessão logada segue.
+    // 04) - sem Elenco, só dá pra saber se A PRÓPRIA sessão logada segue.
     chamarERegistrar('/seguir-campanha')
       .then((lista) => setEuSigo(lista.some((item) => item.idCampanha === id)))
       .catch(() => setEuSigo(false));
@@ -204,7 +204,7 @@ export function VidaCampanhaAtiva({ auth }) {
               Enviar (como {auth.usuario?.nome})
             </button>
           </div>
-          <p className="texto-fraco text-xs mb-2">Comenta sempre a sessão logada — o banco bloqueia comentário na própria campanha.</p>
+          <p className="texto-fraco text-xs mb-2">Comenta sempre a sessão logada - o banco bloqueia comentário na própria campanha.</p>
           <table className="crud-tabela mb-4">
             <thead>
               <tr>
@@ -228,7 +228,7 @@ export function VidaCampanhaAtiva({ auth }) {
 
           <h3 className="subtitulo mb-2">Seguidores</h3>
           <p className="texto-fraco text-xs mb-2">
-            Sem Elenco só dá pra simular a própria sessão logada seguindo ou não — um roster de vários
+            Sem Elenco só dá pra simular a própria sessão logada seguindo ou não - um roster de vários
             seguidores ao mesmo tempo fica pro redesenho de T3.
           </p>
           <button type="button" className={`btn ${euSigo ? 'btn-primary' : 'btn-secondary'} text-xs`} onClick={alternarSeguir}>

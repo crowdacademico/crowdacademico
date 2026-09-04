@@ -1,7 +1,7 @@
 import { AreaConhecimentoResponse } from '../response/area-conhecimento.response';
 
 // Shape aceita tanto o retorno "cru" de INSERT/UPDATE (.returningAll() em
-// area_conhecimento, sem `nome_pai` — a coluna não existe na própria
+// area_conhecimento, sem `nome_pai` - a coluna não existe na própria
 // tabela) quanto o retorno do SELECT com LEFT JOIN em
 // area-conhecimento.service.findall.ts/findone.ts (que inclui `nome_pai`
 // vindo de `pai.nome`, ver mesmo padrão em 28-log-auditoria/dto/converter/

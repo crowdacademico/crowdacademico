@@ -38,7 +38,7 @@ export class ConfiguracaoServiceUpdate {
     if (!linha) {
       // pol_config_update (04): dono (id_usuario = self) OU
       // 'configuracao_gerenciar' pra linha global. 0 linhas afetadas sem
-      // erro é a RLS filtrando — diferencia de "não existe".
+      // erro é a RLS filtrando - diferencia de "não existe".
       const existe = await db
         .selectFrom('configuracoes')
         .select('id_config')

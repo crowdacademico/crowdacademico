@@ -14,20 +14,20 @@ import { papelApi, usuarioPapelApi } from '../../services/2-papel-permissao/api/
 import { SecaoModeracao } from './secao-moderacao';
 
 // Precisa bater com o hash seedado em arquivos_banco_dados/07_seed_dados.sql
-// ([07-D-1]) — se alguém trocar a senha de dev do seed, troca aqui também.
+// ([07-D-1]) - se alguém trocar a senha de dev do seed, troca aqui também.
 // Só existe pra dar um jeito rápido de voltar a ter uma senha CONHECIDA pra
-// testar login depois que a senha real de alguém foi trocada/esquecida —
+// testar login depois que a senha real de alguém foi trocada/esquecida -
 // nunca em produção (ver selo <dev> no botão abaixo).
 const SENHA_DEV = 'DevTcc123!';
 
 // Segunda view do padrão "uma página por operação de CRUD" (a primeira foi
-// criar-usuario.jsx) — pedido do Lucas, 02-08-2026: Alterar/Excluir saem de
+// criar-usuario.jsx) - pedido do Lucas, 02-08-2026: Alterar/Excluir saem de
 // dentro da tabela (GenericTable) e viram rota própria, com todos os dados
 // visíveis e um botão de confirmar/cancelar no fim, em vez de edição em
 // linha misturada com a listagem.
 //
 // Seções via <SecaoFicha> (09-08-2026, "mesmo estilo que já usei em
-// Consultar" — pedido do Lucas) — reaproveita o MESMO componente de
+// Consultar" - pedido do Lucas) - reaproveita o MESMO componente de
 // ficha-consulta.jsx aqui, mesmo sendo formulário editável: o "estilo" que
 // o Lucas gostou (título pequeno maiúsculo separando blocos) não é
 // exclusivo de campo somente-leitura, serve pra organizar qualquer grupo
@@ -40,7 +40,7 @@ export function AlterarUsuario({ auth }) {
   const [usuario, setUsuario] = useState(null);
   const [nome, setNome] = useState('');
   const [novaSenha, setNovaSenha] = useState('');
-  // Foto de perfil (módulo 25-arquivo) — `avatarUrl` é o que existe HOJE
+  // Foto de perfil (módulo 25-arquivo) - `avatarUrl` é o que existe HOJE
   // (busca separada, ver Promise.all abaixo). `idImagemPerfilNovo` tem 3
   // estados de propósito (25-08-2026, botão "Remover foto"): `undefined` =
   // nenhuma escolha nova ainda (mostra `avatarUrl`); um número = foto nova
@@ -55,10 +55,10 @@ export function AlterarUsuario({ auth }) {
   const [carregando, setCarregando] = useState(true);
   const [enviando, setEnviando] = useState(false);
   const [redefinindoSenhaDev, setRedefinindoSenhaDev] = useState(false);
-  // Papéis do usuário — pedido do Lucas (03-08-2026): "criar um usuário e
+  // Papéis do usuário - pedido do Lucas (03-08-2026): "criar um usuário e
   // promover ele a um cargo, incluindo o de administrador", pela interface,
   // não digitando ID cru (o widget "Papéis de um usuário" já fazia isso,
-  // mas pedindo o id_usuario na mão — aqui já se sabe de quem é).
+  // mas pedindo o id_usuario na mão - aqui já se sabe de quem é).
   const [papeisAtuais, setPapeisAtuais] = useState([]);
   const [catalogoPapeis, setCatalogoPapeis] = useState([]);
   const [idPapelParaAtribuir, setIdPapelParaAtribuir] = useState('');
@@ -85,20 +85,20 @@ export function AlterarUsuario({ auth }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  // Só os papéis que este usuário AINDA não tem — evita tentar atribuir de
+  // Só os papéis que este usuário AINDA não tem - evita tentar atribuir de
   // novo um papel que já está na lista de cima (o backend recusaria com
   // 409, mas nem oferecer a opção é mais claro que deixar tentar e falhar).
   const papeisDisponiveis = catalogoPapeis.filter(
     (papel) => !papeisAtuais.some((atual) => atual.idPapel === papel.idPapel),
   );
 
-  // "sujo" (09-08-2026, Bloco I do prompt do Claude Web) — só compara os
+  // "sujo" (09-08-2026, Bloco I do prompt do Claude Web) - só compara os
   // campos que o próprio <form> salva (nome/senha/foto); atribuir/revogar
   // papel já salva na hora (cada clique é sua própria requisição), não faz
   // parte do "salvar" deste formulário. `idImagemPerfilNovo !== undefined`
   // (módulo 25-arquivo) entra aqui pelo mesmo motivo de novaSenha: o
   // upload (ou a remoção) já aconteceu de verdade no bucket/backend, só
-  // falta o PATCH linkar — sair da página sem salvar perderia essa escolha
+  // falta o PATCH linkar - sair da página sem salvar perderia essa escolha
   // (o arquivo fica órfão, sem problema, mas a pessoa ficaria achando que
   // salvou).
   const sujo =
@@ -123,11 +123,11 @@ export function AlterarUsuario({ auth }) {
       const papelEscolhido = catalogoPapeis.find(
         (papel) => papel.idPapel === Number(idPapelParaAtribuir),
       );
-      // `id` vem de useParams() — SEMPRE string, mesmo quando a URL só tem
+      // `id` vem de useParams() - SEMPRE string, mesmo quando a URL só tem
       // dígitos (ex.: "/usuarios/8/alterar" → id === "8", não 8). O corpo
       // desta requisição é validado por AtribuirPapelRequestDto com
       // `@IsInt()` de verdade (diferente da URL de baixo, em
-      // aoRevogarPapel, onde o Nest converte sozinho via ParseIntPipe) —
+      // aoRevogarPapel, onde o Nest converte sozinho via ParseIntPipe) -
       // sem o Number() aqui, "idUsuario" chegava como texto e a validação
       // rejeitava com "idUsuario must be an integer number".
       await usuarioPapelApi.atribuir(auth.authFetch, Number(id), Number(idPapelParaAtribuir));
@@ -145,7 +145,7 @@ export function AlterarUsuario({ auth }) {
     }
   };
 
-  // Suspender/reativar UM papel por um tempo (09-08-2026, Bloco G) — em vez
+  // Suspender/reativar UM papel por um tempo (09-08-2026, Bloco G) - em vez
   // de remover (aoRevogarPapel, abaixo): preserva quando foi atribuído,
   // volta sozinho no prazo. `papelSuspendendoId` só controla qual badge
   // está mostrando o mini-seletor de dias, não dispara nada sozinho.
@@ -230,11 +230,11 @@ export function AlterarUsuario({ auth }) {
   };
 
   // liberar_bloqueio_login() (03_funcoes_seguranca.sql) existia no banco
-  // desde sempre, mas nenhum endpoint chamava ela — achado ao investigar
+  // desde sempre, mas nenhum endpoint chamava ela - achado ao investigar
   // "o que falta no painel admin" (03-08-2026, pedido do Lucas): uma
   // conta bloqueada por excesso de tentativas de login não tinha NENHUM
   // jeito de ser desbloqueada pelo painel, só direto no banco. Botão
-  // sempre visível (não é recurso <dev> — é uma ação administrativa de
+  // sempre visível (não é recurso <dev> - é uma ação administrativa de
   // verdade); clicar numa conta que não está bloqueada é inofensivo (só
   // zera campos que já estavam zerados).
   const aoDesbloquear = async () => {
@@ -296,11 +296,11 @@ export function AlterarUsuario({ auth }) {
           {erro && <p className="text-red-700 text-sm font-bold text-center mb-6">{erro}</p>}
 
           {/* Cabeçalho de identidade (09-08-2026, Bloco I: "a pessoa
-              precisa saber QUEM está editando") — mesmo espírito do
+              precisa saber QUEM está editando") - mesmo espírito do
               cabeçalho de FichaConsulta, largura cheia acima das 2
               colunas. A bolinha de inicial virou SeletorFotoPerfil
               (módulo 25-arquivo): mesmo componente base (AvatarUsuario),
-              só que agora clicável — mostra a foto já cadastrada
+              só que agora clicável - mostra a foto já cadastrada
               (avatarUrl) até a pessoa trocar, e passa a mostrar a nova
               assim que o upload confirma (avatarUrlNovo). */}
           <div className="flex items-center gap-3 pb-6 mb-6 border-b borda-padrao">
@@ -321,10 +321,10 @@ export function AlterarUsuario({ auth }) {
           </div>
 
           {/* 2 colunas a partir de lg (10-08-2026, rodada Claude Web
-              "embelezar o painel" — causa raiz era CartaoFormulario
+              "embelezar o painel" - causa raiz era CartaoFormulario
               estreito demais, ver comentário lá). Principal (2/3): o que
               se edita. Lateral (1/3): contexto/consulta + ações
-              administrativas — mesmo padrão de Stripe/Linear/Vercel pra
+              administrativas - mesmo padrão de Stripe/Linear/Vercel pra
               tela de edição de registro. Empilha em 1 coluna abaixo de
               lg, igual sempre foi no celular. */}
           <div className="grid lg:grid-cols-3 gap-6 items-start">
@@ -375,12 +375,12 @@ export function AlterarUsuario({ auth }) {
                   "já peça só para criar o campo textbox para o CPF... e um
                   campo de link acadêmico", mesmo sem o módulo
                   6-perfil-pesquisador existir ainda). DEMONSTRATIVO de
-                  propósito — desabilitado, com aviso honesto no topo, mesma
+                  propósito - desabilitado, com aviso honesto no topo, mesma
                   linguagem visual dos placeholders do Dashboard (aba
                   Identidade Visual/Notificações): nada de campo que parece
                   funcionar e não salva. `formatarCpf`/`mascararCpf` (novo
                   util em formatacao.util.js) já existem prontos pro dia
-                  que o backend real chegar — só trocar `disabled` por
+                  que o backend real chegar - só trocar `disabled` por
                   estado de verdade, nada de reescrever a máscara. */}
               <SecaoFicha titulo="Perfil de Pesquisador">
                 <div className="sm:col-span-2 flex items-start gap-2 rounded-lg fundo-info texto-info p-3">
@@ -434,7 +434,7 @@ export function AlterarUsuario({ auth }) {
             <div className="space-y-6">
               {/* colunas={1} (10-08-2026, achado do Lucas: "1 2 / 3 4"
                   ficava apertado numa coluna lateral estreita, e-mail
-                  comprido esbarrava na borda) — empilhado (1/2/3/4),
+                  comprido esbarrava na borda) - empilhado (1/2/3/4),
                   igual ele pediu. */}
               <SecaoFicha titulo="Metadados" colunas={1}>
                 <CampoSomenteLeitura rotulo="id" valor={usuario.idUsuario} />
@@ -527,11 +527,11 @@ export function AlterarUsuario({ auth }) {
                   {papeisDisponiveis.length === 0 ? (
                     // ANTES (achado do Lucas, 03-08-2026: "não consigo
                     // atribuir papel pra ninguém"): este bloco inteiro só
-                    // existia `{papeisDisponiveis.length > 0 && (...)}` —
+                    // existia `{papeisDisponiveis.length > 0 && (...)}` -
                     // quando não sobrava nenhum papel pra atribuir (ex.:
                     // catálogo ainda não carregou, ou o usuário já tem
                     // todos), o seletor E o botão simplesmente SUMIAM da
-                    // tela, sem nenhuma mensagem explicando por quê —
+                    // tela, sem nenhuma mensagem explicando por quê -
                     // parecia "atribuir não funciona", não "não há nada pra
                     // atribuir agora". Corrigido: sempre mostra alguma
                     // coisa, nunca um vazio sem explicação.
@@ -568,11 +568,11 @@ export function AlterarUsuario({ auth }) {
 
               {/* Ferramentas de desenvolvimento (10-08-2026, pedido do
                   Lucas: "tem uns botões temporários de desenvolvimento
-                  dentro, e que devem continuar lá ainda") — agrupadas num
+                  dentro, e que devem continuar lá ainda") - agrupadas num
                   card próprio, marcadas com .badge-dev, pra ficar claro
                   que somem antes de qualquer apresentação/deploy real (ver
                   pendência em temp_Nest_React.md). Desbloquear login NÃO
-                  entra aqui — é ação administrativa de verdade, fica em
+                  entra aqui - é ação administrativa de verdade, fica em
                   "Acesso" na coluna principal. */}
               <div className="fundo-cartao border border-dashed border-purple-300 bg-purple-50 rounded-xl p-4">
                 <span className="badge badge-dev">&lt;dev&gt;</span>

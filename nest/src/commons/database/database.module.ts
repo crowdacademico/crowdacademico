@@ -12,7 +12,7 @@ import { PostgresExceptionFilter } from './postgres-exception.filter';
 // @Inject(PG_POOL), ou (preferível, ver DatabaseService) usar
 // DatabaseService.getDb() pra pegar o Kysely já vinculado à transação da
 // requisição atual. O Pool conecta como app_nestjs (nunca como postgres/
-// superusuário) — é o que faz a RLS do banco valer de verdade (ver
+// superusuário) - é o que faz a RLS do banco valer de verdade (ver
 // tutorial-rodar-projeto.md).
 @Global()
 @Module({
@@ -20,7 +20,7 @@ import { PostgresExceptionFilter } from './postgres-exception.filter';
     ConfigModule,
     // mount:true monta o middleware do CLS (só abre o contexto de
     // AsyncLocalStorage por requisição, não decide nada de negócio) em toda
-    // rota automaticamente — sem isso, o `cls.set()` do GlobalDbInterceptor
+    // rota automaticamente - sem isso, o `cls.set()` do GlobalDbInterceptor
     // não teria contexto nenhum pra escrever.
     ClsModule.forRoot({ global: true, middleware: { mount: true } }),
   ],
@@ -51,7 +51,7 @@ export class DatabaseModule implements OnModuleInit {
 
   // tutorial-rodar-projeto.md, item 2: conectar como qualquer outro usuário
   // que não seja app_nestjs (ex.: postgres, por engano no .env) faz a RLS
-  // deixar de valer SILENCIOSAMENTE — nada quebra na hora, só some a proteção.
+  // deixar de valer SILENCIOSAMENTE - nada quebra na hora, só some a proteção.
   // Falha rápido e alto na subida em vez de deixar isso passar despercebido.
   async onModuleInit(): Promise<void> {
     const resultado = await this.pool.query<{ current_user: string }>(
@@ -61,11 +61,11 @@ export class DatabaseModule implements OnModuleInit {
     if (usuarioConectado !== 'app_nestjs') {
       throw new Error(
         `Backend conectou como "${usuarioConectado}", não como "app_nestjs" ` +
-          '— a Row Level Security do banco fica sem efeito nenhum pra esse ' +
+          '- a Row Level Security do banco fica sem efeito nenhum pra esse ' +
           'usuário (RLS não se aplica a superusuário/dono de tabela). ' +
           'Confira DATABASE_URL no .env (tutorial-rodar-projeto.md, Parte 4).',
       );
     }
-    this.logger.log('Conectado ao Postgres como app_nestjs — RLS ativa.');
+    this.logger.log('Conectado ao Postgres como app_nestjs - RLS ativa.');
   }
 }

@@ -5,15 +5,15 @@ import { CampanhaConverter } from '../dto/converter/campanha.converter';
 import { CampanhaRequestCreate } from '../dto/request/campanha.request-create';
 import { CampanhaResponse } from '../dto/response/campanha.response';
 
-// Nenhuma validação de negócio duplicada aqui de propósito — tudo já é
+// Nenhuma validação de negócio duplicada aqui de propósito - tudo já é
 // trigger no banco (05_regras_negocio.sql, [05-K-2]): prazo (15-60 dias,
 // configurável), meta mínima, limite de 2 campanhas simultâneas por
 // pesquisador, pesquisador precisa estar com status_pesquisador='ativo'
 // (RLS, pol_campanha_insert). O PostgresExceptionFilter global já traduz
 // os ERRCODEs 90xxx/91xxx/92xxx pra 400/403 com a mensagem original da
-// função — duplicar aqui só arriscaria divergir com o tempo.
+// função - duplicar aqui só arriscaria divergir com o tempo.
 //
-// `modelo` só entra no INSERT se vier no DTO — a coluna é NOT NULL com
+// `modelo` só entra no INSERT se vier no DTO - a coluna é NOT NULL com
 // DEFAULT 'all-or-nothing' (01_extensoes_enums_tabelas.sql, [01-E]);
 // mandar `null` explícito violaria a constraint, então omitir a chave
 // (em vez de `?? null`, padrão usado nas colunas nullable abaixo) é o

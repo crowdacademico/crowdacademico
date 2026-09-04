@@ -6,7 +6,7 @@ import { useToast } from '../../components/layout/use-toast';
 import { areaConhecimentoApi } from '../../services/8-area-conhecimento/api/area-conhecimento.api';
 
 // Formato oficial do código CNPq (grande área.área.subárea.especialidade,
-// sempre 2 dígitos por nível, ex.: '1.03.00.00') — mesma validação de
+// sempre 2 dígitos por nível, ex.: '1.03.00.00') - mesma validação de
 // CriarAreaConhecimentoRequestDto (Nest), duplicada aqui só pra dar
 // feedback ANTES de bater no backend, não pra substituir a validação de
 // lá (mesma convenção de REGEX_CHAVE_VALIDA em criar-configuracao.jsx).
@@ -24,7 +24,7 @@ export function CriarAreaConhecimento({ auth }) {
   const [enviando, setEnviando] = useState(false);
 
   // Combo "Grande área" só lista raízes de verdade (`raiz: true`, vira
-  // `?raiz=true` — ver ListarAreaConhecimentoQueryDto no backend). A
+  // `?raiz=true` - ver ListarAreaConhecimentoQueryDto no backend). A
   // mesma regra que area-conhecimento.service.create.ts confere no INSERT
   // (idPai precisa ser uma grande área raiz, nunca outra área de nível 2)
   // já fica garantida por construção aqui: não dá pra escolher algo que
@@ -38,7 +38,7 @@ export function CriarAreaConhecimento({ auth }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Só valida depois que a pessoa digitou alguma coisa — mesmo raciocínio
+  // Só valida depois que a pessoa digitou alguma coisa - mesmo raciocínio
   // de chaveInvalida em criar-configuracao.jsx.
   const codigoInvalido = codigoCnpq.length > 0 && !REGEX_CODIGO_CNPQ.test(codigoCnpq);
 
@@ -91,7 +91,7 @@ export function CriarAreaConhecimento({ auth }) {
             </p>
           ) : (
             <p className="text-xs texto-fraco mt-1">
-              Formato de classificação utilizado pelo CNPq — grande área.área.subárea.especialidade.
+              Formato de classificação utilizado pelo CNPq - grande área.área.subárea.especialidade.
             </p>
           )}
         </div>
@@ -116,7 +116,7 @@ export function CriarAreaConhecimento({ auth }) {
             disabled={carregandoGrandesAreas}
             className="input-padrao"
           >
-            <option value="">— Nenhuma (esta é uma grande área raiz) —</option>
+            <option value="">- Nenhuma (esta é uma grande área raiz) -</option>
             {grandesAreas.map((area) => (
               <option key={area.idAreaConhecimento} value={area.idAreaConhecimento}>
                 {area.nome}

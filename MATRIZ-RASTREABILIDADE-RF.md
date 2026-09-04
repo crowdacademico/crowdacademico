@@ -17,7 +17,7 @@ Cada RF ganha duas colunas de status:
 
 **Metodologia:** a coluna Banco foi conferida contra `DOCUMENTACAO_BD.md`. A coluna Nest foi conferida principalmente pela EXISTÊNCIA de módulo com código real (mesma lista que o próprio `REQUISITOS_V4.md` já traz no cabeçalho, conferida em 04-09-2026) - módulo vazio = ❌ automático para tudo que depende dele, sem exceção. Para módulos que já têm código, o comportamento específico de cada RF nem sempre foi lido linha a linha - nesses casos o símbolo é 🟡 com nota, não um ✅ inventado. **Qualquer 🟡 marcado "não conferido a fundo" merece uma conferência de verdade antes de ser tratado como fato definitivo.**
 
-**Módulos Nest vazios (04-09-2026), afetam toda a matriz abaixo:** `4-mail`, `18-recompensa`, `19-denuncia`, `20-solicitacao-encerramento`, `21-historico-rejeicao`, `22-contribuicao`, `23-repasse`, `24-auditoria-financeira`, `26-notificacao`, `27-resources`. `29-dashboard` está parcial (só `GET /dashboard/resumo`). Ver `PROXIMOS_MODULOS.md` para o que falta em cada um.
+**Módulos Nest vazios (04-09-2026), afetam toda a matriz abaixo:** `4-mail`, `18-recompensa`, `19-denuncia`, `20-solicitacao-encerramento`, `21-historico-rejeicao`, `22-contribuicao`, `23-repasse`, `24-auditoria-financeira`, `26-notificacao`. `29-dashboard` está parcial (só `GET /dashboard/resumo`). (`27-resources` existia como pasta vazia até 04-09-2026, quando foi removida por não ter propósito real neste projeto - não aparece mais na lista de módulos.) Ver `PROXIMOS_MODULOS.md` para o que falta em cada um.
 
 ---
 
@@ -177,7 +177,7 @@ Módulo bem batalhado em ambas as camadas - ver o histórico extenso de bugs de 
 - **RF-105** (status de averiguação: pendente/em análise/resolvida/improcedente) - Banco ✅ (ENUM completo) · Nest ❌ (`19-denuncia` vazio).
 - **RF-106** (autor da denúncia não pode julgar a própria) - Banco ✅ (confirmado - este é o achado que corrigiu a Origem do RF na versão anterior do documento) · Nest ❌ (mesmo motivo).
 - **RF-107** (lista de campanhas denunciadas p/ Admin) - Banco ✅ · Nest ❌.
-- **RF-108** (encerrar/ocultar campanha denunciada, aplica devolução do modelo, oculta página imediatamente, comentários somem junto) - Banco ✅ (`[05-K-2]`, muito detalhado) · Nest 🟡 (mudança de status é `12-campanha`, provável; devolução real depende de `23-repasse`, vazio).
+- **RF-108** (encerrar/ocultar campanha denunciada, aplica devolução do modelo, oculta página imediatamente, comentários somem junto) - Banco ✅ (`[05-K-2]`, muito detalhado; desde 04-09-2026 o `moderador` também tem a permissão pra executar isso, não só o `admin` - ver `PENDENCIAS`, item 57) · Nest 🟡 (mudança de status é `12-campanha`, provável, mas não existe hoje nenhum endpoint de "encerrar campanha por moderação" no Nest - nem pra admin, nem pra moderador; devolução real também depende de `23-repasse`, vazio).
 - **RF-109** (notificar doadores por e-mail no encerramento por moderação flexível, log de auditoria) - Banco ✅ (`log_auditoria`) · Nest 🟡 (log via `28-log-auditoria` ✅; e-mail ❌ por `4-mail` vazio).
 - **RF-110** (lista de denúncias contra perfil de pesquisador p/ Admin) - Banco ✅ · Nest ❌ (`19-denuncia` vazio).
 - **RF-111** (suspender/desativar perfil de pesquisador, mantém como Usuário) - Banco ✅ (`suspender_pesquisador()` - `[03-P]`, muito bem coberto) · Nest 🟡 (função de banco pronta e testada; não confirmei se está ligada ao mesmo mecanismo de moderação de conta do RF-112, ou se são dois caminhos paralelos).
@@ -212,7 +212,7 @@ RNFs são transversais por natureza - a maioria não mapeia pra uma tabela ou en
 - **RNF-014** (proteção OWASP Top 10) - ✅ (RLS forçada em todas as tabelas, `class-validator` nos DTOs, Kysely faz consulta parametrizada - nunca concatenação de SQL).
 - **RNF-015** (Termos explicam score automatizado, LGPD Art. 20) - ❌ (confirmado em aberto pelo item 59 de `PENDENCIAS.md` - decisão de manter score público foi tomada, mas a base legal nunca foi escrita nos Termos).
 - **RNF-016** (processar toda imagem no servidor: reduzir resolução, converter formato, remover metadados; tamanho registrado é o do resultado final) - ✅ (`sharp`: `.rotate()` + `.resize()` + `.webp()`, `tamanhoFinal` calculado depois do processamento, não o declarado pelo cliente - confirmado em `arquivo.service.confirmar-upload.ts`).
-- **RNF-017** (tamanho máximo por arquivo conforme tipo + volume acumulado por conta, verificado antes e depois do envio) - ✅ (`TAMANHO_MAXIMO_BYTES_POR_MIME` por tipo, `COTA_BYTES_POR_USUARIO` de 50MB, checados no início - `iniciar-upload` - e de novo com o tamanho final pós-processamento - `confirmar-upload`).
+- **RNF-017** (tamanho máximo por arquivo conforme tipo + volume acumulado por conta, verificado antes e depois do envio) - ✅ (tamanho por tipo e cota por usuário, configuráveis pelo Painel Admin desde 04-09-2026 - `ConfiguracaoValorService` lê `configuracoes`, com fallback pros padrões de 8MB/5MB/50MB se a chave não existir - checados no início - `iniciar-upload`, que também ganhou rate limit de uploads - e de novo com o tamanho final pós-processamento - `confirmar-upload`).
 
 ---
 
@@ -227,4 +227,4 @@ Contagem aproximada por símbolo (RF-001 a RF-116, sem RNFs):
 
 **Itens marcados 🟡 "não conferido a fundo" que merecem uma varredura futura, não tratados como fato aqui:** RF-002, RF-003, RF-008, RF-010, RF-017, RF-023, RF-033, RF-047, RF-052, RF-055, RF-057 (scheduler), RF-065/066/067, RF-080/081/082, RF-092, RF-097, RF-098, RF-108/109, RF-111, RF-113, RF-114. Nenhum destes é necessariamente um problema - só não foram lidos linha a linha nesta rodada, e "módulo existe" não é o mesmo que "cada regra específica confirmada".
 
-**Pendente de decisão, fora do escopo desta matriz:** vários documentos do projeto (`PENDENCIAS e correcoes.md` em especial) ainda citam números de RF da numeração antiga - por exemplo, o item 57 de `PENDENCIAS` fala em "RF-079" pra se referir a encerrar campanha por moderação, que nesta versão é **RF-108**. Essas menções precisam ser revisadas uma a uma antes de serem tratadas como corretas.
+**Cuidado geral, fora do escopo desta matriz:** outros documentos do projeto podem ainda citar número de RF da numeração antiga por engano - o item 57 de `PENDENCIAS` (que citava "RF-079" pra se referir a encerrar campanha por moderação, na verdade **RF-108** nesta versão) já foi revisado e corrigido, mas não há garantia de que seja o único caso. Qualquer citação de RF por número, em qualquer documento, vale conferir contra `REQUISITOS_V4.md` antes de tratar como certa.

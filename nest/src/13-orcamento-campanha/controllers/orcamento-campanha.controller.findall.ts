@@ -1,7 +1,7 @@
 import { Controller, Get, ParseIntPipe, Query } from '@nestjs/common';
 import { OrcamentoCampanhaServiceFindAll } from '../service/orcamento-campanha.service.findall';
 
-// Sem @UseGuards — pol_orcamento_campanha_select (04) decide sozinha
+// Sem @UseGuards - pol_orcamento_campanha_select (04) decide sozinha
 // (mesma visibilidade de pol_campanha_select: status público, dono, ou
 // relatorio_visualizar). Sem sessão nenhuma, uma campanha ainda não
 // aprovada simplesmente devolve lista vazia, sem erro.

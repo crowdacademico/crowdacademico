@@ -10,14 +10,14 @@ export class UsuarioPapelServiceFindAll {
   async executar(idUsuario: number): Promise<UsuarioPapelResponse[]> {
     // pol_usuariopapel_select (04): id_usuario_atual() = idUsuario OU
     // tem_permissao('papel_gerenciar'). Sem nenhum dos dois, a query só
-    // devolve 0 linhas (RLS filtra, sem erro) — não dá pra saber se o
+    // devolve 0 linhas (RLS filtra, sem erro) - não dá pra saber se o
     // usuário não tem papel nenhum ou se só não tinha permissão de ver.
     const db = this.database.getDb();
 
-    // SAVEPOINT (09-08-2026) — usuario_papel.suspenso_ate (Bloco G) só
+    // SAVEPOINT (09-08-2026) - usuario_papel.suspenso_ate (Bloco G) só
     // existe de verdade depois de alguém colar ATUALIZAR O SUPABASE.sql no
     // SQL Editor (PENDENCIAS e correcoes.md, item 22). Sem isso, esta
-    // query quebrava a listagem inteira de papéis de um usuário com 500 —
+    // query quebrava a listagem inteira de papéis de um usuário com 500 -
     // confirmado ao vivo (09-08-2026). Mesmo padrão de
     // auth.service.login.ts/listarPapeis: tenta com a coluna nova,
     // ROLLBACK TO SAVEPOINT + repete sem ela se a coluna não existir.

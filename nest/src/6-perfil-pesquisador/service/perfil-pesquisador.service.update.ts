@@ -6,7 +6,7 @@ import { PerfilPesquisadorConverter } from '../dto/converter/perfil-pesquisador.
 import { PerfilPesquisadorRequestUpdate } from '../dto/request/perfil-pesquisador.request-update';
 import { PerfilPesquisadorResponse } from '../dto/response/perfil-pesquisador.response';
 
-// Nunca mexe em cpf_criptografado/cpf_hash (DTO nem tem o campo) — GRANT
+// Nunca mexe em cpf_criptografado/cpf_hash (DTO nem tem o campo) - GRANT
 // UPDATE (06) nem libera mais isso pro app_nestjs de propósito, ver
 // PerfilPesquisadorRequestUpdate.
 @Injectable()
@@ -34,13 +34,13 @@ export class PerfilPesquisadorServiceUpdate {
       .executeTakeFirst();
 
     if (!linha) {
-      // pol_perfil_update (04) só libera UPDATE pro próprio dono — 0 linhas
+      // pol_perfil_update (04) só libera UPDATE pro próprio dono - 0 linhas
       // sem erro é a RLS filtrando, mesmo padrão de motivo-denuncia.service.
       // update.ts. Como quem chama este service é sempre o próprio dono
       // (ver controller), 0 linhas aqui só acontece se a pessoa ainda não
       // tem perfil de pesquisador nenhum pra atualizar.
       throw new NotFoundException(
-        'Perfil de pesquisador não encontrado — crie um perfil antes de editá-lo.',
+        'Perfil de pesquisador não encontrado - crie um perfil antes de editá-lo.',
       );
     }
 

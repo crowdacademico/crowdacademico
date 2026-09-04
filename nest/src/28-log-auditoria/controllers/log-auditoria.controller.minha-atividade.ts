@@ -10,7 +10,7 @@ export class LogAuditoriaControllerMinhaAtividade {
   @Get('minha-atividade')
   @UseGuards(RequireAuthGuard)
   minhaAtividade(@Req() request: Request) {
-    // request.user sempre definido aqui — RequireAuthGuard já garantiu.
+    // request.user sempre definido aqui - RequireAuthGuard já garantiu.
     return this.service.executar(request.user!.idUsuario);
   }
 }

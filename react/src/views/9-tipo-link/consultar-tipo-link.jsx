@@ -29,7 +29,7 @@ export function ConsultarTipoLink({ auth }) {
   }
 
   // Rótulos dos 3 escopos marcados (CK_TIPO_LINK_ALGUM_ESCOPO garante
-  // pelo menos 1) — vira badge por escopo, não um badge Sim/Não por
+  // pelo menos 1) - vira badge por escopo, não um badge Sim/Não por
   // campo: mais rápido de ler "onde isto pode ser usado" de relance.
   const escopos = [
     tipo.permitePerfil && 'Perfil',

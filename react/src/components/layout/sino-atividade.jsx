@@ -10,14 +10,14 @@ const ROTULO_OPERACAO = {
 };
 
 // Sino "Atividade recente" no cabeçalho (09-08-2026, Bloco B/C do prompt do
-// Claude Web) — ideia melhor que a original (cachear toast no client): lê
+// Claude Web) - ideia melhor que a original (cachear toast no client): lê
 // log_auditoria de verdade, filtrado pro PRÓPRIO usuário
 // (GET /log-auditoria/minha-atividade, RLS ampliada em pol_log_auditoria_
 // select pra isso). Sobrevive a F5 e a trocar de dispositivo; toast é
 // feedback de "o que EU acabei de clicar", isso aqui é "o que aconteceu,
 // mesmo enquanto eu não estava olhando".
 //
-// Rotulado "Atividade recente", não "Notificações" — quando 26-notificacao
+// Rotulado "Atividade recente", não "Notificações" - quando 26-notificacao
 // existir de verdade, o dropdown ganha uma 2ª aba ("Notificações") e esta
 // vira "Minha atividade", nada do que existe hoje é jogado fora.
 export function SinoAtividade({ auth }) {
@@ -29,7 +29,7 @@ export function SinoAtividade({ auth }) {
   const containerRef = useRef(null);
 
   // Badge de contagem SEM coluna "lida" no banco (09-08-2026, pedido
-  // explícito do Claude Web nessa análise) — guarda só o maior id_log já
+  // explícito do Claude Web nessa análise) - guarda só o maior id_log já
   // visto em localStorage, conta quantas entradas novas passaram disso.
   useEffect(() => {
     logAuditoriaApi
@@ -39,7 +39,7 @@ export function SinoAtividade({ auth }) {
         setNaoLidos(lista.filter((item) => item.idLog > ultimoVisto).length);
       })
       .catch(() => {
-        // Sino é um extra, não uma tela crítica — se falhar (ex.: usuário
+        // Sino é um extra, não uma tela crítica - se falhar (ex.: usuário
         // sem log_visualizar E policy nova ainda não aplicada no banco),
         // só fica sem badge, sem toast de erro atrapalhando o resto.
       });

@@ -7,10 +7,10 @@ import { ArquivoAtualizacaoResponse } from '../dto/response/arquivo-atualizacao.
 
 // Sem remove.ts: 06_grants.sql [06-G] só concede INSERT/UPDATE em
 // arquivo_atualizacao, nenhuma policy de DELETE em 04. Sem update.ts: a
-// tabela só tem as 2 FKs (id_arquivo, id_atualizacao) — não existe campo
+// tabela só tem as 2 FKs (id_arquivo, id_atualizacao) - não existe campo
 // (tipo "ordem" de arquivo_recompensa) que faça sentido editar depois de
 // criado; pra trocar o vínculo, a via é excluir e recriar (mas nem isso é
-// possível hoje sem DELETE granted — combinar com a Alexia se isso vai
+// possível hoje sem DELETE granted - combinar com a Alexia se isso vai
 // precisar mudar quando o módulo 25-arquivo entrar em uso de verdade).
 @Injectable()
 export class ArquivoAtualizacaoServiceCreate {

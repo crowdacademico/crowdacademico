@@ -15,12 +15,12 @@ import type {
 } from '../../../commons/database/db.types';
 
 // `ativo` incluso de propósito (autor oculta a própria atualização,
-// moderador com atualizacao_moderar oculta/reverte qualquer uma) —
+// moderador com atualizacao_moderar oculta/reverte qualquer uma) -
 // fn_bloqueia_reversao_moderacao_comentario não existe pra esta tabela,
 // mas pol_atualizacao_update (04) já limita quem chega até aqui (dono OU
 // atualizacao_moderar); não há trigger extra de reversão nesta tabela
 // (diferente de comentario), então o dono também pode reverter a própria
-// ocultação — decisão consciente, não uma lacuna esquecida.
+// ocultação - decisão consciente, não uma lacuna esquecida.
 export class AtualizacaoCampanhaRequestUpdate {
   @IsOptional()
   @IsString()

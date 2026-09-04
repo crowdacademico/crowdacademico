@@ -19,7 +19,7 @@ import { UsuarioServiceUpdate } from './service/usuario.service.update';
 
 @Module({
   // ArquivoModule importado só pra ArquivoServiceRemove (limpeza da foto
-  // de perfil ANTERIOR quando a pessoa troca — ver usuario.service.update.ts).
+  // de perfil ANTERIOR quando a pessoa troca - ver usuario.service.update.ts).
   // Sem ciclo: ArquivoModule não importa UsuarioModule de volta.
   imports: [ArquivoModule],
   controllers: [

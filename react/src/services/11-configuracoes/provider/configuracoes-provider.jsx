@@ -4,7 +4,7 @@ import { ConfiguracoesContext } from '../context/configuracoes-context';
 
 // Converte o `valor` (sempre string ou null na coluna) pro tipo real,
 // usando o `tipo` que a própria linha declara (mesmo domínio de
-// TIPOS_CONFIGURACAO do lado do Nest, db.types.ts — aqui só o parse, sem
+// TIPOS_CONFIGURACAO do lado do Nest, db.types.ts - aqui só o parse, sem
 // decisão de negócio nenhuma).
 function converterValor(linha) {
   if (linha.valor === null) {
@@ -22,7 +22,7 @@ function converterValor(linha) {
   }
 }
 
-// Carrega 1x (na montagem) TODAS as configurações globais públicas — hoje
+// Carrega 1x (na montagem) TODAS as configurações globais públicas - hoje
 // isso é o GET /configuracoes inteiro, que a RLS já restringe a
 // `id_usuario IS NULL` pra quem não está logado (ver comentário em
 // configuracao.api.js). Existe pra qualquer tela (admin ou pública, futura)
@@ -54,7 +54,7 @@ export function ConfiguracoesProvider({ children }) {
   // valorPadrao é obrigatório aqui de propósito: enquanto `carregando` (ou
   // se a chave não existir/estiver inativa), a tela precisa de algo pra
   // mostrar sem cair de volta pra um número escrito à mão em cada
-  // componente — o padrão fica declarado UMA vez, no lugar que chama.
+  // componente - o padrão fica declarado UMA vez, no lugar que chama.
   const obterConfiguracao = useMemo(
     () => (chave, valorPadrao) =>
       chave in valores ? valores[chave] : valorPadrao,

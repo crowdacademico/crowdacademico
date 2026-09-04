@@ -10,12 +10,12 @@ import { MotivoDenunciaServiceFindOne } from './service/motivo-denuncia.service.
 import { MotivoDenunciaServiceRemove } from './service/motivo-denuncia.service.remove';
 import { MotivoDenunciaServiceUpdate } from './service/motivo-denuncia.service.update';
 
-// Endpoint de remoção adicionado (18-08-2026, pedido do Lucas/Alexia) —
+// Endpoint de remoção adicionado (18-08-2026, pedido do Lucas/Alexia) -
 // 06_grants.sql [06-C-1] e 04_rls_policies.sql (pol_motivo_delete)
 // passaram a conceder DELETE em motivo_denuncia pra app_nestjs, gated
 // pela mesma permissão do update (motivo_denuncia_gerenciar).
 // motivo_denuncia continua podendo ser referenciado por denuncia
-// (FK_DENUNCIA_MOTIVO, sem CASCADE) — o service.remove traduz a
+// (FK_DENUNCIA_MOTIVO, sem CASCADE) - o service.remove traduz a
 // violação de FK num 409 com mensagem própria; desativar via Alterar
 // continua sendo a opção pra quando o motivo está em uso.
 @Module({

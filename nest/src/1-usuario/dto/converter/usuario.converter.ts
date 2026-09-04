@@ -5,7 +5,7 @@ import { UsuarioResponse } from '../response/usuario.response';
 // auth.service.login.ts faz isso, isolado, e nem passa por este converter),
 // então exigir a entity completa aqui quebraria a tipagem em toda query que
 // usa USUARIO_COLUNAS_SELECT. Isto aceita qualquer objeto que tenha PELO
-// MENOS estes 6 campos — a query pode devolver mais colunas, sem problema.
+// MENOS estes 6 campos - a query pode devolver mais colunas, sem problema.
 type UsuarioParaConverter = Pick<
   UsuarioEntity,
   | 'id_usuario'

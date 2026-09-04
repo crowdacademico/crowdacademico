@@ -1,14 +1,14 @@
 import { API_BASE_URL } from '../../constant/constants/api.constants';
 import { tratarResposta } from '../../constant/api/http.util';
 
-// Espelha nest/src/25-arquivo — fluxo de upload em 2 passos (ver doc de
+// Espelha nest/src/25-arquivo - fluxo de upload em 2 passos (ver doc de
 // arquitetura do módulo): iniciar (pega URL pré-assinada) -> enviarParaBucket
-// (PUT direto no provedor de armazenamento, NUNCA via authFetch — é outro
+// (PUT direto no provedor de armazenamento, NUNCA via authFetch - é outro
 // host, não deve levar Authorization nem Content-Type: application/json) ->
 // confirmar (Nest valida de verdade e grava a linha em `arquivo`).
 //
 // GET /arquivo/:id e GET /arquivo/avatar/:idUsuario são públicos no backend
-// (pol_arquivo_select é USING(true)) — chamados com fetch cru, sem
+// (pol_arquivo_select é USING(true)) - chamados com fetch cru, sem
 // authFetch, mesmo padrão de tipoLinkApi.listarPublico.
 export const arquivoApi = {
   iniciarUpload: (authFetch, dados) =>
@@ -23,7 +23,7 @@ export const arquivoApi = {
       body: JSON.stringify(dados),
     }).then(tratarResposta),
 
-  // `uploadPreAssinado` é a resposta de iniciarUpload — `cabecalhosObrigatorios`
+  // `uploadPreAssinado` é a resposta de iniciarUpload - `cabecalhosObrigatorios`
   // precisa ir EXATAMENTE como veio (é isso que a assinatura da URL confere,
   // ver commons/storage/s3-compativel-armazenamento.service.ts). Sem
   // tratarResposta aqui: a resposta do bucket não é JSON e não segue o
@@ -36,7 +36,7 @@ export const arquivoApi = {
     });
     if (!resposta.ok) {
       throw new Error(
-        'Falha ao enviar o arquivo para o armazenamento (URL pode ter expirado — tente de novo).',
+        'Falha ao enviar o arquivo para o armazenamento (URL pode ter expirado - tente de novo).',
       );
     }
   },
@@ -46,10 +46,10 @@ export const arquivoApi = {
   remover: (authFetch, id) =>
     authFetch(`/arquivo/${id}`, { method: 'DELETE' }).then(tratarResposta),
 
-  // Devolve { url, padrao } — `url` já pronta pra `<img src>`, `padrao`
+  // Devolve { url, padrao } - `url` já pronta pra `<img src>`, `padrao`
   // indica se é o avatar de sistema (usuário não tem foto cadastrada ainda,
   // ou a que tinha foi desativada). `url` pode vir `null` se nem o avatar
-  // padrão foi configurado ainda (ver ArquivoServiceResolverAvatar) — quem
+  // padrão foi configurado ainda (ver ArquivoServiceResolverAvatar) - quem
   // chama decide o placeholder nesse caso.
   buscarAvatarPorUsuario: (idUsuario) =>
     fetch(`${API_BASE_URL}/arquivo/avatar/${idUsuario}`).then(tratarResposta),

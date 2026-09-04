@@ -8,7 +8,7 @@ import {
   MaxLength,
 } from 'class-validator';
 
-// Sem idCampanha — mover um item de orçamento pra outra campanha não faz
+// Sem idCampanha - mover um item de orçamento pra outra campanha não faz
 // sentido de produto (mesmo raciocínio de LinkAcademicoRequestUpdate sem
 // idTipoLink).
 export class OrcamentoCampanhaRequestUpdate {

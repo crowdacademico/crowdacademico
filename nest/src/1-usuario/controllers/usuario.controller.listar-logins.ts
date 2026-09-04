@@ -1,7 +1,7 @@
 import { Controller, Get, Param, ParseIntPipe } from '@nestjs/common';
 import { UsuarioServiceListarLogins } from '../service/usuario.service.listar-logins';
 
-// GET /usuario/:id/logins — não conflita com GET /usuario/:id
+// GET /usuario/:id/logins - não conflita com GET /usuario/:id
 // (usuario.controller.findone.ts) pelo mesmo motivo de sempre: Nest casa
 // rota por número de segmentos.
 //

@@ -5,9 +5,9 @@ import * as authApi from '../api/auth.api';
 const CHAVE_REFRESH_TOKEN = 'crowdacademico.refreshToken';
 
 // Hook único de autenticação do painel admin (views/admin, views/3-auth,
-// views/1-usuario) — useAuth() é chamado uma vez em App.jsx e o resultado
+// views/1-usuario) - useAuth() é chamado uma vez em App.jsx e o resultado
 // desce por prop pra Header, Breadcrumb (indiretamente) e cada página.
-// Guarda o accessToken só em memória (nunca localStorage — some ao fechar
+// Guarda o accessToken só em memória (nunca localStorage - some ao fechar
 // a aba, de propósito) e o refreshToken em localStorage (pra não precisar
 // logar de novo a cada F5).
 export function useAuth() {
@@ -15,16 +15,16 @@ export function useAuth() {
   const [usuario, setUsuario] = useState(null);
   // Nomes dos papéis da sessão atual (09-08-2026, Bloco B/C: dropdown do
   // cabeçalho precisa saber se mostra "Painel Admin"). Vem de dentro de
-  // LoginResponseDto/RefreshResponseDto agora (nest/src/3-auth) — não é
+  // LoginResponseDto/RefreshResponseDto agora (nest/src/3-auth) - não é
   // uma checagem de permissão de verdade, só decide o que aparece na UI;
   // toda ação real continua validada pelo backend/RLS a cada requisição.
   const [papeis, setPapeis] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const refreshTokenRef = useRef(localStorage.getItem(CHAVE_REFRESH_TOKEN));
-  // Promise compartilhada entre chamadas simultâneas de authFetch — ver
+  // Promise compartilhada entre chamadas simultâneas de authFetch - ver
   // renovarSessao() logo abaixo.
   const refreshEmAndamentoRef = useRef(null);
-  // GETs em voo, por caminho — ver comentário em authFetch mais abaixo.
+  // GETs em voo, por caminho - ver comentário em authFetch mais abaixo.
   const requisicoesEmAndamentoRef = useRef(new Map());
 
   const salvarSessao = useCallback((resultado) => {
@@ -56,7 +56,7 @@ export function useAuth() {
     [salvarSessao],
   );
 
-  // Cadastro público (09-08-2026, Bloco D) — mesmo formato de resultado do
+  // Cadastro público (09-08-2026, Bloco D) - mesmo formato de resultado do
   // login (accessToken/refreshToken/usuario/papeis), termina já logado.
   const cadastrar = useCallback(
     async (nome, email, senha, aceiteTermos) => {
@@ -73,11 +73,11 @@ export function useAuth() {
   // busca usuário + papéis + catálogo em paralelo) fazia CADA requisição
   // tentar renovar por conta própria, ao mesmo tempo. Renovar é de
   // USO ÚNICO (auth.service.refresh.ts revoga a sessão antiga ao emitir a
-  // nova) — a 1ª chamada a chegar no backend ganha, as outras recebem
+  // nova) - a 1ª chamada a chegar no backend ganha, as outras recebem
   // "refresh token inválido" de volta (a sessão já tinha sido trocada) e
   // cada uma disparava seu próprio toast de erro.
   //
-  // Fix: só existe UMA renovação em voo por vez — se uma já está
+  // Fix: só existe UMA renovação em voo por vez - se uma já está
   // acontecendo, quem chegar depois espera o resultado dela em vez de
   // começar a sua própria (que perderia a corrida). refreshEmAndamentoRef
   // guarda essa promise única; zera no final (sucesso ou falha), pra
@@ -104,15 +104,15 @@ export function useAuth() {
   // CORRIGIDO (11-08-2026, achado ao vivo, testado num script que dava
   // page.goto() reto pra uma URL logo após logar): ESTE efeito chamava
   // authApi.refresh(tokenSalvo) DIRETO, por fora do refreshEmAndamentoRef
-  // de renovarSessao() acima — ou seja, fora da proteção que o comentário
+  // de renovarSessao() acima - ou seja, fora da proteção que o comentário
   // de renovarSessao descreve. Se alguma tela disparasse um GET no mesmo
   // instante (accessToken ainda null, então authFetch levava 401 e também
   // tentava renovar, agora sim via renovarSessao), as DUAS chamadas
-  // usavam o MESMO refresh token (uso único — renovar revoga o antigo).
+  // usavam o MESMO refresh token (uso único - renovar revoga o antigo).
   // Quem perdesse a corrida recebia "refresh token inválido"; como este
   // efeito tratava qualquer erro com limparSessao() incondicional, ele
   // podia apagar a sessão que a OUTRA chamada, vencedora, tinha acabado
-  // de salvar um instante antes — um F5/link direto que deveria continuar
+  // de salvar um instante antes - um F5/link direto que deveria continuar
   // logado às vezes voltava pra tela de login sem motivo aparente.
   // Fix: passou a chamar renovarSessao() (a MESMA promise compartilhada),
   // então só existe UMA renovação de verdade nesta janela, não importa
@@ -132,16 +132,16 @@ export function useAuth() {
     limparSessao();
     if (tokenAtual) {
       await authApi.logout(tokenAtual).catch(() => {
-        // Já limpamos localmente — sessão do lado do backend pode ficar
+        // Já limpamos localmente - sessão do lado do backend pode ficar
         // pendente até expirar sozinha (30 dias), não é crítico pra um devtool.
       });
     }
   }, [limparSessao]);
 
   // authFetch: SEMPRE manda Bearer quando tem accessToken. Se a resposta vier
-  // 401 (access token expirado — dura só 15min), tenta renovar UMA vez com o
+  // 401 (access token expirado - dura só 15min), tenta renovar UMA vez com o
   // refresh token e repete a chamada original. Isso é o que todo o painel
-  // admin usa pra falar com a API — nunca fetch() cru direto.
+  // admin usa pra falar com a API - nunca fetch() cru direto.
   const executarFetch = useCallback(
     async (caminho, opcoes) => {
       const montarHeaders = (token) => ({
@@ -177,17 +177,17 @@ export function useAuth() {
       const metodo = (opcoes.method ?? 'GET').toUpperCase();
 
       // DEDUP DE GET EM VOO (07-08-2026, achado do Lucas: toast de erro
-      // duplicado — "Você precisa estar logado" aparecendo 2x). Causa: o
+      // duplicado - "Você precisa estar logado" aparecendo 2x). Causa: o
       // <StrictMode> do React (main.jsx) dispara todo useEffect 2 vezes DE
-      // PROPÓSITO em desenvolvimento, pra pegar bug de efeito sem limpeza —
+      // PROPÓSITO em desenvolvimento, pra pegar bug de efeito sem limpeza -
       // e nenhuma das nossas buscas cancelava a anterior. Resultado: toda
-      // tela que busca dado ao abrir (a maioria — listagem, log, consultar)
+      // tela que busca dado ao abrir (a maioria - listagem, log, consultar)
       // virava 2 requisições reais pro servidor; se falhava, 2 toasts.
       //
-      // Só GET é deduplicado (create/update/remove nunca são, de propósito —
+      // Só GET é deduplicado (create/update/remove nunca são, de propósito -
       // aqueles são sempre 1 clique = 1 ação, nunca disparados por
       // useEffect). Duas chamadas pro MESMO caminho ao mesmo tempo dividem
-      // a mesma resposta em vez de virarem 2 idas ao servidor — `.clone()`
+      // a mesma resposta em vez de virarem 2 idas ao servidor - `.clone()`
       // porque o corpo de um Response só pode ser lido uma vez; cada quem
       // pediu precisa da própria cópia pra poder chamar `.json()`/`.text()`
       // sem pisar no outro.
@@ -220,7 +220,7 @@ export function useAuth() {
     logout,
     authFetch,
     // Minha Conta (09-08-2026, Bloco E) usa isto depois de PATCH /usuario/:id
-    // com o próprio id — atualiza o nome/etc mostrado no cabeçalho na hora,
+    // com o próprio id - atualiza o nome/etc mostrado no cabeçalho na hora,
     // sem precisar de um refresh de token só pra refletir a mudança.
     atualizarUsuarioLocal: setUsuario,
   };

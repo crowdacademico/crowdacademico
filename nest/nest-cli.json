@@ -3,6 +3,39 @@
   "collection": "@nestjs/schematics",
   "sourceRoot": "src",
   "compilerOptions": {
-    "deleteOutDir": true
+    "deleteOutDir": true,
+    "plugins": [
+      {
+        "name": "@nestjs/swagger/plugin",
+        "options": {
+          "classValidatorShim": true,
+          "introspectComments": true,
+          "dtoFileNameSuffix": [
+            ".dto.ts",
+            ".request-confirmar-upload.ts",
+            ".request-create.ts",
+            ".request-iniciar-upload.ts",
+            ".request-list.ts",
+            ".request-login.ts",
+            ".request-refresh-token.ts",
+            ".request-register.ts",
+            ".request-rejeitar.ts",
+            ".request-suspend.ts",
+            ".request-update.ts",
+            ".request-verify-email.ts",
+            ".response.ts",
+            ".response-ativo.ts",
+            ".response-login.ts",
+            ".response-login-historico.ts",
+            ".response-refresh.ts",
+            ".response-register.ts",
+            ".response-score.ts",
+            ".response-summary.ts",
+            ".response-suspend.ts",
+            ".response-upload-iniciado.ts"
+          ]
+        }
+      }
+    ]
   }
 }

@@ -17,7 +17,7 @@ export class UsuarioServiceFindAll {
     paginacao?: ParametrosPaginacao,
   ): Promise<ResultadoPaginado<UsuarioResponse>> {
     // pol_usuario_select (04_rls_policies.sql) libera `deletado = FALSE`
-    // pra qualquer sessão, mesmo sem login — por isso funciona pra anônimo.
+    // pra qualquer sessão, mesmo sem login - por isso funciona pra anônimo.
     const query = this.database
       .getDb()
       .selectFrom('usuario')

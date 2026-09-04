@@ -14,11 +14,11 @@ const CODIGO_PG_RLS_VIOLATION = '42501';
 // Código padrão que o Postgres usa pra qualquer `RAISE EXCEPTION 'mensagem'`
 // sem ERRCODE customizado. Só sobra pra função de fora de 05_regras_negocio.sql
 // que ainda não ganhou ERRCODE próprio (ex.: excluir_conta_usuario(), em
-// 03_funcoes_seguranca.sql — ver DOCUMENTACAO_ERRCODE.md, seção final).
+// 03_funcoes_seguranca.sql - ver DOCUMENTACAO_ERRCODE.md, seção final).
 const CODIGO_PG_RAISE_EXCEPTION_SEM_ERRCODE = 'P0001';
 
 // ERRCODE customizado nas 42 RAISE EXCEPTION de 05_regras_negocio.sql
-// (Alexia + Claude Web, 03-08-2026 — ver DOCUMENTACAO_ERRCODE.md pra tabela
+// (Alexia + Claude Web, 03-08-2026 - ver DOCUMENTACAO_ERRCODE.md pra tabela
 // completa código -> função -> mensagem, e DOCUMENTACAO_BD.md, seção "05",
 // pro resumo oficial). 4 faixas, pelo prefixo de 2 dígitos do código:
 // 90xxx validação de dado/negócio, 91xxx conflito de estado, 92xxx
@@ -36,10 +36,10 @@ interface ErroPostgres extends Error {
 
 // Rede de segurança GLOBAL pra erro de Postgres que nenhum service tratou
 // localmente (achado do Claude da Alexia, 02-08-2026: usuario.service.create
-// não tinha try/catch nenhum em volta do INSERT — e-mail duplicado virava
+// não tinha try/catch nenhum em volta do INSERT - e-mail duplicado virava
 // 500 cru em vez de 409). Services que já têm try/catch próprio (ex.:
 // configuracao.service.create.ts, usuario-papel.service.create.ts) nunca
-// chegam aqui pra esses casos — a mensagem específica deles é melhor que a
+// chegam aqui pra esses casos - a mensagem específica deles é melhor que a
 // genérica daqui, então continuam como estão. Isto é só a rede embaixo.
 @Catch()
 export class PostgresExceptionFilter extends BaseExceptionFilter {
@@ -90,7 +90,7 @@ export class PostgresExceptionFilter extends BaseExceptionFilter {
         );
       case CODIGO_PG_RAISE_EXCEPTION_SEM_ERRCODE:
         // Sem ERRCODE customizado não dá pra saber SE é permissão, validação
-        // de negócio, etc — 400 com a mensagem original da função (definida
+        // de negócio, etc - 400 com a mensagem original da função (definida
         // em 05_regras_negocio.sql) é o mais honesto que dá pra ser aqui.
         return new HttpException(
           erro.message || 'Operação não permitida pelas regras de negócio.',

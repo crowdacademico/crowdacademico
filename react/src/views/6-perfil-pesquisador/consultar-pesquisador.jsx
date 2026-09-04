@@ -21,7 +21,7 @@ function formatarCpf(cpf) {
 }
 
 // `nomeDimensao` vem cru do banco (snake_case, ex.: "atualizacao_campanha")
-// — sem isso o rótulo colidia com o valor ao lado no grid de 2 colunas
+// - sem isso o rótulo colidia com o valor ao lado no grid de 2 colunas
 // (CampoFicha), texto comprido demais pra largura da célula.
 function formatarNomeDimensao(nome) {
   return nome
@@ -87,7 +87,7 @@ export function ConsultarPesquisador({ auth }) {
           <SecaoFicha titulo="Dados">
             <CampoFicha rotulo="id" valor={perfil.idUsuario} />
             <CampoFicha rotulo="CPF" valor={formatarCpf(perfil.cpf)} />
-            <CampoFicha rotulo="Vínculo institucional" valor={perfil.vinculoInstitucional ?? '—'} />
+            <CampoFicha rotulo="Vínculo institucional" valor={perfil.vinculoInstitucional ?? '-'} />
             <CampoFicha rotulo="Ativado em" valor={formatarData(perfil.ativadoEm)} />
           </SecaoFicha>
         </div>
@@ -96,7 +96,7 @@ export function ConsultarPesquisador({ auth }) {
           <SecaoFicha titulo="Score (Serasa do Pesquisador)">
             {score ? (
               <>
-                <CampoFicha rotulo="Pontuação" largura="cheia" valor={`${score.scoreTotal} — ${score.rotulo}`} />
+                <CampoFicha rotulo="Pontuação" largura="cheia" valor={`${score.scoreTotal} - ${score.rotulo}`} />
                 {score.dimensoes.map((dimensao) => (
                   <CampoFicha
                     key={dimensao.nomeDimensao}

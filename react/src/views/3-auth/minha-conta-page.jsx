@@ -9,12 +9,12 @@ import { sessaoApi } from '../../services/3-auth/api/sessao.api';
 import { usuarioPapelApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 
-// Minha Conta (09-08-2026, Bloco E do prompt do Claude Web) — não é um
+// Minha Conta (09-08-2026, Bloco E do prompt do Claude Web) - não é um
 // formulário só, é uma área com seções independentes, cada uma salva por
 // conta própria.
 //
 // SEM SEÇÃO "Preferências" de propósito (existiu entre 09 e 10-08-2026,
-// removida no mesmo dia) — decisão do Lucas com a Alexia: preferência
+// removida no mesmo dia) - decisão do Lucas com a Alexia: preferência
 // pessoal (tema/fonte) por conta exigiria uma tabela própria pra guardar
 // isso direito, e "estamos com tabelas demais no momento". Tema/fonte
 // continuam ajustáveis, só que de novo só pelos botões do cabeçalho
@@ -22,16 +22,16 @@ import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 // localStorage, sem ligação nenhuma com a conta logada.
 //
 // REDESENHADO (11-08-2026, pedido do Lucas: "portfólio profissional",
-// referência ORCID/ResearchGate/Google Acadêmico — abrem com uma FAIXA DE
-// IDENTIDADE larga no topo, não um cartãozinho de canto) — a versão
+// referência ORCID/ResearchGate/Google Acadêmico - abrem com uma FAIXA DE
+// IDENTIDADE larga no topo, não um cartãozinho de canto) - a versão
 // anterior (10-08-2026) tinha 2 colunas: 5 seções empilhadas + um
 // CartaoPerfil lateral pequeno tentando fazer de âncora visual. Duas
 // falhas de raiz: (1) 5 <Painel> com o MESMO peso visual empilhados =
 // parece formulário longo, não perfil; (2) CartaoPerfil discreto demais
 // pra ancorar a tela. Virou: FaixaIdentidade (larga, topo, reúne o que
-// antes estava espalhado entre CartaoPerfil e cada seção — avatar grande,
+// antes estava espalhado entre CartaoPerfil e cada seção - avatar grande,
 // nome, e-mail, badges de papel, "membro desde") + abas de verdade (rota
-// /admin/minha-conta/:aba, não useState — mesma decisão já tomada quando
+// /admin/minha-conta/:aba, não useState - mesma decisão já tomada quando
 // as abas do painel admin viraram rota) substituindo a pilha de 5
 // <Painel>. CartaoPerfil foi eliminado (virou redundante com a faixa).
 const ABAS_MINHA_CONTA = [
@@ -39,7 +39,7 @@ const ABAS_MINHA_CONTA = [
   { chave: 'seguranca', rotulo: 'Segurança', icone: 'fa-shield-halved' },
   { chave: 'papeis', rotulo: 'Papéis', icone: 'fa-user-tag' },
   { chave: 'academico', rotulo: 'Acadêmico', icone: 'fa-graduation-cap' },
-  // Privacidade por último de propósito — o botão de excluir conta mora
+  // Privacidade por último de propósito - o botão de excluir conta mora
   // aqui dentro, atrás da confirmação por digitação: ação destrutiva
   // nunca na primeira aba que a pessoa vê.
   { chave: 'privacidade', rotulo: 'Privacidade', icone: 'fa-lock' },
@@ -54,26 +54,26 @@ export function MinhaConta({ auth }) {
   }
 
   return (
-    // `w-0 min-w-full` (11-08-2026, achado ao vivo no mobile) — não é
+    // `w-0 min-w-full` (11-08-2026, achado ao vivo no mobile) - não é
     // decorativo: sem isso, a barra de abas logo abaixo (overflow-x-auto,
     // com rótulo em whitespace-nowrap pra não quebrar linha) faz o
     // NAVEGADOR calcular a largura mínima deste bloco pelo CONTEÚDO da
     // barra (~600px) e empurra a página inteira pra largura horizontal,
-    // em vez do próprio nav rolar sozinho — mesmo em telas pequenas.
+    // em vez do próprio nav rolar sozinho - mesmo em telas pequenas.
     // `width: 0` tira este bloco do cálculo de "largura mínima pelo
     // conteúdo" (passa a ter uma largura EXPLÍCITA, não automática);
     // `min-width: 100%` devolve ele pro tamanho normal (cheio do
     // container, até o teto do max-w-5xl) na hora de desenhar de
     // verdade. Resultado igual a antes em qualquer largura de tela, só
-    // que agora sem vazar — troque só se remover a barra de abas.
+    // que agora sem vazar - troque só se remover a barra de abas.
     <div className="w-0 min-w-full max-w-5xl mx-auto p-4 sm:p-8">
-      {/* Um cartão só, do topo ao rodapé — SEM overflow-hidden (mesma
+      {/* Um cartão só, do topo ao rodapé - SEM overflow-hidden (mesma
           lição já aprendida em cartao-formulario.jsx/ficha-consulta.jsx:
           overflow-hidden cria um contexto de scroll que o `sticky` do
           rodapé da aba Perfil não atravessa). A faixa (fundo-sutil,
           diferente do corpo) arredonda o PRÓPRIO canto de cima
           (rounded-t-2xl); o corpo de cada aba é transparente, deixa o
-          fundo-cartao deste wrapper aparecer atrás — só a aba Perfil tem
+          fundo-cartao deste wrapper aparecer atrás - só a aba Perfil tem
           rodapé sticky com fundo próprio, e só ELE precisa arredondar o
           canto de baixo (rounded-b-2xl), as outras abas terminam lisas e
           o canto arredondado do wrapper já aparece sozinho por trás. */}
@@ -91,11 +91,11 @@ export function MinhaConta({ auth }) {
   );
 }
 
-// Faixa de identidade — substitui o <h2>Minha Conta</h2> solto E o antigo
+// Faixa de identidade - substitui o <h2>Minha Conta</h2> solto E o antigo
 // CartaoPerfil lateral (10-08-2026, agora redundante). Busca papéis por
 // conta própria, mesmo espírito de sempre neste arquivo: a lista de
 // papéis de uma pessoa é minúscula, duplicar essa requisição pequena é
-// mais simples e mais seguro do que subir estado — a aba Papéis (abaixo)
+// mais simples e mais seguro do que subir estado - a aba Papéis (abaixo)
 // também busca a sua própria cópia, cada uma no seu tempo de vida.
 function FaixaIdentidade({ auth }) {
   const usuario = auth.usuario;
@@ -118,13 +118,13 @@ function FaixaIdentidade({ auth }) {
   return (
     <div className="relative overflow-hidden rounded-t-2xl border-b borda-padrao fundo-sutil px-6 sm:px-8 py-8">
       {/* Gradiente MUITO discreto (10% de opacidade) em vez de fundo verde
-          chapado — regra já estabelecida no projeto: verde é acento, não
+          chapado - regra já estabelecida no projeto: verde é acento, não
           fundo. Mesmo truque decorativo do blob em login-page.jsx. */}
       <div className="pointer-events-none absolute -top-12 -right-12 w-56 h-56 bg-primary/10 rounded-full blur-3xl"></div>
 
       <div className="relative flex flex-col sm:flex-row sm:items-center gap-5">
         {/* Anel ao redor do avatar via padding + fundo-cartao (não
-            hardcoded em branco) — reage ao tema escuro sozinho, mesmos
+            hardcoded em branco) - reage ao tema escuro sozinho, mesmos
             tokens de sempre. */}
         <div className="p-1 rounded-full fundo-cartao shadow-md shrink-0 w-fit">
           <AvatarUsuario nome={usuario?.nome} foto={usuario?.avatarUrl} tamanho="xxl" forma="circulo" />
@@ -174,8 +174,8 @@ function FaixaIdentidade({ auth }) {
 
 // Abas de verdade, não useState (11-08-2026, pedido explícito do Lucas:
 // "O projeto JÁ tomou essa decisão antes", quando as abas do painel admin
-// viraram rota) — link direto funciona, F5 preserva a aba, botão Voltar
-// navega. `overflow-x-auto` (não empilha) no mobile — pedido explícito.
+// viraram rota) - link direto funciona, F5 preserva a aba, botão Voltar
+// navega. `overflow-x-auto` (não empilha) no mobile - pedido explícito.
 function BarraAbas({ abaAtiva }) {
   return (
     <nav
@@ -201,7 +201,7 @@ function BarraAbas({ abaAtiva }) {
   );
 }
 
-// 1. PERFIL — a aba mais importante, é o "portfólio": foto, nome, e-mail,
+// 1. PERFIL - a aba mais importante, é o "portfólio": foto, nome, e-mail,
 // e um espaço já preparado (desabilitado, aviso honesto) pro dia que o
 // módulo 6-perfil-pesquisador existir. 2 colunas dentro da aba (pedido
 // explícito: "campo de nome não precisa de 900px de largura") + rodapé
@@ -245,7 +245,7 @@ function AbaPerfil({ auth }) {
   };
 
   // "Cancelar" aqui não navega pra lugar nenhum (diferente de Alterar
-  // Usuário) — dentro da mesma página não existe "voltar", só descartar o
+  // Usuário) - dentro da mesma página não existe "voltar", só descartar o
   // que foi digitado/escolhido e voltar ao valor salvo.
   const aoCancelar = () => {
     setNome(auth.usuario?.nome ?? '');
@@ -304,14 +304,14 @@ function AbaPerfil({ auth }) {
             </SecaoFicha>
           </div>
 
-          {/* Espaço já preparado pro Perfil de Pesquisador (módulo 6) —
+          {/* Espaço já preparado pro Perfil de Pesquisador (módulo 6) -
               demonstrativo, mesma linguagem visual dos outros placeholders
               do app (aviso honesto + campos desabilitados). */}
           <SecaoFicha titulo="Vínculo acadêmico" colunas={1}>
             <div className="flex items-start gap-2 rounded-lg fundo-info texto-info p-3">
               <i className="fa-solid fa-circle-info mt-0.5 shrink-0"></i>
               <p className="text-xs">
-                Aparece aqui quando o papel de pesquisador existir — ver mais na aba
+                Aparece aqui quando o papel de pesquisador existir - ver mais na aba
                 "Acadêmico".
               </p>
             </div>
@@ -335,7 +335,7 @@ function AbaPerfil({ auth }) {
       </div>
 
       {/* Rodapé sticky, mesmo padrão de cartao-formulario.jsx/
-          alterar-usuario.jsx — arredonda o PRÓPRIO canto de baixo
+          alterar-usuario.jsx - arredonda o PRÓPRIO canto de baixo
           (rounded-b-2xl), não depende do wrapper. */}
       <div className="px-6 sm:px-8 py-5 border-t borda-padrao fundo-cartao rounded-b-2xl sticky bottom-0 flex gap-3 justify-end">
         <button type="button" onClick={aoCancelar} disabled={!sujo} className="btn btn-secondary">
@@ -360,11 +360,11 @@ function iconePorDispositivo(userAgent) {
   return 'fa-desktop';
 }
 
-// 2. SEGURANÇA — senha (exige a atual) + Sessões Ativas (o item de maior
+// 2. SEGURANÇA - senha (exige a atual) + Sessões Ativas (o item de maior
 // impacto percebido, segundo o Claude Web, 10-08-2026). Polimento
 // (11-08-2026): ícone de dispositivo por sessão, "sessão atual" já vem
 // destacada em verde (badge-sucesso), encerrar virou ícone discreto em
-// vez de botão cheio — antes era uma <ul> crua.
+// vez de botão cheio - antes era uma <ul> crua.
 function AbaSeguranca({ auth }) {
   const [senhaAtual, setSenhaAtual] = useState('');
   const [novaSenha, setNovaSenha] = useState('');
@@ -396,7 +396,7 @@ function AbaSeguranca({ auth }) {
   const [encerrandoTodas, setEncerrandoTodas] = useState(false);
   // Colapsada por padrão (10-08-2026, achado do Lucas: "imagina se o
   // usuário tiver 10, 20, 30 sessões abertas"). Expandida, a lista ainda
-  // ganha scroll próprio (max-h-64) — nunca empurra a página.
+  // ganha scroll próprio (max-h-64) - nunca empurra a página.
   const [sessoesAbertas, setSessoesAbertas] = useState(false);
 
   const carregarSessoes = () => {
@@ -524,7 +524,7 @@ function AbaSeguranca({ auth }) {
                         (11-08-2026, achado ao vivo: user-agent de verdade
                         é longo, e `truncate` num flex container com 2
                         filhos corta a linha inteira sem dar espaço pro
-                        badge — "Esta sessão" sumia. Mesma família do
+                        badge - "Esta sessão" sumia. Mesma família do
                         achado de min-w-0/break-words em CampoFicha.) */}
                     <p className="texto-forte flex items-center gap-2 min-w-0">
                       <span className="truncate min-w-0">
@@ -563,7 +563,7 @@ function AbaSeguranca({ auth }) {
   );
 }
 
-// 3. PAPÉIS — só leitura, como sempre foi.
+// 3. PAPÉIS - só leitura, como sempre foi.
 function AbaPapeis({ auth }) {
   const [papeis, setPapeis] = useState(null);
 
@@ -580,7 +580,7 @@ function AbaPapeis({ auth }) {
   return (
     <div className="px-6 sm:px-8 py-8">
       <p className="text-sm texto-fraco mb-4">
-        O que você é na plataforma, só leitura aqui — pra alterar, um administrador precisa
+        O que você é na plataforma, só leitura aqui - pra alterar, um administrador precisa
         fazer isso pelo painel de Usuários.
       </p>
       {papeis === null ? (
@@ -600,8 +600,8 @@ function AbaPapeis({ auth }) {
   );
 }
 
-// 4. ACADÊMICO — placeholder honesto (módulo 6-perfil-pesquisador ainda
-// não existe), mas já com o desenho dos blocos que virão — mesmos campos
+// 4. ACADÊMICO - placeholder honesto (módulo 6-perfil-pesquisador ainda
+// não existe), mas já com o desenho dos blocos que virão - mesmos campos
 // demonstrativos de alterar-usuario.jsx (Perfil de Pesquisador), pra
 // quando o módulo chegar ser só trocar `disabled` por estado de verdade.
 function AbaAcademico() {
@@ -611,7 +611,7 @@ function AbaAcademico() {
         <i className="fa-solid fa-circle-info mt-0.5 shrink-0"></i>
         <p>
           Módulo de Perfil de Pesquisador ainda não foi implementado. Os campos abaixo são
-          demonstrativos, mostram como vai ficar quando existir — não salvam nada ainda.
+          demonstrativos, mostram como vai ficar quando existir - não salvam nada ainda.
         </p>
       </div>
 
@@ -659,7 +659,7 @@ function AbaAcademico() {
   );
 }
 
-// 5. PRIVACIDADE — última aba de propósito (ação destrutiva nunca na
+// 5. PRIVACIDADE - última aba de propósito (ação destrutiva nunca na
 // primeira). Exportar dados (LGPD Art. 18) ainda não existe (fica
 // registrado honestamente); excluir conta reaproveita
 // excluir_conta_usuario() (03_funcoes_seguranca.sql, [03-O]), que já

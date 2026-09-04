@@ -6,9 +6,9 @@ import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
 import { areaConhecimentoApi } from '../../services/8-area-conhecimento/api/area-conhecimento.api';
 
-// Mesmo padrão de ExcluirConfiguracao (11-configuracoes) — ver comentário
+// Mesmo padrão de ExcluirConfiguracao (11-configuracoes) - ver comentário
 // completo lá. Diferente de configuracao, area_conhecimento é referenciada
-// por campanha e por outras áreas filhas (id_pai) sem CASCADE — se estiver
+// por campanha e por outras áreas filhas (id_pai) sem CASCADE - se estiver
 // em uso, o backend responde 409 com uma mensagem própria (ver
 // area-conhecimento.service.remove.ts), exibida aqui pelo useErroToast
 // normal, sem tratamento especial.
@@ -87,7 +87,7 @@ export function ExcluirAreaConhecimento({ auth }) {
             </p>
             <p>
               Se esta área ainda estiver vinculada a alguma campanha (ou a outra área filha), a
-              exclusão é bloqueada pelo próprio banco — desative-a em vez de excluir. Se não
+              exclusão é bloqueada pelo próprio banco - desative-a em vez de excluir. Se não
               estiver em uso, some do catálogo pra sempre, sem exclusão lógica.
             </p>
           </div>

@@ -11,7 +11,7 @@ export class ConfiguracaoControllerCreate {
   @Post()
   @UseGuards(RequireAuthGuard)
   criar(@Body() dto: ConfiguracaoRequestCreate, @Req() request: Request) {
-    // request.user sempre definido aqui — RequireAuthGuard já garantiu.
+    // request.user sempre definido aqui - RequireAuthGuard já garantiu.
     return this.service.executar(dto, request.user!.idUsuario);
   }
 }

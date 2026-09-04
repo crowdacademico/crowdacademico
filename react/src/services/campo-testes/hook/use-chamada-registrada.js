@@ -11,7 +11,7 @@ import { useCampoTestes } from './use-campo-testes';
 // `auth.authFetch()` de verdade (a sessão real do painel) e só acrescenta
 // cronometragem + registro pra T4 (Registro de Chamadas) continuar
 // funcionando. Devolve o corpo já tratado (`tratarResposta`), mesmo
-// contrato de antes — quem chama não precisa mudar como lê o resultado.
+// contrato de antes - quem chama não precisa mudar como lê o resultado.
 export function useChamadaRegistrada(auth) {
   const { registrarChamada } = useCampoTestes();
 

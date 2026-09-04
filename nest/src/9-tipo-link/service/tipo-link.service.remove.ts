@@ -41,7 +41,7 @@ export class TipoLinkServiceRemove {
     } catch (erro) {
       // FK_LINK_ACADEMICO_TIPOLINK / FK_LINK_ATUALIZACAO_TIPOLINK /
       // FK_LINK_RECOMPENSA_TIPOLINK não têm CASCADE de propósito (módulo
-      // criado sem endpoint de remoção justamente por isso — ver
+      // criado sem endpoint de remoção justamente por isso - ver
       // comentário em tipo-link.module.ts). Mesmo tratamento de
       // area-conhecimento.service.remove.ts: 23503 vira 409 com mensagem
       // própria em vez do 400 genérico do filtro global.

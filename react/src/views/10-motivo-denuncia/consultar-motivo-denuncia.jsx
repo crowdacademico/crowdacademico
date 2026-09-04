@@ -4,7 +4,7 @@ import { CampoFicha, FichaConsulta, SecaoFicha } from '../../components/crud/fic
 import { useErroToast } from '../../components/layout/use-erro-toast';
 import { motivoDenunciaApi } from '../../services/10-motivo-denuncia/api/motivo-denuncia.api';
 
-// Rótulo legível pro `tipo` cru ('campanha' | 'perfil') — mesma ideia dos
+// Rótulo legível pro `tipo` cru ('campanha' | 'perfil') - mesma ideia dos
 // badges de escopo em ConsultarTipoLink, só que aqui é um valor único
 // (não múltiplos escopos), então vira 1 badge neutro em vez de uma lista.
 const ROTULO_TIPO = {

@@ -19,7 +19,7 @@ import { LinkAtualizacaoServiceRemove } from './service/link-atualizacao.service
 import { LinkAtualizacaoServiceUpdate } from './service/link-atualizacao.service.update';
 
 // Um só @Module cobrindo 3 tabelas (atualizacao_campanha + os satélites
-// link_atualizacao/arquivo_atualizacao) — decisão registrada na conversa
+// link_atualizacao/arquivo_atualizacao) - decisão registrada na conversa
 // de 22-08-2026 sobre ordem de prioridade de campanha: nenhuma das duas
 // tem pasta numerada própria em PROXIMOS_MODULOS.md, então entram dentro
 // do módulo-pai em vez de ganhar uma pasta nova sem numeração.

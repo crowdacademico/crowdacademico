@@ -1,6 +1,6 @@
 export class ArquivoResponseUploadIniciado {
   // O front precisa mandar isto de volta, sem alterar, em
-  // POST /arquivo/upload/confirmar — é o "recibo" do upload.
+  // POST /arquivo/upload/confirmar - é o "recibo" do upload.
   chave: string;
   urlUpload: string;
   metodo: 'PUT';

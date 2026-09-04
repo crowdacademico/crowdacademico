@@ -28,16 +28,16 @@ function formatarReais(valor) {
 }
 
 // T2, Bancada da Campanha. SEM ELENCO (25-08-2026, pedido do Lucas:
-// "remover de vez" o motor de login-múltiplo — redesenho completo desta
+// "remover de vez" o motor de login-múltiplo - redesenho completo desta
 // tela). Toda chamada usa a sessão REAL do painel (`auth`, sempre um
 // admin): leituras sempre funcionaram assim (relatorio_visualizar vê
 // tudo); as ESCRITAS que hoje continuam fazendo sentido (Alterar,
-// orçamento/cronograma, Aprovar, Rejeitar, Excluir) também — o admin já
+// orçamento/cronograma, Aprovar, Rejeitar, Excluir) também - o admin já
 // tem `campanha_editar`/`campanha_aprovar`/`campanha_rejeitar`, RLS
 // libera não importa quem seja o dono de verdade (04_rls_policies.sql,
 // pol_campanha_update). Criar campanha SAIU daqui (RLS exige
 // id_usuario = id_usuario_atual(), não dá pra "criar em nome de" um
-// pesquisador escolhido sem personificação) — o Lucas vai detalhar
+// pesquisador escolhido sem personificação) - o Lucas vai detalhar
 // depois como a criação pelo próprio pesquisador vai funcionar.
 //
 // `pesquisadorSelecionado` (T1, Bancada do Pesquisador, compartilhado via
@@ -94,7 +94,7 @@ export function BancadaCampanha({ auth }) {
   }, []);
 
   // Recarrega sempre que o pesquisador selecionado em T1 mudar (filtro
-  // por dono, feito no servidor — campanhaApi.listar já aceita
+  // por dono, feito no servidor - campanhaApi.listar já aceita
   // `idUsuario`) ou limpar (volta a mostrar todas).
   useEffect(() => {
     carregarCampanhas();
@@ -141,9 +141,9 @@ export function BancadaCampanha({ auth }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [campanhaFoco]);
 
-  // Opções do dropdown "Status" — só os valores que já aparecem nos
+  // Opções do dropdown "Status" - só os valores que já aparecem nos
   // dados (mesmo sniff de GenericTable/bancada-pesquisador.jsx), sem
-  // lista fixa do enum (evita hardcoded — se um status novo aparecer, o
+  // lista fixa do enum (evita hardcoded - se um status novo aparecer, o
   // facet já mostra sozinho).
   const opcoesStatus = [...new Set(campanhas.map((c) => c.status))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
 
@@ -188,7 +188,7 @@ export function BancadaCampanha({ auth }) {
     });
   };
 
-  // PATCH /campanha/:id (dono OU campanha_editar) — sem status/id_admin/
+  // PATCH /campanha/:id (dono OU campanha_editar) - sem status/id_admin/
   // taxa_plataforma/modelo aqui de propósito, ver campanha.request-update.
   // ts: quem muda status são aprovar/rejeitar, nunca este PATCH genérico.
   const salvarEdicaoCampanha = async () => {
@@ -263,7 +263,7 @@ export function BancadaCampanha({ auth }) {
   };
 
   // Só permitido em 'aguardando_aprovacao' (RLS: pol_campanha_delete, ver
-  // 04_rls_policies.sql) — mesma lógica do congelamento pós-aprovação.
+  // 04_rls_policies.sql) - mesma lógica do congelamento pós-aprovação.
   // Cascateia orçamento/cronograma/atualizações/seguidores/comentários
   // (ON DELETE CASCADE, 01_extensoes_enums_tabelas.sql), sem risco: nada
   // disso existe ainda pra uma campanha que nunca foi aprovada.

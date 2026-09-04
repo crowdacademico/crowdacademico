@@ -9,7 +9,7 @@ import {
 } from 'class-validator';
 
 // fn_congela_orcamento_campanha (05) bloqueia INSERT/UPDATE/DELETE depois
-// que a campanha sai de 'aguardando_aprovacao'/'rejeitado' — não checado
+// que a campanha sai de 'aguardando_aprovacao'/'rejeitado' - não checado
 // aqui de propósito, mesmo raciocínio de link-academico.service.create.ts.
 // fn_valida_limite_max_orcamento_campanha (05) barra passar de
 // configuracoes.orcamento_max_itens.

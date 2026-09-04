@@ -1,4 +1,4 @@
-// Campo exibido (não editável) nas páginas de Alterar/Excluir — mesmo
+// Campo exibido (não editável) nas páginas de Alterar/Excluir - mesmo
 // visual do <label> dos formulários (criar-usuario.jsx), só sem <input>.
 // Usado sempre que a página precisa mostrar um dado que não faz parte do
 // que pode ser alterado (ex.: e-mail em Alterar Usuário, chave/tipo em
@@ -8,7 +8,7 @@ export function CampoSomenteLeitura({ rotulo, valor }) {
     <div>
       <span className="rotulo-campo">{rotulo}</span>
       {/* break-words (10-08-2026, achado do Lucas: e-mail comprido saindo
-          pra fora do card "Metadados", coluna lateral estreita) — sem
+          pra fora do card "Metadados", coluna lateral estreita) - sem
           isso, um valor sem espaço nenhum (e-mail, token) não tem onde
           quebrar linha sozinho e estica o card na horizontal. */}
       <p className="text-sm font-semibold texto-forte break-words">{String(valor ?? '')}</p>

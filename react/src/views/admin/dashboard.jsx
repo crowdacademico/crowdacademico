@@ -6,18 +6,18 @@ import { DashboardIdentidadeVisual } from './dashboard-identidade-visual';
 import { DashboardRegrasNegocio } from './dashboard-regras-negocio';
 import { DashboardSaude } from './dashboard-saude';
 
-// Texto do tooltip de "sessões ativas" (10-08-2026, pedido do Lucas) —
+// Texto do tooltip de "sessões ativas" (10-08-2026, pedido do Lucas) -
 // exportado porque a aba Saúde (dashboard-saude.jsx) mostra a MESMA
 // métrica e precisa do MESMO texto, não uma 2ª cópia que poderia divergir.
 // "Sessões ativas agora" sugere gente online neste instante, mas
 // `contar_metricas_dashboard()` conta sessão não-revogada dentro da
-// validade de 30 dias (REFRESH_TOKEN_DIAS_VALIDADE) — sobe rápido em
+// validade de 30 dias (REFRESH_TOKEN_DIAS_VALIDADE) - sobe rápido em
 // ambiente de teste, sem ninguém "online" de verdade.
 export const TEXTO_TOOLTIP_SESSOES_ATIVAS =
   'Contagem de sessões não-revogadas em 30 dias, não gente online.';
 
 // Abas (09-08-2026, Bloco H do prompt do Claude Web: Dashboard como painel
-// global) — cuidado explícito do Claude Web contra virar "tela onde tudo
+// global) - cuidado explícito do Claude Web contra virar "tela onde tudo
 // cabe": estrutura em abas em vez de empilhar seção atrás de seção. "Visão
 // Geral" é o que já existia (cards + prévia de notificações); as outras 3
 // são novas.
@@ -29,11 +29,11 @@ const ABAS = [
 ];
 
 // Card de total (item "a" do pedido do Lucas, 08-08-2026): só rótulo
-// pequeno em cinza maiúsculo + número grande, sem ícone/fundo colorido —
+// pequeno em cinza maiúsculo + número grande, sem ícone/fundo colorido -
 // é assim que o Experiment.com mostra número, cor vira acento raro, não
 // preenchimento. `valor === null` = módulo ainda não existe (campanha,
-// notificação) — mostra "—" em vez de esconder o card ou fingir que é 0.
-// Borda ERA slate-200 (pedido original) — escurecida pro slate-300 a
+// notificação) - mostra "-" em vez de esconder o card ou fingir que é 0.
+// Borda ERA slate-200 (pedido original) - escurecida pro slate-300 a
 // pedido do Lucas (09-08-2026), mesmo tom já usado nas bordas de tabela.
 function CardMetrica({ rotulo, valor }) {
   return (
@@ -52,11 +52,11 @@ function CardMetrica({ rotulo, valor }) {
   );
 }
 
-// Tela inicial do painel admin (/admin/dashboard) — pedido do Lucas,
+// Tela inicial do painel admin (/admin/dashboard) - pedido do Lucas,
 // 08-08-2026: uma visão geral antes de cair direto em "Usuários".
 //
 // A faixa de saúde e os cards de total vêm de DUAS requisições
-// INDEPENDENTES (não um Promise.all combinado) — achado do Lucas testando:
+// INDEPENDENTES (não um Promise.all combinado) - achado do Lucas testando:
 // se GET /dashboard/resumo falhasse (ex.: banco fora do ar), a tela
 // inteira ficava em branco, exatamente no momento em que ela mais
 // precisava mostrar "banco sem conexão". Agora cada uma tem seu próprio
@@ -90,7 +90,7 @@ export function Dashboard({ auth }) {
     // encostando no cabeçalho do site... pode descer tudo"). As outras
     // abas (Usuários/Papéis/Configurações) não sentem esse aperto porque
     // o conteúdo delas já nasce dentro de .admin-content-painel (padding
-    // de 2rem) — o título do Dashboard fica FORA de qualquer painel, só
+    // de 2rem) - o título do Dashboard fica FORA de qualquer painel, só
     // com o padding do .admin-content-area (1.5rem), por isso ganha um
     // respiro extra só aqui.
     <div className="space-y-6 pt-6">
@@ -117,7 +117,7 @@ export function Dashboard({ auth }) {
 
       {abaAtiva === 'visao-geral' && (
         <div className="space-y-6">
-          {/* (b) Faixa de saúde — sempre renderiza, mesmo se o resumo abaixo
+          {/* (b) Faixa de saúde - sempre renderiza, mesmo se o resumo abaixo
               falhar (é precisamente aí que ela mais importa). */}
           <div className="fundo-cartao border borda-forte rounded-xl shadow-sm p-5 flex flex-wrap items-center gap-x-8 gap-y-3 text-sm">
             <span className="flex items-center gap-2 font-semibold texto-padrao">
@@ -170,10 +170,10 @@ export function Dashboard({ auth }) {
             </div>
           )}
 
-          {/* (c) Prévia — NOTIFICAÇÕES, não log de auditoria (correção do
+          {/* (c) Prévia - NOTIFICAÇÕES, não log de auditoria (correção do
               Lucas, 08-08-2026: log de auditoria já tem painel próprio, "Ver
               log", embaixo de cada tabela). Módulo 26-notificacao ainda não
-              existe (nem tabela mapeada no Kysely, nem controller) — mostra
+              existe (nem tabela mapeada no Kysely, nem controller) - mostra
               isso honestamente em vez de inventar dado. */}
           <div className="fundo-cartao border borda-forte rounded-xl shadow-sm p-5">
             <h3 className="subtitulo mb-2">Notificações</h3>

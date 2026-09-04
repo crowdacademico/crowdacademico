@@ -1,13 +1,13 @@
 /* Separado de 0-style.css de propósito: @import 'tailwindcss' se expande
    inline (o plugin injeta um bloco enorme de CSS gerado bem ali), e depois
    disso mais nenhum @import pode vir no MESMO arquivo (regra de CSS:
-   @import só pode vir antes de qualquer outra regra) — dava warning de
+   @import só pode vir antes de qualquer outra regra) - dava warning de
    build misturado com os @import dos arquivos numerados. Mantendo isolado
    aqui, os dois arquivos ficam válidos por conta própria. main.jsx importa
    os dois, nessa ordem (ver main.jsx).
 
    @theme = config do Tailwind v4 (substitui o antigo `tailwind.config =
-   {...}` que vivia inline no index.html, via CDN) — MESMAS cores/fontes de
+   {...}` que vivia inline no index.html, via CDN) - MESMAS cores/fontes de
    antes. Emite as variáveis em :root também, então 1-base.css usa
    var(--color-primary) etc. sem redeclarar nada (ver 1-base.css). */
 @import 'tailwindcss';

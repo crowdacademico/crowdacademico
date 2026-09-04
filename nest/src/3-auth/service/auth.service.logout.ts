@@ -22,12 +22,12 @@ export class AuthServiceLogout {
       .executeTakeFirst();
 
     if (!sessao) {
-      // Já não existe — do ponto de vista de logout, o objetivo (sessão não
+      // Já não existe - do ponto de vista de logout, o objetivo (sessão não
       // vale mais nada) já está satisfeito. Não é erro pro cliente.
       return;
     }
 
-    // Confirma o segredo antes de revogar — sem isso, adivinhar um id_sessao
+    // Confirma o segredo antes de revogar - sem isso, adivinhar um id_sessao
     // (é sequencial, fácil de adivinhar) derrubaria a sessão de outra pessoa.
     const segredoValido = await bcrypt.compare(
       parseado.segredo,

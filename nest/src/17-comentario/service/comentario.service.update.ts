@@ -20,7 +20,7 @@ export class ComentarioServiceUpdate {
     const db = this.database.getDb();
 
     // Precisa de id_campanha ANTES do update só quando endossado=true
-    // (pra calcular o próximo ordem_endosso livre daquela campanha) —
+    // (pra calcular o próximo ordem_endosso livre daquela campanha) -
     // essa leitura já serve de "existe?" pro 404 mais abaixo também.
     const atual = await db
       .selectFrom('comentario')
@@ -61,7 +61,7 @@ export class ComentarioServiceUpdate {
 
     if (!linha) {
       // pol_comentario_update (04): autor OU comentario_moderar OU dono da
-      // campanha. A leitura acima já confirmou que a linha EXISTE — chegar
+      // campanha. A leitura acima já confirmou que a linha EXISTE - chegar
       // aqui sem resultado só pode ser a RLS bloqueando o UPDATE.
       throw new ForbiddenException(
         'Sem permissão para editar este comentário.',

@@ -6,9 +6,9 @@ import { useToast } from '../../components/layout/use-toast';
 import { tipoLinkApi } from '../../services/9-tipo-link/api/tipo-link.api';
 
 // Convenção de código (mesma ideia de REGEX_CHAVE_VALIDA em
-// criar-configuracao.jsx) — MAIÚSCULO_COM_UNDERSCORE, igual todo `codigo`
+// criar-configuracao.jsx) - MAIÚSCULO_COM_UNDERSCORE, igual todo `codigo`
 // já seedado (LATTES, ORCID, RESEARCHGATE, LINKEDIN, GITHUB,
-// SITE_INSTITUCIONAL, OUTRO — ver 07_seed_dados.sql [07-C-1]). Mesma
+// SITE_INSTITUCIONAL, OUTRO - ver 07_seed_dados.sql [07-C-1]). Mesma
 // validação de CriarTipoLinkRequestDto (Nest), duplicada aqui só pra dar
 // feedback ANTES de bater no backend.
 const REGEX_CODIGO_VALIDO = /^[A-Z0-9_]+$/;
@@ -26,7 +26,7 @@ function regexValida(padrao) {
 }
 
 // "github.com, gist.github.com" -> ['github.com', 'gist.github.com'];
-// "" (ou só espaços/vírgulas) -> [] — dominio é NOT NULL DEFAULT '{}'
+// "" (ou só espaços/vírgulas) -> [] - dominio é NOT NULL DEFAULT '{}'
 // (mecanismo de validação PRINCIPAL, desde a revisão de 16-08-2026),
 // array vazio é o único jeito de dizer "sem restrição de domínio", não
 // mais `null`.
@@ -45,15 +45,15 @@ export function CriarTipoLink({ auth }) {
   const [nome, setNome] = useState('');
   const [regex, setRegex] = useState('');
   // Texto separado por vírgula na tela ("github.com, gist.github.com"),
-  // não um array de verdade — sem componente de "tags" reutilizável no
+  // não um array de verdade - sem componente de "tags" reutilizável no
   // projeto ainda, isto é o jeito mais simples de editar uma lista
-  // pequena. Convertido pra array (nunca `null` — array vazio é o
+  // pequena. Convertido pra array (nunca `null` - array vazio é o
   // default) só na hora de enviar (`aoCriar` abaixo). dominio é o
   // mecanismo de validação PRINCIPAL (array nativo do Postgres, NOT NULL
-  // DEFAULT '{}') — um tipo pode aceitar mais de um domínio, ex.: GitHub
+  // DEFAULT '{}') - um tipo pode aceitar mais de um domínio, ex.: GitHub
   // também responde em gist.github.com.
   const [dominioTexto, setDominioTexto] = useState('');
-  // Mesmos defaults do banco (01_extensoes_enums_tabelas.sql) — a maioria
+  // Mesmos defaults do banco (01_extensoes_enums_tabelas.sql) - a maioria
   // dos tipos cadastrados até hoje é só de identidade de perfil (Lattes,
   // ORCID, ResearchGate, LinkedIn), então já começar com permitePerfil
   // marcado poupa o clique mais comum.
@@ -62,11 +62,11 @@ export function CriarTipoLink({ auth }) {
   const [permiteRecompensa, setPermiteRecompensa] = useState(false);
   const [enviando, setEnviando] = useState(false);
 
-  // Só valida depois que a pessoa digitou alguma coisa — mesmo raciocínio
+  // Só valida depois que a pessoa digitou alguma coisa - mesmo raciocínio
   // de chaveInvalida em criar-configuracao.jsx.
   const codigoInvalido = codigo.length > 0 && !REGEX_CODIGO_VALIDO.test(codigo);
   const regexInvalida = regex.length > 0 && !regexValida(regex);
-  // CK_TIPO_LINK_ALGUM_ESCOPO (01_extensoes_enums_tabelas.sql) — pelo
+  // CK_TIPO_LINK_ALGUM_ESCOPO (01_extensoes_enums_tabelas.sql) - pelo
   // menos um dos 3 escopos precisa ficar marcado; o service confere isso
   // de novo no backend, isto é só pra travar o botão Criar ANTES de
   // bater lá.
@@ -121,12 +121,12 @@ export function CriarTipoLink({ auth }) {
           />
           {codigoInvalido ? (
             <p className="text-xs text-red-600 font-semibold mt-1">
-              Só letras maiúsculas, números e underscore — sem espaço, minúscula ou acento.
+              Só letras maiúsculas, números e underscore - sem espaço, minúscula ou acento.
             </p>
           ) : (
             <p className="text-xs texto-fraco mt-1">
               Identificador interno, nunca editável depois de criado (usado por regras internas
-              do sistema — ex.: reconhecer Lattes/ORCID no cálculo de score).
+              do sistema - ex.: reconhecer Lattes/ORCID no cálculo de score).
             </p>
           )}
         </div>
@@ -176,7 +176,7 @@ export function CriarTipoLink({ auth }) {
             </p>
           ) : (
             <p className="text-xs texto-fraco mt-1">
-              Complemento opcional aos domínios acima — use só quando o domínio sozinho não
+              Complemento opcional aos domínios acima - use só quando o domínio sozinho não
               garante uma URL válida (ex.: exigir um perfil específico, não a home do site). Deixe
               em branco quando o domínio já for suficiente.
             </p>
@@ -184,10 +184,10 @@ export function CriarTipoLink({ auth }) {
         </div>
 
 
-        {/* Escopos — CK_TIPO_LINK_ALGUM_ESCOPO exige pelo menos um
+        {/* Escopos - CK_TIPO_LINK_ALGUM_ESCOPO exige pelo menos um
             marcado (trg_valida_escopo_tipolink barra, na hora de gravar
             um link de verdade, qualquer tipo cujo campo correspondente
-            aqui seja falso — 05_regras_negocio.sql [05-K-1]). */}
+            aqui seja falso - 05_regras_negocio.sql [05-K-1]). */}
         <div>
           <label className="rotulo-campo">Onde este tipo pode ser usado</label>
           <div className="space-y-2 mt-1">

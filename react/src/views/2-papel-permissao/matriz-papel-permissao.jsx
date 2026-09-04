@@ -10,22 +10,22 @@ import {
 import { nomeAmigavelPermissao } from '../../services/2-papel-permissao/constants/permissao-nomes-amigaveis';
 
 // Substituiu a antiga tabela "Papel × Permissão" (linhas repetindo
-// "admin | admin | ..." — achado do Claude Web: ~40 linhas pra mostrar o
-// que uma matriz mostra em muito menos espaço). Não usa GenericTable — é
+// "admin | admin | ..." - achado do Claude Web: ~40 linhas pra mostrar o
+// que uma matriz mostra em muito menos espaço). Não usa GenericTable - é
 // um formato fundamentalmente diferente (matriz, não lista de linha+ações).
 //
 // Clicável desde 03-08-2026 (pedido do Lucas: "o administrador precisa ter
 // poder absoluto pelo painel admin, nunca mais precisará acessar o banco
-// depois") — cada célula agora concede/revoga a permissão daquele papel,
+// depois") - cada célula agora concede/revoga a permissão daquele papel,
 // via `papelPermissaoApi.atribuir/remover` (RLS exige a permissão
 // 'papel_gerenciar', ver [04-B-1] em 04_rls_policies.sql).
 //
 // Linhas/colunas vêm do CATÁLOGO COMPLETO (`papelApi`/`permissaoApi`), não
-// só das combinações já concedidas (`papelPermissaoApi.listar`) — senão um
+// só das combinações já concedidas (`papelPermissaoApi.listar`) - senão um
 // papel ou permissão sem nenhum vínculo hoje (ex.: 'usuario',
 // 'pesquisador') nunca apareceria pra admin conceder a primeira permissão
 // a ele pelo painel, o que contradiz o próprio objetivo de "nunca precisar
-// mexer no banco". `papel`/`permissao` em si continuam só-leitura — criar
+// mexer no banco". `papel`/`permissao` em si continuam só-leitura - criar
 // um papel ou permissão novos (não só conceder uma combinação já
 // existente) é decisão maior, fora de escopo aqui.
 const TEXTO_TOOLTIP_MATRIZ =
@@ -35,17 +35,17 @@ const TEXTO_TOOLTIP_MATRIZ =
   'próprio dado, não por permissão, mas nada impede conceder uma se ' +
   'precisar). Clique numa célula pra conceder ou revogar.';
 
-// Colunas em ordem de poder (maior pro menor), não alfabética — pedido do
+// Colunas em ordem de poder (maior pro menor), não alfabética - pedido do
 // Lucas, 03-08-2026.
 //
 // CORRIGIDO (07-08-2026, achado do Lucas: "renomeei 'admin' pra 'admin
 // teste' e a coluna pulou pro fim da matriz"): a ordenação comparava o
-// NOME contra uma lista fixa de nomes esperados — assim que o admin usa o
+// NOME contra uma lista fixa de nomes esperados - assim que o admin usa o
 // recurso de renomear papel (alterar-papel.jsx, também 07-08-2026), o nome
 // novo não bate com nada da lista e a coluna cai pro fim. `id_papel` nunca
 // muda (só `nome` é editável) e, desde a reordenação do seed
 // (07_seed_dados.sql [07-B-1], mesma data), já nasce na ordem de poder
-// certa num banco novo — ordenar por ele resolve os dois problemas de
+// certa num banco novo - ordenar por ele resolve os dois problemas de
 // uma vez, sem precisar de lista nenhuma pra manter sincronizada.
 function ordenarPapeisPorPoder(a, b) {
   return a.idPapel - b.idPapel;
@@ -70,7 +70,7 @@ export function MatrizPapelPermissao({ authFetch }) {
     ])
       .then(([listaPapeis, listaPermissoes, vinculos]) => {
         setPapeis([...listaPapeis].sort(ordenarPapeisPorPoder));
-        // Ordena pelo nome AMIGÁVEL (09-08-2026), não pelo código cru — é
+        // Ordena pelo nome AMIGÁVEL (09-08-2026), não pelo código cru - é
         // o que aparece na tela, então é o que precisa estar em ordem
         // alfabética visível pra quem lê.
         setPermissoes(
@@ -141,7 +141,7 @@ export function MatrizPapelPermissao({ authFetch }) {
             <tbody>
               {permissoes.map((permissao) => (
                 <tr key={permissao.idPermissao}>
-                  {/* title com o código cru (09-08-2026) — a matriz é
+                  {/* title com o código cru (09-08-2026) - a matriz é
                       estreita demais pra uma coluna "chave" própria (igual
                       a listagem de Permissões abaixo); hover cobre o
                       mesmo caso de uso pra quem precisa do valor literal. */}

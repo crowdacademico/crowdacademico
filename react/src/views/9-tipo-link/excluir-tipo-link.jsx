@@ -6,9 +6,9 @@ import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
 import { tipoLinkApi } from '../../services/9-tipo-link/api/tipo-link.api';
 
-// Mesmo padrão de ExcluirConfiguracao (11-configuracoes) — ver comentário
+// Mesmo padrão de ExcluirConfiguracao (11-configuracoes) - ver comentário
 // completo lá. Diferente de configuracao, tipo_link é referenciado por
-// link_academico/link_atualizacao/link_recompensa sem CASCADE — se
+// link_academico/link_atualizacao/link_recompensa sem CASCADE - se
 // estiver em uso, o backend responde 409 com uma mensagem própria (ver
 // tipo-link.service.remove.ts), exibida aqui pelo useErroToast normal.
 export function ExcluirTipoLink({ auth }) {
@@ -85,7 +85,7 @@ export function ExcluirTipoLink({ auth }) {
             </p>
             <p>
               Se este tipo ainda estiver em uso em algum perfil, atualização de campanha ou
-              recompensa, a exclusão é bloqueada pelo próprio banco — desative-o em vez de
+              recompensa, a exclusão é bloqueada pelo próprio banco - desative-o em vez de
               excluir. Se não estiver em uso, some do catálogo pra sempre, sem exclusão lógica.
             </p>
           </div>

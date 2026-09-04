@@ -9,7 +9,7 @@ export class AuthServiceVerificarEmail {
 
   async executar(token: string): Promise<void> {
     const hash = hashTokenVerificacaoEmail(token);
-    // confirmar_email_por_token (03_funcoes_seguranca.sql, [03-O]) — o
+    // confirmar_email_por_token (03_funcoes_seguranca.sql, [03-O]) - o
     // token/hash É a autorização, não precisa de sessão. Roda antes de
     // existir login em muitos casos (link clicado direto do e-mail, numa
     // aba sem sessão nenhuma).

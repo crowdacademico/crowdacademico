@@ -9,7 +9,7 @@ import { LogAuditoriaRequestList } from '../dto/request/log-auditoria.request-li
 import { LogAuditoriaResponse } from '../dto/response/log-auditoria.response';
 
 // Tamanho de página BEM menor que o teto de segurança (500) usado em
-// usuario/configuracao (paginacao.util.ts) — de propósito. Aqui não é um
+// usuario/configuracao (paginacao.util.ts) - de propósito. Aqui não é um
 // teto "pra nunca baixar tudo por acidente", é o tamanho de verdade do
 // painel "Ver log" (botão no fundo de cada tabela, GenericTable): mostrar
 // as últimas 20 alterações é o caso de uso real, não um catálogo inteiro.
@@ -23,7 +23,7 @@ export class LogAuditoriaServiceFindAll {
     query: LogAuditoriaRequestList,
   ): Promise<ResultadoPaginado<LogAuditoriaResponse>> {
     // pol_log_auditoria_select (04_rls_policies.sql [04-L]) já exige
-    // tem_permissao('log_visualizar') — sem ela, a query abaixo volta
+    // tem_permissao('log_visualizar') - sem ela, a query abaixo volta
     // vazia (RLS filtra a nível de linha), não dá erro.
     const consulta = this.database
       .getDb()

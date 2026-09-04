@@ -9,7 +9,7 @@ import { useToast } from '../../components/layout/use-toast';
 import { configuracaoApi } from '../../services/11-configuracoes/api/configuracao.api';
 
 // `chave`/`tipo` não aparecem no formulário (só leitura) porque
-// AtualizarConfiguracaoRequestDto (Nest) não os aceita — são imutáveis
+// AtualizarConfiguracaoRequestDto (Nest) não os aceita - são imutáveis
 // depois de criada a linha, só valor/descricao/ativo podem mudar.
 export function AlterarConfiguracao({ auth }) {
   const { id } = useParams();

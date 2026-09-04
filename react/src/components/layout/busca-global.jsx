@@ -6,10 +6,10 @@ import { papelApi, permissaoApi } from '../../services/2-papel-permissao/api/pap
 import { configuracaoApi } from '../../services/11-configuracoes/api/configuracao.api';
 import { EVENTO_ABRIR_BUSCA_GLOBAL as EVENTO_ABRIR } from './busca-global-evento';
 
-// Derivado de ROTAS_ADMIN (09-08-2026), não mais uma lista à mão — era uma
+// Derivado de ROTAS_ADMIN (09-08-2026), não mais uma lista à mão - era uma
 // cópia manual das 4 abas que podia desalinhar (mesmo problema que
 // ROTAS_ADMIN/GRUPOS_MENU_ADMIN já resolveram uma vez pro menu lateral).
-// Ícone aqui é o MESMO que aparece no menu lateral (rota.icone) — pedido
+// Ícone aqui é o MESMO que aparece no menu lateral (rota.icone) - pedido
 // do Lucas ao ver a busca: "coloca estes exatos ícones no menu também".
 const NAVEGACAO = ROTAS_ADMIN.map((rota) => ({
   categoria: 'Navegação',
@@ -18,7 +18,7 @@ const NAVEGACAO = ROTAS_ADMIN.map((rota) => ({
   icone: rota.icone,
 }));
 
-// Catálogos pequenos hoje (dezenas de linhas) — busca 100% no navegador,
+// Catálogos pequenos hoje (dezenas de linhas) - busca 100% no navegador,
 // não justifica endpoint de busca no backend ainda (mesmo raciocínio de
 // TAMANHO_PAGINA_PADRAO em paginacao.util.ts: "não faz sentido construir
 // isso contra 17 linhas de teste"). Revisar se algum catálogo crescer bem
@@ -29,12 +29,12 @@ function contem(texto, termo) {
   return (texto ?? '').toLowerCase().includes(termo);
 }
 
-// Busca global — Ctrl+K/Cmd+K (09-08-2026, pedido do Lucas depois de
+// Busca global - Ctrl+K/Cmd+K (09-08-2026, pedido do Lucas depois de
 // gostar da sugestão: "vamos aplicar pra eu ver como fico"). Um modal só
 // que busca por nome/e-mail/chave em usuário/papel/permissão/configuração
 // ao mesmo tempo, e também pula direto pras 4 abas do menu. Carrega os 4
 // catálogos só na PRIMEIRA vez que abre (mesma convenção de
-// LogAuditoriaPainel — não gasta requisição em quem nunca aperta Ctrl+K),
+// LogAuditoriaPainel - não gasta requisição em quem nunca aperta Ctrl+K),
 // guarda em cache pro resto da sessão.
 export function BuscaGlobal({ auth }) {
   const navigate = useNavigate();
@@ -126,7 +126,7 @@ export function BuscaGlobal({ auth }) {
             caminho: `/admin/papeis/${p.idPapel}/alterar`,
             icone: 'fa-user-shield',
           })),
-        // Permissão não tem tela própria (catálogo só-leitura) — manda pra
+        // Permissão não tem tela própria (catálogo só-leitura) - manda pra
         // Papéis & Permissões, onde ela aparece na matriz/listagem.
         ...dados.permissoes
           .filter((p) => contem(p.nome, termoBusca))

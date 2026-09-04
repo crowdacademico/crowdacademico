@@ -13,19 +13,19 @@ function lerEscalaSalva() {
 
 // Botão A-/A+ no cabeçalho (09-08-2026, pedido do Lucas: acessibilidade,
 // "botão de aumentar e diminuir fonte"). Muda --escala-fonte (1-base.css,
-// aplicada no html inteiro) e guarda a escolha em localStorage — persiste
+// aplicada no html inteiro) e guarda a escolha em localStorage - persiste
 // entre sessões, mesmo padrão de CHAVE_REFRESH_TOKEN em use-auth.js.
 // Estado inicial já lê o valor salvo (useState(lerEscalaSalva), não um
-// useEffect que chama setState depois) — evita o flash de "voltou pro
+// useEffect que chama setState depois) - evita o flash de "voltou pro
 // tamanho padrão" que aconteceria se a leitura ficasse pra depois do
 // primeiro render.
 //
-// Preferência POR CONTA — tentada em 10-08-2026 (usuario.escala_fonte_
+// Preferência POR CONTA - tentada em 10-08-2026 (usuario.escala_fonte_
 // preferida no banco, sincronizada com auth), REVERTIDA no mesmo dia por
 // decisão do Lucas com a Alexia: preferência pessoal deveria ficar numa
 // tabela própria se um dia existir, não colunas soltas em `usuario`
 // ("estamos com tabelas demais no momento"). Preferência de DISPOSITIVO
-// via localStorage é, de novo, a única fonte — mesmo comportamento de
+// via localStorage é, de novo, a única fonte - mesmo comportamento de
 // antes dessa tentativa.
 export function ControleFonte() {
   const [escala, setEscala] = useState(lerEscalaSalva);

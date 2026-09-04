@@ -11,10 +11,10 @@ import { PerfilPesquisadorConverter } from '../dto/converter/perfil-pesquisador.
 import { PerfilPesquisadorRequestList } from '../dto/request/perfil-pesquisador.request-list';
 import { PerfilPesquisadorResponse } from '../dto/response/perfil-pesquisador.response';
 
-// pol_perfil_select (04) é pública (usuario_visivel()) — lista TODOS os
+// pol_perfil_select (04) é pública (usuario_visivel()) - lista TODOS os
 // pesquisadores, não só de quem está logado, mesmo espírito de
 // PerfilPesquisadorServiceFindOne (o perfil é público de propósito). O
-// que muda por permissão é só se o CPF vem decifrado ou `null` — mas
+// que muda por permissão é só se o CPF vem decifrado ou `null` - mas
 // aqui, diferente do findone, "é o próprio dono" varia LINHA A LINHA (uma
 // lista tem N pesquisadores diferentes); `temPermissaoSensivel` é
 // calculado UMA VEZ (mesmo requerente, mesma permissão em toda a
@@ -43,7 +43,7 @@ export class PerfilPesquisadorServiceFindAll {
     }
 
     // SEQUENCIAL, não Promise.all (25-08-2026, mesmo achado de
-    // paginacao.util.ts — uma conexão só por requisição, sem ganho real de
+    // paginacao.util.ts - uma conexão só por requisição, sem ganho real de
     // paralelismo e gerando o warning de depreciação do driver `pg`).
     const resultado = await paginar(query, {
       pagina: filtro.pagina,

@@ -33,7 +33,7 @@ export function ConsultarCampanha({ auth }) {
       .then((dados) => {
         setCampanha(dados);
         // Nome de dono/área resolvidos à parte (não vêm no
-        // CampanhaResponse, só os ids) — mesmo raciocínio de junção
+        // CampanhaResponse, só os ids) - mesmo raciocínio de junção
         // client-side de listar-campanhas.jsx, só que aqui é 1 registro
         // de cada em vez do catálogo inteiro.
         usuarioApi.buscar(auth.authFetch, dados.idUsuario).then((u) => setNomeDono(u.nome)).catch(() => {});

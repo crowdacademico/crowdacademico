@@ -38,7 +38,7 @@ function montarCurl(chamada) {
 // Substituto direto do Thunder Client: toda chamada feita via
 // useChamadaRegistrada (qualquer tela) aparece aqui, mais recente
 // primeiro. SEM coluna "Ator" (25-08-2026, remoção do Elenco): só existe
-// um "ator" possível agora, a sessão real logada — mostrar seria ruído.
+// um "ator" possível agora, a sessão real logada - mostrar seria ruído.
 export function RegistroChamadas() {
   const { registroChamadas, limparRegistro } = useCampoTestes();
   const [aberto, setAberto] = useState(false);

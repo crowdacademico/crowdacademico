@@ -40,7 +40,7 @@ export class MotivoDenunciaServiceRemove {
       }
     } catch (erro) {
       // FK_DENUNCIA_MOTIVO não tem CASCADE de propósito (módulo criado sem
-      // endpoint de remoção justamente por isso — ver comentário em
+      // endpoint de remoção justamente por isso - ver comentário em
       // motivo-denuncia.module.ts). Mesmo tratamento de
       // area-conhecimento.service.remove.ts: 23503 vira 409 com mensagem
       // própria em vez do 400 genérico do filtro global.

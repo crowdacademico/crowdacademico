@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
 import { TermoUsoResponseAtivo } from '../dto/response/termo-uso.response-ativo';
 
-// pol_termos_select (04_rls_policies.sql) é USING(true) — leitura pública de
+// pol_termos_select (04_rls_policies.sql) é USING(true) - leitura pública de
 // propósito, precisa ser lida até por quem ainda não tem sessão nenhuma (a
 // tela de Cadastro é o próprio caso de uso). uq_termos_uso_ativo (02)
 // garante que existe no máximo 1 linha com ativo = TRUE por vez, então
@@ -20,7 +20,7 @@ export class TermoUsoServiceAtivo {
       .executeTakeFirst();
 
     if (!termo) {
-      // Não deveria acontecer num ambiente seedado — sinalizado alto (500
+      // Não deveria acontecer num ambiente seedado - sinalizado alto (500
       // viraria 404 aqui) em vez de deixar o Cadastro seguir sem termo
       // nenhum pra aceitar.
       throw new NotFoundException(

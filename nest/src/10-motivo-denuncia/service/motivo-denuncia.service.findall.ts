@@ -15,7 +15,7 @@ export class MotivoDenunciaServiceFindAll {
   async executar(
     filtro: MotivoDenunciaRequestList = {},
   ): Promise<ResultadoPaginado<MotivoDenunciaResponse>> {
-    // pol_motivo_select (04_rls_policies.sql [04-C-3]) é USING(true) —
+    // pol_motivo_select (04_rls_policies.sql [04-C-3]) é USING(true) -
     // catálogo público, lista mesmo sem login.
     // ERA orderBy('codigo') (removida, 18-08-2026), depois orderBy('descricao').
     // Trocado pra orderBy('id_motivo') (22-08-2026, pedido do Lucas:
