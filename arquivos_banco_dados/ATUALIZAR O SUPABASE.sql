@@ -221,6 +221,25 @@ ON CONFLICT (chave) DO NOTHING;
 
 
 -- ============================================================================
+-- 04-09-2026 - validade de sessão e de token de e-mail viraram configuráveis
+-- pelo Painel Admin (pedido do Lucas: "vamos colocar estes dois no Painel
+-- Admin"). Nenhuma mudança de schema - só 2 chaves novas em `configuracoes`,
+-- lidas pelo Nest (ConfiguracaoValorService) em auth.service.login.ts
+-- (emitirTokens) e auth.service.cadastro.ts, em vez das constantes fixas de
+-- antes (3-auth/constants/auth.constants.ts). O custo de bcrypt do refresh
+-- token (CUSTO_BCRYPT_REFRESH_TOKEN) continua fixo de propósito - é
+-- parâmetro de segurança, não regra de produto.
+--
+-- Seguro rodar de novo? Sim - ON CONFLICT (chave) DO NOTHING.
+-- ============================================================================
+
+INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo) VALUES
+(NULL, 'refresh_token_dias_validade', '30', 'inteiro', 'Por quantos dias a sessão continua válida (refresh token) antes de precisar logar de novo', TRUE),
+(NULL, 'verificacao_email_horas_validade', '24', 'inteiro', 'Validade do token de verificação de e-mail, em horas', TRUE)
+ON CONFLICT (chave) DO NOTHING;
+
+
+-- ============================================================================
 -- NÃO ENTRA NESTE ARQUIVO (registrado aqui só pra não se perder)
 -- ============================================================================
 

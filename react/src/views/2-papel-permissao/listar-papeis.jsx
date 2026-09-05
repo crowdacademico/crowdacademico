@@ -7,7 +7,7 @@ import {
 } from '../../services/2-papel-permissao/api/papel-permissao.api';
 import { ORDEM_PODER_PAPEL } from '../../services/2-papel-permissao/constants/papel-ordem-poder';
 import { detalhePermissao } from '../../services/2-papel-permissao/constants/permissao-nomes-amigaveis';
-import { logAuditoriaApi } from '../../services/28-log-auditoria/api/log-auditoria.api';
+import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
 import { MatrizPapelPermissao } from './matriz-papel-permissao';
 import { ModalDetalhePermissao } from './modal-detalhe-permissao';
 

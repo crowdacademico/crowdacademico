@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { Link } from 'react-router';
 import { GenericTable } from '../../components/crud/generic-table';
 import { tipoLinkApi } from '../../services/9-tipo-link/api/tipo-link.api';
-import { logAuditoriaApi } from '../../services/28-log-auditoria/api/log-auditoria.api';
+import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
 
 // Aba (futura) "Tipos de Link" do painel admin - rota /admin/tipos-link.
 // Já registrada em rotas.constants.js e funcional por URL direta, só

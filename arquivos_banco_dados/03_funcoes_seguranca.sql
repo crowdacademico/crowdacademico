@@ -804,7 +804,7 @@ $$;
 -- não só as aprovadas - é "quantas existem no sistema", não "quantas
 -- estão no ar").
 -- Bloco:      [03-M]
--- Regra:      08-08-2026 - GET /dashboard/resumo (nest/src/29-dashboard)
+-- Regra:      08-08-2026 - GET /dashboard/resumo (nest/src/28-dashboard)
 --             precisa de totais confiáveis pros cards da tela inicial do
 --             painel. RLS filtra LINHA e não é uniforme entre as tabelas
 --             envolvidas: `usuario` só libera não-deletado (ou quem tem

@@ -27,7 +27,7 @@ Este documento é o irmão do `DOCUMENTACAO_BD.md`. Ele cobre o backend em NestJ
 7. [O padrão de módulo - anatomia de `1-usuario` e `12-campanha`](#7-o-padrão-de-módulo--anatomia-de-1-usuario-e-12-campanha)
 8. [Armazenamento e upload de arquivo (`commons/storage` + `25-arquivo`)](#8-armazenamento-e-upload-de-arquivo-commonsstorage--25-arquivo)
 9. [Dado sensível no processo do Nest: CPF (`commons/seguranca`)](#9-dado-sensível-no-processo-do-nest-cpf-commonsseguranca)
-10. [Módulos de apoio do painel: `28-log-auditoria`, `29-dashboard`, `5-termo-uso`](#10-módulos-de-apoio-do-painel-28-log-auditoria-29-dashboard-5-termo-uso)
+10. [Módulos de apoio do painel: `27-log-auditoria`, `28-dashboard`, `5-termo-uso`](#10-módulos-de-apoio-do-painel-27-log-auditoria-28-dashboard-5-termo-uso)
 11. [Bootstrap, segurança HTTP e infraestrutura (`main.ts`, `app/`)](#11-bootstrap-segurança-http-e-infraestrutura-maints-app)
 12. [Migrations: `aplicar-migrations.script.ts`](#12-migrations-aplicar-migrationsscriptts)
 13. [Inventário de rotas HTTP](#13-inventário-de-rotas-http)
@@ -106,7 +106,7 @@ nest/src/
 │   ├── database/              ← ⭐ o coração do projeto (seção 2)
 │   ├── seguranca/             ← cifra de CPF, validador de CPF, decorator @IsCpf
 │   └── storage/               ← abstração de armazenamento de arquivo (seção 8)
-├── 1-usuario/ … 29-dashboard/ ← 29 pastas numeradas, uma por domínio
+├── 1-usuario/ … 28-dashboard/ ← 29 pastas numeradas, uma por domínio
 ```
 
 📌 **A numeração das pastas é a mesma ordem de dependência de produto usada em `PROXIMOS_MODULOS.md`** - `1-usuario` antes de `3-auth` porque autenticação precisa de conta; `12-campanha` antes de `15-atualizacao-campanha` porque atualização pendura numa campanha. **Ela não é ordem de importância nem de execução**: `25-arquivo` (número alto) é usado por `1-usuario` (número baixo).
@@ -207,13 +207,13 @@ const resultado = await paginar(query, { pagina, tamanho });
 
 Monte a query normalmente (`select`/`where`/`orderBy`) e troque o `.execute()` final por `paginar(...)`. Ele aplica `LIMIT`/`OFFSET` e roda a contagem.
 
-📌 **`TAMANHO_PAGINA_PADRAO` e `TAMANHO_PAGINA_MAXIMO` são 500, deliberadamente altos.** Hoje isso é um **teto de segurança** ("nenhum `SELECT` sem limite, nunca mais"), não paginação exposta na tela: o `GenericTable` do React continua buscando a lista inteira e paginando no navegador, o que funciona bem para tabelas pequenas. O comentário no arquivo é explícito sobre quando mudar: **quando um módulo de alto volume existir de verdade** (`22-contribuicao`, `26-notificacao`), *esse* módulo escolhe um tamanho pequeno e o React ganha controles de página - não antes, porque não faz sentido construir paginação contra 17 linhas de teste. `28-log-auditoria` já é o primeiro a fazer isso, com `TAMANHO_PADRAO_LOG = 20` próprio.
+📌 **`TAMANHO_PAGINA_PADRAO` e `TAMANHO_PAGINA_MAXIMO` são 500, deliberadamente altos.** Hoje isso é um **teto de segurança** ("nenhum `SELECT` sem limite, nunca mais"), não paginação exposta na tela: o `GenericTable` do React continua buscando a lista inteira e paginando no navegador, o que funciona bem para tabelas pequenas. O comentário no arquivo é explícito sobre quando mudar: **quando um módulo de alto volume existir de verdade** (`22-contribuicao`, `26-notificacao`), *esse* módulo escolhe um tamanho pequeno e o React ganha controles de página - não antes, porque não faz sentido construir paginação contra 17 linhas de teste. `27-log-auditoria` já é o primeiro a fazer isso, com `TAMANHO_PADRAO_LOG = 20` próprio.
 
 🧩 **As duas queries de `paginar()` são sequenciais, nunca `Promise.all`.** O comentário registra o achado: o driver `pg` emite *"Calling client.query() when the client is already executing a query is deprecated"*. Como há **uma conexão só por requisição** (é isso que faz o `set_config` da RLS funcionar), as duas queries nunca rodavam em paralelo de verdade - o driver só enfileirava por baixo dos panos, e essa fila implícita é justamente o comportamento que o `pg` vai remover. `await` sequencial custa o mesmo tempo total, sem depender de algo que vai sumir.
 
 `PaginacaoQueryDto` (`commons/database/dto/paginacao.query.dto.ts`) é a base que os DTOs de listagem estendem - `@Type(() => Number)` converte a query string antes do `class-validator` rodar.
 
-Usam `paginar()` hoje: `1-usuario`, `6-perfil-pesquisador`, `8-area-conhecimento`, `9-tipo-link`, `10-motivo-denuncia`, `11-configuracoes`, `12-campanha`, `15-atualizacao-campanha`, `17-comentario`, `28-log-auditoria`.
+Usam `paginar()` hoje: `1-usuario`, `6-perfil-pesquisador`, `8-area-conhecimento`, `9-tipo-link`, `10-motivo-denuncia`, `11-configuracoes`, `12-campanha`, `15-atualizacao-campanha`, `17-comentario`, `27-log-auditoria`.
 
 ---
 
@@ -226,7 +226,7 @@ Autenticação própria, JWT com par access + refresh, refresh token com **rota�
 | | Access token | Refresh token |
 |---|---|---|
 | Formato | JWT assinado (`JWT_SECRET`) | `"<id_sessao>.<segredo>"` - texto puro, não é JWT |
-| Validade | `JWT_ACCESS_EXPIRES_IN` (padrão `15m`) | `REFRESH_TOKEN_DIAS_VALIDADE = 30` |
+| Validade | `JWT_ACCESS_EXPIRES_IN` (padrão `15m`) | `configuracoes.refresh_token_dias_validade` (padrão 30, configurável pelo Painel Admin desde 04-09-2026) |
 | Onde é validado | `JwtAuthGuard`, em memória - **nunca consultado contra o banco** | `bcrypt.compare` do segredo contra `sessao.refresh_token_hash` |
 | Claims | `sub` (id do usuário) e `sid` (id da sessão) | - |
 
@@ -262,7 +262,9 @@ Autenticação própria, JWT com par access + refresh, refresh token com **rota�
 
 **Logout** (`POST /auth/logout`): confere o segredo e marca `revogado_em`. Sessão inexistente devolve sucesso, não erro - do ponto de vista do logout, o objetivo (a sessão não vale mais nada) já está satisfeito.
 
-**Cadastro público** (`POST /auth/cadastro` → `auth.service.cadastro.ts`): reaproveita `UsuarioServiceCreate` (a mesmíssima criação que `POST /usuario` do admin usa) e soma o que só faz sentido no auto-cadastro - grava o aceite do termo **ativo** via `registrar_aceite_termo()` (o id do termo é resolvido pelo servidor, **nunca** aceito do corpo da requisição), gera o token de verificação de e-mail em `verificacao_email`, e já devolve tokens de sessão (quem se cadastra termina logado).
+**Cadastro público** (`POST /auth/cadastro` → `auth.service.cadastro.ts`): reaproveita `UsuarioServiceCreate` (a mesmíssima criação que `POST /usuario` do admin usa) e soma o que só faz sentido no auto-cadastro - grava o aceite do termo **ativo** via `registrar_aceite_termo()` (o id do termo é resolvido pelo servidor, **nunca** aceito do corpo da requisição), gera o token de verificação de e-mail em `verificacao_email` (validade em `configuracoes.verificacao_email_horas_validade`, padrão 24h, também configurável pelo Painel Admin desde 04-09-2026), e já devolve tokens de sessão (quem se cadastra termina logado).
+
+📌 **Por que estes dois viraram configuráveis, e o custo de bcrypt não.** `refresh_token_dias_validade` e `verificacao_email_horas_validade` eram constantes fixas em `auth.constants.ts` com um comentário dizendo "parâmetro técnico, não regra de negócio" - revisto em 04-09-2026: os dois são só **janelas de tempo de produto** (por quanto tempo alguém continua logado, por quanto tempo um link de verificação vale), mesmo tipo de número que `configuracoes.bloqueio_login_minutos` já era. Lidos via `ConfiguracaoValorService`, com fallback pro padrão hardcoded se a chave sumir/for desativada - mesmo padrão usado em `25-arquivo` (ver §8.6). `CUSTO_BCRYPT_REFRESH_TOKEN` continua fixo de propósito: é parâmetro de segurança (custo de hash), não regra de produto - baixar isso sem entender a troca enfraquece a defesa contra força bruta offline.
 
 ⚠️ **`tokenVerificacaoEmailDev`.** Como `4-mail` não existe, ninguém envia o e-mail. A linha em `verificacao_email` é criada de qualquer jeito, e o token só viaja no corpo da resposta **fora de produção** (`NODE_ENV !== 'production'`). Em produção ele simplesmente não é devolvido - a escolha declarada foi não fingir que um e-mail foi mandado.
 
@@ -783,11 +785,11 @@ Este é o único dado do sistema que é **cifrado** (não apenas hasheado). O ra
 
 ---
 
-## 10. Módulos de apoio do painel: `28-log-auditoria`, `29-dashboard`, `5-termo-uso`
+## 10. Módulos de apoio do painel: `27-log-auditoria`, `28-dashboard`, `5-termo-uso`
 
 Módulos pequenos, mas reais e em uso pelo painel administrativo.
 
-### `28-log-auditoria` (8 arquivos, 2 endpoints)
+### `27-log-auditoria` (8 arquivos, 2 endpoints)
 
 Somente leitura - a escrita em `log_auditoria` é feita por trigger genérica no banco (letra `L` do `DOCUMENTACAO_BD.md`), nunca pelo Nest.
 
@@ -796,7 +798,7 @@ Somente leitura - a escrita em `log_auditoria` é feita por trigger genérica no
 
 📌 **A autorização é 100% RLS, como sempre.** `pol_log_auditoria_select` exige `tem_permissao('log_visualizar')`; sem ela a query volta **vazia**, não dá erro. O comentário registra a dependência: a policy foi ampliada para deixar qualquer usuário ver as próprias linhas - sem essa mudança aplicada no banco, `minha-atividade` volta vazia para quem não é admin, mesmo sendo autor das próprias linhas.
 
-### `29-dashboard` (4 arquivos, 1 endpoint)
+### `28-dashboard` (4 arquivos, 1 endpoint)
 
 **`GET /dashboard/resumo`** - uma única chamada a `SELECT * FROM contar_metricas_dashboard()` (bloco `[03-M]`).
 

@@ -8,10 +8,12 @@ import * as bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
 import { sql } from 'kysely';
 import { UsuarioServiceFindOne } from '../../1-usuario/service/usuario.service.findone';
+import { ConfiguracaoValorService } from '../../commons/configuracao/configuracao-valor.service';
 import { DatabaseService } from '../../commons/database/database.service';
 import {
+  CHAVE_CONFIG_REFRESH_TOKEN_DIAS_VALIDADE,
   CUSTO_BCRYPT_REFRESH_TOKEN,
-  REFRESH_TOKEN_DIAS_VALIDADE,
+  REFRESH_TOKEN_DIAS_VALIDADE_PADRAO,
   REFRESH_TOKEN_SEPARADOR,
 } from '../constants/auth.constants';
 import { AuthRequestLogin } from '../dto/request/auth.request-login';
@@ -43,6 +45,7 @@ export class AuthServiceLogin {
     private readonly database: DatabaseService,
     private readonly jwtService: JwtService,
     private readonly usuarioServiceFindOne: UsuarioServiceFindOne,
+    private readonly configuracaoValor: ConfiguracaoValorService,
   ) {}
 
   async executar(
@@ -209,8 +212,15 @@ export class AuthServiceLogin {
     const db = this.database.getDb();
     const segredo = randomBytes(32).toString('hex');
     const segredoHash = await bcrypt.hash(segredo, CUSTO_BCRYPT_REFRESH_TOKEN);
+    // Configurável pelo Painel Admin desde 04-09-2026 - cai no padrão
+    // hardcoded (30 dias) se a chave não existir/estiver inativa (ver
+    // ConfiguracaoValorService).
+    const refreshTokenDiasValidade = await this.configuracaoValor.buscarNumero(
+      CHAVE_CONFIG_REFRESH_TOKEN_DIAS_VALIDADE,
+      REFRESH_TOKEN_DIAS_VALIDADE_PADRAO,
+    );
     const expiraEm = new Date(
-      Date.now() + REFRESH_TOKEN_DIAS_VALIDADE * 24 * 60 * 60 * 1000,
+      Date.now() + refreshTokenDiasValidade * 24 * 60 * 60 * 1000,
     );
 
     // sessao (pol_sessao_all, USING(true)/WITH CHECK(true)) - gerenciada

@@ -92,8 +92,8 @@ crowdacademico/                          (repo único na Organization)
 │       │   --- Cluster 5: Infra transversal ---
 │       ├── 25-arquivo/
 │       ├── 26-notificacao/
-│       ├── 28-log-auditoria/        (log_auditoria - só leitura, GET /log-auditoria)
-│       └── 29-dashboard/            (métricas agregadas do painel - GET /dashboard/resumo)
+│       ├── 27-log-auditoria/        (log_auditoria - só leitura, GET /log-auditoria)
+│       └── 28-dashboard/            (métricas agregadas do painel - GET /dashboard/resumo)
 │
 │       (padrão interno de cada módulo N-nome/, igual ao modelo):
 │       │   ├── constants/
@@ -138,8 +138,8 @@ crowdacademico/                          (repo único na Organization)
         │   ├── 22-contribuicao/
         │   ├── 23-repasse/
         │   ├── 26-notificacao/
-        │   ├── 28-log-auditoria/    (consumido pelo componente "Ver log" do GenericTable)
-        │   ├── admin/                (inclui a busca de métricas do 29-dashboard - sem pasta numerada própria aqui)
+        │   ├── 27-log-auditoria/    (consumido pelo componente "Ver log" do GenericTable)
+        │   ├── admin/                (inclui a busca de métricas do 28-dashboard - sem pasta numerada própria aqui)
         │   ├── constant/
         │   └── router/
         │       (cada um dos numerados com api/, constants/, hook/, type/ - igual ao modelo)

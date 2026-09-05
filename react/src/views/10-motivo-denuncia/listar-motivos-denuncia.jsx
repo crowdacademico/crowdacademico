@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { Link } from 'react-router';
 import { GenericTable } from '../../components/crud/generic-table';
 import { motivoDenunciaApi } from '../../services/10-motivo-denuncia/api/motivo-denuncia.api';
-import { logAuditoriaApi } from '../../services/28-log-auditoria/api/log-auditoria.api';
+import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
 
 // Ordem fixa do filtro por faceta abaixo (campanha antes de perfil) - os
 // 2 únicos valores de tipo_motivo_denuncia (01_extensoes_enums_tabelas.sql),

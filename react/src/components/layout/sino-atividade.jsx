@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { logAuditoriaApi } from '../../services/28-log-auditoria/api/log-auditoria.api';
+import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
 
 const CHAVE_ULTIMO_VISTO = 'crowdacademico.atividadeUltimoLogVisto';
 

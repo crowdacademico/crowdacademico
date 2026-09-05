@@ -17,7 +17,7 @@ Cada RF ganha duas colunas de status:
 
 **Metodologia:** a coluna Banco foi conferida contra `DOCUMENTACAO_BD.md`. A coluna Nest foi conferida principalmente pela EXISTÊNCIA de módulo com código real (mesma lista que o próprio `REQUISITOS_V4.md` já traz no cabeçalho, conferida em 04-09-2026) - módulo vazio = ❌ automático para tudo que depende dele, sem exceção. Para módulos que já têm código, o comportamento específico de cada RF nem sempre foi lido linha a linha - nesses casos o símbolo é 🟡 com nota, não um ✅ inventado. **Qualquer 🟡 marcado "não conferido a fundo" merece uma conferência de verdade antes de ser tratado como fato definitivo.**
 
-**Módulos Nest vazios (04-09-2026), afetam toda a matriz abaixo:** `4-mail`, `18-recompensa`, `19-denuncia`, `20-solicitacao-encerramento`, `21-historico-rejeicao`, `22-contribuicao`, `23-repasse`, `24-auditoria-financeira`, `26-notificacao`. `29-dashboard` está parcial (só `GET /dashboard/resumo`). (`27-resources` existia como pasta vazia até 04-09-2026, quando foi removida por não ter propósito real neste projeto - não aparece mais na lista de módulos.) Ver `PROXIMOS_MODULOS.md` para o que falta em cada um.
+**Módulos Nest vazios (04-09-2026), afetam toda a matriz abaixo:** `4-mail`, `18-recompensa`, `19-denuncia`, `20-solicitacao-encerramento`, `21-historico-rejeicao`, `22-contribuicao`, `23-repasse`, `24-auditoria-financeira`, `26-notificacao`. `28-dashboard` está parcial (só `GET /dashboard/resumo`). (`27-resources` existia como pasta vazia até 04-09-2026, quando foi removida por não ter propósito real neste projeto - não aparece mais na lista de módulos.) Ver `PROXIMOS_MODULOS.md` para o que falta em cada um.
 
 ---
 
@@ -138,7 +138,7 @@ Todo este grupo depende de `22-contribuicao` (vazio) e de uma decisão de gatewa
 - **RF-080** (painel do usuário: histórico + campanhas seguidas) - Banco ✅ (dados existem) · Nest 🟡 (seguir funciona; histórico de doação depende de `22-contribuicao`, vazio).
 - **RF-081** (painel do pesquisador: campanhas + métricas + valor líquido real no encerramento) - Banco ✅ · Nest 🟡 (`12-campanha` cobre listagem; valor líquido real depende de `23-repasse`, vazio).
 - **RF-082** (valor líquido estimado, com % da taxa, mesmo campanha ativa) - Banco ✅ (taxa carimbada) · Nest 🟡 (cálculo simples de fazer com o que já existe, mas não confirmei se está exposto).
-- **RF-083** (painel do Admin: métricas gerais da plataforma) - Banco ✅ (`contar_metricas_dashboard()` - `[03-M]`) · Nest ✅ (`29-dashboard`, `GET /dashboard/resumo`).
+- **RF-083** (painel do Admin: métricas gerais da plataforma) - Banco ✅ (`contar_metricas_dashboard()` - `[03-M]`) · Nest ✅ (`28-dashboard`, `GET /dashboard/resumo`).
 
 ## Grupo: Administração (RF-084 a RF-085)
 
@@ -178,7 +178,7 @@ Módulo bem batalhado em ambas as camadas - ver o histórico extenso de bugs de 
 - **RF-106** (autor da denúncia não pode julgar a própria) - Banco ✅ (confirmado - este é o achado que corrigiu a Origem do RF na versão anterior do documento) · Nest ❌ (mesmo motivo).
 - **RF-107** (lista de campanhas denunciadas p/ Admin) - Banco ✅ · Nest ❌.
 - **RF-108** (encerrar/ocultar campanha denunciada, aplica devolução do modelo, oculta página imediatamente, comentários somem junto) - Banco ✅ (`[05-K-2]`, muito detalhado; desde 04-09-2026 o `moderador` também tem a permissão pra executar isso, não só o `admin` - ver `PENDENCIAS`, item 57) · Nest 🟡 (mudança de status é `12-campanha`, provável, mas não existe hoje nenhum endpoint de "encerrar campanha por moderação" no Nest - nem pra admin, nem pra moderador; devolução real também depende de `23-repasse`, vazio).
-- **RF-109** (notificar doadores por e-mail no encerramento por moderação flexível, log de auditoria) - Banco ✅ (`log_auditoria`) · Nest 🟡 (log via `28-log-auditoria` ✅; e-mail ❌ por `4-mail` vazio).
+- **RF-109** (notificar doadores por e-mail no encerramento por moderação flexível, log de auditoria) - Banco ✅ (`log_auditoria`) · Nest 🟡 (log via `27-log-auditoria` ✅; e-mail ❌ por `4-mail` vazio).
 - **RF-110** (lista de denúncias contra perfil de pesquisador p/ Admin) - Banco ✅ · Nest ❌ (`19-denuncia` vazio).
 - **RF-111** (suspender/desativar perfil de pesquisador, mantém como Usuário) - Banco ✅ (`suspender_pesquisador()` - `[03-P]`, muito bem coberto) · Nest 🟡 (função de banco pronta e testada; não confirmei se está ligada ao mesmo mecanismo de moderação de conta do RF-112, ou se são dois caminhos paralelos).
 - **RF-112** (suspender conta ou papel específico, com motivo e prazo, expira sozinha, distinta do bloqueio automático de login) - Banco ✅ (`usuario.suspenso_ate`/`motivo_suspensao`/`suspenso_por`, `usuario_papel.suspenso_ate` - `[03-N]`) · Nest ✅ (`SecaoModeracao` em Alterar Usuário, opções de prazo configuráveis, motivo obrigatório - ver `DOCUMENTACAO_FRONTEND.md`, seção 16).
@@ -188,7 +188,7 @@ Módulo bem batalhado em ambas as camadas - ver o histórico extenso de bugs de 
 ## Grupo: Notificações (RF-115 a RF-116)
 
 - **RF-115** (registrar notificação antes do envio, status, tentativas) - Banco ✅ (`notificacao`, `idx_notificacao_status`) · Nest ❌ (`26-notificacao` E `4-mail` vazios - a fila existe no banco, ninguém a processa ainda).
-- **RF-116** (log de auditoria administrativa, somente-inclusão, sem senha/CPF) - Banco ✅ (`log_auditoria`, letra `L`, muito bem coberto) · Nest ✅ (`28-log-auditoria`).
+- **RF-116** (log de auditoria administrativa, somente-inclusão, sem senha/CPF) - Banco ✅ (`log_auditoria`, letra `L`, muito bem coberto) · Nest ✅ (`27-log-auditoria`).
 
 ---
 

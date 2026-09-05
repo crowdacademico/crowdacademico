@@ -109,7 +109,7 @@ react/
 
 ### A regra: `views/` e `services/` espelham os números dos módulos Nest
 
-Tanto `services/` quanto `views/` usam pastas nomeadas `<numero>-<nome>`, com **o mesmo número do módulo correspondente no backend** - `services/1-usuario/`, `services/2-papel-permissao/`, `services/11-configuracoes/`, `services/12-campanha/`, `services/25-arquivo/`, `services/28-log-auditoria/`, e assim por diante.
+Tanto `services/` quanto `views/` usam pastas nomeadas `<numero>-<nome>`, com **o mesmo número do módulo correspondente no backend** - `services/1-usuario/`, `services/2-papel-permissao/`, `services/11-configuracoes/`, `services/12-campanha/`, `services/25-arquivo/`, `services/27-log-auditoria/`, e assim por diante.
 
 📌 **Por que.** A regra está registrada em `PENDENCIAS e correcoes.md`, na descrição da primeira versão do painel: *"Pastas novas espelhando números que já existiam no Nest (`services/2-papel-permissao/`, `services/11-configuracoes/`), sem inventar número novo - mesma regra da reorganização anterior."* O efeito prático é que o número é uma chave estável entre os dois repositórios: `services/9-tipo-link/api/tipo-link.api.js` fala com `nest/src/9-tipo-link`, e o comentário no topo de praticamente todo arquivo `.api.js` diz isso explicitamente (*"Espelha `nest/src/9-tipo-link`"*).
 
@@ -123,7 +123,7 @@ Nem tudo mapeia para um módulo do Nest. Essas ganham nome próprio, no mesmo n�
 |---|---|
 | `services/constant/` | o que é compartilhado por todos os módulos: `constants/api.constants.js` (a URL base), `api/http.util.js` (tratamento de resposta), `api/traduzir-erro.util.js`, `utils/formatacao.util.js` (moeda/percentual/CPF em pt-BR) |
 | `services/router/` | `rotas.constants.js` - a fonte única de "quais páginas existem" |
-| `services/admin/` | `api/dashboard.api.js` (métricas do painel, módulo `29-dashboard` no Nest) |
+| `services/admin/` | `api/dashboard.api.js` (métricas do painel, módulo `28-dashboard` no Nest) |
 | `services/campo-testes/` | contexto, hooks e utilitários da bancada de testes (ver seção 12) |
 | `views/admin/` | a casca do painel (layout, sidebar, menu) e as telas de Dashboard |
 | `views/campo-testes/` | as telas T1/T2/T3/T4 |

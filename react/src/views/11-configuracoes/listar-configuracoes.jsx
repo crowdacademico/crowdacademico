@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { Link } from 'react-router';
 import { GenericTable } from '../../components/crud/generic-table';
 import { configuracaoApi } from '../../services/11-configuracoes/api/configuracao.api';
-import { logAuditoriaApi } from '../../services/28-log-auditoria/api/log-auditoria.api';
+import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
 
 // Aba "Parâmetros do Sistema" do painel admin - rota /admin/configuracoes
 // (URL/tabela/variáveis internas continuam "configuracoes" de propósito,

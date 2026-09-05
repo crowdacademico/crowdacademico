@@ -747,6 +747,16 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo) VAL
 -- D
 (NULL, 'limite_tentativas_login',    '5',     'inteiro',  'Nº de tentativas de login falhas antes de bloquear a conta',    TRUE),
 (NULL, 'bloqueio_login_minutos',     '15',    'inteiro',  'Duração do bloqueio de login após exceder o limite de tentativas (minutos)', TRUE),
+-- ADICIONADAS (04-09-2026, pedido do Lucas: "vamos colocar estes dois no
+-- Painel Admin") - lidas por ConfiguracaoValorService (commons/configuracao)
+-- em auth.service.login.ts/auth.service.cadastro.ts, mesmo padrão dos dois
+-- de cima (limite_tentativas_login/bloqueio_login_minutos). Antes eram
+-- constantes fixas em 3-auth/constants/auth.constants.ts, com um comentário
+-- dizendo "parâmetro técnico, não regra de negócio configurável" - revisto
+-- agora: são exatamente o mesmo tipo de janela de tempo que os dois de
+-- cima, então não fazia sentido tratar diferente.
+(NULL, 'refresh_token_dias_validade', '30',   'inteiro',  'Por quantos dias a sessão continua válida (refresh token) antes de precisar logar de novo', TRUE),
+(NULL, 'verificacao_email_horas_validade', '24', 'inteiro', 'Validade do token de verificação de e-mail, em horas', TRUE),
 -- ADICIONADA (09-08-2026, Bloco G - moderação/suspensão): opções de prazo
 -- sugeridas no seletor de "Suspender Usuário" do painel; lida pelo React
 -- (minha-conta/alterar-usuario), não por nenhuma trigger/função do banco.

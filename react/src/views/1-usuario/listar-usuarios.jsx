@@ -7,7 +7,7 @@ import {
   ORDEM_PODER_PAPEL,
   PAPEL_SEM_EXTRA,
 } from '../../services/2-papel-permissao/constants/papel-ordem-poder';
-import { logAuditoriaApi } from '../../services/28-log-auditoria/api/log-auditoria.api';
+import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
 
 // Papel que TODO cadastro já ganha automaticamente (atribuir_papel_padrao,
 // 08_trigger_signup_usuario.sql) - mostrar ele na coluna "papel" seria

@@ -13,6 +13,10 @@ export const GRUPO_CONFIGURACAO = {
   limite_tentativas_login: 'Segurança',
   bloqueio_login_minutos: 'Segurança',
   suspensao_usuario_opcoes_dias: 'Segurança',
+  // ADICIONADAS (04-09-2026, pedido do Lucas) - antes eram constantes fixas
+  // em 3-auth/constants/auth.constants.ts.
+  refresh_token_dias_validade: 'Segurança',
+  verificacao_email_horas_validade: 'Segurança',
   // Financeiro
   taxa_plataforma_padrao: 'Financeiro',
   meta_minima_campanha: 'Financeiro',

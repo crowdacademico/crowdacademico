@@ -2,8 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { sql } from 'kysely';
 import { UsuarioServiceCreate } from '../../1-usuario/service/usuario.service.create';
 import { TermoUsoServiceAtivo } from '../../5-termo-uso/service/termo-uso.service.ativo';
+import { ConfiguracaoValorService } from '../../commons/configuracao/configuracao-valor.service';
 import { DatabaseService } from '../../commons/database/database.service';
-import { VERIFICACAO_EMAIL_HORAS_VALIDADE } from '../constants/auth.constants';
+import {
+  CHAVE_CONFIG_VERIFICACAO_EMAIL_HORAS_VALIDADE,
+  VERIFICACAO_EMAIL_HORAS_VALIDADE_PADRAO,
+} from '../constants/auth.constants';
 import { AuthRequestRegister } from '../dto/request/auth.request-register';
 import { AuthResponseRegister } from '../dto/response/auth.response-register';
 import { AuthServiceLogin } from './auth.service.login';
@@ -23,6 +27,7 @@ export class AuthServiceCadastro {
     private readonly usuarioServiceCreate: UsuarioServiceCreate,
     private readonly termoUsoServiceAtivo: TermoUsoServiceAtivo,
     private readonly authServiceLogin: AuthServiceLogin,
+    private readonly configuracaoValor: ConfiguracaoValorService,
   ) {}
 
   async executar(
@@ -53,8 +58,16 @@ export class AuthServiceCadastro {
     // mesmo jeito, só que ninguém recebe o token ainda (nada de fingir que
     // um e-mail foi mandado).
     const { token, hash } = gerarTokenVerificacaoEmail();
+    // Configurável pelo Painel Admin desde 04-09-2026 - cai no padrão
+    // hardcoded (24h) se a chave não existir/estiver inativa (ver
+    // ConfiguracaoValorService).
+    const verificacaoEmailHorasValidade =
+      await this.configuracaoValor.buscarNumero(
+        CHAVE_CONFIG_VERIFICACAO_EMAIL_HORAS_VALIDADE,
+        VERIFICACAO_EMAIL_HORAS_VALIDADE_PADRAO,
+      );
     const expiraEm = new Date(
-      Date.now() + VERIFICACAO_EMAIL_HORAS_VALIDADE * 60 * 60 * 1000,
+      Date.now() + verificacaoEmailHorasValidade * 60 * 60 * 1000,
     );
     await db
       .insertInto('verificacao_email')
