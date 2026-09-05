@@ -18,13 +18,13 @@ export function CriarUsuario({ auth }) {
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
-  // Foto de perfil (módulo 25-arquivo) - OPCIONAL na criação. O upload
+  // Foto de perfil (módulo 25-arquivo) — OPCIONAL na criação. O upload
   // acontece na hora (SeletorFotoPerfil já sobe e confirma o arquivo antes
   // de devolver o id), então aqui só guardamos o id_arquivo já confirmado
   // pra mandar junto do POST /usuario quando existir. Sem foto escolhida,
-  // idImagemPerfil fica null e o campo nem entra no corpo da requisição -
-  // usuário nasce usando o avatar padrão do sistema (ver
-  // ArquivoServiceResolverAvatar).
+  // idImagemPerfil fica null e o campo nem entra no corpo da requisição —
+  // AvatarUsuario mostra iniciais com fundo colorido até a pessoa
+  // cadastrar uma foto de verdade.
   const [idImagemPerfil, setIdImagemPerfil] = useState(null);
   const [urlImagemPerfil, setUrlImagemPerfil] = useState(null);
   const [enviando, setEnviando] = useState(false);

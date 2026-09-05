@@ -83,7 +83,6 @@ export function ConsultarUsuario({ auth }) {
   // Avatar (módulo 25-arquivo) - busca separada de `usuario` de propósito:
   // GET /arquivo/avatar/:idUsuario é público (não precisa de auth.authFetch,
   // é o próprio backend que já resolve foto-cadastrada-ou-padrão), e um
-  // erro aqui (ex.: avatar padrão ainda não configurado, url null) não deve
   // impedir o resto da ficha de carregar - daí o .catch(() => null) igual
   // já é feito pra `papeis` logo abaixo.
   const [avatar, setAvatar] = useState(null);
@@ -226,7 +225,7 @@ export function ConsultarUsuario({ auth }) {
                     Foto cadastrada
                   </span>
                 ) : (
-                  'Avatar padrão do sistema'
+                  'Sem foto (usa iniciais)'
                 )
               }
             />

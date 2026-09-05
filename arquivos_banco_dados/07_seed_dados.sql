@@ -736,15 +736,7 @@ FROM usuario;
 INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo) VALUES
 -- A
 (NULL, 'email_suporte',              'suporte@crowdacademico.com.br', 'texto', 'E-mail de suporte ao usuário',   TRUE), -- lida pelo NestJS (rodapé/e-mails transacionais), não pelo banco - nenhum .sql precisa dela
--- ADICIONADA (24-08-2026, módulo 25-arquivo): chave (não URL completa) do
--- objeto no bucket usado como foto de perfil de quem nunca cadastrou uma -
--- lida por ArquivoServiceResolverAvatar (25-arquivo), nunca pelo banco.
--- NULL de propósito: qual imagem usar ainda não foi decidido pelo time.
--- Assim que decidirem, é só subir o arquivo (endpoint de upload já
--- funciona) e colar a chave aqui pelo próprio painel Admin > Configurações
--- - sem deploy novo.
-(NULL, 'avatar_padrao_chave',        NULL, 'texto', 'Chave do objeto (no bucket) usado como avatar de quem não tem foto de perfil cadastrada - definir após a equipe escolher a imagem', TRUE),
--- D
+-- B
 (NULL, 'limite_tentativas_login',    '5',     'inteiro',  'Nº de tentativas de login falhas antes de bloquear a conta',    TRUE),
 (NULL, 'bloqueio_login_minutos',     '15',    'inteiro',  'Duração do bloqueio de login após exceder o limite de tentativas (minutos)', TRUE),
 -- ADICIONADAS (04-09-2026, pedido do Lucas: "vamos colocar estes dois no
