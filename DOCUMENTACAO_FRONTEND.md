@@ -37,6 +37,7 @@ Este documento é o equivalente do `DOCUMENTACAO_BD.md` para o **app React** que
 14. [O que não existe ainda / pontos em aberto](#14-o-que-não-existe-ainda--pontos-em-aberto)
 15. [Fluxo público: cadastro, termos de uso e verificação de e-mail](#15-fluxo-público-cadastro-termos-de-uso-e-verificação-de-e-mail)
 16. [Minha Conta e moderação de conta](#16-minha-conta-e-moderação-de-conta)
+17. [Painel Admin: Dashboard e suas 4 abas](#17-painel-admin-dashboard-e-suas-4-abas)
 
 ---
 
@@ -637,3 +638,37 @@ Seção dentro de **Alterar Usuário** (não uma tela própria - é ação sobre
 - Datas de suspensão são buscadas por `usuarioApi.buscarSuspensao()`, numa chamada separada da busca normal do usuário - ver a nota sobre `SAVEPOINT`/`USUARIO_COLUNAS_SELECT` na seção 5, mesma proteção aplicada aqui: uma coluna que só existe depois de uma migração pendente no banco nunca pode quebrar o login/consulta geral de usuário se ainda não tiver sido aplicada.
 
 📌 **As colunas de suspensão (`usuario.suspenso_ate`/`motivo_suspensao`/`suspenso_por`, `usuario_papel.suspenso_ate`) dependiam de uma migração colada manualmente no SQL Editor do Supabase (`ATUALIZAR O SUPABASE.sql`) - já aplicada.** Se algum dia um banco específico ainda não tiver rodado esse arquivo, `buscarSuspensao()` falha isolado (capturado, sem derrubar o resto da tela) e a seção some silenciosamente, em vez de quebrar o resto de Alterar Usuário - mesma proteção `SAVEPOINT` descrita na seção 5.
+
+---
+
+## 17. Painel Admin: Dashboard e suas 4 abas
+
+**Achado numa revisão de sistema completa (05-09-2026): esta tela (`views/admin/dashboard.jsx`, rota `/admin/dashboard`) nunca tinha ganhado seção própria neste documento**, apesar de ser a tela inicial do painel admin desde 08-08-2026. `Tooltip` (`components/layout/tooltip.jsx`) também só aparecia citado de passagem (seção 9) - as variantes novas (`baixo`/`aoClicar`/`badge`) nunca tinham sido documentadas.
+
+### As 4 abas (`ABAS`, dentro do próprio `dashboard.jsx`)
+
+| Aba | Componente | O que mostra |
+|---|---|---|
+| Visão Geral | (inline, no próprio `dashboard.jsx`) | Faixa de saúde (banco conectado/sessões ativas/notificações pendentes) + 6 cards de métrica (`GET /dashboard/resumo`) + prévia de notificações |
+| Regras do Negócio | `dashboard-regras-negocio.jsx` | As ~37 chaves de `configuracoes`, agrupadas por assunto |
+| Identidade Visual | `dashboard-identidade-visual.jsx` | Placeholder - gerenciar logo/favicon ainda não foi construído |
+| Saúde | `dashboard-saude.jsx` | Mesmo estado da faixa de saúde da Visão Geral, sem refazer requisição, mais contagens agregadas |
+
+📌 **Faixa de saúde e cards de métrica vêm de DUAS requisições independentes, de propósito** - não um `Promise.all` combinado. Achado do Lucas testando: se `GET /dashboard/resumo` falhasse (ex.: banco fora do ar), a tela inteira ficava em branco, bem no momento em que mais precisava mostrar "banco sem conexão". Cada uma tem seu próprio estado de carregando/erro agora.
+
+⚠️ **Comentário desatualizado, achado nesta revisão:** `dashboard-saude.jsx` diz que a tabela `schema_migrations` "NÃO EXISTE neste projeto" e por isso a aba não mostra "última migration aplicada"/divergência de hash. Isso deixou de ser verdade em 04/05-09-2026 - `aplicar-migrations.script.ts` (`DOCUMENTACAO_BACKEND.md`, seção 12) criou exatamente essa tabela, e ela já tem linhas de verdade no banco (Lucas rodou `npm run db:migrate:adotar`). O placeholder em si continua correto (ninguém implementou de fato mostrar isso na tela), só a justificativa ("a tabela não existe") ficou errada - mesma classe de achado já registrada nesta seção pro `dashboard-identidade-visual.jsx` (seção 14).
+
+### `dashboard-regras-negocio.jsx` - configuração agrupada por assunto
+
+Segunda forma de olhar pro mesmo dado da aba "Configurações" (CRUD cru, `11-configuracoes`) - aqui as chaves de `configuracoes` aparecem **agrupadas por tema** (Segurança, Financeiro, Campanha, Score / Reputação, Arquivo, Geral, Outras), cada grupo num cartão com título + lista de `chave: valor` + botão "Alterar" indo pra mesma tela de edição de sempre. Não duplica formulário nenhum, só organiza a leitura.
+
+- **`services/11-configuracoes/constants/configuracao-grupos.js`** - `GRUPO_CONFIGURACAO` é um dicionário `chave → nome do grupo`, mantido à mão (mesmo espírito de `permissao-nomes-amigaveis.js`). Uma chave nova em `configuracoes` que não ganhar entrada aqui cai automaticamente no grupo "Outras" - nunca quebra a tela, só fica sem organização até alguém lembrar de classificar. `agruparConfiguracoes()` devolve os grupos já na ordem certa de exibição (`ORDEM_GRUPOS`) - "Outras" sempre por último, mesmo tendo o maior número de linhas.
+- **Grupo "Arquivo" tem um ícone ⓘ ao lado do título, que abre um modal** (`ModalDetalhe`, mesmo componente da seção 9) com a explicação completa dos 7 limites de upload configuráveis e por que o teto do Supabase Storage (50MB/arquivo, 1GB total) importa. Nasceu de um pedido do Lucas: a explicação era grande demais pra caber num tooltip comum, então o ícone virou clicável (`aoClicar`) em vez de só mostrar texto no hover.
+
+### `Tooltip` (`components/layout/tooltip.jsx`) - variantes
+
+CSS puro (`:hover`/`:focus`), sem estado de React. Três props opcionais, todas podem combinar:
+
+- **`baixo`** - abre a dica pra BAIXO em vez de pra cima (padrão). Usar quando o ícone fica perto do topo de um cartão com `overflow-hidden` (ex.: cabeçalho de grupo em `dashboard-regras-negocio.jsx`) - a dica padrão nascia cortada pela borda arredondada do cartão.
+- **`aoClicar`** - o ícone vira um `<button>` clicável (cursor de ponteiro em vez de "?"); o hover continua mostrando só `texto` (curto, tipo "Saiba mais"), e o clique dispara a função passada - normalmente pra abrir um `ModalDetalhe` com a explicação completa em seções/parágrafos, em vez de um bloco de texto só dentro do balão do tooltip.
+- **`badge`** - selo circular escuro sobreposto (não um ícone solto flutuando do lado), mesmo padrão visual de "editar foto" do Instagram/LinkedIn - usado em `consultar-usuario.jsx` (módulo 1, seção 16) no canto inferior direito do avatar, abrindo a foto de perfil em outra guia.

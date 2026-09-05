@@ -60,9 +60,17 @@ const SQL_CRIAR_TABELA_CONTROLE = `
   );
 `;
 
+// Só os 8 arquivos numerados (`01_...` a `08_...`) - NUNCA `ATUALIZAR O
+// SUPABASE.sql` (achado do Lucas, 05-09-2026, rodando `--adotar` de
+// verdade: o filtro antigo, "termina em .sql", pegava qualquer .sql da
+// pasta, inclusive esse). `ATUALIZAR O SUPABASE.sql` é um rascunho VIVO -
+// cresce toda vez que alguém adiciona um ajuste pequeno (ex.: RF-108,
+// limites de upload) - tratar ele como um dos 8 faria o hash mudar a cada
+// adição, disparando o aviso de "conteúdo mudou" pra sempre, sem nunca
+// fazer sentido reaplicar o arquivo INTEIRO de uma vez.
 function listarArquivosSqlEmOrdem(): string[] {
   return readdirSync(PASTA_ARQUIVOS_SQL)
-    .filter((nome) => nome.endsWith('.sql'))
+    .filter((nome) => /^\d{2}_.*\.sql$/.test(nome))
     .sort(); // '01_...' a '08_...' - ordem alfabética já é a ordem certa (prefixo numérico com 2 dígitos)
 }
 

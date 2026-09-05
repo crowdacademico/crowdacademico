@@ -233,6 +233,63 @@ ON CONFLICT (chave) DO NOTHING;
 -- Seguro rodar de novo? Sim - ON CONFLICT (chave) DO NOTHING.
 -- ============================================================================
 
+
+-- ============================================================================
+-- 05-09-2026 - orcamento_min_itens virou 1 (não mais 3). Achado conferindo
+-- REQUISITOS_V5.md (RF-039: "valores padrão de 1 (mínimo) e 10 (máximo)")
+-- contra o banco - o texto oficial do requisito diz 1, o banco tinha 3
+-- (decisão de 01-08-2026, meio-termo de uma faixa sugerida na época).
+-- Decisão do Lucas: ajustar o banco pro texto do requisito, não o contrário.
+-- cronograma_min_marcos NÃO muda, continua 3 (RF-041 já cita 3 certo).
+--
+-- Seguro rodar de novo? Sim - o UPDATE é idempotente (só muda algo na
+-- primeira vez; nas seguintes já está em '1' e não faz diferença), e o
+-- CREATE OR REPLACE FUNCTION sempre pode rodar de novo.
+-- ============================================================================
+
+UPDATE configuracoes SET valor = '1' WHERE chave = 'orcamento_min_itens';
+
+CREATE OR REPLACE FUNCTION public.fn_valida_completude_campanha_aprovacao()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+    v_min_orcamento  INT;
+    v_min_marcos     INT;
+    v_qtd_orcamento  INT;
+    v_qtd_marcos     INT;
+    v_soma_orcamento DECIMAL(10,2);
+BEGIN
+    v_min_orcamento := public.config_numero('orcamento_min_itens', 1)::INT;
+    v_min_marcos    := public.config_numero('cronograma_min_marcos', 3)::INT;
+
+    SELECT COUNT(*), COALESCE(SUM(valor), 0)
+      INTO v_qtd_orcamento, v_soma_orcamento
+      FROM orcamento_campanha
+      WHERE id_campanha = NEW.id_campanha;
+
+    SELECT COUNT(*)
+      INTO v_qtd_marcos
+      FROM marco_cronograma
+      WHERE id_campanha = NEW.id_campanha;
+
+    IF v_qtd_orcamento < v_min_orcamento THEN
+        RAISE EXCEPTION 'A campanha precisa de pelo menos % itens de orçamento para ser aprovada (tem %).', v_min_orcamento, v_qtd_orcamento
+            USING ERRCODE = '90009';
+    END IF;
+
+    IF v_qtd_marcos < v_min_marcos THEN
+        RAISE EXCEPTION 'A campanha precisa de pelo menos % marcos de cronograma para ser aprovada (tem %).', v_min_marcos, v_qtd_marcos
+            USING ERRCODE = '90010';
+    END IF;
+
+    IF v_soma_orcamento <> NEW.meta_financeira THEN
+        RAISE EXCEPTION 'A soma dos itens de orçamento (%) precisa ser exatamente igual à meta financeira (%) para a campanha ser aprovada.', v_soma_orcamento, NEW.meta_financeira
+            USING ERRCODE = '90011';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
 INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo) VALUES
 (NULL, 'refresh_token_dias_validade', '30', 'inteiro', 'Por quantos dias a sessão continua válida (refresh token) antes de precisar logar de novo', TRUE),
 (NULL, 'verificacao_email_horas_validade', '24', 'inteiro', 'Validade do token de verificação de e-mail, em horas', TRUE)

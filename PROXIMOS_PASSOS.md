@@ -61,11 +61,10 @@ A página pública de campanha (a que um doador visita, compartilha no WhatsApp)
 
 ## 4. Exportação de dados (LGPD Art. 18) e Request ID por requisição
 
-Dois itens de baixo risco técnico, só não entraram ainda por tempo/prioridade:
-- **Exportação de dados do usuário** (LGPD Art. 18, portabilidade) - a exclusão de conta já existe, faltava o par (exportar antes de excluir, ou por pedido).
-- **Request ID por requisição** - `nestjs-cls` já está instalado (usado pra RLS), só falta gerar um ID por requisição e incluir no log, pra virar "achei os 8 logs daquela requisição" em vez de "deu erro às 14:32".
+- **Exportação de dados do usuário** (LGPD Art. 18, portabilidade) - a exclusão de conta já existe, falta o par (exportar antes de excluir, ou por pedido). Não depende de nenhum módulo novo - viveria dentro de `1-usuario`, mesmo padrão de `usuario.service.remove.ts`.
+- 🟢 **Request ID por requisição - RESOLVIDO (05-09-2026).** `nestjs-cls` ganhou `generateId`/`idGenerator` (`database.module.ts`) e `commons/logging/request-logger.middleware.ts` loga toda requisição no formato `[id] MÉTODO /rota STATUS - Xms`. Detalhamento completo (inclusive por que é middleware, não interceptor) em `DOCUMENTACAO_BACKEND.md`, §2.8.
 
-**Status:** não iniciado, sem bloqueio - é só entrar na fila.
+**Status:** exportação de dados não iniciada, sem bloqueio - é só entrar na fila. Request ID concluído.
 
 ---
 

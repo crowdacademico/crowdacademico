@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { Global, Inject, Logger, Module, OnModuleInit } from '@nestjs/common';
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -22,7 +23,23 @@ import { PostgresExceptionFilter } from './postgres-exception.filter';
     // AsyncLocalStorage por requisição, não decide nada de negócio) em toda
     // rota automaticamente - sem isso, o `cls.set()` do GlobalDbInterceptor
     // não teria contexto nenhum pra escrever.
-    ClsModule.forRoot({ global: true, middleware: { mount: true } }),
+    //
+    // generateId/idGenerator (05-09-2026, item 6 da lista de pendências:
+    // "Request ID por requisição nos logs") - gera um UUID por requisição,
+    // guardado sob a chave reservada CLS_ID (não uma chave nossa, é a
+    // própria convenção do nestjs-cls) e lido em qualquer lugar via
+    // `cls.getId()` - é o que RequestLoggerMiddleware (commons/logging)
+    // usa pra marcar cada linha de log com o id da requisição que a
+    // originou. Sem `idGenerator` explícito, `generateId: true` sozinho
+    // não gera nada (o pacote não tem gerador padrão embutido).
+    ClsModule.forRoot({
+      global: true,
+      middleware: {
+        mount: true,
+        generateId: true,
+        idGenerator: () => randomUUID(),
+      },
+    }),
   ],
   providers: [
     {

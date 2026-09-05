@@ -8,6 +8,7 @@ import { CampanhaControllerRemove } from './controllers/campanha.controller.remo
 import { CampanhaControllerUpdate } from './controllers/campanha.controller.update';
 import { CampanhaServiceAprovar } from './service/campanha.service.aprovar';
 import { CampanhaServiceCreate } from './service/campanha.service.create';
+import { CampanhaServiceEncerrarVencidas } from './service/campanha.service.encerrar-vencidas';
 import { CampanhaServiceFindAll } from './service/campanha.service.findall';
 import { CampanhaServiceFindOne } from './service/campanha.service.findone';
 import { CampanhaServiceRejeitar } from './service/campanha.service.rejeitar';
@@ -32,6 +33,9 @@ import { CampanhaServiceUpdate } from './service/campanha.service.update';
     CampanhaServiceAprovar,
     CampanhaServiceRejeitar,
     CampanhaServiceRemove,
+    // Job agendado (RF-057) - registrado aqui só porque o @Cron precisa de
+    // um provider vivo pra existir; não é chamado por nenhum controller.
+    CampanhaServiceEncerrarVencidas,
   ],
 })
 export class CampanhaModule {}

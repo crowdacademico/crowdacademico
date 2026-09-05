@@ -1,6 +1,9 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { DatabaseModule } from '../commons/database/database.module';
+import { LoggingModule } from '../commons/logging/logging.module';
+import { RequestLoggerMiddleware } from '../commons/logging/request-logger.middleware';
 import { UsuarioModule } from '../1-usuario/usuario.module';
 import { TermoUsoModule } from '../5-termo-uso/termo-uso.module';
 import { PapelPermissaoModule } from '../2-papel-permissao/papel-permissao.module';
@@ -29,7 +32,16 @@ import { ConfiguracaoValorModule } from '../commons/configuracao/configuracao-va
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    // Habilita @Cron em qualquer service do app (05-09-2026, RF-057) - sem
+    // isso registrado uma vez aqui, o decorator @Cron não faz nada sozinho,
+    // precisa do agendador do próprio módulo rodando por trás. Primeiro
+    // consumidor: CampanhaServiceEncerrarVencidas (12-campanha).
+    ScheduleModule.forRoot(),
     DatabaseModule,
+    // Log de requisição com id (05-09-2026, item 6 da lista de pendências) -
+    // ver configure() logo abaixo, é lá que o middleware é aplicado de
+    // verdade a toda rota.
+    LoggingModule,
     // Global (ver commons/storage/storage.module.ts) - registrado aqui,
     // junto de DatabaseModule, por ser infra compartilhada por qualquer
     // módulo, não só 25-arquivo.
@@ -62,4 +74,13 @@ import { ConfiguracaoValorModule } from '../commons/configuracao/configuracao-va
   controllers: [AppController, HealthController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  // Middleware, não interceptor (ver comentário completo em
+  // request-logger.middleware.ts) - precisa do evento nativo `res.on
+  // ('finish')` do Express pra pegar o status HTTP já definitivo.
+  // `forRoutes('*')` cobre toda rota, incluindo as que não passam por
+  // nenhum guard/interceptor específico (ex.: `GET /health`).
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(RequestLoggerMiddleware).forRoutes('*');
+  }
+}

@@ -48,7 +48,7 @@ Este documento é o irmão do `DOCUMENTACAO_BD.md`. Ele cobre o backend em NestJ
 | **NestJS 11** (TypeScript) | Framework HTTP + injeção de dependência. O pipeline dele (guards → interceptors → pipes → handler) é o que torna possível o desenho da seção 2. |
 | **Kysely 0.29** | *Query builder* tipado, **não um ORM**. Não há entidades gerenciadas, nem *unit of work*, nem migrations do lado do TypeScript - o schema é escrito à mão em `arquivos_banco_dados/*.sql`, e o Kysely só monta SQL com segurança de tipo em cima dele. |
 | **`pg` 8** | Driver Postgres. Usado **diretamente** em três lugares (o `Pool`, o `SET`/`BEGIN`/`COMMIT` do interceptor, e o script de migrations); em todo o resto do app ele fica escondido por baixo do Kysely. |
-| **`nestjs-cls`** | `AsyncLocalStorage` embrulhado. Carrega a conexão/transação da requisição atual "por fora", sem nenhum service precisar saber disso. |
+| **`nestjs-cls`** | `AsyncLocalStorage` embrulhado. Carrega a conexão/transação da requisição atual "por fora", sem nenhum service precisar saber disso. Desde 05-09-2026, também gera o id de requisição usado no log (`RequestLoggerMiddleware`, §2.8). |
 | **Supabase** | Só como **host do Postgres** (e, desde então, também do bucket de arquivos - ver seção 8). O Supabase Auth/PostgREST **não** é usado: a autenticação é própria, em `3-auth`. |
 | **`@nestjs/jwt` + `bcrypt`** | Access token (JWT) e hash de senha/segredo de refresh token. |
 | **`class-validator` / `class-transformer`** | Validação de entrada, via `ValidationPipe` global. |
@@ -57,6 +57,7 @@ Este documento é o irmão do `DOCUMENTACAO_BD.md`. Ele cobre o backend em NestJ
 | **`@aws-sdk/client-s3` + `s3-request-presigner`** | Cliente S3 genérico - usado contra o Supabase Storage, não contra a AWS (ver seção 8). |
 | **`sharp`** | Processamento de imagem no servidor (redimensiona, converte pra WebP, remove EXIF). |
 | **`@nestjs/swagger`** | Documentação interativa da API (`/api`, só fora de produção) - gerada automaticamente a partir dos DTOs já existentes, ver §18. |
+| **`@nestjs/schedule`** | Agendamento (`@Cron`) - único consumidor hoje é o encerramento automático de campanha vencida (RF-057), ver §7.4. |
 
 📌 **Por que Kysely e não TypeORM/Prisma, e `class-validator` em vez de Joi.** Embora nos foi ensinado no semestre passado, pelo professor Francisco, do IFSP Birigui, a usar TypeORM + Joi (nos projetos de sala de aula da disciplina de Programação para Web 2), decidimos não utilizar isso aqui devido ao seguinte:
 
@@ -84,8 +85,8 @@ Nenhuma dessas três escolhas é uma crítica ao que foi ensinado - a disciplina
 
 | Item | Quantidade |
 |---|---|
-| Arquivos `.ts` em `nest/src/` | 355 |
-| Módulos Nest (`*.module.ts`) | 22 (19 de domínio + `DatabaseModule` + `StorageModule` + `AppModule`) |
+| Arquivos `.ts` em `nest/src/` | 360 |
+| Módulos Nest (`*.module.ts`) | 24 (19 de domínio + `DatabaseModule` + `StorageModule` + `ConfiguracaoValorModule` + `LoggingModule` + `AppModule`) |
 | Arquivos de controller | 94 |
 | Arquivos de service | 98 |
 | Rotas HTTP (handlers `@Get`/`@Post`/`@Patch`/`@Delete`) | 100 |
@@ -214,6 +215,31 @@ Monte a query normalmente (`select`/`where`/`orderBy`) e troque o `.execute()` f
 `PaginacaoQueryDto` (`commons/database/dto/paginacao.query.dto.ts`) é a base que os DTOs de listagem estendem - `@Type(() => Number)` converte a query string antes do `class-validator` rodar.
 
 Usam `paginar()` hoje: `1-usuario`, `6-perfil-pesquisador`, `8-area-conhecimento`, `9-tipo-link`, `10-motivo-denuncia`, `11-configuracoes`, `12-campanha`, `15-atualizacao-campanha`, `17-comentario`, `27-log-auditoria`.
+
+### 2.8 `commons/logging` - log de requisição com ID (05-09-2026)
+
+Até esta data, **não existia nenhum log de requisição neste projeto** - só logs pontuais tipo "conectado ao banco" (`DatabaseModule.onModuleInit`). Um erro relatado como "deu erro às 14:32" não tinha como virar "achei os 8 logs daquela requisição específica" - item 6 de uma lista de pendências, resolvido no mesmo dia em que foi levantado.
+
+**De onde vem o ID.** Não é gerado num arquivo próprio - é o próprio `nestjs-cls` que já sustenta a seção 2.2 inteira. `ClsModule.forRoot()` (`database.module.ts`) ganhou duas opções novas dentro de `middleware`:
+
+```ts
+ClsModule.forRoot({
+  global: true,
+  middleware: { mount: true, generateId: true, idGenerator: () => randomUUID() },
+}),
+```
+
+`generateId: true` liga a geração; `idGenerator` diz **como** gerar (o pacote não vem com um gerador padrão embutido - sem essa função, `generateId: true` sozinho não produz nada). O id fica guardado sob uma chave reservada do próprio `nestjs-cls` (não uma chave nossa), lida em qualquer lugar do código com `cls.getId()` - mesma mecânica de `AsyncLocalStorage` "por fora" que já guarda o Kysely da requisição (seção 2.2), só que essa parte já vem pronta no pacote, não precisou ser escrita.
+
+**Quem lê o ID e decide o que logar: `RequestLoggerMiddleware`** (`commons/logging/request-logger.middleware.ts`), aplicado a toda rota em `AppModule.configure()`. Uma linha de log por requisição, no formato `[<id>] MÉTODO /rota STATUS - Xms`, em nível `log`/`warn`/`error` conforme o status HTTP (< 400 / 400-499 / ≥ 500).
+
+🧩 **Por que é um `NestMiddleware`, não um interceptor - e isso importa.** Testado na prática: o status HTTP final de uma resposta (`res.statusCode`) só fica **definitivo** depois que o Nest termina de serializar a resposta de sucesso, ou depois que um exception filter decide o código de erro - um interceptor comum roda cedo demais nesse processo pra garantir o valor certo sempre. O evento nativo do Express `res.on('finish')` resolve isso sem ambiguidade: só dispara depois que a resposta já foi enviada por completo pro cliente, com o status code já fechado - é o mesmo mecanismo por trás de bibliotecas de log de requisição consagradas no ecossistema Node (`morgan`, por exemplo).
+
+📌 **Ordem importa, e já foi verificada ao vivo, não só no papel.** O middleware do `nestjs-cls` (que gera o id) precisa rodar **antes** de `RequestLoggerMiddleware` (que só lê o id já pronto) - `DatabaseModule` é importado antes de `LoggingModule` em `AppModule`, e o teste ao vivo abaixo confirma que a ordem está certa: o id aparece de verdade no log, nunca `undefined`.
+
+**Testado de verdade, não só compilado:** subiu o servidor, `GET /health` → `[dc7235a8-...] GET /health 200 - 216ms`; `GET /rota-inexistente` → mesmo formato, em `WARN`, `404`, id **diferente** do anterior (cada requisição gera o seu). `tsc --noEmit` e `eslint` limpos.
+
+⚠️ **O que isto NÃO é:** não é observabilidade completa (não manda log pra nenhum serviço externo, não sobrevive a um restart do processo, não tem retenção configurada) - é só a peça mínima que faltava pra correlacionar "um erro aconteceu" com "todas as linhas de log daquela requisição específica", dentro do console do próprio processo. Suficiente pro estágio atual do projeto; se um dia o volume de log justificar, a evolução natural é mandar essas linhas pra um serviço de log agregado, sem precisar mudar nada de como o id é gerado ou propagado.
 
 ---
 
@@ -540,6 +566,39 @@ export class CampanhaServiceCreate {
 
 **`ComentarioServiceCreate`** - cálculo que a trigger não faz. A trigger `validar_comentario_endosso` valida a **contagem** contra o limite configurado, mas não **calcula** o próximo `ordem_endosso`; o service faz `MAX(ordem_endosso)+1`. ⚠️ Corrida teórica assumida (duas pessoas endossando ao mesmo tempo podem calcular o mesmo número), aceita pelo volume baixo - registrado tanto no comentário quanto em `PENDENCIAS e correcoes.md`, item 747. A solução, se virar problema real, é mover o cálculo para uma trigger `BEFORE INSERT`.
 
+**`CampanhaServiceEncerrarVencidas`** (05-09-2026, RF-057) - o único service do projeto que roda **fora** do pipeline HTTP, e por isso o único que não usa `DatabaseService.getDb()`:
+
+> Achado numa revisão de sistema completa: `encerrar_campanhas_vencidas()` (Postgres, `[05-K-2]`) sempre existiu e sempre esteve correta, mas nada nunca a chamava - nenhum `@nestjs/schedule` instalado, nenhum `@Cron`, nenhum `pg_cron`. Na prática, uma campanha vencida continuava `'ativo'` para sempre.
+
+- **`@Cron('*/15 * * * *')`** (`@nestjs/schedule`, registrado uma vez em `AppModule` via `ScheduleModule.forRoot()`) chama `SELECT public.encerrar_campanhas_vencidas()` a cada 15 minutos.
+- **Não precisa de `app.id_usuario_atual` setado** porque a função é `SECURITY DEFINER` - o mesmo motivo por trás dela existir: bypassa a RLS por desenho (dono da função, não a sessão de quem chama), então não importa que o job não tenha "usuário logado" nenhum. Mesma categoria de `registrar_falha_login`/`registrar_login_sucesso` (`[03-O]`), que também rodam sem sessão.
+- **`@Cron` sozinho não faz nada** sem `ScheduleModule.forRoot()` registrado uma vez em algum módulo raiz (`AppModule`, neste projeto) - é o agendador de verdade rodando por trás; o decorator só registra o handler nele.
+
+#### 🧩 Por que injeta `PG_POOL` direto, e não `DatabaseService.getDb()` - explicado do zero
+
+**O que é um "Pool" de conexão, em termos simples.** Abrir uma conexão nova com o banco de dados (o "aperto de mão" inicial entre o Nest e o Postgres) é uma operação relativamente cara - leva um tempinho perceptível, ainda mais num banco na nuvem (Supabase). Se o app abrisse uma conexão nova pra cada consulta e fechasse na hora, ia gastar a maior parte do tempo só "cumprimentando" o banco, não fazendo trabalho de verdade. Um **Pool** resolve isso: é um conjunto de conexões já abertas e prontas, mantidas vivas o tempo todo, que o código **empresta** quando precisa e **devolve** quando termina - como uma fila de guichês já abertos num banco físico, em vez de abrir e fechar guichê a cada cliente nesse mesmo prédio. `PG_POOL` é o nome (token) que este projeto usa pra esse conjunto de conexões - ele já existe desde o primeiríssimo dia do projeto (`DatabaseModule`, seção 2), é o mesmo Pool que sustenta **toda** conversa com o banco, em qualquer rota HTTP.
+
+**Por que o caminho normal (`DatabaseService.getDb()`) não serve aqui.** Em toda rota HTTP normal deste projeto, existe uma etapa que roda **antes** de qualquer service: o `GlobalDbInterceptor` (seção 2.2) pega **uma** conexão emprestada do Pool, abre uma transação nela, avisa ao Postgres "quem está perguntando" (`SET LOCAL app.id_usuario_atual = ...`, é isso que faz a RLS/segurança por linha funcionar) e guarda essa conexão específica num lugar que qualquer service da mesma requisição consegue achar depois (`nestjs-cls`, explicado na seção 15.3) - é esse "achar depois" que `DatabaseService.getDb()` faz. **O problema: um `@Cron` não é uma rota HTTP.** Ninguém visitou nenhuma URL pra disparar isso - o relógio do `@nestjs/schedule` só chama a função do service diretamente, o `GlobalDbInterceptor` **nunca roda**, e por isso nunca existe nenhuma conexão guardada pra `DatabaseService.getDb()` achar. Se eu tivesse tentado usar ele aqui mesmo assim, o próprio código já previa esse erro exato (`database.service.ts`): *"chamado fora de uma requisição com GlobalDbInterceptor já executado - nenhum Kysely disponível no contexto"* - o app teria simplesmente quebrado a cada 15 minutos.
+
+**O que eu fiz em vez disso:** peguei emprestado o **mesmo Pool de sempre** (`PG_POOL`, já existente, `@Inject(PG_POOL)`), mas usei ele **diretamente** - sem passar pela etapa de "abrir transação e avisar quem está perguntando", porque para esta chamada específica isso não faz falta nenhuma: a função `encerrar_campanhas_vencidas()` é `SECURITY DEFINER`, o que (explicado na seção 4 e no `DOCUMENTACAO_BD.md`) significa que ela roda sempre com a MESMA autoridade fixa, não importa quem a chamou - não precisa saber "quem está perguntando" porque a resposta é sempre a mesma. É o equivalente a uma máquina de café que funciona do mesmo jeito não importa qual funcionário aperte o botão, então não precisa nem crachá nem identificação pra usar.
+
+#### É a melhor solução? É *future-proof*?
+
+**Para o tamanho e a fase atual do projeto: sim, é a solução certa** - simples, usa infraestrutura que já existe (nenhuma peça nova além do agendador em si), e é literalmente o padrão recomendado no ecossistema NestJS para "preciso rodar algo periodicamente, sem que seja uma rota HTTP visitada por alguém" - qualquer outro job futuro deste tipo (ex.: expirar QR Code do RF-076, reprocessar notificação com falha) pode copiar exatamente este molde: injetar `PG_POOL`, um método com `@Cron`, pronto.
+
+**Uma limitação real, que vale você saber para explicar se perguntarem:** isto roda **dentro do mesmo processo** do servidor Nest - ou seja, só dispara enquanto o backend estiver de pé. Hospedagem gratuita (Render, citado em `PENDENCIAS.md`/RNF-012) costuma **"dormir"** um serviço web depois de um tempo sem nenhuma requisição chegando, acordando de novo só quando alguém acessa. Se isso acontecer, o `@Cron` também dorme junto - nenhuma campanha vence "atrasado de verdade" nesse intervalo, só fica pendente de encerrar até o backend acordar por qualquer motivo (a próxima visita de qualquer usuário já é suficiente). Quando acorda, a própria natureza da função resolve isso sozinha, sem precisar de nada especial: ela sempre confere `data_fim <= NOW()` contra o relógio de agora, então uma campanha vencida há 2 horas ou há 2 minutos é encerrada do mesmo jeito na primeira checagem depois de acordar - nada fica "perdido pra sempre", só potencialmente **atrasado** enquanto o servidor está dormindo. Este é o mesmo tipo de limitação que o projeto já aceita conscientemente em outros lugares por causa da hospedagem gratuita (RNF-012: "disponibilidade mínima de 95%... limitações de uptime são reconhecidas como restrição do ambiente acadêmico") - não é uma falha de desenho, é uma característica do ambiente gratuito.
+
+**A alternativa mais robusta, se um dia isso importar de verdade:** a extensão `pg_cron` do próprio Postgres (o Supabase oferece ela pronta pra ativar) - ela agenda a chamada **dentro do banco**, independente de o backend Nest estar dormindo ou não. Não implementei isso agora porque adiciona uma peça de infraestrutura nova (mexer em configuração do Supabase, não só código do projeto) pra resolver um problema que, na prática, hoje é pequeno: ninguém está cronometrando o segundo exato em que uma campanha de TCC deveria fechar. Fica anotado aqui como o caminho natural de evolução, não como algo faltando.
+
+#### Isso vai causar lag ou sobrecarregar o banco?
+
+**Não, e dá pra explicar exatamente por quê, sem "confiar" apenas.** A chamada roda a cada 15 minutos (96 vezes por dia) e faz, por trás, um `UPDATE campanha SET status = ... WHERE status = 'ativo' AND data_fim <= NOW()`. Dois fatores garantem que isso é barato:
+
+1. **Existe um índice feito sob medida pra essa consulta exata:** `idx_campanha_status_data_fim`, em `(status, data_fim)` (`02_indices.sql`). Em vez de o Postgres precisar olhar linha por linha de **toda** a tabela `campanha` pra achar quem está vencido, ele usa esse índice pra pular direto pras linhas com `status = 'ativo'` já ordenadas por `data_fim` - o mesmo princípio de um índice remissivo no fim de um livro em vez de ler a obra inteira procurando uma palavra. Rápido mesmo com a tabela crescendo.
+2. **Na prática, a maioria das checagens não muda nenhuma linha.** Entre uma checagem e outra (15 minutos), é raro existir alguma campanha cujo prazo tenha vencido bem naquela janela - então o `UPDATE` na maior parte das vezes afeta **zero linhas**, e um `UPDATE` que não muda nada é praticamente instantâneo. Ele só trava (bloqueia) as linhas que efetivamente atualiza, nunca a tabela inteira - outras consultas acontecendo ao mesmo tempo (alguém navegando, doando, etc.) não sentem nada disso.
+
+Pra comparação de escala: 96 chamadas por dia é um volume desprezível perto do tráfego normal de qualquer aplicação com usuário de verdade - não chega perto de nenhum limite de uso do plano gratuito do Supabase (que é sobre espaço em disco e certas cotas de API, não sobre "número de consultas simples" como esta). Resumindo: nem o intervalo de 15 minutos, nem a query em si, representam risco de lentidão pro sistema.
+
 **`CampanhaServiceFindAll`** - filtros que **não** são autorização:
 > *"`pol_campanha_select` já decide QUAIS linhas aparecem (status público, ou dono, ou `relatorio_visualizar`) - os filtros abaixo são só conveniência de navegação por cima do que a RLS já deixou visível, nunca uma segunda camada de autorização."*
 
@@ -864,6 +923,8 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 
 ⚠️ **`--adotar` não confere se o banco de verdade tem tudo** que os arquivos descrevem - só estabelece a linha de base. O próprio script avisa isso na saída.
 
+🐛➡️✅ **Bug real, achado pelo Lucas rodando `--adotar` de verdade contra o Supabase (05-09-2026), corrigido no mesmo dia.** `listarArquivosSqlEmOrdem()` filtrava só "termina em `.sql`" - como `arquivos_banco_dados/ATUALIZAR O SUPABASE.sql` mora na mesma pasta dos 8 numerados, ele também foi listado, hasheado e "adotado" como se fosse um 9º arquivo rastreado. O problema de fundo: `ATUALIZAR O SUPABASE.sql` é um rascunho **vivo** (cresce a cada ajuste pequeno - RF-108, limites de upload, validade de sessão configurável, etc.), nunca um bloco fechado como os 8 numerados - tratá-lo como um deles faria o hash mudar a cada adição, disparando pra sempre o aviso de "conteúdo mudou, não reaplicado" só por causa dele, mesmo sem nenhum problema real. **Corrigido:** o filtro agora exige exatamente dois dígitos no início do nome (`/^\d{2}_.*\.sql$/`) - só `01_...` a `08_...` passam; `ATUALIZAR O SUPABASE.sql` nunca mais entra na lista. A linha órfã que o `--adotar` já tinha gravado pra ele em `schema_migrations` (antes da correção) fica inofensiva, sem efeito - o script simplesmente não procura mais por esse nome de arquivo.
+
 ---
 
 ## 13. Inventário de rotas HTTP
@@ -1007,6 +1068,10 @@ Carrega variáveis de ambiente (`.env`) através do `ConfigService`, injetável 
 ### 15.7 Segurança HTTP - `helmet` + `@nestjs/throttler`
 
 `helmet` aplica um conjunto de cabeçalhos HTTP de segurança (proteção contra clickjacking, sniffing de MIME type, etc.) com uma linha de configuração - é a forma padrão de resolver essa categoria de proteção sem reimplementar cabeçalho por cabeçalho. `@nestjs/throttler` implementa limite de requisições por IP; hoje aplicado especificamente em `POST /auth/login` (e no cadastro, ver seção 3) - mitiga força bruta de senha e criação de conta em massa **na borda HTTP**, antes mesmo de a lógica de `registrar_falha_login()` (banco, seção 4) entrar em ação. As duas camadas não são redundantes: o throttler limita **tentativas por IP**, a função de banco limita **tentativas por conta** - um ataque distribuído (muitos IPs, uma conta) só é pego pela segunda; um ataque de credential-stuffing (um IP, muitas contas) só é pego pela primeira.
+
+### 15.7b Agendamento - `@nestjs/schedule`
+
+Adicionado em 05-09-2026 pra fechar o RF-057 (encerramento automático de campanha vencida) - até então a função de banco existia, mas nada a chamava (ver §7.4, `CampanhaServiceEncerrarVencidas`). É o pacote oficial do NestJS pra `@Cron`/`@Interval`/`@Timeout` - registra um agendador de verdade por trás do decorator via `ScheduleModule.forRoot()` (uma vez, em `AppModule`). Único consumidor hoje: `CampanhaServiceEncerrarVencidas`, a cada 15 minutos.
 
 ### 15.8 Armazenamento de arquivo - `@aws-sdk/client-s3` + `@aws-sdk/s3-request-presigner` + `sharp`
 

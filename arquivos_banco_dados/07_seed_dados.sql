@@ -799,7 +799,12 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo) VAL
 -- valores 10/20 eram pra ser o TETO (nº máximo permitido por campanha), não o
 -- piso obrigatório pra aprovar. Mínimo virou 3 pros dois (meio-termo da faixa
 -- que ela sugeriu, 2 a 5 - ajustável livremente depois, sem migração).
-(NULL, 'orcamento_min_itens',                      '3',    'inteiro', 'Nº mínimo de itens de orçamento exigido para aprovar uma campanha',         TRUE),
+-- ATUALIZADO (05-09-2026): orcamento_min_itens virou 1 (não mais 3) - achado
+-- conferindo REQUISITOS_V5.md (RF-039: "valores padrão de 1 (mínimo) e 10
+-- (máximo)") contra o banco; decisão do Lucas foi ajustar o banco pro texto
+-- oficial do requisito. cronograma_min_marcos NÃO mudou, continua 3 (RF-041
+-- já cita 3 corretamente).
+(NULL, 'orcamento_min_itens',                      '1',    'inteiro', 'Nº mínimo de itens de orçamento exigido para aprovar uma campanha (RF-039)', TRUE),
 (NULL, 'orcamento_max_itens',                      '10',   'inteiro', 'Nº máximo de itens de orçamento permitido por campanha',                    TRUE),
 (NULL, 'cronograma_min_marcos',                    '3',    'inteiro', 'Nº mínimo de marcos de cronograma exigido para aprovar uma campanha',       TRUE),
 (NULL, 'cronograma_max_marcos',                    '20',   'inteiro', 'Nº máximo de marcos de cronograma permitido por campanha',                  TRUE),

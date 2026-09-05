@@ -1572,14 +1572,18 @@ EXECUTE FUNCTION public.fn_congela_orcamento_campanha();
 -- Bloco:      [05-K-2]
 -- Regra:      ADICIONADO (01-08-2026, correção do que a Alexia mandou em
 --             31-07-2026): ela tinha misturado o número que devia ser TETO
---             (10) com o de PISO (que devia ser bem menor, 3) dentro da MESMA
+--             (10) com o de PISO (que devia ser bem menor) dentro da MESMA
 --             chave `orcamento_min_itens`. Separado em duas chaves:
---             `orcamento_min_itens` (3, checado na aprovação, ver
+--             `orcamento_min_itens` (checado na aprovação, ver
 --             fn_valida_completude_campanha_aprovacao) e `orcamento_max_itens`
 --             (10, checado aqui). Checar o máximo no INSERT - não só na
 --             aprovação - dá feedback imediato pro pesquisador no item 11,
 --             em vez de deixar ele descobrir só quando a campanha for
 --             recusada na moderação.
+-- CORRIGIDO (05-09-2026): `orcamento_min_itens` mudou de 3 pra 1 - achado
+-- conferindo `REQUISITOS_V5.md` (RF-039) contra o banco, que citava "valor
+-- padrão de 1 (mínimo)" enquanto o seed tinha 3. Decisão do Lucas: ajustar o
+-- banco pro texto oficial do requisito, não o contrário.
 -- CORRIGIDO (01-08-2026, achado em revisão): faltava SECURITY DEFINER. O
 -- COUNT(*) abaixo é sobre a própria orcamento_campanha, sujeito à sua RLS de
 -- SELECT (pol_orcamento_campanha_select, 04) - que passou pra quem tem
@@ -1942,9 +1946,13 @@ EXECUTE FUNCTION fn_valida_transicao_campanha();
 --             que a campanha está de fato completa antes de ir ao ar.
 -- CORRIGIDO (01-08-2026): os defaults de fallback do config_numero() abaixo
 -- eram 10/20 (a Alexia tinha confundido min com max) - corrigidos pra 3/3,
--- coerente com as chaves *_min_itens/*_min_marcos agora seedadas com 3 (ver
--- 07_seed_dados.sql). O comportamento de verdade sempre vem da chave em
--- configuracoes; o fallback só entra em ação se a linha sumir do banco.
+-- coerente com as chaves *_min_itens/*_min_marcos seedadas na época. O
+-- comportamento de verdade sempre vem da chave em configuracoes; o fallback
+-- só entra em ação se a linha sumir do banco.
+-- CORRIGIDO (05-09-2026): fallback de `orcamento_min_itens` mudou de 3 pra
+-- 1, acompanhando a mudança do valor seedado (ver comentário da função
+-- fn_valida_limite_max_orcamento_campanha, acima nesta seção - RF-039 da
+-- REQUISITOS_V5.md). `cronograma_min_marcos` não mudou, continua 3.
 -- CORRIGIDO (01-08-2026, achado em revisão, antes do commit): faltava
 -- SECURITY DEFINER. Sem isso, os SELECT COUNT(*)/SUM() abaixo, contra
 -- orcamento_campanha/marco_cronograma, ficam sujeitos à RLS de QUEM está
@@ -1970,7 +1978,7 @@ DECLARE
     v_qtd_marcos     INT;
     v_soma_orcamento DECIMAL(10,2);
 BEGIN
-    v_min_orcamento := public.config_numero('orcamento_min_itens', 3)::INT;
+    v_min_orcamento := public.config_numero('orcamento_min_itens', 1)::INT;
     v_min_marcos    := public.config_numero('cronograma_min_marcos', 3)::INT;
 
     SELECT COUNT(*), COALESCE(SUM(valor), 0)
