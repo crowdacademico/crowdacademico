@@ -604,7 +604,7 @@ Pra comparação de escala: 96 chamadas por dia é um volume desprezível perto 
 
 Também registra uma mudança concreta: era `orderBy('criado_em','desc')`, virou `orderBy('id_campanha')` a pedido do Lucas, porque `criado_em` do seed nem sempre bate com a ordem de inserção real (algumas linhas foram seedadas com timestamp retroativo).
 
-**`UsuarioServiceExportarDados`** (05-09-2026, item 3 de `PROXIMOS_PASSOS.md`, LGPD Art. 18) - o endpoint mais sensível do sistema, e o que mais junta decisão de segurança num lugar só:
+**`UsuarioServiceExportarDados`** (05-09-2026, item 3 de `PROXIMOS_PASSOS.md`, LGPD Art. 18, formalizado em **RF-015A** de `REQUISITOS_V5.md` em 06-09-2026) - o endpoint mais sensível do sistema, e o que mais junta decisão de segurança num lugar só:
 
 - **`GET /usuario/eu/exportar-dados`, sem `:id`, de propósito.** Todo outro endpoint deste módulo aceita um id de rota (`GET /usuario/:id`, etc.); este não - o ator é sempre `request.user!.idUsuario` (quem está autenticado), nunca um parâmetro. Decisão do Claude Web, confirmada em conversa: aceitar um id aqui abriria a porta pro erro clássico de trocar o número e baixar dado de outra conta (a RLS provavelmente barraria, mas a boa prática é nem deixar o parâmetro existir num endereço deste tamanho de sensibilidade). Sem colisão de rota com `GET /usuario/:id` - `:id` do Express só casa um segmento, `eu/exportar-dados` tem dois.
 - **Três proteções, nenhuma opcional:**

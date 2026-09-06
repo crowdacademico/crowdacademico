@@ -46,10 +46,6 @@ export const GRUPO_CONFIGURACAO = {
   score_penalidade_sem_justificativa: 'Score / Reputação',
   score_frequencia_esperada_mensal: 'Score / Reputação',
   // Arquivo
-  // achado (04-09-2026, varredura pra ver o que mais ficava fora dos
-  // grupos organizados): já existia desde 24-08-2026, caía em "Outras"
-  // por não ter grupo próprio ainda - mesmo domínio dos 7 de baixo.
-  avatar_padrao_chave: 'Arquivo',
   // limites de upload configuráveis (04-09-2026)
   arquivo_tamanho_minimo_bytes: 'Arquivo',
   arquivo_tamanho_maximo_imagem_bytes: 'Arquivo',

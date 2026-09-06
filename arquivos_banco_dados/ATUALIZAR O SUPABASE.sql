@@ -391,6 +391,24 @@ GRANT EXECUTE ON FUNCTION public.registrar_exportacao_dados(INT) TO app_nestjs;
 
 
 -- ============================================================================
+-- 06-09-2026 - a Alexia removeu `avatar_padrao_chave` de 07_seed_dados.sql
+-- (commit 3fc7a13 - o mecanismo de "avatar padrão do sistema" saiu de cena,
+-- o front já resolve com iniciais coloridas). Mas o seed só roda em banco
+-- NOVO - o Supabase de produção já tinha essa linha inserida desde
+-- 24-08-2026 (bloco "módulo 25-arquivo implementado", mais acima neste
+-- arquivo) e nada além do seed a remove. Sem este DELETE, a chave fica
+-- órfã: nenhum código lê ela mais, mas ela continua aparecendo na tela
+-- Configurações do painel como se fosse um parâmetro de verdade (achado
+-- pelo Claude Web, revisando o handoff desta rodada).
+--
+-- Seguro rodar de novo? Sim - DELETE numa chave que já não existe mais
+-- não dá erro, só afeta 0 linhas.
+-- ============================================================================
+
+DELETE FROM configuracoes WHERE chave = 'avatar_padrao_chave';
+
+
+-- ============================================================================
 -- NÃO ENTRA NESTE ARQUIVO (registrado aqui só pra não se perder)
 -- ============================================================================
 
