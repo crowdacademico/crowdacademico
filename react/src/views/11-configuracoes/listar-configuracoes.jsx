@@ -34,6 +34,10 @@ export function ListarConfiguracoes({ auth }) {
           { chave: 'valor', rotulo: 'valor' },
           { chave: 'tipo', rotulo: 'tipo' },
           { chave: 'ativo', rotulo: 'ativo' },
+          // ADICIONADA (05-09-2026, item 5 de PENDENCIAS) - se a linha
+          // global aparece pra quem não tem 'configuracao_gerenciar'
+          // (GET /configuracoes sem token). Sem efeito numa linha pessoal.
+          { chave: 'publica', rotulo: 'pública' },
         ]}
         chavePrimaria="idConfig"
         listar={listarConfiguracoes}

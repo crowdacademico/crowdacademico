@@ -313,6 +313,16 @@ CREATE TABLE configuracoes (
     tipo        tipo_configuracao NOT NULL,
     descricao   VARCHAR(255),
     ativo       BOOLEAN DEFAULT TRUE,
+    -- ADICIONADA (05-09-2026, item 5 de PENDENCIAS): GET /configuracoes
+    -- devolvia toda linha global (id_usuario IS NULL) pra qualquer um, sem
+    -- distinguir o que o navegador precisa pra montar uma tela (ex.:
+    -- valor_minimo_contribuicao) do que é parâmetro interno de segurança/
+    -- moderação (ex.: limite_tentativas_login). DEFAULT FALSE de propósito -
+    -- uma chave nova nasce interna, e só fica pública por ato deliberado
+    -- (marcar TRUE); o contrário (DEFAULT TRUE) faria esquecer de marcar
+    -- ser igual a expor. Só tem efeito em linha global - `pol_config_select`
+    -- (04) é quem de fato aplica isso.
+    publica     BOOLEAN NOT NULL DEFAULT FALSE,
 
     CONSTRAINT "PK_CONFIGURACOES" PRIMARY KEY (id_config),
     CONSTRAINT "UK_CONFIGURACOES_CHAVE" UNIQUE (chave),
@@ -961,5 +971,14 @@ CREATE TABLE log_auditoria (
 
     CONSTRAINT "PK_LOG_AUDITORIA" PRIMARY KEY (id_log),
     CONSTRAINT "FK_LOG_AUDITORIA_USUARIO" FOREIGN KEY (id_usuario_responsavel) REFERENCES usuario(id_usuario) ON DELETE SET NULL,
-    CONSTRAINT "CK_LOG_AUDITORIA_OPERACAO" CHECK (operacao IN ('INSERT', 'UPDATE', 'DELETE'))
+    -- ATUALIZADA (05-09-2026, item 3 de PROXIMOS_PASSOS.md - exportação de
+    -- dados, LGPD Art. 18): 'EXPORT' acrescentado - as 3 originais (INSERT/UPDATE/
+    -- DELETE) só cobrem MUDANÇA de dado, gravadas por trigger
+    -- (fn_log_auditoria(), 05). Uma exportação não muda nada, mas "toda
+    -- exportação de dados pessoais deve deixar rastro" (decisão do Claude
+    -- Web) exige um registro mesmo assim - só uma leitura sensível o
+    -- bastante pra precisar de trilha própria. dados_anteriores/dados_novos
+    -- ficam NULL nesse caso (nada mudou), só tabela/identidade_registro/
+    -- id_usuario_responsavel/ocorrido_em importam.
+    CONSTRAINT "CK_LOG_AUDITORIA_OPERACAO" CHECK (operacao IN ('INSERT', 'UPDATE', 'DELETE', 'EXPORT'))
 );

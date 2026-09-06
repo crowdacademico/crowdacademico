@@ -23,6 +23,7 @@ export class ConfiguracaoServiceUpdate {
       ...(dto.valor !== undefined ? { valor: dto.valor } : {}),
       ...(dto.descricao !== undefined ? { descricao: dto.descricao } : {}),
       ...(dto.ativo !== undefined ? { ativo: dto.ativo } : {}),
+      ...(dto.publica !== undefined ? { publica: dto.publica } : {}),
     };
     if (Object.keys(campos).length === 0) {
       throw new BadRequestException('Nenhum campo para atualizar.');

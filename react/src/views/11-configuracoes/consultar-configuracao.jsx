@@ -44,6 +44,12 @@ export function ConsultarConfiguracao({ auth }) {
         >
           {configuracao.ativo ? 'Ativo' : 'Inativo'}
         </span>,
+        <span
+          key="publica"
+          className={'badge ' + (configuracao.publica ? 'badge-sucesso' : 'badge-neutro')}
+        >
+          {configuracao.publica ? 'Pública' : 'Interna'}
+        </span>,
       ]}
       acoes={
         <button type="button" onClick={() => navigate(-1)} className="btn btn-secondary w-full">

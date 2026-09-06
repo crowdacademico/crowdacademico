@@ -297,6 +297,100 @@ ON CONFLICT (chave) DO NOTHING;
 
 
 -- ============================================================================
+-- 05-09-2026 - GET /configuracoes deixou de expor toda config global pra
+-- qualquer um (item 5 de PENDENCIAS): nova coluna `publica`, e
+-- `pol_config_select` passou a exigir `publica = TRUE` (ou a permissão
+-- `configuracao_gerenciar`) pra enxergar uma linha global. Critério de
+-- quem é pública: o navegador precisa dela pra montar/validar uma tela.
+-- `suspensao_usuario_opcoes_dias` é pública por necessidade técnica -
+-- `ConfiguracoesProvider` nunca manda token, nem pro próprio admin.
+--
+-- Escopo desta rodada: só backend (coluna + policy + seed). O frontend
+-- continua com as constantes duplicadas à mão (teto de imagem, MIME etc.)
+-- por enquanto - virar consumidor de fato é rodada seguinte, separada.
+--
+-- Seguro rodar de novo? Sim - ADD COLUMN IF NOT EXISTS, UPDATE é
+-- idempotente (mesmo valor toda vez), CREATE POLICY tem DROP IF EXISTS.
+-- ============================================================================
+
+ALTER TABLE configuracoes ADD COLUMN IF NOT EXISTS publica BOOLEAN NOT NULL DEFAULT FALSE;
+
+UPDATE configuracoes SET publica = TRUE WHERE chave IN (
+    'email_suporte',
+    'suspensao_usuario_opcoes_dias',
+    'taxa_plataforma_padrao',
+    'prazo_minimo_campanha_dias',
+    'prazo_maximo_campanha_dias',
+    'limite_campanhas_simultaneas',
+    'limite_endossos_campanha',
+    'limite_denuncias_24h',
+    'janela_denuncias_horas',
+    'limite_caracteres_descricao_campanha',
+    'limite_caracteres_conteudo_atualizacao',
+    'limite_caracteres_relato_denuncia',
+    'limite_caracteres_justificativa_encerramento',
+    'limite_caracteres_descricao_recompensa',
+    'orcamento_min_itens',
+    'orcamento_max_itens',
+    'cronograma_min_marcos',
+    'cronograma_max_marcos',
+    'limite_caracteres_descricao_orcamento',
+    'limite_caracteres_descricao_marco',
+    'meta_minima_campanha',
+    'limite_links_academicos_perfil',
+    'valor_minimo_contribuicao',
+    'arquivo_tamanho_minimo_bytes',
+    'arquivo_tamanho_maximo_imagem_bytes',
+    'arquivo_tamanho_maximo_documento_bytes',
+    'arquivo_cota_bytes_por_usuario'
+);
+-- Todas as outras (limite_tentativas_login, bloqueio_login_minutos,
+-- refresh_token_dias_validade, verificacao_email_horas_validade,
+-- avatar_padrao_chave, notificar_novas_campanhas, score_*,
+-- arquivo_limite_uploads_janela, arquivo_janela_limite_uploads_minutos,
+-- arquivo_intervalo_minimo_segundos) ficam com o DEFAULT FALSE - internas.
+
+DROP POLICY IF EXISTS pol_config_select ON configuracoes;
+CREATE POLICY pol_config_select ON configuracoes FOR SELECT TO app_nestjs USING (
+    (id_usuario IS NULL AND (publica = TRUE OR public.tem_permissao('configuracao_gerenciar')))
+    OR id_usuario = public.id_usuario_atual()
+);
+
+
+-- ============================================================================
+-- 05-09-2026 - GET /usuario/eu/exportar-dados (item 3 de PROXIMOS_PASSOS.md,
+-- LGPD Art. 18 - portabilidade/acesso). A rota em si é só código Nest (não muda
+-- schema); o que precisa rodar aqui são as 3 peças que ela depende pra
+-- deixar rastro em log_auditoria: valor novo no CHECK de operação, a
+-- função SECURITY DEFINER que grava esse rastro (app_nestjs não tem GRANT
+-- INSERT em log_auditoria de propósito, só SELECT - ver 06), e o
+-- REVOKE/GRANT dela.
+--
+-- Seguro rodar de novo? Sim - CREATE OR REPLACE FUNCTION substitui sem
+-- erro, REVOKE/GRANT são idempotentes. O ALTER TABLE ... DROP CONSTRAINT +
+-- ADD CONSTRAINT não é IF NOT EXISTS (Postgres não tem essa forma pra
+-- CHECK), mas rodar 2x só dá erro inofensivo de "constraint já existe" na
+-- 2ª vez - não corrompe nada.
+-- ============================================================================
+
+ALTER TABLE log_auditoria DROP CONSTRAINT IF EXISTS "CK_LOG_AUDITORIA_OPERACAO";
+ALTER TABLE log_auditoria ADD CONSTRAINT "CK_LOG_AUDITORIA_OPERACAO" CHECK (operacao IN ('INSERT', 'UPDATE', 'DELETE', 'EXPORT'));
+
+CREATE OR REPLACE FUNCTION public.registrar_exportacao_dados(p_id_usuario INT)
+RETURNS VOID
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    INSERT INTO log_auditoria (tabela, identidade_registro, operacao, id_usuario_responsavel)
+    VALUES ('usuario', p_id_usuario::TEXT, 'EXPORT', p_id_usuario);
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.registrar_exportacao_dados(INT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.registrar_exportacao_dados(INT) TO app_nestjs;
+
+
+-- ============================================================================
 -- NÃO ENTRA NESTE ARQUIVO (registrado aqui só pra não se perder)
 -- ============================================================================
 

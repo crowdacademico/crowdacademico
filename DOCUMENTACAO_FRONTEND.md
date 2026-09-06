@@ -133,6 +133,10 @@ Nem tudo mapeia para um módulo do Nest. Essas ganham nome próprio, no mesmo n�
 
 O esqueleto padrão é `api/`, `constants/`, `hook/`, `type/` - criado com `.gitkeep` mesmo antes de existir código. Módulos que ainda não têm nenhuma tela consumindo (`7-link-academico`, `17-comentario`, `19-denuncia`, `22-contribuicao`, `23-repasse`, `26-notificacao`) têm só os `.gitkeep`.
 
+**Duas pastas a mais, ambas opcionais, cada uma resolvendo um problema diferente:**
+- **`context/`** - só existe nos módulos que precisam de estado compartilhado entre telas sem parentesco (`11-configuracoes`, `campo-testes`). Critério de quando um módulo ganha ela, e o formato exato, na seção 10.
+- **`util/`** - só existe nos módulos que têm lógica pura auxiliar que não é chamada de API (`api/`), nem estado (`hook/`/`context/`), nem constante fixa (`constants/`) - hoje usada por `25-arquivo` e `campo-testes`. Critério é o mesmo espírito das outras: se o módulo tem uma função "cálculo/formatação sem efeito colateral" que várias partes dele reaproveitam, ela mora aqui em vez de duplicada dentro de cada `api.js`/hook.
+
 ⚠️ A pasta `type/` existe em todos os módulos e está **sempre vazia** - é resquício do esqueleto pensado para TypeScript. Enquanto o item 10 das pendências não for decidido, ela não tem uso.
 
 ⚠️ Em `views/`, as pastas `checkout/`, `dash-doador/` e `dash-pesquisador/` existem só com `.gitkeep`. São lugares reservados para a interface pública/de usuário final, ainda não construída. O mesmo vale para `components/pagination/` e `components/search/`.
@@ -461,13 +465,25 @@ return import.meta.env.DEV ? <CampoTestesProvider>{rotas}</CampoTestesProvider> 
 
 | Provider | Onde | Para quê |
 |---|---|---|
-| `ConfiguracoesProvider` | `services/11-configuracoes/provider/` | carrega uma vez todas as configurações globais públicas e expõe `obterConfiguracao(chave)` via `useConfiguracoes()` |
+| `ConfiguracoesProvider` | `services/11-configuracoes/context/` | carrega uma vez todas as configurações globais públicas e expõe `obterConfiguracao(chave)` via `useConfiguracoes()` |
 | `ToastProvider` | `components/layout/` | `useToast().mostrar(mensagem, titulo, tipo)` |
 | `CampoTestesProvider` | `services/campo-testes/context/` | estado compartilhado entre T1/T2/T3/T4 - só em build de dev |
+
+📌 **`11-configuracoes` mudou de duas pastas (`context/`+`provider/` separadas) pra uma só (05-09-2026)** - era o único módulo divergente do formato acima (ver "Critério" logo abaixo). Contexto e provider continuam em **arquivos separados** dentro da mesma pasta (nunca no mesmo arquivo - Fast Refresh do Vite quebra o hot-reload quando um arquivo mistura componente e hook/contexto, mesmo motivo do `toast-context.js`), só a pasta que uniu.
 
 📌 **`ConfiguracoesProvider` existe para não hardcodar regra de negócio no JSX.** O comentário: *"Existe pra qualquer tela (admin ou pública, futura) conseguir ler `taxa_plataforma_padrao`, `valor_minimo_contribuicao` etc. direto do banco via `obterConfiguracao(...)`, em vez de escrever esses valores de negócio direto no HTML/JSX."* Ele converte o `valor` (sempre string ou `null` na coluna) para o tipo real usando o `tipo` que a própria linha declara (`decimal`/`inteiro`/`booleano`), e só considera linhas com `ativo = true`. Usa `configuracaoApi.buscarPublicas()` - `fetch` cru, sem token (ver seção 6).
 
 ⚠️ **Não existe provider/estado global de autenticação.** `auth` é passado por prop desde `App.jsx` (seção 5). É consistente hoje, mas significa que toda página nova precisa aceitar `auth` como prop explicitamente.
+
+### 📐 Critério: quando um módulo ganha `context/` (decidido 05-09-2026)
+
+Antes desta data, cada módulo que precisou de "dado compartilhado entre telas" resolveu de um jeito diferente, sem critério escrito - `11-configuracoes` separou `context/`/`provider/` em duas pastas, `campo-testes` juntou os dois numa pasta `context/` só, `toast` nem mora dentro de `services/`. Três soluções diferentes pro mesmo problema, cada uma decidida na hora por quem estava construindo naquele momento.
+
+**Critério, em uma frase:** um módulo só ganha `context/` quando o dado é lido por telas **sem relação de parentesco entre si** e é **caro ou errado buscar de novo** a cada tela. `configuracoes` passa nesse teste (lido em qualquer lugar do site, muda quase nunca). A lista de campanhas não passa (cada tela busca a sua, e está certo assim - buscar de novo é barato e sempre atual).
+
+**Formato da pasta, daqui pra frente:** uma `context/` só, com o contexto e o provider juntos (mesmo formato de `campo-testes`, não o de duas pastas separadas que `11-configuracoes` tinha - ver seção 3 pro padrão de pastas por módulo).
+
+📌 **`3-auth` é hoje o caso mais forte de estado global do sistema inteiro, e o único que não usa `context/`.** Funciona bem enquanto a árvore de componentes é rasa (só o painel admin existe) - vai doer quando a página pública de campanha existir, porque aí o usuário logado precisa ser lido em pontos bem distantes da raiz, não só no cabeçalho. **Decisão registrada agora, execução não é agora:** quando `3-auth` migrar pra `context/`, vai pro mesmo formato acima - não um quinto jeito. O momento natural dessa migração é junto da página pública de campanha (é aí que a dor aparece de verdade), não antes - fazer agora seria gastar esforço resolvendo um problema que ainda não incomoda.
 
 ---
 

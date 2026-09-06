@@ -99,6 +99,10 @@ export interface ConfiguracoesTable {
   tipo: TipoConfiguracao;
   descricao: string | null;
   ativo: Generated<boolean>;
+  // ADICIONADA (05-09-2026) - espelha 01_extensoes_enums_tabelas.sql, item 5
+  // de PENDENCIAS. Controla o que pol_config_select (04) libera pra quem
+  // não tem `configuracao_gerenciar`.
+  publica: Generated<boolean>;
 }
 
 // ADICIONADA (03-08-2026) - espelha 01_extensoes_enums_tabelas.sql [01-L].
@@ -373,6 +377,58 @@ export interface SeguirCampanhaTable {
   seguido_em: Generated<Date>;
 }
 
+// ADICIONADA (05-09-2026) - espelha 01_extensoes_enums_tabelas.sql (tabela
+// seguir_pesquisador), sem módulo Nest próprio ainda (RF-026, MATRIZ marca
+// ❌ - "não há módulo/endpoint dedicado"). Primeiro consumidor: exportação
+// de dados do usuário (1-usuario), que precisa ler "quem eu sigo" sem
+// esperar o módulo inteiro existir.
+export interface SeguirPesquisadorTable {
+  id_seg_pesquisador: Generated<number>;
+  id_usuario: number;
+  id_pesquisador: number;
+  seguido_em: Generated<Date>;
+}
+
+// CREATE TYPE meio_pagamento AS ENUM ('pix','cartao_credito','cartao_debito','boleto') - 01
+export const MEIOS_PAGAMENTO = [
+  'pix',
+  'cartao_credito',
+  'cartao_debito',
+  'boleto',
+] as const;
+export type MeioPagamento = (typeof MEIOS_PAGAMENTO)[number];
+
+// CREATE TYPE status_contribuicao AS ENUM (...) - 01
+export const STATUS_CONTRIBUICAO = [
+  'pendente',
+  'confirmado',
+  'repassado',
+  'a_devolver',
+  'devolvido',
+  'reembolsado',
+  'erro',
+  'expirado',
+  'reembolso_manual',
+] as const;
+export type StatusContribuicao = (typeof STATUS_CONTRIBUICAO)[number];
+
+// ADICIONADA (05-09-2026) - espelha 01_extensoes_enums_tabelas.sql (tabela
+// contribuicao), sem módulo Nest próprio ainda (22-contribuicao vazio,
+// trava no gateway de pagamento). Primeiro consumidor: exportação de dados
+// do usuário (1-usuario) - só leitura, nenhuma escrita fica sem o módulo.
+export interface ContribuicaoTable {
+  id_contribuicao: Generated<number>;
+  id_campanha: number;
+  id_usuario: number | null;
+  valor: string;
+  meio_pagamento: MeioPagamento;
+  status: Generated<StatusContribuicao>;
+  anonima: Generated<boolean>;
+  id_transacao_api: string | null;
+  criado_em: Generated<Date>;
+  token_sessao: Generated<string>;
+}
+
 export interface AtualizacaoCampanhaTable {
   id_atualizacao: Generated<number>;
   id_campanha: number;
@@ -524,6 +580,8 @@ export interface DB {
   campanha: CampanhaTable;
   historico_rejeicao: HistoricoRejeicaoTable;
   seguir_campanha: SeguirCampanhaTable;
+  seguir_pesquisador: SeguirPesquisadorTable;
+  contribuicao: ContribuicaoTable;
   atualizacao_campanha: AtualizacaoCampanhaTable;
   orcamento_campanha: OrcamentoCampanhaTable;
   marco_cronograma: MarcoCronogramaTable;

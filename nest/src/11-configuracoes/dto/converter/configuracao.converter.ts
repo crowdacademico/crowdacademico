@@ -14,6 +14,7 @@ export class ConfiguracaoConverter {
       tipo: linha.tipo,
       descricao: linha.descricao,
       ativo: linha.ativo,
+      publica: linha.publica,
     };
   }
 }

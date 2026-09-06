@@ -38,6 +38,7 @@ export class ConfiguracaoServiceCreate {
           valor: dto.valor ?? null,
           tipo: dto.tipo,
           descricao: dto.descricao ?? null,
+          ...(dto.publica !== undefined ? { publica: dto.publica } : {}),
         })
         .returningAll()
         .executeTakeFirstOrThrow();

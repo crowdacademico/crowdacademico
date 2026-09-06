@@ -20,6 +20,9 @@ export function AlterarConfiguracao({ auth }) {
   const [valor, setValor] = useState('');
   const [descricao, setDescricao] = useState('');
   const [ativo, setAtivo] = useState(true);
+  // ADICIONADO (05-09-2026, item 5 de PENDENCIAS) - controla se a linha,
+  // quando global, aparece pra quem não tem 'configuracao_gerenciar'.
+  const [publica, setPublica] = useState(false);
   const [carregando, setCarregando] = useState(true);
   const [enviando, setEnviando] = useState(false);
 
@@ -31,6 +34,7 @@ export function AlterarConfiguracao({ auth }) {
         setValor(dados.valor ?? '');
         setDescricao(dados.descricao ?? '');
         setAtivo(dados.ativo);
+        setPublica(dados.publica);
       })
       .catch(reportarErro)
       .finally(() => setCarregando(false));
@@ -41,7 +45,8 @@ export function AlterarConfiguracao({ auth }) {
     configuracao !== null &&
     (valor !== (configuracao.valor ?? '') ||
       descricao !== (configuracao.descricao ?? '') ||
-      ativo !== configuracao.ativo);
+      ativo !== configuracao.ativo ||
+      publica !== configuracao.publica);
   useAvisoAlteracaoNaoSalva(sujo);
 
   const aoCancelar = () => {
@@ -56,7 +61,7 @@ export function AlterarConfiguracao({ auth }) {
     limparErro();
     setEnviando(true);
     try {
-      await configuracaoApi.atualizar(auth.authFetch, id, { valor, descricao, ativo });
+      await configuracaoApi.atualizar(auth.authFetch, id, { valor, descricao, ativo, publica });
       mostrar('Parâmetro alterado com sucesso.', `ID: ${id} foi alterado`);
       navigate(-1);
     } catch (erroRequisicao) {
@@ -138,7 +143,7 @@ export function AlterarConfiguracao({ auth }) {
               />
             </div>
 
-            <label className="sm:col-span-2 flex items-center gap-2 text-sm font-semibold texto-padrao">
+            <label className="flex items-center gap-2 text-sm font-semibold texto-padrao">
               <input
                 type="checkbox"
                 checked={ativo}
@@ -146,6 +151,22 @@ export function AlterarConfiguracao({ auth }) {
               />
               Ativo
             </label>
+
+            <div className="sm:col-span-2">
+              <label className="flex items-center gap-2 text-sm font-semibold texto-padrao">
+                <input
+                  type="checkbox"
+                  checked={publica}
+                  onChange={(evento) => setPublica(evento.target.checked)}
+                />
+                Pública
+              </label>
+              <p className="text-xs texto-fraco mt-1">
+                Só tem efeito se este parâmetro for global (não uma preferência pessoal): marcado,
+                aparece pra qualquer visitante em <code>GET /configuracoes</code>; desmarcado, só
+                aparece pra quem tem a permissão &quot;configuracao_gerenciar&quot;.
+              </p>
+            </div>
           </SecaoFicha>
         </form>
       )}

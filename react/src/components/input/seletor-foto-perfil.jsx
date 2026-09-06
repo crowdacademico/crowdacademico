@@ -4,6 +4,7 @@ import { ErroHttp } from '../../services/constant/api/http.util';
 import { traduzirErro } from '../../services/constant/api/traduzir-erro.util';
 import { arquivoApi } from '../../services/25-arquivo/api/arquivo.api';
 import { reduzirImagemNoNavegador } from '../../services/25-arquivo/util/reduzir-imagem.util';
+import { useConfiguracoes } from '../../services/11-configuracoes/hook/use-configuracoes';
 
 // Espelha a lista aceita no backend (nest/src/25-arquivo/arquivo.constants.ts
 // TIPOS_MIME_PERMITIDOS) - MENOS application/pdf, que não faz sentido como
@@ -11,18 +12,13 @@ import { reduzirImagemNoNavegador } from '../../services/25-arquivo/util/reduzir
 // isto é só uma checagem CLIENTE (evita round-trip óbvio), o backend
 // confere de novo (e de verdade - assinatura mágica dos bytes) na
 // confirmação, então errar aqui não é um risco de segurança, só uma UX
-// pior (erro só depois de enviar).
+// pior (erro só depois de enviar). Não é config - é lista estrutural do
+// que o processamento de imagem (`sharp`) sabe converter, não regra de
+// negócio editável pelo Admin.
 const TIPOS_AVATAR_PERMITIDOS = ['image/jpeg', 'image/png', 'image/webp'];
-// Mesmo teto usado pelo backend pra imagens (TAMANHO_MAXIMO_BYTES_POR_MIME,
-// baixado de 10MB pra 8MB em 01-09-2026 - plano grátis do Supabase Storage
-// só tem 1GB de espaço total). Checado DEPOIS de reduzirImagemNoNavegador
-// (01-09-2026) - não antes: com a redução automática no cliente, uma foto
-// de celular de 10-15MB vira algumas centenas de KB, então barrar pelo
-// tamanho BRUTO derrubaria o próprio motivo de ter a redução.
-const TAMANHO_MAXIMO_AVATAR_BYTES = 8 * 1024 * 1024;
 // Teto BRUTO (antes da redução) - só pra recusar algo absurdo cedo (ex.:
 // vídeo de 300MB renomeado pra .jpg) sem gastar CPU tentando processar no
-// canvas; não tem relação com o teto real do backend acima.
+// canvas; não tem relação com o teto real do backend (abaixo, via config).
 const TAMANHO_MAXIMO_BRUTO_BYTES = 30 * 1024 * 1024;
 // Mesmos números do perfil 'avatar' em PERFIL_PROCESSAMENTO_POR_CONTEXTO
 // (nest/src/25-arquivo/arquivo.constants.ts) - sem import cruzado entre
@@ -63,6 +59,19 @@ export function SeletorFotoPerfil({
   const [enviando, setEnviando] = useState(false);
   const [erroLocal, setErroLocal] = useState('');
 
+  // `arquivo_tamanho_maximo_imagem_bytes` já vive em `configuracoes`
+  // (marcada `publica`, 05-09-2026) - lida daqui em vez de duplicada à mão
+  // (era `8 * 1024 * 1024` fixo neste arquivo, e no Nest ao mesmo tempo,
+  // sincronizados só de boa vontade). O valor padrão abaixo é só o que
+  // aparece por uma fração de segundo antes do `ConfiguracoesProvider`
+  // terminar de carregar - depois disso, sempre reflete o que o Admin
+  // configurou.
+  const { obterConfiguracao } = useConfiguracoes();
+  const tamanhoMaximoAvatarBytes = obterConfiguracao(
+    'arquivo_tamanho_maximo_imagem_bytes',
+    8 * 1024 * 1024,
+  );
+
   const processarArquivo = async (arquivoEscolhido) => {
     setErroLocal('');
 
@@ -89,9 +98,13 @@ export function SeletorFotoPerfil({
         PERFIL_REDUCAO_AVATAR,
       );
 
-      if (arquivo.size > TAMANHO_MAXIMO_AVATAR_BYTES) {
+      if (arquivo.size > tamanhoMaximoAvatarBytes) {
         // `finally` abaixo cuida de setEnviando(false) neste return também.
-        setErroLocal('Imagem muito grande - o tamanho máximo é 8 MB.');
+        // Mensagem calcula o MB a partir da config (não hardcoded) - se o
+        // Admin mudar `arquivo_tamanho_maximo_imagem_bytes`, o texto some
+        // sozinho.
+        const megabytes = Math.round(tamanhoMaximoAvatarBytes / (1024 * 1024));
+        setErroLocal(`Imagem muito grande - o tamanho máximo é ${megabytes} MB.`);
         return;
       }
 

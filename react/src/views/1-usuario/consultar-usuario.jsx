@@ -81,10 +81,12 @@ export function ConsultarUsuario({ auth }) {
   const [usuario, setUsuario] = useState(null);
   const [papeis, setPapeis] = useState(null);
   // Avatar (módulo 25-arquivo) - busca separada de `usuario` de propósito:
-  // GET /arquivo/avatar/:idUsuario é público (não precisa de auth.authFetch,
-  // é o próprio backend que já resolve foto-cadastrada-ou-padrão), e um
-  // impedir o resto da ficha de carregar - daí o .catch(() => null) igual
-  // já é feito pra `papeis` logo abaixo.
+  // GET /arquivo/avatar/:idUsuario é público (não precisa de auth.authFetch),
+  // e devolve { url: null } pra quem não tem foto (SIMPLIFICADO 05-09-2026 -
+  // não existe mais "avatar padrão do sistema", AvatarUsuario já desenha
+  // iniciais quando `url` é null). Um erro aqui não deve impedir o resto da
+  // ficha de carregar - daí o .catch(() => null) igual já é feito pra
+  // `papeis` logo abaixo.
   const [avatar, setAvatar] = useState(null);
   // Perfil de pesquisador (módulo 6, 25-08-2026: existe de verdade agora,
   // o aviso "ainda não implementado" que morava aqui era só um resquício
@@ -175,7 +177,7 @@ export function ConsultarUsuario({ auth }) {
         // do Instagram/LinkedIn.
         <div className="relative shrink-0">
           <AvatarUsuario nome={usuario.nome} foto={avatar?.url} tamanho="xl" />
-          {avatar?.padrao === false && avatar?.url && (
+          {avatar?.url && (
             <div className="absolute bottom-0 right-0">
               <BotaoVerFotoPerfil url={avatar.url} badge />
             </div>
@@ -216,12 +218,12 @@ export function ConsultarUsuario({ auth }) {
               // Botão de olho à ESQUERDA do texto (04-09-2026, pedido do
               // Lucas) - por isso vem dentro de `valor`, não em `acao`
               // (que sempre renderiza à direita, ver ficha-consulta.jsx).
-              // Só aparece pra quem cadastrou foto de verdade (avatar
-              // padrão do sistema não precisa disso).
+              // Só aparece pra quem cadastrou foto de verdade (sem foto,
+              // não tem nada pra ver).
               valor={
-                avatar?.padrao === false ? (
+                avatar?.url ? (
                   <span className="inline-flex items-center gap-2">
-                    {avatar?.url && <BotaoVerFotoPerfil url={avatar.url} />}
+                    <BotaoVerFotoPerfil url={avatar.url} />
                     Foto cadastrada
                   </span>
                 ) : (

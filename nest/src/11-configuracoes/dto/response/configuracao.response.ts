@@ -8,4 +8,7 @@ export class ConfiguracaoResponse {
   tipo: TipoConfiguracao;
   descricao: string | null;
   ativo: boolean;
+  // ADICIONADO (05-09-2026, item 5 de PENDENCIAS) - controla se a linha
+  // (quando global) aparece pra quem não tem `configuracao_gerenciar`.
+  publica: boolean;
 }

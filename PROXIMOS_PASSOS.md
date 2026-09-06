@@ -6,25 +6,11 @@ Criado em 03-08-2026, sugestão da IA numa rodada de consolidação/auditoria.
 
 ---
 
-## 1. Migração gradual de regra de negócio do banco pro Nest
-
-**Origem:** a Alexia recebeu uma mensagem genérica (não sobre o nosso projeto) dizendo que lógica de negócio pesada no banco é anti-padrão. Ela mesma já filtrou o que se aplicava e o que não: RLS/trigger de autorização está OK pro nosso caso (o front nunca fala com o banco direto, só com o Nest - é exatamente o padrão que a mensagem defende); o que ela concorda que exageramos é regra de PRODUTO (que muda com o tempo) misturada com invariante estrutural, dentro das mesmas triggers.
-
-**Critério acordado** (refinado pela IA em cima da proposta dela - "regra que muda" vs "invariante" virou uma pergunta mais precisa):
-
-> Se um bug no Nest violar essa regra, **alguém perde dinheiro ou dado**? → fica no banco.
-> Se a regra é só **escolha de negócio, sem consequência de integridade**? → pode ir pro Nest.
-
-- **Fica no banco:** `all-or-nothing` do repasse, congelamento pós-aprovação de campanha (`fn_congela_regras_campanha`), **transição de status de campanha** (`fn_valida_transicao_campanha`).
-- **Pode ir pro Nest, aos poucos:** limite de campanhas simultâneas por pesquisador, rate limit de denúncia (24h).
-
-⚠️ **Nota importante sobre `fn_valida_transicao_campanha`:** a primeira proposta da Alexia classificava "transição de status" como regra de produto que poderia sair do banco. A IA discordou nesse ponto específico, com um contraexemplo empírico, não teórico - testou ao vivo uma cadeia de fraude completa: pesquisador cria campanha, aprova a própria campanha, doa pra si mesmo, marca a doação como paga. Todos os passos passavam pelo Nest normalmente (nenhuma validação de aplicação barrou nada) - quem impediu foi a trigger do banco. Se essa regra estivesse só no backend, essa fraude teria ido pra produção. **Esta função fica no banco, não é candidata a migrar.**
-
-**Status:** critério acordado, nada implementado ainda. Migrar é trabalho de médio prazo, revisando trigger por trigger - não uma rodada só.
+> 🗑️➡️✅ **"Migração gradual de regra de negócio do banco pro Nest" - RECLASSIFICADO (05-09-2026), saiu desta lista.** Não era uma pendência de verdade - o estado atual (regra de integridade/fraude no banco, regra de produto pode ir pro Nest quando a ocasião surgir) já é o correto, e deixar isso numa lista de "próximos passos" dava a impressão errada de dívida acumulando. Virou política de arquitetura registrada, não tarefa esperando: ver `DOCUMENTACAO_BD.md`, Anexo E.
 
 ---
 
-## 2. Gateway de pagamento
+## 1. Gateway de pagamento
 
 Destrava três coisas de uma vez: verificação de assinatura HMAC do webhook, idempotência (gateways reenviam webhook "pelo menos uma vez"), e reconciliação financeira (job comparando extrato do gateway com `contribuicao`).
 
@@ -51,7 +37,7 @@ Destrava três coisas de uma vez: verificação de assinatura HMAC do webhook, i
 
 ---
 
-## 3. Página pública de campanha + Open Graph
+## 2. Página pública de campanha + Open Graph
 
 A página pública de campanha (a que um doador visita, compartilha no WhatsApp) ainda não existe no React - só o painel admin existe hoje. Open Graph (meta tags pra link com preview) e contador de visualizações dependem dela existir primeiro.
 
@@ -59,16 +45,16 @@ A página pública de campanha (a que um doador visita, compartilha no WhatsApp)
 
 ---
 
-## 4. Exportação de dados (LGPD Art. 18) e Request ID por requisição
+## 3. Exportação de dados (LGPD Art. 18) e Request ID por requisição
 
-- **Exportação de dados do usuário** (LGPD Art. 18, portabilidade) - a exclusão de conta já existe, falta o par (exportar antes de excluir, ou por pedido). Não depende de nenhum módulo novo - viveria dentro de `1-usuario`, mesmo padrão de `usuario.service.remove.ts`.
+- 🟢 **Exportação de dados do usuário - RESOLVIDO (05-09-2026).** `GET /usuario/eu/exportar-dados` (novo, dentro de `1-usuario`, mesmo padrão de `usuario.service.remove.ts`) - sem `:id`, ator sempre o autenticado. CPF sai mascarado (nunca em texto puro); rate limit de 1x/hora por conta (não por IP); rastro em `log_auditoria` a cada chamada (`registrar_exportacao_dados()`, `SECURITY DEFINER`); `Cache-Control: no-store`. Detalhamento completo em `DOCUMENTACAO_BACKEND.md` §7.4 e `DOCUMENTACAO_BD.md` (`[03-O]` + seção `log_auditoria`). Falta rodar manualmente em produção: bloco de migração em `ATUALIZAR O SUPABASE.sql` (05-09-2026, CHECK constraint + função + grants).
 - 🟢 **Request ID por requisição - RESOLVIDO (05-09-2026).** `nestjs-cls` ganhou `generateId`/`idGenerator` (`database.module.ts`) e `commons/logging/request-logger.middleware.ts` loga toda requisição no formato `[id] MÉTODO /rota STATUS - Xms`. Detalhamento completo (inclusive por que é middleware, não interceptor) em `DOCUMENTACAO_BACKEND.md`, §2.8.
 
-**Status:** exportação de dados não iniciada, sem bloqueio - é só entrar na fila. Request ID concluído.
+**Status:** os dois itens concluídos.
 
 ---
 
-## 5. Padronizar estrutura de pastas do React (`services/*`)
+## 4. Padronizar estrutura de pastas do React (`services/*`)
 
 `services/1-usuario` segue o padrão `api/constants/hook/type`; `services/11-configuracoes` segue `api/context/hook/provider`. Duas convenções diferentes coexistindo - antes de o projeto crescer mais (mais módulos = mais pastas nesse formato), vale escolher uma e migrar a outra.
 
@@ -76,13 +62,13 @@ A página pública de campanha (a que um doador visita, compartilha no WhatsApp)
 
 ---
 
-## 6. ENUM vs. tabela de catálogo - decisão fechada, nada a implementar
+## 5. ENUM vs. tabela de catálogo - decisão fechada, nada a implementar
 
 **Origem:** ao mapear "o que o admin ainda não edita pelo painel sem SQL", a IA identificou os 15 `ENUM` do banco como o maior teto restante. A pergunta natural era: por que não virar tabela editável, igual `motivo_denuncia`/`tipo_link`/`area_conhecimento` já são?
 
-**Por que a resposta não é "converter tudo":** `ENUM` não é só uma lista de opções - é um contrato que trigger/policy/função assumem. Se o admin pudesse adicionar `status = 'suspenso_temporario'` pelo painel, nenhuma regra do sistema saberia tratar esse valor - a campanha entraria num estado que ninguém previu, em silêncio. Isso tem nome (*inner-platform effect*): o sistema fica tão configurável que vira um segundo banco de dados mal feito dentro do primeiro - o extremo oposto do problema que motivou o item 1 desta lista.
+**Por que a resposta não é "converter tudo":** `ENUM` não é só uma lista de opções - é um contrato que trigger/policy/função assumem. Se o admin pudesse adicionar `status = 'suspenso_temporario'` pelo painel, nenhuma regra do sistema saberia tratar esse valor - a campanha entraria num estado que ninguém previu, em silêncio. Isso tem nome (*inner-platform effect*): o sistema fica tão configurável que vira um segundo banco de dados mal feito dentro do primeiro - o extremo oposto do problema tratado no Anexo E de `DOCUMENTACAO_BD.md` (regra de negócio no banco vs. no Nest).
 
-**Critério usado** (mesmo espírito do item 1): se o admin adicionar um valor novo, alguma regra do sistema precisa saber o que fazer com ele? Se sim, fica `ENUM` (mudança vira código, com revisão). Se não, pode virar catálogo.
+**Critério usado** (mesmo espírito do Anexo E): se o admin adicionar um valor novo, alguma regra do sistema precisa saber o que fazer com ele? Se sim, fica `ENUM` (mudança vira código, com revisão). Se não, pode virar catálogo.
 
 **Aplicado e CONFIRMADO no código** (não só na teoria - checado direto no `05_regras_negocio.sql`):
 - `status_campanha`, `status_contribuicao`, `status_encerramento`, `modelo_campanha` - ficam `ENUM`. Lógica de verdade depende do valor específico (ex.: `meio_pagamento <> 'pix'` trava contribuição all-or-nothing).
@@ -98,5 +84,5 @@ A página pública de campanha (a que um doador visita, compartilha no WhatsApp)
 
 - **Módulo `6-perfil-pesquisador` + validação de CPF** - construído (Grupo 2 de `PROXIMOS_MODULOS.md`). O bloqueio original (Lucas não queria CPF de sequência repetida como atalho de teste, "vou pensar em algo melhor", 03-08-2026) foi resolvido usando CPFs sintaticamente válidos e não sequenciais nos dados de teste - ver `Como testar perfil_pesquisador.md` para o passo a passo com um CPF de exemplo real (`45612398719`). Algoritmo de validação usa dígito verificador de verdade, não só formato.
 - **`papel.codigo`** - resolvido em 03-08-2026 (ver `DOCUMENTACAO_BD.md`, seção "05. RBAC"). O achado que motivou (renomear papel quebrava RBAC em silêncio) foi confirmado corrigido testando ao vivo (renomeou `'admin'`/`'pesquisador'`, as automações continuaram funcionando).
-- **Migrations (tabela de controle + runner)** - resolvido em 03-08-2026 (ver `DOCUMENTACAO_BACKEND.md`, seção 12). Escopo mínimo, como decidido: os 8 arquivos `.sql` continuam exatamente como estavam - só ganharam uma tabela `schema_migrations` e um script (`npm run db:migrate`/`db:migrate:adotar`) por cima, usando conexão separada da `app_nestjs`. Falta só Lucas e Alexia rodarem `db:migrate:adotar` cada um no próprio banco (passo a passo em `tutorial-rodar-projeto.md`).
+- **Migrations (tabela de controle + runner)** - resolvido em 03-08-2026 (ver `DOCUMENTACAO_BACKEND.md`, seção 12). Escopo mínimo, como decidido: os 8 arquivos `.sql` continuam exatamente como estavam - só ganharam uma tabela `schema_migrations` e um script (`npm run db:migrate`/`db:migrate:adotar`) por cima, usando conexão separada da `app_nestjs`. **Lucas já rodou `db:migrate:adotar` no próprio banco (05-09-2026).** Falta só a Alexia rodar no dela - passo a passo em `tutorial-rodar-projeto.md`. Sem prazo (ela só roda quando surgir oportunidade, não é algo pra cobrar) - **migração acumulada esperando esse momento:** a coluna `configuracoes.publica` (ver `PENDENCIAS e correcoes.md`, seção "GET /configuracoes agora distingue pública de interna", 05-09-2026), pra rodar as duas de uma vez.
 - **Uma lacuna genuína, identificada pela IA, ainda sem item próprio na lista:** textos de e-mail. Quando o módulo `4-mail` for construído (ainda não existe), o conteúdo dos e-mails (aprovação, reprovação, meta atingida) não deveria nascer hardcoded num `.ts` - muda toda semana por decisão de produto, é candidato natural a virar uma tabela `template_email` editável pelo admin, sem risco nenhum (nenhuma regra do sistema depende do TEXTO de um e-mail). Vale lembrar disso quando o módulo `4-mail` entrar em pauta - não tem prazo definido ainda, por isso não virou item numerado.

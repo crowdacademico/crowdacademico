@@ -27,4 +27,13 @@ export class ConfiguracaoRequestCreate {
   @IsOptional()
   @IsBoolean()
   global?: boolean;
+
+  // ADICIONADO (05-09-2026, item 5 de PENDENCIAS) - true = linha global
+  // fica visível pra qualquer um (mesmo sem 'configuracao_gerenciar'),
+  // false/ausente = só quem tem a permissão vê (cai no DEFAULT FALSE do
+  // banco). Sem efeito nenhum numa linha pessoal (id_usuario preenchido) -
+  // essa já é visível só pro dono, com ou sem esta flag.
+  @IsOptional()
+  @IsBoolean()
+  publica?: boolean;
 }

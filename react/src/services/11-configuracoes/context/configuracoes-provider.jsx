@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { configuracaoApi } from '../api/configuracao.api';
-import { ConfiguracoesContext } from '../context/configuracoes-context';
+import { ConfiguracoesContext } from './configuracoes-context';
 
 // Converte o `valor` (sempre string ou null na coluna) pro tipo real,
 // usando o `tipo` que a própria linha declara (mesmo domínio de

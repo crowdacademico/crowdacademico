@@ -442,6 +442,34 @@ AS $$
 $$;
 
 -- ----------------------------------------------------------------------------
+-- Função:     registrar_exportacao_dados
+-- Assinatura: (p_id_usuario INT) -> VOID
+-- Bloco:      [03-O]
+-- Regra:      Item 7 de PENDENCIAS (exportação de dados do usuário, LGPD
+--             Art. 18) - deixa rastro em log_auditoria a cada chamada de
+--             GET /usuario/eu/exportar-dados. `app_nestjs` só tem GRANT
+--             SELECT em log_auditoria (06) - de propósito, quem grava é só
+--             a trigger fn_log_auditoria() (05), pra ninguém conseguir
+--             forjar/inflar o histórico de auditoria escrevendo direto
+--             nele. Mesma categoria de pré-autorização de
+--             registrar_falha_login/registrar_login_sucesso (acima nesta
+--             seção): SECURITY DEFINER contorna essa restrição só pra este
+--             propósito específico, sem abrir INSERT geral na tabela.
+--             p_id_usuario precisa ser sempre o próprio usuário autenticado
+--             (o endpoint não aceita :id, ver usuario.controller.exportar-
+--             dados.ts) - nunca um valor arbitrário vindo do cliente.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.registrar_exportacao_dados(p_id_usuario INT)
+RETURNS VOID
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    INSERT INTO log_auditoria (tabela, identidade_registro, operacao, id_usuario_responsavel)
+    VALUES ('usuario', p_id_usuario::TEXT, 'EXPORT', p_id_usuario);
+$$;
+
+-- ----------------------------------------------------------------------------
 -- Função:     excluir_conta_usuario
 -- Assinatura: (p_id_usuario INT) -> VOID
 -- Bloco:      [03-O]

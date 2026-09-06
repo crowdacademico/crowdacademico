@@ -733,12 +733,23 @@ FROM usuario;
 -- funcionar). Duas (email_suporte, notificar_novas_campanhas, mais abaixo) ganharam
 -- comentário explicando quem lê (NestJS, não o banco); duas saíram do seed - ver
 -- motivo em cada uma, no final deste bloco.
-INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo) VALUES
+-- Coluna `publica` adicionada (05-09-2026, item 5 de PENDENCIAS) - critério:
+-- PÚBLICA é o que o navegador precisa pra montar/validar uma tela (admin ou
+-- pública, futura); INTERNA é parâmetro de segurança/moderação (ex.: tudo
+-- que envolve tentativa de login, bloqueio, validade de token/sessão) ou
+-- constante que só uma trigger/service interno lê, nunca exibida a ninguém.
+-- `suspensao_usuario_opcoes_dias` é PÚBLICA por necessidade técnica, não só
+-- critério de conteúdo: `ConfiguracoesProvider` usa `configuracaoApi.
+-- buscarPublicas()`, que NUNCA manda token (nem quando quem está olhando é
+-- o próprio admin) - se essa chave fosse interna, o seletor de "Suspender
+-- Usuário" no painel perderia as opções de prazo, quebrando uma tela que já
+-- funciona hoje.
+INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, publica) VALUES
 -- A
-(NULL, 'email_suporte',              'suporte@crowdacademico.com.br', 'texto', 'E-mail de suporte ao usuário',   TRUE), -- lida pelo NestJS (rodapé/e-mails transacionais), não pelo banco - nenhum .sql precisa dela
+(NULL, 'email_suporte',              'suporte@crowdacademico.com.br', 'texto', 'E-mail de suporte ao usuário',   TRUE, TRUE), -- lida pelo NestJS (rodapé/e-mails transacionais), não pelo banco - nenhum .sql precisa dela
 -- B
-(NULL, 'limite_tentativas_login',    '5',     'inteiro',  'Nº de tentativas de login falhas antes de bloquear a conta',    TRUE),
-(NULL, 'bloqueio_login_minutos',     '15',    'inteiro',  'Duração do bloqueio de login após exceder o limite de tentativas (minutos)', TRUE),
+(NULL, 'limite_tentativas_login',    '5',     'inteiro',  'Nº de tentativas de login falhas antes de bloquear a conta',    TRUE, FALSE),
+(NULL, 'bloqueio_login_minutos',     '15',    'inteiro',  'Duração do bloqueio de login após exceder o limite de tentativas (minutos)', TRUE, FALSE),
 -- ADICIONADAS (04-09-2026, pedido do Lucas: "vamos colocar estes dois no
 -- Painel Admin") - lidas por ConfiguracaoValorService (commons/configuracao)
 -- em auth.service.login.ts/auth.service.cadastro.ts, mesmo padrão dos dois
@@ -747,13 +758,13 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo) VAL
 -- dizendo "parâmetro técnico, não regra de negócio configurável" - revisto
 -- agora: são exatamente o mesmo tipo de janela de tempo que os dois de
 -- cima, então não fazia sentido tratar diferente.
-(NULL, 'refresh_token_dias_validade', '30',   'inteiro',  'Por quantos dias a sessão continua válida (refresh token) antes de precisar logar de novo', TRUE),
-(NULL, 'verificacao_email_horas_validade', '24', 'inteiro', 'Validade do token de verificação de e-mail, em horas', TRUE),
+(NULL, 'refresh_token_dias_validade', '30',   'inteiro',  'Por quantos dias a sessão continua válida (refresh token) antes de precisar logar de novo', TRUE, FALSE),
+(NULL, 'verificacao_email_horas_validade', '24', 'inteiro', 'Validade do token de verificação de e-mail, em horas', TRUE, FALSE),
 -- ADICIONADA (09-08-2026, Bloco G - moderação/suspensão): opções de prazo
 -- sugeridas no seletor de "Suspender Usuário" do painel; lida pelo React
 -- (minha-conta/alterar-usuario), não por nenhuma trigger/função do banco.
-(NULL, 'suspensao_usuario_opcoes_dias', '1,3,7,30', 'texto', 'Opções de prazo (em dias) sugeridas no seletor de suspensão de usuário - lista separada por vírgula.', TRUE),
-(1,   'notificar_novas_campanhas',   'true',  'booleano', 'Admin recebe e-mail sobre novas campanhas',            TRUE), -- lida pelo worker de notificação do NestJS, não pelo banco - nenhuma trigger/função a consulta
+(NULL, 'suspensao_usuario_opcoes_dias', '1,3,7,30', 'texto', 'Opções de prazo (em dias) sugeridas no seletor de suspensão de usuário - lista separada por vírgula.', TRUE, TRUE),
+(1,   'notificar_novas_campanhas',   'true',  'booleano', 'Admin recebe e-mail sobre novas campanhas',            TRUE, FALSE), -- lida pelo worker de notificação do NestJS, não pelo banco - nenhuma trigger/função a consulta; `publica` é irrelevante aqui (linha pessoal, id_usuario=1, RLS já restringe ao dono)
 -- E
 -- ADICIONADO (28-07-2026, item 16 da Lista C): prazo_minimo_campanha_dias e os
 -- 3 limites de negócio (campanhas simultâneas, endossos, denúncias/24h) que
@@ -761,26 +772,26 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo) VAL
 -- deste bloco e nas funções correspondentes. Valores idênticos aos que já
 -- estavam hardcoded (15, 2, 4, 5) - nada muda no comportamento hoje, só o
 -- lugar de onde o número é lido.
-(NULL, 'taxa_plataforma_padrao',     '5.00',  'decimal',  'Taxa padrão cobrada pela plataforma (%)',              TRUE),
-(NULL, 'prazo_minimo_campanha_dias', '15',    'inteiro',  'Duração mínima permitida de uma campanha em dias',     TRUE),
+(NULL, 'taxa_plataforma_padrao',     '5.00',  'decimal',  'Taxa padrão cobrada pela plataforma (%)',              TRUE, TRUE),
+(NULL, 'prazo_minimo_campanha_dias', '15',    'inteiro',  'Duração mínima permitida de uma campanha em dias',     TRUE, TRUE),
 -- ATUALIZADO (28-07-2026): 90 → 60. Decisão tomada direto por você e pela
 -- Alexia (não ficou mais em aberto entre "90 ou 60", ver item 16 da Lista C).
-(NULL, 'prazo_maximo_campanha_dias', '60',    'inteiro',  'Duração máxima permitida de uma campanha em dias',     TRUE),
-(NULL, 'limite_campanhas_simultaneas','2',    'inteiro',  'Nº máximo de campanhas simultâneas (aguardando_aprovacao/ativo) por pesquisador (RF-029)', TRUE),
-(NULL, 'limite_endossos_campanha',   '4',     'inteiro',  'Nº máximo de endossos ativos simultâneos por campanha (RF-063)', TRUE),
-(NULL, 'limite_denuncias_24h',       '5',     'inteiro',  'Nº máximo de denúncias por usuário dentro da janela de configuracoes.janela_denuncias_horas (RF-076)', TRUE),
+(NULL, 'prazo_maximo_campanha_dias', '60',    'inteiro',  'Duração máxima permitida de uma campanha em dias',     TRUE, TRUE),
+(NULL, 'limite_campanhas_simultaneas','2',    'inteiro',  'Nº máximo de campanhas simultâneas (aguardando_aprovacao/ativo) por pesquisador (RF-029)', TRUE, TRUE),
+(NULL, 'limite_endossos_campanha',   '4',     'inteiro',  'Nº máximo de endossos ativos simultâneos por campanha (RF-063)', TRUE, TRUE),
+(NULL, 'limite_denuncias_24h',       '5',     'inteiro',  'Nº máximo de denúncias por usuário dentro da janela de configuracoes.janela_denuncias_horas (RF-076)', TRUE, TRUE),
 -- ADICIONADO (11-08-2026, achado pela IA: metade da regra de RF-076 já era
 -- configurável desde 28-07, mas a JANELA de tempo continuava fixa em 24h no
 -- corpo da função - ver validar_denuncia_frequencia() em 05, [05-K-3]).
-(NULL, 'janela_denuncias_horas',     '24',    'inteiro',  'Janela de tempo (em horas) usada por limite_denuncias_24h (RF-076)', TRUE),
+(NULL, 'janela_denuncias_horas',     '24',    'inteiro',  'Janela de tempo (em horas) usada por limite_denuncias_24h (RF-076)', TRUE, TRUE),
 -- ADICIONADO (28-07-2026, Claude Web - "Problema 2"): limite de negócio (menor,
 -- configurável) por cima do limite técnico largo das colunas (01) - mesmo padrão
 -- config + trigger do prazo de campanha (item 16).
-(NULL, 'limite_caracteres_descricao_campanha',     '5000', 'inteiro', 'Nº máximo de caracteres em campanha.descricao (RF)',                        TRUE),
-(NULL, 'limite_caracteres_conteudo_atualizacao',   '5000', 'inteiro', 'Nº máximo de caracteres em atualizacao_campanha.conteudo',                  TRUE),
-(NULL, 'limite_caracteres_relato_denuncia',        '1000', 'inteiro', 'Nº máximo de caracteres em denuncia.relato (sugestão do Claude Web)',       TRUE),
-(NULL, 'limite_caracteres_justificativa_encerramento', '2000', 'inteiro', 'Nº máximo de caracteres em solicitacao_encerramento.justificativa_pesquisador/justificativa_admin', TRUE),
-(NULL, 'limite_caracteres_descricao_recompensa',   '2000', 'inteiro', 'Nº máximo de caracteres em recompensa.descricao',                            TRUE),
+(NULL, 'limite_caracteres_descricao_campanha',     '5000', 'inteiro', 'Nº máximo de caracteres em campanha.descricao (RF)',                        TRUE, TRUE),
+(NULL, 'limite_caracteres_conteudo_atualizacao',   '5000', 'inteiro', 'Nº máximo de caracteres em atualizacao_campanha.conteudo',                  TRUE, TRUE),
+(NULL, 'limite_caracteres_relato_denuncia',        '1000', 'inteiro', 'Nº máximo de caracteres em denuncia.relato (sugestão do Claude Web)',       TRUE, TRUE),
+(NULL, 'limite_caracteres_justificativa_encerramento', '2000', 'inteiro', 'Nº máximo de caracteres em solicitacao_encerramento.justificativa_pesquisador/justificativa_admin', TRUE, TRUE),
+(NULL, 'limite_caracteres_descricao_recompensa',   '2000', 'inteiro', 'Nº máximo de caracteres em recompensa.descricao',                            TRUE, TRUE),
 -- ADICIONADO (31-07-2026, Alexia; valores corrigidos 01-08-2026): orçamento e
 -- cronograma estruturados (01, [01-E]). Mesmo padrão config + trigger de tudo
 -- acima nesta seção - mudar o mínimo/máximo exigido, ou o limite de texto,
@@ -796,19 +807,19 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo) VAL
 -- (máximo)") contra o banco; decisão do Lucas foi ajustar o banco pro texto
 -- oficial do requisito. cronograma_min_marcos NÃO mudou, continua 3 (RF-041
 -- já cita 3 corretamente).
-(NULL, 'orcamento_min_itens',                      '1',    'inteiro', 'Nº mínimo de itens de orçamento exigido para aprovar uma campanha (RF-039)', TRUE),
-(NULL, 'orcamento_max_itens',                      '10',   'inteiro', 'Nº máximo de itens de orçamento permitido por campanha',                    TRUE),
-(NULL, 'cronograma_min_marcos',                    '3',    'inteiro', 'Nº mínimo de marcos de cronograma exigido para aprovar uma campanha',       TRUE),
-(NULL, 'cronograma_max_marcos',                    '20',   'inteiro', 'Nº máximo de marcos de cronograma permitido por campanha',                  TRUE),
-(NULL, 'limite_caracteres_descricao_orcamento',    '2000', 'inteiro', 'Nº máximo de caracteres em orcamento_campanha.descricao',                    TRUE),
-(NULL, 'limite_caracteres_descricao_marco',        '2000', 'inteiro', 'Nº máximo de caracteres em marco_cronograma.descricao',                      TRUE),
+(NULL, 'orcamento_min_itens',                      '1',    'inteiro', 'Nº mínimo de itens de orçamento exigido para aprovar uma campanha (RF-039)', TRUE, TRUE),
+(NULL, 'orcamento_max_itens',                      '10',   'inteiro', 'Nº máximo de itens de orçamento permitido por campanha',                    TRUE, TRUE),
+(NULL, 'cronograma_min_marcos',                    '3',    'inteiro', 'Nº mínimo de marcos de cronograma exigido para aprovar uma campanha',       TRUE, TRUE),
+(NULL, 'cronograma_max_marcos',                    '20',   'inteiro', 'Nº máximo de marcos de cronograma permitido por campanha',                  TRUE, TRUE),
+(NULL, 'limite_caracteres_descricao_orcamento',    '2000', 'inteiro', 'Nº máximo de caracteres em orcamento_campanha.descricao',                    TRUE, TRUE),
+(NULL, 'limite_caracteres_descricao_marco',        '2000', 'inteiro', 'Nº máximo de caracteres em marco_cronograma.descricao',                      TRUE, TRUE),
 -- ADICIONADO (28-07-2026, Claude Web - 5ª auditoria): meta 0.00 era aceita
 -- (campanha all-or-nothing com meta zero é sucesso instantâneo). Mesmo padrão
 -- do prazo (item 16): limite técnico largo na constraint (01, > 0), mínimo de
 -- negócio de verdade aqui.
-(NULL, 'meta_minima_campanha',       '500.00', 'decimal',  'Valor mínimo de meta financeira aceito para uma campanha (RF)',            TRUE),
+(NULL, 'meta_minima_campanha',       '500.00', 'decimal',  'Valor mínimo de meta financeira aceito para uma campanha (RF)',            TRUE, TRUE),
 -- F
-(NULL, 'limite_links_academicos_perfil', '5', 'inteiro',  'Nº máximo de links acadêmicos por pesquisador (RF-014/016/018)', TRUE),
+(NULL, 'limite_links_academicos_perfil', '5', 'inteiro',  'Nº máximo de links acadêmicos por pesquisador (RF-014/016/018)', TRUE, TRUE),
 -- H
 -- ADICIONADO (30-07-2026, RF-056 - sugestão do Claude Web, confirmada pelo
 -- Lucas): mesmo padrão do item 16/meta_minima_campanha, acima. R$5,00 estava
@@ -816,7 +827,7 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo) VAL
 -- não impõe mínimo), é política de negócio da própria plataforma, então
 -- precisa ser configurável igual as outras. Valor idêntico ao que já estava
 -- fixo (5.00) - nada muda no comportamento hoje, só o lugar de onde vem.
-(NULL, 'valor_minimo_contribuicao',  '5.00',  'decimal',  'Valor mínimo aceito por contribuição, em R$ (RF-056)',                       TRUE),
+(NULL, 'valor_minimo_contribuicao',  '5.00',  'decimal',  'Valor mínimo aceito por contribuição, em R$ (RF-056)',                       TRUE, TRUE),
 -- I
 -- DECIDIDO (28-07-2026, item 3 da lista de pendências): score NUNCA bloqueia
 -- criação de campanha (nem Catarse nem Experiment fazem isso; o filtro real é
@@ -824,7 +835,7 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo) VAL
 -- destacar, na fila de aprovação, campanhas de pesquisador abaixo do mínimo
 -- pra receberem revisão mais cuidadosa - ver public.fn_precisa_revisao_score()
 -- em 05_regras_negocio.sql, [05-I-1]. De propósito, sem trigger de bloqueio.
-(NULL, 'score_minimo_campanha',      '25.00', 'decimal',  'Score mínimo para criar campanha (sinal de revisão manual, nunca bloqueio automático)', TRUE);
+(NULL, 'score_minimo_campanha',      '25.00', 'decimal',  'Score mínimo para criar campanha (sinal de revisão manual, nunca bloqueio automático)', TRUE, FALSE);
 -- REMOVIDA (era 'permitir_campanha_anonima', booleano, default 'false'): não fazia
 -- sentido no modelo atual - campanha.id_usuario é NOT NULL (01), toda campanha SEMPRE
 -- tem um pesquisador identificado, é o que a curadoria (RF-068/069) exige. Contribuição
@@ -845,10 +856,10 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo) VAL
 -- que o Painel Admin realmente edita e que já tem trigger de recálculo. Manter
 -- as 2 chaves aqui, sem nenhuma função lendo, recriaria o mesmo problema que
 -- estamos corrigindo (constante seedada que não move nada).
-INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo) VALUES
-(NULL, 'score_penalidade_abandono',         '3',  'decimal', 'Pontos descontados por campanha não atingida e nunca encerrada formalmente (sem solicitação de encerramento)', TRUE),
-(NULL, 'score_penalidade_sem_justificativa','2',  'decimal', 'Pontos descontados por campanha não atingida cuja solicitação de encerramento não tem justificativa', TRUE),
-(NULL, 'score_frequencia_esperada_mensal',  '1',  'decimal', 'Nº de atualizações de campanha esperadas por mês de duração, usado na dimensão Atualização da Campanha', TRUE)
+INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, publica) VALUES
+(NULL, 'score_penalidade_abandono',         '3',  'decimal', 'Pontos descontados por campanha não atingida e nunca encerrada formalmente (sem solicitação de encerramento)', TRUE, FALSE),
+(NULL, 'score_penalidade_sem_justificativa','2',  'decimal', 'Pontos descontados por campanha não atingida cuja solicitação de encerramento não tem justificativa', TRUE, FALSE),
+(NULL, 'score_frequencia_esperada_mensal',  '1',  'decimal', 'Nº de atualizações de campanha esperadas por mês de duração, usado na dimensão Atualização da Campanha', TRUE, FALSE)
 ON CONFLICT (chave) DO NOTHING;
 
 -- [07-G] configuracoes: limites de upload de arquivo (ARQUIVO)
@@ -864,14 +875,21 @@ ON CONFLICT (chave) DO NOTHING;
 -- imagem/documento, 50MB cota) - nada muda no comportamento hoje, só o
 -- lugar de onde o número vem. Os dois de rate limit (janela/intervalo)
 -- são novos, sem hardcoded equivalente antes.
-INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo) VALUES
-(NULL, 'arquivo_tamanho_minimo_bytes',          '100',      'inteiro', 'Tamanho mínimo aceito por arquivo enviado, em bytes - barra arquivo vazio/corrompido', TRUE),
-(NULL, 'arquivo_tamanho_maximo_imagem_bytes',   '8388608',  'inteiro', 'Tamanho máximo aceito por imagem enviada (JPEG/PNG/WebP), em bytes (RF-017)', TRUE),
-(NULL, 'arquivo_tamanho_maximo_documento_bytes','5242880',  'inteiro', 'Tamanho máximo aceito por documento enviado (PDF), em bytes (RF-017)', TRUE),
-(NULL, 'arquivo_cota_bytes_por_usuario',        '52428800', 'inteiro', 'Cota total de armazenamento ativo por usuário, em bytes (RNF-017)', TRUE),
-(NULL, 'arquivo_limite_uploads_janela',         '20',       'inteiro', 'Nº máximo de uploads confirmados por usuário dentro da janela de configuracoes.arquivo_janela_limite_uploads_minutos', TRUE),
-(NULL, 'arquivo_janela_limite_uploads_minutos', '1440',     'inteiro', 'Janela de tempo (em minutos) usada por arquivo_limite_uploads_janela - padrão 1440 = 24h', TRUE),
-(NULL, 'arquivo_intervalo_minimo_segundos',     '5',        'inteiro', 'Intervalo mínimo (em segundos) entre um upload confirmado e o próximo início de upload do mesmo usuário', TRUE)
+-- `publica`: os 4 tetos de tamanho/cota são úteis pro navegador validar/
+-- avisar antes de tentar subir um arquivo grande demais (ex.: "máximo 8MB"
+-- na tela de upload) - PÚBLICA. Os 2 de rate limit (janela/intervalo) são
+-- anti-abuso, mesma categoria de limite_tentativas_login/bloqueio_login_
+-- minutos (INTERNA) - não é informação que ajuda ninguém a montar tela,
+-- só serve pra quem já está tentando abusar do sistema saber o intervalo
+-- exato de espera.
+INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, publica) VALUES
+(NULL, 'arquivo_tamanho_minimo_bytes',          '100',      'inteiro', 'Tamanho mínimo aceito por arquivo enviado, em bytes - barra arquivo vazio/corrompido', TRUE, TRUE),
+(NULL, 'arquivo_tamanho_maximo_imagem_bytes',   '8388608',  'inteiro', 'Tamanho máximo aceito por imagem enviada (JPEG/PNG/WebP), em bytes (RF-017)', TRUE, TRUE),
+(NULL, 'arquivo_tamanho_maximo_documento_bytes','5242880',  'inteiro', 'Tamanho máximo aceito por documento enviado (PDF), em bytes (RF-017)', TRUE, TRUE),
+(NULL, 'arquivo_cota_bytes_por_usuario',        '52428800', 'inteiro', 'Cota total de armazenamento ativo por usuário, em bytes (RNF-017)', TRUE, TRUE),
+(NULL, 'arquivo_limite_uploads_janela',         '20',       'inteiro', 'Nº máximo de uploads confirmados por usuário dentro da janela de configuracoes.arquivo_janela_limite_uploads_minutos', TRUE, FALSE),
+(NULL, 'arquivo_janela_limite_uploads_minutos', '1440',     'inteiro', 'Janela de tempo (em minutos) usada por arquivo_limite_uploads_janela - padrão 1440 = 24h', TRUE, FALSE),
+(NULL, 'arquivo_intervalo_minimo_segundos',     '5',        'inteiro', 'Intervalo mínimo (em segundos) entre um upload confirmado e o próximo início de upload do mesmo usuário', TRUE, FALSE)
 ON CONFLICT (chave) DO NOTHING;
 
 

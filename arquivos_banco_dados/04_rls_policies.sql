@@ -98,8 +98,18 @@ ALTER TABLE motivo_denuncia      FORCE ROW LEVEL SECURITY;
 ALTER TABLE arquivo              ENABLE ROW LEVEL SECURITY;
 ALTER TABLE arquivo              FORCE ROW LEVEL SECURITY;
 
+-- ATUALIZADA (05-09-2026, item 5 de PENDENCIAS): antes, TODA linha global
+-- (id_usuario IS NULL) era visível a qualquer um, logado ou não - sem
+-- distinguir pública de interna. Agora, linha global só é visível sem
+-- `configuracao_gerenciar` se `publica = TRUE`; quem tem a permissão
+-- continua vendo tudo (inclusive interna, pra poder editar pelo painel).
+-- Linha pessoal (id_usuario = dono) nunca muda - sempre visível só pro
+-- próprio dono, pública ou não.
 DROP POLICY IF EXISTS pol_config_select ON configuracoes;
-CREATE POLICY pol_config_select ON configuracoes FOR SELECT TO app_nestjs USING (id_usuario IS NULL OR id_usuario = public.id_usuario_atual());
+CREATE POLICY pol_config_select ON configuracoes FOR SELECT TO app_nestjs USING (
+    (id_usuario IS NULL AND (publica = TRUE OR public.tem_permissao('configuracao_gerenciar')))
+    OR id_usuario = public.id_usuario_atual()
+);
 -- [04-C-1] configuracoes: por que existem policies de escrita (ver DOCUMENTACAO_BD.md)
 DROP POLICY IF EXISTS pol_config_insert ON configuracoes;
 CREATE POLICY pol_config_insert ON configuracoes FOR INSERT TO app_nestjs WITH CHECK (
