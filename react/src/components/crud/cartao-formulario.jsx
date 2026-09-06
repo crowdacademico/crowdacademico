@@ -7,7 +7,7 @@
 // "mesmo estilo que já usei em Consultar" (pedido do Lucas): um lugar só
 // pra ajustar o visual do "cartão de formulário" inteiro do painel.
 //
-// REFEITO (10-08-2026, rodada Claude Web "embelezar o painel" - causa raiz
+// REFEITO (10-08-2026, rodada de IA "embelezar o painel" - causa raiz
 // do "Alterar parece um monte de card empilhado, confuso"): a versão
 // anterior tinha `max-w-md` (448px) + `min-h-[...] flex items-center
 // justify-center` + `max-h-[...] overflow-hidden` - MEDIDA E COMPORTAMENTO
@@ -21,7 +21,7 @@
 // em vez de "flex-column com scroll interno" pra manter Salvar/Cancelar
 // visível.
 //
-// `largura` - 2 medidas canônicas (pedido indireto do Claude Web: "definir
+// `largura` - 2 medidas canônicas (pedido indireto de uma IA: "definir
 // larguras canônicas em vez de cada tela escolher a sua"): 'media'
 // (max-w-2xl, MESMA largura de FichaConsulta - consistência visual entre
 // Consultar e um Alterar/Criar/Excluir simples de 1-2 campos) e 'larga'

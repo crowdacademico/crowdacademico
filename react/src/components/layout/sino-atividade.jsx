@@ -10,7 +10,7 @@ const ROTULO_OPERACAO = {
 };
 
 // Sino "Atividade recente" no cabeçalho (09-08-2026, Bloco B/C do prompt do
-// Claude Web) - ideia melhor que a original (cachear toast no client): lê
+// uma IA) - ideia melhor que a original (cachear toast no client): lê
 // log_auditoria de verdade, filtrado pro PRÓPRIO usuário
 // (GET /log-auditoria/minha-atividade, RLS ampliada em pol_log_auditoria_
 // select pra isso). Sobrevive a F5 e a trocar de dispositivo; toast é
@@ -29,7 +29,7 @@ export function SinoAtividade({ auth }) {
   const containerRef = useRef(null);
 
   // Badge de contagem SEM coluna "lida" no banco (09-08-2026, pedido
-  // explícito do Claude Web nessa análise) - guarda só o maior id_log já
+  // explícito de uma IA nessa análise) - guarda só o maior id_log já
   // visto em localStorage, conta quantas entradas novas passaram disso.
   useEffect(() => {
     logAuditoriaApi

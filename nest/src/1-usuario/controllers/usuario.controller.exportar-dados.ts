@@ -7,7 +7,7 @@ import { UsuarioServiceExportarDados } from '../service/usuario.service.exportar
 
 // LGPD Art. 18 (portabilidade/acesso) - item 3 de PROXIMOS_PASSOS.md.
 //
-// Rota SEM :id, de propósito (decisão do Claude Web) - este é, disparado, o
+// Rota SEM :id, de propósito (decisão de uma IA) - este é, disparado, o
 // endereço mais sensível do sistema: devolve, num pacote só, tudo que
 // existe sobre uma pessoa. Aceitar um identificador na rota abriria a
 // porta pro erro clássico de trocar o número e baixar dado de outra conta

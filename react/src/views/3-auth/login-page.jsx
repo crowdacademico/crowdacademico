@@ -108,7 +108,7 @@ export function LoginPage({ auth }) {
             <div className="flex-grow border-t-2 borda-padrao"></div>
           </div>
 
-          {/* Botão do Google (10-08-2026, achado do Claude Web: o ícone
+          {/* Botão do Google (10-08-2026, achado de uma IA: o ícone
               era `fa-brands fa-google text-red-500`, um G vermelho
               chapado - nada parecido com o que Google/GitHub/qualquer
               site usa). Logo oficial de 4 cores via SVG (icone-google.jsx),
@@ -126,7 +126,7 @@ export function LoginPage({ auth }) {
             <IconeGoogle /> Continuar com Google
           </button>
 
-          {/* Chamada de cadastro (10-08-2026, achado do Claude Web:
+          {/* Chamada de cadastro (10-08-2026, achado de uma IA:
               "pequeno demais pro que é a segunda ação mais importante da
               tela") - text-xs → text-sm, mais respiro acima, separador ">
               antes de sumir dentro do "ou acesse com". Continua sendo

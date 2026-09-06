@@ -236,8 +236,8 @@ ON CONFLICT (chave) DO NOTHING;
 
 -- ============================================================================
 -- 05-09-2026 - orcamento_min_itens virou 1 (não mais 3). Achado conferindo
--- REQUISITOS_V5.md (RF-039: "valores padrão de 1 (mínimo) e 10 (máximo)")
--- contra o banco - o texto oficial do requisito diz 1, o banco tinha 3
+-- os Requisitos Funcionais (RF-039: "valores padrão de 1 (mínimo) e 10
+-- (máximo)") contra o banco - o texto oficial do requisito diz 1, o banco tinha 3
 -- (decisão de 01-08-2026, meio-termo de uma faixa sugerida na época).
 -- Decisão do Lucas: ajustar o banco pro texto do requisito, não o contrário.
 -- cronograma_min_marcos NÃO muda, continua 3 (RF-041 já cita 3 certo).
@@ -399,7 +399,7 @@ GRANT EXECUTE ON FUNCTION public.registrar_exportacao_dados(INT) TO app_nestjs;
 -- arquivo) e nada além do seed a remove. Sem este DELETE, a chave fica
 -- órfã: nenhum código lê ela mais, mas ela continua aparecendo na tela
 -- Configurações do painel como se fosse um parâmetro de verdade (achado
--- pelo Claude Web, revisando o handoff desta rodada).
+-- por uma IA, revisando o handoff desta rodada).
 --
 -- Seguro rodar de novo? Sim - DELETE numa chave que já não existe mais
 -- não dá erro, só afeta 0 linhas.

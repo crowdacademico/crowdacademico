@@ -5,7 +5,7 @@ import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
 import { configuracaoApi } from '../../services/11-configuracoes/api/configuracao.api';
 
-// Convenção de chave (10-08-2026, rodada Claude Web "embelezar o painel",
+// Convenção de chave (10-08-2026, rodada de IA "embelezar o painel",
 // item 6: "o Lucas não entendeu como usar") - minúsculas, número e
 // underscore, sem espaço nem acento. Mesma convenção que TODAS as chaves
 // já cadastradas no seed seguem (07_seed_dados.sql), só nunca tinha virado

@@ -10,7 +10,7 @@ import {
 import { nomeAmigavelPermissao } from '../../services/2-papel-permissao/constants/permissao-nomes-amigaveis';
 
 // Substituiu a antiga tabela "Papel × Permissão" (linhas repetindo
-// "admin | admin | ..." - achado do Claude Web: ~40 linhas pra mostrar o
+// "admin | admin | ..." - achado de uma IA: ~40 linhas pra mostrar o
 // que uma matriz mostra em muito menos espaço). Não usa GenericTable - é
 // um formato fundamentalmente diferente (matriz, não lista de linha+ações).
 //

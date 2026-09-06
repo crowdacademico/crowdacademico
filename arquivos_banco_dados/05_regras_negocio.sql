@@ -56,7 +56,7 @@
 -- ----------------------------------------------------------------------------
 
 -- ----------------------------------------------------------------------------
--- ATENÇÃO (28-07-2026, Claude Web - 6ª auditoria, "manutenção e trabalhos de
+-- ATENÇÃO (28-07-2026, uma IA - 6ª auditoria, "manutenção e trabalhos de
 -- fundo precisam de identidade"): depois de trg_campanha_valida_transicao
 -- ([05-K-2]) e de pol_campanha_update (04) exigirem dono ou permissão real,
 -- QUALQUER UPDATE em campanha rodado sem app.id_usuario_atual definido na
@@ -74,7 +74,7 @@
 -- ----------------------------------------------------------------------------
 
 -- ----------------------------------------------------------------------------
--- ERRCODE CUSTOMIZADO (02-08-2026, Claude Web - pendência apontada pela
+-- ERRCODE CUSTOMIZADO (02-08-2026, uma IA - pendência apontada pela
 -- Alexia): as 42 `RAISE EXCEPTION` deste arquivo passaram a carregar
 -- `USING ERRCODE = '<código>'`. Antes disso, todas caíam no SQLSTATE genérico
 -- `P0001` (qualquer `RAISE EXCEPTION` sem ERRCODE explícito), e o Nest não
@@ -112,7 +112,7 @@
 --  [05-I-1] SCORE - HELPERS E UTILITÁRIOS
 --  Descrição: Funções de suporte geral para leitura de configurações do sistema
 --             e fallbacks operacionais.
--- MOVIDO (28-07-2026, Claude Web - "três pontas menores"): config_numero()
+-- MOVIDO (28-07-2026, uma IA - "três pontas menores"): config_numero()
 -- morava aqui, mas 03_funcoes_seguranca.sql (que roda ANTES deste arquivo) já
 -- tinha uma função nova (registrar_falha_login, [03-O]) chamando config_numero -
 -- funcionava só porque, no bootstrap completo, nada CHAMA a função antes da
@@ -616,8 +616,8 @@ $$;
 -- Função:    trg_recalcular_por_campanha()
 -- Bloco:     [05-I-4]
 -- Regra:     Dispara o recálculo de score do pesquisador dono da campanha.
--- CORRIGIDO (28-07-2026, Claude Web - "Problema 2", item #10 da 1ª análise dele,
--- nunca corrigido até agora): a trigger original era AFTER INSERT OR UPDATE OR
+-- CORRIGIDO (28-07-2026, achado numa auditoria de IA - "Problema 2", item #10
+-- da 1ª análise, nunca corrigido até agora): a trigger original era AFTER INSERT OR UPDATE OR
 -- DELETE sem nenhuma cláusula WHEN - todo UPDATE em campanha recalculava as 4
 -- dimensões inteiras, mesmo quando nenhuma delas usa a coluna que mudou. A cadeia
 -- contribuicao -> trg_sincroniza_arrecadado_campanha -> UPDATE campanha
@@ -1014,7 +1014,7 @@ CREATE TRIGGER trg_link_academico_valida_limite
 -- Função:     fn_valida_limite_texto_livre
 -- Assinatura: () -> TRIGGER (genérica, recebe 2 argumentos via TG_ARGV)
 -- Bloco:      [05-K-1]
--- Regra:      RESOLVE o "Problema 2" apontado pelo Claude Web (28-07-2026) -
+-- Regra:      RESOLVE o "Problema 2" apontado por uma IA (28-07-2026) -
 --             vários campos de texto livre preenchidos por usuário (denuncia.
 --             relato, campanha.descricao, atualizacao_campanha.conteudo,
 --             solicitacao_encerramento.justificativa_pesquisador/admin,
@@ -1313,7 +1313,7 @@ EXECUTE FUNCTION fn_valida_repasse_all_or_nothing();
 -- Função:     atualizar_status_repasse
 -- Assinatura: (p_id_repasse INT, p_status VARCHAR, p_repassado_em TIMESTAMP DEFAULT NULL) -> VOID
 -- Bloco:      [05-K-2]
--- Regra:      CRÍTICO 2 (extensão) - 5ª auditoria do Claude Web: "estender o
+-- Regra:      CRÍTICO 2 (extensão) - 5ª auditoria de uma IA: "estender o
 --             mesmo tratamento a repasse, que também é dinheiro saindo".
 --             `pol_repasse_update` (04) é `USING (true)` de propósito (item 9
 --             da PENDENCIAS) - o `GRANT UPDATE` de tabela inteira que isso
@@ -1581,9 +1581,9 @@ EXECUTE FUNCTION public.fn_congela_orcamento_campanha();
 --             em vez de deixar ele descobrir só quando a campanha for
 --             recusada na moderação.
 -- CORRIGIDO (05-09-2026): `orcamento_min_itens` mudou de 3 pra 1 - achado
--- conferindo `REQUISITOS_V5.md` (RF-039) contra o banco, que citava "valor
--- padrão de 1 (mínimo)" enquanto o seed tinha 3. Decisão do Lucas: ajustar o
--- banco pro texto oficial do requisito, não o contrário.
+-- conferindo os Requisitos Funcionais (RF-039) contra o banco, que citava
+-- "valor padrão de 1 (mínimo)" enquanto o seed tinha 3. Decisão do Lucas:
+-- ajustar o banco pro texto oficial do requisito, não o contrário.
 -- CORRIGIDO (01-08-2026, achado em revisão): faltava SECURITY DEFINER. O
 -- COUNT(*) abaixo é sobre a própria orcamento_campanha, sujeito à sua RLS de
 -- SELECT (pol_orcamento_campanha_select, 04) - que passou pra quem tem
@@ -1643,7 +1643,7 @@ EXECUTE FUNCTION public.fn_valida_limite_max_orcamento_campanha();
 -- raciocínio de fn_congela_orcamento_campanha (acima) - o SELECT data_inicio
 -- FROM campanha abaixo ficaria sujeito à RLS de quem executa, silenciosamente
 -- inerte pra quem tem só 'campanha_editar' sem 'relatorio_visualizar'.
--- CORRIGIDO (01-08-2026, achado pelo Claude Web em auditoria): a checagem só
+-- CORRIGIDO (01-08-2026, achado por uma IA em auditoria): a checagem só
 -- olhava data_inicio <= NOW(), sem olhar o status da campanha - diferente de
 -- fn_congela_regras_campanha e fn_congela_orcamento_campanha, que só travam
 -- com a campanha JÁ aprovada (status IN ('ativo', ...)). Isso travava o
@@ -1786,7 +1786,7 @@ EXECUTE FUNCTION public.fn_valida_limite_max_marco_cronograma();
 -- Função:     fn_valida_transicao_campanha
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-2]
--- Regra:      CRÍTICO 1 - 5ª auditoria do Claude Web, achado simulando a
+-- Regra:      CRÍTICO 1 - 5ª auditoria de uma IA, achado simulando a
 --             jornada de um usuário mal-intencionado (não por leitura de
 --             código): `pol_campanha_update` (04) libera UPDATE pro próprio
 --             dono (`id_usuario = id_usuario_atual()`), e `fn_congela_regras_
@@ -1951,8 +1951,8 @@ EXECUTE FUNCTION fn_valida_transicao_campanha();
 -- só entra em ação se a linha sumir do banco.
 -- CORRIGIDO (05-09-2026): fallback de `orcamento_min_itens` mudou de 3 pra
 -- 1, acompanhando a mudança do valor seedado (ver comentário da função
--- fn_valida_limite_max_orcamento_campanha, acima nesta seção - RF-039 da
--- REQUISITOS_V5.md). `cronograma_min_marcos` não mudou, continua 3.
+-- fn_valida_limite_max_orcamento_campanha, acima nesta seção - RF-039 dos
+-- Requisitos Funcionais). `cronograma_min_marcos` não mudou, continua 3.
 -- CORRIGIDO (01-08-2026, achado em revisão, antes do commit): faltava
 -- SECURITY DEFINER. Sem isso, os SELECT COUNT(*)/SUM() abaixo, contra
 -- orcamento_campanha/marco_cronograma, ficam sujeitos à RLS de QUEM está
@@ -2030,8 +2030,8 @@ EXECUTE FUNCTION public.fn_valida_completude_campanha_aprovacao();
 -- Função:     fn_preenche_encerramento_campanha
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-2]
--- Regra:      ADICIONADO (28-07-2026) - bug real encontrado pelo Claude da
---             Alexia: a coluna encerrado_em (`[01-E]`, criada em 27-07-2026
+-- Regra:      ADICIONADO (28-07-2026) - bug real encontrado numa auditoria
+--             de IA feita pela Alexia: a coluna encerrado_em (`[01-E]`, criada em 27-07-2026
 --             pro RF-042/RF-058) nunca era preenchida por nada - nem trigger,
 --             nem UPDATE algum no `.sql`. Nascia e ficava NULL pra sempre,
 --             mesmo em campanha já encerrada. Esta trigger fecha o buraco:
@@ -2040,7 +2040,7 @@ EXECUTE FUNCTION public.fn_valida_completude_campanha_aprovacao();
 --             sem depender do backend lembrar de fazer isso em toda rota que
 --             muda status. Só grava se ainda não tiver um valor (não
 --             sobrescreve um encerrado_em já registrado).
--- CORRIGIDO (28-07-2026, Claude Web - 6ª auditoria, ao implementar
+-- CORRIGIDO (28-07-2026, uma IA - 6ª auditoria, ao implementar
 -- encerrar_campanhas_vencidas() logo abaixo): o comentário original da coluna
 -- (`[01-E]`) já dizia "registra a data real de encerramento (natural,
 -- antecipado ou por moderação)" - mas esta trigger só cobria "antecipado"
@@ -2083,7 +2083,7 @@ EXECUTE FUNCTION fn_preenche_encerramento_campanha();
 -- Função:     encerrar_campanhas_vencidas
 -- Assinatura: () -> INT
 -- Bloco:      [05-K-2]
--- Regra:      ÚNICO ACHADO - 6ª auditoria do Claude Web, achado simulando o
+-- Regra:      ÚNICO ACHADO - 6ª auditoria de uma IA, achado simulando o
 --             cron do RF-037 rodando de verdade: um job de fundo roda como
 --             app_nestjs SEM sessão de usuário (`id_usuario_atual()` é `NULL`).
 --             `pol_campanha_update` (04) exige ser dono OU ter
@@ -2246,7 +2246,7 @@ EXECUTE FUNCTION fn_valida_prazo_campanha_negocio();
 -- Função:     fn_valida_meta_campanha_negocio
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-2]
--- Regra:      MÉDIO 3 - 5ª auditoria do Claude Web: campanha com
+-- Regra:      MÉDIO 3 - 5ª auditoria de uma IA: campanha com
 --             `meta_financeira = 0.00` era aceita (reproduzido, existia uma no
 --             banco de teste) - sem `CHECK` e sem chave de configuração. Numa
 --             campanha `all-or-nothing`, meta zero é sucesso instantâneo (a
@@ -2408,7 +2408,7 @@ EXECUTE FUNCTION fn_valida_contribuicao_campanha_ativa();
 -- Função:     fn_valida_contribuicao_valor_minimo
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-2]
--- Regra:      30-07-2026 (RF-056, sugestão do Claude Web). R$5,00 estava
+-- Regra:      30-07-2026 (RF-056, sugestão de uma IA). R$5,00 estava
 --             hardcoded direto na CHECK CK_CONTRIBUICAO_VALOR_MINIMO (01) -
 --             não é piso do gateway de pagamento (PIX em si não impõe
 --             mínimo), é política de negócio da plataforma. Mesmo padrão do
@@ -2518,7 +2518,7 @@ EXECUTE FUNCTION fn_sincroniza_arrecadado_campanha();
 -- Função:     atualizar_status_contribuicao
 -- Assinatura: (p_id INT, p_status status_contribuicao, p_id_transacao VARCHAR DEFAULT NULL) -> VOID
 -- Bloco:      [05-K-2]
--- Regra:      CRÍTICO 2 - 5ª auditoria do Claude Web, achado simulando a
+-- Regra:      CRÍTICO 2 - 5ª auditoria de uma IA, achado simulando a
 --             jornada de um usuário mal-intencionado: `pol_contribuicao_update`
 --             (04) era `USING (true)` com `GRANT UPDATE` de tabela inteira -
 --             qualquer usuário confirmava a própria contribuição (ou a de
@@ -2904,7 +2904,7 @@ EXECUTE FUNCTION validar_denuncia_frequencia();
 -- Função:     fn_valida_denuncia_sem_autojulgamento
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-3]
--- Regra:      MENOR 5 - 5ª auditoria do Claude Web, reproduzido: um moderador
+-- Regra:      MENOR 5 - 5ª auditoria de uma IA, reproduzido: um moderador
 --             (Diego, id 10) criou uma denúncia contra um pesquisador e depois
 --             marcou a própria denúncia como 'resolvida' - o que custa 4
 --             pontos de score ao alvo (calcular_score_reputacao, [05-I-2]).
@@ -2996,7 +2996,7 @@ FOR EACH ROW EXECUTE FUNCTION public.trg_admin_recebe_toda_permissao();
 -- Função:     fn_atribuir_papel_pesquisador
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-3]
--- Regra:      MÉDIO 4 - 5ª auditoria do Claude Web, achado na jornada "usuário
+-- Regra:      MÉDIO 4 - 5ª auditoria de uma IA, achado na jornada "usuário
 --             com mestrado vira pesquisador": quando o app cria o
 --             `perfil_pesquisador` (upgrade de conta), o usuário fica só com o
 --             papel `'usuario'` - o papel `'pesquisador'` nunca é atribuído
@@ -3056,7 +3056,7 @@ FOR EACH ROW EXECUTE FUNCTION public.fn_atribuir_papel_pesquisador();
 -- ============================================================
 -- [05-L] LOG DE AUDITORIA (log_auditoria)
 -- ============================================================
--- ADICIONADO (03-08-2026, sugestão do Claude Web) - ver comentário
+-- ADICIONADO (03-08-2026, sugestão de uma IA) - ver comentário
 -- completo em 01_extensoes_enums_tabelas.sql [01-L]. Uma função genérica,
 -- aplicada em N tabelas via CREATE TRIGGER ... EXECUTE FUNCTION
 -- fn_log_auditoria('coluna_pk_1'[, 'coluna_pk_2']) - os argumentos são os
@@ -3138,7 +3138,7 @@ BEGIN
             RETURN NEW;
         END IF;
 
-        -- CORRIGIDO (03-08-2026, achado do Claude Web em revisão): score_atual/
+        -- CORRIGIDO (03-08-2026, achado de uma IA em revisão): score_atual/
         -- score_atualizado_em (perfil_pesquisador) mudam SOZINHOS toda vez que
         -- recalcular_score_pesquisador() roda (05, [05-I-4] - disparado por
         -- qualquer trigger que mexa em campanha/comentário/etc., não por ação
@@ -3193,7 +3193,7 @@ BEGIN
 END;
 $$;
 
--- Tabelas com PK simples (1 argumento) - lista escolhida com o Claude Web,
+-- Tabelas com PK simples (1 argumento) - lista escolhida com apoio de IA,
 -- não é "logar tudo": só o que o painel admin já edita hoje via
 -- RBAC/usuário/config, mais os catálogos que o admin também edita
 -- (motivo_denuncia, area_conhecimento, tipo_link, termos_de_uso, papel).
@@ -3261,7 +3261,7 @@ AFTER INSERT OR UPDATE OR DELETE ON papel_permissao
 FOR EACH ROW EXECUTE FUNCTION public.fn_log_auditoria('id_papel', 'id_permissao');
 
 -- campanha/denuncia: só a TRANSIÇÃO DE STATUS, não qualquer edição (pedido
--- do Claude Web: registrar toda alteração de título/descrição/etc de
+-- de uma IA: registrar toda alteração de título/descrição/etc de
 -- campanha seria ruído - o que importa pra auditoria é "quem aprovou/
 -- rejeitou/suspendeu o quê e quando"). Por isso é AFTER UPDATE ... WHEN,
 -- sem INSERT nem DELETE (nenhuma das duas tabelas tem DELETE liberado

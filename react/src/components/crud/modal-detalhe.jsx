@@ -1,5 +1,5 @@
 // Modal genérico de "detalhe explicado" (09-08-2026, Bloco F do prompt do
-// Claude Web) - nasceu pra explicar uma permissão (o quê, por que existe,
+// uma IA) - nasceu pra explicar uma permissão (o quê, por que existe,
 // quem tem hoje), mas não tem nada específico de permissão aqui: título,
 // legenda em fonte mono (a "chave" técnica), um badge opcional e uma lista
 // de seções título+conteúdo. Feito pra ser reaproveitado depois pra

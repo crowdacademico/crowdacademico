@@ -576,7 +576,7 @@ CREATE POLICY pol_historicorej_update ON historico_rejeicao FOR UPDATE TO app_ne
 -- [04-E-7] repasse: por que existem policies de escrita (ver DOCUMENTACAO_BD.md)
 DROP POLICY IF EXISTS pol_repasse_insert ON repasse;
 CREATE POLICY pol_repasse_insert ON repasse FOR INSERT TO app_nestjs WITH CHECK (true);
--- SUPERADA (28-07-2026, Claude Web - 5ª auditoria, "estender o mesmo tratamento a
+-- SUPERADA (28-07-2026, uma IA - 5ª auditoria, "estender o mesmo tratamento a
 -- repasse - também é dinheiro saindo"): mesmo raciocínio de pol_contribuicao_update
 -- acima. GRANT UPDATE saiu (06, [06-E]); status/repassado_em só mudam via
 -- atualizar_status_repasse() (05, SECURITY DEFINER, [05-K-2]). Mantida por
@@ -795,7 +795,7 @@ CREATE POLICY pol_contribuicao_insert ON contribuicao FOR INSERT TO app_nestjs W
     id_usuario IS NULL OR id_usuario = public.id_usuario_atual()
 );
 -- CORRIGIDO: o webhook de pagamento precisa atualizar o status da contribuição sem depender do dono da contribuição.
--- SUPERADA (28-07-2026, Claude Web - 5ª auditoria): USING(true) + GRANT UPDATE de
+-- SUPERADA (28-07-2026, uma IA - 5ª auditoria): USING(true) + GRANT UPDATE de
 -- tabela inteira permitia qualquer usuário confirmar a própria contribuição
 -- direto por UPDATE (fraude reproduzida: doar pra própria campanha e se
 -- auto-confirmar). O GRANT UPDATE saiu (06, [06-H]) - dali em diante o único
@@ -925,7 +925,7 @@ CREATE POLICY pol_score_rotulo_update ON public.score_rotulo FOR UPDATE TO app_n
 -- ser avaliada pra esse caminho.
 ALTER TABLE log_auditoria ENABLE ROW LEVEL SECURITY;
 
--- AMPLIADA (09-08-2026, Bloco B/C do prompt do Claude Web - sino "Atividade
+-- AMPLIADA (09-08-2026, Bloco B/C do prompt de uma IA - sino "Atividade
 -- recente" no cabeçalho): além de quem tem 'log_visualizar' (visão
 -- administrativa, qualquer linha), o próprio AUTOR de uma linha agora
 -- também enxerga ela - "minhas últimas ações", não é uma visão nova de

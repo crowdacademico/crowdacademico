@@ -197,7 +197,7 @@ INSERT INTO permissao (nome) VALUES
 -- notificação e quebraria o envio de e-mail se alguém restringisse essa permissão
 -- por motivo de privacidade no futuro sem perceber a dependência.
 ('notificacao_processar'),
--- ADICIONADO (28-07-2026, Claude Web - "Problema 1" da 2ª auditoria de segurança):
+-- ADICIONADO (28-07-2026, uma IA - "Problema 1" da 2ª auditoria de segurança):
 -- excluir_conta_usuario/liberar_bloqueio_login (03, [03-O]) são SECURITY DEFINER -
 -- desligam a RLS, então a checagem de "quem pode agir sobre a conta de outra
 -- pessoa" precisa estar dentro da própria função. usuario_excluir gateia excluir
@@ -325,7 +325,7 @@ WHERE (p.nome, perm.nome) IN (
     ('suporte', 'verificacao_email_reenviar'),
     -- ADICIONADO (28-07-2026): desbloquear login é atendimento de conta - mesmo
     -- escopo das outras 3 permissões de 'suporte' acima.
-    -- CORRIGIDO (28-07-2026, Claude Web - 4ª auditoria, decisão de produto):
+    -- CORRIGIDO (28-07-2026, uma IA - 4ª auditoria, decisão de produto):
     -- usuario_excluir NÃO fica com 'suporte' - Catarse/Experiment tratam
     -- exclusão de conta como auto-serviço do titular (que já funciona sem
     -- nenhuma permissão, ver excluir_conta_usuario em 03, [03-O]); suporte abre
@@ -726,7 +726,7 @@ FROM usuario;
 -- cosmético pra CADA CHAVE em si: `chave` é UNIQUE e toda leitura (NestJS)
 -- busca por nome, nunca por posição/id_config.
 --
--- REVISADO (28-07-2026, Claude Web - "Problema 3", varredura inversa: pra cada chave
+-- REVISADO (28-07-2026, uma IA - "Problema 3", varredura inversa: pra cada chave
 -- em configuracoes, quantas vezes ela aparece lida em algum dos 8 arquivos). 4 chaves
 -- não tinham NENHUM consumidor - "alavancas fantasma": o Admin muda no painel e nada
 -- acontece, o que é pior que um valor fixo no código (porque parece que devia
@@ -784,12 +784,12 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, pub
 -- configurável desde 28-07, mas a JANELA de tempo continuava fixa em 24h no
 -- corpo da função - ver validar_denuncia_frequencia() em 05, [05-K-3]).
 (NULL, 'janela_denuncias_horas',     '24',    'inteiro',  'Janela de tempo (em horas) usada por limite_denuncias_24h (RF-076)', TRUE, TRUE),
--- ADICIONADO (28-07-2026, Claude Web - "Problema 2"): limite de negócio (menor,
+-- ADICIONADO (28-07-2026, uma IA - "Problema 2"): limite de negócio (menor,
 -- configurável) por cima do limite técnico largo das colunas (01) - mesmo padrão
 -- config + trigger do prazo de campanha (item 16).
 (NULL, 'limite_caracteres_descricao_campanha',     '5000', 'inteiro', 'Nº máximo de caracteres em campanha.descricao (RF)',                        TRUE, TRUE),
 (NULL, 'limite_caracteres_conteudo_atualizacao',   '5000', 'inteiro', 'Nº máximo de caracteres em atualizacao_campanha.conteudo',                  TRUE, TRUE),
-(NULL, 'limite_caracteres_relato_denuncia',        '1000', 'inteiro', 'Nº máximo de caracteres em denuncia.relato (sugestão do Claude Web)',       TRUE, TRUE),
+(NULL, 'limite_caracteres_relato_denuncia',        '1000', 'inteiro', 'Nº máximo de caracteres em denuncia.relato (sugestão de uma IA)',       TRUE, TRUE),
 (NULL, 'limite_caracteres_justificativa_encerramento', '2000', 'inteiro', 'Nº máximo de caracteres em solicitacao_encerramento.justificativa_pesquisador/justificativa_admin', TRUE, TRUE),
 (NULL, 'limite_caracteres_descricao_recompensa',   '2000', 'inteiro', 'Nº máximo de caracteres em recompensa.descricao',                            TRUE, TRUE),
 -- ADICIONADO (31-07-2026, Alexia; valores corrigidos 01-08-2026): orçamento e
@@ -803,9 +803,9 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, pub
 -- piso obrigatório pra aprovar. Mínimo virou 3 pros dois (meio-termo da faixa
 -- que ela sugeriu, 2 a 5 - ajustável livremente depois, sem migração).
 -- ATUALIZADO (05-09-2026): orcamento_min_itens virou 1 (não mais 3) - achado
--- conferindo REQUISITOS_V5.md (RF-039: "valores padrão de 1 (mínimo) e 10
--- (máximo)") contra o banco; decisão do Lucas foi ajustar o banco pro texto
--- oficial do requisito. cronograma_min_marcos NÃO mudou, continua 3 (RF-041
+-- conferindo os Requisitos Funcionais (RF-039: "valores padrão de 1 (mínimo)
+-- e 10 (máximo)") contra o banco; decisão do Lucas foi ajustar o banco pro
+-- texto oficial do requisito. cronograma_min_marcos NÃO mudou, continua 3 (RF-041
 -- já cita 3 corretamente).
 (NULL, 'orcamento_min_itens',                      '1',    'inteiro', 'Nº mínimo de itens de orçamento exigido para aprovar uma campanha (RF-039)', TRUE, TRUE),
 (NULL, 'orcamento_max_itens',                      '10',   'inteiro', 'Nº máximo de itens de orçamento permitido por campanha',                    TRUE, TRUE),
@@ -813,7 +813,7 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, pub
 (NULL, 'cronograma_max_marcos',                    '20',   'inteiro', 'Nº máximo de marcos de cronograma permitido por campanha',                  TRUE, TRUE),
 (NULL, 'limite_caracteres_descricao_orcamento',    '2000', 'inteiro', 'Nº máximo de caracteres em orcamento_campanha.descricao',                    TRUE, TRUE),
 (NULL, 'limite_caracteres_descricao_marco',        '2000', 'inteiro', 'Nº máximo de caracteres em marco_cronograma.descricao',                      TRUE, TRUE),
--- ADICIONADO (28-07-2026, Claude Web - 5ª auditoria): meta 0.00 era aceita
+-- ADICIONADO (28-07-2026, uma IA - 5ª auditoria): meta 0.00 era aceita
 -- (campanha all-or-nothing com meta zero é sucesso instantâneo). Mesmo padrão
 -- do prazo (item 16): limite técnico largo na constraint (01, > 0), mínimo de
 -- negócio de verdade aqui.
@@ -821,7 +821,7 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, pub
 -- F
 (NULL, 'limite_links_academicos_perfil', '5', 'inteiro',  'Nº máximo de links acadêmicos por pesquisador (RF-014/016/018)', TRUE, TRUE),
 -- H
--- ADICIONADO (30-07-2026, RF-056 - sugestão do Claude Web, confirmada pelo
+-- ADICIONADO (30-07-2026, RF-056 - sugestão de uma IA, confirmada pelo
 -- Lucas): mesmo padrão do item 16/meta_minima_campanha, acima. R$5,00 estava
 -- hardcoded numa CHECK (01) - não é piso do gateway de pagamento (o PIX em si
 -- não impõe mínimo), é política de negócio da própria plataforma, então
@@ -1301,9 +1301,9 @@ INSERT INTO notificacao (id_usuario, email_destinatario, tipo_evento, status, te
 
 -- [07-D-5] Como logar no app depois deste seed (autenticação própria, ver DOCUMENTACAO_BD.md)
 
--- CORRIGIDO (28-07-2026, Claude Web - 5ª auditoria): a referência "[07-J] acima"
+-- CORRIGIDO (28-07-2026, uma IA - 5ª auditoria): a referência "[07-J] acima"
 -- era uma referência quebrada - nunca existiu bloco [07-J] neste arquivo (o
--- Claude Web encontrou isso comparando .sql contra DOCUMENTACAO_BD.md, que
+-- uma IA encontrou isso comparando .sql contra DOCUMENTACAO_BD.md, que
 -- também não tinha nenhum capítulo [07-J]). O que a frase queria apontar são as
 -- triggers de recálculo automático de score, que ficam em 05_regras_negocio.sql,
 -- [05-I-4] - corrigido pra apontar pro lugar certo.

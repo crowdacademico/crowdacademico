@@ -28,7 +28,7 @@
 --             existir. Usada por praticamente todo o resto do banco (score,
 --             limites de negócio em 05, e as funções de autenticação de
 --             [03-O], neste mesmo arquivo).
--- MOVIDO (28-07-2026, Claude Web - "três pontas menores"): morava em
+-- MOVIDO (28-07-2026, uma IA - "três pontas menores"): morava em
 -- 05_regras_negocio.sql, mas 03 (este arquivo, que roda ANTES do 05) já tinha
 -- uma função chamando config_numero (registrar_falha_login, [03-O]) - o
 -- bootstrap completo funcionava só porque nada CHAMA a função antes da hora;
@@ -91,7 +91,7 @@ $$;
 --             não encontra nenhuma linha e a função retorna FALSE de forma
 --             determinística, sem tratamento especial de NULL necessário.
 -- ----------------------------------------------------------------------------
--- AMPLIADA (09-08-2026, Bloco G do prompt do Claude Web - moderação):
+-- AMPLIADA (09-08-2026, Bloco G do prompt de uma IA - moderação):
 -- passou a ignorar vínculo usuario_papel com suspenso_ate no futuro (ver
 -- [01-B]) - um papel suspenso não concede mais nenhuma permissão dele
 -- enquanto durar a suspensão, sem precisar remover o vínculo (volta
@@ -124,7 +124,7 @@ $$;
 -- Assinatura: (p_id_usuario INT) -> SETOF TEXT
 -- Bloco:      [03-B]
 -- Regra:      SECURITY DEFINER de propósito (09-08-2026, Bloco B/C do prompt
---             do Claude Web sobre cabeçalho/avatar) - devolve o CÓDIGO
+--             de uma IA sobre cabeçalho/avatar) - devolve o CÓDIGO
 --             (`papel.codigo`, não `papel.nome`) dos papéis de um usuário
 --             pra login/refresh (03-auth) decidirem se mostram "Painel
 --             Admin" no dropdown do cabeçalho. `codigo`, não `nome`, pelo
@@ -185,7 +185,7 @@ $$;
 -- Assinatura: (p_id_usuario INT, p_id_termo INT, p_ip TEXT) -> VOID
 -- Bloco:      [03-D-1]
 -- Regra:      SECURITY DEFINER de propósito (09-08-2026, Bloco D do prompt do
---             Claude Web sobre cadastro público) - grava o aceite dos Termos
+--             uma IA sobre cadastro público) - grava o aceite dos Termos
 --             de Uso (usuario_termo) no MOMENTO do cadastro, quando a conta
 --             acabou de ser criada NESTA MESMA requisição e ainda não existe
 --             sessão nenhuma (id_usuario_atual() é NULL). pol_usuario_termo_
@@ -255,14 +255,14 @@ AS $$
 $$;
 
 -- ============================================================
--- [03-O] OPERAÇÕES DE AUTENTICAÇÃO (item "Problema 1" - Claude Web, 28-07-2026)
+-- [03-O] OPERAÇÕES DE AUTENTICAÇÃO (item "Problema 1" - uma IA, 28-07-2026)
 -- Descrição: email_verificado, tentativas_login_falhas, bloqueado_ate,
 --            ultimo_login_em, ultimo_login_ip e deletado saíram do GRANT UPDATE
 --            de usuario (06, [06-D-2]) - restringir só por coluna não bastava,
 --            porque é o MESMO app_nestjs que atende o endpoint genérico de
 --            "editar meu perfil" e o fluxo de autenticação; nenhuma lista de
---            colunas separa os dois papéis. Testado (Claude Web) como usuário
---            comum, via UPDATE direto: auto-verificar o próprio e-mail sem
+--            colunas separa os dois papéis. Testado numa auditoria de IA,
+--            simulando um usuário comum, via UPDATE direto: auto-verificar o próprio e-mail sem
 --            clicar no link (bypass permanente), limpar o próprio bloqueio de
 --            login, e "ressuscitar" a própria conta excluída. As funções abaixo
 --            são o único jeito de mudar essas colunas dali em diante - mesmo
@@ -270,11 +270,11 @@ $$;
 --            SECURITY DEFINER, ponto único e auditável por operação nomeada, em
 --            vez de UPDATE aberto.
 --
--- CORRIGIDO (28-07-2026, 2ª auditoria do Claude Web - "SECURITY DEFINER troca um
+-- CORRIGIDO (28-07-2026, 2ª auditoria de uma IA - "SECURITY DEFINER troca um
 -- furo por outro se a função não checar quem está chamando"): a 1ª versão dessas
 -- funções aceitava qualquer p_id_usuario sem checagem nenhuma - SECURITY DEFINER
 -- desliga a RLS, então a função vira a ÚNICA guardiã, e a 1ª versão não guardava
--- nada. Testado (Claude Web) como usuário comum (id 9) chamando
+-- nada. Testado numa auditoria de IA, simulando um usuário comum (id 9) chamando
 -- excluir_conta_usuario(2)/liberar_bloqueio_login(2)/confirmar_email_usuario(2):
 -- todas executavam - um usuário comum conseguia excluir a conta de QUALQUER outra
 -- pessoa. Pior que o GRANT UPDATE aberto que essas funções vieram substituir (lá
@@ -392,7 +392,7 @@ $$;
 --             usuário (quem está bloqueado não consegue logar pra chamar nada; e
 --             registrar_login_sucesso() já faz o mesmo reset automaticamente
 --             quando o login dá certo). Exige a permissão usuario_desbloquear -
---             CORRIGIDO (28-07-2026, Claude Web): a 1ª versão não checava nada,
+--             CORRIGIDO (28-07-2026, uma IA): a 1ª versão não checava nada,
 --             qualquer usuário comum conseguia desbloquear a conta de outro.
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.liberar_bloqueio_login(p_id_usuario INT)
@@ -480,10 +480,10 @@ $$;
 --             existente (usuario_visivel(), item 17 em PENDENCIAS.md). Permite
 --             o próprio usuário excluir a própria conta (sem precisar de
 --             permissão nenhuma) OU quem tiver usuario_excluir agindo sobre a
---             conta de outra pessoa - CORRIGIDO (28-07-2026, Claude Web): a 1ª
+--             conta de outra pessoa - CORRIGIDO (28-07-2026, uma IA): a 1ª
 --             versão não checava nada, qualquer usuário comum conseguia excluir
 --             a conta de qualquer outra.
--- CORRIGIDO (28-07-2026, Claude Web - 4ª auditoria, "excluir conta não deixa
+-- CORRIGIDO (28-07-2026, uma IA - 4ª auditoria, "excluir conta não deixa
 -- rastro"): gravava deletado = TRUE e mais nada - o Art. 37 da LGPD exige
 -- registro de quem fez e quando numa operação de tratamento, e exclusão é a
 -- mais sensível de todas. Passou a gravar deletado_em/deletado_por (01) também.
@@ -604,7 +604,7 @@ $$;
 -- Função:     reativar_pesquisador
 -- Assinatura: (p_id_usuario INT) -> BOOLEAN
 -- Bloco:      [03-P]
--- Regra:      30-07-2026 (item 60, PENDENCIAS.md - recomendação do Claude Web,
+-- Regra:      30-07-2026 (item 60, PENDENCIAS.md - recomendação de uma IA,
 --             confirmada pelo Lucas). Só devolve status_pesquisador pra
 --             'ativo' - devolve a capacidade do pesquisador de criar campanha
 --             nova. NÃO toca em nenhuma linha de campanha, de propósito:
@@ -684,7 +684,7 @@ $$;
 -- ============================================================
 -- [03-N] MODERAÇÃO SOBRE CONTA - SUSPENSÃO DE USUÁRIO E DE PAPEL (09-08-2026)
 -- ============================================================
--- Descrição: Bloco G do prompt do Claude Web sobre cabeçalho/moderação -
+-- Descrição: Bloco G do prompt de uma IA sobre cabeçalho/moderação -
 -- diferente de [03-P] (suspende o PERFIL DE PESQUISADOR, com cascata sobre
 -- campanhas, RF-084): aqui é suspensão de CONTA (bloqueia login) e
 -- suspensão de UM PAPEL específico (usuario continua logado, só perde as

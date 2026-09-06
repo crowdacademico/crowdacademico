@@ -1,6 +1,6 @@
 // Cifra/decifra de CPF + índice cego (22-08-2026) - decidido em conversa
-// conjunta entre Lucas, Claude Code e Claude Web (Opus 5); registro completo
-// do raciocínio em DOCUMENTACAO_BD.md, seção [01-D] `perfil_pesquisador`.
+// do Lucas com apoio de IA; registro completo do raciocínio em
+// DOCUMENTACAO_BD.md, seção [01-D] `perfil_pesquisador`.
 // Resumo curto pra quem só quer usar as funções: CPF precisa poder ser
 // DECIFRADO de volta (a API de pagamento/KYC do RF-015 precisa dele), então
 // não pode ser hash comum (irreversível). Cifra de verdade é de propósito

@@ -11,7 +11,7 @@
 // se tiver algo cobre QUALQUER status com corpo vazio, não só 204 - não
 // precisa lembrar de decorar cada endpoint futuro com @HttpCode(204).
 
-// ErroHttp carrega o `status` HTTP junto da mensagem (achado do Claude Web,
+// ErroHttp carrega o `status` HTTP junto da mensagem (achado de uma IA,
 // 03-08-2026: o backend já categoriza erro em 4 faixas de HTTP pelo ERRCODE
 // (postgres-exception.filter.ts), mas o React descartava o status e ficava
 // só com o texto - sem status, `traduzir-erro.util.js` não tem como tratar

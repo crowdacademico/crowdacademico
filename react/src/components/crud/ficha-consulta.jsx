@@ -13,7 +13,7 @@
 //   </SecaoFicha>
 // </FichaConsulta>
 //
-// `largura` (10-08-2026, rodada Claude Web "embelezar o painel", item 4) -
+// `largura` (10-08-2026, rodada de IA "embelezar o painel", item 4) -
 // mesmo sistema de 2 medidas canônicas de cartao-formulario.jsx: 'media'
 // (max-w-2xl, padrão - Consultar Configuração, ficha simples) e 'larga'
 // (max-w-5xl - Consultar Usuário, que ganhou 2 colunas pelo mesmo motivo

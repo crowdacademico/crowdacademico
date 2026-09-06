@@ -7,7 +7,7 @@
 // Mesma ordem por domínio de 07_seed_dados.sql [07-B-2]/[07-C-2]
 // (A,B,C,D,E,F,H,I,L), só pra facilitar achar um item aqui.
 //
-// Virou objeto (09-08-2026, Bloco F do prompt do Claude Web: coluna
+// Virou objeto (09-08-2026, Bloco F do prompt de uma IA: coluna
 // "Descrição" na tabela Permissões + modal de detalhe por linha) - cada
 // entrada carrega, além do nome amigável, um resumo curto (pra coluna),
 // um texto mais longo dividido em "o que faz"/"por que existe" (pro

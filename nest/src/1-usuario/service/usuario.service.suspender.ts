@@ -4,7 +4,7 @@ import { DatabaseService } from '../../commons/database/database.service';
 import { UsuarioResponseSuspend } from '../dto/response/usuario.response-suspend';
 
 // suspender_usuario/revogar_suspensao_usuario (03_funcoes_seguranca.sql,
-// [03-N], 09-08-2026, Bloco G do prompt do Claude Web) - mesmo padrão de
+// [03-N], 09-08-2026, Bloco G do prompt de uma IA) - mesmo padrão de
 // UsuarioServiceDesbloquear: SECURITY DEFINER que já exige a permissão
 // internamente (não RLS), erro do Postgres vira ForbiddenException aqui.
 // "Reduzir a pena" não é um método à parte - é chamar `suspender` de novo

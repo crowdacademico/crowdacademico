@@ -141,8 +141,7 @@ export interface PerfilProcessamentoImagem {
   qualidadeWebp: number;
 }
 
-// Números decididos em conversa (Lucas + Claude Web + Claude Code,
-// 01-09-2026): nenhuma tela do protótipo de interface usa avatar maior
+// Números decididos em conversa (Lucas, com apoio de IA, 01-09-2026): nenhuma tela do protótipo de interface usa avatar maior
 // que 512px nem imagem de campanha/anexo de atualização maior que
 // 1600px de largura útil, mesmo em tela cheia num monitor comum.
 // Qualidade WebP 78-80 é visualmente quase indistinguível do original

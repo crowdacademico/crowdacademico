@@ -1,5 +1,5 @@
-// Util único de formatação pt-BR - pedido do Claude Web ao olhar o Projeto
-// de Interface (Gemini): cada tela formatava dinheiro/percentual do seu
+// Util único de formatação pt-BR - pedido de uma IA ao olhar o Projeto
+// de Interface: cada tela formatava dinheiro/percentual do seu
 // jeito. Qualquer componente que precisa exibir R$ ou % chama uma função
 // daqui, nunca `valor.toFixed(2)` nem template string solto.
 const formatadorMoeda = new Intl.NumberFormat('pt-BR', {
@@ -19,7 +19,7 @@ export function formatarPercentual(valor) {
   return `${numero}%`;
 }
 
-// CPF (10-08-2026, rodada Claude Web "embelezar o painel", item 2: seção
+// CPF (10-08-2026, rodada de IA "embelezar o painel", item 2: seção
 // Perfil de Pesquisador demonstrativa em Alterar Usuário) - util aqui, não
 // inline no componente, porque vai aparecer em mais de uma tela quando o
 // módulo 6-perfil-pesquisador existir de verdade (cadastro, perfil).

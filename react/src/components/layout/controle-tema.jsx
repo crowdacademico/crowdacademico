@@ -13,7 +13,7 @@ function lerTemaSalvo() {
   return TEMAS.includes(salvo) ? salvo : 'claro';
 }
 
-// Botão de tema no cabeçalho (09-08-2026, Bloco A do prompt do Claude Web
+// Botão de tema no cabeçalho (09-08-2026, Bloco A do prompt de uma IA
 // sobre dark mode) - mesmo padrão do ControleFonte: useState(lerTemaSalvo)
 // como inicializador preguiçoso (evita flash do tema errado no primeiro
 // render) + useEffect que aplica e persiste. A diferença é ONDE aplica:

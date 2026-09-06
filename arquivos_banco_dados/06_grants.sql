@@ -108,7 +108,7 @@ REVOKE SELECT ON public.perfil_pesquisador FROM app_nestjs;
 -- ALTERADO: coluna id_supabase removida da tabela usuario (autenticação própria).
 -- [06-D-2] usuario: por que estas colunas específicas de auth precisam estar no GRANT (ver DOCUMENTACAO_BD.md)
 -- CORRIGIDO: faltava email_verificado na lista (coluna existe desde o 01, nunca tinha GRANT).
--- ADICIONADO (28-07-2026, Claude Web - 4ª auditoria): deletado_em/deletado_por -
+-- ADICIONADO (28-07-2026, uma IA - 4ª auditoria): deletado_em/deletado_por -
 -- só leitura aqui (não estão no GRANT UPDATE, [06-D-9] abaixo; só mudam via
 -- excluir_conta_usuario, 03, [03-O]), pro Admin conseguir ver quem excluiu e
 -- quando (a trilha que faltava pro Art. 37 da LGPD).
@@ -162,7 +162,7 @@ GRANT SELECT (
 GRANT INSERT ON usuario, perfil_pesquisador, termos_de_uso TO app_nestjs;
 GRANT UPDATE ON termos_de_uso TO app_nestjs;
 
--- CORRIGIDO (28-07-2026, achado pelo Claude Web): GRANT UPDATE de TABELA INTEIRA em
+-- CORRIGIDO (28-07-2026, achado por uma IA): GRANT UPDATE de TABELA INTEIRA em
 -- usuario/perfil_pesquisador era uma porta dos fundos grave - o GRANT SELECT já é
 -- restrito por coluna (ver [06-D-2] acima), mas o UPDATE não era, e é o MESMO
 -- app_nestjs que atende tanto um endpoint genérico de "editar meu perfil" quanto o
@@ -181,7 +181,7 @@ GRANT UPDATE ON termos_de_uso TO app_nestjs;
 -- próprio pesquisador se auto-suspender/reativar, o que não faz sentido, e não
 -- existia caminho nenhum pra moderação suspender outra pessoa. Agora só muda
 -- via suspender_pesquisador() (SECURITY DEFINER, 03, [03-P]).
--- CORRIGIDO (22-08-2026, achado do Claude Web analisando o módulo
+-- CORRIGIDO (22-08-2026, achado de uma IA analisando o módulo
 -- 6-perfil-pesquisador antes de implementar): cpf_criptografado TAMBÉM saiu
 -- daqui, mesma classe de bug - pol_perfil_update (04) libera UPDATE pro
 -- próprio dono, e esta lista incluía cpf_criptografado, então o próprio
@@ -209,7 +209,7 @@ GRANT UPDATE (nome, id_imagem_perfil, senha_hash) ON public.usuario TO app_nestj
 -- [06-D-2b] Funções de autenticação (ver [03-O] em 03_funcoes_seguranca.sql):
 -- único jeito de mudar email_verificado, tentativas_login_falhas, bloqueado_ate,
 -- ultimo_login_em, ultimo_login_ip e deletado agora que saíram do GRANT direto acima.
--- CORRIGIDO (28-07-2026, Claude Web - higiene): função nova no Postgres já nasce
+-- CORRIGIDO (28-07-2026, uma IA - higiene): função nova no Postgres já nasce
 -- com EXECUTE liberado pra PUBLIC por padrão (mesmo motivo por trás do comentário
 -- em [06-I-1] sobre usuario_visivel/tem_permissao) - pra função que apaga conta ou
 -- muda estado de autenticação, isso é folga desnecessária. REVOKE explícito antes
@@ -289,7 +289,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON verificacao_email, recuperacao_senha, se
 -- ============================================================================
 -- CORRIGIDO: só seguir_campanha tem policy de DELETE nesse bloco; as demais tinham
 -- DELETE concedido sem nenhuma policy correspondente (ver [06-E] no DOCUMENTACAO_BD.md).
--- CORRIGIDO (28-07-2026, Claude Web - 5ª auditoria): repasse saiu daqui - mesmo
+-- CORRIGIDO (28-07-2026, uma IA - 5ª auditoria): repasse saiu daqui - mesmo
 -- raciocínio de contribuicao (acima, [06-H]), é dinheiro saindo e
 -- pol_repasse_update (04) também é USING(true). status/repassado_em só mudam
 -- via atualizar_status_repasse() (05, SECURITY DEFINER, [05-K-2]).
@@ -316,7 +316,7 @@ GRANT INSERT, UPDATE, DELETE ON orcamento_campanha, marco_cronograma TO app_nest
 REVOKE EXECUTE ON FUNCTION public.atualizar_status_repasse(INT, VARCHAR, TIMESTAMP) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.atualizar_status_repasse(INT, VARCHAR, TIMESTAMP) TO app_nestjs;
 
--- ADICIONADO (28-07-2026, Claude Web - 6ª auditoria): encerrar_campanhas_vencidas()
+-- ADICIONADO (28-07-2026, uma IA - 6ª auditoria): encerrar_campanhas_vencidas()
 -- é chamada por agendamento (@Cron no NestJS), sem sessão de usuário - mesma
 -- categoria de higiene das outras funções pré-autorizadas ([03-O],
 -- atualizar_status_contribuicao/atualizar_status_repasse, acima).
@@ -345,7 +345,7 @@ TO app_nestjs;
 --  [06-H] CONTRIBUIÇÃO
 -- ============================================================================
 -- CORRIGIDO: nenhuma das quatro tem policy de DELETE (ver [06-H] no DOCUMENTACAO_BD.md).
--- CORRIGIDO (28-07-2026, Claude Web - 5ª auditoria, "qualquer usuário confirma
+-- CORRIGIDO (28-07-2026, uma IA - 5ª auditoria, "qualquer usuário confirma
 -- qualquer contribuição"): contribuicao saiu daqui - GRANT UPDATE de tabela
 -- inteira + pol_contribuicao_update USING(true) (04) deixava qualquer usuário
 -- confirmar a própria doação (ou a de qualquer um) direto por UPDATE.
@@ -377,7 +377,7 @@ GRANT INSERT, UPDATE ON score_config, score_rotulo TO app_nestjs;
 -- função, não com os de app_nestjs.
 
 -- [06-I-1] Funções do motor de score: por que precisam de GRANT EXECUTE (ver DOCUMENTACAO_BD.md)
--- CORRIGIDO (28-07-2026, Claude Web - 4ª auditoria): as duas escrevem
+-- CORRIGIDO (28-07-2026, uma IA - 4ª auditoria): as duas escrevem
 -- (score_pesquisador/perfil_pesquisador) - recalcular_todos_os_scores() em
 -- especial, sem custo de chamada nenhum pra quem chama, era negação de serviço
 -- barata deixada aberta pra PUBLIC (percorre todos os pesquisadores a cada

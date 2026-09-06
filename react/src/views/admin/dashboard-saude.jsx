@@ -1,9 +1,9 @@
 import { Tooltip } from '../../components/layout/tooltip';
 import { TEXTO_TOOLTIP_SESSOES_ATIVAS } from './dashboard';
 
-// Aba "Saúde" (09-08-2026, Bloco H do prompt do Claude Web) - recebe o
+// Aba "Saúde" (09-08-2026, Bloco H do prompt de uma IA) - recebe o
 // mesmo estado que a faixa de saúde da Visão Geral já calcula (não refaz a
-// requisição). Claude Web sugeriu mostrar "última migration aplicada"
+// requisição). uma IA sugeriu mostrar "última migration aplicada"
 // lendo uma tabela `schema_migrations` - CONFERIDO contra o banco real
 // antes de implementar: essa tabela NÃO EXISTE neste projeto (o histórico
 // de mudança de schema vive nos arquivos numerados 01-08 + `ATUALIZAR O

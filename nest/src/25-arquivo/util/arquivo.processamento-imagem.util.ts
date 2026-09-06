@@ -7,7 +7,7 @@ import {
 // Roda em confirmar-upload.ts, DEPOIS da assinatura já ter sido conferida
 // (nunca processar bytes que ainda não foram validados como o tipo que
 // afirmam ser). Três coisas na mesma passada, sempre nesta ordem (decisão
-// Lucas + Claude Web + Claude Code, 01-09-2026):
+// do Lucas, com apoio de IA, 01-09-2026):
 //
 // 1. `.rotate()` sem argumento - auto-orienta pela EXIF ANTES de mexer em
 //    mais nada. Foto de celular em retrato quase sempre grava os pixels

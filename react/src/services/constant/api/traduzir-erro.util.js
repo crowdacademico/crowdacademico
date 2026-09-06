@@ -2,7 +2,7 @@ import { ErroHttp } from './http.util';
 
 // Espelho, do lado do React, do postgres-exception.filter.ts (Nest): lá, o
 // backend traduz erro de banco pra HTTP com mensagem em PT-BR - aqui é onde
-// isso finalmente chega pra tela. Achado do Claude Web (03-08-2026): sem
+// isso finalmente chega pra tela. Achado de uma IA (03-08-2026): sem
 // isto, toda tela reinventa o próprio `catch`, e duas categorias de erro
 // ficavam mal representadas em todo lugar que já existe:
 //

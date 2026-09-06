@@ -7,7 +7,7 @@ const TAMANHOS_PAGINA = [10, 20, 30, 'todos'];
 const LIMIAR_FILTRO = 5;
 
 // Valor booleano vira badge colorido (Sim/Não), não o texto cru "true"/
-// "false" - muito mais legível numa lista (achado do Claude Web, rodando
+// "false" - muito mais legível numa lista (achado de uma IA, rodando
 // o painel de verdade: "E-MAIL VERIFICADO: false" não é instantâneo de
 // ler, um badge é).
 function celulaValor(valor) {

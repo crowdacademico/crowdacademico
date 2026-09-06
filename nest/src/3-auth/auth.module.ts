@@ -25,7 +25,7 @@ import { AuthServiceVerificarEmail } from './service/auth.service.verificar-emai
     UsuarioModule,
     TermoUsoModule,
     ConfigModule,
-    // Achado do Claude Web (03-08-2026): bcrypt é lento DE PROPÓSITO
+    // Achado de uma IA (03-08-2026): bcrypt é lento DE PROPÓSITO
     // (~100ms por verificação, ver auth.service.login.ts) - sem limite
     // nenhum, é fácil derrubar o servidor só de CPU mandando muitas
     // tentativas de login em paralelo, mesmo com senha errada e sem

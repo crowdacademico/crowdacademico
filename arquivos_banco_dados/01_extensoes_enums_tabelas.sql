@@ -106,7 +106,7 @@ CREATE TYPE tipo_recompensa       AS ENUM ('digital', 'reconhecimento', 'acesso_
 -- [01-B] RBAC (3 tabelas)
 -- ============================================================
 -- ADICIONADO (03-08-2026, achado de uma revisão externa - outra IA, não o
--- Claude Web - pedida pelo Lucas pra pensar em "poder absoluto da
+-- uma IA - pedida pelo Lucas pra pensar em "poder absoluto da
 -- modularidade": `codigo` versus `nome`, mesmo padrão já usado em
 -- `tipo_link.codigo`/`motivo_denuncia.codigo`. Motivo: 3 pontos deste banco
 -- reconheciam papel especial pelo TEXTO do nome, literal, sem nenhuma trava
@@ -249,8 +249,8 @@ CREATE TABLE usuario (
     id_imagem_perfil INT,
     criado_em        TIMESTAMPTZ    DEFAULT NOW(),
     deletado         BOOLEAN      DEFAULT FALSE,
-    -- ADICIONADAS (28-07-2026, Claude,"o único ponto onde a LGPD ainda tem
-    -- uma ponta solta"): excluir_conta_usuario() (03, [03-O]) gravava deletado =
+    -- ADICIONADAS (28-07-2026, achado numa auditoria de IA - "o único ponto
+    -- onde a LGPD ainda tem uma ponta solta"): excluir_conta_usuario() (03, [03-O]) gravava deletado =
     -- TRUE e nada mais - sem quem fez nem quando, o Art. 37 da LGPD (registro das
     -- operações de tratamento, exclusão sendo a mais sensível de todas) ficava
     -- sem trilha. Preenchidas pela própria função (deletado_por =
@@ -265,7 +265,7 @@ CREATE TABLE usuario (
     ultimo_login_em          TIMESTAMPTZ,
     ultimo_login_ip          VARCHAR(45),
 
-    -- ADICIONADAS (09-08-2026, Bloco G do prompt do Claude Web -
+    -- ADICIONADAS (09-08-2026, Bloco G do prompt de uma IA -
     -- moderação/suspensão): CONCEITO DIFERENTE de `bloqueado_ate` acima -
     -- aquele é bloqueio AUTOMÁTICO por senha errada repetida
     -- (registrar_falha_login/liberar_bloqueio_login, [03-O]); este é
@@ -570,7 +570,7 @@ CREATE TABLE atualizacao_campanha (
 
 -- ADICIONADO (31-07-2026, Alexia): orçamento estruturado da campanha (itens de gasto
 -- com categoria + valor), inspirado na estrutura de campanha do Experiment.com
--- (pedido do time via Claude). Substitui a antiga prática de descrever o
+-- (pedido do time). Substitui a antiga prática de descrever o
 -- orçamento só em texto livre dentro de campanha.descricao - aqui vira dado
 -- estruturado, que dá pra somar, validar contra meta_financeira e renderizar
 -- em gráfico de pizza na página da campanha (o cálculo do percentual de cada
@@ -655,7 +655,7 @@ CREATE TABLE solicitacao_encerramento (
     CONSTRAINT "PK_SOLICITACAO_ENCERRAMENTO" PRIMARY KEY (id_solicitacao_encerramento),
     CONSTRAINT "FK_SOLICITACAO_ENCERRAMENTO_CAMPANHA" FOREIGN KEY (id_campanha) REFERENCES campanha(id_campanha),
     CONSTRAINT "FK_SOLICITACAO_ENCERRAMENTO_ADMIN" FOREIGN KEY (id_admin) REFERENCES usuario(id_usuario),
-    -- ADICIONADO (28-07-2026, Claude - "Problema 2"): mesmo raciocínio de
+    -- ADICIONADO (28-07-2026, achado numa auditoria de IA - "Problema 2"): mesmo raciocínio de
     -- CK_CAMPANHA_DESCRICAO_TAMANHO, pros dois campos de justificativa - limite
     -- técnico largo aqui, limite de negócio configurável via trigger, ver [05-K-1].
     CONSTRAINT "CK_SOLICITACAO_JUSTIFICATIVA_PESQ_TAMANHO" CHECK (justificativa_pesquisador IS NULL OR char_length(justificativa_pesquisador) <= 10000),
@@ -717,7 +717,7 @@ CREATE TABLE denuncia (
         (id_campanha_alvo IS NOT NULL AND id_pesquisador_alvo IS NULL)
         OR (id_campanha_alvo IS NULL AND id_pesquisador_alvo IS NOT NULL)
     ),
-    -- ADICIONADO (28-07-2026, Claude - "Problema 2", a Alexia já tinha avisado no
+    -- ADICIONADO (28-07-2026, achado numa auditoria de IA - "Problema 2", a Alexia já tinha avisado no
     -- WhatsApp antes mesmo da coluna existir: "relato como text pode dar problema, tem
     -- que ver depois se dá pra restringir o tamanho"): sem limite nenhum, um campo de
     -- denúncia pública virava vetor de abuso (o limite de 5 denúncias/24h não impede
@@ -741,7 +741,7 @@ CREATE TABLE recompensa (
     CONSTRAINT "FK_RECOMPENSA_CAMPANHA" FOREIGN KEY (id_campanha) REFERENCES campanha(id_campanha) ON DELETE CASCADE,
     CONSTRAINT "CK_RECOMPENSA_VALOR_MINIMO" CHECK (valor_minimo > 0),
     CONSTRAINT "CK_RECOMPENSA_QUANTIDADE"   CHECK (quantidade_disponivel IS NULL OR quantidade_disponivel >= 0),
-    -- ADICIONADO (28-07-2026, Claude - "Problema 2"): mesma categoria de texto
+    -- ADICIONADO (28-07-2026, achado numa auditoria de IA - "Problema 2"): mesma categoria de texto
     -- livre sem limite, mesmo raciocínio de CK_CAMPANHA_DESCRICAO_TAMANHO. Limite
     -- técnico largo aqui; limite de negócio configurável via trigger, ver [05-K-1].
     CONSTRAINT "CK_RECOMPENSA_DESCRICAO_TAMANHO" CHECK (descricao IS NULL OR char_length(descricao) <= 10000)
@@ -975,8 +975,8 @@ CREATE TABLE log_auditoria (
     -- dados, LGPD Art. 18): 'EXPORT' acrescentado - as 3 originais (INSERT/UPDATE/
     -- DELETE) só cobrem MUDANÇA de dado, gravadas por trigger
     -- (fn_log_auditoria(), 05). Uma exportação não muda nada, mas "toda
-    -- exportação de dados pessoais deve deixar rastro" (decisão do Claude
-    -- Web) exige um registro mesmo assim - só uma leitura sensível o
+    -- exportação de dados pessoais deve deixar rastro" (decisão tomada em
+    -- conversa com apoio de IA) exige um registro mesmo assim - só uma leitura sensível o
     -- bastante pra precisar de trilha própria. dados_anteriores/dados_novos
     -- ficam NULL nesse caso (nada mudou), só tabela/identidade_registro/
     -- id_usuario_responsavel/ocorrido_em importam.

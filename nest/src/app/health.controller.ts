@@ -8,7 +8,7 @@ import {
 import { Pool } from 'pg';
 import { PG_POOL } from '../commons/database/database.constants';
 
-// GET /health - pedido do Claude Web (03-08-2026): "qualquer plataforma de
+// GET /health - pedido de uma IA (03-08-2026): "qualquer plataforma de
 // deploy (Render, Railway, Fly) precisa disso pra saber se a aplicação está
 // viva". Sem login, sem RequireAuthGuard - precisa responder mesmo antes de
 // qualquer usuário existir/logar, e é isso que a plataforma de deploy chama

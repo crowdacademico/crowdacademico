@@ -8,7 +8,7 @@ import { Generated } from 'kysely';
 // NORMALMENTE isso seria gerado por `npm run db:codegen` (kysely-codegen,
 // já instalado em devDependencies e configurado em package.json), que
 // introspecciona o Postgres de verdade e nunca erra nome de coluna/tipo.
-// Não rodei o codegen porque este ambiente (sandbox do Claude Code) não tem
+// Não rodei o codegen porque este ambiente de execução não tem
 // acesso a um Postgres rodando - só ao código. Assim que rodar localmente
 // com o banco de pé, rode `npm run db:codegen` (gera
 // src/commons/database/db.types.generated.ts, TODAS as 41 tabelas) e
@@ -125,7 +125,7 @@ export interface LogAuditoriaTable {
 
 // ADICIONADAS (09-08-2026) - espelham 01_extensoes_enums_tabelas.sql, tabelas
 // termos_de_uso/usuario_termo, tocadas pela 1ª vez pelo módulo 5-termo-uso
-// (Bloco D do prompt do Claude Web sobre cadastro público).
+// (Bloco D do prompt de uma IA sobre cadastro público).
 export interface TermosDeUsoTable {
   id_termo: Generated<number>;
   versao: string;

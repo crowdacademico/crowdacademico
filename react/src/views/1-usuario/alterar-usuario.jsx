@@ -92,7 +92,7 @@ export function AlterarUsuario({ auth }) {
     (papel) => !papeisAtuais.some((atual) => atual.idPapel === papel.idPapel),
   );
 
-  // "sujo" (09-08-2026, Bloco I do prompt do Claude Web) - só compara os
+  // "sujo" (09-08-2026, Bloco I do prompt de uma IA) - só compara os
   // campos que o próprio <form> salva (nome/senha/foto); atribuir/revogar
   // papel já salva na hora (cada clique é sua própria requisição), não faz
   // parte do "salvar" deste formulário. `idImagemPerfilNovo !== undefined`
@@ -320,7 +320,7 @@ export function AlterarUsuario({ auth }) {
             </div>
           </div>
 
-          {/* 2 colunas a partir de lg (10-08-2026, rodada Claude Web
+          {/* 2 colunas a partir de lg (10-08-2026, rodada de IA
               "embelezar o painel" - causa raiz era CartaoFormulario
               estreito demais, ver comentário lá). Principal (2/3): o que
               se edita. Lateral (1/3): contexto/consulta + ações
@@ -370,7 +370,7 @@ export function AlterarUsuario({ auth }) {
                 </div>
               </SecaoFicha>
 
-              {/* Perfil de Pesquisador (10-08-2026, rodada Claude Web
+              {/* Perfil de Pesquisador (10-08-2026, rodada de IA
                   "embelezar o painel", item 2, pedido explícito do Lucas:
                   "já peça só para criar o campo textbox para o CPF... e um
                   campo de link acadêmico", mesmo sem o módulo

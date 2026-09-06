@@ -5,7 +5,7 @@
 // "feature" ficaria estranho).
 export interface UsuarioAutenticado {
   idUsuario: number;
-  // ADICIONADO (09-08-2026, Bloco E do prompt do Claude Web: "Sessões
+  // ADICIONADO (09-08-2026, Bloco E do prompt de uma IA: "Sessões
   // ativas" em Minha Conta) - vem do claim `sid` do JWT (ver
   // auth.service.login.ts, emitirTokens). Sem isso não dava pra saber QUAL
   // sessao.id_sessao corresponde à aba/dispositivo atual (o access token

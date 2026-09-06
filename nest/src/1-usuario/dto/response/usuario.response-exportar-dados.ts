@@ -1,6 +1,5 @@
 // LGPD Art. 18 (portabilidade/acesso) - item 3 de PROXIMOS_PASSOS.md,
-// desenhado em conversa entre o Lucas, o Claude Code e o Claude Web
-// (05-09-2026). Um objeto por seção, cada seção como array (mesmo vazio,
+// desenhado em conversa entre o Lucas e apoio de IA (05-09-2026). Um objeto por seção, cada seção como array (mesmo vazio,
 // nunca ausente) - fica claro pra quem lê o JSON o que foi verificado e não
 // tinha nada, contra o que nem foi incluído de propósito.
 //

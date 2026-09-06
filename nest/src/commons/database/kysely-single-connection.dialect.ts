@@ -14,7 +14,7 @@ import {
 } from 'kysely';
 import { PoolClient } from 'pg';
 
-// Ponto 1 do "Probleminha-chan.md" (sugestão do Claude Web): o Kysely aqui
+// Ponto 1 do "Probleminha-chan.md" (sugestão de uma IA): o Kysely aqui
 // NUNCA gerencia sua própria conexão/transação - ele só executa SQL em cima do
 // MESMO PoolClient que o GlobalDbInterceptor já abriu, já rodou BEGIN e já
 // setou app.id_usuario_atual via set_config(). Por isso beginTransaction/

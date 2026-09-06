@@ -1,6 +1,6 @@
 import { SelectQueryBuilder } from 'kysely';
 
-// Achado do Claude Web (03-08-2026): usuario.service.findall.ts e
+// Achado de uma IA (03-08-2026): usuario.service.findall.ts e
 // configuracao.service.findall.ts fazem `.execute()` sem `limit`/`offset`
 // nenhum - hoje invisível (17 usuários, 28 configurações), mas o mesmo
 // padrão copiado pra contribuicao/auditoria_financeira/notificacao (ainda

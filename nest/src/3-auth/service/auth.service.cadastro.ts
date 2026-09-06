@@ -13,7 +13,7 @@ import { AuthResponseRegister } from '../dto/response/auth.response-register';
 import { AuthServiceLogin } from './auth.service.login';
 import { gerarTokenVerificacaoEmail } from './verificacao-email-token.util';
 
-// Cadastro público (09-08-2026, Bloco D do prompt do Claude Web) - reaproveita
+// Cadastro público (09-08-2026, Bloco D do prompt de uma IA) - reaproveita
 // UsuarioServiceCreate (a MESMA criação que POST /usuario admin já usa: hash
 // de senha + INSERT + atribuir_papel_padrao()) e soma o que só faz sentido
 // aqui: gravar o aceite do termo ATIVO (nunca um id vindo do cliente), gerar

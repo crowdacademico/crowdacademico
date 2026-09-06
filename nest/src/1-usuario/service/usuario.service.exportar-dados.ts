@@ -5,7 +5,7 @@ import { decifrarCpf } from '../../commons/seguranca/cpf-cifra.util';
 import { USUARIO_COLUNAS_SELECT } from '../constants/usuario.constants';
 import { UsuarioResponseExportarDados } from '../dto/response/usuario.response-exportar-dados';
 
-// Mascara o CPF (3 primeiros + 2 últimos dígitos) - decisão do Claude Web,
+// Mascara o CPF (3 primeiros + 2 últimos dígitos) - decisão de uma IA,
 // confirmada em conversa (05-09-2026): incluir o CPF em texto puro exigiria
 // reautenticação por senha antes de gerar a exportação, mecanismo que não
 // existe em NENHUM outro lugar do sistema hoje (a exclusão de conta usa

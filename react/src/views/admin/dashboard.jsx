@@ -16,8 +16,8 @@ import { DashboardSaude } from './dashboard-saude';
 export const TEXTO_TOOLTIP_SESSOES_ATIVAS =
   'Contagem de sessões não-revogadas em 30 dias, não gente online.';
 
-// Abas (09-08-2026, Bloco H do prompt do Claude Web: Dashboard como painel
-// global) - cuidado explícito do Claude Web contra virar "tela onde tudo
+// Abas (09-08-2026, Bloco H do prompt de uma IA: Dashboard como painel
+// global) - cuidado explícito de uma IA contra virar "tela onde tudo
 // cabe": estrutura em abas em vez de empilhar seção atrás de seção. "Visão
 // Geral" é o que já existia (cards + prévia de notificações); as outras 3
 // são novas.

@@ -6,7 +6,7 @@ import { buscarAtivo } from '../../services/5-termo-uso/api/termo-uso.api';
 const REGEX_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Requisitos do medidor de força de senha (09-08-2026, Bloco D do prompt do
-// Claude Web) - só GUIA visual, o piso de verdade continua sendo o backend
+// uma IA) - só GUIA visual, o piso de verdade continua sendo o backend
 // (CadastroRequestDto, @MinLength(8)): não faz sentido bloquear o clique
 // aqui por maiúscula/número/símbolo se o servidor aceitaria com menos.
 const REQUISITOS_SENHA = [
@@ -20,7 +20,7 @@ const REQUISITOS_SENHA = [
   },
 ];
 
-// Tela de cadastro público (09-08-2026, Bloco D do prompt do Claude Web) -
+// Tela de cadastro público (09-08-2026, Bloco D do prompt de uma IA) -
 // primeira tela pública de verdade além de login. Só os 5 campos que
 // importam pra criar a conta (nome/e-mail/senha/confirmar/aceite) - o
 // resto (foto, perfil acadêmico...) mora em Minha Conta, editável depois,
@@ -37,7 +37,7 @@ export function CadastroPage({ auth }) {
   const { erro, reportarErro, limparErro } = useErroToast();
 
   // "Tocado" (blur), não a cada tecla (09-08-2026, pedido explícito do
-  // Claude Web: validar enquanto a pessoa ainda está digitando o e-mail
+  // uma IA: validar enquanto a pessoa ainda está digitando o e-mail
   // acusa erro antes de ela terminar de escrever).
   const [tocado, setTocado] = useState({ nome: false, email: false, senha: false, confirmar: false });
   const marcarTocado = (campo) => setTocado((atual) => ({ ...atual, [campo]: true }));
@@ -221,7 +221,7 @@ export function CadastroPage({ auth }) {
             />
             {/* Em tempo real, não só no blur - comparar com a 1ª senha é o
                 único campo onde "digitando ainda" já vale avisar (pedido
-                explícito do Claude Web: "confirmar senha valida em tempo
+                explícito de uma IA: "confirmar senha valida em tempo
                 real"). */}
             {confirmarSenha.length > 0 && !senhasIguais && (
               <p className="text-xs texto-erro mt-1">As senhas não são iguais.</p>

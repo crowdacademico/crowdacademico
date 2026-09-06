@@ -1,5 +1,5 @@
 // Logo oficial do Google ("G" colorido, 4 cores) - SVG inline, não Font
-// Awesome (10-08-2026, achado do Claude Web: `fa-brands fa-google
+// Awesome (10-08-2026, achado de uma IA: `fa-brands fa-google
 // text-red-500` era um G vermelho chapado, nada parecido com o que
 // Google/GitHub/qualquer site usa de verdade). Path oficial das
 // diretrizes de marca do Google Identity - inline em vez de vir de CDN de

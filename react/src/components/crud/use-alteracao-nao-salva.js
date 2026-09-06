@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 
-// Aviso nativo do navegador (09-08-2026, Bloco I do prompt do Claude Web:
+// Aviso nativo do navegador (09-08-2026, Bloco I do prompt de uma IA:
 // "aviso ao tentar sair com mudança não salva") - beforeunload cobre
 // fechar aba/atualizar página/digitar outra URL. Navegação DENTRO do app
 // (botão Cancelar, clicar em outro item do menu) não passa por

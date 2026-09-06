@@ -18,7 +18,7 @@ const CODIGO_PG_RLS_VIOLATION = '42501';
 const CODIGO_PG_RAISE_EXCEPTION_SEM_ERRCODE = 'P0001';
 
 // ERRCODE customizado nas 42 RAISE EXCEPTION de 05_regras_negocio.sql
-// (Alexia + Claude Web, 03-08-2026 - ver DOCUMENTACAO_ERRCODE.md pra tabela
+// (Alexia + uma IA, 03-08-2026 - ver DOCUMENTACAO_ERRCODE.md pra tabela
 // completa código -> função -> mensagem, e DOCUMENTACAO_BD.md, seção "05",
 // pro resumo oficial). 4 faixas, pelo prefixo de 2 dígitos do código:
 // 90xxx validação de dado/negócio, 91xxx conflito de estado, 92xxx
@@ -35,7 +35,7 @@ interface ErroPostgres extends Error {
 }
 
 // Rede de segurança GLOBAL pra erro de Postgres que nenhum service tratou
-// localmente (achado do Claude da Alexia, 02-08-2026: usuario.service.create
+// localmente (achado numa auditoria de IA feita pela Alexia, 02-08-2026: usuario.service.create
 // não tinha try/catch nenhum em volta do INSERT - e-mail duplicado virava
 // 500 cru em vez de 409). Services que já têm try/catch próprio (ex.:
 // configuracao.service.create.ts, usuario-papel.service.create.ts) nunca

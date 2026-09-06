@@ -1,5 +1,5 @@
 // Agrupamento de configurações por assunto (09-08-2026, Bloco H do prompt
-// do Claude Web: Dashboard como painel global) - mesmo espírito da tradução
+// de uma IA: Dashboard como painel global) - mesmo espírito da tradução
 // de permissões (permissao-nomes-amigaveis.js): puramente camada de
 // exibição, sem coluna nova no banco. A tabela `configuracoes` crua (28
 // linhas, todas juntas, sem contexto) virou uma lista organizada por tema -

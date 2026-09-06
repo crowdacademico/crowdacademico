@@ -9,7 +9,7 @@ import { sessaoApi } from '../../services/3-auth/api/sessao.api';
 import { usuarioPapelApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 
-// Minha Conta (09-08-2026, Bloco E do prompt do Claude Web) - não é um
+// Minha Conta (09-08-2026, Bloco E do prompt de uma IA) - não é um
 // formulário só, é uma área com seções independentes, cada uma salva por
 // conta própria.
 //
@@ -361,7 +361,7 @@ function iconePorDispositivo(userAgent) {
 }
 
 // 2. SEGURANÇA - senha (exige a atual) + Sessões Ativas (o item de maior
-// impacto percebido, segundo o Claude Web, 10-08-2026). Polimento
+// impacto percebido, segundo uma IA, 10-08-2026). Polimento
 // (11-08-2026): ícone de dispositivo por sessão, "sessão atual" já vem
 // destacada em verde (badge-sucesso), encerrar virou ícone discreto em
 // vez de botão cheio - antes era uma <ul> crua.

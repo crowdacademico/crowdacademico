@@ -17,7 +17,7 @@ export function ExcluirUsuario({ auth }) {
   const [usuario, setUsuario] = useState(null);
   const [carregando, setCarregando] = useState(true);
   const [excluindo, setExcluindo] = useState(false);
-  // Confirmação por digitação (09-08-2026, Bloco I do prompt do Claude Web:
+  // Confirmação por digitação (09-08-2026, Bloco I do prompt de uma IA:
   // exclusão de USUÁRIO exige digitar o e-mail - configuração, mais abaixo
   // em excluir-configuracao.jsx, fica só com confirmação simples, é um
   // dado técnico, não a conta de uma pessoa).
@@ -85,7 +85,7 @@ export function ExcluirUsuario({ auth }) {
         <div className="p-10 space-y-6">
           {erro && <p className="text-red-700 text-sm font-bold text-center">{erro}</p>}
 
-          {/* SecaoFicha/CampoFicha (10-08-2026, rodada Claude Web
+          {/* SecaoFicha/CampoFicha (10-08-2026, rodada de IA
               "embelezar o painel", item 3: "usar FichaConsulta INTEIRA em
               modo leitura mostrando o que será excluído, em vez de repetir
               campos") - mesmos blocos que Consultar Usuário usa pro mesmo

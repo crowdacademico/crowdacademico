@@ -47,7 +47,7 @@ const SECOES_MODAL_ARQUIVO = [
   },
 ];
 
-// Aba "Regras do Negócio" (09-08-2026, Bloco H do prompt do Claude Web) -
+// Aba "Regras do Negócio" (09-08-2026, Bloco H do prompt de uma IA) -
 // as ~28 chaves de `configuracoes` viravam uma tabela CRUD crua (Aba
 // Configurações, ainda existe, sem mudança) - aqui é uma segunda forma de
 // olhar pro MESMO dado, agrupado por assunto, mais fácil de escanear.

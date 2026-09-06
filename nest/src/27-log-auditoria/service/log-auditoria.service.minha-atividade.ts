@@ -5,7 +5,7 @@ import { LogAuditoriaResponse } from '../dto/response/log-auditoria.response';
 
 // Últimas N ações do PRÓPRIO usuário logado, de QUALQUER tabela - usado
 // pelo sino "Atividade recente" do cabeçalho (09-08-2026, Bloco B/C do
-// prompt do Claude Web). Diferente de LogAuditoriaServiceFindAll (que
+// prompt de uma IA). Diferente de LogAuditoriaServiceFindAll (que
 // filtra por `tabela`, uma de cada vez, pro botão "Ver log" embaixo de
 // cada listagem): aqui não recebe `tabela` nenhuma, só limita quantidade -
 // é "o que EU fiz recentemente", não "o histórico de uma tabela".

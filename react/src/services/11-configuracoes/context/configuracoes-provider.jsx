@@ -28,7 +28,7 @@ function converterValor(linha) {
 // configuracao.api.js). Existe pra qualquer tela (admin ou pública, futura)
 // conseguir ler `taxa_plataforma_padrao`, `valor_minimo_contribuicao` etc.
 // direto do banco via `obterConfiguracao(...)`, em vez de escrever esses
-// valores de negócio direto no HTML/JSX (achado do Claude Web, 02-08-2026,
+// valores de negócio direto no HTML/JSX (achado de uma IA, 02-08-2026,
 // olhando o Projeto de Interface de referência).
 export function ConfiguracoesProvider({ children }) {
   const [valores, setValores] = useState({});

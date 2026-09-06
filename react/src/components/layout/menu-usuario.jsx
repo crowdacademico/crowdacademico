@@ -6,9 +6,9 @@ function placeholder(mensagem) {
   return () => window.alert(mensagem);
 }
 
-// Dropdown do cabeçalho (09-08-2026, Bloco B/C do prompt do Claude Web) -
-// substitui o antigo bloco solto "nome + Sair"/"Entrar". Recomendação do
-// Claude Web adotada: avatar NÃO substitui os controles soltos (fonte,
+// Dropdown do cabeçalho (09-08-2026, Bloco B/C do prompt de uma IA) -
+// substitui o antigo bloco solto "nome + Sair"/"Entrar". Recomendação de
+// uma IA adotada: avatar NÃO substitui os controles soltos (fonte,
 // tema, sino) - só guarda identidade/conta, mesmo padrão GitHub/Linear/
 // Notion.
 //

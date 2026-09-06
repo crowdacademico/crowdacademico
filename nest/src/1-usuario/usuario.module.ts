@@ -64,7 +64,7 @@ import { UsuarioServiceUpdate } from './service/usuario.service.update';
   // usuário público no corpo da resposta de login) em vez de duplicar a
   // mesma query/converter. UsuarioServiceCreate exportado (09-08-2026) pelo
   // mesmo motivo: POST /auth/cadastro (self-registro público, Bloco D do
-  // prompt do Claude Web) reaproveita a MESMA criação de usuário que
+  // prompt de uma IA) reaproveita a MESMA criação de usuário que
   // POST /usuario (admin) já usa, em vez de duplicar bcrypt.hash + INSERT +
   // atribuir_papel_padrao() num segundo lugar.
   exports: [UsuarioServiceFindOne, UsuarioServiceCreate],

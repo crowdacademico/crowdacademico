@@ -176,7 +176,7 @@ export const ROTAS_ADMIN = [
     icone: 'fa-link',
   },
   // Motivo de Denúncia (módulo 10-motivo-denuncia) - ativada no menu
-  // lateral em 22-08-2026 (achado do Claude Code: a rota e a página já
+  // lateral em 22-08-2026 (achado numa auditoria: a rota e a página já
   // funcionavam por URL direta desde que a Alexia terminou o módulo, mas
   // sem `rotuloMenu`/`grupoMenu` não tinha entrada nenhuma no menu lateral
   // - ninguém achava navegando). MOVIDA (mesmo dia, pedido do Lucas) de
@@ -422,7 +422,7 @@ export const ROTAS_ADMIN = [
   // TODAS as rotas, não só as do Campo de Testes).
   //
   // `import.meta.env.DEV` (22-08-2026, pedido explícito da revisão do
-  // Claude Web sobre o Campo de Testes): em build de produção, este array
+  // uma IA sobre o Campo de Testes): em build de produção, este array
   // fica vazio - a rota nem existe, o grupo some do menu (admin-menu.
   // constants.js só mostra o que `itensDoGrupo` acha aqui). O Elenco
   // guarda refresh token de várias contas reais ao mesmo tempo; em
