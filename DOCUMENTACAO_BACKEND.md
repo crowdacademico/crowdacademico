@@ -807,11 +807,11 @@ sharp(bytesOriginais)
 
 📌 **Mas os bytes no bucket são apagados de verdade.** O comentário explica por que isso é seguro: ninguém serve o arquivo pela chave sem antes passar pela checagem de `ativo` no banco; uma vez `ativo = false`, o dado já parou de aparecer em qualquer lugar do sistema. Falha ao apagar do bucket **não** desfaz o soft delete (a linha já ficou inativa, que é o que importa para a correção do sistema) - só vira um objeto órfão, e agora **com `logger.warn`**, não em silêncio.
 
-**`ArquivoServiceResolverAvatar`** - a cadeia de fallback, em um lugar só:
-1. `id_imagem_perfil` aponta para um arquivo `ativo` → URL pública dele, `padrao: false`.
-2. Aponta para um arquivo removido/desativado → cai no fallback (em vez de devolver link quebrado).
-3. Fallback: a chave em `configuracoes.avatar_padrao_chave` (editável pelo painel Admin, sem deploy) → URL, `padrao: true`.
-4. Config vazia → `{ url: null, padrao: true }`, e o front usa o próprio placeholder local.
+**`ArquivoServiceResolverAvatar`** - 🗑️➡️✅ **SIMPLIFICADO (commit da Alexia, 05-09-2026):** antes tinha uma cadeia de 4 passos com um "avatar padrão do sistema" configurável (`configuracoes.avatar_padrao_chave`, editável pelo painel Admin) como fallback, e a resposta carregava um campo `padrao: boolean` distinguindo foto real de substituta. Removido de propósito - `AvatarUsuario` (front) já desenha iniciais com fundo colorido quando não há foto, então manter os dois mecanismos resolvendo o mesmo problema era complexidade duplicada (primeiro caso concreto validando a regra "apontar duplicidade de mecanismo" que o Lucas pediu pra adotar em toda auditoria). Hoje é só:
+1. `id_imagem_perfil` aponta para um arquivo `ativo` → `{ url: <URL pública> }`.
+2. `null`, ou aponta pra um arquivo removido/desativado → `{ url: null }` - o front resolve com iniciais, sem round-trip nenhum pra saber disso.
+
+📌 **A chave `avatar_padrao_chave` foi removida do seed (05-09-2026) e do banco de produção (`DELETE`, 06-09-2026)** - não é mais um parâmetro válido em `configuracoes`, não confundir com nenhuma chave ativa.
 
 📌 **`GET /arquivo/avatar/:idUsuario` é pública de propósito** (sem `RequireAuthGuard`): um visitante anônimo olhando um perfil ou os comentários de uma campanha precisa ver o avatar.
 

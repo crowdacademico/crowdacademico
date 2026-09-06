@@ -129,15 +129,17 @@ Nem tudo mapeia para um módulo do Nest. Essas ganham nome próprio, no mesmo n�
 | `views/admin/` | a casca do painel (layout, sidebar, menu) e as telas de Dashboard |
 | `views/campo-testes/` | as telas T1/T2/T3/T4 |
 
-### Subpastas dentro de cada módulo de `services/`
+### Subpastas dentro de cada módulo de `services/` - convenção oficial (fechada em 06-09-2026)
 
-O esqueleto padrão é `api/`, `constants/`, `hook/`, `type/` - criado com `.gitkeep` mesmo antes de existir código. Módulos que ainda não têm nenhuma tela consumindo (`7-link-academico`, `17-comentario`, `19-denuncia`, `22-contribuicao`, `23-repasse`, `26-notificacao`) têm só os `.gitkeep`.
+**`api/constants/hook/type[/context][/util]`** - esqueleto oficial pra todo módulo novo daqui pra frente, criado com `.gitkeep` mesmo antes de existir código. As 4 primeiras são a base; `context/` e `util/` só entram quando o módulo precisa mesmo delas (critério de cada uma, abaixo). Não existe mais "duas convenções coexistindo" - `11-configuracoes` (que tinha `provider/` separado de `context/`) já foi unificada nesse formato numa rodada anterior; o que restava era só formalizar por escrito que este é o padrão pra módulo NOVO, não migrar nada em módulo antigo.
+
+⚠️ **Não é retroativo:** 4 módulos mais antigos (`10-motivo-denuncia`, `9-tipo-link`, `27-log-auditoria`, `5-termo-uso`) nunca ganharam o esqueleto completo - têm só `api/`, sem os `.gitkeep` de `constants/hook/type`. Não é erro nem pendência - são módulos simples o bastante pra nunca ter precisado das outras pastas; a convenção vale pra módulo novo, não obriga recriar pasta vazia em módulo que já funciona sem ela.
 
 **Duas pastas a mais, ambas opcionais, cada uma resolvendo um problema diferente:**
 - **`context/`** - só existe nos módulos que precisam de estado compartilhado entre telas sem parentesco (`11-configuracoes`, `campo-testes`). Critério de quando um módulo ganha ela, e o formato exato, na seção 10.
 - **`util/`** - só existe nos módulos que têm lógica pura auxiliar que não é chamada de API (`api/`), nem estado (`hook/`/`context/`), nem constante fixa (`constants/`) - hoje usada por `25-arquivo` e `campo-testes`. Critério é o mesmo espírito das outras: se o módulo tem uma função "cálculo/formatação sem efeito colateral" que várias partes dele reaproveitam, ela mora aqui em vez de duplicada dentro de cada `api.js`/hook.
 
-⚠️ A pasta `type/` existe em todos os módulos e está **sempre vazia** - é resquício do esqueleto pensado para TypeScript. Enquanto o item 10 das pendências não for decidido, ela não tem uso.
+⚠️ A pasta `type/` existe na maioria dos módulos e está **sempre vazia** - é resquício do esqueleto pensado para TypeScript, sem uso enquanto a decisão "React em JavaScript ou TypeScript" não for tomada (`PENDENCIAS e correcoes.md`). `11-configuracoes` é a única exceção que não tem nem essa pasta vazia - inofensivo, mas quem for criar um módulo novo deve incluir `type/` mesmo assim, pra manter o esqueleto completo daqui pra frente.
 
 ⚠️ Em `views/`, as pastas `checkout/`, `dash-doador/` e `dash-pesquisador/` existem só com `.gitkeep`. São lugares reservados para a interface pública/de usuário final, ainda não construída. O mesmo vale para `components/pagination/` e `components/search/`.
 
@@ -434,10 +436,10 @@ Hoje só tem `seletor-foto-perfil.jsx` (abaixo). `components/3-auth/icone-google
 📌 **WebP com fallback verificado, não assumido.** Tenta `toBlob(..., 'image/webp')` e **confere o `.type` do resultado** antes de confiar nele, porque *"`canvas.toBlob` com 'image/webp' nem todo navegador honra (Safari mais antigo cai pra PNG em silêncio, sem erro nenhum)"*. Sem WebP, cai para JPEG - não PNG, *"que sempre sai sem perda e, por isso, muito maior"*. A extensão do nome do arquivo é trocada para bater com o formato de saída.
 
 📌 **A ordem das validações mudou por causa da redução.** `seletor-foto-perfil.jsx` tem hoje **dois** tetos de tamanho, e o comentário explica a razão:
-- `TAMANHO_MAXIMO_BRUTO_BYTES` (30 MB), checado **antes** da redução - *"só pra recusar algo absurdo cedo (ex.: vídeo de 300MB renomeado pra .jpg) sem gastar CPU tentando processar no canvas"*;
-- `TAMANHO_MAXIMO_AVATAR_BYTES` (8 MB), checado **depois** - *"não antes: com a redução automática no cliente, uma foto de celular de 10-15MB vira algumas centenas de KB, então barrar pelo tamanho BRUTO derrubaria o próprio motivo de ter a redução."*
+- `TAMANHO_MAXIMO_BRUTO_BYTES` (30 MB, constante fixa), checado **antes** da redução - *"só pra recusar algo absurdo cedo (ex.: vídeo de 300MB renomeado pra .jpg) sem gastar CPU tentando processar no canvas"*;
+- `tamanhoMaximoAvatarBytes`, checado **depois** - *"não antes: com a redução automática no cliente, uma foto de celular de 10-15MB vira algumas centenas de KB, então barrar pelo tamanho BRUTO derrubaria o próprio motivo de ter a redução."*
 
-O teto de 8 MB espelha o backend (*"baixado de 10MB pra 8MB em 01-09-2026 - plano grátis do Supabase Storage só tem 1GB de espaço total"*), e o perfil de redução (`{ larguraMaxima: 512, qualidade: 80 }`) espelha o perfil `'avatar'` do Nest - ver o ⚠️ de sincronia manual na seção 2.
+🗑️➡️✅ **O teto de 8 MB deixou de ser constante fixa (06-09-2026, ver `ACHADOS_PARA_DISCUTIR.md`, item "Constantes duplicadas...").** Antes era `TAMANHO_MAXIMO_AVATAR_BYTES = 8 * 1024 * 1024` hardcoded (duplicando o valor do Nest, sincronizado só de boa vontade); virou `obterConfiguracao('arquivo_tamanho_maximo_imagem_bytes', 8 * 1024 * 1024)` - lê a mesma chave de `configuracoes` que o Admin já pode editar pelo painel, o `8 * 1024 * 1024` que sobra é só o valor mostrado por uma fração de segundo antes do `ConfiguracoesProvider` carregar. A mensagem de erro também calcula o "X MB" a partir desse valor, em vez de "8 MB" fixo no texto. O perfil de redução (`{ larguraMaxima: 512, qualidade: 80 }`) **continua** hardcoded, espelhando o perfil `'avatar'` do Nest à mão - ver o ⚠️ de sincronia manual na seção 2; essa parte não é config, é estrutural, e segue dependendo da decisão de TS.
 
 📌 **Tratamento de erro que distingue as origens:** o `catch` só passa por `traduzirErro` o que for `ErroHttp`, porque *"validação local e falha de rede no PUT pro bucket ... já lançam com mensagem própria em português; passar essas por `traduzirErro` as trocaria pela mensagem genérica de 'não foi possível falar com o servidor', que aqui seria enganosa."*
 
@@ -666,7 +668,7 @@ Seção dentro de **Alterar Usuário** (não uma tela própria - é ação sobre
 | Aba | Componente | O que mostra |
 |---|---|---|
 | Visão Geral | (inline, no próprio `dashboard.jsx`) | Faixa de saúde (banco conectado/sessões ativas/notificações pendentes) + 6 cards de métrica (`GET /dashboard/resumo`) + prévia de notificações |
-| Regras do Negócio | `dashboard-regras-negocio.jsx` | As ~37 chaves de `configuracoes`, agrupadas por assunto |
+| Regras do Negócio | `dashboard-regras-negocio.jsx` | As 38 chaves de `configuracoes`, agrupadas por assunto |
 | Identidade Visual | `dashboard-identidade-visual.jsx` | Placeholder - gerenciar logo/favicon ainda não foi construído |
 | Saúde | `dashboard-saude.jsx` | Mesmo estado da faixa de saúde da Visão Geral, sem refazer requisição, mais contagens agregadas |
 

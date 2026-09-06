@@ -54,11 +54,11 @@ A página pública de campanha (a que um doador visita, compartilha no WhatsApp)
 
 ---
 
-## 4. Padronizar estrutura de pastas do React (`services/*`)
+## 4. 🟢 Padronizar estrutura de pastas do React (`services/*`) - RESOLVIDO (06-09-2026)
 
-`services/1-usuario` segue o padrão `api/constants/hook/type`; `services/11-configuracoes` segue `api/context/hook/provider`. Duas convenções diferentes coexistindo - antes de o projeto crescer mais (mais módulos = mais pastas nesse formato), vale escolher uma e migrar a outra.
+Não era mais um empate de verdade entre duas convenções - `11-configuracoes` (que tinha `provider/` separado de `context/`) já tinha sido unificada numa rodada anterior; faltava só formalizar por escrito que `api/constants/hook/type[/context][/util]` é a convenção oficial pra módulo NOVO. Feito em `DOCUMENTACAO_FRONTEND.md`, seção "Subpastas dentro de cada módulo de `services/`" - não retroativo, módulo antigo sem o esqueleto completo continua como está.
 
-**Status:** não iniciado, decisão de convenção ainda sem dono (Lucas/Alexia precisam escolher).
+**Status:** concluído, nada a implementar.
 
 ---
 

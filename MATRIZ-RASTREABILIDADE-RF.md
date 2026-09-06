@@ -223,12 +223,12 @@ RNFs são transversais por natureza - a maioria não mapeia pra uma tabela ou en
 
 ## Resumo executivo
 
-Contagem aproximada por símbolo (RF-001 a RF-116, sem RNFs):
+Contagem aproximada por símbolo (RF-001 a RF-116, sem RNFs - ⚠️ **esta seção e os números de RF citados abaixo ainda são da numeração pré-06-09-2026** (antes de RF-015A virar RF-016 e empurrar o resto pra RF-117; ver nota no topo deste documento e em `REQUISITOS_V5.md`) - não foram propagados de propósito, é o Lucas quem vai fazer isso por conta própria):
 
 - **Banco ✅:** a grande maioria - o schema está muito à frente do Nest. Poucos ❌ reais no banco (RF-026, RF-031).
 - **Nest ✅:** concentrado em Usuário, Perfil Pesquisador (incluindo score, sessões e exclusão de conta), Campanha (núcleo + orçamento/cronograma/atualização), Comentários, Administração, Dashboard, Log de Auditoria, Termos, Moderação de conta (suspensão/desbloqueio) - os módulos que já têm código e foram documentados a fundo nesta rodada.
 - **Nest ❌ quase uniforme em:** todo o Grupo Contribuições, Recompensa, Denúncia/Moderação-de-denúncia, Solicitação de Encerramento, Repasse, Auditoria Financeira, Notificações, e qualquer página pública (campanha, perfil de pesquisador) - ou seja, **dinheiro de verdade entrando/saindo, denúncia/moderação de conteúdo, comunicação por e-mail e a própria interface pública são as maiores lacunas do projeto hoje**, não modelagem de dado (essa parte já está pronta e testada há semanas).
-- **Maior gap de segurança ainda aberto (não é falta de funcionalidade, é falta de proteção):** RNF-007/item 9 - escrita em `auditoria_financeira`/`repasse`/`historico_rejeicao` sem trava real de RLS, aguardando o serviço isolado do Nest que a `PENDENCIAS.md` já recomenda construir.
+- **Maior gap de segurança ainda aberto (não é falta de funcionalidade, é falta de proteção):** RNF-007, item "Validação de escrevibilidade financeira" de `PENDENCIAS.md` - escrita em `auditoria_financeira`/`repasse`/`historico_rejeicao` sem trava real de RLS, travada até o gateway de pagamento ser escolhido (ver `PROXIMOS_PASSOS.md`).
 - **Achado E corrigido nesta revisão (05-09-2026): RF-057 não era cumprido de verdade.** `encerrar_campanhas_vencidas()` existia e estava correta no banco, mas nada a chamava. Corrigido no mesmo dia com `@nestjs/schedule` (`CampanhaServiceEncerrarVencidas`, `@Cron` a cada 15 min) - ver a entrada do RF-057, acima.
 
 **Itens marcados 🟡 "não conferido a fundo" que ainda merecem uma varredura futura, não tratados como fato aqui:** RF-003, RF-008, RF-010, RF-017, RF-023, RF-033, RF-047, RF-052, RF-055, RF-065/066/067, RF-080/081/082, RF-092, RF-097, RF-098, RF-108/109, RF-111, RF-113, RF-114. (RF-002 conferido e confirmado ✅ nesta rodada; RF-057 conferido e confirmado ❌ - os dois saíram desta lista.) Nenhum dos restantes é necessariamente um problema - só não foram lidos linha a linha ainda, e "módulo existe" não é o mesmo que "cada regra específica confirmada".
