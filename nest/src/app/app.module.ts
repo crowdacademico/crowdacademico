@@ -1,6 +1,7 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { DatabaseModule } from '../commons/database/database.module';
 import { LoggingModule } from '../commons/logging/logging.module';
 import { RequestLoggerMiddleware } from '../commons/logging/request-logger.middleware';
@@ -37,6 +38,26 @@ import { ConfiguracaoValorModule } from '../commons/configuracao/configuracao-va
     // precisa do agendador do próprio módulo rodando por trás. Primeiro
     // consumidor: CampanhaServiceEncerrarVencidas (12-campanha).
     ScheduleModule.forRoot(),
+    // CORRIGIDO (07-09-2026, achado incidentalmente ao revisar o trabalho da
+    // migração TS, depois confirmado ao vivo): existiam DOIS
+    // `ThrottlerModule.forRoot()` (auth.module.ts e usuario.module.ts) - o
+    // módulo é `@Global()` (conferido direto em
+    // node_modules/@nestjs/throttler), e `THROTTLER_OPTIONS` é um token de
+    // string FIXO, o mesmo em toda chamada de `forRoot()` - o segundo
+    // registro vencia o primeiro no processo inteiro. Confirmado ao vivo:
+    // POST /auth/login (que não declarava `@Throttle()` próprio, só confiava
+    // no default do módulo) ficou limitado a 1 tentativa POR HORA (o valor
+    // pensado só pra GET /usuario/eu/exportar-dados), não 5-30/60s como
+    // deveria - login inteiro inutilizável, silenciosamente. Só não afetou a
+    // exportação porque ela já declarava `@Throttle()` próprio no controller
+    // (sobrescreve o default do módulo, não importa o que ele diga).
+    //
+    // Regra do projeto daqui pra frente: toda rota com limite de frequência
+    // declara o PRÓPRIO `@Throttle()` no controller - o default aqui embaixo
+    // é só rede de segurança genérica, nunca a fonte do valor de uma rota
+    // sensível. Este valor (60/min) não protege login nem exportação -
+    // ambos têm o limite deles decorado no próprio controller.
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 60 }]),
     DatabaseModule,
     // Log de requisição com id (05-09-2026, item 6 da lista de pendências) -
     // ver configure() logo abaixo, é lá que o middleware é aplicado de

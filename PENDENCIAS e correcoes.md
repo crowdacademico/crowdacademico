@@ -1197,6 +1197,28 @@ Achado incidentalmente durante o teste manual de fechamento da migração TypeSc
 
 ---
 
+### 🟢 RESOLVIDO (07-09-2026): dois `ThrottlerModule.forRoot()` no processo - o de `usuario.module.ts` (exportar-dados, 1/hora) vencia o de `auth.module.ts` (login, 5-30/60s) globalmente, sem ninguém perceber
+
+Achado revisando o trabalho da rodada de refinamento pós-migração TS - um comentário em `usuario.module.ts` afirmava "duas instâncias independentes... sem conflito", nunca testado de verdade. Verificado em duas camadas antes de mexer em qualquer coisa:
+
+**Estático:** `ThrottlerModule` (`@nestjs/throttler` v6.5.0) é decorado com `@Global()` direto na classe (conferido no `.js` compilado do próprio pacote), e `THROTTLER_OPTIONS` é um token de string FIXO (`'THROTTLER:MODULE_OPTIONS'`) - o mesmo em toda chamada de `forRoot()`, não um token único por instância.
+
+**Empírico (só local, nunca publicado - sem impacto em produção real):** subiu o Nest e mandou 7 tentativas de login com senha errada em sequência - a 2ª já voltou `429`, não a 30ª esperada em dev. O registro de `usuario.module.ts` (`ttl: 3_600_000, limit: 1`) vencia globalmente o de `auth.module.ts` - **login ficava limitado a 1 tentativa por hora por IP**, silenciosamente, desde que o registro de `usuario.module.ts` foi adicionado (05-09-2026, item 3 de PROXIMOS_PASSOS.md - efeito colateral do endpoint de exportação de dados). `GET /usuario/eu/exportar-dados` nunca foi afetado - já declarava `@Throttle()` próprio no controller, que por design do `@nestjs/throttler` tem prioridade sobre o default do módulo, não importa qual `forRoot()` vencesse.
+
+**Causa raiz:** não é ter dois `forRoot()` - é uma rota sensível (login) depender de um valor implícito, vivendo em outro arquivo, sem declaração própria. A exportação atravessou o problema inteiro sem ser afetada, exatamente por declarar o próprio limite.
+
+**Corrigido:**
+- Os dois `ThrottlerModule.forRoot()` (auth.module.ts, usuario.module.ts) removidos; um único registrado em `app.module.ts`, com um valor deliberadamente conservador e genérico (`60 requisições/min`) - rede de segurança apenas, nunca fonte de valor de rota sensível.
+- `POST /auth/login` e `POST /auth/cadastro` (mesma categoria - bcrypt custoso, endpoint público) ganharam `@Throttle()` próprio, com os mesmos valores de sempre (5/60s produção, 30/60s dev) - `cadastro` não estava no prompt original do Claude Web, mas dependia do mesmo default implícito e sofria do mesmo risco, corrigido junto pelo mesmo princípio.
+- `GET /usuario/eu/exportar-dados` mantido como estava (já correto); só o comentário atualizado (não mais "sobrescreve o default do módulo, 5-30/min pensado pra bcrypt" - o default agora é genérico).
+- Comentário antigo em `usuario.module.ts` (afirmava "sem conflito", nunca testado) removido, não reescrito em outro lugar - a explicação deixou de ser verdadeira.
+
+**Verificado empiricamente depois da correção** (não só `tsc`/`eslint`/`build`, que não provam nada aqui - o problema só aparece rodando): 7 tentativas de login com senha errada, nenhuma bateu 429 (todas 401, como esperado em dev); `GET /usuario/eu/exportar-dados` chamado 2x seguidas com a mesma conta - 1ª `200`, 2ª `429`, confirmando que o limite da exportação continua intacto.
+
+**Regra do projeto, daqui pra frente:** toda rota com limite de frequência declara o próprio `@Throttle()` no controller - o `forRoot()` do módulo nunca é a fonte do valor de uma rota sensível, só rede de segurança genérica.
+
+---
+
 ### 🔴 Pendência aberta (lado Nest): falta o endpoint de "encerrar campanha por moderação" - só volta à tona quando `19-denuncia` nascer
 
 A autorização já está pronta no banco (item 57, acima - `campanha_encerrar_moderacao`, concedida a `admin` e `moderador`), mas não existe hoje nenhum controller/service no Nest que execute a transição `ativo → encerrado_moderacao` de verdade - `12-campanha` não tem esse endpoint, e `19-denuncia` (de onde a ação naturalmente parte, depois de uma denúncia julgada procedente) ainda é pasta vazia.

@@ -22,9 +22,10 @@ export class UsuarioControllerExportarDados {
   // RequireAuthGuard ANTES do throttler, de propósito - garante que
   // `request.user` sempre existe quando ExportarDadosThrottlerGuard tenta
   // ler `request.user.idUsuario` (guards de um mesmo @UseGuards() rodam na
-  // ordem do array). @Throttle sobrescreve o default do módulo (5-30/min,
-  // pensado pra bcrypt) pro limite certo aqui: 1 por hora, por CONTA (ver
-  // comentário completo em exportar-dados-throttler.guard.ts).
+  // ordem do array). @Throttle sobrescreve o default genérico do módulo
+  // (app.module.ts, só rede de segurança) pro limite certo aqui: 1 por
+  // hora, por CONTA (ver comentário completo em
+  // exportar-dados-throttler.guard.ts).
   @UseGuards(RequireAuthGuard, ExportarDadosThrottlerGuard)
   @Throttle({ default: { limit: 1, ttl: 3_600_000 } })
   // Nunca cacheável, em lugar nenhum do caminho (proxy, CDN, navegador) -

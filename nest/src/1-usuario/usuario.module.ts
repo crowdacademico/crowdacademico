@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { ThrottlerModule } from '@nestjs/throttler';
 import { ArquivoModule } from '../25-arquivo/arquivo.module';
 import { UsuarioControllerCreate } from './controllers/usuario.controller.create';
 import { UsuarioControllerDesbloquear } from './controllers/usuario.controller.desbloquear';
@@ -25,18 +24,7 @@ import { UsuarioServiceUpdate } from './service/usuario.service.update';
   // ArquivoModule importado só pra ArquivoServiceRemove (limpeza da foto
   // de perfil ANTERIOR quando a pessoa troca - ver usuario.service.update.ts).
   // Sem ciclo: ArquivoModule não importa UsuarioModule de volta.
-  //
-  // ThrottlerModule.forRoot() de novo aqui (05-09-2026, item 3 de PROXIMOS_PASSOS.md) - já existe
-  // uma instância em 3-auth/auth.module.ts (5-30/min, pensada pra bcrypt),
-  // mas AuthModule não é importado por UsuarioModule (é o contrário) - sem
-  // registrar aqui também, ExportarDadosThrottlerGuard não teria de onde
-  // resolver ThrottlerStorage/ThrottlerModuleOptions. Duas instâncias
-  // independentes, cada uma só visível no módulo que a registrou - sem
-  // conflito, cada uma protege rotas diferentes com limites diferentes.
-  imports: [
-    ArquivoModule,
-    ThrottlerModule.forRoot([{ ttl: 3_600_000, limit: 1 }]),
-  ],
+  imports: [ArquivoModule],
   controllers: [
     UsuarioControllerCreate,
     UsuarioControllerFindAll,
