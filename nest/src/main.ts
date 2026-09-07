@@ -95,9 +95,10 @@ async function bootstrap() {
   await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap().catch((erro: unknown) => {
-  // existir qualquer Logger configurado; é aqui que o health-check de
-  // DatabaseModule.onModuleInit (conectar como app_nestjs, não postgres)
-  // aparece se falhar.
+  // `console.error`, não o `Logger` do Nest, de propósito: se `bootstrap()`
+  // falhar, pode ser ANTES de existir qualquer Logger configurado; é aqui que o
+  // health-check de DatabaseModule.onModuleInit (conectar como app_nestjs, não
+  // postgres) aparece se falhar.
   console.error('Falha ao iniciar a aplicação:', erro);
   process.exit(1);
 });
