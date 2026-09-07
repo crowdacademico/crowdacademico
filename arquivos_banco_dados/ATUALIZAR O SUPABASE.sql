@@ -409,6 +409,47 @@ DELETE FROM configuracoes WHERE chave = 'avatar_padrao_chave';
 
 
 -- ============================================================================
+-- 07-09-2026 - encerrar_campanhas_vencidas() quebrava com erro de tipo toda
+-- vez que o @Cron rodava (desde 05-09-2026, quando o cron foi ligado pro
+-- RF-057) - achado incidentalmente no teste de fechamento da migração
+-- TypeScript do react/, nada a ver com ela. `SET status = CASE WHEN ...
+-- THEN 'sucesso' ELSE 'nao_atingido' END` sem cast: o Postgres resolve o
+-- CASE pro tipo `text` antes de chegar na coluna `status_campanha`
+-- (diferente de atribuir um literal solto, que ganha cast automático) -
+-- `error: column "status" is of type status_campanha but expression is of
+-- type text` (42804). Nenhuma campanha vencida foi encerrada de verdade
+-- entre 05-09 e 07-09-2026, mesmo com o cron corretamente ligado.
+--
+-- Seguro rodar de novo? Sim - CREATE OR REPLACE FUNCTION substitui sem
+-- duplicar nada.
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION public.encerrar_campanhas_vencidas()
+RETURNS INT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_encerradas INT;
+BEGIN
+    UPDATE campanha
+    SET status = (CASE
+        WHEN valor_bruto_arrecadado >= meta_financeira THEN 'sucesso'
+        ELSE 'nao_atingido'
+    END)::status_campanha
+    WHERE status = 'ativo'
+      AND data_fim IS NOT NULL
+      AND data_fim <= NOW();
+
+    GET DIAGNOSTICS v_encerradas = ROW_COUNT;
+
+    RETURN v_encerradas;
+END;
+$$;
+
+
+-- ============================================================================
 -- NÃO ENTRA NESTE ARQUIVO (registrado aqui só pra não se perder)
 -- ============================================================================
 
