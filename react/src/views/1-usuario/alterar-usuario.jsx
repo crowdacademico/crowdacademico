@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router';
 import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
 import { CartaoFormulario } from '../../components/crud/cartao-formulario';
 import { useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
-import { SecaoFicha } from '../../components/crud/ficha-consulta';
+import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { SeletorFotoPerfil } from '../../components/input/seletor-foto-perfil';
 import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
@@ -11,6 +11,13 @@ import { formatarCpf } from '../../services/constant/utils/formatacao.util';
 import { arquivoApi } from '../../services/25-arquivo/api/arquivo.api';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { papelApi, usuarioPapelApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
+import { perfilPesquisadorApi } from '../../services/6-perfil-pesquisador/api/perfil-pesquisador.api';
+import {
+  ROTULO_STATUS_PESQUISADOR,
+  ROTULO_TIPO_VINCULO,
+  ROTULO_TITULO_ACADEMICO,
+  classeBadgeStatusPesquisador,
+} from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
 import { SecaoModeracao } from './secao-moderacao';
 
 // Precisa bater com o hash seedado em arquivos_banco_dados/07_seed_dados.sql
@@ -52,6 +59,13 @@ export function AlterarUsuario({ auth }) {
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [idImagemPerfilNovo, setIdImagemPerfilNovo] = useState(undefined);
   const [avatarUrlNovo, setAvatarUrlNovo] = useState(null);
+  // Perfil de Pesquisador (25-08-2026, mesmo padrão de consultar-usuario.jsx)
+  // - `null` = não é pesquisador (upgrade nunca feito, seja pelo próprio
+  // usuário ou por um papel atribuído direto pelo Admin sem o upgrade real
+  // - `perfil_pesquisador` é a fonte de verdade, não o papel). Some a
+  // seção inteira nesse caso, em vez de mostrar campo vazio/desabilitado
+  // pra sempre.
+  const [perfilPesquisador, setPerfilPesquisador] = useState(null);
   const [carregando, setCarregando] = useState(true);
   const [enviando, setEnviando] = useState(false);
   const [redefinindoSenhaDev, setRedefinindoSenhaDev] = useState(false);
@@ -72,13 +86,17 @@ export function AlterarUsuario({ auth }) {
       usuarioPapelApi.listarPorUsuario(auth.authFetch, id).catch(() => []),
       papelApi.listar(auth.authFetch),
       arquivoApi.buscarAvatarPorUsuario(id).catch(() => null),
+      // 404 = não é pesquisador - mesma tolerância dos outros acima, não
+      // impede o resto do formulário de carregar.
+      perfilPesquisadorApi.buscar(auth.authFetch, id).catch(() => null),
     ])
-      .then(([dadosUsuario, papeisDoUsuario, catalogo, avatarAtual]) => {
+      .then(([dadosUsuario, papeisDoUsuario, catalogo, avatarAtual, perfilUsuario]) => {
         setUsuario(dadosUsuario);
         setNome(dadosUsuario.nome);
         setPapeisAtuais(papeisDoUsuario);
         setCatalogoPapeis(catalogo);
         setAvatarUrl(avatarAtual?.url ?? null);
+        setPerfilPesquisador(perfilUsuario);
       })
       .catch(reportarErro)
       .finally(() => setCarregando(false));
@@ -370,63 +388,43 @@ export function AlterarUsuario({ auth }) {
                 </div>
               </SecaoFicha>
 
-              {/* Perfil de Pesquisador (10-08-2026, rodada de IA
-                  "embelezar o painel", item 2, pedido explícito do Lucas:
-                  "já peça só para criar o campo textbox para o CPF... e um
-                  campo de link acadêmico", mesmo sem o módulo
-                  6-perfil-pesquisador existir ainda). DEMONSTRATIVO de
-                  propósito - desabilitado, com aviso honesto no topo, mesma
-                  linguagem visual dos placeholders do Dashboard (aba
-                  Identidade Visual/Notificações): nada de campo que parece
-                  funcionar e não salva. `formatarCpf`/`mascararCpf` (novo
-                  util em formatacao.util.js) já existem prontos pro dia
-                  que o backend real chegar - só trocar `disabled` por
-                  estado de verdade, nada de reescrever a máscara. */}
-              <SecaoFicha titulo="Perfil de Pesquisador">
-                <div className="sm:col-span-2 flex items-start gap-2 rounded-lg fundo-info texto-info p-3">
-                  <i className="fa-solid fa-circle-info mt-0.5 shrink-0"></i>
-                  <p className="text-xs">
-                    Módulo de Perfil de Pesquisador ainda não foi implementado. Estes campos
-                    são demonstrativos, não salvam nada ainda.
-                  </p>
-                </div>
-
-                <div>
-                  <label className="rotulo-campo">CPF</label>
-                  <input
-                    type="text"
-                    disabled
-                    placeholder={formatarCpf('12345678900')}
-                    className="input-padrao opacity-60 cursor-not-allowed"
+              {/* Perfil de Pesquisador (25-08-2026: dado real agora, módulo
+                  6 existe - some inteira pra quem não é pesquisador, em vez
+                  de mostrar campo vazio/desabilitado pra sempre. Corrigido
+                  06-09-2026: esta tela ainda tinha a versão DEMONSTRATIVA de
+                  10-08-2026, escrita antes do módulo existir - consertado
+                  só aqui em Alterar, já tinha sido corrigido em Consultar.
+                  Só leitura, mesmo padrão de lá - não existe endpoint do
+                  Admin editar perfil de pesquisador de outra pessoa. */}
+              {perfilPesquisador && (
+                <SecaoFicha titulo="Perfil de Pesquisador">
+                  <CampoFicha
+                    rotulo="CPF"
+                    valor={perfilPesquisador.cpf ? formatarCpf(perfilPesquisador.cpf) : null}
                   />
-                </div>
-                <div>
-                  <label className="rotulo-campo">Tipo de link</label>
-                  <select disabled className="input-padrao opacity-60 cursor-not-allowed">
-                    <option>Lattes</option>
-                  </select>
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className="rotulo-campo">URL do link acadêmico</label>
-                  <input
-                    type="text"
-                    disabled
-                    placeholder="https://lattes.cnpq.br/0000000000000000"
-                    className="input-padrao opacity-60 cursor-not-allowed"
+                  <CampoFicha
+                    rotulo="Status"
+                    valor={
+                      <span className={'badge ' + classeBadgeStatusPesquisador(perfilPesquisador.statusPesquisador)}>
+                        {ROTULO_STATUS_PESQUISADOR[perfilPesquisador.statusPesquisador]}
+                      </span>
+                    }
                   />
-                </div>
-
-                <div className="sm:col-span-2">
-                  <button
-                    type="button"
-                    disabled
-                    className="btn btn-secondary opacity-60 cursor-not-allowed"
-                  >
-                    <i className="fa-solid fa-plus"></i> Adicionar link
-                  </button>
-                </div>
-              </SecaoFicha>
+                  <CampoFicha
+                    rotulo="Título acadêmico"
+                    valor={ROTULO_TITULO_ACADEMICO[perfilPesquisador.tituloAcademico]}
+                  />
+                  <CampoFicha
+                    rotulo="Tipo de vínculo"
+                    valor={ROTULO_TIPO_VINCULO[perfilPesquisador.tipoVinculo]}
+                  />
+                  <CampoFicha
+                    rotulo="Vínculo institucional"
+                    valor={perfilPesquisador.vinculoInstitucional}
+                  />
+                  <CampoFicha rotulo="Score atual" valor={perfilPesquisador.scoreAtual} />
+                </SecaoFicha>
+              )}
 
               <SecaoModeracao auth={auth} idUsuario={usuario.idUsuario} />
             </div>
