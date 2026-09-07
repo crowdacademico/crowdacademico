@@ -43,11 +43,6 @@ const CLASSE_BADGE_STATUS_CAMPANHA: Record<StatusCampanha, string> = {
   encerrado_moderacao: 'badge-erro',
 };
 
-// Fallback mantido mesmo com o Record acima cobrindo os 7 valores conhecidos
-// - até todo módulo 12-campanha estar migrado (fase 6), chamador ainda em
-// `.jsx` pode passar um valor fora da união sem o compilador avisar
-// (allowJs/checkJs:false não analisa esses arquivos). Zero mudança de
-// comportamento: a defesa em runtime continua exatamente como estava.
 export function classeBadgeStatusCampanha(status: StatusCampanha): string {
-  return CLASSE_BADGE_STATUS_CAMPANHA[status] ?? 'badge-neutro';
+  return CLASSE_BADGE_STATUS_CAMPANHA[status];
 }

@@ -5,15 +5,9 @@ import { CartaoFormulario } from '../../components/crud/cartao-formulario';
 import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
 import { motivoDenunciaApi } from '../../services/10-motivo-denuncia/api/motivo-denuncia.api';
+import { ehTipoMotivoDenuncia } from '../../services/10-motivo-denuncia/constants/motivo-denuncia.constants';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { TipoMotivoDenuncia } from '../../services/10-motivo-denuncia/type/motivo-denuncia.type';
-
-// `<select>` só tem essas 2 opções fixas - guarda de tipo em vez de `as`
-// pra provar ao TypeScript que o valor cru do DOM (sempre `string`) é um
-// `TipoMotivoDenuncia` de verdade antes de guardar no estado.
-function ehTipoMotivoDenuncia(valor: string): valor is TipoMotivoDenuncia {
-  return valor === 'campanha' || valor === 'perfil';
-}
 
 export function CriarMotivoDenuncia({ auth }: PropsPagina) {
   const navigate = useNavigate();

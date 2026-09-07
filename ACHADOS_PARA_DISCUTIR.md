@@ -92,6 +92,25 @@ Conferidas as 51 chamadas não-void em todo `api/`. Método: todo service do Nes
 
 Fora esses 2, nenhuma outra chamada não-void de `tratarResposta<T>` corre o risco documentado no item 8 hoje - verificado, não suposto.
 
+## 13. Super auditoria pós-migração (07-09-2026) - código/comentário morto, achados de sistema, e triagem do que fazer agora vs. depois
+
+Pedido do Lucas: olhar o sistema inteiro atrás de código/comentário morto ou prolixo, e separadamente pensar em melhorias possíveis - sem mexer em nada até decidir. Auditoria feita em 3 frentes paralelas (react/, sistema completo, aproveitamento do TypeScript), cada achado relevante conferido manualmente antes de entrar aqui (não só relatado). Revisão externa (Claude Web) organizou a triagem entre "fazer agora" (dividendo direto da migração, remoção pura) e "registrar e não mexer" (refatoração/decisão que merece janela própria).
+
+**🟢 CORRIGIDO (07-09-2026) - 5 itens, todos remoção pura, sem reorganizar nada em volta:**
+- `views/admin/dashboard-identidade-visual.tsx` - o texto mostrado ao admin dizia que o upload (25-arquivo) "ainda não existe", contradizendo o próprio comentário do arquivo (e a realidade - o módulo existe e está em uso via SeletorFotoPerfil). Texto corrigido.
+- `views/admin/dashboard.tsx` - comentário citava "campanha" como exemplo de métrica `null` por módulo inexistente; `totalCampanhas` é `number` não-opcional há tempos, só `notificacoesPendentes` segue `null`. Comentário corrigido.
+- `services/12-campanha/constants/status-campanha.constants.ts` - `classeBadgeStatusCampanha()` tinha um fallback `?? 'badge-neutro'` cujo próprio comentário dizia existir só "até todo módulo 12-campanha estar migrado" (chamador `.jsx` sem checagem). Migração terminou, `allowJs` removido, `CLASSE_BADGE_STATUS_CAMPANHA` é `Record<StatusCampanha, string>` exaustivo. **Conferido antes de remover** (pergunta legítima do Claude Web): o ENUM `status_campanha` no Postgres (`01_extensoes_enums_tabelas.sql:94`) tem exatamente os mesmos 7 valores do union do frontend - fallback comprovadamente morto, não protegia divergência real. Removido.
+- `services/3-auth/hook/use-auth.ts` (`salvarSessao`) - `if (resultado.usuario)`/`if (resultado.papeis)` eram guardas impossíveis de falhar: `AuthResponseLogin.usuario`/`.papeis` não são opcionais no tipo (diferente do `if (!auth.usuario) return` usado em outras telas, que o compilador genuinamente não prova). Guardas removidas, atribuição direta.
+- `ehTipoMotivoDenuncia`/`ROTULO_TIPO` (10-motivo-denuncia) - duplicados palavra por palavra em Criar/Alterar e Consultar/Excluir respectivamente. Centralizados em `services/10-motivo-denuncia/constants/motivo-denuncia.constants.ts` (novo arquivo, mesmo padrão de `status-campanha.constants.ts`), os 4 arquivos passaram a importar de lá.
+- Junto: `tutorial-rodar-projeto.md` ganhou as 2 linhas de `.env` que faltavam (`CPF_ENCRYPTION_KEY`/`CPF_INDEX_KEY`, obrigatórias desde o módulo `6-perfil-pesquisador` - sem elas o backend sobe normal, mas perfil de pesquisador quebra na hora).
+- `tsc --noEmit`, `eslint .` e `npm run build` limpos depois de tudo.
+
+**🔴 Registrado, decisão consciente de NÃO mexer agora:**
+- **CORS sem allowlist** (`nest/main.ts:12`, `app.enableCors()` sem opção nenhuma - aceita qualquer origem). Risco baixo hoje (autenticação é Bearer no header, não cookie - não existe o ataque clássico de CSRF), mas seria uma linha com lista de origens vinda de variável de ambiente. **Decisão do Lucas (07-09-2026): esperar o domínio de produção estar definido**, revisitar então.
+- **`comentario` (17-comentario) é o único mecanismo de conteúdo do usuário sem limite de frequência/quantidade** (`pol_comentario_insert`, `04_rls_policies.sql:485-489` - só confere `status_pesquisador='ativo'`, nenhuma trava de quantidade, diferente de denúncia/endosso/link acadêmico/upload, que têm todos um teto configurável em `configuracoes`). Risco mitigado por ser ação restrita a pesquisador com perfil verificado (CPF), não conta comum - custo de abuso mais alto. Fica pra quando o módulo `19-denuncia` (tema de abuso) voltar à mesa; a chave nova em `configuracoes` já tem 4 irmãs pra copiar o padrão.
+- **`GET /campanha` (listagem) busca as mesmas colunas pesadas do detalhe** (`CAMPANHA_COLUNAS_SELECT`, `nest/src/12-campanha/constants/campanha.constants.ts`, reaproveitado sem diferença entre `findall`/`findone` - inclui `descricao` até 20 mil caracteres e `video_apresentacao_url` em cada linha de uma lista paginada). Inofensivo hoje (página pública de campanha ainda não existe); revisar o contrato quando ela for construída, não antes.
+- **Formatação de data duplicada em 5 lugares** (`consultar-campanha.tsx`, `consultar-pesquisador.tsx` - mesma função local `formatarData`; `alterar-usuario.tsx`, `minha-conta-page.tsx` - inline, com opções DIFERENTES entre si, uma inconsistência visível de verdade, não só duplicação). Junta com o item 7 (`formatarCpf` triplicado) pra uma rodada própria de centralização em `formatacao.util.ts` - é refatoração, não remoção, merece janela consciente.
+
 ---
 
 ## Onde ficam os achados "menores" (não estão aqui de propósito)

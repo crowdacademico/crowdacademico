@@ -190,9 +190,13 @@ Crie um arquivo `.env` na raiz da pasta `backend`:  ... app_nestjs:escolha-uma-s
 DATABASE_URL=postgresql://app_nestjs:app_nestjs123@localhost:5432/crowdacademico
 JWT_SECRET=segredo-dev-tcc-trocar-antes-de-producao
 JWT_ACCESS_EXPIRES_IN=15m
+CPF_ENCRYPTION_KEY=segredo-dev-tcc-cifra-cpf-trocar-antes-de-producao
+CPF_INDEX_KEY=segredo-dev-tcc-indice-cpf-trocar-antes-de-producao
 ```
 
 `JWT_SECRET`/`JWT_ACCESS_EXPIRES_IN` só existem a partir de quando o módulo `3-auth` (login/token) foi implementado - sem eles o backend nem sobe (o `JwtModule` exige `JWT_SECRET`). Qualquer valor serve em dev; troque por algo gerado (`openssl rand -hex 32`) antes de qualquer coisa que se pareça com produção de verdade.
+
+`CPF_ENCRYPTION_KEY`/`CPF_INDEX_KEY` só existem a partir de quando o módulo `6-perfil-pesquisador` foi implementado - sem elas o backend sobe normal, mas qualquer criação/consulta de perfil de pesquisador quebra na hora (ver `nest/src/commons/seguranca/cpf-cifra.util.ts`). Qualquer valor serve em dev, desde que as duas sejam **diferentes** entre si (ver `DOCUMENTACAO_BD.md`, seção `perfil_pesquisador`, pro porquê) - troque por algo gerado antes de produção, igual `JWT_SECRET`.
 
 O `.env` normalmente **não vem** de um `git clone` (fica de fora do repositório de propósito, mesmo sendo uma senha de teste) - então esse arquivo precisa ser recriado à mão toda vez que você clonar o projeto num computador novo, inclusive na escola. Copiar a linha acima exatamente como está resolve isso em 10 segundos.
 

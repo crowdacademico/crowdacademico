@@ -13,10 +13,10 @@ export function DashboardIdentidadeVisual() {
       </div>
       <h3 className="subtitulo mb-2">Ainda não implementado</h3>
       <p className="text-sm texto-fraco max-w-md mx-auto">
-        Gerenciar logo/favicon do site aqui depende do módulo de upload de arquivo
-        (25-arquivo), que ainda não existe. O caminho já está desenhado - quando o upload
-        existir, isto vira um upload + duas chaves em Configurações ("logo_id_arquivo" /
-        "favicon_id_arquivo"), sem precisar de tabela nova.
+        O módulo de upload de arquivo (25-arquivo) já existe - o que falta é construir esta
+        tela de gerenciar logo/favicon. O caminho já está desenhado: um upload + duas chaves
+        em Configurações ("logo_id_arquivo" / "favicon_id_arquivo"), sem precisar de tabela
+        nova.
       </p>
     </div>
   );

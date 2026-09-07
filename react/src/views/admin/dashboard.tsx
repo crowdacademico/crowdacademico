@@ -35,7 +35,7 @@ const ABAS: { chave: AbaChave; rotulo: string; icone: string }[] = [
 // Card de total (item "a" do pedido do Lucas, 08-08-2026): só rótulo
 // pequeno em cinza maiúsculo + número grande, sem ícone/fundo colorido -
 // é assim que o Experiment.com mostra número, cor vira acento raro, não
-// preenchimento. `valor === null` = módulo ainda não existe (campanha,
+// preenchimento. `valor === null` = módulo ainda não existe (hoje só
 // notificação) - mostra "-" em vez de esconder o card ou fingir que é 0.
 // Borda ERA slate-200 (pedido original) - escurecida pro slate-300 a
 // pedido do Lucas (09-08-2026), mesmo tom já usado nas bordas de tabela.

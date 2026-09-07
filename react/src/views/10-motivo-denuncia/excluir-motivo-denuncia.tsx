@@ -5,8 +5,9 @@ import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
 import { motivoDenunciaApi } from '../../services/10-motivo-denuncia/api/motivo-denuncia.api';
+import { ROTULO_TIPO_MOTIVO_DENUNCIA as ROTULO_TIPO } from '../../services/10-motivo-denuncia/constants/motivo-denuncia.constants';
 import type { PropsPagina } from '../../services/router/pagina.type';
-import type { MotivoDenunciaResponse, TipoMotivoDenuncia } from '../../services/10-motivo-denuncia/type/motivo-denuncia.type';
+import type { MotivoDenunciaResponse } from '../../services/10-motivo-denuncia/type/motivo-denuncia.type';
 
 // Mesmo padrão de ExcluirConfiguracao (11-configuracoes) - ver comentário
 // completo lá. Diferente de configuracao, motivo_denuncia é referenciado
@@ -14,10 +15,6 @@ import type { MotivoDenunciaResponse, TipoMotivoDenuncia } from '../../services/
 // backend responde 409 com uma mensagem própria (ver
 // motivo-denuncia.service.remove.ts), exibida aqui pelo useErroToast
 // normal.
-const ROTULO_TIPO: Record<TipoMotivoDenuncia, string> = {
-  campanha: 'Campanha',
-  perfil: 'Perfil',
-};
 
 export function ExcluirMotivoDenuncia({ auth }: PropsPagina) {
   const { id = '' } = useParams();

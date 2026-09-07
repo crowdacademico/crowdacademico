@@ -3,16 +3,9 @@ import { useNavigate, useParams } from 'react-router';
 import { CampoFicha, FichaConsulta, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { useErroToast } from '../../components/layout/use-erro-toast';
 import { motivoDenunciaApi } from '../../services/10-motivo-denuncia/api/motivo-denuncia.api';
+import { ROTULO_TIPO_MOTIVO_DENUNCIA as ROTULO_TIPO } from '../../services/10-motivo-denuncia/constants/motivo-denuncia.constants';
 import type { PropsPagina } from '../../services/router/pagina.type';
-import type { MotivoDenunciaResponse, TipoMotivoDenuncia } from '../../services/10-motivo-denuncia/type/motivo-denuncia.type';
-
-// Rótulo legível pro `tipo` cru ('campanha' | 'perfil') - mesma ideia dos
-// badges de escopo em ConsultarTipoLink, só que aqui é um valor único
-// (não múltiplos escopos), então vira 1 badge neutro em vez de uma lista.
-const ROTULO_TIPO: Record<TipoMotivoDenuncia, string> = {
-  campanha: 'Campanha',
-  perfil: 'Perfil',
-};
+import type { MotivoDenunciaResponse } from '../../services/10-motivo-denuncia/type/motivo-denuncia.type';
 
 export function ConsultarMotivoDenuncia({ auth }: PropsPagina) {
   const { id = '' } = useParams();

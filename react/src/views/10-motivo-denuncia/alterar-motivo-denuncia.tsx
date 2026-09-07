@@ -7,15 +7,9 @@ import { SecaoFicha } from '../../components/crud/ficha-consulta';
 import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
 import { motivoDenunciaApi } from '../../services/10-motivo-denuncia/api/motivo-denuncia.api';
+import { ehTipoMotivoDenuncia } from '../../services/10-motivo-denuncia/constants/motivo-denuncia.constants';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { MotivoDenunciaResponse, TipoMotivoDenuncia } from '../../services/10-motivo-denuncia/type/motivo-denuncia.type';
-
-// `<select>` só tem essas 2 opções fixas - guarda de tipo em vez de `as`
-// pra provar ao TypeScript que o valor cru do DOM (sempre `string`) é um
-// `TipoMotivoDenuncia` de verdade antes de guardar no estado.
-function ehTipoMotivoDenuncia(valor: string): valor is TipoMotivoDenuncia {
-  return valor === 'campanha' || valor === 'perfil';
-}
 
 // `tipo` É editável aqui: não existe trigger no banco que trave a troca
 // depois de criado (ver comentário completo em

@@ -53,12 +53,8 @@ export function useAuth(): UseAuthReturn {
     setAccessToken(resultado.accessToken);
     refreshTokenRef.current = resultado.refreshToken;
     localStorage.setItem(CHAVE_REFRESH_TOKEN, resultado.refreshToken);
-    if (resultado.usuario) {
-      setUsuario(resultado.usuario);
-    }
-    if (resultado.papeis) {
-      setPapeis(resultado.papeis);
-    }
+    setUsuario(resultado.usuario);
+    setPapeis(resultado.papeis);
   }, []);
 
   const limparSessao = useCallback(() => {
