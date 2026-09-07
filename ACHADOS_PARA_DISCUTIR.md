@@ -36,6 +36,39 @@ Exemplos concretos: teto de 8MB por imagem, lista de tipos MIME aceitos, os perf
 
 Quando `26-notificacao` for construído, não basta o módulo existir - `contar_metricas_dashboard()` (a função SQL que alimenta o card do dashboard) também precisa ganhar essa contagem. Existe um precedente idêntico já comentado no próprio código pra `totalCampanhas` (mesma situação, resolvida do mesmo jeito quando `12-campanha` foi construído) - então o caminho já é conhecido, só não é automático.
 
+## 7. Achados da migração TypeScript (Fase 1 - `constants/`+`util/`, 07-09-2026)
+
+Migração é pura de propósito (regra definida antes de começar) - achados anotados aqui, sem tocar:
+
+- **Três funções mortas em `formatacao.util.ts`:** `formatarMoeda`, `formatarPercentual` e `mascararCpf` são exportadas mas **nenhum componente as importa** (busquei em todo `react/src`). `formatarCpf` (a única realmente usada) segue viva, importada por `alterar-usuario.jsx`/`consultar-usuario.jsx`.
+- **`formatarCpf` duplicada em mais dois lugares**, sem importar do util compartilhado: `views/6-perfil-pesquisador/consultar-pesquisador.jsx` e `views/campo-testes/bancada-pesquisador.jsx` cada um define sua PRÓPRIA função local `formatarCpf(cpf)` em vez de reaproveitar `services/constant/utils/formatacao.util.ts`. Três implementações da mesma máscara de CPF no projeto, quando deveria ser uma só.
+
+## 8. Migração TypeScript - 2 das 3 fronteiras de `as` pré-autorizadas nunca foram usadas (07-09-2026)
+
+Na Fase 1, foi aberta uma lista fechada de exatamente 3 fronteiras onde `as` seria permitido (achado real: a proibição original de `as` era inexecutável em `tratarResposta()`). Fases 1 a 5 já convertidos e só **1 das 3** foi realmente necessária:
+
+- **Usada:** `tratarResposta<T>()` em `http.util.ts` (o erro-corpo `(await resposta.json().catch(() => null)) as {...} | null`).
+- **Não usada:** os dois `JSON.parse` de `use-chamada-registrada.ts` (Campo de Testes) - `JSON.parse` já devolve `any` nativamente, aceito sem cast por `unknown`/`Record`; o único ajuste necessário foi `JSON.parse(String(opcoes.body))`, que só torna explícita uma coerção que o JS já fazia.
+- **Não usada:** leitura de `sessionStorage`/`localStorage` com desserialização de objeto - nunca ocorre no projeto real (todo uso grep-confirmado guarda só string/number cru: token, tema, escala de fonte, último log visto).
+
+Ao revisar o caso do `ComponentType` na Fase 5 (achado 9, abaixo), ficou claro que autorização não usada deveria ser retirada da lista, não guardada - permissão ampla demais é convite pra uso futuro sem discussão. Registrado aqui, não decidido sozinho - se a Fase 6 quiser encolher a lista pra só a fronteira 1, é uma decisão à parte com o Lucas, não uma limpeza automática.
+
+## 9. Migração TypeScript - `rotas.constants.js` era lacuna real da Fase 1, e o princípio de ordenação das fases foi corrigido (07-09-2026)
+
+`services/router/rotas.constants.js` (tabela única de rotas, ~40 páginas) nunca foi tocado na Fase 1 porque mora numa pasta plana `services/router/` sem `api/` - o escopo original da Fase 1 varreu só módulos com pasta `api/`, então essa pasta escapou. Só foi encontrado na Fase 5 porque `Breadcrumb.tsx` importa dele.
+
+Ao investigar o achado (o campo `elemento` só compilava com `ComponentType<any>`, aparentemente exigindo uma 4ª exceção à regra do `any`), o próprio princípio por trás da ordem das fases foi corrigido: não é "constants primeiro", é "converter um arquivo depois de tudo que ele importa" - `constants/` geralmente não importa nada, por isso foi posto na Fase 1, mas este arquivo específico importa as ~40 páginas de `views/`, então pelo princípio real ele pertence ao FIM da migração, não ao início. Regra daqui pra frente: "quando a heurística da fase e esse princípio discordarem, o princípio ganha" - se aparecer outro arquivo na mesma situação (constants/util/etc que importa muita coisa ainda não migrada), ele vai pro fim sem perguntar, não é pra tratar como uma nova pausa.
+
+A solução de verdade (não precisou de 4ª exceção nem de `@ts-expect-error`): `PropsPagina { auth: UseAuthReturn }` em `services/router/pagina.type.ts`, confirmado contra o próprio `App.jsx` (toda rota renderiza `<Elemento auth={auth} />`, sempre a mesma prop) - a Fase 6 vai anotar cada view com esse tipo, convergindo tudo.
+
+## 10. Bug real no backend (Nest), achado incidentalmente no teste manual de fechamento da migração TypeScript (07-09-2026)
+
+Não é do `react/` nem desta migração - registrado aqui só porque apareceu durante o teste E2E da Fase 7, não veio de nenhuma investigação proposital no backend.
+
+O cron `CampanhaServiceEncerrarVencidas` (`nest/src/12-campanha/service/campanha.service.encerrar-vencidas.ts`), que chama a função `encerrar_campanhas_vencidas()` no Postgres, falha com `error: column "status" is of type status_campanha but expression is of type text` (código `42804`, `parse_target.c`). A função SQL faz `SET status = CASE WHEN ... THEN 'sucesso' ELSE 'nao_atingido' END` sem cast explícito pro enum `status_campanha` - o Postgres não infere o tipo sozinho num `CASE` dentro de um `UPDATE ... SET`, mesmo as duas opções sendo literais válidos do enum. Precisa de `::status_campanha` em pelo menos um dos dois braços do `CASE` (ou no resultado inteiro).
+
+Efeito prático: toda vez que o cron roda (encerrar campanhas com `data_fim` vencida), ele quebra com esse erro e nenhuma campanha vencida é encerrada de verdade - silencioso, só aparece no log do servidor. Não travei pra investigar a função SQL a fundo (fora do escopo desta sessão, que é só `react/`), só registrando pro Lucas decidir quando/como corrigir.
+
 ---
 
 ## Onde ficam os achados "menores" (não estão aqui de propósito)

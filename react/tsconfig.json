@@ -14,9 +14,6 @@
     "strict": true,
     "noImplicitAny": true,
 
-    "allowJs": true,
-    "checkJs": false,
-
     "skipLibCheck": true
   },
   "include": ["src"]
