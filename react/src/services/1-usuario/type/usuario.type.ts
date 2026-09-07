@@ -34,3 +34,21 @@ export interface UsuarioResponseSuspend {
   motivoSuspensao: string | null;
   suspensoPor: number | null;
 }
+
+// Espelha nest/src/1-usuario/dto/request/*.ts.
+
+// Espelha usuario.request-create.ts.
+export interface UsuarioRequestCreate {
+  nome: string;
+  email: string;
+  senha: string;
+  idImagemPerfil?: number;
+}
+
+// Espelha usuario.request-update.ts.
+export interface UsuarioRequestUpdate {
+  nome?: string;
+  idImagemPerfil?: number | null;
+  novaSenha?: string;
+  senhaAtual?: string;
+}

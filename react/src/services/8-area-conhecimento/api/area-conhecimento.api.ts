@@ -2,7 +2,11 @@ import { API_BASE_URL } from '../../constant/constants/api.constants';
 import { tratarResposta } from '../../constant/api/http.util';
 import type { AuthFetch } from '../../3-auth/type/auth.type';
 import type { ResultadoPaginado } from '../../constant/type/paginacao.type';
-import type { AreaConhecimentoResponse } from '../type/area-conhecimento.type';
+import type {
+  AreaConhecimentoRequestCreate,
+  AreaConhecimentoRequestUpdate,
+  AreaConhecimentoResponse,
+} from '../type/area-conhecimento.type';
 
 // Espelha nest/src/8-area-conhecimento - GET (listar/buscar) é PÚBLICO no
 // backend (pol_area_select é USING(true), 04_rls_policies.sql [04-C-2]);
@@ -53,14 +57,18 @@ export const areaConhecimentoApi = {
       .then((resposta) => resposta.dados),
   buscar: (authFetch: AuthFetch, id: number | string): Promise<AreaConhecimentoResponse> =>
     authFetch(`/area-conhecimento/${id}`).then(tratarResposta<AreaConhecimentoResponse>),
-  criar: (authFetch: AuthFetch, dados: unknown): Promise<AreaConhecimentoResponse> =>
+  criar: (authFetch: AuthFetch, dados: AreaConhecimentoRequestCreate): Promise<AreaConhecimentoResponse> =>
     authFetch('/area-conhecimento', {
       method: 'POST',
       body: JSON.stringify(dados),
     }).then(tratarResposta<AreaConhecimentoResponse>),
   // Só nome/ativo são aceitos (ver AtualizarAreaConhecimentoRequestDto no
   // backend) - codigoCnpq e idPai são imutáveis depois de criada a linha.
-  atualizar: (authFetch: AuthFetch, id: number | string, dados: unknown): Promise<AreaConhecimentoResponse> =>
+  atualizar: (
+    authFetch: AuthFetch,
+    id: number | string,
+    dados: AreaConhecimentoRequestUpdate,
+  ): Promise<AreaConhecimentoResponse> =>
     authFetch(`/area-conhecimento/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(dados),

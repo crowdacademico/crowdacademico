@@ -2,6 +2,8 @@ import { API_BASE_URL } from '../../constant/constants/api.constants';
 import { tratarResposta } from '../../constant/api/http.util';
 import type { AuthFetch } from '../../3-auth/type/auth.type';
 import type {
+  ArquivoRequestConfirmarUpload,
+  ArquivoRequestIniciarUpload,
   ArquivoResponse,
   ArquivoResponseUploadIniciado,
   AvatarResolvido,
@@ -17,13 +19,16 @@ import type {
 // (pol_arquivo_select é USING(true)) - chamados com fetch cru, sem
 // authFetch, mesmo padrão de tipoLinkApi.listarPublico.
 export const arquivoApi = {
-  iniciarUpload: (authFetch: AuthFetch, dados: unknown): Promise<ArquivoResponseUploadIniciado> =>
+  iniciarUpload: (
+    authFetch: AuthFetch,
+    dados: ArquivoRequestIniciarUpload,
+  ): Promise<ArquivoResponseUploadIniciado> =>
     authFetch('/arquivo/upload/iniciar', {
       method: 'POST',
       body: JSON.stringify(dados),
     }).then(tratarResposta<ArquivoResponseUploadIniciado>),
 
-  confirmarUpload: (authFetch: AuthFetch, dados: unknown): Promise<ArquivoResponse> =>
+  confirmarUpload: (authFetch: AuthFetch, dados: ArquivoRequestConfirmarUpload): Promise<ArquivoResponse> =>
     authFetch('/arquivo/upload/confirmar', {
       method: 'POST',
       body: JSON.stringify(dados),

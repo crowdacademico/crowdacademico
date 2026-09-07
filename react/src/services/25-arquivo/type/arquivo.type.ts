@@ -27,3 +27,26 @@ export interface ArquivoResponseUploadIniciado {
 export interface AvatarResolvido {
   url: string | null;
 }
+
+// Espelha nest/src/25-arquivo/arquivo.constants.ts (CONTEXTOS_ARQUIVO) - só
+// decide o teto de redimensionamento em confirmar-upload, não é conferido
+// contra nada físico do arquivo.
+export type ContextoArquivo = 'avatar' | 'campanha' | 'atualizacao';
+
+// Espelha arquivo.request-iniciar-upload.ts. `tipoMime` é `string` aqui
+// (não união literal de TIPOS_MIME_PERMITIDOS), mesma simplificação já
+// usada em ArquivoResponse.tipoMime (Fase 2).
+export interface ArquivoRequestIniciarUpload {
+  nomeOriginal: string;
+  tipoMime: string;
+  tamanhoBytes: number;
+}
+
+// Espelha arquivo.request-confirmar-upload.ts.
+export interface ArquivoRequestConfirmarUpload {
+  chave: string;
+  nomeOriginal: string;
+  tipoMime: string;
+  tamanhoBytes: number;
+  contexto: ContextoArquivo;
+}

@@ -62,6 +62,7 @@ export function AlterarMotivoDenuncia({ auth }: PropsPagina) {
 
   const aoSalvar = async (evento: FormEvent<HTMLFormElement>) => {
     evento.preventDefault();
+    if (tipo === '') return;
     limparErro();
     setEnviando(true);
     try {

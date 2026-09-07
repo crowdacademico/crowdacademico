@@ -2,7 +2,11 @@ import { API_BASE_URL } from '../../constant/constants/api.constants';
 import { tratarResposta } from '../../constant/api/http.util';
 import type { AuthFetch } from '../../3-auth/type/auth.type';
 import type { ResultadoPaginado } from '../../constant/type/paginacao.type';
-import type { ConfiguracaoResponse } from '../type/configuracao.type';
+import type {
+  ConfiguracaoRequestCreate,
+  ConfiguracaoRequestUpdate,
+  ConfiguracaoResponse,
+} from '../type/configuracao.type';
 
 export const configuracaoApi = {
   // GET /configuracoes devolve { dados, total, pagina, tamanho } desde
@@ -23,12 +27,16 @@ export const configuracaoApi = {
       .then((resposta) => resposta.dados),
   buscar: (authFetch: AuthFetch, id: number | string): Promise<ConfiguracaoResponse> =>
     authFetch(`/configuracoes/${id}`).then(tratarResposta<ConfiguracaoResponse>),
-  criar: (authFetch: AuthFetch, dados: unknown): Promise<ConfiguracaoResponse> =>
+  criar: (authFetch: AuthFetch, dados: ConfiguracaoRequestCreate): Promise<ConfiguracaoResponse> =>
     authFetch('/configuracoes', {
       method: 'POST',
       body: JSON.stringify(dados),
     }).then(tratarResposta<ConfiguracaoResponse>),
-  atualizar: (authFetch: AuthFetch, id: number | string, dados: unknown): Promise<ConfiguracaoResponse> =>
+  atualizar: (
+    authFetch: AuthFetch,
+    id: number | string,
+    dados: ConfiguracaoRequestUpdate,
+  ): Promise<ConfiguracaoResponse> =>
     authFetch(`/configuracoes/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(dados),

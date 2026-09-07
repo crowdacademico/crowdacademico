@@ -2111,6 +2111,20 @@ EXECUTE FUNCTION fn_preenche_encerramento_campanha();
 -- sucesso ([03-O]) e do webhook de atualizar_status_contribuicao. Retorna a
 -- quantidade de campanhas encerradas, pro job poder logar de verdade (em vez
 -- de silêncio) quantas mudaram.
+--
+-- CORRIGIDO (07-09-2026, achado incidental no teste manual de fechamento da
+-- migração TypeScript do react/, nada a ver com ela): faltava `::status_
+-- campanha` no resultado do CASE abaixo. `error: column "status" is of type
+-- status_campanha but expression is of type text` (42804) - o Postgres NÃO
+-- aplica cast de atribuição a um `CASE` com dois ramos literais do jeito que
+-- aplicaria a um único literal solto (`SET status = 'sucesso'` funcionaria
+-- sem cast; o `CASE` resolve pra `text` antes de chegar na coluna). Isso
+-- quebrava a função a cada chamada, com ou sem campanha vencida pra
+-- processar (erro de tipo, não de dado) - o `@Cron` de 15 em 15 min
+-- (`CampanhaServiceEncerrarVencidas`, ligado em 05-09-2026 pro RF-057)
+-- vinha falhando desde então. Comentário “mesmo padrão de atualizar_status_
+-- repasse” (acima) não se sustentava: aquela função recebe `p_status`
+-- como parâmetro único, nunca um `CASE` de dois literais.
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.encerrar_campanhas_vencidas()
 RETURNS INT
@@ -2122,10 +2136,10 @@ DECLARE
     v_encerradas INT;
 BEGIN
     UPDATE campanha
-    SET status = CASE
+    SET status = (CASE
         WHEN valor_bruto_arrecadado >= meta_financeira THEN 'sucesso'
         ELSE 'nao_atingido'
-    END
+    END)::status_campanha
     WHERE status = 'ativo'
       AND data_fim IS NOT NULL
       AND data_fim <= NOW();

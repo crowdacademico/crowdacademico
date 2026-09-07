@@ -2,7 +2,12 @@ import { API_BASE_URL } from '../../constant/constants/api.constants';
 import { tratarResposta } from '../../constant/api/http.util';
 import type { AuthFetch } from '../../3-auth/type/auth.type';
 import type { ResultadoPaginado } from '../../constant/type/paginacao.type';
-import type { EscopoTipoLink, TipoLinkResponse } from '../type/tipo-link.type';
+import type {
+  EscopoTipoLink,
+  TipoLinkRequestCreate,
+  TipoLinkRequestUpdate,
+  TipoLinkResponse,
+} from '../type/tipo-link.type';
 
 // Espelha nest/src/9-tipo-link - GET (listar/buscar) é PÚBLICO no backend
 // (pol_tipolink_select é USING(true), 04_rls_policies.sql [04-C-2]);
@@ -51,7 +56,7 @@ export const tipoLinkApi = {
       .then((resposta) => resposta.dados),
   buscar: (authFetch: AuthFetch, id: number | string): Promise<TipoLinkResponse> =>
     authFetch(`/tipo-link/${id}`).then(tratarResposta<TipoLinkResponse>),
-  criar: (authFetch: AuthFetch, dados: unknown): Promise<TipoLinkResponse> =>
+  criar: (authFetch: AuthFetch, dados: TipoLinkRequestCreate): Promise<TipoLinkResponse> =>
     authFetch('/tipo-link', {
       method: 'POST',
       body: JSON.stringify(dados),
@@ -59,7 +64,11 @@ export const tipoLinkApi = {
   // Só nome/ativo/regex/dominio/permitePerfil/permiteAtualizacao/
   // permiteRecompensa são aceitos (ver AtualizarTipoLinkRequestDto no
   // backend) - codigo é imutável depois de criado.
-  atualizar: (authFetch: AuthFetch, id: number | string, dados: unknown): Promise<TipoLinkResponse> =>
+  atualizar: (
+    authFetch: AuthFetch,
+    id: number | string,
+    dados: TipoLinkRequestUpdate,
+  ): Promise<TipoLinkResponse> =>
     authFetch(`/tipo-link/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(dados),

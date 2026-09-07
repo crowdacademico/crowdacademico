@@ -1187,6 +1187,16 @@ Achado numa revisão de sistema completa (05-09-2026), cruzando os Requisitos Fu
 
 ---
 
+### 🟢 RESOLVIDO (07-09-2026): o `@Cron` do RF-057 (acima) rodava desde 05-09-2026, mas quebrava toda vez com erro de tipo - bug diferente, na mesma função
+
+Achado incidentalmente durante o teste manual de fechamento da migração TypeScript do `react/` (não veio de investigação proposital no backend - registrado primeiro em `ACHADOS_PARA_DISCUTIR.md` item 10, movido pra cá por ser bug real de produção, não achado de estilo).
+
+`encerrar_campanhas_vencidas()` (`05_regras_negocio.sql`) - a mesma função que o item acima colocou pra rodar de 15 em 15 min - falhava com `error: column "status" is of type status_campanha but expression is of type text` (`42804`) toda vez que o `@Cron` disparava, com ou sem campanha vencida pra processar (é erro de tipo na consulta, não depende de nenhuma linha bater no `WHERE`). Causa: `SET status = CASE WHEN ... THEN 'sucesso' ELSE 'nao_atingido' END` sem `::status_campanha` - um `CASE` de dois literais resolve pro tipo `text` antes de chegar na coluna (diferente de atribuir um literal solto, que ganha cast automático). Efeito prático: nenhuma campanha vencida vinha sendo encerrada de verdade desde 05-09-2026, mesmo com o `@Cron` corretamente ligado - o erro só aparecia no log do servidor, silencioso pra qualquer usuário.
+
+**Corrigido:** `::status_campanha` adicionado no resultado do `CASE`, direto em `05_regras_negocio.sql` (nota completa da correção junto da função). Não pôde ser reconfirmado rodando contra o Supabase de produção nesta sessão (sem acesso de rede ao banco a partir daqui) - a correção segue a semântica documentada do Postgres pra esse erro (`42804`), não uma suposição. **Pendente:** aplicar a mesma alteração direto no Supabase de produção (mesmo processo já usado pro achado do `avatar_padrao_chave`, acima - alterar função existente não precisa de migração formal, só rodar o `CREATE OR REPLACE FUNCTION` atualizado no SQL Editor) e conferir os logs do Render pra ver quantos ciclos de 15 min já falharam desde 05-09-2026.
+
+---
+
 ### 🔴 Pendência aberta (lado Nest): falta o endpoint de "encerrar campanha por moderação" - só volta à tona quando `19-denuncia` nascer
 
 A autorização já está pronta no banco (item 57, acima - `campanha_encerrar_moderacao`, concedida a `admin` e `moderador`), mas não existe hoje nenhum controller/service no Nest que execute a transição `ativo → encerrado_moderacao` de verdade - `12-campanha` não tem esse endpoint, e `19-denuncia` (de onde a ação naturalmente parte, depois de uma denúncia julgada procedente) ainda é pasta vazia.

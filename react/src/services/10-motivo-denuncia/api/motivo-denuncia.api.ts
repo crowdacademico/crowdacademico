@@ -2,7 +2,12 @@ import { API_BASE_URL } from '../../constant/constants/api.constants';
 import { tratarResposta } from '../../constant/api/http.util';
 import type { AuthFetch } from '../../3-auth/type/auth.type';
 import type { ResultadoPaginado } from '../../constant/type/paginacao.type';
-import type { MotivoDenunciaResponse, TipoMotivoDenuncia } from '../type/motivo-denuncia.type';
+import type {
+  MotivoDenunciaRequestCreate,
+  MotivoDenunciaRequestUpdate,
+  MotivoDenunciaResponse,
+  TipoMotivoDenuncia,
+} from '../type/motivo-denuncia.type';
 
 // Espelha nest/src/10-motivo-denuncia - GET (listar/buscar) é PÚBLICO no
 // backend (pol_motivo_select é USING(true), 04_rls_policies.sql [04-C-3]);
@@ -51,14 +56,18 @@ export const motivoDenunciaApi = {
       .then((resposta) => resposta.dados),
   buscar: (authFetch: AuthFetch, id: number | string): Promise<MotivoDenunciaResponse> =>
     authFetch(`/motivo-denuncia/${id}`).then(tratarResposta<MotivoDenunciaResponse>),
-  criar: (authFetch: AuthFetch, dados: unknown): Promise<MotivoDenunciaResponse> =>
+  criar: (authFetch: AuthFetch, dados: MotivoDenunciaRequestCreate): Promise<MotivoDenunciaResponse> =>
     authFetch('/motivo-denuncia', {
       method: 'POST',
       body: JSON.stringify(dados),
     }).then(tratarResposta<MotivoDenunciaResponse>),
   // descricao/tipo/ativo são aceitos (ver AtualizarMotivoDenunciaRequestDto
   // no backend).
-  atualizar: (authFetch: AuthFetch, id: number | string, dados: unknown): Promise<MotivoDenunciaResponse> =>
+  atualizar: (
+    authFetch: AuthFetch,
+    id: number | string,
+    dados: MotivoDenunciaRequestUpdate,
+  ): Promise<MotivoDenunciaResponse> =>
     authFetch(`/motivo-denuncia/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(dados),

@@ -42,6 +42,7 @@ export function CriarConfiguracao({ auth }: PropsPagina) {
 
   const aoCriar = async (evento: FormEvent<HTMLFormElement>) => {
     evento.preventDefault();
+    if (tipo === '') return;
     limparErro();
     setEnviando(true);
     try {

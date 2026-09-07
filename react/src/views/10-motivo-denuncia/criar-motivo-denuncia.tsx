@@ -29,6 +29,7 @@ export function CriarMotivoDenuncia({ auth }: PropsPagina) {
 
   const aoCriar = async (evento: FormEvent<HTMLFormElement>) => {
     evento.preventDefault();
+    if (tipo === '') return;
     limparErro();
     setEnviando(true);
     try {

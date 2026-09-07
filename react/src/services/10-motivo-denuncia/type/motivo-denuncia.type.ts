@@ -8,3 +8,17 @@ export interface MotivoDenunciaResponse {
   tipo: TipoMotivoDenuncia;
   ativo: boolean;
 }
+
+// Espelha motivo-denuncia.request-create.ts.
+export interface MotivoDenunciaRequestCreate {
+  descricao: string;
+  tipo: TipoMotivoDenuncia;
+  ativo?: boolean;
+}
+
+// Espelha motivo-denuncia.request-update.ts.
+export interface MotivoDenunciaRequestUpdate {
+  descricao?: string;
+  tipo?: TipoMotivoDenuncia;
+  ativo?: boolean;
+}

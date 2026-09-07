@@ -6,6 +6,11 @@ export interface PapelResponse {
   nome: string;
 }
 
+// Espelha papel.request-update.ts.
+export interface PapelRequestUpdate {
+  nome: string;
+}
+
 // Espelha permissao.response.ts.
 export interface PermissaoResponse {
   idPermissao: number;

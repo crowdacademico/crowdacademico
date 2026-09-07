@@ -2,6 +2,8 @@ import { tratarResposta } from '../../constant/api/http.util';
 import type { AuthFetch } from '../../3-auth/type/auth.type';
 import type { ResultadoPaginado } from '../../constant/type/paginacao.type';
 import type {
+  UsuarioRequestCreate,
+  UsuarioRequestUpdate,
   UsuarioResponse,
   UsuarioResponseLoginHistorico,
   UsuarioResponseSuspend,
@@ -21,11 +23,15 @@ export const usuarioApi = {
       .then((resposta) => resposta.dados),
   buscar: (authFetch: AuthFetch, id: number | string): Promise<UsuarioResponse> =>
     authFetch(`/usuario/${id}`).then(tratarResposta<UsuarioResponse>),
-  criar: (authFetch: AuthFetch, dados: unknown): Promise<UsuarioResponse> =>
+  criar: (authFetch: AuthFetch, dados: UsuarioRequestCreate): Promise<UsuarioResponse> =>
     authFetch('/usuario', { method: 'POST', body: JSON.stringify(dados) }).then(
       tratarResposta<UsuarioResponse>,
     ),
-  atualizar: (authFetch: AuthFetch, id: number | string, dados: unknown): Promise<UsuarioResponse> =>
+  atualizar: (
+    authFetch: AuthFetch,
+    id: number | string,
+    dados: UsuarioRequestUpdate,
+  ): Promise<UsuarioResponse> =>
     authFetch(`/usuario/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(dados),
