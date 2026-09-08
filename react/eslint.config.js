@@ -31,11 +31,39 @@ export default defineConfig([
       reactHooks.configs.flat.recommended,
       reactRefresh.configs.vite,
     ],
+    // `projectService` (07-09-2026) - lint ciente de tipo, não só de forma.
+    // Habilita regras que enxergam o que cada valor REALMENTE é (ex.: "isto
+    // aqui é sempre uma Promise") - achou sozinho, num teste, a mesma
+    // categoria de achado que só tínhamos pegado na mão até agora (ver
+    // ACHADOS_PARA_DISCUTIR.md). Só `no-misused-promises` foi adotada de
+    // vez nesta rodada (achado limpo, zero pendência depois do ajuste) - as
+    // outras (no-floating-promises, no-unnecessary-condition,
+    // no-base-to-string, restrict-template-expressions, no-unsafe-argument)
+    // ficaram de fora de propósito: ligar com pendência sem resolver é pior
+    // que não ligar (todo mundo aprende a ignorar a saída do lint). Cada
+    // uma tem achado registrado (ver ACHADOS_PARA_DISCUTIR.md) pra decidir
+    // e ligar numa rodada própria.
     languageOptions: {
       globals: globals.browser,
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
     },
     rules: {
       '@typescript-eslint/no-non-null-assertion': 'error',
+      // `checksVoidReturn: { attributes: false }` - sem isso, TODO
+      // `onClick`/`onSubmit` assíncrono (`onClick={async () => {...}}`,
+      // padrão usado em ~40 arquivos) acusava erro, mesmo o React não
+      // ligando pro retorno. Testado antes de ligar: amostrado 4 handlers
+      // de módulos diferentes, todos já tratam erro internamente
+      // (try/catch ou .catch() explícito) - com essa opção, a regra caiu
+      // de 69 pra 0 ocorrências, mantendo as outras checagens da regra
+      // ativas (só a de atributo JSX foi desligada).
+      '@typescript-eslint/no-misused-promises': [
+        'error',
+        { checksVoidReturn: { attributes: false } },
+      ],
     },
   },
 ])

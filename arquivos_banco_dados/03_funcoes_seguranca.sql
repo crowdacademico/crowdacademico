@@ -565,10 +565,20 @@ $$;
 --             mesmo padrão já usado pro prazo vencido e pro cron de
 --             encerramento (item 58, PENDENCIAS.md, parte 10). Retorna FALSE
 --             sem fazer nada se o pesquisador já estava suspenso (idempotente).
---             Não existe função simétrica de reativação ainda - ver item 60
---             em PENDENCIAS e correcoes.md.
+--
+-- ATUALIZADA (07-09-2026, pedido do Lucas): ganhou `p_ate`/`p_motivo`, mesmo
+-- padrão de suspender_usuario ([03-N]) - motivo obrigatório, visível pro
+-- próprio pesquisador (RF - "ele precisa saber o porquê"), diferente de
+-- suspender a CONTA: aqui o login continua funcionando normal, só a
+-- autoridade de pesquisador é suspensa. Expira sozinho quando `p_ate`
+-- passa - ver reativar_pesquisadores_vencidos() (05), chamada por @Cron a
+-- cada 15 min, mesmo padrão de encerrar_campanhas_vencidas.
 -- ----------------------------------------------------------------------------
-CREATE OR REPLACE FUNCTION public.suspender_pesquisador(p_id_usuario INT)
+CREATE OR REPLACE FUNCTION public.suspender_pesquisador(
+    p_id_usuario INT,
+    p_ate TIMESTAMPTZ,
+    p_motivo TEXT
+)
 RETURNS BOOLEAN
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -580,9 +590,15 @@ BEGIN
     IF NOT public.tem_permissao('usuario_suspender') THEN
         RAISE EXCEPTION 'Sem permissão para suspender pesquisador.';
     END IF;
+    IF p_motivo IS NULL OR btrim(p_motivo) = '' THEN
+        RAISE EXCEPTION 'Motivo da suspensão é obrigatório.';
+    END IF;
 
     UPDATE perfil_pesquisador
-    SET status_pesquisador = 'suspenso'
+    SET status_pesquisador = 'suspenso',
+        suspenso_ate = p_ate,
+        motivo_suspensao = p_motivo,
+        suspenso_por = public.id_usuario_atual()
     WHERE id_usuario = p_id_usuario AND status_pesquisador <> 'suspenso';
 
     GET DIAGNOSTICS v_linhas = ROW_COUNT;
@@ -618,6 +634,10 @@ $$;
 --             fechada para sempre, mesmo após reativação - só campanha NOVA,
 --             criada depois de reativado, é afetada. Mesma permissão de
 --             suspender_pesquisador() (quem pode suspender pode reverter).
+--
+-- ATUALIZADA (07-09-2026): também limpa suspenso_ate/motivo_suspensao/
+-- suspenso_por (CK_PERFIL_PESQUISADOR_SUSPENSAO exige os 3 juntos ou
+-- nenhum, mesmo espírito de revogar_suspensao_usuario, [03-N]).
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.reativar_pesquisador(p_id_usuario INT)
 RETURNS BOOLEAN
@@ -633,7 +653,10 @@ BEGIN
     END IF;
 
     UPDATE perfil_pesquisador
-    SET status_pesquisador = 'ativo'
+    SET status_pesquisador = 'ativo',
+        suspenso_ate = NULL,
+        motivo_suspensao = NULL,
+        suspenso_por = NULL
     WHERE id_usuario = p_id_usuario AND status_pesquisador <> 'ativo';
 
     GET DIAGNOSTICS v_linhas = ROW_COUNT;
@@ -678,6 +701,49 @@ BEGIN
 
     GET DIAGNOSTICS v_linhas = ROW_COUNT;
     RETURN v_linhas > 0;
+END;
+$$;
+
+-- [03-R] criar_perfil_pesquisador_para_outro - ADICIONADA (07-09-2026),
+-- achado testando "promover outro usuário pra pesquisador" na Bancada do
+-- Pesquisador (Campo de Testes, hoje parte permanente do painel):
+-- POST /perfil-pesquisador (self-service, PerfilPesquisadorServiceCreate)
+-- SEMPRE usa id_usuario_atual() como dono - pol_perfil_insert (04) exige
+-- id_usuario = id_usuario_atual(), então tentar criar perfil pra outra
+-- pessoa logado como Admin sempre colidia com o PRÓPRIO perfil do Admin
+-- (already exists), nunca criava nada pra ninguém - silencioso e enganoso.
+-- Esta função é o caminho SEPARADO, gateado por permissão própria
+-- (perfil_pesquisador_criar_para_outro, ver 07), pensado pra suporte/admin
+-- de verdade criar perfil em nome de outra pessoa - nunca reaproveitada
+-- pelo self-service, que continua exatamente como estava. Recebe CPF já
+-- cifrado/hashed (calculado no Nest, mesma fronteira de corrigir_cpf_
+-- pesquisador, acima) - a função não sabe cifrar nem calcular HMAC.
+CREATE OR REPLACE FUNCTION public.criar_perfil_pesquisador_para_outro(
+    p_id_usuario INT,
+    p_cpf_criptografado TEXT,
+    p_cpf_hash TEXT,
+    p_tipo_vinculo tipo_vinculo,
+    p_vinculo_institucional TEXT,
+    p_titulo_academico titulo_academico
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    IF NOT public.tem_permissao('perfil_pesquisador_criar_para_outro') THEN
+        RAISE EXCEPTION 'Sem permissão para criar perfil de pesquisador em nome de outro usuário.';
+    END IF;
+
+    INSERT INTO perfil_pesquisador (
+        id_usuario, cpf_criptografado, cpf_hash,
+        tipo_vinculo, vinculo_institucional, titulo_academico
+    )
+    VALUES (
+        p_id_usuario, p_cpf_criptografado, p_cpf_hash,
+        p_tipo_vinculo, p_vinculo_institucional, p_titulo_academico
+    );
 END;
 $$;
 

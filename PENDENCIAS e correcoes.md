@@ -85,7 +85,7 @@ Isso importa porque o banco vai rodar no Supabase, e lá você executa SQL pelo 
 
 🔴 **28. O inverso do 27 - `verificacao_email`/`recuperacao_senha`/`sessao` não conseguem `DELETE`, mesmo a policy permitindo** - as 3 têm policy `FOR ALL` (que cobre `DELETE`), mas o `GRANT` (`06`) é só `SELECT, INSERT, UPDATE` - falta `DELETE`. `app_nestjs` nunca consegue apagar sessão expirada ou token já consumido; essas 3 tabelas só crescem. Provavelmente proposital (revogar é só marcar `revogado_em`/`usado_em`, nunca apagar linha) - mas aí a política de retenção de dado precisa estar escrita em algum lugar, porque o RNF-003 fala em guardar dado pessoal só pelo tempo mínimo necessário, e sessão antiga com IP e user-agent é dado pessoal. *(CORRIGIDO em 28-07-2026 - ver item B1 na seção de resolvidos: `DELETE` concedido nas 3, com janela de retenção sugerida.)*
 
-🔴 **32. 15 das 39 tabelas ficam vazias depois do seed** - separando por motivo:
+🟢 **32. 15 das 39 tabelas ficam vazias depois do seed - ESCLARECIDO, nenhuma pendência real restando** - separando por motivo:
 - **Vazias porque o seed quebrava** (já resolvido - ver item 21, na seção de resolvidos): `atualizacao_campanha`, `arquivo_atualizacao`, `auditoria_financeira`.
 - **Vazias porque o seed simplesmente não escreve nelas** - *(atualização 28-07-2026: `termos_de_uso`, `usuario_termo`, `aceite_termo_contribuicao` e `notificacao` já foram seedadas, ver itens A5/A6 na seção de resolvidos - deixaram de fazer parte deste problema)*.
 - **Vazias por escopo** (Lista C, não mexer): a família `recompensa` e a família `link_atualizacao`/`link_recompensa` *(atualização 28-07-2026: `recompensa` já pode receber dados, ver item 34 no topo do arquivo - a Alexia poderia semear via SQL a qualquer momento, sem depender do módulo)*, mais as tabelas de runtime de autenticação (normal nascerem vazias).
@@ -236,9 +236,11 @@ Garantir que a conexão do backend use sempre `app_nestjs`, nunca superusuário 
 
 ### Decisões que precisamos tomar, não bugs
 
-🔴 **10. React em JavaScript ou TypeScript**
+🟢 **10. React em JavaScript ou TypeScript - RESOLVIDO (07-09-2026)**
 
 > Sugestão da *** IA ***: TypeScript. O NestJS já é TypeScript por padrão - manter o front em JavaScript puro cria uma costura inconsistente entre as duas pontas, e vocês perdem a chance de compartilhar tipos entre back e front (ex.: o formato de uma campanha, de uma contribuição). Pra quem ainda está aprendendo, o TypeScript pega em tempo de compilação exatamente o tipo de erro bobo (nome de campo errado, tipo trocado) que sem ele só aparece rodando o app - é uma rede de segurança a mais, não só "código chato de escrever a mais".
+
+**Decisão do Lucas: TypeScript, seguindo a sugestão.** Migração feita de uma vez (06/07-09-2026, feriado, todas as 7 fases), zero mudança de comportamento, `allowJs` removido, zero `.js`/`.jsx` restando em `src/`. Depois disso, uma rodada de refinamento (07-09-2026) fechou a fronteira Nest/React nos dois sentidos (`type/` de request, não só de resposta), corrigiu 2 endpoints que devolviam tipo errado sem ninguém perceber, e ligou lint ciente de tipo (`no-misused-promises`). Detalhamento completo em `ACHADOS_PARA_DISCUTIR.md` (itens 7 a 14) e `DOCUMENTACAO_LINT.md` (novo).
 
 🟢 **11. Pool direto no Service - RESOLVIDO (01-08-2026, de graça, como efeito colateral da parte 16)**
 

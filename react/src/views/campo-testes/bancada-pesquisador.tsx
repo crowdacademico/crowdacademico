@@ -1,6 +1,8 @@
 // ============================================================================
-// ESTE ARQUIVO EXISTE SOLENEMENTE PARA O CAMPO DE TESTES.
-// NÃO ESTÁ NOS REQUISITOS FUNCIONAIS E NEM ESTARÁ.
+// Campo de Testes deixou de ser só ferramenta de teste descartável
+// (07-09-2026, decisão do Lucas): virou parte permanente do painel
+// administrativo, com o mesmo padrão de dados/comportamento do resto do
+// sistema (nunca uma versão simplificada à parte).
 // ============================================================================
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -12,11 +14,19 @@ import { useCampoTestes } from '../../services/campo-testes/hook/use-campo-teste
 import { useChamadaRegistrada } from '../../services/campo-testes/hook/use-chamada-registrada';
 import { gerarCpfValido } from '../../services/campo-testes/util/gerar-cpf-valido';
 import { PESQUISADOR_BLOQUEADO, motivoBloqueioPesquisador } from '../../services/campo-testes/util/registros-bloqueados';
+import { formatarCpf, formatarCpfExibicao, formatarDataHora } from '../../services/constant/utils/formatacao.util';
 import {
   ROTULO_STATUS_PESQUISADOR,
+  ROTULO_TIPO_VINCULO,
   ROTULO_TITULO_ACADEMICO,
+  classeBadgeStatusPesquisador,
 } from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
+import { AvatarUsuario } from '../../components/layout/avatar-usuario';
+import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
+import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { ModalDetalhe } from '../../components/crud/modal-detalhe';
+import { ModalFicha } from '../../components/crud/modal-ficha';
+import { SecaoModeracaoPesquisador } from '../6-perfil-pesquisador/secao-moderacao-pesquisador';
 import { RegistroChamadas } from './registro-chamadas';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { UsuarioResponse } from '../../services/1-usuario/type/usuario.type';
@@ -63,11 +73,6 @@ function ehTipoVinculo(valor: string): valor is TipoVinculo {
 
 function ehTituloAcademico(valor: string): valor is TituloAcademico {
   return valor === 'graduado' || valor === 'especialista' || valor === 'mestre' || valor === 'doutor';
-}
-
-function formatarCpf(cpf: string): string {
-  if (!cpf) return '';
-  return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
 }
 
 const TAMANHO_MAXIMO_URL_NA_LINHA = 40;
@@ -132,6 +137,18 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
   });
   const [criando, setCriando] = useState(false);
   const [erroCriar, setErroCriar] = useState<string | null>(null);
+
+  // Ações da coluna normal (07-09-2026, pedido do Lucas: Admin ver/alterar
+  // TODOS os campos do pesquisador, igual os outros módulos) - separado da
+  // coluna "Escolher" (mesmo split já feito em T2, Bancada da Campanha).
+  const [perfilConsultado, setPerfilConsultado] = useState<PesquisadorLinha | null>(null);
+  const [idUsuarioEditandoPerfil, setIdUsuarioEditandoPerfil] = useState<number | null>(null);
+  const [formEdicaoPerfil, setFormEdicaoPerfil] = useState<{
+    tipoVinculo: TipoVinculo;
+    vinculoInstitucional: string;
+    tituloAcademico: TituloAcademico;
+  } | null>(null);
+  const [cpfCorrecao, setCpfCorrecao] = useState('');
 
   const [score, setScore] = useState<PerfilPesquisadorResponseScore | null>(null);
 
@@ -245,11 +262,18 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
     selecionarPesquisador({ idUsuario: perfil.idUsuario, nome: perfil.usuario.nome, email: perfil.usuario.email });
   };
 
+  // CORRIGIDO (07-09-2026): chamava POST /perfil-pesquisador (self-service,
+  // sempre cria em nome de quem está logado) - promover outro usuário,
+  // logado como Admin, sempre colidia com o PRÓPRIO perfil do Admin ("já
+  // existe um registro"), nunca criava nada de verdade pro usuário
+  // escolhido. Agora usa POST /perfil-pesquisador/:id (endpoint de
+  // suporte/admin, ver perfil-pesquisador.service.create-para-outro.ts).
   const criarPerfil = async () => {
+    if (chaveFoco === null) return;
     setCriando(true);
     setErroCriar(null);
     try {
-      await chamarERegistrar<PerfilPesquisadorResponse>('/perfil-pesquisador', {
+      await chamarERegistrar<PerfilPesquisadorResponse>(`/perfil-pesquisador/${chaveFoco}`, {
         method: 'POST',
         body: JSON.stringify({
           cpf: form.cpf,
@@ -264,6 +288,48 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
     } finally {
       setCriando(false);
     }
+  };
+
+  const iniciarEdicaoPerfil = (perfil: PesquisadorLinha) => {
+    setIdUsuarioEditandoPerfil(perfil.idUsuario);
+    setFormEdicaoPerfil({
+      tipoVinculo: perfil.tipoVinculo ?? 'institucional',
+      vinculoInstitucional: perfil.vinculoInstitucional ?? '',
+      tituloAcademico: perfil.tituloAcademico ?? 'mestre',
+    });
+    setCpfCorrecao('');
+  };
+
+  // PATCH /perfil-pesquisador/:id (vínculo/título) - endpoint já existia,
+  // só nunca tinha tela nenhuma chamando ele (nem aqui, nem no painel real).
+  const salvarEdicaoPerfil = async () => {
+    if (!formEdicaoPerfil || idUsuarioEditandoPerfil === null) return;
+    await chamarERegistrar<void>(`/perfil-pesquisador/${idUsuarioEditandoPerfil}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        tipoVinculo: formEdicaoPerfil.tipoVinculo,
+        ...(formEdicaoPerfil.tipoVinculo === 'institucional'
+          ? { vinculoInstitucional: formEdicaoPerfil.vinculoInstitucional }
+          : {}),
+        tituloAcademico: formEdicaoPerfil.tituloAcademico,
+      }),
+    }).catch(() => {});
+    setIdUsuarioEditandoPerfil(null);
+    carregarPesquisadores();
+  };
+
+  // PATCH /perfil-pesquisador/:id/cpf (07-09-2026) - endpoint novo, gateado
+  // por 'perfil_pesquisador_corrigir_cpf' (RF-017, ação de suporte/admin,
+  // nunca do próprio pesquisador). corrigir_cpf_pesquisador() já existia no
+  // banco, achado sem endpoint nenhum no Nest ao investigar este pedido.
+  const salvarCorrecaoCpf = async () => {
+    if (!cpfCorrecao || idUsuarioEditandoPerfil === null) return;
+    await chamarERegistrar<void>(`/perfil-pesquisador/${idUsuarioEditandoPerfil}/cpf`, {
+      method: 'PATCH',
+      body: JSON.stringify({ cpf: cpfCorrecao }),
+    }).catch(() => {});
+    setCpfCorrecao('');
+    carregarPesquisadores();
   };
 
   const adicionarLink = async () => {
@@ -463,18 +529,19 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
             <th>título</th>
             <th>status</th>
             <th className="crud-tabela__celula--centralizada">score</th>
+            <th className="crud-tabela__celula--centralizada">Escolher</th>
             <th className="crud-tabela__celula--centralizada">Ações</th>
           </tr>
         </thead>
         <tbody>
           {carregandoLista && (
             <tr>
-              <td colSpan={7} className="texto-fraco">Carregando...</td>
+              <td colSpan={8} className="texto-fraco">Carregando...</td>
             </tr>
           )}
           {!carregandoLista && pesquisadoresPagina.length === 0 && (
             <tr>
-              <td colSpan={7} className="texto-fraco">{filtroTexto ? 'Nenhum registro bate com o filtro.' : 'Nenhum registro.'}</td>
+              <td colSpan={8} className="texto-fraco">{filtroTexto ? 'Nenhum registro bate com o filtro.' : 'Nenhum registro.'}</td>
             </tr>
           )}
           {!carregandoLista &&
@@ -506,7 +573,7 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
                   <td className="crud-tabela__celula--centralizada">
                     {bloqueado ? (
                       <span title={motivoBloqueioPesquisador()}>
-                        <i className="fa-solid fa-lock"></i> bloqueado
+                        <i className="fa-solid fa-lock"></i>
                       </span>
                     ) : selecionado ? (
                       <span className="texto-sucesso font-bold text-xs">
@@ -523,6 +590,38 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
                         <span className="crud-tabela__acao-texto">Escolher</span>
                         <span className="crud-tabela__acao-dica" role="tooltip">Escolher</span>
                       </button>
+                    )}
+                  </td>
+                  <td className="crud-tabela__celula--centralizada">
+                    {bloqueado ? (
+                      <span title={motivoBloqueioPesquisador()}>
+                        <i className="fa-solid fa-lock"></i> bloqueado
+                      </span>
+                    ) : perfil.statusPesquisador ? (
+                      <div className="crud-tabela__acoes">
+                        <button
+                          type="button"
+                          className="crud-tabela__acao crud-tabela__acao--alterar"
+                          onClick={() => iniciarEdicaoPerfil(perfil)}
+                          aria-label="Alterar"
+                        >
+                          <i className="fa-solid fa-pen"></i>
+                          <span className="crud-tabela__acao-texto">Alterar</span>
+                          <span className="crud-tabela__acao-dica" role="tooltip">Alterar</span>
+                        </button>
+                        <button
+                          type="button"
+                          className="crud-tabela__acao"
+                          onClick={() => setPerfilConsultado(perfil)}
+                          aria-label="Consultar"
+                        >
+                          <i className="fa-solid fa-eye"></i>
+                          <span className="crud-tabela__acao-texto">Consultar</span>
+                          <span className="crud-tabela__acao-dica" role="tooltip">Consultar</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="texto-fraco text-xs">-</span>
                     )}
                   </td>
                 </tr>
@@ -576,6 +675,180 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
           </div>
         </div>
       )}
+
+      {/* Consultar/Alterar em MODAL, replicando a mesma aparência de
+          Consultar/Alterar Usuário (SecaoFicha/CampoFicha, grid de 2
+          colunas em Alterar) - pedido do Lucas, 07-09-2026: "não precisa
+          reinventar a roda... exatamente igual, a diferença é que dessa
+          vez é um modal". Escopo limitado ao que T1 sempre tratou (Perfil
+          de Pesquisador + as 2 Moderações) - nome/senha/foto/papéis
+          continuam fora daqui, como sempre foram (decisão do Lucas). Se
+          ficar bom, o Lucas pretende levar este mesmo tratamento (modal em
+          vez de página) pra Consultar/Alterar Usuário de verdade depois. */}
+      {perfilConsultado && (
+        <ModalFicha
+          titulo={perfilConsultado.usuario?.nome ?? `#${perfilConsultado.idUsuario}`}
+          subtitulo={perfilConsultado.usuario?.email}
+          avatar={<AvatarUsuario nome={perfilConsultado.usuario?.nome} tamanho="lg" />}
+          aoFechar={() => setPerfilConsultado(null)}
+        >
+          <SecaoFicha titulo="Perfil de Pesquisador">
+            <CampoFicha
+              rotulo="CPF"
+              valor={
+                perfilConsultado.cpf
+                  ? formatarCpfExibicao(perfilConsultado.cpf)
+                  : 'Não visível (sem permissão sensível ou não é o dono)'
+              }
+            />
+            <CampoFicha
+              rotulo="Status"
+              valor={
+                perfilConsultado.statusPesquisador && (
+                  <span className={'badge ' + classeBadgeStatusPesquisador(perfilConsultado.statusPesquisador)}>
+                    {ROTULO_STATUS_PESQUISADOR[perfilConsultado.statusPesquisador]}
+                  </span>
+                )
+              }
+            />
+            <CampoFicha
+              rotulo="Título acadêmico"
+              valor={perfilConsultado.tituloAcademico ? ROTULO_TITULO_ACADEMICO[perfilConsultado.tituloAcademico] : undefined}
+            />
+            <CampoFicha
+              rotulo="Tipo de vínculo"
+              valor={perfilConsultado.tipoVinculo ? ROTULO_TIPO_VINCULO[perfilConsultado.tipoVinculo] : undefined}
+            />
+            <CampoFicha rotulo="Vínculo institucional" valor={perfilConsultado.vinculoInstitucional} />
+            <CampoFicha rotulo="Score atual" valor={perfilConsultado.scoreAtual} />
+            <CampoFicha
+              rotulo="Ativado em"
+              valor={perfilConsultado.ativadoEm ? formatarDataHora(perfilConsultado.ativadoEm) : undefined}
+            />
+          </SecaoFicha>
+        </ModalFicha>
+      )}
+
+      {idUsuarioEditandoPerfil !== null && formEdicaoPerfil && (() => {
+        const perfilEmEdicao = pesquisadores.find((perfil) => perfil.idUsuario === idUsuarioEditandoPerfil) ?? null;
+        return (
+          <ModalFicha
+            titulo={perfilEmEdicao?.usuario?.nome ?? `#${idUsuarioEditandoPerfil}`}
+            subtitulo={perfilEmEdicao?.usuario?.email}
+            avatar={<AvatarUsuario nome={perfilEmEdicao?.usuario?.nome} tamanho="lg" />}
+            aoFechar={() => setIdUsuarioEditandoPerfil(null)}
+            rodape={
+              <div className="flex gap-3 max-w-sm ml-auto">
+                <button
+                  type="button"
+                  onClick={() => setIdUsuarioEditandoPerfil(null)}
+                  className="btn btn-secondary flex-1"
+                >
+                  Cancelar
+                </button>
+                <button type="button" onClick={salvarEdicaoPerfil} className="btn btn-primary flex-1">
+                  Salvar
+                </button>
+              </div>
+            }
+          >
+            <div className="grid lg:grid-cols-3 gap-6 items-start">
+              <div className="lg:col-span-2 space-y-6">
+                <SecaoFicha titulo="Perfil de Pesquisador">
+                  <div>
+                    <label className="rotulo-campo">Tipo de vínculo</label>
+                    <select
+                      value={formEdicaoPerfil.tipoVinculo}
+                      onChange={(evento) => {
+                        if (ehTipoVinculo(evento.target.value)) {
+                          setFormEdicaoPerfil({ ...formEdicaoPerfil, tipoVinculo: evento.target.value });
+                        }
+                      }}
+                      className="input-padrao"
+                    >
+                      {TIPOS_VINCULO.map((tipo) => (
+                        <option key={tipo} value={tipo}>
+                          {tipo}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {formEdicaoPerfil.tipoVinculo === 'institucional' && (
+                    <div>
+                      <label className="rotulo-campo">Vínculo institucional</label>
+                      <input
+                        type="text"
+                        value={formEdicaoPerfil.vinculoInstitucional}
+                        onChange={(evento) =>
+                          setFormEdicaoPerfil({ ...formEdicaoPerfil, vinculoInstitucional: evento.target.value })
+                        }
+                        className="input-padrao"
+                      />
+                    </div>
+                  )}
+                  <div>
+                    <label className="rotulo-campo">Título acadêmico</label>
+                    <select
+                      value={formEdicaoPerfil.tituloAcademico}
+                      onChange={(evento) => {
+                        if (ehTituloAcademico(evento.target.value)) {
+                          setFormEdicaoPerfil({ ...formEdicaoPerfil, tituloAcademico: evento.target.value });
+                        }
+                      }}
+                      className="input-padrao"
+                    >
+                      {TITULOS_ACADEMICOS.map((titulo) => (
+                        <option key={titulo} value={titulo}>
+                          {titulo}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* CPF em endpoint separado de propósito (RF-017, ação de
+                      suporte/admin) - não faz parte do "Salvar" do rodapé. */}
+                  <div className="sm:col-span-2 flex items-end gap-2 rounded-lg border borda-forte p-3">
+                    <label className="text-xs flex-1 flex flex-col gap-1">
+                      Corrigir CPF (suporte/admin)
+                      <input
+                        type="text"
+                        value={formatarCpf(cpfCorrecao)}
+                        onChange={(evento) => setCpfCorrecao(evento.target.value.replace(/\D/g, '').slice(0, 11))}
+                        className="input-padrao"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      className="btn btn-secondary shrink-0"
+                      disabled={!cpfCorrecao}
+                      onClick={salvarCorrecaoCpf}
+                    >
+                      Salvar CPF
+                    </button>
+                  </div>
+                </SecaoFicha>
+
+                <SecaoModeracaoPesquisador auth={auth} idUsuario={idUsuarioEditandoPerfil} />
+              </div>
+
+              <div className="space-y-6">
+                <SecaoFicha titulo="Metadados" colunas={1}>
+                  <CampoSomenteLeitura rotulo="id" valor={idUsuarioEditandoPerfil} />
+                  <CampoSomenteLeitura rotulo="E-mail" valor={perfilEmEdicao?.usuario?.email} />
+                  <CampoSomenteLeitura
+                    rotulo="Status atual"
+                    valor={
+                      perfilEmEdicao?.statusPesquisador
+                        ? ROTULO_STATUS_PESQUISADOR[perfilEmEdicao.statusPesquisador]
+                        : '-'
+                    }
+                  />
+                </SecaoFicha>
+              </div>
+            </div>
+          </ModalFicha>
+        );
+      })()}
 
       <div className="border-t borda-padrao my-8"></div>
 

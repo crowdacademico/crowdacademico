@@ -373,9 +373,24 @@ CREATE TABLE perfil_pesquisador (
     ativado_em            TIMESTAMPTZ,
     score_atual           INTEGER    NOT NULL  DEFAULT 0,
     score_atualizado_em   TIMESTAMPTZ,
+    -- Suspensão do PODER de pesquisador (07-09-2026) - mesmo padrão de
+    -- usuario.suspenso_ate/motivo_suspensao/suspenso_por ([01-D] acima),
+    -- mas separado: suspender aqui NÃO bloqueia login (a conta continua
+    -- normal), só a autoridade de pesquisador (status_pesquisador já reflete
+    -- isso - estas 3 colunas só existem pra guardar POR QUANTO TEMPO e POR
+    -- QUÊ, coisa que o enum sozinho não guarda). Expira sozinho (mesmo
+    -- espírito de usuario) via reativar_pesquisadores_vencidos() (05,
+    -- chamada por @Cron a cada 15 min - mesmo padrão de
+    -- encerrar_campanhas_vencidas), não por checagem ao vivo em toda RLS
+    -- policy que lê status_pesquisador (evita reabrir as 3 policies que já
+    -- checam status_pesquisador = 'ativo').
+    suspenso_ate          TIMESTAMPTZ,
+    motivo_suspensao      TEXT,
+    suspenso_por          INT,
 
     CONSTRAINT "PK_PERFIL_PESQUISADOR" PRIMARY KEY (id_usuario),
     CONSTRAINT "FK_PERFIL_PESQUISADOR_USUARIO" FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE CASCADE,
+    CONSTRAINT "FK_PERFIL_PESQUISADOR_SUSPENSO_POR" FOREIGN KEY (suspenso_por) REFERENCES usuario(id_usuario),
     CONSTRAINT "UK_PERFIL_PESQUISADOR_CPF_HASH" UNIQUE (cpf_hash),
     -- Institucional exige o nome da instituição preenchido (não vazio); independente
     -- exige que o campo fique vazio (não é "esqueceram de preencher", é um fato
@@ -383,6 +398,12 @@ CREATE TABLE perfil_pesquisador (
     CONSTRAINT "CK_PERFIL_VINCULO" CHECK (
         (tipo_vinculo = 'institucional' AND vinculo_institucional IS NOT NULL AND btrim(vinculo_institucional) <> '')
         OR (tipo_vinculo = 'independente' AND vinculo_institucional IS NULL)
+    ),
+    -- Motivo obrigatório sempre que há suspensão ativa, e vice-versa - mesmo
+    -- espírito de CK_USUARIO_SUSPENSAO ([01-D]).
+    CONSTRAINT "CK_PERFIL_PESQUISADOR_SUSPENSAO" CHECK (
+        (suspenso_ate IS NULL AND motivo_suspensao IS NULL)
+        OR (suspenso_ate IS NOT NULL AND motivo_suspensao IS NOT NULL)
     )
 );
 

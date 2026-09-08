@@ -2,7 +2,15 @@ import { tratarResposta } from '../../constant/api/http.util';
 import type { AuthFetch } from '../../3-auth/type/auth.type';
 import type { ResultadoPaginado } from '../../constant/type/paginacao.type';
 import type { StatusPesquisador, TipoVinculo } from '../constants/status-pesquisador.constants';
-import type { PerfilPesquisadorResponse, PerfilPesquisadorResponseScore } from '../type/perfil-pesquisador.type';
+import type {
+  PerfilPesquisadorRequestCorrigirCpf,
+  PerfilPesquisadorRequestCreate,
+  PerfilPesquisadorRequestSuspender,
+  PerfilPesquisadorRequestUpdate,
+  PerfilPesquisadorResponse,
+  PerfilPesquisadorResponseScore,
+  PerfilPesquisadorResponseSuspend,
+} from '../type/perfil-pesquisador.type';
 
 // Espelha nest/src/6-perfil-pesquisador. GET é público no backend
 // (pol_perfil_select usa usuario_visivel()) - CPF vem mascarado (`null`)
@@ -38,4 +46,52 @@ export const perfilPesquisadorApi = {
     authFetch(`/perfil-pesquisador/${id}`).then(tratarResposta<PerfilPesquisadorResponse>),
   buscarScore: (authFetch: AuthFetch, id: number | string): Promise<PerfilPesquisadorResponseScore> =>
     authFetch(`/perfil-pesquisador/${id}/score`).then(tratarResposta<PerfilPesquisadorResponseScore>),
+  criar: (authFetch: AuthFetch, dados: PerfilPesquisadorRequestCreate): Promise<PerfilPesquisadorResponse> =>
+    authFetch('/perfil-pesquisador', {
+      method: 'POST',
+      body: JSON.stringify(dados),
+    }).then(tratarResposta<PerfilPesquisadorResponse>),
+  // Endpoint separado de criar() acima, de propósito (07-09-2026) - criar()
+  // é self-service (sempre a própria conta logada, pol_perfil_insert exige
+  // id_usuario = id_usuario_atual()); esta é a ação de suporte/admin,
+  // gateada por 'perfil_pesquisador_criar_para_outro' dentro da função do
+  // banco - cria perfil EM NOME de outro usuário.
+  criarParaOutro: (
+    authFetch: AuthFetch,
+    id: number | string,
+    dados: PerfilPesquisadorRequestCreate,
+  ): Promise<PerfilPesquisadorResponse> =>
+    authFetch(`/perfil-pesquisador/${id}`, {
+      method: 'POST',
+      body: JSON.stringify(dados),
+    }).then(tratarResposta<PerfilPesquisadorResponse>),
+  atualizar: (
+    authFetch: AuthFetch,
+    id: number | string,
+    dados: PerfilPesquisadorRequestUpdate,
+  ): Promise<PerfilPesquisadorResponse> =>
+    authFetch(`/perfil-pesquisador/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(dados),
+    }).then(tratarResposta<PerfilPesquisadorResponse>),
+  // Endpoint separado do atualizar() acima, de propósito (07-09-2026,
+  // RF-017) - correção de CPF é ação de suporte/admin
+  // (perfil_pesquisador_corrigir_cpf), nunca um PATCH comum.
+  corrigirCpf: (authFetch: AuthFetch, id: number | string, dados: PerfilPesquisadorRequestCorrigirCpf): Promise<void> =>
+    authFetch(`/perfil-pesquisador/${id}/cpf`, {
+      method: 'PATCH',
+      body: JSON.stringify(dados),
+    }).then(tratarResposta<void>),
+  // Suspende só o PODER de pesquisador (login continua funcionando) - mesmo
+  // formato de usuarioApi.suspender/buscarSuspensao/revogarSuspensao
+  // (07-09-2026, pedido do Lucas: mesmo padrão de Moderação de usuário).
+  buscarSuspensao: (authFetch: AuthFetch, id: number | string): Promise<PerfilPesquisadorResponseSuspend> =>
+    authFetch(`/perfil-pesquisador/${id}/suspensao`).then(tratarResposta<PerfilPesquisadorResponseSuspend>),
+  suspender: (authFetch: AuthFetch, id: number | string, dados: PerfilPesquisadorRequestSuspender): Promise<void> =>
+    authFetch(`/perfil-pesquisador/${id}/suspender`, {
+      method: 'POST',
+      body: JSON.stringify(dados),
+    }).then(tratarResposta<void>),
+  reativar: (authFetch: AuthFetch, id: number | string): Promise<void> =>
+    authFetch(`/perfil-pesquisador/${id}/reativar`, { method: 'POST' }).then(tratarResposta<void>),
 };

@@ -191,6 +191,10 @@ GRANT UPDATE ON termos_de_uso TO app_nestjs;
 -- em conjunto com cpf_criptografado, nunca sozinho). Agora os dois só mudam
 -- via corrigir_cpf_pesquisador() (SECURITY DEFINER, 03) - ver GRANT EXECUTE
 -- correspondente mais abaixo.
+-- suspenso_ate/motivo_suspensao/suspenso_por (07-09-2026) - mesma classe de
+-- exclusão de status_pesquisador/cpf_*, acima: só mudam via
+-- suspender_pesquisador()/reativar_pesquisador() (SECURITY DEFINER, 03),
+-- nunca por UPDATE direto - de propósito fora desta lista.
 GRANT UPDATE (
     tipo_vinculo, vinculo_institucional,
     titulo_academico, ativado_em
@@ -225,15 +229,22 @@ REVOKE EXECUTE ON FUNCTION public.excluir_conta_usuario(INT)              FROM P
 -- público (POST /auth/cadastro, 3-auth) pra gravar o aceite de termo no
 -- mesmo instante em que a conta é criada, sem sessão ainda existindo.
 REVOKE EXECUTE ON FUNCTION public.registrar_aceite_termo(INT, INT, TEXT)  FROM PUBLIC;
--- suspender_pesquisador(INT) - ver [03-P]. Mesma higiene das demais funções
--- privilegiadas: nasce com EXECUTE liberado pra PUBLIC por padrão, precisa ser
--- revogado antes do GRANT explícito.
-REVOKE EXECUTE ON FUNCTION public.suspender_pesquisador(INT)              FROM PUBLIC;
+-- suspender_pesquisador(INT, TIMESTAMPTZ, TEXT) - ver [03-P]. Assinatura
+-- ganhou p_ate/p_motivo em 07-09-2026 (era só INT). Mesma higiene das
+-- demais funções privilegiadas: nasce com EXECUTE liberado pra PUBLIC por
+-- padrão, precisa ser revogado antes do GRANT explícito.
+REVOKE EXECUTE ON FUNCTION public.suspender_pesquisador(INT, TIMESTAMPTZ, TEXT) FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.reativar_pesquisador(INT)               FROM PUBLIC;
+-- reativar_pesquisadores_vencidos() - ADICIONADA (07-09-2026), ver 05_regras_
+-- negocio.sql. Mesma higiene.
+REVOKE EXECUTE ON FUNCTION public.reativar_pesquisadores_vencidos()       FROM PUBLIC;
 -- corrigir_cpf_pesquisador(INT, TEXT, TEXT) - ADICIONADA (22-08-2026), ver
 -- [03-Q] em 03_funcoes_seguranca.sql e comentário do GRANT UPDATE de
 -- perfil_pesquisador logo acima. Mesma higiene.
 REVOKE EXECUTE ON FUNCTION public.corrigir_cpf_pesquisador(INT, TEXT, TEXT) FROM PUBLIC;
+-- criar_perfil_pesquisador_para_outro(...) - ADICIONADA (07-09-2026), ver
+-- [03-R] em 03_funcoes_seguranca.sql. Mesma higiene.
+REVOKE EXECUTE ON FUNCTION public.criar_perfil_pesquisador_para_outro(INT, TEXT, TEXT, tipo_vinculo, TEXT, titulo_academico) FROM PUBLIC;
 -- suspender_usuario/revogar_suspensao_usuario/suspender_papel_usuario/
 -- revogar_suspensao_papel_usuario - ver [03-N]. Mesma higiene.
 REVOKE EXECUTE ON FUNCTION public.suspender_usuario(INT, TIMESTAMPTZ, TEXT)         FROM PUBLIC;
@@ -249,9 +260,11 @@ GRANT EXECUTE ON FUNCTION public.liberar_bloqueio_login(INT)              TO app
 GRANT EXECUTE ON FUNCTION public.registrar_login_sucesso(INT, TEXT)       TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.excluir_conta_usuario(INT)               TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.registrar_aceite_termo(INT, INT, TEXT)   TO app_nestjs;
-GRANT EXECUTE ON FUNCTION public.suspender_pesquisador(INT)               TO app_nestjs;
+GRANT EXECUTE ON FUNCTION public.suspender_pesquisador(INT, TIMESTAMPTZ, TEXT) TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.reativar_pesquisador(INT)                TO app_nestjs;
+GRANT EXECUTE ON FUNCTION public.reativar_pesquisadores_vencidos()        TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.corrigir_cpf_pesquisador(INT, TEXT, TEXT) TO app_nestjs;
+GRANT EXECUTE ON FUNCTION public.criar_perfil_pesquisador_para_outro(INT, TEXT, TEXT, tipo_vinculo, TEXT, titulo_academico) TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.suspender_usuario(INT, TIMESTAMPTZ, TEXT)      TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.revogar_suspensao_usuario(INT)                 TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.suspender_papel_usuario(INT, INT, TIMESTAMPTZ) TO app_nestjs;

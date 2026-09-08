@@ -1,6 +1,6 @@
 # ⚛️ Documentação Técnica do Frontend React - CrowdAcadêmico
 
-Este documento é o equivalente do `DOCUMENTACAO_BD.md` para o **app React** que vive em `react/`. O objetivo é o mesmo: explicar as decisões de arquitetura e o *porquê* de cada padrão, de forma que os arquivos `.jsx`/`.js` não precisem carregar toda a explicação inline - e que quem chegar depois entenda a estrutura sem ter que abrir 100 arquivos.
+Este documento é o equivalente do `DOCUMENTACAO_BD.md` para o **app React** que vive em `react/`. O objetivo é o mesmo: explicar as decisões de arquitetura e o *porquê* de cada padrão, de forma que os arquivos `.tsx`/`.ts` não precisem carregar toda a explicação inline - e que quem chegar depois entenda a estrutura sem ter que abrir 100 arquivos.
 
 ---
 
@@ -25,7 +25,7 @@ Este documento é o equivalente do `DOCUMENTACAO_BD.md` para o **app React** que
 2. [Stack e ferramentas de build](#2-stack-e-ferramentas-de-build)
 3. [Estrutura de pastas e a convenção de numeração](#3-estrutura-de-pastas-e-a-convenção-de-numeração)
 4. [Roteamento](#4-roteamento)
-5. [Autenticação (`use-auth.js`)](#5-autenticação-use-authjs)
+5. [Autenticação (`use-auth.ts`)](#5-autenticação-use-authts)
 6. [Padrão de service / API](#6-padrão-de-service--api)
 7. [Upload de arquivo (`25-arquivo`)](#7-upload-de-arquivo-25-arquivo)
 8. [`<GenericTable>` - o componente central do painel](#8-generictable--o-componente-central-do-painel)
@@ -70,22 +70,24 @@ O que existe em `react/` hoje é **um painel administrativo**: listar/criar/alte
 
 ⚠️ **Google Fonts e Font Awesome continuam via CDN**, e isso é deliberado. O comentário em `react/index.html` explica o critério: *"degradam suave se a rede falhar - ícone some, fonte cai pro fallback do sistema - diferente do Tailwind, que quebrava a página inteira sem CDN"*. Ou seja: só o que quebra a página inteira saiu do CDN.
 
-### JavaScript puro, não TypeScript
+### TypeScript (migração concluída em 07-09-2026)
 
-Todo o `react/src` é **JavaScript** (`.js` / `.jsx`). Não há nenhum arquivo `.ts`/`.tsx`, nenhuma configuração de `tsconfig`, nenhum `typescript-eslint`.
+Todo o `react/src` é **TypeScript** (`.ts` / `.tsx`). Zero arquivo `.js`/`.jsx` restando, `strict: true` no `tsconfig.json`, `allowJs` removido (existiu só durante a migração, como período de transição).
 
-⚠️ **Isto é uma pendência aberta, não uma decisão fechada.** `PENDENCIAS e correcoes.md`, item 10 (*"Decisões que precisamos tomar, não bugs"*), continua marcado 🔴 e diz literalmente: **"React em JavaScript ou TypeScript"**. A recomendação registrada ali é TypeScript (*"o NestJS já é TypeScript por padrão - manter o front em JavaScript puro cria uma costura inconsistente entre as duas pontas, e vocês perdem a chance de compartilhar tipos entre back e front"*), mas a decisão **nunca foi tomada oficialmente** e o projeto segue em JavaScript puro até hoje.
+**Decisão do Lucas: TypeScript**, seguindo a recomendação já registrada aqui antes (*"o NestJS já é TypeScript por padrão - manter o front em JavaScript puro cria uma costura inconsistente entre as duas pontas"*) - `PENDENCIAS e correcoes.md`, item 10, marcado 🟢 desde então. Migração feita de uma vez (06/07-09-2026), em 7 fases (das folhas pra raiz - `constants/`/`util/` primeiro, `views/`/raiz do app por último), zero mudança de comportamento de propósito - o que foi achado de errado no caminho ficou registrado, não corrigido na hora (`ACHADOS_PARA_DISCUTIR.md`, itens 7 a 13).
 
-Efeito colateral concreto e visível no código: como não há import cruzado nem tipo compartilhado entre `nest/` e `react/`, várias constantes precisam ser mantidas em sincronia **manualmente**. Dois exemplos que o próprio código admite:
+`any`/`@ts-ignore`/`@ts-expect-error` são proibidos; `as` só é permitido numa única fronteira fechada (`tratarResposta<T>()` em `services/constant/api/http.util.ts` - conversão de bytes crus de rede pra dado tipado, onde é estruturalmente impossível ao compilador deduzir o tipo sozinho). Detalhamento completo da migração, decisões tomadas e achados no caminho: `ACHADOS_PARA_DISCUTIR.md` (itens 7 a 14) e `DOCUMENTACAO_LINT.md`.
 
-- `services/25-arquivo/util/reduzir-imagem.util.js`: *"mesmo perfil (largura/qualidade) usado no backend pro mesmo contexto, ver `PERFIL_PROCESSAMENTO_POR_CONTEXTO` em `arquivo.constants.ts` - mantenha os dois em sincronia manualmente, não há import cruzado entre os repositórios `nest/` e `react/`"*.
-- `components/input/seletor-foto-perfil.jsx`: a lista de MIME types aceitos *"espelha a lista aceita no backend ... Se um dia o backend mudar essa lista, mudar aqui também"*.
+Efeito colateral que a migração **não** resolveu, e não tentou resolver: como não há import cruzado entre `nest/` e `react/` (são dois projetos com compilação separada), os tipos de `services/*/type/` são espelho **manual** dos DTOs do Nest, e algumas constantes de valor (não só de tipo) também precisam ser mantidas em sincronia manualmente. Dois exemplos que o próprio código admite:
+
+- `services/25-arquivo/util/reduzir-imagem.util.ts`: *"mesmo perfil (largura/qualidade) usado no backend pro mesmo contexto, ver `PERFIL_PROCESSAMENTO_POR_CONTEXTO` em `arquivo.constants.ts` - mantenha os dois em sincronia manualmente, não há import cruzado entre os repositórios `nest/` e `react/`"*.
+- `components/input/seletor-foto-perfil.tsx`: a lista de MIME types aceitos *"espelha a lista aceita no backend ... Se um dia o backend mudar essa lista, mudar aqui também"*.
 
 ### Lint
 
-`react/eslint.config.js` é um flat config enxuto: `js.configs.recommended` + `eslint-plugin-react-hooks` (preset flat recommended) + `eslint-plugin-react-refresh` (preset `vite`), aplicado a `**/*.{js,jsx}`, ignorando `dist`.
+Duas camadas - detalhamento completo, incluindo toda regra ligada/testada e o porquê, em `DOCUMENTACAO_LINT.md`. Resumo: `react/eslint.config.js` tem 2 blocos - `**/*.{js,jsx}` (hoje só cobre `eslint.config.js`/`vite.config.js`, os únicos arquivos JS puro que restam no projeto, de propósito) e `**/*.{ts,tsx}` (todo o resto, com `tseslint.configs.recommended` + `parserOptions.projectService` ligado desde 07-09-2026 - lint ciente de tipo, não só de forma).
 
-⚠️ Há `eslint-disable-next-line` pontuais no código, sempre com justificativa escrita ao lado. O padrão mais comum é em `useEffect` que busca dados na montagem - ex.: em `components/crud/generic-table.jsx`, *"padrão comum de 'buscar dado ao montar/quando a query mudar' (mesmo exemplo dos docs do React) - a regra nova `react-hooks/set-state-in-effect` marca a chamada de `setCarregando`/`setErro` como suspeita mesmo assim"*.
+⚠️ Há `eslint-disable-next-line` pontuais no código, sempre com justificativa escrita ao lado. O padrão mais comum é em `useEffect` que busca dados na montagem - ex.: em `components/crud/generic-table.tsx`, *"padrão comum de 'buscar dado ao montar/quando a query mudar' (mesmo exemplo dos docs do React) - a regra nova `react-hooks/set-state-in-effect` marca a chamada de `setCarregando`/`setErro` como suspeita mesmo assim"*.
 
 ⚠️ **Não existe teste automatizado no React.** A verificação é só `npm run build` + `npm run lint` (`PENDENCIAS e correcoes.md`, parte 17: *"Nenhum teste automatizado no React ainda (só `nest/` tem `npm test`)"*). Isso não mudou.
 
@@ -100,8 +102,8 @@ react/
 ├── eslint.config.js
 ├── .env                - só VITE_API_URL
 └── src/
-    ├── main.jsx        - createRoot + os providers globais
-    ├── App.jsx         - monta as <Route> a partir de rotas.constants.js
+    ├── main.tsx        - createRoot + os providers globais
+    ├── App.tsx         - monta as <Route> a partir de rotas.constants.ts
     ├── assets/css/     - CSS numerado próprio + tema Tailwind
     ├── components/     - o que é reutilizável entre módulos
     ├── services/       - comunicação com a API + estado compartilhado
@@ -112,9 +114,9 @@ react/
 
 Tanto `services/` quanto `views/` usam pastas nomeadas `<numero>-<nome>`, com **o mesmo número do módulo correspondente no backend** - `services/1-usuario/`, `services/2-papel-permissao/`, `services/11-configuracoes/`, `services/12-campanha/`, `services/25-arquivo/`, `services/27-log-auditoria/`, e assim por diante.
 
-📌 **Por que.** A regra está registrada em `PENDENCIAS e correcoes.md`, na descrição da primeira versão do painel: *"Pastas novas espelhando números que já existiam no Nest (`services/2-papel-permissao/`, `services/11-configuracoes/`), sem inventar número novo - mesma regra da reorganização anterior."* O efeito prático é que o número é uma chave estável entre os dois repositórios: `services/9-tipo-link/api/tipo-link.api.js` fala com `nest/src/9-tipo-link`, e o comentário no topo de praticamente todo arquivo `.api.js` diz isso explicitamente (*"Espelha `nest/src/9-tipo-link`"*).
+📌 **Por que.** A regra está registrada em `PENDENCIAS e correcoes.md`, na descrição da primeira versão do painel: *"Pastas novas espelhando números que já existiam no Nest (`services/2-papel-permissao/`, `services/11-configuracoes/`), sem inventar número novo - mesma regra da reorganização anterior."* O efeito prático é que o número é uma chave estável entre os dois repositórios: `services/9-tipo-link/api/tipo-link.api.ts` fala com `nest/src/9-tipo-link`, e o comentário no topo de praticamente todo arquivo `.api.ts` diz isso explicitamente (*"Espelha `nest/src/9-tipo-link`"*).
 
-Vários arquivos `.api.js` vão além e citam o artefato exato do banco que sustenta a rota - ex.: `tipo-link.api.js` anota que o `GET` é público *"(`pol_tipolink_select` é `USING(true)`, `04_rls_policies.sql` `[04-C-2]`)"*. Ou seja: a numeração amarra React ↔ Nest, e os comentários amarram React ↔ `DOCUMENTACAO_BD.md`.
+Vários arquivos `.api.ts` vão além e citam o artefato exato do banco que sustenta a rota - ex.: `tipo-link.api.ts` anota que o `GET` é público *"(`pol_tipolink_select` é `USING(true)`, `04_rls_policies.sql` `[04-C-2]`)"*. Ou seja: a numeração amarra React ↔ Nest, e os comentários amarram React ↔ `DOCUMENTACAO_BD.md`.
 
 ### Pastas sem número
 
@@ -122,9 +124,9 @@ Nem tudo mapeia para um módulo do Nest. Essas ganham nome próprio, no mesmo n�
 
 | Pasta | Conteúdo |
 |---|---|
-| `services/constant/` | o que é compartilhado por todos os módulos: `constants/api.constants.js` (a URL base), `api/http.util.js` (tratamento de resposta), `api/traduzir-erro.util.js`, `utils/formatacao.util.js` (moeda/percentual/CPF em pt-BR) |
-| `services/router/` | `rotas.constants.js` - a fonte única de "quais páginas existem" |
-| `services/admin/` | `api/dashboard.api.js` (métricas do painel, módulo `28-dashboard` no Nest) |
+| `services/constant/` | o que é compartilhado por todos os módulos: `constants/api.constants.ts` (a URL base), `api/http.util.ts` (tratamento de resposta), `api/traduzir-erro.util.ts`, `utils/formatacao.util.ts` (moeda/percentual/CPF em pt-BR) |
+| `services/router/` | `rotas.constants.ts` - a fonte única de "quais páginas existem" |
+| `services/admin/` | `api/dashboard.api.ts` (métricas do painel, módulo `28-dashboard` no Nest) |
 | `services/campo-testes/` | contexto, hooks e utilitários da bancada de testes (ver seção 12) |
 | `views/admin/` | a casca do painel (layout, sidebar, menu) e as telas de Dashboard |
 | `views/campo-testes/` | as telas T1/T2/T3/T4 |
@@ -137,9 +139,9 @@ Nem tudo mapeia para um módulo do Nest. Essas ganham nome próprio, no mesmo n�
 
 **Duas pastas a mais, ambas opcionais, cada uma resolvendo um problema diferente:**
 - **`context/`** - só existe nos módulos que precisam de estado compartilhado entre telas sem parentesco (`11-configuracoes`, `campo-testes`). Critério de quando um módulo ganha ela, e o formato exato, na seção 10.
-- **`util/`** - só existe nos módulos que têm lógica pura auxiliar que não é chamada de API (`api/`), nem estado (`hook/`/`context/`), nem constante fixa (`constants/`) - hoje usada por `25-arquivo` e `campo-testes`. Critério é o mesmo espírito das outras: se o módulo tem uma função "cálculo/formatação sem efeito colateral" que várias partes dele reaproveitam, ela mora aqui em vez de duplicada dentro de cada `api.js`/hook.
+- **`util/`** - só existe nos módulos que têm lógica pura auxiliar que não é chamada de API (`api/`), nem estado (`hook/`/`context/`), nem constante fixa (`constants/`) - hoje usada por `25-arquivo` e `campo-testes`. Critério é o mesmo espírito das outras: se o módulo tem uma função "cálculo/formatação sem efeito colateral" que várias partes dele reaproveitam, ela mora aqui em vez de duplicada dentro de cada `api.ts`/hook.
 
-⚠️ A pasta `type/` existe na maioria dos módulos e está **sempre vazia** - é resquício do esqueleto pensado para TypeScript, sem uso enquanto a decisão "React em JavaScript ou TypeScript" não for tomada (`PENDENCIAS e correcoes.md`). `11-configuracoes` é a única exceção que não tem nem essa pasta vazia - inofensivo, mas quem for criar um módulo novo deve incluir `type/` mesmo assim, pra manter o esqueleto completo daqui pra frente.
+🟢 **A pasta `type/` deixou de estar vazia (07-09-2026)** - era resquício do esqueleto pensado para TypeScript, sem uso enquanto a decisão "React em JavaScript ou TypeScript" não tinha sido tomada. Com a migração concluída, `type/` de todo módulo com chamada de API real (13 módulos, ver `ACHADOS_PARA_DISCUTIR.md` sobre o escopo exato da Fase 2) hoje espelha os DTOs de resposta (e, desde o refinamento pós-migração, também de request) do Nest correspondente - um arquivo `<modulo>.type.ts` por módulo. Os módulos sem chamada de API real ainda mantêm a pasta reservada, só com `.gitkeep`.
 
 ⚠️ Em `views/`, as pastas `checkout/`, `dash-doador/` e `dash-pesquisador/` existem só com `.gitkeep`. São lugares reservados para a interface pública/de usuário final, ainda não construída. O mesmo vale para `components/pagination/` e `components/search/`.
 
@@ -147,16 +149,16 @@ Nem tudo mapeia para um módulo do Nest. Essas ganham nome próprio, no mesmo n�
 
 ## 4. Roteamento
 
-O roteamento usa **React Router** (`react-router` v8), com `<BrowserRouter>` em `main.jsx` e as `<Route>` montadas em `App.jsx`.
+O roteamento usa **React Router** (`react-router` v8), com `<BrowserRouter>` em `main.tsx` e as `<Route>` montadas em `App.tsx`.
 
-### A fonte única: `services/router/rotas.constants.js`
+### A fonte única: `services/router/rotas.constants.ts`
 
 📌 Este é o arquivo mais importante da navegação. Ele exporta **duas listas** e três consumidores diferentes leem dela - nunca cada um com a sua cópia. O comentário do arquivo explica:
 
-> *"Fonte única de verdade pra 'quais páginas existem' - `App.jsx` monta as `<Route>` a partir daqui, e `breadcrumb.jsx` monta o rótulo a partir daqui."*
+> *"Fonte única de verdade pra 'quais páginas existem' - `App.tsx` monta as `<Route>` a partir daqui, e `breadcrumb.tsx` monta o rótulo a partir daqui."*
 
 - **`ROTAS`** - páginas públicas/pré-login, sem menu lateral: `/login`, `/cadastro`, `/verificar-email`.
-- **`ROTAS_ADMIN`** - tudo que precisa do menu lateral, renderizado dentro do `<Outlet/>` de `views/admin/admin-layout.jsx`.
+- **`ROTAS_ADMIN`** - tudo que precisa do menu lateral, renderizado dentro do `<Outlet/>` de `views/admin/admin-layout.tsx`.
 
 Cada entrada carrega, além de `caminho` e `elemento`, os metadados que os outros consumidores usam:
 
@@ -170,14 +172,14 @@ Cada entrada carrega, além de `caminho` e `elemento`, os metadados que os outro
 
 📌 **Como uma rota de detalhe mantém a aba "pai" destacada sem código extra.** O comentário do arquivo explica: *"a URL aninhada, ex.: `/admin/usuarios/8/alterar`, já COMEÇA com `/admin/usuarios`, então o próprio `NavLink` de 'Usuários' já marca 'ativo' sem código nenhum extra."*
 
-### Redirecionamentos em `App.jsx`
+### Redirecionamentos em `App.tsx`
 
 - `/` → `/admin/dashboard`. Comentário: *"a aba padrão, 08-08-2026 - ERA `/admin/usuarios` até o Dashboard existir"*.
 - `/admin/minha-conta` → `/admin/minha-conta/perfil`. Existe porque "Minha Conta" virou uma rota parametrizada (`/admin/minha-conta/:aba`, com abas Perfil/Segurança/Papéis/Acadêmico/Privacidade) e o link antigo precisava continuar funcionando.
 
 ### O menu lateral é derivado, não duplicado
 
-`views/admin/admin-menu.constants.js` **não** tem lista própria de itens: ele filtra `ROTAS_ADMIN` por `grupoMenu` via uma função `itensDoGrupo()`. O comentário registra o problema que isso resolveu: *"antes existiam 2 listas (esta e `ROTAS`) descrevendo as mesmas 3 abas, com risco de desalinhar"*.
+`views/admin/admin-menu.constants.ts` **não** tem lista própria de itens: ele filtra `ROTAS_ADMIN` por `grupoMenu` via uma função `itensDoGrupo()`. O comentário registra o problema que isso resolveu: *"antes existiam 2 listas (esta e `ROTAS`) descrevendo as mesmas 3 abas, com risco de desalinhar"*.
 
 Os grupos hoje são: um grupo sem título (só o Dashboard, com divisória), `GESTÃO DO USUÁRIO`, `Configurações`, `CAMPANHA`, `MODERAÇÃO` e - só em desenvolvimento - `CAMPO DE TESTES`.
 
@@ -185,13 +187,13 @@ Os grupos hoje são: um grupo sem título (só o Dashboard, com divisória), `GE
 
 ⚠️ O grupo `MODERAÇÃO` tem 4 itens escritos à mão e marcados `desabilitado: true` (Aprovar Campanhas, Denúncias, Solicitações, Enc. Antecipados). O comentário é explícito sobre o porquê: *"são só o desenho do painel completo, sem fingir que uma tela que não existe funciona"*.
 
-`components/layout/busca-global.jsx` (o Ctrl+K) também deriva sua seção "Navegação" de `ROTAS_ADMIN`, pelo mesmo motivo.
+`components/layout/busca-global.tsx` (o Ctrl+K) também deriva sua seção "Navegação" de `ROTAS_ADMIN`, pelo mesmo motivo.
 
 ---
 
-## 5. Autenticação (`use-auth.js`)
+## 5. Autenticação (`use-auth.ts`)
 
-Arquivo: `services/3-auth/hook/use-auth.js`. É um hook único, **chamado uma vez só, em `App.jsx`**, e o objeto resultante desce por prop para o `Layout` (e daí para o `Header`) e para cada página:
+Arquivo: `services/3-auth/hook/use-auth.ts`. É um hook único, **chamado uma vez só, em `App.tsx`**, e o objeto resultante desce por prop para o `Layout` (e daí para o `Header`) e para cada página:
 
 ```jsx
 const auth = useAuth();
@@ -199,7 +201,7 @@ const auth = useAuth();
 <Route path={caminho} element={<Elemento auth={auth} />} />
 ```
 
-📌 O comentário do próprio `App.jsx` justifica: *"`useAuth()` chamado uma vez só, aqui em cima - Header (dentro de Layout) e cada página recebem o mesmo `auth` por prop, nunca cada um com sua própria sessão."* Não há Context de autenticação; é passagem explícita por prop.
+📌 O comentário do próprio `App.tsx` justifica: *"`useAuth()` chamado uma vez só, aqui em cima - Header (dentro de Layout) e cada página recebem o mesmo `auth` por prop, nunca cada um com sua própria sessão."* Não há Context de autenticação; é passagem explícita por prop.
 
 ### Onde cada token mora
 
@@ -229,11 +231,11 @@ O comentário resume: *"SEMPRE manda Bearer quando tem accessToken. Se a respost
 
 📌 **O `useEffect` de restauração também usa essa promise compartilhada.** O comentário registra que esse efeito chamava `authApi.refresh()` direto, por fora da proteção acima, e que isso causava um bug real: *"um F5/link direto que deveria continuar logado às vezes voltava pra tela de login sem motivo aparente"* (o efeito tratava qualquer erro com `limparSessao()` incondicional e podia apagar a sessão que a outra chamada vencedora tinha acabado de salvar). Hoje ele chama `renovarSessao()`, a mesma promise compartilhada.
 
-📌 **Deduplicação de `GET` em voo (`requisicoesEmAndamentoRef`).** Duas chamadas simultâneas ao **mesmo caminho** dividem a mesma resposta (com `.clone()`, porque o corpo de um `Response` só pode ser lido uma vez). Motivo documentado: o `<StrictMode>` de `main.jsx` dispara todo `useEffect` duas vezes em desenvolvimento, o que virava duas requisições reais e dois toasts de erro. **Só `GET` é deduplicado** - o comentário é explícito: *"create/update/remove nunca são, de propósito - aqueles são sempre 1 clique = 1 ação, nunca disparados por `useEffect`."*
+📌 **Deduplicação de `GET` em voo (`requisicoesEmAndamentoRef`).** Duas chamadas simultâneas ao **mesmo caminho** dividem a mesma resposta (com `.clone()`, porque o corpo de um `Response` só pode ser lido uma vez). Motivo documentado: o `<StrictMode>` de `main.tsx` dispara todo `useEffect` duas vezes em desenvolvimento, o que virava duas requisições reais e dois toasts de erro. **Só `GET` é deduplicado** - o comentário é explícito: *"create/update/remove nunca são, de propósito - aqueles são sempre 1 clique = 1 ação, nunca disparados por `useEffect`."*
 
 ### Configuração de endereço
 
-`services/constant/constants/api.constants.js`:
+`services/constant/constants/api.constants.ts`:
 
 ```js
 export const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
@@ -247,9 +249,9 @@ O comentário registra que `react/.env` contém apenas essa URL, *"sem segredo n
 
 ## 6. Padrão de service / API
 
-### Um arquivo `<modulo>.api.js` por módulo
+### Um arquivo `<modulo>.api.ts` por módulo
 
-Cada módulo tem `services/<n>-<nome>/api/<nome>.api.js` exportando **um objeto único** com as operações. Exemplo real, `services/1-usuario/api/usuario.api.js`:
+Cada módulo tem `services/<n>-<nome>/api/<nome>.api.ts` exportando **um objeto único** com as operações. Exemplo real, `services/1-usuario/api/usuario.api.ts`:
 
 ```js
 export const usuarioApi = {
@@ -260,28 +262,28 @@ export const usuarioApi = {
 };
 ```
 
-📌 **`authFetch` é injetado, nunca importado.** O comentário do arquivo diz: *"`authFetch` vem de `use-auth.js` (`services/3-auth/hook`) - injetado, não importado direto, pra este arquivo não precisar saber nada de token."* Toda função autenticada recebe `authFetch` como **primeiro parâmetro**, sem exceção.
+📌 **`authFetch` é injetado, nunca importado.** O comentário do arquivo diz: *"`authFetch` vem de `use-auth.ts` (`services/3-auth/hook`) - injetado, não importado direto, pra este arquivo não precisar saber nada de token."* Toda função autenticada recebe `authFetch` como **primeiro parâmetro**, sem exceção.
 
 📌 **Rota pública usa `fetch` cru, com o motivo escrito ao lado.** Onde a RLS do banco já libera a leitura para qualquer um, a função chama `fetch(`${API_BASE_URL}...`)` diretamente e o comentário diz por quê. Exemplos:
 
-- `configuracao.api.js` → `buscarPublicas()`: *"Sem `authFetch` de propósito: `pol_config_select` já libera as configurações globais (`id_usuario IS NULL`) pra qualquer um, logado ou não - é o que sustenta `useConfiguracoes()` em página pública (campanha, home), que roda fora de `<ConfiguracoesProvider>` autenticado."*
-- `tipo-link.api.js` → `listarPublico()`: mesma justificativa, apontando `pol_tipolink_select`.
-- `arquivo.api.js` → `buscar()` e `buscarAvatarPorUsuario()`: *"são públicos no backend (`pol_arquivo_select` é `USING(true)`)"*.
+- `configuracao.api.ts` → `buscarPublicas()`: *"Sem `authFetch` de propósito: `pol_config_select` já libera as configurações globais (`id_usuario IS NULL`) pra qualquer um, logado ou não - é o que sustenta `useConfiguracoes()` em página pública (campanha, home), que roda fora de `<ConfiguracoesProvider>` autenticado."*
+- `tipo-link.api.ts` → `listarPublico()`: mesma justificativa, apontando `pol_tipolink_select`.
+- `arquivo.api.ts` → `buscar()` e `buscarAvatarPorUsuario()`: *"são públicos no backend (`pol_arquivo_select` é `USING(true)`)"*.
 
-📌 **Paginação desembrulhada num lugar só.** Vários endpoints devolvem `{ dados, total, pagina, tamanho }` desde 03-08-2026, correção de um problema real: um `findall` sem `limit`/`offset` baixaria a tabela inteira conforme ela crescesse. O `.dados` é desembrulhado **dentro do `.api.js`**, uma vez só, pra `GenericTable` e todo o resto do app continuar recebendo um array puro, sem precisar saber que página/total existem.
+📌 **Paginação desembrulhada num lugar só.** Vários endpoints devolvem `{ dados, total, pagina, tamanho }` desde 03-08-2026, correção de um problema real: um `findall` sem `limit`/`offset` baixaria a tabela inteira conforme ela crescesse. O `.dados` é desembrulhado **dentro do `.api.ts`**, uma vez só, pra `GenericTable` e todo o resto do app continuar recebendo um array puro, sem precisar saber que página/total existem.
 
-### `tratarResposta` - `services/constant/api/http.util.js`
+### `tratarResposta` - `services/constant/api/http.util.ts`
 
-Todo `.api.js` termina em `.then(tratarResposta)`. A função:
+Todo `.api.ts` termina em `.then(tratarResposta)`. A função:
 
 - se `!resposta.ok`, lança um **`ErroHttp`** (subclasse de `Error` que carrega `status` além da mensagem);
 - se ok, lê o corpo **como texto primeiro** e só faz `JSON.parse` se houver algo.
 
 📌 O segundo ponto tem origem documentada: *"achado do Lucas: 'Unexpected end of JSON input' ao atribuir permissão. Checar só `status === 204` não bastava. Endpoint que só cria um vínculo ... volta com corpo vazio, mas o Nest manda 201 (padrão de POST), não 204 ... Ler como texto primeiro e só fazer `JSON.parse` se tiver algo cobre QUALQUER status com corpo vazio."*
 
-📌 **Por que `ErroHttp` carrega o `status`:** *"o backend já categoriza erro em 4 faixas de HTTP pelo ERRCODE (`postgres-exception.filter.ts`), mas o React descartava o status e ficava só com o texto - sem status, `traduzir-erro.util.js` não tem como tratar 429/5xx/etc de forma diferente do resto."*
+📌 **Por que `ErroHttp` carrega o `status`:** *"o backend já categoriza erro em 4 faixas de HTTP pelo ERRCODE (`postgres-exception.filter.ts`), mas o React descartava o status e ficava só com o texto - sem status, `traduzir-erro.util.ts` não tem como tratar 429/5xx/etc de forma diferente do resto."*
 
-### `traduzirErro` - `services/constant/api/traduzir-erro.util.js`
+### `traduzirErro` - `services/constant/api/traduzir-erro.util.ts`
 
 Espelho, do lado do React, do `postgres-exception.filter.ts` do Nest. Trata só as duas categorias que o backend **não** consegue cobrir sozinho:
 
@@ -290,13 +292,13 @@ Espelho, do lado do React, do `postgres-exception.filter.ts` do Nest. Trata só 
 
 📌 Todo o resto passa direto: *"400/403/404/409... já vem em PT-BR, específico e correto direto do backend ... não faz sentido sobrescrever o que já está certo."*
 
-O par "texto de erro na tela + toast" está encapsulado em `components/layout/use-erro-toast.js` (`reportarErro(erro)`), que faz `setErro(traduzirErro(erro))` e dispara o toast numa chamada só - *"qualquer tela nova que adote isto ganha o toast de graça, sem precisar lembrar da 2ª linha"*.
+O par "texto de erro na tela + toast" está encapsulado em `components/layout/use-erro-toast.ts` (`reportarErro(erro)`), que faz `setErro(traduzirErro(erro))` e dispara o toast numa chamada só - *"qualquer tela nova que adote isto ganha o toast de graça, sem precisar lembrar da 2ª linha"*.
 
 ---
 
 ## 7. Upload de arquivo (`25-arquivo`)
 
-`services/25-arquivo/api/arquivo.api.js` é o exemplo mais completo do padrão de service, porque é o único que fala com **dois hosts diferentes**.
+`services/25-arquivo/api/arquivo.api.ts` é o exemplo mais completo do padrão de service, porque é o único que fala com **dois hosts diferentes**.
 
 ### O fluxo, na prática: três chamadas de rede
 
@@ -308,7 +310,7 @@ O par "texto de erro na tela + toast" está encapsulado em `components/layout/us
 
 📌 **O passo 2 nunca usa `authFetch`.** O comentário do arquivo é explícito: *"PUT direto no provedor de armazenamento, NUNCA via `authFetch` - é outro host, não deve levar `Authorization` nem `Content-Type: application/json`"*. Os `cabecalhosObrigatorios` devolvidos pelo passo 1 precisam ir **exatamente** como vieram, porque é isso que a assinatura da URL confere. Também não passa por `tratarResposta`: *"a resposta do bucket não é JSON e não segue o formato do nosso backend"*.
 
-⚠️ **Discrepância de nomenclatura, sem impacto funcional.** O comentário de `arquivo.api.js` chama o fluxo de *"upload em 2 passos"* (contando só as duas chamadas ao Nest, mesma contagem usada por `PROXIMOS_MODULOS.md`), enquanto `seletor-foto-perfil.jsx` fala em *"fluxo de upload de 3 passos"* (contando também o PUT no bucket). São a mesma coisa descrita de dois jeitos; vale uniformizar se alguém for mexer nos dois arquivos.
+⚠️ **Discrepância de nomenclatura, sem impacto funcional.** O comentário de `arquivo.api.ts` chama o fluxo de *"upload em 2 passos"* (contando só as duas chamadas ao Nest, mesma contagem usada por `PROXIMOS_MODULOS.md`), enquanto `seletor-foto-perfil.tsx` fala em *"fluxo de upload de 3 passos"* (contando também o PUT no bucket). São a mesma coisa descrita de dois jeitos; vale uniformizar se alguém for mexer nos dois arquivos.
 
 ### `contexto` - quem manda no processamento do backend
 
@@ -320,7 +322,7 @@ O passo 3 envia um campo `contexto` (hoje sempre `'avatar'`), que diz ao backend
 
 ## 8. `<GenericTable>` - o componente central do painel
 
-Arquivo: `components/crud/generic-table.jsx`. É o componente mais reutilizado do app.
+Arquivo: `components/crud/generic-table.tsx`. É o componente mais reutilizado do app.
 
 📌 **A ideia, na frase do próprio código:** *"Tabela genérica de LISTAGEM (leitura, filtro, ordenação, paginação) usada pelo painel admin - cada módulo novo do Nest com listagem simples vira só uma entrada de colunas aqui, não uma tela nova escrita do zero."*
 
@@ -361,7 +363,7 @@ O componente é dirigido por props, não por herança nem por children:
 
 ### Quem usa
 
-Todas as telas `listar-*.jsx`: `views/1-usuario/listar-usuarios.jsx`, `views/2-papel-permissao/listar-papeis.jsx`, `views/6-perfil-pesquisador/listar-pesquisadores.jsx`, `views/8-area-conhecimento/`, `views/9-tipo-link/`, `views/10-motivo-denuncia/`, `views/11-configuracoes/`, `views/12-campanha/`.
+Todas as telas `listar-*.tsx`: `views/1-usuario/listar-usuarios.tsx`, `views/2-papel-permissao/listar-papeis.tsx`, `views/6-perfil-pesquisador/listar-pesquisadores.tsx`, `views/8-area-conhecimento/`, `views/9-tipo-link/`, `views/10-motivo-denuncia/`, `views/11-configuracoes/`, `views/12-campanha/`.
 
 ⚠️ As telas do Campo de Testes (`views/campo-testes/`) **não** usam `<GenericTable>` - implementam filtro/faceta/paginação por conta própria, com constantes locais duplicadas (`TAMANHOS_PAGINA`, `LIMIAR_FILTRO`). Não é acidente: elas precisam de colunas de seleção/bloqueio que o componente genérico não prevê. Mas é duplicação real de lógica.
 
@@ -373,23 +375,23 @@ Todas as telas `listar-*.jsx`: `views/1-usuario/listar-usuarios.jsx`, `views/2-p
 
 | Componente | Papel |
 |---|---|
-| `generic-table.jsx` | ver seção 8 |
-| `cartao-formulario.jsx` | casca de Criar/Alterar/Excluir: ícone circular + título + subtítulo + cartão |
-| `ficha-consulta.jsx` | casca das telas "Consultar" (`<FichaConsulta>` + `<SecaoFicha>` + `<CampoFicha>`) |
-| `campo-somente-leitura.jsx` | um dado exibido, não editável, com o mesmo visual do `<label>` dos formulários |
-| `modal-detalhe.jsx` | modal genérico de "detalhe explicado" (título, chave em fonte mono, badge, seções) |
-| `log-auditoria-painel.jsx` | painel "Ver log", embutido no rodapé da `GenericTable` |
-| `use-alteracao-nao-salva.js` | `useAvisoAlteracaoNaoSalva(sujo)` - `beforeunload` nativo |
+| `generic-table.tsx` | ver seção 8 |
+| `cartao-formulario.tsx` | casca de Criar/Alterar/Excluir: ícone circular + título + subtítulo + cartão |
+| `ficha-consulta.tsx` | casca das telas "Consultar" (`<FichaConsulta>` + `<SecaoFicha>` + `<CampoFicha>`) |
+| `campo-somente-leitura.tsx` | um dado exibido, não editável, com o mesmo visual do `<label>` dos formulários |
+| `modal-detalhe.tsx` | modal genérico de "detalhe explicado" (título, chave em fonte mono, badge, seções) |
+| `log-auditoria-painel.tsx` | painel "Ver log", embutido no rodapé da `GenericTable` |
+| `use-alteracao-nao-salva.ts` | `useAvisoAlteracaoNaoSalva(sujo)` - `beforeunload` nativo |
 
-📌 **`excluir-usuario.jsx` exige confirmação por digitação do e-mail, não um `window.confirm()`.** Mostra os dados reais do usuário antes de excluir (`FichaConsulta`/`SecaoFicha`/`CampoFicha`, mesma casca de Consultar) e só habilita o botão de confirmar quando o texto digitado bate com o e-mail da conta, exatamente (case-insensitive). O comentário do arquivo explica o critério que separa este caso do de Configuração (`excluir-configuracao.jsx`, que continua com confirmação simples): *"exclusão de USUÁRIO exige digitar o e-mail - configuração é um dado técnico, não a conta de uma pessoa."*
+📌 **`excluir-usuario.tsx` exige confirmação por digitação do e-mail, não um `window.confirm()`.** Mostra os dados reais do usuário antes de excluir (`FichaConsulta`/`SecaoFicha`/`CampoFicha`, mesma casca de Consultar) e só habilita o botão de confirmar quando o texto digitado bate com o e-mail da conta, exatamente (case-insensitive). O comentário do arquivo explica o critério que separa este caso do de Configuração (`excluir-configuracao.tsx`, que continua com confirmação simples): *"exclusão de USUÁRIO exige digitar o e-mail - configuração é um dado técnico, não a conta de uma pessoa."*
 
 📌 **`CartaoFormulario` nasceu de duplicação real:** *"era a MESMA estrutura ... copiada e colada em 7 arquivos ..., já levemente divergente entre eles"*.
 
-📌 **`ModalDetalhe`/`ModalDetalhePermissao` - "Papéis com esta permissão" lido ao vivo, nunca de dicionário estático.** `views/2-papel-permissao/modal-detalhe-permissao.jsx` monta o modal genérico (`modal-detalhe.jsx`) com um detalhe fixo (nome amigável, o que faz, por que existe, badge de impacto - `services/2-papel-permissao/constants/permissao-nomes-amigaveis.js`, dicionário `nome → rótulo` sem coluna nova no banco) e uma lista que **não** vem desse dicionário: refaz as mesmas duas chamadas de `matriz-papel-permissao.jsx` (`papelApi.listar` + `papelPermissaoApi.listar`) para saber quem tem a permissão agora. O comentário do arquivo explica por quê: *"o dicionário só sabe o que a permissão FAZ, não quem tem ela agora - isso muda toda vez que um admin mexe na matriz."* A listagem de Permissões usa o mesmo dicionário para exibir o nome amigável como "nome" e o código cru (`permissao.nome`) como "chave".
+📌 **`ModalDetalhe`/`ModalDetalhePermissao` - "Papéis com esta permissão" lido ao vivo, nunca de dicionário estático.** `views/2-papel-permissao/modal-detalhe-permissao.tsx` monta o modal genérico (`modal-detalhe.tsx`) com um detalhe fixo (nome amigável, o que faz, por que existe, badge de impacto - `services/2-papel-permissao/constants/permissao-nomes-amigaveis.ts`, dicionário `nome → rótulo` sem coluna nova no banco) e uma lista que **não** vem desse dicionário: refaz as mesmas duas chamadas de `matriz-papel-permissao.tsx` (`papelApi.listar` + `papelPermissaoApi.listar`) para saber quem tem a permissão agora. O comentário do arquivo explica por quê: *"o dicionário só sabe o que a permissão FAZ, não quem tem ela agora - isso muda toda vez que um admin mexe na matriz."* A listagem de Permissões usa o mesmo dicionário para exibir o nome amigável como "nome" e o código cru (`permissao.nome`) como "chave".
 
-📌 **`CartaoFormulario` e `FichaConsulta` compartilham duas larguras canônicas** - `'media'` (`max-w-2xl`) e `'larga'` (`max-w-5xl`) - decisão registrada de definir larguras canônicas em vez de cada tela escolher a sua. O comentário de `cartao-formulario.jsx` explica a causa raiz do redesenho: a versão anterior tinha medida e comportamento de modal (centralizado na tela, altura travada com *scroll* próprio), mesmo sendo usada como página em todo lugar - daí a queixa de que ficava "um monte de card empilhado, confuso".
+📌 **`CartaoFormulario` e `FichaConsulta` compartilham duas larguras canônicas** - `'media'` (`max-w-2xl`) e `'larga'` (`max-w-5xl`) - decisão registrada de definir larguras canônicas em vez de cada tela escolher a sua. O comentário de `cartao-formulario.tsx` explica a causa raiz do redesenho: a versão anterior tinha medida e comportamento de modal (centralizado na tela, altura travada com *scroll* próprio), mesmo sendo usada como página em todo lugar - daí a queixa de que ficava "um monte de card empilhado, confuso".
 
-📌 **Telas "Alterar" com conteúdo substancial usam 2 colunas dentro do `CartaoFormulario` largo (`largura="larga"`).** `alterar-usuario.jsx` é o exemplo: `grid lg:grid-cols-3`, coluna principal (`lg:col-span-2`) com o que se edita (Dados da conta, Acesso, Perfil de Pesquisador - este último desabilitado de propósito, campos demonstrativos até o módulo `6-perfil-pesquisador` existir), coluna lateral (1/3) com contexto/consulta e ações administrativas (Metadados, Papéis, `SecaoModeracao` - ver seção 16, card `<dev>` isolado). Empilha em 1 coluna abaixo do breakpoint `lg`, mesmo comportamento de sempre no celular. O comentário do arquivo cita o mesmo padrão usado por painéis de referência (Stripe/Linear/Vercel) para tela de edição de registro.
+📌 **Telas "Alterar" com conteúdo substancial usam 2 colunas dentro do `CartaoFormulario` largo (`largura="larga"`).** `alterar-usuario.tsx` é o exemplo: `grid lg:grid-cols-3`, coluna principal (`lg:col-span-2`) com o que se edita (Dados da conta, Acesso, Perfil de Pesquisador - este último desabilitado de propósito, campos demonstrativos até o módulo `6-perfil-pesquisador` existir), coluna lateral (1/3) com contexto/consulta e ações administrativas (Metadados, Papéis, `SecaoModeracao` - ver seção 16, card `<dev>` isolado). Empilha em 1 coluna abaixo do breakpoint `lg`, mesmo comportamento de sempre no celular. O comentário do arquivo cita o mesmo padrão usado por painéis de referência (Stripe/Linear/Vercel) para tela de edição de registro.
 
 📌 **`FichaConsulta` existe porque campo desabilitado comunica a coisa errada:** *"'campo desabilitado' é o jeito errado de comunicar 'isto nunca foi editável' (o desabilitado promete 'você poderia editar, mas não pode' - aqui nada promete isso)"*.
 
@@ -397,9 +399,9 @@ Todas as telas `listar-*.jsx`: `views/1-usuario/listar-usuarios.jsx`, `views/2-p
 
 ### `components/layout/` - a moldura do app
 
-`layout.jsx` (Header + Breadcrumb + `<Outlet/>` + Footer), `header.jsx`, `footer.jsx`, `breadcrumb.jsx`, `menu-usuario.jsx`, `avatar-usuario.jsx`, `busca-global.jsx` (+ `busca-global-evento.js`), `sino-atividade.jsx`, `controle-tema.jsx`, `controle-fonte.jsx`, `tooltip.jsx`, `toast-provider.jsx` (+ `toast-context.js`, `use-toast.js`), `use-erro-toast.js`, `dev-login-rapido.jsx`.
+`layout.tsx` (Header + Breadcrumb + `<Outlet/>` + Footer), `header.tsx`, `footer.tsx`, `breadcrumb.tsx`, `menu-usuario.tsx`, `avatar-usuario.tsx`, `busca-global.tsx` (+ `busca-global-evento.ts`), `sino-atividade.tsx`, `controle-tema.tsx`, `controle-fonte.tsx`, `tooltip.tsx`, `toast-provider.tsx` (+ `toast-context.ts`, `use-toast.ts`), `use-erro-toast.ts`, `dev-login-rapido.tsx`.
 
-📌 **Header e Footer são cópia declarada do protótipo de interface.** O comentário de `header.jsx`: *"Cópia fiel de `componentes/header.html` do Projeto de Interface real (mesmas classes Tailwind, mesma estrutura)"*. As adaptações estão listadas ali: a marca navega de verdade para `/`; "Explorar Projetos"/"Como Funciona"/"Transparência LGPD"/"Submeter Pesquisa" continuam `window.alert()` de placeholder, *"mesmo espírito do `showAction()` do protótipo original"*.
+📌 **Header e Footer são cópia declarada do protótipo de interface.** O comentário de `header.tsx`: *"Cópia fiel de `componentes/header.html` do Projeto de Interface real (mesmas classes Tailwind, mesma estrutura)"*. As adaptações estão listadas ali: a marca navega de verdade para `/`; "Explorar Projetos"/"Como Funciona"/"Transparência LGPD"/"Submeter Pesquisa" continuam `window.alert()` de placeholder, *"mesmo espírito do `showAction()` do protótipo original"*.
 
 📌 **`AvatarUsuario`: cor determinística por nome.** Hash simples (soma de código de caractere) sobre uma paleta de 7 tokens CSS - *"a mesma pessoa cai sempre na mesma cor, em qualquer tela/sessão, sem guardar nada no banco. Nada de `Math.random()`."* Escala de tamanhos `sm`/`md`/`lg`/`xl`/`xxl`.
 
@@ -411,23 +413,23 @@ Todas as telas `listar-*.jsx`: `views/1-usuario/listar-usuarios.jsx`, `views/2-p
 
 📌 **`ToastProvider`:** duração por tipo (sucesso 4s, erro 5s - *"erro fica 1s a mais que sucesso"*). O redesenho unificou as duas estruturas, que tinham evoluído separadas: *"a cor vira ACENTO (a barra/ícone), não fundo. Texto sempre escuro (nunca branco sobre colorido) resolve de vez o problema de legibilidade em monitor não calibrado"*. A barra colorida é `border-left` do próprio cartão, não uma `<div>` irmã dependendo de `overflow-hidden` para arredondar - *"uma borda SEMPRE acompanha o `border-radius` do elemento dela, sem costura nenhuma"*.
 
-📌 **`DevLoginRapido` é ferramenta de desenvolvimento com senhas de seed em texto no código.** São 7 contas do `07_seed_dados.sql` (uma por papel), com a senha de dev `DevTcc123!` literal no arquivo. O comentário justifica (*"logar como admin toda hora pra testar o painel era chato"*) e afirma que não cria conta nem senha nova. **Protegido por `import.meta.env.DEV` desde 04-09-2026** (`header.jsx`), mesmo tratamento do Campo de Testes - some sozinho em qualquer `npm run build`, continua disponível em `npm run dev`. Antes disso, o componente era renderizado pelo `Header` em qualquer build, inclusive produção; foi corrigido depois de identificado como achado em `ACHADOS_PARA_DISCUTIR.md`.
+📌 **`DevLoginRapido` é ferramenta de desenvolvimento com senhas de seed em texto no código.** São 7 contas do `07_seed_dados.sql` (uma por papel), com a senha de dev `DevTcc123!` literal no arquivo. O comentário justifica (*"logar como admin toda hora pra testar o painel era chato"*) e afirma que não cria conta nem senha nova. **Protegido por `import.meta.env.DEV` desde 04-09-2026** (`header.tsx`), mesmo tratamento do Campo de Testes - some sozinho em qualquer `npm run build`, continua disponível em `npm run dev`. Antes disso, o componente era renderizado pelo `Header` em qualquer build, inclusive produção; foi corrigido depois de identificado como achado em `ACHADOS_PARA_DISCUTIR.md`.
 
 ### `components/input/`
 
-Hoje só tem `seletor-foto-perfil.jsx` (abaixo). `components/3-auth/icone-google.jsx` é um SVG inline do logo do Google, usado no botão "Continuar com Google" da tela de login - que hoje é apenas um `window.alert('Login social com Google simulado no protótipo.')`.
+Hoje só tem `seletor-foto-perfil.tsx` (abaixo). `components/3-auth/icone-google.tsx` é um SVG inline do logo do Google, usado no botão "Continuar com Google" da tela de login - que hoje é apenas um `window.alert('Login social com Google simulado no protótipo.')`.
 
 ### `SeletorFotoPerfil` - o avatar editável
 
-`components/input/seletor-foto-perfil.jsx` é o avatar com botão de câmera, `<input type="file">` escondido, botão de remover e o fluxo de upload inteiro.
+`components/input/seletor-foto-perfil.tsx` é o avatar com botão de câmera, `<input type="file">` escondido, botão de remover e o fluxo de upload inteiro.
 
-📌 **Separação de responsabilidade:** *"Este componente NUNCA salva nada em `usuario` sozinho - ele só sobe (ou sinaliza a remoção d)o arquivo e devolve o resultado pro pai via `aoAlterar`."* Quem usa (`criar-usuario.jsx`, `alterar-usuario.jsx`, `minha-conta-page.jsx`) decide quando mandar isso ao backend.
+📌 **Separação de responsabilidade:** *"Este componente NUNCA salva nada em `usuario` sozinho - ele só sobe (ou sinaliza a remoção d)o arquivo e devolve o resultado pro pai via `aoAlterar`."* Quem usa (`criar-usuario.tsx`, `alterar-usuario.tsx`, `minha-conta-page.tsx`) decide quando mandar isso ao backend.
 
 📌 **Três estados, não dois.** `aoAlterar(idArquivo, novaUrl)` = foto nova; `aoAlterar(null, null)` = remoção pedida; **não ter chamado `aoAlterar`** = nenhuma escolha feita. Por isso o pai guarda o id como `undefined` por padrão, nunca `null` - *"exatamente pra sobrar esse terceiro estado"*.
 
-#### Redução de imagem no navegador (`reduzir-imagem.util.js`)
+#### Redução de imagem no navegador (`reduzir-imagem.util.ts`)
 
-`services/25-arquivo/util/reduzir-imagem.util.js` reduz a imagem **antes** do upload, usando a Canvas API nativa, sem biblioteca: `createImageBitmap(arquivo, { imageOrientation: 'from-image' })` → `<canvas>` redimensionado com `drawImage` → `canvas.toBlob(...)` → um `File` novo.
+`services/25-arquivo/util/reduzir-imagem.util.ts` reduz a imagem **antes** do upload, usando a Canvas API nativa, sem biblioteca: `createImageBitmap(arquivo, { imageOrientation: 'from-image' })` → `<canvas>` redimensionado com `drawImage` → `canvas.toBlob(...)` → um `File` novo.
 
 📌 **É otimização de UX, nunca autoridade de segurança.** O comentário do arquivo é categórico: *"complementa, não substitui, o processamento de verdade que o backend já faz com `sharp` ... O backend continua sendo a autoridade: o navegador pode mentir, alguém pode chamar a API direto sem passar por aqui."* O ganho declarado é duplo: upload mais rápido em conexão ruim (*"foto de celular de 5MB vira umas centenas de KB antes de sair do aparelho"*) e **menos risco de a URL pré-assinada, que vale 5 minutos, expirar no meio de um envio lento**.
 
@@ -435,7 +437,7 @@ Hoje só tem `seletor-foto-perfil.jsx` (abaixo). `components/3-auth/icone-google
 
 📌 **WebP com fallback verificado, não assumido.** Tenta `toBlob(..., 'image/webp')` e **confere o `.type` do resultado** antes de confiar nele, porque *"`canvas.toBlob` com 'image/webp' nem todo navegador honra (Safari mais antigo cai pra PNG em silêncio, sem erro nenhum)"*. Sem WebP, cai para JPEG - não PNG, *"que sempre sai sem perda e, por isso, muito maior"*. A extensão do nome do arquivo é trocada para bater com o formato de saída.
 
-📌 **A ordem das validações mudou por causa da redução.** `seletor-foto-perfil.jsx` tem hoje **dois** tetos de tamanho, e o comentário explica a razão:
+📌 **A ordem das validações mudou por causa da redução.** `seletor-foto-perfil.tsx` tem hoje **dois** tetos de tamanho, e o comentário explica a razão:
 - `TAMANHO_MAXIMO_BRUTO_BYTES` (30 MB, constante fixa), checado **antes** da redução - *"só pra recusar algo absurdo cedo (ex.: vídeo de 300MB renomeado pra .jpg) sem gastar CPU tentando processar no canvas"*;
 - `tamanhoMaximoAvatarBytes`, checado **depois** - *"não antes: com a redução automática no cliente, uma foto de celular de 10-15MB vira algumas centenas de KB, então barrar pelo tamanho BRUTO derrubaria o próprio motivo de ter a redução."*
 
@@ -449,7 +451,7 @@ Hoje só tem `seletor-foto-perfil.jsx` (abaixo). `components/3-auth/icone-google
 
 ## 10. Estado global: os três providers
 
-`main.jsx` monta a árvore assim:
+`main.tsx` monta a árvore assim:
 
 ```jsx
 <StrictMode>
@@ -459,7 +461,7 @@ Hoje só tem `seletor-foto-perfil.jsx` (abaixo). `components/3-auth/icone-google
         <App />
 ```
 
-e `App.jsx` envolve as rotas num quarto provider **só em desenvolvimento**:
+e `App.tsx` envolve as rotas num quarto provider **só em desenvolvimento**:
 
 ```jsx
 return import.meta.env.DEV ? <CampoTestesProvider>{rotas}</CampoTestesProvider> : rotas;
@@ -471,11 +473,11 @@ return import.meta.env.DEV ? <CampoTestesProvider>{rotas}</CampoTestesProvider> 
 | `ToastProvider` | `components/layout/` | `useToast().mostrar(mensagem, titulo, tipo)` |
 | `CampoTestesProvider` | `services/campo-testes/context/` | estado compartilhado entre T1/T2/T3/T4 - só em build de dev |
 
-📌 **`11-configuracoes` mudou de duas pastas (`context/`+`provider/` separadas) pra uma só (05-09-2026)** - era o único módulo divergente do formato acima (ver "Critério" logo abaixo). Contexto e provider continuam em **arquivos separados** dentro da mesma pasta (nunca no mesmo arquivo - Fast Refresh do Vite quebra o hot-reload quando um arquivo mistura componente e hook/contexto, mesmo motivo do `toast-context.js`), só a pasta que uniu.
+📌 **`11-configuracoes` mudou de duas pastas (`context/`+`provider/` separadas) pra uma só (05-09-2026)** - era o único módulo divergente do formato acima (ver "Critério" logo abaixo). Contexto e provider continuam em **arquivos separados** dentro da mesma pasta (nunca no mesmo arquivo - Fast Refresh do Vite quebra o hot-reload quando um arquivo mistura componente e hook/contexto, mesmo motivo do `toast-context.ts`), só a pasta que uniu.
 
 📌 **`ConfiguracoesProvider` existe para não hardcodar regra de negócio no JSX.** O comentário: *"Existe pra qualquer tela (admin ou pública, futura) conseguir ler `taxa_plataforma_padrao`, `valor_minimo_contribuicao` etc. direto do banco via `obterConfiguracao(...)`, em vez de escrever esses valores de negócio direto no HTML/JSX."* Ele converte o `valor` (sempre string ou `null` na coluna) para o tipo real usando o `tipo` que a própria linha declara (`decimal`/`inteiro`/`booleano`), e só considera linhas com `ativo = true`. Usa `configuracaoApi.buscarPublicas()` - `fetch` cru, sem token (ver seção 6).
 
-⚠️ **Não existe provider/estado global de autenticação.** `auth` é passado por prop desde `App.jsx` (seção 5). É consistente hoje, mas significa que toda página nova precisa aceitar `auth` como prop explicitamente.
+⚠️ **Não existe provider/estado global de autenticação.** `auth` é passado por prop desde `App.tsx` (seção 5). É consistente hoje, mas significa que toda página nova precisa aceitar `auth` como prop explicitamente.
 
 ### 📐 Critério: quando um módulo ganha `context/` (decidido 05-09-2026)
 
@@ -491,7 +493,7 @@ Antes desta data, cada módulo que precisou de "dado compartilhado entre telas" 
 
 ## 11. CSS, Tailwind e temas
 
-Duas fontes de estilo, importadas nessa ordem em `main.jsx`:
+Duas fontes de estilo, importadas nessa ordem em `main.tsx`:
 
 1. **`assets/css/tailwind-theme.css`** - `@import 'tailwindcss'` + o bloco `@theme` com as cores e fontes do projeto: `--color-primary: #0f9b58`, `--color-primary-dark`, `--color-surface`, `--color-dark: #0f172a`, `Inter` e `DM Serif Display`. 📌 Está num arquivo isolado por uma razão técnica concreta: *"`@import 'tailwindcss'` se expande inline ... e depois disso mais nenhum `@import` pode vir no MESMO arquivo (regra de CSS: `@import` só pode vir antes de qualquer outra regra)"*.
 2. **`assets/css/0-style.css`** - manifesto que importa os arquivos numerados na ordem: `1-base.css`, `2-componentes.css`, `3-admin-shell.css`, `4-crud.css`, `5-responsividade.css`, `6-campo-testes.css`. 📌 A convenção vem declarada: *"mesma ideia do projeto de interface de referência ... um arquivo por responsabilidade, importado aqui em ordem"*.
@@ -515,31 +517,31 @@ Todo arquivo do Campo de Testes começa com o mesmo cabeçalho, literal:
 // ============================================================================
 ```
 
-📌 **O que é, segundo o próprio código** (comentário em `admin-menu.constants.js`): *"Telas administrativas pra testar, pela interface (não só por Thunder Client), módulos que hoje só fariam sentido testar pela área PÚBLICA do site (que ainda não existe em React). O que for criado aqui nunca aparece pro usuário final, é só ferramenta de teste interna."*
+📌 **O que é, segundo o próprio código** (comentário em `admin-menu.constants.ts`): *"Telas administrativas pra testar, pela interface (não só por Thunder Client), módulos que hoje só fariam sentido testar pela área PÚBLICA do site (que ainda não existe em React). O que for criado aqui nunca aparece pro usuário final, é só ferramenta de teste interna."*
 
 ### As quatro telas
 
 | Tela | Arquivo | O que faz |
 |---|---|---|
-| **T1 - Bancada do Pesquisador** | `views/campo-testes/bancada-pesquisador.jsx` | lista pesquisadores reais (`GET /perfil-pesquisador`), promove usuário → pesquisador, gerencia links acadêmicos; a seleção alimenta T2 |
-| **T2 - Bancada da Campanha** | `views/campo-testes/bancada-campanha.jsx` | campanhas (filtradas pelo pesquisador selecionado em T1), orçamento/cronograma, aprovar/rejeitar; a "campanha em foco" alimenta T3 |
-| **T3 - Vida da Campanha Ativa** | `views/campo-testes/vida-campanha-ativa.jsx` | atualizações, comentários/endosso, seguir - sobre a campanha em foco de T2 |
-| **T4 - Registro de Chamadas** | `views/campo-testes/registro-chamadas.jsx` | gaveta recolhível presente em todas as telas acima; lista as requisições feitas, com método/caminho/status/tempo/corpo, e monta um `curl` |
+| **T1 - Bancada do Pesquisador** | `views/campo-testes/bancada-pesquisador.tsx` | lista pesquisadores reais (`GET /perfil-pesquisador`), promove usuário → pesquisador, gerencia links acadêmicos; a seleção alimenta T2 |
+| **T2 - Bancada da Campanha** | `views/campo-testes/bancada-campanha.tsx` | campanhas (filtradas pelo pesquisador selecionado em T1), orçamento/cronograma, aprovar/rejeitar; a "campanha em foco" alimenta T3 |
+| **T3 - Vida da Campanha Ativa** | `views/campo-testes/vida-campanha-ativa.tsx` | atualizações, comentários/endosso, seguir - sobre a campanha em foco de T2 |
+| **T4 - Registro de Chamadas** | `views/campo-testes/registro-chamadas.tsx` | gaveta recolhível presente em todas as telas acima; lista as requisições feitas, com método/caminho/status/tempo/corpo, e monta um `curl` |
 
 ### Protegido por `import.meta.env.DEV` em três lugares
 
-1. `rotas.constants.js` - o bloco de rotas T1/T2/T3 é espalhado condicionalmente (`...(import.meta.env.DEV ? [...] : [])`);
-2. `admin-menu.constants.js` - o **objeto do grupo inteiro**, não só os itens;
-3. `App.jsx` - o `CampoTestesProvider`.
+1. `rotas.constants.ts` - o bloco de rotas T1/T2/T3 é espalhado condicionalmente (`...(import.meta.env.DEV ? [...] : [])`);
+2. `admin-menu.constants.ts` - o **objeto do grupo inteiro**, não só os itens;
+3. `App.tsx` - o `CampoTestesProvider`.
 
 📌 O ponto 2 tem origem documentada: *"só os ITENS estavam protegidos por DEV ... o GRUPO em si (título 'CAMPO DE TESTES' + tooltip) continuava aparecendo no build de produção, vazio mas visível, o que já vazava a existência da ferramenta pro usuário final. O `npm run build` de verdade confirmou isso: a string 'CAMPO DE TESTES' aparecia no bundle final antes desta correção."*
 
 ### O que ele NÃO faz mais: o "Elenco"
 
-📌 Existiu um motor de login múltiplo (`ElencoProvider`), **removido em 25-08-2026**. O comentário de `campo-testes-provider.jsx`: *"pedido do Lucas: 'remover de vez' o motor de login-múltiplo - nenhum endpoint do backend aceita agir 'em nome de' outro usuário, então simular vários atores ao mesmo tempo não tinha mais sustentação real."*
+📌 Existiu um motor de login múltiplo (`ElencoProvider`), **removido em 25-08-2026**. O comentário de `campo-testes-provider.tsx`: *"pedido do Lucas: 'remover de vez' o motor de login-múltiplo - nenhum endpoint do backend aceita agir 'em nome de' outro usuário, então simular vários atores ao mesmo tempo não tinha mais sustentação real."*
 
 Consequências, todas registradas no código:
-- toda chamada usa a **sessão real do painel** (`auth.authFetch`), via o hook `use-chamada-registrada.js`, que apenas acrescenta cronometragem e registro para T4;
+- toda chamada usa a **sessão real do painel** (`auth.authFetch`), via o hook `use-chamada-registrada.ts`, que apenas acrescenta cronometragem e registro para T4;
 - "Promover Usuário → Pesquisador" e as ações de link acadêmico *"só têm efeito de verdade quando o usuário selecionado É a própria conta logada - pra qualquer outro, a RLS responde com erro de permissão"*. Isso está explicitado como **limitação aceita**, não bug;
 - criar campanha **saiu** de T2, porque a RLS exige `id_usuario = id_usuario_atual()`;
 - em T3, "Seguidores" virou um único toggle ("Eu sigo");
@@ -549,11 +551,11 @@ Consequências, todas registradas no código:
 
 ### Trabalha sobre dados reais, com uma trava explícita
 
-📌 `services/campo-testes/util/registros-bloqueados.js` marca os pesquisadores de id **12 a 22** e as campanhas de id **1 a 10** como bloqueados dentro do Campo de Testes: eles aparecem nas listas (riscados, com cadeado), mas sem botão de ação. Motivo: *"já nascem com uma 'demo' inteira montada desde `07_seed_dados.sql` ... Mexer neles pra testar quebraria a demonstração que já existe pronta."*
+📌 `services/campo-testes/util/registros-bloqueados.ts` marca os pesquisadores de id **12 a 22** e as campanhas de id **1 a 10** como bloqueados dentro do Campo de Testes: eles aparecem nas listas (riscados, com cadeado), mas sem botão de ação. Motivo: *"já nascem com uma 'demo' inteira montada desde `07_seed_dados.sql` ... Mexer neles pra testar quebraria a demonstração que já existe pronta."*
 
 ⚠️ Esses limites (12, 22, 10) são constantes fixas no arquivo, casadas com os ids do seed. Se o seed mudar, elas silenciosamente passam a bloquear/liberar os registros errados.
 
-📌 `services/campo-testes/util/gerar-cpf-valido.js` existe porque o backend valida o dígito verificador de CPF - coerente com `PENDENCIAS e correcoes.md`, item 745 (todos os CPFs de desenvolvimento são inventados; não há verificação de existência real).
+📌 `services/campo-testes/util/gerar-cpf-valido.ts` existe porque o backend valida o dígito verificador de CPF - coerente com `PENDENCIAS e correcoes.md`, item 745 (todos os CPFs de desenvolvimento são inventados; não há verificação de existência real).
 
 ⚠️ **T4 não grava o Bearer**, e por isso o `curl` gerado não é autenticado. É decisão consciente: *"gravar token de sessão num log que fica na tela o tempo todo seria pior que não ter o cURL pronto."*
 
@@ -579,7 +581,7 @@ Registrada com comentário direto no código (`react/vite.config.js`): o Tailwin
 
 ### 13.3 Ferramental de build e tipo - `vite`, `@vitejs/plugin-react`, `@types/react`/`@types/react-dom`
 
-`vite` é o bundler/dev-server; `@vitejs/plugin-react` é o que ensina o Vite a processar JSX e habilita Fast Refresh (hot reload preservando estado de componente). Os dois pacotes de tipo (`@types/react`, `@types/react-dom`) chamam atenção **porque o projeto é JavaScript, não TypeScript** (seção 2) - eles não compilam nada; existem só para o editor (autocomplete/checagem leve via `// @ts-check` ou inferência do VSCode) entender a API do React sem exigir migração pra `.tsx`. É um meio-termo real: ganha parte do benefício de tipo sem pagar o custo de converter o projeto inteiro - mas não é o mesmo que a pendência do item 10 (JS vs TS) resolvida de verdade, que exigiria os arquivos serem `.ts`/`.tsx` de fato para o compilador checar, não só o editor sugerir.
+`vite` é o bundler/dev-server; `@vitejs/plugin-react` é o que ensina o Vite a processar JSX/TSX e habilita Fast Refresh (hot reload preservando estado de componente). Os dois pacotes de tipo (`@types/react`, `@types/react-dom`) continuam necessários mesmo com o projeto inteiro em TypeScript real (seção 2) - o próprio React é publicado como JavaScript puro, sem tipo embutido; esses dois pacotes são só as definições de tipo da API do React/ReactDOM, usadas pelo `tsc`/editor pra checar de verdade `.tsx` contra a API real (props de componente, tipos de evento etc.) - sem eles, todo componente do React seria implicitamente `any`.
 
 ### 13.4 Lint - `eslint` + `@eslint/js` + `eslint-plugin-react-hooks` + `eslint-plugin-react-refresh` + `globals`
 
@@ -602,19 +604,19 @@ Sinais disso espalhados pelo código, todos coerentes entre si:
 
 ### Decisões e débitos em aberto
 
-⚠️ **JavaScript vs TypeScript** - `PENDENCIAS e correcoes.md`, item 10, ainda 🔴 e sem decisão. Ver seção 2.
+🟢 **JavaScript vs TypeScript - RESOLVIDO (07-09-2026).** `PENDENCIAS e correcoes.md`, item 10. Ver seção 2.
 
 ⚠️ **`react/.gitignore` não cobre `.env`** - item 744, correção deliberadamente adiada. Ver seção 5.
 
 ⚠️ **Nenhum teste automatizado no React.** Só `build` + `lint`.
 
-⚠️ **Comentários desatualizados sobre o módulo `25-arquivo`.** O módulo de upload já existe e funciona (é o que `SeletorFotoPerfil` usa), mas dois arquivos ainda afirmam o contrário:
-- `components/layout/avatar-usuario.jsx`: *"o upload de arquivo ainda não está implementado, ver PENDENCIAS.md; quando existir, é só trocar `foto` por uma URL de verdade aqui"* - o parâmetro `foto` já recebe URL real hoje (`minha-conta-page.jsx`, `menu-usuario.jsx`, `consultar-usuario.jsx`);
-- `views/admin/dashboard-identidade-visual.jsx`: a aba "Identidade Visual" continua sendo um placeholder que diz *"depende do módulo de UPLOAD de arquivo (25-arquivo) existir de verdade primeiro, e ele ainda não existe (só a pasta reservada)"*. O placeholder em si segue válido (ninguém implementou o gerenciamento de logo/favicon), mas a justificativa não é mais verdadeira.
+🟢 **Comentários desatualizados sobre o módulo `25-arquivo` - CORRIGIDO (07-09-2026).** O módulo de upload já existe e funciona (é o que `SeletorFotoPerfil` usa) há tempos, mas dois arquivos ainda afirmavam o contrário - corrigido numa auditoria de código morto/comentário desatualizado:
+- `components/layout/avatar-usuario.tsx`: não tem mais o comentário antigo dizendo que o upload "ainda não está implementado".
+- `views/admin/dashboard-identidade-visual.tsx`: o placeholder da aba "Identidade Visual" segue válido (ninguém implementou o gerenciamento de logo/favicon), mas o texto (visível ao admin) e o comentário foram corrigidos - agora dizem corretamente que `25-arquivo` já existe, e o que falta é só a tela de gerenciar logo/favicon em cima dele.
 
-⚠️ **Outro comentário desatualizado, menor:** `components/layout/breadcrumb.jsx` afirma que *"A aba padrão do admin (`/admin/usuarios`) tem `rotuloBreadcrumb: null` de propósito"*. Isso deixou de valer quando o Dashboard virou a aba padrão (08-08-2026): hoje quem tem `rotuloBreadcrumb: null` é `/admin/dashboard`, e `/admin/usuarios` tem rótulo normal. O comportamento do componente está certo - só o exemplo citado no comentário envelheceu.
+⚠️ **Outro comentário desatualizado, menor:** `components/layout/breadcrumb.tsx` afirma que *"A aba padrão do admin (`/admin/usuarios`) tem `rotuloBreadcrumb: null` de propósito"*. Isso deixou de valer quando o Dashboard virou a aba padrão (08-08-2026): hoje quem tem `rotuloBreadcrumb: null` é `/admin/dashboard`, e `/admin/usuarios` tem rótulo normal. O comportamento do componente está certo - só o exemplo citado no comentário envelheceu.
 
-⚠️ **Constantes duplicadas manualmente entre `nest/` e `react/`** - perfis de redução de imagem, lista de MIME types, tetos de tamanho, mínimos de orçamento/cronograma exibidos como rótulo em T2. Todos com comentário pedindo sincronia manual. É consequência direta de não haver tipo compartilhado (item 10).
+⚠️ **Constantes duplicadas manualmente entre `nest/` e `react/`** - perfis de redução de imagem, lista de MIME types, tetos de tamanho, mínimos de orçamento/cronograma exibidos como rótulo em T2. Todos com comentário pedindo sincronia manual. Continua existindo mesmo depois do TypeScript (item 10, resolvido) - os dois projetos têm compilação separada, sem import cruzado, então tipo (TypeScript) e valor (constante) precisam ambos ser espelhados à mão.
 
 ⚠️ **Filtro/busca/paginação client-side** na `GenericTable` e na `BuscaGlobal` - os dois lugares admitem por escrito que não escalam além de "dezenas de linhas" e precisariam de suporte do backend.
 
@@ -626,19 +628,19 @@ Sinais disso espalhados pelo código, todos coerentes entre si:
 
 ## 15. Fluxo público: cadastro, termos de uso e verificação de e-mail
 
-Três rotas de `ROTAS` (seção 4, sem menu lateral) cobrem o ciclo de entrada de uma conta nova: `/login`, `/cadastro` (`views/3-auth/cadastro-page.jsx`) e `/verificar-email` (`views/3-auth/verificar-email-page.jsx`).
+Três rotas de `ROTAS` (seção 4, sem menu lateral) cobrem o ciclo de entrada de uma conta nova: `/login`, `/cadastro` (`views/3-auth/cadastro-page.tsx`) e `/verificar-email` (`views/3-auth/verificar-email-page.tsx`).
 
-📌 **Cadastro exige aceite de Termos de Uso, lido ao vivo do banco.** O formulário (nome, e-mail, senha, confirmar senha) tem um checkbox obrigatório de aceite; ao lado, um link "Termos de Uso" abre um modal que busca o termo **vigente** via `termoUsoApi.buscarAtivo()` (`services/5-termo-uso/api/termo-uso.api.js`), carregado só na primeira vez que o modal abre e mantido em cache pelo tempo de vida da página. O botão de cadastrar continua desabilitado até nome (≥2 caracteres), e-mail válido, senha (≥8 caracteres), confirmação batendo e o checkbox marcado.
+📌 **Cadastro exige aceite de Termos de Uso, lido ao vivo do banco.** O formulário (nome, e-mail, senha, confirmar senha) tem um checkbox obrigatório de aceite; ao lado, um link "Termos de Uso" abre um modal que busca o termo **vigente** via `termoUsoApi.buscarAtivo()` (`services/5-termo-uso/api/termo-uso.api.ts`), carregado só na primeira vez que o modal abre e mantido em cache pelo tempo de vida da página. O botão de cadastrar continua desabilitado até nome (≥2 caracteres), e-mail válido, senha (≥8 caracteres), confirmação batendo e o checkbox marcado.
 
 ⚠️ **Verificação de e-mail funciona, mas sem enviar e-mail nenhum - o módulo `4-mail` ainda não existe.** Depois de um cadastro bem-sucedido, a tela mostra um `window.alert()` com o link de verificação completo (incluindo o token), rotulado explicitamente `"[SÓ EM DEV]"`. Em produção, esse link viraria o conteúdo de um e-mail de verdade - hoje é só exibido na tela para permitir testar o fluxo de ponta a ponta sem o módulo de e-mail.
 
-📌 **`verificar-email-page.jsx` não exige sessão nenhuma.** É uma rota pública que lê o `token` da query string (`?token=...`) e chama `verificarEmail(token)` (`services/3-auth/api/auth.api.js`) assim que monta. O comentário do arquivo justifica: *"o token em si já é a autorização"* - o backend resolve o dono do token, não recebe nenhum id vindo do cliente (mesmo padrão de `confirmar_email_por_token` no banco, ver `DOCUMENTACAO_BD.md`, bloco `[03-O]`). Token ausente na URL já nasce em estado de erro (inicializador preguiçoso do `useState`, sem passar por uma renderização de "carregando" that não corresponde à realidade).
+📌 **`verificar-email-page.tsx` não exige sessão nenhuma.** É uma rota pública que lê o `token` da query string (`?token=...`) e chama `verificarEmail(token)` (`services/3-auth/api/auth.api.ts`) assim que monta. O comentário do arquivo justifica: *"o token em si já é a autorização"* - o backend resolve o dono do token, não recebe nenhum id vindo do cliente (mesmo padrão de `confirmar_email_por_token` no banco, ver `DOCUMENTACAO_BD.md`, bloco `[03-O]`). Token ausente na URL já nasce em estado de erro (inicializador preguiçoso do `useState`, sem passar por uma renderização de "carregando" that não corresponde à realidade).
 
 ---
 
 ## 16. Minha Conta e moderação de conta
 
-### `views/3-auth/minha-conta-page.jsx` - rota `/admin/minha-conta/:aba`
+### `views/3-auth/minha-conta-page.tsx` - rota `/admin/minha-conta/:aba`
 
 📌 **O layout foi redesenhado duas vezes antes de chegar no formato atual.** O comentário do arquivo documenta as duas versões anteriores: a primeira (09-08-2026) era um formulário único com as seções empilhadas; a segunda (10-08-2026) virou 2 colunas com um `CartaoPerfil` pequeno na lateral tentando ancorar a tela visualmente. A versão atual (11-08-2026, pedido do Lucas: *"portfólio profissional"*, referência ORCID/ResearchGate/Google Acadêmico) substituiu as duas por uma **`FaixaIdentidade`** larga no topo (avatar grande, nome, e-mail, badge de e-mail verificado, badges de papel, "membro desde") seguida de abas de verdade - rota (`/admin/minha-conta/perfil`, `/seguranca`, `/papeis`, `/academico`, `/privacidade`), não `useState`, mesma decisão já tomada quando as abas do painel admin em si viraram rota (seção 4). O `CartaoPerfil` lateral foi eliminado por ficar redundante com a faixa.
 
@@ -646,7 +648,7 @@ Três rotas de `ROTAS` (seção 4, sem menu lateral) cobrem o ciclo de entrada d
 
 ⚠️ **Não existe mais seção "Preferências" (tema/fonte por conta).** Existiu por um dia (09→10-08-2026) e foi revertida por decisão do Lucas com a Alexia - ver a nota sobre `ControleTema`/`ControleFonte` na seção 9. Tema e tamanho de fonte continuam ajustáveis, só que sempre por dispositivo (`localStorage`, botões do cabeçalho), nunca amarrados à conta logada.
 
-### `views/1-usuario/secao-moderacao.jsx` - suspender/revogar conta
+### `views/1-usuario/secao-moderacao.tsx` - suspender/revogar conta
 
 Seção dentro de **Alterar Usuário** (não uma tela própria - é ação sobre a mesma conta que a tela já edita), que bloqueia o login de uma conta por um prazo escolhido, com motivo obrigatório.
 
@@ -661,32 +663,32 @@ Seção dentro de **Alterar Usuário** (não uma tela própria - é ação sobre
 
 ## 17. Painel Admin: Dashboard e suas 4 abas
 
-**Achado numa revisão de sistema completa (05-09-2026): esta tela (`views/admin/dashboard.jsx`, rota `/admin/dashboard`) nunca tinha ganhado seção própria neste documento**, apesar de ser a tela inicial do painel admin desde 08-08-2026. `Tooltip` (`components/layout/tooltip.jsx`) também só aparecia citado de passagem (seção 9) - as variantes novas (`baixo`/`aoClicar`/`badge`) nunca tinham sido documentadas.
+**Achado numa revisão de sistema completa (05-09-2026): esta tela (`views/admin/dashboard.tsx`, rota `/admin/dashboard`) nunca tinha ganhado seção própria neste documento**, apesar de ser a tela inicial do painel admin desde 08-08-2026. `Tooltip` (`components/layout/tooltip.tsx`) também só aparecia citado de passagem (seção 9) - as variantes novas (`baixo`/`aoClicar`/`badge`) nunca tinham sido documentadas.
 
-### As 4 abas (`ABAS`, dentro do próprio `dashboard.jsx`)
+### As 4 abas (`ABAS`, dentro do próprio `dashboard.tsx`)
 
 | Aba | Componente | O que mostra |
 |---|---|---|
-| Visão Geral | (inline, no próprio `dashboard.jsx`) | Faixa de saúde (banco conectado/sessões ativas/notificações pendentes) + 6 cards de métrica (`GET /dashboard/resumo`) + prévia de notificações |
-| Regras do Negócio | `dashboard-regras-negocio.jsx` | As 38 chaves de `configuracoes`, agrupadas por assunto |
-| Identidade Visual | `dashboard-identidade-visual.jsx` | Placeholder - gerenciar logo/favicon ainda não foi construído |
-| Saúde | `dashboard-saude.jsx` | Mesmo estado da faixa de saúde da Visão Geral, sem refazer requisição, mais contagens agregadas |
+| Visão Geral | (inline, no próprio `dashboard.tsx`) | Faixa de saúde (banco conectado/sessões ativas/notificações pendentes) + 6 cards de métrica (`GET /dashboard/resumo`) + prévia de notificações |
+| Regras do Negócio | `dashboard-regras-negocio.tsx` | As 38 chaves de `configuracoes`, agrupadas por assunto |
+| Identidade Visual | `dashboard-identidade-visual.tsx` | Placeholder - gerenciar logo/favicon ainda não foi construído |
+| Saúde | `dashboard-saude.tsx` | Mesmo estado da faixa de saúde da Visão Geral, sem refazer requisição, mais contagens agregadas |
 
 📌 **Faixa de saúde e cards de métrica vêm de DUAS requisições independentes, de propósito** - não um `Promise.all` combinado. Achado do Lucas testando: se `GET /dashboard/resumo` falhasse (ex.: banco fora do ar), a tela inteira ficava em branco, bem no momento em que mais precisava mostrar "banco sem conexão". Cada uma tem seu próprio estado de carregando/erro agora.
 
-⚠️ **Comentário desatualizado, achado nesta revisão:** `dashboard-saude.jsx` diz que a tabela `schema_migrations` "NÃO EXISTE neste projeto" e por isso a aba não mostra "última migration aplicada"/divergência de hash. Isso deixou de ser verdade em 04/05-09-2026 - `aplicar-migrations.script.ts` (`DOCUMENTACAO_BACKEND.md`, seção 12) criou exatamente essa tabela, e ela já tem linhas de verdade no banco (Lucas rodou `npm run db:migrate:adotar`). O placeholder em si continua correto (ninguém implementou de fato mostrar isso na tela), só a justificativa ("a tabela não existe") ficou errada - mesma classe de achado já registrada nesta seção pro `dashboard-identidade-visual.jsx` (seção 14).
+⚠️ **Comentário desatualizado, achado nesta revisão:** `dashboard-saude.tsx` diz que a tabela `schema_migrations` "NÃO EXISTE neste projeto" e por isso a aba não mostra "última migration aplicada"/divergência de hash. Isso deixou de ser verdade em 04/05-09-2026 - `aplicar-migrations.script.ts` (`DOCUMENTACAO_BACKEND.md`, seção 12) criou exatamente essa tabela, e ela já tem linhas de verdade no banco (Lucas rodou `npm run db:migrate:adotar`). O placeholder em si continua correto (ninguém implementou de fato mostrar isso na tela), só a justificativa ("a tabela não existe") ficou errada - mesma classe de achado já registrada nesta seção pro `dashboard-identidade-visual.tsx` (seção 14).
 
-### `dashboard-regras-negocio.jsx` - configuração agrupada por assunto
+### `dashboard-regras-negocio.tsx` - configuração agrupada por assunto
 
 Segunda forma de olhar pro mesmo dado da aba "Configurações" (CRUD cru, `11-configuracoes`) - aqui as chaves de `configuracoes` aparecem **agrupadas por tema** (Segurança, Financeiro, Campanha, Score / Reputação, Arquivo, Geral, Outras), cada grupo num cartão com título + lista de `chave: valor` + botão "Alterar" indo pra mesma tela de edição de sempre. Não duplica formulário nenhum, só organiza a leitura.
 
-- **`services/11-configuracoes/constants/configuracao-grupos.js`** - `GRUPO_CONFIGURACAO` é um dicionário `chave → nome do grupo`, mantido à mão (mesmo espírito de `permissao-nomes-amigaveis.js`). Uma chave nova em `configuracoes` que não ganhar entrada aqui cai automaticamente no grupo "Outras" - nunca quebra a tela, só fica sem organização até alguém lembrar de classificar. `agruparConfiguracoes()` devolve os grupos já na ordem certa de exibição (`ORDEM_GRUPOS`) - "Outras" sempre por último, mesmo tendo o maior número de linhas.
+- **`services/11-configuracoes/constants/configuracao-grupos.ts`** - `GRUPO_CONFIGURACAO` é um dicionário `chave → nome do grupo`, mantido à mão (mesmo espírito de `permissao-nomes-amigaveis.ts`). Uma chave nova em `configuracoes` que não ganhar entrada aqui cai automaticamente no grupo "Outras" - nunca quebra a tela, só fica sem organização até alguém lembrar de classificar. `agruparConfiguracoes()` devolve os grupos já na ordem certa de exibição (`ORDEM_GRUPOS`) - "Outras" sempre por último, mesmo tendo o maior número de linhas.
 - **Grupo "Arquivo" tem um ícone ⓘ ao lado do título, que abre um modal** (`ModalDetalhe`, mesmo componente da seção 9) com a explicação completa dos 7 limites de upload configuráveis e por que o teto do Supabase Storage (50MB/arquivo, 1GB total) importa. Nasceu de um pedido do Lucas: a explicação era grande demais pra caber num tooltip comum, então o ícone virou clicável (`aoClicar`) em vez de só mostrar texto no hover.
 
-### `Tooltip` (`components/layout/tooltip.jsx`) - variantes
+### `Tooltip` (`components/layout/tooltip.tsx`) - variantes
 
 CSS puro (`:hover`/`:focus`), sem estado de React. Três props opcionais, todas podem combinar:
 
-- **`baixo`** - abre a dica pra BAIXO em vez de pra cima (padrão). Usar quando o ícone fica perto do topo de um cartão com `overflow-hidden` (ex.: cabeçalho de grupo em `dashboard-regras-negocio.jsx`) - a dica padrão nascia cortada pela borda arredondada do cartão.
+- **`baixo`** - abre a dica pra BAIXO em vez de pra cima (padrão). Usar quando o ícone fica perto do topo de um cartão com `overflow-hidden` (ex.: cabeçalho de grupo em `dashboard-regras-negocio.tsx`) - a dica padrão nascia cortada pela borda arredondada do cartão.
 - **`aoClicar`** - o ícone vira um `<button>` clicável (cursor de ponteiro em vez de "?"); o hover continua mostrando só `texto` (curto, tipo "Saiba mais"), e o clique dispara a função passada - normalmente pra abrir um `ModalDetalhe` com a explicação completa em seções/parágrafos, em vez de um bloco de texto só dentro do balão do tooltip.
-- **`badge`** - selo circular escuro sobreposto (não um ícone solto flutuando do lado), mesmo padrão visual de "editar foto" do Instagram/LinkedIn - usado em `consultar-usuario.jsx` (módulo 1, seção 16) no canto inferior direito do avatar, abrindo a foto de perfil em outra guia.
+- **`badge`** - selo circular escuro sobreposto (não um ícone solto flutuando do lado), mesmo padrão visual de "editar foto" do Instagram/LinkedIn - usado em `consultar-usuario.tsx` (módulo 1, seção 16) no canto inferior direito do avatar, abrindo a foto de perfil em outra guia.

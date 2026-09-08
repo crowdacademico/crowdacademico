@@ -182,6 +182,12 @@ INSERT INTO permissao (nome) VALUES
 -- próprio CPF (contrariando o RF-017, correção só via suporte) - esta é a
 -- permissão que decide quem pode chamar a função de correção.
 ('perfil_pesquisador_corrigir_cpf'),
+-- ADICIONADA (07-09-2026) - gate de criar_perfil_pesquisador_para_outro()
+-- (03, [03-R]). O self-service (POST /perfil-pesquisador) sempre cria em
+-- nome de quem está logado - esta é a permissão que decide quem pode criar
+-- perfil de pesquisador em nome de OUTRA pessoa (achado testando a Bancada
+-- do Pesquisador, Campo de Testes).
+('perfil_pesquisador_criar_para_outro'),
 ('termos_uso_gerenciar'),
 -- NOTA: estas 3 são propositalmente sem policy de RLS - verificacao_email,
 -- recuperacao_senha e sessao já têm policy FOR ALL USING(true) de propósito (o
@@ -279,6 +285,7 @@ WHERE (p.nome, perm.nome) IN (
     ('admin', 'usuario_visualizar_sensivel'),
     ('admin', 'perfil_pesquisador_visualizar_sensivel'),
     ('admin', 'perfil_pesquisador_corrigir_cpf'),
+    ('admin', 'perfil_pesquisador_criar_para_outro'),
     ('admin', 'termos_uso_gerenciar'),
     ('admin', 'sessao_revogar'),
     ('admin', 'recuperacao_senha_revogar'),

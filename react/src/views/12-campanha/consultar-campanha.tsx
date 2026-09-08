@@ -9,15 +9,12 @@ import {
 } from '../../services/12-campanha/constants/status-campanha.constants';
 import { areaConhecimentoApi } from '../../services/8-area-conhecimento/api/area-conhecimento.api';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
+import { formatarDataHora } from '../../services/constant/utils/formatacao.util';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { CampanhaResponse } from '../../services/12-campanha/type/campanha.type';
 
 function formatarReais(valor: number | null): string {
   return Number(valor ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-}
-
-function formatarData(iso: string | null): string {
-  return iso ? new Date(iso).toLocaleString('pt-BR') : 'Não definida';
 }
 
 export function ConsultarCampanha({ auth }: PropsPagina) {
@@ -83,11 +80,11 @@ export function ConsultarCampanha({ auth }: PropsPagina) {
           </SecaoFicha>
 
           <SecaoFicha titulo="Datas">
-            <CampoFicha rotulo="Início" valor={formatarData(campanha.dataInicio)} />
-            <CampoFicha rotulo="Fim (previsto)" valor={formatarData(campanha.dataFim)} />
-            <CampoFicha rotulo="Criada em" valor={formatarData(campanha.criadoEm)} />
-            <CampoFicha rotulo="Aprovada em" valor={formatarData(campanha.aprovadoEm)} />
-            <CampoFicha rotulo="Encerrada em" valor={formatarData(campanha.encerradoEm)} />
+            <CampoFicha rotulo="Início" valor={formatarDataHora(campanha.dataInicio)} />
+            <CampoFicha rotulo="Fim (previsto)" valor={formatarDataHora(campanha.dataFim)} />
+            <CampoFicha rotulo="Criada em" valor={formatarDataHora(campanha.criadoEm)} />
+            <CampoFicha rotulo="Aprovada em" valor={formatarDataHora(campanha.aprovadoEm)} />
+            <CampoFicha rotulo="Encerrada em" valor={formatarDataHora(campanha.encerradoEm)} />
           </SecaoFicha>
         </div>
 

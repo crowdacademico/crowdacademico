@@ -2,19 +2,20 @@ import { Link, matchPath, useLocation } from 'react-router';
 import { ROTAS, ROTAS_ADMIN } from '../../services/router/rotas.constants';
 import type { Rota } from '../../services/router/rotas.constants';
 
-// Rótulos vêm de services/router/rotas.constants.js (ROTAS + ROTAS_ADMIN)
-// - mesma fonte que App.jsx usa pras rotas e admin-menu.constants.js usa
+// Rótulos vêm de services/router/rotas.constants.ts (ROTAS + ROTAS_ADMIN)
+// - mesma fonte que App.tsx usa pras rotas e admin-menu.constants.ts usa
 // pro menu lateral, nunca uma lista própria separada.
 const TODAS_AS_ROTAS: Rota[] = [...ROTAS, ...ROTAS_ADMIN];
 
 // Aparece embaixo do cabeçalho em toda página cujo rotuloBreadcrumb não
 // seja null - só um jeito rápido de voltar. A aba padrão do admin
-// (/admin/usuarios) tem rotuloBreadcrumb: null de propósito: mostrar
-// "Início > Usuários" ali seria redundante com o próprio link "Início".
+// (/admin/dashboard, desde 08-08-2026) tem rotuloBreadcrumb: null de
+// propósito: mostrar "Início > Dashboard" ali seria redundante com o
+// próprio link "Início".
 //
 // Cadeia de ancestrais (10-08-2026, achado do Lucas: "Início > Alterar
 // Usuário" devia ser "Início > Usuários > Alterar Usuário") - cada rota
-// de detalhe (Alterar/Consultar/Excluir/Criar, ver rotas.constants.js)
+// de detalhe (Alterar/Consultar/Excluir/Criar, ver rotas.constants.ts)
 // aponta pro `caminho` absoluto da própria listagem via `paiCaminho`; sobe
 // essa cadeia até não ter mais pai (a maioria das rotas, sem aninhamento,
 // já para na 1ª volta - nenhuma mudança de comportamento pra elas).
@@ -22,7 +23,7 @@ export function Breadcrumb() {
   const location = useLocation();
 
   // matchPath (não comparação exata de string) porque agora existem rotas
-  // com parâmetro (ex.: /admin/usuarios/:id/alterar) - .criar-usuario.jsx
+  // com parâmetro (ex.: /admin/usuarios/:id/alterar) - criar-usuario.tsx
   // etc. seriam a única entrada nunca encontrada se comparássemos o
   // pathname literal contra ":id" ao invés do número de verdade da URL.
   const rota = TODAS_AS_ROTAS.find((r) => matchPath(r.caminho, location.pathname));

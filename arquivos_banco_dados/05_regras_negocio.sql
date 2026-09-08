@@ -2151,6 +2151,45 @@ END;
 $$;
 
 -- ----------------------------------------------------------------------------
+-- Função:     reativar_pesquisadores_vencidos
+-- Assinatura: () -> INT
+-- Regra:      ADICIONADA (07-09-2026) - mesmo espírito e mesmo formato de
+--             encerrar_campanhas_vencidas(), acima: suspender_pesquisador()
+--             (03_funcoes_seguranca.sql, [03-P]) grava `suspenso_ate`, mas
+--             nada reverte sozinho quando o prazo passa - sem isso, a
+--             suspensão do PODER de pesquisador nunca expiraria de verdade,
+--             mesmo com o prazo escolhido pelo Admin já vencido. Chamada
+--             por agendamento (@Cron no NestJS, mesmo padrão de
+--             CampanhaServiceEncerrarVencidas) - não expira ao vivo em cada
+--             policy que lê status_pesquisador (evita reabrir as 3 policies
+--             de 04 que já checam status_pesquisador = 'ativo'; ver
+--             ACHADOS_PARA_DISCUTIR.md).
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.reativar_pesquisadores_vencidos()
+RETURNS INT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_reativados INT;
+BEGIN
+    UPDATE perfil_pesquisador
+    SET status_pesquisador = 'ativo',
+        suspenso_ate = NULL,
+        motivo_suspensao = NULL,
+        suspenso_por = NULL
+    WHERE status_pesquisador = 'suspenso'
+      AND suspenso_ate IS NOT NULL
+      AND suspenso_ate <= NOW();
+
+    GET DIAGNOSTICS v_reativados = ROW_COUNT;
+
+    RETURN v_reativados;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
 -- Função:     fn_carimba_taxa_plataforma_aprovacao
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-2]

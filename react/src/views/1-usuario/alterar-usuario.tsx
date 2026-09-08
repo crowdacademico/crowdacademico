@@ -8,7 +8,7 @@ import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { SeletorFotoPerfil } from '../../components/input/seletor-foto-perfil';
 import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
-import { formatarCpf } from '../../services/constant/utils/formatacao.util';
+import { formatarCpf, formatarData } from '../../services/constant/utils/formatacao.util';
 import { arquivoApi } from '../../services/25-arquivo/api/arquivo.api';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { papelApi, usuarioPapelApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
@@ -202,7 +202,7 @@ export function AlterarUsuario({ auth }: PropsPagina) {
       setPapelSuspendendoId(null);
       mostrar(
         'Papel suspenso com sucesso.',
-        `"${papel.nomePapel}" suspenso até ${new Date(ate).toLocaleDateString('pt-BR')}`,
+        `"${papel.nomePapel}" suspenso até ${formatarData(ate)}`,
       );
     } catch (erroRequisicao) {
       reportarErro(erroRequisicao);
@@ -410,8 +410,11 @@ export function AlterarUsuario({ auth }: PropsPagina) {
                   06-09-2026: esta tela ainda tinha a versão DEMONSTRATIVA de
                   10-08-2026, escrita antes do módulo existir - consertado
                   só aqui em Alterar, já tinha sido corrigido em Consultar.
-                  Só leitura, mesmo padrão de lá - não existe endpoint do
-                  Admin editar perfil de pesquisador de outra pessoa. */}
+                  Só leitura por ora (07-09-2026: o Admin já TEM endpoint pra
+                  editar vínculo/título/CPF de outra pessoa - ver módulo
+                  6-perfil-pesquisador e o protótipo em modal do Campo de
+                  Testes, T1 - só ainda não foi replicado aqui de propósito,
+                  decisão do Lucas de validar o padrão de modal primeiro). */}
               {perfilPesquisador && (
                 <SecaoFicha titulo="Perfil de Pesquisador">
                   <CampoFicha
@@ -459,7 +462,7 @@ export function AlterarUsuario({ auth }: PropsPagina) {
                 />
                 <CampoSomenteLeitura
                   rotulo="Criado em"
-                  valor={usuario.criadoEm && new Date(usuario.criadoEm).toLocaleDateString('pt-BR')}
+                  valor={usuario.criadoEm && formatarData(usuario.criadoEm)}
                 />
               </SecaoFicha>
 

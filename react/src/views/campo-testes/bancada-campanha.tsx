@@ -1,6 +1,8 @@
 // ============================================================================
-// ESTE ARQUIVO EXISTE SOLENEMENTE PARA O CAMPO DE TESTES.
-// NÃO ESTÁ NOS REQUISITOS FUNCIONAIS E NEM ESTARÁ.
+// Campo de Testes deixou de ser só ferramenta de teste descartável
+// (07-09-2026, decisão do Lucas): virou parte permanente do painel
+// administrativo, com o mesmo padrão de dados/comportamento do resto do
+// sistema (nunca uma versão simplificada à parte).
 // ============================================================================
 
 import { Fragment, useEffect, useRef, useState } from 'react';

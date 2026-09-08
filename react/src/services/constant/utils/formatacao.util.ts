@@ -19,6 +19,28 @@ export function formatarPercentual(valor: string | number): string {
   return `${numero}%`;
 }
 
+// Data (07-09-2026, achado numa auditoria: mesma lógica de formatação
+// duplicada em consultar-campanha.tsx/consultar-pesquisador.tsx, mais 3
+// variações inline em alterar-usuario.tsx/minha-conta-page.tsx). Só a
+// MECÂNICA de formatar mora aqui - sempre 'pt-BR', sempre a mesma chamada
+// de `Intl`. Qual das três granularidades usar em qual tela continua
+// decisão de cada view (varia de propósito: auditoria quer hora exata,
+// "membro desde" quer só mês/ano) - não é regra pra centralizar aqui
+// também, cada call site escolhe a função certa pro próprio contexto.
+export function formatarDataHora(iso: string | null | undefined): string {
+  return iso ? new Date(iso).toLocaleString('pt-BR') : 'Não definida';
+}
+
+export function formatarData(iso: string | null | undefined): string {
+  return iso ? new Date(iso).toLocaleDateString('pt-BR') : 'Não definida';
+}
+
+export function formatarMesAno(iso: string | null | undefined): string {
+  return iso
+    ? new Date(iso).toLocaleDateString('pt-BR', { month: '2-digit', year: 'numeric' })
+    : 'Não definida';
+}
+
 // CPF (10-08-2026, rodada de IA "embelezar o painel", item 2: seção
 // Perfil de Pesquisador demonstrativa em Alterar Usuário) - util aqui, não
 // inline no componente, porque vai aparecer em mais de uma tela quando o
@@ -46,6 +68,19 @@ export function formatarCpf(valor: string | null | undefined): string {
     resultado += '-' + digitosVerificadores;
   }
   return resultado;
+}
+
+// `formatarCpfExibicao` (07-09-2026) - pra EXIBIR um CPF que já chegou
+// COMPLETO da API (Consultar/Bancada), nunca pra digitar. Proposital não
+// reaproveitar `formatarCpf` (acima) aqui: aquela existe pra tratar entrada
+// PARCIAL enquanto a pessoa digita - são responsabilidades diferentes, com
+// motivo de mudar no futuro diferente (mexer na máscara de digitação não
+// devia arriscar mudar uma tela de exibição, e vice-versa), mesmo o
+// resultado batendo hoje pra um CPF completo. Quem chama decide o que
+// mostrar se `cpf` vier vazio (mensagem, string vazia etc.) - não é
+// responsabilidade desta função.
+export function formatarCpfExibicao(cpf: string): string {
+  return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
 }
 
 // `mascararCpf` - pra EXIBIR (Consultar), não pra digitar: esconde o meio,

@@ -5,14 +5,26 @@ import { AvatarUsuario } from '../../components/layout/avatar-usuario';
 import { SeletorFotoPerfil } from '../../components/input/seletor-foto-perfil';
 import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
-import { SecaoFicha } from '../../components/crud/ficha-consulta';
+import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { sessaoApi } from '../../services/3-auth/api/sessao.api';
 import { usuarioPapelApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
+import { perfilPesquisadorApi } from '../../services/6-perfil-pesquisador/api/perfil-pesquisador.api';
+import {
+  ROTULO_STATUS_PESQUISADOR,
+  ROTULO_TIPO_VINCULO,
+  ROTULO_TITULO_ACADEMICO,
+  classeBadgeStatusPesquisador,
+} from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
+import { formatarCpfExibicao, formatarDataHora, formatarMesAno } from '../../services/constant/utils/formatacao.util';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { SessaoResponse } from '../../services/3-auth/type/auth.type';
 import type { UsuarioPapelResponse } from '../../services/2-papel-permissao/type/papel-permissao.type';
+import type {
+  PerfilPesquisadorResponse,
+  PerfilPesquisadorResponseSuspend,
+} from '../../services/6-perfil-pesquisador/type/perfil-pesquisador.type';
 
 // Minha Conta (09-08-2026, Bloco E do prompt de uma IA) - não é um
 // formulário só, é uma área com seções independentes, cada uma salva por
@@ -89,7 +101,7 @@ export function MinhaConta({ auth }: PropsPagina) {
         {aba === 'perfil' && <AbaPerfil auth={auth} />}
         {aba === 'seguranca' && <AbaSeguranca auth={auth} />}
         {aba === 'papeis' && <AbaPapeis auth={auth} />}
-        {aba === 'academico' && <AbaAcademico />}
+        {aba === 'academico' && <AbaAcademico auth={auth} />}
         {aba === 'privacidade' && <AbaPrivacidade auth={auth} />}
       </div>
     </div>
@@ -120,9 +132,7 @@ function FaixaIdentidade({ auth }: FaixaIdentidadeProps) {
       .catch(() => setPapeis([]));
   }, [auth.authFetch, usuario]);
 
-  const membroDesde = usuario?.criadoEm
-    ? new Date(usuario.criadoEm).toLocaleDateString('pt-BR', { month: '2-digit', year: 'numeric' })
-    : null;
+  const membroDesde = usuario?.criadoEm ? formatarMesAno(usuario.criadoEm) : null;
 
   return (
     <div className="relative overflow-hidden rounded-t-2xl border-b borda-padrao fundo-sutil px-6 sm:px-8 py-8">
@@ -571,7 +581,7 @@ function AbaSeguranca({ auth }: AbaSegurancaProps) {
                     </p>
                     <p className="text-xs texto-fraco">
                       {sessao.ip ?? 'IP desconhecido'} · desde{' '}
-                      {new Date(sessao.criadoEm).toLocaleString('pt-BR')}
+                      {formatarDataHora(sessao.criadoEm)}
                     </p>
                   </div>
                   {!sessao.atual && (
@@ -639,60 +649,92 @@ function AbaPapeis({ auth }: AbaPapeisProps) {
   );
 }
 
-// 4. ACADÊMICO - placeholder honesto (módulo 6-perfil-pesquisador ainda
-// não existe), mas já com o desenho dos blocos que virão - mesmos campos
-// demonstrativos de alterar-usuario.jsx (Perfil de Pesquisador), pra
-// quando o módulo chegar ser só trocar `disabled` por estado de verdade.
-function AbaAcademico() {
+// 4. ACADÊMICO - construída de verdade (07-09-2026, decisão do Lucas ao
+// mesmo tempo em que "suspender só o poder de pesquisador" ganhou motivo +
+// prazo): quem é suspenso PRECISA ver o motivo em algum lugar próprio, não
+// só descobrir tentando fazer algo e sendo barrado sem explicação (a
+// suspensão de pesquisador NUNCA bloqueia login - a pessoa continua tendo
+// acesso normal a Minha Conta). Antes disto, esta aba era só um
+// placeholder demonstrativo escrito antes do módulo 6-perfil-pesquisador
+// existir (10-08-2026) - nunca tinha sido atualizada depois. Não existe
+// (ainda) um formulário de "tornar-se pesquisador" em lugar nenhum do app
+// real (só o Campo de Testes, T1, faz esse POST) - fora do escopo deste
+// pedido, por isso quem não é pesquisador só vê um aviso honesto, sem
+// convite pra virar um.
+interface AbaAcademicoProps {
+  auth: Pick<UseAuthReturn, 'usuario' | 'authFetch'>;
+}
+
+function AbaAcademico({ auth }: AbaAcademicoProps) {
+  const [perfil, setPerfil] = useState<PerfilPesquisadorResponse | null>(null);
+  const [suspensao, setSuspensao] = useState<PerfilPesquisadorResponseSuspend | null>(null);
+  const [carregando, setCarregando] = useState(true);
+
+  useEffect(() => {
+    if (!auth.usuario) {
+      return;
+    }
+    const idUsuario = auth.usuario.idUsuario;
+    Promise.all([
+      // 404 = não é pesquisador (upgrade nunca feito) - mesma tolerância
+      // já usada em consultar-usuario.tsx/alterar-usuario.tsx.
+      perfilPesquisadorApi.buscar(auth.authFetch, idUsuario).catch(() => null),
+      perfilPesquisadorApi.buscarSuspensao(auth.authFetch, idUsuario).catch(() => null),
+    ])
+      .then(([dadosPerfil, dadosSuspensao]) => {
+        setPerfil(dadosPerfil);
+        setSuspensao(dadosSuspensao);
+      })
+      .finally(() => setCarregando(false));
+  }, [auth.authFetch, auth.usuario]);
+
+  const suspensoAte = suspensao?.suspensoAte ?? null;
+  const suspensoAgora = suspensoAte !== null && new Date(suspensoAte) > new Date();
+
+  if (carregando) {
+    return <p className="px-6 sm:px-8 py-8 text-sm texto-fraco">Carregando...</p>;
+  }
+
+  if (!perfil) {
+    return (
+      <div className="px-6 sm:px-8 py-8">
+        <div className="flex items-start gap-2 rounded-lg fundo-info texto-info p-3 text-xs">
+          <i className="fa-solid fa-circle-info mt-0.5 shrink-0"></i>
+          <p>Você ainda não é pesquisador nesta plataforma.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="px-6 sm:px-8 py-8 space-y-6">
-      <div className="flex items-start gap-2 rounded-lg fundo-info texto-info p-3 text-xs">
-        <i className="fa-solid fa-circle-info mt-0.5 shrink-0"></i>
-        <p>
-          Módulo de Perfil de Pesquisador ainda não foi implementado. Os campos abaixo são
-          demonstrativos, mostram como vai ficar quando existir - não salvam nada ainda.
-        </p>
-      </div>
+      {suspensoAgora && (
+        <div className="rounded-lg border borda-forte fundo-erro p-4">
+          <p className="text-sm font-bold texto-erro">
+            Seu poder de pesquisador está suspenso até {suspensoAte && new Date(suspensoAte).toLocaleString('pt-BR')}
+          </p>
+          <p className="text-xs texto-erro mt-1">Motivo: {suspensao?.motivoSuspensao}</p>
+          <p className="text-xs texto-erro mt-2">
+            Sua conta continua funcionando normalmente - só a autoridade de pesquisador (criar
+            campanha, endossar, etc.) fica suspensa até o prazo acima.
+          </p>
+        </div>
+      )}
 
-      <SecaoFicha titulo="Identificadores acadêmicos">
-        <div>
-          <label className="rotulo-campo">Tipo de link</label>
-          <select disabled className="input-padrao opacity-60 cursor-not-allowed">
-            <option>Lattes</option>
-          </select>
-        </div>
-        <div>
-          <label className="rotulo-campo">URL</label>
-          <input
-            type="text"
-            disabled
-            placeholder="https://lattes.cnpq.br/0000000000000000"
-            className="input-padrao opacity-60 cursor-not-allowed"
-          />
-        </div>
-        <div className="sm:col-span-2">
-          <button type="button" disabled className="btn btn-secondary opacity-60 cursor-not-allowed">
-            <i className="fa-solid fa-plus"></i> Adicionar link
-          </button>
-        </div>
-      </SecaoFicha>
-
-      <SecaoFicha titulo="Vínculo institucional">
-        <div>
-          <label className="rotulo-campo">Instituição</label>
-          <input
-            type="text"
-            disabled
-            placeholder="Ex.: IFSP - Câmpus Birigui"
-            className="input-padrao opacity-60 cursor-not-allowed"
-          />
-        </div>
-        <div>
-          <label className="rotulo-campo">Título acadêmico</label>
-          <select disabled className="input-padrao opacity-60 cursor-not-allowed">
-            <option>Não informado</option>
-          </select>
-        </div>
+      <SecaoFicha titulo="Perfil de Pesquisador">
+        <CampoFicha rotulo="CPF" valor={perfil.cpf ? formatarCpfExibicao(perfil.cpf) : null} />
+        <CampoFicha
+          rotulo="Status"
+          valor={
+            <span className={'badge ' + classeBadgeStatusPesquisador(perfil.statusPesquisador)}>
+              {ROTULO_STATUS_PESQUISADOR[perfil.statusPesquisador]}
+            </span>
+          }
+        />
+        <CampoFicha rotulo="Título acadêmico" valor={ROTULO_TITULO_ACADEMICO[perfil.tituloAcademico]} />
+        <CampoFicha rotulo="Tipo de vínculo" valor={ROTULO_TIPO_VINCULO[perfil.tipoVinculo]} />
+        <CampoFicha rotulo="Vínculo institucional" valor={perfil.vinculoInstitucional} />
+        <CampoFicha rotulo="Score atual" valor={perfil.scoreAtual} />
       </SecaoFicha>
     </div>
   );

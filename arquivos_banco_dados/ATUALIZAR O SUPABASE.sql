@@ -450,6 +450,193 @@ $$;
 
 
 -- ============================================================================
+-- 07-09-2026 - Admin ganhou como criar perfil de pesquisador EM NOME DE
+-- OUTRA pessoa (Bancada do Pesquisador, Campo de Testes). Achado: o
+-- self-service (POST /perfil-pesquisador) sempre cria pra quem está
+-- logado - tentar promover outro usuário, logado como Admin, sempre
+-- colidia com o PRÓPRIO perfil do Admin ("já existe um registro"), sem
+-- nunca criar nada pra ninguém, silenciosamente.
+--
+-- Seguro rodar de novo? Sim - permissão usa ON CONFLICT (nome) DO NOTHING,
+-- CREATE OR REPLACE FUNCTION substitui sem duplicar, REVOKE/GRANT são
+-- idempotentes. A concessão pro papel 'admin' não precisa de INSERT
+-- explícito aqui - trg_admin_recebe_toda_permissao já concede
+-- automaticamente qualquer permissão nova assim que a linha é inserida.
+-- ============================================================================
+
+INSERT INTO permissao (nome) VALUES
+('perfil_pesquisador_criar_para_outro')
+ON CONFLICT (nome) DO NOTHING;
+
+CREATE OR REPLACE FUNCTION public.criar_perfil_pesquisador_para_outro(
+    p_id_usuario INT,
+    p_cpf_criptografado TEXT,
+    p_cpf_hash TEXT,
+    p_tipo_vinculo tipo_vinculo,
+    p_vinculo_institucional TEXT,
+    p_titulo_academico titulo_academico
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    IF NOT public.tem_permissao('perfil_pesquisador_criar_para_outro') THEN
+        RAISE EXCEPTION 'Sem permissão para criar perfil de pesquisador em nome de outro usuário.';
+    END IF;
+
+    INSERT INTO perfil_pesquisador (
+        id_usuario, cpf_criptografado, cpf_hash,
+        tipo_vinculo, vinculo_institucional, titulo_academico
+    )
+    VALUES (
+        p_id_usuario, p_cpf_criptografado, p_cpf_hash,
+        p_tipo_vinculo, p_vinculo_institucional, p_titulo_academico
+    );
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.criar_perfil_pesquisador_para_outro(INT, TEXT, TEXT, tipo_vinculo, TEXT, titulo_academico) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.criar_perfil_pesquisador_para_outro(INT, TEXT, TEXT, tipo_vinculo, TEXT, titulo_academico) TO app_nestjs;
+
+
+-- ============================================================================
+-- 07-09-2026 - suspender só o PODER de pesquisador ganhou motivo obrigatório
+-- e prazo (mesmo padrão de suspender_usuario), e passou a reativar sozinho
+-- quando o prazo vence (cron, mesmo espírito de encerrar_campanhas_vencidas).
+-- Antes, suspender_pesquisador(p_id_usuario INT) só marcava
+-- status_pesquisador='suspenso', sem prazo nem motivo, e reativar era só
+-- manual.
+--
+-- ATENÇÃO - a assinatura de suspender_pesquisador MUDOU (ganhou 2
+-- parâmetros) - CREATE OR REPLACE FUNCTION não troca a assinatura antiga,
+-- cria uma segunda função sobrecarregada. Por isso o DROP FUNCTION abaixo é
+-- obrigatório antes do CREATE novo (mas é seguro rodar de novo - IF EXISTS).
+--
+-- Seguro rodar de novo? Sim - ADD COLUMN/CONSTRAINT usam IF NOT EXISTS ou
+-- DO $$ ... verificando pg_constraint primeiro; DROP FUNCTION usa IF EXISTS;
+-- CREATE OR REPLACE FUNCTION substitui sem duplicar; REVOKE/GRANT são
+-- idempotentes.
+-- ============================================================================
+
+ALTER TABLE perfil_pesquisador ADD COLUMN IF NOT EXISTS suspenso_ate TIMESTAMPTZ;
+ALTER TABLE perfil_pesquisador ADD COLUMN IF NOT EXISTS motivo_suspensao TEXT;
+ALTER TABLE perfil_pesquisador ADD COLUMN IF NOT EXISTS suspenso_por INT;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'FK_PERFIL_PESQUISADOR_SUSPENSO_POR'
+    ) THEN
+        ALTER TABLE perfil_pesquisador
+            ADD CONSTRAINT "FK_PERFIL_PESQUISADOR_SUSPENSO_POR"
+            FOREIGN KEY (suspenso_por) REFERENCES usuario(id_usuario);
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'CK_PERFIL_PESQUISADOR_SUSPENSAO'
+    ) THEN
+        ALTER TABLE perfil_pesquisador
+            ADD CONSTRAINT "CK_PERFIL_PESQUISADOR_SUSPENSAO"
+            CHECK ((suspenso_ate IS NULL AND motivo_suspensao IS NULL) OR (suspenso_ate IS NOT NULL AND motivo_suspensao IS NOT NULL));
+    END IF;
+END $$;
+
+DROP FUNCTION IF EXISTS public.suspender_pesquisador(INT);
+
+CREATE OR REPLACE FUNCTION public.suspender_pesquisador(
+    p_id_usuario INT,
+    p_ate TIMESTAMPTZ,
+    p_motivo TEXT
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_linhas INT;
+BEGIN
+    IF NOT public.tem_permissao('usuario_suspender') THEN
+        RAISE EXCEPTION 'Sem permissão para suspender pesquisador.';
+    END IF;
+    IF p_motivo IS NULL OR btrim(p_motivo) = '' THEN
+        RAISE EXCEPTION 'Motivo da suspensão é obrigatório.';
+    END IF;
+
+    UPDATE perfil_pesquisador
+    SET status_pesquisador = 'suspenso',
+        suspenso_ate = p_ate,
+        motivo_suspensao = p_motivo,
+        suspenso_por = public.id_usuario_atual()
+    WHERE id_usuario = p_id_usuario AND status_pesquisador <> 'suspenso';
+
+    GET DIAGNOSTICS v_linhas = ROW_COUNT;
+    RETURN v_linhas > 0;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.reativar_pesquisador(p_id_usuario INT)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_linhas INT;
+BEGIN
+    IF NOT public.tem_permissao('usuario_suspender') THEN
+        RAISE EXCEPTION 'Sem permissão para reativar pesquisador.';
+    END IF;
+
+    UPDATE perfil_pesquisador
+    SET status_pesquisador = 'ativo',
+        suspenso_ate = NULL,
+        motivo_suspensao = NULL,
+        suspenso_por = NULL
+    WHERE id_usuario = p_id_usuario AND status_pesquisador <> 'ativo';
+
+    GET DIAGNOSTICS v_linhas = ROW_COUNT;
+    RETURN v_linhas > 0;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.reativar_pesquisadores_vencidos()
+RETURNS INT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_reativados INT;
+BEGIN
+    UPDATE perfil_pesquisador
+    SET status_pesquisador = 'ativo',
+        suspenso_ate = NULL,
+        motivo_suspensao = NULL,
+        suspenso_por = NULL
+    WHERE status_pesquisador = 'suspenso'
+      AND suspenso_ate IS NOT NULL
+      AND suspenso_ate <= NOW();
+
+    GET DIAGNOSTICS v_reativados = ROW_COUNT;
+
+    RETURN v_reativados;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.suspender_pesquisador(INT, TIMESTAMPTZ, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.suspender_pesquisador(INT, TIMESTAMPTZ, TEXT) TO app_nestjs;
+
+REVOKE EXECUTE ON FUNCTION public.reativar_pesquisadores_vencidos() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.reativar_pesquisadores_vencidos() TO app_nestjs;
+
+
+-- ============================================================================
 -- NÃO ENTRA NESTE ARQUIVO (registrado aqui só pra não se perder)
 -- ============================================================================
 

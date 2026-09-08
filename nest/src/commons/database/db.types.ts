@@ -242,6 +242,13 @@ export interface PerfilPesquisadorTable {
   // só não fazem parte de nenhum `.values()` de escrita.
   score_atual: Generated<number>;
   score_atualizado_em: Date | null;
+  // Suspensão do PODER de pesquisador (07-09-2026) - nunca escritos por
+  // UPDATE direto (fora do GRANT, ver 06_grants.sql), só via
+  // suspender_pesquisador()/reativar_pesquisador() (03). Selecionados
+  // normalmente por PerfilPesquisadorServiceSuspender.buscarSuspensao.
+  suspenso_ate: Date | null;
+  motivo_suspensao: string | null;
+  suspenso_por: number | null;
 }
 
 // ADICIONADA (22-08-2026) - espelha 01_extensoes_enums_tabelas.sql (tabela
