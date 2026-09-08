@@ -731,19 +731,25 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
 
       {idUsuarioEditandoPerfil !== null && formEdicaoPerfil && (() => {
         const perfilEmEdicao = pesquisadores.find((perfil) => perfil.idUsuario === idUsuarioEditandoPerfil) ?? null;
+        // Sempre recarrega a lista ao fechar (X, backdrop ou Cancelar) - não
+        // só depois de "Salvar" (achado 08-09-2026, revisão pós-rodada):
+        // SecaoModeracaoPesquisador chama `perfilPesquisadorApi` direto, sem
+        // avisar este componente pai - suspender/reativar por lá deixava a
+        // tabela (e um Consultar aberto depois) com o status ANTIGO até
+        // alguma outra ação disparar carregarPesquisadores() por acaso.
+        const fecharModal = () => {
+          setIdUsuarioEditandoPerfil(null);
+          carregarPesquisadores();
+        };
         return (
           <ModalFicha
             titulo={perfilEmEdicao?.usuario?.nome ?? `#${idUsuarioEditandoPerfil}`}
             subtitulo={perfilEmEdicao?.usuario?.email}
             avatar={<AvatarUsuario nome={perfilEmEdicao?.usuario?.nome} tamanho="lg" />}
-            aoFechar={() => setIdUsuarioEditandoPerfil(null)}
+            aoFechar={fecharModal}
             rodape={
               <div className="flex gap-3 max-w-sm ml-auto">
-                <button
-                  type="button"
-                  onClick={() => setIdUsuarioEditandoPerfil(null)}
-                  className="btn btn-secondary flex-1"
-                >
+                <button type="button" onClick={fecharModal} className="btn btn-secondary flex-1">
                   Cancelar
                 </button>
                 <button type="button" onClick={salvarEdicaoPerfil} className="btn btn-primary flex-1">

@@ -151,10 +151,21 @@ GRANT SELECT (
 -- INSERT logo abaixo). Nunca é exposto na resposta HTTP (não é dado de
 -- exibição, é só chave de busca interna) - isso é regra de DTO/converter no
 -- Nest, o GRANT aqui só permite a leitura pelo backend.
+-- suspenso_ate/motivo_suspensao/suspenso_por (07-09-2026, [03-P]) - ADICIONADAS
+-- à tabela mas ESQUECIDAS aqui na 1ª rodada (achado 08-09-2026, testando ao
+-- vivo depois do Lucas colar o SQL: `buscarSuspensao()` batia em "permission
+-- denied for table perfil_pesquisador" porque o SELECT por coluna é
+-- restritivo - a suspensão em si funcionava, porque escreve via
+-- suspender_pesquisador()/reativar_pesquisador() SECURITY DEFINER, que
+-- ignora GRANT; só a LEITURA direta ficava cega). Mesmo raciocínio de
+-- usuario ([06-D-2] acima): leitura liberada pra Consultar/Alterar
+-- Pesquisador mostrarem o estado de suspensão, escrita continua só via as
+-- funções SECURITY DEFINER, nunca por este GRANT.
 GRANT SELECT (
     id_usuario, cpf_criptografado, cpf_hash, tipo_vinculo, vinculo_institucional,
     titulo_academico, status_pesquisador, ativado_em,
-    score_atual, score_atualizado_em
+    score_atual, score_atualizado_em,
+    suspenso_ate, motivo_suspensao, suspenso_por
 ) ON public.perfil_pesquisador TO app_nestjs;
 
 -- CORRIGIDO: usuario, perfil_pesquisador, termos_de_uso e usuario_termo tinham DELETE

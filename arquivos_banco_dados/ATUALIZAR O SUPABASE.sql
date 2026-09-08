@@ -637,6 +637,30 @@ GRANT EXECUTE ON FUNCTION public.reativar_pesquisadores_vencidos() TO app_nestjs
 
 
 -- ============================================================================
+-- 08-09-2026 - CORREÇÃO do bloco de 07-09-2026 acima: suspenso_ate/
+-- motivo_suspensao/suspenso_por foram adicionadas à tabela perfil_pesquisador,
+-- mas ESQUECIDAS no GRANT SELECT por coluna (06_grants.sql) - achado testando
+-- ao vivo depois de colar o bloco anterior: a suspensão em si funcionava
+-- (escreve via função SECURITY DEFINER, que ignora GRANT), mas
+-- GET /perfil-pesquisador/:id/suspensao sempre devolvia tudo null, mascarando
+-- um "permission denied for table perfil_pesquisador" (42501) engolido pelo
+-- SAVEPOINT de proteção. Sem este bloco, o card de Moderação (Pesquisador)
+-- nunca mostra o aviso vermelho de "suspenso até X, motivo Y", mesmo com a
+-- suspensão tendo funcionado de verdade no banco.
+--
+-- Seguro rodar de novo? Sim - GRANT SELECT substitui a lista de colunas
+-- inteira, não duplica nada.
+-- ============================================================================
+
+GRANT SELECT (
+    id_usuario, cpf_criptografado, cpf_hash, tipo_vinculo, vinculo_institucional,
+    titulo_academico, status_pesquisador, ativado_em,
+    score_atual, score_atualizado_em,
+    suspenso_ate, motivo_suspensao, suspenso_por
+) ON public.perfil_pesquisador TO app_nestjs;
+
+
+-- ============================================================================
 -- NÃO ENTRA NESTE ARQUIVO (registrado aqui só pra não se perder)
 -- ============================================================================
 

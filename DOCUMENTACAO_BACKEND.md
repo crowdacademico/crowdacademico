@@ -972,6 +972,9 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | **Perfil e links** | | |
 | pub | GET | `/perfil-pesquisador` · `/perfil-pesquisador/:id` · `/perfil-pesquisador/:id/score` |
 | AUTH | POST · PATCH | `/perfil-pesquisador` |
+| AUTH | POST | `/perfil-pesquisador/:id` *(ADICIONADA 07-09-2026 - criar em nome de outro, distinta do `POST /perfil-pesquisador` self-service acima)* |
+| AUTH | PATCH | `/perfil-pesquisador/:id/cpf` *(ADICIONADA 07-09-2026, RF-017 - correção de CPF, ação de suporte/admin)* |
+| AUTH | GET · POST | `/perfil-pesquisador/:id/suspensao` · `/perfil-pesquisador/:id/suspender` · `/perfil-pesquisador/:id/reativar` *(ADICIONADAS 07-09-2026 - suspende só o PODER de pesquisador, não bloqueia login; `suspender` exige corpo `{ate, motivo}`)* |
 | pub | GET | `/link-academico` |
 | AUTH | POST | `/link-academico` |
 | AUTH | PATCH · DELETE | `/link-academico/:id` |
