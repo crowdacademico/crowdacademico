@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useErroToast } from '../layout/use-erro-toast';
+import { textoSeguro } from '../../services/constant/utils/formatacao.util';
 import type { ResultadoPaginado } from '../../services/constant/type/paginacao.type';
 import type { LogAuditoriaResponse, OperacaoLogAuditoria } from '../../services/27-log-auditoria/type/log-auditoria.type';
 
@@ -16,8 +17,8 @@ const ROTULO_OPERACAO: Partial<Record<OperacaoLogAuditoria, string>> = {
 // `dadosAnteriores`/`dadosNovos` guardam snapshot genérico da linha
 // (Record<string, unknown>) - não dá pra jogar `unknown` direto num filho
 // JSX. Na prática `campoRenomeio` é sempre um campo textual (ex.: "nome"),
-// então isto só cai no `String(valor)` num caso que nunca acontece de
-// verdade - mesmo padrão de `celulaValor` em generic-table.tsx.
+// então isto só cai no `textoSeguro(valor)` num caso que nunca acontece de
+// verdade - mesmo util compartilhado de `celulaValor` em generic-table.tsx.
 function valorRenomeio(valor: unknown): ReactNode {
   if (valor === null || valor === undefined) {
     return '-';
@@ -25,7 +26,7 @@ function valorRenomeio(valor: unknown): ReactNode {
   if (typeof valor === 'string' || typeof valor === 'number' || typeof valor === 'boolean') {
     return valor;
   }
-  return String(valor);
+  return textoSeguro(valor);
 }
 
 interface LogAuditoriaPainelProps {

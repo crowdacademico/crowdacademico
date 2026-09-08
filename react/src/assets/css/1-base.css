@@ -394,6 +394,23 @@
     margin-bottom: 0.5rem;
   }
 
+  /* `.rotulo-leitura` (08-09-2026, achado do Lucas: "ve se não ficou mais
+     nada flutuante perdido") - mesma ideia de `.rotulo-campo` (rótulo
+     pequeno/maiúsculo), mas mais leve (font-bold, não font-black) e sem
+     margem embutida - usado quando o rótulo acompanha um VALOR sendo
+     EXIBIDO (CampoFicha, card de métrica do Dashboard, cabeçalho de
+     categoria da Busca Global), nunca um campo de formulário editável
+     (isso continua sendo `.rotulo-campo`). "text-[11px] font-bold
+     texto-fraco uppercase tracking-widest" estava repetido cru nos 3
+     lugares acima, sem ninguém ter percebido que já era um padrão. */
+  .rotulo-leitura {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--cor-texto-fraco);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
   /* Escala tipográfica única do painel (23-08-2026, auditoria completa:
      8 padrões concorrentes fazendo o mesmo papel de título em tamanhos/
      pesos/fontes diferentes). Mesma lógica do protótipo de interface
@@ -405,7 +422,28 @@
      um wrapper ancestral pra "ganhar" da regra global
      h1,h2,h3{font-family:serif} (aquilo é o que causava o bug de título
      saindo em serif sem querer, corrigido primeiro no Campo de Testes e
-     agora nesta rodada). */
+     agora nesta rodada).
+
+     `.titulo-bloco` (08-09-2026, achado do Lucas: "não podemos ter algo
+     perdido flutuando por aí") - o 3º título que o comentário acima já
+     citava de propósito (protótipo), mas nunca tinha virado classe de
+     verdade aqui: o rótulo pequeno/maiúsculo que `SecaoFicha`
+     (ficha-consulta.tsx) sempre usou solto, copiado à mão em pelo menos
+     mais 2 lugares (Minha Conta, Campo de Testes) sem ninguém perceber
+     que já era um padrão repetido. Só a parte tipográfica mora aqui
+     (mesma regra dos outros 5 tokens desta escala) - espaçamento/borda
+     (`mb-3 pb-2 border-b borda-padrao`) continuam como utilitário solto
+     em cada lugar que usa, porque isso é decisão de LAYOUT de quem
+     chama, não de tipografia. */
+  .titulo-bloco {
+    font-family: var(--font-sans);
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--cor-texto-fraco);
+  }
+
   .titulo-pagina {
     font-family: var(--font-serif);
     font-size: var(--font-size-3xl);

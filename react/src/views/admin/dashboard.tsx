@@ -47,7 +47,7 @@ interface CardMetricaProps {
 function CardMetrica({ rotulo, valor }: CardMetricaProps) {
   return (
     <div className="fundo-cartao border borda-forte rounded-xl shadow-sm p-5">
-      <div className="text-[11px] font-bold texto-fraco uppercase tracking-widest mb-1">
+      <div className="rotulo-leitura mb-1">
         {rotulo}
       </div>
       <div

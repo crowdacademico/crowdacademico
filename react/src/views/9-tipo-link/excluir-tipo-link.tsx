@@ -37,7 +37,7 @@ export function ExcluirTipoLink({ auth }: PropsPagina) {
     try {
       await tipoLinkApi.remover(auth.authFetch, id);
       mostrar('Tipo de link excluído com sucesso.', `ID: ${id} foi excluído`);
-      navigate(-1);
+      void navigate(-1);
     } catch (erroRequisicao) {
       reportarErro(erroRequisicao);
       setExcluindo(false);

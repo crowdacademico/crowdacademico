@@ -32,7 +32,7 @@ export function ExcluirConfiguracao({ auth }: PropsPagina) {
     try {
       await configuracaoApi.remover(auth.authFetch, id);
       mostrar('Parâmetro excluído com sucesso.', `ID: ${id} foi excluído`);
-      navigate(-1);
+      void navigate(-1);
     } catch (erroRequisicao) {
       reportarErro(erroRequisicao);
       setExcluindo(false);

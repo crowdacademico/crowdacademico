@@ -96,7 +96,7 @@ export function CadastroPage({ auth }: PropsPagina) {
             `${window.location.origin}/verificar-email?token=${resultado.tokenVerificacaoEmailDev}`,
         );
       }
-      navigate('/');
+      void navigate('/');
     } catch (erroRequisicao) {
       if (erroRequisicao instanceof ErroHttp && erroRequisicao.status === 409) {
         setErroEmailDuplicado(true);

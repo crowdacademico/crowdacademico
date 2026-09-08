@@ -102,7 +102,7 @@ export function ModalDetalhe({
         <div className="px-6 py-4 overflow-y-auto space-y-4">
           {secoes.map((secao) => (
             <div key={secao.titulo}>
-              <h4 className="text-xs font-bold uppercase tracking-widest texto-fraco mb-1.5">
+              <h4 className="titulo-bloco mb-1.5">
                 {secao.titulo}
               </h4>
               {/* ERA texto-padrao (slate-700) - muito claro pro corpo

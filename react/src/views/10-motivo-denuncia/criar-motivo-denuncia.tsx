@@ -35,7 +35,7 @@ export function CriarMotivoDenuncia({ auth }: PropsPagina) {
         'Motivo de denúncia cadastrado com sucesso.',
         `O novo motivo possui o ID: ${motivoCriado.idMotivo}`,
       );
-      navigate(-1);
+      void navigate(-1);
     } catch (erroRequisicao) {
       reportarErro(erroRequisicao);
     } finally {

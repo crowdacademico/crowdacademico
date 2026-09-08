@@ -604,8 +604,13 @@ ALTER TABLE link_recompensa       FORCE ROW LEVEL SECURITY;
 -- CORRIGIDO: era USING (TRUE) sem checar se o dono do link está deletado.
 DROP POLICY IF EXISTS pol_link_select ON link_academico;
 CREATE POLICY pol_link_select ON link_academico FOR SELECT USING (public.usuario_visivel(id_usuario));
+-- CORRIGIDO (08-09-2026, achado do Lucas: "não consigo colocar link
+-- acadêmico novo pros pesquisadores" em T1/Bancada do Pesquisador) - o
+-- INSERT tinha ficado pra trás quando UPDATE/DELETE (logo abaixo) ganharam
+-- a exceção de admin: só o dono conseguia criar, admin não. Mesma condição
+-- das outras duas, só que faltando aqui.
 DROP POLICY IF EXISTS pol_link_insert ON link_academico;
-CREATE POLICY pol_link_insert ON link_academico FOR INSERT TO app_nestjs WITH CHECK (id_usuario = public.id_usuario_atual());
+CREATE POLICY pol_link_insert ON link_academico FOR INSERT TO app_nestjs WITH CHECK (id_usuario = public.id_usuario_atual() OR public.tem_permissao('link_academico_gerenciar'));
 -- ADICIONADO: links de perfil passam a aceitar edição e remoção pelo dono do perfil ou pelo admin.
 DROP POLICY IF EXISTS pol_link_update ON link_academico;
 CREATE POLICY pol_link_update ON link_academico FOR UPDATE TO app_nestjs USING (id_usuario = public.id_usuario_atual() OR public.tem_permissao('link_academico_gerenciar')) WITH CHECK (id_usuario = public.id_usuario_atual() OR public.tem_permissao('link_academico_gerenciar'));

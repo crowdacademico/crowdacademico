@@ -243,7 +243,7 @@ export function useAuth(): UseAuthReturn {
       if (!promessa) {
         promessa = executarFetch(caminho, opcoes);
         requisicoesEmAndamentoRef.current.set(caminho, promessa);
-        promessa.finally(() => {
+        void promessa.finally(() => {
           requisicoesEmAndamentoRef.current.delete(caminho);
         });
       }

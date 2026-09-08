@@ -168,7 +168,7 @@ export function SeletorFotoPerfil({
     // de novo com o mesmo nome) não dispara onChange na segunda vez.
     evento.target.value = '';
     if (arquivo) {
-      processarArquivo(arquivo);
+      void processarArquivo(arquivo);
     }
   };
 

@@ -92,7 +92,7 @@ export function CriarTipoLink({ auth }: PropsPagina) {
         'Tipo de link cadastrado com sucesso.',
         `O novo tipo possui o ID: ${tipoCriado.idTipolink}`,
       );
-      navigate(-1);
+      void navigate(-1);
     } catch (erroRequisicao) {
       reportarErro(erroRequisicao);
     } finally {

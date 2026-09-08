@@ -56,7 +56,7 @@ export function AlterarConfiguracao({ auth }: PropsPagina) {
     if (sujo && !window.confirm('Você tem alterações não salvas. Sair mesmo assim?')) {
       return;
     }
-    navigate(-1);
+    void navigate(-1);
   };
 
   const aoSalvar = async (evento: FormEvent<HTMLFormElement>) => {
@@ -66,7 +66,7 @@ export function AlterarConfiguracao({ auth }: PropsPagina) {
     try {
       await configuracaoApi.atualizar(auth.authFetch, id, { valor, descricao, ativo, publica });
       mostrar('Parâmetro alterado com sucesso.', `ID: ${id} foi alterado`);
-      navigate(-1);
+      void navigate(-1);
     } catch (erroRequisicao) {
       reportarErro(erroRequisicao);
     } finally {

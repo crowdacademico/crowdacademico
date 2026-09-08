@@ -661,6 +661,119 @@ GRANT SELECT (
 
 
 -- ============================================================================
+-- 08-09-2026 - Admin ganhou como criar LINK ACADÊMICO em nome de outro
+-- pesquisador (Bancada do Pesquisador, Campo de Testes) - mesma classe de
+-- bug já corrigida em criar_perfil_pesquisador_para_outro (07-09-2026):
+-- POST /link-academico self-service sempre criava em nome de quem está
+-- logado, então adicionar link pra qualquer pesquisador que não fosse a
+-- própria conta do Admin nunca aparecia pra ninguém. Diferente daquele
+-- caso, aqui não precisou de função SECURITY DEFINER nova - só faltava a
+-- MESMA exceção de admin que UPDATE/DELETE de link_academico já tinham
+-- (pol_link_update/pol_link_delete, 04) - o INSERT tinha ficado pra trás.
+--
+-- Seguro rodar de novo? Sim - CREATE POLICY tem DROP IF EXISTS.
+-- ============================================================================
+
+DROP POLICY IF EXISTS pol_link_insert ON link_academico;
+CREATE POLICY pol_link_insert ON link_academico FOR INSERT TO app_nestjs WITH CHECK (
+    id_usuario = public.id_usuario_atual() OR public.tem_permissao('link_academico_gerenciar')
+);
+
+
+-- ============================================================================
+-- 08-09-2026 - Admin ganhou 2 poderes novos em Campo de Testes (T2, Bancada
+-- da Campanha), pedido do Lucas: (1) CRIAR campanha em nome de outro
+-- pesquisador (mesma classe de criar_perfil_pesquisador_para_outro,
+-- 07-09-2026 - "Criar campanha" tinha saído do Campo de Testes em
+-- 25-08-2026, remoção do Elenco); (2) EXCLUIR campanha à força, ignorando
+-- status - "senão este campo de testes vai ficar muito sujo". Confirmado
+-- com o Lucas antes de implementar: a exclusão forçada fica só ferramenta
+-- de bancada (permissão própria, nunca reaproveitando campanha_editar) -
+-- o painel real de Gestão de Campanhas nem tem Excluir hoje (só Consultar).
+--
+-- Seguro rodar de novo? Sim - permissões usam ON CONFLICT (nome) DO
+-- NOTHING, CREATE OR REPLACE FUNCTION substitui sem duplicar, REVOKE/GRANT
+-- são idempotentes. A concessão pro papel 'admin' não precisa de INSERT
+-- explícito aqui - trg_admin_recebe_toda_permissao já concede
+-- automaticamente qualquer permissão nova assim que a linha é inserida.
+-- ============================================================================
+
+INSERT INTO permissao (nome) VALUES
+('campanha_criar_para_outro'),
+('campanha_excluir_forcado')
+ON CONFLICT (nome) DO NOTHING;
+
+CREATE OR REPLACE FUNCTION public.criar_campanha_para_outro(
+    p_id_usuario INT,
+    p_id_area_conhecimento INT,
+    p_titulo TEXT,
+    p_modelo modelo_campanha,
+    p_meta_financeira DECIMAL,
+    p_descricao TEXT,
+    p_data_inicio TIMESTAMPTZ,
+    p_data_fim TIMESTAMPTZ,
+    p_video_apresentacao_url TEXT
+)
+RETURNS INT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_id_campanha INT;
+BEGIN
+    IF NOT public.tem_permissao('campanha_criar_para_outro') THEN
+        RAISE EXCEPTION 'Sem permissão para criar campanha em nome de outro pesquisador.';
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM perfil_pesquisador
+        WHERE id_usuario = p_id_usuario AND status_pesquisador = 'ativo'
+    ) THEN
+        RAISE EXCEPTION 'O usuário escolhido não é um pesquisador ativo.';
+    END IF;
+
+    INSERT INTO campanha (
+        id_usuario, id_area_conhecimento, titulo, modelo,
+        meta_financeira, descricao, data_inicio, data_fim, video_apresentacao_url
+    )
+    VALUES (
+        p_id_usuario, p_id_area_conhecimento, p_titulo, COALESCE(p_modelo, 'all-or-nothing'),
+        p_meta_financeira, p_descricao, p_data_inicio, p_data_fim, p_video_apresentacao_url
+    )
+    RETURNING id_campanha INTO v_id_campanha;
+
+    RETURN v_id_campanha;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.forcar_exclusao_campanha(p_id_campanha INT)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_linhas INT;
+BEGIN
+    IF NOT public.tem_permissao('campanha_excluir_forcado') THEN
+        RAISE EXCEPTION 'Sem permissão para excluir campanha à força.';
+    END IF;
+
+    DELETE FROM campanha WHERE id_campanha = p_id_campanha;
+    GET DIAGNOSTICS v_linhas = ROW_COUNT;
+    RETURN v_linhas > 0;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.criar_campanha_para_outro(INT, INT, TEXT, modelo_campanha, DECIMAL, TEXT, TIMESTAMPTZ, TIMESTAMPTZ, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.criar_campanha_para_outro(INT, INT, TEXT, modelo_campanha, DECIMAL, TEXT, TIMESTAMPTZ, TIMESTAMPTZ, TEXT) TO app_nestjs;
+
+REVOKE EXECUTE ON FUNCTION public.forcar_exclusao_campanha(INT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.forcar_exclusao_campanha(INT) TO app_nestjs;
+
+
+-- ============================================================================
 -- NÃO ENTRA NESTE ARQUIVO (registrado aqui só pra não se perder)
 -- ============================================================================
 

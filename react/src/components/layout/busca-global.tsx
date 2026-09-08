@@ -182,7 +182,7 @@ export function BuscaGlobal({ auth }: BuscaGlobalProps) {
 
   const irPara = useCallback(
     (item: ResultadoBusca) => {
-      navigate(item.caminho);
+      void navigate(item.caminho);
       fechar();
     },
     [navigate, fechar],
@@ -249,7 +249,7 @@ export function BuscaGlobal({ auth }: BuscaGlobalProps) {
           )}
           {grupos.map((grupo) => (
             <div key={grupo.categoria}>
-              <div className="px-4 pt-2 pb-1 text-[11px] font-bold uppercase tracking-widest texto-fraco">
+              <div className="rotulo-leitura px-4 pt-2 pb-1">
                 {grupo.categoria}
               </div>
               {grupo.itens.map((item) => {

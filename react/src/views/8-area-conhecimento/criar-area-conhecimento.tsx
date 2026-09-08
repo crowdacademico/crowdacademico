@@ -59,7 +59,7 @@ export function CriarAreaConhecimento({ auth }: PropsPagina) {
         'Área de conhecimento cadastrada com sucesso.',
         `A nova área possui o ID: ${areaCriada.idAreaConhecimento}`,
       );
-      navigate(-1);
+      void navigate(-1);
     } catch (erroRequisicao) {
       reportarErro(erroRequisicao);
     } finally {

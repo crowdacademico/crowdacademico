@@ -144,7 +144,7 @@ export function AlterarUsuario({ auth }: PropsPagina) {
     if (sujo && !window.confirm('Você tem alterações não salvas. Sair mesmo assim?')) {
       return;
     }
-    navigate(-1);
+    void navigate(-1);
   };
 
   const aoAtribuirPapel = async () => {
@@ -255,7 +255,7 @@ export function AlterarUsuario({ auth }: PropsPagina) {
       }
       await usuarioApi.atualizar(auth.authFetch, id, dados);
       mostrar('Usuário alterado com sucesso.', `ID: ${id} foi alterado`);
-      navigate(-1);
+      void navigate(-1);
     } catch (erroRequisicao) {
       reportarErro(erroRequisicao);
     } finally {

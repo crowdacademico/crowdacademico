@@ -22,6 +22,8 @@ import {
   classeBadgeStatusPesquisador,
 } from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
 import { AvatarUsuario } from '../../components/layout/avatar-usuario';
+import { useErroToast } from '../../components/layout/use-erro-toast';
+import { useToast } from '../../components/layout/use-toast';
 import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { ModalDetalhe } from '../../components/crud/modal-detalhe';
@@ -29,6 +31,7 @@ import { ModalFicha } from '../../components/crud/modal-ficha';
 import { SecaoModeracaoPesquisador } from '../6-perfil-pesquisador/secao-moderacao-pesquisador';
 import { RegistroChamadas } from './registro-chamadas';
 import type { PropsPagina } from '../../services/router/pagina.type';
+import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { UsuarioResponse } from '../../services/1-usuario/type/usuario.type';
 import type { PerfilPesquisadorResponse, PerfilPesquisadorResponseScore } from '../../services/6-perfil-pesquisador/type/perfil-pesquisador.type';
 import type { TipoVinculo, TituloAcademico } from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
@@ -85,6 +88,276 @@ function truncarUrl(url: string): string {
   return url.length > TAMANHO_MAXIMO_URL_NA_LINHA ? `${url.slice(0, TAMANHO_MAXIMO_URL_NA_LINHA)} ...` : url;
 }
 
+interface PainelLinksAcademicosProps {
+  auth: Pick<UseAuthReturn, 'authFetch'>;
+  idUsuario: number;
+  tiposLink: TipoLinkResponse[];
+  // `tituloComoSecaoFicha` (08-09-2026, pedido do Lucas: "precisava se
+  // parecer com os demais") - dentro do modal de Alterar, o título precisa
+  // bater com o mesmo estilo de "Perfil de Pesquisador"/"Metadados"
+  // (SecaoFicha, ficha-consulta.tsx) - embaixo da página (uso original),
+  // continua com o título simples de sempre. Mesmas classes de
+  // `SecaoFicha`, sem importar o componente inteiro (ele espera pares
+  // rótulo/valor num grid, não uma tabela inteira).
+  tituloComoSecaoFicha?: boolean;
+}
+
+// Extraído (08-09-2026, pedido do Lucas) - o mesmo card de "Links
+// acadêmicos" que já existia embaixo (ligado ao pesquisador ESCOLHIDO,
+// `chaveFoco`) passou a ser reaproveitado TAMBÉM dentro do modal de
+// Alterar (ligado ao pesquisador em EDIÇÃO, `idUsuarioEditandoPerfil`) -
+// os dois podem ser pessoas diferentes ao mesmo tempo, por isso virou
+// componente próprio com estado próprio, em vez de duplicar o JSX cru
+// (duas cópias do mesmo bug seria pior que uma). É proposital ter os dois
+// lugares por enquanto: o Lucas quer perguntar pra Alexia qual dos dois
+// ela prefere (embaixo, solto, ou dentro do Alterar) antes de decidir
+// remover um.
+function PainelLinksAcademicos({ auth, idUsuario, tiposLink, tituloComoSecaoFicha }: PainelLinksAcademicosProps) {
+  const chamarERegistrar = useChamadaRegistrada(auth);
+  const { mostrar } = useToast();
+  const { reportarErro } = useErroToast();
+
+  const [links, setLinks] = useState<LinkAcademico[]>([]);
+  const [novoLink, setNovoLink] = useState({ idTipoLink: '', url: '', rotulo: '' });
+  const [idLinkEditando, setIdLinkEditando] = useState<number | null>(null);
+  const [formEdicaoLink, setFormEdicaoLink] = useState({ url: '', rotulo: '' });
+  const [linkConsultado, setLinkConsultado] = useState<LinkAcademico | null>(null);
+
+  const carregarLinks = useCallback(() => {
+    chamarERegistrar<LinkAcademico[]>(`/link-academico?idUsuario=${idUsuario}`)
+      .then(setLinks)
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idUsuario]);
+
+  useEffect(() => {
+    carregarLinks();
+  }, [carregarLinks]);
+
+  const adicionarLink = async () => {
+    if (!novoLink.idTipoLink || !novoLink.url) return;
+    try {
+      await chamarERegistrar<LinkAcademico>(`/link-academico/${idUsuario}`, {
+        method: 'POST',
+        body: JSON.stringify({
+          idTipoLink: Number(novoLink.idTipoLink),
+          url: novoLink.url,
+          ...(novoLink.rotulo ? { rotulo: novoLink.rotulo } : {}),
+        }),
+      });
+      carregarLinks();
+      setNovoLink({ idTipoLink: '', url: '', rotulo: '' });
+      mostrar('Link acadêmico adicionado com sucesso.');
+    } catch (erro) {
+      reportarErro(erro);
+    }
+  };
+
+  const removerLink = async (idLinkAcademico: number) => {
+    try {
+      await chamarERegistrar<void>(`/link-academico/${idLinkAcademico}`, { method: 'DELETE' });
+      carregarLinks();
+      mostrar('Link acadêmico excluído com sucesso.');
+    } catch (erro) {
+      reportarErro(erro);
+    }
+  };
+
+  const iniciarEdicaoLink = (link: LinkAcademico) => {
+    setIdLinkEditando(link.idLinkAcademico);
+    setFormEdicaoLink({ url: link.url, rotulo: link.rotulo ?? '' });
+  };
+
+  const salvarEdicaoLink = async () => {
+    if (!formEdicaoLink.url) return;
+    try {
+      await chamarERegistrar<void>(`/link-academico/${idLinkEditando}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ url: formEdicaoLink.url, ...(formEdicaoLink.rotulo ? { rotulo: formEdicaoLink.rotulo } : {}) }),
+      });
+      carregarLinks();
+      setIdLinkEditando(null);
+      mostrar('Link acadêmico alterado com sucesso.');
+    } catch (erro) {
+      reportarErro(erro);
+    }
+  };
+
+  return (
+    <>
+      {/* `.titulo-bloco` (08-09-2026) - token novo em 1-base.css, o mesmo
+          rótulo pequeno/maiúsculo que SecaoFicha/Minha Conta já usavam
+          soltos (achado do Lucas: "não podemos ter algo perdido flutuando
+          por aí"). Define a tipografia certa sozinho (font-family sans,
+          não depende mais de estar numa tag h1/h2/h3 específica pra
+          escapar da regra global de heading serifado). */}
+      {tituloComoSecaoFicha ? (
+        <h3 className="titulo-bloco mb-3 pb-2 border-b borda-padrao">
+          Links acadêmicos ({links.length} de 5)
+        </h3>
+      ) : (
+        <h4 className="font-bold mt-4 mb-1">Links acadêmicos ({links.length} de 5)</h4>
+      )}
+      <div className="links-academicos-wrapper">
+        <table className="crud-tabela mb-2">
+          <thead>
+            <tr>
+              <th className="crud-tabela__celula--centralizada">Tipo</th>
+              <th className="crud-tabela__celula--centralizada">URL</th>
+              <th className="crud-tabela__celula--centralizada">Rótulo</th>
+              <th className="crud-tabela__celula--centralizada">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {links.map((link) => {
+              const emEdicao = idLinkEditando === link.idLinkAcademico;
+              return (
+                <tr key={link.idLinkAcademico}>
+                  <td className="crud-tabela__celula--centralizada">{tiposLink.find((t) => t.idTipolink === link.idTipoLink)?.nome ?? link.idTipoLink}</td>
+                  {emEdicao ? (
+                    <>
+                      <td>
+                        <input
+                          type="text"
+                          value={formEdicaoLink.url}
+                          onChange={(evento) => setFormEdicaoLink({ ...formEdicaoLink, url: evento.target.value })}
+                          className="border-2 border-[var(--cor-texto-info)] rounded-md px-2 py-1 w-full"
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="text"
+                          value={formEdicaoLink.rotulo}
+                          onChange={(evento) => setFormEdicaoLink({ ...formEdicaoLink, rotulo: evento.target.value })}
+                          className="border-2 border-[var(--cor-texto-info)] rounded-md px-2 py-1 w-full"
+                        />
+                      </td>
+                      <td className="crud-tabela__celula--centralizada">
+                        <div className="crud-tabela__acoes">
+                          <button type="button" className="crud-tabela__acao crud-tabela__acao--escolher" onClick={salvarEdicaoLink} aria-label="Salvar">
+                            <i className="fa-solid fa-check"></i>
+                            <span className="crud-tabela__acao-texto">Salvar</span>
+                            <span className="crud-tabela__acao-dica" role="tooltip">Salvar</span>
+                          </button>
+                          <button type="button" className="crud-tabela__acao" onClick={() => setIdLinkEditando(null)} aria-label="Cancelar">
+                            <i className="fa-solid fa-xmark"></i>
+                            <span className="crud-tabela__acao-texto">Cancelar</span>
+                            <span className="crud-tabela__acao-dica" role="tooltip">Cancelar</span>
+                          </button>
+                        </div>
+                      </td>
+                    </>
+                  ) : (
+                    <>
+                      <td style={{ whiteSpace: 'nowrap' }}>{truncarUrl(link.url)}</td>
+                      <td className="crud-tabela__celula--centralizada">{link.rotulo ?? '-'}</td>
+                      <td className="crud-tabela__celula--centralizada">
+                        <div className="crud-tabela__acoes">
+                          <button
+                            type="button"
+                            className="crud-tabela__acao crud-tabela__acao--alterar"
+                            onClick={() => iniciarEdicaoLink(link)}
+                            aria-label="Alterar"
+                          >
+                            <i className="fa-solid fa-pen"></i>
+                            <span className="crud-tabela__acao-texto">Alterar</span>
+                            <span className="crud-tabela__acao-dica" role="tooltip">Alterar</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="crud-tabela__acao"
+                            onClick={() => setLinkConsultado(link)}
+                            aria-label="Consultar"
+                          >
+                            <i className="fa-solid fa-eye"></i>
+                            <span className="crud-tabela__acao-texto">Consultar</span>
+                            <span className="crud-tabela__acao-dica" role="tooltip">Consultar</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="crud-tabela__acao crud-tabela__acao--excluir"
+                            onClick={() => removerLink(link.idLinkAcademico)}
+                            aria-label="Remover"
+                          >
+                            <i className="fa-solid fa-trash"></i>
+                            <span className="crud-tabela__acao-texto">Remover</span>
+                            <span className="crud-tabela__acao-dica" role="tooltip">Remover</span>
+                          </button>
+                        </div>
+                      </td>
+                    </>
+                  )}
+                </tr>
+              );
+            })}
+            {links.length < 5 && (
+              <tr>
+                <td>
+                  <select
+                    value={novoLink.idTipoLink}
+                    onChange={(evento) => setNovoLink({ ...novoLink, idTipoLink: evento.target.value })}
+                    className="border borda-forte rounded-md px-2 py-1 w-full"
+                  >
+                    <option value="">Tipo...</option>
+                    {tiposLink.map((tipo) => (
+                      <option key={tipo.idTipolink} value={tipo.idTipolink}>
+                        {tipo.nome}
+                      </option>
+                    ))}
+                  </select>
+                </td>
+                <td>
+                  <input
+                    type="text"
+                    placeholder="URL"
+                    value={novoLink.url}
+                    onChange={(evento) => setNovoLink({ ...novoLink, url: evento.target.value })}
+                    className="border borda-forte rounded-md px-2 py-1 w-full placeholder:text-[var(--cor-texto)]"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="text"
+                    placeholder="Rótulo (opcional)"
+                    value={novoLink.rotulo}
+                    onChange={(evento) => setNovoLink({ ...novoLink, rotulo: evento.target.value })}
+                    className="border borda-forte rounded-md px-2 py-1 w-full placeholder:text-[var(--cor-texto)]"
+                  />
+                </td>
+                {/* Nada aqui embaixo de Ações de propósito (23-08-2026,
+                    achado do Lucas: "+ adicionar na mesma linha ficou
+                    péssimo, aparece barra de rolagem") - o botão SÓ
+                    forçava a tabela a precisar de mais espaço do que
+                    a coluna tinha, empurrando tudo. Vive fora da
+                    tabela agora, embaixo. */}
+                <td></td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {links.length < 5 && (
+        <button type="button" className="btn btn-primary" onClick={adicionarLink}>
+          + Adicionar
+        </button>
+      )}
+
+      {linkConsultado && (
+        <ModalDetalhe
+          rotuloAcao="Consultar"
+          titulo={tiposLink.find((t) => t.idTipolink === linkConsultado.idTipoLink)?.nome ?? 'Link acadêmico'}
+          secoes={[
+            { titulo: 'URL completa:', conteudo: <a href={linkConsultado.url} target="_blank" rel="noreferrer" className="texto-link break-all">{linkConsultado.url}</a> },
+            { titulo: 'Rótulo:', conteudo: linkConsultado.rotulo ?? '(sem rótulo)' },
+          ]}
+          aoFechar={() => setLinkConsultado(null)}
+        />
+      )}
+    </>
+  );
+}
+
 // T1, Bancada do Pesquisador. Trabalha em cima de REGISTROS REAIS
 // (23-08-2026, pedido do Lucas, ERA um roster de personas fixas,
 // apagado): a lista abaixo vem de GET /perfil-pesquisador de verdade
@@ -97,12 +370,12 @@ function truncarUrl(url: string): string {
 // SEM ELENCO (25-08-2026, pedido do Lucas: "remover de vez" o motor de
 // login-múltiplo). Selecionar uma linha aqui só marca `pesquisadorSelecionado`
 // (CampoTestesProvider) - não faz login nenhum, é sempre a sessão real do
-// painel (`auth`) quem executa toda escrita. Efeito prático: "Promover
-// Usuário → Pesquisador" e as ações de link acadêmico só têm efeito de
-// verdade quando o usuário selecionado É a própria conta logada - pra
-// qualquer outro, a RLS responde com erro de permissão (aparece em
-// `erroCriar`, já tratado). Essa é a limitação aceita pelo Lucas: o
-// Campo de Testes deixou de simular "várias contas ao mesmo tempo".
+// painel (`auth`) quem executa toda escrita. "Promover Usuário → Pesquisador"
+// e as ações de link acadêmico (07/08-09-2026: ambos ganharam endpoint "para
+// outro", mesmo padrão de CPF/suspensão) já funcionam de verdade pra
+// QUALQUER pesquisador selecionado, não só a própria conta do Admin - a
+// limitação antiga ("só funciona logado como a própria pessoa") foi
+// corrigida nos dois casos, não é mais verdade.
 export function BancadaPesquisador({ auth }: PropsPagina) {
   const { pesquisadorSelecionado, selecionarPesquisador, limparPesquisadorSelecionado } = useCampoTestes();
   const chamarERegistrar = useChamadaRegistrada(auth);
@@ -110,6 +383,7 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
 
   const [pesquisadores, setPesquisadores] = useState<PesquisadorLinha[]>([]);
   const [carregandoLista, setCarregandoLista] = useState(true);
+  const [erroListagem, setErroListagem] = useState<string | null>(null);
   // Ligado por padrão (pedido do Lucas): a demo pré-montada (12-22) não
   // serve pra testar, então já nasce fora da vista, sem precisar caçar.
   const [ocultarBloqueados, setOcultarBloqueados] = useState(true);
@@ -151,13 +425,7 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
   const [cpfCorrecao, setCpfCorrecao] = useState('');
 
   const [score, setScore] = useState<PerfilPesquisadorResponseScore | null>(null);
-
-  const [links, setLinks] = useState<LinkAcademico[]>([]);
   const [tiposLink, setTiposLink] = useState<TipoLinkResponse[]>([]);
-  const [novoLink, setNovoLink] = useState({ idTipoLink: '', url: '', rotulo: '' });
-  const [idLinkEditando, setIdLinkEditando] = useState<number | null>(null);
-  const [formEdicaoLink, setFormEdicaoLink] = useState({ url: '', rotulo: '' });
-  const [linkConsultado, setLinkConsultado] = useState<LinkAcademico | null>(null);
 
   // Sem probe separado (era `elenco.atores[chaveFoco].temPerfilPesquisador`,
   // uma 2ª chamada de rede): `pesquisadores` já carrega perfil_pesquisador
@@ -175,8 +443,13 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
   // Coluna/facet "papel" (mesma lógica de listar-usuarios.jsx): junta
   // usuario_papel de todo mundo de uma vez (1 requisição, não 1 por
   // linha), papel padrão 'usuario' não conta como "extra".
+  // `.catch()` no fim (achado 08-09-2026, no-floating-promises) - antes,
+  // se `usuarioApi.listar` falhasse, o `.finally()` ainda zerava o
+  // spinner, mas nenhum erro aparecia: a tela ficava vazia/desatualizada
+  // em silêncio, sem explicar por quê.
   const carregarPesquisadores = useCallback(() => {
     setCarregandoLista(true);
+    setErroListagem(null);
     Promise.all([
       usuarioApi.listar(auth.authFetch),
       perfilPesquisadorApi.listar(auth.authFetch).catch(() => []),
@@ -199,6 +472,9 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
             papel: papeisPorUsuario.get(usuario.idUsuario)?.join(', ') || PAPEL_SEM_EXTRA,
           })),
         );
+      })
+      .catch((erro: unknown) => {
+        setErroListagem(erro instanceof Error ? erro.message : 'Falha ao carregar a lista de pesquisadores.');
       })
       .finally(() => setCarregandoLista(false));
   }, [auth.authFetch]);
@@ -225,23 +501,21 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
     return () => document.removeEventListener('mousedown', aoClicarFora);
   }, [facetaPapelAberta]);
 
-  // Carrega score + links sempre que o pesquisador selecionado (com
-  // perfil) mudar. A comparação "CPF visto pelo dono x visto por outro"
-  // (RF-016) não tem mais painel dedicado (23-08-2026, pedido do Lucas):
-  // as chamadas GET já aparecem naturalmente no Registro de Chamadas,
-  // sem precisar duplicar a UI.
+  // Carrega score sempre que o pesquisador selecionado (com perfil) mudar.
+  // A comparação "CPF visto pelo dono x visto por outro" (RF-016) não tem
+  // mais painel dedicado (23-08-2026, pedido do Lucas): as chamadas GET já
+  // aparecem naturalmente no Registro de Chamadas, sem precisar duplicar a
+  // UI. Links acadêmicos saíram daqui (08-09-2026) - viraram responsabilidade
+  // própria de <PainelLinksAcademicos>, que carrega pelo idUsuario que
+  // recebe (chaveFoco aqui embaixo, idUsuarioEditandoPerfil dentro do modal).
   useEffect(() => {
     if (!chaveFoco || jaTemPerfil !== true) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setScore(null);
-      setLinks([]);
       return;
     }
     chamarERegistrar<PerfilPesquisadorResponseScore>(`/perfil-pesquisador/${chaveFoco}/score`)
       .then(setScore)
-      .catch(() => {});
-    chamarERegistrar<LinkAcademico[]>(`/link-academico?idUsuario=${chaveFoco}`)
-      .then(setLinks)
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chaveFoco, jaTemPerfil]);
@@ -330,56 +604,6 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
     }).catch(() => {});
     setCpfCorrecao('');
     carregarPesquisadores();
-  };
-
-  const adicionarLink = async () => {
-    if (!novoLink.idTipoLink || !novoLink.url) return;
-    try {
-      await chamarERegistrar<LinkAcademico>('/link-academico', {
-        method: 'POST',
-        body: JSON.stringify({
-          idTipoLink: Number(novoLink.idTipoLink),
-          url: novoLink.url,
-          ...(novoLink.rotulo ? { rotulo: novoLink.rotulo } : {}),
-        }),
-      });
-      const atualizados = await chamarERegistrar<LinkAcademico[]>(`/link-academico?idUsuario=${chaveFoco}`);
-      setLinks(atualizados);
-      setNovoLink({ idTipoLink: '', url: '', rotulo: '' });
-    } catch {
-      // O erro (ex.: limite de 5 links) já aparece no Registro de
-      // Chamadas (T4), é justamente o tipo de erro que vale a pena ver
-      // acontecer, não esconder.
-    }
-  };
-
-  // Faltava (23-08-2026, achado do Lucas: "consigo adicionar mas não
-  // consigo tirar") - o DELETE /link-academico/:id já existe e funciona
-  // desde sempre (7-link-academico/controllers/link-academico.controller.
-  // remove.ts), só nunca tinha ganhado botão aqui na tela de teste.
-  const removerLink = async (idLinkAcademico: number) => {
-    await chamarERegistrar<void>(`/link-academico/${idLinkAcademico}`, { method: 'DELETE' }).catch(() => {});
-    const atualizados = await chamarERegistrar<LinkAcademico[]>(`/link-academico?idUsuario=${chaveFoco}`);
-    setLinks(atualizados);
-  };
-
-  const iniciarEdicaoLink = (link: LinkAcademico) => {
-    setIdLinkEditando(link.idLinkAcademico);
-    setFormEdicaoLink({ url: link.url, rotulo: link.rotulo ?? '' });
-  };
-
-  // PATCH /link-academico/:id: sem idTipoLink de propósito (trocar o TIPO
-  // de um link existente não é permitido pelo próprio DTO, ver
-  // link-academico.request-update.ts), só url/rótulo.
-  const salvarEdicaoLink = async () => {
-    if (!formEdicaoLink.url) return;
-    await chamarERegistrar<void>(`/link-academico/${idLinkEditando}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ url: formEdicaoLink.url, ...(formEdicaoLink.rotulo ? { rotulo: formEdicaoLink.rotulo } : {}) }),
-    }).catch(() => {});
-    const atualizados = await chamarERegistrar<LinkAcademico[]>(`/link-academico?idUsuario=${chaveFoco}`);
-    setLinks(atualizados);
-    setIdLinkEditando(null);
   };
 
   // Opções do dropdown "Papel" - só os valores que já aparecem nos dados
@@ -539,7 +763,12 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
               <td colSpan={8} className="texto-fraco">Carregando...</td>
             </tr>
           )}
-          {!carregandoLista && pesquisadoresPagina.length === 0 && (
+          {!carregandoLista && erroListagem && (
+            <tr>
+              <td colSpan={8} className="texto-erro font-bold">{erroListagem}</td>
+            </tr>
+          )}
+          {!carregandoLista && !erroListagem && pesquisadoresPagina.length === 0 && (
             <tr>
               <td colSpan={8} className="texto-fraco">{filtroTexto ? 'Nenhum registro bate com o filtro.' : 'Nenhum registro.'}</td>
             </tr>
@@ -691,6 +920,11 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
           subtitulo={perfilConsultado.usuario?.email}
           avatar={<AvatarUsuario nome={perfilConsultado.usuario?.nome} tamanho="lg" />}
           aoFechar={() => setPerfilConsultado(null)}
+          rodape={
+            <button type="button" onClick={() => setPerfilConsultado(null)} className="btn btn-secondary w-full">
+              Fechar
+            </button>
+          }
         >
           <SecaoFicha titulo="Perfil de Pesquisador">
             <CampoFicha
@@ -834,6 +1068,22 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
                   </div>
                 </SecaoFicha>
 
+                {/* Duplicado de propósito (08-09-2026, pedido do Lucas) - o
+                    mesmo card que já existe embaixo, agora também aqui
+                    dentro do Alterar. Os dois convivem até o Lucas
+                    perguntar pra Alexia qual lugar ela prefere. */}
+                <PainelLinksAcademicos
+                  auth={auth}
+                  idUsuario={idUsuarioEditandoPerfil}
+                  tiposLink={tiposLink}
+                  tituloComoSecaoFicha
+                />
+
+                {/* Linha divisória (08-09-2026, pedido do Lucas: "insinuando
+                    que são coisas separadas") - Links acadêmicos e Moderação
+                    são conceitos bem diferentes, mesmo vizinhos no modal. */}
+                <div className="border-t borda-padrao"></div>
+
                 <SecaoModeracaoPesquisador auth={auth} idUsuario={idUsuarioEditandoPerfil} />
               </div>
 
@@ -957,168 +1207,8 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
               </div>
             )}
 
-            {jaTemPerfil === true && (
-              <>
-                <h4 className="font-bold mt-4 mb-1">
-                  Links acadêmicos ({links.length} de 5)
-                </h4>
-                <div className="links-academicos-wrapper">
-                <table className="crud-tabela mb-2">
-                  <thead>
-                    <tr>
-                      <th className="crud-tabela__celula--centralizada">Tipo</th>
-                      <th className="crud-tabela__celula--centralizada">URL</th>
-                      <th className="crud-tabela__celula--centralizada">Rótulo</th>
-                      <th className="crud-tabela__celula--centralizada">Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {links.map((link) => {
-                      const emEdicao = idLinkEditando === link.idLinkAcademico;
-                      return (
-                        <tr key={link.idLinkAcademico}>
-                          <td className="crud-tabela__celula--centralizada">{tiposLink.find((t) => t.idTipolink === link.idTipoLink)?.nome ?? link.idTipoLink}</td>
-                          {emEdicao ? (
-                            <>
-                              <td>
-                                <input
-                                  type="text"
-                                  value={formEdicaoLink.url}
-                                  onChange={(evento) => setFormEdicaoLink({ ...formEdicaoLink, url: evento.target.value })}
-                                  className="border-2 border-[var(--cor-texto-info)] rounded-md px-2 py-1 w-full"
-                                />
-                              </td>
-                              <td>
-                                <input
-                                  type="text"
-                                  value={formEdicaoLink.rotulo}
-                                  onChange={(evento) => setFormEdicaoLink({ ...formEdicaoLink, rotulo: evento.target.value })}
-                                  className="border-2 border-[var(--cor-texto-info)] rounded-md px-2 py-1 w-full"
-                                />
-                              </td>
-                              <td className="crud-tabela__celula--centralizada">
-                                <div className="crud-tabela__acoes">
-                                  <button type="button" className="crud-tabela__acao crud-tabela__acao--escolher" onClick={salvarEdicaoLink} aria-label="Salvar">
-                                    <i className="fa-solid fa-check"></i>
-                                    <span className="crud-tabela__acao-texto">Salvar</span>
-                                    <span className="crud-tabela__acao-dica" role="tooltip">Salvar</span>
-                                  </button>
-                                  <button type="button" className="crud-tabela__acao" onClick={() => setIdLinkEditando(null)} aria-label="Cancelar">
-                                    <i className="fa-solid fa-xmark"></i>
-                                    <span className="crud-tabela__acao-texto">Cancelar</span>
-                                    <span className="crud-tabela__acao-dica" role="tooltip">Cancelar</span>
-                                  </button>
-                                </div>
-                              </td>
-                            </>
-                          ) : (
-                            <>
-                              <td style={{ whiteSpace: 'nowrap' }}>{truncarUrl(link.url)}</td>
-                              <td className="crud-tabela__celula--centralizada">{link.rotulo ?? '-'}</td>
-                              <td className="crud-tabela__celula--centralizada">
-                                <div className="crud-tabela__acoes">
-                                  <button
-                                    type="button"
-                                    className="crud-tabela__acao crud-tabela__acao--alterar"
-                                    onClick={() => iniciarEdicaoLink(link)}
-                                    aria-label="Alterar"
-                                  >
-                                    <i className="fa-solid fa-pen"></i>
-                                    <span className="crud-tabela__acao-texto">Alterar</span>
-                                    <span className="crud-tabela__acao-dica" role="tooltip">Alterar</span>
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="crud-tabela__acao"
-                                    onClick={() => setLinkConsultado(link)}
-                                    aria-label="Consultar"
-                                  >
-                                    <i className="fa-solid fa-eye"></i>
-                                    <span className="crud-tabela__acao-texto">Consultar</span>
-                                    <span className="crud-tabela__acao-dica" role="tooltip">Consultar</span>
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="crud-tabela__acao crud-tabela__acao--excluir"
-                                    onClick={() => removerLink(link.idLinkAcademico)}
-                                    aria-label="Remover"
-                                  >
-                                    <i className="fa-solid fa-trash"></i>
-                                    <span className="crud-tabela__acao-texto">Remover</span>
-                                    <span className="crud-tabela__acao-dica" role="tooltip">Remover</span>
-                                  </button>
-                                </div>
-                              </td>
-                            </>
-                          )}
-                        </tr>
-                      );
-                    })}
-                    {links.length < 5 && (
-                      <tr>
-                        <td>
-                          <select
-                            value={novoLink.idTipoLink}
-                            onChange={(evento) => setNovoLink({ ...novoLink, idTipoLink: evento.target.value })}
-                            className="border borda-forte rounded-md px-2 py-1 w-full"
-                          >
-                            <option value="">Tipo...</option>
-                            {tiposLink.map((tipo) => (
-                              <option key={tipo.idTipolink} value={tipo.idTipolink}>
-                                {tipo.nome}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
-                        <td>
-                          <input
-                            type="text"
-                            placeholder="URL"
-                            value={novoLink.url}
-                            onChange={(evento) => setNovoLink({ ...novoLink, url: evento.target.value })}
-                            className="border borda-forte rounded-md px-2 py-1 w-full placeholder:text-[var(--cor-texto)]"
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="text"
-                            placeholder="Rótulo (opcional)"
-                            value={novoLink.rotulo}
-                            onChange={(evento) => setNovoLink({ ...novoLink, rotulo: evento.target.value })}
-                            className="border borda-forte rounded-md px-2 py-1 w-full placeholder:text-[var(--cor-texto)]"
-                          />
-                        </td>
-                        {/* Nada aqui embaixo de Ações de propósito (23-08-2026,
-                            achado do Lucas: "+ adicionar na mesma linha ficou
-                            péssimo, aparece barra de rolagem") - o botão SÓ
-                            forçava a tabela a precisar de mais espaço do que
-                            a coluna tinha, empurrando tudo. Vive fora da
-                            tabela agora, embaixo. */}
-                        <td></td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-                </div>
-
-                {links.length < 5 && (
-                  <button type="button" className="btn btn-primary" onClick={adicionarLink}>
-                    + Adicionar
-                  </button>
-                )}
-
-                {linkConsultado && (
-                  <ModalDetalhe
-                    rotuloAcao="Consultar"
-                    titulo={tiposLink.find((t) => t.idTipolink === linkConsultado.idTipoLink)?.nome ?? 'Link acadêmico'}
-                    secoes={[
-                      { titulo: 'URL completa:', conteudo: <a href={linkConsultado.url} target="_blank" rel="noreferrer" className="texto-link break-all">{linkConsultado.url}</a> },
-                      { titulo: 'Rótulo:', conteudo: linkConsultado.rotulo ?? '(sem rótulo)' },
-                    ]}
-                    aoFechar={() => setLinkConsultado(null)}
-                  />
-                )}
-              </>
+            {jaTemPerfil === true && chaveFoco !== null && (
+              <PainelLinksAcademicos auth={auth} idUsuario={chaveFoco} tiposLink={tiposLink} />
             )}
           </div>
 

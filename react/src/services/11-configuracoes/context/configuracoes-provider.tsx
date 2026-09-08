@@ -54,7 +54,9 @@ export function ConfiguracoesProvider({ children }: ConfiguracoesProviderProps) 
         }
         setValores(mapa);
       })
-      .catch((erroRequisicao) => setErro(erroRequisicao))
+      .catch((erroRequisicao: unknown) => {
+        setErro(erroRequisicao instanceof Error ? erroRequisicao : new Error(String(erroRequisicao)));
+      })
       .finally(() => setCarregando(false));
   }, []);
 

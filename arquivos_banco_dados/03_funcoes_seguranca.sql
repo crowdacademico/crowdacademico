@@ -747,6 +747,97 @@ BEGIN
 END;
 $$;
 
+-- [03-S] criar_campanha_para_outro - ADICIONADA (08-09-2026), mesma classe
+-- de achado de criar_perfil_pesquisador_para_outro ([03-R], acima):
+-- "Criar campanha" saiu do Campo de Testes em 25-08-2026 (remoção do
+-- Elenco) porque pol_campanha_insert (04) exige id_usuario =
+-- id_usuario_atual() E pesquisador ativo - não dava mais pra "criar em
+-- nome de" um pesquisador escolhido sem personificação. Esta função é o
+-- caminho separado, gateado por permissão própria
+-- (campanha_criar_para_outro, ver 07) - o self-service (POST /campanha)
+-- continua exatamente como estava. Continua exigindo pesquisador ATIVO
+-- (mesma regra de negócio do self-service, só que checada aqui em vez de
+-- RLS) - não é bypass da regra, só troca QUEM pode disparar o INSERT em
+-- nome de outro. Nenhuma validação de prazo/meta/limite de campanhas
+-- simultâneas duplicada aqui de propósito - continua tudo em trigger
+-- (05_regras_negocio.sql), dispara igual pra INSERT via SECURITY DEFINER.
+CREATE OR REPLACE FUNCTION public.criar_campanha_para_outro(
+    p_id_usuario INT,
+    p_id_area_conhecimento INT,
+    p_titulo TEXT,
+    p_modelo modelo_campanha,
+    p_meta_financeira DECIMAL,
+    p_descricao TEXT,
+    p_data_inicio TIMESTAMPTZ,
+    p_data_fim TIMESTAMPTZ,
+    p_video_apresentacao_url TEXT
+)
+RETURNS INT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_id_campanha INT;
+BEGIN
+    IF NOT public.tem_permissao('campanha_criar_para_outro') THEN
+        RAISE EXCEPTION 'Sem permissão para criar campanha em nome de outro pesquisador.';
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM perfil_pesquisador
+        WHERE id_usuario = p_id_usuario AND status_pesquisador = 'ativo'
+    ) THEN
+        RAISE EXCEPTION 'O usuário escolhido não é um pesquisador ativo.';
+    END IF;
+
+    INSERT INTO campanha (
+        id_usuario, id_area_conhecimento, titulo, modelo,
+        meta_financeira, descricao, data_inicio, data_fim, video_apresentacao_url
+    )
+    VALUES (
+        p_id_usuario, p_id_area_conhecimento, p_titulo, COALESCE(p_modelo, 'all-or-nothing'),
+        p_meta_financeira, p_descricao, p_data_inicio, p_data_fim, p_video_apresentacao_url
+    )
+    RETURNING id_campanha INTO v_id_campanha;
+
+    RETURN v_id_campanha;
+END;
+$$;
+
+-- [03-T] forcar_exclusao_campanha - ADICIONADA (08-09-2026), pedido do
+-- Lucas: "o Admin, o todo poderoso, precisa poder excluir forçadamente
+-- uma campanha, senão o Campo de Testes vai ficar muito sujo". Diferente
+-- de campanha_excluir_forcado, isto IGNORA status de propósito (pol_
+-- campanha_delete, 04, só libera 'aguardando_aprovacao' - proteção
+-- correta pra campanha REAL, com contribuição/repasse em andamento, que
+-- continua intacta pro DELETE normal). Gateada por permissão própria
+-- (campanha_excluir_forcado, ver 07) - NUNCA reaproveitando
+-- campanha_editar de propósito: qualquer papel futuro com campanha_editar
+-- (ex.: um moderador) não ganha este poder destrutivo de brinde, sem
+-- decisão explícita. Decisão do Lucas (confirmada antes de implementar):
+-- fica só uma ferramenta de bancada - o painel real de Gestão de
+-- Campanhas nem tem Excluir hoje (só Consultar), e não é pra esta função
+-- virar endpoint exposto lá.
+CREATE OR REPLACE FUNCTION public.forcar_exclusao_campanha(p_id_campanha INT)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_linhas INT;
+BEGIN
+    IF NOT public.tem_permissao('campanha_excluir_forcado') THEN
+        RAISE EXCEPTION 'Sem permissão para excluir campanha à força.';
+    END IF;
+
+    DELETE FROM campanha WHERE id_campanha = p_id_campanha;
+    GET DIAGNOSTICS v_linhas = ROW_COUNT;
+    RETURN v_linhas > 0;
+END;
+$$;
+
 -- ============================================================
 -- [03-N] MODERAÇÃO SOBRE CONTA - SUSPENSÃO DE USUÁRIO E DE PAPEL (09-08-2026)
 -- ============================================================

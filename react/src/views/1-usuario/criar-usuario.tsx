@@ -72,7 +72,7 @@ export function CriarUsuario({ auth }: PropsPagina) {
       // "sucesso" ficava esquisito, sem a pessoa criada nem aparecer).
       // navigate(-1) volta pra onde a pessoa realmente veio (a listagem de
       // Usuários), mesmo padrão já usado por alterar/excluir-usuario.jsx.
-      navigate(-1);
+      void navigate(-1);
     } catch (erroRequisicao) {
       reportarErro(erroRequisicao);
     } finally {

@@ -49,7 +49,7 @@ export function AlterarAreaConhecimento({ auth }: PropsPagina) {
     if (sujo && !window.confirm('Você tem alterações não salvas. Sair mesmo assim?')) {
       return;
     }
-    navigate(-1);
+    void navigate(-1);
   };
 
   const aoSalvar = async (evento: FormEvent<HTMLFormElement>) => {
@@ -59,7 +59,7 @@ export function AlterarAreaConhecimento({ auth }: PropsPagina) {
     try {
       await areaConhecimentoApi.atualizar(auth.authFetch, id, { nome, ativo });
       mostrar('Área de conhecimento alterada com sucesso.', `ID: ${id} foi alterada`);
-      navigate(-1);
+      void navigate(-1);
     } catch (erroRequisicao) {
       reportarErro(erroRequisicao);
     } finally {

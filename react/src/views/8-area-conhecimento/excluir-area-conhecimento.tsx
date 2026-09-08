@@ -38,7 +38,7 @@ export function ExcluirAreaConhecimento({ auth }: PropsPagina) {
     try {
       await areaConhecimentoApi.remover(auth.authFetch, id);
       mostrar('Área de conhecimento excluída com sucesso.', `ID: ${id} foi excluído`);
-      navigate(-1);
+      void navigate(-1);
     } catch (erroRequisicao) {
       reportarErro(erroRequisicao);
       setExcluindo(false);

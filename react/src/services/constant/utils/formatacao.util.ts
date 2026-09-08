@@ -96,3 +96,23 @@ export function mascararCpf(valor: string | null | undefined): string {
   const digitosVerificadores = digitos.slice(9, 11);
   return `${bloco1}.***.**${ultimoDigitoBloco3}-${digitosVerificadores}`;
 }
+
+// Converte um valor de tipo desconhecido pra texto exibível sem nunca cair
+// em "[object Object]" (achado 08-09-2026, `@typescript-eslint/no-base-to-
+// string`) - usado pelos componentes genéricos que mostram valor de campo
+// sem saber o tipo real de antemão (`CampoSomenteLeitura`, a célula padrão
+// de `GenericTable`, o log de auditoria). Nenhum chamador conhecido hoje
+// passa objeto de verdade por aqui - isto é rede de segurança, não deveria
+// aparecer na prática.
+export function textoSeguro(valor: unknown): string {
+  if (valor === null || valor === undefined) {
+    return '';
+  }
+  if (typeof valor === 'string' || typeof valor === 'number' || typeof valor === 'boolean' || typeof valor === 'bigint') {
+    return String(valor);
+  }
+  // object/função/símbolo - `JSON.stringify` devolve `undefined` pra
+  // função/símbolo puro (nunca acontece na prática, é só a rede de
+  // segurança do tipo cobrindo o caso todo).
+  return JSON.stringify(valor) ?? '(valor não representável)';
+}

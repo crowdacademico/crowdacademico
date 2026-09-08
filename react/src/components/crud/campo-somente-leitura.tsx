@@ -1,3 +1,5 @@
+import { textoSeguro } from '../../services/constant/utils/formatacao.util';
+
 // Campo exibido (não editável) nas páginas de Alterar/Excluir - mesmo
 // visual do <label> dos formulários (criar-usuario.jsx), só sem <input>.
 // Usado sempre que a página precisa mostrar um dado que não faz parte do
@@ -16,7 +18,7 @@ export function CampoSomenteLeitura({ rotulo, valor }: CampoSomenteLeituraProps)
           pra fora do card "Metadados", coluna lateral estreita) - sem
           isso, um valor sem espaço nenhum (e-mail, token) não tem onde
           quebrar linha sozinho e estica o card na horizontal. */}
-      <p className="text-sm font-semibold texto-forte break-words">{String(valor ?? '')}</p>
+      <p className="text-sm font-semibold texto-forte break-words">{textoSeguro(valor)}</p>
     </div>
   );
 }

@@ -40,7 +40,7 @@ export function ExcluirMotivoDenuncia({ auth }: PropsPagina) {
     try {
       await motivoDenunciaApi.remover(auth.authFetch, id);
       mostrar('Motivo de denúncia excluído com sucesso.', `ID: ${id} foi excluído`);
-      navigate(-1);
+      void navigate(-1);
     } catch (erroRequisicao) {
       reportarErro(erroRequisicao);
       setExcluindo(false);

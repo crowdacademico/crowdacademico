@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { useErroToast } from '../layout/use-erro-toast';
+import { textoSeguro } from '../../services/constant/utils/formatacao.util';
 import { LogAuditoriaPainel } from './log-auditoria-painel';
 import type { ResultadoPaginado } from '../../services/constant/type/paginacao.type';
 import type { LogAuditoriaResponse } from '../../services/27-log-auditoria/type/log-auditoria.type';
@@ -66,7 +67,7 @@ function celulaValor(valor: unknown): ReactNode {
       </span>
     );
   }
-  return String(valor ?? '');
+  return textoSeguro(valor);
 }
 
 // Tabela genérica de LISTAGEM (leitura, filtro, ordenação, paginação) usada
@@ -851,7 +852,7 @@ export function GenericTable<T extends Linha>({
                         {acoes.includes('alterar') && (
                           <Link
                             className="crud-tabela__acao crud-tabela__acao--alterar"
-                            to={`${rotaBase}/${linha[chavePrimaria]}/alterar`}
+                            to={`${rotaBase}/${String(linha[chavePrimaria])}/alterar`}
                             aria-label="Alterar"
                           >
                             <i className="fa-solid fa-pen"></i>
@@ -862,7 +863,7 @@ export function GenericTable<T extends Linha>({
                         {acoes.includes('consultar') && (
                           <Link
                             className="crud-tabela__acao"
-                            to={`${rotaBase}/${linha[chavePrimaria]}/consultar`}
+                            to={`${rotaBase}/${String(linha[chavePrimaria])}/consultar`}
                             aria-label="Consultar"
                           >
                             <i className="fa-solid fa-eye"></i>
@@ -873,7 +874,7 @@ export function GenericTable<T extends Linha>({
                         {acoes.includes('excluir') && (
                           <Link
                             className="crud-tabela__acao crud-tabela__acao--excluir"
-                            to={`${rotaBase}/${linha[chavePrimaria]}/excluir`}
+                            to={`${rotaBase}/${String(linha[chavePrimaria])}/excluir`}
                             aria-label="Excluir"
                           >
                             <i className="fa-solid fa-trash"></i>

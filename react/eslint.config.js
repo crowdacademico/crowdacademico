@@ -35,14 +35,23 @@ export default defineConfig([
     // Habilita regras que enxergam o que cada valor REALMENTE é (ex.: "isto
     // aqui é sempre uma Promise") - achou sozinho, num teste, a mesma
     // categoria de achado que só tínhamos pegado na mão até agora (ver
-    // ACHADOS_PARA_DISCUTIR.md). Só `no-misused-promises` foi adotada de
-    // vez nesta rodada (achado limpo, zero pendência depois do ajuste) - as
-    // outras (no-floating-promises, no-unnecessary-condition,
-    // no-base-to-string, restrict-template-expressions, no-unsafe-argument)
-    // ficaram de fora de propósito: ligar com pendência sem resolver é pior
-    // que não ligar (todo mundo aprende a ignorar a saída do lint). Cada
-    // uma tem achado registrado (ver ACHADOS_PARA_DISCUTIR.md) pra decidir
-    // e ligar numa rodada própria.
+    // ACHADOS_PARA_DISCUTIR.md). `no-misused-promises` adotada nesta
+    // rodada (achado limpo, zero pendência depois do ajuste).
+    //
+    // ATUALIZADO (08-09-2026): mais 3 adotadas, depois de cada achado ser
+    // corrigido de verdade (nunca só silenciado) - `no-floating-promises`
+    // (1 bug real corrigido - listagem de Bancada do Pesquisador sem
+    // `.catch()`, resto era `navigate()` sem esperar, resolvido com `void`);
+    // `no-base-to-string` (4 ocorrências - novo util compartilhado
+    // `textoSeguro()` em `formatacao.util.ts`, evita "[object Object]" de
+    // verdade em vez de só confiar que nunca vai acontecer);
+    // `restrict-template-expressions` (3 ocorrências em `generic-table.tsx`,
+    // `String()` explícito antes de interpolar); `no-unsafe-argument` (1
+    // ocorrência, `configuracoes-provider.tsx` - narrowing `instanceof Error`
+    // antes de guardar no estado). Só `no-unnecessary-condition` continua de
+    // fora de propósito - as 41 ocorrências exigem conferir DTO por DTO pra
+    // separar código morto de proteção legítima (ver ACHADOS_PARA_DISCUTIR.md,
+    // item 14) - meio dia de trabalho, fica pra uma rodada própria.
     languageOptions: {
       globals: globals.browser,
       parserOptions: {
@@ -64,6 +73,10 @@ export default defineConfig([
         'error',
         { checksVoidReturn: { attributes: false } },
       ],
+      '@typescript-eslint/no-floating-promises': 'error',
+      '@typescript-eslint/no-base-to-string': 'error',
+      '@typescript-eslint/restrict-template-expressions': 'error',
+      '@typescript-eslint/no-unsafe-argument': 'error',
     },
   },
 ])

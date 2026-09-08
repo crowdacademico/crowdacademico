@@ -62,7 +62,7 @@ export function CriarConfiguracao({ auth }: PropsPagina) {
         'Parâmetro cadastrado com sucesso.',
         `O novo parâmetro possui o ID: ${configuracaoCriada.idConfig}`,
       );
-      navigate(-1);
+      void navigate(-1);
     } catch (erroRequisicao) {
       reportarErro(erroRequisicao);
     } finally {

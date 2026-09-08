@@ -51,7 +51,7 @@ export function AlterarMotivoDenuncia({ auth }: PropsPagina) {
     if (sujo && !window.confirm('Você tem alterações não salvas. Sair mesmo assim?')) {
       return;
     }
-    navigate(-1);
+    void navigate(-1);
   };
 
   const aoSalvar = async (evento: FormEvent<HTMLFormElement>) => {
@@ -66,7 +66,7 @@ export function AlterarMotivoDenuncia({ auth }: PropsPagina) {
         ativo,
       });
       mostrar('Motivo de denúncia alterado com sucesso.', `ID: ${id} foi alterado`);
-      navigate(-1);
+      void navigate(-1);
     } catch (erroRequisicao) {
       reportarErro(erroRequisicao);
     } finally {

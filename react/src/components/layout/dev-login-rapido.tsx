@@ -61,7 +61,7 @@ export function DevLoginRapido({ auth }: DevLoginRapidoProps) {
     limparErro();
     try {
       await auth.login(conta.email, conta.senha);
-      navigate('/');
+      void navigate('/');
     } catch (erroRequisicao) {
       reportarErro(erroRequisicao);
     } finally {

@@ -41,7 +41,7 @@ export function ExcluirUsuario({ auth }: PropsPagina) {
     try {
       await usuarioApi.remover(auth.authFetch, id);
       mostrar('Usuário excluído com sucesso.', `ID: ${id} foi excluído`);
-      navigate(-1);
+      void navigate(-1);
     } catch (erroRequisicao) {
       reportarErro(erroRequisicao);
       setExcluindo(false);

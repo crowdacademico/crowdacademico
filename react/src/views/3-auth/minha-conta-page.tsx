@@ -484,7 +484,7 @@ function AbaSeguranca({ auth }: AbaSegurancaProps) {
   return (
     <div className="px-6 sm:px-8 py-8 space-y-8">
       <div>
-        <h3 className="text-xs font-bold uppercase tracking-widest texto-fraco mb-3 pb-2 border-b borda-padrao">
+        <h3 className="titulo-bloco mb-3 pb-2 border-b borda-padrao">
           Trocar senha
         </h3>
         <form onSubmit={aoTrocarSenha} className="space-y-4 max-w-md">
@@ -524,7 +524,7 @@ function AbaSeguranca({ auth }: AbaSegurancaProps) {
           <button
             type="button"
             onClick={() => setSessoesAbertas((atual) => !atual)}
-            className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest texto-fraco"
+            className="titulo-bloco flex items-center gap-2"
           >
             Sessões ativas
             {sessoes && <span className="font-normal normal-case tracking-normal">({sessoes.length})</span>}
@@ -675,7 +675,7 @@ function AbaAcademico({ auth }: AbaAcademicoProps) {
       return;
     }
     const idUsuario = auth.usuario.idUsuario;
-    Promise.all([
+    void Promise.all([
       // 404 = não é pesquisador (upgrade nunca feito) - mesma tolerância
       // já usada em consultar-usuario.tsx/alterar-usuario.tsx.
       perfilPesquisadorApi.buscar(auth.authFetch, idUsuario).catch(() => null),
@@ -765,8 +765,8 @@ function AbaPrivacidade({ auth }: AbaPrivacidadeProps) {
     setExcluindo(true);
     try {
       await usuarioApi.remover(auth.authFetch, auth.usuario.idUsuario);
-      auth.logout();
-      navigate('/');
+      void auth.logout();
+      void navigate('/');
     } catch (erroRequisicao) {
       reportarErro(erroRequisicao);
       setExcluindo(false);

@@ -188,6 +188,12 @@ INSERT INTO permissao (nome) VALUES
 -- perfil de pesquisador em nome de OUTRA pessoa (achado testando a Bancada
 -- do Pesquisador, Campo de Testes).
 ('perfil_pesquisador_criar_para_outro'),
+-- Campo de Testes (08-09-2026): Admin criar campanha em nome de outro
+-- pesquisador (mesma classe de perfil_pesquisador_criar_para_outro,
+-- acima) e excluir campanha à força, ignorando status (limpeza de dado
+-- de teste - nunca oferecida no painel real, que nem tem Excluir hoje).
+('campanha_criar_para_outro'),
+('campanha_excluir_forcado'),
 ('termos_uso_gerenciar'),
 -- NOTA: estas 3 são propositalmente sem policy de RLS - verificacao_email,
 -- recuperacao_senha e sessao já têm policy FOR ALL USING(true) de propósito (o
@@ -286,6 +292,8 @@ WHERE (p.nome, perm.nome) IN (
     ('admin', 'perfil_pesquisador_visualizar_sensivel'),
     ('admin', 'perfil_pesquisador_corrigir_cpf'),
     ('admin', 'perfil_pesquisador_criar_para_outro'),
+    ('admin', 'campanha_criar_para_outro'),
+    ('admin', 'campanha_excluir_forcado'),
     ('admin', 'termos_uso_gerenciar'),
     ('admin', 'sessao_revogar'),
     ('admin', 'recuperacao_senha_revogar'),

@@ -30,7 +30,7 @@ export function LoginPage({ auth }: PropsPagina) {
     setEnviando(true);
     try {
       await auth.login(email, senha);
-      navigate('/');
+      void navigate('/');
     } catch (erroRequisicao) {
       reportarErro(erroRequisicao);
     } finally {
@@ -73,7 +73,7 @@ export function LoginPage({ auth }: PropsPagina) {
 
           <div>
             <div className="flex justify-between items-center mb-2">
-              <label className="text-[11px] font-black texto-fraco uppercase tracking-widest">
+              <label className="rotulo-campo mb-0">
                 Sua Senha
               </label>
               <button

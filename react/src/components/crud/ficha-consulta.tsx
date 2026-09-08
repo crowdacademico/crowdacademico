@@ -121,7 +121,7 @@ interface SecaoFichaProps {
 export function SecaoFicha({ titulo, children, colunas = 2 }: SecaoFichaProps) {
   return (
     <div>
-      <h3 className="text-xs font-bold uppercase tracking-widest texto-fraco mb-3 pb-2 border-b borda-padrao">
+      <h3 className="titulo-bloco mb-3 pb-2 border-b borda-padrao">
         {titulo}
       </h3>
       <div
@@ -158,7 +158,7 @@ export function CampoFicha({ rotulo, valor, largura, acao, children }: CampoFich
 
   return (
     <div className={largura === 'cheia' ? 'sm:col-span-2' : undefined}>
-      <div className="text-[11px] font-bold texto-fraco uppercase tracking-widest mb-1">
+      <div className="rotulo-leitura mb-1">
         {rotulo}
       </div>
       <div className="flex items-center justify-between gap-2">
