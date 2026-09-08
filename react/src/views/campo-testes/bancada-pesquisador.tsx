@@ -14,7 +14,7 @@ import { useCampoTestes } from '../../services/campo-testes/hook/use-campo-teste
 import { useChamadaRegistrada } from '../../services/campo-testes/hook/use-chamada-registrada';
 import { gerarCpfValido } from '../../services/campo-testes/util/gerar-cpf-valido';
 import { PESQUISADOR_BLOQUEADO, motivoBloqueioPesquisador } from '../../services/campo-testes/util/registros-bloqueados';
-import { formatarCpf, formatarCpfExibicao, formatarDataHora } from '../../services/constant/utils/formatacao.util';
+import { formatarCpf, formatarCpfExibicao, formatarDataHora, formatarNomeDimensao } from '../../services/constant/utils/formatacao.util';
 import {
   ROTULO_STATUS_PESQUISADOR,
   ROTULO_TIPO_VINCULO,
@@ -358,6 +358,81 @@ function PainelLinksAcademicos({ auth, idUsuario, tiposLink, tituloComoSecaoFich
   );
 }
 
+interface PainelScoreProps {
+  auth: Pick<UseAuthReturn, 'authFetch'>;
+  idUsuario: number;
+  // mesmo raciocínio de `tituloComoSecaoFicha` em PainelLinksAcademicos.
+  tituloComoSecaoFicha?: boolean;
+}
+
+// Extraído (08-09-2026, pedido do Lucas) - "duplicar" o card de Score que
+// já existia embaixo (ligado a `chaveFoco`) pro Consultar também (ligado
+// a `perfilConsultado`, que pode ser um pesquisador DIFERENTE do foco ao
+// mesmo tempo) - mesmo motivo de PainelLinksAcademicos: virou componente
+// próprio com fetch próprio em vez de duplicar o JSX cru. É proposital
+// ter os dois lugares por enquanto (o card solto embaixo do Campo de
+// Testes vai sumir em breve, ficando só dentro dos modais).
+function PainelScore({ auth, idUsuario, tituloComoSecaoFicha }: PainelScoreProps) {
+  const chamarERegistrar = useChamadaRegistrada(auth);
+  const [score, setScore] = useState<PerfilPesquisadorResponseScore | null>(null);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setScore(null);
+    chamarERegistrar<PerfilPesquisadorResponseScore>(`/perfil-pesquisador/${idUsuario}/score`)
+      .then(setScore)
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idUsuario]);
+
+  return (
+    <>
+      {tituloComoSecaoFicha ? (
+        <h3 className="titulo-bloco mb-3 pb-2 border-b borda-padrao">Score</h3>
+      ) : (
+        <h3 className="subtitulo mb-2">Score</h3>
+      )}
+      <div className="fundo-erro texto-erro rounded-md p-4 mb-3 flex items-start gap-3">
+        <i className="fa-solid fa-triangle-exclamation text-xl"></i>
+        <div>
+          <p className="font-bold">Ainda não está pronto</p>
+          <p className="text-sm">
+            A regra de negócio de pontuação (pesos e dimensões abaixo) ainda não foi fechada. Os números
+            são só uma prévia da estrutura, não confie neles pra testar nada que dependa do valor final.
+          </p>
+        </div>
+      </div>
+      {score ? (
+        <>
+          <p>
+            {score.scoreTotal} pontos, <span className="badge badge-sucesso">{score.rotulo}</span>
+          </p>
+          <table className="crud-tabela mt-2">
+            <thead>
+              <tr>
+                <th>Dimensão</th>
+                <th>Pontos</th>
+                <th>Peso</th>
+              </tr>
+            </thead>
+            <tbody>
+              {score.dimensoes.map((dimensao) => (
+                <tr key={dimensao.nomeDimensao}>
+                  <td>{formatarNomeDimensao(dimensao.nomeDimensao)}</td>
+                  <td>{dimensao.pontosObtidos}</td>
+                  <td>{dimensao.peso}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      ) : (
+        <p className="texto-fraco text-xs">carregando...</p>
+      )}
+    </>
+  );
+}
+
 // T1, Bancada do Pesquisador. Trabalha em cima de REGISTROS REAIS
 // (23-08-2026, pedido do Lucas, ERA um roster de personas fixas,
 // apagado): a lista abaixo vem de GET /perfil-pesquisador de verdade
@@ -424,7 +499,6 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
   } | null>(null);
   const [cpfCorrecao, setCpfCorrecao] = useState('');
 
-  const [score, setScore] = useState<PerfilPesquisadorResponseScore | null>(null);
   const [tiposLink, setTiposLink] = useState<TipoLinkResponse[]>([]);
 
   // Sem probe separado (era `elenco.atores[chaveFoco].temPerfilPesquisador`,
@@ -501,24 +575,13 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
     return () => document.removeEventListener('mousedown', aoClicarFora);
   }, [facetaPapelAberta]);
 
-  // Carrega score sempre que o pesquisador selecionado (com perfil) mudar.
   // A comparação "CPF visto pelo dono x visto por outro" (RF-016) não tem
   // mais painel dedicado (23-08-2026, pedido do Lucas): as chamadas GET já
   // aparecem naturalmente no Registro de Chamadas, sem precisar duplicar a
-  // UI. Links acadêmicos saíram daqui (08-09-2026) - viraram responsabilidade
-  // própria de <PainelLinksAcademicos>, que carrega pelo idUsuario que
-  // recebe (chaveFoco aqui embaixo, idUsuarioEditandoPerfil dentro do modal).
-  useEffect(() => {
-    if (!chaveFoco || jaTemPerfil !== true) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setScore(null);
-      return;
-    }
-    chamarERegistrar<PerfilPesquisadorResponseScore>(`/perfil-pesquisador/${chaveFoco}/score`)
-      .then(setScore)
-      .catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chaveFoco, jaTemPerfil]);
+  // UI. Links acadêmicos e Score saíram daqui (08-09-2026) - viraram
+  // responsabilidade própria de <PainelLinksAcademicos>/<PainelScore>, que
+  // carregam pelo idUsuario que recebem (chaveFoco aqui embaixo,
+  // idUsuarioEditandoPerfil dentro do modal).
 
   // Catálogo de tipo de link, uma vez só, ao montar - não depende mais de
   // ninguém selecionado (era "qualquer ator vivo", só pra ter alguém pra
@@ -751,7 +814,7 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
             <th>nome</th>
             <th>papel</th>
             <th>título</th>
-            <th>status</th>
+            <th className="crud-tabela__celula--centralizada">status</th>
             <th className="crud-tabela__celula--centralizada">score</th>
             <th className="crud-tabela__celula--centralizada">Escolher</th>
             <th className="crud-tabela__celula--centralizada">Ações</th>
@@ -795,7 +858,10 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
                   <td style={bloqueado ? { textDecoration: 'line-through' } : undefined}>
                     {perfil.tituloAcademico ? ROTULO_TITULO_ACADEMICO[perfil.tituloAcademico] ?? perfil.tituloAcademico : '-'}
                   </td>
-                  <td style={bloqueado ? { textDecoration: 'line-through' } : undefined}>
+                  <td
+                    className="crud-tabela__celula--centralizada"
+                    style={bloqueado ? { textDecoration: 'line-through' } : undefined}
+                  >
                     {perfil.statusPesquisador ? ROTULO_STATUS_PESQUISADOR[perfil.statusPesquisador] ?? perfil.statusPesquisador : '-'}
                   </td>
                   <td className="crud-tabela__celula--centralizada">{perfil.scoreAtual ?? '-'}</td>
@@ -960,6 +1026,13 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
               valor={perfilConsultado.ativadoEm ? formatarDataHora(perfilConsultado.ativadoEm) : undefined}
             />
           </SecaoFicha>
+
+          {/* Score "duplicado" pra dentro do Consultar (08-09-2026, pedido do
+              Lucas) - mesmo card de baixo, agora também aqui, pra comparar
+              os dois lugares antes de decidir (o card solto embaixo do Campo
+              de Testes vai sumir em breve, ficando só dentro dos modais). */}
+          <div className="border-t borda-padrao"></div>
+          <PainelScore auth={auth} idUsuario={perfilConsultado.idUsuario} tituloComoSecaoFicha />
         </ModalFicha>
       )}
 
@@ -1213,48 +1286,7 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
           </div>
 
           <div className={'flex-1 min-w-0' + (jaTemPerfil === true ? ' lg:border-l lg:border-[var(--cor-borda)] lg:pl-6' : '')}>
-            {jaTemPerfil === true && (
-              <>
-                <h3 className="subtitulo mb-2">Score</h3>
-                <div className="fundo-erro texto-erro rounded-md p-4 mb-3 flex items-start gap-3">
-                  <i className="fa-solid fa-triangle-exclamation text-xl"></i>
-                  <div>
-                    <p className="font-bold">Ainda não está pronto</p>
-                    <p className="text-sm">
-                      A regra de negócio de pontuação (pesos e dimensões abaixo) ainda não foi fechada. Os números
-                      são só uma prévia da estrutura, não confie neles pra testar nada que dependa do valor final.
-                    </p>
-                  </div>
-                </div>
-                {score ? (
-                  <>
-                    <p>
-                      {score.scoreTotal} pontos, <span className="badge badge-sucesso">{score.rotulo}</span>
-                    </p>
-                    <table className="crud-tabela mt-2">
-                      <thead>
-                        <tr>
-                          <th>Dimensão</th>
-                          <th>Pontos</th>
-                          <th>Peso</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {score.dimensoes.map((dimensao) => (
-                          <tr key={dimensao.nomeDimensao}>
-                            <td>{dimensao.nomeDimensao}</td>
-                            <td>{dimensao.pontosObtidos}</td>
-                            <td>{dimensao.peso}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </>
-                ) : (
-                  <p className="texto-fraco text-xs">carregando...</p>
-                )}
-              </>
-            )}
+            {jaTemPerfil === true && chaveFoco !== null && <PainelScore auth={auth} idUsuario={chaveFoco} />}
           </div>
         </div>
       )}

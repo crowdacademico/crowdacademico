@@ -10,22 +10,12 @@ import {
   classeBadgeStatusPesquisador,
 } from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
-import { formatarCpfExibicao, formatarDataHora } from '../../services/constant/utils/formatacao.util';
+import { formatarCpfExibicao, formatarDataHora, formatarNomeDimensao } from '../../services/constant/utils/formatacao.util';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { PerfilPesquisadorResponse, PerfilPesquisadorResponseScore } from '../../services/6-perfil-pesquisador/type/perfil-pesquisador.type';
 
 function formatarCpf(cpf: string | null): string {
   return cpf ? formatarCpfExibicao(cpf) : 'Não visível (sem permissão sensível ou não é o dono)';
-}
-
-// `nomeDimensao` vem cru do banco (snake_case, ex.: "atualizacao_campanha")
-// - sem isso o rótulo colidia com o valor ao lado no grid de 2 colunas
-// (CampoFicha), texto comprido demais pra largura da célula.
-function formatarNomeDimensao(nome: string): string {
-  return nome
-    .split('_')
-    .map((parte) => parte.charAt(0).toUpperCase() + parte.slice(1))
-    .join(' ');
 }
 
 export function ConsultarPesquisador({ auth }: PropsPagina) {

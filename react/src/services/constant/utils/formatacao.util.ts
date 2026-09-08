@@ -104,6 +104,17 @@ export function mascararCpf(valor: string | null | undefined): string {
 // de `GenericTable`, o log de auditoria). Nenhum chamador conhecido hoje
 // passa objeto de verdade por aqui - isto é rede de segurança, não deveria
 // aparecer na prática.
+// `nomeDimensao` (Score de pesquisador) vem cru do banco (snake_case, ex.:
+// "atualizacao_campanha") - duplicado antes em consultar-pesquisador.tsx e
+// bancada-pesquisador.tsx (T1, Campo de Testes), centralizado aqui
+// (08-09-2026) pra não arriscar as duas cópias divergirem.
+export function formatarNomeDimensao(nome: string): string {
+  return nome
+    .split('_')
+    .map((parte) => parte.charAt(0).toUpperCase() + parte.slice(1))
+    .join(' ');
+}
+
 export function textoSeguro(valor: unknown): string {
   if (valor === null || valor === undefined) {
     return '';

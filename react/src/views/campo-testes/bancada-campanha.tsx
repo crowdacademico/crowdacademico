@@ -670,6 +670,11 @@ export function BancadaCampanha({ auth }: PropsPagina) {
       <section className="crud-secao">
       <div className="crud-secao__cabecalho">
         <h2 className="titulo-secao">Campo de Testes - Bancada da Campanha</h2>
+        <div className="crud-secao__acao-topo">
+          <button type="button" className="btn btn-primary" onClick={() => setCriandoCampanha(true)}>
+            Criar
+          </button>
+        </div>
       </div>
 
       {pesquisadorSelecionado && (
@@ -700,9 +705,6 @@ export function BancadaCampanha({ auth }: PropsPagina) {
       <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
         <h3 className="subtitulo">Campanhas{pesquisadorSelecionado ? ` de ${pesquisadorSelecionado.nome}` : ''}</h3>
         <div className="flex items-center gap-3 flex-wrap">
-          <button type="button" className="btn btn-primary text-sm" onClick={() => setCriandoCampanha(true)}>
-            <i className="fa-solid fa-plus"></i> Criar Campanha
-          </button>
           <label className="text-xs flex items-center gap-1.5">
             <input
               type="checkbox"
@@ -799,7 +801,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
           <tr>
             <th className="crud-tabela__coluna-id crud-tabela__celula--centralizada">id</th>
             <th>título</th>
-            <th>status</th>
+            <th className="crud-tabela__celula--centralizada">status</th>
             <th>dono</th>
             <th className="crud-tabela__celula--centralizada">meta</th>
             <th className="crud-tabela__celula--centralizada">Escolher</th>
@@ -824,7 +826,14 @@ export function BancadaCampanha({ auth }: PropsPagina) {
                     {item.idCampanha}
                   </td>
                   <td style={bloqueada && !selecionada ? { textDecoration: 'line-through' } : undefined}>{item.titulo}</td>
-                  <td style={bloqueada && !selecionada ? { textDecoration: 'line-through' } : undefined}>{item.status}</td>
+                  <td
+                    className="crud-tabela__celula--centralizada"
+                    style={bloqueada && !selecionada ? { textDecoration: 'line-through' } : undefined}
+                  >
+                    <span className={`badge ${classeBadgeStatusCampanha(item.status)}`}>
+                      {ROTULO_STATUS_CAMPANHA[item.status] ?? item.status}
+                    </span>
+                  </td>
                   <td style={bloqueada && !selecionada ? { textDecoration: 'line-through' } : undefined}>{nomeDe(item.idUsuario)}</td>
                   <td className="crud-tabela__celula--centralizada">{formatarReais(item.metaFinanceira)}</td>
                   {/* CORRIGIDO (08-09-2026, pedido do Lucas) - "Escolher" já
@@ -942,8 +951,12 @@ export function BancadaCampanha({ auth }: PropsPagina) {
               </SecaoFicha>
 
               {/* Orçamento/Cronograma acima de Datas (08-09-2026, pedido do
-                  Lucas) - só leitura aqui (Consultar nunca edita nada). */}
+                  Lucas) - só leitura aqui (Consultar nunca edita nada).
+                  Linha divisória dos dois lados, mesmo padrão já usado
+                  entre Links Acadêmicos e Moderação em T1. */}
+              <div className="border-t borda-padrao"></div>
               <PainelOrcamentoCronograma auth={auth} idCampanha={campanhaConsultada.idCampanha} podeEditar={false} />
+              <div className="border-t borda-padrao"></div>
 
               <SecaoFicha titulo="Datas">
                 <CampoFicha rotulo="Início" valor={formatarDataHora(campanhaConsultada.dataInicio)} />
@@ -1062,12 +1075,14 @@ export function BancadaCampanha({ auth }: PropsPagina) {
                     Acadêmicos em T1), mas só quando a campanha ainda está
                     aguardando aprovação (mesma regra do painel "campanha em
                     foco" mais abaixo nesta tela) e não é uma das 10 de
-                    demonstração. */}
+                    demonstração. Linha divisória dos dois lados. */}
+                <div className="border-t borda-padrao"></div>
                 <PainelOrcamentoCronograma
                   auth={auth}
                   idCampanha={idCampanhaEditando}
                   podeEditar={!bloqueadaEdicao && campanhaEmEdicao?.status === 'aguardando_aprovacao'}
                 />
+                <div className="border-t borda-padrao"></div>
 
                 <SecaoFicha titulo="Datas">
                   <div>
