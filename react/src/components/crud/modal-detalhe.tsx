@@ -80,7 +80,7 @@ export function ModalDetalhe({
               <span
                 className={
                   'text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ' +
-                  (CLASSE_BADGE_IMPACTO[badgeImpacto] ?? 'fundo-sutil texto-fraco')
+                  CLASSE_BADGE_IMPACTO[badgeImpacto]
                 }
               >
                 Impacto {badgeImpacto}

@@ -124,6 +124,10 @@ export function textoSeguro(valor: unknown): string {
   }
   // object/função/símbolo - `JSON.stringify` devolve `undefined` pra
   // função/símbolo puro (nunca acontece na prática, é só a rede de
-  // segurança do tipo cobrindo o caso todo).
+  // segurança do tipo cobrindo o caso todo). O tipo embutido do TS pra
+  // `JSON.stringify` afirma `string` sempre - é o próprio lib.d.ts que
+  // mente aqui, não um DTO nosso; achado na auditoria do
+  // `no-unnecessary-condition` (12-09-2026), mantido de propósito.
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   return JSON.stringify(valor) ?? '(valor não representável)';
 }

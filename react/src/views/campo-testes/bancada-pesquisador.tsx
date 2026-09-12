@@ -24,6 +24,7 @@ import {
 import { AvatarUsuario } from '../../components/layout/avatar-usuario';
 import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
+import { useConfiguracoes } from '../../services/11-configuracoes/hook/use-configuracoes';
 import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { ModalDetalhe } from '../../components/crud/modal-detalhe';
@@ -117,6 +118,16 @@ function PainelLinksAcademicos({ auth, idUsuario, tiposLink, tituloComoSecaoFich
   const { mostrar } = useToast();
   const { reportarErro } = useErroToast();
 
+  // CORRIGIDO (12-09-2026, achado de agente numa auditoria de hardcode):
+  // `5` era fixo aqui, mesmo já existindo `configuracoes.
+  // limite_links_academicos_perfil` (pública, é o valor que
+  // trg_link_academico_valida_limite lê de verdade) - se o Admin mudasse
+  // esse número pelo painel, esta tela continuava travada em 5. Mesmo
+  // padrão de `seletor-foto-perfil.tsx`.
+  const { obterConfiguracao } = useConfiguracoes();
+  const valorLimiteLinks = obterConfiguracao('limite_links_academicos_perfil', 5);
+  const limiteLinks = typeof valorLimiteLinks === 'number' ? valorLimiteLinks : 5;
+
   const [links, setLinks] = useState<LinkAcademico[]>([]);
   const [novoLink, setNovoLink] = useState({ idTipoLink: '', url: '', rotulo: '' });
   const [idLinkEditando, setIdLinkEditando] = useState<number | null>(null);
@@ -193,10 +204,10 @@ function PainelLinksAcademicos({ auth, idUsuario, tiposLink, tituloComoSecaoFich
           escapar da regra global de heading serifado). */}
       {tituloComoSecaoFicha ? (
         <h3 className="titulo-bloco mb-3 pb-2 border-b borda-padrao">
-          Links acadêmicos ({links.length} de 5)
+          Links acadêmicos ({links.length} de {limiteLinks})
         </h3>
       ) : (
-        <h4 className="font-bold mt-4 mb-1">Links acadêmicos ({links.length} de 5)</h4>
+        <h4 className="font-bold mt-4 mb-1">Links acadêmicos ({links.length} de {limiteLinks})</h4>
       )}
       <div className="links-academicos-wrapper">
         <table className="crud-tabela mb-2">
@@ -290,7 +301,7 @@ function PainelLinksAcademicos({ auth, idUsuario, tiposLink, tituloComoSecaoFich
                 </tr>
               );
             })}
-            {links.length < 5 && (
+            {links.length < limiteLinks && (
               <tr>
                 <td>
                   <select
@@ -337,7 +348,7 @@ function PainelLinksAcademicos({ auth, idUsuario, tiposLink, tituloComoSecaoFich
         </table>
       </div>
 
-      {links.length < 5 && (
+      {links.length < limiteLinks && (
         <button type="button" className="btn btn-primary" onClick={adicionarLink}>
           + Adicionar
         </button>
@@ -589,13 +600,12 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
   useEffect(() => {
     if (tiposLink.length > 0) return;
     chamarERegistrar<ResultadoPaginado<TipoLinkResponse>>('/tipo-link?escopo=perfil&tamanho=100')
-      .then((resultado) => setTiposLink(resultado.dados ?? []))
+      .then((resultado) => setTiposLink(resultado.dados))
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const escolherPesquisador = (perfil: PesquisadorLinha) => {
-    if (!perfil.usuario) return;
     selecionarPesquisador({ idUsuario: perfil.idUsuario, nome: perfil.usuario.nome, email: perfil.usuario.email });
   };
 
@@ -671,7 +681,7 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
 
   // Opções do dropdown "Papel" - só os valores que já aparecem nos dados
   // (mesmo sniff de GenericTable), ordenados do menor pro maior poder.
-  const opcoesPapel = [...new Set(pesquisadores.flatMap((perfil) => (perfil.papel ?? '').split(', ').filter(Boolean)))].sort((a, b) => {
+  const opcoesPapel = [...new Set(pesquisadores.flatMap((perfil) => perfil.papel.split(', ').filter(Boolean)))].sort((a, b) => {
     const posicao = (valor: string): number => {
       const indice = ORDEM_PODER_PAPEL.indexOf(valor);
       return indice === -1 ? ORDEM_PODER_PAPEL.length : indice;
@@ -683,14 +693,14 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
     .filter((perfil) => !ocultarBloqueados || !PESQUISADOR_BLOQUEADO(perfil.idUsuario))
     .filter((perfil) => {
       if (papeisSelecionados.length === 0) return true;
-      return (perfil.papel ?? '').split(', ').some((papel) => papeisSelecionados.includes(papel));
+      return perfil.papel.split(', ').some((papel) => papeisSelecionados.includes(papel));
     })
     .filter((perfil) => {
       const termo = filtroTexto.trim().toLowerCase();
       if (!termo) return true;
       return [
         perfil.idUsuario,
-        perfil.usuario?.nome,
+        perfil.usuario.nome,
         perfil.tituloAcademico ? ROTULO_TITULO_ACADEMICO[perfil.tituloAcademico] : undefined,
         perfil.statusPesquisador ? ROTULO_STATUS_PESQUISADOR[perfil.statusPesquisador] : undefined,
         perfil.papel,
@@ -852,17 +862,17 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
                     {perfil.idUsuario}
                   </td>
                   <td style={bloqueado ? { textDecoration: 'line-through' } : undefined}>
-                    {perfil.usuario?.nome ?? `#${perfil.idUsuario}`}
+                    {perfil.usuario.nome}
                   </td>
                   <td style={bloqueado ? { textDecoration: 'line-through' } : undefined}>{perfil.papel}</td>
                   <td style={bloqueado ? { textDecoration: 'line-through' } : undefined}>
-                    {perfil.tituloAcademico ? ROTULO_TITULO_ACADEMICO[perfil.tituloAcademico] ?? perfil.tituloAcademico : '-'}
+                    {perfil.tituloAcademico ? ROTULO_TITULO_ACADEMICO[perfil.tituloAcademico] : '-'}
                   </td>
                   <td
                     className="crud-tabela__celula--centralizada"
                     style={bloqueado ? { textDecoration: 'line-through' } : undefined}
                   >
-                    {perfil.statusPesquisador ? ROTULO_STATUS_PESQUISADOR[perfil.statusPesquisador] ?? perfil.statusPesquisador : '-'}
+                    {perfil.statusPesquisador ? ROTULO_STATUS_PESQUISADOR[perfil.statusPesquisador] : '-'}
                   </td>
                   <td className="crud-tabela__celula--centralizada">{perfil.scoreAtual ?? '-'}</td>
                   <td className="crud-tabela__celula--centralizada">
@@ -982,9 +992,9 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
           vez de página) pra Consultar/Alterar Usuário de verdade depois. */}
       {perfilConsultado && (
         <ModalFicha
-          titulo={perfilConsultado.usuario?.nome ?? `#${perfilConsultado.idUsuario}`}
-          subtitulo={perfilConsultado.usuario?.email}
-          avatar={<AvatarUsuario nome={perfilConsultado.usuario?.nome} tamanho="lg" />}
+          titulo={perfilConsultado.usuario.nome}
+          subtitulo={perfilConsultado.usuario.email}
+          avatar={<AvatarUsuario nome={perfilConsultado.usuario.nome} tamanho="lg" />}
           aoFechar={() => setPerfilConsultado(null)}
           rodape={
             <button type="button" onClick={() => setPerfilConsultado(null)} className="btn btn-secondary w-full">
@@ -1050,9 +1060,9 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
         };
         return (
           <ModalFicha
-            titulo={perfilEmEdicao?.usuario?.nome ?? `#${idUsuarioEditandoPerfil}`}
-            subtitulo={perfilEmEdicao?.usuario?.email}
-            avatar={<AvatarUsuario nome={perfilEmEdicao?.usuario?.nome} tamanho="lg" />}
+            titulo={perfilEmEdicao?.usuario.nome ?? `#${idUsuarioEditandoPerfil}`}
+            subtitulo={perfilEmEdicao?.usuario.email}
+            avatar={<AvatarUsuario nome={perfilEmEdicao?.usuario.nome} tamanho="lg" />}
             aoFechar={fecharModal}
             rodape={
               <div className="flex gap-3 max-w-sm ml-auto">
@@ -1163,7 +1173,7 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
               <div className="space-y-6">
                 <SecaoFicha titulo="Metadados" colunas={1}>
                   <CampoSomenteLeitura rotulo="id" valor={idUsuarioEditandoPerfil} />
-                  <CampoSomenteLeitura rotulo="E-mail" valor={perfilEmEdicao?.usuario?.email} />
+                  <CampoSomenteLeitura rotulo="E-mail" valor={perfilEmEdicao?.usuario.email} />
                   <CampoSomenteLeitura
                     rotulo="Status atual"
                     valor={
@@ -1280,13 +1290,13 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
               </div>
             )}
 
-            {jaTemPerfil === true && chaveFoco !== null && (
+            {jaTemPerfil === true && (
               <PainelLinksAcademicos auth={auth} idUsuario={chaveFoco} tiposLink={tiposLink} />
             )}
           </div>
 
           <div className={'flex-1 min-w-0' + (jaTemPerfil === true ? ' lg:border-l lg:border-[var(--cor-borda)] lg:pl-6' : '')}>
-            {jaTemPerfil === true && chaveFoco !== null && <PainelScore auth={auth} idUsuario={chaveFoco} />}
+            {jaTemPerfil === true && <PainelScore auth={auth} idUsuario={chaveFoco} />}
           </div>
         </div>
       )}

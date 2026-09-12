@@ -42,7 +42,7 @@ export function ConsultarMotivoDenuncia({ auth }: PropsPagina) {
           {motivo.ativo ? 'Ativo' : 'Inativo'}
         </span>,
         <span key="tipo" className="badge badge-neutro">
-          {ROTULO_TIPO[motivo.tipo] ?? motivo.tipo}
+          {ROTULO_TIPO[motivo.tipo]}
         </span>,
       ]}
       acoes={
@@ -53,7 +53,7 @@ export function ConsultarMotivoDenuncia({ auth }: PropsPagina) {
     >
       <SecaoFicha titulo="Dados">
         <CampoFicha rotulo="id" valor={motivo.idMotivo} />
-        <CampoFicha rotulo="Tipo" valor={ROTULO_TIPO[motivo.tipo] ?? motivo.tipo} />
+        <CampoFicha rotulo="Tipo" valor={ROTULO_TIPO[motivo.tipo]} />
         <CampoFicha rotulo="Descrição" valor={motivo.descricao} largura="cheia" />
       </SecaoFicha>
     </FichaConsulta>

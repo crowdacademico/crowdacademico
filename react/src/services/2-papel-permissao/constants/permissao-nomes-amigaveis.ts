@@ -29,7 +29,16 @@ interface DetalhePermissao {
   impacto: ImpactoPermissao | null;
 }
 
-export const DETALHE_PERMISSAO: Record<string, DetalhePermissao> = {
+// `Partial<Record<...>>`, não `Record<...>` puro (achado na auditoria do
+// `no-unnecessary-condition`, 12-09-2026): o dicionário é fechado (só as
+// permissões documentadas abaixo), mas quem chama passa `permissao.nome`
+// vindo direto do banco - um nome novo, semeado mas ainda não documentado
+// aqui, é um caso real, não hipotético. `Record<string, T>` fazia o
+// TypeScript mentir que TODA chave string tem valor, marcando o fallback
+// das duas funções abaixo como "morto"; `Partial` deixa o tipo honesto
+// (`DetalhePermissao | undefined`), then o fallback correspondia a uma
+// proteção legítima o tempo todo.
+export const DETALHE_PERMISSAO: Partial<Record<string, DetalhePermissao>> = {
   // A - Visão Geral & Configuração Inicial
   relatorio_visualizar: {
     nome: 'Visualizar Relatórios',

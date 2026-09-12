@@ -110,13 +110,22 @@ export function RegistroChamadas() {
               {linhaExpandida === chamada.id && (
                 <div className="fundo-sutil rounded-md p-3 my-1 text-xs">
                   <p className="font-bold mb-1">Enviado</p>
-                  <pre className="overflow-x-auto">{JSON.stringify(chamada.corpoEnviado, null, 2) ?? '(sem corpo)'}</pre>
+                  <pre className="overflow-x-auto">{JSON.stringify(chamada.corpoEnviado, null, 2)}</pre>
                   <p className="font-bold mt-2 mb-1">Recebido</p>
-                  <pre className="overflow-x-auto">{JSON.stringify(chamada.corpoRecebido, null, 2) ?? '(sem corpo)'}</pre>
+                  <pre className="overflow-x-auto">{JSON.stringify(chamada.corpoRecebido, null, 2)}</pre>
                   <button
                     type="button"
                     className="btn btn-secondary text-xs mt-2"
-                    onClick={() => navigator.clipboard?.writeText(montarCurl(chamada))}
+                    onClick={() => {
+                      // `navigator.clipboard` (achado na auditoria do
+                      // `no-unnecessary-condition`, 12-09-2026): o tipo do
+                      // lib.dom.d.ts afirma sempre presente, mas a Clipboard
+                      // API de verdade só existe em contexto seguro
+                      // (HTTPS/localhost) e falta em navegador mais antigo -
+                      // proteção real contra o ambiente, não código morto.
+                      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+                      void navigator.clipboard?.writeText(montarCurl(chamada));
+                    }}
                   >
                     <i className="fa-solid fa-copy"></i> Copiar como cURL
                   </button>

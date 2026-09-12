@@ -26,15 +26,20 @@ interface Atualizacao {
   idCampanha: number;
   titulo: string;
   conteudo: string;
-  fase: string;
-  tipo: string;
+  // `fase`/`tipo` são `null` de verdade no DTO Nest (achado numa auditoria,
+  // 12-09-2026, agente conferindo DTO x tipo) - esta interface local tinha
+  // os dois como obrigatórios, mais otimista do que a API real permite.
+  fase: string | null;
+  tipo: string | null;
   ativo: boolean;
 }
 
 interface Comentario {
   idComentario: number;
   idCampanha: number;
-  idPesquisador: number;
+  // `number | null` (mesmo achado acima) - autor pode não existir mais
+  // (conta excluída/anonimizada), o DTO Nest já reflete isso.
+  idPesquisador: number | null;
   conteudo: string;
   endossado: boolean;
   ativo: boolean;
@@ -78,7 +83,11 @@ export function VidaCampanhaAtiva({ auth }: PropsPagina) {
 
   const [euSigo, setEuSigo] = useState(false);
 
-  const nomeDe = (idUsuario: number): string => nomesPorId.get(idUsuario) ?? `usuário #${idUsuario}`;
+  // Aceita `null` (12-09-2026, mesmo achado do comentário em `Comentario`
+  // acima) - `idPesquisador` de um comentário pode ser `null` de verdade
+  // (autor excluído/anonimizado), não só usuário nunca carregado.
+  const nomeDe = (idUsuario: number | null): string =>
+    idUsuario === null ? 'Pesquisador removido' : (nomesPorId.get(idUsuario) ?? `usuário #${idUsuario}`);
 
   useEffect(() => {
     usuarioApi
@@ -94,12 +103,12 @@ export function VidaCampanhaAtiva({ auth }: PropsPagina) {
     auth
       .authFetch(`/atualizacao-campanha?idCampanha=${id}&tamanho=50`)
       .then(tratarResposta<ResultadoPaginado<Atualizacao>>)
-      .then((r) => setAtualizacoes(r.dados ?? []))
+      .then((r) => setAtualizacoes(r.dados))
       .catch(() => {});
     auth
       .authFetch(`/comentario?idCampanha=${id}&tamanho=50`)
       .then(tratarResposta<ResultadoPaginado<Comentario>>)
-      .then((r) => setComentarios(r.dados ?? []))
+      .then((r) => setComentarios(r.dados))
       .catch(() => {});
     // GET /seguir-campanha só devolve "minha lista" (pol_seg_campanha_select,
     // 04) - sem Elenco, só dá pra saber se A PRÓPRIA sessão logada segue.
@@ -213,7 +222,7 @@ export function VidaCampanhaAtiva({ auth }: PropsPagina) {
               {atualizacoes.map((item) => (
                 <tr key={item.idAtualizacao}>
                   <td>{item.titulo}</td>
-                  <td>{item.fase}</td>
+                  <td>{item.fase ?? '-'}</td>
                   <td className="crud-tabela__celula--centralizada">
                     <span className={`badge ${item.ativo ? 'badge-sucesso' : 'badge-neutro'}`}>{item.ativo ? 'Sim' : 'Não'}</span>
                   </td>

@@ -33,7 +33,7 @@ export function AlterarMotivoDenuncia({ auth }: PropsPagina) {
       .buscar(auth.authFetch, id)
       .then((dados) => {
         setMotivo(dados);
-        setDescricao(dados.descricao ?? '');
+        setDescricao(dados.descricao);
         setTipo(dados.tipo);
         setAtivo(dados.ativo);
       })
@@ -44,7 +44,7 @@ export function AlterarMotivoDenuncia({ auth }: PropsPagina) {
 
   const sujo =
     motivo !== null &&
-    (descricao !== (motivo.descricao ?? '') || tipo !== motivo.tipo || ativo !== motivo.ativo);
+    (descricao !== motivo.descricao || tipo !== motivo.tipo || ativo !== motivo.ativo);
   useAvisoAlteracaoNaoSalva(sujo);
 
   const aoCancelar = () => {

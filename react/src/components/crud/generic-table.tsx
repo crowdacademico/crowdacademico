@@ -286,7 +286,7 @@ export function GenericTable<T extends Linha>({
   // contam como "Todos", não filtram nada) - usado tanto no filtro quanto
   // pra saber se deve mostrar "Nenhum registro bate com o filtro."
   const algumaFacetaAtiva = (filtrosFacetados ?? []).some(
-    (faceta) => (selecoesPorFaceta[faceta.chave]?.length ?? 0) > 0,
+    (faceta) => selecoesPorFaceta[faceta.chave].length > 0,
   );
 
   // Filtro é só client-side (a lista inteira já veio do backend) - resolve
@@ -304,7 +304,7 @@ export function GenericTable<T extends Linha>({
     // opções marcadas).
     (filtrosFacetados ?? []).forEach((faceta) => {
       const selecionados = selecoesPorFaceta[faceta.chave];
-      if (selecionados && selecionados.length > 0) {
+      if (selecionados.length > 0) {
         base = base.filter((linha) => {
           const valoresDaLinha = String(linha[faceta.chave] ?? '')
             .split(',')
@@ -608,7 +608,7 @@ export function GenericTable<T extends Linha>({
 
       {!carregando &&
         (linhas.length > LIMIAR_FILTRO ||
-          (filtrosFacetados ?? []).some((faceta) => (opcoesPorFaceta[faceta.chave]?.length ?? 0) > 1)) && (
+          (filtrosFacetados ?? []).some((faceta) => opcoesPorFaceta[faceta.chave].length > 1)) && (
           <div className="flex items-center gap-3 flex-wrap mb-3">
             {linhas.length > LIMIAR_FILTRO && (
               <input

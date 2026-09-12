@@ -35,8 +35,8 @@ export function ListarPesquisadores({ auth }: PropsPagina) {
     return pesquisadores.map((pesquisador) => ({
       ...pesquisador,
       nome: nomePorIdUsuario.get(pesquisador.idUsuario) ?? `#${pesquisador.idUsuario}`,
-      tituloAcademico: ROTULO_TITULO_ACADEMICO[pesquisador.tituloAcademico] ?? pesquisador.tituloAcademico,
-      statusPesquisador: ROTULO_STATUS_PESQUISADOR[pesquisador.statusPesquisador] ?? pesquisador.statusPesquisador,
+      tituloAcademico: ROTULO_TITULO_ACADEMICO[pesquisador.tituloAcademico],
+      statusPesquisador: ROTULO_STATUS_PESQUISADOR[pesquisador.statusPesquisador],
     }));
   }, [auth.authFetch]);
 

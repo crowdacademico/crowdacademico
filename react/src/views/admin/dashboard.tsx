@@ -171,7 +171,7 @@ export function Dashboard({ auth }: DashboardProps) {
           {carregandoResumo ? (
             <p className="text-sm texto-fraco">Carregando métricas...</p>
           ) : !resumo ? (
-            <p className="crud-erro">{erro ?? 'Não foi possível carregar as métricas.'}</p>
+            <p className="crud-erro">{erro}</p>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <CardMetrica rotulo="Usuários" valor={resumo.totalUsuarios} />

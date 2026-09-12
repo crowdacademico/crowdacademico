@@ -54,14 +54,14 @@ export function ConsultarPesquisador({ auth }: PropsPagina) {
   return (
     <FichaConsulta
       titulo={nomeUsuario ?? `Usuário #${perfil.idUsuario}`}
-      subtitulo={ROTULO_TITULO_ACADEMICO[perfil.tituloAcademico] ?? perfil.tituloAcademico}
+      subtitulo={ROTULO_TITULO_ACADEMICO[perfil.tituloAcademico]}
       largura="larga"
       badges={[
         <span key="status" className={`badge ${classeBadgeStatusPesquisador(perfil.statusPesquisador)}`}>
-          {ROTULO_STATUS_PESQUISADOR[perfil.statusPesquisador] ?? perfil.statusPesquisador}
+          {ROTULO_STATUS_PESQUISADOR[perfil.statusPesquisador]}
         </span>,
         <span key="vinculo" className="badge badge-neutro">
-          {ROTULO_TIPO_VINCULO[perfil.tipoVinculo] ?? perfil.tipoVinculo}
+          {ROTULO_TIPO_VINCULO[perfil.tipoVinculo]}
         </span>,
       ]}
       acoes={

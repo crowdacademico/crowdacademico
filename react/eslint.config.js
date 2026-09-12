@@ -48,10 +48,16 @@ export default defineConfig([
     // `restrict-template-expressions` (3 ocorrências em `generic-table.tsx`,
     // `String()` explícito antes de interpolar); `no-unsafe-argument` (1
     // ocorrência, `configuracoes-provider.tsx` - narrowing `instanceof Error`
-    // antes de guardar no estado). Só `no-unnecessary-condition` continua de
-    // fora de propósito - as 41 ocorrências exigem conferir DTO por DTO pra
-    // separar código morto de proteção legítima (ver ACHADOS_PARA_DISCUTIR.md,
-    // item 14) - meio dia de trabalho, fica pra uma rodada própria.
+    // antes de guardar no estado).
+    //
+    // ATUALIZADO (12-09-2026): `no-unnecessary-condition` também adotada -
+    // as 57 ocorrências (cresceram de 41 pra 57 com o trabalho novo em Campo
+    // de Testes) foram conferidas uma a uma contra o DTO Nest/tipo real
+    // correspondente antes de decidir remover, corrigir o tipo (2 casos,
+    // `Record<string,T>` que devia ser `Partial<Record<string,T>>`) ou manter
+    // com `eslint-disable` comentado (2 casos, onde o `lib.d.ts` do TS mente
+    // sobre o retorno real de `JSON.stringify`/`navigator.clipboard`) - ver
+    // `DOCUMENTACAO_LINT.md` pra detalhamento completo dos 3 grupos.
     languageOptions: {
       globals: globals.browser,
       parserOptions: {
@@ -77,6 +83,7 @@ export default defineConfig([
       '@typescript-eslint/no-base-to-string': 'error',
       '@typescript-eslint/restrict-template-expressions': 'error',
       '@typescript-eslint/no-unsafe-argument': 'error',
+      '@typescript-eslint/no-unnecessary-condition': 'error',
     },
   },
 ])

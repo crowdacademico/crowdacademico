@@ -105,6 +105,24 @@ export interface ConfiguracoesTable {
   publica: Generated<boolean>;
 }
 
+// CK_LOG_AUDITORIA_OPERACAO (01) - não é CREATE TYPE ... AS ENUM (é CHECK
+// direto na coluna), mas o mesmo raciocínio de TIPOS_MOTIVO_DENUNCIA acima
+// se aplica: array em runtime, tipo derivado dele. Achado numa auditoria
+// (12-09-2026, achado de agente conferindo DTO Nest x tipo React): antes
+// disto, `operacao` era `string` solto aqui - o tipo em
+// react/src/services/27-log-auditoria/type/log-auditoria.type.ts já
+// restringia a esses 4 valores (comentário lá dizia "espelha db.types.ts",
+// mas nada aqui garantia isso) - se a constraint um dia ganhasse um 5º
+// valor, nada nos dois lados avisaria. Os 4 valores conferidos contra
+// 01_extensoes_enums_tabelas.sql linha 1004.
+export const OPERACOES_LOG_AUDITORIA = [
+  'INSERT',
+  'UPDATE',
+  'DELETE',
+  'EXPORT',
+] as const;
+export type OperacaoLogAuditoria = (typeof OPERACOES_LOG_AUDITORIA)[number];
+
 // ADICIONADA (03-08-2026) - espelha 01_extensoes_enums_tabelas.sql [01-L].
 // `id_log` é `Generated<string>`, não `<number>`: é BIGSERIAL (bigint), e o
 // driver `pg` devolve bigint como STRING por padrão (evita perda de
@@ -115,7 +133,7 @@ export interface LogAuditoriaTable {
   id_log: Generated<string>;
   tabela: string;
   identidade_registro: string;
-  operacao: string;
+  operacao: OperacaoLogAuditoria;
   id_usuario_responsavel: number | null;
   campos_alterados: string[] | null;
   dados_anteriores: Record<string, unknown> | null;

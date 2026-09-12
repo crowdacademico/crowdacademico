@@ -58,7 +58,7 @@ export function ConsultarCampanha({ auth }: PropsPagina) {
       largura="larga"
       badges={[
         <span key="status" className={`badge ${classeBadgeStatusCampanha(campanha.status)}`}>
-          {ROTULO_STATUS_CAMPANHA[campanha.status] ?? campanha.status}
+          {ROTULO_STATUS_CAMPANHA[campanha.status]}
         </span>,
         <span key="modelo" className="badge badge-neutro">
           {campanha.modelo}

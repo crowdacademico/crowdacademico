@@ -59,8 +59,8 @@ interface AvatarUsuarioProps {
 }
 
 export function AvatarUsuario({ nome, foto, tamanho = 'md', forma = 'circulo' }: AvatarUsuarioProps) {
-  const classeTamanho = CLASSE_TAMANHO[tamanho] ?? CLASSE_TAMANHO.md;
-  const classeForma = CLASSE_FORMA[forma] ?? CLASSE_FORMA.circulo;
+  const classeTamanho = CLASSE_TAMANHO[tamanho];
+  const classeForma = CLASSE_FORMA[forma];
   const nomeSeguro = nome?.trim() || '?';
 
   if (foto) {

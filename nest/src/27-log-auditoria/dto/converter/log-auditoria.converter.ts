@@ -1,4 +1,5 @@
 import { LogAuditoriaResponse } from '../response/log-auditoria.response';
+import type { OperacaoLogAuditoria } from '../../../commons/database/db.types';
 
 // Shape exata do SELECT de log-auditoria.service.findall.ts (join com
 // usuario) - não é um `Selectable<LogAuditoriaTable>` puro por causa do
@@ -7,7 +8,7 @@ interface LogAuditoriaParaConverter {
   id_log: string;
   tabela: string;
   identidade_registro: string;
-  operacao: string;
+  operacao: OperacaoLogAuditoria;
   id_usuario_responsavel: number | null;
   nome_responsavel: string | null;
   campos_alterados: string[] | null;

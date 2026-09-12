@@ -81,7 +81,7 @@ export function ExcluirMotivoDenuncia({ auth }: PropsPagina) {
 
           <SecaoFicha titulo="O que será excluído">
             <CampoFicha rotulo="Descrição" valor={motivo.descricao} largura="cheia" />
-            <CampoFicha rotulo="Tipo" valor={ROTULO_TIPO[motivo.tipo] ?? motivo.tipo} />
+            <CampoFicha rotulo="Tipo" valor={ROTULO_TIPO[motivo.tipo]} />
           </SecaoFicha>
 
           <div className="rounded-lg border borda-forte fundo-erro p-4 text-sm texto-erro">

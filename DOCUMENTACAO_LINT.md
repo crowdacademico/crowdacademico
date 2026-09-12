@@ -2,7 +2,37 @@
 
 Referência do estado atual do lint do `react/` - o que está ligado, por quê, e o que foi testado e deixado de fora de propósito. Documento de consulta, não de trabalho em andamento: não deve precisar de atualização com frequência, mas precisa existir pra você e a Alexia saberem o que há por trás do sistema sem precisar reconstruir o raciocínio do zero.
 
-**Escopo: só `react/`.** O `nest/` (backend) não tem lint ciente de tipo configurado - é TypeScript desde o início do projeto, mas o `eslint.config.js` de lá nunca passou por essa mesma revisão. Nada neste documento se aplica ao backend.
+**Escopo: majoritariamente `react/`** (é onde está o detalhamento, achado por achado, de cada regra). O `nest/` tem seu próprio `eslint.config.mjs`, resumido na tabela abaixo pra este documento não fingir que ele não existe, mas sem o mesmo nível de detalhe - nunca passou pela mesma revisão de "testar, achar, corrigir de verdade" que o `react/` passou.
+
+---
+
+## Lista completa - tudo que está ligado hoje, nos dois lados
+
+### `react/eslint.config.js`
+
+**Bases (presets herdados, não regra avulsa):** `js.configs.recommended` (só nos arquivos `.js`/`.jsx` da raiz - `eslint.config.js`/`vite.config.js`); `tseslint.configs.recommended` (todo `.ts`/`.tsx` de `src/`); `reactHooks.configs.flat.recommended`; `reactRefresh.configs.vite`.
+
+**Regras extras, além do preset, hoje todas em `'error'`:**
+
+| Regra | Desde |
+|---|---|
+| `@typescript-eslint/no-non-null-assertion` | 06-09-2026 |
+| `@typescript-eslint/no-misused-promises` (`checksVoidReturn: { attributes: false }`) | 07-09-2026 |
+| `@typescript-eslint/no-floating-promises` | 08-09-2026 |
+| `@typescript-eslint/no-base-to-string` | 08-09-2026 |
+| `@typescript-eslint/restrict-template-expressions` | 08-09-2026 |
+| `@typescript-eslint/no-unsafe-argument` | 08-09-2026 |
+| `@typescript-eslint/no-unnecessary-condition` | 12-09-2026 |
+
+Detalhamento de cada uma (o quê, por quê, o que foi achado ao ligar) nas seções abaixo.
+
+### `nest/eslint.config.mjs`
+
+Nunca reformado - é essencialmente o esqueleto padrão que o `nest new` gera, sem a mesma auditoria de regra por regra que o `react/` recebeu. Registrado aqui só pra este documento ser a lista completa que o Lucas pediu (12-09-2026), não como recomendação de mexer agora:
+
+- **Bases:** `eslint.configs.recommended` (`@eslint/js`); `tseslint.configs.recommendedTypeChecked` (preset TS ciente de tipo, mais amplo que o `recommended` simples do React); `eslintPluginPrettierRecommended` (formatação, não é análise de bug).
+- **Ajustes por cima do preset:** `@typescript-eslint/no-explicit-any` **desligado** (`'off'`) - o preset `recommendedTypeChecked` liga por padrão; `@typescript-eslint/no-floating-promises` e `@typescript-eslint/no-unsafe-argument` rebaixados pra `'warn'` (o preset liga como erro) - as mesmas duas regras que o `react/` tem como `'error'` depois de uma auditoria dedicada.
+- **Achado ao escrever esta lista (12-09-2026, não investigado a fundo ainda):** o backend nunca passou pela mesma rodada de "rodar com o preset completo, contar ocorrência, decidir uma a uma" que o `react/` recebeu nesta sessão. `no-floating-promises`/`no-unsafe-argument` como `warn` (não `error`) significa que uma ocorrência nova não quebra o build, só aparece como aviso - pode valer a pena, um dia, repetir no `nest/` o mesmo processo já feito aqui. Não é uma pendência formal ainda, é só a lacuna ficando visível ao montar esta lista.
 
 ---
 
@@ -25,24 +55,19 @@ Dois blocos:
 
 ### Regras ligadas além do padrão
 
+Todas as regras da Camada 2 testadas até hoje acabaram adotadas - não sobrou nenhuma "testada e deixada de fora" (a tabela antiga desta seção listava 4 regras como pendentes; as 4 foram resolvidas em 08-09-2026, e a 5ª, `no-unnecessary-condition`, em 12-09-2026).
+
 | Regra | Camada | Desde | Por quê |
 |---|---|---|---|
 | `@typescript-eslint/no-non-null-assertion` | forma | Fase 1 da migração TS (06-09-2026) | Proíbe o operador `!` (ex.: `valor!`) - mesma categoria de "confiar sem prova" que a migração evitou desde o início; usa `??`/reestruturação de código no lugar. |
 | `@typescript-eslint/no-misused-promises`, com `checksVoidReturn: { attributes: false }` | tipo | 07-09-2026 | Sem a opção, todo `onClick`/`onSubmit` assíncrono (`onClick={async () => {...}}`, padrão usado em ~40 arquivos do painel) acusava erro - o React não liga pro retorno de uma Promise em atributo de evento, mas o TypeScript reclamava mesmo assim. A opção desliga só essa checagem específica (atributo JSX), mantendo as outras formas de uso indevido de Promise que a regra ainda pega. Testado antes de ligar: amostrados 4 handlers de módulos diferentes (`alterar-usuario.tsx`, `bancada-campanha.tsx`, `dev-login-rapido.tsx`, `menu-usuario.tsx`) - todos já tratavam erro internamente (try/catch ou `.catch()` explícito). Resultado: 69 ocorrências → 0. |
+| `@typescript-eslint/no-floating-promises` | tipo | 08-09-2026 | Das 32 ocorrências (31 do achado original + 1 nova entre 07 e 08-09): 27 eram `navigate()` do react-router não aguardado (trivial, resolvido com `void`), 5 já tratavam erro internamente (também só precisaram de `void` pra declarar a intenção), e **1 era bug real** - `bancada-pesquisador.tsx` (`carregarPesquisadores`) podia falhar em silêncio, spinner some sem nenhum erro aparecer. Ganhou um `.catch()` de verdade (linha vermelha na própria tabela) antes da regra ser ligada. |
+| `@typescript-eslint/no-base-to-string` | tipo | 08-09-2026 | As 4 ocorrências (`campo-somente-leitura.tsx`, `generic-table.tsx`, `log-auditoria-painel.tsx`) passaram a usar um util novo e compartilhado, `textoSeguro()` (`formatacao.util.ts`) - trata `object` explicitamente via `JSON.stringify` em vez de confiar no `toString()` padrão, então um valor-objeto real nunca mais viraria `"[object Object]"` visível. `use-chamada-registrada.ts` era um caso diferente (corpo de requisição, não valor de exibição), corrigido separadamente. |
+| `@typescript-eslint/restrict-template-expressions` | tipo | 08-09-2026 | As 3 ocorrências (`generic-table.tsx`) - `linha[chavePrimaria]` envolto em `String(...)` explícito antes de entrar no template literal, mesmo padrão que a própria `key` da linha já usava. |
+| `@typescript-eslint/no-unsafe-argument` | tipo | 08-09-2026 | `configuracoes-provider.tsx` - `.catch()` ganhou `instanceof Error` antes de guardar no estado, mesmo padrão de narrowing já usado no resto do projeto. |
+| `@typescript-eslint/no-unnecessary-condition` | tipo | 12-09-2026 | As 57 ocorrências (cresceram de 41 pra 57 entre 07 e 12-09, com o trabalho novo em Campo de Testes) foram conferidas uma a uma contra o DTO Nest/tipo real correspondente - ver seção própria abaixo. |
 
-### Regras testadas e deixadas de fora, de propósito
-
-A Camada 2 foi testada de uma vez com o preset completo (`recommendedTypeChecked`) antes de decidir o que manter - achou mais 4 categorias, nenhuma adotada ainda:
-
-| Regra | Ocorrências achadas | Por que não está ligada |
-|---|---|---|
-| `no-floating-promises` | 31 (todas revisadas uma a uma) | 27 são triviais (`navigate()` do react-router, não aguardado - navegação client-side não produz erro que valha tratar) e 3 já tratam erro internamente. **1 é achado real**: `views/campo-testes/bancada-pesquisador.tsx:163` pode falhar em silêncio (spinner some, nenhum erro aparece). Ligar a regra exige resolver esse 1 caso primeiro - senão a regra nasce já com uma pendência. |
-| `no-unnecessary-condition` | 41, em 17 arquivos | A regra confia que os tipos declarados são sempre verdade. Mas os tipos de `type/` (Fase 2 da migração) são espelho MANUAL dos DTOs do Nest, não importados de verdade - um campo "obrigatório" no frontend pode legitimamente vir vazio se o espelho um dia divergir do backend. Distinguir código morto de verdade (como o `?? 'badge-neutro'` já removido, ver achado 13) de proteção legítima contra essa divergência exige conferir o DTO Nest correspondente pra cada um dos 41 - meio dia de trabalho, não uma configuração de 5 minutos. |
-| `no-base-to-string` | 4 | Todas em componentes genéricos (`campo-somente-leitura.tsx`, `generic-table.tsx`, `log-auditoria-painel.tsx`, `use-chamada-registrada.ts`) que tipam um valor como `unknown` de propósito (reaproveitados por toda tela) e o convertem pra texto com `String(valor ?? '')`. Nenhum chamador conhecido hoje passa um objeto ali (viraria `"[object Object]"` visível), mas corrigir sem confirmar caso a caso mudaria o que aparece na tela em vez do tipo - decisão de comportamento, não só de tipo. |
-| `restrict-template-expressions` | 3 | Todas em `generic-table.tsx`, interpolando um valor de tipo genérico (`T[keyof T & string]`) num template literal - mesma limitação de tipo genérico do item acima, não indício de bug. |
-| `no-unsafe-argument` | 1 | `configuracoes-provider.tsx:57` - parâmetro de `.catch()` é sempre `any` pro TypeScript (rejeição de Promise pode ser qualquer coisa em JS puro), passado direto pra um setter tipado sem checar `instanceof Error` antes. Padrão já usado em outros lugares do projeto (`catch (erro: unknown)` + narrowing) não foi seguido aqui - candidato a correção pequena numa rodada própria. |
-
-Detalhamento completo (arquivo, linha, e o raciocínio de cada classificação) em `ACHADOS_PARA_DISCUTIR.md`, item 14.
+Detalhamento completo do achado original (arquivo, linha, e o raciocínio de cada classificação) em `ACHADOS_PARA_DISCUTIR.md`, item 14.
 
 ---
 
@@ -50,4 +75,18 @@ Detalhamento completo (arquivo, linha, e o raciocínio de cada classificação) 
 
 Duas telas do painel (`services/12-campanha/constants/status-campanha.constants.ts` e `services/3-auth/hook/use-auth.ts`) tinham código que só existia porque, em algum momento da migração, o compilador ainda não conseguia provar que ele era desnecessário - um `??` de segurança cobrindo um valor de enum que o Postgres nunca produz, e duas guardas (`if (resultado.usuario)`) verificando campos que o próprio tipo já garante que nunca são vazios. Ninguém tinha achado isso de propósito - apareceu numa auditoria manual, achado por achado.
 
-`no-unnecessary-condition` é a regra que teria apontado os dois sozinha, sem precisar de auditoria nenhuma. Ela está desligada por enquanto (ver tabela acima), mas é o motivo de valer a pena, um dia, fazer a rodada de meio dia que ela exige - depois disso, essa categoria inteira de código morto para de precisar ser caçada à mão.
+`no-unnecessary-condition` é a regra que teria apontado os dois sozinha, sem precisar de auditoria nenhuma - e foi exatamente essa a motivação de fazer a rodada de meio dia (ver seção abaixo).
+
+---
+
+## `no-unnecessary-condition` - as 57 ocorrências, uma a uma (12-09-2026)
+
+Cada uma das 57 (17 arquivos) foi conferida contra o DTO Nest ou tipo real correspondente antes de decidir - nunca só apagada por confiar cegamente no lint. Caíram em 3 grupos:
+
+**Grupo 1 - código morto de verdade, removido (a maioria).** Um `??`/`?.`/guarda cobrindo um caso que o tipo E os dados reais garantem que nunca acontece - mesma categoria do `?? 'badge-neutro'` já achado antes (item 13). Exemplos: `ROTULO_STATUS_CAMPANHA[status] ?? status`/`ROTULO_STATUS_PESQUISADOR[status] ?? status`/`ROTULO_TITULO_ACADEMICO[titulo] ?? titulo` (Record exaustivo sobre ENUM fechado, confirmado contra o Postgres), `PesquisadorLinha.usuario?.` (campo declarado obrigatório na interface E sempre populado na única construção real do objeto), `ResultadoPaginado.dados ?? []` (campo `T[]` obrigatório, espelhando `nest/src/commons/database/paginacao.util.ts`), e duas guardas redundantes em `bancada-pesquisador.tsx` (`chaveFoco !== null` depois de já estar dentro de um `{chaveFoco && (...)}`, `!perfil.usuario` sempre falso).
+
+**Grupo 2 - proteção legítima, tipo corrigido pra ficar honesto (2 ocorrências).** `permissao-nomes-amigaveis.ts` (`DETALHE_PERMISSAO`) estava com tipo `Record<string, DetalhePermissao>` - mas o dicionário é fechado (só as permissões documentadas) enquanto quem chama passa `permissao.nome` vindo do banco, um espaço de chaves aberto. Uma permissão nova, semeada mas ainda não documentada aqui, é um caso real, não hipotético. Trocado pra `Partial<Record<string, DetalhePermissao>>` - o tipo passa a admitir `undefined` de verdade, e os dois fallbacks (que já existiam, corretos, desde antes) voltam a ser necessários pro compilador também, não só na prática.
+
+**Grupo 3 - proteção legítima contra o próprio tipo embutido do TypeScript "mentir", mantida com `eslint-disable` comentado (2 ocorrências).** Duas APIs onde o `lib.d.ts` do TypeScript declara um retorno mais otimista do que a realidade: `JSON.stringify()` é tipado como `string` sempre, mas devolve `undefined` de verdade pra `função`/`símbolo`/`undefined` puro (`textoSeguro()` em `formatacao.util.ts`, e o preview de corpo de chamada em `registro-chamadas.tsx`); `navigator.clipboard` é tipado como sempre presente, mas a Clipboard API real só existe em contexto seguro (HTTPS/localhost) e falta em navegador mais antigo (`registro-chamadas.tsx`, botão "Copiar como cURL"). Nos dois casos, o comentário ao lado da linha explica o motivo específico - não é uma supressão genérica.
+
+Verificado ao final: `eslint .` (0 ocorrências da regra, 0 erros/avisos no total), `tsc --noEmit` e `npm run build` limpos.

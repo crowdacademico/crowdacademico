@@ -1266,3 +1266,13 @@ Fica registrado como uma exceção pequena, consciente, à regra de "tudo em Cam
 T1 (Bancada do Pesquisador) ganhou Consultar/Alterar como MODAL, replicando a aparência exata das páginas reais (`consultar-usuario.tsx`/`alterar-usuario.tsx`) - pedido do Lucas, que notou que como modal a tela abre mais rápido e resolve o problema mais rápido que navegar pra uma página nova. A ideia é: se esse padrão se provar bom no uso real do Campo de Testes, replicar o mesmo tratamento (modal em vez de página inteira) nas páginas reais de Gestão de Usuário.
 
 **Combinado explicitamente que fica pra depois** - o Lucas vai conversar com a Alexia sobre adotar isso antes de qualquer trabalho nessa direção. Nada foi feito ainda nas páginas reais; só o protótipo em T1 existe hoje.
+
+---
+
+### 🔴 Pendência aberta (11-09-2026): RF-031 (contestação de score) só faz sentido implementar depois do motor de score estar fechado de vez
+
+RF-031 já tem o texto do requisito escrito (pesquisador abre solicitação de revisão junto ao Administrador se achar uma penalização injusta/desatualizada, mesmo fluxo de análise das denúncias) - mas nunca teve nenhuma implementação (Banco ❌, Nest ❌ na `MATRIZ-RASTREABILIDADE-RF.md`, confirmado no item 59 acima).
+
+**Ponto levantado pelo Lucas (11-09-2026):** construir o fluxo de contestação antes do motor de score estar com as regras de cálculo fechadas de vez não faz sentido - estaria montando um processo de revisão pra contestar um número cuja fórmula ainda pode mudar por baixo. O item 13 (Lista C, acima) já fechou 4 decisões pontuais de regra (denúncia improcedente, dupla penalização, encerramento antecipado, reconhecimento de GitHub), mas o próprio painel (`PainelScore`, Campo de Testes T1/T2, ambos Consultar e o card solto) ainda exibe um aviso explícito dizendo que "a regra de negócio de pontuação (pesos e dimensões) ainda não foi fechada, os números são só uma prévia da estrutura" - ou seja, mesmo com aquelas 4 correções pontuais, o motor como um todo (pesos por dimensão, principalmente) continua sinalizado como provisório na própria interface.
+
+**Não resolvido ainda se esse aviso está desatualizado ou genuinamente reflete o estado atual** - só registrado aqui que RF-031 depende dessa resposta antes de virar trabalho técnico de verdade. Ordem sugerida: (1) decidir se o motor de score está de fato fechado (e, se estiver, tirar o aviso "ainda não está pronto" da interface); (2) só depois disso implementar RF-031 (Banco + Nest).

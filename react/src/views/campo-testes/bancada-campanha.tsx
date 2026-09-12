@@ -14,6 +14,7 @@ import { useCampoTestes } from '../../services/campo-testes/hook/use-campo-teste
 import { useChamadaRegistrada } from '../../services/campo-testes/hook/use-chamada-registrada';
 import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
+import { useConfiguracoes } from '../../services/11-configuracoes/hook/use-configuracoes';
 import { CAMPANHA_BLOQUEADA, motivoBloqueioCampanha } from '../../services/campo-testes/util/registros-bloqueados';
 import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
@@ -33,12 +34,6 @@ import type { UsuarioResponse } from '../../services/1-usuario/type/usuario.type
 import type { PerfilPesquisadorResponse } from '../../services/6-perfil-pesquisador/type/perfil-pesquisador.type';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 
-// Mesmos defaults de configuracoes.orcamento_min_itens/cronograma_min_marcos
-// (07_seed_dados.sql), mostrados aqui só como RÓTULO da checklist "Pronta
-// pra aprovar?"; quem decide de verdade é sempre o banco
-// (fn_valida_completude_campanha_aprovacao, 05).
-const MINIMO_ITENS_ORCAMENTO = 3;
-const MINIMO_MARCOS_CRONOGRAMA = 3;
 const TAMANHOS_PAGINA = [10, 20, 30, 'todos'] as const;
 const LIMIAR_FILTRO = 5;
 
@@ -263,6 +258,20 @@ export function BancadaCampanha({ auth }: PropsPagina) {
   const { mostrar } = useToast();
   const { reportarErro } = useErroToast();
 
+  // CORRIGIDO (12-09-2026, achado de agente numa auditoria de hardcode):
+  // eram constantes fixas (`MINIMO_ITENS_ORCAMENTO = 3`), cujo próprio
+  // comentário já avisava "mostrado aqui só como RÓTULO, quem decide de
+  // verdade é o banco" - mas `configuracoes.orcamento_min_itens` mudou de
+  // 3 pra 1 em 05-09-2026 (RF revisado) e ninguém atualizou a cópia daqui.
+  // Resultado: o botão "Aprovar" ficava desabilitado (`orcamentoOk`
+  // calculado com o número ERRADO) mesmo quando o banco já aceitaria.
+  // Lendo ao vivo agora, mesmo padrão de `seletor-foto-perfil.tsx`.
+  const { obterConfiguracao } = useConfiguracoes();
+  const valorMinimoOrcamento = obterConfiguracao('orcamento_min_itens', 1);
+  const minimoItensOrcamento = typeof valorMinimoOrcamento === 'number' ? valorMinimoOrcamento : 1;
+  const valorMinimoCronograma = obterConfiguracao('cronograma_min_marcos', 3);
+  const minimoMarcosCronograma = typeof valorMinimoCronograma === 'number' ? valorMinimoCronograma : 3;
+
   const [areas, setAreas] = useState<AreaConhecimentoResponse[]>([]);
   const [usuarios, setUsuarios] = useState<UsuarioResponse[]>([]);
   const [perfisPesquisador, setPerfisPesquisador] = useState<PerfilPesquisadorResponse[]>([]);
@@ -452,7 +461,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
       const termo = filtroTexto.trim().toLowerCase();
       if (!termo) return true;
       return [item.idCampanha, item.titulo, item.status, nomeDe(item.idUsuario)].some((valor) =>
-        String(valor ?? '').toLowerCase().includes(termo),
+        String(valor).toLowerCase().includes(termo),
       );
     });
   const totalPaginas = tamanhoPagina === 'todos' ? 1 : Math.max(1, Math.ceil(campanhasFiltradas.length / tamanhoPagina));
@@ -462,14 +471,14 @@ export function BancadaCampanha({ auth }: PropsPagina) {
 
   const somaOrcamento = orcamento.reduce((total, item) => total + Number(item.valor), 0);
   const metaBatendo = campanha && somaOrcamento === Number(campanha.metaFinanceira);
-  const orcamentoOk = orcamento.length >= MINIMO_ITENS_ORCAMENTO && metaBatendo;
-  const cronogramaOk = cronograma.length >= MINIMO_MARCOS_CRONOGRAMA;
+  const orcamentoOk = orcamento.length >= minimoItensOrcamento && metaBatendo;
+  const cronogramaOk = cronograma.length >= minimoMarcosCronograma;
   const prontaParaAprovar = campanha?.status === 'aguardando_aprovacao' && orcamentoOk && cronogramaOk;
 
   const motivoAprovarDesabilitado = () => {
     if (campanha?.status !== 'aguardando_aprovacao') return `Status atual é "${campanha?.status}", não dá pra aprovar.`;
-    if (!orcamentoOk) return `Orçamento incompleto (${orcamento.length}/${MINIMO_ITENS_ORCAMENTO} itens, soma ${formatarReais(somaOrcamento)} de ${formatarReais(campanha?.metaFinanceira)}).`;
-    if (!cronogramaOk) return `Cronograma incompleto (${cronograma.length}/${MINIMO_MARCOS_CRONOGRAMA} marcos).`;
+    if (!orcamentoOk) return `Orçamento incompleto (${orcamento.length}/${minimoItensOrcamento} itens, soma ${formatarReais(somaOrcamento)} de ${formatarReais(campanha.metaFinanceira)}).`;
+    if (!cronogramaOk) return `Cronograma incompleto (${cronograma.length}/${minimoMarcosCronograma} marcos).`;
     return null;
   };
 
@@ -831,7 +840,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
                     style={bloqueada && !selecionada ? { textDecoration: 'line-through' } : undefined}
                   >
                     <span className={`badge ${classeBadgeStatusCampanha(item.status)}`}>
-                      {ROTULO_STATUS_CAMPANHA[item.status] ?? item.status}
+                      {ROTULO_STATUS_CAMPANHA[item.status]}
                     </span>
                   </td>
                   <td style={bloqueada && !selecionada ? { textDecoration: 'line-through' } : undefined}>{nomeDe(item.idUsuario)}</td>
@@ -925,7 +934,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
           subtitulo={`Pesquisador: ${nomeDe(campanhaConsultada.idUsuario)}`}
           badges={[
             <span key="status" className={`badge ${classeBadgeStatusCampanha(campanhaConsultada.status)}`}>
-              {ROTULO_STATUS_CAMPANHA[campanhaConsultada.status] ?? campanhaConsultada.status}
+              {ROTULO_STATUS_CAMPANHA[campanhaConsultada.status]}
             </span>,
             <span key="modelo" className="badge badge-neutro">
               {campanhaConsultada.modelo}
@@ -1129,7 +1138,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
 
                 <SecaoFicha titulo="Metadados" colunas={1}>
                   <CampoSomenteLeitura rotulo="id" valor={idCampanhaEditando} />
-                  <CampoSomenteLeitura rotulo="Status" valor={campanhaEmEdicao ? (ROTULO_STATUS_CAMPANHA[campanhaEmEdicao.status] ?? campanhaEmEdicao.status) : '-'} />
+                  <CampoSomenteLeitura rotulo="Status" valor={campanhaEmEdicao ? ROTULO_STATUS_CAMPANHA[campanhaEmEdicao.status] : '-'} />
                   <CampoSomenteLeitura rotulo="Dono" valor={campanhaEmEdicao ? nomeDe(campanhaEmEdicao.idUsuario) : '-'} />
                 </SecaoFicha>
               </div>
@@ -1195,7 +1204,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
             <SecaoFicha titulo={bloqueadaDemo || statusNaoElegivel ? 'Dados da campanha' : 'O que será excluído'}>
               <CampoFicha rotulo="id" valor={campanhaExcluindo.idCampanha} />
               <CampoFicha rotulo="Título" valor={campanhaExcluindo.titulo} />
-              <CampoFicha rotulo="Status" valor={ROTULO_STATUS_CAMPANHA[campanhaExcluindo.status] ?? campanhaExcluindo.status} />
+              <CampoFicha rotulo="Status" valor={ROTULO_STATUS_CAMPANHA[campanhaExcluindo.status]} />
               <CampoFicha rotulo="Dono" valor={nomeDe(campanhaExcluindo.idUsuario)} />
               <CampoFicha rotulo="Meta" valor={formatarReais(campanhaExcluindo.metaFinanceira)} largura="cheia" />
             </SecaoFicha>
@@ -1520,7 +1529,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
           <div className="fundo-sutil rounded-md p-4 mb-4">
             <div className="flex gap-3 items-center flex-wrap mb-2">
               <span className={`badge ${classeBadgeStatusCampanha(campanha.status)}`}>
-                {ROTULO_STATUS_CAMPANHA[campanha.status] ?? campanha.status}
+                {ROTULO_STATUS_CAMPANHA[campanha.status]}
               </span>
               <h4 className="subtitulo">{campanha.titulo}</h4>
               <span className="legenda">dono: {nomeDono ?? campanha.idUsuario}</span>
@@ -1558,10 +1567,10 @@ export function BancadaCampanha({ auth }: PropsPagina) {
                 </thead>
                 <tbody>
                   <tr>
-                    <td>Orçamento: {orcamento.length} itens (mínimo {MINIMO_ITENS_ORCAMENTO})</td>
+                    <td>Orçamento: {orcamento.length} itens (mínimo {minimoItensOrcamento})</td>
                     <td className="crud-tabela__celula--centralizada">
-                      <span className={`badge ${orcamento.length >= MINIMO_ITENS_ORCAMENTO ? 'badge-sucesso' : 'badge-erro'}`}>
-                        {orcamento.length >= MINIMO_ITENS_ORCAMENTO ? 'OK' : 'Faltando'}
+                      <span className={`badge ${orcamento.length >= minimoItensOrcamento ? 'badge-sucesso' : 'badge-erro'}`}>
+                        {orcamento.length >= minimoItensOrcamento ? 'OK' : 'Faltando'}
                       </span>
                     </td>
                   </tr>
@@ -1575,7 +1584,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
                     </td>
                   </tr>
                   <tr>
-                    <td>Cronograma: {cronograma.length} marcos (mínimo {MINIMO_MARCOS_CRONOGRAMA})</td>
+                    <td>Cronograma: {cronograma.length} marcos (mínimo {minimoMarcosCronograma})</td>
                     <td className="crud-tabela__celula--centralizada">
                       <span className={`badge ${cronogramaOk ? 'badge-sucesso' : 'badge-erro'}`}>{cronogramaOk ? 'OK' : 'Faltando'}</span>
                     </td>

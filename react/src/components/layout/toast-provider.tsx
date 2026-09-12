@@ -71,7 +71,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
     (titulo: string, descricao?: string, tipo: TipoToast = 'sucesso') => {
       const id = proximoId.current++;
       setToasts((atuais) => [...atuais, { id, titulo, descricao, tipo }]);
-      setTimeout(() => remover(id), DURACAO_MS[tipo] ?? DURACAO_MS.sucesso);
+      setTimeout(() => remover(id), DURACAO_MS[tipo]);
     },
     [remover],
   );
@@ -90,7 +90,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
           toast. */}
       <div className="fixed top-32 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-3 items-stretch w-full max-w-lg px-4 pointer-events-none">
         {toasts.map((toast) => {
-          const config = CONFIG_TIPO[toast.tipo] ?? CONFIG_TIPO.sucesso;
+          const config = CONFIG_TIPO[toast.tipo];
           return (
             <div
               key={toast.id}

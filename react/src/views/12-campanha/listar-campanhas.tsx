@@ -51,7 +51,7 @@ export function ListarCampanhas({ auth }: PropsPagina) {
 
     return campanhas.map((campanha) => ({
       ...campanha,
-      status: ROTULO_STATUS_CAMPANHA[campanha.status] ?? campanha.status,
+      status: ROTULO_STATUS_CAMPANHA[campanha.status],
       pesquisador: nomePorIdUsuario.get(campanha.idUsuario) ?? `#${campanha.idUsuario}`,
       area: nomePorIdArea.get(campanha.idAreaConhecimento) ?? `#${campanha.idAreaConhecimento}`,
       metaFinanceira: formatarReais(campanha.metaFinanceira),
