@@ -5,10 +5,6 @@ import { CadastroPage } from '../../views/3-auth/cadastro-page';
 import { VerificarEmailPage } from '../../views/3-auth/verificar-email-page';
 import { MinhaConta } from '../../views/3-auth/minha-conta-page';
 import { Dashboard } from '../../views/admin/dashboard';
-import { CriarUsuario } from '../../views/1-usuario/criar-usuario';
-import { AlterarUsuario } from '../../views/1-usuario/alterar-usuario';
-import { ConsultarUsuario } from '../../views/1-usuario/consultar-usuario';
-import { ExcluirUsuario } from '../../views/1-usuario/excluir-usuario';
 import { ListarUsuarios } from '../../views/1-usuario/listar-usuarios';
 import { ListarPapeis } from '../../views/2-papel-permissao/listar-papeis';
 import { AlterarPapel } from '../../views/2-papel-permissao/alterar-papel';
@@ -253,36 +249,12 @@ export const ROTAS_ADMIN: Rota[] = [
     rotuloBreadcrumb: 'Minha Conta',
   },
 
-  // Usuário - filhas de /admin/usuarios (paiCaminho), mesmo padrão pras
-  // outras 2 seções abaixo.
-  {
-    caminho: '/admin/usuarios/criar',
-    caminhoRelativo: 'usuarios/criar',
-    elemento: CriarUsuario,
-    rotuloBreadcrumb: 'Criar Usuário',
-    paiCaminho: '/admin/usuarios',
-  },
-  {
-    caminho: '/admin/usuarios/:id/alterar',
-    caminhoRelativo: 'usuarios/:id/alterar',
-    elemento: AlterarUsuario,
-    rotuloBreadcrumb: 'Alterar Usuário',
-    paiCaminho: '/admin/usuarios',
-  },
-  {
-    caminho: '/admin/usuarios/:id/consultar',
-    caminhoRelativo: 'usuarios/:id/consultar',
-    elemento: ConsultarUsuario,
-    rotuloBreadcrumb: 'Consultar Usuário',
-    paiCaminho: '/admin/usuarios',
-  },
-  {
-    caminho: '/admin/usuarios/:id/excluir',
-    caminhoRelativo: 'usuarios/:id/excluir',
-    elemento: ExcluirUsuario,
-    rotuloBreadcrumb: 'Excluir Usuário',
-    paiCaminho: '/admin/usuarios',
-  },
+  // Usuário - EM MODAL (13-09-2026, pedido do Lucas: "apagar as telas do
+  // CRUD de Usuário, fazer a completa migração do Modal") - Criar/Alterar/
+  // Consultar/Excluir deixaram de ser rotas próprias; viraram os modais
+  // abertos direto por listar-usuarios.tsx (ver modal-usuario.tsx/
+  // modal-criar-usuario.tsx), mesmos componentes reaproveitados pela
+  // Bancada do Pesquisador (Campo de Testes).
 
   // Papel - filha de /admin/papeis.
   {

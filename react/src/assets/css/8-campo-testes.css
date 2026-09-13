@@ -1,21 +1,14 @@
 /* ============================================================================
    ESTE ARQUIVO EXISTE SOLENEMENTE PARA O CAMPO DE TESTES.
    NÃO ESTÁ NOS REQUISITOS FUNCIONAIS E NEM ESTARÁ.
-   ============================================================================ */
 
-/* Linha selecionada numa tabela do Campo de Testes - o pesquisador
-   escolhido em T1, a campanha em foco em T2 (bancada-pesquisador.jsx/
-   bancada-campanha.jsx, 23-08-2026, pedido do Lucas: "só um selecionado
-   por vez, bem marcante") - mesma linguagem visual de
-   .admin-sidebar__item--ativo (6-admin-shell.css): fundo levemente
-   tintado + barra de 4px na cor da marca à esquerda. box-shadow inset em
-   vez de border-left de verdade - funciona igual mas não desalinha as
-   bordas da linha (border-collapse da tabela). */
-.crud-tabela__linha--selecionada {
-  background-color: var(--cor-fundo-hover);
-  box-shadow: inset 4px 0 0 var(--color-primary);
-  font-weight: 700;
-}
+   EXCEÇÃO (13-09-2026): `.links-academicos-wrapper`, mais abaixo, também é
+   usado por `<PainelLinksAcademicos>` dentro de `modal-usuario.tsx` - que
+   deixou de ser exclusivo do Campo de Testes ao virar o modal compartilhado
+   do CRUD real de Usuário. Não vale a pena mover essa única regra pra outro
+   arquivo só por causa disso; fica registrado aqui pra este comentário não
+   mentir.
+   ============================================================================ */
 
 /* Botão desabilitado com motivo (a "segunda metade" da solução, ver
    prompt/resposta do Claude Web sobre o Campo de Testes): sempre mostra

@@ -1,5 +1,4 @@
-import { useCallback } from 'react';
-import { Link } from 'react-router';
+import { useCallback, useState } from 'react';
 import { GenericTable } from '../../components/crud/generic-table';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { usuarioPapelApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
@@ -8,6 +7,8 @@ import {
   PAPEL_SEM_EXTRA,
 } from '../../services/2-papel-permissao/constants/papel-ordem-poder';
 import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
+import { ModalAlterarUsuario, ModalConsultarUsuario, ModalExcluirUsuario } from './modal-usuario';
+import { ModalCriarUsuario } from './modal-criar-usuario';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { UsuarioResponse } from '../../services/1-usuario/type/usuario.type';
 
@@ -22,10 +23,33 @@ interface UsuarioLinha extends UsuarioResponse {
 const PAPEL_PADRAO = 'usuario';
 
 // Aba "Usuários" do painel admin - vive na rota /admin/usuarios (ver
-// services/router/rotas.constants.js, ROTAS_ADMIN). Renderizada dentro do
-// <Outlet/> de views/admin/admin-layout.jsx (sidebar + área de conteúdo já
+// services/router/rotas.constants.ts, ROTAS_ADMIN). Renderizada dentro do
+// <Outlet/> de views/admin/admin-layout.tsx (sidebar + área de conteúdo já
 // prontos por fora, esta view só cuida do próprio conteúdo).
+//
+// EM MODAL (13-09-2026, pedido do Lucas: "apagar as telas do CRUD de
+// Usuário, fazer a completa migração do Modal") - Criar/Alterar/Consultar/
+// Excluir deixaram de ser páginas próprias (`/admin/usuarios/:id/alterar`
+// etc., removidas de rotas.constants.ts) e viraram os modais de
+// `modal-usuario.tsx`/`modal-criar-usuario.tsx` - os MESMOS componentes
+// que a Bancada do Pesquisador (Campo de Testes) usa, sem duplicar nada.
+// `GenericTable` ganhou `aoAlterar`/`aoConsultar`/`aoExcluir` (aditivo, as
+// outras ~10 telas que ainda usam `rotaBase` continuam navegando por
+// página, sem mudança nenhuma) especificamente pra esta migração.
 export function ListarUsuarios({ auth }: PropsPagina) {
+  const [criando, setCriando] = useState(false);
+  const [idAlterando, setIdAlterando] = useState<number | null>(null);
+  const [idConsultando, setIdConsultando] = useState<number | null>(null);
+  const [excluindo, setExcluindo] = useState<UsuarioLinha | null>(null);
+  // Incrementar isto muda a IDENTIDADE de `listarUsuarios` (useCallback
+  // abaixo) sem mudar o que ela faz - é assim que se força o `useEffect`
+  // interno de GenericTable (`useEffect(() => {...}, [listar])`) a buscar
+  // de novo depois que um modal altera dado (GenericTable não expõe um
+  // "recarregar" próprio, de propósito: quem decide QUANDO recarregar é
+  // sempre o componente pai, não a tabela genérica).
+  const [chaveRecarga, setChaveRecarga] = useState(0);
+  const recarregar = () => setChaveRecarga((atual) => atual + 1);
+
   // useCallback aqui não é sobre performance - é porque GenericTable usa a
   // função em `useEffect([listar])`; sem isso, cada render criaria uma
   // função nova e recarregaria a tabela em loop.
@@ -56,7 +80,8 @@ export function ListarUsuarios({ auth }: PropsPagina) {
       ...usuario,
       papel: papeisPorUsuario.get(usuario.idUsuario)?.join(', ') || PAPEL_SEM_EXTRA,
     }));
-  }, [auth.authFetch]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [auth.authFetch, chaveRecarga]);
   // 'usuario' é o nome FÍSICO da tabela no Postgres (bate com
   // fn_log_auditoria() via TG_TABLE_NAME), não o nome da rota.
   const buscarLogUsuario = useCallback(
@@ -66,12 +91,12 @@ export function ListarUsuarios({ auth }: PropsPagina) {
 
   return (
     <div className="admin-content-painel">
-      <GenericTable
+      <GenericTable<UsuarioLinha>
         titulo="Usuários"
         acaoTopo={
-          <Link to="/admin/usuarios/criar" className="btn btn-primary">
+          <button type="button" className="btn btn-primary" onClick={() => setCriando(true)}>
             Criar
-          </Link>
+          </button>
         }
         colunas={[
           { chave: 'idUsuario', rotulo: 'id' },
@@ -82,7 +107,9 @@ export function ListarUsuarios({ auth }: PropsPagina) {
         ]}
         chavePrimaria="idUsuario"
         listar={listarUsuarios}
-        rotaBase="/admin/usuarios"
+        aoAlterar={(linha) => setIdAlterando(linha.idUsuario)}
+        aoConsultar={(linha) => setIdConsultando(linha.idUsuario)}
+        aoExcluir={(linha) => setExcluindo(linha)}
         // Botão de filtro por papel (09-08-2026, pedido do Lucas), na mesma
         // linha do filtro de texto, padrão "Todos" (nenhum papel marcado),
         // marcar um ou mais esconde o resto. Opções vêm sozinhas dos
@@ -99,6 +126,35 @@ export function ListarUsuarios({ auth }: PropsPagina) {
         // pelo painel).
         campoRenomeioLog="nome"
       />
+
+      {criando && (
+        <ModalCriarUsuario auth={auth} aoFechar={() => setCriando(false)} aoCriado={recarregar} />
+      )}
+
+      {idAlterando !== null && (
+        <ModalAlterarUsuario
+          auth={auth}
+          idUsuario={idAlterando}
+          aoFechar={() => setIdAlterando(null)}
+          aoAtualizado={recarregar}
+        />
+      )}
+
+      {idConsultando !== null && (
+        <ModalConsultarUsuario auth={auth} idUsuario={idConsultando} aoFechar={() => setIdConsultando(null)} />
+      )}
+
+      {excluindo && (
+        <ModalExcluirUsuario
+          auth={auth}
+          idUsuario={excluindo.idUsuario}
+          nome={excluindo.nome}
+          email={excluindo.email}
+          emailVerificado={excluindo.emailVerificado}
+          aoFechar={() => setExcluindo(null)}
+          aoExcluido={recarregar}
+        />
+      )}
     </div>
   );
 }

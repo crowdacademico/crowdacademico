@@ -53,6 +53,16 @@ interface GenericTableProps<T extends Linha> {
   acoes?: AcaoPadrao[];
   colunaExtra?: ColunaExtra<T>;
   filtrosFacetados?: FiltroFacetado<T>[];
+  // `aoAlterar`/`aoConsultar`/`aoExcluir` (13-09-2026, pedido do Lucas: migrar
+  // Usuário pro padrão de modal, sem afetar as ~10 outras telas que já usam
+  // `rotaBase`) - aditivo: quando presente, a ação correspondente vira
+  // `<button onClick={...}>` (abre modal no componente pai) em vez de
+  // `<Link to={rotaBase + .../ação}>` (navega pra página própria). Uma tela
+  // pode misturar (ex.: Alterar/Consultar via modal, Excluir via rotaBase),
+  // mas nenhuma tela existente muda de comportamento sem passar a prop nova.
+  aoAlterar?: (linha: T) => void;
+  aoConsultar?: (linha: T) => void;
+  aoExcluir?: (linha: T) => void;
 }
 
 // Valor booleano vira badge colorido (Sim/Não), não o texto cru "true"/
@@ -118,6 +128,9 @@ export function GenericTable<T extends Linha>({
   // (botão, ícone, badge composto), não só `String(valor)`. Independe de
   // `rotaBase`/`acoes` - tabelas só-leitura (sem Ações) também podem usar.
   colunaExtra,
+  aoAlterar,
+  aoConsultar,
+  aoExcluir,
   // Filtros por faceta (09-08-2026, pedido do Lucas: filtro de papel na
   // tabela Usuários; generalizado no mesmo dia pra virar lista - tabela
   // Permissões pediu 2 lado a lado, papel e impacto) - array de `{ chave,
@@ -136,6 +149,10 @@ export function GenericTable<T extends Linha>({
   // lista, não desaparece.
   filtrosFacetados,
 }: GenericTableProps<T>) {
+  // A coluna Ações existe se `rotaBase` (páginas de verdade) OU qualquer um
+  // dos callbacks de modal foi passado - `rotaBase` sozinho não decide mais
+  // sozinho se a coluna aparece (13-09-2026, ver comentário da prop acima).
+  const temAcoes = Boolean(rotaBase) || Boolean(aoAlterar) || Boolean(aoConsultar) || Boolean(aoExcluir);
   const [linhas, setLinhas] = useState<T[]>([]);
   const [carregando, setCarregando] = useState(true);
   const { erro, reportarErro, limparErro } = useErroToast();
@@ -757,7 +774,7 @@ export function GenericTable<T extends Linha>({
                   à toa e empurrando o ícone de Excluir pra fora da tela -
                   table-layout: auto já dimensiona certo sozinho nos dois
                   modos, sem ajuda nenhuma daqui. */}
-              {rotaBase && <th className="crud-tabela__celula--centralizada">Ações</th>}
+              {temAcoes && <th className="crud-tabela__celula--centralizada">Ações</th>}
             </tr>
           </thead>
           <tbody>
@@ -773,7 +790,7 @@ export function GenericTable<T extends Linha>({
                     <div className="h-3.5 fundo-sutil rounded"></div>
                   </td>
                 )}
-                {rotaBase && (
+                {temAcoes && (
                   <td>
                     <div className="h-3.5 fundo-sutil rounded"></div>
                   </td>
@@ -801,7 +818,7 @@ export function GenericTable<T extends Linha>({
                   </th>
                 ))}
                 {colunaExtra && <th>{colunaExtra.rotulo}</th>}
-                {rotaBase && <th className="crud-tabela__celula--centralizada">Ações</th>}
+                {temAcoes && <th className="crud-tabela__celula--centralizada">Ações</th>}
               </tr>
             </thead>
             <tbody>
@@ -823,7 +840,7 @@ export function GenericTable<T extends Linha>({
                     </td>
                   ))}
                   {colunaExtra && <td>{colunaExtra.renderizar(linha)}</td>}
-                  {rotaBase && (
+                  {temAcoes && (
                     <td>
                       {/* Texto/ícone discreto, não botão sólido (08-08-2026).
                           Ícone com uma cor fraquinha (09-08-2026, pedido do
@@ -849,39 +866,75 @@ export function GenericTable<T extends Linha>({
                           propósito - os dois juntos mostrariam 2 dicas
                           sobrepostas. */}
                       <div className="crud-tabela__acoes">
-                        {acoes.includes('alterar') && (
-                          <Link
-                            className="crud-tabela__acao crud-tabela__acao--alterar"
-                            to={`${rotaBase}/${String(linha[chavePrimaria])}/alterar`}
-                            aria-label="Alterar"
-                          >
-                            <i className="fa-solid fa-pen"></i>
-                            <span className="crud-tabela__acao-texto">Alterar</span>
-                            <span className="crud-tabela__acao-dica" role="tooltip">Alterar</span>
-                          </Link>
-                        )}
-                        {acoes.includes('consultar') && (
-                          <Link
-                            className="crud-tabela__acao"
-                            to={`${rotaBase}/${String(linha[chavePrimaria])}/consultar`}
-                            aria-label="Consultar"
-                          >
-                            <i className="fa-solid fa-eye"></i>
-                            <span className="crud-tabela__acao-texto">Consultar</span>
-                            <span className="crud-tabela__acao-dica" role="tooltip">Consultar</span>
-                          </Link>
-                        )}
-                        {acoes.includes('excluir') && (
-                          <Link
-                            className="crud-tabela__acao crud-tabela__acao--excluir"
-                            to={`${rotaBase}/${String(linha[chavePrimaria])}/excluir`}
-                            aria-label="Excluir"
-                          >
-                            <i className="fa-solid fa-trash"></i>
-                            <span className="crud-tabela__acao-texto">Excluir</span>
-                            <span className="crud-tabela__acao-dica" role="tooltip">Excluir</span>
-                          </Link>
-                        )}
+                        {acoes.includes('alterar') &&
+                          (aoAlterar ? (
+                            <button
+                              type="button"
+                              className="crud-tabela__acao crud-tabela__acao--alterar"
+                              onClick={() => aoAlterar(linha)}
+                              aria-label="Alterar"
+                            >
+                              <i className="fa-solid fa-pen"></i>
+                              <span className="crud-tabela__acao-texto">Alterar</span>
+                              <span className="crud-tabela__acao-dica" role="tooltip">Alterar</span>
+                            </button>
+                          ) : (
+                            <Link
+                              className="crud-tabela__acao crud-tabela__acao--alterar"
+                              to={`${rotaBase}/${String(linha[chavePrimaria])}/alterar`}
+                              aria-label="Alterar"
+                            >
+                              <i className="fa-solid fa-pen"></i>
+                              <span className="crud-tabela__acao-texto">Alterar</span>
+                              <span className="crud-tabela__acao-dica" role="tooltip">Alterar</span>
+                            </Link>
+                          ))}
+                        {acoes.includes('consultar') &&
+                          (aoConsultar ? (
+                            <button
+                              type="button"
+                              className="crud-tabela__acao"
+                              onClick={() => aoConsultar(linha)}
+                              aria-label="Consultar"
+                            >
+                              <i className="fa-solid fa-eye"></i>
+                              <span className="crud-tabela__acao-texto">Consultar</span>
+                              <span className="crud-tabela__acao-dica" role="tooltip">Consultar</span>
+                            </button>
+                          ) : (
+                            <Link
+                              className="crud-tabela__acao"
+                              to={`${rotaBase}/${String(linha[chavePrimaria])}/consultar`}
+                              aria-label="Consultar"
+                            >
+                              <i className="fa-solid fa-eye"></i>
+                              <span className="crud-tabela__acao-texto">Consultar</span>
+                              <span className="crud-tabela__acao-dica" role="tooltip">Consultar</span>
+                            </Link>
+                          ))}
+                        {acoes.includes('excluir') &&
+                          (aoExcluir ? (
+                            <button
+                              type="button"
+                              className="crud-tabela__acao crud-tabela__acao--excluir"
+                              onClick={() => aoExcluir(linha)}
+                              aria-label="Excluir"
+                            >
+                              <i className="fa-solid fa-trash"></i>
+                              <span className="crud-tabela__acao-texto">Excluir</span>
+                              <span className="crud-tabela__acao-dica" role="tooltip">Excluir</span>
+                            </button>
+                          ) : (
+                            <Link
+                              className="crud-tabela__acao crud-tabela__acao--excluir"
+                              to={`${rotaBase}/${String(linha[chavePrimaria])}/excluir`}
+                              aria-label="Excluir"
+                            >
+                              <i className="fa-solid fa-trash"></i>
+                              <span className="crud-tabela__acao-texto">Excluir</span>
+                              <span className="crud-tabela__acao-dica" role="tooltip">Excluir</span>
+                            </Link>
+                          ))}
                       </div>
                     </td>
                   )}
@@ -889,7 +942,7 @@ export function GenericTable<T extends Linha>({
               ))}
               {linhasPagina.length === 0 && !erro && (
                 <tr>
-                  <td colSpan={colunas.length + (colunaExtra ? 1 : 0) + (rotaBase ? 1 : 0)}>
+                  <td colSpan={colunas.length + (colunaExtra ? 1 : 0) + (temAcoes ? 1 : 0)}>
                     {filtro || algumaFacetaAtiva
                       ? 'Nenhum registro bate com o filtro.'
                       : 'Nenhum registro.'}
