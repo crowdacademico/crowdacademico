@@ -1267,6 +1267,8 @@ T1 (Bancada do Pesquisador) ganhou Consultar/Alterar como MODAL, replicando a ap
 
 **Combinado explicitamente que fica pra depois** - o Lucas vai conversar com a Alexia sobre adotar isso antes de qualquer trabalho nessa direção. Nada foi feito ainda nas páginas reais; só o protótipo em T1 existe hoje.
 
+**Atualização (12-09-2026):** o Lucas levou a ideia pra Alexia e pra professora orientadora - as duas gostaram, e a professora comentou que modal faz mais sentido pro CRUD do que a tela própria usada hoje em Usuário, por ser mais rápido de usar. Validação de produto real, ainda não é sinal verde pra implementar: o próprio Lucas observou que "nosso Modal ainda não está completo" (ver Fase 4 do plano de UI, e o achado de 08-09-2026 sobre `SecaoModeracaoPesquisador` fora do `chamarERegistrar`) - fica registrado como validação forte a favor, decisão de quando/como migrar continua em aberto.
+
 ---
 
 ### 🔴 Pendência aberta (11-09-2026): RF-031 (contestação de score) só faz sentido implementar depois do motor de score estar fechado de vez
@@ -1276,3 +1278,13 @@ RF-031 já tem o texto do requisito escrito (pesquisador abre solicitação de r
 **Ponto levantado pelo Lucas (11-09-2026):** construir o fluxo de contestação antes do motor de score estar com as regras de cálculo fechadas de vez não faz sentido - estaria montando um processo de revisão pra contestar um número cuja fórmula ainda pode mudar por baixo. O item 13 (Lista C, acima) já fechou 4 decisões pontuais de regra (denúncia improcedente, dupla penalização, encerramento antecipado, reconhecimento de GitHub), mas o próprio painel (`PainelScore`, Campo de Testes T1/T2, ambos Consultar e o card solto) ainda exibe um aviso explícito dizendo que "a regra de negócio de pontuação (pesos e dimensões) ainda não foi fechada, os números são só uma prévia da estrutura" - ou seja, mesmo com aquelas 4 correções pontuais, o motor como um todo (pesos por dimensão, principalmente) continua sinalizado como provisório na própria interface.
 
 **Não resolvido ainda se esse aviso está desatualizado ou genuinamente reflete o estado atual** - só registrado aqui que RF-031 depende dessa resposta antes de virar trabalho técnico de verdade. Ordem sugerida: (1) decidir se o motor de score está de fato fechado (e, se estiver, tirar o aviso "ainda não está pronto" da interface); (2) só depois disso implementar RF-031 (Banco + Nest).
+
+---
+
+### 🔴 Pendência aberta (12-09-2026): paginação client-side e "fechar dropdown ao clicar fora" triplicados/quadruplicados - conserto fica pra depois, sem pressa
+
+Achado na auditoria extra de código morto/hardcode/duplicação antes do commit da rodada de `no-unnecessary-condition` (ver `ACHADOS_PARA_DISCUTIR.md`, item 18, categoria 3.1, detalhamento completo com arquivo:linha).
+
+A mecânica de paginação client-side (`Math.ceil`/`Math.min`/`.slice` + o bloco JSX de "Página X de Y" com select de tamanho + Anterior/Próxima) e o padrão de "fechar dropdown ao clicar fora" (`mousedown` + `ref.contains`) aparecem, cada um, em 3-4 lugares diferentes: `GenericTable`, `bancada-pesquisador.tsx`, `bancada-campanha.tsx` (este com 2 dropdowns próprios) - os próprios comentários do código já admitem a cópia.
+
+**Decisão do Lucas (12-09-2026):** fácil de consertar, mas fica pra depois, sem pressa - não é bug, é dívida técnica. Sugestão já registrada em `ACHADOS_PARA_DISCUTIR.md` item 18: extrair `usePaginacaoClientSide()`/`useFecharAoClicarFora()` como hooks pequenos compartilhados, sem mexer no `GenericTable` em si (a razão de T1/T2 não reaproveitarem ele inteiro continua válida - linha riscada/cadeado por registro bloqueado).

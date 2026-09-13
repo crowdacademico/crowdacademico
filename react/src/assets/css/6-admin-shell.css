@@ -27,7 +27,7 @@
 
    Tudo dentro de @layer components: sem isso, estas regras (fora de
    qualquer @layer) ganhariam de QUALQUER utilitário do Tailwind sozinhas,
-   não importa a especificidade - mesmo bug do reset em 1-base.css. */
+   não importa a especificidade - mesmo bug do reset em 3-base.css. */
 @layer components {
 .admin-pagina {
   width: 100%;
@@ -114,7 +114,7 @@
 /* Achado (23-08-2026, Lucas: "o menu lateral ficou com rolagem lateral")
    - o ícone do Tooltip (components/layout/tooltip.jsx) fica encostado na
    borda DIREITA do grupo "CAMPO DE TESTES" (padding-right acima), mas
-   .tooltip__texto (2-componentes.css) centraliza a caixa da dica embaixo
+   .tooltip__texto (4-componentes.css) centraliza a caixa da dica embaixo
    do ícone (`left: 50%; transform: translateX(-50%)`) - com até 16rem
    (256px) de largura, isso jogava boa parte da caixa pra FORA da coluna
    de 260px do menu, inflando o scrollWidth do <aside> (que já é
@@ -271,7 +271,7 @@
    aqui via theme() - não funciona, quebra o build: este arquivo entra
    pela cadeia de @import de 0-style.css, um pipeline de CSS SEPARADO do
    de tailwind-theme.css (que é quem tem `@import 'tailwindcss'`; ver o
-   mesmo problema já documentado pra @utility em 1-base.css linha ~293)
+   mesmo problema já documentado pra @utility em 1-cores.css linha ~174)
    - theme()/@utility só resolvem dentro daquele pipeline. Solução:
    mesmo número literal nos dois lugares, escrito por extenso nos dois
    (não mais um `xl:` escondido que não deixava óbvio que precisava

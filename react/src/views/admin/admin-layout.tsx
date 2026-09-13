@@ -35,14 +35,14 @@ export function AdminLayout({ auth }: AdminLayoutProps) {
           sempre encostou direto no breadcrumb, quero que continue assim").
           Ideia nova, descrita pelo próprio Lucas: a faixa mora POR TRÁS
           de tudo (`absolute`, primeiro filho de `.admin-shell` - que
-          ganhou `position:relative` em 3-admin-shell.css só pra servir de
+          ganhou `position:relative` em 6-admin-shell.css só pra servir de
           âncora pra isto), a sidebar continua no fluxo normal do grid
           (sem ser empurrada, encosta direto no breadcrumb como sempre),
           e é o PRÓPRIO fundo opaco dela + vir DEPOIS no HTML
           (min-[1377px]:relative em admin-sidebar.jsx) que cobre/esconde a
           faixa atrás dela sozinha, sem precisar de display/visibility
           condicional nenhum aqui. Só a área de CONTEÚDO (.admin-content-
-          area, padding-top maior, ver 3-admin-shell.css) reserva espaço
+          area, padding-top maior, ver 6-admin-shell.css) reserva espaço
           de verdade - é onde a faixa aparece, dando aquele respiro entre
           breadcrumb e tabela que o Lucas pediu desde o início. Bônus:
           como o botão nunca mais é escondido via CSS (nem hidden, nem

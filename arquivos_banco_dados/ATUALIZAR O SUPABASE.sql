@@ -774,6 +774,201 @@ GRANT EXECUTE ON FUNCTION public.forcar_exclusao_campanha(INT) TO app_nestjs;
 
 
 -- ============================================================================
+-- 12-09-2026 - fn_log_auditoria() passou a redigir também `cpf_hash`
+--
+-- Achado de agente numa auditoria RF x implementação (RF-117: "senhas,
+-- hashes de senha e CPF nunca têm seus valores gravados no log"). A trigger
+-- já excluía `senha_hash`/`cpf_criptografado` de dados_anteriores/
+-- dados_novos, mas esquecia a 3ª coluna sensível de perfil_pesquisador,
+-- `cpf_hash` (HMAC-SHA256 com chave secreta, não reversível sem ela, mas
+-- ainda um dado derivado do CPF - lido ao pé da letra, RF-117 pede o mesmo
+-- cuidado). Puro CREATE OR REPLACE, mesma função, só a lista de exclusão
+-- ganhou mais um item - seguro rodar quantas vezes precisar.
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION public.fn_log_auditoria()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+    v_antigos_completo JSONB;
+    v_novos_completo   JSONB;
+    v_antigos          JSONB;
+    v_novos            JSONB;
+    v_campos           TEXT[];
+    v_coluna           TEXT;
+    v_partes           TEXT[] := ARRAY[]::TEXT[];
+    v_identidade       TEXT;
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        FOREACH v_coluna IN ARRAY TG_ARGV LOOP
+            v_partes := v_partes || (to_jsonb(NEW) ->> v_coluna);
+        END LOOP;
+        v_identidade := array_to_string(v_partes, ',');
+
+        v_novos := to_jsonb(NEW) - 'senha_hash' - 'cpf_criptografado' - 'cpf_hash';
+        INSERT INTO log_auditoria (tabela, identidade_registro, operacao, id_usuario_responsavel, dados_novos)
+        VALUES (TG_TABLE_NAME, v_identidade, TG_OP, public.id_usuario_atual(), v_novos);
+        RETURN NEW;
+
+    ELSIF TG_OP = 'UPDATE' THEN
+        FOREACH v_coluna IN ARRAY TG_ARGV LOOP
+            v_partes := v_partes || (to_jsonb(NEW) ->> v_coluna);
+        END LOOP;
+        v_identidade := array_to_string(v_partes, ',');
+
+        v_antigos_completo := to_jsonb(OLD);
+        v_novos_completo   := to_jsonb(NEW);
+
+        SELECT array_agg(chave) INTO v_campos
+        FROM jsonb_object_keys(v_novos_completo) AS chave
+        WHERE v_antigos_completo -> chave IS DISTINCT FROM v_novos_completo -> chave;
+
+        IF v_campos IS NULL THEN
+            RETURN NEW;
+        END IF;
+
+        IF TG_TABLE_NAME = 'perfil_pesquisador' AND v_campos <@ ARRAY['score_atual', 'score_atualizado_em'] THEN
+            RETURN NEW;
+        END IF;
+
+        IF TG_TABLE_NAME = 'usuario' AND v_campos <@ ARRAY['ultimo_login_em', 'ultimo_login_ip'] THEN
+            RETURN NEW;
+        END IF;
+
+        v_antigos := v_antigos_completo - 'senha_hash' - 'cpf_criptografado' - 'cpf_hash';
+        v_novos   := v_novos_completo - 'senha_hash' - 'cpf_criptografado' - 'cpf_hash';
+
+        INSERT INTO log_auditoria (tabela, identidade_registro, operacao, id_usuario_responsavel, campos_alterados, dados_anteriores, dados_novos)
+        VALUES (TG_TABLE_NAME, v_identidade, TG_OP, public.id_usuario_atual(), v_campos, v_antigos, v_novos);
+        RETURN NEW;
+
+    ELSIF TG_OP = 'DELETE' THEN
+        FOREACH v_coluna IN ARRAY TG_ARGV LOOP
+            v_partes := v_partes || (to_jsonb(OLD) ->> v_coluna);
+        END LOOP;
+        v_identidade := array_to_string(v_partes, ',');
+
+        v_antigos := to_jsonb(OLD) - 'senha_hash' - 'cpf_criptografado' - 'cpf_hash';
+        INSERT INTO log_auditoria (tabela, identidade_registro, operacao, id_usuario_responsavel, dados_anteriores)
+        VALUES (TG_TABLE_NAME, v_identidade, TG_OP, public.id_usuario_atual(), v_antigos);
+        RETURN OLD;
+    END IF;
+
+    RETURN NULL;
+END;
+$$;
+
+
+-- ============================================================================
+-- 12-09-2026 - contar_metricas_dashboard() ganhou campanhas por status,
+-- valor total arrecadado e denúncias pendentes (RF-084 - achado de agente
+-- numa auditoria RF x implementação: a função só devolvia total_campanhas
+-- sem quebra, e nenhum valor arrecadado/denúncia).
+--
+-- NÃO é idempotente do jeito simples (CREATE OR REPLACE sozinho FALHA aqui
+-- - Postgres não deixa mudar o RETURNS TABLE de uma função existente sem
+-- DROP antes). Precisa do DROP FUNCTION primeiro, é seguro rodar de novo
+-- (IF EXISTS) mas só uma vez é suficiente.
+-- ============================================================================
+
+DROP FUNCTION IF EXISTS public.contar_metricas_dashboard();
+
+CREATE FUNCTION public.contar_metricas_dashboard()
+RETURNS TABLE (
+    total_usuarios                 INT,
+    total_pesquisadores            INT,
+    total_papeis                   INT,
+    total_permissoes                INT,
+    total_configuracoes            INT,
+    total_campanhas                INT,
+    sessoes_ativas                  INT,
+    campanhas_ativas                INT,
+    campanhas_sucesso               INT,
+    campanhas_nao_atingida          INT,
+    campanhas_aguardando_aprovacao  INT,
+    valor_total_arrecadado          DECIMAL(14,2),
+    denuncias_pendentes             INT
+)
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT
+        (SELECT count(*)::INT FROM usuario WHERE deletado = FALSE),
+        (SELECT count(DISTINCT up.id_usuario)::INT
+           FROM usuario_papel up
+           JOIN papel p ON p.id_papel = up.id_papel
+          WHERE p.nome = 'pesquisador'),
+        (SELECT count(*)::INT FROM papel),
+        (SELECT count(*)::INT FROM permissao),
+        (SELECT count(*)::INT FROM configuracoes),
+        (SELECT count(*)::INT FROM campanha),
+        (SELECT count(*)::INT FROM sessao WHERE revogado_em IS NULL AND expira_em > now()),
+        (SELECT count(*)::INT FROM campanha WHERE status = 'ativo'),
+        (SELECT count(*)::INT FROM campanha WHERE status = 'sucesso'),
+        (SELECT count(*)::INT FROM campanha WHERE status = 'nao_atingido'),
+        (SELECT count(*)::INT FROM campanha WHERE status = 'aguardando_aprovacao'),
+        (SELECT COALESCE(SUM(valor_bruto_arrecadado), 0)::DECIMAL(14,2) FROM campanha),
+        (SELECT count(*)::INT FROM denuncia WHERE status = 'pendente');
+$$;
+
+GRANT EXECUTE ON FUNCTION public.contar_metricas_dashboard() TO app_nestjs;
+
+
+-- ============================================================================
+-- 12-09-2026 - `comentario` ganhou limite de frequência (era o único
+-- mecanismo de conteúdo do usuário sem nenhum, ver PENDENCIAS e
+-- correcoes.md/ACHADOS_PARA_DISCUTIR.md item 18) - mesmo padrão de
+-- validar_denuncia_frequencia(): 2 chaves novas em configuracoes + função +
+-- trigger novas. Tudo novo, nada substitui função existente - seguro colar
+-- e rodar quantas vezes precisar (INSERT usa ON CONFLICT implícito via
+-- DEFAULT da tabela? NÃO - ver nota abaixo antes de rodar duas vezes).
+--
+-- ATENÇÃO: os 2 INSERT abaixo NÃO têm ON CONFLICT (a maioria dos blocos
+-- deste arquivo pra `configuracoes` também não tem, porque cada chave só é
+-- inserida uma vez na vida) - rodar este bloco duas vezes duplicaria as 2
+-- linhas. Se precisar rodar de novo por algum motivo, comente os 2 INSERT
+-- (a função e o trigger, sim, são seguros de repetir).
+-- ============================================================================
+
+INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, publica) VALUES
+(NULL, 'limite_comentarios_por_hora', '5', 'inteiro', 'Nº máximo de comentários por usuário dentro da janela de configuracoes.janela_comentarios_horas', TRUE, TRUE),
+(NULL, 'janela_comentarios_horas',    '1', 'inteiro', 'Janela de tempo (em horas) usada por limite_comentarios_por_hora', TRUE, TRUE);
+
+CREATE OR REPLACE FUNCTION validar_comentario_frequencia()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_count        integer;
+    v_limite       integer;
+    v_janela_horas integer;
+BEGIN
+    v_limite       := public.config_numero('limite_comentarios_por_hora', 5);
+    v_janela_horas := public.config_numero('janela_comentarios_horas', 1);
+
+    SELECT COUNT(*) INTO v_count
+    FROM comentario
+    WHERE id_pesquisador = NEW.id_pesquisador
+      AND criado_em >= NOW() - (v_janela_horas || ' hours')::INTERVAL;
+
+    IF v_count >= v_limite THEN
+        RAISE EXCEPTION 'Usuário já atingiu o limite de % comentários nas últimas % horas', v_limite, v_janela_horas
+            USING ERRCODE = '93002';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_comentario_limite_taxa ON comentario;
+CREATE TRIGGER trg_comentario_limite_taxa
+BEFORE INSERT ON comentario
+FOR EACH ROW
+EXECUTE FUNCTION validar_comentario_frequencia();
+
+
+-- ============================================================================
 -- NÃO ENTRA NESTE ARQUIVO (registrado aqui só pra não se perder)
 -- ============================================================================
 

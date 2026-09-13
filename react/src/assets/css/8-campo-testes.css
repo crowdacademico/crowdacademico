@@ -7,7 +7,7 @@
    escolhido em T1, a campanha em foco em T2 (bancada-pesquisador.jsx/
    bancada-campanha.jsx, 23-08-2026, pedido do Lucas: "só um selecionado
    por vez, bem marcante") - mesma linguagem visual de
-   .admin-sidebar__item--ativo (3-admin-shell.css): fundo levemente
+   .admin-sidebar__item--ativo (6-admin-shell.css): fundo levemente
    tintado + barra de 4px na cor da marca à esquerda. box-shadow inset em
    vez de border-left de verdade - funciona igual mas não desalinha as
    bordas da linha (border-collapse da tabela). */
@@ -64,7 +64,7 @@
 /* Centralizado só nas colunas de valor curto e uniforme (Hora, Status,
    ms) - Chamada e Recebido variam muito de tamanho linha a linha,
    centralizar essas ficaria estranho (23-08-2026, pedido do Lucas).
-   Mesmo raciocínio de crud-tabela__celula--centralizada em 4-crud.css,
+   Mesmo raciocínio de crud-tabela__celula--centralizada em 5-crud.css,
    só que por posição (nth-child) em vez de classe, porque aqui é sempre
    a mesma coluna em toda linha, cabeçalho incluso. Coluna "Ator" saiu
    (25-08-2026, remoção do Elenco: só existe 1 ator possível agora, a
@@ -95,23 +95,23 @@
 
 /* Tabela de Links acadêmicos (Bancada do Pesquisador) - vive dividindo a
    metade da tela com o painel de Score (bancada-pesquisador.jsx), então
-   a largura de JANELA (usada pela regra geral de 4-crud.css, @media
+   a largura de JANELA (usada pela regra geral de 5-crud.css, @media
    max-width: 1400px) não corresponde à largura real desta coluna: numa
    janela de 1500px+ o texto de Alterar/Consultar/Remover carregava
    normal e sufocava Tipo/URL/Rótulo (achado do Lucas, 23-08-2026).
    Container query em vez de media query resolve isso PORQUE aqui o
    problema não é o auto-layout da própria tabela (aquele, sim, nunca
-   encolhe sozinho - ver o comentário grande em 4-crud.css) - é o
+   encolhe sozinho - ver o comentário grande em 5-crud.css) - é o
    elemento-PAI (a coluna flex) que tem uma largura real e menor que a
    da janela; consultar ESSA largura funciona.
    Teto real medido ao vivo: mesmo em janela ultra-wide, esta coluna
-   nunca passa de ~743px (.admin-content-area__inner, 3-admin-shell.css,
+   nunca passa de ~743px (.admin-content-area__inner, 6-admin-shell.css,
    trava a área de conteúdo em max-width: 1600px). RESISTÊNCIA AUMENTADA
    de propósito (23-08-2026, pedido do Lucas, depois de ver o texto
    aparecer e sufocar tudo de novo): 60em é ACIMA desse teto medido - ou
    seja, hoje o texto praticamente nunca aparece aqui, e só passaria a
    aparecer se o próprio teto de 1600px (admin-content-area__inner,
-   3-admin-shell.css) crescesse no futuro. É proposital: esta coluna é
+   6-admin-shell.css) crescesse no futuro. É proposital: esta coluna é
    estreita por natureza, ícone-só é o normal dela.
    overflow-x aqui é só rede de segurança: se mesmo assim não couber (ex.:
    um rótulo gigante), a TABELA rola sozinha dentro da própria coluna, em
@@ -121,7 +121,7 @@
 /* overflow-x: hidden (não auto) - achado ao vivo (23-08-2026): a barra
    de rolagem não vinha da tabela em si (table-layout: fixed abaixo já
    trava isso matematicamente), vinha da DICA de hover de
-   .crud-tabela__acao-dica (4-crud.css) - um balãozinho position:
+   .crud-tabela__acao-dica (5-crud.css) - um balãozinho position:
    absolute, invisível até passar o mouse, centralizado embaixo do
    último botão (Remover). Centralizado + perto da borda direita = uma
    fatia dele nasce fora da caixa, e isso sozinho já conta como overflow
@@ -135,7 +135,7 @@
   overflow-x: hidden;
 }
 
-/* Padding padrão de 4-crud.css (0.85rem 1.1rem) foi desenhado pra tabela
+/* Padding padrão de 5-crud.css (0.85rem 1.1rem) foi desenhado pra tabela
    de página inteira - nesta coluna de ~540px, 4 colunas x esse padding
    sozinho já passava dos 539px disponíveis (achado do Lucas, 23-08-2026:
    "a barra de rolagem tem que sumir a todo custo"). Reduzido só aqui. */
@@ -145,7 +145,7 @@
 }
 
 /* table-layout: auto (padrão do resto do projeto, ver comentário grande
-   em 4-crud.css) ainda deixava a tabela pedir ~19px a mais do que a
+   em 5-crud.css) ainda deixava a tabela pedir ~19px a mais do que a
    coluna tinha, mesmo com bem menos padding - sobra de arredondamento
    do próprio algoritmo de auto-layout, não dava pra tirar só cortando
    padding. Só ESTA tabela troca pra table-layout: fixed com largura por

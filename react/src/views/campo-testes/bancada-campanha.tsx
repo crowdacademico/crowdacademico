@@ -24,7 +24,7 @@ import {
   ROTULO_STATUS_CAMPANHA,
   classeBadgeStatusCampanha,
 } from '../../services/12-campanha/constants/status-campanha.constants';
-import { formatarDataHora } from '../../services/constant/utils/formatacao.util';
+import { formatarDataHora, formatarMoeda } from '../../services/constant/utils/formatacao.util';
 import { RegistroChamadas } from './registro-chamadas';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { CampanhaResponse } from '../../services/12-campanha/type/campanha.type';
@@ -63,10 +63,6 @@ interface FormEdicaoCampanha {
   dataInicio: string;
   dataFim: string;
   videoApresentacaoUrl: string;
-}
-
-function formatarReais(valor: number | null): string {
-  return (valor ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
 interface PainelOrcamentoCronogramaProps {
@@ -158,7 +154,7 @@ function PainelOrcamentoCronograma({ auth, idCampanha, podeEditar }: PainelOrcam
             {orcamento.map((item) => (
               <tr key={item.idOrcamento}>
                 <td>{item.categoria}</td>
-                <td>{formatarReais(item.valor)}</td>
+                <td>{formatarMoeda(item.valor)}</td>
                 {podeEditar && (
                   <td>
                     <button type="button" className="crud-tabela__acao crud-tabela__acao--excluir" onClick={() => removerItemOrcamento(item.idOrcamento)}>
@@ -477,7 +473,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
 
   const motivoAprovarDesabilitado = () => {
     if (campanha?.status !== 'aguardando_aprovacao') return `Status atual é "${campanha?.status}", não dá pra aprovar.`;
-    if (!orcamentoOk) return `Orçamento incompleto (${orcamento.length}/${minimoItensOrcamento} itens, soma ${formatarReais(somaOrcamento)} de ${formatarReais(campanha.metaFinanceira)}).`;
+    if (!orcamentoOk) return `Orçamento incompleto (${orcamento.length}/${minimoItensOrcamento} itens, soma ${formatarMoeda(somaOrcamento)} de ${formatarMoeda(campanha.metaFinanceira)}).`;
     if (!cronogramaOk) return `Cronograma incompleto (${cronograma.length}/${minimoMarcosCronograma} marcos).`;
     return null;
   };
@@ -844,7 +840,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
                     </span>
                   </td>
                   <td style={bloqueada && !selecionada ? { textDecoration: 'line-through' } : undefined}>{nomeDe(item.idUsuario)}</td>
-                  <td className="crud-tabela__celula--centralizada">{formatarReais(item.metaFinanceira)}</td>
+                  <td className="crud-tabela__celula--centralizada">{formatarMoeda(item.metaFinanceira)}</td>
                   {/* CORRIGIDO (08-09-2026, pedido do Lucas) - "Escolher" já
                       não depende mais de `bloqueada`: as 10 campanhas de
                       demonstração (Alexia) continuam protegidas contra
@@ -978,8 +974,8 @@ export function BancadaCampanha({ auth }: PropsPagina) {
 
             <div className="space-y-6">
               <SecaoFicha titulo="Financeiro">
-                <CampoFicha rotulo="Meta" valor={formatarReais(campanhaConsultada.metaFinanceira)} />
-                <CampoFicha rotulo="Arrecadado" valor={formatarReais(campanhaConsultada.valorBrutoArrecadado)} />
+                <CampoFicha rotulo="Meta" valor={formatarMoeda(campanhaConsultada.metaFinanceira)} />
+                <CampoFicha rotulo="Arrecadado" valor={formatarMoeda(campanhaConsultada.valorBrutoArrecadado)} />
                 <CampoFicha
                   rotulo="Taxa da plataforma"
                   valor={campanhaConsultada.taxaPlataforma === null ? 'Ainda não carimbada (não aprovada)' : `${campanhaConsultada.taxaPlataforma}%`}
@@ -1129,7 +1125,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
                       disabled={bloqueadaEdicao}
                     />
                   </div>
-                  <CampoSomenteLeitura rotulo="Arrecadado" valor={campanhaEmEdicao ? formatarReais(campanhaEmEdicao.valorBrutoArrecadado) : '-'} />
+                  <CampoSomenteLeitura rotulo="Arrecadado" valor={campanhaEmEdicao ? formatarMoeda(campanhaEmEdicao.valorBrutoArrecadado) : '-'} />
                   <CampoSomenteLeitura
                     rotulo="Taxa da plataforma"
                     valor={campanhaEmEdicao?.taxaPlataforma === null || campanhaEmEdicao === null ? 'Ainda não carimbada' : `${campanhaEmEdicao.taxaPlataforma}%`}
@@ -1206,7 +1202,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
               <CampoFicha rotulo="Título" valor={campanhaExcluindo.titulo} />
               <CampoFicha rotulo="Status" valor={ROTULO_STATUS_CAMPANHA[campanhaExcluindo.status]} />
               <CampoFicha rotulo="Dono" valor={nomeDe(campanhaExcluindo.idUsuario)} />
-              <CampoFicha rotulo="Meta" valor={formatarReais(campanhaExcluindo.metaFinanceira)} largura="cheia" />
+              <CampoFicha rotulo="Meta" valor={formatarMoeda(campanhaExcluindo.metaFinanceira)} largura="cheia" />
             </SecaoFicha>
 
             {bloqueadaDemo && (
@@ -1540,7 +1536,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
               )}
             </div>
             <p className="paragrafo">
-              Modelo: {campanha.modelo} · Meta: {formatarReais(campanha.metaFinanceira)} · Arrecadado: {formatarReais(campanha.valorBrutoArrecadado)}
+              Modelo: {campanha.modelo} · Meta: {formatarMoeda(campanha.metaFinanceira)} · Arrecadado: {formatarMoeda(campanha.valorBrutoArrecadado)}
               {campanha.taxaPlataforma !== null && (
                 <>
                   {' '}
@@ -1576,8 +1572,8 @@ export function BancadaCampanha({ auth }: PropsPagina) {
                   </tr>
                   <tr>
                     <td>
-                      Soma × meta: {formatarReais(somaOrcamento)} de {formatarReais(campanha.metaFinanceira)}
-                      {!metaBatendo && ` (faltam ${formatarReais(Number(campanha.metaFinanceira) - somaOrcamento)})`}
+                      Soma × meta: {formatarMoeda(somaOrcamento)} de {formatarMoeda(campanha.metaFinanceira)}
+                      {!metaBatendo && ` (faltam ${formatarMoeda(Number(campanha.metaFinanceira) - somaOrcamento)})`}
                     </td>
                     <td className="crud-tabela__celula--centralizada">
                       <span className={`badge ${metaBatendo ? 'badge-sucesso' : 'badge-erro'}`}>{metaBatendo ? 'OK' : 'Faltando'}</span>
@@ -1636,7 +1632,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
                 {orcamento.map((item) => (
                   <tr key={item.idOrcamento}>
                     <td>{item.categoria}</td>
-                    <td>{formatarReais(item.valor)}</td>
+                    <td>{formatarMoeda(item.valor)}</td>
                     {campanha.status === 'aguardando_aprovacao' && (
                       <td>
                         <button type="button" className="crud-tabela__acao crud-tabela__acao--excluir" onClick={() => removerItemOrcamento(item.idOrcamento)}>

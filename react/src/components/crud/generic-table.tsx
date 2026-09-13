@@ -435,7 +435,7 @@ export function GenericTable<T extends Linha>({
   // `white-space` padrão do navegador já quebra sozinho quando aperta,
   // mas de forma instável), insere uma quebra MANUAL entre a última
   // palavra e o resto - escondida por padrão (`display:none` em
-  // `.crud-tabela__quebra-rotulo`, ver 4-crud.css) e só "ligada" abaixo
+  // `.crud-tabela__quebra-rotulo`, ver 5-crud.css) e só "ligada" abaixo
   // de UM breakpoint fixo de JANELA (não de espaço sobrando, de
   // propósito - janela só encolhe numa direção, nunca pula igual o
   // espaço da coluna pula) - muda de estado uma vez só, sempre no mesmo
@@ -454,7 +454,7 @@ export function GenericTable<T extends Linha>({
   // Classe extra só pro <th> (não pro <td> - `classesColuna` é
   // compartilhada pelos dois, mas `quebrarRotulo` é uma decisão só do
   // CABEÇALHO). `.crud-tabela__rotulo-controlado` trava `white-space:
-  // nowrap` (ver 4-crud.css) - sem isso, o navegador ainda podia quebrar
+  // nowrap` (ver 5-crud.css) - sem isso, o navegador ainda podia quebrar
   // sozinho no espaço (agora corrigido, ver comentário de rotuloColuna)
   // antes do breakpoint escolhido, reproduzindo a mesma oscilação de
   // antes, só que "certa" em vez de errada no hífen. `white-space:
@@ -752,7 +752,7 @@ export function GenericTable<T extends Linha>({
                   MESMOS botões em toda linha/página (nunca "dança" ao
                   paginar), então o piso artificial só atrapalhava: abaixo
                   de 1400px o texto some e vira ícone-só (ver @media em
-                  4-crud.css), mas o min-width antigo (calculado pro modo
+                  5-crud.css), mas o min-width antigo (calculado pro modo
                   COM texto) continuava travado, sobrando espaço reservado
                   à toa e empurrando o ícone de Excluir pra fora da tela -
                   table-layout: auto já dimensiona certo sozinho nos dois
@@ -830,7 +830,7 @@ export function GenericTable<T extends Linha>({
                           Lucas: "voltar a dar as cores das ações... mas mais
                           fraquinho, só pra dar mais vida") - ver
                           .crud-tabela__acao--alterar/--excluir em
-                          4-crud.css. Texto continua neutro nos dois casos.
+                          5-crud.css. Texto continua neutro nos dois casos.
                           Texto em <span> próprio (não solto ao lado do
                           <i>) - precisa de um elemento pra sumir sozinho
                           via CSS quando a coluna aperta; `aria-label` no

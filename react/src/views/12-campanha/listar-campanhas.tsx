@@ -8,12 +8,9 @@ import {
 import { areaConhecimentoApi } from '../../services/8-area-conhecimento/api/area-conhecimento.api';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
+import { formatarMoeda } from '../../services/constant/utils/formatacao.util';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { CampanhaResponse } from '../../services/12-campanha/type/campanha.type';
-
-function formatarReais(valor: number | null): string {
-  return Number(valor ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-}
 
 interface CampanhaLinha extends Omit<CampanhaResponse, 'status' | 'metaFinanceira' | 'valorBrutoArrecadado'> {
   status: string;
@@ -54,8 +51,8 @@ export function ListarCampanhas({ auth }: PropsPagina) {
       status: ROTULO_STATUS_CAMPANHA[campanha.status],
       pesquisador: nomePorIdUsuario.get(campanha.idUsuario) ?? `#${campanha.idUsuario}`,
       area: nomePorIdArea.get(campanha.idAreaConhecimento) ?? `#${campanha.idAreaConhecimento}`,
-      metaFinanceira: formatarReais(campanha.metaFinanceira),
-      valorBrutoArrecadado: formatarReais(campanha.valorBrutoArrecadado),
+      metaFinanceira: formatarMoeda(campanha.metaFinanceira),
+      valorBrutoArrecadado: formatarMoeda(campanha.valorBrutoArrecadado),
     }));
   }, [auth.authFetch]);
 

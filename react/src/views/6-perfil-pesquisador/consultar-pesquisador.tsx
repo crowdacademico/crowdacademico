@@ -10,13 +10,9 @@ import {
   classeBadgeStatusPesquisador,
 } from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
-import { formatarCpfExibicao, formatarDataHora, formatarNomeDimensao } from '../../services/constant/utils/formatacao.util';
+import { formatarCpfOuMotivoOculto, formatarDataHora, formatarNomeDimensao } from '../../services/constant/utils/formatacao.util';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { PerfilPesquisadorResponse, PerfilPesquisadorResponseScore } from '../../services/6-perfil-pesquisador/type/perfil-pesquisador.type';
-
-function formatarCpf(cpf: string | null): string {
-  return cpf ? formatarCpfExibicao(cpf) : 'Não visível (sem permissão sensível ou não é o dono)';
-}
 
 export function ConsultarPesquisador({ auth }: PropsPagina) {
   const { id = '' } = useParams();
@@ -74,7 +70,7 @@ export function ConsultarPesquisador({ auth }: PropsPagina) {
         <div className="lg:col-span-2 space-y-6">
           <SecaoFicha titulo="Dados">
             <CampoFicha rotulo="id" valor={perfil.idUsuario} />
-            <CampoFicha rotulo="CPF" valor={formatarCpf(perfil.cpf)} />
+            <CampoFicha rotulo="CPF" valor={formatarCpfOuMotivoOculto(perfil.cpf)} />
             <CampoFicha rotulo="Vínculo institucional" valor={perfil.vinculoInstitucional ?? '-'} />
             <CampoFicha rotulo="Ativado em" valor={formatarDataHora(perfil.ativadoEm)} />
           </SecaoFicha>

@@ -82,6 +82,7 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | Código | Função | Tabela | Mensagem |
 |---|---|---|---|
 | 93001 | `validar_denuncia_frequencia` | `denuncia` | Limite de denúncias nas últimas 24h atingido |
+| 93002 | `validar_comentario_frequencia` | `comentario` | Limite de comentários na última hora atingido (12-09-2026) |
 
 ---
 

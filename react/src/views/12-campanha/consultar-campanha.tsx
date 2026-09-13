@@ -9,13 +9,9 @@ import {
 } from '../../services/12-campanha/constants/status-campanha.constants';
 import { areaConhecimentoApi } from '../../services/8-area-conhecimento/api/area-conhecimento.api';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
-import { formatarDataHora } from '../../services/constant/utils/formatacao.util';
+import { formatarDataHora, formatarMoeda } from '../../services/constant/utils/formatacao.util';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { CampanhaResponse } from '../../services/12-campanha/type/campanha.type';
-
-function formatarReais(valor: number | null): string {
-  return Number(valor ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-}
 
 export function ConsultarCampanha({ auth }: PropsPagina) {
   const { id = '' } = useParams();
@@ -90,8 +86,8 @@ export function ConsultarCampanha({ auth }: PropsPagina) {
 
         <div className="space-y-6">
           <SecaoFicha titulo="Financeiro">
-            <CampoFicha rotulo="Meta" valor={formatarReais(campanha.metaFinanceira)} />
-            <CampoFicha rotulo="Arrecadado" valor={formatarReais(campanha.valorBrutoArrecadado)} />
+            <CampoFicha rotulo="Meta" valor={formatarMoeda(campanha.metaFinanceira)} />
+            <CampoFicha rotulo="Arrecadado" valor={formatarMoeda(campanha.valorBrutoArrecadado)} />
             <CampoFicha
               rotulo="Taxa da plataforma"
               valor={campanha.taxaPlataforma === null ? 'Ainda não carimbada (não aprovada)' : `${campanha.taxaPlataforma}%`}

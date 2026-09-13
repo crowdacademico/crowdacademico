@@ -15,6 +15,14 @@ interface LinhaMetricasDashboard {
   total_configuracoes: number;
   total_campanhas: number;
   sessoes_ativas: number;
+  campanhas_ativas: number;
+  campanhas_sucesso: number;
+  campanhas_nao_atingida: number;
+  campanhas_aguardando_aprovacao: number;
+  // DECIMAL vem como string do driver `pg` (mesmo cuidado de BIGSERIAL em
+  // log_auditoria.id_log) - convertido pra number em `executar()` abaixo.
+  valor_total_arrecadado: string;
+  denuncias_pendentes: number;
 }
 
 @Injectable()
@@ -55,6 +63,12 @@ export class DashboardServiceResumo {
       sessoesAtivas: metricas.sessoes_ativas,
       // notificacao (26-notificacao) ainda não existe - ver comentário do DTO.
       notificacoesPendentes: null,
+      campanhasAtivas: metricas.campanhas_ativas,
+      campanhasSucesso: metricas.campanhas_sucesso,
+      campanhasNaoAtingida: metricas.campanhas_nao_atingida,
+      campanhasAguardandoAprovacao: metricas.campanhas_aguardando_aprovacao,
+      valorTotalArrecadado: Number(metricas.valor_total_arrecadado),
+      denunciasPendentes: metricas.denuncias_pendentes,
     };
   }
 }

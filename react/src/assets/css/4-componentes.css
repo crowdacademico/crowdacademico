@@ -7,7 +7,7 @@
    gigante de utilitários Tailwind copiada e colada - muda o estilo do
    botão primário do projeto inteiro num lugar só, aqui.
 
-   @layer components: mesmo motivo do 3-admin-shell.css/4-crud.css - sem
+   @layer components: mesmo motivo do 6-admin-shell.css/5-crud.css - sem
    isso, estas classes ganhariam de QUALQUER utilitário do Tailwind
    colocado do lado (`className="btn btn-primary w-full"` - o `w-full`
    precisa poder vencer, senão a composição classe+utilitário não funciona
@@ -65,7 +65,7 @@
 
   /* .btn-info (azulado, só pra "Alterar" em GenericTable) removido
      08-08-2026: a coluna Ações da tabela trocou botão sólido por
-     texto/ícone discreto (.crud-tabela__acao, 4-crud.css) - perdeu a
+     texto/ícone discreto (.crud-tabela__acao, 5-crud.css) - perdeu a
      única razão de existir. */
 
   /* Input/select de formulário fora da tabela de CRUD (login, criar
@@ -117,7 +117,7 @@
   }
 
   /* 23-08-2026 - nasceu dentro do arquivo do Campo de Testes por engano
-     (6-campo-testes.css), movida pra cá quando a listagem de Campanhas
+     (8-campo-testes.css), movida pra cá quando a listagem de Campanhas
      (views/12-campanha) precisou do mesmo badge pra status rejeitado/
      encerrado_moderacao - é utilitário genérico, não algo exclusivo de
      ferramenta de teste. */

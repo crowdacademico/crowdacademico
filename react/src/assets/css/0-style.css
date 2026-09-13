@@ -6,9 +6,11 @@
    + tailwind-theme.css (esse fica separado, ver o comentário lá pro
    porquê). */
 
-@import url('./1-base.css');
-@import url('./2-componentes.css');
-@import url('./3-admin-shell.css');
-@import url('./4-crud.css');
-@import url('./5-responsividade.css');
-@import url('./6-campo-testes.css');
+@import url('./1-cores.css');
+@import url('./2-tipografia.css');
+@import url('./3-base.css');
+@import url('./4-componentes.css');
+@import url('./5-crud.css');
+@import url('./6-admin-shell.css');
+@import url('./7-responsividade.css');
+@import url('./8-campo-testes.css');

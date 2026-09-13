@@ -1,9 +1,9 @@
 /* ========= BLOCOS DE CRUD (tabela genérica) =========
    Usado por components/crud/generic-table.jsx dentro do painel admin.
    Migrado do antigo devtools.css (cores hardcoded) pras variáveis de
-   1-base.css - mesma ideia de "tirar o hardcoded" já aplicada no banco
+   1-cores.css - mesma ideia de "tirar o hardcoded" já aplicada no banco
    (configuracoes em vez de valor fixo no .sql). Paginação/rodapé da tabela
-   ainda usa as classes de 2-componentes.css (.btn/.btn-secondary); a
+   ainda usa as classes de 4-componentes.css (.btn/.btn-secondary); a
    coluna Ações de cada linha tem estilo próprio aqui (.crud-tabela__acao,
    08-08-2026) - texto/ícone discreto, não botão sólido. */
 @layer components {
@@ -58,7 +58,7 @@
      "planilha", mais "lista"), cabeçalho neutro (sem verde) com uma borda
      inferior mais forte separando do corpo, mais respiro vertical. */
   /* Wrapper de rolagem (25-08-2026, 3ª tentativa) - .admin-content-area__inner
-     tem min-width: 0 (3-admin-shell.css, correção mais antiga: "a tabela
+     tem min-width: 0 (6-admin-shell.css, correção mais antiga: "a tabela
      empurrava a PÁGINA inteira") pra permitir que o CARTÃO encolha abaixo
      da largura da tabela em vez de esticar a página. Isso resolveu aquele
      bug, mas trocou por outro: sem nenhum overflow definido em nenhum
@@ -97,7 +97,7 @@
      por volta de ~640px (conta: Nvw = teto quando W = teto/N; escolhido
      1.5vw pra começar a encolher perto de onde as colunas em geral já
      começam a se apertar, ver comentário do @container mais abaixo).
-     Com box-sizing: border-box (1-base.css) em todo elemento, encolher
+     Com box-sizing: border-box (3-base.css) em todo elemento, encolher
      o padding realmente devolve espaço pro CONTEÚDO dentro do mesmo piso
      de min-width calculado em generic-table.jsx - alivia a tabela
      inteira de uma vez, não só a coluna id. Vertical (0.85rem) continua
@@ -301,7 +301,7 @@
   }
 
   /* Dica ao passar o mouse (18-08-2026, pedido da Alexia) - mesmo visual
-     de .tooltip__texto (components/layout/tooltip.jsx / 2-componentes.css:
+     de .tooltip__texto (components/layout/tooltip.jsx / 4-componentes.css:
      pílula escura, acima do elemento, fade puro em CSS), reimplementada
      aqui em vez de reaproveitar a classe: `.tooltip` tem `cursor: help` e
      `margin-left` pensados pro ícone "ⓘ" avulso, errados pra um link de
@@ -342,7 +342,7 @@
      rodada, achado do Lucas: "o texto de ação corta antes da hora, mas o
      menu lateral nem colapsou ainda pra sobrar espaço") - viewport width
      não é a mesma coisa que espaço disponível pro conteúdo: com a sidebar
-     fixa de 260px (abaixo de 1024px ela empilha, ver 3-admin-shell.css),
+     fixa de 260px (abaixo de 1024px ela empilha, ver 6-admin-shell.css),
      duas janelas do MESMO tamanho podem ter o conteúdo bem mais apertado
      ou folgado dependendo só de sobrar ou não aquele tanto de sidebar -
      media query no viewport não enxerga essa diferença, container query
@@ -397,7 +397,7 @@
      entra nela (`.crud-tabela tbody tr:hover`, mais abaixo neste
      arquivo), então um fundo igual por cima simplesmente some. Mesma
      solução já usada no menu lateral pro mesmo problema (ver
-     `.admin-sidebar__item:hover` em 3-admin-shell.css: também trocou de
+     `.admin-sidebar__item:hover` em 6-admin-shell.css: também trocou de
      `--cor-fundo-sutil` fraco demais pra `--cor-borda`, mais visível). */
   .crud-tabela__acao:hover {
     color: var(--cor-texto-forte);
@@ -407,7 +407,7 @@
   /* Alterar/Excluir usam os MESMOS tokens de "informação"/"erro" já
      usados em banner de aviso e mensagem de erro em todo o app
      (--cor-texto-info/--cor-fundo-info, --cor-texto-erro/--cor-fundo-
-     erro - ver 1-base.css) - não mais um azul/vermelho hardcoded só
+     erro - ver 1-cores.css) - não mais um azul/vermelho hardcoded só
      desta tabela. Reaproveitar o token pronto, em vez de inventar um
      rgba() novo, foi o que o Lucas pediu (11-08-2026): esses 2 tokens já
      têm um valor pra tema claro E um pra tema escuro (dark mode) - um

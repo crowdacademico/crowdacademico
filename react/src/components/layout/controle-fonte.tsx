@@ -12,7 +12,7 @@ function lerEscalaSalva(): number {
 }
 
 // Botão A-/A+ no cabeçalho (09-08-2026, pedido do Lucas: acessibilidade,
-// "botão de aumentar e diminuir fonte"). Muda --escala-fonte (1-base.css,
+// "botão de aumentar e diminuir fonte"). Muda --escala-fonte (3-base.css,
 // aplicada no html inteiro) e guarda a escolha em localStorage - persiste
 // entre sessões, mesmo padrão de CHAVE_REFRESH_TOKEN em use-auth.js.
 // Estado inicial já lê o valor salvo (useState(lerEscalaSalva), não um

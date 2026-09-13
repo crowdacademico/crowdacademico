@@ -8,8 +8,9 @@
 
    @theme = config do Tailwind v4 (substitui o antigo `tailwind.config =
    {...}` que vivia inline no index.html, via CDN) - MESMAS cores/fontes de
-   antes. Emite as variáveis em :root também, então 1-base.css usa
-   var(--color-primary) etc. sem redeclarar nada (ver 1-base.css). */
+   antes. Emite as variáveis em :root também, então os arquivos numerados
+   (1-cores.css em especial, mas não só ele) usam var(--color-primary)
+   etc. sem redeclarar nada. */
 @import 'tailwindcss';
 
 @theme {

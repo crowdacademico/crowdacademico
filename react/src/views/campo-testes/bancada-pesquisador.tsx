@@ -14,7 +14,7 @@ import { useCampoTestes } from '../../services/campo-testes/hook/use-campo-teste
 import { useChamadaRegistrada } from '../../services/campo-testes/hook/use-chamada-registrada';
 import { gerarCpfValido } from '../../services/campo-testes/util/gerar-cpf-valido';
 import { PESQUISADOR_BLOQUEADO, motivoBloqueioPesquisador } from '../../services/campo-testes/util/registros-bloqueados';
-import { formatarCpf, formatarCpfExibicao, formatarDataHora, formatarNomeDimensao } from '../../services/constant/utils/formatacao.util';
+import { formatarCpf, formatarCpfOuMotivoOculto, formatarDataHora, formatarNomeDimensao } from '../../services/constant/utils/formatacao.util';
 import {
   ROTULO_STATUS_PESQUISADOR,
   ROTULO_TIPO_VINCULO,
@@ -196,7 +196,7 @@ function PainelLinksAcademicos({ auth, idUsuario, tiposLink, tituloComoSecaoFich
 
   return (
     <>
-      {/* `.titulo-bloco` (08-09-2026) - token novo em 1-base.css, o mesmo
+      {/* `.titulo-bloco` (08-09-2026) - token novo em 2-tipografia.css, o mesmo
           rótulo pequeno/maiúsculo que SecaoFicha/Minha Conta já usavam
           soltos (achado do Lucas: "não podemos ter algo perdido flutuando
           por aí"). Define a tipografia certa sozinho (font-family sans,
@@ -1003,14 +1003,7 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
           }
         >
           <SecaoFicha titulo="Perfil de Pesquisador">
-            <CampoFicha
-              rotulo="CPF"
-              valor={
-                perfilConsultado.cpf
-                  ? formatarCpfExibicao(perfilConsultado.cpf)
-                  : 'Não visível (sem permissão sensível ou não é o dono)'
-              }
-            />
+            <CampoFicha rotulo="CPF" valor={formatarCpfOuMotivoOculto(perfilConsultado.cpf)} />
             <CampoFicha
               rotulo="Status"
               valor={

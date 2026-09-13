@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Tooltip } from '../../components/layout/tooltip';
 import { useErroToast } from '../../components/layout/use-erro-toast';
 import { dashboardApi } from '../../services/admin/api/dashboard.api';
+import { formatarMoeda } from '../../services/constant/utils/formatacao.util';
 import { DashboardIdentidadeVisual } from './dashboard-identidade-visual';
 import { DashboardRegrasNegocio } from './dashboard-regras-negocio';
 import { DashboardSaude } from './dashboard-saude';
@@ -41,7 +42,7 @@ const ABAS: { chave: AbaChave; rotulo: string; icone: string }[] = [
 // pedido do Lucas (09-08-2026), mesmo tom já usado nas bordas de tabela.
 interface CardMetricaProps {
   rotulo: string;
-  valor: number | null;
+  valor: number | string | null;
 }
 
 function CardMetrica({ rotulo, valor }: CardMetricaProps) {
@@ -173,14 +174,31 @@ export function Dashboard({ auth }: DashboardProps) {
           ) : !resumo ? (
             <p className="crud-erro">{erro}</p>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <CardMetrica rotulo="Usuários" valor={resumo.totalUsuarios} />
-              <CardMetrica rotulo="Pesquisadores" valor={resumo.totalPesquisadores} />
-              <CardMetrica rotulo="Papéis" valor={resumo.totalPapeis} />
-              <CardMetrica rotulo="Permissões" valor={resumo.totalPermissoes} />
-              <CardMetrica rotulo="Configurações" valor={resumo.totalConfiguracoes} />
-              <CardMetrica rotulo="Campanhas" valor={resumo.totalCampanhas} />
-            </div>
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <CardMetrica rotulo="Usuários" valor={resumo.totalUsuarios} />
+                <CardMetrica rotulo="Pesquisadores" valor={resumo.totalPesquisadores} />
+                <CardMetrica rotulo="Papéis" valor={resumo.totalPapeis} />
+                <CardMetrica rotulo="Permissões" valor={resumo.totalPermissoes} />
+                <CardMetrica rotulo="Configurações" valor={resumo.totalConfiguracoes} />
+                <CardMetrica rotulo="Campanhas" valor={resumo.totalCampanhas} />
+                <CardMetrica rotulo="Denúncias pendentes" valor={resumo.denunciasPendentes} />
+                <CardMetrica rotulo="Arrecadado (total)" valor={formatarMoeda(resumo.valorTotalArrecadado)} />
+              </div>
+
+              {/* Campanhas por status (RF-084) - achado numa auditoria
+                  (12-09-2026): o requisito pede essa quebra, só existia o
+                  total sem distinção. Não inclui "campanhas sinalizadas por
+                  baixa reputação" (a 5ª parte do RF-084) de propósito -
+                  depende do motor de score estar fechado (ver PENDENCIAS e
+                  correcoes.md, RF-031). */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <CardMetrica rotulo="Campanhas ativas" valor={resumo.campanhasAtivas} />
+                <CardMetrica rotulo="Campanhas com sucesso" valor={resumo.campanhasSucesso} />
+                <CardMetrica rotulo="Campanhas não atingidas" valor={resumo.campanhasNaoAtingida} />
+                <CardMetrica rotulo="Aguardando aprovação" valor={resumo.campanhasAguardandoAprovacao} />
+              </div>
+            </>
           )}
 
           {/* (c) Prévia - NOTIFICAÇÕES, não log de auditoria (correção do

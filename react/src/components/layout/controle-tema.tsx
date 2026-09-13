@@ -27,7 +27,7 @@ function lerTemaSalvo(): Tema {
 // sobre dark mode) - mesmo padrão do ControleFonte: useState(lerTemaSalvo)
 // como inicializador preguiçoso (evita flash do tema errado no primeiro
 // render) + useEffect que aplica e persiste. A diferença é ONDE aplica:
-// data-tema é um ATRIBUTO em <html>, não uma custom property - 1-base.css
+// data-tema é um ATRIBUTO em <html>, não uma custom property - 1-cores.css
 // tem os 3 blocos de tokens (:root = claro, :root[data-tema='escuro'],
 // @media(prefers-color-scheme:dark) + [data-tema='sistema']) que reagem a
 // esse atributo sozinhos, nenhum componente além deste precisa saber que

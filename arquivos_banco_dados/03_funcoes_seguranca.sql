@@ -1011,15 +1011,32 @@ $$;
 --             notificação pendente, não log - log_auditoria já tem seu
 --             próprio painel "Ver log" embaixo de cada tabela).
 -- ----------------------------------------------------------------------------
+-- ATUALIZADA (12-09-2026, achado de agente numa auditoria RF x
+-- implementação): RF-084 pede campanhas por status (ativas/sucesso/não
+-- atingidas/aguardando aprovação), valor total arrecadado e denúncias
+-- pendentes - nenhum dos três existia aqui, só `total_campanhas` (um
+-- único count, sem quebra). Os 3 dados abaixo NÃO dependem de
+-- `19-denuncia`/`22-contribuicao` (módulos Nest) existirem: `denuncia` e
+-- as colunas de status/valor de `campanha` já são tabela/coluna real do
+-- banco desde antes, lidas aqui direto por SQL - só a 5ª parte do
+-- requisito ("campanhas sinalizadas por baixa pontuação de reputação")
+-- fica de fora de propósito, porque depende do motor de score estar
+-- fechado (ver PENDENCIAS e correcoes.md, RF-031).
 CREATE OR REPLACE FUNCTION public.contar_metricas_dashboard()
 RETURNS TABLE (
-    total_usuarios      INT,
-    total_pesquisadores INT,
-    total_papeis        INT,
-    total_permissoes    INT,
-    total_configuracoes INT,
-    total_campanhas     INT,
-    sessoes_ativas      INT
+    total_usuarios                 INT,
+    total_pesquisadores            INT,
+    total_papeis                   INT,
+    total_permissoes                INT,
+    total_configuracoes            INT,
+    total_campanhas                INT,
+    sessoes_ativas                  INT,
+    campanhas_ativas                INT,
+    campanhas_sucesso               INT,
+    campanhas_nao_atingida          INT,
+    campanhas_aguardando_aprovacao  INT,
+    valor_total_arrecadado          DECIMAL(14,2),
+    denuncias_pendentes             INT
 )
 LANGUAGE sql
 STABLE
@@ -1036,5 +1053,11 @@ AS $$
         (SELECT count(*)::INT FROM permissao),
         (SELECT count(*)::INT FROM configuracoes),
         (SELECT count(*)::INT FROM campanha),
-        (SELECT count(*)::INT FROM sessao WHERE revogado_em IS NULL AND expira_em > now());
+        (SELECT count(*)::INT FROM sessao WHERE revogado_em IS NULL AND expira_em > now()),
+        (SELECT count(*)::INT FROM campanha WHERE status = 'ativo'),
+        (SELECT count(*)::INT FROM campanha WHERE status = 'sucesso'),
+        (SELECT count(*)::INT FROM campanha WHERE status = 'nao_atingido'),
+        (SELECT count(*)::INT FROM campanha WHERE status = 'aguardando_aprovacao'),
+        (SELECT COALESCE(SUM(valor_bruto_arrecadado), 0)::DECIMAL(14,2) FROM campanha),
+        (SELECT count(*)::INT FROM denuncia WHERE status = 'pendente');
 $$;

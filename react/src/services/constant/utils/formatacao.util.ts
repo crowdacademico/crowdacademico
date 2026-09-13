@@ -7,16 +7,14 @@ const formatadorMoeda = new Intl.NumberFormat('pt-BR', {
   currency: 'BRL',
 });
 
-export function formatarMoeda(valor: string | number): string {
+// `| null` (12-09-2026, achado numa auditoria de duplicação) - antes só
+// aceitava `string | number`, e por isso 3 telas (`consultar-campanha.tsx`,
+// `listar-campanhas.tsx`, `bancada-campanha.tsx`) tinham cada uma sua
+// própria cópia local `formatarReais(valor: number | null)` (idênticas,
+// só pra tratar `null` como zero). `Number(null)` já é `0` em JS - só
+// faltava o TIPO admitir isso, o comportamento em si nunca precisou mudar.
+export function formatarMoeda(valor: string | number | null): string {
   return formatadorMoeda.format(Number(valor));
-}
-
-export function formatarPercentual(valor: string | number): string {
-  const numero = Number(valor).toLocaleString('pt-BR', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  });
-  return `${numero}%`;
 }
 
 // Data (07-09-2026, achado numa auditoria: mesma lógica de formatação
@@ -83,18 +81,13 @@ export function formatarCpfExibicao(cpf: string): string {
   return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
 }
 
-// `mascararCpf` - pra EXIBIR (Consultar), não pra digitar: esconde o meio,
-// mostra só o 1º bloco e os dígitos verificadores (ex.: "123.***.**9-00").
-// CPF incompleto/inválido volta cru, sem tentar mascarar pela metade.
-export function mascararCpf(valor: string | null | undefined): string {
-  const digitos = String(valor ?? '').replace(/\D/g, '');
-  if (digitos.length !== 11) {
-    return valor ? String(valor) : '';
-  }
-  const bloco1 = digitos.slice(0, 3);
-  const ultimoDigitoBloco3 = digitos.slice(8, 9);
-  const digitosVerificadores = digitos.slice(9, 11);
-  return `${bloco1}.***.**${ultimoDigitoBloco3}-${digitosVerificadores}`;
+// `formatarCpfOuMotivoOculto` (12-09-2026, achado numa auditoria de
+// duplicação) - `consultar-pesquisador.tsx` e `bancada-pesquisador.tsx`
+// (Campo de Testes) cada um definia sua PRÓPRIA função local, idêntica,
+// pra formatar o CPF quando visível ou explicar por que não está (a API
+// só devolve `cpf` de verdade pro dono ou quem tem permissão sensível).
+export function formatarCpfOuMotivoOculto(cpf: string | null | undefined): string {
+  return cpf ? formatarCpfExibicao(cpf) : 'Não visível (sem permissão sensível ou não é o dono)';
 }
 
 // Converte um valor de tipo desconhecido pra texto exibível sem nunca cair

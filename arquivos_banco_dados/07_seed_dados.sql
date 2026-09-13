@@ -799,6 +799,15 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, pub
 -- configurável desde 28-07, mas a JANELA de tempo continuava fixa em 24h no
 -- corpo da função - ver validar_denuncia_frequencia() em 05, [05-K-3]).
 (NULL, 'janela_denuncias_horas',     '24',    'inteiro',  'Janela de tempo (em horas) usada por limite_denuncias_24h (RF-076)', TRUE, TRUE),
+-- ADICIONADO (12-09-2026, pedido do Lucas): `comentario` era o único
+-- mecanismo de conteúdo do usuário sem limite de frequência (achado numa
+-- auditoria - ver ACHADOS_PARA_DISCUTIR.md item 18/PENDENCIAS e
+-- correcoes.md) - endosso/link_academico/upload já tinham teto, denúncia já
+-- tinha frequência (par acima). Mesmo padrão de 2 chaves (contagem + janela)
+-- de limite_denuncias_24h/janela_denuncias_horas, mesmos valores de partida
+-- (5 comentários por hora) - ajustável livremente depois, sem migração.
+(NULL, 'limite_comentarios_por_hora', '5',     'inteiro',  'Nº máximo de comentários por usuário dentro da janela de configuracoes.janela_comentarios_horas', TRUE, TRUE),
+(NULL, 'janela_comentarios_horas',    '1',     'inteiro',  'Janela de tempo (em horas) usada por limite_comentarios_por_hora', TRUE, TRUE),
 -- ADICIONADO (28-07-2026, uma IA - "Problema 2"): limite de negócio (menor,
 -- configurável) por cima do limite técnico largo das colunas (01) - mesmo padrão
 -- config + trigger do prazo de campanha (item 16).

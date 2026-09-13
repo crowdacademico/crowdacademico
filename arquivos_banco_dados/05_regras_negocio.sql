@@ -2816,7 +2816,12 @@ EXECUTE FUNCTION validar_comentario_endosso();
 -- Função:     validar_comentario_autor
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-3]
--- Regra:      Pesquisador não pode comentar em sua própria campanha (RF-066).
+-- Regra:      Pesquisador não pode comentar em sua própria campanha (RF-092).
+--             CORRIGIDO (12-09-2026, achado de agente numa auditoria RF x
+--             implementação) - citava RF-066 (prazo mínimo/máximo de
+--             campanha, sem relação nenhuma), resíduo de uma numeração de
+--             RF antiga que nunca foi atualizado aqui. A regra em si
+--             sempre esteve correta, só o comentário estava desatualizado.
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION validar_comentario_autor()
 RETURNS trigger
@@ -2892,6 +2897,62 @@ CREATE TRIGGER trg_comentario_bloqueia_reversao_moderacao
 BEFORE UPDATE ON comentario
 FOR EACH ROW
 EXECUTE FUNCTION fn_bloqueia_reversao_moderacao_comentario();
+
+-- ----------------------------------------------------------------------------
+-- Função:     validar_comentario_frequencia
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-K-3]
+-- Regra:      ADICIONADA (12-09-2026, pedido do Lucas, achado numa auditoria):
+--             `comentario` era o único mecanismo de conteúdo do usuário sem
+--             limite de frequência/quantidade - endosso/link_academico/
+--             upload já tinham teto, denúncia já tinha frequência. Mesmo
+--             desenho de validar_denuncia_frequencia() (acima) - conta
+--             quantos comentários o mesmo pesquisador postou dentro da
+--             janela, bloqueia o (limite+1)-ésimo. Não distingue campanha -
+--             é limite de FREQUÊNCIA (anti-rajada/spam), não de volume total
+--             por campanha, então soma comentários em QUALQUER campanha.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION validar_comentario_frequencia()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_count        integer;
+    v_limite       integer;
+    v_janela_horas integer;
+BEGIN
+    v_limite       := public.config_numero('limite_comentarios_por_hora', 5);
+    v_janela_horas := public.config_numero('janela_comentarios_horas', 1);
+
+    SELECT COUNT(*) INTO v_count
+    FROM comentario
+    WHERE id_pesquisador = NEW.id_pesquisador
+      AND criado_em >= NOW() - (v_janela_horas || ' hours')::INTERVAL;
+
+    IF v_count >= v_limite THEN
+        RAISE EXCEPTION 'Usuário já atingiu o limite de % comentários nas últimas % horas', v_limite, v_janela_horas
+            USING ERRCODE = '93002';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_comentario_limite_taxa
+-- Tabela:    comentario
+-- Momento:   BEFORE INSERT
+-- Função:    validar_comentario_frequencia()
+-- Bloco:     [05-K-3]
+-- Regra:     Bloqueia o (limite+1)-ésimo comentário de um mesmo pesquisador
+--            dentro da janela - 6º na última hora com os valores padrão de
+--            hoje, mas os dois números são configuráveis (ver função acima).
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_comentario_limite_taxa ON comentario;
+CREATE TRIGGER trg_comentario_limite_taxa
+BEFORE INSERT ON comentario
+FOR EACH ROW
+EXECUTE FUNCTION validar_comentario_frequencia();
 
 
 -- ----------------------------------------------------------------------------
@@ -3130,13 +3191,19 @@ FOR EACH ROW EXECUTE FUNCTION public.fn_atribuir_papel_pesquisador();
 --             com o privilégio de quem A CRIOU (SECURITY DEFINER), não de
 --             quem disparou o UPDATE/INSERT/DELETE que a acionou.
 --
---             REDAÇÃO DE COLUNA SENSÍVEL: 'senha_hash' (usuario) e
---             'cpf_criptografado' (perfil_pesquisador) nunca entram em
---             dados_anteriores/dados_novos - removidas do JSONB (operador
---             `-`) DEPOIS de calcular campos_alterados (por isso o nome da
---             coluna ainda aparece em campos_alterados quando ela muda -
---             saber QUE a senha mudou é auditoria válida; o HASH em si,
---             não). Se uma tabela nova entrar na lista de triggers abaixo
+--             REDAÇÃO DE COLUNA SENSÍVEL: 'senha_hash' (usuario),
+--             'cpf_criptografado' e 'cpf_hash' (as duas de perfil_
+--             pesquisador) nunca entram em dados_anteriores/dados_novos -
+--             removidas do JSONB (operador `-`) DEPOIS de calcular
+--             campos_alterados (por isso o nome da coluna ainda aparece em
+--             campos_alterados quando ela muda - saber QUE a senha/CPF
+--             mudou é auditoria válida; o HASH em si, não). `cpf_hash`
+--             ADICIONADO (12-09-2026, achado de agente numa auditoria RF x
+--             implementação, RF-117: "CPF nunca tem seu valor gravado no
+--             log") - é um HMAC-SHA256 com chave secreta, não reversível
+--             sem ela, mas ainda uma redação de dado derivado do CPF; lido
+--             ao pé da letra, RF-117 pede o mesmo cuidado dado a
+--             cpf_criptografado. Se uma tabela nova entrar na lista de triggers abaixo
 --             e tiver outra coluna sensível (ex.: token_hash, se um dia
 --             verificacao_email/recuperacao_senha entrarem pra este log),
 --             adicione um `- 'nome_da_coluna'` a mais nas duas linhas de
@@ -3169,7 +3236,7 @@ BEGIN
         END LOOP;
         v_identidade := array_to_string(v_partes, ',');
 
-        v_novos := to_jsonb(NEW) - 'senha_hash' - 'cpf_criptografado';
+        v_novos := to_jsonb(NEW) - 'senha_hash' - 'cpf_criptografado' - 'cpf_hash';
         INSERT INTO log_auditoria (tabela, identidade_registro, operacao, id_usuario_responsavel, dados_novos)
         VALUES (TG_TABLE_NAME, v_identidade, TG_OP, public.id_usuario_atual(), v_novos);
         RETURN NEW;
@@ -3223,8 +3290,8 @@ BEGIN
             RETURN NEW;
         END IF;
 
-        v_antigos := v_antigos_completo - 'senha_hash' - 'cpf_criptografado';
-        v_novos   := v_novos_completo - 'senha_hash' - 'cpf_criptografado';
+        v_antigos := v_antigos_completo - 'senha_hash' - 'cpf_criptografado' - 'cpf_hash';
+        v_novos   := v_novos_completo - 'senha_hash' - 'cpf_criptografado' - 'cpf_hash';
 
         INSERT INTO log_auditoria (tabela, identidade_registro, operacao, id_usuario_responsavel, campos_alterados, dados_anteriores, dados_novos)
         VALUES (TG_TABLE_NAME, v_identidade, TG_OP, public.id_usuario_atual(), v_campos, v_antigos, v_novos);
@@ -3236,7 +3303,7 @@ BEGIN
         END LOOP;
         v_identidade := array_to_string(v_partes, ',');
 
-        v_antigos := to_jsonb(OLD) - 'senha_hash' - 'cpf_criptografado';
+        v_antigos := to_jsonb(OLD) - 'senha_hash' - 'cpf_criptografado' - 'cpf_hash';
         INSERT INTO log_auditoria (tabela, identidade_registro, operacao, id_usuario_responsavel, dados_anteriores)
         VALUES (TG_TABLE_NAME, v_identidade, TG_OP, public.id_usuario_atual(), v_antigos);
         RETURN OLD;
