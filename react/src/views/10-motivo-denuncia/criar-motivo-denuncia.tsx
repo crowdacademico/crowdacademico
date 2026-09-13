@@ -50,7 +50,7 @@ export function CriarMotivoDenuncia({ auth }: PropsPagina) {
       subtitulo="Preencha os dados abaixo para cadastrar um novo motivo de denúncia."
     >
       <form onSubmit={aoCriar} className="p-10 space-y-6">
-        {erro && <p className="text-red-700 text-sm font-bold text-center">{erro}</p>}
+        {erro && <p className="texto-erro text-sm font-bold text-center">{erro}</p>}
 
         <div>
           <label className="rotulo-campo">Tipo</label>

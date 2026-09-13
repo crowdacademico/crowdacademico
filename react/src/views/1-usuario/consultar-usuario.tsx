@@ -170,7 +170,7 @@ export function ConsultarUsuario({ auth }: PropsPagina) {
   }
 
   if (!usuario) {
-    return <p className="p-10 text-center text-red-700 text-sm font-bold">{erro}</p>;
+    return <p className="p-10 text-center texto-erro text-sm font-bold">{erro}</p>;
   }
 
   return (

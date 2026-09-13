@@ -77,7 +77,7 @@ export function CriarConfiguracao({ auth }: PropsPagina) {
       subtitulo="Preencha os dados abaixo para cadastrar um novo parâmetro."
     >
       <form onSubmit={aoCriar} className="p-10 space-y-6">
-        {erro && <p className="text-red-700 text-sm font-bold text-center">{erro}</p>}
+        {erro && <p className="texto-erro text-sm font-bold text-center">{erro}</p>}
 
         {/* Aviso honesto (10-08-2026, item 6) - a confusão do Lucas era
             achar que criar uma chave pelo painel já faz o sistema passar a
@@ -106,7 +106,7 @@ export function CriarConfiguracao({ auth }: PropsPagina) {
             className={'input-padrao font-mono' + (chaveInvalida ? ' border-red-500' : '')}
           />
           {chaveInvalida ? (
-            <p className="text-xs text-red-600 font-semibold mt-1">
+            <p className="text-xs texto-erro font-semibold mt-1">
               Só letras minúsculas, números e underscore - sem espaço, maiúscula ou acento.
             </p>
           ) : (

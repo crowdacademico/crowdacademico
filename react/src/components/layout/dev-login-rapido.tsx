@@ -120,7 +120,7 @@ export function DevLoginRapido({ auth }: DevLoginRapidoProps) {
       )}
 
       {erro && (
-        <div className="absolute right-0 mt-1 w-56 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg shadow-lg z-50 px-3 py-2">
+        <div className="absolute right-0 mt-1 w-56 bg-red-50 border border-red-200 texto-erro text-xs rounded-lg shadow-lg z-50 px-3 py-2">
           {erro}
         </div>
       )}

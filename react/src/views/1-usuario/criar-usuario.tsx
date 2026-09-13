@@ -87,7 +87,7 @@ export function CriarUsuario({ auth }: PropsPagina) {
       subtitulo="Preencha os dados abaixo para cadastrar um novo usuário."
     >
       <form onSubmit={aoCriar} className="p-10 space-y-6">
-        {erro && <p className="text-red-700 text-sm font-bold text-center">{erro}</p>}
+        {erro && <p className="texto-erro text-sm font-bold text-center">{erro}</p>}
 
         {/* Centralizado, acima dos campos de texto - é o primeiro elemento
             visual da ficha, mesmo lugar que ocupará depois em Alterar

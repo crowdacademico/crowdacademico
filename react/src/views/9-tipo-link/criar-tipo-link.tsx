@@ -107,7 +107,7 @@ export function CriarTipoLink({ auth }: PropsPagina) {
       subtitulo="Preencha os dados abaixo para cadastrar um novo tipo de link."
     >
       <form onSubmit={aoCriar} className="p-10 space-y-6">
-        {erro && <p className="text-red-700 text-sm font-bold text-center">{erro}</p>}
+        {erro && <p className="texto-erro text-sm font-bold text-center">{erro}</p>}
 
         <div>
           <label className="rotulo-campo">Código</label>
@@ -122,7 +122,7 @@ export function CriarTipoLink({ auth }: PropsPagina) {
             className={'input-padrao font-mono' + (codigoInvalido ? ' border-red-500' : '')}
           />
           {codigoInvalido ? (
-            <p className="text-xs text-red-600 font-semibold mt-1">
+            <p className="text-xs texto-erro font-semibold mt-1">
               Só letras maiúsculas, números e underscore - sem espaço, minúscula ou acento.
             </p>
           ) : (
@@ -173,7 +173,7 @@ export function CriarTipoLink({ auth }: PropsPagina) {
             className={'input-padrao font-mono' + (regexInvalida ? ' border-red-500' : '')}
           />
           {regexInvalida ? (
-            <p className="text-xs text-red-600 font-semibold mt-1">
+            <p className="text-xs texto-erro font-semibold mt-1">
               Isto não é uma expressão regular válida.
             </p>
           ) : (
@@ -219,7 +219,7 @@ export function CriarTipoLink({ auth }: PropsPagina) {
             </label>
           </div>
           {nenhumEscopoMarcado && (
-            <p className="text-xs text-red-600 font-semibold mt-1">
+            <p className="text-xs texto-erro font-semibold mt-1">
               Pelo menos uma opção precisa ficar marcada.
             </p>
           )}

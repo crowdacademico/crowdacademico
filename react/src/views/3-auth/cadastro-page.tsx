@@ -125,7 +125,7 @@ export function CadastroPage({ auth }: PropsPagina) {
           onSubmit={aoCadastrar}
           className="p-10 space-y-5 overflow-y-auto min-h-0 flex-1"
         >
-          {erro && <p className="text-red-700 text-sm font-bold text-center">{erro}</p>}
+          {erro && <p className="texto-erro text-sm font-bold text-center">{erro}</p>}
 
           <div>
             <label className="rotulo-campo">Nome</label>

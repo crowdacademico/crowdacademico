@@ -74,7 +74,7 @@ export function CriarAreaConhecimento({ auth }: PropsPagina) {
       subtitulo="Preencha os dados abaixo para cadastrar uma nova área do conhecimento."
     >
       <form onSubmit={aoCriar} className="p-10 space-y-6">
-        {erro && <p className="text-red-700 text-sm font-bold text-center">{erro}</p>}
+        {erro && <p className="texto-erro text-sm font-bold text-center">{erro}</p>}
 
         <div>
           <label className="rotulo-campo">Código CNPq</label>
@@ -88,7 +88,7 @@ export function CriarAreaConhecimento({ auth }: PropsPagina) {
             className={'input-padrao font-mono' + (codigoInvalido ? ' border-red-500' : '')}
           />
           {codigoInvalido ? (
-            <p className="text-xs text-red-600 font-semibold mt-1">
+            <p className="text-xs texto-erro font-semibold mt-1">
               Precisa seguir o formato do CNPq: 4 níveis de 2 dígitos separados por ponto (ex.:
               "1.03.00.00").
             </p>

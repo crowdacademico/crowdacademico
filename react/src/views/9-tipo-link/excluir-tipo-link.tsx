@@ -71,10 +71,10 @@ export function ExcluirTipoLink({ auth }: PropsPagina) {
       {carregando ? (
         <p className="p-10 text-center text-sm texto-fraco">Carregando...</p>
       ) : !tipo ? (
-        <p className="p-10 text-center text-red-700 text-sm font-bold">{erro}</p>
+        <p className="p-10 text-center texto-erro text-sm font-bold">{erro}</p>
       ) : (
         <div className="p-10 space-y-6">
-          {erro && <p className="text-red-700 text-sm font-bold text-center">{erro}</p>}
+          {erro && <p className="texto-erro text-sm font-bold text-center">{erro}</p>}
 
           <SecaoFicha titulo="O que será excluído">
             <CampoFicha rotulo="Código" valor={tipo.codigo} />

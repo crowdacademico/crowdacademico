@@ -54,7 +54,7 @@ export function LoginPage({ auth }: PropsPagina) {
 
         <form onSubmit={aoEntrar} className="p-10 space-y-6">
           {erro && (
-            <p className="text-red-700 text-sm font-bold text-center whitespace-pre-line">
+            <p className="texto-erro text-sm font-bold text-center whitespace-pre-line">
               {erro}
             </p>
           )}

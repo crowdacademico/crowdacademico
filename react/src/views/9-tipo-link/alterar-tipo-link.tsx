@@ -156,10 +156,10 @@ export function AlterarTipoLink({ auth }: PropsPagina) {
       {carregando ? (
         <p className="p-10 text-center text-sm texto-fraco">Carregando...</p>
       ) : !tipo ? (
-        <p className="p-10 text-center text-red-700 text-sm font-bold">{erro}</p>
+        <p className="p-10 text-center texto-erro text-sm font-bold">{erro}</p>
       ) : (
         <form id="form-alterar-tipo-link" onSubmit={aoSalvar} className="p-10 space-y-6">
-          {erro && <p className="text-red-700 text-sm font-bold text-center">{erro}</p>}
+          {erro && <p className="texto-erro text-sm font-bold text-center">{erro}</p>}
 
           <div className="flex items-center gap-3 pb-4 border-b borda-padrao">
             <div className="w-11 h-11 rounded-full bg-primary text-white flex items-center justify-center shrink-0">
@@ -214,7 +214,7 @@ export function AlterarTipoLink({ auth }: PropsPagina) {
                 className={'input-padrao font-mono' + (regexInvalida ? ' border-red-500' : '')}
               />
               {regexInvalida ? (
-                <p className="text-xs text-red-600 font-semibold mt-1">
+                <p className="text-xs texto-erro font-semibold mt-1">
                   Isto não é uma expressão regular válida.
                 </p>
               ) : (
@@ -264,7 +264,7 @@ export function AlterarTipoLink({ auth }: PropsPagina) {
                 </label>
               </div>
               {nenhumEscopoMarcado && (
-                <p className="text-xs text-red-600 font-semibold mt-1">
+                <p className="text-xs texto-erro font-semibold mt-1">
                   Pelo menos uma opção precisa ficar marcada.
                 </p>
               )}

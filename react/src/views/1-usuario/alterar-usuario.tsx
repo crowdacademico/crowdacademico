@@ -324,10 +324,10 @@ export function AlterarUsuario({ auth }: PropsPagina) {
       {carregando ? (
         <p className="p-10 text-center text-sm texto-fraco">Carregando...</p>
       ) : !usuario ? (
-        <p className="p-10 text-center text-red-700 text-sm font-bold">{erro}</p>
+        <p className="p-10 text-center texto-erro text-sm font-bold">{erro}</p>
       ) : (
         <form id="form-alterar-usuario" onSubmit={aoSalvar} className="p-6 sm:p-10">
-          {erro && <p className="text-red-700 text-sm font-bold text-center mb-6">{erro}</p>}
+          {erro && <p className="texto-erro text-sm font-bold text-center mb-6">{erro}</p>}
 
           {/* Cabeçalho de identidade (09-08-2026, Bloco I: "a pessoa
               precisa saber QUEM está editando") - mesmo espírito do
@@ -513,7 +513,7 @@ export function AlterarUsuario({ auth }: PropsPagina) {
                                   type="button"
                                   onClick={() => aoRevogarPapel(papel)}
                                   disabled={revogandoPapel === papel.idPapel}
-                                  className="text-red-600 font-bold hover:text-red-800 disabled:opacity-50"
+                                  className="texto-erro font-bold hover:text-red-800 disabled:opacity-50"
                                   title={`Revogar "${papel.nomePapel}"`}
                                 >
                                   ×

@@ -70,10 +70,10 @@ export function ExcluirConfiguracao({ auth }: PropsPagina) {
       {carregando ? (
         <p className="p-10 text-center text-sm texto-fraco">Carregando...</p>
       ) : !configuracao ? (
-        <p className="p-10 text-center text-red-700 text-sm font-bold">{erro}</p>
+        <p className="p-10 text-center texto-erro text-sm font-bold">{erro}</p>
       ) : (
         <div className="p-10 space-y-6">
-          {erro && <p className="text-red-700 text-sm font-bold text-center">{erro}</p>}
+          {erro && <p className="texto-erro text-sm font-bold text-center">{erro}</p>}
 
           {/* SecaoFicha/CampoFicha (10-08-2026, mesma rodada do item 3 em
               Excluir Usuário) - mesmos blocos que Consultar usa, zero

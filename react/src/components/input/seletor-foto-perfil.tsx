@@ -233,7 +233,7 @@ export function SeletorFotoPerfil({
         />
       </div>
 
-      {erroLocal && <p className="text-red-700 text-xs font-bold mt-1.5 max-w-[10rem]">{erroLocal}</p>}
+      {erroLocal && <p className="texto-erro text-xs font-bold mt-1.5 max-w-[10rem]">{erroLocal}</p>}
     </div>
   );
 }
