@@ -8,7 +8,7 @@ import { tipoLinkApi } from '../../services/9-tipo-link/api/tipo-link.api';
 import type { PropsPagina } from '../../services/router/pagina.type';
 
 // Convenção de código (mesma ideia de REGEX_CHAVE_VALIDA em
-// criar-configuracao.jsx) - MAIÚSCULO_COM_UNDERSCORE, igual todo `codigo`
+// criar-configuracao.tsx) - MAIÚSCULO_COM_UNDERSCORE, igual todo `codigo`
 // já seedado (LATTES, ORCID, RESEARCHGATE, LINKEDIN, GITHUB,
 // SITE_INSTITUCIONAL, OUTRO - ver 07_seed_dados.sql [07-C-1]). Mesma
 // validação de CriarTipoLinkRequestDto (Nest), duplicada aqui só pra dar
@@ -65,7 +65,7 @@ export function CriarTipoLink({ auth }: PropsPagina) {
   const [enviando, setEnviando] = useState(false);
 
   // Só valida depois que a pessoa digitou alguma coisa - mesmo raciocínio
-  // de chaveInvalida em criar-configuracao.jsx.
+  // de chaveInvalida em criar-configuracao.tsx.
   const codigoInvalido = codigo.length > 0 && !REGEX_CODIGO_VALIDO.test(codigo);
   const regexInvalida = regex.length > 0 && !regexValida(regex);
   // CK_TIPO_LINK_ALGUM_ESCOPO (01_extensoes_enums_tabelas.sql) - pelo

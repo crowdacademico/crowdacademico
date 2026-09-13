@@ -64,7 +64,7 @@ export const arquivoApi = {
   // Devolve { url } - `url` já pronta pra `<img src>`, ou `null` se a
   // pessoa não tem foto cadastrada. Sem foto, quem chama não precisa
   // resolver nenhum "avatar padrão" sozinho - AvatarUsuario
-  // (components/layout/avatar-usuario.jsx) já desenha iniciais com fundo
+  // (components/layout/avatar-usuario.tsx) já desenha iniciais com fundo
   // colorido quando `foto` é null.
   buscarAvatarPorUsuario: (idUsuario: number | string): Promise<AvatarResolvido> =>
     fetch(`${API_BASE_URL}/arquivo/avatar/${idUsuario}`).then(tratarResposta<AvatarResolvido>),

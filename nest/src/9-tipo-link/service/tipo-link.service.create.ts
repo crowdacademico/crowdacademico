@@ -5,12 +5,13 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
+import {
+  CODIGO_PG_UNIQUE_VIOLATION,
+  CODIGO_PG_RLS_VIOLATION,
+} from '../../commons/database/postgres-exception.filter';
 import { TipoLinkConverter } from '../dto/converter/tipo-link.converter';
 import { TipoLinkRequestCreate } from '../dto/request/tipo-link.request-create';
 import { TipoLinkResponse } from '../dto/response/tipo-link.response';
-
-const CODIGO_PG_UNIQUE_VIOLATION = '23505';
-const CODIGO_PG_RLS_VIOLATION = '42501';
 
 @Injectable()
 export class TipoLinkServiceCreate {

@@ -71,7 +71,7 @@ export function grupoConfiguracao(chave: string): string {
 //
 // Genérico de propósito (fase 1 - `type/` ainda não existe, fase 2) - só
 // exige que o item tenha `chave`, preserva o resto do formato de quem
-// chamar (ex.: quando dashboard-regras-negocio.jsx for tipado na fase 6,
+// chamar (ex.: quando dashboard-regras-negocio.tsx for tipado na fase 6,
 // isto já aceita ConfiguracaoResponse[] sem precisar mudar nada aqui).
 export function agruparConfiguracoes<T extends { chave: string }>(
   configuracoes: T[],

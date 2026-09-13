@@ -24,7 +24,7 @@ function ehTipoConfiguracao(valor: string): valor is TipoConfiguracao {
 
 // Antes era um formulário embutido no fim da tabela de Configurações
 // (GenericTable). Virou view própria (pedido do Lucas, 02-08-2026),
-// seguindo o mesmo padrão de views/1-usuario/criar-usuario.jsx.
+// seguindo o mesmo padrão de views/9-tipo-link/criar-tipo-link.tsx.
 export function CriarConfiguracao({ auth }: PropsPagina) {
   const navigate = useNavigate();
   const { mostrar } = useToast();

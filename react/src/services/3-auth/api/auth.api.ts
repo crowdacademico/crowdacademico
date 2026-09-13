@@ -13,7 +13,7 @@ import type {
 //
 // CORRIGIDO (07-08-2026): este arquivo tinha um `tratarResposta` próprio,
 // que lançava `Error` comum em vez do `ErroHttp` (com `.status`) do
-// http.util.js compartilhado - `traduzirErro()` (usado por login-page.jsx,
+// http.util.js compartilhado - `traduzirErro()` (usado por login-page.tsx,
 // feito de propósito pra reconhecer 429 do ThrottlerGuard) precisa de
 // `erro instanceof ErroHttp` pra funcionar; com o `Error` comum, todo erro
 // de login (incluindo o 429 de "Muitas tentativas") caía sempre na

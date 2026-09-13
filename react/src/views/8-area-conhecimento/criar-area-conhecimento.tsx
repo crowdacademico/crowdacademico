@@ -12,7 +12,7 @@ import type { AreaConhecimentoResponse } from '../../services/8-area-conheciment
 // sempre 2 dígitos por nível, ex.: '1.03.00.00') - mesma validação de
 // CriarAreaConhecimentoRequestDto (Nest), duplicada aqui só pra dar
 // feedback ANTES de bater no backend, não pra substituir a validação de
-// lá (mesma convenção de REGEX_CHAVE_VALIDA em criar-configuracao.jsx).
+// lá (mesma convenção de REGEX_CHAVE_VALIDA em criar-configuracao.tsx).
 const REGEX_CODIGO_CNPQ = /^\d{1,2}\.\d{2}\.\d{2}\.\d{2}$/;
 
 export function CriarAreaConhecimento({ auth }: PropsPagina) {
@@ -42,7 +42,7 @@ export function CriarAreaConhecimento({ auth }: PropsPagina) {
   }, []);
 
   // Só valida depois que a pessoa digitou alguma coisa - mesmo raciocínio
-  // de chaveInvalida em criar-configuracao.jsx.
+  // de chaveInvalida em criar-configuracao.tsx.
   const codigoInvalido = codigoCnpq.length > 0 && !REGEX_CODIGO_CNPQ.test(codigoCnpq);
 
   const aoCriar = async (evento: FormEvent<HTMLFormElement>) => {

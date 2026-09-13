@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { AvatarUsuario } from './avatar-usuario';
+import { useFecharAoClicarFora } from '../../services/constant/hook/use-fechar-ao-clicar-fora';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 
 function placeholder(mensagem: string): () => void {
@@ -27,22 +28,7 @@ export function MenuUsuario({ auth }: MenuUsuarioProps) {
   const [aberto, setAberto] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!aberto) {
-      return undefined;
-    }
-    const aoClicarFora = (evento: MouseEvent) => {
-      if (
-        containerRef.current &&
-        evento.target instanceof Node &&
-        !containerRef.current.contains(evento.target)
-      ) {
-        setAberto(false);
-      }
-    };
-    document.addEventListener('mousedown', aoClicarFora);
-    return () => document.removeEventListener('mousedown', aoClicarFora);
-  }, [aberto]);
+  useFecharAoClicarFora(containerRef, aberto, () => setAberto(false));
 
   if (auth.carregando) {
     return <span className="text-sm texto-fraco">Carregando sessão...</span>;

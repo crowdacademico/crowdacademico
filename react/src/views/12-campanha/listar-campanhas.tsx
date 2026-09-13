@@ -31,7 +31,7 @@ interface CampanhaLinha extends Omit<CampanhaResponse, 'status' | 'metaFinanceir
 // enquanto, só listar + consultar; hoje quem precisa criar/aprovar
 // campanha de teste usa o Campo de Testes (views/campo-testes).
 export function ListarCampanhas({ auth }: PropsPagina) {
-  // Mesmo padrão de junção client-side de listar-usuarios.jsx (coluna
+  // Mesmo padrão de junção client-side de listar-usuarios.tsx (coluna
   // "papel"): busca campanhas + usuários + áreas numa vez só, junta no
   // navegador - os dois `.catch(() => [])` seguem o mesmo espírito:
   // se um catálogo falhar, a tabela continua de pé, só sem aquele nome

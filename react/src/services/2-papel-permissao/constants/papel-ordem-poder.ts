@@ -9,7 +9,7 @@ export const PAPEL_SEM_EXTRA = 'usuário';
 // alfabético). Mesma ordem já usada em DevLoginRapido/CONTAS_DEV, só
 // invertida (lá é do maior pro menor). id_papel 7=usuario ... 1=admin
 // (07_seed_dados.sql [07-B-1]). Extraído aqui (não mais local de
-// listar-usuarios.jsx) porque listar-papeis.jsx passou a precisar da
+// listar-usuarios.tsx) porque listar-papeis.tsx passou a precisar da
 // mesma ordem pro filtro por papel da tabela Permissões - um só lugar de
 // verdade evita as duas telas divergirem se a ordem de poder mudar.
 export const ORDEM_PODER_PAPEL = [

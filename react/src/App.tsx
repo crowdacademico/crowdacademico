@@ -31,7 +31,7 @@ function App() {
           {/* Redirect da rota base sem aba (11-08-2026) - mesmo espírito do
               redirect de "/" pro Dashboard logo acima: "/admin/minha-conta"
               sozinho não é mais uma página própria, é só o link antigo
-              (menu-usuario.jsx) apontando pra cá; a aba padrão é Perfil. */}
+              (menu-usuario.tsx) apontando pra cá; a aba padrão é Perfil. */}
           <Route
             path="minha-conta"
             element={<Navigate to="/admin/minha-conta/perfil" replace />}

@@ -19,7 +19,7 @@ export function formatarMoeda(valor: string | number | null): string {
 
 // Data (07-09-2026, achado numa auditoria: mesma lógica de formatação
 // duplicada em consultar-campanha.tsx/consultar-pesquisador.tsx, mais 3
-// variações inline em alterar-usuario.tsx/minha-conta-page.tsx). Só a
+// variações inline em modal-usuario.tsx/minha-conta-page.tsx). Só a
 // MECÂNICA de formatar mora aqui - sempre 'pt-BR', sempre a mesma chamada
 // de `Intl`. Qual das três granularidades usar em qual tela continua
 // decisão de cada view (varia de propósito: auditoria quer hora exata,

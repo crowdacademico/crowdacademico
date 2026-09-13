@@ -27,7 +27,7 @@ function regexValida(padrao: string): boolean {
 // "" (ou só espaços/vírgulas) -> [] - dominio é NOT NULL DEFAULT '{}'
 // (mecanismo de validação PRINCIPAL, desde a revisão de 16-08-2026),
 // array vazio é o único jeito de dizer "sem restrição de domínio", não
-// mais `null`. Mesma função de criar-tipo-link.jsx, duplicada aqui - cada
+// mais `null`. Mesma função de criar-tipo-link.tsx, duplicada aqui - cada
 // view deste módulo fica autocontida, mesmo padrão do resto do projeto.
 function paraDominios(texto: string): string[] {
   return texto

@@ -37,8 +37,8 @@ const PERFIL_REDUCAO_AVATAR = { larguraMaxima: 512, qualidade: 80 };
 //
 // Este componente NUNCA salva nada em `usuario` sozinho - ele só sobe (ou
 // sinaliza a remoção d)o arquivo e devolve o resultado pro pai via
-// `aoAlterar`. Quem usa isto (criar-usuario.jsx, alterar-usuario.jsx,
-// minha-conta-page.jsx) decide quando mandar isso pro backend (no create,
+// `aoAlterar`. Quem usa isto (modal-criar-usuario.tsx, modal-usuario.tsx,
+// minha-conta-page.tsx) decide quando mandar isso pro backend (no create,
 // ou no PATCH de alterar/Minha Conta) - mesma separação de
 // responsabilidade do resto do app (componente de input nunca chama
 // usuarioApi diretamente).
@@ -49,7 +49,7 @@ const PERFIL_REDUCAO_AVATAR = { larguraMaxima: 512, qualidade: 80 };
 // distingue "nenhuma escolha feita ainda" (não chamou aoAlterar) de
 // "removida de propósito" (chamou com null) guardando o id como
 // `undefined` por padrão, nunca `null`, exatamente pra sobrar esse
-// terceiro estado - ver alterar-usuario.jsx/minha-conta-page.jsx.
+// terceiro estado - ver modal-usuario.tsx/minha-conta-page.tsx.
 interface SeletorFotoPerfilProps {
   authFetch: AuthFetch;
   nome?: string | null;

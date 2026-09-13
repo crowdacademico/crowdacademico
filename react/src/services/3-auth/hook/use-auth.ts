@@ -27,7 +27,7 @@ export interface UseAuthReturn {
 }
 
 // Hook único de autenticação do painel admin (views/admin, views/3-auth,
-// views/1-usuario) - useAuth() é chamado uma vez em App.jsx e o resultado
+// views/1-usuario) - useAuth() é chamado uma vez em App.tsx e o resultado
 // desce por prop pra Header, Breadcrumb (indiretamente) e cada página.
 // Guarda o accessToken só em memória (nunca localStorage - some ao fechar
 // a aba, de propósito) e o refreshToken em localStorage (pra não precisar
@@ -222,7 +222,7 @@ export function useAuth(): UseAuthReturn {
 
       // DEDUP DE GET EM VOO (07-08-2026, achado do Lucas: toast de erro
       // duplicado - "Você precisa estar logado" aparecendo 2x). Causa: o
-      // <StrictMode> do React (main.jsx) dispara todo useEffect 2 vezes DE
+      // <StrictMode> do React (main.tsx) dispara todo useEffect 2 vezes DE
       // PROPÓSITO em desenvolvimento, pra pegar bug de efeito sem limpeza -
       // e nenhuma das nossas buscas cancelava a anterior. Resultado: toda
       // tela que busca dado ao abrir (a maioria - listagem, log, consultar)

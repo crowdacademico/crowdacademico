@@ -23,9 +23,9 @@ export function Breadcrumb() {
   const location = useLocation();
 
   // matchPath (não comparação exata de string) porque agora existem rotas
-  // com parâmetro (ex.: /admin/usuarios/:id/alterar) - criar-usuario.tsx
-  // etc. seriam a única entrada nunca encontrada se comparássemos o
-  // pathname literal contra ":id" ao invés do número de verdade da URL.
+  // com parâmetro (ex.: /admin/papeis/:id/alterar) - essa seria a única
+  // entrada nunca encontrada se comparássemos o pathname literal contra
+  // ":id" ao invés do número de verdade da URL.
   const rota = TODAS_AS_ROTAS.find((r) => matchPath(r.caminho, location.pathname));
   if (!rota?.rotuloBreadcrumb) {
     return null;

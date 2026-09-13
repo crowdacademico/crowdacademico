@@ -1,10 +1,9 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
+import { CODIGO_PG_RLS_VIOLATION } from '../../commons/database/postgres-exception.filter';
 import { MotivoDenunciaConverter } from '../dto/converter/motivo-denuncia.converter';
 import { MotivoDenunciaRequestCreate } from '../dto/request/motivo-denuncia.request-create';
 import { MotivoDenunciaResponse } from '../dto/response/motivo-denuncia.response';
-
-const CODIGO_PG_RLS_VIOLATION = '42501';
 
 @Injectable()
 export class MotivoDenunciaServiceCreate {

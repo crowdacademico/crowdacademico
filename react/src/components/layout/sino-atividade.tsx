@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
+import { useFecharAoClicarFora } from '../../services/constant/hook/use-fechar-ao-clicar-fora';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { LogAuditoriaResponse, OperacaoLogAuditoria } from '../../services/27-log-auditoria/type/log-auditoria.type';
 
@@ -54,22 +55,7 @@ export function SinoAtividade({ auth }: SinoAtividadeProps) {
       });
   }, [auth.authFetch]);
 
-  useEffect(() => {
-    if (!aberto) {
-      return undefined;
-    }
-    const aoClicarFora = (evento: MouseEvent) => {
-      if (
-        containerRef.current &&
-        evento.target instanceof Node &&
-        !containerRef.current.contains(evento.target)
-      ) {
-        setAberto(false);
-      }
-    };
-    document.addEventListener('mousedown', aoClicarFora);
-    return () => document.removeEventListener('mousedown', aoClicarFora);
-  }, [aberto]);
+  useFecharAoClicarFora(containerRef, aberto, () => setAberto(false));
 
   const aoAbrir = () => {
     const abrindoAgora = !aberto;

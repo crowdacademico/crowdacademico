@@ -8,7 +8,7 @@ import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 
 // Cópia fiel de componentes/header.html do Projeto de Interface real
 // (mesmas classes Tailwind, mesma estrutura) - único em toda tela
-// (App.jsx). Adaptações, porque este React ainda só tem o painel admin
+// (App.tsx). Adaptações, porque este React ainda só tem o painel admin
 // (home) e a tela de login, nenhuma outra tela pública:
 // 1. A marca agora navega de verdade pra "/" (home) - antes era só um
 //    alert(), já que "home" não existia como rota.
@@ -19,7 +19,7 @@ import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 // 3. "Meu Painel"/"Entrar" (canto direito): logado mostra nome real + Sair;
 //    deslogado agora é um link de verdade pra "/login" (era um formulário
 //    embutido aqui antes - virou a tela de login própria, ver
-//    views/3-auth/login-page.jsx).
+//    views/3-auth/login-page.tsx).
 function placeholder(mensagem: string): () => void {
   return () => window.alert(mensagem);
 }

@@ -13,6 +13,8 @@ import { ORDEM_PODER_PAPEL, PAPEL_SEM_EXTRA } from '../../services/2-papel-permi
 import { PESQUISADOR_BLOQUEADO, motivoBloqueioPesquisador } from '../../services/campo-testes/util/registros-bloqueados';
 import { gerarCpfValido } from '../../services/campo-testes/util/gerar-cpf-valido';
 import { useCampoTestes } from '../../services/campo-testes/hook/use-campo-testes';
+import { useFecharAoClicarFora } from '../../services/constant/hook/use-fechar-ao-clicar-fora';
+import { paginarClientSide } from '../../services/constant/utils/paginacao.util';
 import {
   ROTULO_STATUS_PESQUISADOR,
   ROTULO_TITULO_ACADEMICO,
@@ -79,7 +81,7 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
   // serve pra testar, então já nasce fora da vista, sem precisar caçar.
   const [ocultarBloqueados, setOcultarBloqueados] = useState(true);
   // Mesmo filtro + paginação + facet "Papel" de GenericTable (components/
-  // crud/generic-table.jsx), reimplementado aqui (não a versão genérica
+  // crud/generic-table.tsx), reimplementado aqui (não a versão genérica
   // de N facetas com URL/ordenação) porque esta tabela precisa de linha
   // riscada/cadeado por registro bloqueado, que o GenericTable não tem
   // como fazer (sem className por linha).
@@ -148,21 +150,8 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
   }, [carregarPesquisadores]);
 
   // Fechar o dropdown "Papel" ao clicar fora (mesmo padrão de
-  // GenericTable) - listener de mousedown, não depende de foco.
-  useEffect(() => {
-    if (!facetaPapelAberta) return undefined;
-    const aoClicarFora = (evento: MouseEvent) => {
-      if (
-        facetaPapelRef.current &&
-        evento.target instanceof Node &&
-        !facetaPapelRef.current.contains(evento.target)
-      ) {
-        setFacetaPapelAberta(false);
-      }
-    };
-    document.addEventListener('mousedown', aoClicarFora);
-    return () => document.removeEventListener('mousedown', aoClicarFora);
-  }, [facetaPapelAberta]);
+  // GenericTable, extraído em `useFecharAoClicarFora` em 13-09-2026).
+  useFecharAoClicarFora(facetaPapelRef, facetaPapelAberta, () => setFacetaPapelAberta(false));
 
   // Opções do dropdown "Papel" - só os valores que já aparecem nos dados
   // (mesmo sniff de GenericTable), ordenados do menor pro maior poder.
@@ -192,10 +181,7 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
       ]
         .some((valor) => String(valor ?? '').toLowerCase().includes(termo));
     });
-  const totalPaginas = tamanhoPagina === 'todos' ? 1 : Math.max(1, Math.ceil(pesquisadoresFiltrados.length / tamanhoPagina));
-  const paginaAtual = Math.min(pagina, totalPaginas);
-  const pesquisadoresPagina =
-    tamanhoPagina === 'todos' ? pesquisadoresFiltrados : pesquisadoresFiltrados.slice((paginaAtual - 1) * tamanhoPagina, paginaAtual * tamanhoPagina);
+  const { totalPaginas, paginaAtual, itensPagina: pesquisadoresPagina } = paginarClientSide(pesquisadoresFiltrados, pagina, tamanhoPagina);
 
   return (
     <div className="admin-content-painel">

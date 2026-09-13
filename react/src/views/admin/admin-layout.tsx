@@ -8,9 +8,9 @@ interface AdminLayoutProps {
   auth: UseAuthReturn;
 }
 
-// Casca do painel administrativo - menu lateral (admin-sidebar.jsx: coluna
+// Casca do painel administrativo - menu lateral (admin-sidebar.tsx: coluna
 // fixa à esquerda a partir de 1377px (min-[1377px]:, ver comentário
-// completo em admin-sidebar.jsx sobre por que é um valor literal, não um
+// completo em admin-sidebar.tsx sobre por que é um valor literal, não um
 // token de tema), gaveta com hambúrguer em telas menores) + área de
 // conteúdo. Cada aba (Usuários/Papéis/Configurações) é
 // uma rota de verdade dentro de /admin/* (ver services/router/
@@ -19,10 +19,10 @@ interface AdminLayoutProps {
 //
 // `auth` (09-08-2026) passou a ser recebido direto - precisou pra montar
 // <BuscaGlobal/> aqui (o Ctrl+K precisa de authFetch pra buscar nos 4
-// catálogos). Continua vindo explícito por prop de App.jsx, não por
+// catálogos). Continua vindo explícito por prop de App.tsx, não por
 // Outlet context - mesmo padrão de sempre, só que agora AdminLayout
 // também usa, não só repassa pros filhos do <Outlet/> (que continuam
-// recebendo `auth` direto de App.jsx, sem mudança).
+// recebendo `auth` direto de App.tsx, sem mudança).
 export function AdminLayout({ auth }: AdminLayoutProps) {
   const [menuAberto, setMenuAberto] = useState(false);
 
@@ -39,7 +39,7 @@ export function AdminLayout({ auth }: AdminLayoutProps) {
           âncora pra isto), a sidebar continua no fluxo normal do grid
           (sem ser empurrada, encosta direto no breadcrumb como sempre),
           e é o PRÓPRIO fundo opaco dela + vir DEPOIS no HTML
-          (min-[1377px]:relative em admin-sidebar.jsx) que cobre/esconde a
+          (min-[1377px]:relative em admin-sidebar.tsx) que cobre/esconde a
           faixa atrás dela sozinha, sem precisar de display/visibility
           condicional nenhum aqui. Só a área de CONTEÚDO (.admin-content-
           area, padding-top maior, ver 6-admin-shell.css) reserva espaço

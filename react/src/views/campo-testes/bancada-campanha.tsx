@@ -10,6 +10,7 @@ import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
 import { areaConhecimentoApi } from '../../services/8-area-conhecimento/api/area-conhecimento.api';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { tratarResposta } from '../../services/constant/api/http.util';
+import { useFecharAoClicarFora } from '../../services/constant/hook/use-fechar-ao-clicar-fora';
 import { useChamadaRegistrada } from '../../services/campo-testes/hook/use-chamada-registrada';
 import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
@@ -24,6 +25,7 @@ import {
   classeBadgeStatusCampanha,
 } from '../../services/12-campanha/constants/status-campanha.constants';
 import { formatarDataHora, formatarMoeda } from '../../services/constant/utils/formatacao.util';
+import { paginarClientSide } from '../../services/constant/utils/paginacao.util';
 import { RegistroChamadas } from './registro-chamadas';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { CampanhaResponse } from '../../services/12-campanha/type/campanha.type';
@@ -380,39 +382,11 @@ export function BancadaCampanha({ auth }: PropsPagina) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Fechar as sugestões do combobox de pesquisador ao clicar fora - mesmo
-  // padrão do facet "Status" logo abaixo.
-  useEffect(() => {
-    if (!sugestoesPesquisadorAbertas) return undefined;
-    const aoClicarFora = (evento: MouseEvent) => {
-      if (
-        sugestoesPesquisadorRef.current &&
-        evento.target instanceof Node &&
-        !sugestoesPesquisadorRef.current.contains(evento.target)
-      ) {
-        setSugestoesPesquisadorAbertas(false);
-      }
-    };
-    document.addEventListener('mousedown', aoClicarFora);
-    return () => document.removeEventListener('mousedown', aoClicarFora);
-  }, [sugestoesPesquisadorAbertas]);
-
-  // Fechar o dropdown "Status" ao clicar fora (mesmo padrão do facet
-  // "Papel" de bancada-pesquisador.jsx / GenericTable).
-  useEffect(() => {
-    if (!facetaStatusAberta) return undefined;
-    const aoClicarFora = (evento: MouseEvent) => {
-      if (
-        facetaStatusRef.current &&
-        evento.target instanceof Node &&
-        !facetaStatusRef.current.contains(evento.target)
-      ) {
-        setFacetaStatusAberta(false);
-      }
-    };
-    document.addEventListener('mousedown', aoClicarFora);
-    return () => document.removeEventListener('mousedown', aoClicarFora);
-  }, [facetaStatusAberta]);
+  // Fechar as sugestões do combobox de pesquisador ao clicar fora, e o
+  // dropdown "Status" - mesmo padrão, extraído em `useFecharAoClicarFora`
+  // em 13-09-2026.
+  useFecharAoClicarFora(sugestoesPesquisadorRef, sugestoesPesquisadorAbertas, () => setSugestoesPesquisadorAbertas(false));
+  useFecharAoClicarFora(facetaStatusRef, facetaStatusAberta, () => setFacetaStatusAberta(false));
 
   const nomeDe = (idUsuario: number): string => usuarios.find((u) => u.idUsuario === idUsuario)?.nome ?? `#${idUsuario}`;
 
@@ -438,7 +412,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
   })();
 
   // Opções do dropdown "Status" - só os valores que já aparecem nos
-  // dados (mesmo sniff de GenericTable/bancada-pesquisador.jsx), sem
+  // dados (mesmo sniff de GenericTable/bancada-pesquisador.tsx), sem
   // lista fixa do enum (evita hardcoded - se um status novo aparecer, o
   // facet já mostra sozinho).
   const opcoesStatus = [...new Set(campanhas.map((c) => c.status))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
@@ -453,10 +427,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
         String(valor).toLowerCase().includes(termo),
       );
     });
-  const totalPaginas = tamanhoPagina === 'todos' ? 1 : Math.max(1, Math.ceil(campanhasFiltradas.length / tamanhoPagina));
-  const paginaAtual = Math.min(pagina, totalPaginas);
-  const campanhasPagina =
-    tamanhoPagina === 'todos' ? campanhasFiltradas : campanhasFiltradas.slice((paginaAtual - 1) * tamanhoPagina, paginaAtual * tamanhoPagina);
+  const { totalPaginas, paginaAtual, itensPagina: campanhasPagina } = paginarClientSide(campanhasFiltradas, pagina, tamanhoPagina);
 
   const iniciarEdicaoCampanha = (item: CampanhaResponse) => {
     setIdCampanhaEditando(item.idCampanha);

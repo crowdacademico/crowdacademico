@@ -74,7 +74,7 @@ export const usuarioPapelApi = {
   // acima: UsuarioPapelServiceCreate.executar() também é `Promise<void>`
   // de verdade (só INSERT, sem SELECT de volta), controller sem
   // `@HttpCode`, 201 com corpo vazio. Único ponto de chamada
-  // (alterar-usuario.tsx) só faz `await`, nunca lê o valor.
+  // (modal-usuario.tsx, ModalAlterarUsuario) só faz `await`, nunca lê o valor.
   atribuir: (
     authFetch: AuthFetch,
     idUsuario: number | string,

@@ -14,13 +14,13 @@
 // </FichaConsulta>
 //
 // `largura` (10-08-2026, rodada de IA "embelezar o painel", item 4) -
-// mesmo sistema de 2 medidas canônicas de cartao-formulario.jsx: 'media'
+// mesmo sistema de 2 medidas canônicas de cartao-formulario.tsx: 'media'
 // (max-w-2xl, padrão - Consultar Configuração, ficha simples) e 'larga'
 // (max-w-5xl - Consultar Usuário, que ganhou 2 colunas pelo mesmo motivo
 // do Alterar Usuário). O layout em colunas não mora AQUI dentro - quem usa
 // `largura="larga"` monta o próprio `grid lg:grid-cols-3` nos `children`,
-// igual já é feito em alterar-usuario.jsx; este componente só garante o
-// espaço pra isso caber.
+// igual já é feito em modal-usuario.tsx (ModalAlterarUsuario); este
+// componente só garante o espaço pra isso caber.
 import type { ReactNode } from 'react';
 
 type LarguraFicha = 'media' | 'larga';
@@ -142,7 +142,7 @@ export function SecaoFicha({ titulo, children, colunas = 2 }: SecaoFichaProps) {
 // `largura="cheia"` ocupa as 2 colunas da seção (campo com valor longo, ou
 // que tem controle extra - ver `acao`/`children`).
 // `acao` - controle pequeno ao lado do valor (ex.: a setinha de expandir
-// histórico de login em consultar-usuario.jsx).
+// histórico de login em modal-usuario.tsx, ModalConsultarUsuario).
 // `children` - conteúdo extra ABAIXO do valor (ex.: a lista expandida em
 // si), continua fora do fluxo normal de rótulo/valor.
 interface CampoFichaProps {

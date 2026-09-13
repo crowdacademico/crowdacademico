@@ -20,7 +20,7 @@ interface PesquisadorLinha extends Omit<PerfilPesquisadorResponse, 'tituloAcadem
 // esqueci?" - 6-perfil-pesquisador estava pronto e testado desde
 // 22-08-2026, mas sem NENHUMA entrada de menu, igual Motivos de Denúncia
 // estava antes). Mesmo raciocínio de sem-Alterar/sem-Excluir de
-// listar-campanhas.jsx: editar campos de pesquisador tem regra própria
+// listar-campanhas.tsx: editar campos de pesquisador tem regra própria
 // (RF-017, correção de CPF é só via função SECURITY DEFINER, não um PATCH
 // livre) e não existe endpoint de exclusão (status ativo/suspenso).
 export function ListarPesquisadores({ auth }: PropsPagina) {

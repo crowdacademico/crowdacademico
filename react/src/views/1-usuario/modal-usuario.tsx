@@ -117,6 +117,63 @@ async function comRegistro<T>(
   }
 }
 
+// Extraído (13-09-2026, achado de auditoria: os dois modais abaixo abriam
+// com o MESMO Promise.all de 4 chamadas - usuário, perfil de pesquisador,
+// avatar, papéis - byte a byte, cada um com sua própria cópia de estado).
+// `perfilPesquisador` e `papeis` continuam expostos com setter porque NÃO
+// são só leitura em ModalAlterarUsuario - `criarPerfil()` reatribui o
+// primeiro depois de criar um perfil, e as 4 ações de papel (atribuir/
+// suspender/reativar/revogar) reatribuem o segundo depois de cada uma -
+// nenhum dos dois é puramente derivado da busca inicial só em Alterar
+// (em Consultar, os dois são só leitura, o setter simplesmente não é
+// usado). `carregando` é true até o Promise.all assentar (sucesso OU
+// erro), igual ao `finally` que já existia nas duas cópias.
+// `reportarErro` é recebido do chamador (em vez de um `useErroToast()`
+// próprio aqui dentro) de propósito - em ModalAlterarUsuario, o mesmo erro
+// dessa busca inicial precisa cair na MESMA faixa de erro que as outras
+// ~10 ações do modal (atribuir papel, criar perfil, etc.) já usam; um
+// `useErroToast()` isolado aqui dentro criaria um segundo estado de erro
+// que a busca inicial nunca alimentaria.
+function useDadosUsuario(
+  idUsuario: number,
+  auth: Pick<UseAuthReturn, 'authFetch'>,
+  aoRegistrarChamada: ((entrada: EntradaRegistroChamada) => void) | undefined,
+  reportarErro: (erro: unknown) => void,
+) {
+  const [usuario, setUsuario] = useState<UsuarioResponse | null>(null);
+  const [perfilPesquisador, setPerfilPesquisador] = useState<PerfilPesquisadorResponse | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [papeis, setPapeis] = useState<UsuarioPapelResponse[] | null>(null);
+  const [carregando, setCarregando] = useState(true);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCarregando(true);
+    setUsuario(null);
+    setPerfilPesquisador(null);
+    setAvatarUrl(null);
+    setPapeis(null);
+    Promise.all([
+      comRegistro(aoRegistrarChamada, 'GET', `/usuario/${idUsuario}`, null, () => usuarioApi.buscar(auth.authFetch, idUsuario)),
+      comRegistro(aoRegistrarChamada, 'GET', `/perfil-pesquisador/${idUsuario}`, null, () => perfilPesquisadorApi.buscar(auth.authFetch, idUsuario)).catch(() => null),
+      // Avatar não é registrado (endpoint público, cosmético).
+      arquivoApi.buscarAvatarPorUsuario(idUsuario).catch(() => null),
+      comRegistro(aoRegistrarChamada, 'GET', `/usuario-papel/${idUsuario}`, null, () => usuarioPapelApi.listarPorUsuario(auth.authFetch, idUsuario)).catch(() => []),
+    ])
+      .then(([dadosUsuario, perfil, avatar, papeisDoUsuario]) => {
+        setUsuario(dadosUsuario);
+        setPerfilPesquisador(perfil);
+        setAvatarUrl(avatar?.url ?? null);
+        setPapeis(papeisDoUsuario);
+      })
+      .catch(reportarErro)
+      .finally(() => setCarregando(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idUsuario]);
+
+  return { usuario, perfilPesquisador, setPerfilPesquisador, avatarUrl, papeis, setPapeis, carregando };
+}
+
 const TIPOS_VINCULO: TipoVinculo[] = ['institucional', 'independente'];
 const TITULOS_ACADEMICOS: TituloAcademico[] = ['graduado', 'especialista', 'mestre', 'doutor'];
 
@@ -141,6 +198,89 @@ const FORM_CRIAR_PERFIL_VAZIO: FormCriarPerfil = {
   vinculoInstitucional: '',
   tituloAcademico: 'mestre',
 };
+
+interface CamposVinculoPerfilProps {
+  tipoVinculo: TipoVinculo;
+  vinculoInstitucional: string;
+  tituloAcademico: TituloAcademico;
+  rotuloVinculoInstitucional: string;
+  aoAlterarTipoVinculo: (tipo: TipoVinculo) => void;
+  aoAlterarVinculoInstitucional: (valor: string) => void;
+  aoAlterarTituloAcademico: (titulo: TituloAcademico) => void;
+}
+
+// Extraído (13-09-2026, achado B2 do contra-prompt do Claude Web) - os 3
+// campos abaixo (tipo de vínculo, vínculo institucional condicional, título
+// acadêmico) apareciam IDÊNTICOS em "Perfil de Pesquisador" (edição,
+// ModalAlterarUsuario) e "Criar Perfil Pesquisador" (criação, mesmo modal) -
+// só o objeto de estado por trás mudava (`formEdicaoPerfil` vs `form`). O
+// rótulo do campo condicional é o único texto que já era diferente entre os
+// dois ("Vínculo institucional" na edição, "Instituição" na criação) -
+// por isso vem como prop em vez de fixo aqui dentro, preservando o texto
+// exato de cada lugar.
+function CamposVinculoPerfil({
+  tipoVinculo,
+  vinculoInstitucional,
+  tituloAcademico,
+  rotuloVinculoInstitucional,
+  aoAlterarTipoVinculo,
+  aoAlterarVinculoInstitucional,
+  aoAlterarTituloAcademico,
+}: CamposVinculoPerfilProps) {
+  return (
+    <>
+      <div>
+        <label className="rotulo-campo">Tipo de vínculo</label>
+        <select
+          value={tipoVinculo}
+          onChange={(evento) => {
+            if (ehTipoVinculo(evento.target.value)) {
+              aoAlterarTipoVinculo(evento.target.value);
+            }
+          }}
+          className="input-padrao"
+        >
+          {TIPOS_VINCULO.map((tipo) => (
+            <option key={tipo} value={tipo}>
+              {tipo}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {tipoVinculo === 'institucional' && (
+        <div>
+          <label className="rotulo-campo">{rotuloVinculoInstitucional}</label>
+          <input
+            type="text"
+            value={vinculoInstitucional}
+            onChange={(evento) => aoAlterarVinculoInstitucional(evento.target.value)}
+            className="input-padrao"
+          />
+        </div>
+      )}
+
+      <div>
+        <label className="rotulo-campo">Título acadêmico</label>
+        <select
+          value={tituloAcademico}
+          onChange={(evento) => {
+            if (ehTituloAcademico(evento.target.value)) {
+              aoAlterarTituloAcademico(evento.target.value);
+            }
+          }}
+          className="input-padrao"
+        >
+          {TITULOS_ACADEMICOS.map((titulo) => (
+            <option key={titulo} value={titulo}>
+              {titulo}
+            </option>
+          ))}
+        </select>
+      </div>
+    </>
+  );
+}
 
 interface BotaoVerFotoPerfilProps {
   url: string;
@@ -525,40 +665,11 @@ interface ModalConsultarUsuarioProps {
 // Acesso/histórico de login, Papéis) + Perfil de Pesquisador/Score (só se a
 // pessoa for pesquisadora) - tudo buscado ao abrir, não precisa de rota.
 export function ModalConsultarUsuario({ auth, idUsuario, aoFechar, aoRegistrarChamada }: ModalConsultarUsuarioProps) {
-  const [usuario, setUsuario] = useState<UsuarioResponse | null>(null);
-  const [perfilPesquisador, setPerfilPesquisador] = useState<PerfilPesquisadorResponse | null>(null);
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [papeis, setPapeis] = useState<UsuarioPapelResponse[] | null>(null);
+  const { erro, reportarErro } = useErroToast();
+  const { usuario, perfilPesquisador, avatarUrl, papeis } = useDadosUsuario(idUsuario, auth, aoRegistrarChamada, reportarErro);
   const [logins, setLogins] = useState<UsuarioResponseLoginHistorico[] | null>(null);
   const [carregandoLogins, setCarregandoLogins] = useState(false);
   const [loginsAbertos, setLoginsAbertos] = useState(false);
-  const { erro, reportarErro } = useErroToast();
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setUsuario(null);
-    setPerfilPesquisador(null);
-    setAvatarUrl(null);
-    setPapeis(null);
-    setLogins(null);
-    setLoginsAbertos(false);
-    Promise.all([
-      comRegistro(aoRegistrarChamada, 'GET', `/usuario/${idUsuario}`, null, () => usuarioApi.buscar(auth.authFetch, idUsuario)),
-      comRegistro(aoRegistrarChamada, 'GET', `/perfil-pesquisador/${idUsuario}`, null, () => perfilPesquisadorApi.buscar(auth.authFetch, idUsuario)).catch(() => null),
-      // Avatar não é registrado (mesmo padrão de antes da extração) - é
-      // endpoint público, cosmético, não exige `authFetch`.
-      arquivoApi.buscarAvatarPorUsuario(idUsuario).catch(() => null),
-      comRegistro(aoRegistrarChamada, 'GET', `/usuario-papel/${idUsuario}`, null, () => usuarioPapelApi.listarPorUsuario(auth.authFetch, idUsuario)).catch(() => []),
-    ])
-      .then(([dadosUsuario, perfil, avatar, papeisDoUsuario]) => {
-        setUsuario(dadosUsuario);
-        setPerfilPesquisador(perfil);
-        setAvatarUrl(avatar?.url ?? null);
-        setPapeis(papeisDoUsuario);
-      })
-      .catch(reportarErro);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idUsuario]);
 
   const aoAlternarLogins = async () => {
     if (loginsAbertos) {
@@ -745,13 +856,16 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado, g
   const { erro, reportarErro, limparErro } = useErroToast();
   const [tiposLink, setTiposLink] = useState<TipoLinkResponse[]>([]);
 
-  const [carregando, setCarregando] = useState(true);
-  const [usuario, setUsuario] = useState<UsuarioResponse | null>(null);
-  const [perfilPesquisador, setPerfilPesquisador] = useState<PerfilPesquisadorResponse | null>(null);
+  const { usuario, perfilPesquisador, setPerfilPesquisador, avatarUrl, papeis, setPapeis, carregando } = useDadosUsuario(
+    idUsuario,
+    auth,
+    aoRegistrarChamada,
+    reportarErro,
+  );
+  const papeisAtuais = papeis ?? [];
 
   const [nomeEdicao, setNomeEdicao] = useState('');
   const [novaSenhaEdicao, setNovaSenhaEdicao] = useState('');
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [idImagemPerfilNovo, setIdImagemPerfilNovo] = useState<number | null | undefined>(undefined);
   const [avatarUrlNovo, setAvatarUrlNovo] = useState<string | null>(null);
   const [desbloqueando, setDesbloqueando] = useState(false);
@@ -769,7 +883,6 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado, g
   const [erroCriar, setErroCriar] = useState<string | null>(null);
 
   const [catalogoPapeis, setCatalogoPapeis] = useState<PapelResponse[]>([]);
-  const [papeisAtuais, setPapeisAtuais] = useState<UsuarioPapelResponse[]>([]);
   const [idPapelParaAtribuir, setIdPapelParaAtribuir] = useState('');
   const [atribuindoPapel, setAtribuindoPapel] = useState(false);
   const [papelSuspendendoId, setPapelSuspendendoId] = useState<number | null>(null);
@@ -777,41 +890,60 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado, g
   const [reativandoPapel, setReativandoPapel] = useState<number | null>(null);
   const [revogandoPapel, setRevogandoPapel] = useState<number | null>(null);
 
+  // Reseta o formulário de edição sempre que uma busca nova de `usuario`
+  // termina (dep só em `usuario`, de propósito - ele nunca muda por nenhuma
+  // outra ação deste modal, só pela busca inicial de `useDadosUsuario`, então
+  // dispara exatamente 1x por abertura, igual ao `.then()` único de antes da
+  // extração). NÃO inclui `perfilPesquisador` nas deps: ele é reatribuído
+  // depois por `criarPerfil()`, e esse formulário de EDIÇÃO de nome/senha não
+  // pode ser resetado só porque um perfil de pesquisador foi criado no meio
+  // da mesma sessão do modal - ler `perfilPesquisador` aqui dentro sem
+  // listar como dep funciona porque as duas atualizações (`setUsuario` e
+  // `setPerfilPesquisador`) vêm do MESMO `.then()` dentro do hook, no mesmo
+  // lote de render.
+  useEffect(() => {
+    if (!usuario) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setNomeEdicao(usuario.nome);
+    setNovaSenhaEdicao('');
+    setIdImagemPerfilNovo(undefined);
+    setAvatarUrlNovo(null);
+    setFormEdicaoPerfil(
+      perfilPesquisador
+        ? {
+            tipoVinculo: perfilPesquisador.tipoVinculo,
+            vinculoInstitucional: perfilPesquisador.vinculoInstitucional ?? '',
+            tituloAcademico: perfilPesquisador.tituloAcademico,
+          }
+        : null,
+    );
+    setCpfCorrecao('');
+    setForm(FORM_CRIAR_PERFIL_VAZIO);
+    setErroCriar(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [usuario]);
+
+  // Catálogos exclusivos deste modal (Consultar não precisa deles) - mesma
+  // dependência `[idUsuario]` que a busca principal tinha antes da extração.
+  // `carregandoCatalogos` combinado com o `carregando` do hook (ver JSX mais
+  // abaixo) preserva o comportamento de antes da extração: a tela só sai do
+  // "Carregando..." quando TUDO (dados do usuário + estes 2 catálogos) já
+  // chegou, em vez de mostrar o conteúdo principal com os dropdowns de papel/
+  // link ainda vazios por uma fração de segundo.
+  const [carregandoCatalogos, setCarregandoCatalogos] = useState(true);
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setCarregando(true);
-    limparErro();
-    Promise.all([
-      comRegistro(aoRegistrarChamada, 'GET', `/usuario/${idUsuario}`, null, () => usuarioApi.buscar(auth.authFetch, idUsuario)),
-      comRegistro(aoRegistrarChamada, 'GET', `/perfil-pesquisador/${idUsuario}`, null, () => perfilPesquisadorApi.buscar(auth.authFetch, idUsuario)).catch(() => null),
-      // Avatar não é registrado (endpoint público, cosmético).
-      arquivoApi.buscarAvatarPorUsuario(idUsuario).catch(() => null),
-      comRegistro(aoRegistrarChamada, 'GET', `/usuario-papel/${idUsuario}`, null, () => usuarioPapelApi.listarPorUsuario(auth.authFetch, idUsuario)).catch(() => []),
+    setCarregandoCatalogos(true);
+    void Promise.all([
       comRegistro(aoRegistrarChamada, 'GET', '/papel', null, () => papelApi.listar(auth.authFetch)).catch(() => []),
       comRegistro(aoRegistrarChamada, 'GET', '/tipo-link?escopo=perfil', null, () => tipoLinkApi.listar(auth.authFetch, { escopo: 'perfil' })).catch(() => []),
     ])
-      .then(([dadosUsuario, perfil, avatar, papeisDoUsuario, catalogo, tiposLinkCatalogo]) => {
-        setUsuario(dadosUsuario);
-        setNomeEdicao(dadosUsuario.nome);
-        setNovaSenhaEdicao('');
-        setAvatarUrl(avatar?.url ?? null);
-        setIdImagemPerfilNovo(undefined);
-        setAvatarUrlNovo(null);
-        setPerfilPesquisador(perfil);
-        setFormEdicaoPerfil(
-          perfil
-            ? { tipoVinculo: perfil.tipoVinculo, vinculoInstitucional: perfil.vinculoInstitucional ?? '', tituloAcademico: perfil.tituloAcademico }
-            : null,
-        );
-        setCpfCorrecao('');
-        setForm(FORM_CRIAR_PERFIL_VAZIO);
-        setErroCriar(null);
-        setPapeisAtuais(papeisDoUsuario);
+      .then(([catalogo, tiposLinkCatalogo]) => {
         setCatalogoPapeis(catalogo);
         setTiposLink(tiposLinkCatalogo);
       })
-      .catch(reportarErro)
-      .finally(() => setCarregando(false));
+      .finally(() => setCarregandoCatalogos(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idUsuario]);
 
@@ -890,7 +1022,7 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado, g
       const papeisAtualizados = await comRegistro(aoRegistrarChamada, 'GET', `/usuario-papel/${idUsuario}`, null, () =>
         usuarioPapelApi.listarPorUsuario(auth.authFetch, idUsuario),
       );
-      setPapeisAtuais(papeisAtualizados);
+      setPapeis(papeisAtualizados);
       setIdPapelParaAtribuir('');
       mostrar('Papel atribuído com sucesso.', `ID: ${idUsuario} agora tem o papel "${papelEscolhido?.nome}"`);
       aoAtualizado();
@@ -913,7 +1045,7 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado, g
       const papeisAtualizados = await comRegistro(aoRegistrarChamada, 'GET', `/usuario-papel/${idUsuario}`, null, () =>
         usuarioPapelApi.listarPorUsuario(auth.authFetch, idUsuario),
       );
-      setPapeisAtuais(papeisAtualizados);
+      setPapeis(papeisAtualizados);
       setPapelSuspendendoId(null);
       mostrar('Papel suspenso com sucesso.', `"${papel.nomePapel}" suspenso até ${formatarData(ate)}`);
     } catch (erroRequisicao) {
@@ -933,7 +1065,7 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado, g
       const papeisAtualizados = await comRegistro(aoRegistrarChamada, 'GET', `/usuario-papel/${idUsuario}`, null, () =>
         usuarioPapelApi.listarPorUsuario(auth.authFetch, idUsuario),
       );
-      setPapeisAtuais(papeisAtualizados);
+      setPapeis(papeisAtualizados);
       mostrar('Papel reativado com sucesso.', `"${papel.nomePapel}" voltou a valer normalmente`);
     } catch (erroRequisicao) {
       reportarErro(erroRequisicao);
@@ -952,7 +1084,7 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado, g
       const papeisAtualizados = await comRegistro(aoRegistrarChamada, 'GET', `/usuario-papel/${idUsuario}`, null, () =>
         usuarioPapelApi.listarPorUsuario(auth.authFetch, idUsuario),
       );
-      setPapeisAtuais(papeisAtualizados);
+      setPapeis(papeisAtualizados);
       mostrar('Papel revogado com sucesso.', `ID: ${idUsuario} perdeu o papel "${papel.nomePapel}"`);
       aoAtualizado();
     } catch (erroRequisicao) {
@@ -1041,7 +1173,7 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado, g
         )
       }
     >
-      {carregando ? (
+      {carregando || carregandoCatalogos ? (
         <p className="p-6 text-center text-sm texto-fraco">Carregando...</p>
       ) : !usuario ? (
         <p className="p-6 text-center texto-erro text-sm font-bold">{erro}</p>
@@ -1094,55 +1226,17 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado, g
               {formEdicaoPerfil ? (
                 <>
                   <SecaoFicha titulo="Perfil de Pesquisador">
-                    <div>
-                      <label className="rotulo-campo">Tipo de vínculo</label>
-                      <select
-                        value={formEdicaoPerfil.tipoVinculo}
-                        onChange={(evento) => {
-                          if (ehTipoVinculo(evento.target.value)) {
-                            setFormEdicaoPerfil({ ...formEdicaoPerfil, tipoVinculo: evento.target.value });
-                          }
-                        }}
-                        className="input-padrao"
-                      >
-                        {TIPOS_VINCULO.map((tipo) => (
-                          <option key={tipo} value={tipo}>
-                            {tipo}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    {formEdicaoPerfil.tipoVinculo === 'institucional' && (
-                      <div>
-                        <label className="rotulo-campo">Vínculo institucional</label>
-                        <input
-                          type="text"
-                          value={formEdicaoPerfil.vinculoInstitucional}
-                          onChange={(evento) =>
-                            setFormEdicaoPerfil({ ...formEdicaoPerfil, vinculoInstitucional: evento.target.value })
-                          }
-                          className="input-padrao"
-                        />
-                      </div>
-                    )}
-                    <div>
-                      <label className="rotulo-campo">Título acadêmico</label>
-                      <select
-                        value={formEdicaoPerfil.tituloAcademico}
-                        onChange={(evento) => {
-                          if (ehTituloAcademico(evento.target.value)) {
-                            setFormEdicaoPerfil({ ...formEdicaoPerfil, tituloAcademico: evento.target.value });
-                          }
-                        }}
-                        className="input-padrao"
-                      >
-                        {TITULOS_ACADEMICOS.map((titulo) => (
-                          <option key={titulo} value={titulo}>
-                            {titulo}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                    <CamposVinculoPerfil
+                      tipoVinculo={formEdicaoPerfil.tipoVinculo}
+                      vinculoInstitucional={formEdicaoPerfil.vinculoInstitucional}
+                      tituloAcademico={formEdicaoPerfil.tituloAcademico}
+                      rotuloVinculoInstitucional="Vínculo institucional"
+                      aoAlterarTipoVinculo={(tipo) => setFormEdicaoPerfil({ ...formEdicaoPerfil, tipoVinculo: tipo })}
+                      aoAlterarVinculoInstitucional={(valor) =>
+                        setFormEdicaoPerfil({ ...formEdicaoPerfil, vinculoInstitucional: valor })
+                      }
+                      aoAlterarTituloAcademico={(titulo) => setFormEdicaoPerfil({ ...formEdicaoPerfil, tituloAcademico: titulo })}
+                    />
 
                     <CampoFicha rotulo="Score atual" valor={perfilPesquisador?.scoreAtual} />
 
@@ -1197,55 +1291,15 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado, g
                     </div>
                   </div>
 
-                  <div>
-                    <label className="rotulo-campo">Tipo de vínculo</label>
-                    <select
-                      value={form.tipoVinculo}
-                      onChange={(evento) => {
-                        if (ehTipoVinculo(evento.target.value)) {
-                          setForm({ ...form, tipoVinculo: evento.target.value });
-                        }
-                      }}
-                      className="input-padrao"
-                    >
-                      {TIPOS_VINCULO.map((tipo) => (
-                        <option key={tipo} value={tipo}>
-                          {tipo}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {form.tipoVinculo === 'institucional' && (
-                    <div>
-                      <label className="rotulo-campo">Instituição</label>
-                      <input
-                        type="text"
-                        value={form.vinculoInstitucional}
-                        onChange={(evento) => setForm({ ...form, vinculoInstitucional: evento.target.value })}
-                        className="input-padrao"
-                      />
-                    </div>
-                  )}
-
-                  <div>
-                    <label className="rotulo-campo">Título acadêmico</label>
-                    <select
-                      value={form.tituloAcademico}
-                      onChange={(evento) => {
-                        if (ehTituloAcademico(evento.target.value)) {
-                          setForm({ ...form, tituloAcademico: evento.target.value });
-                        }
-                      }}
-                      className="input-padrao"
-                    >
-                      {TITULOS_ACADEMICOS.map((titulo) => (
-                        <option key={titulo} value={titulo}>
-                          {titulo}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  <CamposVinculoPerfil
+                    tipoVinculo={form.tipoVinculo}
+                    vinculoInstitucional={form.vinculoInstitucional}
+                    tituloAcademico={form.tituloAcademico}
+                    rotuloVinculoInstitucional="Instituição"
+                    aoAlterarTipoVinculo={(tipo) => setForm({ ...form, tipoVinculo: tipo })}
+                    aoAlterarVinculoInstitucional={(valor) => setForm({ ...form, vinculoInstitucional: valor })}
+                    aoAlterarTituloAcademico={(titulo) => setForm({ ...form, tituloAcademico: titulo })}
+                  />
 
                   <div className="sm:col-span-2">
                     <button

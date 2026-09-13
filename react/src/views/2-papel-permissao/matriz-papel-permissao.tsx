@@ -43,7 +43,7 @@ const TEXTO_TOOLTIP_MATRIZ =
 // CORRIGIDO (07-08-2026, achado do Lucas: "renomeei 'admin' pra 'admin
 // teste' e a coluna pulou pro fim da matriz"): a ordenação comparava o
 // NOME contra uma lista fixa de nomes esperados - assim que o admin usa o
-// recurso de renomear papel (alterar-papel.jsx, também 07-08-2026), o nome
+// recurso de renomear papel (alterar-papel.tsx, também 07-08-2026), o nome
 // novo não bate com nada da lista e a coluna cai pro fim. `id_papel` nunca
 // muda (só `nome` é editável) e, desde a reordenação do seed
 // (07_seed_dados.sql [07-B-1], mesma data), já nasce na ordem de poder

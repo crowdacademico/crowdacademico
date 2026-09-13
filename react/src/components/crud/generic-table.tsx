@@ -2,7 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { useErroToast } from '../layout/use-erro-toast';
+import { useFecharAoClicarFora } from '../../services/constant/hook/use-fechar-ao-clicar-fora';
 import { textoSeguro } from '../../services/constant/utils/formatacao.util';
+import { paginarClientSide } from '../../services/constant/utils/paginacao.util';
 import { LogAuditoriaPainel } from './log-auditoria-painel';
 import type { ResultadoPaginado } from '../../services/constant/type/paginacao.type';
 import type { LogAuditoriaResponse } from '../../services/27-log-auditoria/type/log-auditoria.type';
@@ -84,19 +86,20 @@ function celulaValor(valor: unknown): ReactNode {
 // pelo painel admin - cada módulo novo do Nest com listagem simples vira só
 // uma entrada de colunas aqui, não uma tela nova escrita do zero.
 //
-// Criar/Alterar/Excluir NÃO acontecem mais aqui dentro (pedido do Lucas,
-// 02-08-2026: "tudo que faz parte do CRUD precisa de view própria" - mesmo
-// padrão já usado em views/1-usuario/criar-usuario.jsx). Passando
-// `rotaBase` (ex.: "/usuarios"), cada linha ganha "Alterar"/"Excluir"
-// apontando pra `${rotaBase}/${id}/alterar` e `/excluir` - páginas de
-// verdade, com sua própria URL, não formulário/confirm() embutido na
-// tabela. Sem `rotaBase` (catálogos só-leitura como Papéis/Permissões),
-// não aparece coluna de Ações nenhuma.
+// Criar/Alterar/Excluir NÃO acontecem embutidos nesta tabela (pedido do
+// Lucas, 02-08-2026: "tudo que faz parte do CRUD precisa de view própria").
+// Passando `rotaBase` (ex.: "/usuarios"), cada linha ganha "Alterar"/
+// "Excluir" apontando pra `${rotaBase}/${id}/alterar` e `/excluir` - páginas
+// de verdade, com sua própria URL, não formulário/confirm() embutido na
+// tabela. Sem `rotaBase` (catálogos só-leitura como Papéis/Permissões), não
+// aparece coluna de Ações nenhuma. Usuário é a exceção desde 13-09-2026
+// (ver `aoAlterar`/`aoConsultar`/`aoExcluir` abaixo): usa modal em vez de
+// rota própria, mesmo padrão de ações, visual diferente.
 //
 // `buscarLog` (opcional, pedido do Lucas 03-08-2026: "um botão no fundo de
 // cada tabela pra ver a última alteração") - mesma convenção de `listar`:
 // função já pré-amarrada (authFetch + nome físico da tabela) pelo
-// componente pai (ver listar-usuarios.jsx/listar-configuracoes.jsx). Sem
+// componente pai (ver listar-usuarios.tsx/listar-configuracoes.tsx). Sem
 // essa prop, o botão "Ver log" nem aparece - nem toda tabela tem
 // log_auditoria aplicado (só as que passam por `fn_log_auditoria()`, ver
 // 05_regras_negocio.sql [05-L]).
@@ -162,10 +165,11 @@ export function GenericTable<T extends Linha>({
   // é desmontada na troca de rota, e useState não sobrevive a isso).
   // `{ replace: true }` em toda escrita: cada clique em filtro/página/
   // ordenação SUBSTITUI a entrada atual do histórico em vez de empilhar
-  // uma nova - só o clique em "Consultar" (Link de verdade) empilha,
-  // então o botão "Voltar" (navigate(-1), ver consultar-usuario.jsx e
-  // afins) sempre volta pro último estado de filtro, não pro passo-a-passo
-  // de cada clique dentro do dropdown.
+  // uma nova - só o clique em "Consultar" (Link de verdade, rotaBase) empilha,
+  // então o botão "Voltar" (navigate(-1), ver consultar-configuracao.tsx e
+  // afins - Usuário não se aplica mais aqui, migrou pra modal em
+  // 13-09-2026) sempre volta pro último estado de filtro, não pro
+  // passo-a-passo de cada clique dentro do dropdown.
   // Nomes reservados na URL: q, pagina, tamanho, ordenar, dir - evitar
   // faceta com uma dessas `chave` (nenhuma das existentes hoje usa).
   const [searchParams, setSearchParams] = useSearchParams();
@@ -234,22 +238,7 @@ export function GenericTable<T extends Linha>({
   // depende de foco nenhum - fecha só quando o clique é GEOMETRICAMENTE
   // fora de qualquer uma delas. Clicar no botão de OUTRA faceta ainda está
   // dentro do container, então só troca qual está aberta, não fecha tudo.
-  useEffect(() => {
-    if (facetaAbertaChave === null) {
-      return undefined;
-    }
-    const aoClicarFora = (evento: MouseEvent) => {
-      if (
-        facetasRef.current &&
-        evento.target instanceof Node &&
-        !facetasRef.current.contains(evento.target)
-      ) {
-        setFacetaAbertaChave(null);
-      }
-    };
-    document.addEventListener('mousedown', aoClicarFora);
-    return () => document.removeEventListener('mousedown', aoClicarFora);
-  }, [facetaAbertaChave]);
+  useFecharAoClicarFora(facetasRef, facetaAbertaChave !== null, () => setFacetaAbertaChave(null));
 
   useEffect(() => {
     // Padrão comum de "buscar dado ao montar/quando a query mudar" (mesmo
@@ -593,20 +582,7 @@ export function GenericTable<T extends Linha>({
         ? { minWidth: minLargurasColunas[coluna.chave] }
         : undefined;
 
-  // "todos" (pedido do Lucas: opção de ver 10/20/30/todos os registros,
-  // além de Anterior/Próxima) vira 1 página só, com a lista inteira.
-  const totalPaginas =
-    tamanhoPagina === 'todos'
-      ? 1
-      : Math.max(1, Math.ceil(linhasOrdenadas.length / tamanhoPagina));
-  const paginaAtual = Math.min(pagina, totalPaginas);
-  const linhasPagina =
-    tamanhoPagina === 'todos'
-      ? linhasOrdenadas
-      : linhasOrdenadas.slice(
-          (paginaAtual - 1) * tamanhoPagina,
-          paginaAtual * tamanhoPagina,
-        );
+  const { totalPaginas, paginaAtual, itensPagina: linhasPagina } = paginarClientSide(linhasOrdenadas, pagina, tamanhoPagina);
 
   const aoClicarColuna = (chave: keyof T & string) => {
     const novaDirecao = ordenacao.chave === chave && ordenacao.direcao === 'asc' ? 'desc' : 'asc';
@@ -859,7 +835,7 @@ export function GenericTable<T extends Linha>({
                           Alexia: "ao passar o mouse por cima dos ícones de
                           ação, queria que aparecesse o texto da ação") -
                           mesmo mecanismo CSS puro (:hover/:focus) do
-                          Tooltip em components/layout/tooltip.jsx, só que
+                          Tooltip em components/layout/tooltip.tsx, só que
                           aplicado direto no próprio link de ação em vez de
                           um "ⓘ" à parte (não faria sentido aqui: o ícone
                           JÁ é o elemento clicável). Sem `title=` nativo de

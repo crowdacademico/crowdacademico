@@ -34,10 +34,11 @@ const ORDEM_IMPACTO = ['alto', 'médio', 'baixo', IMPACTO_NAO_CLASSIFICADO];
 //
 // REMOVIDO (07-08-2026, pedido do Lucas: "não consigo usar, é confuso"): o
 // 4º bloco era UsuarioPapelWidget - digitar id_usuario/id_papel cru pra
-// atribuir/revogar. Redundante desde que alterar-usuario.jsx ganhou uma
-// seção "Papéis" de verdade (etiquetas + menu suspenso só com o que falta
-// atribuir) - a mesma ação, só que mais clara. Não sobrou nenhuma
-// funcionalidade órfã: tudo que o widget fazia, Alterar Usuário já faz.
+// atribuir/revogar. Redundante desde que a página de Alterar Usuário (hoje
+// modal-usuario.tsx, ModalAlterarUsuario) ganhou uma seção "Papéis" de
+// verdade (etiquetas + menu suspenso só com o que falta atribuir) - a
+// mesma ação, só que mais clara. Não sobrou nenhuma funcionalidade órfã:
+// tudo que o widget fazia, Alterar Usuário já faz.
 export function ListarPapeis({ auth }: PropsPagina) {
   const listarPapeis = useCallback(() => papelApi.listar(auth.authFetch), [auth.authFetch]);
   // Nome amigável + descrição (09-08-2026, pedido do Lucas: "campanha_
@@ -88,7 +89,7 @@ export function ListarPapeis({ auth }: PropsPagina) {
   const [permissaoDetalhada, setPermissaoDetalhada] = useState<PermissaoResponse | null>(null);
   // 'papel' é o nome FÍSICO da tabela no Postgres (bate com TG_TABLE_NAME
   // em fn_log_auditoria(), trg_log_auditoria_papel, 07-08-2026) - mesma
-  // convenção de buscarLogUsuario em listar-usuarios.jsx.
+  // convenção de buscarLogUsuario em listar-usuarios.tsx.
   const buscarLogPapel = useCallback(
     (pagina: number) => logAuditoriaApi.listarPorTabela(auth.authFetch, 'papel', pagina),
     [auth.authFetch],

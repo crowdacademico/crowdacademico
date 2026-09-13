@@ -1,9 +1,13 @@
 // Casca compartilhada de Criar/Alterar/Excluir (09-08-2026) - era a MESMA
 // estrutura (ícone circular + título + subtítulo + cartão branco
-// centralizado) copiada e colada em 7 arquivos (criar/alterar-usuario,
-// alterar-papel, criar/alterar/excluir-configuracao, excluir-usuario), já
+// centralizado) copiada e colada em 7 arquivos (criar/alterar/excluir-
+// usuario, alterar-papel, criar/alterar/excluir-configuracao), já
 // levemente divergente entre eles (algumas com border-slate-200, outras
-// não escurecidas). Extraído aqui pelo mesmo motivo de FichaConsulta -
+// não escurecidas). Os 3 de usuário não existem mais como arquivo próprio
+// (13-09-2026, migraram pra modal - ver modal-usuario.tsx/modal-criar-
+// usuario.tsx, que usam `ModalFicha`, não este componente) - hoje são 14
+// consumidores, todos página de verdade (nenhum modal usa este componente).
+// Extraído aqui pelo mesmo motivo de FichaConsulta -
 // "mesmo estilo que já usei em Consultar" (pedido do Lucas): um lugar só
 // pra ajustar o visual do "cartão de formulário" inteiro do painel.
 //
@@ -25,8 +29,12 @@
 // larguras canônicas em vez de cada tela escolher a sua"): 'media'
 // (max-w-2xl, MESMA largura de FichaConsulta - consistência visual entre
 // Consultar e um Alterar/Criar/Excluir simples de 1-2 campos) e 'larga'
-// (max-w-5xl - só pra formulário grande o bastante pra virar 2 colunas,
-// hoje só Alterar Usuário).
+// (max-w-5xl - pra formulário grande o bastante pra virar 2 colunas). Só
+// Alterar Usuário precisava de 'larga' aqui - virou modal em 13-09-2026
+// (`ModalFicha`, prop `largura` própria, não esta), então NENHUM dos 14
+// consumidores atuais deste componente usa 'larga' hoje - mantido no tipo
+// porque é 1 linha e documenta a existência da 2ª medida, não porque haja
+// uso ativo.
 //
 // `variante="perigo"` é só o ícone (vermelho, pra Excluir) - o resto do
 // cartão é idêntico, não é um componente "de exclusão" separado.
@@ -68,7 +76,7 @@ export function CartaoFormulario({
     <div className="p-4 sm:p-8 fundo-pagina">
       <div className={'mx-auto w-full ' + LARGURAS[largura]}>
         {/* SEM overflow-hidden no cartão inteiro (10-08-2026, achado
-            corrigindo o mesmo problema em ficha-consulta.jsx) -
+            corrigindo o mesmo problema em ficha-consulta.tsx) -
             overflow-hidden cria um contexto de scroll que o `sticky` do
             rodapé não atravessa (ele simplesmente nunca gruda). Cada
             pedaço arredonda o PRÓPRIO canto (`rounded-t-3xl`/

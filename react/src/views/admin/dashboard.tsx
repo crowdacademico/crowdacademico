@@ -10,7 +10,7 @@ import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { DashboardResponseSummary } from '../../services/admin/type/dashboard.type';
 
 // Texto do tooltip de "sessões ativas" (10-08-2026, pedido do Lucas) -
-// exportado porque a aba Saúde (dashboard-saude.jsx) mostra a MESMA
+// exportado porque a aba Saúde (dashboard-saude.tsx) mostra a MESMA
 // métrica e precisa do MESMO texto, não uma 2ª cópia que poderia divergir.
 // "Sessões ativas agora" sugere gente online neste instante, mas
 // `contar_metricas_dashboard()` conta sessão não-revogada dentro da

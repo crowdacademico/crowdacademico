@@ -36,8 +36,8 @@ import { BancadaPesquisador } from '../../views/campo-testes/bancada-pesquisador
 import { BancadaCampanha } from '../../views/campo-testes/bancada-campanha';
 import { VidaCampanhaAtiva } from '../../views/campo-testes/vida-campanha-ativa';
 
-// Fonte única de verdade pra "quais páginas existem" - App.jsx monta as
-// <Route> a partir daqui, e breadcrumb.jsx monta o rótulo a partir daqui.
+// Fonte única de verdade pra "quais páginas existem" - App.tsx monta as
+// <Route> a partir daqui, e breadcrumb.tsx monta o rótulo a partir daqui.
 // rotuloBreadcrumb: null = não aparece no breadcrumb.
 //
 // Duas listas, não uma, porque descrevem coisas diferentes: ROTAS são
@@ -47,17 +47,17 @@ import { VidaCampanhaAtiva } from '../../views/campo-testes/vida-campanha-ativa'
 // sumir" em Alterar/Consultar/Excluir/Minha Conta - antes essas telas
 // viviam em ROTAS, por isso perdiam o menu E o breadcrumb não sabia de
 // qual listagem elas vieram). Renderizadas dentro do <Outlet/> de
-// views/admin/admin-layout.jsx (sidebar + área de conteúdo compartilhadas).
+// views/admin/admin-layout.tsx (sidebar + área de conteúdo compartilhadas).
 //
 // rotuloMenu (só nas 3 abas de verdade) é o que aparece no menu lateral
-// (admin-sidebar.jsx via admin-menu.constants.js) - é a MESMA lista, não
+// (admin-sidebar.tsx via admin-menu.constants.js) - é a MESMA lista, não
 // uma 3ª cópia. As rotas de detalhe (Alterar/Consultar/Excluir/Criar/
 // Minha Conta) NÃO têm rotuloMenu/grupoMenu de propósito - admin-menu.
 // constants.js só lista item com grupoMenu preenchido, então elas nunca
 // viram um botão clicável no menu, só ganham a moldura (sidebar visível,
 // com a aba "pai" destacada sozinha pelo NavLink - a URL aninhada, ex.:
-// /admin/usuarios/8/alterar, já COMEÇA com /admin/usuarios, então o
-// próprio NavLink de "Usuários" já marca "ativo" sem código nenhum extra).
+// /admin/papeis/8/alterar, já COMEÇA com /admin/papeis, então o próprio
+// NavLink de "Papéis" já marca "ativo" sem código nenhum extra).
 //
 // `paiCaminho` (10-08-2026) - só nas rotas de detalhe: o `caminho`
 // absoluto da listagem "dona" delas, pro breadcrumb montar a cadeia
@@ -239,9 +239,11 @@ export const ROTAS_ADMIN: Rota[] = [
   // repetidas: MinhaConta lê `aba` via useParams() e decide o que
   // renderizar por baixo da faixa de identidade (que não muda entre
   // abas). Mesmo padrão de parâmetro já usado em
-  // '/admin/usuarios/:id/alterar' aqui embaixo. O caminho SEM `/:aba`
+  // '/admin/papeis/:id/alterar' aqui embaixo (Usuário tinha o mesmo padrão
+  // até 13-09-2026, migrou pra modal - ver bloco logo abaixo). O caminho
+  // SEM `/:aba`
   // (ex.: link antigo direto pra "/admin/minha-conta") ganha um redirect
-  // pra ".../perfil" em App.jsx - não precisa de uma 2ª entrada aqui.
+  // pra ".../perfil" em App.tsx - não precisa de uma 2ª entrada aqui.
   {
     caminho: '/admin/minha-conta/:aba',
     caminhoRelativo: 'minha-conta/:aba',

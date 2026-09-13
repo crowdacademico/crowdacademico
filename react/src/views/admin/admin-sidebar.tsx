@@ -26,14 +26,14 @@ import { GRUPOS_MENU_ADMIN } from './admin-menu.constants';
 // URL atual, não um state comparado à mão.
 //
 // `min-[1377px]:relative` (25-08-2026, ERA `min-[1377px]:static` - pedido
-// do Lucas: a faixa do botão "Menu" - ver admin-layout.jsx - precisa ficar
+// do Lucas: a faixa do botão "Menu" - ver admin-layout.tsx - precisa ficar
 // por BAIXO da sidebar, escondida atrás dela, não empurrando ela pra
 // baixo). `position:static` NÃO participa de z-index de jeito nenhum
 // (regra do CSS: z-index só tem efeito em elemento posicionado) - trocar
 // pra `relative` (visualmente idêntico, mesma posição no fluxo normal do
 // grid) deixa a sidebar entrar na mesma "categoria" de empilhamento da
-// faixa (position:absolute em admin-layout.jsx) e, por vir DEPOIS dela no
-// HTML (ver ordem em admin-layout.jsx), pinta por CIMA automaticamente -
+// faixa (position:absolute em admin-layout.tsx) e, por vir DEPOIS dela no
+// HTML (ver ordem em admin-layout.tsx), pinta por CIMA automaticamente -
 // sem precisar declarar z-index nenhum à mão, é só ordem de DOM entre dois
 // elementos posicionados. Resultado: a sidebar cobre (esconde) a faixa
 // atrás dela sozinha, só porque tem fundo opaco e está na frente - exatamente
@@ -69,7 +69,7 @@ export function AdminSidebar({ aberto, aoFechar }: AdminSidebarProps) {
         {/* Busca global (09-08-2026) - Ctrl+K abre de qualquer lugar, mas
             um atalho sozinho não é descobrível; este botão é a pista
             visível de que ele existe (ver components/layout/
-            busca-global.jsx). */}
+            busca-global.tsx). */}
         <button
           type="button"
           onClick={abrirBuscaGlobal}

@@ -6,16 +6,23 @@ import {
 } from '@nestjs/common';
 import { BaseExceptionFilter } from '@nestjs/core';
 
-const CODIGO_PG_UNIQUE_VIOLATION = '23505';
-const CODIGO_PG_FOREIGN_KEY_VIOLATION = '23503';
-const CODIGO_PG_NOT_NULL_VIOLATION = '23502';
-const CODIGO_PG_CHECK_VIOLATION = '23514';
-const CODIGO_PG_RLS_VIOLATION = '42501';
+// Exportadas (13-09-2026, achado de auditoria: 10 arquivos de `*.service.
+// create.ts`/`*.service.remove.ts`/`*.service.update.ts` redeclaravam a
+// mesma cadeia literal localmente, em vez de importar daqui - o lugar
+// central já existia desde sempre, só ninguém importava dele) - qualquer
+// service que trata um código específico no próprio `catch` (em vez de
+// deixar cair nesta rede de segurança global) deve importar daqui, nunca
+// redeclarar o literal.
+export const CODIGO_PG_UNIQUE_VIOLATION = '23505';
+export const CODIGO_PG_FOREIGN_KEY_VIOLATION = '23503';
+export const CODIGO_PG_NOT_NULL_VIOLATION = '23502';
+export const CODIGO_PG_CHECK_VIOLATION = '23514';
+export const CODIGO_PG_RLS_VIOLATION = '42501';
 // Código padrão que o Postgres usa pra qualquer `RAISE EXCEPTION 'mensagem'`
 // sem ERRCODE customizado. Só sobra pra função de fora de 05_regras_negocio.sql
 // que ainda não ganhou ERRCODE próprio (ex.: excluir_conta_usuario(), em
 // 03_funcoes_seguranca.sql - ver DOCUMENTACAO_ERRCODE.md, seção final).
-const CODIGO_PG_RAISE_EXCEPTION_SEM_ERRCODE = 'P0001';
+export const CODIGO_PG_RAISE_EXCEPTION_SEM_ERRCODE = 'P0001';
 
 // ERRCODE customizado nas 42 RAISE EXCEPTION de 05_regras_negocio.sql
 // (Alexia + uma IA, 03-08-2026 - ver DOCUMENTACAO_ERRCODE.md pra tabela

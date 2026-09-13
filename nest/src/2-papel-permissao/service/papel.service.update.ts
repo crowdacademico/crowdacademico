@@ -5,11 +5,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
+import {
+  CODIGO_PG_UNIQUE_VIOLATION,
+  CODIGO_PG_RLS_VIOLATION,
+} from '../../commons/database/postgres-exception.filter';
 import { PapelRequestUpdate } from '../dto/request/papel.request-update';
 import { PapelResponse } from '../dto/response/papel.response';
-
-const CODIGO_PG_UNIQUE_VIOLATION = '23505';
-const CODIGO_PG_RLS_VIOLATION = '42501';
 
 @Injectable()
 export class PapelServiceUpdate {

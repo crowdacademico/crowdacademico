@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from 'react';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { tratarResposta } from '../../services/constant/api/http.util';
+import { useFecharAoClicarFora } from '../../services/constant/hook/use-fechar-ao-clicar-fora';
 import { useChamadaRegistrada } from '../../services/campo-testes/hook/use-chamada-registrada';
 import { RegistroChamadas } from './registro-chamadas';
 import type { PropsPagina } from '../../services/router/pagina.type';
@@ -113,21 +114,9 @@ export function VidaCampanhaAtiva({ auth }: PropsPagina) {
   }, []);
 
   // Fechar as sugestões da busca de campanha ao clicar fora - mesmo padrão
-  // do combobox "dono da campanha" em bancada-campanha.tsx.
-  useEffect(() => {
-    if (!sugestoesCampanhaAbertas) return undefined;
-    const aoClicarFora = (evento: MouseEvent) => {
-      if (
-        sugestoesCampanhaRef.current &&
-        evento.target instanceof Node &&
-        !sugestoesCampanhaRef.current.contains(evento.target)
-      ) {
-        setSugestoesCampanhaAbertas(false);
-      }
-    };
-    document.addEventListener('mousedown', aoClicarFora);
-    return () => document.removeEventListener('mousedown', aoClicarFora);
-  }, [sugestoesCampanhaAbertas]);
+  // do combobox "dono da campanha" em bancada-campanha.tsx, extraído em
+  // `useFecharAoClicarFora` em 13-09-2026.
+  useFecharAoClicarFora(sugestoesCampanhaRef, sugestoesCampanhaAbertas, () => setSugestoesCampanhaAbertas(false));
 
   // Busca por id OU pedaço do título (13-09-2026, mesmo padrão do combobox
   // de pesquisador em T2) - até 5 resultados.

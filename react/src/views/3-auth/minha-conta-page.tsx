@@ -85,7 +85,7 @@ export function MinhaConta({ auth }: PropsPagina) {
     // que agora sem vazar - troque só se remover a barra de abas.
     <div className="w-0 min-w-full max-w-5xl mx-auto p-4 sm:p-8">
       {/* Um cartão só, do topo ao rodapé - SEM overflow-hidden (mesma
-          lição já aprendida em cartao-formulario.jsx/ficha-consulta.jsx:
+          lição já aprendida em cartao-formulario.tsx/ficha-consulta.tsx:
           overflow-hidden cria um contexto de scroll que o `sticky` do
           rodapé da aba Perfil não atravessa). A faixa (fundo-sutil,
           diferente do corpo) arredonda o PRÓPRIO canto de cima
@@ -138,7 +138,7 @@ function FaixaIdentidade({ auth }: FaixaIdentidadeProps) {
     <div className="relative overflow-hidden rounded-t-2xl border-b borda-padrao fundo-sutil px-6 sm:px-8 py-8">
       {/* Gradiente MUITO discreto (10% de opacidade) em vez de fundo verde
           chapado - regra já estabelecida no projeto: verde é acento, não
-          fundo. Mesmo truque decorativo do blob em login-page.jsx. */}
+          fundo. Mesmo truque decorativo do blob em login-page.tsx. */}
       <div className="pointer-events-none absolute -top-12 -right-12 w-56 h-56 bg-primary/10 rounded-full blur-3xl"></div>
 
       <div className="relative flex flex-col sm:flex-row sm:items-center gap-5">
@@ -228,7 +228,7 @@ function BarraAbas({ abaAtiva }: BarraAbasProps) {
 // e um espaço já preparado (desabilitado, aviso honesto) pro dia que o
 // módulo 6-perfil-pesquisador existir. 2 colunas dentro da aba (pedido
 // explícito: "campo de nome não precisa de 900px de largura") + rodapé
-// sticky Salvar/Cancelar, mesmo padrão de alterar-usuario.jsx.
+// sticky Salvar/Cancelar, mesmo padrão de modal-usuario.tsx (ModalAlterarUsuario).
 interface AbaPerfilProps {
   auth: Pick<UseAuthReturn, 'usuario' | 'authFetch' | 'atualizarUsuarioLocal'>;
 }
@@ -244,7 +244,7 @@ function AbaPerfil({ auth }: AbaPerfilProps) {
   const { mostrar } = useToast();
   const { erro, reportarErro, limparErro } = useErroToast();
 
-  // Mesmo padrão de 3 estados de alterar-usuario.jsx (25-08-2026, módulo
+  // Mesmo padrão de 3 estados de modal-usuario.tsx (25-08-2026, módulo
   // 25-arquivo + botão "Remover foto"): `undefined` = nenhuma escolha nova
   // (mostra a foto que já existe), número = foto nova (upload já
   // confirmado, só falta linkar no PATCH), `null` = removida de propósito.
@@ -372,8 +372,8 @@ function AbaPerfil({ auth }: AbaPerfilProps) {
         </div>
       </div>
 
-      {/* Rodapé sticky, mesmo padrão de cartao-formulario.jsx/
-          alterar-usuario.jsx - arredonda o PRÓPRIO canto de baixo
+      {/* Rodapé sticky, mesmo padrão de cartao-formulario.tsx/
+          modal-usuario.tsx - arredonda o PRÓPRIO canto de baixo
           (rounded-b-2xl), não depende do wrapper. */}
       <div className="px-6 sm:px-8 py-5 border-t borda-padrao fundo-cartao rounded-b-2xl sticky bottom-0 flex gap-3 justify-end">
         <button type="button" onClick={aoCancelar} disabled={!sujo} className="btn btn-secondary">
@@ -677,7 +677,7 @@ function AbaAcademico({ auth }: AbaAcademicoProps) {
     const idUsuario = auth.usuario.idUsuario;
     void Promise.all([
       // 404 = não é pesquisador (upgrade nunca feito) - mesma tolerância
-      // já usada em consultar-usuario.tsx/alterar-usuario.tsx.
+      // já usada em modal-usuario.tsx (Consultar/Alterar).
       perfilPesquisadorApi.buscar(auth.authFetch, idUsuario).catch(() => null),
       perfilPesquisadorApi.buscarSuspensao(auth.authFetch, idUsuario).catch(() => null),
     ])

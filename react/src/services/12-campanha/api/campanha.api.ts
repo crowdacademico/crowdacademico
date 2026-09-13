@@ -11,7 +11,7 @@ import type { StatusCampanha } from '../constants/status-campanha.constants';
 // admin com relatorio_visualizar enxerga todos os status, não só os
 // públicos. Sem criar() de propósito: campanha não tem POST genérico no
 // backend - criação vive no Campo de Testes hoje (views/campo-testes/
-// bancada-campanha.jsx). `remover()` (25-08-2026) só funciona em campanha
+// bancada-campanha.tsx). `remover()` (25-08-2026) só funciona em campanha
 // 'aguardando_aprovacao' (pol_campanha_delete, 04) - depois de aprovada,
 // só dá pra rejeitar/encerrar, nunca apagar de vez.
 interface FiltroCampanha {

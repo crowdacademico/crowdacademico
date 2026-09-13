@@ -75,7 +75,7 @@ export function DevLoginRapido({ auth }: DevLoginRapidoProps) {
       // cabeçalho quando este componente ainda vivia dentro dele
       // (09-08-2026, achado do Lucas: "ícone de login sobrou no meio da
       // tela"). Agora quem posiciona pra direita é o wrapper absoluto em
-      // header.jsx - aqui só precisa do `relative`, pro dropdown/erro
+      // header.tsx - aqui só precisa do `relative`, pro dropdown/erro
       // internos (absolute right-0) continuarem ancorados neste componente.
       className="relative"
       onBlur={(evento) => {

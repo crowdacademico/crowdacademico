@@ -4,7 +4,7 @@
 // ============================================================================
 
 // Registros REAIS (não dados falsos, ver comentário grande em elenco-
-// provider.jsx) que o Campo de Testes evita mexer de propósito, porque
+// provider.tsx) que o Campo de Testes evita mexer de propósito, porque
 // já nascem com uma "demo" inteira montada desde 07_seed_dados.sql:
 // pesquisadores 12-22 (Ana Beatriz até Vinícius, campanha, score e
 // links pré-calculados) e as campanhas 1-10 (uma por pesquisador desse

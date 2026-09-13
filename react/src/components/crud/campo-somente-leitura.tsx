@@ -1,7 +1,7 @@
 import { textoSeguro } from '../../services/constant/utils/formatacao.util';
 
 // Campo exibido (não editável) nas páginas de Alterar/Excluir - mesmo
-// visual do <label> dos formulários (criar-usuario.jsx), só sem <input>.
+// visual do <label> dos formulários (modal-criar-usuario.tsx), só sem <input>.
 // Usado sempre que a página precisa mostrar um dado que não faz parte do
 // que pode ser alterado (ex.: e-mail em Alterar Usuário, chave/tipo em
 // Alterar Configuração) ou que é só pra conferência (Excluir *).

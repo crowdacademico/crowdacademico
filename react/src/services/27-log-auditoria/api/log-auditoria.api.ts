@@ -7,7 +7,7 @@ import type { LogAuditoriaResponse } from '../type/log-auditoria.type';
 // valor que fn_log_auditoria() grava via TG_TABLE_NAME. Devolve o objeto
 // paginado inteiro ({ dados, total, pagina, tamanho }), sem desembrulhar
 // `.dados` aqui (diferente de usuarioApi.listar/configuracaoApi.listar) -
-// quem usa isso (log-auditoria-painel.jsx) quer saber o total também.
+// quem usa isso (log-auditoria-painel.tsx) quer saber o total também.
 export const logAuditoriaApi = {
   // `pagina` (11-08-2026, achado da parceira do Lucas: "vai virar aquela
   // listona conforme o sistema cresce") - o backend (log-auditoria.

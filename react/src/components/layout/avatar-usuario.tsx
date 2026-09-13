@@ -43,7 +43,7 @@ const CLASSE_TAMANHO: Record<TamanhoAvatar, string> = {
 // 'quadrado' (10-08-2026, pedido do Lucas: "o quadradinho da imagem",
 // card de perfil parecido com portfólio) - rounded-2xl, não rounded-lg
 // nem cantos retos: seguem o mesmo raio generoso já usado nos cartões do
-// painel (cartao-formulario.jsx usa rounded-3xl), só um degrau abaixo.
+// painel (cartao-formulario.tsx usa rounded-3xl), só um degrau abaixo.
 // 'circulo' continua sendo o padrão em todo o resto do app (cabeçalho,
 // tabelas, dropdown) - não muda nada pra quem já usa o componente.
 const CLASSE_FORMA: Record<FormaAvatar, string> = {

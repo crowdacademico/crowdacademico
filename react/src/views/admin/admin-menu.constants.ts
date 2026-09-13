@@ -44,7 +44,7 @@ function itensDoGrupo(grupoMenu: string | null): ItemMenuAdminReal[] {
 // O 1º grupo (Dashboard, 08-08-2026) não tem `titulo` - é navegação de
 // outro nível, não mais um cadastro (pedido do Lucas), então não ganha um
 // cabeçalho "CADASTROS"-like acima dele; `divisorApos` desenha só a linha
-// fina que separa ele do resto (ver admin-sidebar.jsx).
+// fina que separa ele do resto (ver admin-sidebar.tsx).
 export const GRUPOS_MENU_ADMIN: GrupoMenuAdmin[] = [
   {
     titulo: null,
@@ -132,7 +132,7 @@ export const GRUPOS_MENU_ADMIN: GrupoMenuAdmin[] = [
           // aqui nunca aparece pro usuário final, é só ferramenta de
           // teste interna. `dica` (só este grupo tem) vira um Tooltip do
           // lado direito do título em vez do ícone normal de item - ver
-          // admin-sidebar.jsx.
+          // admin-sidebar.tsx.
           titulo: 'CAMPO DE TESTES',
           dica: 'Este submenu é para testar campos que só seriam possíveis na área pública. O que for criado aqui não aparece para o usuário final.',
           itens: itensDoGrupo('CAMPO_TESTES'),

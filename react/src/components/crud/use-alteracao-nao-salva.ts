@@ -6,7 +6,9 @@ import { useEffect } from 'react';
 // (botão Cancelar, clicar em outro item do menu) não passa por
 // beforeunload - cada tela de Alterar decide isso na hora (geralmente um
 // window.confirm antes de navigate(-1), ver aoCancelar em
-// alterar-usuario.jsx). Sem useBlocker do react-router de propósito: essa
+// alterar-configuracao.tsx e afins - Usuário não usa mais este hook desde
+// 13-09-2026, migrou pra modal e fecha por `aoFechar()`, sem navigate).
+// Sem useBlocker do react-router de propósito: essa
 // API exige montar um diálogo próprio pra cada bloqueio - pro escopo
 // deste pedido (só avisar, não impedir a qualquer custo), os dois
 // mecanismos nativos do browser resolvem sem componente extra.

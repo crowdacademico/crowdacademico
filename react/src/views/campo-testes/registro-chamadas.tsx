@@ -7,6 +7,7 @@
 
 import { useState } from 'react';
 import { API_BASE_URL } from '../../services/constant/constants/api.constants';
+import { paginarClientSide } from '../../services/constant/utils/paginacao.util';
 import { useCampoTestes } from '../../services/campo-testes/hook/use-campo-testes';
 import type { RegistroChamada } from '../../services/campo-testes/context/campo-testes-context';
 
@@ -49,12 +50,7 @@ export function RegistroChamadas() {
   const [pagina, setPagina] = useState(1);
   const [tamanhoPagina, setTamanhoPagina] = useState<number | 'todos'>(10);
 
-  const totalPaginas = tamanhoPagina === 'todos' ? 1 : Math.max(1, Math.ceil(registroChamadas.length / tamanhoPagina));
-  const paginaAtual = Math.min(pagina, totalPaginas);
-  const registrosPagina =
-    tamanhoPagina === 'todos'
-      ? registroChamadas
-      : registroChamadas.slice((paginaAtual - 1) * tamanhoPagina, paginaAtual * tamanhoPagina);
+  const { totalPaginas, paginaAtual, itensPagina: registrosPagina } = paginarClientSide(registroChamadas, pagina, tamanhoPagina);
 
   return (
     <div className="registro-chamadas">

@@ -5,8 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
-
-const CODIGO_PG_FOREIGN_KEY_VIOLATION = '23503';
+import { CODIGO_PG_FOREIGN_KEY_VIOLATION } from '../../commons/database/postgres-exception.filter';
 
 @Injectable()
 export class TipoLinkServiceRemove {

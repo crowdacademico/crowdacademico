@@ -17,7 +17,7 @@ interface ModalDetalhePermissaoProps {
 // "Papéis com esta permissão" (09-08-2026, Bloco F do prompt de IA
 // usado nesta rodada; rótulo renomeado no mesmo dia, ERA "Quem tem hoje") - lido AO
 // VIVO da matriz Papel × Permissão (mesmas 2 chamadas de
-// matriz-papel-permissao.jsx), nunca do dicionário estático: o dicionário
+// matriz-papel-permissao.tsx), nunca do dicionário estático: o dicionário
 // só sabe o que a permissão FAZ, não quem tem ela agora - isso muda toda
 // vez que um admin mexe na matriz.
 export function ModalDetalhePermissao({ permissao, authFetch, aoFechar }: ModalDetalhePermissaoProps) {
