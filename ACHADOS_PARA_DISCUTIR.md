@@ -151,6 +151,8 @@ Escritas de T1 continuam via `chamarERegistrar` cru (não a `perfilPesquisadorAp
 
 **Testado ao vivo** (Playwright, conta de teste segura - Fernanda, id 23, nunca o Admin): login, Consultar mostrando CPF real formatado, Alterar abrindo a linha de edição, correção de CPF salva e revertida pro valor original, Suspender/Reativar alternando e revertido no final - banco limpo ao terminar, zero erro de console, zero requisição falhada. `tsc`/`eslint`/`build` limpos em `nest/` e `react/`.
 
+**SUPERADO (12-09-2026):** a coluna "Escolher" descrita acima foi removida por completo (pedido do Lucas: "é estúpido, agora que eu percebi") - Alterar/Consultar não dependem mais de ter alguém "escolhido", ficaram diretos em toda linha da tabela. Detalhe completo em `PENDENCIAS e correcoes.md`, item "levar o padrão de modal (Consultar/Alterar) pra Gestão de Usuário de verdade".
+
 **Não incluído:** botão "Excluir" - `perfil_pesquisador` não tem endpoint de exclusão por design (status ativo/suspenso, nunca linha removida), então a coluna Ações tem Alterar/Consultar/Suspender-Reativar, não o trio Alterar/Consultar/Excluir de outros módulos.
 
 ## 16. Bug real achado testando o item 15: "Criar Perfil Pesquisador" em T1 nunca funcionou pra ninguém além de quem está logado (07-09-2026)

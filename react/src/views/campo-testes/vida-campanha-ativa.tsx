@@ -5,12 +5,10 @@
 // sistema (nunca uma versão simplificada à parte).
 // ============================================================================
 
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router';
+import { useEffect, useRef, useState } from 'react';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { tratarResposta } from '../../services/constant/api/http.util';
-import { useCampoTestes } from '../../services/campo-testes/hook/use-campo-testes';
 import { useChamadaRegistrada } from '../../services/campo-testes/hook/use-chamada-registrada';
 import { RegistroChamadas } from './registro-chamadas';
 import type { PropsPagina } from '../../services/router/pagina.type';
@@ -54,11 +52,7 @@ const FASES = ['andamento', 'resultado_preliminar', 'resultado_final'];
 const TIPOS = ['texto', 'imagem', 'pdf', 'linkexterno'];
 const LIMITE_ENDOSSOS = 4; // configuracoes.limite_endossos_campanha (mesmo default do seed)
 
-// T3, depende de uma campanha já ATIVA. Não escolhe mais a campanha por
-// conta própria (23-08-2026, pedido do Lucas: "só vai aparecer a
-// campanha que foi selecionada no T anterior"), usa `campanhaFoco`
-// (CampoTestesProvider), a mesma escolha feita na Bancada da Campanha
-// (T2). Sem campanha focada ainda, só mostra o link pra T2.
+// T3, depende de uma campanha já ATIVA.
 //
 // SEM REDESENHO ainda (25-08-2026, remoção do Elenco: T1 e T2 tiveram
 // prioridade, T3 fica só "destravado" por enquanto - o redesenho de
@@ -68,9 +62,25 @@ const LIMITE_ENDOSSOS = 4; // configuracoes.limite_endossos_campanha (mesmo defa
 // a própria sessão logada É o dono/o autor pretendido; "Seguidores" virou
 // um único toggle ("Eu sigo"), não dá mais pra simular vários seguidores
 // ao mesmo tempo dentro da ferramenta.
+//
+// BUSCA PRÓPRIA (13-09-2026, pedido do Lucas: "tirar o Escolher também de
+// T2") - ERA (23-08-2026) "só vai aparecer a campanha que foi selecionada
+// no T anterior", via `campanhaFoco` do CampoTestesProvider, alimentado
+// pela coluna "Escolher" de T2. Essa coluna saiu de T2 (painel "campanha
+// em foco" virou parte do modal de Alterar de lá, sem gerar mais nenhum
+// "foco" pra fora) - T3 ficaria sem NENHUM jeito de carregar uma campanha,
+// então ganhou busca própria (mesmo padrão do combobox "dono da campanha"
+// de T2/Criar Campanha: digita id ou pedaço do título, até 5 resultados).
+// `campanhaFoco` virou estado local (não mais compartilhado) - nada mais
+// no app usa o do `CampoTestesContext`, que foi removido de lá também.
 export function VidaCampanhaAtiva({ auth }: PropsPagina) {
-  const { campanhaFoco } = useCampoTestes();
   const chamarERegistrar = useChamadaRegistrada(auth);
+
+  const [campanhaFoco, setCampanhaFoco] = useState<number | null>(null);
+  const [todasCampanhas, setTodasCampanhas] = useState<CampanhaResponse[]>([]);
+  const [buscaCampanha, setBuscaCampanha] = useState('');
+  const [sugestoesCampanhaAbertas, setSugestoesCampanhaAbertas] = useState(false);
+  const sugestoesCampanhaRef = useRef<HTMLDivElement>(null);
 
   const [campanha, setCampanha] = useState<CampanhaResponse | null>(null);
   const [nomesPorId, setNomesPorId] = useState<Map<number, string>>(new Map());
@@ -94,8 +104,40 @@ export function VidaCampanhaAtiva({ auth }: PropsPagina) {
       .listar(auth.authFetch)
       .then((lista) => setNomesPorId(new Map(lista.map((usuario) => [usuario.idUsuario, usuario.nome]))))
       .catch(() => {});
+    // Todas as campanhas, uma vez só ao montar (13-09-2026, mesmo padrão do
+    // combobox "dono da campanha" em bancada-campanha.tsx: filtra client-side
+    // por id/título em vez de buscar a cada tecla) - alimenta a busca própria
+    // de T3, ver `sugestoesCampanha` abaixo.
+    campanhaApi.listar(auth.authFetch).then(setTodasCampanhas).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Fechar as sugestões da busca de campanha ao clicar fora - mesmo padrão
+  // do combobox "dono da campanha" em bancada-campanha.tsx.
+  useEffect(() => {
+    if (!sugestoesCampanhaAbertas) return undefined;
+    const aoClicarFora = (evento: MouseEvent) => {
+      if (
+        sugestoesCampanhaRef.current &&
+        evento.target instanceof Node &&
+        !sugestoesCampanhaRef.current.contains(evento.target)
+      ) {
+        setSugestoesCampanhaAbertas(false);
+      }
+    };
+    document.addEventListener('mousedown', aoClicarFora);
+    return () => document.removeEventListener('mousedown', aoClicarFora);
+  }, [sugestoesCampanhaAbertas]);
+
+  // Busca por id OU pedaço do título (13-09-2026, mesmo padrão do combobox
+  // de pesquisador em T2) - até 5 resultados.
+  const sugestoesCampanha = (() => {
+    const termo = buscaCampanha.trim().toLowerCase();
+    if (!termo) return [];
+    return todasCampanhas
+      .filter((item) => String(item.idCampanha).includes(termo) || item.titulo.toLowerCase().includes(termo))
+      .slice(0, 5);
+  })();
 
   const recarregarTudo = (id: number | null) => {
     if (!id) return;
@@ -168,13 +210,52 @@ export function VidaCampanhaAtiva({ auth }: PropsPagina) {
         <h2 className="titulo-secao">Campo de Testes - Vida da Campanha Ativa</h2>
       </div>
 
+      {/* Busca própria (13-09-2026) - substitui a antiga dependência da
+          coluna "Escolher" de T2. Um só <input>, sempre (mesmo padrão do
+          combobox "dono da campanha" de bancada-campanha.tsx) - o texto
+          mostrado é a campanha escolhida; digitar de novo invalida a
+          escolha atual até clicar numa sugestão. */}
+      <div className="relative mb-4 max-w-sm" ref={sugestoesCampanhaRef}>
+        <label className="rotulo-campo">Buscar campanha</label>
+        <input
+          type="text"
+          value={buscaCampanha}
+          onChange={(evento) => {
+            setBuscaCampanha(evento.target.value);
+            setCampanhaFoco(null);
+            setSugestoesCampanhaAbertas(true);
+          }}
+          onFocus={() => setSugestoesCampanhaAbertas(true)}
+          placeholder="Digite o id ou o título..."
+          className="input-padrao"
+          autoComplete="off"
+        />
+        {sugestoesCampanhaAbertas && sugestoesCampanha.length > 0 && (
+          <div className="absolute left-0 right-0 mt-1 fundo-cartao border borda-padrao rounded-lg shadow-lg z-20 overflow-hidden">
+            {sugestoesCampanha.map((item) => (
+              <button
+                key={item.idCampanha}
+                type="button"
+                onClick={() => {
+                  setCampanhaFoco(item.idCampanha);
+                  setBuscaCampanha(item.titulo);
+                  setSugestoesCampanhaAbertas(false);
+                }}
+                className="w-full text-left px-3 py-2 text-sm border-b borda-padrao last:border-b-0 hover:bg-primary/10 flex items-center justify-between gap-2"
+              >
+                <span className="texto-forte inline-flex items-baseline">
+                  <span className="inline-block w-16 shrink-0 tabular-nums">ID: {item.idCampanha}</span>
+                  <span>{item.titulo}</span>
+                </span>
+                <span className="badge badge-neutro">{item.status}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
       {!campanhaFoco && (
-        <p className="texto-fraco">
-          Nenhuma campanha selecionada ainda.{' '}
-          <Link to="/admin/campo-testes/campanha" className="texto-link">
-            Escolha uma na Bancada da Campanha primeiro.
-          </Link>
-        </p>
+        <p className="texto-fraco">Nenhuma campanha selecionada ainda - busque uma acima (id ou título).</p>
       )}
 
       {campanha && (

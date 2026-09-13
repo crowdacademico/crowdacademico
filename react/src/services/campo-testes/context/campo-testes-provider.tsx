@@ -6,7 +6,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { CampoTestesContext } from './campo-testes-context';
-import type { EntradaRegistroChamada, PesquisadorSelecionado, RegistroChamada } from './campo-testes-context';
+import type { EntradaRegistroChamada, RegistroChamada } from './campo-testes-context';
 
 const LIMITE_REGISTRO_CHAMADAS = 200;
 
@@ -18,26 +18,22 @@ interface CampoTestesProviderProps {
 // de vez" o motor de login-múltiplo - nenhum endpoint do backend aceita
 // agir "em nome de" outro usuário, então simular vários atores ao mesmo
 // tempo não tinha mais sustentação real). Só guarda estado compartilhado
-// entre T1/T2/T3/T4, sem nenhuma sessão paralela: toda chamada de rede do
-// Campo de Testes passa a usar a MESMA sessão real do painel (`auth`,
-// prop já recebida por toda tela).
+// entre telas, sem nenhuma sessão paralela: toda chamada de rede do Campo
+// de Testes passa a usar a MESMA sessão real do painel (`auth`, prop já
+// recebida por toda tela).
 //
-// `pesquisadorSelecionado`: escolhido em T1 (Bancada do Pesquisador),
-// usado por T2 (Bancada da Campanha) pra filtrar a tabela de campanhas por
-// dono e mostrar quem está selecionado.
-// `campanhaFoco`: escolhida em T2 (coluna "Escolher"), usada por T3 (Vida
-// da Campanha Ativa) pra saber de qual campanha continuar. Mesmo conceito
-// de antes, só que sem depender do Elenco.
 // `registroChamadas`: alimentado por use-chamada-registrada.js - T4
-// continua existindo, só que com um único "ator" possível agora (quem
-// estiver realmente logado).
+// (Registro de Chamadas) continua existindo, só que com um único "ator"
+// possível agora (quem estiver realmente logado).
+//
+// SEM `pesquisadorSelecionado` (removido 12-09-2026 - única fonte era a
+// coluna "Escolher" de T1) NEM `campanhaFoco` (removido 13-09-2026 - única
+// fonte era a coluna "Escolher" de T2) - os dois eram estado de "seleção
+// compartilhada entre telas" alimentado por uma coluna que não existe mais
+// em nenhum dos dois lugares. Este provider hoje só compartilha o que
+// sobra de verdade entre telas: o Registro de Chamadas.
 export function CampoTestesProvider({ children }: CampoTestesProviderProps) {
-  const [pesquisadorSelecionado, setPesquisadorSelecionado] = useState<PesquisadorSelecionado | null>(null);
-  const [campanhaFoco, setCampanhaFoco] = useState<number | null>(null);
   const [registroChamadas, setRegistroChamadas] = useState<RegistroChamada[]>([]);
-
-  const limparPesquisadorSelecionado = useCallback(() => setPesquisadorSelecionado(null), []);
-  const limparCampanhaFoco = useCallback(() => setCampanhaFoco(null), []);
 
   const registrarChamada = useCallback((entrada: EntradaRegistroChamada) => {
     setRegistroChamadas((atual) => {
@@ -53,17 +49,11 @@ export function CampoTestesProvider({ children }: CampoTestesProviderProps) {
 
   const valor = useMemo(
     () => ({
-      pesquisadorSelecionado,
-      selecionarPesquisador: setPesquisadorSelecionado,
-      limparPesquisadorSelecionado,
-      campanhaFoco,
-      selecionarCampanhaFoco: setCampanhaFoco,
-      limparCampanhaFoco,
       registroChamadas,
       registrarChamada,
       limparRegistro,
     }),
-    [pesquisadorSelecionado, limparPesquisadorSelecionado, campanhaFoco, limparCampanhaFoco, registroChamadas, registrarChamada, limparRegistro],
+    [registroChamadas, registrarChamada, limparRegistro],
   );
 
   return <CampoTestesContext.Provider value={valor}>{children}</CampoTestesContext.Provider>;

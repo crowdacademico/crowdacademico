@@ -47,7 +47,11 @@ interface BotaoVerFotoPerfilProps {
 // Sem o `title` explicando "tamanho máximo" (04-09-2026, pedido do Lucas:
 // "o olho de cima não precisa deste tooltip") - a explicação completa fica
 // só no olho de baixo, ao lado de "Foto cadastrada".
-function BotaoVerFotoPerfil({ url, tamanho = 'text-base', badge = false }: BotaoVerFotoPerfilProps) {
+// Exportado (12-09-2026, pedido do Lucas: unificar o modal de Consultar de
+// T1/Bancada do Pesquisador com este CRUD de Usuário) - mesmo botão de
+// olho, reaproveitado por bancada-pesquisador.tsx em vez de duplicar o
+// JSX/comentários inteiros de novo.
+export function BotaoVerFotoPerfil({ url, tamanho = 'text-base', badge = false }: BotaoVerFotoPerfilProps) {
   if (badge) {
     return (
       <a

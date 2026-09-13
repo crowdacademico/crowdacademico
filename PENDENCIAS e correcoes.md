@@ -1269,6 +1269,38 @@ T1 (Bancada do Pesquisador) ganhou Consultar/Alterar como MODAL, replicando a ap
 
 **Atualização (12-09-2026):** o Lucas levou a ideia pra Alexia e pra professora orientadora - as duas gostaram, e a professora comentou que modal faz mais sentido pro CRUD do que a tela própria usada hoje em Usuário, por ser mais rápido de usar. Validação de produto real, ainda não é sinal verde pra implementar: o próprio Lucas observou que "nosso Modal ainda não está completo" (ver Fase 4 do plano de UI, e o achado de 08-09-2026 sobre `SecaoModeracaoPesquisador` fora do `chamarERegistrar`) - fica registrado como validação forte a favor, decisão de quando/como migrar continua em aberto.
 
+**Atualização 2 (12-09-2026): modal de T1 agora está completo.** Mesmo dia, o Lucas percebeu (olhando esta lista) que a coluna "Escolher" de T1 - o mecanismo de selecionar-um-pesquisador-e-ver-um-painel-embaixo - não fazia mais sentido nenhum ("é estúpido, agora que eu percebi"). Pedido: tirar "Escolher" e tudo relacionado, e usar a oportunidade pra trazer TODO o conteúdo do CRUD de Usuário (`alterar-usuario.tsx`/`consultar-usuario.tsx`) pra dentro do modal de T1, completando exatamente a lacuna citada acima.
+
+Feito: `views/campo-testes/bancada-pesquisador.tsx` reescrito -
+- Coluna "Escolher" removida (tabela, handler `escolherPesquisador`, painel solto embaixo com "Criar Perfil Pesquisador"/Links/Score ligados a `chaveFoco`).
+- `pesquisadorSelecionado`/`selecionarPesquisador`/`limparPesquisadorSelecionado` removidos do `CampoTestesContext`/`CampoTestesProvider` inteiro - única fonte era essa coluna. T2 (Bancada da Campanha) dependia disso pra pré-filtrar campanhas por dono e mostrar um resumo "Pesquisador selecionado (T1)" com "Limpar seleção" - removido também (decisão do Lucas, explícita: "remover também", em vez de dar a T2 um seletor próprio), T2 volta a listar todas as campanhas sem pré-filtro.
+- Modal de Alterar/Consultar de T1 ganhou TUDO que faltava: nome, senha (+ desbloquear login), foto de perfil (`SeletorFotoPerfil`/`BotaoVerFotoPerfil`, este último agora exportado de `consultar-usuario.tsx`), Papéis (atribuir/suspender/reativar/revogar), `SecaoModeracao` (conta, importada de `views/1-usuario/`, ao lado de `SecaoModeracaoPesquisador` que já existia), card `<dev>` de redefinir senha, e histórico de login (Consultar). Alterar/Consultar deixaram de depender de `statusPesquisador` - qualquer usuário pode ser aberto agora, não só quem já é pesquisador.
+- "Criar Perfil Pesquisador" (fluxo que só existia no painel solto de baixo) mudou de lugar: agora é o próprio conteúdo do modal de Alterar quando a pessoa ainda não é pesquisadora (`formEdicaoPerfil === null`), no lugar das seções de Perfil/Links/Moderação-pesquisador. Ao criar com sucesso, o modal troca sozinho pro conteúdo completo, sem fechar/reabrir.
+- `PainelLinksAcademicos`/`PainelScore` perderam a prop `tituloComoSecaoFicha` (virou sempre-verdadeira, já que só sobrou o uso dentro do modal) - simplificação direta, não pedida à parte.
+
+Testado ao vivo (Playwright + `npm run dev`/`nest start:dev`): login, abrir Alterar (todas as seções novas presentes) e Consultar, T2 sem mais o resumo de pesquisador selecionado, `tsc`/`eslint`/`build` limpos nos dois lados.
+
+**Decisão que continua em aberto** (não foi tomada agora, de propósito): migrar as páginas REAIS de Usuário (`alterar-usuario.tsx`/`consultar-usuario.tsx`) pra este mesmo padrão de modal, aposentando as páginas inteiras. O que foi feito hoje prova que o modal já dá conta do recado (é literalmente um superset das páginas reais agora) - falta só o Lucas decidir se/quando troca as páginas de verdade por ele.
+
+**Atualização 3 (13-09-2026): T1 ganhou o ícone de Excluir + o mesmo tratamento se espalhou pra T2.** Dois pedidos na mesma mensagem: (1) T1 ainda não tinha Excluir na coluna Ações (só Alterar/Consultar) - faltava o último degrau do CRUD completo; (2) "vamos tirar o Escolher também de T2 - Bancada de Campanha", mesmo raciocínio de ontem aplicado à outra tela.
+
+**T1 - Excluir:** botão novo na coluna Ações (`abrirExclusao`/`excluirUsuario`), modal próprio com a MESMA exclusão lógica e confirmação por e-mail de `excluir-usuario.tsx` (CRUD real) - `excluir_conta_usuario()`, sem botão de desfazer, aviso de LGPD idêntico ao da página real.
+
+**T2 - "Escolher" removido, mas com uma complicação a mais que T1 não tinha:** a coluna "Escolher" de T2 não alimentava só um pré-filtro (como a de T1 alimentava T2) - ela era a ÚNICA fonte de `campanhaFoco`, e T3 (Vida da Campanha Ativa) **inteira** depende de `campanhaFoco` pra saber qual campanha mostrar (sem ele, T3 não existe - não é um "a mais", é o "tudo"). Isso foi levantado explicitamente pro Lucas antes de mexer; a escolha dele foi T3 ganhar busca própria, não deixar T3 quebrado.
+
+Feito:
+- **T2 perdeu a coluna "Escolher" e o painel "campanha em foco"** (checklist "Pronta pra aprovar?" + Aprovar/Rejeitar + abas de Orçamento/Cronograma) que vivia solto embaixo da tabela, alimentado só por ela. Esse conteúdo inteiro virou parte do modal de Alterar (que já mostrava Orçamento/Cronograma editável desde 08-09-2026 - só faltava o checklist e os 2 botões). `PainelOrcamentoCronograma` ganhou um callback opcional `aoCarregar` pra o modal de Alterar manter as contagens do checklist em dia sem duplicar adicionar/remover (usa `useRef` + `useEffect`, não dependência direta, pra não recriar o fetch a cada render).
+- **`campanhaFoco`/`selecionarCampanhaFoco`/`limparCampanhaFoco` saíram do `CampoTestesContext`/`CampoTestesProvider` por inteiro** - mesma limpeza de `pesquisadorSelecionado` ontem. O provider hoje só compartilha o Registro de Chamadas (T4) entre telas.
+- **T3 ganhou busca própria** (`vida-campanha-ativa.tsx`) - mesmo padrão do combobox "dono da campanha" de T2 (Criar Campanha): digita id ou pedaço do título, até 5 sugestões, clica e carrega. `campanhaFoco` virou `useState` local de T3, não mais contexto compartilhado.
+
+Testado ao vivo (Playwright): Excluir de T1 abre e mostra "O que será excluído"; T2 sem coluna Escolher nem painel solto; criada uma campanha de teste só pra confirmar o checklist funcionando dentro do modal de Alterar (Aprovar desabilitado com o motivo certo, sem orçamento/cronograma ainda) - depois excluída; T3 com a busca funcionando (digitou "2", escolheu uma sugestão, campanha carregou). `tsc`/`eslint`/`build` limpos.
+
+**Auditoria de completude do modal de T1 (mesmo dia, pedido do Lucas: "acha que falta algo no Modal?"):** conferi campo a campo contra `alterar-usuario.tsx`/`consultar-usuario.tsx` de novo e achei 2 lacunas reais, as duas na seção "Perfil de Pesquisador" do Alterar (o Consultar já tinha as duas certas):
+- **Score não aparecia em lugar nenhum do Alterar** - só existia no Consultar (via `<PainelScore>`). Quando esse bloco virou editável (12-09-2026), o "Score atual" que a página real sempre mostrou como campo simples ficou pelo caminho.
+- **CPF atual não aparecia** - só existia o campo em branco "Corrigir CPF", sem mostrar o que já estava cadastrado antes de decidir corrigir.
+
+Corrigido: `CampoFicha rotulo="Score atual"` (mesmo número simples da página real, sem duplicar a tabela de dimensões que já existe só no Consultar) e `CampoFicha rotulo="CPF atual"` (mesma máscara `formatarCpfOuMotivoOculto` do resto do sistema) adicionados dentro de "Perfil de Pesquisador" no Alterar. Testado ao vivo (Playwright + screenshot) - os dois aparecem corretos, sem quebrar o grid existente. `tsc`/`eslint`/`build` limpos.
+
 ---
 
 ### 🔴 Pendência aberta (11-09-2026): RF-031 (contestação de score) só faz sentido implementar depois do motor de score estar fechado de vez

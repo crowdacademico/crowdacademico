@@ -10,11 +10,10 @@ import { perfilPesquisadorApi } from '../../services/6-perfil-pesquisador/api/pe
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { usuarioPapelApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
 import { ORDEM_PODER_PAPEL, PAPEL_SEM_EXTRA } from '../../services/2-papel-permissao/constants/papel-ordem-poder';
-import { useCampoTestes } from '../../services/campo-testes/hook/use-campo-testes';
 import { useChamadaRegistrada } from '../../services/campo-testes/hook/use-chamada-registrada';
 import { gerarCpfValido } from '../../services/campo-testes/util/gerar-cpf-valido';
 import { PESQUISADOR_BLOQUEADO, motivoBloqueioPesquisador } from '../../services/campo-testes/util/registros-bloqueados';
-import { formatarCpf, formatarCpfOuMotivoOculto, formatarDataHora, formatarNomeDimensao } from '../../services/constant/utils/formatacao.util';
+import { formatarCpf, formatarCpfOuMotivoOculto, formatarData, formatarDataHora, formatarNomeDimensao } from '../../services/constant/utils/formatacao.util';
 import {
   ROTULO_STATUS_PESQUISADOR,
   ROTULO_TIPO_VINCULO,
@@ -22,6 +21,7 @@ import {
   classeBadgeStatusPesquisador,
 } from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
 import { AvatarUsuario } from '../../components/layout/avatar-usuario';
+import { SeletorFotoPerfil } from '../../components/input/seletor-foto-perfil';
 import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
 import { useConfiguracoes } from '../../services/11-configuracoes/hook/use-configuracoes';
@@ -30,14 +30,27 @@ import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { ModalDetalhe } from '../../components/crud/modal-detalhe';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { SecaoModeracaoPesquisador } from '../6-perfil-pesquisador/secao-moderacao-pesquisador';
+import { SecaoModeracao } from '../1-usuario/secao-moderacao';
+import { BotaoVerFotoPerfil } from '../1-usuario/consultar-usuario';
+import { arquivoApi } from '../../services/25-arquivo/api/arquivo.api';
 import { RegistroChamadas } from './registro-chamadas';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
-import type { UsuarioResponse } from '../../services/1-usuario/type/usuario.type';
+import type { UsuarioResponse, UsuarioResponseLoginHistorico } from '../../services/1-usuario/type/usuario.type';
+import type { PapelResponse, UsuarioPapelResponse } from '../../services/2-papel-permissao/type/papel-permissao.type';
 import type { PerfilPesquisadorResponse, PerfilPesquisadorResponseScore } from '../../services/6-perfil-pesquisador/type/perfil-pesquisador.type';
 import type { TipoVinculo, TituloAcademico } from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
 import type { TipoLinkResponse } from '../../services/9-tipo-link/type/tipo-link.type';
 import type { ResultadoPaginado } from '../../services/constant/type/paginacao.type';
+
+// Precisa bater com o hash seedado em arquivos_banco_dados/07_seed_dados.sql
+// ([07-D-1]) - mesma constante de views/1-usuario/alterar-usuario.tsx,
+// duplicada de propósito aqui (12-09-2026, pedido do Lucas: unificar o
+// modal de T1 com o CRUD de Usuário) - os dois modais fazem exatamente a
+// mesma coisa (redefinir pra uma senha conhecida), mas vivem em módulos
+// diferentes o bastante pra não valer a pena extrair um import cruzado só
+// por causa de uma string.
+const SENHA_DEV = 'DevTcc123!';
 
 const TIPOS_VINCULO: TipoVinculo[] = ['institucional', 'independente'];
 const TITULOS_ACADEMICOS: TituloAcademico[] = ['graduado', 'especialista', 'mestre', 'doutor'];
@@ -93,27 +106,20 @@ interface PainelLinksAcademicosProps {
   auth: Pick<UseAuthReturn, 'authFetch'>;
   idUsuario: number;
   tiposLink: TipoLinkResponse[];
-  // `tituloComoSecaoFicha` (08-09-2026, pedido do Lucas: "precisava se
-  // parecer com os demais") - dentro do modal de Alterar, o título precisa
-  // bater com o mesmo estilo de "Perfil de Pesquisador"/"Metadados"
-  // (SecaoFicha, ficha-consulta.tsx) - embaixo da página (uso original),
-  // continua com o título simples de sempre. Mesmas classes de
-  // `SecaoFicha`, sem importar o componente inteiro (ele espera pares
-  // rótulo/valor num grid, não uma tabela inteira).
-  tituloComoSecaoFicha?: boolean;
 }
 
-// Extraído (08-09-2026, pedido do Lucas) - o mesmo card de "Links
-// acadêmicos" que já existia embaixo (ligado ao pesquisador ESCOLHIDO,
-// `chaveFoco`) passou a ser reaproveitado TAMBÉM dentro do modal de
-// Alterar (ligado ao pesquisador em EDIÇÃO, `idUsuarioEditandoPerfil`) -
-// os dois podem ser pessoas diferentes ao mesmo tempo, por isso virou
-// componente próprio com estado próprio, em vez de duplicar o JSX cru
-// (duas cópias do mesmo bug seria pior que uma). É proposital ter os dois
-// lugares por enquanto: o Lucas quer perguntar pra Alexia qual dos dois
-// ela prefere (embaixo, solto, ou dentro do Alterar) antes de decidir
-// remover um.
-function PainelLinksAcademicos({ auth, idUsuario, tiposLink, tituloComoSecaoFicha }: PainelLinksAcademicosProps) {
+// Extraído (08-09-2026, pedido do Lucas) - componente próprio com estado
+// próprio (não JSX cru duplicado), usado só dentro do modal de Alterar
+// (Consultar nunca mostrou Links Acadêmicos, só Perfil de Pesquisador +
+// Score).
+// SIMPLIFICADO (12-09-2026, consequência direta de remover a coluna
+// "Escolher"): existia uma 2ª cópia solta embaixo da tabela, ligada ao
+// pesquisador ESCOLHIDO (`chaveFoco`) - o Lucas ia perguntar pra Alexia
+// qual dos dois lugares ela preferia. Com "Escolher" removido, só sobrou
+// o uso dentro do modal - a prop `tituloComoSecaoFicha` (que alternava
+// entre os dois estilos de título) virou sempre-verdadeira, então saiu
+// junto com o branch morto.
+function PainelLinksAcademicos({ auth, idUsuario, tiposLink }: PainelLinksAcademicosProps) {
   const chamarERegistrar = useChamadaRegistrada(auth);
   const { mostrar } = useToast();
   const { reportarErro } = useErroToast();
@@ -202,13 +208,9 @@ function PainelLinksAcademicos({ auth, idUsuario, tiposLink, tituloComoSecaoFich
           por aí"). Define a tipografia certa sozinho (font-family sans,
           não depende mais de estar numa tag h1/h2/h3 específica pra
           escapar da regra global de heading serifado). */}
-      {tituloComoSecaoFicha ? (
-        <h3 className="titulo-bloco mb-3 pb-2 border-b borda-padrao">
-          Links acadêmicos ({links.length} de {limiteLinks})
-        </h3>
-      ) : (
-        <h4 className="font-bold mt-4 mb-1">Links acadêmicos ({links.length} de {limiteLinks})</h4>
-      )}
+      <h3 className="titulo-bloco mb-3 pb-2 border-b borda-padrao">
+        Links acadêmicos ({links.length} de {limiteLinks})
+      </h3>
       <div className="links-academicos-wrapper">
         <table className="crud-tabela mb-2">
           <thead>
@@ -372,18 +374,16 @@ function PainelLinksAcademicos({ auth, idUsuario, tiposLink, tituloComoSecaoFich
 interface PainelScoreProps {
   auth: Pick<UseAuthReturn, 'authFetch'>;
   idUsuario: number;
-  // mesmo raciocínio de `tituloComoSecaoFicha` em PainelLinksAcademicos.
-  tituloComoSecaoFicha?: boolean;
 }
 
-// Extraído (08-09-2026, pedido do Lucas) - "duplicar" o card de Score que
-// já existia embaixo (ligado a `chaveFoco`) pro Consultar também (ligado
-// a `perfilConsultado`, que pode ser um pesquisador DIFERENTE do foco ao
-// mesmo tempo) - mesmo motivo de PainelLinksAcademicos: virou componente
-// próprio com fetch próprio em vez de duplicar o JSX cru. É proposital
-// ter os dois lugares por enquanto (o card solto embaixo do Campo de
-// Testes vai sumir em breve, ficando só dentro dos modais).
-function PainelScore({ auth, idUsuario, tituloComoSecaoFicha }: PainelScoreProps) {
+// Extraído (08-09-2026, pedido do Lucas) - componente próprio com fetch
+// próprio (não JSX cru duplicado), reaproveitado tanto no modal de
+// Consultar quanto no de Alterar.
+// SIMPLIFICADO (12-09-2026, mesma consequência de PainelLinksAcademicos,
+// acima) - a cópia solta embaixo da tabela (ligada a `chaveFoco`) saiu
+// junto com a coluna "Escolher"; só sobrou o uso dentro dos modais, então
+// `tituloComoSecaoFicha` virou sempre-verdadeiro e saiu do componente.
+function PainelScore({ auth, idUsuario }: PainelScoreProps) {
   const chamarERegistrar = useChamadaRegistrada(auth);
   const [score, setScore] = useState<PerfilPesquisadorResponseScore | null>(null);
 
@@ -398,11 +398,7 @@ function PainelScore({ auth, idUsuario, tituloComoSecaoFicha }: PainelScoreProps
 
   return (
     <>
-      {tituloComoSecaoFicha ? (
-        <h3 className="titulo-bloco mb-3 pb-2 border-b borda-padrao">Score</h3>
-      ) : (
-        <h3 className="subtitulo mb-2">Score</h3>
-      )}
+      <h3 className="titulo-bloco mb-3 pb-2 border-b borda-padrao">Score</h3>
       <div className="fundo-erro texto-erro rounded-md p-4 mb-3 flex items-start gap-3">
         <i className="fa-solid fa-triangle-exclamation text-xl"></i>
         <div>
@@ -454,18 +450,28 @@ function PainelScore({ auth, idUsuario, tituloComoSecaoFicha }: PainelScoreProps
 // virar cobaia de teste.
 //
 // SEM ELENCO (25-08-2026, pedido do Lucas: "remover de vez" o motor de
-// login-múltiplo). Selecionar uma linha aqui só marca `pesquisadorSelecionado`
-// (CampoTestesProvider) - não faz login nenhum, é sempre a sessão real do
-// painel (`auth`) quem executa toda escrita. "Promover Usuário → Pesquisador"
-// e as ações de link acadêmico (07/08-09-2026: ambos ganharam endpoint "para
-// outro", mesmo padrão de CPF/suspensão) já funcionam de verdade pra
-// QUALQUER pesquisador selecionado, não só a própria conta do Admin - a
-// limitação antiga ("só funciona logado como a própria pessoa") foi
-// corrigida nos dois casos, não é mais verdade.
+// login-múltiplo). Toda escrita usa a sessão REAL do painel (`auth`).
+// "Promover Usuário → Pesquisador" e as ações de link acadêmico (07/08-
+// 09-2026: ambos ganharam endpoint "para outro", mesmo padrão de CPF/
+// suspensão) funcionam de verdade pra QUALQUER pesquisador, não só a
+// própria conta do Admin.
+//
+// SEM "Escolher" (12-09-2026, pedido do Lucas: "abandonar completamente
+// esta coluna... podemos tirar ela e tudo relacionado a ela") - o
+// mecanismo de selecionar-um-registro-e-ver-um-painel-embaixo saiu de
+// vez (junto com `pesquisadorSelecionado`/CampoTestesProvider, que só
+// existia pra alimentar isso e o pré-filtro de T2, também removido).
+// Toda ação (inclusive "Criar Perfil Pesquisador", que antes só existia
+// nesse painel de baixo) agora mora dentro do modal de Alterar, aberto
+// por linha - mesmo espírito de "não precisa reinventar a roda" já usado
+// pro resto deste modal, um degrau adiante: o modal também UNIFICA T1 com
+// o CRUD de Usuário de verdade (nome/senha/foto/papéis/moderação de
+// conta, antes só em views/1-usuario/alterar-usuario.tsx), virando um
+// único lugar que edita a pessoa inteira - conta E perfil de pesquisador.
 export function BancadaPesquisador({ auth }: PropsPagina) {
-  const { pesquisadorSelecionado, selecionarPesquisador, limparPesquisadorSelecionado } = useCampoTestes();
   const chamarERegistrar = useChamadaRegistrada(auth);
-  const chaveFoco = pesquisadorSelecionado?.idUsuario ?? null;
+  const { mostrar } = useToast();
+  const { erro: erroModal, reportarErro: reportarErroModal, limparErro: limparErroModal } = useErroToast();
 
   const [pesquisadores, setPesquisadores] = useState<PesquisadorLinha[]>([]);
   const [carregandoLista, setCarregandoLista] = useState(true);
@@ -489,6 +495,10 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
   const [facetaPapelAberta, setFacetaPapelAberta] = useState(false);
   const facetaPapelRef = useRef<HTMLDivElement>(null);
 
+  // Criar Perfil Pesquisador (12-09-2026: ERA um painel solto embaixo da
+  // tabela, ligado a `chaveFoco`/"Escolher" - agora vive DENTRO do modal
+  // de Alterar, condicionado a `formEdicaoPerfil === null` logo abaixo,
+  // pra quem ainda não é pesquisador).
   const [form, setForm] = useState<FormCriarPerfil>({
     cpf: '',
     tipoVinculo: 'institucional',
@@ -498,27 +508,59 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
   const [criando, setCriando] = useState(false);
   const [erroCriar, setErroCriar] = useState<string | null>(null);
 
-  // Ações da coluna normal (07-09-2026, pedido do Lucas: Admin ver/alterar
-  // TODOS os campos do pesquisador, igual os outros módulos) - separado da
-  // coluna "Escolher" (mesmo split já feito em T2, Bancada da Campanha).
+  // Consultar - mesmos dados de conta que a listagem principal não carrega
+  // (avatar/papéis/histórico de login), buscados só ao abrir o modal
+  // (mesmo padrão "colapsado até clicar" de consultar-usuario.tsx).
   const [perfilConsultado, setPerfilConsultado] = useState<PesquisadorLinha | null>(null);
+  const [avatarConsultado, setAvatarConsultado] = useState<string | null>(null);
+  const [papeisConsultado, setPapeisConsultado] = useState<UsuarioPapelResponse[] | null>(null);
+  const [loginsConsultado, setLoginsConsultado] = useState<UsuarioResponseLoginHistorico[] | null>(null);
+  const [carregandoLoginsConsultado, setCarregandoLoginsConsultado] = useState(false);
+  const [loginsAbertosConsultado, setLoginsAbertosConsultado] = useState(false);
+
+  // Excluir (13-09-2026, pedido do Lucas: "faltava o ícone de excluir")
+  // - mesma exclusão LÓGICA e confirmação por e-mail de excluir-usuario.tsx
+  // (CRUD real), agora em modal, completando o trio Alterar/Consultar/
+  // Excluir que faltava aqui desde a unificação do modal.
+  const [usuarioExcluindo, setUsuarioExcluindo] = useState<PesquisadorLinha | null>(null);
+  const [confirmacaoExclusaoUsuario, setConfirmacaoExclusaoUsuario] = useState('');
+  const [excluindoUsuario, setExcluindoUsuario] = useState(false);
+
+  // Alterar - conta inteira (12-09-2026, pedido do Lucas: unificar este
+  // modal com o CRUD de Usuário) - `idUsuarioEditandoPerfil` continua com
+  // este nome (histórico, era só o perfil), mas agora identifica a PESSOA
+  // em edição no modal, não só o perfil de pesquisador dela.
   const [idUsuarioEditandoPerfil, setIdUsuarioEditandoPerfil] = useState<number | null>(null);
+  // `null` = a pessoa ainda não é pesquisador (mostra o formulário "Criar
+  // Perfil Pesquisador" no lugar das seções de perfil/links/moderação).
   const [formEdicaoPerfil, setFormEdicaoPerfil] = useState<{
     tipoVinculo: TipoVinculo;
     vinculoInstitucional: string;
     tituloAcademico: TituloAcademico;
   } | null>(null);
   const [cpfCorrecao, setCpfCorrecao] = useState('');
+  // Dados da conta (nome/senha/foto) - mesmo trio de estados de
+  // alterar-usuario.tsx (3 estados no avatar de propósito: `undefined` =
+  // nenhuma escolha nova, número = foto nova, `null` = removida).
+  const [nomeEdicao, setNomeEdicao] = useState('');
+  const [novaSenhaEdicao, setNovaSenhaEdicao] = useState('');
+  const [avatarUrlEdicao, setAvatarUrlEdicao] = useState<string | null>(null);
+  const [idImagemPerfilNovoEdicao, setIdImagemPerfilNovoEdicao] = useState<number | null | undefined>(undefined);
+  const [avatarUrlNovoEdicao, setAvatarUrlNovoEdicao] = useState<string | null>(null);
+  const [desbloqueando, setDesbloqueando] = useState(false);
+  const [redefinindoSenhaDev, setRedefinindoSenhaDev] = useState(false);
+  // Papéis (mesmo padrão de alterar-usuario.tsx) - catálogo carrega uma
+  // vez só (ver useEffect abaixo), os atuais recarregam a cada abertura.
+  const [catalogoPapeis, setCatalogoPapeis] = useState<PapelResponse[]>([]);
+  const [papeisAtuaisEdicao, setPapeisAtuaisEdicao] = useState<UsuarioPapelResponse[]>([]);
+  const [idPapelParaAtribuir, setIdPapelParaAtribuir] = useState('');
+  const [atribuindoPapel, setAtribuindoPapel] = useState(false);
+  const [papelSuspendendoId, setPapelSuspendendoId] = useState<number | null>(null);
+  const [enviandoSuspensaoPapel, setEnviandoSuspensaoPapel] = useState<number | null>(null);
+  const [reativandoPapel, setReativandoPapel] = useState<number | null>(null);
+  const [revogandoPapel, setRevogandoPapel] = useState<number | null>(null);
 
   const [tiposLink, setTiposLink] = useState<TipoLinkResponse[]>([]);
-
-  // Sem probe separado (era `elenco.atores[chaveFoco].temPerfilPesquisador`,
-  // uma 2ª chamada de rede): `pesquisadores` já carrega perfil_pesquisador
-  // JUNTO com usuario (ver carregarPesquisadores abaixo), então a própria
-  // linha selecionada já diz se tem perfil ou não.
-  const perfilFoco = pesquisadores.find((perfil) => perfil.idUsuario === chaveFoco) ?? null;
-  const usuarioFoco = perfilFoco?.usuario ?? pesquisadorSelecionado ?? null;
-  const jaTemPerfil = chaveFoco === null ? undefined : Boolean(perfilFoco?.statusPesquisador);
 
   // Lista TODOS os usuários (23-08-2026, pedido do Lucas: "não deve
   // aparecer só Pesquisadores"), não só quem já tem perfil_pesquisador -
@@ -591,8 +633,8 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
   // aparecem naturalmente no Registro de Chamadas, sem precisar duplicar a
   // UI. Links acadêmicos e Score saíram daqui (08-09-2026) - viraram
   // responsabilidade própria de <PainelLinksAcademicos>/<PainelScore>, que
-  // carregam pelo idUsuario que recebem (chaveFoco aqui embaixo,
-  // idUsuarioEditandoPerfil dentro do modal).
+  // carregam pelo idUsuario que recebem (idUsuarioEditandoPerfil dentro do
+  // modal, perfilConsultado.idUsuario no Consultar).
 
   // Catálogo de tipo de link, uma vez só, ao montar - não depende mais de
   // ninguém selecionado (era "qualquer ator vivo", só pra ter alguém pra
@@ -605,9 +647,21 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const escolherPesquisador = (perfil: PesquisadorLinha) => {
-    selecionarPesquisador({ idUsuario: perfil.idUsuario, nome: perfil.usuario.nome, email: perfil.usuario.email });
-  };
+  // Catálogo de papéis, uma vez só ao montar (12-09-2026, mesmo padrão de
+  // tiposLink acima) - alimenta o seletor "Atribuir papel" dentro do modal
+  // de Alterar (seção "Papéis", trazida de alterar-usuario.tsx).
+  useEffect(() => {
+    chamarERegistrar<PapelResponse[]>('/papel')
+      .then(setCatalogoPapeis)
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Só os papéis que este usuário AINDA não tem (mesmo filtro de
+  // alterar-usuario.tsx).
+  const papeisDisponiveis = catalogoPapeis.filter(
+    (papel) => !papeisAtuaisEdicao.some((atual) => atual.idPapel === papel.idPapel),
+  );
 
   // CORRIGIDO (07-09-2026): chamava POST /perfil-pesquisador (self-service,
   // sempre cria em nome de quem está logado) - promover outro usuário,
@@ -615,12 +669,21 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
   // existe um registro"), nunca criava nada de verdade pro usuário
   // escolhido. Agora usa POST /perfil-pesquisador/:id (endpoint de
   // suporte/admin, ver perfil-pesquisador.service.create-para-outro.ts).
+  //
+  // CORRIGIDO (12-09-2026): usava `chaveFoco` (o antigo "Escolher"),
+  // agora usa `idUsuarioEditandoPerfil` - o formulário vive dentro do
+  // modal de Alterar (ver JSX abaixo), não mais num painel solto embaixo
+  // da tabela. Ao criar com sucesso, `formEdicaoPerfil` passa a não-nulo
+  // na hora (sem esperar carregarPesquisadores() recarregar a lista
+  // inteira): o modal troca sozinho do formulário de criação pras seções
+  // de Perfil de Pesquisador/Links/Moderação, sem precisar fechar e abrir
+  // de novo.
   const criarPerfil = async () => {
-    if (chaveFoco === null) return;
+    if (idUsuarioEditandoPerfil === null) return;
     setCriando(true);
     setErroCriar(null);
     try {
-      await chamarERegistrar<PerfilPesquisadorResponse>(`/perfil-pesquisador/${chaveFoco}`, {
+      const perfilCriado = await chamarERegistrar<PerfilPesquisadorResponse>(`/perfil-pesquisador/${idUsuarioEditandoPerfil}`, {
         method: 'POST',
         body: JSON.stringify({
           cpf: form.cpf,
@@ -629,6 +692,12 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
           tituloAcademico: form.tituloAcademico,
         }),
       });
+      setFormEdicaoPerfil({
+        tipoVinculo: perfilCriado.tipoVinculo,
+        vinculoInstitucional: perfilCriado.vinculoInstitucional ?? '',
+        tituloAcademico: perfilCriado.tituloAcademico,
+      });
+      mostrar('Perfil de Pesquisador criado com sucesso.', `ID: ${idUsuarioEditandoPerfil} agora é pesquisador`);
       carregarPesquisadores();
     } catch (erro) {
       setErroCriar(erro instanceof Error ? erro.message : 'Falha ao criar perfil.');
@@ -637,32 +706,252 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
     }
   };
 
+  // Abre o modal de Alterar já carregando TUDO (12-09-2026: antes só
+  // carregava vínculo/título/CPF do perfil - agora também busca avatar e
+  // papéis atuais, mesmo padrão de alterar-usuario.tsx). `perfil.
+  // statusPesquisador` decide se mostra as seções de pesquisador ou o
+  // formulário de criação (`formEdicaoPerfil` vira `null` nesse caso).
   const iniciarEdicaoPerfil = (perfil: PesquisadorLinha) => {
     setIdUsuarioEditandoPerfil(perfil.idUsuario);
-    setFormEdicaoPerfil({
-      tipoVinculo: perfil.tipoVinculo ?? 'institucional',
-      vinculoInstitucional: perfil.vinculoInstitucional ?? '',
-      tituloAcademico: perfil.tituloAcademico ?? 'mestre',
-    });
+    setFormEdicaoPerfil(
+      perfil.statusPesquisador
+        ? {
+            tipoVinculo: perfil.tipoVinculo ?? 'institucional',
+            vinculoInstitucional: perfil.vinculoInstitucional ?? '',
+            tituloAcademico: perfil.tituloAcademico ?? 'mestre',
+          }
+        : null,
+    );
     setCpfCorrecao('');
+    setForm({ cpf: '', tipoVinculo: 'institucional', vinculoInstitucional: '', tituloAcademico: 'mestre' });
+    setErroCriar(null);
+    limparErroModal();
+
+    setNomeEdicao(perfil.usuario.nome);
+    setNovaSenhaEdicao('');
+    setAvatarUrlEdicao(null);
+    setIdImagemPerfilNovoEdicao(undefined);
+    setAvatarUrlNovoEdicao(null);
+    setPapeisAtuaisEdicao([]);
+
+    arquivoApi
+      .buscarAvatarPorUsuario(perfil.idUsuario)
+      .then((avatar) => setAvatarUrlEdicao(avatar.url))
+      .catch(() => {});
+    chamarERegistrar<UsuarioPapelResponse[]>(`/usuario-papel/${perfil.idUsuario}`)
+      .then(setPapeisAtuaisEdicao)
+      .catch(() => {});
   };
 
-  // PATCH /perfil-pesquisador/:id (vínculo/título) - endpoint já existia,
-  // só nunca tinha tela nenhuma chamando ele (nem aqui, nem no painel real).
+  // Salva a conta inteira (12-09-2026: ERA só PATCH /perfil-pesquisador -
+  // agora também PATCH /usuario, trazido de alterar-usuario.tsx). O PATCH
+  // de perfil só roda se a pessoa já É pesquisadora (`formEdicaoPerfil`
+  // não-nulo) - quem ainda não é usa o formulário "Criar Perfil" (função
+  // `criarPerfil`, botão próprio, não faz parte deste "Salvar").
   const salvarEdicaoPerfil = async () => {
-    if (!formEdicaoPerfil || idUsuarioEditandoPerfil === null) return;
-    await chamarERegistrar<void>(`/perfil-pesquisador/${idUsuarioEditandoPerfil}`, {
-      method: 'PATCH',
-      body: JSON.stringify({
-        tipoVinculo: formEdicaoPerfil.tipoVinculo,
-        ...(formEdicaoPerfil.tipoVinculo === 'institucional'
-          ? { vinculoInstitucional: formEdicaoPerfil.vinculoInstitucional }
-          : {}),
-        tituloAcademico: formEdicaoPerfil.tituloAcademico,
-      }),
-    }).catch(() => {});
-    setIdUsuarioEditandoPerfil(null);
-    carregarPesquisadores();
+    if (idUsuarioEditandoPerfil === null) return;
+    limparErroModal();
+    try {
+      await chamarERegistrar<UsuarioResponse>(`/usuario/${idUsuarioEditandoPerfil}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          nome: nomeEdicao,
+          ...(novaSenhaEdicao ? { novaSenha: novaSenhaEdicao } : {}),
+          ...(idImagemPerfilNovoEdicao !== undefined ? { idImagemPerfil: idImagemPerfilNovoEdicao } : {}),
+        }),
+      });
+      if (formEdicaoPerfil) {
+        await chamarERegistrar<void>(`/perfil-pesquisador/${idUsuarioEditandoPerfil}`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            tipoVinculo: formEdicaoPerfil.tipoVinculo,
+            ...(formEdicaoPerfil.tipoVinculo === 'institucional'
+              ? { vinculoInstitucional: formEdicaoPerfil.vinculoInstitucional }
+              : {}),
+            tituloAcademico: formEdicaoPerfil.tituloAcademico,
+          }),
+        });
+      }
+      mostrar('Usuário alterado com sucesso.', `ID: ${idUsuarioEditandoPerfil} foi alterado`);
+      setIdUsuarioEditandoPerfil(null);
+      carregarPesquisadores();
+    } catch (erro) {
+      reportarErroModal(erro);
+    }
+  };
+
+  const aoAtribuirPapel = async () => {
+    if (!idPapelParaAtribuir || idUsuarioEditandoPerfil === null) return;
+    limparErroModal();
+    setAtribuindoPapel(true);
+    try {
+      const papelEscolhido = catalogoPapeis.find((papel) => papel.idPapel === Number(idPapelParaAtribuir));
+      await chamarERegistrar<void>('/usuario-papel', {
+        method: 'POST',
+        body: JSON.stringify({ idUsuario: idUsuarioEditandoPerfil, idPapel: Number(idPapelParaAtribuir) }),
+      });
+      const papeisAtualizados = await chamarERegistrar<UsuarioPapelResponse[]>(`/usuario-papel/${idUsuarioEditandoPerfil}`);
+      setPapeisAtuaisEdicao(papeisAtualizados);
+      setIdPapelParaAtribuir('');
+      mostrar('Papel atribuído com sucesso.', `ID: ${idUsuarioEditandoPerfil} agora tem o papel "${papelEscolhido?.nome}"`);
+      carregarPesquisadores();
+    } catch (erro) {
+      reportarErroModal(erro);
+    } finally {
+      setAtribuindoPapel(false);
+    }
+  };
+
+  const aoSuspenderPapel = async (papel: UsuarioPapelResponse, dias: number) => {
+    if (idUsuarioEditandoPerfil === null) return;
+    limparErroModal();
+    setEnviandoSuspensaoPapel(papel.idPapel);
+    try {
+      // eslint-disable-next-line react-hooks/purity
+      const ate = new Date(Date.now() + dias * 24 * 60 * 60 * 1000).toISOString();
+      await chamarERegistrar<void>(`/usuario-papel/${idUsuarioEditandoPerfil}/${papel.idPapel}/suspender`, {
+        method: 'POST',
+        body: JSON.stringify({ ate }),
+      });
+      const papeisAtualizados = await chamarERegistrar<UsuarioPapelResponse[]>(`/usuario-papel/${idUsuarioEditandoPerfil}`);
+      setPapeisAtuaisEdicao(papeisAtualizados);
+      setPapelSuspendendoId(null);
+      mostrar('Papel suspenso com sucesso.', `"${papel.nomePapel}" suspenso até ${formatarData(ate)}`);
+    } catch (erro) {
+      reportarErroModal(erro);
+    } finally {
+      setEnviandoSuspensaoPapel(null);
+    }
+  };
+
+  const aoReativarPapel = async (papel: UsuarioPapelResponse) => {
+    if (idUsuarioEditandoPerfil === null) return;
+    limparErroModal();
+    setReativandoPapel(papel.idPapel);
+    try {
+      await chamarERegistrar<void>(`/usuario-papel/${idUsuarioEditandoPerfil}/${papel.idPapel}/revogar-suspensao`, {
+        method: 'POST',
+      });
+      const papeisAtualizados = await chamarERegistrar<UsuarioPapelResponse[]>(`/usuario-papel/${idUsuarioEditandoPerfil}`);
+      setPapeisAtuaisEdicao(papeisAtualizados);
+      mostrar('Papel reativado com sucesso.', `"${papel.nomePapel}" voltou a valer normalmente`);
+    } catch (erro) {
+      reportarErroModal(erro);
+    } finally {
+      setReativandoPapel(null);
+    }
+  };
+
+  const aoRevogarPapel = async (papel: UsuarioPapelResponse) => {
+    if (idUsuarioEditandoPerfil === null) return;
+    limparErroModal();
+    setRevogandoPapel(papel.idPapel);
+    try {
+      await chamarERegistrar<void>(`/usuario-papel/${idUsuarioEditandoPerfil}/${papel.idPapel}`, { method: 'DELETE' });
+      const papeisAtualizados = await chamarERegistrar<UsuarioPapelResponse[]>(`/usuario-papel/${idUsuarioEditandoPerfil}`);
+      setPapeisAtuaisEdicao(papeisAtualizados);
+      mostrar('Papel revogado com sucesso.', `ID: ${idUsuarioEditandoPerfil} perdeu o papel "${papel.nomePapel}"`);
+      carregarPesquisadores();
+    } catch (erro) {
+      reportarErroModal(erro);
+    } finally {
+      setRevogandoPapel(null);
+    }
+  };
+
+  // liberar_bloqueio_login() - mesmo botão/endpoint de alterar-usuario.tsx,
+  // trazido pra dentro deste modal (12-09-2026).
+  const aoDesbloquear = async () => {
+    if (idUsuarioEditandoPerfil === null) return;
+    limparErroModal();
+    setDesbloqueando(true);
+    try {
+      await chamarERegistrar<void>(`/usuario/${idUsuarioEditandoPerfil}/desbloquear`, { method: 'POST' });
+      mostrar('Login desbloqueado com sucesso.', `ID: ${idUsuarioEditandoPerfil} pode tentar logar novamente`);
+    } catch (erro) {
+      reportarErroModal(erro);
+    } finally {
+      setDesbloqueando(false);
+    }
+  };
+
+  const aoRedefinirSenhaDev = async () => {
+    if (idUsuarioEditandoPerfil === null) return;
+    limparErroModal();
+    setRedefinindoSenhaDev(true);
+    try {
+      await chamarERegistrar<void>(`/usuario/${idUsuarioEditandoPerfil}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ novaSenha: SENHA_DEV }),
+      });
+      mostrar('Senha redefinida com sucesso.', `ID: ${idUsuarioEditandoPerfil} teve a senha redefinida para "${SENHA_DEV}"`);
+    } catch (erro) {
+      reportarErroModal(erro);
+    } finally {
+      setRedefinindoSenhaDev(false);
+    }
+  };
+
+  // Consultar - mesmo botão de olho / setinha de logins de
+  // consultar-usuario.tsx, trazidos pra dentro deste modal (12-09-2026).
+  const abrirConsulta = (perfil: PesquisadorLinha) => {
+    setPerfilConsultado(perfil);
+    setAvatarConsultado(null);
+    setPapeisConsultado(null);
+    setLoginsConsultado(null);
+    setLoginsAbertosConsultado(false);
+    arquivoApi
+      .buscarAvatarPorUsuario(perfil.idUsuario)
+      .then((avatar) => setAvatarConsultado(avatar.url))
+      .catch(() => {});
+    chamarERegistrar<UsuarioPapelResponse[]>(`/usuario-papel/${perfil.idUsuario}`)
+      .then(setPapeisConsultado)
+      .catch(() => setPapeisConsultado([]));
+  };
+
+  const aoAlternarLoginsConsultado = async () => {
+    if (loginsAbertosConsultado) {
+      setLoginsAbertosConsultado(false);
+      return;
+    }
+    setLoginsAbertosConsultado(true);
+    if (loginsConsultado !== null || !perfilConsultado) return;
+    setCarregandoLoginsConsultado(true);
+    try {
+      const resultado = await chamarERegistrar<UsuarioResponseLoginHistorico[]>(`/usuario/${perfilConsultado.idUsuario}/logins`);
+      setLoginsConsultado(resultado);
+    } catch {
+      // Leitura auxiliar (mesmo padrão do resto do arquivo) - falha aqui
+      // não deve travar o resto do modal de Consultar.
+    } finally {
+      setCarregandoLoginsConsultado(false);
+    }
+  };
+
+  const abrirExclusao = (perfil: PesquisadorLinha) => {
+    setUsuarioExcluindo(perfil);
+    setConfirmacaoExclusaoUsuario('');
+    limparErroModal();
+  };
+
+  // excluir_conta_usuario() - mesma exclusão lógica de excluir-usuario.tsx
+  // (usuario.deletado = TRUE, login para de funcionar, registro continua
+  // pra auditoria/LGPD), confirmada digitando o e-mail.
+  const excluirUsuario = async () => {
+    if (!usuarioExcluindo) return;
+    limparErroModal();
+    setExcluindoUsuario(true);
+    try {
+      await chamarERegistrar<void>(`/usuario/${usuarioExcluindo.idUsuario}`, { method: 'DELETE' });
+      mostrar('Usuário excluído com sucesso.', `ID: ${usuarioExcluindo.idUsuario} foi excluído`);
+      setUsuarioExcluindo(null);
+      setConfirmacaoExclusaoUsuario('');
+      carregarPesquisadores();
+    } catch (erro) {
+      reportarErroModal(erro);
+    } finally {
+      setExcluindoUsuario(false);
+    }
   };
 
   // PATCH /perfil-pesquisador/:id/cpf (07-09-2026) - endpoint novo, gateado
@@ -722,11 +1011,6 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
       <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
         <h3 className="subtitulo">Usuários</h3>
         <div className="flex items-center gap-3 flex-wrap">
-          {pesquisadorSelecionado && (
-            <button type="button" className="btn btn-secondary text-xs" onClick={limparPesquisadorSelecionado}>
-              <i className="fa-solid fa-xmark"></i> Limpar seleção
-            </button>
-          )}
           <label className="text-xs flex items-center gap-1.5">
             <input
               type="checkbox"
@@ -826,38 +1110,30 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
             <th>título</th>
             <th className="crud-tabela__celula--centralizada">status</th>
             <th className="crud-tabela__celula--centralizada">score</th>
-            <th className="crud-tabela__celula--centralizada">Escolher</th>
             <th className="crud-tabela__celula--centralizada">Ações</th>
           </tr>
         </thead>
         <tbody>
           {carregandoLista && (
             <tr>
-              <td colSpan={8} className="texto-fraco">Carregando...</td>
+              <td colSpan={7} className="texto-fraco">Carregando...</td>
             </tr>
           )}
           {!carregandoLista && erroListagem && (
             <tr>
-              <td colSpan={8} className="texto-erro font-bold">{erroListagem}</td>
+              <td colSpan={7} className="texto-erro font-bold">{erroListagem}</td>
             </tr>
           )}
           {!carregandoLista && !erroListagem && pesquisadoresPagina.length === 0 && (
             <tr>
-              <td colSpan={8} className="texto-fraco">{filtroTexto ? 'Nenhum registro bate com o filtro.' : 'Nenhum registro.'}</td>
+              <td colSpan={7} className="texto-fraco">{filtroTexto ? 'Nenhum registro bate com o filtro.' : 'Nenhum registro.'}</td>
             </tr>
           )}
           {!carregandoLista &&
             pesquisadoresPagina.map((perfil) => {
               const bloqueado = PESQUISADOR_BLOQUEADO(perfil.idUsuario);
-              // Só UM pesquisador selecionado por vez (pedido do Lucas,
-              // 23-08-2026: "clicar em outro a seleção troca") - usado
-              // por T2 (Bancada da Campanha) pra filtrar por dono.
-              const selecionado = perfil.idUsuario === chaveFoco;
               return (
-                <tr
-                  key={perfil.idUsuario}
-                  className={bloqueado ? 'texto-fraco' : selecionado ? 'crud-tabela__linha--selecionada' : undefined}
-                >
+                <tr key={perfil.idUsuario} className={bloqueado ? 'texto-fraco' : undefined}>
                   <td className="crud-tabela__coluna-id crud-tabela__celula--centralizada" style={bloqueado ? { textDecoration: 'line-through' } : undefined}>
                     {perfil.idUsuario}
                   </td>
@@ -875,34 +1151,20 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
                     {perfil.statusPesquisador ? ROTULO_STATUS_PESQUISADOR[perfil.statusPesquisador] : '-'}
                   </td>
                   <td className="crud-tabela__celula--centralizada">{perfil.scoreAtual ?? '-'}</td>
-                  <td className="crud-tabela__celula--centralizada">
-                    {bloqueado ? (
-                      <span title={motivoBloqueioPesquisador()}>
-                        <i className="fa-solid fa-lock"></i>
-                      </span>
-                    ) : selecionado ? (
-                      <span className="texto-sucesso font-bold text-xs">
-                        <i className="fa-solid fa-circle-check"></i> Selecionado
-                      </span>
-                    ) : (
-                      <button
-                        type="button"
-                        className="crud-tabela__acao crud-tabela__acao--escolher"
-                        onClick={() => escolherPesquisador(perfil)}
-                        aria-label="Escolher"
-                      >
-                        <i className="fa-solid fa-user-check"></i>
-                        <span className="crud-tabela__acao-texto">Escolher</span>
-                        <span className="crud-tabela__acao-dica" role="tooltip">Escolher</span>
-                      </button>
-                    )}
-                  </td>
+                  {/* CORRIGIDO (12-09-2026, pedido do Lucas: "abandonar
+                      completamente esta coluna Escolher") - Alterar/
+                      Consultar deixaram de depender de `statusPesquisador`:
+                      TODO usuário (não só quem já é pesquisador) pode ser
+                      alterado/consultado por aqui agora - o modal de
+                      Alterar é quem decide, por dentro, se mostra as
+                      seções de pesquisador ou o formulário "Criar Perfil
+                      Pesquisador" (ver iniciarEdicaoPerfil). */}
                   <td className="crud-tabela__celula--centralizada">
                     {bloqueado ? (
                       <span title={motivoBloqueioPesquisador()}>
                         <i className="fa-solid fa-lock"></i> bloqueado
                       </span>
-                    ) : perfil.statusPesquisador ? (
+                    ) : (
                       <div className="crud-tabela__acoes">
                         <button
                           type="button"
@@ -917,16 +1179,24 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
                         <button
                           type="button"
                           className="crud-tabela__acao"
-                          onClick={() => setPerfilConsultado(perfil)}
+                          onClick={() => abrirConsulta(perfil)}
                           aria-label="Consultar"
                         >
                           <i className="fa-solid fa-eye"></i>
                           <span className="crud-tabela__acao-texto">Consultar</span>
                           <span className="crud-tabela__acao-dica" role="tooltip">Consultar</span>
                         </button>
+                        <button
+                          type="button"
+                          className="crud-tabela__acao crud-tabela__acao--excluir"
+                          onClick={() => abrirExclusao(perfil)}
+                          aria-label="Excluir"
+                        >
+                          <i className="fa-solid fa-trash"></i>
+                          <span className="crud-tabela__acao-texto">Excluir</span>
+                          <span className="crud-tabela__acao-dica" role="tooltip">Excluir</span>
+                        </button>
                       </div>
-                    ) : (
-                      <span className="texto-fraco text-xs">-</span>
                     )}
                   </td>
                 </tr>
@@ -990,62 +1260,161 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
           continuam fora daqui, como sempre foram (decisão do Lucas). Se
           ficar bom, o Lucas pretende levar este mesmo tratamento (modal em
           vez de página) pra Consultar/Alterar Usuário de verdade depois. */}
-      {perfilConsultado && (
-        <ModalFicha
-          titulo={perfilConsultado.usuario.nome}
-          subtitulo={perfilConsultado.usuario.email}
-          avatar={<AvatarUsuario nome={perfilConsultado.usuario.nome} tamanho="lg" />}
-          aoFechar={() => setPerfilConsultado(null)}
-          rodape={
-            <button type="button" onClick={() => setPerfilConsultado(null)} className="btn btn-secondary w-full">
-              Fechar
-            </button>
-          }
-        >
-          <SecaoFicha titulo="Perfil de Pesquisador">
-            <CampoFicha rotulo="CPF" valor={formatarCpfOuMotivoOculto(perfilConsultado.cpf)} />
-            <CampoFicha
-              rotulo="Status"
-              valor={
-                perfilConsultado.statusPesquisador && (
-                  <span className={'badge ' + classeBadgeStatusPesquisador(perfilConsultado.statusPesquisador)}>
-                    {ROTULO_STATUS_PESQUISADOR[perfilConsultado.statusPesquisador]}
-                  </span>
-                )
-              }
-            />
-            <CampoFicha
-              rotulo="Título acadêmico"
-              valor={perfilConsultado.tituloAcademico ? ROTULO_TITULO_ACADEMICO[perfilConsultado.tituloAcademico] : undefined}
-            />
-            <CampoFicha
-              rotulo="Tipo de vínculo"
-              valor={perfilConsultado.tipoVinculo ? ROTULO_TIPO_VINCULO[perfilConsultado.tipoVinculo] : undefined}
-            />
-            <CampoFicha rotulo="Vínculo institucional" valor={perfilConsultado.vinculoInstitucional} />
-            <CampoFicha rotulo="Score atual" valor={perfilConsultado.scoreAtual} />
-            <CampoFicha
-              rotulo="Ativado em"
-              valor={perfilConsultado.ativadoEm ? formatarDataHora(perfilConsultado.ativadoEm) : undefined}
-            />
-          </SecaoFicha>
+      {perfilConsultado && (() => {
+        const loginsAnterioresConsultado = loginsConsultado?.slice(1) ?? [];
+        return (
+          <ModalFicha
+            titulo={perfilConsultado.usuario.nome}
+            subtitulo={perfilConsultado.usuario.email}
+            avatar={
+              <div className="relative shrink-0">
+                <AvatarUsuario nome={perfilConsultado.usuario.nome} foto={avatarConsultado} tamanho="lg" />
+                {avatarConsultado && (
+                  <div className="absolute bottom-0 right-0">
+                    <BotaoVerFotoPerfil url={avatarConsultado} badge />
+                  </div>
+                )}
+              </div>
+            }
+            aoFechar={() => setPerfilConsultado(null)}
+            rodape={
+              <button type="button" onClick={() => setPerfilConsultado(null)} className="btn btn-secondary w-full">
+                Fechar
+              </button>
+            }
+          >
+            {/* Dados da conta/Acesso/Papéis (12-09-2026, pedido do Lucas:
+                trazer o CRUD de Usuário pra dentro deste modal) - mesmo
+                conteúdo de consultar-usuario.tsx, só que buscado sob
+                demanda ao abrir (ver abrirConsulta), não no carregamento
+                da tabela inteira. */}
+            <div className="grid lg:grid-cols-3 gap-6 items-start">
+              <div className="lg:col-span-2 space-y-6">
+                <SecaoFicha titulo="Dados da conta">
+                  <CampoFicha rotulo="id" valor={perfilConsultado.usuario.idUsuario} />
+                  <CampoFicha
+                    rotulo="Foto de perfil"
+                    valor={
+                      avatarConsultado ? (
+                        <span className="inline-flex items-center gap-2">
+                          <BotaoVerFotoPerfil url={avatarConsultado} />
+                          Foto cadastrada
+                        </span>
+                      ) : (
+                        'Sem foto (usa iniciais)'
+                      )
+                    }
+                  />
+                  <CampoFicha rotulo="Criado em" valor={formatarData(perfilConsultado.usuario.criadoEm)} />
+                  <CampoFicha rotulo="E-mail verificado" valor={perfilConsultado.usuario.emailVerificado ? 'Sim' : 'Não'} />
+                </SecaoFicha>
 
-          {/* Score "duplicado" pra dentro do Consultar (08-09-2026, pedido do
-              Lucas) - mesmo card de baixo, agora também aqui, pra comparar
-              os dois lugares antes de decidir (o card solto embaixo do Campo
-              de Testes vai sumir em breve, ficando só dentro dos modais). */}
-          <div className="border-t borda-padrao"></div>
-          <PainelScore auth={auth} idUsuario={perfilConsultado.idUsuario} tituloComoSecaoFicha />
-        </ModalFicha>
-      )}
+                <SecaoFicha titulo="Acesso">
+                  <CampoFicha
+                    rotulo="Último login em"
+                    largura="cheia"
+                    valor={perfilConsultado.usuario.ultimoLoginEm ? formatarDataHora(perfilConsultado.usuario.ultimoLoginEm) : 'Nunca'}
+                    acao={
+                      perfilConsultado.usuario.ultimoLoginEm && (
+                        <button
+                          type="button"
+                          onClick={aoAlternarLoginsConsultado}
+                          aria-label="Ver logins anteriores"
+                          title="Ver logins anteriores"
+                          className="texto-fraco hover-texto-forte transition-colors shrink-0"
+                        >
+                          <i className={'fa-solid fa-chevron-down transition-transform' + (loginsAbertosConsultado ? ' rotate-180' : '')}></i>
+                        </button>
+                      )
+                    }
+                  >
+                    {loginsAbertosConsultado && (
+                      <div className="mt-2 rounded-lg border borda-padrao fundo-sutil p-3 text-sm max-h-64 overflow-y-auto">
+                        {carregandoLoginsConsultado ? (
+                          <p className="texto-fraco">Carregando...</p>
+                        ) : loginsAnterioresConsultado.length === 0 ? (
+                          <p className="texto-fraco">Nenhum login anterior registrado.</p>
+                        ) : (
+                          <ul className="space-y-1">
+                            {loginsAnterioresConsultado.map((login, indice) => (
+                              <li key={indice} className="texto-padrao">
+                                {formatarDataHora(login.logadoEm)}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    )}
+                  </CampoFicha>
+                </SecaoFicha>
 
-      {idUsuarioEditandoPerfil !== null && formEdicaoPerfil && (() => {
+                {perfilConsultado.statusPesquisador && (
+                  <SecaoFicha titulo="Perfil de Pesquisador">
+                    <CampoFicha rotulo="CPF" valor={formatarCpfOuMotivoOculto(perfilConsultado.cpf)} />
+                    <CampoFicha
+                      rotulo="Status"
+                      valor={
+                        <span className={'badge ' + classeBadgeStatusPesquisador(perfilConsultado.statusPesquisador)}>
+                          {ROTULO_STATUS_PESQUISADOR[perfilConsultado.statusPesquisador]}
+                        </span>
+                      }
+                    />
+                    <CampoFicha
+                      rotulo="Título acadêmico"
+                      valor={perfilConsultado.tituloAcademico ? ROTULO_TITULO_ACADEMICO[perfilConsultado.tituloAcademico] : undefined}
+                    />
+                    <CampoFicha
+                      rotulo="Tipo de vínculo"
+                      valor={perfilConsultado.tipoVinculo ? ROTULO_TIPO_VINCULO[perfilConsultado.tipoVinculo] : undefined}
+                    />
+                    <CampoFicha rotulo="Vínculo institucional" valor={perfilConsultado.vinculoInstitucional} />
+                    <CampoFicha rotulo="Score atual" valor={perfilConsultado.scoreAtual} />
+                    <CampoFicha
+                      rotulo="Ativado em"
+                      valor={perfilConsultado.ativadoEm ? formatarDataHora(perfilConsultado.ativadoEm) : undefined}
+                    />
+                  </SecaoFicha>
+                )}
+              </div>
+
+              <div className="space-y-6">
+                <SecaoFicha titulo="Papéis">
+                  <CampoFicha
+                    rotulo="Papéis atribuídos"
+                    largura="cheia"
+                    valor={
+                      papeisConsultado === null
+                        ? undefined
+                        : papeisConsultado.length === 0
+                          ? null
+                          : papeisConsultado.map((papel) => papel.nomePapel).join(', ')
+                    }
+                  />
+                </SecaoFicha>
+              </div>
+            </div>
+
+            {/* Score "duplicado" pra dentro do Consultar (08-09-2026, pedido do
+                Lucas) - mesmo card de baixo, agora também aqui, pra comparar
+                os dois lugares antes de decidir (o card solto embaixo do Campo
+                de Testes vai sumir em breve, ficando só dentro dos modais). */}
+            {perfilConsultado.statusPesquisador && (
+              <>
+                <div className="border-t borda-padrao"></div>
+                <PainelScore auth={auth} idUsuario={perfilConsultado.idUsuario} />
+              </>
+            )}
+          </ModalFicha>
+        );
+      })()}
+
+      {idUsuarioEditandoPerfil !== null && (() => {
         const perfilEmEdicao = pesquisadores.find((perfil) => perfil.idUsuario === idUsuarioEditandoPerfil) ?? null;
         // Sempre recarrega a lista ao fechar (X, backdrop ou Cancelar) - não
         // só depois de "Salvar" (achado 08-09-2026, revisão pós-rodada):
-        // SecaoModeracaoPesquisador chama `perfilPesquisadorApi` direto, sem
-        // avisar este componente pai - suspender/reativar por lá deixava a
-        // tabela (e um Consultar aberto depois) com o status ANTIGO até
+        // SecaoModeracaoPesquisador/SecaoModeracao chamam suas APIs direto,
+        // sem avisar este componente pai - suspender/reativar por lá deixava
+        // a tabela (e um Consultar aberto depois) com o status ANTIGO até
         // alguma outra ação disparar carregarPesquisadores() por acaso.
         const fecharModal = () => {
           setIdUsuarioEditandoPerfil(null);
@@ -1055,7 +1424,18 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
           <ModalFicha
             titulo={perfilEmEdicao?.usuario.nome ?? `#${idUsuarioEditandoPerfil}`}
             subtitulo={perfilEmEdicao?.usuario.email}
-            avatar={<AvatarUsuario nome={perfilEmEdicao?.usuario.nome} tamanho="lg" />}
+            avatar={
+              <SeletorFotoPerfil
+                authFetch={auth.authFetch}
+                nome={perfilEmEdicao?.usuario.nome}
+                url={idImagemPerfilNovoEdicao === undefined ? avatarUrlEdicao : avatarUrlNovoEdicao}
+                tamanho="lg"
+                aoAlterar={(idArquivo, novaUrl) => {
+                  setIdImagemPerfilNovoEdicao(idArquivo);
+                  setAvatarUrlNovoEdicao(novaUrl);
+                }}
+              />
+            }
             aoFechar={fecharModal}
             rodape={
               <div className="flex gap-3 max-w-sm ml-auto">
@@ -1068,99 +1448,253 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
               </div>
             }
           >
+            {erroModal && <p className="texto-erro text-sm font-bold text-center">{erroModal}</p>}
+
             <div className="grid lg:grid-cols-3 gap-6 items-start">
               <div className="lg:col-span-2 space-y-6">
-                <SecaoFicha titulo="Perfil de Pesquisador">
-                  <div>
-                    <label className="rotulo-campo">Tipo de vínculo</label>
-                    <select
-                      value={formEdicaoPerfil.tipoVinculo}
-                      onChange={(evento) => {
-                        if (ehTipoVinculo(evento.target.value)) {
-                          setFormEdicaoPerfil({ ...formEdicaoPerfil, tipoVinculo: evento.target.value });
-                        }
-                      }}
+                {/* Dados da conta/Acesso (12-09-2026, pedido do Lucas: trazer
+                    o CRUD de Usuário pra dentro deste modal) - mesmo
+                    conteúdo de alterar-usuario.tsx (nome/senha/desbloquear),
+                    agora batizando o "Salvar" único do rodapé junto com o
+                    Perfil de Pesquisador logo abaixo. */}
+                <SecaoFicha titulo="Dados da conta">
+                  <div className="sm:col-span-2">
+                    <label className="rotulo-campo">Nome</label>
+                    <input
+                      type="text"
+                      value={nomeEdicao}
+                      onChange={(evento) => setNomeEdicao(evento.target.value)}
                       className="input-padrao"
-                    >
-                      {TIPOS_VINCULO.map((tipo) => (
-                        <option key={tipo} value={tipo}>
-                          {tipo}
-                        </option>
-                      ))}
-                    </select>
+                    />
                   </div>
-                  {formEdicaoPerfil.tipoVinculo === 'institucional' && (
-                    <div>
-                      <label className="rotulo-campo">Vínculo institucional</label>
-                      <input
-                        type="text"
-                        value={formEdicaoPerfil.vinculoInstitucional}
-                        onChange={(evento) =>
-                          setFormEdicaoPerfil({ ...formEdicaoPerfil, vinculoInstitucional: evento.target.value })
-                        }
-                        className="input-padrao"
-                      />
-                    </div>
-                  )}
-                  <div>
-                    <label className="rotulo-campo">Título acadêmico</label>
-                    <select
-                      value={formEdicaoPerfil.tituloAcademico}
-                      onChange={(evento) => {
-                        if (ehTituloAcademico(evento.target.value)) {
-                          setFormEdicaoPerfil({ ...formEdicaoPerfil, tituloAcademico: evento.target.value });
-                        }
-                      }}
+                </SecaoFicha>
+
+                <SecaoFicha titulo="Acesso">
+                  <div className="sm:col-span-2">
+                    <label className="rotulo-campo">Nova senha (opcional)</label>
+                    <input
+                      type="password"
+                      value={novaSenhaEdicao}
+                      onChange={(evento) => setNovaSenhaEdicao(evento.target.value)}
                       className="input-padrao"
-                    >
-                      {TITULOS_ACADEMICOS.map((titulo) => (
-                        <option key={titulo} value={titulo}>
-                          {titulo}
-                        </option>
-                      ))}
-                    </select>
+                      placeholder="••••••••"
+                    />
                   </div>
 
-                  {/* CPF em endpoint separado de propósito (RF-017, ação de
-                      suporte/admin) - não faz parte do "Salvar" do rodapé. */}
-                  <div className="sm:col-span-2 flex items-end gap-2 rounded-lg border borda-forte p-3">
-                    <label className="text-xs flex-1 flex flex-col gap-1">
-                      Corrigir CPF (suporte/admin)
-                      <input
-                        type="text"
-                        value={formatarCpf(cpfCorrecao)}
-                        onChange={(evento) => setCpfCorrecao(evento.target.value.replace(/\D/g, '').slice(0, 11))}
-                        className="input-padrao"
-                      />
-                    </label>
+                  <div className="sm:col-span-2 flex items-center justify-between gap-3 rounded-lg border borda-forte p-3">
+                    <p className="text-xs texto-fraco">
+                      Zera o contador de tentativas de login falhas e libera a conta, caso esteja
+                      bloqueada temporariamente.
+                    </p>
                     <button
                       type="button"
+                      onClick={aoDesbloquear}
+                      disabled={desbloqueando}
                       className="btn btn-secondary shrink-0"
-                      disabled={!cpfCorrecao}
-                      onClick={salvarCorrecaoCpf}
                     >
-                      Salvar CPF
+                      {desbloqueando ? 'Desbloqueando...' : 'Desbloquear login'}
                     </button>
                   </div>
                 </SecaoFicha>
 
-                {/* Duplicado de propósito (08-09-2026, pedido do Lucas) - o
-                    mesmo card que já existe embaixo, agora também aqui
-                    dentro do Alterar. Os dois convivem até o Lucas
-                    perguntar pra Alexia qual lugar ela prefere. */}
-                <PainelLinksAcademicos
-                  auth={auth}
-                  idUsuario={idUsuarioEditandoPerfil}
-                  tiposLink={tiposLink}
-                  tituloComoSecaoFicha
-                />
+                {formEdicaoPerfil ? (
+                  <>
+                    <SecaoFicha titulo="Perfil de Pesquisador">
+                      <div>
+                        <label className="rotulo-campo">Tipo de vínculo</label>
+                        <select
+                          value={formEdicaoPerfil.tipoVinculo}
+                          onChange={(evento) => {
+                            if (ehTipoVinculo(evento.target.value)) {
+                              setFormEdicaoPerfil({ ...formEdicaoPerfil, tipoVinculo: evento.target.value });
+                            }
+                          }}
+                          className="input-padrao"
+                        >
+                          {TIPOS_VINCULO.map((tipo) => (
+                            <option key={tipo} value={tipo}>
+                              {tipo}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      {formEdicaoPerfil.tipoVinculo === 'institucional' && (
+                        <div>
+                          <label className="rotulo-campo">Vínculo institucional</label>
+                          <input
+                            type="text"
+                            value={formEdicaoPerfil.vinculoInstitucional}
+                            onChange={(evento) =>
+                              setFormEdicaoPerfil({ ...formEdicaoPerfil, vinculoInstitucional: evento.target.value })
+                            }
+                            className="input-padrao"
+                          />
+                        </div>
+                      )}
+                      <div>
+                        <label className="rotulo-campo">Título acadêmico</label>
+                        <select
+                          value={formEdicaoPerfil.tituloAcademico}
+                          onChange={(evento) => {
+                            if (ehTituloAcademico(evento.target.value)) {
+                              setFormEdicaoPerfil({ ...formEdicaoPerfil, tituloAcademico: evento.target.value });
+                            }
+                          }}
+                          className="input-padrao"
+                        >
+                          {TITULOS_ACADEMICOS.map((titulo) => (
+                            <option key={titulo} value={titulo}>
+                              {titulo}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
 
-                {/* Linha divisória (08-09-2026, pedido do Lucas: "insinuando
-                    que são coisas separadas") - Links acadêmicos e Moderação
-                    são conceitos bem diferentes, mesmo vizinhos no modal. */}
+                      {/* CORRIGIDO (13-09-2026, achado ao conferir a
+                          completude do modal, pedido do Lucas) - "Score
+                          atual" existia como campo simples na página real
+                          (alterar-usuario.tsx, só-leitura) e sumiu quando
+                          este bloco virou editável aqui; sem ele, só dava
+                          pra ver o score fechando este modal e abrindo o
+                          Consultar. O detalhe completo (tabela de
+                          dimensões) continua só no Consultar via
+                          <PainelScore>, de propósito - aqui é só o número,
+                          igual a página real sempre mostrou. */}
+                      <CampoFicha rotulo="Score atual" valor={perfilEmEdicao?.scoreAtual} />
+
+                      {/* CPF em endpoint separado de propósito (RF-017, ação
+                          de suporte/admin) - não faz parte do "Salvar" do
+                          rodapé. CORRIGIDO (13-09-2026, mesmo achado acima)
+                          - "CPF atual" não aparecia em lugar nenhum aqui, só
+                          o campo em branco de correção; sem ele não dava pra
+                          saber o que estava cadastrado antes de decidir
+                          corrigir. */}
+                      <CampoFicha rotulo="CPF atual" valor={formatarCpfOuMotivoOculto(perfilEmEdicao?.cpf)} largura="cheia" />
+                      <div className="sm:col-span-2 flex items-end gap-2 rounded-lg border borda-forte p-3">
+                        <label className="text-xs flex-1 flex flex-col gap-1">
+                          Corrigir CPF (suporte/admin)
+                          <input
+                            type="text"
+                            value={formatarCpf(cpfCorrecao)}
+                            onChange={(evento) => setCpfCorrecao(evento.target.value.replace(/\D/g, '').slice(0, 11))}
+                            className="input-padrao"
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          className="btn btn-secondary shrink-0"
+                          disabled={!cpfCorrecao}
+                          onClick={salvarCorrecaoCpf}
+                        >
+                          Salvar CPF
+                        </button>
+                      </div>
+                    </SecaoFicha>
+
+                    <PainelLinksAcademicos auth={auth} idUsuario={idUsuarioEditandoPerfil} tiposLink={tiposLink} />
+
+                    {/* Linha divisória (08-09-2026, pedido do Lucas:
+                        "insinuando que são coisas separadas") - Links
+                        acadêmicos e Moderação são conceitos bem diferentes,
+                        mesmo vizinhos no modal. */}
+                    <div className="border-t borda-padrao"></div>
+
+                    <SecaoModeracaoPesquisador auth={auth} idUsuario={idUsuarioEditandoPerfil} />
+                  </>
+                ) : (
+                  // Criar Perfil Pesquisador (12-09-2026: ERA o painel solto
+                  // embaixo da tabela, ligado ao antigo "Escolher" - agora
+                  // mora aqui, condicionado a esta pessoa ainda não ser
+                  // pesquisadora). Ao criar com sucesso, `criarPerfil` já
+                  // troca `formEdicaoPerfil` pra não-nulo sozinho, sem
+                  // precisar fechar/reabrir o modal.
+                  <SecaoFicha titulo="Criar Perfil Pesquisador">
+                    <div>
+                      <label className="rotulo-campo">CPF</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={formatarCpf(form.cpf)}
+                          onChange={(evento) => setForm({ ...form, cpf: evento.target.value.replace(/\D/g, '').slice(0, 11) })}
+                          className="input-padrao"
+                        />
+                        <button
+                          type="button"
+                          className="btn btn-secondary text-xs whitespace-nowrap"
+                          onClick={() => setForm({ ...form, cpf: gerarCpfValido() })}
+                        >
+                          Gerar CPF válido
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="rotulo-campo">Tipo de vínculo</label>
+                      <select
+                        value={form.tipoVinculo}
+                        onChange={(evento) => {
+                          if (ehTipoVinculo(evento.target.value)) {
+                            setForm({ ...form, tipoVinculo: evento.target.value });
+                          }
+                        }}
+                        className="input-padrao"
+                      >
+                        {TIPOS_VINCULO.map((tipo) => (
+                          <option key={tipo} value={tipo}>
+                            {tipo}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {form.tipoVinculo === 'institucional' && (
+                      <div>
+                        <label className="rotulo-campo">Instituição</label>
+                        <input
+                          type="text"
+                          value={form.vinculoInstitucional}
+                          onChange={(evento) => setForm({ ...form, vinculoInstitucional: evento.target.value })}
+                          className="input-padrao"
+                        />
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="rotulo-campo">Título acadêmico</label>
+                      <select
+                        value={form.tituloAcademico}
+                        onChange={(evento) => {
+                          if (ehTituloAcademico(evento.target.value)) {
+                            setForm({ ...form, tituloAcademico: evento.target.value });
+                          }
+                        }}
+                        className="input-padrao"
+                      >
+                        {TITULOS_ACADEMICOS.map((titulo) => (
+                          <option key={titulo} value={titulo}>
+                            {titulo}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        disabled={criando || !form.cpf}
+                        onClick={criarPerfil}
+                      >
+                        {criando ? 'Criando...' : 'Criar Perfil Pesquisador'}
+                      </button>
+                      {erroCriar && <p className="texto-erro text-xs mt-2">{erroCriar}</p>}
+                    </div>
+                  </SecaoFicha>
+                )}
+
                 <div className="border-t borda-padrao"></div>
 
-                <SecaoModeracaoPesquisador auth={auth} idUsuario={idUsuarioEditandoPerfil} />
+                <SecaoModeracao auth={auth} idUsuario={idUsuarioEditandoPerfil} />
               </div>
 
               <div className="space-y-6">
@@ -1168,131 +1702,225 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
                   <CampoSomenteLeitura rotulo="id" valor={idUsuarioEditandoPerfil} />
                   <CampoSomenteLeitura rotulo="E-mail" valor={perfilEmEdicao?.usuario.email} />
                   <CampoSomenteLeitura
-                    rotulo="Status atual"
-                    valor={
-                      perfilEmEdicao?.statusPesquisador
-                        ? ROTULO_STATUS_PESQUISADOR[perfilEmEdicao.statusPesquisador]
-                        : '-'
-                    }
+                    rotulo="E-mail verificado"
+                    valor={perfilEmEdicao?.usuario.emailVerificado ? 'Sim' : 'Não'}
                   />
+                  <CampoSomenteLeitura
+                    rotulo="Criado em"
+                    valor={perfilEmEdicao?.usuario.criadoEm && formatarData(perfilEmEdicao.usuario.criadoEm)}
+                  />
+                  {formEdicaoPerfil && (
+                    <CampoSomenteLeitura
+                      rotulo="Status (pesquisador)"
+                      valor={
+                        perfilEmEdicao?.statusPesquisador
+                          ? ROTULO_STATUS_PESQUISADOR[perfilEmEdicao.statusPesquisador]
+                          : '-'
+                      }
+                    />
+                  )}
                 </SecaoFicha>
+
+                {/* Papéis (12-09-2026, trazido de alterar-usuario.tsx) -
+                    mesmo widget de badges com suspender/reativar/revogar +
+                    atribuir novo, agora dentro deste modal também. */}
+                <SecaoFicha titulo="Papéis">
+                  <div className="sm:col-span-2">
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {papeisAtuaisEdicao.length === 0 && (
+                        <p className="text-xs texto-fraco">Nenhum papel atribuído ainda.</p>
+                      )}
+                      {papeisAtuaisEdicao.map((papel) => {
+                        const suspenso = papel.suspensoAte && new Date(papel.suspensoAte) > new Date();
+                        return (
+                          <span key={papel.idPapel} className="inline-flex flex-col items-start gap-1">
+                            <span
+                              className={
+                                'badge flex items-center gap-2 ' +
+                                (suspenso ? 'fundo-aviso texto-aviso' : 'badge-neutro')
+                              }
+                            >
+                              {papel.nomePapel}
+                              {suspenso && <i className="fa-solid fa-clock text-[10px]"></i>}
+                              {suspenso ? (
+                                <button
+                                  type="button"
+                                  onClick={() => aoReativarPapel(papel)}
+                                  disabled={reativandoPapel === papel.idPapel}
+                                  className="font-bold hover:underline disabled:opacity-50"
+                                  title="Reativar agora"
+                                >
+                                  {reativandoPapel === papel.idPapel ? '…' : 'reativar'}
+                                </button>
+                              ) : (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setPapelSuspendendoId((atual) => (atual === papel.idPapel ? null : papel.idPapel))
+                                    }
+                                    className="texto-fraco hover-texto-forte"
+                                    title={`Suspender "${papel.nomePapel}" por um tempo`}
+                                  >
+                                    <i className="fa-solid fa-clock text-[10px]"></i>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => aoRevogarPapel(papel)}
+                                    disabled={revogandoPapel === papel.idPapel}
+                                    className="texto-erro font-bold hover:text-red-800 disabled:opacity-50"
+                                    title={`Revogar "${papel.nomePapel}"`}
+                                  >
+                                    ×
+                                  </button>
+                                </>
+                              )}
+                            </span>
+                            {papelSuspendendoId === papel.idPapel && (
+                              <span className="flex gap-1 fundo-cartao border borda-forte rounded-lg p-1.5">
+                                {[1, 7, 30].map((dias) => (
+                                  <button
+                                    key={dias}
+                                    type="button"
+                                    onClick={() => aoSuspenderPapel(papel, dias)}
+                                    disabled={enviandoSuspensaoPapel === papel.idPapel}
+                                    className="text-[10px] font-bold texto-padrao hover-fundo-sutil px-1.5 py-0.5 rounded"
+                                  >
+                                    {dias}d
+                                  </button>
+                                ))}
+                              </span>
+                            )}
+                          </span>
+                        );
+                      })}
+                    </div>
+
+                    {papeisDisponiveis.length === 0 ? (
+                      <p className="text-xs texto-fraco">
+                        Nenhum papel adicional disponível pra atribuir (o catálogo ainda está
+                        carregando, ou este usuário já tem todos os papéis existentes).
+                      </p>
+                    ) : (
+                      <div className="flex flex-col gap-2">
+                        <select
+                          value={idPapelParaAtribuir}
+                          onChange={(evento) => setIdPapelParaAtribuir(evento.target.value)}
+                          className="input-padrao"
+                        >
+                          <option value="">Selecione um papel...</option>
+                          {papeisDisponiveis.map((papel) => (
+                            <option key={papel.idPapel} value={papel.idPapel}>
+                              {papel.nome}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          onClick={aoAtribuirPapel}
+                          disabled={!idPapelParaAtribuir || atribuindoPapel}
+                          className="btn btn-primary"
+                        >
+                          {atribuindoPapel ? 'Atribuindo...' : 'Atribuir'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </SecaoFicha>
+
+                {/* Ferramentas de desenvolvimento (12-09-2026, trazido de
+                    alterar-usuario.tsx) - mesmo card marcado com .badge-dev,
+                    some antes de qualquer apresentação/deploy real. */}
+                <div className="fundo-cartao border border-dashed borda-dev fundo-dev-sutil rounded-xl p-4">
+                  <span className="badge badge-dev">&lt;dev&gt;</span>
+                  <p className="text-xs texto-fraco mt-2 mb-3">
+                    Redefine a senha direto pra "{SENHA_DEV}", sem digitar nada. Só pra testar login.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={aoRedefinirSenhaDev}
+                    disabled={redefinindoSenhaDev}
+                    className="btn btn-secondary w-full"
+                  >
+                    {redefinindoSenhaDev ? 'Redefinindo...' : 'Redefinir senha dev'}
+                  </button>
+                </div>
               </div>
             </div>
           </ModalFicha>
         );
       })()}
 
-      <div className="border-t borda-padrao my-8"></div>
-
-      {!chaveFoco && (
-        <p className="texto-fraco">
-          Clique em <strong>Escolher</strong> numa linha da tabela acima.
-        </p>
-      )}
-
-      {chaveFoco && (
-        <div className="flex flex-col lg:flex-row gap-6">
-          <div className="flex-1 min-w-0">
-            <h3 className="subtitulo mb-2">
-              Criar Perfil Pesquisador ({usuarioFoco?.nome ?? chaveFoco})
-              {jaTemPerfil === true && <span className="badge badge-sucesso ml-2">Pesquisador</span>}
-            </h3>
-
-            {jaTemPerfil !== true && (
-              <div className="flex flex-col gap-4 max-w-sm">
-                <label className="text-sm flex flex-col gap-1">
-                  CPF
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={formatarCpf(form.cpf)}
-                      onChange={(evento) =>
-                        setForm({ ...form, cpf: evento.target.value.replace(/\D/g, '').slice(0, 11) })
-                      }
-                      className="border borda-padrao rounded-md px-2 py-1 w-full"
-                    />
-                    <button
-                      type="button"
-                      className="btn btn-secondary text-xs whitespace-nowrap"
-                      onClick={() => setForm({ ...form, cpf: gerarCpfValido() })}
-                    >
-                      Gerar CPF válido
-                    </button>
-                  </div>
-                </label>
-
-                <label className="text-sm flex flex-col gap-1">
-                  Tipo de vínculo
-                  <select
-                    value={form.tipoVinculo}
-                    onChange={(evento) => {
-                      if (ehTipoVinculo(evento.target.value)) {
-                        setForm({ ...form, tipoVinculo: evento.target.value });
-                      }
-                    }}
-                    className="border borda-padrao rounded-md px-2 py-1 w-full"
-                  >
-                    {TIPOS_VINCULO.map((tipo) => (
-                      <option key={tipo} value={tipo}>
-                        {tipo}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                {form.tipoVinculo === 'institucional' && (
-                  <label className="text-sm flex flex-col gap-1">
-                    Instituição
-                    <input
-                      type="text"
-                      value={form.vinculoInstitucional}
-                      onChange={(evento) => setForm({ ...form, vinculoInstitucional: evento.target.value })}
-                      className="border borda-padrao rounded-md px-2 py-1 w-full"
-                    />
-                  </label>
-                )}
-
-                <label className="text-sm flex flex-col gap-1">
-                  Título acadêmico
-                  <select
-                    value={form.tituloAcademico}
-                    onChange={(evento) => {
-                      if (ehTituloAcademico(evento.target.value)) {
-                        setForm({ ...form, tituloAcademico: evento.target.value });
-                      }
-                    }}
-                    className="border borda-padrao rounded-md px-2 py-1 w-full"
-                  >
-                    {TITULOS_ACADEMICOS.map((titulo) => (
-                      <option key={titulo} value={titulo}>
-                        {titulo}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
+      {usuarioExcluindo && (() => {
+        const fecharModalExcluir = () => {
+          setUsuarioExcluindo(null);
+          setConfirmacaoExclusaoUsuario('');
+          limparErroModal();
+        };
+        const confirmado = confirmacaoExclusaoUsuario.trim().toLowerCase() === usuarioExcluindo.usuario.email.toLowerCase();
+        return (
+          <ModalFicha
+            titulo={`Excluir "${usuarioExcluindo.usuario.nome}"`}
+            subtitulo="Não existe botão de desfazer no painel."
+            aoFechar={fecharModalExcluir}
+            rodape={
+              <div className="flex gap-3 max-w-sm ml-auto">
+                <button type="button" onClick={fecharModalExcluir} className="btn btn-secondary flex-1">
+                  Cancelar
+                </button>
                 <button
                   type="button"
-                  className="btn btn-primary"
-                  disabled={criando || !form.cpf}
-                  onClick={criarPerfil}
+                  onClick={excluirUsuario}
+                  disabled={excluindoUsuario || !confirmado}
+                  className="btn btn-danger flex-1"
                 >
-                  Criar Perfil Pesquisador ({usuarioFoco?.nome ?? chaveFoco})
+                  {excluindoUsuario ? 'Excluindo...' : 'Confirmar exclusão'}
                 </button>
-                {erroCriar && <p className="texto-erro text-xs">{erroCriar}</p>}
               </div>
-            )}
+            }
+          >
+            {erroModal && <p className="texto-erro text-sm font-bold text-center">{erroModal}</p>}
 
-            {jaTemPerfil === true && (
-              <PainelLinksAcademicos auth={auth} idUsuario={chaveFoco} tiposLink={tiposLink} />
-            )}
-          </div>
+            <SecaoFicha titulo="O que será excluído">
+              <CampoFicha rotulo="id" valor={usuarioExcluindo.idUsuario} />
+              <CampoFicha rotulo="Nome" valor={usuarioExcluindo.usuario.nome} />
+              <CampoFicha rotulo="E-mail" valor={usuarioExcluindo.usuario.email} largura="cheia" />
+              <CampoFicha
+                rotulo="E-mail verificado"
+                valor={usuarioExcluindo.usuario.emailVerificado ? 'Sim' : 'Não'}
+              />
+            </SecaoFicha>
 
-          <div className={'flex-1 min-w-0' + (jaTemPerfil === true ? ' lg:border-l lg:border-[var(--cor-borda)] lg:pl-6' : '')}>
-            {jaTemPerfil === true && <PainelScore auth={auth} idUsuario={chaveFoco} />}
-          </div>
-        </div>
-      )}
+            <div className="rounded-lg border borda-forte fundo-aviso p-4 text-sm texto-aviso">
+              <p className="font-bold mb-1">
+                <i className="fa-solid fa-circle-info mr-1"></i> O que acontece de verdade
+              </p>
+              <p>
+                A conta é marcada como excluída (exclusão lógica), não apagada do banco: o login
+                deixa de funcionar e o perfil some do público na hora, mas o registro continua
+                existindo pra auditoria e conformidade com a LGPD. Não existe um botão de
+                "restaurar" no painel - reverter isso hoje exige acesso direto ao banco.
+              </p>
+            </div>
+
+            <div>
+              <label className="rotulo-campo">
+                Digite o e-mail "{usuarioExcluindo.usuario.email}" pra confirmar
+              </label>
+              <input
+                type="text"
+                value={confirmacaoExclusaoUsuario}
+                onChange={(evento) => setConfirmacaoExclusaoUsuario(evento.target.value)}
+                className="input-padrao"
+                placeholder={usuarioExcluindo.usuario.email}
+                autoComplete="off"
+              />
+            </div>
+          </ModalFicha>
+        );
+      })()}
+
+      <div className="border-t borda-padrao my-8"></div>
 
       <RegistroChamadas />
       </section>

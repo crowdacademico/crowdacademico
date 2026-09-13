@@ -4,16 +4,6 @@
 // ============================================================================
 
 import { createContext } from 'react';
-import type { Dispatch, SetStateAction } from 'react';
-
-// Selecionado em T1 (Bancada do Pesquisador) - não é o PerfilPesquisadorResponse
-// inteiro, só o recorte que T2/T3 realmente usam pra filtrar/mostrar (ver
-// bancada-pesquisador.jsx, selecionarPesquisador()).
-export interface PesquisadorSelecionado {
-  idUsuario: number;
-  nome: string;
-  email: string;
-}
 
 export interface EntradaRegistroChamada {
   metodo: string;
@@ -30,13 +20,14 @@ export interface RegistroChamada extends EntradaRegistroChamada {
   hora: Date;
 }
 
+// SEM `pesquisadorSelecionado` (removido 12-09-2026) NEM `campanhaFoco`
+// (removido 13-09-2026) - os dois eram estado de "seleção compartilhada
+// entre telas", alimentados por colunas "Escolher" que não existem mais em
+// nenhum lugar (T1 e T2 respectivamente); T2 dobrou seu próprio "campanha
+// em foco" pra dentro do modal de Alterar, e T3 ganhou busca própria (ver
+// vida-campanha-ativa.tsx). Só sobra o que realmente precisa ser
+// compartilhado entre telas: o Registro de Chamadas (T4).
 export interface CampoTestesContextValue {
-  pesquisadorSelecionado: PesquisadorSelecionado | null;
-  selecionarPesquisador: Dispatch<SetStateAction<PesquisadorSelecionado | null>>;
-  limparPesquisadorSelecionado: () => void;
-  campanhaFoco: number | null;
-  selecionarCampanhaFoco: Dispatch<SetStateAction<number | null>>;
-  limparCampanhaFoco: () => void;
   registroChamadas: RegistroChamada[];
   registrarChamada: (entrada: EntradaRegistroChamada) => void;
   limparRegistro: () => void;
