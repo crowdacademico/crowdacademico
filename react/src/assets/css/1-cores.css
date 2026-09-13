@@ -36,7 +36,18 @@
   --color-red-600: #dc2626;
   --color-blue-100: #dbeafe;
   --color-blue-600: #2563eb;
+  /* --color-purple-50/-300 (12-09-2026, achado numa auditoria: 3 lugares
+     usavam `border-purple-300`/`bg-purple-50` crus do Tailwind em vez do
+     token) - mesma família de -100/600/700 abaixo (na verdade "violet" do
+     Tailwind, apelidada de "purple" neste projeto desde antes - não é erro
+     de hoje, só um nome que não bate 1-pra-1 com a paleta real do
+     Tailwind). Usar o "purple" de VERDADE do Tailwind pros tons que
+     faltavam criaria uma inconsistência nova (family diferente da que
+     .badge-dev já usa) - por isso os valores aqui são de violet-50/300,
+     pra completar a MESMA família já em uso, não uma nova. */
+  --color-purple-50: #f5f3ff;
   --color-purple-100: #ede9fe;
+  --color-purple-300: #c4b5fd;
   --color-purple-600: #7c3aed;
   --color-purple-700: #6d28d9;
 
@@ -84,6 +95,21 @@
   --cor-texto-aviso: var(--color-amber-600);
   --cor-fundo-info: var(--color-blue-100);
   --cor-texto-info: var(--color-blue-600);
+
+  /* Tokens de "ferramenta dev" (12-09-2026, achado do Lucas: era a ÚNICA
+     cor do sistema referenciada direto por `--color-purple-*` cru nos
+     componentes, sem passar pela camada semântica `--cor-*` que todo o
+     resto do projeto usa - `.badge-dev`/`.btn-dev` (4-componentes.css) e
+     `.borda-dev`/`.fundo-dev-sutil` (abaixo, mesmo arquivo) migrados pra
+     cá). Deliberadamente SEM bloco de tema escuro - "roxo feio e em
+     destaque" é pra continuar do mesmo jeito nos dois temas, nunca suavizar
+     (mesmo espírito de `--font-mono-dev`: marca visual de "isto não é
+     produção", não decoração de tema). */
+  --cor-dev-fundo-sutil: var(--color-purple-50); /* fundo bem claro - dropdown, card informativo */
+  --cor-dev-fundo-selo: var(--color-purple-100); /* fundo do selo <dev>, borda do botão sólido */
+  --cor-dev-texto: var(--color-purple-600); /* texto do selo, fundo do botão sólido */
+  --cor-dev-borda: var(--color-purple-300); /* borda tracejada dos cards/dropdowns "dev" */
+  --cor-dev-hover: var(--color-purple-700); /* hover do botão sólido */
 
   /* Paleta do avatar-iniciais (09-08-2026, Bloco B/C: bolinha com a
      inicial do nome quando não há foto) - cor de fundo DETERMINÍSTICA a
@@ -257,5 +283,46 @@
 
   .texto-info {
     color: var(--cor-texto-info);
+  }
+
+  /* Bolinha de status de conexão (12-09-2026, achado numa auditoria de
+     duplicação) - `dashboard.tsx`/`dashboard-saude.tsx` tinham a MESMA
+     lógica de 3 estados copiada, com cor crua do Tailwind
+     (bg-slate-300/bg-emerald-500/bg-red-500) - não se adaptava ao tema
+     escuro como o resto do sistema. Reaproveita os tokens de status já
+     existentes (--cor-texto-sucesso/--cor-texto-erro, os mesmos usados
+     nos badges) em vez de inventar uma paleta nova só pra isto; o estado
+     "verificando" usa --cor-borda-forte (mesmo tom que já era usado,
+     slate-300, agora como variável de tema). Ver `PontoStatusConexao` em
+     `views/admin/dashboard.tsx`, componente compartilhado que usa estas 3
+     classes. */
+  .ponto-status--neutro {
+    background-color: var(--cor-borda-forte);
+  }
+
+  .ponto-status--sucesso {
+    background-color: var(--cor-texto-sucesso);
+  }
+
+  .ponto-status--erro {
+    background-color: var(--cor-texto-erro);
+  }
+
+  /* "Ferramenta dev" (12-09-2026, achado numa auditoria) - `dev-login-
+     rapido.tsx`/`alterar-usuario.tsx` usavam `border-purple-300`/
+     `bg-purple-50` crus do Tailwind. ATUALIZADO (mesmo dia, achado do
+     Lucas): passou a usar os tokens SEMÂNTICOS `--cor-dev-*` (definidos
+     acima), não mais `--color-purple-*` direto - mesmo padrão que
+     `.badge-dev` (`4-componentes.css`) também passou a seguir. */
+  .borda-dev {
+    border-color: var(--cor-dev-borda);
+  }
+
+  .fundo-dev-sutil {
+    background-color: var(--cor-dev-fundo-sutil);
+  }
+
+  .hover-fundo-dev-sutil:hover {
+    background-color: var(--cor-dev-fundo-sutil);
   }
 }

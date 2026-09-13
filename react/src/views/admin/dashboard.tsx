@@ -62,6 +62,25 @@ function CardMetrica({ rotulo, valor }: CardMetricaProps) {
   );
 }
 
+// Bolinha de status de conexão (12-09-2026, achado numa auditoria de
+// duplicação) - a Visão Geral (abaixo) e a aba Saúde (`dashboard-saude.tsx`)
+// mostravam a MESMA bolinha, com a MESMA lógica de 3 estados copiada -
+// exportado daqui e importado lá, mesmo padrão já usado por
+// `TEXTO_TOOLTIP_SESSOES_ATIVAS` acima. Cor vem de `.ponto-status--*`
+// (1-cores.css), reaproveitando os mesmos tokens de status dos badges -
+// antes era `bg-slate-300`/`bg-emerald-500`/`bg-red-500` crus do Tailwind,
+// sem se adaptar ao tema escuro.
+export function PontoStatusConexao({ valor }: { valor: boolean | null }) {
+  return (
+    <span
+      className={
+        'inline-block w-2.5 h-2.5 rounded-full ' +
+        (valor === null ? 'ponto-status--neutro' : valor ? 'ponto-status--sucesso' : 'ponto-status--erro')
+      }
+    ></span>
+  );
+}
+
 // Tela inicial do painel admin (/admin/dashboard) - pedido do Lucas,
 // 08-08-2026: uma visão geral antes de cair direto em "Usuários".
 //
@@ -135,16 +154,7 @@ export function Dashboard({ auth }: DashboardProps) {
               falhar (é precisamente aí que ela mais importa). */}
           <div className="fundo-cartao border borda-forte rounded-xl shadow-sm p-5 flex flex-wrap items-center gap-x-8 gap-y-3 text-sm">
             <span className="flex items-center gap-2 font-semibold texto-padrao">
-              <span
-                className={
-                  'inline-block w-2.5 h-2.5 rounded-full ' +
-                  (bancoConectado === null
-                    ? 'bg-slate-300'
-                    : bancoConectado
-                      ? 'bg-emerald-500'
-                      : 'bg-red-500')
-                }
-              ></span>
+              <PontoStatusConexao valor={bancoConectado} />
               {bancoConectado === null
                 ? 'Verificando banco...'
                 : bancoConectado

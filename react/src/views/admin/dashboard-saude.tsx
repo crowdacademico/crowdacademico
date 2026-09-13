@@ -1,5 +1,5 @@
 import { Tooltip } from '../../components/layout/tooltip';
-import { TEXTO_TOOLTIP_SESSOES_ATIVAS } from './dashboard';
+import { PontoStatusConexao, TEXTO_TOOLTIP_SESSOES_ATIVAS } from './dashboard';
 import type { DashboardResponseSummary } from '../../services/admin/type/dashboard.type';
 
 interface DashboardSaudeProps {
@@ -22,16 +22,7 @@ export function DashboardSaude({ bancoConectado, resumo }: DashboardSaudeProps) 
       <div className="fundo-cartao border borda-forte rounded-xl shadow-sm p-5">
         <h3 className="subtitulo mb-3">Conexão com o banco</h3>
         <div className="flex items-center gap-2 text-sm">
-          <span
-            className={
-              'inline-block w-2.5 h-2.5 rounded-full ' +
-              (bancoConectado === null
-                ? 'bg-slate-300'
-                : bancoConectado
-                  ? 'bg-emerald-500'
-                  : 'bg-red-500')
-            }
-          ></span>
+          <PontoStatusConexao valor={bancoConectado} />
           <span className="texto-padrao font-semibold">
             {bancoConectado === null
               ? 'Verificando...'

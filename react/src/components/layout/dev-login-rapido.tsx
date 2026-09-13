@@ -104,13 +104,13 @@ export function DevLoginRapido({ auth }: DevLoginRapidoProps) {
       </div>
 
       {menuAberto && (
-        <div className="absolute right-0 mt-1 w-56 fundo-cartao border-2 border-dashed border-purple-300 rounded-lg shadow-lg z-50 overflow-hidden">
+        <div className="absolute right-0 mt-1 w-56 fundo-cartao border-2 border-dashed borda-dev rounded-lg shadow-lg z-50 overflow-hidden">
           {CONTAS_DEV.map((conta) => (
             <button
               key={conta.email}
               type="button"
               onClick={() => entrarComo(conta)}
-              className="w-full text-left px-3 py-2 text-sm hover:bg-purple-50"
+              className="w-full text-left px-3 py-2 text-sm hover-fundo-dev-sutil"
             >
               {conta.rotulo}
               <span className="block texto-fraco text-xs">{conta.email}</span>

@@ -591,7 +591,7 @@ export function AlterarUsuario({ auth }: PropsPagina) {
                   pendência em temp_Nest_React.md). Desbloquear login NÃO
                   entra aqui - é ação administrativa de verdade, fica em
                   "Acesso" na coluna principal. */}
-              <div className="fundo-cartao border border-dashed border-purple-300 bg-purple-50 rounded-xl p-4">
+              <div className="fundo-cartao border border-dashed borda-dev fundo-dev-sutil rounded-xl p-4">
                 <span className="badge badge-dev">&lt;dev&gt;</span>
                 <p className="text-xs texto-fraco mt-2 mb-3">
                   Redefine a senha direto pra "{SENHA_DEV}", sem digitar nada. Só pra testar

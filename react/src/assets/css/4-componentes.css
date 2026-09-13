@@ -130,10 +130,14 @@
      desenvolvimento/teste (ex.: redefinir senha pra um valor conhecido),
      nunca pra ficar disponível em produção de verdade. Roxo + monoespaçada
      de propósito: nenhuma outra cor/fonte do projeto usa essa combinação,
-     então é visualmente inconfundível com o resto da interface. */
+     então é visualmente inconfundível com o resto da interface.
+     ATUALIZADO (12-09-2026, achado do Lucas): usava `--color-purple-*`
+     direto - a ÚNICA cor do sistema fora da camada semântica `--cor-*` que
+     todo o resto do projeto usa. Migrado pra `--cor-dev-*` (1-cores.css),
+     mesmos valores, zero mudança visual. */
   .badge-dev {
-    background-color: var(--color-purple-100);
-    color: var(--color-purple-600);
+    background-color: var(--cor-dev-fundo-selo);
+    color: var(--cor-dev-texto);
     font-family: var(--font-mono-dev);
   }
 
@@ -146,18 +150,18 @@
     align-items: center;
     gap: 0.4rem;
     padding: 0.5rem 0.9rem;
-    background-color: var(--color-purple-600);
+    background-color: var(--cor-dev-texto);
     color: var(--color-white);
     font-family: var(--font-mono-dev);
     font-weight: 700;
     font-size: var(--font-size-xs);
-    border: 2px dashed var(--color-purple-100);
+    border: 2px dashed var(--cor-dev-fundo-selo);
     cursor: pointer;
     transition: var(--transition-normal);
   }
 
   .btn-dev:hover {
-    background-color: var(--color-purple-700);
+    background-color: var(--cor-dev-hover);
   }
 
   .btn-dev--seta {
