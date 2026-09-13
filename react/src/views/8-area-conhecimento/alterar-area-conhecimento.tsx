@@ -8,6 +8,7 @@ import { SecaoFicha } from '../../components/crud/ficha-consulta';
 import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
 import { areaConhecimentoApi } from '../../services/8-area-conhecimento/api/area-conhecimento.api';
+import { LIMITE_NOME_AREA_CONHECIMENTO } from '../../services/8-area-conhecimento/constants/area-conhecimento.constants';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { AreaConhecimentoResponse } from '../../services/8-area-conhecimento/type/area-conhecimento.type';
 
@@ -127,7 +128,7 @@ export function AlterarAreaConhecimento({ auth }: PropsPagina) {
                 value={nome}
                 onChange={(evento) => setNome(evento.target.value)}
                 required
-                maxLength={100}
+                maxLength={LIMITE_NOME_AREA_CONHECIMENTO}
                 className="input-padrao"
               />
             </div>

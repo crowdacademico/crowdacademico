@@ -5,9 +5,6 @@ import { useErroToast } from '../layout/use-erro-toast';
 import { useFecharAoClicarFora } from '../../services/constant/hook/use-fechar-ao-clicar-fora';
 import { textoSeguro } from '../../services/constant/utils/formatacao.util';
 import { paginarClientSide } from '../../services/constant/utils/paginacao.util';
-import { LogAuditoriaPainel } from './log-auditoria-painel';
-import type { ResultadoPaginado } from '../../services/constant/type/paginacao.type';
-import type { LogAuditoriaResponse } from '../../services/27-log-auditoria/type/log-auditoria.type';
 
 const TAMANHOS_PAGINA = [10, 20, 30, 'todos'] as const;
 const LIMIAR_FILTRO = 5;
@@ -50,8 +47,6 @@ interface GenericTableProps<T extends Linha> {
   chavePrimaria: keyof T & string;
   listar: () => Promise<T[]>;
   rotaBase?: string;
-  buscarLog?: (pagina: number) => Promise<ResultadoPaginado<LogAuditoriaResponse>>;
-  campoRenomeioLog?: string;
   acoes?: AcaoPadrao[];
   colunaExtra?: ColunaExtra<T>;
   filtrosFacetados?: FiltroFacetado<T>[];
@@ -96,13 +91,20 @@ function celulaValor(valor: unknown): ReactNode {
 // (ver `aoAlterar`/`aoConsultar`/`aoExcluir` abaixo): usa modal em vez de
 // rota própria, mesmo padrão de ações, visual diferente.
 //
-// `buscarLog` (opcional, pedido do Lucas 03-08-2026: "um botão no fundo de
-// cada tabela pra ver a última alteração") - mesma convenção de `listar`:
-// função já pré-amarrada (authFetch + nome físico da tabela) pelo
-// componente pai (ver listar-usuarios.tsx/listar-configuracoes.tsx). Sem
-// essa prop, o botão "Ver log" nem aparece - nem toda tabela tem
-// log_auditoria aplicado (só as que passam por `fn_log_auditoria()`, ver
-// 05_regras_negocio.sql [05-L]).
+// O botão "Ver log" + painel de auditoria NÃO moram mais aqui (13-09-2026,
+// achado do Claude Web: "log de auditoria não é estrutura de tabela" -
+// virou `BlocoLogAuditoria`, componente irmão colocado pelas 8 telas que
+// precisam logo abaixo do `<GenericTable>`, não mais uma prop daqui).
+//
+// TESTE PRA QUALQUER PROP NOVA que alguém for tentado a adicionar aqui
+// (método do Claude Web, vale mais que a regra em abstrato): uma prop
+// pertence a ESTE componente se uma tela que não é "do tipo dele" (uma
+// tela sem tabela nenhuma) conseguiria viver sem ela. `colunaExtra`/
+// `filtrosFacetados` passam nesse teste - são configuração de TABELA.
+// `buscarLog` não passava (achado acima) - é outra funcionalidade
+// (dados/paginação/visual próprios) que só por acaso costumava aparecer
+// embaixo de uma tabela. "Quantas telas já usam a prop" NÃO é o teste -
+// era usada por 8 das 10 telas e ainda assim não pertencia aqui.
 const ACOES_PADRAO: AcaoPadrao[] = ['alterar', 'consultar', 'excluir'];
 
 export function GenericTable<T extends Linha>({
@@ -112,11 +114,6 @@ export function GenericTable<T extends Linha>({
   chavePrimaria,
   listar,
   rotaBase,
-  buscarLog,
-  // Repassado direto pro LogAuditoriaPainel (09-08-2026, ver comentário lá)
-  // - troca a coluna genérica "Campos alterados" por "De"/"Para" lendo
-  // esse campo específico de dadosAnteriores/dadosNovos.
-  campoRenomeioLog,
   // Quais dos 3 botões padrão aparecem, quando `rotaBase` está presente
   // (03-08-2026, pedido do Lucas: Papéis precisa só de "Alterar" - sem
   // Consultar (a tabela já mostra tudo, mesma decisão já tomada pra
@@ -203,15 +200,11 @@ export function GenericTable<T extends Linha>({
     }),
     [searchParams],
   );
-  // Só busca quando abre (não em toda carga da tabela) - a maioria das
-  // visitas a uma listagem não vai clicar em "Ver log". Fica de fora da
-  // URL de propósito - é estado de UI (painel aberto), não um filtro de
-  // QUAIS dados aparecem.
-  const [logAberto, setLogAberto] = useState(false);
   // Só 1 dropdown de faceta aberto por vez (chave de qual está aberta, ou
   // null) - mais simples que um booleano por faceta, e evita 2 dropdowns
-  // abertos sobrepondo um no outro quando são vários lado a lado. Também
-  // fora da URL, mesmo motivo do `logAberto` acima.
+  // abertos sobrepondo um no outro quando são vários lado a lado. Fora da
+  // URL de propósito - é estado de UI (dropdown aberto), não um filtro de
+  // QUAIS dados aparecem.
   const [facetaAbertaChave, setFacetaAbertaChave] = useState<string | null>(null);
   // Seleção de cada faceta, independente: { [chave]: string[] }. Faceta
   // sem entrada aqui (ou array vazio) = "Todos" pra ela.
@@ -984,21 +977,6 @@ export function GenericTable<T extends Linha>({
       )}
 
       {erro && <p className="crud-erro">{erro}</p>}
-
-      {buscarLog && (
-        <>
-          <button
-            type="button"
-            onClick={() => setLogAberto((atual) => !atual)}
-            className="btn btn-secondary mt-4"
-          >
-            {logAberto ? 'Esconder log' : 'Ver log'}
-          </button>
-          {logAberto && (
-            <LogAuditoriaPainel buscar={buscarLog} campoRenomeio={campoRenomeioLog} />
-          )}
-        </>
-      )}
     </section>
   );
 }

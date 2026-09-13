@@ -25,32 +25,32 @@
 // em vez de "flex-column com scroll interno" pra manter Salvar/Cancelar
 // visível.
 //
-// `largura` - 2 medidas canônicas (pedido indireto de uma IA: "definir
-// larguras canônicas em vez de cada tela escolher a sua"): 'media'
-// (max-w-2xl, MESMA largura de FichaConsulta - consistência visual entre
-// Consultar e um Alterar/Criar/Excluir simples de 1-2 campos) e 'larga'
-// (max-w-5xl - pra formulário grande o bastante pra virar 2 colunas). Só
-// Alterar Usuário precisava de 'larga' aqui - virou modal em 13-09-2026
-// (`ModalFicha`, prop `largura` própria, não esta), então NENHUM dos 14
-// consumidores atuais deste componente usa 'larga' hoje - mantido no tipo
-// porque é 1 linha e documenta a existência da 2ª medida, não porque haja
-// uso ativo.
+// `largura` - só existe UMA medida hoje (09-08-2026: 'media', max-w-2xl,
+// MESMA largura de FichaConsulta - consistência visual entre Consultar e
+// um Alterar/Criar/Excluir simples de 1-2 campos). Chegou a existir uma
+// 2ª medida ('larga', max-w-5xl) só pra Alterar Usuário - REMOVIDA
+// (13-09-2026, achado do Claude Web numa auditoria de otimização): Alterar
+// Usuário virou modal nesse mesmo dia (usa `ModalFicha`, que é sempre
+// max-w-5xl fixo, sem prop de largura nenhuma) e ficou como opção sem
+// nenhum consumidor - "opção não usada em componente compartilhado é
+// convite, não seguro" (alguém escolheria sem saber que nunca foi testada
+// em tela de formulário nenhuma). Se um formulário precisar de largura
+// maior de novo, voltar é só recriar a entrada.
+//
+// Nota (mesma auditoria): `CartaoFormulario` (só 'media' hoje) e
+// `CampoFicha` ('cheia') têm cada um sua própria prop `largura`, com
+// vocabulário PRÓPRIO e independente - não confundir um com o outro por
+// analogia.
 //
 // `variante="perigo"` é só o ícone (vermelho, pra Excluir) - o resto do
 // cartão é idêntico, não é um componente "de exclusão" separado.
 import type { ReactNode } from 'react';
 
 type VarianteIcone = 'padrao' | 'perigo';
-type LarguraFormulario = 'media' | 'larga';
 
 const VARIANTES_ICONE: Record<VarianteIcone, string> = {
   padrao: 'bg-primary text-white',
   perigo: 'fundo-erro texto-erro',
-};
-
-const LARGURAS: Record<LarguraFormulario, string> = {
-  media: 'max-w-2xl',
-  larga: 'max-w-5xl',
 };
 
 interface CartaoFormularioProps {
@@ -58,7 +58,6 @@ interface CartaoFormularioProps {
   titulo: string;
   subtitulo?: string;
   variante?: VarianteIcone;
-  largura?: LarguraFormulario;
   rodape?: ReactNode;
   children?: ReactNode;
 }
@@ -68,13 +67,12 @@ export function CartaoFormulario({
   titulo,
   subtitulo,
   variante = 'padrao',
-  largura = 'media',
   rodape,
   children,
 }: CartaoFormularioProps) {
   return (
     <div className="p-4 sm:p-8 fundo-pagina">
-      <div className={'mx-auto w-full ' + LARGURAS[largura]}>
+      <div className="mx-auto w-full max-w-2xl">
         {/* SEM overflow-hidden no cartão inteiro (10-08-2026, achado
             corrigindo o mesmo problema em ficha-consulta.tsx) -
             overflow-hidden cria um contexto de scroll que o `sticky` do

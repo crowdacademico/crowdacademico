@@ -4,7 +4,17 @@
    MySQL_.../react_academic/src/assets/css/0-style.css): um arquivo por
    responsabilidade, importado aqui em ordem. main.jsx importa este arquivo
    + tailwind-theme.css (esse fica separado, ver o comentário lá pro
-   porquê). */
+   porquê).
+
+   MAPA (13-09-2026, achado do Claude Web: a numeração sugere sequência de
+   passos, mas não é isso - são 3 grupos de natureza diferente):
+   - 1 a 3: FUNDAÇÃO - tokens de cor, tokens de tipografia, reset de tag
+     crua. Nada aqui depende de nenhum componente existir.
+   - 4 a 6: COMPONENTES - painel admin de verdade (botão/input/badge,
+     tela de CRUD, casca do admin).
+   - 7 a 8: TRANSVERSAL/FERRAMENTA - 7 (responsividade) se aplica por
+     CIMA de tudo que já veio antes, não é um passo posterior; 8 é só o
+     Campo de Testes (ferramenta interna, não é tela de produto). */
 
 @import url('./1-cores.css');
 @import url('./2-tipografia.css');

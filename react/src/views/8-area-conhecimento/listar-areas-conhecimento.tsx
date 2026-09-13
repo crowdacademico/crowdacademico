@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { Link } from 'react-router';
 import { GenericTable } from '../../components/crud/generic-table';
+import { BlocoLogAuditoria } from '../../components/crud/bloco-log-auditoria';
 import { areaConhecimentoApi } from '../../services/8-area-conhecimento/api/area-conhecimento.api';
 import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
 import type { PropsPagina } from '../../services/router/pagina.type';
@@ -76,8 +77,6 @@ export function ListarAreasConhecimento({ auth }: PropsPagina) {
         chavePrimaria="idAreaConhecimento"
         listar={listarAreas}
         rotaBase="/admin/areas-conhecimento"
-        buscarLog={buscarLogAreas}
-        campoRenomeioLog="nome"
         // Escolher uma grande área de verdade no filtro mostra só as áreas
         // filhas dela. "Base" (25-08-2026) é a opção especial pras 9
         // grandes áreas em si (topo da hierarquia, sem pai) - antes elas
@@ -86,6 +85,7 @@ export function ListarAreasConhecimento({ auth }: PropsPagina) {
         // lista, o resto continua alfabético.
         filtrosFacetados={[{ chave: 'nomePai', rotulo: 'Grande área', ordem: ['Base'] }]}
       />
+      <BlocoLogAuditoria buscar={buscarLogAreas} campoRenomeio="nome" />
     </div>
   );
 }

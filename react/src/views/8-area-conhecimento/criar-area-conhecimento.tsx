@@ -5,6 +5,7 @@ import { CartaoFormulario } from '../../components/crud/cartao-formulario';
 import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
 import { areaConhecimentoApi } from '../../services/8-area-conhecimento/api/area-conhecimento.api';
+import { LIMITE_NOME_AREA_CONHECIMENTO } from '../../services/8-area-conhecimento/constants/area-conhecimento.constants';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { AreaConhecimentoResponse } from '../../services/8-area-conhecimento/type/area-conhecimento.type';
 
@@ -85,7 +86,7 @@ export function CriarAreaConhecimento({ auth }: PropsPagina) {
             required
             placeholder="ex.: 1.03.00.00"
             aria-invalid={codigoInvalido}
-            className={'input-padrao font-mono' + (codigoInvalido ? ' border-red-500' : '')}
+            className={'input-padrao font-mono' + (codigoInvalido ? ' borda-erro' : '')}
           />
           {codigoInvalido ? (
             <p className="text-xs texto-erro font-semibold mt-1">
@@ -106,7 +107,7 @@ export function CriarAreaConhecimento({ auth }: PropsPagina) {
             value={nome}
             onChange={(evento) => setNome(evento.target.value)}
             required
-            maxLength={100}
+            maxLength={LIMITE_NOME_AREA_CONHECIMENTO}
             className="input-padrao"
           />
         </div>

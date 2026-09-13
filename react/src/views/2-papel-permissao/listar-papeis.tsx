@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { GenericTable } from '../../components/crud/generic-table';
+import { BlocoLogAuditoria } from '../../components/crud/bloco-log-auditoria';
 import {
   papelApi,
   papelPermissaoApi,
@@ -108,13 +109,12 @@ export function ListarPapeis({ auth }: PropsPagina) {
           listar={listarPapeis}
           rotaBase="/admin/papeis"
           acoes={['alterar']}
-          buscarLog={buscarLogPapel}
-          // "De"/"Para" em vez de "Campos alterados" (09-08-2026, pedido
-          // do Lucas) - só "nome" muda em papel hoje (codigo é fixo), mas
-          // o recurso é genérico (ver LogAuditoriaPainel), não hardcoded
-          // aqui além do nome do campo.
-          campoRenomeioLog="nome"
         />
+        {/* "De"/"Para" em vez de "Campos alterados" (09-08-2026, pedido do
+            Lucas) - só "nome" muda em papel hoje (codigo é fixo), mas o
+            recurso é genérico (ver LogAuditoriaPainel), não hardcoded aqui
+            além do nome do campo. */}
+        <BlocoLogAuditoria buscar={buscarLogPapel} campoRenomeio="nome" />
       </div>
       <div className="admin-content-painel">
         <GenericTable

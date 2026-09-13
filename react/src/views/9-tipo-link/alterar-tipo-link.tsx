@@ -8,6 +8,7 @@ import { SecaoFicha } from '../../components/crud/ficha-consulta';
 import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
 import { tipoLinkApi } from '../../services/9-tipo-link/api/tipo-link.api';
+import { LIMITE_NOME_TIPO_LINK } from '../../services/9-tipo-link/constants/tipo-link.constants';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { TipoLinkResponse } from '../../services/9-tipo-link/type/tipo-link.type';
 
@@ -183,7 +184,7 @@ export function AlterarTipoLink({ auth }: PropsPagina) {
                 value={nome}
                 onChange={(evento) => setNome(evento.target.value)}
                 required
-                maxLength={100}
+                maxLength={LIMITE_NOME_TIPO_LINK}
                 className="input-padrao"
               />
             </div>
@@ -211,7 +212,7 @@ export function AlterarTipoLink({ auth }: PropsPagina) {
                 value={regex}
                 onChange={(evento) => setRegex(evento.target.value)}
                 aria-invalid={regexInvalida}
-                className={'input-padrao font-mono' + (regexInvalida ? ' border-red-500' : '')}
+                className={'input-padrao font-mono' + (regexInvalida ? ' borda-erro' : '')}
               />
               {regexInvalida ? (
                 <p className="text-xs texto-erro font-semibold mt-1">

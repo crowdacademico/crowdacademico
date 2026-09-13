@@ -13,14 +13,20 @@
 //   </SecaoFicha>
 // </FichaConsulta>
 //
-// `largura` (10-08-2026, rodada de IA "embelezar o painel", item 4) -
-// mesmo sistema de 2 medidas canônicas de cartao-formulario.tsx: 'media'
-// (max-w-2xl, padrão - Consultar Configuração, ficha simples) e 'larga'
-// (max-w-5xl - Consultar Usuário, que ganhou 2 colunas pelo mesmo motivo
-// do Alterar Usuário). O layout em colunas não mora AQUI dentro - quem usa
-// `largura="larga"` monta o próprio `grid lg:grid-cols-3` nos `children`,
-// igual já é feito em modal-usuario.tsx (ModalAlterarUsuario); este
-// componente só garante o espaço pra isso caber.
+// `largura` (10-08-2026, rodada de IA "embelezar o painel", item 4) - 2
+// medidas próprias deste componente: 'media' (max-w-2xl, padrão -
+// Consultar Configuração, ficha simples) e 'larga' (max-w-5xl - Consultar
+// Usuário, que ganhou 2 colunas pelo mesmo motivo do Alterar Usuário). O
+// layout em colunas não mora AQUI dentro - quem usa `largura="larga"`
+// monta o próprio `grid lg:grid-cols-3` nos `children`, igual já é feito
+// em modal-usuario.tsx (ModalAlterarUsuario); este componente só garante o
+// espaço pra isso caber.
+//
+// NOTA (13-09-2026, achado do Claude Web): `largura` aqui é um vocabulário
+// PRÓPRIO e independente - `CartaoFormulario` só tem 'media' hoje (perdeu
+// 'larga' no mesmo achado, sem consumidor), e `ModalFicha` nem tem prop de
+// largura (é sempre max-w-5xl fixo). Não confundir um com o outro por
+// analogia.
 import type { ReactNode } from 'react';
 
 type LarguraFicha = 'media' | 'larga';

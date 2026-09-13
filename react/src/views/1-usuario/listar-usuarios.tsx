@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { GenericTable } from '../../components/crud/generic-table';
+import { BlocoLogAuditoria } from '../../components/crud/bloco-log-auditoria';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { usuarioPapelApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
 import {
@@ -118,14 +119,14 @@ export function ListarUsuarios({ auth }: PropsPagina) {
         // Array de 1 elemento (a API é genérica pra 1+ facetas lado a
         // lado, ver GenericTable e a tabela Permissões).
         filtrosFacetados={[{ chave: 'papel', rotulo: 'Papel', ordem: ORDEM_PODER_PAPEL }]}
-        buscarLog={buscarLogUsuario}
-        // "De"/"Para" (09-08-2026, pedido do Lucas depois de ver isso em
-        // Papéis) - "nome" é o único campo de texto editável de usuario
-        // que faz sentido rastrear assim (senha nunca entra no log, ver
-        // fn_log_auditoria() [strip de senha_hash]; e-mail não é editável
-        // pelo painel).
-        campoRenomeioLog="nome"
       />
+
+      {/* "De"/"Para" (09-08-2026, pedido do Lucas depois de ver isso em
+          Papéis) - "nome" é o único campo de texto editável de usuario que
+          faz sentido rastrear assim (senha nunca entra no log, ver
+          fn_log_auditoria() [strip de senha_hash]; e-mail não é editável
+          pelo painel). */}
+      <BlocoLogAuditoria buscar={buscarLogUsuario} campoRenomeio="nome" />
 
       {criando && (
         <ModalCriarUsuario auth={auth} aoFechar={() => setCriando(false)} aoCriado={recarregar} />

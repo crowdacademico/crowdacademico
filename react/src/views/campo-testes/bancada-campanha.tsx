@@ -11,6 +11,7 @@ import { areaConhecimentoApi } from '../../services/8-area-conhecimento/api/area
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { tratarResposta } from '../../services/constant/api/http.util';
 import { useFecharAoClicarFora } from '../../services/constant/hook/use-fechar-ao-clicar-fora';
+import { LIMITE_SUGESTOES_COMBOBOX } from '../../services/campo-testes/constants/campo-testes.constants';
 import { useChamadaRegistrada } from '../../services/campo-testes/hook/use-chamada-registrada';
 import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
@@ -408,7 +409,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
     if (!termo) return [];
     return usuarios
       .filter((usuario) => String(usuario.idUsuario).includes(termo) || usuario.nome.toLowerCase().includes(termo))
-      .slice(0, 5);
+      .slice(0, LIMITE_SUGESTOES_COMBOBOX);
   })();
 
   // Opções do dropdown "Status" - só os valores que já aparecem nos

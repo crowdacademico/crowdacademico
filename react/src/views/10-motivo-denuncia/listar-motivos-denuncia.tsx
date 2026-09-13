@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { Link } from 'react-router';
 import { GenericTable } from '../../components/crud/generic-table';
+import { BlocoLogAuditoria } from '../../components/crud/bloco-log-auditoria';
 import { motivoDenunciaApi } from '../../services/10-motivo-denuncia/api/motivo-denuncia.api';
 import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
 import type { PropsPagina } from '../../services/router/pagina.type';
@@ -53,9 +54,8 @@ export function ListarMotivosDenuncia({ auth }: PropsPagina) {
         // concreto de achar rápido, entre os ~12 motivos seedados, só os
         // de um tipo (mesma ideia do filtro de papel em ListarUsuarios).
         filtrosFacetados={[{ chave: 'tipo', rotulo: 'Tipo', ordem: ORDEM_TIPO }]}
-        buscarLog={buscarLogMotivos}
-        campoRenomeioLog="descricao"
       />
+      <BlocoLogAuditoria buscar={buscarLogMotivos} campoRenomeio="descricao" />
     </div>
   );
 }

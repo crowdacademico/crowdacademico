@@ -8,6 +8,7 @@ import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { ModalDetalhe } from '../../components/crud/modal-detalhe';
 import { ModalFicha } from '../../components/crud/modal-ficha';
+import { useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { usuarioPapelApi, papelApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
 import { perfilPesquisadorApi } from '../../services/6-perfil-pesquisador/api/perfil-pesquisador.api';
@@ -1138,7 +1139,35 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado, g
     }
   };
 
+  // Aviso de "alteração não salva" (13-09-2026, achado do Claude Web: o
+  // modal fecha por 3 caminhos - X, clique no fundo escurecido, botão
+  // Cancelar - e todos os 3 já passam por `fechar()` abaixo; a página
+  // antiga que este modal substituiu tinha esse aviso, o modal nunca
+  // ganhou). `sujo` cobre os 3 formulários de verdade (dados da conta,
+  // edição de perfil, criação de perfil) - de propósito NÃO inclui foto de
+  // perfil nem ações de papel, porque essas já salvam na hora (não ficam
+  // pendentes) e incluir geraria aviso quando não há nada a perder.
+  const sujo = Boolean(
+    usuario &&
+      (nomeEdicao !== usuario.nome ||
+        novaSenhaEdicao !== '' ||
+        (formEdicaoPerfil !== null &&
+          perfilPesquisador !== null &&
+          (formEdicaoPerfil.tipoVinculo !== perfilPesquisador.tipoVinculo ||
+            formEdicaoPerfil.vinculoInstitucional !== (perfilPesquisador.vinculoInstitucional ?? '') ||
+            formEdicaoPerfil.tituloAcademico !== perfilPesquisador.tituloAcademico)) ||
+        (perfilPesquisador === null &&
+          (form.cpf !== '' ||
+            form.tipoVinculo !== FORM_CRIAR_PERFIL_VAZIO.tipoVinculo ||
+            form.vinculoInstitucional !== '' ||
+            form.tituloAcademico !== FORM_CRIAR_PERFIL_VAZIO.tituloAcademico))),
+  );
+  useAvisoAlteracaoNaoSalva(sujo);
+
   const fechar = () => {
+    if (sujo && !window.confirm('Você tem alterações não salvas. Sair mesmo assim?')) {
+      return;
+    }
     aoAtualizado();
     aoFechar();
   };
@@ -1378,7 +1407,7 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado, g
                                   type="button"
                                   onClick={() => aoRevogarPapel(papel)}
                                   disabled={revogandoPapel === papel.idPapel}
-                                  className="texto-erro font-bold hover:text-red-800 disabled:opacity-50"
+                                  className="texto-erro font-bold hover-texto-erro disabled:opacity-50"
                                   title={`Revogar "${papel.nomePapel}"`}
                                 >
                                   ×

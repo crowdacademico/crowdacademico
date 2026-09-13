@@ -1,9 +1,10 @@
 /* ========= CORES =========
    Extraído de 1-base.css (12-09-2026, pedido do Lucas: organização - um
    arquivo por responsabilidade, mesmo raciocínio que já valeu pra
-   2-tipografia.css horas antes). Escopo: TODA cor do sistema - paleta
-   crua, tokens semânticos, os dois blocos de tema escuro, e as classes
-   utilitárias de cor (`.fundo-*`/`.texto-*`/`.borda-*`).
+   2-tipografia.css horas antes). Escopo: TODA cor do sistema, incluindo os
+   alias das 4 cores da marca (ver bloco logo abaixo) - paleta crua, tokens
+   semânticos, os dois blocos de tema escuro, e as classes utilitárias de
+   cor (`.fundo-*`/`.texto-*`/`.borda-*`).
 
    NÃO entra aqui (fica em 3-base.css de propósito, mesmo raciocínio já
    usado na separação da tipografia): o reset de tag crua (`body`/
@@ -14,6 +15,23 @@
    fragmentado. Se um dia isso também precisar migrar pra cá, é decisão
    separada - avisar antes de mexer. */
 :root {
+  /* Alias das 4 cores da MARCA (13-09-2026, achado do Claude Web numa
+     auditoria: este arquivo afirmava "TODA cor do sistema", mas as 4 cores
+     mais fundamentais do site - a verde de marca e as 3 de base - não
+     tinham nenhuma representação aqui). O valor BRUTO das 4 continua em
+     `tailwind-theme.css` (`@theme`), por restrição técnica real: o
+     `@import 'tailwindcss'` precisa ficar sozinho no arquivo, não pode
+     dividir espaço com nenhum outro `@import` (ver o comentário de lá) -
+     não dá pra mover o valor pra cá. O que dá, e o que resolve o problema
+     de verdade (não só documenta ele), é fazer qualquer componente nunca
+     precisar referenciar `--color-primary`/`--color-surface`/`--color-dark`
+     direto - só o alias `--cor-*` abaixo, mesma regra de ouro que já vale
+     pro resto da paleta. */
+  --cor-marca: var(--color-primary);
+  --cor-marca-escura: var(--color-primary-dark);
+  --cor-superficie: var(--color-surface);
+  --cor-escura: var(--color-dark);
+
   --color-white: #ffffff;
 
   --color-slate-50: #f8fafc;
@@ -34,6 +52,7 @@
   --color-red-100: #fee2e2;
   --color-red-500: #ef4444;
   --color-red-600: #dc2626;
+  --color-red-800: #991b1b;
   --color-blue-100: #dbeafe;
   --color-blue-600: #2563eb;
   /* --color-purple-50/-300 (12-09-2026, achado numa auditoria: 3 lugares
@@ -91,6 +110,18 @@
   --cor-texto-sucesso: var(--color-emerald-600);
   --cor-fundo-erro: var(--color-red-100);
   --cor-texto-erro: var(--color-red-600);
+  /* --cor-texto-erro-forte (13-09-2026, achado do Claude Web numa auditoria:
+     um botão de revogar papel usava `texto-erro` + `hover:text-red-800` cru
+     do Tailwind lado a lado - o hover não respondia a tema escuro) - mesmo
+     papel que `--cor-texto-forte` já cumpre pra `--cor-texto-fraco`
+     (intensificar ao passar o mouse), só que na família vermelha. */
+  --cor-texto-erro-forte: var(--color-red-800);
+  /* --cor-borda-erro (13-09-2026, achado numa varredura própria: 5 telas
+     de Criar/Alterar - configuração, área do conhecimento, tipo de link
+     ×2 - usavam `border-red-500` cru pra marcar campo de código/regex
+     inválido, sem passar pelo tema. Mesmo motivo dos outros tokens de
+     erro: precisa de override no escuro. */
+  --cor-borda-erro: var(--color-red-500);
   --cor-fundo-aviso: var(--color-amber-100);
   --cor-texto-aviso: var(--color-amber-600);
   --cor-fundo-info: var(--color-blue-100);
@@ -160,6 +191,8 @@
   --cor-texto-sucesso: #34d399;
   --cor-fundo-erro: rgba(239, 68, 68, 0.16);
   --cor-texto-erro: #f87171;
+  --cor-texto-erro-forte: #fca5a5;
+  --cor-borda-erro: #f87171;
   --cor-fundo-aviso: rgba(217, 119, 6, 0.18);
   --cor-texto-aviso: #fbbf24;
   --cor-fundo-info: rgba(37, 99, 235, 0.18);
@@ -184,6 +217,7 @@
     --cor-texto-sucesso: #34d399;
     --cor-fundo-erro: rgba(239, 68, 68, 0.16);
     --cor-texto-erro: #f87171;
+    --cor-texto-erro-forte: #fca5a5;
     --cor-fundo-aviso: rgba(217, 119, 6, 0.18);
     --cor-texto-aviso: #fbbf24;
     --cor-fundo-info: rgba(37, 99, 235, 0.18);
@@ -253,6 +287,19 @@
     border-color: var(--cor-borda-forte);
   }
 
+  /* Campo com valor inválido (código/regex, ver os `*Invalido` de
+     Criar/Alterar Configuração/Área do Conhecimento/Tipo de Link) -
+     13-09-2026, achado numa varredura própria: 5 telas repetiam
+     `border-red-500` cru pra isso.
+     Sozinha, esta classe NÃO ganha de `.input-padrao`/`.input-padrao:focus`
+     (mesma @layer components, especificidade igual ou menor) - o par
+     `.input-padrao.borda-erro`/`.input-padrao.borda-erro:focus` que faz o
+     vermelho aparecer de verdade mora em 4-componentes.css, perto de
+     `.input-padrao` (achado ao testar ao vivo, não só ler o CSS). */
+  .borda-erro {
+    border-color: var(--cor-borda-erro);
+  }
+
   .fundo-sucesso {
     background-color: var(--cor-fundo-sucesso);
   }
@@ -267,6 +314,14 @@
 
   .texto-erro {
     color: var(--cor-texto-erro);
+  }
+
+  /* Par de .texto-erro, mesmo papel de .hover-texto-forte pra
+     .texto-fraco - intensifica ao passar o mouse, respeitando tema
+     escuro (13-09-2026, achado do Claude Web: um botão de revogar papel
+     usava hover:text-red-800 cru do Tailwind, sem responder ao escuro). */
+  .hover-texto-erro:hover {
+    color: var(--cor-texto-erro-forte);
   }
 
   .fundo-aviso {

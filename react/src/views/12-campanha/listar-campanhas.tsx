@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { GenericTable } from '../../components/crud/generic-table';
+import { BlocoLogAuditoria } from '../../components/crud/bloco-log-auditoria';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
 import {
   ORDEM_STATUS_CAMPANHA,
@@ -107,8 +108,8 @@ export function ListarCampanhas({ auth }: PropsPagina) {
           { chave: 'status', rotulo: 'Status', ordem: ORDEM_STATUS_CAMPANHA.map((s) => ROTULO_STATUS_CAMPANHA[s]) },
           { chave: 'area', rotulo: 'Área' },
         ]}
-        buscarLog={buscarLogCampanha}
       />
+      <BlocoLogAuditoria buscar={buscarLogCampanha} />
     </div>
   );
 }

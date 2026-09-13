@@ -17,6 +17,17 @@ interface ModalFichaProps {
 // blocos da página real), só que dentro de um modal (07-09-2026, Campo de
 // Testes: T1 replicando a aparência exata de Consultar/Alterar Usuário,
 // sem reinventar o layout).
+//
+// NOTA (13-09-2026, achado do Claude Web): os 3 caminhos de fechar (botão
+// de fechar, clique no fundo escurecido, e o que o chamador decidir passar
+// como `aoFechar`) já passam todos pela MESMA prop `aoFechar` - de
+// propósito, é o que permite `ModalAlterarUsuario` embrulhar `aoFechar`
+// com uma guarda de "alteração não salva" numa linha só, sem esta casca
+// precisar saber nada sobre isso. Este componente hoje NÃO trata a tecla
+// Esc (sorte, não desenho - Esc simplesmente não faz nada agora). Se um
+// dia alguém adicionar suporte a Esc aqui, ele TEM que fechar chamando
+// `aoFechar`, nunca fechar "por conta própria" - senão vira um 4º caminho
+// que escapa de qualquer guarda que um chamador tenha embrulhado em cima.
 export function ModalFicha({ titulo, subtitulo, avatar, badges, rodape, aoFechar, children }: ModalFichaProps) {
   return (
     <div

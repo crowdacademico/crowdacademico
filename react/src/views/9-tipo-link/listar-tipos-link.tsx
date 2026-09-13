@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { Link } from 'react-router';
 import { GenericTable } from '../../components/crud/generic-table';
+import { BlocoLogAuditoria } from '../../components/crud/bloco-log-auditoria';
 import { tipoLinkApi } from '../../services/9-tipo-link/api/tipo-link.api';
 import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
 import type { PropsPagina } from '../../services/router/pagina.type';
@@ -55,9 +56,8 @@ export function ListarTiposLink({ auth }: PropsPagina) {
         chavePrimaria="idTipolink"
         listar={listarTipos}
         rotaBase="/admin/tipos-link"
-        buscarLog={buscarLogTipos}
-        campoRenomeioLog="nome"
       />
+      <BlocoLogAuditoria buscar={buscarLogTipos} campoRenomeio="nome" />
     </div>
   );
 }

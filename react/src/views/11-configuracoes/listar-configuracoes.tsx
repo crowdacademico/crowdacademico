@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { Link } from 'react-router';
 import { GenericTable } from '../../components/crud/generic-table';
+import { BlocoLogAuditoria } from '../../components/crud/bloco-log-auditoria';
 import { configuracaoApi } from '../../services/11-configuracoes/api/configuracao.api';
 import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
 import type { PropsPagina } from '../../services/router/pagina.type';
@@ -43,14 +44,13 @@ export function ListarConfiguracoes({ auth }: PropsPagina) {
         chavePrimaria="idConfig"
         listar={listarConfiguracoes}
         rotaBase="/admin/configuracoes"
-        buscarLog={buscarLogConfiguracoes}
-        // "De"/"Para" no VALOR (09-08-2026, pedido do Lucas) - é a coluna
-        // que mais importa aqui: configuracoes existe pra tirar regra de
-        // negócio hardcoded do .sql, então ver o valor antigo/novo de uma
-        // mudança (ex.: taxa, limite, prazo) é mais útil que "chave"/
-        // "descricao"/"ativo" mudaram.
-        campoRenomeioLog="valor"
       />
+      {/* "De"/"Para" no VALOR (09-08-2026, pedido do Lucas) - é a coluna que
+          mais importa aqui: configuracoes existe pra tirar regra de negócio
+          hardcoded do .sql, então ver o valor antigo/novo de uma mudança
+          (ex.: taxa, limite, prazo) é mais útil que "chave"/"descricao"/
+          "ativo" mudaram. */}
+      <BlocoLogAuditoria buscar={buscarLogConfiguracoes} campoRenomeio="valor" />
     </div>
   );
 }

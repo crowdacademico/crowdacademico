@@ -11,6 +11,7 @@ import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { tratarResposta } from '../../services/constant/api/http.util';
 import { useFecharAoClicarFora } from '../../services/constant/hook/use-fechar-ao-clicar-fora';
 import { useChamadaRegistrada } from '../../services/campo-testes/hook/use-chamada-registrada';
+import { LIMITE_SUGESTOES_COMBOBOX } from '../../services/campo-testes/constants/campo-testes.constants';
 import { RegistroChamadas } from './registro-chamadas';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { CampanhaResponse } from '../../services/12-campanha/type/campanha.type';
@@ -125,7 +126,7 @@ export function VidaCampanhaAtiva({ auth }: PropsPagina) {
     if (!termo) return [];
     return todasCampanhas
       .filter((item) => String(item.idCampanha).includes(termo) || item.titulo.toLowerCase().includes(termo))
-      .slice(0, 5);
+      .slice(0, LIMITE_SUGESTOES_COMBOBOX);
   })();
 
   const recarregarTudo = (id: number | null) => {

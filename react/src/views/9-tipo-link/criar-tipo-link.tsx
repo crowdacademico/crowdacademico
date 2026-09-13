@@ -5,6 +5,7 @@ import { CartaoFormulario } from '../../components/crud/cartao-formulario';
 import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
 import { tipoLinkApi } from '../../services/9-tipo-link/api/tipo-link.api';
+import { LIMITE_CODIGO_TIPO_LINK, LIMITE_NOME_TIPO_LINK } from '../../services/9-tipo-link/constants/tipo-link.constants';
 import type { PropsPagina } from '../../services/router/pagina.type';
 
 // Convenção de código (mesma ideia de REGEX_CHAVE_VALIDA em
@@ -116,10 +117,10 @@ export function CriarTipoLink({ auth }: PropsPagina) {
             value={codigo}
             onChange={(evento) => setCodigo(evento.target.value.toUpperCase())}
             required
-            maxLength={20}
+            maxLength={LIMITE_CODIGO_TIPO_LINK}
             placeholder="ex.: SITE_INSTITUCIONAL"
             aria-invalid={codigoInvalido}
-            className={'input-padrao font-mono' + (codigoInvalido ? ' border-red-500' : '')}
+            className={'input-padrao font-mono' + (codigoInvalido ? ' borda-erro' : '')}
           />
           {codigoInvalido ? (
             <p className="text-xs texto-erro font-semibold mt-1">
@@ -140,7 +141,7 @@ export function CriarTipoLink({ auth }: PropsPagina) {
             value={nome}
             onChange={(evento) => setNome(evento.target.value)}
             required
-            maxLength={100}
+            maxLength={LIMITE_NOME_TIPO_LINK}
             placeholder="ex.: Site Institucional"
             className="input-padrao"
           />
@@ -170,7 +171,7 @@ export function CriarTipoLink({ auth }: PropsPagina) {
             onChange={(evento) => setRegex(evento.target.value)}
             placeholder="ex.: ^https?://(www\.)?github\.com/[\w\-]+/?$"
             aria-invalid={regexInvalida}
-            className={'input-padrao font-mono' + (regexInvalida ? ' border-red-500' : '')}
+            className={'input-padrao font-mono' + (regexInvalida ? ' borda-erro' : '')}
           />
           {regexInvalida ? (
             <p className="text-xs texto-erro font-semibold mt-1">

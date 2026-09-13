@@ -5,7 +5,7 @@ import { CartaoFormulario } from '../../components/crud/cartao-formulario';
 import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
 import { motivoDenunciaApi } from '../../services/10-motivo-denuncia/api/motivo-denuncia.api';
-import { ehTipoMotivoDenuncia } from '../../services/10-motivo-denuncia/constants/motivo-denuncia.constants';
+import { ehTipoMotivoDenuncia, LIMITE_DESCRICAO_MOTIVO_DENUNCIA } from '../../services/10-motivo-denuncia/constants/motivo-denuncia.constants';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { TipoMotivoDenuncia } from '../../services/10-motivo-denuncia/type/motivo-denuncia.type';
 
@@ -83,7 +83,7 @@ export function CriarMotivoDenuncia({ auth }: PropsPagina) {
             value={descricao}
             onChange={(evento) => setDescricao(evento.target.value)}
             required
-            maxLength={255}
+            maxLength={LIMITE_DESCRICAO_MOTIVO_DENUNCIA}
             placeholder="ex.: Campanha com informações falsas ou enganosas"
             className="input-padrao"
           />

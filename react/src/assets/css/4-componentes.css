@@ -88,6 +88,22 @@
     background-color: var(--cor-fundo-cartao);
   }
 
+  /* Precisa deste seletor combinado, e precisa estar AQUI (não só
+     `.borda-erro` sozinho em 1-cores.css) - 13-09-2026, achado testando
+     ao vivo logo depois de extrair o token: `.borda-erro` sozinho tem a
+     MESMA especificidade de `.input-padrao` (uma classe cada, mesma
+     @layer components) e perde por ORDEM DE ARQUIVO (4-componentes.css
+     carrega depois de 1-cores.css, então a borda cinza padrão sempre
+     vencia); e `.input-padrao:focus` tem especificidade MAIOR (classe +
+     pseudo-classe) que sempre venceria enquanto o campo estivesse com
+     foco, escondendo o vermelho bem na hora de digitar. Repetir aqui, com
+     `.input-padrao` na frente, resolve os dois - o campo inválido
+     continua vermelho mesmo focado. */
+  .input-padrao.borda-erro,
+  .input-padrao.borda-erro:focus {
+    border-color: var(--cor-borda-erro);
+  }
+
   /* Tela "Consultar" (campo-textbox-consulta.jsx) - deixa claro visualmente
      que o campo é só leitura, não é só um input esquecido sem onChange. */
   .input-padrao:disabled {

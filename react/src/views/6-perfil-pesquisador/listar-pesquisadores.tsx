@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { GenericTable } from '../../components/crud/generic-table';
+import { BlocoLogAuditoria } from '../../components/crud/bloco-log-auditoria';
 import { perfilPesquisadorApi } from '../../services/6-perfil-pesquisador/api/perfil-pesquisador.api';
 import {
   ROTULO_STATUS_PESQUISADOR,
@@ -71,8 +72,8 @@ export function ListarPesquisadores({ auth }: PropsPagina) {
         rotaBase="/admin/pesquisadores"
         acoes={['consultar']}
         filtrosFacetados={[{ chave: 'statusPesquisador', rotulo: 'Status' }]}
-        buscarLog={buscarLogPerfil}
       />
+      <BlocoLogAuditoria buscar={buscarLogPerfil} />
     </div>
   );
 }

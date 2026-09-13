@@ -103,7 +103,7 @@ export function CriarConfiguracao({ auth }: PropsPagina) {
             required
             placeholder="ex.: limite_campanhas_simultaneas"
             aria-invalid={chaveInvalida}
-            className={'input-padrao font-mono' + (chaveInvalida ? ' border-red-500' : '')}
+            className={'input-padrao font-mono' + (chaveInvalida ? ' borda-erro' : '')}
           />
           {chaveInvalida ? (
             <p className="text-xs texto-erro font-semibold mt-1">
