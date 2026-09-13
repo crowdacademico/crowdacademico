@@ -5,7 +5,7 @@
    flutuando com margem, o menu é uma coluna quadrada que encosta no
    cabeçalho, na parede esquerda e no rodapé - grid de 2 colunas, sem
    sticky (rola junto com a página).
-   Ver views/admin/admin-sidebar.jsx e views/admin/admin-layout.jsx. */
+   Ver views/admin/admin-sidebar.tsx e views/admin/admin-layout.tsx. */
 
 /* O bug que a gente tinha: .admin-pagina levava max-width+margin:auto, o
    que centralizava o GRUPO INTEIRO (sidebar+conteúdo) como um bloco só -
@@ -47,7 +47,7 @@
 }
 
 /* position: relative (25-08-2026) - âncora pra faixa do botão "Menu"
-   (admin-layout.jsx), que é `position: absolute` e primeiro filho daqui.
+   (admin-layout.tsx), que é `position: absolute` e primeiro filho daqui.
    Sem isso, o `absolute` se posicionaria relativo à página inteira (o
    próximo ancestral REALMENTE posicionado, que podia estar bem mais
    longe), não relativo a este grid - `absolute inset-x-0 top-0` só cola
@@ -71,7 +71,7 @@
   font-family: var(--font-sans);
   font-weight: 900;
   font-size: var(--font-size-sm);
-  color: var(--color-dark);
+  color: var(--cor-escura);
 }
 
 .admin-sidebar__subtitulo {
@@ -102,7 +102,7 @@
   margin: 0.5rem 0 0.5rem 0.5rem;
   /* flex (22-08-2026, grupo "CAMPO DE TESTES") - só entra em jogo pros
      grupos que passam `dica` (Tooltip do lado direito, ver admin-
-     sidebar.jsx); com 1 filho só (os outros grupos, sem dica), flex não
+     sidebar.tsx); com 1 filho só (os outros grupos, sem dica), flex não
      muda nada do visual de antes. `padding-right` evita o ícone colar na
      borda do menu (260px é estreito). */
   display: flex;
@@ -112,7 +112,7 @@
 }
 
 /* Achado (23-08-2026, Lucas: "o menu lateral ficou com rolagem lateral")
-   - o ícone do Tooltip (components/layout/tooltip.jsx) fica encostado na
+   - o ícone do Tooltip (components/layout/tooltip.tsx) fica encostado na
    borda DIREITA do grupo "CAMPO DE TESTES" (padding-right acima), mas
    .tooltip__texto (4-componentes.css) centraliza a caixa da dica embaixo
    do ícone (`left: 50%; transform: translateX(-50%)`) - com até 16rem
@@ -176,7 +176,7 @@
    ativo). */
 .admin-sidebar__item--ativo {
   background-color: var(--cor-fundo-hover);
-  border-left-color: var(--color-primary);
+  border-left-color: var(--cor-marca);
   color: var(--cor-texto-forte);
   font-weight: 800;
 }
@@ -200,10 +200,10 @@
   min-width: 0;
   padding: 1.5rem;
   /* padding-top extra (25-08-2026) - reserva espaço de VERDADE pra faixa
-     do botão "Menu" (admin-layout.jsx, position:absolute, primeiro
+     do botão "Menu" (admin-layout.tsx, position:absolute, primeiro
      filho de .admin-shell), que passa POR TRÁS de tudo e só fica visível
      aqui, na área de conteúdo (a sidebar cobre ela com o próprio fundo
-     opaco, ver comentário em admin-sidebar.jsx). 1.5rem (padding normal,
+     opaco, ver comentário em admin-sidebar.tsx). 1.5rem (padding normal,
      preservado) + ~3rem (altura natural estimada da faixa: botão em
      text-sm/ícone ≈ 21px de conteúdo + 0.75rem de padding vertical dos
      dois lados ≈ 45px ≈ 2.8rem, arredondado com folga) = 4.5rem no topo
@@ -237,7 +237,7 @@
      nome, papel, e-mail, ações...) empurrava a PÁGINA INTEIRA pra
      largura da tabela em vez da tabela encolher pra caber na tela, mesmo
      mecanismo já corrigido antes em .admin-pagina (Minha Conta) e aqui
-     mesmo em w-0/min-w-full (minha-conta-page.jsx) - mesma família de
+     mesmo em w-0/min-w-full (minha-conta-page.tsx) - mesma família de
      bug, lugar diferente. */
   min-width: 0;
   display: flex;
@@ -257,8 +257,8 @@
    colunas terminam de se espremer confortavelmente até 1377px, mas a
    sidebar só sumia abaixo de 1310px - nessa faixa de ~67px a tabela já
    estava no limite do aperto e a sidebar ainda ocupava 260px à toa).
-   PRECISA bater exato com `min-[1377px]:` em admin-sidebar.jsx/
-   admin-layout.jsx - ERA `xl:` fixo de 1280px no JSX + esse valor aqui
+   PRECISA bater exato com `min-[1377px]:` em admin-sidebar.tsx/
+   admin-layout.tsx - ERA `xl:` fixo de 1280px no JSX + esse valor aqui
    editado à mão à parte - a causa exata do "bug da tela branca entre
    1279px e 1309px" que o Lucas achou ao vivo antes desta rodada: com
    dois números DIFERENTES e sem nada em comum visualmente, era fácil

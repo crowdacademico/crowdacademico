@@ -1,15 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { useNavigate } from 'react-router';
-import { ROTAS_ADMIN } from '../../services/router/rotas.constants';
-import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
-import { papelApi, permissaoApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
-import { configuracaoApi } from '../../services/11-configuracoes/api/configuracao.api';
+import { ROTAS_ADMIN } from '../../../services/router/rotas.constants';
+import { usuarioApi } from '../../../services/1-usuario/api/usuario.api';
+import { papelApi, permissaoApi } from '../../../services/2-papel-permissao/api/papel-permissao.api';
+import { configuracaoApi } from '../../../services/11-configuracoes/api/configuracao.api';
 import { EVENTO_ABRIR_BUSCA_GLOBAL as EVENTO_ABRIR } from './busca-global-evento';
-import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
-import type { UsuarioResponse } from '../../services/1-usuario/type/usuario.type';
-import type { PapelResponse, PermissaoResponse } from '../../services/2-papel-permissao/type/papel-permissao.type';
-import type { ConfiguracaoResponse } from '../../services/11-configuracoes/type/configuracao.type';
+import type { UseAuthReturn } from '../../../services/3-auth/hook/use-auth';
+import type { UsuarioResponse } from '../../../services/1-usuario/type/usuario.type';
+import type { PapelResponse, PermissaoResponse } from '../../../services/2-papel-permissao/type/papel-permissao.type';
+import type { ConfiguracaoResponse } from '../../../services/11-configuracoes/type/configuracao.type';
 
 interface ResultadoBusca {
   categoria: string;

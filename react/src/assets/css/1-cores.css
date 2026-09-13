@@ -92,8 +92,16 @@
      estava implícito (bg-white do Tailwind direto no JSX), e é exatamente
      o que precisa inverter no escuro. Cada um marca uma "camada" de
      profundidade: página (mais fundo) < cartão < elevado (dropdown/modal,
-     precisa se destacar do cartão que está atrás dele). */
-  --cor-fundo-pagina: var(--color-surface);
+     precisa se destacar do cartão que está atrás dele).
+
+     CORRIGIDO (13-09-2026, achado do Claude Web, rodada 3): `--cor-fundo-
+     pagina` referenciava `var(--color-surface)` direto - sobra de ordem
+     cronológica (esta linha nasceu em 09-08-2026, antes do alias
+     `--cor-superficie` existir, criado só na rodada 2 de hoje). Variável
+     CSS resolve no momento do USO, não da declaração, então não importa
+     que o alias apareça depois no arquivo - trocado pra usar o alias, sem
+     mudar nenhum valor. */
+  --cor-fundo-pagina: var(--cor-superficie);
   --cor-fundo-cartao: var(--color-white);
   --cor-fundo-elevado: var(--color-white);
   --cor-fundo-hover: var(--color-slate-100);
@@ -144,7 +152,7 @@
 
   /* Paleta do avatar-iniciais (09-08-2026, Bloco B/C: bolinha com a
      inicial do nome quando não há foto) - cor de fundo DETERMINÍSTICA a
-     partir do nome (hash simples → índice aqui, ver avatar-usuario.jsx),
+     partir do nome (hash simples → índice aqui, ver avatar-usuario.tsx),
      nunca aleatória: a mesma pessoa precisa sempre cair na mesma cor, em
      qualquer tela. Token em vez de hardcoded no componente, pra poder
      ajustar a paleta inteira num lugar só. Tons -600 de propósito: contraste
@@ -161,7 +169,7 @@
 }
 
 /* ========= TEMA ESCURO (09-08-2026) =========
-   components/layout/controle-tema.jsx escreve data-tema="claro"/"escuro"/
+   components/layout/cabecalho/controle-tema.tsx escreve data-tema="claro"/"escuro"/
    "sistema" em <html> (mesmo padrão do --escala-fonte, 3-base.css: lazy
    initializer + localStorage['crowdacademico.tema'], pra não piscar no
    primeiro render). Só redefine os MESMOS nomes de token já usados no
@@ -258,9 +266,44 @@
   }
 
   /* Estático (não só :hover) - item selecionado por teclado/mouse em
-     lista (ex.: busca-global.jsx), não só passagem do mouse. */
+     lista (ex.: busca-global.tsx), não só passagem do mouse. */
   .fundo-realce {
     background-color: var(--cor-fundo-hover);
+  }
+
+  /* Utilitários da cor da MARCA (13-09-2026, achado do Claude Web,
+     rodada 3, migração dos ~21 consumidores de `bg-primary`/`text-
+     primary`/`border-primary` cru do Tailwind pro alias `--cor-marca`
+     criado na rodada 2) - mesmo papel de `.fundo-cartao`/`.texto-forte`/
+     `.borda-padrao` acima, só que pra cor de marca em vez de neutra. O
+     verde da marca é o MESMO nos dois temas (nenhum bloco de tema escuro
+     redefine `--cor-marca`/`--color-primary`) - migrar não muda nada
+     visualmente, só tira a referência crua. */
+  .fundo-marca {
+    background-color: var(--cor-marca);
+  }
+
+  .hover-fundo-marca-escura:hover {
+    background-color: var(--cor-marca-escura);
+  }
+
+  .texto-marca {
+    color: var(--cor-marca);
+  }
+
+  .hover-texto-marca:hover {
+    color: var(--cor-marca);
+  }
+
+  .borda-marca {
+    border-color: var(--cor-marca);
+  }
+
+  /* Campo de busca/filtro fora de `.input-padrao` (que já tem seu
+     próprio `:focus` embutido) - mesmo destaque visual de foco em verde,
+     aplicado junto de `outline-none` no JSX. */
+  .foco-marca:focus {
+    border-color: var(--cor-marca);
   }
 
   .texto-forte {

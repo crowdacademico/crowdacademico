@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router';
-import { abrirBuscaGlobal } from '../../components/layout/busca-global-evento';
+import { abrirBuscaGlobal } from '../../components/layout/cabecalho/busca-global-evento';
 import { Tooltip } from '../../components/layout/tooltip';
 import { GRUPOS_MENU_ADMIN } from './admin-menu.constants';
 
@@ -68,7 +68,7 @@ export function AdminSidebar({ aberto, aoFechar }: AdminSidebarProps) {
 
         {/* Busca global (09-08-2026) - Ctrl+K abre de qualquer lugar, mas
             um atalho sozinho não é descobrível; este botão é a pista
-            visível de que ele existe (ver components/layout/
+            visível de que ele existe (ver components/layout/cabecalho/
             busca-global.tsx). */}
         <button
           type="button"

@@ -1,9 +1,9 @@
 import { Link } from 'react-router';
-import { ControleFonte } from './controle-fonte';
-import { ControleTema } from './controle-tema';
+import { ControleFonte } from './cabecalho/controle-fonte';
+import { ControleTema } from './cabecalho/controle-tema';
 import { DevLoginRapido } from './dev-login-rapido';
-import { MenuUsuario } from './menu-usuario';
-import { SinoAtividade } from './sino-atividade';
+import { MenuUsuario } from './cabecalho/menu-usuario';
+import { SinoAtividade } from './cabecalho/sino-atividade';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 
 // Cópia fiel de componentes/header.html do Projeto de Interface real
@@ -40,7 +40,7 @@ export function Header({ auth }: HeaderProps) {
             menor que o ícone+texto do <footer>; os dois títulos ficam
             visualmente idênticos agora, só a posição (topo/rodapé) muda. */}
         <Link to="/" className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center text-white font-bold shadow-inner">
+          <div className="w-10 h-10 fundo-marca rounded-lg flex items-center justify-center text-white font-bold shadow-inner">
             <i className="fa-solid fa-flask"></i>
           </div>
           <span className="font-bold text-2xl tracking-tight texto-forte hidden sm:block">
@@ -58,7 +58,7 @@ export function Header({ auth }: HeaderProps) {
         <nav className="hidden md:flex space-x-8 h-full">
           <button
             onClick={placeholder('Explorar Projetos ainda não existe neste protótipo.')}
-            className="text-dark font-bold border-b-2 border-primary h-full flex items-center"
+            className="text-dark font-bold border-b-2 borda-marca h-full flex items-center"
           >
             Explorar Projetos
           </button>
@@ -91,7 +91,7 @@ export function Header({ auth }: HeaderProps) {
         <div className="flex items-center gap-3">
           <button
             onClick={placeholder('Submeter Pesquisa ainda não existe neste protótipo.')}
-            className="bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-lg font-bold transition-all text-sm shadow-md hidden lg:block mr-10"
+            className="fundo-marca hover-fundo-marca-escura text-white px-5 py-2.5 rounded-lg font-bold transition-all text-sm shadow-md hidden lg:block mr-10"
           >
             Submeter Pesquisa
           </button>

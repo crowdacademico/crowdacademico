@@ -33,12 +33,12 @@
   }
 
   .btn-primary {
-    background-color: var(--color-primary);
+    background-color: var(--cor-marca);
     color: var(--color-white);
   }
 
   .btn-primary:hover:not(:disabled) {
-    background-color: var(--color-primary-dark);
+    background-color: var(--cor-marca-escura);
   }
 
   .btn-secondary {
@@ -84,7 +84,7 @@
 
   .input-padrao:focus {
     outline: none;
-    border-color: var(--color-primary);
+    border-color: var(--cor-marca);
     background-color: var(--cor-fundo-cartao);
   }
 
@@ -104,7 +104,7 @@
     border-color: var(--cor-borda-erro);
   }
 
-  /* Tela "Consultar" (campo-textbox-consulta.jsx) - deixa claro visualmente
+  /* Tela "Consultar" (campo-textbox-consulta.tsx) - deixa claro visualmente
      que o campo é só leitura, não é só um input esquecido sem onChange. */
   .input-padrao:disabled {
     background-color: var(--cor-fundo-hover);
@@ -157,7 +157,7 @@
     font-family: var(--font-mono-dev);
   }
 
-  /* components/layout/dev-login-rapido.jsx - feio DE PROPÓSITO (roxo
+  /* components/layout/dev-login-rapido.tsx - feio DE PROPÓSITO (roxo
      sólido, borda tracejada, fonte monoespaçada): pedido explícito do
      Lucas, "roxo feio e em destaque, claramente mostrando que não vai
      ficar ali". Não é refinamento esquecido, é sinalização visual. */
@@ -185,7 +185,7 @@
     border-left: none;
   }
 
-  /* Tooltip (components/layout/tooltip.jsx) - ícone "ⓘ" que revela uma
+  /* Tooltip (components/layout/tooltip.tsx) - ícone "ⓘ" que revela uma
      explicação curta ao passar o mouse ou focar via teclado. CSS puro
      (:hover/:focus), sem JS controlando abrir/fechar. */
   .tooltip {
@@ -200,7 +200,7 @@
 
   .tooltip:hover,
   .tooltip:focus {
-    color: var(--color-primary);
+    color: var(--cor-marca);
     outline: none;
   }
 
@@ -209,7 +209,7 @@
     bottom: 135%;
     left: 50%;
     transform: translateX(-50%);
-    background-color: var(--color-dark);
+    background-color: var(--cor-escura);
     color: var(--color-white);
     padding: 0.5rem 0.75rem;
     border-radius: var(--radius-sm);
@@ -250,7 +250,7 @@
   }
 
   /* Variante --clicavel (04-09-2026): o ícone também abre um modal ao
-     clicar (ver prop `aoClicar` em tooltip.jsx) - reset dos estilos
+     clicar (ver prop `aoClicar` em tooltip.tsx) - reset dos estilos
      padrão de <button> (fundo, borda, fonte) pra ficar visualmente
      idêntico à variante só-hover (<span>), só trocando o cursor de
      "help" pra "pointer", que é o sinal certo pra algo clicável. */
@@ -260,5 +260,68 @@
     padding: 0;
     font: inherit;
     cursor: pointer;
+  }
+
+  /* Hover suave da cor da marca, derivado do token via color-mix() (não
+     um valor fixo) - 13-09-2026, achado do Claude Web, rodada 3: 8
+     ocorrências de `hover:bg-primary/10`/`/20` cru do Tailwind, a
+     opacidade calculada pela biblioteca por baixo, sem passar pelo
+     alias `--cor-marca`. `color-mix()` faz à mão o mesmo cálculo (é
+     inclusive o que o próprio Tailwind 4 usa por dentro pros modificadores
+     de opacidade) - se o verde da marca mudar um dia, isto acompanha
+     sozinho. Nomeada pela INTENÇÃO (hover de item selecionável), não pelo
+     valor - por isso não existe ".fundo-marca-10"/"-20" à parte, só esta
+     e o `.brilho-marca` mais abaixo (2 usos decorativos, opacidade
+     diferente, papel diferente). */
+  .hover-fundo-marca-suave:hover {
+    background-color: color-mix(in srgb, var(--cor-marca) 10%, transparent);
+  }
+
+  /* Linha de opção de dropdown/faceta com checkbox múltiplo (facet do
+     GenericTable e das 2 bancadas do Campo de Testes) - 13-09-2026,
+     achado do Claude Web: a MESMA cadeia de classes Tailwind (só a cor
+     mudando de nome) aparecia idêntica byte a byte em 3 arquivos
+     (generic-table.tsx, bancada-pesquisador.tsx, bancada-campanha.tsx) -
+     não era só cor crua, era o padrão inteiro triplicado. */
+  .dropdown-opcao {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    font-size: var(--font-size-sm);
+    font-weight: 700;
+    border-bottom: 1px solid var(--cor-borda);
+  }
+  .dropdown-opcao:hover {
+    background-color: color-mix(in srgb, var(--cor-marca) 10%, transparent);
+  }
+
+  /* Linha de opção de combobox de busca (sugestão de pesquisador/campanha
+     no Campo de Testes) - mesmo achado de triplicação do `.dropdown-opcao`
+     acima, cadeia diferente (sem borda embaixo, com gap de ícone). */
+  .combobox-opcao {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    font-size: var(--font-size-sm);
+    cursor: pointer;
+  }
+  .combobox-opcao:hover {
+    background-color: color-mix(in srgb, var(--cor-marca) 10%, transparent);
+  }
+
+  /* Brilho decorativo (blur de fundo, login e Minha Conta) - só 2 usos,
+     opacidades diferentes (20% e 10%), sem repetição de padrão de
+     layout nenhuma (por isso não vira ".dropdown-opcao"/"combobox-
+     opcao" - aqueles têm cadeia inteira duplicada, este é só decoração
+     solta). Ainda assim ganhou classe própria (não ficou cru) pra manter
+     a regra de ouro sem exceção - `--opacidade-brilho-marca` deixa a
+     tela escolher 10 ou 20 via style inline, sem inventar uma classe por
+     tela. */
+  .brilho-marca {
+    background-color: color-mix(in srgb, var(--cor-marca) var(--opacidade-brilho-marca, 10%), transparent);
   }
 }

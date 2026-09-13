@@ -145,7 +145,7 @@ export function RegistroChamadas() {
                       setTamanhoPagina(valor === 'todos' ? 'todos' : Number(valor));
                       setPagina(1);
                     }}
-                    className="border borda-padrao rounded-md fundo-sutil py-1 px-2 text-xs outline-none focus:border-primary"
+                    className="border borda-padrao rounded-md fundo-sutil py-1 px-2 text-xs outline-none foco-marca"
                   >
                     {TAMANHOS_PAGINA.map((tamanho) => (
                       <option key={tamanho} value={tamanho}>

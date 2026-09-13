@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { FormEvent } from 'react';
+import type { CSSProperties, FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { IconeGoogle } from '../../components/3-auth/icone-google';
 import { useErroToast } from '../../components/layout/use-erro-toast';
@@ -42,8 +42,11 @@ export function LoginPage({ auth }: PropsPagina) {
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 fundo-pagina">
       <div className="max-w-md w-full fundo-cartao rounded-3xl shadow-2xl border borda-padrao overflow-hidden">
         <div className="p-10 text-center border-b borda-padrao relative overflow-hidden fundo-sutil">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-32 bg-primary/20 rounded-full blur-3xl"></div>
-          <div className="w-14 h-14 bg-primary rounded-2xl mx-auto flex items-center justify-center text-white font-bold text-2xl mb-5 shadow-lg relative z-10">
+          <div
+            className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-32 brilho-marca rounded-full blur-3xl"
+            style={{ '--opacidade-brilho-marca': '20%' } as CSSProperties}
+          ></div>
+          <div className="w-14 h-14 fundo-marca rounded-2xl mx-auto flex items-center justify-center text-white font-bold text-2xl mb-5 shadow-lg relative z-10">
             <i className="fa-solid fa-flask"></i>
           </div>
           <h2 className="text-3xl font-serif font-bold texto-forte mb-2 relative z-10">Bem-vindo(a)</h2>
@@ -79,7 +82,7 @@ export function LoginPage({ auth }: PropsPagina) {
               <button
                 type="button"
                 onClick={() => window.alert('Recuperação de senha simulada no protótipo.')}
-                className="text-xs text-primary font-bold hover:underline"
+                className="text-xs texto-marca font-bold hover:underline"
               >
                 Esqueceu a senha?
               </button>
@@ -136,7 +139,7 @@ export function LoginPage({ auth }: PropsPagina) {
               entre si). */}
           <p className="text-sm texto-fraco text-center pt-2">
             Ainda não tem cadastro?{' '}
-            <Link to="/cadastro" className="text-primary font-bold underline">
+            <Link to="/cadastro" className="texto-marca font-bold underline">
               Clique aqui
             </Link>
           </p>

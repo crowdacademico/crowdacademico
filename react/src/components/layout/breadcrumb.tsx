@@ -51,7 +51,7 @@ export function Breadcrumb() {
     // por cima quando os dois grudam juntos no topo.
     <nav className="fundo-sutil border-b borda-padrao sticky top-16 z-40">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center gap-2 text-sm flex-wrap">
-        <Link to="/" className="text-primary font-bold hover:underline">
+        <Link to="/" className="texto-marca font-bold hover:underline">
           Início
         </Link>
         {cadeia.map((r, indice) => (
@@ -63,7 +63,7 @@ export function Breadcrumb() {
             {indice === ultimoIndice ? (
               <span className="texto-padrao font-medium">{r.rotuloBreadcrumb}</span>
             ) : (
-              <Link to={r.caminho} className="text-primary font-bold hover:underline">
+              <Link to={r.caminho} className="texto-marca font-bold hover:underline">
                 {r.rotuloBreadcrumb}
               </Link>
             )}

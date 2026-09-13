@@ -29,7 +29,7 @@
 
   /* Controle de fonte (09-08-2026, pedido do Lucas: acessibilidade,
      "botão de aumentar e diminuir fonte") - components/layout/
-     controle-fonte.jsx muda este valor via
+     controle-fonte.tsx muda este valor via
      document.documentElement.style.setProperty(). Aplicado no `html`
      (ver @layer base abaixo), não em cada elemento: como o projeto
      inteiro é rem-based (Tailwind v4 por padrão, mais as variáveis de

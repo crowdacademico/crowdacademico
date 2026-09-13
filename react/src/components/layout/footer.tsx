@@ -11,7 +11,7 @@ export function Footer() {
       <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-12">
         <div className="col-span-1 md:col-span-1">
           <Link to="/" className="flex items-center gap-3 mb-5">
-            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center text-white font-bold">
+            <div className="w-10 h-10 fundo-marca rounded-lg flex items-center justify-center text-white font-bold">
               <i className="fa-solid fa-flask"></i>
             </div>
             <span className="font-bold text-2xl tracking-tight text-white">CrowdAcadêmico</span>
@@ -28,19 +28,19 @@ export function Footer() {
           </h4>
           <ul className="space-y-4 text-sm font-medium">
             <li>
-              <a href="#" className="hover:text-primary transition-colors flex items-center gap-2">
+              <a href="#" className="hover-texto-marca transition-colors flex items-center gap-2">
                 <i className="fa-solid fa-angle-right text-[10px] text-slate-600"></i> Ciências
                 Biológicas
               </a>
             </li>
             <li>
-              <a href="#" className="hover:text-primary transition-colors flex items-center gap-2">
+              <a href="#" className="hover-texto-marca transition-colors flex items-center gap-2">
                 <i className="fa-solid fa-angle-right text-[10px] text-slate-600"></i> Exatas e
                 Engenharias
               </a>
             </li>
             <li>
-              <a href="#" className="hover:text-primary transition-colors flex items-center gap-2">
+              <a href="#" className="hover-texto-marca transition-colors flex items-center gap-2">
                 <i className="fa-solid fa-angle-right text-[10px] text-slate-600"></i> Ciências
                 Humanas
               </a>
@@ -54,19 +54,19 @@ export function Footer() {
           </h4>
           <ul className="space-y-4 text-sm font-medium">
             <li>
-              <a href="#" className="hover:text-primary transition-colors flex items-center gap-2">
+              <a href="#" className="hover-texto-marca transition-colors flex items-center gap-2">
                 <i className="fa-solid fa-angle-right text-[10px] text-slate-600"></i> Diretrizes de
                 Submissão
               </a>
             </li>
             <li>
-              <a href="#" className="hover:text-primary transition-colors flex items-center gap-2">
+              <a href="#" className="hover-texto-marca transition-colors flex items-center gap-2">
                 <i className="fa-solid fa-angle-right text-[10px] text-slate-600"></i> Validação via
                 Lattes
               </a>
             </li>
             <li>
-              <a href="#" className="hover:text-primary transition-colors flex items-center gap-2">
+              <a href="#" className="hover-texto-marca transition-colors flex items-center gap-2">
                 <i className="fa-solid fa-angle-right text-[10px] text-slate-600"></i> Taxas e
                 Repasses
               </a>

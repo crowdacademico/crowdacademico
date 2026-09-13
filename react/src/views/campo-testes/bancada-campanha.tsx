@@ -647,7 +647,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
                 setFiltroTexto(evento.target.value);
                 setPagina(1);
               }}
-              className="w-full sm:w-64 border borda-forte rounded-lg fundo-sutil py-2 px-3 text-sm outline-none focus:border-primary"
+              className="w-full sm:w-64 border borda-forte rounded-lg fundo-sutil py-2 px-3 text-sm outline-none foco-marca"
             />
           )}
 
@@ -676,7 +676,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
                       setStatusSelecionados([]);
                       setPagina(1);
                     }}
-                    className="w-full text-left px-3 py-2 text-sm font-bold hover:bg-primary/10 border-b borda-padrao flex items-center justify-between"
+                    className="dropdown-opcao"
                   >
                     Todos
                     {statusSelecionados.length === 0 && <i className="fa-solid fa-check texto-sucesso"></i>}
@@ -691,7 +691,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
                       return (
                         <label
                           key={status}
-                          className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-primary/10 cursor-pointer"
+                          className="combobox-opcao"
                           onClick={(evento) => {
                             if (evento.target instanceof Element && evento.target.tagName !== 'INPUT') {
                               evento.preventDefault();
@@ -1339,7 +1339,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
                         }}
                         className={
                           'w-full text-left px-3 py-2 text-sm border-b borda-padrao last:border-b-0 flex items-center justify-between gap-2 ' +
-                          (podeEscolher ? 'hover:bg-primary/10' : 'opacity-60 cursor-not-allowed')
+                          (podeEscolher ? 'hover-fundo-marca-suave' : 'opacity-60 cursor-not-allowed')
                         }
                       >
                         <span className="texto-forte inline-flex items-baseline">
@@ -1449,7 +1449,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
                   setTamanhoPagina(valor === 'todos' ? 'todos' : Number(valor));
                   setPagina(1);
                 }}
-                className="border borda-padrao rounded-md fundo-sutil py-1 px-2 text-xs outline-none focus:border-primary"
+                className="border borda-padrao rounded-md fundo-sutil py-1 px-2 text-xs outline-none foco-marca"
               >
                 {TAMANHOS_PAGINA.map((tamanho) => (
                   <option key={tamanho} value={tamanho}>

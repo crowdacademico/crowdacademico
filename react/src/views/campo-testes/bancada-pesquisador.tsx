@@ -218,7 +218,7 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
                 setFiltroTexto(evento.target.value);
                 setPagina(1);
               }}
-              className="w-full sm:w-64 border borda-forte rounded-lg fundo-sutil py-2 px-3 text-sm outline-none focus:border-primary"
+              className="w-full sm:w-64 border borda-forte rounded-lg fundo-sutil py-2 px-3 text-sm outline-none foco-marca"
             />
           )}
 
@@ -247,7 +247,7 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
                       setPapeisSelecionados([]);
                       setPagina(1);
                     }}
-                    className="w-full text-left px-3 py-2 text-sm font-bold hover:bg-primary/10 border-b borda-padrao flex items-center justify-between"
+                    className="dropdown-opcao"
                   >
                     Todos
                     {papeisSelecionados.length === 0 && <i className="fa-solid fa-check texto-sucesso"></i>}
@@ -262,7 +262,7 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
                       return (
                         <label
                           key={papel}
-                          className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-primary/10 cursor-pointer"
+                          className="combobox-opcao"
                           onClick={(evento) => {
                             if (evento.target instanceof Element && evento.target.tagName !== 'INPUT') {
                               evento.preventDefault();
@@ -394,7 +394,7 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
                   setTamanhoPagina(valor === 'todos' ? 'todos' : Number(valor));
                   setPagina(1);
                 }}
-                className="border borda-padrao rounded-md fundo-sutil py-1 px-2 text-xs outline-none focus:border-primary"
+                className="border borda-padrao rounded-md fundo-sutil py-1 px-2 text-xs outline-none foco-marca"
               >
                 {TAMANHOS_PAGINA.map((tamanho) => (
                   <option key={tamanho} value={tamanho}>

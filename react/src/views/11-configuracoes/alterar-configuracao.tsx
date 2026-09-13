@@ -105,7 +105,7 @@ export function AlterarConfiguracao({ auth }: PropsPagina) {
           {erro && <p className="texto-erro text-sm font-bold text-center">{erro}</p>}
 
           <div className="flex items-center gap-3 pb-4 border-b borda-padrao">
-            <div className="w-11 h-11 rounded-full bg-primary text-white flex items-center justify-center shrink-0">
+            <div className="w-11 h-11 rounded-full fundo-marca text-white flex items-center justify-center shrink-0">
               <i className="fa-solid fa-gear"></i>
             </div>
             <div className="min-w-0">

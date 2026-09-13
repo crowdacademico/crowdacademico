@@ -1,5 +1,5 @@
 /* ========= BLOCOS DE CRUD (tabela genérica) =========
-   Usado por components/crud/generic-table.jsx dentro do painel admin.
+   Usado por components/crud/generic-table.tsx dentro do painel admin.
    Migrado do antigo devtools.css (cores hardcoded) pras variáveis de
    1-cores.css - mesma ideia de "tirar o hardcoded" já aplicada no banco
    (configuracoes em vez de valor fixo no .sql). Paginação/rodapé da tabela
@@ -99,7 +99,7 @@
      começam a se apertar, ver comentário do @container mais abaixo).
      Com box-sizing: border-box (3-base.css) em todo elemento, encolher
      o padding realmente devolve espaço pro CONTEÚDO dentro do mesmo piso
-     de min-width calculado em generic-table.jsx - alivia a tabela
+     de min-width calculado em generic-table.tsx - alivia a tabela
      inteira de uma vez, não só a coluna id. Vertical (0.85rem) continua
      fixo de propósito - o pedido era sobre o vão ENTRE colunas
      (horizontal), não a altura da linha. */
@@ -134,7 +134,7 @@
      Lucas: "deve suportar até 3 ou 4 dígitos sem quebra de linha").
      `width` aqui é só um FALLBACK - GenericTable (25-08-2026) calcula a
      própria largura por tabela (table-layout: auto, min-width piso de
-     8ch, ver comentário completo em generic-table.jsx) e sobrescreve
+     8ch, ver comentário completo em generic-table.tsx) e sobrescreve
      isto via `style` inline; esta regra continua valendo pra qualquer
      tabela que NÃO passe por esse cálculo. `white-space: nowrap`
      garante que os dígitos nunca quebram linha mesmo numa tela estreita.
@@ -216,7 +216,7 @@
   }
 
   /* `<br>` manual e controlado (25-08-2026, ver `coluna.quebrarRotulo` em
-     generic-table.jsx - o "porquê" completo está lá) - escondido por
+     generic-table.tsx - o "porquê" completo está lá) - escondido por
      padrão (nenhuma quebra, cabeçalho numa linha só, em qualquer
      largura), e só "ligado" abaixo do breakpoint. `display: none` não
      esconde só visualmente, remove o `<br>` da árvore de fato - sem
@@ -259,7 +259,7 @@
   }
 
   .crud-tabela th.crud-tabela__ordenavel:hover {
-    color: var(--color-primary-dark);
+    color: var(--cor-marca-escura);
   }
 
   /* Coluna Ações - texto/ícone discreto, não botão sólido (pedido do
@@ -301,7 +301,7 @@
   }
 
   /* Dica ao passar o mouse (18-08-2026, pedido da Alexia) - mesmo visual
-     de .tooltip__texto (components/layout/tooltip.jsx / 4-componentes.css:
+     de .tooltip__texto (components/layout/tooltip.tsx / 4-componentes.css:
      pílula escura, acima do elemento, fade puro em CSS), reimplementada
      aqui em vez de reaproveitar a classe: `.tooltip` tem `cursor: help` e
      `margin-left` pensados pro ícone "ⓘ" avulso, errados pra um link de
@@ -313,7 +313,7 @@
     bottom: 135%;
     left: 50%;
     transform: translateX(-50%);
-    background-color: var(--color-dark);
+    background-color: var(--cor-escura);
     color: var(--color-white);
     padding: 0.35rem 0.65rem;
     border-radius: var(--radius-sm);
@@ -359,7 +359,7 @@
      query abaixo observa, não a coluna.
      Valor (900px, ERA 1150px) - achado do Lucas testando ao vivo o novo
      breakpoint da sidebar (xl:, ~1280-1340px de janela, ver
-     admin-sidebar.jsx): "bug esquisito, poucos centímetros antes do menu
+     admin-sidebar.tsx): "bug esquisito, poucos centímetros antes do menu
      lateral sumir". Causa: a sidebar ocupa ~372px de "chrome" (260px de
      coluna + paddings ao redor) enquanto está aberta, e ZERO quando vira
      gaveta - no exato pixel do breakpoint dela, o espaço da tabela SALTA

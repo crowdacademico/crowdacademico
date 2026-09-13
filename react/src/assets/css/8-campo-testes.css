@@ -87,7 +87,7 @@
 }
 
 /* Tabela de Links acadêmicos (Bancada do Pesquisador) - vive dividindo a
-   metade da tela com o painel de Score (bancada-pesquisador.jsx), então
+   metade da tela com o painel de Score (bancada-pesquisador.tsx), então
    a largura de JANELA (usada pela regra geral de 5-crud.css, @media
    max-width: 1400px) não corresponde à largura real desta coluna: numa
    janela de 1500px+ o texto de Alterar/Consultar/Remover carregava
@@ -110,7 +110,7 @@
    um rótulo gigante), a TABELA rola sozinha dentro da própria coluna, em
    vez de vazar visualmente pro painel de Score do lado - nunca deveria
    disparar em uso normal (o botão "+ adicionar" saiu da linha por causa
-   disso, ver bancada-pesquisador.jsx). */
+   disso, ver bancada-pesquisador.tsx). */
 /* overflow-x: hidden (não auto) - achado ao vivo (23-08-2026): a barra
    de rolagem não vinha da tabela em si (table-layout: fixed abaixo já
    trava isso matematicamente), vinha da DICA de hover de

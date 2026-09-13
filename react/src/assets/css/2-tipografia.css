@@ -133,7 +133,7 @@
   }
 
   /* Texto técnico denso (chave, log, id) - já era o padrão de fato em
-     ModalDetalhe e dashboard-regras-negocio.jsx antes de virar token. */
+     ModalDetalhe e dashboard-regras-negocio.tsx antes de virar token. */
   .paragrafo-denso {
     font-family: var(--font-mono-dev);
     font-size: var(--font-size-xs);

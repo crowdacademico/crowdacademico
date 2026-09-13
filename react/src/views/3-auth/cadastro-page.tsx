@@ -111,7 +111,7 @@ export function CadastroPage({ auth }: PropsPagina) {
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 fundo-pagina">
       <div className="max-w-md w-full max-h-[calc(100vh-2rem)] fundo-cartao rounded-3xl shadow-2xl border borda-padrao overflow-hidden flex flex-col">
         <div className="p-10 text-center border-b borda-padrao fundo-sutil shrink-0">
-          <div className="w-14 h-14 bg-primary rounded-2xl mx-auto flex items-center justify-center text-white font-bold text-2xl mb-5 shadow-lg">
+          <div className="w-14 h-14 fundo-marca rounded-2xl mx-auto flex items-center justify-center text-white font-bold text-2xl mb-5 shadow-lg">
             <i className="fa-solid fa-user-plus"></i>
           </div>
           <h2 className="text-3xl font-serif font-bold texto-forte mb-2">Criar conta</h2>
@@ -202,7 +202,7 @@ export function CadastroPage({ auth }: PropsPagina) {
                       key={r.chave}
                       className={
                         'h-1 flex-1 rounded-full ' +
-                        (indice < requisitosCumpridos ? 'bg-primary' : 'fundo-sutil')
+                        (indice < requisitosCumpridos ? 'fundo-marca' : 'fundo-sutil')
                       }
                     ></div>
                   ))}
@@ -262,7 +262,7 @@ export function CadastroPage({ auth }: PropsPagina) {
               <button
                 type="button"
                 onClick={abrirTermos}
-                className="text-primary font-bold underline"
+                className="texto-marca font-bold underline"
               >
                 Termos de Uso
               </button>
@@ -282,7 +282,7 @@ export function CadastroPage({ auth }: PropsPagina) {
           </button>
           <p className="text-xs texto-fraco text-center">
             Já tem conta?{' '}
-            <Link to="/login" className="text-primary font-bold underline">
+            <Link to="/login" className="texto-marca font-bold underline">
               Entrar
             </Link>
           </p>

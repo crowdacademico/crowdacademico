@@ -231,7 +231,7 @@ export function VidaCampanhaAtiva({ auth }: PropsPagina) {
                   setBuscaCampanha(item.titulo);
                   setSugestoesCampanhaAbertas(false);
                 }}
-                className="w-full text-left px-3 py-2 text-sm border-b borda-padrao last:border-b-0 hover:bg-primary/10 flex items-center justify-between gap-2"
+                className="w-full text-left px-3 py-2 text-sm border-b borda-padrao last:border-b-0 hover-fundo-marca-suave flex items-center justify-between gap-2"
               >
                 <span className="texto-forte inline-flex items-baseline">
                   <span className="inline-block w-16 shrink-0 tabular-nums">ID: {item.idCampanha}</span>

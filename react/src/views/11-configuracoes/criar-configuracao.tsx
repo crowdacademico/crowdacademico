@@ -156,7 +156,7 @@ export function CriarConfiguracao({ auth }: PropsPagina) {
               onClick={() => setValor(valor === 'true' ? 'false' : 'true')}
               className={
                 'w-14 h-8 rounded-full relative transition-colors shrink-0 ' +
-                (valor === 'true' ? 'bg-primary' : 'fundo-sutil border borda-forte')
+                (valor === 'true' ? 'fundo-marca' : 'fundo-sutil border borda-forte')
               }
             >
               <span

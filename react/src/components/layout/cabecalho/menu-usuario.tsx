@@ -1,8 +1,8 @@
 import { useRef, useState } from 'react';
 import { Link } from 'react-router';
-import { AvatarUsuario } from './avatar-usuario';
-import { useFecharAoClicarFora } from '../../services/constant/hook/use-fechar-ao-clicar-fora';
-import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
+import { AvatarUsuario } from '../avatar-usuario';
+import { useFecharAoClicarFora } from '../../../services/constant/hook/use-fechar-ao-clicar-fora';
+import type { UseAuthReturn } from '../../../services/3-auth/hook/use-auth';
 
 function placeholder(mensagem: string): () => void {
   return () => window.alert(mensagem);
@@ -83,7 +83,7 @@ export function MenuUsuario({ auth }: MenuUsuarioProps) {
                   <Link
                     to="/admin/dashboard"
                     onClick={() => setAberto(false)}
-                    className="flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-primary hover-fundo-sutil transition-colors"
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm font-semibold texto-marca hover-fundo-sutil transition-colors"
                   >
                     <i className="fa-solid fa-shield-halved w-4"></i>
                     Painel Admin
@@ -114,7 +114,7 @@ export function MenuUsuario({ auth }: MenuUsuarioProps) {
               <Link
                 to="/cadastro"
                 onClick={() => setAberto(false)}
-                className="flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-primary hover-fundo-sutil transition-colors"
+                className="flex items-center gap-3 px-4 py-2.5 text-sm font-semibold texto-marca hover-fundo-sutil transition-colors"
               >
                 <i className="fa-solid fa-user-plus w-4"></i>
                 Cadastre-se

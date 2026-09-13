@@ -49,7 +49,7 @@ import type { ReactNode } from 'react';
 type VarianteIcone = 'padrao' | 'perigo';
 
 const VARIANTES_ICONE: Record<VarianteIcone, string> = {
-  padrao: 'bg-primary text-white',
+  padrao: 'fundo-marca text-white',
   perigo: 'fundo-erro texto-erro',
 };
 

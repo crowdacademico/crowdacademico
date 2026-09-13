@@ -2,7 +2,7 @@
    (informacoes/Sem-Node-Projeto-de-Interface-CrowdAcademico/css/estilos.css)
    e da convenção de numeração já usada no hotel (informacoes/modelo em
    MySQL_.../react_academic/src/assets/css/0-style.css): um arquivo por
-   responsabilidade, importado aqui em ordem. main.jsx importa este arquivo
+   responsabilidade, importado aqui em ordem. main.tsx importa este arquivo
    + tailwind-theme.css (esse fica separado, ver o comentário lá pro
    porquê).
 

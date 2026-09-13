@@ -139,7 +139,7 @@ function FaixaIdentidade({ auth }: FaixaIdentidadeProps) {
       {/* Gradiente MUITO discreto (10% de opacidade) em vez de fundo verde
           chapado - regra já estabelecida no projeto: verde é acento, não
           fundo. Mesmo truque decorativo do blob em login-page.tsx. */}
-      <div className="pointer-events-none absolute -top-12 -right-12 w-56 h-56 bg-primary/10 rounded-full blur-3xl"></div>
+      <div className="pointer-events-none absolute -top-12 -right-12 w-56 h-56 brilho-marca rounded-full blur-3xl"></div>
 
       <div className="relative flex flex-col sm:flex-row sm:items-center gap-5">
         {/* Anel ao redor do avatar via padding + fundo-cartao (não
@@ -212,7 +212,7 @@ function BarraAbas({ abaAtiva }: BarraAbasProps) {
           className={
             'flex items-center gap-2 px-4 py-3.5 text-sm font-bold whitespace-nowrap border-b-2 -mb-px transition-colors ' +
             (item.chave === abaAtiva
-              ? 'border-primary text-primary'
+              ? 'borda-marca texto-marca'
               : 'border-transparent texto-fraco hover-texto-forte')
           }
         >

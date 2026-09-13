@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Outlet } from 'react-router';
-import { BuscaGlobal } from '../../components/layout/busca-global';
+import { BuscaGlobal } from '../../components/layout/cabecalho/busca-global';
 import { AdminSidebar } from './admin-sidebar';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 

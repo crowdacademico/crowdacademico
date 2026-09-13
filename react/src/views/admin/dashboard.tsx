@@ -138,7 +138,7 @@ export function Dashboard({ auth }: DashboardProps) {
             className={
               'px-4 py-2.5 text-sm font-semibold flex items-center gap-2 border-b-2 -mb-px whitespace-nowrap transition-colors ' +
               (abaAtiva === aba.chave
-                ? 'border-primary text-primary'
+                ? 'borda-marca texto-marca'
                 : 'border-transparent texto-fraco hover-texto-forte')
             }
           >

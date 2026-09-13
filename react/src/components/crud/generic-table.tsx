@@ -604,7 +604,7 @@ export function GenericTable<T extends Linha>({
                 onChange={(evento) => {
                   atualizarParametros({ q: evento.target.value, pagina: null });
                 }}
-                className="w-full sm:w-64 border borda-forte rounded-lg fundo-sutil py-2 px-3 text-sm outline-none focus:border-primary"
+                className="w-full sm:w-64 border borda-forte rounded-lg fundo-sutil py-2 px-3 text-sm outline-none foco-marca"
               />
             )}
 
@@ -650,7 +650,7 @@ export function GenericTable<T extends Linha>({
                             onClick={() => {
                               atualizarParametros({ [faceta.chave]: null, pagina: null });
                             }}
-                            className="w-full text-left px-3 py-2 text-sm font-bold hover:bg-primary/10 border-b borda-padrao flex items-center justify-between"
+                            className="dropdown-opcao"
                           >
                             Todos
                             {selecionados.length === 0 && <i className="fa-solid fa-check texto-sucesso"></i>}
@@ -686,7 +686,7 @@ export function GenericTable<T extends Linha>({
                                 // e cancelaria a mudança.
                                 <label
                                   key={opcao}
-                                  className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-primary/10 cursor-pointer"
+                                  className="combobox-opcao"
                                   onClick={(evento) => {
                                     if (
                                       evento.target instanceof Element &&
@@ -939,7 +939,7 @@ export function GenericTable<T extends Linha>({
                         pagina: null,
                       });
                     }}
-                    className="border borda-padrao rounded-md fundo-sutil py-1 px-2 text-xs outline-none focus:border-primary"
+                    className="border borda-padrao rounded-md fundo-sutil py-1 px-2 text-xs outline-none foco-marca"
                   >
                     {TAMANHOS_PAGINA.map((tamanho) => (
                       <option key={tamanho} value={tamanho}>
