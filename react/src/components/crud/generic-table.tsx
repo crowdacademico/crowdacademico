@@ -36,6 +36,13 @@ interface FiltroFacetado<T extends Linha> {
   chave: keyof T & string;
   rotulo: string;
   ordem?: string[];
+  // `rotulos` (13-09-2026, pedido do Lucas: facet de Tipo em Termos de Uso)
+  // - opcional, traduz o valor CRU pra um texto amigável só na exibição do
+  // dropdown (botão + opções); o filtro em si continua comparando/gravando
+  // na URL o valor cru (`atualizarParametros`), nunca o traduzido - mesmo
+  // espírito de permissao-nomes-amigaveis.ts, camada de exibição por cima
+  // do dado, sem mudar o dado.
+  rotulos?: Record<string, string>;
 }
 
 type AcaoPadrao = 'alterar' | 'consultar' | 'excluir';
@@ -698,7 +705,7 @@ export function GenericTable<T extends Linha>({
                                   }}
                                 >
                                   <input type="checkbox" checked={marcado} onChange={alternar} />
-                                  {opcao}
+                                  {faceta.rotulos?.[opcao] ?? opcao}
                                 </label>
                               );
                             })}

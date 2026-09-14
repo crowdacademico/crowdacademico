@@ -39,12 +39,29 @@ export interface PerfilPesquisadorResponseScore {
   dimensoes: DimensaoScoreResponse[];
 }
 
-// Espelha perfil-pesquisador.request-create.ts.
+// Espelha perfil-pesquisador.request-create.ts - self-service (upgrade da
+// PRÓPRIA conta). `aceiteTermos` ADICIONADO (13-09-2026, modal de upgrade
+// em T1) - mesmo padrão de AuthRequestRegister no cadastro.
 export interface PerfilPesquisadorRequestCreate {
   cpf: string;
   tipoVinculo: TipoVinculo;
   vinculoInstitucional?: string;
   tituloAcademico: TituloAcademico;
+  aceiteTermos: boolean;
+}
+
+// Espelha perfil-pesquisador.request-create-para-outro.ts - admin criando
+// EM NOME de outra pessoa. `aceiteTermos` OPCIONAL (14-09-2026, diferente
+// do self-service que exige `true`) - o card "Criar Perfil Pesquisador"
+// dentro de ModalAlterarUsuario não manda esse campo (continua sem
+// registrar aceite, como sempre); o cadeado em T1 manda `true` (mostrou o
+// Termo de Uso vigente antes, aceite gravado em nome do ALVO).
+export interface PerfilPesquisadorRequestCreateParaOutro {
+  cpf: string;
+  tipoVinculo: TipoVinculo;
+  vinculoInstitucional?: string;
+  tituloAcademico: TituloAcademico;
+  aceiteTermos?: boolean;
 }
 
 // Espelha perfil-pesquisador.request-update.ts. Nunca inclui `cpf`, de

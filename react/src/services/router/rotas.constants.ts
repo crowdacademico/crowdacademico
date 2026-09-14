@@ -36,7 +36,6 @@ import { BancadaCampanha } from '../../views/campo-testes/bancada-campanha';
 import { VidaCampanhaAtiva } from '../../views/campo-testes/vida-campanha-ativa';
 import { ListarTermosUso } from '../../views/5-termo-uso/listar-termos-uso';
 import { CriarTermoUso } from '../../views/5-termo-uso/criar-termo-uso';
-import { AlterarTermoUso } from '../../views/5-termo-uso/alterar-termo-uso';
 
 // Fonte única de verdade pra "quais páginas existem" - App.tsx monta as
 // <Route> a partir daqui, e breadcrumb.tsx monta o rótulo a partir daqui.
@@ -298,16 +297,11 @@ export const ROTAS_ADMIN: Rota[] = [
     paiCaminho: '/admin/termos-uso',
   },
   // Alterar (13-09-2026, decisão do Lucas via AskUserQuestion: "editar só
-  // enquanto ninguém aceitou ainda") - só é aceito pelo backend
-  // (TermoUsoServiceAlterar) enquanto a versão não tiver nenhum aceite;
-  // depois disso a própria tela mostra o erro 409 vindo do servidor.
-  {
-    caminho: '/admin/termos-uso/:id/alterar',
-    caminhoRelativo: 'termos-uso/:id/alterar',
-    elemento: AlterarTermoUso,
-    rotuloBreadcrumb: 'Alterar Termos de Uso',
-    paiCaminho: '/admin/termos-uso',
-  },
+  // enquanto ninguém aceitou ainda") EM MODAL desde o mesmo dia, rodada
+  // seguinte (pedido do Lucas: "adotar modal para o CRUD") - a página
+  // própria que existia aqui foi apagada; ModalAlterarTermoUso é aberto
+  // direto por listar-termos-uso.tsx/dashboard-regras-negocio.tsx, sem
+  // rota própria (mesmo padrão de Usuário).
 
   // Parâmetro do Sistema (nome novo) - filhas de /admin/configuracoes
   // (caminho da URL não mudou, só o rótulo, ver comentário lá em cima).

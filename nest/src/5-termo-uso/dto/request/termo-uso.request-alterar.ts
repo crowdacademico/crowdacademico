@@ -1,12 +1,11 @@
-import { IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsOptional, IsString } from 'class-validator';
 
+// Só `conteudo` (13-09-2026, achado do Lucas: 2 caixas de texto mostrando a
+// mesma versão no modal - o listbox de seleção e um campo "Versão" editável
+// - não fazia sentido). `tipo`/`versao` são imutáveis depois de criada a
+// linha; quem quiser um identificador novo, publica uma versão nova
+// (TermoUsoRequestCriar), não altera esta.
 export class TermoUsoRequestAlterar {
-  // bate com termos_de_uso.versao VARCHAR(20), 01_extensoes_enums_tabelas.sql
-  @IsOptional()
-  @IsString()
-  @MaxLength(20)
-  versao?: string;
-
   @IsOptional()
   @IsString()
   conteudo?: string;

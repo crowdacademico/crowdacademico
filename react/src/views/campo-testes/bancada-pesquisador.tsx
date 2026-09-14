@@ -20,6 +20,7 @@ import {
   ROTULO_TITULO_ACADEMICO,
 } from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
 import { ModalAlterarUsuario, ModalConsultarUsuario, ModalExcluirUsuario } from '../1-usuario/modal-usuario';
+import { ModalUpgradePesquisador } from '../6-perfil-pesquisador/modal-upgrade-pesquisador';
 import { RegistroChamadas } from './registro-chamadas';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { UsuarioResponse } from '../../services/1-usuario/type/usuario.type';
@@ -101,6 +102,15 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
   const [idUsuarioConsultando, setIdUsuarioConsultando] = useState<number | null>(null);
   const [idUsuarioAlterando, setIdUsuarioAlterando] = useState<number | null>(null);
   const [usuarioExcluindo, setUsuarioExcluindo] = useState<PesquisadorLinha | null>(null);
+  // Coluna "upgrade" (13-09-2026, pedido do Lucas) - cadeado abre o MESMO
+  // Modal de upgrade de perfil que qualquer conta usaria (ModalUpgrade
+  // Pesquisador, em 6-perfil-pesquisador/ - não é exclusivo do Campo de
+  // Testes) pra QUALQUER linha sem perfil, própria ou de outra pessoa
+  // (14-09-2026, decisão do Lucas via AskUserQuestion: o Termo de Uso
+  // aparece sempre, mesmo pra outra conta - o Modal decide sozinho, por
+  // baixo, se usa o endpoint self-service ou "para outro" comparando
+  // `idUsuarioAlvo` com a conta logada).
+  const [idUsuarioUpgrade, setIdUsuarioUpgrade] = useState<number | null>(null);
 
   // Lista TODOS os usuários (23-08-2026, pedido do Lucas: "não deve
   // aparecer só Pesquisadores"), não só quem já tem perfil_pesquisador -
@@ -292,23 +302,24 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
             <th>título</th>
             <th className="crud-tabela__celula--centralizada">status</th>
             <th className="crud-tabela__celula--centralizada">score</th>
+            <th className="crud-tabela__celula--centralizada">upgrade</th>
             <th className="crud-tabela__celula--centralizada">Ações</th>
           </tr>
         </thead>
         <tbody>
           {carregandoLista && (
             <tr>
-              <td colSpan={7} className="texto-fraco">Carregando...</td>
+              <td colSpan={8} className="texto-fraco">Carregando...</td>
             </tr>
           )}
           {!carregandoLista && erroListagem && (
             <tr>
-              <td colSpan={7} className="texto-erro font-bold">{erroListagem}</td>
+              <td colSpan={8} className="texto-erro font-bold">{erroListagem}</td>
             </tr>
           )}
           {!carregandoLista && !erroListagem && pesquisadoresPagina.length === 0 && (
             <tr>
-              <td colSpan={7} className="texto-fraco">{filtroTexto ? 'Nenhum registro bate com o filtro.' : 'Nenhum registro.'}</td>
+              <td colSpan={8} className="texto-fraco">{filtroTexto ? 'Nenhum registro bate com o filtro.' : 'Nenhum registro.'}</td>
             </tr>
           )}
           {!carregandoLista &&
@@ -333,6 +344,29 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
                     {perfil.statusPesquisador ? ROTULO_STATUS_PESQUISADOR[perfil.statusPesquisador] : '-'}
                   </td>
                   <td className="crud-tabela__celula--centralizada">{perfil.scoreAtual ?? '-'}</td>
+                  <td className="crud-tabela__celula--centralizada">
+                    {perfil.statusPesquisador !== undefined ? (
+                      <span className="badge badge-sucesso">Pesquisador</span>
+                    ) : (
+                      // Cadeado SEMPRE visível e clicável (14-09-2026,
+                      // achado do Lucas: "nos Usuários que não Pesquisadores
+                      // está aparecendo '-'... era pro cadeado estar ali") -
+                      // em toda linha sem perfil, própria ou de outra
+                      // pessoa. O Modal (ModalUpgradePesquisador) decide
+                      // sozinho, por baixo, qual endpoint usar comparando o
+                      // `idUsuarioAlvo` com a conta logada - aqui só se
+                      // guarda QUEM.
+                      <button
+                        type="button"
+                        onClick={() => setIdUsuarioUpgrade(perfil.idUsuario)}
+                        disabled={bloqueado}
+                        title="Fazer upgrade de perfil pra pesquisador"
+                        aria-label="Fazer upgrade de perfil pra pesquisador"
+                      >
+                        <i className="fa-solid fa-lock texto-aviso"></i>
+                      </button>
+                    )}
+                  </td>
                   <td className="crud-tabela__celula--centralizada">
                     {bloqueado ? (
                       <span title={motivoBloqueioPesquisador()}>
@@ -442,6 +476,16 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
           aoAtualizado={carregarPesquisadores}
           gerarCpfDeTeste={gerarCpfValido}
           aoRegistrarChamada={registrarChamada}
+        />
+      )}
+
+      {idUsuarioUpgrade !== null && (
+        <ModalUpgradePesquisador
+          auth={auth}
+          idUsuarioAlvo={idUsuarioUpgrade}
+          gerarCpfDeTeste={gerarCpfValido}
+          aoFechar={() => setIdUsuarioUpgrade(null)}
+          aoConcluido={carregarPesquisadores}
         />
       )}
 

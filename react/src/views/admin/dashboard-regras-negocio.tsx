@@ -4,6 +4,7 @@ import { configuracaoApi } from '../../services/11-configuracoes/api/configuraca
 import { agruparConfiguracoes } from '../../services/11-configuracoes/constants/configuracao-grupos';
 import { termoUsoApi } from '../../services/5-termo-uso/api/termo-uso.api';
 import { DESCRICAO_TIPO_TERMO, ROTULO_TIPO_TERMO, TIPOS_TERMO } from '../../services/5-termo-uso/constants/termo-uso-tipos';
+import { ModalAlterarTermoUso } from '../5-termo-uso/modal-alterar-termo-uso';
 import { Tooltip } from '../../components/layout/tooltip';
 import { ModalDetalhe } from '../../components/crud/modal-detalhe';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
@@ -64,28 +65,32 @@ type EstadoTermoAtivo = TermoUsoResponseAtivo | null | undefined;
 
 const SECOES_MODAL_TERMO_USO = [
   {
-    titulo: 'Por que 2 linhas',
+    titulo: 'Por que várias linhas',
     conteudo: (
       <p>
         O sistema sempre tem exatamente 1 Termo de Uso vigente <strong>por tipo</strong> -
-        um pro aceite geral (feito uma vez, no cadastro da conta) e outro pra contribuição a
-        campanha (aceito a cada contribuição). São trilhas independentes: publicar uma versão
-        nova de um tipo nunca desativa o do outro.
+        cadastro (aceito uma vez, na criação da conta), contribuição a campanha (aceito a
+        cada contribuição) e upgrade de perfil de pesquisador (aceito ao solicitar o
+        upgrade). São trilhas independentes: publicar ou tornar vigente uma versão de um
+        tipo nunca afeta os outros.
       </p>
     ),
   },
   {
-    titulo: 'Alterar x Publicar versão nova',
+    titulo: 'Criar → revisar → tornar vigente',
     conteudo: (
       <p>
-        <strong>Alterar</strong> só é aceito enquanto NINGUÉM aceitou aquela versão ainda -
-        assim que a 1ª pessoa aceitar, ela trava e vira só-leitura pra sempre (o valor
-        probatório do aceite se perderia se o texto pudesse mudar depois). Depois disso, a
-        forma de corrigir o texto é sempre publicar uma versão nova pela lista completa em{' '}
+        Publicar uma versão nova (Criar) cria um <strong>rascunho</strong>, sem ativar nada
+        automaticamente - a versão vigente atual continua no ar. Depois de revisar o texto
+        (erro de português etc.), um administrador torna o rascunho vigente manualmente pelo
+        botão &quot;Tornar vigente&quot;, dentro do Alterar. <strong>Alterar</strong> o
+        conteúdo só é aceito enquanto NINGUÉM aceitou aquela versão ainda - assim que a 1ª
+        pessoa aceitar, ela trava pra sempre (o valor probatório do aceite se perderia se o
+        texto pudesse mudar depois). Veja o histórico completo (todos os tipos) em{' '}
         <Link to="/admin/termos-uso" className="texto-marca font-bold underline">
           Termos de Uso
         </Link>
-        , que também mostra o histórico dos 2 tipos.
+        .
       </p>
     ),
   },
@@ -101,22 +106,28 @@ const SECOES_MODAL_TERMO_USO = [
 // 02_indices.sql), cada um com link direto pra Alterar a versão vigente ou
 // publicar uma nova (pré-selecionando o tipo certo via `?tipo=`).
 function CardTermoUso({ auth }: { auth: Pick<UseAuthReturn, 'authFetch'> }) {
-  const [termosAtivos, setTermosAtivos] = useState<Record<TipoTermo, EstadoTermoAtivo>>({
-    cadastro: undefined,
-    contribuicao: undefined,
-  });
+  // Construído a partir de TIPOS_TERMO (não hardcoded aqui) - um tipo novo
+  // (ex.: 'upgrade_pesquisador', 13-09-2026) já aparece sozinho, sem
+  // precisar lembrar de atualizar este estado inicial também.
+  const [termosAtivos, setTermosAtivos] = useState<Record<TipoTermo, EstadoTermoAtivo>>(() =>
+    Object.fromEntries(TIPOS_TERMO.map((tipo) => [tipo, undefined])) as Record<
+      TipoTermo,
+      EstadoTermoAtivo
+    >,
+  );
   const [modalAberto, setModalAberto] = useState(false);
+  const [tipoAlterando, setTipoAlterando] = useState<TipoTermo | null>(null);
+  const termoParaAlterar = tipoAlterando ? termosAtivos[tipoAlterando] : null;
+
+  const recarregarTermoAtivo = (tipo: TipoTermo) => {
+    termoUsoApi
+      .buscarAtivo(tipo)
+      .then((termo) => setTermosAtivos((atual) => ({ ...atual, [tipo]: termo })))
+      .catch(() => setTermosAtivos((atual) => ({ ...atual, [tipo]: null })));
+  };
 
   useEffect(() => {
-    TIPOS_TERMO.forEach((tipo) => {
-      termoUsoApi
-        .buscarAtivo(tipo)
-        .then((termo) => setTermosAtivos((atual) => ({ ...atual, [tipo]: termo })))
-        // 404 (nenhuma versão ativa deste tipo ainda) é um estado real, não
-        // uma falha de rede - vira `null` (mostra CTA de publicar a
-        // primeira versão), não um toast de erro.
-        .catch(() => setTermosAtivos((atual) => ({ ...atual, [tipo]: null })));
-    });
+    TIPOS_TERMO.forEach(recarregarTermoAtivo);
   }, [auth.authFetch]);
 
   return (
@@ -154,12 +165,13 @@ function CardTermoUso({ auth }: { auth: Pick<UseAuthReturn, 'authFetch'> }) {
                 ) : (
                   <>
                     <span className="text-sm font-bold texto-forte">{termo.versao}</span>
-                    <Link
-                      to={`/admin/termos-uso/${termo.idTermo}/alterar`}
+                    <button
+                      type="button"
+                      onClick={() => setTipoAlterando(tipo)}
                       className="crud-tabela__acao crud-tabela__acao--alterar"
                     >
                       <i className="fa-solid fa-pen"></i> Alterar
-                    </Link>
+                    </button>
                   </>
                 )}
               </div>
@@ -173,6 +185,16 @@ function CardTermoUso({ auth }: { auth: Pick<UseAuthReturn, 'authFetch'> }) {
           titulo="Termo de Uso"
           secoes={SECOES_MODAL_TERMO_USO}
           aoFechar={() => setModalAberto(false)}
+        />
+      )}
+
+      {tipoAlterando && termoParaAlterar && (
+        <ModalAlterarTermoUso
+          auth={auth}
+          tipo={tipoAlterando}
+          idTermoInicial={termoParaAlterar.idTermo}
+          aoFechar={() => setTipoAlterando(null)}
+          aoSalvar={() => recarregarTermoAtivo(tipoAlterando)}
         />
       )}
     </div>

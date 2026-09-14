@@ -1,10 +1,12 @@
 import { Injectable } from '@nestjs/common';
+import { sql } from 'kysely';
 import {
   calcularHashCpf,
   cifrarCpf,
   normalizarCpf,
 } from '../../commons/seguranca/cpf-cifra.util';
 import { DatabaseService } from '../../commons/database/database.service';
+import { TermoUsoServiceAtivo } from '../../5-termo-uso/service/termo-uso.service.ativo';
 import { PERFIL_PESQUISADOR_COLUNAS_SELECT } from '../constants/perfil-pesquisador.constants';
 import { PerfilPesquisadorConverter } from '../dto/converter/perfil-pesquisador.converter';
 import { PerfilPesquisadorRequestCreate } from '../dto/request/perfil-pesquisador.request-create';
@@ -14,6 +16,17 @@ import { PerfilPesquisadorResponse } from '../dto/response/perfil-pesquisador.re
 // outra pessoa, é a própria pessoa se declarando pesquisadora, mesmo
 // espírito de AuthServiceCadastro pro cadastro inicial). id_usuario nunca
 // vem do dto, sempre do controller (request.user.idUsuario).
+//
+// Aceite do Termo de Uso (13-09-2026, pedido do Lucas: modal de upgrade em
+// T1 - Bancada do Pesquisador) - grava junto do INSERT do perfil, na MESMA
+// transação por requisição (GlobalDbInterceptor, mesmo padrão de
+// AuthServiceCadastro/campanha.service.rejeitar.ts). De propósito SEM
+// checar "já aceitou antes" nem persistir nenhum estado intermediário: se o
+// usuário clicar no cadeado, aceitar o termo, e fechar o navegador antes de
+// terminar o formulário, NADA foi gravado (nem perfil, nem aceite) - a
+// próxima tentativa começa do zero, mostrando o termo de novo. Isso evita
+// de propósito qualquer "upgrade em progresso" travado - não existe estado
+// parcial pra destravar.
 //
 // Duas UNIQUE constraints podem disparar 23505 aqui - a PK (id_usuario, se a
 // pessoa já tem perfil) e UK_PERFIL_PESQUISADOR_CPF_HASH (se o CPF já
@@ -26,11 +39,15 @@ import { PerfilPesquisadorResponse } from '../dto/response/perfil-pesquisador.re
 // virar um problema real (mensagem genérica demais pro usuário).
 @Injectable()
 export class PerfilPesquisadorServiceCreate {
-  constructor(private readonly database: DatabaseService) {}
+  constructor(
+    private readonly database: DatabaseService,
+    private readonly termoUsoServiceAtivo: TermoUsoServiceAtivo,
+  ) {}
 
   async executar(
     dto: PerfilPesquisadorRequestCreate,
     idUsuario: number,
+    ip: string | undefined,
   ): Promise<PerfilPesquisadorResponse> {
     const cpfNormalizado = normalizarCpf(dto.cpf);
     const cpfCriptografado = cifrarCpf(cpfNormalizado);
@@ -59,6 +76,15 @@ export class PerfilPesquisadorServiceCreate {
 
     // trg_perfil_atribui_papel_pesquisador (05) já atribuiu o papel
     // 'pesquisador' sozinha, AFTER INSERT - nada a fazer aqui.
+
+    // Resolvido pelo SERVIDOR, nunca aceito do corpo da requisição - mesmo
+    // raciocínio de AuthServiceCadastro sobre registrar_aceite_termo().
+    const termoAtivo = await this.termoUsoServiceAtivo.executar(
+      'upgrade_pesquisador',
+    );
+    await sql`SELECT public.registrar_aceite_termo(${idUsuario}, ${termoAtivo.idTermo}, ${ip ?? null})`.execute(
+      db,
+    );
 
     // Quem acabou de criar o próprio perfil sempre vê o próprio CPF de
     // volta (é o dono, não precisa da permissão de sensível pra isso -

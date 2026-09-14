@@ -10,23 +10,23 @@ import type { PropsPagina } from '../../services/router/pagina.type';
 import type { TipoTermo } from '../../services/5-termo-uso/type/termo-uso.type';
 
 function ehTipoTermo(valor: string | null): valor is TipoTermo {
-  return valor === 'cadastro' || valor === 'contribuicao';
+  return valor === 'cadastro' || valor === 'contribuicao' || valor === 'upgrade_pesquisador';
 }
 
 // Publicar versão NOVA (13-09-2026, pedido do Lucas: "vamos acabar Termos
-// de Uso por completo") - deliberadamente sem Alterar/Excluir (ver
-// TermoUsoServiceCriar, nest/): versão publicada não muda depois, porque
-// já pode ter gente aceitando ela. Corrigir errata ou trocar o texto de
-// verdade é sempre criar uma versão nova, nunca editar a antiga - o banco
-// desativa a anterior sozinho (uq_termos_uso_ativo) na mesma transação,
-// só dentro do MESMO tipo (publicar uma versão de contribuição nunca
-// desativa o termo de cadastro, e vice-versa).
+// de Uso por completo") - fica registrada como RASCUNHO, `ativo = false`
+// sempre (CORRIGIDO no mesmo dia, rodada seguinte: "não é assim que
+// funciona" - Criar chegou a ativar automaticamente, desativando a versão
+// anterior sozinho; o fluxo real é criar o rascunho, a "staff" revisar
+// (erro de português etc.), e SÓ DEPOIS um administrador tornar essa
+// versão vigente manualmente em Regras do Negócio ou na listagem -
+// ModalAlterarTermoUso ganhou o botão "Tornar vigente" pra isso).
 //
-// `tipo` (13-09-2026, separação em 2 termos ativos simultâneos) - campo
-// obrigatório e imutável depois de criado (ver TermoUsoRequestAlterar).
-// Aceita pré-seleção via `?tipo=contribuicao` na URL - usado pelo link
-// "Publicar nova versão" do card de Termo de Uso em Regras do Negócio,
-// que já sabe qual das 2 trilhas o admin estava olhando.
+// `tipo` (13-09-2026, separação em termos ativos simultâneos por trilha) -
+// campo obrigatório e imutável depois de criado (ver
+// TermoUsoRequestAlterar). Aceita pré-seleção via `?tipo=contribuicao` na
+// URL - usado pelo link "Publicar nova versão" do card de Termo de Uso em
+// Regras do Negócio, que já sabe qual trilha o admin estava olhando.
 export function CriarTermoUso({ auth }: PropsPagina) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -47,8 +47,8 @@ export function CriarTermoUso({ auth }: PropsPagina) {
     try {
       const termoCriado = await termoUsoApi.criar(auth.authFetch, { tipo, versao, conteudo });
       mostrar(
-        'Nova versão dos Termos de Uso publicada com sucesso.',
-        `Versão "${termoCriado.versao}" (${ROTULO_TIPO_TERMO[tipo]}) agora é a ativa - a anterior desse tipo foi desativada automaticamente.`,
+        'Rascunho de Termos de Uso criado com sucesso.',
+        `Versão "${termoCriado.versao}" (${ROTULO_TIPO_TERMO[tipo]}) foi registrada, mas AINDA NÃO é a vigente - revise o texto e torne-a vigente manualmente quando estiver pronta.`,
       );
       void navigate(-1);
     } catch (erroRequisicao) {
@@ -62,7 +62,7 @@ export function CriarTermoUso({ auth }: PropsPagina) {
     <CartaoFormulario
       icone="fa-file-contract"
       titulo="Publicar Termos de Uso"
-      subtitulo="Cria uma versão nova. A versão atualmente ativa do MESMO tipo é desativada automaticamente - ela nunca é sobrescrita, só substituída."
+      subtitulo="Cria um RASCUNHO novo (ainda não vigente). A versão vigente atual do mesmo tipo continua ativa até um administrador tornar este rascunho vigente manualmente."
     >
       <form onSubmit={aoCriar} className="p-10 space-y-6">
         {erro && <p className="texto-erro text-sm font-bold text-center">{erro}</p>}
@@ -83,7 +83,7 @@ export function CriarTermoUso({ auth }: PropsPagina) {
           <p className="text-xs texto-fraco mt-1">
             Não pode ser alterado depois de publicado. &quot;Cadastro&quot; é aceito uma vez, no
             cadastro da conta; &quot;Contribuição&quot; é aceito a cada contribuição a uma
-            campanha.
+            campanha; &quot;Upgrade Pesquisador&quot; é aceito ao solicitar o upgrade de perfil.
           </p>
         </div>
 

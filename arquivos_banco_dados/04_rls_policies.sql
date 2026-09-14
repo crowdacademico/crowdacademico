@@ -287,6 +287,13 @@ DROP POLICY IF EXISTS pol_termos_insert ON termos_de_uso;
 CREATE POLICY pol_termos_insert ON termos_de_uso FOR INSERT TO app_nestjs WITH CHECK (public.tem_permissao('termos_uso_gerenciar'));
 DROP POLICY IF EXISTS pol_termos_update ON termos_de_uso;
 CREATE POLICY pol_termos_update ON termos_de_uso FOR UPDATE TO app_nestjs USING (public.tem_permissao('termos_uso_gerenciar'));
+-- ADICIONADA (13-09-2026, pedido do Lucas: ícone de lixeira em Termos de
+-- Uso, pra não sujar o banco de rascunho durante o desenvolvimento) - a
+-- trava de "só rascunho nunca ativo/nunca aceito" mora no Nest
+-- (TermoUsoServiceExcluir), não aqui - esta policy só decide QUEM pode
+-- tentar, não O QUE pode ser apagado.
+DROP POLICY IF EXISTS pol_termos_delete ON termos_de_uso;
+CREATE POLICY pol_termos_delete ON termos_de_uso FOR DELETE TO app_nestjs USING (public.tem_permissao('termos_uso_gerenciar'));
 
 -- usuario_termo: cada usuário só vê e registra o próprio aceite.
 -- Sem política de UPDATE/DELETE: aceite é um registro de auditoria,

@@ -104,7 +104,11 @@ CREATE TYPE tipo_recompensa       AS ENUM ('digital', 'reconhecimento', 'acesso_
 -- ADICIONADO (13-09-2026, pedido do Lucas: o sistema sempre vai ter 2
 -- Termos de Uso vigentes ao mesmo tempo, um por cada momento de aceite -
 -- ver termos_de_uso abaixo).
-CREATE TYPE tipo_termo            AS ENUM ('cadastro', 'contribuicao');
+-- 'upgrade_pesquisador' ADICIONADO (13-09-2026, mesmo dia, rodada seguinte)
+-- - o 3º momento de aceite (upgrade de perfil de pesquisador), pendente
+-- desde a criação deste enum porque a tela de auto-upgrade ainda não
+-- existia.
+CREATE TYPE tipo_termo            AS ENUM ('cadastro', 'contribuicao', 'upgrade_pesquisador');
 
 -- ============================================================
 -- [01-B] RBAC (3 tabelas)
@@ -455,7 +459,13 @@ CREATE TABLE usuario_termo (
 
     CONSTRAINT "PK_USUARIO_TERMO" PRIMARY KEY (id_usuario_termo),
     CONSTRAINT "FK_USUARIO_TERMO_USUARIO" FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE CASCADE,
-    CONSTRAINT "FK_USUARIO_TERMO_TERMO" FOREIGN KEY (id_termo) REFERENCES termos_de_uso(id_termo) ON DELETE RESTRICT, -- não deixa apagar um termo já aceito por alguém
+    -- CASCADE (14-09-2026, pedido do Lucas: Excluir com "forçar" precisa
+    -- funcionar mesmo numa versão já aceita - era RESTRICT antes disso, ver
+    -- TermoUsoServiceExcluir. Apagar o termo com `forcar: true` apaga junto
+    -- as linhas de aceite que apontam pra ele - decisão consciente do
+    -- Lucas, perde o rastro de quem aceitou ESTA versão especificamente
+    -- (a exclusão em si continua em log_auditoria).
+    CONSTRAINT "FK_USUARIO_TERMO_TERMO" FOREIGN KEY (id_termo) REFERENCES termos_de_uso(id_termo) ON DELETE CASCADE,
     CONSTRAINT "UK_USUARIO_TERMO_USUARIO_TERMO" UNIQUE (id_usuario, id_termo) -- [melhoria] mesmo usuário não aceita a mesma versão duas vezes
 );
 
@@ -921,7 +931,8 @@ CREATE TABLE aceite_termo_contribuicao (
 
     CONSTRAINT "PK_ACEITE_TERMO_CONTRIBUICAO" PRIMARY KEY (id_aceite_contrib),
     CONSTRAINT "FK_ACEITE_TERMO_CONTRIBUICAO_CONTRIBUICAO" FOREIGN KEY (id_contribuicao) REFERENCES contribuicao(id_contribuicao) ON DELETE CASCADE,
-    CONSTRAINT "FK_ACEITE_TERMO_CONTRIBUICAO_TERMO" FOREIGN KEY (id_termo) REFERENCES termos_de_uso(id_termo) ON DELETE RESTRICT,
+    -- CASCADE (14-09-2026) - mesmo motivo de FK_USUARIO_TERMO_TERMO acima.
+    CONSTRAINT "FK_ACEITE_TERMO_CONTRIBUICAO_TERMO" FOREIGN KEY (id_termo) REFERENCES termos_de_uso(id_termo) ON DELETE CASCADE,
     CONSTRAINT "UK_ACEITE_TERMO_CONTRIBUICAO_CONTRIBUICAO" UNIQUE (id_contribuicao)
 );
 

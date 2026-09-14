@@ -11,37 +11,19 @@ import {
 import { TermoUsoRequestCriar } from '../dto/request/termo-uso.request-criar';
 import { TermoUsoResponse } from '../dto/response/termo-uso.response';
 
-// Publicar versão nova = 2 writes (desativar a atual DO MESMO TIPO + inserir
-// a nova já ativa), na MESMA transação por requisição (GlobalDbInterceptor,
-// mesmo padrão de campanha.service.rejeitar.ts - nenhum dos dois precisa de
-// `db.transaction()` manual aqui). Precisa ser assim por causa de
-// uq_termos_uso_ativo (02_indices.sql): índice único parcial que só admite
-// 1 linha ativa POR TIPO (13-09-2026, antes era 1 no sistema inteiro) - se
-// o INSERT novo entrasse como ativo SEM desativar a antiga DO MESMO TIPO
-// primeiro, o próprio banco rejeitaria (2 linhas ativas do mesmo tipo ao
-// mesmo tempo). O UPDATE É FILTRADO POR `tipo` de propósito - publicar uma
-// versão nova de 'contribuicao' NUNCA pode desativar o termo ativo de
-// 'cadastro' (e vice-versa), são trilhas independentes.
-//
-// Se a pessoa não tiver 'termos_uso_gerenciar': o UPDATE de desativar (USING
-// da RLS) simplesmente não enxerga nenhuma linha e atualiza 0 (não é erro),
-// e o INSERT seguinte é quem rejeita de verdade (WITH CHECK da RLS) - a
-// transação inteira desfaz o UPDATE também, então uma tentativa sem
-// permissão nunca deixa o termo atual desativado por engano.
+// Publicar versão nova NUNCA ativa sozinha (13-09-2026, corrigido a pedido
+// do Lucas: "não é assim que funciona" - fluxo real é criar rascunho, a
+// "staff" revisar/procurar erro de português, e SÓ DEPOIS o administrador
+// tornar essa versão vigente manualmente, ver TermoUsoServiceAtivar). Antes
+// deste ajuste, Criar desativava a versão anterior e ativava a nova na
+// mesma transação, automaticamente - virou um INSERT simples, sempre
+// `ativo: false`, sem tocar em mais nenhuma linha.
 @Injectable()
 export class TermoUsoServiceCriar {
   constructor(private readonly database: DatabaseService) {}
 
   async executar(dto: TermoUsoRequestCriar): Promise<TermoUsoResponse> {
     try {
-      await this.database
-        .getDb()
-        .updateTable('termos_de_uso')
-        .set({ ativo: false })
-        .where('tipo', '=', dto.tipo)
-        .where('ativo', '=', true)
-        .execute();
-
       const linha = await this.database
         .getDb()
         .insertInto('termos_de_uso')
@@ -49,7 +31,7 @@ export class TermoUsoServiceCriar {
           tipo: dto.tipo,
           versao: dto.versao,
           conteudo: dto.conteudo,
-          ativo: true,
+          ativo: false,
         })
         .returningAll()
         .executeTakeFirstOrThrow();
@@ -66,7 +48,7 @@ export class TermoUsoServiceCriar {
       const codigo = (erro as { code?: string }).code;
       if (codigo === CODIGO_PG_UNIQUE_VIOLATION) {
         throw new ConflictException(
-          `Já existe uma versão de Termos de Uso com o código "${dto.versao}".`,
+          `Já existe uma versão de Termos de Uso com o código "${dto.versao}" neste tipo.`,
         );
       }
       if (codigo === CODIGO_PG_RLS_VIOLATION) {

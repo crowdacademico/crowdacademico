@@ -5,6 +5,7 @@ import type { StatusPesquisador, TipoVinculo } from '../constants/status-pesquis
 import type {
   PerfilPesquisadorRequestCorrigirCpf,
   PerfilPesquisadorRequestCreate,
+  PerfilPesquisadorRequestCreateParaOutro,
   PerfilPesquisadorRequestSuspender,
   PerfilPesquisadorRequestUpdate,
   PerfilPesquisadorResponse,
@@ -59,7 +60,7 @@ export const perfilPesquisadorApi = {
   criarParaOutro: (
     authFetch: AuthFetch,
     id: number | string,
-    dados: PerfilPesquisadorRequestCreate,
+    dados: PerfilPesquisadorRequestCreateParaOutro,
   ): Promise<PerfilPesquisadorResponse> =>
     authFetch(`/perfil-pesquisador/${id}`, {
       method: 'POST',

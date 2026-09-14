@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { RequireAuthGuard } from '../../3-auth/guards/require-auth.guard';
-import { PerfilPesquisadorRequestCreate } from '../dto/request/perfil-pesquisador.request-create';
+import { PerfilPesquisadorRequestCreateParaOutro } from '../dto/request/perfil-pesquisador.request-create-para-outro';
 import { PerfilPesquisadorServiceCreateParaOutro } from '../service/perfil-pesquisador.service.create-para-outro';
 
 // Rota COM :id, de propósito - diferente do self-service (POST
@@ -26,9 +26,14 @@ export class PerfilPesquisadorControllerCreateParaOutro {
   @UseGuards(RequireAuthGuard)
   criarParaOutro(
     @Param('id', ParseIntPipe) id: number,
-    @Body() dto: PerfilPesquisadorRequestCreate,
+    @Body() dto: PerfilPesquisadorRequestCreateParaOutro,
     @Req() request: Request,
   ) {
-    return this.service.executar(id, dto, request.user!.idUsuario);
+    return this.service.executar(
+      id,
+      dto,
+      request.user!.idUsuario,
+      request.ip ?? request.socket.remoteAddress,
+    );
   }
 }

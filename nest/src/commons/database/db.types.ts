@@ -151,7 +151,15 @@ export interface LogAuditoriaTable {
 // DEFAULT 'cadastro' no banco (histórico das versões de antes desta
 // migração), mas todo INSERT novo passa `tipo` explícito - mesmo espírito
 // de `ativo`, que também é `Generated` e mesmo assim sempre especificado.
-export const TIPOS_TERMO = ['cadastro', 'contribuicao'] as const;
+// `'upgrade_pesquisador'` ADICIONADO (13-09-2026, mesmo dia, rodada
+// seguinte) - o 3º momento que o Lucas descreveu desde o início ("upgrade
+// perfil de pesquisador"), até então só registrado como pendência porque a
+// tela de upgrade de perfil em si não existia (ver PerfilPesquisadorServiceCreate).
+export const TIPOS_TERMO = [
+  'cadastro',
+  'contribuicao',
+  'upgrade_pesquisador',
+] as const;
 export type TipoTermo = (typeof TIPOS_TERMO)[number];
 
 export interface TermosDeUsoTable {

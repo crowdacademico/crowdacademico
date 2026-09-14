@@ -22,6 +22,7 @@ import {
   classeBadgeStatusPesquisador,
 } from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
 import { formatarCpf, formatarCpfOuMotivoOculto, formatarData, formatarDataHora, formatarNomeDimensao } from '../../services/constant/utils/formatacao.util';
+import { CamposVinculoPerfil } from '../6-perfil-pesquisador/campos-vinculo-perfil';
 import { SecaoModeracaoPesquisador } from '../6-perfil-pesquisador/secao-moderacao-pesquisador';
 import { SecaoModeracao } from './secao-moderacao';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
@@ -175,17 +176,6 @@ function useDadosUsuario(
   return { usuario, perfilPesquisador, setPerfilPesquisador, avatarUrl, papeis, setPapeis, carregando };
 }
 
-const TIPOS_VINCULO: TipoVinculo[] = ['institucional', 'independente'];
-const TITULOS_ACADEMICOS: TituloAcademico[] = ['graduado', 'especialista', 'mestre', 'doutor'];
-
-function ehTipoVinculo(valor: string): valor is TipoVinculo {
-  return valor === 'institucional' || valor === 'independente';
-}
-
-function ehTituloAcademico(valor: string): valor is TituloAcademico {
-  return valor === 'graduado' || valor === 'especialista' || valor === 'mestre' || valor === 'doutor';
-}
-
 interface FormCriarPerfil {
   cpf: string;
   tipoVinculo: TipoVinculo;
@@ -200,88 +190,6 @@ const FORM_CRIAR_PERFIL_VAZIO: FormCriarPerfil = {
   tituloAcademico: 'mestre',
 };
 
-interface CamposVinculoPerfilProps {
-  tipoVinculo: TipoVinculo;
-  vinculoInstitucional: string;
-  tituloAcademico: TituloAcademico;
-  rotuloVinculoInstitucional: string;
-  aoAlterarTipoVinculo: (tipo: TipoVinculo) => void;
-  aoAlterarVinculoInstitucional: (valor: string) => void;
-  aoAlterarTituloAcademico: (titulo: TituloAcademico) => void;
-}
-
-// Extraído (13-09-2026, achado B2 do contra-prompt do Claude Web) - os 3
-// campos abaixo (tipo de vínculo, vínculo institucional condicional, título
-// acadêmico) apareciam IDÊNTICOS em "Perfil de Pesquisador" (edição,
-// ModalAlterarUsuario) e "Criar Perfil Pesquisador" (criação, mesmo modal) -
-// só o objeto de estado por trás mudava (`formEdicaoPerfil` vs `form`). O
-// rótulo do campo condicional é o único texto que já era diferente entre os
-// dois ("Vínculo institucional" na edição, "Instituição" na criação) -
-// por isso vem como prop em vez de fixo aqui dentro, preservando o texto
-// exato de cada lugar.
-function CamposVinculoPerfil({
-  tipoVinculo,
-  vinculoInstitucional,
-  tituloAcademico,
-  rotuloVinculoInstitucional,
-  aoAlterarTipoVinculo,
-  aoAlterarVinculoInstitucional,
-  aoAlterarTituloAcademico,
-}: CamposVinculoPerfilProps) {
-  return (
-    <>
-      <div>
-        <label className="rotulo-campo">Tipo de vínculo</label>
-        <select
-          value={tipoVinculo}
-          onChange={(evento) => {
-            if (ehTipoVinculo(evento.target.value)) {
-              aoAlterarTipoVinculo(evento.target.value);
-            }
-          }}
-          className="input-padrao"
-        >
-          {TIPOS_VINCULO.map((tipo) => (
-            <option key={tipo} value={tipo}>
-              {tipo}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {tipoVinculo === 'institucional' && (
-        <div>
-          <label className="rotulo-campo">{rotuloVinculoInstitucional}</label>
-          <input
-            type="text"
-            value={vinculoInstitucional}
-            onChange={(evento) => aoAlterarVinculoInstitucional(evento.target.value)}
-            className="input-padrao"
-          />
-        </div>
-      )}
-
-      <div>
-        <label className="rotulo-campo">Título acadêmico</label>
-        <select
-          value={tituloAcademico}
-          onChange={(evento) => {
-            if (ehTituloAcademico(evento.target.value)) {
-              aoAlterarTituloAcademico(evento.target.value);
-            }
-          }}
-          className="input-padrao"
-        >
-          {TITULOS_ACADEMICOS.map((titulo) => (
-            <option key={titulo} value={titulo}>
-              {titulo}
-            </option>
-          ))}
-        </select>
-      </div>
-    </>
-  );
-}
 
 interface BotaoVerFotoPerfilProps {
   url: string;

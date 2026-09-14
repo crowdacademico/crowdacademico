@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { TermoUsoModule } from '../5-termo-uso/termo-uso.module';
 import { PerfilPesquisadorControllerCorrigirCpf } from './controllers/perfil-pesquisador.controller.corrigir-cpf';
 import { PerfilPesquisadorControllerCreate } from './controllers/perfil-pesquisador.controller.create';
 import { PerfilPesquisadorControllerCreateParaOutro } from './controllers/perfil-pesquisador.controller.create-para-outro';
@@ -19,6 +20,7 @@ import { PerfilPesquisadorServiceSuspender } from './service/perfil-pesquisador.
 import { PerfilPesquisadorServiceUpdate } from './service/perfil-pesquisador.service.update';
 
 @Module({
+  imports: [TermoUsoModule],
   controllers: [
     PerfilPesquisadorControllerCreate,
     PerfilPesquisadorControllerFindAll,

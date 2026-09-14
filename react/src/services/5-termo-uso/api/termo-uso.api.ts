@@ -45,4 +45,20 @@ export const termoUsoApi = {
       method: 'PATCH',
       body: JSON.stringify(dados),
     }).then(tratarResposta<TermoUsoResponse>),
+  // PATCH /termos-uso/:id/ativar - torna esta versão a vigente do seu tipo
+  // (13-09-2026, ação nova, separada de criar/atualizar - Criar não ativa
+  // mais sozinho, ver TermoUsoServiceCriar no Nest).
+  ativar: (authFetch: AuthFetch, id: number): Promise<TermoUsoResponse> =>
+    authFetch(`/termos-uso/${id}/ativar`, { method: 'PATCH' }).then(
+      tratarResposta<TermoUsoResponse>,
+    ),
+  // DELETE /termos-uso/:id - nunca permitido na versão vigente. Numa versão
+  // já aceita por alguém, dá 409 a menos que `forcar: true` (14-09-2026,
+  // pedido do Lucas: checkbox "entendi" + "Excluir mesmo assim") - com
+  // `forcar`, apaga o termo e AS LINHAS DE ACEITE que apontam pra ele
+  // (FKs viraram CASCADE, ver TermoUsoServiceExcluir no Nest).
+  excluir: (authFetch: AuthFetch, id: number, forcar?: boolean): Promise<void> =>
+    authFetch(`/termos-uso/${id}${forcar ? '?forcar=true' : ''}`, { method: 'DELETE' }).then(
+      tratarResposta<void>,
+    ),
 };

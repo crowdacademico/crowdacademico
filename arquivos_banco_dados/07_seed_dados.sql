@@ -803,6 +803,31 @@ Dados de pagamento são processados pelo meio de pagamento escolhido (Pix, cart�
 6. ALTERAÇÕES DESTE TERMO
 Este termo pode ser atualizado periodicamente; a versão vigente no momento da confirmação da contribuição é a que se aplica àquela contribuição específica, mesmo que uma versão nova seja publicada depois.', TRUE, '2026-09-13 00:00:00');
 
+-- Primeira versão do tipo 'upgrade_pesquisador' (13-09-2026, mesmo dia,
+-- rodada seguinte - o 3º momento de aceite, pedido do Lucas desde o
+-- início: "upgrade perfil de pesquisador"). Mesmo aviso de sempre:
+-- rascunho REALISTA, NÃO é texto jurídico validado.
+INSERT INTO termos_de_uso (tipo, versao, conteudo, ativo, criado_em) VALUES
+('upgrade_pesquisador', 'v1-2026-09-13', 'TERMOS DE UPGRADE DE PERFIL DE PESQUISADOR - CROWDACADÊMICO
+
+1. OBJETO
+Este termo é exibido no momento em que um usuário comum solicita o upgrade de sua conta para perfil de pesquisador, complementando os Termos de Uso gerais aceitos no cadastro.
+
+2. RESPONSABILIDADE PELAS INFORMAÇÕES DECLARADAS
+Ao solicitar o upgrade, o usuário declara que o CPF, o vínculo institucional (quando aplicável) e o título acadêmico informados são verdadeiros. Informações falsas podem levar à suspensão do perfil de pesquisador e das campanhas vinculadas a ele.
+
+3. RESPONSABILIDADES DO PERFIL DE PESQUISADOR
+O perfil de pesquisador autoriza submeter e gerenciar campanhas de financiamento coletivo. O pesquisador é responsável pela veracidade das informações de cada campanha, pela execução do projeto descrito e pela prestação de contas aos apoiadores, conforme as regras de moderação da plataforma.
+
+4. PONTUAÇÃO E REPUTAÇÃO
+O perfil de pesquisador está sujeito ao sistema de pontuação (score) da plataforma, que reflete o histórico de campanhas, cumprimento de prazos e conduta. A pontuação pode influenciar a visibilidade de campanhas futuras.
+
+5. DADOS PESSOAIS (LGPD)
+O CPF é armazenado de forma cifrada e nunca exibido publicamente em sua forma completa, conforme a Lei 13.709/2018 (LGPD). O vínculo institucional e o título acadêmico são exibidos publicamente no perfil, por serem informações de natureza profissional/acadêmica relevantes para os apoiadores.
+
+6. ALTERAÇÕES DESTE TERMO
+Este termo pode ser atualizado periodicamente; a versão vigente no momento da solicitação do upgrade é a que se aplica.', TRUE, '2026-09-13 00:00:00');
+
 -- Todos os usuários aceitaram a v1 no próprio cadastro (aceito_em = pouco
 -- depois de usuario.criado_em) - nenhum ainda re-aceitou v2 nem v3,
 -- propositalmente (cenário realista: ninguém foi reavisado depois que uma

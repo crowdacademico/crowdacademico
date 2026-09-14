@@ -13,6 +13,10 @@ export class PerfilPesquisadorControllerCreate {
   @Post()
   @UseGuards(RequireAuthGuard)
   criar(@Body() dto: PerfilPesquisadorRequestCreate, @Req() request: Request) {
-    return this.service.executar(dto, request.user!.idUsuario);
+    return this.service.executar(
+      dto,
+      request.user!.idUsuario,
+      request.ip ?? request.socket.remoteAddress,
+    );
   }
 }

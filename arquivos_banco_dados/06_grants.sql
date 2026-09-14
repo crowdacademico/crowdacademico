@@ -172,6 +172,13 @@ GRANT SELECT (
 -- sem nenhuma policy de DELETE correspondente (ver [06-D] no DOCUMENTACAO_BD.md).
 GRANT INSERT ON usuario, perfil_pesquisador, termos_de_uso TO app_nestjs;
 GRANT UPDATE ON termos_de_uso TO app_nestjs;
+-- DELETE em termos_de_uso RE-ADICIONADO (13-09-2026, pedido do Lucas: ícone
+-- de lixeira em Termos de Uso, "para não sujar o banco") - desta vez COM a
+-- policy correspondente (pol_termos_delete, 04_rls_policies.sql), gateada
+-- por 'termos_uso_gerenciar' - diferente da situação descrita no comentário
+-- acima (GRANT sem policy nenhuma), que é o que motivou remover o GRANT de
+-- DELETE daquela vez.
+GRANT DELETE ON termos_de_uso TO app_nestjs;
 
 -- CORRIGIDO (28-07-2026, achado por uma IA): GRANT UPDATE de TABELA INTEIRA em
 -- usuario/perfil_pesquisador era uma porta dos fundos grave - o GRANT SELECT já é

@@ -1,4 +1,10 @@
-import { IsEnum, IsString, MinLength, ValidateIf } from 'class-validator';
+import {
+  Equals,
+  IsEnum,
+  IsString,
+  MinLength,
+  ValidateIf,
+} from 'class-validator';
 import { IsCpf } from '../../../commons/seguranca/cpf-valido.decorator';
 import { TIPOS_VINCULO } from '../../../commons/database/db.types';
 import type { TipoVinculo } from '../../../commons/database/db.types';
@@ -51,4 +57,16 @@ export class PerfilPesquisadorRequestCreate {
     message: `tituloAcademico precisa ser um de: ${TITULOS_ACADEMICOS_VALIDOS.join(', ')}.`,
   })
   tituloAcademico: (typeof TITULOS_ACADEMICOS_VALIDOS)[number];
+
+  // ADICIONADO (13-09-2026, pedido do Lucas: modal de upgrade em T1 -
+  // Bancada do Pesquisador) - mesmo padrão de AuthRequestRegister
+  // (aceiteTermos): o texto do termo em si nunca chega no corpo desta
+  // requisição, o backend sempre resolve sozinho a versão ATIVA do tipo
+  // 'upgrade_pesquisador' (PerfilPesquisadorServiceCreate) e grava o
+  // aceite na MESMA transação da criação do perfil - ver comentário lá.
+  @Equals(true, {
+    message:
+      'É preciso aceitar os Termos de Uso pra fazer o upgrade de perfil.',
+  })
+  aceiteTermos: boolean;
 }

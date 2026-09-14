@@ -1093,6 +1093,76 @@ Este termo pode ser atualizado periodicamente; a versão vigente no momento da c
 
 
 -- ============================================================================
+-- 13-09-2026 (mesmo dia, rodada seguinte) - 3 ajustes pequenos em Termos de
+-- Uso, pedidos do Lucas depois de testar a separação em 2 tipos:
+--
+-- (1) 3º tipo de termo, 'upgrade_pesquisador' - o momento que faltava desde
+-- o início (upgrade de perfil de pesquisador). SEM seed de versão inicial
+-- aqui de propósito: `ALTER TYPE ... ADD VALUE` não pode ter o valor novo
+-- USADO na MESMA transação que o adiciona (restrição do Postgres) - a
+-- primeira versão deste tipo deve ser publicada e tornada vigente pelo
+-- próprio painel (Criar → Tornar vigente em Regras do Negócio ou na
+-- listagem), depois que este bloco rodar, não colada aqui junto.
+--
+-- (2) policy de DELETE em termos_de_uso - Criar deixou de ativar sozinho
+-- (ver item 3), então um rascunho revisado e rejeitado agora pode ser
+-- excluído (TermoUsoServiceExcluir no Nest já bloqueia qualquer versão
+-- vigente ou aceita por alguém, com 409/403 - esta policy só decide QUEM
+-- pode tentar).
+--
+-- (3) Criar não ativa mais sozinho, Alterar não edita mais `versao` -
+-- mudança só de código (Nest/React), nada de schema aqui.
+--
+-- Seguro rodar de novo? O (1) sim (`IF NOT EXISTS`). O (2) sim (`DROP...IF
+-- EXISTS` antes do `CREATE POLICY`).
+-- ============================================================================
+
+ALTER TYPE tipo_termo ADD VALUE IF NOT EXISTS 'upgrade_pesquisador';
+
+DROP POLICY IF EXISTS pol_termos_delete ON termos_de_uso;
+CREATE POLICY pol_termos_delete ON termos_de_uso FOR DELETE TO app_nestjs USING (public.tem_permissao('termos_uso_gerenciar'));
+
+
+-- ============================================================================
+-- 13-09-2026 (mesmo dia, rodada seguinte ainda) - achado do Lucas testando
+-- o Excluir: "Sem permissão para esta operação" mesmo logado como admin.
+-- Causa: a policy acima (pol_termos_delete) só decide QUEM pode tentar,
+-- mas o GRANT de base (SQL, mais grosso que RLS) nunca tinha sido dado -
+-- termos_de_uso teve GRANT DELETE removido faz tempo (06_grants.sql,
+-- comentário "CORRIGIDO" logo ali: era um GRANT sem NENHUMA policy de
+-- DELETE, então tanto fazia). Faltou lembrar de devolver o GRANT ao criar
+-- a policy nova.
+--
+-- Seguro rodar de novo? Sim (GRANT é idempotente).
+-- ============================================================================
+
+GRANT DELETE ON termos_de_uso TO app_nestjs;
+
+
+-- ============================================================================
+-- 14-09-2026 - Excluir termo já aceito, com confirmação explícita
+-- ("checkbox entendi" + "Excluir mesmo assim", pedido do Lucas). As FKs de
+-- usuario_termo/aceite_termo_contribuicao pra termos_de_uso eram ON DELETE
+-- RESTRICT (nunca deixavam apagar um termo aceito, nem tentando) - viram
+-- CASCADE: com `forcar: true` (TermoUsoServiceExcluir), apagar o termo
+-- apaga junto as linhas de aceite que apontam pra ele. Decisão consciente
+-- do Lucas, sabendo que isso perde o rastro de QUEM aceitou aquela versão
+-- especificamente (a exclusão do termo em si continua registrada em
+-- log_auditoria, trigger genérico da tabela).
+--
+-- Seguro rodar de novo? Sim (`DROP CONSTRAINT IF EXISTS` antes de recriar).
+-- ============================================================================
+
+ALTER TABLE usuario_termo DROP CONSTRAINT IF EXISTS "FK_USUARIO_TERMO_TERMO";
+ALTER TABLE usuario_termo ADD CONSTRAINT "FK_USUARIO_TERMO_TERMO"
+    FOREIGN KEY (id_termo) REFERENCES termos_de_uso(id_termo) ON DELETE CASCADE;
+
+ALTER TABLE aceite_termo_contribuicao DROP CONSTRAINT IF EXISTS "FK_ACEITE_TERMO_CONTRIBUICAO_TERMO";
+ALTER TABLE aceite_termo_contribuicao ADD CONSTRAINT "FK_ACEITE_TERMO_CONTRIBUICAO_TERMO"
+    FOREIGN KEY (id_termo) REFERENCES termos_de_uso(id_termo) ON DELETE CASCADE;
+
+
+-- ============================================================================
 -- NÃO ENTRA NESTE ARQUIVO (registrado aqui só pra não se perder)
 -- ============================================================================
 
