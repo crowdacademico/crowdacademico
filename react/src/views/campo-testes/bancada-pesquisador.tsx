@@ -462,7 +462,6 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
           idUsuario={idUsuarioAlterando}
           aoFechar={() => setIdUsuarioAlterando(null)}
           aoAtualizado={carregarPesquisadores}
-          gerarCpfDeTeste={gerarCpfValido}
           aoRegistrarChamada={registrarChamada}
         />
       )}

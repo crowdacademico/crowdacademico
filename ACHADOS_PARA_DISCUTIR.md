@@ -238,7 +238,7 @@ Pedido do Lucas, continuação da auditoria do item 18: conferir os 117 RFs (`in
 
 **Verificado por amostragem, sem achado (17 RFs com número específico conferidos contra o banco real):** prazo de campanha, meta mínima, taxa da plataforma, limites de caracteres, pesos/faixas do score, orçamento/cronograma mín-máx, limite de endossos, valor mínimo de contribuição, bloqueio de login, expiração de recuperação de senha - todos batem. Estrutura de módulos vazios da Matriz (`4-mail`, `18-recompensa`, `19-denuncia`, `20-solicitacao-encerramento`, `21-historico-rejeicao`, `22-contribuicao`, `23-repasse`, `24-auditoria-financeira`, `26-notificacao`) conferida contra `nest/src/` real - 100% precisa.
 
-**Pendente, registrado, decisão do Lucas (não bug urgente):** RF-058 (encerrar campanhas vencidas) - o fix de tipo (`::status_campanha`) já está no código-fonte desde 07-09-2026, mas não há confirmação de que já foi aplicado no Supabase de produção. Sem isso, o `@Cron` de 15 em 15 min continua falhando silenciosamente lá.
+**🟢 RESOLVIDO (14-09-2026):** RF-058 (encerrar campanhas vencidas) - o fix de tipo (`::status_campanha`) já estava no código-fonte desde 07-09-2026; confirmado agora que também está rodando no Supabase de produção (`pg_get_functiondef` do SQL Editor confirmou o `::status_campanha` na função ativa). Detalhe completo em `PENDENCIAS e correcoes.md`, seção "RF-057 (...) - o `@Cron` (...) quebrava toda vez com erro de tipo". Item fechado, não é mais pendência.
 
 ---
 

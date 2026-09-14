@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AvatarUsuario } from '../../components/layout/avatar-usuario';
-import { CampoCpf } from '../../components/input/campo-cpf';
 import { SeletorFotoPerfil } from '../../components/input/seletor-foto-perfil';
 import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
@@ -177,20 +176,6 @@ function useDadosUsuario(
 
   return { usuario, perfilPesquisador, setPerfilPesquisador, avatarUrl, papeis, setPapeis, carregando };
 }
-
-interface FormCriarPerfil {
-  cpf: string;
-  tipoVinculo: TipoVinculo;
-  vinculoInstitucional: string;
-  tituloAcademico: TituloAcademico;
-}
-
-const FORM_CRIAR_PERFIL_VAZIO: FormCriarPerfil = {
-  cpf: '',
-  tipoVinculo: 'institucional',
-  vinculoInstitucional: '',
-  tituloAcademico: 'mestre',
-};
 
 
 interface BotaoVerFotoPerfilProps {
@@ -787,28 +772,22 @@ interface ModalAlterarUsuarioProps {
   idUsuario: number;
   aoFechar: () => void;
   aoAtualizado: () => void;
-  // `gerarCpfDeTeste` (13-09-2026, achado ao extrair este modal pro CRUD
-  // real) - o botão "Gerar CPF válido" (formulário "Criar Perfil
-  // Pesquisador") usa `gerarCpfValido()`, utilitário que mora só em
-  // `services/campo-testes/` de propósito (existe SÓ pra acelerar teste,
-  // nunca faria sentido oferecer "gerar um CPF fictício" num admin
-  // cadastrando o perfil de uma pessoa real). Opcional, `undefined` por
-  // padrão (o CRUD real de Usuário não passa isto) - só a Bancada do
-  // Pesquisador (Campo de Testes) passa a função de verdade.
-  gerarCpfDeTeste?: () => string;
   aoRegistrarChamada?: (entrada: EntradaRegistroChamada) => void;
 }
 
 // Alterar - conta inteira (nome/senha/foto/papéis/moderação de conta) +
 // Perfil de Pesquisador (vínculo/título/CPF/links/moderação de pesquisador),
-// ou o formulário "Criar Perfil Pesquisador" no lugar, se a pessoa ainda não
-// for pesquisadora.
-export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado, gerarCpfDeTeste, aoRegistrarChamada }: ModalAlterarUsuarioProps) {
+// pra quem já é pesquisador. Criar perfil pra quem ainda não é passou a
+// viver só no cadeado de upgrade (6-perfil-pesquisador/modal-upgrade-
+// pesquisador.tsx), hoje disponível apenas na Bancada do Pesquisador
+// (Campo de Testes) - removido de aqui a pedido do Lucas (14-09-2026,
+// duplicava o mesmo poder sem passar pelo Termo de Uso).
+export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado, aoRegistrarChamada }: ModalAlterarUsuarioProps) {
   const { mostrar } = useToast();
   const { erro, reportarErro, limparErro } = useErroToast();
   const [tiposLink, setTiposLink] = useState<TipoLinkResponse[]>([]);
 
-  const { usuario, perfilPesquisador, setPerfilPesquisador, avatarUrl, papeis, setPapeis, carregando } = useDadosUsuario(
+  const { usuario, perfilPesquisador, avatarUrl, papeis, setPapeis, carregando } = useDadosUsuario(
     idUsuario,
     auth,
     aoRegistrarChamada,
@@ -830,10 +809,6 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado, g
   } | null>(null);
   const [cpfCorrecao, setCpfCorrecao] = useState('');
 
-  const [form, setForm] = useState<FormCriarPerfil>(FORM_CRIAR_PERFIL_VAZIO);
-  const [criando, setCriando] = useState(false);
-  const [erroCriar, setErroCriar] = useState<string | null>(null);
-
   const [catalogoPapeis, setCatalogoPapeis] = useState<PapelResponse[]>([]);
   const [idPapelParaAtribuir, setIdPapelParaAtribuir] = useState('');
   const [atribuindoPapel, setAtribuindoPapel] = useState(false);
@@ -846,13 +821,7 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado, g
   // termina (dep só em `usuario`, de propósito - ele nunca muda por nenhuma
   // outra ação deste modal, só pela busca inicial de `useDadosUsuario`, então
   // dispara exatamente 1x por abertura, igual ao `.then()` único de antes da
-  // extração). NÃO inclui `perfilPesquisador` nas deps: ele é reatribuído
-  // depois por `criarPerfil()`, e esse formulário de EDIÇÃO de nome/senha não
-  // pode ser resetado só porque um perfil de pesquisador foi criado no meio
-  // da mesma sessão do modal - ler `perfilPesquisador` aqui dentro sem
-  // listar como dep funciona porque as duas atualizações (`setUsuario` e
-  // `setPerfilPesquisador`) vêm do MESMO `.then()` dentro do hook, no mesmo
-  // lote de render.
+  // extração).
   useEffect(() => {
     if (!usuario) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -870,8 +839,6 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado, g
         : null,
     );
     setCpfCorrecao('');
-    setForm(FORM_CRIAR_PERFIL_VAZIO);
-    setErroCriar(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [usuario]);
 
@@ -902,34 +869,6 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado, g
   const papeisDisponiveis = catalogoPapeis.filter(
     (papel) => !papeisAtuais.some((atual) => atual.idPapel === papel.idPapel),
   );
-
-  const criarPerfil = async () => {
-    setCriando(true);
-    setErroCriar(null);
-    const corpo = {
-      cpf: form.cpf,
-      tipoVinculo: form.tipoVinculo,
-      ...(form.tipoVinculo === 'institucional' ? { vinculoInstitucional: form.vinculoInstitucional } : {}),
-      tituloAcademico: form.tituloAcademico,
-    };
-    try {
-      const perfilCriado = await comRegistro(aoRegistrarChamada, 'POST', `/perfil-pesquisador/${idUsuario}`, corpo, () =>
-        perfilPesquisadorApi.criarParaOutro(auth.authFetch, idUsuario, corpo),
-      );
-      setPerfilPesquisador(perfilCriado);
-      setFormEdicaoPerfil({
-        tipoVinculo: perfilCriado.tipoVinculo,
-        vinculoInstitucional: perfilCriado.vinculoInstitucional ?? '',
-        tituloAcademico: perfilCriado.tituloAcademico,
-      });
-      mostrar('Perfil de Pesquisador criado com sucesso.', `ID: ${idUsuario} agora é pesquisador`);
-      aoAtualizado();
-    } catch (erroRequisicao) {
-      setErroCriar(erroRequisicao instanceof Error ? erroRequisicao.message : 'Falha ao criar perfil.');
-    } finally {
-      setCriando(false);
-    }
-  };
 
   const salvarEdicao = async () => {
     limparErro();
@@ -1106,12 +1045,7 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado, g
           perfilPesquisador !== null &&
           (formEdicaoPerfil.tipoVinculo !== perfilPesquisador.tipoVinculo ||
             formEdicaoPerfil.vinculoInstitucional !== (perfilPesquisador.vinculoInstitucional ?? '') ||
-            formEdicaoPerfil.tituloAcademico !== perfilPesquisador.tituloAcademico)) ||
-        (perfilPesquisador === null &&
-          (form.cpf !== '' ||
-            form.tipoVinculo !== FORM_CRIAR_PERFIL_VAZIO.tipoVinculo ||
-            form.vinculoInstitucional !== '' ||
-            form.tituloAcademico !== FORM_CRIAR_PERFIL_VAZIO.tituloAcademico))),
+            formEdicaoPerfil.tituloAcademico !== perfilPesquisador.tituloAcademico))),
   );
   useAvisoAlteracaoNaoSalva(sujo);
 
@@ -1207,7 +1141,7 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado, g
                 </div>
               </SecaoFicha>
 
-              {formEdicaoPerfil ? (
+              {formEdicaoPerfil && (
                 <>
                   <SecaoFicha titulo="Perfil de Pesquisador">
                     <CamposVinculoPerfil
@@ -1252,36 +1186,6 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado, g
 
                   <SecaoModeracaoPesquisador auth={auth} idUsuario={idUsuario} />
                 </>
-              ) : (
-                <SecaoFicha titulo="Criar Perfil Pesquisador">
-                  <CampoCpf
-                    valor={form.cpf}
-                    onChange={(cpf) => setForm({ ...form, cpf })}
-                    gerarCpfDeTeste={gerarCpfDeTeste}
-                  />
-
-                  <CamposVinculoPerfil
-                    tipoVinculo={form.tipoVinculo}
-                    vinculoInstitucional={form.vinculoInstitucional}
-                    tituloAcademico={form.tituloAcademico}
-                    rotuloVinculoInstitucional="Instituição"
-                    aoAlterarTipoVinculo={(tipo) => setForm({ ...form, tipoVinculo: tipo })}
-                    aoAlterarVinculoInstitucional={(valor) => setForm({ ...form, vinculoInstitucional: valor })}
-                    aoAlterarTituloAcademico={(titulo) => setForm({ ...form, tituloAcademico: titulo })}
-                  />
-
-                  <div className="sm:col-span-2">
-                    <button
-                      type="button"
-                      className="btn btn-primary"
-                      disabled={criando || !form.cpf}
-                      onClick={criarPerfil}
-                    >
-                      {criando ? 'Criando...' : 'Criar Perfil Pesquisador'}
-                    </button>
-                    {erroCriar && <p className="texto-erro text-xs mt-2">{erroCriar}</p>}
-                  </div>
-                </SecaoFicha>
               )}
 
               <div className="border-t borda-padrao"></div>
