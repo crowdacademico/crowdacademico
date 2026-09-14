@@ -7,6 +7,7 @@ import type {
   UsuarioResponse,
   UsuarioResponseLoginHistorico,
   UsuarioResponseSuspend,
+  UsuarioResponseTermoAceito,
 } from '../type/usuario.type';
 
 // authFetch vem de use-auth.js (services/3-auth/hook) - injetado, não
@@ -49,6 +50,17 @@ export const usuarioApi = {
   // não precisou de tabela nova - mais recente primeiro.
   listarLogins: (authFetch: AuthFetch, id: number | string): Promise<UsuarioResponseLoginHistorico[]> =>
     authFetch(`/usuario/${id}/logins`).then(tratarResposta<UsuarioResponseLoginHistorico[]>),
+  // Termos de Uso aceitos (14-09-2026, pedido do Lucas: "onde fica
+  // registrado" o aceite) - join de usuario_termo com termos_de_uso, mais
+  // recente primeiro. Cobre cadastro e upgrade de perfil de pesquisador -
+  // aceite por contribuição a campanha fica de fora (aceite_termo_
+  // contribuicao é por CONTRIBUIÇÃO, não por usuário direto, e o módulo de
+  // contribuição ainda não existe).
+  listarTermosAceitos: (
+    authFetch: AuthFetch,
+    id: number | string,
+  ): Promise<UsuarioResponseTermoAceito[]> =>
+    authFetch(`/usuario/${id}/termos-aceitos`).then(tratarResposta<UsuarioResponseTermoAceito[]>),
   // Suspensão de MODERAÇÃO (09-08-2026, Bloco G) - diferente de
   // `desbloquear` acima (aquele é bloqueio automático por senha errada).
   // `ate` é ISO string. "Reduzir a pena" é chamar `suspender` de novo com

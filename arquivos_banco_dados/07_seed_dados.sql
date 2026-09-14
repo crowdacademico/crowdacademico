@@ -1058,6 +1058,23 @@ INSERT INTO perfil_pesquisador (id_usuario, cpf_criptografado, cpf_hash, vinculo
 (21, 'v1:Irign/aW5mMCv4Ug:EQxzkR0lXxnJhmu8xAEhcw==:2lmUgJVYjExvdAM=', 'b5944441f2b1f45294195783812f36bc72c9bf38d2ef3d8a231c1a8d8f538ec5', 'Universidade Federal da Bahia (UFBA)',              'mestre',   'ativo', '2024-05-25 09:00:00'), -- Eduardo:  alvo = Em Construção
 (22, 'v1:m7z9uq+435l0syBo:wVQB6djPxdi38eWcfpnUAQ==:45Hee0oUAA3IDek=', '469f49af437e577be058f668669a27ec903aa9ddc42895750ef3e1d45f05c380', 'Universidade Federal do Ceará (UFC)',               'graduado', 'ativo', '2024-05-28 09:00:00'); -- Vinícius: alvo = Atenção
 
+-- ADICIONADO (14-09-2026, pedido do Lucas: "pesquisadores usuários antigos
+-- obviamente não consta nenhum termo aceite" - não é bug, é o comportamento
+-- correto pra quem nunca passou pelo fluxo de upgrade de verdade, mas
+-- incompleto pro cenário fictício do seed) - estes 11 pesquisadores já
+-- nascem com perfil pronto acima, então "aceitaram" o Termo de Upgrade de
+-- Pesquisador na mesma data em que o próprio perfil foi ativado
+-- (ativado_em), não agora. Usa subquery pelo id_termo ATIVO do tipo
+-- 'upgrade_pesquisador' (não um id fixo) - continua correto mesmo se a
+-- versão vigente desse tipo mudar antes deste seed rodar.
+INSERT INTO usuario_termo (id_usuario, id_termo, aceito_em, ip_aceite)
+SELECT
+    id_usuario,
+    (SELECT id_termo FROM termos_de_uso WHERE tipo = 'upgrade_pesquisador' AND ativo = TRUE),
+    ativado_em,
+    '187.10.20.30'
+FROM perfil_pesquisador;
+
 
 -- [07-F-1] link_academico
 -- ADICIONADO: Bruno (19) recebe os 3 links que a fórmula de score realmente soma

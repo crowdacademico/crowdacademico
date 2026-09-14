@@ -22,11 +22,12 @@ import {
   classeBadgeStatusPesquisador,
 } from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
 import { formatarCpf, formatarCpfOuMotivoOculto, formatarData, formatarDataHora, formatarNomeDimensao } from '../../services/constant/utils/formatacao.util';
+import { ROTULO_TIPO_TERMO } from '../../services/5-termo-uso/constants/termo-uso-tipos';
 import { CamposVinculoPerfil } from '../6-perfil-pesquisador/campos-vinculo-perfil';
 import { SecaoModeracaoPesquisador } from '../6-perfil-pesquisador/secao-moderacao-pesquisador';
 import { SecaoModeracao } from './secao-moderacao';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
-import type { UsuarioResponse, UsuarioResponseLoginHistorico } from '../../services/1-usuario/type/usuario.type';
+import type { UsuarioResponse, UsuarioResponseLoginHistorico, UsuarioResponseTermoAceito } from '../../services/1-usuario/type/usuario.type';
 import type { PapelResponse, UsuarioPapelResponse } from '../../services/2-papel-permissao/type/papel-permissao.type';
 import type {
   PerfilPesquisadorResponse,
@@ -579,6 +580,21 @@ export function ModalConsultarUsuario({ auth, idUsuario, aoFechar, aoRegistrarCh
   const [logins, setLogins] = useState<UsuarioResponseLoginHistorico[] | null>(null);
   const [carregandoLogins, setCarregandoLogins] = useState(false);
   const [loginsAbertos, setLoginsAbertos] = useState(false);
+  // Termos de Uso aceitos (14-09-2026, pedido do Lucas: "onde fica
+  // registrado" o aceite) - buscado sempre (não atrás de um toggle, como os
+  // logins) porque é informação de conformidade que faz sentido já vir
+  // visível ao consultar a conta, não um detalhe auxiliar raramente checado.
+  const [termosAceitos, setTermosAceitos] = useState<UsuarioResponseTermoAceito[] | null>(null);
+
+  useEffect(() => {
+    comRegistro(aoRegistrarChamada, 'GET', `/usuario/${idUsuario}/termos-aceitos`, null, () =>
+      usuarioApi.listarTermosAceitos(auth.authFetch, idUsuario),
+    )
+      .then(setTermosAceitos)
+      // Leitura auxiliar - falha aqui não deve travar o resto do modal.
+      .catch(() => setTermosAceitos([]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idUsuario]);
 
   const aoAlternarLogins = async () => {
     if (loginsAbertos) {
@@ -604,17 +620,23 @@ export function ModalConsultarUsuario({ auth, idUsuario, aoFechar, aoRegistrarCh
 
   return (
     <ModalFicha
-      titulo={usuario?.nome ?? `#${idUsuario}`}
+      // `carregando` (14-09-2026) - ModalFicha já esconde título/avatar
+      // sozinho enquanto `usuario` não chega, mostrando "Carregando..." no
+      // lugar (ver comentário completo em modal-ficha.tsx).
+      carregando={!usuario}
+      titulo={usuario?.nome ?? ''}
       subtitulo={usuario?.email}
       avatar={
-        <div className="relative shrink-0">
-          <AvatarUsuario nome={usuario?.nome} foto={avatarUrl} tamanho="lg" />
-          {avatarUrl && (
-            <div className="absolute bottom-0 right-0">
-              <BotaoVerFotoPerfil url={avatarUrl} badge />
-            </div>
-          )}
-        </div>
+        usuario && (
+          <div className="relative shrink-0">
+            <AvatarUsuario nome={usuario.nome} foto={avatarUrl} tamanho="lg" />
+            {avatarUrl && (
+              <div className="absolute bottom-0 right-0">
+                <BotaoVerFotoPerfil url={avatarUrl} badge />
+              </div>
+            )}
+          </div>
+        )
       }
       aoFechar={aoFechar}
       rodape={
@@ -686,6 +708,26 @@ export function ModalConsultarUsuario({ auth, idUsuario, aoFechar, aoRegistrarCh
                   )}
                 </CampoFicha>
               </SecaoFicha>
+
+              {termosAceitos === null ? (
+                <SecaoFicha titulo="Termos de Uso Aceitos" colunas={1}>
+                  <p className="texto-fraco text-sm">Carregando...</p>
+                </SecaoFicha>
+              ) : termosAceitos.length === 0 ? (
+                <SecaoFicha titulo="Termos de Uso Aceitos" colunas={1}>
+                  <p className="texto-fraco text-sm">Nenhum termo aceito registrado.</p>
+                </SecaoFicha>
+              ) : (
+                <SecaoFicha titulo="Termos de Uso Aceitos">
+                  {termosAceitos.map((termo, indice) => (
+                    <CampoFicha
+                      key={indice}
+                      rotulo={ROTULO_TIPO_TERMO[termo.tipo]}
+                      valor={`${termo.versao} - ${formatarDataHora(termo.aceitoEm)}`}
+                    />
+                  ))}
+                </SecaoFicha>
+              )}
 
               {perfilPesquisador && (
                 <SecaoFicha titulo="Perfil de Pesquisador">
@@ -1082,19 +1124,23 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado, g
 
   return (
     <ModalFicha
-      titulo={usuario?.nome ?? `#${idUsuario}`}
+      // `carregando` (14-09-2026) - mesmo mecanismo de ModalConsultarUsuario.
+      carregando={!usuario}
+      titulo={usuario?.nome ?? ''}
       subtitulo={usuario?.email}
       avatar={
-        <SeletorFotoPerfil
-          authFetch={auth.authFetch}
-          nome={usuario?.nome}
-          url={idImagemPerfilNovo === undefined ? avatarUrl : avatarUrlNovo}
-          tamanho="lg"
-          aoAlterar={(idArquivo, novaUrl) => {
-            setIdImagemPerfilNovo(idArquivo);
-            setAvatarUrlNovo(novaUrl);
-          }}
-        />
+        usuario && (
+          <SeletorFotoPerfil
+            authFetch={auth.authFetch}
+            nome={usuario.nome}
+            url={idImagemPerfilNovo === undefined ? avatarUrl : avatarUrlNovo}
+            tamanho="lg"
+            aoAlterar={(idArquivo, novaUrl) => {
+              setIdImagemPerfilNovo(idArquivo);
+              setAvatarUrlNovo(novaUrl);
+            }}
+          />
+        )
       }
       aoFechar={fechar}
       rodape={

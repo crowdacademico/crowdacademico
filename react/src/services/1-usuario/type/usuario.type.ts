@@ -1,3 +1,5 @@
+import type { TipoTermo } from '../../5-termo-uso/type/termo-uso.type';
+
 // Espelha nest/src/1-usuario/dto/response/*.ts, um a um, mesmo nome de
 // arquivo pra divergência ficar visível se um lado mudar e o outro não
 // (fase 2 da migração TS - ver DOCUMENTACAO_FRONTEND.md/ACHADOS_PARA_DISCUTIR.md
@@ -26,6 +28,14 @@ export interface UsuarioResponse {
 // Espelha usuario.response-login-historico.ts.
 export interface UsuarioResponseLoginHistorico {
   logadoEm: string;
+}
+
+// Espelha usuario.response-termo-aceito.ts (14-09-2026, pedido do Lucas:
+// "onde fica registrado" o aceite do Termo de Uso - Consultar Usuário).
+export interface UsuarioResponseTermoAceito {
+  tipo: TipoTermo;
+  versao: string;
+  aceitoEm: string;
 }
 
 // Espelha usuario.response-suspend.ts.

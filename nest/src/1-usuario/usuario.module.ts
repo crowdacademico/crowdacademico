@@ -6,6 +6,7 @@ import { UsuarioControllerExportarDados } from './controllers/usuario.controller
 import { UsuarioControllerFindAll } from './controllers/usuario.controller.findall';
 import { UsuarioControllerFindOne } from './controllers/usuario.controller.findone';
 import { UsuarioControllerListarLogins } from './controllers/usuario.controller.listar-logins';
+import { UsuarioControllerListarTermosAceitos } from './controllers/usuario.controller.listar-termos-aceitos';
 import { UsuarioControllerRemove } from './controllers/usuario.controller.remove';
 import { UsuarioControllerSuspender } from './controllers/usuario.controller.suspender';
 import { UsuarioControllerUpdate } from './controllers/usuario.controller.update';
@@ -16,6 +17,7 @@ import { UsuarioServiceExportarDados } from './service/usuario.service.exportar-
 import { UsuarioServiceFindAll } from './service/usuario.service.findall';
 import { UsuarioServiceFindOne } from './service/usuario.service.findone';
 import { UsuarioServiceListarLogins } from './service/usuario.service.listar-logins';
+import { UsuarioServiceListarTermosAceitos } from './service/usuario.service.listar-termos-aceitos';
 import { UsuarioServiceRemove } from './service/usuario.service.remove';
 import { UsuarioServiceSuspender } from './service/usuario.service.suspender';
 import { UsuarioServiceUpdate } from './service/usuario.service.update';
@@ -33,6 +35,7 @@ import { UsuarioServiceUpdate } from './service/usuario.service.update';
     UsuarioControllerRemove,
     UsuarioControllerDesbloquear,
     UsuarioControllerListarLogins,
+    UsuarioControllerListarTermosAceitos,
     UsuarioControllerSuspender,
     UsuarioControllerExportarDados,
   ],
@@ -44,6 +47,7 @@ import { UsuarioServiceUpdate } from './service/usuario.service.update';
     UsuarioServiceRemove,
     UsuarioServiceDesbloquear,
     UsuarioServiceListarLogins,
+    UsuarioServiceListarTermosAceitos,
     UsuarioServiceSuspender,
     UsuarioServiceExportarDados,
     ExportarDadosThrottlerGuard,

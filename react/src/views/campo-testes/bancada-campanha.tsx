@@ -896,7 +896,11 @@ export function BancadaCampanha({ auth }: PropsPagina) {
         };
         return (
           <ModalFicha
-            titulo={campanhaEmEdicao?.titulo ?? `#${idCampanhaEditando}`}
+            // `carregando` (14-09-2026) - ModalFicha esconde o título de
+            // verdade sozinho enquanto `campanhaEmEdicao` não chega (ver
+            // comentário completo em modal-ficha.tsx).
+            carregando={!campanhaEmEdicao}
+            titulo={campanhaEmEdicao?.titulo ?? ''}
             subtitulo={campanhaEmEdicao ? `Pesquisador: ${nomeDe(campanhaEmEdicao.idUsuario)}` : undefined}
             aoFechar={() => setIdCampanhaEditando(null)}
             rodape={

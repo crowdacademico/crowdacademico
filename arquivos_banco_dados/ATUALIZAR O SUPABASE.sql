@@ -1163,6 +1163,33 @@ ALTER TABLE aceite_termo_contribuicao ADD CONSTRAINT "FK_ACEITE_TERMO_CONTRIBUIC
 
 
 -- ============================================================================
+-- 14-09-2026 - OPCIONAL, não crítico (pedido do Lucas, mesmo tom: "não é
+-- urgente"). Backfill dos pesquisadores que já existem no banco DE
+-- DESENVOLVIMENTO hoje (seed + qualquer um criado ao vivo testando) - dá a
+-- eles um aceite do Termo de Upgrade de Pesquisador, na data em que o
+-- próprio perfil foi ativado (ou agora, se não tiver essa data). Sem isto,
+-- "Termos de Uso Aceitos" em Consultar Usuário mostra "Nenhum termo aceito
+-- registrado" pra pesquisador antigo - comportamento correto (ninguém
+-- passou pelo fluxo de verdade), só incompleto pro cenário de
+-- demonstração. Só rode isto se quiser ver o efeito AGORA nas contas que
+-- já existem - o `07_seed_dados.sql` já foi corrigido pra qualquer banco
+-- NOVO nascer certo sozinho, sem depender deste bloco.
+--
+-- Seguro rodar de novo? Sim (`ON CONFLICT DO NOTHING` - já cobre a
+-- UNIQUE(id_usuario, id_termo) de usuario_termo).
+-- ============================================================================
+
+INSERT INTO usuario_termo (id_usuario, id_termo, aceito_em, ip_aceite)
+SELECT
+    pp.id_usuario,
+    (SELECT id_termo FROM termos_de_uso WHERE tipo = 'upgrade_pesquisador' AND ativo = TRUE),
+    COALESCE(pp.ativado_em, NOW()),
+    '187.10.20.30'
+FROM perfil_pesquisador pp
+ON CONFLICT (id_usuario, id_termo) DO NOTHING;
+
+
+-- ============================================================================
 -- NÃO ENTRA NESTE ARQUIVO (registrado aqui só pra não se perder)
 -- ============================================================================
 
