@@ -17,7 +17,10 @@ export class ConfiguracaoServiceRemove {
       .where('id_config', '=', idConfig)
       .executeTakeFirst();
 
-    if ((resultado?.numDeletedRows ?? 0n) === 0n) {
+    // `resultado` nunca é undefined - mesmo motivo de
+    // motivo-denuncia.service.remove.ts (executeTakeFirst() de DELETE
+    // sempre resolve pro DeleteResult sintetizado pelo Kysely).
+    if (resultado.numDeletedRows === 0n) {
       // pol_config_delete (04): mesmo critério do update (dono ou
       // 'configuracao_gerenciar').
       const existe = await db

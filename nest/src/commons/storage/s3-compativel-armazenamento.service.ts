@@ -236,8 +236,13 @@ export class S3CompativelArmazenamentoService implements ArmazenamentoService {
       name?: string;
       $metadata?: { httpStatusCode?: number };
     };
+    // `erro` é `unknown` de verdade antes do `as` (cast, não prova) - `?.`
+    // fica de propósito, mesma justificativa de
+    // postgres-exception.filter.ts.
     return (
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       erroTipado?.name === 'NotFound' ||
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       erroTipado?.$metadata?.httpStatusCode === 404
     );
   }

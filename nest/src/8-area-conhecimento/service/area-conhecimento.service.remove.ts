@@ -20,7 +20,10 @@ export class AreaConhecimentoServiceRemove {
         .where('id_area_conhecimento', '=', idAreaConhecimento)
         .executeTakeFirst();
 
-      if ((resultado?.numDeletedRows ?? 0n) === 0n) {
+      // `resultado` nunca é undefined - mesmo motivo de
+      // motivo-denuncia.service.remove.ts (executeTakeFirst() de DELETE
+      // sempre resolve pro DeleteResult sintetizado pelo Kysely).
+      if (resultado.numDeletedRows === 0n) {
         // pol_area_delete (04): mesmo critério do update
         // (area_conhecimento_gerenciar).
         const existe = await db
@@ -54,7 +57,10 @@ export class AreaConhecimentoServiceRemove {
       ) {
         throw erro;
       }
+      // `erro` é `unknown` de verdade antes do `as` - `?.` fica de
+      // propósito, mesma justificativa de motivo-denuncia.service.remove.ts.
       if (
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         (erro as { code?: string })?.code === CODIGO_PG_FOREIGN_KEY_VIOLATION
       ) {
         throw new ConflictException(

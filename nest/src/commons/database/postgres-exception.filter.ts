@@ -60,7 +60,13 @@ export class PostgresExceptionFilter extends BaseExceptionFilter {
     super.catch(traduzido ?? excecao, host);
   }
 
+  // `erro: ErroPostgres` chega aqui via `excecao as ErroPostgres` no
+  // `catch()` acima, a partir de um `excecao: unknown` que é literalmente
+  // QUALQUER coisa lançada em QUALQUER lugar da aplicação (`@Catch()` sem
+  // filtro de tipo) - `as` é cast, não prova; `erro?.code` fica de
+  // propósito, mesmo o tipo declarado dizendo que `erro` nunca é nulo.
   private traduzir(erro: ErroPostgres): HttpException | null {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     const prefixoNegocio = erro?.code?.slice(0, 2);
     if (prefixoNegocio && prefixoNegocio in FAIXA_ERRCODE_REGRA_NEGOCIO) {
       return new HttpException(
@@ -69,6 +75,7 @@ export class PostgresExceptionFilter extends BaseExceptionFilter {
       );
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     switch (erro?.code) {
       case CODIGO_PG_UNIQUE_VIOLATION:
         return new HttpException(

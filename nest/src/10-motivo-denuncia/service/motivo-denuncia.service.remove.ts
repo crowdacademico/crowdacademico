@@ -20,7 +20,12 @@ export class MotivoDenunciaServiceRemove {
         .where('id_motivo', '=', idMotivo)
         .executeTakeFirst();
 
-      if ((resultado?.numDeletedRows ?? 0n) === 0n) {
+      // `resultado` nunca é undefined aqui - executeTakeFirst() de um
+      // DELETE sempre resolve pro DeleteResult sintetizado pelo Kysely
+      // (SimplifySingleResult devolve O puro pra Insert/Update/Delete/
+      // MergeResult, nunca `| undefined`), então numDeletedRows também
+      // nunca é undefined.
+      if (resultado.numDeletedRows === 0n) {
         // pol_motivo_delete (04): mesmo critério do update
         // (motivo_denuncia_gerenciar).
         const existe = await db
@@ -49,7 +54,11 @@ export class MotivoDenunciaServiceRemove {
       ) {
         throw erro;
       }
+      // `erro` é `unknown` de verdade antes do `as` (cast, não prova) -
+      // `?.` fica de propósito, mesmo o lint achando redundante depois do
+      // cast.
       if (
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         (erro as { code?: string })?.code === CODIGO_PG_FOREIGN_KEY_VIOLATION
       ) {
         throw new ConflictException(

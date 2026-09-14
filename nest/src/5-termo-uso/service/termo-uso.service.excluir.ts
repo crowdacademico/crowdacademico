@@ -78,7 +78,10 @@ export class TermoUsoServiceExcluir {
       .where('id_termo', '=', id)
       .executeTakeFirst();
 
-    if ((resultado?.numDeletedRows ?? 0n) === 0n) {
+    // `resultado` nunca é undefined - mesmo motivo de
+    // motivo-denuncia.service.remove.ts (executeTakeFirst() de DELETE
+    // sempre resolve pro DeleteResult sintetizado pelo Kysely).
+    if (resultado.numDeletedRows === 0n) {
       // pol_termos_select é USING(true) - já confirmamos que a linha
       // existe acima, então 0 linhas apagadas só pode ser falta de
       // 'termos_uso_gerenciar' na pol_termos_delete.

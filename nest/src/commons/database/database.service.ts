@@ -13,6 +13,11 @@ export class DatabaseService {
 
   getDb(): Kysely<DB> {
     const db = this.cls.get<Kysely<DB>>(CLS_KEY_KYSELY_DB);
+    // `ClsService.get<T>()` (nestjs-cls) é tipado pra devolver `T` sempre,
+    // mas o próprio JSDoc do método admite "returns the value stored under
+    // the key or undefined" - o tipo mente, a guarda protege o cenário real
+    // descrito abaixo.
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (!db) {
       // Só acontece se alguém chamar isto fora do pipeline HTTP do Nest (ex.:
       // dentro do próprio GlobalDbInterceptor antes de ele rodar, ou num

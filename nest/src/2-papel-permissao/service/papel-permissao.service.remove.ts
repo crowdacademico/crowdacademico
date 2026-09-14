@@ -22,7 +22,10 @@ export class PapelPermissaoServiceRemove {
       .where('id_permissao', '=', idPermissao)
       .executeTakeFirst();
 
-    if ((resultado?.numDeletedRows ?? 0n) === 0n) {
+    // `resultado` nunca é undefined - mesmo motivo de
+    // motivo-denuncia.service.remove.ts (executeTakeFirst() de DELETE
+    // sempre resolve pro DeleteResult sintetizado pelo Kysely).
+    if (resultado.numDeletedRows === 0n) {
       const existe = await db
         .selectFrom('papel_permissao')
         .select('id_papel')
