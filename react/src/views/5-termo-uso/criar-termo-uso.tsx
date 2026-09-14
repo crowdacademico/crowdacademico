@@ -2,8 +2,9 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { CartaoFormulario } from '../../components/crud/cartao-formulario';
-import { useErroToast } from '../../components/layout/use-erro-toast';
-import { useToast } from '../../components/layout/use-toast';
+import { RodapeFormulario } from '../../components/crud/rodape-formulario';
+import { useErroToast } from '../../components/layout/toast/use-erro-toast';
+import { useToast } from '../../components/layout/toast/use-toast';
 import { termoUsoApi } from '../../services/5-termo-uso/api/termo-uso.api';
 import { ROTULO_TIPO_TERMO, TIPOS_TERMO } from '../../services/5-termo-uso/constants/termo-uso-tipos';
 import type { PropsPagina } from '../../services/router/pagina.type';
@@ -117,17 +118,14 @@ export function CriarTermoUso({ auth }: PropsPagina) {
           />
         </div>
 
-        <div className="flex gap-3 pt-2">
-          <button type="button" onClick={() => navigate(-1)} className="btn btn-secondary flex-1">
-            Cancelar
-          </button>
-          <button
-            type="submit"
-            disabled={enviando || !versao.trim() || !conteudo.trim()}
-            className="btn btn-primary flex-1"
-          >
-            {enviando ? 'Publicando...' : 'Publicar versão'}
-          </button>
+        <div className="pt-2">
+          <RodapeFormulario
+            aoCancelar={() => navigate(-1)}
+            desabilitado={enviando || !versao.trim() || !conteudo.trim()}
+            enviando={enviando}
+            textoAcao="Publicar versão"
+            textoEnviando="Publicando..."
+          />
         </div>
       </form>
     </CartaoFormulario>

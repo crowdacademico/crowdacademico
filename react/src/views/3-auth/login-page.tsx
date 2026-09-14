@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { CSSProperties, FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { IconeGoogle } from '../../components/3-auth/icone-google';
-import { useErroToast } from '../../components/layout/use-erro-toast';
+import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import type { PropsPagina } from '../../services/router/pagina.type';
 
 // Cópia fiel de telas/login/login.html do Projeto de Interface real -

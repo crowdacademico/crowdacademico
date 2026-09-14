@@ -4,8 +4,8 @@ import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura
 import { SecaoFicha } from '../../components/crud/ficha-consulta';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { confirmarSaida, useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
-import { useErroToast } from '../../components/layout/use-erro-toast';
-import { useToast } from '../../components/layout/use-toast';
+import { useErroToast } from '../../components/layout/toast/use-erro-toast';
+import { useToast } from '../../components/layout/toast/use-toast';
 import { termoUsoApi } from '../../services/5-termo-uso/api/termo-uso.api';
 import { ROTULO_TIPO_TERMO } from '../../services/5-termo-uso/constants/termo-uso-tipos';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';

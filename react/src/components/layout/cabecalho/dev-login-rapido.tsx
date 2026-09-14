@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { useErroToast } from './use-erro-toast';
-import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
+import { useErroToast } from '../toast/use-erro-toast';
+import type { UseAuthReturn } from '../../../services/3-auth/hook/use-auth';
 
 // <dev> - login instantâneo com uma conta que JÁ existe no seed
 // (07_seed_dados.sql, [07-D-1]), sem digitar nada. Existe só porque logar

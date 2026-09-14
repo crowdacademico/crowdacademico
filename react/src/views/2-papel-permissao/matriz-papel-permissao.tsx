@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Tooltip } from '../../components/layout/tooltip';
-import { useErroToast } from '../../components/layout/use-erro-toast';
-import { useToast } from '../../components/layout/use-toast';
+import { useErroToast } from '../../components/layout/toast/use-erro-toast';
+import { useToast } from '../../components/layout/toast/use-toast';
 import {
   papelApi,
   papelPermissaoApi,

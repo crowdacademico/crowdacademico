@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { CartaoFormulario } from '../../components/crud/cartao-formulario';
-import { useErroToast } from '../../components/layout/use-erro-toast';
-import { useToast } from '../../components/layout/use-toast';
+import { RodapeFormulario } from '../../components/crud/rodape-formulario';
+import { useErroToast } from '../../components/layout/toast/use-erro-toast';
+import { useToast } from '../../components/layout/toast/use-toast';
 import { areaConhecimentoApi } from '../../services/8-area-conhecimento/api/area-conhecimento.api';
 import { LIMITE_NOME_AREA_CONHECIMENTO } from '../../services/8-area-conhecimento/constants/area-conhecimento.constants';
 import type { PropsPagina } from '../../services/router/pagina.type';
@@ -133,17 +134,14 @@ export function CriarAreaConhecimento({ auth }: PropsPagina) {
           </p>
         </div>
 
-        <div className="flex gap-3 pt-2">
-          <button type="button" onClick={() => navigate(-1)} className="btn btn-secondary flex-1">
-            Cancelar
-          </button>
-          <button
-            type="submit"
-            disabled={enviando || codigoInvalido}
-            className="btn btn-primary flex-1"
-          >
-            {enviando ? 'Criando...' : 'Criar'}
-          </button>
+        <div className="pt-2">
+          <RodapeFormulario
+            aoCancelar={() => navigate(-1)}
+            desabilitado={enviando || codigoInvalido}
+            enviando={enviando}
+            textoAcao="Criar"
+            textoEnviando="Criando..."
+          />
         </div>
       </form>
     </CartaoFormulario>

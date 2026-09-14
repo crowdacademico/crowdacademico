@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AvatarUsuario } from '../../components/layout/avatar-usuario';
 import { SeletorFotoPerfil } from '../../components/input/seletor-foto-perfil';
-import { useErroToast } from '../../components/layout/use-erro-toast';
-import { useToast } from '../../components/layout/use-toast';
+import { useErroToast } from '../../components/layout/toast/use-erro-toast';
+import { useToast } from '../../components/layout/toast/use-toast';
 import { useConfiguracoes } from '../../services/11-configuracoes/hook/use-configuracoes';
 import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';

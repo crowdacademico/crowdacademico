@@ -2,9 +2,10 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { CartaoFormulario } from '../../components/crud/cartao-formulario';
+import { RodapeFormulario } from '../../components/crud/rodape-formulario';
 import { confirmarSaida, useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
 import { SecaoFicha } from '../../components/crud/ficha-consulta';
-import { useToast } from '../../components/layout/use-toast';
+import { useToast } from '../../components/layout/toast/use-toast';
 import { motivoDenunciaApi } from '../../services/10-motivo-denuncia/api/motivo-denuncia.api';
 import { ehTipoMotivoDenuncia, LIMITE_DESCRICAO_MOTIVO_DENUNCIA } from '../../services/10-motivo-denuncia/constants/motivo-denuncia.constants';
 import { useBuscarPorId } from '../../services/constant/hook/use-buscar-por-id';
@@ -81,19 +82,14 @@ export function AlterarMotivoDenuncia({ auth }: PropsPagina) {
       titulo="Alterar Motivo de Denúncia"
       rodape={
         motivo && (
-          <div className="flex gap-3">
-            <button type="button" onClick={aoCancelar} className="btn btn-secondary flex-1">
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              form="form-alterar-motivo-denuncia"
-              disabled={enviando || !sujo || tipo === '' || descricao.trim() === ''}
-              className="btn btn-primary flex-1"
-            >
-              {enviando ? 'Salvando...' : 'Salvar'}
-            </button>
-          </div>
+          <RodapeFormulario
+            aoCancelar={aoCancelar}
+            formulario="form-alterar-motivo-denuncia"
+            desabilitado={enviando || !sujo || tipo === '' || descricao.trim() === ''}
+            enviando={enviando}
+            textoAcao="Salvar"
+            textoEnviando="Salvando..."
+          />
         )
       }
     >

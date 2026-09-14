@@ -3,9 +3,10 @@ import type { FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
 import { CartaoFormulario } from '../../components/crud/cartao-formulario';
+import { RodapeFormulario } from '../../components/crud/rodape-formulario';
 import { confirmarSaida, useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
 import { SecaoFicha } from '../../components/crud/ficha-consulta';
-import { useToast } from '../../components/layout/use-toast';
+import { useToast } from '../../components/layout/toast/use-toast';
 import { tipoLinkApi } from '../../services/9-tipo-link/api/tipo-link.api';
 import { LIMITE_NOME_TIPO_LINK } from '../../services/9-tipo-link/constants/tipo-link.constants';
 import { useBuscarPorId } from '../../services/constant/hook/use-buscar-por-id';
@@ -138,19 +139,14 @@ export function AlterarTipoLink({ auth }: PropsPagina) {
       titulo="Alterar Tipo de Link"
       rodape={
         tipo && (
-          <div className="flex gap-3">
-            <button type="button" onClick={aoCancelar} className="btn btn-secondary flex-1">
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              form="form-alterar-tipo-link"
-              disabled={enviando || !sujo || regexInvalida || nenhumEscopoMarcado}
-              className="btn btn-primary flex-1"
-            >
-              {enviando ? 'Salvando...' : 'Salvar'}
-            </button>
-          </div>
+          <RodapeFormulario
+            aoCancelar={aoCancelar}
+            formulario="form-alterar-tipo-link"
+            desabilitado={enviando || !sujo || regexInvalida || nenhumEscopoMarcado}
+            enviando={enviando}
+            textoAcao="Salvar"
+            textoEnviando="Salvando..."
+          />
         )
       }
     >

@@ -2,8 +2,9 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { CartaoFormulario } from '../../components/crud/cartao-formulario';
-import { useErroToast } from '../../components/layout/use-erro-toast';
-import { useToast } from '../../components/layout/use-toast';
+import { RodapeFormulario } from '../../components/crud/rodape-formulario';
+import { useErroToast } from '../../components/layout/toast/use-erro-toast';
+import { useToast } from '../../components/layout/toast/use-toast';
 import { motivoDenunciaApi } from '../../services/10-motivo-denuncia/api/motivo-denuncia.api';
 import { ehTipoMotivoDenuncia, LIMITE_DESCRICAO_MOTIVO_DENUNCIA } from '../../services/10-motivo-denuncia/constants/motivo-denuncia.constants';
 import type { PropsPagina } from '../../services/router/pagina.type';
@@ -93,17 +94,14 @@ export function CriarMotivoDenuncia({ auth }: PropsPagina) {
           </p>
         </div>
 
-        <div className="flex gap-3 pt-2">
-          <button type="button" onClick={() => navigate(-1)} className="btn btn-secondary flex-1">
-            Cancelar
-          </button>
-          <button
-            type="submit"
-            disabled={enviando || descricao.trim() === '' || tipo === ''}
-            className="btn btn-primary flex-1"
-          >
-            {enviando ? 'Criando...' : 'Criar'}
-          </button>
+        <div className="pt-2">
+          <RodapeFormulario
+            aoCancelar={() => navigate(-1)}
+            desabilitado={enviando || descricao.trim() === '' || tipo === ''}
+            enviando={enviando}
+            textoAcao="Criar"
+            textoEnviando="Criando..."
+          />
         </div>
       </form>
     </CartaoFormulario>

@@ -2,8 +2,9 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { CartaoFormulario } from '../../components/crud/cartao-formulario';
-import { useErroToast } from '../../components/layout/use-erro-toast';
-import { useToast } from '../../components/layout/use-toast';
+import { RodapeFormulario } from '../../components/crud/rodape-formulario';
+import { useErroToast } from '../../components/layout/toast/use-erro-toast';
+import { useToast } from '../../components/layout/toast/use-toast';
 import { configuracaoApi } from '../../services/11-configuracoes/api/configuracao.api';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { TipoConfiguracao } from '../../services/11-configuracoes/type/configuracao.type';
@@ -209,21 +210,14 @@ export function CriarConfiguracao({ auth }: PropsPagina) {
           />
         </div>
 
-        <div className="flex gap-3 pt-2">
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className="btn btn-secondary flex-1"
-          >
-            Cancelar
-          </button>
-          <button
-            type="submit"
-            disabled={enviando || chaveInvalida}
-            className="btn btn-primary flex-1"
-          >
-            {enviando ? 'Criando...' : 'Criar'}
-          </button>
+        <div className="pt-2">
+          <RodapeFormulario
+            aoCancelar={() => navigate(-1)}
+            desabilitado={enviando || chaveInvalida}
+            enviando={enviando}
+            textoAcao="Criar"
+            textoEnviando="Criando..."
+          />
         </div>
       </form>
     </CartaoFormulario>

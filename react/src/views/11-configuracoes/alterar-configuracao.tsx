@@ -3,9 +3,10 @@ import type { FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
 import { CartaoFormulario } from '../../components/crud/cartao-formulario';
+import { RodapeFormulario } from '../../components/crud/rodape-formulario';
 import { confirmarSaida, useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
 import { SecaoFicha } from '../../components/crud/ficha-consulta';
-import { useToast } from '../../components/layout/use-toast';
+import { useToast } from '../../components/layout/toast/use-toast';
 import { configuracaoApi } from '../../services/11-configuracoes/api/configuracao.api';
 import { useBuscarPorId } from '../../services/constant/hook/use-buscar-por-id';
 import type { PropsPagina } from '../../services/router/pagina.type';
@@ -80,19 +81,14 @@ export function AlterarConfiguracao({ auth }: PropsPagina) {
       titulo="Alterar Parâmetro"
       rodape={
         configuracao && (
-          <div className="flex gap-3">
-            <button type="button" onClick={aoCancelar} className="btn btn-secondary flex-1">
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              form="form-alterar-configuracao"
-              disabled={enviando || !sujo}
-              className="btn btn-primary flex-1"
-            >
-              {enviando ? 'Salvando...' : 'Salvar'}
-            </button>
-          </div>
+          <RodapeFormulario
+            aoCancelar={aoCancelar}
+            formulario="form-alterar-configuracao"
+            desabilitado={enviando || !sujo}
+            enviando={enviando}
+            textoAcao="Salvar"
+            textoEnviando="Salvando..."
+          />
         )
       }
     >

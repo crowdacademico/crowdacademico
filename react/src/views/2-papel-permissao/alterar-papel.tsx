@@ -3,9 +3,10 @@ import type { FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
 import { CartaoFormulario } from '../../components/crud/cartao-formulario';
+import { RodapeFormulario } from '../../components/crud/rodape-formulario';
 import { confirmarSaida, useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
-import { useErroToast } from '../../components/layout/use-erro-toast';
-import { useToast } from '../../components/layout/use-toast';
+import { useErroToast } from '../../components/layout/toast/use-erro-toast';
+import { useToast } from '../../components/layout/toast/use-toast';
 import { papelApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
 import type { PropsPagina } from '../../services/router/pagina.type';
 
@@ -81,19 +82,14 @@ export function AlterarPapel({ auth }: PropsPagina) {
       subtitulo="Só o nome exibido muda, o identificador interno usado pelas regras do sistema nunca é afetado."
       rodape={
         encontrado && (
-          <div className="flex gap-3">
-            <button type="button" onClick={aoCancelar} className="btn btn-secondary flex-1">
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              form="form-alterar-papel"
-              disabled={enviando || !sujo}
-              className="btn btn-primary flex-1"
-            >
-              {enviando ? 'Salvando...' : 'Salvar'}
-            </button>
-          </div>
+          <RodapeFormulario
+            aoCancelar={aoCancelar}
+            formulario="form-alterar-papel"
+            desabilitado={enviando || !sujo}
+            enviando={enviando}
+            textoAcao="Salvar"
+            textoEnviando="Salvando..."
+          />
         )
       }
     >

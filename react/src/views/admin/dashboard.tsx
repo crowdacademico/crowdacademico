@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Tooltip } from '../../components/layout/tooltip';
-import { useErroToast } from '../../components/layout/use-erro-toast';
+import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { dashboardApi } from '../../services/admin/api/dashboard.api';
 import { formatarMoeda } from '../../services/constant/utils/formatacao.util';
 import { DashboardIdentidadeVisual } from './dashboard-identidade-visual';

@@ -130,6 +130,13 @@
      inválido, sem passar pelo tema. Mesmo motivo dos outros tokens de
      erro: precisa de override no escuro. */
   --cor-borda-erro: var(--color-red-500);
+  /* --cor-borda-sucesso (14-09-2026, achado numa auditoria de componentização:
+     toast-provider.tsx usava `border-emerald-500` cru pra barra lateral de
+     sucesso, ao lado de `border-red-500` cru pro erro - o próprio erro já
+     tinha token (`--cor-borda-erro`, acima), sucesso nunca ganhou o
+     equivalente. Mesmo padrão: um tom mais claro (500) que o de texto (600),
+     igual erro já fazia. */
+  --cor-borda-sucesso: var(--color-emerald-500);
   --cor-fundo-aviso: var(--color-amber-100);
   --cor-texto-aviso: var(--color-amber-600);
   --cor-fundo-info: var(--color-blue-100);
@@ -201,6 +208,7 @@
   --cor-texto-erro: #f87171;
   --cor-texto-erro-forte: #fca5a5;
   --cor-borda-erro: #f87171;
+  --cor-borda-sucesso: #34d399;
   --cor-fundo-aviso: rgba(217, 119, 6, 0.18);
   --cor-texto-aviso: #fbbf24;
   --cor-fundo-info: rgba(37, 99, 235, 0.18);
@@ -226,6 +234,13 @@
     --cor-fundo-erro: rgba(239, 68, 68, 0.16);
     --cor-texto-erro: #f87171;
     --cor-texto-erro-forte: #fca5a5;
+    /* CORRIGIDO (14-09-2026, achado na mesma auditoria que criou
+       --cor-borda-sucesso): --cor-borda-erro nunca tinha sido adicionada
+       aqui (só existia em :root e em [data-tema='escuro']) - quem usasse
+       tema "sistema" (não "escuro" explícito) caía de volta pro tom claro
+       (--color-red-500), sem o ajuste de legibilidade do escuro. */
+    --cor-borda-erro: #f87171;
+    --cor-borda-sucesso: #34d399;
     --cor-fundo-aviso: rgba(217, 119, 6, 0.18);
     --cor-texto-aviso: #fbbf24;
     --cor-fundo-info: rgba(37, 99, 235, 0.18);
@@ -341,6 +356,14 @@
      `.input-padrao` (achado ao testar ao vivo, não só ler o CSS). */
   .borda-erro {
     border-color: var(--cor-borda-erro);
+  }
+
+  /* Barra de acento do toast de sucesso (14-09-2026, ver comentário de
+     --cor-borda-sucesso, acima) - único consumidor hoje é toast-provider.tsx,
+     mas fica aqui junto de `.borda-erro` por simetria, não escondida como
+     código de uso único. */
+  .borda-sucesso {
+    border-color: var(--cor-borda-sucesso);
   }
 
   .fundo-sucesso {

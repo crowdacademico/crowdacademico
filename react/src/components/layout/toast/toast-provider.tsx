@@ -25,14 +25,19 @@ const DURACAO_MS: Record<TipoToast, number> = { sucesso: 4000, erro: 5000 };
 // deixam uma frestinha), a cor virou `border-left` do próprio cartão - uma
 // borda SEMPRE acompanha o border-radius do elemento dela, sem costura
 // nenhuma, não depende de overflow cortar nada.
+// `corBorda` (14-09-2026, achado numa auditoria de componentização): eram
+// `border-emerald-500`/`border-red-500` crus do Tailwind - únicas 2 cores
+// do toast (que aparece em toda ação do painel) fora da camada de tokens
+// `--cor-*`, sem responder a tema escuro. `.borda-erro` já existia
+// (13-09-2026); `.borda-sucesso` criada agora ao lado, mesmo motivo.
 const CONFIG_TIPO: Record<TipoToast, { corBorda: string; corIcone: string; icone: string }> = {
   sucesso: {
-    corBorda: 'border-emerald-500',
+    corBorda: 'borda-sucesso',
     corIcone: 'texto-sucesso',
     icone: 'fa-solid fa-circle-check',
   },
   erro: {
-    corBorda: 'border-red-500',
+    corBorda: 'borda-erro',
     corIcone: 'texto-erro',
     icone: 'fa-solid fa-circle-exclamation',
   },

@@ -1,7 +1,7 @@
 import { Link } from 'react-router';
 import { ControleFonte } from './cabecalho/controle-fonte';
 import { ControleTema } from './cabecalho/controle-tema';
-import { DevLoginRapido } from './dev-login-rapido';
+import { DevLoginRapido } from './cabecalho/dev-login-rapido';
 import { MenuUsuario } from './cabecalho/menu-usuario';
 import { SinoAtividade } from './cabecalho/sino-atividade';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';

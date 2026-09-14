@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { SecaoFicha } from '../../components/crud/ficha-consulta';
-import { useErroToast } from '../../components/layout/use-erro-toast';
-import { useToast } from '../../components/layout/use-toast';
+import { useErroToast } from '../../components/layout/toast/use-erro-toast';
+import { useToast } from '../../components/layout/toast/use-toast';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { useConfiguracoes } from '../../services/11-configuracoes/hook/use-configuracoes';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useSearchParams } from 'react-router';
 import { AcaoLinha } from './acao-linha';
-import { useErroToast } from '../layout/use-erro-toast';
+import { useErroToast } from '../layout/toast/use-erro-toast';
 import { useFecharAoClicarFora } from '../../services/constant/hook/use-fechar-ao-clicar-fora';
 import { textoSeguro } from '../../services/constant/utils/formatacao.util';
 import { paginarClientSide } from '../../services/constant/utils/paginacao.util';

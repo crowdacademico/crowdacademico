@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { useErroToast } from '../../components/layout/use-erro-toast';
+import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { termoUsoApi } from '../../services/5-termo-uso/api/termo-uso.api';
 import { ErroHttp } from '../../services/constant/api/http.util';
 import type { PropsPagina } from '../../services/router/pagina.type';

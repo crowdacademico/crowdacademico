@@ -2,8 +2,9 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { CartaoFormulario } from '../../components/crud/cartao-formulario';
-import { useErroToast } from '../../components/layout/use-erro-toast';
-import { useToast } from '../../components/layout/use-toast';
+import { RodapeFormulario } from '../../components/crud/rodape-formulario';
+import { useErroToast } from '../../components/layout/toast/use-erro-toast';
+import { useToast } from '../../components/layout/toast/use-toast';
 import { tipoLinkApi } from '../../services/9-tipo-link/api/tipo-link.api';
 import { LIMITE_CODIGO_TIPO_LINK, LIMITE_NOME_TIPO_LINK } from '../../services/9-tipo-link/constants/tipo-link.constants';
 import type { PropsPagina } from '../../services/router/pagina.type';
@@ -226,17 +227,14 @@ export function CriarTipoLink({ auth }: PropsPagina) {
           )}
         </div>
 
-        <div className="flex gap-3 pt-2">
-          <button type="button" onClick={() => navigate(-1)} className="btn btn-secondary flex-1">
-            Cancelar
-          </button>
-          <button
-            type="submit"
-            disabled={enviando || codigoInvalido || regexInvalida || nenhumEscopoMarcado}
-            className="btn btn-primary flex-1"
-          >
-            {enviando ? 'Criando...' : 'Criar'}
-          </button>
+        <div className="pt-2">
+          <RodapeFormulario
+            aoCancelar={() => navigate(-1)}
+            desabilitado={enviando || codigoInvalido || regexInvalida || nenhumEscopoMarcado}
+            enviando={enviando}
+            textoAcao="Criar"
+            textoEnviando="Criando..."
+          />
         </div>
       </form>
     </CartaoFormulario>

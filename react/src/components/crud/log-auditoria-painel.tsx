@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import { useErroToast } from '../layout/use-erro-toast';
+import { useErroToast } from '../layout/toast/use-erro-toast';
 import { textoSeguro } from '../../services/constant/utils/formatacao.util';
 import type { ResultadoPaginado } from '../../services/constant/type/paginacao.type';
 import type { LogAuditoriaResponse, OperacaoLogAuditoria } from '../../services/27-log-auditoria/type/log-auditoria.type';

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router';
 import type { ReactNode } from 'react';
 import { CartaoFormulario } from './cartao-formulario';
 import { SecaoFicha } from './ficha-consulta';
-import { useToast } from '../layout/use-toast';
+import { useToast } from '../layout/toast/use-toast';
 import { useBuscarPorId } from '../../services/constant/hook/use-buscar-por-id';
 
 interface PaginaExcluirProps<T> {

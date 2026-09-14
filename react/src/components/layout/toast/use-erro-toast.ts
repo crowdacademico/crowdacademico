@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useToast } from './use-toast';
-import { traduzirErro } from '../../services/constant/api/traduzir-erro.util';
+import { traduzirErro } from '../../../services/constant/api/traduzir-erro.util';
 
 // Junta num lugar só o par que se repetia em toda tela - setErro(traduzirErro(erro))
 // pro texto vermelho que já existia + mostrar(..., 'erro') pro toast (pedido do
