@@ -1,42 +1,40 @@
 import { useState } from 'react';
-import type { FormEvent } from 'react';
-import { useNavigate } from 'react-router';
-import { CartaoFormulario } from '../../components/crud/cartao-formulario';
-import { RodapeFormulario } from '../../components/crud/rodape-formulario';
+import { ModalFicha } from '../../components/crud/modal-ficha';
+import { SecaoFicha } from '../../components/crud/ficha-consulta';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
 import { motivoDenunciaApi } from '../../services/10-motivo-denuncia/api/motivo-denuncia.api';
 import { ehTipoMotivoDenuncia, LIMITE_DESCRICAO_MOTIVO_DENUNCIA } from '../../services/10-motivo-denuncia/constants/motivo-denuncia.constants';
-import type { PropsPagina } from '../../services/router/pagina.type';
-import type { TipoMotivoDenuncia } from '../../services/10-motivo-denuncia/type/motivo-denuncia.type';
+import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
+import type { MotivoDenunciaResponse, TipoMotivoDenuncia } from '../../services/10-motivo-denuncia/type/motivo-denuncia.type';
 
-export function CriarMotivoDenuncia({ auth }: PropsPagina) {
-  const navigate = useNavigate();
+interface ModalCriarMotivoDenunciaProps {
+  auth: Pick<UseAuthReturn, 'authFetch'>;
+  aoFechar: () => void;
+  aoCriado: (motivoCriado: MotivoDenunciaResponse) => void;
+}
+
+// Criar - migrado de página pra modal (14-09-2026, continuação da migração
+// CRUD→Modal pedida pelo Lucas - mesmo padrão de ModalCriarUsuario).
+export function ModalCriarMotivoDenuncia({ auth, aoFechar, aoCriado }: ModalCriarMotivoDenunciaProps) {
   const { mostrar } = useToast();
   const { erro, reportarErro, limparErro } = useErroToast();
   const [descricao, setDescricao] = useState('');
-  // tipo_motivo_denuncia NOT NULL, sem default no banco - sem opção
-  // pré-selecionada aqui de propósito, pra forçar uma escolha consciente
-  // (diferente de permitePerfil em CriarTipoLink, que tinha um valor mais
-  // comum óbvio pra vir marcado).
   const [tipo, setTipo] = useState<TipoMotivoDenuncia | ''>('');
   const [enviando, setEnviando] = useState(false);
 
-  const aoCriar = async (evento: FormEvent<HTMLFormElement>) => {
-    evento.preventDefault();
+  const aoCriar = async () => {
     if (tipo === '') return;
     limparErro();
     setEnviando(true);
     try {
-      const motivoCriado = await motivoDenunciaApi.criar(auth.authFetch, {
-        descricao,
-        tipo,
-      });
+      const motivoCriado = await motivoDenunciaApi.criar(auth.authFetch, { descricao, tipo });
       mostrar(
         'Motivo de denúncia cadastrado com sucesso.',
         `O novo motivo possui o ID: ${motivoCriado.idMotivo}`,
       );
-      void navigate(-1);
+      aoCriado(motivoCriado);
+      aoFechar();
     } catch (erroRequisicao) {
       reportarErro(erroRequisicao);
     } finally {
@@ -45,15 +43,30 @@ export function CriarMotivoDenuncia({ auth }: PropsPagina) {
   };
 
   return (
-    <CartaoFormulario
-      icone="fa-flag"
+    <ModalFicha
       titulo="Criar Motivo de Denúncia"
       subtitulo="Preencha os dados abaixo para cadastrar um novo motivo de denúncia."
+      aoFechar={aoFechar}
+      rodape={
+        <div className="flex gap-3 max-w-sm ml-auto">
+          <button type="button" onClick={aoFechar} className="btn btn-secondary flex-1">
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={() => void aoCriar()}
+            disabled={enviando || descricao.trim() === '' || tipo === ''}
+            className="btn btn-primary flex-1"
+          >
+            {enviando ? 'Criando...' : 'Criar'}
+          </button>
+        </div>
+      }
     >
-      <form onSubmit={aoCriar} className="p-10 space-y-6">
-        {erro && <p className="texto-erro text-sm font-bold text-center">{erro}</p>}
+      {erro && <p className="texto-erro text-sm font-bold text-center">{erro}</p>}
 
-        <div>
+      <SecaoFicha titulo="Dados">
+        <div className="sm:col-span-2">
           <label className="rotulo-campo">Tipo</label>
           <select
             value={tipo}
@@ -77,7 +90,7 @@ export function CriarMotivoDenuncia({ auth }: PropsPagina) {
           </p>
         </div>
 
-        <div>
+        <div className="sm:col-span-2">
           <label className="rotulo-campo">Descrição</label>
           <input
             type="text"
@@ -93,17 +106,7 @@ export function CriarMotivoDenuncia({ auth }: PropsPagina) {
             identificador do motivo, então precisa ser claro por si só.
           </p>
         </div>
-
-        <div className="pt-2">
-          <RodapeFormulario
-            aoCancelar={() => navigate(-1)}
-            desabilitado={enviando || descricao.trim() === '' || tipo === ''}
-            enviando={enviando}
-            textoAcao="Criar"
-            textoEnviando="Criando..."
-          />
-        </div>
-      </form>
-    </CartaoFormulario>
+      </SecaoFicha>
+    </ModalFicha>
   );
 }

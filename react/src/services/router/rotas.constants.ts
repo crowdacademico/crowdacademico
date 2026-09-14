@@ -7,30 +7,12 @@ import { MinhaConta } from '../../views/3-auth/minha-conta-page';
 import { Dashboard } from '../../views/admin/dashboard';
 import { ListarUsuarios } from '../../views/1-usuario/listar-usuarios';
 import { ListarPapeis } from '../../views/2-papel-permissao/listar-papeis';
-import { AlterarPapel } from '../../views/2-papel-permissao/alterar-papel';
-import { CriarConfiguracao } from '../../views/11-configuracoes/criar-configuracao';
-import { AlterarConfiguracao } from '../../views/11-configuracoes/alterar-configuracao';
-import { ConsultarConfiguracao } from '../../views/11-configuracoes/consultar-configuracao';
-import { ExcluirConfiguracao } from '../../views/11-configuracoes/excluir-configuracao';
 import { ListarConfiguracoes } from '../../views/11-configuracoes/listar-configuracoes';
-import { CriarAreaConhecimento } from '../../views/8-area-conhecimento/criar-area-conhecimento';
-import { AlterarAreaConhecimento } from '../../views/8-area-conhecimento/alterar-area-conhecimento';
-import { ConsultarAreaConhecimento } from '../../views/8-area-conhecimento/consultar-area-conhecimento';
-import { ExcluirAreaConhecimento } from '../../views/8-area-conhecimento/excluir-area-conhecimento';
 import { ListarAreasConhecimento } from '../../views/8-area-conhecimento/listar-areas-conhecimento';
-import { CriarTipoLink } from '../../views/9-tipo-link/criar-tipo-link';
-import { AlterarTipoLink } from '../../views/9-tipo-link/alterar-tipo-link';
-import { ConsultarTipoLink } from '../../views/9-tipo-link/consultar-tipo-link';
-import { ExcluirTipoLink } from '../../views/9-tipo-link/excluir-tipo-link';
 import { ListarTiposLink } from '../../views/9-tipo-link/listar-tipos-link';
-import { CriarMotivoDenuncia } from '../../views/10-motivo-denuncia/criar-motivo-denuncia';
-import { AlterarMotivoDenuncia } from '../../views/10-motivo-denuncia/alterar-motivo-denuncia';
-import { ConsultarMotivoDenuncia } from '../../views/10-motivo-denuncia/consultar-motivo-denuncia';
-import { ExcluirMotivoDenuncia } from '../../views/10-motivo-denuncia/excluir-motivo-denuncia';
 import { ListarMotivosDenuncia } from '../../views/10-motivo-denuncia/listar-motivos-denuncia';
 import { ListarPesquisadores } from '../../views/6-perfil-pesquisador/listar-pesquisadores';
 import { ListarCampanhas } from '../../views/12-campanha/listar-campanhas';
-import { ConsultarCampanha } from '../../views/12-campanha/consultar-campanha';
 import { BancadaPesquisador } from '../../views/campo-testes/bancada-pesquisador';
 import { BancadaCampanha } from '../../views/campo-testes/bancada-campanha';
 import { VidaCampanhaAtiva } from '../../views/campo-testes/vida-campanha-ativa';
@@ -257,10 +239,12 @@ export const ROTAS_ADMIN: Rota[] = [
   // Acadêmico/Privacidade) - UMA rota parametrizada, não 5 entradas
   // repetidas: MinhaConta lê `aba` via useParams() e decide o que
   // renderizar por baixo da faixa de identidade (que não muda entre
-  // abas). Mesmo padrão de parâmetro já usado em
-  // '/admin/papeis/:id/alterar' aqui embaixo (Usuário tinha o mesmo padrão
-  // até 13-09-2026, migrou pra modal - ver bloco logo abaixo). O caminho
-  // SEM `/:aba`
+  // abas). CORRIGIDO (14-09-2026): este comentário citava
+  // '/admin/papeis/:id/alterar' como outro exemplo de rota com parâmetro -
+  // essa rota (e toda rota com `:id` que existia em ROTAS_ADMIN) migrou
+  // pra modal na mesma data (ver os comentários "migrou pra modal" mais
+  // abaixo). `:aba`, aqui, é hoje o ÚNICO parâmetro de rota que sobra no
+  // painel admin inteiro. O caminho SEM `/:aba`
   // (ex.: link antigo direto pra "/admin/minha-conta") ganha um redirect
   // pra ".../perfil" em App.tsx - não precisa de uma 2ª entrada aqui.
   {
@@ -277,14 +261,8 @@ export const ROTAS_ADMIN: Rota[] = [
   // modal-criar-usuario.tsx), mesmos componentes reaproveitados pela
   // Bancada do Pesquisador (Campo de Testes).
 
-  // Papel - filha de /admin/papeis.
-  {
-    caminho: '/admin/papeis/:id/alterar',
-    caminhoRelativo: 'papeis/:id/alterar',
-    elemento: AlterarPapel,
-    rotuloBreadcrumb: 'Alterar Papel',
-    paiCaminho: '/admin/papeis',
-  },
+  // Papel - Alterar migrou pra modal (14-09-2026, ver listar-papeis.tsx) -
+  // sem rota própria, mesmo motivo dos outros catálogos.
 
   // Termos de Uso - filhas de /admin/termos-uso. Consultar é modal (ver
   // listar-termos-uso.tsx), sem Excluir de propósito (nenhuma versão pode
@@ -303,136 +281,25 @@ export const ROTAS_ADMIN: Rota[] = [
   // direto por listar-termos-uso.tsx/dashboard-regras-negocio.tsx, sem
   // rota própria (mesmo padrão de Usuário).
 
-  // Parâmetro do Sistema (nome novo) - filhas de /admin/configuracoes
-  // (caminho da URL não mudou, só o rótulo, ver comentário lá em cima).
-  {
-    caminho: '/admin/configuracoes/criar',
-    caminhoRelativo: 'configuracoes/criar',
-    elemento: CriarConfiguracao,
-    rotuloBreadcrumb: 'Criar Parâmetro',
-    paiCaminho: '/admin/configuracoes',
-  },
-  {
-    caminho: '/admin/configuracoes/:id/alterar',
-    caminhoRelativo: 'configuracoes/:id/alterar',
-    elemento: AlterarConfiguracao,
-    rotuloBreadcrumb: 'Alterar Parâmetro',
-    paiCaminho: '/admin/configuracoes',
-  },
-  {
-    caminho: '/admin/configuracoes/:id/consultar',
-    caminhoRelativo: 'configuracoes/:id/consultar',
-    elemento: ConsultarConfiguracao,
-    rotuloBreadcrumb: 'Consultar Parâmetro',
-    paiCaminho: '/admin/configuracoes',
-  },
-  {
-    caminho: '/admin/configuracoes/:id/excluir',
-    caminhoRelativo: 'configuracoes/:id/excluir',
-    elemento: ExcluirConfiguracao,
-    rotuloBreadcrumb: 'Excluir Parâmetro',
-    paiCaminho: '/admin/configuracoes',
-  },
+  // Parâmetro do Sistema - Criar/Alterar/Consultar/Excluir migraram pra
+  // modal (14-09-2026, ver listar-configuracoes.tsx) - sem rota própria,
+  // mesmo motivo de Usuário/Motivo de Denúncia/Termos de Uso.
 
-  // Área de Conhecimento - filhas de /admin/areas-conhecimento.
-  {
-    caminho: '/admin/areas-conhecimento/criar',
-    caminhoRelativo: 'areas-conhecimento/criar',
-    elemento: CriarAreaConhecimento,
-    rotuloBreadcrumb: 'Criar Área de Conhecimento',
-    paiCaminho: '/admin/areas-conhecimento',
-  },
-  {
-    caminho: '/admin/areas-conhecimento/:id/alterar',
-    caminhoRelativo: 'areas-conhecimento/:id/alterar',
-    elemento: AlterarAreaConhecimento,
-    rotuloBreadcrumb: 'Alterar Área de Conhecimento',
-    paiCaminho: '/admin/areas-conhecimento',
-  },
-  {
-    caminho: '/admin/areas-conhecimento/:id/consultar',
-    caminhoRelativo: 'areas-conhecimento/:id/consultar',
-    elemento: ConsultarAreaConhecimento,
-    rotuloBreadcrumb: 'Consultar Área de Conhecimento',
-    paiCaminho: '/admin/areas-conhecimento',
-  },
-  {
-    caminho: '/admin/areas-conhecimento/:id/excluir',
-    caminhoRelativo: 'areas-conhecimento/:id/excluir',
-    elemento: ExcluirAreaConhecimento,
-    rotuloBreadcrumb: 'Excluir Área de Conhecimento',
-    paiCaminho: '/admin/areas-conhecimento',
-  },
+  // Área de Conhecimento - Criar/Alterar/Consultar/Excluir migraram pra
+  // modal (14-09-2026, ver listar-areas-conhecimento.tsx) - sem rota
+  // própria, mesmo motivo dos outros catálogos.
 
-  // Tipo de Link - filhas de /admin/tipos-link.
-  {
-    caminho: '/admin/tipos-link/criar',
-    caminhoRelativo: 'tipos-link/criar',
-    elemento: CriarTipoLink,
-    rotuloBreadcrumb: 'Criar Tipo de Link',
-    paiCaminho: '/admin/tipos-link',
-  },
-  {
-    caminho: '/admin/tipos-link/:id/alterar',
-    caminhoRelativo: 'tipos-link/:id/alterar',
-    elemento: AlterarTipoLink,
-    rotuloBreadcrumb: 'Alterar Tipo de Link',
-    paiCaminho: '/admin/tipos-link',
-  },
-  {
-    caminho: '/admin/tipos-link/:id/consultar',
-    caminhoRelativo: 'tipos-link/:id/consultar',
-    elemento: ConsultarTipoLink,
-    rotuloBreadcrumb: 'Consultar Tipo de Link',
-    paiCaminho: '/admin/tipos-link',
-  },
-  {
-    caminho: '/admin/tipos-link/:id/excluir',
-    caminhoRelativo: 'tipos-link/:id/excluir',
-    elemento: ExcluirTipoLink,
-    rotuloBreadcrumb: 'Excluir Tipo de Link',
-    paiCaminho: '/admin/tipos-link',
-  },
+  // Tipo de Link - Criar/Alterar/Consultar/Excluir migraram pra modal
+  // (14-09-2026, ver listar-tipos-link.tsx) - sem rota própria, mesmo
+  // motivo dos outros catálogos.
 
-  // Motivo de Denúncia - filhas de /admin/motivos-denuncia.
-  {
-    caminho: '/admin/motivos-denuncia/criar',
-    caminhoRelativo: 'motivos-denuncia/criar',
-    elemento: CriarMotivoDenuncia,
-    rotuloBreadcrumb: 'Criar Motivo de Denúncia',
-    paiCaminho: '/admin/motivos-denuncia',
-  },
-  {
-    caminho: '/admin/motivos-denuncia/:id/alterar',
-    caminhoRelativo: 'motivos-denuncia/:id/alterar',
-    elemento: AlterarMotivoDenuncia,
-    rotuloBreadcrumb: 'Alterar Motivo de Denúncia',
-    paiCaminho: '/admin/motivos-denuncia',
-  },
-  {
-    caminho: '/admin/motivos-denuncia/:id/consultar',
-    caminhoRelativo: 'motivos-denuncia/:id/consultar',
-    elemento: ConsultarMotivoDenuncia,
-    rotuloBreadcrumb: 'Consultar Motivo de Denúncia',
-    paiCaminho: '/admin/motivos-denuncia',
-  },
-  {
-    caminho: '/admin/motivos-denuncia/:id/excluir',
-    caminhoRelativo: 'motivos-denuncia/:id/excluir',
-    elemento: ExcluirMotivoDenuncia,
-    rotuloBreadcrumb: 'Excluir Motivo de Denúncia',
-    paiCaminho: '/admin/motivos-denuncia',
-  },
+  // Motivo de Denúncia - Criar/Alterar/Consultar/Excluir migraram pra
+  // modal (14-09-2026, ver listar-motivos-denuncia.tsx) - sem rota
+  // própria, mesmo motivo de Usuário/Pesquisador/Termos de Uso.
 
-  // Campanhas - só Consultar (ver comentário da listagem, acima: sem
-  // Alterar/Excluir por enquanto).
-  {
-    caminho: '/admin/campanhas/:id/consultar',
-    caminhoRelativo: 'campanhas/:id/consultar',
-    elemento: ConsultarCampanha,
-    rotuloBreadcrumb: 'Consultar Campanha',
-    paiCaminho: '/admin/campanhas',
-  },
+  // Campanhas - Consultar migrou pra modal (14-09-2026, ver
+  // listar-campanhas.tsx) - sem rota própria (sem Alterar/Excluir por
+  // enquanto, ver comentário da listagem).
 
   // Pesquisadores - Consultar EM MODAL desde 13-09-2026 (pedido do Lucas:
   // "não duplicar código, é exatamente igual ao do Usuário") - a rota

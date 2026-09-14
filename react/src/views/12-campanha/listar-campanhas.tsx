@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { GenericTable } from '../../components/crud/generic-table';
 import { BlocoLogAuditoria } from '../../components/crud/bloco-log-auditoria';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
@@ -10,6 +10,7 @@ import { areaConhecimentoApi } from '../../services/8-area-conhecimento/api/area
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
 import { formatarMoeda } from '../../services/constant/utils/formatacao.util';
+import { ModalConsultarCampanha } from './modal-consultar-campanha';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { CampanhaResponse } from '../../services/12-campanha/type/campanha.type';
 
@@ -22,16 +23,18 @@ interface CampanhaLinha extends Omit<CampanhaResponse, 'status' | 'metaFinanceir
 }
 
 // Aba "Campanhas" do painel admin (23-08-2026, pedido do Lucas: "tipo o
-// Menu de Usuários") - vive na rota /admin/campanhas. Sem rotaBase (sem
-// Alterar/Excluir): campanha não tem endpoint de exclusão no backend
-// (soft-delete via status, não linha removida), e editar campos foge do
-// que um formulário genérico deveria fazer aqui - os campos editáveis
-// dependem do status (congelados depois de aprovada) e a
-// aprovação/rejeição têm regras próprias (ver PROXIMOS_MODULOS.md, Grupo
-// 6, "Aprovar Campanhas" - tela dedicada ainda não construída). Por
-// enquanto, só listar + consultar; hoje quem precisa criar/aprovar
-// campanha de teste usa o Campo de Testes (views/campo-testes).
+// Menu de Usuários") - vive na rota /admin/campanhas. Sem Alterar/Excluir:
+// campanha não tem endpoint de exclusão no backend (soft-delete via
+// status, não linha removida), e editar campos foge do que um formulário
+// genérico deveria fazer aqui - os campos editáveis dependem do status
+// (congelados depois de aprovada) e a aprovação/rejeição têm regras
+// próprias (ver PROXIMOS_MODULOS.md, Grupo 6, "Aprovar Campanhas" - tela
+// dedicada ainda não construída). Por enquanto, só listar + consultar
+// (EM MODAL, 14-09-2026, continuação da migração CRUD→Modal); quem
+// precisa criar/aprovar campanha de teste usa o Campo de Testes.
 export function ListarCampanhas({ auth }: PropsPagina) {
+  const [consultandoId, setConsultandoId] = useState<number | null>(null);
+
   // Mesmo padrão de junção client-side de listar-usuarios.tsx (coluna
   // "papel"): busca campanhas + usuários + áreas numa vez só, junta no
   // navegador - os dois `.catch(() => [])` seguem o mesmo espírito:
@@ -97,8 +100,8 @@ export function ListarCampanhas({ auth }: PropsPagina) {
         ]}
         chavePrimaria="idCampanha"
         listar={listarCampanhas}
-        rotaBase="/admin/campanhas"
         acoes={['consultar']}
+        aoConsultar={(linha) => setConsultandoId(linha.idCampanha)}
         // "Área" (25-08-2026, pedido do Lucas: "tabela muito poluída") saiu
         // das colunas visíveis e virou filtro - o dado (`linha.area`)
         // continua vindo de listarCampanhas normalmente, filtro por faceta
@@ -110,6 +113,14 @@ export function ListarCampanhas({ auth }: PropsPagina) {
         ]}
       />
       <BlocoLogAuditoria buscar={buscarLogCampanha} />
+
+      {consultandoId !== null && (
+        <ModalConsultarCampanha
+          auth={auth}
+          idCampanha={consultandoId}
+          aoFechar={() => setConsultandoId(null)}
+        />
+      )}
     </div>
   );
 }

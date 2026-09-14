@@ -11,8 +11,9 @@ import { detalhePermissao } from '../../services/2-papel-permissao/constants/per
 import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
 import { MatrizPapelPermissao } from './matriz-papel-permissao';
 import { ModalDetalhePermissao } from './modal-detalhe-permissao';
+import { ModalAlterarPapel } from './modal-alterar-papel';
 import type { PropsPagina } from '../../services/router/pagina.type';
-import type { PermissaoResponse } from '../../services/2-papel-permissao/type/papel-permissao.type';
+import type { PapelResponse, PermissaoResponse } from '../../services/2-papel-permissao/type/papel-permissao.type';
 
 interface PermissaoLinha extends PermissaoResponse {
   nomeAmigavel: string;
@@ -41,7 +42,15 @@ const ORDEM_IMPACTO = ['alto', 'médio', 'baixo', IMPACTO_NAO_CLASSIFICADO];
 // mesma ação, só que mais clara. Não sobrou nenhuma funcionalidade órfã:
 // tudo que o widget fazia, Alterar Usuário já faz.
 export function ListarPapeis({ auth }: PropsPagina) {
-  const listarPapeis = useCallback(() => papelApi.listar(auth.authFetch), [auth.authFetch]);
+  const [alterando, setAlterando] = useState<PapelResponse | null>(null);
+  const [chaveRecarga, setChaveRecarga] = useState(0);
+  const recarregar = () => setChaveRecarga((atual) => atual + 1);
+
+  const listarPapeis = useCallback(
+    () => papelApi.listar(auth.authFetch),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [auth.authFetch, chaveRecarga],
+  );
   // Nome amigável + descrição (09-08-2026, pedido do Lucas: "campanha_
   // aprovar parece linha de código, pq é linha de código") - tradução
   // 100% no frontend (ver permissao-nomes-amigaveis.js), o `nome` cru do
@@ -99,7 +108,7 @@ export function ListarPapeis({ auth }: PropsPagina) {
   return (
     <>
       <div className="admin-content-painel">
-        <GenericTable
+        <GenericTable<PapelResponse>
           titulo="Papéis"
           colunas={[
             { chave: 'idPapel', rotulo: 'id' },
@@ -107,8 +116,8 @@ export function ListarPapeis({ auth }: PropsPagina) {
           ]}
           chavePrimaria="idPapel"
           listar={listarPapeis}
-          rotaBase="/admin/papeis"
           acoes={['alterar']}
+          aoAlterar={setAlterando}
         />
         {/* "De"/"Para" em vez de "Campos alterados" (09-08-2026, pedido do
             Lucas) - só "nome" muda em papel hoje (codigo é fixo), mas o
@@ -171,6 +180,15 @@ export function ListarPapeis({ auth }: PropsPagina) {
           permissao={permissaoDetalhada}
           authFetch={auth.authFetch}
           aoFechar={() => setPermissaoDetalhada(null)}
+        />
+      )}
+
+      {alterando && (
+        <ModalAlterarPapel
+          auth={auth}
+          papel={alterando}
+          aoFechar={() => setAlterando(null)}
+          aoAtualizado={recarregar}
         />
       )}
     </>

@@ -1,28 +1,41 @@
-import { useCallback } from 'react';
-import { Link } from 'react-router';
+import { useCallback, useState } from 'react';
 import { GenericTable } from '../../components/crud/generic-table';
 import { BlocoLogAuditoria } from '../../components/crud/bloco-log-auditoria';
 import { motivoDenunciaApi } from '../../services/10-motivo-denuncia/api/motivo-denuncia.api';
 import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
+import { ModalCriarMotivoDenuncia } from './modal-criar-motivo-denuncia';
+import {
+  ModalAlterarMotivoDenuncia,
+  ModalConsultarMotivoDenuncia,
+  ModalExcluirMotivoDenuncia,
+} from './modal-motivo-denuncia';
 import type { PropsPagina } from '../../services/router/pagina.type';
+import type { MotivoDenunciaResponse } from '../../services/10-motivo-denuncia/type/motivo-denuncia.type';
 
 // Ordem fixa do filtro por faceta abaixo (campanha antes de perfil) - os
 // 2 únicos valores de tipo_motivo_denuncia (01_extensoes_enums_tabelas.sql),
 // mesma ideia de ORDEM_PODER_PAPEL em listar-usuarios.tsx.
 const ORDEM_TIPO = ['campanha', 'perfil'];
 
-// Futura aba "Motivos de Denúncia" do painel admin - rota
-// /admin/motivos-denuncia. Já registrada em rotas.constants.js e
-// funcional por URL direta, só ainda sem rotuloMenu/grupoMenu ativos (o
-// Lucas não decidiu em que grupo do menu lateral ela entra - talvez junto
-// de Áreas do Conhecimento/Tipos de Link em CADASTROS, talvez dentro de
-// um futuro grupo MODERAÇÃO ao lado de "Denúncias" quando o módulo
-// 19-denuncia existir) - ver comentário em rotas.constants.js pra ativar
-// depois. Mesmo padrão de ListarTiposLink/ListarAreasConhecimento.
+// Aba "Motivos de Denúncia" do painel admin - rota /admin/motivos-denuncia.
+//
+// EM MODAL (14-09-2026, continuação da migração CRUD→Modal pedida pelo
+// Lucas) - Criar/Alterar/Consultar/Excluir deixaram de ser páginas
+// próprias (removidas de rotas.constants.ts) e viraram os modais de
+// modal-motivo-denuncia.tsx/modal-criar-motivo-denuncia.tsx, mesmo padrão
+// de listar-usuarios.tsx.
 export function ListarMotivosDenuncia({ auth }: PropsPagina) {
+  const [criando, setCriando] = useState(false);
+  const [alterando, setAlterando] = useState<MotivoDenunciaResponse | null>(null);
+  const [consultando, setConsultando] = useState<MotivoDenunciaResponse | null>(null);
+  const [excluindo, setExcluindo] = useState<MotivoDenunciaResponse | null>(null);
+  const [chaveRecarga, setChaveRecarga] = useState(0);
+  const recarregar = () => setChaveRecarga((atual) => atual + 1);
+
   const listarMotivos = useCallback(
     () => motivoDenunciaApi.listar(auth.authFetch),
-    [auth.authFetch],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [auth.authFetch, chaveRecarga],
   );
   // 'motivo_denuncia' é o nome FÍSICO da tabela (bate com
   // trg_log_auditoria_motivo_denuncia, 05_regras_negocio.sql), não o nome
@@ -34,12 +47,12 @@ export function ListarMotivosDenuncia({ auth }: PropsPagina) {
 
   return (
     <div className="admin-content-painel">
-      <GenericTable
+      <GenericTable<MotivoDenunciaResponse>
         titulo="Motivos de Denúncia"
         acaoTopo={
-          <Link to="/admin/motivos-denuncia/criar" className="btn btn-primary">
+          <button type="button" className="btn btn-primary" onClick={() => setCriando(true)}>
             Criar
-          </Link>
+          </button>
         }
         colunas={[
           { chave: 'idMotivo', rotulo: 'id' },
@@ -49,13 +62,41 @@ export function ListarMotivosDenuncia({ auth }: PropsPagina) {
         ]}
         chavePrimaria="idMotivo"
         listar={listarMotivos}
-        rotaBase="/admin/motivos-denuncia"
+        aoAlterar={setAlterando}
+        aoConsultar={setConsultando}
+        aoExcluir={setExcluindo}
         // Filtro por faceta (campanha/perfil) - pensado pro caso de uso
         // concreto de achar rápido, entre os ~12 motivos seedados, só os
         // de um tipo (mesma ideia do filtro de papel em ListarUsuarios).
         filtrosFacetados={[{ chave: 'tipo', rotulo: 'Tipo', ordem: ORDEM_TIPO }]}
       />
       <BlocoLogAuditoria buscar={buscarLogMotivos} campoRenomeio="descricao" />
+
+      {criando && (
+        <ModalCriarMotivoDenuncia auth={auth} aoFechar={() => setCriando(false)} aoCriado={recarregar} />
+      )}
+
+      {alterando && (
+        <ModalAlterarMotivoDenuncia
+          auth={auth}
+          motivo={alterando}
+          aoFechar={() => setAlterando(null)}
+          aoAtualizado={recarregar}
+        />
+      )}
+
+      {consultando && (
+        <ModalConsultarMotivoDenuncia motivo={consultando} aoFechar={() => setConsultando(null)} />
+      )}
+
+      {excluindo && (
+        <ModalExcluirMotivoDenuncia
+          auth={auth}
+          motivo={excluindo}
+          aoFechar={() => setExcluindo(null)}
+          aoExcluido={recarregar}
+        />
+      )}
     </div>
   );
 }

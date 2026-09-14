@@ -1,18 +1,30 @@
-import { useCallback } from 'react';
-import { Link } from 'react-router';
+import { useCallback, useState } from 'react';
 import { GenericTable } from '../../components/crud/generic-table';
 import { BlocoLogAuditoria } from '../../components/crud/bloco-log-auditoria';
 import { areaConhecimentoApi } from '../../services/8-area-conhecimento/api/area-conhecimento.api';
 import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
+import { ModalCriarAreaConhecimento } from './modal-criar-area-conhecimento';
+import {
+  ModalAlterarAreaConhecimento,
+  ModalConsultarAreaConhecimento,
+  ModalExcluirAreaConhecimento,
+} from './modal-area-conhecimento';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { AreaConhecimentoResponse } from '../../services/8-area-conhecimento/type/area-conhecimento.type';
 
-// Aba (futura) "Áreas do Conhecimento" do painel admin - rota
-// /admin/areas-conhecimento. Já registrada em rotas.constants.js e
-// funcional por URL direta, só ainda sem rotuloMenu/grupoMenu ativos (o
-// Lucas não decidiu em que grupo do menu lateral ela entra) - ver
-// comentário lá pra ativar depois.
+// Aba "Áreas do Conhecimento" do painel admin - rota
+// /admin/areas-conhecimento.
+//
+// EM MODAL (14-09-2026, continuação da migração CRUD→Modal pedida pelo
+// Lucas) - mesmo padrão de listar-usuarios.tsx/listar-motivos-denuncia.tsx.
 export function ListarAreasConhecimento({ auth }: PropsPagina) {
+  const [criando, setCriando] = useState(false);
+  const [alterando, setAlterando] = useState<AreaConhecimentoResponse | null>(null);
+  const [consultando, setConsultando] = useState<AreaConhecimentoResponse | null>(null);
+  const [excluindo, setExcluindo] = useState<AreaConhecimentoResponse | null>(null);
+  const [chaveRecarga, setChaveRecarga] = useState(0);
+  const recarregar = () => setChaveRecarga((atual) => atual + 1);
+
   // `nomePai` vem vazio pras 9 grandes áreas de verdade (topo da hierarquia
   // CNPq, sem pai nenhum) - "Base" (25-08-2026, pedido do Lucas) no lugar
   // do vazio, tanto na célula quanto como opção clicável no filtro
@@ -36,7 +48,8 @@ export function ListarAreasConhecimento({ auth }: PropsPagina) {
           nomePai: area.idPai === null ? `Base, ${area.nome}` : area.nomePai,
         })),
       ),
-    [auth.authFetch],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [auth.authFetch, chaveRecarga],
   );
   // 'area_conhecimento' é o nome FÍSICO da tabela (bate com
   // trg_log_auditoria_area_conhecimento, 05_regras_negocio.sql), não o
@@ -49,12 +62,12 @@ export function ListarAreasConhecimento({ auth }: PropsPagina) {
 
   return (
     <div className="admin-content-painel">
-      <GenericTable
+      <GenericTable<AreaConhecimentoResponse>
         titulo="Áreas do Conhecimento"
         acaoTopo={
-          <Link to="/admin/areas-conhecimento/criar" className="btn btn-primary">
+          <button type="button" className="btn btn-primary" onClick={() => setCriando(true)}>
             Criar
-          </Link>
+          </button>
         }
         // Ordem "id, nome, ..." (25-08-2026, pedido do Lucas: padronizar
         // com as outras tabelas - Usuários/Pesquisadores/Campanhas todas
@@ -76,7 +89,9 @@ export function ListarAreasConhecimento({ auth }: PropsPagina) {
         ]}
         chavePrimaria="idAreaConhecimento"
         listar={listarAreas}
-        rotaBase="/admin/areas-conhecimento"
+        aoAlterar={setAlterando}
+        aoConsultar={setConsultando}
+        aoExcluir={setExcluindo}
         // Escolher uma grande área de verdade no filtro mostra só as áreas
         // filhas dela. "Base" (25-08-2026) é a opção especial pras 9
         // grandes áreas em si (topo da hierarquia, sem pai) - antes elas
@@ -86,6 +101,32 @@ export function ListarAreasConhecimento({ auth }: PropsPagina) {
         filtrosFacetados={[{ chave: 'nomePai', rotulo: 'Grande área', ordem: ['Base'] }]}
       />
       <BlocoLogAuditoria buscar={buscarLogAreas} campoRenomeio="nome" />
+
+      {criando && (
+        <ModalCriarAreaConhecimento auth={auth} aoFechar={() => setCriando(false)} aoCriado={recarregar} />
+      )}
+
+      {alterando && (
+        <ModalAlterarAreaConhecimento
+          auth={auth}
+          area={alterando}
+          aoFechar={() => setAlterando(null)}
+          aoAtualizado={recarregar}
+        />
+      )}
+
+      {consultando && (
+        <ModalConsultarAreaConhecimento area={consultando} aoFechar={() => setConsultando(null)} />
+      )}
+
+      {excluindo && (
+        <ModalExcluirAreaConhecimento
+          auth={auth}
+          area={excluindo}
+          aoFechar={() => setExcluindo(null)}
+          aoExcluido={recarregar}
+        />
+      )}
     </div>
   );
 }

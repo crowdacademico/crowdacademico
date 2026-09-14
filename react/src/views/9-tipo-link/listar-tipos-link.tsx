@@ -1,18 +1,30 @@
-import { useCallback } from 'react';
-import { Link } from 'react-router';
+import { useCallback, useState } from 'react';
 import { GenericTable } from '../../components/crud/generic-table';
 import { BlocoLogAuditoria } from '../../components/crud/bloco-log-auditoria';
 import { tipoLinkApi } from '../../services/9-tipo-link/api/tipo-link.api';
 import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
+import { ModalCriarTipoLink } from './modal-criar-tipo-link';
+import { ModalAlterarTipoLink, ModalConsultarTipoLink, ModalExcluirTipoLink } from './modal-tipo-link';
 import type { PropsPagina } from '../../services/router/pagina.type';
+import type { TipoLinkResponse } from '../../services/9-tipo-link/type/tipo-link.type';
 
-// Aba (futura) "Tipos de Link" do painel admin - rota /admin/tipos-link.
-// Já registrada em rotas.constants.js e funcional por URL direta, só
-// ainda sem rotuloMenu/grupoMenu ativos (o Lucas não decidiu em que grupo
-// do menu lateral ela entra) - ver comentário lá pra ativar depois. Mesmo
-// padrão de ListarAreasConhecimento (8-area-conhecimento).
+// Aba "Tipos de Link" do painel admin - rota /admin/tipos-link.
+//
+// EM MODAL (14-09-2026, continuação da migração CRUD→Modal pedida pelo
+// Lucas) - mesmo padrão de listar-usuarios.tsx/listar-motivos-denuncia.tsx.
 export function ListarTiposLink({ auth }: PropsPagina) {
-  const listarTipos = useCallback(() => tipoLinkApi.listar(auth.authFetch), [auth.authFetch]);
+  const [criando, setCriando] = useState(false);
+  const [alterando, setAlterando] = useState<TipoLinkResponse | null>(null);
+  const [consultando, setConsultando] = useState<TipoLinkResponse | null>(null);
+  const [excluindo, setExcluindo] = useState<TipoLinkResponse | null>(null);
+  const [chaveRecarga, setChaveRecarga] = useState(0);
+  const recarregar = () => setChaveRecarga((atual) => atual + 1);
+
+  const listarTipos = useCallback(
+    () => tipoLinkApi.listar(auth.authFetch),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [auth.authFetch, chaveRecarga],
+  );
   // 'tipo_link' é o nome FÍSICO da tabela (bate com
   // trg_log_auditoria_tipo_link, 05_regras_negocio.sql), não o nome da
   // rota - mesma convenção de buscarLogAreas/buscarLogConfiguracoes.
@@ -23,12 +35,12 @@ export function ListarTiposLink({ auth }: PropsPagina) {
 
   return (
     <div className="admin-content-painel">
-      <GenericTable
+      <GenericTable<TipoLinkResponse>
         titulo="Tipos de Link"
         acaoTopo={
-          <Link to="/admin/tipos-link/criar" className="btn btn-primary">
+          <button type="button" className="btn btn-primary" onClick={() => setCriando(true)}>
             Criar
-          </Link>
+          </button>
         }
         // `largura: '9.25rem'` nas 4 booleanas (19-08-2026, pedido do
         // Lucas: "o exato mesmo espaçamento") - sem isso, cada uma tinha
@@ -55,9 +67,37 @@ export function ListarTiposLink({ auth }: PropsPagina) {
         ]}
         chavePrimaria="idTipolink"
         listar={listarTipos}
-        rotaBase="/admin/tipos-link"
+        aoAlterar={setAlterando}
+        aoConsultar={setConsultando}
+        aoExcluir={setExcluindo}
       />
       <BlocoLogAuditoria buscar={buscarLogTipos} campoRenomeio="nome" />
+
+      {criando && (
+        <ModalCriarTipoLink auth={auth} aoFechar={() => setCriando(false)} aoCriado={recarregar} />
+      )}
+
+      {alterando && (
+        <ModalAlterarTipoLink
+          auth={auth}
+          tipo={alterando}
+          aoFechar={() => setAlterando(null)}
+          aoAtualizado={recarregar}
+        />
+      )}
+
+      {consultando && (
+        <ModalConsultarTipoLink tipo={consultando} aoFechar={() => setConsultando(null)} />
+      )}
+
+      {excluindo && (
+        <ModalExcluirTipoLink
+          auth={auth}
+          tipo={excluindo}
+          aoFechar={() => setExcluindo(null)}
+          aoExcluido={recarregar}
+        />
+      )}
     </div>
   );
 }

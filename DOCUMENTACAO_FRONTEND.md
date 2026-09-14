@@ -383,7 +383,7 @@ Todas as telas `listar-*.tsx`: `views/1-usuario/listar-usuarios.tsx`, `views/2-p
 | `log-auditoria-painel.tsx` | painel "Ver log", embutido no rodapé da `GenericTable` |
 | `use-alteracao-nao-salva.ts` | `useAvisoAlteracaoNaoSalva(sujo)` - `beforeunload` nativo |
 
-📌 **`excluir-usuario.tsx` exige confirmação por digitação do e-mail, não um `window.confirm()`.** Mostra os dados reais do usuário antes de excluir (`FichaConsulta`/`SecaoFicha`/`CampoFicha`, mesma casca de Consultar) e só habilita o botão de confirmar quando o texto digitado bate com o e-mail da conta, exatamente (case-insensitive). O comentário do arquivo explica o critério que separa este caso do de Configuração (`excluir-configuracao.tsx`, que continua com confirmação simples): *"exclusão de USUÁRIO exige digitar o e-mail - configuração é um dado técnico, não a conta de uma pessoa."*
+📌 **`ModalExcluirUsuario` (`modal-usuario.tsx`) exige confirmação por digitação do e-mail, não um `window.confirm()`.** Mostra os dados reais do usuário antes de excluir (mesma casca `ModalFicha`/`SecaoFicha`/`CampoFicha` de Consultar) e só habilita o botão de confirmar quando o texto digitado bate com o e-mail da conta, exatamente (case-insensitive). O comentário do arquivo explica o critério que separa este caso do de Configuração (`ModalExcluirConfiguracao`, `modal-configuracao.tsx` - migrado de página pra modal em 14-09-2026, continua com confirmação simples): *"exclusão de USUÁRIO exige digitar o e-mail - configuração é um dado técnico, não a conta de uma pessoa."*
 
 📌 **`CartaoFormulario` nasceu de duplicação real:** *"era a MESMA estrutura ... copiada e colada em 7 arquivos ..., já levemente divergente entre eles"*.
 
