@@ -1,27 +1,18 @@
-import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
+import { BadgeBooleano } from '../../components/crud/badge-booleano';
 import { CampoFicha, FichaConsulta, SecaoFicha } from '../../components/crud/ficha-consulta';
-import { useErroToast } from '../../components/layout/use-erro-toast';
 import { motivoDenunciaApi } from '../../services/10-motivo-denuncia/api/motivo-denuncia.api';
 import { ROTULO_TIPO_MOTIVO_DENUNCIA as ROTULO_TIPO } from '../../services/10-motivo-denuncia/constants/motivo-denuncia.constants';
+import { useBuscarPorId } from '../../services/constant/hook/use-buscar-por-id';
 import type { PropsPagina } from '../../services/router/pagina.type';
-import type { MotivoDenunciaResponse } from '../../services/10-motivo-denuncia/type/motivo-denuncia.type';
 
 export function ConsultarMotivoDenuncia({ auth }: PropsPagina) {
   const { id = '' } = useParams();
   const navigate = useNavigate();
-  const [motivo, setMotivo] = useState<MotivoDenunciaResponse | null>(null);
-  const [carregando, setCarregando] = useState(true);
-  const { erro, reportarErro } = useErroToast();
-
-  useEffect(() => {
-    motivoDenunciaApi
-      .buscar(auth.authFetch, id)
-      .then(setMotivo)
-      .catch(reportarErro)
-      .finally(() => setCarregando(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  const { dado: motivo, carregando, erro } = useBuscarPorId(
+    (id) => motivoDenunciaApi.buscar(auth.authFetch, id),
+    id,
+  );
 
   if (carregando) {
     return <p className="p-10 text-center text-sm texto-fraco">Carregando...</p>;
@@ -35,12 +26,7 @@ export function ConsultarMotivoDenuncia({ auth }: PropsPagina) {
     <FichaConsulta
       titulo={motivo.descricao}
       badges={[
-        <span
-          key="ativo"
-          className={'badge ' + (motivo.ativo ? 'badge-sucesso' : 'badge-neutro')}
-        >
-          {motivo.ativo ? 'Ativo' : 'Inativo'}
-        </span>,
+        <BadgeBooleano key="ativo" valor={motivo.ativo} rotuloTrue="Ativo" rotuloFalse="Inativo" />,
         <span key="tipo" className="badge badge-neutro">
           {ROTULO_TIPO[motivo.tipo]}
         </span>,

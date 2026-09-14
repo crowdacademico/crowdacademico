@@ -1,26 +1,17 @@
-import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
+import { BadgeBooleano } from '../../components/crud/badge-booleano';
 import { CampoFicha, FichaConsulta, SecaoFicha } from '../../components/crud/ficha-consulta';
-import { useErroToast } from '../../components/layout/use-erro-toast';
 import { areaConhecimentoApi } from '../../services/8-area-conhecimento/api/area-conhecimento.api';
+import { useBuscarPorId } from '../../services/constant/hook/use-buscar-por-id';
 import type { PropsPagina } from '../../services/router/pagina.type';
-import type { AreaConhecimentoResponse } from '../../services/8-area-conhecimento/type/area-conhecimento.type';
 
 export function ConsultarAreaConhecimento({ auth }: PropsPagina) {
   const { id = '' } = useParams();
   const navigate = useNavigate();
-  const [area, setArea] = useState<AreaConhecimentoResponse | null>(null);
-  const [carregando, setCarregando] = useState(true);
-  const { erro, reportarErro } = useErroToast();
-
-  useEffect(() => {
-    areaConhecimentoApi
-      .buscar(auth.authFetch, id)
-      .then(setArea)
-      .catch(reportarErro)
-      .finally(() => setCarregando(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  const { dado: area, carregando, erro } = useBuscarPorId(
+    (id) => areaConhecimentoApi.buscar(auth.authFetch, id),
+    id,
+  );
 
   if (carregando) {
     return <p className="p-10 text-center text-sm texto-fraco">Carregando...</p>;
@@ -35,9 +26,7 @@ export function ConsultarAreaConhecimento({ auth }: PropsPagina) {
       titulo={area.nome}
       subtitulo={area.codigoCnpq}
       badges={[
-        <span key="ativo" className={'badge ' + (area.ativo ? 'badge-sucesso' : 'badge-neutro')}>
-          {area.ativo ? 'Ativo' : 'Inativo'}
-        </span>,
+        <BadgeBooleano key="ativo" valor={area.ativo} rotuloTrue="Ativo" rotuloFalse="Inativo" />,
         // Nível deduzido de idPai, não de um campo próprio - igual o
         // resto da UI (idPai null = grande área raiz, ver comentário no
         // response DTO do backend).

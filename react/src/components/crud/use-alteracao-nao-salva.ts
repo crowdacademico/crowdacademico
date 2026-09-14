@@ -25,3 +25,18 @@ export function useAvisoAlteracaoNaoSalva(sujo: boolean): void {
     return () => window.removeEventListener('beforeunload', aoTentarFechar);
   }, [sujo]);
 }
+
+// Extraído (14-09-2026, pedido do Lucas na auditoria de componentes) - a
+// confirmação de "sair com alteração não salva?" (window.confirm com o
+// MESMO texto) estava copiada em 7 lugares (cada `aoCancelar`/`fechar` de
+// tela Alterar ou modal, ver comentário no topo do arquivo). Não virou um
+// hook novo de propósito - continua sendo o CHAMADOR quem decide fechar ou
+// não, esta função só evita reescrever a mesma frase/condição de novo:
+//
+//   const fechar = () => {
+//     if (!confirmarSaida(sujo)) return;
+//     aoFechar();
+//   };
+export function confirmarSaida(sujo: boolean): boolean {
+  return !sujo || window.confirm('Você tem alterações não salvas. Sair mesmo assim?');
+}

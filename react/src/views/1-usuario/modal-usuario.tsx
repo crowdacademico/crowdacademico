@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AvatarUsuario } from '../../components/layout/avatar-usuario';
+import { CampoCpf } from '../../components/input/campo-cpf';
 import { SeletorFotoPerfil } from '../../components/input/seletor-foto-perfil';
 import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
@@ -8,7 +9,7 @@ import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { ModalDetalhe } from '../../components/crud/modal-detalhe';
 import { ModalFicha } from '../../components/crud/modal-ficha';
-import { useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
+import { confirmarSaida, useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { usuarioPapelApi, papelApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
 import { perfilPesquisadorApi } from '../../services/6-perfil-pesquisador/api/perfil-pesquisador.api';
@@ -1115,7 +1116,7 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado, g
   useAvisoAlteracaoNaoSalva(sujo);
 
   const fechar = () => {
-    if (sujo && !window.confirm('Você tem alterações não salvas. Sair mesmo assim?')) {
+    if (!confirmarSaida(sujo)) {
       return;
     }
     aoAtualizado();
@@ -1253,26 +1254,11 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado, g
                 </>
               ) : (
                 <SecaoFicha titulo="Criar Perfil Pesquisador">
-                  <div>
-                    <label className="rotulo-campo">CPF</label>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={formatarCpf(form.cpf)}
-                        onChange={(evento) => setForm({ ...form, cpf: evento.target.value.replace(/\D/g, '').slice(0, 11) })}
-                        className="input-padrao"
-                      />
-                      {gerarCpfDeTeste && (
-                        <button
-                          type="button"
-                          className="btn btn-secondary text-xs whitespace-nowrap"
-                          onClick={() => setForm({ ...form, cpf: gerarCpfDeTeste() })}
-                        >
-                          Gerar CPF válido
-                        </button>
-                      )}
-                    </div>
-                  </div>
+                  <CampoCpf
+                    valor={form.cpf}
+                    onChange={(cpf) => setForm({ ...form, cpf })}
+                    gerarCpfDeTeste={gerarCpfDeTeste}
+                  />
 
                   <CamposVinculoPerfil
                     tipoVinculo={form.tipoVinculo}

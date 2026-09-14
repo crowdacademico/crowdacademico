@@ -17,6 +17,7 @@ import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
 import { useConfiguracoes } from '../../services/11-configuracoes/hook/use-configuracoes';
 import { CAMPANHA_BLOQUEADA, motivoBloqueioCampanha } from '../../services/campo-testes/util/registros-bloqueados';
+import { AcaoLinha } from '../../components/crud/acao-linha';
 import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { ModalFicha } from '../../components/crud/modal-ficha';
@@ -754,36 +755,23 @@ export function BancadaCampanha({ auth }: PropsPagina) {
                       risco nenhum de estragar a demo. */}
                   <td className="crud-tabela__celula--centralizada">
                     <div className="crud-tabela__acoes">
-                      <button
-                        type="button"
-                        className="crud-tabela__acao crud-tabela__acao--alterar"
+                      <AcaoLinha
+                        rotulo="Alterar"
+                        icone="fa-pen"
+                        variante="alterar"
                         onClick={() => iniciarEdicaoCampanha(item)}
-                        aria-label="Alterar"
-                      >
-                        <i className="fa-solid fa-pen"></i>
-                        <span className="crud-tabela__acao-texto">Alterar</span>
-                        <span className="crud-tabela__acao-dica" role="tooltip">Alterar</span>
-                      </button>
-                      <button
-                        type="button"
-                        className="crud-tabela__acao"
+                      />
+                      <AcaoLinha
+                        rotulo="Consultar"
+                        icone="fa-eye"
                         onClick={() => setCampanhaConsultada(item)}
-                        aria-label="Consultar"
-                      >
-                        <i className="fa-solid fa-eye"></i>
-                        <span className="crud-tabela__acao-texto">Consultar</span>
-                        <span className="crud-tabela__acao-dica" role="tooltip">Consultar</span>
-                      </button>
-                      <button
-                        type="button"
-                        className="crud-tabela__acao crud-tabela__acao--excluir"
+                      />
+                      <AcaoLinha
+                        rotulo="Excluir"
+                        icone="fa-trash"
+                        variante="excluir"
                         onClick={() => setCampanhaExcluindo(item)}
-                        aria-label="Excluir"
-                      >
-                        <i className="fa-solid fa-trash"></i>
-                        <span className="crud-tabela__acao-texto">Excluir</span>
-                        <span className="crud-tabela__acao-dica" role="tooltip">Excluir</span>
-                      </button>
+                      />
                     </div>
                   </td>
                 </tr>

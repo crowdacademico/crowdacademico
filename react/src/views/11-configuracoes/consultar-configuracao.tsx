@@ -1,10 +1,9 @@
-import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
+import { BadgeBooleano } from '../../components/crud/badge-booleano';
 import { CampoFicha, FichaConsulta, SecaoFicha } from '../../components/crud/ficha-consulta';
-import { useErroToast } from '../../components/layout/use-erro-toast';
 import { configuracaoApi } from '../../services/11-configuracoes/api/configuracao.api';
+import { useBuscarPorId } from '../../services/constant/hook/use-buscar-por-id';
 import type { PropsPagina } from '../../services/router/pagina.type';
-import type { ConfiguracaoResponse } from '../../services/11-configuracoes/type/configuracao.type';
 
 // "Consultar" - botão do meio entre Alterar e Excluir (GenericTable).
 // Migrada pro mesmo estilo de FichaConsulta usado em ConsultarUsuario
@@ -14,18 +13,10 @@ import type { ConfiguracaoResponse } from '../../services/11-configuracoes/type/
 export function ConsultarConfiguracao({ auth }: PropsPagina) {
   const { id = '' } = useParams();
   const navigate = useNavigate();
-  const [configuracao, setConfiguracao] = useState<ConfiguracaoResponse | null>(null);
-  const [carregando, setCarregando] = useState(true);
-  const { erro, reportarErro } = useErroToast();
-
-  useEffect(() => {
-    configuracaoApi
-      .buscar(auth.authFetch, id)
-      .then(setConfiguracao)
-      .catch(reportarErro)
-      .finally(() => setCarregando(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  const { dado: configuracao, carregando, erro } = useBuscarPorId(
+    (id) => configuracaoApi.buscar(auth.authFetch, id),
+    id,
+  );
 
   if (carregando) {
     return <p className="p-10 text-center text-sm texto-fraco">Carregando...</p>;
@@ -40,18 +31,8 @@ export function ConsultarConfiguracao({ auth }: PropsPagina) {
       titulo={configuracao.chave}
       subtitulo={configuracao.descricao ?? undefined}
       badges={[
-        <span
-          key="ativo"
-          className={'badge ' + (configuracao.ativo ? 'badge-sucesso' : 'badge-neutro')}
-        >
-          {configuracao.ativo ? 'Ativo' : 'Inativo'}
-        </span>,
-        <span
-          key="publica"
-          className={'badge ' + (configuracao.publica ? 'badge-sucesso' : 'badge-neutro')}
-        >
-          {configuracao.publica ? 'Pública' : 'Interna'}
-        </span>,
+        <BadgeBooleano key="ativo" valor={configuracao.ativo} rotuloTrue="Ativo" rotuloFalse="Inativo" />,
+        <BadgeBooleano key="publica" valor={configuracao.publica} rotuloTrue="Pública" rotuloFalse="Interna" />,
       ]}
       acoes={
         <button type="button" onClick={() => navigate(-1)} className="btn btn-secondary w-full">

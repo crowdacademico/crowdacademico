@@ -1,15 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { CartaoFormulario } from '../../components/crud/cartao-formulario';
-import { useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
+import { confirmarSaida, useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
 import { SecaoFicha } from '../../components/crud/ficha-consulta';
-import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
 import { motivoDenunciaApi } from '../../services/10-motivo-denuncia/api/motivo-denuncia.api';
 import { ehTipoMotivoDenuncia, LIMITE_DESCRICAO_MOTIVO_DENUNCIA } from '../../services/10-motivo-denuncia/constants/motivo-denuncia.constants';
+import { useBuscarPorId } from '../../services/constant/hook/use-buscar-por-id';
 import type { PropsPagina } from '../../services/router/pagina.type';
-import type { MotivoDenunciaResponse, TipoMotivoDenuncia } from '../../services/10-motivo-denuncia/type/motivo-denuncia.type';
+import type { TipoMotivoDenuncia } from '../../services/10-motivo-denuncia/type/motivo-denuncia.type';
 
 // `tipo` É editável aqui: não existe trigger no banco que trave a troca
 // depois de criado (ver comentário completo em
@@ -20,27 +20,28 @@ export function AlterarMotivoDenuncia({ auth }: PropsPagina) {
   const { id = '' } = useParams();
   const navigate = useNavigate();
   const { mostrar } = useToast();
-  const { erro, reportarErro, limparErro } = useErroToast();
-  const [motivo, setMotivo] = useState<MotivoDenunciaResponse | null>(null);
+  const { dado: motivo, carregando, erro, reportarErro, limparErro } = useBuscarPorId(
+    (id) => motivoDenunciaApi.buscar(auth.authFetch, id),
+    id,
+  );
   const [descricao, setDescricao] = useState('');
   const [tipo, setTipo] = useState<TipoMotivoDenuncia | ''>('');
   const [ativo, setAtivo] = useState(true);
-  const [carregando, setCarregando] = useState(true);
   const [enviando, setEnviando] = useState(false);
 
-  useEffect(() => {
-    motivoDenunciaApi
-      .buscar(auth.authFetch, id)
-      .then((dados) => {
-        setMotivo(dados);
-        setDescricao(dados.descricao);
-        setTipo(dados.tipo);
-        setAtivo(dados.ativo);
-      })
-      .catch(reportarErro)
-      .finally(() => setCarregando(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  // Sincroniza os campos locais quando `motivo` chega, sem useEffect (evita
+  // set-state-in-effect) - técnica oficial do React de "ajustar estado
+  // quando um valor muda", comparando com o valor anterior durante o
+  // próprio render.
+  const [motivoAnterior, setMotivoAnterior] = useState(motivo);
+  if (motivo !== motivoAnterior) {
+    setMotivoAnterior(motivo);
+    if (motivo) {
+      setDescricao(motivo.descricao);
+      setTipo(motivo.tipo);
+      setAtivo(motivo.ativo);
+    }
+  }
 
   const sujo =
     motivo !== null &&
@@ -48,7 +49,7 @@ export function AlterarMotivoDenuncia({ auth }: PropsPagina) {
   useAvisoAlteracaoNaoSalva(sujo);
 
   const aoCancelar = () => {
-    if (sujo && !window.confirm('Você tem alterações não salvas. Sair mesmo assim?')) {
+    if (!confirmarSaida(sujo)) {
       return;
     }
     void navigate(-1);

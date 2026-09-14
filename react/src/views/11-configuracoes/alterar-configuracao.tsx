@@ -1,15 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
 import { CartaoFormulario } from '../../components/crud/cartao-formulario';
-import { useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
+import { confirmarSaida, useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
 import { SecaoFicha } from '../../components/crud/ficha-consulta';
-import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
 import { configuracaoApi } from '../../services/11-configuracoes/api/configuracao.api';
+import { useBuscarPorId } from '../../services/constant/hook/use-buscar-por-id';
 import type { PropsPagina } from '../../services/router/pagina.type';
-import type { ConfiguracaoResponse } from '../../services/11-configuracoes/type/configuracao.type';
 
 // `chave`/`tipo` não aparecem no formulário (só leitura) porque
 // AtualizarConfiguracaoRequestDto (Nest) não os aceita - são imutáveis
@@ -18,31 +17,32 @@ export function AlterarConfiguracao({ auth }: PropsPagina) {
   const { id = '' } = useParams();
   const navigate = useNavigate();
   const { mostrar } = useToast();
-  const { erro, reportarErro, limparErro } = useErroToast();
-  const [configuracao, setConfiguracao] = useState<ConfiguracaoResponse | null>(null);
+  const { dado: configuracao, carregando, erro, reportarErro, limparErro } = useBuscarPorId(
+    (id) => configuracaoApi.buscar(auth.authFetch, id),
+    id,
+  );
   const [valor, setValor] = useState('');
   const [descricao, setDescricao] = useState('');
   const [ativo, setAtivo] = useState(true);
   // ADICIONADO (05-09-2026, item 5 de PENDENCIAS) - controla se a linha,
   // quando global, aparece pra quem não tem 'configuracao_gerenciar'.
   const [publica, setPublica] = useState(false);
-  const [carregando, setCarregando] = useState(true);
   const [enviando, setEnviando] = useState(false);
 
-  useEffect(() => {
-    configuracaoApi
-      .buscar(auth.authFetch, id)
-      .then((dados) => {
-        setConfiguracao(dados);
-        setValor(dados.valor ?? '');
-        setDescricao(dados.descricao ?? '');
-        setAtivo(dados.ativo);
-        setPublica(dados.publica);
-      })
-      .catch(reportarErro)
-      .finally(() => setCarregando(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  // Sincroniza os campos locais quando `configuracao` chega, sem useEffect
+  // (evita set-state-in-effect) - técnica oficial do React de "ajustar
+  // estado quando um valor muda", comparando com o valor anterior durante
+  // o próprio render.
+  const [configuracaoAnterior, setConfiguracaoAnterior] = useState(configuracao);
+  if (configuracao !== configuracaoAnterior) {
+    setConfiguracaoAnterior(configuracao);
+    if (configuracao) {
+      setValor(configuracao.valor ?? '');
+      setDescricao(configuracao.descricao ?? '');
+      setAtivo(configuracao.ativo);
+      setPublica(configuracao.publica);
+    }
+  }
 
   const sujo =
     configuracao !== null &&
@@ -53,7 +53,7 @@ export function AlterarConfiguracao({ auth }: PropsPagina) {
   useAvisoAlteracaoNaoSalva(sujo);
 
   const aoCancelar = () => {
-    if (sujo && !window.confirm('Você tem alterações não salvas. Sair mesmo assim?')) {
+    if (!confirmarSaida(sujo)) {
       return;
     }
     void navigate(-1);

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { Link, useSearchParams } from 'react-router';
+import { useSearchParams } from 'react-router';
+import { AcaoLinha } from './acao-linha';
 import { useErroToast } from '../layout/use-erro-toast';
 import { useFecharAoClicarFora } from '../../services/constant/hook/use-fechar-ao-clicar-fora';
 import { textoSeguro } from '../../services/constant/utils/formatacao.util';
@@ -842,75 +843,35 @@ export function GenericTable<T extends Linha>({
                           propósito - os dois juntos mostrariam 2 dicas
                           sobrepostas. */}
                       <div className="crud-tabela__acoes">
-                        {acoes.includes('alterar') &&
-                          (aoAlterar ? (
-                            <button
-                              type="button"
-                              className="crud-tabela__acao crud-tabela__acao--alterar"
-                              onClick={() => aoAlterar(linha)}
-                              aria-label="Alterar"
-                            >
-                              <i className="fa-solid fa-pen"></i>
-                              <span className="crud-tabela__acao-texto">Alterar</span>
-                              <span className="crud-tabela__acao-dica" role="tooltip">Alterar</span>
-                            </button>
-                          ) : (
-                            <Link
-                              className="crud-tabela__acao crud-tabela__acao--alterar"
-                              to={`${rotaBase}/${String(linha[chavePrimaria])}/alterar`}
-                              aria-label="Alterar"
-                            >
-                              <i className="fa-solid fa-pen"></i>
-                              <span className="crud-tabela__acao-texto">Alterar</span>
-                              <span className="crud-tabela__acao-dica" role="tooltip">Alterar</span>
-                            </Link>
-                          ))}
-                        {acoes.includes('consultar') &&
-                          (aoConsultar ? (
-                            <button
-                              type="button"
-                              className="crud-tabela__acao"
-                              onClick={() => aoConsultar(linha)}
-                              aria-label="Consultar"
-                            >
-                              <i className="fa-solid fa-eye"></i>
-                              <span className="crud-tabela__acao-texto">Consultar</span>
-                              <span className="crud-tabela__acao-dica" role="tooltip">Consultar</span>
-                            </button>
-                          ) : (
-                            <Link
-                              className="crud-tabela__acao"
-                              to={`${rotaBase}/${String(linha[chavePrimaria])}/consultar`}
-                              aria-label="Consultar"
-                            >
-                              <i className="fa-solid fa-eye"></i>
-                              <span className="crud-tabela__acao-texto">Consultar</span>
-                              <span className="crud-tabela__acao-dica" role="tooltip">Consultar</span>
-                            </Link>
-                          ))}
-                        {acoes.includes('excluir') &&
-                          (aoExcluir ? (
-                            <button
-                              type="button"
-                              className="crud-tabela__acao crud-tabela__acao--excluir"
-                              onClick={() => aoExcluir(linha)}
-                              aria-label="Excluir"
-                            >
-                              <i className="fa-solid fa-trash"></i>
-                              <span className="crud-tabela__acao-texto">Excluir</span>
-                              <span className="crud-tabela__acao-dica" role="tooltip">Excluir</span>
-                            </button>
-                          ) : (
-                            <Link
-                              className="crud-tabela__acao crud-tabela__acao--excluir"
-                              to={`${rotaBase}/${String(linha[chavePrimaria])}/excluir`}
-                              aria-label="Excluir"
-                            >
-                              <i className="fa-solid fa-trash"></i>
-                              <span className="crud-tabela__acao-texto">Excluir</span>
-                              <span className="crud-tabela__acao-dica" role="tooltip">Excluir</span>
-                            </Link>
-                          ))}
+                        {acoes.includes('alterar') && (
+                          <AcaoLinha
+                            rotulo="Alterar"
+                            icone="fa-pen"
+                            variante="alterar"
+                            {...(aoAlterar
+                              ? { onClick: () => aoAlterar(linha) }
+                              : { to: `${rotaBase}/${String(linha[chavePrimaria])}/alterar` })}
+                          />
+                        )}
+                        {acoes.includes('consultar') && (
+                          <AcaoLinha
+                            rotulo="Consultar"
+                            icone="fa-eye"
+                            {...(aoConsultar
+                              ? { onClick: () => aoConsultar(linha) }
+                              : { to: `${rotaBase}/${String(linha[chavePrimaria])}/consultar` })}
+                          />
+                        )}
+                        {acoes.includes('excluir') && (
+                          <AcaoLinha
+                            rotulo="Excluir"
+                            icone="fa-trash"
+                            variante="excluir"
+                            {...(aoExcluir
+                              ? { onClick: () => aoExcluir(linha) }
+                              : { to: `${rotaBase}/${String(linha[chavePrimaria])}/excluir` })}
+                          />
+                        )}
                       </div>
                     </td>
                   )}

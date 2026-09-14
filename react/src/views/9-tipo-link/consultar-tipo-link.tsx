@@ -1,26 +1,17 @@
-import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
+import { BadgeBooleano } from '../../components/crud/badge-booleano';
 import { CampoFicha, FichaConsulta, SecaoFicha } from '../../components/crud/ficha-consulta';
-import { useErroToast } from '../../components/layout/use-erro-toast';
 import { tipoLinkApi } from '../../services/9-tipo-link/api/tipo-link.api';
+import { useBuscarPorId } from '../../services/constant/hook/use-buscar-por-id';
 import type { PropsPagina } from '../../services/router/pagina.type';
-import type { TipoLinkResponse } from '../../services/9-tipo-link/type/tipo-link.type';
 
 export function ConsultarTipoLink({ auth }: PropsPagina) {
   const { id = '' } = useParams();
   const navigate = useNavigate();
-  const [tipo, setTipo] = useState<TipoLinkResponse | null>(null);
-  const [carregando, setCarregando] = useState(true);
-  const { erro, reportarErro } = useErroToast();
-
-  useEffect(() => {
-    tipoLinkApi
-      .buscar(auth.authFetch, id)
-      .then(setTipo)
-      .catch(reportarErro)
-      .finally(() => setCarregando(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  const { dado: tipo, carregando, erro } = useBuscarPorId(
+    (id) => tipoLinkApi.buscar(auth.authFetch, id),
+    id,
+  );
 
   if (carregando) {
     return <p className="p-10 text-center text-sm texto-fraco">Carregando...</p>;
@@ -44,9 +35,7 @@ export function ConsultarTipoLink({ auth }: PropsPagina) {
       titulo={tipo.nome}
       subtitulo={tipo.codigo}
       badges={[
-        <span key="ativo" className={'badge ' + (tipo.ativo ? 'badge-sucesso' : 'badge-neutro')}>
-          {tipo.ativo ? 'Ativo' : 'Inativo'}
-        </span>,
+        <BadgeBooleano key="ativo" valor={tipo.ativo} rotuloTrue="Ativo" rotuloFalse="Inativo" />,
         ...escopos.map((escopo) => (
           <span key={escopo} className="badge badge-neutro">
             {escopo}

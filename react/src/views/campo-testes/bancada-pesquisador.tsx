@@ -6,6 +6,7 @@
 // ============================================================================
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { AcaoLinha } from '../../components/crud/acao-linha';
 import { perfilPesquisadorApi } from '../../services/6-perfil-pesquisador/api/perfil-pesquisador.api';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { usuarioPapelApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
@@ -374,36 +375,23 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
                       </span>
                     ) : (
                       <div className="crud-tabela__acoes">
-                        <button
-                          type="button"
-                          className="crud-tabela__acao crud-tabela__acao--alterar"
+                        <AcaoLinha
+                          rotulo="Alterar"
+                          icone="fa-pen"
+                          variante="alterar"
                           onClick={() => setIdUsuarioAlterando(perfil.idUsuario)}
-                          aria-label="Alterar"
-                        >
-                          <i className="fa-solid fa-pen"></i>
-                          <span className="crud-tabela__acao-texto">Alterar</span>
-                          <span className="crud-tabela__acao-dica" role="tooltip">Alterar</span>
-                        </button>
-                        <button
-                          type="button"
-                          className="crud-tabela__acao"
+                        />
+                        <AcaoLinha
+                          rotulo="Consultar"
+                          icone="fa-eye"
                           onClick={() => setIdUsuarioConsultando(perfil.idUsuario)}
-                          aria-label="Consultar"
-                        >
-                          <i className="fa-solid fa-eye"></i>
-                          <span className="crud-tabela__acao-texto">Consultar</span>
-                          <span className="crud-tabela__acao-dica" role="tooltip">Consultar</span>
-                        </button>
-                        <button
-                          type="button"
-                          className="crud-tabela__acao crud-tabela__acao--excluir"
+                        />
+                        <AcaoLinha
+                          rotulo="Excluir"
+                          icone="fa-trash"
+                          variante="excluir"
                           onClick={() => setUsuarioExcluindo(perfil)}
-                          aria-label="Excluir"
-                        >
-                          <i className="fa-solid fa-trash"></i>
-                          <span className="crud-tabela__acao-texto">Excluir</span>
-                          <span className="crud-tabela__acao-dica" role="tooltip">Excluir</span>
-                        </button>
+                        />
                       </div>
                     )}
                   </td>

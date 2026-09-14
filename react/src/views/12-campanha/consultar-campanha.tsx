@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { CampoFicha, FichaConsulta, SecaoFicha } from '../../components/crud/ficha-consulta';
-import { useErroToast } from '../../components/layout/use-erro-toast';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
 import {
   ROTULO_STATUS_CAMPANHA,
@@ -9,35 +8,30 @@ import {
 } from '../../services/12-campanha/constants/status-campanha.constants';
 import { areaConhecimentoApi } from '../../services/8-area-conhecimento/api/area-conhecimento.api';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
+import { useBuscarPorId } from '../../services/constant/hook/use-buscar-por-id';
 import { formatarDataHora, formatarMoeda } from '../../services/constant/utils/formatacao.util';
 import type { PropsPagina } from '../../services/router/pagina.type';
-import type { CampanhaResponse } from '../../services/12-campanha/type/campanha.type';
 
 export function ConsultarCampanha({ auth }: PropsPagina) {
   const { id = '' } = useParams();
   const navigate = useNavigate();
-  const [campanha, setCampanha] = useState<CampanhaResponse | null>(null);
+  const { dado: campanha, carregando, erro } = useBuscarPorId(
+    (id) => campanhaApi.buscar(auth.authFetch, id),
+    id,
+  );
   const [nomeDono, setNomeDono] = useState<string | null>(null);
   const [nomeArea, setNomeArea] = useState<string | null>(null);
-  const [carregando, setCarregando] = useState(true);
-  const { erro, reportarErro } = useErroToast();
 
+  // Nome de dono/área resolvidos à parte (não vêm no CampanhaResponse, só
+  // os ids) - mesmo raciocínio de junção client-side de listar-campanhas.tsx,
+  // só que aqui é 1 registro de cada em vez do catálogo inteiro.
   useEffect(() => {
-    campanhaApi
-      .buscar(auth.authFetch, id)
-      .then((dados) => {
-        setCampanha(dados);
-        // Nome de dono/área resolvidos à parte (não vêm no
-        // CampanhaResponse, só os ids) - mesmo raciocínio de junção
-        // client-side de listar-campanhas.tsx, só que aqui é 1 registro
-        // de cada em vez do catálogo inteiro.
-        usuarioApi.buscar(auth.authFetch, dados.idUsuario).then((u) => setNomeDono(u.nome)).catch(() => {});
-        areaConhecimentoApi.buscar(auth.authFetch, dados.idAreaConhecimento).then((a) => setNomeArea(a.nome)).catch(() => {});
-      })
-      .catch(reportarErro)
-      .finally(() => setCarregando(false));
+    if (campanha) {
+      usuarioApi.buscar(auth.authFetch, campanha.idUsuario).then((u) => setNomeDono(u.nome)).catch(() => {});
+      areaConhecimentoApi.buscar(auth.authFetch, campanha.idAreaConhecimento).then((a) => setNomeArea(a.nome)).catch(() => {});
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [campanha]);
 
   if (carregando) {
     return <p className="p-10 text-center text-sm texto-fraco">Carregando...</p>;

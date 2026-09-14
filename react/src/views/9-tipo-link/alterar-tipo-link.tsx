@@ -1,16 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
 import { CartaoFormulario } from '../../components/crud/cartao-formulario';
-import { useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
+import { confirmarSaida, useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
 import { SecaoFicha } from '../../components/crud/ficha-consulta';
-import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
 import { tipoLinkApi } from '../../services/9-tipo-link/api/tipo-link.api';
 import { LIMITE_NOME_TIPO_LINK } from '../../services/9-tipo-link/constants/tipo-link.constants';
+import { useBuscarPorId } from '../../services/constant/hook/use-buscar-por-id';
 import type { PropsPagina } from '../../services/router/pagina.type';
-import type { TipoLinkResponse } from '../../services/9-tipo-link/type/tipo-link.type';
 
 function regexValida(padrao: string): boolean {
   if (!padrao) {
@@ -46,8 +45,10 @@ export function AlterarTipoLink({ auth }: PropsPagina) {
   const { id = '' } = useParams();
   const navigate = useNavigate();
   const { mostrar } = useToast();
-  const { erro, reportarErro, limparErro } = useErroToast();
-  const [tipo, setTipo] = useState<TipoLinkResponse | null>(null);
+  const { dado: tipo, carregando, erro, reportarErro, limparErro } = useBuscarPorId(
+    (id) => tipoLinkApi.buscar(auth.authFetch, id),
+    id,
+  );
   const [nome, setNome] = useState('');
   const [ativo, setAtivo] = useState(true);
   const [regex, setRegex] = useState('');
@@ -59,26 +60,25 @@ export function AlterarTipoLink({ auth }: PropsPagina) {
   const [permitePerfil, setPermitePerfil] = useState(true);
   const [permiteAtualizacao, setPermiteAtualizacao] = useState(false);
   const [permiteRecompensa, setPermiteRecompensa] = useState(false);
-  const [carregando, setCarregando] = useState(true);
   const [enviando, setEnviando] = useState(false);
 
-  useEffect(() => {
-    tipoLinkApi
-      .buscar(auth.authFetch, id)
-      .then((dados) => {
-        setTipo(dados);
-        setNome(dados.nome);
-        setAtivo(dados.ativo);
-        setRegex(dados.regex ?? '');
-        setDominioTexto(dados.dominio.join(', '));
-        setPermitePerfil(dados.permitePerfil);
-        setPermiteAtualizacao(dados.permiteAtualizacao);
-        setPermiteRecompensa(dados.permiteRecompensa);
-      })
-      .catch(reportarErro)
-      .finally(() => setCarregando(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  // Sincroniza os campos locais quando `tipo` chega, sem useEffect (evita
+  // set-state-in-effect) - técnica oficial do React de "ajustar estado
+  // quando um valor muda", comparando com o valor anterior durante o
+  // próprio render.
+  const [tipoAnterior, setTipoAnterior] = useState(tipo);
+  if (tipo !== tipoAnterior) {
+    setTipoAnterior(tipo);
+    if (tipo) {
+      setNome(tipo.nome);
+      setAtivo(tipo.ativo);
+      setRegex(tipo.regex ?? '');
+      setDominioTexto(tipo.dominio.join(', '));
+      setPermitePerfil(tipo.permitePerfil);
+      setPermiteAtualizacao(tipo.permiteAtualizacao);
+      setPermiteRecompensa(tipo.permiteRecompensa);
+    }
+  }
 
   const sujo =
     tipo !== null &&
@@ -98,7 +98,7 @@ export function AlterarTipoLink({ auth }: PropsPagina) {
   const nenhumEscopoMarcado = !permitePerfil && !permiteAtualizacao && !permiteRecompensa;
 
   const aoCancelar = () => {
-    if (sujo && !window.confirm('Você tem alterações não salvas. Sair mesmo assim?')) {
+    if (!confirmarSaida(sujo)) {
       return;
     }
     void navigate(-1);

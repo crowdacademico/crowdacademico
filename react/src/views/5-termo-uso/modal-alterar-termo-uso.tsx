@@ -3,7 +3,7 @@ import type { FormEvent } from 'react';
 import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
 import { SecaoFicha } from '../../components/crud/ficha-consulta';
 import { ModalFicha } from '../../components/crud/modal-ficha';
-import { useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
+import { confirmarSaida, useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
 import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
 import { termoUsoApi } from '../../services/5-termo-uso/api/termo-uso.api';
@@ -96,7 +96,7 @@ export function ModalAlterarTermoUso({
   useAvisoAlteracaoNaoSalva(sujo);
 
   const fechar = () => {
-    if (sujo && !window.confirm('Você tem alterações não salvas. Sair mesmo assim?')) {
+    if (!confirmarSaida(sujo)) {
       return;
     }
     aoFechar();

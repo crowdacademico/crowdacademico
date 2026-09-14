@@ -1,16 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
 import { CartaoFormulario } from '../../components/crud/cartao-formulario';
-import { useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
+import { confirmarSaida, useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
 import { SecaoFicha } from '../../components/crud/ficha-consulta';
-import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
 import { areaConhecimentoApi } from '../../services/8-area-conhecimento/api/area-conhecimento.api';
 import { LIMITE_NOME_AREA_CONHECIMENTO } from '../../services/8-area-conhecimento/constants/area-conhecimento.constants';
+import { useBuscarPorId } from '../../services/constant/hook/use-buscar-por-id';
 import type { PropsPagina } from '../../services/router/pagina.type';
-import type { AreaConhecimentoResponse } from '../../services/8-area-conhecimento/type/area-conhecimento.type';
 
 // `codigoCnpq`/"Grande área (pai)" não aparecem como campo editável (só
 // leitura) porque AtualizarAreaConhecimentoRequestDto (Nest) não os
@@ -23,31 +22,32 @@ export function AlterarAreaConhecimento({ auth }: PropsPagina) {
   const { id = '' } = useParams();
   const navigate = useNavigate();
   const { mostrar } = useToast();
-  const { erro, reportarErro, limparErro } = useErroToast();
-  const [area, setArea] = useState<AreaConhecimentoResponse | null>(null);
+  const { dado: area, carregando, erro, reportarErro, limparErro } = useBuscarPorId(
+    (id) => areaConhecimentoApi.buscar(auth.authFetch, id),
+    id,
+  );
   const [nome, setNome] = useState('');
   const [ativo, setAtivo] = useState(true);
-  const [carregando, setCarregando] = useState(true);
   const [enviando, setEnviando] = useState(false);
 
-  useEffect(() => {
-    areaConhecimentoApi
-      .buscar(auth.authFetch, id)
-      .then((dados) => {
-        setArea(dados);
-        setNome(dados.nome);
-        setAtivo(dados.ativo);
-      })
-      .catch(reportarErro)
-      .finally(() => setCarregando(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  // Sincroniza os campos locais quando `area` chega, sem useEffect (evita
+  // set-state-in-effect) - técnica oficial do React de "ajustar estado
+  // quando um valor muda", comparando com o valor anterior durante o
+  // próprio render.
+  const [areaAnterior, setAreaAnterior] = useState(area);
+  if (area !== areaAnterior) {
+    setAreaAnterior(area);
+    if (area) {
+      setNome(area.nome);
+      setAtivo(area.ativo);
+    }
+  }
 
   const sujo = area !== null && (nome !== area.nome || ativo !== area.ativo);
   useAvisoAlteracaoNaoSalva(sujo);
 
   const aoCancelar = () => {
-    if (sujo && !window.confirm('Você tem alterações não salvas. Sair mesmo assim?')) {
+    if (!confirmarSaida(sujo)) {
       return;
     }
     void navigate(-1);

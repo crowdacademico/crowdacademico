@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { SecaoFicha } from '../../components/crud/ficha-consulta';
 import { ModalFicha } from '../../components/crud/modal-ficha';
+import { CampoCpf } from '../../components/input/campo-cpf';
 import { useErroToast } from '../../components/layout/use-erro-toast';
 import { useToast } from '../../components/layout/use-toast';
 import { perfilPesquisadorApi } from '../../services/6-perfil-pesquisador/api/perfil-pesquisador.api';
 import { termoUsoApi } from '../../services/5-termo-uso/api/termo-uso.api';
-import { formatarCpf } from '../../services/constant/utils/formatacao.util';
 import { CamposVinculoPerfil } from './campos-vinculo-perfil';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { PerfilPesquisadorResponse } from '../../services/6-perfil-pesquisador/type/perfil-pesquisador.type';
@@ -202,28 +202,11 @@ export function ModalUpgradePesquisador({
       ) : (
         <form id="form-upgrade-pesquisador" onSubmit={(evento) => void aoEnviar(evento)}>
           <SecaoFicha titulo="Criar Perfil Pesquisador">
-            <div>
-              <label className="rotulo-campo">CPF</label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={formatarCpf(form.cpf)}
-                  onChange={(evento) =>
-                    setForm({ ...form, cpf: evento.target.value.replace(/\D/g, '').slice(0, 11) })
-                  }
-                  className="input-padrao"
-                />
-                {gerarCpfDeTeste && (
-                  <button
-                    type="button"
-                    className="btn btn-secondary text-xs whitespace-nowrap"
-                    onClick={() => setForm({ ...form, cpf: gerarCpfDeTeste() })}
-                  >
-                    Gerar CPF válido
-                  </button>
-                )}
-              </div>
-            </div>
+            <CampoCpf
+              valor={form.cpf}
+              onChange={(cpf) => setForm({ ...form, cpf })}
+              gerarCpfDeTeste={gerarCpfDeTeste}
+            />
 
             <CamposVinculoPerfil
               tipoVinculo={form.tipoVinculo}
