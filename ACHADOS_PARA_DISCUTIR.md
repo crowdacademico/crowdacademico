@@ -4,6 +4,56 @@ Achados pelos agentes que escreveram `DOCUMENTACAO_BACKEND.md`/`DOCUMENTACAO_FRO
 
 ---
 
+## 🔴 Vulnerabilidade real de segurança no `nest/` (multer, via `@nestjs/platform-express`) - achado em 14-09-2026, parado até decisão manual do Lucas
+
+**Isto não é uma pendência de rotina - fica só registrado aqui até eu decidir manualmente o que fazer. Não mover pra `PENDENCIAS e correcoes.md`.**
+
+### Como foi achado
+
+O Lucas usou o sistema no computador da escola (09-09-2026) e recebeu avisos de `npm install` diferentes dos que via em casa - levou a conversa (com outra IA, por e-mail) pra confirmar o que significavam. Antes de responder, roda `npm audit` de verdade nos dois lados (`nest/` e `react/`) direto na própria máquina de casa do Lucas, agora, pra não especular. Resultado: **não é diferença entre máquinas**. `react/` está limpo dos dois lados (0 vulnerabilidades, só um aviso inofensivo de versão de Node exigida pelo `react-router`, que não impede nada - o `npm run dev` sobe normal). `nest/`, porém, mostra a MESMA vulnerabilidade em casa e na escola: 6 vulnerabilidades altas em casa agora, 7 na escola há 5 dias (a diferença de 1 é só o banco de vulnerabilidades do npm ter sido atualizado nesse intervalo, não é uma migração de estado). Ou seja: **o problema sempre existiu no projeto, em toda máquina - só nunca tinha sido notado/checado antes.**
+
+### O que é o problema, com precisão técnica
+
+`nest/` usa `multer` (biblioteca de upload de arquivo multipart, é o que o módulo `25-arquivo` usa por baixo, direta ou indiretamente via `@nestjs/platform-express`) na versão **`2.2.0`**, resolvida no lockfile atual (`node_modules/multer`, confirmado com `node -e "console.log(require('./node_modules/multer/package.json').version)"` = `2.2.0`). Essa versão tem 4 avisórios abertos, todos classificados como **Severidade Alta**, todos da categoria **Negação de Serviço (DoS)** - nenhum é sobre roubo de dado ou execução remota de código:
+
+- `GHSA-wc9g-mqfw-jrwm` - DoS via nomes de campo multipart malformados/crafted.
+- `GHSA-qfvm-cv95-jqjf` - DoS via vazamento de file descriptor quando um upload é abortado no meio.
+- `GHSA-qvfw-j98x-7q72` - bypass do limite de tamanho de arquivo, via condição de corrida (race condition) no `fileFilter` assíncrono.
+- `GHSA-535w-7cp7-47q4` - DoS via índice de array anormalmente grande nos nomes de campo.
+
+Na prática: alguém mandando uma requisição de upload malformada de propósito pode travar/derrubar o processo do backend, ou (no caso do `fileFilter`) conseguir subir um arquivo maior do que o limite configurado deveria permitir. Não é acesso a dado de outro usuário, é disponibilidade do serviço e integridade do limite de tamanho.
+
+### Por que essa versão vulnerável está presa aqui, mesmo com `npm install` normal
+
+Não é o `package.json` do próprio projeto pedindo essa versão - é o pacote `@nestjs/platform-express` (hoje resolvido em `11.1.28`, confirmado em `nest/package-lock.json`) que declara, no PRÓPRIO `package.json` dele, `"multer": "2.2.0"` como **versão EXATA, sem `^` nem `~`** (confirmado lendo o bloco `node_modules/@nestjs/platform-express` inteiro no lockfile - `dependencies: { cors, express, multer: "2.2.0", path-to-regexp, tslib }`). Um `npm install`/`npm update` comum nunca vai mover essa dependência aninhada sozinho, porque o próprio autor do pacote pai fixou o número exato - não é uma faixa aberta esperando uma versão mais nova.
+
+### O conserto que o próprio `npm audit fix --force` sugere - e por que eu NÃO aplicaria sem conversar antes
+
+O npm resolve isso subindo `@nestjs/platform-express` pra `12.0.2` - só que a versão atual instalada de todo o resto do NestJS é a **11.x** (`@nestjs/core: ^11.0.1`, `@nestjs/common: ^11.0.1`, confirmado em `nest/package.json`). `@nestjs/platform-express@12` exige `@nestjs/core`/`@nestjs/common` também na versão 12 (peer dependency) - ou seja, o conserto "oficial" não troca só a lib de upload, **arrasta todo o framework backend pra uma major version nova de uma vez** (`@nestjs/core`, `@nestjs/common`, `@nestjs/schedule`, `@nestjs/swagger`, `@nestjs/testing`, `nestjs-cls`, todos precisando de uma versão compatível com Nest 12). Major version de framework normalmente remove/muda API que já pode estar em uso em qualquer um dos ~28 módulos do backend - é uma migração real, com superfície de risco em todo o projeto, pra resolver um problema que, tecnicamente, é bem mais estreito que isso.
+
+### O conserto que eu proporia, se o Lucas topar (ainda não aplicado - só a análise, por pedido dele)
+
+Existe `multer@2.3.0` e `multer@2.4.0` já publicados, **fora** da faixa vulnerável (os avisórios cobrem "<=2.2.0" - ou seja, 2.3.0 em diante já está corrigido). Como o motivo da versão travada é `@nestjs/platform-express` pedir um número exato no PRÓPRIO pacote dele (não uma regra do nosso `package.json`), a saída é usar o campo `"overrides"` do npm, em `nest/package.json` - uma seção nova que diz "não importa quem pediu qual versão de `multer` lá no fundo da árvore, resolve todo mundo pra `^2.4.0`". Isso resolveria a vulnerabilidade **sem tocar em nenhuma versão do NestJS** (continua tudo na família 11.x, zero migração de framework).
+
+**Risco real desse caminho, pra não vender como zero-risco:** `2.2.0` → `2.4.0` é um bump MENOR dentro da mesma major (2.x) do `multer` - pela convenção de versionamento semântico, não devia ter nada que quebra, mas "não devia" não é "garantido": bibliotecas reais às vezes têm mudança de comportamento sutil mesmo em minor version, e `@nestjs/platform-express@11.1.28` foi testado pelos próprios autores contra `2.2.0` especificamente, nunca contra `2.4.0`. Antes de confiar nisso de verdade, precisaria testar ao vivo o fluxo de upload real (avatar de perfil, no mínimo - é o único caminho de upload com consumidor real hoje, ver `PROXIMOS_MODULOS.md`) depois de aplicar o override, não só confiar que `npm audit` fica limpo.
+
+### Gravidade prática pro momento atual do projeto
+
+Como é uma falha de Negação de Serviço, não de roubo de dado, e o sistema ainda não está em produção real (sem tráfego público de verdade, sem exposição direta na internet ainda) - o risco HOJE é baixo. Mas o módulo de upload (`25-arquivo`) já é usado de verdade (avatar de perfil) e vai crescer (foto de campanha, anexos de atualização, quando essas telas existirem) - e mais importante, vai ficar diretamente exposto a qualquer visitante público quando a página pública de campanha existir. Não é urgente pra HOJE, mas é o tipo de coisa que precisa estar resolvida ANTES de qualquer exposição pública real, não depois.
+
+### Resumindo as opções, sem empurrar nenhuma
+
+1. Ignorar por enquanto (sistema não está em produção, risco real hoje é baixo) - aceitar consciente, revisitar antes do deploy.
+2. Aplicar o `overrides` pro `multer@^2.4.0` (conserto pequeno, testar upload de avatar depois) - minha recomendação, se for pra fazer algo agora.
+3. Aplicar `npm audit fix --force` (migração completa do NestJS pra v12) - não recomendo fazer isso só por causa desta vulnerabilidade específica; se um dia migrar pra Nest 12 por outro motivo, aí sim resolve de tabela.
+
+---
+
+
+
+
+
+
 ## 1. 🟢 DECIDIDO (04-09-2026) - `GET /dashboard/resumo` continua público, de propósito
 
 `SECURITY DEFINER` sem guard de autenticação na frente - os números agregados (total de usuários, sessões ativas etc.) ficam acessíveis sem login. Chegou a ser corrigido com `@UseGuards(RequireAuthGuard)`, mas o Lucas decidiu reverter: a exigência de login atrapalha mais que ajuda durante o desenvolvimento agora, e a decisão de arquitetura de longo prazo é que o painel admin inteiro vai ficar fora do alcance do usuário comum de outra forma (não é este guard específico que vai sustentar essa fronteira). Não é esquecimento - é decisão consciente de deixar como está.
