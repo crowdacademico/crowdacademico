@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { useErroToast } from '../../components/layout/use-erro-toast';
-import { buscarAtivo } from '../../services/5-termo-uso/api/termo-uso.api';
+import { termoUsoApi } from '../../services/5-termo-uso/api/termo-uso.api';
 import { ErroHttp } from '../../services/constant/api/http.util';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { TermoUsoResponseAtivo } from '../../services/5-termo-uso/type/termo-uso.type';
@@ -68,7 +68,7 @@ export function CadastroPage({ auth }: PropsPagina) {
     setModalTermoAberto(true);
     if (!termo) {
       setCarregandoTermo(true);
-      buscarAtivo()
+      termoUsoApi.buscarAtivo('cadastro')
         .then(setTermo)
         .catch(() => setTermo(null))
         .finally(() => setCarregandoTermo(false));

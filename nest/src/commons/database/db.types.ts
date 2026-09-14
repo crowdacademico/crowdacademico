@@ -144,8 +144,19 @@ export interface LogAuditoriaTable {
 // ADICIONADAS (09-08-2026) - espelham 01_extensoes_enums_tabelas.sql, tabelas
 // termos_de_uso/usuario_termo, tocadas pela 1ª vez pelo módulo 5-termo-uso
 // (Bloco D do prompt de uma IA sobre cadastro público).
+//
+// `tipo` ADICIONADO (13-09-2026, pedido do Lucas: o sistema sempre tem 2
+// Termos de Uso vigentes ao mesmo tempo - um pro aceite geral/cadastro,
+// outro pra contribuição a campanha). `Generated` porque a coluna tem
+// DEFAULT 'cadastro' no banco (histórico das versões de antes desta
+// migração), mas todo INSERT novo passa `tipo` explícito - mesmo espírito
+// de `ativo`, que também é `Generated` e mesmo assim sempre especificado.
+export const TIPOS_TERMO = ['cadastro', 'contribuicao'] as const;
+export type TipoTermo = (typeof TIPOS_TERMO)[number];
+
 export interface TermosDeUsoTable {
   id_termo: Generated<number>;
+  tipo: Generated<TipoTermo>;
   versao: string;
   conteudo: string;
   ativo: Generated<boolean>;
@@ -155,6 +166,20 @@ export interface TermosDeUsoTable {
 export interface UsuarioTermoTable {
   id_usuario_termo: Generated<number>;
   id_usuario: number;
+  id_termo: number;
+  aceito_em: Generated<Date>;
+  ip_aceite: string | null;
+}
+
+// ADICIONADA (13-09-2026, achado ao construir TermoUsoServiceAlterar: essa
+// tabela existe desde 09-08-2026, mas nunca tinha ganho tipo Kysely - só
+// usuario_termo tinha, provavelmente porque só 08_trigger_signup_usuario.sql
+// (cadastro) precisava até agora). Espelha 01_extensoes_enums_tabelas.sql -
+// aceite_termo_contribuicao, gerada 1x por contribuição (UNIQUE em
+// id_contribuicao).
+export interface AceiteTermoContribuicaoTable {
+  id_aceite_contrib: Generated<number>;
+  id_contribuicao: number;
   id_termo: number;
   aceito_em: Generated<Date>;
   ip_aceite: string | null;
@@ -593,6 +618,7 @@ export interface DB {
   log_auditoria: LogAuditoriaTable;
   termos_de_uso: TermosDeUsoTable;
   usuario_termo: UsuarioTermoTable;
+  aceite_termo_contribuicao: AceiteTermoContribuicaoTable;
   verificacao_email: VerificacaoEmailTable;
   area_conhecimento: AreaConhecimentoTable;
   tipo_link: TipoLinkTable;

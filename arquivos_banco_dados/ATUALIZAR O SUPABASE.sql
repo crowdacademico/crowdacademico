@@ -969,6 +969,130 @@ EXECUTE FUNCTION validar_comentario_frequencia();
 
 
 -- ============================================================================
+-- 13-09-2026 - Termos de Uso: publicar v3 com rascunho realista (LGPD +
+-- estilo de plataforma de financiamento coletivo), substituindo o
+-- "[PLACEHOLDER]" que a v2 (ativa até aqui) ainda tinha. NÃO é texto
+-- jurídico validado - é só pra parar de mostrar "[PLACEHOLDER]" pra quem
+-- testar o sistema. Precisa de revisão jurídica de verdade antes de
+-- produção real. Mesma regra da tela de admin nova (views/5-termo-uso/
+-- criar-termo-uso.tsx): nunca editar uma versão publicada, sempre criar
+-- versão nova - por isso UPDATE (desativa v2) + INSERT (v3 já ativa), na
+-- mesma transação (uq_termos_uso_ativo, 02_indices.sql, só admite 1 linha
+-- ativa por vez).
+--
+-- Seguro rodar de novo? Não sozinho - rodar duas vezes criaria duas linhas
+-- "v3-2026-09-13" e a segunda quebraria com violação de UNIQUE em `versao`
+-- (o que é seguro: não duplica nem corrompe nada, só devolve erro claro).
+-- ============================================================================
+
+UPDATE termos_de_uso SET ativo = FALSE WHERE ativo = TRUE;
+INSERT INTO termos_de_uso (versao, conteudo, ativo, criado_em) VALUES
+('v3-2026-09-13', 'TERMOS DE USO E POLÍTICA DE PRIVACIDADE - CROWDACADÊMICO
+
+1. OBJETO
+O CrowdAcadêmico é uma plataforma de financiamento coletivo (crowdfunding) dedicada exclusivamente a projetos de pesquisa científica e tecnológica brasileira. Estes Termos regem o uso da plataforma por pesquisadores, apoiadores e demais usuários cadastrados.
+
+2. CADASTRO E CONTA
+O cadastro exige informações verdadeiras, completas e atualizadas. Cada pessoa pode manter apenas uma conta ativa. O usuário é responsável por manter a confidencialidade de sua senha e por toda atividade realizada em sua conta.
+
+3. PERFIL DE PESQUISADOR
+Para submeter e gerenciar campanhas, o usuário deve solicitar o upgrade para perfil de pesquisador, informando CPF, vínculo institucional (quando aplicável) e título acadêmico. Essas informações são usadas exclusivamente para validação e exibição pública do perfil.
+
+4. CAMPANHAS E CONTRIBUIÇÕES
+Toda campanha passa por aprovação administrativa antes de ficar visível ao público. O CrowdAcadêmico não garante o sucesso de nenhuma campanha nem se responsabiliza pelo uso dos recursos arrecadados após o repasse ao pesquisador responsável. Contribuições são voluntárias e, uma vez processadas, seguem a política de reembolso vigente na campanha específica.
+
+5. PROPRIEDADE INTELECTUAL
+O conteúdo publicado por pesquisadores (descrição de projeto, atualizações, materiais anexados) permanece de titularidade do autor. Ao publicar, o pesquisador concede ao CrowdAcadêmico licença não exclusiva para exibição pública do conteúdo na plataforma, pelo tempo em que a campanha ou o perfil permanecerem ativos.
+
+6. PROTEÇÃO DE DADOS PESSOAIS (LGPD)
+O tratamento de dados pessoais nesta plataforma segue a Lei Geral de Proteção de Dados Pessoais (Lei 13.709/2018). Coletamos apenas os dados necessários para cadastro, validação de identidade, processamento de contribuições e cumprimento de obrigações legais. O titular dos dados tem direito a: confirmação da existência de tratamento; acesso aos dados; correção de dados incompletos ou desatualizados; anonimização, bloqueio ou eliminação de dados desnecessários; portabilidade; e revogação do consentimento, a qualquer momento, mediante solicitação pelos canais oficiais da plataforma. Dados sensíveis, como CPF, são armazenados de forma protegida e nunca exibidos publicamente em sua forma completa.
+
+7. MODERAÇÃO E DENÚNCIAS
+A equipe administrativa pode suspender ou encerrar campanhas, perfis ou contas que violem estes Termos, mediante denúncia fundamentada ou verificação própria, assegurado o direito de manifestação do usuário afetado.
+
+8. ENCERRAMENTO DE CONTA
+O usuário pode solicitar o encerramento de sua conta a qualquer momento. Dados vinculados a obrigações legais ou financeiras, como histórico de contribuições, podem ser mantidos pelo prazo exigido pela legislação aplicável, mesmo após o encerramento.
+
+9. ALTERAÇÕES DESTES TERMOS
+Estes Termos podem ser atualizados periodicamente. A versão vigente é sempre a mais recente publicada nesta tela, e o usuário é notificado para revisar e reaceitar o texto atualizado.
+
+10. FORO
+Fica eleito o foro da comarca do domicílio do usuário para dirimir eventuais controvérsias, conforme o Código de Defesa do Consumidor, quando aplicável.', TRUE, NOW());
+
+
+-- ============================================================================
+-- 13-09-2026 - Termos de Uso: separação em 2 tipos simultâneos ativos
+-- (pedido do Lucas - o sistema sempre vai ter 1 Termo de Uso vigente pro
+-- aceite geral/cadastro E 1 vigente pra contribuição a campanha, ao mesmo
+-- tempo, cada um com sua própria versão/histórico). Antes disso só existia
+-- o conceito de "o termo ativo" (1 no sistema inteiro).
+--
+-- Muda: (1) enum novo `tipo_termo`; (2) coluna `tipo` em termos_de_uso,
+-- DEFAULT 'cadastro' - todas as linhas que já existirem no banco (v1/v2/v3
+-- ou qualquer versão de teste criada pela tela de admin) viram 'cadastro'
+-- automaticamente, sem precisar de UPDATE manual, porque tudo que existia
+-- até aqui era, na prática, só o aceite de cadastro; (3) a UNIQUE de
+-- `versao` deixa de ser global e passa a ser por tipo (permite "v1" de
+-- cadastro E "v1" de contribuição coexistirem); (4) o índice parcial que
+-- garante "só 1 ativo" passa a valer POR TIPO, não mais pro sistema
+-- inteiro; (5) publica a primeira versão do tipo 'contribuicao' (nunca
+-- existiu, é greenfield).
+--
+-- Seguro rodar de novo? Os passos 1/2/4 sim (guardados com IF NOT
+-- EXISTS/checagem em pg_type). O passo 3 (trocar a constraint) NÃO -
+-- rodar duas vezes falha no ADD CONSTRAINT com "já existe" (erro claro,
+-- não corrompe nada). O passo 5 (INSERT da v1-contribuicao) também NÃO -
+-- mesma lógica do INSERT da v3 acima, rodar duas vezes bateria na UNIQUE
+-- nova de (tipo, versao).
+-- ============================================================================
+
+-- (1) enum novo
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'tipo_termo') THEN
+        CREATE TYPE tipo_termo AS ENUM ('cadastro', 'contribuicao');
+    END IF;
+END $$;
+
+-- (2) coluna nova, com backfill automático via DEFAULT
+ALTER TABLE termos_de_uso ADD COLUMN IF NOT EXISTS tipo tipo_termo NOT NULL DEFAULT 'cadastro';
+
+-- (3) UNIQUE de versão passa a ser por tipo
+ALTER TABLE termos_de_uso DROP CONSTRAINT IF EXISTS "UK_TERMOS_DE_USO_VERSAO";
+ALTER TABLE termos_de_uso ADD CONSTRAINT "UK_TERMOS_DE_USO_TIPO_VERSAO" UNIQUE (tipo, versao);
+
+-- (4) índice de "só 1 ativo" passa a ser por tipo (DROP+CREATE, então é
+-- seguro rodar de novo - o índice antigo simplesmente já não existe na 2ª vez)
+DROP INDEX IF EXISTS uq_termos_uso_ativo;
+CREATE UNIQUE INDEX uq_termos_uso_ativo ON termos_de_uso (tipo) WHERE ativo = TRUE;
+
+-- (5) primeira versão do tipo 'contribuicao' - rascunho REALISTA (LGPD +
+-- política de reembolso comum de crowdfunding), mesmo aviso de sempre:
+-- NÃO é texto jurídico validado, precisa de revisão jurídica de verdade
+-- antes de produção real.
+INSERT INTO termos_de_uso (tipo, versao, conteudo, ativo, criado_em) VALUES
+('contribuicao', 'v1-2026-09-13', 'TERMOS DE CONTRIBUIÇÃO - CROWDACADÊMICO
+
+1. OBJETO
+Este termo é exibido no momento em que um apoiador confirma uma contribuição financeira a uma campanha de pesquisa no CrowdAcadêmico, complementando os Termos de Uso gerais aceitos no cadastro.
+
+2. NATUREZA DA CONTRIBUIÇÃO
+A contribuição é voluntária e destinada ao financiamento do projeto de pesquisa descrito na campanha. O CrowdAcadêmico atua como intermediário entre apoiador e pesquisador, não sendo parte na relação de pesquisa em si, e não garante os resultados científicos do projeto apoiado.
+
+3. MODELO DE ARRECADAÇÃO E REPASSE
+Dependendo do modelo da campanha (tudo ou nada / flexível), o valor pode ser repassado ao pesquisador somente se a meta for atingida, ou repassado progressivamente. O apoiador é informado do modelo antes de contribuir, na própria página da campanha.
+
+4. POLÍTICA DE REEMBOLSO
+Contribuições podem ser reembolsadas total ou parcialmente nos casos previstos nas regras da plataforma (ex.: campanha não atinge a meta em modelo "tudo ou nada", campanha encerrada por moderação antes do repasse). Fora desses casos, a contribuição é considerada definitiva a partir da confirmação do pagamento.
+
+5. DADOS PESSOAIS E DE PAGAMENTO (LGPD)
+Dados de pagamento são processados pelo meio de pagamento escolhido (Pix, cartão, boleto) e tratados conforme a Lei 13.709/2018 (LGPD). O CrowdAcadêmico armazena o registro da contribuição e o aceite deste termo (com data e IP) para fins de auditoria e cumprimento de obrigação legal, mesmo que a conta do apoiador seja futuramente encerrada.
+
+6. ALTERAÇÕES DESTE TERMO
+Este termo pode ser atualizado periodicamente; a versão vigente no momento da confirmação da contribuição é a que se aplica àquela contribuição específica, mesmo que uma versão nova seja publicada depois.', TRUE, NOW());
+
+
+-- ============================================================================
 -- NÃO ENTRA NESTE ARQUIVO (registrado aqui só pra não se perder)
 -- ============================================================================
 

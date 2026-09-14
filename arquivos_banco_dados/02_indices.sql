@@ -42,8 +42,11 @@ CREATE INDEX idx_area_conhecimento_pai      ON area_conhecimento(id_pai);
 -- ============================================================
 CREATE INDEX idx_seguir_pesquisador_alvo    ON seguir_pesquisador(id_pesquisador);
 
--- Garante no máximo 1 versão de termo ativa/vigente no sistema
-CREATE UNIQUE INDEX uq_termos_uso_ativo ON termos_de_uso (ativo) WHERE ativo = TRUE;
+-- Garante no máximo 1 versão ativa/vigente POR TIPO (13-09-2026 - antes era
+-- 1 no sistema inteiro; único em "tipo" filtrado por ativo = TRUE significa
+-- "entre as linhas ativas, tipo não pode repetir", ou seja, no máximo 1
+-- cadastro ativo + 1 contribuicao ativo ao mesmo tempo, nunca 2 do mesmo tipo).
+CREATE UNIQUE INDEX uq_termos_uso_ativo ON termos_de_uso (tipo) WHERE ativo = TRUE;
 CREATE INDEX idx_usuario_termo_termo        ON usuario_termo(id_termo);
 
 CREATE INDEX idx_notificacao_usuario        ON notificacao(id_usuario);

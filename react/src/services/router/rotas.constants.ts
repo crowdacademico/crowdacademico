@@ -29,12 +29,14 @@ import { ConsultarMotivoDenuncia } from '../../views/10-motivo-denuncia/consulta
 import { ExcluirMotivoDenuncia } from '../../views/10-motivo-denuncia/excluir-motivo-denuncia';
 import { ListarMotivosDenuncia } from '../../views/10-motivo-denuncia/listar-motivos-denuncia';
 import { ListarPesquisadores } from '../../views/6-perfil-pesquisador/listar-pesquisadores';
-import { ConsultarPesquisador } from '../../views/6-perfil-pesquisador/consultar-pesquisador';
 import { ListarCampanhas } from '../../views/12-campanha/listar-campanhas';
 import { ConsultarCampanha } from '../../views/12-campanha/consultar-campanha';
 import { BancadaPesquisador } from '../../views/campo-testes/bancada-pesquisador';
 import { BancadaCampanha } from '../../views/campo-testes/bancada-campanha';
 import { VidaCampanhaAtiva } from '../../views/campo-testes/vida-campanha-ativa';
+import { ListarTermosUso } from '../../views/5-termo-uso/listar-termos-uso';
+import { CriarTermoUso } from '../../views/5-termo-uso/criar-termo-uso';
+import { AlterarTermoUso } from '../../views/5-termo-uso/alterar-termo-uso';
 
 // Fonte única de verdade pra "quais páginas existem" - App.tsx monta as
 // <Route> a partir daqui, e breadcrumb.tsx monta o rótulo a partir daqui.
@@ -152,6 +154,24 @@ export const ROTAS_ADMIN: Rota[] = [
   // espírito de `grupoMenu: 'CADASTROS'` nunca ter mudado de nome quando
   // o TÍTULO do grupo mudou de "CADASTROS" pra "GESTÃO DE ACESSO E
   // SISTEMA" (ver admin-menu.constants.js).
+  // Termos de Uso (módulo 5-termo-uso) - ativado no menu lateral em
+  // 13-09-2026, pedido do Lucas: "vamos acabar Termos de Uso por
+  // completo". Mesmo grupo de Parâmetros do Sistema (CONFIGURACOES) - é
+  // configuração/documento do sistema, não caso individual de moderação
+  // (não é MODERACAO) nem cadastro sobre "quem é o usuário" (não é
+  // CADASTROS). Entra ACIMA de Parâmetros do Sistema de propósito (pedido
+  // do Lucas) - `itensDoGrupo` (admin-menu.constants.js) preserva a ORDEM
+  // deste array, então a posição aqui embaixo decide a posição no menu.
+  {
+    caminho: '/admin/termos-uso',
+    caminhoRelativo: 'termos-uso',
+    elemento: ListarTermosUso,
+    rotuloMenu: 'Termos de Uso',
+    rotuloBreadcrumb: 'Termos de Uso',
+    grupoMenu: 'CONFIGURACOES',
+    icone: 'fa-file-contract',
+  },
+
   {
     caminho: '/admin/configuracoes',
     caminhoRelativo: 'configuracoes',
@@ -265,6 +285,28 @@ export const ROTAS_ADMIN: Rota[] = [
     elemento: AlterarPapel,
     rotuloBreadcrumb: 'Alterar Papel',
     paiCaminho: '/admin/papeis',
+  },
+
+  // Termos de Uso - filhas de /admin/termos-uso. Consultar é modal (ver
+  // listar-termos-uso.tsx), sem Excluir de propósito (nenhuma versão pode
+  // desaparecer - rastro de auditoria).
+  {
+    caminho: '/admin/termos-uso/criar',
+    caminhoRelativo: 'termos-uso/criar',
+    elemento: CriarTermoUso,
+    rotuloBreadcrumb: 'Publicar Termos de Uso',
+    paiCaminho: '/admin/termos-uso',
+  },
+  // Alterar (13-09-2026, decisão do Lucas via AskUserQuestion: "editar só
+  // enquanto ninguém aceitou ainda") - só é aceito pelo backend
+  // (TermoUsoServiceAlterar) enquanto a versão não tiver nenhum aceite;
+  // depois disso a própria tela mostra o erro 409 vindo do servidor.
+  {
+    caminho: '/admin/termos-uso/:id/alterar',
+    caminhoRelativo: 'termos-uso/:id/alterar',
+    elemento: AlterarTermoUso,
+    rotuloBreadcrumb: 'Alterar Termos de Uso',
+    paiCaminho: '/admin/termos-uso',
   },
 
   // Parâmetro do Sistema (nome novo) - filhas de /admin/configuracoes
@@ -398,14 +440,10 @@ export const ROTAS_ADMIN: Rota[] = [
     paiCaminho: '/admin/campanhas',
   },
 
-  // Pesquisadores - mesmo raciocínio de Campanhas (só Consultar).
-  {
-    caminho: '/admin/pesquisadores/:id/consultar',
-    caminhoRelativo: 'pesquisadores/:id/consultar',
-    elemento: ConsultarPesquisador,
-    rotuloBreadcrumb: 'Consultar Pesquisador',
-    paiCaminho: '/admin/pesquisadores',
-  },
+  // Pesquisadores - Consultar EM MODAL desde 13-09-2026 (pedido do Lucas:
+  // "não duplicar código, é exatamente igual ao do Usuário") - a rota
+  // própria (`consultar-pesquisador.tsx`) foi apagada; listar-pesquisadores.tsx
+  // agora abre o mesmo ModalConsultarUsuario direto, sem navegar daqui.
 
   // ESTE ARQUIVO EXISTE SOLENEMENTE PARA O CAMPO DE TESTES. NÃO ESTÁ NOS
   // REQUISITOS FUNCIONAIS E NEM ESTARÁ. - vale só pro trecho abaixo, não

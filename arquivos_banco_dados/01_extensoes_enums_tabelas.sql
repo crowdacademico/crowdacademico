@@ -101,6 +101,10 @@ CREATE TYPE status_encerramento   AS ENUM ('pendente', 'aprovado', 'rejeitado', 
 CREATE TYPE tipo_motivo_denuncia  AS ENUM ('campanha', 'perfil');
 CREATE TYPE status_notificacao    AS ENUM ('pendente', 'enviado', 'falhou', 'cancelado');
 CREATE TYPE tipo_recompensa       AS ENUM ('digital', 'reconhecimento', 'acesso_antecipado');
+-- ADICIONADO (13-09-2026, pedido do Lucas: o sistema sempre vai ter 2
+-- Termos de Uso vigentes ao mesmo tempo, um por cada momento de aceite -
+-- ver termos_de_uso abaixo).
+CREATE TYPE tipo_termo            AS ENUM ('cadastro', 'contribuicao');
 
 -- ============================================================
 -- [01-B] RBAC (3 tabelas)
@@ -422,13 +426,24 @@ CREATE TABLE seguir_pesquisador (
 
 CREATE TABLE termos_de_uso (
     id_termo  SERIAL,
-    versao    VARCHAR(20) NOT NULL,   -- ex: "2026-07-01", "v3" - precisa ser única
+    -- ADICIONADA (13-09-2026, pedido do Lucas: "sempre vai ter 2 Termo de Uso
+    -- ativo" - um pro aceite geral/cadastro, outro pra contribuição a
+    -- campanha, cada um com sua PRÓPRIA versão vigente, independente do
+    -- outro). DEFAULT 'cadastro' só pra não quebrar a linha histórica que já
+    -- existia antes desta coluna nascer (todas as versões de antes desta
+    -- migração eram, na prática, do tipo cadastro - a única coisa que
+    -- existia era o aceite no cadastro).
+    tipo      tipo_termo  NOT NULL DEFAULT 'cadastro',
+    versao    VARCHAR(20) NOT NULL,   -- ex: "2026-07-01", "v3" - única DENTRO do tipo, não no sistema inteiro (ver UK abaixo)
     conteudo  TEXT        NOT NULL,
     ativo     BOOLEAN     DEFAULT TRUE,
     criado_em TIMESTAMPTZ   DEFAULT NOW(),      -- [melhoria] registra quando cada versão entrou em vigor
 
     CONSTRAINT "PK_TERMOS_DE_USO" PRIMARY KEY (id_termo),
-    CONSTRAINT "UK_TERMOS_DE_USO_VERSAO" UNIQUE (versao)
+    -- POR TIPO (13-09-2026), não mais global - cada trilha (cadastro/
+    -- contribuicao) numera sua própria sequência de versão ("v1" de
+    -- cadastro e "v1" de contribuicao podem coexistir).
+    CONSTRAINT "UK_TERMOS_DE_USO_TIPO_VERSAO" UNIQUE (tipo, versao)
 );
 
 CREATE TABLE usuario_termo (

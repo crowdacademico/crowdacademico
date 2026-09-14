@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { GenericTable } from '../../components/crud/generic-table';
 import { BlocoLogAuditoria } from '../../components/crud/bloco-log-auditoria';
 import { perfilPesquisadorApi } from '../../services/6-perfil-pesquisador/api/perfil-pesquisador.api';
@@ -8,6 +8,7 @@ import {
 } from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
+import { ModalConsultarUsuario } from '../1-usuario/modal-usuario';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { PerfilPesquisadorResponse } from '../../services/6-perfil-pesquisador/type/perfil-pesquisador.type';
 
@@ -24,7 +25,16 @@ interface PesquisadorLinha extends Omit<PerfilPesquisadorResponse, 'tituloAcadem
 // listar-campanhas.tsx: editar campos de pesquisador tem regra própria
 // (RF-017, correção de CPF é só via função SECURITY DEFINER, não um PATCH
 // livre) e não existe endpoint de exclusão (status ativo/suspenso).
+//
+// Consultar EM MODAL (13-09-2026, pedido do Lucas: "o Consultar dos
+// pesquisadores é exatamente igual ao do Usuário, não duplicar código") -
+// `consultar-pesquisador.tsx` (página própria) foi apagada; reaproveita o
+// MESMO `ModalConsultarUsuario` que Usuário e a Bancada do Pesquisador
+// (Campo de Testes) já usam - um perfil de pesquisador é um usuário com um
+// perfil a mais, o modal já mostra tudo (dados da conta, papéis, perfil de
+// pesquisador, score), não é subconjunto nenhum perdido.
 export function ListarPesquisadores({ auth }: PropsPagina) {
+  const [idConsultando, setIdConsultando] = useState<number | null>(null);
   const listarPesquisadores = useCallback(async (): Promise<PesquisadorLinha[]> => {
     const [pesquisadores, usuarios] = await Promise.all([
       perfilPesquisadorApi.listar(auth.authFetch),
@@ -69,11 +79,22 @@ export function ListarPesquisadores({ auth }: PropsPagina) {
         ]}
         chavePrimaria="idUsuario"
         listar={listarPesquisadores}
-        rotaBase="/admin/pesquisadores"
+        // SÓ Consultar (13-09-2026, achado do Lucas: sem isto, `acoes` cai
+        // no padrão `['alterar', 'consultar', 'excluir']` do GenericTable, e
+        // Alterar/Excluir tentam virar <Link to={`${rotaBase}/.../alterar`}>
+        // com `rotaBase` undefined - link quebrado, tentando abrir uma rota
+        // que nunca existiu). Sem Alterar/Excluir de propósito (ver
+        // comentário no topo do arquivo - regra própria de CPF/sem
+        // endpoint de exclusão).
         acoes={['consultar']}
+        aoConsultar={(linha) => setIdConsultando(linha.idUsuario)}
         filtrosFacetados={[{ chave: 'statusPesquisador', rotulo: 'Status' }]}
       />
       <BlocoLogAuditoria buscar={buscarLogPerfil} />
+
+      {idConsultando !== null && (
+        <ModalConsultarUsuario auth={auth} idUsuario={idConsultando} aoFechar={() => setIdConsultando(null)} />
+      )}
     </div>
   );
 }

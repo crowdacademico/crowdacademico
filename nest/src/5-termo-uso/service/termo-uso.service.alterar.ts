@@ -1,0 +1,107 @@
+import {
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { DatabaseService } from '../../commons/database/database.service';
+import { CODIGO_PG_UNIQUE_VIOLATION } from '../../commons/database/postgres-exception.filter';
+import { TermoUsoRequestAlterar } from '../dto/request/termo-uso.request-alterar';
+import { TermoUsoResponse } from '../dto/response/termo-uso.response';
+
+// Alterar SÓ é permitido enquanto NINGUÉM aceitou esta versão específica
+// ainda (decisão do Lucas, 13-09-2026, depois de pesar as 3 opções: manter
+// só "criar versão nova" sem editar nunca; permitir editar só antes do
+// primeiro aceite; ou permitir editar sempre). Assim que a 1ª pessoa
+// aceitar, a versão trava e vira só-leitura pra sempre (mesmo raciocínio
+// de TermoUsoServiceCriar: editar depois do aceite destruiria o valor
+// probatório de quem já aceitou um texto que deixaria de ser esse).
+//
+// Precisa checar as DUAS tabelas de aceite que referenciam termos_de_uso -
+// usuario_termo (aceite geral, cadastro) E aceite_termo_contribuicao
+// (aceite por contribuição a campanha) - um termo pode estar "usado" por
+// qualquer uma das duas, mesmo hoje só existindo 1 conceito de "termo
+// ativo" (ver achado do Lucas, registrado em PENDENCIAS, sobre o sistema
+// provavelmente precisar de 2 termos distintos um dia).
+@Injectable()
+export class TermoUsoServiceAlterar {
+  constructor(private readonly database: DatabaseService) {}
+
+  async executar(
+    id: number,
+    dto: TermoUsoRequestAlterar,
+  ): Promise<TermoUsoResponse> {
+    const [aceiteGeral, aceiteContribuicao] = await Promise.all([
+      this.database
+        .getDb()
+        .selectFrom('usuario_termo')
+        .select('id_usuario_termo')
+        .where('id_termo', '=', id)
+        .executeTakeFirst(),
+      this.database
+        .getDb()
+        .selectFrom('aceite_termo_contribuicao')
+        .select('id_aceite_contrib')
+        .where('id_termo', '=', id)
+        .executeTakeFirst(),
+    ]);
+
+    if (aceiteGeral || aceiteContribuicao) {
+      throw new ConflictException(
+        'Esta versão já foi aceita por pelo menos uma pessoa - não pode mais ser editada. Publique uma versão nova.',
+      );
+    }
+
+    try {
+      const linha = await this.database
+        .getDb()
+        .updateTable('termos_de_uso')
+        .set({
+          ...(dto.versao !== undefined ? { versao: dto.versao } : {}),
+          ...(dto.conteudo !== undefined ? { conteudo: dto.conteudo } : {}),
+        })
+        .where('id_termo', '=', id)
+        .returningAll()
+        .executeTakeFirst();
+
+      if (!linha) {
+        // pol_termos_select é USING(true) - uma 2ª consulta aqui sempre
+        // enxerga a linha se ela existir de verdade, então distingue "não
+        // existe" (404) de "existe, mas pol_termos_update bloqueou por
+        // falta de 'termos_uso_gerenciar'" (403) - mesmo padrão de
+        // campanha.service.rejeitar.ts.
+        const existe = await this.database
+          .getDb()
+          .selectFrom('termos_de_uso')
+          .select('id_termo')
+          .where('id_termo', '=', id)
+          .executeTakeFirst();
+        if (!existe) {
+          throw new NotFoundException(
+            'Versão de Termos de Uso não encontrada.',
+          );
+        }
+        throw new ForbiddenException(
+          "Sem permissão 'termos_uso_gerenciar' para alterar esta versão.",
+        );
+      }
+
+      return {
+        idTermo: linha.id_termo,
+        tipo: linha.tipo,
+        versao: linha.versao,
+        conteudo: linha.conteudo,
+        ativo: linha.ativo,
+        criadoEm: linha.criado_em,
+      };
+    } catch (erro) {
+      const codigo = (erro as { code?: string }).code;
+      if (codigo === CODIGO_PG_UNIQUE_VIOLATION) {
+        throw new ConflictException(
+          `Já existe uma versão de Termos de Uso com o código "${dto.versao}".`,
+        );
+      }
+      throw erro;
+    }
+  }
+}
