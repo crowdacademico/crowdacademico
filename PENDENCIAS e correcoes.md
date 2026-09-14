@@ -1601,6 +1601,25 @@ Pedido do Lucas depois de olhar o painel de verdade: "vc vai fazer uma auditoria
 
 ---
 
+### 🟢 CONSTRUÍDO (14-09-2026, mesmo dia): Pesquisadores ganhou Alterar/Excluir (reaproveitando Usuário), Papel ganhou Consultar (permissões de verdade) e Excluir (só explicativo)
+
+Depois da auditoria acima, o Lucas propôs padronizar Alterar+Consultar+Excluir em toda listagem, em vez de restringir `acoes` conforme falta callback - "muito mais inteligente, só colocar os 3 em tudo... economiza código, padroniza o sistema". Investigado antes de aplicar: os 3 casos citados (Campanhas, Papéis, Pesquisadores) tinham motivos bem diferentes por trás de estarem incompletos - não era o mesmo "esquecimento" nos 3.
+
+**🟢 Pesquisadores - zero risco, aplicado direto.** Conferido no código de T1 (Bancada do Pesquisador): os 3 botões ali **não agem sobre o perfil de pesquisador**, agem sobre o USUÁRIO por trás da linha (`ModalAlterarUsuario`/`ModalConsultarUsuario`/`ModalExcluirUsuario`, os MESMOS componentes de `listar-usuarios.tsx`). `listar-pesquisadores.tsx` ganhou `aoAlterar`/`aoExcluir` chamando os mesmos modais - zero endpoint novo, zero lógica nova. Único ajuste: a linha da tabela precisou passar a trazer `email`/`emailVerificado` também (antes só trazia `nome`), porque `ModalExcluirUsuario` exige os 3 campos como prop (não busca sozinho).
+
+**🟡 Campanhas - não construído, é pergunta de produto, não de padronização.** Confirmado que Alterar/Excluir campanha **já existem e funcionam de verdade dentro de T2** (Campo de Testes) - com checklist de aprovação, trava de campos por status, Excluir só em `aguardando_aprovacao`. Não é funcionalidade faltando - foi mantida só em T2 de propósito, mesmo padrão do cadeado de upgrade de Pesquisador (T1). Registrado como pergunta pro Lucas decidir (com ou sem Claude Web): expor essas 2 ações na tela real também, reaproveitando a mesma lógica de T2, ou deixar T2 como o lugar oficial? Não implementado enquanto não decidido.
+
+**🟢 Papel - Consultar ganhou conteúdo real (não só id+nome), Excluir ganhou modal só explicativo.**
+- **`ModalConsultarPapel`** (novo, `modal-papel.tsx`) - mostra id/nome do papel + a lista de permissões concedidas a ele, lida ao vivo da matriz Papel×Permissão (mesmas 2 chamadas que `ModalDetalhePermissao`/`matriz-papel-permissao.tsx` já fazem - nunca hardcoded). Cada permissão é um botão que abre o MESMO `ModalDetalhePermissao` já usado pelo "Saiba mais" da tabela de Permissões (zero lógica de detalhe duplicada - só reaproveita).
+- **`ModalExcluirPapel`** (novo, mesmo arquivo) - pedido explícito do Lucas: "o ícone da lixeira... um modal pequeno explicando isto, sem opção de confirmar". Nunca chama a API - só explica, com um botão "Entendi" (sem confirmar exclusão nenhuma). Motivo confirmado no schema antes de escrever o texto: `usuario_papel`/`papel_permissao` apontam pra `papel` com `ON DELETE CASCADE` (`01_extensoes_enums_tabelas.sql`) - excluir um papel apagaria, na hora e sem aviso, o vínculo de TODOS os usuários que têm esse papel e TODAS as permissões dele. Diferente de qualquer outro Excluir do sistema (que ou é lógico, ou é bloqueado por FK com mensagem própria), aqui o risco é grande demais pra ser uma ação real de painel - o ícone existe só pra a coluna Ações ficar padronizada, a exclusão em si nunca acontece.
+- **Achado, registrado, não implementado**: o Lucas também mencionou, de passagem, a ideia de um usuário comum conseguir ver o PRÓPRIO papel/permissões (self-service, "o que ele pode fazer no sistema") - isso é uma tela nova pro usuário comum (provavelmente dentro de Minha Conta), diferente do Consultar administrativo que foi construído agora. Não é a mesma coisa, fica registrado como ideia separada, não construída nesta rodada.
+
+**Risco visual não verificado**: `ModalConsultarPapel` pode abrir `ModalDetalhePermissao` por cima de si mesmo (2 modais empilhados, mesmo `z-[200]` nos dois) - funcionalmente deveria empilhar certo pela ordem do DOM, mas o efeito visual exato (2 fundos escurecidos sobrepostos) não foi visto num navegador de verdade.
+
+`tsc --noEmit`, `eslint .` (0 erros) e `npm run build` limpos. Não testado ao vivo (sem Playwright nesta sessão).
+
+---
+
 ### 🟡 Especificação registrada (13-09-2026): tela de administração pra `arquivo` (espaço ocupado, órfãos, maiores consumidores) - NÃO construída de propósito
 
 O Lucas pediu detalhamento dessa ideia (citada de passagem pelo Claude Web numa rodada anterior, descartada na hora). Resposta completa, registrada aqui pra não se perder - **decisão de não construir agora confirmada pelo próprio Claude Web**: poucos arquivos no sistema hoje (todos de teste), a tela mostraria números perto de zero e não responderia pergunta nenhuma de verdade. Momento certo: depois de `18-recompensa`/`15-atualizacao-campanha` estarem em uso real, quando anexos tiverem volume e órfãos aparecerem sozinhos.

@@ -8,12 +8,14 @@ import {
 } from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
-import { ModalConsultarUsuario } from '../1-usuario/modal-usuario';
+import { ModalAlterarUsuario, ModalConsultarUsuario, ModalExcluirUsuario } from '../1-usuario/modal-usuario';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { PerfilPesquisadorResponse } from '../../services/6-perfil-pesquisador/type/perfil-pesquisador.type';
 
 interface PesquisadorLinha extends Omit<PerfilPesquisadorResponse, 'tituloAcademico' | 'statusPesquisador'> {
   nome: string;
+  email: string;
+  emailVerificado: boolean;
   tituloAcademico: string;
   statusPesquisador: string;
 }
@@ -21,35 +23,46 @@ interface PesquisadorLinha extends Omit<PerfilPesquisadorResponse, 'tituloAcadem
 // Aba "Pesquisadores" (23-08-2026, pedido do Lucas: "algum outro que eu
 // esqueci?" - 6-perfil-pesquisador estava pronto e testado desde
 // 22-08-2026, mas sem NENHUMA entrada de menu, igual Motivos de Denúncia
-// estava antes). Mesmo raciocínio de sem-Alterar/sem-Excluir de
-// listar-campanhas.tsx: editar campos de pesquisador tem regra própria
-// (RF-017, correção de CPF é só via função SECURITY DEFINER, não um PATCH
-// livre) e não existe endpoint de exclusão (status ativo/suspenso).
+// estava antes).
 //
-// Consultar EM MODAL (13-09-2026, pedido do Lucas: "o Consultar dos
-// pesquisadores é exatamente igual ao do Usuário, não duplicar código") -
-// `consultar-pesquisador.tsx` (página própria) foi apagada; reaproveita o
-// MESMO `ModalConsultarUsuario` que Usuário e a Bancada do Pesquisador
-// (Campo de Testes) já usam - um perfil de pesquisador é um usuário com um
-// perfil a mais, o modal já mostra tudo (dados da conta, papéis, perfil de
-// pesquisador, score), não é subconjunto nenhum perdido.
+// Alterar/Consultar/Excluir EM MODAL, reaproveitando os MESMOS modais de
+// Usuário (14-09-2026, pedido do Lucas: "Pesquisadores é o mesmo que
+// Usuário, é praticamente duas telas de Usuário uma embaixo da outra") -
+// mesmo raciocínio de T1 (Bancada do Pesquisador, Campo de Testes): as 3
+// ações agem sobre o USUÁRIO por trás da linha (`ModalAlterarUsuario`/
+// `ModalConsultarUsuario`/`ModalExcluirUsuario`, os MESMOS de
+// `listar-usuarios.tsx`), não sobre o perfil de pesquisador em si - por
+// isso não precisou de nenhum endpoint novo. `consultar-pesquisador.tsx`
+// (página própria) já tinha sido apagada em 13-09-2026 por esse motivo;
+// Alterar/Excluir seguem o mesmo caminho agora.
 export function ListarPesquisadores({ auth }: PropsPagina) {
   const [idConsultando, setIdConsultando] = useState<number | null>(null);
+  const [idAlterando, setIdAlterando] = useState<number | null>(null);
+  const [excluindo, setExcluindo] = useState<PesquisadorLinha | null>(null);
+  const [chaveRecarga, setChaveRecarga] = useState(0);
+  const recarregar = () => setChaveRecarga((atual) => atual + 1);
+
   const listarPesquisadores = useCallback(async (): Promise<PesquisadorLinha[]> => {
     const [pesquisadores, usuarios] = await Promise.all([
       perfilPesquisadorApi.listar(auth.authFetch),
       usuarioApi.listar(auth.authFetch).catch(() => []),
     ]);
 
-    const nomePorIdUsuario = new Map(usuarios.map((usuario) => [usuario.idUsuario, usuario.nome]));
+    const usuarioPorId = new Map(usuarios.map((usuario) => [usuario.idUsuario, usuario]));
 
-    return pesquisadores.map((pesquisador) => ({
-      ...pesquisador,
-      nome: nomePorIdUsuario.get(pesquisador.idUsuario) ?? `#${pesquisador.idUsuario}`,
-      tituloAcademico: ROTULO_TITULO_ACADEMICO[pesquisador.tituloAcademico],
-      statusPesquisador: ROTULO_STATUS_PESQUISADOR[pesquisador.statusPesquisador],
-    }));
-  }, [auth.authFetch]);
+    return pesquisadores.map((pesquisador) => {
+      const usuario = usuarioPorId.get(pesquisador.idUsuario);
+      return {
+        ...pesquisador,
+        nome: usuario?.nome ?? `#${pesquisador.idUsuario}`,
+        email: usuario?.email ?? '',
+        emailVerificado: usuario?.emailVerificado ?? false,
+        tituloAcademico: ROTULO_TITULO_ACADEMICO[pesquisador.tituloAcademico],
+        statusPesquisador: ROTULO_STATUS_PESQUISADOR[pesquisador.statusPesquisador],
+      };
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [auth.authFetch, chaveRecarga]);
 
   const buscarLogPerfil = useCallback(
     (pagina: number) => logAuditoriaApi.listarPorTabela(auth.authFetch, 'perfil_pesquisador', pagina),
@@ -79,21 +92,36 @@ export function ListarPesquisadores({ auth }: PropsPagina) {
         ]}
         chavePrimaria="idUsuario"
         listar={listarPesquisadores}
-        // SÓ Consultar (13-09-2026, achado do Lucas: sem isto, `acoes` cai
-        // no padrão `['alterar', 'consultar', 'excluir']` do GenericTable, e
-        // Alterar/Excluir tentam virar <Link to={`${rotaBase}/.../alterar`}>
-        // com `rotaBase` undefined - link quebrado, tentando abrir uma rota
-        // que nunca existiu). Sem Alterar/Excluir de propósito (ver
-        // comentário no topo do arquivo - regra própria de CPF/sem
-        // endpoint de exclusão).
-        acoes={['consultar']}
+        aoAlterar={(linha) => setIdAlterando(linha.idUsuario)}
         aoConsultar={(linha) => setIdConsultando(linha.idUsuario)}
+        aoExcluir={setExcluindo}
         filtrosFacetados={[{ chave: 'statusPesquisador', rotulo: 'Status' }]}
       />
       <BlocoLogAuditoria buscar={buscarLogPerfil} />
 
+      {idAlterando !== null && (
+        <ModalAlterarUsuario
+          auth={auth}
+          idUsuario={idAlterando}
+          aoFechar={() => setIdAlterando(null)}
+          aoAtualizado={recarregar}
+        />
+      )}
+
       {idConsultando !== null && (
         <ModalConsultarUsuario auth={auth} idUsuario={idConsultando} aoFechar={() => setIdConsultando(null)} />
+      )}
+
+      {excluindo && (
+        <ModalExcluirUsuario
+          auth={auth}
+          idUsuario={excluindo.idUsuario}
+          nome={excluindo.nome}
+          email={excluindo.email}
+          emailVerificado={excluindo.emailVerificado}
+          aoFechar={() => setExcluindo(null)}
+          aoExcluido={recarregar}
+        />
       )}
     </div>
   );

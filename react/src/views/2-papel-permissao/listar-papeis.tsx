@@ -12,6 +12,7 @@ import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditor
 import { MatrizPapelPermissao } from './matriz-papel-permissao';
 import { ModalDetalhePermissao } from './modal-detalhe-permissao';
 import { ModalAlterarPapel } from './modal-alterar-papel';
+import { ModalConsultarPapel, ModalExcluirPapel } from './modal-papel';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { PapelResponse, PermissaoResponse } from '../../services/2-papel-permissao/type/papel-permissao.type';
 
@@ -43,6 +44,8 @@ const ORDEM_IMPACTO = ['alto', 'médio', 'baixo', IMPACTO_NAO_CLASSIFICADO];
 // tudo que o widget fazia, Alterar Usuário já faz.
 export function ListarPapeis({ auth }: PropsPagina) {
   const [alterando, setAlterando] = useState<PapelResponse | null>(null);
+  const [consultando, setConsultando] = useState<PapelResponse | null>(null);
+  const [excluindo, setExcluindo] = useState<PapelResponse | null>(null);
   const [chaveRecarga, setChaveRecarga] = useState(0);
   const recarregar = () => setChaveRecarga((atual) => atual + 1);
 
@@ -116,8 +119,9 @@ export function ListarPapeis({ auth }: PropsPagina) {
           ]}
           chavePrimaria="idPapel"
           listar={listarPapeis}
-          acoes={['alterar']}
           aoAlterar={setAlterando}
+          aoConsultar={setConsultando}
+          aoExcluir={setExcluindo}
         />
         {/* "De"/"Para" em vez de "Campos alterados" (09-08-2026, pedido do
             Lucas) - só "nome" muda em papel hoje (codigo é fixo), mas o
@@ -190,6 +194,14 @@ export function ListarPapeis({ auth }: PropsPagina) {
           aoFechar={() => setAlterando(null)}
           aoAtualizado={recarregar}
         />
+      )}
+
+      {consultando && (
+        <ModalConsultarPapel auth={auth} papel={consultando} aoFechar={() => setConsultando(null)} />
+      )}
+
+      {excluindo && (
+        <ModalExcluirPapel papel={excluindo} aoFechar={() => setExcluindo(null)} />
       )}
     </>
   );

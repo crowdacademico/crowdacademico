@@ -23,9 +23,10 @@ interface ModalAlterarPapelProps {
 //
 // Só "nome" é editável (`codigo`, ver 01_extensoes_enums_tabelas.sql
 // [01-B], nunca é exposto/editável - as triggers de RBAC leem `codigo`,
-// não `nome`, então renomear é seguro). Sem Consultar/Excluir pra papel (a
-// listagem já mostra id/nome; excluir um papel usado em usuario_papel/
-// papel_permissao é decisão maior, fora de escopo).
+// não `nome`, então renomear é seguro). Consultar/Excluir ganharam modal
+// próprio depois (14-09-2026, ver modal-papel.tsx) - Consultar mostra as
+// permissões do papel; Excluir é só explicativo, nunca executa (ver
+// comentário completo em modal-papel.tsx sobre o ON DELETE CASCADE).
 export function ModalAlterarPapel({ auth, papel, aoFechar, aoAtualizado }: ModalAlterarPapelProps) {
   const { mostrar } = useToast();
   const { erro, reportarErro, limparErro } = useErroToast();
