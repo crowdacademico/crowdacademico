@@ -30,7 +30,7 @@ import { formatarDataHora, formatarMoeda } from '../../services/constant/utils/f
 import { paginarClientSide } from '../../services/constant/utils/paginacao.util';
 import { RegistroChamadas } from './registro-chamadas';
 import type { PropsPagina } from '../../services/router/pagina.type';
-import type { CampanhaResponse } from '../../services/12-campanha/type/campanha.type';
+import type { CampanhaResponse, HistoricoRejeicaoResponse } from '../../services/12-campanha/type/campanha.type';
 import type { StatusCampanha } from '../../services/12-campanha/constants/status-campanha.constants';
 import type { AreaConhecimentoResponse } from '../../services/8-area-conhecimento/type/area-conhecimento.type';
 import type { UsuarioResponse } from '../../services/1-usuario/type/usuario.type';
@@ -321,6 +321,21 @@ export function BancadaCampanha({ auth }: PropsPagina) {
   const [facetaStatusAberta, setFacetaStatusAberta] = useState(false);
   const facetaStatusRef = useRef<HTMLDivElement>(null);
   const [campanhaConsultada, setCampanhaConsultada] = useState<CampanhaResponse | null>(null);
+  const [historicoRejeicaoConsultada, setHistoricoRejeicaoConsultada] = useState<HistoricoRejeicaoResponse[]>([]);
+
+  // Histórico de rejeições da campanha aberta em Consultar (14-09-2026) -
+  // mesmo dado/mesma chamada de consultar-campanha.tsx, só que esta tela é
+  // uma cópia manual da página real (ver comentário grande perto do modal,
+  // "Consultar replica a página real") - mantendo os dois em sincronia.
+  useEffect(() => {
+    if (campanhaConsultada) {
+      campanhaApi
+        .listarHistoricoRejeicao(auth.authFetch, campanhaConsultada.idCampanha)
+        .then(setHistoricoRejeicaoConsultada)
+        .catch(() => setHistoricoRejeicaoConsultada([]));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [campanhaConsultada]);
   const [idCampanhaEditando, setIdCampanhaEditando] = useState<number | null>(null);
   const [formEdicaoCampanha, setFormEdicaoCampanha] = useState<FormEdicaoCampanha | null>(null);
   // Checklist "Pronta pra aprovar?" + Aprovar/Rejeitar (13-09-2026, trazido
@@ -834,6 +849,21 @@ export function BancadaCampanha({ auth }: PropsPagina) {
                 <CampoFicha rotulo="Aprovada em" valor={formatarDataHora(campanhaConsultada.aprovadoEm)} />
                 <CampoFicha rotulo="Encerrada em" valor={formatarDataHora(campanhaConsultada.encerradoEm)} />
               </SecaoFicha>
+
+              {/* Escondida quando vazia, mesmo critério de
+                  consultar-campanha.tsx - rejeição é minoria. */}
+              {historicoRejeicaoConsultada.length > 0 && (
+                <SecaoFicha titulo="Histórico de Rejeições">
+                  {historicoRejeicaoConsultada.map((item) => (
+                    <CampoFicha
+                      key={item.idRejeicao}
+                      rotulo={formatarDataHora(item.rejeitadoEm)}
+                      valor={`${item.justificativa ?? 'Sem justificativa registrada.'} (${item.nomeAdmin ?? 'Administrador removido'})`}
+                      largura="cheia"
+                    />
+                  ))}
+                </SecaoFicha>
+              )}
             </div>
 
             <div className="space-y-6">

@@ -11,6 +11,7 @@ import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { useBuscarPorId } from '../../services/constant/hook/use-buscar-por-id';
 import { formatarDataHora, formatarMoeda } from '../../services/constant/utils/formatacao.util';
 import type { PropsPagina } from '../../services/router/pagina.type';
+import type { HistoricoRejeicaoResponse } from '../../services/12-campanha/type/campanha.type';
 
 export function ConsultarCampanha({ auth }: PropsPagina) {
   const { id = '' } = useParams();
@@ -21,14 +22,21 @@ export function ConsultarCampanha({ auth }: PropsPagina) {
   );
   const [nomeDono, setNomeDono] = useState<string | null>(null);
   const [nomeArea, setNomeArea] = useState<string | null>(null);
+  const [historicoRejeicao, setHistoricoRejeicao] = useState<HistoricoRejeicaoResponse[]>([]);
 
   // Nome de dono/área resolvidos à parte (não vêm no CampanhaResponse, só
   // os ids) - mesmo raciocínio de junção client-side de listar-campanhas.tsx,
-  // só que aqui é 1 registro de cada em vez do catálogo inteiro.
+  // só que aqui é 1 registro de cada em vez do catálogo inteiro. Histórico
+  // de rejeições (14-09-2026) busca junto, mesma lógica - "onde fica
+  // registrado" o motivo, pedido do Lucas.
   useEffect(() => {
     if (campanha) {
       usuarioApi.buscar(auth.authFetch, campanha.idUsuario).then((u) => setNomeDono(u.nome)).catch(() => {});
       areaConhecimentoApi.buscar(auth.authFetch, campanha.idAreaConhecimento).then((a) => setNomeArea(a.nome)).catch(() => {});
+      campanhaApi
+        .listarHistoricoRejeicao(auth.authFetch, campanha.idCampanha)
+        .then(setHistoricoRejeicao)
+        .catch(() => {});
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [campanha]);
@@ -76,6 +84,23 @@ export function ConsultarCampanha({ auth }: PropsPagina) {
             <CampoFicha rotulo="Aprovada em" valor={formatarDataHora(campanha.aprovadoEm)} />
             <CampoFicha rotulo="Encerrada em" valor={formatarDataHora(campanha.encerradoEm)} />
           </SecaoFicha>
+
+          {/* Escondida quando vazia de propósito (14-09-2026) - diferente de
+              "Termos de Uso Aceitos" (modal-usuario.tsx), que é universal a
+              todo usuário. Rejeição é minoria: a maioria das campanhas
+              nunca passou por isso, mostrar "nenhuma" sempre seria ruído. */}
+          {historicoRejeicao.length > 0 && (
+            <SecaoFicha titulo="Histórico de Rejeições">
+              {historicoRejeicao.map((item) => (
+                <CampoFicha
+                  key={item.idRejeicao}
+                  rotulo={formatarDataHora(item.rejeitadoEm)}
+                  valor={`${item.justificativa ?? 'Sem justificativa registrada.'} (${item.nomeAdmin ?? 'Administrador removido'})`}
+                  largura="cheia"
+                />
+              ))}
+            </SecaoFicha>
+          )}
         </div>
 
         <div className="space-y-6">

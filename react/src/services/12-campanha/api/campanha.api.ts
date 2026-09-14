@@ -1,7 +1,7 @@
 import { tratarResposta } from '../../constant/api/http.util';
 import type { AuthFetch } from '../../3-auth/type/auth.type';
 import type { ResultadoPaginado } from '../../constant/type/paginacao.type';
-import type { CampanhaResponse } from '../type/campanha.type';
+import type { CampanhaResponse, HistoricoRejeicaoResponse } from '../type/campanha.type';
 import type { StatusCampanha } from '../constants/status-campanha.constants';
 
 // Espelha nest/src/12-campanha. GET é público no backend (pol_campanha_
@@ -48,4 +48,16 @@ export const campanhaApi = {
     authFetch(`/campanha/${id}`).then(tratarResposta<CampanhaResponse>),
   remover: (authFetch: AuthFetch, id: number | string): Promise<void> =>
     authFetch(`/campanha/${id}`, { method: 'DELETE' }).then(tratarResposta<void>),
+  // Histórico de rejeições (14-09-2026, pedido do Lucas: "onde fica
+  // registrado" o motivo) - mais recente primeiro, mesmo padrão de
+  // usuarioApi.listarTermosAceitos. Endpoint próprio (21-historico-
+  // rejeicao), não aninhado em /campanha - mesmo motivo de orcamento-
+  // campanha/marco-cronograma (GET /historico-rejeicao?idCampanha=).
+  listarHistoricoRejeicao: (
+    authFetch: AuthFetch,
+    idCampanha: number | string,
+  ): Promise<HistoricoRejeicaoResponse[]> =>
+    authFetch(`/historico-rejeicao?idCampanha=${idCampanha}`).then(
+      tratarResposta<HistoricoRejeicaoResponse[]>,
+    ),
 };

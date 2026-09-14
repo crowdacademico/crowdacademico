@@ -1506,6 +1506,22 @@ Verificado depois de promover: `eslint src` (mesmos ~19 erros pré-existentes de
 
 ---
 
+### 🟢 CONSTRUÍDO (14-09-2026): `21-historico-rejeicao` - consulta pura, sem tela própria, embutida em Consultar Campanha
+
+Pedido do Lucas, escolhido entre os itens da lista de pendências antiga (`informacoes/pendencias 1.md`) por não depender de nenhum outro módulo vazio e já ter dado real hoje (toda rejeição de campanha, desde sempre, já grava uma linha - conferido no código antes de começar). Antes de construir, respondida a pergunta do próprio Lucas ("tem tela própria no painel administrador?"): **não** - `historico_rejeicao` é sempre 1-pra-N com uma campanha específica, o lugar natural é uma seção dentro de Consultar Campanha (mesmo padrão já usado pra "Termos de Uso Aceitos" em Consultar Usuário), não um item novo no menu lateral que ninguém navegaria sozinho.
+
+**Nest** (`21-historico-rejeicao`, módulo antes vazio): `HistoricoRejeicaoServiceListar` + `HistoricoRejeicaoControllerListar` (`GET /historico-rejeicao?idCampanha=`, mesma convenção de `orcamento-campanha`/`marco-cronograma` - sem `@UseGuards`, `pol_historicorej_select` decide sozinha) - `leftJoin` em `usuario` pra resolver `nome_admin` (não expõe `id_admin` cru), mais recente primeiro. Registrado em `AppModule`.
+
+**Achado no caminho, útil pra próxima vez que `no-unnecessary-condition` for revisada:** o primeiro rascunho tinha `linha.nome_admin ?? null` - a própria regra ligada ontem como `'error'` no `nest/` pegou isso na hora (Kysely já tipa coluna de `leftJoin` como `string | null`, o `?? null` não muda nada) - corrigido antes de rodar o lint de verdade, prova de que a regra nova já está pagando o próprio investimento.
+
+**React**: `campanhaApi.listarHistoricoRejeicao` novo (`services/12-campanha/api/campanha.api.ts`) + `HistoricoRejeicaoResponse` (`campanha.type.ts`). Seção "Histórico de Rejeições" adicionada em **dois lugares**, não um só - `consultar-campanha.tsx` (página real do painel admin) E o modal Consultar de T2/Bancada da Campanha (Campo de Testes), porque o comentário do próprio código de T2 já documentava que aquele modal é uma CÓPIA manual da página real ("Consultar replica a página real") - atualizar só um dos dois deixaria os dois lados divergindo silenciosamente, o mesmo tipo de achado que o Lucas sempre pede pra sinalizar. Seção escondida quando a lista vem vazia (diferente de "Termos de Uso Aceitos", que é universal a todo usuário) - rejeição é minoria, mostrar "nenhuma" em toda campanha seria ruído.
+
+**Testado ao vivo, sem mutar dado nenhum:** login real como Admin (`admin@crowdacademico.com.br`), `GET /historico-rejeicao?idCampanha=1` devolveu um registro real do próprio seed (a campanha 1, "Desenvolvimento de Algoritmo para Diagnóstico Precoce de Alzheimer por IA", foi rejeitada em 25/01/2024, corrigida e reenviada, hoje está `sucesso`) - `nomeAdmin: "Admin Sistema"` resolvido certo pelo join, `justificativa` completa, data certa. `idCampanha=99999` (não existe) devolveu `[]` sem erro. Mesma chamada **sem token** devolveu `[]` com `200` (RLS escondendo por falta de permissão, não erro) - mesmo comportamento documentado em `orcamento-campanha`. Não foi preciso rejeitar nenhuma campanha de propósito pra testar, porque o próprio seed já tinha um caso real - evitou mudar o status de alguma campanha do banco de desenvolvimento compartilhado sem necessidade.
+
+`tsc --noEmit`, `eslint` (nos arquivos tocados) e `build` limpos em `nest/` e `react/`. `PROXIMOS_MODULOS.md` (✅) e `MATRIZ-RASTREABILIDADE-RF.md` (RF-098, Nest de ❌/vazio pra 🟡 - só a metade "consulta" foi construída; a metade "pesquisador edita e reenvia" continua sem endpoint, porque a página de edição de campanha do próprio pesquisador ainda não existe) atualizados.
+
+---
+
 ### 🟡 Especificação registrada (13-09-2026): tela de administração pra `arquivo` (espaço ocupado, órfãos, maiores consumidores) - NÃO construída de propósito
 
 O Lucas pediu detalhamento dessa ideia (citada de passagem pelo Claude Web numa rodada anterior, descartada na hora). Resposta completa, registrada aqui pra não se perder - **decisão de não construir agora confirmada pelo próprio Claude Web**: poucos arquivos no sistema hoje (todos de teste), a tela mostraria números perto de zero e não responderia pergunta nenhuma de verdade. Momento certo: depois de `18-recompensa`/`15-atualizacao-campanha` estarem em uso real, quando anexos tiverem volume e órfãos aparecerem sozinhos.

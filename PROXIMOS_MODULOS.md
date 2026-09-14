@@ -40,7 +40,7 @@ Três módulos pequenos e parecidos entre si - todos seguem o mesmo formato (uma
 
 - **`19-denuncia`** - denúncia de campanha ou perfil, usando o catálogo de motivos (Grupo 1).
 - **`20-solicitacao-encerramento`** - pedido de encerramento antecipado de campanha, com decisão do admin.
-- **`21-historico-rejeicao`** - histórico de rejeições de campanha (consulta, majoritariamente).
+- ✅ **`21-historico-rejeicao`** - histórico de rejeições de campanha, consulta pura (14-09-2026). `GET /historico-rejeicao?idCampanha=` (nome do admin já resolvido via join, mais recente primeiro) - sem tela própria, virou seção "Histórico de Rejeições" dentro de Consultar Campanha (admin real e T2 do Campo de Testes), escondida quando a campanha nunca foi rejeitada.
 
 ## Grupo 7 - Comunicação
 

@@ -24,3 +24,14 @@ export interface CampanhaResponse {
   videoApresentacaoUrl: string | null;
   criadoEm: string;
 }
+
+// Espelha nest/src/21-historico-rejeicao/dto/response/historico-rejeicao.response.ts.
+// "Onde fica registrado" o motivo de uma campanha ter sido rejeitada
+// (14-09-2026, pedido do Lucas) - mesma ideia de UsuarioResponseTermoAceito
+// (usuario.type.ts), mas do lado de campanha em vez de usuário.
+export interface HistoricoRejeicaoResponse {
+  idRejeicao: number;
+  nomeAdmin: string | null;
+  justificativa: string | null;
+  rejeitadoEm: string;
+}

@@ -172,7 +172,7 @@ Módulo bem batalhado em ambas as camadas - ver o histórico extenso de bugs de 
 
 - **RF-096** (Admin lista campanhas aguardando aprovação) - Banco ✅ · Nest ✅ (`12-campanha`).
 - **RF-097** (aprovar/rejeitar, justificativa obrigatória na rejeição) - Banco ✅ (`justificativa_admin` - item 19(d) da Lista C, `[01-E]`) · Nest 🟡 (aprovar/rejeitar via `12-campanha` confirmado; notificação por e-mail depende de `4-mail`, vazio).
-- **RF-098** (rejeitada → editável → reenviada, histórico de rejeições) - Banco ✅ (`historico_rejeicao`) · Nest 🟡 (`21-historico-rejeicao` está **vazio** - a tabela existe e é escrita por trigger, mas expor a consulta pelo Nest não está confirmado).
+- **RF-098** (rejeitada → editável → reenviada, histórico de rejeições) - Banco ✅ (`historico_rejeicao`) · Nest 🟡 (14-09-2026: **metade construída** - `21-historico-rejeicao` agora expõe a consulta (`GET /historico-rejeicao?idCampanha=`, seção "Histórico de Rejeições" em Consultar Campanha); a outra metade do requisito - o pesquisador EDITAR e REENVIAR a campanha rejeitada - ainda não tem endpoint nenhum, porque a página pública/painel do próprio pesquisador pra editar campanha ainda não existe).
 - **RF-099** (notificar pesquisador por e-mail sobre aprovação/rejeição) - Banco ➖ · Nest ❌ (`4-mail` vazio).
 - **RF-100** (denunciar campanha, motivo + descrição opcional) - Banco ✅ (`denuncia`, `motivo_denuncia`) · Nest ❌ (`19-denuncia` vazio).
 - **RF-101** (motivos de denúncia em catálogo, tipo campanha/perfil, ativo/inativo) - Banco ✅ (`motivo_denuncia`) · Nest ✅ (`10-motivo-denuncia`).
