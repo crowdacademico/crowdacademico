@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { AvatarUsuario } from '../layout/avatar-usuario';
+import { Dica } from '../layout/tooltip';
 import type { TamanhoAvatar } from '../layout/avatar-usuario';
 import { ErroHttp } from '../../services/constant/api/http.util';
 import { traduzirErro } from '../../services/constant/api/traduzir-erro.util';
@@ -204,10 +205,10 @@ export function SeletorFotoPerfil({
             onClick={() => inputRef.current?.click()}
             disabled={enviando}
             aria-label="Alterar foto de perfil"
-            title="Alterar foto de perfil"
-            className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-dark hover:bg-black text-white flex items-center justify-center text-xs border-2 border-white shadow transition-colors disabled:opacity-60"
+            className="dica absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-dark hover:bg-black text-white flex items-center justify-center text-xs border-2 border-white shadow transition-colors disabled:opacity-60"
           >
             <i className="fa-solid fa-camera"></i>
+            <Dica texto="Alterar foto de perfil" curta />
           </button>
         )}
 
@@ -217,10 +218,10 @@ export function SeletorFotoPerfil({
             onClick={aoRemover}
             disabled={enviando}
             aria-label="Remover foto de perfil"
-            title="Remover foto de perfil"
-            className="absolute -bottom-1 -left-1 w-7 h-7 rounded-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center text-xs border-2 border-white shadow transition-colors disabled:opacity-60"
+            className="dica absolute -bottom-1 -left-1 w-7 h-7 rounded-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center text-xs border-2 border-white shadow transition-colors disabled:opacity-60"
           >
             <i className="fa-solid fa-trash"></i>
+            <Dica texto="Remover foto de perfil" curta />
           </button>
         )}
 

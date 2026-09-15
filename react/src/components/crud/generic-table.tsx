@@ -1,14 +1,15 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useSearchParams } from 'react-router';
 import { AcaoLinha } from './acao-linha';
+import { BadgeBooleano } from './badge-booleano';
+import { BarraFiltros } from '../search/barra-filtros';
 import { useErroToast } from '../layout/toast/use-erro-toast';
-import { useFecharAoClicarFora } from '../../services/constant/hook/use-fechar-ao-clicar-fora';
 import { textoSeguro } from '../../services/constant/utils/formatacao.util';
 import { paginarClientSide } from '../../services/constant/utils/paginacao.util';
-
-const TAMANHOS_PAGINA = [10, 20, 30, 'todos'] as const;
-const LIMIAR_FILTRO = 5;
+import { RodapePaginacao } from '../pagination/rodape-paginacao';
+import { TAMANHOS_PAGINA } from '../pagination/tamanhos-pagina.constants';
+import { LIMIAR_FILTRO } from '../search/limiar-filtro.constants';
 
 // `object`, não `Record<string, unknown>` (achado na Fase 6, primeiro uso
 // real do genérico): toda linha real é uma interface nomeada espelhando
@@ -54,33 +55,28 @@ interface GenericTableProps<T extends Linha> {
   colunas: Coluna<T>[];
   chavePrimaria: keyof T & string;
   listar: () => Promise<T[]>;
-  rotaBase?: string;
-  acoes?: AcaoPadrao[];
+  // `acoes` (14-09-2026, contra-prompt Claude Web - substitui o par antigo
+  // `acoes: AcaoPadrao[]` + `aoAlterar`/`aoConsultar`/`aoExcluir` separados)
+  // - "quais ações aparecem" e "quem trata cada ação" eram 2 fontes de
+  // verdade independentes que podiam discordar em silêncio (Campanha e
+  // Papel ficaram com um ícone sem handler, que caía num `<Link
+  // to="undefined/id/ação">` quebrado em runtime, sem erro de tipo nem de
+  // lint). Com o handler DENTRO da própria chave, ação exibida sem handler
+  // vira estado ilegal irrepresentável em vez de bug de runtime - a lista
+  // de botões é só `Object.keys(acoes)` filtrado pela ordem fixa abaixo.
+  acoes?: Partial<Record<AcaoPadrao, (linha: T) => void>>;
   colunaExtra?: ColunaExtra<T>;
   filtrosFacetados?: FiltroFacetado<T>[];
-  // `aoAlterar`/`aoConsultar`/`aoExcluir` (13-09-2026, pedido do Lucas: migrar
-  // Usuário pro padrão de modal, sem afetar as ~10 outras telas que já usam
-  // `rotaBase`) - aditivo: quando presente, a ação correspondente vira
-  // `<button onClick={...}>` (abre modal no componente pai) em vez de
-  // `<Link to={rotaBase + .../ação}>` (navega pra página própria). Uma tela
-  // pode misturar (ex.: Alterar/Consultar via modal, Excluir via rotaBase),
-  // mas nenhuma tela existente muda de comportamento sem passar a prop nova.
-  aoAlterar?: (linha: T) => void;
-  aoConsultar?: (linha: T) => void;
-  aoExcluir?: (linha: T) => void;
 }
 
 // Valor booleano vira badge colorido (Sim/Não), não o texto cru "true"/
 // "false" - muito mais legível numa lista (achado de uma IA, rodando
 // o painel de verdade: "E-MAIL VERIFICADO: false" não é instantâneo de
-// ler, um badge é).
+// ler, um badge é). Reaproveita `BadgeBooleano` (14-09-2026) em vez de
+// remontar a mesma classe na mão - era a única duplicação real dele.
 function celulaValor(valor: unknown): ReactNode {
   if (typeof valor === 'boolean') {
-    return (
-      <span className={'badge ' + (valor ? 'badge-sucesso' : 'badge-neutro')}>
-        {valor ? 'Sim' : 'Não'}
-      </span>
-    );
+    return <BadgeBooleano valor={valor} />;
   }
   return textoSeguro(valor);
 }
@@ -89,15 +85,10 @@ function celulaValor(valor: unknown): ReactNode {
 // pelo painel admin - cada módulo novo do Nest com listagem simples vira só
 // uma entrada de colunas aqui, não uma tela nova escrita do zero.
 //
-// Criar/Alterar/Excluir NÃO acontecem embutidos nesta tabela (pedido do
-// Lucas, 02-08-2026: "tudo que faz parte do CRUD precisa de view própria").
-// Passando `rotaBase` (ex.: "/usuarios"), cada linha ganha "Alterar"/
-// "Excluir" apontando pra `${rotaBase}/${id}/alterar` e `/excluir` - páginas
-// de verdade, com sua própria URL, não formulário/confirm() embutido na
-// tabela. Sem `rotaBase` (catálogos só-leitura como Papéis/Permissões), não
-// aparece coluna de Ações nenhuma. Usuário é a exceção desde 13-09-2026
-// (ver `aoAlterar`/`aoConsultar`/`aoExcluir` abaixo): usa modal em vez de
-// rota própria, mesmo padrão de ações, visual diferente.
+// Criar/Alterar/Excluir NÃO acontecem embutidos nesta tabela - abrem modal
+// no componente pai via `acoes` (ver comentário da prop, acima). Sem
+// `acoes` (catálogos só-leitura como Permissões), não aparece coluna de
+// Ações nenhuma.
 //
 // O botão "Ver log" + painel de auditoria NÃO moram mais aqui (13-09-2026,
 // achado do Claude Web: "log de auditoria não é estrutura de tabela" -
@@ -113,7 +104,16 @@ function celulaValor(valor: unknown): ReactNode {
 // (dados/paginação/visual próprios) que só por acaso costumava aparecer
 // embaixo de uma tabela. "Quantas telas já usam a prop" NÃO é o teste -
 // era usada por 8 das 10 telas e ainda assim não pertencia aqui.
-const ACOES_PADRAO: AcaoPadrao[] = ['alterar', 'consultar', 'excluir'];
+//
+// SEGUNDO TESTE, complementar (14-09-2026, contra-prompt Claude Web - o
+// teste acima só decide ENTRADA, não decide SAÍDA): se uma tela que NÃO
+// PODE usar este componente ainda assim precisa de algo que hoje mora
+// aqui dentro, isto é um IRMÃO, não um miolo - foi esse critério que fez
+// o `BlocoLogAuditoria` nascer, e é o mesmo que tirou o rodapé de
+// paginação e a barra de filtros de dentro daqui (ver
+// `components/pagination/rodape-paginacao.tsx` e
+// `components/search/barra-filtros.tsx`) - as bancadas do Campo de Testes
+// (risco de linha impede usar a tabela) precisavam dos dois mesmo assim.
 
 export function GenericTable<T extends Linha>({
   titulo,
@@ -121,24 +121,14 @@ export function GenericTable<T extends Linha>({
   colunas,
   chavePrimaria,
   listar,
-  rotaBase,
-  // Quais dos 3 botões padrão aparecem, quando `rotaBase` está presente
-  // (03-08-2026, pedido do Lucas: Papéis precisa só de "Alterar" - sem
-  // Consultar (a tabela já mostra tudo, mesma decisão já tomada pra
-  // Usuário/Configuração) e sem Excluir (apagar um papel usado em RBAC é
-  // decisão maior, fora de escopo). Default preserva o comportamento de
-  // sempre (todo `rotaBase` já existente continua com os 3 botões).
-  acoes = ACOES_PADRAO,
+  acoes,
   // Coluna adicional genérica (09-08-2026, Bloco F: botão "ⓘ" que abre um
   // modal de detalhe por linha, na tabela Permissões) - `{ rotulo,
   // renderizar(linha) }`. Existe separada de `colunas` (que só espera
   // valor de dado bruto) porque esta pode renderizar QUALQUER coisa
   // (botão, ícone, badge composto), não só `String(valor)`. Independe de
-  // `rotaBase`/`acoes` - tabelas só-leitura (sem Ações) também podem usar.
+  // `acoes` - tabelas só-leitura (sem Ações) também podem usar.
   colunaExtra,
-  aoAlterar,
-  aoConsultar,
-  aoExcluir,
   // Filtros por faceta (09-08-2026, pedido do Lucas: filtro de papel na
   // tabela Usuários; generalizado no mesmo dia pra virar lista - tabela
   // Permissões pediu 2 lado a lado, papel e impacto) - array de `{ chave,
@@ -157,24 +147,27 @@ export function GenericTable<T extends Linha>({
   // lista, não desaparece.
   filtrosFacetados,
 }: GenericTableProps<T>) {
-  // A coluna Ações existe se `rotaBase` (páginas de verdade) OU qualquer um
-  // dos callbacks de modal foi passado - `rotaBase` sozinho não decide mais
-  // sozinho se a coluna aparece (13-09-2026, ver comentário da prop acima).
-  const temAcoes = Boolean(rotaBase) || Boolean(aoAlterar) || Boolean(aoConsultar) || Boolean(aoExcluir);
+  // Handlers extraídos pra const (não `acoes.alterar!(linha)` dentro do
+  // `onClick`, mais abaixo) - `acoes?.alterar &&` só estreita o tipo dentro
+  // da MESMA expressão; dentro de uma closure nova (o `onClick`), o
+  // TypeScript não carrega essa narrowing pra dentro, e `!` (non-null
+  // assertion) é banido no projeto (eslint). Uma const captura a
+  // narrowing sem precisar de `!` - mesmo valor pra toda linha da tabela,
+  // por isso vive aqui fora do `.map`, não dentro dele.
+  const aoAlterarLinha = acoes?.alterar;
+  const aoConsultarLinha = acoes?.consultar;
+  const aoExcluirLinha = acoes?.excluir;
+  // A coluna Ações existe se pelo menos 1 handler foi passado em `acoes`.
+  const temAcoes = Boolean(aoAlterarLinha || aoConsultarLinha || aoExcluirLinha);
   const [linhas, setLinhas] = useState<T[]>([]);
   const [carregando, setCarregando] = useState(true);
   const { erro, reportarErro, limparErro } = useErroToast();
   // Filtro/página/ordenação/faceta vivem na URL (query string), não em
-  // useState local (22-08-2026, pedido do Lucas: ao voltar de "Consultar"
-  // via navigate(-1), o filtro escolhido resetava - a página de listagem
-  // é desmontada na troca de rota, e useState não sobrevive a isso).
-  // `{ replace: true }` em toda escrita: cada clique em filtro/página/
-  // ordenação SUBSTITUI a entrada atual do histórico em vez de empilhar
-  // uma nova - só o clique em "Consultar" (Link de verdade, rotaBase) empilha,
-  // então o botão "Voltar" (navigate(-1), ver consultar-configuracao.tsx e
-  // afins - Usuário não se aplica mais aqui, migrou pra modal em
-  // 13-09-2026) sempre volta pro último estado de filtro, não pro
-  // passo-a-passo de cada clique dentro do dropdown.
+  // useState local (22-08-2026, pedido do Lucas: uma navegação que
+  // desmontasse a página de listagem resetava o filtro escolhido, e
+  // useState não sobrevive a isso). `{ replace: true }` em toda escrita:
+  // cada clique em filtro/página/ordenação SUBSTITUI a entrada atual do
+  // histórico em vez de empilhar uma nova.
   // Nomes reservados na URL: q, pagina, tamanho, ordenar, dir - evitar
   // faceta com uma dessas `chave` (nenhuma das existentes hoje usa).
   const [searchParams, setSearchParams] = useSearchParams();
@@ -208,12 +201,6 @@ export function GenericTable<T extends Linha>({
     }),
     [searchParams],
   );
-  // Só 1 dropdown de faceta aberto por vez (chave de qual está aberta, ou
-  // null) - mais simples que um booleano por faceta, e evita 2 dropdowns
-  // abertos sobrepondo um no outro quando são vários lado a lado. Fora da
-  // URL de propósito - é estado de UI (dropdown aberto), não um filtro de
-  // QUAIS dados aparecem.
-  const [facetaAbertaChave, setFacetaAbertaChave] = useState<string | null>(null);
   // Seleção de cada faceta, independente: { [chave]: string[] }. Faceta
   // sem entrada aqui (ou array vazio) = "Todos" pra ela.
   const selecoesPorFaceta = useMemo(() => {
@@ -224,23 +211,6 @@ export function GenericTable<T extends Linha>({
     });
     return resultado;
   }, [searchParams, filtrosFacetados]);
-  const facetasRef = useRef<HTMLDivElement>(null);
-
-  // Fechar ao clicar fora (09-08-2026) - ERA onBlur+relatedTarget (mesmo
-  // padrão do DevLoginRapido), mas com checkbox dentro de <label> isso
-  // fecha o dropdown ANTES do clique completar: o mousedown num elemento
-  // não-focável (o texto do <label>) dispara blur no botão que abriu o
-  // dropdown com relatedTarget ainda nulo (o navegador só decide o próximo
-  // foco depois), o guard via de que "saiu do container" e fecha - achado
-  // ao vivo pelo Lucas ("clico em qualquer coisa que não seja o
-  // quadradinho, o filtro fecha e não faz nada"). Listener de mousedown no
-  // document, comparando o alvo do clique com o container (o ref cobre
-  // TODAS as facetas juntas, não uma por vez) por `contains()`, não
-  // depende de foco nenhum - fecha só quando o clique é GEOMETRICAMENTE
-  // fora de qualquer uma delas. Clicar no botão de OUTRA faceta ainda está
-  // dentro do container, então só troca qual está aberta, não fecha tudo.
-  useFecharAoClicarFora(facetasRef, facetaAbertaChave !== null, () => setFacetaAbertaChave(null));
-
   useEffect(() => {
     // Padrão comum de "buscar dado ao montar/quando a query mudar" (mesmo
     // exemplo dos docs do React) - a regra nova react-hooks/set-state-in-effect
@@ -600,126 +570,31 @@ export function GenericTable<T extends Linha>({
         {acaoTopo && <div className="crud-secao__acao-topo">{acaoTopo}</div>}
       </div>
 
-      {!carregando &&
-        (linhas.length > LIMIAR_FILTRO ||
-          (filtrosFacetados ?? []).some((faceta) => opcoesPorFaceta[faceta.chave].length > 1)) && (
-          <div className="flex items-center gap-3 flex-wrap mb-3">
-            {linhas.length > LIMIAR_FILTRO && (
-              <input
-                type="search"
-                placeholder="Filtrar..."
-                value={filtro}
-                onChange={(evento) => {
-                  atualizarParametros({ q: evento.target.value, pagina: null });
-                }}
-                className="w-full sm:w-64 border borda-forte rounded-lg fundo-sutil py-2 px-3 text-sm outline-none foco-marca"
-              />
-            )}
-
-            {/* Filtros por faceta (09-08-2026), lado a lado - 1+ dropdowns,
-                cada um só aparece se houver mais de 1 valor possível (com 1
-                só, filtrar não faria diferença nenhuma). O ref cobre TODAS
-                juntas (ver useEffect de clicar fora, acima) - clicar no
-                botão de uma enquanto outra está aberta só troca qual está
-                aberta, não fecha as duas. */}
-            {(filtrosFacetados ?? []).length > 0 && (
-              <div className="flex items-center gap-3 flex-wrap" ref={facetasRef}>
-                {(filtrosFacetados ?? []).map((faceta) => {
-                  const opcoes = opcoesPorFaceta[faceta.chave] ?? [];
-                  if (opcoes.length <= 1) {
-                    return null;
-                  }
-                  const selecionados = selecoesPorFaceta[faceta.chave] ?? [];
-                  const aberta = facetaAbertaChave === faceta.chave;
-
-                  return (
-                    <div key={faceta.chave} className="relative">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setFacetaAbertaChave((atual) => (atual === faceta.chave ? null : faceta.chave))
-                        }
-                        className="btn btn-secondary text-sm flex items-center gap-2"
-                      >
-                        <i className="fa-solid fa-filter"></i>
-                        {faceta.rotulo}
-                        {selecionados.length > 0 ? (
-                          <span className="badge badge-sucesso">{selecionados.length}</span>
-                        ) : (
-                          <span className="texto-fraco font-normal">(Todos)</span>
-                        )}
-                        <i className="fa-solid fa-chevron-down text-xs"></i>
-                      </button>
-
-                      {aberta && (
-                        <div className="absolute left-0 mt-1 w-56 fundo-cartao border borda-padrao rounded-lg shadow-lg z-20 overflow-hidden">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              atualizarParametros({ [faceta.chave]: null, pagina: null });
-                            }}
-                            className="dropdown-opcao"
-                          >
-                            Todos
-                            {selecionados.length === 0 && <i className="fa-solid fa-check texto-sucesso"></i>}
-                          </button>
-                          <div className="max-h-64 overflow-y-auto">
-                            {opcoes.map((opcao) => {
-                              const marcado = selecionados.includes(opcao);
-                              const alternar = () => {
-                                const novoValor = marcado
-                                  ? selecionados.filter((valor) => valor !== opcao)
-                                  : [...selecionados, opcao];
-                                atualizarParametros({
-                                  [faceta.chave]: novoValor.length > 0 ? novoValor.join(',') : null,
-                                  pagina: null,
-                                });
-                              };
-                              return (
-                                // Clique na linha toda alterna, não só na
-                                // caixinha (09-08-2026, achado do Lucas:
-                                // "clico em qualquer coisa que não seja o
-                                // quadradinho e não faz nada"). 2 casos,
-                                // tratados diferente de propósito: clique
-                                // DIRETO na caixinha deixa o navegador fazer
-                                // o que já sabe fazer sozinho (onChange do
-                                // <input>, ver abaixo) - é o jeito mais
-                                // confiável de manter o visual sincronizado,
-                                // sem gambiarra. Clique no TEXTO (o alvo não
-                                // é o <input>) chama `alternar()` aqui e
-                                // cancela o encaminhamento nativo pro
-                                // <input> por baixo (preventDefault) - sem
-                                // isso, o clique alternaria a caixinha 2x
-                                // (uma vez aqui, outra pelo encaminhamento)
-                                // e cancelaria a mudança.
-                                <label
-                                  key={opcao}
-                                  className="combobox-opcao"
-                                  onClick={(evento) => {
-                                    if (
-                                      evento.target instanceof Element &&
-                                      evento.target.tagName !== 'INPUT'
-                                    ) {
-                                      evento.preventDefault();
-                                      alternar();
-                                    }
-                                  }}
-                                >
-                                  <input type="checkbox" checked={marcado} onChange={alternar} />
-                                  {faceta.rotulos?.[opcao] ?? opcao}
-                                </label>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
+      {!carregando && (
+        <BarraFiltros
+          mostrarBusca={linhas.length > LIMIAR_FILTRO}
+          valorBusca={filtro}
+          aoMudarBusca={(valor) => atualizarParametros({ q: valor, pagina: null })}
+          facetas={(filtrosFacetados ?? []).map((faceta) => ({
+            chave: faceta.chave,
+            rotulo: faceta.rotulo,
+            opcoes: opcoesPorFaceta[faceta.chave] ?? [],
+            selecionados: selecoesPorFaceta[faceta.chave] ?? [],
+            rotulos: faceta.rotulos,
+            aoAlternar: (opcao) => {
+              const selecionados = selecoesPorFaceta[faceta.chave] ?? [];
+              const novoValor = selecionados.includes(opcao)
+                ? selecionados.filter((valor) => valor !== opcao)
+                : [...selecionados, opcao];
+              atualizarParametros({
+                [faceta.chave]: novoValor.length > 0 ? novoValor.join(',') : null,
+                pagina: null,
+              });
+            },
+            aoLimpar: () => atualizarParametros({ [faceta.chave]: null, pagina: null }),
+          }))}
+        />
+      )}
 
       {carregando ? (
         // Esqueleto em vez de texto "Carregando..." - padrão comum em
@@ -825,51 +700,32 @@ export function GenericTable<T extends Linha>({
                           fraquinho, só pra dar mais vida") - ver
                           .crud-tabela__acao--alterar/--excluir em
                           5-crud.css. Texto continua neutro nos dois casos.
-                          Texto em <span> próprio (não solto ao lado do
-                          <i>) - precisa de um elemento pra sumir sozinho
-                          via CSS quando a coluna aperta; `aria-label` no
-                          <Link> garante que o botão continua tendo nome
-                          acessível pra leitor de tela mesmo com o texto
-                          escondido (display:none tira do texto da árvore
-                          de acessibilidade também, não só da tela).
-                          `.crud-tabela__acao-dica` (18-08-2026, pedido da
-                          Alexia: "ao passar o mouse por cima dos ícones de
-                          ação, queria que aparecesse o texto da ação") -
-                          mesmo mecanismo CSS puro (:hover/:focus) do
-                          Tooltip em components/layout/tooltip.tsx, só que
-                          aplicado direto no próprio link de ação em vez de
-                          um "ⓘ" à parte (não faria sentido aqui: o ícone
-                          JÁ é o elemento clicável). Sem `title=` nativo de
-                          propósito - os dois juntos mostrariam 2 dicas
-                          sobrepostas. */}
+                          Ordem de exibição É FIXA (alterar → consultar →
+                          excluir), independente da ordem das chaves em
+                          `acoes` - só a PRESENÇA da chave decide se o botão
+                          aparece. */}
                       <div className="crud-tabela__acoes">
-                        {acoes.includes('alterar') && (
+                        {aoAlterarLinha && (
                           <AcaoLinha
                             rotulo="Alterar"
                             icone="fa-pen"
                             variante="alterar"
-                            {...(aoAlterar
-                              ? { onClick: () => aoAlterar(linha) }
-                              : { to: `${rotaBase}/${String(linha[chavePrimaria])}/alterar` })}
+                            onClick={() => aoAlterarLinha(linha)}
                           />
                         )}
-                        {acoes.includes('consultar') && (
+                        {aoConsultarLinha && (
                           <AcaoLinha
                             rotulo="Consultar"
                             icone="fa-eye"
-                            {...(aoConsultar
-                              ? { onClick: () => aoConsultar(linha) }
-                              : { to: `${rotaBase}/${String(linha[chavePrimaria])}/consultar` })}
+                            onClick={() => aoConsultarLinha(linha)}
                           />
                         )}
-                        {acoes.includes('excluir') && (
+                        {aoExcluirLinha && (
                           <AcaoLinha
                             rotulo="Excluir"
                             icone="fa-trash"
                             variante="excluir"
-                            {...(aoExcluir
-                              ? { onClick: () => aoExcluir(linha) }
-                              : { to: `${rotaBase}/${String(linha[chavePrimaria])}/excluir` })}
+                            onClick={() => aoExcluirLinha(linha)}
                           />
                         )}
                       </div>
@@ -890,57 +746,19 @@ export function GenericTable<T extends Linha>({
           </table>
           </div>
 
-          {linhasOrdenadas.length > TAMANHOS_PAGINA[0] && (
-            <div className="flex items-center justify-between flex-wrap gap-3 mt-3 text-sm texto-padrao">
-              <span>
-                Página {paginaAtual} de {totalPaginas} ({linhasOrdenadas.length} registros)
-              </span>
-              <div className="flex items-center gap-3">
-                <label className="flex items-center gap-2 text-xs font-semibold texto-padrao">
-                  Mostrar
-                  <select
-                    value={tamanhoPagina}
-                    onChange={(evento) => {
-                      const valor = evento.target.value;
-                      atualizarParametros({
-                        tamanho: valor === String(TAMANHOS_PAGINA[0]) ? null : valor,
-                        pagina: null,
-                      });
-                    }}
-                    className="border borda-padrao rounded-md fundo-sutil py-1 px-2 text-xs outline-none foco-marca"
-                  >
-                    {TAMANHOS_PAGINA.map((tamanho) => (
-                      <option key={tamanho} value={tamanho}>
-                        {tamanho === 'todos' ? 'Todos' : tamanho}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => {
-                      const alvo = Math.max(1, paginaAtual - 1);
-                      atualizarParametros({ pagina: alvo === 1 ? null : alvo });
-                    }}
-                    disabled={paginaAtual === 1}
-                    className="btn btn-secondary"
-                  >
-                    Anterior
-                  </button>
-                  <button
-                    onClick={() => {
-                      const alvo = Math.min(totalPaginas, paginaAtual + 1);
-                      atualizarParametros({ pagina: alvo === 1 ? null : alvo });
-                    }}
-                    disabled={paginaAtual === totalPaginas}
-                    className="btn btn-secondary"
-                  >
-                    Próxima
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+          <RodapePaginacao
+            total={linhasOrdenadas.length}
+            paginaAtual={paginaAtual}
+            totalPaginas={totalPaginas}
+            tamanhoPagina={tamanhoPagina}
+            aoMudarPagina={(alvo) => atualizarParametros({ pagina: alvo === 1 ? null : alvo })}
+            aoMudarTamanho={(tamanho) =>
+              atualizarParametros({
+                tamanho: tamanho === TAMANHOS_PAGINA[0] ? null : String(tamanho),
+                pagina: null,
+              })
+            }
+          />
         </>
       )}
 

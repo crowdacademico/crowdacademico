@@ -8,6 +8,7 @@
 import { useState } from 'react';
 import { API_BASE_URL } from '../../services/constant/constants/api.constants';
 import { paginarClientSide } from '../../services/constant/utils/paginacao.util';
+import { RodapePaginacao } from '../../components/pagination/rodape-paginacao';
 import { useCampoTestes } from '../../services/campo-testes/hook/use-campo-testes';
 import type { RegistroChamada } from '../../services/campo-testes/context/campo-testes-context';
 
@@ -21,8 +22,6 @@ function formatarPrevia(corpo: unknown): string {
   const texto = JSON.stringify(corpo);
   return texto.length > 120 ? `${texto.slice(0, 120)}...` : texto;
 }
-
-const TAMANHOS_PAGINA = [10, 20, 30, 'todos'] as const;
 
 function montarCurl(chamada: RegistroChamada): string {
   const partes = [`curl -X ${chamada.metodo} '${API_BASE_URL}${chamada.caminho}'`, `-H 'Content-Type: application/json'`];
@@ -100,7 +99,7 @@ export function RegistroChamadas() {
                 </span>
                 <span>{chamada.status}</span>
                 <span>{chamada.ms}ms</span>
-                <span title={formatarPrevia(chamada.corpoRecebido)}>{formatarPrevia(chamada.corpoRecebido)}</span>
+                <span>{formatarPrevia(chamada.corpoRecebido)}</span>
               </div>
 
               {linhaExpandida === chamada.id && (
@@ -130,51 +129,17 @@ export function RegistroChamadas() {
             </div>
           ))}
 
-          {registroChamadas.length > TAMANHOS_PAGINA[0] && (
-            <div className="flex items-center justify-between flex-wrap gap-3 mt-3 text-sm texto-padrao">
-              <span>
-                Página {paginaAtual} de {totalPaginas} ({registroChamadas.length} registros)
-              </span>
-              <div className="flex items-center gap-3">
-                <label className="flex items-center gap-2 text-xs font-semibold texto-padrao">
-                  Mostrar
-                  <select
-                    value={tamanhoPagina}
-                    onChange={(evento) => {
-                      const valor = evento.target.value;
-                      setTamanhoPagina(valor === 'todos' ? 'todos' : Number(valor));
-                      setPagina(1);
-                    }}
-                    className="border borda-padrao rounded-md fundo-sutil py-1 px-2 text-xs outline-none foco-marca"
-                  >
-                    {TAMANHOS_PAGINA.map((tamanho) => (
-                      <option key={tamanho} value={tamanho}>
-                        {tamanho === 'todos' ? 'Todos' : tamanho}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setPagina((atual) => Math.max(1, atual - 1))}
-                    disabled={paginaAtual === 1}
-                    className="btn btn-secondary"
-                  >
-                    Anterior
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPagina((atual) => Math.min(totalPaginas, atual + 1))}
-                    disabled={paginaAtual === totalPaginas}
-                    className="btn btn-secondary"
-                  >
-                    Próxima
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+          <RodapePaginacao
+            total={registroChamadas.length}
+            paginaAtual={paginaAtual}
+            totalPaginas={totalPaginas}
+            tamanhoPagina={tamanhoPagina}
+            aoMudarPagina={setPagina}
+            aoMudarTamanho={(tamanho) => {
+              setTamanhoPagina(tamanho);
+              setPagina(1);
+            }}
+          />
         </div>
       )}
     </div>

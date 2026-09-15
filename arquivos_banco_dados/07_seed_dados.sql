@@ -188,6 +188,12 @@ INSERT INTO permissao (nome) VALUES
 -- perfil de pesquisador em nome de OUTRA pessoa (achado testando a Bancada
 -- do Pesquisador, Campo de Testes).
 ('perfil_pesquisador_criar_para_outro'),
+-- ADICIONADA (14-09-2026) - gate de alterar_perfil_pesquisador_de_outro()
+-- (03, [03-U]). Achado rodando o painel de verdade ("Cannot PATCH
+-- /perfil-pesquisador/1"): o modal de Alterar Usuário sempre tentava
+-- salvar vínculo/título acadêmico de quem está sendo editado, mas não
+-- existia rota nem permissão pra isso - só o self-service.
+('perfil_pesquisador_alterar_de_outro'),
 -- Campo de Testes (08-09-2026): Admin criar campanha em nome de outro
 -- pesquisador (mesma classe de perfil_pesquisador_criar_para_outro,
 -- acima) e excluir campanha à força, ignorando status (limpeza de dado
@@ -292,6 +298,7 @@ WHERE (p.nome, perm.nome) IN (
     ('admin', 'perfil_pesquisador_visualizar_sensivel'),
     ('admin', 'perfil_pesquisador_corrigir_cpf'),
     ('admin', 'perfil_pesquisador_criar_para_outro'),
+    ('admin', 'perfil_pesquisador_alterar_de_outro'),
     ('admin', 'campanha_criar_para_outro'),
     ('admin', 'campanha_excluir_forcado'),
     ('admin', 'termos_uso_gerenciar'),

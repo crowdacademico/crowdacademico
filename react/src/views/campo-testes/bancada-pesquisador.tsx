@@ -5,8 +5,9 @@
 // sistema (nunca uma versão simplificada à parte).
 // ============================================================================
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { AcaoLinha } from '../../components/crud/acao-linha';
+import { Dica } from '../../components/layout/tooltip';
 import { perfilPesquisadorApi } from '../../services/6-perfil-pesquisador/api/perfil-pesquisador.api';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { usuarioPapelApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
@@ -14,8 +15,10 @@ import { ORDEM_PODER_PAPEL, PAPEL_SEM_EXTRA } from '../../services/2-papel-permi
 import { PESQUISADOR_BLOQUEADO, motivoBloqueioPesquisador } from '../../services/campo-testes/util/registros-bloqueados';
 import { gerarCpfValido } from '../../services/campo-testes/util/gerar-cpf-valido';
 import { useCampoTestes } from '../../services/campo-testes/hook/use-campo-testes';
-import { useFecharAoClicarFora } from '../../services/constant/hook/use-fechar-ao-clicar-fora';
 import { paginarClientSide } from '../../services/constant/utils/paginacao.util';
+import { RodapePaginacao } from '../../components/pagination/rodape-paginacao';
+import { BarraFiltros } from '../../components/search/barra-filtros';
+import { LIMIAR_FILTRO } from '../../components/search/limiar-filtro.constants';
 import {
   ROTULO_STATUS_PESQUISADOR,
   ROTULO_TITULO_ACADEMICO,
@@ -26,9 +29,6 @@ import { RegistroChamadas } from './registro-chamadas';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { UsuarioResponse } from '../../services/1-usuario/type/usuario.type';
 import type { PerfilPesquisadorResponse } from '../../services/6-perfil-pesquisador/type/perfil-pesquisador.type';
-
-const TAMANHOS_PAGINA = [10, 20, 30, 'todos'] as const;
-const LIMIAR_FILTRO = 5;
 
 // Perfil ainda pode não existir pra um usuário (upgrade nunca feito) -
 // por isso os campos de PerfilPesquisadorResponse ficam todos opcionais
@@ -95,8 +95,6 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
   // outro filtro por papel do painel (ex.: /admin/usuarios), o padrão
   // continua sendo "Todos".
   const [papeisSelecionados, setPapeisSelecionados] = useState<string[]>([PAPEL_SEM_EXTRA, 'pesquisador']);
-  const [facetaPapelAberta, setFacetaPapelAberta] = useState(false);
-  const facetaPapelRef = useRef<HTMLDivElement>(null);
 
   // Qual modal está aberto - o conteúdo de cada um vive em modal-usuario.tsx
   // (compartilhado com o CRUD real de Usuário), aqui só se guarda QUEM.
@@ -160,10 +158,6 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
     carregarPesquisadores();
   }, [carregarPesquisadores]);
 
-  // Fechar o dropdown "Papel" ao clicar fora (mesmo padrão de
-  // GenericTable, extraído em `useFecharAoClicarFora` em 13-09-2026).
-  useFecharAoClicarFora(facetaPapelRef, facetaPapelAberta, () => setFacetaPapelAberta(false));
-
   // Opções do dropdown "Papel" - só os valores que já aparecem nos dados
   // (mesmo sniff de GenericTable), ordenados do menor pro maior poder.
   const opcoesPapel = [...new Set(pesquisadores.flatMap((perfil) => perfil.papel.split(', ').filter(Boolean)))].sort((a, b) => {
@@ -218,81 +212,32 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
         </div>
       </div>
 
-      {(pesquisadores.length > LIMIAR_FILTRO || opcoesPapel.length > 1) && (
-        <div className="flex items-center gap-3 flex-wrap mb-3">
-          {pesquisadores.length > LIMIAR_FILTRO && (
-            <input
-              type="search"
-              placeholder="Filtrar..."
-              value={filtroTexto}
-              onChange={(evento) => {
-                setFiltroTexto(evento.target.value);
-                setPagina(1);
-              }}
-              className="w-full sm:w-64 border borda-forte rounded-lg fundo-sutil py-2 px-3 text-sm outline-none foco-marca"
-            />
-          )}
-
-          {opcoesPapel.length > 1 && (
-            <div className="relative" ref={facetaPapelRef}>
-              <button
-                type="button"
-                onClick={() => setFacetaPapelAberta((atual) => !atual)}
-                className="btn btn-secondary text-sm flex items-center gap-2"
-              >
-                <i className="fa-solid fa-filter"></i>
-                Papel
-                {papeisSelecionados.length > 0 ? (
-                  <span className="badge badge-sucesso">{papeisSelecionados.length}</span>
-                ) : (
-                  <span className="texto-fraco font-normal">(Todos)</span>
-                )}
-                <i className="fa-solid fa-chevron-down text-xs"></i>
-              </button>
-
-              {facetaPapelAberta && (
-                <div className="absolute left-0 mt-1 w-56 fundo-cartao border borda-padrao rounded-lg shadow-lg z-20 overflow-hidden">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPapeisSelecionados([]);
-                      setPagina(1);
-                    }}
-                    className="dropdown-opcao"
-                  >
-                    Todos
-                    {papeisSelecionados.length === 0 && <i className="fa-solid fa-check texto-sucesso"></i>}
-                  </button>
-                  <div className="max-h-64 overflow-y-auto">
-                    {opcoesPapel.map((papel) => {
-                      const marcado = papeisSelecionados.includes(papel);
-                      const alternar = () => {
-                        setPapeisSelecionados((atuais) => (marcado ? atuais.filter((p) => p !== papel) : [...atuais, papel]));
-                        setPagina(1);
-                      };
-                      return (
-                        <label
-                          key={papel}
-                          className="combobox-opcao"
-                          onClick={(evento) => {
-                            if (evento.target instanceof Element && evento.target.tagName !== 'INPUT') {
-                              evento.preventDefault();
-                              alternar();
-                            }
-                          }}
-                        >
-                          <input type="checkbox" checked={marcado} onChange={alternar} />
-                          {papel}
-                        </label>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
+      <BarraFiltros
+        mostrarBusca={pesquisadores.length > LIMIAR_FILTRO}
+        valorBusca={filtroTexto}
+        aoMudarBusca={(valor) => {
+          setFiltroTexto(valor);
+          setPagina(1);
+        }}
+        facetas={[
+          {
+            chave: 'papel',
+            rotulo: 'Papel',
+            opcoes: opcoesPapel,
+            selecionados: papeisSelecionados,
+            aoAlternar: (papel) => {
+              setPapeisSelecionados((atuais) =>
+                atuais.includes(papel) ? atuais.filter((p) => p !== papel) : [...atuais, papel],
+              );
+              setPagina(1);
+            },
+            aoLimpar: () => {
+              setPapeisSelecionados([]);
+              setPagina(1);
+            },
+          },
+        ]}
+      />
 
       <table className="crud-tabela mb-4">
         <thead>
@@ -361,17 +306,19 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
                         type="button"
                         onClick={() => setIdUsuarioUpgrade(perfil.idUsuario)}
                         disabled={bloqueado}
-                        title="Fazer upgrade de perfil pra pesquisador"
                         aria-label="Fazer upgrade de perfil pra pesquisador"
+                        className="dica"
                       >
                         <i className="fa-solid fa-lock texto-aviso"></i>
+                        <Dica texto="Fazer upgrade de perfil pra pesquisador" curta />
                       </button>
                     )}
                   </td>
                   <td className="crud-tabela__celula--centralizada">
                     {bloqueado ? (
-                      <span title={motivoBloqueioPesquisador()}>
+                      <span className="dica" tabIndex={0} role="note" aria-label={motivoBloqueioPesquisador()}>
                         <i className="fa-solid fa-lock"></i> bloqueado
+                        <Dica texto={motivoBloqueioPesquisador()} />
                       </span>
                     ) : (
                       <div className="crud-tabela__acoes">
@@ -401,51 +348,18 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
         </tbody>
       </table>
 
-      {pesquisadoresFiltrados.length > TAMANHOS_PAGINA[0] && (
-        <div className="flex items-center justify-between flex-wrap gap-3 mt-3 mb-4 text-sm texto-padrao">
-          <span>
-            Página {paginaAtual} de {totalPaginas} ({pesquisadoresFiltrados.length} registros)
-          </span>
-          <div className="flex items-center gap-3">
-            <label className="flex items-center gap-2 text-xs font-semibold texto-padrao">
-              Mostrar
-              <select
-                value={tamanhoPagina}
-                onChange={(evento) => {
-                  const valor = evento.target.value;
-                  setTamanhoPagina(valor === 'todos' ? 'todos' : Number(valor));
-                  setPagina(1);
-                }}
-                className="border borda-padrao rounded-md fundo-sutil py-1 px-2 text-xs outline-none foco-marca"
-              >
-                {TAMANHOS_PAGINA.map((tamanho) => (
-                  <option key={tamanho} value={tamanho}>
-                    {tamanho === 'todos' ? 'Todos' : tamanho}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setPagina((atual) => Math.max(1, atual - 1))}
-                disabled={paginaAtual === 1}
-                className="btn btn-secondary"
-              >
-                Anterior
-              </button>
-              <button
-                type="button"
-                onClick={() => setPagina((atual) => Math.min(totalPaginas, atual + 1))}
-                disabled={paginaAtual === totalPaginas}
-                className="btn btn-secondary"
-              >
-                Próxima
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <RodapePaginacao
+        total={pesquisadoresFiltrados.length}
+        paginaAtual={paginaAtual}
+        totalPaginas={totalPaginas}
+        tamanhoPagina={tamanhoPagina}
+        className="mb-4"
+        aoMudarPagina={setPagina}
+        aoMudarTamanho={(tamanho) => {
+          setTamanhoPagina(tamanho);
+          setPagina(1);
+        }}
+      />
 
       {idUsuarioConsultando !== null && (
         <ModalConsultarUsuario

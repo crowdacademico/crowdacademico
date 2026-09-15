@@ -66,15 +66,22 @@ export const perfilPesquisadorApi = {
       method: 'POST',
       body: JSON.stringify(dados),
     }).then(tratarResposta<PerfilPesquisadorResponse>),
+  // PATCH /perfil-pesquisador/:id (14-09-2026) - rota separada do
+  // self-service (PATCH /perfil-pesquisador, sem id, sempre a própria
+  // conta) - achado rodando o painel de verdade: essa rota nunca tinha
+  // sido implementada no backend ("Cannot PATCH /perfil-pesquisador/1"),
+  // mesmo o modal de Alterar Usuário já chamando ela desde 13-09-2026.
+  // `Promise<void>` (204), não `PerfilPesquisadorResponse` - o único
+  // chamador (modal-usuario.tsx) descarta o retorno e recarrega a lista.
   atualizar: (
     authFetch: AuthFetch,
     id: number | string,
     dados: PerfilPesquisadorRequestUpdate,
-  ): Promise<PerfilPesquisadorResponse> =>
+  ): Promise<void> =>
     authFetch(`/perfil-pesquisador/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(dados),
-    }).then(tratarResposta<PerfilPesquisadorResponse>),
+    }).then(tratarResposta<void>),
   // Endpoint separado do atualizar() acima, de propósito (07-09-2026,
   // RF-017) - correção de CPF é ação de suporte/admin
   // (perfil_pesquisador_corrigir_cpf), nunca um PATCH comum.

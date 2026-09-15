@@ -113,10 +113,10 @@
    disso, ver bancada-pesquisador.tsx). */
 /* overflow-x: hidden (não auto) - achado ao vivo (23-08-2026): a barra
    de rolagem não vinha da tabela em si (table-layout: fixed abaixo já
-   trava isso matematicamente), vinha da DICA de hover de
-   .crud-tabela__acao-dica (5-crud.css) - um balãozinho position:
-   absolute, invisível até passar o mouse, centralizado embaixo do
-   último botão (Remover). Centralizado + perto da borda direita = uma
+   trava isso matematicamente), vinha da DICA de hover (`.dica__bolha`,
+   4-componentes.css, era `.crud-tabela__acao-dica` em 5-crud.css) - um
+   balãozinho position: absolute, invisível até passar o mouse, centralizado
+   embaixo do último botão (Remover). Centralizado + perto da borda direita = uma
    fatia dele nasce fora da caixa, e isso sozinho já conta como overflow
    pra fins de scrollWidth, mesmo com opacity: 0. "auto" reagia a essa
    invisível criando barra; "hidden" simplesmente nunca deixa nascer

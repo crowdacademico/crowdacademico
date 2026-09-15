@@ -16,6 +16,68 @@
 
 
 -- ============================================================================
+-- 14-09-2026 (PATCH /perfil-pesquisador/:id de outra pessoa - achado no painel)
+--
+-- Achado rodando o painel admin de verdade: clicar em "Salvar" no modal de
+-- Alterar Usuário, editando alguém com perfil de pesquisador, dava
+-- "Cannot PATCH /perfil-pesquisador/1". O modal chama PATCH
+-- /perfil-pesquisador/:id pra salvar tipo de vínculo/vínculo institucional/
+-- título acadêmico de QUEM está sendo editado, desde 13-09-2026 - mas essa
+-- rota nunca existiu no backend. Só existia PATCH /perfil-pesquisador (sem
+-- id, self-service, sempre a própria conta) e PATCH /perfil-pesquisador/:id/
+-- cpf (correção de CPF). Mesmo motivo de fundo de corrigir_cpf_pesquisador/
+-- criar_perfil_pesquisador_para_outro (já aplicados): pol_perfil_update (04)
+-- só libera UPDATE pro PRÓPRIO dono - um admin editando outra pessoa por
+-- UPDATE direto sempre resultaria em 0 linhas silenciosas.
+--
+-- Seguro rodar de novo? Sim - permissão usa ON CONFLICT (nome) DO NOTHING,
+-- CREATE OR REPLACE FUNCTION substitui sem duplicar, REVOKE/GRANT são
+-- idempotentes. A concessão pro papel 'admin' não precisa de INSERT
+-- explícito aqui - trg_admin_recebe_toda_permissao já concede
+-- automaticamente qualquer permissão nova assim que a linha é inserida.
+-- ============================================================================
+
+INSERT INTO permissao (nome) VALUES
+('perfil_pesquisador_alterar_de_outro')
+ON CONFLICT (nome) DO NOTHING;
+
+CREATE OR REPLACE FUNCTION public.alterar_perfil_pesquisador_de_outro(
+    p_id_usuario INT,
+    p_tipo_vinculo tipo_vinculo,
+    p_vinculo_institucional TEXT,
+    p_titulo_academico titulo_academico
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_linhas INT;
+BEGIN
+    IF NOT public.tem_permissao('perfil_pesquisador_alterar_de_outro') THEN
+        RAISE EXCEPTION 'Sem permissão para alterar perfil de pesquisador de outro usuário.';
+    END IF;
+
+    UPDATE perfil_pesquisador
+    SET tipo_vinculo = p_tipo_vinculo,
+        vinculo_institucional = CASE
+            WHEN p_tipo_vinculo = 'institucional' THEN p_vinculo_institucional
+            ELSE NULL
+        END,
+        titulo_academico = p_titulo_academico
+    WHERE id_usuario = p_id_usuario;
+
+    GET DIAGNOSTICS v_linhas = ROW_COUNT;
+    RETURN v_linhas > 0;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.alterar_perfil_pesquisador_de_outro(INT, tipo_vinculo, TEXT, titulo_academico) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.alterar_perfil_pesquisador_de_outro(INT, tipo_vinculo, TEXT, titulo_academico) TO app_nestjs;
+
+
+-- ============================================================================
 -- 25-08-2026 (Excluir campanha)
 
 

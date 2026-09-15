@@ -185,26 +185,19 @@
     border-left: none;
   }
 
-  /* Tooltip (components/layout/tooltip.tsx) - ícone "ⓘ" que revela uma
-     explicação curta ao passar o mouse ou focar via teclado. CSS puro
-     (:hover/:focus), sem JS controlando abrir/fechar. */
-  .tooltip {
+  /* Dica (components/layout/tooltip.tsx: exporta `Dica` + `Tooltip`) -
+     primitivo ÚNICO de hover-dica do sistema (14-09-2026, contra-prompt
+     Claude Web - fundiu este bloco com o extinto `.crud-tabela__acao-dica`
+     de 5-crud.css, que era quase idêntico: mesmo bottom: 135%, mesma cor,
+     mesmo z-index, mesma transition). `.dica` vai no GATILHO (qualquer
+     elemento - button, span, Link -, não só o ⓘ avulso); `.dica__bolha` é
+     o `<Dica>` soltado dentro dele. CSS puro (:hover/:focus), sem JS
+     controlando abrir/fechar. */
+  .dica {
     position: relative;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    margin-left: 0.35rem;
-    color: var(--cor-texto-fraco);
-    cursor: help;
   }
 
-  .tooltip:hover,
-  .tooltip:focus {
-    color: var(--cor-marca);
-    outline: none;
-  }
-
-  .tooltip__texto {
+  .dica__bolha {
     position: absolute;
     bottom: 135%;
     left: 50%;
@@ -233,8 +226,9 @@
     z-index: 20;
   }
 
-  .tooltip:hover .tooltip__texto,
-  .tooltip:focus .tooltip__texto {
+  .dica:hover .dica__bolha,
+  .dica:focus .dica__bolha,
+  .dica:focus-visible .dica__bolha {
     opacity: 1;
     visibility: visible;
   }
@@ -244,9 +238,34 @@
      topo de um container com overflow-hidden (pro rounded-xl não vazar
      canto quadrado) - a dica padrão (pra cima) nascia cortada pela borda
      arredondada. Esta variante abre pra baixo, dentro da área do cartão. */
-  .tooltip--baixo .tooltip__texto {
+  .dica__bolha--baixo {
     bottom: auto;
     top: 135%;
+  }
+
+  /* Variante --curta (14-09-2026, era `.crud-tabela__acao-dica`): rótulo
+     de 1 palavra (ações de tabela) - sem quebra de linha, padding menor
+     que a versão de texto explicativo. */
+  .dica__bolha--curta {
+    white-space: nowrap;
+    padding: 0.35rem 0.65rem;
+  }
+
+  /* Gatilho ⓘ avulso (ver `Tooltip` em tooltip.tsx) - visual só do ÍCONE,
+     a bolha em si usa `.dica__bolha` acima. */
+  .dica--info {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 0.35rem;
+    color: var(--cor-texto-fraco);
+    cursor: help;
+  }
+
+  .dica--info:hover,
+  .dica--info:focus {
+    color: var(--cor-marca);
+    outline: none;
   }
 
   /* Variante --clicavel (04-09-2026): o ícone também abre um modal ao
@@ -254,7 +273,7 @@
      padrão de <button> (fundo, borda, fonte) pra ficar visualmente
      idêntico à variante só-hover (<span>), só trocando o cursor de
      "help" pra "pointer", que é o sinal certo pra algo clicável. */
-  .tooltip--clicavel {
+  .dica--clicavel {
     background: none;
     border: none;
     padding: 0;

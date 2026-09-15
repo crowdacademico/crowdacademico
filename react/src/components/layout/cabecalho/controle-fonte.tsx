@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Dica } from '../tooltip';
 
 const CHAVE_LOCALSTORAGE = 'crowdacademico.escalaFonte';
 const ESCALA_PADRAO = 1;
@@ -52,20 +53,20 @@ export function ControleFonte() {
         onClick={() => mudar(-PASSO)}
         disabled={escala <= ESCALA_MINIMA}
         aria-label="Diminuir fonte"
-        title="Diminuir fonte"
-        className="px-2.5 py-1.5 text-xs font-bold texto-padrao hover-fundo-sutil transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+        className="dica px-2.5 py-1.5 text-xs font-bold texto-padrao hover-fundo-sutil transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
       >
         A-
+        <Dica texto="Diminuir fonte" curta />
       </button>
       <button
         type="button"
         onClick={() => mudar(PASSO)}
         disabled={escala >= ESCALA_MAXIMA}
         aria-label="Aumentar fonte"
-        title="Aumentar fonte"
-        className="px-2.5 py-1.5 text-xs font-bold texto-padrao hover-fundo-sutil transition-colors border-l borda-forte disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+        className="dica px-2.5 py-1.5 text-xs font-bold texto-padrao hover-fundo-sutil transition-colors border-l borda-forte disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
       >
         A+
+        <Dica texto="Aumentar fonte" curta />
       </button>
     </div>
   );

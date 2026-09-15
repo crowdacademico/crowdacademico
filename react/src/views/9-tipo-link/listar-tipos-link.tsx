@@ -1,6 +1,7 @@
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { GenericTable } from '../../components/crud/generic-table';
 import { BlocoLogAuditoria } from '../../components/crud/bloco-log-auditoria';
+import { useCrudModais } from '../../services/constant/hook/use-crud-modais';
 import { tipoLinkApi } from '../../services/9-tipo-link/api/tipo-link.api';
 import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
 import { ModalCriarTipoLink } from './modal-criar-tipo-link';
@@ -13,12 +14,20 @@ import type { TipoLinkResponse } from '../../services/9-tipo-link/type/tipo-link
 // EM MODAL (14-09-2026, continuação da migração CRUD→Modal pedida pelo
 // Lucas) - mesmo padrão de listar-usuarios.tsx/listar-motivos-denuncia.tsx.
 export function ListarTiposLink({ auth }: PropsPagina) {
-  const [criando, setCriando] = useState(false);
-  const [alterando, setAlterando] = useState<TipoLinkResponse | null>(null);
-  const [consultando, setConsultando] = useState<TipoLinkResponse | null>(null);
-  const [excluindo, setExcluindo] = useState<TipoLinkResponse | null>(null);
-  const [chaveRecarga, setChaveRecarga] = useState(0);
-  const recarregar = () => setChaveRecarga((atual) => atual + 1);
+  const {
+    criando,
+    abrirCriando,
+    fecharCriando,
+    alterando,
+    consultando,
+    excluindo,
+    fecharAlterando,
+    fecharConsultando,
+    fecharExcluindo,
+    chaveRecarga,
+    recarregar,
+    acoesCompletas,
+  } = useCrudModais<TipoLinkResponse>();
 
   const listarTipos = useCallback(
     () => tipoLinkApi.listar(auth.authFetch),
@@ -38,7 +47,7 @@ export function ListarTiposLink({ auth }: PropsPagina) {
       <GenericTable<TipoLinkResponse>
         titulo="Tipos de Link"
         acaoTopo={
-          <button type="button" className="btn btn-primary" onClick={() => setCriando(true)}>
+          <button type="button" className="btn btn-primary" onClick={abrirCriando}>
             Criar
           </button>
         }
@@ -67,34 +76,32 @@ export function ListarTiposLink({ auth }: PropsPagina) {
         ]}
         chavePrimaria="idTipolink"
         listar={listarTipos}
-        aoAlterar={setAlterando}
-        aoConsultar={setConsultando}
-        aoExcluir={setExcluindo}
+        acoes={acoesCompletas}
       />
       <BlocoLogAuditoria buscar={buscarLogTipos} campoRenomeio="nome" />
 
       {criando && (
-        <ModalCriarTipoLink auth={auth} aoFechar={() => setCriando(false)} aoCriado={recarregar} />
+        <ModalCriarTipoLink auth={auth} aoFechar={fecharCriando} aoCriado={recarregar} />
       )}
 
       {alterando && (
         <ModalAlterarTipoLink
           auth={auth}
           tipo={alterando}
-          aoFechar={() => setAlterando(null)}
+          aoFechar={fecharAlterando}
           aoAtualizado={recarregar}
         />
       )}
 
       {consultando && (
-        <ModalConsultarTipoLink tipo={consultando} aoFechar={() => setConsultando(null)} />
+        <ModalConsultarTipoLink tipo={consultando} aoFechar={fecharConsultando} />
       )}
 
       {excluindo && (
         <ModalExcluirTipoLink
           auth={auth}
           tipo={excluindo}
-          aoFechar={() => setExcluindo(null)}
+          aoFechar={fecharExcluindo}
           aoExcluido={recarregar}
         />
       )}

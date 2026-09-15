@@ -1,10 +1,32 @@
-// Ícone pequeno (ⓘ) que mostra `texto` ao passar o mouse (ou focar via
-// teclado, `tabIndex`) - pedido do Lucas pra explicar coisas não óbvias
-// direto na tela (ex.: por que um papel não aparece na matriz, por que um
-// botão está desativado), sem precisar de um parágrafo fixo ocupando espaço
-// o tempo todo. CSS puro (:hover/:focus em 4-componentes.css), sem estado
-// de React - não precisa fechar ao clicar fora nem nada parecido.
-// `baixo`: abre a dica PARA BAIXO em vez de para cima (padrão) - usar
+// Primitivo único de dica de hover do sistema (14-09-2026, contra-prompt
+// Claude Web - fundiu o que era `Tooltip`/`.tooltip__texto` com o que era
+// `.crud-tabela__acao-dica`, quase idênticos). Dois contratos diferentes
+// usam o MESMO mecanismo visual: dar nome a um controle (`Dica`, soltada
+// dentro de qualquer gatilho com a classe `dica`) e o ícone "ⓘ" avulso
+// (`Tooltip`, que por dentro é só um gatilho `.dica--info` + `<Dica>`).
+//
+// A bolha (`Dica`) é SEMPRE `aria-hidden` - `role="tooltip"` sem
+// `aria-describedby` apontando pra ele é inerte (achado do Claude Web:
+// nenhum leitor de tela faz nada com isso), então a role saiu e não volta
+// sem esse par. O nome acessível mora no GATILHO (`aria-label` ou texto
+// visível), nunca na bolha - é por isso que o texto da dica quase sempre É
+// o nome do controle ("Encerrar sessão"), não uma descrição adicional dele.
+interface DicaProps {
+  texto: string;
+  baixo?: boolean;
+  curta?: boolean;
+}
+
+export function Dica({ texto, baixo, curta }: DicaProps) {
+  const classe = 'dica__bolha' + (baixo ? ' dica__bolha--baixo' : '') + (curta ? ' dica__bolha--curta' : '');
+  return (
+    <span className={classe} aria-hidden="true">
+      {texto}
+    </span>
+  );
+}
+
+// `baixo` - abre a dica PARA BAIXO em vez de para cima (padrão) - usar
 // quando o ícone fica perto do topo de um cartão com `overflow-hidden`
 // (ex.: cabeçalho de grupo), senão a dica nasce cortada pela borda
 // arredondada do cartão, que corta qualquer coisa acima do ícone.
@@ -22,8 +44,7 @@ interface TooltipProps {
 }
 
 export function Tooltip({ texto, baixo = false, aoClicar }: TooltipProps) {
-  const classe =
-    'tooltip' + (baixo ? ' tooltip--baixo' : '') + (aoClicar ? ' tooltip--clicavel' : '');
+  const classe = 'dica dica--info' + (aoClicar ? ' dica--clicavel' : '');
   const Elemento = aoClicar ? 'button' : 'span';
 
   return (
@@ -32,11 +53,10 @@ export function Tooltip({ texto, baixo = false, aoClicar }: TooltipProps) {
       className={classe}
       tabIndex={aoClicar ? undefined : 0}
       onClick={aoClicar}
+      aria-label={texto}
     >
       <i className="fa-solid fa-circle-info" aria-hidden="true"></i>
-      <span className="tooltip__texto" role="tooltip">
-        {texto}
-      </span>
+      <Dica texto={texto} baixo={baixo} />
     </Elemento>
   );
 }

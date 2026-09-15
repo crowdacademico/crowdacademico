@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { GenericTable } from '../../components/crud/generic-table';
 import { BlocoLogAuditoria } from '../../components/crud/bloco-log-auditoria';
+import { useCrudModais } from '../../services/constant/hook/use-crud-modais';
 import {
   papelApi,
   papelPermissaoApi,
@@ -43,11 +44,17 @@ const ORDEM_IMPACTO = ['alto', 'médio', 'baixo', IMPACTO_NAO_CLASSIFICADO];
 // mesma ação, só que mais clara. Não sobrou nenhuma funcionalidade órfã:
 // tudo que o widget fazia, Alterar Usuário já faz.
 export function ListarPapeis({ auth }: PropsPagina) {
-  const [alterando, setAlterando] = useState<PapelResponse | null>(null);
-  const [consultando, setConsultando] = useState<PapelResponse | null>(null);
-  const [excluindo, setExcluindo] = useState<PapelResponse | null>(null);
-  const [chaveRecarga, setChaveRecarga] = useState(0);
-  const recarregar = () => setChaveRecarga((atual) => atual + 1);
+  const {
+    alterando,
+    consultando,
+    excluindo,
+    fecharAlterando,
+    fecharConsultando,
+    fecharExcluindo,
+    chaveRecarga,
+    recarregar,
+    acoesCompletas,
+  } = useCrudModais<PapelResponse>();
 
   const listarPapeis = useCallback(
     () => papelApi.listar(auth.authFetch),
@@ -119,9 +126,7 @@ export function ListarPapeis({ auth }: PropsPagina) {
           ]}
           chavePrimaria="idPapel"
           listar={listarPapeis}
-          aoAlterar={setAlterando}
-          aoConsultar={setConsultando}
-          aoExcluir={setExcluindo}
+          acoes={acoesCompletas}
         />
         {/* "De"/"Para" em vez de "Campos alterados" (09-08-2026, pedido do
             Lucas) - só "nome" muda em papel hoje (codigo é fixo), mas o
@@ -191,17 +196,17 @@ export function ListarPapeis({ auth }: PropsPagina) {
         <ModalAlterarPapel
           auth={auth}
           papel={alterando}
-          aoFechar={() => setAlterando(null)}
+          aoFechar={fecharAlterando}
           aoAtualizado={recarregar}
         />
       )}
 
       {consultando && (
-        <ModalConsultarPapel auth={auth} papel={consultando} aoFechar={() => setConsultando(null)} />
+        <ModalConsultarPapel auth={auth} papel={consultando} aoFechar={fecharConsultando} />
       )}
 
       {excluindo && (
-        <ModalExcluirPapel papel={excluindo} aoFechar={() => setExcluindo(null)} />
+        <ModalExcluirPapel papel={excluindo} aoFechar={fecharExcluindo} />
       )}
     </>
   );

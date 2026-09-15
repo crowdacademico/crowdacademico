@@ -1,6 +1,7 @@
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { GenericTable } from '../../components/crud/generic-table';
 import { BlocoLogAuditoria } from '../../components/crud/bloco-log-auditoria';
+import { useCrudModais } from '../../services/constant/hook/use-crud-modais';
 import { areaConhecimentoApi } from '../../services/8-area-conhecimento/api/area-conhecimento.api';
 import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
 import { ModalCriarAreaConhecimento } from './modal-criar-area-conhecimento';
@@ -18,12 +19,20 @@ import type { AreaConhecimentoResponse } from '../../services/8-area-conheciment
 // EM MODAL (14-09-2026, continuação da migração CRUD→Modal pedida pelo
 // Lucas) - mesmo padrão de listar-usuarios.tsx/listar-motivos-denuncia.tsx.
 export function ListarAreasConhecimento({ auth }: PropsPagina) {
-  const [criando, setCriando] = useState(false);
-  const [alterando, setAlterando] = useState<AreaConhecimentoResponse | null>(null);
-  const [consultando, setConsultando] = useState<AreaConhecimentoResponse | null>(null);
-  const [excluindo, setExcluindo] = useState<AreaConhecimentoResponse | null>(null);
-  const [chaveRecarga, setChaveRecarga] = useState(0);
-  const recarregar = () => setChaveRecarga((atual) => atual + 1);
+  const {
+    criando,
+    abrirCriando,
+    fecharCriando,
+    alterando,
+    consultando,
+    excluindo,
+    fecharAlterando,
+    fecharConsultando,
+    fecharExcluindo,
+    chaveRecarga,
+    recarregar,
+    acoesCompletas,
+  } = useCrudModais<AreaConhecimentoResponse>();
 
   // `nomePai` vem vazio pras 9 grandes áreas de verdade (topo da hierarquia
   // CNPq, sem pai nenhum) - "Base" (25-08-2026, pedido do Lucas) no lugar
@@ -65,7 +74,7 @@ export function ListarAreasConhecimento({ auth }: PropsPagina) {
       <GenericTable<AreaConhecimentoResponse>
         titulo="Áreas do Conhecimento"
         acaoTopo={
-          <button type="button" className="btn btn-primary" onClick={() => setCriando(true)}>
+          <button type="button" className="btn btn-primary" onClick={abrirCriando}>
             Criar
           </button>
         }
@@ -89,9 +98,7 @@ export function ListarAreasConhecimento({ auth }: PropsPagina) {
         ]}
         chavePrimaria="idAreaConhecimento"
         listar={listarAreas}
-        aoAlterar={setAlterando}
-        aoConsultar={setConsultando}
-        aoExcluir={setExcluindo}
+        acoes={acoesCompletas}
         // Escolher uma grande área de verdade no filtro mostra só as áreas
         // filhas dela. "Base" (25-08-2026) é a opção especial pras 9
         // grandes áreas em si (topo da hierarquia, sem pai) - antes elas
@@ -103,27 +110,27 @@ export function ListarAreasConhecimento({ auth }: PropsPagina) {
       <BlocoLogAuditoria buscar={buscarLogAreas} campoRenomeio="nome" />
 
       {criando && (
-        <ModalCriarAreaConhecimento auth={auth} aoFechar={() => setCriando(false)} aoCriado={recarregar} />
+        <ModalCriarAreaConhecimento auth={auth} aoFechar={fecharCriando} aoCriado={recarregar} />
       )}
 
       {alterando && (
         <ModalAlterarAreaConhecimento
           auth={auth}
           area={alterando}
-          aoFechar={() => setAlterando(null)}
+          aoFechar={fecharAlterando}
           aoAtualizado={recarregar}
         />
       )}
 
       {consultando && (
-        <ModalConsultarAreaConhecimento area={consultando} aoFechar={() => setConsultando(null)} />
+        <ModalConsultarAreaConhecimento area={consultando} aoFechar={fecharConsultando} />
       )}
 
       {excluindo && (
         <ModalExcluirAreaConhecimento
           auth={auth}
           area={excluindo}
-          aoFechar={() => setExcluindo(null)}
+          aoFechar={fecharExcluindo}
           aoExcluido={recarregar}
         />
       )}

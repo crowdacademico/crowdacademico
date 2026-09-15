@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AvatarUsuario } from '../../components/layout/avatar-usuario';
+import { Dica } from '../../components/layout/tooltip';
 import { SeletorFotoPerfil } from '../../components/input/seletor-foto-perfil';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
@@ -198,8 +199,7 @@ function BotaoVerFotoPerfil({ url, tamanho = 'text-base', badge = false }: Botao
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Abrir imagem em outra guia"
-        title="Abrir imagem em outra guia"
-        className="w-7 h-7 rounded-full flex items-center justify-center border-2 transition-opacity hover:opacity-80"
+        className="dica w-7 h-7 rounded-full flex items-center justify-center border-2 transition-opacity hover:opacity-80"
         style={{
           backgroundColor: 'var(--color-dark)',
           borderColor: 'var(--cor-fundo-cartao)',
@@ -207,6 +207,7 @@ function BotaoVerFotoPerfil({ url, tamanho = 'text-base', badge = false }: Botao
         }}
       >
         <i className="fa-solid fa-eye text-xs"></i>
+        <Dica texto="Abrir imagem em outra guia" curta />
       </a>
     );
   }
@@ -217,10 +218,10 @@ function BotaoVerFotoPerfil({ url, tamanho = 'text-base', badge = false }: Botao
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Abrir imagem em outra guia"
-      title='Abrir imagem em outra guia (no tamanho "máximo" - já reduzido pelo servidor, o original não é guardado)'
-      className={'texto-forte hover:opacity-70 transition-opacity shrink-0 ' + tamanho}
+      className={'dica texto-forte hover:opacity-70 transition-opacity shrink-0 ' + tamanho}
     >
       <i className="fa-solid fa-eye"></i>
+      <Dica texto='Abrir imagem em outra guia (no tamanho "máximo" - já reduzido pelo servidor, o original não é guardado)' />
     </a>
   );
 }
@@ -368,15 +369,15 @@ function PainelLinksAcademicos({ auth, idUsuario, tiposLink, aoRegistrarChamada 
                       </td>
                       <td className="crud-tabela__celula--centralizada">
                         <div className="crud-tabela__acoes">
-                          <button type="button" className="crud-tabela__acao crud-tabela__acao--escolher" onClick={salvarEdicaoLink} aria-label="Salvar">
+                          <button type="button" className="crud-tabela__acao crud-tabela__acao--escolher dica" onClick={salvarEdicaoLink} aria-label="Salvar">
                             <i className="fa-solid fa-check"></i>
                             <span className="crud-tabela__acao-texto">Salvar</span>
-                            <span className="crud-tabela__acao-dica" role="tooltip">Salvar</span>
+                            <Dica texto="Salvar" curta />
                           </button>
-                          <button type="button" className="crud-tabela__acao" onClick={() => setIdLinkEditando(null)} aria-label="Cancelar">
+                          <button type="button" className="crud-tabela__acao dica" onClick={() => setIdLinkEditando(null)} aria-label="Cancelar">
                             <i className="fa-solid fa-xmark"></i>
                             <span className="crud-tabela__acao-texto">Cancelar</span>
-                            <span className="crud-tabela__acao-dica" role="tooltip">Cancelar</span>
+                            <Dica texto="Cancelar" curta />
                           </button>
                         </div>
                       </td>
@@ -389,33 +390,33 @@ function PainelLinksAcademicos({ auth, idUsuario, tiposLink, aoRegistrarChamada 
                         <div className="crud-tabela__acoes">
                           <button
                             type="button"
-                            className="crud-tabela__acao crud-tabela__acao--alterar"
+                            className="crud-tabela__acao crud-tabela__acao--alterar dica"
                             onClick={() => iniciarEdicaoLink(link)}
                             aria-label="Alterar"
                           >
                             <i className="fa-solid fa-pen"></i>
                             <span className="crud-tabela__acao-texto">Alterar</span>
-                            <span className="crud-tabela__acao-dica" role="tooltip">Alterar</span>
+                            <Dica texto="Alterar" curta />
                           </button>
                           <button
                             type="button"
-                            className="crud-tabela__acao"
+                            className="crud-tabela__acao dica"
                             onClick={() => setLinkConsultado(link)}
                             aria-label="Consultar"
                           >
                             <i className="fa-solid fa-eye"></i>
                             <span className="crud-tabela__acao-texto">Consultar</span>
-                            <span className="crud-tabela__acao-dica" role="tooltip">Consultar</span>
+                            <Dica texto="Consultar" curta />
                           </button>
                           <button
                             type="button"
-                            className="crud-tabela__acao crud-tabela__acao--excluir"
+                            className="crud-tabela__acao crud-tabela__acao--excluir dica"
                             onClick={() => removerLink(link.idLinkAcademico)}
                             aria-label="Remover"
                           >
                             <i className="fa-solid fa-trash"></i>
                             <span className="crud-tabela__acao-texto">Remover</span>
-                            <span className="crud-tabela__acao-dica" role="tooltip">Remover</span>
+                            <Dica texto="Remover" curta />
                           </button>
                         </div>
                       </td>
@@ -667,10 +668,10 @@ export function ModalConsultarUsuario({ auth, idUsuario, aoFechar, aoRegistrarCh
                         type="button"
                         onClick={aoAlternarLogins}
                         aria-label="Ver logins anteriores"
-                        title="Ver logins anteriores"
-                        className="texto-fraco hover-texto-forte transition-colors shrink-0"
+                        className="dica texto-fraco hover-texto-forte transition-colors shrink-0"
                       >
                         <i className={'fa-solid fa-chevron-down transition-transform' + (loginsAbertos ? ' rotate-180' : '')}></i>
+                        <Dica texto="Ver logins anteriores" curta />
                       </button>
                     )
                   }
@@ -1230,10 +1231,10 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado, a
                                 type="button"
                                 onClick={() => aoReativarPapel(papel)}
                                 disabled={reativandoPapel === papel.idPapel}
-                                className="font-bold hover:underline disabled:opacity-50"
-                                title="Reativar agora"
+                                className="dica font-bold hover:underline disabled:opacity-50"
                               >
                                 {reativandoPapel === papel.idPapel ? '…' : 'reativar'}
+                                <Dica texto="Reativar agora" curta />
                               </button>
                             ) : (
                               <>
@@ -1242,19 +1243,21 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado, a
                                   onClick={() =>
                                     setPapelSuspendendoId((atual) => (atual === papel.idPapel ? null : papel.idPapel))
                                   }
-                                  className="texto-fraco hover-texto-forte"
-                                  title={`Suspender "${papel.nomePapel}" por um tempo`}
+                                  className="dica texto-fraco hover-texto-forte"
+                                  aria-label={`Suspender "${papel.nomePapel}" por um tempo`}
                                 >
                                   <i className="fa-solid fa-clock text-[10px]"></i>
+                                  <Dica texto={`Suspender "${papel.nomePapel}" por um tempo`} curta />
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => aoRevogarPapel(papel)}
                                   disabled={revogandoPapel === papel.idPapel}
-                                  className="texto-erro font-bold hover-texto-erro disabled:opacity-50"
-                                  title={`Revogar "${papel.nomePapel}"`}
+                                  className="dica texto-erro font-bold hover-texto-erro disabled:opacity-50"
+                                  aria-label={`Revogar "${papel.nomePapel}"`}
                                 >
                                   ×
+                                  <Dica texto={`Revogar "${papel.nomePapel}"`} curta />
                                 </button>
                               </>
                             )}

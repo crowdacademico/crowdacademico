@@ -1,6 +1,7 @@
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { GenericTable } from '../../components/crud/generic-table';
 import { BlocoLogAuditoria } from '../../components/crud/bloco-log-auditoria';
+import { useCrudModais } from '../../services/constant/hook/use-crud-modais';
 import { perfilPesquisadorApi } from '../../services/6-perfil-pesquisador/api/perfil-pesquisador.api';
 import {
   ROTULO_STATUS_PESQUISADOR,
@@ -36,11 +37,17 @@ interface PesquisadorLinha extends Omit<PerfilPesquisadorResponse, 'tituloAcadem
 // (página própria) já tinha sido apagada em 13-09-2026 por esse motivo;
 // Alterar/Excluir seguem o mesmo caminho agora.
 export function ListarPesquisadores({ auth }: PropsPagina) {
-  const [idConsultando, setIdConsultando] = useState<number | null>(null);
-  const [idAlterando, setIdAlterando] = useState<number | null>(null);
-  const [excluindo, setExcluindo] = useState<PesquisadorLinha | null>(null);
-  const [chaveRecarga, setChaveRecarga] = useState(0);
-  const recarregar = () => setChaveRecarga((atual) => atual + 1);
+  const {
+    alterando,
+    consultando,
+    excluindo,
+    fecharAlterando,
+    fecharConsultando,
+    fecharExcluindo,
+    chaveRecarga,
+    recarregar,
+    acoesCompletas,
+  } = useCrudModais<PesquisadorLinha>();
 
   const listarPesquisadores = useCallback(async (): Promise<PesquisadorLinha[]> => {
     const [pesquisadores, usuarios] = await Promise.all([
@@ -92,24 +99,22 @@ export function ListarPesquisadores({ auth }: PropsPagina) {
         ]}
         chavePrimaria="idUsuario"
         listar={listarPesquisadores}
-        aoAlterar={(linha) => setIdAlterando(linha.idUsuario)}
-        aoConsultar={(linha) => setIdConsultando(linha.idUsuario)}
-        aoExcluir={setExcluindo}
+        acoes={acoesCompletas}
         filtrosFacetados={[{ chave: 'statusPesquisador', rotulo: 'Status' }]}
       />
       <BlocoLogAuditoria buscar={buscarLogPerfil} />
 
-      {idAlterando !== null && (
+      {alterando && (
         <ModalAlterarUsuario
           auth={auth}
-          idUsuario={idAlterando}
-          aoFechar={() => setIdAlterando(null)}
+          idUsuario={alterando.idUsuario}
+          aoFechar={fecharAlterando}
           aoAtualizado={recarregar}
         />
       )}
 
-      {idConsultando !== null && (
-        <ModalConsultarUsuario auth={auth} idUsuario={idConsultando} aoFechar={() => setIdConsultando(null)} />
+      {consultando && (
+        <ModalConsultarUsuario auth={auth} idUsuario={consultando.idUsuario} aoFechar={fecharConsultando} />
       )}
 
       {excluindo && (
@@ -119,7 +124,7 @@ export function ListarPesquisadores({ auth }: PropsPagina) {
           nome={excluindo.nome}
           email={excluindo.email}
           emailVerificado={excluindo.emailVerificado}
-          aoFechar={() => setExcluindo(null)}
+          aoFechar={fecharExcluindo}
           aoExcluido={recarregar}
         />
       )}

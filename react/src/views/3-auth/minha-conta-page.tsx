@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router';
 import { AvatarUsuario } from '../../components/layout/avatar-usuario';
+import { Dica } from '../../components/layout/tooltip';
 import { SeletorFotoPerfil } from '../../components/input/seletor-foto-perfil';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
@@ -589,14 +590,15 @@ function AbaSeguranca({ auth }: AbaSegurancaProps) {
                       type="button"
                       onClick={() => aoEncerrarUma(sessao.idSessao)}
                       disabled={encerrando === sessao.idSessao}
-                      title="Encerrar sessão"
-                      className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center texto-erro hover-fundo-sutil transition-colors disabled:opacity-50"
+                      aria-label="Encerrar sessão"
+                      className="dica shrink-0 w-8 h-8 rounded-full flex items-center justify-center texto-erro hover-fundo-sutil transition-colors disabled:opacity-50"
                     >
                       <i
                         className={
                           'fa-solid text-sm ' + (encerrando === sessao.idSessao ? 'fa-spinner fa-spin' : 'fa-power-off')
                         }
                       ></i>
+                      <Dica texto="Encerrar sessão" curta />
                     </button>
                   )}
                 </li>

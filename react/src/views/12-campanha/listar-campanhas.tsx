@@ -100,8 +100,7 @@ export function ListarCampanhas({ auth }: PropsPagina) {
         ]}
         chavePrimaria="idCampanha"
         listar={listarCampanhas}
-        acoes={['consultar']}
-        aoConsultar={(linha) => setConsultandoId(linha.idCampanha)}
+        acoes={{ consultar: (linha) => setConsultandoId(linha.idCampanha) }}
         // "Área" (25-08-2026, pedido do Lucas: "tabela muito poluída") saiu
         // das colunas visíveis e virou filtro - o dado (`linha.area`)
         // continua vindo de listarCampanhas normalmente, filtro por faceta

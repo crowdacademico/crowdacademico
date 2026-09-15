@@ -263,6 +263,9 @@ REVOKE EXECUTE ON FUNCTION public.corrigir_cpf_pesquisador(INT, TEXT, TEXT) FROM
 -- criar_perfil_pesquisador_para_outro(...) - ADICIONADA (07-09-2026), ver
 -- [03-R] em 03_funcoes_seguranca.sql. Mesma higiene.
 REVOKE EXECUTE ON FUNCTION public.criar_perfil_pesquisador_para_outro(INT, TEXT, TEXT, tipo_vinculo, TEXT, titulo_academico) FROM PUBLIC;
+-- alterar_perfil_pesquisador_de_outro(...) - ADICIONADA (14-09-2026), ver
+-- [03-U] em 03_funcoes_seguranca.sql. Mesma higiene.
+REVOKE EXECUTE ON FUNCTION public.alterar_perfil_pesquisador_de_outro(INT, tipo_vinculo, TEXT, titulo_academico) FROM PUBLIC;
 -- criar_campanha_para_outro(...)/forcar_exclusao_campanha(INT) - ADICIONADAS
 -- (08-09-2026), ver [03-S]/[03-T] em 03_funcoes_seguranca.sql. Mesma higiene.
 REVOKE EXECUTE ON FUNCTION public.criar_campanha_para_outro(INT, INT, TEXT, modelo_campanha, DECIMAL, TEXT, TIMESTAMPTZ, TIMESTAMPTZ, TEXT) FROM PUBLIC;
@@ -287,6 +290,7 @@ GRANT EXECUTE ON FUNCTION public.reativar_pesquisador(INT)                TO app
 GRANT EXECUTE ON FUNCTION public.reativar_pesquisadores_vencidos()        TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.corrigir_cpf_pesquisador(INT, TEXT, TEXT) TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.criar_perfil_pesquisador_para_outro(INT, TEXT, TEXT, tipo_vinculo, TEXT, titulo_academico) TO app_nestjs;
+GRANT EXECUTE ON FUNCTION public.alterar_perfil_pesquisador_de_outro(INT, tipo_vinculo, TEXT, titulo_academico) TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.criar_campanha_para_outro(INT, INT, TEXT, modelo_campanha, DECIMAL, TEXT, TIMESTAMPTZ, TIMESTAMPTZ, TEXT) TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.forcar_exclusao_campanha(INT) TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.suspender_usuario(INT, TIMESTAMPTZ, TEXT)      TO app_nestjs;

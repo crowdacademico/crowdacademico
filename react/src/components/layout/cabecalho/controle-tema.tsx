@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Dica } from '../tooltip';
 
 type Tema = 'claro' | 'escuro' | 'sistema';
 
@@ -60,10 +61,10 @@ export function ControleTema() {
       type="button"
       onClick={proximoTema}
       aria-label={rotulo}
-      title={rotulo}
-      className="flex items-center justify-center w-9 h-9 borda-padrao border rounded-lg texto-padrao hover-fundo-sutil transition-colors"
+      className="dica flex items-center justify-center w-9 h-9 borda-padrao border rounded-lg texto-padrao hover-fundo-sutil transition-colors"
     >
       <i className={'fa-solid ' + icone}></i>
+      <Dica texto={rotulo} curta />
     </button>
   );
 }

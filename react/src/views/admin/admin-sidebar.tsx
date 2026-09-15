@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router';
 import { abrirBuscaGlobal } from '../../components/layout/cabecalho/busca-global-evento';
-import { Tooltip } from '../../components/layout/tooltip';
+import { Dica, Tooltip } from '../../components/layout/tooltip';
 import { GRUPOS_MENU_ADMIN } from './admin-menu.constants';
 
 // Menu lateral - coluna fixa a partir de 1377px (grid em .admin-shell,
@@ -101,15 +101,21 @@ export function AdminSidebar({ aberto, aoFechar }: AdminSidebarProps) {
             )}
             {grupo.itens.map((item) =>
               item.desabilitado ? (
-                <button
-                  key={item.rotulo}
-                  type="button"
-                  disabled
-                  className="admin-sidebar__item admin-sidebar__item--desabilitado"
-                  title="Ainda não implementado"
-                >
-                  <span>{item.rotulo}</span>
-                </button>
+                // Wrapper com `.dica` (não o <button> em si) - um <button
+                // disabled> não dispara :hover em CSS (o navegador tira o
+                // elemento do fluxo normal de eventos de mouse), então a
+                // dica precisa morar num elemento vizinho não-desabilitado
+                // pra funcionar (14-09-2026, contra-prompt Claude Web).
+                <span key={item.rotulo} className="dica">
+                  <button
+                    type="button"
+                    disabled
+                    className="admin-sidebar__item admin-sidebar__item--desabilitado"
+                  >
+                    <span>{item.rotulo}</span>
+                  </button>
+                  <Dica texto="Ainda não implementado" curta />
+                </span>
               ) : (
                 <NavLink
                   key={item.caminho}

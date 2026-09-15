@@ -1,6 +1,7 @@
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { GenericTable } from '../../components/crud/generic-table';
 import { BlocoLogAuditoria } from '../../components/crud/bloco-log-auditoria';
+import { useCrudModais } from '../../services/constant/hook/use-crud-modais';
 import { motivoDenunciaApi } from '../../services/10-motivo-denuncia/api/motivo-denuncia.api';
 import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
 import { ModalCriarMotivoDenuncia } from './modal-criar-motivo-denuncia';
@@ -25,12 +26,20 @@ const ORDEM_TIPO = ['campanha', 'perfil'];
 // modal-motivo-denuncia.tsx/modal-criar-motivo-denuncia.tsx, mesmo padrão
 // de listar-usuarios.tsx.
 export function ListarMotivosDenuncia({ auth }: PropsPagina) {
-  const [criando, setCriando] = useState(false);
-  const [alterando, setAlterando] = useState<MotivoDenunciaResponse | null>(null);
-  const [consultando, setConsultando] = useState<MotivoDenunciaResponse | null>(null);
-  const [excluindo, setExcluindo] = useState<MotivoDenunciaResponse | null>(null);
-  const [chaveRecarga, setChaveRecarga] = useState(0);
-  const recarregar = () => setChaveRecarga((atual) => atual + 1);
+  const {
+    criando,
+    abrirCriando,
+    fecharCriando,
+    alterando,
+    consultando,
+    excluindo,
+    fecharAlterando,
+    fecharConsultando,
+    fecharExcluindo,
+    chaveRecarga,
+    recarregar,
+    acoesCompletas,
+  } = useCrudModais<MotivoDenunciaResponse>();
 
   const listarMotivos = useCallback(
     () => motivoDenunciaApi.listar(auth.authFetch),
@@ -50,7 +59,7 @@ export function ListarMotivosDenuncia({ auth }: PropsPagina) {
       <GenericTable<MotivoDenunciaResponse>
         titulo="Motivos de Denúncia"
         acaoTopo={
-          <button type="button" className="btn btn-primary" onClick={() => setCriando(true)}>
+          <button type="button" className="btn btn-primary" onClick={abrirCriando}>
             Criar
           </button>
         }
@@ -62,9 +71,7 @@ export function ListarMotivosDenuncia({ auth }: PropsPagina) {
         ]}
         chavePrimaria="idMotivo"
         listar={listarMotivos}
-        aoAlterar={setAlterando}
-        aoConsultar={setConsultando}
-        aoExcluir={setExcluindo}
+        acoes={acoesCompletas}
         // Filtro por faceta (campanha/perfil) - pensado pro caso de uso
         // concreto de achar rápido, entre os ~12 motivos seedados, só os
         // de um tipo (mesma ideia do filtro de papel em ListarUsuarios).
@@ -73,27 +80,27 @@ export function ListarMotivosDenuncia({ auth }: PropsPagina) {
       <BlocoLogAuditoria buscar={buscarLogMotivos} campoRenomeio="descricao" />
 
       {criando && (
-        <ModalCriarMotivoDenuncia auth={auth} aoFechar={() => setCriando(false)} aoCriado={recarregar} />
+        <ModalCriarMotivoDenuncia auth={auth} aoFechar={fecharCriando} aoCriado={recarregar} />
       )}
 
       {alterando && (
         <ModalAlterarMotivoDenuncia
           auth={auth}
           motivo={alterando}
-          aoFechar={() => setAlterando(null)}
+          aoFechar={fecharAlterando}
           aoAtualizado={recarregar}
         />
       )}
 
       {consultando && (
-        <ModalConsultarMotivoDenuncia motivo={consultando} aoFechar={() => setConsultando(null)} />
+        <ModalConsultarMotivoDenuncia motivo={consultando} aoFechar={fecharConsultando} />
       )}
 
       {excluindo && (
         <ModalExcluirMotivoDenuncia
           auth={auth}
           motivo={excluindo}
-          aoFechar={() => setExcluindo(null)}
+          aoFechar={fecharExcluindo}
           aoExcluido={recarregar}
         />
       )}

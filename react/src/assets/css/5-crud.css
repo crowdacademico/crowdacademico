@@ -300,39 +300,10 @@
     border-radius: var(--radius-full);
   }
 
-  /* Dica ao passar o mouse (18-08-2026, pedido da Alexia) - mesmo visual
-     de .tooltip__texto (components/layout/tooltip.tsx / 4-componentes.css:
-     pílula escura, acima do elemento, fade puro em CSS), reimplementada
-     aqui em vez de reaproveitar a classe: `.tooltip` tem `cursor: help` e
-     `margin-left` pensados pro ícone "ⓘ" avulso, errados pra um link de
-     ação de verdade (cursor precisa continuar `pointer`, sem margem
-     empurrando o ícone). `pointer-events: none` - sem isso, a dica ficaria
-     "no caminho" do clique quando aparece bem em cima do ícone. */
-  .crud-tabela__acao-dica {
-    position: absolute;
-    bottom: 135%;
-    left: 50%;
-    transform: translateX(-50%);
-    background-color: var(--cor-escura);
-    color: var(--color-white);
-    padding: 0.35rem 0.65rem;
-    border-radius: var(--radius-sm);
-    font-size: var(--font-size-xs);
-    font-weight: 500;
-    white-space: nowrap;
-    box-shadow: var(--shadow-md);
-    opacity: 0;
-    visibility: hidden;
-    transition: var(--transition-normal);
-    pointer-events: none;
-    z-index: 20;
-  }
-
-  .crud-tabela__acao:hover .crud-tabela__acao-dica,
-  .crud-tabela__acao:focus-visible .crud-tabela__acao-dica {
-    opacity: 1;
-    visibility: visible;
-  }
+  /* A dica ao passar o mouse (18-08-2026, pedido da Alexia) saiu daqui
+     (14-09-2026) - `.crud-tabela__acao` ganhou a classe `dica` (ver
+     acao-linha.tsx) e usa o primitivo único `.dica`/`.dica__bolha--curta`
+     de 4-componentes.css, que fundiu este bloco com `.tooltip__texto`. */
 
   /* Quando o espaço REAL da seção aperta, o texto de cada ação some
      sozinho e fica só o ícone - reaparece sozinho se crescer de novo, sem

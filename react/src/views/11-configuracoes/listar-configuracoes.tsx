@@ -1,6 +1,7 @@
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { GenericTable } from '../../components/crud/generic-table';
 import { BlocoLogAuditoria } from '../../components/crud/bloco-log-auditoria';
+import { useCrudModais } from '../../services/constant/hook/use-crud-modais';
 import { configuracaoApi } from '../../services/11-configuracoes/api/configuracao.api';
 import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
 import { ModalCriarConfiguracao } from './modal-criar-configuracao';
@@ -19,12 +20,20 @@ import type { ConfiguracaoResponse } from '../../services/11-configuracoes/type/
 // EM MODAL (14-09-2026, continuação da migração CRUD→Modal pedida pelo
 // Lucas) - mesmo padrão de listar-usuarios.tsx/listar-motivos-denuncia.tsx.
 export function ListarConfiguracoes({ auth }: PropsPagina) {
-  const [criando, setCriando] = useState(false);
-  const [alterando, setAlterando] = useState<ConfiguracaoResponse | null>(null);
-  const [consultando, setConsultando] = useState<ConfiguracaoResponse | null>(null);
-  const [excluindo, setExcluindo] = useState<ConfiguracaoResponse | null>(null);
-  const [chaveRecarga, setChaveRecarga] = useState(0);
-  const recarregar = () => setChaveRecarga((atual) => atual + 1);
+  const {
+    criando,
+    abrirCriando,
+    fecharCriando,
+    alterando,
+    consultando,
+    excluindo,
+    fecharAlterando,
+    fecharConsultando,
+    fecharExcluindo,
+    chaveRecarga,
+    recarregar,
+    acoesCompletas,
+  } = useCrudModais<ConfiguracaoResponse>();
 
   const listarConfiguracoes = useCallback(
     () => configuracaoApi.listar(auth.authFetch),
@@ -43,7 +52,7 @@ export function ListarConfiguracoes({ auth }: PropsPagina) {
       <GenericTable<ConfiguracaoResponse>
         titulo="Parâmetros do Sistema"
         acaoTopo={
-          <button type="button" className="btn btn-primary" onClick={() => setCriando(true)}>
+          <button type="button" className="btn btn-primary" onClick={abrirCriando}>
             Criar
           </button>
         }
@@ -60,9 +69,7 @@ export function ListarConfiguracoes({ auth }: PropsPagina) {
         ]}
         chavePrimaria="idConfig"
         listar={listarConfiguracoes}
-        aoAlterar={setAlterando}
-        aoConsultar={setConsultando}
-        aoExcluir={setExcluindo}
+        acoes={acoesCompletas}
       />
       {/* "De"/"Para" no VALOR (09-08-2026, pedido do Lucas) - é a coluna que
           mais importa aqui: configuracoes existe pra tirar regra de negócio
@@ -72,27 +79,27 @@ export function ListarConfiguracoes({ auth }: PropsPagina) {
       <BlocoLogAuditoria buscar={buscarLogConfiguracoes} campoRenomeio="valor" />
 
       {criando && (
-        <ModalCriarConfiguracao auth={auth} aoFechar={() => setCriando(false)} aoCriado={recarregar} />
+        <ModalCriarConfiguracao auth={auth} aoFechar={fecharCriando} aoCriado={recarregar} />
       )}
 
       {alterando && (
         <ModalAlterarConfiguracao
           auth={auth}
           configuracao={alterando}
-          aoFechar={() => setAlterando(null)}
+          aoFechar={fecharAlterando}
           aoAtualizado={recarregar}
         />
       )}
 
       {consultando && (
-        <ModalConsultarConfiguracao configuracao={consultando} aoFechar={() => setConsultando(null)} />
+        <ModalConsultarConfiguracao configuracao={consultando} aoFechar={fecharConsultando} />
       )}
 
       {excluindo && (
         <ModalExcluirConfiguracao
           auth={auth}
           configuracao={excluindo}
-          aoFechar={() => setExcluindo(null)}
+          aoFechar={fecharExcluindo}
           aoExcluido={recarregar}
         />
       )}

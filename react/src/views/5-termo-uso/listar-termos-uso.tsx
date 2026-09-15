@@ -1,7 +1,8 @@
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { Link } from 'react-router';
 import { GenericTable } from '../../components/crud/generic-table';
 import { ModalDetalhe } from '../../components/crud/modal-detalhe';
+import { useCrudModais } from '../../services/constant/hook/use-crud-modais';
 import { ModalAlterarTermoUso } from './modal-alterar-termo-uso';
 import { ModalExcluirTermoUso } from './modal-excluir-termo-uso';
 import { termoUsoApi } from '../../services/5-termo-uso/api/termo-uso.api';
@@ -29,14 +30,21 @@ import type { TermoUsoResponse } from '../../services/5-termo-uso/type/termo-uso
 // Filtro por tipo (mesmo dia) - "Todos" marcado por padrão (mesmo padrão do
 // facet de Papel em Usuários), com rótulo amigável no dropdown.
 export function ListarTermosUso({ auth }: PropsPagina) {
-  const [termoDetalhado, setTermoDetalhado] = useState<TermoUsoResponse | null>(null);
-  const [termoAlterando, setTermoAlterando] = useState<TermoUsoResponse | null>(null);
-  const [termoExcluindo, setTermoExcluindo] = useState<TermoUsoResponse | null>(null);
-  // `chaveRecarga` força o `useEffect([listar])` interno de GenericTable a
-  // buscar de novo depois que ModalAlterarTermoUso/ModalExcluirTermoUso
-  // salva/exclui (mesmo padrão de listar-usuarios.tsx - GenericTable não
-  // expõe "recarregar" próprio).
-  const [chaveRecarga, setChaveRecarga] = useState(0);
+  // Nomes padronizados (14-09-2026, contra-prompt Claude Web - ERA
+  // `termoDetalhado`/`termoAlterando`/`termoExcluindo`, as 8 telas de
+  // listagem nomeavam a mesma coisa de 3 jeitos diferentes) via
+  // `useCrudModais`, mesmo hook das outras 7 telas.
+  const {
+    alterando,
+    consultando,
+    excluindo,
+    fecharAlterando,
+    fecharConsultando,
+    fecharExcluindo,
+    chaveRecarga,
+    recarregar,
+    acoesCompletas,
+  } = useCrudModais<TermoUsoResponse>();
   const listarTermos = useCallback(
     () => termoUsoApi.listar(auth.authFetch),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -77,42 +85,39 @@ export function ListarTermosUso({ auth }: PropsPagina) {
         filtrosFacetados={[
           { chave: 'tipo', rotulo: 'Tipo', ordem: TIPOS_TERMO, rotulos: ROTULO_TIPO_TERMO },
         ]}
-        acoes={['alterar', 'consultar', 'excluir']}
-        aoAlterar={(linha) => setTermoAlterando(linha)}
-        aoConsultar={(linha) => setTermoDetalhado(linha)}
-        aoExcluir={(linha) => setTermoExcluindo(linha)}
+        acoes={acoesCompletas}
       />
 
-      {termoDetalhado && (
+      {consultando && (
         <ModalDetalhe
-          titulo={`Termos de Uso ${termoDetalhado.versao} (${ROTULO_TIPO_TERMO[termoDetalhado.tipo]})`}
-          chave={termoDetalhado.ativo ? 'Versão ativa' : 'Versão histórica (substituída)'}
-          aoFechar={() => setTermoDetalhado(null)}
+          titulo={`Termos de Uso ${consultando.versao} (${ROTULO_TIPO_TERMO[consultando.tipo]})`}
+          chave={consultando.ativo ? 'Versão ativa' : 'Versão histórica (substituída)'}
+          aoFechar={fecharConsultando}
           secoes={[
             {
               titulo: 'Texto completo',
-              conteudo: <div className="whitespace-pre-wrap">{termoDetalhado.conteudo}</div>,
+              conteudo: <div className="whitespace-pre-wrap">{consultando.conteudo}</div>,
             },
           ]}
         />
       )}
 
-      {termoAlterando && (
+      {alterando && (
         <ModalAlterarTermoUso
           auth={auth}
-          tipo={termoAlterando.tipo}
-          idTermoInicial={termoAlterando.idTermo}
-          aoFechar={() => setTermoAlterando(null)}
-          aoSalvar={() => setChaveRecarga((atual) => atual + 1)}
+          tipo={alterando.tipo}
+          idTermoInicial={alterando.idTermo}
+          aoFechar={fecharAlterando}
+          aoSalvar={recarregar}
         />
       )}
 
-      {termoExcluindo && (
+      {excluindo && (
         <ModalExcluirTermoUso
           auth={auth}
-          termo={termoExcluindo}
-          aoFechar={() => setTermoExcluindo(null)}
-          aoExcluido={() => setChaveRecarga((atual) => atual + 1)}
+          termo={excluindo}
+          aoFechar={fecharExcluindo}
+          aoExcluido={recarregar}
         />
       )}
     </div>

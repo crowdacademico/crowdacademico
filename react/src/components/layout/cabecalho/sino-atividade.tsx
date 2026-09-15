@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Dica } from '../tooltip';
 import { logAuditoriaApi } from '../../../services/27-log-auditoria/api/log-auditoria.api';
 import { useFecharAoClicarFora } from '../../../services/constant/hook/use-fechar-ao-clicar-fora';
 import type { UseAuthReturn } from '../../../services/3-auth/hook/use-auth';
@@ -85,8 +86,7 @@ export function SinoAtividade({ auth }: SinoAtividadeProps) {
         type="button"
         onClick={aoAbrir}
         aria-label="Atividade recente"
-        title="Atividade recente"
-        className="relative flex items-center justify-center w-9 h-9 borda-padrao border rounded-lg texto-padrao hover-fundo-sutil transition-colors"
+        className="dica relative flex items-center justify-center w-9 h-9 borda-padrao border rounded-lg texto-padrao hover-fundo-sutil transition-colors"
       >
         <i className="fa-solid fa-bell"></i>
         {naoLidos > 0 && (
@@ -94,6 +94,7 @@ export function SinoAtividade({ auth }: SinoAtividadeProps) {
             {naoLidos > 9 ? '9+' : naoLidos}
           </span>
         )}
+        <Dica texto="Atividade recente" curta />
       </button>
 
       {aberto && (

@@ -1061,3 +1061,50 @@ AS $$
         (SELECT COALESCE(SUM(valor_bruto_arrecadado), 0)::DECIMAL(14,2) FROM campanha),
         (SELECT count(*)::INT FROM denuncia WHERE status = 'pendente');
 $$;
+
+-- [03-U] alterar_perfil_pesquisador_de_outro - ADICIONADA (14-09-2026),
+-- achado rodando o painel admin de verdade: o modal de Alterar Usuário
+-- (React) chama PATCH /perfil-pesquisador/:id pra salvar tipo de vínculo/
+-- vínculo institucional/título acadêmico de QUEM está sendo editado, desde
+-- 13-09-2026 - mas nenhuma rota nem função dava suporte a isso. O motivo:
+-- pol_perfil_update (04) só libera UPDATE de perfil_pesquisador pro
+-- PRÓPRIO dono (id_usuario = id_usuario_atual()), então um admin editando
+-- o perfil de OUTRA pessoa por UPDATE direto sempre resultaria em 0
+-- linhas silenciosas - mesma classe de bug já resolvida em
+-- corrigir_cpf_pesquisador ([03-Q]) e criar_perfil_pesquisador_para_outro
+-- ([03-R]), acima. Mesma solução: função SECURITY DEFINER, gateada por
+-- permissão própria (perfil_pesquisador_alterar_de_outro, ver 07), que
+-- ignora RLS de propósito - o self-service (PATCH /perfil-pesquisador,
+-- sem id, PerfilPesquisadorServiceUpdate) continua exatamente como estava,
+-- nunca reaproveitando esta função.
+CREATE OR REPLACE FUNCTION public.alterar_perfil_pesquisador_de_outro(
+    p_id_usuario INT,
+    p_tipo_vinculo tipo_vinculo,
+    p_vinculo_institucional TEXT,
+    p_titulo_academico titulo_academico
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_linhas INT;
+BEGIN
+    IF NOT public.tem_permissao('perfil_pesquisador_alterar_de_outro') THEN
+        RAISE EXCEPTION 'Sem permissão para alterar perfil de pesquisador de outro usuário.';
+    END IF;
+
+    UPDATE perfil_pesquisador
+    SET tipo_vinculo = p_tipo_vinculo,
+        vinculo_institucional = CASE
+            WHEN p_tipo_vinculo = 'institucional' THEN p_vinculo_institucional
+            ELSE NULL
+        END,
+        titulo_academico = p_titulo_academico
+    WHERE id_usuario = p_id_usuario;
+
+    GET DIAGNOSTICS v_linhas = ROW_COUNT;
+    RETURN v_linhas > 0;
+END;
+$$;

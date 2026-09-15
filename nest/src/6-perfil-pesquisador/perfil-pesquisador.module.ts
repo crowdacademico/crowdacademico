@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TermoUsoModule } from '../5-termo-uso/termo-uso.module';
+import { PerfilPesquisadorControllerAlterarDeOutro } from './controllers/perfil-pesquisador.controller.alterar-de-outro';
 import { PerfilPesquisadorControllerCorrigirCpf } from './controllers/perfil-pesquisador.controller.corrigir-cpf';
 import { PerfilPesquisadorControllerCreate } from './controllers/perfil-pesquisador.controller.create';
 import { PerfilPesquisadorControllerCreateParaOutro } from './controllers/perfil-pesquisador.controller.create-para-outro';
@@ -8,6 +9,7 @@ import { PerfilPesquisadorControllerFindOne } from './controllers/perfil-pesquis
 import { PerfilPesquisadorControllerReativar } from './controllers/perfil-pesquisador.controller.reativar';
 import { PerfilPesquisadorControllerSuspender } from './controllers/perfil-pesquisador.controller.suspender';
 import { PerfilPesquisadorControllerUpdate } from './controllers/perfil-pesquisador.controller.update';
+import { PerfilPesquisadorServiceAlterarDeOutro } from './service/perfil-pesquisador.service.alterar-de-outro';
 import { PerfilPesquisadorServiceCorrigirCpf } from './service/perfil-pesquisador.service.corrigir-cpf';
 import { PerfilPesquisadorServiceCreate } from './service/perfil-pesquisador.service.create';
 import { PerfilPesquisadorServiceCreateParaOutro } from './service/perfil-pesquisador.service.create-para-outro';
@@ -26,6 +28,7 @@ import { PerfilPesquisadorServiceUpdate } from './service/perfil-pesquisador.ser
     PerfilPesquisadorControllerFindAll,
     PerfilPesquisadorControllerFindOne,
     PerfilPesquisadorControllerUpdate,
+    PerfilPesquisadorControllerAlterarDeOutro,
     PerfilPesquisadorControllerCorrigirCpf,
     PerfilPesquisadorControllerSuspender,
     PerfilPesquisadorControllerReativar,
@@ -37,6 +40,7 @@ import { PerfilPesquisadorServiceUpdate } from './service/perfil-pesquisador.ser
     PerfilPesquisadorServiceFindOne,
     PerfilPesquisadorServiceFindOneScore,
     PerfilPesquisadorServiceUpdate,
+    PerfilPesquisadorServiceAlterarDeOutro,
     PerfilPesquisadorServiceCorrigirCpf,
     PerfilPesquisadorServiceSuspender,
     PerfilPesquisadorServiceReativar,

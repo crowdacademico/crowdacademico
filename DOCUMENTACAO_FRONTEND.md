@@ -336,11 +336,11 @@ O componente é dirigido por props, não por herança nem por children:
 | `colunas` | array de `{ chave, rotulo }`, com extras opcionais: `renderizar(linha)`, `centralizar`, `largura`, `quebrarRotulo` |
 | `chavePrimaria` | nome do campo usado como `key` de linha |
 | `listar` | função **já pré-amarrada** com `authFetch` pelo componente pai; a tabela só a chama |
-| `rotaBase` | ex.: `/admin/usuarios`. Presente ⇒ cada linha ganha a coluna "Ações" apontando para `${rotaBase}/${id}/alterar\|consultar\|excluir`. Ausente ⇒ sem coluna de ações |
-| `acoes` | quais dos três botões aparecem (padrão: os três) |
-| `colunaExtra` | `{ rotulo, renderizar(linha) }` - coluna que pode renderizar qualquer coisa, independente de `rotaBase` |
+| `acoes` | `Partial<Record<'alterar'\|'consultar'\|'excluir', (linha) => void>>` (14-09-2026, ERA `acoes: AcaoPadrao[]` + `aoAlterar`/`aoConsultar`/`aoExcluir` separados) - quais botões aparecem é derivado das CHAVES presentes, não de uma lista à parte. Ausente ⇒ sem coluna de ações |
+| `colunaExtra` | `{ rotulo, renderizar(linha) }` - coluna que pode renderizar qualquer coisa, independente de `acoes` |
 | `filtrosFacetados` | array de `{ chave, rotulo, ordem? }` - cada um vira um dropdown de múltipla escolha |
-| `buscarLog`, `campoRenomeioLog` | habilitam o botão "Ver log" no rodapé da tabela |
+
+Não existe prop de log - `BlocoLogAuditoria` é um componente IRMÃO (ver seção 9), colocado pela tela logo abaixo de `<GenericTable>`, não uma prop daqui (13-09-2026, achado do Claude Web: "log de auditoria não é estrutura de tabela").
 
 📌 **CRUD não acontece dentro da tabela.** Comentário: *"Criar/Alterar/Excluir NÃO acontecem mais aqui dentro (pedido do Lucas, 02-08-2026: 'tudo que faz parte do CRUD precisa de view própria') ... páginas de verdade, com sua própria URL, não formulário/`confirm()` embutido na tabela."*
 
@@ -361,11 +361,13 @@ O componente é dirigido por props, não por herança nem por children:
 
 ⚠️ **O filtro e a paginação são 100% client-side.** O comentário admite o limite: *"resolve 'achar uma linha no meio de 28' (Configurações já tem esse tanto), mas não resolve buscar num universo de milhares sem baixar tudo primeiro - isso exigiria busca no próprio backend (`LIMIT/OFFSET` + `WHERE`), fora do escopo desta rodada."*
 
+📌 **Segundo teste de prop, complementar ao "uma tela sem tabela viveria sem isto?" (14-09-2026, contra-prompt Claude Web).** O teste original só decide ENTRADA (o que pode virar prop daqui). Ele não decide SAÍDA - se algo que já mora aqui dentro deveria sair. Segundo teste, escrito no próprio `generic-table.tsx`: **"se uma tela que NÃO PODE usar este componente ainda assim precisa disto, então isto é um IRMÃO, não um miolo."** Foi esse critério que já tinha feito o `BlocoLogAuditoria` nascer (13-09-2026); aplicado de novo em 14-09-2026, tirou o rodapé de paginação (`components/pagination/rodape-paginacao.tsx`) e a barra de busca/faceta (`components/search/barra-filtros.tsx`) de dentro do `generic-table.tsx` - as bancadas do Campo de Testes (não podem usar `<GenericTable>`, risco de linha) precisavam dos dois mesmo assim, e reimplementavam à mão.
+
 ### Quem usa
 
 Todas as telas `listar-*.tsx`: `views/1-usuario/listar-usuarios.tsx`, `views/2-papel-permissao/listar-papeis.tsx`, `views/6-perfil-pesquisador/listar-pesquisadores.tsx`, `views/8-area-conhecimento/`, `views/9-tipo-link/`, `views/10-motivo-denuncia/`, `views/11-configuracoes/`, `views/12-campanha/`.
 
-⚠️ As telas do Campo de Testes (`views/campo-testes/`) **não** usam `<GenericTable>` - implementam filtro/faceta/paginação por conta própria, com constantes locais duplicadas (`TAMANHOS_PAGINA`, `LIMIAR_FILTRO`). Não é acidente: elas precisam de colunas de seleção/bloqueio que o componente genérico não prevê. Mas é duplicação real de lógica.
+⚠️ As telas do Campo de Testes (`views/campo-testes/`) **não** usam `<GenericTable>` - implementam a TABELA por conta própria (risco de linha exige controle manual), mas desde 14-09-2026 reaproveitam `<RodapePaginacao>` e `<BarraFiltros>` (ver acima) em vez de duplicar filtro/faceta/paginação à mão. `TAMANHOS_PAGINA`/`LIMIAR_FILTRO` moraram em 4 lugares até 14-09-2026; hoje só existem em `components/pagination/tamanhos-pagina.constants.ts`/`components/search/limiar-filtro.constants.ts`.
 
 ---
 
@@ -380,8 +382,20 @@ Todas as telas `listar-*.tsx`: `views/1-usuario/listar-usuarios.tsx`, `views/2-p
 | `ficha-consulta.tsx` | casca das telas "Consultar" (`<FichaConsulta>` + `<SecaoFicha>` + `<CampoFicha>`) |
 | `campo-somente-leitura.tsx` | um dado exibido, não editável, com o mesmo visual do `<label>` dos formulários |
 | `modal-detalhe.tsx` | modal genérico de "detalhe explicado" (título, chave em fonte mono, badge, seções) |
-| `log-auditoria-painel.tsx` | painel "Ver log", embutido no rodapé da `GenericTable` |
+| `log-auditoria-painel.tsx` (ver `bloco-log-auditoria.tsx`) | painel "Ver log" - componente IRMÃO colocado pela tela logo abaixo de `<GenericTable>`, não uma prop dela |
+| `acao-linha.tsx` | ícone + texto + dica de hover de cada ação de linha (Alterar/Consultar/Excluir) - usado por `GenericTable` E pelas bancadas do Campo de Testes |
+| `badge-booleano.tsx` | `<span className="badge ...">Sim/Não</span>` - versão avulsa do que `GenericTable` já faz sozinha pra colunas booleanas |
+| `rodape-formulario.tsx` | par Cancelar/Ação de formulários Criar/Alterar em página (extraído 14-09-2026 de 10 telas) |
 | `use-alteracao-nao-salva.ts` | `useAvisoAlteracaoNaoSalva(sujo)` - `beforeunload` nativo |
+
+### `components/pagination/` e `components/search/` - extraídos do `GenericTable` (14-09-2026)
+
+| Componente | Papel |
+|---|---|
+| `pagination/rodape-paginacao.tsx` | rodapé "Página X de Y / Mostrar / Anterior / Próxima" - controlado, sem opinião de onde página/tamanho moram (URL no `GenericTable`, `useState` nas bancadas do Campo de Testes) |
+| `search/barra-filtros.tsx` | busca de texto + 1+ dropdowns de faceta - controlado; gerencia por conta própria qual dropdown está aberto (estado de UI, não filtro) |
+
+📌 **Nasceram do segundo teste de prop** (ver seção 8: "se uma tela que não pode usar `GenericTable` ainda precisa disto, é irmão, não miolo") - as bancadas do Campo de Testes não podem usar a TABELA genérica (risco de linha), mas precisavam do rodapé e da barra de filtros, e reimplementavam os dois à mão em 3 lugares diferentes antes desta extração.
 
 📌 **`ModalExcluirUsuario` (`modal-usuario.tsx`) exige confirmação por digitação do e-mail, não um `window.confirm()`.** Mostra os dados reais do usuário antes de excluir (mesma casca `ModalFicha`/`SecaoFicha`/`CampoFicha` de Consultar) e só habilita o botão de confirmar quando o texto digitado bate com o e-mail da conta, exatamente (case-insensitive). O comentário do arquivo explica o critério que separa este caso do de Configuração (`ModalExcluirConfiguracao`, `modal-configuracao.tsx` - migrado de página pra modal em 14-09-2026, continua com confirmação simples): *"exclusão de USUÁRIO exige digitar o e-mail - configuração é um dado técnico, não a conta de uma pessoa."*
 
@@ -620,7 +634,7 @@ Sinais disso espalhados pelo código, todos coerentes entre si:
 
 ⚠️ **Filtro/busca/paginação client-side** na `GenericTable` e na `BuscaGlobal` - os dois lugares admitem por escrito que não escalam além de "dezenas de linhas" e precisariam de suporte do backend.
 
-⚠️ **Telas do Campo de Testes reimplementam filtro/paginação** em vez de usar `<GenericTable>`.
+⚠️ **Telas do Campo de Testes reimplementam a TABELA em vez de usar `<GenericTable>`** (risco de linha exige controle manual) - mas desde 14-09-2026 reaproveitam `<RodapePaginacao>`/`<BarraFiltros>` (ver seção 8) em vez de duplicar filtro/faceta/paginação à mão.
 
 ⚠️ **`DevLoginRapido` carrega senhas de seed literais no código** (`DevTcc123!`, as mesmas 7 contas do seed) - agora protegido por `import.meta.env.DEV` (ver seção 9), mas vale lembrar que continua sendo uma ferramenta de conveniência de dev, não algo pra existir num ambiente com dado real.
 
@@ -685,9 +699,16 @@ Segunda forma de olhar pro mesmo dado da aba "Configurações" (CRUD cru, `11-co
 - **`services/11-configuracoes/constants/configuracao-grupos.ts`** - `GRUPO_CONFIGURACAO` é um dicionário `chave → nome do grupo`, mantido à mão (mesmo espírito de `permissao-nomes-amigaveis.ts`). Uma chave nova em `configuracoes` que não ganhar entrada aqui cai automaticamente no grupo "Outras" - nunca quebra a tela, só fica sem organização até alguém lembrar de classificar. `agruparConfiguracoes()` devolve os grupos já na ordem certa de exibição (`ORDEM_GRUPOS`) - "Outras" sempre por último, mesmo tendo o maior número de linhas.
 - **Grupo "Arquivo" tem um ícone ⓘ ao lado do título, que abre um modal** (`ModalDetalhe`, mesmo componente da seção 9) com a explicação completa dos 7 limites de upload configuráveis e por que o teto do Supabase Storage (50MB/arquivo, 1GB total) importa. Nasceu de um pedido do Lucas: a explicação era grande demais pra caber num tooltip comum, então o ícone virou clicável (`aoClicar`) em vez de só mostrar texto no hover.
 
-### `Tooltip` (`components/layout/tooltip.tsx`) - variantes
+### Dica de hover - dois contratos, um primitivo só (`components/layout/tooltip.tsx`)
 
-CSS puro (`:hover`/`:focus`), sem estado de React. Três props opcionais, todas podem combinar:
+**Reescrito em 14-09-2026 (contra-prompt Claude Web).** Existem DOIS contratos diferentes no sistema, não três soluções pro mesmo problema:
+
+1. **Dar nome visível a um controle** ("Alterar", "Encerrar sessão", "Saiba mais") → mecanismo unificado `.dica`/`<Dica>` - qualquer gatilho (botão, link, ícone avulso) que ganhe a classe `dica` no `className` pode soltar um `<Dica texto="..." />` dentro de si. Cobre o que antes eram DOIS mecanismos quase idênticos e duplicados: o `Tooltip` (ⓘ avulso) e o `.crud-tabela__acao-dica` (hover nos ícones de ação do `AcaoLinha`/`GenericTable`) - hoje o mesmo CSS (`.dica__bolha` em `4-componentes.css`), com modificadores `--baixo` (abre pra baixo) e `--curta` (`white-space: nowrap`, rótulo de 1 palavra).
+2. **Revelar um valor truncado/traduzido num elemento NÃO interativo** → `title` nativo continua sendo o certo. Sobrevive em exatamente 1 lugar no sistema: `matriz-papel-permissao.tsx`, `<td title={permissao.nome}>` - célula não clicável, não focável, valor cru.
+
+`Tooltip` (o ícone ⓘ avulso, assinatura pública sem mudança - `texto`/`baixo`/`aoClicar`) hoje é implementado POR CIMA do primitivo: só um gatilho `.dica--info` (ou `.dica--info.dica--clicavel` com `aoClicar`) + `<Dica>` dentro. `Dica` é sempre `aria-hidden="true"` - `role="tooltip"` sem `aria-describedby` apontando pra ele é inerte (nenhum leitor de tela faz nada com isso), então a role saiu e não volta sem esse par; o nome acessível mora no GATILHO (`aria-label` explícito ou texto visível), nunca na bolha.
+
+CSS puro (`:hover`/`:focus`/`:focus-visible`), sem estado de React na bolha em si (a lógica de "qual dropdown está aberto" de facetas é outra coisa, ver `BarraFiltros` na seção 8). Três props opcionais do `Tooltip`, todas podem combinar:
 
 - **`baixo`** - abre a dica pra BAIXO em vez de pra cima (padrão). Usar quando o ícone fica perto do topo de um cartão com `overflow-hidden` (ex.: cabeçalho de grupo em `dashboard-regras-negocio.tsx`) - a dica padrão nascia cortada pela borda arredondada do cartão.
 - **`aoClicar`** - o ícone vira um `<button>` clicável (cursor de ponteiro em vez de "?"); o hover continua mostrando só `texto` (curto, tipo "Saiba mais"), e o clique dispara a função passada - normalmente pra abrir um `ModalDetalhe` com a explicação completa em seções/parágrafos, em vez de um bloco de texto só dentro do balão do tooltip.

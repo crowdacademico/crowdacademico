@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Tooltip } from '../../components/layout/tooltip';
+import { Dica, Tooltip } from '../../components/layout/tooltip';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
 import {
@@ -156,13 +156,25 @@ export function MatrizPapelPermissao({ authFetch }: MatrizPapelPermissaoProps) {
                   {/* title com o código cru (09-08-2026) - a matriz é
                       estreita demais pra uma coluna "chave" própria (igual
                       a listagem de Permissões abaixo); hover cobre o
-                      mesmo caso de uso pra quem precisa do valor literal. */}
+                      mesmo caso de uso pra quem precisa do valor literal.
+                      ÚNICO `title` nativo que sobrevive no sistema
+                      (14-09-2026, contra-prompt Claude Web) - `<td>` não é
+                      interativo nem focável, e o propósito é revelar um
+                      valor cru truncado/traduzido, não nomear um controle.
+                      Todo o resto do sistema usa `.dica`/`<Dica>` (ver
+                      components/layout/tooltip.tsx). */}
                   <td title={permissao.nome}>{nomeAmigavelPermissao(permissao.nome)}</td>
                   {papeis.map((papel) => {
                     const chave = `${papel.idPapel}-${permissao.idPermissao}`;
                     const temPermissao = concedidos.has(chave);
                     return (
                       <td key={papel.idPapel} className="text-center">
+                        {/* 37 permissões × 7 papéis = 259 botões com `.dica`
+                            em tela ao mesmo tempo (14-09-2026, contra-prompt
+                            Claude Web) - aceitável (259 <span> é irrelevante
+                            pro navegador), registrado aqui pra uma medição
+                            futura de performance saber onde olhar primeiro
+                            se algum dia isto pesar. */}
                         <button
                           type="button"
                           onClick={() =>
@@ -175,19 +187,26 @@ export function MatrizPapelPermissao({ authFetch }: MatrizPapelPermissaoProps) {
                             )
                           }
                           disabled={celulaAlterando === chave}
-                          title={
+                          aria-label={
                             temPermissao
                               ? `Clique pra revogar de "${papel.nome}"`
                               : `Clique pra conceder pra "${papel.nome}"`
                           }
                           className={
-                            'w-7 h-7 rounded-md font-bold transition-colors disabled:opacity-50 disabled:cursor-wait ' +
+                            'dica w-7 h-7 rounded-md font-bold transition-colors disabled:opacity-50 disabled:cursor-wait ' +
                             (temPermissao
                               ? 'texto-sucesso hover:bg-emerald-100'
                               : 'texto-fraco opacity-50 hover-fundo-sutil hover:opacity-100')
                           }
                         >
                           {celulaAlterando === chave ? '…' : temPermissao ? '✓' : '-'}
+                          <Dica
+                            texto={
+                              temPermissao
+                                ? `Clique pra revogar de "${papel.nome}"`
+                                : `Clique pra conceder pra "${papel.nome}"`
+                            }
+                          />
                         </button>
                       </td>
                     );

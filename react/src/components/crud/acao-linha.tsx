@@ -1,11 +1,13 @@
-import { Link } from 'react-router';
+import { Dica } from '../layout/tooltip';
 
-// Ícone + texto (escondido via CSS quando a coluna aperta) + dica de hover
-// (`crud-tabela__acao-dica`) - bloco que `GenericTable` já montava 6x
-// (3 ações × botão/link) e que `bancada-pesquisador.tsx`/`bancada-campanha.tsx`
-// (Campo de Testes, tabelas manuais que não podem usar `GenericTable` por
-// causa do risco de linha) reimplementavam à mão, idêntico. Centralizado
-// aqui (14-09-2026) - ver PENDENCIAS.
+// Ícone + texto (escondido via CSS quando a coluna aperta) + dica de hover -
+// bloco que `GenericTable` já montava 6x (3 ações × botão) e que
+// `bancada-pesquisador.tsx`/`bancada-campanha.tsx` (Campo de Testes, tabelas
+// manuais que não podem usar `GenericTable` por causa do risco de linha)
+// reimplementavam à mão, idêntico. Centralizado aqui (14-09-2026) - ver
+// PENDENCIAS. Só `<button>` desde 14-09-2026 (contra-prompt Claude Web) - a
+// variante `<Link to=...>` (páginas de verdade, `rotaBase`) não tem mais
+// nenhum consumidor desde que a migração CRUD→Modal terminou.
 type VarianteAcaoLinha = 'alterar' | 'excluir' | 'neutra';
 
 interface AcaoLinhaProps {
@@ -13,7 +15,6 @@ interface AcaoLinhaProps {
   icone: string;
   variante?: VarianteAcaoLinha;
   onClick?: () => void;
-  to?: string;
 }
 
 const CLASSE_VARIANTE: Record<VarianteAcaoLinha, string> = {
@@ -22,27 +23,14 @@ const CLASSE_VARIANTE: Record<VarianteAcaoLinha, string> = {
   neutra: '',
 };
 
-export function AcaoLinha({ rotulo, icone, variante = 'neutra', onClick, to }: AcaoLinhaProps) {
-  const className = 'crud-tabela__acao' + CLASSE_VARIANTE[variante];
-  const conteudo = (
-    <>
-      <i className={`fa-solid ${icone}`}></i>
-      <span className="crud-tabela__acao-texto">{rotulo}</span>
-      <span className="crud-tabela__acao-dica" role="tooltip">{rotulo}</span>
-    </>
-  );
-
-  if (to) {
-    return (
-      <Link className={className} to={to} aria-label={rotulo}>
-        {conteudo}
-      </Link>
-    );
-  }
+export function AcaoLinha({ rotulo, icone, variante = 'neutra', onClick }: AcaoLinhaProps) {
+  const className = 'crud-tabela__acao dica' + CLASSE_VARIANTE[variante];
 
   return (
     <button type="button" className={className} onClick={onClick} aria-label={rotulo}>
-      {conteudo}
+      <i className={`fa-solid ${icone}`}></i>
+      <span className="crud-tabela__acao-texto">{rotulo}</span>
+      <Dica texto={rotulo} curta />
     </button>
   );
 }

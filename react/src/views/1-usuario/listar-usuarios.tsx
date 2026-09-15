@@ -1,6 +1,7 @@
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { GenericTable } from '../../components/crud/generic-table';
 import { BlocoLogAuditoria } from '../../components/crud/bloco-log-auditoria';
+import { useCrudModais } from '../../services/constant/hook/use-crud-modais';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { usuarioPapelApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
 import {
@@ -34,22 +35,24 @@ const PAPEL_PADRAO = 'usuario';
 // etc., removidas de rotas.constants.ts) e viraram os modais de
 // `modal-usuario.tsx`/`modal-criar-usuario.tsx` - os MESMOS componentes
 // que a Bancada do Pesquisador (Campo de Testes) usa, sem duplicar nada.
-// `GenericTable` ganhou `aoAlterar`/`aoConsultar`/`aoExcluir` (aditivo, as
-// outras ~10 telas que ainda usam `rotaBase` continuam navegando por
-// página, sem mudança nenhuma) especificamente pra esta migração.
+// A migração CRUD→Modal terminou em 14-09-2026 pra TODOS os módulos - a
+// prop `acoes` do `GenericTable` hoje só existe nesse formato (handler por
+// chave, ver comentário da prop em generic-table.tsx).
 export function ListarUsuarios({ auth }: PropsPagina) {
-  const [criando, setCriando] = useState(false);
-  const [idAlterando, setIdAlterando] = useState<number | null>(null);
-  const [idConsultando, setIdConsultando] = useState<number | null>(null);
-  const [excluindo, setExcluindo] = useState<UsuarioLinha | null>(null);
-  // Incrementar isto muda a IDENTIDADE de `listarUsuarios` (useCallback
-  // abaixo) sem mudar o que ela faz - é assim que se força o `useEffect`
-  // interno de GenericTable (`useEffect(() => {...}, [listar])`) a buscar
-  // de novo depois que um modal altera dado (GenericTable não expõe um
-  // "recarregar" próprio, de propósito: quem decide QUANDO recarregar é
-  // sempre o componente pai, não a tabela genérica).
-  const [chaveRecarga, setChaveRecarga] = useState(0);
-  const recarregar = () => setChaveRecarga((atual) => atual + 1);
+  const {
+    criando,
+    abrirCriando,
+    fecharCriando,
+    alterando,
+    consultando,
+    excluindo,
+    fecharAlterando,
+    fecharConsultando,
+    fecharExcluindo,
+    chaveRecarga,
+    recarregar,
+    acoesCompletas,
+  } = useCrudModais<UsuarioLinha>();
 
   // useCallback aqui não é sobre performance - é porque GenericTable usa a
   // função em `useEffect([listar])`; sem isso, cada render criaria uma
@@ -95,7 +98,7 @@ export function ListarUsuarios({ auth }: PropsPagina) {
       <GenericTable<UsuarioLinha>
         titulo="Usuários"
         acaoTopo={
-          <button type="button" className="btn btn-primary" onClick={() => setCriando(true)}>
+          <button type="button" className="btn btn-primary" onClick={abrirCriando}>
             Criar
           </button>
         }
@@ -108,9 +111,7 @@ export function ListarUsuarios({ auth }: PropsPagina) {
         ]}
         chavePrimaria="idUsuario"
         listar={listarUsuarios}
-        aoAlterar={(linha) => setIdAlterando(linha.idUsuario)}
-        aoConsultar={(linha) => setIdConsultando(linha.idUsuario)}
-        aoExcluir={(linha) => setExcluindo(linha)}
+        acoes={acoesCompletas}
         // Botão de filtro por papel (09-08-2026, pedido do Lucas), na mesma
         // linha do filtro de texto, padrão "Todos" (nenhum papel marcado),
         // marcar um ou mais esconde o resto. Opções vêm sozinhas dos
@@ -129,20 +130,20 @@ export function ListarUsuarios({ auth }: PropsPagina) {
       <BlocoLogAuditoria buscar={buscarLogUsuario} campoRenomeio="nome" />
 
       {criando && (
-        <ModalCriarUsuario auth={auth} aoFechar={() => setCriando(false)} aoCriado={recarregar} />
+        <ModalCriarUsuario auth={auth} aoFechar={fecharCriando} aoCriado={recarregar} />
       )}
 
-      {idAlterando !== null && (
+      {alterando && (
         <ModalAlterarUsuario
           auth={auth}
-          idUsuario={idAlterando}
-          aoFechar={() => setIdAlterando(null)}
+          idUsuario={alterando.idUsuario}
+          aoFechar={fecharAlterando}
           aoAtualizado={recarregar}
         />
       )}
 
-      {idConsultando !== null && (
-        <ModalConsultarUsuario auth={auth} idUsuario={idConsultando} aoFechar={() => setIdConsultando(null)} />
+      {consultando && (
+        <ModalConsultarUsuario auth={auth} idUsuario={consultando.idUsuario} aoFechar={fecharConsultando} />
       )}
 
       {excluindo && (
@@ -152,7 +153,7 @@ export function ListarUsuarios({ auth }: PropsPagina) {
           nome={excluindo.nome}
           email={excluindo.email}
           emailVerificado={excluindo.emailVerificado}
-          aoFechar={() => setExcluindo(null)}
+          aoFechar={fecharExcluindo}
           aoExcluido={recarregar}
         />
       )}

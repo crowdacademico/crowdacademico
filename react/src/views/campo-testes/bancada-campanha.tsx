@@ -28,6 +28,9 @@ import {
 } from '../../services/12-campanha/constants/status-campanha.constants';
 import { formatarDataHora, formatarMoeda } from '../../services/constant/utils/formatacao.util';
 import { paginarClientSide } from '../../services/constant/utils/paginacao.util';
+import { RodapePaginacao } from '../../components/pagination/rodape-paginacao';
+import { BarraFiltros } from '../../components/search/barra-filtros';
+import { LIMIAR_FILTRO } from '../../components/search/limiar-filtro.constants';
 import { RegistroChamadas } from './registro-chamadas';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { CampanhaResponse, HistoricoRejeicaoResponse } from '../../services/12-campanha/type/campanha.type';
@@ -36,9 +39,6 @@ import type { AreaConhecimentoResponse } from '../../services/8-area-conheciment
 import type { UsuarioResponse } from '../../services/1-usuario/type/usuario.type';
 import type { PerfilPesquisadorResponse } from '../../services/6-perfil-pesquisador/type/perfil-pesquisador.type';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
-
-const TAMANHOS_PAGINA = [10, 20, 30, 'todos'] as const;
-const LIMIAR_FILTRO = 5;
 
 // `orcamento-campanha`/`marco-cronograma` (módulo 22-contribuicao/módulo
 // próprio) não têm type/ formal ainda - só o Campo de Testes fala com
@@ -318,8 +318,6 @@ export function BancadaCampanha({ auth }: PropsPagina) {
   const [pagina, setPagina] = useState(1);
   const [tamanhoPagina, setTamanhoPagina] = useState<number | 'todos'>(10);
   const [statusSelecionados, setStatusSelecionados] = useState<StatusCampanha[]>([]);
-  const [facetaStatusAberta, setFacetaStatusAberta] = useState(false);
-  const facetaStatusRef = useRef<HTMLDivElement>(null);
   const [campanhaConsultada, setCampanhaConsultada] = useState<CampanhaResponse | null>(null);
   const [historicoRejeicaoConsultada, setHistoricoRejeicaoConsultada] = useState<HistoricoRejeicaoResponse[]>([]);
 
@@ -399,11 +397,11 @@ export function BancadaCampanha({ auth }: PropsPagina) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Fechar as sugestões do combobox de pesquisador ao clicar fora, e o
-  // dropdown "Status" - mesmo padrão, extraído em `useFecharAoClicarFora`
-  // em 13-09-2026.
+  // Fechar as sugestões do combobox de pesquisador ao clicar fora - mesmo
+  // padrão, extraído em `useFecharAoClicarFora` em 13-09-2026. O dropdown
+  // "Status" tem o próprio fechamento embutido em `BarraFiltros` desde
+  // 14-09-2026.
   useFecharAoClicarFora(sugestoesPesquisadorRef, sugestoesPesquisadorAbertas, () => setSugestoesPesquisadorAbertas(false));
-  useFecharAoClicarFora(facetaStatusRef, facetaStatusAberta, () => setFacetaStatusAberta(false));
 
   const nomeDe = (idUsuario: number): string => usuarios.find((u) => u.idUsuario === idUsuario)?.nome ?? `#${idUsuario}`;
 
@@ -652,82 +650,33 @@ export function BancadaCampanha({ auth }: PropsPagina) {
         </div>
       </div>
 
-      {(campanhas.length > LIMIAR_FILTRO || opcoesStatus.length > 1) && (
-        <div className="flex items-center gap-3 flex-wrap mb-3">
-          {campanhas.length > LIMIAR_FILTRO && (
-            <input
-              type="search"
-              placeholder="Filtrar..."
-              value={filtroTexto}
-              onChange={(evento) => {
-                setFiltroTexto(evento.target.value);
-                setPagina(1);
-              }}
-              className="w-full sm:w-64 border borda-forte rounded-lg fundo-sutil py-2 px-3 text-sm outline-none foco-marca"
-            />
-          )}
-
-          {opcoesStatus.length > 1 && (
-            <div className="relative" ref={facetaStatusRef}>
-              <button
-                type="button"
-                onClick={() => setFacetaStatusAberta((atual) => !atual)}
-                className="btn btn-secondary text-sm flex items-center gap-2"
-              >
-                <i className="fa-solid fa-filter"></i>
-                Status
-                {statusSelecionados.length > 0 ? (
-                  <span className="badge badge-sucesso">{statusSelecionados.length}</span>
-                ) : (
-                  <span className="texto-fraco font-normal">(Todos)</span>
-                )}
-                <i className="fa-solid fa-chevron-down text-xs"></i>
-              </button>
-
-              {facetaStatusAberta && (
-                <div className="absolute left-0 mt-1 w-56 fundo-cartao border borda-padrao rounded-lg shadow-lg z-20 overflow-hidden">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setStatusSelecionados([]);
-                      setPagina(1);
-                    }}
-                    className="dropdown-opcao"
-                  >
-                    Todos
-                    {statusSelecionados.length === 0 && <i className="fa-solid fa-check texto-sucesso"></i>}
-                  </button>
-                  <div className="max-h-64 overflow-y-auto">
-                    {opcoesStatus.map((status) => {
-                      const marcado = statusSelecionados.includes(status);
-                      const alternar = () => {
-                        setStatusSelecionados((atuais) => (marcado ? atuais.filter((s) => s !== status) : [...atuais, status]));
-                        setPagina(1);
-                      };
-                      return (
-                        <label
-                          key={status}
-                          className="combobox-opcao"
-                          onClick={(evento) => {
-                            if (evento.target instanceof Element && evento.target.tagName !== 'INPUT') {
-                              evento.preventDefault();
-                              alternar();
-                            }
-                          }}
-                        >
-                          <input type="checkbox" checked={marcado} onChange={alternar} />
-                          {status}
-                        </label>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-        </div>
-      )}
+      <BarraFiltros
+        mostrarBusca={campanhas.length > LIMIAR_FILTRO}
+        valorBusca={filtroTexto}
+        aoMudarBusca={(valor) => {
+          setFiltroTexto(valor);
+          setPagina(1);
+        }}
+        facetas={[
+          {
+            chave: 'status',
+            rotulo: 'Status',
+            opcoes: opcoesStatus,
+            selecionados: statusSelecionados,
+            aoAlternar: (opcao) => {
+              const status = opcao as StatusCampanha;
+              setStatusSelecionados((atuais) =>
+                atuais.includes(status) ? atuais.filter((s) => s !== status) : [...atuais, status],
+              );
+              setPagina(1);
+            },
+            aoLimpar: () => {
+              setStatusSelecionados([]);
+              setPagina(1);
+            },
+          },
+        ]}
+      />
 
       <table className="crud-tabela mb-2">
         <thead>
@@ -1456,51 +1405,18 @@ export function BancadaCampanha({ auth }: PropsPagina) {
         </ModalFicha>
       )}
 
-      {campanhasFiltradas.length > TAMANHOS_PAGINA[0] && (
-        <div className="flex items-center justify-between flex-wrap gap-3 mt-3 mb-4 text-sm texto-padrao">
-          <span>
-            Página {paginaAtual} de {totalPaginas} ({campanhasFiltradas.length} registros)
-          </span>
-          <div className="flex items-center gap-3">
-            <label className="flex items-center gap-2 text-xs font-semibold texto-padrao">
-              Mostrar
-              <select
-                value={tamanhoPagina}
-                onChange={(evento) => {
-                  const valor = evento.target.value;
-                  setTamanhoPagina(valor === 'todos' ? 'todos' : Number(valor));
-                  setPagina(1);
-                }}
-                className="border borda-padrao rounded-md fundo-sutil py-1 px-2 text-xs outline-none foco-marca"
-              >
-                {TAMANHOS_PAGINA.map((tamanho) => (
-                  <option key={tamanho} value={tamanho}>
-                    {tamanho === 'todos' ? 'Todos' : tamanho}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setPagina((atual) => Math.max(1, atual - 1))}
-                disabled={paginaAtual === 1}
-                className="btn btn-secondary"
-              >
-                Anterior
-              </button>
-              <button
-                type="button"
-                onClick={() => setPagina((atual) => Math.min(totalPaginas, atual + 1))}
-                disabled={paginaAtual === totalPaginas}
-                className="btn btn-secondary"
-              >
-                Próxima
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <RodapePaginacao
+        total={campanhasFiltradas.length}
+        paginaAtual={paginaAtual}
+        totalPaginas={totalPaginas}
+        tamanhoPagina={tamanhoPagina}
+        className="mb-4"
+        aoMudarPagina={setPagina}
+        aoMudarTamanho={(tamanho) => {
+          setTamanhoPagina(tamanho);
+          setPagina(1);
+        }}
+      />
 
       {/* Criar campanha saiu daqui (25-08-2026, remoção do Elenco): RLS
           exige id_usuario = id_usuario_atual(), não dá mais pra "criar em
