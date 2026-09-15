@@ -106,7 +106,7 @@ export function AdminSidebar({ aberto, aoFechar }: AdminSidebarProps) {
                 // elemento do fluxo normal de eventos de mouse), então a
                 // dica precisa morar num elemento vizinho não-desabilitado
                 // pra funcionar (14-09-2026, contra-prompt Claude Web).
-                <span key={item.rotulo} className="dica">
+                <span key={item.rotulo} className="dica block">
                   <button
                     type="button"
                     disabled
