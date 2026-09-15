@@ -2936,6 +2936,153 @@ BEFORE INSERT ON comentario
 FOR EACH ROW
 EXECUTE FUNCTION validar_comentario_autor();
 
+-- ----------------------------------------------------------------------------
+-- Função:     fn_comentario_ignora_endosso_na_criacao
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-K-3]
+-- Regra:      ADICIONADO (15-09-2026, achado numa auditoria RF x
+--             implementação) - RF-089 é claro: só o pesquisador CRIADOR DA
+--             CAMPANHA marca um comentário como "Endossado", nunca o autor
+--             do próprio comentário. `ComentarioRequestCreate` (Nest)
+--             aceitava `endossado` vindo do cliente na hora de criar, e
+--             `pol_comentario_insert` (04) só checa `id_pesquisador =
+--             id_usuario_atual()` - nada impedia um pesquisador se
+--             autoendossar ao comentar na campanha de outro, publicando o
+--             próprio comentário na seção de endossos (RF-090) sem o dono
+--             aprovar nada. Zera os 2 campos incondicionalmente no INSERT,
+--             não confia em "o Nest não vai mais mandar isso" - defesa em
+--             profundidade, igual o resto deste arquivo faz com colunas
+--             sensíveis (ver GRANT UPDATE restrito de perfil_pesquisador,
+--             06_grants.sql).
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION fn_comentario_ignora_endosso_na_criacao()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.endossado := FALSE;
+    NEW.ordem_endosso := NULL;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_comentario_ignora_endosso_criacao
+-- Tabela:    comentario
+-- Momento:   BEFORE INSERT
+-- Função:    fn_comentario_ignora_endosso_na_criacao()
+-- Bloco:     [05-K-3]
+-- Regra:     Todo comentário nasce sem endosso, sem exceção - endossar é
+--            sempre uma ação SEPARADA e POSTERIOR do dono da campanha
+--            (via UPDATE, ver trg_comentario_endosso_autor abaixo).
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_comentario_ignora_endosso_criacao ON comentario;
+CREATE TRIGGER trg_comentario_ignora_endosso_criacao
+BEFORE INSERT ON comentario
+FOR EACH ROW
+EXECUTE FUNCTION fn_comentario_ignora_endosso_na_criacao();
+
+-- ----------------------------------------------------------------------------
+-- Função:     validar_comentario_endosso_autor
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-K-3]
+-- Regra:      ADICIONADO (15-09-2026, mesma auditoria acima) - metade 2 do
+--             mesmo bug: `pol_comentario_update` (04) libera UPDATE pro
+--             autor do comentário, pro dono da campanha OU pra quem tem
+--             'comentario_moderar', mas nenhuma trigger restringia QUAL
+--             coluna cada um pode tocar. Sem isto, o autor conseguia
+--             endossar o PRÓPRIO comentário também via UPDATE, não só no
+--             INSERT (bloqueado acima) - mesma falha de RF-089 por outra
+--             porta. Só quem é o dono da campanha ou tem
+--             'comentario_moderar' pode mudar `endossado`.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION validar_comentario_endosso_autor()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_id_usuario_campanha INT;
+BEGIN
+    IF NEW.endossado IS DISTINCT FROM OLD.endossado THEN
+        SELECT id_usuario INTO v_id_usuario_campanha
+        FROM campanha
+        WHERE id_campanha = OLD.id_campanha;
+
+        IF NOT (
+            v_id_usuario_campanha = public.id_usuario_atual()
+            OR public.tem_permissao('comentario_moderar')
+        ) THEN
+            RAISE EXCEPTION 'Só o pesquisador criador da campanha (ou moderação) pode endossar/remover endosso de um comentário.'
+                USING ERRCODE = '92008';
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_comentario_endosso_autor
+-- Tabela:    comentario
+-- Momento:   BEFORE UPDATE
+-- Função:    validar_comentario_endosso_autor()
+-- Bloco:     [05-K-3]
+-- Regra:     Bloqueia quem não é o dono da campanha (nem moderação) de
+--            mudar o campo `endossado`.
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_comentario_endosso_autor ON comentario;
+CREATE TRIGGER trg_comentario_endosso_autor
+BEFORE UPDATE ON comentario
+FOR EACH ROW
+EXECUTE FUNCTION validar_comentario_endosso_autor();
+
+-- ----------------------------------------------------------------------------
+-- Função:     validar_comentario_edicao_conteudo
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-K-3]
+-- Regra:      ADICIONADO (15-09-2026, mesma auditoria) - RF-091: "o
+--             pesquisador pode editar o comentário já enviado ENQUANTO ELE
+--             NÃO ESTIVER com status de endossado". Faltava a trigger que
+--             faz valer a 2ª metade dessa frase - sem ela, dava pra editar
+--             `conteudo` de um comentário já endossado (mudando o que está
+--             publicado na página pública sem o dono saber) e, pelo mesmo
+--             motivo de `pol_comentario_update` não distinguir coluna, até
+--             o DONO/moderador conseguiam editar o TEXTO de um comentário
+--             que não escreveram - RF-091 é claro que editar conteúdo é
+--             ação exclusiva do próprio autor. `ativo` (ocultar/reverter)
+--             não é afetado por esta trigger, mora só em
+--             fn_bloqueia_reversao_moderacao_comentario (acima).
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION validar_comentario_edicao_conteudo()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.conteudo IS DISTINCT FROM OLD.conteudo THEN
+        IF OLD.id_pesquisador IS DISTINCT FROM public.id_usuario_atual() THEN
+            RAISE EXCEPTION 'Só o autor do comentário pode editar o próprio texto.'
+                USING ERRCODE = '92007';
+        END IF;
+
+        IF OLD.endossado = TRUE THEN
+            RAISE EXCEPTION 'Não é possível editar um comentário enquanto ele estiver endossado - remova o endosso antes.'
+                USING ERRCODE = '91022';
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_comentario_edicao_conteudo
+-- Tabela:    comentario
+-- Momento:   BEFORE UPDATE
+-- Função:    validar_comentario_edicao_conteudo()
+-- Bloco:     [05-K-3]
+-- Regra:     Só o próprio autor edita `conteudo`, e só enquanto não
+--            estiver endossado (RF-091).
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_comentario_edicao_conteudo ON comentario;
+CREATE TRIGGER trg_comentario_edicao_conteudo
+BEFORE UPDATE ON comentario
+FOR EACH ROW
+EXECUTE FUNCTION validar_comentario_edicao_conteudo();
+
 
 -- ----------------------------------------------------------------------------
 -- Função:     fn_bloqueia_reversao_moderacao_comentario

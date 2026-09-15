@@ -16,6 +16,104 @@
 
 
 -- ============================================================================
+-- 15-09-2026, rodada 3 (comentário/endosso - autoendosso e edição indevida
+-- bloqueados, RF-089/090/091)
+--
+-- Achado conferindo o módulo de Comentários (RF-087 a RF-093) antes de
+-- testar em T3: RF-089 é claro que só o pesquisador CRIADOR DA CAMPANHA
+-- marca um comentário como "Endossado" - nunca o autor do próprio
+-- comentário. Mas `ComentarioRequestCreate` aceitava `endossado` vindo do
+-- cliente na criação, e `pol_comentario_update` (04) libera UPDATE pro
+-- autor/dono/moderador sem distinguir QUAL coluna cada um pode tocar -
+-- juntos, isso deixava qualquer pesquisador se autoendossar comentando na
+-- campanha de outro (na criação OU depois, via UPDATE), publicando o
+-- próprio comentário na seção de endossos (RF-090) sem o dono aprovar
+-- nada. Achado um 2º problema na mesma auditoria: RF-091 diz que o autor
+-- só edita o texto ENQUANTO não estiver endossado - nada bloqueava editar
+-- `conteudo` depois de endossado, nem impedia o DONO/moderador de editar o
+-- TEXTO de um comentário que não escreveram.
+--
+-- 3 triggers novas resolvem os 2 problemas:
+-- 1. Todo comentário nasce sem endosso, sempre, incondicionalmente (nem
+--    confia que o Nest vai parar de mandar o campo).
+-- 2. Só o dono da campanha (ou 'comentario_moderar') pode mudar `endossado`.
+-- 3. Só o próprio autor edita `conteudo`, e só enquanto não endossado.
+--
+-- Seguro rodar de novo? Sim - as 3 são CREATE OR REPLACE FUNCTION +
+-- DROP/CREATE TRIGGER, idempotentes.
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION fn_comentario_ignora_endosso_na_criacao()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.endossado := FALSE;
+    NEW.ordem_endosso := NULL;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_comentario_ignora_endosso_criacao ON comentario;
+CREATE TRIGGER trg_comentario_ignora_endosso_criacao
+BEFORE INSERT ON comentario
+FOR EACH ROW
+EXECUTE FUNCTION fn_comentario_ignora_endosso_na_criacao();
+
+CREATE OR REPLACE FUNCTION validar_comentario_endosso_autor()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_id_usuario_campanha INT;
+BEGIN
+    IF NEW.endossado IS DISTINCT FROM OLD.endossado THEN
+        SELECT id_usuario INTO v_id_usuario_campanha
+        FROM campanha
+        WHERE id_campanha = OLD.id_campanha;
+
+        IF NOT (
+            v_id_usuario_campanha = public.id_usuario_atual()
+            OR public.tem_permissao('comentario_moderar')
+        ) THEN
+            RAISE EXCEPTION 'Só o pesquisador criador da campanha (ou moderação) pode endossar/remover endosso de um comentário.'
+                USING ERRCODE = '92008';
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_comentario_endosso_autor ON comentario;
+CREATE TRIGGER trg_comentario_endosso_autor
+BEFORE UPDATE ON comentario
+FOR EACH ROW
+EXECUTE FUNCTION validar_comentario_endosso_autor();
+
+CREATE OR REPLACE FUNCTION validar_comentario_edicao_conteudo()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.conteudo IS DISTINCT FROM OLD.conteudo THEN
+        IF OLD.id_pesquisador IS DISTINCT FROM public.id_usuario_atual() THEN
+            RAISE EXCEPTION 'Só o autor do comentário pode editar o próprio texto.'
+                USING ERRCODE = '92007';
+        END IF;
+
+        IF OLD.endossado = TRUE THEN
+            RAISE EXCEPTION 'Não é possível editar um comentário enquanto ele estiver endossado - remova o endosso antes.'
+                USING ERRCODE = '91022';
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_comentario_edicao_conteudo ON comentario;
+CREATE TRIGGER trg_comentario_edicao_conteudo
+BEFORE UPDATE ON comentario
+FOR EACH ROW
+EXECUTE FUNCTION validar_comentario_edicao_conteudo();
+
+
+-- ============================================================================
 -- 15-09-2026, rodada 2 (correção do bloco abaixo - faltava checar a soma)
 --
 -- A 1ª versão de expirar_campanhas_rascunho() (bloco seguinte, já rodado)

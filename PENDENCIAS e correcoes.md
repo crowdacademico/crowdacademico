@@ -1698,6 +1698,26 @@ Duas ideias foram propostas (rascunho com tempo de vida vs. autodeleção "insta
 
 ---
 
+### 🟢 CORRIGIDO (15-09-2026, mesmo dia, rodada 3): módulo de Comentários/Endosso deixava qualquer pesquisador se autoendossar - RF-089/090/091
+
+Continuando a mesma auditoria contra `REQUISITOS_V6.md` (o Lucas queria saber se T2/T3 já bastavam pra testar comentário/endosso) - **T3 já tinha UI funcional pra isso** (`vida-campanha-ativa.tsx`: formulário de comentário, checkbox de endossar, tabela com badge de endosso, contador "X de 4 endossos ativos"), mas testar ia exercitar um bug real de regra de negócio primeiro.
+
+**O bug**: RF-089 diz que só o pesquisador CRIADOR DA CAMPANHA marca um comentário como "Endossado" - nunca o autor do próprio comentário. Conferindo o código: `ComentarioRequestCreate` aceitava `endossado: true` vindo do próprio autor na hora de criar, e `pol_comentario_update` (04) libera `UPDATE` pro autor OU dono OU moderador sem nenhuma trigger distinguindo qual coluna cada um pode tocar. Junto, isso deixava **qualquer pesquisador se autoendossar** comentando na campanha de outro (na criação OU depois, via `UPDATE`), publicando o próprio comentário na seção pública de endossos (RF-090) sem o dono aprovar nada. Achado um 2º problema na mesma auditoria: RF-091 diz que o autor só edita o texto **enquanto não estiver endossado** - nada bloqueava editar `conteudo` depois de endossado, nem impedia o dono/moderador de editar o TEXTO de um comentário que não escreveram (editar conteúdo é ação exclusiva do autor).
+
+**🟢 Construído, 3 triggers novas (mesmo padrão de `OLD`/`NEW` já usado várias vezes neste arquivo):**
+- `fn_comentario_ignora_endosso_na_criacao()` (`BEFORE INSERT`) - zera `endossado`/`ordem_endosso` incondicionalmente, não confia em o Nest parar de mandar o campo.
+- `validar_comentario_endosso_autor()` (`BEFORE UPDATE`) - só quem é dono da campanha ou tem `comentario_moderar` pode mudar `endossado`.
+- `validar_comentario_edicao_conteudo()` (`BEFORE UPDATE`) - só o próprio autor edita `conteudo`, e só enquanto `endossado = FALSE`.
+- 3 códigos novos em `DOCUMENTACAO_ERRCODE.md` (91022, 92007, 92008) - **achado no caminho**: os 2 primeiros que eu tinha escolhido no rascunho (92006/91022... ia reusar por engano) já existiam pra outras funções (`fn_valida_denuncia_sem_autojulgamento`) - conferido com grep em todos os `.sql` antes de finalizar, sem colisão real nenhuma no resultado final.
+- `ComentarioRequestCreate` (Nest) perdeu o campo `endossado` - nunca devia ter sido aceito nesse DTO.
+- T3 (`vida-campanha-ativa.tsx`) - checkbox "endossar" removido do formulário de criar comentário; botão "Endossar"/"Remover endosso" por linha, só aparece quando a sessão logada É o dono da campanha em foco (`donoEhSessaoReal`, mesma variável que já gateava "Publicar Atualização") - deixa testar o fluxo certo (comentar como um pesquisador, endossar como outro/o dono) em vez de mascarar o bug.
+
+Patch pronto no topo de `ATUALIZAR O SUPABASE.sql` (15-09-2026, rodada 3) - idempotente, ainda não colado.
+
+`tsc --noEmit`, `eslint --fix` (0 erros) e `npm run build` limpos nos dois lados (nest + react). Não testado ao vivo (sem Playwright nesta sessão).
+
+---
+
 ### 🟡 Especificação registrada (13-09-2026): tela de administração pra `arquivo` (espaço ocupado, órfãos, maiores consumidores) - NÃO construída de propósito
 
 O Lucas pediu detalhamento dessa ideia (citada de passagem pelo Claude Web numa rodada anterior, descartada na hora). Resposta completa, registrada aqui pra não se perder - **decisão de não construir agora confirmada pelo próprio Claude Web**: poucos arquivos no sistema hoje (todos de teste), a tela mostraria números perto de zero e não responderia pergunta nenhuma de verdade. Momento certo: depois de `18-recompensa`/`15-atualizacao-campanha` estarem em uso real, quando anexos tiverem volume e órfãos aparecerem sozinhos.

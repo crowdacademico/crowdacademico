@@ -91,7 +91,13 @@ export function VidaCampanhaAtiva({ auth }: PropsPagina) {
   const [novaAtualizacao, setNovaAtualizacao] = useState({ titulo: '', conteudo: '', fase: 'andamento', tipo: 'texto' });
 
   const [comentarios, setComentarios] = useState<Comentario[]>([]);
-  const [novoComentario, setNovoComentario] = useState({ conteudo: '', endossado: false });
+  // SEM `endossado` aqui (15-09-2026, achado numa auditoria RF x
+  // implementação - RF-089) - quem escreve o comentário nunca decide o
+  // próprio endosso, só o dono da campanha, depois, numa ação separada
+  // (ver `alternarEndosso`, abaixo). O checkbox que existia aqui deixava
+  // autoendossar na hora de criar - o banco bloqueia isso incondicionalmente
+  // agora (trg_comentario_ignora_endosso_criacao, 05_regras_negocio.sql).
+  const [novoComentario, setNovoComentario] = useState({ conteudo: '' });
 
   const [euSigo, setEuSigo] = useState(false);
 
@@ -176,13 +182,27 @@ export function VidaCampanhaAtiva({ auth }: PropsPagina) {
     if (!novoComentario.conteudo) return;
     await chamarERegistrar<void>('/comentario', {
       method: 'POST',
-      body: JSON.stringify({ idCampanha: campanhaFoco, conteudo: novoComentario.conteudo, endossado: novoComentario.endossado }),
+      body: JSON.stringify({ idCampanha: campanhaFoco, conteudo: novoComentario.conteudo }),
     }).catch(() => {});
-    setNovoComentario({ conteudo: '', endossado: false });
+    setNovoComentario({ conteudo: '' });
     recarregarTudo(campanhaFoco);
   };
 
   const endossosAtivos = comentarios.filter((c) => c.endossado && c.ativo).length;
+
+  // Endossar/remover endosso (RF-089) - ação SEPARADA do dono da campanha,
+  // nunca do autor do comentário. Mesmo padrão de `alternarAtivoAtualizacao`
+  // (acima): PATCH direto, gateado por `donoEhSessaoReal` no próprio botão
+  // (a RLS/trigger no banco também recusa se a sessão não for o dono nem
+  // tiver `comentario_moderar` - isto só evita oferecer um botão que ia
+  // falhar na hora).
+  const alternarEndosso = async (idComentario: number, endossadoAtual: boolean) => {
+    await chamarERegistrar<void>(`/comentario/${idComentario}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ endossado: !endossadoAtual }),
+    }).catch(() => {});
+    recarregarTudo(campanhaFoco);
+  };
 
   const alternarSeguir = async () => {
     if (euSigo) {
@@ -317,21 +337,22 @@ export function VidaCampanhaAtiva({ auth }: PropsPagina) {
           </h3>
           <div className="flex gap-2 flex-wrap items-end mb-2">
             <input type="text" placeholder="Comentário" value={novoComentario.conteudo} onChange={(e) => setNovoComentario({ ...novoComentario, conteudo: e.target.value })} className="border borda-padrao rounded-md px-2 py-1 text-xs flex-1" />
-            <label className="text-xs flex items-center gap-1">
-              <input type="checkbox" checked={novoComentario.endossado} onChange={(e) => setNovoComentario({ ...novoComentario, endossado: e.target.checked })} />
-              endossar
-            </label>
             <button type="button" className="btn btn-secondary text-xs" onClick={enviarComentario}>
               Enviar (como {auth.usuario?.nome})
             </button>
           </div>
-          <p className="texto-fraco text-xs mb-2">Comenta sempre a sessão logada - o banco bloqueia comentário na própria campanha.</p>
+          <p className="texto-fraco text-xs mb-2">
+            Comenta sempre a sessão logada - o banco bloqueia comentário na própria campanha. Endossar é ação
+            separada, só do dono da campanha (RF-089) - sem endossar aqui, só é possível testando logado como o
+            próprio dono.
+          </p>
           <table className="crud-tabela mb-4">
             <thead>
               <tr>
                 <th>Autor</th>
                 <th>Comentário</th>
                 <th>Endosso</th>
+                {donoEhSessaoReal && <th>Ações</th>}
               </tr>
             </thead>
             <tbody>
@@ -340,6 +361,18 @@ export function VidaCampanhaAtiva({ auth }: PropsPagina) {
                   <td>{nomeDe(item.idPesquisador)}</td>
                   <td>{item.conteudo}</td>
                   <td>{item.endossado ? <span className="badge badge-sucesso">#{item.ordemEndosso}</span> : '-'}</td>
+                  {donoEhSessaoReal && (
+                    <td>
+                      <button
+                        type="button"
+                        className="crud-tabela__acao"
+                        onClick={() => alternarEndosso(item.idComentario, item.endossado)}
+                        disabled={!item.endossado && endossosAtivos >= LIMITE_ENDOSSOS}
+                      >
+                        {item.endossado ? 'Remover endosso' : 'Endossar'}
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

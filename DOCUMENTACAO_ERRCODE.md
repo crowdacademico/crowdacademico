@@ -65,6 +65,7 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 91019 | `validar_atualizacao_campanha` | `atualizacao_campanha` | Atualização só permitida em campanhas ativas/sucesso/não atingidas |
 | 91020 | `fn_valida_comentario_campanha_ativa` | `comentario` | Não é possível comentar em campanha rejeitada/sob moderação |
 | 91021 | `validar_comentario_endosso` | `comentario` | Limite de endossos ativos atingido |
+| 91022 | `validar_comentario_edicao_conteudo` | `comentario` | Não é possível editar um comentário já endossado (RF-091) - remova o endosso antes |
 
 ## 92xxx - Autorização negada / conflito de interesse (403)
 
@@ -76,6 +77,8 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 92004 | `validar_comentario_autor` | `comentario` | Pesquisador não pode comentar na própria campanha |
 | 92005 | `fn_bloqueia_reversao_moderacao_comentario` | `comentario` | Só quem tem `comentario_moderar` pode reverter comentário ocultado |
 | 92006 | `fn_valida_denuncia_sem_autojulgamento` | `denuncia` | Quem registrou a denúncia não pode julgar a própria denúncia |
+| 92007 | `validar_comentario_edicao_conteudo` | `comentario` | Só o autor do comentário pode editar o próprio texto (RF-091) |
+| 92008 | `validar_comentario_endosso_autor` | `comentario` | Só o dono da campanha (ou moderação) pode endossar/remover endosso (RF-089) |
 
 ## 93xxx - Limite de taxa (429)
 
