@@ -20,6 +20,7 @@ import { CAMPANHA_BLOQUEADA, motivoBloqueioCampanha } from '../../services/campo
 import { AcaoLinha } from '../../components/crud/acao-linha';
 import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
+import { ModalDetalhe } from '../../components/crud/modal-detalhe';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { perfilPesquisadorApi } from '../../services/6-perfil-pesquisador/api/perfil-pesquisador.api';
 import {
@@ -79,6 +80,40 @@ interface PainelOrcamentoCronogramaProps {
   // usa (o modal de Alterar) manter as CONTAGENS em dia sem duplicar
   // adicionar/remover - só o Alterar passa isto, o Consultar não precisa.
   aoCarregar?: (orcamento: ItemOrcamento[], cronograma: MarcoCronograma[]) => void;
+  // `abaFixa` (15-09-2026, pedido do Lucas: Orçamento e Cronograma como
+  // 2 MODAIS/etapas diferentes dentro de Criar Campanha, não uma tabela só
+  // com abas) - quando presente, trava a aba nesse valor e esconde os 2
+  // botões de trocar aba (não faz sentido oferecer "trocar pra Cronograma"
+  // dentro da etapa que É a de Orçamento). Alterar/Consultar Campanha
+  // continuam sem passar isto, mantendo as 2 abas normais de sempre.
+  abaFixa?: 'orcamento' | 'cronograma';
+  // `metaFinanceira` (15-09-2026, pedido do Lucas: "em orçamento precisa
+  // aparecer o valor declarado... e a soma dos itens tem que ser igual o
+  // do orçamento") - opcional: quando presente, mostra "Soma X de Y" logo
+  // acima da tabela de Orçamento, com a diferença em destaque. O banco já
+  // EXIGE essa igualdade exata na aprovação (fn_valida_completude_campanha_
+  // aprovacao, RF-039/040) - isto só adianta o feedback, igual os avisos
+  // de prazo/meta mínima já fazem no formulário de Dados.
+  metaFinanceira?: number;
+  // `dataInicioCampanha` (15-09-2026, pedido do Lucas: "cronograma tem que
+  // estar dentro do tempo declarado") - `min` do campo "Data prevista" de
+  // um marco novo. SÓ o mínimo, de propósito - RF-042/`fn_valida_data_
+  // marco_cronograma` (05_regras_negocio.sql) bloqueiam data ANTERIOR ao
+  // início, mas permitem ultrapassar `data_fim` sem problema ("um marco de
+  // divulgação de resultado é comum acontecer depois do prazo de
+  // arrecadação" - decisão da Alexia, 31-07-2026). Não existe `max` aqui
+  // por isso não ser um bug, é a regra de negócio de verdade.
+  dataInicioCampanha?: string;
+  // `minimoMarcosCronograma` (15-09-2026, achado do Lucas: concluiu o
+  // wizard com orçamento não batendo com a meta E cronograma vazio, sem
+  // AVISO nenhum) - quando vem junto com `metaFinanceira`, mostra 2
+  // tabelinhas simples (Meta/Soma atual em Orçamento; Mínimo de marcos/
+  // Marcos cadastrados em Cronograma, cada uma dentro da própria aba) -
+  // não é o checklist "Pronta para aprovar?" de Alterar Campanha (Lucas
+  // rejeitou essa frase/estilo aqui: "não precisa desses dizeres... está
+  // esquisito"), só um par rótulo + textbox readonly com o valor já
+  // declarado, com borda vermelha quando não bate/não atinge o mínimo.
+  minimoMarcosCronograma?: number;
 }
 
 // Extraído (08-09-2026, pedido do Lucas: "acima de Datas, nos dois
@@ -92,13 +127,36 @@ interface PainelOrcamentoCronogramaProps {
 // decidir se o botão Aprovar libera, e não vale a pena prop-drill esse
 // dado de volta pra cima só pra eliminar uma pequena duplicação de
 // fetch/estado numa ferramenta de bancada.
-function PainelOrcamentoCronograma({ auth, idCampanha, podeEditar, aoCarregar }: PainelOrcamentoCronogramaProps) {
+function PainelOrcamentoCronograma({
+  auth,
+  idCampanha,
+  podeEditar,
+  aoCarregar,
+  abaFixa,
+  metaFinanceira,
+  dataInicioCampanha,
+  minimoMarcosCronograma,
+}: PainelOrcamentoCronogramaProps) {
   const chamarERegistrar = useChamadaRegistrada(auth);
   const [orcamento, setOrcamento] = useState<ItemOrcamento[]>([]);
   const [cronograma, setCronograma] = useState<MarcoCronograma[]>([]);
-  const [abaAtiva, setAbaAtiva] = useState<'orcamento' | 'cronograma'>('orcamento');
+  const [abaAtiva, setAbaAtiva] = useState<'orcamento' | 'cronograma'>(abaFixa ?? 'orcamento');
   const [novoItemOrcamento, setNovoItemOrcamento] = useState({ categoria: '', valor: '' });
   const [novoMarco, setNovoMarco] = useState({ titulo: '', dataPrevista: '' });
+  // Alterar/Consultar de item de orçamento e marco (15-09-2026, pedido do
+  // Lucas: "os 3 ícones de sempre de ações, alterar, consultar e excluir")
+  // - mesmo padrão de edição em linha já usado pra Link Acadêmico em
+  // modal-usuario.tsx (linha vira input + Salvar/Cancelar; fora de edição,
+  // vira Alterar/Consultar/Excluir). Consultar é `ModalDetalhe` (mesmo
+  // componente, mesmo `rotuloAcao="Consultar"` que Link Acadêmico usa) -
+  // não tem nada escondido pra mostrar que a própria linha já não mostre,
+  // mas o Lucas pediu os 3 ícones por consistência com o resto do painel.
+  const [idOrcamentoEditando, setIdOrcamentoEditando] = useState<number | null>(null);
+  const [formEdicaoOrcamento, setFormEdicaoOrcamento] = useState({ categoria: '', valor: '' });
+  const [itemOrcamentoConsultado, setItemOrcamentoConsultado] = useState<ItemOrcamento | null>(null);
+  const [idMarcoEditando, setIdMarcoEditando] = useState<number | null>(null);
+  const [formEdicaoMarco, setFormEdicaoMarco] = useState({ titulo: '', dataPrevista: '' });
+  const [marcoConsultado, setMarcoConsultado] = useState<MarcoCronograma | null>(null);
 
   // Ref (não dependência de `carregar`) - `aoCarregar` recebe uma arrow
   // function nova a cada render do modal pai; colocar ela nas dependências
@@ -144,6 +202,21 @@ function PainelOrcamentoCronograma({ auth, idCampanha, podeEditar, aoCarregar }:
     carregar();
   };
 
+  const iniciarEdicaoOrcamento = (item: ItemOrcamento) => {
+    setIdOrcamentoEditando(item.idOrcamento);
+    setFormEdicaoOrcamento({ categoria: item.categoria, valor: String(item.valor) });
+  };
+
+  const salvarEdicaoOrcamento = async () => {
+    if (!formEdicaoOrcamento.categoria || !formEdicaoOrcamento.valor) return;
+    await chamarERegistrar<void>(`/orcamento-campanha/${idOrcamentoEditando}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ categoria: formEdicaoOrcamento.categoria, valor: Number(formEdicaoOrcamento.valor) }),
+    }).catch(() => {});
+    setIdOrcamentoEditando(null);
+    carregar();
+  };
+
   const adicionarMarco = async () => {
     if (!novoMarco.titulo || !novoMarco.dataPrevista) return;
     await chamarERegistrar<void>('/marco-cronograma', {
@@ -159,19 +232,64 @@ function PainelOrcamentoCronograma({ auth, idCampanha, podeEditar, aoCarregar }:
     carregar();
   };
 
+  const iniciarEdicaoMarco = (marco: MarcoCronograma) => {
+    setIdMarcoEditando(marco.idMarco);
+    setFormEdicaoMarco({ titulo: marco.titulo, dataPrevista: marco.dataPrevista.slice(0, 10) });
+  };
+
+  const salvarEdicaoMarco = async () => {
+    if (!formEdicaoMarco.titulo || !formEdicaoMarco.dataPrevista) return;
+    await chamarERegistrar<void>(`/marco-cronograma/${idMarcoEditando}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ titulo: formEdicaoMarco.titulo, dataPrevista: new Date(formEdicaoMarco.dataPrevista).toISOString() }),
+    }).catch(() => {});
+    setIdMarcoEditando(null);
+    carregar();
+  };
+
   return (
     <div>
-      <div className="flex gap-2 mb-3">
-        <button type="button" className={`btn ${abaAtiva === 'orcamento' ? 'btn-primary' : 'btn-secondary'} text-xs`} onClick={() => setAbaAtiva('orcamento')}>
-          Orçamento
-        </button>
-        <button type="button" className={`btn ${abaAtiva === 'cronograma' ? 'btn-primary' : 'btn-secondary'} text-xs`} onClick={() => setAbaAtiva('cronograma')}>
-          Cronograma
-        </button>
-      </div>
+      {!abaFixa && (
+        <div className="flex gap-2 mb-3">
+          <button type="button" className={`btn ${abaAtiva === 'orcamento' ? 'btn-primary' : 'btn-secondary'} text-xs`} onClick={() => setAbaAtiva('orcamento')}>
+            Orçamento
+          </button>
+          <button type="button" className={`btn ${abaAtiva === 'cronograma' ? 'btn-primary' : 'btn-secondary'} text-xs`} onClick={() => setAbaAtiva('cronograma')}>
+            Cronograma
+          </button>
+        </div>
+      )}
 
       {abaAtiva === 'orcamento' && (
-        <table className="crud-tabela mb-3">
+        <>
+          {/* Meta/Soma em estilo tabela simples, 2 textbox readonly
+              (15-09-2026, pedido do Lucas - a versão anterior era "1 texto
+              inteiro" numa frase só, "esquisito"; o Projeto de Interface já
+              tinha achado o formato certo: rótulo + valor comparável lado a
+              lado, sem badge/palavra "aprovar" nenhuma - isto aqui é
+              criação, não aprovação). `.borda-erro` (já existe pra
+              `.input-padrao`, mesmo par usado no resto do painel) marca a
+              Soma quando ela não bate com a Meta - sem precisar de um
+              badge ao lado pra dizer a mesma coisa 2x. */}
+          {metaFinanceira !== undefined && (() => {
+            const somaOrcamento = orcamento.reduce((soma, item) => soma + item.valor, 0);
+            const bate = somaOrcamento === metaFinanceira;
+            return (
+              <table className="crud-tabela mb-3">
+                <tbody>
+                  <tr>
+                    <td>Meta</td>
+                    <td><input type="text" readOnly value={formatarMoeda(metaFinanceira)} className="input-padrao" /></td>
+                  </tr>
+                  <tr>
+                    <td>Soma atual</td>
+                    <td><input type="text" readOnly value={formatarMoeda(somaOrcamento)} className={'input-padrao' + (bate ? '' : ' borda-erro')} /></td>
+                  </tr>
+                </tbody>
+              </table>
+            );
+          })()}
+          <table className="crud-tabela mb-3">
           <thead>
             <tr>
               <th>Categoria</th>
@@ -180,39 +298,93 @@ function PainelOrcamentoCronograma({ auth, idCampanha, podeEditar, aoCarregar }:
             </tr>
           </thead>
           <tbody>
-            {orcamento.map((item) => (
-              <tr key={item.idOrcamento}>
-                <td>{item.categoria}</td>
-                <td>{formatarMoeda(item.valor)}</td>
-                {podeEditar && (
-                  <td>
-                    <button type="button" className="crud-tabela__acao crud-tabela__acao--excluir" onClick={() => removerItemOrcamento(item.idOrcamento)}>
-                      Remover
-                    </button>
-                  </td>
-                )}
-              </tr>
-            ))}
+            {orcamento.map((item) => {
+              const emEdicao = idOrcamentoEditando === item.idOrcamento;
+              return (
+                <tr key={item.idOrcamento}>
+                  {emEdicao ? (
+                    <>
+                      <td>
+                        <input
+                          type="text"
+                          value={formEdicaoOrcamento.categoria}
+                          onChange={(e) => setFormEdicaoOrcamento({ ...formEdicaoOrcamento, categoria: e.target.value })}
+                          className="input-padrao"
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="number"
+                          value={formEdicaoOrcamento.valor}
+                          onChange={(e) => setFormEdicaoOrcamento({ ...formEdicaoOrcamento, valor: e.target.value })}
+                          className="input-padrao"
+                        />
+                      </td>
+                      {podeEditar && (
+                        <td>
+                          <div className="crud-tabela__acoes">
+                            <AcaoLinha rotulo="Salvar" icone="fa-check" variante="alterar" onClick={salvarEdicaoOrcamento} />
+                            <AcaoLinha rotulo="Cancelar" icone="fa-xmark" onClick={() => setIdOrcamentoEditando(null)} />
+                          </div>
+                        </td>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <td>{item.categoria}</td>
+                      <td>{formatarMoeda(item.valor)}</td>
+                      {podeEditar && (
+                        <td>
+                          <div className="crud-tabela__acoes">
+                            <AcaoLinha rotulo="Alterar" icone="fa-pen" variante="alterar" onClick={() => iniciarEdicaoOrcamento(item)} />
+                            <AcaoLinha rotulo="Consultar" icone="fa-eye" onClick={() => setItemOrcamentoConsultado(item)} />
+                            <AcaoLinha rotulo="Excluir" icone="fa-trash" variante="excluir" onClick={() => removerItemOrcamento(item.idOrcamento)} />
+                          </div>
+                        </td>
+                      )}
+                    </>
+                  )}
+                </tr>
+              );
+            })}
             {podeEditar && (
               <tr>
                 <td>
-                  <input type="text" value={novoItemOrcamento.categoria} onChange={(e) => setNovoItemOrcamento({ ...novoItemOrcamento, categoria: e.target.value })} className="border borda-padrao rounded-md px-2 py-1 text-xs w-full" placeholder="Categoria" />
+                  <input type="text" value={novoItemOrcamento.categoria} onChange={(e) => setNovoItemOrcamento({ ...novoItemOrcamento, categoria: e.target.value })} className="input-padrao" placeholder="Categoria" />
                 </td>
                 <td>
-                  <input type="number" value={novoItemOrcamento.valor} onChange={(e) => setNovoItemOrcamento({ ...novoItemOrcamento, valor: e.target.value })} className="border borda-padrao rounded-md px-2 py-1 text-xs w-24" placeholder="Valor" />
+                  <input type="number" value={novoItemOrcamento.valor} onChange={(e) => setNovoItemOrcamento({ ...novoItemOrcamento, valor: e.target.value })} className="input-padrao" placeholder="Valor" />
                 </td>
                 <td>
-                  <button type="button" className="btn btn-secondary text-xs" onClick={adicionarItemOrcamento}>
+                  <button type="button" className="btn btn-sucesso text-xs" onClick={adicionarItemOrcamento}>
                     + adicionar
                   </button>
                 </td>
               </tr>
             )}
           </tbody>
-        </table>
+          </table>
+        </>
       )}
 
       {abaAtiva === 'cronograma' && (
+        <>
+          {/* Mesmo estilo simples do Orçamento acima - mínimo/cadastrados
+              em textbox readonly, `.borda-erro` só no valor que não bate. */}
+          {minimoMarcosCronograma !== undefined && (
+            <table className="crud-tabela mb-3">
+              <tbody>
+                <tr>
+                  <td>Mínimo de marcos</td>
+                  <td><input type="text" readOnly value={minimoMarcosCronograma} className="input-padrao" /></td>
+                </tr>
+                <tr>
+                  <td>Marcos cadastrados</td>
+                  <td><input type="text" readOnly value={cronograma.length} className={'input-padrao' + (cronograma.length >= minimoMarcosCronograma ? '' : ' borda-erro')} /></td>
+                </tr>
+              </tbody>
+            </table>
+          )}
         <table className="crud-tabela mb-3">
           <thead>
             <tr>
@@ -222,26 +394,63 @@ function PainelOrcamentoCronograma({ auth, idCampanha, podeEditar, aoCarregar }:
             </tr>
           </thead>
           <tbody>
-            {cronograma.map((marco) => (
-              <tr key={marco.idMarco}>
-                <td>{marco.titulo}</td>
-                <td>{new Date(marco.dataPrevista).toLocaleDateString('pt-BR')}</td>
-                {podeEditar && (
-                  <td>
-                    <button type="button" className="crud-tabela__acao crud-tabela__acao--excluir" onClick={() => removerMarco(marco.idMarco)}>
-                      Remover
-                    </button>
-                  </td>
-                )}
-              </tr>
-            ))}
+            {cronograma.map((marco) => {
+              const emEdicao = idMarcoEditando === marco.idMarco;
+              return (
+                <tr key={marco.idMarco}>
+                  {emEdicao ? (
+                    <>
+                      <td>
+                        <input
+                          type="text"
+                          value={formEdicaoMarco.titulo}
+                          onChange={(e) => setFormEdicaoMarco({ ...formEdicaoMarco, titulo: e.target.value })}
+                          className="input-padrao"
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type="date"
+                          value={formEdicaoMarco.dataPrevista}
+                          min={dataInicioCampanha}
+                          onChange={(e) => setFormEdicaoMarco({ ...formEdicaoMarco, dataPrevista: e.target.value })}
+                          className="input-padrao"
+                        />
+                      </td>
+                      {podeEditar && (
+                        <td>
+                          <div className="crud-tabela__acoes">
+                            <AcaoLinha rotulo="Salvar" icone="fa-check" variante="alterar" onClick={salvarEdicaoMarco} />
+                            <AcaoLinha rotulo="Cancelar" icone="fa-xmark" onClick={() => setIdMarcoEditando(null)} />
+                          </div>
+                        </td>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <td>{marco.titulo}</td>
+                      <td>{new Date(marco.dataPrevista).toLocaleDateString('pt-BR')}</td>
+                      {podeEditar && (
+                        <td>
+                          <div className="crud-tabela__acoes">
+                            <AcaoLinha rotulo="Alterar" icone="fa-pen" variante="alterar" onClick={() => iniciarEdicaoMarco(marco)} />
+                            <AcaoLinha rotulo="Consultar" icone="fa-eye" onClick={() => setMarcoConsultado(marco)} />
+                            <AcaoLinha rotulo="Excluir" icone="fa-trash" variante="excluir" onClick={() => removerMarco(marco.idMarco)} />
+                          </div>
+                        </td>
+                      )}
+                    </>
+                  )}
+                </tr>
+              );
+            })}
             {podeEditar && (
               <tr>
                 <td>
-                  <input type="text" value={novoMarco.titulo} onChange={(e) => setNovoMarco({ ...novoMarco, titulo: e.target.value })} className="border borda-padrao rounded-md px-2 py-1 text-xs w-full" placeholder="Título" />
+                  <input type="text" value={novoMarco.titulo} onChange={(e) => setNovoMarco({ ...novoMarco, titulo: e.target.value })} className="input-padrao" placeholder="Título" />
                 </td>
                 <td>
-                  <input type="date" value={novoMarco.dataPrevista} onChange={(e) => setNovoMarco({ ...novoMarco, dataPrevista: e.target.value })} className="border borda-padrao rounded-md px-2 py-1 text-xs" />
+                  <input type="date" value={novoMarco.dataPrevista} min={dataInicioCampanha} onChange={(e) => setNovoMarco({ ...novoMarco, dataPrevista: e.target.value })} className="input-padrao" />
                 </td>
                 <td>
                   <button type="button" className="btn btn-secondary text-xs" onClick={adicionarMarco}>
@@ -252,6 +461,31 @@ function PainelOrcamentoCronograma({ auth, idCampanha, podeEditar, aoCarregar }:
             )}
           </tbody>
         </table>
+        </>
+      )}
+
+      {itemOrcamentoConsultado && (
+        <ModalDetalhe
+          titulo="Item de orçamento"
+          rotuloAcao="Consultar"
+          aoFechar={() => setItemOrcamentoConsultado(null)}
+          secoes={[
+            { titulo: 'Categoria', conteudo: itemOrcamentoConsultado.categoria },
+            { titulo: 'Valor', conteudo: formatarMoeda(itemOrcamentoConsultado.valor) },
+          ]}
+        />
+      )}
+
+      {marcoConsultado && (
+        <ModalDetalhe
+          titulo="Marco de cronograma"
+          rotuloAcao="Consultar"
+          aoFechar={() => setMarcoConsultado(null)}
+          secoes={[
+            { titulo: 'Título', conteudo: marcoConsultado.titulo },
+            { titulo: 'Data prevista', conteudo: new Date(marcoConsultado.dataPrevista).toLocaleDateString('pt-BR') },
+          ]}
+        />
       )}
     </div>
   );
@@ -389,12 +623,18 @@ export function BancadaCampanha({ auth }: PropsPagina) {
   // Cronograma ou Orçamento... era para estar dentro do formulário") -
   // RF-040/RF-042 preveem orçamento/cronograma cadastrados "durante a
   // criação da campanha", mas os itens só podem existir depois da campanha
-  // ter um `idCampanha` de verdade (FK). Em vez de inventar um mecanismo
-  // novo, o modal passa a ter 2 fases: clicar "Criar" grava a campanha e
-  // troca o conteúdo do MESMO modal para o `PainelOrcamentoCronograma` já
-  // usado em Alterar Campanha (nenhuma UI nova pra orçamento/cronograma,
-  // só reaproveitado aqui) - "Concluir" fecha. Nulo = ainda não criada.
+  // ter um `idCampanha` de verdade (FK). Nulo = ainda não criada.
   const [idCampanhaRecemCriada, setIdCampanhaRecemCriada] = useState<number | null>(null);
+  // 3 etapas do MESMO modal (15-09-2026, pedido do Lucas: "Criar" virou
+  // "Próximo", e Orçamento/Cronograma passam a ser 2 telas SEPARADAS e
+  // focadas, com Voltar/Próximo entre elas, em vez de uma tabela só com
+  // abas) - `PainelOrcamentoCronograma` (existia desde 08-09-2026, usado
+  // em Alterar Campanha) ganhou a prop `abaFixa` só pra travar numa aba e
+  // esconder o toggle entre elas nesta rodada, sem duplicar a tabela.
+  // "Voltar" de Orçamento pra Dados PATCHa a campanha já criada (mesmo
+  // endpoint de Alterar Campanha) em vez de tentar criar de novo - ver
+  // `avancarDaEtapaDados`, abaixo.
+  const [etapaCriarCampanha, setEtapaCriarCampanha] = useState<'dados' | 'orcamento' | 'cronograma'>('dados');
   // Combobox de pesquisador (08-09-2026, pedido do Lucas: "digitar 24 ou
   // marina, aparece até 5") - não é um <select> (lista de TODOS os
   // usuários seria enorme e sem indicar quem já é pesquisador de
@@ -647,29 +887,45 @@ export function BancadaCampanha({ auth }: PropsPagina) {
     formCriarCampanha.dataInicio >= hojeISO &&
     duracaoCriarValida;
 
-  const criarCampanha = async () => {
+  // Corpo do request é o mesmo pra criar e pra atualizar (os 2 DTOs do
+  // Nest aceitam os mesmos 7 campos) - só o método/rota mudam.
+  const corpoDadosCampanha = () => ({
+    idAreaConhecimento: Number(formCriarCampanha.idAreaConhecimento),
+    titulo: formCriarCampanha.titulo,
+    metaFinanceira: Number(formCriarCampanha.metaFinanceira),
+    dataInicio: new Date(formCriarCampanha.dataInicio).toISOString(),
+    dataFim: new Date(formCriarCampanha.dataFim).toISOString(),
+    ...(formCriarCampanha.descricao ? { descricao: formCriarCampanha.descricao } : {}),
+    ...(formCriarCampanha.videoApresentacaoUrl ? { videoApresentacaoUrl: formCriarCampanha.videoApresentacaoUrl } : {}),
+  });
+
+  // Botão "Próximo" da etapa Dados (15-09-2026, ERA "Criar") - na 1ª vez
+  // (idCampanhaRecemCriada ainda nulo) cria a campanha de verdade; se a
+  // pessoa voltou da etapa Orçamento pra corrigir algo aqui, a campanha JÁ
+  // existe - "Próximo" de novo faz um PATCH (mesmo endpoint de Alterar
+  // Campanha) em vez de tentar criar outra. Nos dois casos, avança pra
+  // Orçamento no final.
+  const avancarDaEtapaDados = async () => {
     if (!formCriarCampanhaValido || !pesquisadorEscolhido) {
       return;
     }
     try {
-      const nova = await chamarERegistrar<CampanhaResponse>(`/campanha/${pesquisadorEscolhido.idUsuario}`, {
-        method: 'POST',
-        body: JSON.stringify({
-          idAreaConhecimento: Number(formCriarCampanha.idAreaConhecimento),
-          titulo: formCriarCampanha.titulo,
-          metaFinanceira: Number(formCriarCampanha.metaFinanceira),
-          dataInicio: new Date(formCriarCampanha.dataInicio).toISOString(),
-          dataFim: new Date(formCriarCampanha.dataFim).toISOString(),
-          ...(formCriarCampanha.descricao ? { descricao: formCriarCampanha.descricao } : {}),
-          ...(formCriarCampanha.videoApresentacaoUrl ? { videoApresentacaoUrl: formCriarCampanha.videoApresentacaoUrl } : {}),
-        }),
-      });
-      carregarCampanhas();
-      // Não fecha o modal aqui (ERA `setCriandoCampanha(false)` direto) -
-      // troca pra fase de Orçamento/Cronograma da MESMA campanha recém-
-      // criada (ver `idCampanhaRecemCriada`, acima).
-      setIdCampanhaRecemCriada(nova.idCampanha);
-      mostrar('Campanha criada com sucesso.', `ID: ${nova.idCampanha}, em nome de ${nomeDe(nova.idUsuario)}`);
+      if (idCampanhaRecemCriada === null) {
+        const nova = await chamarERegistrar<CampanhaResponse>(`/campanha/${pesquisadorEscolhido.idUsuario}`, {
+          method: 'POST',
+          body: JSON.stringify(corpoDadosCampanha()),
+        });
+        carregarCampanhas();
+        setIdCampanhaRecemCriada(nova.idCampanha);
+        mostrar('Campanha criada com sucesso.', `ID: ${nova.idCampanha}, em nome de ${nomeDe(nova.idUsuario)}`);
+      } else {
+        await chamarERegistrar<void>(`/campanha/${idCampanhaRecemCriada}`, {
+          method: 'PATCH',
+          body: JSON.stringify(corpoDadosCampanha()),
+        });
+        carregarCampanhas();
+      }
+      setEtapaCriarCampanha('orcamento');
     } catch (erro) {
       reportarErro(erro);
     }
@@ -682,6 +938,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
     setPesquisadorEscolhido(null);
     setBuscaPesquisador('');
     setIdCampanhaRecemCriada(null);
+    setEtapaCriarCampanha('dados');
     setFormCriarCampanha({
       titulo: '',
       idAreaConhecimento: '',
@@ -1303,29 +1560,49 @@ export function BancadaCampanha({ auth }: PropsPagina) {
       {criandoCampanha && (
         <ModalFicha
           titulo="Criar Campanha"
+          // Miss-click no fundo escurecido já derrubou este wizard de 3
+          // etapas 2x (15-09-2026, achado do Lucas) - perder o progresso
+          // (ou até uma campanha já criada, se estava nas etapas 2/3) por
+          // um clique sem querer é caro aqui. Só fecha por "Cancelar"/
+          // "Concluir" ou pelo X.
+          fecharAoClicarFora={false}
           subtitulo={
-            idCampanhaRecemCriada === null
-              ? 'Em nome de outro pesquisador - escolha quem é o dono abaixo.'
-              : `Campanha #${idCampanhaRecemCriada} criada - adicione orçamento e cronograma, ou conclua agora.`
+            etapaCriarCampanha === 'dados'
+              ? 'Em nome de outro pesquisador - escolha quem é o dono abaixo. Etapa 1 de 3: Dados.'
+              : etapaCriarCampanha === 'orcamento'
+                ? `Campanha #${idCampanhaRecemCriada} - Etapa 2 de 3: Orçamento.`
+                : `Campanha #${idCampanhaRecemCriada} - Etapa 3 de 3: Cronograma.`
           }
           aoFechar={fecharModalCriarCampanha}
           rodape={
-            idCampanhaRecemCriada === null ? (
+            etapaCriarCampanha === 'dados' ? (
               <div className="flex gap-3 max-w-sm ml-auto">
                 <button type="button" onClick={fecharModalCriarCampanha} className="btn btn-secondary flex-1">
                   Cancelar
                 </button>
                 <button
                   type="button"
-                  onClick={criarCampanha}
+                  onClick={avancarDaEtapaDados}
                   disabled={!formCriarCampanhaValido}
                   className="btn btn-primary flex-1"
                 >
-                  Criar
+                  Próximo
+                </button>
+              </div>
+            ) : etapaCriarCampanha === 'orcamento' ? (
+              <div className="flex gap-3 max-w-sm ml-auto">
+                <button type="button" onClick={() => setEtapaCriarCampanha('dados')} className="btn btn-secondary flex-1">
+                  Voltar
+                </button>
+                <button type="button" onClick={() => setEtapaCriarCampanha('cronograma')} className="btn btn-primary flex-1">
+                  Próximo
                 </button>
               </div>
             ) : (
               <div className="flex gap-3 max-w-sm ml-auto">
+                <button type="button" onClick={() => setEtapaCriarCampanha('orcamento')} className="btn btn-secondary flex-1">
+                  Voltar
+                </button>
                 <button type="button" onClick={fecharModalCriarCampanha} className="btn btn-primary flex-1">
                   Concluir
                 </button>
@@ -1333,22 +1610,41 @@ export function BancadaCampanha({ auth }: PropsPagina) {
             )
           }
         >
-          {idCampanhaRecemCriada !== null ? (
-            // Orçamento/Cronograma DA CAMPANHA RECÉM-CRIADA (14-09-2026,
-            // pedido do Lucas: "dentro do Modal não tem Cronograma ou
-            // Orçamento... era para estar dentro do formulário") - RF-040/
-            // RF-042 preveem isso "durante a criação", mas os itens só
-            // existem depois de a campanha ter um id (FK pra orcamento_
-            // campanha/marco_cronograma) - por isso é uma 2ª fase do MESMO
-            // modal, não um campo a mais no formulário de cima. Reaproveita
-            // o mesmo painel que Alterar Campanha já usa, sem UI nova.
-            // Mínimo de itens (RF-040/042) só é exigido na APROVAÇÃO, não
-            // aqui - pode ficar sem nenhum item e concluir, e completar
-            // depois via Alterar, exatamente como o RF permite ("aos
-            // poucos").
-            <SecaoFicha titulo="Orçamento e Cronograma">
+          {etapaCriarCampanha !== 'dados' && idCampanhaRecemCriada !== null ? (
+            // Orçamento e Cronograma como 2 ETAPAS SEPARADAS e focadas
+            // (15-09-2026, pedido do Lucas: "Modais diferentes e focados
+            // para cada coisa", não uma tabela só com abas) - RF-040/042
+            // preveem isso "durante a criação", mas os itens só existem
+            // depois de a campanha ter um id (FK pra orcamento_campanha/
+            // marco_cronograma), por isso são etapas do MESMO modal, não
+            // campos do formulário de Dados. `abaFixa` trava o painel
+            // (que já existia, usado em Alterar Campanha) numa aba só,
+            // sem UI nova pra tabela em si. Mínimo de itens (RF-040/042)
+            // só é exigido na APROVAÇÃO, não aqui - pode ficar sem nenhum
+            // item e concluir, completando depois via Alterar, exatamente
+            // como o RF permite ("aos poucos").
+            <SecaoFicha titulo={etapaCriarCampanha === 'orcamento' ? 'Orçamento' : 'Cronograma'}>
               <div className="sm:col-span-2">
-                <PainelOrcamentoCronograma auth={auth} idCampanha={idCampanhaRecemCriada} podeEditar={true} />
+                <PainelOrcamentoCronograma
+                  // `key` (15-09-2026, achado do Lucas: Cronograma
+                  // mostrando a tabela de Orçamento) - sem isto, React
+                  // reaproveita a MESMA instância do componente ao trocar
+                  // de etapa (é a mesma posição na árvore JSX, só a prop
+                  // `abaFixa` muda) - o `useState(abaFixa ?? 'orcamento')`
+                  // só roda o inicializador na 1ª montagem, então `abaAtiva`
+                  // ficava travado em 'orcamento' pra sempre, mesmo depois
+                  // de `abaFixa` virar 'cronograma'. `key` força remontar
+                  // (nova instância = novo estado) toda vez que a etapa
+                  // muda.
+                  key={etapaCriarCampanha}
+                  auth={auth}
+                  idCampanha={idCampanhaRecemCriada}
+                  podeEditar={true}
+                  abaFixa={etapaCriarCampanha}
+                  metaFinanceira={Number(formCriarCampanha.metaFinanceira)}
+                  dataInicioCampanha={formCriarCampanha.dataInicio}
+                  minimoMarcosCronograma={minimoMarcosCronograma}
+                />
               </div>
             </SecaoFicha>
           ) : (

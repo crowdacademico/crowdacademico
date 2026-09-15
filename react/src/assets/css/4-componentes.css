@@ -63,6 +63,21 @@
     color: var(--color-white);
   }
 
+  /* .btn-sucesso (15-09-2026, pedido do Lucas: "+ adicionar" de item de
+     orçamento verde) - mesmo par de tokens que `.badge-sucesso` já usa
+     (--cor-fundo-sucesso/--cor-texto-sucesso, com os 3 tons de tema já
+     resolvidos em 1-cores.css), mesmo padrão de hover sólido que
+     `.btn-danger` já tem (fundo fraco em repouso, cor forte só no hover). */
+  .btn-sucesso {
+    background-color: var(--cor-fundo-sucesso);
+    color: var(--cor-texto-sucesso);
+  }
+
+  .btn-sucesso:hover:not(:disabled) {
+    background-color: var(--color-emerald-600);
+    color: var(--color-white);
+  }
+
   /* .btn-info (azulado, só pra "Alterar" em GenericTable) removido
      08-08-2026: a coluna Ações da tabela trocou botão sólido por
      texto/ícone discreto (.crud-tabela__acao, 5-crud.css) - perdeu a

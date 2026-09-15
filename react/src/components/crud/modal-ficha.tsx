@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import type { ReactNode } from 'react';
 
 interface ModalFichaProps {
@@ -23,6 +24,13 @@ interface ModalFichaProps {
   carregando?: boolean;
   aoFechar: () => void;
   children?: ReactNode;
+  // `fecharAoClicarFora` (15-09-2026, pedido do Lucas: "cometi miss click,
+  // cliquei fora da tela" - interrompeu um wizard de várias etapas em
+  // Criar Campanha) - `true` por padrão, preservando o comportamento de
+  // sempre em todo o resto do painel. `false` só tira o clique no fundo
+  // escurecido da lista de caminhos de fechar - o X continua funcionando
+  // (é o outro caminho, intencionalmente separado deste).
+  fecharAoClicarFora?: boolean;
 }
 
 // Mesma moldura de ModalDetalhe (backdrop + cartão + botão fechar), só que
@@ -33,26 +41,55 @@ interface ModalFichaProps {
 // Testes: T1 replicando a aparência exata de Consultar/Alterar Usuário,
 // sem reinventar o layout).
 //
-// NOTA (13-09-2026, achado do Claude Web): os 3 caminhos de fechar (botão
-// de fechar, clique no fundo escurecido, e o que o chamador decidir passar
-// como `aoFechar`) já passam todos pela MESMA prop `aoFechar` - de
-// propósito, é o que permite `ModalAlterarUsuario` embrulhar `aoFechar`
-// com uma guarda de "alteração não salva" numa linha só, sem esta casca
-// precisar saber nada sobre isso. Este componente hoje NÃO trata a tecla
-// Esc (sorte, não desenho - Esc simplesmente não faz nada agora). Se um
-// dia alguém adicionar suporte a Esc aqui, ele TEM que fechar chamando
-// `aoFechar`, nunca fechar "por conta própria" - senão vira um 4º caminho
-// que escapa de qualquer guarda que um chamador tenha embrulhado em cima.
-export function ModalFicha({ titulo, subtitulo, avatar, badges, rodape, carregando, aoFechar, children }: ModalFichaProps) {
+// NOTA (13-09-2026, achado do Claude Web; ATUALIZADA 15-09-2026 com Esc):
+// os 3 caminhos de fechar (botão de fechar, clique no fundo escurecido -
+// este desligável via `fecharAoClicarFora={false}`, ver prop acima - e
+// agora a tecla Esc, sempre ligada, mesmo com `fecharAoClicarFora={false}`
+// - Esc é uma ação deliberada, igual clicar no X, não um acidente como o
+// clique fora) já passam todos pela MESMA prop `aoFechar` - de propósito,
+// é o que permite `ModalAlterarUsuario` embrulhar `aoFechar` com uma
+// guarda de "alteração não salva" numa linha só, sem esta casca precisar
+// saber nada sobre isso. Qualquer caminho de fechar novo que alguém
+// adicionar aqui TEM que continuar chamando `aoFechar`, nunca fechar "por
+// conta própria" - senão vira um caminho extra que escapa de qualquer
+// guarda que um chamador tenha embrulhado em cima.
+export function ModalFicha({
+  titulo,
+  subtitulo,
+  avatar,
+  badges,
+  rodape,
+  carregando,
+  aoFechar,
+  children,
+  fecharAoClicarFora = true,
+}: ModalFichaProps) {
   const tituloExibido = carregando ? 'Carregando...' : titulo;
   const avatarExibido = carregando ? null : avatar;
   const subtituloExibido = carregando ? undefined : subtitulo;
   const badgesExibidos = carregando ? undefined : badges;
 
+  // Esc fecha (15-09-2026, pedido do Lucas: "3 formas de fechar o Modal")
+  // - listener no `document`, não num `onKeyDown` no próprio card: um
+  // <div> não recebe evento de teclado sem `tabIndex`/foco nele, e forçar
+  // foco só pra isso complicaria mais que ajuda. O efeito só existe
+  // enquanto ESTE modal está montado (cada modal do painel é `{aberto &&
+  // <ModalFicha ...>}, então isto liga/desliga sozinho com abrir/fechar,
+  // sem precisar de guarda extra "só se estiver aberto" aqui dentro.
+  useEffect(() => {
+    const aoTeclar = (evento: KeyboardEvent) => {
+      if (evento.key === 'Escape') {
+        aoFechar();
+      }
+    };
+    document.addEventListener('keydown', aoTeclar);
+    return () => document.removeEventListener('keydown', aoTeclar);
+  }, [aoFechar]);
+
   return (
     <div
       className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/40"
-      onClick={aoFechar}
+      onClick={fecharAoClicarFora ? aoFechar : undefined}
     >
       <div
         className="w-full max-w-5xl max-h-[90vh] fundo-cartao rounded-2xl shadow-2xl border borda-padrao overflow-hidden flex flex-col"

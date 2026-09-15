@@ -278,16 +278,16 @@ export function VidaCampanhaAtiva({ auth }: PropsPagina) {
           <h3 className="subtitulo mb-2">Atualizações</h3>
           <div className="acao-com-motivo mb-2">
             <div className="flex gap-2 flex-wrap items-end">
-              <input type="text" placeholder="Título" value={novaAtualizacao.titulo} onChange={(e) => setNovaAtualizacao({ ...novaAtualizacao, titulo: e.target.value })} className="border borda-padrao rounded-md px-2 py-1 text-xs" />
-              <input type="text" placeholder="Conteúdo" value={novaAtualizacao.conteudo} onChange={(e) => setNovaAtualizacao({ ...novaAtualizacao, conteudo: e.target.value })} className="border borda-padrao rounded-md px-2 py-1 text-xs flex-1" />
-              <select value={novaAtualizacao.fase} onChange={(e) => setNovaAtualizacao({ ...novaAtualizacao, fase: e.target.value })} className="border borda-padrao rounded-md px-2 py-1 text-xs">
+              <input type="text" placeholder="Título" value={novaAtualizacao.titulo} onChange={(e) => setNovaAtualizacao({ ...novaAtualizacao, titulo: e.target.value })} className="input-padrao w-40" />
+              <input type="text" placeholder="Conteúdo" value={novaAtualizacao.conteudo} onChange={(e) => setNovaAtualizacao({ ...novaAtualizacao, conteudo: e.target.value })} className="input-padrao flex-1" />
+              <select value={novaAtualizacao.fase} onChange={(e) => setNovaAtualizacao({ ...novaAtualizacao, fase: e.target.value })} className="input-padrao w-40">
                 {FASES.map((fase) => (
                   <option key={fase} value={fase}>
                     {fase}
                   </option>
                 ))}
               </select>
-              <select value={novaAtualizacao.tipo} onChange={(e) => setNovaAtualizacao({ ...novaAtualizacao, tipo: e.target.value })} className="border borda-padrao rounded-md px-2 py-1 text-xs">
+              <select value={novaAtualizacao.tipo} onChange={(e) => setNovaAtualizacao({ ...novaAtualizacao, tipo: e.target.value })} className="input-padrao w-32">
                 {TIPOS.map((tipo) => (
                   <option key={tipo} value={tipo}>
                     {tipo}
@@ -336,7 +336,7 @@ export function VidaCampanhaAtiva({ auth }: PropsPagina) {
             Comentários e endossos ({endossosAtivos} de {LIMITE_ENDOSSOS} endossos ativos)
           </h3>
           <div className="flex gap-2 flex-wrap items-end mb-2">
-            <input type="text" placeholder="Comentário" value={novoComentario.conteudo} onChange={(e) => setNovoComentario({ ...novoComentario, conteudo: e.target.value })} className="border borda-padrao rounded-md px-2 py-1 text-xs flex-1" />
+            <input type="text" placeholder="Comentário" value={novoComentario.conteudo} onChange={(e) => setNovoComentario({ ...novoComentario, conteudo: e.target.value })} className="input-padrao flex-1" />
             <button type="button" className="btn btn-secondary text-xs" onClick={enviarComentario}>
               Enviar (como {auth.usuario?.nome})
             </button>

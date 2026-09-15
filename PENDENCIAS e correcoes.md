@@ -1718,6 +1718,75 @@ Patch pronto no topo de `ATUALIZAR O SUPABASE.sql` (15-09-2026, rodada 3) - idem
 
 ---
 
+### 🟢 CONSTRUÍDO (15-09-2026, mesmo dia, rodada 4): Criar Campanha (T2) virou wizard de 3 etapas - Dados/Orçamento/Cronograma, cada uma num modal focado
+
+Pedido explícito do Lucas: trocar o botão "Criar" por "Próximo", e separar Orçamento e Cronograma (que ontem tinham entrado juntos, numa tabela com abas, como 2ª fase do modal) em 2 etapas DIFERENTES, cada uma com Voltar/Próximo, "focadas para cada coisa".
+
+**🟢 Construído**, novo estado `etapaCriarCampanha: 'dados' | 'orcamento' | 'cronograma'` no lugar do booleano `idCampanhaRecemCriada !== null` de ontem:
+- **Etapa 1 (Dados)** - botão "Próximo" (era "Criar"). Na 1ª vez faz o `POST` de sempre; se a pessoa voltou da etapa 2 pra corrigir algo, "Próximo" faz um `PATCH /campanha/:id` (mesmo endpoint que "Alterar Campanha" já usa, os 2 DTOs do Nest aceitam os mesmos 7 campos) em vez de tentar criar outra campanha. Extraído em `corpoDadosCampanha()` pra não duplicar o corpo do request entre criar/atualizar.
+- **Etapa 2 (Orçamento)** e **Etapa 3 (Cronograma)** - `PainelOrcamentoCronograma` (o mesmo componente de ontem, já usado também em Alterar Campanha) ganhou uma prop nova, `abaFixa?: 'orcamento' | 'cronograma'` - quando presente, trava a aba nesse valor e esconde os 2 botões de trocar aba (não faz sentido oferecer "trocar pra Cronograma" dentro da etapa que É a de Orçamento). Alterar Campanha continua sem passar isso, mantendo as 2 abas normais. "Voltar"/"Próximo" só trocam `etapaCriarCampanha` - não fazem chamada nenhuma, os itens de orçamento/cronograma já persistem sozinhos a cada adicionar/remover (mecanismo de ontem, sem mudança).
+
+`tsc --noEmit`, `eslint --fix` (0 erros) e `npm run build` limpos. Não testado ao vivo - memória de Playwright já atualizada com o roteiro dos 3 passos.
+
+**🟢 CORRIGIDO no mesmo dia, rodada seguinte**: miss-click no fundo escurecido já derrubou o wizard 2x (perdendo etapa/progresso, às vezes com a campanha já criada). `ModalFicha` (casca compartilhada, usada em quase todo modal do painel) ganhou a prop `fecharAoClicarFora` (default `true`, preserva o comportamento de sempre em todo o resto) - só o modal de Criar Campanha passa `false`. O X no topo direito continua fechando normalmente (é um caminho separado, não afetado).
+
+**🟢 CONSTRUÍDO no mesmo dia, rodada seguinte (pedido do Lucas: "3 formas de fechar o Modal... aplicar em todos")**: tecla Esc agora também fecha - `ModalFicha` ganhou um `useEffect` com listener de `keydown` no `document` (não no card - um `<div>` não recebe tecla sem `tabIndex`/foco), chamando a MESMA `aoFechar` de sempre. Como é a casca compartilhada, isso já cobre "quase todo modal do painel" de uma vez, sem precisar tocar em cada um - exatamente o "aplicar em todos" que o Lucas pediu, sem trabalho extra. Esc SEMPRE fecha, mesmo com `fecharAoClicarFora={false}` - é ação deliberada (igual o X), não acidente como o clique fora.
+
+**Achado no caminho, não corrigido - risco pré-existente, não desta rodada**: se 2 modais `ModalFicha` ficarem abertos EMPILHADOS ao mesmo tempo (único caso conhecido: `ModalConsultarPapel` abrindo `ModalDetalhePermissao` por cima - já registrado como "nunca visto ao vivo" numa rodada anterior), a tecla Esc fecha os DOIS de uma vez (cada instância tem seu próprio listener no `document`, sem noção de qual está "por cima"). Clique-fora já tinha uma ambiguidade parecida nesse cenário raro, nunca testada ao vivo. Não construí uma pilha/registro de modais pra resolver isso agora - ninguém pediu, e o único caso conhecido já está na fila de verificação visual, não vale complicar o componente compartilhado pra um cenário nunca confirmado.
+
+---
+
+### 🟢 CORRIGIDO (15-09-2026, mesmo dia, rodada seguinte): bug real - etapa Cronograma mostrava a tabela de Orçamento, achado pelo Lucas testando o wizard novo
+
+Achado exato do Lucas: na Etapa 3 (Cronograma), a tabela renderizada era a de Orçamento (cabeçalho "Categoria/Valor", linha com item de orçamento real). Causa: `<PainelOrcamentoCronograma>` é a MESMA posição na árvore JSX nas etapas 2 e 3 (só a prop `abaFixa` muda) - React não desmonta/remonta só porque uma prop mudou, então `useState(abaFixa ?? 'orcamento')` só roda o inicializador na 1ª montagem (ao entrar na Etapa 2) e nunca de novo (ao entrar na Etapa 3, o componente já existia, `abaAtiva` continuava travado em `'orcamento'`). Corrigido com `key={etapaCriarCampanha}` no `<PainelOrcamentoCronograma>` - troca de `key` força o React a tratar como elemento novo (desmonta o antigo, monta um novo, estado nasce corretamente do zero).
+
+**Junto, 3 pedidos do Lucas pra essa etapa:**
+1. **Meta declarada aparece em Orçamento** - nova prop `metaFinanceira?: number` em `PainelOrcamentoCronograma`; quando presente, mostra "Soma: X de Y" acima da tabela (vermelho se não bate, verde se bate exatamente) - o banco já EXIGE soma exata na aprovação (RF-039/040), isto só adianta o feedback.
+2. **"+ adicionar" verde em Orçamento** - classe nova `.btn-sucesso` (`4-componentes.css`), mesmos tokens que `.badge-sucesso` já usa, mesmo padrão de hover sólido de `.btn-danger`. Só o de Orçamento virou verde - Cronograma não foi pedido, ficou como estava.
+3. **Cronograma dentro do prazo declarado** - `min` no campo de data do marco = `dataInicioCampanha` (nova prop, recebe `formCriarCampanha.dataInicio`). **Só o mínimo, de propósito** - RF-042/`fn_valida_data_marco_cronograma` (já existente) permite um marco ultrapassar `data_fim` (decisão da Alexia, 31-07-2026: "um marco de divulgação de resultado é comum acontecer depois do prazo de arrecadação") - não adicionei `max`, seria contradizer uma regra de negócio já decidida, não corrigir um bug.
+
+`tsc --noEmit`, `eslint --fix` (0 erros) e `npm run build` limpos.
+
+---
+
+### 🟢 CONSTRUÍDO (15-09-2026, mesmo dia, rodada seguinte): Orçamento/Cronograma (T2) - inputs padronizados, ícones de ação de sempre, Alterar de verdade
+
+O Lucas apontou que os inputs de "+ adicionar" eram visualmente diferentes do resto do sistema ("de onde tirou eles"), e pediu os 3 ícones padrão (Alterar/Consultar/Excluir) na coluna Ações, no lugar do texto "Remover" solto.
+
+**🟢 Inputs trocados pra `.input-padrao`** - eram `border borda-padrao rounded-md px-2 py-1 text-xs` cru, uma classe que não existe em nenhum outro formulário do painel (achado ao procurar a origem - não vem de lugar nenhum reconhecível, alguém escreveu isso solto quando este painel de orçamento/cronograma foi criado, 08-09-2026, e nunca foi migrado).
+
+**🟢 Alterar/Consultar/Excluir de verdade, reaproveitando o padrão já existente pra Link Acadêmico** (`modal-usuario.tsx`) - mesmo mecanismo: a linha vira 2 `<input className="input-padrao">` + Salvar/Cancelar ao clicar Alterar; fora de edição, mostra os 3 `<AcaoLinha>` (mesmo componente usado em toda tabela do painel, com `.dica`/tooltip de hover já incluído). Endpoints de `PATCH` já existiam nos dois módulos (`orcamento-campanha`/`marco-cronograma`) - nunca tinham sido ligados no frontend. "Consultar" abre um `ModalDetalhe` (mesmo componente/mesmo `rotuloAcao="Consultar"` que Link Acadêmico usa) - não existe campo escondido pra mostrar que a linha já não mostre, mas ficou consistente com o resto do painel, como pedido.
+
+Aplicado nos DOIS blocos (Orçamento E Cronograma) por consistência - o pedido citou só Orçamento, mas deixar só um dos dois com os ícones novos ficaria parecendo esquecimento, não escolha.
+
+`tsc --noEmit`, `eslint --fix` (0 erros) e `npm run build` limpos.
+
+---
+
+### 🟢 CORRIGIDO (15-09-2026, mesmo dia, rodada seguinte): input feio extinto do sistema todo + bug real - campanha concluída no wizard sem orçamento bater e sem cronograma nenhum, sem nenhum aviso
+
+**🟢 Input feio (`border borda-padrao rounded-md px-2 py-1 text-xs`) removido de vez.** O Lucas perguntou se existia em mais algum lugar - existia, 5 vezes em `vida-campanha-ativa.tsx` (T3: formulário de "Publicar Atualização" e de "Comentário"), a mesma origem de `bancada-campanha.tsx` (T2, já corrigido na rodada anterior): nasceu quando esse painel de orçamento/cronograma foi escrito em 08-09-2026, antes de `.input-padrao` existir ou nunca migrado. Trocados os 6 por `.input-padrao` (+ `w-40`/`w-32`/`flex-1` onde precisava de largura fixa dentro de uma linha `flex`, já que `.input-padrao` sozinho é `width: 100%`). Confirmado por grep no `react/src` inteiro: zero ocorrências restantes.
+
+**🟢 Bug real, achado pelo próprio Lucas testando**: concluiu uma campanha (#22) com orçamento de R$300 contra meta de R$600 e ZERO marcos de cronograma - nada avisou. RF-039/040/042 (`fn_valida_completude_campanha_aprovacao`, 05) já bloqueiam a APROVAÇÃO nesse estado, mas o wizard deixa "Concluir" sem mostrar isso em lugar nenhum - o mesmo antipadrão do item de Heurísticas de Nielsen registrado horas atrás (esconder o problema em vez de mostrar).
+
+**Primeira correção, REJEITADA pelo Lucas**: reaproveitar o checklist "Pronta para aprovar?" de Alterar Campanha (frase única por critério + badge OK/Faltando), mostrado sempre desde a Etapa 2. Lucas: "não precisa desses dizeres... 'Pronta para aprovar?'" e "está esquisito estes dizeres" (a frase-numa-célula tipo "Orçamento: 0 itens (mínimo 1), soma R$ 0,00 de R$ 600,00 Faltando"). Referenciou o Projeto de Interface (`21-criar-campanha.js`) como já tendo o formato visual certo.
+
+**Correção final, aplicada**: nada de checklist combinado nem palavra "aprovar". Dentro de CADA aba, uma tabela simples de 2 linhas rótulo + textbox readonly: em Orçamento, "Meta" e "Soma atual" (a 2ª com `.borda-erro` quando a soma não bate exatamente com a meta); em Cronograma, "Mínimo de marcos" e "Marcos cadastrados" (com `.borda-erro` quando está abaixo do mínimo). Removida a prop `minimoItensOrcamento` (o critério de contagem de itens de orçamento não faz parte deste formato mais simples, só sobra o de soma×meta); `minimoMarcosCronograma` continua em uso. Não bloqueia "Concluir" - RF permite terminar incompleto e completar depois via Alterar ("aos poucos"), só garante que a pessoa VÊ o estado real antes de fechar, em vez de descobrir depois olhando Consultar.
+
+`tsc --noEmit`, `eslint --fix` (0 erros) e `npm run build` limpos.
+
+---
+
+### 🔴 Pendência aberta (15-09-2026, importante, deliberadamente não iniciada): auditoria do painel contra as 10 Heurísticas de Nielsen
+
+O Lucas registrou isto como pendência futura importante, explícito que não é pra começar agora. Exemplo concreto que ele deu: desabilitar silenciosamente um botão ("Próximo"/"Criar"/etc.) quando um campo obrigatório está inválido não é o certo - o certo é deixar clicar e mostrar o problema de verdade (borda do campo em vermelho + mensagem de erro explicando o quê e o porquê). Mapeia direto pras heurísticas #1 (visibilidade do status do sistema) e #9 (ajudar a reconhecer, diagnosticar e corrigir erros) - desabilitar sem feedback é diagnóstico zero.
+
+**Onde esse padrão já existe hoje** (achado no mesmo dia, construindo o wizard de Criar Campanha): `formCriarCampanhaValido` (`bancada-campanha.tsx`) desabilita "Próximo" com base num booleano combinado grande (título, área, meta ≥ mínimo, datas, duração 15-60 dias), só ALGUMAS dessas sub-condições aparecem como aviso inline (meta mínima e duração têm texto vermelho; título/área/pesquisador escolhido não). É o exato antipadrão que ele está descrevendo - provavelmente se repete em outros formulários do painel (Alterar Campanha, Alterar Usuário, etc.) nunca auditados especificamente por isso.
+
+**Como aplicar**: não iniciar varredura proativa. Quando tocar em qualquer formulário com esse padrão de "desabilitar submit se inválido" no futuro, considerar mostrar erro por campo em vez de (ou além de) só desabilitar o botão. Quando o Lucas pedir pra começar essa frente de verdade, o escopo natural é uma auditoria completa em TODOS os formulários de `react/src/views/` contra as 10 heurísticas, não só #1/#9.
+
+---
+
 ### 🟡 Especificação registrada (13-09-2026): tela de administração pra `arquivo` (espaço ocupado, órfãos, maiores consumidores) - NÃO construída de propósito
 
 O Lucas pediu detalhamento dessa ideia (citada de passagem pelo Claude Web numa rodada anterior, descartada na hora). Resposta completa, registrada aqui pra não se perder - **decisão de não construir agora confirmada pelo próprio Claude Web**: poucos arquivos no sistema hoje (todos de teste), a tela mostraria números perto de zero e não responderia pergunta nenhuma de verdade. Momento certo: depois de `18-recompensa`/`15-atualizacao-campanha` estarem em uso real, quando anexos tiverem volume e órfãos aparecerem sozinhos.
