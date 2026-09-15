@@ -2151,6 +2151,75 @@ END;
 $$;
 
 -- ----------------------------------------------------------------------------
+-- Função:     expirar_campanhas_rascunho
+-- Assinatura: () -> INT
+-- Bloco:      [05-K-2]
+-- Regra:      ADICIONADO (15-09-2026, pedido do Lucas) - campanha nasce em
+--             'aguardando_aprovacao' desde o primeiro clique em "Criar"
+--             (RF-046), antes mesmo de ter orçamento/cronograma completos
+--             (RF-040/042 só exigem o mínimo NA APROVAÇÃO, pensado pra
+--             deixar cadastrar "aos poucos"). Cenário levantado: queda de
+--             energia ou fechar a aba sem querer entre criar a campanha e
+--             terminar de preencher orçamento/cronograma - a campanha fica
+--             pra sempre "aguardando_aprovacao", sem nunca poder ser
+--             aprovada (trava no mesmo mínimo), ocupando 1 das 2 vagas
+--             simultâneas do RF-048 e sujando a fila de aprovação do
+--             Administrador indefinidamente.
+--
+--             Mesmo padrão de encerrar_campanhas_vencidas() (acima):
+--             SECURITY DEFINER (bypassa RLS - um job agendado não tem
+--             id_usuario_atual() setado, pol_campanha_delete não deixaria
+--             NENHUMA linha visível pra ele), chamado por @Cron no NestJS,
+--             sem sessão de usuário.
+--
+--             Critério de "abandonada" é o MESMO já usado na aprovação
+--             (orcamento_min_itens/cronograma_min_marcos, configuracoes) -
+--             não um limiar novo. Isso protege trabalho real: se a pessoa
+--             já tinha cadastrado os itens mínimos antes da queda de
+--             energia, a campanha NUNCA expira por este job, mesmo sem
+--             "Concluir" ter sido clicado - só quem, depois do prazo
+--             configurável (campanha_rascunho_ttl_horas, padrão 48h),
+--             ainda não bateria o mínimo pra aprovação de qualquer jeito.
+--
+--             DELETE físico, não soft-delete: uma campanha neste estado
+--             nunca foi aprovada, nunca apareceu na página pública, nunca
+--             recebeu contribuição - não existe nada pra proteger
+--             preservando a linha. orcamento_campanha/marco_cronograma
+--             (FK ON DELETE CASCADE, 01) são limpos automaticamente junto,
+--             sem precisar de DELETE explícito nas duas tabelas.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.expirar_campanhas_rascunho()
+RETURNS INT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_ttl_horas INT;
+    v_orcamento_min INT;
+    v_cronograma_min INT;
+    v_expiradas INT;
+BEGIN
+    v_ttl_horas := public.config_numero('campanha_rascunho_ttl_horas', 48);
+    v_orcamento_min := public.config_numero('orcamento_min_itens', 1);
+    v_cronograma_min := public.config_numero('cronograma_min_marcos', 3);
+
+    DELETE FROM campanha c
+    WHERE c.status = 'aguardando_aprovacao'
+      AND c.criado_em <= NOW() - (v_ttl_horas * INTERVAL '1 hour')
+      AND (
+        (SELECT COUNT(*) FROM orcamento_campanha o WHERE o.id_campanha = c.id_campanha) < v_orcamento_min
+        OR
+        (SELECT COUNT(*) FROM marco_cronograma m WHERE m.id_campanha = c.id_campanha) < v_cronograma_min
+      );
+
+    GET DIAGNOSTICS v_expiradas = ROW_COUNT;
+
+    RETURN v_expiradas;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
 -- Função:     reativar_pesquisadores_vencidos
 -- Assinatura: () -> INT
 -- Regra:      ADICIONADA (07-09-2026) - mesmo espírito e mesmo formato de

@@ -12,6 +12,7 @@ import { CampanhaServiceAprovar } from './service/campanha.service.aprovar';
 import { CampanhaServiceCreate } from './service/campanha.service.create';
 import { CampanhaServiceCreateParaOutro } from './service/campanha.service.create-para-outro';
 import { CampanhaServiceEncerrarVencidas } from './service/campanha.service.encerrar-vencidas';
+import { CampanhaServiceExpirarRascunho } from './service/campanha.service.expirar-rascunho';
 import { CampanhaServiceFindAll } from './service/campanha.service.findall';
 import { CampanhaServiceFindOne } from './service/campanha.service.findone';
 import { CampanhaServiceForcarExclusao } from './service/campanha.service.forcar-exclusao';
@@ -44,6 +45,9 @@ import { CampanhaServiceUpdate } from './service/campanha.service.update';
     // Job agendado (RF-057) - registrado aqui só porque o @Cron precisa de
     // um provider vivo pra existir; não é chamado por nenhum controller.
     CampanhaServiceEncerrarVencidas,
+    // Job agendado (15-09-2026) - mesma razão do de cima, expira rascunho
+    // de campanha abandonado antes de completar orçamento/cronograma.
+    CampanhaServiceExpirarRascunho,
   ],
 })
 export class CampanhaModule {}

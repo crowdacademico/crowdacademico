@@ -306,6 +306,16 @@ export function BancadaCampanha({ auth }: PropsPagina) {
   const minimoItensOrcamento = typeof valorMinimoOrcamento === 'number' ? valorMinimoOrcamento : 1;
   const valorMinimoCronograma = obterConfiguracao('cronograma_min_marcos', 3);
   const minimoMarcosCronograma = typeof valorMinimoCronograma === 'number' ? valorMinimoCronograma : 3;
+  // Mesmo padrão dos 2 acima (14-09-2026, achado do Lucas: "Início/Fim não
+  // deveriam ser opcionais, e tem prazo mínimo/máximo") - RF-066 já é
+  // aplicado de verdade no banco (`fn_valida_prazo_campanha_negocio`,
+  // 05_regras_negocio.sql), lendo estas 2 chaves; o formulário de criação
+  // não lia nenhuma das duas, então só descobria o limite batendo num erro
+  // 90012 cru do Postgres depois de enviar.
+  const valorPrazoMinimo = obterConfiguracao('prazo_minimo_campanha_dias', 15);
+  const prazoMinimoCampanha = typeof valorPrazoMinimo === 'number' ? valorPrazoMinimo : 15;
+  const valorPrazoMaximo = obterConfiguracao('prazo_maximo_campanha_dias', 60);
+  const prazoMaximoCampanha = typeof valorPrazoMaximo === 'number' ? valorPrazoMaximo : 60;
 
   const [areas, setAreas] = useState<AreaConhecimentoResponse[]>([]);
   const [usuarios, setUsuarios] = useState<UsuarioResponse[]>([]);
@@ -369,6 +379,16 @@ export function BancadaCampanha({ auth }: PropsPagina) {
     dataFim: '',
     videoApresentacaoUrl: '',
   });
+  // Fase pós-criação (14-09-2026, pedido do Lucas: "dentro do Modal não tem
+  // Cronograma ou Orçamento... era para estar dentro do formulário") -
+  // RF-040/RF-042 preveem orçamento/cronograma cadastrados "durante a
+  // criação da campanha", mas os itens só podem existir depois da campanha
+  // ter um `idCampanha` de verdade (FK). Em vez de inventar um mecanismo
+  // novo, o modal passa a ter 2 fases: clicar "Criar" grava a campanha e
+  // troca o conteúdo do MESMO modal para o `PainelOrcamentoCronograma` já
+  // usado em Alterar Campanha (nenhuma UI nova pra orçamento/cronograma,
+  // só reaproveitado aqui) - "Concluir" fecha. Nulo = ainda não criada.
+  const [idCampanhaRecemCriada, setIdCampanhaRecemCriada] = useState<number | null>(null);
   // Combobox de pesquisador (08-09-2026, pedido do Lucas: "digitar 24 ou
   // marina, aparece até 5") - não é um <select> (lista de TODOS os
   // usuários seria enorme e sem indicar quem já é pesquisador de
@@ -580,13 +600,48 @@ export function BancadaCampanha({ auth }: PropsPagina) {
     }
   };
 
+  // Hoje em formato de <input type="date"> (yyyy-mm-dd, fuso local) - usado
+  // como `min` do campo Início, pra o próprio navegador impedir escolher
+  // ontem ou antes (14-09-2026, achado do Lucas: "obviamente não deve dar
+  // pra iniciar no dia anterior"). `toISOString()` sozinho usaria UTC, que
+  // pode cair no dia ERRADO pra quem está em fuso negativo (ex.: 23h de
+  // 14/09 em Brasília já é 15/09 em UTC) - por isso monta a string local
+  // campo a campo, igual `getFullYear`/`getMonth`/`getDate` do próprio
+  // objeto Date, em vez de `toISOString().slice(0, 10)`.
+  const hojeISO = (() => {
+    const agora = new Date();
+    const ano = agora.getFullYear();
+    const mes = String(agora.getMonth() + 1).padStart(2, '0');
+    const dia = String(agora.getDate()).padStart(2, '0');
+    return `${ano}-${mes}-${dia}`;
+  })();
+
+  // Duração em dias corridos entre Início/Fim, pra validar contra
+  // RF-066 (`prazo_minimo_campanha_dias`/`prazo_maximo_campanha_dias`) ANTES
+  // de mandar pro backend - o banco já rejeita fora do intervalo
+  // (`fn_valida_prazo_campanha_negocio`), isto só adianta o aviso.
+  const duracaoDiasCriar =
+    formCriarCampanha.dataInicio && formCriarCampanha.dataFim
+      ? Math.round(
+          (new Date(formCriarCampanha.dataFim).getTime() - new Date(formCriarCampanha.dataInicio).getTime()) /
+            86400000,
+        )
+      : null;
+  const duracaoCriarValida =
+    duracaoDiasCriar !== null && duracaoDiasCriar >= prazoMinimoCampanha && duracaoDiasCriar <= prazoMaximoCampanha;
+
+  const formCriarCampanhaValido =
+    Boolean(pesquisadorEscolhido) &&
+    Boolean(formCriarCampanha.titulo) &&
+    Boolean(formCriarCampanha.idAreaConhecimento) &&
+    Boolean(formCriarCampanha.metaFinanceira) &&
+    Boolean(formCriarCampanha.dataInicio) &&
+    Boolean(formCriarCampanha.dataFim) &&
+    formCriarCampanha.dataInicio >= hojeISO &&
+    duracaoCriarValida;
+
   const criarCampanha = async () => {
-    if (
-      !pesquisadorEscolhido ||
-      !formCriarCampanha.titulo ||
-      !formCriarCampanha.idAreaConhecimento ||
-      !formCriarCampanha.metaFinanceira
-    ) {
+    if (!formCriarCampanhaValido || !pesquisadorEscolhido) {
       return;
     }
     try {
@@ -596,29 +651,39 @@ export function BancadaCampanha({ auth }: PropsPagina) {
           idAreaConhecimento: Number(formCriarCampanha.idAreaConhecimento),
           titulo: formCriarCampanha.titulo,
           metaFinanceira: Number(formCriarCampanha.metaFinanceira),
+          dataInicio: new Date(formCriarCampanha.dataInicio).toISOString(),
+          dataFim: new Date(formCriarCampanha.dataFim).toISOString(),
           ...(formCriarCampanha.descricao ? { descricao: formCriarCampanha.descricao } : {}),
-          ...(formCriarCampanha.dataInicio ? { dataInicio: new Date(formCriarCampanha.dataInicio).toISOString() } : {}),
-          ...(formCriarCampanha.dataFim ? { dataFim: new Date(formCriarCampanha.dataFim).toISOString() } : {}),
           ...(formCriarCampanha.videoApresentacaoUrl ? { videoApresentacaoUrl: formCriarCampanha.videoApresentacaoUrl } : {}),
         }),
       });
       carregarCampanhas();
-      setCriandoCampanha(false);
-      setPesquisadorEscolhido(null);
-      setBuscaPesquisador('');
-      setFormCriarCampanha({
-        titulo: '',
-        idAreaConhecimento: '',
-        metaFinanceira: '',
-        descricao: '',
-        dataInicio: '',
-        dataFim: '',
-        videoApresentacaoUrl: '',
-      });
+      // Não fecha o modal aqui (ERA `setCriandoCampanha(false)` direto) -
+      // troca pra fase de Orçamento/Cronograma da MESMA campanha recém-
+      // criada (ver `idCampanhaRecemCriada`, acima).
+      setIdCampanhaRecemCriada(nova.idCampanha);
       mostrar('Campanha criada com sucesso.', `ID: ${nova.idCampanha}, em nome de ${nomeDe(nova.idUsuario)}`);
     } catch (erro) {
       reportarErro(erro);
     }
+  };
+
+  // Fecha o modal de verdade e limpa tudo pra próxima abertura - chamado
+  // tanto pelo "Cancelar" (antes de criar) quanto pelo "Concluir" (depois).
+  const fecharModalCriarCampanha = () => {
+    setCriandoCampanha(false);
+    setPesquisadorEscolhido(null);
+    setBuscaPesquisador('');
+    setIdCampanhaRecemCriada(null);
+    setFormCriarCampanha({
+      titulo: '',
+      idAreaConhecimento: '',
+      metaFinanceira: '',
+      descricao: '',
+      dataInicio: '',
+      dataFim: '',
+      videoApresentacaoUrl: '',
+    });
   };
 
   return (
@@ -1231,41 +1296,56 @@ export function BancadaCampanha({ auth }: PropsPagina) {
       {criandoCampanha && (
         <ModalFicha
           titulo="Criar Campanha"
-          subtitulo="Em nome de outro pesquisador - escolha quem é o dono abaixo."
-          aoFechar={() => {
-            setCriandoCampanha(false);
-            setPesquisadorEscolhido(null);
-            setBuscaPesquisador('');
-          }}
+          subtitulo={
+            idCampanhaRecemCriada === null
+              ? 'Em nome de outro pesquisador - escolha quem é o dono abaixo.'
+              : `Campanha #${idCampanhaRecemCriada} criada - adicione orçamento e cronograma, ou conclua agora.`
+          }
+          aoFechar={fecharModalCriarCampanha}
           rodape={
-            <div className="flex gap-3 max-w-sm ml-auto">
-              <button
-                type="button"
-                onClick={() => {
-                  setCriandoCampanha(false);
-                  setPesquisadorEscolhido(null);
-                  setBuscaPesquisador('');
-                }}
-                className="btn btn-secondary flex-1"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={criarCampanha}
-                disabled={
-                  !pesquisadorEscolhido ||
-                  !formCriarCampanha.titulo ||
-                  !formCriarCampanha.idAreaConhecimento ||
-                  !formCriarCampanha.metaFinanceira
-                }
-                className="btn btn-primary flex-1"
-              >
-                Criar
-              </button>
-            </div>
+            idCampanhaRecemCriada === null ? (
+              <div className="flex gap-3 max-w-sm ml-auto">
+                <button type="button" onClick={fecharModalCriarCampanha} className="btn btn-secondary flex-1">
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={criarCampanha}
+                  disabled={!formCriarCampanhaValido}
+                  className="btn btn-primary flex-1"
+                >
+                  Criar
+                </button>
+              </div>
+            ) : (
+              <div className="flex gap-3 max-w-sm ml-auto">
+                <button type="button" onClick={fecharModalCriarCampanha} className="btn btn-primary flex-1">
+                  Concluir
+                </button>
+              </div>
+            )
           }
         >
+          {idCampanhaRecemCriada !== null ? (
+            // Orçamento/Cronograma DA CAMPANHA RECÉM-CRIADA (14-09-2026,
+            // pedido do Lucas: "dentro do Modal não tem Cronograma ou
+            // Orçamento... era para estar dentro do formulário") - RF-040/
+            // RF-042 preveem isso "durante a criação", mas os itens só
+            // existem depois de a campanha ter um id (FK pra orcamento_
+            // campanha/marco_cronograma) - por isso é uma 2ª fase do MESMO
+            // modal, não um campo a mais no formulário de cima. Reaproveita
+            // o mesmo painel que Alterar Campanha já usa, sem UI nova.
+            // Mínimo de itens (RF-040/042) só é exigido na APROVAÇÃO, não
+            // aqui - pode ficar sem nenhum item e concluir, e completar
+            // depois via Alterar, exatamente como o RF permite ("aos
+            // poucos").
+            <SecaoFicha titulo="Orçamento e Cronograma">
+              <div className="sm:col-span-2">
+                <PainelOrcamentoCronograma auth={auth} idCampanha={idCampanhaRecemCriada} podeEditar={true} />
+              </div>
+            </SecaoFicha>
+          ) : (
+            <>
           <SecaoFicha titulo="Pesquisador">
             <div className="sm:col-span-2 relative" ref={sugestoesPesquisadorRef}>
               <label className="rotulo-campo">Dono da campanha</label>
@@ -1375,23 +1455,40 @@ export function BancadaCampanha({ auth }: PropsPagina) {
               />
             </div>
             <div>
-              <label className="rotulo-campo">Início (opcional)</label>
+              {/* Não é mais "(opcional)" (14-09-2026, achado do Lucas) -
+                  RF-066 exige as duas datas pra checar o prazo (15-60
+                  dias); `min={hojeISO}` impede escolher ontem ou antes
+                  direto no seletor do navegador, sem precisar de JS extra
+                  pra bloquear a data errada. */}
+              <label className="rotulo-campo">Início</label>
               <input
                 type="date"
                 value={formCriarCampanha.dataInicio}
+                min={hojeISO}
                 onChange={(evento) => setFormCriarCampanha({ ...formCriarCampanha, dataInicio: evento.target.value })}
                 className="input-padrao"
               />
             </div>
             <div>
-              <label className="rotulo-campo">Fim (opcional)</label>
+              <label className="rotulo-campo">Fim</label>
               <input
                 type="date"
                 value={formCriarCampanha.dataFim}
+                min={formCriarCampanha.dataInicio || hojeISO}
                 onChange={(evento) => setFormCriarCampanha({ ...formCriarCampanha, dataFim: evento.target.value })}
                 className="input-padrao"
               />
             </div>
+            {/* Aviso de prazo (RF-066) - o banco já rejeita fora do
+                intervalo (fn_valida_prazo_campanha_negocio), isto só
+                adianta o aviso antes de mandar. Só aparece com as 2 datas
+                preenchidas, pra não assustar quem ainda não chegou lá. */}
+            {duracaoDiasCriar !== null && (
+              <p className={'sm:col-span-2 text-xs -mt-2 ' + (duracaoCriarValida ? 'texto-fraco' : 'texto-erro font-semibold')}>
+                Duração: {duracaoDiasCriar} {duracaoDiasCriar === 1 ? 'dia' : 'dias'} - precisa estar entre{' '}
+                {prazoMinimoCampanha} e {prazoMaximoCampanha} dias.
+              </p>
+            )}
             <div className="sm:col-span-2">
               <label className="rotulo-campo">URL do vídeo de apresentação (opcional)</label>
               <input
@@ -1402,6 +1499,8 @@ export function BancadaCampanha({ auth }: PropsPagina) {
               />
             </div>
           </SecaoFicha>
+            </>
+          )}
         </ModalFicha>
       )}
 

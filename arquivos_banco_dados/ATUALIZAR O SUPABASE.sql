@@ -16,6 +16,76 @@
 
 
 -- ============================================================================
+-- 15-09-2026 (expirar_campanhas_rascunho - campanha abandonada antes de
+-- completar orçamento/cronograma)
+--
+-- Campanha nasce em 'aguardando_aprovacao' assim que "Criar" é clicado,
+-- antes de orçamento/cronograma estarem completos (RF-040/042 só exigem o
+-- mínimo NA APROVAÇÃO, pensado pra cadastro "aos poucos"). Se a pessoa
+-- nunca voltar pra terminar (queda de energia, fechou a aba sem querer), a
+-- campanha fica presa nesse status pra sempre - nunca pode ser aprovada,
+-- ocupa 1 das 2 vagas simultâneas do RF-048 e suja a fila de aprovação do
+-- Administrador indefinidamente.
+--
+-- Mesmo padrão de encerrar_campanhas_vencidas() (já em produção): função
+-- SECURITY DEFINER (bypassa RLS - job agendado não tem id_usuario_atual()
+-- setado), chamada por @Cron no NestJS (CampanhaServiceExpirarRascunho,
+-- 1x por hora), sem sessão de usuário. Critério de "abandonada" é o MESMO
+-- já usado na aprovação (orcamento_min_itens/cronograma_min_marcos) - não
+-- um limiar novo, então protege trabalho real: se os itens mínimos já
+-- foram cadastrados antes da queda de energia, a campanha nunca expira por
+-- este job. DELETE físico (não soft-delete) - a campanha nunca foi
+-- aprovada, nunca apareceu pra doador, nunca recebeu contribuição, não há
+-- nada pra preservar; orcamento_campanha/marco_cronograma são limpos
+-- automaticamente pelo ON DELETE CASCADE que já existe.
+--
+-- Seguro rodar de novo? Sim - chave de configuração usa ON CONFLICT
+-- (chave) DO NOTHING, CREATE OR REPLACE FUNCTION substitui sem duplicar,
+-- REVOKE/GRANT são idempotentes. Sem permissão nova (a função não é
+-- gateada por tem_permissao, é pré-autorizada como encerrar_campanhas_
+-- vencidas - só um job de sistema chama ela).
+-- ============================================================================
+
+INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, publica) VALUES
+(NULL, 'campanha_rascunho_ttl_horas', '48', 'inteiro', 'Horas até uma campanha incompleta (sem orçamento/cronograma mínimos) ser apagada automaticamente', TRUE, TRUE)
+ON CONFLICT (chave) DO NOTHING;
+
+CREATE OR REPLACE FUNCTION public.expirar_campanhas_rascunho()
+RETURNS INT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_ttl_horas INT;
+    v_orcamento_min INT;
+    v_cronograma_min INT;
+    v_expiradas INT;
+BEGIN
+    v_ttl_horas := public.config_numero('campanha_rascunho_ttl_horas', 48);
+    v_orcamento_min := public.config_numero('orcamento_min_itens', 1);
+    v_cronograma_min := public.config_numero('cronograma_min_marcos', 3);
+
+    DELETE FROM campanha c
+    WHERE c.status = 'aguardando_aprovacao'
+      AND c.criado_em <= NOW() - (v_ttl_horas * INTERVAL '1 hour')
+      AND (
+        (SELECT COUNT(*) FROM orcamento_campanha o WHERE o.id_campanha = c.id_campanha) < v_orcamento_min
+        OR
+        (SELECT COUNT(*) FROM marco_cronograma m WHERE m.id_campanha = c.id_campanha) < v_cronograma_min
+      );
+
+    GET DIAGNOSTICS v_expiradas = ROW_COUNT;
+
+    RETURN v_expiradas;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.expirar_campanhas_rascunho() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.expirar_campanhas_rascunho() TO app_nestjs;
+
+
+-- ============================================================================
 -- 14-09-2026 (PATCH /perfil-pesquisador/:id de outra pessoa - achado no painel)
 --
 -- Achado rodando o painel admin de verdade: clicar em "Salvar" no modal de

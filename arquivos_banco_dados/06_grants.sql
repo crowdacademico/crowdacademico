@@ -363,6 +363,11 @@ GRANT EXECUTE ON FUNCTION public.atualizar_status_repasse(INT, VARCHAR, TIMESTAM
 -- atualizar_status_contribuicao/atualizar_status_repasse, acima).
 REVOKE EXECUTE ON FUNCTION public.encerrar_campanhas_vencidas() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.encerrar_campanhas_vencidas() TO app_nestjs;
+-- expirar_campanhas_rascunho() - ADICIONADA (15-09-2026), ver [05-K-2] em
+-- 05_regras_negocio.sql. Mesma higiene, mesmo motivo (chamada por @Cron,
+-- sem sessão de usuário).
+REVOKE EXECUTE ON FUNCTION public.expirar_campanhas_rascunho() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.expirar_campanhas_rascunho() TO app_nestjs;
 -- CORRIGIDO: seguir_campanha também tinha UPDATE sem nenhuma policy de UPDATE -
 -- só existe inserir/apagar "seguir campanha", não faz sentido "editar" essa linha.
 GRANT INSERT, DELETE ON seguir_campanha TO app_nestjs;

@@ -1656,6 +1656,41 @@ Achado adicional confirmando que não bastava só criar a rota: `pol_perfil_upda
 
 ---
 
+### 🟢 CONSTRUÍDO (14-09-2026, mesmo dia, rodada seguinte): Criar Campanha (T2) - datas obrigatórias, prazo (RF-066) validado antes de enviar, Orçamento/Cronograma dentro do próprio modal
+
+O Lucas conferiu o formulário "Criar Campanha" do Campo de Testes contra `REQUISITOS_V6.md` e achou 3 problemas reais: Início/Fim marcados como opcionais, nenhuma trava contra data de início no passado, e nenhum campo de orçamento/cronograma dentro do modal (RF-040/042 preveem isso "durante a criação"). Pediu foco em FUNCIONALIDADE, não em redesenho de formulário.
+
+**🟢 Início/Fim deixaram de ser opcionais.** Rótulos perderam o "(opcional)", os dois entram no `formCriarCampanhaValido` que controla o botão "Criar", e sempre são enviados no `POST /campanha/:idUsuario` (antes só iam se preenchidos).
+
+**🟢 Data de início no passado bloqueada no próprio seletor.** `min={hojeISO}` no `<input type="date">` de Início (o navegador já recusa oferecer ontem ou antes) - `hojeISO` calculado campo a campo (`getFullYear`/`getMonth`/`getDate`), não `toISOString().slice(0,10)`, que usaria UTC e erraria o dia pra quem está num fuso negativo à noite. Fim ganhou `min={dataInicio || hojeISO}`, pra não aceitar fim antes do início.
+
+**🟢 Prazo de 15-60 dias (RF-066) validado ANTES de enviar, lendo de `configuracoes` ao vivo.** O banco já rejeitava (`fn_valida_prazo_campanha_negocio`, existia desde 28-07-2026) - o gap era só o formulário não avisar, a pessoa só descobria batendo num erro 90012 cru do Postgres. Mesmo padrão já usado nesta tela pra `orcamento_min_itens`/`cronograma_min_marcos` (`useConfiguracoes()`), agora também pra `prazo_minimo_campanha_dias`/`prazo_maximo_campanha_dias`. Aviso de duração aparece só quando as 2 datas estão preenchidas, em vermelho se fora do intervalo.
+
+**🟢 Orçamento e Cronograma agora dentro do MESMO modal de Criar - como 2ª fase, não como campo extra.** Achado ao investigar: os itens de orçamento/cronograma têm FK pra `id_campanha` - não existem antes da campanha ter um id de verdade, então não cabem no formulário de cima junto com título/meta/datas. Solução: clicar "Criar" grava a campanha e o MESMO modal troca de conteúdo pro `PainelOrcamentoCronograma` (componente que já existe e já é usado em Alterar Campanha - zero UI nova), mostrando "Campanha #X criada" e um botão "Concluir" no lugar de "Cancelar/Criar". RF-040/042 preveem cadastro "aos poucos" (mínimo só checado na aprovação, não na criação) - dá pra concluir sem nenhum item e completar depois via Alterar, exatamente como o RF permite.
+
+**Decisão explícita do Lucas, registrada**: não mexer no DESENHO do formulário (o RF/protótipo estático sugerem um campo único "duração em dias" no lugar de Início/Fim separados - ver discussão da rodada anterior) - isso fica em aberto, só a funcionalidade foi resolvida agora.
+
+`tsc --noEmit`, `eslint` (0 erros, incluindo `--fix` de formatação) e `npm run build` limpos. Não testado ao vivo (sem Playwright nesta sessão) - fica na fila de verificação já registrada em memória.
+
+---
+
+### 🟢 CONSTRUÍDO (15-09-2026): `expirar_campanhas_rascunho()` - campanha abandonada antes de completar orçamento/cronograma some sozinha, sem sujar o banco
+
+Discutindo o item acima (Orçamento/Cronograma dentro do modal de Criar), o Lucas levantou um cenário real: e se a energia cair, ou a aba fechar sem querer, entre criar a campanha e terminar de preencher orçamento/cronograma? A campanha já existe em `'aguardando_aprovacao'` desde o clique em "Criar" (RF-046) - RF-040/042 só exigem o mínimo de itens NA APROVAÇÃO (pensado pra cadastro "aos poucos"), então uma campanha assim fica presa nesse status pra sempre: nunca pode ser aprovada (trava no mesmo mínimo), ocupa 1 das 2 vagas simultâneas do RF-048 e suja a fila de aprovação do Administrador indefinidamente.
+
+Duas ideias foram propostas (rascunho com tempo de vida vs. autodeleção "instantânea" se não completar) - a segunda não é implementável de verdade (o backend não tem como saber o momento exato do abandono, só comparar contra o relógio depois), então as duas convergem pro mesmo mecanismo: uma varredura periódica com janela de tolerância.
+
+**🟢 Construído, reaproveitando 100% do padrão já existente pra `encerrar_campanhas_vencidas()` (RF-057):**
+- `expirar_campanhas_rascunho()` (`05_regras_negocio.sql`, `[05-K-2]`) - `SECURITY DEFINER` (bypassa RLS, mesma razão de sempre pra job agendado sem sessão), `DELETE` físico (a campanha nunca foi aprovada, nunca apareceu pra doador, nunca recebeu contribuição - nada a preservar). `orcamento_campanha`/`marco_cronograma` já têm `ON DELETE CASCADE` pra `campanha` - limpos automaticamente, sem `DELETE` explícito nas duas tabelas.
+- **Critério de "abandonada" é o MESMO já usado na aprovação** (`orcamento_min_itens`/`cronograma_min_marcos`, `configuracoes`) - não um limiar novo. Protege trabalho real: se os itens mínimos já foram cadastrados antes da queda de energia, a campanha nunca expira por este job, mesmo sem "Concluir" ter sido clicado.
+- Chave nova `campanha_rascunho_ttl_horas` (padrão 48h, configurável) - janela de graça antes da varredura considerar abandonada.
+- `CampanhaServiceExpirarRascunho` (novo, `12-campanha/service/`) - `@Cron('0 * * * *')`, 1x por hora (mais espaçado que os 15 min de `encerrar_campanhas_vencidas` - isto é limpeza de rascunho, não afeta doador vendo campanha errada na hora, atrasar 1h não machuca ninguém). Registrado no módulo, mesmo comentário de "provider vivo só pro `@Cron` existir".
+- Patch pronto no topo de `ATUALIZAR O SUPABASE.sql` (15-09-2026) - idempotente. **Ainda não colado no Supabase** - aguardando o Lucas.
+
+`tsc -p tsconfig.build.json`, `eslint` (0 erros) e `nest build` limpos. Não testado ao vivo (precisaria adiantar o relógio ou baixar o TTL pra segundos só pra forçar o cenário) - fica registrado, mas não é prioridade de Playwright como os outros 2 itens da fila (o comportamento é 100% no banco/cron, não tem UI pra ver quebrar).
+
+---
+
 ### 🟡 Especificação registrada (13-09-2026): tela de administração pra `arquivo` (espaço ocupado, órfãos, maiores consumidores) - NÃO construída de propósito
 
 O Lucas pediu detalhamento dessa ideia (citada de passagem pelo Claude Web numa rodada anterior, descartada na hora). Resposta completa, registrada aqui pra não se perder - **decisão de não construir agora confirmada pelo próprio Claude Web**: poucos arquivos no sistema hoje (todos de teste), a tela mostraria números perto de zero e não responderia pergunta nenhuma de verdade. Momento certo: depois de `18-recompensa`/`15-atualizacao-campanha` estarem em uso real, quando anexos tiverem volume e órfãos aparecerem sozinhos.

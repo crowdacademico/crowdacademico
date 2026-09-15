@@ -947,6 +947,15 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, pub
 (NULL, 'orcamento_max_itens',                      '10',   'inteiro', 'Nº máximo de itens de orçamento permitido por campanha',                    TRUE, TRUE),
 (NULL, 'cronograma_min_marcos',                    '3',    'inteiro', 'Nº mínimo de marcos de cronograma exigido para aprovar uma campanha',       TRUE, TRUE),
 (NULL, 'cronograma_max_marcos',                    '20',   'inteiro', 'Nº máximo de marcos de cronograma permitido por campanha',                  TRUE, TRUE),
+-- ADICIONADA (15-09-2026, pedido do Lucas) - gate de expirar_campanhas_
+-- rascunho() (05, [05-K-2]): campanha nasce em 'aguardando_aprovacao' antes
+-- de ter orçamento/cronograma completos (cadastro "aos poucos", RF-040/042).
+-- Se a pessoa não voltar pra terminar (queda de energia, fechou a aba), a
+-- campanha ficaria presa nesse status pra sempre, sem nunca poder ser
+-- aprovada. Job agendado (@Cron) apaga quem, depois deste prazo, ainda não
+-- bate orcamento_min_itens/cronograma_min_marcos (acima) - os MESMOS
+-- mínimos já usados na aprovação, não um limiar novo.
+(NULL, 'campanha_rascunho_ttl_horas',              '48',   'inteiro', 'Horas até uma campanha incompleta (sem orçamento/cronograma mínimos) ser apagada automaticamente', TRUE, TRUE),
 (NULL, 'limite_caracteres_descricao_orcamento',    '2000', 'inteiro', 'Nº máximo de caracteres em orcamento_campanha.descricao',                    TRUE, TRUE),
 (NULL, 'limite_caracteres_descricao_marco',        '2000', 'inteiro', 'Nº máximo de caracteres em marco_cronograma.descricao',                      TRUE, TRUE),
 -- ADICIONADO (28-07-2026, uma IA - 5ª auditoria): meta 0.00 era aceita
