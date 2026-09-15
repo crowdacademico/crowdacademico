@@ -1689,6 +1689,13 @@ Duas ideias foram propostas (rascunho com tempo de vida vs. autodeleção "insta
 
 `tsc -p tsconfig.build.json`, `eslint` (0 erros) e `nest build` limpos. Não testado ao vivo (precisaria adiantar o relógio ou baixar o TTL pra segundos só pra forçar o cenário) - fica registrado, mas não é prioridade de Playwright como os outros 2 itens da fila (o comportamento é 100% no banco/cron, não tem UI pra ver quebrar).
 
+**🟢 CORRIGIDO no mesmo dia, rodada seguinte (pedido do Lucas: "vê se deixamos algo passar despercebido"): 2 achados de uma auditoria contra `REQUISITOS_V6.md`.**
+
+1. **Bug real na função acima** - `expirar_campanhas_rascunho()` só checava as 2 CONTAGENS (itens de orçamento, marcos de cronograma), esquecendo que o gate de aprovação de verdade (`fn_valida_completude_campanha_aprovacao`, mesma seção) também exige a SOMA dos itens bater EXATAMENTE com a meta financeira (RF-039/040). Sem essa 3ª checagem, uma campanha com itens suficientes mas soma errada nunca seria aprovável e, com o critério incompleto, também nunca expiraria - presa pra sempre, o mesmo problema que a função existe pra evitar. Corrigido na função e num novo bloco no topo de `ATUALIZAR O SUPABASE.sql` (rodada 2) - só o `CREATE OR REPLACE FUNCTION` precisa rodar de novo, a permissão/config já tinha rodado antes.
+2. **Meta mínima (RF-067) tinha o MESMO gap que o prazo (RF-066) tinha ontem** - `fn_valida_meta_campanha_negocio` já rejeitava (`meta_minima_campanha`, padrão R$ 500), mas o formulário de Criar Campanha nunca lia essa chave nem avisava antes de enviar. Mesmo padrão já usado pra prazo: `min={metaMinimaCampanha}` no `<input type="number">`, aviso em vermelho quando abaixo do mínimo, e entra no `formCriarCampanhaValido` que controla o botão "Criar".
+
+`tsc --noEmit`, `eslint --fix` (0 erros) e `npm run build` limpos.
+
 ---
 
 ### 🟡 Especificação registrada (13-09-2026): tela de administração pra `arquivo` (espaço ocupado, órfãos, maiores consumidores) - NÃO construída de propósito

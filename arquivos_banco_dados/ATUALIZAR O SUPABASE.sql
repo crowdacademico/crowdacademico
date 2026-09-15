@@ -16,6 +16,54 @@
 
 
 -- ============================================================================
+-- 15-09-2026, rodada 2 (correção do bloco abaixo - faltava checar a soma)
+--
+-- A 1ª versão de expirar_campanhas_rascunho() (bloco seguinte, já rodado)
+-- só checava as 2 CONTAGENS (itens de orçamento, marcos de cronograma),
+-- esquecendo que o gate de aprovação de verdade (fn_valida_completude_
+-- campanha_aprovacao, 05) também exige a SOMA dos itens de orçamento bater
+-- EXATAMENTE com a meta financeira. Sem essa 3ª checagem, uma campanha com
+-- itens suficientes mas soma errada nunca seria aprovável E nunca
+-- expiraria - presa pra sempre, o mesmo problema que a função existe pra
+-- evitar. Só este CREATE OR REPLACE precisa rodar de novo (idempotente) -
+-- o bloco de configuracoes/GRANT abaixo já rodou e não muda.
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION public.expirar_campanhas_rascunho()
+RETURNS INT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_ttl_horas INT;
+    v_orcamento_min INT;
+    v_cronograma_min INT;
+    v_expiradas INT;
+BEGIN
+    v_ttl_horas := public.config_numero('campanha_rascunho_ttl_horas', 48);
+    v_orcamento_min := public.config_numero('orcamento_min_itens', 1);
+    v_cronograma_min := public.config_numero('cronograma_min_marcos', 3);
+
+    DELETE FROM campanha c
+    WHERE c.status = 'aguardando_aprovacao'
+      AND c.criado_em <= NOW() - (v_ttl_horas * INTERVAL '1 hour')
+      AND (
+        (SELECT COUNT(*) FROM orcamento_campanha o WHERE o.id_campanha = c.id_campanha) < v_orcamento_min
+        OR
+        (SELECT COUNT(*) FROM marco_cronograma m WHERE m.id_campanha = c.id_campanha) < v_cronograma_min
+        OR
+        (SELECT COALESCE(SUM(o.valor), 0) FROM orcamento_campanha o WHERE o.id_campanha = c.id_campanha) <> c.meta_financeira
+      );
+
+    GET DIAGNOSTICS v_expiradas = ROW_COUNT;
+
+    RETURN v_expiradas;
+END;
+$$;
+
+
+-- ============================================================================
 -- 15-09-2026 (expirar_campanhas_rascunho - campanha abandonada antes de
 -- completar orçamento/cronograma)
 --

@@ -316,6 +316,12 @@ export function BancadaCampanha({ auth }: PropsPagina) {
   const prazoMinimoCampanha = typeof valorPrazoMinimo === 'number' ? valorPrazoMinimo : 15;
   const valorPrazoMaximo = obterConfiguracao('prazo_maximo_campanha_dias', 60);
   const prazoMaximoCampanha = typeof valorPrazoMaximo === 'number' ? valorPrazoMaximo : 60;
+  // Mesmo padrão dos 3 acima (15-09-2026, achado numa auditoria contra
+  // REQUISITOS_V6.md: RF-067 - `fn_valida_meta_campanha_negocio`,
+  // 05_regras_negocio.sql - já rejeita meta abaixo de `meta_minima_campanha`,
+  // mas o formulário de criação nunca lia essa chave, mesmo gap do prazo.
+  const valorMetaMinima = obterConfiguracao('meta_minima_campanha', 500);
+  const metaMinimaCampanha = typeof valorMetaMinima === 'number' ? valorMetaMinima : 500;
 
   const [areas, setAreas] = useState<AreaConhecimentoResponse[]>([]);
   const [usuarios, setUsuarios] = useState<UsuarioResponse[]>([]);
@@ -635,6 +641,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
     Boolean(formCriarCampanha.titulo) &&
     Boolean(formCriarCampanha.idAreaConhecimento) &&
     Boolean(formCriarCampanha.metaFinanceira) &&
+    Number(formCriarCampanha.metaFinanceira) >= metaMinimaCampanha &&
     Boolean(formCriarCampanha.dataInicio) &&
     Boolean(formCriarCampanha.dataFim) &&
     formCriarCampanha.dataInicio >= hojeISO &&
@@ -1440,10 +1447,20 @@ export function BancadaCampanha({ auth }: PropsPagina) {
               <label className="rotulo-campo">Meta (R$)</label>
               <input
                 type="number"
+                min={metaMinimaCampanha}
                 value={formCriarCampanha.metaFinanceira}
                 onChange={(evento) => setFormCriarCampanha({ ...formCriarCampanha, metaFinanceira: evento.target.value })}
                 className="input-padrao"
               />
+              {/* Aviso de meta mínima (RF-067) - mesmo padrão do aviso de
+                  prazo, abaixo: o banco já rejeita (fn_valida_meta_
+                  campanha_negocio), isto só adianta o aviso. */}
+              {formCriarCampanha.metaFinanceira !== '' &&
+                Number(formCriarCampanha.metaFinanceira) < metaMinimaCampanha && (
+                  <p className="text-xs texto-erro font-semibold mt-1">
+                    Meta mínima: {formatarMoeda(metaMinimaCampanha)}.
+                  </p>
+                )}
             </div>
             <div className="sm:col-span-2">
               <label className="rotulo-campo">Descrição (opcional)</label>

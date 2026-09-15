@@ -2173,13 +2173,21 @@ $$;
 --             sem sessão de usuário.
 --
 --             Critério de "abandonada" é o MESMO já usado na aprovação
---             (orcamento_min_itens/cronograma_min_marcos, configuracoes) -
---             não um limiar novo. Isso protege trabalho real: se a pessoa
---             já tinha cadastrado os itens mínimos antes da queda de
---             energia, a campanha NUNCA expira por este job, mesmo sem
---             "Concluir" ter sido clicado - só quem, depois do prazo
---             configurável (campanha_rascunho_ttl_horas, padrão 48h),
---             ainda não bateria o mínimo pra aprovação de qualquer jeito.
+--             (fn_valida_completude_campanha_aprovacao, acima) - não um
+--             limiar novo: mínimo de itens de orçamento, mínimo de marcos
+--             de cronograma, E a soma dos itens de orçamento batendo
+--             EXATAMENTE com a meta financeira (RF-039/040 - achado numa
+--             2ª revisão, 15-09-2026: a 1ª versão desta função só checava
+--             as 2 contagens, esquecendo a soma - uma campanha com itens
+--             suficientes mas soma errada nunca seria aprovável e, com o
+--             critério incompleto, também nunca expiraria, ficando presa
+--             pra sempre do mesmo jeito que o job existe pra evitar). Isso
+--             protege trabalho real: se a pessoa já tinha cadastrado tudo
+--             certo antes da queda de energia, a campanha NUNCA expira por
+--             este job, mesmo sem "Concluir" ter sido clicado - só quem,
+--             depois do prazo configurável (campanha_rascunho_ttl_horas,
+--             padrão 48h), ainda não estaria em condição de ser aprovada
+--             de qualquer jeito.
 --
 --             DELETE físico, não soft-delete: uma campanha neste estado
 --             nunca foi aprovada, nunca apareceu na página pública, nunca
@@ -2211,6 +2219,8 @@ BEGIN
         (SELECT COUNT(*) FROM orcamento_campanha o WHERE o.id_campanha = c.id_campanha) < v_orcamento_min
         OR
         (SELECT COUNT(*) FROM marco_cronograma m WHERE m.id_campanha = c.id_campanha) < v_cronograma_min
+        OR
+        (SELECT COALESCE(SUM(o.valor), 0) FROM orcamento_campanha o WHERE o.id_campanha = c.id_campanha) <> c.meta_financeira
       );
 
     GET DIAGNOSTICS v_expiradas = ROW_COUNT;
