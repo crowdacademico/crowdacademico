@@ -1836,3 +1836,25 @@ RF-031 já tem o texto do requisito escrito (pesquisador abre solicitação de r
 Achado originalmente na auditoria extra de código morto/hardcode/duplicação de 12-09-2026 (ver `ACHADOS_PARA_DISCUTIR.md`, item 18, categoria 3.1) - decisão na época foi "fácil de consertar, mas fica pra depois, sem pressa".
 
 **Resolvido no mesmo dia do contra-prompt do Claude Web (13-09-2026)**, que redescobriu independentemente os dois mesmos achados (A1 e A2 da lista logo acima) - exatamente a sugestão já registrada aqui (`usePaginacaoClientSide()`/`useFecharAoClicarFora()`) foi implementada, com o ajuste de A2 ser uma FUNÇÃO pura em vez de hook (os 4 chamadores guardam `pagina` de jeitos diferentes). Ver os itens A1 e A2 na entrada "Contra-prompt do Claude Web" acima para o detalhamento completo.
+
+---
+
+### 🟡 Achados da revisão externa da v23 (19-09-2026, outra IA olhou o zip) - registrados, NADA iniciado, levar pro próximo prompt do Claude Web
+
+Conferido no repositório antes de anotar: as afirmações abaixo batem com o código.
+
+**1. Multer: aplicar `overrides` no `nest/package.json` (higiene, não urgência).** `@nestjs/platform-express` fixa `multer: "2.2.0"` (confirmado no `package-lock.json`) com 4 falhas de negação de serviço via multipart malformado. Nenhuma ocorrência de `multer`/`FileInterceptor`/`UploadedFile` em `nest/src` (upload é por URL pré-assinada, nunca passa pelo Nest), então o risco prático é zero por inalcançabilidade. Correção é só para o `npm audit` sair limpo (um professor do TCC pode rodar o comando). Opção escolhida como recomendada: `overrides` pro `multer@^2.4.0`, depois testar upload de avatar por rigor. Descartada: `npm audit fix --force` (arrasta o Nest pra v12). O texto de `ACHADOS_PARA_DISCUTIR.md` diz que o módulo 25-arquivo usa multer "por baixo" - isso está errado, corrigir lá. `nest/package.json` ainda NÃO tem `overrides`.
+
+**2. Tela de admin pra `score_config`/`score_rotulo` não existe.** RF-027/RF-028 afirmam que o score é configurável pelo admin, mas hoje só dá pra editar pelo Supabase (zero ocorrência no `react/src`; no Nest só há leitura, em `perfil-pesquisador` e `usuario.service.exportar-dados`). Única divergência concreta entre requisito escrito e sistema real que sobrou da lista antiga. Falta verificar se existe CRUD no backend ou se precisa criar também.
+
+**3. Decisão em aberto: a lógica de criar campanha mora em `bancada-campanha.tsx` (1852 linhas, maior arquivo do frontend).** `views/12-campanha` só tem listar e consultar; módulos 13 a 17 do backend (orçamento, marco, atualização, seguir, comentário) não têm tela real; `checkout/`, `dash-doador/`, `dash-pesquisador/` existem vazias. O wizard de 3 etapas (Dados/Orçamento/Cronograma) e o `PainelOrcamentoCronograma` foram construídos dentro da bancada e estão acoplados a ela. Risco: quanto mais amadurece ali, mais caro transplantar. Contra-ponto: Campo de Testes é permanente. Decisão do Lucas: tela real de criar campanha entra antes ou depois da entrega do TCC? Sugestão inicial: extrair `PainelOrcamentoCronograma` e o wizard pra `components/`/`views/12-campanha` reutilizáveis antes do arquivo crescer mais.
+
+**4. Cor: 7 usos de `var(--color-*)` cru em `4-componentes.css` (linhas ~37, 62, 63, 77, 78, 185, 221) + footer.** São `--color-white`, `--color-red-600`, `--color-emerald-600` (paleta utilitária do Tailwind, não a marca; um deles é o `.btn-sucesso` criado em 15-09). Decidir: cores de estado (branco/vermelho/verde) ganham alias em `1-cores.css` ou ficam como exceção documentada. Também sobram ~28 classes de cor crua no JSX, 13 delas no `footer.tsx` (tons de slate) e 2 no `header.tsx` - o rodapé é a última ilha não migrada.
+
+**Pontos positivos apontados (não são pendência):** zero `any`/`@ts-ignore`; `dados: unknown` fechado nos 13 arquivos de request; `undefined as T` corrigido em `papel-permissao.api.ts`; `--opacidade-brilho-marca` parametrizada; `BlocoLogAuditoria` extraído; guarda de alteração não salva em 7 modais; gate `import.meta.env.DEV` no Campo de Testes.
+
+---
+
+### 🔴 Pendência aberta (20-09-2026, decisão de produto com a Alexia, NÃO iniciada): novo status "Rascunho" para campanha criada mas incompleta
+
+Hoje a campanha nasce `aguardando_aprovacao` (DEFAULT do enum) já no 1º "Criar", mesmo sem orçamento/cronograma que batam com RF-039/040/042, e o nome é enganoso: ninguém pode aprová-la nesse estado. Alexia sugeriu "Rascunho", Lucas "Em construção"/"Incompleta"; a leitura do Claude Code foi por "Rascunho" (`expirar_campanhas_rascunho`/`campanha_rascunho_ttl_horas` já usam o termo). Decidir junto: transição `rascunho -> aguardando_aprovacao` por botão "Enviar" ou automática; destino após `rejeitado`; data de início vencida ao retomar; aviso antes do TTL; visibilidade (RLS) e contagem no limite de 2 campanhas do RF-048. Impacto: `ALTER TYPE`, DEFAULT, migração de campanhas existentes, `expirar_campanhas_rascunho` passa a filtrar por status, `fn_valida_completude_campanha_aprovacao` muda de gatilho, front (constantes/badges), REQUISITOS. Perguntas já escritas em `informacoes/prompt-claude-web-rascunho-e-otimizacao-20-09-2026.md`.
