@@ -2,6 +2,7 @@ import { API_BASE_URL } from '../../constant/constants/api.constants';
 import { tratarResposta } from '../../constant/api/http.util';
 import type { AuthFetch } from '../../3-auth/type/auth.type';
 import type { ResultadoPaginado } from '../../constant/type/paginacao.type';
+import { desembrulharPaginado } from '../../constant/type/paginacao.type';
 import type {
   EscopoTipoLink,
   TipoLinkRequestCreate,
@@ -43,7 +44,7 @@ export const tipoLinkApi = {
   listar: (authFetch: AuthFetch, filtro?: FiltroTipoLink): Promise<TipoLinkResponse[]> =>
     authFetch(`/tipo-link${paraQueryString(filtro)}`)
       .then(tratarResposta<ResultadoPaginado<TipoLinkResponse>>)
-      .then((resposta) => resposta.dados),
+      .then(desembrulharPaginado('tipos de link')),
   // Sem authFetch de propósito, mesmo padrão de areaConhecimentoApi.
   // listarPublico/configuracaoApi.buscarPublicas: pol_tipolink_select já
   // libera pra qualquer um, logado ou não. Ainda sem nenhuma tela
@@ -53,7 +54,7 @@ export const tipoLinkApi = {
   listarPublico: (filtro?: FiltroTipoLink): Promise<TipoLinkResponse[]> =>
     fetch(`${API_BASE_URL}/tipo-link${paraQueryString(filtro)}`)
       .then(tratarResposta<ResultadoPaginado<TipoLinkResponse>>)
-      .then((resposta) => resposta.dados),
+      .then(desembrulharPaginado('tipos de link')),
   buscar: (authFetch: AuthFetch, id: number | string): Promise<TipoLinkResponse> =>
     authFetch(`/tipo-link/${id}`).then(tratarResposta<TipoLinkResponse>),
   criar: (authFetch: AuthFetch, dados: TipoLinkRequestCreate): Promise<TipoLinkResponse> =>

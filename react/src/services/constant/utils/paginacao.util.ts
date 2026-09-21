@@ -1,4 +1,4 @@
-// Extraído (13-09-2026, achado A2 do contra-prompt do Claude Web) - a
+// Extraído (13-09-2026, achado A2 da revisão do Lucas) - a
 // mesma conta de paginação client-side (total de páginas, página atual
 // grudada no teto quando o filtro encolhe a lista, fatiar os itens da
 // página) aparecia idêntica em 4 lugares: GenericTable, bancada-

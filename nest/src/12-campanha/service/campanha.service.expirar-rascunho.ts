@@ -3,14 +3,13 @@ import { Cron } from '@nestjs/schedule';
 import { Pool } from 'pg';
 import { PG_POOL } from '../../commons/database/database.constants';
 
-// Fecha o gap achado numa conversa com o Lucas (15-09-2026): uma campanha
-// nasce em 'aguardando_aprovacao' assim que "Criar" é clicado, antes de ter
-// orçamento/cronograma completos (RF-040/042 só exigem o mínimo NA
-// APROVAÇÃO, pensado pra deixar cadastrar "aos poucos"). Se a pessoa nunca
-// voltar pra terminar (queda de energia, fechou a aba sem querer), a
-// campanha fica presa nesse status pra sempre - nunca pode ser aprovada
-// (trava no mesmo mínimo), ocupa 1 das 2 vagas simultâneas do RF-048 e
-// suja a fila de aprovação do Administrador indefinidamente.
+// Apaga rascunhos de campanha abandonados (15-09-2026, reescrito em
+// 20-09-2026 junto com o status 'rascunho'). A campanha nasce 'rascunho' no
+// 1º clique de Criar e só vai pra fila de aprovação pelo botão "Enviar para
+// aprovação". Se a pessoa nunca voltar (queda de energia, aba fechada,
+// desistiu do sistema), o rascunho some sozinho depois do prazo em
+// `configuracoes.campanha_rascunho_ttl_horas` (336h, 14 dias). Sem este job,
+// o rascunho ficaria pra sempre.
 //
 // Mesmo padrão de CampanhaServiceEncerrarVencidas (mesma pasta) - `PG_POOL`
 // direto (job agendado roda fora do pipeline HTTP, sem GlobalDbInterceptor
@@ -22,21 +21,33 @@ export class CampanhaServiceExpirarRascunho {
 
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
 
-  // 1x por hora - o prazo de graça é medido em horas (48h padrão,
+  // 1x por hora - o prazo de graça é medido em horas (336h padrão,
   // `configuracoes.campanha_rascunho_ttl_horas`), não precisa da mesma
   // urgência dos 15 minutos de encerrar_campanhas_vencidas (aquela afeta
   // doador vendo campanha errada na hora; esta é limpeza de rascunho
   // abandonado, atrasar 1h não machuca ninguém).
   @Cron('0 * * * *')
   async executar(): Promise<void> {
-    const resultado = await this.pool.query<{
-      expirar_campanhas_rascunho: number;
-    }>('SELECT public.expirar_campanhas_rascunho()');
-    const quantidade = resultado.rows[0]?.expirar_campanhas_rascunho ?? 0;
+    // try/catch (20-09-2026, achado numa revisão do Lucas): sem ele, uma
+    // exceção vinda da função SQL vira `unhandledRejection` (o @Cron chama
+    // este método sem `await` de ninguém), e o Node moderno derruba o
+    // processo inteiro por causa de um job de limpeza. Mesmo tratamento nos
+    // 3 crons do sistema, ver CampanhaServiceEncerrarVencidas e
+    // PerfilPesquisadorServiceReativarVencidos.
+    try {
+      const resultado = await this.pool.query<{
+        expirar_campanhas_rascunho: number;
+      }>('SELECT public.expirar_campanhas_rascunho()');
+      const quantidade = resultado.rows[0]?.expirar_campanhas_rascunho ?? 0;
 
-    if (quantidade > 0) {
-      this.logger.log(
-        `${quantidade} campanha(s) rascunho abandonada(s) expirada(s) automaticamente.`,
+      if (quantidade > 0) {
+        this.logger.log(
+          `${quantidade} campanha(s) rascunho abandonada(s) expirada(s) automaticamente.`,
+        );
+      }
+    } catch (erro) {
+      this.logger.error(
+        `Falha ao expirar campanhas em rascunho: ${erro instanceof Error ? erro.message : String(erro)}`,
       );
     }
   }

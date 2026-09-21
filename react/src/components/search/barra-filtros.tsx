@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { useFecharAoClicarFora } from '../../services/constant/hook/use-fechar-ao-clicar-fora';
 
-// Extraído (14-09-2026, contra-prompt Claude Web) - busca de texto + 1+
+// Extraído (14-09-2026, revisão do Lucas) - busca de texto + 1+
 // dropdowns de faceta, reescrito à mão em `bancada-campanha.tsx`/
 // `bancada-pesquisador.tsx` (Campo de Testes, não podem usar `GenericTable`
 // por causa do risco de linha) além do original em `generic-table.tsx` -

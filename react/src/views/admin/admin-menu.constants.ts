@@ -128,7 +128,7 @@ export const GRUPOS_MENU_ADMIN: GrupoMenuAdmin[] = [
           // Telas administrativas pra testar, pela interface (não só por
           // Thunder Client), módulos que hoje só fariam sentido testar
           // pela área PÚBLICA do site (que ainda não existe em React -
-          // ver prompt-modulos-nucleo-claude-web.md). O que for criado
+          // ver o prompt dos módulos do núcleo, em informacoes/). O que for criado
           // aqui nunca aparece pro usuário final, é só ferramenta de
           // teste interna. `dica` (só este grupo tem) vira um Tooltip do
           // lado direito do título em vez do ícone normal de item - ver

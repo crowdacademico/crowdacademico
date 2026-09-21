@@ -74,11 +74,7 @@ export interface ArmazenamentoService {
    * pelo próprio servidor, depois de já ter processado o conteúdo (ex.:
    * gravar a versão redimensionada/WebP em publico/, no lugar do
    * moverObjeto que só copiava o original sem tocar nos bytes). */
-  enviarObjeto(
-    chave: string,
-    bytes: Buffer,
-    tipoMime: string,
-  ): Promise<void>;
+  enviarObjeto(chave: string, bytes: Buffer, tipoMime: string): Promise<void>;
 
   /** "Move" o objeto de uma chave pra outra (copy + delete - S3 não tem
    * rename/move nativo). Usado pra tirar o arquivo de pendente/ e

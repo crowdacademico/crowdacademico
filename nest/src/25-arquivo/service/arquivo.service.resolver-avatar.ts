@@ -7,8 +7,8 @@ export interface AvatarResolvido {
   // `null` = usuário não tem foto cadastrada (ou a que tinha foi
   // desativada). SIMPLIFICADO (30-08-2026): antes isso caía num "avatar
   // padrão" configurável via `configuracoes` (chave `avatar_padrao_chave`)
-  // — removido porque o front já resolve isso sozinho e melhor:
-  // AvatarUsuario (components/layout/avatar-usuario.jsx) desenha iniciais
+  // e foi removido porque o front já resolve isso sozinho e melhor:
+  // AvatarUsuario (components/layout/avatar-usuario.tsx) desenha iniciais
   // com fundo colorido quando `foto` é null, sem precisar de nenhuma
   // imagem hospedada nem de round-trip nenhum pra saber disso. Manter os
   // dois (imagem padrão no bucket E fallback de iniciais no front) era
@@ -16,7 +16,7 @@ export interface AvatarResolvido {
   url: string | null;
 }
 
-// Exportado do módulo (ver arquivo.module.ts) — hoje usado pelo endpoint
+// Exportado do módulo (ver arquivo.module.ts), hoje usado pelo endpoint
 // GET /arquivo/avatar/:idUsuario, mas pensado pra 1-usuario (ou qualquer
 // outro módulo que precise mostrar um avatar) poder injetar isto
 // diretamente no futuro, sem duplicar a regra de fallback em dois lugares.
@@ -42,8 +42,10 @@ export class ArquivoServiceResolverAvatar {
       .executeTakeFirst();
 
     // Sem `arquivo` (removido/desativado) cai no mesmo `null` de quem
-    // nunca cadastrou nenhuma foto — o front trata os dois casos do
+    // nunca cadastrou nenhuma foto. O front trata os dois casos do
     // mesmo jeito (iniciais com fundo colorido).
-    return { url: arquivo ? this.armazenamento.montarUrlPublica(arquivo.chave) : null };
+    return {
+      url: arquivo ? this.armazenamento.montarUrlPublica(arquivo.chave) : null,
+    };
   }
 }

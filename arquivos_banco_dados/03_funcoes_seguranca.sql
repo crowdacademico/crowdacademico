@@ -573,6 +573,10 @@ $$;
 -- autoridade de pesquisador é suspensa. Expira sozinho quando `p_ate`
 -- passa - ver reativar_pesquisadores_vencidos() (05), chamada por @Cron a
 -- cada 15 min, mesmo padrão de encerrar_campanhas_vencidas.
+--
+-- ATUALIZADA (21-09-2026): a rejeição em cascata das campanhas 'aguardando_aprovacao'
+-- grava uma linha em historico_rejeicao por campanha. Rascunhos não são tocados.
+-- Ver DOCUMENTACAO_BD.md [05-K-2-B].
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.suspender_pesquisador(
     p_id_usuario INT,
@@ -609,8 +613,17 @@ BEGIN
     UPDATE campanha SET status = 'encerrado_moderacao'
     WHERE id_usuario = p_id_usuario AND status = 'ativo';
 
-    UPDATE campanha SET status = 'rejeitado'
-    WHERE id_usuario = p_id_usuario AND status = 'aguardando_aprovacao';
+    -- CTE + INSERT numa instrução só: as linhas devolvidas pelo UPDATE
+    -- alimentam o histórico sem precisar de laço nem de segunda leitura.
+    WITH rejeitadas AS (
+        UPDATE campanha SET status = 'rejeitado'
+        WHERE id_usuario = p_id_usuario AND status = 'aguardando_aprovacao'
+        RETURNING id_campanha, id_usuario, titulo
+    )
+    INSERT INTO historico_rejeicao (id_campanha, id_usuario_dono, titulo_campanha, id_admin, justificativa)
+    SELECT id_campanha, id_usuario, titulo, public.id_usuario_atual(),
+           'Rejeitada automaticamente por suspensão do pesquisador.'
+    FROM rejeitadas;
 
     RETURN TRUE;
 END;
@@ -809,7 +822,8 @@ $$;
 -- Lucas: "o Admin, o todo poderoso, precisa poder excluir forçadamente
 -- uma campanha, senão o Campo de Testes vai ficar muito sujo". Diferente
 -- de campanha_excluir_forcado, isto IGNORA status de propósito (pol_
--- campanha_delete, 04, só libera 'aguardando_aprovacao' - proteção
+-- campanha_delete, 04, só libera 'rascunho' (era 'aguardando_aprovacao'
+-- até 20-09-2026) - proteção
 -- correta pra campanha REAL, com contribuição/repasse em andamento, que
 -- continua intacta pro DELETE normal). Gateada por permissão própria
 -- (campanha_excluir_forcado, ver 07) - NUNCA reaproveitando

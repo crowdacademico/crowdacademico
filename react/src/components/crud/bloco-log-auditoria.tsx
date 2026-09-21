@@ -8,7 +8,7 @@ interface BlocoLogAuditoriaProps {
   campoRenomeio?: string;
 }
 
-// Extraído de dentro do GenericTable (13-09-2026, achado do Claude Web numa
+// Extraído de dentro do GenericTable (13-09-2026, achado do Lucas numa
 // auditoria: "log de auditoria não é estrutura de tabela... é outra
 // funcionalidade, com dados próprios, paginação própria e visual próprio,
 // que por acaso costuma aparecer embaixo de uma tabela"). GenericTable

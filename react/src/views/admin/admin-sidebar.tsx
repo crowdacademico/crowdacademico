@@ -105,7 +105,7 @@ export function AdminSidebar({ aberto, aoFechar }: AdminSidebarProps) {
                 // disabled> não dispara :hover em CSS (o navegador tira o
                 // elemento do fluxo normal de eventos de mouse), então a
                 // dica precisa morar num elemento vizinho não-desabilitado
-                // pra funcionar (14-09-2026, contra-prompt Claude Web).
+                // pra funcionar (14-09-2026, revisão do Lucas).
                 <span key={item.rotulo} className="dica block">
                   <button
                     type="button"

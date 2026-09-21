@@ -41,7 +41,7 @@ interface ModalFichaProps {
 // Testes: T1 replicando a aparência exata de Consultar/Alterar Usuário,
 // sem reinventar o layout).
 //
-// NOTA (13-09-2026, achado do Claude Web; ATUALIZADA 15-09-2026 com Esc):
+// NOTA (13-09-2026, achado do Lucas; ATUALIZADA 15-09-2026 com Esc):
 // os 3 caminhos de fechar (botão de fechar, clique no fundo escurecido -
 // este desligável via `fecharAoClicarFora={false}`, ver prop acima - e
 // agora a tecla Esc, sempre ligada, mesmo com `fecharAoClicarFora={false}`

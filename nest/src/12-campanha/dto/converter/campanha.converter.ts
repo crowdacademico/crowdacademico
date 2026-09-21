@@ -26,6 +26,9 @@ export class CampanhaConverter {
       encerradoEm: entity.encerrado_em,
       videoApresentacaoUrl: entity.video_apresentacao_url,
       criadoEm: entity.criado_em,
+      reenviosRestantes: null,
+      prazoReenvioAte: null,
+      somenteLeitura: false,
     };
   }
 }

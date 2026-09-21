@@ -62,7 +62,9 @@ export class UsuarioServiceRemove {
         // Pior caso: o objeto fica órfão no bucket, mesma categoria de
         // baixo risco/baixa prioridade já aceita em outros pontos deste
         // módulo.
-        await this.armazenamento.excluirObjeto(arquivo.chave).catch(() => undefined);
+        await this.armazenamento
+          .excluirObjeto(arquivo.chave)
+          .catch(() => undefined);
       }
     }
   }

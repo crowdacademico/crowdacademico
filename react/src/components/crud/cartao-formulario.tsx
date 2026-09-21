@@ -29,7 +29,7 @@
 // MESMA largura de FichaConsulta - consistência visual entre Consultar e
 // um Alterar/Criar/Excluir simples de 1-2 campos). Chegou a existir uma
 // 2ª medida ('larga', max-w-5xl) só pra Alterar Usuário - REMOVIDA
-// (13-09-2026, achado do Claude Web numa auditoria de otimização): Alterar
+// (13-09-2026, achado do Lucas numa auditoria de otimização): Alterar
 // Usuário virou modal nesse mesmo dia (usa `ModalFicha`, que é sempre
 // max-w-5xl fixo, sem prop de largura nenhuma) e ficou como opção sem
 // nenhum consumidor - "opção não usada em componente compartilhado é

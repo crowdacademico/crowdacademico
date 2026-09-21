@@ -747,7 +747,7 @@ INSERT INTO termos_de_uso (tipo, versao, conteudo, ativo, criado_em) VALUES
 -- aplica pra qualquer versão nova). v3 é a primeira com texto de rascunho
 -- REALISTA (não é lorem ipsum, mas TAMBÉM NÃO é texto jurídico validado -
 -- inspirado na LGPD e em termos de plataformas de financiamento coletivo
--- reais, escrito pelo Claude Code a pedido do Lucas só pra parar de mostrar
+-- reais, escrito a pedido do Lucas só pra parar de mostrar
 -- "[PLACEHOLDER]" pra quem testar o sistema. Precisa de revisão jurídica
 -- de verdade antes de qualquer uso em produção real).
 UPDATE termos_de_uso SET ativo = FALSE WHERE tipo = 'cadastro' AND versao = 'v2-2025-01-01';
@@ -787,8 +787,8 @@ Fica eleito o foro da comarca do domicílio do usuário para dirimir eventuais c
 -- Primeira versão do tipo 'contribuicao' (13-09-2026) - nasce junto com a
 -- coluna `tipo`, não existia antes disso (só o aceite de cadastro existia
 -- na prática). Mesmo aviso do v3 acima: rascunho REALISTA inspirado na
--- LGPD e em política de reembolso comum de crowdfunding, escrito pelo
--- Claude Code a pedido do Lucas - NÃO é texto jurídico validado.
+-- LGPD e em política de reembolso comum de crowdfunding, escrito a
+-- pedido do Lucas - NÃO é texto jurídico validado.
 INSERT INTO termos_de_uso (tipo, versao, conteudo, ativo, criado_em) VALUES
 ('contribuicao', 'v1-2026-09-13', 'TERMOS DE CONTRIBUIÇÃO - CROWDACADÊMICO
 
@@ -932,7 +932,7 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, pub
 -- cronograma estruturados (01, [01-E]). Mesmo padrão config + trigger de tudo
 -- acima nesta seção - mudar o mínimo/máximo exigido, ou o limite de texto,
 -- vira um UPDATE nesta tabela, não uma migração. Ver
--- fn_valida_completude_campanha_aprovacao e fn_valida_limite_max_orcamento_
+-- fn_valida_completude_campanha e fn_valida_limite_max_orcamento_
 -- campanha/fn_valida_limite_max_marco_cronograma (05, [05-K-2]).
 -- CORRIGIDO (01-08-2026): a Alexia confundiu min/max na primeira versão - os
 -- valores 10/20 eram pra ser o TETO (nº máximo permitido por campanha), não o
@@ -947,15 +947,22 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, pub
 (NULL, 'orcamento_max_itens',                      '10',   'inteiro', 'Nº máximo de itens de orçamento permitido por campanha',                    TRUE, TRUE),
 (NULL, 'cronograma_min_marcos',                    '3',    'inteiro', 'Nº mínimo de marcos de cronograma exigido para aprovar uma campanha',       TRUE, TRUE),
 (NULL, 'cronograma_max_marcos',                    '20',   'inteiro', 'Nº máximo de marcos de cronograma permitido por campanha',                  TRUE, TRUE),
--- ADICIONADA (15-09-2026, pedido do Lucas) - gate de expirar_campanhas_
--- rascunho() (05, [05-K-2]): campanha nasce em 'aguardando_aprovacao' antes
--- de ter orçamento/cronograma completos (cadastro "aos poucos", RF-040/042).
--- Se a pessoa não voltar pra terminar (queda de energia, fechou a aba), a
--- campanha ficaria presa nesse status pra sempre, sem nunca poder ser
--- aprovada. Job agendado (@Cron) apaga quem, depois deste prazo, ainda não
--- bate orcamento_min_itens/cronograma_min_marcos (acima) - os MESMOS
--- mínimos já usados na aprovação, não um limiar novo.
-(NULL, 'campanha_rascunho_ttl_horas',              '48',   'inteiro', 'Horas até uma campanha incompleta (sem orçamento/cronograma mínimos) ser apagada automaticamente', TRUE, TRUE),
+-- Prazo do RASCUNHO de campanha (ADICIONADA 15-09-2026, reescrita 21-09-2026) -
+-- gate de expirar_campanhas_rascunho() (05, [05-K-2]). A campanha nasce
+-- 'rascunho' e só vai pra fila de aprovação por envio explícito do pesquisador.
+-- Se a pessoa nunca voltar (queda de energia, aba fechada, desistiu), o
+-- rascunho some sozinho depois deste prazo, contado da CRIAÇÃO e não da última
+-- edição (ver REQUISITOS_V7). 336h = 14 dias: as 48h originais contradiziam a
+-- própria justificativa do sistema ("cadastrar aos poucos") - quem preenchia
+-- na segunda e voltava na quarta perdia tudo.
+(NULL, 'campanha_rascunho_ttl_horas',              '336',  'inteiro', 'Horas até uma campanha em rascunho ser apagada automaticamente (contadas da criação)', TRUE, TRUE),
+-- ADICIONADAS (21-09-2026, regra de rejeição e reenvio, ver REQUISITOS_V7).
+-- Máximo de reenvios após a 1ª rejeição: 3 reenvios = até 4 rejeições no total
+-- (a 4ª esgota). Prazo, em dias, que a campanha rejeitada continua disponível
+-- ao pesquisador, contado da ÚLTIMA rejeição; sem reenvio nesse prazo, a
+-- campanha é excluída por expirar_campanhas_rejeitadas() (05).
+(NULL, 'campanha_rejeitada_max_reenvios',          '3',    'inteiro', 'Nº máximo de reenvios de uma campanha rejeitada, depois da 1ª rejeição',       TRUE, TRUE),
+(NULL, 'campanha_rejeitada_prazo_dias',            '30',   'inteiro', 'Dias que uma campanha rejeitada fica disponível para reenvio, contados da última rejeição', TRUE, TRUE),
 (NULL, 'limite_caracteres_descricao_orcamento',    '2000', 'inteiro', 'Nº máximo de caracteres em orcamento_campanha.descricao',                    TRUE, TRUE),
 (NULL, 'limite_caracteres_descricao_marco',        '2000', 'inteiro', 'Nº máximo de caracteres em marco_cronograma.descricao',                      TRUE, TRUE),
 -- ADICIONADO (28-07-2026, uma IA - 5ª auditoria): meta 0.00 era aceita
@@ -1148,7 +1155,7 @@ INSERT INTO campanha (id_usuario, id_admin, id_area_conhecimento, titulo, modelo
 (14, 1, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '2.12.00.00'), 'Bioprospecção de Fungos da Caatinga com Potencial Antibiótico',                  'all-or-nothing', 40000.00, 5.00, 'Coleta e análise de fungos endofíticos da Caatinga para identificação de compostos com atividade antibacteriana frente a superbactérias.',              '2024-03-01', '2024-05-30', 'sucesso',             '2024-03-01', '2024-02-20 09:15:00', NULL),
 (15, 1, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '4.06.00.00'), 'Estudo Epidemiológico do Impacto da Dengue na Baixada Fluminense 2024',          'all-or-nothing', 25000.00, 5.00, 'Levantamento epidemiológico detalhado dos casos de dengue em municípios da Baixada Fluminense durante o surto de 2024.',                                 '2024-03-10', '2024-04-24', 'nao_atingido',        '2024-03-10', '2024-03-01 14:00:00', NULL),
 (16, 1, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '6.06.00.00'), 'Mapeamento Socioeconômico de Comunidades Quilombolas de Santa Catarina',         'flexivel',       30000.00, 5.00, 'Pesquisa quantitativa e qualitativa sobre indicadores socioeconômicos, acesso a direitos e identidade cultural em quilombos catarinenses.',              '2024-04-01', '2024-06-01', 'sucesso',             '2024-04-01', '2024-03-20 08:00:00', NULL),
-(17, NULL, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '7.02.00.00'), 'Análise Discursiva das Fake News sobre Vacinas no Twitter (2022–2024)',       'all-or-nothing', 15000.00, 5.00, 'Estudo linguístico-computacional sobre estratégias discursivas de desinformação vacinal em redes sociais brasileiras.',                                  NULL,          NULL,         'aguardando_aprovacao', NULL,        '2025-04-10 16:00:00', NULL),
+(17, NULL, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '7.02.00.00'), 'Análise Discursiva das Fake News sobre Vacinas no Twitter (2022–2024)',       'all-or-nothing', 15000.00, 5.00, 'Estudo linguístico-computacional sobre estratégias discursivas de desinformação vacinal em redes sociais brasileiras.',                                  NULL,          NULL,         'rascunho',             NULL,        NOW(),                 NULL),
 (18, 1, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '4.01.00.00'), 'Eficácia de Probióticos na Redução de Infecções Hospitalares em UTI Neonatal',  'all-or-nothing', 45000.00, 5.00, 'Ensaio clínico randomizado avaliando o uso de probióticos na microbiota intestinal de neonatos para prevenção de sepse hospitalar.',                    '2024-05-01', '2024-07-30', 'encerrado',           '2024-05-01', '2024-04-15 10:00:00', '2024-08-06 11:00:00'),
 -- ADICIONADO: 3 campanhas novas (ids 8, 9, 10 nesta ordem de inserção), uma para cada
 -- pesquisador novo que precisa de histórico real - ver o comentário completo depois do
@@ -1359,14 +1366,20 @@ INSERT INTO solicitacao_encerramento (id_campanha, id_admin, justificativa_pesqu
 
 
 -- [07-E-6] historico_rejeicao
-INSERT INTO historico_rejeicao (id_campanha, id_admin, justificativa, rejeitado_em) VALUES
+-- id_usuario_dono e titulo_campanha são o snapshot gravado na rejeição (ver 01):
+-- aqui vêm de campanha pra não repetir dado à mão em cada linha.
+INSERT INTO historico_rejeicao (id_campanha, id_usuario_dono, titulo_campanha, id_admin, justificativa, rejeitado_em)
+SELECT v.id_campanha, c.id_usuario, c.titulo, v.id_admin, v.justificativa, v.rejeitado_em::TIMESTAMPTZ
+FROM (VALUES
 (4, 1, 'Campanha não apresentou metodologia clara nem parecer de comitê de ética em pesquisa.',               '2024-03-08 10:00:00'),
 (6, 1, 'Escopo da pesquisa não enquadrado como pesquisa acadêmica financiável pela plataforma.',              '2025-04-12 11:00:00'),
 (1, 1, 'Versão inicial sem descrição detalhada dos dados utilizados. Resubmissão solicitada.',                '2024-01-25 09:00:00'),
 (2, 1, 'Faltou anexar declaração institucional da UNICAMP. Campanha devolvida para ajuste.',                  '2024-02-08 14:00:00'),
 (3, 1, 'Meta financeira considerada excessiva sem justificativa de custos detalhada. Ajuste e reenvio.',      '2024-02-22 10:00:00'),
 (5, 1, 'Necessidade de inclusão de termo de consentimento das comunidades quilombolas no projeto.',           '2024-03-22 13:00:00'),
-(7, 1, 'Protocolo de ensaio clínico incompleto. Aprovação pelo CEP obrigatória antes de prosseguir.',        '2024-04-17 11:00:00');
+(7, 1, 'Protocolo de ensaio clínico incompleto. Aprovação pelo CEP obrigatória antes de prosseguir.',        '2024-04-17 11:00:00')
+) AS v(id_campanha, id_admin, justificativa, rejeitado_em)
+JOIN campanha c ON c.id_campanha = v.id_campanha;
 
 
 -- [07-E-7] comentario

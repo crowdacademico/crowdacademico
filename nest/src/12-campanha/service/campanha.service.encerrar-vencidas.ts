@@ -41,14 +41,25 @@ export class CampanhaServiceEncerrarVencidas {
   // à toa (a query é uma varredura simples por status+data_fim, barata).
   @Cron('*/15 * * * *')
   async executar(): Promise<void> {
-    const resultado = await this.pool.query<{
-      encerrar_campanhas_vencidas: number;
-    }>('SELECT public.encerrar_campanhas_vencidas()');
-    const quantidade = resultado.rows[0]?.encerrar_campanhas_vencidas ?? 0;
+    // try/catch (20-09-2026, achado numa revisão do Lucas): sem ele, uma
+    // exceção vinda da função SQL vira `unhandledRejection` (o @Cron chama
+    // este método sem `await` de ninguém), e o Node moderno derruba o
+    // processo inteiro por causa de um job periódico. Mesmo tratamento nos
+    // 3 crons do sistema.
+    try {
+      const resultado = await this.pool.query<{
+        encerrar_campanhas_vencidas: number;
+      }>('SELECT public.encerrar_campanhas_vencidas()');
+      const quantidade = resultado.rows[0]?.encerrar_campanhas_vencidas ?? 0;
 
-    if (quantidade > 0) {
-      this.logger.log(
-        `${quantidade} campanha(s) vencida(s) encerrada(s) automaticamente.`,
+      if (quantidade > 0) {
+        this.logger.log(
+          `${quantidade} campanha(s) vencida(s) encerrada(s) automaticamente.`,
+        );
+      }
+    } catch (erro) {
+      this.logger.error(
+        `Falha ao encerrar campanhas vencidas: ${erro instanceof Error ? erro.message : String(erro)}`,
       );
     }
   }

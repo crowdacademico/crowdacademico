@@ -15,7 +15,7 @@
    fragmentado. Se um dia isso também precisar migrar pra cá, é decisão
    separada - avisar antes de mexer. */
 :root {
-  /* Alias das 4 cores da MARCA (13-09-2026, achado do Claude Web numa
+  /* Alias das 4 cores da MARCA (13-09-2026, achado do Lucas numa
      auditoria: este arquivo afirmava "TODA cor do sistema", mas as 4 cores
      mais fundamentais do site - a verde de marca e as 3 de base - não
      tinham nenhuma representação aqui). O valor BRUTO das 4 continua em
@@ -86,15 +86,15 @@
   --cor-borda-forte: var(--color-slate-300); /* divisória de cabeçalho */
   --cor-fundo-sutil: var(--color-slate-50); /* hover, fundo de seção */
 
-  /* Tokens de FUNDO (09-08-2026, fundação do dark mode - análise do Claude
-     Web sobre o prompt de cabeçalho/conta): faltavam pra completar o
+  /* Tokens de FUNDO (09-08-2026, fundação do dark mode - análise do Lucas
+     sobre o prompt de cabeçalho/conta): faltavam pra completar o
      mecanismo de tema, porque até aqui o fundo branco das telas/cartões
      estava implícito (bg-white do Tailwind direto no JSX), e é exatamente
      o que precisa inverter no escuro. Cada um marca uma "camada" de
      profundidade: página (mais fundo) < cartão < elevado (dropdown/modal,
      precisa se destacar do cartão que está atrás dele).
 
-     CORRIGIDO (13-09-2026, achado do Claude Web, rodada 3): `--cor-fundo-
+     CORRIGIDO (13-09-2026, achado do Lucas, rodada 3): `--cor-fundo-
      pagina` referenciava `var(--color-surface)` direto - sobra de ordem
      cronológica (esta linha nasceu em 09-08-2026, antes do alias
      `--cor-superficie` existir, criado só na rodada 2 de hoje). Variável
@@ -118,7 +118,7 @@
   --cor-texto-sucesso: var(--color-emerald-600);
   --cor-fundo-erro: var(--color-red-100);
   --cor-texto-erro: var(--color-red-600);
-  /* --cor-texto-erro-forte (13-09-2026, achado do Claude Web numa auditoria:
+  /* --cor-texto-erro-forte (13-09-2026, achado do Lucas numa auditoria:
      um botão de revogar papel usava `texto-erro` + `hover:text-red-800` cru
      do Tailwind lado a lado - o hover não respondia a tema escuro) - mesmo
      papel que `--cor-texto-forte` já cumpre pra `--cor-texto-fraco`
@@ -286,7 +286,7 @@
     background-color: var(--cor-fundo-hover);
   }
 
-  /* Utilitários da cor da MARCA (13-09-2026, achado do Claude Web,
+  /* Utilitários da cor da MARCA (13-09-2026, achado do Lucas,
      rodada 3, migração dos ~21 consumidores de `bg-primary`/`text-
      primary`/`border-primary` cru do Tailwind pro alias `--cor-marca`
      criado na rodada 2) - mesmo papel de `.fundo-cartao`/`.texto-forte`/
@@ -384,7 +384,7 @@
 
   /* Par de .texto-erro, mesmo papel de .hover-texto-forte pra
      .texto-fraco - intensifica ao passar o mouse, respeitando tema
-     escuro (13-09-2026, achado do Claude Web: um botão de revogar papel
+     escuro (13-09-2026, achado do Lucas: um botão de revogar papel
      usava hover:text-red-800 cru do Tailwind, sem responder ao escuro). */
   .hover-texto-erro:hover {
     color: var(--cor-texto-erro-forte);

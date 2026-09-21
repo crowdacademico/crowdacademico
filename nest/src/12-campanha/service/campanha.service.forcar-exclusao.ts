@@ -10,7 +10,7 @@ import { DatabaseService } from '../../commons/database/database.service';
 // Lucas (08-09-2026): "o Admin, o todo poderoso, precisa poder excluir
 // forçadamente uma campanha, senão o Campo de Testes vai ficar muito
 // sujo". Diferente de CampanhaServiceRemove (DELETE /campanha/:id), que
-// só funciona em 'aguardando_aprovacao' (pol_campanha_delete, 04 - proteção
+// só funciona em 'rascunho' (pol_campanha_delete, 04 - proteção
 // correta pra campanha real, com contribuição/repasse em andamento): esta
 // função ignora status de propósito, gateada por permissão própria
 // (campanha_excluir_forcado, nunca campanha_editar) - decisão do Lucas,

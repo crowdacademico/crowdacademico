@@ -27,7 +27,7 @@ import {
   ROTULO_STATUS_CAMPANHA,
   classeBadgeStatusCampanha,
 } from '../../services/12-campanha/constants/status-campanha.constants';
-import { formatarDataHora, formatarMoeda } from '../../services/constant/utils/formatacao.util';
+import { formatarData, formatarDataHora, formatarMoeda } from '../../services/constant/utils/formatacao.util';
 import { paginarClientSide } from '../../services/constant/utils/paginacao.util';
 import { RodapePaginacao } from '../../components/pagination/rodape-paginacao';
 import { BarraFiltros } from '../../components/search/barra-filtros';
@@ -551,7 +551,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
   const valorPrazoMaximo = obterConfiguracao('prazo_maximo_campanha_dias', 60);
   const prazoMaximoCampanha = typeof valorPrazoMaximo === 'number' ? valorPrazoMaximo : 60;
   // Mesmo padrão dos 3 acima (15-09-2026, achado numa auditoria contra
-  // REQUISITOS_V6.md: RF-067 - `fn_valida_meta_campanha_negocio`,
+  // Meta mínima de campanha (ver REQUISITOS_V7) - `fn_valida_meta_campanha_negocio`,
   // 05_regras_negocio.sql - já rejeita meta abaixo de `meta_minima_campanha`,
   // mas o formulário de criação nunca lia essa chave, mesmo gap do prazo.
   const valorMetaMinima = obterConfiguracao('meta_minima_campanha', 500);
@@ -597,6 +597,16 @@ export function BancadaCampanha({ auth }: PropsPagina) {
   const [justificativaRejeicaoEdicao, setJustificativaRejeicaoEdicao] = useState('');
   const [aprovando, setAprovando] = useState(false);
   const [rejeitando, setRejeitando] = useState(false);
+  // Ciclo de rejeição e reenvio (21-09-2026, ver REQUISITOS_V7). `detalheRejeitada`
+  // vem de GET /campanha/:id (a listagem NÃO traz reenviosRestantes/prazo/
+  // somenteLeitura, só a consulta individual), buscado ao abrir Alterar numa
+  // campanha rejeitada. `ofertaDatas` liga o aviso "as datas venceram" dentro do
+  // próprio modal (e não um 2º modal empilhado: cada ModalFicha registra o seu
+  // próprio listener de Esc, e dois abertos fechariam juntos).
+  const [detalheRejeitada, setDetalheRejeitada] = useState<CampanhaResponse | null>(null);
+  const [historicoEdicao, setHistoricoEdicao] = useState<HistoricoRejeicaoResponse[]>([]);
+  const [ofertaDatas, setOfertaDatas] = useState(false);
+  const [enviando, setEnviando] = useState(false);
   const [campanhaExcluindo, setCampanhaExcluindo] = useState<CampanhaResponse | null>(null);
   const [confirmacaoExclusao, setConfirmacaoExclusao] = useState('');
   const [excluindo, setExcluindo] = useState(false);
@@ -727,32 +737,85 @@ export function BancadaCampanha({ auth }: PropsPagina) {
     setChecklistOrcamento([]);
     setChecklistCronograma([]);
     setJustificativaRejeicaoEdicao('');
+    setDetalheRejeitada(null);
+    setHistoricoEdicao([]);
+    setOfertaDatas(false);
+    if (item.status === 'rejeitado') {
+      campanhaApi
+        .buscar(auth.authFetch, item.idCampanha)
+        .then(setDetalheRejeitada)
+        .catch(() => setDetalheRejeitada(null));
+      campanhaApi
+        .listarHistoricoRejeicao(auth.authFetch, item.idCampanha)
+        .then(setHistoricoEdicao)
+        .catch(() => setHistoricoEdicao([]));
+    }
   };
 
   // PATCH /campanha/:id (dono OU campanha_editar) - sem status/id_admin/
   // taxa_plataforma/modelo aqui de propósito, ver campanha.request-update.
   // ts: quem muda status são aprovar/rejeitar, nunca este PATCH genérico.
+  const gravarEdicaoCampanha = (id: number, form: FormEdicaoCampanha) =>
+    chamarERegistrar<void>(`/campanha/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        titulo: form.titulo,
+        idAreaConhecimento: Number(form.idAreaConhecimento),
+        metaFinanceira: Number(form.metaFinanceira),
+        ...(form.descricao ? { descricao: form.descricao } : {}),
+        ...(form.dataInicio ? { dataInicio: new Date(form.dataInicio).toISOString() } : {}),
+        ...(form.dataFim ? { dataFim: new Date(form.dataFim).toISOString() } : {}),
+        ...(form.videoApresentacaoUrl ? { videoApresentacaoUrl: form.videoApresentacaoUrl } : {}),
+      }),
+    });
+
   const salvarEdicaoCampanha = async () => {
     if (!formEdicaoCampanha?.titulo || idCampanhaEditando === null) return;
     try {
-      await chamarERegistrar<void>(`/campanha/${idCampanhaEditando}`, {
-        method: 'PATCH',
-        body: JSON.stringify({
-          titulo: formEdicaoCampanha.titulo,
-          idAreaConhecimento: Number(formEdicaoCampanha.idAreaConhecimento),
-          metaFinanceira: Number(formEdicaoCampanha.metaFinanceira),
-          ...(formEdicaoCampanha.descricao ? { descricao: formEdicaoCampanha.descricao } : {}),
-          ...(formEdicaoCampanha.dataInicio ? { dataInicio: new Date(formEdicaoCampanha.dataInicio).toISOString() } : {}),
-          ...(formEdicaoCampanha.dataFim ? { dataFim: new Date(formEdicaoCampanha.dataFim).toISOString() } : {}),
-          ...(formEdicaoCampanha.videoApresentacaoUrl ? { videoApresentacaoUrl: formEdicaoCampanha.videoApresentacaoUrl } : {}),
-        }),
-      });
+      await gravarEdicaoCampanha(idCampanhaEditando, formEdicaoCampanha);
       const idEditado = idCampanhaEditando;
       setIdCampanhaEditando(null);
       carregarCampanhas();
       mostrar('Campanha alterada com sucesso.', `ID: ${idEditado} foi alterada`);
     } catch (erro) {
       reportarErro(erro);
+    }
+  };
+
+  // "Enviar para aprovação" (rascunho) e "Corrigir e reenviar" (rejeitada),
+  // 21-09-2026. Grava o formulário ANTES de enviar, senão uma alteração ainda
+  // não salva se perderia em silêncio. Nenhuma checagem de completude aqui de
+  // propósito: quem cobra orçamento, cronograma e prazo é
+  // trg_campanha_valida_completude (05), e o erro chega traduzido - o clique
+  // acontece e o sistema DIZ o que falta (Heurísticas de Nielsen), em vez de um
+  // botão desabilitado sem explicação. A única exceção é o prazo vencido: em vez
+  // de deixar o erro estourar, oferece atualizar as datas mantendo a duração
+  // (REQUISITOS_V7, "prazo vencido"), sempre com confirmação explícita.
+  const dataFimVencida = (form: FormEdicaoCampanha) => Boolean(form.dataFim) && new Date(form.dataFim) <= new Date();
+
+  const enviarEdicao = async (comDatasAtualizadas = false) => {
+    if (!formEdicaoCampanha || idCampanhaEditando === null) return;
+    if (!comDatasAtualizadas && dataFimVencida(formEdicaoCampanha)) {
+      setOfertaDatas(true);
+      return;
+    }
+    setEnviando(true);
+    try {
+      await gravarEdicaoCampanha(idCampanhaEditando, formEdicaoCampanha);
+      if (comDatasAtualizadas) {
+        await chamarERegistrar<CampanhaResponse>(`/campanha/${idCampanhaEditando}/deslizar-datas`, {
+          method: 'POST',
+          body: JSON.stringify({ novaDataInicio: new Date().toISOString() }),
+        });
+      }
+      await chamarERegistrar<CampanhaResponse>(`/campanha/${idCampanhaEditando}/enviar`, { method: 'POST' });
+      mostrar('Campanha enviada para aprovação.', `ID: ${idCampanhaEditando}`);
+      setIdCampanhaEditando(null);
+      carregarCampanhas();
+    } catch (erro) {
+      reportarErro(erro);
+    } finally {
+      setEnviando(false);
     }
   };
 
@@ -795,11 +858,14 @@ export function BancadaCampanha({ auth }: PropsPagina) {
     }
   };
 
-  // Só permitido em 'aguardando_aprovacao' (RLS: pol_campanha_delete, ver
-  // 04_rls_policies.sql) - mesma lógica do congelamento pós-aprovação.
+  // Só permitido em 'rascunho' (RLS: pol_campanha_delete, ver
+  // 04_rls_policies.sql) - era 'aguardando_aprovacao' até 20-09-2026, e essa
+  // versão antiga tinha um bug: uma campanha rejeitada e reenviada volta pra
+  // 'aguardando_aprovacao' já com linha em historico_rejeicao, cuja FK não tem
+  // ON DELETE CASCADE, então o DELETE travava em violação de FK.
   // Cascateia orçamento/cronograma/atualizações/seguidores/comentários
   // (ON DELETE CASCADE, 01_extensoes_enums_tabelas.sql), sem risco: nada
-  // disso existe ainda pra uma campanha que nunca foi aprovada.
+  // disso existe ainda pra uma campanha que nunca saiu do rascunho.
   //
   // CORRIGIDO (08-09-2026, pedido do Lucas: "consertar T2... modal de
   // Excluir") - antes o botão "Excluir" da tabela apagava na hora, sem
@@ -827,7 +893,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
   // todo poderoso, precisa poder excluir forçadamente uma campanha, senão
   // este campo de testes vai ficar muito sujo") - ignora status de
   // propósito (POST /campanha/:id/forcar-exclusao, endpoint separado do
-  // DELETE normal, que continua só liberando 'aguardando_aprovacao'). Só
+  // DELETE normal, que desde 20-09-2026 só libera 'rascunho'). Só
   // oferecida quando a campanha NÃO é uma das 10 de demonstração - essas
   // continuam protegidas de qualquer exclusão, forçada ou não.
   const forcarExclusaoCampanha = async () => {
@@ -931,8 +997,38 @@ export function BancadaCampanha({ auth }: PropsPagina) {
     }
   };
 
-  // Fecha o modal de verdade e limpa tudo pra próxima abertura - chamado
-  // tanto pelo "Cancelar" (antes de criar) quanto pelo "Concluir" (depois).
+  // "Enviar para aprovação" (20-09-2026, junto com o status 'rascunho') -
+  // substituiu o antigo "Concluir", que só fechava o modal e deixava a
+  // campanha numa fila que ninguém podia aprovar.
+  //
+  // De propósito NÃO tem validação client-side antes de chamar: quem cobra
+  // orçamento completo, soma batendo com a meta, cronograma e prazo não
+  // vencido é trg_campanha_valida_completude_aprovacao (05), e o erro dele
+  // chega aqui traduzido pelo PostgresExceptionFilter. É o comportamento que
+  // o Lucas pediu nas Heurísticas de Nielsen: o clique acontece e o sistema
+  // DIZ o que falta, em vez de um botão desabilitado sem explicação.
+  //
+  // Se falhar, o modal fica aberto: a campanha continua em rascunho, o
+  // trabalho não se perde, e a pessoa pode voltar nas etapas e corrigir.
+  const enviarCampanhaParaAprovacao = async () => {
+    if (idCampanhaRecemCriada === null) {
+      return;
+    }
+    try {
+      await chamarERegistrar<CampanhaResponse>(`/campanha/${idCampanhaRecemCriada}/enviar`, {
+        method: 'POST',
+      });
+      carregarCampanhas();
+      mostrar('Campanha enviada para aprovação.', `ID: ${idCampanhaRecemCriada}`);
+      fecharModalCriarCampanha();
+    } catch (erro) {
+      reportarErro(erro);
+    }
+  };
+
+  // Fecha o modal de verdade e limpa tudo pra próxima abertura - chamado pelo
+  // "Cancelar"/X (a campanha já criada FICA salva como rascunho, nada se
+  // perde) e pelo sucesso do "Enviar para aprovação".
   const fecharModalCriarCampanha = () => {
     setCriandoCampanha(false);
     setPesquisadorEscolhido(null);
@@ -1166,6 +1262,15 @@ export function BancadaCampanha({ auth }: PropsPagina) {
         // (campos ficam só-leitura, Salvar some) em vez de o botão da
         // tabela ficar cinza sem explicação nenhuma.
         const bloqueadaEdicao = CAMPANHA_BLOQUEADA(idCampanhaEditando);
+        // Rejeitada que já usou todos os reenvios é SÓ LEITURA (banco: 91027 nas
+        // 3 funções de congelamento). `edicaoTravada` junta isso com a proteção
+        // das 10 campanhas de demonstração pra decidir o que fica desabilitado.
+        const rejeitadaSomenteLeitura = campanhaEmEdicao?.status === 'rejeitado' && detalheRejeitada?.somenteLeitura === true;
+        const edicaoTravada = bloqueadaEdicao || rejeitadaSomenteLeitura;
+        const duracaoFormDias =
+          formEdicaoCampanha.dataInicio && formEdicaoCampanha.dataFim
+            ? Math.round((new Date(formEdicaoCampanha.dataFim).getTime() - new Date(formEdicaoCampanha.dataInicio).getTime()) / 86400000)
+            : 0;
         // Checklist "Pronta pra aprovar?" (13-09-2026, trazido do painel
         // "campanha em foco" removido - ver comentário grande no topo do
         // arquivo) - contagens vêm de `checklistOrcamento`/`checklistCronograma`,
@@ -1200,17 +1305,27 @@ export function BancadaCampanha({ auth }: PropsPagina) {
             subtitulo={campanhaEmEdicao ? `Pesquisador: ${nomeDe(campanhaEmEdicao.idUsuario)}` : undefined}
             aoFechar={() => setIdCampanhaEditando(null)}
             rodape={
-              <div className="flex gap-3 max-w-sm ml-auto">
+              <div className="flex gap-3 max-w-xl ml-auto">
                 <button
                   type="button"
                   onClick={() => setIdCampanhaEditando(null)}
                   className="btn btn-secondary flex-1"
                 >
-                  {bloqueadaEdicao ? 'Fechar' : 'Cancelar'}
+                  {edicaoTravada ? 'Fechar' : 'Cancelar'}
                 </button>
-                {!bloqueadaEdicao && (
+                {!edicaoTravada && (
                   <button type="button" onClick={salvarEdicaoCampanha} className="btn btn-primary flex-1">
                     Salvar
+                  </button>
+                )}
+                {!edicaoTravada && campanhaEmEdicao?.status === 'rascunho' && (
+                  <button type="button" onClick={() => enviarEdicao()} disabled={enviando} className="btn btn-primary flex-1">
+                    {enviando ? 'Enviando...' : 'Enviar para aprovação'}
+                  </button>
+                )}
+                {!edicaoTravada && campanhaEmEdicao?.status === 'rejeitado' && (
+                  <button type="button" onClick={() => enviarEdicao()} disabled={enviando} className="btn btn-primary flex-1">
+                    {enviando ? 'Enviando...' : 'Corrigir e reenviar'}
                   </button>
                 )}
               </div>
@@ -1225,6 +1340,65 @@ export function BancadaCampanha({ auth }: PropsPagina) {
               </div>
             )}
 
+            {/* Campanha REJEITADA (21-09-2026): o histórico de rejeições vem no
+                topo porque é a primeira coisa que o pesquisador precisa ler pra
+                saber o que corrigir, junto com quantos reenvios ainda tem e até
+                quando. Esgotados os reenvios, vira só leitura e a frase diz
+                quando a campanha será excluída. */}
+            {campanhaEmEdicao?.status === 'rejeitado' && (
+              <div className="rounded-lg border borda-forte fundo-erro p-4 text-sm texto-erro space-y-3">
+                <p className="font-bold">
+                  <i className="fa-solid fa-circle-exclamation mr-1"></i> Campanha rejeitada
+                </p>
+                {detalheRejeitada &&
+                  (detalheRejeitada.somenteLeitura ? (
+                    <p>
+                      Esta campanha usou todos os reenvios permitidos e agora é somente leitura.
+                      {detalheRejeitada.prazoReenvioAte && <> Ela será excluída em {formatarData(detalheRejeitada.prazoReenvioAte)}.</>}
+                    </p>
+                  ) : (
+                    <p>
+                      Reenvios restantes: <strong>{detalheRejeitada.reenviosRestantes}</strong>.
+                      {detalheRejeitada.prazoReenvioAte && <> Prazo para reenviar: até <strong>{formatarData(detalheRejeitada.prazoReenvioAte)}</strong>.</>}
+                    </p>
+                  ))}
+                {historicoEdicao.length > 0 && (
+                  <ul className="space-y-2">
+                    {historicoEdicao.map((item, indice) => (
+                      <li key={item.idRejeicao} className={indice === 0 ? 'font-semibold' : ''}>
+                        {formatarDataHora(item.rejeitadoEm)}
+                        {item.nomeAdmin ? ` por ${item.nomeAdmin}` : ''}: {item.justificativa ?? 'Sem justificativa.'}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+
+            {/* Datas vencidas no envio/reenvio (21-09-2026): oferta EXPLÍCITA, nunca
+                silenciosa - a data de início é o que o pesquisador vai comunicar
+                pra rede dele. */}
+            {ofertaDatas && (
+              <div className="rounded-lg border borda-forte fundo-aviso p-4 text-sm texto-aviso space-y-3">
+                <p className="font-bold">
+                  <i className="fa-solid fa-calendar-xmark mr-1"></i> As datas desta campanha já venceram
+                </p>
+                <p>
+                  O prazo terminou em {formatarData(new Date(formEdicaoCampanha.dataFim).toISOString())}, e uma campanha com prazo
+                  vencido não pode ser enviada para aprovação. Você pode começar agora mantendo a mesma duração
+                  {duracaoFormDias > 0 ? ` de ${duracaoFormDias} dias` : ''}, ou escolher outras datas nos campos de Datas mais abaixo.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" className="btn btn-primary" disabled={enviando} onClick={() => enviarEdicao(true)}>
+                    {enviando ? 'Enviando...' : 'Começar agora, mantendo a duração'}
+                  </button>
+                  <button type="button" className="btn btn-secondary" onClick={() => setOfertaDatas(false)}>
+                    Escolher outras datas
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="grid lg:grid-cols-3 gap-6 items-start">
               <div className="lg:col-span-2 space-y-6">
                 <SecaoFicha titulo="Dados">
@@ -1235,7 +1409,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
                       value={formEdicaoCampanha.titulo}
                       onChange={(evento) => setFormEdicaoCampanha({ ...formEdicaoCampanha, titulo: evento.target.value })}
                       className="input-padrao"
-                      disabled={bloqueadaEdicao}
+                      disabled={edicaoTravada}
                     />
                   </div>
                   <div>
@@ -1244,7 +1418,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
                       value={formEdicaoCampanha.idAreaConhecimento}
                       onChange={(evento) => setFormEdicaoCampanha({ ...formEdicaoCampanha, idAreaConhecimento: evento.target.value })}
                       className="input-padrao"
-                      disabled={bloqueadaEdicao}
+                      disabled={edicaoTravada}
                     >
                       {areas.map((area) => (
                         <option key={area.idAreaConhecimento} value={area.idAreaConhecimento}>
@@ -1260,7 +1434,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
                       value={formEdicaoCampanha.descricao}
                       onChange={(evento) => setFormEdicaoCampanha({ ...formEdicaoCampanha, descricao: evento.target.value })}
                       className="input-padrao"
-                      disabled={bloqueadaEdicao}
+                      disabled={edicaoTravada}
                     />
                   </div>
                   <div className="sm:col-span-2">
@@ -1270,7 +1444,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
                       value={formEdicaoCampanha.videoApresentacaoUrl}
                       onChange={(evento) => setFormEdicaoCampanha({ ...formEdicaoCampanha, videoApresentacaoUrl: evento.target.value })}
                       className="input-padrao"
-                      disabled={bloqueadaEdicao}
+                      disabled={edicaoTravada}
                     />
                   </div>
                 </SecaoFicha>
@@ -1285,7 +1459,20 @@ export function BancadaCampanha({ auth }: PropsPagina) {
                 <PainelOrcamentoCronograma
                   auth={auth}
                   idCampanha={idCampanhaEditando}
-                  podeEditar={!bloqueadaEdicao && campanhaEmEdicao?.status === 'aguardando_aprovacao'}
+                  // 'rascunho' incluído em 20-09-2026: é justamente o status em
+                  // que o pesquisador MAIS precisa mexer em orçamento e
+                  // cronograma. Sem ele, abrir um rascunho em Alterar Campanha
+                  // deixaria os 2 painéis só de leitura, que é o contrário do
+                  // que o estado significa. 'aguardando_aprovacao' continua
+                  // editável porque o congelamento (fn_congela_*, 05) só começa
+                  // em 'ativo' - e é por isso que a checagem de completude
+                  // roda de novo na aprovação, não só no envio.
+                  podeEditar={
+                    !edicaoTravada &&
+                    (campanhaEmEdicao?.status === 'rascunho' ||
+                      campanhaEmEdicao?.status === 'aguardando_aprovacao' ||
+                      campanhaEmEdicao?.status === 'rejeitado')
+                  }
                   aoCarregar={(orcamentoCarregado, cronogramaCarregado) => {
                     setChecklistOrcamento(orcamentoCarregado);
                     setChecklistCronograma(cronogramaCarregado);
@@ -1365,7 +1552,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
                       value={formEdicaoCampanha.dataInicio}
                       onChange={(evento) => setFormEdicaoCampanha({ ...formEdicaoCampanha, dataInicio: evento.target.value })}
                       className="input-padrao"
-                      disabled={bloqueadaEdicao}
+                      disabled={edicaoTravada}
                     />
                   </div>
                   <div>
@@ -1375,7 +1562,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
                       value={formEdicaoCampanha.dataFim}
                       onChange={(evento) => setFormEdicaoCampanha({ ...formEdicaoCampanha, dataFim: evento.target.value })}
                       className="input-padrao"
-                      disabled={bloqueadaEdicao}
+                      disabled={edicaoTravada}
                     />
                   </div>
                 </SecaoFicha>
@@ -1390,7 +1577,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
                       value={formEdicaoCampanha.metaFinanceira}
                       onChange={(evento) => setFormEdicaoCampanha({ ...formEdicaoCampanha, metaFinanceira: evento.target.value })}
                       className="input-padrao"
-                      disabled={bloqueadaEdicao}
+                      disabled={edicaoTravada}
                     />
                   </div>
                   <CampoSomenteLeitura rotulo="Arrecadado" valor={campanhaEmEdicao ? formatarMoeda(campanhaEmEdicao.valorBrutoArrecadado) : '-'} />
@@ -1425,7 +1612,11 @@ export function BancadaCampanha({ auth }: PropsPagina) {
         // (POST /campanha/:id/forcar-exclusao), que ignora status de
         // propósito, gateado por permissão própria.
         const bloqueadaDemo = CAMPANHA_BLOQUEADA(campanhaExcluindo.idCampanha);
-        const statusNaoElegivel = !bloqueadaDemo && campanhaExcluindo.status !== 'aguardando_aprovacao';
+        // 'aguardando_aprovacao' -> 'rascunho' (20-09-2026): acompanha
+        // pol_campanha_delete (04), que mudou junto. Se ficasse como estava, a
+        // tela diria "pode excluir" numa campanha que o banco recusa, e "não
+        // pode" justamente nos rascunhos, que são os únicos excluíveis agora.
+        const statusNaoElegivel = !bloqueadaDemo && campanhaExcluindo.status !== 'rascunho';
         const fecharModal = () => {
           setCampanhaExcluindo(null);
           setConfirmacaoExclusao('');
@@ -1603,8 +1794,8 @@ export function BancadaCampanha({ auth }: PropsPagina) {
                 <button type="button" onClick={() => setEtapaCriarCampanha('orcamento')} className="btn btn-secondary flex-1">
                   Voltar
                 </button>
-                <button type="button" onClick={fecharModalCriarCampanha} className="btn btn-primary flex-1">
-                  Concluir
+                <button type="button" onClick={enviarCampanhaParaAprovacao} className="btn btn-primary flex-1">
+                  Enviar para aprovação
                 </button>
               </div>
             )

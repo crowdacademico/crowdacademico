@@ -12,7 +12,7 @@
    var(--color-primary) etc. pra montar o alias semântico (`--cor-marca`
    e companhia) sem redeclarar nada.
 
-   CORRIGIDO (13-09-2026, achado do Claude Web, rodada 3): esta nota dizia
+   CORRIGIDO (13-09-2026, achado do Lucas, rodada 3): esta nota dizia
    "1-cores.css em especial, mas não só ele" - até então, 5 outros
    arquivos de CSS também referenciavam `--color-primary`/`--color-surface`/
    `--color-dark` direto, sem passar pelo alias. Migrados todos pra usar

@@ -20,7 +20,12 @@ export function assinaturaCorrespondeAoTipo(
     case 'image/jpeg':
       // FF D8 FF - todo JPEG começa assim (marcador SOI seguido do
       // primeiro marcador de segmento).
-      return bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+      return (
+        bytes.length >= 3 &&
+        bytes[0] === 0xff &&
+        bytes[1] === 0xd8 &&
+        bytes[2] === 0xff
+      );
 
     case 'image/png':
       // 89 50 4E 47 0D 0A 1A 0A - assinatura fixa de 8 bytes do formato PNG.

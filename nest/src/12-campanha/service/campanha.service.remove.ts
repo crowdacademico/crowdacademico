@@ -18,8 +18,10 @@ export class CampanhaServiceRemove {
       .executeTakeFirst();
 
     if (!linha) {
-      // pol_campanha_delete (04): status = 'aguardando_aprovacao' E (dono OU
-      // campanha_editar). Mesmo padrão de campanha.service.update.ts: uma
+      // pol_campanha_delete (04): status = 'rascunho' E (dono OU
+      // campanha_editar). Depois de enviada pra fila, a campanha não pode mais
+      // ser excluída pelo pesquisador (a rejeitada some sozinha quando o prazo
+      // de reenvio vence, ver expirar_campanhas_rejeitadas). Mesmo padrão de campanha.service.update.ts: uma
       // campanha ainda invisível pra quem pediu (fora do alcance de
       // pol_campanha_select também) devolve 404 aqui - não vaza que existe.
       const existe = await this.database
@@ -32,7 +34,7 @@ export class CampanhaServiceRemove {
         throw new NotFoundException('Campanha não encontrada.');
       }
       throw new ForbiddenException(
-        'Sem permissão para excluir esta campanha, ou ela já não está mais aguardando aprovação.',
+        'Só é possível excluir uma campanha em rascunho, e só o dono (ou quem tem permissão) pode fazer isso.',
       );
     }
   }

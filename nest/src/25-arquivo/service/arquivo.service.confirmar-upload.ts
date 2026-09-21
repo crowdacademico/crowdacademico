@@ -69,12 +69,7 @@ export class ArquivoServiceConfirmarUpload {
       dto.chave,
       QUANTIDADE_BYTES_ASSINATURA,
     );
-    if (
-      !assinaturaCorrespondeAoTipo(
-        primeirosBytes,
-        dto.tipoMime as TipoMimePermitido,
-      )
-    ) {
+    if (!assinaturaCorrespondeAoTipo(primeirosBytes, dto.tipoMime)) {
       // Limpeza imediata - não depende da regra de ciclo de vida do
       // bucket (que só varre pendente/ depois de até 24h, ver doc de
       // arquitetura) pra tirar um arquivo malicioso/mentiroso de lá.
@@ -91,7 +86,7 @@ export class ArquivoServiceConfirmarUpload {
     // Decide ANTES de gravar em publico/, porque o tamanho final (o que
     // entra na checagem de cota abaixo) só existe depois do processamento
     // pra imagem, mas é o mesmo tamanho declarado pra PDF.
-    const ehImagem = TIPOS_IMAGEM.includes(dto.tipoMime as TipoMimePermitido);
+    const ehImagem = TIPOS_IMAGEM.includes(dto.tipoMime);
 
     let tipoMimeFinal: string = dto.tipoMime;
     let tamanhoFinal: number = dto.tamanhoBytes;

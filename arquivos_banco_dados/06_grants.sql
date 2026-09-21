@@ -336,12 +336,17 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON verificacao_email, recuperacao_senha, se
 -- via atualizar_status_repasse() (05, SECURITY DEFINER, [05-K-2]).
 GRANT INSERT, UPDATE ON
     atualizacao_campanha,
-    solicitacao_encerramento, historico_rejeicao, comentario, denuncia,
+    solicitacao_encerramento, comentario, denuncia,
     recompensa
 TO app_nestjs;
+-- historico_rejeicao saiu do GRANT acima (21-09-2026): só INSERT. Histórico de
+-- moderação é imutável, e nenhum código faz UPDATE nele. A policy de UPDATE
+-- também foi removida em 04.
+GRANT INSERT ON historico_rejeicao TO app_nestjs;
 -- campanha ganha DELETE também (25-08-2026, Campo de Testes: CRUD
 -- completo em T2) - pol_campanha_delete (04) já restringe a
--- 'aguardando_aprovacao' + dono/campanha_editar; sem este GRANT a policy
+-- 'rascunho' + dono/campanha_editar (era 'aguardando_aprovacao' até
+-- 20-09-2026); sem este GRANT a policy
 -- nunca chega a ser avaliada, mesmo padrão do comentário de
 -- orcamento_campanha/marco_cronograma logo abaixo.
 GRANT INSERT, UPDATE, DELETE ON campanha TO app_nestjs;
@@ -368,6 +373,20 @@ GRANT EXECUTE ON FUNCTION public.encerrar_campanhas_vencidas() TO app_nestjs;
 -- sem sessão de usuário).
 REVOKE EXECUTE ON FUNCTION public.expirar_campanhas_rascunho() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.expirar_campanhas_rascunho() TO app_nestjs;
+-- expirar_campanhas_rejeitadas() - ADICIONADA (21-09-2026), mesma higiene e
+-- mesmo motivo (chamada por @Cron, sem sessão de usuário).
+REVOKE EXECUTE ON FUNCTION public.expirar_campanhas_rejeitadas() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.expirar_campanhas_rejeitadas() TO app_nestjs;
+-- deslizar_datas_campanha() - ADICIONADA (21-09-2026). Chamada pelo pesquisador
+-- pelo Nest. Quem pode usar é decidido DENTRO da função (dono + status).
+REVOKE EXECUTE ON FUNCTION public.deslizar_datas_campanha(INT, TIMESTAMPTZ) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.deslizar_datas_campanha(INT, TIMESTAMPTZ) TO app_nestjs;
+-- fn_campanha_reenvios_esgotados() - ADICIONADA (21-09-2026). Chamada de dentro
+-- de triggers que rodam como quem fez a escrita (dono ou admin), por isso o
+-- app_nestjs precisa de EXECUTE. SECURITY DEFINER: enxerga o histórico
+-- independente da RLS de quem chama.
+REVOKE EXECUTE ON FUNCTION public.fn_campanha_reenvios_esgotados(INT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.fn_campanha_reenvios_esgotados(INT) TO app_nestjs;
 -- CORRIGIDO: seguir_campanha também tinha UPDATE sem nenhuma policy de UPDATE -
 -- só existe inserir/apagar "seguir campanha", não faz sentido "editar" essa linha.
 GRANT INSERT, DELETE ON seguir_campanha TO app_nestjs;

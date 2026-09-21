@@ -2,6 +2,7 @@ import { API_BASE_URL } from '../../constant/constants/api.constants';
 import { tratarResposta } from '../../constant/api/http.util';
 import type { AuthFetch } from '../../3-auth/type/auth.type';
 import type { ResultadoPaginado } from '../../constant/type/paginacao.type';
+import { desembrulharPaginado } from '../../constant/type/paginacao.type';
 import type {
   MotivoDenunciaRequestCreate,
   MotivoDenunciaRequestUpdate,
@@ -43,7 +44,7 @@ export const motivoDenunciaApi = {
   listar: (authFetch: AuthFetch, filtro?: FiltroMotivoDenuncia): Promise<MotivoDenunciaResponse[]> =>
     authFetch(`/motivo-denuncia${paraQueryString(filtro)}`)
       .then(tratarResposta<ResultadoPaginado<MotivoDenunciaResponse>>)
-      .then((resposta) => resposta.dados),
+      .then(desembrulharPaginado('motivos de denúncia')),
   // Sem authFetch de propósito, mesmo padrão de tipoLinkApi.listarPublico/
   // areaConhecimentoApi.listarPublico: pol_motivo_select já libera pra
   // qualquer um, logado ou não. Ainda sem nenhuma tela pública chamando
@@ -53,7 +54,7 @@ export const motivoDenunciaApi = {
   listarPublico: (filtro?: FiltroMotivoDenuncia): Promise<MotivoDenunciaResponse[]> =>
     fetch(`${API_BASE_URL}/motivo-denuncia${paraQueryString(filtro)}`)
       .then(tratarResposta<ResultadoPaginado<MotivoDenunciaResponse>>)
-      .then((resposta) => resposta.dados),
+      .then(desembrulharPaginado('motivos de denúncia')),
   buscar: (authFetch: AuthFetch, id: number | string): Promise<MotivoDenunciaResponse> =>
     authFetch(`/motivo-denuncia/${id}`).then(tratarResposta<MotivoDenunciaResponse>),
   criar: (authFetch: AuthFetch, dados: MotivoDenunciaRequestCreate): Promise<MotivoDenunciaResponse> =>

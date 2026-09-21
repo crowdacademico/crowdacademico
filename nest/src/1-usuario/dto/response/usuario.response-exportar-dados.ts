@@ -93,6 +93,15 @@ export class UsuarioResponseExportarDados {
   }>;
 
   aceitesTermos: Array<{ idTermo: number; aceitoEm: Date }>;
+  // Histórico de rejeições das campanhas do titular. SEM o administrador que
+  // rejeitou: registro que identifica quem executou a ação fica de fora da
+  // exportação (mesmo critério de denúncias e afins, ver REQUISITOS_V7).
+  historicoRejeicoes: Array<{
+    idCampanha: number;
+    tituloCampanha: string;
+    justificativa: string | null;
+    rejeitadoEm: Date;
+  }>;
 
   // Histórico de login (origem='login', mesmo filtro de
   // UsuarioServiceListarLogins - renovação silenciosa de token não conta

@@ -6,8 +6,14 @@ import { HistoricoRejeicaoResponse } from '../dto/response/historico-rejeicao.re
 // pedido do Lucas (14-09-2026) pra Consultar Campanha - mesmo espírito de
 // UsuarioServiceListarTermosAceitos (1-usuario): join simples pra mostrar
 // nome do admin em vez do id_admin cru, mais recente primeiro (uma
-// campanha pode ser rejeitada mais de uma vez - RF-070 permite reenviar
-// depois de corrigir).
+// campanha pode ser rejeitada mais de uma vez: o pesquisador corrige e reenvia,
+// ver o ciclo de rejeição e reenvio em REQUISITOS_V7).
+//
+// Filtra por `id_campanha` direto na tabela, sem JOIN com campanha, de
+// propósito (21-09-2026): o histórico sobrevive à exclusão da campanha (sem FK,
+// ver 01), então esta listagem continua funcionando para uma campanha que já
+// foi apagada. O dono continua enxergando pelo `id_usuario_dono` gravado na
+// linha (pol_historicorej_select, 04).
 //
 // `leftJoin` (não `innerJoin`) em `usuario`: `id_admin` já é nullable no
 // schema, e mesmo quando preenchido, `pol_usuario_select` (RLS) esconde a
@@ -26,6 +32,8 @@ export class HistoricoRejeicaoServiceListar {
       .leftJoin('usuario', 'usuario.id_usuario', 'historico_rejeicao.id_admin')
       .select([
         'historico_rejeicao.id_rejeicao',
+        'historico_rejeicao.id_usuario_dono',
+        'historico_rejeicao.titulo_campanha',
         'usuario.nome as nome_admin',
         'historico_rejeicao.justificativa',
         'historico_rejeicao.rejeitado_em',
@@ -36,6 +44,8 @@ export class HistoricoRejeicaoServiceListar {
 
     return linhas.map((linha) => ({
       idRejeicao: linha.id_rejeicao,
+      idUsuarioDono: linha.id_usuario_dono,
+      tituloCampanha: linha.titulo_campanha,
       nomeAdmin: linha.nome_admin,
       justificativa: linha.justificativa,
       rejeitadoEm: linha.rejeitado_em,

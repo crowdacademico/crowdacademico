@@ -30,14 +30,26 @@ export class PerfilPesquisadorServiceReativarVencidos {
   // simples por status_pesquisador + suspenso_ate, barata.
   @Cron('*/15 * * * *')
   async executar(): Promise<void> {
-    const resultado = await this.pool.query<{
-      reativar_pesquisadores_vencidos: number;
-    }>('SELECT public.reativar_pesquisadores_vencidos()');
-    const quantidade = resultado.rows[0]?.reativar_pesquisadores_vencidos ?? 0;
+    // try/catch (20-09-2026, achado numa revisão do Lucas): sem ele, uma
+    // exceção vinda da função SQL vira `unhandledRejection` (o @Cron chama
+    // este método sem `await` de ninguém), e o Node moderno derruba o
+    // processo inteiro por causa de um job periódico. Mesmo tratamento nos
+    // 3 crons do sistema.
+    try {
+      const resultado = await this.pool.query<{
+        reativar_pesquisadores_vencidos: number;
+      }>('SELECT public.reativar_pesquisadores_vencidos()');
+      const quantidade =
+        resultado.rows[0]?.reativar_pesquisadores_vencidos ?? 0;
 
-    if (quantidade > 0) {
-      this.logger.log(
-        `${quantidade} pesquisador(es) reativado(s) automaticamente (prazo de suspensão vencido).`,
+      if (quantidade > 0) {
+        this.logger.log(
+          `${quantidade} pesquisador(es) reativado(s) automaticamente (prazo de suspensão vencido).`,
+        );
+      }
+    } catch (erro) {
+      this.logger.error(
+        `Falha ao reativar pesquisadores suspensos: ${erro instanceof Error ? erro.message : String(erro)}`,
       );
     }
   }

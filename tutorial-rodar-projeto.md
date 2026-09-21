@@ -406,7 +406,7 @@ Isso aqui te deixa com o "hello world" rodando, mas os problemas que já te avis
    ```sql
    SET app.id_usuario_atual = '<id de um usuário com a permissão necessária, ex.: o admin>';
    ```
-   O mesmo vale pro **worker de notificação** (`notificacao`, ainda não construído) e pro **job de encerramento automático de campanha vencida** (RF-037/RF-057) - este último **já está construído** (05-09-2026): `CampanhaServiceEncerrarVencidas` (`12-campanha`) chama `public.encerrar_campanhas_vencidas()` (`05_regras_negocio.sql`) via `@Cron` do NestJS a cada 15 minutos, sem precisar de nenhum `SET LOCAL` manual - a função já é `SECURITY DEFINER` (bypassa a RLS por dentro).
+   O mesmo vale pro **worker de notificação** (`notificacao`, ainda não construído) e pros **jobs agendados**, que **já estão construídos**: `CampanhaServiceEncerrarVencidas` e `PerfilPesquisadorServiceReativarVencidos` (a cada 15 minutos) e `CampanhaServiceExpirarRascunho` e `CampanhaServiceExpirarRejeitadas` (de hora em hora, 21-09-2026). Cada um chama uma função de `05_regras_negocio.sql` via `@Cron` do NestJS, sem precisar de nenhum `SET LOCAL` manual - as funções são `SECURITY DEFINER` (bypassam a RLS por dentro). Atenção ao aplicar o patch de banco pela primeira vez: `expirar_campanhas_rejeitadas()` apaga as campanhas rejeitadas cujo prazo de reenvio já venceu na primeira hora cheia depois de o backend subir.
 
 ---
 

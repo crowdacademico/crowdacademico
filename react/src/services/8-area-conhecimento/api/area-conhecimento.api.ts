@@ -2,6 +2,7 @@ import { API_BASE_URL } from '../../constant/constants/api.constants';
 import { tratarResposta } from '../../constant/api/http.util';
 import type { AuthFetch } from '../../3-auth/type/auth.type';
 import type { ResultadoPaginado } from '../../constant/type/paginacao.type';
+import { desembrulharPaginado } from '../../constant/type/paginacao.type';
 import type {
   AreaConhecimentoRequestCreate,
   AreaConhecimentoRequestUpdate,
@@ -44,7 +45,7 @@ export const areaConhecimentoApi = {
   listar: (authFetch: AuthFetch, filtro?: FiltroAreaConhecimento): Promise<AreaConhecimentoResponse[]> =>
     authFetch(`/area-conhecimento${paraQueryString(filtro)}`)
       .then(tratarResposta<ResultadoPaginado<AreaConhecimentoResponse>>)
-      .then((resposta) => resposta.dados),
+      .then(desembrulharPaginado('áreas do conhecimento')),
   // Sem authFetch de propósito, mesmo padrão de configuracaoApi.
   // buscarPublicas: pol_area_select já libera pra qualquer um, logado ou
   // não. Ainda sem nenhuma tela pública chamando isto (o formulário de
@@ -54,7 +55,7 @@ export const areaConhecimentoApi = {
   listarPublico: (filtro?: FiltroAreaConhecimento): Promise<AreaConhecimentoResponse[]> =>
     fetch(`${API_BASE_URL}/area-conhecimento${paraQueryString(filtro)}`)
       .then(tratarResposta<ResultadoPaginado<AreaConhecimentoResponse>>)
-      .then((resposta) => resposta.dados),
+      .then(desembrulharPaginado('áreas do conhecimento')),
   buscar: (authFetch: AuthFetch, id: number | string): Promise<AreaConhecimentoResponse> =>
     authFetch(`/area-conhecimento/${id}`).then(tratarResposta<AreaConhecimentoResponse>),
   criar: (authFetch: AuthFetch, dados: AreaConhecimentoRequestCreate): Promise<AreaConhecimentoResponse> =>

@@ -1,4 +1,4 @@
-// Extraído (14-09-2026, contra-prompt Claude Web) - o rodapé "Página X de
+// Extraído (14-09-2026, revisão do Lucas) - o rodapé "Página X de
 // Y / Mostrar / Anterior / Próxima" era reescrito inteiro em 4 lugares
 // (`generic-table.tsx`, `bancada-campanha.tsx`, `bancada-pesquisador.tsx`,
 // `registro-chamadas.tsx`) porque as bancadas do Campo de Testes não podem

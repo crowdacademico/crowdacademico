@@ -4,7 +4,7 @@ import type { TipoMotivoDenuncia } from '../type/motivo-denuncia.type';
 // `motivo_denuncia` (01_extensoes_enums_tabelas.sql) - não é regra de
 // negócio ajustável (por isso não mora em `configuracoes`), é o tamanho
 // real da coluna no banco. Compartilhado entre Criar e Alterar (13-09-2026,
-// achado do Claude Web: antes cada um tinha o número 255 hardcoded).
+// achado do Lucas: antes cada um tinha o número 255 hardcoded).
 export const LIMITE_DESCRICAO_MOTIVO_DENUNCIA = 255;
 
 // Rótulo legível pro `tipo` cru ('campanha' | 'perfil') - compartilhado

@@ -147,6 +147,16 @@
     color: var(--cor-texto);
   }
 
+  /* 20-09-2026 - nasceu junto com o status 'rascunho' de campanha. O
+     'aguardando_aprovacao' usava `.badge-neutro`, ou seja, o estado que EXIGE
+     ação do administrador tinha a mesma cor cinza dos estados mortos
+     ('nao_atingido', 'encerrado'). Os tokens de aviso já existiam nos 3 temas
+     (1-cores.css), só faltava a classe de badge que os consome. */
+  .badge-aviso {
+    background-color: var(--cor-fundo-aviso);
+    color: var(--cor-texto-aviso);
+  }
+
   /* 23-08-2026 - nasceu dentro do arquivo do Campo de Testes por engano
      (8-campo-testes.css), movida pra cá quando a listagem de Campanhas
      (views/12-campanha) precisou do mesmo badge pra status rejeitado/
@@ -202,7 +212,7 @@
 
   /* Dica (components/layout/tooltip.tsx: exporta `Dica` + `Tooltip`) -
      primitivo ÚNICO de hover-dica do sistema (14-09-2026, contra-prompt
-     Claude Web - fundiu este bloco com o extinto `.crud-tabela__acao-dica`
+     Lucas - fundiu este bloco com o extinto `.crud-tabela__acao-dica`
      de 5-crud.css, que era quase idêntico: mesmo bottom: 135%, mesma cor,
      mesmo z-index, mesma transition). `.dica` vai no GATILHO (qualquer
      elemento - button, span, Link -, não só o ⓘ avulso); `.dica__bolha` é
@@ -297,7 +307,7 @@
   }
 
   /* Hover suave da cor da marca, derivado do token via color-mix() (não
-     um valor fixo) - 13-09-2026, achado do Claude Web, rodada 3: 8
+     um valor fixo) - 13-09-2026, achado do Lucas, rodada 3: 8
      ocorrências de `hover:bg-primary/10`/`/20` cru do Tailwind, a
      opacidade calculada pela biblioteca por baixo, sem passar pelo
      alias `--cor-marca`. `color-mix()` faz à mão o mesmo cálculo (é
@@ -313,7 +323,7 @@
 
   /* Linha de opção de dropdown/faceta com checkbox múltiplo (facet do
      GenericTable e das 2 bancadas do Campo de Testes) - 13-09-2026,
-     achado do Claude Web: a MESMA cadeia de classes Tailwind (só a cor
+     achado do Lucas: a MESMA cadeia de classes Tailwind (só a cor
      mudando de nome) aparecia idêntica byte a byte em 3 arquivos
      (generic-table.tsx, bancada-pesquisador.tsx, bancada-campanha.tsx) -
      não era só cor crua, era o padrão inteiro triplicado. */

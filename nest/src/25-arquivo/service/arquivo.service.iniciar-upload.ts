@@ -21,7 +21,6 @@ import {
   LIMITE_UPLOADS_JANELA_PADRAO,
   TAMANHO_MAXIMO_BYTES_POR_MIME_PADRAO,
   TAMANHO_MINIMO_BYTES_PADRAO,
-  TipoMimePermitido,
 } from '../arquivo.constants';
 import { ArquivoRequestIniciarUpload } from '../dto/request/arquivo.request-iniciar-upload';
 import { ArquivoResponseUploadIniciado } from '../dto/response/arquivo.response-upload-iniciado';
@@ -42,7 +41,7 @@ export class ArquivoServiceIniciarUpload {
     // class-validator (@IsIn) já garante que dto.tipoMime é um dos 4
     // valores da lista - o cast só declara isso pro TypeScript, pra poder
     // indexar os Records abaixo por tipo.
-    const tipoMime = dto.tipoMime as TipoMimePermitido;
+    const tipoMime = dto.tipoMime;
 
     // Tamanho mín./máx. configuráveis pelo Painel Admin (04-09-2026) -
     // cada leitura cai no padrão hardcoded se a chave não existir/estiver
@@ -161,14 +160,12 @@ export class ArquivoServiceIniciarUpload {
         ? `attachment; filename="${sanitizarNomeParaCabecalho(dto.nomeOriginal)}"`
         : undefined;
 
-    const uploadPreAssinado = await this.armazenamento.gerarUploadPreAssinado(
-      {
-        chave,
-        tipoMime,
-        tamanhoMaximoBytes: dto.tamanhoBytes,
-        contentDisposition,
-      },
-    );
+    const uploadPreAssinado = await this.armazenamento.gerarUploadPreAssinado({
+      chave,
+      tipoMime,
+      tamanhoMaximoBytes: dto.tamanhoBytes,
+      contentDisposition,
+    });
 
     return {
       chave,

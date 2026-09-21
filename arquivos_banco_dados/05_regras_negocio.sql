@@ -262,6 +262,7 @@ DECLARE
     v_concluidas_sucesso    INT := 0;
     v_total_submetidas      INT := 0;
     v_aprovadas             INT := 0;
+    v_rejeitadas_definitivas INT := 0;
     v_abandonadas           INT := 0;
     v_sem_justificativa     INT := 0;
     v_conclusao             DECIMAL := 0;
@@ -281,8 +282,15 @@ BEGIN
     v_penalidade_abandono := public.config_numero('score_penalidade_abandono', 3);
     v_penalidade_sem_just := public.config_numero('score_penalidade_sem_justificativa', 2);
 
-    SELECT count(*) INTO v_total_submetidas FROM campanha WHERE id_usuario = p_id_usuario;
+    -- Taxa de aprovação (21-09-2026): total = aprovadas + rejeitadas definitivas
+    -- (campanhas do histórico de rejeições que já não existem). Rascunho e
+    -- rejeitada ainda no prazo ficam fora. Ver DOCUMENTACAO_BD.md [05-K-2-B].
     SELECT count(*) INTO v_aprovadas FROM campanha WHERE id_usuario = p_id_usuario AND aprovado_em IS NOT NULL;
+    SELECT count(DISTINCT h.id_campanha) INTO v_rejeitadas_definitivas
+    FROM historico_rejeicao h
+    WHERE h.id_usuario_dono = p_id_usuario
+      AND NOT EXISTS (SELECT 1 FROM campanha c WHERE c.id_campanha = h.id_campanha);
+    v_total_submetidas := v_aprovadas + v_rejeitadas_definitivas;
     -- CORRIGIDO (28-07-2026, item 13(b) da Lista C - erro aritmético, não decisão de
     -- negócio): 'rejeitado' saiu do denominador da taxa de conclusão. Contar a mesma
     -- rejeição duas vezes (uma vez derrubando a taxa de aprovação, outra vez entrando
@@ -519,9 +527,15 @@ BEGIN
 
     v_total := v_perfil + v_historico + v_atualizacao + v_reputacao;
 
+    -- ORDER BY score_minimo (20-09-2026): sem ele o LIMIT 1 escolhia uma linha
+    -- QUALQUER quando duas faixas de score_rotulo se sobrepõem, e o mesmo
+    -- pesquisador com o mesmo score podia aparecer com rótulos diferentes em
+    -- execuções diferentes. Com ele, o resultado é sempre o mesmo (a faixa de
+    -- menor mínimo). Não impede a sobreposição, só torna o resultado estável.
     SELECT id_rotulo INTO v_id_rotulo
     FROM score_rotulo
     WHERE v_total >= score_minimo AND v_total <= score_maximo AND ativo = TRUE
+    ORDER BY score_minimo
     LIMIT 1;
 
     INSERT INTO score_pesquisador (id_usuario, id_score_config, id_rotulo, pontos_obtidos, score_total, calculado_em, motivo)
@@ -831,17 +845,18 @@ $$;
 -- ----------------------------------------------------------------------------
 -- Trigger:   trg_score_config_recalcula_todos
 -- Tabela:    score_config
--- Momento:   AFTER UPDATE OF peso (somente quando o peso muda de valor)
+-- Momento:   AFTER UPDATE OF peso, UMA vez por comando (FOR EACH STATEMENT)
 -- Função:    trg_recalcular_por_score_config()
 -- Bloco:     [05-I-4]
 -- Regra:     Recalcula o score de todos os pesquisadores quando um peso é
 --            editado no Painel Admin.
+-- Por comando (21-09-2026): editar os 4 pesos raiz dispara 1 recálculo, não 4.
+-- Perde o filtro "só se o peso mudou". Ver DOCUMENTACAO_BD.md [05-K-2-B].
 -- ----------------------------------------------------------------------------
 DROP TRIGGER IF EXISTS trg_score_config_recalcula_todos ON score_config;
 CREATE TRIGGER trg_score_config_recalcula_todos
     AFTER UPDATE OF peso ON score_config
-    FOR EACH ROW
-    WHEN (OLD.peso IS DISTINCT FROM NEW.peso)
+    FOR EACH STATEMENT
     EXECUTE FUNCTION public.trg_recalcular_por_score_config();
 
 
@@ -1458,6 +1473,23 @@ BEGIN
                 USING ERRCODE = '91008';
         END IF;
 
+        -- CORRIGIDO (20-09-2026, achado numa revisão do Lucas): regressão por
+        -- omissão. Estes 2 campos nasceram DEPOIS desta trigger (video_
+        -- apresentacao_url em 28-07-2026) e nunca foram incluídos, apesar de
+        -- CampanhaRequestUpdate aceitar os dois e pol_campanha_update liberar o
+        -- dono. O vídeo é o MESMO vetor de fraude que a descrição (comentário
+        -- logo acima), com mais impacto - trocar o vídeo de apresentação de um
+        -- projeto já financiado é apresentar outro projeto para quem já doou.
+        IF NEW.video_apresentacao_url IS DISTINCT FROM OLD.video_apresentacao_url THEN
+            RAISE EXCEPTION 'Fraude bloqueada: não é permitido alterar o vídeo de apresentação após a aprovação da campanha.'
+                USING ERRCODE = '91023';
+        END IF;
+
+        IF NEW.id_area_conhecimento IS DISTINCT FROM OLD.id_area_conhecimento THEN
+            RAISE EXCEPTION 'Operação bloqueada: a área do conhecimento não pode ser alterada após a aprovação da campanha.'
+                USING ERRCODE = '91024';
+        END IF;
+
         -- ADICIONADO (28-07-2026) - feature "Em breve": data_fim/data_inicio só
         -- congelam quando a campanha JÁ COMEÇOU de fato (data_inicio no passado),
         -- não no momento da aprovação. Enquanto a campanha está "Em breve"
@@ -1479,6 +1511,27 @@ BEGIN
                 RAISE EXCEPTION 'Operação bloqueada: a data de início da campanha não pode ser alterada depois que ela começa de verdade.'
                     USING ERRCODE = '91010';
             END IF;
+        END IF;
+    END IF;
+
+    -- ADICIONADO (21-09-2026, ver REQUISITOS_V7): campanha REJEITADA que já usou
+    -- todos os reenvios fica só para leitura, pra qualquer perfil, inclusive o
+    -- Administrador. Bloqueia mudança de qualquer campo de CONTEÚDO; status,
+    -- aprovado_em e id_admin ficam de fora porque quem decide essas mudanças é
+    -- fn_valida_transicao_campanha (e o reenvio esgotado já é barrado lá, com
+    -- ERRCODE 91025).
+    IF OLD.status = 'rejeitado' AND public.fn_campanha_reenvios_esgotados(OLD.id_campanha) THEN
+        IF NEW.titulo                    IS DISTINCT FROM OLD.titulo
+           OR NEW.descricao              IS DISTINCT FROM OLD.descricao
+           OR NEW.meta_financeira        IS DISTINCT FROM OLD.meta_financeira
+           OR NEW.modelo                 IS DISTINCT FROM OLD.modelo
+           OR NEW.data_inicio            IS DISTINCT FROM OLD.data_inicio
+           OR NEW.data_fim               IS DISTINCT FROM OLD.data_fim
+           OR NEW.id_area_conhecimento   IS DISTINCT FROM OLD.id_area_conhecimento
+           OR NEW.video_apresentacao_url IS DISTINCT FROM OLD.video_apresentacao_url
+        THEN
+            RAISE EXCEPTION 'Esta campanha rejeitada já usou todos os reenvios permitidos e agora é somente leitura.'
+                USING ERRCODE = '91027';
         END IF;
     END IF;
 
@@ -1544,6 +1597,15 @@ BEGIN
             USING ERRCODE = '91011';
     END IF;
 
+    -- ADICIONADO (21-09-2026): rejeitada sem reenvios é só leitura, ver
+    -- fn_campanha_reenvios_esgotados. Na exclusão da própria campanha (cascata,
+    -- expirar_campanhas_rejeitadas) v_status vem NULL, porque a linha-pai já
+    -- sumiu, e o bloqueio não se aplica - é o que deixa a expiração apagar.
+    IF v_status = 'rejeitado' AND public.fn_campanha_reenvios_esgotados(v_id_campanha) THEN
+        RAISE EXCEPTION 'Esta campanha rejeitada já usou todos os reenvios permitidos e agora é somente leitura.'
+            USING ERRCODE = '91027';
+    END IF;
+
     IF TG_OP = 'DELETE' THEN
         RETURN OLD;
     END IF;
@@ -1575,7 +1637,7 @@ EXECUTE FUNCTION public.fn_congela_orcamento_campanha();
 --             (10) com o de PISO (que devia ser bem menor) dentro da MESMA
 --             chave `orcamento_min_itens`. Separado em duas chaves:
 --             `orcamento_min_itens` (checado na aprovação, ver
---             fn_valida_completude_campanha_aprovacao) e `orcamento_max_itens`
+--             fn_valida_completude_campanha) e `orcamento_max_itens`
 --             (10, checado aqui). Checar o máximo no INSERT - não só na
 --             aprovação - dá feedback imediato pro pesquisador no item 11,
 --             em vez de deixar ele descobrir só quando a campanha for
@@ -1651,7 +1713,7 @@ EXECUTE FUNCTION public.fn_valida_limite_max_orcamento_campanha();
 -- pesquisador que cria a campanha com data_inicio = agora (sem usar "Em
 -- breve") tem o cronograma congelado assim que o relógio passa de
 -- data_inicio, mesmo a campanha nunca tendo sido aprovada - e sem os 3
--- marcos mínimos, fn_valida_completude_campanha_aprovacao nunca deixa
+-- marcos mínimos, fn_valida_completude_campanha nunca deixa
 -- aprovar (trava circular). Corrigido acrescentando a mesma condição de
 -- status usada nas outras duas funções irmãs: só congela se a campanha JÁ
 -- estiver aprovada em diante E data_inicio já tiver passado.
@@ -1669,6 +1731,13 @@ BEGIN
        AND v_data_inicio IS NOT NULL AND v_data_inicio <= NOW() THEN
         RAISE EXCEPTION 'Operação bloqueada: o cronograma não pode ser alterado depois que a campanha começa de verdade.'
             USING ERRCODE = '91013';
+    END IF;
+
+    -- ADICIONADO (21-09-2026): mesmo bloqueio de fn_congela_orcamento_campanha
+    -- (ver comentário lá, inclusive sobre v_status NULL na cascata de exclusão).
+    IF v_status = 'rejeitado' AND public.fn_campanha_reenvios_esgotados(v_id_campanha) THEN
+        RAISE EXCEPTION 'Esta campanha rejeitada já usou todos os reenvios permitidos e agora é somente leitura.'
+            USING ERRCODE = '91027';
     END IF;
 
     IF TG_OP = 'DELETE' THEN
@@ -1866,11 +1935,36 @@ BEGIN
         RETURN NEW;
     END IF;
 
+    -- Dono coloca a própria campanha na fila (rascunho ou rejeitada), sempre por
+    -- botão explícito. Suspenso não envia (92009); o reenvio exige reenvios
+    -- disponíveis (91025) e prazo (91026). Porquês em DOCUMENTACAO_BD.md [05-K-2-B].
     IF NEW.id_usuario = public.id_usuario_atual()
-       AND OLD.status = 'rejeitado' AND NEW.status = 'aguardando_aprovacao'
+       AND OLD.status IN ('rejeitado', 'rascunho') AND NEW.status = 'aguardando_aprovacao'
        AND NEW.aprovado_em IS NOT DISTINCT FROM OLD.aprovado_em
        AND NEW.id_admin    IS NOT DISTINCT FROM OLD.id_admin
     THEN
+        IF NOT EXISTS (
+            SELECT 1 FROM perfil_pesquisador pp
+            WHERE pp.id_usuario = public.id_usuario_atual() AND pp.status_pesquisador = 'ativo'
+        ) THEN
+            RAISE EXCEPTION 'Pesquisador suspenso não pode enviar campanha para aprovação.'
+                USING ERRCODE = '92009';
+        END IF;
+
+        IF OLD.status = 'rejeitado' THEN
+            IF public.fn_campanha_reenvios_esgotados(OLD.id_campanha) THEN
+                RAISE EXCEPTION 'Esta campanha já usou todos os reenvios permitidos e agora é somente leitura.'
+                    USING ERRCODE = '91025';
+            END IF;
+
+            IF (SELECT MAX(h.rejeitado_em) FROM historico_rejeicao h WHERE h.id_campanha = OLD.id_campanha)
+               <= NOW() - (public.config_numero('campanha_rejeitada_prazo_dias', 30)::INT * INTERVAL '1 day')
+            THEN
+                RAISE EXCEPTION 'O prazo para reenviar esta campanha rejeitada já venceu.'
+                    USING ERRCODE = '91026';
+            END IF;
+        END IF;
+
         RETURN NEW;
     END IF;
 
@@ -1902,6 +1996,26 @@ END;
 $$;
 
 -- ----------------------------------------------------------------------------
+-- Função:     fn_campanha_reenvios_esgotados
+-- Assinatura: (p_id_campanha INT) -> BOOLEAN
+-- Bloco:      [05-K-2]
+-- Regra:      TRUE quando a campanha rejeitada passou de 1 + campanha_rejeitada_max_reenvios
+--             rejeições (padrão: a 4ª esgota). SECURITY DEFINER pra enxergar o histórico
+--             independente da RLS de quem chama. Ver DOCUMENTACAO_BD.md [05-K-2-B].
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_campanha_reenvios_esgotados(p_id_campanha INT)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT COUNT(*) > public.config_numero('campanha_rejeitada_max_reenvios', 3)
+    FROM historico_rejeicao
+    WHERE id_campanha = p_id_campanha;
+$$;
+
+-- ----------------------------------------------------------------------------
 -- Trigger:   trg_campanha_valida_transicao
 -- Tabela:    campanha
 -- Momento:   BEFORE UPDATE
@@ -1919,7 +2033,7 @@ FOR EACH ROW
 EXECUTE FUNCTION fn_valida_transicao_campanha();
 
 -- ----------------------------------------------------------------------------
--- Função:     fn_valida_completude_campanha_aprovacao
+-- Função:     fn_valida_completude_campanha  (renomeada em 21-09-2026, ver [05-K-2-B])
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-2]
 -- Regra:      ADICIONADO (31-07-2026, Alexia) - orçamento e cronograma estruturados
@@ -1969,7 +2083,7 @@ EXECUTE FUNCTION fn_valida_transicao_campanha();
 -- vencidas() (03/05): agregado precisa enxergar o total real, não só o que a
 -- sessão de quem chama consegue ver linha a linha.
 -- ----------------------------------------------------------------------------
-CREATE OR REPLACE FUNCTION public.fn_valida_completude_campanha_aprovacao()
+CREATE OR REPLACE FUNCTION public.fn_valida_completude_campanha()
 RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE
     v_min_orcamento  INT;
@@ -1992,18 +2106,24 @@ BEGIN
       WHERE id_campanha = NEW.id_campanha;
 
     IF v_qtd_orcamento < v_min_orcamento THEN
-        RAISE EXCEPTION 'A campanha precisa de pelo menos % itens de orçamento para ser aprovada (tem %).', v_min_orcamento, v_qtd_orcamento
+        RAISE EXCEPTION 'A campanha precisa de pelo menos % itens de orçamento (tem %).', v_min_orcamento, v_qtd_orcamento
             USING ERRCODE = '90009';
     END IF;
 
     IF v_qtd_marcos < v_min_marcos THEN
-        RAISE EXCEPTION 'A campanha precisa de pelo menos % marcos de cronograma para ser aprovada (tem %).', v_min_marcos, v_qtd_marcos
+        RAISE EXCEPTION 'A campanha precisa de pelo menos % marcos de cronograma (tem %).', v_min_marcos, v_qtd_marcos
             USING ERRCODE = '90010';
     END IF;
 
     IF v_soma_orcamento <> NEW.meta_financeira THEN
-        RAISE EXCEPTION 'A soma dos itens de orçamento (%) precisa ser exatamente igual à meta financeira (%) para a campanha ser aprovada.', v_soma_orcamento, NEW.meta_financeira
+        RAISE EXCEPTION 'A soma dos itens de orçamento (%) precisa ser exatamente igual à meta financeira (%).', v_soma_orcamento, NEW.meta_financeira
             USING ERRCODE = '90011';
+    END IF;
+
+    -- Prazo vencido bloqueia envio e aprovação, só por data_fim. Ver DOCUMENTACAO_BD.md [05-K-2-B].
+    IF NEW.data_fim IS NULL OR NEW.data_fim <= NOW() THEN
+        RAISE EXCEPTION 'O prazo da campanha já venceu (fim em %). Atualize as datas antes de enviar.', NEW.data_fim
+            USING ERRCODE = '90015';
     END IF;
 
     RETURN NEW;
@@ -2011,20 +2131,26 @@ END;
 $$;
 
 -- ----------------------------------------------------------------------------
--- Trigger:   trg_campanha_valida_completude_aprovacao
+-- Trigger:   trg_campanha_valida_completude
 -- Tabela:    campanha
--- Momento:   BEFORE UPDATE (só quando status entra em 'ativo')
--- Função:    fn_valida_completude_campanha_aprovacao()
+-- Momento:   BEFORE UPDATE (aprovação, envio de rascunho e reenvio de rejeitada)
+-- Função:    fn_valida_completude_campanha()
 -- Bloco:     [05-K-2]
--- Regra:     Bloqueia aprovação de campanha sem orçamento/cronograma completos
---            e com a soma do orçamento batendo exatamente com a meta.
+-- Regra:     Bloqueia aprovação/envio de campanha sem orçamento e cronograma
+--            completos, com a soma do orçamento batendo exatamente com a meta,
+--            e com o prazo ainda não vencido.
 -- ----------------------------------------------------------------------------
-DROP TRIGGER IF EXISTS trg_campanha_valida_completude_aprovacao ON campanha;
-CREATE TRIGGER trg_campanha_valida_completude_aprovacao
+-- WHEN cobre as 3 portas de entrada (aprovação, envio de rascunho, reenvio de
+-- rejeitada), listadas por nome. Ver DOCUMENTACAO_BD.md [05-K-2-B].
+DROP TRIGGER IF EXISTS trg_campanha_valida_completude ON campanha;
+CREATE TRIGGER trg_campanha_valida_completude
 BEFORE UPDATE ON campanha
 FOR EACH ROW
-WHEN (NEW.status = 'ativo' AND OLD.status IS DISTINCT FROM 'ativo')
-EXECUTE FUNCTION public.fn_valida_completude_campanha_aprovacao();
+WHEN (
+     (NEW.status = 'ativo'                AND OLD.status IS DISTINCT FROM 'ativo')
+  OR (NEW.status = 'aguardando_aprovacao' AND OLD.status IN ('rascunho', 'rejeitado'))
+)
+EXECUTE FUNCTION public.fn_valida_completude_campanha();
 
 -- ----------------------------------------------------------------------------
 -- Função:     fn_preenche_encerramento_campanha
@@ -2154,47 +2280,9 @@ $$;
 -- Função:     expirar_campanhas_rascunho
 -- Assinatura: () -> INT
 -- Bloco:      [05-K-2]
--- Regra:      ADICIONADO (15-09-2026, pedido do Lucas) - campanha nasce em
---             'aguardando_aprovacao' desde o primeiro clique em "Criar"
---             (RF-046), antes mesmo de ter orçamento/cronograma completos
---             (RF-040/042 só exigem o mínimo NA APROVAÇÃO, pensado pra
---             deixar cadastrar "aos poucos"). Cenário levantado: queda de
---             energia ou fechar a aba sem querer entre criar a campanha e
---             terminar de preencher orçamento/cronograma - a campanha fica
---             pra sempre "aguardando_aprovacao", sem nunca poder ser
---             aprovada (trava no mesmo mínimo), ocupando 1 das 2 vagas
---             simultâneas do RF-048 e sujando a fila de aprovação do
---             Administrador indefinidamente.
---
---             Mesmo padrão de encerrar_campanhas_vencidas() (acima):
---             SECURITY DEFINER (bypassa RLS - um job agendado não tem
---             id_usuario_atual() setado, pol_campanha_delete não deixaria
---             NENHUMA linha visível pra ele), chamado por @Cron no NestJS,
---             sem sessão de usuário.
---
---             Critério de "abandonada" é o MESMO já usado na aprovação
---             (fn_valida_completude_campanha_aprovacao, acima) - não um
---             limiar novo: mínimo de itens de orçamento, mínimo de marcos
---             de cronograma, E a soma dos itens de orçamento batendo
---             EXATAMENTE com a meta financeira (RF-039/040 - achado numa
---             2ª revisão, 15-09-2026: a 1ª versão desta função só checava
---             as 2 contagens, esquecendo a soma - uma campanha com itens
---             suficientes mas soma errada nunca seria aprovável e, com o
---             critério incompleto, também nunca expiraria, ficando presa
---             pra sempre do mesmo jeito que o job existe pra evitar). Isso
---             protege trabalho real: se a pessoa já tinha cadastrado tudo
---             certo antes da queda de energia, a campanha NUNCA expira por
---             este job, mesmo sem "Concluir" ter sido clicado - só quem,
---             depois do prazo configurável (campanha_rascunho_ttl_horas,
---             padrão 48h), ainda não estaria em condição de ser aprovada
---             de qualquer jeito.
---
---             DELETE físico, não soft-delete: uma campanha neste estado
---             nunca foi aprovada, nunca apareceu na página pública, nunca
---             recebeu contribuição - não existe nada pra proteger
---             preservando a linha. orcamento_campanha/marco_cronograma
---             (FK ON DELETE CASCADE, 01) são limpos automaticamente junto,
---             sem precisar de DELETE explícito nas duas tabelas.
+-- Regra:      Apaga rascunho mais velho que campanha_rascunho_ttl_horas (336h), contado da
+--             criação e não da última edição. SECURITY DEFINER, chamada por @Cron, sem
+--             sessão de usuário. Só 'rascunho' é alcançado. Ver DOCUMENTACAO_BD.md [05-K-2-B].
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.expirar_campanhas_rascunho()
 RETURNS INT
@@ -2204,28 +2292,108 @@ SET search_path = public
 AS $$
 DECLARE
     v_ttl_horas INT;
-    v_orcamento_min INT;
-    v_cronograma_min INT;
     v_expiradas INT;
 BEGIN
-    v_ttl_horas := public.config_numero('campanha_rascunho_ttl_horas', 48);
-    v_orcamento_min := public.config_numero('orcamento_min_itens', 1);
-    v_cronograma_min := public.config_numero('cronograma_min_marcos', 3);
+    -- Filtra por status, sem recalcular completude (a cópia da regra já divergiu
+    -- uma vez). Ver DOCUMENTACAO_BD.md [05-K-2-B].
+    v_ttl_horas := public.config_numero('campanha_rascunho_ttl_horas', 336);
 
     DELETE FROM campanha c
-    WHERE c.status = 'aguardando_aprovacao'
-      AND c.criado_em <= NOW() - (v_ttl_horas * INTERVAL '1 hour')
-      AND (
-        (SELECT COUNT(*) FROM orcamento_campanha o WHERE o.id_campanha = c.id_campanha) < v_orcamento_min
-        OR
-        (SELECT COUNT(*) FROM marco_cronograma m WHERE m.id_campanha = c.id_campanha) < v_cronograma_min
-        OR
-        (SELECT COALESCE(SUM(o.valor), 0) FROM orcamento_campanha o WHERE o.id_campanha = c.id_campanha) <> c.meta_financeira
-      );
+    WHERE c.status = 'rascunho'
+      AND c.criado_em <= NOW() - (v_ttl_horas * INTERVAL '1 hour');
 
     GET DIAGNOSTICS v_expiradas = ROW_COUNT;
 
     RETURN v_expiradas;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Função:     expirar_campanhas_rejeitadas
+-- Assinatura: () -> INT
+-- Bloco:      [05-K-2]
+-- Regra:      Apaga rejeitada cuja ÚLTIMA rejeição passou de campanha_rejeitada_prazo_dias.
+--             Não apaga rejeitada sem histórico nem com denúncia contra ela. O histórico de
+--             rejeições sobrevive. SECURITY DEFINER, chamada por @Cron. Ver DOCUMENTACAO_BD.md [05-K-2-B].
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.expirar_campanhas_rejeitadas()
+RETURNS INT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_expiradas INT;
+BEGIN
+    DELETE FROM campanha c
+    WHERE c.status = 'rejeitado'
+      AND (SELECT MAX(h.rejeitado_em) FROM historico_rejeicao h WHERE h.id_campanha = c.id_campanha)
+          <= NOW() - (public.config_numero('campanha_rejeitada_prazo_dias', 30)::INT * INTERVAL '1 day')
+      AND NOT EXISTS (SELECT 1 FROM denuncia d WHERE d.id_campanha_alvo = c.id_campanha);
+
+    GET DIAGNOSTICS v_expiradas = ROW_COUNT;
+
+    RETURN v_expiradas;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Função:     deslizar_datas_campanha
+-- Assinatura: (p_id_campanha INT, p_nova_data_inicio TIMESTAMPTZ) -> VOID
+-- Bloco:      [05-K-2]
+-- Regra:      Move data_inicio, data_fim e os marcos pelo mesmo intervalo, mantendo a duração.
+--             É função do banco porque a trigger do marco não dispara por escrita em campanha,
+--             e a ordem das escritas depende do sinal do deslocamento. Só dono ou campanha_editar,
+--             só em rascunho ou rejeitada. Ver DOCUMENTACAO_BD.md [05-K-2-B].
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.deslizar_datas_campanha(
+    p_id_campanha INT,
+    p_nova_data_inicio TIMESTAMPTZ
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_data_inicio TIMESTAMPTZ;
+    v_delta       INTERVAL;
+BEGIN
+    SELECT data_inicio INTO v_data_inicio
+    FROM campanha
+    WHERE id_campanha = p_id_campanha
+      AND (id_usuario = public.id_usuario_atual() OR public.tem_permissao('campanha_editar'))
+      AND status IN ('rascunho', 'rejeitado');
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Só o dono (ou quem pode editar campanhas) reagenda uma campanha em rascunho ou rejeitada.'
+            USING ERRCODE = '92010';
+    END IF;
+
+    IF v_data_inicio IS NULL OR p_nova_data_inicio IS NULL THEN
+        RAISE EXCEPTION 'A campanha precisa ter data de início para as datas serem reagendadas.'
+            USING ERRCODE = '90016';
+    END IF;
+
+    v_delta := p_nova_data_inicio - v_data_inicio;
+
+    IF v_delta >= INTERVAL '0' THEN
+        UPDATE marco_cronograma SET data_prevista = data_prevista + v_delta
+        WHERE id_campanha = p_id_campanha;
+
+        UPDATE campanha
+        SET data_inicio = data_inicio + v_delta,
+            data_fim    = data_fim + v_delta
+        WHERE id_campanha = p_id_campanha;
+    ELSE
+        UPDATE campanha
+        SET data_inicio = data_inicio + v_delta,
+            data_fim    = data_fim + v_delta
+        WHERE id_campanha = p_id_campanha;
+
+        UPDATE marco_cronograma SET data_prevista = data_prevista + v_delta
+        WHERE id_campanha = p_id_campanha;
+    END IF;
 END;
 $$;
 
@@ -2693,7 +2861,14 @@ $$;
 -- Bloco:      [05-K-2]
 -- Regra:      Um pesquisador não pode ter mais campanhas simultâneas (nos
 --             status 'aguardando_aprovacao' ou 'ativo') do que
---             configuracoes.limite_campanhas_simultaneas (RF-029).
+--             configuracoes.limite_campanhas_simultaneas (padrão 2, ver
+--             REQUISITOS_V7, "limite de campanhas simultâneas").
+-- ATUALIZADO (21-09-2026): 'rascunho' NÃO conta, então o limite passou a ser
+-- cobrado no ENVIO pra aprovação (rascunho -> aguardando_aprovacao e reenvio de
+-- rejeitada), não na criação: rascunhos podem ser criados livremente. Continua
+-- BEFORE INSERT OR UPDATE, então não há caminho que fure o limite. A mensagem
+-- foi reescrita porque o erro agora chega no momento do envio, e a antiga falava
+-- em "campanhas ativas ou aguardando aprovação" como se fosse na criação.
 -- CORRIGIDO (28-07-2026, item 16 da Lista C): limite de 2 estava hardcoded
 -- no corpo da função - mudar exigia editar e reaplicar o arquivo inteiro.
 -- Passou a ler configuracoes (mesmo valor de hoje, 2, como DEFAULT de
@@ -2717,7 +2892,7 @@ BEGIN
           AND id_campanha <> COALESCE(NEW.id_campanha, -1);
 
         IF v_count >= v_limite THEN
-            RAISE EXCEPTION 'Pesquisador já possui o limite máximo de % campanhas ativas ou aguardando aprovação', v_limite
+            RAISE EXCEPTION 'Você já possui % campanhas em andamento (ativas ou aguardando aprovação). Aguarde uma delas terminar antes de enviar esta para aprovação.', v_limite
                 USING ERRCODE = '91018';
         END IF;
     END IF;

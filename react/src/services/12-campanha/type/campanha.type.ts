@@ -23,6 +23,12 @@ export interface CampanhaResponse {
   encerradoEm: string | null;
   videoApresentacaoUrl: string | null;
   criadoEm: string;
+  // Só vêm preenchidos em GET /campanha/:id de uma campanha 'rejeitado'
+  // (ciclo de rejeição e reenvio, ver REQUISITOS_V7); nas outras respostas
+  // ficam null/false.
+  reenviosRestantes: number | null;
+  prazoReenvioAte: string | null;
+  somenteLeitura: boolean;
 }
 
 // Espelha nest/src/21-historico-rejeicao/dto/response/historico-rejeicao.response.ts.
@@ -31,6 +37,8 @@ export interface CampanhaResponse {
 // (usuario.type.ts), mas do lado de campanha em vez de usuário.
 export interface HistoricoRejeicaoResponse {
   idRejeicao: number;
+  idUsuarioDono: number;
+  tituloCampanha: string;
   nomeAdmin: string | null;
   justificativa: string | null;
   rejeitadoEm: string;

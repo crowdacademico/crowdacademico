@@ -4,9 +4,19 @@ Achados pelos agentes que escreveram `DOCUMENTACAO_BACKEND.md`/`DOCUMENTACAO_FRO
 
 ---
 
-## 🔴 Vulnerabilidade real de segurança no `nest/` (multer, via `@nestjs/platform-express`) - achado em 14-09-2026, parado até decisão manual do Lucas
+## 🔴 Vulnerabilidade real de segurança no `nest/` (multer, via `@nestjs/platform-express`) - achado em 14-09-2026, 🟢 RESOLVIDO em 20-09-2026 (opção 2, `overrides`)
 
 **Isto não é uma pendência de rotina - fica só registrado aqui até eu decidir manualmente o que fazer. Não mover pra `PENDENCIAS e correcoes.md`.**
+
+### 🟢 DECISÃO E RESULTADO (20-09-2026)
+
+Aplicada a opção 2. `nest/package.json` ganhou `"overrides": { "multer": "^2.4.0" }` e o `package-lock.json` foi regenerado (multer 2.2.0 -> 2.4.0; de brinde saíram `concat-stream` e `typedarray`, que o 2.4.0 não precisa mais). `npm audit`: **de 6 vulnerabilidades altas para 0**. `nest build` limpo.
+
+**Correção importante sobre o texto abaixo, que ficou errado e foi mantido por histórico:** o `multer` NÃO é usado pelo módulo `25-arquivo`, nem direta nem indiretamente. Procurado `FileInterceptor`, `FilesInterceptor`, `UploadedFile`, `MulterModule` e `multer` em todo o `nest/src`: zero ocorrências. O upload funciona por URL pré-assinada (`arquivo.service.iniciar-upload.ts` e `confirmar-upload.ts`): o arquivo vai do navegador direto pro bucket e nunca passa pelo Nest. O multer só está na árvore de dependências porque `@nestjs/platform-express` o declara, mas nenhuma rota do sistema parseia multipart, então as 4 falhas de DoS eram INALCANÇÁVEIS. Consequência: o "risco real desse caminho" e a recomendação de "testar upload de avatar" mais abaixo NÃO se aplicam (não existe fluxo que passe pelo multer para quebrar); o override foi só higiene de `npm audit`.
+
+**⚠️ Não remover este override achando que é entulho.** Hoje ele é cosmético (código nunca executa o multer). No dia em que QUALQUER rota passar a usar `FileInterceptor`/upload multipart pelo Nest, ele deixa de ser cosmético e passa a ser correção de segurança real. Como `package.json` não aceita comentário, o aviso mora aqui.
+
+**Detalhe de execução:** o `package-lock.json` regenerado precisa ser commitado junto. Só o `package.json` não basta: numa máquina com `npm ci` (como a da escola) o lock antigo continuaria resolvendo 2.2.0.
 
 ### Como foi achado
 
@@ -14,7 +24,7 @@ O Lucas usou o sistema no computador da escola (09-09-2026) e recebeu avisos de 
 
 ### O que é o problema, com precisão técnica
 
-`nest/` usa `multer` (biblioteca de upload de arquivo multipart, é o que o módulo `25-arquivo` usa por baixo, direta ou indiretamente via `@nestjs/platform-express`) na versão **`2.2.0`**, resolvida no lockfile atual (`node_modules/multer`, confirmado com `node -e "console.log(require('./node_modules/multer/package.json').version)"` = `2.2.0`). Essa versão tem 4 avisórios abertos, todos classificados como **Severidade Alta**, todos da categoria **Negação de Serviço (DoS)** - nenhum é sobre roubo de dado ou execução remota de código:
+`nest/` usa `multer` (biblioteca de upload de arquivo multipart, ver a correção no bloco de decisão acima: o módulo `25-arquivo` NÃO usa multer, o upload é por URL pré-assinada e nunca passa pelo Nest; ele só está na árvore via `@nestjs/platform-express`) na versão **`2.2.0`**, resolvida no lockfile atual (`node_modules/multer`, confirmado com `node -e "console.log(require('./node_modules/multer/package.json').version)"` = `2.2.0`). Essa versão tem 4 avisórios abertos, todos classificados como **Severidade Alta**, todos da categoria **Negação de Serviço (DoS)** - nenhum é sobre roubo de dado ou execução remota de código:
 
 - `GHSA-wc9g-mqfw-jrwm` - DoS via nomes de campo multipart malformados/crafted.
 - `GHSA-qfvm-cv95-jqjf` - DoS via vazamento de file descriptor quando um upload é abortado no meio.
@@ -97,7 +107,7 @@ Migração é pura de propósito (regra definida antes de começar) - achados an
 
 Na Fase 1, foi aberta uma lista fechada de exatamente 3 fronteiras onde `as` seria permitido (achado real: a proibição original de `as` era inexecutável em `tratarResposta()`). Fases 1 a 5 já convertidos e só **1 das 3** foi realmente necessária:
 
-- **Usada:** `tratarResposta<T>()` em `http.util.ts`. **Correção (07-09-2026, achado do Claude Web numa revisão externa):** o registro original citava só 1 `as` nessa função ("o erro-corpo `(await resposta.json().catch(() => null)) as {...} | null`"), mas a função tem **3** expressões `as`, não 1 - as outras duas ficaram sem menção em nenhum relatório até agora:
+- **Usada:** `tratarResposta<T>()` em `http.util.ts`. **Correção (07-09-2026, achado do Lucas numa revisão externa):** o registro original citava só 1 `as` nessa função ("o erro-corpo `(await resposta.json().catch(() => null)) as {...} | null`"), mas a função tem **3** expressões `as`, não 1 - as outras duas ficaram sem menção em nenhum relatório até agora:
   - `(await resposta.json().catch(() => null)) as {...} | null` (erro-corpo, já citada).
   - `JSON.parse(texto) as T` (corpo de sucesso).
   - `undefined as T` (corpo vazio de sucesso) - **risco não documentado até agora:** se quem chama declarar `tratarResposta<AlgumTipoNaoVoid>()` e o corpo vier vazio, a função devolve `undefined` com o tipo de `T` mentindo pro compilador (nenhum erro de compilação, nenhum erro em runtime até o valor ser usado como se fosse `AlgumTipoNaoVoid`). Mitigado na prática só pela disciplina de sempre declarar `tratarResposta<void>(...)` no ponto de uso quando o endpoint não devolve corpo útil (ver Fase 1) - não há nada no tipo que IMPEÇA o uso incorreto.
@@ -127,13 +137,13 @@ Efeito prático: toda vez que o cron roda (encerrar campanhas com `data_fim` ven
 
 ## 11. Migração TypeScript - fechada a direção que faltava da fronteira Nest/React: corpo de request também tipado (07-09-2026)
 
-A Fase 2 (`type/`) só espelhou os DTOs de **resposta** do Nest, de propósito (registrado na própria Fase 3, ver memória da migração) - os 13 lugares em `api/` que montam corpo de requisição continuaram `dados: unknown` desde então. Achado numa revisão externa (Claude Web, ao auditar o relatório de fechamento): a fronteira Nest/React só estava fechada num sentido, não nos dois - um corpo malformado/incompleto ainda compilava sem avisar nada.
+A Fase 2 (`type/`) só espelhou os DTOs de **resposta** do Nest, de propósito (registrado na própria Fase 3, ver memória da migração) - os 13 lugares em `api/` que montam corpo de requisição continuaram `dados: unknown` desde então. Achado numa revisão externa (Lucas, ao auditar o relatório de fechamento): a fronteira Nest/React só estava fechada num sentido, não nos dois - um corpo malformado/incompleto ainda compilava sem avisar nada.
 
 **Corrigido:** os 13 `dados: unknown` (`1-usuario`, `10-motivo-denuncia`, `11-configuracoes`, `2-papel-permissao`, `25-arquivo`, `8-area-conhecimento`, `9-tipo-link`) viraram os tipos de request de verdade, espelhando um a um os DTOs de `dto/request/*.ts` do Nest correspondente - mesmo método já usado na Fase 2, mesma convenção de nome de arquivo. Nenhum `as`/`any` novo - as únicas 3 quebras reais que apareceram (`tsc --noEmit`) eram 3 telas onde o estado de um `<select>` (`TipoMotivoDenuncia | ''`/`TipoConfiguracao | ''`, valor inicial antes de escolher) precisava provar pro compilador que não estava mais vazio na hora de montar o corpo - resolvido com `if (tipo === '') return;` no início do handler de envio, mesma categoria de guarda "nunca dispara na prática, mas o TS não sabe" já usada em `if (!auth.usuario) return` (Fase 6), não com `as`. `tsc --noEmit`, `eslint .` e `npm run build` limpos depois.
 
 ## 12. Migração TypeScript - o risco do `undefined as T` (item 8, achado 07-09-2026) verificado ponto a ponto, e 2 casos reais achados (não hipotéticos)
 
-Depois de documentar o risco (item 8, achado do Claude Web: `tratarResposta<T>()` com `T` não-void devolve `undefined` sem avisar se o corpo vier vazio), o próprio Claude Web sugeriu ir além de documentar - conferir cada chamada de `tratarResposta<T>` não-void contra o endpoint Nest correspondente, mesma checagem que a Fase 3 já fazia no sentido contrário (`Promise<void>` só depois de confirmar `@HttpCode(204)`).
+Depois de documentar o risco (item 8, achado do Lucas: `tratarResposta<T>()` com `T` não-void devolve `undefined` sem avisar se o corpo vier vazio), o próprio Lucas sugeriu ir além de documentar - conferir cada chamada de `tratarResposta<T>` não-void contra o endpoint Nest correspondente, mesma checagem que a Fase 3 já fazia no sentido contrário (`Promise<void>` só depois de confirmar `@HttpCode(204)`).
 
 Conferidas as 51 chamadas não-void em todo `api/`. Método: todo service do Nest usado por essas 13 pastas declara `Promise<T>` explícito no próprio código (`grep` confirma - nenhum sem anotação) - o próprio TypeScript do lado Nest já garante que todo caminho de um método anotado `Promise<XResponse>` devolve algo daquele tipo, então a checagem real virou "achar todo service anotado `Promise<void>` e confirmar que o controller correspondente não promete um tipo diferente pro front". Achados:
 
@@ -144,12 +154,12 @@ Fora esses 2, nenhuma outra chamada não-void de `tratarResposta<T>` corre o ris
 
 ## 13. Super auditoria pós-migração (07-09-2026) - código/comentário morto, achados de sistema, e triagem do que fazer agora vs. depois
 
-Pedido do Lucas: olhar o sistema inteiro atrás de código/comentário morto ou prolixo, e separadamente pensar em melhorias possíveis - sem mexer em nada até decidir. Auditoria feita em 3 frentes paralelas (react/, sistema completo, aproveitamento do TypeScript), cada achado relevante conferido manualmente antes de entrar aqui (não só relatado). Revisão externa (Claude Web) organizou a triagem entre "fazer agora" (dividendo direto da migração, remoção pura) e "registrar e não mexer" (refatoração/decisão que merece janela própria).
+Pedido do Lucas: olhar o sistema inteiro atrás de código/comentário morto ou prolixo, e separadamente pensar em melhorias possíveis - sem mexer em nada até decidir. Auditoria feita em 3 frentes paralelas (react/, sistema completo, aproveitamento do TypeScript), cada achado relevante conferido manualmente antes de entrar aqui (não só relatado). Revisão externa (Lucas) organizou a triagem entre "fazer agora" (dividendo direto da migração, remoção pura) e "registrar e não mexer" (refatoração/decisão que merece janela própria).
 
 **🟢 CORRIGIDO (07-09-2026) - 5 itens, todos remoção pura, sem reorganizar nada em volta:**
 - `views/admin/dashboard-identidade-visual.tsx` - o texto mostrado ao admin dizia que o upload (25-arquivo) "ainda não existe", contradizendo o próprio comentário do arquivo (e a realidade - o módulo existe e está em uso via SeletorFotoPerfil). Texto corrigido.
 - `views/admin/dashboard.tsx` - comentário citava "campanha" como exemplo de métrica `null` por módulo inexistente; `totalCampanhas` é `number` não-opcional há tempos, só `notificacoesPendentes` segue `null`. Comentário corrigido.
-- `services/12-campanha/constants/status-campanha.constants.ts` - `classeBadgeStatusCampanha()` tinha um fallback `?? 'badge-neutro'` cujo próprio comentário dizia existir só "até todo módulo 12-campanha estar migrado" (chamador `.jsx` sem checagem). Migração terminou, `allowJs` removido, `CLASSE_BADGE_STATUS_CAMPANHA` é `Record<StatusCampanha, string>` exaustivo. **Conferido antes de remover** (pergunta legítima do Claude Web): o ENUM `status_campanha` no Postgres (`01_extensoes_enums_tabelas.sql:94`) tem exatamente os mesmos 7 valores do union do frontend - fallback comprovadamente morto, não protegia divergência real. Removido.
+- `services/12-campanha/constants/status-campanha.constants.ts` - `classeBadgeStatusCampanha()` tinha um fallback `?? 'badge-neutro'` cujo próprio comentário dizia existir só "até todo módulo 12-campanha estar migrado" (chamador `.jsx` sem checagem). Migração terminou, `allowJs` removido, `CLASSE_BADGE_STATUS_CAMPANHA` é `Record<StatusCampanha, string>` exaustivo. **Conferido antes de remover** (pergunta legítima do Lucas): o ENUM `status_campanha` no Postgres (`01_extensoes_enums_tabelas.sql:94`) tem exatamente os mesmos 7 valores do union do frontend - fallback comprovadamente morto, não protegia divergência real. Removido.
 - `services/3-auth/hook/use-auth.ts` (`salvarSessao`) - `if (resultado.usuario)`/`if (resultado.papeis)` eram guardas impossíveis de falhar: `AuthResponseLogin.usuario`/`.papeis` não são opcionais no tipo (diferente do `if (!auth.usuario) return` usado em outras telas, que o compilador genuinamente não prova). Guardas removidas, atribuição direta.
 - `ehTipoMotivoDenuncia`/`ROTULO_TIPO` (10-motivo-denuncia) - duplicados palavra por palavra em Criar/Alterar e Consultar/Excluir respectivamente. Centralizados em `services/10-motivo-denuncia/constants/motivo-denuncia.constants.ts` (novo arquivo, mesmo padrão de `status-campanha.constants.ts`), os 4 arquivos passaram a importar de lá.
 - Junto: `tutorial-rodar-projeto.md` ganhou as 2 linhas de `.env` que faltavam (`CPF_ENCRYPTION_KEY`/`CPF_INDEX_KEY`, obrigatórias desde o módulo `6-perfil-pesquisador` - sem elas o backend sobe normal, mas perfil de pesquisador quebra na hora).
@@ -163,7 +173,7 @@ Pedido do Lucas: olhar o sistema inteiro atrás de código/comentário morto ou 
 
 ## 14. Lint ciente de tipos ligado no `react/` (07-09-2026) - quatro regras adotadas de vez, uma registrada pra decidir depois
 
-Testado (revisão externa, Claude Web): trocar o lint de "só forma" pra "ciente de tipo" (`projectService` apontando pro `tsconfig.json`) faz o ESLint enxergar o que cada valor REALMENTE é, não só a sintaxe - achando sozinho uma categoria inteira de problema que só tínhamos pego na mão até agora (ver item 13, o `?? 'badge-neutro'` morto). Rodado sem corrigir nada primeiro, pra ver o tamanho: **108 ocorrências em 5 regras**, mais **41 numa 6ª regra** (`no-unnecessary-condition`, testada à parte - não vem incluída no preset padrão).
+Testado (revisão externa): trocar o lint de "só forma" pra "ciente de tipo" (`projectService` apontando pro `tsconfig.json`) faz o ESLint enxergar o que cada valor REALMENTE é, não só a sintaxe - achando sozinho uma categoria inteira de problema que só tínhamos pego na mão até agora (ver item 13, o `?? 'badge-neutro'` morto). Rodado sem corrigir nada primeiro, pra ver o tamanho: **108 ocorrências em 5 regras**, mais **41 numa 6ª regra** (`no-unnecessary-condition`, testada à parte - não vem incluída no preset padrão).
 
 **🟢 ADOTADA DE VEZ:** `@typescript-eslint/no-misused-promises`, com `checksVoidReturn: { attributes: false }`. Das 69 ocorrências originais, quase todas eram o mesmo padrão - `onClick`/`onSubmit` assíncrono, onde o React não liga pro retorno mas o TypeScript reclamava mesmo assim. Amostrados 4 handlers de módulos diferentes (`alterar-usuario.tsx`, `bancada-campanha.tsx`, `dev-login-rapido.tsx`, `menu-usuario.tsx`) antes de decidir - todos já tratam erro internamente (try/catch ou `.catch()` explícito), confirmando que desligar só a checagem de atributo JSX é seguro de verdade, não só conveniente. Com a opção: **69 → 0**. Regra fica ligada permanentemente em `eslint.config.js`.
 

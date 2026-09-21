@@ -1,6 +1,8 @@
 # ERRCODE customizado - `05_regras_negocio.sql`
 
-Referência rápida das 42 `RAISE EXCEPTION` do arquivo `arquivos_banco_dados/05_regras_negocio.sql`, agora todas com `USING ERRCODE = '<código>'`. Antes desta mudança, todas caíam no SQLSTATE genérico do Postgres para qualquer `RAISE EXCEPTION` sem código explícito (`P0001`) - o que impedia o Nest de diferenciar "sem permissão" de "dado inválido" de "estado conflitante".
+> 📌 **Numeração de RF (21-09-2026):** os requisitos vigentes são o `informacoes/REQUISITOS_V7.md` (120 RFs). Citações de RF por número neste documento foram escritas em datas diferentes e podem estar em qualquer numeração anterior (pré-06-09-2026, V6 ou V7). A `MATRIZ-RASTREABILIDADE-RF.md` já está inteira na numeração do V7 e traz a conversão. Confira pelo texto do requisito antes de confiar no número.
+
+Referência rápida dos `RAISE EXCEPTION` com ERRCODE customizado dos arquivos `arquivos_banco_dados/05_regras_negocio.sql` (e de `deslizar_datas_campanha`/`suspender_pesquisador`, quando aplicável). Nasceu com 42 códigos em 03-08-2026 e hoje tem 55, todos com `USING ERRCODE = '<código>'`. Antes desta mudança, todas caíam no SQLSTATE genérico do Postgres para qualquer `RAISE EXCEPTION` sem código explícito (`P0001`) - o que impedia o Nest de diferenciar "sem permissão" de "dado inválido" de "estado conflitante".
 
 **Nada foi alterado além disso**: nenhuma mensagem, nenhuma lógica, nenhuma trigger foi tocada - só a cláusula `USING ERRCODE` foi adicionada ao final de cada `RAISE EXCEPTION`. O diff é puramente aditivo (conferido linha a linha).
 
@@ -33,12 +35,14 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 90006 | `trg_valida_tipo_motivo_denuncia` | `denuncia` | Motivo selecionado não é válido para denúncia de perfil |
 | 90007 | `validar_contribuicao_all_or_nothing` | `contribuicao` | Campanhas all-or-nothing aceitam apenas contribuições via PIX |
 | 90008 | `fn_valida_data_marco_cronograma` | `marco_cronograma` | Data do marco anterior à data de início da campanha |
-| 90009 | `fn_valida_completude_campanha_aprovacao` | `campanha` | Faltam itens de orçamento mínimos para aprovar |
-| 90010 | `fn_valida_completude_campanha_aprovacao` | `campanha` | Faltam marcos de cronograma mínimos para aprovar |
-| 90011 | `fn_valida_completude_campanha_aprovacao` | `campanha` | Soma dos itens de orçamento diferente da meta financeira |
+| 90009 | `fn_valida_completude_campanha` | `campanha` | Faltam itens de orçamento mínimos para aprovar |
+| 90010 | `fn_valida_completude_campanha` | `campanha` | Faltam marcos de cronograma mínimos para aprovar |
+| 90011 | `fn_valida_completude_campanha` | `campanha` | Soma dos itens de orçamento diferente da meta financeira |
 | 90012 | `fn_valida_prazo_campanha_negocio` | `campanha` | Duração da campanha fora do intervalo mín/máx configurado |
 | 90013 | `fn_valida_meta_campanha_negocio` | `campanha` | Meta financeira abaixo do mínimo configurado |
 | 90014 | `fn_valida_contribuicao_valor_minimo` | `contribuicao` | Valor da contribuição abaixo do mínimo configurado |
+| 90015 | `fn_valida_completude_campanha` | `campanha` | Prazo da campanha já vencido no envio/aprovação (20-09-2026) - atualize as datas antes de enviar |
+| 90016 | `deslizar_datas_campanha` | `campanha` | Campanha sem data de início não pode ter as datas reagendadas (21-09-2026) |
 
 ## 91xxx - Conflito de estado/regra de negócio (409)
 
@@ -61,11 +65,16 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 91015 | `fn_valida_contribuicao_campanha_ativa` | `contribuicao` | Campanha não está ativa no momento |
 | 91016 | `fn_valida_contribuicao_campanha_ativa` | `contribuicao` | Campanha ainda não começou ("Em breve") |
 | 91017 | `fn_valida_contribuicao_campanha_ativa` | `contribuicao` | Prazo da campanha já encerrado |
-| 91018 | `validar_limite_campanhas_pesquisador` | `campanha` | Limite de campanhas ativas/aguardando aprovação atingido |
+| 91018 | `validar_limite_campanhas_pesquisador` | `campanha` | Limite de campanhas em andamento (ativas ou aguardando aprovação) atingido. Desde 21-09-2026 aparece no ENVIO para aprovação, não na criação: rascunho não conta |
 | 91019 | `validar_atualizacao_campanha` | `atualizacao_campanha` | Atualização só permitida em campanhas ativas/sucesso/não atingidas |
 | 91020 | `fn_valida_comentario_campanha_ativa` | `comentario` | Não é possível comentar em campanha rejeitada/sob moderação |
 | 91021 | `validar_comentario_endosso` | `comentario` | Limite de endossos ativos atingido |
 | 91022 | `validar_comentario_edicao_conteudo` | `comentario` | Não é possível editar um comentário já endossado (RF-091) - remova o endosso antes |
+| 91023 | `fn_congela_regras_campanha` | `campanha` | Vídeo de apresentação não pode ser alterado após a aprovação (20-09-2026) |
+| 91024 | `fn_congela_regras_campanha` | `campanha` | Área do conhecimento não pode ser alterada após a aprovação (20-09-2026) |
+| 91025 | `fn_valida_transicao_campanha` | `campanha` | Campanha rejeitada já usou todos os reenvios permitidos e não pode ser reenviada (21-09-2026) |
+| 91026 | `fn_valida_transicao_campanha` | `campanha` | Prazo para reenviar a campanha rejeitada já venceu (21-09-2026) |
+| 91027 | `fn_congela_regras_campanha` / `fn_congela_orcamento_campanha` / `fn_congela_marco_cronograma` | `campanha` / `orcamento_campanha` / `marco_cronograma` | Campanha rejeitada sem reenvios restantes é somente leitura (21-09-2026) |
 
 ## 92xxx - Autorização negada / conflito de interesse (403)
 
@@ -79,6 +88,8 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 92006 | `fn_valida_denuncia_sem_autojulgamento` | `denuncia` | Quem registrou a denúncia não pode julgar a própria denúncia |
 | 92007 | `validar_comentario_edicao_conteudo` | `comentario` | Só o autor do comentário pode editar o próprio texto (RF-091) |
 | 92008 | `validar_comentario_endosso_autor` | `comentario` | Só o dono da campanha (ou moderação) pode endossar/remover endosso (RF-089) |
+| 92009 | `fn_valida_transicao_campanha` | `campanha` | Pesquisador suspenso não pode enviar nem reenviar campanha para aprovação (21-09-2026) |
+| 92010 | `deslizar_datas_campanha` | `campanha` | Só o dono (ou quem tem `campanha_editar`) reagenda datas de campanha em rascunho ou rejeitada (21-09-2026) |
 
 ## 93xxx - Limite de taxa (429)
 

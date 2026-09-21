@@ -30,7 +30,7 @@ import type { TermoUsoResponse } from '../../services/5-termo-uso/type/termo-uso
 // Filtro por tipo (mesmo dia) - "Todos" marcado por padrão (mesmo padrão do
 // facet de Papel em Usuários), com rótulo amigável no dropdown.
 export function ListarTermosUso({ auth }: PropsPagina) {
-  // Nomes padronizados (14-09-2026, contra-prompt Claude Web - ERA
+  // Nomes padronizados (14-09-2026, revisão do Lucas - ERA
   // `termoDetalhado`/`termoAlterando`/`termoExcluindo`, as 8 telas de
   // listagem nomeavam a mesma coisa de 3 jeitos diferentes) via
   // `useCrudModais`, mesmo hook das outras 7 telas.

@@ -158,7 +158,7 @@ export function MatrizPapelPermissao({ authFetch }: MatrizPapelPermissaoProps) {
                       a listagem de Permissões abaixo); hover cobre o
                       mesmo caso de uso pra quem precisa do valor literal.
                       ÚNICO `title` nativo que sobrevive no sistema
-                      (14-09-2026, contra-prompt Claude Web) - `<td>` não é
+                      (14-09-2026, revisão do Lucas) - `<td>` não é
                       interativo nem focável, e o propósito é revelar um
                       valor cru truncado/traduzido, não nomear um controle.
                       Todo o resto do sistema usa `.dica`/`<Dica>` (ver
@@ -171,7 +171,7 @@ export function MatrizPapelPermissao({ authFetch }: MatrizPapelPermissaoProps) {
                       <td key={papel.idPapel} className="text-center">
                         {/* 37 permissões × 7 papéis = 259 botões com `.dica`
                             em tela ao mesmo tempo (14-09-2026, contra-prompt
-                            Claude Web) - aceitável (259 <span> é irrelevante
+                            Lucas) - aceitável (259 <span> é irrelevante
                             pro navegador), registrado aqui pra uma medição
                             futura de performance saber onde olhar primeiro
                             se algum dia isto pesar. */}

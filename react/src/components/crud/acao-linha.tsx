@@ -5,7 +5,7 @@ import { Dica } from '../layout/tooltip';
 // `bancada-pesquisador.tsx`/`bancada-campanha.tsx` (Campo de Testes, tabelas
 // manuais que não podem usar `GenericTable` por causa do risco de linha)
 // reimplementavam à mão, idêntico. Centralizado aqui (14-09-2026) - ver
-// PENDENCIAS. Só `<button>` desde 14-09-2026 (contra-prompt Claude Web) - a
+// PENDENCIAS. Só `<button>` desde 14-09-2026 (revisão do Lucas) - a
 // variante `<Link to=...>` (páginas de verdade, `rotaBase`) não tem mais
 // nenhum consumidor desde que a migração CRUD→Modal terminou.
 type VarianteAcaoLinha = 'alterar' | 'excluir' | 'neutra';

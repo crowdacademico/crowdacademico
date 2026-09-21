@@ -1,6 +1,7 @@
 import { tratarResposta } from '../../constant/api/http.util';
 import type { AuthFetch } from '../../3-auth/type/auth.type';
 import type { ResultadoPaginado } from '../../constant/type/paginacao.type';
+import { desembrulharPaginado } from '../../constant/type/paginacao.type';
 import type { CampanhaResponse, HistoricoRejeicaoResponse } from '../type/campanha.type';
 import type { StatusCampanha } from '../constants/status-campanha.constants';
 
@@ -12,8 +13,9 @@ import type { StatusCampanha } from '../constants/status-campanha.constants';
 // públicos. Sem criar() de propósito: campanha não tem POST genérico no
 // backend - criação vive no Campo de Testes hoje (views/campo-testes/
 // bancada-campanha.tsx). `remover()` (25-08-2026) só funciona em campanha
-// 'aguardando_aprovacao' (pol_campanha_delete, 04) - depois de aprovada,
-// só dá pra rejeitar/encerrar, nunca apagar de vez.
+// 'rascunho' (pol_campanha_delete, 04 - era 'aguardando_aprovacao' até
+// 20-09-2026) - depois de enviada pra fila, só dá pra rejeitar/encerrar,
+// nunca apagar de vez.
 interface FiltroCampanha {
   status?: StatusCampanha;
   idAreaConhecimento?: number;
@@ -43,7 +45,7 @@ export const campanhaApi = {
   listar: (authFetch: AuthFetch, filtro?: FiltroCampanha): Promise<CampanhaResponse[]> =>
     authFetch(`/campanha${paraQueryString({ tamanho: 500, ...filtro })}`)
       .then(tratarResposta<ResultadoPaginado<CampanhaResponse>>)
-      .then((resposta) => resposta.dados),
+      .then(desembrulharPaginado('campanhas')),
   buscar: (authFetch: AuthFetch, id: number | string): Promise<CampanhaResponse> =>
     authFetch(`/campanha/${id}`).then(tratarResposta<CampanhaResponse>),
   remover: (authFetch: AuthFetch, id: number | string): Promise<void> =>

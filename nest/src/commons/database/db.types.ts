@@ -363,6 +363,7 @@ export const MODELOS_CAMPANHA = ['all-or-nothing', 'flexivel'] as const;
 export type ModeloCampanha = (typeof MODELOS_CAMPANHA)[number];
 
 export const STATUS_CAMPANHA = [
+  'rascunho',
   'aguardando_aprovacao',
   'ativo',
   'sucesso',
@@ -422,7 +423,12 @@ export interface CampanhaTable {
 // gravar aqui mesmo sem o resto do CRUD (findall/findone) existir ainda.
 export interface HistoricoRejeicaoTable {
   id_rejeicao: Generated<number>;
+  // Sem FK para campanha (removida em 21-09-2026): o histórico sobrevive à
+  // exclusão da campanha. Por isso dono e título são gravados AQUI, no
+  // instante da rejeição, e não lidos de campanha depois.
   id_campanha: number;
+  id_usuario_dono: number;
+  titulo_campanha: string;
   id_admin: number | null;
   justificativa: string | null;
   rejeitado_em: Generated<Date>;

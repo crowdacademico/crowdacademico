@@ -1,5 +1,7 @@
 # ⚙️ Documentação Técnica do Backend (NestJS) - CrowdAcadêmico
 
+> 📌 **Numeração de RF (21-09-2026):** os requisitos vigentes são o `informacoes/REQUISITOS_V7.md` (120 RFs). Citações de RF por número neste documento foram escritas em datas diferentes e podem estar em qualquer numeração anterior (pré-06-09-2026, V6 ou V7). A `MATRIZ-RASTREABILIDADE-RF.md` já está inteira na numeração do V7 e traz a conversão. Confira pelo texto do requisito antes de confiar no número.
+
 Este documento é o irmão do `DOCUMENTACAO_BD.md`. Ele cobre o backend em NestJS (`nest/`): como a aplicação conversa com o Postgres, como a autenticação funciona, onde mora a autorização, qual é o padrão que todo módulo segue, e como o módulo de upload de arquivo está montado hoje.
 
 > **Leia esta diferença antes de tudo.** `DOCUMENTACAO_BD.md` é um **log histórico narrativo** - ele registra, com data e autoria, cada decisão de modelagem tomada ao longo de semanas de auditoria do banco. **Este documento aqui não é isso.** Ele descreve o **estado atual** do código do backend: o que existe, como funciona e por quê. Datas e atribuições só aparecem quando estão escritas em comentário no próprio código-fonte (o backend é bem comentado, e vários comentários registram "era X, virou Y, motivo Z" - esses estão citados). Onde o código não conta uma história, este documento descreve o comportamento presente e para por aí, em vez de inventar uma cronologia que ninguém pode conferir.
@@ -57,7 +59,7 @@ Este documento é o irmão do `DOCUMENTACAO_BD.md`. Ele cobre o backend em NestJ
 | **`@aws-sdk/client-s3` + `s3-request-presigner`** | Cliente S3 genérico - usado contra o Supabase Storage, não contra a AWS (ver seção 8). |
 | **`sharp`** | Processamento de imagem no servidor (redimensiona, converte pra WebP, remove EXIF). |
 | **`@nestjs/swagger`** | Documentação interativa da API (`/api`, só fora de produção) - gerada automaticamente a partir dos DTOs já existentes, ver §18. |
-| **`@nestjs/schedule`** | Agendamento (`@Cron`) - único consumidor hoje é o encerramento automático de campanha vencida (RF-057), ver §7.4. |
+| **`@nestjs/schedule`** | Agendamento (`@Cron`) - 4 jobs hoje: encerramento de campanha vencida, fim da suspensão de pesquisador, expiração de rascunho e expiração de campanha rejeitada, ver §7.4. |
 
 📌 **Por que Kysely e não TypeORM/Prisma, e `class-validator` em vez de Joi.** Embora nos foi ensinado no semestre passado, pelo professor Francisco, do IFSP Birigui, a usar TypeORM + Joi (nos projetos de sala de aula da disciplina de Programação para Web 2), decidimos não utilizar isso aqui devido ao seguinte:
 
@@ -85,16 +87,16 @@ Nenhuma dessas três escolhas é uma crítica ao que foi ensinado - a disciplina
 
 | Item | Quantidade |
 |---|---|
-| Arquivos `.ts` em `nest/src/` | 360 |
-| Módulos Nest (`*.module.ts`) | 24 (19 de domínio + `DatabaseModule` + `StorageModule` + `ConfiguracaoValorModule` + `LoggingModule` + `AppModule`) |
-| Arquivos de controller | 94 |
-| Arquivos de service | 98 |
-| Rotas HTTP (handlers `@Get`/`@Post`/`@Patch`/`@Delete`) | 100 |
-| DTOs de request / de response | 48 / 31 |
+| Arquivos `.ts` em `nest/src/` | 413 |
+| Módulos Nest (`*.module.ts`) | 25 (20 de domínio + `DatabaseModule` + `StorageModule` + `ConfiguracaoValorModule` + `LoggingModule` + `AppModule`) |
+| Arquivos de controller | 113 |
+| Arquivos de service | 121 |
+| Rotas HTTP (handlers `@Get`/`@Post`/`@Patch`/`@Delete`) | 120 |
+| DTOs de request / de response | 54 / 36 |
 | Converters | 17 |
-| Pastas de módulo **vazias** (só `.gitkeep`) | 10 |
+| Pastas de módulo **vazias** (só `.gitkeep`) | 8 |
 
-> A seção 17 explica como recontar tudo isso - prefira recontar a confiar nos números acima depois de qualquer rodada de trabalho.
+> Recontado em 21-09-2026. A seção 17 explica como recontar tudo isso - prefira recontar a confiar nos números acima depois de qualquer rodada de trabalho.
 
 ### 1.3 Mapa de pastas
 
@@ -599,6 +601,25 @@ export class CampanhaServiceCreate {
 
 Pra comparação de escala: 96 chamadas por dia é um volume desprezível perto do tráfego normal de qualquer aplicação com usuário de verdade - não chega perto de nenhum limite de uso do plano gratuito do Supabase (que é sobre espaço em disco e certas cotas de API, não sobre "número de consultas simples" como esta). Resumindo: nem o intervalo de 15 minutos, nem a query em si, representam risco de lentidão pro sistema.
 
+**Os 4 jobs agendados do sistema** (atualizado em 21-09-2026). Todos seguem o molde acima (`PG_POOL` direto, função `SECURITY DEFINER`, `@Cron`):
+
+| Job | Cron | Função SQL | O que faz |
+|---|---|---|---|
+| `CampanhaServiceEncerrarVencidas` | a cada 15 min | `encerrar_campanhas_vencidas()` | campanha `ativo` com prazo vencido vira `sucesso` ou `nao_atingido` |
+| `PerfilPesquisadorServiceReativarVencidos` | a cada 15 min | `reativar_pesquisadores_vencidos()` | a suspensão do poder de pesquisador expira sozinha |
+| `CampanhaServiceExpirarRascunho` | de hora em hora | `expirar_campanhas_rascunho()` | apaga rascunho mais velho que `campanha_rascunho_ttl_horas` (336h), contado da criação |
+| `CampanhaServiceExpirarRejeitadas` | de hora em hora | `expirar_campanhas_rejeitadas()` | apaga campanha rejeitada cujo prazo de reenvio (`campanha_rejeitada_prazo_dias`, 30) venceu |
+
+Os 4 têm `try/catch` com `logger.error` (incluindo o nome do job). Motivo: o `@Cron` chama o método sem `await` de ninguém, então uma exceção da função SQL vira `unhandledRejection`, e o Node moderno derruba o processo inteiro por causa de um job de limpeza. Só o registro da falha, sem repetir a tentativa: o job roda de novo no próximo ciclo.
+
+**Ciclo de vida da campanha no Nest** (ver `DOCUMENTACAO_BD.md`, [05-K-2-B], para as regras; o Nest só expõe os endpoints e deixa o banco decidir):
+- `POST /campanha/:id/enviar` (`CampanhaServiceEnviar`): `rascunho -> aguardando_aprovacao` e o reenvio `rejeitado -> aguardando_aprovacao`, no mesmo endpoint. Não repete nenhuma validação: completude, prazo, reenvios, suspensão e limite de simultâneas saem do banco com ERRCODE próprio (90009 a 90011, 90015, 91025, 91026, 92009, 91018).
+- `POST /campanha/:id/deslizar-datas` (`CampanhaServiceDeslizarDatas`, corpo `{ novaDataInicio }`): chama `deslizar_datas_campanha()`, que move início, fim e marcos do cronograma mantendo a duração.
+- `GET /campanha/:id` (`CampanhaServiceFindOne`) preenche `reenviosRestantes`, `prazoReenvioAte` e `somenteLeitura` só para campanha `rejeitado`, para a tela e o futuro e-mail de rejeição. É uma conta que ESPELHA a regra do banco, lendo o histórico pela RLS de quem consulta: exata para o dono e para quem tem `campanha_rejeitar`.
+- `DELETE /campanha/:id` só funciona em `rascunho` (a RLS decide).
+- `GET /historico-rejeicao?idCampanha=` devolve também `idUsuarioDono` e `tituloCampanha`, e continua funcionando para campanha já excluída (o histórico não tem FK para `campanha`).
+- `GET /usuario/eu/exportar-dados` inclui `historicoRejeicoes` das campanhas do titular, sem `id_admin` (quem rejeitou é dado do administrador).
+
 **`CampanhaServiceFindAll`** - filtros que **não** são autorização:
 > *"`pol_campanha_select` já decide QUAIS linhas aparecem (status público, ou dono, ou `relatorio_visualizar`) - os filtros abaixo são só conveniência de navegação por cima do que a RLS já deixou visível, nunca uma segunda camada de autorização."*
 
@@ -940,7 +961,7 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 
 ## 13. Inventário de rotas HTTP
 
-100 handlers. `AUTH` = a rota tem `@UseGuards(RequireAuthGuard)`; `pub` = sem ele (o que **não** significa "sem proteção" - significa que quem protege é a RLS, e que anônimo é um caso legítimo).
+120 handlers (recontados em 21-09-2026). `AUTH` = a rota tem `@UseGuards(RequireAuthGuard)`; `pub` = sem ele (o que **não** significa "sem proteção" - significa que quem protege é a RLS, e que anônimo é um caso legítimo).
 
 | | Método | Rota |
 |---|---|---|
@@ -960,6 +981,8 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | AUTH | PATCH · DELETE | `/usuario/:id` |
 | pub | GET | `/usuario/:id/logins` |
 | AUTH | GET | `/usuario/:id/suspensao` |
+| pub | GET | `/usuario/:id/termos-aceitos` |
+| AUTH | GET | `/usuario/eu/exportar-dados` |
 | AUTH | POST | `/usuario/:id/suspender` · `/usuario/:id/revogar-suspensao` · `/usuario/:id/desbloquear` |
 | pub | GET | `/papel` · `/permissao` · `/papel-permissao` |
 | AUTH | PATCH | `/papel/:id` |
@@ -976,7 +999,7 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | AUTH | PATCH | `/perfil-pesquisador/:id/cpf` *(ADICIONADA 07-09-2026, RF-017 - correção de CPF, ação de suporte/admin)* |
 | AUTH | GET · POST | `/perfil-pesquisador/:id/suspensao` · `/perfil-pesquisador/:id/suspender` · `/perfil-pesquisador/:id/reativar` *(ADICIONADAS 07-09-2026 - suspende só o PODER de pesquisador, não bloqueia login; `suspender` exige corpo `{ate, motivo}`)* |
 | pub | GET | `/link-academico` |
-| AUTH | POST | `/link-academico` |
+| AUTH | POST | `/link-academico` · `/link-academico/:idUsuario` |
 | AUTH | PATCH · DELETE | `/link-academico/:id` |
 | **Catálogos** | | |
 | pub | GET | `/area-conhecimento` · `/area-conhecimento/:id` |
@@ -992,11 +1015,17 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | AUTH | POST | `/configuracoes` |
 | AUTH | PATCH · DELETE | `/configuracoes/:id` |
 | pub | GET | `/termos-uso/ativo` |
+| AUTH | GET | `/termos-uso` · `/termos-uso/:id` |
+| AUTH | POST | `/termos-uso` |
+| AUTH | PATCH | `/termos-uso/:id` · `/termos-uso/:id/ativar` |
+| AUTH | DELETE | `/termos-uso/:id` |
 | **Campanha e satélites** | | |
 | pub | GET | `/campanha` · `/campanha/:id` |
-| AUTH | POST | `/campanha` |
+| AUTH | POST | `/campanha` · `/campanha/:idUsuario` *(criar em nome de outro, Campo de Testes)* |
 | AUTH | PATCH · DELETE | `/campanha/:id` |
-| AUTH | POST | `/campanha/:id/aprovar` · `/campanha/:id/rejeitar` |
+| AUTH | POST | `/campanha/:id/enviar` · `/campanha/:id/deslizar-datas` *(21-09-2026, ciclo de vida da campanha)* |
+| AUTH | POST | `/campanha/:id/aprovar` · `/campanha/:id/rejeitar` · `/campanha/:id/forcar-exclusao` |
+| pub | GET | `/historico-rejeicao` |
 | pub | GET | `/orcamento-campanha` · `/marco-cronograma` |
 | AUTH | POST | `/orcamento-campanha` · `/marco-cronograma` |
 | AUTH | PATCH · DELETE | `/orcamento-campanha/:id` · `/marco-cronograma/:id` |
@@ -1025,7 +1054,7 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 
 ## 14. O que ainda não existe (pastas vazias)
 
-Conferido: as 9 pastas abaixo contêm **exatamente um arquivo `.gitkeep`** e **zero `.ts`**.
+Conferido em 21-09-2026: as 8 pastas abaixo contêm **exatamente um arquivo `.gitkeep`** e **zero `.ts`**. (`21-historico-rejeicao` saiu da lista: ganhou código em 14-09-2026.)
 
 | Pasta | Grupo em `PROXIMOS_MODULOS.md` |
 |---|---|
@@ -1033,7 +1062,6 @@ Conferido: as 9 pastas abaixo contêm **exatamente um arquivo `.gitkeep`** e **z
 | `18-recompensa` | Engajamento |
 | `19-denuncia` | Moderação |
 | `20-solicitacao-encerramento` | Moderação |
-| `21-historico-rejeicao` | Moderação |
 | `22-contribuicao` | Pagamento |
 | `23-repasse` | Pagamento |
 | `24-auditoria-financeira` | Pagamento |
@@ -1057,7 +1085,7 @@ A tabela da seção 1.1 já dá o resumo de uma linha por peça. Este capítulo 
 
 ### 15.1 Núcleo do framework - exigido pelo NestJS, não é escolha do projeto
 
-`@nestjs/common`, `@nestjs/core`, `@nestjs/platform-express`, `reflect-metadata`, `rxjs`. Essas cinco não representam uma decisão de arquitetura - são o próprio NestJS. `@nestjs/platform-express` escolhe **Express** como servidor HTTP por baixo (a alternativa seria `@nestjs/platform-fastify`); nada neste projeto depende de recurso exclusivo de Express, então a escolha é a opção padrão/mais documentada, não uma necessidade técnica específica. `reflect-metadata` existe porque o Nest usa decorators (`@Controller`, `@Injectable`, `@Body`) para descrever metadado de tipo em tempo de execução - sem ele, a injeção de dependência do framework simplesmente não funciona. `rxjs` é a base dos `Observable` que interceptors/pipes do Nest usam internamente; o código deste projeto quase não usa RxJS diretamente (não há stream de evento nem programação reativa de propósito aqui), é consumido pela infraestrutura do framework.
+`@nestjs/common`, `@nestjs/core`, `@nestjs/platform-express`, `reflect-metadata`, `rxjs`. Essas cinco não representam uma decisão de arquitetura - são o próprio NestJS. `@nestjs/platform-express` escolhe **Express** como servidor HTTP por baixo (a alternativa seria `@nestjs/platform-fastify`); nada neste projeto depende de recurso exclusivo de Express, então a escolha é a opção padrão/mais documentada, não uma necessidade técnica específica. `reflect-metadata` existe porque o Nest usa decorators (`@Controller`, `@Injectable`, `@Body`) para descrever metadado de tipo em tempo de execução - sem ele, a injeção de dependência do framework simplesmente não funciona. `rxjs` é a base dos `Observable` que interceptors/pipes do Nest usam internamente; o código deste projeto quase não usa RxJS diretamente (não há stream de evento nem programação reativa de propósito aqui), é consumido pela infraestrutura do framework. ⚠️ `nest/package.json` tem `"overrides": { "multer": "^2.4.0" }` (21-09-2026): `@nestjs/platform-express` fixa `multer` em versão exata e vulnerável (4 avisos de negação de serviço). O sistema nunca executa o `multer` (o upload é por URL pré-assinada e não passa pelo Nest), então o override é higiene de `npm audit` (de 6 vulnerabilidades altas para 0). No dia em que alguma rota usar `FileInterceptor`, ele deixa de ser cosmético. Não remover. Detalhe em `ACHADOS_PARA_DISCUTIR.md`.
 
 ### 15.2 Banco de dados - `kysely` + `pg`
 
@@ -1085,7 +1113,7 @@ Carrega variáveis de ambiente (`.env`) através do `ConfigService`, injetável 
 
 ### 15.7b Agendamento - `@nestjs/schedule`
 
-Adicionado em 05-09-2026 pra fechar o RF-057 (encerramento automático de campanha vencida) - até então a função de banco existia, mas nada a chamava (ver §7.4, `CampanhaServiceEncerrarVencidas`). É o pacote oficial do NestJS pra `@Cron`/`@Interval`/`@Timeout` - registra um agendador de verdade por trás do decorator via `ScheduleModule.forRoot()` (uma vez, em `AppModule`). Único consumidor hoje: `CampanhaServiceEncerrarVencidas`, a cada 15 minutos.
+Adicionado em 05-09-2026 pra fechar o RF-057 (encerramento automático de campanha vencida) - até então a função de banco existia, mas nada a chamava (ver §7.4, `CampanhaServiceEncerrarVencidas`). É o pacote oficial do NestJS pra `@Cron`/`@Interval`/`@Timeout` - registra um agendador de verdade por trás do decorator via `ScheduleModule.forRoot()` (uma vez, em `AppModule`). Consumidores hoje: os 4 jobs listados em §7.4 (`CampanhaServiceEncerrarVencidas` e `PerfilPesquisadorServiceReativarVencidos` a cada 15 minutos, `CampanhaServiceExpirarRascunho` e `CampanhaServiceExpirarRejeitadas` de hora em hora).
 
 ### 15.8 Armazenamento de arquivo - `@aws-sdk/client-s3` + `@aws-sdk/s3-request-presigner` + `sharp`
 

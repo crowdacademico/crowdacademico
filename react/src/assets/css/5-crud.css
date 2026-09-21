@@ -440,7 +440,7 @@
   }
 
   /* Cada campo agora é um <label> (texto do rótulo + input/select dentro) -
-     achado do Claude Web: só placeholder some quando a pessoa digita e ela
+     achado do Lucas: só placeholder some quando a pessoa digita e ela
      perde a referência de qual campo é qual. align-items: flex-end porque o
      botão "Criar" (sem rótulo acima) precisa alinhar com a base dos campos,
      não com o topo. */

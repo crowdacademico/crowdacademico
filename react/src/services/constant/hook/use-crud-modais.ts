@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-// Extraído (14-09-2026, contra-prompt Claude Web) - as 8 telas de listagem
+// Extraído (14-09-2026, revisão do Lucas) - as 8 telas de listagem
 // do painel repetiam o MESMO bloco de estado (criando/alterando/
 // consultando/excluindo/chaveRecarga+recarregar), só com nomes diferentes
 // (`alterando`, `idAlterando`, `termoAlterando` - sintoma de padrão não

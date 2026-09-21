@@ -1,12 +1,12 @@
 // Primitivo único de dica de hover do sistema (14-09-2026, contra-prompt
-// Claude Web - fundiu o que era `Tooltip`/`.tooltip__texto` com o que era
+// Lucas - fundiu o que era `Tooltip`/`.tooltip__texto` com o que era
 // `.crud-tabela__acao-dica`, quase idênticos). Dois contratos diferentes
 // usam o MESMO mecanismo visual: dar nome a um controle (`Dica`, soltada
 // dentro de qualquer gatilho com a classe `dica`) e o ícone "ⓘ" avulso
 // (`Tooltip`, que por dentro é só um gatilho `.dica--info` + `<Dica>`).
 //
 // A bolha (`Dica`) é SEMPRE `aria-hidden` - `role="tooltip"` sem
-// `aria-describedby` apontando pra ele é inerte (achado do Claude Web:
+// `aria-describedby` apontando pra ele é inerte (achado do Lucas:
 // nenhum leitor de tela faz nada com isso), então a role saiu e não volta
 // sem esse par. O nome acessível mora no GATILHO (`aria-label` ou texto
 // visível), nunca na bolha - é por isso que o texto da dica quase sempre É

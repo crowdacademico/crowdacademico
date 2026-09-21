@@ -378,17 +378,14 @@ CREATE POLICY pol_campanha_update ON campanha FOR UPDATE TO app_nestjs USING (
     OR public.tem_permissao('campanha_aprovar')
     OR public.tem_permissao('campanha_rejeitar')
 );
--- Excluir campanha (25-08-2026, Campo de Testes: CRUD completo em T2) -
--- só em 'aguardando_aprovacao', mesma lógica do congelamento pós-
--- aprovação (fn_congela_regras_campanha, 05): nada em orcamento_campanha/
--- marco_cronograma/atualizacao_campanha/seguir_campanha/comentario/
--- recompensa ainda referencia denuncia/repasse/solicitacao_encerramento/
--- historico_rejeicao/contribuicao_recompensa nesse status (essas tabelas
--- só ganham linha depois de aprovada), então o DELETE cascateia
--- (ON DELETE CASCADE, 01) sem risco de travar em FK RESTRICT/NO ACTION.
+-- Excluir campanha (25-08-2026, Campo de Testes: CRUD completo em T2).
+--
+-- Só 'rascunho' (era 'aguardando_aprovacao' até 20-09-2026): a campanha que ainda não
+-- passou pela fila não tem linha em historico_rejeicao. Depois de enviada, apagar de vez
+-- tiraria do administrador o registro de que ela existiu.
 DROP POLICY IF EXISTS pol_campanha_delete ON campanha;
 CREATE POLICY pol_campanha_delete ON campanha FOR DELETE TO app_nestjs USING (
-    status = 'aguardando_aprovacao'
+    status = 'rascunho'
     AND (id_usuario = public.id_usuario_atual() OR public.tem_permissao('campanha_editar'))
 );
 
@@ -420,8 +417,9 @@ CREATE POLICY pol_atualizacao_update ON atualizacao_campanha FOR UPDATE TO app_n
 -- aprovacao) pra qualquer visitante não tem por quê, e o dono/admin já
 -- enxergam por fora dessa condição. Escrita: só o dono da campanha (ou
 -- campanha_editar); o congelamento por status/data_inicio é responsabilidade
--- da trigger em 05 (mesmo desenho de recompensa - RLS controla QUEM, trigger
--- controla QUANDO).
+-- da trigger em 05 (RLS controla QUEM, trigger controla QUANDO).
+-- CORRIGIDO (21-09-2026): recompensa NÃO tem trigger de congelamento (só existem as 3 de
+-- campanha, orçamento e cronograma). Pendência registrada em PENDENCIAS.
 DROP POLICY IF EXISTS pol_orcamento_campanha_select ON orcamento_campanha;
 CREATE POLICY pol_orcamento_campanha_select ON orcamento_campanha FOR SELECT USING (
     EXISTS (
@@ -569,16 +567,23 @@ CREATE POLICY pol_solicitacao_update ON solicitacao_encerramento FOR UPDATE TO a
 -- de solicitacao_encerramento e repasse (tabelas irmãs), que já liberam o dono via
 -- OR EXISTS. Sem isso, o RF-070 (pesquisador edita e reenvia campanha rejeitada)
 -- deixava o motivo da rejeição só acessível por e-mail (RF-071), nunca pela própria plataforma.
+-- O dono é reconhecido por id_usuario_dono (gravado na linha), e não por EXISTS em
+-- campanha: o histórico sobrevive à exclusão da campanha. Ver DOCUMENTACAO_BD.md [05-K-2-B].
 DROP POLICY IF EXISTS pol_historicorej_select ON historico_rejeicao;
 CREATE POLICY pol_historicorej_select ON historico_rejeicao FOR SELECT TO app_nestjs USING (
     public.tem_permissao('campanha_rejeitar')
-    OR EXISTS (SELECT 1 FROM campanha WHERE id_campanha = historico_rejeicao.id_campanha AND id_usuario = public.id_usuario_atual())
+    OR id_usuario_dono = public.id_usuario_atual()
 );
 -- [04-E-6] historico_rejeicao: por que existem policies de escrita (ver DOCUMENTACAO_BD.md)
 DROP POLICY IF EXISTS pol_historicorej_insert ON historico_rejeicao;
 CREATE POLICY pol_historicorej_insert ON historico_rejeicao FOR INSERT TO app_nestjs WITH CHECK (true);
+-- REMOVIDA (21-09-2026): pol_historicorej_update era USING (true) WITH CHECK (true)
+-- e nenhum código do Nest nem do banco faz UPDATE em historico_rejeicao
+-- (conferido). Histórico de moderação tem que ser IMUTÁVEL: com essa policy, e
+-- o GRANT UPDATE que existia em 06, qualquer pesquisador logado conseguiria
+-- reescrever a justificativa da própria rejeição. Sem policy de UPDATE e sem o
+-- GRANT (ver 06), o UPDATE nem chega a ser avaliado.
 DROP POLICY IF EXISTS pol_historicorej_update ON historico_rejeicao;
-CREATE POLICY pol_historicorej_update ON historico_rejeicao FOR UPDATE TO app_nestjs USING (true) WITH CHECK (true);
 
 -- [04-E-7] repasse: por que existem policies de escrita (ver DOCUMENTACAO_BD.md)
 DROP POLICY IF EXISTS pol_repasse_insert ON repasse;

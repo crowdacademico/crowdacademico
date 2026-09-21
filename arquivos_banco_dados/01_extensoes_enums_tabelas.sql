@@ -91,7 +91,9 @@ CREATE TYPE status_pesquisador    AS ENUM ('ativo', 'suspenso');
 CREATE TYPE tipo_vinculo          AS ENUM ('institucional', 'independente');
 CREATE TYPE titulo_academico      AS ENUM ('graduado', 'especialista', 'mestre', 'doutor');
 CREATE TYPE modelo_campanha       AS ENUM ('all-or-nothing', 'flexivel');
-CREATE TYPE status_campanha       AS ENUM ('aguardando_aprovacao', 'ativo', 'sucesso', 'nao_atingido', 'rejeitado', 'encerrado', 'encerrado_moderacao');
+-- 'rascunho' (20-09-2026) é o primeiro valor e o DEFAULT: a campanha nasce rascunho e só
+-- entra na fila por envio explícito. Ver DOCUMENTACAO_BD.md [05-K-2-B].
+CREATE TYPE status_campanha       AS ENUM ('rascunho', 'aguardando_aprovacao', 'ativo', 'sucesso', 'nao_atingido', 'rejeitado', 'encerrado', 'encerrado_moderacao');
 CREATE TYPE status_contribuicao   AS ENUM ('pendente', 'confirmado', 'repassado', 'a_devolver', 'devolvido', 'reembolsado', 'erro', 'expirado', 'reembolso_manual');
 CREATE TYPE meio_pagamento        AS ENUM ('pix', 'cartao_credito', 'cartao_debito', 'boleto');
 CREATE TYPE fase_atualizacao      AS ENUM ('andamento', 'resultado_preliminar', 'resultado_final');
@@ -552,7 +554,7 @@ CREATE TABLE campanha (
     descricao            TEXT,
     data_inicio          TIMESTAMPTZ,
     data_fim             TIMESTAMPTZ,
-    status               status_campanha NOT NULL DEFAULT 'aguardando_aprovacao',
+    status               status_campanha NOT NULL DEFAULT 'rascunho',
     aprovado_em          TIMESTAMPTZ,
     -- CORRIGIDO: data_fim é a promessa (congelada por fn_congela_regras_campanha,
     -- 05); faltava onde registrar quando a campanha de fato terminou (natural,
@@ -624,7 +626,7 @@ CREATE TABLE atualizacao_campanha (
 -- não armazenado). RN: soma de todos os itens de uma campanha precisa bater
 -- EXATAMENTE com campanha.meta_financeira, e a quantidade de itens fica entre
 -- configuracoes.orcamento_min_itens e configuracoes.orcamento_max_itens - ambas
--- checadas na aprovação/inserção, ver fn_valida_completude_campanha_aprovacao e
+-- checadas no envio, na aprovação e na inserção, ver fn_valida_completude_campanha e
 -- fn_valida_limite_max_orcamento_campanha (05, [05-K-2]). Congela junto com o
 -- resto da campanha (mesma condição de status de fn_congela_regras_campanha),
 -- porque mexer nos itens depois de aprovado quebraria a igualdade com uma
@@ -657,7 +659,7 @@ CREATE TABLE orcamento_campanha (
 -- aprovar e começar de fato o pesquisador pode legitimamente precisar
 -- reorganizar datas. RN: a quantidade de marcos fica entre
 -- configuracoes.cronograma_min_marcos e configuracoes.cronograma_max_marcos
--- (checadas na aprovação/inserção, mesmas funções de orcamento_campanha) e
+-- (checadas no envio, na aprovação e na inserção, mesmas funções de orcamento_campanha) e
 -- cada data_prevista precisa ser >= campanha.data_inicio (pode ultrapassar
 -- data_fim sem problema - ver fn_valida_data_marco_cronograma, 05, [05-K-2]).
 CREATE TABLE marco_cronograma (
@@ -708,15 +710,19 @@ CREATE TABLE solicitacao_encerramento (
     CONSTRAINT "CK_SOLICITACAO_JUSTIFICATIVA_ADMIN_TAMANHO" CHECK (justificativa_admin IS NULL OR char_length(justificativa_admin) <= 10000)
 );
 
+-- historico_rejeicao (21-09-2026) não tem FK para campanha: o histórico sobrevive à exclusão
+-- da campanha, então dono e título são gravados na própria linha. Ver DOCUMENTACAO_BD.md [05-K-2-B].
 CREATE TABLE historico_rejeicao (
-    id_rejeicao   SERIAL,
-    id_campanha   INT  NOT NULL,
-    id_admin      INT,
-    justificativa TEXT,
-    rejeitado_em  TIMESTAMPTZ DEFAULT NOW(),
+    id_rejeicao      SERIAL,
+    id_campanha      INT          NOT NULL,
+    id_usuario_dono  INT          NOT NULL,
+    titulo_campanha  VARCHAR(255) NOT NULL,
+    id_admin         INT,
+    justificativa    TEXT,
+    rejeitado_em     TIMESTAMPTZ DEFAULT NOW(),
 
     CONSTRAINT "PK_HISTORICO_REJEICAO" PRIMARY KEY (id_rejeicao),
-    CONSTRAINT "FK_HISTORICO_REJEICAO_CAMPANHA" FOREIGN KEY (id_campanha) REFERENCES campanha(id_campanha),
+    CONSTRAINT "FK_HISTORICO_REJEICAO_DONO" FOREIGN KEY (id_usuario_dono) REFERENCES usuario(id_usuario),
     CONSTRAINT "FK_HISTORICO_REJEICAO_ADMIN" FOREIGN KEY (id_admin) REFERENCES usuario(id_usuario)
 );
 

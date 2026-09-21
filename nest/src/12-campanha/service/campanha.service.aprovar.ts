@@ -16,9 +16,10 @@ import { CampanhaResponse } from '../dto/response/campanha.response';
 // sem a permissão passa pela RLS mas a trigger barra com ERRCODE 92001,
 // que o PostgresExceptionFilter já traduz). taxa_plataforma é carimbada
 // sozinha por trg_campanha_carimba_taxa (05) no instante em que
-// aprovado_em deixa de ser NULL - nunca setada por aqui. fn_valida_
-// completude_campanha_aprovacao (05) barra aprovação sem orçamento/
-// cronograma completos (ERRCODE 90009/90010/90011).
+// aprovado_em deixa de ser NULL - nunca setada por aqui.
+// fn_valida_completude_campanha (05) barra aprovação sem orçamento/
+// cronograma completos (ERRCODE 90009/90010/90011) e com o prazo já
+// vencido (90015).
 @Injectable()
 export class CampanhaServiceAprovar {
   constructor(private readonly database: DatabaseService) {}

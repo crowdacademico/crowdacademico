@@ -1,5 +1,7 @@
 # ⚛️ Documentação Técnica do Frontend React - CrowdAcadêmico
 
+> 📌 **Numeração de RF (21-09-2026):** os requisitos vigentes são o `informacoes/REQUISITOS_V7.md` (120 RFs). Citações de RF por número neste documento foram escritas em datas diferentes e podem estar em qualquer numeração anterior (pré-06-09-2026, V6 ou V7). A `MATRIZ-RASTREABILIDADE-RF.md` já está inteira na numeração do V7 e traz a conversão. Confira pelo texto do requisito antes de confiar no número.
+
 Este documento é o equivalente do `DOCUMENTACAO_BD.md` para o **app React** que vive em `react/`. O objetivo é o mesmo: explicar as decisões de arquitetura e o *porquê* de cada padrão, de forma que os arquivos `.tsx`/`.ts` não precisem carregar toda a explicação inline - e que quem chegar depois entenda a estrutura sem ter que abrir 100 arquivos.
 
 ---
@@ -272,6 +274,8 @@ export const usuarioApi = {
 
 📌 **Paginação desembrulhada num lugar só.** Vários endpoints devolvem `{ dados, total, pagina, tamanho }` desde 03-08-2026, correção de um problema real: um `findall` sem `limit`/`offset` baixaria a tabela inteira conforme ela crescesse. O `.dados` é desembrulhado **dentro do `.api.ts`**, uma vez só, pra `GenericTable` e todo o resto do app continuar recebendo um array puro, sem precisar saber que página/total existem.
 
+📌 **A listagem que trunca em 500 avisa (20-09-2026).** O backend limita as listagens em 500 registros (`paginacao.util.ts`, teto de segurança, não paginação de tela). Antes, as 11 chamadas de listagem faziam `.then((resposta) => resposta.dados)` e descartavam o `total`: no registro 501 a tela passava a mentir em silêncio ("500 registros" existindo 3000). Agora todas passam por `desembrulharPaginado(rotulo)` (`services/constant/type/paginacao.type.ts`), que mantém o mesmo retorno (`T[]`) e dá um `console.warn` quando `total` é maior que o devolvido. Não é paginação no servidor (o volume atual não justifica), só o fim do silêncio.
+
 ### `tratarResposta` - `services/constant/api/http.util.ts`
 
 Todo `.api.ts` termina em `.then(tratarResposta)`. A função:
@@ -340,7 +344,7 @@ O componente é dirigido por props, não por herança nem por children:
 | `colunaExtra` | `{ rotulo, renderizar(linha) }` - coluna que pode renderizar qualquer coisa, independente de `acoes` |
 | `filtrosFacetados` | array de `{ chave, rotulo, ordem? }` - cada um vira um dropdown de múltipla escolha |
 
-Não existe prop de log - `BlocoLogAuditoria` é um componente IRMÃO (ver seção 9), colocado pela tela logo abaixo de `<GenericTable>`, não uma prop daqui (13-09-2026, achado do Claude Web: "log de auditoria não é estrutura de tabela").
+Não existe prop de log - `BlocoLogAuditoria` é um componente IRMÃO (ver seção 9), colocado pela tela logo abaixo de `<GenericTable>`, não uma prop daqui (13-09-2026, achado do Lucas: "log de auditoria não é estrutura de tabela").
 
 📌 **CRUD não acontece dentro da tabela.** Comentário: *"Criar/Alterar/Excluir NÃO acontecem mais aqui dentro (pedido do Lucas, 02-08-2026: 'tudo que faz parte do CRUD precisa de view própria') ... páginas de verdade, com sua própria URL, não formulário/`confirm()` embutido na tabela."*
 
@@ -361,7 +365,7 @@ Não existe prop de log - `BlocoLogAuditoria` é um componente IRMÃO (ver seç�
 
 ⚠️ **O filtro e a paginação são 100% client-side.** O comentário admite o limite: *"resolve 'achar uma linha no meio de 28' (Configurações já tem esse tanto), mas não resolve buscar num universo de milhares sem baixar tudo primeiro - isso exigiria busca no próprio backend (`LIMIT/OFFSET` + `WHERE`), fora do escopo desta rodada."*
 
-📌 **Segundo teste de prop, complementar ao "uma tela sem tabela viveria sem isto?" (14-09-2026, contra-prompt Claude Web).** O teste original só decide ENTRADA (o que pode virar prop daqui). Ele não decide SAÍDA - se algo que já mora aqui dentro deveria sair. Segundo teste, escrito no próprio `generic-table.tsx`: **"se uma tela que NÃO PODE usar este componente ainda assim precisa disto, então isto é um IRMÃO, não um miolo."** Foi esse critério que já tinha feito o `BlocoLogAuditoria` nascer (13-09-2026); aplicado de novo em 14-09-2026, tirou o rodapé de paginação (`components/pagination/rodape-paginacao.tsx`) e a barra de busca/faceta (`components/search/barra-filtros.tsx`) de dentro do `generic-table.tsx` - as bancadas do Campo de Testes (não podem usar `<GenericTable>`, risco de linha) precisavam dos dois mesmo assim, e reimplementavam à mão.
+📌 **Segundo teste de prop, complementar ao "uma tela sem tabela viveria sem isto?" (14-09-2026, revisão do Lucas).** O teste original só decide ENTRADA (o que pode virar prop daqui). Ele não decide SAÍDA - se algo que já mora aqui dentro deveria sair. Segundo teste, escrito no próprio `generic-table.tsx`: **"se uma tela que NÃO PODE usar este componente ainda assim precisa disto, então isto é um IRMÃO, não um miolo."** Foi esse critério que já tinha feito o `BlocoLogAuditoria` nascer (13-09-2026); aplicado de novo em 14-09-2026, tirou o rodapé de paginação (`components/pagination/rodape-paginacao.tsx`) e a barra de busca/faceta (`components/search/barra-filtros.tsx`) de dentro do `generic-table.tsx` - as bancadas do Campo de Testes (não podem usar `<GenericTable>`, risco de linha) precisavam dos dois mesmo assim, e reimplementavam à mão.
 
 ### Quem usa
 
@@ -382,6 +386,7 @@ Todas as telas `listar-*.tsx`: `views/1-usuario/listar-usuarios.tsx`, `views/2-p
 | `ficha-consulta.tsx` | casca das telas "Consultar" (`<FichaConsulta>` + `<SecaoFicha>` + `<CampoFicha>`) |
 | `campo-somente-leitura.tsx` | um dado exibido, não editável, com o mesmo visual do `<label>` dos formulários |
 | `modal-detalhe.tsx` | modal genérico de "detalhe explicado" (título, chave em fonte mono, badge, seções) |
+| `modal-ficha.tsx` | casca larga dos modais de Consultar/Alterar/Criar (backdrop + cartão + rodapé). **Três caminhos de fechar**, todos passando por `aoFechar`: o X, o clique no fundo escurecido (desligável com `fecharAoClicarFora={false}`, usado no wizard de Criar Campanha para um clique perdido não descartar várias etapas) e a tecla **Esc** (sempre ligada, é ação deliberada como o X). Limite conhecido: dois `ModalFicha` empilhados fecham juntos no Esc, cada um registra o próprio listener, por isso o Campo de Testes evita modal sobre modal |
 | `log-auditoria-painel.tsx` (ver `bloco-log-auditoria.tsx`) | painel "Ver log" - componente IRMÃO colocado pela tela logo abaixo de `<GenericTable>`, não uma prop dela |
 | `acao-linha.tsx` | ícone + texto + dica de hover de cada ação de linha (Alterar/Consultar/Excluir) - usado por `GenericTable` E pelas bancadas do Campo de Testes |
 | `badge-booleano.tsx` | `<span className="badge ...">Sim/Não</span>` - versão avulsa do que `GenericTable` já faz sozinha pra colunas booleanas |
@@ -516,6 +521,8 @@ Duas fontes de estilo, importadas nessa ordem em `main.tsx`:
 
 📌 **Tema escuro por atributo, não por classe utilitária.** `ControleTema` grava `data-tema` em `<html>`; `1-cores.css` tem três blocos de tokens (`:root` = claro, `:root[data-tema='escuro']`, e `@media (prefers-color-scheme: dark)` combinado com `[data-tema='sistema']`) que reagem sozinhos. Consequência prática documentada: *"nenhum componente além deste precisa saber que o tema mudou."* É por isso que o JSX usa classes semânticas próprias (`fundo-cartao`, `texto-forte`, `borda-padrao`, `texto-fraco`) misturadas com utilitários Tailwind - as semânticas são as que trocam de valor com o tema.
 
+📌 **Classes de componente que valem conhecer** (`4-componentes.css`): `.input-padrao` é o **único** estilo de campo de formulário do sistema (o padrão antigo `border borda-padrao rounded-md px-2 py-1 text-xs` foi extinto em 15-09-2026, zero ocorrências; `.borda-erro` combina com ele para a borda vermelha de campo inválido). `.btn-sucesso` (verde, espelha `.btn-danger`: fundo fraco em repouso, cor forte no hover) e `.badge-aviso` (âmbar, para "aguardando aprovação": o estado que exige ação do administrador ganhou cor própria em vez do cinza dos estados encerrados).
+
 ⚠️ O JSX mistura, na mesma linha, utilitários Tailwind e classes semânticas do CSS numerado. Funciona e é consistente, mas exige saber qual vocabulário usar em cada caso - não há regra escrita sobre isso em lugar nenhum do código.
 
 ---
@@ -538,7 +545,7 @@ Todo arquivo do Campo de Testes começa com o mesmo cabeçalho, literal:
 | Tela | Arquivo | O que faz |
 |---|---|---|
 | **T1 - Bancada do Pesquisador** | `views/campo-testes/bancada-pesquisador.tsx` | lista pesquisadores reais (`GET /perfil-pesquisador`), promove usuário → pesquisador, gerencia links acadêmicos; a seleção alimenta T2 |
-| **T2 - Bancada da Campanha** | `views/campo-testes/bancada-campanha.tsx` | campanhas (filtradas pelo pesquisador selecionado em T1), orçamento/cronograma, aprovar/rejeitar; a "campanha em foco" alimenta T3 |
+| **T2 - Bancada da Campanha** | `views/campo-testes/bancada-campanha.tsx` | campanhas (filtradas pelo pesquisador selecionado em T1), criar em nome de outro (wizard de 3 etapas), orçamento/cronograma, enviar para aprovação, aprovar/rejeitar, corrigir e reenviar; a "campanha em foco" alimenta T3 |
 | **T3 - Vida da Campanha Ativa** | `views/campo-testes/vida-campanha-ativa.tsx` | atualizações, comentários/endosso, seguir - sobre a campanha em foco de T2 |
 | **T4 - Registro de Chamadas** | `views/campo-testes/registro-chamadas.tsx` | gaveta recolhível presente em todas as telas acima; lista as requisições feitas, com método/caminho/status/tempo/corpo, e monta um `curl` |
 
@@ -557,11 +564,21 @@ Todo arquivo do Campo de Testes começa com o mesmo cabeçalho, literal:
 Consequências, todas registradas no código:
 - toda chamada usa a **sessão real do painel** (`auth.authFetch`), via o hook `use-chamada-registrada.ts`, que apenas acrescenta cronometragem e registro para T4;
 - "Promover Usuário → Pesquisador" e as ações de link acadêmico *"só têm efeito de verdade quando o usuário selecionado É a própria conta logada - pra qualquer outro, a RLS responde com erro de permissão"*. Isso está explicitado como **limitação aceita**, não bug;
-- criar campanha **saiu** de T2, porque a RLS exige `id_usuario = id_usuario_atual()`;
+- criar campanha saiu de T2 em 25-08-2026 (a RLS exige `id_usuario = id_usuario_atual()`) e **voltou em 15-09-2026** por `POST /campanha/:idUsuario` (criar em nome de outro, exige a permissão `campanha_criar_para_outro`), ver a subseção abaixo;
 - em T3, "Seguidores" virou um único toggle ("Eu sigo");
 - T4 perdeu a coluna "Ator".
 
 ⚠️ **T3 ainda não foi redesenhado** depois da remoção do Elenco. O comentário: *"T1 e T2 tiveram prioridade, T3 fica só 'destravado' por enquanto - o redesenho de verdade fica pra outra conversa."*
+
+### T2 e o ciclo de vida da campanha (15 a 21-09-2026)
+
+Regras no banco em `DOCUMENTACAO_BD.md` [05-K-2-B]; aqui o que a tela faz. Rótulos e badges vêm de `services/12-campanha/constants/status-campanha.constants.ts` (`rascunho` primeiro na ordem; `aguardando_aprovacao` em `badge-aviso`).
+
+- **Criar Campanha é um wizard de 3 etapas no mesmo modal** (`etapaCriarCampanha`): **Dados**, **Orçamento**, **Cronograma**. A campanha é criada no primeiro "Próximo" (`POST`, nasce `rascunho`); ao voltar e avançar de novo faz `PATCH`, nunca um segundo `POST`. O último botão é **"Enviar para aprovação"** (`POST /campanha/:id/enviar`); fechar pelo X ou Esc deixa o rascunho salvo. As datas respeitam a config (`min` na data de início, duração entre `prazo_minimo_campanha_dias` e `prazo_maximo_campanha_dias`, meta mínima), e cada etapa mostra uma tabelinha de rótulo mais campo somente leitura (Meta e Soma atual em Orçamento, Mínimo de marcos e Marcos cadastrados em Cronograma), com `.borda-erro` quando não bate.
+- **`PainelOrcamentoCronograma`** (definido no próprio `bancada-campanha.tsx`) é compartilhado entre o wizard e Alterar Campanha. No wizard recebe `abaFixa` (mostra só uma aba) e `key={etapaCriarCampanha}`: sem o `key` o React reaproveita a instância e o `useState` inicial de `abaAtiva` não roda de novo, e a etapa Cronograma mostrava a tabela de Orçamento. Cada item tem as ações padrão (`AcaoLinha`: Alterar, Consultar, Excluir).
+- **Alterar Campanha** por status: **rascunho** e **rejeitada** com reenvios sobrando são editáveis, e o rodapé ganha **"Enviar para aprovação"** ou **"Corrigir e reenviar"** (grava o formulário antes de enviar, para não perder alteração). **Rejeitada** mostra no topo o histórico de rejeições, os reenvios restantes e o prazo (vêm de `GET /campanha/:id`: a listagem não traz esses campos). Rejeitada **esgotada** vira somente leitura, com a data em que será excluída. Nenhuma checagem de completude no cliente: o clique acontece e o erro do banco chega traduzido, em vez de um botão desabilitado sem explicação.
+- **Datas vencidas no envio:** aviso amarelo dentro do próprio modal (não um segundo modal) oferecendo "Começar agora, mantendo a duração" (`POST /campanha/:id/deslizar-datas` e depois enviar) ou escolher outras datas. Confirmação sempre explícita.
+- ⚠️ **Limite da bancada:** quem opera é o administrador, e `fn_valida_transicao_campanha` libera qualquer transição para quem tem `campanha_aprovar`. As travas de reenvio esgotado, prazo e pesquisador suspenso só valem para o **dono**, então T2 não consegue exercitá-las pela interface. O só leitura (que vale para todos) e a oferta de datas funcionam normalmente.
 
 ### Trabalha sobre dados reais, com uma trava explícita
 
@@ -701,7 +718,7 @@ Segunda forma de olhar pro mesmo dado da aba "Configurações" (CRUD cru, `11-co
 
 ### Dica de hover - dois contratos, um primitivo só (`components/layout/tooltip.tsx`)
 
-**Reescrito em 14-09-2026 (contra-prompt Claude Web).** Existem DOIS contratos diferentes no sistema, não três soluções pro mesmo problema:
+**Reescrito em 14-09-2026 (revisão do Lucas).** Existem DOIS contratos diferentes no sistema, não três soluções pro mesmo problema:
 
 1. **Dar nome visível a um controle** ("Alterar", "Encerrar sessão", "Saiba mais") → mecanismo unificado `.dica`/`<Dica>` - qualquer gatilho (botão, link, ícone avulso) que ganhe a classe `dica` no `className` pode soltar um `<Dica texto="..." />` dentro de si. Cobre o que antes eram DOIS mecanismos quase idênticos e duplicados: o `Tooltip` (ⓘ avulso) e o `.crud-tabela__acao-dica` (hover nos ícones de ação do `AcaoLinha`/`GenericTable`) - hoje o mesmo CSS (`.dica__bolha` em `4-componentes.css`), com modificadores `--baixo` (abre pra baixo) e `--curta` (`white-space: nowrap`, rótulo de 1 palavra).
 2. **Revelar um valor truncado/traduzido num elemento NÃO interativo** → `title` nativo continua sendo o certo. Sobrevive em exatamente 1 lugar no sistema: `matriz-papel-permissao.tsx`, `<td title={permissao.nome}>` - célula não clicável, não focável, valor cru.

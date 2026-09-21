@@ -55,7 +55,7 @@ interface GenericTableProps<T extends Linha> {
   colunas: Coluna<T>[];
   chavePrimaria: keyof T & string;
   listar: () => Promise<T[]>;
-  // `acoes` (14-09-2026, contra-prompt Claude Web - substitui o par antigo
+  // `acoes` (14-09-2026, revisão do Lucas - substitui o par antigo
   // `acoes: AcaoPadrao[]` + `aoAlterar`/`aoConsultar`/`aoExcluir` separados)
   // - "quais ações aparecem" e "quem trata cada ação" eram 2 fontes de
   // verdade independentes que podiam discordar em silêncio (Campanha e
@@ -91,12 +91,12 @@ function celulaValor(valor: unknown): ReactNode {
 // Ações nenhuma.
 //
 // O botão "Ver log" + painel de auditoria NÃO moram mais aqui (13-09-2026,
-// achado do Claude Web: "log de auditoria não é estrutura de tabela" -
+// achado do Lucas: "log de auditoria não é estrutura de tabela" -
 // virou `BlocoLogAuditoria`, componente irmão colocado pelas 8 telas que
 // precisam logo abaixo do `<GenericTable>`, não mais uma prop daqui).
 //
 // TESTE PRA QUALQUER PROP NOVA que alguém for tentado a adicionar aqui
-// (método do Claude Web, vale mais que a regra em abstrato): uma prop
+// (método do Lucas, vale mais que a regra em abstrato): uma prop
 // pertence a ESTE componente se uma tela que não é "do tipo dele" (uma
 // tela sem tabela nenhuma) conseguiria viver sem ela. `colunaExtra`/
 // `filtrosFacetados` passam nesse teste - são configuração de TABELA.
@@ -105,7 +105,7 @@ function celulaValor(valor: unknown): ReactNode {
 // embaixo de uma tabela. "Quantas telas já usam a prop" NÃO é o teste -
 // era usada por 8 das 10 telas e ainda assim não pertencia aqui.
 //
-// SEGUNDO TESTE, complementar (14-09-2026, contra-prompt Claude Web - o
+// SEGUNDO TESTE, complementar (14-09-2026, revisão do Lucas - o
 // teste acima só decide ENTRADA, não decide SAÍDA): se uma tela que NÃO
 // PODE usar este componente ainda assim precisa de algo que hoje mora
 // aqui dentro, isto é um IRMÃO, não um miolo - foi esse critério que fez

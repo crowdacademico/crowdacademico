@@ -33,6 +33,9 @@ export class UsuarioServiceFindOne {
     // cabeçalho/Minha Conta saberem a foto sem esperar outra requisição.
     const avatar = await this.resolverAvatar.executar(usuario.id_imagem_perfil);
 
-    return { ...UsuarioConverter.paraResponseDto(usuario), avatarUrl: avatar.url };
+    return {
+      ...UsuarioConverter.paraResponseDto(usuario),
+      avatarUrl: avatar.url,
+    };
   }
 }

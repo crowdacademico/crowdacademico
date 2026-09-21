@@ -24,7 +24,7 @@ Três módulos pequenos e parecidos entre si - todos seguem o mesmo formato (uma
 
 ## Grupo 4 - Núcleo da campanha (o mais importante do projeto)
 
-- ✅ **`12-campanha`** - CRUD completo: criar, listar, consultar, aprovar/rejeitar (fluxo de moderação), editar. É o módulo do qual praticamente tudo mais depende.
+- ✅ **`12-campanha`** - CRUD completo: criar, listar, consultar, aprovar/rejeitar (fluxo de moderação), editar. É o módulo do qual praticamente tudo mais depende. **21-09-2026, ciclo de vida completo:** a campanha nasce **Rascunho** e só entra na fila por `POST /campanha/:id/enviar`; a rejeitada é corrigida e reenviada no mesmo endpoint (máximo de reenvios e prazo por rejeição, configuráveis; esgotada, vira só leitura); `POST /campanha/:id/deslizar-datas` reagenda mantendo a duração; 4 jobs agendados no sistema (2 são deste módulo: expirar rascunho e expirar rejeitada). Regras no banco, ver `DOCUMENTACAO_BD.md` [05-K-2-B].
 - ✅ **`13-orcamento-campanha`** - itens de orçamento estruturado (categoria + valor), obrigatório pra aprovar uma campanha.
 - ✅ **`14-marco-cronograma`** - cronograma estruturado (marcos com data prevista), também obrigatório pra aprovar.
 - ✅ **`7-link-academico`** - links do pesquisador vinculados ao próprio perfil (Lattes, ORCID etc.), usando o catálogo do Grupo 1.
@@ -40,11 +40,11 @@ Três módulos pequenos e parecidos entre si - todos seguem o mesmo formato (uma
 
 - **`19-denuncia`** - denúncia de campanha ou perfil, usando o catálogo de motivos (Grupo 1).
 - **`20-solicitacao-encerramento`** - pedido de encerramento antecipado de campanha, com decisão do admin.
-- ✅ **`21-historico-rejeicao`** - histórico de rejeições de campanha, consulta pura (14-09-2026). `GET /historico-rejeicao?idCampanha=` (nome do admin já resolvido via join, mais recente primeiro) - sem tela própria, virou seção "Histórico de Rejeições" dentro de Consultar Campanha (admin real e T2 do Campo de Testes), escondida quando a campanha nunca foi rejeitada.
+- ✅ **`21-historico-rejeicao`** - histórico de rejeições de campanha, consulta pura (14-09-2026; desde 21-09-2026 sobrevive à exclusão da campanha e guarda dono e título, ver `DOCUMENTACAO_BD.md`). `GET /historico-rejeicao?idCampanha=` (nome do admin já resolvido via join, mais recente primeiro) - sem tela própria, virou seção "Histórico de Rejeições" dentro de Consultar Campanha (admin real e T2 do Campo de Testes), escondida quando a campanha nunca foi rejeitada.
 
 ## Grupo 7 - Comunicação
 
-- **`4-mail`** - envio de e-mail (verificação de conta, recuperação de senha, notificações). Hoje nada disso é enviado de verdade - é o único módulo que bloqueia outros dois RFs já prontos no banco (verificação de e-mail e recuperação de senha, ver `PENDENCIAS e correcoes.md`, item 6).
+- **`4-mail`** - envio de e-mail (verificação de conta, recuperação de senha, notificações, **e-mail de rejeição de campanha com reenvios restantes e data limite**: os dados já são devolvidos por `GET /campanha/:id`, falta só o módulo). Hoje nada disso é enviado de verdade - é o único módulo que bloqueia outros dois RFs já prontos no banco (verificação de e-mail e recuperação de senha, ver `PENDENCIAS e correcoes.md`, item 6).
 - **`26-notificacao`** - fila/histórico de notificações (o que já existe na tabela `notificacao`, expor pelo Nest).
 - ✅ **`5-termo-uso`** - versionamento de termos de uso e aceite pelo usuário. **(esta lista tinha ficado desatualizada aqui - o módulo já existia, 4 arquivos, conferido em 01-09-2026)**
 

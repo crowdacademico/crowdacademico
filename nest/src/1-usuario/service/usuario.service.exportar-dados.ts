@@ -44,6 +44,7 @@ export class UsuarioServiceExportarDados {
       contribuicoes,
       aceitesTermos,
       sessoes,
+      historicoRejeicoes,
     ] = await Promise.all([
       db
         .selectFrom('perfil_pesquisador')
@@ -120,6 +121,20 @@ export class UsuarioServiceExportarDados {
         .where('origem', '=', 'login')
         .orderBy('criado_em', 'desc')
         .execute(),
+      // Nunca seleciona id_admin: quem rejeitou é dado do administrador, não do
+      // titular. Sobrevive à exclusão da campanha (sem FK, ver 01), então
+      // inclui rejeições de campanhas que já foram apagadas.
+      db
+        .selectFrom('historico_rejeicao')
+        .select([
+          'id_campanha',
+          'titulo_campanha',
+          'justificativa',
+          'rejeitado_em',
+        ])
+        .where('id_usuario_dono', '=', idUsuario)
+        .orderBy('rejeitado_em', 'desc')
+        .execute(),
     ]);
 
     // Satélites de campanha (orçamento/cronograma/atualizações) buscados
@@ -193,6 +208,7 @@ export class UsuarioServiceExportarDados {
       'contribuicoes',
       'aceites_termos',
       'sessoes',
+      'historico_rejeicoes',
       perfil && linhasScore.length > 0 ? 'score' : null,
     ].filter((secao): secao is string => secao !== null);
 
@@ -283,6 +299,12 @@ export class UsuarioServiceExportarDados {
         aceitoEm: a.aceito_em,
       })),
       sessoes: sessoes.map((s) => ({ logadoEm: s.criado_em, ip: s.ip })),
+      historicoRejeicoes: historicoRejeicoes.map((h) => ({
+        idCampanha: h.id_campanha,
+        tituloCampanha: h.titulo_campanha,
+        justificativa: h.justificativa,
+        rejeitadoEm: h.rejeitado_em,
+      })),
     };
   }
 }

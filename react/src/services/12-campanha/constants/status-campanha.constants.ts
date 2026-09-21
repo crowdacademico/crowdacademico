@@ -5,6 +5,7 @@
 // (`ordem`) a mostrar as opções numa sequência que faz sentido de
 // fluxo, não embaralhada.
 export type StatusCampanha =
+  | 'rascunho'
   | 'aguardando_aprovacao'
   | 'ativo'
   | 'sucesso'
@@ -14,6 +15,7 @@ export type StatusCampanha =
   | 'encerrado_moderacao';
 
 export const ORDEM_STATUS_CAMPANHA: StatusCampanha[] = [
+  'rascunho',
   'aguardando_aprovacao',
   'ativo',
   'sucesso',
@@ -24,6 +26,7 @@ export const ORDEM_STATUS_CAMPANHA: StatusCampanha[] = [
 ];
 
 export const ROTULO_STATUS_CAMPANHA: Record<StatusCampanha, string> = {
+  rascunho: 'Rascunho',
   aguardando_aprovacao: 'Aguardando aprovação',
   ativo: 'Ativo',
   sucesso: 'Sucesso',
@@ -33,8 +36,14 @@ export const ROTULO_STATUS_CAMPANHA: Record<StatusCampanha, string> = {
   encerrado_moderacao: 'Encerrado (moderação)',
 };
 
+// `aguardando_aprovacao` saiu de 'badge-neutro' pra 'badge-aviso' em
+// 20-09-2026: o estado que EXIGE ação do administrador tinha a mesma cor
+// cinza de `nao_atingido`/`encerrado`, que são estados mortos. Agora a fila
+// de aprovação tem sinal visual próprio, e o cinza fica pro `rascunho`, que
+// é o estado que de fato ainda não é nada.
 const CLASSE_BADGE_STATUS_CAMPANHA: Record<StatusCampanha, string> = {
-  aguardando_aprovacao: 'badge-neutro',
+  rascunho: 'badge-neutro',
+  aguardando_aprovacao: 'badge-aviso',
   ativo: 'badge-sucesso',
   sucesso: 'badge-sucesso',
   nao_atingido: 'badge-neutro',

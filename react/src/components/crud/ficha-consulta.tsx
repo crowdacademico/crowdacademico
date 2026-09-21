@@ -22,7 +22,7 @@
 // em modal-usuario.tsx (ModalAlterarUsuario); este componente só garante o
 // espaço pra isso caber.
 //
-// NOTA (13-09-2026, achado do Claude Web): `largura` aqui é um vocabulário
+// NOTA (13-09-2026, achado do Lucas): `largura` aqui é um vocabulário
 // PRÓPRIO e independente - `CartaoFormulario` só tem 'media' hoje (perdeu
 // 'larga' no mesmo achado, sem consumidor), e `ModalFicha` nem tem prop de
 // largura (é sempre max-w-5xl fixo). Não confundir um com o outro por

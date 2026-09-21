@@ -1030,7 +1030,7 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado, a
     }
   };
 
-  // Aviso de "alteração não salva" (13-09-2026, achado do Claude Web: o
+  // Aviso de "alteração não salva" (13-09-2026, achado do Lucas: o
   // modal fecha por 3 caminhos - X, clique no fundo escurecido, botão
   // Cancelar - e todos os 3 já passam por `fechar()` abaixo; a página
   // antiga que este modal substituiu tinha esse aviso, o modal nunca

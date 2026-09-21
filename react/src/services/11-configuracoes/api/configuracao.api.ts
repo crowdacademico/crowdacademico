@@ -2,6 +2,7 @@ import { API_BASE_URL } from '../../constant/constants/api.constants';
 import { tratarResposta } from '../../constant/api/http.util';
 import type { AuthFetch } from '../../3-auth/type/auth.type';
 import type { ResultadoPaginado } from '../../constant/type/paginacao.type';
+import { desembrulharPaginado } from '../../constant/type/paginacao.type';
 import type {
   ConfiguracaoRequestCreate,
   ConfiguracaoRequestUpdate,
@@ -16,7 +17,7 @@ export const configuracaoApi = {
   listar: (authFetch: AuthFetch): Promise<ConfiguracaoResponse[]> =>
     authFetch('/configuracoes')
       .then(tratarResposta<ResultadoPaginado<ConfiguracaoResponse>>)
-      .then((resposta) => resposta.dados),
+      .then(desembrulharPaginado('configurações')),
   // Sem authFetch de propósito: pol_config_select (04_rls_policies.sql) já
   // libera as configurações globais (id_usuario IS NULL) pra qualquer um,
   // logado ou não - é o que sustenta useConfiguracoes() em página pública
@@ -24,7 +25,7 @@ export const configuracaoApi = {
   buscarPublicas: (): Promise<ConfiguracaoResponse[]> =>
     fetch(`${API_BASE_URL}/configuracoes`)
       .then(tratarResposta<ResultadoPaginado<ConfiguracaoResponse>>)
-      .then((resposta) => resposta.dados),
+      .then(desembrulharPaginado('configurações')),
   buscar: (authFetch: AuthFetch, id: number | string): Promise<ConfiguracaoResponse> =>
     authFetch(`/configuracoes/${id}`).then(tratarResposta<ConfiguracaoResponse>),
   criar: (authFetch: AuthFetch, dados: ConfiguracaoRequestCreate): Promise<ConfiguracaoResponse> =>

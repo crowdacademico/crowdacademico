@@ -56,6 +56,8 @@ export class CampanhaServiceRejeitar {
       .insertInto('historico_rejeicao')
       .values({
         id_campanha: id,
+        id_usuario_dono: linha.id_usuario,
+        titulo_campanha: linha.titulo,
         id_admin: idAdmin,
         justificativa: dto.justificativa ?? null,
       })
