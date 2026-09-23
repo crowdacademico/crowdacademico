@@ -141,6 +141,27 @@
   --cor-texto-aviso: var(--color-amber-600);
   --cor-fundo-info: var(--color-blue-100);
   --cor-texto-info: var(--color-blue-600);
+  /* --cor-texto-sobre-cor (23-09-2026, achado numa revisão: 7 usos de
+     var(--color-white) cru em 4-componentes.css, todos texto em cima de
+     uma superfície colorida SÓLIDA - .btn-primary, .btn-danger:hover,
+     .btn-sucesso:hover, .btn-dev, a bolha de dica). Fica de fora dos 2
+     blocos de tema, de propósito: o verde da marca, o vermelho de perigo
+     e o roxo de dev continuam a MESMA cor sólida no tema escuro, então o
+     texto por cima continua branco - inverter pra preto no escuro
+     quebraria o contraste. Mesmo espírito de --cor-dev-* (acima), que
+     também não tem bloco de tema. */
+  --cor-texto-sobre-cor: var(--color-white);
+  /* --cor-fundo-erro-forte/--cor-fundo-sucesso-forte (23-09-2026) - fundo
+     SÓLIDO no hover de um botão que em repouso usa o pastel
+     (--cor-fundo-erro/--cor-fundo-sucesso, acima). Precisam de override
+     no escuro, diferente de --cor-texto-sobre-cor: aqui o valor claro
+     (600) é ESCURECIDO pro tom 700 no tema escuro (não clareado), porque
+     o botão continua carregando --cor-texto-sobre-cor (branco) por cima -
+     clarear quebraria o contraste. Reusar --cor-texto-erro/--cor-texto-
+     sucesso seria errado: no escuro eles valem um vermelho/verde CLARO
+     (pensado pra texto sobre fundo escuro, não pra ser fundo). */
+  --cor-fundo-erro-forte: var(--color-red-600);
+  --cor-fundo-sucesso-forte: var(--color-emerald-600);
 
   /* Tokens de "ferramenta dev" (12-09-2026, achado do Lucas: era a ÚNICA
      cor do sistema referenciada direto por `--color-purple-*` cru nos
@@ -213,6 +234,8 @@
   --cor-texto-aviso: #fbbf24;
   --cor-fundo-info: rgba(37, 99, 235, 0.18);
   --cor-texto-info: #60a5fa;
+  --cor-fundo-erro-forte: #b91c1c; /* red-700 - escurece, não clareia (ver comentário em :root) */
+  --cor-fundo-sucesso-forte: #047857; /* emerald-700 */
 }
 
 @media (prefers-color-scheme: dark) {
@@ -245,6 +268,8 @@
     --cor-texto-aviso: #fbbf24;
     --cor-fundo-info: rgba(37, 99, 235, 0.18);
     --cor-texto-info: #60a5fa;
+    --cor-fundo-erro-forte: #b91c1c;
+    --cor-fundo-sucesso-forte: #047857;
   }
 }
 
@@ -378,8 +403,30 @@
     background-color: var(--cor-fundo-erro);
   }
 
+  /* Hover pastel de sucesso (23-09-2026) - mesmo espírito de
+     .hover-fundo-sutil/.hover-fundo-marca-escura (acima): matriz-papel-
+     permissao.tsx usava hover:bg-emerald-100 cru pra célula com permissão
+     concedida. */
+  .hover-fundo-sucesso:hover {
+    background-color: var(--cor-fundo-sucesso);
+  }
+
   .texto-erro {
     color: var(--cor-texto-erro);
+  }
+
+  /* Utilitários pra JSX compor com Tailwind, mesmo espírito de .fundo-erro/
+     .texto-erro acima (23-09-2026, ver os tokens em :root pro porquê). */
+  .fundo-erro-forte {
+    background-color: var(--cor-fundo-erro-forte);
+  }
+
+  .fundo-sucesso-forte {
+    background-color: var(--cor-fundo-sucesso-forte);
+  }
+
+  .texto-sobre-cor {
+    color: var(--cor-texto-sobre-cor);
   }
 
   /* Par de .texto-erro, mesmo papel de .hover-texto-forte pra

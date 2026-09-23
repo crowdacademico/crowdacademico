@@ -1808,6 +1808,53 @@ FOR EACH ROW
 EXECUTE FUNCTION public.fn_valida_data_marco_cronograma();
 
 -- ----------------------------------------------------------------------------
+-- Função:     fn_valida_data_inicio_contra_marcos
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-K-2]
+-- Regra:      ADICIONADA (23-09-2026) - a trigger acima só vigia a porta do
+--             marco (INSERT/UPDATE em marco_cronograma), nunca disparava por
+--             escrita em campanha. Um PATCH comum mudando data_inicio pra
+--             frente deixava, sem erro nenhum, marcos anteriores ao novo
+--             início - exatamente o estado que fn_valida_data_marco_cronograma
+--             proíbe do outro lado. deslizar_datas_campanha() (05, [05-K-2])
+--             não sofre disso, porque ela move os marcos manualmente antes de
+--             mover a campanha; este buraco era só no PATCH direto. Mesmo
+--             ERRCODE 90008 da trigger irmã: é a mesma regra de negócio, só
+--             vista pelo lado da campanha.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_valida_data_inicio_contra_marcos()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+    IF NEW.data_inicio IS DISTINCT FROM OLD.data_inicio
+       AND EXISTS (
+           SELECT 1 FROM marco_cronograma
+           WHERE id_campanha = NEW.id_campanha AND data_prevista < NEW.data_inicio
+       )
+    THEN
+        RAISE EXCEPTION 'Existem marcos do cronograma com data anterior à nova data de início.'
+            USING ERRCODE = '90008';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_campanha_valida_data_inicio_contra_marcos
+-- Tabela:    campanha
+-- Momento:   BEFORE UPDATE (só quando data_inicio muda)
+-- Função:    fn_valida_data_inicio_contra_marcos()
+-- Bloco:     [05-K-2]
+-- Regra:     Impede reagendar data_inicio pra depois da data de algum marco já
+--            cadastrado. WHEN evita rodar a consulta em todo UPDATE de campanha.
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_campanha_valida_data_inicio_contra_marcos ON campanha;
+CREATE TRIGGER trg_campanha_valida_data_inicio_contra_marcos
+BEFORE UPDATE ON campanha
+FOR EACH ROW
+WHEN (NEW.data_inicio IS DISTINCT FROM OLD.data_inicio)
+EXECUTE FUNCTION public.fn_valida_data_inicio_contra_marcos();
+
+-- ----------------------------------------------------------------------------
 -- Função:     fn_valida_limite_max_marco_cronograma
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-2]

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { BadgeBooleano } from '../../components/crud/badge-booleano';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
@@ -117,6 +117,8 @@ export function ModalAlterarTipoLink({ auth, tipo, aoFechar, aoAtualizado }: Mod
   useAvisoAlteracaoNaoSalva(sujo);
 
   const regexInvalida = regex.length > 0 && !regexValida(regex);
+  // aria-describedby (23-09-2026): ver modal-criar-area-conhecimento.tsx.
+  const idMensagemRegex = useId();
   const nenhumEscopoMarcado = !permitePerfil && !permiteAtualizacao && !permiteRecompensa;
 
   const fechar = () => {
@@ -210,14 +212,15 @@ export function ModalAlterarTipoLink({ auth, tipo, aoFechar, aoAtualizado }: Mod
             value={regex}
             onChange={(evento) => setRegex(evento.target.value)}
             aria-invalid={regexInvalida}
+            aria-describedby={idMensagemRegex}
             className={'input-padrao font-mono' + (regexInvalida ? ' borda-erro' : '')}
           />
           {regexInvalida ? (
-            <p className="text-xs texto-erro font-semibold mt-1">
+            <p id={idMensagemRegex} className="text-xs texto-erro font-semibold mt-1">
               Isto não é uma expressão regular válida.
             </p>
           ) : (
-            <p className="text-xs texto-fraco mt-1">
+            <p id={idMensagemRegex} className="text-xs texto-fraco mt-1">
               Complemento opcional aos domínios acima. Deixe em branco quando o domínio já for
               suficiente.
             </p>

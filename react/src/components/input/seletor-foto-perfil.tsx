@@ -218,7 +218,7 @@ export function SeletorFotoPerfil({
             onClick={aoRemover}
             disabled={enviando}
             aria-label="Remover foto de perfil"
-            className="dica absolute -bottom-1 -left-1 w-7 h-7 rounded-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center text-xs border-2 border-white shadow transition-colors disabled:opacity-60"
+            className="dica absolute -bottom-1 -left-1 w-7 h-7 rounded-full fundo-erro-forte hover:opacity-80 texto-sobre-cor flex items-center justify-center text-xs border-2 border-white shadow transition-colors disabled:opacity-60"
           >
             <i className="fa-solid fa-trash"></i>
             <Dica texto="Remover foto de perfil" curta />

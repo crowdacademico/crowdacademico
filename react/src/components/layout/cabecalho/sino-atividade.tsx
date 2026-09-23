@@ -90,7 +90,7 @@ export function SinoAtividade({ auth }: SinoAtividadeProps) {
       >
         <i className="fa-solid fa-bell"></i>
         {naoLidos > 0 && (
-          <span className="absolute -top-1 -right-1 min-w-[1.1rem] h-[1.1rem] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+          <span className="absolute -top-1 -right-1 min-w-[1.1rem] h-[1.1rem] px-1 rounded-full fundo-erro-forte texto-sobre-cor text-[10px] font-bold flex items-center justify-center">
             {naoLidos > 9 ? '9+' : naoLidos}
           </span>
         )}

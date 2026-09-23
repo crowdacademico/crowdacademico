@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
@@ -42,6 +42,11 @@ export function ModalCriarAreaConhecimento({ auth, aoFechar, aoCriado }: ModalCr
   }, []);
 
   const codigoInvalido = codigoCnpq.length > 0 && !REGEX_CODIGO_CNPQ.test(codigoCnpq);
+  // `aria-describedby` (23-09-2026): liga o campo ao <p> que explica o
+  // porquê, seja o erro ou a ajuda - sem isso o leitor de tela anunciava
+  // "inválido" sem dizer o que fazer. useId() evita colidir se 2 modais
+  // iguais abrirem ao mesmo tempo.
+  const idMensagemCodigo = useId();
 
   const aoCriar = async () => {
     if (codigoInvalido || codigoCnpq.trim() === '' || nome.trim() === '') return;
@@ -98,15 +103,16 @@ export function ModalCriarAreaConhecimento({ auth, aoFechar, aoCriado }: ModalCr
           required
           placeholder="ex.: 1.03.00.00"
           aria-invalid={codigoInvalido}
+          aria-describedby={idMensagemCodigo}
           className={'input-padrao font-mono' + (codigoInvalido ? ' borda-erro' : '')}
         />
         {codigoInvalido ? (
-          <p className="text-xs texto-erro font-semibold mt-1">
+          <p id={idMensagemCodigo} className="text-xs texto-erro font-semibold mt-1">
             Precisa seguir o formato do CNPq: 4 níveis de 2 dígitos separados por ponto (ex.:
             "1.03.00.00").
           </p>
         ) : (
-          <p className="text-xs texto-fraco mt-1">
+          <p id={idMensagemCodigo} className="text-xs texto-fraco mt-1">
             Formato de classificação utilizado pelo CNPq - grande área.área.subárea.especialidade.
           </p>
         )}

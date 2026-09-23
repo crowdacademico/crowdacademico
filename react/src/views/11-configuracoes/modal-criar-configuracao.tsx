@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
@@ -37,6 +37,8 @@ export function ModalCriarConfiguracao({ auth, aoFechar, aoCriado }: ModalCriarC
   const [enviando, setEnviando] = useState(false);
 
   const chaveInvalida = chave.length > 0 && !REGEX_CHAVE_VALIDA.test(chave);
+  // aria-describedby (23-09-2026): ver modal-criar-area-conhecimento.tsx.
+  const idMensagemChave = useId();
 
   const aoCriar = async () => {
     if (tipo === '' || chaveInvalida || chave.trim() === '') return;
@@ -108,14 +110,15 @@ export function ModalCriarConfiguracao({ auth, aoFechar, aoCriado }: ModalCriarC
           required
           placeholder="ex.: limite_campanhas_simultaneas"
           aria-invalid={chaveInvalida}
+          aria-describedby={idMensagemChave}
           className={'input-padrao font-mono' + (chaveInvalida ? ' borda-erro' : '')}
         />
         {chaveInvalida ? (
-          <p className="text-xs texto-erro font-semibold mt-1">
+          <p id={idMensagemChave} className="text-xs texto-erro font-semibold mt-1">
             Só letras minúsculas, números e underscore - sem espaço, maiúscula ou acento.
           </p>
         ) : (
-          <p className="text-xs texto-fraco mt-1">
+          <p id={idMensagemChave} className="text-xs texto-fraco mt-1">
             Minúsculas, números e underscore (_), sem espaço nem acento.
           </p>
         )}

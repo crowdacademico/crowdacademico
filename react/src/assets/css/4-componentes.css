@@ -34,7 +34,7 @@
 
   .btn-primary {
     background-color: var(--cor-marca);
-    color: var(--color-white);
+    color: var(--cor-texto-sobre-cor);
   }
 
   .btn-primary:hover:not(:disabled) {
@@ -59,8 +59,8 @@
   }
 
   .btn-danger:hover:not(:disabled) {
-    background-color: var(--color-red-600);
-    color: var(--color-white);
+    background-color: var(--cor-fundo-erro-forte);
+    color: var(--cor-texto-sobre-cor);
   }
 
   /* .btn-sucesso (15-09-2026, pedido do Lucas: "+ adicionar" de item de
@@ -74,8 +74,8 @@
   }
 
   .btn-sucesso:hover:not(:disabled) {
-    background-color: var(--color-emerald-600);
-    color: var(--color-white);
+    background-color: var(--cor-fundo-sucesso-forte);
+    color: var(--cor-texto-sobre-cor);
   }
 
   /* .btn-info (azulado, só pra "Alterar" em GenericTable) removido
@@ -192,7 +192,7 @@
     gap: 0.4rem;
     padding: 0.5rem 0.9rem;
     background-color: var(--cor-dev-texto);
-    color: var(--color-white);
+    color: var(--cor-texto-sobre-cor);
     font-family: var(--font-mono-dev);
     font-weight: 700;
     font-size: var(--font-size-xs);
@@ -228,7 +228,7 @@
     left: 50%;
     transform: translateX(-50%);
     background-color: var(--cor-escura);
-    color: var(--color-white);
+    color: var(--cor-texto-sobre-cor);
     padding: 0.5rem 0.75rem;
     border-radius: var(--radius-sm);
     font-size: var(--font-size-xs);

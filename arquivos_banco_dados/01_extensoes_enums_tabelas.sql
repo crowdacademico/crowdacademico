@@ -970,7 +970,23 @@ CREATE TABLE score_rotulo (
     atualizado_em TIMESTAMPTZ    DEFAULT NOW(),
 
     CONSTRAINT "PK_SCORE_ROTULO" PRIMARY KEY (id_rotulo),
-    CONSTRAINT "CK_SCORE_ROTULO_FAIXA" CHECK (score_minimo < score_maximo)
+    CONSTRAINT "CK_SCORE_ROTULO_FAIXA" CHECK (score_minimo < score_maximo),
+    -- ADICIONADA (23-09-2026): sem isto, nada impedia duas faixas ATIVAS se
+    -- sobreporem (ex.: erro de digitação no score_maximo de uma faixa) - e
+    -- recalcular_score_pesquisador (05) faz SELECT ... LIMIT 1 sem ORDER BY
+    -- sobre elas, então o mesmo score podia cair num rótulo diferente em
+    -- execuções diferentes. int4range/GiST tem suporte nativo pro operador
+    -- &&, não precisa da extensão btree_gist (essa só seria necessária pra
+    -- incluir uma coluna ESCALAR na exclusão, tipo "ativo WITH =" - aqui o
+    -- WHERE abaixo já resolve isso sem precisar da coluna dentro do índice).
+    -- DEFERRABLE INITIALLY DEFERRED: a checagem só roda no COMMIT da
+    -- transação, não a cada UPDATE - editar duas faixas adjacentes numa
+    -- mesma transação (ex.: encolher uma e alargar a vizinha) passa por um
+    -- estado intermediário sobreposto sem ser recusado no meio do caminho.
+    CONSTRAINT "EX_SCORE_ROTULO_SEM_SOBREPOSICAO"
+        EXCLUDE USING gist (int4range(score_minimo, score_maximo, '[]') WITH &&)
+        WHERE (ativo = TRUE)
+        DEFERRABLE INITIALLY DEFERRED
 );
 
 CREATE TABLE score_pesquisador (

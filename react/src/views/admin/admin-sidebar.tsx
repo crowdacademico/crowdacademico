@@ -101,21 +101,22 @@ export function AdminSidebar({ aberto, aoFechar }: AdminSidebarProps) {
             )}
             {grupo.itens.map((item) =>
               item.desabilitado ? (
-                // Wrapper com `.dica` (não o <button> em si) - um <button
-                // disabled> não dispara :hover em CSS (o navegador tira o
-                // elemento do fluxo normal de eventos de mouse), então a
-                // dica precisa morar num elemento vizinho não-desabilitado
-                // pra funcionar (14-09-2026, revisão do Lucas).
-                <span key={item.rotulo} className="dica block">
-                  <button
-                    type="button"
-                    disabled
-                    className="admin-sidebar__item admin-sidebar__item--desabilitado"
-                  >
-                    <span>{item.rotulo}</span>
-                  </button>
+                // `aria-disabled`, não `disabled` (23-09-2026, revisão do Lucas):
+                // um <button disabled> sai do fluxo de foco por teclado - Tab
+                // nunca alcança o item, então a dica "Ainda não implementado"
+                // só chegava a quem passa o mouse. Com aria-disabled o botão
+                // continua focável (o CSS de --desabilitado já era por classe,
+                // não por :disabled) e a dica passa a aparecer também no Tab.
+                // Sem onClick neste botão, não há nada pra bloquear na prática.
+                <button
+                  key={item.rotulo}
+                  type="button"
+                  aria-disabled="true"
+                  className="dica admin-sidebar__item admin-sidebar__item--desabilitado"
+                >
+                  <span>{item.rotulo}</span>
                   <Dica texto="Ainda não implementado" curta />
-                </span>
+                </button>
               ) : (
                 <NavLink
                   key={item.caminho}

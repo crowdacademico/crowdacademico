@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
@@ -55,6 +55,9 @@ export function ModalCriarTipoLink({ auth, aoFechar, aoCriado }: ModalCriarTipoL
 
   const codigoInvalido = codigo.length > 0 && !REGEX_CODIGO_VALIDO.test(codigo);
   const regexInvalida = regex.length > 0 && !regexValida(regex);
+  // aria-describedby (23-09-2026): ver modal-criar-area-conhecimento.tsx.
+  const idMensagemCodigo = useId();
+  const idMensagemRegex = useId();
   const nenhumEscopoMarcado = !permitePerfil && !permiteAtualizacao && !permiteRecompensa;
 
   const aoCriar = async () => {
@@ -120,14 +123,15 @@ export function ModalCriarTipoLink({ auth, aoFechar, aoCriado }: ModalCriarTipoL
           maxLength={LIMITE_CODIGO_TIPO_LINK}
           placeholder="ex.: SITE_INSTITUCIONAL"
           aria-invalid={codigoInvalido}
+          aria-describedby={idMensagemCodigo}
           className={'input-padrao font-mono' + (codigoInvalido ? ' borda-erro' : '')}
         />
         {codigoInvalido ? (
-          <p className="text-xs texto-erro font-semibold mt-1">
+          <p id={idMensagemCodigo} className="text-xs texto-erro font-semibold mt-1">
             Só letras maiúsculas, números e underscore - sem espaço, minúscula ou acento.
           </p>
         ) : (
-          <p className="text-xs texto-fraco mt-1">
+          <p id={idMensagemCodigo} className="text-xs texto-fraco mt-1">
             Identificador interno, nunca editável depois de criado (usado por regras internas
             do sistema - ex.: reconhecer Lattes/ORCID no cálculo de score).
           </p>
@@ -171,14 +175,15 @@ export function ModalCriarTipoLink({ auth, aoFechar, aoCriado }: ModalCriarTipoL
           onChange={(evento) => setRegex(evento.target.value)}
           placeholder="ex.: ^https?://(www\.)?github\.com/[\w\-]+/?$"
           aria-invalid={regexInvalida}
+          aria-describedby={idMensagemRegex}
           className={'input-padrao font-mono' + (regexInvalida ? ' borda-erro' : '')}
         />
         {regexInvalida ? (
-          <p className="text-xs texto-erro font-semibold mt-1">
+          <p id={idMensagemRegex} className="text-xs texto-erro font-semibold mt-1">
             Isto não é uma expressão regular válida.
           </p>
         ) : (
-          <p className="text-xs texto-fraco mt-1">
+          <p id={idMensagemRegex} className="text-xs texto-fraco mt-1">
             Complemento opcional aos domínios acima - use só quando o domínio sozinho não
             garante uma URL válida. Deixe em branco quando o domínio já for suficiente.
           </p>

@@ -64,13 +64,13 @@ export function Header({ auth }: HeaderProps) {
           </button>
           <button
             onClick={placeholder('Seção "Como Funciona" simulada para o protótipo.')}
-            className="text-slate-600 hover:text-dark font-medium h-full flex items-center transition-colors"
+            className="texto-padrao hover:text-dark font-medium h-full flex items-center transition-colors"
           >
             Como Funciona
           </button>
           <button
             onClick={placeholder('Seção "Transparência LGPD" simulada para o protótipo.')}
-            className="text-slate-600 hover:text-dark font-medium h-full flex items-center transition-colors"
+            className="texto-padrao hover:text-dark font-medium h-full flex items-center transition-colors"
           >
             Transparência LGPD
           </button>

@@ -7,9 +7,10 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
+import { orcamentoCampanhaApi } from '../../services/13-orcamento-campanha/api/orcamento-campanha.api';
+import { marcoCronogramaApi } from '../../services/14-marco-cronograma/api/marco-cronograma.api';
 import { areaConhecimentoApi } from '../../services/8-area-conhecimento/api/area-conhecimento.api';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
-import { tratarResposta } from '../../services/constant/api/http.util';
 import { useFecharAoClicarFora } from '../../services/constant/hook/use-fechar-ao-clicar-fora';
 import { LIMITE_SUGESTOES_COMBOBOX } from '../../services/campo-testes/constants/campo-testes.constants';
 import { useChamadaRegistrada } from '../../services/campo-testes/hook/use-chamada-registrada';
@@ -35,29 +36,18 @@ import { LIMIAR_FILTRO } from '../../components/search/limiar-filtro.constants';
 import { RegistroChamadas } from './registro-chamadas';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { CampanhaResponse, HistoricoRejeicaoResponse } from '../../services/12-campanha/type/campanha.type';
+import type { OrcamentoCampanhaResponse } from '../../services/13-orcamento-campanha/type/orcamento-campanha.type';
+import type { MarcoCronogramaResponse } from '../../services/14-marco-cronograma/type/marco-cronograma.type';
 import type { StatusCampanha } from '../../services/12-campanha/constants/status-campanha.constants';
 import type { AreaConhecimentoResponse } from '../../services/8-area-conhecimento/type/area-conhecimento.type';
 import type { UsuarioResponse } from '../../services/1-usuario/type/usuario.type';
 import type { PerfilPesquisadorResponse } from '../../services/6-perfil-pesquisador/type/perfil-pesquisador.type';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 
-// `orcamento-campanha`/`marco-cronograma` (módulo 22-contribuicao/módulo
-// próprio) não têm type/ formal ainda - só o Campo de Testes fala com
-// eles, via `authFetch` cru + `tratarResposta<T>`. Shape inferido do
-// próprio uso real aqui.
-interface ItemOrcamento {
-  idOrcamento: number;
-  idCampanha: number;
-  categoria: string;
-  valor: number;
-}
-
-interface MarcoCronograma {
-  idMarco: number;
-  idCampanha: number;
-  titulo: string;
-  dataPrevista: string;
-}
+// Tipos e API extraídos pra services/13-orcamento-campanha e
+// services/14-marco-cronograma (23-09-2026) - antes viviam aqui como
+// interface local com shape inferido do próprio uso; ver o comentário
+// completo no arquivo de tipo de cada módulo.
 
 interface FormEdicaoCampanha {
   titulo: string;
@@ -79,7 +69,7 @@ interface PainelOrcamentoCronogramaProps {
   // que devolve os dados toda vez que este painel (re)carrega, pra quem
   // usa (o modal de Alterar) manter as CONTAGENS em dia sem duplicar
   // adicionar/remover - só o Alterar passa isto, o Consultar não precisa.
-  aoCarregar?: (orcamento: ItemOrcamento[], cronograma: MarcoCronograma[]) => void;
+  aoCarregar?: (orcamento: OrcamentoCampanhaResponse[], cronograma: MarcoCronogramaResponse[]) => void;
   // `abaFixa` (15-09-2026, pedido do Lucas: Orçamento e Cronograma como
   // 2 MODAIS/etapas diferentes dentro de Criar Campanha, não uma tabela só
   // com abas) - quando presente, trava a aba nesse valor e esconde os 2
@@ -138,8 +128,8 @@ function PainelOrcamentoCronograma({
   minimoMarcosCronograma,
 }: PainelOrcamentoCronogramaProps) {
   const chamarERegistrar = useChamadaRegistrada(auth);
-  const [orcamento, setOrcamento] = useState<ItemOrcamento[]>([]);
-  const [cronograma, setCronograma] = useState<MarcoCronograma[]>([]);
+  const [orcamento, setOrcamento] = useState<OrcamentoCampanhaResponse[]>([]);
+  const [cronograma, setCronograma] = useState<MarcoCronogramaResponse[]>([]);
   const [abaAtiva, setAbaAtiva] = useState<'orcamento' | 'cronograma'>(abaFixa ?? 'orcamento');
   const [novoItemOrcamento, setNovoItemOrcamento] = useState({ categoria: '', valor: '' });
   const [novoMarco, setNovoMarco] = useState({ titulo: '', dataPrevista: '' });
@@ -153,10 +143,10 @@ function PainelOrcamentoCronograma({
   // mas o Lucas pediu os 3 ícones por consistência com o resto do painel.
   const [idOrcamentoEditando, setIdOrcamentoEditando] = useState<number | null>(null);
   const [formEdicaoOrcamento, setFormEdicaoOrcamento] = useState({ categoria: '', valor: '' });
-  const [itemOrcamentoConsultado, setItemOrcamentoConsultado] = useState<ItemOrcamento | null>(null);
+  const [itemOrcamentoConsultado, setItemOrcamentoConsultado] = useState<OrcamentoCampanhaResponse | null>(null);
   const [idMarcoEditando, setIdMarcoEditando] = useState<number | null>(null);
   const [formEdicaoMarco, setFormEdicaoMarco] = useState({ titulo: '', dataPrevista: '' });
-  const [marcoConsultado, setMarcoConsultado] = useState<MarcoCronograma | null>(null);
+  const [marcoConsultado, setMarcoConsultado] = useState<MarcoCronogramaResponse | null>(null);
 
   // Ref (não dependência de `carregar`) - `aoCarregar` recebe uma arrow
   // function nova a cada render do modal pai; colocar ela nas dependências
@@ -171,8 +161,8 @@ function PainelOrcamentoCronograma({
 
   const carregar = useCallback(() => {
     Promise.all([
-      auth.authFetch(`/orcamento-campanha?idCampanha=${idCampanha}`).then(tratarResposta<ItemOrcamento[]>).catch(() => []),
-      auth.authFetch(`/marco-cronograma?idCampanha=${idCampanha}`).then(tratarResposta<MarcoCronograma[]>).catch(() => []),
+      orcamentoCampanhaApi.listar(auth.authFetch, idCampanha).catch(() => []),
+      marcoCronogramaApi.listar(auth.authFetch, idCampanha).catch(() => []),
     ])
       .then(([dadosOrcamento, dadosCronograma]) => {
         setOrcamento(dadosOrcamento);
@@ -202,7 +192,7 @@ function PainelOrcamentoCronograma({
     carregar();
   };
 
-  const iniciarEdicaoOrcamento = (item: ItemOrcamento) => {
+  const iniciarEdicaoOrcamento = (item: OrcamentoCampanhaResponse) => {
     setIdOrcamentoEditando(item.idOrcamento);
     setFormEdicaoOrcamento({ categoria: item.categoria, valor: String(item.valor) });
   };
@@ -232,7 +222,7 @@ function PainelOrcamentoCronograma({
     carregar();
   };
 
-  const iniciarEdicaoMarco = (marco: MarcoCronograma) => {
+  const iniciarEdicaoMarco = (marco: MarcoCronogramaResponse) => {
     setIdMarcoEditando(marco.idMarco);
     setFormEdicaoMarco({ titulo: marco.titulo, dataPrevista: marco.dataPrevista.slice(0, 10) });
   };
@@ -592,8 +582,8 @@ export function BancadaCampanha({ auth }: PropsPagina) {
   // componente que já desenha Orçamento/Cronograma editável logo acima no
   // modal) - mantém as duas listas sincronizadas sem duplicar
   // adicionar/remover.
-  const [checklistOrcamento, setChecklistOrcamento] = useState<ItemOrcamento[]>([]);
-  const [checklistCronograma, setChecklistCronograma] = useState<MarcoCronograma[]>([]);
+  const [checklistOrcamento, setChecklistOrcamento] = useState<OrcamentoCampanhaResponse[]>([]);
+  const [checklistCronograma, setChecklistCronograma] = useState<MarcoCronogramaResponse[]>([]);
   const [justificativaRejeicaoEdicao, setJustificativaRejeicaoEdicao] = useState('');
   const [aprovando, setAprovando] = useState(false);
   const [rejeitando, setRejeitando] = useState(false);

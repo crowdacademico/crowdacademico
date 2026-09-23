@@ -195,7 +195,7 @@ export function MatrizPapelPermissao({ authFetch }: MatrizPapelPermissaoProps) {
                           className={
                             'dica w-7 h-7 rounded-md font-bold transition-colors disabled:opacity-50 disabled:cursor-wait ' +
                             (temPermissao
-                              ? 'texto-sucesso hover:bg-emerald-100'
+                              ? 'texto-sucesso hover-fundo-sucesso'
                               : 'texto-fraco opacity-50 hover-fundo-sutil hover:opacity-100')
                           }
                         >
