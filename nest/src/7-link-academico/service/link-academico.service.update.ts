@@ -33,8 +33,7 @@ export class LinkAcademicoServiceUpdate {
       return await distinguir404ou403(
         this.database.getDb(),
         'link_academico',
-        'id_link_academico',
-        id,
+        { id_link_academico: id },
         'Link acadêmico não encontrado.',
         'Sem permissão para editar este link.',
       );

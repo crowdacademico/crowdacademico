@@ -134,7 +134,7 @@ export const GRUPOS_MENU_ADMIN: GrupoMenuAdmin[] = [
           // lado direito do título em vez do ícone normal de item - ver
           // admin-sidebar.tsx.
           titulo: 'CAMPO DE TESTES',
-          dica: 'Este submenu é para testar campos que só seriam possíveis na área pública. O que for criado aqui não aparece para o usuário final.',
+          dica: 'Este submenu é para testar campos que só seriam possíveis na área pública e para ferramentas de desenvolvimento, como o Guia de Estilo. Nada daqui aparece para o usuário final.',
           itens: itensDoGrupo('CAMPO_TESTES'),
         },
       ]

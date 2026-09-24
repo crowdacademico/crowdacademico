@@ -23,6 +23,7 @@ interface LinhaMetricasDashboard {
   // log_auditoria.id_log) - convertido pra number em `executar()` abaixo.
   valor_total_arrecadado: string;
   denuncias_pendentes: number;
+  campanhas_para_revisao_score: number;
 }
 
 @Injectable()
@@ -69,6 +70,7 @@ export class DashboardServiceResumo {
       campanhasAguardandoAprovacao: metricas.campanhas_aguardando_aprovacao,
       valorTotalArrecadado: Number(metricas.valor_total_arrecadado),
       denunciasPendentes: metricas.denuncias_pendentes,
+      campanhasParaRevisaoScore: metricas.campanhas_para_revisao_score,
     };
   }
 }

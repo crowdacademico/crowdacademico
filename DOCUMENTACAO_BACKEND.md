@@ -357,7 +357,7 @@ if (!linha) {
 }
 ```
 
-📌 **Extraído em `commons/database/distinguir-404-ou-403.util.ts` (23-09-2026).** O bloco acima virou `return await distinguir404ou403(db, 'campanha', 'id_campanha', id, 'Campanha não encontrada.', 'Sem permissão para aprovar esta campanha.')` em 23 services (`update`/`remove` dos módulos 5, 7 a 15). A mensagem 403 é passada inteira (não um template), porque alguns chamadores misturam permissão com regra de negócio. Usa `sql.table`/`sql.ref` (`SELECT 1 ... LIMIT 1`) em vez do query builder tipado, cujos genéricos não resolvem com tabela abstrata. O `return` explícito é o que faz o TypeScript estreitar `linha` depois do `if`. **Ficaram de fora de propósito (4):** `usuario.service.update` (o SELECT tem `deletado = false` extra), `campanha.service.enviar` (lê `status` para escolher entre 2 mensagens 403), `papel-permissao.service.remove` e `usuario-papel.service.remove` (chave composta, o helper é de coluna única). Os que já leem a linha antes do write (`comentario.update`, `termo-uso.ativar/excluir`) já discriminam sem SELECT extra e não precisam dele.
+📌 **`commons/database/distinguir-404-ou-403.util.ts`.** O bloco acima (UPDATE/DELETE que afetou 0 linhas: "não existe" ou "a RLS bloqueou") vive num helper, `return await distinguir404ou403(db, 'campanha', { id_campanha: id }, 'Campanha não encontrada.', 'Sem permissão para aprovar esta campanha.')`, usado em 26 services. O 3º argumento é um **objeto de filtro**: chave simples (`{ id_campanha: id }`), composta (`{ id_usuario, id_papel }`) ou chave mais condição (`{ id_usuario, deletado: false }`); todas as colunas entram com `AND`. A mensagem 403 é passada inteira (não um template), porque alguns chamadores misturam permissão com regra de negócio. Usa `sql.table`/`sql.ref` (`SELECT 1 ... LIMIT 1`) em vez do query builder tipado, cujos genéricos não resolvem com tabela abstrata. O `return` explícito é o que faz o TypeScript estreitar `linha` depois do `if`. Fica fora de propósito `campanha.service.enviar` (lê `status` para escolher entre 2 mensagens 403). Os que já leem a linha antes do write (`comentario.update`, `termo-uso.ativar/excluir`) já discriminam sem SELECT extra.
 
 📌 **Por que o `SELECT` extra funciona como discriminador.** Só funciona quando a policy de `SELECT` daquela tabela é mais permissiva que a de escrita - o que é o caso geral aqui (`pol_arquivo_select` é `USING (TRUE)`, `pol_campanha_select` libera por status). Onde a policy de `SELECT` for tão restritiva quanto a de escrita, esse padrão devolve 404 para um caso que na verdade é 403; nesse cenário, 404 é a resposta mais honesta mesmo (a linha, para aquele usuário, de fato não existe).
 
@@ -413,7 +413,7 @@ O converter (`perfil-pesquisador.converter.ts`) recebe `cpfDecifrado` como **par
 
 📌 **`P0001` vira 400, e o comentário justifica:** sem ERRCODE customizado não dá para saber se é permissão, validação ou conflito - 400 com a mensagem original é o mais honesto possível. Sobram nessa situação as funções fora de `05` que ainda não ganharam ERRCODE próprio (ex.: `excluir_conta_usuario()`, em `03_funcoes_seguranca.sql`).
 
-📌 **O corpo de erro passou a trazer `codigo` (24-09-2026).** O filtro devolve `{ statusCode, codigo, message, dados? }`: `statusCode` e `message` como sempre (nada no React quebra), `codigo` é o SQLSTATE (`9xxxx` de regra de negócio ou os nativos `23505`, `23503`, `23502`, `23514`, `42501`, `P0001`), e `dados` só aparece se o `RAISE` mandou um `DETAIL` em JSON. O nome da constraint violada não vai no corpo. O front pode distinguir a regra pelo código estável em vez do texto da mensagem. Contrato completo em `DOCUMENTACAO_ERRCODE.md`, seção "Contrato do corpo de erro da API".
+📌 **O corpo de erro traz `codigo`.** O filtro devolve `{ statusCode, codigo, message, dados? }`: `statusCode` e `message` como sempre, `codigo` é o SQLSTATE (`9xxxx` de regra de negócio ou os nativos `23505`, `23503`, `23502`, `23514`, `42501`, `P0001`), e `dados` só aparece se o `RAISE` mandou um `DETAIL` em JSON. O nome da constraint violada não vai no corpo. O front distingue a regra pelo código estável em vez do texto da mensagem. Contrato completo em `DOCUMENTACAO_ERRCODE.md`, seção "Contrato do corpo de erro da API".
 
 ### 5.2 Quando tratar localmente em vez de deixar cair no filtro
 
@@ -471,7 +471,7 @@ Padrões de validação em uso: `@IsIn(CONSTANTE_DO_DB_TYPES)` para ENUMs; `@IsO
 - **`Pick<>` em vez da entity inteira** (`usuario.converter.ts`): os services nunca selecionam `senha_hash`, então exigir a entity completa quebraria a tipagem de toda query que usa `USUARIO_COLUNAS_SELECT`. O `Pick` aceita qualquer objeto que tenha *pelo menos* os campos usados.
 - **Converter que recebe uma dependência** (`arquivo.converter.ts`): recebe `armazenamento` como parâmetro porque montar a URL pública exige saber `STORAGE_PUBLIC_BASE_URL`. Continua sem estado próprio - só delega a montagem para quem já tem a configuração carregada. É o único converter assim.
 
-📌 **`CampanhaRequestCreate.modelo` aceita só `'all-or-nothing'` (24-09-2026).** O V7 promete os dois modelos, mas as regras do flexível (repasse independente da meta, aviso ao doador, encerramento) dependem do módulo de pagamento e do checkout; aceitar `'flexivel'` hoje criaria uma campanha sem nenhuma dessas proteções. O valor continua no enum e no seed. Quando o módulo de pagamento existir, o DTO volta a aceitar os dois. Ver `PENDENCIAS e correcoes.md`, entrada sobre o modelo flexível.
+📌 **`CampanhaRequestCreate.modelo` aceita só `'all-or-nothing'`.** O V7 prevê os dois modelos, mas as regras do flexível (repasse independente da meta, aviso ao doador, encerramento) dependem do módulo de pagamento e do checkout; aceitar `'flexivel'` criaria uma campanha sem nenhuma dessas proteções. O valor continua no enum e no seed, e o DTO volta a aceitar os dois quando o módulo de pagamento existir.
 
 ### 6.3 Constante de colunas por módulo
 
@@ -607,7 +607,7 @@ export class CampanhaServiceCreate {
 
 Pra comparação de escala: 96 chamadas por dia é um volume desprezível perto do tráfego normal de qualquer aplicação com usuário de verdade - não chega perto de nenhum limite de uso do plano gratuito do Supabase (que é sobre espaço em disco e certas cotas de API, não sobre "número de consultas simples" como esta). Resumindo: nem o intervalo de 15 minutos, nem a query em si, representam risco de lentidão pro sistema.
 
-**Os 5 jobs agendados do sistema** (atualizado em 24-09-2026). Todos seguem o molde acima (`PG_POOL` direto, função `SECURITY DEFINER`, `@Cron`):
+**Os 5 jobs agendados do sistema.** Todos seguem o molde acima (`PG_POOL` direto, função `SECURITY DEFINER`, `@Cron`):
 
 | Job | Cron | Função SQL | O que faz |
 |---|---|---|---|
@@ -622,10 +622,12 @@ Os 5 têm `try/catch` com `logger.error` (incluindo o nome do job). Motivo: o `@
 **Ciclo de vida da campanha no Nest** (ver `DOCUMENTACAO_BD.md`, [05-K-2-B], para as regras; o Nest só expõe os endpoints e deixa o banco decidir):
 - `POST /campanha/:id/enviar` (`CampanhaServiceEnviar`): `rascunho -> aguardando_aprovacao` e o reenvio `rejeitado -> aguardando_aprovacao`, no mesmo endpoint. Não repete nenhuma validação: completude, prazo, reenvios, suspensão e limite de simultâneas saem do banco com ERRCODE próprio (90009 a 90011, 90015, 91025, 91026, 92009, 91018).
 - `POST /campanha/:id/deslizar-datas` (`CampanhaServiceDeslizarDatas`, corpo `{ novaDataInicio }`): chama `deslizar_datas_campanha()`, que move início, fim e marcos do cronograma mantendo a duração.
-- `GET /campanha/:id` (`CampanhaServiceFindOne`) preenche `reenviosRestantes`, `prazoReenvioAte` e `somenteLeitura` só para campanha `rejeitado`, para a tela e o futuro e-mail de rejeição. Desde 24-09-2026 **não refaz mais a conta em TypeScript**: faz um único `SELECT * FROM public.fn_campanha_situacao_reenvio(id)`, a mesma função que a trigger de transição e o job de expirar rejeitadas usam (`DOCUMENTACAO_BD.md`, `[05-K-2-B]`). Por ser `SECURITY DEFINER`, os números saem exatos para quem já enxerga a campanha, mesmo sem acesso à tabela de histórico (antes, quem só tinha `relatorio_visualizar` via zero rejeições). **Depende da função existir no banco:** quem sobe o Nest com um banco sem ela recebe 500 ao consultar uma campanha rejeitada.
+- `GET /campanha/:id` (`CampanhaServiceFindOne`) preenche `reenviosRestantes`, `prazoReenvioAte` e `somenteLeitura` só para campanha `rejeitado`, para a tela e o futuro e-mail de rejeição. Não refaz a conta em TypeScript: faz um único `SELECT * FROM public.fn_campanha_situacao_reenvio(id)`, a mesma função que a trigger de transição e o job de expirar rejeitadas usam (`DOCUMENTACAO_BD.md`, `[05-K-2-B]`). Por ser `SECURITY DEFINER`, os números saem exatos para quem já enxerga a campanha, mesmo sem acesso à tabela de histórico.
 - `DELETE /campanha/:id` só funciona em `rascunho` (a RLS decide).
 - `GET /historico-rejeicao?idCampanha=` devolve também `idUsuarioDono` e `tituloCampanha`, e continua funcionando para campanha já excluída (o histórico não tem FK para `campanha`).
 - `GET /usuario/eu/exportar-dados` inclui `historicoRejeicoes` das campanhas do titular, sem `id_admin` (quem rejeitou é dado do administrador).
+
+**Nome e sinal de score em listar e consultar campanha.** `GET /campanha` e `GET /campanha/:id` usam `selecionarCampanhaComNomes()` (`12-campanha/service/campanha-com-nomes.util.ts`): as colunas da campanha mais `nomePesquisador` e `nomeArea` (`LEFT JOIN` com `usuario` e `area_conhecimento`, porque a RLS pode esconder o usuário e a campanha continua aparecendo, só sem o nome) e `precisaRevisaoScore`. O front não precisa baixar o catálogo de usuários e de áreas para resolver dois nomes. `precisaRevisaoScore` é `fn_precisa_revisao_score` só para campanha `aguardando_aprovacao` **e** para quem tem `campanha_aprovar`; nos outros casos é `null` (o dono não fica sabendo do sinal). As outras respostas (criar, editar, aprovar...) devolvem os três campos como `null`.
 
 **`CampanhaServiceFindAll`** - filtros que **não** são autorização:
 > *"`pol_campanha_select` já decide QUAIS linhas aparecem (status público, ou dono, ou `relatorio_visualizar`) - os filtros abaixo são só conveniência de navegação por cima do que a RLS já deixou visível, nunca uma segunda camada de autorização."*
@@ -892,14 +894,14 @@ Módulos pequenos, mas reais e em uso pelo painel administrativo.
 Somente leitura - a escrita em `log_auditoria` é feita por trigger genérica no banco (letra `L` do `DOCUMENTACAO_BD.md`), nunca pelo Nest.
 
 - **`GET /log-auditoria?tabela=<x>`** - histórico de **uma** tabela, para o botão "Ver log" no fundo de cada listagem. Faz `leftJoin` com `usuario` para trazer `nome_responsavel` junto. Usa `paginar()` com `TAMANHO_PADRAO_LOG = 20` próprio. 📌 O comentário explica por que 20 e não o teto de 500: *aqui não é um teto "para nunca baixar tudo por acidente", é o tamanho de verdade do painel* - mostrar as últimas 20 alterações é o caso de uso real.
-- **Retenção (24-09-2026), sem endpoint:** `LogAuditoriaServiceLimpar` é um `@Cron` diário (3h) que só chama `limpar_log_auditoria()` (ver `DOCUMENTACAO_BD.md` `[05-L]`); toda a regra, inclusive o prazo lido de `configuracoes`, mora no banco. Se o Nest ficar dormindo (hospedagem gratuita), o job roda na próxima vez que acordar; o efeito de atrasar é só a tabela guardar mais um pouco.
+- **Retenção do log, sem endpoint:** `LogAuditoriaServiceLimpar` é um `@Cron` diário (3h) que só chama `limpar_log_auditoria()` (ver `DOCUMENTACAO_BD.md` `[05-L]`); toda a regra, inclusive o prazo lido de `configuracoes`, mora no banco. Se o Nest ficar dormindo (hospedagem gratuita), o job roda na próxima vez que acordar; atrasar só faz a tabela guardar mais um pouco.
 - **`GET /log-auditoria/minha-atividade`** - últimas 10 ações do **próprio** usuário, de **qualquer** tabela, para o sino "Atividade recente" do cabeçalho. Não recebe `tabela`; é *"o que EU fiz"*, não *"o histórico de uma tabela"*.
 
 📌 **A autorização é 100% RLS, como sempre.** `pol_log_auditoria_select` exige `tem_permissao('log_visualizar')`; sem ela a query volta **vazia**, não dá erro. O comentário registra a dependência: a policy foi ampliada para deixar qualquer usuário ver as próprias linhas - sem essa mudança aplicada no banco, `minha-atividade` volta vazia para quem não é admin, mesmo sendo autor das próprias linhas.
 
 ### `28-dashboard` (4 arquivos, 1 endpoint)
 
-**`GET /dashboard/resumo`** - uma única chamada a `SELECT * FROM contar_metricas_dashboard()` (bloco `[03-M]`).
+**`GET /dashboard/resumo`** - uma única chamada a `SELECT * FROM contar_metricas_dashboard()` (bloco `[03-M]`). Inclui `campanhasParaRevisaoScore`: campanhas na fila de aprovação cujo pesquisador está abaixo do score mínimo, só um sinal para o admin.
 
 📌 **Por que uma função `SECURITY DEFINER` em vez de contar no Nest.** A função bypassa deliberadamente a RLS restritiva de `usuario`/`configuracoes`. Sem isso, o total mostrado **dependeria de quem está logado** - errado para um card que diz "total do sistema".
 
@@ -926,7 +928,7 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 
 **`GET /health`** (`app/health.controller.ts`) - roda `SELECT 1` no `Pool`. Sem login. 📌 Usa **`@Inject(PG_POOL)` direto**, não `DatabaseService.getDb()`, e o comentário justifica: um health check tem que testar a **fundação** (o Pool abre conexão e roda query?), não passar pela maquinaria de transação por requisição, que é sobre RLS/auditoria de quem fez o quê - irrelevante aqui, ninguém "fez" nada. 📌 Devolve **503**, não 500, quando o banco está fora: a aplicação está de pé, é a **dependência** que caiu - e é essa distinção que a plataforma de deploy usa para decidir entre reiniciar o processo (500, bug de código) ou só esperar (503, o banco volta sozinho).
 
-**`GET /` foi removido em 24-09-2026.** Era o "hello world" do scaffold do Nest (`AppController`/`AppService`, mais `app.controller.spec.ts` e `test/app.e2e-spec.ts`, que só testavam esse código de gerador). O `AppModule` ficou só com o `HealthController`. `jest` está com `passWithNoTests`, porque hoje não há nenhum teste de unidade no `nest/`.
+**Não existe `GET /` de exemplo.** O `AppModule` só tem o `HealthController`; o "hello world" do scaffold do Nest (`AppController`/`AppService` e os testes de gerador) não faz parte do projeto. `jest` está com `passWithNoTests`, porque não há teste de unidade no `nest/`.
 
 ### Variáveis de ambiente (nomes; valores nunca vão para o repositório)
 
@@ -969,7 +971,7 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 
 ## 13. Inventário de rotas HTTP
 
-119 handlers (recontados em 24-09-2026, depois de remover o `GET /` de exemplo). `AUTH` = a rota tem `@UseGuards(RequireAuthGuard)`; `pub` = sem ele (o que **não** significa "sem proteção" - significa que quem protege é a RLS, e que anônimo é um caso legítimo).
+119 handlers. `AUTH` = a rota tem `@UseGuards(RequireAuthGuard)`; `pub` = sem ele (o que **não** significa "sem proteção": significa que quem protege é a RLS, e que anônimo é um caso legítimo).
 
 | | Método | Rota |
 |---|---|---|
@@ -1054,7 +1056,7 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | AUTH | GET | `/log-auditoria` · `/log-auditoria/minha-atividade` |
 | AUTH | GET | `/dashboard/resumo` |
 
-📌 **Rotas administrativas: a decisão antiga ("sem guard, só o admin chega na tela") foi revertida em 24-09-2026 para 5 rotas.** O argumento não se sustentava: a API não sabe de tela nenhuma, qualquer requisição direta (um `curl`) chega na rota sem passar pelo `/admin`, e o `JwtAuthGuard` global deixa passar como anônima a requisição sem cabeçalho `Authorization` (é o comportamento documentado nele). Sobrava a RLS, e a RLS de `usuario` é permissiva de propósito (o login precisa achar o usuário pelo e-mail antes de existir alguém autenticado). Resultado medido: um visitante anônimo obtinha os e-mails de todos os usuários (`GET /usuario`, `GET /usuario/:id`), quem é administrador (`GET /usuario-papel`, `GET /usuario-papel/:idUsuario`) e métricas internas (`GET /dashboard/resumo`). As 5 rotas agora têm `@UseGuards(RequireAuthGuard)`.
+📌 **Rotas administrativas têm `RequireAuthGuard`.** `GET /usuario`, `GET /usuario/:id`, `GET /usuario-papel`, `GET /usuario-papel/:idUsuario` e `GET /dashboard/resumo` exigem login. Não vale o argumento "só o admin chega na tela": a API não sabe de tela nenhuma, qualquer requisição direta (um `curl`) chega na rota sem passar pelo `/admin`, e o `JwtAuthGuard` global deixa passar como anônima a requisição sem cabeçalho `Authorization` (comportamento documentado nele). Sobra a RLS, e a RLS de `usuario` é permissiva de propósito (o login precisa achar o usuário pelo e-mail antes de existir alguém autenticado); sem o guard, um visitante anônimo obteria os e-mails de todos os usuários, quem é administrador e as métricas internas.
 
 ⚠️ **O que o guard NÃO resolve (decisão pendente):** ele só impede o anônimo. Qualquer usuário **logado** (um pesquisador, por exemplo) ainda enxerga a lista completa de usuários, com e-mail, porque `pol_usuario_select` permite. Exigir também uma permissão administrativa (por exemplo `usuario_visualizar_sensivel` na lista, e `relatorio_visualizar` dentro de `contar_metricas_dashboard()`, que é `SECURITY DEFINER` e bypassa a RLS) é o passo seguinte. A solução grande, para depois: o login passa a usar uma função `SECURITY DEFINER` que devolve só o necessário para autenticar a partir do e-mail, e `pol_usuario_select` pode então ser fechada para anônimo no próprio banco. **Continuam sem guard, e certas:** `GET /usuario/:id/logins` e `GET /usuario/:id/termos-aceitos` (a RLS de `log_auditoria` e de `usuario_termo` só devolve linha do próprio usuário ou de quem tem a permissão) e os catálogos públicos (área, motivo, tipo de link).
 
@@ -1161,7 +1163,7 @@ Reunidos de todas as seções, para servir de checklist.
 7. ⚠️ **`db.types.ts` é escrito à mão**, com `npm run db:codegen` disponível e nunca rodado. Divergência com o `.sql` só aparece em runtime. (§2.6)
 8. ⚠️ **`perfil-pesquisador.service.create` não diferencia as duas `UNIQUE`** que disparam `23505` - 409 genérico onde caberia mensagem específica. (§5.2)
 9. ⚠️ **`ComentarioServiceCreate` calcula `ordem_endosso` no Nest**, com corrida teórica aceita. (§7.4, e item 747)
-10. ✅ **`GET /dashboard/resumo` agora exige login (24-09-2026)**, mas ainda bypassa a RLS (`SECURITY DEFINER`) e não checa permissão: qualquer usuário logado lê as métricas. Checar `relatorio_visualizar` dentro de `contar_metricas_dashboard()` está pendente. (§13)
+10. ✅ **`GET /dashboard/resumo` exige login**, mas ainda bypassa a RLS (`SECURITY DEFINER`) e não checa permissão: qualquer usuário logado lê as métricas. Checar `relatorio_visualizar` dentro de `contar_metricas_dashboard()` está pendente. (§13)
 11. ⚠️ **`notificacoesPendentes` não vai começar a funcionar sozinho** quando `26-notificacao` existir - há precedente comentado no código. (§10)
 12. ⚠️ **Não existe `nest/.env.example`**, apesar de o código referenciá-lo em mensagem de erro. (§8.8)
 13. ⚠️ **`ARQUIVO - Dica de Arquitetura.md` cita Cloudflare R2** como provedor; o atual é Supabase Storage. O desenho continua válido, só o nome mudou. (§8.1)

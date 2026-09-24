@@ -28,11 +28,11 @@ function lerTemaSalvo(): Tema {
 // sobre dark mode) - mesmo padrão do ControleFonte: useState(lerTemaSalvo)
 // como inicializador preguiçoso (evita flash do tema errado no primeiro
 // render) + useEffect que aplica e persiste. A diferença é ONDE aplica:
-// data-tema é um ATRIBUTO em <html>, não uma custom property - 1-cores.css
-// tem os 3 blocos de tokens (:root = claro, :root[data-tema='escuro'],
-// @media(prefers-color-scheme:dark) + [data-tema='sistema']) que reagem a
-// esse atributo sozinhos, nenhum componente além deste precisa saber que
-// o tema mudou.
+// data-tema-efetivo é um ATRIBUTO em <html>, não uma custom property - 1-cores.css
+// tem 2 blocos de tokens (:root = claro, :root[data-tema-efetivo='escuro']) que
+// reagem a esse atributo sozinhos, nenhum componente além deste precisa saber
+// que o tema mudou. "sistema" é resolvido AQUI (matchMedia) para claro ou escuro,
+// e acompanha a mudança do sistema operacional; o CSS não conhece "sistema".
 // Ciclo claro → escuro → sistema → claro (pedido explícito do Lucas).
 //
 // Preferência POR CONTA - tentada em 10-08-2026 (usuario.tema_preferido no
@@ -45,8 +45,19 @@ export function ControleTema() {
   const [tema, setTema] = useState(lerTemaSalvo);
 
   useEffect(() => {
-    document.documentElement.dataset.tema = tema;
+    const raiz = document.documentElement;
+    const sistemaEscuro = window.matchMedia('(prefers-color-scheme: dark)');
+    const aplicar = () => {
+      raiz.dataset.temaEfetivo = tema === 'sistema' ? (sistemaEscuro.matches ? 'escuro' : 'claro') : tema;
+    };
+    raiz.dataset.tema = tema;
     localStorage.setItem(CHAVE_LOCALSTORAGE, tema);
+    aplicar();
+    if (tema !== 'sistema') {
+      return;
+    }
+    sistemaEscuro.addEventListener('change', aplicar);
+    return () => sistemaEscuro.removeEventListener('change', aplicar);
   }, [tema]);
 
   const proximoTema = () => {

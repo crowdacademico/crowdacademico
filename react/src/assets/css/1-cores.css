@@ -14,7 +14,10 @@
    documentado lá) - continua inteiro num lugar só em vez de
    fragmentado. Se um dia isso também precisar migrar pra cá, é decisão
    separada - avisar antes de mexer. */
-:root {
+/* [data-tema-local]: só o Guia de Estilo (Campo de Testes, só em desenvolvimento) usa, pra mostrar os dois
+   temas lado a lado na mesma tela. Mesmos valores, mesma fonte: o seletor extra não duplica nenhum token. */
+:root,
+[data-tema-local='claro'] {
   /* Alias das 4 cores da MARCA (13-09-2026, achado do Lucas numa
      auditoria: este arquivo afirmava "TODA cor do sistema", mas as 4 cores
      mais fundamentais do site - a verde de marca e as 3 de base - não
@@ -205,20 +208,15 @@
 }
 
 /* ========= TEMA ESCURO (09-08-2026) =========
-   components/layout/cabecalho/controle-tema.tsx escreve data-tema="claro"/"escuro"/
-   "sistema" em <html> (mesmo padrão do --escala-fonte, 3-base.css: lazy
-   initializer + localStorage['crowdacademico.tema'], pra não piscar no
-   primeiro render). Só redefine os MESMOS nomes de token já usados no
-   projeto inteiro - nenhum componente/CSS precisa saber que o tema
-   mudou, eles só leem var(--cor-texto-forte) etc. e o valor certo já
-   está lá. Dois blocos porque "sistema" precisa reagir a
-   prefers-color-scheme (media query), enquanto "escuro"/"claro" são
-   escolha explícita do usuário (atributo, sem media query) - duplicar
-   os valores aqui é mais simples e mais fácil de auditar do que
-   indexar um nível de variável extra.
-   "claro" não precisa de bloco próprio: é o valor do :root de cima, já é
-   o padrão do projeto inteiro. */
-:root[data-tema='escuro'] {
+   components/layout/cabecalho/controle-tema.tsx escolhe o tema ("claro", "escuro" ou "sistema", guardado em
+   localStorage['crowdacademico.tema']) e escreve em <html> o atributo data-tema-efetivo, que só vale "claro"
+   ou "escuro": quando a escolha é "sistema", o próprio controle resolve com matchMedia e acompanha a
+   mudança do sistema. Por isso o CSS tem UM bloco escuro só (até 24-09-2026 eram dois, o segundo com
+   @media (prefers-color-scheme) e os mesmos valores, e um token já ficou faltando numa das cópias). Só
+   redefine os MESMOS nomes de token do projeto inteiro: nenhum componente precisa saber que o tema mudou.
+   "claro" não precisa de bloco próprio: é o valor do :root de cima. */
+:root[data-tema-efetivo='escuro'],
+[data-tema-local='escuro'] {
   --cor-texto-forte: #f1f5f9;
   --cor-texto: #cbd5e1;
   --cor-texto-fraco: #94a3b8;
@@ -245,42 +243,6 @@
   --cor-texto-marca: #2fbf71; /* 6,14:1 sobre o cartão escuro */
   --cor-fundo-erro-forte: #b91c1c; /* red-700 - escurece, não clareia (ver comentário em :root) */
   --cor-fundo-sucesso-forte: #047857; /* emerald-700 */
-}
-
-@media (prefers-color-scheme: dark) {
-  :root[data-tema='sistema'] {
-    --cor-texto-forte: #f1f5f9;
-    --cor-texto: #cbd5e1;
-    --cor-texto-fraco: #94a3b8;
-    --cor-borda: #334155;
-    --cor-borda-forte: #475569;
-    --cor-fundo-sutil: #1e2836;
-
-    --cor-fundo-pagina: #0f172a;
-    --cor-fundo-cartao: #1e293b;
-    --cor-fundo-elevado: #263349;
-    --cor-fundo-hover: #29394f;
-
-    --cor-fundo-sucesso: rgba(16, 185, 129, 0.16);
-    --cor-texto-sucesso: #34d399;
-    --cor-fundo-erro: rgba(239, 68, 68, 0.16);
-    --cor-texto-erro: #f87171;
-    --cor-texto-erro-forte: #fca5a5;
-    /* CORRIGIDO (14-09-2026, achado na mesma auditoria que criou
-       --cor-borda-sucesso): --cor-borda-erro nunca tinha sido adicionada
-       aqui (só existia em :root e em [data-tema='escuro']) - quem usasse
-       tema "sistema" (não "escuro" explícito) caía de volta pro tom claro
-       (--color-red-500), sem o ajuste de legibilidade do escuro. */
-    --cor-borda-erro: #f87171;
-    --cor-borda-sucesso: #34d399;
-    --cor-fundo-aviso: rgba(217, 119, 6, 0.18);
-    --cor-texto-aviso: #fbbf24;
-    --cor-fundo-info: rgba(37, 99, 235, 0.18);
-    --cor-texto-info: #60a5fa;
-    --cor-texto-marca: #2fbf71; /* 6,14:1 sobre o cartão escuro */
-    --cor-fundo-erro-forte: #b91c1c;
-    --cor-fundo-sucesso-forte: #047857;
-  }
 }
 
 /* ========= UTILITÁRIOS DE COR =========

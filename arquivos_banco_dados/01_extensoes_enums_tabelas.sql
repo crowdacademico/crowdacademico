@@ -58,15 +58,10 @@ BEGIN
 END
 $$;
 
--- ADICIONADO (28-07-2026) - guarda de BYPASSRLS: não resolve sozinho o item 22 do
--- PENDENCIAS (ainda é preciso confirmar se o papel usado no SQL Editor do Supabase
--- tem BYPASSRLS antes do deploy), mas transforma uma falha silenciosa em uma parada
--- única e autoexplicativa. Sem esta guarda, rodar os arquivos 04-07 como um papel
--- sem BYPASSRLS (nem superusuário) produz dezenas de erros de "new row violates
--- row-level security policy" espalhados pelos INSERTs do 07 - 99 das 116 policies
--- são TO app_nestjs, então qualquer outro papel (dono da tabela incluído, por causa
--- do FORCE ROW LEVEL SECURITY do 04) fica bloqueado silenciosamente em quase tudo.
--- Com a guarda, o erro é um só, no início, e explica exatamente o que fazer.
+-- ADICIONADO (28-07-2026) - guarda de BYPASSRLS: não resolve sozinho o item 22 do PENDENCIAS (ainda
+-- é preciso confirmar se o papel usado no SQL Editor do Supabase tem BYPASSRLS antes do deploy),
+-- mas transforma uma falha silenciosa em uma parada única e autoexplicativa.
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [01-C001]
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -213,26 +208,9 @@ CREATE TABLE motivo_denuncia (
     CONSTRAINT "PK_MOTIVO_DENUNCIA" PRIMARY KEY (id_motivo)
 );
 
--- ATUALIZADA (24-08-2026, módulo 25-arquivo implementado - ver revisão de
--- arquitetura de upload B2/R2 e ATUALIZAR O SUPABASE.sql do mesmo dia):
--- duas mudanças pedidas na revisão:
--- 1. `url` (endereço completo) virou `chave` (só o caminho do objeto
---    dentro do bucket, ex. "publico/<uuid>.jpg"). A URL pública é montada
---    em RUNTIME por commons/storage, a partir de STORAGE_PUBLIC_BASE_URL
---    + esta coluna - trocar de domínio ou de provedor de armazenamento
---    (Backblaze B2 hoje, Cloudflare R2 amanhã, ambos falam o protocolo
---    S3) nunca mais precisa de UPDATE em massa aqui. UNIQUE porque o nome
---    é sempre gerado pelo backend (randomUUID em
---    arquivo.service.iniciar-upload.ts), nunca pelo cliente - colisão
---    indicaria bug, não uso normal.
--- 2. `id_usuario_upload` - a tabela não tinha dono. Sem isso não dava pra
---    responder "quem subiu este arquivo?", limitar quantos uploads uma
---    conta faz por hora, nem localizar o que uma conta banida enviou.
---    Sem FK inline de propósito: `usuario` só é criada MAIS ABAIXO neste
---    mesmo arquivo (e já referencia `arquivo` via FK_USUARIO_IMAGEM -
---    dependência circular entre as duas tabelas). A FK
---    FK_ARQUIVO_USUARIO_UPLOAD é adicionada por ALTER TABLE logo depois
---    que `usuario` existe (ver comentário lá).
+-- ATUALIZADA (24-08-2026, módulo 25-arquivo implementado - ver revisão de arquitetura de upload
+-- B2/R2 e ATUALIZAR O SUPABASE.sql do mesmo dia): duas mudanças pedidas na revisão: 1.
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [01-C002]
 CREATE TABLE arquivo (
     id_arquivo        SERIAL,
     chave             TEXT         NOT NULL,
@@ -343,6 +321,8 @@ CREATE TABLE configuracoes (
         OR (tipo = 'inteiro'  AND valor ~ '^[0-9]+$')
         OR (tipo = 'decimal'  AND valor ~ '^[0-9]+(\.[0-9]+)?$')
         OR (tipo = 'booleano' AND valor IN ('true', 'false'))),
+    -- Chave GLOBAL é contrato do sistema (24-09-2026): para "desligar" uma regra muda-se o valor, não se desativa a chave.
+    CONSTRAINT "CK_CONFIGURACOES_GLOBAL_ATIVA" CHECK (id_usuario IS NOT NULL OR ativo = TRUE),
     CONSTRAINT "FK_CONFIGURACOES_USUARIO" FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE SET NULL
 );
 
@@ -623,21 +603,9 @@ CREATE TABLE atualizacao_campanha (
     CONSTRAINT "CK_ATUALIZACAO_CAMPANHA_CONTEUDO_TAMANHO" CHECK (char_length(conteudo) <= 20000)
 );
 
--- ADICIONADO (31-07-2026, Alexia): orçamento estruturado da campanha (itens de gasto
--- com categoria + valor), inspirado na estrutura de campanha do Experiment.com
--- (pedido do time). Substitui a antiga prática de descrever o
--- orçamento só em texto livre dentro de campanha.descricao - aqui vira dado
--- estruturado, que dá pra somar, validar contra meta_financeira e renderizar
--- em gráfico de pizza na página da campanha (o cálculo do percentual de cada
--- fatia fica pra depois - SUM(valor)/meta_financeira*100 é feito na consulta,
--- não armazenado). RN: soma de todos os itens de uma campanha precisa bater
--- EXATAMENTE com campanha.meta_financeira, e a quantidade de itens fica entre
--- configuracoes.orcamento_min_itens e configuracoes.orcamento_max_itens - ambas
--- checadas no envio, na aprovação e na inserção, ver fn_valida_completude_campanha e
--- fn_valida_limite_max_orcamento_campanha (05, [05-K-2]). Congela junto com o
--- resto da campanha (mesma condição de status de fn_congela_regras_campanha),
--- porque mexer nos itens depois de aprovado quebraria a igualdade com uma
--- meta_financeira que já está congelada.
+-- ADICIONADO (31-07-2026, Alexia): orçamento estruturado da campanha (itens de gasto com categoria
+-- + valor), inspirado na estrutura de campanha do Experiment.com (pedido do time).
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [01-C003]
 CREATE TABLE orcamento_campanha (
     id_orcamento SERIAL,
     id_campanha  INT           NOT NULL,
@@ -655,20 +623,9 @@ CREATE TABLE orcamento_campanha (
     CONSTRAINT "CK_ORCAMENTO_CAMPANHA_DESCRICAO_TAMANHO" CHECK (descricao IS NULL OR char_length(descricao) <= 20000)
 );
 
--- ADICIONADO (31-07-2026, Alexia): cronograma estruturado da campanha (marcos com
--- título, descrição e data prevista), mesmo pedido/origem de orcamento_campanha
--- acima. Diferente de atualizacao_campanha (que registra o que JÁ aconteceu,
--- publicado durante a execução), marco_cronograma é o PLANO anunciado antes
--- da campanha começar a ser financiada - plano esse que trava assim que a
--- campanha efetivamente começa (campanha.data_inicio <= NOW()), mesma janela
--- de carência que campanha.data_inicio/data_fim já tinham (fn_congela_regras_
--- campanha, 05, feature "Em breve") - não trava já na aprovação, porque entre
--- aprovar e começar de fato o pesquisador pode legitimamente precisar
--- reorganizar datas. RN: a quantidade de marcos fica entre
--- configuracoes.cronograma_min_marcos e configuracoes.cronograma_max_marcos
--- (checadas no envio, na aprovação e na inserção, mesmas funções de orcamento_campanha) e
--- cada data_prevista precisa ser >= campanha.data_inicio (pode ultrapassar
--- data_fim sem problema - ver fn_valida_data_marco_cronograma, 05, [05-K-2]).
+-- ADICIONADO (31-07-2026, Alexia): cronograma estruturado da campanha (marcos com título, descrição
+-- e data prevista), mesmo pedido/origem de orcamento_campanha acima.
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [01-C004]
 CREATE TABLE marco_cronograma (
     id_marco      SERIAL,
     id_campanha   INT           NOT NULL,

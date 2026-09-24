@@ -39,8 +39,7 @@ export class ConfiguracaoServiceUpdate {
       return await distinguir404ou403(
         db,
         'configuracoes',
-        'id_config',
-        idConfig,
+        { id_config: idConfig },
         `Configuração ${idConfig} não encontrada`,
         'Sem permissão para editar esta configuração.',
       );

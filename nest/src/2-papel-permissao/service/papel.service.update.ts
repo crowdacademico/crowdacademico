@@ -41,8 +41,7 @@ export class PapelServiceUpdate {
         return await distinguir404ou403(
           this.database.getDb(),
           'papel',
-          'id_papel',
-          idPapel,
+          { id_papel: idPapel },
           `Papel ${idPapel} não encontrado.`,
           "Sem permissão 'papel_gerenciar' para renomear papéis.",
         );

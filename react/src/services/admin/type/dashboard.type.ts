@@ -17,6 +17,7 @@ export interface DashboardResponseSummary {
   campanhasAguardandoAprovacao: number;
   valorTotalArrecadado: number;
   denunciasPendentes: number;
+  campanhasParaRevisaoScore: number;
 }
 
 // Espelha nest/src/app/health.controller.ts (sem DTO formal - objeto

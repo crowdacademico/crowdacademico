@@ -17,6 +17,10 @@ import { DB } from './db.types';
 // abstrato, não uma união de literais - a mesma limitação que levou os
 // outros services a NUNCA terem uma versão genérica disso antes.
 //
+// `filtro` é um objeto coluna -> valor (24-09-2026): chave simples ({ id_campanha: id }), chave composta
+// ({ id_usuario, id_papel }) ou chave mais condição ({ id_usuario, deletado: false }); todas as colunas
+// entram com AND.
+//
 // `mensagemProibido` é a mensagem INTEIRA, não um template - alguns
 // chamadores (ex.: CampanhaServiceRemove, CampanhaServiceEnviar) combinam a
 // regra de permissão com uma regra de negócio na mesma frase ("só é
@@ -25,13 +29,15 @@ import { DB } from './db.types';
 export async function distinguir404ou403<TB extends keyof DB>(
   db: Kysely<DB>,
   tabela: TB,
-  coluna: keyof DB[TB] & string,
-  valor: number | string,
+  filtro: Partial<Record<keyof DB[TB] & string, number | string | boolean>>,
   mensagemNaoEncontrado: string,
   mensagemProibido: string,
 ): Promise<never> {
+  const condicoes = Object.entries(filtro).map(
+    ([coluna, valor]) => sql`${sql.ref(coluna)} = ${valor}`,
+  );
   const resultado = await sql<{ existe: number }>`
-    SELECT 1 AS existe FROM ${sql.table(tabela)} WHERE ${sql.ref(coluna)} = ${valor} LIMIT 1
+    SELECT 1 AS existe FROM ${sql.table(tabela)} WHERE ${sql.join(condicoes, sql` AND `)} LIMIT 1
   `.execute(db);
 
   if (resultado.rows.length === 0) {

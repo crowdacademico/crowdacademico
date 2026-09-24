@@ -30,8 +30,7 @@ export class TipoLinkServiceRemove {
         await distinguir404ou403(
           db,
           'tipo_link',
-          'id_tipolink',
-          idTipolink,
+          { id_tipolink: idTipolink },
           `Tipo de link ${idTipolink} não encontrado`,
           'Sem permissão para excluir este tipo de link.',
         );

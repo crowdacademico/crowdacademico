@@ -8,7 +8,6 @@ import { ModalCriarConfiguracao } from './modal-criar-configuracao';
 import {
   ModalAlterarConfiguracao,
   ModalConsultarConfiguracao,
-  ModalExcluirConfiguracao,
 } from './modal-configuracao';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { ConfiguracaoResponse } from '../../services/11-configuracoes/type/configuracao.type';
@@ -26,10 +25,8 @@ export function ListarConfiguracoes({ auth }: PropsPagina) {
     fecharCriando,
     alterando,
     consultando,
-    excluindo,
     fecharAlterando,
     fecharConsultando,
-    fecharExcluindo,
     chaveRecarga,
     recarregar,
     acoesCompletas,
@@ -69,7 +66,9 @@ export function ListarConfiguracoes({ auth }: PropsPagina) {
         ]}
         chavePrimaria="idConfig"
         listar={listarConfiguracoes}
-        acoes={acoesCompletas}
+        // Sem Excluir (24-09-2026): parâmetro global é contrato do sistema, o banco não deixa apagar
+        // (pol_config_delete, 04); para desligar uma regra, muda-se o valor.
+        acoes={{ alterar: acoesCompletas.alterar, consultar: acoesCompletas.consultar }}
       />
       {/* "De"/"Para" no VALOR (09-08-2026, pedido do Lucas) - é a coluna que
           mais importa aqui: configuracoes existe pra tirar regra de negócio
@@ -93,15 +92,6 @@ export function ListarConfiguracoes({ auth }: PropsPagina) {
 
       {consultando && (
         <ModalConsultarConfiguracao configuracao={consultando} aoFechar={fecharConsultando} />
-      )}
-
-      {excluindo && (
-        <ModalExcluirConfiguracao
-          auth={auth}
-          configuracao={excluindo}
-          aoFechar={fecharExcluindo}
-          aoExcluido={recarregar}
-        />
       )}
     </div>
   );

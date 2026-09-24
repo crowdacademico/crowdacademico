@@ -68,8 +68,8 @@ CREATE INDEX idx_sessao_usuario            ON sessao(id_usuario);
 -- ============================================================
 -- [02-E] CAMPANHA
 -- ============================================================
-CREATE INDEX idx_campanha_usuario           ON campanha(id_usuario);
-CREATE INDEX idx_campanha_status            ON campanha(status);
+-- (id_usuario, status) desde 24-09-2026: serve à regra de simultâneas, ao score e a "minhas campanhas", e à FK.
+CREATE INDEX idx_campanha_usuario           ON campanha(id_usuario, status);
 CREATE INDEX idx_campanha_status_data_fim   ON campanha(status, data_fim);
 -- ADICIONADO (28-07-2026, uma IA - "Problema 3"): o de maior impacto dos 16
 -- achados. A busca pública principal do site (filtrar campanha por área - RF
@@ -86,10 +86,13 @@ CREATE INDEX idx_marco_cronograma_campanha  ON marco_cronograma(id_campanha);
 CREATE INDEX idx_repasse_campanha           ON repasse(id_campanha);
 CREATE INDEX idx_sol_encerramento_campanha  ON solicitacao_encerramento(id_campanha);
 CREATE INDEX idx_historico_rejeicao_campanha ON historico_rejeicao(id_campanha);
+-- FK sem índice que o score consulta (24-09-2026).
+CREATE INDEX idx_historico_rejeicao_dono    ON historico_rejeicao(id_usuario_dono);
 CREATE INDEX idx_comentario_campanha        ON comentario(id_campanha);
 -- ADICIONADO (28-07-2026, uma IA - "Problema 3"): acelera "meus endossos"/
 -- painel de moderação por autor do comentário.
-CREATE INDEX idx_comentario_pesquisador     ON comentario(id_pesquisador);
+-- (id_pesquisador, criado_em) desde 24-09-2026: é exatamente a consulta do limite de frequência de comentário.
+CREATE INDEX idx_comentario_pesquisador     ON comentario(id_pesquisador, criado_em);
 CREATE INDEX idx_denuncia_alvo_campanha     ON denuncia(id_campanha_alvo);
 CREATE INDEX idx_denuncia_alvo_pesq         ON denuncia(id_pesquisador_alvo);
 -- ADICIONADO (28-07-2026, uma IA - "Problema 3"): acelera o painel de

@@ -43,9 +43,9 @@ function bloco(inicio, fim) {
 // (o Tailwind só as emite quando um utilitário as usa). Menor prioridade: se o
 // projeto passar a declarar uma delas, a do projeto vence.
 const TAILWIND_PADRAO = { '--color-white': '#ffffff', '--color-red-600': '#dc2626' };
-const base = { ...TAILWIND_PADRAO, ...variaveis(tailwind), ...variaveis(bloco(':root {', ":root[data-tema='escuro']")) };
+const base = { ...TAILWIND_PADRAO, ...variaveis(tailwind), ...variaveis(bloco(':root,', ":root[data-tema-efetivo='escuro']")) };
 const claro = base;
-const escuro = { ...base, ...variaveis(bloco(":root[data-tema='escuro']", '@media')) };
+const escuro = { ...base, ...variaveis(bloco(":root[data-tema-efetivo='escuro']", '/* ========= UTILITÁRIOS DE COR')) };
 
 function resolver(tema, valor, profundidade = 0) {
   if (!valor || profundidade > 8) return null;
@@ -84,23 +84,10 @@ const razao = (a, b) => {
   return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
 };
 
-// [texto, fundo]: nomes de token, ou um hex literal (ex.: branco).
-const PARES = [
-  ['--cor-texto', '--cor-fundo-cartao'],
-  ['--cor-texto-forte', '--cor-fundo-cartao'],
-  ['--cor-texto-fraco', '--cor-fundo-cartao'],
-  ['--cor-texto-fraco', '--cor-fundo-sutil'],
-  ['--cor-texto-marca', '--cor-fundo-cartao'],
-  ['--cor-texto-sucesso', '--cor-fundo-sucesso'],
-  ['--cor-texto-erro', '--cor-fundo-erro'],
-  ['--cor-texto-erro-forte', '--cor-fundo-erro'],
-  ['--cor-texto-aviso', '--cor-fundo-aviso'],
-  ['--cor-texto-info', '--cor-fundo-info'],
-  ['--cor-texto-sobre-cor', '--cor-fundo-marca-forte'],
-  ['--cor-texto-sobre-cor', '--cor-fundo-sucesso-forte'],
-  ['--cor-texto-sobre-cor', '--cor-fundo-erro-forte'],
-  ...[1, 2, 3, 4, 5, 6, 7].map((n) => ['--cor-texto-sobre-cor', `--cor-avatar-${n}`]),
-];
+// [texto, fundo]: nomes de token. Mesma lista que o Guia de Estilo (Campo de Testes) mostra na tela.
+const PARES = JSON.parse(
+  fs.readFileSync(path.resolve(pasta, '../../services/campo-testes/constants/pares-contraste.json'), 'utf8'),
+);
 
 let falhas = 0;
 let medidos = 0;

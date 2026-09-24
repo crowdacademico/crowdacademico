@@ -32,8 +32,7 @@ export class MotivoDenunciaServiceRemove {
         await distinguir404ou403(
           db,
           'motivo_denuncia',
-          'id_motivo',
-          idMotivo,
+          { id_motivo: idMotivo },
           `Motivo de denúncia ${idMotivo} não encontrado`,
           'Sem permissão para excluir este motivo de denúncia.',
         );

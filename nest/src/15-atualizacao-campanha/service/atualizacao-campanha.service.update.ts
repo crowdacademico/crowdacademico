@@ -33,8 +33,7 @@ export class AtualizacaoCampanhaServiceUpdate {
       return await distinguir404ou403(
         this.database.getDb(),
         'atualizacao_campanha',
-        'id_atualizacao',
-        id,
+        { id_atualizacao: id },
         'Atualização de campanha não encontrada.',
         'Sem permissão para editar esta atualização.',
       );

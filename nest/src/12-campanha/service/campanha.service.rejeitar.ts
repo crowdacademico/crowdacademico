@@ -37,8 +37,7 @@ export class CampanhaServiceRejeitar {
       return await distinguir404ou403(
         this.database.getDb(),
         'campanha',
-        'id_campanha',
-        id,
+        { id_campanha: id },
         'Campanha não encontrada.',
         'Sem permissão para rejeitar esta campanha.',
       );

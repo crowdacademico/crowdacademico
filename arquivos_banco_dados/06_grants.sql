@@ -37,15 +37,11 @@
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
--- Contexto histórico (por que os GRANTs estão consolidados aqui):
--- Este arquivo reúne GRANTs que antes ficavam espalhados em lugares
--- diferentes - o bloco principal de schema/tabela/coluna vinha de um
--- arquivo à parte de "artifícios", o GRANT nas sequências vinha do fim do
--- arquivo de seed (como um fix avulso, provavelmente porque o erro 42501
--- só apareceu depois que alguém tentou inserir e esbarrou na falta de
--- USAGE na sequência), e o GRANT EXECUTE nas funções de score também vinha
--- do arquivo de artifícios. Consolidado aqui, nenhum GRANT corre mais o
--- risco de ficar esquecido num outro arquivo.
+-- Contexto histórico (por que os GRANTs estão consolidados aqui): Este arquivo reúne GRANTs que
+-- antes ficavam espalhados em lugares diferentes - o bloco principal de schema/tabela/coluna vinha
+-- de um arquivo à parte de "artifícios", o GRANT nas sequências vinha do fim do arquivo de seed
+-- (como um fix ...
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [06-C001]
 -- ----------------------------------------------------------------------------
 
 -- ============================================================================
@@ -126,41 +122,7 @@ GRANT SELECT (
 ) ON public.usuario TO app_nestjs;
 
 -- CORRIGIDO: coluna suspenso removida da tabela (01) - tirada da lista também.
--- CORRIGIDO (28-07-2026): cpf_criptografado adicionada - a coluna é NOT NULL
--- (Alexia), então o app_nestjs já era obrigado a GRAVAR o CPF, mas continuava
--- impossibilitado de LÊ-LO (mesma coluna fora do GRANT SELECT), o que travava o
--- KYC do RF-015 (a API de pagamento precisa do CPF pra configurar o recebimento
--- do pesquisador, e o backend não tinha como enviar um dado que nem conseguia
--- selecionar). A proteção que de fato importa passa a ser a permissão
--- perfil_pesquisador_visualizar_sensivel (seedada, hoje sem nenhum efeito porque
--- nada a usava) gateando a leitura no NestJS - não a coluna ficar inacessível
--- pro próprio backend.
--- SUPERADA (30-07-2026): a correção de 28-07-2026 (item 12 da Lista C) tinha
--- tirado score_atual/score_atualizado_em desta lista, porque era uma porta dos
--- fundos pra ler o score de qualquer perfil por aqui mesmo com a policy de
--- score_pesquisador (04) já restrita. Como pol_score_select (04) voltou a ser
--- pública (decisão de produto - ver nota lá e em PENDENCIAS e correcoes.md),
--- não existe mais porta dos fundos a fechar: as 2 colunas voltam pra cá, só
--- por conveniência (evita join com score_pesquisador pra montar a página
--- pública de perfil do pesquisador). GRANT UPDATE continua sem essas 2
--- colunas ([06-D-2b] mais abaixo) - isso é integridade de escrita, não
--- privacidade, e não muda com esta decisão.
--- ATUALIZADO (22-08-2026): cpf_hash entrou na lista - é o índice cego (ver
--- DOCUMENTACAO_BD.md), o backend precisa poder LER pra checar duplicidade
--- (RF-017/suporte localizando conta por CPF) e ESCREVER na criação (grant de
--- INSERT logo abaixo). Nunca é exposto na resposta HTTP (não é dado de
--- exibição, é só chave de busca interna) - isso é regra de DTO/converter no
--- Nest, o GRANT aqui só permite a leitura pelo backend.
--- suspenso_ate/motivo_suspensao/suspenso_por (07-09-2026, [03-P]) - ADICIONADAS
--- à tabela mas ESQUECIDAS aqui na 1ª rodada (achado 08-09-2026, testando ao
--- vivo depois do Lucas colar o SQL: `buscarSuspensao()` batia em "permission
--- denied for table perfil_pesquisador" porque o SELECT por coluna é
--- restritivo - a suspensão em si funcionava, porque escreve via
--- suspender_pesquisador()/reativar_pesquisador() SECURITY DEFINER, que
--- ignora GRANT; só a LEITURA direta ficava cega). Mesmo raciocínio de
--- usuario ([06-D-2] acima): leitura liberada pra Consultar/Alterar
--- Pesquisador mostrarem o estado de suspensão, escrita continua só via as
--- funções SECURITY DEFINER, nunca por este GRANT.
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [06-C002]
 GRANT SELECT (
     id_usuario, cpf_criptografado, cpf_hash, tipo_vinculo, vinculo_institucional,
     titulo_academico, status_pesquisador, ativado_em,
@@ -181,38 +143,10 @@ GRANT UPDATE ON termos_de_uso TO app_nestjs;
 GRANT DELETE ON termos_de_uso TO app_nestjs;
 
 -- CORRIGIDO (28-07-2026, achado por uma IA): GRANT UPDATE de TABELA INTEIRA em
--- usuario/perfil_pesquisador era uma porta dos fundos grave - o GRANT SELECT já é
--- restrito por coluna (ver [06-D-2] acima), mas o UPDATE não era, e é o MESMO
--- app_nestjs que atende tanto um endpoint genérico de "editar meu perfil" quanto o
--- fluxo de autenticação. Testado como usuário comum autenticado, via UPDATE direto:
--- forjar o próprio score_atual pra 100, auto-marcar email_verificado = TRUE (bypass
--- permanente da verificação de e-mail - só precisa de um PATCH genérico no backend),
--- limpar o próprio bloqueio de login, e "ressuscitar" a própria conta excluída
--- (deletado = FALSE). Os 4 ataques funcionavam antes desta correção.
---
--- perfil_pesquisador: GRANT UPDATE por coluna, mesma lista do SELECT ([06-D-2] acima)
--- MENOS score_atual/score_atualizado_em - essas 2 só podem mudar via
--- recalcular_score_pesquisador() (SECURITY DEFINER, 05), nunca por UPDATE direto.
--- CORRIGIDO (30-07-2026, [03-P]): status_pesquisador também saiu daqui. Antes,
--- pol_perfil_update (04) só libera UPDATE pro próprio dono - combinado com
--- este GRANT, o único jeito de status_pesquisador mudar de verdade era o
--- próprio pesquisador se auto-suspender/reativar, o que não faz sentido, e não
--- existia caminho nenhum pra moderação suspender outra pessoa. Agora só muda
--- via suspender_pesquisador() (SECURITY DEFINER, 03, [03-P]).
--- CORRIGIDO (22-08-2026, achado de uma IA analisando o módulo
--- 6-perfil-pesquisador antes de implementar): cpf_criptografado TAMBÉM saiu
--- daqui, mesma classe de bug - pol_perfil_update (04) libera UPDATE pro
--- próprio dono, e esta lista incluía cpf_criptografado, então o próprio
--- pesquisador conseguia alterar o CPF já cadastrado por um PATCH comum,
--- contrariando o RF-017 (correção de CPF é só via suporte). cpf_hash nunca
--- entrou aqui de propósito (teria o mesmo problema, e sempre precisa mudar
--- em conjunto com cpf_criptografado, nunca sozinho). Agora os dois só mudam
--- via corrigir_cpf_pesquisador() (SECURITY DEFINER, 03) - ver GRANT EXECUTE
--- correspondente mais abaixo.
--- suspenso_ate/motivo_suspensao/suspenso_por (07-09-2026) - mesma classe de
--- exclusão de status_pesquisador/cpf_*, acima: só mudam via
--- suspender_pesquisador()/reativar_pesquisador() (SECURITY DEFINER, 03),
--- nunca por UPDATE direto - de propósito fora desta lista.
+-- usuario/perfil_pesquisador era uma porta dos fundos grave - o GRANT SELECT já é restrito por
+-- coluna (ver [06-D-2] acima), mas o UPDATE não era, e é o MESMO app_nestjs que atende tanto um
+-- endpoint genérico de "editar meu ...
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [06-C003]
 GRANT UPDATE (
     tipo_vinculo, vinculo_institucional,
     titulo_academico, ativado_em

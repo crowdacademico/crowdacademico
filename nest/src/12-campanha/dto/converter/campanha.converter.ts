@@ -1,8 +1,16 @@
 import { CampanhaEntity } from '../../entity/campanha.entity';
 import { CampanhaResponse } from '../response/campanha.response';
 
+// As três colunas extras só existem em listar e consultar (campanha-com-nomes.util.ts); nas
+// outras respostas (criar, editar, aprovar...) ficam null.
+type CampanhaComExtras = CampanhaEntity & {
+  nome_pesquisador?: string | null;
+  nome_area?: string | null;
+  precisa_revisao_score?: boolean | null;
+};
+
 export class CampanhaConverter {
-  static paraResponseDto(entity: CampanhaEntity): CampanhaResponse {
+  static paraResponseDto(entity: CampanhaComExtras): CampanhaResponse {
     return {
       idCampanha: entity.id_campanha,
       idUsuario: entity.id_usuario,
@@ -26,6 +34,9 @@ export class CampanhaConverter {
       encerradoEm: entity.encerrado_em,
       videoApresentacaoUrl: entity.video_apresentacao_url,
       criadoEm: entity.criado_em,
+      nomePesquisador: entity.nome_pesquisador ?? null,
+      nomeArea: entity.nome_area ?? null,
+      precisaRevisaoScore: entity.precisa_revisao_score ?? null,
       reenviosRestantes: null,
       prazoReenvioAte: null,
       somenteLeitura: false,

@@ -25,6 +25,10 @@ export class CampanhaResponse {
   // (ciclo de rejeição e reenvio, ver REQUISITOS_V7). A tela e o e-mail de
   // rejeição precisam desses números, e calculá-los no cliente duplicaria a
   // regra. Nas demais respostas ficam null/false.
+  nomePesquisador: string | null;
+  nomeArea: string | null;
+  // Sinal para o admin na fila de aprovação; null fora dela ou para quem não aprova.
+  precisaRevisaoScore: boolean | null;
   reenviosRestantes: number | null;
   prazoReenvioAte: Date | null;
   somenteLeitura: boolean;

@@ -6,7 +6,7 @@ Referência rápida dos `RAISE EXCEPTION` com ERRCODE customizado dos arquivos `
 
 **Nada foi alterado além disso**: nenhuma mensagem, nenhuma lógica, nenhuma trigger foi tocada - só a cláusula `USING ERRCODE` foi adicionada ao final de cada `RAISE EXCEPTION`. O diff é puramente aditivo (conferido linha a linha).
 
-Este documento descrevia, na origem, só a tabela de códigos. Desde 24-09-2026 ele também define o **contrato do corpo de erro da API** (seção no fim): o Nest agora devolve `codigo` (o SQLSTATE) junto de `statusCode` e `message`, ver `postgres-exception.filter.ts`. A contagem de códigos deixou de ser citada aqui (hoje são 59: 90001 a 90019, 91001 a 91028, 92001 a 92010, 93001 e 93002); conte pelas tabelas abaixo.
+Este documento traz a tabela de códigos e o **contrato do corpo de erro da API** (seção no fim): o Nest devolve `codigo` (o SQLSTATE) junto de `statusCode` e `message`, ver `postgres-exception.filter.ts`. A contagem de códigos não é citada aqui (hoje são 59: 90001 a 90019, 91001 a 91028, 92001 a 92010, 93001 e 93002); conte pelas tabelas abaixo.
 
 ---
 
@@ -29,7 +29,7 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 |---|---|---|---|
 | 90001 | `trg_valida_contribuicao_recompensa` | `contribuicao_recompensa` | A recompensa não pertence à campanha da contribuição |
 | 90002 | `trg_valida_escopo_tipolink` | `link_academico` / `link_atualizacao` / `link_recompensa` | Este tipo de link não é permitido para a tabela |
-| 90003 | `fn_valida_limite_texto_livre` | `denuncia`, `campanha`, `atualizacao_campanha`, `solicitacao_encerramento`, `recompensa`, `orcamento_campanha`, `marco_cronograma` (genérica via `TG_ARGV`) | Campo excede o limite de caracteres configurado (só quando o texto muda, 24-09-2026; a mensagem não cita mais o nome da chave) |
+| 90003 | `fn_valida_limite_texto_livre` | `denuncia`, `campanha`, `atualizacao_campanha`, `solicitacao_encerramento`, `recompensa`, `orcamento_campanha`, `marco_cronograma` (genérica via `TG_ARGV`) | Campo excede o limite de caracteres configurado (só quando o texto muda; a mensagem não cita o nome da chave) |
 | 90004 | `fn_valida_area_conhecimento_nivel2` | `campanha` | Área de conhecimento precisa ser nível 2 (não a grande área raiz) |
 | 90005 | `trg_valida_tipo_motivo_denuncia` | `denuncia` | Motivo selecionado não é válido para denúncia de campanha |
 | 90006 | `trg_valida_tipo_motivo_denuncia` | `denuncia` | Motivo selecionado não é válido para denúncia de perfil |
@@ -45,7 +45,7 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 90016 | `deslizar_datas_campanha` | `campanha` | Campanha sem data de início não pode ter as datas reagendadas (21-09-2026) |
 | 90017 | `fn_valida_soma_pesos_score_config` | `score_config` | Soma dos pesos raiz precisa ser exatamente 100 (23-09-2026) |
 | 90018 | `fn_valida_cobertura_score_rotulo` | `score_rotulo` | Faixas ativas precisam cobrir 0-100 sem buraco nem sobreposição (23-09-2026) |
-| 90019 | `fn_valida_pares_min_max_configuracoes` | `configuracoes` | O mínimo de um par (prazo, orçamento, cronograma, tamanho de arquivo) não pode ser maior que o máximo (constraint trigger, roda no `COMMIT`, 24-09-2026). Leva `dados` no corpo: `chaveMinimo`, `valorMinimo`, `chaveMaximo`, `valorMaximo` |
+| 90019 | `fn_valida_pares_min_max_configuracoes` | `configuracoes` | O mínimo de um par (prazo, orçamento, cronograma, tamanho de arquivo) não pode ser maior que o máximo (constraint trigger, roda no `COMMIT`). Leva `dados` no corpo: `chaveMinimo`, `valorMinimo`, `chaveMaximo`, `valorMaximo` |
 
 ## 91xxx - Conflito de estado/regra de negócio (409)
 
@@ -75,16 +75,16 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 91022 | `validar_comentario_edicao_conteudo` | `comentario` | Não é possível editar um comentário já endossado (RF-091) - remova o endosso antes |
 | 91023 | `fn_congela_regras_campanha` | `campanha` | Vídeo de apresentação não pode ser alterado após a aprovação (20-09-2026) |
 | 91024 | `fn_congela_regras_campanha` | `campanha` | Área do conhecimento não pode ser alterada após a aprovação (20-09-2026) |
-| 91025 | `fn_valida_transicao_campanha` | `campanha` | Campanha rejeitada já usou todos os reenvios permitidos e não pode ser reenviada, para qualquer perfil, inclusive quem tem `campanha_editar` (21-09-2026; estendido ao admin em 24-09-2026) |
+| 91025 | `fn_valida_transicao_campanha` | `campanha` | Campanha rejeitada já usou todos os reenvios permitidos e não pode ser reenviada, para qualquer perfil, inclusive quem tem `campanha_editar`  |
 | 91026 | `fn_valida_transicao_campanha` | `campanha` | Prazo para reenviar a campanha rejeitada já venceu (21-09-2026) |
 | 91027 | `fn_congela_regras_campanha` / `fn_congela_orcamento_campanha` / `fn_congela_marco_cronograma` | `campanha` / `orcamento_campanha` / `marco_cronograma` | Campanha rejeitada sem reenvios restantes é somente leitura (21-09-2026) |
-| 91028 | `fn_exige_historico_rejeicao` | `campanha` | Rejeição sem registro em `historico_rejeicao` na mesma transação (constraint trigger, roda no `COMMIT`, 24-09-2026) |
+| 91028 | `fn_exige_historico_rejeicao` | `campanha` | Rejeição sem registro em `historico_rejeicao` na mesma transação (constraint trigger, roda no `COMMIT`) |
 
 ## 92xxx - Autorização negada / conflito de interesse (403)
 
 | Código | Função | Tabela | Mensagem |
 |---|---|---|---|
-| 92001 | `fn_valida_transicao_campanha` | `campanha` | Transição de status de campanha não autorizada (`origem -> destino`); cada permissão abre só a sua aresta, ver `[05-K-2-C]` em `DOCUMENTACAO_BD.md` (24-09-2026) |
+| 92001 | `fn_valida_transicao_campanha` | `campanha` | Transição de status de campanha não autorizada (`origem -> destino`); cada permissão abre só a sua aresta, ver `[05-K-2-C]` em `DOCUMENTACAO_BD.md` |
 | 92002 | `fn_valida_transicao_solicitacao` | `solicitacao_encerramento` | Pesquisador só pode cancelar a própria solicitação, e só enquanto pendente |
 | 92003 | `fn_valida_transicao_solicitacao` | `solicitacao_encerramento` | Sem a permissão, só é permitido alterar o status para cancelado |
 | 92004 | `validar_comentario_autor` | `comentario` | Pesquisador não pode comentar na própria campanha |
@@ -104,7 +104,7 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 
 ---
 
-## Contrato do corpo de erro da API (24-09-2026)
+## Contrato do corpo de erro da API
 
 Antes o corpo de uma recusa do banco trazia só `statusCode` e `message`, e o front só conseguia distinguir uma regra pelo **texto** da mensagem (qualquer ajuste de redação quebraria a distinção). Agora `postgres-exception.filter.ts` devolve também o código:
 
@@ -125,7 +125,7 @@ Antes o corpo de uma recusa do banco trazia só `statusCode` e `message`, e o fr
 
 O front pode, aos poucos, montar texto próprio a partir do código (`MENSAGENS_ERRO[codigo]`), usando a mensagem do banco como reserva. Isso também resolve as mensagens que citam nome interno de chave de configuração.
 
-Códigos novos ou alterados em 24-09-2026: **91028** (rejeição sem registro em `historico_rejeicao`, ver `[05-K-2-C]` em `DOCUMENTACAO_BD.md`); a mensagem do **92001** agora mostra `origem -> destino`; a do **90003** deixou de citar o nome da chave de configuração.
+Observações: **91028** é a rejeição sem registro em `historico_rejeicao` (ver `[05-K-2-C]` em `DOCUMENTACAO_BD.md`); a mensagem do **92001** mostra `origem -> destino`; a do **90003** não cita o nome da chave de configuração.
 
 ---
 

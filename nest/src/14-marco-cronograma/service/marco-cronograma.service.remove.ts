@@ -17,8 +17,7 @@ export class MarcoCronogramaServiceRemove {
       await distinguir404ou403(
         this.database.getDb(),
         'marco_cronograma',
-        'id_marco',
-        id,
+        { id_marco: id },
         'Marco de cronograma não encontrado.',
         'Sem permissão para excluir este marco.',
       );

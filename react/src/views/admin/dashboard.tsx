@@ -101,14 +101,19 @@ export function Dashboard({ auth }: DashboardProps) {
   const [abaAtiva, setAbaAtiva] = useState<AbaChave>('visao-geral');
   const { erro, reportarErro } = useErroToast();
 
+  // Espera a sessão ser restaurada (F5): sem isso o 1º pedido saía sem token e voltava 401 (mesmo conserto
+  // de T2/T3, 24-09-2026).
   useEffect(() => {
+    if (auth.carregando) {
+      return;
+    }
     dashboardApi
       .buscarResumo(auth.authFetch)
       .then(setResumo)
       .catch(reportarErro)
       .finally(() => setCarregandoResumo(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [auth.carregando]);
 
   useEffect(() => {
     dashboardApi
@@ -198,15 +203,16 @@ export function Dashboard({ auth }: DashboardProps) {
 
               {/* Campanhas por status (RF-084) - achado numa auditoria
                   (12-09-2026): o requisito pede essa quebra, só existia o
-                  total sem distinção. Não inclui "campanhas sinalizadas por
-                  baixa reputação" (a 5ª parte do RF-084) de propósito -
-                  depende do motor de score estar fechado (ver PENDENCIAS e
-                  correcoes.md, RF-031). */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  total sem distinção. "Fila com score baixo" (24-09-2026) é a
+                  5ª parte do RF-084: campanha aguardando aprovação cujo
+                  pesquisador está abaixo do score mínimo, só um sinal para
+                  revisar com mais cuidado. */}
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 <CardMetrica rotulo="Campanhas ativas" valor={resumo.campanhasAtivas} />
                 <CardMetrica rotulo="Campanhas com sucesso" valor={resumo.campanhasSucesso} />
                 <CardMetrica rotulo="Campanhas não atingidas" valor={resumo.campanhasNaoAtingida} />
                 <CardMetrica rotulo="Aguardando aprovação" valor={resumo.campanhasAguardandoAprovacao} />
+                <CardMetrica rotulo="Fila com score baixo" valor={resumo.campanhasParaRevisaoScore} />
               </div>
             </>
           )}

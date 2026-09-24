@@ -30,8 +30,7 @@ export class AreaConhecimentoServiceRemove {
         await distinguir404ou403(
           db,
           'area_conhecimento',
-          'id_area_conhecimento',
-          idAreaConhecimento,
+          { id_area_conhecimento: idAreaConhecimento },
           `Área de conhecimento ${idAreaConhecimento} não encontrada`,
           'Sem permissão para excluir esta área de conhecimento.',
         );

@@ -6,8 +6,6 @@ import {
   ORDEM_STATUS_CAMPANHA,
   ROTULO_STATUS_CAMPANHA,
 } from '../../services/12-campanha/constants/status-campanha.constants';
-import { areaConhecimentoApi } from '../../services/8-area-conhecimento/api/area-conhecimento.api';
-import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
 import { formatarMoeda } from '../../services/constant/utils/formatacao.util';
 import { ModalConsultarCampanha } from './modal-consultar-campanha';
@@ -18,6 +16,7 @@ interface CampanhaLinha extends Omit<CampanhaResponse, 'status' | 'metaFinanceir
   status: string;
   pesquisador: string;
   area: string;
+  atencao: string;
   metaFinanceira: string;
   valorBrutoArrecadado: string;
 }
@@ -35,26 +34,19 @@ interface CampanhaLinha extends Omit<CampanhaResponse, 'status' | 'metaFinanceir
 export function ListarCampanhas({ auth }: PropsPagina) {
   const [consultandoId, setConsultandoId] = useState<number | null>(null);
 
-  // Mesmo padrão de junção client-side de listar-usuarios.tsx (coluna
-  // "papel"): busca campanhas + usuários + áreas numa vez só, junta no
-  // navegador - os dois `.catch(() => [])` seguem o mesmo espírito:
-  // se um catálogo falhar, a tabela continua de pé, só sem aquele nome
-  // resolvido (mostra o id cru em vez de travar a tela inteira).
+  // Nome do pesquisador e da área vêm prontos do backend (24-09-2026): antes esta tela baixava o catálogo
+  // inteiro de usuários e de áreas só para resolver dois nomes. Se a RLS esconder o usuário, cai no id.
+  // "atenção" só aparece para quem pode aprovar, na fila de aprovação, quando o pesquisador está abaixo do
+  // score mínimo (sinal, nunca trava nada).
   const listarCampanhas = useCallback(async (): Promise<CampanhaLinha[]> => {
-    const [campanhas, usuarios, areas] = await Promise.all([
-      campanhaApi.listar(auth.authFetch),
-      usuarioApi.listar(auth.authFetch).catch(() => []),
-      areaConhecimentoApi.listar(auth.authFetch).catch(() => []),
-    ]);
-
-    const nomePorIdUsuario = new Map(usuarios.map((usuario) => [usuario.idUsuario, usuario.nome]));
-    const nomePorIdArea = new Map(areas.map((area) => [area.idAreaConhecimento, area.nome]));
+    const campanhas = await campanhaApi.listar(auth.authFetch);
 
     return campanhas.map((campanha) => ({
       ...campanha,
       status: ROTULO_STATUS_CAMPANHA[campanha.status],
-      pesquisador: nomePorIdUsuario.get(campanha.idUsuario) ?? `#${campanha.idUsuario}`,
-      area: nomePorIdArea.get(campanha.idAreaConhecimento) ?? `#${campanha.idAreaConhecimento}`,
+      pesquisador: campanha.nomePesquisador ?? `#${campanha.idUsuario}`,
+      area: campanha.nomeArea ?? `#${campanha.idAreaConhecimento}`,
+      atencao: campanha.precisaRevisaoScore ? 'Score baixo' : '',
       metaFinanceira: formatarMoeda(campanha.metaFinanceira),
       valorBrutoArrecadado: formatarMoeda(campanha.valorBrutoArrecadado),
     }));
@@ -95,6 +87,7 @@ export function ListarCampanhas({ auth }: PropsPagina) {
           { chave: 'titulo', rotulo: 'título', largura: '28rem' },
           { chave: 'status', rotulo: 'status', centralizar: true, largura: '10rem' },
           { chave: 'pesquisador', rotulo: 'pesquisador', centralizar: true, largura: '10rem' },
+          { chave: 'atencao', rotulo: 'atenção', centralizar: true, largura: '8rem' },
           { chave: 'metaFinanceira', rotulo: 'meta', centralizar: true, largura: '10rem' },
           { chave: 'valorBrutoArrecadado', rotulo: 'arrecadado', centralizar: true, largura: '10rem' },
         ]}

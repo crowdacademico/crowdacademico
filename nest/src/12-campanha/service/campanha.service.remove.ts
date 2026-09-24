@@ -24,8 +24,7 @@ export class CampanhaServiceRemove {
       await distinguir404ou403(
         this.database.getDb(),
         'campanha',
-        'id_campanha',
-        id,
+        { id_campanha: id },
         'Campanha não encontrada.',
         'Só é possível excluir uma campanha em rascunho, e só o dono (ou quem tem permissão) pode fazer isso.',
       );

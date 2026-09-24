@@ -23,6 +23,11 @@ export interface CampanhaResponse {
   encerradoEm: string | null;
   videoApresentacaoUrl: string | null;
   criadoEm: string;
+  // Nome resolvido pelo backend em listar e consultar (24-09-2026); null nas outras respostas ou se a RLS
+  // escondeu o usuário. precisaRevisaoScore: sinal para quem aprova, só na fila de aprovação, senão null.
+  nomePesquisador: string | null;
+  nomeArea: string | null;
+  precisaRevisaoScore: boolean | null;
   // Só vêm preenchidos em GET /campanha/:id de uma campanha 'rejeitado'
   // (ciclo de rejeição e reenvio, ver REQUISITOS_V7); nas outras respostas
   // ficam null/false.

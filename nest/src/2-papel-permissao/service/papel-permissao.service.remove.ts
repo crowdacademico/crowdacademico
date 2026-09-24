@@ -1,9 +1,6 @@
-import {
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
+import { distinguir404ou403 } from '../../commons/database/distinguir-404-ou-403.util';
 
 @Injectable()
 export class PapelPermissaoServiceRemove {
@@ -26,16 +23,11 @@ export class PapelPermissaoServiceRemove {
     // motivo-denuncia.service.remove.ts (executeTakeFirst() de DELETE
     // sempre resolve pro DeleteResult sintetizado pelo Kysely).
     if (resultado.numDeletedRows === 0n) {
-      const existe = await db
-        .selectFrom('papel_permissao')
-        .select('id_papel')
-        .where('id_papel', '=', idPapel)
-        .where('id_permissao', '=', idPermissao)
-        .executeTakeFirst();
-      if (!existe) {
-        throw new NotFoundException('Este papel não tem esta permissão.');
-      }
-      throw new ForbiddenException(
+      await distinguir404ou403(
+        db,
+        'papel_permissao',
+        { id_papel: idPapel, id_permissao: idPermissao },
+        'Este papel não tem esta permissão.',
         "Sem permissão 'papel_gerenciar' para revogar permissões.",
       );
     }

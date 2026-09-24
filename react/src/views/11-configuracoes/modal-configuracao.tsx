@@ -157,10 +157,23 @@ export function ModalAlterarConfiguracao({ auth, configuracao, aoFechar, aoAtual
           />
         </div>
 
-        <label className="flex items-center gap-2 text-sm font-semibold texto-padrao">
-          <input type="checkbox" checked={ativo} onChange={(evento) => setAtivo(evento.target.checked)} />
-          Ativo
-        </label>
+        <div>
+          <label className="flex items-center gap-2 text-sm font-semibold texto-padrao">
+            <input
+              type="checkbox"
+              checked={ativo}
+              disabled={configuracao.idUsuario === null}
+              onChange={(evento) => setAtivo(evento.target.checked)}
+            />
+            Ativo
+          </label>
+          {configuracao.idUsuario === null && (
+            <p className="text-xs texto-fraco mt-1">
+              Parâmetro global não se desativa nem se exclui: faz parte do contrato do sistema. Para desligar
+              uma regra, mude o valor.
+            </p>
+          )}
+        </div>
 
         <div className="sm:col-span-2">
           <label className="flex items-center gap-2 text-sm font-semibold texto-padrao">
@@ -174,82 +187,6 @@ export function ModalAlterarConfiguracao({ auth, configuracao, aoFechar, aoAtual
           </p>
         </div>
       </SecaoFicha>
-    </ModalFicha>
-  );
-}
-
-interface ModalExcluirConfiguracaoProps {
-  auth: Pick<UseAuthReturn, 'authFetch'>;
-  configuracao: ConfiguracaoResponse;
-  aoFechar: () => void;
-  aoExcluido: () => void;
-}
-
-// Diferente de Excluir Usuário: configuração não tem exclusão lógica (sem
-// coluna `deletado`) - remover aqui é DELETE de verdade na tabela
-// `configuracoes`.
-export function ModalExcluirConfiguracao({ auth, configuracao, aoFechar, aoExcluido }: ModalExcluirConfiguracaoProps) {
-  const { mostrar } = useToast();
-  const { erro, reportarErro, limparErro } = useErroToast();
-  const [excluindo, setExcluindo] = useState(false);
-
-  const excluir = async () => {
-    limparErro();
-    setExcluindo(true);
-    try {
-      await configuracaoApi.remover(auth.authFetch, configuracao.idConfig);
-      mostrar('Parâmetro excluído com sucesso.', `ID: ${configuracao.idConfig} foi excluído`);
-      aoExcluido();
-      aoFechar();
-    } catch (erroRequisicao) {
-      reportarErro(erroRequisicao);
-    } finally {
-      setExcluindo(false);
-    }
-  };
-
-  return (
-    <ModalFicha
-      titulo={`Excluir "${configuracao.chave}"`}
-      subtitulo="Esta ação não pode ser desfeita."
-      aoFechar={aoFechar}
-      rodape={
-        <div className="flex gap-3 max-w-sm ml-auto">
-          <button type="button" onClick={aoFechar} className="btn btn-secondary flex-1">
-            Cancelar
-          </button>
-          <button
-            type="button"
-            onClick={() => void excluir()}
-            disabled={excluindo}
-            className="btn btn-danger flex-1"
-          >
-            {excluindo ? 'Excluindo...' : 'Confirmar exclusão'}
-          </button>
-        </div>
-      }
-    >
-      {erro && <p className="texto-erro text-sm font-bold text-center">{erro}</p>}
-
-      <SecaoFicha titulo="O que será excluído">
-        <CampoFicha rotulo="Chave" valor={configuracao.chave} largura="cheia" />
-        <CampoFicha rotulo="Valor" valor={configuracao.valor} />
-        <CampoFicha rotulo="Tipo" valor={configuracao.tipo} />
-        <CampoFicha rotulo="Ativo" valor={configuracao.ativo ? 'Sim' : 'Não'} />
-        <CampoFicha rotulo="Descrição" valor={configuracao.descricao} largura="cheia" />
-      </SecaoFicha>
-
-      <div className="rounded-lg border borda-forte fundo-erro p-4 text-sm texto-erro">
-        <p className="font-bold mb-1">
-          <i className="fa-solid fa-circle-info mr-1"></i> O que acontece de verdade
-        </p>
-        <p>
-          Diferente de excluir um usuário, esta linha some do banco pra sempre - não é exclusão
-          lógica. Se algum código ainda ler a chave &quot;{configuracao.chave}&quot;, ele vai
-          passar a receber o valor padrão dele (ou dar erro, dependendo de como foi escrito).
-          Confira se ela não está mais em uso antes de confirmar.
-        </p>
-      </div>
     </ModalFicha>
   );
 }

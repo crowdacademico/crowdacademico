@@ -1,15 +1,14 @@
 import {
   BadRequestException,
-  ForbiddenException,
   Injectable,
   Logger,
-  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { ArquivoServiceRemove } from '../../25-arquivo/service/arquivo.service.remove';
 import { ArquivoServiceResolverAvatar } from '../../25-arquivo/service/arquivo.service.resolver-avatar';
 import { DatabaseService } from '../../commons/database/database.service';
+import { distinguir404ou403 } from '../../commons/database/distinguir-404-ou-403.util';
 import {
   CUSTO_BCRYPT_SENHA,
   USUARIO_COLUNAS_SELECT,
@@ -118,16 +117,13 @@ export class UsuarioServiceUpdate {
       // linha nenhuma só acontece pra quem está logado mas não é dono nem
       // tem a permissão - RLS bloqueou o UPDATE (0 linhas, sem erro do
       // Postgres). Diferencia de "não existe" checando a existência à parte.
-      const existe = await db
-        .selectFrom('usuario')
-        .select('id_usuario')
-        .where('id_usuario', '=', idUsuario)
-        .where('deletado', '=', false)
-        .executeTakeFirst();
-      if (!existe) {
-        throw new NotFoundException(`Usuário ${idUsuario} não encontrado`);
-      }
-      throw new ForbiddenException('Sem permissão para editar este usuário.');
+      return await distinguir404ou403(
+        db,
+        'usuario',
+        { id_usuario: idUsuario, deletado: false },
+        `Usuário ${idUsuario} não encontrado`,
+        'Sem permissão para editar este usuário.',
+      );
     }
 
     // ADICIONADO (25-08-2026, módulo 25-arquivo): resposta já vem com a

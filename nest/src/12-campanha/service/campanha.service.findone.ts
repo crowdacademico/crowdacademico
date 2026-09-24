@@ -1,20 +1,17 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { sql } from 'kysely';
 import { DatabaseService } from '../../commons/database/database.service';
-import { CAMPANHA_COLUNAS_SELECT } from '../constants/campanha.constants';
 import { CampanhaConverter } from '../dto/converter/campanha.converter';
 import { CampanhaResponse } from '../dto/response/campanha.response';
+import { selecionarCampanhaComNomes } from './campanha-com-nomes.util';
 
 @Injectable()
 export class CampanhaServiceFindOne {
   constructor(private readonly database: DatabaseService) {}
 
   async executar(id: number): Promise<CampanhaResponse> {
-    const linha = await this.database
-      .getDb()
-      .selectFrom('campanha')
-      .select(CAMPANHA_COLUNAS_SELECT)
-      .where('id_campanha', '=', id)
+    const linha = await selecionarCampanhaComNomes(this.database.getDb())
+      .where('campanha.id_campanha', '=', id)
       .executeTakeFirst();
 
     // pol_campanha_select (04) já filtra campanha 'rascunho'/

@@ -1,9 +1,6 @@
-import {
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
+import { distinguir404ou403 } from '../../commons/database/distinguir-404-ou-403.util';
 
 @Injectable()
 export class UsuarioPapelServiceRemove {
@@ -25,16 +22,11 @@ export class UsuarioPapelServiceRemove {
     // motivo-denuncia.service.remove.ts (executeTakeFirst() de DELETE
     // sempre resolve pro DeleteResult sintetizado pelo Kysely).
     if (resultado.numDeletedRows === 0n) {
-      const existe = await db
-        .selectFrom('usuario_papel')
-        .select('id_usuario')
-        .where('id_usuario', '=', idUsuario)
-        .where('id_papel', '=', idPapel)
-        .executeTakeFirst();
-      if (!existe) {
-        throw new NotFoundException('Este usuário não tem este papel.');
-      }
-      throw new ForbiddenException(
+      await distinguir404ou403(
+        db,
+        'usuario_papel',
+        { id_usuario: idUsuario, id_papel: idPapel },
+        'Este usuário não tem este papel.',
         "Sem permissão 'papel_gerenciar' para remover papéis de outros usuários.",
       );
     }

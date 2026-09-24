@@ -99,8 +99,7 @@ export class TipoLinkServiceUpdate {
       return await distinguir404ou403(
         db,
         'tipo_link',
-        'id_tipolink',
-        idTipolink,
+        { id_tipolink: idTipolink },
         `Tipo de link ${idTipolink} não encontrado`,
         'Sem permissão para editar este tipo de link.',
       );

@@ -29,8 +29,7 @@ export class LinkAtualizacaoServiceUpdate {
       return await distinguir404ou403(
         this.database.getDb(),
         'link_atualizacao',
-        'id_link_atualizacao',
-        id,
+        { id_link_atualizacao: id },
         'Link de atualização não encontrado.',
         'Sem permissão para editar este link.',
       );

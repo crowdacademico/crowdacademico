@@ -36,75 +36,25 @@
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
--- Contexto histórico do motor de score (por que ele existe):
--- perfil_pesquisador.score_atual e score_pesquisador.pontos_obtidos eram só
--- valores fixos digitados no seed - nada no app realmente calculava o score
--- a partir de campanha/denuncia/link_academico/perfil. 5 dos 7 pesquisadores
--- nem tinham linha em score_pesquisador. No app, a tela de detalhes de
--- pontuação lia campos que não existem no tipo real de dimensões de score
--- (que só tem perfil_academico, historico_plataforma, atualizacao_campanha,
--- reputacao_comunidade), então toda conta vinha undefined * peso = NaN.
---
--- Estratégia: calcular tudo dentro do banco (não no app), manter o resultado
--- em cache em perfil_pesquisador.score_atual / score_pesquisador, atualizado
--- automaticamente por TRIGGER sempre que campanha, denuncia,
--- atualizacao_campanha, link_academico, perfil_pesquisador ou score_config
--- mudarem - assim funciona pra QUALQUER registro novo, sem precisar lembrar
--- de chamar nada no app. Todos os pesos vêm de score_config.peso (não há
--- número "mágico" fixo no código) - editar o peso no Painel Admin já
--- recalcula o score de todo mundo automaticamente.
+-- Contexto histórico do motor de score (por que ele existe): perfil_pesquisador.score_atual e
+-- score_pesquisador.pontos_obtidos eram só valores fixos digitados no seed - nada no app realmente
+-- calculava o score a partir de campanha/denuncia/link_academico/perfil. 5 dos 7 pesquisadores nem
+-- tinham linha ...
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C001]
 -- ----------------------------------------------------------------------------
 
 -- ----------------------------------------------------------------------------
--- ATENÇÃO (28-07-2026, uma IA - 6ª auditoria, "manutenção e trabalhos de
--- fundo precisam de identidade"): depois de trg_campanha_valida_transicao
--- ([05-K-2]) e de pol_campanha_update (04) exigirem dono ou permissão real,
--- QUALQUER UPDATE em campanha rodado sem app.id_usuario_atual definido na
--- sessão - inclusive por um superusuário corrigindo dado manualmente no SQL
--- Editor - não afeta nenhuma linha (RLS filtra tudo antes da trigger sequer
--- avaliar) e devolve "UPDATE 0" SEM ERRO NENHUM. É o comportamento correto
--- (aprovação/rejeição de campanha precisa ser atribuível a alguém), mas o modo
--- de falhar é silencioso. Antes de qualquer UPDATE manual em campanha, rode:
---     SET app.id_usuario_atual = '<id de um usuário com a permissão certa>';
--- Mesmo tema pro worker de notificação (precisa de sessão com
--- notificacao_processar) e pro encerramento automático de campanha vencida -
--- este último já tem função pronta pra isso, encerrar_campanhas_vencidas()
--- ([05-K-2]), SECURITY DEFINER, chamada por agendamento sem precisar de
--- SET LOCAL manual. Documentado também em tutorial-rodar-projeto.md, item 8.
+-- ATENÇÃO (28-07-2026, uma IA - 6ª auditoria, "manutenção e trabalhos de fundo precisam de
+-- identidade"): depois de trg_campanha_valida_transicao ([05-K-2]) e de pol_campanha_update (04)
+-- exigirem dono ou permissão real, QUALQUER UPDATE em campanha rodado sem app.id_usuario_atual
+-- definido na sessão - ...
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C002]
 -- ----------------------------------------------------------------------------
 
 -- ----------------------------------------------------------------------------
--- ERRCODE CUSTOMIZADO (02-08-2026, uma IA - pendência apontada pela
--- Alexia): as 42 `RAISE EXCEPTION` deste arquivo passaram a carregar
--- `USING ERRCODE = '<código>'`. Antes disso, todas caíam no SQLSTATE genérico
--- `P0001` (qualquer `RAISE EXCEPTION` sem ERRCODE explícito), e o Nest não
--- tinha como diferenciar "sem permissão" de "dado inválido" de "estado
--- conflitante" - usuario.service.remove.ts, por exemplo, tratava QUALQUER
--- erro de excluir_conta_usuario() como 403, mesmo que a causa real fosse uma
--- trigger de validação de dado (não de permissão) disparada por tabela
--- relacionada.
---
--- Faixas usadas (nenhuma colide com os SQLSTATE nativos do Postgres já
--- tratados em nest/src/commons/database/postgres-exception.filter.ts:
--- 23505, 23503, 23502, 23514, 42501, P0001):
---   90001-90999  VALIDAÇÃO DE DADO/NEGÓCIO      -> HTTP 400 Bad Request
---                (formato, limite de tamanho, mínimo, campo obrigatório
---                fora do CHECK técnico, etc - nada de permissão envolvida)
---   91001-91999  CONFLITO DE ESTADO/REGRA        -> HTTP 409 Conflict
---                (campanha "congelada" após aprovação, transição de status
---                inválida, limite de recursos atingido, estoque insuficiente,
---                ação incompatível com o status atual do registro)
---   92001-92999  AUTORIZAÇÃO NEGADA (regra de negócio, não RLS) -> HTTP 403
---                (checagem feita via tem_permissao() dentro da trigger, ou
---                restrição por identidade/conflito de interesse - dono, autor,
---                denunciante agindo sobre o próprio registro)
---   93001-93999  LIMITE DE TAXA (rate limit)     -> HTTP 429 Too Many Requests
---
--- Cada código é único neste arquivo (ver DOCUMENTACAO_ERRCODE.md, gerado
--- junto desta mudança, para a lista completa código -> origem -> mensagem).
--- Mapeamento em HttpException fica por conta do Nest (ver
--- postgres-exception.filter.ts) - este arquivo só declara o SQLSTATE, não
--- decide o status HTTP.
+-- ERRCODE CUSTOMIZADO (02-08-2026, uma IA - pendência apontada pela Alexia): as 42 `RAISE
+-- EXCEPTION` deste arquivo passaram a carregar `USING ERRCODE = '<código>'`.
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C003]
 -- ----------------------------------------------------------------------------
 
 
@@ -127,16 +77,10 @@
 -- Função:     fn_precisa_revisao_score
 -- Assinatura: (p_id_usuario INT) -> BOOLEAN
 -- Bloco:      [05-I-1]
--- Regra:      Resolve o item 3 da Lista de Pendências (28-07-2026) - o score
---             NUNCA bloqueia a criação de campanha (nem Catarse nem Experiment
---             fazem isso; o filtro de confiança real é a aprovação manual do
---             Admin, via status='aguardando_aprovacao'). 'configuracoes.
---             score_minimo_campanha' vira só um SINAL pro painel do Admin
---             destacar, na fila de aprovação, campanhas de pesquisadores com
---             score abaixo do mínimo pra receberem uma revisão mais cuidadosa
---             - nunca uma trava automática e definitiva. SECURITY DEFINER
---             porque expõe só um booleano, sem vazar o valor real do score
---             (pol_score_select restringe score_atual ao próprio dono).
+-- Regra:      Resolve o item 3 da Lista de Pendências (28-07-2026) - o score NUNCA bloqueia a
+--             criação de campanha (nem Catarse nem Experiment fazem isso; o filtro de confiança
+--             real é a aprovação manual do Admin, via status='aguardando_aprovacao').
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C004]
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_precisa_revisao_score(p_id_usuario INT)
 RETURNS BOOLEAN
@@ -162,22 +106,11 @@ $$;
 -- Função:     calcular_score_perfil_academico
 -- Assinatura: (p_id_usuario INT) -> INTEGER
 -- Bloco:      [05-I-2]
--- Regra:      Dimensão 1 - Perfil Acadêmico Declarado. Soma os pesos (vindos
---             de score_config, subitens do pai 'perfil_academico') de: link
---             Lattes, link ORCID, outro link acadêmico (qualquer tipo_link que
---             não seja Lattes/ORCID), vínculo institucional preenchido e
+-- Regra:      Dimensão 1 - Perfil Acadêmico Declarado. Soma os pesos (vindos de score_config,
+--             subitens do pai 'perfil_academico') de: link Lattes, link ORCID, outro link acadêmico
+--             (qualquer tipo_link que não seja Lattes/ORCID), vínculo institucional preenchido e
 --             título acadêmico informado no perfil_pesquisador.
--- CORRIGIDO (28-07-2026, item 13(d) da Lista C - "GitHub não pontua"): o
--- reconhecimento de link era por ILIKE no NOME de exibição do tipo_link
--- ('%linkedin%', '%researchgate%', '%academia%', '%scholar%', '%site%') -
--- hardcoded, frágil (rename de exibição quebra silenciosamente) e nunca incluía
--- GitHub, mesmo o tipo já existindo no catálogo. Passou a comparar por
--- tipo_link.codigo (chave estável, ver [01-C]) em vez do nome, e "outro link
--- acadêmico" virou "qualquer tipo_link cadastrado que não seja Lattes/ORCID" -
--- reconhece GitHub automaticamente, e qualquer tipo novo que entrar no catálogo
--- no futuro (sem precisar editar esta função de novo).
--- ----------------------------------------------------------------------------
--- Revisada em 24-09-2026, ver DOCUMENTACAO_BD.md [05-K-2-C].
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C005]
 CREATE OR REPLACE FUNCTION public.calcular_score_perfil_academico(p_id_usuario INT)
 RETURNS INTEGER
 LANGUAGE plpgsql
@@ -240,14 +173,11 @@ $$;
 -- Função:     calcular_score_historico
 -- Assinatura: (p_id_usuario INT) -> INTEGER
 -- Bloco:      [05-I-2]
--- Regra:      Dimensão 2 - Histórico na Plataforma. conclusao = (campanhas
---             concluídas com sucesso / total encerradas) * peso_conclusao;
---             aprovacao = (aprovadas pela moderação / total submetidas) *
---             peso_aprovacao; desconta penalidade_abandono por campanha
---             abandonada e penalidade_sem_justificativa por campanha não
---             atingida sem justificativa na solicitação de encerramento.
--- ----------------------------------------------------------------------------
--- Revisada em 24-09-2026, ver DOCUMENTACAO_BD.md [05-K-2-C].
+-- Regra:      Dimensão 2 - Histórico na Plataforma. conclusao = (campanhas concluídas com sucesso /
+--             total encerradas) * peso_conclusao; aprovacao = (aprovadas pela moderação / total
+--             submetidas) * peso_aprovacao; desconta penalidade_abandono por campanha abandonada e
+--             penalidade_sem_justificativa por campanha não ...
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C006]
 CREATE OR REPLACE FUNCTION public.calcular_score_historico(p_id_usuario INT)
 RETURNS INTEGER
 LANGUAGE plpgsql
@@ -325,15 +255,10 @@ $$;
 -- Função:     calcular_score_atualizacao
 -- Assinatura: (p_id_usuario INT) -> INTEGER
 -- Bloco:      [05-I-2]
--- Regra:      Dimensão 3 - Atualização da Campanha. regularidade =
---             SUM(realizadas)/SUM(esperadas) * peso_regularidade;
---             tempestividade = (% de campanhas em que realizadas >=
---             esperadas) * peso_tempestividade. Considera campanhas que já
---             começaram (ativo/sucesso/nao_atingido/encerrado).
---             atualizacoesEsperadas = duracaoEmMeses * frequencia_esperada_mensal
---             (configurável via score_frequencia_esperada_mensal).
--- ----------------------------------------------------------------------------
--- Revisada em 24-09-2026, ver DOCUMENTACAO_BD.md [05-K-2-C].
+-- Regra:      Dimensão 3 - Atualização da Campanha. regularidade = SUM(realizadas)/SUM(esperadas) *
+--             peso_regularidade; tempestividade = (% de campanhas em que realizadas >= esperadas) *
+--             peso_tempestividade.
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C007]
 CREATE OR REPLACE FUNCTION public.calcular_score_atualizacao(p_id_usuario INT)
 RETURNS INTEGER
 LANGUAGE plpgsql
@@ -407,32 +332,9 @@ $$;
 -- Função:     calcular_score_reputacao
 -- Assinatura: (p_id_usuario INT) -> INTEGER
 -- Bloco:      [05-I-2]
--- Regra:      Dimensão 4 - Reputação da Comunidade. reputacaoScore =
---             peso_raiz - totalDenuncias*custo - totalProcedentes*custo_procedente.
--- CORRIGIDO (28-07-2026, item 13(a) da Lista C - conformidade com RF-077, não
--- decisão de negócio): antes, v_total_denuncias contava QUALQUER denúncia
--- contra o pesquisador (inclusive 'pendente', 'em_analise' e 'improcedente'),
--- penalizando mesmo uma acusação ainda sob análise ou já descartada. O RF-077
--- define 'improcedente' como "denúncia descartada após análise" - contar isso
--- como se fosse culpa contradiz o próprio requisito. Agora só denúncias com
--- status 'resolvida' (= procedente, confirmada pela moderação) penalizam,
--- tanto no custo base quanto no custo extra de procedência. Testado: não muda
--- a faixa de nenhum dos 4 pesquisadores desenhados pro teste determinístico
--- (Eduardo, cujas 2 denúncias são 'pendente', sai de 23 pra 25 na dimensão -
--- 46→48 no total, continua "Em Construção"; Vinícius, cujas 4 denúncias já
--- eram todas 'resolvida', não muda - 19, continua "Atenção").
--- CORRIGIDO junto (item 13, quinto ponto - consolidação de constantes): os
--- pesos volume_denuncias/gravidade_denuncias já existiam em score_config
--- (a tabela que o Painel Admin edita, com trigger de recálculo automático),
--- mas nenhuma função os lia - o cálculo usava score_custo_denuncia/
--- score_custo_denuncia_procedente, duas chaves soltas em configuracoes, sem
--- nenhuma ligação com o score_config. Isso fazia o painel mostrar 2 alavancas
--- (volume_denuncias, gravidade_denuncias) que não moviam nada. Migrado: os
--- valores (1 e 3) agora vivem em score_config (nome='volume_denuncias'/
--- 'gravidade_denuncias', ver [07-I-1]), e as 2 chaves em configuracoes saíram
--- do seed (ver [07-I-2]) - score_config passa a ser a única fonte de verdade.
--- ----------------------------------------------------------------------------
--- Revisada em 24-09-2026, ver DOCUMENTACAO_BD.md [05-K-2-C].
+-- Regra:      Dimensão 4 - Reputação da Comunidade. reputacaoScore = peso_raiz -
+--             totalDenuncias*custo - totalProcedentes*custo_procedente.
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C008]
 CREATE OR REPLACE FUNCTION public.calcular_score_reputacao(p_id_usuario INT)
 RETURNS INTEGER
 LANGUAGE plpgsql
@@ -469,12 +371,9 @@ $$;
 -- Função:     recalcular_score_pesquisador
 -- Assinatura: (p_id_usuario INT) -> INTEGER
 -- Bloco:      [05-I-3]
--- Regra:      Recalcula as 4 dimensões de um pesquisador, grava em
---             score_pesquisador (UPSERT) e atualiza o cache em
---             perfil_pesquisador.score_atual. SECURITY DEFINER: precisa poder
---             escrever no perfil de QUALQUER pesquisador (ex: quando um admin
---             resolve uma denúncia contra outra pessoa), não só no perfil de
---             quem disparou a ação.
+-- Regra:      Recalcula as 4 dimensões de um pesquisador, grava em score_pesquisador (UPSERT) e
+--             atualiza o cache em perfil_pesquisador.score_atual.
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C009]
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.recalcular_score_pesquisador(p_id_usuario INT)
 RETURNS INTEGER
@@ -604,26 +503,18 @@ $$;
 -- Função:    trg_recalcular_por_campanha()
 -- Bloco:     [05-I-4]
 -- Regra:     Dispara o recálculo de score do pesquisador dono da campanha.
--- CORRIGIDO (28-07-2026, achado numa auditoria de IA - "Problema 2", item #10
--- da 1ª análise, nunca corrigido até agora): a trigger original era AFTER INSERT OR UPDATE OR
--- DELETE sem nenhuma cláusula WHEN - todo UPDATE em campanha recalculava as 4
--- dimensões inteiras, mesmo quando nenhuma delas usa a coluna que mudou. A cadeia
--- contribuicao -> trg_sincroniza_arrecadado_campanha -> UPDATE campanha
--- (valor_bruto_arrecadado) -> esta trigger disparava um recálculo completo POR
--- DOAÇÃO - medido: 5 doações confirmadas = 20 gravações em score_pesquisador (4
--- por doação), todas produzindo o mesmo número, porque valor_bruto_arrecadado não
--- entra em nenhuma das 4 dimensões. Numa campanha com 500 doações, seriam 500
--- recálculos completos serializando o FOR UPDATE da linha da campanha - risco
--- direto pro RNF-006 (confirmação de pagamento refletida em até 30s). Postgres
--- não aceita TG_OP dentro de WHEN, então não dá pra resolver numa trigger só:
--- precisa de duas, mesmo padrão já usado em trg_perfil_update_recalcula_score.
--- Medido depois da correção: 0 gravações de score por doação (era 4); recálculo
--- ao aprovar/encerrar/rejeitar campanha continua disparando normalmente.
--- ----------------------------------------------------------------------------
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C010]
 DROP TRIGGER IF EXISTS trg_campanha_recalcula_score ON campanha;
 CREATE TRIGGER trg_campanha_recalcula_score
-    AFTER INSERT OR DELETE ON campanha
-    FOR EACH ROW EXECUTE FUNCTION public.trg_recalcular_por_campanha();
+    AFTER INSERT ON campanha
+    FOR EACH ROW WHEN (NEW.status <> 'rascunho')
+    EXECUTE FUNCTION public.trg_recalcular_por_campanha();
+
+DROP TRIGGER IF EXISTS trg_campanha_recalcula_score_delete ON campanha;
+CREATE TRIGGER trg_campanha_recalcula_score_delete
+    AFTER DELETE ON campanha
+    FOR EACH ROW WHEN (OLD.status <> 'rascunho')
+    EXECUTE FUNCTION public.trg_recalcular_por_campanha();
 
 DROP TRIGGER IF EXISTS trg_campanha_recalcula_score_update ON campanha;
 CREATE TRIGGER trg_campanha_recalcula_score_update
@@ -688,6 +579,11 @@ RETURNS TRIGGER LANGUAGE plpgsql AS $$
 DECLARE
     v_id_usuario INT;
 BEGIN
+    -- 24-09-2026: o score só usa ativo e id_campanha; editar título ou texto não muda nada.
+    IF TG_OP = 'UPDATE' AND NEW.ativo IS NOT DISTINCT FROM OLD.ativo
+       AND NEW.id_campanha IS NOT DISTINCT FROM OLD.id_campanha THEN
+        RETURN NULL;
+    END IF;
     SELECT id_usuario INTO v_id_usuario FROM campanha
     WHERE id_campanha = COALESCE(NEW.id_campanha, OLD.id_campanha);
     IF v_id_usuario IS NOT NULL THEN
@@ -723,6 +619,11 @@ CREATE TRIGGER trg_atualizacao_recalcula_score
 CREATE OR REPLACE FUNCTION public.trg_recalcular_por_link()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN
+    -- 24-09-2026: o score só usa o TIPO do link e o dono; trocar a URL não muda nada.
+    IF TG_OP = 'UPDATE' AND NEW.id_tipolink IS NOT DISTINCT FROM OLD.id_tipolink
+       AND NEW.id_usuario IS NOT DISTINCT FROM OLD.id_usuario THEN
+        RETURN NULL;
+    END IF;
     IF TG_OP = 'DELETE' THEN
         PERFORM public.recalcular_score_pesquisador(OLD.id_usuario);
     ELSE
@@ -753,10 +654,8 @@ CREATE TRIGGER trg_link_recalcula_score
 -- Bloco:      [05-I-4]
 -- Uso:        Invocada por trg_perfil_recalcula_score e
 --             trg_perfil_update_recalcula_score
--- Regra:      Recalcula o score do próprio perfil_pesquisador que mudou. No
---             UPDATE, só dispara se vinculo_institucional/titulo_academico
---             mudaram de verdade (condição WHEN na trigger, evita loop
---             infinito com o próprio recalculo que atualiza score_atual).
+-- Regra:      Recalcula o score do próprio perfil_pesquisador que mudou.
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C011]
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.trg_recalcular_por_perfil()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
@@ -822,10 +721,8 @@ $$;
 -- Momento:   AFTER UPDATE OF peso, UMA vez por comando (FOR EACH STATEMENT)
 -- Função:    trg_recalcular_por_score_config()
 -- Bloco:     [05-I-4]
--- Regra:     Recalcula o score de todos os pesquisadores quando um peso é
---            editado no Painel Admin.
--- Por comando (21-09-2026): editar os 4 pesos raiz dispara 1 recálculo, não 4.
--- Perde o filtro "só se o peso mudou". Ver DOCUMENTACAO_BD.md [05-K-2-B].
+-- Regra:     Recalcula o score de todos os pesquisadores quando um peso é editado no Painel Admin.
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C012]
 -- ----------------------------------------------------------------------------
 DROP TRIGGER IF EXISTS trg_score_config_recalcula_todos ON score_config;
 CREATE TRIGGER trg_score_config_recalcula_todos
@@ -837,24 +734,9 @@ CREATE TRIGGER trg_score_config_recalcula_todos
 -- Função:     fn_valida_soma_pesos_score_config
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-I-4]
--- Regra:      ADICIONADA (23-09-2026) - nada impedia os 4 pesos raiz de
---             score_config (id_pai IS NULL) somarem outra coisa que não 100.
---             Score_rotulo (faixas 0-100, seed) assume que o score MÁXIMO
---             possível é 100 - se a soma dos pesos fosse, por exemplo, 200,
---             ninguém nunca cairia na faixa "Referência" (75-100) de verdade,
---             e um score de 150 não teria rótulo nenhum (recalcular_score_
---             pesquisador, [05-I-2], devolveria NULL). CONSTRAINT TRIGGER
---             (não trigger comum) porque só assim dá pra ser DEFERRABLE -
---             sem isso, editar os 4 pesos em 4 UPDATEs separados (um por
---             linha, sem transação escrita à mão) reprovaria o 1º UPDATE
---             sozinho, mesmo que o conjunto final estivesse certo. FOR EACH
---             ROW é exigência do Postgres pra CONSTRAINT TRIGGER (não aceita
---             FOR EACH STATEMENT) - a função ignora NEW/OLD de propósito e
---             sempre olha a soma agregada da tabela inteira, então dispara
---             1x por linha afetada mas sempre confere o estado FINAL, já
---             no COMMIT (ou SET CONSTRAINTS ALL IMMEDIATE). Testado com
---             PGlite: 2 UPDATEs na mesma transação, inválidos no meio mas
---             certos no fim, o COMMIT passa; terminar errado, o COMMIT falha.
+-- Regra:      ADICIONADA (23-09-2026) - nada impedia os 4 pesos raiz de score_config (id_pai IS
+--             NULL) somarem outra coisa que não 100.
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C013]
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_valida_soma_pesos_score_config()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
@@ -890,20 +772,11 @@ CREATE CONSTRAINT TRIGGER trg_score_config_soma_pesos
 -- Função:     fn_valida_cobertura_score_rotulo
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-I-4]
--- Regra:      ADICIONADA (23-09-2026) - EX_SCORE_ROTULO_SEM_SOBREPOSICAO (01,
---             [01-I]) só impede 2 faixas ativas se SOBREPOREM; não impede um
---             BURACO entre elas (ex.: uma faixa terminando em 49 e a próxima
---             começando em 51 deixaria o score 50 sem rótulo nenhum, mesmo
---             bug de fundo do achado de sobreposição). Exige cobertura EXATA
---             de 0 a 100 - "exata" só faz sentido porque
---             fn_valida_soma_pesos_score_config (acima) já garante que o
---             score máximo possível é 100. Mesmo mecanismo de CONSTRAINT
---             TRIGGER DEFERRABLE da função acima, pelo mesmo motivo (editar
---             faixa por faixa não pode reprovar um estado intermediário).
---             LEAD() OVER (ORDER BY score_minimo) compara cada faixa com a
---             PRÓXIMA (por score_minimo) - se a próxima não começa exatamente
---             1 depois do fim desta, tem buraco (ou sobreposição, já
---             impossível pela outra constraint).
+-- Regra:      ADICIONADA (23-09-2026) - EX_SCORE_ROTULO_SEM_SOBREPOSICAO (01, [01-I]) só impede 2
+--             faixas ativas se SOBREPOREM; não impede um BURACO entre elas (ex.: uma faixa
+--             terminando em 49 e a próxima começando em 51 deixaria o score 50 sem rótulo nenhum,
+--             mesmo bug de fundo do achado de sobreposição).
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C014]
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_valida_cobertura_score_rotulo()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
@@ -1107,11 +980,9 @@ CREATE TRIGGER trg_contrib_recompensa_valida
 -- Bloco:      [05-K-1]
 -- Uso:        Invocada por trg_link_academico_valida_tipo,
 --             trg_link_atualizacao_valida_tipo e trg_link_recompensa_valida_tipo
--- Regra:      tipo_link é compartilhado por 3 tabelas (link_academico,
---             link_atualizacao, link_recompensa). Impede que alguém associe,
---             por exemplo, "Orcid" (permite_perfil=TRUE apenas) a uma
---             recompensa ou atualização - a FK sozinha não bloquearia isso,
---             só a existência do id_tipolink, não o contexto de uso.
+-- Regra:      tipo_link é compartilhado por 3 tabelas (link_academico, link_atualizacao,
+--             link_recompensa).
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C015]
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.trg_valida_escopo_tipolink()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
@@ -1155,12 +1026,9 @@ CREATE TRIGGER trg_link_academico_valida_tipo
 -- Função:     fn_valida_limite_link_academico
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-1]
--- Regra:      RESOLVE o item 19(a) da lista de pendências (28-07-2026) - os
---             RF-014/RF-016/RF-018 e a Etapa 2 falam em até 5 links por
---             pesquisador; a tabela nunca teve trava nenhuma. Limite lido de
---             configuracoes.limite_links_academicos_perfil (mesmo padrão dos
---             outros limites desta lista - campanhas simultâneas, endossos,
---             denúncias/24h), não hardcoded.
+-- Regra:      RESOLVE o item 19(a) da lista de pendências (28-07-2026) - os RF-014/RF-016/RF-018 e
+--             a Etapa 2 falam em até 5 links por pesquisador; a tabela nunca teve trava nenhuma.
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C016]
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_valida_limite_link_academico()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
@@ -1204,22 +1072,12 @@ CREATE TRIGGER trg_link_academico_valida_limite
 -- Função:     fn_valida_limite_texto_livre
 -- Assinatura: () -> TRIGGER (genérica, recebe 2 argumentos via TG_ARGV)
 -- Bloco:      [05-K-1]
--- Regra:      RESOLVE o "Problema 2" apontado por uma IA (28-07-2026) -
---             vários campos de texto livre preenchidos por usuário (denuncia.
---             relato, campanha.descricao, atualizacao_campanha.conteudo,
---             solicitacao_encerramento.justificativa_pesquisador/admin,
---             recompensa.descricao) não tinham NENHUM limite de tamanho - a
---             Alexia já tinha avisado disso no WhatsApp sobre o relato, antes
---             mesmo da coluna existir. Uma função genérica em vez de 6 quase
---             idênticas: TG_ARGV[0] é o nome da coluna a checar (lida via
---             to_jsonb(NEW), já que plpgsql não permite acesso dinâmico a
---             campo de um RECORD por nome), TG_ARGV[1] é a chave em
---             configuracoes, TG_ARGV[2] é o valor padrão caso a chave não
---             exista. O limite técnico largo (bem maior, fixo) já mora na
---             CHECK de cada coluna (01) - esta trigger é só o limite de
---             negócio, menor e configurável pelo Painel Admin.
--- ----------------------------------------------------------------------------
--- Revisada em 24-09-2026, ver DOCUMENTACAO_BD.md [05-K-2-C].
+-- Regra:      RESOLVE o "Problema 2" apontado por uma IA (28-07-2026) - vários campos de texto
+--             livre preenchidos por usuário (denuncia. relato, campanha.descricao,
+--             atualizacao_campanha.conteudo,
+--             solicitacao_encerramento.justificativa_pesquisador/admin, recompensa.descricao) não
+--             tinham NENHUM limite de tamanho - a ...
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C017]
 CREATE OR REPLACE FUNCTION public.fn_valida_limite_texto_livre()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
 DECLARE
@@ -1333,15 +1191,11 @@ CREATE TRIGGER trg_link_recompensa_valida_tipo
 -- Função:     fn_valida_area_conhecimento_nivel2
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-1]
--- Regra:      ADICIONADO (27-07-2026) - area_conhecimento ganhou hierarquia de
---             2 níveis (grande área -> área, id_pai em 01) pra dar granularidade
---             de busca de verdade - "Ciências da Saúde" cobrindo de odontologia
---             a saúde coletiva era amplo demais pra filtro funcionar. Decisão
---             tomada junto (27-07-2026): campanha é obrigada a escolher uma área
---             de nível 2 (folha), nunca a grande área raiz - senão a granularidade
---             nova fica decorativa, ninguém é obrigado a usar. Não dá pra fazer
---             isso com CHECK simples (precisa consultar outra tabela), por isso
---             é trigger, não constraint.
+-- Regra:      ADICIONADO (27-07-2026) - area_conhecimento ganhou hierarquia de 2 níveis (grande
+--             área -> área, id_pai em 01) pra dar granularidade de busca de verdade - "Ciências da
+--             Saúde" cobrindo de odontologia a saúde coletiva era amplo demais pra filtro
+--             funcionar.
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C018]
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_valida_area_conhecimento_nivel2()
 RETURNS TRIGGER AS $$
@@ -1393,11 +1247,11 @@ CREATE TRIGGER trg_campanha_valida_area_nivel2_update
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-1]
 -- Uso:        Invocada por trg_denuncia_valida_tipo_motivo
--- Regra:      CORRIGIDO - a constraint CK_DENUNCIA_ALVO_XOR (01) já garante que
---             exatamente um alvo está preenchido; esta trigger garante que o
---             motivo escolhido é do tipo certo pro alvo escolhido (denunciar uma
---             campanha com um motivo cadastrado como 'perfil', ou vice-versa,
---             não fazia sentido e nada impedia).
+-- Regra:      CORRIGIDO - a constraint CK_DENUNCIA_ALVO_XOR (01) já garante que exatamente um alvo
+--             está preenchido; esta trigger garante que o motivo escolhido é do tipo certo pro alvo
+--             escolhido (denunciar uma campanha com um motivo cadastrado como 'perfil', ou
+--             vice-versa, não fazia sentido e nada impedia).
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C019]
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.trg_valida_tipo_motivo_denuncia()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
@@ -1445,18 +1299,9 @@ CREATE TRIGGER trg_denuncia_valida_tipo_motivo
 -- Função:     fn_valida_repasse_all_or_nothing
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-2]
--- Regra:      Bloqueia repasse indevido em campanha all-or-nothing que não
---             atingiu a meta financeira. Só bloqueia se houver tentativa real
---             de liberar dinheiro (valor_liquido > 0); registro de "nada
---             repassado" (RF-038, valor_liquido = 0) continua permitido.
--- CORRIGIDO: a versão anterior comparava só NEW.valor_liquido > 0, então depois que
--- a A3 passou a validar também em UPDATE, um repasse já feito ficava impossível de
--- corrigir (status, data) se a campanha tivesse sido revertida (contribuições
--- devolvidas derrubando valor_bruto_arrecadado abaixo da meta). Agora só bloqueia
--- quando o valor liberado está de fato AUMENTANDO em relação ao que já era antes -
--- reduzir, zerar ou só mudar status/data nunca deveria travar. TG_OP = 'UPDATE'
--- guarda o acesso a OLD porque, num INSERT, o registro OLD não existe (referenciar
--- OLD.coluna nesse caso lança "record OLD is not assigned yet").
+-- Regra:      Bloqueia repasse indevido em campanha all-or-nothing que não atingiu a meta
+--             financeira.
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C020]
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION fn_valida_repasse_all_or_nothing()
 RETURNS TRIGGER AS $$
@@ -1493,12 +1338,8 @@ $$ LANGUAGE plpgsql;
 -- Momento:   BEFORE INSERT
 -- Função:    fn_valida_repasse_all_or_nothing()
 -- Bloco:     [05-K-2]
--- Regra:     Impede repasse com valor em campanha all-or-nothing sem meta
---            atingida.
--- ----------------------------------------------------------------------------
--- CORRIGIDO: era BEFORE INSERT só - um INSERT com valor_liquido = 0 (permitido, RF-038)
--- seguido de UPDATE pro valor cheio furava a regra all-or-nothing sem revalidar nada,
--- já que pol_repasse_update é USING(true) de propósito (item 9 da PENDENCIAS).
+-- Regra:     Impede repasse com valor em campanha all-or-nothing sem meta atingida.
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C021]
 DROP TRIGGER IF EXISTS trg_valida_repasse ON repasse;
 CREATE TRIGGER trg_valida_repasse
 BEFORE INSERT OR UPDATE ON repasse
@@ -1509,20 +1350,9 @@ EXECUTE FUNCTION fn_valida_repasse_all_or_nothing();
 -- Função:     atualizar_status_repasse
 -- Assinatura: (p_id_repasse INT, p_status VARCHAR, p_repassado_em TIMESTAMP DEFAULT NULL) -> VOID
 -- Bloco:      [05-K-2]
--- Regra:      CRÍTICO 2 (extensão) - 5ª auditoria de uma IA: "estender o
---             mesmo tratamento a repasse, que também é dinheiro saindo".
---             `pol_repasse_update` (04) é `USING (true)` de propósito (item 9
---             da PENDENCIAS) - o `GRANT UPDATE` de tabela inteira que isso
---             exigia saiu (`06`); dali em diante o único jeito de mudar
---             `status`/`repassado_em` é por aqui. `SECURITY DEFINER`, mas
---             `trg_valida_repasse` continua rodando normalmente por baixo (RLS
---             é bypassada, trigger não) - a regra all-or-nothing continua
---             protegida mesmo passando por esta função.
--- SEM AUTORIZAÇÃO DE PROPÓSITO - pré-autenticação: chamada pelo webhook do
--- gateway de pagamento/repasse, sem sessão de usuário (mesma categoria de
--- registrar_falha_login/registrar_login_sucesso, [03-O]). De confiança do
--- backend: o endpoint que chama esta função precisa validar a assinatura do
--- webhook antes, nunca aceitar a chamada de uma rota pública qualquer.
+-- Regra:      CRÍTICO 2 (extensão) - 5ª auditoria de uma IA: "estender o mesmo tratamento a
+--             repasse, que também é dinheiro saindo".
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C022]
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.atualizar_status_repasse(
     p_id_repasse INT, p_status VARCHAR, p_repassado_em TIMESTAMP DEFAULT NULL
@@ -1587,14 +1417,10 @@ EXECUTE FUNCTION validar_contribuicao_all_or_nothing();
 -- Momento:   BEFORE UPDATE (só quando meio_pagamento ou id_campanha mudam de valor)
 -- Função:    validar_contribuicao_all_or_nothing()
 -- Bloco:     [05-K-2]
--- Regra:     CORRIGIDO - a versão anterior (BEFORE INSERT OR UPDATE sem WHEN)
---            revalidava meio_pagamento em TODO UPDATE, mesmo quando só o status
---            mudava (exatamente o que o webhook de confirmação de pagamento faz).
---            Isso congelava para sempre qualquer contribuição não-PIX que já
---            existisse numa campanha all-or-nothing (ex.: dado histórico do seed,
---            carregado com a trigger desligada). A cláusula WHEN restringe a
---            revalidação para quando o que de fato importa muda, sem abrir mão
---            de impedir trocar o meio de pagamento por baixo dos panos depois.
+-- Regra:     CORRIGIDO - a versão anterior (BEFORE INSERT OR UPDATE sem WHEN) revalidava
+--            meio_pagamento em TODO UPDATE, mesmo quando só o status mudava (exatamente o que o
+--            webhook de confirmação de pagamento faz).
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C023]
 -- ----------------------------------------------------------------------------
 DROP TRIGGER IF EXISTS trg_contribuicao_all_or_nothing_pix_update ON contribuicao;
 CREATE TRIGGER trg_contribuicao_all_or_nothing_pix_update
@@ -1611,13 +1437,11 @@ EXECUTE FUNCTION validar_contribuicao_all_or_nothing();
 -- Função:     fn_congela_regras_campanha
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-2]
--- Regra:      Impede a alteração de meta financeira, modelo de financiamento,
---             taxa, título ou descrição após a campanha ser aprovada (status
---             'ativo' em diante, incluindo encerramento por moderação) -
---             proteção contra fraude/alteração retroativa. data_fim/
---             data_inicio têm regra própria: só congelam quando a campanha
---             já começou de fato (data_inicio no passado) - ver comentário
---             mais abaixo, no corpo da função (feature "Em breve").
+-- Regra:      Impede a alteração de meta financeira, modelo de financiamento, taxa, título ou
+--             descrição após a campanha ser aprovada (status 'ativo' em diante, incluindo
+--             encerramento por moderação) - proteção contra fraude/alteração retroativa. data_fim/
+--             data_inicio têm regra própria: só congelam quando a ...
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C024]
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION fn_congela_regras_campanha()
 RETURNS TRIGGER AS $$
@@ -1739,31 +1563,8 @@ EXECUTE FUNCTION fn_congela_regras_campanha();
 -- Função:     fn_congela_orcamento_campanha
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-2]
--- Regra:      ADICIONADO (31-07-2026, Alexia) - orçamento estruturado da campanha
---             (01, [01-E]). Congela na MESMA condição de fn_congela_regras_
---             campanha (status já aprovado em diante) - diferente do
---             cronograma abaixo, que só trava quando a campanha começa de
---             fato. Faz sentido serem diferentes: a soma do orçamento precisa
---             bater EXATAMENTE com meta_financeira (fn_valida_completude_
---             campanha_aprovacao, mais abaixo), e meta_financeira já está
---             congelada desde a aprovação - deixar o orçamento editável até o
---             início de fato permitiria trocar os itens sem nunca quebrar
---             essa igualdade, o que ainda assim seria alteração retroativa de
---             informação já aprovada/exibida publicamente. Cobre INSERT/
---             UPDATE/DELETE porque adicionar ou remover um item depois de
---             aprovado é tão problemático quanto editar o valor de um
---             existente.
--- CORRIGIDO (01-08-2026, achado em revisão): faltava SECURITY DEFINER. Sem
--- isso, o SELECT status FROM campanha abaixo fica sujeito à RLS de quem está
--- executando - pol_campanha_select (04) não inclui 'campanha_editar' entre
--- suas condições, só status/dono/'relatorio_visualizar'. Pro dono da campanha
--- (o caso de longe mais comum) isso nunca foi problema, porque o próprio
--- id_usuario=self já satisfaz a policy. Mas alguém com só 'campanha_editar'
--- (sem 'relatorio_visualizar') mexendo no orçamento de campanha de outra
--- pessoa ainda não aprovada enxergaria v_status = NULL (RLS filtra a linha) e
--- o `IF v_status IN (...)` nunca dispararia - a trava de congelamento ficaria
--- silenciosamente inerte. Mesmo raciocínio de fn_valida_completude_campanha_
--- aprovacao (abaixo, no mesmo bloco), onde este padrão foi detalhado.
+-- Regra:      ADICIONADO (31-07-2026, Alexia) - orçamento estruturado da campanha (01, [01-E]).
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C025]
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_congela_orcamento_campanha()
 RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
@@ -1813,28 +1614,10 @@ EXECUTE FUNCTION public.fn_congela_orcamento_campanha();
 -- Função:     fn_valida_limite_max_orcamento_campanha
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-2]
--- Regra:      ADICIONADO (01-08-2026, correção do que a Alexia mandou em
---             31-07-2026): ela tinha misturado o número que devia ser TETO
---             (10) com o de PISO (que devia ser bem menor) dentro da MESMA
---             chave `orcamento_min_itens`. Separado em duas chaves:
---             `orcamento_min_itens` (checado na aprovação, ver
---             fn_valida_completude_campanha) e `orcamento_max_itens`
---             (10, checado aqui). Checar o máximo no INSERT - não só na
---             aprovação - dá feedback imediato pro pesquisador no item 11,
---             em vez de deixar ele descobrir só quando a campanha for
---             recusada na moderação.
--- CORRIGIDO (05-09-2026): `orcamento_min_itens` mudou de 3 pra 1 - achado
--- conferindo os Requisitos Funcionais (RF-039) contra o banco, que citava
--- "valor padrão de 1 (mínimo)" enquanto o seed tinha 3. Decisão do Lucas:
--- ajustar o banco pro texto oficial do requisito, não o contrário.
--- CORRIGIDO (01-08-2026, achado em revisão): faltava SECURITY DEFINER. O
--- COUNT(*) abaixo é sobre a própria orcamento_campanha, sujeito à sua RLS de
--- SELECT (pol_orcamento_campanha_select, 04) - que passou pra quem tem
--- permissão de INSERT (dono ou 'campanha_editar') mas não necessariamente
--- pra SELECT (só status/dono/'relatorio_visualizar'). Pro dono, nunca foi
--- problema; pra quem só tem 'campanha_editar', o COUNT ficaria sempre 0,
--- deixando o teto inerte em vez de bloquear - mesmo raciocínio de
--- fn_congela_orcamento_campanha (acima).
+-- Regra:      ADICIONADO (01-08-2026, correção do que a Alexia mandou em 31-07-2026): ela tinha
+--             misturado o número que devia ser TETO (10) com o de PISO (que devia ser bem menor)
+--             dentro da MESMA chave `orcamento_min_itens`.
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C026]
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_valida_limite_max_orcamento_campanha()
 RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
@@ -1873,31 +1656,8 @@ EXECUTE FUNCTION public.fn_valida_limite_max_orcamento_campanha();
 -- Função:     fn_congela_marco_cronograma
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-2]
--- Regra:      ADICIONADO (31-07-2026, Alexia) - cronograma estruturado da campanha
---             (01, [01-E]). Diferente do orçamento (acima), o cronograma NÃO
---             trava na aprovação - trava só quando a campanha já começou de
---             fato (campanha.data_inicio <= NOW()), mesma janela de carência
---             já usada pra campanha.data_inicio/data_fim em fn_congela_
---             regras_campanha ("Em breve"): entre aprovar e o início real, o
---             pesquisador pode legitimamente precisar reorganizar datas do
---             plano. Cobre INSERT/UPDATE/DELETE pelo mesmo motivo do
---             orçamento.
--- CORRIGIDO (01-08-2026, achado em revisão): faltava SECURITY DEFINER, mesmo
--- raciocínio de fn_congela_orcamento_campanha (acima) - o SELECT data_inicio
--- FROM campanha abaixo ficaria sujeito à RLS de quem executa, silenciosamente
--- inerte pra quem tem só 'campanha_editar' sem 'relatorio_visualizar'.
--- CORRIGIDO (01-08-2026, achado por uma IA em auditoria): a checagem só
--- olhava data_inicio <= NOW(), sem olhar o status da campanha - diferente de
--- fn_congela_regras_campanha e fn_congela_orcamento_campanha, que só travam
--- com a campanha JÁ aprovada (status IN ('ativo', ...)). Isso travava o
--- cadastro dos marcos obrigatórios ainda em 'aguardando_aprovacao': um
--- pesquisador que cria a campanha com data_inicio = agora (sem usar "Em
--- breve") tem o cronograma congelado assim que o relógio passa de
--- data_inicio, mesmo a campanha nunca tendo sido aprovada - e sem os 3
--- marcos mínimos, fn_valida_completude_campanha nunca deixa
--- aprovar (trava circular). Corrigido acrescentando a mesma condição de
--- status usada nas outras duas funções irmãs: só congela se a campanha JÁ
--- estiver aprovada em diante E data_inicio já tiver passado.
+-- Regra:      ADICIONADO (31-07-2026, Alexia) - cronograma estruturado da campanha (01, [01-E]).
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C027]
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_congela_marco_cronograma()
 RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
@@ -1947,16 +1707,11 @@ EXECUTE FUNCTION public.fn_congela_marco_cronograma();
 -- Função:     fn_valida_data_marco_cronograma
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-2]
--- Regra:      ADICIONADO (31-07-2026, Alexia) - a data prevista de um marco pode
---             ultrapassar campanha.data_fim sem problema (um marco de
---             divulgação de resultado, por exemplo, é comum acontecer depois
---             do prazo de arrecadação), mas não pode ser anterior a
---             campanha.data_inicio - não faz sentido planejar algo "antes da
---             campanha começar". Sai cedo se data_inicio ainda não foi
---             definida (mesmo padrão de fn_valida_prazo_campanha_negocio):
---             sem data_inicio não há o que comparar.
--- CORRIGIDO (01-08-2026, achado em revisão): faltava SECURITY DEFINER, mesmo
--- raciocínio de fn_congela_orcamento_campanha (acima).
+-- Regra:      ADICIONADO (31-07-2026, Alexia) - a data prevista de um marco pode ultrapassar
+--             campanha.data_fim sem problema (um marco de divulgação de resultado, por exemplo, é
+--             comum acontecer depois do prazo de arrecadação), mas não pode ser anterior a
+--             campanha.data_inicio - não faz sentido planejar algo "antes ...
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C028]
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_valida_data_marco_cronograma()
 RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
@@ -1992,16 +1747,9 @@ EXECUTE FUNCTION public.fn_valida_data_marco_cronograma();
 -- Função:     fn_valida_data_inicio_contra_marcos
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-2]
--- Regra:      ADICIONADA (23-09-2026) - a trigger acima só vigia a porta do
---             marco (INSERT/UPDATE em marco_cronograma), nunca disparava por
---             escrita em campanha. Um PATCH comum mudando data_inicio pra
---             frente deixava, sem erro nenhum, marcos anteriores ao novo
---             início - exatamente o estado que fn_valida_data_marco_cronograma
---             proíbe do outro lado. deslizar_datas_campanha() (05, [05-K-2])
---             não sofre disso, porque ela move os marcos manualmente antes de
---             mover a campanha; este buraco era só no PATCH direto. Mesmo
---             ERRCODE 90008 da trigger irmã: é a mesma regra de negócio, só
---             vista pelo lado da campanha.
+-- Regra:      ADICIONADA (23-09-2026) - a trigger acima só vigia a porta do marco (INSERT/UPDATE em
+--             marco_cronograma), nunca disparava por escrita em campanha.
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C029]
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_valida_data_inicio_contra_marcos()
 RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
@@ -2039,12 +1787,10 @@ EXECUTE FUNCTION public.fn_valida_data_inicio_contra_marcos();
 -- Função:     fn_valida_limite_max_marco_cronograma
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-2]
--- Regra:      ADICIONADO (01-08-2026) - mesmo raciocínio de
---             fn_valida_limite_max_orcamento_campanha (acima): checa
---             configuracoes.cronograma_max_marcos (20) no INSERT, feedback
---             imediato em vez de só na aprovação.
--- CORRIGIDO (01-08-2026, achado em revisão): faltava SECURITY DEFINER, mesmo
--- raciocínio de fn_valida_limite_max_orcamento_campanha (acima).
+-- Regra:      ADICIONADO (01-08-2026) - mesmo raciocínio de fn_valida_limite_max_orcamento_campanha
+--             (acima): checa configuracoes.cronograma_max_marcos (20) no INSERT, feedback imediato
+--             em vez de só na aprovação.
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C030]
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_valida_limite_max_marco_cronograma()
 RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
@@ -2083,61 +1829,11 @@ EXECUTE FUNCTION public.fn_valida_limite_max_marco_cronograma();
 -- Função:     fn_valida_transicao_campanha
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-2]
--- Regra:      CRÍTICO 1 - 5ª auditoria de uma IA, achado simulando a
---             jornada de um usuário mal-intencionado (não por leitura de
---             código): `pol_campanha_update` (04) libera UPDATE pro próprio
---             dono (`id_usuario = id_usuario_atual()`), e `fn_congela_regras_
---             campanha` só passa a proteger a linha a partir do momento em que
---             `OLD.status` já está em `('ativo','sucesso','nao_atingido',
---             'encerrado','encerrado_moderacao')` - `'aguardando_aprovacao'`
---             não está nessa lista. Reproduzido: um pesquisador comum, dono da
---             própria campanha em `aguardando_aprovacao`, executava
---             `UPDATE campanha SET status='ativo', aprovado_em=NOW(),
---             id_admin=<ele mesmo>` e funcionava - a campanha saía do ar como
---             se um Administrador tivesse aprovado, e `trg_campanha_carimba_
---             taxa` ainda carimbava `taxa_plataforma=5.00` sozinha, deixando a
---             campanha fraudulenta indistinguível de uma aprovada de verdade.
---             Nenhuma das triggers existentes protegia especificamente QUEM
---             pode mudar `status`/`aprovado_em`/`id_admin` - só o valor final
---             dos outros campos, depois que a campanha já estava aprovada.
--- Regras de transição permitidas, nesta ordem (a primeira que bater libera):
---   1. Nenhum dos 3 campos sensíveis mudou (edição normal de outro campo,
---      já coberta por fn_congela_regras_campanha) - sai cedo.
---   2. Quem tem 'campanha_aprovar', 'campanha_rejeitar' ou
---      'solicitacao_encerramento_decidir' pode fazer qualquer transição - é o
---      Administrador/curador de verdade.
---   3. Encerramento por prazo vencido - AUTOVERIFICÁVEL, sem precisar de
---      permissão nem de um "usuário de sistema": só passa se o prazo já
---      venceu (`data_fim <= NOW()`) E o novo status bate matematicamente com
---      `valor_bruto_arrecadado` vs `meta_financeira` (sucesso só se atingiu a
---      meta, nao_atingido só se não atingiu) - impossível mentir o resultado,
---      porque a condição confere o próprio dado contra si mesma.
---   4. Dono reenviando campanha rejeitada pra nova avaliação (RF-070):
---      só a transição rejeitado -> aguardando_aprovacao, sem tocar
---      aprovado_em/id_admin.
---   5. Cascata de suspensão do pesquisador (RF-084, 30-07-2026) -
---      AUTOVERIFICÁVEL, mesmo espírito do item 3: só passa se o dono da
---      campanha (NEW.id_usuario) está HOJE com status_pesquisador =
---      'suspenso' em perfil_pesquisador, E a transição é exatamente uma das
---      duas que a suspensão prevê (ativo -> encerrado_moderacao ou
---      aguardando_aprovacao -> rejeitado). Não depende de permissão de quem
---      está executando - só do fato, que ninguém consegue forjar por fora de
---      suspender_pesquisador() (03_funcoes_seguranca.sql, [03-P]), o único
---      caminho que escreve status_pesquisador='suspenso'.
---   6. Encerramento por moderação de denúncia (RF-108, 04-09-2026) - quem tem
---      'campanha_encerrar_moderacao' pode fazer especificamente a transição
---      ativo -> encerrado_moderacao, sem tocar aprovado_em/id_admin. Existe
---      porque o item 2 (campanha_aprovar/campanha_rejeitar/solicitacao_
---      encerramento_decidir) só cobria o Administrador - um moderador que
---      julga a denúncia procedente (permissão 'denuncia_responder') não
---      conseguia executar a própria decisão, precisava pedir pro admin fazer
---      fora do sistema. Permissão nova, escopo estreito de propósito: só
---      libera ESSA transição específica, não qualquer uma (diferente do item
---      2) - um moderador não vira aprovador/rejeitador de campanha nova só
---      por ganhar isso.
---   Qualquer outra tentativa de mudar status/aprovado_em/id_admin: bloqueada.
--- ----------------------------------------------------------------------------
--- Revisada em 24-09-2026, ver DOCUMENTACAO_BD.md [05-K-2-C].
+-- Regra:      CRÍTICO 1 - 5ª auditoria de uma IA, achado simulando a jornada de um usuário
+--             mal-intencionado (não por leitura de código): `pol_campanha_update` (04) libera
+--             UPDATE pro próprio dono (`id_usuario = id_usuario_atual()`), e `fn_congela_regras_
+--             campanha` só passa a proteger a linha a partir do momento em ...
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C031]
 CREATE OR REPLACE FUNCTION public.fn_valida_transicao_campanha()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN
@@ -2290,10 +1986,8 @@ $$;
 -- Momento:   BEFORE UPDATE
 -- Função:    fn_valida_transicao_campanha()
 -- Bloco:     [05-K-2]
--- Regra:     Bloqueia auto-aprovação/auto-rejeição/forjar id_admin. Libera
---            aprovação/rejeição real (Admin), encerramento automático por
---            prazo (autoverificável) e reenvio de campanha rejeitada pelo
---            próprio dono (RF-070).
+-- Regra:     Bloqueia auto-aprovação/auto-rejeição/forjar id_admin.
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C032]
 -- ----------------------------------------------------------------------------
 DROP TRIGGER IF EXISTS trg_campanha_valida_transicao ON campanha;
 CREATE TRIGGER trg_campanha_valida_transicao
@@ -2305,52 +1999,11 @@ EXECUTE FUNCTION fn_valida_transicao_campanha();
 -- Função:     fn_valida_completude_campanha  (renomeada em 21-09-2026, ver [05-K-2-B])
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-2]
--- Regra:      ADICIONADO (31-07-2026, Alexia) - orçamento e cronograma estruturados
---             (01, [01-E]) são obrigatórios, e a moderação da campanha (Admin
---             aprovando, ou seja, a transição para 'ativo') é o momento
---             combinado pra checar isso, junto com o resto - não existe
---             moderação separada pros itens. Três condições, todas
---             configuráveis via `configuracoes` (mesmo padrão de meta_minima_
---             campanha/limite_*, acima nesta seção):
---               1. Pelo menos configuracoes.orcamento_min_itens itens de orçamento;
---               2. Pelo menos configuracoes.cronograma_min_marcos marcos de cronograma;
---               3. SUM(orcamento_campanha.valor) = campanha.meta_financeira, EXATO
---                  (não "no máximo", não "aproximado" - bate certinho).
---             O TETO de itens/marcos (10/20) é responsabilidade de
---             fn_valida_limite_max_orcamento_campanha/fn_valida_limite_max_
---             marco_cronograma (acima), checado já no INSERT - aqui só o PISO,
---             que só dá pra confirmar no momento da aprovação (antes disso o
---             pesquisador ainda pode estar adicionando itens). Roda em toda
---             transição PARA 'ativo' vinda de qualquer outro status
---             (normalmente aguardando_aprovacao -> ativo, via campanha_
---             aprovar) - se OLD.status já era 'ativo', não passou por aqui de
---             novo (WHEN abaixo). fn_valida_transicao_campanha (acima) já
---             garantiu QUEM pode fazer essa transição; esta função garante
---             que a campanha está de fato completa antes de ir ao ar.
--- CORRIGIDO (01-08-2026): os defaults de fallback do config_numero() abaixo
--- eram 10/20 (a Alexia tinha confundido min com max) - corrigidos pra 3/3,
--- coerente com as chaves *_min_itens/*_min_marcos seedadas na época. O
--- comportamento de verdade sempre vem da chave em configuracoes; o fallback
--- só entra em ação se a linha sumir do banco.
--- CORRIGIDO (05-09-2026): fallback de `orcamento_min_itens` mudou de 3 pra
--- 1, acompanhando a mudança do valor seedado (ver comentário da função
--- fn_valida_limite_max_orcamento_campanha, acima nesta seção - RF-039 dos
--- Requisitos Funcionais). `cronograma_min_marcos` não mudou, continua 3.
--- CORRIGIDO (01-08-2026, achado em revisão, antes do commit): faltava
--- SECURITY DEFINER. Sem isso, os SELECT COUNT(*)/SUM() abaixo, contra
--- orcamento_campanha/marco_cronograma, ficam sujeitos à RLS de QUEM está
--- aprovando - e pol_orcamento_campanha_select/pol_marco_cronograma_select (04)
--- só liberam leitura por status/dono/'relatorio_visualizar', nenhum dos quais
--- vale ainda quando a campanha está 'aguardando_aprovacao'. Hoje só 'admin'
--- tem 'campanha_aprovar', e 'admin' também tem 'relatorio_visualizar' -
--- mascarou o bug por acidente. Se um dia outro papel ganhar 'campanha_aprovar'/
--- 'campanha_rejeitar'/'solicitacao_encerramento_decidir' sem também ter
--- 'relatorio_visualizar' (é literalmente a decisão em aberto do item 57), a
--- contagem enxergaria sempre 0 linhas e bloquearia toda aprovação, mesmo com
--- orçamento/cronograma completos - falha silenciosa, sem erro nenhum. Mesmo
--- raciocínio já usado em contar_seguidores_pesquisador()/encerrar_campanhas_
--- vencidas() (03/05): agregado precisa enxergar o total real, não só o que a
--- sessão de quem chama consegue ver linha a linha.
+-- Regra:      ADICIONADO (31-07-2026, Alexia) - orçamento e cronograma estruturados (01, [01-E])
+--             são obrigatórios, e a moderação da campanha (Admin aprovando, ou seja, a transição
+--             para 'ativo') é o momento combinado pra checar isso, junto com o resto - não existe
+--             moderação separada pros itens.
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C033]
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_valida_completude_campanha()
 RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
@@ -2405,12 +2058,9 @@ $$;
 -- Momento:   BEFORE UPDATE (aprovação, envio de rascunho e reenvio de rejeitada)
 -- Função:    fn_valida_completude_campanha()
 -- Bloco:     [05-K-2]
--- Regra:     Bloqueia aprovação/envio de campanha sem orçamento e cronograma
---            completos, com a soma do orçamento batendo exatamente com a meta,
---            e com o prazo ainda não vencido.
--- ----------------------------------------------------------------------------
--- WHEN cobre as 3 portas de entrada (aprovação, envio de rascunho, reenvio de
--- rejeitada), listadas por nome. Ver DOCUMENTACAO_BD.md [05-K-2-B].
+-- Regra:     Bloqueia aprovação/envio de campanha sem orçamento e cronograma completos, com a soma
+--            do orçamento batendo exatamente com a meta, e com o prazo ainda não vencido.
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C034]
 DROP TRIGGER IF EXISTS trg_campanha_valida_completude ON campanha;
 CREATE TRIGGER trg_campanha_valida_completude
 BEFORE UPDATE ON campanha
@@ -2425,26 +2075,10 @@ EXECUTE FUNCTION public.fn_valida_completude_campanha();
 -- Função:     fn_preenche_encerramento_campanha
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-2]
--- Regra:      ADICIONADO (28-07-2026) - bug real encontrado numa auditoria
---             de IA feita pela Alexia: a coluna encerrado_em (`[01-E]`, criada em 27-07-2026
---             pro RF-042/RF-058) nunca era preenchida por nada - nem trigger,
---             nem UPDATE algum no `.sql`. Nascia e ficava NULL pra sempre,
---             mesmo em campanha já encerrada. Esta trigger fecha o buraco:
---             quando o status entra em 'encerrado' ou 'encerrado_moderacao'
---             (vindo de qualquer outro status), grava NOW() automaticamente,
---             sem depender do backend lembrar de fazer isso em toda rota que
---             muda status. Só grava se ainda não tiver um valor (não
---             sobrescreve um encerrado_em já registrado).
--- CORRIGIDO (28-07-2026, uma IA - 6ª auditoria, ao implementar
--- encerrar_campanhas_vencidas() logo abaixo): o comentário original da coluna
--- (`[01-E]`) já dizia "registra a data real de encerramento (natural,
--- antecipado ou por moderação)" - mas esta trigger só cobria "antecipado"
--- (`encerrado`) e "por moderação" (`encerrado_moderacao`); faltava o
--- encerramento "natural" de verdade, `'sucesso'`/`'nao_atingido'` (campanha que
--- chega no fim do prazo por conta própria). Ninguém tinha percebido porque,
--- até agora, nada no `.sql` fazia essa transição via `UPDATE` (o seed grava o
--- status final direto no `INSERT`) - só apareceu ao dar ao encerramento
--- automático um caminho de verdade.
+-- Regra:      ADICIONADO (28-07-2026) - bug real encontrado numa auditoria de IA feita pela Alexia:
+--             a coluna encerrado_em (`[01-E]`, criada em 27-07-2026 pro RF-042/RF-058) nunca era
+--             preenchida por nada - nem trigger, nem UPDATE algum no `.sql`.
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C035]
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION fn_preenche_encerramento_campanha()
 RETURNS TRIGGER AS $$
@@ -2478,48 +2112,10 @@ EXECUTE FUNCTION fn_preenche_encerramento_campanha();
 -- Função:     encerrar_campanhas_vencidas
 -- Assinatura: () -> INT
 -- Bloco:      [05-K-2]
--- Regra:      ÚNICO ACHADO - 6ª auditoria de uma IA, achado simulando o
---             cron do RF-037 rodando de verdade: um job de fundo roda como
---             app_nestjs SEM sessão de usuário (`id_usuario_atual()` é `NULL`).
---             `pol_campanha_update` (04) exige ser dono OU ter
---             `campanha_editar`/`campanha_aprovar`/`campanha_rejeitar` - um job
---             não é nenhum dos dois, então a RLS não deixa NENHUMA linha
---             visível pra ele. Reproduzido: `UPDATE campanha SET status=
---             'sucesso' WHERE <vencida, meta batida>` devolvia `UPDATE 0` - SEM
---             erro nenhum. Falha silenciosa, a pior categoria: um cron
---             reportaria "ok" todo dia sem encerrar nenhuma campanha vencida,
---             que ficaria `'ativo'` pra sempre - página pública anunciando
---             campanha aberta com contador regressivo negativo, enquanto
---             `fn_valida_contribuicao_campanha_ativa` já rejeitaria doações
---             novas com "o prazo já foi encerrado". O doador veria uma
---             campanha aberta recusando o próprio dinheiro. Importante: a
---             causa NÃO é `trg_campanha_valida_transicao` (`[05-K-2]`, acima)
---             - o ramo autoverificável dela está certo (testado rodando como
---             superusuário: passa nos dois casos legítimos, bloqueia a
---             mentira) - é a RLS que barra antes da trigger sequer avaliar.
--- Solução, mesmo padrão de atualizar_status_contribuicao/atualizar_status_
--- repasse: `SECURITY DEFINER` bypassa a RLS (não a trigger - `trg_campanha_
--- valida_transicao` continua rodando por baixo e validando cada transição pelo
--- mesmo ramo autoverificável de sempre; não afrouxa nem a trigger nem a
--- policy). Chamada por agendamento (@Cron no NestJS), sem sessão de usuário -
--- mesma categoria pré-autorização de registrar_falha_login/registrar_login_
--- sucesso ([03-O]) e do webhook de atualizar_status_contribuicao. Retorna a
--- quantidade de campanhas encerradas, pro job poder logar de verdade (em vez
--- de silêncio) quantas mudaram.
---
--- CORRIGIDO (07-09-2026, achado incidental no teste manual de fechamento da
--- migração TypeScript do react/, nada a ver com ela): faltava `::status_
--- campanha` no resultado do CASE abaixo. `error: column "status" is of type
--- status_campanha but expression is of type text` (42804) - o Postgres NÃO
--- aplica cast de atribuição a um `CASE` com dois ramos literais do jeito que
--- aplicaria a um único literal solto (`SET status = 'sucesso'` funcionaria
--- sem cast; o `CASE` resolve pra `text` antes de chegar na coluna). Isso
--- quebrava a função a cada chamada, com ou sem campanha vencida pra
--- processar (erro de tipo, não de dado) - o `@Cron` de 15 em 15 min
--- (`CampanhaServiceEncerrarVencidas`, ligado em 05-09-2026 pro RF-057)
--- vinha falhando desde então. Comentário “mesmo padrão de atualizar_status_
--- repasse” (acima) não se sustentava: aquela função recebe `p_status`
--- como parâmetro único, nunca um `CASE` de dois literais.
+-- Regra:      ÚNICO ACHADO - 6ª auditoria de uma IA, achado simulando o cron do RF-037 rodando de
+--             verdade: um job de fundo roda como app_nestjs SEM sessão de usuário
+--             (`id_usuario_atual()` é `NULL`).
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C036]
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.encerrar_campanhas_vencidas()
 RETURNS INT
@@ -2562,16 +2158,28 @@ AS $$
 DECLARE
     v_ttl_horas INT;
     v_expiradas INT;
+    v_id        INT;
 BEGIN
     -- Filtra por status, sem recalcular completude (a cópia da regra já divergiu
     -- uma vez). Ver DOCUMENTACAO_BD.md [05-K-2-B].
     v_ttl_horas := public.config_numero('campanha_rascunho_ttl_horas', 336);
 
-    DELETE FROM campanha c
-    WHERE c.status = 'rascunho'
-      AND c.criado_em <= NOW() - (v_ttl_horas * INTERVAL '1 hour');
-
-    GET DIAGNOSTICS v_expiradas = ROW_COUNT;
+    -- Linha a linha (24-09-2026): um rascunho que ainda tenha filho que impede o DELETE (ex.: solicitação de
+    -- encerramento, que só um dado de teste cria) derrubava o lote inteiro toda hora. Só violação de chave
+    -- estrangeira é engolida; qualquer outro erro continua aparecendo.
+    v_expiradas := 0;
+    FOR v_id IN
+        SELECT c.id_campanha FROM campanha c
+        WHERE c.status = 'rascunho'
+          AND c.criado_em <= NOW() - (v_ttl_horas * INTERVAL '1 hour')
+    LOOP
+        BEGIN
+            DELETE FROM campanha WHERE id_campanha = v_id AND status = 'rascunho';
+            v_expiradas := v_expiradas + 1;
+        EXCEPTION WHEN foreign_key_violation THEN
+            NULL;
+        END;
+    END LOOP;
 
     RETURN v_expiradas;
 END;
@@ -2673,15 +2281,10 @@ $$;
 -- Assinatura: () -> INT
 -- Regra:      ADICIONADA (07-09-2026) - mesmo espírito e mesmo formato de
 --             encerrar_campanhas_vencidas(), acima: suspender_pesquisador()
---             (03_funcoes_seguranca.sql, [03-P]) grava `suspenso_ate`, mas
---             nada reverte sozinho quando o prazo passa - sem isso, a
---             suspensão do PODER de pesquisador nunca expiraria de verdade,
---             mesmo com o prazo escolhido pelo Admin já vencido. Chamada
---             por agendamento (@Cron no NestJS, mesmo padrão de
---             CampanhaServiceEncerrarVencidas) - não expira ao vivo em cada
---             policy que lê status_pesquisador (evita reabrir as 3 policies
---             de 04 que já checam status_pesquisador = 'ativo'; ver
---             ACHADOS_PARA_DISCUTIR.md).
+--             (03_funcoes_seguranca.sql, [03-P]) grava `suspenso_ate`, mas nada reverte sozinho
+--             quando o prazo passa - sem isso, a suspensão do PODER de pesquisador nunca expiraria
+--             de verdade, ...
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C037]
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.reativar_pesquisadores_vencidos()
 RETURNS INT
@@ -2711,17 +2314,11 @@ $$;
 -- Função:     fn_carimba_taxa_plataforma_aprovacao
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-2]
--- Regra:      ADICIONADO (28-07-2026, item 20 da Lista C - o que o RF-036 pede
---             literalmente, não decisão de negócio sobre "se"). taxa_plataforma
---             existia mas nada nunca a preenchia - o requisito que protege o
---             pesquisador de ter a taxa alterada depois da aprovação não estava
---             implementado (só existia a trigger de congelamento, protegendo um
---             valor que nunca chegava a ser gravado). No momento em que
---             aprovado_em deixa de ser NULL, copia configuracoes.
---             taxa_plataforma_padrao pra campanha.taxa_plataforma - só se ainda
---             não tiver um valor explícito (não sobrescreve uma taxa customizada
---             que porventura já tenha sido definida). Daí em diante, a trigger de
---             congelamento (acima) já protege esse valor contra alteração.
+-- Regra:      ADICIONADO (28-07-2026, item 20 da Lista C - o que o RF-036 pede literalmente, não
+--             decisão de negócio sobre "se"). taxa_plataforma existia mas nada nunca a preenchia -
+--             o requisito que protege o pesquisador de ter a taxa alterada depois da aprovação não
+--             estava implementado (só existia a trigger de ...
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C038]
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION fn_carimba_taxa_plataforma_aprovacao()
 RETURNS TRIGGER AS $$
@@ -2754,15 +2351,11 @@ EXECUTE FUNCTION fn_carimba_taxa_plataforma_aprovacao();
 -- Função:     fn_valida_prazo_campanha_negocio
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-2]
--- Regra:      ADICIONADO (28-07-2026, item 16 da Lista C): a regra de negócio
---             real de duração de campanha sai da constraint (que virou só um
---             limite técnico largo, ver CK_CAMPANHA_PRAZO em 01) e passa a ler
---             configuracoes.prazo_minimo_campanha_dias/
---             prazo_maximo_campanha_dias - mudar a política de prazo vira um
---             UPDATE numa linha, não uma migração de estrutura.
--- ATUALIZADO (28-07-2026, mesma data): decisão tomada por você e pela Alexia,
--- direto - prazo agora é 15 a 60 dias (não mais 15-90). O RF-045 (janela de
--- estorno do PIX do Banco Central) fica satisfeito com folga.
+-- Regra:      ADICIONADO (28-07-2026, item 16 da Lista C): a regra de negócio real de duração de
+--             campanha sai da constraint (que virou só um limite técnico largo, ver
+--             CK_CAMPANHA_PRAZO em 01) e passa a ler configuracoes.prazo_minimo_campanha_dias/
+--             prazo_maximo_campanha_dias - mudar a política de prazo vira um ...
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C039]
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION fn_valida_prazo_campanha_negocio()
 RETURNS TRIGGER AS $$
@@ -2817,17 +2410,10 @@ EXECUTE FUNCTION fn_valida_prazo_campanha_negocio();
 -- Função:     fn_valida_meta_campanha_negocio
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-2]
--- Regra:      MÉDIO 3 - 5ª auditoria de uma IA: campanha com
---             `meta_financeira = 0.00` era aceita (reproduzido, existia uma no
---             banco de teste) - sem `CHECK` e sem chave de configuração. Numa
---             campanha `all-or-nothing`, meta zero é sucesso instantâneo (a
---             primeira contribuição confirmada já bate a meta). Mesmo padrão
---             do prazo (item 16): o limite técnico (`meta_financeira > 0`) já
---             mora na `CHECK` (01); esta trigger aplica o mínimo de negócio de
---             verdade, maior e configurável, via
---             `configuracoes.meta_minima_campanha` - mudar o valor mínimo
---             aceito vira um `UPDATE` numa linha, não uma migração de
---             constraint.
+-- Regra:      MÉDIO 3 - 5ª auditoria de uma IA: campanha com `meta_financeira = 0.00` era aceita
+--             (reproduzido, existia uma no banco de teste) - sem `CHECK` e sem chave de
+--             configuração.
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C040]
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION fn_valida_meta_campanha_negocio()
 RETURNS TRIGGER AS $$
@@ -2872,13 +2458,10 @@ EXECUTE FUNCTION fn_valida_meta_campanha_negocio();
 -- Função:     fn_valida_transicao_solicitacao
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-2]
--- Regra:      CORRIGIDO - pol_solicitacao_update (04) passou a liberar UPDATE
---             também pro dono da campanha (não só quem decide), pra destravar o
---             valor 'cancelado' do ENUM status_encerramento. Esta trigger garante
---             que o dono só consegue fazer exatamente uma coisa: cancelar a
---             própria solicitação enquanto ainda está 'pendente' - nenhuma outra
---             coluna, nem outra transição de status. Quem tem
---             solicitacao_encerramento_decidir continua sem nenhuma restrição.
+-- Regra:      CORRIGIDO - pol_solicitacao_update (04) passou a liberar UPDATE também pro dono da
+--             campanha (não só quem decide), pra destravar o valor 'cancelado' do ENUM
+--             status_encerramento.
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C041]
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_valida_transicao_solicitacao()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
@@ -2919,16 +2502,9 @@ EXECUTE FUNCTION fn_valida_transicao_solicitacao();
 -- Função:     fn_valida_contribuicao_campanha_ativa
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-2]
--- Regra:      Bloqueia contribuição em campanha que não está com status
---             'ativo' no momento, cujo prazo (data_fim) já expirou, ou que
---             ainda está "Em breve" (data_inicio no futuro).
--- ADICIONADO (28-07-2026) - feature "Em breve"/rascunho agendado: o pesquisador
--- pode aprovar a campanha e escolher lançar na hora ou agendar um início futuro
--- (mesma ideia do Catarse, contador regressivo no front). A campanha já fica
--- pública assim que aprovada (pol_campanha_select, 04, libera por status -
--- ver [04-E]), mas não pode receber nenhuma doação antes de data_inicio
--- chegar. Não precisa de status novo nem de job/cron pra "virar ativa" -
--- data_inicio no passado já é o suficiente, comparado em tempo real aqui.
+-- Regra:      Bloqueia contribuição em campanha que não está com status 'ativo' no momento, cujo
+--             prazo (data_fim) já expirou, ou que ainda está "Em breve" (data_inicio no futuro).
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C042]
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION fn_valida_contribuicao_campanha_ativa()
 RETURNS TRIGGER AS $$
@@ -2979,14 +2555,10 @@ EXECUTE FUNCTION fn_valida_contribuicao_campanha_ativa();
 -- Função:     fn_valida_contribuicao_valor_minimo
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-2]
--- Regra:      30-07-2026 (RF-056, sugestão de uma IA). R$5,00 estava
---             hardcoded direto na CHECK CK_CONTRIBUICAO_VALOR_MINIMO (01) -
---             não é piso do gateway de pagamento (PIX em si não impõe
---             mínimo), é política de negócio da plataforma. Mesmo padrão do
---             prazo/meta financeira (item 16): o limite técnico
---             (`valor > 0`) já mora na CHECK; esta trigger aplica o mínimo de
---             negócio de verdade, configurável, via
---             configuracoes.valor_minimo_contribuicao.
+-- Regra:      30-07-2026 (RF-056, sugestão de uma IA). R$5,00 estava hardcoded direto na CHECK
+--             CK_CONTRIBUICAO_VALOR_MINIMO (01) - não é piso do gateway de pagamento (PIX em si não
+--             impõe mínimo), é política de negócio da plataforma.
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C043]
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION fn_valida_contribuicao_valor_minimo()
 RETURNS TRIGGER AS $$
@@ -3010,11 +2582,9 @@ $$ LANGUAGE plpgsql;
 -- Momento:   BEFORE INSERT
 -- Função:    fn_valida_contribuicao_valor_minimo()
 -- Bloco:     [05-K-2]
--- Regra:     Aplica o mínimo de negócio do valor de contribuição
---            (configuracoes), separado do limite técnico (constraint em 01).
---            Só BEFORE INSERT - valor de contribuição não é alterado depois
---            de criada (status/id_transacao_api mudam via
---            atualizar_status_contribuicao, 03, nunca o valor em si).
+-- Regra:     Aplica o mínimo de negócio do valor de contribuição (configuracoes), separado do
+--            limite técnico (constraint em 01).
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C044]
 -- ----------------------------------------------------------------------------
 DROP TRIGGER IF EXISTS trg_contribuicao_valida_valor_minimo ON contribuicao;
 CREATE TRIGGER trg_contribuicao_valida_valor_minimo
@@ -3073,27 +2643,11 @@ EXECUTE FUNCTION fn_sincroniza_arrecadado_campanha();
 -- Função:     atualizar_status_contribuicao
 -- Assinatura: (p_id INT, p_status status_contribuicao, p_id_transacao VARCHAR DEFAULT NULL) -> VOID
 -- Bloco:      [05-K-2]
--- Regra:      CRÍTICO 2 - 5ª auditoria de uma IA, achado simulando a
---             jornada de um usuário mal-intencionado: `pol_contribuicao_update`
---             (04) era `USING (true)` com `GRANT UPDATE` de tabela inteira -
---             qualquer usuário confirmava a própria contribuição (ou a de
---             qualquer um) direto por `UPDATE`. Reproduzido: fraudador doa
---             R$ 9.000 pra própria campanha (`status='pendente'`), executa
---             `UPDATE contribuicao SET status='confirmado'`, e
---             `trg_sincroniza_arrecadado_campanha` (acima) soma o valor de
---             verdade em `campanha.valor_bruto_arrecadado` - a página pública
---             passa a exibir R$ 9.000 arrecadados sem nenhum pagamento real
---             ter acontecido. Corrigido no mesmo padrão de `[03-O]`: a
---             coluna `status` (e `id_transacao_api`) sai do `GRANT UPDATE`
---             (`06`) e só muda por aqui - `SECURITY DEFINER`, mas
---             `trg_sincroniza_arrecadado_campanha` e as triggers de validação
---             all-or-nothing continuam rodando por baixo normalmente (RLS é
---             bypassada, trigger não).
--- SEM AUTORIZAÇÃO DE PROPÓSITO - pré-autenticação: chamada pelo webhook do
--- gateway de pagamento, sem sessão de usuário (mesma categoria de
--- registrar_falha_login/registrar_login_sucesso, [03-O]). De confiança do
--- backend: o endpoint que chama esta função precisa validar a assinatura do
--- webhook do gateway antes, nunca expor isso como rota pública genérica.
+-- Regra:      CRÍTICO 2 - 5ª auditoria de uma IA, achado simulando a jornada de um usuário
+--             mal-intencionado: `pol_contribuicao_update` (04) era `USING (true)` com `GRANT
+--             UPDATE` de tabela inteira - qualquer usuário confirmava a própria contribuição (ou a
+--             de qualquer um) direto por `UPDATE`.
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C045]
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.atualizar_status_contribuicao(
     p_id INT, p_status status_contribuicao, p_id_transacao VARCHAR DEFAULT NULL
@@ -3114,22 +2668,10 @@ $$;
 -- Função:     validar_limite_campanhas_pesquisador
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-2]
--- Regra:      Um pesquisador não pode ter mais campanhas simultâneas (nos
---             status 'aguardando_aprovacao' ou 'ativo') do que
---             configuracoes.limite_campanhas_simultaneas (padrão 2, ver
---             REQUISITOS_V7, "limite de campanhas simultâneas").
--- ATUALIZADO (21-09-2026): 'rascunho' NÃO conta, então o limite passou a ser
--- cobrado no ENVIO pra aprovação (rascunho -> aguardando_aprovacao e reenvio de
--- rejeitada), não na criação: rascunhos podem ser criados livremente. Continua
--- BEFORE INSERT OR UPDATE, então não há caminho que fure o limite. A mensagem
--- foi reescrita porque o erro agora chega no momento do envio, e a antiga falava
--- em "campanhas ativas ou aguardando aprovação" como se fosse na criação.
--- CORRIGIDO (28-07-2026, item 16 da Lista C): limite de 2 estava hardcoded
--- no corpo da função - mudar exigia editar e reaplicar o arquivo inteiro.
--- Passou a ler configuracoes (mesmo valor de hoje, 2, como DEFAULT de
--- segurança caso a chave não exista).
--- ----------------------------------------------------------------------------
--- Revisada em 24-09-2026, ver DOCUMENTACAO_BD.md [05-K-2-C].
+-- Regra:      Um pesquisador não pode ter mais campanhas simultâneas (nos status
+--             'aguardando_aprovacao' ou 'ativo') do que configuracoes.limite_campanhas_simultaneas
+--             (padrão 2, ver REQUISITOS_V7, "limite de campanhas simultâneas").
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C046]
 CREATE OR REPLACE FUNCTION public.validar_limite_campanhas_pesquisador()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -3278,12 +2820,9 @@ EXECUTE FUNCTION fn_valida_comentario_campanha_ativa();
 -- Função:     validar_comentario_endosso
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-3]
--- Regra:      Uma campanha não pode ter mais endossos ativos simultâneos
---             (ordem_endosso preenchida) do que
---             configuracoes.limite_endossos_campanha (RF-063).
--- CORRIGIDO (28-07-2026, item 16 da Lista C): limite de 4 estava hardcoded
--- no corpo da função. Passou a ler configuracoes (mesmo valor de hoje, 4,
--- como DEFAULT de segurança caso a chave não exista).
+-- Regra:      Uma campanha não pode ter mais endossos ativos simultâneos (ordem_endosso preenchida)
+--             do que configuracoes.limite_endossos_campanha (RF-063).
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C047]
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION validar_comentario_endosso()
 RETURNS trigger
@@ -3337,11 +2876,7 @@ EXECUTE FUNCTION validar_comentario_endosso();
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-3]
 -- Regra:      Pesquisador não pode comentar em sua própria campanha (RF-092).
---             CORRIGIDO (12-09-2026, achado de agente numa auditoria RF x
---             implementação) - citava RF-066 (prazo mínimo/máximo de
---             campanha, sem relação nenhuma), resíduo de uma numeração de
---             RF antiga que nunca foi atualizado aqui. A regra em si
---             sempre esteve correta, só o comentário estava desatualizado.
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C048]
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION validar_comentario_autor()
 RETURNS trigger
@@ -3381,20 +2916,10 @@ EXECUTE FUNCTION validar_comentario_autor();
 -- Função:     fn_comentario_ignora_endosso_na_criacao
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-3]
--- Regra:      ADICIONADO (15-09-2026, achado numa auditoria RF x
---             implementação) - RF-089 é claro: só o pesquisador CRIADOR DA
---             CAMPANHA marca um comentário como "Endossado", nunca o autor
---             do próprio comentário. `ComentarioRequestCreate` (Nest)
---             aceitava `endossado` vindo do cliente na hora de criar, e
---             `pol_comentario_insert` (04) só checa `id_pesquisador =
---             id_usuario_atual()` - nada impedia um pesquisador se
---             autoendossar ao comentar na campanha de outro, publicando o
---             próprio comentário na seção de endossos (RF-090) sem o dono
---             aprovar nada. Zera os 2 campos incondicionalmente no INSERT,
---             não confia em "o Nest não vai mais mandar isso" - defesa em
---             profundidade, igual o resto deste arquivo faz com colunas
---             sensíveis (ver GRANT UPDATE restrito de perfil_pesquisador,
---             06_grants.sql).
+-- Regra:      ADICIONADO (15-09-2026, achado numa auditoria RF x implementação) - RF-089 é claro:
+--             só o pesquisador CRIADOR DA CAMPANHA marca um comentário como "Endossado", nunca o
+--             autor do próprio comentário.
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C049]
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION fn_comentario_ignora_endosso_na_criacao()
 RETURNS TRIGGER AS $$
@@ -3425,15 +2950,11 @@ EXECUTE FUNCTION fn_comentario_ignora_endosso_na_criacao();
 -- Função:     validar_comentario_endosso_autor
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-3]
--- Regra:      ADICIONADO (15-09-2026, mesma auditoria acima) - metade 2 do
---             mesmo bug: `pol_comentario_update` (04) libera UPDATE pro
---             autor do comentário, pro dono da campanha OU pra quem tem
---             'comentario_moderar', mas nenhuma trigger restringia QUAL
---             coluna cada um pode tocar. Sem isto, o autor conseguia
---             endossar o PRÓPRIO comentário também via UPDATE, não só no
---             INSERT (bloqueado acima) - mesma falha de RF-089 por outra
---             porta. Só quem é o dono da campanha ou tem
---             'comentario_moderar' pode mudar `endossado`.
+-- Regra:      ADICIONADO (15-09-2026, mesma auditoria acima) - metade 2 do mesmo bug:
+--             `pol_comentario_update` (04) libera UPDATE pro autor do comentário, pro dono da
+--             campanha OU pra quem tem 'comentario_moderar', mas nenhuma trigger restringia QUAL
+--             coluna cada um pode tocar.
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C050]
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION validar_comentario_endosso_autor()
 RETURNS TRIGGER AS $$
@@ -3477,18 +2998,9 @@ EXECUTE FUNCTION validar_comentario_endosso_autor();
 -- Função:     validar_comentario_edicao_conteudo
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-3]
--- Regra:      ADICIONADO (15-09-2026, mesma auditoria) - RF-091: "o
---             pesquisador pode editar o comentário já enviado ENQUANTO ELE
---             NÃO ESTIVER com status de endossado". Faltava a trigger que
---             faz valer a 2ª metade dessa frase - sem ela, dava pra editar
---             `conteudo` de um comentário já endossado (mudando o que está
---             publicado na página pública sem o dono saber) e, pelo mesmo
---             motivo de `pol_comentario_update` não distinguir coluna, até
---             o DONO/moderador conseguiam editar o TEXTO de um comentário
---             que não escreveram - RF-091 é claro que editar conteúdo é
---             ação exclusiva do próprio autor. `ativo` (ocultar/reverter)
---             não é afetado por esta trigger, mora só em
---             fn_bloqueia_reversao_moderacao_comentario (acima).
+-- Regra:      ADICIONADO (15-09-2026, mesma auditoria) - RF-091: "o pesquisador pode editar o
+--             comentário já enviado ENQUANTO ELE NÃO ESTIVER com status de endossado".
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C051]
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION validar_comentario_edicao_conteudo()
 RETURNS TRIGGER AS $$
@@ -3529,12 +3041,9 @@ EXECUTE FUNCTION validar_comentario_edicao_conteudo();
 -- Função:     fn_bloqueia_reversao_moderacao_comentario
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-3]
--- Regra:      Só quem tem a permissão 'comentario_moderar' pode reverter
---             (ativo FALSE -> TRUE) um comentário que a moderação ocultou.
---             O autor continua podendo editar o próprio texto e ocultar
---             (ativo TRUE -> FALSE) o próprio comentário normalmente - só a
---             reversão da moderação é bloqueada. (Ver DOCUMENTACAO_BD.md
---             [04-E-3]/[05-K-3]).
+-- Regra:      Só quem tem a permissão 'comentario_moderar' pode reverter (ativo FALSE -> TRUE) um
+--             comentário que a moderação ocultou.
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C052]
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION fn_bloqueia_reversao_moderacao_comentario()
 RETURNS TRIGGER AS $$
@@ -3554,10 +3063,10 @@ $$ LANGUAGE plpgsql;
 -- Momento:   BEFORE UPDATE
 -- Função:    fn_bloqueia_reversao_moderacao_comentario()
 -- Bloco:     [05-K-3]
--- Regra:     Fecha a brecha em que pol_comentario_update (04) libera UPDATE
---            pro autor sem restringir coluna - sem esta trigger, o autor
---            conseguia desfazer sozinho uma moderação (voltar ativo pra
---            TRUE) com um UPDATE direto, sem passar por moderador/admin.
+-- Regra:     Fecha a brecha em que pol_comentario_update (04) libera UPDATE pro autor sem
+--            restringir coluna - sem esta trigger, o autor conseguia desfazer sozinho uma moderação
+--            (voltar ativo pra TRUE) com um UPDATE direto, sem passar por moderador/admin.
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C053]
 -- ----------------------------------------------------------------------------
 DROP TRIGGER IF EXISTS trg_comentario_bloqueia_reversao_moderacao ON comentario;
 CREATE TRIGGER trg_comentario_bloqueia_reversao_moderacao
@@ -3569,15 +3078,10 @@ EXECUTE FUNCTION fn_bloqueia_reversao_moderacao_comentario();
 -- Função:     validar_comentario_frequencia
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-3]
--- Regra:      ADICIONADA (12-09-2026, pedido do Lucas, achado numa auditoria):
---             `comentario` era o único mecanismo de conteúdo do usuário sem
---             limite de frequência/quantidade - endosso/link_academico/
---             upload já tinham teto, denúncia já tinha frequência. Mesmo
---             desenho de validar_denuncia_frequencia() (acima) - conta
---             quantos comentários o mesmo pesquisador postou dentro da
---             janela, bloqueia o (limite+1)-ésimo. Não distingue campanha -
---             é limite de FREQUÊNCIA (anti-rajada/spam), não de volume total
---             por campanha, então soma comentários em QUALQUER campanha.
+-- Regra:      ADICIONADA (12-09-2026, pedido do Lucas, achado numa auditoria): `comentario` era o
+--             único mecanismo de conteúdo do usuário sem limite de frequência/quantidade -
+--             endosso/link_academico/ upload já tinham teto, denúncia já tinha frequência.
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C054]
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION validar_comentario_frequencia()
 RETURNS trigger
@@ -3626,18 +3130,10 @@ EXECUTE FUNCTION validar_comentario_frequencia();
 -- Função:     validar_denuncia_frequencia
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-3]
--- Regra:      Um usuário não pode registrar mais denúncias (campanha + perfil
---             somadas) do que configuracoes.limite_denuncias_24h dentro da
---             janela configuracoes.janela_denuncias_horas (RF-076).
--- CORRIGIDO (28-07-2026, item 16 da Lista C): limite de 5 estava hardcoded
--- no corpo da função. Passou a ler configuracoes (mesmo valor de hoje, 5,
--- como DEFAULT de segurança caso a chave não exista).
--- CORRIGIDO (11-08-2026, achado pela IA testando outra tela: só metade da
--- regra virou configurável em 28-07 - a CONTAGEM (5) passou pra
--- configuracoes, mas a JANELA (24 horas) continuou fixa no INTERVAL, direto
--- no corpo da função. Agora janela_denuncias_horas também é lida de
--- configuracoes (default 24, idêntico ao valor de hoje - nada muda no
--- comportamento atual, só o lugar de onde o número vem).
+-- Regra:      Um usuário não pode registrar mais denúncias (campanha + perfil somadas) do que
+--             configuracoes.limite_denuncias_24h dentro da janela
+--             configuracoes.janela_denuncias_horas (RF-076).
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C055]
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION validar_denuncia_frequencia()
 RETURNS trigger
@@ -3685,18 +3181,10 @@ EXECUTE FUNCTION validar_denuncia_frequencia();
 -- Função:     fn_valida_denuncia_sem_autojulgamento
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-3]
--- Regra:      MENOR 5 - 5ª auditoria de uma IA, reproduzido: um moderador
---             (Diego, id 10) criou uma denúncia contra um pesquisador e depois
---             marcou a própria denúncia como 'resolvida' - o que custa 4
---             pontos de score ao alvo (calcular_score_reputacao, [05-I-2]).
---             `pol_denuncia_update` (04) já checa a permissão
---             `denuncia_responder`, mas não checa se quem julga é o mesmo que
---             denunciou - mesmo tipo de conflito de interesse que
---             `validar_comentario_autor()` já bloqueia pra auto-endosso
---             (`[05-K-3]`, acima). Bloqueia qualquer transição de `status`
---             feita pelo próprio denunciante, não só pra 'resolvida' - também
---             não faz sentido o denunciante marcar a própria denúncia como
---             'improcedente'.
+-- Regra:      MENOR 5 - 5ª auditoria de uma IA, reproduzido: um moderador (Diego, id 10) criou uma
+--             denúncia contra um pesquisador e depois marcou a própria denúncia como 'resolvida' -
+--             o que custa 4 pontos de score ao alvo (calcular_score_reputacao, [05-I-2]).
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C056]
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_valida_denuncia_sem_autojulgamento()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
@@ -3731,23 +3219,9 @@ EXECUTE FUNCTION fn_valida_denuncia_sem_autojulgamento();
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-3]
 -- Uso:        Invocada por trg_permissao_auto_admin
--- Regra:      Rede de segurança para a remoção de eh_admin() das RLS
---             policies (ver RBAC-pontos-discutidos.md e 04_rls_policies.sql).
---             Toda policy passou a checar tem_permissao('x') em vez de
---             eh_admin(). Sem esta trigger, toda permissão nova criada
---             exigiria lembrar de também inserir a linha correspondente em
---             papel_permissao para 'admin' manualmente - e um esquecimento
---             faria o admin perder acesso a algo que antes tinha de graça
---             via eh_admin(). Com a trigger, toda permissão nova já nasce
---             atribuída ao papel 'admin' automaticamente, tornando
---             tem_permissao(...) um substituto 100% seguro do bypass antigo.
--- CORRIGIDO (03-08-2026, achado de revisão externa): lia `WHERE p.nome =
--- 'admin'` - o admin é reconhecido pelo TEXTO do rótulo editável, então
--- renomear o papel 'admin' pelo painel (dia que essa tela existir) faria
--- toda permissão nova parar de ser auto-concedida, em silêncio, sem erro
--- nenhum (testado e confirmado antes de corrigir). Agora lê `codigo`
--- (01_extensoes_enums_tabelas.sql [01-B]), coluna que nunca é exposta pra
--- edição - só `nome` (o rótulo) pode mudar.
+-- Regra:      Rede de segurança para a remoção de eh_admin() das RLS policies (ver
+--             RBAC-pontos-discutidos.md e 04_rls_policies.sql).
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C057]
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.trg_admin_recebe_toda_permissao()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
@@ -3777,27 +3251,11 @@ FOR EACH ROW EXECUTE FUNCTION public.trg_admin_recebe_toda_permissao();
 -- Função:     fn_atribuir_papel_pesquisador
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-3]
--- Regra:      MÉDIO 4 - 5ª auditoria de uma IA, achado na jornada "usuário
---             com mestrado vira pesquisador": quando o app cria o
---             `perfil_pesquisador` (upgrade de conta), o usuário fica só com o
---             papel `'usuario'` - o papel `'pesquisador'` nunca é atribuído
---             por ninguém. O seed atribui `'pesquisador'` aos 11 pesquisadores
---             semeados (dado histórico), mas o fluxo real do app não replica
---             isso. Hoje não quebra nada (o papel `'pesquisador'` nasce com 0
---             permissões, e as policies checam a existência do
---             `perfil_pesquisador`, não o papel) - mas cria duas realidades
---             diferentes no banco, e vira bug silencioso no dia em que alguém
---             conceder a primeira permissão ao papel `'pesquisador'`, que é a
---             coisa mais natural do mundo de acontecer num RBAC dinâmico.
---             Mantém o invariante "tem perfil <=> tem o papel" - mesmo
---             espírito de `atribuir_papel_padrao()` (08) e de
---             `trg_admin_recebe_toda_permissao()` (acima): `SECURITY DEFINER`
---             porque o usuário que está virando pesquisador ainda não tem
---             `'papel_atribuir'` (mesmo problema de "ovo e galinha").
--- CORRIGIDO (03-08-2026, achado de revisão externa): lia `WHERE nome =
--- 'pesquisador'` - mesmo risco de `trg_admin_recebe_toda_permissao`
--- (acima): renomear o papel pelo painel faria completar o perfil de
--- pesquisador parar de atribuir o papel, em silêncio. Agora lê `codigo`.
+-- Regra:      MÉDIO 4 - 5ª auditoria de uma IA, achado na jornada "usuário com mestrado vira
+--             pesquisador": quando o app cria o `perfil_pesquisador` (upgrade de conta), o usuário
+--             fica só com o papel `'usuario'` - o papel `'pesquisador'` nunca é atribuído por
+--             ninguém.
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C058]
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_atribuir_papel_pesquisador()
 RETURNS TRIGGER
@@ -3835,51 +3293,13 @@ AFTER INSERT ON perfil_pesquisador
 FOR EACH ROW EXECUTE FUNCTION public.fn_atribuir_papel_pesquisador();
 
 -- ============================================================
--- [05-L] LOG DE AUDITORIA (log_auditoria)
--- ============================================================
--- ADICIONADO (03-08-2026, sugestão de uma IA) - ver comentário
--- completo em 01_extensoes_enums_tabelas.sql [01-L]. Uma função genérica,
--- aplicada em N tabelas via CREATE TRIGGER ... EXECUTE FUNCTION
--- fn_log_auditoria('coluna_pk_1'[, 'coluna_pk_2']) - os argumentos são os
--- nomes da(s) coluna(s) de PRIMARY KEY daquela tabela específica (1 pra PK
--- simples, 2 pra PK composta como usuario_papel/papel_permissao).
--- ----------------------------------------------------------------------------
 -- Função:     fn_log_auditoria
 -- Assinatura: (VARIADIC coluna_pk TEXT[]) -> TRIGGER
 -- Bloco:      [05-L]
--- Regra:      Grava em log_auditoria quem (id_usuario_atual()), o quê
---             (tabela + identidade do registro) e quando (ocorrido_em,
---             default NOW()) qualquer INSERT/UPDATE/DELETE nas tabelas com
---             a trigger abaixo aplicada.
---
---             SECURITY DEFINER: pol_log_auditoria_select (04) não tem
---             policy de INSERT - ninguém, nem app_nestjs, tem GRANT INSERT
---             nesta tabela (06). A trigger só consegue gravar porque roda
---             com o privilégio de quem A CRIOU (SECURITY DEFINER), não de
---             quem disparou o UPDATE/INSERT/DELETE que a acionou.
---
---             REDAÇÃO DE COLUNA SENSÍVEL: 'senha_hash' (usuario),
---             'cpf_criptografado' e 'cpf_hash' (as duas de perfil_
---             pesquisador) nunca entram em dados_anteriores/dados_novos -
---             removidas do JSONB (operador `-`) DEPOIS de calcular
---             campos_alterados (por isso o nome da coluna ainda aparece em
---             campos_alterados quando ela muda - saber QUE a senha/CPF
---             mudou é auditoria válida; o HASH em si, não). `cpf_hash`
---             ADICIONADO (12-09-2026, achado de agente numa auditoria RF x
---             implementação, RF-117: "CPF nunca tem seu valor gravado no
---             log") - é um HMAC-SHA256 com chave secreta, não reversível
---             sem ela, mas ainda uma redação de dado derivado do CPF; lido
---             ao pé da letra, RF-117 pede o mesmo cuidado dado a
---             cpf_criptografado. Se uma tabela nova entrar na lista de triggers abaixo
---             e tiver outra coluna sensível (ex.: token_hash, se um dia
---             verificacao_email/recuperacao_senha entrarem pra este log),
---             adicione um `- 'nome_da_coluna'` a mais nas duas linhas de
---             v_antigos/v_novos.
---
---             UPDATE que não muda nenhum valor de verdade (ex.: um SET
---             igual ao que já estava) não gera linha nenhuma - v_campos
---             fica NULL e a função retorna cedo, antes do INSERT em
---             log_auditoria.
+-- Regra:      Grava em log_auditoria quem (id_usuario_atual()), o quê (tabela + identidade do
+--             registro) e quando (ocorrido_em, default NOW()) qualquer INSERT/UPDATE/DELETE nas
+--             tabelas com a trigger abaixo aplicada.
+-- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [05-C059]
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_log_auditoria()
 RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$

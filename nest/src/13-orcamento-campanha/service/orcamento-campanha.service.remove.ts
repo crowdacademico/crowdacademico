@@ -17,8 +17,7 @@ export class OrcamentoCampanhaServiceRemove {
       await distinguir404ou403(
         this.database.getDb(),
         'orcamento_campanha',
-        'id_orcamento',
-        id,
+        { id_orcamento: id },
         'Item de orçamento não encontrado.',
         'Sem permissão para excluir este item de orçamento.',
       );

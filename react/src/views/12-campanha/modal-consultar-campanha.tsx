@@ -6,8 +6,6 @@ import {
   ROTULO_STATUS_CAMPANHA,
   classeBadgeStatusCampanha,
 } from '../../services/12-campanha/constants/status-campanha.constants';
-import { areaConhecimentoApi } from '../../services/8-area-conhecimento/api/area-conhecimento.api';
-import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { useBuscarPorId } from '../../services/constant/hook/use-buscar-por-id';
 import { formatarDataHora, formatarMoeda } from '../../services/constant/utils/formatacao.util';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
@@ -33,14 +31,10 @@ export function ModalConsultarCampanha({ auth, idCampanha, aoFechar }: ModalCons
     (id) => campanhaApi.buscar(auth.authFetch, id),
     String(idCampanha),
   );
-  const [nomeDono, setNomeDono] = useState<string | null>(null);
-  const [nomeArea, setNomeArea] = useState<string | null>(null);
   const [historicoRejeicao, setHistoricoRejeicao] = useState<HistoricoRejeicaoResponse[]>([]);
 
   useEffect(() => {
     if (campanha) {
-      usuarioApi.buscar(auth.authFetch, campanha.idUsuario).then((u) => setNomeDono(u.nome)).catch(() => {});
-      areaConhecimentoApi.buscar(auth.authFetch, campanha.idAreaConhecimento).then((a) => setNomeArea(a.nome)).catch(() => {});
       campanhaApi
         .listarHistoricoRejeicao(auth.authFetch, campanha.idCampanha)
         .then(setHistoricoRejeicao)
@@ -69,7 +63,7 @@ export function ModalConsultarCampanha({ auth, idCampanha, aoFechar }: ModalCons
     <ModalFicha
       titulo={campanha?.titulo ?? `#${idCampanha}`}
       carregando={carregando || !campanha}
-      subtitulo={nomeDono ? `Pesquisador: ${nomeDono}` : undefined}
+      subtitulo={campanha?.nomePesquisador ? `Pesquisador: ${campanha.nomePesquisador}` : undefined}
       badges={
         campanha
           ? [
@@ -92,9 +86,15 @@ export function ModalConsultarCampanha({ auth, idCampanha, aoFechar }: ModalCons
       {campanha && (
         <div className="grid lg:grid-cols-3 gap-6 items-start">
           <div className="lg:col-span-2 space-y-6">
+            {campanha.precisaRevisaoScore && (
+              <p className="fundo-aviso texto-aviso rounded-lg p-3 text-xs font-semibold">
+                O pesquisador está abaixo do score mínimo para campanhas. É só um sinal para revisar esta campanha
+                com mais cuidado; não impede a aprovação.
+              </p>
+            )}
             <SecaoFicha titulo="Dados">
               <CampoFicha rotulo="id" valor={campanha.idCampanha} />
-              <CampoFicha rotulo="Área do conhecimento" valor={nomeArea ?? `#${campanha.idAreaConhecimento}`} />
+              <CampoFicha rotulo="Área do conhecimento" valor={campanha.nomeArea ?? `#${campanha.idAreaConhecimento}`} />
               <CampoFicha rotulo="Descrição" valor={campanha.descricao} largura="cheia" />
               <CampoFicha rotulo="Vídeo de apresentação" valor={campanha.videoApresentacaoUrl} largura="cheia" />
             </SecaoFicha>

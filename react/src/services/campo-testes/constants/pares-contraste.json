@@ -1,0 +1,22 @@
+[
+  ["--cor-texto", "--cor-fundo-cartao"],
+  ["--cor-texto-forte", "--cor-fundo-cartao"],
+  ["--cor-texto-fraco", "--cor-fundo-cartao"],
+  ["--cor-texto-fraco", "--cor-fundo-sutil"],
+  ["--cor-texto-marca", "--cor-fundo-cartao"],
+  ["--cor-texto-sucesso", "--cor-fundo-sucesso"],
+  ["--cor-texto-erro", "--cor-fundo-erro"],
+  ["--cor-texto-erro-forte", "--cor-fundo-erro"],
+  ["--cor-texto-aviso", "--cor-fundo-aviso"],
+  ["--cor-texto-info", "--cor-fundo-info"],
+  ["--cor-texto-sobre-cor", "--cor-fundo-marca-forte"],
+  ["--cor-texto-sobre-cor", "--cor-fundo-sucesso-forte"],
+  ["--cor-texto-sobre-cor", "--cor-fundo-erro-forte"],
+  ["--cor-texto-sobre-cor", "--cor-avatar-1"],
+  ["--cor-texto-sobre-cor", "--cor-avatar-2"],
+  ["--cor-texto-sobre-cor", "--cor-avatar-3"],
+  ["--cor-texto-sobre-cor", "--cor-avatar-4"],
+  ["--cor-texto-sobre-cor", "--cor-avatar-5"],
+  ["--cor-texto-sobre-cor", "--cor-avatar-6"],
+  ["--cor-texto-sobre-cor", "--cor-avatar-7"]
+]

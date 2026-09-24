@@ -16,6 +16,7 @@ import { ListarCampanhas } from '../../views/12-campanha/listar-campanhas';
 import { BancadaPesquisador } from '../../views/campo-testes/bancada-pesquisador';
 import { BancadaCampanha } from '../../views/campo-testes/bancada-campanha';
 import { VidaCampanhaAtiva } from '../../views/campo-testes/vida-campanha-ativa';
+import { GuiaEstilo } from '../../views/campo-testes/guia-estilo';
 import { ListarTermosUso } from '../../views/5-termo-uso/listar-termos-uso';
 import { CriarTermoUso } from '../../views/5-termo-uso/criar-termo-uso';
 
@@ -350,6 +351,17 @@ export const ROTAS_ADMIN: Rota[] = [
           rotuloBreadcrumb: 'T3 - Vida da Campanha Ativa',
           grupoMenu: 'CAMPO_TESTES',
           icone: 'fa-comments',
+        },
+        {
+          // Guia de Estilo (24-09-2026): cores nos dois temas, tipografia e componentes
+          // reais, só em desenvolvimento (este array inteiro some do build de produção).
+          caminho: '/admin/campo-testes/guia-estilo',
+          caminhoRelativo: 'campo-testes/guia-estilo',
+          elemento: GuiaEstilo,
+          rotuloMenu: 'Guia de Estilo',
+          rotuloBreadcrumb: 'Guia de Estilo',
+          grupoMenu: 'CAMPO_TESTES',
+          icone: 'fa-palette',
         },
       ]
     : []),

@@ -67,8 +67,7 @@ export class TermoUsoServiceAlterar {
       return await distinguir404ou403(
         this.database.getDb(),
         'termos_de_uso',
-        'id_termo',
-        id,
+        { id_termo: id },
         'Versão de Termos de Uso não encontrada.',
         "Sem permissão 'termos_uso_gerenciar' para alterar esta versão.",
       );

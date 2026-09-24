@@ -9,10 +9,11 @@
 // implementação - RF-084 pedia isso e não existia): campanhas por status,
 // valor total arrecadado, denúncias pendentes. Todos `number` de verdade
 // (não `null`) - `campanha`/`denuncia` já são tabela real, não dependem de
-// nenhum módulo Nest vazio pra existir. NÃO incluído: "campanhas
-// sinalizadas por baixa pontuação de reputação" (a 5ª parte do RF-084) -
-// depende do motor de score estar fechado, ver PENDENCIAS e correcoes.md
-// (RF-031); registrado lá, não implementado aqui de propósito.
+// nenhum módulo Nest vazio pra existir.
+//
+// ADICIONADO (24-09-2026): campanhasParaRevisaoScore, a 5ª parte do RF-084 (campanhas na fila de
+// aprovação cujo pesquisador está abaixo de score_minimo_campanha). É só um SINAL para o admin
+// revisar com mais cuidado, nunca bloqueia nada (ver fn_precisa_revisao_score, 05 [05-I-1]).
 export interface DashboardResponseSummary {
   totalUsuarios: number;
   totalPesquisadores: number;
@@ -28,4 +29,5 @@ export interface DashboardResponseSummary {
   campanhasAguardandoAprovacao: number;
   valorTotalArrecadado: number;
   denunciasPendentes: number;
+  campanhasParaRevisaoScore: number;
 }
