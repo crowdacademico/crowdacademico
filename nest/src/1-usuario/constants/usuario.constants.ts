@@ -17,3 +17,7 @@ export const USUARIO_COLUNAS_SELECT = [
   'ultimo_login_em',
   'ultimo_login_ip',
 ] as const;
+
+// Custo do bcrypt da SENHA do usuário (create e update). Parâmetro de segurança puro, fixo de propósito
+// (não é regra de produto); o do refresh token é outra constante (auth.constants.ts), mesmo valor.
+export const CUSTO_BCRYPT_SENHA = 10;

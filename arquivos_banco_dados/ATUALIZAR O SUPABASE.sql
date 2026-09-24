@@ -1238,3 +1238,114 @@ BEGIN
     RETURN v_expiradas;
 END;
 $$;
+
+
+-- ############################################################################
+-- 24-09-2026 - GRUPO E: reenvio esgotado barra também quem tem campanha_editar (idempotente)
+-- Achado ao vivo: um admin conseguia reenviar campanha rejeitada já somente leitura (91025).
+-- Só CREATE OR REPLACE de uma função; a trigger existente continua apontando para ela. Cole DEPOIS do Grupo D.
+-- ############################################################################
+
+CREATE OR REPLACE FUNCTION public.fn_valida_transicao_campanha()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+    IF NEW.status      IS NOT DISTINCT FROM OLD.status
+       AND NEW.aprovado_em IS NOT DISTINCT FROM OLD.aprovado_em
+       AND NEW.id_admin    IS NOT DISTINCT FROM OLD.id_admin THEN
+        RETURN NEW;
+    END IF;
+
+    IF OLD.status = 'aguardando_aprovacao' AND NEW.status = 'ativo'
+       AND NEW.aprovado_em IS NOT NULL
+       AND public.tem_permissao('campanha_aprovar') THEN
+        RETURN NEW;
+    END IF;
+
+    IF OLD.status = 'aguardando_aprovacao' AND NEW.status = 'rejeitado'
+       AND NEW.aprovado_em IS NOT DISTINCT FROM OLD.aprovado_em
+       AND public.tem_permissao('campanha_rejeitar') THEN
+        RETURN NEW;
+    END IF;
+
+    IF OLD.status = 'ativo' AND NEW.status = 'encerrado'
+       AND NEW.aprovado_em IS NOT DISTINCT FROM OLD.aprovado_em
+       AND public.tem_permissao('solicitacao_encerramento_decidir') THEN
+        RETURN NEW;
+    END IF;
+
+    IF OLD.status = 'ativo'
+       AND OLD.data_fim IS NOT NULL AND OLD.data_fim <= NOW()
+       AND NEW.aprovado_em IS NOT DISTINCT FROM OLD.aprovado_em
+       AND NEW.id_admin    IS NOT DISTINCT FROM OLD.id_admin
+       AND (
+            (NEW.status = 'sucesso'      AND NEW.valor_bruto_arrecadado >= NEW.meta_financeira)
+         OR (NEW.status = 'nao_atingido' AND NEW.valor_bruto_arrecadado <  NEW.meta_financeira)
+       )
+    THEN
+        RETURN NEW;
+    END IF;
+
+    -- Reenvio esgotado vale para QUALQUER perfil, inclusive quem tem campanha_editar (24-09-2026).
+    IF OLD.status = 'rejeitado' AND NEW.status = 'aguardando_aprovacao'
+       AND public.fn_campanha_reenvios_esgotados(OLD.id_campanha) THEN
+        RAISE EXCEPTION 'Esta campanha já usou todos os reenvios permitidos e agora é somente leitura.'
+            USING ERRCODE = '91025';
+    END IF;
+
+    IF OLD.status IN ('rascunho', 'rejeitado') AND NEW.status = 'aguardando_aprovacao'
+       AND NEW.aprovado_em IS NOT DISTINCT FROM OLD.aprovado_em
+       AND NEW.id_admin    IS NOT DISTINCT FROM OLD.id_admin
+       AND public.tem_permissao('campanha_editar') THEN
+        RETURN NEW;
+    END IF;
+
+    IF NEW.id_usuario = public.id_usuario_atual()
+       AND OLD.status IN ('rejeitado', 'rascunho') AND NEW.status = 'aguardando_aprovacao'
+       AND NEW.aprovado_em IS NOT DISTINCT FROM OLD.aprovado_em
+       AND NEW.id_admin    IS NOT DISTINCT FROM OLD.id_admin
+    THEN
+        IF NOT EXISTS (
+            SELECT 1 FROM perfil_pesquisador pp
+            WHERE pp.id_usuario = public.id_usuario_atual() AND pp.status_pesquisador = 'ativo'
+        ) THEN
+            RAISE EXCEPTION 'Pesquisador suspenso não pode enviar campanha para aprovação.'
+                USING ERRCODE = '92009';
+        END IF;
+
+        IF OLD.status = 'rejeitado' THEN
+            IF (SELECT s.prazo_reenvio_ate FROM public.fn_campanha_situacao_reenvio(OLD.id_campanha) s) <= NOW()
+            THEN
+                RAISE EXCEPTION 'O prazo para reenviar esta campanha rejeitada já venceu.'
+                    USING ERRCODE = '91026';
+            END IF;
+        END IF;
+
+        RETURN NEW;
+    END IF;
+
+    IF NEW.aprovado_em IS NOT DISTINCT FROM OLD.aprovado_em
+       AND NEW.id_admin IS NOT DISTINCT FROM OLD.id_admin
+       AND (
+            (OLD.status = 'ativo'                AND NEW.status = 'encerrado_moderacao')
+         OR (OLD.status = 'aguardando_aprovacao' AND NEW.status = 'rejeitado')
+       )
+       AND EXISTS (
+           SELECT 1 FROM perfil_pesquisador pp
+           WHERE pp.id_usuario = NEW.id_usuario AND pp.status_pesquisador = 'suspenso'
+       )
+    THEN
+        RETURN NEW;
+    END IF;
+
+    IF NEW.aprovado_em IS NOT DISTINCT FROM OLD.aprovado_em
+       AND NEW.id_admin IS NOT DISTINCT FROM OLD.id_admin
+       AND OLD.status = 'ativo' AND NEW.status = 'encerrado_moderacao'
+       AND public.tem_permissao('campanha_encerrar_moderacao')
+    THEN
+        RETURN NEW;
+    END IF;
+
+    RAISE EXCEPTION 'Transição de status de campanha não autorizada (% -> %).', OLD.status, NEW.status
+        USING ERRCODE = '92001';
+END;
+$$;

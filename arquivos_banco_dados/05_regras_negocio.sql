@@ -2177,6 +2177,13 @@ BEGIN
         RETURN NEW;
     END IF;
 
+    -- Reenvio esgotado vale para QUALQUER perfil, inclusive quem tem campanha_editar (24-09-2026).
+    IF OLD.status = 'rejeitado' AND NEW.status = 'aguardando_aprovacao'
+       AND public.fn_campanha_reenvios_esgotados(OLD.id_campanha) THEN
+        RAISE EXCEPTION 'Esta campanha já usou todos os reenvios permitidos e agora é somente leitura.'
+            USING ERRCODE = '91025';
+    END IF;
+
     IF OLD.status IN ('rascunho', 'rejeitado') AND NEW.status = 'aguardando_aprovacao'
        AND NEW.aprovado_em IS NOT DISTINCT FROM OLD.aprovado_em
        AND NEW.id_admin    IS NOT DISTINCT FROM OLD.id_admin
@@ -2198,11 +2205,6 @@ BEGIN
         END IF;
 
         IF OLD.status = 'rejeitado' THEN
-            IF public.fn_campanha_reenvios_esgotados(OLD.id_campanha) THEN
-                RAISE EXCEPTION 'Esta campanha já usou todos os reenvios permitidos e agora é somente leitura.'
-                    USING ERRCODE = '91025';
-            END IF;
-
             IF (SELECT s.prazo_reenvio_ate FROM public.fn_campanha_situacao_reenvio(OLD.id_campanha) s) <= NOW()
             THEN
                 RAISE EXCEPTION 'O prazo para reenviar esta campanha rejeitada já venceu.'

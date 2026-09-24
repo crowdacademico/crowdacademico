@@ -75,7 +75,7 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 91022 | `validar_comentario_edicao_conteudo` | `comentario` | Não é possível editar um comentário já endossado (RF-091) - remova o endosso antes |
 | 91023 | `fn_congela_regras_campanha` | `campanha` | Vídeo de apresentação não pode ser alterado após a aprovação (20-09-2026) |
 | 91024 | `fn_congela_regras_campanha` | `campanha` | Área do conhecimento não pode ser alterada após a aprovação (20-09-2026) |
-| 91025 | `fn_valida_transicao_campanha` | `campanha` | Campanha rejeitada já usou todos os reenvios permitidos e não pode ser reenviada (21-09-2026) |
+| 91025 | `fn_valida_transicao_campanha` | `campanha` | Campanha rejeitada já usou todos os reenvios permitidos e não pode ser reenviada, para qualquer perfil, inclusive quem tem `campanha_editar` (21-09-2026; estendido ao admin em 24-09-2026) |
 | 91026 | `fn_valida_transicao_campanha` | `campanha` | Prazo para reenviar a campanha rejeitada já venceu (21-09-2026) |
 | 91027 | `fn_congela_regras_campanha` / `fn_congela_orcamento_campanha` / `fn_congela_marco_cronograma` | `campanha` / `orcamento_campanha` / `marco_cronograma` | Campanha rejeitada sem reenvios restantes é somente leitura (21-09-2026) |
 | 91028 | `fn_exige_historico_rejeicao` | `campanha` | Rejeição sem registro em `historico_rejeicao` na mesma transação (constraint trigger, roda no `COMMIT`, 24-09-2026) |

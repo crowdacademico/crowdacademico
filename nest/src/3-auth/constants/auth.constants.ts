@@ -1,4 +1,4 @@
-// Mesmo custo usado em 1-usuario (usuario.service.create.ts/.update.ts) -
+// Mesmo custo de CUSTO_BCRYPT_SENHA (1-usuario/constants/usuario.constants.ts) -
 // aqui é pro segredo do refresh token, não pra senha do usuário. Continua
 // fixo (não configurável) - é parâmetro de segurança puro (custo de hash),
 // não regra de produto; nenhum admin deveria poder baixar isso sem entender

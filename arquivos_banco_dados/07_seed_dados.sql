@@ -602,7 +602,7 @@ INSERT INTO arquivo (chave, nome_original, tipo_mime, tamanho_bytes) VALUES
 -- nunca gerados pelo bcrypt de verdade - ou seja, NENHUM usuário do seed
 -- conseguia logar, nem sabendo a senha certa, porque não existia senha
 -- nenhuma por trás. Trocado por um hash bcrypt de verdade (custo 10, igual
--- CUSTO_BCRYPT em usuario.service.create.ts/update.ts), o MESMO pra
+-- CUSTO_BCRYPT_SENHA em usuario.constants.ts), o MESMO pra
 -- TODOS - só pra dev/seed, nunca em produção:
 --   senha de todo mundo no seed = DevTcc123!
 -- Gerado com `bcrypt.hash('DevTcc123!', 10)` e conferido com

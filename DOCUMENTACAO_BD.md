@@ -1,5 +1,5 @@
 
-**Contagem de 24-09-2026** (`grep -c` nos `.sql`, para conferir contra as queries acima; **evite repetir estes números em outros documentos**, eles envelhecem a cada rodada, cite a seção "Como conferir este inventário"): **42 tabelas**, **121 policies**, **78 triggers** em `05` (74 comuns e 4 `CONSTRAINT TRIGGER`), **93 funções** (66 em `05`, 26 em `03`, 1 em `08`), **49 índices** em `02`, e **57 códigos de ERRCODE** customizado (tabelas em `DOCUMENTACAO_ERRCODE.md`). Os números de 03-08 e 09-08 acima ficaram como registro histórico.
+**Contagem de 24-09-2026, refeita depois dos Grupos D e E** (`grep -c` nos `.sql`, para conferir contra as queries acima; **evite repetir estes números em outros documentos**, eles envelhecem a cada rodada, cite a seção "Como conferir este inventário"): **42 tabelas**, **121 policies**, **78 triggers** em `05` (74 comuns e 4 `CONSTRAINT TRIGGER`), **96 funções** (69 em `05`, 26 em `03`, 1 em `08`), **49 índices** em `02`, e **59 códigos de ERRCODE** customizado (tabelas em `DOCUMENTACAO_ERRCODE.md`). Os números de 03-08 e 09-08 acima ficaram como registro histórico.
 # 📚 Documentação Técnica do Banco de Dados - CrowdAcadêmico
 
 > 📌 **Numeração de RF (21-09-2026):** os requisitos vigentes são o `informacoes/REQUISITOS_V7.md` (120 RFs). Citações de RF por número neste documento foram escritas em datas diferentes e podem estar em qualquer numeração anterior (pré-06-09-2026, V6 ou V7). A `MATRIZ-RASTREABILIDADE-RF.md` já está inteira na numeração do V7 e traz a conversão. Confira pelo texto do requisito antes de confiar no número.
@@ -633,7 +633,7 @@ Regras novas de ciclo de vida da campanha, todas no banco (o Nest só expõe os 
 | `rascunho` | `aguardando_aprovacao` | dono | pesquisador ativo (92009), completude e prazo (90009, 90010, 90011, 90015), limite de simultâneas (91018) |
 | `aguardando_aprovacao` | `ativo` | admin | mesma completude e prazo, de novo (a campanha ainda é editável até ficar `ativo`) |
 | `aguardando_aprovacao` | `rejeitado` | admin | grava em `historico_rejeicao` |
-| `rejeitado` | `aguardando_aprovacao` | dono | pesquisador ativo (92009), reenvios disponíveis (91025), dentro do prazo (91026), completude e prazo, limite de simultâneas |
+| `rejeitado` | `aguardando_aprovacao` | dono (reenvios esgotados, 91025, também barra o admin com `campanha_editar`) | pesquisador ativo (92009), reenvios disponíveis (91025), dentro do prazo (91026), completude e prazo, limite de simultâneas |
 | `rejeitado` | (excluída) | job | prazo de reenvio vencido, ver `expirar_campanhas_rejeitadas()` |
 | `rascunho` | (excluída) | job ou dono | prazo do rascunho vencido, ver `expirar_campanhas_rascunho()`; o dono também pode excluir (`pol_campanha_delete`) |
 

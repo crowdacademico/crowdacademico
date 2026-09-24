@@ -10,12 +10,13 @@ import * as bcrypt from 'bcrypt';
 import { ArquivoServiceRemove } from '../../25-arquivo/service/arquivo.service.remove';
 import { ArquivoServiceResolverAvatar } from '../../25-arquivo/service/arquivo.service.resolver-avatar';
 import { DatabaseService } from '../../commons/database/database.service';
-import { USUARIO_COLUNAS_SELECT } from '../constants/usuario.constants';
+import {
+  CUSTO_BCRYPT_SENHA,
+  USUARIO_COLUNAS_SELECT,
+} from '../constants/usuario.constants';
 import { UsuarioConverter } from '../dto/converter/usuario.converter';
 import { UsuarioRequestUpdate } from '../dto/request/usuario.request-update';
 import { UsuarioResponse } from '../dto/response/usuario.response';
-
-const CUSTO_BCRYPT = 10;
 
 @Injectable()
 export class UsuarioServiceUpdate {
@@ -51,7 +52,7 @@ export class UsuarioServiceUpdate {
     }
 
     const senhaHash = dto.novaSenha
-      ? await bcrypt.hash(dto.novaSenha, CUSTO_BCRYPT)
+      ? await bcrypt.hash(dto.novaSenha, CUSTO_BCRYPT_SENHA)
       : undefined;
 
     // ADICIONADO (módulo 25-arquivo) - limpa a foto ANTERIOR quando a
