@@ -56,6 +56,17 @@ Esta parte só começa depois que o resto do sistema - principalmente o painel a
 - **`23-repasse`** - repasse do dinheiro arrecadado pro pesquisador, depois da campanha aprovada/bem-sucedida.
 - **`24-auditoria-financeira`** - trilha de auditoria dos eventos financeiros (a tabela já existe e já é usada por trigger do banco; expor pelo Nest é o que falta).
 
+**Já conhecidos antes de construir o 22 e o 23** (achados da revisão de 24-09-2026, registrados aqui para ninguém depender de lembrar; nada disto foi feito ainda, porque só faz sentido junto com os módulos):
+
+- **`22-contribuicao`:**
+  - `UNIQUE` parcial em `contribuicao.id_transacao_api` (`WHERE id_transacao_api IS NOT NULL`). Sem ele, um webhook do gateway entregue duas vezes confirma a mesma contribuição duas vezes.
+  - Máquina de estados para `status_contribuicao`. Hoje `atualizar_status_contribuicao()` (`SECURITY DEFINER`) aceita qualquer status a partir de qualquer status, para qualquer linha, sem checar permissão nem origem.
+  - Quem chama `atualizar_status_contribuicao()` precisa ser só o webhook, com a assinatura do gateway verificada no Nest; ou a função checa permissão por dentro, ou o `EXECUTE` é revogado de `app_nestjs` e ela só roda por trigger.
+  - Fundir as triggers de `contribuicao` (`trg_contribuicao_all_or_nothing_pix` e a de `UPDATE`, mais `trg_valida_status_contribuicao` e `trg_contribuicao_valida_valor_minimo`) numa função por evento.
+  - Job para expirar contribuição pendente (`status_contribuicao = 'expirado'` existe no enum e nada o escreve).
+  - Lembrar que, desde 24-09-2026, `app_nestjs` **não** atualiza `valor_bruto_arrecadado` (nem `taxa_plataforma` nem `encerrado_em`): o total é mantido pela trigger `trg_sincroniza_arrecadado_campanha`, que é `SECURITY DEFINER`. O service de contribuição só faz `INSERT` em `contribuicao`.
+- **`23-repasse`:** `atualizar_status_repasse()` tem o mesmo problema de `atualizar_status_contribuicao()` (qualquer status, sem checagem). O modelo de campanha `flexivel` (repasse independente da meta) também espera este módulo; hoje o DTO só aceita `all-or-nothing`.
+
 ## Grupo 9 - Painel administrativo (não estavam nesta lista, mas já existem)
 
 Estes dois módulos ficaram de fora da lista original - construídos direto, sem passar por aqui como "próximo módulo" antes. Registrados agora (01-09-2026) só pra este documento não mentir sobre o que falta.

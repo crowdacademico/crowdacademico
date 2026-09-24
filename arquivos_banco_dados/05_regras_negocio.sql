@@ -984,6 +984,56 @@ CREATE CONSTRAINT TRIGGER trg_campanha_exige_historico_rejeicao
     WHEN (NEW.status = 'rejeitado' AND OLD.status IS DISTINCT FROM 'rejeitado')
     EXECUTE FUNCTION public.fn_exige_historico_rejeicao();
 
+-- Pares mínimo/máximo de configuracoes (24-09-2026, ERRCODE 90019): mínimo maior que máximo trava todo envio de campanha. DOCUMENTACAO_BD.md [05-K-2-C].
+CREATE OR REPLACE FUNCTION public.fn_valida_pares_min_max_configuracoes()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+DECLARE
+    v_pares TEXT[][] := ARRAY[
+        ['prazo_minimo_campanha_dias',    'prazo_maximo_campanha_dias'],
+        ['orcamento_min_itens',           'orcamento_max_itens'],
+        ['cronograma_min_marcos',         'cronograma_max_marcos'],
+        ['arquivo_tamanho_minimo_bytes',  'arquivo_tamanho_maximo_imagem_bytes'],
+        ['arquivo_tamanho_minimo_bytes',  'arquivo_tamanho_maximo_documento_bytes']
+    ];
+    v_chave  TEXT;
+    v_par    TEXT[];
+    v_minimo DECIMAL;
+    v_maximo DECIMAL;
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        v_chave := OLD.chave;
+    ELSE
+        v_chave := NEW.chave;
+    END IF;
+
+    FOREACH v_par SLICE 1 IN ARRAY v_pares LOOP
+        IF v_chave = v_par[1] OR v_chave = v_par[2] THEN
+            SELECT valor::DECIMAL INTO v_minimo FROM configuracoes
+            WHERE chave = v_par[1] AND id_usuario IS NULL AND ativo = TRUE AND tipo IN ('inteiro', 'decimal');
+            SELECT valor::DECIMAL INTO v_maximo FROM configuracoes
+            WHERE chave = v_par[2] AND id_usuario IS NULL AND ativo = TRUE AND tipo IN ('inteiro', 'decimal');
+
+            IF v_minimo IS NOT NULL AND v_maximo IS NOT NULL AND v_minimo > v_maximo THEN
+                RAISE EXCEPTION 'O valor mínimo (%) de "%" não pode ser maior que o máximo (%) de "%". Antes de subir o mínimo, suba o máximo (ou baixe o máximo só depois de baixar o mínimo).',
+                    v_minimo, v_par[1], v_maximo, v_par[2]
+                    USING ERRCODE = '90019',
+                          DETAIL = json_build_object('chaveMinimo', v_par[1], 'valorMinimo', v_minimo,
+                                                     'chaveMaximo', v_par[2], 'valorMaximo', v_maximo)::text;
+            END IF;
+        END IF;
+    END LOOP;
+
+    RETURN NULL;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_configuracoes_pares_min_max ON configuracoes;
+CREATE CONSTRAINT TRIGGER trg_configuracoes_pares_min_max
+    AFTER INSERT OR UPDATE OR DELETE ON configuracoes
+    DEFERRABLE INITIALLY DEFERRED
+    FOR EACH ROW
+    EXECUTE FUNCTION public.fn_valida_pares_min_max_configuracoes();
+
 
 -- ============================================================================
 --  [05-K-1] REGRAS TRANSVERSAIS - INTEGRIDADE E ESCOPO

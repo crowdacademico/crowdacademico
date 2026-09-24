@@ -6,6 +6,15 @@ Siga na ordem. Não pule etapas mesmo que pareçam óbvias.
 
 ---
 
+## Deletando & Recriando, no supabase (rapidamente):
+
+DROP SCHEMA public CASCADE;
+
+CREATE SCHEMA public;
+GRANT ALL ON SCHEMA public TO postgres;
+GRANT ALL ON SCHEMA public TO public;
+
+
 ## 🏫 Se você vai rodar isso num computador que reseta todo dia (ex: escola)
 
 Este tutorial foi escrito pra funcionar mesmo se você não guardar nada na cabeça de um dia pro outro, e mesmo se o computador apagar tudo (programas instalados, arquivos baixados, configurações) todo santo dia. Três coisas que resolvem isso de uma vez:

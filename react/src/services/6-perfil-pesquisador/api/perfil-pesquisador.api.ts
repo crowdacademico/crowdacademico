@@ -1,7 +1,7 @@
 import { tratarResposta } from '../../constant/api/http.util';
 import type { AuthFetch } from '../../3-auth/type/auth.type';
 import type { ResultadoPaginado } from '../../constant/type/paginacao.type';
-import { desembrulharPaginado } from '../../constant/type/paginacao.type';
+import { desembrulharPaginado, TAMANHO_PAGINA_MAXIMO_API } from '../../constant/type/paginacao.type';
 import type { StatusPesquisador, TipoVinculo } from '../constants/status-pesquisador.constants';
 import type {
   PerfilPesquisadorRequestCorrigirCpf,
@@ -41,7 +41,7 @@ function paraQueryString(filtro?: FiltroPerfilPesquisador): string {
 
 export const perfilPesquisadorApi = {
   listar: (authFetch: AuthFetch, filtro?: FiltroPerfilPesquisador): Promise<PerfilPesquisadorResponse[]> =>
-    authFetch(`/perfil-pesquisador${paraQueryString({ tamanho: 500, ...filtro })}`)
+    authFetch(`/perfil-pesquisador${paraQueryString({ tamanho: TAMANHO_PAGINA_MAXIMO_API, ...filtro })}`)
       .then(tratarResposta<ResultadoPaginado<PerfilPesquisadorResponse>>)
       .then(desembrulharPaginado('pesquisadores')),
   buscar: (authFetch: AuthFetch, id: number | string): Promise<PerfilPesquisadorResponse> =>

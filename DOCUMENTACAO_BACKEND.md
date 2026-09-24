@@ -63,7 +63,7 @@ Este documento é o irmão do `DOCUMENTACAO_BD.md`. Ele cobre o backend em NestJ
 
 📌 **Por que Kysely e não TypeORM/Prisma, e `class-validator` em vez de Joi.** Embora nos foi ensinado no semestre passado, pelo professor Francisco, do IFSP Birigui, a usar TypeORM + Joi (nos projetos de sala de aula da disciplina de Programação para Web 2), decidimos não utilizar isso aqui devido ao seguinte:
 
-O banco deste projeto não é um detalhe de implementação do backend - ele é onde moram as regras de negócio (42 `RAISE EXCEPTION` em triggers, 100+ policies de RLS, funções `SECURITY DEFINER`, `FORCE ROW LEVEL SECURITY` em todas as 42 tabelas). Um ORM como o TypeORM parte do princípio de que a APLICAÇÃO é dona do schema - ele gera e roda migration sozinho, a partir das entidades TypeScript, e junto disso costuma trazer *lazy loading* de relacionamento e outras conveniências automáticas. Isso é ótimo pra um sistema onde toda a regra mora no código da aplicação (que era o caso dos projetos da disciplina), mas aqui o BANCO é a fonte de verdade de uma parte grande e crítica da lógica (quem pode ver/alterar o quê, transição de status válida, cálculo de score, congelamento de campanha aprovada) - se o ORM tentasse gerenciar esse schema, ele brigaria com a RLS e com as triggers o tempo todo, e um relacionamento carregado sozinho por trás das cenas poderia disparar uma consulta que a RLS bloqueia de um jeito confuso de depurar.
+O banco deste projeto não é um detalhe de implementação do backend - ele é onde moram as regras de negócio (dezenas de `RAISE EXCEPTION` com ERRCODE próprio em triggers, mais de 100 policies de RLS, funções `SECURITY DEFINER`, `FORCE ROW LEVEL SECURITY` em todas as 42 tabelas). Um ORM como o TypeORM parte do princípio de que a APLICAÇÃO é dona do schema - ele gera e roda migration sozinho, a partir das entidades TypeScript, e junto disso costuma trazer *lazy loading* de relacionamento e outras conveniências automáticas. Isso é ótimo pra um sistema onde toda a regra mora no código da aplicação (que era o caso dos projetos da disciplina), mas aqui o BANCO é a fonte de verdade de uma parte grande e crítica da lógica (quem pode ver/alterar o quê, transição de status válida, cálculo de score, congelamento de campanha aprovada) - se o ORM tentasse gerenciar esse schema, ele brigaria com a RLS e com as triggers o tempo todo, e um relacionamento carregado sozinho por trás das cenas poderia disparar uma consulta que a RLS bloqueia de um jeito confuso de depurar.
 
 O Kysely resolve o problema real que existe aqui - escrever SQL sem errar nome de coluna, com autocomplete e erro de tipo em tempo de compilação - **sem tentar ser dono do schema**: ele não gera migration, não tem entidade gerenciada, não decide sozinho quando rodar uma consulta. O schema continua sendo só os 8 arquivos `.sql` (`arquivos_banco_dados/`), escritos e revisados à mão, exatamente como o time (eu e a Alexia) já vinha fazendo desde antes do Nest existir no projeto - o Kysely só chegou depois pra tornar mais seguro escrever a consulta em cima desse schema, não pra substituir ele.
 
@@ -389,7 +389,7 @@ O converter (`perfil-pesquisador.converter.ts`) recebe `cpfDecifrado` como **par
 
 `commons/database/postgres-exception.filter.ts`, registrado como `APP_FILTER`. Ele deixa qualquer `HttpException` passar intacta (services que já trataram o erro localmente não são afetados) e só traduz o que chegou cru do driver.
 
-**Faixas de ERRCODE customizado** (as 42 `RAISE EXCEPTION` de `05_regras_negocio.sql` - tabela completa em `DOCUMENTACAO_ERRCODE.md`), reconhecidas pelo **prefixo de 2 dígitos**:
+**Faixas de ERRCODE customizado** (os `RAISE EXCEPTION` com ERRCODE customizado de `05_regras_negocio.sql` - tabela completa em `DOCUMENTACAO_ERRCODE.md`), reconhecidas pelo **prefixo de 2 dígitos**:
 
 | Prefixo | Categoria | HTTP |
 |---|---|---|
@@ -1218,7 +1218,7 @@ console.log('total de rotas:', out.length);
 | Arquivo | Assunto |
 |---|---|
 | `DOCUMENTACAO_BD.md` | O banco: schema, RLS, triggers, funções - e o log histórico das decisões |
-| `DOCUMENTACAO_ERRCODE.md` | Tabela completa código → função → mensagem das 42 `RAISE EXCEPTION` |
+| `DOCUMENTACAO_ERRCODE.md` | Tabela completa código → função → mensagem dos `RAISE EXCEPTION` com ERRCODE customizado |
 | `PENDENCIAS e correcoes.md` | Decisões em aberto e histórico de correções - os itens 5, 6, 7, 8, 9, 11 e 22 são os que mais afetam o backend |
 | `PROXIMOS_MODULOS.md` | O que falta construir, em ordem sugerida |
 | `ARQUIVO - Dica de Arquitetura.md` | O "doc de arquitetura" citado nos comentários de `commons/storage` e `25-arquivo` |

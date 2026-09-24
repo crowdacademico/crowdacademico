@@ -6,7 +6,7 @@ Referência rápida dos `RAISE EXCEPTION` com ERRCODE customizado dos arquivos `
 
 **Nada foi alterado além disso**: nenhuma mensagem, nenhuma lógica, nenhuma trigger foi tocada - só a cláusula `USING ERRCODE` foi adicionada ao final de cada `RAISE EXCEPTION`. O diff é puramente aditivo (conferido linha a linha).
 
-Este documento descrevia, na origem, só a tabela de códigos. Desde 24-09-2026 ele também define o **contrato do corpo de erro da API** (seção no fim): o Nest agora devolve `codigo` (o SQLSTATE) junto de `statusCode` e `message`, ver `postgres-exception.filter.ts`. A contagem de códigos deixou de ser citada aqui (hoje são 57: 90001 a 90018, 91001 a 91028, 92001 a 92010, 93001 e 93002); conte pelas tabelas abaixo.
+Este documento descrevia, na origem, só a tabela de códigos. Desde 24-09-2026 ele também define o **contrato do corpo de erro da API** (seção no fim): o Nest agora devolve `codigo` (o SQLSTATE) junto de `statusCode` e `message`, ver `postgres-exception.filter.ts`. A contagem de códigos deixou de ser citada aqui (hoje são 59: 90001 a 90019, 91001 a 91028, 92001 a 92010, 93001 e 93002); conte pelas tabelas abaixo.
 
 ---
 
@@ -45,6 +45,7 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 90016 | `deslizar_datas_campanha` | `campanha` | Campanha sem data de início não pode ter as datas reagendadas (21-09-2026) |
 | 90017 | `fn_valida_soma_pesos_score_config` | `score_config` | Soma dos pesos raiz precisa ser exatamente 100 (23-09-2026) |
 | 90018 | `fn_valida_cobertura_score_rotulo` | `score_rotulo` | Faixas ativas precisam cobrir 0-100 sem buraco nem sobreposição (23-09-2026) |
+| 90019 | `fn_valida_pares_min_max_configuracoes` | `configuracoes` | O mínimo de um par (prazo, orçamento, cronograma, tamanho de arquivo) não pode ser maior que o máximo (constraint trigger, roda no `COMMIT`, 24-09-2026). Leva `dados` no corpo: `chaveMinimo`, `valorMinimo`, `chaveMaximo`, `valorMaximo` |
 
 ## 91xxx - Conflito de estado/regra de negócio (409)
 

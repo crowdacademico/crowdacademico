@@ -1,7 +1,7 @@
 import { tratarResposta } from '../../constant/api/http.util';
 import type { AuthFetch } from '../../3-auth/type/auth.type';
 import type { ResultadoPaginado } from '../../constant/type/paginacao.type';
-import { desembrulharPaginado } from '../../constant/type/paginacao.type';
+import { desembrulharPaginado, TAMANHO_PAGINA_MAXIMO_API } from '../../constant/type/paginacao.type';
 import type { CampanhaResponse, HistoricoRejeicaoResponse } from '../type/campanha.type';
 import type { StatusCampanha } from '../constants/status-campanha.constants';
 
@@ -43,7 +43,7 @@ export const campanhaApi = {
   // pra GenericTable continuar paginando no navegador, como já faz em
   // toda outra tela.
   listar: (authFetch: AuthFetch, filtro?: FiltroCampanha): Promise<CampanhaResponse[]> =>
-    authFetch(`/campanha${paraQueryString({ tamanho: 500, ...filtro })}`)
+    authFetch(`/campanha${paraQueryString({ tamanho: TAMANHO_PAGINA_MAXIMO_API, ...filtro })}`)
       .then(tratarResposta<ResultadoPaginado<CampanhaResponse>>)
       .then(desembrulharPaginado('campanhas')),
   buscar: (authFetch: AuthFetch, id: number | string): Promise<CampanhaResponse> =>

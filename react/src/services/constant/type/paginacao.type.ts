@@ -3,6 +3,12 @@
 // Hoje só usado como teto de segurança (ver comentário no arquivo
 // original) - o React desembrulha `.dados` uma vez no `X.api.ts` e o
 // resto do app nunca vê `total`/`pagina`/`tamanho`.
+// Teto que o backend aplica em qualquer listagem (nest/src/commons/database/
+// paginacao.util.ts, 500). As telas pedem sempre o máximo, porque a paginação
+// visível é feita no navegador (GenericTable). Um lugar só: se o teto do
+// backend mudar, muda aqui junto.
+export const TAMANHO_PAGINA_MAXIMO_API = 500;
+
 export interface ResultadoPaginado<T> {
   dados: T[];
   total: number;

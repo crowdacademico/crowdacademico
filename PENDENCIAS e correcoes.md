@@ -2107,3 +2107,16 @@ O Claude Web respondeu ao prompt de 24-09 com um documento, um patch de banco, u
 ### 🟢 CORRIGIDO (24-09-2026): `SENHA_DEV` fora do pacote de produção (item que tinha ficado adiado)
 
 `SENHA_DEV` (`DevTcc123!`) e o cartão `<dev>` de "Redefinir senha dev" do modal de Alterar Usuário estavam no `dist` de produção. Agora só existem com `import.meta.env.DEV` (constante do Vite, não vem de `.env`). Conferido no build: produção com zero ocorrências, build em modo desenvolvimento com as duas presentes. `tsc`, `eslint` e `build` limpos. **`registros-bloqueados.ts` já estava fora do build de produção** (só telas do Campo de Testes o importam, e as rotas delas são criadas só com `DEV`), então não foi alterado. Nenhum `.env` foi tocado. Sem teste ao vivo: abrir Alterar Usuário em `npm run dev` e conferir que o cartão `<dev>` continua aparecendo.
+
+---
+
+### 🟢 CORRIGIDO (24-09-2026, mesmo dia, 3º lote): mínimo não passa do máximo nas configurações, constante 500, script de contraste, contagens da documentação
+
+Lote de baixo risco, sem decisão sua, escolhido da lista do que faltava.
+
+- **Mínimo maior que o máximo nas configurações (Grupo C do `ATUALIZAR O SUPABASE.sql`, também em `05`).** O painel de Parâmetros edita uma chave por vez e nada impedia `prazo_minimo = 70` com `prazo_maximo = 60`: nenhuma campanha conseguia mais ser enviada, sem mensagem clara (idem orçamento e cronograma). Nova constraint trigger `trg_configuracoes_pares_min_max` (ERRCODE 90019) para 4 famílias de par: prazo, itens de orçamento, marcos de cronograma e tamanho de arquivo (mínimo contra os dois máximos). Mensagem de alerta no banco (diz o par e a ordem certa de editar, com os valores em `dados`) **e** caixa de aviso no modal de Alterar Parâmetro. **Não altera nenhum dado**, só barra a próxima escrita invertida. Testado no PGlite: 5 casos que passavam por engano agora são barrados (12 de 12); suíte anterior 25 de 25, reconstruindo do zero **só com os arquivos 01 a 08** (que é como a Alexia recria o banco em sala, sem o ATUALIZAR) e também aplicando o bloco 2x sobre o estado do seu último commit. **Você precisa colar o Grupo C** (a consulta de conferência opcional está no comentário do bloco).
+- **Constante `TAMANHO_PAGINA_MAXIMO_API`** no lugar do `500` escrito à mão em 2 arquivos de API do React.
+- **`npm run contraste`**, guarda contra regressão de contraste (40 medições, 0 abaixo de 4,5:1). Testado com falha proposital.
+- **Documentação:** contagens antigas (66 e 72 triggers, 42 `RAISE`) trocadas por uma contagem datada de 24-09-2026 e um aviso para não repetir número fixo em outros documentos (78 triggers, 121 policies, 93 funções, 59 códigos de erro); os problemas já conhecidos dos módulos 22 e 23 anotados em `PROXIMOS_MODULOS.md`; código 90019 em `DOCUMENTACAO_ERRCODE.md` (o cabeçalho tinha dito 57 códigos, o certo antes do 90019 era 58, agora são 59).
+
+**Sem teste ao vivo:** o aviso amarelo no modal de Alterar Parâmetro (abrir `prazo_minimo_campanha_dias` e conferir o texto) e a recusa ao salvar um mínimo acima do máximo. **Descartado a seu pedido:** o registro das mudanças de banco (`schema_migrations`), porque a Alexia recria o banco do zero em sala (`DROP SCHEMA public CASCADE` e rodar os 8 arquivos), então não há banco divergente para conferir.

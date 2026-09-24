@@ -8,6 +8,7 @@ import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
 import { configuracaoApi } from '../../services/11-configuracoes/api/configuracao.api';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
+import { parMinMaxDaConfiguracao } from '../../services/11-configuracoes/constants/configuracao-pares-min-max';
 import type { ConfiguracaoResponse } from '../../services/11-configuracoes/type/configuracao.type';
 
 // Consultar/Alterar/Excluir migrados de página pra modal (14-09-2026,
@@ -67,6 +68,7 @@ export function ModalAlterarConfiguracao({ auth, configuracao, aoFechar, aoAtual
   const [publica, setPublica] = useState(configuracao.publica);
   const [enviando, setEnviando] = useState(false);
   const idValor = useId();
+  const par = parMinMaxDaConfiguracao(configuracao.chave);
   const idDescricao = useId();
 
   const sujo =
@@ -129,6 +131,19 @@ export function ModalAlterarConfiguracao({ auth, configuracao, aoFechar, aoAtual
         <div className="sm:col-span-2">
           <label htmlFor={idValor} className="rotulo-campo">Valor</label>
           <input id={idValor} type="text" value={valor} onChange={(evento) => setValor(evento.target.value)} className="input-padrao" />
+          {par && (
+            <div className="mt-2 flex items-start gap-2 rounded-lg fundo-aviso texto-aviso p-3 text-xs">
+              <i className="fa-solid fa-triangle-exclamation mt-0.5 shrink-0"></i>
+              <p>
+                Este é o valor {par.papel === 'minimo' ? 'MÍNIMO' : 'MÁXIMO'} e precisa ficar
+                {par.papel === 'minimo' ? ' menor ou igual ' : ' maior ou igual '}
+                ao de <code>{par.outras.join('</code> e <code>')}</code>. Se o novo valor passar do outro,
+                o sistema recusa: {par.papel === 'minimo'
+                  ? 'suba o máximo primeiro e depois o mínimo.'
+                  : 'baixe o mínimo primeiro e depois o máximo.'}
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="sm:col-span-2">
