@@ -76,7 +76,9 @@ import type { EntradaRegistroChamada } from '../../services/campo-testes/context
 // pesquisador.tsx (linha já com tudo, mas ignorada por este componente).
 // ============================================================================
 
-const SENHA_DEV = 'DevTcc123!';
+// Só existe em desenvolvimento (24-09-2026): em `npm run build` o Vite troca
+// `import.meta.env.DEV` por `false` e a senha some do pacote de produção.
+const SENHA_DEV = import.meta.env.DEV ? 'DevTcc123!' : '';
 
 // Aproximação consciente: em sucesso, a camada tipada (`usuarioApi` etc.)
 // nunca expõe o status HTTP real (só o corpo já tratado por
@@ -1318,20 +1320,22 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado, a
                 </div>
               </SecaoFicha>
 
-              <div className="fundo-cartao border border-dashed borda-dev fundo-dev-sutil rounded-xl p-4">
-                <span className="badge badge-dev">&lt;dev&gt;</span>
-                <p className="text-xs texto-fraco mt-2 mb-3">
-                  Redefine a senha direto pra "{SENHA_DEV}", sem digitar nada. Só pra testar login.
-                </p>
-                <button
-                  type="button"
-                  onClick={aoRedefinirSenhaDev}
-                  disabled={redefinindoSenhaDev}
-                  className="btn btn-secondary w-full"
-                >
-                  {redefinindoSenhaDev ? 'Redefinindo...' : 'Redefinir senha dev'}
-                </button>
-              </div>
+              {import.meta.env.DEV && (
+                <div className="fundo-cartao border border-dashed borda-dev fundo-dev-sutil rounded-xl p-4">
+                  <span className="badge badge-dev">&lt;dev&gt;</span>
+                  <p className="text-xs texto-fraco mt-2 mb-3">
+                    Redefine a senha direto pra "{SENHA_DEV}", sem digitar nada. Só pra testar login.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={aoRedefinirSenhaDev}
+                    disabled={redefinindoSenhaDev}
+                    className="btn btn-secondary w-full"
+                  >
+                    {redefinindoSenhaDev ? 'Redefinindo...' : 'Redefinir senha dev'}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </>

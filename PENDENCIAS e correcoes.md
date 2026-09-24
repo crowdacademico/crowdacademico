@@ -2087,7 +2087,7 @@ O Claude Web respondeu ao prompt de 24-09 com um documento, um patch de banco, u
 - **Retenção do `log_auditoria`:** ele sugeriu 365 dias numa chave de configuração, com job diário. Não implementado.
 - **Tom do verde do texto no tema escuro** (`#2fbf71`, sugestão dele, já aplicado como valor provisório).
 - **Guardar a suíte PGlite no repositório** (`arquivos_banco_dados/testes/`, um arquivo por módulo). Ele discordou de esperar; você decidiu esperar. Nota: a suíte atual carrega o `ATUALIZAR O SUPABASE.sql`, que é temporário.
-- **`SENHA_DEV` e `registros-bloqueados` atrás de `import.meta.env.DEV`:** adiado a seu pedido; explicado no chat (não mexe em nenhum `.env`).
+- **`SENHA_DEV` e `registros-bloqueados` atrás de `import.meta.env.DEV`:** feito depois, ver a entrada seguinte.
 
 **Achados dele que ficaram para depois (sem urgência, sem dependência de módulo)**
 - Dispatcher único de triggers em `campanha` (17 triggers, 11 em `BEFORE UPDATE`, ordem alfabética implícita) e em `comentario` (8), com `ordem_endosso` indo para o banco (a corrida de dois endossos simultâneos deixa de existir). Versão pequena: renomear com prefixo numérico.
@@ -2101,3 +2101,9 @@ O Claude Web respondeu ao prompt de 24-09 com um documento, um patch de banco, u
 - Seed: as campanhas 2 e 5 estão `sucesso` com arrecadado abaixo da meta (estado que o próprio banco proíbe no caminho automático); o seed deixa de desligar trigger pelo nome (`session_replication_role = replica`); renomear `08_trigger_signup_usuario.sql` (não tem trigger).
 - Documentação: `DOCUMENTACAO_BD.md` e `DOCUMENTACAO_BACKEND.md` ainda citam contagens de agosto (116/117 policies, 66/72 triggers).
 - **O maior risco para a banca, segundo ele:** o fluxo principal do produto (pesquisador cria e envia campanha, admin aprova numa fila, visitante vê a página pública) ainda não tem tela real fora do Campo de Testes. Ordem sugerida: "Minhas campanhas" do pesquisador com o wizard extraído da bancada, fila de aprovação do admin, página pública. Os três usam endpoints que já existem.
+
+---
+
+### 🟢 CORRIGIDO (24-09-2026): `SENHA_DEV` fora do pacote de produção (item que tinha ficado adiado)
+
+`SENHA_DEV` (`DevTcc123!`) e o cartão `<dev>` de "Redefinir senha dev" do modal de Alterar Usuário estavam no `dist` de produção. Agora só existem com `import.meta.env.DEV` (constante do Vite, não vem de `.env`). Conferido no build: produção com zero ocorrências, build em modo desenvolvimento com as duas presentes. `tsc`, `eslint` e `build` limpos. **`registros-bloqueados.ts` já estava fora do build de produção** (só telas do Campo de Testes o importam, e as rotas delas são criadas só com `DEV`), então não foi alterado. Nenhum `.env` foi tocado. Sem teste ao vivo: abrir Alterar Usuário em `npm run dev` e conferir que o cartão `<dev>` continua aparecendo.
