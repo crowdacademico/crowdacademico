@@ -58,6 +58,10 @@ export function ModalCriarTipoLink({ auth, aoFechar, aoCriado }: ModalCriarTipoL
   // aria-describedby (23-09-2026): ver modal-criar-area-conhecimento.tsx.
   const idMensagemCodigo = useId();
   const idMensagemRegex = useId();
+  const idCodigo = useId();
+  const idNome = useId();
+  const idDominios = useId();
+  const idRegex = useId();
   const nenhumEscopoMarcado = !permitePerfil && !permiteAtualizacao && !permiteRecompensa;
 
   const aoCriar = async () => {
@@ -114,8 +118,9 @@ export function ModalCriarTipoLink({ auth, aoFechar, aoCriado }: ModalCriarTipoL
       {erro && <p className="texto-erro text-sm font-bold text-center">{erro}</p>}
 
       <div>
-        <label className="rotulo-campo">Código</label>
+        <label htmlFor={idCodigo} className="rotulo-campo">Código</label>
         <input
+          id={idCodigo}
           type="text"
           value={codigo}
           onChange={(evento) => setCodigo(evento.target.value.toUpperCase())}
@@ -139,8 +144,9 @@ export function ModalCriarTipoLink({ auth, aoFechar, aoCriado }: ModalCriarTipoL
       </div>
 
       <div>
-        <label className="rotulo-campo">Nome</label>
+        <label htmlFor={idNome} className="rotulo-campo">Nome</label>
         <input
+          id={idNome}
           type="text"
           value={nome}
           onChange={(evento) => setNome(evento.target.value)}
@@ -152,8 +158,9 @@ export function ModalCriarTipoLink({ auth, aoFechar, aoCriado }: ModalCriarTipoL
       </div>
 
       <div>
-        <label className="rotulo-campo">Domínios permitidos</label>
+        <label htmlFor={idDominios} className="rotulo-campo">Domínios permitidos</label>
         <input
+          id={idDominios}
           type="text"
           value={dominioTexto}
           onChange={(evento) => setDominioTexto(evento.target.value)}
@@ -168,8 +175,9 @@ export function ModalCriarTipoLink({ auth, aoFechar, aoCriado }: ModalCriarTipoL
       </div>
 
       <div>
-        <label className="rotulo-campo">Regex de validação (opcional)</label>
+        <label htmlFor={idRegex} className="rotulo-campo">Regex de validação (opcional)</label>
         <input
+          id={idRegex}
           type="text"
           value={regex}
           onChange={(evento) => setRegex(evento.target.value)}
@@ -191,7 +199,7 @@ export function ModalCriarTipoLink({ auth, aoFechar, aoCriado }: ModalCriarTipoL
       </div>
 
       <div>
-        <label className="rotulo-campo">Onde este tipo pode ser usado</label>
+        <span className="rotulo-campo">Onde este tipo pode ser usado</span>
         <div className="space-y-2 mt-1">
           <label className="flex items-center gap-2 text-sm font-semibold texto-padrao">
             <input type="checkbox" checked={permitePerfil} onChange={(evento) => setPermitePerfil(evento.target.checked)} />

@@ -1,9 +1,5 @@
-import {
-  BadRequestException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { distinguir404ou403 } from '../../commons/database/distinguir-404-ou-403.util';
 import { DatabaseService } from '../../commons/database/database.service';
 import { AreaConhecimentoConverter } from '../dto/converter/area-conhecimento.converter';
 import { AreaConhecimentoRequestUpdate } from '../dto/request/area-conhecimento.request-update';
@@ -39,17 +35,12 @@ export class AreaConhecimentoServiceUpdate {
       // gerenciar'). 0 linhas afetadas sem erro é a RLS filtrando -
       // diferencia de "não existe" com uma segunda consulta (SELECT já é
       // USING(true), sempre enxerga a linha se ela existir).
-      const existe = await db
-        .selectFrom('area_conhecimento')
-        .select('id_area_conhecimento')
-        .where('id_area_conhecimento', '=', idAreaConhecimento)
-        .executeTakeFirst();
-      if (!existe) {
-        throw new NotFoundException(
-          `Área de conhecimento ${idAreaConhecimento} não encontrada`,
-        );
-      }
-      throw new ForbiddenException(
+      return await distinguir404ou403(
+        db,
+        'area_conhecimento',
+        'id_area_conhecimento',
+        idAreaConhecimento,
+        `Área de conhecimento ${idAreaConhecimento} não encontrada`,
         'Sem permissão para editar esta área de conhecimento.',
       );
     }

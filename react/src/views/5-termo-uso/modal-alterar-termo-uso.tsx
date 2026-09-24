@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import type { FormEvent } from 'react';
 import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
 import { SecaoFicha } from '../../components/crud/ficha-consulta';
@@ -60,6 +60,8 @@ export function ModalAlterarTermoUso({
   const [carregando, setCarregando] = useState(true);
   const [enviando, setEnviando] = useState(false);
   const [ativando, setAtivando] = useState(false);
+  const idSelecionarVersao = useId();
+  const idConteudo = useId();
 
   useEffect(() => {
     termoUsoApi
@@ -172,8 +174,9 @@ export function ModalAlterarTermoUso({
       </SecaoFicha>
 
       <div>
-        <label className="rotulo-campo">Selecionar versão para alterar</label>
+        <label htmlFor={idSelecionarVersao} className="rotulo-campo">Selecionar versão para alterar</label>
         <select
+          id={idSelecionarVersao}
           value={idSelecionado}
           onChange={(evento) => aoTrocarVersaoSelecionada(Number(evento.target.value))}
           className="input-padrao"
@@ -199,8 +202,9 @@ export function ModalAlterarTermoUso({
             className="space-y-6"
           >
             <div>
-              <label className="rotulo-campo">Texto completo</label>
+              <label htmlFor={idConteudo} className="rotulo-campo">Texto completo</label>
               <textarea
+                id={idConteudo}
                 value={conteudo}
                 onChange={(evento) => setConteudo(evento.target.value)}
                 required

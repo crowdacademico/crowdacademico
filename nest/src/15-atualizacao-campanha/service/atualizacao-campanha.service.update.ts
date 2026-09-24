@@ -1,8 +1,5 @@
-import {
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { distinguir404ou403 } from '../../commons/database/distinguir-404-ou-403.util';
 import { DatabaseService } from '../../commons/database/database.service';
 import { ATUALIZACAO_CAMPANHA_COLUNAS_SELECT } from '../constants/atualizacao-campanha.constants';
 import { AtualizacaoCampanhaConverter } from '../dto/converter/atualizacao-campanha.converter';
@@ -33,16 +30,12 @@ export class AtualizacaoCampanhaServiceUpdate {
 
     if (!linha) {
       // pol_atualizacao_update (04): dono da campanha OU atualizacao_moderar.
-      const existe = await this.database
-        .getDb()
-        .selectFrom('atualizacao_campanha')
-        .select('id_atualizacao')
-        .where('id_atualizacao', '=', id)
-        .executeTakeFirst();
-      if (!existe) {
-        throw new NotFoundException('Atualização de campanha não encontrada.');
-      }
-      throw new ForbiddenException(
+      return await distinguir404ou403(
+        this.database.getDb(),
+        'atualizacao_campanha',
+        'id_atualizacao',
+        id,
+        'Atualização de campanha não encontrada.',
         'Sem permissão para editar esta atualização.',
       );
     }

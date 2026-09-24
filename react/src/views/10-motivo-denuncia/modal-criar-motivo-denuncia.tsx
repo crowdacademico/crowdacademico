@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { SecaoFicha } from '../../components/crud/ficha-consulta';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
@@ -22,6 +22,8 @@ export function ModalCriarMotivoDenuncia({ auth, aoFechar, aoCriado }: ModalCria
   const [descricao, setDescricao] = useState('');
   const [tipo, setTipo] = useState<TipoMotivoDenuncia | ''>('');
   const [enviando, setEnviando] = useState(false);
+  const idTipo = useId();
+  const idDescricao = useId();
 
   const aoCriar = async () => {
     if (tipo === '') return;
@@ -67,8 +69,9 @@ export function ModalCriarMotivoDenuncia({ auth, aoFechar, aoCriado }: ModalCria
 
       <SecaoFicha titulo="Dados">
         <div className="sm:col-span-2">
-          <label className="rotulo-campo">Tipo</label>
+          <label htmlFor={idTipo} className="rotulo-campo">Tipo</label>
           <select
+            id={idTipo}
             value={tipo}
             onChange={(evento) => {
               if (ehTipoMotivoDenuncia(evento.target.value)) {
@@ -91,8 +94,9 @@ export function ModalCriarMotivoDenuncia({ auth, aoFechar, aoCriado }: ModalCria
         </div>
 
         <div className="sm:col-span-2">
-          <label className="rotulo-campo">Descrição</label>
+          <label htmlFor={idDescricao} className="rotulo-campo">Descrição</label>
           <input
+            id={idDescricao}
             type="text"
             value={descricao}
             onChange={(evento) => setDescricao(evento.target.value)}

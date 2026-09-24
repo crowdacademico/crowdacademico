@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { distinguir404ou403 } from '../../commons/database/distinguir-404-ou-403.util';
 import { DatabaseService } from '../../commons/database/database.service';
 import { CODIGO_PG_FOREIGN_KEY_VIOLATION } from '../../commons/database/postgres-exception.filter';
 
@@ -26,17 +27,12 @@ export class AreaConhecimentoServiceRemove {
       if (resultado.numDeletedRows === 0n) {
         // pol_area_delete (04): mesmo critério do update
         // (area_conhecimento_gerenciar).
-        const existe = await db
-          .selectFrom('area_conhecimento')
-          .select('id_area_conhecimento')
-          .where('id_area_conhecimento', '=', idAreaConhecimento)
-          .executeTakeFirst();
-        if (!existe) {
-          throw new NotFoundException(
-            `Área de conhecimento ${idAreaConhecimento} não encontrada`,
-          );
-        }
-        throw new ForbiddenException(
+        await distinguir404ou403(
+          db,
+          'area_conhecimento',
+          'id_area_conhecimento',
+          idAreaConhecimento,
+          `Área de conhecimento ${idAreaConhecimento} não encontrada`,
           'Sem permissão para excluir esta área de conhecimento.',
         );
       }

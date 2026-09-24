@@ -43,6 +43,8 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 90014 | `fn_valida_contribuicao_valor_minimo` | `contribuicao` | Valor da contribuição abaixo do mínimo configurado |
 | 90015 | `fn_valida_completude_campanha` | `campanha` | Prazo da campanha já vencido no envio/aprovação (20-09-2026) - atualize as datas antes de enviar |
 | 90016 | `deslizar_datas_campanha` | `campanha` | Campanha sem data de início não pode ter as datas reagendadas (21-09-2026) |
+| 90017 | `fn_valida_soma_pesos_score_config` | `score_config` | Soma dos pesos raiz precisa ser exatamente 100 (23-09-2026) |
+| 90018 | `fn_valida_cobertura_score_rotulo` | `score_rotulo` | Faixas ativas precisam cobrir 0-100 sem buraco nem sobreposição (23-09-2026) |
 
 ## 91xxx - Conflito de estado/regra de negócio (409)
 

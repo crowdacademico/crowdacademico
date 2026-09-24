@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { distinguir404ou403 } from '../../commons/database/distinguir-404-ou-403.util';
 import { DatabaseService } from '../../commons/database/database.service';
 import {
   CODIGO_PG_UNIQUE_VIOLATION,
@@ -37,16 +38,12 @@ export class PapelServiceUpdate {
         // pol_papel_update (04): exige tem_permissao('papel_gerenciar'). 0
         // linhas afetadas sem erro é a RLS filtrando - diferencia de "não
         // existe" (só há uma condição no WHERE, o id).
-        const existe = await this.database
-          .getDb()
-          .selectFrom('papel')
-          .select('id_papel')
-          .where('id_papel', '=', idPapel)
-          .executeTakeFirst();
-        if (!existe) {
-          throw new NotFoundException(`Papel ${idPapel} não encontrado.`);
-        }
-        throw new ForbiddenException(
+        return await distinguir404ou403(
+          this.database.getDb(),
+          'papel',
+          'id_papel',
+          idPapel,
+          `Papel ${idPapel} não encontrado.`,
           "Sem permissão 'papel_gerenciar' para renomear papéis.",
         );
       }

@@ -5,7 +5,7 @@
 // sistema (nunca uma versão simplificada à parte).
 // ============================================================================
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { tratarResposta } from '../../services/constant/api/http.util';
@@ -81,6 +81,7 @@ export function VidaCampanhaAtiva({ auth }: PropsPagina) {
   const [campanhaFoco, setCampanhaFoco] = useState<number | null>(null);
   const [todasCampanhas, setTodasCampanhas] = useState<CampanhaResponse[]>([]);
   const [buscaCampanha, setBuscaCampanha] = useState('');
+  const idBuscaCampanha = useId();
   const [sugestoesCampanhaAbertas, setSugestoesCampanhaAbertas] = useState(false);
   const sugestoesCampanhaRef = useRef<HTMLDivElement>(null);
 
@@ -108,6 +109,10 @@ export function VidaCampanhaAtiva({ auth }: PropsPagina) {
     idUsuario === null ? 'Pesquisador removido' : (nomesPorId.get(idUsuario) ?? `usuário #${idUsuario}`);
 
   useEffect(() => {
+    // Espera a sessão ser restaurada (F5), ver bancada-campanha.tsx.
+    if (auth.carregando) {
+      return;
+    }
     usuarioApi
       .listar(auth.authFetch)
       .then((lista) => setNomesPorId(new Map(lista.map((usuario) => [usuario.idUsuario, usuario.nome]))))
@@ -118,7 +123,7 @@ export function VidaCampanhaAtiva({ auth }: PropsPagina) {
     // de T3, ver `sugestoesCampanha` abaixo.
     campanhaApi.listar(auth.authFetch).then(setTodasCampanhas).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [auth.carregando]);
 
   // Fechar as sugestões da busca de campanha ao clicar fora - mesmo padrão
   // do combobox "dono da campanha" em bancada-campanha.tsx, extraído em
@@ -226,8 +231,9 @@ export function VidaCampanhaAtiva({ auth }: PropsPagina) {
           mostrado é a campanha escolhida; digitar de novo invalida a
           escolha atual até clicar numa sugestão. */}
       <div className="relative mb-4 max-w-sm" ref={sugestoesCampanhaRef}>
-        <label className="rotulo-campo">Buscar campanha</label>
+        <label htmlFor={idBuscaCampanha} className="rotulo-campo">Buscar campanha</label>
         <input
+          id={idBuscaCampanha}
           type="text"
           value={buscaCampanha}
           onChange={(evento) => {

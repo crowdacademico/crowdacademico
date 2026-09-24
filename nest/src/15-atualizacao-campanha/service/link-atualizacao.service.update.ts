@@ -1,8 +1,5 @@
-import {
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { distinguir404ou403 } from '../../commons/database/distinguir-404-ou-403.util';
 import { DatabaseService } from '../../commons/database/database.service';
 import { LINK_ATUALIZACAO_COLUNAS_SELECT } from '../constants/link-atualizacao.constants';
 import { LinkAtualizacaoConverter } from '../dto/converter/link-atualizacao.converter';
@@ -29,16 +26,14 @@ export class LinkAtualizacaoServiceUpdate {
       .executeTakeFirst();
 
     if (!linha) {
-      const existe = await this.database
-        .getDb()
-        .selectFrom('link_atualizacao')
-        .select('id_link_atualizacao')
-        .where('id_link_atualizacao', '=', id)
-        .executeTakeFirst();
-      if (!existe) {
-        throw new NotFoundException('Link de atualização não encontrado.');
-      }
-      throw new ForbiddenException('Sem permissão para editar este link.');
+      return await distinguir404ou403(
+        this.database.getDb(),
+        'link_atualizacao',
+        'id_link_atualizacao',
+        id,
+        'Link de atualização não encontrado.',
+        'Sem permissão para editar este link.',
+      );
     }
 
     return LinkAtualizacaoConverter.paraResponseDto(linha);

@@ -1,9 +1,5 @@
-import {
-  BadRequestException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { distinguir404ou403 } from '../../commons/database/distinguir-404-ou-403.util';
 import { DatabaseService } from '../../commons/database/database.service';
 import { MotivoDenunciaConverter } from '../dto/converter/motivo-denuncia.converter';
 import { MotivoDenunciaRequestUpdate } from '../dto/request/motivo-denuncia.request-update';
@@ -40,17 +36,12 @@ export class MotivoDenunciaServiceUpdate {
       // gerenciar'). 0 linhas afetadas sem erro é a RLS filtrando -
       // diferencia de "não existe" com uma segunda consulta (SELECT já é
       // USING(true), sempre enxerga a linha se ela existir).
-      const existe = await db
-        .selectFrom('motivo_denuncia')
-        .select('id_motivo')
-        .where('id_motivo', '=', idMotivo)
-        .executeTakeFirst();
-      if (!existe) {
-        throw new NotFoundException(
-          `Motivo de denúncia ${idMotivo} não encontrado`,
-        );
-      }
-      throw new ForbiddenException(
+      return await distinguir404ou403(
+        db,
+        'motivo_denuncia',
+        'id_motivo',
+        idMotivo,
+        `Motivo de denúncia ${idMotivo} não encontrado`,
         'Sem permissão para editar este motivo de denúncia.',
       );
     }

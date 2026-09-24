@@ -859,6 +859,127 @@ CREATE TRIGGER trg_score_config_recalcula_todos
     FOR EACH STATEMENT
     EXECUTE FUNCTION public.trg_recalcular_por_score_config();
 
+-- ----------------------------------------------------------------------------
+-- Função:     fn_valida_soma_pesos_score_config
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-I-4]
+-- Regra:      ADICIONADA (23-09-2026) - nada impedia os 4 pesos raiz de
+--             score_config (id_pai IS NULL) somarem outra coisa que não 100.
+--             Score_rotulo (faixas 0-100, seed) assume que o score MÁXIMO
+--             possível é 100 - se a soma dos pesos fosse, por exemplo, 200,
+--             ninguém nunca cairia na faixa "Referência" (75-100) de verdade,
+--             e um score de 150 não teria rótulo nenhum (recalcular_score_
+--             pesquisador, [05-I-2], devolveria NULL). CONSTRAINT TRIGGER
+--             (não trigger comum) porque só assim dá pra ser DEFERRABLE -
+--             sem isso, editar os 4 pesos em 4 UPDATEs separados (um por
+--             linha, sem transação escrita à mão) reprovaria o 1º UPDATE
+--             sozinho, mesmo que o conjunto final estivesse certo. FOR EACH
+--             ROW é exigência do Postgres pra CONSTRAINT TRIGGER (não aceita
+--             FOR EACH STATEMENT) - a função ignora NEW/OLD de propósito e
+--             sempre olha a soma agregada da tabela inteira, então dispara
+--             1x por linha afetada mas sempre confere o estado FINAL, já
+--             no COMMIT (ou SET CONSTRAINTS ALL IMMEDIATE). Testado com
+--             PGlite: 2 UPDATEs na mesma transação, inválidos no meio mas
+--             certos no fim, o COMMIT passa; terminar errado, o COMMIT falha.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_valida_soma_pesos_score_config()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+DECLARE
+    v_soma DECIMAL;
+BEGIN
+    SELECT SUM(peso) INTO v_soma FROM score_config WHERE id_pai IS NULL AND ativo = TRUE;
+    IF v_soma IS DISTINCT FROM 100 THEN
+        RAISE EXCEPTION 'A soma dos pesos raiz de score_config precisa ser exatamente 100 (está %).', v_soma
+            USING ERRCODE = '90017';
+    END IF;
+    RETURN NULL;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_score_config_soma_pesos
+-- Tabela:    score_config
+-- Momento:   AFTER INSERT OR UPDATE OF peso, DEFERRABLE INITIALLY DEFERRED
+-- Função:    fn_valida_soma_pesos_score_config()
+-- Bloco:     [05-I-4]
+-- Regra:     Bloqueia terminar uma transação com os pesos raiz somando
+--            diferente de 100. Ver comentário completo na função acima.
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_score_config_soma_pesos ON score_config;
+CREATE CONSTRAINT TRIGGER trg_score_config_soma_pesos
+    AFTER INSERT OR UPDATE OF peso ON score_config
+    DEFERRABLE INITIALLY DEFERRED
+    FOR EACH ROW
+    WHEN (NEW.id_pai IS NULL)
+    EXECUTE FUNCTION public.fn_valida_soma_pesos_score_config();
+
+-- ----------------------------------------------------------------------------
+-- Função:     fn_valida_cobertura_score_rotulo
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-I-4]
+-- Regra:      ADICIONADA (23-09-2026) - EX_SCORE_ROTULO_SEM_SOBREPOSICAO (01,
+--             [01-I]) só impede 2 faixas ativas se SOBREPOREM; não impede um
+--             BURACO entre elas (ex.: uma faixa terminando em 49 e a próxima
+--             começando em 51 deixaria o score 50 sem rótulo nenhum, mesmo
+--             bug de fundo do achado de sobreposição). Exige cobertura EXATA
+--             de 0 a 100 - "exata" só faz sentido porque
+--             fn_valida_soma_pesos_score_config (acima) já garante que o
+--             score máximo possível é 100. Mesmo mecanismo de CONSTRAINT
+--             TRIGGER DEFERRABLE da função acima, pelo mesmo motivo (editar
+--             faixa por faixa não pode reprovar um estado intermediário).
+--             LEAD() OVER (ORDER BY score_minimo) compara cada faixa com a
+--             PRÓXIMA (por score_minimo) - se a próxima não começa exatamente
+--             1 depois do fim desta, tem buraco (ou sobreposição, já
+--             impossível pela outra constraint).
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_valida_cobertura_score_rotulo()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+DECLARE
+    v_min INT;
+    v_max INT;
+    v_tem_buraco BOOLEAN;
+BEGIN
+    SELECT MIN(score_minimo), MAX(score_maximo) INTO v_min, v_max
+    FROM score_rotulo WHERE ativo = TRUE;
+
+    IF v_min IS DISTINCT FROM 0 OR v_max IS DISTINCT FROM 100 THEN
+        RAISE EXCEPTION 'As faixas ativas de score_rotulo precisam cobrir de 0 a 100 (hoje vão de % a %).', v_min, v_max
+            USING ERRCODE = '90018';
+    END IF;
+
+    SELECT EXISTS (
+        SELECT 1 FROM (
+            SELECT score_maximo, LEAD(score_minimo) OVER (ORDER BY score_minimo) AS proximo_minimo
+            FROM score_rotulo WHERE ativo = TRUE
+        ) t
+        WHERE t.proximo_minimo IS NOT NULL AND t.proximo_minimo <> t.score_maximo + 1
+    ) INTO v_tem_buraco;
+
+    IF v_tem_buraco THEN
+        RAISE EXCEPTION 'Existe um buraco (ou sobreposição) entre 2 faixas ativas de score_rotulo.'
+            USING ERRCODE = '90018';
+    END IF;
+
+    RETURN NULL;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_score_rotulo_cobertura
+-- Tabela:    score_rotulo
+-- Momento:   AFTER INSERT OR UPDATE OR DELETE, DEFERRABLE INITIALLY DEFERRED
+-- Função:    fn_valida_cobertura_score_rotulo()
+-- Bloco:     [05-I-4]
+-- Regra:     Bloqueia terminar uma transação com buraco entre faixas ativas,
+--            ou sem cobrir 0-100. Ver comentário completo na função acima.
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_score_rotulo_cobertura ON score_rotulo;
+CREATE CONSTRAINT TRIGGER trg_score_rotulo_cobertura
+    AFTER INSERT OR UPDATE OR DELETE ON score_rotulo
+    DEFERRABLE INITIALLY DEFERRED
+    FOR EACH ROW
+    EXECUTE FUNCTION public.fn_valida_cobertura_score_rotulo();
+
 
 -- ============================================================================
 --  [05-K-1] REGRAS TRANSVERSAIS - INTEGRIDADE E ESCOPO

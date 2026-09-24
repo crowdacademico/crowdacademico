@@ -1,8 +1,5 @@
-import {
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { distinguir404ou403 } from '../../commons/database/distinguir-404-ou-403.util';
 import { DatabaseService } from '../../commons/database/database.service';
 
 @Injectable()
@@ -24,16 +21,12 @@ export class CampanhaServiceRemove {
       // de reenvio vence, ver expirar_campanhas_rejeitadas). Mesmo padrão de campanha.service.update.ts: uma
       // campanha ainda invisível pra quem pediu (fora do alcance de
       // pol_campanha_select também) devolve 404 aqui - não vaza que existe.
-      const existe = await this.database
-        .getDb()
-        .selectFrom('campanha')
-        .select('id_campanha')
-        .where('id_campanha', '=', id)
-        .executeTakeFirst();
-      if (!existe) {
-        throw new NotFoundException('Campanha não encontrada.');
-      }
-      throw new ForbiddenException(
+      await distinguir404ou403(
+        this.database.getDb(),
+        'campanha',
+        'id_campanha',
+        id,
+        'Campanha não encontrada.',
         'Só é possível excluir uma campanha em rascunho, e só o dono (ou quem tem permissão) pode fazer isso.',
       );
     }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import type { CSSProperties, FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { IconeGoogle } from '../../components/3-auth/icone-google';
@@ -23,6 +23,8 @@ export function LoginPage({ auth }: PropsPagina) {
   const [senha, setSenha] = useState('');
   const [enviando, setEnviando] = useState(false);
   const { erro, reportarErro, limparErro } = useErroToast();
+  const idEmail = useId();
+  const idSenha = useId();
 
   const aoEntrar = async (evento: FormEvent<HTMLFormElement>) => {
     evento.preventDefault();
@@ -63,8 +65,9 @@ export function LoginPage({ auth }: PropsPagina) {
           )}
 
           <div>
-            <label className="rotulo-campo">Seu E-mail</label>
+            <label htmlFor={idEmail} className="rotulo-campo">Seu E-mail</label>
             <input
+              id={idEmail}
               type="email"
               value={email}
               onChange={(evento) => setEmail(evento.target.value)}
@@ -76,7 +79,7 @@ export function LoginPage({ auth }: PropsPagina) {
 
           <div>
             <div className="flex justify-between items-center mb-2">
-              <label className="rotulo-campo mb-0">
+              <label htmlFor={idSenha} className="rotulo-campo mb-0">
                 Sua Senha
               </label>
               <button
@@ -88,6 +91,7 @@ export function LoginPage({ auth }: PropsPagina) {
               </button>
             </div>
             <input
+              id={idSenha}
               type="password"
               value={senha}
               onChange={(evento) => setSenha(evento.target.value)}

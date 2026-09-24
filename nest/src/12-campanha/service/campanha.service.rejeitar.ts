@@ -1,8 +1,5 @@
-import {
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { distinguir404ou403 } from '../../commons/database/distinguir-404-ou-403.util';
 import { DatabaseService } from '../../commons/database/database.service';
 import { CAMPANHA_COLUNAS_SELECT } from '../constants/campanha.constants';
 import { CampanhaConverter } from '../dto/converter/campanha.converter';
@@ -37,16 +34,12 @@ export class CampanhaServiceRejeitar {
       .executeTakeFirst();
 
     if (!linha) {
-      const existe = await this.database
-        .getDb()
-        .selectFrom('campanha')
-        .select('id_campanha')
-        .where('id_campanha', '=', id)
-        .executeTakeFirst();
-      if (!existe) {
-        throw new NotFoundException('Campanha não encontrada.');
-      }
-      throw new ForbiddenException(
+      return await distinguir404ou403(
+        this.database.getDb(),
+        'campanha',
+        'id_campanha',
+        id,
+        'Campanha não encontrada.',
         'Sem permissão para rejeitar esta campanha.',
       );
     }

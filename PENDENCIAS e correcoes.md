@@ -2000,3 +2000,66 @@ Decisão do Lucas: aprovar item por item, deixando de fora só o que era decisã
 **Como foi verificado.** `tsc --noEmit`, `eslint --fix` e `npm run build` limpos no React (nenhuma mudança no Nest nesta rodada). As 2 mudanças de banco testadas com PGlite: 9 verificações da trigger e do `EXCLUDE` (incluindo o comportamento `DEFERRABLE` especificamente), reconstrução do banco inteiro do zero (`01` a `08`) sem erro, e o patch aplicado 2x sobre um banco no estado antigo (idempotência - a 1ª versão do patch falhava na 2ª rodada por faltar `DROP CONSTRAINT IF EXISTS`, corrigido antes de fechar).
 
 **No `ATUALIZAR O SUPABASE.sql`:** bloco único, sem enum novo, pode colar tudo de uma vez.
+
+---
+
+### 🟢 CORRIGIDO (23-09-2026): mais 2 triggers de score (soma de pesos = 100, cobertura sem buraco em score_rotulo)
+
+Continuação da recapitulação de pendências do mesmo dia - itens "checagem de que os 4 pesos somam 100" e "trigger contra buraco entre faixas de score_rotulo" (o `EXCLUDE` do item anterior só resolve sobreposição, não buraco).
+
+**`trg_score_config_soma_pesos`.** Nada impedia os 4 pesos raiz de `score_config` (`id_pai IS NULL`) somarem outra coisa que não 100 - `score_rotulo` assume implicitamente que o score máximo possível é 100 (faixa "Referência" vai até 100). ERRCODE `90017`.
+
+**`trg_score_rotulo_cobertura`.** Exige que as faixas ATIVAS cubram exatamente 0 a 100 sem buraco, via `LEAD() OVER (ORDER BY score_minimo)` comparando cada faixa com a próxima. ERRCODE `90018`.
+
+**Por que `CONSTRAINT TRIGGER`, não trigger comum.** Só `CONSTRAINT TRIGGER` pode ser `DEFERRABLE` - sem isso, editar várias linhas em UPDATEs separados (um por vez, sem transação escrita à mão) reprovaria o 1º UPDATE sozinho mesmo que o conjunto final estivesse certo. Postgres só aceita `CONSTRAINT TRIGGER` como `FOR EACH ROW` (nunca `FOR EACH STATEMENT`) - as 2 funções ignoram `NEW`/`OLD` de propósito e sempre reconferem o agregado da tabela inteira, disparando 1x por linha afetada mas só valendo o resultado no `COMMIT` final.
+
+**Como foi verificado.** PGlite (`score_triggers.mjs`, 8 verificações): transação com estado inválido no meio mas válido no fim passa; terminar errado falha com o ERRCODE certo; para os 2 triggers. Reconstrução do banco inteiro do zero sem erro. Patch em `ATUALIZAR O SUPABASE.sql` testado 2x sobre um banco simulado já populado (idempotência).
+
+**No `ATUALIZAR O SUPABASE.sql`:** novo bloco, mesma data, logo depois do bloco anterior - sem enum novo, pode colar tudo de uma vez.
+
+---
+
+### 🟢 CORRIGIDO (23-09-2026): 3 lotes mecânicos (NavegacaoPagina, distinguir404ou403, htmlFor)
+
+Aprovados pelo Lucas ("Sim, os dois agora"), zero mudança de comportamento.
+
+**NavegacaoPagina.** Núcleo "Página X de Y / Anterior / Próxima" extraído de `RodapePaginacao`; `LogAuditoriaPainel` deixou de duplicá-lo.
+
+**distinguir404ou403.** Helper em `commons/database/distinguir-404-ou-403.util.ts` substitui o bloco de sondagem 404-vs-403 em 23 services. **4 ficaram de fora de propósito:** `usuario.service.update` (filtro `deletado = false`), `campanha.service.enviar` (lê `status` p/ 2 mensagens), `papel-permissao.service.remove` e `usuario-papel.service.remove` (chave composta). Se quiser cobri-los, o helper precisa aceitar condições extras.
+
+**htmlFor.** `useId()` + `htmlFor`/`id` em todos os campos com rótulo (21 arquivos). Rótulo de grupo de checkboxes virou `<span>`.
+
+**Verificação.** `tsc`, `eslint` e `build` limpos em react/ e nest/. Sem teste de UI ao vivo (clicar no rótulo focar o campo) - fica para o próximo Playwright.
+
+---
+
+### 🟢 TESTADO AO VIVO (24-09-2026, Playwright, outra sessão): backlog de dicas, formulários, Criar Campanha, rascunho e rejeição, endosso, 404/403
+
+Tudo do backlog passou, com achados. Dados de teste (prefixo ZZ-PW) removidos; ficaram só as linhas do log_auditoria.
+
+**Corrigidos no mesmo dia:**
+- **Dicas do cabeçalho cortadas** (A-, A+, tema, sino): a bolha abria para cima, fora da tela. Agora `baixo`.
+- **F5 em T2/T3 com lista incompleta** (10 em vez de 20): a busca disparava antes de a sessão ser restaurada. Os efeitos agora esperam `auth.carregando`.
+- **Texto de Excluir campanha** dizia "aguardando aprovação"; o código só libera rascunho. Texto corrigido.
+
+**Abertos, decisão sua:**
+- **Contraste WCAG AA:** `btn-primary` (branco no verde da marca) 3,59:1 nos dois temas; `badge-sucesso` 3,32:1 no claro; botões verdes da matriz 3,77:1 no claro. Consertar exige escurecer o verde ou trocar a cor do texto; mexe na identidade da marca.
+- **Endosso por quem não é dono nem autor** devolve 404 "Comentário não encontrado", não 92008. Só o autor tentando endossar o próprio comentário recebe 403 com a mensagem certa. Provavelmente RLS escondendo o comentário, a confirmar.
+- **Códigos 9xxxx não vêm no corpo do erro HTTP**, só a mensagem (o cliente não consegue distinguir por código).
+- **Campanha ativa em T2 (Alterar):** os campos não ficam travados na tela; o banco recusa ao salvar com mensagem amigável e o modal continua aberto. Só registro, não é erro.
+
+**Ainda sem teste ao vivo:** 91026 (prazo de reenvio vencido) e 92009 (pesquisador suspenso); as funções `expirar_campanhas_rascunho`/`expirar_campanhas_rejeitadas`; as triggers de score; 403 nas rotas de link acadêmico, link de atualização, atualização de campanha, papel e termos de uso; rodapé de paginação do T4; upload de avatar e de `arquivo_atualizacao`; sidebar em tela estreita; F5 em T3 depois do conserto.
+
+---
+
+### 🟡 Pendência aberta (24-09-2026): modelo de campanha `flexivel` existe no banco, no seed e no V7, mas o sistema não o exercita de ponta a ponta
+
+Apontado pelo Claude Web (resposta de 20-09) como "metade dos modelos não existe". Conferido: o **REQUISITOS_V7 promete os dois modelos**, então a pergunta "manter ou tirar o valor do enum" não se aplica; o enum fica. O que falta é implementar o lado flexível:
+
+- **Criação:** o wizard (`corpoDadosCampanha()`) não envia `modelo`, então toda campanha nasce `all-or-nothing`. O DTO de `PATCH` também não aceita `modelo`, de propósito (mudar o modelo depois de criada é decisão de produto em aberto, comentário em `campanha.request-update.ts`).
+- **Regras do banco:** existem `fn_valida_repasse_all_or_nothing` e `validar_contribuicao_all_or_nothing`, mas nenhuma regra correspondente para o flexível (repasse independente de atingir a meta, com a taxa descontada).
+- **Encerramento:** o requisito de encerramento do flexível (repasse registrado com valor bruto, taxa, líquido e indicação de meta atingida ou não) não tem implementação.
+- **Aviso ao doador:** o aviso destacado e a confirmação de ciência antes da contribuição dependem da tela de checkout, que não existe.
+- **Só existe em dado:** `07_seed_dados.sql` tem uma campanha flexível (a do repasse `parcial_processando`), e o tipo aparece em `db.types.ts` e `campanha.type.ts`.
+
+**Depende de:** módulo de contribuição/pagamento (Grupo 8) e checkout. Não iniciar antes. Quando esses módulos nascerem, decidir também se o modelo pode mudar depois de criada a campanha.

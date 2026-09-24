@@ -1,8 +1,5 @@
-import {
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { distinguir404ou403 } from '../../commons/database/distinguir-404-ou-403.util';
 import { DatabaseService } from '../../commons/database/database.service';
 
 @Injectable()
@@ -17,16 +14,12 @@ export class OrcamentoCampanhaServiceRemove {
       .executeTakeFirst();
 
     if (resultado.numDeletedRows === 0n) {
-      const existe = await this.database
-        .getDb()
-        .selectFrom('orcamento_campanha')
-        .select('id_orcamento')
-        .where('id_orcamento', '=', id)
-        .executeTakeFirst();
-      if (!existe) {
-        throw new NotFoundException('Item de orçamento não encontrado.');
-      }
-      throw new ForbiddenException(
+      await distinguir404ou403(
+        this.database.getDb(),
+        'orcamento_campanha',
+        'id_orcamento',
+        id,
+        'Item de orçamento não encontrado.',
         'Sem permissão para excluir este item de orçamento.',
       );
     }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { CartaoFormulario } from '../../components/crud/cartao-formulario';
@@ -40,6 +40,9 @@ export function CriarTermoUso({ auth }: PropsPagina) {
   const [versao, setVersao] = useState('');
   const [conteudo, setConteudo] = useState('');
   const [enviando, setEnviando] = useState(false);
+  const idTipo = useId();
+  const idVersao = useId();
+  const idConteudo = useId();
 
   const aoCriar = async (evento: FormEvent<HTMLFormElement>) => {
     evento.preventDefault();
@@ -69,8 +72,9 @@ export function CriarTermoUso({ auth }: PropsPagina) {
         {erro && <p className="texto-erro text-sm font-bold text-center">{erro}</p>}
 
         <div>
-          <label className="rotulo-campo">Tipo</label>
+          <label htmlFor={idTipo} className="rotulo-campo">Tipo</label>
           <select
+            id={idTipo}
             value={tipo}
             onChange={(evento) => setTipo(evento.target.value as TipoTermo)}
             className="input-padrao"
@@ -89,8 +93,9 @@ export function CriarTermoUso({ auth }: PropsPagina) {
         </div>
 
         <div>
-          <label className="rotulo-campo">Versão</label>
+          <label htmlFor={idVersao} className="rotulo-campo">Versão</label>
           <input
+            id={idVersao}
             type="text"
             value={versao}
             onChange={(evento) => setVersao(evento.target.value)}
@@ -107,8 +112,9 @@ export function CriarTermoUso({ auth }: PropsPagina) {
         </div>
 
         <div>
-          <label className="rotulo-campo">Texto completo</label>
+          <label htmlFor={idConteudo} className="rotulo-campo">Texto completo</label>
           <textarea
+            id={idConteudo}
             value={conteudo}
             onChange={(evento) => setConteudo(evento.target.value)}
             required

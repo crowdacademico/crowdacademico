@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { BadgeBooleano } from '../../components/crud/badge-booleano';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { ModalFicha } from '../../components/crud/modal-ficha';
@@ -68,6 +68,8 @@ export function ModalAlterarMotivoDenuncia({ auth, motivo, aoFechar, aoAtualizad
   const [tipo, setTipo] = useState<TipoMotivoDenuncia>(motivo.tipo);
   const [ativo, setAtivo] = useState(motivo.ativo);
   const [enviando, setEnviando] = useState(false);
+  const idTipo = useId();
+  const idDescricao = useId();
 
   const sujo = descricao !== motivo.descricao || tipo !== motivo.tipo || ativo !== motivo.ativo;
   useAvisoAlteracaoNaoSalva(sujo);
@@ -118,8 +120,9 @@ export function ModalAlterarMotivoDenuncia({ auth, motivo, aoFechar, aoAtualizad
 
       <SecaoFicha titulo="Editar">
         <div className="sm:col-span-2">
-          <label className="rotulo-campo">Tipo</label>
+          <label htmlFor={idTipo} className="rotulo-campo">Tipo</label>
           <select
+            id={idTipo}
             value={tipo}
             onChange={(evento) => {
               if (ehTipoMotivoDenuncia(evento.target.value)) {
@@ -139,8 +142,9 @@ export function ModalAlterarMotivoDenuncia({ auth, motivo, aoFechar, aoAtualizad
         </div>
 
         <div className="sm:col-span-2">
-          <label className="rotulo-campo">Descrição</label>
+          <label htmlFor={idDescricao} className="rotulo-campo">Descrição</label>
           <input
+            id={idDescricao}
             type="text"
             value={descricao}
             onChange={(evento) => setDescricao(evento.target.value)}

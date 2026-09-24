@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router';
 import { AvatarUsuario } from '../../components/layout/avatar-usuario';
@@ -241,6 +241,10 @@ interface DadosAtualizarPerfil {
 
 function AbaPerfil({ auth }: AbaPerfilProps) {
   const [nome, setNome] = useState(auth.usuario?.nome ?? '');
+  const idNome = useId();
+  const idEmail = useId();
+  const idTituloAcademico = useId();
+  const idVinculoInstitucional = useId();
   const [enviando, setEnviando] = useState(false);
   const { mostrar } = useToast();
   const { erro, reportarErro, limparErro } = useErroToast();
@@ -321,8 +325,9 @@ function AbaPerfil({ auth }: AbaPerfilProps) {
 
             <SecaoFicha titulo="Dados da conta">
               <div>
-                <label className="rotulo-campo">Nome</label>
+                <label htmlFor={idNome} className="rotulo-campo">Nome</label>
                 <input
+                  id={idNome}
                   type="text"
                   value={nome}
                   onChange={(evento) => setNome(evento.target.value)}
@@ -330,8 +335,8 @@ function AbaPerfil({ auth }: AbaPerfilProps) {
                 />
               </div>
               <div>
-                <label className="rotulo-campo">E-mail</label>
-                <input type="email" value={auth.usuario?.email ?? ''} disabled className="input-padrao" />
+                <label htmlFor={idEmail} className="rotulo-campo">E-mail</label>
+                <input id={idEmail} type="email" value={auth.usuario?.email ?? ''} disabled className="input-padrao" />
               </div>
               <div className="sm:col-span-2 flex items-start gap-2 rounded-lg fundo-info texto-info p-3">
                 <i className="fa-solid fa-circle-info mt-0.5 shrink-0"></i>
@@ -355,14 +360,15 @@ function AbaPerfil({ auth }: AbaPerfilProps) {
               </p>
             </div>
             <div>
-              <label className="rotulo-campo">Título acadêmico</label>
-              <select disabled className="input-padrao opacity-60 cursor-not-allowed">
+              <label htmlFor={idTituloAcademico} className="rotulo-campo">Título acadêmico</label>
+              <select id={idTituloAcademico} disabled className="input-padrao opacity-60 cursor-not-allowed">
                 <option>Não informado</option>
               </select>
             </div>
             <div>
-              <label className="rotulo-campo">Vínculo institucional</label>
+              <label htmlFor={idVinculoInstitucional} className="rotulo-campo">Vínculo institucional</label>
               <input
+                id={idVinculoInstitucional}
                 type="text"
                 disabled
                 placeholder="Ex.: IFSP - Câmpus Birigui"
@@ -410,6 +416,8 @@ interface AbaSegurancaProps {
 
 function AbaSeguranca({ auth }: AbaSegurancaProps) {
   const [senhaAtual, setSenhaAtual] = useState('');
+  const idSenhaAtual = useId();
+  const idNovaSenha = useId();
   const [novaSenha, setNovaSenha] = useState('');
   const [enviandoSenha, setEnviandoSenha] = useState(false);
   const { mostrar } = useToast();
@@ -491,8 +499,9 @@ function AbaSeguranca({ auth }: AbaSegurancaProps) {
         <form onSubmit={aoTrocarSenha} className="space-y-4 max-w-md">
           {erro && <p className="text-sm texto-erro">{erro}</p>}
           <div>
-            <label className="rotulo-campo">Senha atual</label>
+            <label htmlFor={idSenhaAtual} className="rotulo-campo">Senha atual</label>
             <input
+              id={idSenhaAtual}
               type="password"
               value={senhaAtual}
               onChange={(evento) => setSenhaAtual(evento.target.value)}
@@ -501,8 +510,9 @@ function AbaSeguranca({ auth }: AbaSegurancaProps) {
             />
           </div>
           <div>
-            <label className="rotulo-campo">Nova senha</label>
+            <label htmlFor={idNovaSenha} className="rotulo-campo">Nova senha</label>
             <input
+              id={idNovaSenha}
               type="password"
               value={novaSenha}
               onChange={(evento) => setNovaSenha(evento.target.value)}

@@ -56,7 +56,7 @@ export function ControleFonte() {
         className="dica px-2.5 py-1.5 text-xs font-bold texto-padrao hover-fundo-sutil transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
       >
         A-
-        <Dica texto="Diminuir fonte" curta />
+        <Dica texto="Diminuir fonte" curta baixo />
       </button>
       <button
         type="button"
@@ -66,7 +66,7 @@ export function ControleFonte() {
         className="dica px-2.5 py-1.5 text-xs font-bold texto-padrao hover-fundo-sutil transition-colors border-l borda-forte disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
       >
         A+
-        <Dica texto="Aumentar fonte" curta />
+        <Dica texto="Aumentar fonte" curta baixo />
       </button>
     </div>
   );

@@ -1,9 +1,9 @@
 import {
   BadRequestException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { distinguir404ou403 } from '../../commons/database/distinguir-404-ou-403.util';
 import { DatabaseService } from '../../commons/database/database.service';
 import { TipoLinkConverter } from '../dto/converter/tipo-link.converter';
 import { TipoLinkRequestUpdate } from '../dto/request/tipo-link.request-update';
@@ -96,17 +96,12 @@ export class TipoLinkServiceUpdate {
       // gerenciar'). 0 linhas afetadas sem erro é a RLS filtrando -
       // diferencia de "não existe" com uma segunda consulta (SELECT já é
       // USING(true), sempre enxerga a linha se ela existir).
-      const existe = await db
-        .selectFrom('tipo_link')
-        .select('id_tipolink')
-        .where('id_tipolink', '=', idTipolink)
-        .executeTakeFirst();
-      if (!existe) {
-        throw new NotFoundException(
-          `Tipo de link ${idTipolink} não encontrado`,
-        );
-      }
-      throw new ForbiddenException(
+      return await distinguir404ou403(
+        db,
+        'tipo_link',
+        'id_tipolink',
+        idTipolink,
+        `Tipo de link ${idTipolink} não encontrado`,
         'Sem permissão para editar este tipo de link.',
       );
     }

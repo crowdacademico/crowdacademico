@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { confirmarSaida, useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
@@ -32,6 +32,7 @@ export function ModalAlterarPapel({ auth, papel, aoFechar, aoAtualizado }: Modal
   const { erro, reportarErro, limparErro } = useErroToast();
   const [nome, setNome] = useState(papel.nome);
   const [enviando, setEnviando] = useState(false);
+  const idNome = useId();
 
   const sujo = nome !== papel.nome;
   useAvisoAlteracaoNaoSalva(sujo);
@@ -84,8 +85,9 @@ export function ModalAlterarPapel({ auth, papel, aoFechar, aoAtualizado }: Modal
       <CampoSomenteLeitura rotulo="id" valor={papel.idPapel} />
 
       <div>
-        <label className="rotulo-campo">Nome</label>
+        <label htmlFor={idNome} className="rotulo-campo">Nome</label>
         <input
+          id={idNome}
           type="text"
           value={nome}
           onChange={(evento) => setNome(evento.target.value)}

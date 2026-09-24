@@ -1,8 +1,5 @@
-import {
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { distinguir404ou403 } from '../../commons/database/distinguir-404-ou-403.util';
 import { DatabaseService } from '../../commons/database/database.service';
 
 @Injectable()
@@ -23,15 +20,12 @@ export class ConfiguracaoServiceRemove {
     if (resultado.numDeletedRows === 0n) {
       // pol_config_delete (04): mesmo critério do update (dono ou
       // 'configuracao_gerenciar').
-      const existe = await db
-        .selectFrom('configuracoes')
-        .select('id_config')
-        .where('id_config', '=', idConfig)
-        .executeTakeFirst();
-      if (!existe) {
-        throw new NotFoundException(`Configuração ${idConfig} não encontrada`);
-      }
-      throw new ForbiddenException(
+      await distinguir404ou403(
+        db,
+        'configuracoes',
+        'id_config',
+        idConfig,
+        `Configuração ${idConfig} não encontrada`,
         'Sem permissão para excluir esta configuração.',
       );
     }

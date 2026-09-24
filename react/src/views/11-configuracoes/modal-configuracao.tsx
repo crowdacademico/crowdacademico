@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { BadgeBooleano } from '../../components/crud/badge-booleano';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
@@ -66,6 +66,8 @@ export function ModalAlterarConfiguracao({ auth, configuracao, aoFechar, aoAtual
   const [ativo, setAtivo] = useState(configuracao.ativo);
   const [publica, setPublica] = useState(configuracao.publica);
   const [enviando, setEnviando] = useState(false);
+  const idValor = useId();
+  const idDescricao = useId();
 
   const sujo =
     valor !== (configuracao.valor ?? '') ||
@@ -125,13 +127,14 @@ export function ModalAlterarConfiguracao({ auth, configuracao, aoFechar, aoAtual
 
       <SecaoFicha titulo="Editar">
         <div className="sm:col-span-2">
-          <label className="rotulo-campo">Valor</label>
-          <input type="text" value={valor} onChange={(evento) => setValor(evento.target.value)} className="input-padrao" />
+          <label htmlFor={idValor} className="rotulo-campo">Valor</label>
+          <input id={idValor} type="text" value={valor} onChange={(evento) => setValor(evento.target.value)} className="input-padrao" />
         </div>
 
         <div className="sm:col-span-2">
-          <label className="rotulo-campo">Descrição</label>
+          <label htmlFor={idDescricao} className="rotulo-campo">Descrição</label>
           <input
+            id={idDescricao}
             type="text"
             value={descricao}
             onChange={(evento) => setDescricao(evento.target.value)}

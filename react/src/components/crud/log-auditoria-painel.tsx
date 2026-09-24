@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
+import { NavegacaoPagina } from '../pagination/navegacao-pagina';
 import { useErroToast } from '../layout/toast/use-erro-toast';
 import { textoSeguro } from '../../services/constant/utils/formatacao.util';
 import type { ResultadoPaginado } from '../../services/constant/type/paginacao.type';
@@ -140,29 +141,13 @@ export function LogAuditoriaPainel({ buscar, campoRenomeio }: LogAuditoriaPainel
       )}
 
       {!carregando && !erro && totalPaginas > 1 && (
-        <div className="flex items-center justify-between flex-wrap gap-3 mt-3 text-sm texto-padrao">
-          <span>
-            Página {pagina} de {totalPaginas} ({total} no total)
-          </span>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setPagina((p) => Math.max(1, p - 1))}
-              disabled={pagina === 1}
-              className="btn btn-secondary"
-            >
-              Anterior
-            </button>
-            <button
-              type="button"
-              onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
-              disabled={pagina === totalPaginas}
-              className="btn btn-secondary"
-            >
-              Próxima
-            </button>
-          </div>
-        </div>
+        <NavegacaoPagina
+          total={total}
+          paginaAtual={pagina}
+          totalPaginas={totalPaginas}
+          unidade="no total"
+          aoMudarPagina={(novaPagina) => setPagina(novaPagina)}
+        />
       )}
     </div>
   );

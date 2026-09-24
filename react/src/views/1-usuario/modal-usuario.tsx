@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useId, useState } from 'react';
 import { AvatarUsuario } from '../../components/layout/avatar-usuario';
 import { Dica } from '../../components/layout/tooltip';
 import { SeletorFotoPerfil } from '../../components/input/seletor-foto-perfil';
@@ -817,6 +817,8 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado, a
   const [enviandoSuspensaoPapel, setEnviandoSuspensaoPapel] = useState<number | null>(null);
   const [reativandoPapel, setReativandoPapel] = useState<number | null>(null);
   const [revogandoPapel, setRevogandoPapel] = useState<number | null>(null);
+  const idNomeEdicao = useId();
+  const idNovaSenha = useId();
 
   // Reseta o formulário de edição sempre que uma busca nova de `usuario`
   // termina (dep só em `usuario`, de propósito - ele nunca muda por nenhuma
@@ -1104,8 +1106,9 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado, a
             <div className="lg:col-span-2 space-y-6">
               <SecaoFicha titulo="Dados da conta">
                 <div className="sm:col-span-2">
-                  <label className="rotulo-campo">Nome</label>
+                  <label htmlFor={idNomeEdicao} className="rotulo-campo">Nome</label>
                   <input
+                    id={idNomeEdicao}
                     type="text"
                     value={nomeEdicao}
                     onChange={(evento) => setNomeEdicao(evento.target.value)}
@@ -1116,8 +1119,9 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado, a
 
               <SecaoFicha titulo="Acesso">
                 <div className="sm:col-span-2">
-                  <label className="rotulo-campo">Nova senha (opcional)</label>
+                  <label htmlFor={idNovaSenha} className="rotulo-campo">Nova senha (opcional)</label>
                   <input
+                    id={idNovaSenha}
                     type="password"
                     value={novaSenhaEdicao}
                     onChange={(evento) => setNovaSenhaEdicao(evento.target.value)}
@@ -1355,6 +1359,7 @@ export function ModalExcluirUsuario({ idUsuario, nome, email, emailVerificado, a
   const { erro, reportarErro, limparErro } = useErroToast();
   const [confirmacao, setConfirmacao] = useState('');
   const [excluindo, setExcluindo] = useState(false);
+  const idConfirmacao = useId();
   const confirmado = confirmacao.trim().toLowerCase() === email.toLowerCase();
 
   const excluir = async () => {
@@ -1412,10 +1417,11 @@ export function ModalExcluirUsuario({ idUsuario, nome, email, emailVerificado, a
       </div>
 
       <div>
-        <label className="rotulo-campo">
+        <label htmlFor={idConfirmacao} className="rotulo-campo">
           Digite o e-mail "{email}" pra confirmar
         </label>
         <input
+          id={idConfirmacao}
           type="text"
           value={confirmacao}
           onChange={(evento) => setConfirmacao(evento.target.value)}

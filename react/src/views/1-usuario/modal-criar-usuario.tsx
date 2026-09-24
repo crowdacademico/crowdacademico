@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { SecaoFicha } from '../../components/crud/ficha-consulta';
 import { SeletorFotoPerfil } from '../../components/input/seletor-foto-perfil';
@@ -32,6 +32,9 @@ export function ModalCriarUsuario({ auth, aoFechar, aoCriado }: ModalCriarUsuari
   const [idImagemPerfil, setIdImagemPerfil] = useState<number | null>(null);
   const [urlImagemPerfil, setUrlImagemPerfil] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const idNome = useId();
+  const idEmail = useId();
+  const idSenha = useId();
 
   const aoAlterarFoto = (idArquivo: number | null, novaUrl: string | null) => {
     const idAnterior = idImagemPerfil;
@@ -99,8 +102,9 @@ export function ModalCriarUsuario({ auth, aoFechar, aoCriado }: ModalCriarUsuari
 
       <SecaoFicha titulo="Dados da conta">
         <div className="sm:col-span-2">
-          <label className="rotulo-campo">Nome</label>
+          <label htmlFor={idNome} className="rotulo-campo">Nome</label>
           <input
+            id={idNome}
             type="text"
             value={nome}
             onChange={(evento) => setNome(evento.target.value)}
@@ -111,8 +115,9 @@ export function ModalCriarUsuario({ auth, aoFechar, aoCriado }: ModalCriarUsuari
         </div>
 
         <div className="sm:col-span-2">
-          <label className="rotulo-campo">E-mail</label>
+          <label htmlFor={idEmail} className="rotulo-campo">E-mail</label>
           <input
+            id={idEmail}
             type="email"
             value={email}
             onChange={(evento) => setEmail(evento.target.value)}
@@ -123,8 +128,9 @@ export function ModalCriarUsuario({ auth, aoFechar, aoCriado }: ModalCriarUsuari
         </div>
 
         <div className="sm:col-span-2">
-          <label className="rotulo-campo">Senha</label>
+          <label htmlFor={idSenha} className="rotulo-campo">Senha</label>
           <input
+            id={idSenha}
             type="password"
             value={senha}
             onChange={(evento) => setSenha(evento.target.value)}

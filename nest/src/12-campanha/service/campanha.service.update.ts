@@ -1,8 +1,5 @@
-import {
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { distinguir404ou403 } from '../../commons/database/distinguir-404-ou-403.util';
 import { DatabaseService } from '../../commons/database/database.service';
 import { CAMPANHA_COLUNAS_SELECT } from '../constants/campanha.constants';
 import { CampanhaConverter } from '../dto/converter/campanha.converter';
@@ -48,16 +45,14 @@ export class CampanhaServiceUpdate {
       // campanha_rejeitar. A existência é conferida pela MESMA sessão, então
       // uma campanha ainda invisível pra quem pediu (fora do alcance de
       // pol_campanha_select também) devolve 404 aqui - não vaza que existe.
-      const existe = await this.database
-        .getDb()
-        .selectFrom('campanha')
-        .select('id_campanha')
-        .where('id_campanha', '=', id)
-        .executeTakeFirst();
-      if (!existe) {
-        throw new NotFoundException('Campanha não encontrada.');
-      }
-      throw new ForbiddenException('Sem permissão para editar esta campanha.');
+      return await distinguir404ou403(
+        this.database.getDb(),
+        'campanha',
+        'id_campanha',
+        id,
+        'Campanha não encontrada.',
+        'Sem permissão para editar esta campanha.',
+      );
     }
 
     return CampanhaConverter.paraResponseDto(linha);

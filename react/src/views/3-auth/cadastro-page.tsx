@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
@@ -47,6 +47,10 @@ export function CadastroPage({ auth }: PropsPagina) {
   const [aceiteTermos, setAceiteTermos] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const { erro, reportarErro, limparErro } = useErroToast();
+  const idNome = useId();
+  const idEmail = useId();
+  const idSenha = useId();
+  const idConfirmarSenha = useId();
 
   // "Tocado" (blur), não a cada tecla (09-08-2026, pedido explícito do
   // uma IA: validar enquanto a pessoa ainda está digitando o e-mail
@@ -128,8 +132,9 @@ export function CadastroPage({ auth }: PropsPagina) {
           {erro && <p className="texto-erro text-sm font-bold text-center">{erro}</p>}
 
           <div>
-            <label className="rotulo-campo">Nome</label>
+            <label htmlFor={idNome} className="rotulo-campo">Nome</label>
             <input
+              id={idNome}
               type="text"
               value={nome}
               onChange={(evento) => setNome(evento.target.value)}
@@ -144,8 +149,9 @@ export function CadastroPage({ auth }: PropsPagina) {
           </div>
 
           <div>
-            <label className="rotulo-campo">E-mail</label>
+            <label htmlFor={idEmail} className="rotulo-campo">E-mail</label>
             <input
+              id={idEmail}
               type="email"
               value={email}
               onChange={(evento) => {
@@ -171,9 +177,10 @@ export function CadastroPage({ auth }: PropsPagina) {
           </div>
 
           <div>
-            <label className="rotulo-campo">Senha</label>
+            <label htmlFor={idSenha} className="rotulo-campo">Senha</label>
             <div className="relative">
               <input
+                id={idSenha}
                 type={mostrarSenha ? 'text' : 'password'}
                 value={senha}
                 onChange={(evento) => setSenha(evento.target.value)}
@@ -226,8 +233,9 @@ export function CadastroPage({ auth }: PropsPagina) {
           </div>
 
           <div>
-            <label className="rotulo-campo">Confirmar senha</label>
+            <label htmlFor={idConfirmarSenha} className="rotulo-campo">Confirmar senha</label>
             <input
+              id={idConfirmarSenha}
               type={mostrarSenha ? 'text' : 'password'}
               value={confirmarSenha}
               onChange={(evento) => setConfirmarSenha(evento.target.value)}

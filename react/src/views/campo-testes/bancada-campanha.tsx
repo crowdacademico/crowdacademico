@@ -5,7 +5,7 @@
 // sistema (nunca uma versão simplificada à parte).
 // ============================================================================
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
 import { orcamentoCampanhaApi } from '../../services/13-orcamento-campanha/api/orcamento-campanha.api';
 import { marcoCronogramaApi } from '../../services/14-marco-cronograma/api/marco-cronograma.api';
@@ -576,6 +576,8 @@ export function BancadaCampanha({ auth }: PropsPagina) {
   }, [campanhaConsultada]);
   const [idCampanhaEditando, setIdCampanhaEditando] = useState<number | null>(null);
   const [formEdicaoCampanha, setFormEdicaoCampanha] = useState<FormEdicaoCampanha | null>(null);
+  const prefixoId = useId();
+  const idCampo = (nome: string) => `${prefixoId}-${nome}`;
   // Checklist "Pronta pra aprovar?" + Aprovar/Rejeitar (13-09-2026, trazido
   // pra dentro do modal de Alterar - ver comentário grande acima). As
   // contagens vêm do `aoCarregar` de <PainelOrcamentoCronograma> (o mesmo
@@ -652,7 +654,13 @@ export function BancadaCampanha({ auth }: PropsPagina) {
     campanhaApi.listar(auth.authFetch).then(setCampanhas).catch(() => {});
   };
 
+  // Espera a sessão ser restaurada (`auth.carregando`) antes de buscar: num F5,
+  // o authFetch ainda não tem token e a listagem vinha só com as campanhas
+  // públicas.
   useEffect(() => {
+    if (auth.carregando) {
+      return;
+    }
     areaConhecimentoApi
       .listar(auth.authFetch)
       .then((lista) => setAreas(lista.filter((area) => area.idPai !== null)))
@@ -661,7 +669,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
     perfilPesquisadorApi.listar(auth.authFetch).then(setPerfisPesquisador).catch(() => {});
     carregarCampanhas();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [auth.carregando]);
 
   // Fechar as sugestões do combobox de pesquisador ao clicar fora - mesmo
   // padrão, extraído em `useFecharAoClicarFora` em 13-09-2026. O dropdown
@@ -1393,8 +1401,9 @@ export function BancadaCampanha({ auth }: PropsPagina) {
               <div className="lg:col-span-2 space-y-6">
                 <SecaoFicha titulo="Dados">
                   <div className="sm:col-span-2">
-                    <label className="rotulo-campo">Título</label>
+                    <label htmlFor={idCampo('edit-titulo')} className="rotulo-campo">Título</label>
                     <input
+                      id={idCampo('edit-titulo')}
                       type="text"
                       value={formEdicaoCampanha.titulo}
                       onChange={(evento) => setFormEdicaoCampanha({ ...formEdicaoCampanha, titulo: evento.target.value })}
@@ -1403,8 +1412,9 @@ export function BancadaCampanha({ auth }: PropsPagina) {
                     />
                   </div>
                   <div>
-                    <label className="rotulo-campo">Área do conhecimento</label>
+                    <label htmlFor={idCampo('edit-area')} className="rotulo-campo">Área do conhecimento</label>
                     <select
+                      id={idCampo('edit-area')}
                       value={formEdicaoCampanha.idAreaConhecimento}
                       onChange={(evento) => setFormEdicaoCampanha({ ...formEdicaoCampanha, idAreaConhecimento: evento.target.value })}
                       className="input-padrao"
@@ -1418,8 +1428,9 @@ export function BancadaCampanha({ auth }: PropsPagina) {
                     </select>
                   </div>
                   <div className="sm:col-span-2">
-                    <label className="rotulo-campo">Descrição</label>
+                    <label htmlFor={idCampo('edit-descricao')} className="rotulo-campo">Descrição</label>
                     <input
+                      id={idCampo('edit-descricao')}
                       type="text"
                       value={formEdicaoCampanha.descricao}
                       onChange={(evento) => setFormEdicaoCampanha({ ...formEdicaoCampanha, descricao: evento.target.value })}
@@ -1428,8 +1439,9 @@ export function BancadaCampanha({ auth }: PropsPagina) {
                     />
                   </div>
                   <div className="sm:col-span-2">
-                    <label className="rotulo-campo">URL do vídeo de apresentação</label>
+                    <label htmlFor={idCampo('edit-video')} className="rotulo-campo">URL do vídeo de apresentação</label>
                     <input
+                      id={idCampo('edit-video')}
                       type="text"
                       value={formEdicaoCampanha.videoApresentacaoUrl}
                       onChange={(evento) => setFormEdicaoCampanha({ ...formEdicaoCampanha, videoApresentacaoUrl: evento.target.value })}
@@ -1536,8 +1548,9 @@ export function BancadaCampanha({ auth }: PropsPagina) {
 
                 <SecaoFicha titulo="Datas">
                   <div>
-                    <label className="rotulo-campo">Início</label>
+                    <label htmlFor={idCampo('edit-inicio')} className="rotulo-campo">Início</label>
                     <input
+                      id={idCampo('edit-inicio')}
                       type="date"
                       value={formEdicaoCampanha.dataInicio}
                       onChange={(evento) => setFormEdicaoCampanha({ ...formEdicaoCampanha, dataInicio: evento.target.value })}
@@ -1546,8 +1559,9 @@ export function BancadaCampanha({ auth }: PropsPagina) {
                     />
                   </div>
                   <div>
-                    <label className="rotulo-campo">Fim (previsto)</label>
+                    <label htmlFor={idCampo('edit-fim')} className="rotulo-campo">Fim (previsto)</label>
                     <input
+                      id={idCampo('edit-fim')}
                       type="date"
                       value={formEdicaoCampanha.dataFim}
                       onChange={(evento) => setFormEdicaoCampanha({ ...formEdicaoCampanha, dataFim: evento.target.value })}
@@ -1561,8 +1575,9 @@ export function BancadaCampanha({ auth }: PropsPagina) {
               <div className="space-y-6">
                 <SecaoFicha titulo="Financeiro">
                   <div className="sm:col-span-2">
-                    <label className="rotulo-campo">Meta (R$)</label>
+                    <label htmlFor={idCampo('edit-meta')} className="rotulo-campo">Meta (R$)</label>
                     <input
+                      id={idCampo('edit-meta')}
                       type="number"
                       value={formEdicaoCampanha.metaFinanceira}
                       onChange={(evento) => setFormEdicaoCampanha({ ...formEdicaoCampanha, metaFinanceira: evento.target.value })}
@@ -1670,8 +1685,8 @@ export function BancadaCampanha({ auth }: PropsPagina) {
                     <i className="fa-solid fa-circle-info mr-1"></i> Exclusão normal indisponível
                   </p>
                   <p>
-                    Só dá pra excluir campanhas que ainda estão "aguardando aprovação" - esta já
-                    passou desse ponto (congelamento pós-aprovação).
+                    Só dá pra excluir campanhas em "rascunho" - esta já passou desse ponto
+                    (foi enviada pra aprovação ou aprovada).
                   </p>
                 </div>
 
@@ -1685,10 +1700,11 @@ export function BancadaCampanha({ auth }: PropsPagina) {
                     contribuição/repasse em andamento, isso destruiria dado financeiro de
                     verdade - só use em campanha de teste.
                   </p>
-                  <label className="rotulo-campo">
+                  <label htmlFor={idCampo('excluir-forcada')} className="rotulo-campo">
                     Digite o título "{campanhaExcluindo.titulo}" pra confirmar
                   </label>
                   <input
+                    id={idCampo('excluir-forcada')}
                     type="text"
                     value={confirmacaoExclusaoForcada}
                     onChange={(evento) => setConfirmacaoExclusaoForcada(evento.target.value)}
@@ -1709,16 +1725,17 @@ export function BancadaCampanha({ auth }: PropsPagina) {
                   <p>
                     Diferente de excluir um usuário, isto é uma exclusão de VERDADE (`DELETE`), não
                     lógica - a linha some do banco pra sempre, junto com orçamento, cronograma e tudo
-                    que já foi ligado a ela (cascata). Só é permitido enquanto a campanha ainda está
-                    "aguardando aprovação" - depois disso, o congelamento pós-aprovação impede.
+                    que já foi ligado a ela (cascata). Só é permitido enquanto a campanha ainda é
+                    um "rascunho" - depois de enviada pra aprovação, o banco recusa.
                   </p>
                 </div>
 
                 <div>
-                  <label className="rotulo-campo">
+                  <label htmlFor={idCampo('excluir')} className="rotulo-campo">
                     Digite o título "{campanhaExcluindo.titulo}" pra confirmar
                   </label>
                   <input
+                    id={idCampo('excluir')}
                     type="text"
                     value={confirmacaoExclusao}
                     onChange={(evento) => setConfirmacaoExclusao(evento.target.value)}
@@ -1832,7 +1849,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
             <>
           <SecaoFicha titulo="Pesquisador">
             <div className="sm:col-span-2 relative" ref={sugestoesPesquisadorRef}>
-              <label className="rotulo-campo">Dono da campanha</label>
+              <label htmlFor={idCampo('criar-dono')} className="rotulo-campo">Dono da campanha</label>
               {/* Um só <input>, sempre (08-09-2026, pedido do Lucas) - não
                   troca pra um "chip" separado depois de escolher. O texto
                   mostrado É o nome escolhido; clicar/focar reabre a lista
@@ -1844,6 +1861,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
                   tempo (que invalida a escolha, mesmo padrão de qualquer
                   combobox de busca). */}
               <input
+                id={idCampo('criar-dono')}
                 type="text"
                 value={buscaPesquisador}
                 onChange={(evento) => {
@@ -1897,8 +1915,9 @@ export function BancadaCampanha({ auth }: PropsPagina) {
 
           <SecaoFicha titulo="Dados">
             <div className="sm:col-span-2">
-              <label className="rotulo-campo">Título</label>
+              <label htmlFor={idCampo('criar-titulo')} className="rotulo-campo">Título</label>
               <input
+                id={idCampo('criar-titulo')}
                 type="text"
                 value={formCriarCampanha.titulo}
                 onChange={(evento) => setFormCriarCampanha({ ...formCriarCampanha, titulo: evento.target.value })}
@@ -1906,8 +1925,9 @@ export function BancadaCampanha({ auth }: PropsPagina) {
               />
             </div>
             <div>
-              <label className="rotulo-campo">Área do conhecimento</label>
+              <label htmlFor={idCampo('criar-area')} className="rotulo-campo">Área do conhecimento</label>
               <select
+                id={idCampo('criar-area')}
                 value={formCriarCampanha.idAreaConhecimento}
                 onChange={(evento) => setFormCriarCampanha({ ...formCriarCampanha, idAreaConhecimento: evento.target.value })}
                 className="input-padrao"
@@ -1921,8 +1941,9 @@ export function BancadaCampanha({ auth }: PropsPagina) {
               </select>
             </div>
             <div>
-              <label className="rotulo-campo">Meta (R$)</label>
+              <label htmlFor={idCampo('criar-meta')} className="rotulo-campo">Meta (R$)</label>
               <input
+                id={idCampo('criar-meta')}
                 type="number"
                 min={metaMinimaCampanha}
                 value={formCriarCampanha.metaFinanceira}
@@ -1940,8 +1961,9 @@ export function BancadaCampanha({ auth }: PropsPagina) {
                 )}
             </div>
             <div className="sm:col-span-2">
-              <label className="rotulo-campo">Descrição (opcional)</label>
+              <label htmlFor={idCampo('criar-descricao')} className="rotulo-campo">Descrição (opcional)</label>
               <input
+                id={idCampo('criar-descricao')}
                 type="text"
                 value={formCriarCampanha.descricao}
                 onChange={(evento) => setFormCriarCampanha({ ...formCriarCampanha, descricao: evento.target.value })}
@@ -1954,8 +1976,9 @@ export function BancadaCampanha({ auth }: PropsPagina) {
                   dias); `min={hojeISO}` impede escolher ontem ou antes
                   direto no seletor do navegador, sem precisar de JS extra
                   pra bloquear a data errada. */}
-              <label className="rotulo-campo">Início</label>
+              <label htmlFor={idCampo('criar-inicio')} className="rotulo-campo">Início</label>
               <input
+                id={idCampo('criar-inicio')}
                 type="date"
                 value={formCriarCampanha.dataInicio}
                 min={hojeISO}
@@ -1964,8 +1987,9 @@ export function BancadaCampanha({ auth }: PropsPagina) {
               />
             </div>
             <div>
-              <label className="rotulo-campo">Fim</label>
+              <label htmlFor={idCampo('criar-fim')} className="rotulo-campo">Fim</label>
               <input
+                id={idCampo('criar-fim')}
                 type="date"
                 value={formCriarCampanha.dataFim}
                 min={formCriarCampanha.dataInicio || hojeISO}
@@ -1984,8 +2008,9 @@ export function BancadaCampanha({ auth }: PropsPagina) {
               </p>
             )}
             <div className="sm:col-span-2">
-              <label className="rotulo-campo">URL do vídeo de apresentação (opcional)</label>
+              <label htmlFor={idCampo('criar-video')} className="rotulo-campo">URL do vídeo de apresentação (opcional)</label>
               <input
+                id={idCampo('criar-video')}
                 type="text"
                 value={formCriarCampanha.videoApresentacaoUrl}
                 onChange={(evento) => setFormCriarCampanha({ ...formCriarCampanha, videoApresentacaoUrl: evento.target.value })}

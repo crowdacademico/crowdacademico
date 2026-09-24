@@ -119,6 +119,9 @@ export function ModalAlterarTipoLink({ auth, tipo, aoFechar, aoAtualizado }: Mod
   const regexInvalida = regex.length > 0 && !regexValida(regex);
   // aria-describedby (23-09-2026): ver modal-criar-area-conhecimento.tsx.
   const idMensagemRegex = useId();
+  const idNome = useId();
+  const idDominios = useId();
+  const idRegex = useId();
   const nenhumEscopoMarcado = !permitePerfil && !permiteAtualizacao && !permiteRecompensa;
 
   const fechar = () => {
@@ -179,8 +182,9 @@ export function ModalAlterarTipoLink({ auth, tipo, aoFechar, aoAtualizado }: Mod
 
       <SecaoFicha titulo="Editar">
         <div className="sm:col-span-2">
-          <label className="rotulo-campo">Nome</label>
+          <label htmlFor={idNome} className="rotulo-campo">Nome</label>
           <input
+            id={idNome}
             type="text"
             value={nome}
             onChange={(evento) => setNome(evento.target.value)}
@@ -191,8 +195,9 @@ export function ModalAlterarTipoLink({ auth, tipo, aoFechar, aoAtualizado }: Mod
         </div>
 
         <div className="sm:col-span-2">
-          <label className="rotulo-campo">Domínios permitidos</label>
+          <label htmlFor={idDominios} className="rotulo-campo">Domínios permitidos</label>
           <input
+            id={idDominios}
             type="text"
             value={dominioTexto}
             onChange={(evento) => setDominioTexto(evento.target.value)}
@@ -206,8 +211,9 @@ export function ModalAlterarTipoLink({ auth, tipo, aoFechar, aoAtualizado }: Mod
         </div>
 
         <div className="sm:col-span-2">
-          <label className="rotulo-campo">Regex de validação (opcional)</label>
+          <label htmlFor={idRegex} className="rotulo-campo">Regex de validação (opcional)</label>
           <input
+            id={idRegex}
             type="text"
             value={regex}
             onChange={(evento) => setRegex(evento.target.value)}

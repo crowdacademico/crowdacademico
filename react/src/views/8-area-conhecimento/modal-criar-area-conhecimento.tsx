@@ -47,6 +47,9 @@ export function ModalCriarAreaConhecimento({ auth, aoFechar, aoCriado }: ModalCr
   // "inválido" sem dizer o que fazer. useId() evita colidir se 2 modais
   // iguais abrirem ao mesmo tempo.
   const idMensagemCodigo = useId();
+  const idCodigo = useId();
+  const idNome = useId();
+  const idPaiCampo = useId();
 
   const aoCriar = async () => {
     if (codigoInvalido || codigoCnpq.trim() === '' || nome.trim() === '') return;
@@ -95,8 +98,9 @@ export function ModalCriarAreaConhecimento({ auth, aoFechar, aoCriado }: ModalCr
       {erro && <p className="texto-erro text-sm font-bold text-center">{erro}</p>}
 
       <div>
-        <label className="rotulo-campo">Código CNPq</label>
+        <label htmlFor={idCodigo} className="rotulo-campo">Código CNPq</label>
         <input
+          id={idCodigo}
           type="text"
           value={codigoCnpq}
           onChange={(evento) => setCodigoCnpq(evento.target.value)}
@@ -119,8 +123,9 @@ export function ModalCriarAreaConhecimento({ auth, aoFechar, aoCriado }: ModalCr
       </div>
 
       <div>
-        <label className="rotulo-campo">Nome</label>
+        <label htmlFor={idNome} className="rotulo-campo">Nome</label>
         <input
+          id={idNome}
           type="text"
           value={nome}
           onChange={(evento) => setNome(evento.target.value)}
@@ -131,8 +136,9 @@ export function ModalCriarAreaConhecimento({ auth, aoFechar, aoCriado }: ModalCr
       </div>
 
       <div>
-        <label className="rotulo-campo">Grande área (pai)</label>
+        <label htmlFor={idPaiCampo} className="rotulo-campo">Grande área (pai)</label>
         <select
+          id={idPaiCampo}
           value={idPai}
           onChange={(evento) => setIdPai(evento.target.value)}
           disabled={carregandoGrandesAreas}

@@ -1,8 +1,5 @@
-import {
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { distinguir404ou403 } from '../../commons/database/distinguir-404-ou-403.util';
 import { DatabaseService } from '../../commons/database/database.service';
 import { LINK_ACADEMICO_COLUNAS_SELECT } from '../constants/link-academico.constants';
 import { LinkAcademicoConverter } from '../dto/converter/link-academico.converter';
@@ -33,16 +30,14 @@ export class LinkAcademicoServiceUpdate {
       // pol_link_update (04): dono OU link_academico_gerenciar. 0 linhas sem
       // erro é a RLS filtrando - diferencia de "não existe", mesmo padrão de
       // papel.service.update.ts.
-      const existe = await this.database
-        .getDb()
-        .selectFrom('link_academico')
-        .select('id_link_academico')
-        .where('id_link_academico', '=', id)
-        .executeTakeFirst();
-      if (!existe) {
-        throw new NotFoundException('Link acadêmico não encontrado.');
-      }
-      throw new ForbiddenException('Sem permissão para editar este link.');
+      return await distinguir404ou403(
+        this.database.getDb(),
+        'link_academico',
+        'id_link_academico',
+        id,
+        'Link acadêmico não encontrado.',
+        'Sem permissão para editar este link.',
+      );
     }
 
     return LinkAcademicoConverter.paraResponseDto(linha);

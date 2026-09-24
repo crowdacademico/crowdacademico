@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { distinguir404ou403 } from '../../commons/database/distinguir-404-ou-403.util';
 import { DatabaseService } from '../../commons/database/database.service';
 import { CODIGO_PG_FOREIGN_KEY_VIOLATION } from '../../commons/database/postgres-exception.filter';
 
@@ -28,17 +29,12 @@ export class MotivoDenunciaServiceRemove {
       if (resultado.numDeletedRows === 0n) {
         // pol_motivo_delete (04): mesmo critério do update
         // (motivo_denuncia_gerenciar).
-        const existe = await db
-          .selectFrom('motivo_denuncia')
-          .select('id_motivo')
-          .where('id_motivo', '=', idMotivo)
-          .executeTakeFirst();
-        if (!existe) {
-          throw new NotFoundException(
-            `Motivo de denúncia ${idMotivo} não encontrado`,
-          );
-        }
-        throw new ForbiddenException(
+        await distinguir404ou403(
+          db,
+          'motivo_denuncia',
+          'id_motivo',
+          idMotivo,
+          `Motivo de denúncia ${idMotivo} não encontrado`,
           'Sem permissão para excluir este motivo de denúncia.',
         );
       }

@@ -1,8 +1,5 @@
-import {
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { distinguir404ou403 } from '../../commons/database/distinguir-404-ou-403.util';
 import { DatabaseService } from '../../commons/database/database.service';
 
 @Injectable()
@@ -17,16 +14,14 @@ export class MarcoCronogramaServiceRemove {
       .executeTakeFirst();
 
     if (resultado.numDeletedRows === 0n) {
-      const existe = await this.database
-        .getDb()
-        .selectFrom('marco_cronograma')
-        .select('id_marco')
-        .where('id_marco', '=', id)
-        .executeTakeFirst();
-      if (!existe) {
-        throw new NotFoundException('Marco de cronograma não encontrado.');
-      }
-      throw new ForbiddenException('Sem permissão para excluir este marco.');
+      await distinguir404ou403(
+        this.database.getDb(),
+        'marco_cronograma',
+        'id_marco',
+        id,
+        'Marco de cronograma não encontrado.',
+        'Sem permissão para excluir este marco.',
+      );
     }
   }
 }

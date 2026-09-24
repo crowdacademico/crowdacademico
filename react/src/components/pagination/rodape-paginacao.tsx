@@ -10,6 +10,11 @@
 // `useState` local; `aoMudarPagina`/`aoMudarTamanho` recebem só o valor
 // final (página de destino, tamanho escolhido), cada chamador decide como
 // persistir (ex.: `pagina === 1 ? null : pagina` pra manter a URL limpa).
+//
+// Compõe NavegacaoPagina (23-09-2026) - o "Página X de Y / Anterior /
+// Próxima" é o mesmo miolo que log-auditoria-painel.tsx precisava (esse sem
+// seletor de tamanho); o <select> de tamanho abaixo entra como `children`.
+import { NavegacaoPagina } from './navegacao-pagina';
 import { TAMANHOS_PAGINA } from './tamanhos-pagina.constants';
 import type { TamanhoPagina } from './tamanhos-pagina.constants';
 
@@ -39,52 +44,30 @@ export function RodapePaginacao({
   }
 
   return (
-    <div
-      className={
-        'flex items-center justify-between flex-wrap gap-3 mt-3 text-sm texto-padrao' +
-        (className ? ' ' + className : '')
-      }
+    <NavegacaoPagina
+      total={total}
+      paginaAtual={paginaAtual}
+      totalPaginas={totalPaginas}
+      aoMudarPagina={aoMudarPagina}
+      className={className}
     >
-      <span>
-        Página {paginaAtual} de {totalPaginas} ({total} registros)
-      </span>
-      <div className="flex items-center gap-3">
-        <label className="flex items-center gap-2 text-xs font-semibold texto-padrao">
-          Mostrar
-          <select
-            value={tamanhoPagina}
-            onChange={(evento) => {
-              const valor = evento.target.value;
-              aoMudarTamanho(valor === 'todos' ? 'todos' : Number(valor));
-            }}
-            className="border borda-padrao rounded-md fundo-sutil py-1 px-2 text-xs outline-none foco-marca"
-          >
-            {TAMANHOS_PAGINA.map((tamanho) => (
-              <option key={tamanho} value={tamanho}>
-                {tamanho === 'todos' ? 'Todos' : tamanho}
-              </option>
-            ))}
-          </select>
-        </label>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => aoMudarPagina(Math.max(1, paginaAtual - 1))}
-            disabled={paginaAtual === 1}
-            className="btn btn-secondary"
-          >
-            Anterior
-          </button>
-          <button
-            type="button"
-            onClick={() => aoMudarPagina(Math.min(totalPaginas, paginaAtual + 1))}
-            disabled={paginaAtual === totalPaginas}
-            className="btn btn-secondary"
-          >
-            Próxima
-          </button>
-        </div>
-      </div>
-    </div>
+      <label className="flex items-center gap-2 text-xs font-semibold texto-padrao">
+        Mostrar
+        <select
+          value={tamanhoPagina}
+          onChange={(evento) => {
+            const valor = evento.target.value;
+            aoMudarTamanho(valor === 'todos' ? 'todos' : Number(valor));
+          }}
+          className="border borda-padrao rounded-md fundo-sutil py-1 px-2 text-xs outline-none foco-marca"
+        >
+          {TAMANHOS_PAGINA.map((tamanho) => (
+            <option key={tamanho} value={tamanho}>
+              {tamanho === 'todos' ? 'Todos' : tamanho}
+            </option>
+          ))}
+        </select>
+      </label>
+    </NavegacaoPagina>
   );
 }

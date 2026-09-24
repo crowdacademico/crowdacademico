@@ -39,6 +39,10 @@ export function ModalCriarConfiguracao({ auth, aoFechar, aoCriado }: ModalCriarC
   const chaveInvalida = chave.length > 0 && !REGEX_CHAVE_VALIDA.test(chave);
   // aria-describedby (23-09-2026): ver modal-criar-area-conhecimento.tsx.
   const idMensagemChave = useId();
+  const idChave = useId();
+  const idTipo = useId();
+  const idValor = useId();
+  const idDescricao = useId();
 
   const aoCriar = async () => {
     if (tipo === '' || chaveInvalida || chave.trim() === '') return;
@@ -102,8 +106,9 @@ export function ModalCriarConfiguracao({ auth, aoFechar, aoCriado }: ModalCriarC
       </div>
 
       <div>
-        <label className="rotulo-campo">Chave</label>
+        <label htmlFor={idChave} className="rotulo-campo">Chave</label>
         <input
+          id={idChave}
           type="text"
           value={chave}
           onChange={(evento) => setChave(evento.target.value)}
@@ -125,8 +130,9 @@ export function ModalCriarConfiguracao({ auth, aoFechar, aoCriado }: ModalCriarC
       </div>
 
       <div>
-        <label className="rotulo-campo">Tipo</label>
+        <label htmlFor={idTipo} className="rotulo-campo">Tipo</label>
         <select
+          id={idTipo}
           value={tipo}
           onChange={(evento) => {
             if (ehTipoConfiguracao(evento.target.value)) {
@@ -148,9 +154,10 @@ export function ModalCriarConfiguracao({ auth, aoFechar, aoCriado }: ModalCriarC
       </div>
 
       <div>
-        <label className="rotulo-campo">Valor</label>
+        <label htmlFor={idValor} className="rotulo-campo">Valor</label>
         {tipo === 'booleano' ? (
           <button
+            id={idValor}
             type="button"
             role="switch"
             aria-checked={valor === 'true'}
@@ -169,6 +176,7 @@ export function ModalCriarConfiguracao({ auth, aoFechar, aoCriado }: ModalCriarC
           </button>
         ) : tipo === 'inteiro' ? (
           <input
+            id={idValor}
             type="number"
             step="1"
             value={valor}
@@ -179,6 +187,7 @@ export function ModalCriarConfiguracao({ auth, aoFechar, aoCriado }: ModalCriarC
         ) : tipo === 'decimal' ? (
           <>
             <input
+              id={idValor}
               type="text"
               inputMode="decimal"
               value={valor}
@@ -190,6 +199,7 @@ export function ModalCriarConfiguracao({ auth, aoFechar, aoCriado }: ModalCriarC
           </>
         ) : (
           <input
+            id={idValor}
             type="text"
             value={valor}
             onChange={(evento) => setValor(evento.target.value)}
@@ -201,8 +211,9 @@ export function ModalCriarConfiguracao({ auth, aoFechar, aoCriado }: ModalCriarC
       </div>
 
       <div>
-        <label className="rotulo-campo">Descrição</label>
+        <label htmlFor={idDescricao} className="rotulo-campo">Descrição</label>
         <input
+          id={idDescricao}
           type="text"
           value={descricao}
           onChange={(evento) => setDescricao(evento.target.value)}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { BadgeBooleano } from '../../components/crud/badge-booleano';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
@@ -77,6 +77,7 @@ export function ModalAlterarAreaConhecimento({ auth, area, aoFechar, aoAtualizad
   const [nome, setNome] = useState(area.nome);
   const [ativo, setAtivo] = useState(area.ativo);
   const [enviando, setEnviando] = useState(false);
+  const idNome = useId();
 
   const sujo = nome !== area.nome || ativo !== area.ativo;
   useAvisoAlteracaoNaoSalva(sujo);
@@ -132,8 +133,9 @@ export function ModalAlterarAreaConhecimento({ auth, area, aoFechar, aoAtualizad
 
       <SecaoFicha titulo="Editar">
         <div className="sm:col-span-2">
-          <label className="rotulo-campo">Nome</label>
+          <label htmlFor={idNome} className="rotulo-campo">Nome</label>
           <input
+            id={idNome}
             type="text"
             value={nome}
             onChange={(evento) => setNome(evento.target.value)}

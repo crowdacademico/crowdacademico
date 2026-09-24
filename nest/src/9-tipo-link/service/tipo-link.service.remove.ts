@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { distinguir404ou403 } from '../../commons/database/distinguir-404-ou-403.util';
 import { DatabaseService } from '../../commons/database/database.service';
 import { CODIGO_PG_FOREIGN_KEY_VIOLATION } from '../../commons/database/postgres-exception.filter';
 
@@ -26,17 +27,12 @@ export class TipoLinkServiceRemove {
       if (resultado.numDeletedRows === 0n) {
         // pol_tipolink_delete (04): mesmo critério do update
         // (tipolink_gerenciar).
-        const existe = await db
-          .selectFrom('tipo_link')
-          .select('id_tipolink')
-          .where('id_tipolink', '=', idTipolink)
-          .executeTakeFirst();
-        if (!existe) {
-          throw new NotFoundException(
-            `Tipo de link ${idTipolink} não encontrado`,
-          );
-        }
-        throw new ForbiddenException(
+        await distinguir404ou403(
+          db,
+          'tipo_link',
+          'id_tipolink',
+          idTipolink,
+          `Tipo de link ${idTipolink} não encontrado`,
           'Sem permissão para excluir este tipo de link.',
         );
       }

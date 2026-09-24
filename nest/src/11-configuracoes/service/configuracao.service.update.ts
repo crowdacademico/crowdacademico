@@ -1,9 +1,5 @@
-import {
-  BadRequestException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { distinguir404ou403 } from '../../commons/database/distinguir-404-ou-403.util';
 import { DatabaseService } from '../../commons/database/database.service';
 import { ConfiguracaoConverter } from '../dto/converter/configuracao.converter';
 import { ConfiguracaoRequestUpdate } from '../dto/request/configuracao.request-update';
@@ -40,15 +36,12 @@ export class ConfiguracaoServiceUpdate {
       // pol_config_update (04): dono (id_usuario = self) OU
       // 'configuracao_gerenciar' pra linha global. 0 linhas afetadas sem
       // erro é a RLS filtrando - diferencia de "não existe".
-      const existe = await db
-        .selectFrom('configuracoes')
-        .select('id_config')
-        .where('id_config', '=', idConfig)
-        .executeTakeFirst();
-      if (!existe) {
-        throw new NotFoundException(`Configuração ${idConfig} não encontrada`);
-      }
-      throw new ForbiddenException(
+      return await distinguir404ou403(
+        db,
+        'configuracoes',
+        'id_config',
+        idConfig,
+        `Configuração ${idConfig} não encontrada`,
         'Sem permissão para editar esta configuração.',
       );
     }

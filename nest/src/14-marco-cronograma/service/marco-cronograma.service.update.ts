@@ -1,8 +1,5 @@
-import {
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { distinguir404ou403 } from '../../commons/database/distinguir-404-ou-403.util';
 import { DatabaseService } from '../../commons/database/database.service';
 import { MARCO_CRONOGRAMA_COLUNAS_SELECT } from '../constants/marco-cronograma.constants';
 import { MarcoCronogramaConverter } from '../dto/converter/marco-cronograma.converter';
@@ -31,16 +28,14 @@ export class MarcoCronogramaServiceUpdate {
       .executeTakeFirst();
 
     if (!linha) {
-      const existe = await this.database
-        .getDb()
-        .selectFrom('marco_cronograma')
-        .select('id_marco')
-        .where('id_marco', '=', id)
-        .executeTakeFirst();
-      if (!existe) {
-        throw new NotFoundException('Marco de cronograma não encontrado.');
-      }
-      throw new ForbiddenException('Sem permissão para editar este marco.');
+      return await distinguir404ou403(
+        this.database.getDb(),
+        'marco_cronograma',
+        'id_marco',
+        id,
+        'Marco de cronograma não encontrado.',
+        'Sem permissão para editar este marco.',
+      );
     }
 
     return MarcoCronogramaConverter.paraResponseDto(linha);

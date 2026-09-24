@@ -1,8 +1,5 @@
-import {
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { distinguir404ou403 } from '../../commons/database/distinguir-404-ou-403.util';
 import { DatabaseService } from '../../commons/database/database.service';
 import { ORCAMENTO_CAMPANHA_COLUNAS_SELECT } from '../constants/orcamento-campanha.constants';
 import { OrcamentoCampanhaConverter } from '../dto/converter/orcamento-campanha.converter';
@@ -33,16 +30,12 @@ export class OrcamentoCampanhaServiceUpdate {
     if (!linha) {
       // pol_orcamento_campanha_update (04): dono da campanha OU
       // campanha_editar.
-      const existe = await this.database
-        .getDb()
-        .selectFrom('orcamento_campanha')
-        .select('id_orcamento')
-        .where('id_orcamento', '=', id)
-        .executeTakeFirst();
-      if (!existe) {
-        throw new NotFoundException('Item de orçamento não encontrado.');
-      }
-      throw new ForbiddenException(
+      return await distinguir404ou403(
+        this.database.getDb(),
+        'orcamento_campanha',
+        'id_orcamento',
+        id,
+        'Item de orçamento não encontrado.',
         'Sem permissão para editar este item de orçamento.',
       );
     }

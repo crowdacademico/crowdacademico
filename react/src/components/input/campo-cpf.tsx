@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { formatarCpf } from '../../services/constant/utils/formatacao.util';
 
 interface CampoCpfProps {
@@ -18,11 +19,13 @@ interface CampoCpfProps {
 // ModalUpgradePesquisador) - um bug/ajuste num dos dois só corrigia o que
 // alguém lembrasse de mexer, o outro ficava desatualizado.
 export function CampoCpf({ valor, onChange, gerarCpfDeTeste }: CampoCpfProps) {
+  const idCampo = useId();
   return (
     <div>
-      <label className="rotulo-campo">CPF</label>
+      <label htmlFor={idCampo} className="rotulo-campo">CPF</label>
       <div className="flex gap-2">
         <input
+          id={idCampo}
           type="text"
           value={formatarCpf(valor)}
           onChange={(evento) => onChange(evento.target.value.replace(/\D/g, '').slice(0, 11))}

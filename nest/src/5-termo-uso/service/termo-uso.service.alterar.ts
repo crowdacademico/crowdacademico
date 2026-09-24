@@ -1,9 +1,5 @@
-import {
-  ConflictException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
+import { distinguir404ou403 } from '../../commons/database/distinguir-404-ou-403.util';
 import { DatabaseService } from '../../commons/database/database.service';
 import { TermoUsoRequestAlterar } from '../dto/request/termo-uso.request-alterar';
 import { TermoUsoResponse } from '../dto/response/termo-uso.response';
@@ -68,16 +64,12 @@ export class TermoUsoServiceAlterar {
       // existe" (404) de "existe, mas pol_termos_update bloqueou por
       // falta de 'termos_uso_gerenciar'" (403) - mesmo padrão de
       // campanha.service.rejeitar.ts.
-      const existe = await this.database
-        .getDb()
-        .selectFrom('termos_de_uso')
-        .select('id_termo')
-        .where('id_termo', '=', id)
-        .executeTakeFirst();
-      if (!existe) {
-        throw new NotFoundException('Versão de Termos de Uso não encontrada.');
-      }
-      throw new ForbiddenException(
+      return await distinguir404ou403(
+        this.database.getDb(),
+        'termos_de_uso',
+        'id_termo',
+        id,
+        'Versão de Termos de Uso não encontrada.',
         "Sem permissão 'termos_uso_gerenciar' para alterar esta versão.",
       );
     }

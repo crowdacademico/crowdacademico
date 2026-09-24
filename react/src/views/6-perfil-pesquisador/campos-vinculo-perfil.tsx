@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import type { TipoVinculo, TituloAcademico } from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
 
 const TIPOS_VINCULO: TipoVinculo[] = ['institucional', 'independente'];
@@ -40,11 +41,15 @@ export function CamposVinculoPerfil({
   aoAlterarVinculoInstitucional,
   aoAlterarTituloAcademico,
 }: CamposVinculoPerfilProps) {
+  const idTipoVinculo = useId();
+  const idVinculoInstitucional = useId();
+  const idTituloAcademico = useId();
   return (
     <>
       <div>
-        <label className="rotulo-campo">Tipo de vínculo</label>
+        <label htmlFor={idTipoVinculo} className="rotulo-campo">Tipo de vínculo</label>
         <select
+          id={idTipoVinculo}
           value={tipoVinculo}
           onChange={(evento) => {
             if (ehTipoVinculo(evento.target.value)) {
@@ -63,8 +68,9 @@ export function CamposVinculoPerfil({
 
       {tipoVinculo === 'institucional' && (
         <div>
-          <label className="rotulo-campo">{rotuloVinculoInstitucional}</label>
+          <label htmlFor={idVinculoInstitucional} className="rotulo-campo">{rotuloVinculoInstitucional}</label>
           <input
+            id={idVinculoInstitucional}
             type="text"
             value={vinculoInstitucional}
             onChange={(evento) => aoAlterarVinculoInstitucional(evento.target.value)}
@@ -74,8 +80,9 @@ export function CamposVinculoPerfil({
       )}
 
       <div>
-        <label className="rotulo-campo">Título acadêmico</label>
+        <label htmlFor={idTituloAcademico} className="rotulo-campo">Título acadêmico</label>
         <select
+          id={idTituloAcademico}
           value={tituloAcademico}
           onChange={(evento) => {
             if (ehTituloAcademico(evento.target.value)) {
