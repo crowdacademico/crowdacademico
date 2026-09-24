@@ -393,6 +393,8 @@ GRANT EXECUTE ON FUNCTION public.deslizar_datas_campanha(INT, TIMESTAMPTZ) TO ap
 -- independente da RLS de quem chama.
 REVOKE EXECUTE ON FUNCTION public.fn_campanha_reenvios_esgotados(INT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.fn_campanha_reenvios_esgotados(INT) TO app_nestjs;
+REVOKE EXECUTE ON FUNCTION public.fn_campanha_situacao_reenvio(INT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.fn_campanha_situacao_reenvio(INT) TO app_nestjs;
 -- CORRIGIDO: seguir_campanha também tinha UPDATE sem nenhuma policy de UPDATE -
 -- só existe inserir/apagar "seguir campanha", não faz sentido "editar" essa linha.
 GRANT INSERT, DELETE ON seguir_campanha TO app_nestjs;

@@ -900,3 +900,341 @@ CREATE CONSTRAINT TRIGGER trg_configuracoes_pares_min_max
     DEFERRABLE INITIALLY DEFERRED
     FOR EACH ROW
     EXECUTE FUNCTION public.fn_valida_pares_min_max_configuracoes();
+
+
+-- ############################################################################
+-- 24-09-2026 - GRUPO D: regra de reenvio numa função só e listas de status com nome (idempotente)
+-- Sem valor de enum novo, não altera dado. Só CREATE OR REPLACE de funções: as triggers existentes
+-- continuam apontando para os mesmos nomes. Cole DEPOIS dos Grupos A, B e C.
+-- ############################################################################
+
+CREATE OR REPLACE FUNCTION public.fn_status_pos_aprovacao(p_status status_campanha)
+RETURNS BOOLEAN LANGUAGE sql IMMUTABLE AS $$
+    SELECT p_status IN ('ativo', 'sucesso', 'nao_atingido', 'encerrado', 'encerrado_moderacao');
+$$;
+
+CREATE OR REPLACE FUNCTION public.fn_status_terminal(p_status status_campanha)
+RETURNS BOOLEAN LANGUAGE sql IMMUTABLE AS $$
+    SELECT p_status IN ('sucesso', 'nao_atingido', 'encerrado', 'encerrado_moderacao');
+$$;
+
+CREATE OR REPLACE FUNCTION public.fn_campanha_situacao_reenvio(p_id_campanha INT)
+RETURNS TABLE (rejeicoes INT, reenvios_restantes INT, somente_leitura BOOLEAN, prazo_reenvio_ate TIMESTAMPTZ)
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+    SELECT h.n,
+           GREATEST(0, c.m - GREATEST(h.n - 1, 0)),
+           h.n > c.m,
+           h.ultima + (public.config_numero('campanha_rejeitada_prazo_dias', 30)::INT * INTERVAL '1 day')
+    FROM (SELECT count(*)::INT AS n, max(rejeitado_em) AS ultima
+          FROM historico_rejeicao WHERE id_campanha = p_id_campanha) h,
+         (SELECT public.config_numero('campanha_rejeitada_max_reenvios', 3)::INT AS m) c;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.fn_campanha_situacao_reenvio(INT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.fn_campanha_situacao_reenvio(INT) TO app_nestjs;
+
+CREATE OR REPLACE FUNCTION public.fn_campanha_reenvios_esgotados(p_id_campanha INT)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT somente_leitura FROM public.fn_campanha_situacao_reenvio(p_id_campanha);
+$$;
+
+CREATE OR REPLACE FUNCTION fn_congela_regras_campanha()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF public.fn_status_pos_aprovacao(OLD.status) THEN
+        -- CORRIGIDO: taxa_plataforma é nullable; "<>" contra NULL nunca dá TRUE, deixando
+        -- a taxa mudar sem bloqueio numa campanha aprovada com taxa ainda não preenchida.
+        -- IS DISTINCT FROM trata NULL corretamente nos três casos.
+        IF NEW.meta_financeira IS DISTINCT FROM OLD.meta_financeira THEN
+            RAISE EXCEPTION 'Fraude bloqueada: não é permitido alterar a meta financeira após a aprovação da campanha.'
+                USING ERRCODE = '91004';
+        END IF;
+
+        IF NEW.modelo IS DISTINCT FROM OLD.modelo THEN
+            RAISE EXCEPTION 'Fraude bloqueada: não é permitido alterar o modelo de financiamento após a aprovação da campanha.'
+                USING ERRCODE = '91005';
+        END IF;
+
+        IF NEW.taxa_plataforma IS DISTINCT FROM OLD.taxa_plataforma THEN
+            RAISE EXCEPTION 'Operação bloqueada: a taxa da plataforma não pode ser alterada após o congelamento.'
+                USING ERRCODE = '91006';
+        END IF;
+
+        -- CORRIGIDO (B2): título, descrição e prazo não eram protegidos - trocar a
+        -- descrição de um projeto já financiado é o vetor de fraude mais óbvio que
+        -- existe numa plataforma de doação. Mesma trigger, mesmos campos protegidos.
+        IF NEW.titulo IS DISTINCT FROM OLD.titulo THEN
+            RAISE EXCEPTION 'Fraude bloqueada: não é permitido alterar o título após a aprovação da campanha.'
+                USING ERRCODE = '91007';
+        END IF;
+
+        IF NEW.descricao IS DISTINCT FROM OLD.descricao THEN
+            RAISE EXCEPTION 'Fraude bloqueada: não é permitido alterar a descrição após a aprovação da campanha.'
+                USING ERRCODE = '91008';
+        END IF;
+
+        -- CORRIGIDO (20-09-2026, achado numa revisão do Lucas): regressão por
+        -- omissão. Estes 2 campos nasceram DEPOIS desta trigger (video_
+        -- apresentacao_url em 28-07-2026) e nunca foram incluídos, apesar de
+        -- CampanhaRequestUpdate aceitar os dois e pol_campanha_update liberar o
+        -- dono. O vídeo é o MESMO vetor de fraude que a descrição (comentário
+        -- logo acima), com mais impacto - trocar o vídeo de apresentação de um
+        -- projeto já financiado é apresentar outro projeto para quem já doou.
+        IF NEW.video_apresentacao_url IS DISTINCT FROM OLD.video_apresentacao_url THEN
+            RAISE EXCEPTION 'Fraude bloqueada: não é permitido alterar o vídeo de apresentação após a aprovação da campanha.'
+                USING ERRCODE = '91023';
+        END IF;
+
+        IF NEW.id_area_conhecimento IS DISTINCT FROM OLD.id_area_conhecimento THEN
+            RAISE EXCEPTION 'Operação bloqueada: a área do conhecimento não pode ser alterada após a aprovação da campanha.'
+                USING ERRCODE = '91024';
+        END IF;
+
+        -- ADICIONADO (28-07-2026) - feature "Em breve": data_fim/data_inicio só
+        -- congelam quando a campanha JÁ COMEÇOU de fato (data_inicio no passado),
+        -- não no momento da aprovação. Enquanto a campanha está "Em breve"
+        -- (aprovada, pública, mas com data_inicio no futuro - ver
+        -- fn_valida_contribuicao_campanha_ativa), o pesquisador pode reagendar o
+        -- início livremente (precisa de mais tempo de divulgação, por exemplo).
+        -- meta/modelo/taxa/título/descrição continuam congelados desde a aprovação
+        -- - só as datas ganharam esse período de carência.
+        IF OLD.data_inicio IS NOT NULL AND OLD.data_inicio <= NOW() THEN
+            IF NEW.data_fim IS DISTINCT FROM OLD.data_fim THEN
+                RAISE EXCEPTION 'Operação bloqueada: o prazo da campanha não pode ser alterado depois que ela começa de verdade.'
+                    USING ERRCODE = '91009';
+            END IF;
+
+            -- CORRIGIDO (regressão do B2): data_inicio tinha ficado de fora - dava pra
+            -- recuar a data de início e mudar a duração da campanha pelo outro lado,
+            -- sem nenhum bloqueio, mesmo com data_fim já congelado.
+            IF NEW.data_inicio IS DISTINCT FROM OLD.data_inicio THEN
+                RAISE EXCEPTION 'Operação bloqueada: a data de início da campanha não pode ser alterada depois que ela começa de verdade.'
+                    USING ERRCODE = '91010';
+            END IF;
+        END IF;
+    END IF;
+
+    -- ADICIONADO (21-09-2026, ver REQUISITOS_V7): campanha REJEITADA que já usou
+    -- todos os reenvios fica só para leitura, pra qualquer perfil, inclusive o
+    -- Administrador. Bloqueia mudança de qualquer campo de CONTEÚDO; status,
+    -- aprovado_em e id_admin ficam de fora porque quem decide essas mudanças é
+    -- fn_valida_transicao_campanha (e o reenvio esgotado já é barrado lá, com
+    -- ERRCODE 91025).
+    IF OLD.status = 'rejeitado' AND public.fn_campanha_reenvios_esgotados(OLD.id_campanha) THEN
+        IF NEW.titulo                    IS DISTINCT FROM OLD.titulo
+           OR NEW.descricao              IS DISTINCT FROM OLD.descricao
+           OR NEW.meta_financeira        IS DISTINCT FROM OLD.meta_financeira
+           OR NEW.modelo                 IS DISTINCT FROM OLD.modelo
+           OR NEW.data_inicio            IS DISTINCT FROM OLD.data_inicio
+           OR NEW.data_fim               IS DISTINCT FROM OLD.data_fim
+           OR NEW.id_area_conhecimento   IS DISTINCT FROM OLD.id_area_conhecimento
+           OR NEW.video_apresentacao_url IS DISTINCT FROM OLD.video_apresentacao_url
+        THEN
+            RAISE EXCEPTION 'Esta campanha rejeitada já usou todos os reenvios permitidos e agora é somente leitura.'
+                USING ERRCODE = '91027';
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION public.fn_congela_orcamento_campanha()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+    v_id_campanha INT := COALESCE(NEW.id_campanha, OLD.id_campanha);
+    v_status      status_campanha;
+BEGIN
+    SELECT status INTO v_status FROM campanha WHERE id_campanha = v_id_campanha;
+
+    IF public.fn_status_pos_aprovacao(v_status) THEN
+        RAISE EXCEPTION 'Fraude bloqueada: não é permitido alterar o orçamento após a aprovação da campanha.'
+            USING ERRCODE = '91011';
+    END IF;
+
+    -- ADICIONADO (21-09-2026): rejeitada sem reenvios é só leitura, ver
+    -- fn_campanha_reenvios_esgotados. Na exclusão da própria campanha (cascata,
+    -- expirar_campanhas_rejeitadas) v_status vem NULL, porque a linha-pai já
+    -- sumiu, e o bloqueio não se aplica - é o que deixa a expiração apagar.
+    IF v_status = 'rejeitado' AND public.fn_campanha_reenvios_esgotados(v_id_campanha) THEN
+        RAISE EXCEPTION 'Esta campanha rejeitada já usou todos os reenvios permitidos e agora é somente leitura.'
+            USING ERRCODE = '91027';
+    END IF;
+
+    IF TG_OP = 'DELETE' THEN
+        RETURN OLD;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.fn_congela_marco_cronograma()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+    v_id_campanha INT := COALESCE(NEW.id_campanha, OLD.id_campanha);
+    v_status      status_campanha;
+    v_data_inicio TIMESTAMP;
+BEGIN
+    SELECT status, data_inicio INTO v_status, v_data_inicio FROM campanha WHERE id_campanha = v_id_campanha;
+
+    IF public.fn_status_pos_aprovacao(v_status)
+       AND v_data_inicio IS NOT NULL AND v_data_inicio <= NOW() THEN
+        RAISE EXCEPTION 'Operação bloqueada: o cronograma não pode ser alterado depois que a campanha começa de verdade.'
+            USING ERRCODE = '91013';
+    END IF;
+
+    -- ADICIONADO (21-09-2026): mesmo bloqueio de fn_congela_orcamento_campanha
+    -- (ver comentário lá, inclusive sobre v_status NULL na cascata de exclusão).
+    IF v_status = 'rejeitado' AND public.fn_campanha_reenvios_esgotados(v_id_campanha) THEN
+        RAISE EXCEPTION 'Esta campanha rejeitada já usou todos os reenvios permitidos e agora é somente leitura.'
+            USING ERRCODE = '91027';
+    END IF;
+
+    IF TG_OP = 'DELETE' THEN
+        RETURN OLD;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION fn_preenche_encerramento_campanha()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF public.fn_status_terminal(NEW.status)
+       AND NOT public.fn_status_terminal(OLD.status)
+       AND NEW.encerrado_em IS NULL THEN
+        NEW.encerrado_em := NOW();
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION public.fn_valida_transicao_campanha()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+    IF NEW.status      IS NOT DISTINCT FROM OLD.status
+       AND NEW.aprovado_em IS NOT DISTINCT FROM OLD.aprovado_em
+       AND NEW.id_admin    IS NOT DISTINCT FROM OLD.id_admin THEN
+        RETURN NEW;
+    END IF;
+
+    IF OLD.status = 'aguardando_aprovacao' AND NEW.status = 'ativo'
+       AND NEW.aprovado_em IS NOT NULL
+       AND public.tem_permissao('campanha_aprovar') THEN
+        RETURN NEW;
+    END IF;
+
+    IF OLD.status = 'aguardando_aprovacao' AND NEW.status = 'rejeitado'
+       AND NEW.aprovado_em IS NOT DISTINCT FROM OLD.aprovado_em
+       AND public.tem_permissao('campanha_rejeitar') THEN
+        RETURN NEW;
+    END IF;
+
+    IF OLD.status = 'ativo' AND NEW.status = 'encerrado'
+       AND NEW.aprovado_em IS NOT DISTINCT FROM OLD.aprovado_em
+       AND public.tem_permissao('solicitacao_encerramento_decidir') THEN
+        RETURN NEW;
+    END IF;
+
+    IF OLD.status = 'ativo'
+       AND OLD.data_fim IS NOT NULL AND OLD.data_fim <= NOW()
+       AND NEW.aprovado_em IS NOT DISTINCT FROM OLD.aprovado_em
+       AND NEW.id_admin    IS NOT DISTINCT FROM OLD.id_admin
+       AND (
+            (NEW.status = 'sucesso'      AND NEW.valor_bruto_arrecadado >= NEW.meta_financeira)
+         OR (NEW.status = 'nao_atingido' AND NEW.valor_bruto_arrecadado <  NEW.meta_financeira)
+       )
+    THEN
+        RETURN NEW;
+    END IF;
+
+    IF OLD.status IN ('rascunho', 'rejeitado') AND NEW.status = 'aguardando_aprovacao'
+       AND NEW.aprovado_em IS NOT DISTINCT FROM OLD.aprovado_em
+       AND NEW.id_admin    IS NOT DISTINCT FROM OLD.id_admin
+       AND public.tem_permissao('campanha_editar') THEN
+        RETURN NEW;
+    END IF;
+
+    IF NEW.id_usuario = public.id_usuario_atual()
+       AND OLD.status IN ('rejeitado', 'rascunho') AND NEW.status = 'aguardando_aprovacao'
+       AND NEW.aprovado_em IS NOT DISTINCT FROM OLD.aprovado_em
+       AND NEW.id_admin    IS NOT DISTINCT FROM OLD.id_admin
+    THEN
+        IF NOT EXISTS (
+            SELECT 1 FROM perfil_pesquisador pp
+            WHERE pp.id_usuario = public.id_usuario_atual() AND pp.status_pesquisador = 'ativo'
+        ) THEN
+            RAISE EXCEPTION 'Pesquisador suspenso não pode enviar campanha para aprovação.'
+                USING ERRCODE = '92009';
+        END IF;
+
+        IF OLD.status = 'rejeitado' THEN
+            IF public.fn_campanha_reenvios_esgotados(OLD.id_campanha) THEN
+                RAISE EXCEPTION 'Esta campanha já usou todos os reenvios permitidos e agora é somente leitura.'
+                    USING ERRCODE = '91025';
+            END IF;
+
+            IF (SELECT s.prazo_reenvio_ate FROM public.fn_campanha_situacao_reenvio(OLD.id_campanha) s) <= NOW()
+            THEN
+                RAISE EXCEPTION 'O prazo para reenviar esta campanha rejeitada já venceu.'
+                    USING ERRCODE = '91026';
+            END IF;
+        END IF;
+
+        RETURN NEW;
+    END IF;
+
+    IF NEW.aprovado_em IS NOT DISTINCT FROM OLD.aprovado_em
+       AND NEW.id_admin IS NOT DISTINCT FROM OLD.id_admin
+       AND (
+            (OLD.status = 'ativo'                AND NEW.status = 'encerrado_moderacao')
+         OR (OLD.status = 'aguardando_aprovacao' AND NEW.status = 'rejeitado')
+       )
+       AND EXISTS (
+           SELECT 1 FROM perfil_pesquisador pp
+           WHERE pp.id_usuario = NEW.id_usuario AND pp.status_pesquisador = 'suspenso'
+       )
+    THEN
+        RETURN NEW;
+    END IF;
+
+    IF NEW.aprovado_em IS NOT DISTINCT FROM OLD.aprovado_em
+       AND NEW.id_admin IS NOT DISTINCT FROM OLD.id_admin
+       AND OLD.status = 'ativo' AND NEW.status = 'encerrado_moderacao'
+       AND public.tem_permissao('campanha_encerrar_moderacao')
+    THEN
+        RETURN NEW;
+    END IF;
+
+    RAISE EXCEPTION 'Transição de status de campanha não autorizada (% -> %).', OLD.status, NEW.status
+        USING ERRCODE = '92001';
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.expirar_campanhas_rejeitadas()
+RETURNS INT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_expiradas INT;
+BEGIN
+    DELETE FROM campanha c
+    WHERE c.status = 'rejeitado'
+      AND (SELECT s.prazo_reenvio_ate FROM public.fn_campanha_situacao_reenvio(c.id_campanha) s) <= NOW()
+      AND NOT EXISTS (SELECT 1 FROM denuncia d                 WHERE d.id_campanha_alvo = c.id_campanha)
+      AND NOT EXISTS (SELECT 1 FROM contribuicao ct            WHERE ct.id_campanha     = c.id_campanha)
+      AND NOT EXISTS (SELECT 1 FROM repasse r                  WHERE r.id_campanha      = c.id_campanha)
+      AND NOT EXISTS (SELECT 1 FROM solicitacao_encerramento s WHERE s.id_campanha      = c.id_campanha);
+
+    GET DIAGNOSTICS v_expiradas = ROW_COUNT;
+    RETURN v_expiradas;
+END;
+$$;

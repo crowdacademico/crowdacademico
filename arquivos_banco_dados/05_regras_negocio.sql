@@ -1622,7 +1622,7 @@ EXECUTE FUNCTION validar_contribuicao_all_or_nothing();
 CREATE OR REPLACE FUNCTION fn_congela_regras_campanha()
 RETURNS TRIGGER AS $$
 BEGIN
-    IF OLD.status IN ('ativo', 'sucesso', 'nao_atingido', 'encerrado', 'encerrado_moderacao') THEN
+    IF public.fn_status_pos_aprovacao(OLD.status) THEN
         -- CORRIGIDO: taxa_plataforma é nullable; "<>" contra NULL nunca dá TRUE, deixando
         -- a taxa mudar sem bloqueio numa campanha aprovada com taxa ainda não preenchida.
         -- IS DISTINCT FROM trata NULL corretamente nos três casos.
@@ -1773,7 +1773,7 @@ DECLARE
 BEGIN
     SELECT status INTO v_status FROM campanha WHERE id_campanha = v_id_campanha;
 
-    IF v_status IN ('ativo', 'sucesso', 'nao_atingido', 'encerrado', 'encerrado_moderacao') THEN
+    IF public.fn_status_pos_aprovacao(v_status) THEN
         RAISE EXCEPTION 'Fraude bloqueada: não é permitido alterar o orçamento após a aprovação da campanha.'
             USING ERRCODE = '91011';
     END IF;
@@ -1908,7 +1908,7 @@ DECLARE
 BEGIN
     SELECT status, data_inicio INTO v_status, v_data_inicio FROM campanha WHERE id_campanha = v_id_campanha;
 
-    IF v_status IN ('ativo', 'sucesso', 'nao_atingido', 'encerrado', 'encerrado_moderacao')
+    IF public.fn_status_pos_aprovacao(v_status)
        AND v_data_inicio IS NOT NULL AND v_data_inicio <= NOW() THEN
         RAISE EXCEPTION 'Operação bloqueada: o cronograma não pode ser alterado depois que a campanha começa de verdade.'
             USING ERRCODE = '91013';
@@ -2203,8 +2203,7 @@ BEGIN
                     USING ERRCODE = '91025';
             END IF;
 
-            IF (SELECT MAX(h.rejeitado_em) FROM historico_rejeicao h WHERE h.id_campanha = OLD.id_campanha)
-               <= NOW() - (public.config_numero('campanha_rejeitada_prazo_dias', 30)::INT * INTERVAL '1 day')
+            IF (SELECT s.prazo_reenvio_ate FROM public.fn_campanha_situacao_reenvio(OLD.id_campanha) s) <= NOW()
             THEN
                 RAISE EXCEPTION 'O prazo para reenviar esta campanha rejeitada já venceu.'
                     USING ERRCODE = '91026';
@@ -2241,6 +2240,19 @@ BEGIN
 END;
 $$;
 
+-- fn_campanha_situacao_reenvio (24-09-2026): a conta do ciclo de reenvio num lugar só; ver DOCUMENTACAO_BD.md [05-K-2-B].
+CREATE OR REPLACE FUNCTION public.fn_campanha_situacao_reenvio(p_id_campanha INT)
+RETURNS TABLE (rejeicoes INT, reenvios_restantes INT, somente_leitura BOOLEAN, prazo_reenvio_ate TIMESTAMPTZ)
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+    SELECT h.n,
+           GREATEST(0, c.m - GREATEST(h.n - 1, 0)),
+           h.n > c.m,
+           h.ultima + (public.config_numero('campanha_rejeitada_prazo_dias', 30)::INT * INTERVAL '1 day')
+    FROM (SELECT count(*)::INT AS n, max(rejeitado_em) AS ultima
+          FROM historico_rejeicao WHERE id_campanha = p_id_campanha) h,
+         (SELECT public.config_numero('campanha_rejeitada_max_reenvios', 3)::INT AS m) c;
+$$;
+
 -- ----------------------------------------------------------------------------
 -- Função:     fn_campanha_reenvios_esgotados
 -- Assinatura: (p_id_campanha INT) -> BOOLEAN
@@ -2256,9 +2268,18 @@ STABLE
 SECURITY DEFINER
 SET search_path = public
 AS $$
-    SELECT COUNT(*) > public.config_numero('campanha_rejeitada_max_reenvios', 3)
-    FROM historico_rejeicao
-    WHERE id_campanha = p_id_campanha;
+    SELECT somente_leitura FROM public.fn_campanha_situacao_reenvio(p_id_campanha);
+$$;
+
+-- Status "pós-aprovação" e "terminal" num lugar só (24-09-2026); ver DOCUMENTACAO_BD.md [05-K-2-B].
+CREATE OR REPLACE FUNCTION public.fn_status_pos_aprovacao(p_status status_campanha)
+RETURNS BOOLEAN LANGUAGE sql IMMUTABLE AS $$
+    SELECT p_status IN ('ativo', 'sucesso', 'nao_atingido', 'encerrado', 'encerrado_moderacao');
+$$;
+
+CREATE OR REPLACE FUNCTION public.fn_status_terminal(p_status status_campanha)
+RETURNS BOOLEAN LANGUAGE sql IMMUTABLE AS $$
+    SELECT p_status IN ('sucesso', 'nao_atingido', 'encerrado', 'encerrado_moderacao');
 $$;
 
 -- ----------------------------------------------------------------------------
@@ -2426,8 +2447,8 @@ EXECUTE FUNCTION public.fn_valida_completude_campanha();
 CREATE OR REPLACE FUNCTION fn_preenche_encerramento_campanha()
 RETURNS TRIGGER AS $$
 BEGIN
-    IF NEW.status IN ('sucesso', 'nao_atingido', 'encerrado', 'encerrado_moderacao')
-       AND OLD.status NOT IN ('sucesso', 'nao_atingido', 'encerrado', 'encerrado_moderacao')
+    IF public.fn_status_terminal(NEW.status)
+       AND NOT public.fn_status_terminal(OLD.status)
        AND NEW.encerrado_em IS NULL THEN
         NEW.encerrado_em := NOW();
     END IF;
@@ -2574,8 +2595,7 @@ DECLARE
 BEGIN
     DELETE FROM campanha c
     WHERE c.status = 'rejeitado'
-      AND (SELECT MAX(h.rejeitado_em) FROM historico_rejeicao h WHERE h.id_campanha = c.id_campanha)
-          <= NOW() - (public.config_numero('campanha_rejeitada_prazo_dias', 30)::INT * INTERVAL '1 day')
+      AND (SELECT s.prazo_reenvio_ate FROM public.fn_campanha_situacao_reenvio(c.id_campanha) s) <= NOW()
       AND NOT EXISTS (SELECT 1 FROM denuncia d                 WHERE d.id_campanha_alvo = c.id_campanha)
       AND NOT EXISTS (SELECT 1 FROM contribuicao ct            WHERE ct.id_campanha     = c.id_campanha)
       AND NOT EXISTS (SELECT 1 FROM repasse r                  WHERE r.id_campanha      = c.id_campanha)

@@ -1,6 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { sql } from 'kysely';
-import { ConfiguracaoValorService } from '../../commons/configuracao/configuracao-valor.service';
 import { DatabaseService } from '../../commons/database/database.service';
 import { CAMPANHA_COLUNAS_SELECT } from '../constants/campanha.constants';
 import { CampanhaConverter } from '../dto/converter/campanha.converter';
@@ -8,10 +7,7 @@ import { CampanhaResponse } from '../dto/response/campanha.response';
 
 @Injectable()
 export class CampanhaServiceFindOne {
-  constructor(
-    private readonly database: DatabaseService,
-    private readonly configuracaoValor: ConfiguracaoValorService,
-  ) {}
+  constructor(private readonly database: DatabaseService) {}
 
   async executar(id: number): Promise<CampanhaResponse> {
     const linha = await this.database
@@ -37,43 +33,25 @@ export class CampanhaServiceFindOne {
     return resposta;
   }
 
-  // Números do ciclo de rejeição e reenvio (ver REQUISITOS_V7). A regra mora no
-  // banco (fn_campanha_reenvios_esgotados e fn_valida_transicao_campanha, 05):
-  // esta conta só ESPELHA o que o banco vai decidir, pra tela e o e-mail
-  // poderem mostrar "restam N reenvios até dd/mm" sem tentar reenviar pra
-  // descobrir. Consultas em sequência, não Promise.all: a conexão é uma só por
-  // requisição (ver commons/database/paginacao.util.ts).
-  //
-  // O histórico passa pela RLS de quem consulta (pol_historicorej_select, 04):
-  // o dono e quem tem campanha_rejeitar enxergam tudo, então pra esses o
-  // resultado é exato. Um perfil que só tem relatorio_visualizar veria 0
-  // rejeições, e nesse caso os números aqui são apenas indicativos.
+  // Números do ciclo de rejeição e reenvio (ver REQUISITOS_V7). A conta inteira
+  // mora no banco, em fn_campanha_situacao_reenvio (05, [05-K-2-B]): a MESMA
+  // função que a trigger de transição e o job de expirar rejeitadas usam, então
+  // a tela mostra exatamente o que o banco vai decidir (antes esta classe
+  // refazia a conta em TypeScript, com os padrões 3 e 30 repetidos aqui).
+  // É SECURITY DEFINER: os números saem exatos para quem já enxerga a campanha
+  // (dono e quem tem relatorio_visualizar), mesmo sem acesso à tabela de
+  // histórico, que a RLS restringe.
   private async preencherReenvios(resposta: CampanhaResponse): Promise<void> {
-    const maxReenvios = await this.configuracaoValor.buscarNumero(
-      'campanha_rejeitada_max_reenvios',
-      3,
+    const resultado = await sql<{
+      reenvios_restantes: number;
+      somente_leitura: boolean;
+      prazo_reenvio_ate: Date | null;
+    }>`SELECT * FROM public.fn_campanha_situacao_reenvio(${resposta.idCampanha})`.execute(
+      this.database.getDb(),
     );
-    const prazoDias = await this.configuracaoValor.buscarNumero(
-      'campanha_rejeitada_prazo_dias',
-      30,
-    );
-    const historico = await this.database
-      .getDb()
-      .selectFrom('historico_rejeicao')
-      .select([
-        sql<string>`count(*)`.as('total'),
-        sql<Date | null>`max(rejeitado_em)`.as('ultima'),
-      ])
-      .where('id_campanha', '=', resposta.idCampanha)
-      .executeTakeFirst();
-
-    const rejeicoes = Math.max(Number(historico?.total ?? 0), 1);
-    resposta.reenviosRestantes = Math.max(0, maxReenvios - (rejeicoes - 1));
-    resposta.somenteLeitura = rejeicoes > maxReenvios;
-    if (historico?.ultima) {
-      const limite = new Date(historico.ultima);
-      limite.setDate(limite.getDate() + prazoDias);
-      resposta.prazoReenvioAte = limite;
-    }
+    const situacao = resultado.rows[0];
+    resposta.reenviosRestantes = situacao.reenvios_restantes;
+    resposta.somenteLeitura = situacao.somente_leitura;
+    resposta.prazoReenvioAte = situacao.prazo_reenvio_ate;
   }
 }
