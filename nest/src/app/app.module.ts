@@ -13,8 +13,6 @@ import { ConfiguracoesModule } from '../11-configuracoes/configuracoes.module';
 import { AreaConhecimentoModule } from '../8-area-conhecimento/area-conhecimento.module';
 import { LogAuditoriaModule } from '../27-log-auditoria/log-auditoria.module';
 import { DashboardModule } from '../28-dashboard/dashboard.module';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { HealthController } from './health.controller';
 import { TipoLinkModule } from '../9-tipo-link/tipo-link.module';
 import { MotivoDenunciaModule } from '../10-motivo-denuncia/motivo-denuncia.module';
@@ -94,8 +92,7 @@ import { ConfiguracaoValorModule } from '../commons/configuracao/configuracao-va
     LogAuditoriaModule,
     DashboardModule,
   ],
-  controllers: [AppController, HealthController],
-  providers: [AppService],
+  controllers: [HealthController],
 })
 export class AppModule implements NestModule {
   // Middleware, não interceptor (ver comentário completo em

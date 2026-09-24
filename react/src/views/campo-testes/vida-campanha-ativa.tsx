@@ -10,6 +10,7 @@ import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { tratarResposta } from '../../services/constant/api/http.util';
 import { useFecharAoClicarFora } from '../../services/constant/hook/use-fechar-ao-clicar-fora';
+import { useConfiguracoes } from '../../services/11-configuracoes/hook/use-configuracoes';
 import { useChamadaRegistrada } from '../../services/campo-testes/hook/use-chamada-registrada';
 import { LIMITE_SUGESTOES_COMBOBOX } from '../../services/campo-testes/constants/campo-testes.constants';
 import { RegistroChamadas } from './registro-chamadas';
@@ -52,7 +53,6 @@ interface SeguirCampanha {
 
 const FASES = ['andamento', 'resultado_preliminar', 'resultado_final'];
 const TIPOS = ['texto', 'imagem', 'pdf', 'linkexterno'];
-const LIMITE_ENDOSSOS = 4; // configuracoes.limite_endossos_campanha (mesmo default do seed)
 
 // T3, depende de uma campanha já ATIVA.
 //
@@ -77,6 +77,10 @@ const LIMITE_ENDOSSOS = 4; // configuracoes.limite_endossos_campanha (mesmo defa
 // no app usa o do `CampoTestesContext`, que foi removido de lá também.
 export function VidaCampanhaAtiva({ auth }: PropsPagina) {
   const chamarERegistrar = useChamadaRegistrada(auth);
+  // Limite vem de configuracoes (publica), o 4 é só reserva enquanto carrega.
+  const { obterConfiguracao } = useConfiguracoes();
+  const valorLimiteEndossos = obterConfiguracao('limite_endossos_campanha', 4);
+  const LIMITE_ENDOSSOS = typeof valorLimiteEndossos === 'number' ? valorLimiteEndossos : 4;
 
   const [campanhaFoco, setCampanhaFoco] = useState<number | null>(null);
   const [todasCampanhas, setTodasCampanhas] = useState<CampanhaResponse[]>([]);

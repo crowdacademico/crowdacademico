@@ -336,6 +336,13 @@ CREATE TABLE configuracoes (
 
     CONSTRAINT "PK_CONFIGURACOES" PRIMARY KEY (id_config),
     CONSTRAINT "UK_CONFIGURACOES_CHAVE" UNIQUE (chave),
+    -- O valor precisa bater com o tipo (24-09-2026): "5,00" derrubava toda aprovação com 22P02.
+    CONSTRAINT "CK_CONFIGURACOES_VALOR_TIPO" CHECK (
+           valor IS NULL
+        OR tipo = 'texto'
+        OR (tipo = 'inteiro'  AND valor ~ '^[0-9]+$')
+        OR (tipo = 'decimal'  AND valor ~ '^[0-9]+(\.[0-9]+)?$')
+        OR (tipo = 'booleano' AND valor IN ('true', 'false'))),
     CONSTRAINT "FK_CONFIGURACOES_USUARIO" FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE SET NULL
 );
 

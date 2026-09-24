@@ -33,12 +33,12 @@
   }
 
   .btn-primary {
-    background-color: var(--cor-marca);
+    background-color: var(--cor-fundo-marca-forte);
     color: var(--cor-texto-sobre-cor);
   }
 
   .btn-primary:hover:not(:disabled) {
-    background-color: var(--cor-marca-escura);
+    background-color: var(--cor-fundo-marca-forte-hover);
   }
 
   .btn-secondary {
@@ -95,6 +95,12 @@
     font-size: var(--font-size-sm);
     font-weight: 500;
     transition: var(--transition-normal);
+  }
+
+  /* Placeholder com contraste AA (24-09-2026): o padrão do Tailwind é 50% da
+     cor do texto, perto de 2,6:1. */
+  .input-padrao::placeholder {
+    color: var(--cor-texto-fraco);
   }
 
   .input-padrao:focus {
@@ -289,7 +295,7 @@
 
   .dica--info:hover,
   .dica--info:focus {
-    color: var(--cor-marca);
+    color: var(--cor-texto-marca);
     outline: none;
   }
 

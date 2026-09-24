@@ -91,7 +91,7 @@ export function Header({ auth }: HeaderProps) {
         <div className="flex items-center gap-3">
           <button
             onClick={placeholder('Submeter Pesquisa ainda não existe neste protótipo.')}
-            className="fundo-marca hover-fundo-marca-escura text-white px-5 py-2.5 rounded-lg font-bold transition-all text-sm shadow-md hidden lg:block mr-10"
+            className="fundo-marca-forte hover-fundo-marca-forte-hover text-white px-5 py-2.5 rounded-lg font-bold transition-all text-sm shadow-md hidden lg:block mr-10"
           >
             Submeter Pesquisa
           </button>

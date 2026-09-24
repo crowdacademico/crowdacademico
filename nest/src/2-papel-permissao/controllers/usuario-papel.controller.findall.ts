@@ -1,9 +1,18 @@
-import { Controller, Get, Param, ParseIntPipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  ParseIntPipe,
+  UseGuards,
+} from '@nestjs/common';
+import { RequireAuthGuard } from '../../3-auth/guards/require-auth.guard';
 import { UsuarioPapelServiceFindAll } from '../service/usuario-papel.service.findall';
 
-// SEM RequireAuthGuard - mesmo motivo do findall-geral (ver comentário lá).
-// Usado por consultar-usuario.jsx pro textbox de papel.
+// COM RequireAuthGuard desde 24-09-2026: quem tem qual papel revela quem é
+// administrador. A decisão antiga ("sem guard, só admin chega na tela") não
+// protegia a rota, só a tela; ver PENDENCIAS. Usado pelo modal de usuário.
 @Controller('usuario-papel')
+@UseGuards(RequireAuthGuard)
 export class UsuarioPapelControllerFindAll {
   constructor(private readonly service: UsuarioPapelServiceFindAll) {}
 

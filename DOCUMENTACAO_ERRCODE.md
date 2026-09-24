@@ -6,7 +6,7 @@ Referência rápida dos `RAISE EXCEPTION` com ERRCODE customizado dos arquivos `
 
 **Nada foi alterado além disso**: nenhuma mensagem, nenhuma lógica, nenhuma trigger foi tocada - só a cláusula `USING ERRCODE` foi adicionada ao final de cada `RAISE EXCEPTION`. O diff é puramente aditivo (conferido linha a linha).
 
-Este documento **não altera nada no Nest/React** - a ideia é que vocês (você e seu colega) decidam juntos como consumir esses códigos em `postgres-exception.filter.ts` e nos services, sem eu mexer em código que já está em implementação.
+Este documento descrevia, na origem, só a tabela de códigos. Desde 24-09-2026 ele também define o **contrato do corpo de erro da API** (seção no fim): o Nest agora devolve `codigo` (o SQLSTATE) junto de `statusCode` e `message`, ver `postgres-exception.filter.ts`. A contagem de códigos deixou de ser citada aqui (hoje são 57: 90001 a 90018, 91001 a 91028, 92001 a 92010, 93001 e 93002); conte pelas tabelas abaixo.
 
 ---
 
@@ -29,7 +29,7 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 |---|---|---|---|
 | 90001 | `trg_valida_contribuicao_recompensa` | `contribuicao_recompensa` | A recompensa não pertence à campanha da contribuição |
 | 90002 | `trg_valida_escopo_tipolink` | `link_academico` / `link_atualizacao` / `link_recompensa` | Este tipo de link não é permitido para a tabela |
-| 90003 | `fn_valida_limite_texto_livre` | `denuncia`, `campanha`, `atualizacao_campanha`, `solicitacao_encerramento`, `recompensa` (genérica via `TG_ARGV`) | Campo excede o limite de caracteres configurado |
+| 90003 | `fn_valida_limite_texto_livre` | `denuncia`, `campanha`, `atualizacao_campanha`, `solicitacao_encerramento`, `recompensa`, `orcamento_campanha`, `marco_cronograma` (genérica via `TG_ARGV`) | Campo excede o limite de caracteres configurado (só quando o texto muda, 24-09-2026; a mensagem não cita mais o nome da chave) |
 | 90004 | `fn_valida_area_conhecimento_nivel2` | `campanha` | Área de conhecimento precisa ser nível 2 (não a grande área raiz) |
 | 90005 | `trg_valida_tipo_motivo_denuncia` | `denuncia` | Motivo selecionado não é válido para denúncia de campanha |
 | 90006 | `trg_valida_tipo_motivo_denuncia` | `denuncia` | Motivo selecionado não é válido para denúncia de perfil |
@@ -77,12 +77,13 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 91025 | `fn_valida_transicao_campanha` | `campanha` | Campanha rejeitada já usou todos os reenvios permitidos e não pode ser reenviada (21-09-2026) |
 | 91026 | `fn_valida_transicao_campanha` | `campanha` | Prazo para reenviar a campanha rejeitada já venceu (21-09-2026) |
 | 91027 | `fn_congela_regras_campanha` / `fn_congela_orcamento_campanha` / `fn_congela_marco_cronograma` | `campanha` / `orcamento_campanha` / `marco_cronograma` | Campanha rejeitada sem reenvios restantes é somente leitura (21-09-2026) |
+| 91028 | `fn_exige_historico_rejeicao` | `campanha` | Rejeição sem registro em `historico_rejeicao` na mesma transação (constraint trigger, roda no `COMMIT`, 24-09-2026) |
 
 ## 92xxx - Autorização negada / conflito de interesse (403)
 
 | Código | Função | Tabela | Mensagem |
 |---|---|---|---|
-| 92001 | `fn_valida_transicao_campanha` | `campanha` | Transição de status de campanha não autorizada (checa `tem_permissao()`) |
+| 92001 | `fn_valida_transicao_campanha` | `campanha` | Transição de status de campanha não autorizada (`origem -> destino`); cada permissão abre só a sua aresta, ver `[05-K-2-C]` em `DOCUMENTACAO_BD.md` (24-09-2026) |
 | 92002 | `fn_valida_transicao_solicitacao` | `solicitacao_encerramento` | Pesquisador só pode cancelar a própria solicitação, e só enquanto pendente |
 | 92003 | `fn_valida_transicao_solicitacao` | `solicitacao_encerramento` | Sem a permissão, só é permitido alterar o status para cancelado |
 | 92004 | `validar_comentario_autor` | `comentario` | Pesquisador não pode comentar na própria campanha |
@@ -99,6 +100,31 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 |---|---|---|---|
 | 93001 | `validar_denuncia_frequencia` | `denuncia` | Limite de denúncias nas últimas 24h atingido |
 | 93002 | `validar_comentario_frequencia` | `comentario` | Limite de comentários na última hora atingido (12-09-2026) |
+
+---
+
+## Contrato do corpo de erro da API (24-09-2026)
+
+Antes o corpo de uma recusa do banco trazia só `statusCode` e `message`, e o front só conseguia distinguir uma regra pelo **texto** da mensagem (qualquer ajuste de redação quebraria a distinção). Agora `postgres-exception.filter.ts` devolve também o código:
+
+```json
+{
+  "statusCode": 409,
+  "codigo": "91018",
+  "message": "Você já possui 2 campanhas em andamento ...",
+  "dados": { "limite": 2 }
+}
+```
+
+* `statusCode` e `message` **continuam exatamente como antes** (nada no React quebra).
+* `codigo` é o SQLSTATE do erro: `9xxxx` (regra de negócio, tabelas acima) ou os nativos que o filtro traduz (`23505`, `23503`, `23502`, `23514`, `42501`, `P0001`).
+* `dados` é **opcional** e só aparece se o `RAISE` mandou um `DETAIL` em JSON (`RAISE EXCEPTION '...' USING ERRCODE = '91018', DETAIL = json_build_object('limite', v_limite)::text`). Nenhum `RAISE` manda ainda; o gancho está pronto para os códigos que citam um limite (90003, 90009 a 90014, 91012, 91014, 91018, 91021, 93001, 93002).
+* O **nome da constraint violada não vai no corpo** (é detalhe interno).
+* Erros que não são de Postgres continuam como o Nest já devolve (sem `codigo`).
+
+O front pode, aos poucos, montar texto próprio a partir do código (`MENSAGENS_ERRO[codigo]`), usando a mensagem do banco como reserva. Isso também resolve as mensagens que citam nome interno de chave de configuração.
+
+Códigos novos ou alterados em 24-09-2026: **91028** (rejeição sem registro em `historico_rejeicao`, ver `[05-K-2-C]` em `DOCUMENTACAO_BD.md`); a mensagem do **92001** agora mostra `origem -> destino`; a do **90003** deixou de citar o nome da chave de configuração.
 
 ---
 

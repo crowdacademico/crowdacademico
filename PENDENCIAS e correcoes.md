@@ -2063,3 +2063,41 @@ Apontado pelo Claude Web (resposta de 20-09) como "metade dos modelos não exist
 - **Só existe em dado:** `07_seed_dados.sql` tem uma campanha flexível (a do repasse `parcial_processando`), e o tipo aparece em `db.types.ts` e `campanha.type.ts`.
 
 **Depende de:** módulo de contribuição/pagamento (Grupo 8) e checkout. Não iniciar antes. Quando esses módulos nascerem, decidir também se o modelo pode mudar depois de criada a campanha.
+
+---
+
+### 🟢 CORRIGIDO (24-09-2026): revisão externa do Claude Web (triggers, hardcoded, pendências), lote de baixo risco
+
+O Claude Web respondeu ao prompt de 24-09 com um documento, um patch de banco, um patch do motor de score e um teste PGlite. Conferi contra o código e o banco antes de aplicar: **os números batem** (rodei o teste dele: 12 de 25 falhavam no estado anterior, 25 de 25 com o patch; contrastes recalculados por conta própria; funções do patch comparadas com a fonte real). Ele não alucinou, mas **errou em um ponto e deixou outro incompleto** (abaixo).
+
+**Correções ao meu próprio prompt (ele estava certo):** `POST /campanha` do pesquisador **já existe** (`campanha.controller.create.ts`, com `RequireAuthGuard`); o que falta é a tela real. O rate limit de login por IP **já existia** (resolvido em 07-08-2026, ver a entrada antiga desta lista). O 404 do endosso por terceiro **está correto** (a `pol_comentario_select` esconde o comentário não endossado de quem não é autor nem dono; um 403 confirmaria que existe um comentário privado). Não "consertar" isso.
+
+**Fechado agora**
+- **Dados pessoais expostos sem login (o achado mais sério).** `GET /usuario`, `GET /usuario/:id`, `GET /usuario-papel`, `GET /usuario-papel/:idUsuario` e `GET /dashboard/resumo` não tinham guard: um visitante anônimo obtinha os e-mails de todos, quem é administrador e métricas internas. As 5 rotas agora exigem login (`RequireAuthGuard`). `GET /usuario/:id/logins` e `/termos-aceitos` ficaram como estão (a RLS deles já protege). Todos os chamadores no React são telas de admin com token. **Ainda aberto:** quem está logado (um pesquisador) continua vendo a lista de usuários; ver "decisões" abaixo.
+- **Banco, Grupo A e Grupo B** (no fim do `ATUALIZAR O SUPABASE.sql` e já incorporados a `01`, `03`, `05` e `06`; detalhe em `DOCUMENTACAO_BD.md`, `[05-K-2-C]`): limite de texto e de simultâneas só na entrada (baixar o limite travava doação e o job de encerrar), total arrecadado com privilégio próprio (a doação do próprio doador sumia do total em silêncio), peso de subitem desativado vale 0, soma dos pesos também ao desativar/apagar, job de rejeitadas resiliente, score no log, `p.codigo` no dashboard, máquina de estados por permissão, `UPDATE` por coluna em `campanha`, `CHECK` do tipo de configuração, histórico de rejeição obrigatório (91028).
+- **Erro encontrado no patch dele, corrigido:** o endurecimento da máquina de estados quebrava o "Enviar para aprovação" e o "Corrigir e reenviar" do Campo de Testes (o admin recebia 92001 ao enviar rascunho de outra pessoa). Ele só testou o envio como dono. Acrescentei a aresta para `campanha_editar` (só o admin), e testei como `app_nestjs`.
+- **Nest:** `codigo` (SQLSTATE) no corpo do erro (contrato em `DOCUMENTACAO_ERRCODE.md`); `modelo` da campanha só aceita `'all-or-nothing'` por enquanto; "Hello World" e os dois testes de gerador removidos (`jest` com `passWithNoTests`).
+- **React:** `LIMITE_ENDOSSOS` vem de `configuracoes`; contraste WCAG AA (tokens novos, marca inalterada; tabela em `DOCUMENTACAO_FRONTEND.md`).
+
+**Verificação.** Banco: reconstruído do zero a partir das fontes (25/25); banco no estado antigo mais Grupo A e B aplicados **duas vezes** (25/25); aprovar, rejeitar e enviar como `app_nestjs` com sessão de usuário. Nest e React: `tsc`, `eslint` e `build` limpos. **Pendente de você:** colar o Grupo A e depois o Grupo B do `ATUALIZAR O SUPABASE.sql` (rodar antes a consulta de conferência do item da configuração, no comentário do Grupo B). **Sem teste ao vivo** (Playwright): as 5 rotas devolvendo 401 sem login, o visual dos botões e badges verdes nos dois temas, e T2 enviando rascunho como admin depois do patch.
+
+**Decisões suas, do que sobrou (nada feito, tudo dele em detalhe no documento da revisão)**
+- **Lista de usuários para quem está logado:** exigir permissão (`usuario_visualizar_sensivel`) além do login, e checar `relatorio_visualizar` dentro de `contar_metricas_dashboard()`. O guard sozinho só fecha o anônimo.
+- **Motor do score (Parte C):** subitem como proporção do peso da dimensão, reputação medindo denúncias contra o perfil **e** contra as campanhas (hoje as de campanha nem contam, apesar do requisito). Números sugeridos por ele: 10 pontos para perfil, 15 para campanhas, 3 denúncias zeram cada parte. Os números são seus e da Alexia. Patch pronto, testado, **não aplicado**.
+- **Retenção do `log_auditoria`:** ele sugeriu 365 dias numa chave de configuração, com job diário. Não implementado.
+- **Tom do verde do texto no tema escuro** (`#2fbf71`, sugestão dele, já aplicado como valor provisório).
+- **Guardar a suíte PGlite no repositório** (`arquivos_banco_dados/testes/`, um arquivo por módulo). Ele discordou de esperar; você decidiu esperar. Nota: a suíte atual carrega o `ATUALIZAR O SUPABASE.sql`, que é temporário.
+- **`SENHA_DEV` e `registros-bloqueados` atrás de `import.meta.env.DEV`:** adiado a seu pedido; explicado no chat (não mexe em nenhum `.env`).
+
+**Achados dele que ficaram para depois (sem urgência, sem dependência de módulo)**
+- Dispatcher único de triggers em `campanha` (17 triggers, 11 em `BEFORE UPDATE`, ordem alfabética implícita) e em `comentario` (8), com `ordem_endosso` indo para o banco (a corrida de dois endossos simultâneos deixa de existir). Versão pequena: renomear com prefixo numérico.
+- `fn_campanha_situacao_reenvio()` (a regra de reenvio hoje está em 3 lugares, um deles em TypeScript), `fn_status_pos_aprovacao()`/`fn_status_terminal()` (listas de status repetidas 5 vezes), função única de campos bloqueados por status (resolve o Alterar campanha ativa que não trava os campos, com aviso visível e `readOnly`).
+- Configuração global que não se apaga nem se desativa, e coerência entre mínimo e máximo (`prazo_minimo` maior que `prazo_maximo` trava todo envio sem mensagem clara).
+- Log de auditoria só com o diff dos campos que mudaram; índice BRIN em `log_auditoria`; `(SELECT tem_permissao(...))` nas policies (o maior ganho de desempenho disponível); índices (`idx_campanha_status` sobra, `historico_rejeicao(id_usuario_dono)` falta).
+- Tipos gerados do banco (`kysely-codegen` sobre o PGlite) no lugar de `db.types.ts` escrito à mão, e enums do React gerados do catálogo.
+- Bloco SQL "modo produção" que remove as permissões das ferramentas de teste do admin (a barreira real deve ser o banco, não `NODE_ENV`); CORS com lista e refresh token em cookie `HttpOnly` juntos, no deploy.
+- Hook `useErrosFormulario` (versão pequena do `<CampoValidado>`), seguindo a heurística 9 de Nielsen, começando pelo wizard de campanha.
+- Sinalização de score baixo na fila de aprovação (`fn_precisa_revisao_score` existe e ninguém chama; é requisito do V7 sem implementação).
+- Seed: as campanhas 2 e 5 estão `sucesso` com arrecadado abaixo da meta (estado que o próprio banco proíbe no caminho automático); o seed deixa de desligar trigger pelo nome (`session_replication_role = replica`); renomear `08_trigger_signup_usuario.sql` (não tem trigger).
+- Documentação: `DOCUMENTACAO_BD.md` e `DOCUMENTACAO_BACKEND.md` ainda citam contagens de agosto (116/117 policies, 66/72 triggers).
+- **O maior risco para a banca, segundo ele:** o fluxo principal do produto (pesquisador cria e envia campanha, admin aprova numa fila, visitante vê a página pública) ainda não tem tela real fora do Campo de Testes. Ordem sugerida: "Minhas campanhas" do pesquisador com o wizard extraído da bancada, fila de aprovação do admin, página pública. Os três usam endpoints que já existem.

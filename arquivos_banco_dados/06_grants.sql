@@ -349,7 +349,13 @@ GRANT INSERT ON historico_rejeicao TO app_nestjs;
 -- 20-09-2026); sem este GRANT a policy
 -- nunca chega a ser avaliada, mesmo padrão do comentário de
 -- orcamento_campanha/marco_cronograma logo abaixo.
-GRANT INSERT, UPDATE, DELETE ON campanha TO app_nestjs;
+GRANT INSERT, DELETE ON campanha TO app_nestjs;
+-- UPDATE por coluna (24-09-2026): campo calculado (valor_bruto_arrecadado, taxa_plataforma, encerrado_em) e imutável (modelo, id_usuario) só mudam por função SECURITY DEFINER ou trigger. Ver DOCUMENTACAO_BD.md [05-K-2-C].
+GRANT UPDATE (
+    titulo, descricao, id_area_conhecimento, meta_financeira,
+    data_inicio, data_fim, video_apresentacao_url,
+    status, aprovado_em, id_admin
+) ON campanha TO app_nestjs;
 GRANT INSERT ON repasse TO app_nestjs;
 
 -- ADICIONADO (31-07-2026, Alexia): orçamento e cronograma estruturados (01, [01-E]).
@@ -486,3 +492,7 @@ GRANT EXECUTE ON FUNCTION public.contar_metricas_dashboard() TO app_nestjs;
 -- prova de nada - a proteção real está em NÃO EXISTIR o caminho, não em a
 -- RLS bloquear um caminho que existe.
 GRANT SELECT ON log_auditoria TO app_nestjs;
+
+-- fn_peso_score (24-09-2026)
+REVOKE EXECUTE ON FUNCTION public.fn_peso_score(INT, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.fn_peso_score(INT, TEXT) TO app_nestjs;

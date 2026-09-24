@@ -1062,7 +1062,7 @@ AS $$
         (SELECT count(DISTINCT up.id_usuario)::INT
            FROM usuario_papel up
            JOIN papel p ON p.id_papel = up.id_papel
-          WHERE p.nome = 'pesquisador'),
+          WHERE p.codigo = 'pesquisador'),
         (SELECT count(*)::INT FROM papel),
         (SELECT count(*)::INT FROM permissao),
         (SELECT count(*)::INT FROM configuracoes),

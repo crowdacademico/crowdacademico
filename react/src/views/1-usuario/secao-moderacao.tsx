@@ -121,7 +121,7 @@ export function SecaoModeracao({ auth, idUsuario }: SecaoModeracaoProps) {
                   className={
                     'px-3 py-1.5 rounded-lg text-xs font-bold border ' +
                     (dias === String(d)
-                      ? 'fundo-marca text-white borda-marca'
+                      ? 'fundo-marca-forte text-white borda-marca'
                       : 'texto-padrao borda-forte hover-fundo-sutil')
                   }
                 >

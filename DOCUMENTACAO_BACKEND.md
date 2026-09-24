@@ -103,7 +103,7 @@ Nenhuma dessas três escolhas é uma crítica ao que foi ensinado - a disciplina
 ```
 nest/src/
 ├── main.ts                    ← bootstrap: CORS, helmet, trust proxy, ValidationPipe
-├── app/                       ← AppModule, GET /, GET /health
+├── app/                       ← AppModule, GET /health
 ├── commons/                   ← infraestrutura compartilhada, sem domínio próprio
 │   ├── auth/                  ← formato de request.user (UsuarioAutenticado)
 │   ├── database/              ← ⭐ o coração do projeto (seção 2)
@@ -413,6 +413,8 @@ O converter (`perfil-pesquisador.converter.ts`) recebe `cpfDecifrado` como **par
 
 📌 **`P0001` vira 400, e o comentário justifica:** sem ERRCODE customizado não dá para saber se é permissão, validação ou conflito - 400 com a mensagem original é o mais honesto possível. Sobram nessa situação as funções fora de `05` que ainda não ganharam ERRCODE próprio (ex.: `excluir_conta_usuario()`, em `03_funcoes_seguranca.sql`).
 
+📌 **O corpo de erro passou a trazer `codigo` (24-09-2026).** O filtro devolve `{ statusCode, codigo, message, dados? }`: `statusCode` e `message` como sempre (nada no React quebra), `codigo` é o SQLSTATE (`9xxxx` de regra de negócio ou os nativos `23505`, `23503`, `23502`, `23514`, `42501`, `P0001`), e `dados` só aparece se o `RAISE` mandou um `DETAIL` em JSON. O nome da constraint violada não vai no corpo. O front pode distinguir a regra pelo código estável em vez do texto da mensagem. Contrato completo em `DOCUMENTACAO_ERRCODE.md`, seção "Contrato do corpo de erro da API".
+
 ### 5.2 Quando tratar localmente em vez de deixar cair no filtro
 
 O filtro nasceu como rede de segurança: `usuario.service.create` não tinha `try/catch` nenhum, e e-mail duplicado virava 500 cru em vez de 409.
@@ -468,6 +470,8 @@ Padrões de validação em uso: `@IsIn(CONSTANTE_DO_DB_TYPES)` para ENUMs; `@IsO
 
 - **`Pick<>` em vez da entity inteira** (`usuario.converter.ts`): os services nunca selecionam `senha_hash`, então exigir a entity completa quebraria a tipagem de toda query que usa `USUARIO_COLUNAS_SELECT`. O `Pick` aceita qualquer objeto que tenha *pelo menos* os campos usados.
 - **Converter que recebe uma dependência** (`arquivo.converter.ts`): recebe `armazenamento` como parâmetro porque montar a URL pública exige saber `STORAGE_PUBLIC_BASE_URL`. Continua sem estado próprio - só delega a montagem para quem já tem a configuração carregada. É o único converter assim.
+
+📌 **`CampanhaRequestCreate.modelo` aceita só `'all-or-nothing'` (24-09-2026).** O V7 promete os dois modelos, mas as regras do flexível (repasse independente da meta, aviso ao doador, encerramento) dependem do módulo de pagamento e do checkout; aceitar `'flexivel'` hoje criaria uma campanha sem nenhuma dessas proteções. O valor continua no enum e no seed. Quando o módulo de pagamento existir, o DTO volta a aceitar os dois. Ver `PENDENCIAS e correcoes.md`, entrada sobre o modelo flexível.
 
 ### 6.3 Constante de colunas por módulo
 
@@ -920,7 +924,7 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 
 **`GET /health`** (`app/health.controller.ts`) - roda `SELECT 1` no `Pool`. Sem login. 📌 Usa **`@Inject(PG_POOL)` direto**, não `DatabaseService.getDb()`, e o comentário justifica: um health check tem que testar a **fundação** (o Pool abre conexão e roda query?), não passar pela maquinaria de transação por requisição, que é sobre RLS/auditoria de quem fez o quê - irrelevante aqui, ninguém "fez" nada. 📌 Devolve **503**, não 500, quando o banco está fora: a aplicação está de pé, é a **dependência** que caiu - e é essa distinção que a plataforma de deploy usa para decidir entre reiniciar o processo (500, bug de código) ou só esperar (503, o banco volta sozinho).
 
-**`GET /`** (`app/app.controller.ts`) - o "hello world" do scaffold do Nest, nunca removido.
+**`GET /` foi removido em 24-09-2026.** Era o "hello world" do scaffold do Nest (`AppController`/`AppService`, mais `app.controller.spec.ts` e `test/app.e2e-spec.ts`, que só testavam esse código de gerador). O `AppModule` ficou só com o `HealthController`. `jest` está com `passWithNoTests`, porque hoje não há nenhum teste de unidade no `nest/`.
 
 ### Variáveis de ambiente (nomes; valores nunca vão para o repositório)
 
@@ -963,11 +967,10 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 
 ## 13. Inventário de rotas HTTP
 
-120 handlers (recontados em 21-09-2026). `AUTH` = a rota tem `@UseGuards(RequireAuthGuard)`; `pub` = sem ele (o que **não** significa "sem proteção" - significa que quem protege é a RLS, e que anônimo é um caso legítimo).
+119 handlers (recontados em 24-09-2026, depois de remover o `GET /` de exemplo). `AUTH` = a rota tem `@UseGuards(RequireAuthGuard)`; `pub` = sem ele (o que **não** significa "sem proteção" - significa que quem protege é a RLS, e que anônimo é um caso legítimo).
 
 | | Método | Rota |
 |---|---|---|
-| pub | GET | `/` |
 | pub | GET | `/health` |
 | **Auth** | | |
 | pub | POST | `/auth/cadastro` *(throttled)* |
@@ -978,8 +981,9 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | AUTH | GET · DELETE | `/auth/sessoes` |
 | AUTH | DELETE | `/auth/sessoes/:id` |
 | **Usuário e RBAC** | | |
-| pub | POST · GET | `/usuario` |
-| pub | GET | `/usuario/:id` |
+| pub | POST | `/usuario` |
+| AUTH | GET | `/usuario` |
+| AUTH | GET | `/usuario/:id` |
 | AUTH | PATCH · DELETE | `/usuario/:id` |
 | pub | GET | `/usuario/:id/logins` |
 | AUTH | GET | `/usuario/:id/suspensao` |
@@ -990,7 +994,7 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | AUTH | PATCH | `/papel/:id` |
 | AUTH | POST | `/papel-permissao` |
 | AUTH | DELETE | `/papel-permissao/:idPapel/:idPermissao` |
-| pub | GET | `/usuario-papel` · `/usuario-papel/:idUsuario` |
+| AUTH | GET | `/usuario-papel` · `/usuario-papel/:idUsuario` |
 | AUTH | POST | `/usuario-papel` |
 | AUTH | DELETE | `/usuario-papel/:idUsuario/:idPapel` |
 | AUTH | POST | `/usuario-papel/:idUsuario/:idPapel/suspender` · `.../revogar-suspensao` |
@@ -1046,11 +1050,11 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | AUTH | DELETE | `/arquivo/:id` |
 | **Painel** | | |
 | AUTH | GET | `/log-auditoria` · `/log-auditoria/minha-atividade` |
-| pub | GET | `/dashboard/resumo` |
+| AUTH | GET | `/dashboard/resumo` |
 
-📌 **Rotas administrativas sem `RequireAuthGuard` são uma escolha declarada, não esquecimento.** O comentário em `usuario-papel.controller.findall-geral.ts` é o mais explícito e vale por todos: *"SEM RequireAuthGuard, DE PROPÓSITO - este painel admin, em qualquer versão futura do sistema, só é alcançado por admin. Não é gambiarra: mesmo padrão já usado por `PapelControllerFindAll` e `UsuarioControllerFindAll`, ambos também sem guard, apoiados na RLS."* `GET /usuario/:id/logins` remete a esse mesmo raciocínio. A defesa continua sendo a policy (`id_usuario_atual()` é `NULL` para anônimo, e a policy decide o que fazer com isso), não o guard.
+📌 **Rotas administrativas: a decisão antiga ("sem guard, só o admin chega na tela") foi revertida em 24-09-2026 para 5 rotas.** O argumento não se sustentava: a API não sabe de tela nenhuma, qualquer requisição direta (um `curl`) chega na rota sem passar pelo `/admin`, e o `JwtAuthGuard` global deixa passar como anônima a requisição sem cabeçalho `Authorization` (é o comportamento documentado nele). Sobrava a RLS, e a RLS de `usuario` é permissiva de propósito (o login precisa achar o usuário pelo e-mail antes de existir alguém autenticado). Resultado medido: um visitante anônimo obtinha os e-mails de todos os usuários (`GET /usuario`, `GET /usuario/:id`), quem é administrador (`GET /usuario-papel`, `GET /usuario-papel/:idUsuario`) e métricas internas (`GET /dashboard/resumo`). As 5 rotas agora têm `@UseGuards(RequireAuthGuard)`.
 
-⚠️ **Mas há um caso que foge dessa lógica: `GET /dashboard/resumo`.** Ele é público **e** chama uma função `SECURITY DEFINER` que **bypassa a RLS de propósito** (é o que torna o total confiável, §10) - ou seja, aqui a policy não é rede de proteção nenhuma. Os totais do sistema (número de usuários, campanhas, sessões ativas) ficam acessíveis sem login. Não expõe dado de ninguém em particular, mas é o único ponto do backend onde "público" e "bypassa RLS" se encontram na mesma rota.
+⚠️ **O que o guard NÃO resolve (decisão pendente):** ele só impede o anônimo. Qualquer usuário **logado** (um pesquisador, por exemplo) ainda enxerga a lista completa de usuários, com e-mail, porque `pol_usuario_select` permite. Exigir também uma permissão administrativa (por exemplo `usuario_visualizar_sensivel` na lista, e `relatorio_visualizar` dentro de `contar_metricas_dashboard()`, que é `SECURITY DEFINER` e bypassa a RLS) é o passo seguinte. A solução grande, para depois: o login passa a usar uma função `SECURITY DEFINER` que devolve só o necessário para autenticar a partir do e-mail, e `pol_usuario_select` pode então ser fechada para anônimo no próprio banco. **Continuam sem guard, e certas:** `GET /usuario/:id/logins` e `GET /usuario/:id/termos-aceitos` (a RLS de `log_auditoria` e de `usuario_termo` só devolve linha do próprio usuário ou de quem tem a permissão) e os catálogos públicos (área, motivo, tipo de link).
 
 ---
 
@@ -1155,7 +1159,7 @@ Reunidos de todas as seções, para servir de checklist.
 7. ⚠️ **`db.types.ts` é escrito à mão**, com `npm run db:codegen` disponível e nunca rodado. Divergência com o `.sql` só aparece em runtime. (§2.6)
 8. ⚠️ **`perfil-pesquisador.service.create` não diferencia as duas `UNIQUE`** que disparam `23505` - 409 genérico onde caberia mensagem específica. (§5.2)
 9. ⚠️ **`ComentarioServiceCreate` calcula `ordem_endosso` no Nest**, com corrida teórica aceita. (§7.4, e item 747)
-10. ⚠️ **`GET /dashboard/resumo` é público E bypassa a RLS** (`SECURITY DEFINER`) - o único ponto do backend onde as duas coisas coincidem, deixando os totais do sistema acessíveis sem login. As outras rotas admin sem guard são escolha declarada e continuam protegidas pela policy. (§13)
+10. ✅ **`GET /dashboard/resumo` agora exige login (24-09-2026)**, mas ainda bypassa a RLS (`SECURITY DEFINER`) e não checa permissão: qualquer usuário logado lê as métricas. Checar `relatorio_visualizar` dentro de `contar_metricas_dashboard()` está pendente. (§13)
 11. ⚠️ **`notificacoesPendentes` não vai começar a funcionar sozinho** quando `26-notificacao` existir - há precedente comentado no código. (§10)
 12. ⚠️ **Não existe `nest/.env.example`**, apesar de o código referenciá-lo em mensagem de erro. (§8.8)
 13. ⚠️ **`ARQUIVO - Dica de Arquitetura.md` cita Cloudflare R2** como provedor; o atual é Supabase Storage. O desenho continua válido, só o nome mudou. (§8.1)

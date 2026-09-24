@@ -1,4 +1,5 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, UseGuards } from '@nestjs/common';
+import { RequireAuthGuard } from '../../3-auth/guards/require-auth.guard';
 import { UsuarioPapelServiceFindAllGeral } from '../service/usuario-papel.service.findall-geral';
 
 // GET /usuario-papel (sem :idUsuario) - não conflita com o findall
@@ -6,14 +7,12 @@ import { UsuarioPapelServiceFindAllGeral } from '../service/usuario-papel.servic
 // número de segmentos: esta exige zero segmentos extras, a outra exige
 // exatamente um.
 //
-// SEM RequireAuthGuard, DE PROPÓSITO (07-08-2026, pedido do Lucas): este
-// painel admin, em qualquer versão futura do sistema, só é alcançado por
-// admin - usuário comum e pesquisador nunca chegam nem perto dele. Não é
-// gambiarra: mesmo padrão já usado por PapelControllerFindAll (catálogo
-// papel) e UsuarioControllerFindAll (lista de usuário) - ambos também sem
-// guard, apoiados na RLS (pol_usuariopapel_select agora é USING(true), ver
-// "ATUALIZAR O SUPABASE.sql"). id_usuario_atual() só retorna NULL pra quem
-// não está logado; a policy nem olha pra isso.
+// COM RequireAuthGuard desde 24-09-2026 (antes era sem, de propósito, com o
+// argumento de que só o admin chega neste painel): a API não sabe de tela
+// nenhuma, qualquer requisição direta chegava, e a lista mostra quem é
+// administrador. Guard só impede o anônimo; restringir por permissão fica
+// pendente (ver PENDENCIAS).
+@UseGuards(RequireAuthGuard)
 @Controller('usuario-papel')
 export class UsuarioPapelControllerFindAllGeral {
   constructor(private readonly service: UsuarioPapelServiceFindAllGeral) {}

@@ -29,6 +29,14 @@
      pro resto da paleta. */
   --cor-marca: var(--color-primary);
   --cor-marca-escura: var(--color-primary-dark);
+  /* Contraste WCAG AA (24-09-2026, achado no Playwright): branco sobre a marca
+     (#0f9b58) dá 3,59:1, e o mínimo pra texto normal é 4,5:1. A marca continua
+     sendo a cor de identidade (borda, foco, ícone, brilho, texto grande, onde
+     3:1 basta); estes 3 tokens são só pra FUNDO SÓLIDO COM TEXTO e pra TEXTO
+     VERDE sobre fundo claro. #0b7a45 dá 5,41:1 com branco. */
+  --cor-fundo-marca-forte: var(--color-primary-dark);
+  --cor-fundo-marca-forte-hover: color-mix(in srgb, var(--color-primary-dark) 85%, black);
+  --cor-texto-marca: var(--color-primary-dark);
   --cor-superficie: var(--color-surface);
   --cor-escura: var(--color-dark);
 
@@ -115,9 +123,9 @@
      tema escuro - vira 15 por cento de opacidade sobre a cor sólida, não
      um tom pastel). */
   --cor-fundo-sucesso: var(--color-emerald-100);
-  --cor-texto-sucesso: var(--color-emerald-600);
+  --cor-texto-sucesso: #047857; /* emerald-700, 4,84:1 sobre emerald-100 */
   --cor-fundo-erro: var(--color-red-100);
-  --cor-texto-erro: var(--color-red-600);
+  --cor-texto-erro: #b91c1c; /* red-700, 5,30:1 sobre red-100 */
   /* --cor-texto-erro-forte (13-09-2026, achado do Lucas numa auditoria:
      um botão de revogar papel usava `texto-erro` + `hover:text-red-800` cru
      do Tailwind lado a lado - o hover não respondia a tema escuro) - mesmo
@@ -138,9 +146,9 @@
      igual erro já fazia. */
   --cor-borda-sucesso: var(--color-emerald-500);
   --cor-fundo-aviso: var(--color-amber-100);
-  --cor-texto-aviso: var(--color-amber-600);
+  --cor-texto-aviso: #92400e; /* amber-800, 6,37:1 sobre amber-100 (o 700 dá 4,51, no limite) */
   --cor-fundo-info: var(--color-blue-100);
-  --cor-texto-info: var(--color-blue-600);
+  --cor-texto-info: #1d4ed8; /* blue-700, 5,49:1 sobre blue-100 */
   /* --cor-texto-sobre-cor (23-09-2026, achado numa revisão: 7 usos de
      var(--color-white) cru em 4-componentes.css, todos texto em cima de
      uma superfície colorida SÓLIDA - .btn-primary, .btn-danger:hover,
@@ -161,7 +169,7 @@
      sucesso seria errado: no escuro eles valem um vermelho/verde CLARO
      (pensado pra texto sobre fundo escuro, não pra ser fundo). */
   --cor-fundo-erro-forte: var(--color-red-600);
-  --cor-fundo-sucesso-forte: var(--color-emerald-600);
+  --cor-fundo-sucesso-forte: #047857; /* emerald-700 (era emerald-600, 3,77:1 com branco) */
 
   /* Tokens de "ferramenta dev" (12-09-2026, achado do Lucas: era a ÚNICA
      cor do sistema referenciada direto por `--color-purple-*` cru nos
@@ -188,9 +196,9 @@
      precisa de bloco de tema separado - é uma cor de acento, não de
      superfície). */
   --cor-avatar-1: #dc2626;
-  --cor-avatar-2: #ea580c;
-  --cor-avatar-3: #16a34a;
-  --cor-avatar-4: #0d9488;
+  --cor-avatar-2: #c2410c;
+  --cor-avatar-3: #15803d;
+  --cor-avatar-4: #0f766e;
   --cor-avatar-5: #2563eb;
   --cor-avatar-6: #7c3aed;
   --cor-avatar-7: #db2777;
@@ -234,6 +242,7 @@
   --cor-texto-aviso: #fbbf24;
   --cor-fundo-info: rgba(37, 99, 235, 0.18);
   --cor-texto-info: #60a5fa;
+  --cor-texto-marca: #2fbf71; /* 6,14:1 sobre o cartão escuro */
   --cor-fundo-erro-forte: #b91c1c; /* red-700 - escurece, não clareia (ver comentário em :root) */
   --cor-fundo-sucesso-forte: #047857; /* emerald-700 */
 }
@@ -268,6 +277,7 @@
     --cor-texto-aviso: #fbbf24;
     --cor-fundo-info: rgba(37, 99, 235, 0.18);
     --cor-texto-info: #60a5fa;
+    --cor-texto-marca: #2fbf71; /* 6,14:1 sobre o cartão escuro */
     --cor-fundo-erro-forte: #b91c1c;
     --cor-fundo-sucesso-forte: #047857;
   }
@@ -328,11 +338,22 @@
   }
 
   .texto-marca {
-    color: var(--cor-marca);
+    color: var(--cor-texto-marca);
   }
 
   .hover-texto-marca:hover {
-    color: var(--cor-marca);
+    color: var(--cor-texto-marca);
+  }
+
+  /* Fundo verde COM TEXTO por cima (botão, chip selecionado): a versão que
+     passa no contraste. `.fundo-marca` continua pra ícone, barra e texto
+     grande. */
+  .fundo-marca-forte {
+    background-color: var(--cor-fundo-marca-forte);
+  }
+
+  .hover-fundo-marca-forte-hover:hover {
+    background-color: var(--cor-fundo-marca-forte-hover);
   }
 
   .borda-marca {

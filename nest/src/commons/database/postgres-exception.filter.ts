@@ -39,6 +39,7 @@ const FAIXA_ERRCODE_REGRA_NEGOCIO: Record<string, HttpStatus> = {
 
 interface ErroPostgres extends Error {
   code?: string;
+  detail?: string;
 }
 
 // Rede de segurança GLOBAL pra erro de Postgres que nenhum service tratou
@@ -69,7 +70,8 @@ export class PostgresExceptionFilter extends BaseExceptionFilter {
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     const prefixoNegocio = erro?.code?.slice(0, 2);
     if (prefixoNegocio && prefixoNegocio in FAIXA_ERRCODE_REGRA_NEGOCIO) {
-      return new HttpException(
+      return this.montar(
+        erro,
         erro.message || 'Operação não permitida pelas regras de negócio.',
         FAIXA_ERRCODE_REGRA_NEGOCIO[prefixoNegocio],
       );
@@ -78,27 +80,32 @@ export class PostgresExceptionFilter extends BaseExceptionFilter {
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     switch (erro?.code) {
       case CODIGO_PG_UNIQUE_VIOLATION:
-        return new HttpException(
+        return this.montar(
+          erro,
           'Já existe um registro com estes dados.',
           HttpStatus.CONFLICT,
         );
       case CODIGO_PG_FOREIGN_KEY_VIOLATION:
-        return new HttpException(
+        return this.montar(
+          erro,
           'Referência inválida: o registro relacionado não existe.',
           HttpStatus.BAD_REQUEST,
         );
       case CODIGO_PG_NOT_NULL_VIOLATION:
-        return new HttpException(
+        return this.montar(
+          erro,
           'Campo obrigatório ausente.',
           HttpStatus.BAD_REQUEST,
         );
       case CODIGO_PG_CHECK_VIOLATION:
-        return new HttpException(
+        return this.montar(
+          erro,
           'Dado inválido para este campo.',
           HttpStatus.BAD_REQUEST,
         );
       case CODIGO_PG_RLS_VIOLATION:
-        return new HttpException(
+        return this.montar(
+          erro,
           'Sem permissão para esta operação.',
           HttpStatus.FORBIDDEN,
         );
@@ -106,12 +113,50 @@ export class PostgresExceptionFilter extends BaseExceptionFilter {
         // Sem ERRCODE customizado não dá pra saber SE é permissão, validação
         // de negócio, etc - 400 com a mensagem original da função (definida
         // em 05_regras_negocio.sql) é o mais honesto que dá pra ser aqui.
-        return new HttpException(
+        return this.montar(
+          erro,
           erro.message || 'Operação não permitida pelas regras de negócio.',
           HttpStatus.BAD_REQUEST,
         );
       default:
         return null;
+    }
+  }
+
+  // Corpo de erro da API (24-09-2026, ver DOCUMENTACAO_ERRCODE.md, "Contrato
+  // do corpo de erro"): `statusCode` e `message` continuam como antes (nada
+  // no React quebra), e ganhou `codigo` (o SQLSTATE: 9xxxx de regra de
+  // negócio, ou 23505/23503/23502/23514/42501/P0001 dos nativos) pra o front
+  // distinguir a regra pelo código estável em vez do texto da mensagem.
+  // `dados` é opcional: só aparece se o RAISE mandou um DETAIL em JSON
+  // (nenhum manda ainda, o gancho está pronto). O nome da constraint violada
+  // NÃO vai no corpo, é detalhe interno.
+  private montar(
+    erro: ErroPostgres,
+    mensagem: string,
+    status: HttpStatus,
+  ): HttpException {
+    const corpo: Record<string, unknown> = {
+      statusCode: status,
+      codigo: erro.code,
+      message: mensagem,
+    };
+    const dados = this.lerDetalheJson(erro.detail);
+    if (dados) {
+      corpo.dados = dados;
+    }
+    return new HttpException(corpo, status);
+  }
+
+  private lerDetalheJson(detalhe: string | undefined): object | null {
+    if (!detalhe) {
+      return null;
+    }
+    try {
+      const lido: unknown = JSON.parse(detalhe);
+      return typeof lido === 'object' && lido !== null ? lido : null;
+    } catch {
+      return null;
     }
   }
 }

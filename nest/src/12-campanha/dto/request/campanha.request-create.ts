@@ -9,7 +9,6 @@ import {
   IsUrl,
   MaxLength,
 } from 'class-validator';
-import { MODELOS_CAMPANHA } from '../../../commons/database/db.types';
 import type { ModeloCampanha } from '../../../commons/database/db.types';
 
 // id_usuario NUNCA vem daqui (sempre request.user.idUsuario, mesmo padrão
@@ -28,8 +27,13 @@ export class CampanhaRequestCreate {
   @IsInt()
   idAreaConhecimento: number;
 
+  // Só 'all-or-nothing' por enquanto (24-09-2026): o V7 promete o modelo
+  // flexível, mas as regras dele (repasse independente da meta, aviso ao doador,
+  // encerramento) dependem do módulo de pagamento e do checkout. Aceitar
+  // 'flexivel' hoje criaria campanha sem nenhuma dessas proteções. Ver
+  // PENDENCIAS, entrada sobre o modelo flexível.
   @IsOptional()
-  @IsIn(MODELOS_CAMPANHA)
+  @IsIn(['all-or-nothing'])
   modelo?: ModeloCampanha;
 
   @IsNumber({ maxDecimalPlaces: 2 })
