@@ -107,7 +107,16 @@ export function CoresDoSistema() {
 // no tema escuro. Escolhido um, a troca é uma linha em 1-cores.css.
 const CANDIDATOS_VERDE = ['#1fae66', '#2fbf71', '#3ecf8e', '#4ade80'];
 
-function LinhaVerde({ rotulo, cor }: { rotulo: string; cor: string }) {
+interface LinhaVerdeProps {
+  rotulo: string;
+  cor: string;
+  // hex que esta linha põe em prévia (null = voltar ao valor do sistema)
+  valor: string | null;
+  emPrevia: boolean;
+  aoEscolher: (valor: string | null) => void;
+}
+
+function LinhaVerde({ rotulo, cor, valor, emPrevia, aoEscolher }: LinhaVerdeProps) {
   const [razoes, setRazoes] = useState<{ cartao: number; pagina: number } | null>(null);
   const medir = useCallback((linha: HTMLElement | null) => {
     if (!linha) {
@@ -128,6 +137,14 @@ function LinhaVerde({ rotulo, cor }: { rotulo: string; cor: string }) {
         <span className="text-base font-bold">Texto de marca em negrito </span>
         <span className="text-sm underline">link</span>
       </span>
+      <button
+        type="button"
+        onClick={() => aoEscolher(valor)}
+        aria-pressed={emPrevia}
+        className={`btn ${emPrevia ? 'btn-primary' : 'btn-secondary'}`}
+      >
+        {emPrevia ? 'Em prévia' : 'Ver nas amostras'}
+      </button>
       {razoes && (
         <span className="flex gap-1">
           {([['cartão', razoes.cartao], ['página', razoes.pagina]] as const).map(([onde, razao]) => (
@@ -141,24 +158,41 @@ function LinhaVerde({ rotulo, cor }: { rotulo: string; cor: string }) {
   );
 }
 
-export function ComparadorVerdeTexto() {
-  const [personalizada, setPersonalizada] = useState('#2fbf71');
+interface ComparadorVerdeTextoProps {
+  previa: string | null;
+  personalizada: string;
+  aoEscolher: (valor: string | null) => void;
+  aoMudarPersonalizada: (hex: string) => void;
+}
 
+export function ComparadorVerdeTexto({ previa, personalizada, aoEscolher, aoMudarPersonalizada }: ComparadorVerdeTextoProps) {
   return (
     <PainelTema tema="escuro" titulo="Tema escuro: candidatos para o texto verde">
       <div className="space-y-2">
-        <LinhaVerde rotulo="Atual (texto-marca)" cor="var(--cor-texto-marca)" />
+        <LinhaVerde rotulo="Atual (texto-marca)" cor="var(--cor-texto-marca)" valor={null} emPrevia={previa === null} aoEscolher={aoEscolher} />
         {CANDIDATOS_VERDE.map((hex) => (
-          <LinhaVerde key={hex} rotulo={hex} cor={hex} />
+          <LinhaVerde key={hex} rotulo={hex} cor={hex} valor={hex} emPrevia={previa === hex} aoEscolher={aoEscolher} />
         ))}
-        <LinhaVerde key={personalizada} rotulo={personalizada} cor={personalizada} />
+        <LinhaVerde
+          key={personalizada}
+          rotulo={`Outra: ${personalizada}`}
+          cor={personalizada}
+          valor={personalizada}
+          emPrevia={previa === personalizada}
+          aoEscolher={aoEscolher}
+        />
         <label className="flex items-center gap-2 text-sm texto-padrao">
-          <input type="color" value={personalizada} onChange={(evento) => setPersonalizada(evento.target.value)} />
-          Testar outra cor
+          <input
+            type="color"
+            value={personalizada}
+            onChange={(evento) => aoMudarPersonalizada(evento.target.value)}
+          />
+          Escolher outra cor (só a última linha acompanha; use "Ver nas amostras" nela para aplicar)
         </label>
         <p className="legenda">
-          Para aplicar: troque <code>--cor-texto-marca</code> no bloco escuro de <code>1-cores.css</code> e rode{' '}
-          <code>npm run contraste</code>.
+          "Ver nas amostras" aplica a cor só nos painéis escuros desta página (Cores, Tipografia e Componentes abaixo), para
+          você julgar em contexto; o sistema não muda. Para valer de verdade, troque <code>--cor-texto-marca</code> no bloco
+          escuro de <code>1-cores.css</code> e rode <code>npm run contraste</code>.
         </p>
       </div>
     </PainelTema>
