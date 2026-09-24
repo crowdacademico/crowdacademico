@@ -383,6 +383,9 @@ GRANT EXECUTE ON FUNCTION public.expirar_campanhas_rascunho() TO app_nestjs;
 -- mesmo motivo (chamada por @Cron, sem sessão de usuário).
 REVOKE EXECUTE ON FUNCTION public.expirar_campanhas_rejeitadas() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.expirar_campanhas_rejeitadas() TO app_nestjs;
+-- limpar_log_auditoria() - ADICIONADA (24-09-2026), mesma higiene e mesmo motivo (@Cron diário, sem sessão).
+REVOKE EXECUTE ON FUNCTION public.limpar_log_auditoria() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.limpar_log_auditoria() TO app_nestjs;
 -- deslizar_datas_campanha() - ADICIONADA (21-09-2026). Chamada pelo pesquisador
 -- pelo Nest. Quem pode usar é decidido DENTRO da função (dono + status).
 REVOKE EXECUTE ON FUNCTION public.deslizar_datas_campanha(INT, TIMESTAMPTZ) FROM PUBLIC;

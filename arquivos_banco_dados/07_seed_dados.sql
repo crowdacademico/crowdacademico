@@ -1014,6 +1014,11 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, pub
 (NULL, 'score_frequencia_esperada_mensal',  '1',  'decimal', 'Nº de atualizações de campanha esperadas por mês de duração, usado na dimensão Atualização da Campanha', TRUE, FALSE)
 ON CONFLICT (chave) DO NOTHING;
 
+-- [07-I-3] configuracoes: retenção do log de auditoria (24-09-2026, ver DOCUMENTACAO_BD.md [05-L])
+INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, publica) VALUES
+(NULL, 'log_auditoria_retencao_dias', '365', 'inteiro', 'Dias que o log de auditoria é guardado antes de ser apagado por job diário (0 = guardar para sempre)', TRUE, FALSE)
+ON CONFLICT (chave) DO NOTHING;
+
 -- [07-G] configuracoes: limites de upload de arquivo (ARQUIVO)
 -- ADICIONADO (04-09-2026, pedido do Lucas: "arquivo não é configurável
 -- pelo Painel Admin... o administrador deve poder estabelecer o limite

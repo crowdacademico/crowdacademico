@@ -59,7 +59,7 @@ Este documento é o irmão do `DOCUMENTACAO_BD.md`. Ele cobre o backend em NestJ
 | **`@aws-sdk/client-s3` + `s3-request-presigner`** | Cliente S3 genérico - usado contra o Supabase Storage, não contra a AWS (ver seção 8). |
 | **`sharp`** | Processamento de imagem no servidor (redimensiona, converte pra WebP, remove EXIF). |
 | **`@nestjs/swagger`** | Documentação interativa da API (`/api`, só fora de produção) - gerada automaticamente a partir dos DTOs já existentes, ver §18. |
-| **`@nestjs/schedule`** | Agendamento (`@Cron`) - 4 jobs hoje: encerramento de campanha vencida, fim da suspensão de pesquisador, expiração de rascunho e expiração de campanha rejeitada, ver §7.4. |
+| **`@nestjs/schedule`** | Agendamento (`@Cron`) - 5 jobs hoje: encerramento de campanha vencida, fim da suspensão de pesquisador, expiração de rascunho, expiração de campanha rejeitada e retenção do log de auditoria, ver §7.4. |
 
 📌 **Por que Kysely e não TypeORM/Prisma, e `class-validator` em vez de Joi.** Embora nos foi ensinado no semestre passado, pelo professor Francisco, do IFSP Birigui, a usar TypeORM + Joi (nos projetos de sala de aula da disciplina de Programação para Web 2), decidimos não utilizar isso aqui devido ao seguinte:
 
@@ -607,7 +607,7 @@ export class CampanhaServiceCreate {
 
 Pra comparação de escala: 96 chamadas por dia é um volume desprezível perto do tráfego normal de qualquer aplicação com usuário de verdade - não chega perto de nenhum limite de uso do plano gratuito do Supabase (que é sobre espaço em disco e certas cotas de API, não sobre "número de consultas simples" como esta). Resumindo: nem o intervalo de 15 minutos, nem a query em si, representam risco de lentidão pro sistema.
 
-**Os 4 jobs agendados do sistema** (atualizado em 21-09-2026). Todos seguem o molde acima (`PG_POOL` direto, função `SECURITY DEFINER`, `@Cron`):
+**Os 5 jobs agendados do sistema** (atualizado em 24-09-2026). Todos seguem o molde acima (`PG_POOL` direto, função `SECURITY DEFINER`, `@Cron`):
 
 | Job | Cron | Função SQL | O que faz |
 |---|---|---|---|
@@ -615,8 +615,9 @@ Pra comparação de escala: 96 chamadas por dia é um volume desprezível perto 
 | `PerfilPesquisadorServiceReativarVencidos` | a cada 15 min | `reativar_pesquisadores_vencidos()` | a suspensão do poder de pesquisador expira sozinha |
 | `CampanhaServiceExpirarRascunho` | de hora em hora | `expirar_campanhas_rascunho()` | apaga rascunho mais velho que `campanha_rascunho_ttl_horas` (336h), contado da criação |
 | `CampanhaServiceExpirarRejeitadas` | de hora em hora | `expirar_campanhas_rejeitadas()` | apaga campanha rejeitada cujo prazo de reenvio (`campanha_rejeitada_prazo_dias`, 30) venceu |
+| `LogAuditoriaServiceLimpar` | 1x por dia, às 3h | `limpar_log_auditoria()` | apaga `log_auditoria` mais velho que `log_auditoria_retencao_dias` (365; 0 = guardar para sempre) e deixa uma linha de rastro com a quantidade e a data de corte |
 
-Os 4 têm `try/catch` com `logger.error` (incluindo o nome do job). Motivo: o `@Cron` chama o método sem `await` de ninguém, então uma exceção da função SQL vira `unhandledRejection`, e o Node moderno derruba o processo inteiro por causa de um job de limpeza. Só o registro da falha, sem repetir a tentativa: o job roda de novo no próximo ciclo.
+Os 5 têm `try/catch` com `logger.error` (incluindo o nome do job). Motivo: o `@Cron` chama o método sem `await` de ninguém, então uma exceção da função SQL vira `unhandledRejection`, e o Node moderno derruba o processo inteiro por causa de um job de limpeza. Só o registro da falha, sem repetir a tentativa: o job roda de novo no próximo ciclo.
 
 **Ciclo de vida da campanha no Nest** (ver `DOCUMENTACAO_BD.md`, [05-K-2-B], para as regras; o Nest só expõe os endpoints e deixa o banco decidir):
 - `POST /campanha/:id/enviar` (`CampanhaServiceEnviar`): `rascunho -> aguardando_aprovacao` e o reenvio `rejeitado -> aguardando_aprovacao`, no mesmo endpoint. Não repete nenhuma validação: completude, prazo, reenvios, suspensão e limite de simultâneas saem do banco com ERRCODE próprio (90009 a 90011, 90015, 91025, 91026, 92009, 91018).
@@ -891,6 +892,7 @@ Módulos pequenos, mas reais e em uso pelo painel administrativo.
 Somente leitura - a escrita em `log_auditoria` é feita por trigger genérica no banco (letra `L` do `DOCUMENTACAO_BD.md`), nunca pelo Nest.
 
 - **`GET /log-auditoria?tabela=<x>`** - histórico de **uma** tabela, para o botão "Ver log" no fundo de cada listagem. Faz `leftJoin` com `usuario` para trazer `nome_responsavel` junto. Usa `paginar()` com `TAMANHO_PADRAO_LOG = 20` próprio. 📌 O comentário explica por que 20 e não o teto de 500: *aqui não é um teto "para nunca baixar tudo por acidente", é o tamanho de verdade do painel* - mostrar as últimas 20 alterações é o caso de uso real.
+- **Retenção (24-09-2026), sem endpoint:** `LogAuditoriaServiceLimpar` é um `@Cron` diário (3h) que só chama `limpar_log_auditoria()` (ver `DOCUMENTACAO_BD.md` `[05-L]`); toda a regra, inclusive o prazo lido de `configuracoes`, mora no banco. Se o Nest ficar dormindo (hospedagem gratuita), o job roda na próxima vez que acordar; o efeito de atrasar é só a tabela guardar mais um pouco.
 - **`GET /log-auditoria/minha-atividade`** - últimas 10 ações do **próprio** usuário, de **qualquer** tabela, para o sino "Atividade recente" do cabeçalho. Não recebe `tabela`; é *"o que EU fiz"*, não *"o histórico de uma tabela"*.
 
 📌 **A autorização é 100% RLS, como sempre.** `pol_log_auditoria_select` exige `tem_permissao('log_visualizar')`; sem ela a query volta **vazia**, não dá erro. O comentário registra a dependência: a policy foi ampliada para deixar qualquer usuário ver as próprias linhas - sem essa mudança aplicada no banco, `minha-atividade` volta vazia para quem não é admin, mesmo sendo autor das próprias linhas.

@@ -35,6 +35,8 @@ Destrava três coisas de uma vez: verificação de assinatura HMAC do webhook, i
 
 **Status:** gateway ainda não escolhido.
 
+**Regra do Lucas (24-09-2026):** é a última coisa do sistema, e os testes serão todos em sandbox, **mas sandbox não é desculpa para fazer mal feito**: quando chegar a hora, mesmo em sandbox, tem que funcionar perfeitamente (assinatura do webhook, idempotência, reconciliação, máquina de estados de contribuição e repasse).
+
 ---
 
 ## 2. Página pública de campanha + Open Graph

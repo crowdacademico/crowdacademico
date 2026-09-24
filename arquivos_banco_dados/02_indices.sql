@@ -164,4 +164,6 @@ CREATE INDEX idx_log_auditoria_tabela_ocorrido ON log_auditoria(tabela, ocorrido
 -- ocorrido_em < ..."), que não filtra por tabela nem por usuário - os
 -- dois índices acima não ajudariam essa consulta (a coluna de filtro
 -- deles vem ANTES de ocorrido_em, e aqui não há filtro nenhum sobre ela).
-CREATE INDEX idx_log_auditoria_ocorrido ON log_auditoria(ocorrido_em);
+-- TROCADO por BRIN (24-09-2026): tabela que só cresce, apagada por data (limpar_log_auditoria) e
+-- sempre lida com tabela ou usuário no filtro (os índices acima), então o B-tree inteiro só ocupava espaço.
+CREATE INDEX idx_log_auditoria_ocorrido ON log_auditoria USING brin (ocorrido_em);

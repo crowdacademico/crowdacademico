@@ -3980,6 +3980,46 @@ BEGIN
 END;
 $$;
 
+-- ----------------------------------------------------------------------------
+-- Função:     limpar_log_auditoria
+-- Assinatura: () -> INT
+-- Bloco:      [05-L]
+-- Regra:      Apaga log_auditoria mais velho que log_auditoria_retencao_dias (365). Valor 0 ou
+--             negativo = guardar para sempre. Deixa UMA linha de rastro (DELETE em log_auditoria,
+--             com quantidade e corte) quando apaga algo. SECURITY DEFINER, chamada por @Cron
+--             diário, sem sessão de usuário. Ver DOCUMENTACAO_BD.md [05-L].
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.limpar_log_auditoria()
+RETURNS INT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_dias      INT;
+    v_corte     TIMESTAMPTZ;
+    v_apagadas  INT;
+BEGIN
+    v_dias := public.config_numero('log_auditoria_retencao_dias', 365)::INT;
+    IF v_dias <= 0 THEN
+        RETURN 0;
+    END IF;
+
+    v_corte := NOW() - (v_dias * INTERVAL '1 day');
+
+    DELETE FROM log_auditoria WHERE ocorrido_em < v_corte;
+    GET DIAGNOSTICS v_apagadas = ROW_COUNT;
+
+    IF v_apagadas > 0 THEN
+        INSERT INTO log_auditoria (tabela, identidade_registro, operacao, id_usuario_responsavel, dados_anteriores)
+        VALUES ('log_auditoria', 'anteriores a ' || to_char(v_corte, 'YYYY-MM-DD'), 'DELETE', NULL,
+                jsonb_build_object('quantidade', v_apagadas, 'dias_retencao', v_dias, 'corte', v_corte));
+    END IF;
+
+    RETURN v_apagadas;
+END;
+$$;
+
 -- Tabelas com PK simples (1 argumento) - lista escolhida com apoio de IA,
 -- não é "logar tudo": só o que o painel admin já edita hoje via
 -- RBAC/usuário/config, mais os catálogos que o admin também edita
