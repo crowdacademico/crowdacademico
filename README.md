@@ -45,7 +45,7 @@ CREATE INDEX idx_seguir_pesquisador_alvo ON seguir_pesquisador(id_pesquisador);
   2. **Catálogos** - dado de apoio que existe independente de campanha (área de conhecimento, tipo de link, motivo de denúncia, configurações).
   3. **Núcleo** - a trilha de vida de uma campanha, em ordem de fluxo: cria → orçamento/cronograma → publica atualização → engajamento social → recompensa → moderação (denúncia/encerramento).
   4. **Financeiro** - dinheiro (contribuição, repasse, auditoria).
-  5. **Infra transversal** - usado por todo mundo, dono de ninguém (arquivo, notificação, resources).
+  5. **Infra transversal** - usado por todo mundo, dono de ninguém (arquivo, notificação).
 - `score_config`/`score_rotulo`/`score_pesquisador` (banco) não têm módulo próprio - dobrados dentro de `6-perfil-pesquisador`, porque score é característica calculada do pesquisador, sem tela própria de criar/editar.
 
 Exemplo: 

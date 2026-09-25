@@ -1,18 +1,27 @@
 // ============================================================================
-// Guia de Estilo (24-09-2026): página só de DESENVOLVIMENTO, no grupo Campo de
-// Testes do menu. Mostra os tokens e classes REAIS do sistema (cores nos dois
-// temas lado a lado, com o contraste medido no navegador, tipografia e
-// componentes), sem cópia de valor nenhum: se um token muda em 1-cores.css, a
-// página muda junto. Serve para escolher e conferir cor/estilo olhando, em vez
-// de imaginar. Não chama a API e não depende de login além do painel.
+// Guia de Estilo: página só de DESENVOLVIMENTO. Mostra os tokens e classes
+// REAIS do sistema (cores nos dois temas com contraste medido, tipografia,
+// componentes), sem copiar valor: se um token muda em 1-cores.css, a página
+// muda junto. Não chama a API e não grava nada.
 //
-// Some do build de produção: a rota só existe dentro de `import.meta.env.DEV`
-// (rotas.constants.ts), então nada daqui entra no pacote final.
+// Arquivos desta pasta: 2 cores, 3 componentes globais, 4 painéis de tema,
+// 5 utilitário de contraste, 6 JSON com a lista de pares de contraste.
+//
+// Fora da pasta:
+//   - rota: services/router/rotas.constants.ts (dentro de import.meta.env.DEV,
+//     por isso nada daqui entra no build de produção)
+//   - menu: grupo CAMPO DE TESTES, views/admin/admin-menu.constants.ts
+//   - CSS: 2 linhas de seletor [data-tema-local] em assets/css/1-cores.css
+//
+// Dependência: o `npm run contraste` (react/scripts/contraste-tokens.mjs) lê
+// 6-pares-contraste.json daqui. Ao remover o guia, mova o JSON e ajuste o script.
+// Detalhes: DOCUMENTACAO_FRONTEND.md, seção "Guia de Estilo".
 // ============================================================================
 
 import { useEffect, useId, useState, type ReactNode } from 'react';
-import { CoresDoSistema, ComparadorVerdeTexto } from './guia-estilo-cores';
-import { ComparativoTemas } from './guia-estilo-temas';
+import { CoresDoSistema, ComparadorVerdeTexto } from './2-guia-estilo-cores';
+import { ComparativoTemas } from './4-guia-estilo-temas';
+import { Avatares, BordasComContraste, BotaoDev, CamposExtras, InterativosGlobais } from './3-guia-estilo-extras';
 
 const CLASSES_TIPOGRAFICAS = [
   { classe: 'titulo-pagina', exemplo: 'Título de página' },
@@ -64,6 +73,8 @@ function Componentes() {
         </div>
       </div>
 
+      <BotaoDev />
+
       <div>
         <p className="rotulo-leitura mb-2">Badges</p>
         <div className="flex flex-wrap gap-2">
@@ -101,6 +112,12 @@ function Componentes() {
           ))}
         </div>
       </div>
+
+      <CamposExtras />
+
+      <Avatares />
+
+      <BordasComContraste />
 
       <div>
         <p className="rotulo-leitura mb-2">Cartões</p>
@@ -203,6 +220,13 @@ export function GuiaEstilo() {
         </Secao>
         </div>
       </div>
+
+      <Secao
+        titulo="Modal, toast, dica e tabela"
+        descricao="Componentes globais: seguem o tema do cabeçalho, então troque o tema lá em cima para vê-los no claro e no escuro."
+      >
+        <InterativosGlobais />
+      </Secao>
     </div>
   );
 }

@@ -91,7 +91,7 @@ Nenhuma dessas três escolhas é uma crítica ao que foi ensinado - a disciplina
 | Módulos Nest (`*.module.ts`) | 25 (20 de domínio + `DatabaseModule` + `StorageModule` + `ConfiguracaoValorModule` + `LoggingModule` + `AppModule`) |
 | Arquivos de controller | 113 |
 | Arquivos de service | 121 |
-| Rotas HTTP (handlers `@Get`/`@Post`/`@Patch`/`@Delete`) | 120 |
+| Rotas HTTP (handlers `@Get`/`@Post`/`@Patch`/`@Delete`) | 119 |
 | DTOs de request / de response | 54 / 36 |
 | Converters | 17 |
 | Pastas de módulo **vazias** (só `.gitkeep`) | 8 |
@@ -594,7 +594,7 @@ export class CampanhaServiceCreate {
 
 **Para o tamanho e a fase atual do projeto: sim, é a solução certa** - simples, usa infraestrutura que já existe (nenhuma peça nova além do agendador em si), e é literalmente o padrão recomendado no ecossistema NestJS para "preciso rodar algo periodicamente, sem que seja uma rota HTTP visitada por alguém" - qualquer outro job futuro deste tipo (ex.: expirar QR Code do RF-076, reprocessar notificação com falha) pode copiar exatamente este molde: injetar `PG_POOL`, um método com `@Cron`, pronto.
 
-**Uma limitação real, que vale você saber para explicar se perguntarem:** isto roda **dentro do mesmo processo** do servidor Nest - ou seja, só dispara enquanto o backend estiver de pé. Hospedagem gratuita (Render, citado em `PENDENCIAS.md`/RNF-012) costuma **"dormir"** um serviço web depois de um tempo sem nenhuma requisição chegando, acordando de novo só quando alguém acessa. Se isso acontecer, o `@Cron` também dorme junto - nenhuma campanha vence "atrasado de verdade" nesse intervalo, só fica pendente de encerrar até o backend acordar por qualquer motivo (a próxima visita de qualquer usuário já é suficiente). Quando acorda, a própria natureza da função resolve isso sozinha, sem precisar de nada especial: ela sempre confere `data_fim <= NOW()` contra o relógio de agora, então uma campanha vencida há 2 horas ou há 2 minutos é encerrada do mesmo jeito na primeira checagem depois de acordar - nada fica "perdido pra sempre", só potencialmente **atrasado** enquanto o servidor está dormindo. Este é o mesmo tipo de limitação que o projeto já aceita conscientemente em outros lugares por causa da hospedagem gratuita (RNF-012: "disponibilidade mínima de 95%... limitações de uptime são reconhecidas como restrição do ambiente acadêmico") - não é uma falha de desenho, é uma característica do ambiente gratuito.
+**Uma limitação real, que vale você saber para explicar se perguntarem:** isto roda **dentro do mesmo processo** do servidor Nest - ou seja, só dispara enquanto o backend estiver de pé. Hospedagem gratuita (Render, citado em `PENDENCIAS e correcoes.md`/RNF-012) costuma **"dormir"** um serviço web depois de um tempo sem nenhuma requisição chegando, acordando de novo só quando alguém acessa. Se isso acontecer, o `@Cron` também dorme junto - nenhuma campanha vence "atrasado de verdade" nesse intervalo, só fica pendente de encerrar até o backend acordar por qualquer motivo (a próxima visita de qualquer usuário já é suficiente). Quando acorda, a própria natureza da função resolve isso sozinha, sem precisar de nada especial: ela sempre confere `data_fim <= NOW()` contra o relógio de agora, então uma campanha vencida há 2 horas ou há 2 minutos é encerrada do mesmo jeito na primeira checagem depois de acordar - nada fica "perdido pra sempre", só potencialmente **atrasado** enquanto o servidor está dormindo. Este é o mesmo tipo de limitação que o projeto já aceita conscientemente em outros lugares por causa da hospedagem gratuita (RNF-012: "disponibilidade mínima de 95%... limitações de uptime são reconhecidas como restrição do ambiente acadêmico") - não é uma falha de desenho, é uma característica do ambiente gratuito.
 
 **A alternativa mais robusta, se um dia isso importar de verdade:** a extensão `pg_cron` do próprio Postgres (o Supabase oferece ela pronta pra ativar) - ela agenda a chamada **dentro do banco**, independente de o backend Nest estar dormindo ou não. Não implementei isso agora porque adiciona uma peça de infraestrutura nova (mexer em configuração do Supabase, não só código do projeto) pra resolver um problema que, na prática, hoje é pequeno: ninguém está cronometrando o segundo exato em que uma campanha de TCC deveria fechar. Fica anotado aqui como o caminho natural de evolução, não como algo faltando.
 
@@ -889,7 +889,7 @@ Este é o único dado do sistema que é **cifrado** (não apenas hasheado). O ra
 
 Módulos pequenos, mas reais e em uso pelo painel administrativo.
 
-### `27-log-auditoria` (8 arquivos, 2 endpoints)
+### `27-log-auditoria` (9 arquivos, 2 endpoints)
 
 Somente leitura - a escrita em `log_auditoria` é feita por trigger genérica no banco (letra `L` do `DOCUMENTACAO_BD.md`), nunca pelo Nest.
 
@@ -909,9 +909,16 @@ Devolve `totalUsuarios`, `totalPesquisadores`, `totalPapeis`, `totalPermissoes`,
 
 ⚠️ **`notificacoesPendentes` é `null` fixo** - `26-notificacao` não existe. Há um precedente comentado no código: `totalCampanhas` **também** era `null` fixo ("campanha ainda não existe") e continuou `null` mesmo depois de `12-campanha` ser construído, até alguém perceber e atualizar a função do banco. **Quando `26-notificacao` existir, este campo não vai começar a funcionar sozinho** - exige atualizar `contar_metricas_dashboard()` no `.sql` *e* trocar o `null` aqui.
 
-### `5-termo-uso` (4 arquivos, 1 endpoint)
+### `5-termo-uso` (19 arquivos, 7 endpoints)
 
-**`GET /termos-uso/ativo`** - devolve a versão vigente dos termos. Pequeno, mas estruturalmente importante: `AuthServiceCadastro` injeta `TermoUsoServiceAtivo` para gravar o aceite do termo **ativo resolvido pelo servidor**, nunca um id vindo do cliente.
+Versões dos termos de uso, de 3 tipos (`cadastro`, `contribuicao`, `upgrade_pesquisador`); cada tipo tem no máximo uma versão **vigente** (`ativo = TRUE`). Só `GET /termos-uso/ativo?tipo=...` é público; o resto exige login e a permissão é decidida pela RLS.
+
+- **`GET /termos-uso/ativo?tipo=X`** devolve a versão vigente do tipo (`tipo` é obrigatório). Estruturalmente importante: `AuthServiceCadastro` injeta `TermoUsoServiceAtivo` para gravar o aceite do termo **ativo resolvido pelo servidor**, nunca um id vindo do cliente.
+- **`GET /termos-uso`** lista todas as versões dos 3 tipos misturadas, por id crescente; **`GET /termos-uso/:id`** busca uma.
+- **`POST /termos-uso` (Criar)** só cria rascunho: sempre `ativo = FALSE`, nunca ativa sozinho nem mexe em outra linha. O fluxo é criar, a equipe revisar o texto e só então um administrador tornar a versão vigente.
+- **`PATCH /termos-uso/:id/ativar`** torna a versão a vigente do seu tipo e, na mesma transação, desativa a vigente anterior do mesmo tipo (idempotente se o alvo já é a vigente). Serve tanto para promover um rascunho quanto para voltar a uma versão antiga.
+- **`PATCH /termos-uso/:id` (Alterar)** só edita `conteudo`, e só enquanto **ninguém aceitou** aquela versão (confere `usuario_termo` e `aceite_termo_contribuicao`); depois do primeiro aceite a versão fica somente leitura, para preservar o valor probatório do que foi aceito. `versao` e `tipo` são imutáveis.
+- **`DELETE /termos-uso/:id`**: nunca apaga a versão vigente (sempre precisa existir uma por tipo); versão com aceite registrado só apaga com `forcar: true`, ciente de que isso remove o rastro de quem aceitou.
 
 ---
 
@@ -1005,7 +1012,8 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | **Perfil e links** | | |
 | pub | GET | `/perfil-pesquisador` · `/perfil-pesquisador/:id` · `/perfil-pesquisador/:id/score` |
 | AUTH | POST · PATCH | `/perfil-pesquisador` |
-| AUTH | POST | `/perfil-pesquisador/:id` *(ADICIONADA 07-09-2026 - criar em nome de outro, distinta do `POST /perfil-pesquisador` self-service acima)* |
+| AUTH | POST | `/perfil-pesquisador/:id` *(criar em nome de outro, distinta do `POST /perfil-pesquisador` self-service acima)* |
+| AUTH | PATCH | `/perfil-pesquisador/:id` *(alterar o perfil de outro pesquisador; o `PATCH /perfil-pesquisador` sem id é o self-service)* |
 | AUTH | PATCH | `/perfil-pesquisador/:id/cpf` *(ADICIONADA 07-09-2026, RF-017 - correção de CPF, ação de suporte/admin)* |
 | AUTH | GET · POST | `/perfil-pesquisador/:id/suspensao` · `/perfil-pesquisador/:id/suspender` · `/perfil-pesquisador/:id/reativar` *(ADICIONADAS 07-09-2026 - suspende só o PODER de pesquisador, não bloqueia login; `suspender` exige corpo `{ate, motivo}`)* |
 | pub | GET | `/link-academico` |
@@ -1137,7 +1145,7 @@ Nenhuma delas roda em produção - ficam de fora do processo que o Render execut
 |---|---|---|
 | Linguagem/compilação | `typescript`, `ts-node`, `ts-loader`, `tsconfig-paths`, `source-map-support` | Compila/roda TypeScript; `source-map-support` faz stack trace de erro apontar pra linha do `.ts` original, não pro `.js` gerado. |
 | Qualidade de código | `eslint`, `@eslint/js`, `@eslint/eslintrc`, `typescript-eslint`, `eslint-plugin-prettier`, `eslint-config-prettier`, `prettier`, `globals` | Lint + formatação automática, mesmo padrão do lado `react/`. |
-| Testes | `jest`, `ts-jest`, `@types/jest`, `supertest`, `@types/supertest` | `jest` roda os testes; `supertest` faz requisição HTTP contra a aplicação Nest sem precisar de servidor real de pé - usado (ou planejado) para os testes de integração de `test/app.e2e-spec.ts`. |
+| Testes | `jest`, `ts-jest`, `@types/jest`, `supertest`, `@types/supertest` | `jest` roda os testes; `supertest` faz requisição HTTP contra a aplicação Nest sem precisar de servidor real de pé - pensado para testes de integração da API; hoje não há nenhum teste de unidade nem e2e no `nest/`, e as regras de negócio são testadas no banco (`informacoes/testes-banco/`). |
 | Tipos para bibliotecas JS puras | `@types/bcrypt`, `@types/express`, `@types/node`, `@types/pg` | `bcrypt`/`express`/`node`/`pg` não vêm com tipo TypeScript embutido - esses pacotes só adicionam a definição de tipo, zero código em tempo de execução. |
 | Ferramental Nest | `@nestjs/cli`, `@nestjs/schematics`, `@nestjs/testing` | CLI (`nest generate`, `nest build`) e utilitário de teste do próprio framework. |
 | Geração de tipo do banco | `kysely-codegen` | Geraria `db.types.ts` automaticamente a partir do schema real do Postgres - **nunca rodou de fato neste projeto** (⚠️ ver seção 16, `db.types.ts` é escrito à mão até hoje). |

@@ -16,7 +16,7 @@ import { ListarCampanhas } from '../../views/12-campanha/listar-campanhas';
 import { BancadaPesquisador } from '../../views/campo-testes/bancada-pesquisador';
 import { BancadaCampanha } from '../../views/campo-testes/bancada-campanha';
 import { VidaCampanhaAtiva } from '../../views/campo-testes/vida-campanha-ativa';
-import { GuiaEstilo } from '../../views/campo-testes/guia-estilo';
+import { GuiaEstilo } from '../../views/campo-testes/guia-estilo/1-guia-estilo';
 import { ListarTermosUso } from '../../views/5-termo-uso/listar-termos-uso';
 import { CriarTermoUso } from '../../views/5-termo-uso/criar-termo-uso';
 

@@ -86,7 +86,7 @@ const razao = (a, b) => {
 
 // [texto, fundo]: nomes de token. Mesma lista que o Guia de Estilo (Campo de Testes) mostra na tela.
 const PARES = JSON.parse(
-  fs.readFileSync(path.resolve(pasta, '../../services/campo-testes/constants/pares-contraste.json'), 'utf8'),
+  fs.readFileSync(path.resolve(pasta, '../../views/campo-testes/guia-estilo/6-pares-contraste.json'), 'utf8'),
 );
 
 let falhas = 0;

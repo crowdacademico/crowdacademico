@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
-import { comporSobre, LIMITE_TEXTO_AA, lerCor, paraHex, razaoContraste } from '../../services/campo-testes/util/contraste-cor.util';
-import paresContraste from '../../services/campo-testes/constants/pares-contraste.json';
-import { PainelTema } from './guia-estilo-temas';
+import { comporSobre, LIMITE_TEXTO_AA, lerCor, paraHex, razaoContraste } from './5-contraste-cor.util';
+import paresContraste from './6-pares-contraste.json';
+import { PainelTema } from './4-guia-estilo-temas';
 
 const formatarRazao = (razao: number) => razao.toFixed(2).replace('.', ',') + ':1';
 
