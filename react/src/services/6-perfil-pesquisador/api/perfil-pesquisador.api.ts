@@ -14,13 +14,11 @@ import type {
   PerfilPesquisadorResponseSuspend,
 } from '../type/perfil-pesquisador.type';
 
-// Espelha nest/src/6-perfil-pesquisador. GET é público no backend
-// (pol_perfil_select usa usuario_visivel()) - CPF vem mascarado (`null`)
-// pra quem não é o próprio dono nem tem perfil_pesquisador_visualizar_
-// sensivel; o painel admin autenticado como quem tem essa permissão
-// enxerga o CPF de todo mundo. Sem criar()/remover() aqui: criação é
-// self-service (o próprio usuário vira pesquisador), sem endpoint de
-// exclusão (status_pesquisador ativo/suspenso, nunca linha removida).
+// Espelha nest/src/6-perfil-pesquisador. GET é público no backend (pol_perfil_select usa usuario_visivel()):
+// CPF vem mascarado (`null`) para quem não é o próprio dono nem tem perfil_pesquisador_visualizar_sensivel; o
+// painel admin autenticado como quem tem essa permissão enxerga o CPF de todo mundo. Sem criar()/remover()
+// aqui: criação é self-service (o próprio usuário vira pesquisador), sem endpoint de exclusão
+// (status_pesquisador ativo/suspenso, nunca linha removida).
 interface FiltroPerfilPesquisador {
   statusPesquisador?: StatusPesquisador;
   tipoVinculo?: TipoVinculo;
@@ -53,11 +51,9 @@ export const perfilPesquisadorApi = {
       method: 'POST',
       body: JSON.stringify(dados),
     }).then(tratarResposta<PerfilPesquisadorResponse>),
-  // Endpoint separado de criar() acima, de propósito (07-09-2026) - criar()
-  // é self-service (sempre a própria conta logada, pol_perfil_insert exige
-  // id_usuario = id_usuario_atual()); esta é a ação de suporte/admin,
-  // gateada por 'perfil_pesquisador_criar_para_outro' dentro da função do
-  // banco - cria perfil EM NOME de outro usuário.
+  // Endpoint separado de criar() acima, de propósito: criar() é self-service (sempre a própria conta logada,
+  // pol_perfil_insert exige id_usuario = id_usuario_atual()); esta é a ação de suporte/admin, gateada por
+  // 'perfil_pesquisador_criar_para_outro' dentro da função do banco: cria perfil EM NOME de outro usuário.
   criarParaOutro: (
     authFetch: AuthFetch,
     id: number | string,
@@ -67,13 +63,9 @@ export const perfilPesquisadorApi = {
       method: 'POST',
       body: JSON.stringify(dados),
     }).then(tratarResposta<PerfilPesquisadorResponse>),
-  // PATCH /perfil-pesquisador/:id (14-09-2026) - rota separada do
-  // self-service (PATCH /perfil-pesquisador, sem id, sempre a própria
-  // conta) - achado rodando o painel de verdade: essa rota nunca tinha
-  // sido implementada no backend ("Cannot PATCH /perfil-pesquisador/1"),
-  // mesmo o modal de Alterar Usuário já chamando ela desde 13-09-2026.
-  // `Promise<void>` (204), não `PerfilPesquisadorResponse` - o único
-  // chamador (modal-usuario.tsx) descarta o retorno e recarrega a lista.
+  // PATCH /perfil-pesquisador/:id: rota separada do self-service (PATCH /perfil-pesquisador, sem id, sempre a
+  // própria conta), usada pelo modal de Alterar Usuário. `Promise<void>` (204), não
+  // `PerfilPesquisadorResponse`: o único chamador (modal-usuario.tsx) descarta o retorno e recarrega a lista.
   atualizar: (
     authFetch: AuthFetch,
     id: number | string,
@@ -83,17 +75,15 @@ export const perfilPesquisadorApi = {
       method: 'PATCH',
       body: JSON.stringify(dados),
     }).then(tratarResposta<void>),
-  // Endpoint separado do atualizar() acima, de propósito (07-09-2026,
-  // RF-017) - correção de CPF é ação de suporte/admin
+  // Endpoint separado do atualizar() acima, de propósito (RF-017): correção de CPF é ação de suporte/admin
   // (perfil_pesquisador_corrigir_cpf), nunca um PATCH comum.
   corrigirCpf: (authFetch: AuthFetch, id: number | string, dados: PerfilPesquisadorRequestCorrigirCpf): Promise<void> =>
     authFetch(`/perfil-pesquisador/${id}/cpf`, {
       method: 'PATCH',
       body: JSON.stringify(dados),
     }).then(tratarResposta<void>),
-  // Suspende só o PODER de pesquisador (login continua funcionando) - mesmo
-  // formato de usuarioApi.suspender/buscarSuspensao/revogarSuspensao
-  // (07-09-2026, pedido do Lucas: mesmo padrão de Moderação de usuário).
+  // Suspende só o PODER de pesquisador (login continua funcionando): mesmo formato de
+  // usuarioApi.suspender/buscarSuspensao/revogarSuspensao (mesmo padrão de Moderação de usuário).
   buscarSuspensao: (authFetch: AuthFetch, id: number | string): Promise<PerfilPesquisadorResponseSuspend> =>
     authFetch(`/perfil-pesquisador/${id}/suspensao`).then(tratarResposta<PerfilPesquisadorResponseSuspend>),
   suspender: (authFetch: AuthFetch, id: number | string, dados: PerfilPesquisadorRequestSuspender): Promise<void> =>

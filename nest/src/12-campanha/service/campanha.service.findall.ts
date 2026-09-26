@@ -20,13 +20,9 @@ export class CampanhaServiceFindAll {
   async executar(
     filtro: CampanhaRequestList = {},
   ): Promise<ResultadoPaginado<CampanhaResponse>> {
-    // ERA orderBy('criado_em', 'desc') - trocado (23-08-2026, pedido do
-    // Lucas: "ordene por ID", mesmo padrão já aplicado em motivo_
-    // denuncia/tipo_link/area_conhecimento - catálogo ordena por ID,
-    // sempre). `criado_em` do seed nem sempre bate com a ordem de
-    // inserção real (algumas linhas foram seedadas com timestamp
-    // retroativo), então a ordem por data ficava embaralhada em relação
-    // ao id - por ID é estável e previsível.
+    // Ordena por id (catálogo ordena por ID, sempre): `criado_em` do seed nem sempre bate com a ordem de
+    // inserção real (algumas linhas foram seedadas com timestamp retroativo), então a ordem por data ficava
+    // embaralhada em relação ao id; por ID é estável e previsível.
     let query = selecionarCampanhaComNomes(this.database.getDb()).orderBy(
       'campanha.id_campanha',
     );

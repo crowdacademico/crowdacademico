@@ -7,15 +7,10 @@ interface DashboardSaudeProps {
   resumo: DashboardResponseSummary | null;
 }
 
-// Aba "Saúde" (09-08-2026, Bloco H do prompt de uma IA) - recebe o
-// mesmo estado que a faixa de saúde da Visão Geral já calcula (não refaz a
-// requisição). uma IA sugeriu mostrar "última migration aplicada"
-// lendo uma tabela `schema_migrations` - CONFERIDO contra o banco real
-// antes de implementar: essa tabela NÃO EXISTE neste projeto (o histórico
-// de mudança de schema vive nos arquivos numerados 01-08 + `ATUALIZAR O
-// SUPABASE.sql`, não numa tabela de controle de migration formal) - por
-// isso esse item não está aqui. Mostrar um dado fabricado seria pior que
-// não mostrar nada.
+// Aba "Saúde": recebe o mesmo estado que a faixa de saúde da Visão Geral já calcula (não refaz a requisição).
+// Não mostra "última migration aplicada": o projeto não tem uma tabela de controle de migration em uso (o
+// histórico de mudança de schema vive nos arquivos numerados 01-08 + `ATUALIZAR O SUPABASE.sql`). Mostrar um
+// dado fabricado seria pior que não mostrar nada.
 export function DashboardSaude({ bancoConectado, resumo }: DashboardSaudeProps) {
   return (
     <div className="space-y-4">

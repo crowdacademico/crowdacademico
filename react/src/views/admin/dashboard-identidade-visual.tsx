@@ -1,10 +1,7 @@
-// Aba "Identidade Visual" (09-08-2026, Bloco H) - placeholder HONESTO, não
-// fingido: o caminho já está desenhado (configuracoes ganharia as chaves
-// 'logo_id_arquivo'/'favicon_id_arquivo', apontando pra uma linha de
-// `arquivo` - zero tabela nova, mesmo padrão de id_imagem_perfil em
-// usuario). `25-arquivo` (upload) já existe hoje - o que falta não é mais
-// o upload em si, é construir a tela de gerenciar logo/favicon que
-// consumiria ele; ninguém pediu essa tela ainda.
+// Aba "Identidade Visual": placeholder HONESTO, não fingido. O caminho já está desenhado: `configuracoes`
+// ganharia as chaves 'logo_id_arquivo'/'favicon_id_arquivo', apontando para uma linha de `arquivo` (zero tabela
+// nova, mesmo padrão de id_imagem_perfil em usuario). `25-arquivo` (upload) já existe; o que falta é construir
+// a tela de gerenciar logo/favicon que consumiria ele.
 export function DashboardIdentidadeVisual() {
   return (
     <div className="fundo-cartao border borda-forte rounded-xl shadow-sm p-8 text-center">

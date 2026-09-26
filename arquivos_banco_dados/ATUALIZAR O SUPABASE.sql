@@ -2153,3 +2153,338 @@ DROP POLICY IF EXISTS pol_log_auditoria_select ON public.log_auditoria;
 CREATE POLICY pol_log_auditoria_select ON public.log_auditoria FOR SELECT TO app_nestjs USING (
     (SELECT public.tem_permissao('log_visualizar')) OR id_usuario_responsavel = (SELECT public.id_usuario_atual())
 );
+
+-- ############################################################################
+-- 25-09-2026 - GRUPO I: papéis só do dono ou de quem gerencia papéis, e dashboard só com permissão (idempotente)
+-- Achado do teste com Playwright: uma pesquisadora comum lia usuario_papel de todo mundo e o /dashboard/resumo.
+-- 1) pol_usuariopapel_select deixa de ser USING (true). 2) contar_metricas_dashboard() passa a exigir
+-- relatorio_visualizar (ERRCODE 92011, mesmo tipo de retorno, então CREATE OR REPLACE basta). Cole DEPOIS do Grupo H.
+-- ############################################################################
+
+DROP POLICY IF EXISTS pol_usuariopapel_select ON usuario_papel;
+CREATE POLICY pol_usuariopapel_select ON usuario_papel FOR SELECT TO app_nestjs USING (
+    id_usuario = (SELECT public.id_usuario_atual()) OR (SELECT public.tem_permissao('papel_gerenciar'))
+);
+
+CREATE OR REPLACE FUNCTION public.contar_metricas_dashboard()
+RETURNS TABLE (
+    total_usuarios                 INT,
+    total_pesquisadores            INT,
+    total_papeis                   INT,
+    total_permissoes                INT,
+    total_configuracoes            INT,
+    total_campanhas                INT,
+    sessoes_ativas                  INT,
+    campanhas_ativas                INT,
+    campanhas_sucesso               INT,
+    campanhas_nao_atingida          INT,
+    campanhas_aguardando_aprovacao  INT,
+    valor_total_arrecadado          DECIMAL(14,2),
+    denuncias_pendentes             INT,
+    campanhas_para_revisao_score    INT
+)
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    IF NOT public.tem_permissao('relatorio_visualizar') THEN
+        RAISE EXCEPTION 'Sem permissão para ver as métricas do painel.' USING ERRCODE = '92011';
+    END IF;
+    RETURN QUERY SELECT
+        (SELECT count(*)::INT FROM usuario WHERE deletado = FALSE),
+        (SELECT count(DISTINCT up.id_usuario)::INT
+           FROM usuario_papel up
+           JOIN papel p ON p.id_papel = up.id_papel
+          WHERE p.codigo = 'pesquisador'),
+        (SELECT count(*)::INT FROM papel),
+        (SELECT count(*)::INT FROM permissao),
+        (SELECT count(*)::INT FROM configuracoes),
+        (SELECT count(*)::INT FROM campanha),
+        (SELECT count(*)::INT FROM sessao WHERE revogado_em IS NULL AND expira_em > now()),
+        (SELECT count(*)::INT FROM campanha WHERE status = 'ativo'),
+        (SELECT count(*)::INT FROM campanha WHERE status = 'sucesso'),
+        (SELECT count(*)::INT FROM campanha WHERE status = 'nao_atingido'),
+        (SELECT count(*)::INT FROM campanha WHERE status = 'aguardando_aprovacao'),
+        (SELECT COALESCE(SUM(valor_bruto_arrecadado), 0)::DECIMAL(14,2) FROM campanha),
+        (SELECT count(*)::INT FROM denuncia WHERE status = 'pendente'),
+        (SELECT count(*)::INT FROM campanha c
+          WHERE c.status = 'aguardando_aprovacao' AND public.fn_precisa_revisao_score(c.id_usuario));
+END;
+$$;
+
+-- ############################################################################
+-- 26-09-2026 - GRUPO J: INSERT em usuario só nas colunas que o cadastro envia (idempotente)
+-- Antes o app_nestjs tinha INSERT na tabela inteira: o banco aceitaria um INSERT já com email_verificado = TRUE,
+-- deletado, bloqueio ou suspensão preenchidos, e só o DTO do Nest impedia. Agora só nome, email, senha_hash e
+-- id_imagem_perfil; as demais colunas nascem do DEFAULT. Cole DEPOIS do Grupo I.
+-- ############################################################################
+
+REVOKE INSERT ON public.usuario FROM app_nestjs;
+GRANT INSERT (nome, email, senha_hash, id_imagem_perfil) ON public.usuario TO app_nestjs;
+
+-- ############################################################################
+-- 26-09-2026 - GRUPO K: ordem_endosso calculada no banco, sob lock por campanha (idempotente)
+-- O Nest fazia MAX(ordem_endosso) + 1 num SELECT separado: dois endossos ao mesmo tempo geravam ordem repetida (e o
+-- limite de endossos podia ser ultrapassado). Agora a trigger de autoria do endosso (que roda antes da do limite)
+-- calcula a ordem sob pg_advisory_xact_lock por campanha; a do limite passa a olhar NEW.endossado. Só CREATE OR REPLACE
+-- de duas funções, as triggers existentes continuam apontando para elas. Cole DEPOIS do Grupo J e ANTES de subir o Nest novo.
+-- ############################################################################
+
+CREATE OR REPLACE FUNCTION validar_comentario_endosso_autor()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_id_usuario_campanha INT;
+BEGIN
+    IF NEW.endossado IS DISTINCT FROM OLD.endossado THEN
+        SELECT id_usuario INTO v_id_usuario_campanha
+        FROM campanha
+        WHERE id_campanha = OLD.id_campanha;
+
+        IF NOT (
+            v_id_usuario_campanha = public.id_usuario_atual()
+            OR public.tem_permissao('comentario_moderar')
+        ) THEN
+            RAISE EXCEPTION 'Só o pesquisador criador da campanha (ou moderação) pode endossar/remover endosso de um comentário.'
+                USING ERRCODE = '92008';
+        END IF;
+
+        -- Ordem de endosso (26-09-2026): calculada aqui, sob lock por campanha, e não mais no Nest.
+        -- Precisa rodar ANTES de trg_comentario_limite_endosso (ordem alfabética dos nomes).
+        IF NEW.endossado THEN
+            PERFORM pg_advisory_xact_lock(92008, OLD.id_campanha);
+            SELECT COALESCE(MAX(ordem_endosso), 0) + 1 INTO NEW.ordem_endosso
+            FROM comentario
+            WHERE id_campanha = OLD.id_campanha AND ativo = TRUE AND id_comentario <> OLD.id_comentario;
+        ELSE
+            NEW.ordem_endosso := NULL;
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION validar_comentario_endosso()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_count integer;
+    v_limite integer;
+BEGIN
+    IF NEW.endossado IS TRUE OR NEW.ordem_endosso IS NOT NULL THEN
+        v_limite := public.config_numero('limite_endossos_campanha', 4);
+
+        -- CORRIGIDO: comentario ganhou soft delete (coluna "ativo") para
+        -- remoção por moderação. Sem o filtro abaixo, um comentário
+        -- endossado que foi removido por moderação continuava ocupando
+        -- para sempre uma das vagas de endosso da campanha.
+        SELECT COUNT(*) INTO v_count
+        FROM comentario
+        WHERE id_campanha = NEW.id_campanha
+          AND ordem_endosso IS NOT NULL
+          AND ativo = TRUE
+          AND id_comentario <> COALESCE(NEW.id_comentario, -1);
+
+        IF v_count >= v_limite THEN
+            RAISE EXCEPTION 'Campanha já atingiu o limite máximo de % endossos ativos', v_limite
+                USING ERRCODE = '91021';
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+-- ############################################################################
+-- 26-09-2026 - GRUPO L: campos bloqueados da campanha numa função só (idempotente)
+-- fn_campanha_campos_bloqueados devolve a lista de campos travados (aprovada em diante, rejeitada sem reenvios, datas depois
+-- de começar); a trigger de congelamento passa a percorrer essa lista em vez de ter um IF por campo, e GET /campanha/:id devolve
+-- a mesma lista (camposBloqueados). Mesmos códigos e mensagens de antes (91004 a 91010, 91023, 91024, 91027). A trigger existente
+-- continua apontando para a função. Cole DEPOIS do Grupo K e ANTES de subir o Nest novo.
+-- ############################################################################
+
+-- Campos de campanha que o congelamento trava agora, na ordem em que a trigger confere (26-09-2026). Fonte única para a
+-- trigger fn_congela_regras_campanha e para GET /campanha/:id (camposBloqueados); ver DOCUMENTACAO_BD.md [05-K-2-D].
+CREATE OR REPLACE FUNCTION public.fn_campanha_campos_bloqueados(p public.campanha)
+RETURNS TEXT[]
+LANGUAGE sql
+STABLE
+AS $$
+    SELECT CASE
+        WHEN p.status = 'rejeitado' AND public.fn_campanha_reenvios_esgotados(p.id_campanha) THEN
+            ARRAY['titulo', 'descricao', 'meta_financeira', 'modelo', 'data_inicio', 'data_fim',
+                  'id_area_conhecimento', 'video_apresentacao_url']
+        WHEN public.fn_status_pos_aprovacao(p.status) THEN
+            ARRAY['meta_financeira', 'modelo', 'taxa_plataforma', 'titulo', 'descricao',
+                  'video_apresentacao_url', 'id_area_conhecimento']
+            || CASE WHEN p.data_inicio IS NOT NULL AND p.data_inicio <= NOW()
+                    THEN ARRAY['data_fim', 'data_inicio'] ELSE ARRAY[]::TEXT[] END
+        ELSE ARRAY[]::TEXT[]
+    END;
+$$;
+
+-- Código e mensagem de cada campo congelado (os mesmos de sempre, 91004 a 91010, 91023, 91024 e 91027 na rejeitada esgotada).
+CREATE OR REPLACE FUNCTION public.fn_campanha_erro_congelamento(p_campo TEXT, p_rejeitada BOOLEAN)
+RETURNS TABLE (errcode TEXT, mensagem TEXT)
+LANGUAGE sql
+IMMUTABLE
+AS $$
+    SELECT '91027', 'Esta campanha rejeitada já usou todos os reenvios permitidos e agora é somente leitura.'
+    WHERE p_rejeitada
+    UNION ALL
+    SELECT v.errcode, v.mensagem
+    FROM (VALUES
+        ('meta_financeira',       '91004', 'Fraude bloqueada: não é permitido alterar a meta financeira após a aprovação da campanha.'),
+        ('modelo',                '91005', 'Fraude bloqueada: não é permitido alterar o modelo de financiamento após a aprovação da campanha.'),
+        ('taxa_plataforma',       '91006', 'Operação bloqueada: a taxa da plataforma não pode ser alterada após o congelamento.'),
+        ('titulo',                '91007', 'Fraude bloqueada: não é permitido alterar o título após a aprovação da campanha.'),
+        ('descricao',             '91008', 'Fraude bloqueada: não é permitido alterar a descrição após a aprovação da campanha.'),
+        ('video_apresentacao_url','91023', 'Fraude bloqueada: não é permitido alterar o vídeo de apresentação após a aprovação da campanha.'),
+        ('id_area_conhecimento',  '91024', 'Operação bloqueada: a área do conhecimento não pode ser alterada após a aprovação da campanha.'),
+        ('data_fim',              '91009', 'Operação bloqueada: o prazo da campanha não pode ser alterado depois que ela começa de verdade.'),
+        ('data_inicio',           '91010', 'Operação bloqueada: a data de início da campanha não pode ser alterada depois que ela começa de verdade.')
+    ) AS v(campo, errcode, mensagem)
+    WHERE NOT p_rejeitada AND v.campo = p_campo;
+$$;
+
+CREATE OR REPLACE FUNCTION fn_congela_regras_campanha()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_campo TEXT;
+    v_erro  RECORD;
+BEGIN
+    -- A lista de campos travados e o código/mensagem de cada um moram em fn_campanha_campos_bloqueados e
+    -- fn_campanha_erro_congelamento (a mesma lista alimenta GET /campanha/:id). A comparação usa to_jsonb, que
+    -- trata NULL como o IS DISTINCT FROM de antes (taxa_plataforma e data_inicio são nullable).
+    FOREACH v_campo IN ARRAY public.fn_campanha_campos_bloqueados(OLD) LOOP
+        IF (to_jsonb(NEW) -> v_campo) IS DISTINCT FROM (to_jsonb(OLD) -> v_campo) THEN
+            SELECT * INTO v_erro FROM public.fn_campanha_erro_congelamento(v_campo, OLD.status = 'rejeitado');
+            RAISE EXCEPTION '%', v_erro.mensagem USING ERRCODE = v_erro.errcode;
+        END IF;
+    END LOOP;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+REVOKE EXECUTE ON FUNCTION public.fn_campanha_campos_bloqueados(public.campanha) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.fn_campanha_campos_bloqueados(public.campanha) TO app_nestjs;
+REVOKE EXECUTE ON FUNCTION public.fn_campanha_erro_congelamento(TEXT, BOOLEAN) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.fn_campanha_erro_congelamento(TEXT, BOOLEAN) TO app_nestjs;
+
+-- ############################################################################
+-- 26-09-2026 - GRUPO M: as tarefas agendadas do banco processam uma linha por vez (idempotente)
+-- encerrar_campanhas_vencidas, expirar_campanhas_rejeitadas e reativar_pesquisadores_vencidos faziam um comando só sobre todas as
+-- linhas: uma linha recusada por uma trigger derrubava o lote inteiro em todo ciclo. Agora cada linha tem o seu bloco de exceção;
+-- a falha vira WARNING no log do Postgres e a linha é tentada de novo no ciclo seguinte. Mesma assinatura e mesmo resultado (INT),
+-- então só CREATE OR REPLACE. Cole DEPOIS do Grupo L.
+-- ############################################################################
+
+CREATE OR REPLACE FUNCTION public.encerrar_campanhas_vencidas()
+RETURNS INT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_encerradas INT := 0;
+    v_linhas     INT;
+    v_id         INT;
+BEGIN
+    -- Linha a linha (26-09-2026): uma campanha que uma trigger recuse não impede as outras de encerrar. A falha vira
+    -- WARNING nos logs do Postgres e a campanha é tentada de novo no ciclo seguinte. Ver DOCUMENTACAO_BD.md [05-K-2-E].
+    FOR v_id IN
+        SELECT c.id_campanha FROM campanha c
+        WHERE c.status = 'ativo' AND c.data_fim IS NOT NULL AND c.data_fim <= NOW()
+        ORDER BY c.id_campanha
+    LOOP
+        BEGIN
+            UPDATE campanha
+            SET status = (CASE
+                WHEN valor_bruto_arrecadado >= meta_financeira THEN 'sucesso'
+                ELSE 'nao_atingido'
+            END)::status_campanha
+            WHERE id_campanha = v_id AND status = 'ativo';
+            GET DIAGNOSTICS v_linhas = ROW_COUNT;
+            v_encerradas := v_encerradas + v_linhas;
+        EXCEPTION WHEN OTHERS THEN
+            RAISE WARNING 'encerrar_campanhas_vencidas: campanha % ignorada neste ciclo (% / %)', v_id, SQLSTATE, SQLERRM;
+        END;
+    END LOOP;
+
+    RETURN v_encerradas;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.expirar_campanhas_rejeitadas()
+RETURNS INT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_expiradas INT := 0;
+    v_linhas    INT;
+    v_id        INT;
+BEGIN
+    -- Linha a linha (26-09-2026): ver encerrar_campanhas_vencidas e DOCUMENTACAO_BD.md [05-K-2-E].
+    FOR v_id IN
+        SELECT c.id_campanha FROM campanha c
+        WHERE c.status = 'rejeitado'
+          AND (SELECT s.prazo_reenvio_ate FROM public.fn_campanha_situacao_reenvio(c.id_campanha) s) <= NOW()
+          AND NOT EXISTS (SELECT 1 FROM denuncia d                 WHERE d.id_campanha_alvo = c.id_campanha)
+          AND NOT EXISTS (SELECT 1 FROM contribuicao ct            WHERE ct.id_campanha     = c.id_campanha)
+          AND NOT EXISTS (SELECT 1 FROM repasse r                  WHERE r.id_campanha      = c.id_campanha)
+          AND NOT EXISTS (SELECT 1 FROM solicitacao_encerramento s WHERE s.id_campanha      = c.id_campanha)
+        ORDER BY c.id_campanha
+    LOOP
+        BEGIN
+            DELETE FROM campanha WHERE id_campanha = v_id AND status = 'rejeitado';
+            GET DIAGNOSTICS v_linhas = ROW_COUNT;
+            v_expiradas := v_expiradas + v_linhas;
+        EXCEPTION WHEN OTHERS THEN
+            RAISE WARNING 'expirar_campanhas_rejeitadas: campanha % ignorada neste ciclo (% / %)', v_id, SQLSTATE, SQLERRM;
+        END;
+    END LOOP;
+
+    RETURN v_expiradas;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.reativar_pesquisadores_vencidos()
+RETURNS INT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_reativados INT := 0;
+    v_linhas     INT;
+    v_id         INT;
+BEGIN
+    -- Linha a linha (26-09-2026): ver encerrar_campanhas_vencidas e DOCUMENTACAO_BD.md [05-K-2-E].
+    FOR v_id IN
+        SELECT p.id_usuario FROM perfil_pesquisador p
+        WHERE p.status_pesquisador = 'suspenso' AND p.suspenso_ate IS NOT NULL AND p.suspenso_ate <= NOW()
+        ORDER BY p.id_usuario
+    LOOP
+        BEGIN
+            UPDATE perfil_pesquisador
+            SET status_pesquisador = 'ativo',
+                suspenso_ate = NULL,
+                motivo_suspensao = NULL,
+                suspenso_por = NULL
+            WHERE id_usuario = v_id AND status_pesquisador = 'suspenso';
+            GET DIAGNOSTICS v_linhas = ROW_COUNT;
+            v_reativados := v_reativados + v_linhas;
+        EXCEPTION WHEN OTHERS THEN
+            RAISE WARNING 'reativar_pesquisadores_vencidos: pesquisador % ignorado neste ciclo (% / %)', v_id, SQLSTATE, SQLERRM;
+        END;
+    END LOOP;
+
+    RETURN v_reativados;
+END;
+$$;

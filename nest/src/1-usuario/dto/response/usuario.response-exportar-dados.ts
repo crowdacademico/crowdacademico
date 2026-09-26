@@ -1,12 +1,10 @@
-// LGPD Art. 18 (portabilidade/acesso) - item 3 de PROXIMOS_PASSOS.md,
-// desenhado em conversa entre o Lucas e apoio de IA (05-09-2026). Um objeto por seção, cada seção como array (mesmo vazio,
-// nunca ausente) - fica claro pra quem lê o JSON o que foi verificado e não
-// tinha nada, contra o que nem foi incluído de propósito.
+// LGPD Art. 18 (portabilidade/acesso), RF-016: exportação de dados. Um objeto por seção, cada seção como array
+// (mesmo vazio, nunca ausente): fica claro a quem lê o JSON o que foi verificado e não tinha nada, contra o que
+// nem foi incluído de propósito.
 //
-// O QUE NÃO ENTRA, de propósito (dado de TERCEIRO, não do titular):
-// denúncias feitas CONTRA ele (revelaria/permitiria deduzir quem denunciou),
-// comentários de OUTRAS pessoas nas campanhas dele, log de auditoria
-// (carrega identidade de quem administrou, não do titular).
+// O QUE NÃO ENTRA, de propósito (dado de TERCEIRO, não do titular): denúncias feitas CONTRA ele
+// (revelaria/permitiria deduzir quem denunciou), comentários de OUTRAS pessoas nas campanhas dele, log de
+// auditoria (carrega identidade de quem administrou, não do titular).
 export class UsuarioResponseExportarDados {
   geradoEm: Date;
   secoesIncluidas: string[];

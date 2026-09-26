@@ -27,31 +27,18 @@ import type {
   PerfilPesquisadorResponseSuspend,
 } from '../../services/6-perfil-pesquisador/type/perfil-pesquisador.type';
 
-// Minha Conta (09-08-2026, Bloco E do prompt de uma IA) - não é um
-// formulário só, é uma área com seções independentes, cada uma salva por
-// conta própria.
+// Minha Conta: não é um formulário só, é uma área com seções independentes, cada uma salva por conta própria.
 //
-// SEM SEÇÃO "Preferências" de propósito (existiu entre 09 e 10-08-2026,
-// removida no mesmo dia) - decisão do Lucas com a Alexia: preferência
-// pessoal (tema/fonte) por conta exigiria uma tabela própria pra guardar
-// isso direito, e "estamos com tabelas demais no momento". Tema/fonte
-// continuam ajustáveis, só que de novo só pelos botões do cabeçalho
-// (ControleTema/ControleFonte), preferência de DISPOSITIVO via
-// localStorage, sem ligação nenhuma com a conta logada.
+// SEM seção "Preferências" de propósito: preferência pessoal (tema/fonte) por conta exigiria uma tabela própria
+// para guardar isso direito (o projeto já tem tabelas demais). Tema/fonte são ajustáveis só pelos botões do
+// cabeçalho (ControleTema/ControleFonte), preferência de DISPOSITIVO via localStorage, sem ligação nenhuma com
+// a conta logada.
 //
-// REDESENHADO (11-08-2026, pedido do Lucas: "portfólio profissional",
-// referência ORCID/ResearchGate/Google Acadêmico - abrem com uma FAIXA DE
-// IDENTIDADE larga no topo, não um cartãozinho de canto) - a versão
-// anterior (10-08-2026) tinha 2 colunas: 5 seções empilhadas + um
-// CartaoPerfil lateral pequeno tentando fazer de âncora visual. Duas
-// falhas de raiz: (1) 5 <Painel> com o MESMO peso visual empilhados =
-// parece formulário longo, não perfil; (2) CartaoPerfil discreto demais
-// pra ancorar a tela. Virou: FaixaIdentidade (larga, topo, reúne o que
-// antes estava espalhado entre CartaoPerfil e cada seção - avatar grande,
-// nome, e-mail, badges de papel, "membro desde") + abas de verdade (rota
-// /admin/minha-conta/:aba, não useState - mesma decisão já tomada quando
-// as abas do painel admin viraram rota) substituindo a pilha de 5
-// <Painel>. CartaoPerfil foi eliminado (virou redundante com a faixa).
+// Estrutura (referência ORCID/ResearchGate/Google Acadêmico: "portfólio profissional", abrem com uma FAIXA DE
+// IDENTIDADE larga no topo, não um cartãozinho de canto): FaixaIdentidade (larga, topo: avatar grande, nome,
+// e-mail, badges de papel, "membro desde") + abas de verdade (rota /admin/minha-conta/:aba, não useState: mesma
+// decisão das abas do painel admin). Cinco <Painel> com o MESMO peso visual empilhados parecem um formulário
+// longo, não um perfil, e um cartão lateral discreto não ancora a tela.
 const ABAS_MINHA_CONTA = [
   { chave: 'perfil', rotulo: 'Perfil', icone: 'fa-user' },
   { chave: 'seguranca', rotulo: 'Segurança', icone: 'fa-shield-halved' },
@@ -72,18 +59,13 @@ export function MinhaConta({ auth }: PropsPagina) {
   }
 
   return (
-    // `w-0 min-w-full` (11-08-2026, achado ao vivo no mobile) - não é
-    // decorativo: sem isso, a barra de abas logo abaixo (overflow-x-auto,
-    // com rótulo em whitespace-nowrap pra não quebrar linha) faz o
-    // NAVEGADOR calcular a largura mínima deste bloco pelo CONTEÚDO da
-    // barra (~600px) e empurra a página inteira pra largura horizontal,
-    // em vez do próprio nav rolar sozinho - mesmo em telas pequenas.
-    // `width: 0` tira este bloco do cálculo de "largura mínima pelo
-    // conteúdo" (passa a ter uma largura EXPLÍCITA, não automática);
-    // `min-width: 100%` devolve ele pro tamanho normal (cheio do
-    // container, até o teto do max-w-5xl) na hora de desenhar de
-    // verdade. Resultado igual a antes em qualquer largura de tela, só
-    // que agora sem vazar - troque só se remover a barra de abas.
+    // `w-0 min-w-full`: não é decorativo. Sem isso, a barra de abas logo abaixo (overflow-x-auto, com rótulo em
+    // whitespace-nowrap para não quebrar linha) faz o NAVEGADOR calcular a largura mínima deste bloco pelo
+    // CONTEÚDO da barra (~600px) e empurra a página inteira para a largura horizontal, em vez do próprio nav
+    // rolar sozinho, mesmo em telas pequenas. `width: 0` tira este bloco do cálculo de "largura mínima pelo
+    // conteúdo" (passa a ter uma largura EXPLÍCITA, não automática); `min-width: 100%` devolve ele ao tamanho
+    // normal (cheio do container, até o teto do max-w-5xl) na hora de desenhar de verdade. Troque só se remover
+    // a barra de abas.
     <div className="w-0 min-w-full max-w-5xl mx-auto p-4 sm:p-8">
       {/* Um cartão só, do topo ao rodapé - SEM overflow-hidden (mesma
           lição já aprendida em cartao-formulario.tsx/ficha-consulta.tsx:
@@ -109,12 +91,9 @@ export function MinhaConta({ auth }: PropsPagina) {
   );
 }
 
-// Faixa de identidade - substitui o <h2>Minha Conta</h2> solto E o antigo
-// CartaoPerfil lateral (10-08-2026, agora redundante). Busca papéis por
-// conta própria, mesmo espírito de sempre neste arquivo: a lista de
-// papéis de uma pessoa é minúscula, duplicar essa requisição pequena é
-// mais simples e mais seguro do que subir estado - a aba Papéis (abaixo)
-// também busca a sua própria cópia, cada uma no seu tempo de vida.
+// Faixa de identidade: busca papéis por conta própria, mesmo espírito de sempre neste arquivo: a lista de
+// papéis de uma pessoa é minúscula, duplicar essa requisição pequena é mais simples e mais seguro do que subir
+// estado (a aba Papéis, abaixo, também busca a sua própria cópia, cada uma no seu tempo de vida).
 interface FaixaIdentidadeProps {
   auth: Pick<UseAuthReturn, 'usuario' | 'authFetch'>;
 }
@@ -192,10 +171,8 @@ function FaixaIdentidade({ auth }: FaixaIdentidadeProps) {
   );
 }
 
-// Abas de verdade, não useState (11-08-2026, pedido explícito do Lucas:
-// "O projeto JÁ tomou essa decisão antes", quando as abas do painel admin
-// viraram rota) - link direto funciona, F5 preserva a aba, botão Voltar
-// navega. `overflow-x-auto` (não empilha) no mobile - pedido explícito.
+// Abas de verdade, não useState (mesma decisão das abas do painel admin): link direto funciona, F5 preserva a
+// aba, botão Voltar navega. `overflow-x-auto` (não empilha) no mobile.
 interface BarraAbasProps {
   abaAtiva: string;
 }
@@ -249,10 +226,9 @@ function AbaPerfil({ auth }: AbaPerfilProps) {
   const { mostrar } = useToast();
   const { erro, reportarErro, limparErro } = useErroToast();
 
-  // Mesmo padrão de 3 estados de modal-usuario.tsx (25-08-2026, módulo
-  // 25-arquivo + botão "Remover foto"): `undefined` = nenhuma escolha nova
-  // (mostra a foto que já existe), número = foto nova (upload já
-  // confirmado, só falta linkar no PATCH), `null` = removida de propósito.
+  // Mesmo padrão de 3 estados de modal-usuario.tsx (botão "Remover foto"): `undefined` = nenhuma escolha nova
+  // (mostra a foto que já existe), número = foto nova (upload já confirmado, só falta linkar no PATCH), `null`
+  // = removida de propósito.
   const [idImagemPerfilNovo, setIdImagemPerfilNovo] = useState<number | null | undefined>(undefined);
   const [avatarUrlNovo, setAvatarUrlNovo] = useState<string | null>(null);
 
@@ -405,11 +381,8 @@ function iconePorDispositivo(userAgent: string | null): string {
   return 'fa-desktop';
 }
 
-// 2. SEGURANÇA - senha (exige a atual) + Sessões Ativas (o item de maior
-// impacto percebido, segundo uma IA, 10-08-2026). Polimento
-// (11-08-2026): ícone de dispositivo por sessão, "sessão atual" já vem
-// destacada em verde (badge-sucesso), encerrar virou ícone discreto em
-// vez de botão cheio - antes era uma <ul> crua.
+// 2. SEGURANÇA: senha (exige a atual) + Sessões Ativas (ícone de dispositivo por sessão, "sessão atual" já vem
+// destacada em verde (badge-sucesso), encerrar é um ícone discreto em vez de botão cheio).
 interface AbaSegurancaProps {
   auth: Pick<UseAuthReturn, 'usuario' | 'authFetch'>;
 }
@@ -448,9 +421,8 @@ function AbaSeguranca({ auth }: AbaSegurancaProps) {
   const [sessoes, setSessoes] = useState<SessaoResponse[] | null>(null);
   const [encerrando, setEncerrando] = useState<number | null>(null);
   const [encerrandoTodas, setEncerrandoTodas] = useState(false);
-  // Colapsada por padrão (10-08-2026, achado do Lucas: "imagina se o
-  // usuário tiver 10, 20, 30 sessões abertas"). Expandida, a lista ainda
-  // ganha scroll próprio (max-h-64) - nunca empurra a página.
+  // Colapsada por padrão: imagine um usuário com 10, 20, 30 sessões abertas. Expandida, a lista ainda ganha
+  // scroll próprio (max-h-64): nunca empurra a página.
   const [sessoesAbertas, setSessoesAbertas] = useState(false);
 
   const carregarSessoes = () => {
@@ -576,12 +548,9 @@ function AbaSeguranca({ auth }: AbaSegurancaProps) {
                     }
                   ></i>
                   <div className="min-w-0 flex-1">
-                    {/* truncate no <span> do texto, não no <p> inteiro
-                        (11-08-2026, achado ao vivo: user-agent de verdade
-                        é longo, e `truncate` num flex container com 2
-                        filhos corta a linha inteira sem dar espaço pro
-                        badge - "Esta sessão" sumia. Mesma família do
-                        achado de min-w-0/break-words em CampoFicha.) */}
+                    {/* truncate no <span> do texto, não no <p> inteiro: user-agent de verdade é longo, e
+                        `truncate` num flex container com 2 filhos corta a linha inteira sem dar espaço para
+                        o badge ("Esta sessão" sumia). Mesma família de min-w-0/break-words em CampoFicha. */}
                     <p className="texto-forte flex items-center gap-2 min-w-0">
                       <span className="truncate min-w-0">
                         {sessao.userAgent ?? 'Dispositivo desconhecido'}
@@ -661,18 +630,11 @@ function AbaPapeis({ auth }: AbaPapeisProps) {
   );
 }
 
-// 4. ACADÊMICO - construída de verdade (07-09-2026, decisão do Lucas ao
-// mesmo tempo em que "suspender só o poder de pesquisador" ganhou motivo +
-// prazo): quem é suspenso PRECISA ver o motivo em algum lugar próprio, não
-// só descobrir tentando fazer algo e sendo barrado sem explicação (a
-// suspensão de pesquisador NUNCA bloqueia login - a pessoa continua tendo
-// acesso normal a Minha Conta). Antes disto, esta aba era só um
-// placeholder demonstrativo escrito antes do módulo 6-perfil-pesquisador
-// existir (10-08-2026) - nunca tinha sido atualizada depois. Não existe
-// (ainda) um formulário de "tornar-se pesquisador" em lugar nenhum do app
-// real (só o Campo de Testes, T1, faz esse POST) - fora do escopo deste
-// pedido, por isso quem não é pesquisador só vê um aviso honesto, sem
-// convite pra virar um.
+// 4. ACADÊMICO: quem é suspenso PRECISA ver o motivo em algum lugar próprio, não só descobrir tentando fazer
+// algo e sendo barrado sem explicação (a suspensão de pesquisador NUNCA bloqueia login: a pessoa continua tendo
+// acesso normal a Minha Conta). Não existe (ainda) um formulário de "tornar-se pesquisador" em lugar nenhum do
+// app real (só o Campo de Testes, T1, faz esse POST), por isso quem não é pesquisador só vê um aviso honesto,
+// sem convite para virar um.
 interface AbaAcademicoProps {
   auth: Pick<UseAuthReturn, 'usuario' | 'authFetch'>;
 }

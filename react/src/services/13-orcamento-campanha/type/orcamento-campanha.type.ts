@@ -1,10 +1,6 @@
-// Espelha nest/src/13-orcamento-campanha/dto/response/orcamento-campanha.response.ts.
-// Extraído (23-09-2026) de dentro de bancada-campanha.tsx, onde vivia como
-// `interface ItemOrcamento` local, com o shape inferido do próprio uso -
-// nenhuma outra tela ainda consumia. Agora espelha o DTO real (inclui
-// descricao/ordem/criadoEm, que a bancada não usa hoje, mas que existem
-// no backend), pra qualquer tela nova poder importar o tipo completo em
-// vez de redeclarar um subconjunto.
+// Espelha nest/src/13-orcamento-campanha/dto/response/orcamento-campanha.response.ts, o DTO real completo
+// (inclui descricao/ordem/criadoEm, que a bancada não usa hoje, mas existem no backend), para qualquer tela
+// nova poder importar o tipo completo em vez de redeclarar um subconjunto.
 export interface OrcamentoCampanhaResponse {
   idOrcamento: number;
   idCampanha: number;

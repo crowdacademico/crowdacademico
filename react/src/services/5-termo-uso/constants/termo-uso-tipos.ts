@@ -1,9 +1,8 @@
 import type { TipoTermo } from '../type/termo-uso.type';
 
-// Tradução code -> rótulo amigável (13-09-2026), mesmo espírito de
-// permissao-nomes-amigaveis.ts - `tipo` é o identificador estável usado
-// pelo banco (enum tipo_termo, 01_extensoes_enums_tabelas.sql), esta
-// tabela é só a camada de exibição.
+// Tradução code -> rótulo amigável, mesmo espírito de permissao-nomes-amigaveis.ts: `tipo` é o identificador
+// estável usado pelo banco (enum tipo_termo, 01_extensoes_enums_tabelas.sql), esta tabela é só a camada de
+// exibição.
 export const TIPOS_TERMO: TipoTermo[] = ['cadastro', 'contribuicao', 'upgrade_pesquisador'];
 
 export const ROTULO_TIPO_TERMO: Record<TipoTermo, string> = {

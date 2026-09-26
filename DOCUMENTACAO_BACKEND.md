@@ -572,7 +572,7 @@ export class CampanhaServiceCreate {
 - **`best-effort` com log, nunca em silêncio.** A limpeza da foto antiga é `.catch()` com `logger.warn` - uma falha ali não pode travar a atualização de nome/senha. O comentário registra o achado que motivou o log: arquivo órfão apareceu no bucket sem **nenhum** rastro do motivo. *Best-effort não é o mesmo que invisível.*
 - **`UPDATE` sem coluna nenhuma é SQL inválido** - o service devolve 400 claro em vez de deixar o Postgres estourar erro de sintaxe.
 
-**`ComentarioServiceCreate`** - cálculo que a trigger não faz. A trigger `validar_comentario_endosso` valida a **contagem** contra o limite configurado, mas não **calcula** o próximo `ordem_endosso`; o service faz `MAX(ordem_endosso)+1`. ⚠️ Corrida teórica assumida (duas pessoas endossando ao mesmo tempo podem calcular o mesmo número), aceita pelo volume baixo - registrado tanto no comentário quanto em `PENDENCIAS e correcoes.md`, item 747. A solução, se virar problema real, é mover o cálculo para uma trigger `BEFORE INSERT`.
+**`ComentarioServiceUpdate`** - não calcula mais `ordem_endosso` (26-09-2026). Ao endossar, a trigger `validar_comentario_endosso_autor` calcula `MAX(ordem_endosso) + 1` da campanha sob `pg_advisory_xact_lock` (dois endossos ao mesmo tempo na mesma campanha ficam em fila e não repetem o número nem passam do limite), e ao remover o endosso zera a ordem; o service só manda `endossado`. Como o `UPDATE` que não afeta linha nenhuma pode ser "não existe" ou "a RLS barrou", o service usa `distinguir404ou403` (sem o `SELECT` prévio que existia só para achar a campanha). A trigger de limite (`validar_comentario_endosso`) confere `NEW.endossado`, para não depender de a ordem já estar calculada.
 
 **`CampanhaServiceEncerrarVencidas`** (05-09-2026, RF-057) - o único service do projeto que roda **fora** do pipeline HTTP, e por isso o único que não usa `DatabaseService.getDb()`:
 
@@ -622,7 +622,7 @@ Os 5 têm `try/catch` com `logger.error` (incluindo o nome do job). Motivo: o `@
 **Ciclo de vida da campanha no Nest** (ver `DOCUMENTACAO_BD.md`, [05-K-2-B], para as regras; o Nest só expõe os endpoints e deixa o banco decidir):
 - `POST /campanha/:id/enviar` (`CampanhaServiceEnviar`): `rascunho -> aguardando_aprovacao` e o reenvio `rejeitado -> aguardando_aprovacao`, no mesmo endpoint. Não repete nenhuma validação: completude, prazo, reenvios, suspensão e limite de simultâneas saem do banco com ERRCODE próprio (90009 a 90011, 90015, 91025, 91026, 92009, 91018).
 - `POST /campanha/:id/deslizar-datas` (`CampanhaServiceDeslizarDatas`, corpo `{ novaDataInicio }`): chama `deslizar_datas_campanha()`, que move início, fim e marcos do cronograma mantendo a duração.
-- `GET /campanha/:id` (`CampanhaServiceFindOne`) preenche `reenviosRestantes`, `prazoReenvioAte` e `somenteLeitura` só para campanha `rejeitado`, para a tela e o futuro e-mail de rejeição. Não refaz a conta em TypeScript: faz um único `SELECT * FROM public.fn_campanha_situacao_reenvio(id)`, a mesma função que a trigger de transição e o job de expirar rejeitadas usam (`DOCUMENTACAO_BD.md`, `[05-K-2-B]`). Por ser `SECURITY DEFINER`, os números saem exatos para quem já enxerga a campanha, mesmo sem acesso à tabela de histórico.
+- `GET /campanha/:id` (`CampanhaServiceFindOne`) também devolve `camposBloqueados` (26-09-2026): a lista, com os nomes do DTO, que `fn_campanha_campos_bloqueados` (`[05-K-2-D]`) diz estar travada naquele momento, a mesma que a trigger de congelamento usa. O React trava exatamente esses campos, sem lista própria. Vem vazia nas outras respostas (listagem inclusive). Preenche também `reenviosRestantes`, `prazoReenvioAte` e `somenteLeitura` só para campanha `rejeitado`, para a tela e o futuro e-mail de rejeição. Não refaz a conta em TypeScript: faz um único `SELECT * FROM public.fn_campanha_situacao_reenvio(id)`, a mesma função que a trigger de transição e o job de expirar rejeitadas usam (`DOCUMENTACAO_BD.md`, `[05-K-2-B]`). Por ser `SECURITY DEFINER`, os números saem exatos para quem já enxerga a campanha, mesmo sem acesso à tabela de histórico.
 - `DELETE /campanha/:id` só funciona em `rascunho` (a RLS decide).
 - `GET /historico-rejeicao?idCampanha=` devolve também `idUsuarioDono` e `tituloCampanha`, e continua funcionando para campanha já excluída (o histórico não tem FK para `campanha`).
 - `GET /usuario/eu/exportar-dados` inclui `historicoRejeicoes` das campanhas do titular, sem `id_admin` (quem rejeitou é dado do administrador).
@@ -634,7 +634,7 @@ Os 5 têm `try/catch` com `logger.error` (incluindo o nome do job). Motivo: o `@
 
 Também registra uma mudança concreta: era `orderBy('criado_em','desc')`, virou `orderBy('id_campanha')` a pedido do Lucas, porque `criado_em` do seed nem sempre bate com a ordem de inserção real (algumas linhas foram seedadas com timestamp retroativo).
 
-**`UsuarioServiceExportarDados`** (05-09-2026, item 3 de `PROXIMOS_PASSOS.md`, LGPD Art. 18, formalizado como **RF-016** nos Requisitos Funcionais, atualizados em 06-09-2026 - o requisito nasceu como "RF-015A" e foi promovido a RF-016 de verdade, empurrando +1 todo requisito daquele ponto em diante) - o endpoint mais sensível do sistema, e o que mais junta decisão de segurança num lugar só:
+**`UsuarioServiceExportarDados`** (05-09-2026, RF-016, exportação de dados (LGPD Art. 18), LGPD Art. 18, formalizado como **RF-016** nos Requisitos Funcionais, atualizados em 06-09-2026 - o requisito nasceu como "RF-015A" e foi promovido a RF-016 de verdade, empurrando +1 todo requisito daquele ponto em diante) - o endpoint mais sensível do sistema, e o que mais junta decisão de segurança num lugar só:
 
 - **`GET /usuario/eu/exportar-dados`, sem `:id`, de propósito.** Todo outro endpoint deste módulo aceita um id de rota (`GET /usuario/:id`, etc.); este não - o ator é sempre `request.user!.idUsuario` (quem está autenticado), nunca um parâmetro. Decisão de uma IA, confirmada em conversa: aceitar um id aqui abriria a porta pro erro clássico de trocar o número e baixar dado de outra conta (a RLS provavelmente barraria, mas a boa prática é nem deixar o parâmetro existir num endereço deste tamanho de sensibilidade). Sem colisão de rota com `GET /usuario/:id` - `:id` do Express só casa um segmento, `eu/exportar-dados` tem dois.
 - **Três proteções, nenhuma opcional:**
@@ -671,7 +671,7 @@ Foto de perfil, imagem de campanha, anexo de atualização - tudo é conteúdo p
 
 📌 **Consequência.** O bucket pode ser público e servido por um domínio próprio; o navegador busca a imagem direto de lá, sem passar pelo Nest e sem link assinado por leitura. `arquivo.chave` guarda o caminho do objeto, e `montarUrlPublica()` monta o endereço - string pura, zero rede. Metade da complexidade de um módulo de upload costuma ser controle de acesso ao download; aqui ela não existe. (Raciocínio completo em `ARQUIVO - Dica de Arquitetura.md`, o "doc de arquitetura" citado nos comentários do código.)
 
-⚠️ **`ARQUIVO - Dica de Arquitetura.md` fala em Cloudflare R2** - ele foi escrito quando o R2 era o provedor cogitado. O **provedor atual é o Supabase Storage** (ver 8.2). O desenho descrito lá continua valendo integralmente; só o nome do provedor mudou.
+⚠️ **`ARQUIVO - Dica de Arquitetura.md` (hoje em `informacoes/arquivo morto/`) fala em Cloudflare R2** - ele foi escrito quando o R2 era o provedor cogitado. O **provedor atual é o Supabase Storage** (ver 8.2). O desenho descrito lá continua valendo integralmente; só o nome do provedor mudou.
 
 ### 8.2 A abstração: `ArmazenamentoService`
 
@@ -687,7 +687,7 @@ Todo consumidor injeta `@Inject(ARMAZENAMENTO_SERVICE)` **contra a interface**, 
 
 Métodos do contrato: `gerarUploadPreAssinado`, `obterInfoObjeto`, `lerPrimeirosBytes`, `lerObjetoCompleto`, `enviarObjeto`, `moverObjeto`, `excluirObjeto`, `montarUrlPublica`.
 
-**Provedor atual: Supabase Storage** (bucket S3-compatível, no mesmo projeto Supabase que hospeda o Postgres). Confirmado em três lugares: `nest/.env` (`STORAGE_ENDPOINT` aponta para `…storage.supabase.co/storage/v1/s3`), `ARQUIVO_para_configurar_modulo-arquivo.md` (instruções de criação do bucket no painel do Supabase) e o comentário no topo do service.
+**Provedor atual: Supabase Storage** (bucket S3-compatível, no mesmo projeto Supabase que hospeda o Postgres). Confirmado em três lugares: `nest/.env` (`STORAGE_ENDPOINT` aponta para `…storage.supabase.co/storage/v1/s3`), `nest/.env.example` (instruções de criação do bucket no painel do Supabase) e o comentário no topo do service.
 
 📌 **Uma implementação cobre todos os provedores viáveis.** Supabase Storage, Cloudflare R2, Backblaze B2, AWS S3 e MinIO falam o **mesmo protocolo** (S3). Trocar de provedor é trocar variáveis de ambiente - `STORAGE_ENDPOINT`, `STORAGE_ACCESS_KEY_ID`, `STORAGE_SECRET_ACCESS_KEY`, `STORAGE_BUCKET`, `STORAGE_PUBLIC_BASE_URL`, `STORAGE_REGION`, `STORAGE_FORCE_PATH_STYLE` - **sem tocar em uma linha de TypeScript**. Só um provedor com API genuinamente não-S3 exigiria uma classe nova; nesse caso, muda-se o `useExisting` no `storage.module.ts` e nada em `25-arquivo` muda.
 
@@ -849,12 +849,12 @@ sharp(bytesOriginais)
 
 ### 8.8 Lembretes de infraestrutura (configurados no painel, não em código)
 
-De `ARQUIVO_para_configurar_modulo-arquivo.md`:
+De `nest/.env.example` (bloco `STORAGE_*`):
 1. O bucket precisa ser **público** (leitura) e servido por um **domínio separado** do site principal (`arquivos.<dominio>`, nunca `<dominio>/arquivos`) - assim, mesmo que algo malicioso escape, não roda "de dentro" do site nem alcança cookies/sessão.
 2. **Regra de ciclo de vida** apagando tudo em `pendente/` com mais de 24h.
 3. A lista de tipos aceitos é fechada no código; SVG nunca entra.
 
-⚠️ **Não existe `nest/.env.example`.** O código referencia esse arquivo em mensagem de erro (*"Ver .env.example"*), e `ARQUIVO_para_configurar_modulo-arquivo.md` cumpre esse papel na prática para as `STORAGE_*` - mas o arquivo em si não está no repositório.
+📌 **`nest/.env.example` existe (26-09-2026).** Lista todas as variáveis do `nest/.env` (banco, JWT, chaves do CPF, `STORAGE_*`) com o que cada uma faz e onde achar o valor, sem nenhum segredo. É o arquivo que a mensagem de erro do storage (*"Ver .env.example"*) cita. Copie para `nest/.env` e preencha; o `.env` continua fora do git.
 
 ---
 
@@ -996,9 +996,9 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | AUTH | GET | `/usuario` |
 | AUTH | GET | `/usuario/:id` |
 | AUTH | PATCH · DELETE | `/usuario/:id` |
-| pub | GET | `/usuario/:id/logins` |
+| AUTH | GET | `/usuario/:id/logins` |
 | AUTH | GET | `/usuario/:id/suspensao` |
-| pub | GET | `/usuario/:id/termos-aceitos` |
+| AUTH | GET | `/usuario/:id/termos-aceitos` |
 | AUTH | GET | `/usuario/eu/exportar-dados` |
 | AUTH | POST | `/usuario/:id/suspender` · `/usuario/:id/revogar-suspensao` · `/usuario/:id/desbloquear` |
 | pub | GET | `/papel` · `/permissao` · `/papel-permissao` |
@@ -1066,7 +1066,7 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 
 📌 **Rotas administrativas têm `RequireAuthGuard`.** `GET /usuario`, `GET /usuario/:id`, `GET /usuario-papel`, `GET /usuario-papel/:idUsuario` e `GET /dashboard/resumo` exigem login. Não vale o argumento "só o admin chega na tela": a API não sabe de tela nenhuma, qualquer requisição direta (um `curl`) chega na rota sem passar pelo `/admin`, e o `JwtAuthGuard` global deixa passar como anônima a requisição sem cabeçalho `Authorization` (comportamento documentado nele). Sobra a RLS, e a RLS de `usuario` é permissiva de propósito (o login precisa achar o usuário pelo e-mail antes de existir alguém autenticado); sem o guard, um visitante anônimo obteria os e-mails de todos os usuários, quem é administrador e as métricas internas.
 
-⚠️ **O que o guard NÃO resolve (decisão pendente):** ele só impede o anônimo. Qualquer usuário **logado** (um pesquisador, por exemplo) ainda enxerga a lista completa de usuários, com e-mail, porque `pol_usuario_select` permite. Exigir também uma permissão administrativa (por exemplo `usuario_visualizar_sensivel` na lista, e `relatorio_visualizar` dentro de `contar_metricas_dashboard()`, que é `SECURITY DEFINER` e bypassa a RLS) é o passo seguinte. A solução grande, para depois: o login passa a usar uma função `SECURITY DEFINER` que devolve só o necessário para autenticar a partir do e-mail, e `pol_usuario_select` pode então ser fechada para anônimo no próprio banco. **Continuam sem guard, e certas:** `GET /usuario/:id/logins` e `GET /usuario/:id/termos-aceitos` (a RLS de `log_auditoria` e de `usuario_termo` só devolve linha do próprio usuário ou de quem tem a permissão) e os catálogos públicos (área, motivo, tipo de link).
+📌 **Permissão além do login (25-09-2026).** O guard só impede o anônimo, e `pol_usuario_select` é permissiva de propósito, então a permissão é checada no Nest por `AutorizacaoService` (`commons/seguranca/autorizacao.service.ts`, global, usa `tem_permissao()` e `id_usuario_atual()` da própria sessão): `GET /usuario` exige `usuario_visualizar_sensivel`; `GET /usuario/:id` e `GET /usuario/:id/logins` exigem ser o próprio usuário ou ter `usuario_visualizar_sensivel`; `GET /usuario/:id/suspensao` e `GET /perfil-pesquisador/:id/suspensao` exigem ser o próprio ou `usuario_suspender`. Sem isso: 403 com mensagem em português. A checagem de `GET /usuario/:id` fica no controller, e não no service, porque login e refresh reaproveitam `UsuarioServiceFindOne` antes de existir alguém autenticado. `GET /usuario-papel` e `GET /usuario-papel/:idUsuario` são decididos pela RLS (`pol_usuariopapel_select`, ver `[04-D-4b]`) e `GET /dashboard/resumo` por `contar_metricas_dashboard()` (`relatorio_visualizar`, ERRCODE 92011). `GET /usuario/:id/logins` deixou de ser público: a tabela `sessao` é lida por qualquer sessão (o refresh precisa achar o token antes de existir usuário atual), então a RLS não protegia o histórico de login. `GET /usuario/:id/termos-aceitos` também exige login (a RLS de `usuario_termo` já limitava as linhas ao próprio ou a quem tem a permissão). Continuam públicos os catálogos (área, motivo, tipo de link). A solução maior, para depois: o login passa a usar uma função `SECURITY DEFINER` que devolve só o necessário para autenticar a partir do e-mail, e `pol_usuario_select` pode então ser fechada para anônimo no próprio banco.
 
 ---
 
@@ -1170,11 +1170,11 @@ Reunidos de todas as seções, para servir de checklist.
 
 7. ⚠️ **`db.types.ts` é escrito à mão**, com `npm run db:codegen` disponível e nunca rodado. Divergência com o `.sql` só aparece em runtime. (§2.6)
 8. ⚠️ **`perfil-pesquisador.service.create` não diferencia as duas `UNIQUE`** que disparam `23505` - 409 genérico onde caberia mensagem específica. (§5.2)
-9. ⚠️ **`ComentarioServiceCreate` calcula `ordem_endosso` no Nest**, com corrida teórica aceita. (§7.4, e item 747)
-10. ✅ **`GET /dashboard/resumo` exige login**, mas ainda bypassa a RLS (`SECURITY DEFINER`) e não checa permissão: qualquer usuário logado lê as métricas. Checar `relatorio_visualizar` dentro de `contar_metricas_dashboard()` está pendente. (§13)
+9. ✅ **`ordem_endosso` é calculada no banco** (trigger `validar_comentario_endosso_autor`, sob lock por campanha, desde 26-09-2026); a corrida teórica acabou. (§7.4)
+10. ✅ **`GET /dashboard/resumo` exige login e a permissão `relatorio_visualizar`** (checada dentro de `contar_metricas_dashboard()`, ERRCODE 92011, desde 25-09-2026). (§13)
 11. ⚠️ **`notificacoesPendentes` não vai começar a funcionar sozinho** quando `26-notificacao` existir - há precedente comentado no código. (§10)
-12. ⚠️ **Não existe `nest/.env.example`**, apesar de o código referenciá-lo em mensagem de erro. (§8.8)
-13. ⚠️ **`ARQUIVO - Dica de Arquitetura.md` cita Cloudflare R2** como provedor; o atual é Supabase Storage. O desenho continua válido, só o nome mudou. (§8.1)
+12. ✅ **`nest/.env.example` existe** (26-09-2026). (§8.8)
+13. ⚠️ **`ARQUIVO - Dica de Arquitetura.md` (em `informacoes/arquivo morto/`) cita Cloudflare R2** como provedor; o atual é Supabase Storage. O desenho continua válido, só o nome mudou. (§8.1)
 14. ⚠️ **`paginacao.util` com padrão 500** é teto de segurança, não paginação real - precisa baixar quando o primeiro módulo de alto volume existir. (§2.7)
 15. ⚠️ **`.stream()` não é suportado** pelo dialect. (§2.4)
 
@@ -1231,11 +1231,11 @@ console.log('total de rotas:', out.length);
 |---|---|
 | `DOCUMENTACAO_BD.md` | O banco: schema, RLS, triggers, funções - e o log histórico das decisões |
 | `DOCUMENTACAO_ERRCODE.md` | Tabela completa código → função → mensagem dos `RAISE EXCEPTION` com ERRCODE customizado |
-| `PENDENCIAS e correcoes.md` | Decisões em aberto e histórico de correções - os itens 5, 6, 7, 8, 9, 11 e 22 são os que mais afetam o backend |
+| `PENDENCIAS e correcoes.md` | Decisões em aberto e o log dos últimos dias; o histórico antigo (itens e partes resolvidos até 22-09-2026) está em `informacoes/HISTORICO/HISTORICO_PENDENCIAS_E_CORRECOES.md`, e os itens 5, 6, 7, 8, 9, 11 e 22 citados neste documento estão lá |
 | `PROXIMOS_MODULOS.md` | O que falta construir, em ordem sugerida |
-| `ARQUIVO - Dica de Arquitetura.md` | O "doc de arquitetura" citado nos comentários de `commons/storage` e `25-arquivo` |
-| `ARQUIVO_para_configurar_modulo-arquivo.md` | Passo a passo do bucket + as variáveis `STORAGE_*` |
-| `tutorial-rodar-projeto.md` | Instalação, incluindo o `ALTER ROLE app_nestjs LOGIN PASSWORD` obrigatório |
+| `ARQUIVO - Dica de Arquitetura.md` (em `informacoes/arquivo morto/`) | O "doc de arquitetura" citado nos comentários de `commons/storage` e `25-arquivo`; a substância está na seção 8 deste documento |
+| `nest/.env.example` | Todas as variáveis do `.env` do Nest, com o passo a passo do bucket do Supabase (`STORAGE_*`) |
+| `.Tutorial-rodar-projeto.md` | Instalação, incluindo o `ALTER ROLE app_nestjs LOGIN PASSWORD` obrigatório |
 
 ---
 

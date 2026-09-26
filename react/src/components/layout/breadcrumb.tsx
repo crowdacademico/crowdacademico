@@ -7,18 +7,14 @@ import type { Rota } from '../../services/router/rotas.constants';
 // pro menu lateral, nunca uma lista própria separada.
 const TODAS_AS_ROTAS: Rota[] = [...ROTAS, ...ROTAS_ADMIN];
 
-// Aparece embaixo do cabeçalho em toda página cujo rotuloBreadcrumb não
-// seja null - só um jeito rápido de voltar. A aba padrão do admin
-// (/admin/dashboard, desde 08-08-2026) tem rotuloBreadcrumb: null de
-// propósito: mostrar "Início > Dashboard" ali seria redundante com o
-// próprio link "Início".
+// Aparece embaixo do cabeçalho em toda página cujo rotuloBreadcrumb não seja null: só um jeito rápido de
+// voltar. A aba padrão do admin (/admin/dashboard) tem rotuloBreadcrumb: null de propósito: mostrar "Início >
+// Dashboard" ali seria redundante com o próprio link "Início".
 //
-// Cadeia de ancestrais (10-08-2026, achado do Lucas: "Início > Alterar
-// Usuário" devia ser "Início > Usuários > Alterar Usuário") - cada rota
-// de detalhe (Alterar/Consultar/Excluir/Criar, ver rotas.constants.ts)
-// aponta pro `caminho` absoluto da própria listagem via `paiCaminho`; sobe
-// essa cadeia até não ter mais pai (a maioria das rotas, sem aninhamento,
-// já para na 1ª volta - nenhuma mudança de comportamento pra elas).
+// Cadeia de ancestrais ("Início > Usuários > Alterar Usuário"): cada rota de detalhe
+// (Alterar/Consultar/Excluir/Criar, ver rotas.constants.ts) aponta para o `caminho` absoluto da própria
+// listagem via `paiCaminho`; sobe essa cadeia até não ter mais pai (a maioria das rotas, sem aninhamento, já
+// para na 1ª volta).
 export function Breadcrumb() {
   const location = useLocation();
 
@@ -44,11 +40,9 @@ export function Breadcrumb() {
   const ultimoIndice = cadeia.length - 1;
 
   return (
-    // sticky top-16 (pedido do Lucas, 02-08-2026: "queria que ele
-    // acompanhasse o cabeçalho, conforme a gente vai rolando pra baixo") -
-    // 16 = 4rem = a altura do <Header> (h-16), que também é sticky top-0;
-    // z-40 (menor que o z-50 do Header) garante que o cabeçalho sempre fica
-    // por cima quando os dois grudam juntos no topo.
+    // sticky top-16: o breadcrumb acompanha o cabeçalho conforme a página rola; 16 = 4rem = a altura do
+    // <Header> (h-16), que também é sticky top-0; z-40 (menor que o z-50 do Header) garante que o cabeçalho
+    // sempre fica por cima quando os dois grudam juntos no topo.
     <nav className="fundo-sutil border-b borda-padrao sticky top-16 z-40">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center gap-2 text-sm flex-wrap">
         <Link to="/" className="texto-marca font-bold hover:underline">

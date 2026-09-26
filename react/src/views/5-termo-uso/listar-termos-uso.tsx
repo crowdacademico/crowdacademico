@@ -11,29 +11,21 @@ import { formatarDataHora } from '../../services/constant/utils/formatacao.util'
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { TermoUsoResponse } from '../../services/5-termo-uso/type/termo-uso.type';
 
-// Criar/Listar/Consultar/Alterar/Excluir (13-09-2026, EM MODAL - pedido do
-// Lucas: "vamos acabar com as telas próprias e adotar modal para o CRUD",
-// mesmo padrão de Usuário/Pesquisadores). `conteudo` não vira coluna (texto
-// integral, longo demais pra tabela) - Consultar abre no MESMO ModalDetalhe
-// já usado por Permissões; Alterar abre ModalAlterarTermoUso (o mesmo
-// componente que o card de Regras do Negócio usa).
+// Criar/Listar/Consultar/Alterar/Excluir EM MODAL, mesmo padrão de Usuário/Pesquisadores. `conteudo` não vira
+// coluna (texto integral, longo demais para tabela): Consultar abre no MESMO ModalDetalhe já usado por
+// Permissões; Alterar abre ModalAlterarTermoUso (o mesmo componente que o card de Regras do Negócio usa).
 //
-// Ordem das colunas (mesmo dia, rodada seguinte, pedido do Lucas):
-// "versão" trocou de lugar com "tipo" - versão é o identificador visível
-// (mesmo papel de "nome" nas outras tabelas), então vem logo depois do id,
-// igual ao padrão (id, nome, ..., Ações) de todo o resto do painel. "tipo"/
-// "ativo"/"publicado em" ficaram centralizados (cabeçalho e célula juntos).
+// Ordem das colunas: "versão" é o identificador visível (mesmo papel de "nome" nas outras tabelas), então vem
+// logo depois do id, igual ao padrão (id, nome, ..., Ações) de todo o resto do painel.
+// "tipo"/"ativo"/"publicado em" ficam centralizados (cabeçalho e célula juntos).
 //
-// Excluir (mesmo dia) - só rascunho nunca vigente e nunca aceito por
-// ninguém (TermoUsoServiceExcluir bloqueia o resto com 409/403).
+// Excluir: só rascunho nunca vigente e nunca aceito por ninguém (TermoUsoServiceExcluir bloqueia o resto com
+// 409/403).
 //
-// Filtro por tipo (mesmo dia) - "Todos" marcado por padrão (mesmo padrão do
-// facet de Papel em Usuários), com rótulo amigável no dropdown.
+// Filtro por tipo: "Todos" marcado por padrão (mesmo padrão do facet de Papel em Usuários), com rótulo amigável
+// no dropdown.
 export function ListarTermosUso({ auth }: PropsPagina) {
-  // Nomes padronizados (14-09-2026, revisão do Lucas - ERA
-  // `termoDetalhado`/`termoAlterando`/`termoExcluindo`, as 8 telas de
-  // listagem nomeavam a mesma coisa de 3 jeitos diferentes) via
-  // `useCrudModais`, mesmo hook das outras 7 telas.
+  // Nomes padronizados via `useCrudModais`, o mesmo hook das outras telas de listagem.
   const {
     alterando,
     consultando,
@@ -79,9 +71,8 @@ export function ListarTermosUso({ auth }: PropsPagina) {
         ]}
         chavePrimaria="idTermo"
         listar={listarTermos}
-        // Filtro por tipo (13-09-2026, pedido do Lucas: "assim como
-        // USUARIOS", marcado Todos por padrão) - `rotulos` traduz o valor
-        // cru do enum pro rótulo amigável só na exibição do dropdown.
+        // Filtro por tipo (como em USUARIOS, marcado Todos por padrão): `rotulos` traduz o valor cru do enum
+        // para o rótulo amigável só na exibição do dropdown.
         filtrosFacetados={[
           { chave: 'tipo', rotulo: 'Tipo', ordem: TIPOS_TERMO, rotulos: ROTULO_TIPO_TERMO },
         ]}

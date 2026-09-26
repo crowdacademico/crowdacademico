@@ -1,6 +1,5 @@
-// Separado de `rodape-paginacao.tsx` (14-09-2026) - react-refresh exige que
-// um arquivo de COMPONENTE só exporte componentes; constante/tipo
-// compartilhado vai num arquivo próprio.
+// Separado de `rodape-paginacao.tsx`: react-refresh exige que um arquivo de COMPONENTE só exporte componentes;
+// constante/tipo compartilhado vai num arquivo próprio.
 export const TAMANHOS_PAGINA = [10, 20, 30, 'todos'] as const;
 
 // `number | 'todos'` (não `(typeof TAMANHOS_PAGINA)[number]`, que travaria

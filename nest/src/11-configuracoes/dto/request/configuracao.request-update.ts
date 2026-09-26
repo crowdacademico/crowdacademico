@@ -13,8 +13,7 @@ export class ConfiguracaoRequestUpdate {
   @IsBoolean()
   ativo?: boolean;
 
-  // ADICIONADO (05-09-2026, item 5 de PENDENCIAS) - ver comentário completo
-  // em configuracao.request-create.ts.
+  // Ver comentário completo em configuracao.request-create.ts.
   @IsOptional()
   @IsBoolean()
   publica?: boolean;

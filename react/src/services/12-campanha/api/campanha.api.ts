@@ -5,17 +5,13 @@ import { desembrulharPaginado, TAMANHO_PAGINA_MAXIMO_API } from '../../constant/
 import type { CampanhaResponse, HistoricoRejeicaoResponse } from '../type/campanha.type';
 import type { StatusCampanha } from '../constants/status-campanha.constants';
 
-// Espelha nest/src/12-campanha. GET é público no backend (pol_campanha_
-// select mostra status público/dono/relatorio_visualizar - ver
-// 04_rls_policies.sql [04-E]); aqui sempre passamos authFetch mesmo assim
-// porque quem usa este arquivo é sempre o painel admin (logado), e o
-// admin com relatorio_visualizar enxerga todos os status, não só os
-// públicos. Sem criar() de propósito: campanha não tem POST genérico no
-// backend - criação vive no Campo de Testes hoje (views/campo-testes/
-// bancada-campanha.tsx). `remover()` (25-08-2026) só funciona em campanha
-// 'rascunho' (pol_campanha_delete, 04 - era 'aguardando_aprovacao' até
-// 20-09-2026) - depois de enviada pra fila, só dá pra rejeitar/encerrar,
-// nunca apagar de vez.
+// Espelha nest/src/12-campanha. GET é público no backend (pol_campanha_select mostra status
+// público/dono/relatorio_visualizar, ver 04_rls_policies.sql [04-E]); aqui sempre passamos authFetch mesmo
+// assim porque quem usa este arquivo é sempre o painel admin (logado), e o admin com relatorio_visualizar
+// enxerga todos os status, não só os públicos. Sem criar() de propósito: campanha não tem POST genérico no
+// backend; a criação vive no Campo de Testes (views/campo-testes/bancada-campanha.tsx). `remover()` só funciona
+// em campanha 'rascunho' (pol_campanha_delete, 04): depois de enviada para a fila, só dá para
+// rejeitar/encerrar, nunca apagar de vez.
 interface FiltroCampanha {
   status?: StatusCampanha;
   idAreaConhecimento?: number;
@@ -48,13 +44,15 @@ export const campanhaApi = {
       .then(desembrulharPaginado('campanhas')),
   buscar: (authFetch: AuthFetch, id: number | string): Promise<CampanhaResponse> =>
     authFetch(`/campanha/${id}`).then(tratarResposta<CampanhaResponse>),
+  aprovar: (authFetch: AuthFetch, id: number | string): Promise<void> =>
+    authFetch(`/campanha/${id}/aprovar`, { method: 'POST' }).then(tratarResposta<void>),
+  rejeitar: (authFetch: AuthFetch, id: number | string, justificativa: string): Promise<void> =>
+    authFetch(`/campanha/${id}/rejeitar`, { method: 'POST', body: JSON.stringify({ justificativa }) }).then(tratarResposta<void>),
   remover: (authFetch: AuthFetch, id: number | string): Promise<void> =>
     authFetch(`/campanha/${id}`, { method: 'DELETE' }).then(tratarResposta<void>),
-  // Histórico de rejeições (14-09-2026, pedido do Lucas: "onde fica
-  // registrado" o motivo) - mais recente primeiro, mesmo padrão de
-  // usuarioApi.listarTermosAceitos. Endpoint próprio (21-historico-
-  // rejeicao), não aninhado em /campanha - mesmo motivo de orcamento-
-  // campanha/marco-cronograma (GET /historico-rejeicao?idCampanha=).
+  // Histórico de rejeições ("onde fica registrado" o motivo): mais recente primeiro, mesmo padrão de
+  // usuarioApi.listarTermosAceitos. Endpoint próprio (21-historico-rejeicao), não aninhado em /campanha: mesmo
+  // motivo de orcamento-campanha/marco-cronograma (GET /historico-rejeicao?idCampanha=).
   listarHistoricoRejeicao: (
     authFetch: AuthFetch,
     idCampanha: number | string,

@@ -2,17 +2,13 @@ import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
 import { UsuarioResponseTermoAceito } from '../dto/response/usuario.response-termo-aceito';
 
-// "Onde fica registrado" o aceite do Termo de Uso, pedido do Lucas
-// (14-09-2026) pra Consultar Usuário - join simples de usuario_termo com
-// termos_de_uso (pra mostrar versão/tipo, não só o id_termo cru).
+// "Onde fica registrado" o aceite do Termo de Uso, para Consultar Usuário: join simples de usuario_termo com
+// termos_de_uso (para mostrar versão/tipo, não só o id_termo cru).
 //
-// SÓ usuario_termo aqui - cadastro E upgrade de perfil de pesquisador (as 2
-// trilhas que gravam nessa tabela hoje). aceite_termo_contribuicao fica de
-// fora de propósito: é por CONTRIBUIÇÃO, não por usuário direto, e o módulo
-// de contribuição (22-contribuicao) ainda nem existe - juntar isso aqui
-// exigiria um join a mais através de uma tabela que ainda não tem nenhuma
-// linha no sistema. Registrado como próximo passo natural quando esse
-// módulo nascer, não construído agora.
+// SÓ usuario_termo aqui (cadastro E upgrade de perfil de pesquisador, as 2 trilhas que gravam nessa tabela).
+// aceite_termo_contribuicao fica de fora de propósito: é por CONTRIBUIÇÃO, não por usuário direto, e o módulo
+// de contribuição (22-contribuicao) ainda não existe; juntar isso aqui exigiria um join a mais por uma tabela
+// que ainda não tem linha no sistema. Próximo passo natural quando esse módulo nascer.
 @Injectable()
 export class UsuarioServiceListarTermosAceitos {
   constructor(private readonly database: DatabaseService) {}

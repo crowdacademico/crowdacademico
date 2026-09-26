@@ -7,15 +7,12 @@ import { sql } from 'kysely';
 import { DatabaseService } from '../../commons/database/database.service';
 import { PerfilPesquisadorRequestUpdate } from '../dto/request/perfil-pesquisador.request-update';
 
-// alterar_perfil_pesquisador_de_outro() (03_funcoes_seguranca.sql, [03-U]) -
-// achado (14-09-2026) rodando o painel admin de verdade: pol_perfil_update
-// (04) só libera UPDATE de perfil_pesquisador pro PRÓPRIO dono
-// (id_usuario = id_usuario_atual()), então um admin editando o vínculo/
-// título de OUTRA pessoa via UPDATE direto sempre resultaria em 0 linhas -
-// mesma classe de bug de corrigir_cpf_pesquisador/criar_perfil_pesquisador_
-// para_outro (acima, mesmo módulo), resolvida da mesma forma: função
-// SECURITY DEFINER, gateada por permissão própria
-// (perfil_pesquisador_alterar_de_outro), que ignora RLS de propósito.
+// alterar_perfil_pesquisador_de_outro() (03_funcoes_seguranca.sql, [03-U]): pol_perfil_update (04) só libera
+// UPDATE de perfil_pesquisador ao PRÓPRIO dono (id_usuario = id_usuario_atual()), então um admin editando o
+// vínculo/título de OUTRA pessoa via UPDATE direto sempre resultaria em 0 linhas: mesma classe de
+// corrigir_cpf_pesquisador/criar_perfil_pesquisador_para_outro (acima, mesmo módulo), resolvida da mesma forma:
+// função SECURITY DEFINER, gateada por permissão própria (perfil_pesquisador_alterar_de_outro), que ignora RLS
+// de propósito.
 @Injectable()
 export class PerfilPesquisadorServiceAlterarDeOutro {
   constructor(private readonly database: DatabaseService) {}

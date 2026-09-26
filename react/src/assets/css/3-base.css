@@ -1,19 +1,13 @@
-/* Tailwind (import + @theme com as cores/fontes) vive em tailwind-theme.css,
-   não aqui - @import só pode ser a primeira coisa num arquivo CSS. Ver o
-   comentário lá pro porquê.
+/* Tailwind (import + @theme com as cores/fontes) vive em tailwind-theme.css, não aqui: @import só pode ser a
+   primeira coisa num arquivo CSS. Ver o comentário lá para o porquê.
 
    ========= VARIÁVEIS GLOBAIS (CSS próprio, não Tailwind) =========
-   `--color-primary`/`--color-primary-dark`/`--color-surface`/`--color-dark`/
-   `--font-sans`/`--font-serif` NÃO são redeclaradas aqui - o `@theme`
-   já expõe elas como variável CSS normal em `:root`, disponível pra
-   qualquer regra do projeto (Tailwind v4 faz isso automaticamente). Aqui
-   só entra o que o `@theme` não cobre e que NÃO é cor nem tipografia:
-   raio de borda, sombra, escala de acessibilidade, e o reset de tag
-   crua. Cor (paleta, tokens semânticos, tema escuro, utilitários
-   `.fundo-*`/`.texto-*`/`.borda-*`) mora em 1-cores.css; tamanho de
-   fonte e a escala tipográfica nomeada (`.titulo-*` etc.) moram em
-   2-tipografia.css - os dois saíram daqui em 12-09-2026 (pedido do
-   Lucas: um arquivo por responsabilidade). */
+   `--color-primary`/`--color-primary-dark`/`--color-surface`/`--color-dark`/`--font-sans`/`--font-serif` NÃO
+   são redeclaradas aqui: o `@theme` já expõe elas como variável CSS normal em `:root`, disponível para
+   qualquer regra do projeto (Tailwind v4 faz isso automaticamente). Aqui só entra o que o `@theme` não cobre
+   e que NÃO é cor nem tipografia: raio de borda, sombra, escala de acessibilidade, e o reset de tag crua.
+   Cor (paleta, tokens semânticos, tema escuro, utilitários `.fundo-*`/`.texto-*`/`.borda-*`) mora em
+   1-cores.css; tamanho de fonte e a escala tipográfica nomeada (`.titulo-*` etc.) moram em 2-tipografia.css. */
 :root {
   --radius-sm: 0.25rem;
   --radius-md: 0.5rem;
@@ -27,43 +21,29 @@
 
   --transition-normal: all 0.2s ease;
 
-  /* Controle de fonte (09-08-2026, pedido do Lucas: acessibilidade,
-     "botão de aumentar e diminuir fonte") - components/layout/
-     controle-fonte.tsx muda este valor via
-     document.documentElement.style.setProperty(). Aplicado no `html`
-     (ver @layer base abaixo), não em cada elemento: como o projeto
-     inteiro é rem-based (Tailwind v4 por padrão, mais as variáveis de
-     tamanho de fonte, raio de borda e sombra já existentes aqui em cima),
-     mudar o font-size da RAIZ reescala texto E espaçamento juntos, com
-     uma variável só - reescalar só o texto, sem o resto, quebraria layout
-     (botão menor que o próprio texto dentro dele). Mesmo princípio do
-     "zoom" que a maioria dos sites de verdade usa pra esse tipo de
-     controle.
-     Padrão 1 = 100% (nenhuma mudança) - só existe pra ControleFonte ter
-     algo pra ler/escrever; qualquer CSS aqui pode ignorá-la de propósito. */
+  /* Controle de fonte (acessibilidade, "botão de aumentar e diminuir fonte"):
+     components/layout/controle-fonte.tsx muda este valor via document.documentElement.style.setProperty().
+     Aplicado no `html` (ver @layer base abaixo), não em cada elemento: como o projeto inteiro é rem-based
+     (Tailwind v4 por padrão, mais as variáveis de tamanho de fonte, raio de borda e sombra), mudar o
+     font-size da RAIZ reescala texto E espaçamento juntos, com uma variável só; reescalar só o texto, sem o
+     resto, quebraria layout (botão menor que o próprio texto dentro dele). Mesmo princípio do "zoom" que a
+     maioria dos sites usa para esse tipo de controle.
+     Padrão 1 = 100% (nenhuma mudança): só existe para ControleFonte ter algo para ler/escrever; qualquer CSS
+     aqui pode ignorá-la de propósito. */
   --escala-fonte: 1;
 }
 
 /* ========= RESET =========
-   BUG REAL achado pelo Lucas rodando o painel (02-08-2026), depois da
-   migração do Tailwind pro build de verdade: cabeçalho/rodapé desalinhados,
-   breadcrumb colado na borda, botões "feios". Causa: este reset (e o resto
-   deste arquivo) vivia FORA de qualquer @layer. Regra da cascata de CSS:
-   estilo sem @layer sempre GANHA de qualquer estilo QUE ESTEJA em @layer,
-   não importa a especificidade - e o Tailwind v4 embrulha TUDO que ele gera
-   (`.mx-auto`, `.px-4`, `.py-2` etc.) dentro de `@layer utilities`. Ou seja,
-   o `margin:0; padding:0` universal abaixo estava silenciosamente vencendo
-   `.mx-auto`/`.px-4`/`.py-10` de QUALQUER elemento no projeto inteiro -
-   funcionava certinho antes só porque o Tailwind vinha por <script> CDN,
-   que não usa @layer do jeito que o import físico usa.
-   Fix: declarar @layer base (mesmo nome que o Tailwind já declara) - as
-   regras se juntam na posição certa, antes de @layer utilities, e o
-   `.mx-auto` volta a ganhar do reset.
-   Este bloco mistura box-model com `color`/`background-color` em algumas
-   linhas (body, h1-h3) - fica inteiro aqui de propósito (12-09-2026,
-   separação de cor/tipografia): fragmentar um reset de tag pra seguir a
-   separação de arquivo à risca perderia a explicação de por que cada
-   propriedade está do jeito que está, mais do que ganharia em pureza
+   Este reset (e o resto deste arquivo) fica DENTRO de `@layer base`, o mesmo nome que o Tailwind declara.
+   Regra da cascata de CSS: estilo sem @layer sempre GANHA de qualquer estilo QUE ESTEJA em @layer, não
+   importa a especificidade, e o Tailwind v4 embrulha TUDO que ele gera (`.mx-auto`, `.px-4`, `.py-2` etc.)
+   dentro de `@layer utilities`. Fora de @layer, o `margin:0; padding:0` universal abaixo venceria
+   `.mx-auto`/`.px-4`/`.py-10` de QUALQUER elemento no projeto inteiro (cabeçalho/rodapé desalinhados,
+   breadcrumb colado na borda). Declarando @layer base, as regras se juntam na posição certa, antes de @layer
+   utilities, e o `.mx-auto` ganha do reset.
+   Este bloco mistura box-model com `color`/`background-color` em algumas linhas (body, h1-h3) e fica inteiro
+   aqui de propósito: fragmentar um reset de tag para seguir a separação de arquivo à risca perderia a
+   explicação de por que cada propriedade está do jeito que está, mais do que ganharia em pureza
    organizacional. */
 @layer base {
   *,
@@ -88,14 +68,12 @@
     font-family: var(--font-sans);
     font-size: var(--font-size-sm);
     line-height: 1.5;
-    /* ERA --color-surface direto - precisa ser o token de tema
-       (--cor-fundo-pagina) pra inverter junto com o resto no escuro; hoje
-       os dois valem o mesmo no tema claro, então nada muda visualmente. */
+    /* Token de tema (--cor-fundo-pagina), não --color-surface direto: precisa inverter junto com o resto no
+       escuro; no tema claro os dois valem o mesmo. */
     background-color: var(--cor-fundo-pagina);
-    /* --cor-texto-forte (não --cor-texto) - o corpo do texto já era
-       slate-800 antes dos tokens existirem (achado do Lucas, escurecido de
-       propósito pra monitor não calibrado); manter o token que bate com o
-       valor de HOJE, não com o rótulo "corpo" ao pé da letra. */
+    /* --cor-texto-forte (não --cor-texto): o corpo do texto é slate-800, escurecido de propósito para
+       monitor não calibrado; manter o token que bate com o valor real, não com o rótulo "corpo" ao pé da
+       letra. */
     color: var(--cor-texto-forte);
     -webkit-font-smoothing: antialiased;
     transition: background-color 0.15s ease, color 0.15s ease;
@@ -110,11 +88,9 @@
   h2,
   h3 {
     font-family: var(--font-serif);
-    /* ERA --color-dark direto (#0f172a fixo) - em tema escuro isso ficaria
-       quase invisível (texto quase preto sobre fundo quase preto). Token
-       de tema em vez de cor fixa, mesmo valor no claro (--cor-texto-forte
-       = slate-800, próximo o bastante de --color-dark pra não mudar nada
-       visualmente hoje). */
+    /* Token de tema em vez de --color-dark direto (#0f172a fixo): em tema escuro isso ficaria quase
+       invisível (texto quase preto sobre fundo quase preto). No claro, --cor-texto-forte = slate-800 é
+       próximo o bastante de --color-dark para não mudar nada visualmente. */
     color: var(--cor-texto-forte);
     font-weight: 700;
   }
@@ -124,7 +100,6 @@
     cursor: pointer;
   }
 
-  /* `input`/`select`/`textarea` (font-family/font-size) saíram pra
-     2-tipografia.css (12-09-2026) - eram 100% tipografia, sem nada de
-     box-model pra ficar preso aqui. */
+  /* `input`/`select`/`textarea` (font-family/font-size) moram em 2-tipografia.css: são 100% tipografia, sem
+     nada de box-model para ficar preso aqui. */
 }

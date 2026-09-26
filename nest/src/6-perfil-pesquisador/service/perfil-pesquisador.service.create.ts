@@ -12,31 +12,24 @@ import { PerfilPesquisadorConverter } from '../dto/converter/perfil-pesquisador.
 import { PerfilPesquisadorRequestCreate } from '../dto/request/perfil-pesquisador.request-create';
 import { PerfilPesquisadorResponse } from '../dto/response/perfil-pesquisador.response';
 
-// "Tornar-se pesquisador" - upgrade de conta comum (não é admin criando pra
-// outra pessoa, é a própria pessoa se declarando pesquisadora, mesmo
-// espírito de AuthServiceCadastro pro cadastro inicial). id_usuario nunca
-// vem do dto, sempre do controller (request.user.idUsuario).
+// "Tornar-se pesquisador": upgrade de conta comum (não é admin criando para outra pessoa, é a própria pessoa se
+// declarando pesquisadora, mesmo espírito de AuthServiceCadastro para o cadastro inicial). id_usuario nunca vem
+// do dto, sempre do controller (request.user.idUsuario).
 //
-// Aceite do Termo de Uso (13-09-2026, pedido do Lucas: modal de upgrade em
-// T1 - Bancada do Pesquisador) - grava junto do INSERT do perfil, na MESMA
-// transação por requisição (GlobalDbInterceptor, mesmo padrão de
-// AuthServiceCadastro/campanha.service.rejeitar.ts). De propósito SEM
-// checar "já aceitou antes" nem persistir nenhum estado intermediário: se o
-// usuário clicar no cadeado, aceitar o termo, e fechar o navegador antes de
-// terminar o formulário, NADA foi gravado (nem perfil, nem aceite) - a
-// próxima tentativa começa do zero, mostrando o termo de novo. Isso evita
-// de propósito qualquer "upgrade em progresso" travado - não existe estado
-// parcial pra destravar.
+// Aceite do Termo de Uso (modal de upgrade em T1, Bancada do Pesquisador): gravado junto do INSERT do perfil,
+// na MESMA transação por requisição (GlobalDbInterceptor, mesmo padrão de
+// AuthServiceCadastro/campanha.service.rejeitar.ts). De propósito SEM checar "já aceitou antes" nem persistir
+// nenhum estado intermediário: se o usuário clicar no cadeado, aceitar o termo, e fechar o navegador antes de
+// terminar o formulário, NADA foi gravado (nem perfil, nem aceite), e a próxima tentativa começa do zero,
+// mostrando o termo de novo. Isso evita qualquer "upgrade em progresso" travado: não existe estado parcial para
+// destravar.
 //
-// Duas UNIQUE constraints podem disparar 23505 aqui - a PK (id_usuario, se a
-// pessoa já tem perfil) e UK_PERFIL_PESQUISADOR_CPF_HASH (se o CPF já
-// pertence a outra conta). Nenhum try/catch próprio aqui: o
-// PostgresExceptionFilter global (commons/database) já traduz 23505 pra 409
-// com mensagem genérica, e diferenciar as duas causas por nome de
-// constraint precisa de um Postgres de verdade rodando pra confirmar o
-// formato exato do erro do driver `pg` - não dá pra testar isso neste
-// ambiente (sem banco conectado). Ver DOCUMENTACAO_BD.md se um dia isso
-// virar um problema real (mensagem genérica demais pro usuário).
+// Duas UNIQUE constraints podem disparar 23505 aqui: a PK (id_usuario, se a pessoa já tem perfil) e
+// UK_PERFIL_PESQUISADOR_CPF_HASH (se o CPF já pertence a outra conta). Nenhum try/catch próprio aqui: o
+// PostgresExceptionFilter global (commons/database) já traduz 23505 para 409 com mensagem genérica, e
+// diferenciar as duas causas por nome de constraint precisa de um Postgres de verdade rodando para confirmar o
+// formato exato do erro do driver `pg`. Ver DOCUMENTACAO_BD.md se um dia isso virar um problema real (mensagem
+// genérica demais para o usuário).
 @Injectable()
 export class PerfilPesquisadorServiceCreate {
   constructor(

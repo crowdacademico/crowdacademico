@@ -1,14 +1,19 @@
-import { Controller, Get, Param, ParseIntPipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  ParseIntPipe,
+  UseGuards,
+} from '@nestjs/common';
+import { RequireAuthGuard } from '../../3-auth/guards/require-auth.guard';
 import { UsuarioServiceListarLogins } from '../service/usuario.service.listar-logins';
 
-// GET /usuario/:id/logins - não conflita com GET /usuario/:id
-// (usuario.controller.findone.ts) pelo mesmo motivo de sempre: Nest casa
-// rota por número de segmentos.
+// GET /usuario/:id/logins não conflita com GET /usuario/:id (usuario.controller.findone.ts): o Nest casa rota
+// por número de segmentos.
 //
-// Sem RequireAuthGuard, mesmo raciocínio de usuario-papel.controller.
-// findall-geral.ts (07-08-2026): este painel admin só é alcançado por
-// admin em qualquer versão futura do sistema.
+// Exige login e, no service, ser o próprio usuário ou ter usuario_visualizar_sensivel.
 @Controller('usuario')
+@UseGuards(RequireAuthGuard)
 export class UsuarioControllerListarLogins {
   constructor(private readonly service: UsuarioServiceListarLogins) {}
 

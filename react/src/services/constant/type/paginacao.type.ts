@@ -16,16 +16,12 @@ export interface ResultadoPaginado<T> {
   tamanho: number;
 }
 
-// ADICIONADO (20-09-2026, achado numa revisão do Lucas): as 11 chamadas
-// de listagem faziam `.then((resposta) => resposta.dados)` e jogavam o
-// `total` fora. Como o backend limita em 500 (paginacao.util.ts), no
-// registro 501 a tela passava a MENTIR silenciosamente - GenericTable
-// mostraria "500 registros" existindo 3000, sem nenhum aviso em lugar
-// nenhum. Não é hora de paginar no servidor (volume atual não justifica,
-// e o teto de 500 é decisão consciente já documentada), mas truncar em
-// silêncio é diferente de truncar avisando. Este helper substitui o
-// `.then` cru nas 11 chamadas e mantém o mesmo retorno (`T[]`), então
-// nenhum chamador muda.
+// As chamadas de listagem faziam `.then((resposta) => resposta.dados)` e jogavam o `total` fora. Como o backend
+// limita em 500 (paginacao.util.ts), no registro 501 a tela passaria a MENTIR silenciosamente: GenericTable
+// mostraria "500 registros" existindo 3000, sem nenhum aviso. Não é hora de paginar no servidor (volume atual
+// não justifica, e o teto de 500 é decisão consciente já documentada), mas truncar em silêncio é diferente de
+// truncar avisando. Este helper substitui o `.then` cru nas chamadas de listagem e mantém o mesmo retorno
+// (`T[]`), então nenhum chamador muda.
 export function desembrulharPaginado<T>(rotulo: string) {
   return (resposta: ResultadoPaginado<T>): T[] => {
     if (resposta.total > resposta.dados.length) {

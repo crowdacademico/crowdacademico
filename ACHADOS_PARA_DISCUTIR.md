@@ -1,315 +1,103 @@
-# 🗣️ Achados pra discutir - rodada de documentação (01-09-2026)
+# Achados para discutir: o que ainda falta (lista de 26-09-2026)
+
+Lista montada a partir da resposta da revisão externa de 24-09-2026 (a pasta de contra-prompt de 24-09 dentro de `informacoes/`), conferida item por item contra o código. Os achados antigos (itens 1 a 20, quase todos resolvidos) estão em `informacoes/HISTORICO/HISTORICO_ACHADOS_PARA_DISCUTIR.md`; qualquer citação "`ACHADOS_PARA_DISCUTIR.md`, item N" em documento ou comentário antigo aponta para lá.
+
+## A. Dá para fazer agora, sem decisão de negócio
+
+1. **Tipos gerados do banco (B4).**
+   - Situação: o `db.types.ts` continua escrito à mão, com 660 linhas, e os enums de status estão repetidos no React.
+   - Revisão externa: rodar o `kysely-codegen` contra o PGlite e gerar um `enums.gerado.ts` para o React. Serve de resposta para a banca ("o código bate com o banco").
+   - Sugestão: concordo. Risco baixo, mas os erros de tipo que aparecerem vão mostrar divergências reais. Precisa de OK para instalar `@electric-sql/pglite-socket` como dependência de desenvolvimento.
+   - **Decisão do Lucas (26-09-2026): não instalar por enquanto.** O tópico será levado à revisão externa antes de qualquer instalação. Nada foi instalado.
+   - **Análise da dependência `@electric-sql/pglite-socket` (26-09-2026):**
+     - **O que é.** Adaptador que abre uma porta TCP local (por exemplo 5432) e a liga ao PGlite, o Postgres em WebAssembly usado nos testes. Com isso, qualquer programa que fale com um Postgres de verdade, como o `kysely-codegen`, conecta nele por uma URL comum. O PGlite sozinho só aceita chamadas de dentro do Node. A conexão local que ele abre não é aberta para a internet, e o banco do teste nasce dos arquivos 01 a 08 e some quando o processo termina.
+     - **De onde veio.** Pacote oficial do mesmo repositório do PGlite (`electric-sql/pglite`), da ElectricSQL. Licença Apache-2.0, versão 0.2.11 (publicada em 26-08-2026). Exige exatamente o `@electric-sql/pglite@0.5.8`, a versão já usada em `informacoes/testes-banco`. Dados do registro do npm; não foi possível conferir quantas pessoas o usam nem os downloads.
+     - **Quem usa e se é comum.** É o jeito documentado pelo projeto para ferramentas que exigem uma conexão Postgres de verdade (ORMs, geradores de tipos, `psql`, `pg_dump`). Fora dos testes é pouco conhecido, porque a maioria dos projetos gera tipos direto do Postgres que já roda. Gerar tipos a partir de um Postgres local é prática comum; usar o PGlite como esse Postgres é o que é menos usual.
+     - **Benefícios.** (1) Os tipos passariam a ser gerados do banco montado pelos arquivos 01 a 08, sem tocar no Supabase e sem instalar um Postgres local. (2) Os erros de tipo que aparecerem vão mostrar divergências reais entre o `db.types.ts` escrito à mão (660 linhas) e o banco. (3) Resposta pronta para a banca: "o código bate com o banco". (4) Um `enums.gerado.ts` para o React elimina os enums repetidos à mão.
+     - **Problemas possíveis.** (1) O PGlite aceita uma conexão por vez; o `kysely-codegen` pode abrir mais de uma, e aí trava ou dá erro (é preciso testar na prática). (2) Diferenças de catálogo: o PGlite é um Postgres real em WebAssembly, mas o `kysely-codegen` lê as tabelas de sistema, e um detalhe delas que o PGlite não tenha, ou tenha diferente, pode gerar um tipo errado. (3) Versão presa: o pacote exige exatamente a 0.5.8, então atualizar o PGlite exige atualizar os dois juntos. (4) Muitos erros de tipo de uma vez: trocar o arquivo escrito à mão pelo gerado deve produzir uma leva de erros de compilação (tipos `Generated`, `null`, enums); é o ganho, mas dá trabalho, e o caminho seria em etapas (gerar ao lado, comparar, só depois trocar). (5) Manutenção: mais um passo a repetir sempre que o banco mudar (`npm run db:tipos`), que só vale se ficar num script único e documentado. (6) Não é dependência de produção: iria como `devDependency` no `nest/` ou em `informacoes/testes-banco` (ignorada pelo git), e não vai para o servidor. Como a Alexia não vê `informacoes/`, o lugar certo para ela poder repetir o processo é o `nest/`.
+     - **Riscos da instalação em si:** baixos. Pacote pequeno, de mantenedores conhecidos, licença permissiva, e pode ser desinstalado sem deixar rastro. Se o problema (1) ou o (2) se mostrarem inviáveis, desistir e remover o pacote.
+     - **Recomendação registrada.** Instalar em `nest/` como `devDependency` e fazer a primeira geração ao lado do arquivo atual, sem trocar nada, para ver a diferença antes de decidir.
+2. ✅ **FEITO (26-09-2026, banco, Nest e tela de teste): campos bloqueados vindos do banco (D4).** Funções `fn_campanha_campos_bloqueados` e `fn_campanha_erro_congelamento`, trigger de congelamento refatorada com os mesmos códigos e mensagens, `camposBloqueados` em `GET /campanha/:id`; Grupo L do `ATUALIZAR` (colar depois do K); suíte 14. Falta só a tela real de "Minhas campanhas" usar isso (B.1). Descrição original:
+   - Situação: não existe. A trigger de congelamento e o `findOne` de campanha calculam cada um por conta própria.
+   - Revisão externa: uma função SQL única que os dois usam. Resolve a tensão com Nielsen sem duplicar regra.
+   - Sugestão: concordo. Também é pré-requisito para Alterar campanha na tela real.
+3. ✅ **FEITO (26-09-2026): `ordem_endosso` para o banco (A6.3).** Trigger `validar_comentario_endosso_autor` calcula sob lock por campanha; Grupo K do `ATUALIZAR` (colar depois do J); suíte 13. Descrição original:
+   - Situação: o Nest ainda calcula `MAX + 1` num SELECT separado. Dois cliques rápidos geram ordem repetida.
+   - Revisão externa: mover para a trigger com `pg_advisory_xact_lock`, junto do dispatcher.
+   - Sugestão: dá para fazer antes e sozinho, é pequeno e testável no PGlite. Também simplifica o D2.
+4. ✅ **FEITO (26-09-2026): `GRANT INSERT` por coluna em `usuario` (F3.7).** Só nome, email, senha_hash e id_imagem_perfil; Grupo J do `ATUALIZAR` (colar depois do I); suíte 12. Descrição original:
+   - Situação: o grant é da tabela inteira, então o banco aceitaria um INSERT com `email_verificado = true`. Só o DTO impede.
+   - Revisão externa: GRANT por coluna, como já foi feito em `campanha`.
+   - Sugestão: concordo. Pequeno, mas precisa listar as colunas que o cadastro e o trigger de signup usam.
+5. ✅ **FEITO (26-09-2026): fila de aprovação do admin (B1.3 e E5).** Menu MODERAÇÃO > Aprovar Campanhas, tela e modal de revisão, provada ao vivo. Descrição original:
+   - Situação: os endpoints, o sinal de score baixo e a coluna "atenção" existem. O item "Aprovar Campanhas" no menu ainda está desabilitado.
+   - Revisão externa: é o 2º passo do fluxo principal.
+   - Sugestão: dá para fazer sem decisão: ativar o menu e montar a tela.
+6. ➡️ **MOVIDO PARA `PENDENCIAS e correcoes.md` (26-09-2026, decisão do Lucas: sem urgência até o deploy).** Bloco SQL "modo produção" (E3). Descrição original:
+   - Situação: não existe.
+   - Revisão externa: a barreira real das ferramentas do Campo de Testes é o banco (tirar essas permissões do admin), não `NODE_ENV`.
+   - Sugestão: deixar o arquivo pronto e testado no PGlite, sem rodar nunca. É para o dia do deploy.
+7. ✅ **FEITO (26-09-2026): caso do 92009 no PGlite (pesquisador suspenso).** Suíte 15, 7 casos; o banco já barrava, faltava o teste.
+8. ✅ **FEITO (26-09-2026): jobs linha a linha (F4.5).** Grupo M do `ATUALIZAR` (colar depois do L), suíte 16. Descrição original:
+   - Situação: só o job de rascunho é assim.
+   - Revisão externa: só se aparecer problema.
+   - Sugestão: baixa prioridade.
+9. ➡️ **MOVIDO PARA `PENDENCIAS e correcoes.md` (26-09-2026, decisão do Lucas: deixar parado).** Remover `aplicar-migrations.script.ts` (A7, passo 8). Descrição original:
+   - Situação: ninguém usa.
+   - Revisão externa: trocar o `ATUALIZAR` por uma pasta de migrações registradas.
+   - Sugestão: discordo, porque a Alexia recria o banco do zero com os arquivos 01 a 08. Recomendo apagar o script. Precisa de OK.
+10. **Colar o Grupo I no Supabase (depois do H).** Sem ele, `/usuario-papel` e o dashboard continuam abertos à pesquisadora. Os Grupos F, G e H já foram colados; o E foi confirmado ao vivo pelo Playwright (o 5º envio foi recusado até para o admin).
+
+## B. Precisam de decisão
+
+1. **"Minhas campanhas" do pesquisador, com o wizard extraído do Campo de Testes.**
+   - Revisão externa: é o maior risco do TCC. Numa banca pedem "me mostra o pesquisador criando uma campanha", e hoje só existe a bancada de testes.
+   - Sugestão: concordo. A decisão é onde mora: área própria ou dentro do painel.
+2. **Hook `useErrosFormulario`.** Revisão externa: umas 60 linhas, aplicar primeiro no wizard. Sugestão: só faz sentido junto com o item 1.
+3. **Alterar e Excluir campanha na tela real.** Revisão externa: dentro de "Minhas campanhas", com D4, e Excluir só em rascunho. Sugestão: concordo, depende do item 1 e do D4 (A.2).
+4. **Página pública da campanha.** Revisão externa: não depende do gateway, com o botão "Contribuir em breve". Sugestão: concordo. A decisão é o escopo.
+5. **Score, Parte C.** Adiada. Patch pronto; precisa de tela de admin, dos números (10, 15 e 3 denúncias) e do texto dos Termos de Uso.
+6. **Dispatcher de triggers** (`campanha` de 17 para 5, `comentario` de 8 para 2).
+   - Revisão externa: só depois de ter os testes no repositório.
+   - Sugestão: o ganho é ordem explícita e mensagens previsíveis, não velocidade; risco médio. As suítes 8 e 9 já são a rede de segurança. Fazer depois do item 1, se sobrar tempo.
+7. **Log de auditoria só com diff (A5).**
+   - Revisão externa: sim, é barato.
+   - Sugestão: recomendo não mudar. O UPDATE perde o estado completo, e o espaço não pesa (uns 5 MB por ano).
+8. **Comentários dos `.sql`.** Revisão externa: fazer junto do dispatcher. Já houve a primeira passada em `03` e `05`; `02` e `06` seguem com uns 63% de comentário.
+9. **Verde do tema escuro (#2fbf71) e borda de campo com 1,48:1.** Decidir olhando o Guia de Estilo, com a Alexia.
+10. **Guarda de login em `/admin/*`.** Pendência: hoje o painel abre sem login depois de sair. Vale fazer (o refresh token salvo e o botão `<dev> Entrar como Admin` deixam o custo baixo), fica para depois.
+11. **Moderados do axe** (sem h1, ordem dos títulos do rodapé). Mexe na tipografia fixa.
+12. **Botão "Criar" de parâmetro global.** Se continua ou some.
+
+## C. Dependem de módulo (não antecipar)
+
+- **18-recompensa:** congelamento de `recompensa` e `FOR UPDATE` no estoque.
+- **19-denúncia:** gravidade por motivo, fundir as triggers, contestação do score, endpoint de encerrar por moderação.
+- **22-contribuição:** `UNIQUE` em `id_transacao_api`, máquina de estados de `status_contribuicao`, e a regra de `SECURITY DEFINER` com checagem interna (F3.2).
+- **23-repasse:** checagem em `atualizar_status_repasse()`.
+- **26-notificacao:** `contar_metricas_dashboard()` também precisa ganhar a contagem de notificações; o módulo sozinho não resolve `notificacoesPendentes: null`.
+- **4-mail:** e-mail de rejeição com reenvios, e "avise-me quando começar".
+- **Deploy:** CORS com lista (`app.enableCors()` hoje aceita qualquer origem), refresh token em cookie (as duas juntas), Termos de Uso com texto real.
+- **Por último:** gateway (sandbox também perfeito), 2FA, CPF real.
+
+## D. Ideias opcionais da revisão externa (F1)
+
+- Selo "Resultado publicado", a partir da fase `resultado_final`.
+- "Revisada pela curadoria em (data)", a partir de `aprovado_em`.
+- Rota `GET /c/:id` com as tags `og:` para o WhatsApp e o LinkedIn mostrarem o card.
+- Todas dependem da página pública (B.4).
+- Matchfunding, login por função `SECURITY DEFINER` com `pol_usuario_select` fechada, recálculo de score por instrução e throttle distribuído ficam para depois do TCC.
+
+## E. A revisão externa recomenda não fazer
+
+Mover regra de trigger para o Nest, recálculo de score sob demanda, trocar o log por pgAudit ou `supa_audit`, endpoint de enums, auditar Nielsen no Campo de Testes, dispatcher nas tabelas pequenas, `NODE_ENV` como barreira de segurança. Concordamos com tudo.
+
+## F. Registrados de antes, ainda válidos
+
+- **Não remover o `overrides` do `multer` em `nest/package.json`.** Hoje é cosmético (nenhuma rota usa upload multipart pelo Nest). No dia em que qualquer rota usar `FileInterceptor`, vira correção de segurança real. O `package.json` não aceita comentário, por isso o aviso mora aqui.
+- **`GET /campanha` (listagem) traz as mesmas colunas pesadas do detalhe** (`CAMPANHA_COLUNAS_SELECT`, inclui `descricao` de até 20 mil caracteres). Inofensivo hoje; rever o contrato quando a página pública existir.
+- **Constantes duplicadas entre `nest/` e `react/`:** conferido em 26-09-2026. A duplicação dentro de cada lado foi eliminada; sobram, de propósito, a lista de tipos de imagem e o perfil de redução do avatar (512 px, qualidade 80), sem código compartilhado entre os repositórios (cada lado comenta o outro). Sem mais nada a fazer.
+
+## Sugestão de ordem
 
-Achados pelos agentes que escreveram `DOCUMENTACAO_BACKEND.md`/`DOCUMENTACAO_FRONTEND.md` e pela matriz de rastreabilidade, na mesma rodada. Nenhum foi decidido nem corrigido - só registrados aqui pra discutir com calma depois. Ordem não é prioridade, é só a ordem que saíram no relatório.
-
----
-
-## 🔴 Vulnerabilidade real de segurança no `nest/` (multer, via `@nestjs/platform-express`) - achado em 14-09-2026, 🟢 RESOLVIDO em 20-09-2026 (opção 2, `overrides`)
-
-**Isto não é uma pendência de rotina - fica só registrado aqui até eu decidir manualmente o que fazer. Não mover pra `PENDENCIAS e correcoes.md`.**
-
-### 🟢 DECISÃO E RESULTADO (20-09-2026)
-
-Aplicada a opção 2. `nest/package.json` ganhou `"overrides": { "multer": "^2.4.0" }` e o `package-lock.json` foi regenerado (multer 2.2.0 -> 2.4.0; de brinde saíram `concat-stream` e `typedarray`, que o 2.4.0 não precisa mais). `npm audit`: **de 6 vulnerabilidades altas para 0**. `nest build` limpo.
-
-**Correção importante sobre o texto abaixo, que ficou errado e foi mantido por histórico:** o `multer` NÃO é usado pelo módulo `25-arquivo`, nem direta nem indiretamente. Procurado `FileInterceptor`, `FilesInterceptor`, `UploadedFile`, `MulterModule` e `multer` em todo o `nest/src`: zero ocorrências. O upload funciona por URL pré-assinada (`arquivo.service.iniciar-upload.ts` e `confirmar-upload.ts`): o arquivo vai do navegador direto pro bucket e nunca passa pelo Nest. O multer só está na árvore de dependências porque `@nestjs/platform-express` o declara, mas nenhuma rota do sistema parseia multipart, então as 4 falhas de DoS eram INALCANÇÁVEIS. Consequência: o "risco real desse caminho" e a recomendação de "testar upload de avatar" mais abaixo NÃO se aplicam (não existe fluxo que passe pelo multer para quebrar); o override foi só higiene de `npm audit`.
-
-**⚠️ Não remover este override achando que é entulho.** Hoje ele é cosmético (código nunca executa o multer). No dia em que QUALQUER rota passar a usar `FileInterceptor`/upload multipart pelo Nest, ele deixa de ser cosmético e passa a ser correção de segurança real. Como `package.json` não aceita comentário, o aviso mora aqui.
-
-**Detalhe de execução:** o `package-lock.json` regenerado precisa ser commitado junto. Só o `package.json` não basta: numa máquina com `npm ci` (como a da escola) o lock antigo continuaria resolvendo 2.2.0.
-
-### Como foi achado
-
-O Lucas usou o sistema no computador da escola (09-09-2026) e recebeu avisos de `npm install` diferentes dos que via em casa - levou a conversa (com outra IA, por e-mail) pra confirmar o que significavam. Antes de responder, roda `npm audit` de verdade nos dois lados (`nest/` e `react/`) direto na própria máquina de casa do Lucas, agora, pra não especular. Resultado: **não é diferença entre máquinas**. `react/` está limpo dos dois lados (0 vulnerabilidades, só um aviso inofensivo de versão de Node exigida pelo `react-router`, que não impede nada - o `npm run dev` sobe normal). `nest/`, porém, mostra a MESMA vulnerabilidade em casa e na escola: 6 vulnerabilidades altas em casa agora, 7 na escola há 5 dias (a diferença de 1 é só o banco de vulnerabilidades do npm ter sido atualizado nesse intervalo, não é uma migração de estado). Ou seja: **o problema sempre existiu no projeto, em toda máquina - só nunca tinha sido notado/checado antes.**
-
-### O que é o problema, com precisão técnica
-
-`nest/` usa `multer` (biblioteca de upload de arquivo multipart, ver a correção no bloco de decisão acima: o módulo `25-arquivo` NÃO usa multer, o upload é por URL pré-assinada e nunca passa pelo Nest; ele só está na árvore via `@nestjs/platform-express`) na versão **`2.2.0`**, resolvida no lockfile atual (`node_modules/multer`, confirmado com `node -e "console.log(require('./node_modules/multer/package.json').version)"` = `2.2.0`). Essa versão tem 4 avisórios abertos, todos classificados como **Severidade Alta**, todos da categoria **Negação de Serviço (DoS)** - nenhum é sobre roubo de dado ou execução remota de código:
-
-- `GHSA-wc9g-mqfw-jrwm` - DoS via nomes de campo multipart malformados/crafted.
-- `GHSA-qfvm-cv95-jqjf` - DoS via vazamento de file descriptor quando um upload é abortado no meio.
-- `GHSA-qvfw-j98x-7q72` - bypass do limite de tamanho de arquivo, via condição de corrida (race condition) no `fileFilter` assíncrono.
-- `GHSA-535w-7cp7-47q4` - DoS via índice de array anormalmente grande nos nomes de campo.
-
-Na prática: alguém mandando uma requisição de upload malformada de propósito pode travar/derrubar o processo do backend, ou (no caso do `fileFilter`) conseguir subir um arquivo maior do que o limite configurado deveria permitir. Não é acesso a dado de outro usuário, é disponibilidade do serviço e integridade do limite de tamanho.
-
-### Por que essa versão vulnerável está presa aqui, mesmo com `npm install` normal
-
-Não é o `package.json` do próprio projeto pedindo essa versão - é o pacote `@nestjs/platform-express` (hoje resolvido em `11.1.28`, confirmado em `nest/package-lock.json`) que declara, no PRÓPRIO `package.json` dele, `"multer": "2.2.0"` como **versão EXATA, sem `^` nem `~`** (confirmado lendo o bloco `node_modules/@nestjs/platform-express` inteiro no lockfile - `dependencies: { cors, express, multer: "2.2.0", path-to-regexp, tslib }`). Um `npm install`/`npm update` comum nunca vai mover essa dependência aninhada sozinho, porque o próprio autor do pacote pai fixou o número exato - não é uma faixa aberta esperando uma versão mais nova.
-
-### O conserto que o próprio `npm audit fix --force` sugere - e por que eu NÃO aplicaria sem conversar antes
-
-O npm resolve isso subindo `@nestjs/platform-express` pra `12.0.2` - só que a versão atual instalada de todo o resto do NestJS é a **11.x** (`@nestjs/core: ^11.0.1`, `@nestjs/common: ^11.0.1`, confirmado em `nest/package.json`). `@nestjs/platform-express@12` exige `@nestjs/core`/`@nestjs/common` também na versão 12 (peer dependency) - ou seja, o conserto "oficial" não troca só a lib de upload, **arrasta todo o framework backend pra uma major version nova de uma vez** (`@nestjs/core`, `@nestjs/common`, `@nestjs/schedule`, `@nestjs/swagger`, `@nestjs/testing`, `nestjs-cls`, todos precisando de uma versão compatível com Nest 12). Major version de framework normalmente remove/muda API que já pode estar em uso em qualquer um dos ~28 módulos do backend - é uma migração real, com superfície de risco em todo o projeto, pra resolver um problema que, tecnicamente, é bem mais estreito que isso.
-
-### O conserto que eu proporia, se o Lucas topar (ainda não aplicado - só a análise, por pedido dele)
-
-Existe `multer@2.3.0` e `multer@2.4.0` já publicados, **fora** da faixa vulnerável (os avisórios cobrem "<=2.2.0" - ou seja, 2.3.0 em diante já está corrigido). Como o motivo da versão travada é `@nestjs/platform-express` pedir um número exato no PRÓPRIO pacote dele (não uma regra do nosso `package.json`), a saída é usar o campo `"overrides"` do npm, em `nest/package.json` - uma seção nova que diz "não importa quem pediu qual versão de `multer` lá no fundo da árvore, resolve todo mundo pra `^2.4.0`". Isso resolveria a vulnerabilidade **sem tocar em nenhuma versão do NestJS** (continua tudo na família 11.x, zero migração de framework).
-
-**Risco real desse caminho, pra não vender como zero-risco:** `2.2.0` → `2.4.0` é um bump MENOR dentro da mesma major (2.x) do `multer` - pela convenção de versionamento semântico, não devia ter nada que quebra, mas "não devia" não é "garantido": bibliotecas reais às vezes têm mudança de comportamento sutil mesmo em minor version, e `@nestjs/platform-express@11.1.28` foi testado pelos próprios autores contra `2.2.0` especificamente, nunca contra `2.4.0`. Antes de confiar nisso de verdade, precisaria testar ao vivo o fluxo de upload real (avatar de perfil, no mínimo - é o único caminho de upload com consumidor real hoje, ver `PROXIMOS_MODULOS.md`) depois de aplicar o override, não só confiar que `npm audit` fica limpo.
-
-### Gravidade prática pro momento atual do projeto
-
-Como é uma falha de Negação de Serviço, não de roubo de dado, e o sistema ainda não está em produção real (sem tráfego público de verdade, sem exposição direta na internet ainda) - o risco HOJE é baixo. Mas o módulo de upload (`25-arquivo`) já é usado de verdade (avatar de perfil) e vai crescer (foto de campanha, anexos de atualização, quando essas telas existirem) - e mais importante, vai ficar diretamente exposto a qualquer visitante público quando a página pública de campanha existir. Não é urgente pra HOJE, mas é o tipo de coisa que precisa estar resolvida ANTES de qualquer exposição pública real, não depois.
-
-### Resumindo as opções, sem empurrar nenhuma
-
-1. Ignorar por enquanto (sistema não está em produção, risco real hoje é baixo) - aceitar consciente, revisitar antes do deploy.
-2. Aplicar o `overrides` pro `multer@^2.4.0` (conserto pequeno, testar upload de avatar depois) - minha recomendação, se for pra fazer algo agora.
-3. Aplicar `npm audit fix --force` (migração completa do NestJS pra v12) - não recomendo fazer isso só por causa desta vulnerabilidade específica; se um dia migrar pra Nest 12 por outro motivo, aí sim resolve de tabela.
-
----
-
-
-
-
-
-
-## 1. 🟢 DECIDIDO (04-09-2026) - `GET /dashboard/resumo` continua público, de propósito
-
-`SECURITY DEFINER` sem guard de autenticação na frente - os números agregados (total de usuários, sessões ativas etc.) ficam acessíveis sem login. Chegou a ser corrigido com `@UseGuards(RequireAuthGuard)`, mas o Lucas decidiu reverter: a exigência de login atrapalha mais que ajuda durante o desenvolvimento agora, e a decisão de arquitetura de longo prazo é que o painel admin inteiro vai ficar fora do alcance do usuário comum de outra forma (não é este guard específico que vai sustentar essa fronteira). Não é esquecimento - é decisão consciente de deixar como está.
-
-## 2. 🟢 RESOLVIDO (04-09-2026) - `DevLoginRapido` protegido por `import.meta.env.DEV`
-
-O Campo de Testes já usava esse padrão em 3 lugares (só existe no build de desenvolvimento, some do build de produção). O `DevLoginRapido` não usava - ia pro bundle de produção carregando as 7 contas de seed com a senha `DevTcc123!` literal no código. Decisão do Lucas: proteger, mesma lógica do Campo de Testes (a conveniência em `npm run dev` não muda; só deixa de ir pro build de produção). Corrigido em `header.jsx`.
-
-## 3. 🟢 RESOLVIDO (04-09-2026) - Comentários desatualizados dizendo que upload "ainda não existe"
-
-Em `avatar-usuario.jsx` e `dashboard-identidade-visual.jsx` - os dois ainda justificavam um placeholder dizendo que `25-arquivo`/upload não existia. Já existia e funcionava (é o que `SeletorFotoPerfil` usa) - não era decisão nenhuma, só comentário desatualizado. Corrigidos os dois: `avatar-usuario.jsx` agora descreve o upload como existente; `dashboard-identidade-visual.jsx` deixa claro que o que falta não é mais o upload em si, é construir a tela de gerenciar logo/favicon (ninguém pediu ainda).
-
-## 4. 🟢 RESOLVIDO (04-09-2026) - `27-resources` era sobra do modelo da disciplina, removida
-
-O Lucas perguntou pra Alexia, ela lembrou que vinha do sistema modelo da disciplina (Programação para Web 2). Investigado nos dois repositórios de referência do curso: `resources`, lá, é um catálogo estático de rota (`GET /rest/resources`) que o React consulta pra montar URL sem hardcode - só faz sentido porque aquele sistema segue uma convenção rígida de 5 endpoints por entidade. O CrowdAcadêmico já resolve o mesmo problema de origem de outro jeito (`<modulo>.api.js` por módulo), e as rotas daqui não são uniformes o bastante pra caber nesse molde. Pasta vazia removida - detalhe completo em `DOCUMENTACAO_BACKEND.md`, seção 14 (nota 🗑️).
-
-## 5. Constantes duplicadas à mão entre `nest/` e `react/`
-
-Exemplos concretos: teto de 8MB por imagem, lista de tipos MIME aceitos, os perfis de redução (512px/80 avatar, 1600px/78 campanha). Hoje cada lado tem sua própria cópia, sincronizada só de boa vontade - não existe import cruzado entre os dois repositórios. Quando este item foi escrito (05-09-2026), isso era consequência direta de "React em JavaScript ou TypeScript" ainda não ter sido decidido; **a migração completa pra TypeScript terminou em 07-09-2026** (ver memória `project_migracao_ts_react.md`), mas isso sozinho não fecha esta pendência - `nest/` e `react/` continuam repositórios separados, sem workspace/pacote compartilhado entre eles, então mesmo com os dois lados em TS hoje, um tipo/constante ainda precisa ser copiado à mão de um lado pro outro. O que TS abriu de verdade foi a possibilidade técnica de um dia compartilhar - falta a infraestrutura (monorepo ou pacote publicado) pra isso acontecer sozinho.
-
-**Não é uma decisão nova**, só reaparecendo com um exemplo concreto agora que existe mais coisa duplicada (antes era só uma preocupação teórica).
-
-**Achado um caminho mais barato que virar TypeScript (05-09-2026, discussão com apoio de IA):** boa parte destas constantes já são chaves de `configuracoes` (`arquivo_tamanho_maximo_imagem_bytes` etc.) - e `configuracoes.publica` (nova, ver `PENDENCIAS e correcoes.md`, seção "GET /configuracoes agora distingue pública de interna", 05-09-2026) já marca essas chaves como públicas. Pra quem já é config, a duplicação morre lendo do banco via `useConfiguracoes()` (que já existe), sem precisar de tipo compartilhado nem migrar o React pra TS. Só sobra pra TS o que **não** é config (formato de resposta, tipos MIME estruturais, os perfis de redução 512px/1600px) - decisão maior, continua em aberto.
-
-🟢 **A parte que já era config, feita (05-09-2026):** `seletor-foto-perfil.jsx` (o único componente que faz upload de verdade hoje - avatar) trocou `TAMANHO_MAXIMO_AVATAR_BYTES = 8 * 1024 * 1024` fixo por `obterConfiguracao('arquivo_tamanho_maximo_imagem_bytes', 8 * 1024 * 1024)` - o `8 * 1024 * 1024` que sobra é só o valor padrão exibido por uma fração de segundo antes do `ConfiguracoesProvider` carregar, não mais uma segunda fonte de verdade. A mensagem de erro ("tamanho máximo é X MB") também passou a calcular o número a partir da config, em vez de "8 MB" fixo no texto. `arquivo_tamanho_maximo_documento_bytes`/`arquivo_cota_bytes_por_usuario` não tinham nenhum componente duplicando o valor (busquei em todo `react/src` por quem chama `arquivoApi.iniciarUpload`/`confirmarUpload` - só existe este um componente) - nada a trocar neles. Verificado com `eslint` + `vite build` limpos; não testei o upload de ponta a ponta num navegador (exigiria autenticar e escolher um arquivo de verdade) - a mudança é a troca de uma constante por outra do mesmo tipo/valor padrão, risco baixo.
-
-🟢 **Segunda varredura, confirmando que não sobrou mais nada fácil (06-09-2026):** as outras chaves públicas pensadas pra formulário (`limite_caracteres_*`, `prazo_minimo_campanha_dias`/`prazo_maximo_campanha_dias`, `meta_minima_campanha`, `orcamento_min_itens`/`orcamento_max_itens`, `cronograma_min_marcos`/`cronograma_max_marcos`, `limite_links_academicos_perfil`) não têm NENHUM consumidor duplicando o valor hoje - busquei por `maxLength` em toda tela e não existe formulário de criar campanha/relatar denúncia/etc. no React ainda (essas são telas do site público, que não foi construído). Não há nada mais barato pra fazer aqui agora - o resto realmente depende de TS (formato de resposta, MIME, perfis de redução) ou da página pública existir (os limites de caracteres/prazo).
-
-## 6. `notificacoesPendentes: null` no dashboard não vai se resolver sozinho
-
-Quando `26-notificacao` for construído, não basta o módulo existir - `contar_metricas_dashboard()` (a função SQL que alimenta o card do dashboard) também precisa ganhar essa contagem. Existe um precedente idêntico já comentado no próprio código pra `totalCampanhas` (mesma situação, resolvida do mesmo jeito quando `12-campanha` foi construído) - então o caminho já é conhecido, só não é automático.
-
-## 7. Achados da migração TypeScript (Fase 1 - `constants/`+`util/`, 07-09-2026)
-
-Migração é pura de propósito (regra definida antes de começar) - achados anotados aqui, sem tocar:
-
-- **Três funções mortas em `formatacao.util.ts`:** `formatarMoeda`, `formatarPercentual` e `mascararCpf` são exportadas mas **nenhum componente as importa** (busquei em todo `react/src`). `formatarCpf` (a única realmente usada) segue viva, importada por `alterar-usuario.jsx`/`consultar-usuario.jsx`.
-- **`formatarCpf` duplicada em mais dois lugares**, sem importar do util compartilhado: `views/6-perfil-pesquisador/consultar-pesquisador.jsx` e `views/campo-testes/bancada-pesquisador.jsx` cada um define sua PRÓPRIA função local `formatarCpf(cpf)` em vez de reaproveitar `services/constant/utils/formatacao.util.ts`. Três implementações da mesma máscara de CPF no projeto, quando deveria ser uma só.
-
-## 8. Migração TypeScript - 2 das 3 fronteiras de `as` pré-autorizadas nunca foram usadas (07-09-2026)
-
-Na Fase 1, foi aberta uma lista fechada de exatamente 3 fronteiras onde `as` seria permitido (achado real: a proibição original de `as` era inexecutável em `tratarResposta()`). Fases 1 a 5 já convertidos e só **1 das 3** foi realmente necessária:
-
-- **Usada:** `tratarResposta<T>()` em `http.util.ts`. **Correção (07-09-2026, achado do Lucas numa revisão externa):** o registro original citava só 1 `as` nessa função ("o erro-corpo `(await resposta.json().catch(() => null)) as {...} | null`"), mas a função tem **3** expressões `as`, não 1 - as outras duas ficaram sem menção em nenhum relatório até agora:
-  - `(await resposta.json().catch(() => null)) as {...} | null` (erro-corpo, já citada).
-  - `JSON.parse(texto) as T` (corpo de sucesso).
-  - `undefined as T` (corpo vazio de sucesso) - **risco não documentado até agora:** se quem chama declarar `tratarResposta<AlgumTipoNaoVoid>()` e o corpo vier vazio, a função devolve `undefined` com o tipo de `T` mentindo pro compilador (nenhum erro de compilação, nenhum erro em runtime até o valor ser usado como se fosse `AlgumTipoNaoVoid`). Mitigado na prática só pela disciplina de sempre declarar `tratarResposta<void>(...)` no ponto de uso quando o endpoint não devolve corpo útil (ver Fase 1) - não há nada no tipo que IMPEÇA o uso incorreto.
-  As 3 continuam sendo a MESMA fronteira pré-autorizada (nenhuma `as` nova apareceu em lugar nenhum do projeto - conferido de novo em 07-09-2026, grep completo em `src/`), então não é uma violação nova, é uma contagem que estava errada.
-- **Não usada:** os dois `JSON.parse` de `use-chamada-registrada.ts` (Campo de Testes) - `JSON.parse` já devolve `any` nativamente, aceito sem cast por `unknown`/`Record`; o único ajuste necessário foi `JSON.parse(String(opcoes.body))`, que só torna explícita uma coerção que o JS já fazia.
-- **Não usada:** leitura de `sessionStorage`/`localStorage` com desserialização de objeto - nunca ocorre no projeto real (todo uso grep-confirmado guarda só string/number cru: token, tema, escala de fonte, último log visto).
-
-Ao revisar o caso do `ComponentType` na Fase 5 (achado 9, abaixo), ficou claro que autorização não usada deveria ser retirada da lista, não guardada - permissão ampla demais é convite pra uso futuro sem discussão. Registrado aqui, não decidido sozinho - se a Fase 6 quiser encolher a lista pra só a fronteira 1, é uma decisão à parte com o Lucas, não uma limpeza automática.
-
-## 9. Migração TypeScript - `rotas.constants.js` era lacuna real da Fase 1, e o princípio de ordenação das fases foi corrigido (07-09-2026)
-
-`services/router/rotas.constants.js` (tabela única de rotas, ~40 páginas) nunca foi tocado na Fase 1 porque mora numa pasta plana `services/router/` sem `api/` - o escopo original da Fase 1 varreu só módulos com pasta `api/`, então essa pasta escapou. Só foi encontrado na Fase 5 porque `Breadcrumb.tsx` importa dele.
-
-Ao investigar o achado (o campo `elemento` só compilava com `ComponentType<any>`, aparentemente exigindo uma 4ª exceção à regra do `any`), o próprio princípio por trás da ordem das fases foi corrigido: não é "constants primeiro", é "converter um arquivo depois de tudo que ele importa" - `constants/` geralmente não importa nada, por isso foi posto na Fase 1, mas este arquivo específico importa as ~40 páginas de `views/`, então pelo princípio real ele pertence ao FIM da migração, não ao início. Regra daqui pra frente: "quando a heurística da fase e esse princípio discordarem, o princípio ganha" - se aparecer outro arquivo na mesma situação (constants/util/etc que importa muita coisa ainda não migrada), ele vai pro fim sem perguntar, não é pra tratar como uma nova pausa.
-
-A solução de verdade (não precisou de 4ª exceção nem de `@ts-expect-error`): `PropsPagina { auth: UseAuthReturn }` em `services/router/pagina.type.ts`, confirmado contra o próprio `App.jsx` (toda rota renderiza `<Elemento auth={auth} />`, sempre a mesma prop) - a Fase 6 vai anotar cada view com esse tipo, convergindo tudo.
-
-## 10. Bug real no backend (Nest), achado incidentalmente no teste manual de fechamento da migração TypeScript (07-09-2026)
-
-Não é do `react/` nem desta migração - registrado aqui só porque apareceu durante o teste E2E da Fase 7, não veio de nenhuma investigação proposital no backend.
-
-O cron `CampanhaServiceEncerrarVencidas` (`nest/src/12-campanha/service/campanha.service.encerrar-vencidas.ts`), que chama a função `encerrar_campanhas_vencidas()` no Postgres, falha com `error: column "status" is of type status_campanha but expression is of type text` (código `42804`, `parse_target.c`). A função SQL faz `SET status = CASE WHEN ... THEN 'sucesso' ELSE 'nao_atingido' END` sem cast explícito pro enum `status_campanha` - o Postgres não infere o tipo sozinho num `CASE` dentro de um `UPDATE ... SET`, mesmo as duas opções sendo literais válidos do enum. Precisa de `::status_campanha` em pelo menos um dos dois braços do `CASE` (ou no resultado inteiro).
-
-Efeito prático: toda vez que o cron roda (encerrar campanhas com `data_fim` vencida), ele quebra com esse erro e nenhuma campanha vencida é encerrada de verdade - silencioso, só aparece no log do servidor.
-
-**🟢 CORRIGIDO (07-09-2026, a pedido do Lucas ao ser avisado):** `arquivos_banco_dados/05_regras_negocio.sql`, função `encerrar_campanhas_vencidas()` - `::status_campanha` adicionado no resultado do `CASE`. Não pôde ser reconfirmado rodando contra o banco real nesta sessão (sem acesso de rede ao Postgres a partir daqui), mas o erro `42804` e a correção seguem exatamente a semântica documentada do Postgres pra esse caso (um `CASE` de literais resolve pra `text` antes de chegar na coluna; um literal solto, não). Nota completa da correção e do porquê o comentário antigo ("mesmo padrão de `atualizar_status_repasse`") não se sustentava: no próprio `.sql`, junto da função. Como isso afeta um `@Cron` já em produção (ligado 05-09-2026 pro RF-057), o rastreamento passa a viver em `PENDENCIAS e correcoes.md` (onde bugs reais de produção são acompanhados) - este item fica só como o registro histórico de como foi achado, incidentalmente, durante o teste E2E desta migração.
-
-## 11. Migração TypeScript - fechada a direção que faltava da fronteira Nest/React: corpo de request também tipado (07-09-2026)
-
-A Fase 2 (`type/`) só espelhou os DTOs de **resposta** do Nest, de propósito (registrado na própria Fase 3, ver memória da migração) - os 13 lugares em `api/` que montam corpo de requisição continuaram `dados: unknown` desde então. Achado numa revisão externa (Lucas, ao auditar o relatório de fechamento): a fronteira Nest/React só estava fechada num sentido, não nos dois - um corpo malformado/incompleto ainda compilava sem avisar nada.
-
-**Corrigido:** os 13 `dados: unknown` (`1-usuario`, `10-motivo-denuncia`, `11-configuracoes`, `2-papel-permissao`, `25-arquivo`, `8-area-conhecimento`, `9-tipo-link`) viraram os tipos de request de verdade, espelhando um a um os DTOs de `dto/request/*.ts` do Nest correspondente - mesmo método já usado na Fase 2, mesma convenção de nome de arquivo. Nenhum `as`/`any` novo - as únicas 3 quebras reais que apareceram (`tsc --noEmit`) eram 3 telas onde o estado de um `<select>` (`TipoMotivoDenuncia | ''`/`TipoConfiguracao | ''`, valor inicial antes de escolher) precisava provar pro compilador que não estava mais vazio na hora de montar o corpo - resolvido com `if (tipo === '') return;` no início do handler de envio, mesma categoria de guarda "nunca dispara na prática, mas o TS não sabe" já usada em `if (!auth.usuario) return` (Fase 6), não com `as`. `tsc --noEmit`, `eslint .` e `npm run build` limpos depois.
-
-## 12. Migração TypeScript - o risco do `undefined as T` (item 8, achado 07-09-2026) verificado ponto a ponto, e 2 casos reais achados (não hipotéticos)
-
-Depois de documentar o risco (item 8, achado do Lucas: `tratarResposta<T>()` com `T` não-void devolve `undefined` sem avisar se o corpo vier vazio), o próprio Lucas sugeriu ir além de documentar - conferir cada chamada de `tratarResposta<T>` não-void contra o endpoint Nest correspondente, mesma checagem que a Fase 3 já fazia no sentido contrário (`Promise<void>` só depois de confirmar `@HttpCode(204)`).
-
-Conferidas as 51 chamadas não-void em todo `api/`. Método: todo service do Nest usado por essas 13 pastas declara `Promise<T>` explícito no próprio código (`grep` confirma - nenhum sem anotação) - o próprio TypeScript do lado Nest já garante que todo caminho de um método anotado `Promise<XResponse>` devolve algo daquele tipo, então a checagem real virou "achar todo service anotado `Promise<void>` e confirmar que o controller correspondente não promete um tipo diferente pro front". Achados:
-
-- **2 casos reais, não hipotéticos:** `papelPermissaoApi.atribuir()` e `usuarioPapelApi.atribuir()` (`2-papel-permissao/api/papel-permissao.api.ts`) declaravam `Promise<PapelPermissaoResponse>`/`Promise<UsuarioPapelResponse>`, mas os services correspondentes (`PapelPermissaoServiceCreate`/`UsuarioPapelServiceCreate`) são `Promise<void>` de verdade - só fazem o `INSERT` na tabela de vínculo, sem `SELECT`/`.returning()` de volta - e os controllers não têm `@HttpCode`, então o Nest manda `201` com corpo vazio. `tratarResposta<T>` resolvia `undefined as T` nas duas, silenciosamente, desde que os endpoints existem. **Sem efeito prático até hoje:** os únicos 2 pontos de chamada de cada um (`matriz-papel-permissao.tsx`, `alterar-usuario.tsx`) só fazem `await`, nunca leem o valor resolvido. **Corrigido:** os dois viraram `Promise<void>`, batendo com o que a API realmente devolve - zero mudança de comportamento (ninguém lia o valor mesmo), só o tipo parou de mentir.
-- **Verificado e confirmado seguro** (não precisou de mudança): `auth.service.verificar-email.ts` também é `Promise<void>`, mas o controller (`auth.controller.verificar-email.ts`) embrulha o resultado - `await this.service.executar(...); return { verificado: true };` - antes de devolver, batendo com `AuthResponseVerificarEmail` no front. `auth.service.encerrar-sessao.ts.executarUma` é `Promise<void>` mas o controller usa `@HttpCode(204)`, e o front já esperava `Promise<void>` ali (`sessaoApi.encerrarUma`) - correto desde sempre. Todos os 12 services de criar/atualizar tocados no item 11 (acima) devolvem o DTO convertido de verdade via `.returning()`/`.executeTakeFirstOrThrow()`, conferido um a um.
-
-Fora esses 2, nenhuma outra chamada não-void de `tratarResposta<T>` corre o risco documentado no item 8 hoje - verificado, não suposto.
-
-## 13. Super auditoria pós-migração (07-09-2026) - código/comentário morto, achados de sistema, e triagem do que fazer agora vs. depois
-
-Pedido do Lucas: olhar o sistema inteiro atrás de código/comentário morto ou prolixo, e separadamente pensar em melhorias possíveis - sem mexer em nada até decidir. Auditoria feita em 3 frentes paralelas (react/, sistema completo, aproveitamento do TypeScript), cada achado relevante conferido manualmente antes de entrar aqui (não só relatado). Revisão externa (Lucas) organizou a triagem entre "fazer agora" (dividendo direto da migração, remoção pura) e "registrar e não mexer" (refatoração/decisão que merece janela própria).
-
-**🟢 CORRIGIDO (07-09-2026) - 5 itens, todos remoção pura, sem reorganizar nada em volta:**
-- `views/admin/dashboard-identidade-visual.tsx` - o texto mostrado ao admin dizia que o upload (25-arquivo) "ainda não existe", contradizendo o próprio comentário do arquivo (e a realidade - o módulo existe e está em uso via SeletorFotoPerfil). Texto corrigido.
-- `views/admin/dashboard.tsx` - comentário citava "campanha" como exemplo de métrica `null` por módulo inexistente; `totalCampanhas` é `number` não-opcional há tempos, só `notificacoesPendentes` segue `null`. Comentário corrigido.
-- `services/12-campanha/constants/status-campanha.constants.ts` - `classeBadgeStatusCampanha()` tinha um fallback `?? 'badge-neutro'` cujo próprio comentário dizia existir só "até todo módulo 12-campanha estar migrado" (chamador `.jsx` sem checagem). Migração terminou, `allowJs` removido, `CLASSE_BADGE_STATUS_CAMPANHA` é `Record<StatusCampanha, string>` exaustivo. **Conferido antes de remover** (pergunta legítima do Lucas): o ENUM `status_campanha` no Postgres (`01_extensoes_enums_tabelas.sql:94`) tem exatamente os mesmos 7 valores do union do frontend - fallback comprovadamente morto, não protegia divergência real. Removido.
-- `services/3-auth/hook/use-auth.ts` (`salvarSessao`) - `if (resultado.usuario)`/`if (resultado.papeis)` eram guardas impossíveis de falhar: `AuthResponseLogin.usuario`/`.papeis` não são opcionais no tipo (diferente do `if (!auth.usuario) return` usado em outras telas, que o compilador genuinamente não prova). Guardas removidas, atribuição direta.
-- `ehTipoMotivoDenuncia`/`ROTULO_TIPO` (10-motivo-denuncia) - duplicados palavra por palavra em Criar/Alterar e Consultar/Excluir respectivamente. Centralizados em `services/10-motivo-denuncia/constants/motivo-denuncia.constants.ts` (novo arquivo, mesmo padrão de `status-campanha.constants.ts`), os 4 arquivos passaram a importar de lá.
-- Junto: `tutorial-rodar-projeto.md` ganhou as 2 linhas de `.env` que faltavam (`CPF_ENCRYPTION_KEY`/`CPF_INDEX_KEY`, obrigatórias desde o módulo `6-perfil-pesquisador` - sem elas o backend sobe normal, mas perfil de pesquisador quebra na hora).
-- `tsc --noEmit`, `eslint .` e `npm run build` limpos depois de tudo.
-
-**🔴 Registrado, decisão consciente de NÃO mexer agora:**
-- **CORS sem allowlist** (`nest/main.ts:12`, `app.enableCors()` sem opção nenhuma - aceita qualquer origem). Risco baixo hoje (autenticação é Bearer no header, não cookie - não existe o ataque clássico de CSRF), mas seria uma linha com lista de origens vinda de variável de ambiente. **Decisão do Lucas (07-09-2026): esperar o domínio de produção estar definido**, revisitar então.
-- 🟢 **`comentario` (17-comentario) era o único mecanismo de conteúdo do usuário sem limite de frequência/quantidade - RESOLVIDO (12-09-2026).** Ver item 20, mais abaixo: ganhou o mesmo padrão config+trigger de `denuncia`, não precisou esperar o `19-denuncia` voltar à mesa.
-- **`GET /campanha` (listagem) busca as mesmas colunas pesadas do detalhe** (`CAMPANHA_COLUNAS_SELECT`, `nest/src/12-campanha/constants/campanha.constants.ts`, reaproveitado sem diferença entre `findall`/`findone` - inclui `descricao` até 20 mil caracteres e `video_apresentacao_url` em cada linha de uma lista paginada). Inofensivo hoje (página pública de campanha ainda não existe); revisar o contrato quando ela for construída, não antes.
-- 🟢 **Formatação de data duplicada em 5 lugares - CORRIGIDO (07-09-2026).** Conferido antes de mexer: não eram 3 usos aleatórios do mesmo formato, eram 3 granularidades genuinamente diferentes (hora exata pra auditoria/sessão, só data pra suspensão, só mês/ano pra "membro desde") - unificar tudo num só formato mudaria o que aparece em "Minha Conta" sem necessidade real. Solução aplicada (revisão de arquitetura: infraestrutura genérica não deve carregar decisão específica de tela, mesmo princípio do porquê `GenericTable` não sabe nada de regra de negócio): 3 funções pequenas e nomeadas em `formatacao.util.ts` (`formatarDataHora`, `formatarData`, `formatarMesAno`), cada uma só com a MECÂNICA de formatar (sempre `pt-BR`) - a escolha de qual granularidade usar em qual tela continua decisão de cada view, não virou regra embutida no util. `consultar-campanha.tsx`/`consultar-pesquisador.tsx` perderam a função local duplicada; `alterar-usuario.tsx`/`minha-conta-page.tsx` trocaram a formatação inline pela função compartilhada, mesmo comportamento exato de antes (fallback "Não definida"/vazio/`null` preservado em cada call site, não uniformizado). `formatarCpf` triplicado (item 7) continua pendente, fica pra rodada própria - tem uma complicação a mais (uma das 3 cópias tem uma mensagem especial pra CPF não visível por permissão, não é cópia 100% idêntica).
-
-## 14. Lint ciente de tipos ligado no `react/` (07-09-2026) - quatro regras adotadas de vez, uma registrada pra decidir depois
-
-Testado (revisão externa): trocar o lint de "só forma" pra "ciente de tipo" (`projectService` apontando pro `tsconfig.json`) faz o ESLint enxergar o que cada valor REALMENTE é, não só a sintaxe - achando sozinho uma categoria inteira de problema que só tínhamos pego na mão até agora (ver item 13, o `?? 'badge-neutro'` morto). Rodado sem corrigir nada primeiro, pra ver o tamanho: **108 ocorrências em 5 regras**, mais **41 numa 6ª regra** (`no-unnecessary-condition`, testada à parte - não vem incluída no preset padrão).
-
-**🟢 ADOTADA DE VEZ:** `@typescript-eslint/no-misused-promises`, com `checksVoidReturn: { attributes: false }`. Das 69 ocorrências originais, quase todas eram o mesmo padrão - `onClick`/`onSubmit` assíncrono, onde o React não liga pro retorno mas o TypeScript reclamava mesmo assim. Amostrados 4 handlers de módulos diferentes (`alterar-usuario.tsx`, `bancada-campanha.tsx`, `dev-login-rapido.tsx`, `menu-usuario.tsx`) antes de decidir - todos já tratam erro internamente (try/catch ou `.catch()` explícito), confirmando que desligar só a checagem de atributo JSX é seguro de verdade, não só conveniente. Com a opção: **69 → 0**. Regra fica ligada permanentemente em `eslint.config.js`.
-
-**🟢 ADOTADA (08-09-2026) - `@typescript-eslint/no-floating-promises`, depois de resolver as 32 ocorrências (31 do achado original + 1 nova, código escrito entre 07 e 08-09):**
-- **Grupo 1 - disparo deliberado, já seguro internamente (5):** `use-auth.ts` (`.finally()` de limpeza de cache), `seletor-foto-perfil.tsx` (`processarArquivo` com try/catch/finally completo por dentro), `minha-conta-page.tsx` (`auth.logout()`, que já engole o próprio erro; e o `Promise.all` novo da aba Acadêmico, cujas 2 promises internas já têm `.catch(() => null)` cada) - todos resolvidos só com o operador `void` na chamada, sem mudar nada de comportamento.
-- **Grupo 2 - bug real, corrigido de verdade:** `views/campo-testes/bancada-pesquisador.tsx` - `carregarPesquisadores` ganhou um `.catch()` que agora mostra o erro na própria tabela (`erroListagem`, um `<tr>` vermelho) em vez de deixar a lista sumir em silêncio se `usuarioApi.listar()` falhar.
-- **Grupo 3 - trivial, resolvido com `void` (26):** todos os `navigate(-1)`/`navigate('/')`/`navigate(item.caminho)` do react-router não aguardados - navegação client-side não produz erro que valha a pena tratar, só precisava do operador `void` pra declarar a intenção.
-- Regra ligada permanentemente em `eslint.config.js`.
-
-**🟢 ADOTADAS (08-09-2026) - os 8 restantes (`no-base-to-string` 4, `restrict-template-expressions` 3, `no-unsafe-argument` 1):**
-- `no-base-to-string` (`campo-somente-leitura.tsx`, `generic-table.tsx`/`celulaValor`, `log-auditoria-painel.tsx`/`valorRenomeio`) - as 3 telas genéricas passaram a usar um util novo e compartilhado, `textoSeguro()` (`formatacao.util.ts`) - trata `object` explicitamente via `JSON.stringify` em vez de confiar no `toString()` padrão do JS, então um valor-objeto real nunca mais viraria `"[object Object]"` visível na tela (correção de verdade, não só silenciar o lint). `use-chamada-registrada.ts` era um caso diferente (corpo de requisição, não valor de exibição) - corrigido separadamente, só tentando `JSON.parse` quando `opcoes.body` já é `string` de verdade.
-- `restrict-template-expressions` (`generic-table.tsx:854,865,876`) - `linha[chavePrimaria]` envolto em `String(...)` explícito antes de entrar no template literal, mesmo padrão que a própria `key` da linha (`String(linha[chavePrimaria])`) já usava logo acima.
-- `no-unsafe-argument` (`configuracoes-provider.tsx`) - `.catch()` ganhou `instanceof Error` antes de guardar no estado, mesmo padrão de narrowing já usado no resto do projeto.
-
-**🟢 ADOTADA (12-09-2026) - `@typescript-eslint/no-unnecessary-condition`, depois de conferir as 57 ocorrências (cresceram de 41 pra 57 entre 07 e 12-09-2026, com o trabalho novo em Campo de Testes) uma a uma contra o DTO Nest/tipo real correspondente:**
-- **Grupo 1 - código morto de verdade, removido (maioria das 57):** mesma categoria do `?? 'badge-neutro'` (item 13) - `Record<EnumFechado,string>` exaustivo com fallback pro valor cru (`ROTULO_STATUS_CAMPANHA`/`ROTULO_STATUS_PESQUISADOR`/`ROTULO_TITULO_ACADEMICO`/`ROTULO_TIPO_VINCULO`, confirmados exaustivos contra o ENUM real do Postgres), campo declarado obrigatório na interface E sempre populado na única construção real do objeto (`PesquisadorLinha.usuario`), `ResultadoPaginado.dados ?? []` (campo `T[]` obrigatório, espelha `nest/src/commons/database/paginacao.util.ts`), e 2 guardas redundantes em `bancada-pesquisador.tsx` (`chaveFoco !== null` já dentro de um `{chaveFoco && (...)}`, `!perfil.usuario` sempre falso).
-- **Grupo 2 - proteção legítima, tipo corrigido pra ficar honesto (2 ocorrências):** `DETALHE_PERMISSAO` (`permissao-nomes-amigaveis.ts`) tinha tipo `Record<string, DetalhePermissao>` - dicionário fechado, mas quem chama passa `permissao.nome` vindo do banco (espaço de chaves aberto, uma permissão nova ainda não documentada é caso real). Trocado pra `Partial<Record<string, DetalhePermissao>>` - o tipo passa a admitir `undefined` de verdade, os 2 fallbacks (já corretos antes) voltam a ser necessários pro compilador também.
-- **Grupo 3 - proteção legítima contra o próprio `lib.d.ts` do TypeScript "mentir", mantida com `eslint-disable` comentado (2 ocorrências):** `JSON.stringify()` é tipado como `string` sempre, mas devolve `undefined` de verdade pra função/símbolo/`undefined` puro (`textoSeguro()`, e o preview de corpo de chamada em `registro-chamadas.tsx`); `navigator.clipboard` é tipado como sempre presente, mas a Clipboard API real falta em contexto inseguro/navegador antigo (`registro-chamadas.tsx`, botão "Copiar como cURL").
-
-Detalhamento completo em `DOCUMENTACAO_LINT.md`. `eslint .`, `tsc --noEmit` e `npm run build` limpos depois de tudo.
-
-## 15. Bancada do Pesquisador (T1) ganha Escolher/Ações separados + Admin passa a poder ver/alterar todos os campos do pesquisador, incluindo CPF (07-09-2026)
-
-Pedido do Lucas, no mesmo espírito do split já feito em T2 (Bancada da Campanha): a coluna "Ações" de T1 fazia 3 coisas ao mesmo tempo (cadeado, "Selecionado", botão "Escolher") - separada numa coluna "Escolher" própria, e "Ações" voltou a ser a coluna normal (Alterar/Consultar/Suspender-Reativar), igual T2.
-
-**Achado no caminho:** dar ao Admin poder de alterar TODOS os campos do pesquisador não era só front-end. Vínculo/título acadêmico já tinham endpoint pronto (`PATCH /perfil-pesquisador/:id`) - nunca usado por nenhuma tela, nem aqui nem no painel real (a própria camada de API do módulo não tinha `criar`/`atualizar` tipados, só `listar`/`buscar`/`buscarScore`). CPF e suspender/reativar pesquisador eram mais sérios: `corrigir_cpf_pesquisador()`/`suspender_pesquisador()`/`reativar_pesquisador()` já existiam no banco (a primeira desde 22-08-2026, as outras duas mais antigas ainda), gateadas por permissão própria, mas **nenhum endpoint do Nest chamava nenhuma das três** - achado real, não hipotético, confirmado por grep no projeto inteiro.
-
-**Corrigido:**
-- **3 endpoints novos no Nest** (`6-perfil-pesquisador`): `PATCH /perfil-pesquisador/:id/cpf` (cifra + calcula hash reaproveitando `cpf-cifra.util.ts`, chama a função do banco, distingue erro de permissão de erro de CPF duplicado - `23505` segue pro filtro global, não vira 403 por engano), `POST /perfil-pesquisador/:id/suspender`, `POST /perfil-pesquisador/:id/reativar` - todos seguindo o mesmo padrão já usado em `usuario.service.desbloquear.ts` (chamada crua via `kysely`, `RAISE EXCEPTION` de permissão vira `ForbiddenException`).
-- **Camada de API do frontend completada**: `perfilPesquisadorApi` ganhou `criar`/`atualizar`/`corrigirCpf`/`suspender`/`reativar` tipados (só tinha leitura antes) - tipos novos espelhando os DTOs do Nest.
-- **`formatarCpfExibicao`** nova em `formatacao.util.ts` (ver item 13/14 sobre a centralização de CPF) - usada no modal de Consultar.
-- **T1 reestruturada**: Escolher e Ações separados; Ações mostra Alterar (vínculo/título/instituição, mesmo padrão de linha expansível de T2) + Consultar (modal com CPF/vínculo/título/status/score) + Suspender/Reativar, só pra quem já tem perfil - "-" pra quem não tem.
-
-Escritas de T1 continuam via `chamarERegistrar` cru (não a `perfilPesquisadorApi` tipada), de propósito - mesmo padrão de T2, pra continuar aparecendo em T4 (Registro de Chamadas). A API tipada existe pra qualquer tela fora do Campo de Testes que precisar (ex.: `consultar-pesquisador.tsx` já usa `buscar`/`buscarScore`).
-
-**Testado ao vivo** (Playwright, conta de teste segura - Fernanda, id 23, nunca o Admin): login, Consultar mostrando CPF real formatado, Alterar abrindo a linha de edição, correção de CPF salva e revertida pro valor original, Suspender/Reativar alternando e revertido no final - banco limpo ao terminar, zero erro de console, zero requisição falhada. `tsc`/`eslint`/`build` limpos em `nest/` e `react/`.
-
-**SUPERADO (12-09-2026):** a coluna "Escolher" descrita acima foi removida por completo (pedido do Lucas: "é estúpido, agora que eu percebi") - Alterar/Consultar não dependem mais de ter alguém "escolhido", ficaram diretos em toda linha da tabela. Detalhe completo em `PENDENCIAS e correcoes.md`, item "levar o padrão de modal (Consultar/Alterar) pra Gestão de Usuário de verdade".
-
-**Não incluído:** botão "Excluir" - `perfil_pesquisador` não tem endpoint de exclusão por design (status ativo/suspenso, nunca linha removida), então a coluna Ações tem Alterar/Consultar/Suspender-Reativar, não o trio Alterar/Consultar/Excluir de outros módulos.
-
-## 16. Bug real achado testando o item 15: "Criar Perfil Pesquisador" em T1 nunca funcionou pra ninguém além de quem está logado (07-09-2026)
-
-O Lucas testou "promover Larissa/Maria da Silva pra pesquisador" e recebeu "Já existe um registro com estes dados." em todas as tentativas. Reproduzido fora da tela (curl direto, CPF garantidamente novo) pra isolar a causa - **não era CPF duplicado**: `POST /perfil-pesquisador` (self-service, `PerfilPesquisadorServiceCreate`) sempre cria o perfil em nome de **quem está logado de verdade** (`request.user.idUsuario`, nunca de um id vindo do corpo) - `pol_perfil_insert` (04) exige `id_usuario = id_usuario_atual()`. Logado como Admin, e o Admin já tem perfil próprio, toda tentativa de "criar pra outro usuário" na verdade tentava recriar o perfil do PRÓPRIO Admin - colidia com a PK, sempre, não importa quem estivesse selecionado na tela. Ninguém tinha testado esse caminho específico até agora (só funcionava, por acidente, se o usuário escolhido fosse o próprio logado).
-
-Não é um bug introduzido pela migração nem pela rodada de hoje - existia desde a remoção do Elenco (25-08-2026), documentado na memória do projeto como limitação aceita ("ações que dependem de agir como outro pesquisador só têm efeito real logado como essa pessoa"), só nunca tinha sido de fato testado.
-
-**Decisão do Lucas: construir endpoint novo**, mesmo padrão do item 15 (CPF/suspender) - **`POST /perfil-pesquisador/:id`** (`PerfilPesquisadorServiceCreateParaOutro`), gateado por permissão própria (`perfil_pesquisador_criar_para_outro`) dentro de uma nova função `SECURITY DEFINER` no banco (`criar_perfil_pesquisador_para_outro()`, `03_funcoes_seguranca.sql` [03-R]) - bypassa `pol_perfil_insert` com checagem de permissão própria, nunca reaproveitando o self-service. `bancada-pesquisador.tsx` trocado pra chamar essa rota nova em vez da antiga.
-
-**Pendente, crítico:** a função/permissão novas só existem nos arquivos `.sql` - **precisa colar o bloco de 07-09-2026 em `ATUALIZAR O SUPABASE.sql` no SQL Editor** antes do botão funcionar de verdade (sem isso, o erro muda de "já existe" pra "sem permissão", mas continua não funcionando). `tsc`/`eslint`/`build` limpos em `nest/` e `react/` - não testado ao vivo ainda porque depende desse passo manual no Supabase.
-
----
-
-## 17. Suspender só o poder de pesquisador (com motivo + prazo, auto-expira) + T1 ganha Consultar/Alterar em MODAL replicando Gestão de Usuário (07-09-2026)
-
-**Pedido do Lucas:** o botão "Suspender" avulso de T1 não fazia sentido isolado - o que existia de verdade era "suspender usuário" (bloqueia login). Faltava o equivalente focado só na autoridade de pesquisador: exige motivo (RF), tem prazo, **não bloqueia login** (a conta continua normal, só a autoridade de pesquisador - criar campanha, endossar etc. - fica suspensa), reativa sozinho quando o prazo vence, e o pesquisador precisa conseguir ver o motivo em algum lugar seu.
-
-**Banco:** `perfil_pesquisador` ganhou `suspenso_ate`/`motivo_suspensao`/`suspenso_por` (mesmo desenho de `usuario`, `CK_PERFIL_PESQUISADOR_SUSPENSAO` exigindo os 3 juntos ou nenhum). `suspender_pesquisador()` mudou de assinatura `(INT)` pra `(INT, TIMESTAMPTZ, TEXT)`, exige motivo não-vazio. `reativar_pesquisador()` limpa os 3 campos. Nova `reativar_pesquisadores_vencidos()` (mesmo padrão de `encerrar_campanhas_vencidas()`) + `@Cron` novo (`PerfilPesquisadorServiceReativarVencidos`, 15 em 15 min, `PG_POOL` direto - nunca `DatabaseService.getDb()`, mesmo motivo já documentado pro cron de campanha).
-
-**Nest:** `PerfilPesquisadorServiceSuspender` ganhou `buscarSuspensao()` (com o mesmo SAVEPOINT de proteção contra coluna ainda não migrada) e `executar(idUsuario, ate, motivo)`; `GET /perfil-pesquisador/:id/suspensao` novo, `POST /perfil-pesquisador/:id/suspender` agora exige corpo `{ate, motivo}`.
-
-**React:** `SecaoModeracaoPesquisador` (novo, `6-perfil-pesquisador/secao-moderacao-pesquisador.tsx`) é quase um espelho de `secao-moderacao.tsx` (1-usuario) - reaproveita a MESMA configuração `suspensao_usuario_opcoes_dias` (é a mesma política de negócio, não duplicada). Diferença deliberada: chama `perfilPesquisadorApi` direto (não `chamarERegistrar`), então as escritas deste card específico **não aparecem no Registro de Chamadas (T4)** - aceito porque é literalmente o mesmo componente que deve voltar a ser usado (sem mudança nenhuma) se o Lucas decidir replicar isto em Usuário de verdade depois.
-
-**T1 - Consultar/Alterar viraram MODAL**, replicando a aparência exata de `consultar-usuario.tsx`/`alterar-usuario.tsx` (mesmos `SecaoFicha`/`CampoFicha`, mesmo grid de 2 colunas em Alterar) - novo componente genérico `components/crud/modal-ficha.tsx` (mesma moldura de `ModalDetalhe`, largo como `FichaConsulta largura="larga"`, recebendo `children` livre em vez de uma lista fixa de `secoes`). Escopo confirmado com o Lucas via pergunta direta: **só a parte de Pesquisador** (CPF/vínculo/título, agora editável no modal + Moderação de Pesquisador) - nome/senha/foto/papéis continuam fora do Campo de Testes, como sempre foram. O botão avulso "Suspender/Reativar" da coluna Ações foi removido (a ação agora mora dentro do Alterar, dentro da nova seção de Moderação).
-
-**Minha Conta > Acadêmico** deixou de ser o placeholder demonstrativo de 10-08-2026 (escrito antes do módulo 6 existir) e passou a mostrar dados reais: `SecaoFicha`/`CampoFicha` com o perfil de verdade, e um aviso destacado (vermelho, com motivo + prazo) quando a própria autoridade de pesquisador está suspensa - exatamente o "precisa saber o porquê" pedido pelo Lucas. Quem nunca virou pesquisador só vê um aviso honesto (não existe, em lugar nenhum do app real, um formulário de "tornar-se pesquisador" - só o Campo de Testes faz esse POST; fora do escopo deste pedido).
-
-**Verificado ao vivo (Playwright):** login como Admin, T1 abre Consultar/Alterar em modal com as seções certas, o clique em "Suspender poder de pesquisador" dispara a requisição certa (403 esperado - ver pendência abaixo); reset de senha dev + login como Fernanda (id 23, conta de teste documentada) confirmou a aba Acadêmico mostrando score/título reais, zero erro de console numa carga limpa.
-
-**Achado numa revisão pós-rodada (08-09-2026), pedido do Lucas ("procure se deixamos algo pra trás"):** fechar o modal Alterar (X, backdrop ou "Cancelar") não recarregava a tabela de T1 - `SecaoModeracaoPesquisador` chama `perfilPesquisadorApi` direto (não `chamarERegistrar`, nem avisa o componente pai), então suspender/reativar por lá deixava a linha da tabela (e um Consultar aberto depois) com o status ANTIGO até alguma outra ação disparar `carregarPesquisadores()` por acaso. **Corrigido:** fechar o modal Alterar, por qualquer caminho, sempre recarrega a lista agora.
-
-**Resolvido em 2 etapas (08-09-2026), depois do Lucas colar o bloco de 07-09-2026 (2ª rodada):**
-
-1. Primeiro teste ao vivo ainda deu `403 "function ... does not exist"` - mas a causa não era o SQL: era o processo do Nest rodando um build antigo (`node dist/main`, sem watch/reload). Reconstruído (`npm run build`) e reiniciado - o `suspender_pesquisador` de 3 parâmetros passou a responder.
-2. Segundo problema, esse sim um bug meu de verdade: a suspensão passou a GRAVAR certo (`status_pesquisador` mudava, visível no Consultar), mas `GET /perfil-pesquisador/:id/suspensao` sempre devolvia tudo `null`, então o card de Moderação (Pesquisador) nunca mostrava o aviso vermelho. Log de diagnóstico revelou a causa: `error: permission denied for table perfil_pesquisador` (42501) - as 3 colunas novas (`suspenso_ate`/`motivo_suspensao`/`suspenso_por`) foram adicionadas à tabela na rodada de 07-09, mas **esquecidas na lista de `GRANT SELECT` por coluna** em `06_grants.sql` (o padrão que a tabela `usuario` já seguia certo pras suas próprias colunas de suspensão, só não foi replicado aqui). A escrita funcionava porque passa pela função `SECURITY DEFINER` (ignora GRANT); só a leitura direta ficava cega, e o `SAVEPOINT` de proteção engolia o erro real, mascarando como "nunca foi suspenso". **Corrigido:** `06_grants.sql` atualizado, bloco novo "08-09-2026 - CORREÇÃO" adicionado em `ATUALIZAR O SUPABASE.sql`, colado pelo Lucas.
-
-**Verificado ao vivo, ponta a ponta, depois das duas correções:** suspender grava `suspenso_ate`/`motivo_suspensao`, o card de Moderação mostra o aviso vermelho com o motivo certo, "Revogar suspensão" funciona, e fechar o modal Alterar recarrega a tabela pro status correto. `tsc`/`eslint`/`build` limpos em `nest/` e `react/`.
-
----
-
-## 18. Auditoria extra antes de um commit grande (12-09-2026) - 2 agentes dedicados, DTO×tipo e hardcode/duplicação
-
-Pedido do Lucas: antes de commitar a rodada de `no-unnecessary-condition` (item 14), auditar de novo, mais a fundo que o normal - divergência de DTO em TODOS os módulos (não só os 17 tocados), código morto, hardcode e duplicação em `nest/src` e `react/src`, e fontes/cores soltas do sistema de tokens.
-
-**DTO×tipo - 3 achados reais, todos corrigidos:**
-- `27-log-auditoria`: campo `operacao` era `string` solto no DTO Nest (`log-auditoria.response.ts`/`db.types.ts`), mas o tipo React já restringia a `'INSERT'|'UPDATE'|'DELETE'|'EXPORT'` com um comentário dizendo "espelha db.types.ts" - que não era verdade até agora. **Corrigido:** `OPERACOES_LOG_AUDITORIA`/`OperacaoLogAuditoria` novos em `db.types.ts` (mesmo padrão de `TIPOS_MOTIVO_DENUNCIA`), usados em `LogAuditoriaTable`/`LogAuditoriaConverter`/`LogAuditoriaResponse`. Os 4 valores conferidos contra `CK_LOG_AUDITORIA_OPERACAO` (`01_extensoes_enums_tabelas.sql:1004`) - nenhuma mudança de comportamento, só o tipo parou de mentir.
-- `views/campo-testes/vida-campanha-ativa.tsx` (interfaces locais cruas, sem `type/` formal): `Comentario.idPesquisador` estava `number`, mas o DTO real (`17-comentario`) permite `number | null` (autor removido/anonimizado); `Atualizacao.fase`/`tipo` estavam `string` obrigatório, mas o DTO real (`15-atualizacao-campanha`) permite `null` nos dois. **Corrigido:** os 3 campos widened pra bater com o DTO; `nomeDe()` (só usada neste arquivo) passou a aceitar `idUsuario: number | null` e devolve "Pesquisador removido" pro caso nulo; célula de `fase` ganhou fallback `?? '-'`. `tipo` não tinha nenhum consumidor de exibição (só o formulário de criar, que sempre manda um valor não-nulo) - largura de tipo sem efeito visual.
-
-**Hardcode - 2 achados reais, ambos corrigidos:**
-- `bancada-campanha.tsx`: `MINIMO_ITENS_ORCAMENTO = 3` (constante fixa, comentário já avisava "só rótulo, quem decide é o banco") **estava desatualizada** - `configuracoes.orcamento_min_itens` mudou de 3 pra 1 em 05-09-2026 (RF revisado, ver `07_seed_dados.sql:820-825`) e a cópia local nunca foi atualizada. **Efeito real, não cosmético:** o botão "Aprovar" ficava desabilitado em campanhas que o banco já aceitaria (`fn_valida_completude_campanha_aprovacao` já lê `config_numero('orcamento_min_itens', 1)` corretamente - só o Campo de Testes estava com o número errado). **Corrigido:** os dois mínimos (orçamento/cronograma) agora lidos via `useConfiguracoes()`/`obterConfiguracao()`, mesmo padrão de `seletor-foto-perfil.tsx`.
-- `bancada-pesquisador.tsx` (`PainelLinksAcademicos`): `links.length < 5` fixo em 2 lugares + "de 5" no rótulo, apesar de `configuracoes.limite_links_academicos_perfil` já existir (pública, é o valor que `trg_link_academico_valida_limite` lê de verdade). Sem efeito visível hoje (os dois valores batem, 5), mas mesmo risco de drift do achado acima se o Admin mudar o limite pelo painel. **Corrigido**, mesmo padrão.
-
-`tsc --noEmit`, `eslint .` e `npm run build` limpos em `nest/` e `react/` depois de tudo.
-
-**Duplicação - 1 achado real, registrado, NÃO mexido ainda (aguardando decisão do Lucas):** a mecânica de paginação client-side (`Math.ceil`/`Math.min`/`.slice` + o bloco JSX de "Página X de Y" com select de tamanho + Anterior/Próxima) e o padrão de "fechar dropdown ao clicar fora" (`mousedown` + `ref.contains`) aparecem, cada um, em 3-4 lugares diferentes (`GenericTable`, `bancada-pesquisador.tsx`, `bancada-campanha.tsx` com 2 dropdowns próprios) - os próprios comentários do código já admitem a cópia ("mesmo filtro + paginação + facet 'Papel' de GenericTable... reimplementado aqui"). Sugestão registrada: extrair `usePaginacaoClientSide()`/`useFecharAoClicarFora()` como hooks pequenos compartilhados, sem mudar `GenericTable` em si (a razão de T1/T2 não reaproveitarem ele inteiro continua válida - linha riscada/cadeado por registro bloqueado). Não implementado nesta rodada, por ser refatoração (não bug), seguindo a mesma regra de sempre apontar duplicidade sem mexer sem pedir.
-
-**Fontes/cores soltas:**
-
-🟢 **`text-red-700`/`text-red-600` cru → `.texto-erro` - RESOLVIDO (12-09-2026), 27 arquivos.** Achado grande: quase todo Consultar/Alterar/Criar/Excluir do painel usava a cor crua do Tailwind pro parágrafo de erro, em vez de `.texto-erro` (que resolve pra `var(--cor-texto-erro)`, ajustado pro dark mode) - o mesmo trecho de JSX duplicado em quase todos. Ficou registrado sem mexer até confirmar com o Lucas, dado o tamanho (27+ arquivos); confirmado, aplicada a troca direta (`text-red-700`/`text-red-600` → `texto-erro`, preservando as outras classes de cada linha) nos 27 arquivos - mecânica, sem mudança de comportamento, só o texto de erro passa a se adaptar ao tema escuro igual o resto do sistema. `hover:text-red-800` (1 ocorrência, `alterar-usuario.tsx:516`, um link de ação destrutiva) ficou de fora de propósito - não fazia parte do pedido, e não existe token de hover equivalente ainda. `tsc`/`eslint`/`build` limpos; CSS gerado até encolheu um pouco (as classes `.text-red-600`/`.text-red-700` do Tailwind pararam de ser geradas, ninguém mais usa).
-
-🟢 **Bolinha de status de conexão duplicada - RESOLVIDO (12-09-2026).** `dashboard.tsx`/`dashboard-saude.tsx` tinham a mesma lógica de 3 estados (`bg-slate-300`/`bg-emerald-500`/`bg-red-500`, cru do Tailwind, sem token) copiada. Extraído `PontoStatusConexao` (exportado de `dashboard.tsx`, importado por `dashboard-saude.tsx`, mesmo padrão já usado por `TEXTO_TOOLTIP_SESSOES_ATIVAS`) + 3 classes novas em `1-cores.css` (`.ponto-status--neutro/--sucesso/--erro`), reaproveitando os MESMOS tokens de status que os badges já usam (`--cor-texto-sucesso`/`--cor-texto-erro`/`--cor-borda-forte`) - não inventou paleta nova, e agora se adapta ao tema escuro.
-
-🟢 **Roxo "ferramenta dev" fora do token - RESOLVIDO (12-09-2026), em 2 etapas.** `dev-login-rapido.tsx`/`alterar-usuario.tsx` usavam `border-purple-300`/`bg-purple-50` crus do Tailwind. Achado ao investigar: o `.badge-dev` já existente usa `--color-purple-100/600/700`, que são na verdade os valores de **violet** do Tailwind (não do "purple" de verdade - apelido antigo do projeto, não é erro desta rodada) - usar o `purple-300`/`purple-50` REAL do Tailwind teria introduzido uma família de roxo diferente da que `.badge-dev` já usa, uma inconsistência nova em vez de resolvida. 1ª etapa: completados `--color-purple-50`/`--color-purple-300` com os valores de violet (mesma família), + classes novas `.borda-dev`/`.fundo-dev-sutil`/`.hover-fundo-dev-sutil` em `1-cores.css`.
-
-🟢 **2ª etapa, achado do próprio Lucas revisando o resultado:** essas classes (e `.badge-dev`/`.btn-dev`, que já existiam) ainda referenciavam `--color-purple-*` DIRETO - a ÚNICA cor do sistema fora da camada semântica `--cor-*` que todo o resto do projeto usa (`--cor-texto-erro`, `--cor-fundo-sucesso` etc., nunca `--color-red-*`/`--color-emerald-*` cru num componente). Criados 5 tokens semânticos novos em `1-cores.css` (`--cor-dev-fundo-sutil`/`--cor-dev-fundo-selo`/`--cor-dev-texto`/`--cor-dev-borda`/`--cor-dev-hover`), deliberadamente SEM bloco de tema escuro (o roxo "feio de propósito" é pra continuar igual nos dois temas). `.badge-dev`/`.btn-dev` (`4-componentes.css`) e as 3 classes novas (`1-cores.css`) migradas pra usar os tokens semânticos - `--color-purple-*` cru agora só existe DENTRO de `1-cores.css`, nunca mais referenciado direto por um componente. Puramente CSS (nenhum `.tsx` mudou), zero mudança visual.
-
-**Rótulos de texto com `text-[10px]`/`text-[11px]` cru - conferido caso a caso, NÃO mexido, por bons motivos:** boa parte das ocorrências encontradas são tamanho de ÍCONE (`<i className="fa-clock text-[10px]">` etc.), não tipografia - fora do escopo deste achado. Das que são texto de verdade (`modal-detalhe.tsx` badge de impacto, `busca-global.tsx`/`admin-sidebar.tsx` dica de atalho `<kbd>`, `sino-atividade.tsx` número do badge de notificação, `alterar-usuario.tsx:532` rótulo clicável, `login-page.tsx` divisor "OU"), nenhuma bate exatamente com a receita de `.legenda`/`.rotulo-leitura` (pesos, tamanhos e letter-spacing diferentes entre si) - forçar todas pra um token só mudaria a aparência de cada uma de um jeito não pedido. O trio idêntico em `footer.tsx` (3 `<h4>` iguais) parecia o caso mais fácil de consolidar, mas o próprio comentário do arquivo avisa que é **cópia fiel deliberada** do `footer.html` do Projeto de Interface (protótipo estático, projeto separado) - mexer nas classes tiraria esse componente de ser um espelho fiel, contrariando o propósito dele. Fica registrado, sem tocar, até surgir um pedido específico de redesenhar algum desses rótulos.
-
-**🟢 RESOLVIDO (14-09-2026):** a causa do esgotamento de memória era só o limite padrão de heap do Node/V8, não falta de RAM real - rodando de novo com `NODE_OPTIONS=--max-old-space-size=8192`, `eslint src` completo no `nest/` terminou em segundos. Achadas 22 ocorrências em 10 arquivos (14 código morto de verdade, provado pelo tipo do Kysely; 8 proteção legítima contra `unknown`/tipo de biblioteca que mente, mantidas com `eslint-disable` comentado). Regra ligada como `'error'` em `nest/eslint.config.mjs`. Detalhe completo em `DOCUMENTACAO_LINT.md`, seção "`no-unnecessary-condition` no `nest/`".
-
----
-
-## 19. Auditoria de Requisitos Funcionais x implementação real (12-09-2026) - 1 agente dedicado, 2 achados corrigidos
-
-Pedido do Lucas, continuação da auditoria do item 18: conferir os 117 RFs (`informacoes/REQUISITOS_V6.md`) contra o código/banco real, sem mexer no arquivo de requisitos. Achados reais, ambos corrigidos:
-
-**RF-084 (painel do Administrador, métricas gerais) - a Matriz marcava ✅/✅ sem ressalva, mas 4 das 5 partes do requisito não tinham dado real.** `contar_metricas_dashboard()` só devolvia `total_campanhas` (count único, sem quebra por status) e nada de valor arrecadado/denúncias pendentes. **Corrigido:** a função ganhou `campanhas_ativas`/`campanhas_sucesso`/`campanhas_nao_atingida`/`campanhas_aguardando_aprovacao`/`valor_total_arrecadado`/`denuncias_pendentes` - nenhum depende de módulo Nest vazio (`campanha`/`denuncia` já são tabela real desde antes, só não estavam sendo lidas aqui); `DashboardResponseSummary` (Nest + React) e `views/admin/dashboard.tsx` ganharam os cards novos. **Só a 5ª parte do requisito fica de fora, de propósito:** "campanhas sinalizadas por baixa pontuação de reputação" depende do motor de score estar fechado (ver `PENDENCIAS e correcoes.md`, pendência RF-031) - implementar isso antes seria a mesma armadilha já identificada lá (contestar/sinalizar em cima de um número que ainda pode mudar de fórmula). Migração (`DROP FUNCTION` + `CREATE`, já que o `RETURNS TABLE` mudou de forma) em `ATUALIZAR O SUPABASE.sql`. `MATRIZ-RASTREABILIDADE-RF.md` atualizada com a ressalva. `tsc`/`eslint`/`build` limpos em `nest/` e `react/`.
-
-**`cpf_hash` não era excluído do log de auditoria (RF-117).** `fn_log_auditoria()` já filtrava `senha_hash`/`cpf_criptografado`, mas esquecia a 3ª coluna sensível de `perfil_pesquisador`. É um HMAC-SHA256 com chave secreta (não reversível sem ela), então o risco prático é baixo - mas lido ao pé da letra, RF-117 pede o mesmo cuidado com CPF que com senha, e este é um dado derivado do CPF indo pro log sem necessidade. **Corrigido:** `cpf_hash` entrou na mesma lista de exclusão, nos 4 pontos da função (`INSERT`/`UPDATE`×2/`DELETE`). Migração (`CREATE OR REPLACE`, mesma assinatura - seguro rodar de novo) em `ATUALIZAR O SUPABASE.sql`.
-
-**Achado de comentário desatualizado, corrigido junto (não é RF, é higiene de código):** `05_regras_negocio.sql`, comentário da trigger `validar_comentario_autor` citava "RF-066" (na verdade sobre prazo de campanha, sem relação) - o certo é **RF-092**, conferido contra `REQUISITOS_V6.md`. A regra em si sempre funcionou certo, só o comentário estava desatualizado.
-
-**Verificado por amostragem, sem achado (17 RFs com número específico conferidos contra o banco real):** prazo de campanha, meta mínima, taxa da plataforma, limites de caracteres, pesos/faixas do score, orçamento/cronograma mín-máx, limite de endossos, valor mínimo de contribuição, bloqueio de login, expiração de recuperação de senha - todos batem. Estrutura de módulos vazios da Matriz (`4-mail`, `18-recompensa`, `19-denuncia`, `20-solicitacao-encerramento`, `21-historico-rejeicao`, `22-contribuicao`, `23-repasse`, `24-auditoria-financeira`, `26-notificacao`) conferida contra `nest/src/` real - 100% precisa.
-
-**🟢 RESOLVIDO (14-09-2026):** RF-058 (encerrar campanhas vencidas) - o fix de tipo (`::status_campanha`) já estava no código-fonte desde 07-09-2026; confirmado agora que também está rodando no Supabase de produção (`pg_get_functiondef` do SQL Editor confirmou o `::status_campanha` na função ativa). Detalhe completo em `PENDENCIAS e correcoes.md`, seção "RF-057 (...) - o `@Cron` (...) quebrava toda vez com erro de tipo". Item fechado, não é mais pendência.
-
----
-
-## 20. `comentario` ganhou limite de frequência + consolidação de `formatarMoeda`/`formatarCpf` duplicados (12-09-2026)
-
-**`comentario` sem limite de frequência/quantidade (item já registrado em `PENDENCIAS e correcoes.md`) - resolvido, pedido do Lucas.** Mesmo padrão de `validar_denuncia_frequencia()`: 2 chaves novas em `configuracoes` (`limite_comentarios_por_hora`, `janela_comentarios_horas`, ambas públicas, default 5/1h) + função `validar_comentario_frequencia()` + trigger `trg_comentario_limite_taxa` (`BEFORE INSERT`), bloqueando o (limite+1)-ésimo comentário do mesmo pesquisador dentro da janela - soma TODAS as campanhas (é limite de frequência/anti-rajada, não de volume por campanha). Novo `ERRCODE 93002` registrado em `DOCUMENTACAO_ERRCODE.md`, mapeado automaticamente pro filtro genérico de exceção do Nest (prefixo `93` → `429 Too Many Requests`, zero mudança no lado Nest). Conferido que os `criado_em` históricos do seed (datas de 2024/2025) nunca disparam a trigger contra o `NOW()` real de quando o seed roda - mesmo comportamento já validado em `denuncia`. Migração em `ATUALIZAR O SUPABASE.sql`.
-
-**Duplicação de `formatarMoeda`/`formatarReais`/`formatarCpf` (achados antigos, itens 5/7) - consolidada.** `formatarReais` (idêntica) estava copiada em 3 arquivos (`consultar-campanha.tsx`, `listar-campanhas.tsx`, `bancada-campanha.tsx`) só porque `formatarMoeda` (util compartilhado) não aceitava `null` - `Number(null)` já é `0` em JS, só faltava o TIPO admitir; widened o parâmetro pra `string | number | null`, apaguei as 3 cópias locais, os 3 arquivos passaram a importar a versão compartilhada. `formatarCpf` "triplicada" já tinha se resolvido sozinha em 2 dos 3 lugares numa rodada anterior (`bancada-pesquisador.tsx` já importava a certa) - sobrava só a mensagem "Não visível (sem permissão sensível ou não é o dono)" duplicada (`consultar-pesquisador.tsx` como função local, `bancada-pesquisador.tsx` solta inline) - virou `formatarCpfOuMotivoOculto()` no util compartilhado, usada nos dois lugares. `formatarPercentual`/`mascararCpf` (dead code, zero chamadores confirmados por grep) apagadas; `formatarMoeda` não estava mais morta (usada no card novo do RF-084, item 19) - mantida e agora com um uso a mais. `tsc`/`eslint`/`build` limpos.
-
----
-
-## Onde ficam os achados "menores" (não estão aqui de propósito)
-
-Cada documento novo tem sua própria seção final ("o que não consegui confirmar com confiança") com uma lista mais longa e mais técnica de detalhes que os agentes não verificaram linha a linha - esses ficam nos próprios documentos (`DOCUMENTACAO_BACKEND.md` e `DOCUMENTACAO_FRONTEND.md`, seções finais), não duplicados aqui. Este arquivo é só pros achados que pareceram merecer uma conversa, não uma checagem técnica.
+Se o foco é otimizar: A.4, A.3, A.2, A.1 e A.7 (o A.1 com OK para a dependência), todos sem decisão de negócio, com teste no PGlite e prova ao vivo. Em seguida, a fila de aprovação (A.5). O dispatcher fica para depois de "Minhas campanhas".

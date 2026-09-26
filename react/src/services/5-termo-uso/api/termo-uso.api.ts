@@ -9,15 +9,12 @@ import type {
   TipoTermo,
 } from '../type/termo-uso.type';
 
-// Migrado de função solta (`buscarAtivo`) pra objeto (13-09-2026, mesma
-// convenção de todo o resto dos api.ts do projeto) ao ganhar `criar`/
-// `listar` - só tinha ficado solto porque nasceu com 1 função só.
+// Objeto (mesma convenção de todo o resto dos api.ts do projeto), não função solta.
 export const termoUsoApi = {
-  // GET /termos-uso/ativo é público (sem guard no Nest, ver
-  // nest/src/5-termo-uso) - usa fetch puro, não authFetch, pelo mesmo motivo
-  // de auth.api.ts: quem chama isso (tela de Cadastro) ainda não tem sessão
-  // nenhuma. `tipo` obrigatório (13-09-2026) - desde a separação em 2 termos
-  // ativos simultâneos, "o termo ativo" sem dizer qual trilha virou ambíguo.
+  // GET /termos-uso/ativo é público (sem guard no Nest, ver nest/src/5-termo-uso): usa fetch puro, não
+  // authFetch, pelo mesmo motivo de auth.api.ts: quem chama isso (tela de Cadastro) ainda não tem sessão
+  // nenhuma. `tipo` obrigatório: há 1 termo ativo por trilha, então "o termo ativo" sem dizer qual trilha é
+  // ambíguo.
   buscarAtivo: (tipo: TipoTermo): Promise<TermoUsoResponseAtivo> =>
     fetch(`${API_BASE_URL}/termos-uso/ativo?tipo=${tipo}`).then(tratarResposta<TermoUsoResponseAtivo>),
   // GET /termos-uso (sem "/ativo") - listagem completa (histórico incluso),
@@ -45,18 +42,15 @@ export const termoUsoApi = {
       method: 'PATCH',
       body: JSON.stringify(dados),
     }).then(tratarResposta<TermoUsoResponse>),
-  // PATCH /termos-uso/:id/ativar - torna esta versão a vigente do seu tipo
-  // (13-09-2026, ação nova, separada de criar/atualizar - Criar não ativa
-  // mais sozinho, ver TermoUsoServiceCriar no Nest).
+  // PATCH /termos-uso/:id/ativar: torna esta versão a vigente do seu tipo (ação separada de criar/atualizar:
+  // Criar não ativa sozinho, ver TermoUsoServiceCriar no Nest).
   ativar: (authFetch: AuthFetch, id: number): Promise<TermoUsoResponse> =>
     authFetch(`/termos-uso/${id}/ativar`, { method: 'PATCH' }).then(
       tratarResposta<TermoUsoResponse>,
     ),
-  // DELETE /termos-uso/:id - nunca permitido na versão vigente. Numa versão
-  // já aceita por alguém, dá 409 a menos que `forcar: true` (14-09-2026,
-  // pedido do Lucas: checkbox "entendi" + "Excluir mesmo assim") - com
-  // `forcar`, apaga o termo e AS LINHAS DE ACEITE que apontam pra ele
-  // (FKs viraram CASCADE, ver TermoUsoServiceExcluir no Nest).
+  // DELETE /termos-uso/:id: nunca permitido na versão vigente. Numa versão já aceita por alguém, dá 409 a menos
+  // que `forcar: true` (checkbox "entendi" + "Excluir mesmo assim"): com `forcar`, apaga o termo e AS LINHAS DE
+  // ACEITE que apontam para ele (as FKs são CASCADE, ver TermoUsoServiceExcluir no Nest).
   excluir: (authFetch: AuthFetch, id: number, forcar?: boolean): Promise<void> =>
     authFetch(`/termos-uso/${id}${forcar ? '?forcar=true' : ''}`, { method: 'DELETE' }).then(
       tratarResposta<void>,

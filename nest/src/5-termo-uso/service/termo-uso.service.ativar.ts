@@ -6,21 +6,16 @@ import {
 import { DatabaseService } from '../../commons/database/database.service';
 import { TermoUsoResponse } from '../dto/response/termo-uso.response';
 
-// Tornar UMA versão específica a vigente do seu tipo (13-09-2026, ação nova
-// - separada de Criar, que a partir de agora NUNCA ativa sozinha, ver
-// TermoUsoServiceCriar). Fluxo real, pedido do Lucas: cria-se um rascunho,
-// a "staff" revisa (procura erro de português etc.), e SÓ DEPOIS um
-// administrador vem aqui e torna essa versão a vigente manualmente - nunca
-// automático.
+// Tornar UMA versão específica a vigente do seu tipo (ação separada de Criar, que NUNCA ativa sozinha, ver
+// TermoUsoServiceCriar). Fluxo real: cria-se um rascunho, a "staff" revisa (procura erro de português etc.), e
+// SÓ DEPOIS um administrador vem aqui e torna essa versão a vigente manualmente, nunca automático.
 //
-// 2 writes na MESMA transação por requisição (GlobalDbInterceptor, mesmo
-// padrão de campanha.service.rejeitar.ts) - desativa a vigente atual DO
-// MESMO TIPO (excluindo o próprio alvo - se o alvo já for o vigente, isto é
-// idempotente, não desativa e reativa à toa) e ativa o alvo. Funciona tanto
-// pra promover um rascunho novo quanto pra REVERTER pra uma versão antiga
-// (reativar algo já usado no passado) - nenhuma restrição de "já foi
-// aceita" aqui, essa trava é só de TermoUsoServiceAlterar (editar
-// conteúdo), não de "qual está vigente agora".
+// 2 writes na MESMA transação por requisição (GlobalDbInterceptor, mesmo padrão de
+// campanha.service.rejeitar.ts): desativa a vigente atual DO MESMO TIPO (excluindo o próprio alvo: se o alvo já
+// for o vigente, isto é idempotente, não desativa e reativa à toa) e ativa o alvo. Funciona tanto para promover
+// um rascunho novo quanto para REVERTER para uma versão antiga (reativar algo já usado no passado): nenhuma
+// restrição de "já foi aceita" aqui, essa trava é só de TermoUsoServiceAlterar (editar conteúdo), não de "qual
+// está vigente agora".
 @Injectable()
 export class TermoUsoServiceAtivar {
   constructor(private readonly database: DatabaseService) {}
@@ -55,9 +50,8 @@ export class TermoUsoServiceAtivar {
       .executeTakeFirst();
 
     if (!linha) {
-      // pol_termos_update exige 'termos_uso_gerenciar' - se o UPDATE não
-      // afetou nada apesar do SELECT acima ter achado a linha (pol_termos_
-      // select é USING(true)), é falta de permissão, não inexistência.
+      // pol_termos_update exige 'termos_uso_gerenciar': se o UPDATE não afetou nada apesar do SELECT acima ter
+      // achado a linha (pol_termos_select é USING(true)), é falta de permissão, não inexistência.
       throw new ForbiddenException(
         "Sem permissão 'termos_uso_gerenciar' para tornar esta versão vigente.",
       );

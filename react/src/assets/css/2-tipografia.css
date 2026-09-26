@@ -1,25 +1,12 @@
 /* ========= SISTEMA DE TIPOGRAFIA =========
-   Extraído de 1-base.css (12-09-2026, pedido do Lucas: organização - um
-   arquivo por responsabilidade, e tipografia já tinha virado grande o
-   bastante pra merecer o próprio; horas depois, `1-base.css` foi
-   renumerado pra `3-base.css` e a cor ganhou o próprio arquivo também,
-   `1-cores.css` - ver comentário lá). Escopo: a escala tipográfica
-   nomeada do painel inteiro - tokens de tamanho/fonte + as classes
-   `.titulo-*`/`.subtitulo`/`.paragrafo*`/`.legenda`/`.rotulo-*` (ver
-   histórico completo da escala na memória
-   project_unificacao_tipografia_painel_admin, e o achado de 08-09-2026
-   sobre `.titulo-bloco`/`.rotulo-leitura`, "não podemos ter algo
-   perdido flutuando por aí").
+   Escopo: a escala tipográfica nomeada do painel inteiro: tokens de tamanho/fonte + as classes
+   `.titulo-*`/`.subtitulo`/`.paragrafo*`/`.legenda`/`.rotulo-*`.
 
-   NÃO entra aqui: as variáveis de cor (`--cor-*`/`--color-*`) e os
-   utilitários `.fundo-*`/`.texto-*`/`.borda-*`, que moram em
-   1-cores.css; e o reset de tag crua (`body`/`h1-h3`/`button`/
-   `input,select,textarea` dentro de `@layer base`, em 3-base.css) -
-   aquele bloco mistura tipografia (e cor) com box-model e tem uma
-   história própria (o bug de `@layer` documentado lá), então continua
-   inteiro num lugar só em vez de fragmentado entre arquivos. Se um dia
-   isso também precisar migrar, é decisão separada - avisar antes de
-   mexer. */
+   NÃO entra aqui: as variáveis de cor (`--cor-*`/`--color-*`) e os utilitários
+   `.fundo-*`/`.texto-*`/`.borda-*`, que moram em 1-cores.css; e o reset de tag crua
+   (`body`/`h1-h3`/`button`/`input,select,textarea` dentro de `@layer base`, em 3-base.css): aquele bloco
+   mistura tipografia (e cor) com box-model e tem uma história própria (o bug de `@layer` documentado lá),
+   então continua inteiro num lugar só em vez de fragmentado entre arquivos. */
 :root {
   --font-size-xs: 0.75rem;
   --font-size-sm: 0.875rem;
@@ -29,46 +16,26 @@
   --font-size-2xl: 1.5rem;
   --font-size-3xl: 1.875rem;
 
-  /* Fonte só pro selo <dev> (.badge-dev, 4-componentes.css) - pedido do
-     Lucas, 03-08-2026: qualquer coisa marcada como "só pra
-     desenvolvimento" usa essa combinação (roxo + monoespaçada), nunca
-     hardcoded caso a caso. */
+  /* Fonte só para o selo <dev> (.badge-dev, 4-componentes.css): qualquer coisa marcada como "só para
+     desenvolvimento" usa essa combinação (roxo + monoespaçada), nunca hardcoded caso a caso. */
   --font-mono-dev: 'Courier New', monospace;
 }
 
-/* Escala tipográfica única do painel (23-08-2026, auditoria completa:
-   8 padrões concorrentes fazendo o mesmo papel de título em tamanhos/
-   pesos/fontes diferentes). Mesma lógica do protótipo de interface
-   (3 títulos + 1 subtítulo + 1-2 parágrafos, ver memória
-   feedback_prototipo_constantes_rigidas), com os valores que já são
-   reais neste sistema hoje (ex.: body já é 14px, não 16px) - nenhum
-   token de tamanho/fonte novo, só nomear o que já existe. Aplicar
-   direto na tag (`className="titulo-secao"` etc.), não depender de
-   um wrapper ancestral pra "ganhar" da regra global
-   h1,h2,h3{font-family:serif} (aquilo é o que causava o bug de título
-   saindo em serif sem querer, corrigido primeiro no Campo de Testes e
-   agora nesta rodada) - essa regra global continua em 3-base.css
-   (@layer base), fora deste arquivo de propósito (ver comentário no
-   topo).
+/* Escala tipográfica única do painel: 3 títulos + 1 subtítulo + 1-2 parágrafos (mesma lógica do protótipo de
+   interface), com os valores que já são reais neste sistema (ex.: body é 14px, não 16px); nenhum token de
+   tamanho/fonte novo, só nomear o que já existe. Aplicar direto na tag (`className="titulo-secao"` etc.),
+   não depender de um wrapper ancestral para "ganhar" da regra global h1,h2,h3{font-family:serif} (é o que
+   causava título saindo em serif sem querer); essa regra global continua em 3-base.css (@layer base), fora
+   deste arquivo de propósito (ver comentário no topo).
 
-   `.titulo-bloco` (08-09-2026, achado do Lucas: "não podemos ter algo
-   perdido flutuando por aí") - o 3º título que o comentário acima já
-   citava de propósito (protótipo), mas nunca tinha virado classe de
-   verdade aqui: o rótulo pequeno/maiúsculo que `SecaoFicha`
-   (ficha-consulta.tsx) sempre usou solto, copiado à mão em pelo menos
-   mais 2 lugares (Minha Conta, Campo de Testes) sem ninguém perceber
-   que já era um padrão repetido. Só a parte tipográfica mora aqui
-   (mesma regra dos outros 5 tokens desta escala) - espaçamento/borda
-   (`mb-3 pb-2 border-b borda-padrao`) continuam como utilitário solto
-   em cada lugar que usa, porque isso é decisão de LAYOUT de quem
-   chama, não de tipografia. */
+   `.titulo-bloco`: o rótulo pequeno/maiúsculo que `SecaoFicha` (ficha-consulta.tsx) usa, também em Minha
+   Conta e no Campo de Testes. Só a parte tipográfica mora aqui (mesma regra dos outros tokens desta escala):
+   espaçamento/borda (`mb-3 pb-2 border-b borda-padrao`) continuam como utilitário solto em cada lugar que
+   usa, porque isso é decisão de LAYOUT de quem chama, não de tipografia. */
 @layer components {
-  /* Rótulo de campo (label pequeno maiúsculo) - mesma string Tailwind
-     repetida em quase toda tela de Criar/Alterar (achado nesta
-     auditoria): "text-[11px] font-black text-slate-500 uppercase
-     tracking-widest mb-2". Centralizar aqui em vez de deixar 15 cópias
-     cruas facilita tanto o dark mode (troca 1 lugar, não 15) quanto
-     qualquer ajuste futuro de estilo do rótulo. */
+  /* Rótulo de campo (label pequeno maiúsculo): a mesma string Tailwind se repetia em quase toda tela de
+     Criar/Alterar ("text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2"). Centralizar aqui
+     facilita tanto o dark mode (troca 1 lugar, não 15) quanto qualquer ajuste futuro de estilo do rótulo. */
   .rotulo-campo {
     display: block;
     font-size: 11px;
@@ -79,15 +46,10 @@
     margin-bottom: 0.5rem;
   }
 
-  /* `.rotulo-leitura` (08-09-2026, achado do Lucas: "ve se não ficou mais
-     nada flutuante perdido") - mesma ideia de `.rotulo-campo` (rótulo
-     pequeno/maiúsculo), mas mais leve (font-bold, não font-black) e sem
-     margem embutida - usado quando o rótulo acompanha um VALOR sendo
-     EXIBIDO (CampoFicha, card de métrica do Dashboard, cabeçalho de
-     categoria da Busca Global), nunca um campo de formulário editável
-     (isso continua sendo `.rotulo-campo`). "text-[11px] font-bold
-     texto-fraco uppercase tracking-widest" estava repetido cru nos 3
-     lugares acima, sem ninguém ter percebido que já era um padrão. */
+  /* `.rotulo-leitura`: mesma ideia de `.rotulo-campo` (rótulo pequeno/maiúsculo), mas mais leve (font-bold,
+     não font-black) e sem margem embutida; usado quando o rótulo acompanha um VALOR sendo EXIBIDO
+     (CampoFicha, card de métrica do Dashboard, cabeçalho de categoria da Busca Global), nunca um campo de
+     formulário editável (isso continua sendo `.rotulo-campo`). */
   .rotulo-leitura {
     font-size: 11px;
     font-weight: 700;
@@ -132,8 +94,7 @@
     color: var(--cor-texto-forte);
   }
 
-  /* Texto técnico denso (chave, log, id) - já era o padrão de fato em
-     ModalDetalhe e dashboard-regras-negocio.tsx antes de virar token. */
+  /* Texto técnico denso (chave, log, id): padrão de fato em ModalDetalhe e dashboard-regras-negocio.tsx. */
   .paragrafo-denso {
     font-family: var(--font-mono-dev);
     font-size: var(--font-size-xs);

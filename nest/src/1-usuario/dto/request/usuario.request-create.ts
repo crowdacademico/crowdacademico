@@ -24,13 +24,10 @@ export class UsuarioRequestCreate {
   @MinLength(8, { message: 'Senha precisa ter pelo menos 8 caracteres.' })
   senha: string;
 
-  // ADICIONADO (módulo 25-arquivo): opcional, pra permitir escolher a foto
-  // de perfil já na tela de criação (upload acontece ANTES, via
-  // POST /arquivo/upload/iniciar+confirmar - este campo só recebe o
-  // id_arquivo já confirmado). Sem validação de "arquivo existe/é do tipo
-  // certo" aqui: quem confirma isso é o próprio módulo de arquivo; um id
-  // inexistente aqui só resultaria num FK_USUARIO_IMAGEM inválido,
-  // rejeitado pelo Postgres.
+  // Opcional, para permitir escolher a foto de perfil já na tela de criação (o upload acontece ANTES, via POST
+  // /arquivo/upload/iniciar+confirmar; este campo só recebe o id_arquivo já confirmado). Sem validação de
+  // "arquivo existe/é do tipo certo" aqui: quem confirma isso é o módulo de arquivo; um id inexistente aqui só
+  // resultaria num FK_USUARIO_IMAGEM inválido, rejeitado pelo Postgres.
   @IsOptional()
   @IsInt()
   idImagemPerfil?: number;

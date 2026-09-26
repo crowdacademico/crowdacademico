@@ -26,21 +26,16 @@ export class AuthServiceRefresh {
     }
 
     const db = this.database.getDb();
-    // sessao tem policy USING(true) - qualquer requisição enxerga qualquer
-    // linha; a segurança de verdade é o bcrypt.compare abaixo, não a RLS.
+    // sessao tem policy USING(true): qualquer requisição enxerga qualquer linha; a segurança de verdade é o
+    // bcrypt.compare abaixo, não a RLS.
     //
-    // .forUpdate() (07-08-2026, achado do Lucas: linhas duplicadas em
-    // `sessao`, criado_em idêntico até o milissegundo, nenhuma revogada) -
-    // sem isso, duas renovações concorrentes com o MESMO refresh token
-    // (aconteceu bastante: várias abas, ou uma tela que dispara N buscas de
-    // uma vez com o token já vencido) liam revogado_em = NULL AO MESMO
-    // TEMPO, as duas passavam pelo teste abaixo, e as duas criavam sessão
-    // nova a partir do MESMO token - exatamente o par de linhas idênticas
-    // que apareceu no histórico. Cada requisição já roda dentro da própria
-    // transação (GlobalDbInterceptor) - FOR UPDATE trava esta linha até a
-    // 1ª transação terminar; a 2ª só lê DEPOIS, já vendo revogado_em
-    // preenchido, e cai certinho no "Refresh token inválido ou expirado."
-    // logo abaixo, em vez de duplicar.
+    // .forUpdate(): sem isso, duas renovações concorrentes com o MESMO refresh token (acontece bastante: várias
+    // abas, ou uma tela que dispara N buscas de uma vez com o token já vencido) leriam revogado_em = NULL AO
+    // MESMO TEMPO, as duas passariam pelo teste abaixo, e as duas criariam sessão nova a partir do MESMO token
+    // (linhas idênticas no histórico). Cada requisição já roda dentro da própria transação
+    // (GlobalDbInterceptor): FOR UPDATE trava esta linha até a 1ª transação terminar; a 2ª só lê DEPOIS, já
+    // vendo revogado_em preenchido, e cai certinho no "Refresh token inválido ou expirado." logo abaixo, em vez
+    // de duplicar.
     const sessao = await db
       .selectFrom('sessao')
       .select([

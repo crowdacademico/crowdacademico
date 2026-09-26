@@ -94,6 +94,7 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 92008 | `validar_comentario_endosso_autor` | `comentario` | Só o dono da campanha (ou moderação) pode endossar/remover endosso (RF-089) |
 | 92009 | `fn_valida_transicao_campanha` | `campanha` | Pesquisador suspenso não pode enviar nem reenviar campanha para aprovação (21-09-2026) |
 | 92010 | `deslizar_datas_campanha` | `campanha` | Só o dono (ou quem tem `campanha_editar`) reagenda datas de campanha em rascunho ou rejeitada (21-09-2026) |
+| 92011 | `contar_metricas_dashboard` | `dashboard` (várias tabelas) | Só quem tem `relatorio_visualizar` recebe as métricas do painel (25-09-2026) |
 
 ## 93xxx - Limite de taxa (429)
 

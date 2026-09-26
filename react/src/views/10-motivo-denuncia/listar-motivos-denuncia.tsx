@@ -18,13 +18,8 @@ import type { MotivoDenunciaResponse } from '../../services/10-motivo-denuncia/t
 // mesma ideia de ORDEM_PODER_PAPEL em listar-usuarios.tsx.
 const ORDEM_TIPO = ['campanha', 'perfil'];
 
-// Aba "Motivos de Denúncia" do painel admin - rota /admin/motivos-denuncia.
-//
-// EM MODAL (14-09-2026, continuação da migração CRUD→Modal pedida pelo
-// Lucas) - Criar/Alterar/Consultar/Excluir deixaram de ser páginas
-// próprias (removidas de rotas.constants.ts) e viraram os modais de
-// modal-motivo-denuncia.tsx/modal-criar-motivo-denuncia.tsx, mesmo padrão
-// de listar-usuarios.tsx.
+// Aba "Motivos de Denúncia" do painel admin: rota /admin/motivos-denuncia. Criar/Alterar/Consultar/Excluir são
+// MODAIS (modal-motivo-denuncia.tsx/modal-criar-motivo-denuncia.tsx), mesmo padrão de listar-usuarios.tsx.
 export function ListarMotivosDenuncia({ auth }: PropsPagina) {
   const {
     criando,

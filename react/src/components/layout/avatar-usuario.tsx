@@ -8,9 +8,8 @@ const PALETA_AVATAR: string[] = [
   'var(--cor-avatar-7)',
 ];
 
-// Hash simples (soma de código de caractere) - DETERMINÍSTICO de propósito
-// (09-08-2026, Bloco B/C): a mesma pessoa cai sempre na mesma cor, em
-// qualquer tela/sessão, sem guardar nada no banco. Nada de Math.random().
+// Hash simples (soma de código de caractere), DETERMINÍSTICO de propósito: a mesma pessoa cai sempre na mesma
+// cor, em qualquer tela/sessão, sem guardar nada no banco. Nada de Math.random().
 function corPorNome(nome: string): string {
   let soma = 0;
   for (let i = 0; i < nome.length; i += 1) {
@@ -29,23 +28,18 @@ const CLASSE_TAMANHO: Record<TamanhoAvatar, string> = {
   sm: 'w-8 h-8 text-xs',
   md: 'w-9 h-9 text-sm',
   lg: 'w-14 h-14 text-xl',
-  // 'xl' (10-08-2026, card de perfil largo do Minha Conta) - grande o
-  // bastante pra ser o elemento visual principal de um card lateral, sem
-  // exigir upload de foto de verdade pra já parecer "de gente grande"
-  // (a inicial colorida já resolve isso, mesma lógica do resto do app).
+  // 'xl': card de perfil largo do Minha Conta; grande o bastante para ser o elemento visual principal de um
+  // card lateral, sem exigir upload de foto de verdade para já parecer "de gente grande" (a inicial colorida já
+  // resolve isso).
   xl: 'w-24 h-24 text-4xl',
-  // 'xxl' (11-08-2026, faixa de identidade do Minha Conta, estilo perfil
-  // acadêmico tipo ORCID/Google Acadêmico) - 112px, o maior da escala,
-  // âncora visual de uma faixa larga no topo da página.
+  // 'xxl': faixa de identidade do Minha Conta (estilo perfil acadêmico tipo ORCID/Google Acadêmico): 112px, o
+  // maior da escala, âncora visual de uma faixa larga no topo da página.
   xxl: 'w-28 h-28 text-5xl',
 };
 
-// 'quadrado' (10-08-2026, pedido do Lucas: "o quadradinho da imagem",
-// card de perfil parecido com portfólio) - rounded-2xl, não rounded-lg
-// nem cantos retos: seguem o mesmo raio generoso já usado nos cartões do
-// painel (cartao-formulario.tsx usa rounded-3xl), só um degrau abaixo.
-// 'circulo' continua sendo o padrão em todo o resto do app (cabeçalho,
-// tabelas, dropdown) - não muda nada pra quem já usa o componente.
+// 'quadrado': rounded-2xl, não rounded-lg nem cantos retos: segue o mesmo raio generoso dos cartões do painel
+// (cartao-formulario.tsx usa rounded-3xl), só um degrau abaixo. 'circulo' é o padrão em todo o resto do app
+// (cabeçalho, tabelas, dropdown).
 const CLASSE_FORMA: Record<FormaAvatar, string> = {
   circulo: 'rounded-full',
   quadrado: 'rounded-2xl',

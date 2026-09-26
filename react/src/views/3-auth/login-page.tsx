@@ -5,18 +5,14 @@ import { IconeGoogle } from '../../components/3-auth/icone-google';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import type { PropsPagina } from '../../services/router/pagina.type';
 
-// Cópia fiel de telas/login/login.html do Projeto de Interface real -
-// com uma mudança deliberada em relação ao original, não só estética:
+// Cópia fiel de telas/login/login.html do Projeto de Interface real, com uma mudança deliberada em relação ao
+// original, não só estética:
 //
-// O original tem um botão único "Entrar / Criar Conta" + checkbox de
-// Termos de Uso, pensado como login/cadastro combinado. Esta tela NÃO
-// coleta nome (só e-mail/senha) - cadastro público de verdade agora é
-// /cadastro (cadastro-page.tsx, 09-08-2026, Bloco D), tela própria com
-// nome/confirmação de senha/aceite de termos - link "Já tem conta? Entrar"
-// dela devolve pra cá, e o link "Cadastre-se" abaixo leva pra lá. Botão
-// continua só "Entrar" porque só faz login mesmo. "Esqueceu a senha?" e o
-// login social com Google continuam só alert() de protótipo, como no
-// original.
+// O original tem um botão único "Entrar / Criar Conta" + checkbox de Termos de Uso, pensado como login/cadastro
+// combinado. Esta tela NÃO coleta nome (só e-mail/senha): o cadastro público de verdade é /cadastro
+// (cadastro-page.tsx), tela própria com nome/confirmação de senha/aceite de termos; o link "Já tem conta?
+// Entrar" dela devolve para cá, e o link "Cadastre-se" abaixo leva para lá. O botão é só "Entrar" porque só faz
+// login. "Esqueceu a senha?" e o login social com Google são só alert() de protótipo, como no original.
 export function LoginPage({ auth }: PropsPagina) {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
@@ -111,21 +107,17 @@ export function LoginPage({ auth }: PropsPagina) {
 
           <div className="relative flex py-4 items-center">
             <div className="flex-grow border-t-2 borda-padrao"></div>
-            <span className="flex-shrink-0 mx-4 texto-fraco opacity-60 text-[10px] font-black uppercase tracking-widest">
+            <span className="flex-shrink-0 mx-4 texto-fraco text-[10px] font-black uppercase tracking-widest">
               Ou acesse com
             </span>
             <div className="flex-grow border-t-2 borda-padrao"></div>
           </div>
 
-          {/* Botão do Google (10-08-2026, achado de uma IA: o ícone
-              era `fa-brands fa-google text-red-500`, um G vermelho
-              chapado - nada parecido com o que Google/GitHub/qualquer
-              site usa). Logo oficial de 4 cores via SVG (icone-google.tsx),
-              texto "Continuar com Google" (era só "Google"). Cores do
-              fundo/borda continuam nos tokens de tema (fundo-cartao/
-              borda-padrao), não fixas em branco - diferente da diretriz
-              oficial (que é sempre branca), mas consistente com o app
-              inteiro já reagir ao tema escuro; um botão sempre branco
+          {/* Botão do Google: logo oficial de 4 cores via SVG (icone-google.tsx), texto "Continuar com
+              Google" (um `fa-brands fa-google text-red-500` seria um G vermelho chapado, nada parecido com o
+              que Google/GitHub/qualquer site usa). Cores do fundo/borda ficam nos tokens de tema
+              (fundo-cartao/borda-padrao), não fixas em branco: diferente da diretriz oficial (que é sempre
+              branca), mas consistente com o app inteiro reagir ao tema escuro; um botão sempre branco
               destoaria numa tela escura. */}
           <button
             type="button"
@@ -135,12 +127,8 @@ export function LoginPage({ auth }: PropsPagina) {
             <IconeGoogle /> Continuar com Google
           </button>
 
-          {/* Chamada de cadastro (10-08-2026, achado de uma IA:
-              "pequeno demais pro que é a segunda ação mais importante da
-              tela") - text-xs → text-sm, mais respiro acima, separador ">
-              antes de sumir dentro do "ou acesse com". Continua sendo
-              link, não um 2º botão cheio (dois botões grandes competiriam
-              entre si). */}
+          {/* Chamada de cadastro: a segunda ação mais importante da tela, por isso text-sm e mais respiro
+              acima. Continua sendo link, não um 2º botão cheio (dois botões grandes competiriam entre si). */}
           <p className="text-sm texto-fraco text-center pt-2">
             Ainda não tem cadastro?{' '}
             <Link to="/cadastro" className="texto-marca font-bold underline">

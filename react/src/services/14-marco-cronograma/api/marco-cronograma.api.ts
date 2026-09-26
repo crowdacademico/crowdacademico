@@ -6,9 +6,8 @@ import type {
   MarcoCronogramaResponse,
 } from '../type/marco-cronograma.type';
 
-// Espelha nest/src/14-marco-cronograma. Mesmo formato de
-// orcamento-campanha.api.ts (ver lá): array puro, sem envelope de
-// paginação. Extraído (23-09-2026) de dentro de bancada-campanha.tsx.
+// Espelha nest/src/14-marco-cronograma. Mesmo formato de orcamento-campanha.api.ts (ver lá): array puro, sem
+// envelope de paginação.
 export const marcoCronogramaApi = {
   listar: (authFetch: AuthFetch, idCampanha: number): Promise<MarcoCronogramaResponse[]> =>
     authFetch(`/marco-cronograma?idCampanha=${idCampanha}`).then(

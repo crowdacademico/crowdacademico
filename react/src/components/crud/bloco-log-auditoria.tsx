@@ -8,17 +8,11 @@ interface BlocoLogAuditoriaProps {
   campoRenomeio?: string;
 }
 
-// Extraído de dentro do GenericTable (13-09-2026, achado do Lucas numa
-// auditoria: "log de auditoria não é estrutura de tabela... é outra
-// funcionalidade, com dados próprios, paginação própria e visual próprio,
-// que por acaso costuma aparecer embaixo de uma tabela"). GenericTable
-// tinha o botão "Ver log" + este painel embutidos (via `buscarLog`/
-// `campoRenomeioLog`), mesmo sendo usado por 8 das 10 telas - o teste que
-// importa não é "quantos usam", é "uma tela SEM tabela consegue mostrar log
-// de auditoria hoje?" (não conseguia, sem montar um GenericTable falso).
-// Agora é um componente irmão, colocado logo abaixo do `<GenericTable>` nas
-// 8 telas que precisam - mesmo `mt-4` que o botão já tinha dentro do
-// GenericTable, pra manter a aparência idêntica.
+// Log de auditoria não é estrutura de tabela: é outra funcionalidade, com dados próprios, paginação própria e
+// visual próprio, que por acaso costuma aparecer embaixo de uma tabela. Por isso é um componente irmão,
+// colocado logo abaixo do `<GenericTable>` nas telas que precisam (mesmo `mt-4` que o botão "Ver log" tinha
+// dentro do GenericTable). O teste que importa não é "quantos usam", é "uma tela SEM tabela consegue mostrar
+// log de auditoria hoje?": embutido no GenericTable, não conseguia, sem montar um GenericTable falso.
 export function BlocoLogAuditoria({ buscar, campoRenomeio }: BlocoLogAuditoriaProps) {
   const [aberto, setAberto] = useState(false);
 

@@ -12,11 +12,8 @@ import {
 import { DatabaseService } from '../../commons/database/database.service';
 import { PerfilPesquisadorRequestCorrigirCpf } from '../dto/request/perfil-pesquisador.request-corrigir-cpf';
 
-// corrigir_cpf_pesquisador() (03_funcoes_seguranca.sql, [03-Q]) existia no
-// banco desde 22-08-2026, mas nenhum endpoint do Nest nunca chamava ela -
-// achado (07-09-2026) junto do pedido de dar ao Admin poder de ver/alterar
-// todos os campos do pesquisador na Bancada do Pesquisador (Campo de
-// Testes, hoje parte permanente do painel).
+// Chama corrigir_cpf_pesquisador() (03_funcoes_seguranca.sql, [03-Q]): correção de CPF por Admin/suporte, na
+// Bancada do Pesquisador (Campo de Testes, hoje parte permanente do painel).
 @Injectable()
 export class PerfilPesquisadorServiceCorrigirCpf {
   constructor(private readonly database: DatabaseService) {}

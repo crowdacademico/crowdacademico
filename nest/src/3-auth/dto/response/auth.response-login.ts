@@ -5,9 +5,8 @@ export class AuthResponseLogin {
   // "<id_sessao>.<segredo>" - ver constants/auth.constants.ts
   refreshToken: string;
   usuario: UsuarioResponse;
-  // Nomes dos papéis do usuário (09-08-2026, Bloco B/C do prompt de IA
-  // usado nesta rodada) - o frontend usa isso só pra decidir SE mostra "Painel Admin" no
-  // dropdown do cabeçalho, nunca pra checar permissão de verdade (isso
-  // continua sendo decidido pelo backend/RLS a cada requisição).
+  // Nomes dos papéis do usuário: o frontend usa isso só para decidir SE mostra "Painel Admin" no dropdown do
+  // cabeçalho, nunca para checar permissão de verdade (isso continua sendo decidido pelo backend/RLS a cada
+  // requisição).
   papeis: string[];
 }

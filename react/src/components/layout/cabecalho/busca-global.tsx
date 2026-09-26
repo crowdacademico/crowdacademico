@@ -26,12 +26,11 @@ interface DadosCatalogos {
   configuracoes: ConfiguracaoResponse[];
 }
 
-// Derivado de ROTAS_ADMIN (09-08-2026), não mais uma lista à mão - era uma
-// cópia manual das 4 abas que podia desalinhar (mesmo problema que
-// ROTAS_ADMIN/GRUPOS_MENU_ADMIN já resolveram uma vez pro menu lateral).
-// Ícone aqui é o MESMO que aparece no menu lateral (rota.icone) - pedido
-// do Lucas ao ver a busca: "coloca estes exatos ícones no menu também".
-const NAVEGACAO: ResultadoBusca[] = ROTAS_ADMIN.map((rota) => ({
+// Derivado de ROTAS_ADMIN, não uma lista à mão (uma cópia manual das abas podia desalinhar, mesmo problema que
+// ROTAS_ADMIN/GRUPOS_MENU_ADMIN já resolveram para o menu lateral). Só entram rotas com rótulo de menu: as de
+// detalhe (Minha Conta, Publicar Termos de Uso) não têm nome e apareceriam como itens só com bolinha. O ícone é
+// o MESMO do menu lateral (rota.icone).
+const NAVEGACAO: ResultadoBusca[] = ROTAS_ADMIN.filter((rota) => rota.rotuloMenu !== undefined).map((rota) => ({
   categoria: 'Navegação',
   rotulo: rota.rotuloMenu,
   caminho: rota.caminho,
@@ -53,13 +52,10 @@ interface BuscaGlobalProps {
   auth: Pick<UseAuthReturn, 'authFetch'>;
 }
 
-// Busca global - Ctrl+K/Cmd+K (09-08-2026, pedido do Lucas depois de
-// gostar da sugestão: "vamos aplicar pra eu ver como fico"). Um modal só
-// que busca por nome/e-mail/chave em usuário/papel/permissão/configuração
-// ao mesmo tempo, e também pula direto pras 4 abas do menu. Carrega os 4
-// catálogos só na PRIMEIRA vez que abre (mesma convenção de
-// LogAuditoriaPainel - não gasta requisição em quem nunca aperta Ctrl+K),
-// guarda em cache pro resto da sessão.
+// Busca global (Ctrl+K/Cmd+K): um modal só que busca por nome/e-mail/chave em
+// usuário/papel/permissão/configuração ao mesmo tempo, e também pula direto para as abas do menu. Carrega os 4
+// catálogos só na PRIMEIRA vez que abre (mesma convenção de LogAuditoriaPainel: não gasta requisição em quem
+// nunca aperta Ctrl+K), guarda em cache para o resto da sessão.
 export function BuscaGlobal({ auth }: BuscaGlobalProps) {
   const navigate = useNavigate();
   const [aberto, setAberto] = useState(false);
@@ -138,7 +134,7 @@ export function BuscaGlobal({ auth }: BuscaGlobalProps) {
             categoria: 'Usuários',
             rotulo: u.nome,
             subtitulo: u.email,
-            caminho: `/admin/usuarios/${u.idUsuario}/consultar`,
+            caminho: `/admin/usuarios?q=${encodeURIComponent(u.email)}`,
             icone: 'fa-user',
           })),
         ...dados.papeis
@@ -147,11 +143,12 @@ export function BuscaGlobal({ auth }: BuscaGlobalProps) {
           .map((p) => ({
             categoria: 'Papéis',
             rotulo: p.nome,
-            caminho: `/admin/papeis/${p.idPapel}/alterar`,
+            caminho: `/admin/papeis?q=${encodeURIComponent(p.nome)}`,
             icone: 'fa-user-shield',
           })),
-        // Permissão não tem tela própria (catálogo só-leitura) - manda pra
-        // Papéis & Permissões, onde ela aparece na matriz/listagem.
+        // Usuário, papel e parâmetro abrem a listagem já filtrada (?q=): Consultar/Alterar são modal, então não
+        // existem rotas /:id/consultar e /:id/alterar. Permissão não tem tela própria (catálogo só-leitura):
+        // manda para Papéis & Permissões, onde ela aparece na matriz/listagem.
         ...dados.permissoes
           .filter((p) => contem(p.nome, termoBusca))
           .slice(0, LIMITE_POR_CATEGORIA)
@@ -168,7 +165,7 @@ export function BuscaGlobal({ auth }: BuscaGlobalProps) {
             categoria: 'Parâmetros',
             rotulo: c.chave,
             subtitulo: c.descricao,
-            caminho: `/admin/configuracoes/${c.idConfig}/consultar`,
+            caminho: `/admin/configuracoes?q=${encodeURIComponent(c.chave)}`,
             icone: 'fa-sliders',
           })),
       );

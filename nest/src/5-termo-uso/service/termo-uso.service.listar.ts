@@ -2,17 +2,13 @@ import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
 import { TermoUsoResponse } from '../dto/response/termo-uso.response';
 
-// Todas as versões, por id crescente (13-09-2026, pedido do Lucas: "assim
-// como os outros" - mesmo padrão de ordenação de configuracao.service.
-// findall.ts/area-conhecimento.service.findall.ts/tipo-link.service.
-// findall.ts, todos por id, não por data). pol_termos_select é USING(true),
-// não filtra nada - a tela de admin é quem decide o que mostrar; o guard de
-// autenticação fica no controller.
+// Todas as versões, por id crescente (mesmo padrão de ordenação de
+// configuracao.service.findall.ts/area-conhecimento.service.findall.ts/tipo-link.service.findall.ts: por id,
+// não por data). pol_termos_select é USING(true), não filtra nada: a tela de admin é quem decide o que mostrar;
+// o guard de autenticação fica no controller.
 //
-// Lista os 2 tipos juntos, misturados na mesma tabela (`tipo` virou coluna
-// visível, 13-09-2026, ao separar em 2 termos ativos simultâneos) - quem
-// quiser só 1 tipo por vez usa `termoUsoApi.buscarAtivo(tipo)` (card do
-// dashboard), não esta listagem.
+// Lista todos os tipos juntos, misturados na mesma tabela (`tipo` é coluna visível): quem quiser só 1 tipo por
+// vez usa `termoUsoApi.buscarAtivo(tipo)` (card do dashboard), não esta listagem.
 @Injectable()
 export class TermoUsoServiceListar {
   constructor(private readonly database: DatabaseService) {}

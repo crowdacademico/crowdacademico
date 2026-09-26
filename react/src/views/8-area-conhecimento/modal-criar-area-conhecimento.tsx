@@ -17,8 +17,7 @@ interface ModalCriarAreaConhecimentoProps {
   aoCriado: (areaCriada: AreaConhecimentoResponse) => void;
 }
 
-// Criar - migrado de página pra modal (14-09-2026, continuação da
-// migração CRUD→Modal pedida pelo Lucas).
+// Criar em modal.
 export function ModalCriarAreaConhecimento({ auth, aoFechar, aoCriado }: ModalCriarAreaConhecimentoProps) {
   const { mostrar } = useToast();
   const { erro, reportarErro, limparErro } = useErroToast();
@@ -42,10 +41,9 @@ export function ModalCriarAreaConhecimento({ auth, aoFechar, aoCriado }: ModalCr
   }, []);
 
   const codigoInvalido = codigoCnpq.length > 0 && !REGEX_CODIGO_CNPQ.test(codigoCnpq);
-  // `aria-describedby` (23-09-2026): liga o campo ao <p> que explica o
-  // porquê, seja o erro ou a ajuda - sem isso o leitor de tela anunciava
-  // "inválido" sem dizer o que fazer. useId() evita colidir se 2 modais
-  // iguais abrirem ao mesmo tempo.
+  // `aria-describedby`: liga o campo ao <p> que explica o porquê, seja o erro ou a ajuda; sem isso o leitor de
+  // tela anunciaria "inválido" sem dizer o que fazer. useId() evita colidir se 2 modais iguais abrirem ao mesmo
+  // tempo.
   const idMensagemCodigo = useId();
   const idCodigo = useId();
   const idNome = useId();

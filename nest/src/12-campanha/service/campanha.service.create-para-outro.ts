@@ -5,15 +5,11 @@ import { CampanhaRequestCreate } from '../dto/request/campanha.request-create';
 import { CampanhaResponse } from '../dto/response/campanha.response';
 import { CampanhaServiceFindOne } from './campanha.service.findone';
 
-// criar_campanha_para_outro() (03_funcoes_seguranca.sql, [03-S]) - mesma
-// classe de achado de perfil-pesquisador.service.create-para-outro.ts:
-// "Criar campanha" saiu do Campo de Testes em 25-08-2026 (remoção do
-// Elenco) - pol_campanha_insert (04) exige id_usuario =
-// id_usuario_atual() E pesquisador ativo, então não dava mais pra criar
-// em nome de um pesquisador escolhido sem personificação. Endpoint
-// separado, gateado por permissão própria (campanha_criar_para_outro,
-// dentro da função) - o self-service (CampanhaServiceCreate) continua
-// exatamente como estava.
+// criar_campanha_para_outro() (03_funcoes_seguranca.sql, [03-S]): pol_campanha_insert (04) exige id_usuario =
+// id_usuario_atual() E pesquisador ativo, então não dá para criar em nome de um pesquisador escolhido sem
+// personificação. Endpoint separado, gateado por permissão própria (campanha_criar_para_outro, dentro da
+// função); o self-service (CampanhaServiceCreate) não o usa. Mesma classe de
+// perfil-pesquisador.service.create-para-outro.ts.
 @Injectable()
 export class CampanhaServiceCreateParaOutro {
   constructor(

@@ -36,11 +36,9 @@ export const ROTULO_STATUS_CAMPANHA: Record<StatusCampanha, string> = {
   encerrado_moderacao: 'Encerrado (moderação)',
 };
 
-// `aguardando_aprovacao` saiu de 'badge-neutro' pra 'badge-aviso' em
-// 20-09-2026: o estado que EXIGE ação do administrador tinha a mesma cor
-// cinza de `nao_atingido`/`encerrado`, que são estados mortos. Agora a fila
-// de aprovação tem sinal visual próprio, e o cinza fica pro `rascunho`, que
-// é o estado que de fato ainda não é nada.
+// `aguardando_aprovacao` usa 'badge-aviso': o estado que EXIGE ação do administrador não pode ter a mesma cor
+// cinza de `nao_atingido`/`encerrado`, que são estados mortos. A fila de aprovação tem sinal visual próprio, e
+// o cinza fica para o `rascunho`, que é o estado que de fato ainda não é nada.
 const CLASSE_BADGE_STATUS_CAMPANHA: Record<StatusCampanha, string> = {
   rascunho: 'badge-neutro',
   aguardando_aprovacao: 'badge-aviso',

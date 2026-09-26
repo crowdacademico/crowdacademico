@@ -98,7 +98,7 @@ export function Footer() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 mt-16 pt-8 border-t border-slate-800 text-xs text-center font-medium uppercase tracking-wider text-slate-500">
+      <div className="max-w-7xl mx-auto px-4 mt-16 pt-8 border-t border-slate-800 text-xs text-center font-medium uppercase tracking-wider text-slate-400">
         &copy; 2026 CrowdAcadêmico. Protótipo UI TCC - TSI - IFSP.
       </div>
     </footer>

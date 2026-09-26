@@ -6,27 +6,19 @@ import {
 } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
 
-// Excluir (13-09-2026, pedido do Lucas: "para não sujar o banco" durante o
-// desenvolvimento - Criar não ativa mais sozinho, ver TermoUsoServiceCriar,
-// então um rascunho com muito erro de português pode simplesmente ser
-// apagado em vez de corrigido).
+// Excluir: como Criar não ativa mais sozinho (ver TermoUsoServiceCriar), um rascunho com muito erro de
+// português pode simplesmente ser apagado em vez de corrigido, sem sujar o banco.
 //
-// - `ativo = TRUE` bloqueia SEMPRE, sem exceção nem `forcar` (não dá pra
-//   apagar a versão vigente - quebraria a garantia de "sempre existe 1
-//   termo ativo por tipo" que Cadastro/Contribuição/Upgrade dependem pra
-//   funcionar - isso não é sobre auditoria, é operacional).
-// - Aceite em usuario_termo OU aceite_termo_contribuicao bloqueia por
-//   padrão (409, mesma mensagem de antes), MAS aceita `forcar: true`
-//   (13-09-2026, pedido do Lucas: "deveria aparecer... com um checkbox de
-//   'entendi'... e o botão 'Excluir mesmo assim'") - o admin decide, ciente
-//   de que isso apaga o rastro de quem aceitou. Com `forcar`, o DELETE
-//   segue e o CASCADE das FKs (FK_USUARIO_TERMO_TERMO/FK_ACEITE_TERMO_
-//   CONTRIBUICAO_TERMO, alteradas de RESTRICT pra CASCADE nesta mesma
-//   rodada) apaga as linhas de aceite junto - não sobra rastro nenhum
-//   dessas pessoas terem aceitado esta versão especificamente. A EXCLUSÃO
-//   EM SI continua registrada em log_auditoria (trigger genérico da
-//   tabela), então pelo menos "quem excluiu, quando" nunca se perde, só o
-//   "quem tinha aceitado" é que desaparece.
+// - `ativo = TRUE` bloqueia SEMPRE, sem exceção nem `forcar` (não dá para apagar a versão vigente: quebraria a
+// garantia de "sempre existe 1 termo ativo por tipo" de que Cadastro/Contribuição/Upgrade dependem; isso não é
+// sobre auditoria, é operacional).
+// - Aceite em usuario_termo OU aceite_termo_contribuicao bloqueia por padrão (409), MAS aceita `forcar: true`
+// (checkbox de "entendi" e botão "Excluir mesmo assim"): o admin decide, ciente de que isso apaga o rastro de
+// quem aceitou. Com `forcar`, o DELETE segue e o CASCADE das FKs
+// (FK_USUARIO_TERMO_TERMO/FK_ACEITE_TERMO_CONTRIBUICAO_TERMO) apaga as linhas de aceite junto: não sobra rastro
+// nenhum dessas pessoas terem aceitado esta versão especificamente. A EXCLUSÃO EM SI continua registrada em
+// log_auditoria (trigger genérico da tabela), então "quem excluiu, quando" nunca se perde, só o "quem tinha
+// aceitado" desaparece.
 @Injectable()
 export class TermoUsoServiceExcluir {
   constructor(private readonly database: DatabaseService) {}

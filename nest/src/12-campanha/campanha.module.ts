@@ -54,10 +54,10 @@ import { CampanhaServiceUpdate } from './service/campanha.service.update';
     // Job agendado (RF-057) - registrado aqui só porque o @Cron precisa de
     // um provider vivo pra existir; não é chamado por nenhum controller.
     CampanhaServiceEncerrarVencidas,
-    // Job agendado (15-09-2026) - mesma razão do de cima, expira rascunho
-    // de campanha abandonado antes de completar orçamento/cronograma.
+    // Job agendado: mesma razão do de cima, expira rascunho de campanha abandonado antes de completar
+    // orçamento/cronograma.
     CampanhaServiceExpirarRascunho,
-    // Job agendado (21-09-2026) - exclui rejeitada com prazo de reenvio vencido.
+    // Job agendado: exclui rejeitada com prazo de reenvio vencido.
     CampanhaServiceExpirarRejeitadas,
   ],
 })

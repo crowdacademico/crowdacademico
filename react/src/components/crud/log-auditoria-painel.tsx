@@ -35,34 +35,23 @@ interface LogAuditoriaPainelProps {
   campoRenomeio?: string;
 }
 
-// Painel "Ver log" (pedido do Lucas, 03-08-2026: "um botão no fundo de
-// cada tabela... pra vermos a última alteração") - vive dentro de
-// GenericTable, só busca quando abre (`buscar` é a mesma convenção de
-// `listar` do GenericTable: função já vem pronta, pré-amarrada com
-// authFetch e o nome da tabela, pelo componente pai). Mostra as últimas
-// alterações de UMA tabela física (log_auditoria.tabela), mais recente
-// primeiro - não filtra por registro específico ainda (isso seria um 2º
-// botão, "Ver log deste registro", dentro de Consultar - fica pra quando
-// o Lucas quiser essa granularidade).
+// Painel "Ver log": um botão no fundo de cada tabela para ver a última alteração. Só busca quando abre
+// (`buscar` é a mesma convenção de `listar` do GenericTable: função já vem pronta, pré-amarrada com authFetch e
+// o nome da tabela, pelo componente pai). Mostra as últimas alterações de UMA tabela física
+// (log_auditoria.tabela), mais recente primeiro; não filtra por registro específico (isso seria um 2º botão,
+// "Ver log deste registro", dentro de Consultar).
 //
-// `campoRenomeio` (09-08-2026, pedido do Lucas: "log da tabela Papéis com
-// duas colunas, nome antigo e nome atual") - opt-in, não específico de
-// papel: quando informado (ex.: "nome"), troca a coluna genérica "Campos
-// alterados" por duas colunas de verdade ("De"/"Para") lendo o valor
-// daquele campo em `dadosAnteriores`/`dadosNovos` (o log_auditoria já
-// grava a linha inteira antes/depois, não precisou de coluna nova no
-// banco - só o React passou a ler o que já existia). Lucas comentou que
-// esse conceito serve pra outros logs no futuro - qualquer tela que
-// passe `buscarLog`/`campoRenomeioLog` pro GenericTable ganha o mesmo
-// recurso de graça, não é hardcoded pra papel.
+// `campoRenomeio`: opt-in, não específico de papel: quando informado (ex.: "nome"), troca a coluna genérica
+// "Campos alterados" por duas colunas de verdade ("De"/"Para") lendo o valor daquele campo em
+// `dadosAnteriores`/`dadosNovos` (o log_auditoria já grava a linha inteira antes/depois, sem coluna nova no
+// banco). Qualquer tela que passe `buscarLog`/`campoRenomeioLog` ganha o mesmo recurso, não é hardcoded para
+// papel.
 export function LogAuditoriaPainel({ buscar, campoRenomeio }: LogAuditoriaPainelProps) {
   const [linhas, setLinhas] = useState<LogAuditoriaResponse[]>([]);
   const [total, setTotal] = useState(0);
   const [tamanho, setTamanho] = useState(20);
-  // Página (11-08-2026, achado da parceira do Lucas: "vai virar aquela
-  // listona conforme o sistema cresce") - o backend já paginava de
-  // verdade (LIMIT/OFFSET), só o painel nunca pedia página nenhuma além
-  // da 1ª.
+  // Página: o backend já pagina de verdade (LIMIT/OFFSET); sem isto o painel nunca pediria página nenhuma além
+  // da 1ª e viraria uma "listona" conforme o sistema cresce.
   const [pagina, setPagina] = useState(1);
   const [carregando, setCarregando] = useState(true);
   const { erro, reportarErro, limparErro } = useErroToast();
@@ -97,9 +86,7 @@ export function LogAuditoriaPainel({ buscar, campoRenomeio }: LogAuditoriaPainel
         <table className="crud-tabela">
           <thead>
             <tr>
-              {/* Registro antes de Ação (09-08-2026, pedido do Lucas: "fica
-                  mais bonito o registro vindo primeiro") - mesma ordem nos
-                  dois <tr>, cabeçalho e corpo. */}
+              {/* Registro antes de Ação, na mesma ordem nos dois <tr> (cabeçalho e corpo). */}
               <th>Registro</th>
               <th>Ação</th>
               {campoRenomeio ? (

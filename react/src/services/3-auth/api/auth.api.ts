@@ -7,17 +7,13 @@ import type {
   AuthResponseVerificarEmail,
 } from '../type/auth.type';
 
-// Espelha 3-auth/controllers do nest (login/refresh/logout). Sem header
-// Authorization aqui de propósito - login/refresh/logout são as únicas 3
-// rotas que nunca precisam dele (é justamente o que elas emitem).
+// Espelha 3-auth/controllers do nest (login/refresh/logout). Sem header Authorization aqui de propósito:
+// login/refresh/logout são as únicas 3 rotas que nunca precisam dele (é justamente o que elas emitem).
 //
-// CORRIGIDO (07-08-2026): este arquivo tinha um `tratarResposta` próprio,
-// que lançava `Error` comum em vez do `ErroHttp` (com `.status`) do
-// http.util.js compartilhado - `traduzirErro()` (usado por login-page.tsx,
-// feito de propósito pra reconhecer 429 do ThrottlerGuard) precisa de
-// `erro instanceof ErroHttp` pra funcionar; com o `Error` comum, todo erro
-// de login (incluindo o 429 de "Muitas tentativas") caía sempre na
-// mensagem genérica de "não foi possível falar com o servidor".
+// Usa o `tratarResposta` compartilhado de http.util.ts (que lança `ErroHttp`, com `.status`), não um próprio:
+// `traduzirErro()` (usado por login-page.tsx, feito de propósito para reconhecer 429 do ThrottlerGuard) precisa
+// de `erro instanceof ErroHttp`; com um `Error` comum, todo erro de login (incluindo o 429 de "Muitas
+// tentativas") cairia sempre na mensagem genérica de "não foi possível falar com o servidor".
 
 export async function login(email: string, senha: string): Promise<AuthResponseLogin> {
   const resposta = await fetch(`${API_BASE_URL}/auth/login`, {
@@ -46,8 +42,7 @@ export async function logout(refreshToken: string): Promise<void> {
   return tratarResposta<void>(resposta);
 }
 
-// Cadastro público (09-08-2026, Bloco D) - mesma forma de resposta do
-// login (accessToken/refreshToken/usuario/papeis), mais
+// Cadastro público: mesma forma de resposta do login (accessToken/refreshToken/usuario/papeis), mais
 // tokenVerificacaoEmailDev (só fora de produção).
 export async function cadastro(
   nome: string,

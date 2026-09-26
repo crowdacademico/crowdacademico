@@ -3,10 +3,9 @@ import { TIPOS_TERMO } from '../../../commons/database/db.types';
 import type { TipoTermo } from '../../../commons/database/db.types';
 
 export class TermoUsoRequestCriar {
-  // tipo_termo NOT NULL (13-09-2026) - obrigatório, sem default no corpo:
-  // decide se esta versão entra na trilha de aceite geral/cadastro ou na
-  // de contribuição a campanha (cada uma com seu próprio "ativo" -
-  // uq_termos_uso_ativo, 02_indices.sql, hoje é por tipo).
+  // tipo_termo NOT NULL: obrigatório, sem default no corpo. Decide em qual trilha de aceite esta versão entra
+  // (cadastro, contribuição a campanha ou upgrade de pesquisador), cada uma com seu próprio "ativo"
+  // (uq_termos_uso_ativo, 02_indices.sql, é por tipo).
   @IsIn(TIPOS_TERMO)
   tipo: TipoTermo;
 

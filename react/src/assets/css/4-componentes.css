@@ -1,17 +1,12 @@
 /* ========= COMPONENTES REAPROVEITÁVEIS =========
-   Pedido do Lucas (02-08-2026): "constante pra botões, tirando o máximo
-   possível de hardcoded" - mesma ideia já aplicada no banco (valor de
-   negócio vira linha em `configuracoes`, não número solto no `.sql`).
-   Aqui o equivalente é uma classe CSS: o botão "Criar"/"Entrar"/"Salvar"
-   em qualquer tela nova usa `className="btn btn-primary"`, não uma string
-   gigante de utilitários Tailwind copiada e colada - muda o estilo do
-   botão primário do projeto inteiro num lugar só, aqui.
+   Constante para botões, tirando o máximo possível de hardcoded (mesma ideia do banco: valor de negócio vira
+   linha em `configuracoes`, não número solto no `.sql`). O botão "Criar"/"Entrar"/"Salvar" em qualquer tela
+   usa `className="btn btn-primary"`, não uma string gigante de utilitários Tailwind copiada e colada: muda o
+   estilo do botão primário do projeto inteiro num lugar só, aqui.
 
-   @layer components: mesmo motivo do 6-admin-shell.css/5-crud.css - sem
-   isso, estas classes ganhariam de QUALQUER utilitário do Tailwind
-   colocado do lado (`className="btn btn-primary w-full"` - o `w-full`
-   precisa poder vencer, senão a composição classe+utilitário não funciona
-   igual ao resto do Tailwind funciona). */
+   @layer components: mesmo motivo do 6-admin-shell.css/5-crud.css: sem isso, estas classes ganhariam de
+   QUALQUER utilitário do Tailwind colocado do lado (`className="btn btn-primary w-full"`: o `w-full` precisa
+   poder vencer, senão a composição classe+utilitário não funciona igual ao resto do Tailwind). */
 @layer components {
   .btn {
     display: inline-flex;
@@ -47,8 +42,7 @@
     color: var(--cor-texto);
   }
 
-  /* ERA --cor-borda (slate-200) - hover mais escuro, mesmo pedido do
-     Lucas (09-08-2026) aplicado em todos os hovers do painel. */
+  /* Hover mais escuro que o repouso, igual em todos os hovers do painel. */
   .btn-secondary:hover:not(:disabled) {
     background-color: var(--cor-borda-forte);
   }
@@ -63,11 +57,9 @@
     color: var(--cor-texto-sobre-cor);
   }
 
-  /* .btn-sucesso (15-09-2026, pedido do Lucas: "+ adicionar" de item de
-     orçamento verde) - mesmo par de tokens que `.badge-sucesso` já usa
-     (--cor-fundo-sucesso/--cor-texto-sucesso, com os 3 tons de tema já
-     resolvidos em 1-cores.css), mesmo padrão de hover sólido que
-     `.btn-danger` já tem (fundo fraco em repouso, cor forte só no hover). */
+  /* .btn-sucesso: mesmo par de tokens que `.badge-sucesso` usa (--cor-fundo-sucesso/--cor-texto-sucesso, com
+     os 3 tons de tema já resolvidos em 1-cores.css), mesmo padrão de hover sólido que `.btn-danger` (fundo
+     fraco em repouso, cor forte só no hover). */
   .btn-sucesso {
     background-color: var(--cor-fundo-sucesso);
     color: var(--cor-texto-sucesso);
@@ -77,11 +69,6 @@
     background-color: var(--cor-fundo-sucesso-forte);
     color: var(--cor-texto-sobre-cor);
   }
-
-  /* .btn-info (azulado, só pra "Alterar" em GenericTable) removido
-     08-08-2026: a coluna Ações da tabela trocou botão sólido por
-     texto/ícone discreto (.crud-tabela__acao, 5-crud.css) - perdeu a
-     única razão de existir. */
 
   /* Input/select de formulário fora da tabela de CRUD (login, criar
      usuário) - mesma moldura em todo lugar: borda, fundo levemente cinza,
@@ -97,8 +84,7 @@
     transition: var(--transition-normal);
   }
 
-  /* Placeholder com contraste AA (24-09-2026): o padrão do Tailwind é 50% da
-     cor do texto, perto de 2,6:1. */
+  /* Placeholder com contraste AA: o padrão do Tailwind é 50% da cor do texto, perto de 2,6:1. */
   .input-padrao::placeholder {
     color: var(--cor-texto-fraco);
   }
@@ -109,17 +95,13 @@
     background-color: var(--cor-fundo-cartao);
   }
 
-  /* Precisa deste seletor combinado, e precisa estar AQUI (não só
-     `.borda-erro` sozinho em 1-cores.css) - 13-09-2026, achado testando
-     ao vivo logo depois de extrair o token: `.borda-erro` sozinho tem a
-     MESMA especificidade de `.input-padrao` (uma classe cada, mesma
-     @layer components) e perde por ORDEM DE ARQUIVO (4-componentes.css
-     carrega depois de 1-cores.css, então a borda cinza padrão sempre
-     vencia); e `.input-padrao:focus` tem especificidade MAIOR (classe +
-     pseudo-classe) que sempre venceria enquanto o campo estivesse com
-     foco, escondendo o vermelho bem na hora de digitar. Repetir aqui, com
-     `.input-padrao` na frente, resolve os dois - o campo inválido
-     continua vermelho mesmo focado. */
+  /* Precisa deste seletor combinado, e precisa estar AQUI (não só `.borda-erro` sozinho em 1-cores.css):
+     `.borda-erro` sozinho tem a MESMA especificidade de `.input-padrao` (uma classe cada, mesma @layer
+     components) e perde por ORDEM DE ARQUIVO (4-componentes.css carrega depois de 1-cores.css, então a borda
+     cinza padrão sempre venceria); e `.input-padrao:focus` tem especificidade MAIOR (classe + pseudo-classe)
+     que sempre venceria enquanto o campo estivesse com foco, escondendo o vermelho bem na hora de digitar.
+     Repetir aqui, com `.input-padrao` na frente, resolve os dois: o campo inválido continua vermelho mesmo
+     focado. */
   .input-padrao.borda-erro,
   .input-padrao.borda-erro:focus {
     border-color: var(--cor-borda-erro);
@@ -153,45 +135,34 @@
     color: var(--cor-texto);
   }
 
-  /* 20-09-2026 - nasceu junto com o status 'rascunho' de campanha. O
-     'aguardando_aprovacao' usava `.badge-neutro`, ou seja, o estado que EXIGE
-     ação do administrador tinha a mesma cor cinza dos estados mortos
-     ('nao_atingido', 'encerrado'). Os tokens de aviso já existiam nos 3 temas
-     (1-cores.css), só faltava a classe de badge que os consome. */
+  /* .badge-aviso: o estado 'aguardando_aprovacao' EXIGE ação do administrador e não pode ter a mesma cor
+     cinza dos estados mortos ('nao_atingido', 'encerrado', que usam `.badge-neutro`). Os tokens de aviso
+     existem nos 3 temas (1-cores.css). */
   .badge-aviso {
     background-color: var(--cor-fundo-aviso);
     color: var(--cor-texto-aviso);
   }
 
-  /* 23-08-2026 - nasceu dentro do arquivo do Campo de Testes por engano
-     (8-campo-testes.css), movida pra cá quando a listagem de Campanhas
-     (views/12-campanha) precisou do mesmo badge pra status rejeitado/
-     encerrado_moderacao - é utilitário genérico, não algo exclusivo de
-     ferramenta de teste. */
+  /* .badge-erro: utilitário genérico (usado na listagem de Campanhas, views/12-campanha, para status
+     rejeitado/encerrado_moderacao), não algo exclusivo do Campo de Testes. */
   .badge-erro {
     background-color: var(--cor-fundo-erro);
     color: var(--cor-texto-erro);
   }
 
-  /* Selo <dev> - marca qualquer recurso que existe só pra facilitar
-     desenvolvimento/teste (ex.: redefinir senha pra um valor conhecido),
-     nunca pra ficar disponível em produção de verdade. Roxo + monoespaçada
-     de propósito: nenhuma outra cor/fonte do projeto usa essa combinação,
-     então é visualmente inconfundível com o resto da interface.
-     ATUALIZADO (12-09-2026, achado do Lucas): usava `--color-purple-*`
-     direto - a ÚNICA cor do sistema fora da camada semântica `--cor-*` que
-     todo o resto do projeto usa. Migrado pra `--cor-dev-*` (1-cores.css),
-     mesmos valores, zero mudança visual. */
+  /* Selo <dev>: marca qualquer recurso que existe só para facilitar desenvolvimento/teste (ex.: redefinir
+     senha para um valor conhecido), nunca para ficar disponível em produção de verdade. Roxo + monoespaçada
+     de propósito: nenhuma outra cor/fonte do projeto usa essa combinação, então é visualmente inconfundível
+     com o resto da interface. Usa os tokens `--cor-dev-*` (1-cores.css). */
   .badge-dev {
     background-color: var(--cor-dev-fundo-selo);
     color: var(--cor-dev-texto);
     font-family: var(--font-mono-dev);
   }
 
-  /* components/layout/dev-login-rapido.tsx - feio DE PROPÓSITO (roxo
-     sólido, borda tracejada, fonte monoespaçada): pedido explícito do
-     Lucas, "roxo feio e em destaque, claramente mostrando que não vai
-     ficar ali". Não é refinamento esquecido, é sinalização visual. */
+  /* components/layout/dev-login-rapido.tsx: feio DE PROPÓSITO (roxo sólido, borda tracejada, fonte
+     monoespaçada): "roxo feio e em destaque, claramente mostrando que não vai ficar ali". Não é refinamento
+     esquecido, é sinalização visual. */
   .btn-dev {
     display: inline-flex;
     align-items: center;
@@ -216,13 +187,10 @@
     border-left: none;
   }
 
-  /* Dica (components/layout/tooltip.tsx: exporta `Dica` + `Tooltip`) -
-     primitivo ÚNICO de hover-dica do sistema (14-09-2026, contra-prompt
-     Lucas - fundiu este bloco com o extinto `.crud-tabela__acao-dica`
-     de 5-crud.css, que era quase idêntico: mesmo bottom: 135%, mesma cor,
-     mesmo z-index, mesma transition). `.dica` vai no GATILHO (qualquer
-     elemento - button, span, Link -, não só o ⓘ avulso); `.dica__bolha` é
-     o `<Dica>` soltado dentro dele. CSS puro (:hover/:focus), sem JS
+  /* Dica (components/layout/tooltip.tsx: exporta `Dica` + `Tooltip`): primitivo ÚNICO de hover-dica do
+     sistema (inclui o que era `.crud-tabela__acao-dica`, quase idêntico: mesmo bottom: 135%, mesma cor,
+     mesmo z-index, mesma transition). `.dica` vai no GATILHO (qualquer elemento: button, span, Link, não só
+     o ⓘ avulso); `.dica__bolha` é o `<Dica>` soltado dentro dele. CSS puro (:hover/:focus), sem JS
      controlando abrir/fechar. */
   .dica {
     position: relative;
@@ -241,10 +209,8 @@
     font-weight: 500;
     line-height: 1.4;
     text-align: left;
-    /* Reset explícito (22-08-2026, achado usando o Tooltip dentro de
-       .admin-sidebar__grupo-titulo, que é uppercase + letter-spacing) -
-       sem isso, o TEXTO da dica herdava esses dois estilos do ancestral e
-       saía gritado em CAIXA ALTA, não só o rótulo do grupo. */
+    /* Reset explícito: sem isso, o TEXTO da dica herdaria uppercase + letter-spacing de um ancestral como
+       .admin-sidebar__grupo-titulo e sairia gritado em CAIXA ALTA, não só o rótulo do grupo. */
     text-transform: none;
     letter-spacing: normal;
     width: max-content;
@@ -264,19 +230,17 @@
     visibility: visible;
   }
 
-  /* Variante --baixo (04-09-2026, achado no grupo "Arquivo" do dashboard
-     de Regras do Negócio): o cabeçalho do cartão de grupo fica colado no
-     topo de um container com overflow-hidden (pro rounded-xl não vazar
-     canto quadrado) - a dica padrão (pra cima) nascia cortada pela borda
-     arredondada. Esta variante abre pra baixo, dentro da área do cartão. */
+  /* Variante --baixo: o cabeçalho do cartão de grupo (ex.: grupo "Arquivo" do dashboard de Regras do
+     Negócio) fica colado no topo de um container com overflow-hidden (para o rounded-xl não vazar canto
+     quadrado), então a dica padrão (para cima) nasceria cortada pela borda arredondada. Esta variante abre
+     para baixo, dentro da área do cartão. */
   .dica__bolha--baixo {
     bottom: auto;
     top: 135%;
   }
 
-  /* Variante --curta (14-09-2026, era `.crud-tabela__acao-dica`): rótulo
-     de 1 palavra (ações de tabela) - sem quebra de linha, padding menor
-     que a versão de texto explicativo. */
+  /* Variante --curta: rótulo de 1 palavra (ações de tabela), sem quebra de linha, padding menor que a versão
+     de texto explicativo. */
   .dica__bolha--curta {
     white-space: nowrap;
     padding: 0.35rem 0.65rem;
@@ -299,11 +263,9 @@
     outline: none;
   }
 
-  /* Variante --clicavel (04-09-2026): o ícone também abre um modal ao
-     clicar (ver prop `aoClicar` em tooltip.tsx) - reset dos estilos
-     padrão de <button> (fundo, borda, fonte) pra ficar visualmente
-     idêntico à variante só-hover (<span>), só trocando o cursor de
-     "help" pra "pointer", que é o sinal certo pra algo clicável. */
+  /* Variante --clicavel: o ícone também abre um modal ao clicar (ver prop `aoClicar` em tooltip.tsx); reset
+     dos estilos padrão de <button> (fundo, borda, fonte) para ficar visualmente idêntico à variante só-hover
+     (<span>), só trocando o cursor de "help" para "pointer", que é o sinal certo para algo clicável. */
   .dica--clicavel {
     background: none;
     border: none;
@@ -312,27 +274,20 @@
     cursor: pointer;
   }
 
-  /* Hover suave da cor da marca, derivado do token via color-mix() (não
-     um valor fixo) - 13-09-2026, achado do Lucas, rodada 3: 8
-     ocorrências de `hover:bg-primary/10`/`/20` cru do Tailwind, a
-     opacidade calculada pela biblioteca por baixo, sem passar pelo
-     alias `--cor-marca`. `color-mix()` faz à mão o mesmo cálculo (é
-     inclusive o que o próprio Tailwind 4 usa por dentro pros modificadores
-     de opacidade) - se o verde da marca mudar um dia, isto acompanha
-     sozinho. Nomeada pela INTENÇÃO (hover de item selecionável), não pelo
-     valor - por isso não existe ".fundo-marca-10"/"-20" à parte, só esta
-     e o `.brilho-marca` mais abaixo (2 usos decorativos, opacidade
+  /* Hover suave da cor da marca, derivado do token via color-mix() (não um valor fixo): substitui
+     `hover:bg-primary/10`/`/20` cru do Tailwind, cuja opacidade a biblioteca calcula por baixo sem passar
+     pelo alias `--cor-marca`. `color-mix()` faz à mão o mesmo cálculo (é o que o próprio Tailwind 4 usa por
+     dentro para os modificadores de opacidade); se o verde da marca mudar um dia, isto acompanha sozinho.
+     Nomeada pela INTENÇÃO (hover de item selecionável), não pelo valor: por isso não existe
+     ".fundo-marca-10"/"-20" à parte, só esta e o `.brilho-marca` mais abaixo (2 usos decorativos, opacidade
      diferente, papel diferente). */
   .hover-fundo-marca-suave:hover {
     background-color: color-mix(in srgb, var(--cor-marca) 10%, transparent);
   }
 
-  /* Linha de opção de dropdown/faceta com checkbox múltiplo (facet do
-     GenericTable e das 2 bancadas do Campo de Testes) - 13-09-2026,
-     achado do Lucas: a MESMA cadeia de classes Tailwind (só a cor
-     mudando de nome) aparecia idêntica byte a byte em 3 arquivos
-     (generic-table.tsx, bancada-pesquisador.tsx, bancada-campanha.tsx) -
-     não era só cor crua, era o padrão inteiro triplicado. */
+  /* Linha de opção de dropdown/faceta com checkbox múltiplo (facet do GenericTable e das 2 bancadas do Campo
+     de Testes): a MESMA cadeia de classes Tailwind aparecia idêntica em 3 arquivos (generic-table.tsx,
+     bancada-pesquisador.tsx, bancada-campanha.tsx); é o padrão inteiro, não só a cor. */
   .dropdown-opcao {
     display: flex;
     align-items: center;
@@ -348,9 +303,8 @@
     background-color: color-mix(in srgb, var(--cor-marca) 10%, transparent);
   }
 
-  /* Linha de opção de combobox de busca (sugestão de pesquisador/campanha
-     no Campo de Testes) - mesmo achado de triplicação do `.dropdown-opcao`
-     acima, cadeia diferente (sem borda embaixo, com gap de ícone). */
+  /* Linha de opção de combobox de busca (sugestão de pesquisador/campanha no Campo de Testes): mesmo achado
+     do `.dropdown-opcao` acima, cadeia diferente (sem borda embaixo, com gap de ícone). */
   .combobox-opcao {
     display: flex;
     align-items: center;

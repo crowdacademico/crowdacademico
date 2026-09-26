@@ -1,18 +1,15 @@
 import { useState } from 'react';
 
-// Extraído (14-09-2026, revisão do Lucas) - as 8 telas de listagem
-// do painel repetiam o MESMO bloco de estado (criando/alterando/
-// consultando/excluindo/chaveRecarga+recarregar), só com nomes diferentes
-// (`alterando`, `idAlterando`, `termoAlterando` - sintoma de padrão não
-// extraído). Pelo teste-de-prop do `generic-table.tsx` isto NÃO pertence
-// ao `GenericTable` (uma tela sem tabela nenhuma poderia ter modais), mas
-// é compartilhado o bastante pra virar hook.
+// As telas de listagem do painel repetiam o MESMO bloco de estado
+// (criando/alterando/consultando/excluindo/chaveRecarga+recarregar), só com nomes diferentes (`alterando`,
+// `idAlterando`, `termoAlterando`: sintoma de padrão não extraído). Pelo teste-de-prop do `generic-table.tsx`
+// isto NÃO pertence ao `GenericTable` (uma tela sem tabela nenhuma poderia ter modais), mas é compartilhado o
+// bastante para virar hook.
 //
-// Guarda o OBJETO inteiro (T), nunca só o id - quem chama extrai o id na
-// hora de passar pro modal, se o modal só precisar disso (ex.:
-// `ModalAlterarUsuario` quer `idUsuario`; `ModalExcluirUsuario` quer o
-// objeto inteiro). Guardar o objeto sempre, em vez de decidir por tela, é
-// o que permite usar o MESMO hook nos dois casos sem duplicar estado.
+// Guarda o OBJETO inteiro (T), nunca só o id: quem chama extrai o id na hora de passar para o modal, se o modal
+// só precisar disso (ex.: `ModalAlterarUsuario` quer `idUsuario`; `ModalExcluirUsuario` quer o objeto inteiro).
+// Guardar o objeto sempre, em vez de decidir por tela, é o que permite usar o MESMO hook nos dois casos sem
+// duplicar estado.
 export function useCrudModais<T>() {
   const [criando, setCriando] = useState(false);
   const [alterando, setAlterando] = useState<T | null>(null);

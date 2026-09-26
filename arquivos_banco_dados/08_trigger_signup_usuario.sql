@@ -22,19 +22,12 @@
 -- Função:     atribuir_papel_padrao
 -- Assinatura: (p_id_usuario INT) -> VOID
 -- Bloco:      [08-D-1]
--- Regra:      Atribui o papel 'usuario' (padrão de todo cadastro novo) ao
---             usuário recém-criado. Chamada pelo NestJS logo após o INSERT
---             em usuario, dentro da mesma transação de signup. SECURITY
---             DEFINER: precisa gravar em usuario_papel antes de o usuário
---             ter qualquer permissão - pol_usuariopapel_insert (04) exige a
---             permissão 'papel_atribuir', que ninguém tem no primeiro
---             segundo de vida da conta.
--- CORRIGIDO (03-08-2026, achado de revisão externa): lia `WHERE nome =
--- 'usuario'` - esta é a função mais crítica das 3 corrigidas nesta rodada,
--- porque roda em TODO cadastro real (não só num fluxo de upgrade como as
--- outras duas). Renomear o papel 'usuario' pelo painel faria todo cadastro
--- novo nascer sem papel nenhum, em silêncio, sem erro nenhum. Agora lê
--- `codigo` (01_extensoes_enums_tabelas.sql [01-B]).
+-- Regra:      Atribui o papel 'usuario' (padrão de todo cadastro novo) ao usuário recém-criado. Chamada pelo NestJS logo
+--             após o INSERT em usuario, dentro da mesma transação de signup. SECURITY DEFINER: precisa gravar em
+--             usuario_papel antes de o usuário ter qualquer permissão (pol_usuariopapel_insert, 04, exige 'papel_atribuir',
+--             que ninguém tem no primeiro segundo de vida da conta). O papel é reconhecido por `codigo`
+--             (01_extensoes_enums_tabelas.sql [01-B]), não por `nome`: roda em TODO cadastro real, e renomear o papel
+--             'usuario' pelo painel faria todo cadastro novo nascer sem papel, em silêncio.
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.atribuir_papel_padrao(p_id_usuario INT)
 RETURNS VOID
@@ -55,15 +48,9 @@ BEGIN
 END;
 $$;
 
--- CORRIGIDO: faltava GRANT EXECUTE. O NestJS chama esta função logo
--- após o INSERT em usuario, no fluxo de signup - sem o GRANT, a
--- chamada tomaria "permission denied" (erro 42501), o mesmo problema
--- que as funções de score já tiveram e que motivou o GRANT EXECUTE
--- explícito delas em 06_grants.sql.
--- CORRIGIDO (28-07-2026, uma IA - 4ª auditoria, "três funções privilegiadas
--- ainda executáveis por PUBLIC"): esta função escreve em usuario_papel - mesma
--- categoria das 5 de [03-O] que já saíram do EXECUTE-pra-PUBLIC padrão do
--- Postgres. REVOKE explícito antes do GRANT, por consistência (não é hoje
--- explorável, só app_nestjs conecta ao banco).
+-- A função é chamada pelo NestJS logo após o INSERT em usuario, no fluxo de signup, então precisa de GRANT
+-- EXECUTE explícito (sem ele, "permission denied", 42501, como as funções de score). Escreve em usuario_papel:
+-- mesma categoria das 5 de [03-O], que saem do EXECUTE-para-PUBLIC padrão do Postgres; REVOKE explícito antes
+-- do GRANT, por consistência (não é hoje explorável, só app_nestjs conecta ao banco).
 REVOKE EXECUTE ON FUNCTION public.atribuir_papel_padrao(INT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.atribuir_papel_padrao(INT) TO app_nestjs;

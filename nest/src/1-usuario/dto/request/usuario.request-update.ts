@@ -11,10 +11,9 @@ export class UsuarioRequestUpdate {
   @MinLength(2, { message: 'Nome precisa ter pelo menos 2 caracteres.' })
   nome?: string;
 
-  // `null` de propósito (25-08-2026, botão "Remover foto") - @IsOptional()
-  // já pula toda validação quando o valor é null ou undefined (comportamento
-  // documentado do class-validator), então @IsInt() só roda de verdade
-  // quando alguém manda um id numérico pra trocar de foto.
+  // `null` de propósito (botão "Remover foto"): @IsOptional() já pula toda validação quando o valor é null ou
+  // undefined (comportamento documentado do class-validator), então @IsInt() só roda de verdade quando alguém
+  // manda um id numérico para trocar de foto.
   @IsOptional()
   @IsInt()
   idImagemPerfil?: number | null;
@@ -24,11 +23,9 @@ export class UsuarioRequestUpdate {
   @MinLength(8, { message: 'Senha precisa ter pelo menos 8 caracteres.' })
   novaSenha?: string;
 
-  // Opcional (09-08-2026, Bloco E - "Alterar senha (exigindo a atual)" em
-  // Minha Conta): quando presente, o service exige bcrypt.compare contra
-  // a senha atual antes de aceitar `novaSenha`. Ausente = comportamento de
-  // sempre (reset administrativo, quem tem `usuario_suspender` não precisa
-  // saber a senha antiga de outra pessoa) - mesmo endpoint, dois usos.
+  // Opcional ("Alterar senha exigindo a atual" em Minha Conta): quando presente, o service exige bcrypt.compare
+  // contra a senha atual antes de aceitar `novaSenha`. Ausente = reset administrativo (quem tem
+  // `usuario_suspender` não precisa saber a senha antiga de outra pessoa): mesmo endpoint, dois usos.
   @IsOptional()
   @IsString()
   senhaAtual?: string;

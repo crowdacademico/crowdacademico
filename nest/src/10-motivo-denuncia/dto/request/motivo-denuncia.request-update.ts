@@ -10,11 +10,9 @@ import { TIPOS_MOTIVO_DENUNCIA } from '../../../commons/database/db.types';
 import type { TipoMotivoDenuncia } from '../../../commons/database/db.types';
 
 export class MotivoDenunciaRequestUpdate {
-  // NOT NULL no banco desde 18-08-2026 (`codigo` saiu do catálogo - ver
-  // comentário em criar-motivo-denuncia.request.dto.ts - e `descricao`
-  // virou o único identificador legível do motivo). Omitido = não muda;
-  // presente = precisa ser uma string não vazia, `null` não é mais aceito
-  // aqui (diferente do padrão de `regex` em TipoLinkRequestUpdate).
+  // NOT NULL no banco (`descricao` é o único identificador legível do motivo). Omitido = não muda; presente =
+  // precisa ser uma string não vazia, `null` não é aceito aqui (diferente do padrão de `regex` em
+  // TipoLinkRequestUpdate).
   @IsOptional()
   @IsNotEmpty()
   @IsString()

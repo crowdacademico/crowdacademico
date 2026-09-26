@@ -9,14 +9,11 @@ import type {
   AreaConhecimentoResponse,
 } from '../type/area-conhecimento.type';
 
-// Espelha nest/src/8-area-conhecimento - GET (listar/buscar) é PÚBLICO no
-// backend (pol_area_select é USING(true), 04_rls_policies.sql [04-C-2]);
-// POST/PATCH/DELETE exigem a permissão 'area_conhecimento_gerenciar',
-// garantida pela RLS (o Nest não tem guard de permissão nenhum - só
-// RequireAuthGuard pra exigir login; quem não tiver a permissão recebe
-// 403 do próprio Postgres, traduzido por postgres-exception.filter.ts).
-// remover() (18-08-2026) pode voltar 409 se a área ainda estiver em uso
-// por campanha/área filha - ver area-conhecimento.service.remove.ts.
+// Espelha nest/src/8-area-conhecimento: GET (listar/buscar) é PÚBLICO no backend (pol_area_select é
+// USING(true), 04_rls_policies.sql [04-C-2]); POST/PATCH/DELETE exigem a permissão
+// 'area_conhecimento_gerenciar', garantida pela RLS (o Nest só tem RequireAuthGuard para exigir login; quem não
+// tiver a permissão recebe 403 do próprio Postgres, traduzido por postgres-exception.filter.ts). remover() pode
+// voltar 409 se a área ainda estiver em uso por campanha/área filha (ver area-conhecimento.service.remove.ts).
 interface FiltroAreaConhecimento {
   raiz?: boolean;
   idPai?: number;

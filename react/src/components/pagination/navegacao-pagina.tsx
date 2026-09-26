@@ -1,10 +1,7 @@
-// Extraído (23-09-2026) - o núcleo "Página X de Y (N registros) / Anterior /
-// Próxima" de RodapePaginacao (que também tem o <select> de tamanho) era
-// reescrito à mão em log-auditoria-painel.tsx (paginação server-side, sem
-// seletor de tamanho) - mesmo raciocínio de irmão/miolo que já levou à
-// extração de RodapePaginacao: o texto e os 2 botões são o miolo comum,
-// `children` é onde cada chamador encaixa controles extras (ex.: o <select>
-// de tamanho do RodapePaginacao).
+// O núcleo "Página X de Y (N registros) / Anterior / Próxima" de RodapePaginacao (que também tem o <select> de
+// tamanho), reutilizado em log-auditoria-painel.tsx (paginação server-side, sem seletor de tamanho): mesmo
+// raciocínio de irmão/miolo de RodapePaginacao. O texto e os 2 botões são o miolo comum; `children` é onde cada
+// chamador encaixa controles extras (ex.: o <select> de tamanho do RodapePaginacao).
 import type { ReactNode } from 'react';
 
 interface NavegacaoPaginaProps {

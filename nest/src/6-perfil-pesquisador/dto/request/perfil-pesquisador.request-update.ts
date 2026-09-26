@@ -9,12 +9,10 @@ const TITULOS_ACADEMICOS_VALIDOS = [
   'doutor',
 ] as const;
 
-// Nunca inclui `cpf` de propósito - cpf_criptografado/cpf_hash saíram do
-// GRANT UPDATE direto (06_grants.sql, 22-08-2026): correção de CPF é só via
-// corrigir_cpf_pesquisador() (SECURITY DEFINER), gateada por
-// perfil_pesquisador_corrigir_cpf, pensada pra suporte/admin, não pro
-// próprio pesquisador (RF-017). Se um dia existir uma rota de correção de
-// CPF, é um DTO/endpoint separado, nunca este.
+// Nunca inclui `cpf` de propósito: cpf_criptografado/cpf_hash não estão no GRANT UPDATE direto (06_grants.sql):
+// correção de CPF é só via corrigir_cpf_pesquisador() (SECURITY DEFINER), gateada por
+// perfil_pesquisador_corrigir_cpf, pensada para suporte/admin, não para o próprio pesquisador (RF-017). Se um
+// dia existir uma rota de correção de CPF, é um DTO/endpoint separado, nunca este.
 export class PerfilPesquisadorRequestUpdate {
   @IsEnum(TIPOS_VINCULO, {
     message: `tipoVinculo precisa ser um de: ${TIPOS_VINCULO.join(', ')}.`,

@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { sql } from 'kysely';
 import { DatabaseService } from '../../commons/database/database.service';
+import { CAMPO_BLOQUEADO_PARA_DTO } from '../constants/campanha.constants';
 import { CampanhaConverter } from '../dto/converter/campanha.converter';
 import { CampanhaResponse } from '../dto/response/campanha.response';
 import { selecionarCampanhaComNomes } from './campanha-com-nomes.util';
@@ -27,7 +28,22 @@ export class CampanhaServiceFindOne {
     if (linha.status === 'rejeitado') {
       await this.preencherReenvios(resposta);
     }
+    await this.preencherCamposBloqueados(resposta);
     return resposta;
+  }
+
+  // Lista de campos que o banco trava agora: a MESMA função que a trigger de congelamento usa (05, [05-K-2-D]),
+  // então a tela trava exatamente o que o banco vai recusar, sem repetir a regra no React nem aqui.
+  private async preencherCamposBloqueados(
+    resposta: CampanhaResponse,
+  ): Promise<void> {
+    const resultado = await sql<{ campos: string[] }>`
+      SELECT public.fn_campanha_campos_bloqueados(c) AS campos
+      FROM campanha c WHERE c.id_campanha = ${resposta.idCampanha}
+    `.execute(this.database.getDb());
+    resposta.camposBloqueados = (resultado.rows[0]?.campos ?? []).map(
+      (campo) => CAMPO_BLOQUEADO_PARA_DTO[campo] ?? campo,
+    );
   }
 
   // Números do ciclo de rejeição e reenvio (ver REQUISITOS_V7). A conta inteira

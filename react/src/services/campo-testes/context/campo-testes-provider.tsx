@@ -14,24 +14,16 @@ interface CampoTestesProviderProps {
   children: ReactNode;
 }
 
-// Substitui o antigo ElencoProvider (25-08-2026, pedido do Lucas: "remover
-// de vez" o motor de login-múltiplo - nenhum endpoint do backend aceita
-// agir "em nome de" outro usuário, então simular vários atores ao mesmo
-// tempo não tinha mais sustentação real). Só guarda estado compartilhado
-// entre telas, sem nenhuma sessão paralela: toda chamada de rede do Campo
-// de Testes passa a usar a MESMA sessão real do painel (`auth`, prop já
-// recebida por toda tela).
+// Só guarda estado compartilhado entre telas, sem nenhuma sessão paralela: nenhum endpoint do backend aceita
+// agir "em nome de" outro usuário, então toda chamada de rede do Campo de Testes usa a MESMA sessão real do
+// painel (`auth`, prop já recebida por toda tela).
 //
-// `registroChamadas`: alimentado por use-chamada-registrada.js - T4
-// (Registro de Chamadas) continua existindo, só que com um único "ator"
-// possível agora (quem estiver realmente logado).
+// `registroChamadas`: alimentado por use-chamada-registrada.ts; T4 (Registro de Chamadas) tem um único "ator"
+// possível (quem estiver realmente logado).
 //
-// SEM `pesquisadorSelecionado` (removido 12-09-2026 - única fonte era a
-// coluna "Escolher" de T1) NEM `campanhaFoco` (removido 13-09-2026 - única
-// fonte era a coluna "Escolher" de T2) - os dois eram estado de "seleção
-// compartilhada entre telas" alimentado por uma coluna que não existe mais
-// em nenhum dos dois lugares. Este provider hoje só compartilha o que
-// sobra de verdade entre telas: o Registro de Chamadas.
+// SEM `pesquisadorSelecionado` NEM `campanhaFoco` (ver campo-testes-context.ts): eram alimentados por uma
+// coluna "Escolher" que não existe mais em T1 nem em T2. Este provider só compartilha o que sobra de verdade
+// entre telas: o Registro de Chamadas.
 export function CampoTestesProvider({ children }: CampoTestesProviderProps) {
   const [registroChamadas, setRegistroChamadas] = useState<RegistroChamada[]>([]);
 

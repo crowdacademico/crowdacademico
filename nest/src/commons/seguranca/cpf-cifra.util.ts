@@ -1,20 +1,15 @@
-// Cifra/decifra de CPF + índice cego (22-08-2026) - decidido em conversa
-// do Lucas com apoio de IA; registro completo do raciocínio em
-// DOCUMENTACAO_BD.md, seção [01-D] `perfil_pesquisador`.
-// Resumo curto pra quem só quer usar as funções: CPF precisa poder ser
-// DECIFRADO de volta (a API de pagamento/KYC do RF-015 precisa dele), então
-// não pode ser hash comum (irreversível). Cifra de verdade é de propósito
-// não-determinística - o mesmo CPF cifrado duas vezes dá dois resultados
-// diferentes - o que é ótimo pra segurança mas impede comparar/indexar. Por
-// isso duas funções separadas: cifrarCpf()/decifrarCpf() (reversível, pra
-// KYC) e calcularHashCpf() (determinística, não-reversível, pra UNIQUE e
-// busca - "índice cego").
+// Cifra/decifra de CPF + índice cego; o registro completo do raciocínio está em DOCUMENTACAO_BD.md, seção
+// [01-D] `perfil_pesquisador`. Resumo curto para quem só quer usar as funções: CPF precisa poder ser DECIFRADO
+// de volta (a API de pagamento/KYC do RF-015 precisa dele), então não pode ser hash comum (irreversível). Cifra
+// de verdade é de propósito não-determinística (o mesmo CPF cifrado duas vezes dá dois resultados diferentes),
+// o que é ótimo para segurança mas impede comparar/indexar. Por isso duas funções separadas:
+// cifrarCpf()/decifrarCpf() (reversível, para KYC) e calcularHashCpf() (determinística, não-reversível, para
+// UNIQUE e busca: "índice cego").
 //
-// Cifrado no processo do Node (AES-256-GCM, node:crypto nativo), não no
-// Postgres (pgcrypto) - decisão consciente: nenhuma trigger/função/policy do
-// banco lê cpf_criptografado pra nada (conferido por grep nos 5 arquivos de
-// `.sql`), então não existe "consistência com o banco" a preservar cifrando
-// lá. Cifrar aqui significa que a chave nunca sai do processo do Nest.
+// Cifrado no processo do Node (AES-256-GCM, node:crypto nativo), não no Postgres (pgcrypto): decisão
+// consciente, pois nenhuma trigger/função/policy do banco lê cpf_criptografado para nada, então não existe
+// "consistência com o banco" a preservar cifrando lá. Cifrar aqui significa que a chave nunca sai do processo
+// do Nest.
 import {
   createCipheriv,
   createDecipheriv,

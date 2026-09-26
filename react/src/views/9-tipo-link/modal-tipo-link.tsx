@@ -30,10 +30,8 @@ function paraDominios(texto: string): string[] {
     .filter(Boolean);
 }
 
-// Consultar/Alterar/Excluir migrados de página pra modal (14-09-2026,
-// continuação da migração CRUD→Modal pedida pelo Lucas) - recebem a linha
-// (`tipo: TipoLinkResponse`) inteira do chamador, mesmo motivo de
-// modal-motivo-denuncia.tsx. Criar fica em arquivo separado.
+// Consultar/Alterar/Excluir em modal: recebem a linha (`tipo: TipoLinkResponse`) inteira do chamador, mesmo
+// motivo de modal-motivo-denuncia.tsx. Criar fica em arquivo separado.
 
 interface ModalConsultarTipoLinkProps {
   tipo: TipoLinkResponse;
@@ -117,7 +115,7 @@ export function ModalAlterarTipoLink({ auth, tipo, aoFechar, aoAtualizado }: Mod
   useAvisoAlteracaoNaoSalva(sujo);
 
   const regexInvalida = regex.length > 0 && !regexValida(regex);
-  // aria-describedby (23-09-2026): ver modal-criar-area-conhecimento.tsx.
+  // aria-describedby: ver modal-criar-area-conhecimento.tsx.
   const idMensagemRegex = useId();
   const idNome = useId();
   const idDominios = useId();

@@ -32,4 +32,7 @@ export class CampanhaResponse {
   reenviosRestantes: number | null;
   prazoReenvioAte: Date | null;
   somenteLeitura: boolean;
+  // Campos que o banco não deixa mudar agora (fn_campanha_campos_bloqueados), com os nomes deste DTO. Só vem em
+  // GET /campanha/:id; nas demais respostas fica vazio.
+  camposBloqueados: string[];
 }

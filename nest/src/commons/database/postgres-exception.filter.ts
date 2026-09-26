@@ -6,13 +6,8 @@ import {
 } from '@nestjs/common';
 import { BaseExceptionFilter } from '@nestjs/core';
 
-// Exportadas (13-09-2026, achado de auditoria: 10 arquivos de `*.service.
-// create.ts`/`*.service.remove.ts`/`*.service.update.ts` redeclaravam a
-// mesma cadeia literal localmente, em vez de importar daqui - o lugar
-// central já existia desde sempre, só ninguém importava dele) - qualquer
-// service que trata um código específico no próprio `catch` (em vez de
-// deixar cair nesta rede de segurança global) deve importar daqui, nunca
-// redeclarar o literal.
+// Códigos exportados: qualquer service que trata um código específico no próprio `catch` (em vez de deixar cair
+// nesta rede de segurança global) deve importar daqui, nunca redeclarar o literal.
 export const CODIGO_PG_UNIQUE_VIOLATION = '23505';
 export const CODIGO_PG_FOREIGN_KEY_VIOLATION = '23503';
 export const CODIGO_PG_NOT_NULL_VIOLATION = '23502';
@@ -24,11 +19,9 @@ export const CODIGO_PG_RLS_VIOLATION = '42501';
 // 03_funcoes_seguranca.sql - ver DOCUMENTACAO_ERRCODE.md, seção final).
 export const CODIGO_PG_RAISE_EXCEPTION_SEM_ERRCODE = 'P0001';
 
-// ERRCODE customizado nas 42 RAISE EXCEPTION de 05_regras_negocio.sql
-// (Alexia + uma IA, 03-08-2026 - ver DOCUMENTACAO_ERRCODE.md pra tabela
-// completa código -> função -> mensagem, e DOCUMENTACAO_BD.md, seção "05",
-// pro resumo oficial). 4 faixas, pelo prefixo de 2 dígitos do código:
-// 90xxx validação de dado/negócio, 91xxx conflito de estado, 92xxx
+// ERRCODE customizado nas RAISE EXCEPTION de 05_regras_negocio.sql (ver DOCUMENTACAO_ERRCODE.md para a tabela
+// completa código -> função -> mensagem, e DOCUMENTACAO_BD.md, seção "05", para o resumo oficial). 4 faixas,
+// pelo prefixo de 2 dígitos do código: 90xxx validação de dado/negócio, 91xxx conflito de estado, 92xxx
 // autorização negada (regra de negócio, não RLS), 93xxx limite de taxa.
 const FAIXA_ERRCODE_REGRA_NEGOCIO: Record<string, HttpStatus> = {
   '90': HttpStatus.BAD_REQUEST,
@@ -42,13 +35,11 @@ interface ErroPostgres extends Error {
   detail?: string;
 }
 
-// Rede de segurança GLOBAL pra erro de Postgres que nenhum service tratou
-// localmente (achado numa auditoria de IA feita pela Alexia, 02-08-2026: usuario.service.create
-// não tinha try/catch nenhum em volta do INSERT - e-mail duplicado virava
-// 500 cru em vez de 409). Services que já têm try/catch próprio (ex.:
-// configuracao.service.create.ts, usuario-papel.service.create.ts) nunca
-// chegam aqui pra esses casos - a mensagem específica deles é melhor que a
-// genérica daqui, então continuam como estão. Isto é só a rede embaixo.
+// Rede de segurança GLOBAL para erro de Postgres que nenhum service tratou localmente (ex.: e-mail duplicado
+// num INSERT sem try/catch viraria 500 cru em vez de 409). Services que já têm try/catch próprio (ex.:
+// configuracao.service.create.ts, usuario-papel.service.create.ts) nunca chegam aqui para esses casos: a
+// mensagem específica deles é melhor que a genérica daqui, então continuam como estão. Isto é só a rede
+// embaixo.
 @Catch()
 export class PostgresExceptionFilter extends BaseExceptionFilter {
   catch(excecao: unknown, host: ArgumentsHost): void {
@@ -123,14 +114,11 @@ export class PostgresExceptionFilter extends BaseExceptionFilter {
     }
   }
 
-  // Corpo de erro da API (24-09-2026, ver DOCUMENTACAO_ERRCODE.md, "Contrato
-  // do corpo de erro"): `statusCode` e `message` continuam como antes (nada
-  // no React quebra), e ganhou `codigo` (o SQLSTATE: 9xxxx de regra de
-  // negócio, ou 23505/23503/23502/23514/42501/P0001 dos nativos) pra o front
-  // distinguir a regra pelo código estável em vez do texto da mensagem.
-  // `dados` é opcional: só aparece se o RAISE mandou um DETAIL em JSON
-  // (nenhum manda ainda, o gancho está pronto). O nome da constraint violada
-  // NÃO vai no corpo, é detalhe interno.
+  // Corpo de erro da API (ver DOCUMENTACAO_ERRCODE.md, "Contrato do corpo de erro"): `statusCode` e `message`,
+  // mais `codigo` (o SQLSTATE: 9xxxx de regra de negócio, ou 23505/23503/23502/23514/42501/P0001 dos nativos)
+  // para o front distinguir a regra pelo código estável em vez do texto da mensagem. `dados` é opcional: só
+  // aparece se o RAISE mandou um DETAIL em JSON (nenhum manda ainda, o gancho está pronto). O nome da
+  // constraint violada NÃO vai no corpo, é detalhe interno.
   private montar(
     erro: ErroPostgres,
     mensagem: string,

@@ -1,25 +1,20 @@
 import { useRef, useState } from 'react';
 import { useFecharAoClicarFora } from '../../services/constant/hook/use-fechar-ao-clicar-fora';
 
-// Extraído (14-09-2026, revisão do Lucas) - busca de texto + 1+
-// dropdowns de faceta, reescrito à mão em `bancada-campanha.tsx`/
-// `bancada-pesquisador.tsx` (Campo de Testes, não podem usar `GenericTable`
-// por causa do risco de linha) além do original em `generic-table.tsx` -
-// pelo teste-de-prop de `generic-table.tsx`, é um IRMÃO, não um miolo.
+// Busca de texto + 1+ dropdowns de faceta, compartilhada por `generic-table.tsx` e pelas bancadas do Campo de
+// Testes (`bancada-campanha.tsx`/`bancada-pesquisador.tsx`, que não podem usar `GenericTable` por causa do
+// risco de linha): pelo teste-de-prop de `generic-table.tsx`, é um IRMÃO, não um miolo.
 //
-// CONTROLADO, sem opinião de onde o valor/seleção mora (`GenericTable`
-// guarda na URL, as bancadas em `useState` local) - `aoMudarBusca`/
-// `aoAlternar`/`aoLimpar` recebem só o valor final, quem chama decide como
-// persistir. A ÚNICA coisa que este componente decide por conta própria é
-// qual dropdown de faceta está aberto (estado de UI pura, não filtro).
+// CONTROLADO, sem opinião de onde o valor/seleção mora (`GenericTable` guarda na URL, as bancadas em `useState`
+// local): `aoMudarBusca`/`aoAlternar`/`aoLimpar` recebem só o valor final, quem chama decide como persistir. A
+// ÚNICA coisa que este componente decide por conta própria é qual dropdown de faceta está aberto (estado de UI
+// pura, não filtro).
 //
-// 2 comportamentos preservados byte a byte - já foram depurados ao vivo,
-// custaram tempo de debug, não são "só estilo":
-// 1) clique no TEXTO do <label> chama alternar() + preventDefault(); clique
-//    DIRETO no checkbox deixa o onChange nativo agir (senão alterna 2x).
-// 2) fechar por mousedown no document comparando com contains(), NUNCA por
-//    onBlur/relatedTarget (checkbox dentro de <label> dispara blur antes do
-//    clique completar, fechando o dropdown na hora errada).
+// 2 comportamentos preservados byte a byte (foram depurados ao vivo, não são "só estilo"):
+// 1) clique no TEXTO do <label> chama alternar() + preventDefault(); clique DIRETO no checkbox deixa o onChange
+// nativo agir (senão alterna 2x).
+// 2) fechar por mousedown no document comparando com contains(), NUNCA por onBlur/relatedTarget (checkbox
+// dentro de <label> dispara blur antes do clique completar, fechando o dropdown na hora errada).
 export interface FacetaFiltro {
   chave: string;
   rotulo: string;
@@ -90,7 +85,7 @@ export function BarraFiltros({
                   {faceta.selecionados.length > 0 ? (
                     <span className="badge badge-sucesso">{faceta.selecionados.length}</span>
                   ) : (
-                    <span className="texto-fraco font-normal">(Todos)</span>
+                    <span className="texto-padrao font-normal">(Todos)</span>
                   )}
                   <i className="fa-solid fa-chevron-down text-xs"></i>
                 </button>

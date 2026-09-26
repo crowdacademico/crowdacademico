@@ -16,12 +16,10 @@ interface GrupoConfiguracoes {
   itens: ConfiguracaoResponse[];
 }
 
-// Conteúdo do modal "Saiba mais" do grupo Arquivo (04-09-2026) - a
-// explicação era grande demais pra caber num tooltip (achado do Lucas),
-// por isso virou um modal com seções de verdade em vez de um bloco de
-// texto só. Só existe pro grupo Arquivo por enquanto; se outro grupo
-// precisar do mesmo tratamento no futuro, isso vira um objeto por grupo
-// em vez de uma constante solta.
+// Conteúdo do modal "Saiba mais" do grupo Arquivo: a explicação é grande demais para caber num tooltip, por
+// isso é um modal com seções de verdade em vez de um bloco de texto só. Só existe para o grupo Arquivo por
+// enquanto; se outro grupo precisar do mesmo tratamento, isso vira um objeto por grupo em vez de uma constante
+// solta.
 const SECOES_MODAL_ARQUIVO = [
   {
     titulo: 'Valores padrão',
@@ -96,19 +94,14 @@ const SECOES_MODAL_TERMO_USO = [
   },
 ];
 
-// Card "Termo de Uso" (13-09-2026, pedido do Lucas: "uma forma inteligente
-// de alterar o termo de uso vigente") - ACIMA de Segurança de propósito
-// (pedido do Lucas), mesmo tratamento especial que o grupo Arquivo já
-// ganha aqui embaixo (bloco fora do loop genérico de `grupos`, porque o
-// dado não vem de `configuracoes`). Mostra os 2 termos ativos lado a lado
-// (cadastro/contribuição - o sistema sempre tem exatamente 1 de cada,
-// nunca 0 depois do seed, nunca 2 do mesmo tipo - uq_termos_uso_ativo,
-// 02_indices.sql), cada um com link direto pra Alterar a versão vigente ou
-// publicar uma nova (pré-selecionando o tipo certo via `?tipo=`).
+// Card "Termo de Uso": ACIMA de Segurança, com o mesmo tratamento especial que o grupo Arquivo ganha aqui
+// embaixo (bloco fora do loop genérico de `grupos`, porque o dado não vem de `configuracoes`). Mostra os termos
+// ativos lado a lado (o sistema sempre tem exatamente 1 de cada tipo: nunca 0 depois do seed, nunca 2 do mesmo
+// tipo, uq_termos_uso_ativo, 02_indices.sql), cada um com link direto para Alterar a versão vigente ou publicar
+// uma nova (pré-selecionando o tipo certo via `?tipo=`).
 function CardTermoUso({ auth }: { auth: Pick<UseAuthReturn, 'authFetch'> }) {
-  // Construído a partir de TIPOS_TERMO (não hardcoded aqui) - um tipo novo
-  // (ex.: 'upgrade_pesquisador', 13-09-2026) já aparece sozinho, sem
-  // precisar lembrar de atualizar este estado inicial também.
+  // Construído a partir de TIPOS_TERMO (não hardcoded aqui): um tipo novo já aparece sozinho, sem precisar
+  // lembrar de atualizar este estado inicial também.
   const [termosAtivos, setTermosAtivos] = useState<Record<TipoTermo, EstadoTermoAtivo>>(() =>
     Object.fromEntries(TIPOS_TERMO.map((tipo) => [tipo, undefined])) as Record<
       TipoTermo,
@@ -201,12 +194,10 @@ function CardTermoUso({ auth }: { auth: Pick<UseAuthReturn, 'authFetch'> }) {
   );
 }
 
-// Aba "Regras do Negócio" (09-08-2026, Bloco H do prompt de uma IA) -
-// as ~28 chaves de `configuracoes` viravam uma tabela CRUD crua (Aba
-// Configurações, ainda existe, sem mudança) - aqui é uma segunda forma de
-// olhar pro MESMO dado, agrupado por assunto, mais fácil de escanear.
-// "Alterar" continua sendo a tela de sempre (/configuracoes/:id/alterar) -
-// não duplica o formulário de edição aqui, só organiza a leitura.
+// Aba "Regras do Negócio": as chaves de `configuracoes` (a aba Configurações as mostra numa tabela CRUD crua)
+// aqui em uma segunda forma de olhar para o MESMO dado, agrupado por assunto, mais fácil de escanear. "Alterar"
+// continua sendo a tela de sempre (modal de Parâmetros do Sistema): não duplica o formulário de edição aqui, só
+// organiza a leitura.
 interface DashboardRegrasNegocioProps {
   auth: Pick<UseAuthReturn, 'authFetch'>;
 }

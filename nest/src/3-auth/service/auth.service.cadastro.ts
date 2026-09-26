@@ -13,13 +13,11 @@ import { AuthResponseRegister } from '../dto/response/auth.response-register';
 import { AuthServiceLogin } from './auth.service.login';
 import { gerarTokenVerificacaoEmail } from './verificacao-email-token.util';
 
-// Cadastro público (09-08-2026, Bloco D do prompt de uma IA) - reaproveita
-// UsuarioServiceCreate (a MESMA criação que POST /usuario admin já usa: hash
-// de senha + INSERT + atribuir_papel_padrao()) e soma o que só faz sentido
-// aqui: gravar o aceite do termo ATIVO (nunca um id vindo do cliente), gerar
-// o token de verificação de e-mail, e já devolver tokens de sessão -
-// diferente de "admin cria um usuário pra outra pessoa" (criar-usuario.jsx),
-// aqui é a própria pessoa se cadastrando, então termina logada.
+// Cadastro público: reaproveita UsuarioServiceCreate (a MESMA criação que POST /usuario admin usa: hash de
+// senha + INSERT + atribuir_papel_padrao()) e soma o que só faz sentido aqui: gravar o aceite do termo ATIVO
+// (nunca um id vindo do cliente), gerar o token de verificação de e-mail, e já devolver tokens de sessão.
+// Diferente de "admin cria um usuário para outra pessoa": aqui é a própria pessoa se cadastrando, então termina
+// logada.
 @Injectable()
 export class AuthServiceCadastro {
   constructor(
@@ -43,25 +41,20 @@ export class AuthServiceCadastro {
 
     const db = this.database.getDb();
 
-    // Resolvido pelo SERVIDOR, nunca aceito do corpo da requisição - ver
-    // comentário de registrar_aceite_termo() (03_funcoes_seguranca.sql,
-    // [03-D-1]) sobre por que isso importa. `'cadastro'` explícito
-    // (13-09-2026) - desde a separação em 2 termos ativos simultâneos, o
-    // cadastro sempre aceita a trilha "cadastro", nunca a de "contribuicao".
+    // Resolvido pelo SERVIDOR, nunca aceito do corpo da requisição (ver comentário de registrar_aceite_termo(),
+    // 03_funcoes_seguranca.sql, [03-D-1], sobre por que isso importa). `'cadastro'` explícito: o cadastro
+    // sempre aceita a trilha "cadastro", nunca a de "contribuicao".
     const termoAtivo = await this.termoUsoServiceAtivo.executar('cadastro');
     await sql`SELECT public.registrar_aceite_termo(${usuario.idUsuario}, ${termoAtivo.idTermo}, ${ip ?? null})`.execute(
       db,
     );
 
-    // Token de verificação de e-mail (09-08-2026) - gerado e gravado desde
-    // já, mesmo sem 4-mail existir pra enviar de verdade. tokenVerificacao
-    // EmailDev só viaja no corpo da resposta fora de produção (ver
-    // controller) - em produção, a linha em verificacao_email existe do
-    // mesmo jeito, só que ninguém recebe o token ainda (nada de fingir que
-    // um e-mail foi mandado).
+    // Token de verificação de e-mail: gerado e gravado desde já, mesmo sem 4-mail existir para enviar de
+    // verdade. tokenVerificacaoEmailDev só viaja no corpo da resposta fora de produção (ver controller); em
+    // produção, a linha em verificacao_email existe do mesmo jeito, só que ninguém recebe o token ainda (nada
+    // de fingir que um e-mail foi mandado).
     const { token, hash } = gerarTokenVerificacaoEmail();
-    // Configurável pelo Painel Admin desde 04-09-2026 - cai no padrão
-    // hardcoded (24h) se a chave não existir/estiver inativa (ver
+    // Configurável pelo Painel Admin: cai no padrão hardcoded (24h) se a chave não existir/estiver inativa (ver
     // ConfiguracaoValorService).
     const verificacaoEmailHorasValidade =
       await this.configuracaoValor.buscarNumero(

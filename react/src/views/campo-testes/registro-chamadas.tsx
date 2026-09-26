@@ -1,9 +1,5 @@
-// ============================================================================
-// Campo de Testes deixou de ser só ferramenta de teste descartável
-// (07-09-2026, decisão do Lucas): virou parte permanente do painel
-// administrativo, com o mesmo padrão de dados/comportamento do resto do
-// sistema (nunca uma versão simplificada à parte).
-// ============================================================================
+// Campo de Testes é parte permanente do painel administrativo (não uma ferramenta de teste descartável), com o
+// mesmo padrão de dados/comportamento do resto do sistema (nunca uma versão simplificada à parte).
 
 import { useState } from 'react';
 import { API_BASE_URL } from '../../services/constant/constants/api.constants';
@@ -12,11 +8,8 @@ import { RodapePaginacao } from '../../components/pagination/rodape-paginacao';
 import { useCampoTestes } from '../../services/campo-testes/hook/use-campo-testes';
 import type { RegistroChamada } from '../../services/campo-testes/context/campo-testes-context';
 
-// Prévia de uma linha só, pra comparar retornos direto na lista, sem
-// clicar em cada linha (23-08-2026, pedido do Lucas: ERA um painel à
-// parte, "Mesmo GET, dois pontos de vista", comparando o CPF visto por
-// dois atores; virou isto aqui, dois GETs de atores diferentes já
-// aparecem como duas linhas, cada uma com seu retorno visível).
+// Prévia de uma linha só, para comparar retornos direto na lista, sem clicar em cada linha: dois GETs aparecem
+// como duas linhas, cada uma com seu retorno visível.
 function formatarPrevia(corpo: unknown): string {
   if (corpo === null || corpo === undefined) return '(sem corpo)';
   const texto = JSON.stringify(corpo);
@@ -37,11 +30,9 @@ function montarCurl(chamada: RegistroChamada): string {
   return partes.join(' \\\n  ');
 }
 
-// T4, gaveta recolhível, presente em toda tela do Campo de Testes.
-// Substituto direto do Thunder Client: toda chamada feita via
-// useChamadaRegistrada (qualquer tela) aparece aqui, mais recente
-// primeiro. SEM coluna "Ator" (25-08-2026, remoção do Elenco): só existe
-// um "ator" possível agora, a sessão real logada - mostrar seria ruído.
+// T4, gaveta recolhível, presente em toda tela do Campo de Testes. Substituto direto do Thunder Client: toda
+// chamada feita via useChamadaRegistrada (qualquer tela) aparece aqui, mais recente primeiro. Sem coluna
+// "Ator": só existe um "ator" possível, a sessão real logada.
 export function RegistroChamadas() {
   const { registroChamadas, limparRegistro } = useCampoTestes();
   const [aberto, setAberto] = useState(false);
@@ -112,12 +103,10 @@ export function RegistroChamadas() {
                     type="button"
                     className="btn btn-secondary text-xs mt-2"
                     onClick={() => {
-                      // `navigator.clipboard` (achado na auditoria do
-                      // `no-unnecessary-condition`, 12-09-2026): o tipo do
-                      // lib.dom.d.ts afirma sempre presente, mas a Clipboard
-                      // API de verdade só existe em contexto seguro
-                      // (HTTPS/localhost) e falta em navegador mais antigo -
-                      // proteção real contra o ambiente, não código morto.
+                      // `navigator.clipboard` (`no-unnecessary-condition`): o tipo do lib.dom.d.ts afirma
+                      // sempre presente, mas a Clipboard API de verdade só existe em contexto seguro
+                      // (HTTPS/localhost) e falta em navegador mais antigo: proteção real contra o ambiente,
+                      // não código morto.
                       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
                       void navigator.clipboard?.writeText(montarCurl(chamada));
                     }}

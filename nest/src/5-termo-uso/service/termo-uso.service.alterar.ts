@@ -4,21 +4,15 @@ import { DatabaseService } from '../../commons/database/database.service';
 import { TermoUsoRequestAlterar } from '../dto/request/termo-uso.request-alterar';
 import { TermoUsoResponse } from '../dto/response/termo-uso.response';
 
-// Alterar SÓ é permitido enquanto NINGUÉM aceitou esta versão específica
-// ainda (decisão do Lucas, 13-09-2026, depois de pesar as 3 opções: manter
-// só "criar versão nova" sem editar nunca; permitir editar só antes do
-// primeiro aceite; ou permitir editar sempre). Assim que a 1ª pessoa
-// aceitar, a versão trava e vira só-leitura pra sempre (mesmo raciocínio
-// de TermoUsoServiceCriar: editar depois do aceite destruiria o valor
-// probatório de quem já aceitou um texto que deixaria de ser esse). Só
-// `conteudo` é editável - `versao`/`tipo` são imutáveis (ver
-// TermoUsoRequestAlterar), então não há mais UNIQUE de `versao` pra
+// Alterar SÓ é permitido enquanto NINGUÉM aceitou esta versão específica ainda. Assim que a 1ª pessoa aceitar,
+// a versão trava e vira só-leitura para sempre (mesmo raciocínio de TermoUsoServiceCriar: editar depois do
+// aceite destruiria o valor probatório de quem já aceitou um texto que deixaria de ser esse). Só `conteudo` é
+// editável: `versao`/`tipo` são imutáveis (ver TermoUsoRequestAlterar), então não há UNIQUE de `versao` para
 // disparar aqui.
 //
-// Precisa checar as DUAS tabelas de aceite que referenciam termos_de_uso -
-// usuario_termo (aceite geral/cadastro/upgrade_pesquisador) E
-// aceite_termo_contribuicao (aceite por contribuição a campanha) - um termo
-// pode estar "usado" por qualquer uma das duas.
+// Precisa checar as DUAS tabelas de aceite que referenciam termos_de_uso: usuario_termo (aceite
+// geral/cadastro/upgrade_pesquisador) E aceite_termo_contribuicao (aceite por contribuição a campanha); um
+// termo pode estar "usado" por qualquer uma das duas.
 @Injectable()
 export class TermoUsoServiceAlterar {
   constructor(private readonly database: DatabaseService) {}

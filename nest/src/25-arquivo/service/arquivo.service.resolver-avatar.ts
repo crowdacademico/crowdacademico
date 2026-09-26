@@ -4,15 +4,11 @@ import { ARMAZENAMENTO_SERVICE } from '../../commons/storage/storage.constants';
 import type { ArmazenamentoService } from '../../commons/storage/storage.service.interface';
 
 export interface AvatarResolvido {
-  // `null` = usuário não tem foto cadastrada (ou a que tinha foi
-  // desativada). SIMPLIFICADO (30-08-2026): antes isso caía num "avatar
-  // padrão" configurável via `configuracoes` (chave `avatar_padrao_chave`)
-  // e foi removido porque o front já resolve isso sozinho e melhor:
-  // AvatarUsuario (components/layout/avatar-usuario.tsx) desenha iniciais
-  // com fundo colorido quando `foto` é null, sem precisar de nenhuma
-  // imagem hospedada nem de round-trip nenhum pra saber disso. Manter os
-  // dois (imagem padrão no bucket E fallback de iniciais no front) era
-  // complexidade duplicada pro mesmo problema.
+  // `null` = usuário não tem foto cadastrada (ou a que tinha foi desativada). Não há "avatar padrão"
+  // configurável: o front já resolve isso sozinho e melhor (AvatarUsuario,
+  // components/layout/avatar-usuario.tsx, desenha iniciais com fundo colorido quando `foto` é null, sem imagem
+  // hospedada nem round-trip), e manter os dois (imagem padrão no bucket E fallback de iniciais no front) seria
+  // complexidade duplicada para o mesmo problema.
   url: string | null;
 }
 

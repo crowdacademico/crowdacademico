@@ -5,14 +5,10 @@ import { decifrarCpf } from '../../commons/seguranca/cpf-cifra.util';
 import { USUARIO_COLUNAS_SELECT } from '../constants/usuario.constants';
 import { UsuarioResponseExportarDados } from '../dto/response/usuario.response-exportar-dados';
 
-// Mascara o CPF (3 primeiros + 2 últimos dígitos) - decisão de uma IA,
-// confirmada em conversa (05-09-2026): incluir o CPF em texto puro exigiria
-// reautenticação por senha antes de gerar a exportação, mecanismo que não
-// existe em NENHUM outro lugar do sistema hoje (a exclusão de conta usa
-// confirmação por digitação do e-mail, não senha) - construir isso do zero
-// só pra este caso de uso não se paga. Preserva uma propriedade que o
-// projeto cuidou de manter até aqui: o CPF nunca sai do banco em texto
-// puro por nenhum caminho HTTP.
+// Mascara o CPF (3 primeiros + 2 últimos dígitos): incluir o CPF em texto puro exigiria reautenticação por
+// senha antes de gerar a exportação, mecanismo que não existe em nenhum outro lugar do sistema (a exclusão de
+// conta usa confirmação por digitação do e-mail, não senha). Preserva uma propriedade do projeto: o CPF nunca
+// sai do banco em texto puro por nenhum caminho HTTP.
 function mascararCpf(cpfDecifrado: string): string {
   const digitos = cpfDecifrado.replace(/\D/g, '');
   return `${digitos.slice(0, 3)}.***.***-${digitos.slice(9)}`;
@@ -187,11 +183,9 @@ export class UsuarioServiceExportarDados {
           .execute()
       : [];
 
-    // Rastro em log_auditoria (item 3 de PROXIMOS_PASSOS.md - "toda exportação deve deixar
-    // rastro"). app_nestjs não tem GRANT INSERT em log_auditoria de
-    // propósito (só a trigger de banco escreve lá) - por isso via função
-    // SECURITY DEFINER dedicada, não um .insertInto() direto (que falharia
-    // com 42501, permissão negada). Ver registrar_exportacao_dados()
+    // Rastro em log_auditoria (RF-016: "toda exportação deve deixar rastro"). app_nestjs não tem GRANT INSERT
+    // em log_auditoria de propósito (só a trigger de banco escreve lá); por isso via função SECURITY DEFINER
+    // dedicada, não um .insertInto() direto (que falharia com 42501). Ver registrar_exportacao_dados()
     // (03_funcoes_seguranca.sql, [03-O]).
     await sql`SELECT public.registrar_exportacao_dados(${idUsuario})`.execute(
       db,

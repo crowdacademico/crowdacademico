@@ -42,12 +42,10 @@ export class UsuarioServiceRemove {
       );
     }
 
-    // ADICIONADO (módulo 25-arquivo): a função SQL já desativa
-    // (ativo=false) a linha de `arquivo` vinculada como foto de perfil, na
-    // MESMA transação da exclusão da conta (ver 03_funcoes_seguranca.sql)
-    // - isso cobre a parte de CONSISTÊNCIA DE DADOS, garantida não importa
-    // quem chamou. O que falta é só o lado que o Postgres não alcança: os
-    // bytes de verdade no bucket.
+    // A função SQL já desativa (ativo=false) a linha de `arquivo` vinculada como foto de perfil, na MESMA
+    // transação da exclusão da conta (ver 03_funcoes_seguranca.sql): isso cobre a CONSISTÊNCIA DE DADOS,
+    // garantida não importa quem chamou. Falta só o lado que o Postgres não alcança: os bytes de verdade no
+    // bucket.
     if (usuarioAntes?.id_imagem_perfil) {
       const arquivo = await db
         .selectFrom('arquivo')

@@ -27,11 +27,9 @@ export class CampanhaRequestCreate {
   @IsInt()
   idAreaConhecimento: number;
 
-  // Só 'all-or-nothing' por enquanto (24-09-2026): o V7 promete o modelo
-  // flexível, mas as regras dele (repasse independente da meta, aviso ao doador,
-  // encerramento) dependem do módulo de pagamento e do checkout. Aceitar
-  // 'flexivel' hoje criaria campanha sem nenhuma dessas proteções. Ver
-  // PENDENCIAS, entrada sobre o modelo flexível.
+  // Só 'all-or-nothing' por enquanto: o V7 promete o modelo flexível, mas as regras dele (repasse independente
+  // da meta, aviso ao doador, encerramento) dependem do módulo de pagamento e do checkout. Aceitar 'flexivel'
+  // hoje criaria campanha sem nenhuma dessas proteções.
   @IsOptional()
   @IsIn(['all-or-nothing'])
   modelo?: ModeloCampanha;

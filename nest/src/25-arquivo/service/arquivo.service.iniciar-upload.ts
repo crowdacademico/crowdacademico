@@ -43,9 +43,8 @@ export class ArquivoServiceIniciarUpload {
     // indexar os Records abaixo por tipo.
     const tipoMime = dto.tipoMime;
 
-    // Tamanho mín./máx. configuráveis pelo Painel Admin (04-09-2026) -
-    // cada leitura cai no padrão hardcoded se a chave não existir/estiver
-    // inativa (ver ConfiguracaoValorService).
+    // Tamanho mín./máx. configuráveis pelo Painel Admin: cada leitura cai no padrão hardcoded se a chave não
+    // existir/estiver inativa (ver ConfiguracaoValorService).
     const tamanhoMinimo = await this.configuracaoValor.buscarNumero(
       CHAVE_CONFIG_TAMANHO_MINIMO,
       TAMANHO_MINIMO_BYTES_PADRAO,
@@ -93,10 +92,9 @@ export class ArquivoServiceIniciarUpload {
       );
     }
 
-    // Rate limit de upload (04-09-2026) - dois limites complementares,
-    // configuráveis pelo Painel Admin, conferidos contra `arquivo.
-    // criado_em` (não filtra por `ativo`: mesmo um arquivo já removido
-    // depois conta como "um upload que aconteceu" pra este propósito).
+    // Rate limit de upload: dois limites complementares, configuráveis pelo Painel Admin, conferidos contra
+    // `arquivo.criado_em` (não filtra por `ativo`: mesmo um arquivo já removido depois conta como "um upload
+    // que aconteceu" para este propósito).
     const janelaMinutos = await this.configuracaoValor.buscarNumero(
       CHAVE_CONFIG_JANELA_LIMITE_UPLOADS_MINUTOS,
       JANELA_LIMITE_UPLOADS_MINUTOS_PADRAO,

@@ -1,24 +1,17 @@
-// Tradução code -> rótulo amigável (09-08-2026, pedido do Lucas: "parece
-// linha de código, pq é linha de código" - os 32 valores de
-// `permissao.nome` são o identificador estável usado por tem_permissao()
-// no banco (03_funcoes_seguranca.sql), nunca deveriam ser renomeados lá;
-// aqui é só a CAMADA DE EXIBIÇÃO. Puramente uma tabela de tradução - sem
-// coluna nova no banco, sem endpoint novo: quem tem `nome`, tem o rótulo.
-// Mesma ordem por domínio de 07_seed_dados.sql [07-B-2]/[07-C-2]
-// (A,B,C,D,E,F,H,I,L), só pra facilitar achar um item aqui.
+// Tradução code -> rótulo amigável: os valores de `permissao.nome` são o identificador estável usado por
+// tem_permissao() no banco (03_funcoes_seguranca.sql), nunca devem ser renomeados lá; aqui é só a CAMADA DE
+// EXIBIÇÃO. Puramente uma tabela de tradução: sem coluna nova no banco, sem endpoint novo (quem tem `nome`, tem
+// o rótulo). Mesma ordem por domínio de 07_seed_dados.sql [07-B-2]/[07-C-2] (A,B,C,D,E,F,H,I,L), só para
+// facilitar achar um item aqui.
 //
-// Virou objeto (09-08-2026, Bloco F do prompt de uma IA: coluna
-// "Descrição" na tabela Permissões + modal de detalhe por linha) - cada
-// entrada carrega, além do nome amigável, um resumo curto (pra coluna),
-// um texto mais longo dividido em "o que faz"/"por que existe" (pro
-// modal) e uma classificação de impacto (badge do modal). Propositalmente
-// NÃO carrega "quem usa hoje" aqui - isso é lido AO VIVO da matriz Papel ×
-// Permissão (papelPermissaoApi), não hardcoded neste dicionário, senão
-// desatualizaria sozinho toda vez que alguém conceder/revogar pela tela.
+// Cada entrada carrega, além do nome amigável, um resumo curto (para a coluna "Descrição" da tabela
+// Permissões), um texto mais longo dividido em "o que faz"/"por que existe" (para o modal de detalhe por linha)
+// e uma classificação de impacto (badge do modal). Propositalmente NÃO carrega "quem usa hoje": isso é lido AO
+// VIVO da matriz Papel × Permissão (papelPermissaoApi), não hardcoded neste dicionário, senão desatualizaria
+// sozinho toda vez que alguém conceder/revogar pela tela.
 //
-// Se uma permissão nova nascer sem entrada aqui, todo helper abaixo cai
-// pro próprio `nome` cru (ou um objeto mínimo equivalente) - nunca quebra,
-// só fica menos bonito até alguém lembrar de adicionar a tradução.
+// Se uma permissão nova nascer sem entrada aqui, todo helper abaixo cai para o próprio `nome` cru (ou um objeto
+// mínimo equivalente): nunca quebra, só fica menos bonito até alguém lembrar de adicionar a tradução.
 type ImpactoPermissao = 'baixo' | 'médio' | 'alto';
 
 interface DetalhePermissao {
@@ -29,15 +22,12 @@ interface DetalhePermissao {
   impacto: ImpactoPermissao | null;
 }
 
-// `Partial<Record<...>>`, não `Record<...>` puro (achado na auditoria do
-// `no-unnecessary-condition`, 12-09-2026): o dicionário é fechado (só as
-// permissões documentadas abaixo), mas quem chama passa `permissao.nome`
-// vindo direto do banco - um nome novo, semeado mas ainda não documentado
-// aqui, é um caso real, não hipotético. `Record<string, T>` fazia o
-// TypeScript mentir que TODA chave string tem valor, marcando o fallback
-// das duas funções abaixo como "morto"; `Partial` deixa o tipo honesto
-// (`DetalhePermissao | undefined`), then o fallback correspondia a uma
-// proteção legítima o tempo todo.
+// `Partial<Record<...>>`, não `Record<...>` puro: o dicionário é fechado (só as permissões documentadas
+// abaixo), mas quem chama passa `permissao.nome` vindo direto do banco, e um nome novo, semeado mas ainda não
+// documentado aqui, é um caso real, não hipotético. `Record<string, T>` faria o TypeScript mentir que TODA
+// chave string tem valor, marcando o fallback das duas funções abaixo como "morto"
+// (`no-unnecessary-condition`); `Partial` deixa o tipo honesto (`DetalhePermissao | undefined`) e o fallback é
+// uma proteção legítima.
 export const DETALHE_PERMISSAO: Partial<Record<string, DetalhePermissao>> = {
   // A - Visão Geral & Configuração Inicial
   relatorio_visualizar: {

@@ -8,19 +8,15 @@ import {
 import { Pool } from 'pg';
 import { PG_POOL } from '../commons/database/database.constants';
 
-// GET /health - pedido de uma IA (03-08-2026): "qualquer plataforma de
-// deploy (Render, Railway, Fly) precisa disso pra saber se a aplicação está
-// viva". Sem login, sem RequireAuthGuard - precisa responder mesmo antes de
-// qualquer usuário existir/logar, e é isso que a plataforma de deploy chama
-// periodicamente pra decidir se reinicia o processo.
+// GET /health: qualquer plataforma de deploy (Render, Railway, Fly) precisa disso para saber se a aplicação
+// está viva. Sem login, sem RequireAuthGuard: precisa responder mesmo antes de qualquer usuário existir/logar,
+// e é isso que a plataforma de deploy chama periodicamente para decidir se reinicia o processo.
 //
-// `@Inject(PG_POOL)` direto (não `DatabaseService.getDb()`) de propósito:
-// é o MESMO padrão que `DatabaseModule.onModuleInit()` já usa (`SELECT
-// current_user`) pra testar a conexão crua com o Postgres - um health check
-// tem que testar a fundação (o Pool consegue abrir uma conexão e rodar uma
-// query?), não passar pela maquinaria de transação por requisição do
-// GlobalDbInterceptor (BEGIN/SET app.id_usuario_atual/COMMIT), que é sobre
-// RLS/auditoria de quem fez o quê - irrelevante aqui, ninguém "fez" nada.
+// `@Inject(PG_POOL)` direto (não `DatabaseService.getDb()`) de propósito: é o MESMO padrão que
+// `DatabaseModule.onModuleInit()` usa (`SELECT current_user`) para testar a conexão crua com o Postgres; um
+// health check tem que testar a fundação (o Pool consegue abrir uma conexão e rodar uma query?), não passar
+// pela maquinaria de transação por requisição do GlobalDbInterceptor (BEGIN/SET app.id_usuario_atual/COMMIT),
+// que é sobre RLS/auditoria de quem fez o quê, irrelevante aqui.
 @Controller('health')
 export class HealthController {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}

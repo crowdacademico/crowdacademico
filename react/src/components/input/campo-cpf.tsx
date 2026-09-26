@@ -2,9 +2,7 @@ import { useId } from 'react';
 import { formatarCpf } from '../../services/constant/utils/formatacao.util';
 
 interface CampoCpfProps {
-  // Sempre só dígitos (até 11), nunca formatado - quem formata pra
-  // exibição é este componente por dentro, igual já era em cada
-  // consumidor antes de existir.
+  // Sempre só dígitos (até 11), nunca formatado: quem formata para exibição é este componente por dentro.
   valor: string;
   onChange: (digitos: string) => void;
   // Ausente por padrão - só quem chama de dentro do Campo de Testes passa
@@ -13,11 +11,9 @@ interface CampoCpfProps {
   gerarCpfDeTeste?: () => string;
 }
 
-// Extraído (14-09-2026, pedido do Lucas na auditoria de componentes) - o
-// campo de CPF + botão "Gerar CPF válido" existia idêntico, byte a byte,
-// em 2 lugares (o card "Criar Perfil Pesquisador" de ModalAlterarUsuario e
-// ModalUpgradePesquisador) - um bug/ajuste num dos dois só corrigia o que
-// alguém lembrasse de mexer, o outro ficava desatualizado.
+// Campo de CPF + botão "Gerar CPF válido", compartilhado pelo card "Criar Perfil Pesquisador" de
+// ModalAlterarUsuario e por ModalUpgradePesquisador (idêntico byte a byte nos dois: um bug/ajuste num só
+// corrigiria o que alguém lembrasse de mexer).
 export function CampoCpf({ valor, onChange, gerarCpfDeTeste }: CampoCpfProps) {
   const idCampo = useId();
   return (

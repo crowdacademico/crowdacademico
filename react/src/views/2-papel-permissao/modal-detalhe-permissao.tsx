@@ -14,12 +14,9 @@ interface ModalDetalhePermissaoProps {
   aoFechar: () => void;
 }
 
-// "Papéis com esta permissão" (09-08-2026, Bloco F do prompt de IA
-// usado nesta rodada; rótulo renomeado no mesmo dia, ERA "Quem tem hoje") - lido AO
-// VIVO da matriz Papel × Permissão (mesmas 2 chamadas de
-// matriz-papel-permissao.tsx), nunca do dicionário estático: o dicionário
-// só sabe o que a permissão FAZ, não quem tem ela agora - isso muda toda
-// vez que um admin mexe na matriz.
+// "Papéis com esta permissão": lido AO VIVO da matriz Papel × Permissão (mesmas 2 chamadas de
+// matriz-papel-permissao.tsx), nunca do dicionário estático: o dicionário só sabe o que a permissão FAZ, não
+// quem tem ela agora, e isso muda toda vez que um admin mexe na matriz.
 export function ModalDetalhePermissao({ permissao, authFetch, aoFechar }: ModalDetalhePermissaoProps) {
   const detalhe = detalhePermissao(permissao.nome);
   const [papeisComEla, setPapeisComEla] = useState<string[] | null>(null);
@@ -47,9 +44,8 @@ export function ModalDetalhePermissao({ permissao, authFetch, aoFechar }: ModalD
         { titulo: 'O que faz', conteudo: detalhe.oQueFaz },
         { titulo: 'Por que existe', conteudo: detalhe.porQueExiste },
         {
-          // ERA "Quem tem hoje" (09-08-2026, achado do Lucas: "fica
-          // esquisito" - frase solta em cima de só "admin" soava cortada).
-          // Frase-rótulo (tipo campo de formulário) combina melhor.
+          // Frase-rótulo (tipo campo de formulário) combina melhor que uma frase solta como "Quem tem hoje",
+          // que soava cortada em cima de só "admin".
           titulo: 'Papéis com esta permissão',
           conteudo:
             papeisComEla === null ? (

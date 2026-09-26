@@ -21,21 +21,11 @@ interface PesquisadorLinha extends Omit<PerfilPesquisadorResponse, 'tituloAcadem
   statusPesquisador: string;
 }
 
-// Aba "Pesquisadores" (23-08-2026, pedido do Lucas: "algum outro que eu
-// esqueci?" - 6-perfil-pesquisador estava pronto e testado desde
-// 22-08-2026, mas sem NENHUMA entrada de menu, igual Motivos de Denúncia
-// estava antes).
-//
-// Alterar/Consultar/Excluir EM MODAL, reaproveitando os MESMOS modais de
-// Usuário (14-09-2026, pedido do Lucas: "Pesquisadores é o mesmo que
-// Usuário, é praticamente duas telas de Usuário uma embaixo da outra") -
-// mesmo raciocínio de T1 (Bancada do Pesquisador, Campo de Testes): as 3
-// ações agem sobre o USUÁRIO por trás da linha (`ModalAlterarUsuario`/
-// `ModalConsultarUsuario`/`ModalExcluirUsuario`, os MESMOS de
-// `listar-usuarios.tsx`), não sobre o perfil de pesquisador em si - por
-// isso não precisou de nenhum endpoint novo. `consultar-pesquisador.tsx`
-// (página própria) já tinha sido apagada em 13-09-2026 por esse motivo;
-// Alterar/Excluir seguem o mesmo caminho agora.
+// Aba "Pesquisadores": Alterar/Consultar/Excluir EM MODAL, reaproveitando os MESMOS modais de Usuário: as 3
+// ações agem sobre o USUÁRIO por trás da linha
+// (`ModalAlterarUsuario`/`ModalConsultarUsuario`/`ModalExcluirUsuario`, os MESMOS de `listar-usuarios.tsx`),
+// não sobre o perfil de pesquisador em si (mesmo raciocínio de T1, Bancada do Pesquisador, Campo de Testes),
+// por isso não precisou de nenhum endpoint novo.
 export function ListarPesquisadores({ auth }: PropsPagina) {
   const {
     alterando,
@@ -83,16 +73,11 @@ export function ListarPesquisadores({ auth }: PropsPagina) {
         colunas={[
           { chave: 'idUsuario', rotulo: 'id' },
           { chave: 'nome', rotulo: 'nome' },
-          // largura igual nas 3 (25-08-2026, pedido do Lucas: "título,
-          // status e score, cada um de um tamanho diferente e espalhados"
-          // - mesma causa e mesmo remédio de Tipos de Link, "9.25rem"
-          // pras 4 colunas Sim/Não: sem largura fixa, table-layout: auto
-          // mede cada coluna pelo próprio maior valor ("Especialista" é
-          // bem mais comprido que "Doutor"/"Ativo"), então cada uma
-          // ficava com um tamanho diferente. `centralizar` em título
-          // também (não teria entrado sozinho - é texto, não
-          // número/booleano) pra alinhar com status/score, que já
-          // centralizavam.
+          // Largura igual nas 3 colunas (título, status e score): mesma causa e mesmo remédio de Tipos de Link
+          // ("9.25rem" para as 4 colunas Sim/Não): sem largura fixa, table-layout: auto mede cada coluna pelo
+          // próprio maior valor ("Especialista" é bem mais comprido que "Doutor"/"Ativo"), então cada uma
+          // ficaria com um tamanho diferente. `centralizar` em título também (não entraria sozinho: é texto,
+          // não número/booleano) para alinhar com status/score, que já centralizam.
           { chave: 'tituloAcademico', rotulo: 'título', centralizar: true, largura: '8rem' },
           { chave: 'statusPesquisador', rotulo: 'status', centralizar: true, largura: '8rem' },
           { chave: 'scoreAtual', rotulo: 'score', largura: '8rem' },

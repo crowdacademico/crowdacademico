@@ -1,12 +1,9 @@
 import type { ReactNode } from 'react';
 
-// Modal genérico de "detalhe explicado" (09-08-2026, Bloco F do prompt do
-// uma IA) - nasceu pra explicar uma permissão (o quê, por que existe,
-// quem tem hoje), mas não tem nada específico de permissão aqui: título,
-// legenda em fonte mono (a "chave" técnica), um badge opcional e uma lista
-// de seções título+conteúdo. Feito pra ser reaproveitado depois pra
-// explicar configuração, papel, status de campanha etc - quem muda é só
-// o conteúdo das seções, não este componente.
+// Modal genérico de "detalhe explicado": nasceu para explicar uma permissão (o quê, por que existe, quem tem
+// hoje), mas não tem nada específico de permissão: título, legenda em fonte mono (a "chave" técnica), um badge
+// opcional e uma lista de seções título+conteúdo. Feito para ser reaproveitado para explicar configuração,
+// papel, status de campanha etc.: quem muda é só o conteúdo das seções, não este componente.
 type ImpactoBadge = 'alto' | 'médio' | 'baixo';
 
 const CLASSE_BADGE_IMPACTO: Record<ImpactoBadge, string> = {
@@ -29,12 +26,9 @@ interface ModalDetalheProps {
   rotuloAcao?: string;
 }
 
-// `rotuloAcao` (23-08-2026, Campo de Testes: "Consultar" de Link
-// Acadêmico) - cabeçalho extra, opcional, grande/centralizado/maiúsculo
-// + linha divisória, ANTES do título normal (achado do Lucas: um
-// "Consultar" precisa deixar claro de cara que ação é essa, antes de
-// entrar nos detalhes de qual registro). Sem essa prop, o modal continua
-// exatamente como sempre foi (Permissões nunca passou isso).
+// `rotuloAcao`: cabeçalho extra, opcional, grande/centralizado/maiúsculo + linha divisória, ANTES do título
+// normal (um "Consultar" precisa deixar claro de cara que ação é essa, antes de entrar nos detalhes de qual
+// registro). Sem essa prop, o modal continua como o de Permissões (que nunca passa isso).
 export function ModalDetalhe({
   titulo,
   chave,
@@ -105,12 +99,9 @@ export function ModalDetalhe({
               <h4 className="titulo-bloco mb-1.5">
                 {secao.titulo}
               </h4>
-              {/* ERA texto-padrao (slate-700) - muito claro pro corpo
-                  principal do modal (09-08-2026, achado do Lucas: "o texto
-                  deste dialogbox está muito cinza"). texto-forte é o mesmo
-                  tom do título (slate-800/quase-branco no escuro), sem
-                  perder a hierarquia com o rótulo da seção (que continua
-                  texto-fraco, acima). */}
+              {/* texto-forte (mesmo tom do título: slate-800/quase-branco no escuro) no corpo principal do
+                  modal, sem perder a hierarquia com o rótulo da seção (que continua texto-fraco, acima):
+                  texto-padrão (slate-700) ficava claro demais. */}
               <div className="text-sm texto-forte">{secao.conteudo}</div>
             </div>
           ))}

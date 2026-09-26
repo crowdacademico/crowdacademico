@@ -9,10 +9,8 @@ import { ModalAlterarTipoLink, ModalConsultarTipoLink, ModalExcluirTipoLink } fr
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { TipoLinkResponse } from '../../services/9-tipo-link/type/tipo-link.type';
 
-// Aba "Tipos de Link" do painel admin - rota /admin/tipos-link.
-//
-// EM MODAL (14-09-2026, continuação da migração CRUD→Modal pedida pelo
-// Lucas) - mesmo padrão de listar-usuarios.tsx/listar-motivos-denuncia.tsx.
+// Aba "Tipos de Link" do painel admin: rota /admin/tipos-link. Criar/Alterar/Consultar/Excluir em modal, mesmo
+// padrão de listar-usuarios.tsx/listar-motivos-denuncia.tsx.
 export function ListarTiposLink({ auth }: PropsPagina) {
   const {
     criando,
@@ -51,20 +49,13 @@ export function ListarTiposLink({ auth }: PropsPagina) {
             Criar
           </button>
         }
-        // `largura: '9.25rem'` nas 4 booleanas (19-08-2026, pedido do
-        // Lucas: "o exato mesmo espaçamento") - sem isso, cada uma tinha
-        // uma largura diferente (table-layout: auto mede pela palavra do
-        // cabeçalho, e "Atualização"/"Recompensa" são bem mais compridas
-        // que "Perfil"/"Ativo"). 9.25rem é a medida real da mais larga
-        // ("Atualização", ~9.1rem) com uma folga pequena. Os 3 escopos
-        // (CK_TIPO_LINK_ALGUM_ESCOPO - pelo menos 1 sempre TRUE) viram
-        // badge Sim/Não sozinhos, mesmo tratamento que GenericTable já dá
-        // pra qualquer coluna booleana - não precisou de `renderizar`
-        // customizado.
-        // Ordem "id, nome, ..." (25-08-2026, pedido do Lucas: padronizar
-        // com as outras tabelas - código só trocou de lugar com nome,
-        // nenhum dado mudou, mesma mudança já feita em Áreas do
-        // Conhecimento).
+        // `largura: '9.25rem'` nas 4 booleanas (o exato mesmo espaçamento): sem isso, cada uma teria uma
+        // largura diferente (table-layout: auto mede pela palavra do cabeçalho, e "Atualização"/"Recompensa"
+        // são bem mais compridas que "Perfil"/"Ativo"). 9.25rem é a medida real da mais larga ("Atualização",
+        // ~9.1rem) com uma folga pequena. Os 3 escopos (CK_TIPO_LINK_ALGUM_ESCOPO: pelo menos 1 sempre TRUE)
+        // viram badge Sim/Não sozinhos, mesmo tratamento que GenericTable dá a qualquer coluna booleana: não
+        // precisa de `renderizar` customizado.
+        // Ordem "id, nome, ...": padroniza com as outras tabelas (mesmo padrão de Áreas do Conhecimento).
         colunas={[
           { chave: 'idTipolink', rotulo: 'id' },
           { chave: 'nome', rotulo: 'nome' },

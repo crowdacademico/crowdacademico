@@ -17,15 +17,11 @@ interface ModalConsultarCampanhaProps {
   aoFechar: () => void;
 }
 
-// Consultar - migrado de página pra modal (14-09-2026, continuação da
-// migração CRUD→Modal pedida pelo Lucas). Recebe só `idCampanha` (não a
-// linha inteira da listagem) e busca a campanha de novo, de propósito -
-// diferente dos catálogos simples (ver modal-motivo-denuncia.tsx), a linha
-// de `listar-campanhas.tsx` é TRANSFORMADA pra exibição (`status` vira
-// rótulo em português, `metaFinanceira`/`valorBrutoArrecadado` viram
-// string já formatada em R$) - usar a linha direto quebraria o badge de
-// status e formatava moeda em cima de moeda já formatada. `useBuscarPorId`
-// pega o dado cru de verdade, mesmo comportamento exato da página antiga.
+// Consultar em modal. Recebe só `idCampanha` (não a linha inteira da listagem) e busca a campanha de novo, de
+// propósito: diferente dos catálogos simples (ver modal-motivo-denuncia.tsx), a linha de `listar-campanhas.tsx`
+// é TRANSFORMADA para exibição (`status` vira rótulo em português, `metaFinanceira`/`valorBrutoArrecadado`
+// viram string já formatada em R$): usar a linha direto quebraria o badge de status e formataria moeda em cima
+// de moeda já formatada. `useBuscarPorId` pega o dado cru de verdade.
 export function ModalConsultarCampanha({ auth, idCampanha, aoFechar }: ModalConsultarCampanhaProps) {
   const { dado: campanha, carregando, erro } = useBuscarPorId(
     (id) => campanhaApi.buscar(auth.authFetch, id),
@@ -107,8 +103,8 @@ export function ModalConsultarCampanha({ auth, idCampanha, aoFechar }: ModalCons
               <CampoFicha rotulo="Encerrada em" valor={formatarDataHora(campanha.encerradoEm)} />
             </SecaoFicha>
 
-            {/* Escondida quando vazia de propósito (14-09-2026) - rejeição é
-                minoria, mostrar "nenhuma" sempre seria ruído. */}
+            {/* Escondida quando vazia, de propósito: rejeição é minoria, mostrar "nenhuma" sempre seria
+                ruído. */}
             {historicoRejeicao.length > 0 && (
               <SecaoFicha titulo="Histórico de Rejeições">
                 {historicoRejeicao.map((item) => (

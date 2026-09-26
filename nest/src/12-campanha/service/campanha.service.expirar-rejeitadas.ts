@@ -3,14 +3,13 @@ import { Cron } from '@nestjs/schedule';
 import { Pool } from 'pg';
 import { PG_POOL } from '../../commons/database/database.constants';
 
-// Exclui campanhas REJEITADAS cujo prazo de reenvio venceu (21-09-2026, ciclo
-// de rejeição e reenvio, ver REQUISITOS_V7). Cada rejeição dá ao pesquisador
-// `configuracoes.campanha_rejeitada_prazo_dias` (30 dias) pra corrigir e
-// reenviar, contados da ÚLTIMA rejeição. Sem reenvio nesse prazo, a campanha
-// some, e o histórico de rejeições dela permanece (não tem FK pra campanha).
+// Exclui campanhas REJEITADAS cujo prazo de reenvio venceu (ciclo de rejeição e reenvio, ver REQUISITOS_V7).
+// Cada rejeição dá ao pesquisador `configuracoes.campanha_rejeitada_prazo_dias` (30 dias) para corrigir e
+// reenviar, contados da ÚLTIMA rejeição. Sem reenvio nesse prazo, a campanha some, e o histórico de rejeições
+// dela permanece (não tem FK para campanha).
 //
-// Mesmo molde de CampanhaServiceExpirarRascunho (mesma pasta): `PG_POOL`
-// direto porque o job roda fora do pipeline HTTP, função SECURITY DEFINER.
+// Mesmo molde de CampanhaServiceExpirarRascunho (mesma pasta): `PG_POOL` direto porque o job roda fora do
+// pipeline HTTP, função SECURITY DEFINER.
 @Injectable()
 export class CampanhaServiceExpirarRejeitadas {
   private readonly logger = new Logger(CampanhaServiceExpirarRejeitadas.name);

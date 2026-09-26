@@ -2,12 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
 import { SessaoResponse } from '../dto/response/sessao.response';
 
-// Minha Conta > Segurança > Sessões Ativas (09-08-2026, Bloco E do prompt
-// de uma IA - "o item de maior impacto percebido nesta lista
-// inteira"). `sessao` (pol_sessao_all, USING(true)) não filtra por dono na
-// RLS - a autorização de "só as suas sessões" é feita AQUI, no WHERE, não
-// no banco (mesmo raciocínio já documentado em auth.service.refresh.ts).
-// NUNCA aceitar id_usuario vindo de fora - sempre o id de quem está logado.
+// Minha Conta > Segurança > Sessões Ativas. `sessao` (pol_sessao_all, USING(true)) não filtra por dono na RLS:
+// a autorização de "só as suas sessões" é feita AQUI, no WHERE, não no banco (mesmo raciocínio documentado em
+// auth.service.refresh.ts). NUNCA aceitar id_usuario vindo de fora: sempre o id de quem está logado.
 @Injectable()
 export class AuthServiceListarSessoes {
   constructor(private readonly database: DatabaseService) {}

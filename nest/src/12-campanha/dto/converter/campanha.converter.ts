@@ -40,6 +40,7 @@ export class CampanhaConverter {
       reenviosRestantes: null,
       prazoReenvioAte: null,
       somenteLeitura: false,
+      camposBloqueados: [],
     };
   }
 }

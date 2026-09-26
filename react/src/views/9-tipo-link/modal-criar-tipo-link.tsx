@@ -39,8 +39,7 @@ interface ModalCriarTipoLinkProps {
   aoCriado: (tipoCriado: TipoLinkResponse) => void;
 }
 
-// Criar - migrado de página pra modal (14-09-2026, continuação da
-// migração CRUD→Modal pedida pelo Lucas).
+// Criar em modal.
 export function ModalCriarTipoLink({ auth, aoFechar, aoCriado }: ModalCriarTipoLinkProps) {
   const { mostrar } = useToast();
   const { erro, reportarErro, limparErro } = useErroToast();
@@ -55,7 +54,7 @@ export function ModalCriarTipoLink({ auth, aoFechar, aoCriado }: ModalCriarTipoL
 
   const codigoInvalido = codigo.length > 0 && !REGEX_CODIGO_VALIDO.test(codigo);
   const regexInvalida = regex.length > 0 && !regexValida(regex);
-  // aria-describedby (23-09-2026): ver modal-criar-area-conhecimento.tsx.
+  // aria-describedby: ver modal-criar-area-conhecimento.tsx.
   const idMensagemCodigo = useId();
   const idMensagemRegex = useId();
   const idCodigo = useId();

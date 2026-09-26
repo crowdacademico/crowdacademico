@@ -1,12 +1,8 @@
-// Par Cancelar/Ação (Salvar, Criar, Publicar...) que se repetia quase byte a
-// byte em 10 telas de Criar/Alterar (achado numa auditoria pedida pelo
-// Lucas, 14-09-2026, procurando mais candidato a componente compartilhado).
+// Par Cancelar/Ação (Salvar, Criar, Publicar...) que se repetia quase byte a byte em 10 telas de Criar/Alterar.
 //
-// `formulario` (opcional) - só as telas de ALTERAR passam isto: o botão de
-// ação usa o atributo HTML `form="id"` pra submeter um `<form>` que vive
-// FORA deste rodapé (dentro do rodapé sticky de `CartaoFormulario`). Telas
-// de CRIAR não passam - lá o botão já mora dentro do próprio `<form>`, não
-// precisa apontar pra fora.
+// `formulario` (opcional): só as telas de ALTERAR passam isto: o botão de ação usa o atributo HTML `form="id"`
+// para submeter um `<form>` que vive FORA deste rodapé (dentro do rodapé sticky de `CartaoFormulario`). Telas
+// de CRIAR não passam: lá o botão já mora dentro do próprio `<form>`, não precisa apontar para fora.
 interface RodapeFormularioProps {
   aoCancelar: () => void;
   desabilitado: boolean;

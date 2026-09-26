@@ -42,9 +42,8 @@ export class PerfilPesquisadorServiceFindAll {
       query = query.where('tipo_vinculo', '=', filtro.tipoVinculo);
     }
 
-    // SEQUENCIAL, não Promise.all (25-08-2026, mesmo achado de
-    // paginacao.util.ts - uma conexão só por requisição, sem ganho real de
-    // paralelismo e gerando o warning de depreciação do driver `pg`).
+    // SEQUENCIAL, não Promise.all (mesmo motivo de paginacao.util.ts): uma conexão só por requisição, sem ganho
+    // real de paralelismo e gerando o warning de depreciação do driver `pg`.
     const resultado = await paginar(query, {
       pagina: filtro.pagina,
       tamanho: filtro.tamanho,

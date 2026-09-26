@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import type { Request } from 'express';
 
-// GET /usuario/eu/exportar-dados (LGPD Art. 18, item 3 de PROXIMOS_PASSOS.md)
+// GET /usuario/eu/exportar-dados (LGPD Art. 18, RF-016, exportação de dados (LGPD Art. 18))
 // devolve, num pacote só, tudo que existe sobre uma conta - o endereço mais
 // sensível do sistema. Rate limit é obrigatório, não
 // opcional, mas o `ThrottlerGuard` padrão (usado em POST /auth/login/

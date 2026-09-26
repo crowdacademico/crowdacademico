@@ -22,16 +22,11 @@ interface CamposVinculoPerfilProps {
   aoAlterarTituloAcademico: (titulo: TituloAcademico) => void;
 }
 
-// Extraído de views/1-usuario/modal-usuario.tsx (13-09-2026, ao ganhar um
-// 3º consumidor: ModalUpgradePesquisador, o formulário de upgrade de perfil
-// em T1 - Bancada do Pesquisador) - antes vivia só ali, local, porque só
-// tinha 2 consumidores (edição/criação DENTRO do mesmo modal de Usuário).
-// Os 3 campos abaixo (tipo de vínculo, vínculo institucional condicional,
-// título acadêmico) são idênticos nos 3 lugares - só o objeto de estado
-// por trás muda. O rótulo do campo condicional é o único texto que já
-// variava entre os consumidores ("Vínculo institucional" na edição admin,
-// "Instituição" na criação admin/upgrade de perfil) - por isso vem como
-// prop, preservando o texto exato de cada lugar.
+// Os 3 campos abaixo (tipo de vínculo, vínculo institucional condicional, título acadêmico) são idênticos em 3
+// lugares (edição e criação dentro do modal de Usuário, e ModalUpgradePesquisador, o formulário de upgrade de
+// perfil em T1): só o objeto de estado por trás muda. O rótulo do campo condicional é o único texto que varia
+// entre os consumidores ("Vínculo institucional" na edição admin, "Instituição" na criação admin/upgrade de
+// perfil), por isso vem como prop, preservando o texto exato de cada lugar.
 export function CamposVinculoPerfil({
   tipoVinculo,
   vinculoInstitucional,

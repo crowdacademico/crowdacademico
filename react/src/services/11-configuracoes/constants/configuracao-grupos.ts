@@ -1,20 +1,17 @@
-// Agrupamento de configurações por assunto (09-08-2026, Bloco H do prompt
-// de uma IA: Dashboard como painel global) - mesmo espírito da tradução
-// de permissões (permissao-nomes-amigaveis.js): puramente camada de
-// exibição, sem coluna nova no banco. A tabela `configuracoes` crua (28
-// linhas, todas juntas, sem contexto) virou uma lista organizada por tema -
-// um admin não deveria precisar saber o que é "prazo_maximo_campanha_dias"
-// pra entender que aquilo é sobre CAMPANHA.
+// Agrupamento de configurações por assunto: mesmo espírito da tradução de permissões
+// (permissao-nomes-amigaveis.ts), puramente camada de exibição, sem coluna nova no banco. A tabela
+// `configuracoes` crua (todas juntas, sem contexto) vira uma lista organizada por tema: um admin não deveria
+// precisar saber o que é "prazo_maximo_campanha_dias" para entender que aquilo é sobre CAMPANHA.
 //
-// Se uma chave nova nascer sem entrada aqui, cai no grupo "Outras" - nunca
-// quebra a tela, só fica sem organização até alguém lembrar de classificar.
+// Se uma chave nova nascer sem entrada aqui, cai no grupo "Outras": nunca quebra a tela, só fica sem
+// organização até alguém lembrar de classificar.
 export const GRUPO_CONFIGURACAO: Record<string, string> = {
   // Segurança
   limite_tentativas_login: 'Segurança',
   bloqueio_login_minutos: 'Segurança',
   suspensao_usuario_opcoes_dias: 'Segurança',
-  // ADICIONADAS (04-09-2026, pedido do Lucas) - antes eram constantes fixas
-  // em 3-auth/constants/auth.constants.ts.
+  // Validade da sessão/token: configuráveis pelo Painel Admin (não são constantes fixas em
+  // 3-auth/constants/auth.constants.ts).
   refresh_token_dias_validade: 'Segurança',
   verificacao_email_horas_validade: 'Segurança',
   // Financeiro
@@ -45,8 +42,7 @@ export const GRUPO_CONFIGURACAO: Record<string, string> = {
   score_penalidade_abandono: 'Score / Reputação',
   score_penalidade_sem_justificativa: 'Score / Reputação',
   score_frequencia_esperada_mensal: 'Score / Reputação',
-  // Arquivo
-  // limites de upload configuráveis (04-09-2026)
+  // Arquivo: limites de upload configuráveis.
   arquivo_tamanho_minimo_bytes: 'Arquivo',
   arquivo_tamanho_maximo_imagem_bytes: 'Arquivo',
   arquivo_tamanho_maximo_documento_bytes: 'Arquivo',

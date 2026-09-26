@@ -1,16 +1,14 @@
 import { Kysely, sql } from 'kysely';
 import { DB } from '../../commons/database/db.types';
 
-// Seleção comum de listar e consultar campanha (24-09-2026): as colunas da
-// campanha mais o NOME do pesquisador e da área, para o front parar de baixar
-// o catálogo inteiro de usuários e de áreas só para resolver dois nomes.
+// Seleção comum de listar e consultar campanha: as colunas da campanha mais o NOME do pesquisador e da área,
+// para o front não baixar o catálogo inteiro de usuários e de áreas só para resolver dois nomes.
 //
-// - `usuario`/`area_conhecimento` entram por LEFT JOIN: a RLS pode esconder o
-//   usuário (ex.: conta excluída), e a campanha continua aparecendo, só sem o nome.
-// - `precisa_revisao_score`: SINAL para o admin, na fila de aprovação, de que o
-//   pesquisador está abaixo de score_minimo_campanha (fn_precisa_revisao_score,
-//   05 [05-I-1]). Só vem para quem pode aprovar e só para campanha aguardando
-//   aprovação; nos outros casos é null. Nunca bloqueia nada.
+// - `usuario`/`area_conhecimento` entram por LEFT JOIN: a RLS pode esconder o usuário (ex.: conta excluída), e
+// a campanha continua aparecendo, só sem o nome.
+// - `precisa_revisao_score`: SINAL para o admin, na fila de aprovação, de que o pesquisador está abaixo de
+// score_minimo_campanha (fn_precisa_revisao_score, 05 [05-I-1]). Só vem para quem pode aprovar e só para
+// campanha aguardando aprovação; nos outros casos é null. Nunca bloqueia nada.
 export function selecionarCampanhaComNomes(db: Kysely<DB>) {
   return db
     .selectFrom('campanha')

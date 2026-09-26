@@ -1,10 +1,8 @@
 import type { TipoMotivoDenuncia } from '../type/motivo-denuncia.type';
 
-// Espelha o limite físico da coluna `descricao VARCHAR(255)` de
-// `motivo_denuncia` (01_extensoes_enums_tabelas.sql) - não é regra de
-// negócio ajustável (por isso não mora em `configuracoes`), é o tamanho
-// real da coluna no banco. Compartilhado entre Criar e Alterar (13-09-2026,
-// achado do Lucas: antes cada um tinha o número 255 hardcoded).
+// Espelha o limite físico da coluna `descricao VARCHAR(255)` de `motivo_denuncia`
+// (01_extensoes_enums_tabelas.sql): não é regra de negócio ajustável (por isso não mora em `configuracoes`), é
+// o tamanho real da coluna no banco. Compartilhado entre Criar e Alterar.
 export const LIMITE_DESCRICAO_MOTIVO_DENUNCIA = 255;
 
 // Rótulo legível pro `tipo` cru ('campanha' | 'perfil') - compartilhado

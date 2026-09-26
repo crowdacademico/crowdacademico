@@ -1,7 +1,6 @@
-// Espelha nest/src/28-dashboard/dto/response/dashboard.response-summary.ts.
-// `notificacoesPendentes` continua `null` até 26-notificacao ser
-// construído - ver ACHADOS_PARA_DISCUTIR.md, item 6. Campos de campanha/
-// denúncia/arrecadação (12-09-2026) - ver comentário completo no DTO Nest.
+// Espelha nest/src/28-dashboard/dto/response/dashboard.response-summary.ts. `notificacoesPendentes` é `null`
+// até 26-notificacao ser construído. Campos de campanha/denúncia/arrecadação: ver comentário completo no DTO
+// Nest.
 export interface DashboardResponseSummary {
   totalUsuarios: number;
   totalPesquisadores: number;

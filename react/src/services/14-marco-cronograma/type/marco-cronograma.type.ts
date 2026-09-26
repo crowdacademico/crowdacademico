@@ -1,6 +1,5 @@
-// Espelha nest/src/14-marco-cronograma/dto/response/marco-cronograma.response.ts.
-// Extraído (23-09-2026) de dentro de bancada-campanha.tsx, mesmo raciocínio
-// de orcamento-campanha.type.ts (ver lá).
+// Espelha nest/src/14-marco-cronograma/dto/response/marco-cronograma.response.ts, mesmo raciocínio de
+// orcamento-campanha.type.ts (ver lá).
 export interface MarcoCronogramaResponse {
   idMarco: number;
   idCampanha: number;

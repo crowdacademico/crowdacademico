@@ -18,17 +18,13 @@ import type { TermoUsoResponseAtivo } from '../../services/5-termo-uso/type/term
 
 interface ModalUpgradePesquisadorProps {
   auth: Pick<UseAuthReturn, 'authFetch' | 'usuario'>;
-  // Conta que vai virar pesquisadora - pode ser a própria conta logada OU
-  // a de outra pessoa (14-09-2026, pedido do Lucas: o cadeado em T1 -
-  // Bancada do Pesquisador precisa funcionar em qualquer linha, não só na
-  // própria). O Termo de Uso aparece sempre, pra qualquer conta - o aceite
-  // fica registrado em nome DESTE `idUsuarioAlvo`, nunca de quem está
+  // Conta que vai virar pesquisadora: pode ser a própria conta logada OU a de outra pessoa (o cadeado em T1,
+  // Bancada do Pesquisador, precisa funcionar em qualquer linha, não só na própria). O Termo de Uso aparece
+  // sempre, para qualquer conta: o aceite fica registrado em nome DESTE `idUsuarioAlvo`, nunca de quem está
   // preenchendo a tela.
   idUsuarioAlvo: number;
-  // Botão "Gerar CPF válido" (mesmo padrão de ModalAlterarUsuario) -
-  // ausente aqui por padrão, pedido de volta pelo Lucas (14-09-2026: "vai
-  // ser útil por enquanto") - só quem chama de dentro do Campo de Testes
-  // passa isso (bancada-pesquisador.tsx), nunca um consumidor de verdade.
+  // Botão "Gerar CPF válido" (mesmo padrão de ModalAlterarUsuario): ausente por padrão; só quem chama de dentro
+  // do Campo de Testes passa isso (bancada-pesquisador.tsx), nunca um consumidor de verdade.
   gerarCpfDeTeste?: () => string;
   aoFechar: () => void;
   aoConcluido: (perfil: PerfilPesquisadorResponse) => void;
@@ -50,29 +46,20 @@ const FORM_VAZIO: FormUpgrade = {
   tituloAcademico: 'mestre',
 };
 
-// Upgrade de perfil de pesquisador (13-09-2026, pedido do Lucas: cadeado em
-// T1 - Bancada do Pesquisador, mas pensado pra qualquer tela futura que
-// precise do mesmo botão). 2 etapas, SEMPRE do zero - de propósito SEM
-// nenhum estado "já aceitei antes"/"upgrade em progresso" persistido em
-// lugar nenhum (nem localStorage, nem backend): a etapa 1 (termo) é só
-// estado local deste componente, NENHUMA requisição grava aceite até a
-// etapa 2 ser enviada de verdade. Se a pessoa fechar o navegador no meio -
-// depois de aceitar o termo, ou no meio do formulário - absolutamente nada
-// foi gravado; na próxima vez que clicar no cadeado, começa do zero, no
-// termo de novo. Isso evita de propósito qualquer estado travado tipo
-// "upgrade em progresso" - não existe estado parcial pra destravar, porque
-// não existe estado parcial gravado em lugar nenhum.
+// Upgrade de perfil de pesquisador (cadeado em T1, Bancada do Pesquisador, mas pensado para qualquer tela
+// futura que precise do mesmo botão). 2 etapas, SEMPRE do zero: de propósito SEM nenhum estado "já aceitei
+// antes"/"upgrade em progresso" persistido em lugar nenhum (nem localStorage, nem backend): a etapa 1 (termo) é
+// só estado local deste componente, NENHUMA requisição grava aceite até a etapa 2 ser enviada de verdade. Se a
+// pessoa fechar o navegador no meio (depois de aceitar o termo, ou no meio do formulário), absolutamente nada
+// foi gravado; na próxima vez que clicar no cadeado, começa do zero, no termo de novo. Não existe estado
+// parcial para destravar, porque não existe estado parcial gravado em lugar nenhum.
 //
-// SEMPRE a própria conta OU a de outra pessoa (14-09-2026, decisão do Lucas
-// via AskUserQuestion): o Termo de Uso da etapa 1 aparece nos dois casos -
-// quando `idUsuarioAlvo` é outra pessoa, quem está fisicamente clicando é o
-// administrador, mas o aceite é gravado em nome do ALVO (mesma função
-// SECURITY DEFINER `registrar_aceite_termo`, que aceita qualquer
-// id_usuario, não só o da sessão atual). Por baixo, chama `criar` (self)
-// quando o alvo é a própria conta logada, ou `criarParaOutro` (mesmo
-// endpoint que o card "Criar Perfil Pesquisador" de ModalAlterarUsuario já
-// usa) quando é outra - o Nest decide o que gravar a partir do `aceiteTermos`
-// vindo `true` daqui.
+// SEMPRE a própria conta OU a de outra pessoa: o Termo de Uso da etapa 1 aparece nos dois casos; quando
+// `idUsuarioAlvo` é outra pessoa, quem está fisicamente clicando é o administrador, mas o aceite é gravado em
+// nome do ALVO (mesma função SECURITY DEFINER `registrar_aceite_termo`, que aceita qualquer id_usuario, não só
+// o da sessão atual). Por baixo, chama `criar` (self) quando o alvo é a própria conta logada, ou
+// `criarParaOutro` (mesmo endpoint que o card "Criar Perfil Pesquisador" de ModalAlterarUsuario usa) quando é
+// outra: o Nest decide o que gravar a partir do `aceiteTermos` vindo `true` daqui.
 export function ModalUpgradePesquisador({
   auth,
   idUsuarioAlvo,

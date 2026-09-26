@@ -1,28 +1,19 @@
 import { useEffect } from 'react';
 import type { RefObject } from 'react';
 
-// Extraído (13-09-2026, achado de auditoria: 7 ocorrências do MESMO bloco,
-// byte a byte, em 6 arquivos diferentes - sino-atividade.tsx, menu-usuario.
-// tsx, generic-table.tsx, bancada-pesquisador.tsx, bancada-campanha.tsx
-// (2x, facet "Status" + combobox de pesquisador), vida-campanha-ativa.tsx)
-// - dropdown/faceta/combobox que fecha ao clicar fora dele. Mesmo padrão em
-// todos: listener de `mousedown` no documento (não `click`, pra fechar
-// ANTES do próximo clique completar - ver histórico do achado original em
-// generic-table.tsx), comparando o alvo do clique com um container via
-// `ref.contains()`, sem depender de foco (funciona clicando em qualquer
-// coisa não-focável também, ex.: texto dentro de um <label>).
+// Dropdown/faceta/combobox que fecha ao clicar fora dele (usado por sino-atividade.tsx, menu-usuario.tsx,
+// generic-table.tsx, bancada-pesquisador.tsx, bancada-campanha.tsx, vida-campanha-ativa.tsx). Mesmo padrão em
+// todos: listener de `mousedown` no documento (não `click`, para fechar ANTES do próximo clique completar),
+// comparando o alvo do clique com um container via `ref.contains()`, sem depender de foco (funciona clicando em
+// qualquer coisa não-focável também, ex.: texto dentro de um <label>).
 //
-// `aberto`/`aoFechar` genéricos de propósito - não é sempre um `boolean`
-// (GenericTable usa uma CHAVE de faceta, `string | null`, não um booleano
-// - o chamador decide a condição `aberto` e a ação `aoFechar` de acordo
-// com o próprio estado, o hook não precisa saber a forma exata).
+// `aberto`/`aoFechar` genéricos de propósito: não é sempre um `boolean` (GenericTable usa uma CHAVE de faceta,
+// `string | null`, não um booleano); o chamador decide a condição `aberto` e a ação `aoFechar` de acordo com o
+// próprio estado, o hook não precisa saber a forma exata.
 //
-// Deps do efeito são só `[aberto]`, de propósito - mesmo comportamento dos
-// 7 originais, que nunca reagiam a mudança de referência de `ref`/callback
-// de fechar (sempre um `useRef`/`setState` estáveis nos 7 casos reais).
-// Um `aoFechar` recriado a cada render (ex.: `() => setX(false)` inline)
-// não recria a inscrição do listener a cada render - só quando `aberto`
-// muda de verdade, igual sempre foi.
+// Deps do efeito são só `[aberto]`, de propósito: `ref`/callback de fechar são sempre um `useRef`/`setState`
+// estáveis nos casos reais. Um `aoFechar` recriado a cada render (ex.: `() => setX(false)` inline) não recria a
+// inscrição do listener a cada render, só quando `aberto` muda de verdade.
 export function useFecharAoClicarFora(
   ref: RefObject<HTMLElement | null>,
   aberto: boolean,

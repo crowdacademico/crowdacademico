@@ -1,28 +1,30 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { sql } from 'kysely';
 import { DatabaseService } from '../../commons/database/database.service';
+import { AutorizacaoService } from '../../commons/seguranca/autorizacao.service';
 import { UsuarioResponseSuspend } from '../dto/response/usuario.response-suspend';
 
-// suspender_usuario/revogar_suspensao_usuario (03_funcoes_seguranca.sql,
-// [03-N], 09-08-2026, Bloco G do prompt de uma IA) - mesmo padrão de
-// UsuarioServiceDesbloquear: SECURITY DEFINER que já exige a permissão
-// internamente (não RLS), erro do Postgres vira ForbiddenException aqui.
-// "Reduzir a pena" não é um método à parte - é chamar `suspender` de novo
-// com uma data mais próxima (a função já sobrescreve).
+// suspender_usuario/revogar_suspensao_usuario (03_funcoes_seguranca.sql, [03-N]): mesmo padrão de
+// UsuarioServiceDesbloquear (SECURITY DEFINER que já exige a permissão internamente, não RLS); erro do Postgres
+// vira ForbiddenException aqui. "Reduzir a pena" não é um método à parte: é chamar `suspender` de novo com uma
+// data mais próxima (a função já sobrescreve).
 @Injectable()
 export class UsuarioServiceSuspender {
-  constructor(private readonly database: DatabaseService) {}
+  constructor(
+    private readonly database: DatabaseService,
+    private readonly autorizacao: AutorizacaoService,
+  ) {}
 
-  // SAVEPOINT (09-08-2026) - buscarSuspensao roda AUTOMATICAMENTE ao abrir
-  // Alterar Usuário (SecaoModeracao), não é uma ação explícita da pessoa -
-  // sem essa proteção, a tela inteira de Alterar Usuário ficava dependente
-  // das colunas suspenso_ate/motivo_suspensao/suspenso_por existirem
-  // (Bloco G só existe de verdade depois da migração no SQL Editor, ver
-  // PENDENCIAS e correcoes.md item 22). Confirmado ao vivo (09-08-2026):
-  // sem isso, este endpoint sozinho já derrubava com 500 (o frontend tinha
-  // um .catch() cobrindo isso, mas o endpoint em si devia responder certo,
-  // não depender só do cliente engolir o erro).
+  // SAVEPOINT: buscarSuspensao roda AUTOMATICAMENTE ao abrir Alterar Usuário (SecaoModeracao), não é uma ação
+  // explícita da pessoa; sem essa proteção, a tela inteira dependeria das colunas
+  // suspenso_ate/motivo_suspensao/suspenso_por existirem no banco, e o endpoint sozinho derrubaria com 500 (o
+  // endpoint deve responder certo, não depender de o cliente engolir o erro).
   async buscarSuspensao(idUsuario: number): Promise<UsuarioResponseSuspend> {
+    await this.autorizacao.exigirProprioOuPermissao(
+      idUsuario,
+      'usuario_suspender',
+      'Você só pode ver a suspensão da sua própria conta.',
+    );
     const db = this.database.getDb();
     await sql`SAVEPOINT sp_buscar_suspensao_usuario`.execute(db);
     try {

@@ -9,21 +9,16 @@ import { DashboardSaude } from './dashboard-saude';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { DashboardResponseSummary } from '../../services/admin/type/dashboard.type';
 
-// Texto do tooltip de "sessões ativas" (10-08-2026, pedido do Lucas) -
-// exportado porque a aba Saúde (dashboard-saude.tsx) mostra a MESMA
-// métrica e precisa do MESMO texto, não uma 2ª cópia que poderia divergir.
-// "Sessões ativas agora" sugere gente online neste instante, mas
-// `contar_metricas_dashboard()` conta sessão não-revogada dentro da
-// validade de 30 dias (REFRESH_TOKEN_DIAS_VALIDADE) - sobe rápido em
-// ambiente de teste, sem ninguém "online" de verdade.
+// Texto do tooltip de "sessões ativas": exportado porque a aba Saúde (dashboard-saude.tsx) mostra a MESMA
+// métrica e precisa do MESMO texto, não uma 2ª cópia que poderia divergir. "Sessões ativas agora" sugere gente
+// online neste instante, mas `contar_metricas_dashboard()` conta sessão não-revogada dentro da validade de 30
+// dias (REFRESH_TOKEN_DIAS_VALIDADE): sobe rápido em ambiente de teste, sem ninguém "online" de verdade.
 export const TEXTO_TOOLTIP_SESSOES_ATIVAS =
   'Contagem de sessões não-revogadas em 30 dias, não gente online.';
 
-// Abas (09-08-2026, Bloco H do prompt de uma IA: Dashboard como painel
-// global) - cuidado explícito de uma IA contra virar "tela onde tudo
-// cabe": estrutura em abas em vez de empilhar seção atrás de seção. "Visão
-// Geral" é o que já existia (cards + prévia de notificações); as outras 3
-// são novas.
+// Abas: estrutura em abas em vez de empilhar seção atrás de seção (para o Dashboard não virar uma "tela onde
+// tudo cabe"). "Visão Geral" tem os cards + prévia de notificações; as outras 3 (Regras do Negócio, Identidade
+// Visual, Saúde) são visões do painel global.
 type AbaChave = 'visao-geral' | 'regras' | 'identidade' | 'saude';
 
 const ABAS: { chave: AbaChave; rotulo: string; icone: string }[] = [
@@ -33,13 +28,10 @@ const ABAS: { chave: AbaChave; rotulo: string; icone: string }[] = [
   { chave: 'saude', rotulo: 'Saúde', icone: 'fa-heart-pulse' },
 ];
 
-// Card de total (item "a" do pedido do Lucas, 08-08-2026): só rótulo
-// pequeno em cinza maiúsculo + número grande, sem ícone/fundo colorido -
-// é assim que o Experiment.com mostra número, cor vira acento raro, não
-// preenchimento. `valor === null` = módulo ainda não existe (hoje só
-// notificação) - mostra "-" em vez de esconder o card ou fingir que é 0.
-// Borda ERA slate-200 (pedido original) - escurecida pro slate-300 a
-// pedido do Lucas (09-08-2026), mesmo tom já usado nas bordas de tabela.
+// Card de total: só rótulo pequeno em cinza maiúsculo + número grande, sem ícone/fundo colorido: é assim que o
+// Experiment.com mostra número, cor vira acento raro, não preenchimento. `valor === null` = módulo ainda não
+// existe (hoje só notificação): mostra "-" em vez de esconder o card ou fingir que é 0. Borda slate-300, o
+// mesmo tom das bordas de tabela.
 interface CardMetricaProps {
   rotulo: string;
   valor: number | string | null;
@@ -47,7 +39,7 @@ interface CardMetricaProps {
 
 function CardMetrica({ rotulo, valor }: CardMetricaProps) {
   return (
-    <div className="fundo-cartao border borda-forte rounded-xl shadow-sm p-5">
+    <div className="fundo-cartao border borda-forte rounded-xl shadow-sm p-5 min-w-0 break-words">
       <div className="rotulo-leitura mb-1">
         {rotulo}
       </div>
@@ -62,14 +54,10 @@ function CardMetrica({ rotulo, valor }: CardMetricaProps) {
   );
 }
 
-// Bolinha de status de conexão (12-09-2026, achado numa auditoria de
-// duplicação) - a Visão Geral (abaixo) e a aba Saúde (`dashboard-saude.tsx`)
-// mostravam a MESMA bolinha, com a MESMA lógica de 3 estados copiada -
-// exportado daqui e importado lá, mesmo padrão já usado por
-// `TEXTO_TOOLTIP_SESSOES_ATIVAS` acima. Cor vem de `.ponto-status--*`
-// (1-cores.css), reaproveitando os mesmos tokens de status dos badges -
-// antes era `bg-slate-300`/`bg-emerald-500`/`bg-red-500` crus do Tailwind,
-// sem se adaptar ao tema escuro.
+// Bolinha de status de conexão: a Visão Geral (abaixo) e a aba Saúde (`dashboard-saude.tsx`) mostram a MESMA
+// bolinha, com a MESMA lógica de 3 estados: exportado daqui e importado lá, mesmo padrão de
+// `TEXTO_TOOLTIP_SESSOES_ATIVAS` acima. Cor vem de `.ponto-status--*` (1-cores.css), reaproveitando os mesmos
+// tokens de status dos badges (se adapta ao tema escuro).
 export function PontoStatusConexao({ valor }: { valor: boolean | null }) {
   return (
     <span
@@ -81,15 +69,12 @@ export function PontoStatusConexao({ valor }: { valor: boolean | null }) {
   );
 }
 
-// Tela inicial do painel admin (/admin/dashboard) - pedido do Lucas,
-// 08-08-2026: uma visão geral antes de cair direto em "Usuários".
+// Tela inicial do painel admin (/admin/dashboard): uma visão geral antes de cair direto em "Usuários".
 //
-// A faixa de saúde e os cards de total vêm de DUAS requisições
-// INDEPENDENTES (não um Promise.all combinado) - achado do Lucas testando:
-// se GET /dashboard/resumo falhasse (ex.: banco fora do ar), a tela
-// inteira ficava em branco, exatamente no momento em que ela mais
-// precisava mostrar "banco sem conexão". Agora cada uma tem seu próprio
-// estado de carregando/erro, e a faixa de saúde sempre aparece.
+// A faixa de saúde e os cards de total vêm de DUAS requisições INDEPENDENTES (não um Promise.all combinado): se
+// GET /dashboard/resumo falhasse (ex.: banco fora do ar), a tela inteira ficaria em branco, exatamente no
+// momento em que ela mais precisa mostrar "banco sem conexão". Cada uma tem seu próprio estado de
+// carregando/erro, e a faixa de saúde sempre aparece.
 interface DashboardProps {
   auth: UseAuthReturn;
 }
@@ -101,8 +86,8 @@ export function Dashboard({ auth }: DashboardProps) {
   const [abaAtiva, setAbaAtiva] = useState<AbaChave>('visao-geral');
   const { erro, reportarErro } = useErroToast();
 
-  // Espera a sessão ser restaurada (F5): sem isso o 1º pedido saía sem token e voltava 401 (mesmo conserto
-  // de T2/T3, 24-09-2026).
+  // Espera a sessão ser restaurada (F5): sem isso o 1º pedido saía sem token e voltava 401 (mesmo conserto de
+  // T2/T3).
   useEffect(() => {
     if (auth.carregando) {
       return;
@@ -124,13 +109,10 @@ export function Dashboard({ auth }: DashboardProps) {
   }, []);
 
   return (
-    // pt-6 + letreiro maior (09-08-2026, pedido do Lucas: "está quase
-    // encostando no cabeçalho do site... pode descer tudo"). As outras
-    // abas (Usuários/Papéis/Configurações) não sentem esse aperto porque
-    // o conteúdo delas já nasce dentro de .admin-content-painel (padding
-    // de 2rem) - o título do Dashboard fica FORA de qualquer painel, só
-    // com o padding do .admin-content-area (1.5rem), por isso ganha um
-    // respiro extra só aqui.
+    // pt-6 + letreiro maior: o título do Dashboard fica FORA de qualquer painel, só com o padding do
+    // .admin-content-area (1.5rem), então quase encostaria no cabeçalho do site; as outras abas
+    // (Usuários/Papéis/Configurações) não sentem esse aperto porque o conteúdo delas já nasce dentro de
+    // .admin-content-painel (padding de 2rem). Por isso ganha um respiro extra só aqui.
     <div className="space-y-6 pt-6">
       <h2 className="text-3xl font-serif font-bold texto-forte">Dashboard</h2>
 
@@ -201,12 +183,9 @@ export function Dashboard({ auth }: DashboardProps) {
                 <CardMetrica rotulo="Arrecadado (total)" valor={formatarMoeda(resumo.valorTotalArrecadado)} />
               </div>
 
-              {/* Campanhas por status (RF-084) - achado numa auditoria
-                  (12-09-2026): o requisito pede essa quebra, só existia o
-                  total sem distinção. "Fila com score baixo" (24-09-2026) é a
-                  5ª parte do RF-084: campanha aguardando aprovação cujo
-                  pesquisador está abaixo do score mínimo, só um sinal para
-                  revisar com mais cuidado. */}
+              {/* Campanhas por status (RF-084): o requisito pede essa quebra, não só o total. "Fila com
+                  score baixo" é a 5ª parte do RF-084: campanha aguardando aprovação cujo pesquisador está
+                  abaixo do score mínimo, só um sinal para revisar com mais cuidado. */}
               <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 <CardMetrica rotulo="Campanhas ativas" valor={resumo.campanhasAtivas} />
                 <CardMetrica rotulo="Campanhas com sucesso" valor={resumo.campanhasSucesso} />
@@ -217,11 +196,9 @@ export function Dashboard({ auth }: DashboardProps) {
             </>
           )}
 
-          {/* (c) Prévia - NOTIFICAÇÕES, não log de auditoria (correção do
-              Lucas, 08-08-2026: log de auditoria já tem painel próprio, "Ver
-              log", embaixo de cada tabela). Módulo 26-notificacao ainda não
-              existe (nem tabela mapeada no Kysely, nem controller) - mostra
-              isso honestamente em vez de inventar dado. */}
+          {/* (c) Prévia: NOTIFICAÇÕES, não log de auditoria (log de auditoria já tem painel próprio, "Ver
+              log", embaixo de cada tabela). Módulo 26-notificacao ainda não existe (nem tabela mapeada no
+              Kysely, nem controller): mostra isso honestamente em vez de inventar dado. */}
           <div className="fundo-cartao border borda-forte rounded-xl shadow-sm p-5">
             <h3 className="subtitulo mb-2">Notificações</h3>
             <p className="text-sm texto-fraco">

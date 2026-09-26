@@ -8,16 +8,13 @@ import type {
   UsuarioPapelResponse,
 } from '../type/papel-permissao.type';
 
-// Espelha 2-papel-permissao (nest): papel/permissao continuam só leitura
-// (catálogo gerenciado via seed/migração direta, de propósito - criar
-// papel/permissão nova é decisão maior, fora de escopo aqui).
-// papel_permissao ganhou atribuir/remover (03-08-2026) - a matriz Papel ×
-// Permissão virou editável pra admin, mesmo padrão de usuarioPapelApi.
+// Espelha 2-papel-permissao (nest): papel/permissao são só leitura (catálogo gerenciado via seed/migração
+// direta, de propósito: criar papel/permissão nova é decisão maior, fora de escopo aqui). papel_permissao tem
+// atribuir/remover: a matriz Papel × Permissão é editável pelo admin, mesmo padrão de usuarioPapelApi.
 export const papelApi = {
   listar: (authFetch: AuthFetch): Promise<PapelResponse[]> =>
     authFetch('/papel').then(tratarResposta<PapelResponse[]>),
-  // Só `nome` é aceito (03-08-2026) - o `codigo` estável que o RBAC lê
-  // nunca é exposto nem editável por aqui, de propósito.
+  // Só `nome` é aceito: o `codigo` estável que o RBAC lê nunca é exposto nem editável por aqui, de propósito.
   atualizar: (
     authFetch: AuthFetch,
     idPapel: number | string,
@@ -37,16 +34,10 @@ export const permissaoApi = {
 export const papelPermissaoApi = {
   listar: (authFetch: AuthFetch): Promise<PapelPermissaoResponse[]> =>
     authFetch('/papel-permissao').then(tratarResposta<PapelPermissaoResponse[]>),
-  // CORRIGIDO (07-09-2026, achado auditando os `undefined as T` de
-  // tratarResposta<T> não-void): o controller Nest (POST /papel-permissao)
-  // devolve o corpo cru de PapelPermissaoServiceCreate.executar(), que é
-  // `Promise<void>` de verdade (só faz o INSERT, sem SELECT de volta) -
-  // sem `@HttpCode`, então o Nest manda 201 com corpo vazio. O tipo daqui
-  // dizia `Promise<PapelPermissaoResponse>`, mas sempre resolvia
-  // `undefined` (via `tratarResposta`). Sem efeito prático até agora - os
-  // 2 pontos de chamada (matriz-papel-permissao.tsx) só fazem `await`,
-  // nunca leem o valor - mas o tipo estava mentindo. Corrigido pra bater
-  // com o corpo real, não com o que a resposta HTTP realmente devolve.
+  // O tipo de retorno é `Promise<void>`: o controller Nest (POST /papel-permissao) devolve o corpo cru de
+  // PapelPermissaoServiceCreate.executar(), que é `Promise<void>` de verdade (só faz o INSERT, sem SELECT de
+  // volta), sem `@HttpCode`, então o Nest manda 201 com corpo vazio. Os 2 pontos de chamada
+  // (matriz-papel-permissao.tsx) só fazem `await`, nunca leem o valor.
   atribuir: (
     authFetch: AuthFetch,
     idPapel: number | string,
@@ -70,11 +61,9 @@ export const usuarioPapelApi = {
     authFetch('/usuario-papel').then(tratarResposta<UsuarioPapelResponse[]>),
   listarPorUsuario: (authFetch: AuthFetch, idUsuario: number | string): Promise<UsuarioPapelResponse[]> =>
     authFetch(`/usuario-papel/${idUsuario}`).then(tratarResposta<UsuarioPapelResponse[]>),
-  // CORRIGIDO (07-09-2026) - mesmo achado de papelPermissaoApi.atribuir,
-  // acima: UsuarioPapelServiceCreate.executar() também é `Promise<void>`
-  // de verdade (só INSERT, sem SELECT de volta), controller sem
-  // `@HttpCode`, 201 com corpo vazio. Único ponto de chamada
-  // (modal-usuario.tsx, ModalAlterarUsuario) só faz `await`, nunca lê o valor.
+  // Mesmo caso de papelPermissaoApi.atribuir, acima: UsuarioPapelServiceCreate.executar() também é
+  // `Promise<void>` de verdade (só INSERT, sem SELECT de volta), controller sem `@HttpCode`, 201 com corpo
+  // vazio. Único ponto de chamada (modal-usuario.tsx, ModalAlterarUsuario) só faz `await`, nunca lê o valor.
   atribuir: (
     authFetch: AuthFetch,
     idUsuario: number | string,
@@ -88,9 +77,8 @@ export const usuarioPapelApi = {
     authFetch(`/usuario-papel/${idUsuario}/${idPapel}`, {
       method: 'DELETE',
     }).then(tratarResposta<void>),
-  // Suspender/revogar UM papel por um tempo (09-08-2026, Bloco G) - em vez
-  // de remover o vínculo: preserva quando foi atribuído, volta sozinho no
-  // prazo. `ate` é ISO string.
+  // Suspender/revogar UM papel por um tempo, em vez de remover o vínculo: preserva quando foi atribuído, volta
+  // sozinho no prazo. `ate` é ISO string.
   suspender: (
     authFetch: AuthFetch,
     idUsuario: number | string,

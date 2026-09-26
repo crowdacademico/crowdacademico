@@ -24,20 +24,14 @@ interface UsuarioLinha extends UsuarioResponse {
 // padrão aparecem na coluna; sem nenhum, mostra PAPEL_SEM_EXTRA.
 const PAPEL_PADRAO = 'usuario';
 
-// Aba "Usuários" do painel admin - vive na rota /admin/usuarios (ver
-// services/router/rotas.constants.ts, ROTAS_ADMIN). Renderizada dentro do
-// <Outlet/> de views/admin/admin-layout.tsx (sidebar + área de conteúdo já
+// Aba "Usuários" do painel admin: vive na rota /admin/usuarios (ver services/router/rotas.constants.ts,
+// ROTAS_ADMIN). Renderizada dentro do <Outlet/> de views/admin/admin-layout.tsx (sidebar + área de conteúdo já
 // prontos por fora, esta view só cuida do próprio conteúdo).
 //
-// EM MODAL (13-09-2026, pedido do Lucas: "apagar as telas do CRUD de
-// Usuário, fazer a completa migração do Modal") - Criar/Alterar/Consultar/
-// Excluir deixaram de ser páginas próprias (`/admin/usuarios/:id/alterar`
-// etc., removidas de rotas.constants.ts) e viraram os modais de
-// `modal-usuario.tsx`/`modal-criar-usuario.tsx` - os MESMOS componentes
-// que a Bancada do Pesquisador (Campo de Testes) usa, sem duplicar nada.
-// A migração CRUD→Modal terminou em 14-09-2026 pra TODOS os módulos - a
-// prop `acoes` do `GenericTable` hoje só existe nesse formato (handler por
-// chave, ver comentário da prop em generic-table.tsx).
+// Criar/Alterar/Consultar/Excluir são MODAIS (`modal-usuario.tsx`/`modal-criar-usuario.tsx`), não páginas
+// próprias: os MESMOS componentes que a Bancada do Pesquisador (Campo de Testes) usa, sem duplicar nada. A prop
+// `acoes` do `GenericTable` só existe nesse formato (handler por chave, ver comentário da prop em
+// generic-table.tsx).
 export function ListarUsuarios({ auth }: PropsPagina) {
   const {
     criando,
@@ -54,16 +48,13 @@ export function ListarUsuarios({ auth }: PropsPagina) {
     acoesCompletas,
   } = useCrudModais<UsuarioLinha>();
 
-  // useCallback aqui não é sobre performance - é porque GenericTable usa a
-  // função em `useEffect([listar])`; sem isso, cada render criaria uma
-  // função nova e recarregaria a tabela em loop.
+  // useCallback aqui não é sobre performance: é porque GenericTable usa a função em `useEffect([listar])`; sem
+  // isso, cada render criaria uma função nova e recarregaria a tabela em loop.
   //
-  // Coluna "papel" (03-08-2026, pedido do Lucas) - busca a lista de
-  // usuários e o vínculo usuário↔papel de TODOS de uma vez (1 requisição
-  // cada, não 1-por-linha), e junta os dois no navegador antes de devolver
-  // pro GenericTable. `usuarioPapelApi.listarTudo` tem `.catch(() => [])`
-  // de propósito: se falhar por qualquer motivo, a tabela continua
-  // funcionando, só sem a coluna de papel preenchida.
+  // Coluna "papel": busca a lista de usuários e o vínculo usuário↔papel de TODOS de uma vez (1 requisição cada,
+  // não 1-por-linha), e junta os dois no navegador antes de devolver para o GenericTable.
+  // `usuarioPapelApi.listarTudo` tem `.catch(() => [])` de propósito: se falhar por qualquer motivo, a tabela
+  // continua funcionando, só sem a coluna de papel preenchida.
   const listarUsuarios = useCallback(async (): Promise<UsuarioLinha[]> => {
     const [usuarios, vinculos] = await Promise.all([
       usuarioApi.listar(auth.authFetch),
@@ -112,21 +103,16 @@ export function ListarUsuarios({ auth }: PropsPagina) {
         chavePrimaria="idUsuario"
         listar={listarUsuarios}
         acoes={acoesCompletas}
-        // Botão de filtro por papel (09-08-2026, pedido do Lucas), na mesma
-        // linha do filtro de texto, padrão "Todos" (nenhum papel marcado),
-        // marcar um ou mais esconde o resto. Opções vêm sozinhas dos
-        // valores que já aparecem na coluna "papel" (ver GenericTable);
-        // `ordem` só reordena (menor pro maior poder), não filtra nada.
-        // Array de 1 elemento (a API é genérica pra 1+ facetas lado a
-        // lado, ver GenericTable e a tabela Permissões).
+        // Botão de filtro por papel, na mesma linha do filtro de texto, padrão "Todos" (nenhum papel marcado);
+        // marcar um ou mais esconde o resto. Opções vêm sozinhas dos valores que já aparecem na coluna "papel"
+        // (ver GenericTable); `ordem` só reordena (menor para o maior poder), não filtra nada. Array de 1
+        // elemento (a API é genérica para 1+ facetas lado a lado, ver GenericTable e a tabela Permissões).
         filtrosFacetados={[{ chave: 'papel', rotulo: 'Papel', ordem: ORDEM_PODER_PAPEL }]}
       />
 
-      {/* "De"/"Para" (09-08-2026, pedido do Lucas depois de ver isso em
-          Papéis) - "nome" é o único campo de texto editável de usuario que
-          faz sentido rastrear assim (senha nunca entra no log, ver
-          fn_log_auditoria() [strip de senha_hash]; e-mail não é editável
-          pelo painel). */}
+      {/* "De"/"Para": "nome" é o único campo de texto editável de usuario que faz sentido rastrear assim
+          (senha nunca entra no log, ver fn_log_auditoria() [strip de senha_hash]; e-mail não é editável pelo
+          painel). */}
       <BlocoLogAuditoria buscar={buscarLogUsuario} campoRenomeio="nome" />
 
       {criando && (

@@ -40,7 +40,7 @@ Essencialmente o esqueleto padrão que o `nest new` gera, mas hoje já com as me
 
 **Camada 1 - lint de forma.** O ESLint "básico" (`js.configs.recommended`, e o `tseslint.configs.recommended` sem checagem de tipo) olha só a sintaxe: variável não usada, import faltando, hook do React chamado condicionalmente. Não sabe o que cada valor É, só como o código está escrito. Isto sempre esteve ligado no projeto.
 
-**Camada 2 - lint ciente de tipo.** Ligada em 07-09-2026, depois que a migração de `react/` inteiro pra TypeScript terminou (ver `ACHADOS_PARA_DISCUTIR.md`, item 13, e a memória da migração). Essa camada enxerga o que cada valor REALMENTE é - "isto aqui é sempre uma Promise", "este campo nunca pode ser `null`" - e por isso encontra uma categoria de erro que a Camada 1 não vê: código que só existe por incerteza de tipo (uma sobra do tempo em que o compilador não conseguia provar algo), ou uma chamada assíncrona cujo tratamento de erro foi esquecido.
+**Camada 2 - lint ciente de tipo.** Ligada em 07-09-2026, depois que a migração de `react/` inteiro pra TypeScript terminou (ver `HISTORICO_ACHADOS_PARA_DISCUTIR.md`, item 13, e a memória da migração). Essa camada enxerga o que cada valor REALMENTE é - "isto aqui é sempre uma Promise", "este campo nunca pode ser `null`" - e por isso encontra uma categoria de erro que a Camada 1 não vê: código que só existe por incerteza de tipo (uma sobra do tempo em que o compilador não conseguia provar algo), ou uma chamada assíncrona cujo tratamento de erro foi esquecido.
 
 Tecnicamente, a Camada 2 exige `parserOptions.projectService` apontando pro `tsconfig.json` - é isso que dá ao ESLint acesso ao mesmo motor de tipos do próprio `tsc`, não só ao texto do arquivo.
 
@@ -67,7 +67,7 @@ Todas as regras da Camada 2 testadas até hoje acabaram adotadas - não sobrou n
 | `@typescript-eslint/no-unsafe-argument` | tipo | 08-09-2026 | `configuracoes-provider.tsx` - `.catch()` ganhou `instanceof Error` antes de guardar no estado, mesmo padrão de narrowing já usado no resto do projeto. |
 | `@typescript-eslint/no-unnecessary-condition` | tipo | 12-09-2026 | As 57 ocorrências (cresceram de 41 pra 57 entre 07 e 12-09, com o trabalho novo em Campo de Testes) foram conferidas uma a uma contra o DTO Nest/tipo real correspondente - ver seção própria abaixo. |
 
-Detalhamento completo do achado original (arquivo, linha, e o raciocínio de cada classificação) em `ACHADOS_PARA_DISCUTIR.md`, item 14.
+Detalhamento completo do achado original (arquivo, linha, e o raciocínio de cada classificação) em `HISTORICO_ACHADOS_PARA_DISCUTIR.md`, item 14.
 
 ---
 
@@ -95,7 +95,7 @@ Verificado ao final: `eslint .` (0 ocorrências da regra, 0 erros/avisos no tota
 
 ## `no-unnecessary-condition` no `nest/` - as 22 ocorrências, uma a uma (14-09-2026)
 
-Tentativa anterior (12-09-2026, `ACHADOS_PARA_DISCUTIR.md` item 18) tinha esgotado memória rodando `no-unnecessary-condition` contra `nest/src` inteiro de uma vez, sem nunca ser retomada. A causa real não era falta de RAM na máquina (32GB, a maior parte livre) - era o limite padrão de heap do V8/Node. Rodando de novo com `NODE_OPTIONS=--max-old-space-size=8192`, o `eslint src` completo terminou em segundos, achando só **22 ocorrências em 10 arquivos** (bem menos que as 57 do `react/`, porque o `nest/` tem menos módulos implementados hoje). Cada uma conferida contra o tipo real (Kysely) ou a real amplitude do valor `unknown` antes de decidir - nunca só apagada por confiar no lint.
+Tentativa anterior (12-09-2026, `HISTORICO_ACHADOS_PARA_DISCUTIR.md` item 18) tinha esgotado memória rodando `no-unnecessary-condition` contra `nest/src` inteiro de uma vez, sem nunca ser retomada. A causa real não era falta de RAM na máquina (32GB, a maior parte livre) - era o limite padrão de heap do V8/Node. Rodando de novo com `NODE_OPTIONS=--max-old-space-size=8192`, o `eslint src` completo terminou em segundos, achando só **22 ocorrências em 10 arquivos** (bem menos que as 57 do `react/`, porque o `nest/` tem menos módulos implementados hoje). Cada uma conferida contra o tipo real (Kysely) ou a real amplitude do valor `unknown` antes de decidir - nunca só apagada por confiar no lint.
 
 **Grupo 1 - código morto de verdade, provado pelo tipo do Kysely, removido (14 ocorrências, 7 sites).** Padrão idêntico nos 7 arquivos (`motivo-denuncia`, `configuracao`, `papel-permissao`, `usuario-papel`, `area-conhecimento`, `tipo-link`, `termo-uso` - todos os `*.service.remove.ts`/`*.service.excluir.ts` que fazem `db.deleteFrom(...).executeTakeFirst()`): `(resultado?.numDeletedRows ?? 0n) === 0n`. O tipo do próprio Kysely prova que é sempre morto - `SimplifySingleResult<O>` (`kysely/dist/util/type-utils.d.ts`) devolve `O` puro, nunca `O | undefined`, quando `O` é `InsertResult | UpdateResult | DeleteResult | MergeResult` (Postgres sempre sintetiza um resultado de comando pra essas operações, mesmo com 0 linhas afetadas - diferente de um `SELECT`, que pode legitimamente não achar nada). Simplificado pra `resultado.numDeletedRows === 0n` nos 7 arquivos, cada um com um comentário curto explicando o motivo (referenciando o primeiro, `motivo-denuncia.service.remove.ts`, pra não repetir o parágrafo inteiro 7 vezes).
 

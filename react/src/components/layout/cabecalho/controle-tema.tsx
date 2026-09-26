@@ -24,23 +24,15 @@ function lerTemaSalvo(): Tema {
   return ehTema(salvo) ? salvo : 'claro';
 }
 
-// Botão de tema no cabeçalho (09-08-2026, Bloco A do prompt de uma IA
-// sobre dark mode) - mesmo padrão do ControleFonte: useState(lerTemaSalvo)
-// como inicializador preguiçoso (evita flash do tema errado no primeiro
-// render) + useEffect que aplica e persiste. A diferença é ONDE aplica:
-// data-tema-efetivo é um ATRIBUTO em <html>, não uma custom property - 1-cores.css
-// tem 2 blocos de tokens (:root = claro, :root[data-tema-efetivo='escuro']) que
-// reagem a esse atributo sozinhos, nenhum componente além deste precisa saber
-// que o tema mudou. "sistema" é resolvido AQUI (matchMedia) para claro ou escuro,
-// e acompanha a mudança do sistema operacional; o CSS não conhece "sistema".
-// Ciclo claro → escuro → sistema → claro (pedido explícito do Lucas).
+// Botão de tema no cabeçalho: mesmo padrão do ControleFonte (useState(lerTemaSalvo) como inicializador
+// preguiçoso, que evita flash do tema errado no primeiro render, + useEffect que aplica e persiste). A
+// diferença é ONDE aplica: data-tema-efetivo é um ATRIBUTO em <html>, não uma custom property: 1-cores.css tem
+// 2 blocos de tokens (:root = claro, :root[data-tema-efetivo='escuro']) que reagem a esse atributo sozinhos, e
+// nenhum componente além deste precisa saber que o tema mudou. "sistema" é resolvido AQUI (matchMedia) para
+// claro ou escuro, e acompanha a mudança do sistema operacional; o CSS não conhece "sistema". Ciclo claro →
+// escuro → sistema → claro.
 //
-// Preferência POR CONTA - tentada em 10-08-2026 (usuario.tema_preferido no
-// banco, sincronizada com auth), REVERTIDA no mesmo dia por decisão do
-// Lucas com a Alexia: preferência pessoal deveria ficar numa tabela
-// própria se um dia existir, não colunas soltas em `usuario` ("estamos com
-// tabelas demais no momento"). Preferência de DISPOSITIVO via localStorage
-// é, de novo, a única fonte - mesmo comportamento de antes dessa tentativa.
+// Preferência de DISPOSITIVO via localStorage, não por conta (mesmo motivo do ControleFonte).
 export function ControleTema() {
   const [tema, setTema] = useState(lerTemaSalvo);
 

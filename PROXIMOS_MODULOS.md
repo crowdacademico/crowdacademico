@@ -44,13 +44,25 @@ Três módulos pequenos e parecidos entre si - todos seguem o mesmo formato (uma
 
 ## Grupo 7 - Comunicação
 
-- **`4-mail`** - envio de e-mail (verificação de conta, recuperação de senha, notificações, **e-mail de rejeição de campanha com reenvios restantes e data limite**: os dados já são devolvidos por `GET /campanha/:id`, falta só o módulo). Hoje nada disso é enviado de verdade - é o único módulo que bloqueia outros dois RFs já prontos no banco (verificação de e-mail e recuperação de senha, ver `PENDENCIAS e correcoes.md`, item 6).
+- **`4-mail`** - envio de e-mail (verificação de conta, recuperação de senha, notificações, **e-mail de rejeição de campanha com reenvios restantes e data limite**: os dados já são devolvidos por `GET /campanha/:id`, falta só o módulo). Hoje nada disso é enviado de verdade - é o único módulo que bloqueia outros dois RFs já prontos no banco (verificação de e-mail e recuperação de senha, ver `PENDENCIAS e correcoes.md`, item 6). **Textos de e-mail:** quando o módulo entrar, o conteúdo (aprovação, reprovação, meta atingida) não deveria nascer fixo num `.ts`: muda por decisão de produto e é candidato natural a uma tabela `template_email` editável pelo admin, sem risco, porque nenhuma regra do sistema depende do texto de um e-mail.
 - **`26-notificacao`** - fila/histórico de notificações (o que já existe na tabela `notificacao`, expor pelo Nest).
 - ✅ **`5-termo-uso`** - versionamento de termos de uso e aceite pelo usuário. **(esta lista tinha ficado desatualizada aqui - o módulo já existia, 4 arquivos, conferido em 01-09-2026)**
 
 ## Grupo 8 - Pagamento (por último, de propósito)
 
 Esta parte só começa depois que o resto do sistema - principalmente o painel administrativo e o núcleo de campanha - estiver funcionando perfeitamente. Também depende de uma decisão de negócio ainda não tomada (qual gateway de pagamento usar).
+
+**Regra do Lucas (24-09-2026):** é a última coisa do sistema, e os testes serão todos em sandbox, **mas sandbox não é desculpa para fazer mal feito**: quando chegar a hora, mesmo em sandbox, tem que funcionar perfeitamente (assinatura do webhook, idempotência, reconciliação, máquina de estados de contribuição e repasse).
+
+**Escolha do gateway (levantamento de 03-08-2026; confirmar valores e regras no site de cada um antes de decidir).** Ela destrava três coisas de uma vez: verificação de assinatura HMAC do webhook, idempotência (gateways reenviam webhook "pelo menos uma vez") e reconciliação financeira (job comparando o extrato do gateway com `contribuicao`). O critério mais importante para este projeto: o dinheiro entra de vários doadores, fica em custódia até a campanha ser aprovada (ou até o prazo acabar, no all-or-nothing) e só depois é repassado ao pesquisador, ou devolvido a todos se a meta não foi batida. No mundo dos gateways isso se chama "split de pagamento" ou "marketplace", e nem todo gateway faz de forma automática; sem split o repasse vira processo manual (mais trabalho e mais chance de erro humano, mas não impede o TCC de funcionar).
+
+- **Mercado Pago:** o mais usado no Brasil, documentação em português, PIX nativo, "Marketplace" com split automático. Atenção: habilitar o split costuma pedir CNPJ e um processo de aprovação; conferir se dá para testar em sandbox só com CPF.
+- **Asaas:** brasileiro, pensado desde o início para plataformas, com "subcontas" que mapeiam bem o dinheiro em custódia. PIX nativo e ambiente de teste. Menos conhecido, com menos tutorial e comunidade.
+- **Pagar.me (Stone):** split robusto (Pagar.me Connect), habilitação mais burocrática, geralmente pede CNPJ.
+- **Stripe:** documentação excelente e Stripe Connect maduro para split. Atenção: o suporte a PIX no Brasil veio depois dos gateways brasileiros (checar se hoje é suficiente) e a documentação é em inglês.
+- **Efí Bank (ex-Gerencianet):** focado em PIX direto, API simples. Não tem split automático: o repasse ao pesquisador seria uma transferência separada, manual ou por outra chamada de API.
+
+Riscos de decidir mal ou tarde: escolher um sem split e descobrir depois que o repasse não é automático; escolher um que exige CNPJ para a funcionalidade necessária e ter de trocar no meio do caminho; decidir com pressa quando restar pouco tempo de TCC. Perguntas para decidir: existe CNPJ ou MEI disponível, ou os testes serão só com CPF pessoal (sandbox)? Vale a complexidade de um split automático, ou o repasse manual é simples o bastante para o tamanho deste TCC? **Status:** gateway ainda não escolhido.
 
 - **`22-contribuicao`** - registrar contribuição/doação, incluindo o recebimento da confirmação de pagamento do gateway escolhido.
 - **`23-repasse`** - repasse do dinheiro arrecadado pro pesquisador, depois da campanha aprovada/bem-sucedida.

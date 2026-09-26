@@ -30,8 +30,7 @@ export interface UsuarioTable {
   bloqueado_ate: Date | null;
   ultimo_login_em: Date | null;
   ultimo_login_ip: string | null;
-  // ADICIONADAS (09-08-2026) - espelham 01_extensoes_enums_tabelas.sql
-  // [01-D]. Suspensão de MODERAÇÃO (manual, com motivo) - diferente de
+  // Espelham 01_extensoes_enums_tabelas.sql [01-D]. Suspensão de MODERAÇÃO (manual, com motivo), diferente de
   // `bloqueado_ate` acima (automático, por senha errada).
   suspenso_ate: Date | null;
   motivo_suspensao: string | null;
@@ -41,9 +40,8 @@ export interface UsuarioTable {
 export interface PapelTable {
   id_papel: Generated<number>;
   nome: string;
-  // ADICIONADA (03-08-2026) - espelha 01_extensoes_enums_tabelas.sql [01-B].
-  // Estável, nunca editável pela API (diferente de `nome`) - ver comentário
-  // completo lá sobre por que existe.
+  // Espelha 01_extensoes_enums_tabelas.sql [01-B]. Estável, nunca editável pela API (diferente de `nome`); ver
+  // o comentário completo lá sobre por que existe.
   codigo: string;
 }
 
@@ -60,8 +58,7 @@ export interface PapelPermissaoTable {
 export interface UsuarioPapelTable {
   id_usuario: number;
   id_papel: number;
-  // ADICIONADA (09-08-2026) - espelha 01_extensoes_enums_tabelas.sql
-  // [01-B]. NULL = papel valendo normalmente.
+  // Espelha 01_extensoes_enums_tabelas.sql [01-B]. NULL = papel valendo normalmente.
   suspenso_ate: Date | null;
 }
 
@@ -74,8 +71,8 @@ export interface SessaoTable {
   revogado_em: Date | null;
   ip: string | null;
   user_agent: string | null;
-  // 'login' (senha digitada) ou 'refresh' (renovação silenciosa do token de
-  // acesso, a cada ~15min de uso) - 07-08-2026, ver auth.service.login.ts.
+  // 'login' (senha digitada) ou 'refresh' (renovação silenciosa do token de acesso, a cada ~15min de uso), ver
+  // auth.service.login.ts.
   origem: Generated<'login' | 'refresh'>;
 }
 
@@ -99,22 +96,17 @@ export interface ConfiguracoesTable {
   tipo: TipoConfiguracao;
   descricao: string | null;
   ativo: Generated<boolean>;
-  // ADICIONADA (05-09-2026) - espelha 01_extensoes_enums_tabelas.sql, item 5
-  // de PENDENCIAS. Controla o que pol_config_select (04) libera pra quem
-  // não tem `configuracao_gerenciar`.
+  // Espelha 01_extensoes_enums_tabelas.sql. Controla o que pol_config_select (04) libera para quem não tem
+  // `configuracao_gerenciar`.
   publica: Generated<boolean>;
 }
 
-// CK_LOG_AUDITORIA_OPERACAO (01) - não é CREATE TYPE ... AS ENUM (é CHECK
-// direto na coluna), mas o mesmo raciocínio de TIPOS_MOTIVO_DENUNCIA acima
-// se aplica: array em runtime, tipo derivado dele. Achado numa auditoria
-// (12-09-2026, achado de agente conferindo DTO Nest x tipo React): antes
-// disto, `operacao` era `string` solto aqui - o tipo em
-// react/src/services/27-log-auditoria/type/log-auditoria.type.ts já
-// restringia a esses 4 valores (comentário lá dizia "espelha db.types.ts",
-// mas nada aqui garantia isso) - se a constraint um dia ganhasse um 5º
-// valor, nada nos dois lados avisaria. Os 4 valores conferidos contra
-// 01_extensoes_enums_tabelas.sql linha 1004.
+// CK_LOG_AUDITORIA_OPERACAO (01) não é CREATE TYPE ... AS ENUM (é CHECK direto na coluna), mas o mesmo
+// raciocínio de TIPOS_MOTIVO_DENUNCIA acima se aplica: array em runtime, tipo derivado dele. Sem isso,
+// `operacao` seria `string` solto aqui, enquanto o tipo em
+// react/src/services/27-log-auditoria/type/log-auditoria.type.ts restringe a esses 4 valores: se a constraint
+// um dia ganhasse um 5º valor, nada nos dois lados avisaria. Os 4 valores são os de CK_LOG_AUDITORIA_OPERACAO
+// em 01_extensoes_enums_tabelas.sql.
 export const OPERACOES_LOG_AUDITORIA = [
   'INSERT',
   'UPDATE',
@@ -123,12 +115,10 @@ export const OPERACOES_LOG_AUDITORIA = [
 ] as const;
 export type OperacaoLogAuditoria = (typeof OPERACOES_LOG_AUDITORIA)[number];
 
-// ADICIONADA (03-08-2026) - espelha 01_extensoes_enums_tabelas.sql [01-L].
-// `id_log` é `Generated<string>`, não `<number>`: é BIGSERIAL (bigint), e o
-// driver `pg` devolve bigint como STRING por padrão (evita perda de
-// precisão em valores acima de 2^53) - convertido pra `number` só na hora
-// de montar o LogAuditoriaResponse (log-auditoria.converter.ts), mesmo cuidado já
-// tomado com `COUNT(*)` em paginacao.util.ts.
+// Espelha 01_extensoes_enums_tabelas.sql [01-L]. `id_log` é `Generated<string>`, não `<number>`: é BIGSERIAL
+// (bigint), e o driver `pg` devolve bigint como STRING por padrão (evita perda de precisão em valores acima de
+// 2^53); convertido para `number` só na hora de montar o LogAuditoriaResponse (log-auditoria.converter.ts),
+// mesmo cuidado tomado com `COUNT(*)` em paginacao.util.ts.
 export interface LogAuditoriaTable {
   id_log: Generated<string>;
   tabela: string;
@@ -141,20 +131,12 @@ export interface LogAuditoriaTable {
   ocorrido_em: Generated<Date>;
 }
 
-// ADICIONADAS (09-08-2026) - espelham 01_extensoes_enums_tabelas.sql, tabelas
-// termos_de_uso/usuario_termo, tocadas pela 1ª vez pelo módulo 5-termo-uso
-// (Bloco D do prompt de uma IA sobre cadastro público).
+// Espelham 01_extensoes_enums_tabelas.sql, tabelas termos_de_uso/usuario_termo (módulo 5-termo-uso).
 //
-// `tipo` ADICIONADO (13-09-2026, pedido do Lucas: o sistema sempre tem 2
-// Termos de Uso vigentes ao mesmo tempo - um pro aceite geral/cadastro,
-// outro pra contribuição a campanha). `Generated` porque a coluna tem
-// DEFAULT 'cadastro' no banco (histórico das versões de antes desta
-// migração), mas todo INSERT novo passa `tipo` explícito - mesmo espírito
-// de `ativo`, que também é `Generated` e mesmo assim sempre especificado.
-// `'upgrade_pesquisador'` ADICIONADO (13-09-2026, mesmo dia, rodada
-// seguinte) - o 3º momento que o Lucas descreveu desde o início ("upgrade
-// perfil de pesquisador"), até então só registrado como pendência porque a
-// tela de upgrade de perfil em si não existia (ver PerfilPesquisadorServiceCreate).
+// `tipo`: o sistema sempre tem 1 Termo de Uso vigente por momento de aceite (cadastro, contribuição a campanha,
+// upgrade de pesquisador). `Generated` porque a coluna tem DEFAULT 'cadastro' no banco (para as versões
+// anteriores à coluna), mas todo INSERT novo passa `tipo` explícito, mesmo espírito de `ativo`, que também é
+// `Generated` e mesmo assim sempre especificado.
 export const TIPOS_TERMO = [
   'cadastro',
   'contribuicao',
@@ -179,11 +161,7 @@ export interface UsuarioTermoTable {
   ip_aceite: string | null;
 }
 
-// ADICIONADA (13-09-2026, achado ao construir TermoUsoServiceAlterar: essa
-// tabela existe desde 09-08-2026, mas nunca tinha ganho tipo Kysely - só
-// usuario_termo tinha, provavelmente porque só 08_trigger_signup_usuario.sql
-// (cadastro) precisava até agora). Espelha 01_extensoes_enums_tabelas.sql -
-// aceite_termo_contribuicao, gerada 1x por contribuição (UNIQUE em
+// Espelha 01_extensoes_enums_tabelas.sql, aceite_termo_contribuicao (gerada 1x por contribuição, UNIQUE em
 // id_contribuicao).
 export interface AceiteTermoContribuicaoTable {
   id_aceite_contrib: Generated<number>;
@@ -193,12 +171,10 @@ export interface AceiteTermoContribuicaoTable {
   ip_aceite: string | null;
 }
 
-// ADICIONADA - espelha 01_extensoes_enums_tabelas.sql (tabela
-// area_conhecimento), tocada pela 1ª vez pelo módulo 8-area-conhecimento.
-// `id_pai` auto-referenciado implementa a hierarquia de 2 níveis (grande
-// área -> área) explicada no comentário da própria tabela no SQL; NULL =
-// grande área raiz, preenchido = área de nível 2. Mesmo padrão já usado em
-// score_config (não modelada aqui ainda, nenhum módulo a toca).
+// Espelha 01_extensoes_enums_tabelas.sql (tabela area_conhecimento). `id_pai` auto-referenciado implementa a
+// hierarquia de 2 níveis (grande área -> área) explicada no comentário da própria tabela no SQL; NULL = grande
+// área raiz, preenchido = área de nível 2. Mesmo padrão de score_config (não modelada aqui, nenhum módulo a
+// toca).
 export interface AreaConhecimentoTable {
   id_area_conhecimento: Generated<number>;
   codigo_cnpq: string;
@@ -207,17 +183,13 @@ export interface AreaConhecimentoTable {
   ativo: Generated<boolean>;
 }
 
-// ADICIONADA - espelha 01_extensoes_enums_tabelas.sql (tabela tipo_link),
-// tocada pela 1ª vez pelo módulo 9-tipo-link. `codigo` é a chave estável
-// lida por calcular_score_perfil_academico() (05_regras_negocio.sql
-// [05-I-2]); os 3 `permite_*` são os escopos de uso, com
-// CK_TIPO_LINK_ALGUM_ESCOPO garantindo pelo menos um TRUE.
-// ATUALIZADO (14-08-2026): `dominio` virou array nativo do Postgres
-// (VARCHAR(255)[] - node-postgres/Kysely já devolve isto como `string[]`
-// puro, sem parsing manual nenhum). `regex`/`dominio` continuam NULLABLE
-// de propósito (decisão revista no dia seguinte: array vazio é truthy em
-// JS/TS, então "sem restrição" fica mais seguro como ausência de valor -
-// ver comentário completo em 01_extensoes_enums_tabelas.sql [01-B]).
+// Espelha 01_extensoes_enums_tabelas.sql (tabela tipo_link). `codigo` é a chave estável lida por
+// calcular_score_perfil_academico() (05_regras_negocio.sql [05-I-2]); os 3 `permite_*` são os escopos de uso,
+// com CK_TIPO_LINK_ALGUM_ESCOPO garantindo pelo menos um TRUE.
+// `dominio` é array nativo do Postgres (VARCHAR(255)[]): node-postgres/Kysely já devolve isso como `string[]`
+// puro, sem parsing manual. `regex`/`dominio` são NULLABLE de propósito: array vazio é truthy em JS/TS, então
+// "sem restrição" fica mais seguro como ausência de valor (ver comentário completo em
+// 01_extensoes_enums_tabelas.sql [01-B]).
 export interface TipoLinkTable {
   id_tipolink: Generated<number>;
   codigo: string;
@@ -238,32 +210,23 @@ export interface TipoLinkTable {
 export const TIPOS_MOTIVO_DENUNCIA = ['campanha', 'perfil'] as const;
 export type TipoMotivoDenuncia = (typeof TIPOS_MOTIVO_DENUNCIA)[number];
 
-// ADICIONADA - espelha 01_extensoes_enums_tabelas.sql (tabela
-// motivo_denuncia), tocada pela 1ª vez pelo módulo 10-motivo-denuncia.
-// `codigo` é a chave estável (UK_MOTIVO_DENUNCIA_CODIGO) - mesmo padrão de
-// `tipo_link.codigo` (ver comentário em [01-B] sobre os 3 pontos do banco
-// que passaram a distinguir `codigo`/`nome`); `tipo` decide se o motivo
-// serve pra denúncia de campanha ou de perfil - trg_valida_tipo_motivo_
-// denuncia (05_regras_negocio.sql [05-K-1]) barra em denuncia.id_motivo
-// qualquer motivo cujo `tipo` não bate com o alvo escolhido (id_campanha_
-// alvo x id_pesquisador_alvo).
+// Espelha 01_extensoes_enums_tabelas.sql (tabela motivo_denuncia). `tipo` decide se o motivo serve para
+// denúncia de campanha ou de perfil: trg_valida_tipo_motivo_denuncia (05_regras_negocio.sql [05-K-1]) barra em
+// denuncia.id_motivo qualquer motivo cujo `tipo` não bate com o alvo escolhido (id_campanha_alvo x
+// id_pesquisador_alvo).
 export interface MotivoDenunciaTable {
   id_motivo: Generated<number>;
-  // NOT NULL desde 18-08-2026 - `codigo` saiu do catálogo (não era lido
-  // por nenhuma trigger/função, diferente de `papel.codigo`/
-  // `tipo_link.codigo`) e `descricao` virou o único identificador
-  // legível do motivo.
+  // NOT NULL: `descricao` é o único identificador legível do motivo (`codigo` saiu do catálogo, não era lido
+  // por nenhuma trigger/função, diferente de `papel.codigo`/`tipo_link.codigo`).
   descricao: string;
   tipo: TipoMotivoDenuncia;
   ativo: Generated<boolean>;
 }
 
-// ADICIONADA (22-08-2026) - espelha 01_extensoes_enums_tabelas.sql
-// (tabela perfil_pesquisador), tocada pela 1ª vez pelo módulo
-// 6-perfil-pesquisador. cpf_criptografado/cpf_hash são STRING aqui (Kysely
-// não sabe que um é cifra e o outro é HMAC - isso é responsabilidade de
-// commons/seguranca/cpf-cifra.util.ts, nunca do tipo da coluna). Ver
-// DOCUMENTACAO_BD.md pro raciocínio completo por trás dos dois.
+// Espelha 01_extensoes_enums_tabelas.sql (tabela perfil_pesquisador). cpf_criptografado/cpf_hash são STRING
+// aqui (Kysely não sabe que um é cifra e o outro é HMAC: isso é responsabilidade de
+// commons/seguranca/cpf-cifra.util.ts, nunca do tipo da coluna). Ver DOCUMENTACAO_BD.md para o raciocínio
+// completo por trás dos dois.
 export const TIPOS_VINCULO = ['institucional', 'independente'] as const;
 export type TipoVinculo = (typeof TIPOS_VINCULO)[number];
 
@@ -293,17 +256,15 @@ export interface PerfilPesquisadorTable {
   // só não fazem parte de nenhum `.values()` de escrita.
   score_atual: Generated<number>;
   score_atualizado_em: Date | null;
-  // Suspensão do PODER de pesquisador (07-09-2026) - nunca escritos por
-  // UPDATE direto (fora do GRANT, ver 06_grants.sql), só via
-  // suspender_pesquisador()/reativar_pesquisador() (03). Selecionados
-  // normalmente por PerfilPesquisadorServiceSuspender.buscarSuspensao.
+  // Suspensão do PODER de pesquisador: nunca escritos por UPDATE direto (fora do GRANT, ver 06_grants.sql), só
+  // via suspender_pesquisador()/reativar_pesquisador() (03). Selecionados normalmente por
+  // PerfilPesquisadorServiceSuspender.buscarSuspensao.
   suspenso_ate: Date | null;
   motivo_suspensao: string | null;
   suspenso_por: number | null;
 }
 
-// ADICIONADA (22-08-2026) - espelha 01_extensoes_enums_tabelas.sql (tabela
-// link_academico), tocada pela 1ª vez pelo módulo 7-link-academico.
+// Espelha 01_extensoes_enums_tabelas.sql (tabela link_academico).
 export interface LinkAcademicoTable {
   id_link_academico: Generated<number>;
   id_usuario: number;
@@ -313,11 +274,9 @@ export interface LinkAcademicoTable {
   rotulo: string | null;
 }
 
-// ADICIONADAS (22-08-2026) - espelham 01_extensoes_enums_tabelas.sql (bloco
-// [01-I] SCORE), lidas (nunca escritas diretamente) pelo módulo
-// 6-perfil-pesquisador na consulta de score/dimensões - quem ESCREVE são as
-// funções de 05_regras_negocio.sql (recalcular_score_pesquisador() e as 4
-// funções de dimensão), nunca o Nest.
+// Espelham 01_extensoes_enums_tabelas.sql (bloco [01-I] SCORE), lidas (nunca escritas diretamente) pelo módulo
+// 6-perfil-pesquisador na consulta de score/dimensões: quem ESCREVE são as funções de 05_regras_negocio.sql
+// (recalcular_score_pesquisador() e as 4 funções de dimensão), nunca o Nest.
 export interface ScoreConfigTable {
   id_score_config: Generated<number>;
   nome: string;
@@ -351,14 +310,11 @@ export interface ScorePesquisadorTable {
   motivo: string | null;
 }
 
-// ADICIONADAS (22-08-2026) - espelham 01_extensoes_enums_tabelas.sql
-// [01-E] CAMPANHA, tocadas pela 1ª vez pelos módulos 12-campanha,
-// 13-orcamento-campanha, 14-marco-cronograma, 15-atualizacao-campanha,
-// 16-seguir-campanha, 17-comentario, 18-recompensa. Campos DECIMAL (meta_
-// financeira, valor_bruto_arrecadado, taxa_plataforma, valor, valor_minimo)
-// são `string` aqui, nunca `number` - mesmo cuidado já registrado em
-// ScoreConfigTable.peso (node-postgres devolve DECIMAL como string pra não
-// perder precisão); convertidos pra number só no converter de cada módulo.
+// Espelham 01_extensoes_enums_tabelas.sql [01-E] CAMPANHA (módulos 12-campanha, 13-orcamento-campanha,
+// 14-marco-cronograma, 15-atualizacao-campanha, 16-seguir-campanha, 17-comentario, 18-recompensa). Campos
+// DECIMAL (meta_financeira, valor_bruto_arrecadado, taxa_plataforma, valor, valor_minimo) são `string` aqui,
+// nunca `number`, mesmo cuidado de ScoreConfigTable.peso (node-postgres devolve DECIMAL como string para não
+// perder precisão); convertidos para number só no converter de cada módulo.
 export const MODELOS_CAMPANHA = ['all-or-nothing', 'flexivel'] as const;
 export type ModeloCampanha = (typeof MODELOS_CAMPANHA)[number];
 
@@ -423,9 +379,8 @@ export interface CampanhaTable {
 // gravar aqui mesmo sem o resto do CRUD (findall/findone) existir ainda.
 export interface HistoricoRejeicaoTable {
   id_rejeicao: Generated<number>;
-  // Sem FK para campanha (removida em 21-09-2026): o histórico sobrevive à
-  // exclusão da campanha. Por isso dono e título são gravados AQUI, no
-  // instante da rejeição, e não lidos de campanha depois.
+  // Sem FK para campanha: o histórico sobrevive à exclusão da campanha. Por isso dono e título são gravados
+  // AQUI, no instante da rejeição, e não lidos de campanha depois.
   id_campanha: number;
   id_usuario_dono: number;
   titulo_campanha: string;
@@ -441,11 +396,9 @@ export interface SeguirCampanhaTable {
   seguido_em: Generated<Date>;
 }
 
-// ADICIONADA (05-09-2026) - espelha 01_extensoes_enums_tabelas.sql (tabela
-// seguir_pesquisador), sem módulo Nest próprio ainda (RF-026, MATRIZ marca
-// ❌ - "não há módulo/endpoint dedicado"). Primeiro consumidor: exportação
-// de dados do usuário (1-usuario), que precisa ler "quem eu sigo" sem
-// esperar o módulo inteiro existir.
+// Espelha 01_extensoes_enums_tabelas.sql (tabela seguir_pesquisador), sem módulo Nest próprio ainda (RF-026).
+// Primeiro consumidor: exportação de dados do usuário (1-usuario), que precisa ler "quem eu sigo" sem esperar o
+// módulo inteiro existir.
 export interface SeguirPesquisadorTable {
   id_seg_pesquisador: Generated<number>;
   id_usuario: number;
@@ -476,10 +429,9 @@ export const STATUS_CONTRIBUICAO = [
 ] as const;
 export type StatusContribuicao = (typeof STATUS_CONTRIBUICAO)[number];
 
-// ADICIONADA (05-09-2026) - espelha 01_extensoes_enums_tabelas.sql (tabela
-// contribuicao), sem módulo Nest próprio ainda (22-contribuicao vazio,
-// trava no gateway de pagamento). Primeiro consumidor: exportação de dados
-// do usuário (1-usuario) - só leitura, nenhuma escrita fica sem o módulo.
+// Espelha 01_extensoes_enums_tabelas.sql (tabela contribuicao), sem módulo Nest próprio ainda (22-contribuicao
+// vazio, trava no gateway de pagamento). Primeiro consumidor: exportação de dados do usuário (1-usuario), só
+// leitura; nenhuma escrita fica sem o módulo.
 export interface ContribuicaoTable {
   id_contribuicao: Generated<number>;
   id_campanha: number;
@@ -547,9 +499,8 @@ export interface RecompensaTable {
   criado_em: Generated<Date>;
 }
 
-// Satélites de atualizacao_campanha/recompensa (01-F/01-G) - dobrados
-// dentro dos módulos 15-atualizacao-campanha/18-recompensa (22-08-2026,
-// decisão registrada em PROXIMOS_MODULOS.md: nenhuma das 4 tem pasta
+// Satélites de atualizacao_campanha/recompensa (01-F/01-G), dobrados dentro dos módulos
+// 15-atualizacao-campanha/18-recompensa (decisão registrada em PROXIMOS_MODULOS.md: nenhuma das 4 tem pasta
 // numerada própria, o roteiro não as lista como módulo individual).
 export interface LinkAtualizacaoTable {
   id_link_atualizacao: Generated<number>;
@@ -567,14 +518,11 @@ export interface LinkRecompensaTable {
   url: string;
 }
 
-// ADICIONADA (24-08-2026, módulo 25-arquivo implementado - ver
-// arquivos_banco_dados/01_extensoes_enums_tabelas.sql). `chave` (não
-// `url`): guarda só o caminho do objeto dentro do bucket
-// (ex. "publico/<uuid>.jpg"), nunca o endereço completo - a URL pública é
-// montada em runtime por commons/storage (montarUrlPublica), a partir de
-// STORAGE_PUBLIC_BASE_URL. Isso é o que permite trocar de provedor de
-// armazenamento (Supabase Storage hoje, Cloudflare R2 se um dia migrar -
-// os dois falam o protocolo S3) sem nenhum UPDATE em massa nesta tabela.
+// Espelha 01_extensoes_enums_tabelas.sql (tabela arquivo). `chave` (não `url`): guarda só o caminho do objeto
+// dentro do bucket (ex. "publico/<uuid>.jpg"), nunca o endereço completo; a URL pública é montada em runtime
+// por commons/storage (montarUrlPublica), a partir de STORAGE_PUBLIC_BASE_URL. Isso permite trocar de provedor
+// de armazenamento (os provedores S3-compatíveis falam o mesmo protocolo) sem nenhum UPDATE em massa nesta
+// tabela.
 export interface ArquivoTable {
   id_arquivo: Generated<number>;
   chave: string;
@@ -587,11 +535,9 @@ export interface ArquivoTable {
   desativado_em: Date | null;
 }
 
-// id_arquivo aqui referencia uma linha da tabela `arquivo` (módulo
-// 25-arquivo, implementado em 24-08-2026) - os endpoints de vínculo abaixo
-// (INSERT/UPDATE da tabela de associação em si) já podiam ser testados
-// isoladamente antes disso, mas só agora dá pra testar o fluxo de ponta a
-// ponta (upload real -> vínculo -> exibição).
+// id_arquivo aqui referencia uma linha da tabela `arquivo` (módulo 25-arquivo); os endpoints de vínculo
+// (INSERT/UPDATE da tabela de associação em si) podem ser testados isoladamente, e o fluxo de ponta a ponta é
+// upload real -> vínculo -> exibição.
 export interface ArquivoAtualizacaoTable {
   id_arq_atu: Generated<number>;
   id_arquivo: number;

@@ -22,23 +22,17 @@ import { UsuarioPapelServiceFindAllGeral } from './service/usuario-papel.service
 import { UsuarioPapelServiceRemove } from './service/usuario-papel.service.remove';
 import { UsuarioPapelServiceSuspender } from './service/usuario-papel.service.suspender';
 
-// `papel`/`permissao` continuam quase todo só-leitura (catálogo gerenciado
-// via seed/migração direta, de propósito - CRIAR um papel ou permissão
-// nova continua fora de escopo, decisão maior). `papel_permissao` ganhou
-// insert/delete (03-08-2026, pedido do Lucas: admin precisa conseguir
-// conceder/revogar permissão de um papel já existente pelo Painel Admin,
-// sem acessar o banco - ver [04-B-1] em 04_rls_policies.sql). Mesmo padrão
-// de `usuario_papel`: só insert/delete, não existe "editar" um vínculo,
-// só atribuir ou remover.
+// `papel`/`permissao` são quase todo só-leitura (catálogo gerenciado via seed/migração direta, de propósito:
+// CRIAR um papel ou permissão nova é decisão maior). `papel_permissao` tem insert/delete: o admin
+// concede/revoga permissão de um papel já existente pelo Painel Admin, sem acessar o banco (ver [04-B-1] em
+// 04_rls_policies.sql). Mesmo padrão de `usuario_papel`: só insert/delete, não existe "editar" um vínculo, só
+// atribuir ou remover.
 //
-// `papel` ganhou UPDATE (só de `nome`, 03-08-2026) - renomear um papel já
-// existente (ex.: 'admin' → 'Administrador') virou seguro depois de
-// `papel.codigo` existir (01_extensoes_enums_tabelas.sql [01-B]): as
-// triggers de RBAC leem `codigo`, nunca `nome`, então renomear pelo painel
-// não quebra mais nada em silêncio. `permissao` continua sem nenhum
-// caminho de escrita - renomear uma permissão exigiria também atualizar
-// qualquer lugar que a referencie por nome (não é o caso de `papel`, cujas
-// 3 dependências por nome foram todas movidas pra `codigo`).
+// `papel` tem UPDATE só de `nome`: renomear um papel já existente (ex.: 'admin' → 'Administrador') é seguro
+// porque `papel.codigo` existe (01_extensoes_enums_tabelas.sql [01-B]) e as triggers de RBAC leem `codigo`,
+// nunca `nome`. `permissao` continua sem nenhum caminho de escrita: renomear uma permissão exigiria também
+// atualizar qualquer lugar que a referencie por nome (não é o caso de `papel`, cujas 3 dependências por nome
+// foram todas movidas para `codigo`).
 @Module({
   controllers: [
     PapelControllerFindAll,

@@ -11,19 +11,15 @@ import { LIMITE_NOME_AREA_CONHECIMENTO } from '../../services/8-area-conheciment
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { AreaConhecimentoResponse } from '../../services/8-area-conhecimento/type/area-conhecimento.type';
 
-// Consultar/Alterar/Excluir migrados de página pra modal (14-09-2026,
-// continuação da migração CRUD→Modal pedida pelo Lucas) - recebem a linha
-// (`area: AreaConhecimentoResponse`) inteira do chamador, mesmo motivo de
-// modal-motivo-denuncia.tsx. Criar fica em arquivo separado.
+// Consultar/Alterar/Excluir em modal: recebem a linha (`area: AreaConhecimentoResponse`) inteira do chamador,
+// mesmo motivo de modal-motivo-denuncia.tsx. Criar fica em arquivo separado.
 //
-// `nomePaiExibido` - listar-areas-conhecimento.tsx transforma `nomePai`
-// pras 9 raízes ("Base, <nome>", pro filtro por faceta reconhecer a
-// própria linha) antes de entregar a linha pro GenericTable - e é essa
-// linha TRANSFORMADA que chega aqui via `aoConsultar`/`aoAlterar`/
-// `aoExcluir`. Mostrar `area.nomePai` direto exibiria "Base, ..." pra uma
-// raiz, errado pro contexto do modal - a mesma lógica que a própria
-// coluna da tabela já usa (`renderizar`, ver listar-areas-conhecimento.tsx)
-// pra decidir o texto certo a partir de `idPai`, não de `nomePai` cru.
+// `nomePaiExibido`: listar-areas-conhecimento.tsx transforma `nomePai` para as 9 raízes ("Base, <nome>", para o
+// filtro por faceta reconhecer a própria linha) antes de entregar a linha ao GenericTable, e é essa linha
+// TRANSFORMADA que chega aqui via `aoConsultar`/`aoAlterar`/`aoExcluir`. Mostrar `area.nomePai` direto exibiria
+// "Base, ..." para uma raiz, errado para o contexto do modal: a mesma lógica que a própria coluna da tabela usa
+// (`renderizar`, ver listar-areas-conhecimento.tsx) decide o texto certo a partir de `idPai`, não de `nomePai`
+// cru.
 function nomePaiExibido(area: AreaConhecimentoResponse): string | null {
   return area.idPai === null ? null : area.nomePai;
 }

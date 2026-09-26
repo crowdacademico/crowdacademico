@@ -39,9 +39,8 @@ export interface PerfilPesquisadorResponseScore {
   dimensoes: DimensaoScoreResponse[];
 }
 
-// Espelha perfil-pesquisador.request-create.ts - self-service (upgrade da
-// PRÓPRIA conta). `aceiteTermos` ADICIONADO (13-09-2026, modal de upgrade
-// em T1) - mesmo padrão de AuthRequestRegister no cadastro.
+// Espelha perfil-pesquisador.request-create.ts: self-service (upgrade da PRÓPRIA conta). `aceiteTermos` segue o
+// mesmo padrão de AuthRequestRegister no cadastro (modal de upgrade em T1).
 export interface PerfilPesquisadorRequestCreate {
   cpf: string;
   tipoVinculo: TipoVinculo;
@@ -50,12 +49,10 @@ export interface PerfilPesquisadorRequestCreate {
   aceiteTermos: boolean;
 }
 
-// Espelha perfil-pesquisador.request-create-para-outro.ts - admin criando
-// EM NOME de outra pessoa. `aceiteTermos` OPCIONAL (14-09-2026, diferente
-// do self-service que exige `true`) - o card "Criar Perfil Pesquisador"
-// dentro de ModalAlterarUsuario não manda esse campo (continua sem
-// registrar aceite, como sempre); o cadeado em T1 manda `true` (mostrou o
-// Termo de Uso vigente antes, aceite gravado em nome do ALVO).
+// Espelha perfil-pesquisador.request-create-para-outro.ts: admin criando EM NOME de outra pessoa.
+// `aceiteTermos` OPCIONAL (diferente do self-service, que exige `true`): o card "Criar Perfil Pesquisador"
+// dentro de ModalAlterarUsuario não manda esse campo (não registra aceite); o cadeado em T1 manda `true`
+// (mostrou o Termo de Uso vigente antes, aceite gravado em nome do ALVO).
 export interface PerfilPesquisadorRequestCreateParaOutro {
   cpf: string;
   tipoVinculo: TipoVinculo;
@@ -72,15 +69,14 @@ export interface PerfilPesquisadorRequestUpdate {
   tituloAcademico: TituloAcademico;
 }
 
-// Espelha perfil-pesquisador.request-corrigir-cpf.ts (07-09-2026) - ação de
-// suporte/admin (RF-017), endpoint separado do PATCH comum de propósito.
+// Espelha perfil-pesquisador.request-corrigir-cpf.ts: ação de suporte/admin (RF-017), endpoint separado do
+// PATCH comum de propósito.
 export interface PerfilPesquisadorRequestCorrigirCpf {
   cpf: string;
 }
 
-// Espelha perfil-pesquisador.request-suspender.ts (07-09-2026) - mesmo
-// formato de UsuarioRequestSuspend (auth.type.ts): `ate` ISO 8601, `motivo`
-// obrigatório. Suspende só o PODER de pesquisador, não bloqueia login.
+// Espelha perfil-pesquisador.request-suspender.ts: mesmo formato de UsuarioRequestSuspend (auth.type.ts): `ate`
+// ISO 8601, `motivo` obrigatório. Suspende só o PODER de pesquisador, não bloqueia login.
 export interface PerfilPesquisadorRequestSuspender {
   ate: string;
   motivo: string;

@@ -3,17 +3,13 @@ import { Cron } from '@nestjs/schedule';
 import { Pool } from 'pg';
 import { PG_POOL } from '../../commons/database/database.constants';
 
-// Apaga rascunhos de campanha abandonados (15-09-2026, reescrito em
-// 20-09-2026 junto com o status 'rascunho'). A campanha nasce 'rascunho' no
-// 1º clique de Criar e só vai pra fila de aprovação pelo botão "Enviar para
-// aprovação". Se a pessoa nunca voltar (queda de energia, aba fechada,
-// desistiu do sistema), o rascunho some sozinho depois do prazo em
-// `configuracoes.campanha_rascunho_ttl_horas` (336h, 14 dias). Sem este job,
-// o rascunho ficaria pra sempre.
+// Apaga rascunhos de campanha abandonados. A campanha nasce 'rascunho' no 1º clique de Criar e só vai para a
+// fila de aprovação pelo botão "Enviar para aprovação". Se a pessoa nunca voltar (queda de energia, aba
+// fechada, desistência), o rascunho some sozinho depois do prazo em `configuracoes.campanha_rascunho_ttl_horas`
+// (336h, 14 dias); sem este job, ficaria para sempre.
 //
-// Mesmo padrão de CampanhaServiceEncerrarVencidas (mesma pasta) - `PG_POOL`
-// direto (job agendado roda fora do pipeline HTTP, sem GlobalDbInterceptor
-// pra abrir transação/CLS), função SECURITY DEFINER (bypassa RLS de
+// Mesmo padrão de CampanhaServiceEncerrarVencidas (mesma pasta): `PG_POOL` direto (job agendado roda fora do
+// pipeline HTTP, sem GlobalDbInterceptor para abrir transação/CLS), função SECURITY DEFINER (bypassa RLS de
 // propósito, não precisa de app.id_usuario_atual setado).
 @Injectable()
 export class CampanhaServiceExpirarRascunho {
@@ -28,11 +24,9 @@ export class CampanhaServiceExpirarRascunho {
   // abandonado, atrasar 1h não machuca ninguém).
   @Cron('0 * * * *')
   async executar(): Promise<void> {
-    // try/catch (20-09-2026, achado numa revisão do Lucas): sem ele, uma
-    // exceção vinda da função SQL vira `unhandledRejection` (o @Cron chama
-    // este método sem `await` de ninguém), e o Node moderno derruba o
-    // processo inteiro por causa de um job de limpeza. Mesmo tratamento nos
-    // 3 crons do sistema, ver CampanhaServiceEncerrarVencidas e
+    // try/catch: sem ele, uma exceção vinda da função SQL vira `unhandledRejection` (o @Cron chama este método
+    // sem `await` de ninguém), e o Node moderno derruba o processo inteiro por causa de um job de limpeza.
+    // Mesmo tratamento nos 3 crons do sistema, ver CampanhaServiceEncerrarVencidas e
     // PerfilPesquisadorServiceReativarVencidos.
     try {
       const resultado = await this.pool.query<{

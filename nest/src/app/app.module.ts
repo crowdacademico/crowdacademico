@@ -32,44 +32,30 @@ import { ConfiguracaoValorModule } from '../commons/configuracao/configuracao-va
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    // Habilita @Cron em qualquer service do app (05-09-2026, RF-057) - sem
-    // isso registrado uma vez aqui, o decorator @Cron não faz nada sozinho,
-    // precisa do agendador do próprio módulo rodando por trás. Primeiro
-    // consumidor: CampanhaServiceEncerrarVencidas (12-campanha).
+    // Habilita @Cron em qualquer service do app (RF-057): sem isso registrado uma vez aqui, o decorator @Cron
+    // não faz nada sozinho, precisa do agendador do próprio módulo rodando por trás. Primeiro consumidor:
+    // CampanhaServiceEncerrarVencidas (12-campanha).
     ScheduleModule.forRoot(),
-    // CORRIGIDO (07-09-2026, achado incidentalmente ao revisar o trabalho da
-    // migração TS, depois confirmado ao vivo): existiam DOIS
-    // `ThrottlerModule.forRoot()` (auth.module.ts e usuario.module.ts) - o
-    // módulo é `@Global()` (conferido direto em
-    // node_modules/@nestjs/throttler), e `THROTTLER_OPTIONS` é um token de
-    // string FIXO, o mesmo em toda chamada de `forRoot()` - o segundo
-    // registro vencia o primeiro no processo inteiro. Confirmado ao vivo:
-    // POST /auth/login (que não declarava `@Throttle()` próprio, só confiava
-    // no default do módulo) ficou limitado a 1 tentativa POR HORA (o valor
-    // pensado só pra GET /usuario/eu/exportar-dados), não 5-30/60s como
-    // deveria - login inteiro inutilizável, silenciosamente. Só não afetou a
-    // exportação porque ela já declarava `@Throttle()` próprio no controller
-    // (sobrescreve o default do módulo, não importa o que ele diga).
+    // Existir DOIS `ThrottlerModule.forRoot()` (auth.module.ts e usuario.module.ts) foi um bug: o módulo é
+    // `@Global()` (conferido direto em node_modules/@nestjs/throttler) e `THROTTLER_OPTIONS` é um token de
+    // string FIXO, o mesmo em toda chamada de `forRoot()`, então o segundo registro vencia o primeiro no
+    // processo inteiro. Foi o que deixou POST /auth/login (que não declarava `@Throttle()` próprio) limitado a
+    // 1 tentativa POR HORA (o valor pensado só para GET /usuario/eu/exportar-dados), em silêncio.
     //
-    // Regra do projeto daqui pra frente: toda rota com limite de frequência
-    // declara o PRÓPRIO `@Throttle()` no controller - o default aqui embaixo
-    // é só rede de segurança genérica, nunca a fonte do valor de uma rota
-    // sensível. Este valor (60/min) não protege login nem exportação -
-    // ambos têm o limite deles decorado no próprio controller.
+    // Regra do projeto: toda rota com limite de frequência declara o PRÓPRIO `@Throttle()` no controller; o
+    // default aqui embaixo é só rede de segurança genérica, nunca a fonte do valor de uma rota sensível. Este
+    // valor (60/min) não protege login nem exportação: ambos têm o limite deles decorado no próprio controller.
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 60 }]),
     DatabaseModule,
-    // Log de requisição com id (05-09-2026, item 6 da lista de pendências) -
-    // ver configure() logo abaixo, é lá que o middleware é aplicado de
-    // verdade a toda rota.
+    // Log de requisição com id (ver configure() logo abaixo: é lá que o middleware é aplicado de verdade a toda
+    // rota).
     LoggingModule,
     // Global (ver commons/storage/storage.module.ts) - registrado aqui,
     // junto de DatabaseModule, por ser infra compartilhada por qualquer
     // módulo, não só 25-arquivo.
     StorageModule,
-    // Global também (04-09-2026) - leitura de configuracoes por qualquer
-    // módulo que precisar de um número configurável pelo Painel Admin,
-    // sem precisar de trigger de banco por trás. Primeiro consumidor:
-    // 25-arquivo (limites de upload).
+    // Global também: leitura de configuracoes por qualquer módulo que precise de um número configurável pelo
+    // Painel Admin, sem trigger de banco por trás. Primeiro consumidor: 25-arquivo (limites de upload).
     ConfiguracaoValorModule,
     UsuarioModule,
     TermoUsoModule,

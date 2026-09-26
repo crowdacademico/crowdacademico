@@ -2,10 +2,8 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
 import { TermoUsoResponse } from '../dto/response/termo-uso.response';
 
-// Buscar uma versão específica por id (13-09-2026, adicionado junto de
-// TermoUsoServiceAlterar - a tela de Alterar precisa carregar os dados
-// atuais antes de editar, mesmo padrão de qualquer outro "Consultar/
-// Alterar" do painel).
+// Buscar uma versão específica por id: a tela de Alterar precisa carregar os dados atuais antes de editar
+// (mesmo padrão de qualquer outro "Consultar/Alterar" do painel).
 @Injectable()
 export class TermoUsoServiceBuscar {
   constructor(private readonly database: DatabaseService) {}

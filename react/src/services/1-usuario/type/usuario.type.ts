@@ -1,15 +1,12 @@
 import type { TipoTermo } from '../../5-termo-uso/type/termo-uso.type';
 
-// Espelha nest/src/1-usuario/dto/response/*.ts, um a um, mesmo nome de
-// arquivo pra divergência ficar visível se um lado mudar e o outro não
-// (fase 2 da migração TS - ver DOCUMENTACAO_FRONTEND.md/ACHADOS_PARA_DISCUTIR.md
-// sobre a fraqueza conhecida deste desenho: nada AVISA se os dois lados
-// desalinharem, é espelho manual, sem import cruzado entre os repositórios).
+// Espelha nest/src/1-usuario/dto/response/*.ts, um a um, com o mesmo nome de arquivo, para a divergência ficar
+// visível se um lado mudar e o outro não (fraqueza conhecida deste desenho, ver DOCUMENTACAO_FRONTEND.md: nada
+// AVISA se os dois lados desalinharem, é espelho manual, sem import cruzado entre os repositórios).
 //
-// Datas: o Nest declara `Date`, mas o que atravessa a rede em JSON é
-// sempre uma STRING ISO 8601 - o `Date` do Nest só existe no lado de lá,
-// nunca chega assim no navegador. Por isso todo campo de data aqui é
-// `string`, não `Date`, refletindo o formato real da resposta HTTP.
+// Datas: o Nest declara `Date`, mas o que atravessa a rede em JSON é sempre uma STRING ISO 8601 (o `Date` do
+// Nest só existe no lado de lá), por isso todo campo de data aqui é `string`, não `Date`, refletindo o formato
+// real da resposta HTTP.
 
 // Espelha usuario.response.ts (UsuarioResponse).
 export interface UsuarioResponse {
@@ -30,8 +27,7 @@ export interface UsuarioResponseLoginHistorico {
   logadoEm: string;
 }
 
-// Espelha usuario.response-termo-aceito.ts (14-09-2026, pedido do Lucas:
-// "onde fica registrado" o aceite do Termo de Uso - Consultar Usuário).
+// Espelha usuario.response-termo-aceito.ts (Consultar Usuário: onde fica registrado o aceite do Termo de Uso).
 export interface UsuarioResponseTermoAceito {
   tipo: TipoTermo;
   versao: string;

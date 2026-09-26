@@ -1,9 +1,5 @@
-// ============================================================================
-// Campo de Testes deixou de ser só ferramenta de teste descartável
-// (07-09-2026, decisão do Lucas): virou parte permanente do painel
-// administrativo, com o mesmo padrão de dados/comportamento do resto do
-// sistema (nunca uma versão simplificada à parte).
-// ============================================================================
+// Campo de Testes é parte permanente do painel administrativo (não uma ferramenta de teste descartável), com o
+// mesmo padrão de dados/comportamento do resto do sistema (nunca uma versão simplificada à parte).
 
 import { useCallback, useEffect, useState } from 'react';
 import { AcaoLinha } from '../../components/crud/acao-linha';
@@ -39,48 +35,32 @@ interface PesquisadorLinha extends Partial<PerfilPesquisadorResponse> {
   papel: string;
 }
 
-// T1, Bancada do Pesquisador. Trabalha em cima de REGISTROS REAIS
-// (23-08-2026, pedido do Lucas, ERA um roster de personas fixas,
-// apagado): a lista abaixo vem de GET /perfil-pesquisador de verdade
-// (mesma API da tela admin "Pesquisadores"). Os 11 pesquisadores 12-22
-// (a "demo" do próprio 07_seed_dados.sql, já têm campanha, score e links
-// pré-montados) ficam BLOQUEADOS aqui: aparecem na lista, mas riscados,
-// com cadeado, sem botão de usar. Servem pra explorar o produto, não pra
+// T1, Bancada do Pesquisador. Trabalha em cima de REGISTROS REAIS: a lista abaixo vem de GET
+// /perfil-pesquisador de verdade (mesma API da tela admin "Pesquisadores"). Os 11 pesquisadores 12-22 (a "demo"
+// do próprio 07_seed_dados.sql, que já têm campanha, score e links pré-montados) ficam BLOQUEADOS aqui:
+// aparecem na lista, mas riscados, com cadeado, sem botão de usar. Servem para explorar o produto, não para
 // virar cobaia de teste.
 //
-// SEM ELENCO (25-08-2026, pedido do Lucas: "remover de vez" o motor de
-// login-múltiplo). Toda escrita usa a sessão REAL do painel (`auth`).
+// Toda escrita usa a sessão REAL do painel (`auth`).
 //
-// SEM "Escolher" (12-09-2026) - removida por completo, junto com o painel
-// solto embaixo da tabela que ela alimentava.
-//
-// SEM MODAL PRÓPRIO (13-09-2026, pedido do Lucas: "apagar as telas do CRUD
-// de Usuário, fazer a completa migração do Modal") - o modal completo
-// (Alterar/Consultar/Excluir, unificando conta + Perfil de Pesquisador) que
-// nasceu e cresceu aqui entre 07 e 12-09-2026 foi extraído pra
-// `views/1-usuario/modal-usuario.tsx`, que agora também é o CRUD real de
-// Usuário (`listar-usuarios.tsx`). Esta tela só abre esses componentes
-// compartilhados - não duplica mais nome/senha/foto/papéis/moderação/CPF/
-// score/links acadêmicos aqui dentro. O que continua exclusivo desta tela:
-// a própria tabela (com linha riscada/cadeado por registro bloqueado, que
+// Esta tela não tem modal próprio: abre os componentes compartilhados de `views/1-usuario/modal-usuario.tsx`
+// (Alterar/Consultar/Excluir, unificando conta + Perfil de Pesquisador), que também são o CRUD real de Usuário
+// (`listar-usuarios.tsx`); não duplica nome/senha/foto/papéis/moderação/CPF/score/links acadêmicos aqui dentro.
+// O que continua exclusivo desta tela: a própria tabela (com linha riscada/cadeado por registro bloqueado, que
 // GenericTable não sabe fazer) e o filtro/facet/paginação por cima dela.
 export function BancadaPesquisador({ auth }: PropsPagina) {
-  // CORRIGIDO (13-09-2026, achado numa varredura de código inerte pedida
-  // pelo Lucas) - o modal compartilhado (`modal-usuario.tsx`) não pode usar
-  // `chamarERegistrar`/`useCampoTestes()` internamente (quebraria a página
-  // real em produção, ver comentário no topo daquele arquivo), então T1
-  // tinha parado de aparecer no T4 (Registro de Chamadas) por completo -
-  // regressão real, não cosmética, já que T4 é exatamente a ferramenta que
-  // ajuda a ver de perto o que "testar upgrade de perfil, scores, etc."
-  // dispara de verdade. `registrarChamada` (só existe aqui, dentro do
-  // Provider) é passado como prop pro modal - a página real nunca recebe
-  // essa prop, continua sem nenhuma dependência do Provider.
+  // O modal compartilhado (`modal-usuario.tsx`) não pode usar `chamarERegistrar`/`useCampoTestes()`
+  // internamente (quebraria a página real em produção, ver comentário no topo daquele arquivo). Para T1
+  // continuar aparecendo no T4 (Registro de Chamadas), que é a ferramenta que ajuda a ver de perto o que
+  // "testar upgrade de perfil, scores, etc." dispara de verdade, `registrarChamada` (só existe aqui, dentro do
+  // Provider) é passado como prop para o modal; a página real nunca recebe essa prop, continua sem nenhuma
+  // dependência do Provider.
   const { registrarChamada } = useCampoTestes();
   const [pesquisadores, setPesquisadores] = useState<PesquisadorLinha[]>([]);
   const [carregandoLista, setCarregandoLista] = useState(true);
   const [erroListagem, setErroListagem] = useState<string | null>(null);
-  // Ligado por padrão (pedido do Lucas): a demo pré-montada (12-22) não
-  // serve pra testar, então já nasce fora da vista, sem precisar caçar.
+  // Ligado por padrão: a demo pré-montada (12-22) não serve para testar, então já nasce fora da vista, sem
+  // precisar caçar.
   const [ocultarBloqueados, setOcultarBloqueados] = useState(true);
   // Mesmo filtro + paginação + facet "Papel" de GenericTable (components/
   // crud/generic-table.tsx), reimplementado aqui (não a versão genérica
@@ -90,10 +70,8 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
   const [filtroTexto, setFiltroTexto] = useState('');
   const [pagina, setPagina] = useState(1);
   const [tamanhoPagina, setTamanhoPagina] = useState<number | 'todos'>(10);
-  // Pré-marcado com usuário/pesquisador (pedido do Lucas, 23-08-2026: "só
-  // pra adiantar os testes") - só este facet, só nesta tela; em qualquer
-  // outro filtro por papel do painel (ex.: /admin/usuarios), o padrão
-  // continua sendo "Todos".
+  // Pré-marcado com usuário/pesquisador, para adiantar os testes: só este facet, só nesta tela; em qualquer
+  // outro filtro por papel do painel (ex.: /admin/usuarios), o padrão continua sendo "Todos".
   const [papeisSelecionados, setPapeisSelecionados] = useState<string[]>([PAPEL_SEM_EXTRA, 'pesquisador']);
 
   // Qual modal está aberto - o conteúdo de cada um vive em modal-usuario.tsx
@@ -101,26 +79,18 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
   const [idUsuarioConsultando, setIdUsuarioConsultando] = useState<number | null>(null);
   const [idUsuarioAlterando, setIdUsuarioAlterando] = useState<number | null>(null);
   const [usuarioExcluindo, setUsuarioExcluindo] = useState<PesquisadorLinha | null>(null);
-  // Coluna "upgrade" (13-09-2026, pedido do Lucas) - cadeado abre o MESMO
-  // Modal de upgrade de perfil que qualquer conta usaria (ModalUpgrade
-  // Pesquisador, em 6-perfil-pesquisador/ - não é exclusivo do Campo de
-  // Testes) pra QUALQUER linha sem perfil, própria ou de outra pessoa
-  // (14-09-2026, decisão do Lucas via AskUserQuestion: o Termo de Uso
-  // aparece sempre, mesmo pra outra conta - o Modal decide sozinho, por
-  // baixo, se usa o endpoint self-service ou "para outro" comparando
-  // `idUsuarioAlvo` com a conta logada).
+  // Coluna "upgrade": o cadeado abre o MESMO Modal de upgrade de perfil que qualquer conta usaria
+  // (ModalUpgradePesquisador, em 6-perfil-pesquisador/, não é exclusivo do Campo de Testes) para QUALQUER linha
+  // sem perfil, própria ou de outra pessoa (o Termo de Uso aparece sempre, mesmo para outra conta): o Modal
+  // decide sozinho, por baixo, se usa o endpoint self-service ou "para outro" comparando `idUsuarioAlvo` com a
+  // conta logada.
   const [idUsuarioUpgrade, setIdUsuarioUpgrade] = useState<number | null>(null);
 
-  // Lista TODOS os usuários (23-08-2026, pedido do Lucas: "não deve
-  // aparecer só Pesquisadores"), não só quem já tem perfil_pesquisador -
-  // qualquer conta real dá pra abrir. Coluna/facet "papel" (mesma lógica de
-  // listar-usuarios.tsx): junta usuario_papel de todo mundo de uma vez (1
-  // requisição, não 1 por linha), papel padrão 'usuario' não conta como
-  // "extra".
-  // `.catch()` no fim (achado 08-09-2026, no-floating-promises) - antes,
-  // se `usuarioApi.listar` falhasse, o `.finally()` ainda zerava o
-  // spinner, mas nenhum erro aparecia: a tela ficava vazia/desatualizada
-  // em silêncio, sem explicar por quê.
+  // Lista TODOS os usuários, não só quem já tem perfil_pesquisador: qualquer conta real dá para abrir.
+  // Coluna/facet "papel" (mesma lógica de listar-usuarios.tsx): junta usuario_papel de todo mundo de uma vez (1
+  // requisição, não 1 por linha), papel padrão 'usuario' não conta como "extra".
+  // `.catch()` no fim (`no-floating-promises`): se `usuarioApi.listar` falhasse, o `.finally()` ainda zeraria o
+  // spinner, mas nenhum erro apareceria: a tela ficaria vazia/desatualizada em silêncio, sem explicar por quê.
   const carregarPesquisadores = useCallback(() => {
     setCarregandoLista(true);
     setErroListagem(null);
@@ -294,14 +264,9 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
                     {perfil.statusPesquisador !== undefined ? (
                       <span className="badge badge-sucesso">Pesquisador</span>
                     ) : (
-                      // Cadeado SEMPRE visível e clicável (14-09-2026,
-                      // achado do Lucas: "nos Usuários que não Pesquisadores
-                      // está aparecendo '-'... era pro cadeado estar ali") -
-                      // em toda linha sem perfil, própria ou de outra
-                      // pessoa. O Modal (ModalUpgradePesquisador) decide
-                      // sozinho, por baixo, qual endpoint usar comparando o
-                      // `idUsuarioAlvo` com a conta logada - aqui só se
-                      // guarda QUEM.
+                      // Cadeado SEMPRE visível e clicável em toda linha sem perfil, própria ou de outra pessoa.
+                      // O Modal (ModalUpgradePesquisador) decide sozinho, por baixo, qual endpoint usar
+                      // comparando o `idUsuarioAlvo` com a conta logada: aqui só se guarda QUEM.
                       <button
                         type="button"
                         onClick={() => setIdUsuarioUpgrade(perfil.idUsuario)}

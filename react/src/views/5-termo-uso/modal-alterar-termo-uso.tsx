@@ -22,28 +22,19 @@ interface ModalAlterarTermoUsoProps {
   aoSalvar?: () => void;
 }
 
-// Modal de Alterar (13-09-2026, pedido do Lucas: "vamos acabar com as telas
-// próprias e adotar modal para o CRUD", mesmo padrão de ModalAlterarUsuario)
-// - substitui a página `/admin/termos-uso/:id/alterar`. Mesma regra de
-// negócio de antes (só edita conteúdo enquanto ninguém aceitou a versão,
-// ver TermoUsoServiceAlterar no Nest).
+// Modal de Alterar (mesmo padrão de ModalAlterarUsuario): substitui a página `/admin/termos-uso/:id/alterar`.
+// Regra de negócio: só edita conteúdo enquanto ninguém aceitou a versão (ver TermoUsoServiceAlterar no Nest).
 //
-// LISTBOX de versões existentes (pedido do Lucas) - abrir "Alterar" a
-// partir do card mostra só a versão vigente daquele tipo, mas ela pode já
-// estar travada (alguém aceitou); o listbox deixa trocar, sem fechar o
-// modal, pra QUALQUER outra versão do MESMO tipo (histórico incluso) -
-// útil quando a vigente está travada mas uma versão antiga, por acaso,
-// nunca foi aceita por ninguém e ainda pode ser corrigida.
+// LISTBOX de versões existentes: abrir "Alterar" a partir do card mostra só a versão vigente daquele tipo, mas
+// ela pode já estar travada (alguém aceitou); o listbox deixa trocar, sem fechar o modal, para QUALQUER outra
+// versão do MESMO tipo (histórico incluso): útil quando a vigente está travada mas uma versão antiga, por
+// acaso, nunca foi aceita por ninguém e ainda pode ser corrigida.
 //
-// SEM campo "Versão" separado (corrigido no mesmo dia, achado do Lucas: 2
-// caixas de texto mostrando a mesma versão - o listbox e um input editável
-// - não fazia sentido). `versao`/`tipo` são imutáveis; só `conteudo` se
-// edita aqui.
+// SEM campo "Versão" separado: 2 caixas de texto mostrando a mesma versão (o listbox e um input editável) não
+// faria sentido. `versao`/`tipo` são imutáveis; só `conteudo` se edita aqui.
 //
-// "Tornar vigente" (mesmo dia, rodada seguinte - Criar não ativa mais
-// sozinho) - ação separada de "Salvar" (editar conteúdo), chama
-// `TermoUsoServiceAtivar` no Nest. Só aparece quando a versão selecionada
-// AINDA NÃO é a vigente.
+// "Tornar vigente": ação separada de "Salvar" (editar conteúdo), chama `TermoUsoServiceAtivar` no Nest (Criar
+// não ativa sozinho). Só aparece quando a versão selecionada AINDA NÃO é a vigente.
 export function ModalAlterarTermoUso({
   auth,
   tipo,

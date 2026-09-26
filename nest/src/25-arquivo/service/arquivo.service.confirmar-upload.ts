@@ -16,20 +16,13 @@ import {
   CHAVE_CONFIG_COTA_BYTES_POR_USUARIO,
   COTA_BYTES_POR_USUARIO_PADRAO,
   QUANTIDADE_BYTES_ASSINATURA,
-  TipoMimePermitido,
+  TIPOS_IMAGEM_PERMITIDOS,
 } from '../arquivo.constants';
 import { ArquivoConverter } from '../dto/converter/arquivo.converter';
 import { ArquivoRequestConfirmarUpload } from '../dto/request/arquivo.request-confirmar-upload';
 import { ArquivoResponse } from '../dto/response/arquivo.response';
 import { assinaturaCorrespondeAoTipo } from '../util/arquivo.assinatura.util';
 import { processarImagem } from '../util/arquivo.processamento-imagem.util';
-
-// PDF nunca passa pelo sharp (não é imagem) - os 3 tipos abaixo, sim.
-const TIPOS_IMAGEM: readonly TipoMimePermitido[] = [
-  'image/jpeg',
-  'image/png',
-  'image/webp',
-];
 
 @Injectable()
 export class ArquivoServiceConfirmarUpload {
@@ -86,7 +79,8 @@ export class ArquivoServiceConfirmarUpload {
     // Decide ANTES de gravar em publico/, porque o tamanho final (o que
     // entra na checagem de cota abaixo) só existe depois do processamento
     // pra imagem, mas é o mesmo tamanho declarado pra PDF.
-    const ehImagem = TIPOS_IMAGEM.includes(dto.tipoMime);
+    // PDF nunca passa pelo sharp (não é imagem).
+    const ehImagem = TIPOS_IMAGEM_PERMITIDOS.includes(dto.tipoMime);
 
     let tipoMimeFinal: string = dto.tipoMime;
     let tamanhoFinal: number = dto.tamanhoBytes;
@@ -110,12 +104,10 @@ export class ArquivoServiceConfirmarUpload {
       chaveDestino = dto.chave.replace(PASTA_PENDENTE, PASTA_PUBLICO);
     }
 
-    // Cota por usuário (01-09-2026) - checada com o tamanho FINAL (já
-    // processado, pra imagem), nunca o declarado antes da compressão:
-    // checar antes seria injusto (rejeitaria upload que cabe de sobra
-    // depois de comprimido) e checar depois de já ter gravado em
-    // publico/ deixaria arquivo órfão pra trás se estourasse. Por isso
-    // fica bem aqui: depois de processar, antes de gravar o resultado.
+    // Cota por usuário: checada com o tamanho FINAL (já processado, para imagem), nunca o declarado antes da
+    // compressão: checar antes seria injusto (rejeitaria upload que cabe de sobra depois de comprimido) e
+    // checar depois de já ter gravado em publico/ deixaria arquivo órfão para trás se estourasse. Por isso fica
+    // bem aqui: depois de processar, antes de gravar o resultado.
     const db = this.database.getDb();
     const usoAtual = await db
       .selectFrom('arquivo')

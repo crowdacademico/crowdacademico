@@ -38,46 +38,32 @@ import type { TipoVinculo, TituloAcademico } from '../../services/6-perfil-pesqu
 import type { TipoLinkResponse } from '../../services/9-tipo-link/type/tipo-link.type';
 import type { EntradaRegistroChamada } from '../../services/campo-testes/context/campo-testes-context';
 
-// ============================================================================
-// Modal ÚNICO de Alterar/Consultar/Excluir Usuário (nome/senha/foto/papéis/
-// moderação de conta) + Perfil de Pesquisador (vínculo/título/CPF/score/
-// links acadêmicos/moderação de pesquisador) - nasceu dentro do Campo de
-// Testes (T1, Bancada do Pesquisador, 07 a 12-09-2026), extraído pra cá
-// (13-09-2026, pedido do Lucas: "apagar as telas do CRUD de Usuário, fazer a
-// completa migração do Modal") pra virar o CRUD real de Usuário, sem deixar
-// de ser usado por T1 também - um único componente, dois consumidores.
+// Modal ÚNICO de Alterar/Consultar/Excluir Usuário (nome/senha/foto/papéis/moderação de conta) + Perfil de
+// Pesquisador (vínculo/título/CPF/score/links acadêmicos/moderação de pesquisador). Nasceu dentro do Campo de
+// Testes (T1, Bancada do Pesquisador) e foi extraído para cá para ser o CRUD real de Usuário, sem deixar de ser
+// usado por T1: um único componente, dois consumidores.
 //
-// Diferença chave em relação à versão que vivia em bancada-pesquisador.tsx:
-// aqui NUNCA se usa `chamarERegistrar`/`useCampoTestes()` diretamente - esses
-// só existem dentro de `<CampoTestesProvider>`, que só é montado em build de
-// desenvolvimento (ver App.tsx). Este arquivo é código de produção de
-// verdade, usado sempre; toda chamada usa `auth.authFetch` direto (via
-// `usuarioApi`/`perfilPesquisadorApi`/`usuarioPapelApi`/`papelApi`, mesma
-// convenção do resto do painel fora do Campo de Testes) - mesma exceção já
-// aceita pra `SecaoModeracaoPesquisador`/`SecaoModeracao` (não aparecem no
+// Diferença chave em relação à versão que vivia em bancada-pesquisador.tsx: aqui NUNCA se usa
+// `chamarERegistrar`/`useCampoTestes()` diretamente: esses só existem dentro de `<CampoTestesProvider>`, que só
+// é montado em build de desenvolvimento (ver App.tsx). Este arquivo é código de produção de verdade, usado
+// sempre; toda chamada usa `auth.authFetch` direto (via
+// `usuarioApi`/`perfilPesquisadorApi`/`usuarioPapelApi`/`papelApi`, mesma convenção do resto do painel fora do
+// Campo de Testes). Mesma exceção aceita para `SecaoModeracaoPesquisador`/`SecaoModeracao` (não aparecem no
 // Registro de Chamadas quando usado a partir de T1, consciente).
 //
-// CORRIGIDO (13-09-2026, achado numa varredura de código morto/inerte pedida
-// pelo Lucas depois da extração): a frase acima ficou incompleta na primeira
-// versão - T1 (que TINHA todas essas chamadas registradas em T4 antes da
-// extração) passou a não aparecer mais NUNCA no Registro de Chamadas, mesmo
-// pra quem só usa T1 (perda real, não cosmética, pro próprio propósito de T1
-// - "testar upgrade de perfil, scores, etc." de perto). Corrigido com uma
-// prop opcional `aoRegistrarChamada?: (entrada: EntradaRegistroChamada) =>
-// void` em cada modal - `undefined` na página real (nunca registra, nunca
-// depende do provider), a função de verdade só quando T1 passa (via
-// `useCampoTestes().registrarChamada`). O helper `comRegistro()` abaixo
-// cronometra e reporta cada chamada só quando essa prop existe.
+// Para T1 não perder o Registro de Chamadas (T4, que é o propósito de T1: "testar upgrade de perfil, scores,
+// etc." de perto), cada modal tem uma prop opcional `aoRegistrarChamada?: (entrada: EntradaRegistroChamada) =>
+// void`: `undefined` na página real (nunca registra, nunca depende do provider), a função de verdade só quando
+// T1 passa (via `useCampoTestes().registrarChamada`). O helper `comRegistro()` abaixo cronometra e reporta cada
+// chamada só quando essa prop existe.
 //
-// Também self-contido: cada modal recebe só `idUsuario` e busca os PRÓPRIOS
-// dados ao abrir (nome/perfil/avatar/papéis) - não depende mais de uma linha
-// pré-carregada pelo componente pai, então serve tanto pra listar-usuarios.
-// tsx (linha sem perfil_pesquisador embutido) quanto pra bancada-
-// pesquisador.tsx (linha já com tudo, mas ignorada por este componente).
-// ============================================================================
+// Também self-contido: cada modal recebe só `idUsuario` e busca os PRÓPRIOS dados ao abrir
+// (nome/perfil/avatar/papéis): não depende de uma linha pré-carregada pelo componente pai, então serve tanto
+// para listar-usuarios.tsx (linha sem perfil_pesquisador embutido) quanto para bancada-pesquisador.tsx (linha
+// já com tudo, mas ignorada por este componente).
 
-// Só existe em desenvolvimento (24-09-2026): em `npm run build` o Vite troca
-// `import.meta.env.DEV` por `false` e a senha some do pacote de produção.
+// Só existe em desenvolvimento: em `npm run build` o Vite troca `import.meta.env.DEV` por `false` e a senha
+// some do pacote de produção.
 const SENHA_DEV = import.meta.env.DEV ? 'DevTcc123!' : '';
 
 // Aproximação consciente: em sucesso, a camada tipada (`usuarioApi` etc.)
@@ -123,23 +109,16 @@ async function comRegistro<T>(
   }
 }
 
-// Extraído (13-09-2026, achado de auditoria: os dois modais abaixo abriam
-// com o MESMO Promise.all de 4 chamadas - usuário, perfil de pesquisador,
-// avatar, papéis - byte a byte, cada um com sua própria cópia de estado).
-// `perfilPesquisador` e `papeis` continuam expostos com setter porque NÃO
-// são só leitura em ModalAlterarUsuario - `criarPerfil()` reatribui o
-// primeiro depois de criar um perfil, e as 4 ações de papel (atribuir/
-// suspender/reativar/revogar) reatribuem o segundo depois de cada uma -
-// nenhum dos dois é puramente derivado da busca inicial só em Alterar
-// (em Consultar, os dois são só leitura, o setter simplesmente não é
-// usado). `carregando` é true até o Promise.all assentar (sucesso OU
-// erro), igual ao `finally` que já existia nas duas cópias.
-// `reportarErro` é recebido do chamador (em vez de um `useErroToast()`
-// próprio aqui dentro) de propósito - em ModalAlterarUsuario, o mesmo erro
-// dessa busca inicial precisa cair na MESMA faixa de erro que as outras
-// ~10 ações do modal (atribuir papel, criar perfil, etc.) já usam; um
-// `useErroToast()` isolado aqui dentro criaria um segundo estado de erro
-// que a busca inicial nunca alimentaria.
+// Os dois modais abaixo abrem com o MESMO Promise.all de 4 chamadas (usuário, perfil de pesquisador, avatar,
+// papéis). `perfilPesquisador` e `papeis` continuam expostos com setter porque NÃO são só leitura em
+// ModalAlterarUsuario: `criarPerfil()` reatribui o primeiro depois de criar um perfil, e as 4 ações de papel
+// (atribuir/suspender/reativar/revogar) reatribuem o segundo depois de cada uma (em Consultar, os dois são só
+// leitura, o setter simplesmente não é usado). `carregando` é true até o Promise.all assentar (sucesso OU
+// erro).
+// `reportarErro` é recebido do chamador (em vez de um `useErroToast()` próprio aqui dentro) de propósito: em
+// ModalAlterarUsuario, o mesmo erro dessa busca inicial precisa cair na MESMA faixa de erro que as outras ~10
+// ações do modal (atribuir papel, criar perfil, etc.) já usam; um `useErroToast()` isolado aqui dentro criaria
+// um segundo estado de erro que a busca inicial nunca alimentaria.
 function useDadosUsuario(
   idUsuario: number,
   auth: Pick<UseAuthReturn, 'authFetch'>,
@@ -180,19 +159,16 @@ function useDadosUsuario(
   return { usuario, perfilPesquisador, setPerfilPesquisador, avatarUrl, papeis, setPapeis, carregando };
 }
 
-
 interface BotaoVerFotoPerfilProps {
   url: string;
   tamanho?: string;
   badge?: boolean;
 }
 
-// Botão de olho - abre a foto de perfil em outra guia. Mesma explicação de
-// sempre (ERA local só em consultar-usuario.tsx): não existe "tamanho
-// máximo" de verdade, é a MESMA url do avatar pequeno, já processada pelo
-// `sharp` no upload (RNF-016). `badge` desenha o selo circular sobreposto no
-// canto inferior direito do avatar (cabeçalho do modal); sem `badge`, é o
-// ícone inline usado dentro de "Dados da conta".
+// Botão de olho: abre a foto de perfil em outra guia. Não existe "tamanho máximo" de verdade: é a MESMA url do
+// avatar pequeno, já processada pelo `sharp` no upload (RNF-016). `badge` desenha o selo circular sobreposto no
+// canto inferior direito do avatar (cabeçalho do modal); sem `badge`, é o ícone inline usado dentro de "Dados
+// da conta".
 function BotaoVerFotoPerfil({ url, tamanho = 'text-base', badge = false }: BotaoVerFotoPerfilProps) {
   if (badge) {
     return (
@@ -569,10 +545,9 @@ export function ModalConsultarUsuario({ auth, idUsuario, aoFechar, aoRegistrarCh
   const [logins, setLogins] = useState<UsuarioResponseLoginHistorico[] | null>(null);
   const [carregandoLogins, setCarregandoLogins] = useState(false);
   const [loginsAbertos, setLoginsAbertos] = useState(false);
-  // Termos de Uso aceitos (14-09-2026, pedido do Lucas: "onde fica
-  // registrado" o aceite) - buscado sempre (não atrás de um toggle, como os
-  // logins) porque é informação de conformidade que faz sentido já vir
-  // visível ao consultar a conta, não um detalhe auxiliar raramente checado.
+  // Termos de Uso aceitos ("onde fica registrado" o aceite): buscado sempre (não atrás de um toggle, como os
+  // logins) porque é informação de conformidade que faz sentido já vir visível ao consultar a conta, não um
+  // detalhe auxiliar raramente checado.
   const [termosAceitos, setTermosAceitos] = useState<UsuarioResponseTermoAceito[] | null>(null);
 
   useEffect(() => {
@@ -609,9 +584,8 @@ export function ModalConsultarUsuario({ auth, idUsuario, aoFechar, aoRegistrarCh
 
   return (
     <ModalFicha
-      // `carregando` (14-09-2026) - ModalFicha já esconde título/avatar
-      // sozinho enquanto `usuario` não chega, mostrando "Carregando..." no
-      // lugar (ver comentário completo em modal-ficha.tsx).
+      // `carregando`: ModalFicha já esconde título/avatar sozinho enquanto `usuario` não chega, mostrando
+      // "Carregando..." no lugar (ver comentário completo em modal-ficha.tsx).
       carregando={!usuario}
       titulo={usuario?.nome ?? ''}
       subtitulo={usuario?.email}
@@ -778,13 +752,10 @@ interface ModalAlterarUsuarioProps {
   aoRegistrarChamada?: (entrada: EntradaRegistroChamada) => void;
 }
 
-// Alterar - conta inteira (nome/senha/foto/papéis/moderação de conta) +
-// Perfil de Pesquisador (vínculo/título/CPF/links/moderação de pesquisador),
-// pra quem já é pesquisador. Criar perfil pra quem ainda não é passou a
-// viver só no cadeado de upgrade (6-perfil-pesquisador/modal-upgrade-
-// pesquisador.tsx), hoje disponível apenas na Bancada do Pesquisador
-// (Campo de Testes) - removido de aqui a pedido do Lucas (14-09-2026,
-// duplicava o mesmo poder sem passar pelo Termo de Uso).
+// Alterar: conta inteira (nome/senha/foto/papéis/moderação de conta) + Perfil de Pesquisador
+// (vínculo/título/CPF/links/moderação de pesquisador), para quem já é pesquisador. Criar perfil para quem ainda
+// não é vive só no cadeado de upgrade (6-perfil-pesquisador/modal-upgrade-pesquisador.tsx), disponível apenas
+// na Bancada do Pesquisador (Campo de Testes): duplicar aqui daria o mesmo poder sem passar pelo Termo de Uso.
 export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado, aoRegistrarChamada }: ModalAlterarUsuarioProps) {
   const { mostrar } = useToast();
   const { erro, reportarErro, limparErro } = useErroToast();
@@ -1034,14 +1005,10 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado, a
     }
   };
 
-  // Aviso de "alteração não salva" (13-09-2026, achado do Lucas: o
-  // modal fecha por 3 caminhos - X, clique no fundo escurecido, botão
-  // Cancelar - e todos os 3 já passam por `fechar()` abaixo; a página
-  // antiga que este modal substituiu tinha esse aviso, o modal nunca
-  // ganhou). `sujo` cobre os 3 formulários de verdade (dados da conta,
-  // edição de perfil, criação de perfil) - de propósito NÃO inclui foto de
-  // perfil nem ações de papel, porque essas já salvam na hora (não ficam
-  // pendentes) e incluir geraria aviso quando não há nada a perder.
+  // Aviso de "alteração não salva": o modal fecha por 3 caminhos (X, clique no fundo escurecido, botão
+  // Cancelar) e todos passam por `fechar()` abaixo. `sujo` cobre os 3 formulários de verdade (dados da conta,
+  // edição de perfil, criação de perfil); de propósito NÃO inclui foto de perfil nem ações de papel, porque
+  // essas já salvam na hora (não ficam pendentes) e incluir geraria aviso quando não há nada a perder.
   const sujo = Boolean(
     usuario &&
       (nomeEdicao !== usuario.nome ||
@@ -1064,7 +1031,7 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado, a
 
   return (
     <ModalFicha
-      // `carregando` (14-09-2026) - mesmo mecanismo de ModalConsultarUsuario.
+      // `carregando`: mesmo mecanismo de ModalConsultarUsuario.
       carregando={!usuario}
       titulo={usuario?.nome ?? ''}
       subtitulo={usuario?.email}

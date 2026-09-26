@@ -5,11 +5,9 @@
 // a troca de segurança que está fazendo.
 export const CUSTO_BCRYPT_REFRESH_TOKEN = 10;
 
-// Validade da sessão (dias) - DEFAULT, usado só quando a chave
-// correspondente não existir/estiver inativa em `configuracoes` (ver
-// ConfiguracaoValorService, commons/configuracao). Configurável pelo
-// Painel Admin desde 04-09-2026 - mesmo raciocínio de `arquivo`: é regra de
-// produto (por quanto tempo alguém continua logado sem precisar entrar de
+// Validade da sessão (dias): DEFAULT, usado só quando a chave correspondente não existir/estiver inativa em
+// `configuracoes` (ver ConfiguracaoValorService, commons/configuracao). Configurável pelo Painel Admin, mesmo
+// raciocínio de `arquivo`: é regra de produto (por quanto tempo alguém continua logado sem precisar entrar de
 // novo), não parâmetro de segurança como `CUSTO_BCRYPT_REFRESH_TOKEN` acima.
 export const REFRESH_TOKEN_DIAS_VALIDADE_PADRAO = 30;
 export const CHAVE_CONFIG_REFRESH_TOKEN_DIAS_VALIDADE =
@@ -21,12 +19,9 @@ export const CHAVE_CONFIG_REFRESH_TOKEN_DIAS_VALIDADE =
 // Nunca confiar no id_sessao sozinho pra revogar/renovar sem essa checagem.
 export const REFRESH_TOKEN_SEPARADOR = '.';
 
-// Validade do token de verificação de e-mail (horas) - DEFAULT, mesmo
-// tratamento de REFRESH_TOKEN_DIAS_VALIDADE_PADRAO acima. Configurável
-// desde 04-09-2026 - decisão anterior (09-08-2026) tratava isto como
-// "parâmetro técnico, não regra de negócio configurável", revista agora: é
-// exatamente o mesmo tipo de janela de tempo que `bloqueio_login_minutos`
-// já é configurável, então não fazia sentido tratar diferente.
+// Validade do token de verificação de e-mail (horas): DEFAULT, mesmo tratamento de
+// REFRESH_TOKEN_DIAS_VALIDADE_PADRAO acima. Configurável: é exatamente o mesmo tipo de janela de tempo que
+// `bloqueio_login_minutos`, que já é configurável.
 export const VERIFICACAO_EMAIL_HORAS_VALIDADE_PADRAO = 24;
 export const CHAVE_CONFIG_VERIFICACAO_EMAIL_HORAS_VALIDADE =
   'verificacao_email_horas_validade';

@@ -1,27 +1,17 @@
-/* Separado de 0-style.css de propósito: @import 'tailwindcss' se expande
-   inline (o plugin injeta um bloco enorme de CSS gerado bem ali), e depois
-   disso mais nenhum @import pode vir no MESMO arquivo (regra de CSS:
-   @import só pode vir antes de qualquer outra regra) - dava warning de
-   build misturado com os @import dos arquivos numerados. Mantendo isolado
-   aqui, os dois arquivos ficam válidos por conta própria. main.tsx importa
-   os dois, nessa ordem (ver main.tsx).
+/* Separado de 0-style.css de propósito: @import 'tailwindcss' se expande inline (o plugin injeta um bloco
+   enorme de CSS gerado bem ali), e depois disso mais nenhum @import pode vir no MESMO arquivo (regra de CSS:
+   @import só pode vir antes de qualquer outra regra), o que geraria warning de build misturado com os
+   @import dos arquivos numerados. Mantendo isolado aqui, os dois arquivos ficam válidos por conta própria.
+   main.tsx importa os dois, nessa ordem (ver main.tsx).
 
-   @theme = config do Tailwind v4 (substitui o antigo `tailwind.config =
-   {...}` que vivia inline no index.html, via CDN) - MESMAS cores/fontes de
-   antes. Emite as variáveis em :root também, então `1-cores.css` usa
-   var(--color-primary) etc. pra montar o alias semântico (`--cor-marca`
-   e companhia) sem redeclarar nada.
+   @theme = config do Tailwind v4 (substitui o antigo `tailwind.config = {...}` inline no index.html, via
+   CDN). Emite as variáveis em :root também, então `1-cores.css` usa var(--color-primary) etc. para montar o
+   alias semântico (`--cor-marca` e companhia) sem redeclarar nada.
 
-   CORRIGIDO (13-09-2026, achado do Lucas, rodada 3): esta nota dizia
-   "1-cores.css em especial, mas não só ele" - até então, 5 outros
-   arquivos de CSS também referenciavam `--color-primary`/`--color-surface`/
-   `--color-dark` direto, sem passar pelo alias. Migrados todos pra usar
-   `--cor-marca`/`--cor-marca-escura`/`--cor-superficie`/`--cor-escura` -
-   agora É só `1-cores.css` mesmo, a frase virou verdade de novo. Buscar
-   `var(--color-primary` / `var(--color-surface)` / `var(--color-dark)` em
-   `src/assets/css/*.css` e só achar ocorrência aqui + em `1-cores.css` é
-   a verificação de uma linha que confirma a regra de ouro (componente
-   nunca referencia `--color-*` cru) continua valendo. */
+   Regra de ouro: só `1-cores.css` referencia `--color-primary`/`--color-surface`/`--color-dark` direto (os
+   outros arquivos usam `--cor-marca`/`--cor-marca-escura`/`--cor-superficie`/`--cor-escura`). Buscar
+   `var(--color-primary` / `var(--color-surface)` / `var(--color-dark)` em `src/assets/css/*.css` e só achar
+   ocorrência aqui + em `1-cores.css` é a verificação de uma linha que confirma que a regra continua valendo. */
 @import 'tailwindcss';
 
 @theme {

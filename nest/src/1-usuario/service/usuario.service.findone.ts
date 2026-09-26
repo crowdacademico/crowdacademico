@@ -25,12 +25,9 @@ export class UsuarioServiceFindOne {
       throw new NotFoundException(`Usuário ${idUsuario} não encontrado`);
     }
 
-    // ADICIONADO (25-08-2026, módulo 25-arquivo): resolvido aqui (busca de
-    // UM usuário só, nunca em findall/listagem) - cobre tanto GET /usuario/
-    // :id (consultar-usuario.jsx, que hoje ainda busca separado, sem
-    // problema, só redundante) quanto login/refresh (AuthServiceLogin/
-    // Refresh chamam este mesmo service), que é o que faltava pro
-    // cabeçalho/Minha Conta saberem a foto sem esperar outra requisição.
+    // Resolvido aqui (busca de UM usuário só, nunca em findall/listagem): cobre GET /usuario/:id e
+    // login/refresh (AuthServiceLogin/Refresh chamam este mesmo service), para o cabeçalho/Minha Conta saberem
+    // a foto sem esperar outra requisição.
     const avatar = await this.resolverAvatar.executar(usuario.id_imagem_perfil);
 
     return {

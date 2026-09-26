@@ -14,14 +14,11 @@ import {
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { MotivoDenunciaResponse, TipoMotivoDenuncia } from '../../services/10-motivo-denuncia/type/motivo-denuncia.type';
 
-// Consultar/Alterar/Excluir migrados de página pra modal (14-09-2026,
-// continuação da migração CRUD→Modal pedida pelo Lucas). Recebem a linha
-// (`motivo: MotivoDenunciaResponse`) inteira do chamador - o `GenericTable`
-// já tem o dado completo em memória (`aoAlterar`/`aoConsultar`/`aoExcluir`
-// recebem `linha: T`), não precisa refazer a busca por id como
-// ModalAlterarUsuario faz (que precisa de MUITO mais dado do que a linha da
-// tabela tem). Criar fica em arquivo separado (modal-criar-motivo-
-// denuncia.tsx), mesmo padrão de modal-usuario.tsx/modal-criar-usuario.tsx.
+// Consultar/Alterar/Excluir em modal. Recebem a linha (`motivo: MotivoDenunciaResponse`) inteira do chamador: o
+// `GenericTable` já tem o dado completo em memória (`aoAlterar`/`aoConsultar`/`aoExcluir` recebem `linha: T`),
+// não precisa refazer a busca por id como ModalAlterarUsuario faz (que precisa de MUITO mais dado do que a
+// linha da tabela tem). Criar fica em arquivo separado (modal-criar-motivo-denuncia.tsx), mesmo padrão de
+// modal-usuario.tsx/modal-criar-usuario.tsx.
 
 interface ModalConsultarMotivoDenunciaProps {
   motivo: MotivoDenunciaResponse;

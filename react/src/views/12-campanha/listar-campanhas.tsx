@@ -21,23 +21,17 @@ interface CampanhaLinha extends Omit<CampanhaResponse, 'status' | 'metaFinanceir
   valorBrutoArrecadado: string;
 }
 
-// Aba "Campanhas" do painel admin (23-08-2026, pedido do Lucas: "tipo o
-// Menu de Usuários") - vive na rota /admin/campanhas. Sem Alterar/Excluir:
-// campanha não tem endpoint de exclusão no backend (soft-delete via
-// status, não linha removida), e editar campos foge do que um formulário
-// genérico deveria fazer aqui - os campos editáveis dependem do status
-// (congelados depois de aprovada) e a aprovação/rejeição têm regras
-// próprias (ver PROXIMOS_MODULOS.md, Grupo 6, "Aprovar Campanhas" - tela
-// dedicada ainda não construída). Por enquanto, só listar + consultar
-// (EM MODAL, 14-09-2026, continuação da migração CRUD→Modal); quem
-// precisa criar/aprovar campanha de teste usa o Campo de Testes.
+// Aba "Campanhas" do painel admin: rota /admin/campanhas. Sem Alterar/Excluir aqui: os campos editáveis
+// dependem do status (congelados depois de aprovada) e a aprovação/rejeição têm regras próprias (fila de
+// aprovação, aprovar-campanhas.tsx). Por isso só listar + consultar (em modal); quem precisa criar/aprovar
+// campanha de teste usa o Campo de Testes.
 export function ListarCampanhas({ auth }: PropsPagina) {
   const [consultandoId, setConsultandoId] = useState<number | null>(null);
 
-  // Nome do pesquisador e da área vêm prontos do backend (24-09-2026): antes esta tela baixava o catálogo
-  // inteiro de usuários e de áreas só para resolver dois nomes. Se a RLS esconder o usuário, cai no id.
-  // "atenção" só aparece para quem pode aprovar, na fila de aprovação, quando o pesquisador está abaixo do
-  // score mínimo (sinal, nunca trava nada).
+  // Nome do pesquisador e da área vêm prontos do backend (a tela não baixa o catálogo inteiro de usuários e de
+  // áreas só para resolver dois nomes). Se a RLS esconder o usuário, cai no id. "atenção" só aparece para quem
+  // pode aprovar, na fila de aprovação, quando o pesquisador está abaixo do score mínimo (sinal, nunca trava
+  // nada).
   const listarCampanhas = useCallback(async (): Promise<CampanhaLinha[]> => {
     const campanhas = await campanhaApi.listar(auth.authFetch);
 
@@ -61,27 +55,18 @@ export function ListarCampanhas({ auth }: PropsPagina) {
     <div className="admin-content-painel">
       <GenericTable
         titulo="Campanhas"
-        // largura igual nas 4 (25-08-2026, pedido do Lucas: mesma ideia de
-        // Tipos de Link/Pesquisadores - "status"/"pesquisador"/"meta"/
-        // "arrecadado" ficando cada um com um tamanho, "arrecadado" nem
-        // tinha `centralizar` (inconsistência real com "meta", ao lado).
-        // 10rem (não 8rem como em Pesquisadores) porque "status" aqui tem
-        // valor bem mais longo que um badge normal (ex.: "Encerrado
-        // (moderação)", 22 caracteres) - ainda pode quebrar em 2 linhas
-        // nesse caso raro (nenhum white-space:nowrap forçado), só não
-        // pede uma coluna gigante à toa pros valores curtos, que são a
-        // maioria.
-        // "título" também ganhou `largura` própria (18rem, ACHADO do
-        // Lucas: sem largura nenhuma, virou a ÚNICA coluna "livre" da
-        // tabela - absorvia sozinha TODO o espaço sobrando, já que as
-        // outras 4 agora são fixas, mesmo problema que "nome"/"papel" já
-        // tinham em Usuários antes de darmos largura fixa às vizinhas).
-        // Diferente das 4 acima, sem `centralizar` - é a coluna principal
-        // de texto (o "nome" desta tabela), fica alinhada à esquerda.
-        // Texto quebra livremente dentro dos 18rem (nenhum nowrap
-        // forçado, igual qualquer outra coluna de texto) - título de
-        // campanha comprido agora ganha 2-3 linhas em vez de esticar a
-        // coluna.
+        // Largura igual nas 4 colunas curtas (mesma ideia de Tipos de Link/Pesquisadores): sem isso
+        // "status"/"pesquisador"/"meta"/"arrecadado" ficariam cada um com um tamanho (e "arrecadado" nem tinha
+        // `centralizar`, inconsistência com "meta", ao lado). 10rem (não 8rem como em Pesquisadores) porque
+        // "status" aqui tem valor bem mais longo que um badge normal (ex.: "Encerrado (moderação)", 22
+        // caracteres): ainda pode quebrar em 2 linhas nesse caso raro (nenhum white-space:nowrap forçado), só
+        // não pede uma coluna gigante à toa para os valores curtos, que são a maioria.
+        // "título" também tem `largura` própria (18rem): sem largura nenhuma, seria a ÚNICA coluna "livre" da
+        // tabela e absorveria sozinha TODO o espaço sobrando, já que as outras 4 são fixas (mesmo problema que
+        // "nome"/"papel" tinham em Usuários antes de darmos largura fixa às vizinhas). Sem `centralizar`: é a
+        // coluna principal de texto (o "nome" desta tabela), fica alinhada à esquerda. O texto quebra
+        // livremente dentro dos 18rem (nenhum nowrap forçado): título de campanha comprido ganha 2-3 linhas em
+        // vez de esticar a coluna.
         colunas={[
           { chave: 'idCampanha', rotulo: 'id' },
           { chave: 'titulo', rotulo: 'título', largura: '28rem' },
@@ -94,11 +79,9 @@ export function ListarCampanhas({ auth }: PropsPagina) {
         chavePrimaria="idCampanha"
         listar={listarCampanhas}
         acoes={{ consultar: (linha) => setConsultandoId(linha.idCampanha) }}
-        // "Área" (25-08-2026, pedido do Lucas: "tabela muito poluída") saiu
-        // das colunas visíveis e virou filtro - o dado (`linha.area`)
-        // continua vindo de listarCampanhas normalmente, filtro por faceta
-        // não depende da coluna existir na tabela, só do campo existir na
-        // linha.
+        // "Área" é filtro, não coluna visível (a tabela ficava poluída): o dado (`linha.area`) continua vindo
+        // de listarCampanhas, e o filtro por faceta não depende da coluna existir na tabela, só do campo
+        // existir na linha.
         filtrosFacetados={[
           { chave: 'status', rotulo: 'Status', ordem: ORDEM_STATUS_CAMPANHA.map((s) => ROTULO_STATUS_CAMPANHA[s]) },
           { chave: 'area', rotulo: 'Área' },

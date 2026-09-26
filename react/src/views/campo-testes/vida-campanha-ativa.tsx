@@ -1,9 +1,5 @@
-// ============================================================================
-// Campo de Testes deixou de ser só ferramenta de teste descartável
-// (07-09-2026, decisão do Lucas): virou parte permanente do painel
-// administrativo, com o mesmo padrão de dados/comportamento do resto do
-// sistema (nunca uma versão simplificada à parte).
-// ============================================================================
+// Campo de Testes é parte permanente do painel administrativo (não uma ferramenta de teste descartável), com o
+// mesmo padrão de dados/comportamento do resto do sistema (nunca uma versão simplificada à parte).
 
 import { useEffect, useId, useRef, useState } from 'react';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
@@ -27,9 +23,8 @@ interface Atualizacao {
   idCampanha: number;
   titulo: string;
   conteudo: string;
-  // `fase`/`tipo` são `null` de verdade no DTO Nest (achado numa auditoria,
-  // 12-09-2026, agente conferindo DTO x tipo) - esta interface local tinha
-  // os dois como obrigatórios, mais otimista do que a API real permite.
+  // `fase`/`tipo` são `null` de verdade no DTO Nest: esta interface local não pode declará-los como
+  // obrigatórios.
   fase: string | null;
   tipo: string | null;
   ativo: boolean;
@@ -38,8 +33,7 @@ interface Atualizacao {
 interface Comentario {
   idComentario: number;
   idCampanha: number;
-  // `number | null` (mesmo achado acima) - autor pode não existir mais
-  // (conta excluída/anonimizada), o DTO Nest já reflete isso.
+  // `number | null`: o autor pode não existir mais (conta excluída/anonimizada), o DTO Nest já reflete isso.
   idPesquisador: number | null;
   conteudo: string;
   endossado: boolean;
@@ -54,27 +48,12 @@ interface SeguirCampanha {
 const FASES = ['andamento', 'resultado_preliminar', 'resultado_final'];
 const TIPOS = ['texto', 'imagem', 'pdf', 'linkexterno'];
 
-// T3, depende de uma campanha já ATIVA.
+// T3, depende de uma campanha já ATIVA. Toda ação usa a sessão REAL do painel, sem escolha de ator: publicar
+// atualização e comentar só têm efeito quando a própria sessão logada É o dono/o autor pretendido; "Seguidores"
+// é um único toggle ("Eu sigo"), não dá para simular vários seguidores ao mesmo tempo dentro da ferramenta.
 //
-// SEM REDESENHO ainda (25-08-2026, remoção do Elenco: T1 e T2 tiveram
-// prioridade, T3 fica só "destravado" por enquanto - o redesenho de
-// verdade fica pra outra conversa, junto com a criação de campanha pelo
-// próprio pesquisador). Toda ação usa a sessão REAL do painel agora, sem
-// escolha de ator: publicar atualização e comentar só têm efeito quando
-// a própria sessão logada É o dono/o autor pretendido; "Seguidores" virou
-// um único toggle ("Eu sigo"), não dá mais pra simular vários seguidores
-// ao mesmo tempo dentro da ferramenta.
-//
-// BUSCA PRÓPRIA (13-09-2026, pedido do Lucas: "tirar o Escolher também de
-// T2") - ERA (23-08-2026) "só vai aparecer a campanha que foi selecionada
-// no T anterior", via `campanhaFoco` do CampoTestesProvider, alimentado
-// pela coluna "Escolher" de T2. Essa coluna saiu de T2 (painel "campanha
-// em foco" virou parte do modal de Alterar de lá, sem gerar mais nenhum
-// "foco" pra fora) - T3 ficaria sem NENHUM jeito de carregar uma campanha,
-// então ganhou busca própria (mesmo padrão do combobox "dono da campanha"
-// de T2/Criar Campanha: digita id ou pedaço do título, até 5 resultados).
-// `campanhaFoco` virou estado local (não mais compartilhado) - nada mais
-// no app usa o do `CampoTestesContext`, que foi removido de lá também.
+// Busca própria: T3 não depende de nenhuma seleção feita em outra tela. `campanhaFoco` é estado local (mesmo
+// padrão do combobox "dono da campanha" de T2/Criar Campanha: digita id ou pedaço do título, até 5 resultados).
 export function VidaCampanhaAtiva({ auth }: PropsPagina) {
   const chamarERegistrar = useChamadaRegistrada(auth);
   // Limite vem de configuracoes (publica), o 4 é só reserva enquanto carrega.
@@ -96,19 +75,15 @@ export function VidaCampanhaAtiva({ auth }: PropsPagina) {
   const [novaAtualizacao, setNovaAtualizacao] = useState({ titulo: '', conteudo: '', fase: 'andamento', tipo: 'texto' });
 
   const [comentarios, setComentarios] = useState<Comentario[]>([]);
-  // SEM `endossado` aqui (15-09-2026, achado numa auditoria RF x
-  // implementação - RF-089) - quem escreve o comentário nunca decide o
-  // próprio endosso, só o dono da campanha, depois, numa ação separada
-  // (ver `alternarEndosso`, abaixo). O checkbox que existia aqui deixava
-  // autoendossar na hora de criar - o banco bloqueia isso incondicionalmente
-  // agora (trg_comentario_ignora_endosso_criacao, 05_regras_negocio.sql).
+  // SEM `endossado` aqui: quem escreve o comentário nunca decide o próprio endosso, só o dono da campanha,
+  // depois, numa ação separada (ver `alternarEndosso`, abaixo). O banco bloqueia o autoendosso
+  // incondicionalmente (trg_comentario_ignora_endosso_criacao, 05_regras_negocio.sql, RF-089).
   const [novoComentario, setNovoComentario] = useState({ conteudo: '' });
 
   const [euSigo, setEuSigo] = useState(false);
 
-  // Aceita `null` (12-09-2026, mesmo achado do comentário em `Comentario`
-  // acima) - `idPesquisador` de um comentário pode ser `null` de verdade
-  // (autor excluído/anonimizado), não só usuário nunca carregado.
+  // Aceita `null`: `idPesquisador` de um comentário pode ser `null` de verdade (autor excluído/anonimizado),
+  // não só usuário nunca carregado.
   const nomeDe = (idUsuario: number | null): string =>
     idUsuario === null ? 'Pesquisador removido' : (nomesPorId.get(idUsuario) ?? `usuário #${idUsuario}`);
 
@@ -121,21 +96,18 @@ export function VidaCampanhaAtiva({ auth }: PropsPagina) {
       .listar(auth.authFetch)
       .then((lista) => setNomesPorId(new Map(lista.map((usuario) => [usuario.idUsuario, usuario.nome]))))
       .catch(() => {});
-    // Todas as campanhas, uma vez só ao montar (13-09-2026, mesmo padrão do
-    // combobox "dono da campanha" em bancada-campanha.tsx: filtra client-side
-    // por id/título em vez de buscar a cada tecla) - alimenta a busca própria
-    // de T3, ver `sugestoesCampanha` abaixo.
+    // Todas as campanhas, uma vez só ao montar (mesmo padrão do combobox "dono da campanha" em
+    // bancada-campanha.tsx: filtra client-side por id/título em vez de buscar a cada tecla): alimenta a busca
+    // própria de T3, ver `sugestoesCampanha` abaixo.
     campanhaApi.listar(auth.authFetch).then(setTodasCampanhas).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auth.carregando]);
 
-  // Fechar as sugestões da busca de campanha ao clicar fora - mesmo padrão
-  // do combobox "dono da campanha" em bancada-campanha.tsx, extraído em
-  // `useFecharAoClicarFora` em 13-09-2026.
+  // Fechar as sugestões da busca de campanha ao clicar fora: mesmo padrão do combobox "dono da campanha" em
+  // bancada-campanha.tsx (`useFecharAoClicarFora`).
   useFecharAoClicarFora(sugestoesCampanhaRef, sugestoesCampanhaAbertas, () => setSugestoesCampanhaAbertas(false));
 
-  // Busca por id OU pedaço do título (13-09-2026, mesmo padrão do combobox
-  // de pesquisador em T2) - até 5 resultados.
+  // Busca por id OU pedaço do título (mesmo padrão do combobox de pesquisador em T2): até 5 resultados.
   const sugestoesCampanha = (() => {
     const termo = buscaCampanha.trim().toLowerCase();
     if (!termo) return [];
@@ -229,10 +201,8 @@ export function VidaCampanhaAtiva({ auth }: PropsPagina) {
         <h2 className="titulo-secao">Campo de Testes - Vida da Campanha Ativa</h2>
       </div>
 
-      {/* Busca própria (13-09-2026) - substitui a antiga dependência da
-          coluna "Escolher" de T2. Um só <input>, sempre (mesmo padrão do
-          combobox "dono da campanha" de bancada-campanha.tsx) - o texto
-          mostrado é a campanha escolhida; digitar de novo invalida a
+      {/* Busca própria de campanha: um só <input>, sempre (mesmo padrão do combobox "dono da campanha" de
+          bancada-campanha.tsx); o texto mostrado é a campanha escolhida, e digitar de novo invalida a
           escolha atual até clicar numa sugestão. */}
       <div className="relative mb-4 max-w-sm" ref={sugestoesCampanhaRef}>
         <label htmlFor={idBuscaCampanha} className="rotulo-campo">Buscar campanha</label>

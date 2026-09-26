@@ -34,22 +34,18 @@
 --  [01-G] ARQUIVO (2 tabelas de associação)
 --  [01-H] CONTRIBUIÇÃO (4 tabelas)
 --  [01-I] SCORE (3 tabelas + Bloco DO)
---  [01-L] LOG DE AUDITORIA (1 tabela - ADICIONADO 03-08-2026)
+--  [01-L] LOG DE AUDITORIA (1 tabela)
 -- ============================================================================
 -- [01-A] Bootstrap, Extensões e ENUMs
 -- ============================================================
--- CORRIGIDO (27-07-2026): role nasce NOLOGIN, sem senha nenhuma. A versão anterior
--- criava a role já com LOGIN e uma senha placeholder ('TROCAR_NO_AMBIENTE_REAL') -
--- esquecer de trocar isso em produção falha ABERTO (o sistema funciona perfeitamente
--- com uma senha conhecida publicada no GitHub, sem nenhum aviso). Com NOLOGIN,
--- esquecer o passo abaixo falha FECHADO: o NestJS simplesmente não consegue conectar
--- (FATAL: role "app_nestjs" is not permitted to log in), erro percebido em minutos,
--- não uma falha de segurança silenciosa. GRANT e SET ROLE continuam funcionando
--- normalmente numa role NOLOGIN - só LOGIN direto (usuário/senha) é que fica bloqueado.
+-- A role nasce NOLOGIN, sem senha nenhuma: esquecer o passo abaixo falha FECHADO (o NestJS
+-- simplesmente não consegue conectar: FATAL: role "app_nestjs" is not permitted to log in),
+-- erro percebido em minutos, e não uma falha de segurança silenciosa com senha conhecida.
+-- GRANT e SET ROLE continuam funcionando numa role NOLOGIN; só o LOGIN direto fica bloqueado.
 -- PASSO OBRIGATÓRIO DE INSTALAÇÃO (rodar uma vez, fora deste arquivo, com a senha
 -- real de cada ambiente - local ou produção - nunca versionada em texto puro):
 --     ALTER ROLE app_nestjs LOGIN PASSWORD 'a_senha_que_voce_vai_por_no_.env';
--- (ver tutorial-rodar-projeto.md, que já tem esse passo numerado logo após o 01).
+-- (ver .Tutorial-rodar-projeto.md, que já tem esse passo numerado logo após o 01).
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'app_nestjs') THEN
@@ -58,10 +54,8 @@ BEGIN
 END
 $$;
 
--- ADICIONADO (28-07-2026) - guarda de BYPASSRLS: não resolve sozinho o item 22 do PENDENCIAS (ainda
--- é preciso confirmar se o papel usado no SQL Editor do Supabase tem BYPASSRLS antes do deploy),
--- mas transforma uma falha silenciosa em uma parada única e autoexplicativa.
--- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [01-C001]
+-- Guarda de BYPASSRLS: transforma uma falha silenciosa em uma parada única e autoexplicativa.
+-- Antes do deploy ainda é preciso confirmar se o papel do SQL Editor do Supabase tem BYPASSRLS.
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -69,7 +63,7 @@ BEGIN
         WHERE rolname = current_user
           AND (rolsuper OR rolbypassrls)
     ) THEN
-        RAISE EXCEPTION 'Bootstrap abortado: o papel "%" nao ignora RLS. Como as 42 tabelas usam FORCE ROW LEVEL SECURITY e a maioria das policies sao TO app_nestjs, o seed falharia em silencio (dezenas de erros espalhados). Rode como superusuario, ou peca BYPASSRLS pro papel, ou use o papel indicado no tutorial-rodar-projeto.md.', current_user;
+        RAISE EXCEPTION 'Bootstrap abortado: o papel "%" nao ignora RLS. Como as 42 tabelas usam FORCE ROW LEVEL SECURITY e a maioria das policies sao TO app_nestjs, o seed falharia em silencio (dezenas de erros espalhados). Rode como superusuario, ou peca BYPASSRLS pro papel, ou use o papel indicado no .Tutorial-rodar-projeto.md.', current_user;
     END IF;
 END
 $$;
@@ -86,7 +80,7 @@ CREATE TYPE status_pesquisador    AS ENUM ('ativo', 'suspenso');
 CREATE TYPE tipo_vinculo          AS ENUM ('institucional', 'independente');
 CREATE TYPE titulo_academico      AS ENUM ('graduado', 'especialista', 'mestre', 'doutor');
 CREATE TYPE modelo_campanha       AS ENUM ('all-or-nothing', 'flexivel');
--- 'rascunho' (20-09-2026) é o primeiro valor e o DEFAULT: a campanha nasce rascunho e só
+-- 'rascunho' é o primeiro valor e o DEFAULT: a campanha nasce rascunho e só
 -- entra na fila por envio explícito. Ver DOCUMENTACAO_BD.md [05-K-2-B].
 CREATE TYPE status_campanha       AS ENUM ('rascunho', 'aguardando_aprovacao', 'ativo', 'sucesso', 'nao_atingido', 'rejeitado', 'encerrado', 'encerrado_moderacao');
 CREATE TYPE status_contribuicao   AS ENUM ('pendente', 'confirmado', 'repassado', 'a_devolver', 'devolvido', 'reembolsado', 'erro', 'expirado', 'reembolso_manual');
@@ -98,37 +92,20 @@ CREATE TYPE status_encerramento   AS ENUM ('pendente', 'aprovado', 'rejeitado', 
 CREATE TYPE tipo_motivo_denuncia  AS ENUM ('campanha', 'perfil');
 CREATE TYPE status_notificacao    AS ENUM ('pendente', 'enviado', 'falhou', 'cancelado');
 CREATE TYPE tipo_recompensa       AS ENUM ('digital', 'reconhecimento', 'acesso_antecipado');
--- ADICIONADO (13-09-2026, pedido do Lucas: o sistema sempre vai ter 2
--- Termos de Uso vigentes ao mesmo tempo, um por cada momento de aceite -
--- ver termos_de_uso abaixo).
--- 'upgrade_pesquisador' ADICIONADO (13-09-2026, mesmo dia, rodada seguinte)
--- - o 3º momento de aceite (upgrade de perfil de pesquisador), pendente
--- desde a criação deste enum porque a tela de auto-upgrade ainda não
--- existia.
+-- Cada tipo de termo (cadastro, contribuicao, upgrade_pesquisador) tem sempre 1 versão vigente,
+-- uma por momento de aceite; ver termos_de_uso abaixo.
 CREATE TYPE tipo_termo            AS ENUM ('cadastro', 'contribuicao', 'upgrade_pesquisador');
 
 -- ============================================================
 -- [01-B] RBAC (3 tabelas)
 -- ============================================================
--- ADICIONADO (03-08-2026, achado de uma revisão externa - outra IA, não o
--- uma IA - pedida pelo Lucas pra pensar em "poder absoluto da
--- modularidade": `codigo` versus `nome`, mesmo padrão já usado em
--- `tipo_link.codigo`/`motivo_denuncia.codigo`. Motivo: 3 pontos deste banco
--- reconheciam papel especial pelo TEXTO do nome, literal, sem nenhuma trava
--- (`trg_admin_recebe_toda_permissao` procura `WHERE nome = 'admin'`,
--- `fn_atribuir_papel_pesquisador` procura `WHERE nome = 'pesquisador'`,
--- `atribuir_papel_padrao` (08) procura `WHERE nome = 'usuario'`). O achado
--- foi confirmado rodando de verdade (renomear 'admin' e criar uma
--- permissão nova: ela parava de ser auto-concedida, sem erro nenhum -
--- falha silenciosa). Isso não é um bug ativo hoje (não existe tela nem
--- endpoint pra renomear um papel ainda), mas o Lucas avisou que uma tela
--- de editar papel está vindo - `codigo` entra ANTES dela, não depois, pra
--- nunca existir uma janela em que renomear um papel pelo painel quebre
--- RBAC de admin/pesquisador/cadastro em silêncio. `nome` continua sendo o
--- único campo editável (rótulo livre); `codigo` nunca é exposto em nenhum
--- formulário de edição - ver 05_regras_negocio.sql (as 3 triggers
--- corrigidas) e 07_seed_dados.sql ([07-B-1], `codigo` seedado igual ao
--- `nome` atual dos 7 papéis).
+-- `codigo` versus `nome`, mesmo padrão de `tipo_link.codigo`/`motivo_denuncia.codigo`. Três pontos do
+-- banco reconhecem papel especial pelo `codigo` (trg_admin_recebe_toda_permissao,
+-- fn_atribuir_papel_pesquisador, atribuir_papel_padrao em 08): quando liam o TEXTO do nome, renomear
+-- 'admin' fazia uma permissão nova parar de ser auto-concedida, sem erro nenhum. `nome` é o único
+-- campo editável (rótulo livre); `codigo` nunca é exposto em formulário de edição. Ver
+-- 05_regras_negocio.sql (as 3 triggers) e 07_seed_dados.sql ([07-B-1], `codigo` seedado igual ao
+-- `nome` dos 7 papéis).
 CREATE TABLE papel (
     id_papel SERIAL,
     nome     VARCHAR(50) NOT NULL,
@@ -177,10 +154,8 @@ CREATE TABLE tipo_link (
         CHECK (permite_perfil OR permite_atualizacao OR permite_recompensa)
 );
 
--- ADICIONADO (27-07-2026): id_pai auto-referenciado - mesmo padrão já usado em
--- score_config (ver [01-I]) - pra suportar a hierarquia de 2 níveis do CNPq
--- (grande área -> área). Antes, as 9 linhas eram só as grandes áreas; ver seed
--- em 07_seed_dados.sql para as áreas de nível 2 (filhas) e o motivo da mudança.
+-- id_pai auto-referenciado (mesmo padrão de score_config, ver [01-I]) suporta a hierarquia de 2
+-- níveis do CNPq (grande área -> área); as áreas filhas estão em 07_seed_dados.sql.
 CREATE TABLE area_conhecimento (
     id_area_conhecimento SERIAL,
     codigo_cnpq          VARCHAR(20)  NOT NULL,
@@ -193,11 +168,9 @@ CREATE TABLE area_conhecimento (
     CONSTRAINT "FK_AREA_CONHECIMENTO_PAI" FOREIGN KEY (id_pai) REFERENCES area_conhecimento(id_area_conhecimento) ON DELETE SET NULL
 );
 
--- `codigo` removido (18-08-2026, pedido do Lucas/Alexia) - diferente de
--- `papel.codigo`/`tipo_link.codigo` ([01-B] acima), nenhuma trigger ou
--- função em 05_regras_negocio.sql lia este campo; era só texto
--- informativo. `descricao` virou NOT NULL (era opcional) porque agora é
--- o único identificador legível do motivo.
+-- Sem `codigo`: diferente de papel.codigo/tipo_link.codigo ([01-B] acima), nenhuma trigger ou função
+-- em 05_regras_negocio.sql lê este campo. `descricao` é NOT NULL: é o único identificador legível
+-- do motivo.
 CREATE TABLE motivo_denuncia (
     id_motivo SERIAL,
     descricao VARCHAR(255)         NOT NULL,
@@ -208,9 +181,6 @@ CREATE TABLE motivo_denuncia (
     CONSTRAINT "PK_MOTIVO_DENUNCIA" PRIMARY KEY (id_motivo)
 );
 
--- ATUALIZADA (24-08-2026, módulo 25-arquivo implementado - ver revisão de arquitetura de upload
--- B2/R2 e ATUALIZAR O SUPABASE.sql do mesmo dia): duas mudanças pedidas na revisão: 1.
--- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [01-C002]
 CREATE TABLE arquivo (
     id_arquivo        SERIAL,
     chave             TEXT         NOT NULL,
@@ -237,13 +207,9 @@ CREATE TABLE usuario (
     id_imagem_perfil INT,
     criado_em        TIMESTAMPTZ    DEFAULT NOW(),
     deletado         BOOLEAN      DEFAULT FALSE,
-    -- ADICIONADAS (28-07-2026, achado numa auditoria de IA - "o único ponto
-    -- onde a LGPD ainda tem uma ponta solta"): excluir_conta_usuario() (03, [03-O]) gravava deletado =
-    -- TRUE e nada mais - sem quem fez nem quando, o Art. 37 da LGPD (registro das
-    -- operações de tratamento, exclusão sendo a mais sensível de todas) ficava
-    -- sem trilha. Preenchidas pela própria função (deletado_por =
-    -- id_usuario_atual()) - nunca pelo app diretamente, mesma proteção das
-    -- outras colunas de auth que saíram do GRANT UPDATE direto.
+    -- Preenchidas por excluir_conta_usuario() (03, [03-O]), nunca pelo app diretamente (mesma proteção
+    -- das outras colunas de auth fora do GRANT UPDATE direto): quem excluiu a conta e quando, para a
+    -- trilha exigida pelo Art. 37 da LGPD (registro das operações de tratamento).
     deletado_em      TIMESTAMPTZ,
     deletado_por     INT,
 
@@ -253,15 +219,11 @@ CREATE TABLE usuario (
     ultimo_login_em          TIMESTAMPTZ,
     ultimo_login_ip          VARCHAR(45),
 
-    -- ADICIONADAS (09-08-2026, Bloco G do prompt de uma IA -
-    -- moderação/suspensão): CONCEITO DIFERENTE de `bloqueado_ate` acima -
-    -- aquele é bloqueio AUTOMÁTICO por senha errada repetida
-    -- (registrar_falha_login/liberar_bloqueio_login, [03-O]); este é
-    -- suspensão MANUAL de moderação, decidida por um admin, com motivo
-    -- obrigatório. Reaproveitar `bloqueado_ate` pros dois casos faria
-    -- `liberar_bloqueio_login()` apagar sem querer uma suspensão de 30
-    -- dias, e um login bem-sucedido (que zera `bloqueado_ate`) reverteria
-    -- uma suspensão de moderação sozinho - dois conceitos, duas colunas.
+    -- Suspensão MANUAL de moderação, decidida por um admin, com motivo obrigatório. CONCEITO DIFERENTE de
+    -- `bloqueado_ate` acima, que é o bloqueio AUTOMÁTICO por senha errada repetida
+    -- (registrar_falha_login/liberar_bloqueio_login, [03-O]). Reaproveitar a mesma coluna faria
+    -- liberar_bloqueio_login() apagar uma suspensão de 30 dias, e um login bem-sucedido reverteria a
+    -- suspensão sozinho: dois conceitos, duas colunas.
     suspenso_ate             TIMESTAMPTZ,
     motivo_suspensao         TEXT,
     suspenso_por             INT,
@@ -279,13 +241,11 @@ CREATE TABLE usuario (
     )
 );
 
--- ADICIONADA (24-08-2026, módulo 25-arquivo) - só agora, porque `usuario`
--- precisa existir primeiro (ver comentário no CREATE TABLE arquivo, acima:
--- `arquivo` é criada ANTES de `usuario` pra permitir FK_USUARIO_IMAGEM, o
--- que impede colocar esta FK inline lá). ON DELETE SET NULL (não CASCADE):
--- apagar/anonimizar a conta que fez o upload não deve apagar o arquivo em
--- si - ele pode continuar em uso (ex.: imagem já publicada numa atualização
--- de campanha de outra pessoa, ou a própria campanha).
+-- FK adicionada por ALTER porque `usuario` precisa existir primeiro (arquivo é criada ANTES de
+-- usuario para permitir FK_USUARIO_IMAGEM, o que impede esta FK inline). ON DELETE SET NULL (não
+-- CASCADE): apagar/anonimizar a conta que fez o upload não deve apagar o arquivo, que pode continuar
+-- em uso (ex.: imagem já publicada numa atualização de campanha de outra pessoa, ou a própria
+-- campanha).
 ALTER TABLE arquivo
     ADD CONSTRAINT "FK_ARQUIVO_USUARIO_UPLOAD" FOREIGN KEY (id_usuario_upload) REFERENCES usuario(id_usuario) ON DELETE SET NULL;
 
@@ -301,27 +261,23 @@ CREATE TABLE configuracoes (
     tipo        tipo_configuracao NOT NULL,
     descricao   VARCHAR(255),
     ativo       BOOLEAN DEFAULT TRUE,
-    -- ADICIONADA (05-09-2026, item 5 de PENDENCIAS): GET /configuracoes
-    -- devolvia toda linha global (id_usuario IS NULL) pra qualquer um, sem
-    -- distinguir o que o navegador precisa pra montar uma tela (ex.:
-    -- valor_minimo_contribuicao) do que é parâmetro interno de segurança/
-    -- moderação (ex.: limite_tentativas_login). DEFAULT FALSE de propósito -
-    -- uma chave nova nasce interna, e só fica pública por ato deliberado
-    -- (marcar TRUE); o contrário (DEFAULT TRUE) faria esquecer de marcar
-    -- ser igual a expor. Só tem efeito em linha global - `pol_config_select`
-    -- (04) é quem de fato aplica isso.
+    -- Distingue o que o navegador precisa para montar uma tela (ex.: valor_minimo_contribuicao) do que é
+    -- parâmetro interno de segurança/moderação (ex.: limite_tentativas_login). DEFAULT FALSE de
+    -- propósito: uma chave nova nasce interna e só fica pública por ato deliberado (o contrário faria
+    -- esquecer de marcar ser igual a expor). Só tem efeito em linha global (id_usuario IS NULL);
+    -- quem aplica é pol_config_select (04).
     publica     BOOLEAN NOT NULL DEFAULT FALSE,
 
     CONSTRAINT "PK_CONFIGURACOES" PRIMARY KEY (id_config),
     CONSTRAINT "UK_CONFIGURACOES_CHAVE" UNIQUE (chave),
-    -- O valor precisa bater com o tipo (24-09-2026): "5,00" derrubava toda aprovação com 22P02.
+    -- O valor precisa bater com o tipo: "5,00" derrubava toda aprovação com 22P02.
     CONSTRAINT "CK_CONFIGURACOES_VALOR_TIPO" CHECK (
            valor IS NULL
         OR tipo = 'texto'
         OR (tipo = 'inteiro'  AND valor ~ '^[0-9]+$')
         OR (tipo = 'decimal'  AND valor ~ '^[0-9]+(\.[0-9]+)?$')
         OR (tipo = 'booleano' AND valor IN ('true', 'false'))),
-    -- Chave GLOBAL é contrato do sistema (24-09-2026): para "desligar" uma regra muda-se o valor, não se desativa a chave.
+    -- Chave GLOBAL é contrato do sistema: para "desligar" uma regra muda-se o valor, não se desativa a chave.
     CONSTRAINT "CK_CONFIGURACOES_GLOBAL_ATIVA" CHECK (id_usuario IS NOT NULL OR ativo = TRUE),
     CONSTRAINT "FK_CONFIGURACOES_USUARIO" FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE SET NULL
 );
@@ -329,12 +285,9 @@ CREATE TABLE configuracoes (
 CREATE TABLE usuario_papel (  -- fica aqui por depender de usuario; documentada no RBAC
     id_usuario   INT NOT NULL,
     id_papel     INT NOT NULL,
-    -- ADICIONADA (09-08-2026, Bloco G - "suspender só um papel específico
-    -- por um tempo, em vez de remover") - NULL = papel valendo normalmente.
-    -- Preferível a DELETE porque preserva o histórico (quando o papel foi
-    -- atribuído) e volta sozinho no prazo, sem precisar reatribuir manual.
-    -- tem_permissao() (03, [03-B]) passa a ignorar papel com suspenso_ate
-    -- no futuro.
+    -- NULL = papel valendo normalmente. Suspende só um papel por um tempo: preferível a DELETE porque
+    -- preserva o histórico (quando o papel foi atribuído) e volta sozinho no prazo, sem reatribuir
+    -- manualmente. tem_permissao() (03, [03-B]) ignora papel com suspenso_ate no futuro.
     suspenso_ate TIMESTAMPTZ,
 
     CONSTRAINT "PK_USUARIO_PAPEL" PRIMARY KEY (id_usuario, id_papel),
@@ -342,25 +295,18 @@ CREATE TABLE usuario_papel (  -- fica aqui por depender de usuario; documentada 
     CONSTRAINT "FK_USUARIO_PAPEL_PAPEL" FOREIGN KEY (id_papel) REFERENCES papel(id_papel) ON DELETE CASCADE
 );
 
-
 CREATE TABLE perfil_pesquisador (
     id_usuario            INT NOT NULL,
-    -- TEXT, não VARCHAR(255) (corrigido 22-08-2026) - o tamanho de um valor
-    -- cifrado é ditado pelo algoritmo de cifra (hoje ~61 caracteres pro
-    -- formato "v1:<iv>:<tag>:<ciphertext>", ver commons/seguranca/
-    -- cpf-cifra.util.ts no Nest), não por uma decisão de produto sobre
-    -- tamanho de campo - TEXT não fixa uma constante que não faz sentido
-    -- fixar. Ver DOCUMENTACAO_BD.md, seção perfil_pesquisador, pra todo o
-    -- raciocínio (por que cifrar no Node e não no Postgres, formato "v1:",
-    -- índice cego).
+    -- TEXT, não VARCHAR(255): o tamanho de um valor cifrado é ditado pelo algoritmo de cifra (hoje ~61
+    -- caracteres no formato "v1:<iv>:<tag>:<ciphertext>", ver commons/seguranca/cpf-cifra.util.ts no
+    -- Nest), não por uma decisão de produto sobre tamanho de campo. Ver DOCUMENTACAO_BD.md, seção
+    -- perfil_pesquisador (por que cifrar no Node e não no Postgres, formato "v1:", índice cego).
     cpf_criptografado     TEXT NOT NULL,
-    -- Índice cego (22-08-2026) - HMAC-SHA256(cpf_normalizado, CPF_INDEX_KEY),
-    -- calculado no Nest (commons/seguranca/cpf-cifra.util.ts), nunca no
-    -- Postgres. Existe porque cpf_criptografado é cifra não-determinística
-    -- (o mesmo CPF cifrado duas vezes dá valores diferentes) e por isso
-    -- NUNCA poderia levar um UNIQUE nem ser buscado por igualdade - este
-    -- índice é quem garante "um CPF, uma conta, sempre" e permite o suporte/
-    -- curadoria localizar uma conta pelo CPF informado. Detalhe completo em
+    -- Índice cego: HMAC-SHA256(cpf_normalizado, CPF_INDEX_KEY), calculado no Nest
+    -- (commons/seguranca/cpf-cifra.util.ts), nunca no Postgres. cpf_criptografado é cifra
+    -- não-determinística (o mesmo CPF cifrado duas vezes dá valores diferentes) e por isso NUNCA poderia
+    -- levar UNIQUE nem ser buscado por igualdade; este índice garante "um CPF, uma conta, sempre" e
+    -- permite ao suporte/curadoria localizar uma conta pelo CPF informado. Detalhe completo em
     -- DOCUMENTACAO_BD.md.
     cpf_hash              TEXT NOT NULL,
     tipo_vinculo          tipo_vinculo NOT NULL DEFAULT 'institucional',
@@ -370,17 +316,13 @@ CREATE TABLE perfil_pesquisador (
     ativado_em            TIMESTAMPTZ,
     score_atual           INTEGER    NOT NULL  DEFAULT 0,
     score_atualizado_em   TIMESTAMPTZ,
-    -- Suspensão do PODER de pesquisador (07-09-2026) - mesmo padrão de
-    -- usuario.suspenso_ate/motivo_suspensao/suspenso_por ([01-D] acima),
-    -- mas separado: suspender aqui NÃO bloqueia login (a conta continua
-    -- normal), só a autoridade de pesquisador (status_pesquisador já reflete
-    -- isso - estas 3 colunas só existem pra guardar POR QUANTO TEMPO e POR
-    -- QUÊ, coisa que o enum sozinho não guarda). Expira sozinho (mesmo
-    -- espírito de usuario) via reativar_pesquisadores_vencidos() (05,
-    -- chamada por @Cron a cada 15 min - mesmo padrão de
-    -- encerrar_campanhas_vencidas), não por checagem ao vivo em toda RLS
-    -- policy que lê status_pesquisador (evita reabrir as 3 policies que já
-    -- checam status_pesquisador = 'ativo').
+    -- Suspensão do PODER de pesquisador: mesmo padrão de usuario.suspenso_ate/motivo_suspensao/
+    -- suspenso_por ([01-D] acima), mas separada: NÃO bloqueia login (a conta continua normal), só a
+    -- autoridade de pesquisador (status_pesquisador já reflete isso; estas 3 colunas guardam POR QUANTO
+    -- TEMPO e POR QUÊ, coisa que o enum sozinho não guarda). Expira sozinha via
+    -- reativar_pesquisadores_vencidos() (05, chamada por @Cron a cada 15 min, mesmo padrão de
+    -- encerrar_campanhas_vencidas), e não por checagem ao vivo em toda RLS policy que lê
+    -- status_pesquisador.
     suspenso_ate          TIMESTAMPTZ,
     motivo_suspensao      TEXT,
     suspenso_por          INT,
@@ -419,13 +361,8 @@ CREATE TABLE seguir_pesquisador (
 
 CREATE TABLE termos_de_uso (
     id_termo  SERIAL,
-    -- ADICIONADA (13-09-2026, pedido do Lucas: "sempre vai ter 2 Termo de Uso
-    -- ativo" - um pro aceite geral/cadastro, outro pra contribuição a
-    -- campanha, cada um com sua PRÓPRIA versão vigente, independente do
-    -- outro). DEFAULT 'cadastro' só pra não quebrar a linha histórica que já
-    -- existia antes desta coluna nascer (todas as versões de antes desta
-    -- migração eram, na prática, do tipo cadastro - a única coisa que
-    -- existia era o aceite no cadastro).
+    -- Cada tipo de termo tem sua PRÓPRIA versão vigente, independente das outras. DEFAULT 'cadastro' só
+    -- para as linhas que já existiam antes desta coluna (na prática, todas eram de cadastro).
     tipo      tipo_termo  NOT NULL DEFAULT 'cadastro',
     versao    VARCHAR(20) NOT NULL,   -- ex: "2026-07-01", "v3" - única DENTRO do tipo, não no sistema inteiro (ver UK abaixo)
     conteudo  TEXT        NOT NULL,
@@ -433,9 +370,8 @@ CREATE TABLE termos_de_uso (
     criado_em TIMESTAMPTZ   DEFAULT NOW(),      -- [melhoria] registra quando cada versão entrou em vigor
 
     CONSTRAINT "PK_TERMOS_DE_USO" PRIMARY KEY (id_termo),
-    -- POR TIPO (13-09-2026), não mais global - cada trilha (cadastro/
-    -- contribuicao) numera sua própria sequência de versão ("v1" de
-    -- cadastro e "v1" de contribuicao podem coexistir).
+    -- Único POR TIPO: cada trilha numera sua própria sequência de versão ("v1" de cadastro e "v1" de
+    -- contribuicao podem coexistir).
     CONSTRAINT "UK_TERMOS_DE_USO_TIPO_VERSAO" UNIQUE (tipo, versao)
 );
 
@@ -448,12 +384,10 @@ CREATE TABLE usuario_termo (
 
     CONSTRAINT "PK_USUARIO_TERMO" PRIMARY KEY (id_usuario_termo),
     CONSTRAINT "FK_USUARIO_TERMO_USUARIO" FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE CASCADE,
-    -- CASCADE (14-09-2026, pedido do Lucas: Excluir com "forçar" precisa
-    -- funcionar mesmo numa versão já aceita - era RESTRICT antes disso, ver
-    -- TermoUsoServiceExcluir. Apagar o termo com `forcar: true` apaga junto
-    -- as linhas de aceite que apontam pra ele - decisão consciente do
-    -- Lucas, perde o rastro de quem aceitou ESTA versão especificamente
-    -- (a exclusão em si continua em log_auditoria).
+    -- CASCADE: Excluir com "forçar" precisa funcionar mesmo numa versão já aceita (ver
+    -- TermoUsoServiceExcluir). Apagar o termo com `forcar: true` apaga junto as linhas de aceite que
+    -- apontam para ele: perde o rastro de quem aceitou ESTA versão especificamente (a exclusão em si
+    -- continua em log_auditoria).
     CONSTRAINT "FK_USUARIO_TERMO_TERMO" FOREIGN KEY (id_termo) REFERENCES termos_de_uso(id_termo) ON DELETE CASCADE,
     CONSTRAINT "UK_USUARIO_TERMO_USUARIO_TERMO" UNIQUE (id_usuario, id_termo) -- [melhoria] mesmo usuário não aceita a mesma versão duas vezes
 );
@@ -509,14 +443,10 @@ CREATE TABLE sessao (
     revogado_em        TIMESTAMPTZ,
     ip                 VARCHAR(45),
     user_agent         TEXT,
-    -- ADICIONADO (07-08-2026, achado do Lucas: "não fiz tantos logs de
-    -- login assim"): toda renovação silenciosa do token de acesso (a cada
-    -- ~15min de uso) também gera uma linha aqui, sempre gerou - sem esta
-    -- coluna não dava pra separar "login de verdade" de "token se
-    -- renovando sozinho" na tela de histórico. DEFAULT 'refresh' (não
-    -- 'login') de propósito: linhas antigas (de antes desta coluna
-    -- existir) ficam invisíveis na tela de login em vez de aparecerem
-    -- como login sem ser.
+    -- Toda renovação silenciosa do token de acesso (a cada ~15min de uso) também gera uma linha aqui;
+    -- esta coluna separa "login de verdade" de "token se renovando sozinho" na tela de histórico. DEFAULT
+    -- 'refresh' (não 'login') de propósito: linhas de antes da coluna existir ficam invisíveis na tela de
+    -- login em vez de aparecerem como login sem ser.
     origem              VARCHAR(20) NOT NULL DEFAULT 'refresh',
 
     CONSTRAINT "PK_SESSAO" PRIMARY KEY (id_sessao),
@@ -543,13 +473,11 @@ CREATE TABLE campanha (
     data_fim             TIMESTAMPTZ,
     status               status_campanha NOT NULL DEFAULT 'rascunho',
     aprovado_em          TIMESTAMPTZ,
-    -- CORRIGIDO: data_fim é a promessa (congelada por fn_congela_regras_campanha,
-    -- 05); faltava onde registrar quando a campanha de fato terminou (natural,
-    -- antecipado ou por moderação) - sem isso o RF-042/RF-058 não tinham onde gravar.
+    -- data_fim é a promessa (congelada por fn_congela_regras_campanha, 05); encerrado_em registra quando
+    -- a campanha de fato terminou (natural, antecipado ou por moderação): RF-042/RF-058.
     encerrado_em         TIMESTAMPTZ,
-    -- ADICIONADO (28-07-2026, item 19(c)): RF-033 pede vídeo de apresentação
-    -- opcional em destaque na página da campanha. Só a URL (ex.: YouTube/
-    -- Vimeo) - o arquivo de vídeo em si não é armazenado pela plataforma.
+    -- RF-033: vídeo de apresentação opcional em destaque na página da campanha. Só a URL (ex.: YouTube/
+    -- Vimeo); o arquivo de vídeo em si não é armazenado pela plataforma.
     video_apresentacao_url VARCHAR(500),
     criado_em            TIMESTAMPTZ       DEFAULT NOW(),
 
@@ -561,15 +489,13 @@ CREATE TABLE campanha (
         data_fim IS NULL OR data_inicio IS NULL OR
         (data_fim - data_inicio) BETWEEN INTERVAL '1 day' AND INTERVAL '365 days'
     ),
-    -- ADICIONADO (28-07-2026, "Problema 2"): campo de texto livre sem
-    -- limite nenhum. Mesmo padrão do prazo (item 16): CHECK aqui é só limite técnico
-    -- largo (barra absurdo tipo upload de megabytes de texto); o limite de negócio de
-    -- verdade (menor, configurável) mora em configuracoes + trigger, ver [05-K-1].
+    -- Campo de texto livre: CHECK aqui é só limite técnico largo (barra absurdo tipo upload de megabytes
+    -- de texto); o limite de negócio de verdade (menor, configurável) mora em configuracoes + trigger,
+    -- ver [05-K-1].
     CONSTRAINT "CK_CAMPANHA_DESCRICAO_TAMANHO" CHECK (descricao IS NULL OR char_length(descricao) <= 20000),
-    -- campanha com meta 0.00 era aceita (reproduzido). Mesmo padrão do prazo
-    -- (item 16): CHECK aqui é só limite técnico largo (> 0, barra só o absurdo
-    -- matemático); o mínimo de negócio de verdade (configurável, maior que 0)
-    -- mora em configuracoes.meta_minima_campanha + trigger, ver [05-K-2].
+    -- CHECK aqui é só limite técnico largo (> 0, barra só o absurdo matemático); o mínimo de negócio de
+    -- verdade (configurável, maior que 0) mora em configuracoes.meta_minima_campanha + trigger, ver
+    -- [05-K-2].
     CONSTRAINT "CK_CAMPANHA_META_FINANCEIRA_POSITIVA" CHECK (meta_financeira > 0)
 );
 
@@ -597,15 +523,13 @@ CREATE TABLE atualizacao_campanha (
 
     CONSTRAINT "PK_ATUALIZACAO_CAMPANHA" PRIMARY KEY (id_atualizacao),
     CONSTRAINT "FK_ATUALIZACAO_CAMPANHA_CAMPANHA" FOREIGN KEY (id_campanha) REFERENCES campanha(id_campanha) ON DELETE CASCADE,
-    -- ADICIONADO (28-07-2026, "Problema 2"): mesmo raciocínio de
-    -- CK_CAMPANHA_DESCRICAO_TAMANHO - limite técnico largo aqui, limite de negócio
+    -- Mesmo raciocínio de CK_CAMPANHA_DESCRICAO_TAMANHO: limite técnico largo aqui, limite de negócio
     -- configurável via trigger, ver [05-K-1].
     CONSTRAINT "CK_ATUALIZACAO_CAMPANHA_CONTEUDO_TAMANHO" CHECK (char_length(conteudo) <= 20000)
 );
 
--- ADICIONADO (31-07-2026, Alexia): orçamento estruturado da campanha (itens de gasto com categoria
--- + valor), inspirado na estrutura de campanha do Experiment.com (pedido do time).
--- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [01-C003]
+-- Orçamento estruturado da campanha (itens de gasto com categoria + valor), inspirado na estrutura de
+-- campanha do Experiment.com.
 CREATE TABLE orcamento_campanha (
     id_orcamento SERIAL,
     id_campanha  INT           NOT NULL,
@@ -623,9 +547,8 @@ CREATE TABLE orcamento_campanha (
     CONSTRAINT "CK_ORCAMENTO_CAMPANHA_DESCRICAO_TAMANHO" CHECK (descricao IS NULL OR char_length(descricao) <= 20000)
 );
 
--- ADICIONADO (31-07-2026, Alexia): cronograma estruturado da campanha (marcos com título, descrição
--- e data prevista), mesmo pedido/origem de orcamento_campanha acima.
--- Histórico e porquês: HISTORICO_COMENTARIOS_SQL.md [01-C004]
+-- Cronograma estruturado da campanha (marcos com título, descrição e data prevista), mesma origem de
+-- orcamento_campanha acima.
 CREATE TABLE marco_cronograma (
     id_marco      SERIAL,
     id_campanha   INT           NOT NULL,
@@ -667,15 +590,14 @@ CREATE TABLE solicitacao_encerramento (
     CONSTRAINT "PK_SOLICITACAO_ENCERRAMENTO" PRIMARY KEY (id_solicitacao_encerramento),
     CONSTRAINT "FK_SOLICITACAO_ENCERRAMENTO_CAMPANHA" FOREIGN KEY (id_campanha) REFERENCES campanha(id_campanha),
     CONSTRAINT "FK_SOLICITACAO_ENCERRAMENTO_ADMIN" FOREIGN KEY (id_admin) REFERENCES usuario(id_usuario),
-    -- ADICIONADO (28-07-2026, achado numa auditoria de IA - "Problema 2"): mesmo raciocínio de
-    -- CK_CAMPANHA_DESCRICAO_TAMANHO, pros dois campos de justificativa - limite
+    -- Mesmo raciocínio de CK_CAMPANHA_DESCRICAO_TAMANHO, para os dois campos de justificativa: limite
     -- técnico largo aqui, limite de negócio configurável via trigger, ver [05-K-1].
     CONSTRAINT "CK_SOLICITACAO_JUSTIFICATIVA_PESQ_TAMANHO" CHECK (justificativa_pesquisador IS NULL OR char_length(justificativa_pesquisador) <= 10000),
     CONSTRAINT "CK_SOLICITACAO_JUSTIFICATIVA_ADMIN_TAMANHO" CHECK (justificativa_admin IS NULL OR char_length(justificativa_admin) <= 10000)
 );
 
--- historico_rejeicao (21-09-2026) não tem FK para campanha: o histórico sobrevive à exclusão
--- da campanha, então dono e título são gravados na própria linha. Ver DOCUMENTACAO_BD.md [05-K-2-B].
+-- historico_rejeicao não tem FK para campanha: o histórico sobrevive à exclusão da campanha, então
+-- dono e título são gravados na própria linha. Ver DOCUMENTACAO_BD.md [05-K-2-B].
 CREATE TABLE historico_rejeicao (
     id_rejeicao      SERIAL,
     id_campanha      INT          NOT NULL,
@@ -720,9 +642,9 @@ CREATE TABLE denuncia (
 
     CONSTRAINT "PK_DENUNCIA" PRIMARY KEY (id_denuncia),
     CONSTRAINT "FK_DENUNCIA_USUARIO" FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario),
-    -- SET NULL -> RESTRICT - denúncia é registro de moderação; um alvo
-    -- virando NULL sozinho com o tempo destruiria rastro de auditoria. Na prática não
-    -- muda nada hoje (nem campanha nem usuario têm policy de DELETE, ver 06_grants.sql).
+    -- RESTRICT (não SET NULL): denúncia é registro de moderação; um alvo virando NULL sozinho com o tempo
+    -- destruiria rastro de auditoria. Na prática não muda nada hoje (nem campanha nem usuario têm policy
+    -- de DELETE, ver 06_grants.sql).
     CONSTRAINT "FK_DENUNCIA_CAMPANHA_ALVO" FOREIGN KEY (id_campanha_alvo) REFERENCES campanha(id_campanha) ON DELETE RESTRICT,
     CONSTRAINT "FK_DENUNCIA_PESQUISADOR_ALVO" FOREIGN KEY (id_pesquisador_alvo) REFERENCES usuario(id_usuario) ON DELETE RESTRICT,
     CONSTRAINT "FK_DENUNCIA_MOTIVO" FOREIGN KEY (id_motivo) REFERENCES motivo_denuncia(id_motivo),
@@ -733,12 +655,9 @@ CREATE TABLE denuncia (
         (id_campanha_alvo IS NOT NULL AND id_pesquisador_alvo IS NULL)
         OR (id_campanha_alvo IS NULL AND id_pesquisador_alvo IS NOT NULL)
     ),
-    -- ADICIONADO (28-07-2026, achado numa auditoria de IA - "Problema 2", a Alexia já tinha avisado no
-    -- WhatsApp antes mesmo da coluna existir: "relato como text pode dar problema, tem
-    -- que ver depois se dá pra restringir o tamanho"): sem limite nenhum, um campo de
-    -- denúncia pública virava vetor de abuso (o limite de 5 denúncias/24h não impede
-    -- megabytes de texto POR denúncia). Limite técnico largo aqui; limite de negócio
-    -- configurável via trigger, ver [05-K-1].
+    -- Sem limite, um campo de denúncia pública viraria vetor de abuso (o limite de 5 denúncias/24h não
+    -- impede megabytes de texto POR denúncia). Limite técnico largo aqui; limite de negócio configurável
+    -- via trigger, ver [05-K-1].
     CONSTRAINT "CK_DENUNCIA_RELATO_TAMANHO" CHECK (relato IS NULL OR char_length(relato) <= 5000)
 );
 
@@ -757,9 +676,8 @@ CREATE TABLE recompensa (
     CONSTRAINT "FK_RECOMPENSA_CAMPANHA" FOREIGN KEY (id_campanha) REFERENCES campanha(id_campanha) ON DELETE CASCADE,
     CONSTRAINT "CK_RECOMPENSA_VALOR_MINIMO" CHECK (valor_minimo > 0),
     CONSTRAINT "CK_RECOMPENSA_QUANTIDADE"   CHECK (quantidade_disponivel IS NULL OR quantidade_disponivel >= 0),
-    -- ADICIONADO (28-07-2026, achado numa auditoria de IA - "Problema 2"): mesma categoria de texto
-    -- livre sem limite, mesmo raciocínio de CK_CAMPANHA_DESCRICAO_TAMANHO. Limite
-    -- técnico largo aqui; limite de negócio configurável via trigger, ver [05-K-1].
+    -- Texto livre sem limite: mesmo raciocínio de CK_CAMPANHA_DESCRICAO_TAMANHO. Limite técnico largo
+    -- aqui; limite de negócio configurável via trigger, ver [05-K-1].
     CONSTRAINT "CK_RECOMPENSA_DESCRICAO_TAMANHO" CHECK (descricao IS NULL OR char_length(descricao) <= 10000)
 );
 
@@ -772,10 +690,8 @@ CREATE TABLE link_academico (
     id_tipolink       INT  NOT NULL,
     ordem             INT,
     url               VARCHAR(500) NOT NULL,
-    -- ADICIONADO (28-07-2026, item 19(a)): RF-014/RF-016/RF-018 e a Etapa 2
-    -- falam em rótulo personalizável por link ("meu repositório do projeto X",
-    -- em vez de só o nome genérico do tipo_link). Opcional - sem rótulo, o
-    -- front cai pro nome do tipo_link.
+    -- RF-014/RF-016/RF-018: rótulo personalizável por link ("meu repositório do projeto X", em vez de só
+    -- o nome genérico do tipo_link). Opcional: sem rótulo, o front cai para o nome do tipo_link.
     rotulo             VARCHAR(100),
 
     CONSTRAINT "PK_LINK_ACADEMICO" PRIMARY KEY (id_link_academico),
@@ -852,13 +768,9 @@ CREATE TABLE contribuicao (
     CONSTRAINT "PK_CONTRIBUICAO" PRIMARY KEY (id_contribuicao),
     CONSTRAINT "FK_CONTRIBUICAO_CAMPANHA" FOREIGN KEY (id_campanha) REFERENCES campanha(id_campanha),
     CONSTRAINT "FK_CONTRIBUICAO_USUARIO" FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE SET NULL,
-    -- ALTERADO (30-07-2026, RF-056, mesmo padrão do item 16 da Lista C):
-    -- CK_CONTRIBUICAO_VALOR_MINIMO era `>= 5.00` direto na constraint - hardcoded,
-    -- igual o prazo e a meta financeira estavam antes de virarem configuráveis.
-    -- Vira só limite técnico largo (`> 0`, barra só erro grosseiro tipo valor
-    -- zero/negativo); o mínimo de negócio de verdade (5.00, configurável pelo
-    -- Painel Admin) mora em configuracoes.valor_minimo_contribuicao + trigger,
-    -- ver [05-K-2] em 05_regras_negocio.sql.
+    -- CHECK é só limite técnico largo (`> 0`, barra só erro grosseiro tipo valor zero/negativo); o mínimo
+    -- de negócio de verdade (5.00, configurável pelo Painel Admin) mora em
+    -- configuracoes.valor_minimo_contribuicao + trigger, ver [05-K-2] em 05_regras_negocio.sql.
     CONSTRAINT "CK_CONTRIBUICAO_VALOR_MINIMO" CHECK (valor > 0)
 );
 
@@ -901,7 +813,7 @@ CREATE TABLE aceite_termo_contribuicao (
 
     CONSTRAINT "PK_ACEITE_TERMO_CONTRIBUICAO" PRIMARY KEY (id_aceite_contrib),
     CONSTRAINT "FK_ACEITE_TERMO_CONTRIBUICAO_CONTRIBUICAO" FOREIGN KEY (id_contribuicao) REFERENCES contribuicao(id_contribuicao) ON DELETE CASCADE,
-    -- CASCADE (14-09-2026) - mesmo motivo de FK_USUARIO_TERMO_TERMO acima.
+    -- CASCADE, mesmo motivo de FK_USUARIO_TERMO_TERMO acima.
     CONSTRAINT "FK_ACEITE_TERMO_CONTRIBUICAO_TERMO" FOREIGN KEY (id_termo) REFERENCES termos_de_uso(id_termo) ON DELETE CASCADE,
     CONSTRAINT "UK_ACEITE_TERMO_CONTRIBUICAO_CONTRIBUICAO" UNIQUE (id_contribuicao)
 );
@@ -935,18 +847,14 @@ CREATE TABLE score_rotulo (
 
     CONSTRAINT "PK_SCORE_ROTULO" PRIMARY KEY (id_rotulo),
     CONSTRAINT "CK_SCORE_ROTULO_FAIXA" CHECK (score_minimo < score_maximo),
-    -- ADICIONADA (23-09-2026): sem isto, nada impedia duas faixas ATIVAS se
-    -- sobreporem (ex.: erro de digitação no score_maximo de uma faixa) - e
-    -- recalcular_score_pesquisador (05) faz SELECT ... LIMIT 1 sem ORDER BY
-    -- sobre elas, então o mesmo score podia cair num rótulo diferente em
-    -- execuções diferentes. int4range/GiST tem suporte nativo pro operador
-    -- &&, não precisa da extensão btree_gist (essa só seria necessária pra
-    -- incluir uma coluna ESCALAR na exclusão, tipo "ativo WITH =" - aqui o
-    -- WHERE abaixo já resolve isso sem precisar da coluna dentro do índice).
-    -- DEFERRABLE INITIALLY DEFERRED: a checagem só roda no COMMIT da
-    -- transação, não a cada UPDATE - editar duas faixas adjacentes numa
-    -- mesma transação (ex.: encolher uma e alargar a vizinha) passa por um
-    -- estado intermediário sobreposto sem ser recusado no meio do caminho.
+    -- Sem isto, nada impediria duas faixas ATIVAS de se sobreporem (ex.: erro de digitação no
+    -- score_maximo), e recalcular_score_pesquisador (05) faz SELECT ... LIMIT 1 sem ORDER BY sobre elas:
+    -- o mesmo score podia cair num rótulo diferente em execuções diferentes. int4range/GiST tem suporte
+    -- nativo ao operador &&, não precisa da extensão btree_gist (essa só seria necessária para incluir
+    -- uma coluna ESCALAR na exclusão, tipo "ativo WITH ="; aqui o WHERE abaixo já resolve). DEFERRABLE
+    -- INITIALLY DEFERRED: a checagem só roda no COMMIT, não a cada UPDATE, então editar duas faixas
+    -- adjacentes numa mesma transação (encolher uma e alargar a vizinha) passa por um estado
+    -- intermediário sobreposto sem ser recusado no meio do caminho.
     CONSTRAINT "EX_SCORE_ROTULO_SEM_SOBREPOSICAO"
         EXCLUDE USING gist (int4range(score_minimo, score_maximo, '[]') WITH &&)
         WHERE (ativo = TRUE)
@@ -973,7 +881,6 @@ CREATE TABLE score_pesquisador (
 -- ============================================================
 -- [01-L] LOG DE AUDITORIA (log_auditoria)
 -- ============================================================
--- ADICIONADO (03-08-2026), --
 -- `identidade_registro` é TEXT (não INT) de propósito: cobre tanto tabela
 -- com PK simples (ex.: '42') quanto PK composta, como usuario_papel/
 -- papel_permissao (ex.: '8,3' = id_usuario 8, id_papel 3) - um único
@@ -1004,14 +911,9 @@ CREATE TABLE log_auditoria (
 
     CONSTRAINT "PK_LOG_AUDITORIA" PRIMARY KEY (id_log),
     CONSTRAINT "FK_LOG_AUDITORIA_USUARIO" FOREIGN KEY (id_usuario_responsavel) REFERENCES usuario(id_usuario) ON DELETE SET NULL,
-    -- ATUALIZADA (05-09-2026, item 3 de PROXIMOS_PASSOS.md - exportação de
-    -- dados, LGPD Art. 18): 'EXPORT' acrescentado - as 3 originais (INSERT/UPDATE/
-    -- DELETE) só cobrem MUDANÇA de dado, gravadas por trigger
-    -- (fn_log_auditoria(), 05). Uma exportação não muda nada, mas "toda
-    -- exportação de dados pessoais deve deixar rastro" (decisão tomada em
-    -- conversa com apoio de IA) exige um registro mesmo assim - só uma leitura sensível o
-    -- bastante pra precisar de trilha própria. dados_anteriores/dados_novos
-    -- ficam NULL nesse caso (nada mudou), só tabela/identidade_registro/
-    -- id_usuario_responsavel/ocorrido_em importam.
+    -- 'EXPORT' acrescenta-se às 3 operações originais (INSERT/UPDATE/DELETE), que cobrem MUDANÇA de dado,
+    -- gravadas por trigger (fn_log_auditoria(), 05). Uma exportação de dados pessoais (RF-016, LGPD
+    -- Art. 18) não muda nada, mas deve deixar rastro mesmo assim. dados_anteriores/dados_novos ficam NULL
+    -- nesse caso (nada mudou); só tabela/identidade_registro/id_usuario_responsavel/ocorrido_em importam.
     CONSTRAINT "CK_LOG_AUDITORIA_OPERACAO" CHECK (operacao IN ('INSERT', 'UPDATE', 'DELETE', 'EXPORT'))
 );

@@ -5,16 +5,13 @@ import { CampoTestesProvider } from './services/campo-testes/context/campo-teste
 import { ROTAS, ROTAS_ADMIN } from './services/router/rotas.constants';
 import { AdminLayout } from './views/admin/admin-layout';
 
-// useAuth() chamado uma vez só, aqui em cima - Header (dentro de Layout) e
-// cada página recebem o mesmo `auth` por prop, nunca cada um com sua
-// própria sessão. Rotas vêm de services/router/rotas.constants.js (fonte
-// única, compartilhada com o breadcrumb e o menu lateral) - adicionar uma
-// página nova é só acrescentar uma linha lá, não mexer aqui.
+// useAuth() chamado uma vez só, aqui em cima: Header (dentro de Layout) e cada página recebem o mesmo `auth`
+// por prop, nunca cada um com sua própria sessão. Rotas vêm de services/router/rotas.constants (fonte única,
+// compartilhada com o breadcrumb e o menu lateral): adicionar uma página nova é só acrescentar uma linha lá,
+// não mexer aqui.
 //
-// "/" redireciona pra /admin/dashboard (a aba padrão, 08-08-2026 - ERA
-// /admin/usuarios até o Dashboard existir) - antes era a própria home;
-// virou redirect porque as abas do painel agora são rotas de verdade, não
-// dava mais pra "/" ser todas ao mesmo tempo.
+// "/" redireciona para /admin/dashboard (a aba padrão): as abas do painel são rotas de verdade, então "/" não
+// pode ser todas ao mesmo tempo.
 function App() {
   const auth = useAuth();
 
@@ -28,10 +25,8 @@ function App() {
         ))}
 
         <Route path="/admin" element={<AdminLayout auth={auth} />}>
-          {/* Redirect da rota base sem aba (11-08-2026) - mesmo espírito do
-              redirect de "/" pro Dashboard logo acima: "/admin/minha-conta"
-              sozinho não é mais uma página própria, é só o link antigo
-              (menu-usuario.tsx) apontando pra cá; a aba padrão é Perfil. */}
+          {/* Redirect da rota base sem aba: "/admin/minha-conta" sozinho não é uma página própria (só o link
+              antigo, menu-usuario.tsx, aponta para cá); a aba padrão é Perfil. */}
           <Route
             path="minha-conta"
             element={<Navigate to="/admin/minha-conta/perfil" replace />}

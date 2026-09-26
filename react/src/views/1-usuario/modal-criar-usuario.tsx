@@ -15,20 +15,16 @@ interface ModalCriarUsuarioProps {
   aoCriado: (usuarioCriado: UsuarioResponse) => void;
 }
 
-// Criar - mesmo conteúdo de criar-usuario.tsx (nome/e-mail/senha/foto),
-// migrado de página pra modal (13-09-2026, pedido do Lucas: "a completa
-// migração do Modal"). Não tem equivalente em T1 (Campo de Testes nunca
-// precisou criar conta do zero, só "Criar Perfil Pesquisador" pra quem já é
-// usuário) - só usado pela página real de Usuário.
+// Criar: nome/e-mail/senha/foto. Não tem equivalente em T1 (Campo de Testes nunca precisou criar conta do zero,
+// só "Criar Perfil Pesquisador" para quem já é usuário): só usado pela página real de Usuário.
 export function ModalCriarUsuario({ auth, aoFechar, aoCriado }: ModalCriarUsuarioProps) {
   const { mostrar } = useToast();
   const { erro, reportarErro, limparErro } = useErroToast();
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
-  // Foto de perfil - OPCIONAL na criação, mesmo raciocínio de sempre: sem
-  // usuário criado ainda, não existe PATCH pra disparar limpeza de foto
-  // trocada/removida - best-effort, apaga na hora o upload anterior órfão.
+  // Foto de perfil: OPCIONAL na criação; sem usuário criado ainda, não existe PATCH para disparar limpeza de
+  // foto trocada/removida: best-effort, apaga na hora o upload anterior órfão.
   const [idImagemPerfil, setIdImagemPerfil] = useState<number | null>(null);
   const [urlImagemPerfil, setUrlImagemPerfil] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);

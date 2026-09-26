@@ -19,26 +19,18 @@ export class ArquivoServiceRemove {
     private readonly armazenamento: ArmazenamentoService,
   ) {}
 
-  // Soft delete no BANCO (ativo=false), nunca DELETE de verdade na linha -
-  // 06_grants.sql só concede INSERT/UPDATE em `arquivo` (sem DELETE), e faz
-  // sentido: um arquivo referenciado por arquivo_atualizacao/
-  // arquivo_recompensa/usuario.id_imagem_perfil não pode simplesmente
-  // sumir do banco (quebraria FK). A linha fica, só marcada inativa - e é
-  // por isso que ArquivoServiceResolverAvatar e qualquer outro lugar que
-  // exibe arquivo já filtram por `ativo=true` antes de mostrar.
+  // Soft delete no BANCO (ativo=false), nunca DELETE de verdade na linha: 06_grants.sql só concede
+  // INSERT/UPDATE em `arquivo` (sem DELETE), e faz sentido: um arquivo referenciado por
+  // arquivo_atualizacao/arquivo_recompensa/usuario.id_imagem_perfil não pode simplesmente sumir do banco
+  // (quebraria FK). A linha fica, só marcada inativa; por isso ArquivoServiceResolverAvatar e qualquer outro
+  // lugar que exibe arquivo já filtram por `ativo=true` antes de mostrar.
   //
-  // ADICIONADO: agora TAMBÉM apaga o objeto de verdade no bucket
-  // (armazenamento.excluirObjeto) - antes só desativava no banco e o
-  // arquivo ficava esquecido lá pra sempre, ocupando espaço sem nenhuma
-  // referência ativa apontando pra ele. Isso é seguro fazer aqui porque
-  // ninguém serve o arquivo pela CHAVE direto do bucket sem passar antes
-  // pela checagem de `ativo` no banco - uma vez `ativo=false`, o dado já
-  // parou de aparecer em qualquer lugar do sistema, então apagar os bytes
-  // não quebra nada que ainda devesse funcionar. Falha ao apagar do bucket
-  // NÃO desfaz o soft delete (a linha já ficou inativa, que é o que
-  // importa pra correção do sistema) - só vira um objeto órfão no bucket,
-  // mesma categoria de baixo risco/baixa prioridade dos uploads
-  // abandonados em pendente/.
+  // Também apaga o objeto de verdade no bucket (armazenamento.excluirObjeto): sem isso o arquivo ficaria
+  // esquecido lá para sempre, ocupando espaço sem nenhuma referência ativa. É seguro fazer aqui porque ninguém
+  // serve o arquivo pela CHAVE direto do bucket sem passar antes pela checagem de `ativo` no banco: uma vez
+  // `ativo=false`, o dado parou de aparecer em qualquer lugar do sistema. Falha ao apagar do bucket NÃO desfaz
+  // o soft delete (a linha já ficou inativa, que é o que importa para a correção do sistema): só vira um objeto
+  // órfão no bucket, mesma categoria de baixo risco/baixa prioridade dos uploads abandonados em pendente/.
   async executar(idArquivo: number): Promise<void> {
     const db = this.database.getDb();
 
@@ -51,8 +43,7 @@ export class ArquivoServiceRemove {
       .executeTakeFirst();
 
     if (linha) {
-      // LOGADO, não mais engolido em silêncio (25-08-2026, achado do
-      // Lucas: objeto órfão sobrou no bucket sem nenhum rastro do motivo).
+      // LOGADO, não engolido em silêncio: objeto órfão no bucket precisa deixar rastro do motivo.
       await this.armazenamento.excluirObjeto(linha.chave).catch((erro) => {
         this.logger.warn(
           `Falha ao apagar objeto do bucket (arquivo=${idArquivo}, chave=${linha.chave}): ${(erro as Error).message}`,

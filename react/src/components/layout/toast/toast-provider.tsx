@@ -3,33 +3,21 @@ import type { ReactNode } from 'react';
 import { ToastContext } from './toast-context';
 import type { TipoToast } from './toast-context';
 
-// Duração por tipo (pedido do Lucas, 07-08-2026: erro fica 1s a mais que
-// sucesso - dá mais tempo pra notar/ler antes de sumir).
+// Duração por tipo: erro fica 1s a mais que sucesso (mais tempo para notar/ler antes de sumir).
 const DURACAO_MS: Record<TipoToast, number> = { sucesso: 4000, erro: 5000 };
 
-// Redesenho (08-08-2026, rodada Experiment.com/Catarse): sucesso e erro
-// tinham estruturas DIFERENTES (sucesso era um bloco verde sólido com
-// texto branco; erro era translúcido com borda vermelha grossa) - cada um
-// evoluído em rodada separada, sem desenho conjunto. Unificados na mesma
-// estrutura (cartão branco + barra colorida de 4px na esquerda + ícone) -
-// a cor vira ACENTO (a barra/ícone), não fundo. Texto sempre escuro
-// (nunca branco sobre colorido) resolve de vez o problema de legibilidade
-// em monitor não calibrado já relatado antes pro toast de erro.
+// Sucesso e erro têm a MESMA estrutura: cartão branco + barra colorida de 4px na esquerda + ícone. A cor é
+// ACENTO (a barra/ícone), não fundo; texto sempre escuro (nunca branco sobre colorido), o que resolve a
+// legibilidade em monitor não calibrado.
 //
-// CORRIGIDO (09-08-2026, achado do Lucas: "parte colorida no cantinho e
-// parte branca atrás", mesmo artefato do item ativo do menu lateral) - a
-// barra ERA uma <div> quadrada separada, irmã do conteúdo, dentro de um
-// pai com `overflow-hidden` + `rounded-xl` esperando que o corte arredondasse
-// ela junto. Em vez de contar com o clipping pra arredondar um retângulo
-// reto exatamente no raio do cantinho (sub-pixel, some browsers/zoom
-// deixam uma frestinha), a cor virou `border-left` do próprio cartão - uma
-// borda SEMPRE acompanha o border-radius do elemento dela, sem costura
-// nenhuma, não depende de overflow cortar nada.
-// `corBorda` (14-09-2026, achado numa auditoria de componentização): eram
-// `border-emerald-500`/`border-red-500` crus do Tailwind - únicas 2 cores
-// do toast (que aparece em toda ação do painel) fora da camada de tokens
-// `--cor-*`, sem responder a tema escuro. `.borda-erro` já existia
-// (13-09-2026); `.borda-sucesso` criada agora ao lado, mesmo motivo.
+// A barra é `border-left` do próprio cartão, não uma <div> quadrada separada dentro de um pai com
+// `overflow-hidden` + `rounded-xl`: contar com o clipping para arredondar um retângulo reto exatamente no raio
+// do cantinho deixa uma frestinha sub-pixel em alguns browsers/zoom ("parte colorida no cantinho e parte branca
+// atrás"); uma borda SEMPRE acompanha o border-radius do elemento dela, sem costura, e não depende de overflow
+// cortar nada.
+// `corBorda` usa os tokens `.borda-erro`/`.borda-sucesso` (camada `--cor-*`), não
+// `border-emerald-500`/`border-red-500` crus do Tailwind: o toast aparece em toda ação do painel e precisa
+// responder ao tema escuro.
 const CONFIG_TIPO: Record<TipoToast, { corBorda: string; corIcone: string; icone: string }> = {
   sucesso: {
     corBorda: 'borda-sucesso',
@@ -54,16 +42,13 @@ interface ToastProviderProps {
   children: ReactNode;
 }
 
-// Confirmação visual reaproveitável - pedida pro fluxo de criar usuário,
-// mas pensada pra servir alterar/consultar/excluir também (e qualquer
-// módulo futuro): qualquer componente chama `useToast().mostrar(titulo,
-// descricao, tipo)` (ver use-toast.js), não precisa saber onde o toast é
-// desenhado nem gerenciar timeout sozinho.
+// Confirmação visual reaproveitável (criar/alterar/consultar/excluir e qualquer módulo futuro): qualquer
+// componente chama `useToast().mostrar(titulo, descricao, tipo)` (ver use-toast), não precisa saber onde o
+// toast é desenhado nem gerenciar timeout sozinho.
 //
-// Duas linhas de propósito (pedido do Lucas, 03-08-2026): "Usuário 18
-// alterado com sucesso." de uma vez só não deixava claro nem A AÇÃO nem O
-// ID - título grande e curto ("Usuário alterado com sucesso.") e uma
-// descrição menor embaixo com o dado específico ("ID: 18 foi alterado").
+// Duas linhas de propósito: "Usuário 18 alterado com sucesso." de uma vez só não deixa claro nem A AÇÃO nem O
+// ID; título grande e curto ("Usuário alterado com sucesso.") e uma descrição menor embaixo com o dado
+// específico ("ID: 18 foi alterado").
 export function ToastProvider({ children }: ToastProviderProps) {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const proximoId = useRef(0);
@@ -75,7 +60,13 @@ export function ToastProvider({ children }: ToastProviderProps) {
   const mostrar = useCallback(
     (titulo: string, descricao?: string, tipo: TipoToast = 'sucesso') => {
       const id = proximoId.current++;
-      setToasts((atuais) => [...atuais, { id, titulo, descricao, tipo }]);
+      // Aviso idêntico ao que já está na tela não empilha de novo (o <StrictMode> do desenvolvimento dispara cada efeito
+      // duas vezes e o mesmo erro chegava em dobro).
+      setToasts((atuais) =>
+        atuais.some((t) => t.titulo === titulo && t.descricao === descricao && t.tipo === tipo)
+          ? atuais
+          : [...atuais, { id, titulo, descricao, tipo }],
+      );
       setTimeout(() => remover(id), DURACAO_MS[tipo]);
     },
     [remover],
@@ -84,15 +75,11 @@ export function ToastProvider({ children }: ToastProviderProps) {
   return (
     <ToastContext.Provider value={{ mostrar }}>
       {children}
-      {/* top-32 (8rem): pedido do Lucas (07-08-2026) pra descer um pouco -
-          ainda limpa o Header (h-16) e o Breadcrumb (sticky top-16) sem
-          encostar. pointer-events-none no container (não deve bloquear
-          clique fora do toast em si - só o toast individual, mais abaixo,
-          reativa com pointer-events-auto). max-w-lg pra caber confortável
-          com ícone + botão de fechar. items-stretch (não items-center):
-          cada toast ocupa a largura cheia do container, senão a barra
-          lateral colorida fica "flutuando" com tamanhos diferentes por
-          toast. */}
+      {/* top-32 (8rem): limpa o Header (h-16) e o Breadcrumb (sticky top-16) sem encostar.
+          pointer-events-none no container (não deve bloquear clique fora do toast em si; só o toast
+          individual, mais abaixo, reativa com pointer-events-auto). max-w-lg para caber confortável com
+          ícone + botão de fechar. items-stretch (não items-center): cada toast ocupa a largura cheia do
+          container, senão a barra lateral colorida fica "flutuando" com tamanhos diferentes por toast. */}
       <div className="fixed top-32 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-3 items-stretch w-full max-w-lg px-4 pointer-events-none">
         {toasts.map((toast) => {
           const config = CONFIG_TIPO[toast.tipo];
@@ -110,11 +97,9 @@ export function ToastProvider({ children }: ToastProviderProps) {
                     numa caixa larga é mais difícil de ler e não é o padrão de
                     painel profissional (Experiment/Catarse usam à esquerda). */}
                 <div className="flex-1 min-w-0 text-left">
-                  {/* whitespace-pre-line (09-08-2026): a mensagem de conta
-                      suspensa/bloqueada embute \n\n pra separar a data do
-                      "Motivo:" - sem isto, <p> normal colapsa quebra de
-                      linha num espaço só. Inofensivo pra todo o resto (só
-                      afeta strings que já têm \n de propósito). */}
+                  {/* whitespace-pre-line: a mensagem de conta suspensa/bloqueada embute \n\n para separar a
+                      data do "Motivo:" e, sem isto, <p> normal colapsa quebra de linha num espaço só.
+                      Inofensivo para todo o resto (só afeta strings que já têm \n de propósito). */}
                   <p className="text-sm font-bold texto-forte whitespace-pre-line">
                     {toast.titulo}
                   </p>
@@ -124,8 +109,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
                     </p>
                   )}
                 </div>
-                {/* Botão de fechar - pedido do Lucas, 08-08-2026: erro que a
-                    pessoa já leu deveria poder sair na hora, não só esperar o
+                {/* Botão de fechar: erro que a pessoa já leu deveria poder sair na hora, não só esperar o
                     tempo passar (5s no erro). */}
                 <button
                   type="button"

@@ -6,11 +6,9 @@ import type {
   OrcamentoCampanhaResponse,
 } from '../type/orcamento-campanha.type';
 
-// Espelha nest/src/13-orcamento-campanha. GET /orcamento-campanha?idCampanha=
-// devolve um array puro (sem envelope {dados,total,...} - ver
-// orcamento-campanha.service.findall.ts), diferente da maioria dos outros
-// módulos. Extraído (23-09-2026) de dentro de bancada-campanha.tsx, onde as
-// mesmas 4 chamadas viviam como `authFetch` cru direto no JSX.
+// Espelha nest/src/13-orcamento-campanha. GET /orcamento-campanha?idCampanha= devolve um array puro (sem
+// envelope {dados,total,...}, ver orcamento-campanha.service.findall.ts), diferente da maioria dos outros
+// módulos. Usado por bancada-campanha.tsx.
 export const orcamentoCampanhaApi = {
   listar: (authFetch: AuthFetch, idCampanha: number): Promise<OrcamentoCampanhaResponse[]> =>
     authFetch(`/orcamento-campanha?idCampanha=${idCampanha}`).then(

@@ -13,15 +13,11 @@ interface ModalConsultarPapelProps {
   aoFechar: () => void;
 }
 
-// Consultar - novo (14-09-2026, pedido do Lucas: "podemos colocar
-// informações ali dentro, sobre os atributos de cada papel... e suas
-// permissões"). `PapelResponse` só tem `idPapel`/`nome` (o `codigo` estável
-// nunca é exposto pela API, de propósito) - o dado que realmente falta
-// mostrar são as permissões concedidas, lidas ao vivo da matriz Papel ×
-// Permissão (mesmas 2 chamadas de matriz-papel-permissao.tsx/modal-
-// detalhe-permissao.tsx), nunca hardcoded. Cada badge abre o MESMO
-// `ModalDetalhePermissao` que a tabela de Permissões já usa pro botão
-// "Saiba mais" - zero lógica de detalhe duplicada.
+// Consultar: mostra as permissões concedidas ao papel, lidas ao vivo da matriz Papel × Permissão (mesmas 2
+// chamadas de matriz-papel-permissao.tsx/modal-detalhe-permissao.tsx), nunca hardcoded. `PapelResponse` só tem
+// `idPapel`/`nome` (o `codigo` estável nunca é exposto pela API, de propósito). Cada badge abre o MESMO
+// `ModalDetalhePermissao` que a tabela de Permissões usa no botão "Saiba mais": zero lógica de detalhe
+// duplicada.
 export function ModalConsultarPapel({ auth, papel, aoFechar }: ModalConsultarPapelProps) {
   const [permissoes, setPermissoes] = useState<PermissaoResponse[] | null>(null);
   const [permissaoDetalhada, setPermissaoDetalhada] = useState<PermissaoResponse | null>(null);
@@ -91,19 +87,13 @@ interface ModalExcluirPapelProps {
   aoFechar: () => void;
 }
 
-// Excluir - só explicativo, de propósito (14-09-2026, pedido do Lucas: "o
-// ícone da lixeira... um modal pequeno explicando isto, sem opção de
-// confirmar"). Diferente de todo outro "Excluir" do sistema, este nunca
-// chama a API - `usuario_papel`/`papel_permissao` apontam pra `papel` com
-// `ON DELETE CASCADE` (confirmado em 01_extensoes_enums_tabelas.sql):
-// excluir um papel apagaria, na hora e sem aviso, o vínculo de TODOS os
-// usuários que têm esse papel e TODAS as permissões concedidas a ele -
-// qualquer conta com este papel perderia a autoridade instantaneamente,
-// sistema inteiro. Diferente de Excluir Usuário/Motivo de Denúncia/etc
-// (exclusão lógica ou bloqueada por FK com mensagem própria), aqui o risco
-// é grande demais pra existir como ação de painel - o ícone continua no
-// lugar certo (padroniza a coluna Ações com todo o resto do sistema), só
-// que clicar nele explica o motivo em vez de perguntar "tem certeza?".
+// Excluir: só explicativo, de propósito: nunca chama a API. `usuario_papel`/`papel_permissao` apontam para
+// `papel` com `ON DELETE CASCADE` (01_extensoes_enums_tabelas.sql): excluir um papel apagaria, na hora e sem
+// aviso, o vínculo de TODOS os usuários que têm esse papel e TODAS as permissões concedidas a ele: qualquer
+// conta com este papel perderia a autoridade instantaneamente, sistema inteiro. Diferente de Excluir
+// Usuário/Motivo de Denúncia/etc (exclusão lógica ou bloqueada por FK com mensagem própria), aqui o risco é
+// grande demais para existir como ação de painel: o ícone continua no lugar certo (padroniza a coluna Ações com
+// todo o resto do sistema), só que clicar nele explica o motivo em vez de perguntar "tem certeza?".
 export function ModalExcluirPapel({ papel, aoFechar }: ModalExcluirPapelProps) {
   return (
     <ModalFicha

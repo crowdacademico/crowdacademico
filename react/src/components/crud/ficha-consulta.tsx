@@ -1,11 +1,8 @@
-// Layout de FICHA pra telas "Consultar" (08-08-2026, pedido do Lucas: a
-// versão antiga - pilha de textbox desabilitado, igual pra todo módulo -
-// não escalava bem conforme o dado crescia, e "campo desabilitado" é o
-// jeito errado de comunicar "isto nunca foi editável" (o desabilitado
-// promete "você poderia editar, mas não pode" - aqui nada promete isso).
-// Componente reutilizável de propósito (não específico de usuário) - o
-// próximo módulo com tela de Consultar usa os mesmos 3 blocos abaixo, não
-// escreve do zero.
+// Layout de FICHA para telas "Consultar": a versão antiga (pilha de textbox desabilitado, igual para todo
+// módulo) não escalava conforme o dado crescia, e "campo desabilitado" é o jeito errado de comunicar "isto
+// nunca foi editável" (o desabilitado promete "você poderia editar, mas não pode"). Componente reutilizável de
+// propósito (não específico de usuário): o próximo módulo com tela de Consultar usa os mesmos 3 blocos abaixo,
+// não escreve do zero.
 //
 // <FichaConsulta titulo="..." subtitulo="..." badges={...} acoes={...}>
 //   <SecaoFicha titulo="Dados da conta">
@@ -13,20 +10,13 @@
 //   </SecaoFicha>
 // </FichaConsulta>
 //
-// `largura` (10-08-2026, rodada de IA "embelezar o painel", item 4) - 2
-// medidas próprias deste componente: 'media' (max-w-2xl, padrão -
-// Consultar Configuração, ficha simples) e 'larga' (max-w-5xl - Consultar
-// Usuário, que ganhou 2 colunas pelo mesmo motivo do Alterar Usuário). O
-// layout em colunas não mora AQUI dentro - quem usa `largura="larga"`
-// monta o próprio `grid lg:grid-cols-3` nos `children`, igual já é feito
-// em modal-usuario.tsx (ModalAlterarUsuario); este componente só garante o
-// espaço pra isso caber.
+// `largura`: 2 medidas próprias deste componente: 'media' (max-w-2xl, padrão: ficha simples) e 'larga'
+// (max-w-5xl: Consultar Usuário, com 2 colunas). O layout em colunas não mora AQUI dentro: quem usa
+// `largura="larga"` monta o próprio `grid lg:grid-cols-3` nos `children`, como em modal-usuario.tsx
+// (ModalAlterarUsuario); este componente só garante o espaço para isso caber.
 //
-// NOTA (13-09-2026, achado do Lucas): `largura` aqui é um vocabulário
-// PRÓPRIO e independente - `CartaoFormulario` só tem 'media' hoje (perdeu
-// 'larga' no mesmo achado, sem consumidor), e `ModalFicha` nem tem prop de
-// largura (é sempre max-w-5xl fixo). Não confundir um com o outro por
-// analogia.
+// `largura` aqui é um vocabulário PRÓPRIO e independente: `CartaoFormulario` só tem 'media', e `ModalFicha` nem
+// tem prop de largura (é sempre max-w-5xl fixo). Não confundir um com o outro por analogia.
 import type { ReactNode } from 'react';
 
 type LarguraFicha = 'media' | 'larga';
@@ -64,22 +54,14 @@ export function FichaConsulta({
           'w-full fundo-cartao rounded-2xl shadow-lg border borda-padrao ' + LARGURAS[largura]
         }
       >
-        {/* Cabeçalho: `avatar` (25-08-2026, módulo 25-arquivo - antes o
-            avatar era espremido dentro de um CampoFicha lá embaixo, no
-            slot `acao` pensado pra um ícone pequeno tipo a setinha de
-            login; uma foto de verdade ali ficava torta, desalinhada do
-            próprio rótulo. Mesmo lugar visual que já existe em Alterar
-            Usuário - foto ao lado do nome) + nome grande + e-mail abaixo,
-            badges e `acaoTopo` (10-08-2026, item 4: "botão Alterar no topo
-            da ficha" - fluxo consultar→alterar é o mais comum em painel
-            admin, não fazia sentido só no rodapé) à direita - nada de
-            campo de formulário aqui, de propósito. `rounded-t-2xl` aqui
-            (não `overflow-hidden` no cartão inteiro, 10-08-2026) -
-            overflow-hidden quebraria o rodapé `sticky` (cria um contexto
-            de scroll próprio que o sticky não atravessa), mesmo problema
-            de raiz do artefato de cantinho já corrigido em toast-provider/
-            admin-sidebar nesta sessão: cada pedaço arredonda o PRÓPRIO
-            canto, não depende de recorte de um pai. */}
+        {/* Cabeçalho: `avatar` (a foto de verdade, ao lado do nome, como em Alterar Usuário; um avatar
+            espremido num CampoFicha lá embaixo, no slot `acao` pensado para um ícone pequeno, ficaria torto
+            e desalinhado do próprio rótulo) + nome grande + e-mail abaixo, badges e `acaoTopo` (botão
+            Alterar no topo da ficha: o fluxo consultar→alterar é o mais comum em painel admin) à direita.
+            Nada de campo de formulário aqui, de propósito. `rounded-t-2xl` aqui, não `overflow-hidden` no
+            cartão inteiro: overflow-hidden quebraria o rodapé `sticky` (cria um contexto de scroll próprio
+            que o sticky não atravessa); cada pedaço arredonda o PRÓPRIO canto, não depende de recorte de um
+            pai. */}
         <div className="px-8 py-6 border-b borda-padrao fundo-sutil rounded-t-2xl flex items-start justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3 min-w-0">
             {avatar}
@@ -108,16 +90,13 @@ export function FichaConsulta({
   );
 }
 
-// Título pequeno em maiúsculo separando cada bloco ("Dados da conta",
-// "Acesso", "Papéis"...) - grid de 2 colunas em telas >=sm pros pares
-// rótulo/valor, 1 coluna no mobile.
+// Título pequeno em maiúsculo separando cada bloco ("Dados da conta", "Acesso", "Papéis"...): grid de 2 colunas
+// em telas >=sm para os pares rótulo/valor, 1 coluna no mobile.
 //
-// `colunas={1}` (10-08-2026, achado do Lucas: card "Metadados" na coluna
-// lateral do Alterar Usuário) - `sm:grid-cols-2` é baseado na largura da
-// TELA, não do container; dentro de uma coluna lateral estreita (1/3 de
-// uma página larga), o grid via pra 2 colunas mesmo sem espaço de
-// verdade, cada metade ficando apertada - e-mail comprido esbarrava na
-// borda do card. Sem essa prop, comportamento igual a sempre.
+// `colunas={1}`: `sm:grid-cols-2` é baseado na largura da TELA, não do container; dentro de uma coluna lateral
+// estreita (1/3 de uma página larga, ex.: card "Metadados" do Alterar Usuário), o grid iria para 2 colunas
+// mesmo sem espaço de verdade, cada metade ficando apertada (e-mail comprido esbarrava na borda do card). Sem
+// essa prop, comportamento igual ao padrão.
 interface SecaoFichaProps {
   titulo: string;
   children?: ReactNode;
@@ -168,11 +147,9 @@ export function CampoFicha({ rotulo, valor, largura, acao, children }: CampoFich
         {rotulo}
       </div>
       <div className="flex items-center justify-between gap-2">
-        {/* break-words + min-w-0 (10-08-2026, mesmo achado do Lucas do
-            card Metadados) - min-w-0 é o que permite o span ENCOLHER
-            dentro do flex (sem isso, break-words sozinho não bastava,
-            flex item por padrão não aceita ficar menor que o próprio
-            conteúdo e empurraria `acao` pra fora). */}
+        {/* break-words + min-w-0: min-w-0 é o que permite o span ENCOLHER dentro do flex (sem isso,
+            break-words sozinho não basta: flex item por padrão não aceita ficar menor que o próprio conteúdo
+            e empurraria `acao` para fora). */}
         <span
           className={
             'text-sm min-w-0 break-words ' +

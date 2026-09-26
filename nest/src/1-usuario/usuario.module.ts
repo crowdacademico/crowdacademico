@@ -52,13 +52,10 @@ import { UsuarioServiceUpdate } from './service/usuario.service.update';
     UsuarioServiceExportarDados,
     ExportarDadosThrottlerGuard,
   ],
-  // UsuarioServiceFindOne exportado pra 3-auth reaproveitar (devolver o
-  // usuário público no corpo da resposta de login) em vez de duplicar a
-  // mesma query/converter. UsuarioServiceCreate exportado (09-08-2026) pelo
-  // mesmo motivo: POST /auth/cadastro (self-registro público, Bloco D do
-  // prompt de uma IA) reaproveita a MESMA criação de usuário que
-  // POST /usuario (admin) já usa, em vez de duplicar bcrypt.hash + INSERT +
-  // atribuir_papel_padrao() num segundo lugar.
+  // UsuarioServiceFindOne exportado para 3-auth reaproveitar (devolver o usuário público no corpo da resposta
+  // de login) em vez de duplicar a mesma query/converter. UsuarioServiceCreate exportado pelo mesmo motivo:
+  // POST /auth/cadastro (self-registro público) reaproveita a MESMA criação de usuário que POST /usuario
+  // (admin), em vez de duplicar bcrypt.hash + INSERT + atribuir_papel_padrao() num segundo lugar.
   exports: [UsuarioServiceFindOne, UsuarioServiceCreate],
 })
 export class UsuarioModule {}

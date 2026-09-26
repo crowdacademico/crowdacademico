@@ -1,10 +1,8 @@
 /* ========= PAINEL ADMIN: MENU LATERAL + CONTEÚDO =========
-   Inspirado no Projeto de Interface real (estilos.css: .admin-shell/
-   .admin-sidebar/.admin-content-area/.admin-sidebar-nav-item), mas com
-   visual próprio a pedido do Lucas: em vez de cartão arredondado
-   flutuando com margem, o menu é uma coluna quadrada que encosta no
-   cabeçalho, na parede esquerda e no rodapé - grid de 2 colunas, sem
-   sticky (rola junto com a página).
+   Inspirado no Projeto de Interface real (estilos.css:
+   .admin-shell/.admin-sidebar/.admin-content-area/.admin-sidebar-nav-item), mas com visual próprio: em vez
+   de cartão arredondado flutuando com margem, o menu é uma coluna quadrada que encosta no cabeçalho, na
+   parede esquerda e no rodapé (grid de 2 colunas, sem sticky: rola junto com a página).
    Ver views/admin/admin-sidebar.tsx e views/admin/admin-layout.tsx. */
 
 /* O bug que a gente tinha: .admin-pagina levava max-width+margin:auto, o
@@ -33,27 +31,20 @@
   width: 100%;
   flex-grow: 1;
   display: flex;
-  /* flex-direction: column (11-08-2026, achado ao vivo testando o Minha
-     Conta no celular) - SEM isso, `display:flex` sozinho é `row` por
-     padrão: o botão "☰ Menu" (mobile, xl:hidden, logo abaixo no DOM) e
-     .admin-shell inteiro ficavam lado a lado dividindo a largura da tela
-     ao meio, em vez do botão empilhar ACIMA do shell. É o que fazia
-     .admin-content-area render espremido em ~metade da viewport em toda
-     página do painel no celular (Dashboard incluso, não é bug de uma
-     tela só) - .admin-shell em si já tinha grid-template-columns:
-     minmax(0, 1fr) certo (o "0" mínimo já evitava crescer por causa de
-     conteúdo), o problema era um nível acima. */
+  /* flex-direction: column: SEM isso, `display:flex` sozinho é `row` por padrão: o botão "☰ Menu" (mobile,
+     xl:hidden, logo abaixo no DOM) e .admin-shell inteiro ficariam lado a lado dividindo a largura da tela
+     ao meio, em vez do botão empilhar ACIMA do shell, e .admin-content-area renderizaria espremido em
+     ~metade da viewport em toda página do painel no celular. .admin-shell em si já tem
+     grid-template-columns: minmax(0, 1fr) certo (o "0" mínimo evita crescer por causa de conteúdo); o
+     problema estaria um nível acima. */
   flex-direction: column;
 }
 
-/* position: relative (25-08-2026) - âncora pra faixa do botão "Menu"
-   (admin-layout.tsx), que é `position: absolute` e primeiro filho daqui.
-   Sem isso, o `absolute` se posicionaria relativo à página inteira (o
-   próximo ancestral REALMENTE posicionado, que podia estar bem mais
-   longe), não relativo a este grid - `absolute inset-x-0 top-0` só cola
-   "no topo daqui" se "aqui" for uma posição de verdade. Não muda nada do
-   comportamento do grid em si (`position:relative` não interfere em
-   `display:grid`). */
+/* position: relative: âncora para a faixa do botão "Menu" (admin-layout.tsx), que é `position: absolute` e
+   primeiro filho daqui. Sem isso, o `absolute` se posicionaria relativo à página inteira (o próximo
+   ancestral REALMENTE posicionado, que pode estar bem mais longe), não a este grid: `absolute inset-x-0
+   top-0` só cola "no topo daqui" se "aqui" for uma posição de verdade. Não muda o comportamento do grid em
+   si (`position:relative` não interfere em `display:grid`). */
 .admin-shell {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -71,7 +62,7 @@
   font-family: var(--font-sans);
   font-weight: 900;
   font-size: var(--font-size-sm);
-  color: var(--cor-escura);
+  color: var(--cor-texto-forte);
 }
 
 .admin-sidebar__subtitulo {
@@ -88,40 +79,30 @@
 }
 
 .admin-sidebar__grupo-titulo {
-  /* Teste (11-08-2026, pedido do Lucas: "aumenta a fonte um pouco e deixa
-     eles preto total, pra eu ver como fica") - ERA font-size-xs +
-     cor-texto-fraco (cinza). font-size-sm (1 degrau acima) + cor-texto-
-     forte (não preto fixo - o token mais escuro/forte que já existe,
-     continua se adaptando ao tema escuro sozinho, mesmo espírito de nunca
-     hardcodar cor direto neste projeto). */
+  /* font-size-sm + cor-texto-forte (não preto fixo: o token mais escuro/forte que já existe, continua se
+     adaptando ao tema escuro sozinho, mesmo espírito de nunca hardcodar cor direto neste projeto). */
   font-size: var(--font-size-sm);
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--cor-texto-forte);
   margin: 0.5rem 0 0.5rem 0.5rem;
-  /* flex (22-08-2026, grupo "CAMPO DE TESTES") - só entra em jogo pros
-     grupos que passam `dica` (Tooltip do lado direito, ver admin-
-     sidebar.tsx); com 1 filho só (os outros grupos, sem dica), flex não
-     muda nada do visual de antes. `padding-right` evita o ícone colar na
-     borda do menu (260px é estreito). */
+  /* flex: só entra em jogo para os grupos que passam `dica` (Tooltip do lado direito, ver
+     admin-sidebar.tsx); com 1 filho só (os outros grupos, sem dica), flex não muda nada do visual.
+     `padding-right` evita o ícone colar na borda do menu (260px é estreito). */
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding-right: 0.5rem;
 }
 
-/* Achado (23-08-2026, Lucas: "o menu lateral ficou com rolagem lateral")
-   - o ícone do Tooltip (components/layout/tooltip.tsx) fica encostado na
-   borda DIREITA do grupo "CAMPO DE TESTES" (padding-right acima), mas
-   .dica__bolha (4-componentes.css, era `.tooltip__texto`) centraliza a
-   caixa da dica embaixo do ícone (`left: 50%; transform: translateX(-50%)`)
-   - com até 16rem (256px) de largura, isso jogava boa parte da caixa pra
-   FORA da coluna de 260px do menu, inflando o scrollWidth do <aside> (que
-   já é overflow-y-auto, e por regra de CSS um eixo em auto/scroll força o
-   outro a virar auto também - daí a barra horizontal). Ancorando pela
-   direita (em vez de centralizar) e reduzindo o teto de largura, a caixa
-   cresce só pra dentro do menu, nunca estoura a borda direita. */
+/* O ícone do Tooltip (components/layout/tooltip.tsx) fica encostado na borda DIREITA do grupo "CAMPO DE
+   TESTES" (padding-right acima), mas .dica__bolha (4-componentes.css) centraliza a caixa da dica embaixo do
+   ícone (`left: 50%; transform: translateX(-50%)`): com até 16rem (256px) de largura, isso jogaria boa parte
+   da caixa para FORA da coluna de 260px do menu, inflando o scrollWidth do <aside> (que já é
+   overflow-y-auto, e por regra de CSS um eixo em auto/scroll força o outro a virar auto também: daí a barra
+   horizontal). Ancorando pela direita (em vez de centralizar) e reduzindo o teto de largura, a caixa cresce
+   só para dentro do menu, nunca estoura a borda direita. */
 .admin-sidebar__grupo-titulo .dica__bolha {
   left: auto;
   right: -0.25rem;
@@ -140,10 +121,9 @@
   gap: 0.5rem;
   border-radius: var(--radius-md);
   border: 1px solid transparent;
-  /* 4px reservado pra TODOS os itens, ativo ou não (09-08-2026) - ver
-     comentário completo em --ativo, abaixo, sobre por que a barra virou
-     border-left em vez de box-shadow. Reservar aqui, na base, é o que
-     evita o item pular/desalinhar 3px quando fica ativo. */
+  /* 4px reservado para TODOS os itens, ativo ou não (ver comentário completo em --ativo, abaixo, sobre por
+     que a barra é border-left e não box-shadow). Reservar aqui, na base, evita o item pular/desalinhar 3px
+     quando fica ativo. */
   border-left-width: 4px;
   background: none;
   color: var(--cor-texto);
@@ -152,28 +132,18 @@
   transition: var(--transition-normal);
 }
 
-/* ERA --cor-fundo-sutil (slate-50) - o Lucas achou o hover fraco demais
-   (09-08-2026), quase imperceptível. slate-200 dá um contraste bem mais
-   visível contra o fundo branco da sidebar. */
+/* Hover mais visível: slate-200 dá um contraste bem mais visível contra o fundo branco da sidebar do que
+   --cor-fundo-sutil (slate-50), quase imperceptível. */
 .admin-sidebar__item:hover:not(.admin-sidebar__item--desabilitado) {
   background-color: var(--cor-borda);
 }
 
-/* Cor como ACENTO, não preenchimento (pedido do Lucas, 08-08-2026, rodada
-   Experiment.com/Catarse: "quando tudo é verde, nada se destaca" - era um
-   fundo verde translúcido cobrindo o item inteiro, virou fundo neutro +
-   barra de 4px na esquerda, mesmo padrão adotado no toast).
-   CORRIGIDO (09-08-2026, achado do Lucas: "parte colorida no cantinho e
-   parte branca atrás", mesmo artefato do toast) - ERA box-shadow inset,
-   escolhido de propósito pra não empurrar o padding do item, mas um
-   box-shadow inset num elemento com border-radius às vezes deixa uma
-   frestinha sub-pixel no cantinho arredondado (dependendo de navegador/
-   zoom) - a borda propriamente dita não tem esse problema, SEMPRE
-   acompanha a curva do border-radius sem costura. Trocado pra
-   border-left-color (a LARGURA de 4px já é reservada pra todo item, ativo
-   ou não, ver `.admin-sidebar__item` acima) - resolve o artefato E
-   preserva a propriedade original (nenhum item pula/desalinha ao ficar
-   ativo). */
+/* Cor como ACENTO, não preenchimento ("quando tudo é verde, nada se destaca"): fundo neutro + barra de 4px
+   na esquerda, mesmo padrão adotado no toast. A barra é border-left-color (a LARGURA de 4px já é reservada
+   para todo item, ativo ou não, ver `.admin-sidebar__item` acima) e não box-shadow inset: um box-shadow
+   inset num elemento com border-radius às vezes deixa uma frestinha sub-pixel no cantinho arredondado
+   (dependendo de navegador/zoom), enquanto a borda SEMPRE acompanha a curva do border-radius sem costura, e
+   nenhum item pula/desalinha ao ficar ativo. */
 .admin-sidebar__item--ativo {
   background-color: var(--cor-fundo-hover);
   border-left-color: var(--cor-marca);
@@ -198,20 +168,17 @@
 
 .admin-content-area {
   min-width: 0;
+  /* bolhas de dica escondidas (opacity 0) perto da borda direita alargavam a página em telas estreitas */
+  overflow-x: clip;
   padding: 1.5rem;
-  /* padding-top extra (25-08-2026) - reserva espaço de VERDADE pra faixa
-     do botão "Menu" (admin-layout.tsx, position:absolute, primeiro
-     filho de .admin-shell), que passa POR TRÁS de tudo e só fica visível
-     aqui, na área de conteúdo (a sidebar cobre ela com o próprio fundo
-     opaco, ver comentário em admin-sidebar.tsx). 1.5rem (padding normal,
-     preservado) + ~3rem (altura natural estimada da faixa: botão em
-     text-sm/ícone ≈ 21px de conteúdo + 0.75rem de padding vertical dos
-     dois lados ≈ 45px ≈ 2.8rem, arredondado com folga) = 4.5rem no topo
-     - as outras 3 direções continuam com o 1.5rem do `padding` acima
-     (longhand só no topo, não redeclara os outros lados). Estimativa,
-     não medido ao vivo ainda nesta forma nova - se sobrar/faltar um
-     pouco de espaço entre a faixa e o topo do primeiro cartão, é aqui
-     que se ajusta. */
+  /* padding-top extra: reserva espaço de VERDADE para a faixa do botão "Menu" (admin-layout.tsx,
+     position:absolute, primeiro filho de .admin-shell), que passa POR TRÁS de tudo e só fica visível aqui,
+     na área de conteúdo (a sidebar cobre ela com o próprio fundo opaco, ver comentário em
+     admin-sidebar.tsx). 1.5rem (padding normal, preservado) + ~3rem (altura natural estimada da faixa: botão
+     em text-sm/ícone ≈ 21px de conteúdo + 0.75rem de padding vertical dos dois lados ≈ 45px ≈ 2.8rem,
+     arredondado com folga) = 4.5rem no topo; as outras 3 direções continuam com o 1.5rem do `padding` acima
+     (longhand só no topo). Estimativa: se sobrar/faltar espaço entre a faixa e o topo do primeiro cartão, é
+     aqui que se ajusta. */
   padding-top: 4.5rem;
   /* Centraliza o __inner só dentro do espaço que sobra à direita da
      sidebar - nunca a página inteira. Se a tela for mais larga que o
@@ -229,16 +196,12 @@
      mas ainda é um teto, não um valor fixo que ignora a tela pequena. */
   width: 100%;
   max-width: 1600px;
-  /* min-width: 0 (11-08-2026, achado testando a coluna de Ações) - SEM
-     isso, este `<div>` é item flex de .admin-content-area (que já tinha
-     min-width:0 pra SI MESMO, mas isso não passa pros filhos sozinho) e
-     herda o comportamento padrão min-width:auto, que nunca encolhe abaixo
-     do conteúdo mais largo lá dentro - uma tabela cheia de colunas (id,
-     nome, papel, e-mail, ações...) empurrava a PÁGINA INTEIRA pra
-     largura da tabela em vez da tabela encolher pra caber na tela, mesmo
-     mecanismo já corrigido antes em .admin-pagina (Minha Conta) e aqui
-     mesmo em w-0/min-w-full (minha-conta-page.tsx) - mesma família de
-     bug, lugar diferente. */
+  /* min-width: 0: SEM isso, este `<div>` é item flex de .admin-content-area (que tem min-width:0 para SI
+     MESMO, mas isso não passa para os filhos sozinho) e herda o comportamento padrão min-width:auto, que
+     nunca encolhe abaixo do conteúdo mais largo lá dentro: uma tabela cheia de colunas (id, nome, papel,
+     e-mail, ações...) empurraria a PÁGINA INTEIRA para a largura da tabela em vez de a tabela encolher para
+     caber na tela (mesmo mecanismo de .admin-pagina, Minha Conta, e de w-0/min-w-full em
+     minha-conta-page.tsx). */
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -253,30 +216,16 @@
   padding: 2rem;
 }
 
-/* 1377px (ERA 1310px, 25-08-2026 - achado do Lucas testando ao vivo: as
-   colunas terminam de se espremer confortavelmente até 1377px, mas a
-   sidebar só sumia abaixo de 1310px - nessa faixa de ~67px a tabela já
-   estava no limite do aperto e a sidebar ainda ocupava 260px à toa).
-   PRECISA bater exato com `min-[1377px]:` em admin-sidebar.tsx/
-   admin-layout.tsx - ERA `xl:` fixo de 1280px no JSX + esse valor aqui
-   editado à mão à parte - a causa exata do "bug da tela branca entre
-   1279px e 1309px" que o Lucas achou ao vivo antes desta rodada: com
-   dois números DIFERENTES e sem nada em comum visualmente, era fácil
-   mudar um sem notar que precisava mudar o outro junto. A sidebar já
-   virava position:static pelo Tailwind (1280px) antes do grid reservar
-   a coluna pra ela (1310px, na época) - nessa faixa, ela tentava
-   esticar pra ocupar a única coluna do grid inteiro, empurrando o
-   resto, tela quebrando visualmente. TENTATIVA: um token
-   `--breakpoint-sidebar` central em @theme (tailwind-theme.css), lido
-   aqui via theme() - não funciona, quebra o build: este arquivo entra
-   pela cadeia de @import de 0-style.css, um pipeline de CSS SEPARADO do
-   de tailwind-theme.css (que é quem tem `@import 'tailwindcss'`; ver o
-   mesmo problema já documentado pra @utility em 1-cores.css linha ~174)
-   - theme()/@utility só resolvem dentro daquele pipeline. Solução:
-   mesmo número literal nos dois lugares, escrito por extenso nos dois
-   (não mais um `xl:` escondido que não deixava óbvio que precisava
-   bater com outro arquivo) - ao mudar aqui, busque por "1377px" no
-   projeto pra achar o outro lado. */
+/* 1377px: as colunas terminam de se espremer confortavelmente até 1377px, e a sidebar some abaixo disso.
+   PRECISA bater exato com `min-[1377px]:` em admin-sidebar.tsx/admin-layout.tsx: dois números DIFERENTES e
+   sem nada em comum visualmente (um `xl:` fixo de 1280px no JSX e outro valor aqui) causariam uma faixa em
+   que a sidebar já virou position:static pelo Tailwind antes de o grid reservar a coluna para ela: ela
+   tentaria esticar para ocupar a única coluna do grid inteiro, empurrando o resto (tela branca/quebrada). Um
+   token `--breakpoint-sidebar` central em @theme (tailwind-theme.css), lido aqui via theme(), não funciona e
+   quebra o build: este arquivo entra pela cadeia de @import de 0-style.css, um pipeline de CSS SEPARADO do
+   de tailwind-theme.css (que tem `@import 'tailwindcss'`); theme()/@utility só resolvem dentro daquele
+   pipeline. Solução: o mesmo número literal escrito por extenso nos dois lugares; ao mudar aqui, busque por
+   "1377px" no projeto para achar o outro lado. */
 @media (min-width: 1377px) {
   .admin-shell {
     grid-template-columns: 260px minmax(0, 1fr);

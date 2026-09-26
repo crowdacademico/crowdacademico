@@ -13,11 +13,8 @@ import {
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { AreaConhecimentoResponse } from '../../services/8-area-conhecimento/type/area-conhecimento.type';
 
-// Aba "Áreas do Conhecimento" do painel admin - rota
-// /admin/areas-conhecimento.
-//
-// EM MODAL (14-09-2026, continuação da migração CRUD→Modal pedida pelo
-// Lucas) - mesmo padrão de listar-usuarios.tsx/listar-motivos-denuncia.tsx.
+// Aba "Áreas do Conhecimento" do painel admin: rota /admin/areas-conhecimento. Criar/Alterar/Consultar/Excluir
+// em modal, mesmo padrão de listar-usuarios.tsx/listar-motivos-denuncia.tsx.
 export function ListarAreasConhecimento({ auth }: PropsPagina) {
   const {
     criando,
@@ -34,21 +31,17 @@ export function ListarAreasConhecimento({ auth }: PropsPagina) {
     acoesCompletas,
   } = useCrudModais<AreaConhecimentoResponse>();
 
-  // `nomePai` vem vazio pras 9 grandes áreas de verdade (topo da hierarquia
-  // CNPq, sem pai nenhum) - "Base" (25-08-2026, pedido do Lucas) no lugar
-  // do vazio, tanto na célula quanto como opção clicável no filtro
-  // "Grande área" (ver `ordem` abaixo, pra ela aparecer primeiro).
+  // `nomePai` vem vazio para as 9 grandes áreas de verdade (topo da hierarquia CNPq, sem pai nenhum): "Base" no
+  // lugar do vazio, tanto na célula quanto como opção clicável no filtro "Grande área" (ver `ordem` abaixo,
+  // para ela aparecer primeiro).
   //
-  // ACHADO (mesmo dia): filtrar por "Ciências Agrárias" só mostrava as
-  // FILHAS dela, não ela mesma - errado, ela também "é" Ciências Agrárias.
-  // Fix: pras 9 raízes, `nomePai` guarda os DOIS valores separados por
-  // vírgula ("Base, Ciências Agrárias") - mesmo truque multivalor que a
-  // coluna "papel" de Usuários já usa (GenericTable separa por vírgula
-  // pra achar as opções de faceta E pra decidir quem bate com o filtro
-  // ativo). Assim a própria linha aparece tanto no filtro "Base" quanto
-  // no filtro do próprio nome dela. A CÉLULA continua mostrando só "Base"
-  // (ver `renderizar` na coluna, abaixo) - a vírgula é só pro filtro
-  // enxergar, não pra pessoa ler.
+  // Filtrar por "Ciências Agrárias" só mostraria as FILHAS dela, não ela mesma, o que é errado (ela também "é"
+  // Ciências Agrárias). Por isso, para as 9 raízes, `nomePai` guarda os DOIS valores separados por vírgula
+  // ("Base, Ciências Agrárias"): mesmo truque multivalor que a coluna "papel" de Usuários usa (GenericTable
+  // separa por vírgula para achar as opções de faceta E para decidir quem bate com o filtro ativo). Assim a
+  // própria linha aparece tanto no filtro "Base" quanto no filtro do próprio nome dela. A CÉLULA continua
+  // mostrando só "Base" (ver `renderizar` na coluna, abaixo): a vírgula é só para o filtro enxergar, não para a
+  // pessoa ler.
   const listarAreas = useCallback(
     (): Promise<AreaConhecimentoResponse[]> =>
       areaConhecimentoApi.listar(auth.authFetch).then((lista) =>
@@ -78,11 +71,8 @@ export function ListarAreasConhecimento({ auth }: PropsPagina) {
             Criar
           </button>
         }
-        // Ordem "id, nome, ..." (25-08-2026, pedido do Lucas: padronizar
-        // com as outras tabelas - Usuários/Pesquisadores/Campanhas todas
-        // colocam "nome" logo depois de "id"; código CNPq vindo antes
-        // era a única fora do padrão) - código CNPq só trocou de lugar
-        // com nome, nenhum dado mudou.
+        // Ordem "id, nome, ...": padroniza com as outras tabelas (Usuários/Pesquisadores/Campanhas colocam
+        // "nome" logo depois de "id").
         colunas={[
           { chave: 'idAreaConhecimento', rotulo: 'id' },
           { chave: 'nome', rotulo: 'nome' },
@@ -99,12 +89,10 @@ export function ListarAreasConhecimento({ auth }: PropsPagina) {
         chavePrimaria="idAreaConhecimento"
         listar={listarAreas}
         acoes={acoesCompletas}
-        // Escolher uma grande área de verdade no filtro mostra só as áreas
-        // filhas dela. "Base" (25-08-2026) é a opção especial pras 9
-        // grandes áreas em si (topo da hierarquia, sem pai) - antes elas
-        // simplesmente somiam de qualquer filtro ativo, sem nenhum jeito
-        // de isolar só elas; `ordem: ['Base']` fixa essa opção primeiro na
-        // lista, o resto continua alfabético.
+        // Escolher uma grande área de verdade no filtro mostra só as áreas filhas dela. "Base" é a opção
+        // especial para as 9 grandes áreas em si (topo da hierarquia, sem pai): sem ela, elas simplesmente
+        // sumiriam de qualquer filtro ativo, sem nenhum jeito de isolar só elas; `ordem: ['Base']` fixa essa
+        // opção primeiro na lista, o resto continua alfabético.
         filtrosFacetados={[{ chave: 'nomePai', rotulo: 'Grande área', ordem: ['Base'] }]}
       />
       <BlocoLogAuditoria buscar={buscarLogAreas} campoRenomeio="nome" />

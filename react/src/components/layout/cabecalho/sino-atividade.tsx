@@ -20,17 +20,13 @@ interface SinoAtividadeProps {
   auth: Pick<UseAuthReturn, 'authFetch'>;
 }
 
-// Sino "Atividade recente" no cabeçalho (09-08-2026, Bloco B/C do prompt do
-// uma IA) - ideia melhor que a original (cachear toast no client): lê
-// log_auditoria de verdade, filtrado pro PRÓPRIO usuário
-// (GET /log-auditoria/minha-atividade, RLS ampliada em pol_log_auditoria_
-// select pra isso). Sobrevive a F5 e a trocar de dispositivo; toast é
-// feedback de "o que EU acabei de clicar", isso aqui é "o que aconteceu,
-// mesmo enquanto eu não estava olhando".
+// Sino "Atividade recente" no cabeçalho: lê log_auditoria de verdade, filtrado para o PRÓPRIO usuário (GET
+// /log-auditoria/minha-atividade, RLS ampliada em pol_log_auditoria_select para isso). Sobrevive a F5 e a
+// trocar de dispositivo; toast é feedback de "o que EU acabei de clicar", isto é "o que aconteceu, mesmo
+// enquanto eu não estava olhando".
 //
-// Rotulado "Atividade recente", não "Notificações" - quando 26-notificacao
-// existir de verdade, o dropdown ganha uma 2ª aba ("Notificações") e esta
-// vira "Minha atividade", nada do que existe hoje é jogado fora.
+// Rotulado "Atividade recente", não "Notificações": quando 26-notificacao existir de verdade, o dropdown ganha
+// uma 2ª aba ("Notificações") e esta vira "Minha atividade".
 export function SinoAtividade({ auth }: SinoAtividadeProps) {
   const [aberto, setAberto] = useState(false);
   const [carregando, setCarregando] = useState(false);
@@ -39,9 +35,8 @@ export function SinoAtividade({ auth }: SinoAtividadeProps) {
   const [naoLidos, setNaoLidos] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Badge de contagem SEM coluna "lida" no banco (09-08-2026, pedido
-  // explícito de uma IA nessa análise) - guarda só o maior id_log já
-  // visto em localStorage, conta quantas entradas novas passaram disso.
+  // Badge de contagem SEM coluna "lida" no banco: guarda só o maior id_log já visto em localStorage, conta
+  // quantas entradas novas passaram disso.
   useEffect(() => {
     logAuditoriaApi
       .minhaAtividade(auth.authFetch)

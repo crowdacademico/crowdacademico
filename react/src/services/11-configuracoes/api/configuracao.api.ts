@@ -10,10 +10,9 @@ import type {
 } from '../type/configuracao.type';
 
 export const configuracaoApi = {
-  // GET /configuracoes devolve { dados, total, pagina, tamanho } desde
-  // 03-08-2026 (mesmo motivo de usuarioApi.listar, ver comentário lá) -
-  // `.dados` desembrulhado aqui pras duas funções abaixo continuarem
-  // devolvendo um array puro pra quem chama.
+  // GET /configuracoes devolve { dados, total, pagina, tamanho } (mesmo motivo de usuarioApi.listar, ver
+  // comentário lá): `.dados` desembrulhado aqui para as duas funções abaixo continuarem devolvendo um array
+  // puro.
   listar: (authFetch: AuthFetch): Promise<ConfiguracaoResponse[]> =>
     authFetch('/configuracoes')
       .then(tratarResposta<ResultadoPaginado<ConfiguracaoResponse>>)

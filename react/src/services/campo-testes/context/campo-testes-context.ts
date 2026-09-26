@@ -20,13 +20,10 @@ export interface RegistroChamada extends EntradaRegistroChamada {
   hora: Date;
 }
 
-// SEM `pesquisadorSelecionado` (removido 12-09-2026) NEM `campanhaFoco`
-// (removido 13-09-2026) - os dois eram estado de "seleção compartilhada
-// entre telas", alimentados por colunas "Escolher" que não existem mais em
-// nenhum lugar (T1 e T2 respectivamente); T2 dobrou seu próprio "campanha
-// em foco" pra dentro do modal de Alterar, e T3 ganhou busca própria (ver
-// vida-campanha-ativa.tsx). Só sobra o que realmente precisa ser
-// compartilhado entre telas: o Registro de Chamadas (T4).
+// SEM `pesquisadorSelecionado` NEM `campanhaFoco`: seriam estado de "seleção compartilhada entre telas",
+// alimentado por colunas "Escolher" que não existem mais em nenhum lugar (T1 e T2); T2 tem seu próprio
+// "campanha em foco" dentro do modal de Alterar, e T3 tem busca própria (ver vida-campanha-ativa.tsx). Só sobra
+// o que realmente precisa ser compartilhado entre telas: o Registro de Chamadas (T4).
 export interface CampoTestesContextValue {
   registroChamadas: RegistroChamada[];
   registrarChamada: (entrada: EntradaRegistroChamada) => void;

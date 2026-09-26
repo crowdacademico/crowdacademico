@@ -1,9 +1,5 @@
-// ============================================================================
-// Campo de Testes deixou de ser só ferramenta de teste descartável
-// (07-09-2026, decisão do Lucas): virou parte permanente do painel
-// administrativo, com o mesmo padrão de dados/comportamento do resto do
-// sistema (nunca uma versão simplificada à parte).
-// ============================================================================
+// Campo de Testes é parte permanente do painel administrativo (não uma ferramenta de teste descartável), com o
+// mesmo padrão de dados/comportamento do resto do sistema (nunca uma versão simplificada à parte).
 
 import { useCallback } from 'react';
 import { tratarResposta } from '../../constant/api/http.util';
@@ -39,13 +35,11 @@ export function useChamadaRegistrada(auth: Pick<UseAuthReturn, 'authFetch'>) {
         caminho,
         status: respostaFetch.status,
         ms,
-        // `opcoes.body` é tipado como BodyInit (Blob/FormData/etc. também
-        // são válidos ali, mesmo esta app SEMPRE mandando `JSON.stringify(...)`
-        // - nunca um desses outros formatos) - `String()` num Blob/FormData
-        // não dá o JSON de volta, dá "[object Blob]" (achado 08-09-2026,
-        // `no-base-to-string`). Só tenta interpretar quando já é string de
-        // verdade; outro formato de corpo vira `null` aqui (nunca aconteceu
-        // até hoje, mas full-honesto é melhor que dado enganoso no T4).
+        // `opcoes.body` é tipado como BodyInit (Blob/FormData/etc. também são válidos ali, mesmo esta app
+        // SEMPRE mandando `JSON.stringify(...)`, nunca um desses outros formatos): `String()` num Blob/FormData
+        // não dá o JSON de volta, dá "[object Blob]" (`no-base-to-string`). Só tenta interpretar quando já é
+        // string de verdade; outro formato de corpo vira `null` aqui (nunca aconteceu até hoje, mas ser honesto
+        // é melhor que dado enganoso no T4).
         corpoEnviado: typeof opcoes.body === 'string' ? JSON.parse(opcoes.body) : null,
         corpoRecebido,
         ok: respostaFetch.ok,

@@ -1,9 +1,5 @@
-// ============================================================================
-// Campo de Testes deixou de ser só ferramenta de teste descartável
-// (07-09-2026, decisão do Lucas): virou parte permanente do painel
-// administrativo, com o mesmo padrão de dados/comportamento do resto do
-// sistema (nunca uma versão simplificada à parte).
-// ============================================================================
+// Campo de Testes é parte permanente do painel administrativo (não uma ferramenta de teste descartável), com o
+// mesmo padrão de dados/comportamento do resto do sistema (nunca uma versão simplificada à parte).
 
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
@@ -44,10 +40,8 @@ import type { UsuarioResponse } from '../../services/1-usuario/type/usuario.type
 import type { PerfilPesquisadorResponse } from '../../services/6-perfil-pesquisador/type/perfil-pesquisador.type';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 
-// Tipos e API extraídos pra services/13-orcamento-campanha e
-// services/14-marco-cronograma (23-09-2026) - antes viviam aqui como
-// interface local com shape inferido do próprio uso; ver o comentário
-// completo no arquivo de tipo de cada módulo.
+// Tipos e API de orçamento/cronograma vivem em services/13-orcamento-campanha e services/14-marco-cronograma;
+// ver o comentário no arquivo de tipo de cada módulo.
 
 interface FormEdicaoCampanha {
   titulo: string;
@@ -63,60 +57,34 @@ interface PainelOrcamentoCronogramaProps {
   auth: Pick<UseAuthReturn, 'authFetch'>;
   idCampanha: number;
   podeEditar: boolean;
-  // `aoCarregar` (13-09-2026, pedido do Lucas: remover o painel "campanha
-  // em foco" de baixo, que tinha SUA PRÓPRIA cópia de orçamento/cronograma
-  // só pra alimentar o checklist "Pronta pra aprovar?") - callback opcional
-  // que devolve os dados toda vez que este painel (re)carrega, pra quem
-  // usa (o modal de Alterar) manter as CONTAGENS em dia sem duplicar
-  // adicionar/remover - só o Alterar passa isto, o Consultar não precisa.
+  // `aoCarregar`: callback opcional que devolve os dados toda vez que este painel (re)carrega, para quem usa (o
+  // modal de Alterar) manter as CONTAGENS em dia sem duplicar adicionar/remover. Só o Alterar passa isto, o
+  // Consultar não precisa.
   aoCarregar?: (orcamento: OrcamentoCampanhaResponse[], cronograma: MarcoCronogramaResponse[]) => void;
-  // `abaFixa` (15-09-2026, pedido do Lucas: Orçamento e Cronograma como
-  // 2 MODAIS/etapas diferentes dentro de Criar Campanha, não uma tabela só
-  // com abas) - quando presente, trava a aba nesse valor e esconde os 2
-  // botões de trocar aba (não faz sentido oferecer "trocar pra Cronograma"
-  // dentro da etapa que É a de Orçamento). Alterar/Consultar Campanha
-  // continuam sem passar isto, mantendo as 2 abas normais de sempre.
+  // `abaFixa`: quando presente, trava a aba nesse valor e esconde os 2 botões de trocar aba (Orçamento e
+  // Cronograma são 2 etapas/modais diferentes dentro de Criar Campanha; não faz sentido oferecer "trocar para
+  // Cronograma" dentro da etapa que É a de Orçamento). Alterar/Consultar Campanha não passam isto e mantêm as 2
+  // abas.
   abaFixa?: 'orcamento' | 'cronograma';
-  // `metaFinanceira` (15-09-2026, pedido do Lucas: "em orçamento precisa
-  // aparecer o valor declarado... e a soma dos itens tem que ser igual o
-  // do orçamento") - opcional: quando presente, mostra "Soma X de Y" logo
-  // acima da tabela de Orçamento, com a diferença em destaque. O banco já
-  // EXIGE essa igualdade exata na aprovação (fn_valida_completude_campanha_
-  // aprovacao, RF-039/040) - isto só adianta o feedback, igual os avisos
-  // de prazo/meta mínima já fazem no formulário de Dados.
+  // `metaFinanceira`: opcional; quando presente, mostra "Soma X de Y" logo acima da tabela de Orçamento, com a
+  // diferença em destaque. O banco já EXIGE essa igualdade exata na aprovação (fn_valida_completude_campanha,
+  // RF-039/040); isto só adianta o feedback, como os avisos de prazo/meta mínima no formulário de Dados.
   metaFinanceira?: number;
-  // `dataInicioCampanha` (15-09-2026, pedido do Lucas: "cronograma tem que
-  // estar dentro do tempo declarado") - `min` do campo "Data prevista" de
-  // um marco novo. SÓ o mínimo, de propósito - RF-042/`fn_valida_data_
-  // marco_cronograma` (05_regras_negocio.sql) bloqueiam data ANTERIOR ao
-  // início, mas permitem ultrapassar `data_fim` sem problema ("um marco de
-  // divulgação de resultado é comum acontecer depois do prazo de
-  // arrecadação" - decisão da Alexia, 31-07-2026). Não existe `max` aqui
-  // por isso não ser um bug, é a regra de negócio de verdade.
+  // `dataInicioCampanha`: `min` do campo "Data prevista" de um marco novo. SÓ o mínimo, de propósito:
+  // RF-042/`fn_valida_data_marco_cronograma` (05_regras_negocio.sql) bloqueiam data ANTERIOR ao início, mas
+  // permitem ultrapassar `data_fim` (um marco de divulgação de resultado costuma acontecer depois do prazo de
+  // arrecadação). Não existir `max` aqui não é um bug, é a regra de negócio.
   dataInicioCampanha?: string;
-  // `minimoMarcosCronograma` (15-09-2026, achado do Lucas: concluiu o
-  // wizard com orçamento não batendo com a meta E cronograma vazio, sem
-  // AVISO nenhum) - quando vem junto com `metaFinanceira`, mostra 2
-  // tabelinhas simples (Meta/Soma atual em Orçamento; Mínimo de marcos/
-  // Marcos cadastrados em Cronograma, cada uma dentro da própria aba) -
-  // não é o checklist "Pronta para aprovar?" de Alterar Campanha (Lucas
-  // rejeitou essa frase/estilo aqui: "não precisa desses dizeres... está
-  // esquisito"), só um par rótulo + textbox readonly com o valor já
-  // declarado, com borda vermelha quando não bate/não atinge o mínimo.
+  // `minimoMarcosCronograma`: quando vem junto com `metaFinanceira`, mostra 2 tabelinhas simples (Meta/Soma
+  // atual em Orçamento; Mínimo de marcos/Marcos cadastrados em Cronograma, cada uma dentro da própria aba): só
+  // um par rótulo + textbox readonly com o valor já declarado, com borda vermelha quando não bate/não atinge o
+  // mínimo (não é o checklist "Pronta para aprovar?" de Alterar Campanha).
   minimoMarcosCronograma?: number;
 }
 
-// Extraído (08-09-2026, pedido do Lucas: "acima de Datas, nos dois
-// modais") - mesmo padrão de <PainelLinksAcademicos> em T1: componente
-// próprio com estado próprio, porque Consultar/Alterar podem abrir uma
-// campanha DIFERENTE da que está em foco (`campanhaFoco`) lá embaixo, não
-// dá pra reaproveitar o mesmo estado. Único ponto que ficou de fora de
-// propósito: o painel "campanha em foco" (mais abaixo nesta tela) mantém
-// a PRÓPRIA cópia de `orcamento`/`cronograma` no componente pai - o
-// checklist "Pronta pra aprovar?" precisa somar/contar esses itens pra
-// decidir se o botão Aprovar libera, e não vale a pena prop-drill esse
-// dado de volta pra cima só pra eliminar uma pequena duplicação de
-// fetch/estado numa ferramenta de bancada.
+// Painel de Orçamento/Cronograma: mesmo padrão de <PainelLinksAcademicos> em T1: componente próprio com estado
+// próprio, porque Consultar/Alterar abrem campanhas diferentes. O checklist "Pronta para aprovar?" do modal de
+// Alterar recebe as contagens por `aoCarregar`, sem duplicar adicionar/remover.
 function PainelOrcamentoCronograma({
   auth,
   idCampanha,
@@ -133,14 +101,11 @@ function PainelOrcamentoCronograma({
   const [abaAtiva, setAbaAtiva] = useState<'orcamento' | 'cronograma'>(abaFixa ?? 'orcamento');
   const [novoItemOrcamento, setNovoItemOrcamento] = useState({ categoria: '', valor: '' });
   const [novoMarco, setNovoMarco] = useState({ titulo: '', dataPrevista: '' });
-  // Alterar/Consultar de item de orçamento e marco (15-09-2026, pedido do
-  // Lucas: "os 3 ícones de sempre de ações, alterar, consultar e excluir")
-  // - mesmo padrão de edição em linha já usado pra Link Acadêmico em
-  // modal-usuario.tsx (linha vira input + Salvar/Cancelar; fora de edição,
-  // vira Alterar/Consultar/Excluir). Consultar é `ModalDetalhe` (mesmo
-  // componente, mesmo `rotuloAcao="Consultar"` que Link Acadêmico usa) -
-  // não tem nada escondido pra mostrar que a própria linha já não mostre,
-  // mas o Lucas pediu os 3 ícones por consistência com o resto do painel.
+  // Alterar/Consultar de item de orçamento e marco: mesmo padrão de edição em linha de Link Acadêmico em
+  // modal-usuario.tsx (linha vira input + Salvar/Cancelar; fora de edição, vira Alterar/Consultar/Excluir).
+  // Consultar é `ModalDetalhe` (mesmo componente, mesmo `rotuloAcao="Consultar"` que Link Acadêmico usa): não
+  // tem nada escondido para mostrar que a própria linha já não mostre, mas mantém os 3 ícones por consistência
+  // com o resto do painel.
   const [idOrcamentoEditando, setIdOrcamentoEditando] = useState<number | null>(null);
   const [formEdicaoOrcamento, setFormEdicaoOrcamento] = useState({ categoria: '', valor: '' });
   const [itemOrcamentoConsultado, setItemOrcamentoConsultado] = useState<OrcamentoCampanhaResponse | null>(null);
@@ -148,12 +113,10 @@ function PainelOrcamentoCronograma({
   const [formEdicaoMarco, setFormEdicaoMarco] = useState({ titulo: '', dataPrevista: '' });
   const [marcoConsultado, setMarcoConsultado] = useState<MarcoCronogramaResponse | null>(null);
 
-  // Ref (não dependência de `carregar`) - `aoCarregar` recebe uma arrow
-  // function nova a cada render do modal pai; colocar ela nas dependências
-  // de `useCallback` recriaria `carregar` toda hora, disparando o efeito
-  // de baixo em loop. O ref sempre lê a versão mais recente sem esse risco.
-  // Atualizado em `useEffect` (não direto no corpo do componente) - mutar
-  // ref durante o render é proibido pela regra `react-hooks/refs`.
+  // Ref (não dependência de `carregar`): `aoCarregar` recebe uma arrow function nova a cada render do modal
+  // pai; colocá-la nas dependências de `useCallback` recriaria `carregar` toda hora, disparando o efeito de
+  // baixo em loop. O ref sempre lê a versão mais recente sem esse risco. Atualizado em `useEffect` (não direto
+  // no corpo do componente): mutar ref durante o render é proibido pela regra `react-hooks/refs`.
   const aoCarregarRef = useRef(aoCarregar);
   useEffect(() => {
     aoCarregarRef.current = aoCarregar;
@@ -252,15 +215,10 @@ function PainelOrcamentoCronograma({
 
       {abaAtiva === 'orcamento' && (
         <>
-          {/* Meta/Soma em estilo tabela simples, 2 textbox readonly
-              (15-09-2026, pedido do Lucas - a versão anterior era "1 texto
-              inteiro" numa frase só, "esquisito"; o Projeto de Interface já
-              tinha achado o formato certo: rótulo + valor comparável lado a
-              lado, sem badge/palavra "aprovar" nenhuma - isto aqui é
-              criação, não aprovação). `.borda-erro` (já existe pra
-              `.input-padrao`, mesmo par usado no resto do painel) marca a
-              Soma quando ela não bate com a Meta - sem precisar de um
-              badge ao lado pra dizer a mesma coisa 2x. */}
+          {/* Meta/Soma em estilo tabela simples, 2 textbox readonly: rótulo + valor comparável lado a lado,
+              sem badge/palavra "aprovar" (isto é criação, não aprovação). `.borda-erro` (mesmo par usado no
+              resto do painel) marca a Soma quando ela não bate com a Meta, sem precisar de um badge ao lado
+              dizendo a mesma coisa 2x. */}
           {metaFinanceira !== undefined && (() => {
             const somaOrcamento = orcamento.reduce((soma, item) => soma + item.valor, 0);
             const bate = somaOrcamento === metaFinanceira;
@@ -481,69 +439,52 @@ function PainelOrcamentoCronograma({
   );
 }
 
-// T2, Bancada da Campanha. SEM ELENCO (25-08-2026, pedido do Lucas:
-// "remover de vez" o motor de login-múltiplo - redesenho completo desta
-// tela). Toda chamada usa a sessão REAL do painel (`auth`, sempre um
-// admin): leituras sempre funcionaram assim (relatorio_visualizar vê
-// tudo); as ESCRITAS que hoje continuam fazendo sentido (Alterar,
-// orçamento/cronograma, Aprovar, Rejeitar, Excluir) também - o admin já
-// tem `campanha_editar`/`campanha_aprovar`/`campanha_rejeitar`, RLS
-// libera não importa quem seja o dono de verdade (04_rls_policies.sql,
-// pol_campanha_update). Criar campanha SAIU daqui (RLS exige
-// id_usuario = id_usuario_atual(), não dá pra "criar em nome de" um
-// pesquisador escolhido sem personificação) - o Lucas vai detalhar
-// depois como a criação pelo próprio pesquisador vai funcionar.
+// T2, Bancada da Campanha. Toda chamada usa a sessão REAL do painel (`auth`, sempre um admin): leituras sempre
+// funcionaram assim (relatorio_visualizar vê tudo); as ESCRITAS que fazem sentido aqui (Alterar,
+// orçamento/cronograma, Aprovar, Rejeitar, Excluir) também: o admin já tem
+// `campanha_editar`/`campanha_aprovar`/`campanha_rejeitar`, e a RLS libera não importa quem seja o dono de
+// verdade (04_rls_policies.sql, pol_campanha_update). Criar campanha aqui usa o endpoint de suporte/admin (POST
+// /campanha/:idUsuario), porque a RLS exige id_usuario = id_usuario_atual() e não dá para "criar em nome de" um
+// pesquisador escolhido sem personificação.
 //
-// SEM pré-filtro por pesquisador (12-09-2026, pedido do Lucas: "abandonar
-// completamente" a coluna "Escolher" de T1 - ela era a ÚNICA fonte de
-// `pesquisadorSelecionado`, então o pré-filtro que dependia dele aqui
-// (tabela só mostrando campanhas de um dono escolhido em T1, resumo
-// "Pesquisador selecionado (T1)" com "Limpar seleção") ficaria morto pra
-// sempre, nunca mais alimentado por ninguém. Removido junto, não só
-// deixado quieto.
-//
-// SEM "Escolher"/"campanha em foco" (13-09-2026, pedido do Lucas: "vamos
-// tirar o Escolher também de T2") - mesmo raciocínio de T1: o painel
-// "campanha em foco" (checklist "Pronta pra aprovar?" + Aprovar/Rejeitar +
-// Orçamento/Cronograma) que vivia solto embaixo da tabela, alimentado só
-// pela coluna "Escolher", foi embutido no modal de Alterar (que já mostra
-// Orçamento/Cronograma - só faltava o checklist e os 2 botões). `campanhaFoco`
-// saiu do `CampoTestesContext` por inteiro (única fonte era esta coluna) -
-// T3 (Vida da Campanha Ativa), que dependia dele pra saber qual campanha
-// usar, ganhou busca própria (ver vida-campanha-ativa.tsx), não depende
-// mais de nada escolhido aqui.
+// Sem pré-filtro por pesquisador nem "Escolher"/"campanha em foco": o checklist "Pronta para aprovar?" +
+// Aprovar/Rejeitar + Orçamento/Cronograma fazem parte do modal de Alterar, e `CampoTestesContext` não guarda
+// `campanhaFoco`; T3 (Vida da Campanha Ativa) tem busca própria (ver vida-campanha-ativa.tsx).
+const ROTULO_CAMPO_BLOQUEADO: Record<string, string> = {
+  titulo: 'Título',
+  descricao: 'Descrição',
+  metaFinanceira: 'Meta',
+  modelo: 'Modelo de financiamento',
+  taxaPlataforma: 'Taxa da plataforma',
+  idAreaConhecimento: 'Área do conhecimento',
+  videoApresentacaoUrl: 'Vídeo de apresentação',
+  dataInicio: 'Início',
+  dataFim: 'Fim',
+};
+
 export function BancadaCampanha({ auth }: PropsPagina) {
   const chamarERegistrar = useChamadaRegistrada(auth);
   const { mostrar } = useToast();
   const { reportarErro } = useErroToast();
 
-  // CORRIGIDO (12-09-2026, achado de agente numa auditoria de hardcode):
-  // eram constantes fixas (`MINIMO_ITENS_ORCAMENTO = 3`), cujo próprio
-  // comentário já avisava "mostrado aqui só como RÓTULO, quem decide de
-  // verdade é o banco" - mas `configuracoes.orcamento_min_itens` mudou de
-  // 3 pra 1 em 05-09-2026 (RF revisado) e ninguém atualizou a cópia daqui.
-  // Resultado: o botão "Aprovar" ficava desabilitado (`orcamentoOk`
-  // calculado com o número ERRADO) mesmo quando o banco já aceitaria.
-  // Lendo ao vivo agora, mesmo padrão de `seletor-foto-perfil.tsx`.
+  // Lidos ao vivo de `configuracoes` (nada fixo aqui): `orcamento_min_itens` mudou de valor (RF revisado) e uma
+  // constante fixa aqui deixaria o botão "Aprovar" desabilitado (`orcamentoOk` calculado com o número ERRADO)
+  // mesmo quando o banco já aceitaria. Mesmo padrão de `seletor-foto-perfil.tsx`; quem decide de verdade é o
+  // banco.
   const { obterConfiguracao } = useConfiguracoes();
   const valorMinimoOrcamento = obterConfiguracao('orcamento_min_itens', 1);
   const minimoItensOrcamento = typeof valorMinimoOrcamento === 'number' ? valorMinimoOrcamento : 1;
   const valorMinimoCronograma = obterConfiguracao('cronograma_min_marcos', 3);
   const minimoMarcosCronograma = typeof valorMinimoCronograma === 'number' ? valorMinimoCronograma : 3;
-  // Mesmo padrão dos 2 acima (14-09-2026, achado do Lucas: "Início/Fim não
-  // deveriam ser opcionais, e tem prazo mínimo/máximo") - RF-066 já é
-  // aplicado de verdade no banco (`fn_valida_prazo_campanha_negocio`,
-  // 05_regras_negocio.sql), lendo estas 2 chaves; o formulário de criação
-  // não lia nenhuma das duas, então só descobria o limite batendo num erro
-  // 90012 cru do Postgres depois de enviar.
+  // Mesmo padrão dos 2 acima: RF-066 já é aplicado de verdade no banco (`fn_valida_prazo_campanha_negocio`,
+  // 05_regras_negocio.sql), lendo estas 2 chaves; se o formulário de criação não as lesse, a pessoa só
+  // descobriria o limite batendo num erro 90012 cru do Postgres depois de enviar.
   const valorPrazoMinimo = obterConfiguracao('prazo_minimo_campanha_dias', 15);
   const prazoMinimoCampanha = typeof valorPrazoMinimo === 'number' ? valorPrazoMinimo : 15;
   const valorPrazoMaximo = obterConfiguracao('prazo_maximo_campanha_dias', 60);
   const prazoMaximoCampanha = typeof valorPrazoMaximo === 'number' ? valorPrazoMaximo : 60;
-  // Mesmo padrão dos 3 acima (15-09-2026, achado numa auditoria contra
-  // Meta mínima de campanha (ver REQUISITOS_V7) - `fn_valida_meta_campanha_negocio`,
-  // 05_regras_negocio.sql - já rejeita meta abaixo de `meta_minima_campanha`,
-  // mas o formulário de criação nunca lia essa chave, mesmo gap do prazo.
+  // Mesmo padrão dos 3 acima: `fn_valida_meta_campanha_negocio` (05_regras_negocio.sql, ver REQUISITOS_V7) já
+  // rejeita meta abaixo de `meta_minima_campanha`; o formulário lê a chave para avisar antes de enviar.
   const valorMetaMinima = obterConfiguracao('meta_minima_campanha', 500);
   const metaMinimaCampanha = typeof valorMetaMinima === 'number' ? valorMetaMinima : 500;
 
@@ -551,8 +492,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
   const [usuarios, setUsuarios] = useState<UsuarioResponse[]>([]);
   const [perfisPesquisador, setPerfisPesquisador] = useState<PerfilPesquisadorResponse[]>([]);
   const [campanhas, setCampanhas] = useState<CampanhaResponse[]>([]);
-  // Ligado por padrão (pedido do Lucas): a demo pré-montada (campanhas
-  // 1-10) não serve pra testar, então já nasce fora da vista.
+  // Ligado por padrão: a demo pré-montada (campanhas 1-10) não serve para testar, então já nasce fora da vista.
   const [ocultarBloqueadas, setOcultarBloqueadas] = useState(true);
   const [filtroTexto, setFiltroTexto] = useState('');
   const [pagina, setPagina] = useState(1);
@@ -561,10 +501,9 @@ export function BancadaCampanha({ auth }: PropsPagina) {
   const [campanhaConsultada, setCampanhaConsultada] = useState<CampanhaResponse | null>(null);
   const [historicoRejeicaoConsultada, setHistoricoRejeicaoConsultada] = useState<HistoricoRejeicaoResponse[]>([]);
 
-  // Histórico de rejeições da campanha aberta em Consultar (14-09-2026) -
-  // mesmo dado/mesma chamada de consultar-campanha.tsx, só que esta tela é
-  // uma cópia manual da página real (ver comentário grande perto do modal,
-  // "Consultar replica a página real") - mantendo os dois em sincronia.
+  // Histórico de rejeições da campanha aberta em Consultar: mesmo dado/mesma chamada de
+  // modal-consultar-campanha.tsx (esta tela é uma cópia manual da página real, ver comentário grande perto do
+  // modal, "Consultar replica a página real"); manter os dois em sincronia.
   useEffect(() => {
     if (campanhaConsultada) {
       campanhaApi
@@ -578,24 +517,20 @@ export function BancadaCampanha({ auth }: PropsPagina) {
   const [formEdicaoCampanha, setFormEdicaoCampanha] = useState<FormEdicaoCampanha | null>(null);
   const prefixoId = useId();
   const idCampo = (nome: string) => `${prefixoId}-${nome}`;
-  // Checklist "Pronta pra aprovar?" + Aprovar/Rejeitar (13-09-2026, trazido
-  // pra dentro do modal de Alterar - ver comentário grande acima). As
-  // contagens vêm do `aoCarregar` de <PainelOrcamentoCronograma> (o mesmo
-  // componente que já desenha Orçamento/Cronograma editável logo acima no
-  // modal) - mantém as duas listas sincronizadas sem duplicar
-  // adicionar/remover.
+  // Checklist "Pronta para aprovar?" + Aprovar/Rejeitar dentro do modal de Alterar: as contagens vêm do
+  // `aoCarregar` de <PainelOrcamentoCronograma> (o mesmo componente que desenha Orçamento/Cronograma editável
+  // logo acima no modal), mantendo as duas listas sincronizadas sem duplicar adicionar/remover.
   const [checklistOrcamento, setChecklistOrcamento] = useState<OrcamentoCampanhaResponse[]>([]);
   const [checklistCronograma, setChecklistCronograma] = useState<MarcoCronogramaResponse[]>([]);
   const [justificativaRejeicaoEdicao, setJustificativaRejeicaoEdicao] = useState('');
   const [aprovando, setAprovando] = useState(false);
   const [rejeitando, setRejeitando] = useState(false);
-  // Ciclo de rejeição e reenvio (21-09-2026, ver REQUISITOS_V7). `detalheRejeitada`
-  // vem de GET /campanha/:id (a listagem NÃO traz reenviosRestantes/prazo/
-  // somenteLeitura, só a consulta individual), buscado ao abrir Alterar numa
-  // campanha rejeitada. `ofertaDatas` liga o aviso "as datas venceram" dentro do
-  // próprio modal (e não um 2º modal empilhado: cada ModalFicha registra o seu
-  // próprio listener de Esc, e dois abertos fechariam juntos).
-  const [detalheRejeitada, setDetalheRejeitada] = useState<CampanhaResponse | null>(null);
+  // `detalheEdicao` vem de GET /campanha/:id (a listagem NÃO traz reenviosRestantes/prazo/somenteLeitura nem
+  // camposBloqueados, só a consulta individual), buscado ao abrir Alterar em qualquer campanha. Ciclo de
+  // rejeição e reenvio: ver REQUISITOS_V7. `ofertaDatas` liga o aviso "as datas venceram" dentro do próprio
+  // modal (e não um 2º modal empilhado: cada ModalFicha registra o seu próprio listener de Esc, e dois abertos
+  // fechariam juntos).
+  const [detalheEdicao, setDetalheEdicao] = useState<CampanhaResponse | null>(null);
   const [historicoEdicao, setHistoricoEdicao] = useState<HistoricoRejeicaoResponse[]>([]);
   const [ofertaDatas, setOfertaDatas] = useState(false);
   const [enviando, setEnviando] = useState(false);
@@ -605,11 +540,8 @@ export function BancadaCampanha({ auth }: PropsPagina) {
   const [confirmacaoExclusaoForcada, setConfirmacaoExclusaoForcada] = useState('');
   const [excluindoForcado, setExcluindoForcado] = useState(false);
 
-  // Criar Campanha (08-09-2026, pedido do Lucas: "o Admin deve conseguir
-  // criar uma campanha e ASSOCIAR um pesquisador a ela") - mesmo padrão de
-  // "Criar Perfil Pesquisador" em T1, só que campanha nunca teve um botão
-  // de Criar aqui desde a remoção do Elenco (25-08-2026). Usa POST
-  // /campanha/:idUsuario (endpoint de suporte/admin, ver
+  // Criar Campanha: o Admin cria uma campanha e ASSOCIA um pesquisador a ela; mesmo padrão de "Criar Perfil
+  // Pesquisador" em T1. Usa POST /campanha/:idUsuario (endpoint de suporte/admin, ver
   // campanha.controller.create-para-outro.ts).
   const [criandoCampanha, setCriandoCampanha] = useState(false);
   const [formCriarCampanha, setFormCriarCampanha] = useState({
@@ -621,30 +553,21 @@ export function BancadaCampanha({ auth }: PropsPagina) {
     dataFim: '',
     videoApresentacaoUrl: '',
   });
-  // Fase pós-criação (14-09-2026, pedido do Lucas: "dentro do Modal não tem
-  // Cronograma ou Orçamento... era para estar dentro do formulário") -
-  // RF-040/RF-042 preveem orçamento/cronograma cadastrados "durante a
-  // criação da campanha", mas os itens só podem existir depois da campanha
-  // ter um `idCampanha` de verdade (FK). Nulo = ainda não criada.
+  // Fase pós-criação: RF-040/RF-042 preveem orçamento/cronograma cadastrados "durante a criação da campanha",
+  // mas os itens só podem existir depois da campanha ter um `idCampanha` de verdade (FK). Nulo = ainda não
+  // criada.
   const [idCampanhaRecemCriada, setIdCampanhaRecemCriada] = useState<number | null>(null);
-  // 3 etapas do MESMO modal (15-09-2026, pedido do Lucas: "Criar" virou
-  // "Próximo", e Orçamento/Cronograma passam a ser 2 telas SEPARADAS e
-  // focadas, com Voltar/Próximo entre elas, em vez de uma tabela só com
-  // abas) - `PainelOrcamentoCronograma` (existia desde 08-09-2026, usado
-  // em Alterar Campanha) ganhou a prop `abaFixa` só pra travar numa aba e
-  // esconder o toggle entre elas nesta rodada, sem duplicar a tabela.
-  // "Voltar" de Orçamento pra Dados PATCHa a campanha já criada (mesmo
-  // endpoint de Alterar Campanha) em vez de tentar criar de novo - ver
-  // `avancarDaEtapaDados`, abaixo.
+  // 3 etapas do MESMO modal: "Próximo" na etapa Dados, e Orçamento/Cronograma são 2 telas SEPARADAS e focadas,
+  // com Voltar/Próximo entre elas, em vez de uma tabela só com abas: `PainelOrcamentoCronograma` (também usado
+  // em Alterar Campanha) recebe a prop `abaFixa` só para travar numa aba e esconder o toggle entre elas, sem
+  // duplicar a tabela. "Voltar" de Orçamento para Dados PATCHa a campanha já criada (mesmo endpoint de Alterar
+  // Campanha) em vez de tentar criar de novo: ver `avancarDaEtapaDados`, abaixo.
   const [etapaCriarCampanha, setEtapaCriarCampanha] = useState<'dados' | 'orcamento' | 'cronograma'>('dados');
-  // Combobox de pesquisador (08-09-2026, pedido do Lucas: "digitar 24 ou
-  // marina, aparece até 5") - não é um <select> (lista de TODOS os
-  // usuários seria enorme e sem indicar quem já é pesquisador de
-  // verdade). Busca por id OU pedaço do nome, até 5 resultados; cada
-  // resultado mostra se dá pra escolher (pesquisador ativo) ou não (sem
-  // perfil / suspenso), com o motivo explícito - nunca deixa escolher
-  // quem não pode, o backend também recusaria, mas é melhor a pessoa
-  // nunca tentar.
+  // Combobox de pesquisador (digitar "24" ou "marina", aparece até 5): não é um <select> (a lista de TODOS os
+  // usuários seria enorme e sem indicar quem já é pesquisador de verdade). Busca por id OU pedaço do nome, até
+  // 5 resultados; cada resultado mostra se dá para escolher (pesquisador ativo) ou não (sem perfil / suspenso),
+  // com o motivo explícito: nunca deixa escolher quem não pode (o backend também recusaria, mas é melhor a
+  // pessoa nunca tentar).
   const [pesquisadorEscolhido, setPesquisadorEscolhido] = useState<UsuarioResponse | null>(null);
   const [buscaPesquisador, setBuscaPesquisador] = useState('');
   const [sugestoesPesquisadorAbertas, setSugestoesPesquisadorAbertas] = useState(false);
@@ -671,10 +594,8 @@ export function BancadaCampanha({ auth }: PropsPagina) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auth.carregando]);
 
-  // Fechar as sugestões do combobox de pesquisador ao clicar fora - mesmo
-  // padrão, extraído em `useFecharAoClicarFora` em 13-09-2026. O dropdown
-  // "Status" tem o próprio fechamento embutido em `BarraFiltros` desde
-  // 14-09-2026.
+  // Fechar as sugestões do combobox de pesquisador ao clicar fora (`useFecharAoClicarFora`). O dropdown
+  // "Status" tem o próprio fechamento embutido em `BarraFiltros`.
   useFecharAoClicarFora(sugestoesPesquisadorRef, sugestoesPesquisadorAbertas, () => setSugestoesPesquisadorAbertas(false));
 
   const nomeDe = (idUsuario: number): string => usuarios.find((u) => u.idUsuario === idUsuario)?.nome ?? `#${idUsuario}`;
@@ -689,8 +610,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
     return perfil.statusPesquisador === 'suspenso' ? 'suspenso' : 'ativo';
   };
 
-  // Busca por id OU pedaço do nome (08-09-2026, pedido do Lucas) - até 5
-  // resultados, sem filtro nenhum além do texto digitado (mostra
+  // Busca por id OU pedaço do nome: até 5 resultados, sem filtro nenhum além do texto digitado (mostra
   // pesquisador e não-pesquisador juntos, cada um com seu próprio aviso).
   const sugestoesPesquisador = (() => {
     const termo = buscaPesquisador.trim().toLowerCase();
@@ -735,14 +655,14 @@ export function BancadaCampanha({ auth }: PropsPagina) {
     setChecklistOrcamento([]);
     setChecklistCronograma([]);
     setJustificativaRejeicaoEdicao('');
-    setDetalheRejeitada(null);
+    setDetalheEdicao(null);
     setHistoricoEdicao([]);
     setOfertaDatas(false);
+    campanhaApi
+      .buscar(auth.authFetch, item.idCampanha)
+      .then(setDetalheEdicao)
+      .catch(() => setDetalheEdicao(null));
     if (item.status === 'rejeitado') {
-      campanhaApi
-        .buscar(auth.authFetch, item.idCampanha)
-        .then(setDetalheRejeitada)
-        .catch(() => setDetalheRejeitada(null));
       campanhaApi
         .listarHistoricoRejeicao(auth.authFetch, item.idCampanha)
         .then(setHistoricoEdicao)
@@ -780,15 +700,12 @@ export function BancadaCampanha({ auth }: PropsPagina) {
     }
   };
 
-  // "Enviar para aprovação" (rascunho) e "Corrigir e reenviar" (rejeitada),
-  // 21-09-2026. Grava o formulário ANTES de enviar, senão uma alteração ainda
-  // não salva se perderia em silêncio. Nenhuma checagem de completude aqui de
-  // propósito: quem cobra orçamento, cronograma e prazo é
-  // trg_campanha_valida_completude (05), e o erro chega traduzido - o clique
-  // acontece e o sistema DIZ o que falta (Heurísticas de Nielsen), em vez de um
-  // botão desabilitado sem explicação. A única exceção é o prazo vencido: em vez
-  // de deixar o erro estourar, oferece atualizar as datas mantendo a duração
-  // (REQUISITOS_V7, "prazo vencido"), sempre com confirmação explícita.
+  // "Enviar para aprovação" (rascunho) e "Corrigir e reenviar" (rejeitada): grava o formulário ANTES de enviar,
+  // senão uma alteração ainda não salva se perderia em silêncio. Nenhuma checagem de completude aqui, de
+  // propósito: quem cobra orçamento, cronograma e prazo é trg_campanha_valida_completude (05), e o erro chega
+  // traduzido: o clique acontece e o sistema DIZ o que falta (Heurísticas de Nielsen), em vez de um botão
+  // desabilitado sem explicação. A única exceção é o prazo vencido: em vez de deixar o erro estourar, oferece
+  // atualizar as datas mantendo a duração (REQUISITOS_V7, "prazo vencido"), sempre com confirmação explícita.
   const dataFimVencida = (form: FormEdicaoCampanha) => Boolean(form.dataFim) && new Date(form.dataFim) <= new Date();
 
   const enviarEdicao = async (comDatasAtualizadas = false) => {
@@ -817,12 +734,9 @@ export function BancadaCampanha({ auth }: PropsPagina) {
     }
   };
 
-  // Aprovar/Rejeitar (13-09-2026, trazido pra dentro do modal de Alterar -
-  // ERA um botão do painel "campanha em foco", solto embaixo da tabela,
-  // alimentado só pela coluna "Escolher") - escopados a `idCampanhaEditando`
-  // (o modal aberto), não mais a um "foco" separado. Fecham o modal ao
-  // terminar (mudar de status torna o resto do formulário obsoleto - "Salvar"
-  // não faz mais sentido depois de aprovar/rejeitar).
+  // Aprovar/Rejeitar dentro do modal de Alterar: escopados a `idCampanhaEditando` (o modal aberto). Fecham o
+  // modal ao terminar (mudar de status torna o resto do formulário obsoleto: "Salvar" não faz mais sentido
+  // depois de aprovar/rejeitar).
   const aprovarEdicao = async () => {
     if (idCampanhaEditando === null) return;
     setAprovando(true);
@@ -856,21 +770,15 @@ export function BancadaCampanha({ auth }: PropsPagina) {
     }
   };
 
-  // Só permitido em 'rascunho' (RLS: pol_campanha_delete, ver
-  // 04_rls_policies.sql) - era 'aguardando_aprovacao' até 20-09-2026, e essa
-  // versão antiga tinha um bug: uma campanha rejeitada e reenviada volta pra
-  // 'aguardando_aprovacao' já com linha em historico_rejeicao, cuja FK não tem
-  // ON DELETE CASCADE, então o DELETE travava em violação de FK.
-  // Cascateia orçamento/cronograma/atualizações/seguidores/comentários
-  // (ON DELETE CASCADE, 01_extensoes_enums_tabelas.sql), sem risco: nada
-  // disso existe ainda pra uma campanha que nunca saiu do rascunho.
+  // Só permitido em 'rascunho' (RLS: pol_campanha_delete, ver 04_rls_policies.sql): uma campanha rejeitada e
+  // reenviada volta para 'aguardando_aprovacao' já com linha em historico_rejeicao, cuja FK não tem ON DELETE
+  // CASCADE, então o DELETE travaria em violação de FK. Cascateia
+  // orçamento/cronograma/atualizações/seguidores/comentários (ON DELETE CASCADE,
+  // 01_extensoes_enums_tabelas.sql), sem risco: nada disso existe ainda para uma campanha que nunca saiu do
+  // rascunho.
   //
-  // CORRIGIDO (08-09-2026, pedido do Lucas: "consertar T2... modal de
-  // Excluir") - antes o botão "Excluir" da tabela apagava na hora, sem
-  // NENHUMA confirmação (só um `disabled` quando o status não permitia) -
-  // diferente de Excluir Usuário, que sempre exigiu digitar o e-mail antes.
-  // Exclusão de campanha é DELETE de verdade (não lógica, como usuário) -
-  // mereceu a mesma barreira, ou mais.
+  // Exclusão de campanha é DELETE de verdade (não lógica, como usuário): merece a mesma barreira de Excluir
+  // Usuário (confirmação explícita no modal), ou mais.
   const excluirCampanha = async () => {
     if (!campanhaExcluindo) return;
     setExcluindo(true);
@@ -887,13 +795,10 @@ export function BancadaCampanha({ auth }: PropsPagina) {
     }
   };
 
-  // forcar_exclusao_campanha() (08-09-2026, pedido do Lucas: "o Admin, o
-  // todo poderoso, precisa poder excluir forçadamente uma campanha, senão
-  // este campo de testes vai ficar muito sujo") - ignora status de
-  // propósito (POST /campanha/:id/forcar-exclusao, endpoint separado do
-  // DELETE normal, que desde 20-09-2026 só libera 'rascunho'). Só
-  // oferecida quando a campanha NÃO é uma das 10 de demonstração - essas
-  // continuam protegidas de qualquer exclusão, forçada ou não.
+  // forcar_exclusao_campanha(): o Admin precisa poder excluir forçadamente uma campanha, senão o Campo de
+  // Testes fica muito sujo. Ignora status de propósito (POST /campanha/:id/forcar-exclusao, endpoint separado
+  // do DELETE normal, que só libera 'rascunho'). Só oferecida quando a campanha NÃO é uma das 10 de
+  // demonstração: essas continuam protegidas de qualquer exclusão, forçada ou não.
   const forcarExclusaoCampanha = async () => {
     if (!campanhaExcluindo) return;
     setExcluindoForcado(true);
@@ -910,14 +815,10 @@ export function BancadaCampanha({ auth }: PropsPagina) {
     }
   };
 
-  // Hoje em formato de <input type="date"> (yyyy-mm-dd, fuso local) - usado
-  // como `min` do campo Início, pra o próprio navegador impedir escolher
-  // ontem ou antes (14-09-2026, achado do Lucas: "obviamente não deve dar
-  // pra iniciar no dia anterior"). `toISOString()` sozinho usaria UTC, que
-  // pode cair no dia ERRADO pra quem está em fuso negativo (ex.: 23h de
-  // 14/09 em Brasília já é 15/09 em UTC) - por isso monta a string local
-  // campo a campo, igual `getFullYear`/`getMonth`/`getDate` do próprio
-  // objeto Date, em vez de `toISOString().slice(0, 10)`.
+  // Hoje em formato de <input type="date"> (yyyy-mm-dd, fuso local): usado como `min` do campo Início, para o
+  // próprio navegador impedir escolher ontem ou antes. `toISOString()` sozinho usaria UTC, que pode cair no dia
+  // ERRADO para quem está em fuso negativo (ex.: 23h de 14/09 em Brasília já é 15/09 em UTC): por isso monta a
+  // string local campo a campo (`getFullYear`/`getMonth`/`getDate`), em vez de `toISOString().slice(0, 10)`.
   const hojeISO = (() => {
     const agora = new Date();
     const ano = agora.getFullYear();
@@ -963,11 +864,9 @@ export function BancadaCampanha({ auth }: PropsPagina) {
     ...(formCriarCampanha.videoApresentacaoUrl ? { videoApresentacaoUrl: formCriarCampanha.videoApresentacaoUrl } : {}),
   });
 
-  // Botão "Próximo" da etapa Dados (15-09-2026, ERA "Criar") - na 1ª vez
-  // (idCampanhaRecemCriada ainda nulo) cria a campanha de verdade; se a
-  // pessoa voltou da etapa Orçamento pra corrigir algo aqui, a campanha JÁ
-  // existe - "Próximo" de novo faz um PATCH (mesmo endpoint de Alterar
-  // Campanha) em vez de tentar criar outra. Nos dois casos, avança pra
+  // Botão "Próximo" da etapa Dados: na 1ª vez (idCampanhaRecemCriada ainda nulo) cria a campanha de verdade; se
+  // a pessoa voltou da etapa Orçamento para corrigir algo aqui, a campanha JÁ existe: "Próximo" de novo faz um
+  // PATCH (mesmo endpoint de Alterar Campanha) em vez de tentar criar outra. Nos dois casos, avança para
   // Orçamento no final.
   const avancarDaEtapaDados = async () => {
     if (!formCriarCampanhaValido || !pesquisadorEscolhido) {
@@ -995,19 +894,13 @@ export function BancadaCampanha({ auth }: PropsPagina) {
     }
   };
 
-  // "Enviar para aprovação" (20-09-2026, junto com o status 'rascunho') -
-  // substituiu o antigo "Concluir", que só fechava o modal e deixava a
-  // campanha numa fila que ninguém podia aprovar.
+  // "Enviar para aprovação": de propósito NÃO tem validação client-side antes de chamar: quem cobra orçamento
+  // completo, soma batendo com a meta, cronograma e prazo não vencido é trg_campanha_valida_completude (05), e
+  // o erro chega aqui traduzido pelo PostgresExceptionFilter. O clique acontece e o sistema DIZ o que falta
+  // (Heurísticas de Nielsen), em vez de um botão desabilitado sem explicação.
   //
-  // De propósito NÃO tem validação client-side antes de chamar: quem cobra
-  // orçamento completo, soma batendo com a meta, cronograma e prazo não
-  // vencido é trg_campanha_valida_completude_aprovacao (05), e o erro dele
-  // chega aqui traduzido pelo PostgresExceptionFilter. É o comportamento que
-  // o Lucas pediu nas Heurísticas de Nielsen: o clique acontece e o sistema
-  // DIZ o que falta, em vez de um botão desabilitado sem explicação.
-  //
-  // Se falhar, o modal fica aberto: a campanha continua em rascunho, o
-  // trabalho não se perde, e a pessoa pode voltar nas etapas e corrigir.
+  // Se falhar, o modal fica aberto: a campanha continua em rascunho, o trabalho não se perde, e a pessoa pode
+  // voltar nas etapas e corrigir.
   const enviarCampanhaParaAprovacao = async () => {
     if (idCampanhaRecemCriada === null) {
       return;
@@ -1136,10 +1029,8 @@ export function BancadaCampanha({ auth }: PropsPagina) {
                   </td>
                   <td style={bloqueada ? { textDecoration: 'line-through' } : undefined}>{nomeDe(item.idUsuario)}</td>
                   <td className="crud-tabela__celula--centralizada">{formatarMoeda(item.metaFinanceira)}</td>
-                  {/* CORRIGIDO (13-09-2026, pedido do Lucas: "tirar o Escolher
-                      também de T2") - a coluna sumiu, mas o cadeado continua
-                      só em Alterar/Excluir; Consultar é leitura pura, sem
-                      risco nenhum de estragar a demo. */}
+                  {/* A coluna "Escolher" não existe; o cadeado continua só em Alterar/Excluir; Consultar é
+                      leitura pura, sem risco nenhum de estragar a demo. */}
                   <td className="crud-tabela__celula--centralizada">
                     <div className="crud-tabela__acoes">
                       <AcaoLinha
@@ -1167,14 +1058,11 @@ export function BancadaCampanha({ auth }: PropsPagina) {
         </tbody>
       </table>
 
-      {/* Consultar/Alterar/Excluir em MODAL (08-09-2026, pedido do Lucas:
-          "consertar T2... os modais primeiro") - mesmo padrão de T1
-          (ModalFicha + SecaoFicha/CampoFicha). Diferença de T1: não existe
-          página real de Alterar/Excluir Campanha no painel admin pra
-          copiar (só Consultar existe, ver consultar-campanha.tsx -
-          editar/excluir campanha é ação do dono, painel dele ainda não
-          construído) - Consultar replica a página real; Alterar e Excluir
-          são desenho novo, seguindo o mesmo padrão visual estabelecido. */}
+      {/* Consultar/Alterar/Excluir em MODAL, mesmo padrão de T1 (ModalFicha + SecaoFicha/CampoFicha).
+          Diferença de T1: não existe página real de Alterar/Excluir Campanha no painel admin para copiar (só
+          Consultar existe, ver modal-consultar-campanha.tsx; editar/excluir campanha é ação do dono, painel
+          dele ainda não construído): Consultar replica a página real; Alterar e Excluir são desenho novo,
+          seguindo o mesmo padrão visual. */}
       {campanhaConsultada && (
         <ModalFicha
           titulo={campanhaConsultada.titulo}
@@ -1206,10 +1094,8 @@ export function BancadaCampanha({ auth }: PropsPagina) {
                 <CampoFicha rotulo="Vídeo de apresentação" valor={campanhaConsultada.videoApresentacaoUrl} largura="cheia" />
               </SecaoFicha>
 
-              {/* Orçamento/Cronograma acima de Datas (08-09-2026, pedido do
-                  Lucas) - só leitura aqui (Consultar nunca edita nada).
-                  Linha divisória dos dois lados, mesmo padrão já usado
-                  entre Links Acadêmicos e Moderação em T1. */}
+              {/* Orçamento/Cronograma acima de Datas: só leitura aqui (Consultar nunca edita nada). Linha
+                  divisória dos dois lados, mesmo padrão entre Links Acadêmicos e Moderação em T1. */}
               <div className="border-t borda-padrao"></div>
               <PainelOrcamentoCronograma auth={auth} idCampanha={campanhaConsultada.idCampanha} podeEditar={false} />
               <div className="border-t borda-padrao"></div>
@@ -1254,27 +1140,28 @@ export function BancadaCampanha({ auth }: PropsPagina) {
 
       {idCampanhaEditando !== null && formEdicaoCampanha && (() => {
         const campanhaEmEdicao = campanhas.find((c) => c.idCampanha === idCampanhaEditando) ?? null;
-        // CORRIGIDO (08-09-2026, pedido do Lucas: mesmo raciocínio do
-        // modal de Excluir) - Alterar também sempre abre o modal; se for
-        // uma das 10 campanhas de demonstração, um aviso aparece dentro
-        // (campos ficam só-leitura, Salvar some) em vez de o botão da
-        // tabela ficar cinza sem explicação nenhuma.
+        // Alterar também sempre abre o modal (mesmo raciocínio do modal de Excluir): se for uma das 10
+        // campanhas de demonstração, um aviso aparece dentro (campos ficam só-leitura, Salvar some) em vez de o
+        // botão da tabela ficar cinza sem explicação nenhuma.
         const bloqueadaEdicao = CAMPANHA_BLOQUEADA(idCampanhaEditando);
         // Rejeitada que já usou todos os reenvios é SÓ LEITURA (banco: 91027 nas
         // 3 funções de congelamento). `edicaoTravada` junta isso com a proteção
         // das 10 campanhas de demonstração pra decidir o que fica desabilitado.
-        const rejeitadaSomenteLeitura = campanhaEmEdicao?.status === 'rejeitado' && detalheRejeitada?.somenteLeitura === true;
+        const rejeitadaSomenteLeitura = campanhaEmEdicao?.status === 'rejeitado' && detalheEdicao?.somenteLeitura === true;
         const edicaoTravada = bloqueadaEdicao || rejeitadaSomenteLeitura;
+        // Campos que o banco trava agora (fn_campanha_campos_bloqueados, via GET /campanha/:id): a tela desabilita exatamente
+        // o que o banco recusaria, sem lista própria aqui.
+        const camposBloqueados = new Set(detalheEdicao?.camposBloqueados ?? []);
+        const travado = (campo: string) => edicaoTravada || camposBloqueados.has(campo);
+        const idAvisoBloqueio = idCampo('aviso-bloqueio');
+        const descreveBloqueio = (campo: string) => (camposBloqueados.has(campo) ? idAvisoBloqueio : undefined);
         const duracaoFormDias =
           formEdicaoCampanha.dataInicio && formEdicaoCampanha.dataFim
             ? Math.round((new Date(formEdicaoCampanha.dataFim).getTime() - new Date(formEdicaoCampanha.dataInicio).getTime()) / 86400000)
             : 0;
-        // Checklist "Pronta pra aprovar?" (13-09-2026, trazido do painel
-        // "campanha em foco" removido - ver comentário grande no topo do
-        // arquivo) - contagens vêm de `checklistOrcamento`/`checklistCronograma`,
-        // preenchidas pelo `aoCarregar` de <PainelOrcamentoCronograma> logo
-        // abaixo (mesmo idCampanha, sempre em sincronia com o que a pessoa
-        // vê nas abas Orçamento/Cronograma).
+        // Checklist "Pronta para aprovar?": as contagens vêm de `checklistOrcamento`/`checklistCronograma`,
+        // preenchidas pelo `aoCarregar` de <PainelOrcamentoCronograma> logo abaixo (mesmo idCampanha, sempre em
+        // sincronia com o que a pessoa vê nas abas Orçamento/Cronograma).
         const somaChecklistOrcamento = checklistOrcamento.reduce((total, item) => total + Number(item.valor), 0);
         const metaBatendoChecklist = campanhaEmEdicao !== null && somaChecklistOrcamento === Number(campanhaEmEdicao.metaFinanceira);
         const orcamentoOkChecklist = checklistOrcamento.length >= minimoItensOrcamento && metaBatendoChecklist;
@@ -1295,9 +1182,8 @@ export function BancadaCampanha({ auth }: PropsPagina) {
         };
         return (
           <ModalFicha
-            // `carregando` (14-09-2026) - ModalFicha esconde o título de
-            // verdade sozinho enquanto `campanhaEmEdicao` não chega (ver
-            // comentário completo em modal-ficha.tsx).
+            // `carregando`: ModalFicha esconde o título de verdade sozinho enquanto `campanhaEmEdicao` não
+            // chega (ver comentário completo em modal-ficha.tsx).
             carregando={!campanhaEmEdicao}
             titulo={campanhaEmEdicao?.titulo ?? ''}
             subtitulo={campanhaEmEdicao ? `Pesquisador: ${nomeDe(campanhaEmEdicao.idUsuario)}` : undefined}
@@ -1338,26 +1224,24 @@ export function BancadaCampanha({ auth }: PropsPagina) {
               </div>
             )}
 
-            {/* Campanha REJEITADA (21-09-2026): o histórico de rejeições vem no
-                topo porque é a primeira coisa que o pesquisador precisa ler pra
-                saber o que corrigir, junto com quantos reenvios ainda tem e até
-                quando. Esgotados os reenvios, vira só leitura e a frase diz
-                quando a campanha será excluída. */}
+            {/* Campanha REJEITADA: o histórico de rejeições vem no topo porque é a primeira coisa que o
+                pesquisador precisa ler para saber o que corrigir, junto com quantos reenvios ainda tem e até
+                quando. Esgotados os reenvios, vira só leitura e a frase diz quando a campanha será excluída. */}
             {campanhaEmEdicao?.status === 'rejeitado' && (
               <div className="rounded-lg border borda-forte fundo-erro p-4 text-sm texto-erro space-y-3">
                 <p className="font-bold">
                   <i className="fa-solid fa-circle-exclamation mr-1"></i> Campanha rejeitada
                 </p>
-                {detalheRejeitada &&
-                  (detalheRejeitada.somenteLeitura ? (
+                {detalheEdicao &&
+                  (detalheEdicao.somenteLeitura ? (
                     <p>
                       Esta campanha usou todos os reenvios permitidos e agora é somente leitura.
-                      {detalheRejeitada.prazoReenvioAte && <> Ela será excluída em {formatarData(detalheRejeitada.prazoReenvioAte)}.</>}
+                      {detalheEdicao.prazoReenvioAte && <> Ela será excluída em {formatarData(detalheEdicao.prazoReenvioAte)}.</>}
                     </p>
                   ) : (
                     <p>
-                      Reenvios restantes: <strong>{detalheRejeitada.reenviosRestantes}</strong>.
-                      {detalheRejeitada.prazoReenvioAte && <> Prazo para reenviar: até <strong>{formatarData(detalheRejeitada.prazoReenvioAte)}</strong>.</>}
+                      Reenvios restantes: <strong>{detalheEdicao.reenviosRestantes}</strong>.
+                      {detalheEdicao.prazoReenvioAte && <> Prazo para reenviar: até <strong>{formatarData(detalheEdicao.prazoReenvioAte)}</strong>.</>}
                     </p>
                   ))}
                 {historicoEdicao.length > 0 && (
@@ -1373,9 +1257,8 @@ export function BancadaCampanha({ auth }: PropsPagina) {
               </div>
             )}
 
-            {/* Datas vencidas no envio/reenvio (21-09-2026): oferta EXPLÍCITA, nunca
-                silenciosa - a data de início é o que o pesquisador vai comunicar
-                pra rede dele. */}
+            {/* Datas vencidas no envio/reenvio: oferta EXPLÍCITA, nunca silenciosa (a data de início é o que
+                o pesquisador vai comunicar para a rede dele). */}
             {ofertaDatas && (
               <div className="rounded-lg border borda-forte fundo-aviso p-4 text-sm texto-aviso space-y-3">
                 <p className="font-bold">
@@ -1397,6 +1280,18 @@ export function BancadaCampanha({ auth }: PropsPagina) {
               </div>
             )}
 
+            {camposBloqueados.size > 0 && !rejeitadaSomenteLeitura && (
+              <div id={idAvisoBloqueio} className="rounded-lg border borda-forte fundo-info p-4 text-sm texto-info">
+                <p className="font-bold">
+                  <i className="fa-solid fa-lock mr-1"></i> Campos travados
+                </p>
+                <p>
+                  Depois da aprovação estes campos não mudam, para proteger quem já contribuiu:{' '}
+                  {[...camposBloqueados].map((campo) => ROTULO_CAMPO_BLOQUEADO[campo] ?? campo).join(', ')}.
+                </p>
+              </div>
+            )}
+
             <div className="grid lg:grid-cols-3 gap-6 items-start">
               <div className="lg:col-span-2 space-y-6">
                 <SecaoFicha titulo="Dados">
@@ -1408,7 +1303,8 @@ export function BancadaCampanha({ auth }: PropsPagina) {
                       value={formEdicaoCampanha.titulo}
                       onChange={(evento) => setFormEdicaoCampanha({ ...formEdicaoCampanha, titulo: evento.target.value })}
                       className="input-padrao"
-                      disabled={edicaoTravada}
+                      disabled={travado('titulo')}
+                      aria-describedby={descreveBloqueio('titulo')}
                     />
                   </div>
                   <div>
@@ -1418,7 +1314,8 @@ export function BancadaCampanha({ auth }: PropsPagina) {
                       value={formEdicaoCampanha.idAreaConhecimento}
                       onChange={(evento) => setFormEdicaoCampanha({ ...formEdicaoCampanha, idAreaConhecimento: evento.target.value })}
                       className="input-padrao"
-                      disabled={edicaoTravada}
+                      disabled={travado('idAreaConhecimento')}
+                      aria-describedby={descreveBloqueio('idAreaConhecimento')}
                     >
                       {areas.map((area) => (
                         <option key={area.idAreaConhecimento} value={area.idAreaConhecimento}>
@@ -1435,7 +1332,8 @@ export function BancadaCampanha({ auth }: PropsPagina) {
                       value={formEdicaoCampanha.descricao}
                       onChange={(evento) => setFormEdicaoCampanha({ ...formEdicaoCampanha, descricao: evento.target.value })}
                       className="input-padrao"
-                      disabled={edicaoTravada}
+                      disabled={travado('descricao')}
+                      aria-describedby={descreveBloqueio('descricao')}
                     />
                   </div>
                   <div className="sm:col-span-2">
@@ -1446,29 +1344,24 @@ export function BancadaCampanha({ auth }: PropsPagina) {
                       value={formEdicaoCampanha.videoApresentacaoUrl}
                       onChange={(evento) => setFormEdicaoCampanha({ ...formEdicaoCampanha, videoApresentacaoUrl: evento.target.value })}
                       className="input-padrao"
-                      disabled={edicaoTravada}
+                      disabled={travado('videoApresentacaoUrl')}
+                      aria-describedby={descreveBloqueio('videoApresentacaoUrl')}
                     />
                   </div>
                 </SecaoFicha>
 
-                {/* Orçamento/Cronograma acima de Datas (08-09-2026, pedido
-                    do Lucas) - editável aqui também (mesmo padrão de Links
-                    Acadêmicos em T1), mas só quando a campanha ainda está
-                    aguardando aprovação (mesma regra do painel "campanha em
-                    foco" mais abaixo nesta tela) e não é uma das 10 de
-                    demonstração. Linha divisória dos dois lados. */}
+                {/* Orçamento/Cronograma acima de Datas: editável aqui também (mesmo padrão de Links
+                    Acadêmicos em T1), mas só quando a campanha ainda está em rascunho/aguardando aprovação e
+                    não é uma das 10 de demonstração. Linha divisória dos dois lados. */}
                 <div className="border-t borda-padrao"></div>
                 <PainelOrcamentoCronograma
                   auth={auth}
                   idCampanha={idCampanhaEditando}
-                  // 'rascunho' incluído em 20-09-2026: é justamente o status em
-                  // que o pesquisador MAIS precisa mexer em orçamento e
-                  // cronograma. Sem ele, abrir um rascunho em Alterar Campanha
-                  // deixaria os 2 painéis só de leitura, que é o contrário do
-                  // que o estado significa. 'aguardando_aprovacao' continua
-                  // editável porque o congelamento (fn_congela_*, 05) só começa
-                  // em 'ativo' - e é por isso que a checagem de completude
-                  // roda de novo na aprovação, não só no envio.
+                  // 'rascunho' incluído: é justamente o status em que o pesquisador MAIS precisa mexer em
+                  // orçamento e cronograma; sem ele, abrir um rascunho em Alterar Campanha deixaria os 2
+                  // painéis só de leitura, o contrário do que o estado significa. 'aguardando_aprovacao'
+                  // continua editável porque o congelamento (fn_congela_*, 05) só começa em 'ativo': é por isso
+                  // que a checagem de completude roda de novo na aprovação, não só no envio.
                   podeEditar={
                     !edicaoTravada &&
                     (campanhaEmEdicao?.status === 'rascunho' ||
@@ -1481,10 +1374,8 @@ export function BancadaCampanha({ auth }: PropsPagina) {
                   }}
                 />
 
-                {/* "Pronta pra aprovar?" + Aprovar/Rejeitar (13-09-2026,
-                    trazido do painel "campanha em foco" removido) - só
-                    faz sentido enquanto a campanha ainda está aguardando
-                    aprovação e não é uma das 10 de demonstração. */}
+                {/* "Pronta para aprovar?" + Aprovar/Rejeitar: só faz sentido enquanto a campanha ainda está
+                    aguardando aprovação e não é uma das 10 de demonstração. */}
                 {!bloqueadaEdicao && campanhaEmEdicao?.status === 'aguardando_aprovacao' && (
                   <div className="fundo-sutil rounded-md p-4">
                     <h3 className="subtitulo mb-3">Pronta para aprovar?</h3>
@@ -1555,7 +1446,8 @@ export function BancadaCampanha({ auth }: PropsPagina) {
                       value={formEdicaoCampanha.dataInicio}
                       onChange={(evento) => setFormEdicaoCampanha({ ...formEdicaoCampanha, dataInicio: evento.target.value })}
                       className="input-padrao"
-                      disabled={edicaoTravada}
+                      disabled={travado('dataInicio')}
+                      aria-describedby={descreveBloqueio('dataInicio')}
                     />
                   </div>
                   <div>
@@ -1566,7 +1458,8 @@ export function BancadaCampanha({ auth }: PropsPagina) {
                       value={formEdicaoCampanha.dataFim}
                       onChange={(evento) => setFormEdicaoCampanha({ ...formEdicaoCampanha, dataFim: evento.target.value })}
                       className="input-padrao"
-                      disabled={edicaoTravada}
+                      disabled={travado('dataFim')}
+                      aria-describedby={descreveBloqueio('dataFim')}
                     />
                   </div>
                 </SecaoFicha>
@@ -1582,7 +1475,8 @@ export function BancadaCampanha({ auth }: PropsPagina) {
                       value={formEdicaoCampanha.metaFinanceira}
                       onChange={(evento) => setFormEdicaoCampanha({ ...formEdicaoCampanha, metaFinanceira: evento.target.value })}
                       className="input-padrao"
-                      disabled={edicaoTravada}
+                      disabled={travado('metaFinanceira')}
+                      aria-describedby={descreveBloqueio('metaFinanceira')}
                     />
                   </div>
                   <CampoSomenteLeitura rotulo="Arrecadado" valor={campanhaEmEdicao ? formatarMoeda(campanhaEmEdicao.valorBrutoArrecadado) : '-'} />
@@ -1604,23 +1498,15 @@ export function BancadaCampanha({ auth }: PropsPagina) {
       })()}
 
       {campanhaExcluindo && (() => {
-        // CORRIGIDO (08-09-2026, pedido do Lucas: "clico e não acontece
-        // nada, parece quebrado") - Excluir agora SEMPRE abre o modal
-        // (nunca fica um botão cinza/inerte na tabela); quando a campanha
-        // não pode ser excluída normalmente, o motivo aparece bem visível
-        // dentro do próprio modal, em vez de um tooltip em cima de um
-        // botão desabilitado. As 10 campanhas de demonstração continuam
-        // com proteção TOTAL (nem "forçar" funciona nelas) - o resto
-        // (status que já passou de "aguardando aprovação") ganha a opção
-        // de exclusão FORÇADA (08-09-2026, pedido do Lucas: "senão este
-        // campo de testes vai ficar muito sujo") - endpoint separado
-        // (POST /campanha/:id/forcar-exclusao), que ignora status de
-        // propósito, gateado por permissão própria.
+        // Excluir SEMPRE abre o modal (nunca fica um botão cinza/inerte na tabela): quando a campanha não pode
+        // ser excluída normalmente, o motivo aparece bem visível dentro do próprio modal, em vez de um tooltip
+        // em cima de um botão desabilitado. As 10 campanhas de demonstração têm proteção TOTAL (nem "forçar"
+        // funciona nelas); o resto (status que já passou de rascunho) ganha a opção de exclusão FORÇADA (POST
+        // /campanha/:id/forcar-exclusao), que ignora status de propósito, gateada por permissão própria.
         const bloqueadaDemo = CAMPANHA_BLOQUEADA(campanhaExcluindo.idCampanha);
-        // 'aguardando_aprovacao' -> 'rascunho' (20-09-2026): acompanha
-        // pol_campanha_delete (04), que mudou junto. Se ficasse como estava, a
-        // tela diria "pode excluir" numa campanha que o banco recusa, e "não
-        // pode" justamente nos rascunhos, que são os únicos excluíveis agora.
+        // Só 'rascunho' é excluível normalmente (acompanha pol_campanha_delete, 04): senão a tela diria "pode
+        // excluir" numa campanha que o banco recusa, e "não pode" justamente nos rascunhos, que são os únicos
+        // excluíveis.
         const statusNaoElegivel = !bloqueadaDemo && campanhaExcluindo.status !== 'rascunho';
         const fecharModal = () => {
           setCampanhaExcluindo(null);
@@ -1750,19 +1636,15 @@ export function BancadaCampanha({ auth }: PropsPagina) {
         );
       })()}
 
-      {/* Criar Campanha (08-09-2026, pedido do Lucas: "o Admin deve
-          conseguir criar uma campanha e ASSOCIAR um pesquisador a ela,
-          por id e ou nome, não importa") - dropdown mostra nome (id), o
-          valor por baixo é o id. Mesmo endpoint de suporte/admin usado no
-          resto desta sessão (POST /campanha/:idUsuario). */}
+      {/* Criar Campanha: o Admin cria uma campanha e ASSOCIA um pesquisador a ela, por id ou nome; o
+          dropdown mostra nome (id), o valor por baixo é o id. Mesmo endpoint de suporte/admin (POST
+          /campanha/:idUsuario). */}
       {criandoCampanha && (
         <ModalFicha
           titulo="Criar Campanha"
-          // Miss-click no fundo escurecido já derrubou este wizard de 3
-          // etapas 2x (15-09-2026, achado do Lucas) - perder o progresso
-          // (ou até uma campanha já criada, se estava nas etapas 2/3) por
-          // um clique sem querer é caro aqui. Só fecha por "Cancelar"/
-          // "Concluir" ou pelo X.
+          // Miss-click no fundo escurecido derrubaria este wizard de 3 etapas: perder o progresso (ou até uma
+          // campanha já criada, se estava nas etapas 2/3) por um clique sem querer é caro aqui. Só fecha por
+          // "Cancelar"/"Concluir" ou pelo X.
           fecharAoClicarFora={false}
           subtitulo={
             etapaCriarCampanha === 'dados'
@@ -1809,31 +1691,22 @@ export function BancadaCampanha({ auth }: PropsPagina) {
           }
         >
           {etapaCriarCampanha !== 'dados' && idCampanhaRecemCriada !== null ? (
-            // Orçamento e Cronograma como 2 ETAPAS SEPARADAS e focadas
-            // (15-09-2026, pedido do Lucas: "Modais diferentes e focados
-            // para cada coisa", não uma tabela só com abas) - RF-040/042
-            // preveem isso "durante a criação", mas os itens só existem
-            // depois de a campanha ter um id (FK pra orcamento_campanha/
-            // marco_cronograma), por isso são etapas do MESMO modal, não
-            // campos do formulário de Dados. `abaFixa` trava o painel
-            // (que já existia, usado em Alterar Campanha) numa aba só,
-            // sem UI nova pra tabela em si. Mínimo de itens (RF-040/042)
-            // só é exigido na APROVAÇÃO, não aqui - pode ficar sem nenhum
-            // item e concluir, completando depois via Alterar, exatamente
-            // como o RF permite ("aos poucos").
+            // Orçamento e Cronograma como 2 ETAPAS SEPARADAS e focadas (não uma tabela só com abas): RF-040/042
+            // preveem isso "durante a criação", mas os itens só existem depois de a campanha ter um id (FK para
+            // orcamento_campanha/marco_cronograma), por isso são etapas do MESMO modal, não campos do
+            // formulário de Dados. `abaFixa` trava o painel (também usado em Alterar Campanha) numa aba só, sem
+            // UI nova para a tabela em si. O mínimo de itens (RF-040/042) só é exigido na APROVAÇÃO, não aqui:
+            // pode ficar sem nenhum item e concluir, completando depois via Alterar, como o RF permite ("aos
+            // poucos").
             <SecaoFicha titulo={etapaCriarCampanha === 'orcamento' ? 'Orçamento' : 'Cronograma'}>
               <div className="sm:col-span-2">
                 <PainelOrcamentoCronograma
-                  // `key` (15-09-2026, achado do Lucas: Cronograma
-                  // mostrando a tabela de Orçamento) - sem isto, React
-                  // reaproveita a MESMA instância do componente ao trocar
-                  // de etapa (é a mesma posição na árvore JSX, só a prop
-                  // `abaFixa` muda) - o `useState(abaFixa ?? 'orcamento')`
-                  // só roda o inicializador na 1ª montagem, então `abaAtiva`
-                  // ficava travado em 'orcamento' pra sempre, mesmo depois
-                  // de `abaFixa` virar 'cronograma'. `key` força remontar
-                  // (nova instância = novo estado) toda vez que a etapa
-                  // muda.
+                  // `key`: sem isto, React reaproveita a MESMA instância do componente ao trocar de etapa (é a
+                  // mesma posição na árvore JSX, só a prop `abaFixa` muda), e o `useState(abaFixa ??
+                  // 'orcamento')` só roda o inicializador na 1ª montagem: `abaAtiva` ficaria travado em
+                  // 'orcamento' para sempre, mesmo depois de `abaFixa` virar 'cronograma' (Cronograma mostrando
+                  // a tabela de Orçamento). `key` força remontar (nova instância = novo estado) toda vez que a
+                  // etapa muda.
                   key={etapaCriarCampanha}
                   auth={auth}
                   idCampanha={idCampanhaRecemCriada}
@@ -1850,16 +1723,12 @@ export function BancadaCampanha({ auth }: PropsPagina) {
           <SecaoFicha titulo="Pesquisador">
             <div className="sm:col-span-2 relative" ref={sugestoesPesquisadorRef}>
               <label htmlFor={idCampo('criar-dono')} className="rotulo-campo">Dono da campanha</label>
-              {/* Um só <input>, sempre (08-09-2026, pedido do Lucas) - não
-                  troca pra um "chip" separado depois de escolher. O texto
-                  mostrado É o nome escolhido; clicar/focar reabre a lista
-                  de sugestões já filtrada por esse mesmo nome (ex.: "Maria
-                  da Silva" escolhida, clicar mostra "Maria da Silva",
-                  "Maria da Silva Junior", "Maria da Silva Oliveira"...) -
-                  a escolha atual continua valendo até a pessoa clicar
-                  numa sugestão diferente ou digitar algo nesse meio
-                  tempo (que invalida a escolha, mesmo padrão de qualquer
-                  combobox de busca). */}
+              {/* Um só <input>, sempre: não troca para um "chip" separado depois de escolher. O texto
+                  mostrado É o nome escolhido; clicar/focar reabre a lista de sugestões já filtrada por esse
+                  mesmo nome (ex.: "Maria da Silva" escolhida, clicar mostra "Maria da Silva", "Maria da
+                  Silva Junior"...); a escolha atual continua valendo até a pessoa clicar numa sugestão
+                  diferente ou digitar algo nesse meio tempo (que invalida a escolha, mesmo padrão de
+                  qualquer combobox de busca). */}
               <input
                 id={idCampo('criar-dono')}
                 type="text"
@@ -1971,11 +1840,9 @@ export function BancadaCampanha({ auth }: PropsPagina) {
               />
             </div>
             <div>
-              {/* Não é mais "(opcional)" (14-09-2026, achado do Lucas) -
-                  RF-066 exige as duas datas pra checar o prazo (15-60
-                  dias); `min={hojeISO}` impede escolher ontem ou antes
-                  direto no seletor do navegador, sem precisar de JS extra
-                  pra bloquear a data errada. */}
+              {/* Início e Fim são obrigatórios: RF-066 exige as duas datas para checar o prazo (15-60 dias);
+                  `min={hojeISO}` impede escolher ontem ou antes direto no seletor do navegador, sem JS
+                  extra. */}
               <label htmlFor={idCampo('criar-inicio')} className="rotulo-campo">Início</label>
               <input
                 id={idCampo('criar-inicio')}
@@ -2036,19 +1903,10 @@ export function BancadaCampanha({ auth }: PropsPagina) {
         }}
       />
 
-      {/* Criar campanha saiu daqui (25-08-2026, remoção do Elenco): RLS
-          exige id_usuario = id_usuario_atual(), não dá mais pra "criar em
-          nome de" um pesquisador escolhido. Lucas vai detalhar depois como
-          fica a criação pelo próprio pesquisador (login como ele, ou uma
-          conta já com privilégio de pesquisador). */}
+      {/* Criar campanha usa POST /campanha/:idUsuario (suporte/admin): a RLS exige id_usuario =
+          id_usuario_atual(), então não dá para "criar em nome de" um pesquisador escolhido pelo endpoint
+          normal. */}
 
-      {/* Painel "campanha em foco" (checklist "Pronta pra aprovar?" +
-          Aprovar/Rejeitar + abas de Orçamento/Cronograma) removido daqui
-          (13-09-2026, pedido do Lucas: "vamos tirar o Escolher também de
-          T2") - a coluna "Escolher" era sua única fonte. Todo esse
-          conteúdo virou parte do modal de Alterar (que já mostrava
-          Orçamento/Cronograma mesmo antes disso - só faltava o checklist e
-          os 2 botões, ver bloco `idCampanhaEditando` acima). */}
       <div className="border-t borda-padrao my-8"></div>
 
       <RegistroChamadas />

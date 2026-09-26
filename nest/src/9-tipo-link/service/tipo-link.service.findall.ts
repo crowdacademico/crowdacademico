@@ -21,11 +21,9 @@ export class TipoLinkServiceFindAll {
       .getDb()
       .selectFrom('tipo_link')
       .selectAll()
-      // ERA orderBy('nome') - trocado (22-08-2026, pedido do Lucas:
-      // catálogos ordenam por ID, sempre). O seed já insere na ordem
-      // Lattes/ORCID/ResearchGate/LinkedIn/GitHub, então o resultado
-      // visual nem muda muito, só passa a ser estável por id em vez de
-      // recalculado por nome toda vez.
+      // Ordena por id (catálogos ordenam por ID, sempre). O seed insere na ordem
+      // Lattes/ORCID/ResearchGate/LinkedIn/GitHub, então o resultado é estável por id em vez de recalculado por
+      // nome toda vez.
       .orderBy('id_tipolink');
 
     if (filtro.ativo !== undefined) {

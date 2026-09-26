@@ -17,25 +17,16 @@ import type {
   UploadPreAssinado,
 } from './storage.service.interface';
 
-// Implementação ÚNICA pra qualquer provedor que fale o protocolo S3 -
-// Supabase Storage (provedor ATUAL, ver ARQUIVO_para_configurar_modulo-
-// arquivo.md e o .env real: STORAGE_ENDPOINT aponta pro endpoint S3 do
-// Supabase), Cloudflare R2, Backblaze B2, AWS S3 de verdade, ou MinIO num
-// ambiente self-hosted. Nenhum desses precisa de código diferente: só de
-// variáveis de ambiente diferentes (endpoint, região, bucket,
-// credenciais). Migrar pra R2 no futuro (avaliado 01-09-2026: Supabase
-// free dá 1GB de storage + 5GB de egress/mês contra os 10GB de storage +
-// egress ilimitado do R2, mas a equipe decidiu ficar no Supabase por
-// enquanto, já está funcionando) é só isso - trocar STORAGE_ENDPOINT e as
-// credenciais no .env, sem tocar em uma linha de TypeScript.
-// CORRIGIDO 01-09-2026: este comentário dizia "Backblaze B2 (provedor
-// atual)" - estava desatualizado, o .env real nunca apontou pra B2 nesta
-// fase do projeto.
+// Implementação ÚNICA para qualquer provedor que fale o protocolo S3: Supabase Storage (provedor ATUAL, ver
+// nest/.env.example e o .env real: STORAGE_ENDPOINT aponta para o endpoint S3 do Supabase), Cloudflare R2,
+// Backblaze B2, AWS S3 de verdade, ou MinIO num ambiente self-hosted. Nenhum desses precisa de código
+// diferente: só de variáveis de ambiente diferentes (endpoint, região, bucket, credenciais). Migrar para R2 no
+// futuro (Supabase free dá 1GB de storage + 5GB de egress/mês contra os 10GB de storage + egress ilimitado do
+// R2) é só trocar STORAGE_ENDPOINT e as credenciais no .env, sem tocar em uma linha de TypeScript.
 //
-// Bibliotecas: @aws-sdk/client-s3 + @aws-sdk/s3-request-presigner - SDK
-// oficial da AWS, mas nada aqui é exclusivo da AWS: é o cliente HTTP que
-// fala o protocolo, apontado pra QUALQUER endpoint compatível (é assim que
-// B2 e R2 documentam a própria compatibilidade S3).
+// Bibliotecas: @aws-sdk/client-s3 + @aws-sdk/s3-request-presigner: SDK oficial da AWS, mas nada aqui é
+// exclusivo da AWS; é o cliente HTTP que fala o protocolo, apontado para QUALQUER endpoint compatível (é assim
+// que B2 e R2 documentam a própria compatibilidade S3).
 @Injectable()
 export class S3CompativelArmazenamentoService implements ArmazenamentoService {
   // Client/config são construídos SOB DEMANDA (getter privado abaixo), não

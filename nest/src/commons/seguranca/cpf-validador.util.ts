@@ -1,7 +1,6 @@
-// Validação de FORMATO do CPF (dígito verificador) - não confirma que o CPF
-// pertence a uma pessoa real, nem consulta nenhuma fonte externa. Ver
-// PENDENCIAS e correcoes.md, item 745: verificação de existência real fica
-// pra um momento futuro do projeto, fora de escopo por decisão do Lucas.
+// Validação de FORMATO do CPF (dígito verificador): não confirma que o CPF pertence a uma pessoa real, nem
+// consulta nenhuma fonte externa. A verificação de existência real fica para um momento futuro do projeto, fora
+// de escopo.
 import { normalizarCpf } from './cpf-cifra.util';
 
 // Peso inicial 10 pro primeiro dígito verificador (soma multiplicando os 9

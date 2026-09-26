@@ -12,14 +12,11 @@ interface SecaoModeracaoPesquisadorProps {
   idUsuario: number | string;
 }
 
-// Moderação - suspender/reativar o PODER de pesquisador (07-09-2026, pedido
-// do Lucas: "mesmo card de Suspender Usuário, só que focado no papel de
-// Pesquisador"). Espelha secao-moderacao.tsx (1-usuario) quase igual - a
-// diferença real é conceitual, não visual: isto NUNCA bloqueia login (a
-// conta continua normal), só a autoridade de pesquisador (criar campanha
-// nova, endossar, etc.) - por isso o pesquisador precisa continuar vendo o
-// motivo em algum lugar próprio (Minha Conta > Acadêmico), não só descobrir
-// tentando fazer algo e sendo barrado sem explicação.
+// Moderação: suspender/reativar o PODER de pesquisador (mesmo card de Suspender Usuário, focado no papel de
+// Pesquisador). Espelha secao-moderacao.tsx (1-usuario) quase igual: a diferença real é conceitual, não visual:
+// isto NUNCA bloqueia login (a conta continua normal), só a autoridade de pesquisador (criar campanha nova,
+// endossar, etc.), por isso o pesquisador precisa continuar vendo o motivo em algum lugar próprio (Minha Conta
+// > Acadêmico), não só descobrir tentando fazer algo e sendo barrado sem explicação.
 export function SecaoModeracaoPesquisador({ auth, idUsuario }: SecaoModeracaoPesquisadorProps) {
   const { mostrar } = useToast();
   const { erro, reportarErro, limparErro } = useErroToast();

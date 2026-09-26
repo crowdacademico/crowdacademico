@@ -11,13 +11,9 @@ import {
 import { TermoUsoRequestCriar } from '../dto/request/termo-uso.request-criar';
 import { TermoUsoResponse } from '../dto/response/termo-uso.response';
 
-// Publicar versão nova NUNCA ativa sozinha (13-09-2026, corrigido a pedido
-// do Lucas: "não é assim que funciona" - fluxo real é criar rascunho, a
-// "staff" revisar/procurar erro de português, e SÓ DEPOIS o administrador
-// tornar essa versão vigente manualmente, ver TermoUsoServiceAtivar). Antes
-// deste ajuste, Criar desativava a versão anterior e ativava a nova na
-// mesma transação, automaticamente - virou um INSERT simples, sempre
-// `ativo: false`, sem tocar em mais nenhuma linha.
+// Publicar versão nova NUNCA ativa sozinha: o fluxo real é criar rascunho, a "staff" revisar/procurar erro de
+// português, e SÓ DEPOIS o administrador tornar essa versão vigente manualmente (ver TermoUsoServiceAtivar). É
+// um INSERT simples, sempre `ativo: false`, sem tocar em mais nenhuma linha.
 @Injectable()
 export class TermoUsoServiceCriar {
   constructor(private readonly database: DatabaseService) {}

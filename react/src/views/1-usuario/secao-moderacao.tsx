@@ -12,11 +12,9 @@ interface SecaoModeracaoProps {
   idUsuario: number | string;
 }
 
-// Moderação - suspender/revogar CONTA (09-08-2026, Bloco G do prompt do
-// uma IA) - dentro de Alterar Usuário porque é ação sobre a MESMA
-// conta que a tela já edita, não uma tela própria. Opções de prazo vêm de
-// `configuracoes.suspensao_usuario_opcoes_dias` (nada fixo no código) +
-// campo livre pra qualquer outro número de dias.
+// Moderação: suspender/revogar CONTA, dentro de Alterar Usuário porque é ação sobre a MESMA conta que a tela já
+// edita, não uma tela própria. Opções de prazo vêm de `configuracoes.suspensao_usuario_opcoes_dias` (nada fixo
+// no código) + campo livre para qualquer outro número de dias.
 export function SecaoModeracao({ auth, idUsuario }: SecaoModeracaoProps) {
   const { mostrar } = useToast();
   const { erro, reportarErro, limparErro } = useErroToast();

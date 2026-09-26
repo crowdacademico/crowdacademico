@@ -15,20 +15,14 @@ interface ModalExcluirTermoUsoProps {
   aoExcluido: () => void;
 }
 
-// Excluir (13-09-2026, pedido do Lucas: "para não sujar o banco" durante o
-// desenvolvimento - Criar não ativa mais sozinho, então um rascunho com
-// muito erro de português pode simplesmente ser apagado). Confirmação
-// simples (sem digitar nada, diferente de ModalExcluirUsuario) - o backend
-// (TermoUsoServiceExcluir) já bloqueia com 409 qualquer versão vigente ou
-// aceita por alguém.
+// Excluir: como Criar não ativa mais sozinho, um rascunho com muito erro de português pode simplesmente ser
+// apagado (para não sujar o banco). Confirmação simples (sem digitar nada, diferente de ModalExcluirUsuario): o
+// backend (TermoUsoServiceExcluir) já bloqueia com 409 qualquer versão vigente ou aceita por alguém.
 //
-// "Excluir mesmo assim" (14-09-2026, pedido do Lucas) - se o 409 for
-// especificamente o de "já foi aceita" (não o de "é a vigente", esse
-// continua bloqueado sem exceção), a tela troca pro modo forçado: mostra
-// o aviso + checkbox "entendi" + botão "Excluir mesmo assim", que reenvia
-// com `forcar: true` (apaga o termo E as linhas de aceite que apontam pra
-// ele - decisão consciente do Lucas, sabendo que perde o rastro de quem
-// aceitou).
+// "Excluir mesmo assim": se o 409 for especificamente o de "já foi aceita" (não o de "é a vigente", esse
+// continua bloqueado sem exceção), a tela troca para o modo forçado: mostra o aviso + checkbox "entendi" +
+// botão "Excluir mesmo assim", que reenvia com `forcar: true` (apaga o termo E as linhas de aceite que apontam
+// para ele: decisão consciente, sabendo que perde o rastro de quem aceitou).
 export function ModalExcluirTermoUso({ auth, termo, aoFechar, aoExcluido }: ModalExcluirTermoUsoProps) {
   const { mostrar } = useToast();
   const { erro, reportarErro, limparErro } = useErroToast();

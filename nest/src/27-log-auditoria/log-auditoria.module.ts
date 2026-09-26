@@ -17,7 +17,7 @@ import { LogAuditoriaServiceMinhaAtividade } from './service/log-auditoria.servi
   providers: [
     LogAuditoriaServiceFindAll,
     LogAuditoriaServiceMinhaAtividade,
-    // Job agendado (24-09-2026): retenção do log, sem controller.
+    // Job agendado: retenção do log, sem controller.
     LogAuditoriaServiceLimpar,
   ],
 })

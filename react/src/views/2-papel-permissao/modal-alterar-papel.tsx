@@ -15,17 +15,12 @@ interface ModalAlterarPapelProps {
   aoAtualizado: () => void;
 }
 
-// Alterar - migrado de página pra modal (14-09-2026, continuação da
-// migração CRUD→Modal pedida pelo Lucas). Recebe a linha (`papel:
-// PapelResponse`) inteira do chamador - mesmo motivo de modal-motivo-
-// denuncia.tsx - o que elimina o "busca a lista inteira e filtra pelo id"
-// que a página antiga precisava fazer (não existe `GET /papel/:id`).
+// Alterar em modal. Recebe a linha (`papel: PapelResponse`) inteira do chamador, mesmo motivo de
+// modal-motivo-denuncia.tsx: elimina o "busca a lista inteira e filtra pelo id" (não existe `GET /papel/:id`).
 //
-// Só "nome" é editável (`codigo`, ver 01_extensoes_enums_tabelas.sql
-// [01-B], nunca é exposto/editável - as triggers de RBAC leem `codigo`,
-// não `nome`, então renomear é seguro). Consultar/Excluir ganharam modal
-// próprio depois (14-09-2026, ver modal-papel.tsx) - Consultar mostra as
-// permissões do papel; Excluir é só explicativo, nunca executa (ver
+// Só "nome" é editável (`codigo`, ver 01_extensoes_enums_tabelas.sql [01-B], nunca é exposto/editável: as
+// triggers de RBAC leem `codigo`, não `nome`, então renomear é seguro). Consultar/Excluir têm modal próprio
+// (ver modal-papel.tsx): Consultar mostra as permissões do papel; Excluir é só explicativo, nunca executa (ver
 // comentário completo em modal-papel.tsx sobre o ON DELETE CASCADE).
 export function ModalAlterarPapel({ auth, papel, aoFechar, aoAtualizado }: ModalAlterarPapelProps) {
   const { mostrar } = useToast();

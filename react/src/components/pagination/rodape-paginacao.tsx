@@ -1,19 +1,15 @@
-// Extraído (14-09-2026, revisão do Lucas) - o rodapé "Página X de
-// Y / Mostrar / Anterior / Próxima" era reescrito inteiro em 4 lugares
-// (`generic-table.tsx`, `bancada-campanha.tsx`, `bancada-pesquisador.tsx`,
-// `registro-chamadas.tsx`) porque as bancadas do Campo de Testes não podem
-// usar `GenericTable` (risco de linha), mas precisavam do MESMO rodapé -
-// pelo teste-de-prop de `generic-table.tsx`, isso é um IRMÃO, não um miolo.
+// O rodapé "Página X de Y / Mostrar / Anterior / Próxima", compartilhado por `generic-table.tsx`,
+// `bancada-campanha.tsx`, `bancada-pesquisador.tsx` e `registro-chamadas.tsx`: as bancadas do Campo de Testes
+// não podem usar `GenericTable` (risco de linha), mas precisam do MESMO rodapé; pelo teste-de-prop de
+// `generic-table.tsx`, isso é um IRMÃO, não um miolo.
 //
-// Controlado, sem opinião sobre ONDE o estado de página/tamanho mora -
-// `GenericTable` guarda isso na URL (`useSearchParams`), as bancadas usam
-// `useState` local; `aoMudarPagina`/`aoMudarTamanho` recebem só o valor
-// final (página de destino, tamanho escolhido), cada chamador decide como
-// persistir (ex.: `pagina === 1 ? null : pagina` pra manter a URL limpa).
+// Controlado, sem opinião sobre ONDE o estado de página/tamanho mora: `GenericTable` guarda isso na URL
+// (`useSearchParams`), as bancadas usam `useState` local; `aoMudarPagina`/`aoMudarTamanho` recebem só o valor
+// final (página de destino, tamanho escolhido), cada chamador decide como persistir (ex.: `pagina === 1 ? null
+// : pagina` para manter a URL limpa).
 //
-// Compõe NavegacaoPagina (23-09-2026) - o "Página X de Y / Anterior /
-// Próxima" é o mesmo miolo que log-auditoria-painel.tsx precisava (esse sem
-// seletor de tamanho); o <select> de tamanho abaixo entra como `children`.
+// Compõe NavegacaoPagina: o "Página X de Y / Anterior / Próxima" é o mesmo miolo que log-auditoria-painel.tsx
+// precisa (esse sem seletor de tamanho); o <select> de tamanho abaixo entra como `children`.
 import { NavegacaoPagina } from './navegacao-pagina';
 import { TAMANHOS_PAGINA } from './tamanhos-pagina.constants';
 import type { TamanhoPagina } from './tamanhos-pagina.constants';

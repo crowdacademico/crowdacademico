@@ -29,14 +29,11 @@ interface ConfiguracoesProviderProps {
   children: ReactNode;
 }
 
-// Carrega 1x (na montagem) TODAS as configurações globais públicas - hoje
-// isso é o GET /configuracoes inteiro, que a RLS já restringe a
-// `id_usuario IS NULL` pra quem não está logado (ver comentário em
-// configuracao.api.ts). Existe pra qualquer tela (admin ou pública, futura)
-// conseguir ler `taxa_plataforma_padrao`, `valor_minimo_contribuicao` etc.
-// direto do banco via `obterConfiguracao(...)`, em vez de escrever esses
-// valores de negócio direto no HTML/JSX (achado de uma IA, 02-08-2026,
-// olhando o Projeto de Interface de referência).
+// Carrega 1x (na montagem) TODAS as configurações globais públicas: hoje isso é o GET /configuracoes inteiro,
+// que a RLS já restringe a `id_usuario IS NULL` para quem não está logado (ver comentário em
+// configuracao.api.ts). Existe para qualquer tela (admin ou pública, futura) conseguir ler
+// `taxa_plataforma_padrao`, `valor_minimo_contribuicao` etc. direto do banco via `obterConfiguracao(...)`, em
+// vez de escrever esses valores de negócio direto no HTML/JSX.
 export function ConfiguracoesProvider({ children }: ConfiguracoesProviderProps) {
   const [valores, setValores] = useState<Record<string, ValorConfiguracao | null>>({});
   const [carregando, setCarregando] = useState(true);

@@ -19,14 +19,11 @@ import {
 import { AuthRequestLogin } from '../dto/request/auth.request-login';
 import { AuthResponseLogin } from '../dto/response/auth.response-login';
 
-// toISOString() cru ("...T00:28:27.382Z") não significa nada pra quem não
-// programa (pedido do Lucas, 09-08-2026: "eu não sei o que significa T ou
-// Z") - as duas mensagens de bloqueio/suspensão abaixo são as únicas do
-// projeto que embutem uma data DENTRO de uma frase de erro (todo resto do
-// app formata no React com toLocaleString('pt-BR'), mas aqui a data já
-// precisa estar pronta dentro do texto do throw). timeZone explícito (não
-// o padrão do processo Node) porque o servidor pode rodar em UTC mesmo o
-// público sendo brasileiro.
+// toISOString() cru ("...T00:28:27.382Z") não significa nada para quem não programa: as duas mensagens de
+// bloqueio/suspensão abaixo são as únicas do projeto que embutem uma data DENTRO de uma frase de erro (todo o
+// resto do app formata no React com toLocaleString('pt-BR'), mas aqui a data precisa estar pronta dentro do
+// texto do throw). timeZone explícito (não o padrão do processo Node) porque o servidor pode rodar em UTC mesmo
+// o público sendo brasileiro.
 function formatarDataHoraBr(data: Date): string {
   const dataFormatada = data.toLocaleDateString('pt-BR', {
     timeZone: 'America/Sao_Paulo',
@@ -76,21 +73,15 @@ export class AuthServiceLogin {
       );
     }
 
-    // Suspensão de MODERAÇÃO (09-08-2026, Bloco G) - conceito diferente de
-    // bloqueado_ate acima (ver comentário completo em usuario.suspenso_ate,
-    // 01_extensoes_enums_tabelas.sql [01-D]). 403, não 401: a pessoa não
-    // errou credencial nenhuma, a CONTA é que está impedida - precisa saber
-    // por quê, diferente do "Credenciais inválidas" deliberadamente vago.
+    // Suspensão de MODERAÇÃO: conceito diferente de bloqueado_ate acima (ver comentário completo em
+    // usuario.suspenso_ate, 01_extensoes_enums_tabelas.sql [01-D]). 403, não 401: a pessoa não errou credencial
+    // nenhuma, a CONTA é que está impedida, e precisa saber por quê (diferente do "Credenciais inválidas"
+    // deliberadamente vago).
     //
-    // ⚠️ Consulta separada (não junto do SELECT acima) e protegida por
-    // SAVEPOINT de propósito - mesmo bug já corrigido uma vez neste mesmo
-    // arquivo (ver comentário grande em listarPapeis, embaixo): as colunas
-    // suspenso_ate/motivo_suspensao só existem de verdade depois de alguém
-    // colar ATUALIZAR O SUPABASE.sql no SQL Editor (Bloco G, PENDENCIAS e
-    // correcoes.md item 22). Até lá, um SELECT direto nelas quebraria
-    // LOGIN INTEIRO com 500 - confirmado ao vivo (09-08-2026) tentando
-    // logar antes da migração ter rodado. Falha graciosamente: sem as
-    // colunas, ninguém está suspenso (mesma coisa que sempre foi).
+    // Consulta separada (não junto do SELECT acima) e protegida por SAVEPOINT de propósito (mesmo bug já
+    // corrigido em listarPapeis, embaixo): as colunas suspenso_ate/motivo_suspensao só existem depois de alguém
+    // colar ATUALIZAR O SUPABASE.sql no SQL Editor; até lá, um SELECT direto nelas quebraria o LOGIN INTEIRO
+    // com 500. Falha graciosamente: sem as colunas, ninguém está suspenso.
     const suspensao = await this.buscarSuspensao(usuario.id_usuario);
     if (suspensao.suspensoAte && suspensao.suspensoAte > new Date()) {
       throw new ForbiddenException(
@@ -131,7 +122,7 @@ export class AuthServiceLogin {
 
   // Ver comentário de chamada em executar() acima - SAVEPOINT protege o
   // resto da transação (tokens, sessao) de um erro "coluna não existe"
-  // enquanto a migração do Bloco G não rodou no banco de produção.
+  // enquanto a migração das colunas de suspensão não rodou no banco.
   async buscarSuspensao(
     idUsuario: number,
   ): Promise<{ suspensoAte: Date | null; motivoSuspensao: string | null }> {
@@ -154,30 +145,19 @@ export class AuthServiceLogin {
     }
   }
 
-  // Reaproveitado por AuthServiceRefresh - mesmo raciocínio de emitirTokens
-  // logo abaixo: um lugar só pra essa consulta, chamada tanto no login
-  // quanto na renovação silenciosa.
+  // Reaproveitado por AuthServiceRefresh (mesmo raciocínio de emitirTokens logo abaixo): um lugar só para essa
+  // consulta, chamada tanto no login quanto na renovação silenciosa.
   //
-  // ⚠️ BUG REAL achado e corrigido no mesmo dia (09-08-2026): a 1ª versão
-  // disto era um try/catch simples devolvendo [] se listar_papeis_usuario()
-  // não existisse (ver PENDENCIAS e correcoes.md, item 22 - a função só
-  // existe de verdade depois de alguém colar ATUALIZAR O SUPABASE.sql no
-  // SQL Editor). Isso pareceu funcionar (login voltava 200 com papeis: [])
-  // mas SILENCIOSAMENTE FAZIA O LOGIN INTEIRO NÃO PERSISTIR NADA: um erro
-  // de Postgres deixa a TRANSAÇÃO inteira "abortada" até um ROLLBACK de
-  // verdade - pegar a exceção em JavaScript não desfaz isso. O
-  // client.query('COMMIT') do GlobalDbInterceptor, chamado depois, virava
-  // silenciosamente um ROLLBACK (Postgres troca COMMIT por ROLLBACK sozinho
-  // numa transação abortada) - sessao/ultimo_login_em, tudo que a mesma
-  // requisição tinha gravado antes, sumia, mesmo a resposta HTTP voltando
-  // 200 com dado que parecia certo (lido DENTRO da transação, antes dela
-  // abortar). Só descobri rodando um GET /auth/sessoes logo depois de um
-  // login e vendo a lista vazia, e confirmei instrumentando o interceptor.
-  // Fix de verdade: SAVEPOINT ao redor SÓ desta chamada arriscada - se
-  // listar_papeis_usuario() falhar, ROLLBACK TO SAVEPOINT desfaz só ela,
-  // sem abortar a transação inteira (KyselySingleConnectionDialect não tem
-  // db.transaction() com savepoint, por isso é SQL cru aqui, não o Kysely
-  // .transaction()).
+  // SAVEPOINT ao redor SÓ desta chamada arriscada (a função listar_papeis_usuario() só existe depois de alguém
+  // colar ATUALIZAR O SUPABASE.sql no SQL Editor). Um try/catch simples devolvendo [] parece funcionar (login
+  // volta 200 com papeis: []) mas FAZ O LOGIN INTEIRO NÃO PERSISTIR NADA: um erro de Postgres deixa a TRANSAÇÃO
+  // inteira "abortada" até um ROLLBACK de verdade, pegar a exceção em JavaScript não desfaz isso. O
+  // client.query('COMMIT') do GlobalDbInterceptor, chamado depois, vira silenciosamente um ROLLBACK (o Postgres
+  // troca COMMIT por ROLLBACK sozinho numa transação abortada): sessao/ultimo_login_em, tudo que a mesma
+  // requisição gravou antes, some, mesmo a resposta HTTP voltando 200 com dado que parece certo. Com o
+  // SAVEPOINT, se listar_papeis_usuario() falhar, ROLLBACK TO SAVEPOINT desfaz só ela, sem abortar a transação
+  // inteira (KyselySingleConnectionDialect não tem db.transaction() com savepoint, por isso é SQL cru aqui, não
+  // o Kysely .transaction()).
   async listarPapeis(idUsuario: number): Promise<string[]> {
     const db = this.database.getDb();
     await sql`SAVEPOINT sp_listar_papeis`.execute(db);
@@ -192,17 +172,14 @@ export class AuthServiceLogin {
     }
   }
 
-  // Reaproveitado por AuthServiceRefresh (rotação de refresh token) - mesma
-  // lógica de emitir o par access+refresh, só muda de onde é chamado.
+  // Reaproveitado por AuthServiceRefresh (rotação de refresh token): mesma lógica de emitir o par
+  // access+refresh, só muda de onde é chamado.
   //
-  // `origem` (07-08-2026, achado do Lucas: "não fiz tantos logs de login
-  // assim"): toda RENOVAÇÃO silenciosa (a cada ~15min de uso, token de
-  // acesso vencendo) também passa por aqui e também cria uma linha em
-  // `sessao` - sempre criou, desde o início. A tela de "logins anteriores"
-  // (consultar-usuario.jsx) lia `sessao` inteira, sem diferenciar renovação
-  // de login de verdade, então mostrava dezenas de "logins" que eram só o
-  // token se renovando sozinho em segundo plano. `origem` marca qual é
-  // qual; usuario.service.listar-logins.ts agora só mostra 'login'.
+  // `origem`: toda RENOVAÇÃO silenciosa (a cada ~15min de uso, token de acesso vencendo) também passa por aqui
+  // e também cria uma linha em `sessao`. A tela de "logins anteriores" (Consultar Usuário) lia `sessao`
+  // inteira, sem diferenciar renovação de login de verdade, então mostraria dezenas de "logins" que eram só o
+  // token se renovando sozinho em segundo plano. `origem` marca qual é qual; usuario.service.listar-logins.ts
+  // só mostra 'login'.
   async emitirTokens(
     idUsuario: number,
     ip: string | undefined,
@@ -212,9 +189,8 @@ export class AuthServiceLogin {
     const db = this.database.getDb();
     const segredo = randomBytes(32).toString('hex');
     const segredoHash = await bcrypt.hash(segredo, CUSTO_BCRYPT_REFRESH_TOKEN);
-    // Configurável pelo Painel Admin desde 04-09-2026 - cai no padrão
-    // hardcoded (30 dias) se a chave não existir/estiver inativa (ver
-    // ConfiguracaoValorService).
+    // Configurável pelo Painel Admin: cai no padrão hardcoded (30 dias) se a chave não existir/estiver inativa
+    // (ver ConfiguracaoValorService).
     const refreshTokenDiasValidade = await this.configuracaoValor.buscarNumero(
       CHAVE_CONFIG_REFRESH_TOKEN_DIAS_VALIDADE,
       REFRESH_TOKEN_DIAS_VALIDADE_PADRAO,
@@ -239,14 +215,12 @@ export class AuthServiceLogin {
       .returning('id_sessao')
       .executeTakeFirstOrThrow();
 
-    // `sid` (09-08-2026, Bloco E - Sessões Ativas em Minha Conta): sem isso
-    // não tinha como saber qual sessao.id_sessao corresponde à aba atual,
-    // pra marcar "sessão atual" na lista e excluí-la de "encerrar todas as
-    // outras" (ver usuario-autenticado.interface.ts). Continua consistente
-    // depois de uma renovação silenciosa: refresh chama esta MESMA função,
-    // que cria uma sessao NOVA e devolve um accessToken novo com o `sid`
-    // atualizado - o cliente sempre troca o token inteiro (salvarSessao),
-    // nunca fica com um `sid` velho apontando pra uma sessao já revogada.
+    // `sid`: sem isso não haveria como saber qual sessao.id_sessao corresponde à aba atual, para marcar "sessão
+    // atual" na lista de Sessões Ativas (Minha Conta) e excluí-la de "encerrar todas as outras" (ver
+    // usuario-autenticado.interface.ts). Continua consistente depois de uma renovação silenciosa: refresh chama
+    // esta MESMA função, que cria uma sessao NOVA e devolve um accessToken novo com o `sid` atualizado; o
+    // cliente sempre troca o token inteiro (salvarSessao), nunca fica com um `sid` velho apontando para uma
+    // sessao já revogada.
     const accessToken = this.jwtService.sign({
       sub: idUsuario,
       sid: sessao.id_sessao,

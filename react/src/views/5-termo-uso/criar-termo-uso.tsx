@@ -14,20 +14,14 @@ function ehTipoTermo(valor: string | null): valor is TipoTermo {
   return valor === 'cadastro' || valor === 'contribuicao' || valor === 'upgrade_pesquisador';
 }
 
-// Publicar versão NOVA (13-09-2026, pedido do Lucas: "vamos acabar Termos
-// de Uso por completo") - fica registrada como RASCUNHO, `ativo = false`
-// sempre (CORRIGIDO no mesmo dia, rodada seguinte: "não é assim que
-// funciona" - Criar chegou a ativar automaticamente, desativando a versão
-// anterior sozinho; o fluxo real é criar o rascunho, a "staff" revisar
-// (erro de português etc.), e SÓ DEPOIS um administrador tornar essa
-// versão vigente manualmente em Regras do Negócio ou na listagem -
-// ModalAlterarTermoUso ganhou o botão "Tornar vigente" pra isso).
+// Publicar versão NOVA: fica registrada como RASCUNHO, `ativo = false` sempre. O fluxo real é criar o rascunho,
+// a "staff" revisar (erro de português etc.), e SÓ DEPOIS um administrador tornar essa versão vigente
+// manualmente em Regras do Negócio ou na listagem (ModalAlterarTermoUso tem o botão "Tornar vigente" para
+// isso).
 //
-// `tipo` (13-09-2026, separação em termos ativos simultâneos por trilha) -
-// campo obrigatório e imutável depois de criado (ver
-// TermoUsoRequestAlterar). Aceita pré-seleção via `?tipo=contribuicao` na
-// URL - usado pelo link "Publicar nova versão" do card de Termo de Uso em
-// Regras do Negócio, que já sabe qual trilha o admin estava olhando.
+// `tipo`: campo obrigatório e imutável depois de criado (ver TermoUsoRequestAlterar). Aceita pré-seleção via
+// `?tipo=contribuicao` na URL: usado pelo link "Publicar nova versão" do card de Termo de Uso em Regras do
+// Negócio, que já sabe qual trilha o admin estava olhando.
 export function CriarTermoUso({ auth }: PropsPagina) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();

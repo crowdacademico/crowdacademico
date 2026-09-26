@@ -5,16 +5,13 @@ import { RequireAuthGuard } from '../../3-auth/guards/require-auth.guard';
 import { ExportarDadosThrottlerGuard } from '../guards/exportar-dados-throttler.guard';
 import { UsuarioServiceExportarDados } from '../service/usuario.service.exportar-dados';
 
-// LGPD Art. 18 (portabilidade/acesso) - item 3 de PROXIMOS_PASSOS.md.
+// LGPD Art. 18 (portabilidade/acesso), RF-016: exportação de dados.
 //
-// Rota SEM :id, de propósito (decisão de uma IA) - este é, disparado, o
-// endereço mais sensível do sistema: devolve, num pacote só, tudo que
-// existe sobre uma pessoa. Aceitar um identificador na rota abriria a
-// porta pro erro clássico de trocar o número e baixar dado de outra conta
-// (a RLS provavelmente barraria, mas a boa prática é nem deixar o
-// parâmetro existir). O ator é sempre quem está autenticado - se um dia o
-// suporte precisar exportar em nome de alguém, isso vira um endereço
-// SEPARADO, atrás de permissão nomeada, com auditoria própria - nunca este.
+// Rota SEM :id, de propósito: este é o endereço mais sensível do sistema (devolve, num pacote só, tudo que
+// existe sobre uma pessoa). Aceitar um identificador na rota abriria a porta para o erro clássico de trocar o
+// número e baixar dado de outra conta (a RLS provavelmente barraria, mas a boa prática é nem deixar o parâmetro
+// existir). O ator é sempre quem está autenticado; se um dia o suporte precisar exportar em nome de alguém,
+// isso vira um endereço SEPARADO, atrás de permissão nomeada, com auditoria própria, nunca este.
 @Controller('usuario')
 export class UsuarioControllerExportarDados {
   constructor(private readonly service: UsuarioServiceExportarDados) {}

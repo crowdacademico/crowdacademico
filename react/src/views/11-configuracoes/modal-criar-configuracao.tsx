@@ -6,9 +6,8 @@ import { configuracaoApi } from '../../services/11-configuracoes/api/configuraca
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { ConfiguracaoResponse, TipoConfiguracao } from '../../services/11-configuracoes/type/configuracao.type';
 
-// Convenção de chave (10-08-2026) - minúsculas, número e underscore, sem
-// espaço nem acento. Mesma convenção que toda chave já cadastrada no seed
-// segue (07_seed_dados.sql).
+// Convenção de chave: minúsculas, número e underscore, sem espaço nem acento. Mesma convenção que toda chave já
+// cadastrada no seed segue (07_seed_dados.sql).
 const REGEX_CHAVE_VALIDA = /^[a-z0-9_]+$/;
 
 // `<select>` só tem essas 4 opções fixas - guarda de tipo em vez de `as`
@@ -24,9 +23,7 @@ interface ModalCriarConfiguracaoProps {
   aoCriado: (configuracaoCriada: ConfiguracaoResponse) => void;
 }
 
-// Criar - migrado de página pra modal (14-09-2026, continuação da
-// migração CRUD→Modal pedida pelo Lucas). Mesmo conteúdo/mesmas
-// validações de antes (widget de valor muda de cara conforme o tipo).
+// Criar em modal. Widget de valor muda de cara conforme o tipo.
 export function ModalCriarConfiguracao({ auth, aoFechar, aoCriado }: ModalCriarConfiguracaoProps) {
   const { mostrar } = useToast();
   const { erro, reportarErro, limparErro } = useErroToast();
@@ -37,7 +34,7 @@ export function ModalCriarConfiguracao({ auth, aoFechar, aoCriado }: ModalCriarC
   const [enviando, setEnviando] = useState(false);
 
   const chaveInvalida = chave.length > 0 && !REGEX_CHAVE_VALIDA.test(chave);
-  // aria-describedby (23-09-2026): ver modal-criar-area-conhecimento.tsx.
+  // aria-describedby: ver modal-criar-area-conhecimento.tsx.
   const idMensagemChave = useId();
   const idChave = useId();
   const idTipo = useId();
@@ -94,8 +91,7 @@ export function ModalCriarConfiguracao({ auth, aoFechar, aoCriado }: ModalCriarC
     >
       {erro && <p className="texto-erro text-sm font-bold text-center">{erro}</p>}
 
-      {/* Aviso honesto (10-08-2026) - criar uma chave pelo painel não faz o
-          sistema passar a usá-la sozinho. */}
+      {/* Aviso honesto: criar uma chave pelo painel não faz o sistema passar a usá-la sozinho. */}
       <div className="flex items-start gap-2 rounded-lg fundo-info texto-info p-3">
         <i className="fa-solid fa-circle-info mt-0.5 shrink-0"></i>
         <p className="text-xs">

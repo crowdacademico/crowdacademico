@@ -17,10 +17,8 @@ const TITULOS_ACADEMICOS_VALIDOS = [
   'doutor',
 ] as const;
 
-// Separado de PerfilPesquisadorRequestCreate (13-09-2026, achado ao
-// adicionar `aceiteTermos` no self-service) - as duas classes tinham os
-// MESMOS 4 campos, mas são ações diferentes (admin criando perfil PRA
-// OUTRA pessoa, via criar_perfil_pesquisador_para_outro()).
+// Separado de PerfilPesquisadorRequestCreate: as duas classes têm os MESMOS 4 campos, mas são ações diferentes
+// (admin criando perfil PARA OUTRA pessoa, via criar_perfil_pesquisador_para_outro()).
 export class PerfilPesquisadorRequestCreateParaOutro {
   @IsString()
   @IsCpf()
@@ -46,15 +44,12 @@ export class PerfilPesquisadorRequestCreateParaOutro {
   })
   tituloAcademico: (typeof TITULOS_ACADEMICOS_VALIDOS)[number];
 
-  // OPCIONAL, diferente de PerfilPesquisadorRequestCreate (14-09-2026,
-  // pedido do Lucas: o cadeado em T1 deve mostrar o Termo de Uso vigente
-  // ANTES do formulário pra QUALQUER conta, inclusive a de outra pessoa - o
-  // aceite fica registrado em nome do ALVO, não de quem preencheu). Fica
-  // opcional (não `@Equals(true)` como no self-service) pra não quebrar o
-  // card "Criar Perfil Pesquisador" que já existe dentro de
-  // ModalAlterarUsuario - esse caminho antigo continua sem passar este
-  // campo, então continua sem gravar aceite nenhum, exatamente como hoje
-  // (ver comentário em PerfilPesquisadorServiceCreateParaOutro).
+  // OPCIONAL, diferente de PerfilPesquisadorRequestCreate: o cadeado em T1 mostra o Termo de Uso vigente ANTES
+  // do formulário para QUALQUER conta, inclusive a de outra pessoa (o aceite fica registrado em nome do ALVO,
+  // não de quem preencheu). Fica opcional (não `@Equals(true)` como no self-service) para não quebrar o card
+  // "Criar Perfil Pesquisador" que já existe dentro de ModalAlterarUsuario: esse caminho continua sem passar
+  // este campo, então continua sem gravar aceite nenhum (ver comentário em
+  // PerfilPesquisadorServiceCreateParaOutro).
   @IsOptional()
   @IsBoolean()
   aceiteTermos?: boolean;

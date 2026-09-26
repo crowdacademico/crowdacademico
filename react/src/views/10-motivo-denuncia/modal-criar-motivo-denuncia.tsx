@@ -14,8 +14,7 @@ interface ModalCriarMotivoDenunciaProps {
   aoCriado: (motivoCriado: MotivoDenunciaResponse) => void;
 }
 
-// Criar - migrado de página pra modal (14-09-2026, continuação da migração
-// CRUD→Modal pedida pelo Lucas - mesmo padrão de ModalCriarUsuario).
+// Criar em modal, mesmo padrão de ModalCriarUsuario.
 export function ModalCriarMotivoDenuncia({ auth, aoFechar, aoCriado }: ModalCriarMotivoDenunciaProps) {
   const { mostrar } = useToast();
   const { erro, reportarErro, limparErro } = useErroToast();
