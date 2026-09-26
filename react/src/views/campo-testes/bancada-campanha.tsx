@@ -237,81 +237,83 @@ function PainelOrcamentoCronograma({
               </table>
             );
           })()}
-          <table className="crud-tabela mb-3">
-          <thead>
-            <tr>
-              <th>Categoria</th>
-              <th>Valor</th>
-              {podeEditar && <th>Ações</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {orcamento.map((item) => {
-              const emEdicao = idOrcamentoEditando === item.idOrcamento;
-              return (
-                <tr key={item.idOrcamento}>
-                  {emEdicao ? (
-                    <>
-                      <td>
-                        <input
-                          type="text"
-                          value={formEdicaoOrcamento.categoria}
-                          onChange={(e) => setFormEdicaoOrcamento({ ...formEdicaoOrcamento, categoria: e.target.value })}
-                          className="input-padrao"
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="number"
-                          value={formEdicaoOrcamento.valor}
-                          onChange={(e) => setFormEdicaoOrcamento({ ...formEdicaoOrcamento, valor: e.target.value })}
-                          className="input-padrao"
-                        />
-                      </td>
-                      {podeEditar && (
-                        <td>
-                          <div className="crud-tabela__acoes">
-                            <AcaoLinha rotulo="Salvar" icone="fa-check" variante="alterar" onClick={salvarEdicaoOrcamento} />
-                            <AcaoLinha rotulo="Cancelar" icone="fa-xmark" onClick={() => setIdOrcamentoEditando(null)} />
-                          </div>
-                        </td>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      <td>{item.categoria}</td>
-                      <td>{formatarMoeda(item.valor)}</td>
-                      {podeEditar && (
-                        <td>
-                          <div className="crud-tabela__acoes">
-                            <AcaoLinha rotulo="Alterar" icone="fa-pen" variante="alterar" onClick={() => iniciarEdicaoOrcamento(item)} />
-                            <AcaoLinha rotulo="Consultar" icone="fa-eye" onClick={() => setItemOrcamentoConsultado(item)} />
-                            <AcaoLinha rotulo="Excluir" icone="fa-trash" variante="excluir" onClick={() => removerItemOrcamento(item.idOrcamento)} />
-                          </div>
-                        </td>
-                      )}
-                    </>
-                  )}
-                </tr>
-              );
-            })}
-            {podeEditar && (
+          <div className="crud-tabela__wrapper">
+            <table className="crud-tabela mb-3">
+            <thead>
               <tr>
-                <td>
-                  <input type="text" value={novoItemOrcamento.categoria} onChange={(e) => setNovoItemOrcamento({ ...novoItemOrcamento, categoria: e.target.value })} className="input-padrao" placeholder="Categoria" />
-                </td>
-                <td>
-                  <input type="number" value={novoItemOrcamento.valor} onChange={(e) => setNovoItemOrcamento({ ...novoItemOrcamento, valor: e.target.value })} className="input-padrao" placeholder="Valor" />
-                </td>
-                <td>
-                  <button type="button" className="btn btn-sucesso text-xs" onClick={adicionarItemOrcamento}>
-                    + adicionar
-                  </button>
-                </td>
+                <th>Categoria</th>
+                <th>Valor</th>
+                {podeEditar && <th>Ações</th>}
               </tr>
-            )}
-          </tbody>
-          </table>
+            </thead>
+            <tbody>
+              {orcamento.map((item) => {
+                const emEdicao = idOrcamentoEditando === item.idOrcamento;
+                return (
+                  <tr key={item.idOrcamento}>
+                    {emEdicao ? (
+                      <>
+                        <td>
+                          <input
+                            type="text"
+                            value={formEdicaoOrcamento.categoria}
+                            onChange={(e) => setFormEdicaoOrcamento({ ...formEdicaoOrcamento, categoria: e.target.value })}
+                            className="input-padrao"
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="number"
+                            value={formEdicaoOrcamento.valor}
+                            onChange={(e) => setFormEdicaoOrcamento({ ...formEdicaoOrcamento, valor: e.target.value })}
+                            className="input-padrao"
+                          />
+                        </td>
+                        {podeEditar && (
+                          <td>
+                            <div className="crud-tabela__acoes">
+                              <AcaoLinha rotulo="Salvar" icone="fa-check" variante="alterar" onClick={salvarEdicaoOrcamento} />
+                              <AcaoLinha rotulo="Cancelar" icone="fa-xmark" onClick={() => setIdOrcamentoEditando(null)} />
+                            </div>
+                          </td>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <td>{item.categoria}</td>
+                        <td>{formatarMoeda(item.valor)}</td>
+                        {podeEditar && (
+                          <td>
+                            <div className="crud-tabela__acoes">
+                              <AcaoLinha rotulo="Alterar" icone="fa-pen" variante="alterar" onClick={() => iniciarEdicaoOrcamento(item)} />
+                              <AcaoLinha rotulo="Consultar" icone="fa-eye" onClick={() => setItemOrcamentoConsultado(item)} />
+                              <AcaoLinha rotulo="Excluir" icone="fa-trash" variante="excluir" onClick={() => removerItemOrcamento(item.idOrcamento)} />
+                            </div>
+                          </td>
+                        )}
+                      </>
+                    )}
+                  </tr>
+                );
+              })}
+              {podeEditar && (
+                <tr>
+                  <td>
+                    <input type="text" value={novoItemOrcamento.categoria} onChange={(e) => setNovoItemOrcamento({ ...novoItemOrcamento, categoria: e.target.value })} className="input-padrao" placeholder="Categoria" />
+                  </td>
+                  <td>
+                    <input type="number" value={novoItemOrcamento.valor} onChange={(e) => setNovoItemOrcamento({ ...novoItemOrcamento, valor: e.target.value })} className="input-padrao" placeholder="Valor" />
+                  </td>
+                  <td>
+                    <button type="button" className="btn btn-sucesso text-xs" onClick={adicionarItemOrcamento}>
+                      + adicionar
+                    </button>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+            </table>
+          </div>
         </>
       )}
 
@@ -333,82 +335,84 @@ function PainelOrcamentoCronograma({
               </tbody>
             </table>
           )}
-        <table className="crud-tabela mb-3">
-          <thead>
-            <tr>
-              <th>Título</th>
-              <th>Data prevista</th>
-              {podeEditar && <th>Ações</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {cronograma.map((marco) => {
-              const emEdicao = idMarcoEditando === marco.idMarco;
-              return (
-                <tr key={marco.idMarco}>
-                  {emEdicao ? (
-                    <>
-                      <td>
-                        <input
-                          type="text"
-                          value={formEdicaoMarco.titulo}
-                          onChange={(e) => setFormEdicaoMarco({ ...formEdicaoMarco, titulo: e.target.value })}
-                          className="input-padrao"
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="date"
-                          value={formEdicaoMarco.dataPrevista}
-                          min={dataInicioCampanha}
-                          onChange={(e) => setFormEdicaoMarco({ ...formEdicaoMarco, dataPrevista: e.target.value })}
-                          className="input-padrao"
-                        />
-                      </td>
-                      {podeEditar && (
-                        <td>
-                          <div className="crud-tabela__acoes">
-                            <AcaoLinha rotulo="Salvar" icone="fa-check" variante="alterar" onClick={salvarEdicaoMarco} />
-                            <AcaoLinha rotulo="Cancelar" icone="fa-xmark" onClick={() => setIdMarcoEditando(null)} />
-                          </div>
-                        </td>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      <td>{marco.titulo}</td>
-                      <td>{new Date(marco.dataPrevista).toLocaleDateString('pt-BR')}</td>
-                      {podeEditar && (
-                        <td>
-                          <div className="crud-tabela__acoes">
-                            <AcaoLinha rotulo="Alterar" icone="fa-pen" variante="alterar" onClick={() => iniciarEdicaoMarco(marco)} />
-                            <AcaoLinha rotulo="Consultar" icone="fa-eye" onClick={() => setMarcoConsultado(marco)} />
-                            <AcaoLinha rotulo="Excluir" icone="fa-trash" variante="excluir" onClick={() => removerMarco(marco.idMarco)} />
-                          </div>
-                        </td>
-                      )}
-                    </>
-                  )}
-                </tr>
-              );
-            })}
-            {podeEditar && (
+        <div className="crud-tabela__wrapper">
+          <table className="crud-tabela mb-3">
+            <thead>
               <tr>
-                <td>
-                  <input type="text" value={novoMarco.titulo} onChange={(e) => setNovoMarco({ ...novoMarco, titulo: e.target.value })} className="input-padrao" placeholder="Título" />
-                </td>
-                <td>
-                  <input type="date" value={novoMarco.dataPrevista} min={dataInicioCampanha} onChange={(e) => setNovoMarco({ ...novoMarco, dataPrevista: e.target.value })} className="input-padrao" />
-                </td>
-                <td>
-                  <button type="button" className="btn btn-secondary text-xs" onClick={adicionarMarco}>
-                    + adicionar
-                  </button>
-                </td>
+                <th>Título</th>
+                <th>Data prevista</th>
+                {podeEditar && <th>Ações</th>}
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {cronograma.map((marco) => {
+                const emEdicao = idMarcoEditando === marco.idMarco;
+                return (
+                  <tr key={marco.idMarco}>
+                    {emEdicao ? (
+                      <>
+                        <td>
+                          <input
+                            type="text"
+                            value={formEdicaoMarco.titulo}
+                            onChange={(e) => setFormEdicaoMarco({ ...formEdicaoMarco, titulo: e.target.value })}
+                            className="input-padrao"
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="date"
+                            value={formEdicaoMarco.dataPrevista}
+                            min={dataInicioCampanha}
+                            onChange={(e) => setFormEdicaoMarco({ ...formEdicaoMarco, dataPrevista: e.target.value })}
+                            className="input-padrao"
+                          />
+                        </td>
+                        {podeEditar && (
+                          <td>
+                            <div className="crud-tabela__acoes">
+                              <AcaoLinha rotulo="Salvar" icone="fa-check" variante="alterar" onClick={salvarEdicaoMarco} />
+                              <AcaoLinha rotulo="Cancelar" icone="fa-xmark" onClick={() => setIdMarcoEditando(null)} />
+                            </div>
+                          </td>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <td>{marco.titulo}</td>
+                        <td>{new Date(marco.dataPrevista).toLocaleDateString('pt-BR')}</td>
+                        {podeEditar && (
+                          <td>
+                            <div className="crud-tabela__acoes">
+                              <AcaoLinha rotulo="Alterar" icone="fa-pen" variante="alterar" onClick={() => iniciarEdicaoMarco(marco)} />
+                              <AcaoLinha rotulo="Consultar" icone="fa-eye" onClick={() => setMarcoConsultado(marco)} />
+                              <AcaoLinha rotulo="Excluir" icone="fa-trash" variante="excluir" onClick={() => removerMarco(marco.idMarco)} />
+                            </div>
+                          </td>
+                        )}
+                      </>
+                    )}
+                  </tr>
+                );
+              })}
+              {podeEditar && (
+                <tr>
+                  <td>
+                    <input type="text" value={novoMarco.titulo} onChange={(e) => setNovoMarco({ ...novoMarco, titulo: e.target.value })} className="input-padrao" placeholder="Título" />
+                  </td>
+                  <td>
+                    <input type="date" value={novoMarco.dataPrevista} min={dataInicioCampanha} onChange={(e) => setNovoMarco({ ...novoMarco, dataPrevista: e.target.value })} className="input-padrao" />
+                  </td>
+                  <td>
+                    <button type="button" className="btn btn-secondary text-xs" onClick={adicionarMarco}>
+                      + adicionar
+                    </button>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
         </>
       )}
 
@@ -621,7 +625,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
   })();
 
   // Opções do dropdown "Status" - só os valores que já aparecem nos
-  // dados (mesmo sniff de GenericTable/bancada-pesquisador.tsx), sem
+  // dados (mesma ideia das facetas de GenericTable e de bancada-pesquisador.tsx), sem
   // lista fixa do enum (evita hardcoded - se um status novo aparecer, o
   // facet já mostra sozinho).
   const opcoesStatus = [...new Set(campanhas.map((c) => c.status))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
@@ -941,7 +945,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
     <div className="admin-content-painel">
       <section className="crud-secao">
       <div className="crud-secao__cabecalho">
-        <h2 className="titulo-secao">Campo de Testes - Bancada da Campanha</h2>
+        <h1 className="titulo-secao">Campo de Testes - Bancada da Campanha</h1>
         <div className="crud-secao__acao-topo">
           <button type="button" className="btn btn-primary" onClick={() => setCriandoCampanha(true)}>
             Criar
@@ -950,7 +954,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
       </div>
 
       <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
-        <h3 className="subtitulo">Campanhas</h3>
+        <h2 className="subtitulo">Campanhas</h2>
         <div className="flex items-center gap-3 flex-wrap">
           <label className="text-xs flex items-center gap-1.5">
             <input
@@ -994,69 +998,71 @@ export function BancadaCampanha({ auth }: PropsPagina) {
         ]}
       />
 
-      <table className="crud-tabela mb-2">
-        <thead>
-          <tr>
-            <th className="crud-tabela__coluna-id crud-tabela__celula--centralizada">id</th>
-            <th>título</th>
-            <th className="crud-tabela__celula--centralizada">status</th>
-            <th>dono</th>
-            <th className="crud-tabela__celula--centralizada">meta</th>
-            <th className="crud-tabela__celula--centralizada">Ações</th>
-          </tr>
-        </thead>
-        <tbody>
-          {campanhasPagina.length === 0 && (
+      <div className="crud-tabela__wrapper">
+        <table className="crud-tabela mb-2">
+          <thead>
             <tr>
-              <td colSpan={6} className="texto-fraco">{filtroTexto ? 'Nenhum registro bate com o filtro.' : 'Nenhum registro.'}</td>
+              <th className="crud-tabela__coluna-id crud-tabela__celula--centralizada">id</th>
+              <th>título</th>
+              <th className="crud-tabela__celula--centralizada">status</th>
+              <th>dono</th>
+              <th className="crud-tabela__celula--centralizada">meta</th>
+              <th className="crud-tabela__celula--centralizada">Ações</th>
             </tr>
-          )}
-          {campanhasPagina.map((item) => {
-            const bloqueada = CAMPANHA_BLOQUEADA(item.idCampanha);
-            return (
-                <tr key={item.idCampanha} className={bloqueada ? 'texto-fraco' : undefined}>
-                  <td className="crud-tabela__coluna-id crud-tabela__celula--centralizada" style={bloqueada ? { textDecoration: 'line-through' } : undefined}>
-                    {item.idCampanha}
-                  </td>
-                  <td style={bloqueada ? { textDecoration: 'line-through' } : undefined}>{item.titulo}</td>
-                  <td
-                    className="crud-tabela__celula--centralizada"
-                    style={bloqueada ? { textDecoration: 'line-through' } : undefined}
-                  >
-                    <span className={`badge ${classeBadgeStatusCampanha(item.status)}`}>
-                      {ROTULO_STATUS_CAMPANHA[item.status]}
-                    </span>
-                  </td>
-                  <td style={bloqueada ? { textDecoration: 'line-through' } : undefined}>{nomeDe(item.idUsuario)}</td>
-                  <td className="crud-tabela__celula--centralizada">{formatarMoeda(item.metaFinanceira)}</td>
-                  {/* A coluna "Escolher" não existe; o cadeado continua só em Alterar/Excluir; Consultar é
-                      leitura pura, sem risco nenhum de estragar a demo. */}
-                  <td className="crud-tabela__celula--centralizada">
-                    <div className="crud-tabela__acoes">
-                      <AcaoLinha
-                        rotulo="Alterar"
-                        icone="fa-pen"
-                        variante="alterar"
-                        onClick={() => iniciarEdicaoCampanha(item)}
-                      />
-                      <AcaoLinha
-                        rotulo="Consultar"
-                        icone="fa-eye"
-                        onClick={() => setCampanhaConsultada(item)}
-                      />
-                      <AcaoLinha
-                        rotulo="Excluir"
-                        icone="fa-trash"
-                        variante="excluir"
-                        onClick={() => setCampanhaExcluindo(item)}
-                      />
-                    </div>
-                  </td>
-                </tr>
-            );
-          })}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {campanhasPagina.length === 0 && (
+              <tr>
+                <td colSpan={6} className="texto-fraco">{filtroTexto ? 'Nenhum registro bate com o filtro.' : 'Nenhum registro.'}</td>
+              </tr>
+            )}
+            {campanhasPagina.map((item) => {
+              const bloqueada = CAMPANHA_BLOQUEADA(item.idCampanha);
+              return (
+                  <tr key={item.idCampanha} className={bloqueada ? 'texto-fraco' : undefined}>
+                    <td className="crud-tabela__coluna-id crud-tabela__celula--centralizada" style={bloqueada ? { textDecoration: 'line-through' } : undefined}>
+                      {item.idCampanha}
+                    </td>
+                    <td style={bloqueada ? { textDecoration: 'line-through' } : undefined}>{item.titulo}</td>
+                    <td
+                      className="crud-tabela__celula--centralizada"
+                      style={bloqueada ? { textDecoration: 'line-through' } : undefined}
+                    >
+                      <span className={`badge ${classeBadgeStatusCampanha(item.status)}`}>
+                        {ROTULO_STATUS_CAMPANHA[item.status]}
+                      </span>
+                    </td>
+                    <td style={bloqueada ? { textDecoration: 'line-through' } : undefined}>{nomeDe(item.idUsuario)}</td>
+                    <td className="crud-tabela__celula--centralizada">{formatarMoeda(item.metaFinanceira)}</td>
+                    {/* A coluna "Escolher" não existe; o cadeado continua só em Alterar/Excluir; Consultar é
+                        leitura pura, sem risco nenhum de estragar a demo. */}
+                    <td className="crud-tabela__celula--centralizada">
+                      <div className="crud-tabela__acoes">
+                        <AcaoLinha
+                          rotulo="Alterar"
+                          icone="fa-pen"
+                          variante="alterar"
+                          onClick={() => iniciarEdicaoCampanha(item)}
+                        />
+                        <AcaoLinha
+                          rotulo="Consultar"
+                          icone="fa-eye"
+                          onClick={() => setCampanhaConsultada(item)}
+                        />
+                        <AcaoLinha
+                          rotulo="Excluir"
+                          icone="fa-trash"
+                          variante="excluir"
+                          onClick={() => setCampanhaExcluindo(item)}
+                        />
+                      </div>
+                    </td>
+                  </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
 
       {/* Consultar/Alterar/Excluir em MODAL, mesmo padrão de T1 (ModalFicha + SecaoFicha/CampoFicha).
           Diferença de T1: não existe página real de Alterar/Excluir Campanha no painel admin para copiar (só

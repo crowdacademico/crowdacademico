@@ -97,18 +97,20 @@ export function FichaConsulta({
 // estreita (1/3 de uma página larga, ex.: card "Metadados" do Alterar Usuário), o grid iria para 2 colunas
 // mesmo sem espaço de verdade, cada metade ficando apertada (e-mail comprido esbarrava na borda do card). Sem
 // essa prop, comportamento igual ao padrão.
+// `nivel`: dentro de modal (título h2) a seção é h3; numa página (Minha Conta, título h1) é h2, para os
+// títulos não pularem nível. Mesmo visual nos dois.
 interface SecaoFichaProps {
   titulo: string;
   children?: ReactNode;
   colunas?: 1 | 2;
+  nivel?: 2 | 3;
 }
 
-export function SecaoFicha({ titulo, children, colunas = 2 }: SecaoFichaProps) {
+export function SecaoFicha({ titulo, children, colunas = 2, nivel = 3 }: SecaoFichaProps) {
+  const Titulo = nivel === 2 ? 'h2' : 'h3';
   return (
     <div>
-      <h3 className="titulo-bloco mb-3 pb-2 border-b borda-padrao">
-        {titulo}
-      </h3>
+      <Titulo className="titulo-bloco mb-3 pb-2 border-b borda-padrao">{titulo}</Titulo>
       <div
         className={
           'grid gap-x-6 gap-y-4 ' + (colunas === 1 ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2')

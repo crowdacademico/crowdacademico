@@ -71,16 +71,11 @@ export function ListarPesquisadores({ auth }: PropsPagina) {
       <GenericTable
         titulo="Pesquisadores"
         colunas={[
-          { chave: 'idUsuario', rotulo: 'id' },
-          { chave: 'nome', rotulo: 'nome' },
-          // Largura igual nas 3 colunas (título, status e score): mesma causa e mesmo remédio de Tipos de Link
-          // ("9.25rem" para as 4 colunas Sim/Não): sem largura fixa, table-layout: auto mede cada coluna pelo
-          // próprio maior valor ("Especialista" é bem mais comprido que "Doutor"/"Ativo"), então cada uma
-          // ficaria com um tamanho diferente. `centralizar` em título também (não entraria sozinho: é texto,
-          // não número/booleano) para alinhar com status/score, que já centralizam.
-          { chave: 'tituloAcademico', rotulo: 'título', centralizar: true, largura: '8rem' },
-          { chave: 'statusPesquisador', rotulo: 'status', centralizar: true, largura: '8rem' },
-          { chave: 'scoreAtual', rotulo: 'score', largura: '8rem' },
+          { chave: 'idUsuario', rotulo: 'id', tipo: 'id' },
+          { chave: 'nome', rotulo: 'nome', tipo: 'nome' },
+          { chave: 'tituloAcademico', rotulo: 'título', tipo: 'status' },
+          { chave: 'statusPesquisador', rotulo: 'status', tipo: 'status' },
+          { chave: 'scoreAtual', rotulo: 'score', tipo: 'numero' },
         ]}
         chavePrimaria="idUsuario"
         listar={listarPesquisadores}

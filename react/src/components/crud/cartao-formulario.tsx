@@ -63,7 +63,7 @@ export function CartaoFormulario({
             >
               <i className={'fa-solid ' + icone}></i>
             </div>
-            <h2 className="titulo-pagina mb-2">{titulo}</h2>
+            <h1 className="titulo-pagina mb-2">{titulo}</h1>
             {subtitulo && <p className="text-sm texto-padrao font-medium">{subtitulo}</p>}
           </div>
 

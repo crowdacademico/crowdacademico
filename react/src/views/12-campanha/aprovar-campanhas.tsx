@@ -1,17 +1,14 @@
 import { useCallback, useState } from 'react';
 import { GenericTable } from '../../components/crud/generic-table';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
-import { formatarData, formatarMoeda } from '../../services/constant/utils/formatacao.util';
 import { ModalRevisarCampanha } from './modal-revisar-campanha';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { CampanhaResponse } from '../../services/12-campanha/type/campanha.type';
 
-interface LinhaFila extends Omit<CampanhaResponse, 'metaFinanceira'> {
+interface LinhaFila extends CampanhaResponse {
   pesquisador: string;
   area: string;
   atencao: string;
-  metaFinanceira: string;
-  criadaEm: string;
 }
 
 // Fila de aprovação do admin (grupo MODERAÇÃO do menu): só campanhas 'aguardando_aprovacao', com o sinal de
@@ -28,8 +25,6 @@ export function AprovarCampanhas({ auth }: PropsPagina) {
       pesquisador: campanha.nomePesquisador ?? `#${campanha.idUsuario}`,
       area: campanha.nomeArea ?? `#${campanha.idAreaConhecimento}`,
       atencao: campanha.precisaRevisaoScore ? 'Score baixo' : '',
-      metaFinanceira: formatarMoeda(campanha.metaFinanceira),
-      criadaEm: formatarData(campanha.criadoEm),
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auth.authFetch, chaveRecarga]);
@@ -39,12 +34,12 @@ export function AprovarCampanhas({ auth }: PropsPagina) {
       <GenericTable<LinhaFila>
         titulo="Aprovar Campanhas"
         colunas={[
-          { chave: 'idCampanha', rotulo: 'id' },
-          { chave: 'titulo', rotulo: 'título', largura: '28rem' },
-          { chave: 'pesquisador', rotulo: 'pesquisador', centralizar: true, largura: '10rem' },
-          { chave: 'atencao', rotulo: 'atenção', centralizar: true, largura: '8rem' },
-          { chave: 'metaFinanceira', rotulo: 'meta', centralizar: true, largura: '10rem' },
-          { chave: 'criadaEm', rotulo: 'criada em', centralizar: true, largura: '9rem' },
+          { chave: 'idCampanha', rotulo: 'id', tipo: 'id' },
+          { chave: 'titulo', rotulo: 'título', tipo: 'nome' },
+          { chave: 'pesquisador', rotulo: 'pesquisador', tipo: 'texto' },
+          { chave: 'atencao', rotulo: 'atenção', tipo: 'status' },
+          { chave: 'metaFinanceira', rotulo: 'meta', tipo: 'dinheiro' },
+          { chave: 'criadoEm', rotulo: 'criada em', tipo: 'data' },
         ]}
         chavePrimaria="idCampanha"
         listar={listarFila}

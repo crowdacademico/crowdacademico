@@ -23,9 +23,9 @@ export function Footer() {
         </div>
 
         <div>
-          <h4 className="text-white font-black mb-6 text-[11px] tracking-widest uppercase">
+          <h2 className="font-sans text-white font-black mb-6 text-[11px] tracking-widest uppercase">
             Explore Projetos
-          </h4>
+          </h2>
           <ul className="space-y-4 text-sm font-medium">
             <li>
               <a href="#" className="hover-texto-marca transition-colors flex items-center gap-2">
@@ -49,9 +49,9 @@ export function Footer() {
         </div>
 
         <div>
-          <h4 className="text-white font-black mb-6 text-[11px] tracking-widest uppercase">
+          <h2 className="font-sans text-white font-black mb-6 text-[11px] tracking-widest uppercase">
             Para Pesquisadores
-          </h4>
+          </h2>
           <ul className="space-y-4 text-sm font-medium">
             <li>
               <a href="#" className="hover-texto-marca transition-colors flex items-center gap-2">
@@ -75,9 +75,9 @@ export function Footer() {
         </div>
 
         <div>
-          <h4 className="text-white font-black mb-6 text-[11px] tracking-widest uppercase">
+          <h2 className="font-sans text-white font-black mb-6 text-[11px] tracking-widest uppercase">
             Segurança e Pagamentos
-          </h4>
+          </h2>
           <div className="flex gap-5 text-3xl text-slate-600 mb-6">
             <i
               className="fa-brands fa-pix hover:text-emerald-500 transition-colors cursor-pointer"

@@ -94,11 +94,11 @@ export function ListarUsuarios({ auth }: PropsPagina) {
           </button>
         }
         colunas={[
-          { chave: 'idUsuario', rotulo: 'id' },
-          { chave: 'nome', rotulo: 'nome' },
-          { chave: 'papel', rotulo: 'papel' },
-          { chave: 'email', rotulo: 'email' },
-          { chave: 'emailVerificado', rotulo: 'e-mail verificado', quebrarRotulo: true },
+          { chave: 'idUsuario', rotulo: 'id', tipo: 'id' },
+          { chave: 'nome', rotulo: 'nome', tipo: 'nome' },
+          { chave: 'papel', rotulo: 'papel', tipo: 'texto' },
+          { chave: 'email', rotulo: 'email', tipo: 'texto' },
+          { chave: 'emailVerificado', rotulo: 'e-mail verificado', tipo: 'simNao', quebrarRotulo: true },
         ]}
         chavePrimaria="idUsuario"
         listar={listarUsuarios}

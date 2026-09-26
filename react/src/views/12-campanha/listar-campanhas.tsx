@@ -7,18 +7,14 @@ import {
   ROTULO_STATUS_CAMPANHA,
 } from '../../services/12-campanha/constants/status-campanha.constants';
 import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
-import { formatarMoeda } from '../../services/constant/utils/formatacao.util';
 import { ModalConsultarCampanha } from './modal-consultar-campanha';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { CampanhaResponse } from '../../services/12-campanha/type/campanha.type';
 
-interface CampanhaLinha extends Omit<CampanhaResponse, 'status' | 'metaFinanceira' | 'valorBrutoArrecadado'> {
+interface CampanhaLinha extends Omit<CampanhaResponse, 'status'> {
   status: string;
   pesquisador: string;
   area: string;
-  atencao: string;
-  metaFinanceira: string;
-  valorBrutoArrecadado: string;
 }
 
 // Aba "Campanhas" do painel admin: rota /admin/campanhas. Sem Alterar/Excluir aqui: os campos editáveis
@@ -29,9 +25,8 @@ export function ListarCampanhas({ auth }: PropsPagina) {
   const [consultandoId, setConsultandoId] = useState<number | null>(null);
 
   // Nome do pesquisador e da área vêm prontos do backend (a tela não baixa o catálogo inteiro de usuários e de
-  // áreas só para resolver dois nomes). Se a RLS esconder o usuário, cai no id. "atenção" só aparece para quem
-  // pode aprovar, na fila de aprovação, quando o pesquisador está abaixo do score mínimo (sinal, nunca trava
-  // nada).
+  // áreas só para resolver dois nomes). Se a RLS esconder o usuário, cai no id. O sinal de score baixo
+  // ("atenção") fica só na fila de aprovação (aprovar-campanhas.tsx), onde a decisão acontece.
   const listarCampanhas = useCallback(async (): Promise<CampanhaLinha[]> => {
     const campanhas = await campanhaApi.listar(auth.authFetch);
 
@@ -40,9 +35,6 @@ export function ListarCampanhas({ auth }: PropsPagina) {
       status: ROTULO_STATUS_CAMPANHA[campanha.status],
       pesquisador: campanha.nomePesquisador ?? `#${campanha.idUsuario}`,
       area: campanha.nomeArea ?? `#${campanha.idAreaConhecimento}`,
-      atencao: campanha.precisaRevisaoScore ? 'Score baixo' : '',
-      metaFinanceira: formatarMoeda(campanha.metaFinanceira),
-      valorBrutoArrecadado: formatarMoeda(campanha.valorBrutoArrecadado),
     }));
   }, [auth.authFetch]);
 
@@ -55,26 +47,13 @@ export function ListarCampanhas({ auth }: PropsPagina) {
     <div className="admin-content-painel">
       <GenericTable
         titulo="Campanhas"
-        // Largura igual nas 4 colunas curtas (mesma ideia de Tipos de Link/Pesquisadores): sem isso
-        // "status"/"pesquisador"/"meta"/"arrecadado" ficariam cada um com um tamanho (e "arrecadado" nem tinha
-        // `centralizar`, inconsistência com "meta", ao lado). 10rem (não 8rem como em Pesquisadores) porque
-        // "status" aqui tem valor bem mais longo que um badge normal (ex.: "Encerrado (moderação)", 22
-        // caracteres): ainda pode quebrar em 2 linhas nesse caso raro (nenhum white-space:nowrap forçado), só
-        // não pede uma coluna gigante à toa para os valores curtos, que são a maioria.
-        // "título" também tem `largura` própria (18rem): sem largura nenhuma, seria a ÚNICA coluna "livre" da
-        // tabela e absorveria sozinha TODO o espaço sobrando, já que as outras 4 são fixas (mesmo problema que
-        // "nome"/"papel" tinham em Usuários antes de darmos largura fixa às vizinhas). Sem `centralizar`: é a
-        // coluna principal de texto (o "nome" desta tabela), fica alinhada à esquerda. O texto quebra
-        // livremente dentro dos 18rem (nenhum nowrap forçado): título de campanha comprido ganha 2-3 linhas em
-        // vez de esticar a coluna.
         colunas={[
-          { chave: 'idCampanha', rotulo: 'id' },
-          { chave: 'titulo', rotulo: 'título', largura: '28rem' },
-          { chave: 'status', rotulo: 'status', centralizar: true, largura: '10rem' },
-          { chave: 'pesquisador', rotulo: 'pesquisador', centralizar: true, largura: '10rem' },
-          { chave: 'atencao', rotulo: 'atenção', centralizar: true, largura: '8rem' },
-          { chave: 'metaFinanceira', rotulo: 'meta', centralizar: true, largura: '10rem' },
-          { chave: 'valorBrutoArrecadado', rotulo: 'arrecadado', centralizar: true, largura: '10rem' },
+          { chave: 'idCampanha', rotulo: 'id', tipo: 'id' },
+          { chave: 'titulo', rotulo: 'título', tipo: 'nome' },
+          { chave: 'status', rotulo: 'status', tipo: 'status' },
+          { chave: 'pesquisador', rotulo: 'pesquisador', tipo: 'texto' },
+          { chave: 'metaFinanceira', rotulo: 'meta', tipo: 'dinheiro' },
+          { chave: 'valorBrutoArrecadado', rotulo: 'arrecadado', tipo: 'dinheiro' },
         ]}
         chavePrimaria="idCampanha"
         listar={listarCampanhas}

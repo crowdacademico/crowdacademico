@@ -47,7 +47,7 @@ export function LoginPage({ auth }: PropsPagina) {
           <div className="w-14 h-14 fundo-marca rounded-2xl mx-auto flex items-center justify-center text-white font-bold text-2xl mb-5 shadow-lg relative z-10">
             <i className="fa-solid fa-flask"></i>
           </div>
-          <h2 className="text-3xl font-serif font-bold texto-forte mb-2 relative z-10">Bem-vindo(a)</h2>
+          <h1 className="text-3xl font-serif font-bold texto-forte mb-2 relative z-10">Bem-vindo(a)</h1>
           <p className="text-sm texto-fraco font-medium relative z-10">
             Acesse sua conta para apoiar a ciência brasileira.
           </p>

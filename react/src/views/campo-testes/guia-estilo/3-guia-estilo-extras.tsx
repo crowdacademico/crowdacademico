@@ -172,10 +172,11 @@ export function InterativosGlobais() {
 
       <GenericTable<LinhaExemplo>
         titulo="Exemplo de tabela"
+        nivelTitulo={2}
         colunas={[
-          { chave: 'id', rotulo: 'id' },
-          { chave: 'nome', rotulo: 'nome' },
-          { chave: 'status', rotulo: 'status', centralizar: true },
+          { chave: 'id', rotulo: 'id', tipo: 'id' },
+          { chave: 'nome', rotulo: 'nome', tipo: 'nome' },
+          { chave: 'status', rotulo: 'status', tipo: 'status' },
         ]}
         chavePrimaria="id"
         listar={listarExemplo}

@@ -8,7 +8,7 @@ export function DashboardIdentidadeVisual() {
       <div className="w-14 h-14 fundo-sutil rounded-2xl mx-auto flex items-center justify-center texto-fraco text-2xl mb-4">
         <i className="fa-solid fa-image"></i>
       </div>
-      <h3 className="subtitulo mb-2">Ainda não implementado</h3>
+      <h2 className="subtitulo mb-2">Ainda não implementado</h2>
       <p className="text-sm texto-fraco max-w-md mx-auto">
         O módulo de upload de arquivo (25-arquivo) já existe - o que falta é construir esta
         tela de gerenciar logo/favicon. O caminho já está desenhado: um upload + duas chaves

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Tooltip } from '../../components/layout/tooltip';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { dashboardApi } from '../../services/admin/api/dashboard.api';
-import { formatarMoeda } from '../../services/constant/utils/formatacao.util';
+import { formatarReaisSemSimbolo } from '../../services/constant/utils/formatacao.util';
 import { DashboardIdentidadeVisual } from './dashboard-identidade-visual';
 import { DashboardRegrasNegocio } from './dashboard-regras-negocio';
 import { DashboardSaude } from './dashboard-saude';
@@ -31,24 +31,39 @@ const ABAS: { chave: AbaChave; rotulo: string; icone: string }[] = [
 // Card de total: só rótulo pequeno em cinza maiúsculo + número grande, sem ícone/fundo colorido: é assim que o
 // Experiment.com mostra número, cor vira acento raro, não preenchimento. `valor === null` = módulo ainda não
 // existe (hoje só notificação): mostra "-" em vez de esconder o card ou fingir que é 0. Borda slate-300, o
-// mesmo tom das bordas de tabela.
+// mesmo tom das bordas de tabela. `moeda`: o "R$" sai menor, na frente, e o número nunca quebra no meio
+// ("R$ 257.800,00" inteiro no tamanho grande não cabia no card e quebrava o último zero para a linha de baixo).
 interface CardMetricaProps {
   rotulo: string;
   valor: number | string | null;
+  moeda?: boolean;
 }
 
-function CardMetrica({ rotulo, valor }: CardMetricaProps) {
+function CardMetrica({ rotulo, valor, moeda = false }: CardMetricaProps) {
   return (
-    <div className="fundo-cartao border borda-forte rounded-xl shadow-sm p-5 min-w-0 break-words">
+    <div className="@container fundo-cartao border borda-forte rounded-xl shadow-sm p-5 min-w-0 break-words">
       <div className="rotulo-leitura mb-1">
         {rotulo}
       </div>
       <div
         className={
-          'text-3xl font-extrabold ' + (valor === null ? 'texto-fraco opacity-50' : 'texto-forte')
+          // Moeda: acompanha a largura do card (`cqi`), entre text-base e text-3xl, com a mesma altura de
+          // linha do text-3xl, para caber no celular sem desalinhar dos cards vizinhos.
+          (moeda ? 'text-[clamp(1rem,13.5cqi,1.875rem)] leading-9 ' : 'text-3xl ') +
+          'font-extrabold whitespace-nowrap ' +
+          (valor === null ? 'texto-fraco opacity-50' : 'texto-forte')
         }
       >
-        {valor === null ? '-' : valor}
+        {valor === null ? (
+          '-'
+        ) : moeda ? (
+          <>
+            <span className="text-lg mr-1">R$</span>
+            {formatarReaisSemSimbolo(valor)}
+          </>
+        ) : (
+          valor
+        )}
       </div>
     </div>
   );
@@ -114,7 +129,7 @@ export function Dashboard({ auth }: DashboardProps) {
     // (Usuários/Papéis/Configurações) não sentem esse aperto porque o conteúdo delas já nasce dentro de
     // .admin-content-painel (padding de 2rem). Por isso ganha um respiro extra só aqui.
     <div className="space-y-6 pt-6">
-      <h2 className="text-3xl font-serif font-bold texto-forte">Dashboard</h2>
+      <h1 className="text-3xl font-serif font-bold texto-forte">Dashboard</h1>
 
       <div className="flex gap-1 border-b borda-padrao overflow-x-auto">
         {ABAS.map((aba) => (
@@ -180,7 +195,7 @@ export function Dashboard({ auth }: DashboardProps) {
                 <CardMetrica rotulo="Configurações" valor={resumo.totalConfiguracoes} />
                 <CardMetrica rotulo="Campanhas" valor={resumo.totalCampanhas} />
                 <CardMetrica rotulo="Denúncias pendentes" valor={resumo.denunciasPendentes} />
-                <CardMetrica rotulo="Arrecadado (total)" valor={formatarMoeda(resumo.valorTotalArrecadado)} />
+                <CardMetrica rotulo="Arrecadado (total)" valor={resumo.valorTotalArrecadado} moeda />
               </div>
 
               {/* Campanhas por status (RF-084): o requisito pede essa quebra, não só o total. "Fila com
@@ -200,7 +215,7 @@ export function Dashboard({ auth }: DashboardProps) {
               log", embaixo de cada tabela). Módulo 26-notificacao ainda não existe (nem tabela mapeada no
               Kysely, nem controller): mostra isso honestamente em vez de inventar dado. */}
           <div className="fundo-cartao border borda-forte rounded-xl shadow-sm p-5">
-            <h3 className="subtitulo mb-2">Notificações</h3>
+            <h2 className="subtitulo mb-2">Notificações</h2>
             <p className="text-sm texto-fraco">
               Módulo de notificações ainda não foi implementado, esta prévia vai listar as
               pendências assim que existir.

@@ -22,7 +22,7 @@ export function AdminLayout({ auth }: AdminLayoutProps) {
   const [menuAberto, setMenuAberto] = useState(false);
 
   return (
-    <main className="admin-pagina">
+    <div className="admin-pagina">
       {/* Faixa como CAMADA DE FUNDO, não um elemento que empurra tudo: a faixa mora POR TRÁS de tudo
           (`absolute`, primeiro filho de `.admin-shell`, que tem `position:relative` em 6-admin-shell.css só
           para servir de âncora para isto), e a sidebar continua no fluxo normal do grid (sem ser empurrada,
@@ -55,6 +55,6 @@ export function AdminLayout({ auth }: AdminLayoutProps) {
       </div>
 
       <BuscaGlobal auth={auth} />
-    </main>
+    </div>
   );
 }

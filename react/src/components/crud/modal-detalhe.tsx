@@ -66,7 +66,7 @@ export function ModalDetalhe({
 
         <div className={'px-6 py-4 flex items-start justify-between gap-3 shrink-0' + (rotuloAcao ? '' : ' border-b borda-padrao')}>
           <div className="min-w-0">
-            <p className="font-bold texto-forte truncate">{titulo}</p>
+            <h2 className="font-sans font-bold texto-forte truncate">{titulo}</h2>
             {chave && <p className="paragrafo-denso mt-0.5">{chave}</p>}
           </div>
           <div className="flex items-center gap-3 shrink-0">
@@ -96,9 +96,9 @@ export function ModalDetalhe({
         <div className="px-6 py-4 overflow-y-auto space-y-4">
           {secoes.map((secao) => (
             <div key={secao.titulo}>
-              <h4 className="titulo-bloco mb-1.5">
+              <h3 className="titulo-bloco mb-1.5">
                 {secao.titulo}
-              </h4>
+              </h3>
               {/* texto-forte (mesmo tom do título: slate-800/quase-branco no escuro) no corpo principal do
                   modal, sem perder a hierarquia com o rótulo da seção (que continua texto-fraco, acima):
                   texto-padrão (slate-700) ficava claro demais. */}

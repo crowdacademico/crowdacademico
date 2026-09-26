@@ -126,7 +126,7 @@ function CardTermoUso({ auth }: { auth: Pick<UseAuthReturn, 'authFetch'> }) {
   return (
     <div className="fundo-cartao border borda-forte rounded-xl shadow-sm overflow-hidden">
       <div className="px-5 py-3 border-b borda-padrao fundo-sutil flex items-center gap-2">
-        <h3 className="subtitulo">Termo de Uso</h3>
+        <h2 className="subtitulo">Termo de Uso</h2>
         <Tooltip
           texto="Saiba mais"
           baixo
@@ -223,7 +223,7 @@ export function DashboardRegrasNegocio({ auth }: DashboardRegrasNegocioProps) {
         grupos.map(({ grupo, itens }) => (
           <div key={grupo} className="fundo-cartao border borda-forte rounded-xl shadow-sm overflow-hidden">
             <div className="px-5 py-3 border-b borda-padrao fundo-sutil flex items-center gap-2">
-              <h3 className="subtitulo">{grupo}</h3>
+              <h2 className="subtitulo">{grupo}</h2>
               {grupo === 'Arquivo' && (
                 <Tooltip texto="Saiba mais" baixo aoClicar={() => setModalArquivoAberto(true)} />
               )}

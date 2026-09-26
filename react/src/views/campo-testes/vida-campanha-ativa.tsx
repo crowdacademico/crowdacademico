@@ -198,7 +198,7 @@ export function VidaCampanhaAtiva({ auth }: PropsPagina) {
     <div className="admin-content-painel">
       <section className="crud-secao">
       <div className="crud-secao__cabecalho">
-        <h2 className="titulo-secao">Campo de Testes - Vida da Campanha Ativa</h2>
+        <h1 className="titulo-secao">Campo de Testes - Vida da Campanha Ativa</h1>
       </div>
 
       {/* Busca própria de campanha: um só <input>, sempre (mesmo padrão do combobox "dono da campanha" de
@@ -255,7 +255,7 @@ export function VidaCampanhaAtiva({ auth }: PropsPagina) {
             <span className="texto-fraco text-xs">dono: {nomeDe(campanha.idUsuario)}</span>
           </div>
 
-          <h3 className="subtitulo mb-2">Atualizações</h3>
+          <h2 className="subtitulo mb-2">Atualizações</h2>
           <div className="acao-com-motivo mb-2">
             <div className="flex gap-2 flex-wrap items-end">
               <input type="text" placeholder="Título" value={novaAtualizacao.titulo} onChange={(e) => setNovaAtualizacao({ ...novaAtualizacao, titulo: e.target.value })} className="input-padrao w-40" />
@@ -280,32 +280,34 @@ export function VidaCampanhaAtiva({ auth }: PropsPagina) {
             </div>
             {!donoEhSessaoReal && <span className="acao-com-motivo__motivo">Só publica quem estiver logado como o dono da campanha ({nomeDe(campanha.idUsuario)}).</span>}
           </div>
-          <table className="crud-tabela mb-4">
-            <thead>
-              <tr>
-                <th>Título</th>
-                <th>Fase</th>
-                <th className="crud-tabela__celula--centralizada">Ativo</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {atualizacoes.map((item) => (
-                <tr key={item.idAtualizacao}>
-                  <td>{item.titulo}</td>
-                  <td>{item.fase ?? '-'}</td>
-                  <td className="crud-tabela__celula--centralizada">
-                    <span className={`badge ${item.ativo ? 'badge-sucesso' : 'badge-neutro'}`}>{item.ativo ? 'Sim' : 'Não'}</span>
-                  </td>
-                  <td>
-                    <button type="button" className="crud-tabela__acao" onClick={() => alternarAtivoAtualizacao(item.idAtualizacao, item.ativo)}>
-                      {item.ativo ? 'Ocultar' : 'Reverter'}
-                    </button>
-                  </td>
+          <div className="crud-tabela__wrapper">
+            <table className="crud-tabela mb-4">
+              <thead>
+                <tr>
+                  <th>Título</th>
+                  <th>Fase</th>
+                  <th className="crud-tabela__celula--centralizada">Ativo</th>
+                  <th>Ações</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {atualizacoes.map((item) => (
+                  <tr key={item.idAtualizacao}>
+                    <td>{item.titulo}</td>
+                    <td>{item.fase ?? '-'}</td>
+                    <td className="crud-tabela__celula--centralizada">
+                      <span className={`badge ${item.ativo ? 'badge-sucesso' : 'badge-neutro'}`}>{item.ativo ? 'Sim' : 'Não'}</span>
+                    </td>
+                    <td>
+                      <button type="button" className="crud-tabela__acao" onClick={() => alternarAtivoAtualizacao(item.idAtualizacao, item.ativo)}>
+                        {item.ativo ? 'Ocultar' : 'Reverter'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           <p className="texto-fraco text-xs mb-4">
             <i className="fa-solid fa-ban"></i> Anexos (arquivo_atualizacao): aguardando o módulo 25-arquivo existir de verdade.
           </p>
@@ -326,41 +328,43 @@ export function VidaCampanhaAtiva({ auth }: PropsPagina) {
             separada, só do dono da campanha (RF-089) - sem endossar aqui, só é possível testando logado como o
             próprio dono.
           </p>
-          <table className="crud-tabela mb-4">
-            <thead>
-              <tr>
-                <th>Autor</th>
-                <th>Comentário</th>
-                <th>Endosso</th>
-                {donoEhSessaoReal && <th>Ações</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {comentarios.map((item) => (
-                <tr key={item.idComentario}>
-                  <td>{nomeDe(item.idPesquisador)}</td>
-                  <td>{item.conteudo}</td>
-                  <td>{item.endossado ? <span className="badge badge-sucesso">#{item.ordemEndosso}</span> : '-'}</td>
-                  {donoEhSessaoReal && (
-                    <td>
-                      <button
-                        type="button"
-                        className="crud-tabela__acao"
-                        onClick={() => alternarEndosso(item.idComentario, item.endossado)}
-                        disabled={!item.endossado && endossosAtivos >= LIMITE_ENDOSSOS}
-                      >
-                        {item.endossado ? 'Remover endosso' : 'Endossar'}
-                      </button>
-                    </td>
-                  )}
+          <div className="crud-tabela__wrapper">
+            <table className="crud-tabela mb-4">
+              <thead>
+                <tr>
+                  <th>Autor</th>
+                  <th>Comentário</th>
+                  <th>Endosso</th>
+                  {donoEhSessaoReal && <th>Ações</th>}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {comentarios.map((item) => (
+                  <tr key={item.idComentario}>
+                    <td>{nomeDe(item.idPesquisador)}</td>
+                    <td>{item.conteudo}</td>
+                    <td>{item.endossado ? <span className="badge badge-sucesso">#{item.ordemEndosso}</span> : '-'}</td>
+                    {donoEhSessaoReal && (
+                      <td>
+                        <button
+                          type="button"
+                          className="crud-tabela__acao"
+                          onClick={() => alternarEndosso(item.idComentario, item.endossado)}
+                          disabled={!item.endossado && endossosAtivos >= LIMITE_ENDOSSOS}
+                        >
+                          {item.endossado ? 'Remover endosso' : 'Endossar'}
+                        </button>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
           <div className="border-t borda-padrao my-8"></div>
 
-          <h3 className="subtitulo mb-2">Seguidores</h3>
+          <h2 className="subtitulo mb-2">Seguidores</h2>
           <p className="texto-fraco text-xs mb-2">
             Sem Elenco só dá pra simular a própria sessão logada seguindo ou não - um roster de vários
             seguidores ao mesmo tempo fica pro redesenho de T3.

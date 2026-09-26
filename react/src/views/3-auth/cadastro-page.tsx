@@ -114,7 +114,7 @@ export function CadastroPage({ auth }: PropsPagina) {
           <div className="w-14 h-14 fundo-marca rounded-2xl mx-auto flex items-center justify-center text-white font-bold text-2xl mb-5 shadow-lg">
             <i className="fa-solid fa-user-plus"></i>
           </div>
-          <h2 className="text-3xl font-serif font-bold texto-forte mb-2">Criar conta</h2>
+          <h1 className="text-3xl font-serif font-bold texto-forte mb-2">Criar conta</h1>
           <p className="text-sm texto-fraco font-medium">
             Leva menos de um minuto, o resto você completa depois, em Minha Conta.
           </p>

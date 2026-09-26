@@ -18,7 +18,9 @@ export function Layout({ auth }: LayoutProps) {
     <>
       <Header auth={auth} />
       <Breadcrumb />
-      <Outlet />
+      <main className="flex flex-col flex-1">
+        <Outlet />
+      </main>
       <Footer />
     </>
   );

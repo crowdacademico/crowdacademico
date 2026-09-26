@@ -59,10 +59,10 @@ export function ListarMotivosDenuncia({ auth }: PropsPagina) {
           </button>
         }
         colunas={[
-          { chave: 'idMotivo', rotulo: 'id' },
-          { chave: 'descricao', rotulo: 'descrição' },
-          { chave: 'tipo', rotulo: 'tipo' },
-          { chave: 'ativo', rotulo: 'ativo' },
+          { chave: 'idMotivo', rotulo: 'id', tipo: 'id' },
+          { chave: 'descricao', rotulo: 'descrição', tipo: 'nome' },
+          { chave: 'tipo', rotulo: 'tipo', tipo: 'status' },
+          { chave: 'ativo', rotulo: 'ativo', tipo: 'simNao' },
         ]}
         chavePrimaria="idMotivo"
         listar={listarMotivos}

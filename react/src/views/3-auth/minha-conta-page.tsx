@@ -280,7 +280,7 @@ function AbaPerfil({ auth }: AbaPerfilProps) {
 
         <div className="grid lg:grid-cols-3 gap-6 items-start">
           <div className="lg:col-span-2 space-y-6">
-            <SecaoFicha titulo="Foto do perfil">
+            <SecaoFicha titulo="Foto do perfil" nivel={2}>
               <div className="sm:col-span-2 flex items-center gap-4">
                 <SeletorFotoPerfil
                   authFetch={auth.authFetch}
@@ -299,7 +299,7 @@ function AbaPerfil({ auth }: AbaPerfilProps) {
               </div>
             </SecaoFicha>
 
-            <SecaoFicha titulo="Dados da conta">
+            <SecaoFicha titulo="Dados da conta" nivel={2}>
               <div>
                 <label htmlFor={idNome} className="rotulo-campo">Nome</label>
                 <input
@@ -327,7 +327,7 @@ function AbaPerfil({ auth }: AbaPerfilProps) {
           {/* Espaço já preparado pro Perfil de Pesquisador (módulo 6) -
               demonstrativo, mesma linguagem visual dos outros placeholders
               do app (aviso honesto + campos desabilitados). */}
-          <SecaoFicha titulo="Vínculo acadêmico" colunas={1}>
+          <SecaoFicha titulo="Vínculo acadêmico" colunas={1} nivel={2}>
             <div className="flex items-start gap-2 rounded-lg fundo-info texto-info p-3">
               <i className="fa-solid fa-circle-info mt-0.5 shrink-0"></i>
               <p className="text-xs">
@@ -465,9 +465,9 @@ function AbaSeguranca({ auth }: AbaSegurancaProps) {
   return (
     <div className="px-6 sm:px-8 py-8 space-y-8">
       <div>
-        <h3 className="titulo-bloco mb-3 pb-2 border-b borda-padrao">
+        <h2 className="titulo-bloco mb-3 pb-2 border-b borda-padrao">
           Trocar senha
-        </h3>
+        </h2>
         <form onSubmit={aoTrocarSenha} className="space-y-4 max-w-md">
           {erro && <p className="text-sm texto-erro">{erro}</p>}
           <div>
@@ -695,7 +695,7 @@ function AbaAcademico({ auth }: AbaAcademicoProps) {
         </div>
       )}
 
-      <SecaoFicha titulo="Perfil de Pesquisador">
+      <SecaoFicha titulo="Perfil de Pesquisador" nivel={2}>
         <CampoFicha rotulo="CPF" valor={perfil.cpf ? formatarCpfExibicao(perfil.cpf) : null} />
         <CampoFicha
           rotulo="Status"

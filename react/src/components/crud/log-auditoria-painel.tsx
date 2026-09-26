@@ -19,7 +19,7 @@ const ROTULO_OPERACAO: Partial<Record<OperacaoLogAuditoria, string>> = {
 // (Record<string, unknown>) - não dá pra jogar `unknown` direto num filho
 // JSX. Na prática `campoRenomeio` é sempre um campo textual (ex.: "nome"),
 // então isto só cai no `textoSeguro(valor)` num caso que nunca acontece de
-// verdade - mesmo util compartilhado de `celulaValor` em generic-table.tsx.
+// verdade (mesmo util que os tipos de coluna da GenericTable usam).
 function valorRenomeio(valor: unknown): ReactNode {
   if (valor === null || valor === undefined) {
     return '-';
@@ -75,56 +75,58 @@ export function LogAuditoriaPainel({ buscar, campoRenomeio }: LogAuditoriaPainel
 
   return (
     <div className="mt-4 border-t borda-padrao pt-4">
-      <h3 className="text-sm font-bold texto-padrao mb-2">
+      <h2 className="text-sm font-bold texto-padrao mb-2">
         Últimas alterações {total > 0 && `(${total} no total)`}
-      </h3>
+      </h2>
 
       {carregando && <p className="text-sm texto-fraco">Carregando...</p>}
       {erro && <p className="crud-erro">{erro}</p>}
 
       {!carregando && !erro && (
-        <table className="crud-tabela">
-          <thead>
-            <tr>
-              {/* Registro antes de Ação, na mesma ordem nos dois <tr> (cabeçalho e corpo). */}
-              <th>Registro</th>
-              <th>Ação</th>
-              {campoRenomeio ? (
-                <>
-                  <th>De</th>
-                  <th>Para</th>
-                </>
-              ) : (
-                <th>Campos alterados</th>
-              )}
-              <th>Quem</th>
-              <th>Quando</th>
-            </tr>
-          </thead>
-          <tbody>
-            {linhas.map((linha) => (
-              <tr key={linha.idLog}>
-                <td>{linha.identidadeRegistro}</td>
-                <td>{ROTULO_OPERACAO[linha.operacao] ?? linha.operacao}</td>
+        <div className="crud-tabela__wrapper">
+          <table className="crud-tabela">
+            <thead>
+              <tr>
+                {/* Registro antes de Ação, na mesma ordem nos dois <tr> (cabeçalho e corpo). */}
+                <th>Registro</th>
+                <th>Ação</th>
                 {campoRenomeio ? (
                   <>
-                    <td>{valorRenomeio(linha.dadosAnteriores?.[campoRenomeio])}</td>
-                    <td>{valorRenomeio(linha.dadosNovos?.[campoRenomeio])}</td>
+                    <th>De</th>
+                    <th>Para</th>
                   </>
                 ) : (
-                  <td>{linha.camposAlterados ? linha.camposAlterados.join(', ') : ''}</td>
+                  <th>Campos alterados</th>
                 )}
-                <td>{linha.nomeResponsavel ?? 'Sistema'}</td>
-                <td>{new Date(linha.ocorridoEm).toLocaleString('pt-BR')}</td>
+                <th>Quem</th>
+                <th>Quando</th>
               </tr>
-            ))}
-            {linhas.length === 0 && (
-              <tr>
-                <td colSpan={campoRenomeio ? 6 : 5}>Nenhuma alteração registrada ainda.</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {linhas.map((linha) => (
+                <tr key={linha.idLog}>
+                  <td>{linha.identidadeRegistro}</td>
+                  <td>{ROTULO_OPERACAO[linha.operacao] ?? linha.operacao}</td>
+                  {campoRenomeio ? (
+                    <>
+                      <td>{valorRenomeio(linha.dadosAnteriores?.[campoRenomeio])}</td>
+                      <td>{valorRenomeio(linha.dadosNovos?.[campoRenomeio])}</td>
+                    </>
+                  ) : (
+                    <td>{linha.camposAlterados ? linha.camposAlterados.join(', ') : ''}</td>
+                  )}
+                  <td>{linha.nomeResponsavel ?? 'Sistema'}</td>
+                  <td>{new Date(linha.ocorridoEm).toLocaleString('pt-BR')}</td>
+                </tr>
+              ))}
+              {linhas.length === 0 && (
+                <tr>
+                  <td colSpan={campoRenomeio ? 6 : 5}>Nenhuma alteração registrada ainda.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       )}
 
       {!carregando && !erro && totalPaginas > 1 && (

@@ -12,6 +12,16 @@ export function formatarMoeda(valor: string | number | null): string {
   return formatadorMoeda.format(Number(valor));
 }
 
+// Só o número, sem o "R$": para quando o símbolo é desenhado à parte (ex.: menor, no card do Dashboard).
+const formatadorReaisSemSimbolo = new Intl.NumberFormat('pt-BR', {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+export function formatarReaisSemSimbolo(valor: string | number | null): string {
+  return formatadorReaisSemSimbolo.format(Number(valor));
+}
+
 // Só a MECÂNICA de formatar mora aqui: sempre 'pt-BR', sempre a mesma chamada de `Intl`. Qual das três
 // granularidades usar em qual tela continua decisão de cada view (varia de propósito: auditoria quer hora
 // exata, "membro desde" quer só mês/ano): cada call site escolhe a função certa para o próprio contexto.

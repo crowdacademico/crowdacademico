@@ -343,25 +343,47 @@ O componente é dirigido por props, não por herança nem por children:
 | Prop | O que faz |
 |---|---|
 | `titulo`, `acaoTopo` | cabeçalho da seção e o botão da direita (ex.: "Criar") |
-| `colunas` | array de `{ chave, rotulo }`, com extras opcionais: `renderizar(linha)`, `centralizar`, `largura`, `quebrarRotulo` |
+| `colunas` | array de `{ chave, rotulo, tipo }`, com extras opcionais: `renderizar(linha)` e `quebrarRotulo`. O `tipo` é obrigatório (ver "Tipos de coluna", abaixo) |
 | `chavePrimaria` | nome do campo usado como `key` de linha |
 | `listar` | função **já pré-amarrada** com `authFetch` pelo componente pai; a tabela só a chama |
 | `acoes` | `Partial<Record<'alterar'\|'consultar'\|'excluir', (linha) => void>>` (14-09-2026, ERA `acoes: AcaoPadrao[]` + `aoAlterar`/`aoConsultar`/`aoExcluir` separados) - quais botões aparecem é derivado das CHAVES presentes, não de uma lista à parte. Ausente ⇒ sem coluna de ações |
-| `colunaExtra` | `{ rotulo, renderizar(linha) }` - coluna que pode renderizar qualquer coisa, independente de `acoes` |
 | `filtrosFacetados` | array de `{ chave, rotulo, ordem? }` - cada um vira um dropdown de múltipla escolha |
 
 Não existe prop de log - `BlocoLogAuditoria` é um componente IRMÃO (ver seção 9), colocado pela tela logo abaixo de `<GenericTable>`, não uma prop daqui (13-09-2026, achado do Lucas: "log de auditoria não é estrutura de tabela").
 
-📌 **CRUD não acontece dentro da tabela.** Comentário: *"Criar/Alterar/Excluir NÃO acontecem mais aqui dentro (pedido do Lucas, 02-08-2026: 'tudo que faz parte do CRUD precisa de view própria') ... páginas de verdade, com sua própria URL, não formulário/`confirm()` embutido na tabela."*
+📌 **CRUD não acontece dentro da tabela.** Criar, Alterar, Consultar e Excluir abrem modal no componente pai, pelos handlers de `acoes` (nunca formulário ou `confirm()` embutido na tabela).
 
 📌 **Estado de filtro/página/ordenação vive na URL**, via `useSearchParams`, não em `useState` local. Motivo documentado: *"ao voltar de 'Consultar' via `navigate(-1)`, o filtro escolhido resetava - a página de listagem é desmontada na troca de rota, e `useState` não sobrevive a isso."* Toda escrita usa `{ replace: true }`, para que o botão Voltar não fique preso no passo-a-passo de cada clique de dropdown. Nomes reservados na query string: `q`, `pagina`, `tamanho`, `ordenar`, `dir`.
 
-📌 **Comportamentos inferidos do dado, não configurados por tela.** Três coisas são decididas "sniffando" o tipo do primeiro valor não-nulo de cada coluna, para não exigir configuração nova nas ~10 telas que já usam o componente:
-- **ordenação** por `number` / `boolean` / `string` (com `localeCompare` em `pt-BR`);
-- **centralização** de colunas numéricas e booleanas (pedido da Alexia, 18-08-2026: *"centralizar o negócio de sim e não"*);
-- **largura mínima** de cada coluna, calculada em `ch` a partir da lista **inteira** (não da página visível) - porque *"`table-layout: auto` recalcula a largura de cada coluna com base SÓ nas linhas visíveis; trocar de página muda o conjunto visível, a largura muda junto"* (achado do Lucas: *"as colunas dançam ao trocar de página"*). É `min-width`, não `width`, para não quebrar o responsivo.
+### Tipos de coluna (26-09-2026)
 
-📌 **Booleano vira badge Sim/Não**, não o texto cru `true`/`false` - *"'E-MAIL VERIFICADO: false' não é instantâneo de ler, um badge é"*.
+📌 **Cada coluna declara um `tipo`, e o tipo decide tudo o que é visual e de comportamento:** largura, alinhamento, formato, ordenação e busca. A tela nunca escreve largura nem alinhamento na mão. Assim, a mesma espécie de coluna fica igual em todas as tabelas, e as colunas não "dançam" ao passar de uma tabela para outra. Os tipos moram em `components/crud/colunas/`, um arquivo por tipo, numerados na ordem em que costumam aparecer:
+
+| Arquivo | `tipo` | Como se comporta |
+|---|---|---|
+| `1-coluna-id.ts` | `id` | 1ª coluna, estreita, centralizada, sem quebra; presa à esquerda na rolagem lateral |
+| `2-coluna-nome.tsx` | `nome` | O nome do registro (mesmo quando o campo é título, descrição, chave ou versão). Coluna principal: tem mínimo (`--coluna-nome-min`) e máximo do texto (`--coluna-nome-max`); presa à esquerda, logo depois do id. Uma por tabela |
+| `3-coluna-texto.ts` | `texto` | Texto variável que não é o nome (e-mail, código, papéis); à esquerda, largura pelo conteúdo, quebra antes do nome |
+| `4-coluna-numero.ts` | `numero` | Número que não é id nem dinheiro (ex.: score) |
+| `5-coluna-sim-nao.tsx` | `simNao` | Booleano vira badge Sim/Não |
+| `6-coluna-status.ts` | `status` | Status, tipo ou qualquer rótulo curto de lista fixa; a tela entrega o rótulo já traduzido |
+| `7-coluna-dinheiro.ts` | `dinheiro` | A tela entrega o número cru; o R$ aparece só na exibição |
+| `8-coluna-data.ts` | `data`, `dataHora` | A tela entrega a data ISO; formatada só na exibição |
+| `9-coluna-acoes.tsx` | (nenhum) | Ações não é declarada pela tela: a tabela monta sozinha a partir de `acoes`, sempre por último |
+
+O catálogo fica em `tipos-coluna.ts` e o contrato em `tipo-coluna.type.ts`.
+
+📌 **Ordena pelo valor cru, exibe formatado.** Antes, dinheiro e data chegavam à tabela já como texto ("R$ 10.000,00", "dd/mm/aaaa") e a ordenação era alfabética: "R$ 10.000" vinha antes de "R$ 9.000", e "criada em" ordenava pelo dia. Agora a tela entrega o valor original, o tipo compara pelo valor e formata só na célula. A busca procura no que a pessoa vê na célula (ex.: "50.000", "Sim") e também no valor cru.
+
+📌 **Larguras em tokens, em `5-crud.css`.** As colunas de conteúdo curto (Sim/Não, status, número, dinheiro, data) têm largura `clamp(mínimo, vw, máximo)`: acompanham a janela, então se juntam ao estreitar a tela e continuam iguais entre tabelas numa mesma largura. Nome e texto crescem com o conteúdo, com piso calculado pela lista **inteira** (não só pela página visível), para a coluna não mudar ao virar a página; esse piso é limitado por `--coluna-piso-maximo` (menor para texto que para nome, e menor ainda no celular). Ações ocupa só a largura dos botões (`width: 1%`): antes, a coluna Ações engolia todo o espaço sobrando em tela larga (chegava a 1011 px em Papéis, a 1920 px de janela).
+
+📌 **Ao diminuir a tela:** primeiro some o espaço extra (as colunas se juntam); depois, com a seção abaixo de 1000 px, o texto secundário (tipo `texto`: e-mail, código, chave) desce um tamanho de fonte; depois nome e texto quebram a linha; e só então a tabela rola de lado dentro do cartão. E-mail e chave técnica são uma "palavra" só, então a quebra acontece só em ponto natural: depois do `@` e do `_` (`<wbr>`, em `colunas/quebras-naturais.tsx`). Depois do `.` não, para o e-mail ocupar no máximo 2 linhas.
+
+📌 **Título da tabela é o `h1` da página** (`nivelTitulo`, padrão `1`). Numa página com mais de uma seção, as seguintes passam `nivelTitulo={2}` (Permissões, em Papéis; o exemplo do Guia de Estilo). O visual é o mesmo nos dois níveis.
+
+📌 **Rolagem lateral com colunas presas.** Quando a tabela não cabe, id e nome ficam presos à esquerda e Ações à direita (`position: sticky`), com uma linha fina separando a parte presa da que rola, só do lado em que há algo escondido. A largura real da coluna id é medida em `generic-table.tsx` (`--deslocamento-nome`), para o nome grudar logo depois dela. No celular (seção com menos de 640 px) só o nome fica preso, no canto esquerdo: id, nome e Ações presos ao mesmo tempo não deixariam janela para rolar.
+
+📌 **A dica do último botão de Ações abre alinhada pela direita**: centralizada, ela passava da borda da tabela (mesmo invisível, ocupa espaço) e criava uma rolagem lateral de poucos pixels.
 
 📌 **Ordena a lista filtrada inteira, antes de paginar** - nunca só a página atual. O comentário nomeia o bug clássico que isso evita: *"linha some da vista ao virar página, ordem parece errada entre páginas"*.
 
@@ -425,9 +447,11 @@ Todas as telas `listar-*.tsx`: `views/1-usuario/listar-usuarios.tsx`, `views/2-p
 
 ### `components/layout/` - a moldura do app
 
-`layout.tsx` (Header + Breadcrumb + `<Outlet/>` + Footer), `header.tsx`, `footer.tsx`, `breadcrumb.tsx`, `menu-usuario.tsx`, `avatar-usuario.tsx`, `busca-global.tsx` (+ `busca-global-evento.ts`), `sino-atividade.tsx`, `controle-tema.tsx`, `controle-fonte.tsx`, `tooltip.tsx`, `toast-provider.tsx` (+ `toast-context.ts`, `use-toast.ts`), `use-erro-toast.ts`, `dev-login-rapido.tsx`.
+`layout.tsx` (Header + Breadcrumb + `<main>` com o `<Outlet/>` + Footer), `header.tsx`, `footer.tsx`, `breadcrumb.tsx`, `menu-usuario.tsx`, `avatar-usuario.tsx`, `busca-global.tsx` (+ `busca-global-evento.ts`), `sino-atividade.tsx`, `controle-tema.tsx`, `controle-fonte.tsx`, `tooltip.tsx`, `toast-provider.tsx` (+ `toast-context.ts`, `use-toast.ts`), `use-erro-toast.ts`, `dev-login-rapido.tsx`.
 
-📌 **Header e Footer são cópia declarada do protótipo de interface.** O comentário de `header.tsx`: *"Cópia fiel de `componentes/header.html` do Projeto de Interface real (mesmas classes Tailwind, mesma estrutura)"*. As adaptações estão listadas ali: a marca navega de verdade para `/`; "Explorar Projetos"/"Como Funciona"/"Transparência LGPD"/"Submeter Pesquisa" continuam `window.alert()` de placeholder, *"mesmo espírito do `showAction()` do protótipo original"*.
+📌 **Header e Footer são cópia declarada do protótipo de interface.** O comentário de `header.tsx`: *"Cópia fiel de `componentes/header.html` do Projeto de Interface real (mesmas classes Tailwind, mesma estrutura)"*. As adaptações estão listadas ali: a marca navega de verdade para `/`; "Submeter Pesquisa" continua `window.alert()` de placeholder, *"mesmo espírito do `showAction()` do protótipo original"*. O menu "Explorar Projetos"/"Como Funciona"/"Transparência LGPD", que estava comentado no código esperando essas telas, saiu (26-09-2026); volta quando as telas existirem.
+
+📌 **Títulos e marcos da página (26-09-2026).** Toda página tem exatamente um `<main>` (em `layout.tsx`; o `AdminLayout` é um `<div>` dentro dele) e exatamente um `h1`: o título grande das páginas públicas (Login, Criar conta, Verificar e-mail), "Dashboard", o nome de Minha Conta, o título da bancada no Campo de Testes, o título do cartão de formulário (`CartaoFormulario`) e, nas listagens, o título da `GenericTable` (ver `nivelTitulo`). As seções abaixo são `h2`, e os blocos dentro de um modal (título `h2`) são `h3`; os títulos do rodapé são `h2`. `SecaoFicha` recebe `nivel` (3 em modal, 2 em página). A troca de nível não muda o visual: as classes continuam as mesmas, e onde a regra base de `h1`-`h3` (serif, em `3-base.css`) mudaria a fonte, a tag leva `font-sans`. Resultado: o axe não acusa nenhuma violação, nem moderada, nas 22 telas (painel, públicas, log aberto e modal de detalhe).
 
 📌 **`AvatarUsuario`: cor determinística por nome.** Hash simples (soma de código de caractere) sobre uma paleta de 7 tokens CSS - *"a mesma pessoa cai sempre na mesma cor, em qualquer tela/sessão, sem guardar nada no banco. Nada de `Math.random()`."* Escala de tamanhos `sm`/`md`/`lg`/`xl`/`xxl`.
 

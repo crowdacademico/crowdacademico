@@ -129,7 +129,7 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
   }, [carregarPesquisadores]);
 
   // Opções do dropdown "Papel" - só os valores que já aparecem nos dados
-  // (mesmo sniff de GenericTable), ordenados do menor pro maior poder.
+  // (mesma ideia das facetas de GenericTable), ordenados do menor pro maior poder.
   const opcoesPapel = [...new Set(pesquisadores.flatMap((perfil) => perfil.papel.split(', ').filter(Boolean)))].sort((a, b) => {
     const posicao = (valor: string): number => {
       const indice = ORDEM_PODER_PAPEL.indexOf(valor);
@@ -162,11 +162,11 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
     <div className="admin-content-painel">
       <section className="crud-secao">
       <div className="crud-secao__cabecalho">
-        <h2 className="titulo-secao">Campo de Testes - Bancada do Pesquisador</h2>
+        <h1 className="titulo-secao">Campo de Testes - Bancada do Pesquisador</h1>
       </div>
 
       <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
-        <h3 className="subtitulo">Usuários</h3>
+        <h2 className="subtitulo">Usuários</h2>
         <div className="flex items-center gap-3 flex-wrap">
           <label className="text-xs flex items-center gap-1.5">
             <input
@@ -209,109 +209,111 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
         ]}
       />
 
-      <table className="crud-tabela mb-4">
-        <thead>
-          <tr>
-            <th className="crud-tabela__coluna-id crud-tabela__celula--centralizada">id</th>
-            <th>nome</th>
-            <th>papel</th>
-            <th>título</th>
-            <th className="crud-tabela__celula--centralizada">status</th>
-            <th className="crud-tabela__celula--centralizada">score</th>
-            <th className="crud-tabela__celula--centralizada">upgrade</th>
-            <th className="crud-tabela__celula--centralizada">Ações</th>
-          </tr>
-        </thead>
-        <tbody>
-          {carregandoLista && (
+      <div className="crud-tabela__wrapper">
+        <table className="crud-tabela mb-4">
+          <thead>
             <tr>
-              <td colSpan={8} className="texto-fraco">Carregando...</td>
+              <th className="crud-tabela__coluna-id crud-tabela__celula--centralizada">id</th>
+              <th>nome</th>
+              <th>papel</th>
+              <th>título</th>
+              <th className="crud-tabela__celula--centralizada">status</th>
+              <th className="crud-tabela__celula--centralizada">score</th>
+              <th className="crud-tabela__celula--centralizada">upgrade</th>
+              <th className="crud-tabela__celula--centralizada">Ações</th>
             </tr>
-          )}
-          {!carregandoLista && erroListagem && (
-            <tr>
-              <td colSpan={8} className="texto-erro font-bold">{erroListagem}</td>
-            </tr>
-          )}
-          {!carregandoLista && !erroListagem && pesquisadoresPagina.length === 0 && (
-            <tr>
-              <td colSpan={8} className="texto-fraco">{filtroTexto ? 'Nenhum registro bate com o filtro.' : 'Nenhum registro.'}</td>
-            </tr>
-          )}
-          {!carregandoLista &&
-            pesquisadoresPagina.map((perfil) => {
-              const bloqueado = PESQUISADOR_BLOQUEADO(perfil.idUsuario);
-              return (
-                <tr key={perfil.idUsuario} className={bloqueado ? 'texto-fraco' : undefined}>
-                  <td className="crud-tabela__coluna-id crud-tabela__celula--centralizada" style={bloqueado ? { textDecoration: 'line-through' } : undefined}>
-                    {perfil.idUsuario}
-                  </td>
-                  <td style={bloqueado ? { textDecoration: 'line-through' } : undefined}>
-                    {perfil.usuario.nome}
-                  </td>
-                  <td style={bloqueado ? { textDecoration: 'line-through' } : undefined}>{perfil.papel}</td>
-                  <td style={bloqueado ? { textDecoration: 'line-through' } : undefined}>
-                    {perfil.tituloAcademico ? ROTULO_TITULO_ACADEMICO[perfil.tituloAcademico] : '-'}
-                  </td>
-                  <td
-                    className="crud-tabela__celula--centralizada"
-                    style={bloqueado ? { textDecoration: 'line-through' } : undefined}
-                  >
-                    {perfil.statusPesquisador ? ROTULO_STATUS_PESQUISADOR[perfil.statusPesquisador] : '-'}
-                  </td>
-                  <td className="crud-tabela__celula--centralizada">{perfil.scoreAtual ?? '-'}</td>
-                  <td className="crud-tabela__celula--centralizada">
-                    {perfil.statusPesquisador !== undefined ? (
-                      <span className="badge badge-sucesso">Pesquisador</span>
-                    ) : (
-                      // Cadeado SEMPRE visível e clicável em toda linha sem perfil, própria ou de outra pessoa.
-                      // O Modal (ModalUpgradePesquisador) decide sozinho, por baixo, qual endpoint usar
-                      // comparando o `idUsuarioAlvo` com a conta logada: aqui só se guarda QUEM.
-                      <button
-                        type="button"
-                        onClick={() => setIdUsuarioUpgrade(perfil.idUsuario)}
-                        disabled={bloqueado}
-                        aria-label="Fazer upgrade de perfil pra pesquisador"
-                        className="dica"
-                      >
-                        <i className="fa-solid fa-lock texto-aviso"></i>
-                        <Dica texto="Fazer upgrade de perfil pra pesquisador" curta />
-                      </button>
-                    )}
-                  </td>
-                  <td className="crud-tabela__celula--centralizada">
-                    {bloqueado ? (
-                      <span className="dica" tabIndex={0} role="note" aria-label={motivoBloqueioPesquisador()}>
-                        <i className="fa-solid fa-lock"></i> bloqueado
-                        <Dica texto={motivoBloqueioPesquisador()} />
-                      </span>
-                    ) : (
-                      <div className="crud-tabela__acoes">
-                        <AcaoLinha
-                          rotulo="Alterar"
-                          icone="fa-pen"
-                          variante="alterar"
-                          onClick={() => setIdUsuarioAlterando(perfil.idUsuario)}
-                        />
-                        <AcaoLinha
-                          rotulo="Consultar"
-                          icone="fa-eye"
-                          onClick={() => setIdUsuarioConsultando(perfil.idUsuario)}
-                        />
-                        <AcaoLinha
-                          rotulo="Excluir"
-                          icone="fa-trash"
-                          variante="excluir"
-                          onClick={() => setUsuarioExcluindo(perfil)}
-                        />
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {carregandoLista && (
+              <tr>
+                <td colSpan={8} className="texto-fraco">Carregando...</td>
+              </tr>
+            )}
+            {!carregandoLista && erroListagem && (
+              <tr>
+                <td colSpan={8} className="texto-erro font-bold">{erroListagem}</td>
+              </tr>
+            )}
+            {!carregandoLista && !erroListagem && pesquisadoresPagina.length === 0 && (
+              <tr>
+                <td colSpan={8} className="texto-fraco">{filtroTexto ? 'Nenhum registro bate com o filtro.' : 'Nenhum registro.'}</td>
+              </tr>
+            )}
+            {!carregandoLista &&
+              pesquisadoresPagina.map((perfil) => {
+                const bloqueado = PESQUISADOR_BLOQUEADO(perfil.idUsuario);
+                return (
+                  <tr key={perfil.idUsuario} className={bloqueado ? 'texto-fraco' : undefined}>
+                    <td className="crud-tabela__coluna-id crud-tabela__celula--centralizada" style={bloqueado ? { textDecoration: 'line-through' } : undefined}>
+                      {perfil.idUsuario}
+                    </td>
+                    <td style={bloqueado ? { textDecoration: 'line-through' } : undefined}>
+                      {perfil.usuario.nome}
+                    </td>
+                    <td style={bloqueado ? { textDecoration: 'line-through' } : undefined}>{perfil.papel}</td>
+                    <td style={bloqueado ? { textDecoration: 'line-through' } : undefined}>
+                      {perfil.tituloAcademico ? ROTULO_TITULO_ACADEMICO[perfil.tituloAcademico] : '-'}
+                    </td>
+                    <td
+                      className="crud-tabela__celula--centralizada"
+                      style={bloqueado ? { textDecoration: 'line-through' } : undefined}
+                    >
+                      {perfil.statusPesquisador ? ROTULO_STATUS_PESQUISADOR[perfil.statusPesquisador] : '-'}
+                    </td>
+                    <td className="crud-tabela__celula--centralizada">{perfil.scoreAtual ?? '-'}</td>
+                    <td className="crud-tabela__celula--centralizada">
+                      {perfil.statusPesquisador !== undefined ? (
+                        <span className="badge badge-sucesso">Pesquisador</span>
+                      ) : (
+                        // Cadeado SEMPRE visível e clicável em toda linha sem perfil, própria ou de outra pessoa.
+                        // O Modal (ModalUpgradePesquisador) decide sozinho, por baixo, qual endpoint usar
+                        // comparando o `idUsuarioAlvo` com a conta logada: aqui só se guarda QUEM.
+                        <button
+                          type="button"
+                          onClick={() => setIdUsuarioUpgrade(perfil.idUsuario)}
+                          disabled={bloqueado}
+                          aria-label="Fazer upgrade de perfil pra pesquisador"
+                          className="dica"
+                        >
+                          <i className="fa-solid fa-lock texto-aviso"></i>
+                          <Dica texto="Fazer upgrade de perfil pra pesquisador" curta />
+                        </button>
+                      )}
+                    </td>
+                    <td className="crud-tabela__celula--centralizada">
+                      {bloqueado ? (
+                        <span className="dica" tabIndex={0} role="note" aria-label={motivoBloqueioPesquisador()}>
+                          <i className="fa-solid fa-lock"></i> bloqueado
+                          <Dica texto={motivoBloqueioPesquisador()} />
+                        </span>
+                      ) : (
+                        <div className="crud-tabela__acoes">
+                          <AcaoLinha
+                            rotulo="Alterar"
+                            icone="fa-pen"
+                            variante="alterar"
+                            onClick={() => setIdUsuarioAlterando(perfil.idUsuario)}
+                          />
+                          <AcaoLinha
+                            rotulo="Consultar"
+                            icone="fa-eye"
+                            onClick={() => setIdUsuarioConsultando(perfil.idUsuario)}
+                          />
+                          <AcaoLinha
+                            rotulo="Excluir"
+                            icone="fa-trash"
+                            variante="excluir"
+                            onClick={() => setUsuarioExcluindo(perfil)}
+                          />
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+          </tbody>
+        </table>
+      </div>
 
       <RodapePaginacao
         total={pesquisadoresFiltrados.length}

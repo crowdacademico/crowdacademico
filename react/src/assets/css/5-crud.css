@@ -77,11 +77,10 @@
     text-align: left;
   }
 
-  /* Coluna de valor curto (id, Sim/Não) centralizada, cabeçalho e célula. GenericTable decide SOZINHA quais
-     colunas ganham esta classe, sniffando o tipo do dado (number/boolean), como já faz para ordenação:
-     nenhuma tela precisa declarar isso. `text-align: center` sozinho já centraliza tanto texto solto quanto
-     o `<span class="badge">` que `celulaValor()` desenha para booleano (ambos são conteúdo inline), sem
-     precisar de flexbox. Padding horizontal 1.1rem: coluna de valor curto com texto à esquerda numa coluna
+  /* Coluna de valor curto (id, Sim/Não, status, dinheiro, data) centralizada, cabeçalho e célula: na
+     GenericTable quem liga esta classe é o tipo da coluna (components/crud/colunas/); as tabelas manuais do
+     Campo de Testes usam direto. `text-align: center` sozinho já centraliza tanto texto solto quanto o badge
+     (ambos são conteúdo inline), sem precisar de flexbox. Padding horizontal 1.1rem: coluna de valor curto com texto à esquerda numa coluna
      larga deixa muito vão sobrando de um lado só, enquanto a coluna de texto vizinha (nome/descrição) fica
      com pouco respiro; centralizar reparte o vão dos dois lados, e o padding maior dá o mesmo respiro extra
      às colunas de texto. */
@@ -90,10 +89,8 @@
     text-align: center;
   }
 
-  /* Largura padrão da coluna "id" em TODA tabela (deve suportar 3 ou 4 dígitos sem quebra de linha). `width`
-     aqui é só um FALLBACK: GenericTable calcula a própria largura por tabela (table-layout: auto, min-width
-     piso de 8ch, ver comentário completo em generic-table.tsx) e sobrescreve isto via `style` inline; esta
-     regra continua valendo para qualquer tabela que NÃO passe por esse cálculo. `white-space: nowrap`
+  /* Largura padrão da coluna "id" em TODA tabela (deve suportar 3 ou 4 dígitos sem quebra de linha). `width` é
+     preferência, não trava: ids maiores alargam a coluna sozinhos. `white-space: nowrap`
      garante que os dígitos nunca quebram linha mesmo numa tela estreita.
      `padding-right` extra: a coluna do lado direito de ID precisa ficar naturalmente um pouco mais afastada
      se tiver espaço, e só se aproximar em tela pequena. Próprio `clamp()`, deliberadamente MAIS generoso que
@@ -112,6 +109,118 @@
     padding-right: clamp(1.1rem, 2.5vw, 2rem);
   }
 
+  /* ===== Tipos de coluna da GenericTable (components/crud/colunas/) =====
+     Cada tipo tem uma classe aqui e a largura vem destes tokens, iguais em toda tabela: a mesma espécie de
+     coluna nunca muda de tamanho de uma tabela para outra. Colunas de conteúdo curto e previsível têm largura
+     fixa (`width` numa tabela `table-layout: auto` também é piso: a coluna não encolhe abaixo dela). Nome e
+     texto crescem com o conteúdo: o piso sai do maior valor da lista (inline, generic-table.tsx), limitado por
+     `--coluna-piso-maximo`. O nome tem mínimo e máximo próprios. Ações ocupa só a largura dos
+     botões (`width: 1%` + nowrap), então nunca engolem o espaço que sobra numa tela larga.
+     Ao diminuir a tela: primeiro some o espaço extra (as colunas se juntam), depois nome e texto encolhem
+     quebrando a linha, e só então a tabela rola de lado dentro do cartão. */
+  /* `clamp(mínimo, vw, máximo)`: a largura das colunas fixas acompanha a JANELA (não o conteúdo), então as
+     colunas se juntam ao estreitar a tela e continuam iguais entre tabelas numa mesma largura de janela. O
+     máximo vale a partir de ~1400px. */
+  .crud-tabela {
+    --coluna-sim-nao: clamp(5.5rem, 10.5vw, 9.25rem);
+    --coluna-status: clamp(6.5rem, 10.5vw, 9.25rem);
+    --coluna-numero: clamp(5rem, 8vw, 7rem);
+    --coluna-dinheiro: clamp(7.5rem, 11vw, 9.5rem);
+    --coluna-data: clamp(6.5rem, 9vw, 8rem);
+    --coluna-data-hora: clamp(7rem, 12.5vw, 11rem);
+    --coluna-nome-min: 12rem;
+    --coluna-nome-max: 32rem;
+    --coluna-piso-maximo: 28ch;
+  }
+
+  /* Texto (e-mail, código, pesquisador) tem piso menor que o nome: é ele que quebra a linha primeiro quando a
+     tela aperta, o nome continua com o espaço principal. */
+  .crud-tabela .crud-tabela__col--texto {
+    --coluna-piso-maximo: 18ch;
+  }
+
+  .crud-tabela .crud-tabela__col--sim-nao {
+    width: var(--coluna-sim-nao);
+  }
+
+  .crud-tabela .crud-tabela__col--status {
+    width: var(--coluna-status);
+  }
+
+  .crud-tabela .crud-tabela__col--numero {
+    width: var(--coluna-numero);
+  }
+
+  .crud-tabela .crud-tabela__col--dinheiro {
+    width: var(--coluna-dinheiro);
+    white-space: nowrap;
+  }
+
+  .crud-tabela .crud-tabela__col--data {
+    width: var(--coluna-data);
+    white-space: nowrap;
+  }
+
+  .crud-tabela .crud-tabela__col--data-hora {
+    width: var(--coluna-data-hora);
+  }
+
+  .crud-tabela__nome {
+    display: block;
+    min-width: var(--coluna-nome-min);
+    max-width: var(--coluna-nome-max);
+  }
+
+  .crud-tabela .crud-tabela__col--acoes {
+    width: 1%;
+    white-space: nowrap;
+  }
+
+  /* Rolagem lateral: id e nome ficam presos à esquerda e Ações à direita, para a pessoa sempre saber de qual
+     registro é a linha e alcançar os botões. `--deslocamento-nome` (largura real da coluna id) é medido em
+     generic-table.tsx. Fundo próprio porque o conteúdo rolando passa por baixo. */
+  .crud-tabela .crud-tabela__col--id,
+  .crud-tabela .crud-tabela__col--nome,
+  .crud-tabela .crud-tabela__col--acoes {
+    position: sticky;
+    z-index: 1;
+  }
+
+  .crud-tabela .crud-tabela__col--id {
+    left: 0;
+  }
+
+  .crud-tabela .crud-tabela__col--nome {
+    left: var(--deslocamento-nome, 0px);
+  }
+
+  .crud-tabela .crud-tabela__col--acoes {
+    right: 0;
+  }
+
+  .crud-tabela td.crud-tabela__col--id,
+  .crud-tabela td.crud-tabela__col--nome,
+  .crud-tabela td.crud-tabela__col--acoes {
+    background-color: var(--cor-fundo-cartao);
+  }
+
+  /* A dica do último botão de Ações abre alinhada pela direita: centralizada, ela passaria da borda da tabela
+     (mesmo invisível, ocupa espaço) e criaria uma rolagem lateral de poucos pixels. */
+  .crud-tabela__col--acoes .crud-tabela__acao:last-child .dica__bolha {
+    left: auto;
+    right: 0;
+    transform: none;
+  }
+
+  /* Linha separando a parte presa da que rola, só quando há algo escondido daquele lado. */
+  .crud-tabela__wrapper[data-rola-esquerda] .crud-tabela__col--nome {
+    box-shadow: inset -1px 0 0 var(--cor-borda-forte);
+  }
+
+  .crud-tabela__wrapper[data-rola-direita] .crud-tabela__col--acoes {
+    box-shadow: inset 1px 0 0 var(--cor-borda-forte);
+  }
+
   /* Linha fina entre linhas do corpo (não grade completa). */
   .crud-tabela tbody tr {
     border-bottom: 1px solid var(--cor-borda);
@@ -121,8 +230,9 @@
     border-bottom: none;
   }
 
-  /* Hover mais escuro em todo o painel, não só no menu lateral. */
-  .crud-tabela tbody tr:hover {
+  /* Hover mais escuro em todo o painel, não só no menu lateral. Pintado na CÉLULA (não na linha) para cobrir
+     também as colunas presas da rolagem lateral, que têm fundo próprio. */
+  .crud-tabela tbody tr:hover > td {
     background-color: var(--cor-fundo-hover);
   }
 
@@ -251,6 +361,40 @@
 
     .crud-tabela__acao {
       font-size: var(--font-size-base);
+    }
+  }
+
+  /* Primeiro passo quando a seção aperta: o texto secundário (e-mail, código, chave) desce um tamanho de fonte,
+     antes de precisar quebrar a linha. O nome continua no tamanho normal. */
+  @container (max-width: 1000px) {
+    .crud-tabela td.crud-tabela__col--texto {
+      font-size: var(--font-size-xs);
+    }
+  }
+
+  /* Tela estreita (celular): não cabem id, nome e Ações presos ao mesmo tempo, então só o nome fica preso (no
+     canto esquerdo), com mínimo e piso de conteúdo menores para sobrar uma janela de verdade para rolar. */
+  @container (max-width: 640px) {
+    .crud-tabela {
+      --coluna-nome-min: 9rem;
+      --coluna-piso-maximo: 16ch;
+    }
+
+    .crud-tabela .crud-tabela__col--texto {
+      --coluna-piso-maximo: 12ch;
+    }
+
+    .crud-tabela .crud-tabela__col--id,
+    .crud-tabela .crud-tabela__col--acoes {
+      position: static;
+    }
+
+    .crud-tabela .crud-tabela__col--nome {
+      left: 0;
+    }
+
+    .crud-tabela__wrapper[data-rola-direita] .crud-tabela__col--acoes {
+      box-shadow: none;
     }
   }
 

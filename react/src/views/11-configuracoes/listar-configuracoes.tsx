@@ -45,14 +45,14 @@ export function ListarConfiguracoes({ auth }: PropsPagina) {
       <GenericTable<ConfiguracaoResponse>
         titulo="Parâmetros do Sistema"
         colunas={[
-          { chave: 'idConfig', rotulo: 'id' },
-          { chave: 'chave', rotulo: 'chave' },
-          { chave: 'valor', rotulo: 'valor' },
-          { chave: 'tipo', rotulo: 'tipo' },
-          { chave: 'ativo', rotulo: 'ativo' },
+          { chave: 'idConfig', rotulo: 'id', tipo: 'id' },
+          { chave: 'chave', rotulo: 'chave', tipo: 'nome' },
+          { chave: 'valor', rotulo: 'valor', tipo: 'texto' },
+          { chave: 'tipo', rotulo: 'tipo', tipo: 'status' },
+          { chave: 'ativo', rotulo: 'ativo', tipo: 'simNao' },
           // `publica`: se a linha global aparece para quem não tem 'configuracao_gerenciar' (GET /configuracoes
           // sem token). Sem efeito numa linha pessoal.
-          { chave: 'publica', rotulo: 'pública' },
+          { chave: 'publica', rotulo: 'pública', tipo: 'simNao' },
         ]}
         chavePrimaria="idConfig"
         listar={listarConfiguracoes}

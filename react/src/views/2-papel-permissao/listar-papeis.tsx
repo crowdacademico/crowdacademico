@@ -106,8 +106,8 @@ export function ListarPapeis({ auth }: PropsPagina) {
         <GenericTable<PapelResponse>
           titulo="Papéis"
           colunas={[
-            { chave: 'idPapel', rotulo: 'id' },
-            { chave: 'nome', rotulo: 'nome' },
+            { chave: 'idPapel', rotulo: 'id', tipo: 'id' },
+            { chave: 'nome', rotulo: 'nome', tipo: 'nome' },
           ]}
           chavePrimaria="idPapel"
           listar={listarPapeis}
@@ -120,9 +120,10 @@ export function ListarPapeis({ auth }: PropsPagina) {
       <div className="admin-content-painel">
         <GenericTable
           titulo="Permissões (catálogo, só leitura)"
+          nivelTitulo={2}
           colunas={[
-            { chave: 'idPermissao', rotulo: 'id' },
-            { chave: 'nomeAmigavel', rotulo: 'nome' },
+            { chave: 'idPermissao', rotulo: 'id', tipo: 'id' },
+            { chave: 'nomeAmigavel', rotulo: 'nome', tipo: 'nome' },
             // Botão de verdade, não ícone/tooltip no canto: a coluna "descrição" não mostra o resumo em texto,
             // mostra um botão "Saiba mais" que abre o modal de detalhe (o que faz, por que existe, quem tem
             // hoje). `resumo` continua no dado (não usado aqui, mas o filtro de texto da tabela ainda busca
@@ -130,10 +131,8 @@ export function ListarPapeis({ auth }: PropsPagina) {
             {
               chave: 'resumo',
               rotulo: 'descrição',
-              // O dado por trás é texto (`resumo`, string: o sniff automático de GenericTable não centralizaria
-              // sozinho), mas o que renderiza é um botão curto ("Saiba mais"), que fica esquisito colado à
-              // esquerda igual as outras colunas de texto longo.
-              centralizar: true,
+              // Tipo 'status' (centralizado, largura fixa): o que aparece é um botão curto, não o texto.
+              tipo: 'status',
               renderizar: (linha) => (
                 <button
                   type="button"
@@ -144,7 +143,7 @@ export function ListarPapeis({ auth }: PropsPagina) {
                 </button>
               ),
             },
-            { chave: 'nome', rotulo: 'chave' },
+            { chave: 'nome', rotulo: 'chave', tipo: 'texto' },
           ]}
           chavePrimaria="idPermissao"
           listar={listarPermissoes}

@@ -74,17 +74,18 @@ export function ListarAreasConhecimento({ auth }: PropsPagina) {
         // Ordem "id, nome, ...": padroniza com as outras tabelas (Usuários/Pesquisadores/Campanhas colocam
         // "nome" logo depois de "id").
         colunas={[
-          { chave: 'idAreaConhecimento', rotulo: 'id' },
-          { chave: 'nome', rotulo: 'nome' },
-          { chave: 'codigoCnpq', rotulo: 'código CNPq', centralizar: true },
+          { chave: 'idAreaConhecimento', rotulo: 'id', tipo: 'id' },
+          { chave: 'nome', rotulo: 'nome', tipo: 'nome' },
+          { chave: 'codigoCnpq', rotulo: 'código CNPq', tipo: 'texto' },
           {
             chave: 'nomePai',
             rotulo: 'grande área',
+            tipo: 'texto',
             // Célula mostra só "Base" pras 9 raízes - o valor de verdade
             // (com a vírgula, ver listarAreas acima) é só pro filtro.
             renderizar: (linha) => (linha.idPai === null ? 'Base' : linha.nomePai),
           },
-          { chave: 'ativo', rotulo: 'ativo' },
+          { chave: 'ativo', rotulo: 'ativo', tipo: 'simNao' },
         ]}
         chavePrimaria="idAreaConhecimento"
         listar={listarAreas}

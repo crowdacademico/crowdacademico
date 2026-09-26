@@ -475,3 +475,30 @@ Decisão do Lucas: fica **dentro do painel administrativo**, como item novo do m
 - **Sem mudança no banco nem no Nest:** os endpoints de "fazer por conta própria" já existem (criar, alterar, enviar, excluir rascunho, deslizar datas) e a RLS já libera o dono. O trabalho é só no React, reaproveitando os componentes do T2.
 - **Não depende da página pública da campanha**, que vem depois. Atualizações e comentários (hoje no T3) também ficam para depois.
 - **Destrava depois:** o hook de erro por campo (`useErrosFormulario`) e a página pública da campanha.
+
+### 🟢 FEITO (26-09-2026): tipos de coluna na GenericTable (colunas padronizadas entre tabelas)
+
+- **O que mudou:** toda coluna declara um `tipo` (`id`, `nome`, `texto`, `numero`, `simNao`, `status`, `dinheiro`, `data`, `dataHora`), e o tipo decide largura, alinhamento, formato, ordenação e busca. Os tipos moram em `react/src/components/crud/colunas/`, um arquivo por tipo (`1-coluna-id.ts` a `9-coluna-acoes.tsx`). As larguras viraram tokens em `5-crud.css`. As 11 tabelas que usam a `GenericTable` foram trocadas; saíram `centralizar` e `largura` escritos à mão em cada tela.
+- **Bugs consertados no caminho:** ordenar por dinheiro (meta, arrecadado) era alfabético ("R$ 10.000" antes de "R$ 9.000"), e "criada em" (Aprovar Campanhas) ordenava pelo dia. Em tela larga, a coluna Ações engolia todo o espaço sobrando (1011 px em Papéis a 1920 px de janela). Uma dica invisível do último botão de Ações criava rolagem lateral de 5 px.
+- **Rolagem lateral:** quando a tabela não cabe, id e nome ficam presos à esquerda e Ações à direita; no celular só o nome fica preso.
+- **Prova:** medição das 10 tabelas em 6 larguras antes e depois (em 1400 px nenhuma tabela rola mais; antes eram 3), ordenação conferida ao vivo, tema escuro e hover conferidos, G7 (29 casos) e G8 axe (14 casos) verdes, `tsc`, `eslint` e build limpos. Detalhes em `DOCUMENTACAO_FRONTEND.md`, "Tipos de coluna".
+- **Fora do escopo:** as tabelas manuais do Campo de Testes (bancadas), a matriz Papel × Permissão e o painel de log continuam com tabela própria.
+
+### 🟢 FEITO (26-09-2026, mesmo dia): ajustes finais das tabelas e títulos da página (axe zerado)
+
+- **`colunaExtra` removida da `GenericTable`:** nenhuma tela usava; `renderizar` já cobre o caso (o "Saiba mais" de Permissões).
+- **Coluna "atenção" saiu da lista de Campanhas:** o sinal de score baixo só faz sentido na fila de aprovação, onde continua. Ideia registrada para depois: um filtro "precisa de atenção" em cima da tabela.
+- **Texto secundário antes de quebrar:** com a seção abaixo de 1000 px, e-mail/código/chave descem um tamanho de fonte; só depois quebram a linha, e só em ponto natural (depois do `@` e do `_`). Em 1100 px nenhuma tabela rola mais de lado; em 900 px sobraram 3 (antes 5), rolando bem menos.
+- **Um `h1` e um `<main>` por página, sem mudar o visual:** o título de cada listagem, do Dashboard, das páginas públicas, das bancadas e do formulário de Termos virou `h1`; seções `h2`; blocos de modal `h3`; rodapé `h2`. `GenericTable` ganhou `nivelTitulo` e `SecaoFicha` ganhou `nivel`. O axe não acusa nenhuma violação (nem moderada) em 22 telas; G7 (29) e G8 (14) verdes; `tsc` e `eslint` limpos. Detalhes em `DOCUMENTACAO_FRONTEND.md`.
+
+### 🟢 CORRIGIDO (26-09-2026, mesmo dia): tabelas do Campo de Testes cortadas no celular e valor do card "Arrecadado"
+
+- **Tabelas manuais sem área de rolagem:** as listas do T1, do T2 (e as tabelas de orçamento e cronograma), as duas do T3 e o painel "Ver log" não ficavam dentro de `.crud-tabela__wrapper`. No celular a tabela passava do cartão (T1: 647 px num cartão de 358 px) e os botões de Ações ficavam fora de alcance. Agora rolam dentro do cartão, como as outras.
+- **Card "Arrecadado (total)" do Dashboard:** o valor quebrava no meio ("R$ 257.800,0" / "0") por causa do `break-words` do card. Agora o "R$" sai menor, na frente, o número nunca quebra, e o tamanho do valor acompanha a largura do card (entre `text-base` e `text-3xl`, mesma altura de linha dos cards vizinhos). Conferido de 1920 a 390 px.
+
+### 🟡 Achado (26-09-2026): "sessões ativas agora" no Dashboard conta sessões de teste, não gente online
+
+Consulta só de leitura no Supabase: 378 sessões não revogadas e dentro da validade de 30 dias, 326 delas do admin, criadas pelos logins automáticos dos testes (Playwright, scripts de API com `node` e `curl`), que nunca fazem logout. Não é erro de código: a renovação do token revoga a sessão anterior, e a contagem já ignora sessão vencida ou revogada (o tooltip do card explica isso). O rótulo "agora" é que engana. Opções, para decidir:
+- **Rótulo:** trocar "sessões ativas agora" por "sessões abertas (30 dias)". Só texto.
+- **Métrica de verdade:** como cada renovação silenciosa (a cada ~15 min de uso) cria uma linha nova em `sessao`, dá para contar "com atividade na última meia hora" sem coluna nova: sessão não revogada com `criado_em` recente. Muda `contar_metricas_dashboard()` (03), então precisa de patch no `ATUALIZAR O SUPABASE.sql`.
+- **Testes:** os scripts de teste podem fazer logout no fim, para não acumular sessão.

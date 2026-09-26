@@ -15,7 +15,7 @@ export function DashboardSaude({ bancoConectado, resumo }: DashboardSaudeProps) 
   return (
     <div className="space-y-4">
       <div className="fundo-cartao border borda-forte rounded-xl shadow-sm p-5">
-        <h3 className="subtitulo mb-3">Conexão com o banco</h3>
+        <h2 className="subtitulo mb-3">Conexão com o banco</h2>
         <div className="flex items-center gap-2 text-sm">
           <PontoStatusConexao valor={bancoConectado} />
           <span className="texto-padrao font-semibold">
@@ -29,7 +29,7 @@ export function DashboardSaude({ bancoConectado, resumo }: DashboardSaudeProps) 
       </div>
 
       <div className="fundo-cartao border borda-forte rounded-xl shadow-sm p-5">
-        <h3 className="subtitulo mb-3">Contagens agregadas</h3>
+        <h2 className="subtitulo mb-3">Contagens agregadas</h2>
         {resumo ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
             <p className="texto-fraco">

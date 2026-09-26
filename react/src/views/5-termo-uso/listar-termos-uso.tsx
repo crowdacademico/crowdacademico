@@ -7,7 +7,6 @@ import { ModalAlterarTermoUso } from './modal-alterar-termo-uso';
 import { ModalExcluirTermoUso } from './modal-excluir-termo-uso';
 import { termoUsoApi } from '../../services/5-termo-uso/api/termo-uso.api';
 import { ROTULO_TIPO_TERMO, TIPOS_TERMO } from '../../services/5-termo-uso/constants/termo-uso-tipos';
-import { formatarDataHora } from '../../services/constant/utils/formatacao.util';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { TermoUsoResponse } from '../../services/5-termo-uso/type/termo-uso.type';
 
@@ -53,21 +52,16 @@ export function ListarTermosUso({ auth }: PropsPagina) {
           </Link>
         }
         colunas={[
-          { chave: 'idTermo', rotulo: 'id' },
-          { chave: 'versao', rotulo: 'versão' },
+          { chave: 'idTermo', rotulo: 'id', tipo: 'id' },
+          { chave: 'versao', rotulo: 'versão', tipo: 'nome' },
           {
             chave: 'tipo',
             rotulo: 'tipo',
-            centralizar: true,
+            tipo: 'status',
             renderizar: (linha) => ROTULO_TIPO_TERMO[linha.tipo],
           },
-          { chave: 'ativo', rotulo: 'ativo' },
-          {
-            chave: 'criadoEm',
-            rotulo: 'publicado em',
-            centralizar: true,
-            renderizar: (linha) => formatarDataHora(linha.criadoEm),
-          },
+          { chave: 'ativo', rotulo: 'ativo', tipo: 'simNao' },
+          { chave: 'criadoEm', rotulo: 'publicado em', tipo: 'dataHora' },
         ]}
         chavePrimaria="idTermo"
         listar={listarTermos}

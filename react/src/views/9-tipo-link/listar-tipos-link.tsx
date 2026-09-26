@@ -49,21 +49,15 @@ export function ListarTiposLink({ auth }: PropsPagina) {
             Criar
           </button>
         }
-        // `largura: '9.25rem'` nas 4 booleanas (o exato mesmo espaçamento): sem isso, cada uma teria uma
-        // largura diferente (table-layout: auto mede pela palavra do cabeçalho, e "Atualização"/"Recompensa"
-        // são bem mais compridas que "Perfil"/"Ativo"). 9.25rem é a medida real da mais larga ("Atualização",
-        // ~9.1rem) com uma folga pequena. Os 3 escopos (CK_TIPO_LINK_ALGUM_ESCOPO: pelo menos 1 sempre TRUE)
-        // viram badge Sim/Não sozinhos, mesmo tratamento que GenericTable dá a qualquer coluna booleana: não
-        // precisa de `renderizar` customizado.
         // Ordem "id, nome, ...": padroniza com as outras tabelas (mesmo padrão de Áreas do Conhecimento).
         colunas={[
-          { chave: 'idTipolink', rotulo: 'id' },
-          { chave: 'nome', rotulo: 'nome' },
-          { chave: 'codigo', rotulo: 'código' },
-          { chave: 'permitePerfil', rotulo: 'perfil', largura: '9.25rem' },
-          { chave: 'permiteAtualizacao', rotulo: 'atualização', largura: '9.25rem' },
-          { chave: 'permiteRecompensa', rotulo: 'recompensa', largura: '9.25rem' },
-          { chave: 'ativo', rotulo: 'ativo', largura: '9.25rem' },
+          { chave: 'idTipolink', rotulo: 'id', tipo: 'id' },
+          { chave: 'nome', rotulo: 'nome', tipo: 'nome' },
+          { chave: 'codigo', rotulo: 'código', tipo: 'texto' },
+          { chave: 'permitePerfil', rotulo: 'perfil', tipo: 'simNao' },
+          { chave: 'permiteAtualizacao', rotulo: 'atualização', tipo: 'simNao' },
+          { chave: 'permiteRecompensa', rotulo: 'recompensa', tipo: 'simNao' },
+          { chave: 'ativo', rotulo: 'ativo', tipo: 'simNao' },
         ]}
         chavePrimaria="idTipolink"
         listar={listarTipos}
