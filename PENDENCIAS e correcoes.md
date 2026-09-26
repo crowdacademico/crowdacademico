@@ -458,3 +458,20 @@ Ninguém usa: a Alexia recria o banco do zero com os arquivos `01` a `08`, e as 
 ### 🟢 FEITO (26-09-2026): botão "Criar" saiu de Parâmetros do Sistema
 
 Decisão do Lucas. Uma chave criada pela tela não tinha efeito nenhum, porque só as chaves que alguma regra do banco ou do Nest lê (`config_numero('...')`) mudam o comportamento do sistema. Parâmetro novo passa a entrar só por SQL (`07_seed_dados.sql`), junto com a regra que o usa. Saíram o botão, o `modal-criar-configuracao.tsx`, o `configuracaoApi.criar` e o tipo `ConfiguracaoRequestCreate` do React. Alterar e Consultar continuam iguais. O endpoint `POST /configuracoes` do Nest ficou, porque também cria configuração pessoal do próprio usuário. `tsc` e `eslint` limpos.
+
+### 🔴 ALTA PRIORIDADE, pendência aberta (26-09-2026): "Minhas campanhas" do pesquisador
+
+Decisão do Lucas: fica **dentro do painel administrativo**, como item novo do menu lateral, visível só para quem é pesquisador. Não começar ainda: antes há ajustes menores a fazer, e o Lucas avisa quando for a hora.
+
+- **Por que é alta prioridade:** hoje o pesquisador não tem tela própria para criar ou corrigir campanha. Tudo isso só existe no Campo de Testes (T2), que é ferramenta do admin e some no build de produção. Numa banca, "entra como pesquisador e cria uma campanha" não teria onde ser mostrado.
+- **Como ficaria:**
+  - Uma tabela só com as campanhas do pesquisador logado (título, status, meta, prazo) e o botão "Criar campanha".
+  - Criar abre o mesmo passo a passo do T2 (Dados, Orçamento, Cronograma), só que em nome do próprio pesquisador (`POST /campanha`), sem escolher dono.
+  - Ações por status:
+    - **rascunho:** Alterar, Excluir e "Enviar para aprovação";
+    - **aguardando aprovação:** Consultar e ajustar orçamento e cronograma;
+    - **rejeitada:** ver o motivo e os reenvios restantes, e "Corrigir e reenviar";
+    - **ativa em diante:** só Consultar, com os campos congelados vindos do banco (`camposBloqueados`).
+- **Sem mudança no banco nem no Nest:** os endpoints de "fazer por conta própria" já existem (criar, alterar, enviar, excluir rascunho, deslizar datas) e a RLS já libera o dono. O trabalho é só no React, reaproveitando os componentes do T2.
+- **Não depende da página pública da campanha**, que vem depois. Atualizações e comentários (hoje no T3) também ficam para depois.
+- **Destrava depois:** o hook de erro por campo (`useErrosFormulario`) e a página pública da campanha.

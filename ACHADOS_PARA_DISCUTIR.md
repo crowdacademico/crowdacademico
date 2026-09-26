@@ -52,7 +52,7 @@ Lista montada a partir da resposta da revisão externa de 24-09-2026 (a pasta de
 
 1. **"Minhas campanhas" do pesquisador, com o wizard extraído do Campo de Testes.**
    - Revisão externa: é o maior risco do TCC. Numa banca pedem "me mostra o pesquisador criando uma campanha", e hoje só existe a bancada de testes.
-   - Sugestão: concordo. A decisão é onde mora: área própria ou dentro do painel.
+   - Decidido em 26-09-2026: dentro do painel, item novo do menu, só para pesquisador. Alta prioridade, aguardando o Lucas liberar (ver "PENDENCIAS e correcoes.md").
 2. **Hook `useErrosFormulario`.** Revisão externa: umas 60 linhas, aplicar primeiro no wizard. Sugestão: só faz sentido junto com o item 1.
 3. **Alterar e Excluir campanha na tela real.** Revisão externa: dentro de "Minhas campanhas", com D4, e Excluir só em rascunho. Sugestão: concordo, depende do item 1 e do D4 (A.2).
 4. **Página pública da campanha.** Revisão externa: não depende do gateway, com o botão "Contribuir em breve". Sugestão: concordo. A decisão é o escopo.
