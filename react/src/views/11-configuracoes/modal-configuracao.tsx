@@ -11,9 +11,8 @@ import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import { parMinMaxDaConfiguracao } from '../../services/11-configuracoes/constants/configuracao-pares-min-max';
 import type { ConfiguracaoResponse } from '../../services/11-configuracoes/type/configuracao.type';
 
-// Consultar/Alterar/Excluir em modal: recebem a linha (`configuracao: ConfiguracaoResponse`) inteira do
-// chamador, mesmo motivo de modal-motivo-denuncia.tsx. Criar fica em arquivo separado
-// (modal-criar-configuracao.tsx).
+// Consultar/Alterar em modal: recebem a linha (`configuracao: ConfiguracaoResponse`) inteira do
+// chamador, mesmo motivo de modal-motivo-denuncia.tsx.
 
 interface ModalConsultarConfiguracaoProps {
   configuracao: ConfiguracaoResponse;

@@ -4,7 +4,6 @@ import type { AuthFetch } from '../../3-auth/type/auth.type';
 import type { ResultadoPaginado } from '../../constant/type/paginacao.type';
 import { desembrulharPaginado } from '../../constant/type/paginacao.type';
 import type {
-  ConfiguracaoRequestCreate,
   ConfiguracaoRequestUpdate,
   ConfiguracaoResponse,
 } from '../type/configuracao.type';
@@ -27,11 +26,6 @@ export const configuracaoApi = {
       .then(desembrulharPaginado('configurações')),
   buscar: (authFetch: AuthFetch, id: number | string): Promise<ConfiguracaoResponse> =>
     authFetch(`/configuracoes/${id}`).then(tratarResposta<ConfiguracaoResponse>),
-  criar: (authFetch: AuthFetch, dados: ConfiguracaoRequestCreate): Promise<ConfiguracaoResponse> =>
-    authFetch('/configuracoes', {
-      method: 'POST',
-      body: JSON.stringify(dados),
-    }).then(tratarResposta<ConfiguracaoResponse>),
   atualizar: (
     authFetch: AuthFetch,
     id: number | string,

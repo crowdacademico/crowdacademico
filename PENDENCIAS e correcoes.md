@@ -454,3 +454,7 @@ Ninguém usa: a Alexia recria o banco do zero com os arquivos `01` a `08`, e as 
 - **Prova:** o código dos `.sql` é idêntico ao de antes (tirando os comentários, a comparação bate); `tsc` limpo no Nest e no React, `eslint` limpo no React; as 16 suítes do banco (1.227 casos) passam, com e sem o `ATUALIZAR O SUPABASE.sql`.
 - **Não tocado:** `ATUALIZAR O SUPABASE.sql` (é patch de execução única) e os dados de seed (uma descrição de seed ainda traz "(sugestão de uma IA)", isso é dado, não comentário).
 - **Menu temporário removido:** o bloco comentado "TEMPORÁRIO" do cabeçalho (`Explorar Projetos`, `Como Funciona`, `Transparência LGPD`) era código morto e foi para o histórico.
+
+### 🟢 FEITO (26-09-2026): botão "Criar" saiu de Parâmetros do Sistema
+
+Decisão do Lucas. Uma chave criada pela tela não tinha efeito nenhum, porque só as chaves que alguma regra do banco ou do Nest lê (`config_numero('...')`) mudam o comportamento do sistema. Parâmetro novo passa a entrar só por SQL (`07_seed_dados.sql`), junto com a regra que o usa. Saíram o botão, o `modal-criar-configuracao.tsx`, o `configuracaoApi.criar` e o tipo `ConfiguracaoRequestCreate` do React. Alterar e Consultar continuam iguais. O endpoint `POST /configuracoes` do Nest ficou, porque também cria configuração pessoal do próprio usuário. `tsc` e `eslint` limpos.

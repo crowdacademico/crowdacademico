@@ -4,7 +4,6 @@ import { BlocoLogAuditoria } from '../../components/crud/bloco-log-auditoria';
 import { useCrudModais } from '../../services/constant/hook/use-crud-modais';
 import { configuracaoApi } from '../../services/11-configuracoes/api/configuracao.api';
 import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
-import { ModalCriarConfiguracao } from './modal-criar-configuracao';
 import {
   ModalAlterarConfiguracao,
   ModalConsultarConfiguracao,
@@ -14,12 +13,12 @@ import type { ConfiguracaoResponse } from '../../services/11-configuracoes/type/
 
 // Aba "Parâmetros do Sistema" do painel admin: rota /admin/configuracoes (URL/tabela/variáveis internas
 // continuam "configuracoes" de propósito, só o nome visível na tela mudou; ver rotas.constants.ts).
-// Criar/Alterar/Consultar em modal, mesmo padrão de listar-usuarios.tsx/listar-motivos-denuncia.tsx.
+// Alterar/Consultar em modal, mesmo padrão de listar-usuarios.tsx/listar-motivos-denuncia.tsx.
+//
+// Sem Criar: uma chave nova só tem efeito se alguma regra do banco ou do Nest a ler (config_numero('...')),
+// então parâmetro novo entra por SQL (07_seed_dados.sql), junto com a regra que o usa.
 export function ListarConfiguracoes({ auth }: PropsPagina) {
   const {
-    criando,
-    abrirCriando,
-    fecharCriando,
     alterando,
     consultando,
     fecharAlterando,
@@ -45,11 +44,6 @@ export function ListarConfiguracoes({ auth }: PropsPagina) {
     <div className="admin-content-painel">
       <GenericTable<ConfiguracaoResponse>
         titulo="Parâmetros do Sistema"
-        acaoTopo={
-          <button type="button" className="btn btn-primary" onClick={abrirCriando}>
-            Criar
-          </button>
-        }
         colunas={[
           { chave: 'idConfig', rotulo: 'id' },
           { chave: 'chave', rotulo: 'chave' },
@@ -70,10 +64,6 @@ export function ListarConfiguracoes({ auth }: PropsPagina) {
           negócio hardcoded do .sql, então ver o valor antigo/novo de uma mudança (ex.: taxa, limite, prazo)
           é mais útil que "chave"/"descricao"/"ativo" mudaram. */}
       <BlocoLogAuditoria buscar={buscarLogConfiguracoes} campoRenomeio="valor" />
-
-      {criando && (
-        <ModalCriarConfiguracao auth={auth} aoFechar={fecharCriando} aoCriado={recarregar} />
-      )}
 
       {alterando && (
         <ModalAlterarConfiguracao

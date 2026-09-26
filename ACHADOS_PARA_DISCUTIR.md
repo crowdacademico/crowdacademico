@@ -67,7 +67,7 @@ Lista montada a partir da resposta da revisão externa de 24-09-2026 (a pasta de
 9. **Verde do tema escuro (#2fbf71) e borda de campo com 1,48:1.** Decidir olhando o Guia de Estilo, com a Alexia.
 10. **Guarda de login em `/admin/*`.** Pendência: hoje o painel abre sem login depois de sair. Vale fazer (o refresh token salvo e o botão `<dev> Entrar como Admin` deixam o custo baixo), fica para depois.
 11. **Moderados do axe** (sem h1, ordem dos títulos do rodapé). Mexe na tipografia fixa.
-12. **Botão "Criar" de parâmetro global.** Se continua ou some.
+12. **Botão "Criar" de parâmetro global.** Decidido em 26-09-2026: saiu da tela.
 
 ## C. Dependem de módulo (não antecipar)
 

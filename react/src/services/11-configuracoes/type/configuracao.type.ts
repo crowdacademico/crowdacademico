@@ -13,16 +13,6 @@ export interface ConfiguracaoResponse {
   publica: boolean;
 }
 
-// Espelha configuracao.request-create.ts.
-export interface ConfiguracaoRequestCreate {
-  chave: string;
-  valor?: string;
-  tipo: TipoConfiguracao;
-  descricao?: string;
-  global?: boolean;
-  publica?: boolean;
-}
-
 // Espelha configuracao.request-update.ts.
 export interface ConfiguracaoRequestUpdate {
   valor?: string;
