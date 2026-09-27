@@ -14,7 +14,7 @@ const CLASSE_BADGE_IMPACTO: Record<ImpactoBadge, string> = {
   baixo: 'fundo-info texto-info',
 };
 
-interface SecaoModalDetalhe {
+export interface SecaoModalDetalhe {
   titulo: string;
   conteudo: ReactNode;
 }

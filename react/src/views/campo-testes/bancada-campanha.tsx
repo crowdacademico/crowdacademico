@@ -12,7 +12,9 @@ import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
 import { useRegrasCampanha } from '../../services/12-campanha/hook/use-regras-campanha';
 import { CAMPANHA_BLOQUEADA, motivoBloqueioCampanha } from '../../services/campo-testes/util/registros-bloqueados';
-import { AcaoLinha } from '../../components/crud/acao-linha';
+import { TabelaBancadaCampanha } from '../../components/crud/tabelas/9-tabela-bancada-campanha';
+import { TabelaCriteriosEnvio } from '../../components/crud/tabelas/7-tabela-criterios-envio';
+import { avaliarCriteriosEnvio } from '../../services/12-campanha/util/criterios-envio.util';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { perfilPesquisadorApi } from '../../services/6-perfil-pesquisador/api/perfil-pesquisador.api';
@@ -21,17 +23,12 @@ import {
   classeBadgeStatusCampanha,
 } from '../../services/12-campanha/constants/status-campanha.constants';
 import { formatarDataHora, formatarMoeda } from '../../services/constant/utils/formatacao.util';
-import { paginarClientSide } from '../../services/constant/utils/paginacao.util';
-import { RodapePaginacao } from '../../components/pagination/rodape-paginacao';
-import { BarraFiltros } from '../../components/search/barra-filtros';
-import { LIMIAR_FILTRO } from '../../components/search/limiar-filtro.constants';
 import { RegistroChamadas } from './registro-chamadas';
 import { ModalAlterarCampanha } from '../12-campanha/modal-alterar-campanha';
 import { ModalCriarCampanha } from '../12-campanha/modal-criar-campanha';
 import { PainelOrcamentoCronograma } from '../12-campanha/painel-orcamento-cronograma';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { CampanhaResponse, HistoricoRejeicaoResponse } from '../../services/12-campanha/type/campanha.type';
-import type { StatusCampanha } from '../../services/12-campanha/constants/status-campanha.constants';
 import type { AreaConhecimentoResponse } from '../../services/8-area-conhecimento/type/area-conhecimento.type';
 import type { UsuarioResponse } from '../../services/1-usuario/type/usuario.type';
 import type { PerfilPesquisadorResponse } from '../../services/6-perfil-pesquisador/type/perfil-pesquisador.type';
@@ -65,12 +62,6 @@ export function BancadaCampanha({ auth }: PropsPagina) {
   const [usuarios, setUsuarios] = useState<UsuarioResponse[]>([]);
   const [perfisPesquisador, setPerfisPesquisador] = useState<PerfilPesquisadorResponse[]>([]);
   const [campanhas, setCampanhas] = useState<CampanhaResponse[]>([]);
-  // Ligado por padrão: a demo pré-montada (campanhas 1-10) não serve para testar, então já nasce fora da vista.
-  const [ocultarBloqueadas, setOcultarBloqueadas] = useState(true);
-  const [filtroTexto, setFiltroTexto] = useState('');
-  const [pagina, setPagina] = useState(1);
-  const [tamanhoPagina, setTamanhoPagina] = useState<number | 'todos'>(10);
-  const [statusSelecionados, setStatusSelecionados] = useState<StatusCampanha[]>([]);
   const [campanhaConsultada, setCampanhaConsultada] = useState<CampanhaResponse | null>(null);
   const [historicoRejeicaoConsultada, setHistoricoRejeicaoConsultada] = useState<HistoricoRejeicaoResponse[]>([]);
 
@@ -158,24 +149,6 @@ export function BancadaCampanha({ auth }: PropsPagina) {
       .filter((usuario) => String(usuario.idUsuario).includes(termo) || usuario.nome.toLowerCase().includes(termo))
       .slice(0, LIMITE_SUGESTOES_COMBOBOX);
   })();
-
-  // Opções do dropdown "Status" - só os valores que já aparecem nos
-  // dados (mesma ideia das facetas de GenericTable e de bancada-pesquisador.tsx), sem
-  // lista fixa do enum (evita hardcoded - se um status novo aparecer, o
-  // facet já mostra sozinho).
-  const opcoesStatus = [...new Set(campanhas.map((c) => c.status))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
-
-  const campanhasFiltradas = campanhas
-    .filter((item) => !ocultarBloqueadas || !CAMPANHA_BLOQUEADA(item.idCampanha))
-    .filter((item) => statusSelecionados.length === 0 || statusSelecionados.includes(item.status))
-    .filter((item) => {
-      const termo = filtroTexto.trim().toLowerCase();
-      if (!termo) return true;
-      return [item.idCampanha, item.titulo, item.status, nomeDe(item.idUsuario)].some((valor) =>
-        String(valor).toLowerCase().includes(termo),
-      );
-    });
-  const { totalPaginas, paginaAtual, itensPagina: campanhasPagina } = paginarClientSide(campanhasFiltradas, pagina, tamanhoPagina);
 
   const iniciarEdicaoCampanha = (item: CampanhaResponse) => {
     setIdCampanhaEditando(item.idCampanha);
@@ -282,116 +255,13 @@ export function BancadaCampanha({ auth }: PropsPagina) {
         </div>
       </div>
 
-      <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
-        <h2 className="subtitulo">Campanhas</h2>
-        <div className="flex items-center gap-3 flex-wrap">
-          <label className="text-xs flex items-center gap-1.5">
-            <input
-              type="checkbox"
-              checked={ocultarBloqueadas}
-              onChange={(evento) => {
-                setOcultarBloqueadas(evento.target.checked);
-                setPagina(1);
-              }}
-            />
-            Ocultar bloqueadas (demonstração)
-          </label>
-        </div>
-      </div>
-
-      <BarraFiltros
-        mostrarBusca={campanhas.length > LIMIAR_FILTRO}
-        valorBusca={filtroTexto}
-        aoMudarBusca={(valor) => {
-          setFiltroTexto(valor);
-          setPagina(1);
-        }}
-        facetas={[
-          {
-            chave: 'status',
-            rotulo: 'Status',
-            opcoes: opcoesStatus,
-            selecionados: statusSelecionados,
-            aoAlternar: (opcao) => {
-              const status = opcao as StatusCampanha;
-              setStatusSelecionados((atuais) =>
-                atuais.includes(status) ? atuais.filter((s) => s !== status) : [...atuais, status],
-              );
-              setPagina(1);
-            },
-            aoLimpar: () => {
-              setStatusSelecionados([]);
-              setPagina(1);
-            },
-          },
-        ]}
+      <TabelaBancadaCampanha
+        campanhas={campanhas}
+        nomeDe={nomeDe}
+        aoAlterar={iniciarEdicaoCampanha}
+        aoConsultar={setCampanhaConsultada}
+        aoExcluir={setCampanhaExcluindo}
       />
-
-      <div className="crud-tabela__wrapper">
-        <table className="crud-tabela mb-2">
-          <thead>
-            <tr>
-              <th className="crud-tabela__coluna-id crud-tabela__celula--centralizada">id</th>
-              <th>título</th>
-              <th className="crud-tabela__celula--centralizada">status</th>
-              <th>dono</th>
-              <th className="crud-tabela__celula--centralizada">meta</th>
-              <th className="crud-tabela__celula--centralizada">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {campanhasPagina.length === 0 && (
-              <tr>
-                <td colSpan={6} className="texto-fraco">{filtroTexto ? 'Nenhum registro bate com o filtro.' : 'Nenhum registro.'}</td>
-              </tr>
-            )}
-            {campanhasPagina.map((item) => {
-              const bloqueada = CAMPANHA_BLOQUEADA(item.idCampanha);
-              return (
-                  <tr key={item.idCampanha} className={bloqueada ? 'texto-fraco' : undefined}>
-                    <td className="crud-tabela__coluna-id crud-tabela__celula--centralizada" style={bloqueada ? { textDecoration: 'line-through' } : undefined}>
-                      {item.idCampanha}
-                    </td>
-                    <td style={bloqueada ? { textDecoration: 'line-through' } : undefined}>{item.titulo}</td>
-                    <td
-                      className="crud-tabela__celula--centralizada"
-                      style={bloqueada ? { textDecoration: 'line-through' } : undefined}
-                    >
-                      <span className={`badge ${classeBadgeStatusCampanha(item.status)}`}>
-                        {ROTULO_STATUS_CAMPANHA[item.status]}
-                      </span>
-                    </td>
-                    <td style={bloqueada ? { textDecoration: 'line-through' } : undefined}>{nomeDe(item.idUsuario)}</td>
-                    <td className="crud-tabela__celula--centralizada">{formatarMoeda(item.metaFinanceira)}</td>
-                    {/* A coluna "Escolher" não existe; o cadeado continua só em Alterar/Excluir; Consultar é
-                        leitura pura, sem risco nenhum de estragar a demo. */}
-                    <td className="crud-tabela__celula--centralizada">
-                      <div className="crud-tabela__acoes">
-                        <AcaoLinha
-                          rotulo="Alterar"
-                          icone="fa-pen"
-                          variante="alterar"
-                          onClick={() => iniciarEdicaoCampanha(item)}
-                        />
-                        <AcaoLinha
-                          rotulo="Consultar"
-                          icone="fa-eye"
-                          onClick={() => setCampanhaConsultada(item)}
-                        />
-                        <AcaoLinha
-                          rotulo="Excluir"
-                          icone="fa-trash"
-                          variante="excluir"
-                          onClick={() => setCampanhaExcluindo(item)}
-                        />
-                      </div>
-                    </td>
-                  </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
 
       {/* Consultar/Alterar/Excluir em MODAL, mesmo padrão de T1 (ModalFicha + SecaoFicha/CampoFicha).
           Diferença de T1: não existe página real de Alterar/Excluir Campanha no painel admin para copiar (só
@@ -491,45 +361,18 @@ export function BancadaCampanha({ auth }: PropsPagina) {
               if (bloqueadaEdicao || campanha.status !== 'aguardando_aprovacao') {
                 return null;
               }
-              const soma = orcamento.reduce((total, item) => total + Number(item.valor), 0);
-              const metaBatendo = soma === Number(campanha.metaFinanceira);
-              const orcamentoOk = orcamento.length >= minimoItensOrcamento && metaBatendo;
-              const cronogramaOk = cronograma.length >= minimoMarcosCronograma;
-              const pronta = orcamentoOk && cronogramaOk;
-              const motivo = !orcamentoOk
-                ? `Orçamento incompleto (${orcamento.length}/${minimoItensOrcamento} itens, soma ${formatarMoeda(soma)} de ${formatarMoeda(campanha.metaFinanceira)}).`
-                : !cronogramaOk
-                  ? `Cronograma incompleto (${cronograma.length}/${minimoMarcosCronograma} marcos).`
-                  : '';
-              const badge = (ok: boolean) => <span className={`badge ${ok ? 'badge-sucesso' : 'badge-erro'}`}>{ok ? 'OK' : 'Faltando'}</span>;
+              const criterios = {
+                orcamento,
+                cronograma,
+                metaFinanceira: campanha.metaFinanceira,
+                minimoItensOrcamento,
+                minimoMarcosCronograma,
+              };
+              const { pronta, motivo } = avaliarCriteriosEnvio(criterios);
               return (
                 <div className="fundo-sutil rounded-md p-4">
                   <h3 className="subtitulo mb-3">Pronta para aprovar?</h3>
-                  <table className="crud-tabela mb-3">
-                    <thead>
-                      <tr>
-                        <th>Critério</th>
-                        <th className="crud-tabela__celula--centralizada">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td>Orçamento: {orcamento.length} itens (mínimo {minimoItensOrcamento})</td>
-                        <td className="crud-tabela__celula--centralizada">{badge(orcamento.length >= minimoItensOrcamento)}</td>
-                      </tr>
-                      <tr>
-                        <td>
-                          Soma × meta: {formatarMoeda(soma)} de {formatarMoeda(campanha.metaFinanceira)}
-                          {!metaBatendo && ` (faltam ${formatarMoeda(Number(campanha.metaFinanceira) - soma)})`}
-                        </td>
-                        <td className="crud-tabela__celula--centralizada">{badge(metaBatendo)}</td>
-                      </tr>
-                      <tr>
-                        <td>Cronograma: {cronograma.length} marcos (mínimo {minimoMarcosCronograma})</td>
-                        <td className="crud-tabela__celula--centralizada">{badge(cronogramaOk)}</td>
-                      </tr>
-                    </tbody>
-                  </table>
+                  <TabelaCriteriosEnvio {...criterios} />
 
                   <div className="acao-com-motivo mt-3">
                     <button type="button" className="btn btn-primary" disabled={!pronta || aprovando} onClick={aprovarEdicao}>
@@ -778,19 +621,6 @@ export function BancadaCampanha({ auth }: PropsPagina) {
           aoFechar={fecharModalCriarCampanha}
         />
       )}
-
-      <RodapePaginacao
-        total={campanhasFiltradas.length}
-        paginaAtual={paginaAtual}
-        totalPaginas={totalPaginas}
-        tamanhoPagina={tamanhoPagina}
-        className="mb-4"
-        aoMudarPagina={setPagina}
-        aoMudarTamanho={(tamanho) => {
-          setTamanhoPagina(tamanho);
-          setPagina(1);
-        }}
-      />
 
       {/* Criar campanha usa POST /campanha/:idUsuario (suporte/admin): a RLS exige id_usuario =
           id_usuario_atual(), então não dá para "criar em nome de" um pesquisador escolhido pelo endpoint

@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Dica, Tooltip } from '../../components/layout/tooltip';
+import { Tooltip } from '../../components/layout/tooltip';
+import { TabelaPapelPermissao } from '../../components/crud/tabelas/6-tabela-papel-permissao';
+import { chaveCelula } from '../../services/2-papel-permissao/util/chave-celula-matriz.util';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
 import {
@@ -70,7 +72,7 @@ export function MatrizPapelPermissao({ authFetch }: MatrizPapelPermissaoProps) {
             nomeAmigavelPermissao(a.nome).localeCompare(nomeAmigavelPermissao(b.nome)),
           ),
         );
-        setConcedidos(new Set(vinculos.map((v) => `${v.idPapel}-${v.idPermissao}`)));
+        setConcedidos(new Set(vinculos.map((v) => chaveCelula(v.idPapel, v.idPermissao))));
       })
       .catch(reportarErro)
       .finally(() => setCarregando(false));
@@ -82,16 +84,12 @@ export function MatrizPapelPermissao({ authFetch }: MatrizPapelPermissaoProps) {
     recarregar();
   }, [recarregar]);
 
-  const alternar = async (
-    idPapel: number,
-    nomePapel: string,
-    idPermissao: number,
-    nomePermissao: string,
-    concedidoAtual: boolean,
-  ) => {
-    const chave = `${idPapel}-${idPermissao}`;
+  const alternar = async (papel: PapelResponse, permissao: PermissaoResponse, concedidoAtual: boolean) => {
+    const { idPapel, nome: nomePapel } = papel;
+    const { idPermissao } = permissao;
+    const nomePermissao = nomeAmigavelPermissao(permissao.nome);
     limparErro();
-    setCelulaAlterando(chave);
+    setCelulaAlterando(chaveCelula(idPapel, idPermissao));
     try {
       if (concedidoAtual) {
         await papelPermissaoApi.remover(authFetch, idPapel, idPermissao);
@@ -124,83 +122,13 @@ export function MatrizPapelPermissao({ authFetch }: MatrizPapelPermissaoProps) {
       {carregando ? (
         <div className="animate-pulse h-32 fundo-sutil rounded"></div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="crud-tabela">
-            <thead>
-              <tr>
-                <th>Permissão</th>
-                {papeis.map((papel) => (
-                  <th key={papel.idPapel} className="text-center">
-                    {papel.nome}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {permissoes.map((permissao) => (
-                <tr key={permissao.idPermissao}>
-                  {/* title com o código cru: a matriz é estreita demais para uma coluna "chave" própria
-                      (como a listagem de Permissões abaixo); o hover cobre o mesmo caso de uso para quem
-                      precisa do valor literal. ÚNICO `title` nativo que sobrevive no sistema: `<td>` não é
-                      interativo nem focável, e o propósito é revelar um valor cru truncado/traduzido, não
-                      nomear um controle. Todo o resto do sistema usa `.dica`/`<Dica>` (ver
-                      components/layout/tooltip.tsx). */}
-                  <td title={permissao.nome}>{nomeAmigavelPermissao(permissao.nome)}</td>
-                  {papeis.map((papel, indice) => {
-                    const chave = `${papel.idPapel}-${permissao.idPermissao}`;
-                    const temPermissao = concedidos.has(chave);
-                    return (
-                      <td key={papel.idPapel} className="text-center">
-                        {/* 37 permissões × 7 papéis = 259 botões com `.dica` em tela ao mesmo tempo:
-                            aceitável (259 <span> é irrelevante para o navegador), registrado aqui para uma
-                            medição futura de performance saber onde olhar primeiro se algum dia isto pesar. */}
-                        <button
-                          type="button"
-                          onClick={() =>
-                            alternar(
-                              papel.idPapel,
-                              papel.nome,
-                              permissao.idPermissao,
-                              nomeAmigavelPermissao(permissao.nome),
-                              temPermissao,
-                            )
-                          }
-                          disabled={celulaAlterando === chave}
-                          aria-label={
-                            temPermissao
-                              ? `Clique pra revogar de "${papel.nome}"`
-                              : `Clique pra conceder pra "${papel.nome}"`
-                          }
-                          className={
-                            'dica w-7 h-7 rounded-md font-bold transition-colors disabled:opacity-50 disabled:cursor-wait ' +
-                            (temPermissao
-                              ? 'texto-sucesso hover-fundo-sucesso'
-                              : 'texto-fraco opacity-50 hover-fundo-sutil hover:opacity-100')
-                          }
-                        >
-                          {celulaAlterando === chave ? '…' : temPermissao ? '✓' : '-'}
-                          <Dica
-                            texto={
-                              temPermissao
-                                ? `Clique pra revogar de "${papel.nome}"`
-                                : `Clique pra conceder pra "${papel.nome}"`
-                            }
-                            direita={indice === papeis.length - 1}
-                          />
-                        </button>
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-              {permissoes.length === 0 && (
-                <tr>
-                  <td colSpan={papeis.length + 1}>Nenhuma permissão cadastrada.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        <TabelaPapelPermissao
+          papeis={papeis}
+          permissoes={permissoes}
+          concedidos={concedidos}
+          celulaAlterando={celulaAlterando}
+          aoAlternar={(papel, permissao, concedido) => void alternar(papel, permissao, concedido)}
+        />
       )}
 
       {erro && <p className="crud-erro">{erro}</p>}

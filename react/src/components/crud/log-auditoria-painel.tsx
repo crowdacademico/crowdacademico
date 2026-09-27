@@ -1,34 +1,9 @@
 import { useEffect, useState } from 'react';
-import type { ReactNode } from 'react';
 import { NavegacaoPagina } from '../pagination/navegacao-pagina';
 import { useErroToast } from '../layout/toast/use-erro-toast';
-import { textoSeguro } from '../../services/constant/utils/formatacao.util';
+import { TabelaHistoricoAlteracoes } from './tabelas/5-tabela-historico-alteracoes';
 import type { ResultadoPaginado } from '../../services/constant/type/paginacao.type';
-import type { LogAuditoriaResponse, OperacaoLogAuditoria } from '../../services/27-log-auditoria/type/log-auditoria.type';
-
-// Parcial de propósito: 'EXPORT' não tem rótulo próprio aqui - o `??
-// linha.operacao` na leitura já cobre esse (e qualquer outro) caso
-// ausente, mesmo comportamento de antes.
-const ROTULO_OPERACAO: Partial<Record<OperacaoLogAuditoria, string>> = {
-  INSERT: 'Criado',
-  UPDATE: 'Alterado',
-  DELETE: 'Excluído',
-};
-
-// `dadosAnteriores`/`dadosNovos` guardam snapshot genérico da linha
-// (Record<string, unknown>) - não dá pra jogar `unknown` direto num filho
-// JSX. Na prática `campoRenomeio` é sempre um campo textual (ex.: "nome"),
-// então isto só cai no `textoSeguro(valor)` num caso que nunca acontece de
-// verdade (mesmo util que os tipos de coluna da GenericTable usam).
-function valorRenomeio(valor: unknown): ReactNode {
-  if (valor === null || valor === undefined) {
-    return '-';
-  }
-  if (typeof valor === 'string' || typeof valor === 'number' || typeof valor === 'boolean') {
-    return valor;
-  }
-  return textoSeguro(valor);
-}
+import type { LogAuditoriaResponse } from '../../services/27-log-auditoria/type/log-auditoria.type';
 
 interface LogAuditoriaPainelProps {
   buscar: (pagina: number) => Promise<ResultadoPaginado<LogAuditoriaResponse>>;
@@ -39,13 +14,7 @@ interface LogAuditoriaPainelProps {
 // (`buscar` é a mesma convenção de `listar` do GenericTable: função já vem pronta, pré-amarrada com authFetch e
 // o nome da tabela, pelo componente pai). Mostra as últimas alterações de UMA tabela física
 // (log_auditoria.tabela), mais recente primeiro; não filtra por registro específico (isso seria um 2º botão,
-// "Ver log deste registro", dentro de Consultar).
-//
-// `campoRenomeio`: opt-in, não específico de papel: quando informado (ex.: "nome"), troca a coluna genérica
-// "Campos alterados" por duas colunas de verdade ("De"/"Para") lendo o valor daquele campo em
-// `dadosAnteriores`/`dadosNovos` (o log_auditoria já grava a linha inteira antes/depois, sem coluna nova no
-// banco). Qualquer tela que passe `buscarLog`/`campoRenomeioLog` ganha o mesmo recurso, não é hardcoded para
-// papel.
+// "Ver log deste registro", dentro de Consultar). A tabela em si mora em tabelas/5-tabela-historico-alteracoes.tsx.
 export function LogAuditoriaPainel({ buscar, campoRenomeio }: LogAuditoriaPainelProps) {
   const [linhas, setLinhas] = useState<LogAuditoriaResponse[]>([]);
   const [total, setTotal] = useState(0);
@@ -82,52 +51,7 @@ export function LogAuditoriaPainel({ buscar, campoRenomeio }: LogAuditoriaPainel
       {carregando && <p className="text-sm texto-fraco">Carregando...</p>}
       {erro && <p className="crud-erro">{erro}</p>}
 
-      {!carregando && !erro && (
-        <div className="crud-tabela__wrapper">
-          <table className="crud-tabela">
-            <thead>
-              <tr>
-                {/* Registro antes de Ação, na mesma ordem nos dois <tr> (cabeçalho e corpo). */}
-                <th>Registro</th>
-                <th>Ação</th>
-                {campoRenomeio ? (
-                  <>
-                    <th>De</th>
-                    <th>Para</th>
-                  </>
-                ) : (
-                  <th>Campos alterados</th>
-                )}
-                <th>Quem</th>
-                <th>Quando</th>
-              </tr>
-            </thead>
-            <tbody>
-              {linhas.map((linha) => (
-                <tr key={linha.idLog}>
-                  <td>{linha.identidadeRegistro}</td>
-                  <td>{ROTULO_OPERACAO[linha.operacao] ?? linha.operacao}</td>
-                  {campoRenomeio ? (
-                    <>
-                      <td>{valorRenomeio(linha.dadosAnteriores?.[campoRenomeio])}</td>
-                      <td>{valorRenomeio(linha.dadosNovos?.[campoRenomeio])}</td>
-                    </>
-                  ) : (
-                    <td>{linha.camposAlterados ? linha.camposAlterados.join(', ') : ''}</td>
-                  )}
-                  <td>{linha.nomeResponsavel ?? 'Sistema'}</td>
-                  <td>{new Date(linha.ocorridoEm).toLocaleString('pt-BR')}</td>
-                </tr>
-              ))}
-              {linhas.length === 0 && (
-                <tr>
-                  <td colSpan={campoRenomeio ? 6 : 5}>Nenhuma alteração registrada ainda.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
+      {!carregando && !erro && <TabelaHistoricoAlteracoes linhas={linhas} campoRenomeio={campoRenomeio} />}
 
       {!carregando && !erro && totalPaginas > 1 && (
         <NavegacaoPagina

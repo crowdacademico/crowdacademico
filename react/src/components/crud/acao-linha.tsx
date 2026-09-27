@@ -5,7 +5,8 @@ import { Dica } from '../layout/tooltip';
 // que não podem usar `GenericTable` por causa do risco de linha) reimplementariam à mão, idêntico. Só
 // `<button>`: a variante `<Link to=...>` (páginas de verdade, `rotaBase`) não tem consumidor desde que a
 // migração CRUD→Modal terminou.
-type VarianteAcaoLinha = 'alterar' | 'excluir' | 'neutra';
+// 'escolher': confirmar/salvar (ex.: Salvar da edição na linha, components/crud/tabelas/tabela-editavel.tsx).
+type VarianteAcaoLinha = 'alterar' | 'excluir' | 'escolher' | 'neutra';
 
 interface AcaoLinhaProps {
   rotulo: string;
@@ -17,6 +18,7 @@ interface AcaoLinhaProps {
 const CLASSE_VARIANTE: Record<VarianteAcaoLinha, string> = {
   alterar: ' crud-tabela__acao--alterar',
   excluir: ' crud-tabela__acao--excluir',
+  escolher: ' crud-tabela__acao--escolher',
   neutra: '',
 };
 

@@ -7,8 +7,10 @@ import { useToast } from '../../components/layout/toast/use-toast';
 import { useConfiguracoes } from '../../services/11-configuracoes/hook/use-configuracoes';
 import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
-import { ModalDetalhe } from '../../components/crud/modal-detalhe';
 import { ModalFicha } from '../../components/crud/modal-ficha';
+import { TabelaLinksAcademicos } from '../../components/crud/tabelas/1-tabela-links-academicos';
+import type { DadosLinkAcademico, LinkAcademico } from '../../components/crud/tabelas/1-tabela-links-academicos';
+import { TabelaDimensoesScore } from '../../components/crud/tabelas/2-tabela-dimensoes-score';
 import { confirmarSaida, useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { usuarioPapelApi, papelApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
@@ -23,7 +25,7 @@ import {
   ROTULO_TITULO_ACADEMICO,
   classeBadgeStatusPesquisador,
 } from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
-import { formatarCpf, formatarCpfOuMotivoOculto, formatarData, formatarDataHora, formatarNomeDimensao } from '../../services/constant/utils/formatacao.util';
+import { formatarCpf, formatarCpfOuMotivoOculto, formatarData, formatarDataHora } from '../../services/constant/utils/formatacao.util';
 import { ROTULO_TIPO_TERMO } from '../../services/5-termo-uso/constants/termo-uso-tipos';
 import { CamposVinculoPerfil } from '../6-perfil-pesquisador/campos-vinculo-perfil';
 import { SecaoModeracaoPesquisador } from '../6-perfil-pesquisador/secao-moderacao-pesquisador';
@@ -201,23 +203,6 @@ function BotaoVerFotoPerfil({ url, tamanho = 'text-base', badge = false }: Botao
   );
 }
 
-// `link-academico` (módulo 7) ainda não tem type/api formal em react/src
-// (pasta existe, só com .gitkeep) - interface local + authFetch cru, mesma
-// convenção já usada em vida-campanha-ativa.tsx/bancada-campanha.tsx pra
-// módulos sem camada tipada ainda.
-interface LinkAcademico {
-  idLinkAcademico: number;
-  idTipoLink: number;
-  url: string;
-  rotulo: string | null;
-}
-
-const TAMANHO_MAXIMO_URL_NA_LINHA = 40;
-
-function truncarUrl(url: string): string {
-  return url.length > TAMANHO_MAXIMO_URL_NA_LINHA ? `${url.slice(0, TAMANHO_MAXIMO_URL_NA_LINHA)} ...` : url;
-}
-
 interface PainelLinksAcademicosProps {
   auth: Pick<UseAuthReturn, 'authFetch'>;
   idUsuario: number;
@@ -233,10 +218,6 @@ function PainelLinksAcademicos({ auth, idUsuario, tiposLink, aoRegistrarChamada 
   const limiteLinks = typeof valorLimiteLinks === 'number' ? valorLimiteLinks : 5;
 
   const [links, setLinks] = useState<LinkAcademico[]>([]);
-  const [novoLink, setNovoLink] = useState({ idTipoLink: '', url: '', rotulo: '' });
-  const [idLinkEditando, setIdLinkEditando] = useState<number | null>(null);
-  const [formEdicaoLink, setFormEdicaoLink] = useState({ url: '', rotulo: '' });
-  const [linkConsultado, setLinkConsultado] = useState<LinkAcademico | null>(null);
 
   const carregarLinks = useCallback(() => {
     const caminho = `/link-academico?idUsuario=${idUsuario}`;
@@ -252,29 +233,25 @@ function PainelLinksAcademicos({ auth, idUsuario, tiposLink, aoRegistrarChamada 
     carregarLinks();
   }, [carregarLinks]);
 
-  const adicionarLink = async () => {
-    if (!novoLink.idTipoLink || !novoLink.url) return;
-    const corpo = {
-      idTipoLink: Number(novoLink.idTipoLink),
-      url: novoLink.url,
-      ...(novoLink.rotulo ? { rotulo: novoLink.rotulo } : {}),
-    };
+  // Chamadas da tabela (components/crud/tabelas/1-tabela-links-academicos.tsx): devolvem true quando deu certo.
+  const adicionarLink = async (dados: DadosLinkAcademico) => {
     try {
-      await comRegistro(aoRegistrarChamada, 'POST', `/link-academico/${idUsuario}`, corpo, () =>
-        auth.authFetch(`/link-academico/${idUsuario}`, { method: 'POST', body: JSON.stringify(corpo) }).then(tratarResposta<LinkAcademico>),
+      await comRegistro(aoRegistrarChamada, 'POST', `/link-academico/${idUsuario}`, dados, () =>
+        auth.authFetch(`/link-academico/${idUsuario}`, { method: 'POST', body: JSON.stringify(dados) }).then(tratarResposta<LinkAcademico>),
       );
       carregarLinks();
-      setNovoLink({ idTipoLink: '', url: '', rotulo: '' });
       mostrar('Link acadêmico adicionado com sucesso.');
+      return true;
     } catch (erro) {
       reportarErro(erro);
+      return false;
     }
   };
 
-  const removerLink = async (idLinkAcademico: number) => {
+  const removerLink = async (link: LinkAcademico) => {
     try {
-      await comRegistro(aoRegistrarChamada, 'DELETE', `/link-academico/${idLinkAcademico}`, null, () =>
-        auth.authFetch(`/link-academico/${idLinkAcademico}`, { method: 'DELETE' }).then(tratarResposta<void>),
+      await comRegistro(aoRegistrarChamada, 'DELETE', `/link-academico/${link.idLinkAcademico}`, null, () =>
+        auth.authFetch(`/link-academico/${link.idLinkAcademico}`, { method: 'DELETE' }).then(tratarResposta<void>),
       );
       carregarLinks();
       mostrar('Link acadêmico excluído com sucesso.');
@@ -283,23 +260,19 @@ function PainelLinksAcademicos({ auth, idUsuario, tiposLink, aoRegistrarChamada 
     }
   };
 
-  const iniciarEdicaoLink = (link: LinkAcademico) => {
-    setIdLinkEditando(link.idLinkAcademico);
-    setFormEdicaoLink({ url: link.url, rotulo: link.rotulo ?? '' });
-  };
-
-  const salvarEdicaoLink = async () => {
-    if (!formEdicaoLink.url) return;
-    const corpo = { url: formEdicaoLink.url, ...(formEdicaoLink.rotulo ? { rotulo: formEdicaoLink.rotulo } : {}) };
+  // O tipo não muda depois de criado: o PATCH leva só url e rótulo.
+  const salvarLink = async (link: LinkAcademico, { url, rotulo }: DadosLinkAcademico) => {
+    const corpo = { url, ...(rotulo ? { rotulo } : {}) };
     try {
-      await comRegistro(aoRegistrarChamada, 'PATCH', `/link-academico/${idLinkEditando}`, corpo, () =>
-        auth.authFetch(`/link-academico/${idLinkEditando}`, { method: 'PATCH', body: JSON.stringify(corpo) }).then(tratarResposta<void>),
+      await comRegistro(aoRegistrarChamada, 'PATCH', `/link-academico/${link.idLinkAcademico}`, corpo, () =>
+        auth.authFetch(`/link-academico/${link.idLinkAcademico}`, { method: 'PATCH', body: JSON.stringify(corpo) }).then(tratarResposta<void>),
       );
       carregarLinks();
-      setIdLinkEditando(null);
       mostrar('Link acadêmico alterado com sucesso.');
+      return true;
     } catch (erro) {
       reportarErro(erro);
+      return false;
     }
   };
 
@@ -308,156 +281,14 @@ function PainelLinksAcademicos({ auth, idUsuario, tiposLink, aoRegistrarChamada 
       <h3 className="titulo-bloco mb-3 pb-2 border-b borda-padrao">
         Links acadêmicos ({links.length} de {limiteLinks})
       </h3>
-      <div className="links-academicos-wrapper">
-        <table className="crud-tabela mb-2">
-          <thead>
-            <tr>
-              <th className="crud-tabela__celula--centralizada">Tipo</th>
-              <th className="crud-tabela__celula--centralizada">URL</th>
-              <th className="crud-tabela__celula--centralizada">Rótulo</th>
-              <th className="crud-tabela__celula--centralizada">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {links.map((link) => {
-              const emEdicao = idLinkEditando === link.idLinkAcademico;
-              return (
-                <tr key={link.idLinkAcademico}>
-                  <td className="crud-tabela__celula--centralizada">{tiposLink.find((t) => t.idTipolink === link.idTipoLink)?.nome ?? link.idTipoLink}</td>
-                  {emEdicao ? (
-                    <>
-                      <td>
-                        <input
-                          type="text"
-                          value={formEdicaoLink.url}
-                          onChange={(evento) => setFormEdicaoLink({ ...formEdicaoLink, url: evento.target.value })}
-                          className="border-2 border-[var(--cor-texto-info)] rounded-md px-2 py-1 w-full"
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="text"
-                          value={formEdicaoLink.rotulo}
-                          onChange={(evento) => setFormEdicaoLink({ ...formEdicaoLink, rotulo: evento.target.value })}
-                          className="border-2 border-[var(--cor-texto-info)] rounded-md px-2 py-1 w-full"
-                        />
-                      </td>
-                      <td className="crud-tabela__celula--centralizada">
-                        <div className="crud-tabela__acoes">
-                          <button type="button" className="crud-tabela__acao crud-tabela__acao--escolher dica" onClick={salvarEdicaoLink} aria-label="Salvar">
-                            <i className="fa-solid fa-check"></i>
-                            <span className="crud-tabela__acao-texto">Salvar</span>
-                            <Dica texto="Salvar" curta />
-                          </button>
-                          <button type="button" className="crud-tabela__acao dica" onClick={() => setIdLinkEditando(null)} aria-label="Cancelar">
-                            <i className="fa-solid fa-xmark"></i>
-                            <span className="crud-tabela__acao-texto">Cancelar</span>
-                            <Dica texto="Cancelar" curta />
-                          </button>
-                        </div>
-                      </td>
-                    </>
-                  ) : (
-                    <>
-                      <td style={{ whiteSpace: 'nowrap' }}>{truncarUrl(link.url)}</td>
-                      <td className="crud-tabela__celula--centralizada">{link.rotulo ?? '-'}</td>
-                      <td className="crud-tabela__celula--centralizada">
-                        <div className="crud-tabela__acoes">
-                          <button
-                            type="button"
-                            className="crud-tabela__acao crud-tabela__acao--alterar dica"
-                            onClick={() => iniciarEdicaoLink(link)}
-                            aria-label="Alterar"
-                          >
-                            <i className="fa-solid fa-pen"></i>
-                            <span className="crud-tabela__acao-texto">Alterar</span>
-                            <Dica texto="Alterar" curta />
-                          </button>
-                          <button
-                            type="button"
-                            className="crud-tabela__acao dica"
-                            onClick={() => setLinkConsultado(link)}
-                            aria-label="Consultar"
-                          >
-                            <i className="fa-solid fa-eye"></i>
-                            <span className="crud-tabela__acao-texto">Consultar</span>
-                            <Dica texto="Consultar" curta />
-                          </button>
-                          <button
-                            type="button"
-                            className="crud-tabela__acao crud-tabela__acao--excluir dica"
-                            onClick={() => removerLink(link.idLinkAcademico)}
-                            aria-label="Remover"
-                          >
-                            <i className="fa-solid fa-trash"></i>
-                            <span className="crud-tabela__acao-texto">Remover</span>
-                            <Dica texto="Remover" curta />
-                          </button>
-                        </div>
-                      </td>
-                    </>
-                  )}
-                </tr>
-              );
-            })}
-            {links.length < limiteLinks && (
-              <tr>
-                <td>
-                  <select
-                    value={novoLink.idTipoLink}
-                    onChange={(evento) => setNovoLink({ ...novoLink, idTipoLink: evento.target.value })}
-                    className="border borda-forte rounded-md px-2 py-1 w-full"
-                  >
-                    <option value="">Tipo...</option>
-                    {tiposLink.map((tipo) => (
-                      <option key={tipo.idTipolink} value={tipo.idTipolink}>
-                        {tipo.nome}
-                      </option>
-                    ))}
-                  </select>
-                </td>
-                <td>
-                  <input
-                    type="text"
-                    placeholder="URL"
-                    value={novoLink.url}
-                    onChange={(evento) => setNovoLink({ ...novoLink, url: evento.target.value })}
-                    className="border borda-forte rounded-md px-2 py-1 w-full placeholder:text-[var(--cor-texto)]"
-                  />
-                </td>
-                <td>
-                  <input
-                    type="text"
-                    placeholder="Rótulo (opcional)"
-                    value={novoLink.rotulo}
-                    onChange={(evento) => setNovoLink({ ...novoLink, rotulo: evento.target.value })}
-                    className="border borda-forte rounded-md px-2 py-1 w-full placeholder:text-[var(--cor-texto)]"
-                  />
-                </td>
-                <td></td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {links.length < limiteLinks && (
-        <button type="button" className="btn btn-primary" onClick={adicionarLink}>
-          + Adicionar
-        </button>
-      )}
-
-      {linkConsultado && (
-        <ModalDetalhe
-          rotuloAcao="Consultar"
-          titulo={tiposLink.find((t) => t.idTipolink === linkConsultado.idTipoLink)?.nome ?? 'Link acadêmico'}
-          secoes={[
-            { titulo: 'URL completa:', conteudo: <a href={linkConsultado.url} target="_blank" rel="noreferrer" className="texto-link break-all">{linkConsultado.url}</a> },
-            { titulo: 'Rótulo:', conteudo: linkConsultado.rotulo ?? '(sem rótulo)' },
-          ]}
-          aoFechar={() => setLinkConsultado(null)}
-        />
-      )}
+      <TabelaLinksAcademicos
+        links={links}
+        tiposLink={tiposLink}
+        podeAdicionar={links.length < limiteLinks}
+        aoAdicionar={adicionarLink}
+        aoSalvar={salvarLink}
+        aoExcluir={(link) => void removerLink(link)}
+      />
     </>
   );
 }
@@ -500,24 +331,7 @@ function PainelScore({ auth, idUsuario, aoRegistrarChamada }: PainelScoreProps) 
           <p>
             {score.scoreTotal} pontos, <span className="badge badge-sucesso">{score.rotulo}</span>
           </p>
-          <table className="crud-tabela mt-2">
-            <thead>
-              <tr>
-                <th>Dimensão</th>
-                <th>Pontos</th>
-                <th>Peso</th>
-              </tr>
-            </thead>
-            <tbody>
-              {score.dimensoes.map((dimensao) => (
-                <tr key={dimensao.nomeDimensao}>
-                  <td>{formatarNomeDimensao(dimensao.nomeDimensao)}</td>
-                  <td>{dimensao.pontosObtidos}</td>
-                  <td>{dimensao.peso}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <TabelaDimensoesScore dimensoes={score.dimensoes} />
         </>
       ) : (
         <p className="texto-fraco text-xs">carregando...</p>

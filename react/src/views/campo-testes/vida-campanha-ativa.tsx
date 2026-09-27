@@ -10,6 +10,10 @@ import { useConfiguracoes } from '../../services/11-configuracoes/hook/use-confi
 import { useChamadaRegistrada } from '../../services/campo-testes/hook/use-chamada-registrada';
 import { LIMITE_SUGESTOES_COMBOBOX } from '../../services/campo-testes/constants/campo-testes.constants';
 import { RegistroChamadas } from './registro-chamadas';
+import { TabelaAtualizacoes } from '../../components/crud/tabelas/10-tabela-atualizacoes';
+import type { Atualizacao } from '../../components/crud/tabelas/10-tabela-atualizacoes';
+import { TabelaComentarios } from '../../components/crud/tabelas/11-tabela-comentarios';
+import type { Comentario } from '../../components/crud/tabelas/11-tabela-comentarios';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { CampanhaResponse } from '../../services/12-campanha/type/campanha.type';
 import type { ResultadoPaginado } from '../../services/constant/type/paginacao.type';
@@ -18,29 +22,6 @@ import type { ResultadoPaginado } from '../../services/constant/type/paginacao.t
 // formal ainda - só o Campo de Testes fala com eles, via authFetch cru +
 // tratarResposta<T>/chamarERegistrar<T>. Shape inferido do próprio uso
 // real aqui.
-interface Atualizacao {
-  idAtualizacao: number;
-  idCampanha: number;
-  titulo: string;
-  conteudo: string;
-  // `fase`/`tipo` são `null` de verdade no DTO Nest: esta interface local não pode declará-los como
-  // obrigatórios.
-  fase: string | null;
-  tipo: string | null;
-  ativo: boolean;
-}
-
-interface Comentario {
-  idComentario: number;
-  idCampanha: number;
-  // `number | null`: o autor pode não existir mais (conta excluída/anonimizada), o DTO Nest já reflete isso.
-  idPesquisador: number | null;
-  conteudo: string;
-  endossado: boolean;
-  ativo: boolean;
-  ordemEndosso: number | null;
-}
-
 interface SeguirCampanha {
   idCampanha: number;
 }
@@ -280,34 +261,10 @@ export function VidaCampanhaAtiva({ auth }: PropsPagina) {
             </div>
             {!donoEhSessaoReal && <span className="acao-com-motivo__motivo">Só publica quem estiver logado como o dono da campanha ({nomeDe(campanha.idUsuario)}).</span>}
           </div>
-          <div className="crud-tabela__wrapper">
-            <table className="crud-tabela mb-4">
-              <thead>
-                <tr>
-                  <th>Título</th>
-                  <th>Fase</th>
-                  <th className="crud-tabela__celula--centralizada">Ativo</th>
-                  <th>Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {atualizacoes.map((item) => (
-                  <tr key={item.idAtualizacao}>
-                    <td>{item.titulo}</td>
-                    <td>{item.fase ?? '-'}</td>
-                    <td className="crud-tabela__celula--centralizada">
-                      <span className={`badge ${item.ativo ? 'badge-sucesso' : 'badge-neutro'}`}>{item.ativo ? 'Sim' : 'Não'}</span>
-                    </td>
-                    <td>
-                      <button type="button" className="crud-tabela__acao" onClick={() => alternarAtivoAtualizacao(item.idAtualizacao, item.ativo)}>
-                        {item.ativo ? 'Ocultar' : 'Reverter'}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <TabelaAtualizacoes
+            atualizacoes={atualizacoes}
+            aoAlternarAtivo={(item) => void alternarAtivoAtualizacao(item.idAtualizacao, item.ativo)}
+          />
           <p className="texto-fraco text-xs mb-4">
             <i className="fa-solid fa-ban"></i> Anexos (arquivo_atualizacao): aguardando o módulo 25-arquivo existir de verdade.
           </p>
@@ -328,39 +285,13 @@ export function VidaCampanhaAtiva({ auth }: PropsPagina) {
             separada, só do dono da campanha (RF-089) - sem endossar aqui, só é possível testando logado como o
             próprio dono.
           </p>
-          <div className="crud-tabela__wrapper">
-            <table className="crud-tabela mb-4">
-              <thead>
-                <tr>
-                  <th>Autor</th>
-                  <th>Comentário</th>
-                  <th>Endosso</th>
-                  {donoEhSessaoReal && <th>Ações</th>}
-                </tr>
-              </thead>
-              <tbody>
-                {comentarios.map((item) => (
-                  <tr key={item.idComentario}>
-                    <td>{nomeDe(item.idPesquisador)}</td>
-                    <td>{item.conteudo}</td>
-                    <td>{item.endossado ? <span className="badge badge-sucesso">#{item.ordemEndosso}</span> : '-'}</td>
-                    {donoEhSessaoReal && (
-                      <td>
-                        <button
-                          type="button"
-                          className="crud-tabela__acao"
-                          onClick={() => alternarEndosso(item.idComentario, item.endossado)}
-                          disabled={!item.endossado && endossosAtivos >= LIMITE_ENDOSSOS}
-                        >
-                          {item.endossado ? 'Remover endosso' : 'Endossar'}
-                        </button>
-                      </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <TabelaComentarios
+            comentarios={comentarios}
+            nomeDe={nomeDe}
+            podeEndossar={donoEhSessaoReal}
+            limiteAtingido={endossosAtivos >= LIMITE_ENDOSSOS}
+            aoAlternarEndosso={(item) => void alternarEndosso(item.idComentario, item.endossado)}
+          />
 
           <div className="border-t borda-padrao my-8"></div>
 

@@ -610,3 +610,11 @@ Pedido do Lucas: qualquer papel logado precisa conseguir visualizar tudo para te
 - **Respiro:** parte da sobra do NOME volta como espaço igual entre as colunas do meio (teto de 1.5rem por lado); some quando falta espaço ou quando alguma coluna de texto está quebrando linha. Abaixo de 1000px de seção, a coluna de texto volta a dividir a folga com o NOME.
 - **Medido de 1024 a 1920px:** nenhuma tabela rola (fora Tipos de Link a 1024, rolagem prevista) e nenhuma coluna de texto quebra.
 - **Ainda a decidir:** se Lucas não gostar, testar a "3b colada à esquerda" (vão antes de AÇÕES).
+
+### 🟢 FEITO (27-09-2026, mesmo dia): 11 tabelas específicas centralizadas em `components/crud/tabelas/`
+
+- **Objetivo (Lucas):** achar qualquer tabela sem caçar; organizar, não mudar. Cada tabela num arquivo numerado (1 a 11); a tela só busca e salva.
+- **Bases sem repetição:** `tabela-editavel.tsx` (links, orçamento, marcos eram a mesma tabela escrita 3 vezes) e `tabela-bancada.tsx` (filtro, faceta, ocultar bloqueados e paginação copiados no T1 e no T2).
+- **Pequenas unificações visuais** (eram a mesma coisa feita de jeitos diferentes): links acadêmicos passaram a usar os mesmos campos, botões e "+ adicionar" na linha do orçamento/cronograma; "Remover" virou "Excluir"; Salvar da edição na linha com a mesma cor nas 3 tabelas.
+- **Verificado ao vivo:** as 11 abrem, entram em edição/cancelam e consultam; zero erro de página ou de console. Nada foi salvo no Supabase.
+- **Hardcoded notado, não mexido:** `FASES`/`TIPOS` de atualização fixos em `vida-campanha-ativa.tsx` (espelham enum do banco).
