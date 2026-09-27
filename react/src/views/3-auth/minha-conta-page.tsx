@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router';
 import { AvatarUsuario } from '../../components/layout/avatar-usuario';
@@ -7,6 +7,7 @@ import { SeletorFotoPerfil } from '../../components/input/seletor-foto-perfil';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
+import { confirmarSaida } from '../../components/crud/use-alteracao-nao-salva';
 import { sessaoApi } from '../../services/3-auth/api/sessao.api';
 import { usuarioPapelApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
@@ -52,15 +53,39 @@ const ABAS_MINHA_CONTA = [
 ];
 const CHAVES_ABAS = ABAS_MINHA_CONTA.map((item) => item.chave);
 
+// Posição da entrada atual no histórico do navegador, gravada pelo próprio react-router (history.state.idx).
+function posicaoNoHistorico(): number | null {
+  const estado: unknown = window.history.state;
+  if (estado && typeof estado === 'object' && 'idx' in estado && typeof estado.idx === 'number') {
+    return estado.idx;
+  }
+  return null;
+}
+
 export function MinhaConta({ auth }: PropsPagina) {
   const { aba } = useParams();
+  const navigate = useNavigate();
+
+  // Cada aba é uma rota, então trocar de aba empilha histórico. "Voltar" volta para a tela de ANTES de Minha
+  // Conta, não para a aba anterior: guarda a posição de entrada e pula de volta até a entrada anterior a ela.
+  // Sem entrada anterior (aberta por link direto ou F5 na primeira tela), vai para a página inicial.
+  const posicaoEntrada = useRef(posicaoNoHistorico());
+  const voltar = useCallback(() => {
+    const entrada = posicaoEntrada.current;
+    const atual = posicaoNoHistorico();
+    if (entrada === null || atual === null || entrada === 0) {
+      void navigate('/');
+      return;
+    }
+    void navigate(entrada - 1 - atual);
+  }, [navigate]);
 
   if (!aba || !CHAVES_ABAS.includes(aba)) {
     return <Navigate to="/admin/minha-conta/perfil" replace />;
   }
 
   return (
-    // `w-0 min-w-full`: não é decorativo. Sem isso, a barra de abas logo abaixo (overflow-x-auto, com rótulo em
+    // `w-0 min-w-full`: não é decorativo. Sem isso, a barra de abas logo abaixo (rola na horizontal, com rótulo em
     // whitespace-nowrap para não quebrar linha) faz o NAVEGADOR calcular a largura mínima deste bloco pelo
     // CONTEÚDO da barra (~600px) e empurra a página inteira para a largura horizontal, em vez do próprio nav
     // rolar sozinho, mesmo em telas pequenas. `width: 0` tira este bloco do cálculo de "largura mínima pelo
@@ -85,7 +110,9 @@ export function MinhaConta({ auth }: PropsPagina) {
         {/* `key`: aberta direto pela URL (ou depois de F5), a aba monta antes de a sessão terminar de carregar e
             o formulário nasceria com o nome vazio. Trocar a key quando o usuário chega remonta a aba já com o
             nome certo. */}
-        {aba === 'perfil' && <AbaPerfil key={auth.usuario?.idUsuario ?? 'carregando'} auth={auth} />}
+        {aba === 'perfil' && (
+          <AbaPerfil key={auth.usuario?.idUsuario ?? 'carregando'} auth={auth} aoVoltar={voltar} />
+        )}
         {aba === 'seguranca' && <AbaSeguranca auth={auth} />}
         {aba === 'papeis' && <AbaPapeis auth={auth} />}
         {aba === 'academico' && <AbaAcademico auth={auth} />}
@@ -176,7 +203,7 @@ function FaixaIdentidade({ auth }: FaixaIdentidadeProps) {
 }
 
 // Abas de verdade, não useState (mesma decisão das abas do painel admin): link direto funciona, F5 preserva a
-// aba, botão Voltar navega. `overflow-x-auto` (não empilha) no mobile.
+// aba, botão Voltar navega. Rola na horizontal (não empilha) no mobile, ver `.barra-abas`.
 interface BarraAbasProps {
   abaAtiva: string;
 }
@@ -184,7 +211,7 @@ interface BarraAbasProps {
 function BarraAbas({ abaAtiva }: BarraAbasProps) {
   return (
     <nav
-      className="flex overflow-x-auto border-b borda-padrao px-2 sm:px-4"
+      className="barra-abas px-2 sm:px-4"
       aria-label="Seções de Minha Conta"
     >
       {ABAS_MINHA_CONTA.map((item) => (
@@ -192,7 +219,7 @@ function BarraAbas({ abaAtiva }: BarraAbasProps) {
           key={item.chave}
           to={`/admin/minha-conta/${item.chave}`}
           className={
-            'flex items-center gap-2 px-4 py-3.5 text-sm font-bold whitespace-nowrap border-b-2 -mb-px transition-colors ' +
+            'flex items-center gap-2 px-4 py-3.5 text-sm font-bold whitespace-nowrap border-b-2 transition-colors ' +
             (item.chave === abaAtiva
               ? 'borda-marca texto-marca'
               : 'border-transparent texto-fraco hover-texto-forte')
@@ -206,13 +233,13 @@ function BarraAbas({ abaAtiva }: BarraAbasProps) {
   );
 }
 
-// 1. PERFIL - a aba mais importante, é o "portfólio": foto, nome, e-mail,
-// e um espaço já preparado (desabilitado, aviso honesto) pro dia que o
-// módulo 6-perfil-pesquisador existir. 2 colunas dentro da aba (pedido
-// explícito: "campo de nome não precisa de 900px de largura") + rodapé
-// sticky Salvar/Cancelar, mesmo padrão de modal-usuario.tsx (ModalAlterarUsuario).
+// 1. PERFIL - a aba mais importante, é o "portfólio": foto, nome, e-mail e o vínculo acadêmico (só leitura,
+// vem do perfil de pesquisador; quem não é pesquisador vê o convite para a aba Acadêmico). 2 colunas dentro da
+// aba (pedido explícito: "campo de nome não precisa de 900px de largura") + rodapé sticky Salvar/Cancelar,
+// mesmo padrão de modal-usuario.tsx (ModalAlterarUsuario).
 interface AbaPerfilProps {
   auth: Pick<UseAuthReturn, 'usuario' | 'authFetch' | 'atualizarUsuarioLocal'>;
+  aoVoltar: () => void;
 }
 
 interface DadosAtualizarPerfil {
@@ -220,13 +247,23 @@ interface DadosAtualizarPerfil {
   idImagemPerfil?: number | null;
 }
 
-function AbaPerfil({ auth }: AbaPerfilProps) {
+function AbaPerfil({ auth, aoVoltar }: AbaPerfilProps) {
   const [nome, setNome] = useState(auth.usuario?.nome ?? '');
   const idNome = useId();
   const idEmail = useId();
-  const idTituloAcademico = useId();
-  const idVinculoInstitucional = useId();
   const [enviando, setEnviando] = useState(false);
+  // undefined = carregando; null = não é pesquisador (404, mesma tolerância da aba Acadêmico).
+  const [perfil, setPerfil] = useState<PerfilPesquisadorResponse | null | undefined>(undefined);
+
+  useEffect(() => {
+    if (!auth.usuario) {
+      return;
+    }
+    perfilPesquisadorApi
+      .buscar(auth.authFetch, auth.usuario.idUsuario)
+      .then(setPerfil)
+      .catch(() => setPerfil(null));
+  }, [auth.authFetch, auth.usuario]);
   const { mostrar } = useToast();
   const { erro, reportarErro, limparErro } = useErroToast();
 
@@ -267,14 +304,12 @@ function AbaPerfil({ auth }: AbaPerfilProps) {
     }
   };
 
-  // "Cancelar" aqui não navega pra lugar nenhum (diferente de Alterar
-  // Usuário) - dentro da mesma página não existe "voltar", só descartar o
-  // que foi digitado/escolhido e voltar ao valor salvo.
+  // "Cancelar" volta para a tela de antes de Minha Conta (pergunta antes, se houver alteração não salva).
   const aoCancelar = () => {
-    setNome(auth.usuario?.nome ?? '');
-    setIdImagemPerfilNovo(undefined);
-    setAvatarUrlNovo(null);
-    limparErro();
+    if (!confirmarSaida(sujo)) {
+      return;
+    }
+    aoVoltar();
   };
 
   return (
@@ -328,33 +363,34 @@ function AbaPerfil({ auth }: AbaPerfilProps) {
             </SecaoFicha>
           </div>
 
-          {/* Espaço já preparado pro Perfil de Pesquisador (módulo 6) -
-              demonstrativo, mesma linguagem visual dos outros placeholders
-              do app (aviso honesto + campos desabilitados). */}
           <SecaoFicha titulo="Vínculo acadêmico" colunas={1} nivel={2}>
-            <div className="flex items-start gap-2 rounded-lg fundo-info texto-info p-3">
-              <i className="fa-solid fa-circle-info mt-0.5 shrink-0"></i>
-              <p className="text-xs">
-                Aparece aqui quando o papel de pesquisador existir - ver mais na aba
-                "Acadêmico".
-              </p>
-            </div>
-            <div>
-              <label htmlFor={idTituloAcademico} className="rotulo-campo">Título acadêmico</label>
-              <select id={idTituloAcademico} disabled className="input-padrao opacity-60 cursor-not-allowed">
-                <option>Não informado</option>
-              </select>
-            </div>
-            <div>
-              <label htmlFor={idVinculoInstitucional} className="rotulo-campo">Vínculo institucional</label>
-              <input
-                id={idVinculoInstitucional}
-                type="text"
-                disabled
-                placeholder="Ex.: IFSP - Câmpus Birigui"
-                className="input-padrao opacity-60 cursor-not-allowed"
-              />
-            </div>
+            {perfil === undefined && <p className="text-sm texto-fraco">Carregando...</p>}
+            {perfil === null && (
+              <div className="flex items-start gap-2 rounded-lg fundo-info texto-info p-3">
+                <i className="fa-solid fa-circle-info mt-0.5 shrink-0"></i>
+                <p className="text-xs">
+                  Você ainda não é pesquisador. O upgrade fica na aba{' '}
+                  <Link to="/admin/minha-conta/academico" className="font-bold underline">
+                    Acadêmico
+                  </Link>
+                  .
+                </p>
+              </div>
+            )}
+            {perfil && (
+              <>
+                <CampoFicha rotulo="Título acadêmico" valor={ROTULO_TITULO_ACADEMICO[perfil.tituloAcademico]} />
+                <CampoFicha rotulo="Tipo de vínculo" valor={ROTULO_TIPO_VINCULO[perfil.tipoVinculo]} />
+                <CampoFicha rotulo="Vínculo institucional" valor={perfil.vinculoInstitucional} />
+                <p className="text-xs texto-fraco">
+                  O perfil completo de pesquisador fica na aba{' '}
+                  <Link to="/admin/minha-conta/academico" className="font-bold underline">
+                    Acadêmico
+                  </Link>
+                  .
+                </p>
+              </>
+            )}
           </SecaoFicha>
         </div>
       </div>
@@ -363,7 +399,7 @@ function AbaPerfil({ auth }: AbaPerfilProps) {
           modal-usuario.tsx - arredonda o PRÓPRIO canto de baixo
           (rounded-b-2xl), não depende do wrapper. */}
       <div className="px-6 sm:px-8 py-5 border-t borda-padrao fundo-cartao rounded-b-2xl sticky bottom-0 flex gap-3 justify-end">
-        <button type="button" onClick={aoCancelar} disabled={!sujo} className="btn btn-secondary">
+        <button type="button" onClick={aoCancelar} className="btn btn-secondary">
           Cancelar
         </button>
         <button type="submit" disabled={!sujo || enviando} className="btn btn-primary">
@@ -636,9 +672,7 @@ function AbaPapeis({ auth }: AbaPapeisProps) {
 
 // 4. ACADÊMICO: quem é suspenso PRECISA ver o motivo em algum lugar próprio, não só descobrir tentando fazer
 // algo e sendo barrado sem explicação (a suspensão de pesquisador NUNCA bloqueia login: a pessoa continua tendo
-// acesso normal a Minha Conta). Não existe (ainda) um formulário de "tornar-se pesquisador" em lugar nenhum do
-// app real (só o Campo de Testes, T1, faz esse POST), por isso quem não é pesquisador só vê um aviso honesto,
-// sem convite para virar um.
+// acesso normal a Minha Conta). Quem não é pesquisador faz o upgrade aqui (ver abaixo).
 interface AbaAcademicoProps {
   auth: Pick<UseAuthReturn, 'usuario' | 'authFetch'>;
 }

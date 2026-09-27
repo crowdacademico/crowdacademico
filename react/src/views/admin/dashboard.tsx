@@ -131,14 +131,14 @@ export function Dashboard({ auth }: DashboardProps) {
     <div className="space-y-6 pt-6">
       <h1 className="text-3xl font-serif font-bold texto-forte">Dashboard</h1>
 
-      <div className="flex gap-1 border-b borda-padrao overflow-x-auto">
+      <div className="barra-abas gap-1">
         {ABAS.map((aba) => (
           <button
             key={aba.chave}
             type="button"
             onClick={() => setAbaAtiva(aba.chave)}
             className={
-              'px-4 py-2.5 text-sm font-semibold flex items-center gap-2 border-b-2 -mb-px whitespace-nowrap transition-colors ' +
+              'px-4 py-2.5 text-sm font-semibold flex items-center gap-2 border-b-2 whitespace-nowrap transition-colors ' +
               (abaAtiva === aba.chave
                 ? 'borda-marca texto-marca'
                 : 'border-transparent texto-fraco hover-texto-forte')

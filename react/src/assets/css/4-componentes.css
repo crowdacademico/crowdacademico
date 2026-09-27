@@ -216,9 +216,13 @@
     width: max-content;
     max-width: 16rem;
     box-shadow: var(--shadow-md);
+    /* Escondida = display: none, não só opacity 0: uma bolha invisível perto da borda de um container com
+       overflow auto ainda conta como conteúdo e cria barra de rolagem. allow-discrete + @starting-style
+       mantêm o esmaecer ao abrir e ao fechar. */
+    display: none;
     opacity: 0;
-    visibility: hidden;
     transition: var(--transition-normal);
+    transition-behavior: allow-discrete;
     pointer-events: none;
     z-index: 20;
   }
@@ -226,8 +230,16 @@
   .dica:hover .dica__bolha,
   .dica:focus .dica__bolha,
   .dica:focus-visible .dica__bolha {
+    display: block;
     opacity: 1;
-    visibility: visible;
+  }
+
+  @starting-style {
+    .dica:hover .dica__bolha,
+    .dica:focus .dica__bolha,
+    .dica:focus-visible .dica__bolha {
+      opacity: 0;
+    }
   }
 
   /* Variante --baixo: o cabeçalho do cartão de grupo (ex.: grupo "Arquivo" do dashboard de Regras do
@@ -237,6 +249,17 @@
   .dica__bolha--baixo {
     bottom: auto;
     top: 135%;
+  }
+
+  /* Variante --direita: abre alinhada pela borda direita do gatilho, para o gatilho que fica na última coluna
+     de uma tabela (centralizada, a bolha aberta passaria da borda e criaria rolagem lateral enquanto aberta).
+     Vale sozinha para o último botão de todo grupo de ações de linha (.crud-tabela__acoes), que fica na borda
+     direita da tabela. */
+  .dica__bolha--direita,
+  .crud-tabela__acoes > .crud-tabela__acao:last-child .dica__bolha {
+    left: auto;
+    right: 0;
+    transform: none;
   }
 
   /* Variante --curta: rótulo de 1 palavra (ações de tabela), sem quebra de linha, padding menor que a versão
@@ -327,5 +350,16 @@
      tela. */
   .brilho-marca {
     background-color: color-mix(in srgb, var(--cor-marca) var(--opacidade-brilho-marca, 10%), transparent);
+  }
+
+  /* Barra de abas (Minha Conta, Dashboard): rola na horizontal no celular. A linha de base é uma sombra
+     interna, não border-bottom: o sublinhado de 2px da aba ativa fica DENTRO da barra e cobre a linha. Com
+     border-bottom, a aba precisaria descer 1px (-mb-px) para cobrir a linha, esse 1px sairia da área de rolagem
+     e o navegador mostraria uma barra de rolagem vertical. */
+  .barra-abas {
+    display: flex;
+    overflow-x: auto;
+    overflow-y: hidden;
+    box-shadow: inset 0 -1px 0 var(--cor-borda);
   }
 }

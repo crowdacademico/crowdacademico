@@ -60,21 +60,21 @@
   }
 
   .crud-tabela {
-    --padding-celula: clamp(0.6rem, 1.5vw, 1.1rem);
+    --padding-celula: clamp(0.6rem, 1.3cqi, 1.1rem);
     border-collapse: collapse;
     width: 100%;
     font-size: var(--font-size-sm);
   }
 
-  /* Padding horizontal responsivo em TODA coluna de TODA tabela: `clamp(piso, Nvw, teto)`, o mesmo truque da
-     coluna id (.crud-tabela__coluna-id, mais abaixo), aplicado à regra BASE que toda th/td usa, então cobre
-     toda tabela do painel sem tocar em nenhuma tela individual. `1.1rem` (teto) é o valor de tela larga;
-     abaixo de ~1173px de JANELA o padding começa a encolher sozinho, até um piso de 0.6rem por volta de
-     ~640px (conta: Nvw = teto quando W = teto/N; 1.5vw começa a encolher perto de onde as colunas em geral
-     já começam a se apertar, ver comentário do @container mais abaixo). Com box-sizing: border-box
-     (3-base.css) em todo elemento, encolher o padding devolve espaço ao CONTEÚDO dentro do mesmo piso de
-     min-width calculado em generic-table.tsx. Vertical (0.85rem) fica fixo de propósito: o que encolhe é o
-     vão ENTRE colunas (horizontal), não a altura da linha. */
+  /* Padding horizontal responsivo em TODA coluna de TODA tabela: `clamp(piso, Ncqi, teto)`, aplicado à regra BASE
+     que toda th/td usa, então cobre toda tabela do painel sem tocar em nenhuma tela individual. `cqi` mede a
+     largura da SEÇÃO (.crud-secao é o container), não da janela: a seção é mais estreita que a janela por causa
+     da barra lateral, e é ela que decide se a tabela cabe. `1.1rem` (teto) vale a partir de ~1354px de seção;
+     abaixo disso o padding encolhe sozinho até o piso de 0.6rem (~740px de seção). Assim o vão entre colunas
+     cede antes de a tabela precisar rolar de lado (ex.: Tipos de Link numa tela de 1400px). Com box-sizing:
+     border-box (3-base.css) em todo elemento, encolher o padding devolve espaço ao CONTEÚDO dentro do mesmo
+     piso de min-width calculado em generic-table.tsx. Vertical (0.85rem) fica fixo de propósito: o que encolhe
+     é o vão ENTRE colunas (horizontal), não a altura da linha. */
   .crud-tabela th,
   .crud-tabela td {
     padding: 0.85rem var(--padding-celula);
@@ -174,14 +174,6 @@
   .crud-tabela td.crud-tabela__col--nome,
   .crud-tabela td.crud-tabela__col--acoes {
     background-color: var(--cor-fundo-cartao);
-  }
-
-  /* A dica do último botão de Ações abre alinhada pela direita: centralizada, ela passaria da borda da tabela
-     (mesmo invisível, ocupa espaço) e criaria uma rolagem lateral de poucos pixels. */
-  .crud-tabela__col--acoes .crud-tabela__acao:last-child .dica__bolha {
-    left: auto;
-    right: 0;
-    transform: none;
   }
 
   /* Linha separando a parte presa da que rola, só quando há algo escondido daquele lado. */
@@ -334,6 +326,20 @@
     .crud-tabela__acao {
       font-size: var(--font-size-base);
     }
+  }
+
+  /* Mesmo modo só-ícone, ligado pela própria tabela (generic-table.tsx) quando ela só não cabe por causa do
+     texto das ações, mesmo com a seção acima de 1120px (ex.: Tipos de Link, a tabela mais larga). */
+  .crud-tabela__wrapper[data-acoes-icone] .crud-tabela__acao-texto {
+    display: none;
+  }
+
+  .crud-tabela__wrapper[data-acoes-icone] .crud-tabela__acoes {
+    gap: 1.1rem;
+  }
+
+  .crud-tabela__wrapper[data-acoes-icone] .crud-tabela__acao {
+    font-size: var(--font-size-base);
   }
 
   /* Primeiro passo quando a seção aperta: o texto secundário (e-mail, código, chave) desce um tamanho de fonte,

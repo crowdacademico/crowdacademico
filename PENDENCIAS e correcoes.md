@@ -593,3 +593,12 @@ Pedido do Lucas: qualquer papel logado precisa conseguir visualizar tudo para te
 - **Suíte 18 nova no PGlite** (17 regras de coerência do seed). 1.272 casos verdes.
 - **Login rápido:** Admin, Moderador, Revisor, Suporte, Curador e Pesquisador "Sistema" (ids 1, 3 a 7), sem usuário comum; senha numa constante só (`SENHA_DEV`), compartilhada com o "Redefinir senha" de dev.
 - **Supabase:** os aceites de cadastro de todo mundo sumiram lá em 14-09 (testes excluíram, com "forçar", as versões v1/v2 do termo de cadastro, e o aceite vai junto). Não tem patch: o conserto é recriar o banco do zero com 01 a 08.
+
+### 🟢 FEITO (27-09-2026, mesmo dia): Minha Conta (Cancelar, vínculo acadêmico) e barras de rolagem fantasmas
+
+- **Cancelar da aba Perfil** volta para a tela de antes de Minha Conta (pula as trocas de aba; pergunta antes se houver alteração não salva).
+- **Vínculo acadêmico** na aba Perfil mostra título, tipo de vínculo e vínculo do perfil real; quem não é pesquisador vê o convite para a aba Acadêmico.
+- **Barra de rolagem na barra de abas** (Minha Conta e Dashboard): a aba descia 1px para o sublinhado cobrir a linha e esse 1px saía da área de rolagem. Virou a classe única `.barra-abas` (linha de base por sombra interna).
+- **Barra de rolagem em Papel × Permissão:** vinha das dicas invisíveis da última coluna (220px de balão, 61px para fora da tabela). Corrigido na raiz: dica escondida agora é `display: none` (com esmaecer mantido), e a última coluna abre a dica pela direita (`.dica__bolha--direita`).
+- **Remendos redundantes removidos:** a regra própria de Ações que alinhava a dica pela direita virou a mesma regra de `.dica__bolha--direita` (vale para o último botão de todo grupo de ações); saíram `overflow-x: clip` de `.admin-content-area` e `overflow-x: hidden` de `.links-academicos-wrapper` (este virou `auto`, rede de segurança).
+- **Tipos de Link sem barra de 1280px para cima:** o espaçamento entre colunas passou a seguir a largura da SEÇÃO (`cqi`), não da janela; e a tabela que só não cabe por causa do texto das ações passa sozinha para só-ícone (generic-table.tsx, `data-acoes-icone`), voltando ao texto quando cabe. A 1024px Tipos de Link ainda rola: não cabe nem com espaçamento mínimo e ícones, rolagem prevista.

@@ -88,16 +88,9 @@
    overflow-x aqui é só rede de segurança: se mesmo assim não couber (ex.: um rótulo gigante), a TABELA rola
    sozinha dentro da própria coluna, em vez de vazar visualmente para o painel de Score do lado (nunca
    deveria disparar em uso normal; ver bancada-pesquisador.tsx). */
-/* overflow-x: hidden (não auto): a barra de rolagem não vinha da tabela em si (table-layout: fixed abaixo já
-   trava isso matematicamente), vinha da DICA de hover (`.dica__bolha`, 4-componentes.css): um balãozinho
-   position: absolute, invisível até passar o mouse, centralizado embaixo do último botão (Remover).
-   Centralizado + perto da borda direita = uma fatia dele nasce fora da caixa, e isso sozinho já conta como
-   overflow para fins de scrollWidth, mesmo com opacity: 0. "auto" reagia a essa invisível criando barra;
-   "hidden" nunca deixa nascer nenhuma barra, ao custo de a dica cortar um pouco se alguém passar o mouse bem
-   no canto (evitar esta barra a todo custo). */
 .links-academicos-wrapper {
   container-type: inline-size;
-  overflow-x: hidden;
+  overflow-x: auto;
 }
 
 /* Padding padrão de 5-crud.css (0.85rem 1.1rem) foi desenhado para tabela de página inteira: nesta coluna de

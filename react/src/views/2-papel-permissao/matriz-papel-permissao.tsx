@@ -146,7 +146,7 @@ export function MatrizPapelPermissao({ authFetch }: MatrizPapelPermissaoProps) {
                       nomear um controle. Todo o resto do sistema usa `.dica`/`<Dica>` (ver
                       components/layout/tooltip.tsx). */}
                   <td title={permissao.nome}>{nomeAmigavelPermissao(permissao.nome)}</td>
-                  {papeis.map((papel) => {
+                  {papeis.map((papel, indice) => {
                     const chave = `${papel.idPapel}-${permissao.idPermissao}`;
                     const temPermissao = concedidos.has(chave);
                     return (
@@ -185,6 +185,7 @@ export function MatrizPapelPermissao({ authFetch }: MatrizPapelPermissaoProps) {
                                 ? `Clique pra revogar de "${papel.nome}"`
                                 : `Clique pra conceder pra "${papel.nome}"`
                             }
+                            direita={indice === papeis.length - 1}
                           />
                         </button>
                       </td>

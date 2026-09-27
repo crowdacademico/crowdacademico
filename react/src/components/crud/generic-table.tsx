@@ -367,8 +367,22 @@ export function GenericTable<T extends Linha>({
         });
       });
     };
+    // Texto das ações (Alterar/Consultar/Excluir): além da regra de largura da seção (5-crud.css), some quando
+    // ESTA tabela não cabe com ele, e volta quando o cartão tiver de novo a largura que ela pedia com o texto.
+    let larguraComTextoAcoes = 0;
+    const ajustarTextoAcoes = () => {
+      if (!wrapper.hasAttribute('data-acoes-icone')) {
+        if (wrapper.scrollWidth > wrapper.clientWidth) {
+          larguraComTextoAcoes = wrapper.scrollWidth;
+          wrapper.setAttribute('data-acoes-icone', '');
+        }
+      } else if (wrapper.clientWidth >= larguraComTextoAcoes) {
+        wrapper.removeAttribute('data-acoes-icone');
+      }
+    };
     const atualizar = () => {
       medirCurtas();
+      ajustarTextoAcoes();
       const colunaId = wrapper.querySelector('th.crud-tabela__col--id');
       const deslocamento = colunaId ? colunaId.getBoundingClientRect().width : 0;
       wrapper.style.setProperty('--deslocamento-nome', `${deslocamento}px`);

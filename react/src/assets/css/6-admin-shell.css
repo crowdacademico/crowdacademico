@@ -168,8 +168,6 @@
 
 .admin-content-area {
   min-width: 0;
-  /* bolhas de dica escondidas (opacity 0) perto da borda direita alargavam a página em telas estreitas */
-  overflow-x: clip;
   padding: 1.5rem;
   /* padding-top extra: reserva espaço de VERDADE para a faixa do botão "Menu" (admin-layout.tsx,
      position:absolute, primeiro filho de .admin-shell), que passa POR TRÁS de tudo e só fica visível aqui,

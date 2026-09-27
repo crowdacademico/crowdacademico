@@ -7,14 +7,21 @@
 // (nenhum leitor de tela faz nada com isso), então a role não volta sem esse par. O nome acessível mora no
 // GATILHO (`aria-label` ou texto visível), nunca na bolha: por isso o texto da dica quase sempre É o nome do
 // controle ("Encerrar sessão"), não uma descrição adicional dele.
+//
+// `direita`: abre alinhada pela borda direita do gatilho (gatilho na última coluna de uma tabela).
 interface DicaProps {
   texto: string;
   baixo?: boolean;
   curta?: boolean;
+  direita?: boolean;
 }
 
-export function Dica({ texto, baixo, curta }: DicaProps) {
-  const classe = 'dica__bolha' + (baixo ? ' dica__bolha--baixo' : '') + (curta ? ' dica__bolha--curta' : '');
+export function Dica({ texto, baixo, curta, direita }: DicaProps) {
+  const classe =
+    'dica__bolha' +
+    (baixo ? ' dica__bolha--baixo' : '') +
+    (curta ? ' dica__bolha--curta' : '') +
+    (direita ? ' dica__bolha--direita' : '');
   return (
     <span className={classe} aria-hidden="true">
       {texto}
