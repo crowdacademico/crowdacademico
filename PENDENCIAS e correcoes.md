@@ -602,3 +602,11 @@ Pedido do Lucas: qualquer papel logado precisa conseguir visualizar tudo para te
 - **Barra de rolagem em Papel × Permissão:** vinha das dicas invisíveis da última coluna (220px de balão, 61px para fora da tabela). Corrigido na raiz: dica escondida agora é `display: none` (com esmaecer mantido), e a última coluna abre a dica pela direita (`.dica__bolha--direita`).
 - **Remendos redundantes removidos:** a regra própria de Ações que alinhava a dica pela direita virou a mesma regra de `.dica__bolha--direita` (vale para o último botão de todo grupo de ações); saíram `overflow-x: clip` de `.admin-content-area` e `overflow-x: hidden` de `.links-academicos-wrapper` (este virou `auto`, rede de segurança).
 - **Tipos de Link sem barra de 1280px para cima:** o espaçamento entre colunas passou a seguir a largura da SEÇÃO (`cqi`), não da janela; e a tabela que só não cabe por causa do texto das ações passa sozinha para só-ícone (generic-table.tsx, `data-acoes-icone`), voltando ao texto quando cabe. A 1024px Tipos de Link ainda rola: não cabe nem com espaçamento mínimo e ícones, rolagem prevista.
+
+### 🟢 FEITO (27-09-2026, mesmo dia): colunas do meio das tabelas (distribuição "direita" + respiro)
+
+- **Problema:** entre NOME e AÇÕES, as colunas texto e curta só tinham largura mínima e o navegador repartia a sobra pelo tamanho do texto: cada tabela ficava de um jeito (ex.: "publicado em" com 232px).
+- **Opção 1 aplicada:** texto e curta ficam do tamanho do conteúdo, encostadas em AÇÕES; o NOME fica com a sobra. Modo único em `components/crud/colunas/distribuicao.ts` (outro modo = um valor ali + uma regra no CSS; um botão de escolha seria possível).
+- **Respiro:** parte da sobra do NOME volta como espaço igual entre as colunas do meio (teto de 1.5rem por lado); some quando falta espaço ou quando alguma coluna de texto está quebrando linha. Abaixo de 1000px de seção, a coluna de texto volta a dividir a folga com o NOME.
+- **Medido de 1024 a 1920px:** nenhuma tabela rola (fora Tipos de Link a 1024, rolagem prevista) e nenhuma coluna de texto quebra.
+- **Ainda a decidir:** se Lucas não gostar, testar a "3b colada à esquerda" (vão antes de AÇÕES).

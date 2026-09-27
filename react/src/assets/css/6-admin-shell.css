@@ -168,6 +168,9 @@
 
 .admin-content-area {
   min-width: 0;
+  /* Altura da faixa do botão "Menu" (ver padding-top abaixo); 7-responsividade.css soma o mesmo valor ao
+     padding menor do celular, para a faixa nunca cobrir o topo do conteúdo. */
+  --altura-faixa-menu: 3rem;
   padding: 1.5rem;
   /* padding-top extra: reserva espaço de VERDADE para a faixa do botão "Menu" (admin-layout.tsx,
      position:absolute, primeiro filho de .admin-shell), que passa POR TRÁS de tudo e só fica visível aqui,
@@ -176,8 +179,8 @@
      em text-sm/ícone ≈ 21px de conteúdo + 0.75rem de padding vertical dos dois lados ≈ 45px ≈ 2.8rem,
      arredondado com folga) = 4.5rem no topo; as outras 3 direções continuam com o 1.5rem do `padding` acima
      (longhand só no topo). Estimativa: se sobrar/faltar espaço entre a faixa e o topo do primeiro cartão, é
-     aqui que se ajusta. */
-  padding-top: 4.5rem;
+     aqui que se ajusta (em --altura-faixa-menu). */
+  padding-top: calc(1.5rem + var(--altura-faixa-menu));
   /* Centraliza o __inner só dentro do espaço que sobra à direita da
      sidebar - nunca a página inteira. Se a tela for mais larga que o
      max-width do __inner, a folga fica só aqui, à direita da sidebar. */

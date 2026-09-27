@@ -3,6 +3,7 @@
 @media (max-width: 640px) {
   .admin-content-area {
     padding: 1rem;
+    padding-top: calc(1rem + var(--altura-faixa-menu));
   }
 
   .admin-content-painel {

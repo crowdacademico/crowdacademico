@@ -137,6 +137,39 @@
     white-space: nowrap;
   }
 
+  /* Distribuição "direita" (components/crud/colunas/distribuicao.ts): texto e curta com `width: 1%`, como Ações, ficam
+     do tamanho do conteúdo (o piso medido em generic-table.tsx) e não recebem a sobra da tabela; a sobra vai para o
+     NOME e, dele, uma parte volta como respiro igual entre as colunas do meio (abaixo). Resultado: o bloco de dados
+     fica encostado em Ações, com o mesmo espaço entre as colunas, em qualquer tabela. A texto só é justa em seção
+     larga (ver o @container mais abaixo). */
+  /* Respiro: `--respiro-dados` é a sobra medida em generic-table.tsx (quanto o NOME ganhou além do que o texto
+     dele pede, dividido entre os lados das colunas do meio); `--respiro-dados-maximo` é o teto. Sem sobra, zero:
+     as colunas do meio só ficam coladas quando falta espaço. */
+  .crud-tabela__wrapper {
+    --respiro-dados-maximo: 1.5rem;
+    --respiro-efetivo: min(var(--respiro-dados, 0px), var(--respiro-dados-maximo));
+  }
+
+  .crud-tabela[data-distribuicao="direita"] .crud-tabela__col--texto,
+  .crud-tabela[data-distribuicao="direita"] .crud-tabela__col--curta {
+    padding-inline: calc(var(--padding-celula) + var(--respiro-efetivo));
+  }
+
+  .crud-tabela[data-distribuicao="direita"] .crud-tabela__col--curta {
+    width: 1%;
+  }
+
+  /* Com a coluna de texto justa, o teto de 18ch (feito para ela quebrar cedo e ceder espaço) quebraria e-mails
+     mesmo com o NOME cheio de sobra. Em seção larga o teto sobe e ela fica justa, do tamanho do conteúdo; abaixo
+     de 1000px de seção volta aos tetos menores e deixa de ser justa: divide a folga com o NOME (como no modo
+     sem distribuição) e só quebra a linha quando a folga acaba. */
+  @container (min-width: 1001px) {
+    .crud-tabela[data-distribuicao="direita"] .crud-tabela__col--texto {
+      --coluna-piso-maximo: 40ch;
+      width: 1%;
+    }
+  }
+
   .crud-tabela__nome {
     display: block;
     min-width: var(--coluna-nome-min);

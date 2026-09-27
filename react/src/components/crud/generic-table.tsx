@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useSearchParams } from 'react-router';
 import { TIPOS_COLUNA, type NomeTipoColuna } from './colunas/tipos-coluna';
+import { DISTRIBUICAO_COLUNAS } from './colunas/distribuicao';
 import { CabecalhoAcoes, CelulaAcoes, type AcoesLinha } from './colunas/5-coluna-acoes';
 import { BarraFiltros } from '../search/barra-filtros';
 import { useErroToast } from '../layout/toast/use-erro-toast';
@@ -293,18 +294,22 @@ export function GenericTable<T extends Linha>({
     const resultado: Partial<Record<string, string>> = {};
     colunas.forEach((coluna) => {
       if (TIPOS_COLUNA[coluna.tipo].largura === 'conteudo') {
-        resultado[coluna.chave] = `min(${maiorTexto(coluna, linhas) + 2}ch, var(--coluna-piso-maximo))`;
+        const piso = `min(${maiorTexto(coluna, linhas) + 2}ch, var(--coluna-piso-maximo))`;
+        // Coluna de texto do meio soma o respiro (ver ajustarRespiro), para o respiro não apertar o texto.
+        resultado[coluna.chave] =
+          coluna.tipo === 'texto' ? `calc(${piso} + 2 * var(--respiro-efetivo, 0px))` : piso;
       }
     });
     return resultado;
   }, [linhas, colunas]);
 
-  // Colunas curtas: o texto de TODAS as linhas (não só da página visível), medido em pixels no efeito abaixo.
-  const textosCurtos = useMemo(() => {
+  // Colunas curtas, nome e texto: o texto de TODAS as linhas (não só da página visível), medido em pixels no
+  // efeito abaixo (largura das curtas, quanto o nome sobra e se alguma coluna de texto quebra a linha).
+  const textosMedidos = useMemo(() => {
     const resultado: Partial<Record<string, string[]>> = {};
     colunas.forEach((coluna) => {
       const tipo = TIPOS_COLUNA[coluna.tipo];
-      if (tipo.largura === 'curta') {
+      if (tipo.largura === 'curta' || coluna.tipo === 'nome' || coluna.tipo === 'texto') {
         resultado[coluna.chave] = linhas.map((linha) => tipo.texto(linha[coluna.chave]));
       }
     });
@@ -349,7 +354,7 @@ export function GenericTable<T extends Linha>({
         const primeira = celulas.item(0) as Element | null;
         if (contexto && primeira) {
           contexto.font = getComputedStyle(primeira).font;
-          (textosCurtos[th.dataset.chave ?? ''] ?? []).forEach((texto) => {
+          (textosMedidos[th.dataset.chave ?? ''] ?? []).forEach((texto) => {
             maior = Math.max(maior, contexto.measureText(texto).width);
           });
         }
@@ -363,7 +368,7 @@ export function GenericTable<T extends Linha>({
       });
       grupos.forEach(({ cabecalhos, largura }) => {
         cabecalhos.forEach((th) => {
-          th.style.minWidth = `${Math.ceil(largura)}px`;
+          th.style.minWidth = `calc(${Math.ceil(largura)}px + 2 * var(--respiro-efetivo, 0px))`;
         });
       });
     };
@@ -380,17 +385,86 @@ export function GenericTable<T extends Linha>({
         wrapper.removeAttribute('data-acoes-icone');
       }
     };
-    const atualizar = () => {
-      medirCurtas();
-      ajustarTextoAcoes();
-      const colunaId = wrapper.querySelector('th.crud-tabela__col--id');
-      const deslocamento = colunaId ? colunaId.getBoundingClientRect().width : 0;
-      wrapper.style.setProperty('--deslocamento-nome', `${deslocamento}px`);
+    // Respiro das colunas do meio (texto e curta): o NOME fica com a sobra da tabela (distribuição "direita"),
+    // então sobra = largura que o nome ganhou além do que o texto dele pede (maior nome da lista, até o teto
+    // da coluna). Metade de cada lado de cada coluna do meio vira `--respiro-dados`, que o CSS limita a
+    // `--respiro-dados-maximo`. Sem sobra, respiro zero: as colunas só ficam coladas quando falta espaço.
+    const ajustarRespiro = () => {
+      const cabecalhoNome = wrapper.querySelector<HTMLTableCellElement>('thead th.crud-tabela__col--nome');
+      const blocoNome = wrapper.querySelector('tbody .crud-tabela__nome');
+      const colunasMeio = wrapper.querySelectorAll('thead th.crud-tabela__col--texto, thead th.crud-tabela__col--curta');
+      const contexto = document.createElement('canvas').getContext('2d');
+      if (!cabecalhoNome || !blocoNome || colunasMeio.length === 0 || !contexto) {
+        return;
+      }
+      const estiloBloco = getComputedStyle(blocoNome);
+      contexto.font = estiloBloco.font;
+      let natural = parseFloat(estiloBloco.minWidth) || 0;
+      (textosMedidos[cabecalhoNome.dataset.chave ?? ''] ?? []).forEach((texto) => {
+        natural = Math.max(natural, contexto.measureText(texto).width);
+      });
+      const teto = parseFloat(estiloBloco.maxWidth);
+      if (Number.isFinite(teto)) {
+        natural = Math.min(natural, teto);
+      }
+      // Coluna de texto quebrando a linha (limite menor em seção estreita): a folga vai para ela, não para respiro.
+      const textoQuebra = [...wrapper.querySelectorAll<HTMLTableCellElement>('thead th.crud-tabela__col--texto')].some(
+        (th) => {
+          const celula = wrapper.querySelector(`tbody tr td:nth-child(${th.cellIndex + 1})`);
+          if (!celula) {
+            return false;
+          }
+          const estilo = getComputedStyle(celula);
+          contexto.font = estilo.font;
+          const disponivel =
+            th.getBoundingClientRect().width - parseFloat(estilo.paddingLeft) - parseFloat(estilo.paddingRight);
+          return (textosMedidos[th.dataset.chave ?? ''] ?? []).some(
+            (texto) => contexto.measureText(texto).width > disponivel + 0.5,
+          );
+        },
+      );
+      if (textoQuebra) {
+        return;
+      }
+      contexto.font = estiloBloco.font;
+      const estiloCabecalho = getComputedStyle(cabecalhoNome);
+      natural += parseFloat(estiloCabecalho.paddingLeft) + parseFloat(estiloCabecalho.paddingRight);
+      // O nome não encolhe abaixo do próprio piso (estimado por letras em pisos, acima), mesmo que o texto medido caiba.
+      natural = Math.max(natural, parseFloat(estiloCabecalho.minWidth) || 0);
+      const sobra = cabecalhoNome.getBoundingClientRect().width - natural;
+      if (sobra <= 0) {
+        return;
+      }
+      const lados = colunasMeio.length * 2;
+      const primeiraDoMeio = colunasMeio[0] as HTMLElement;
+      const paddingSemRespiro = parseFloat(getComputedStyle(primeiraDoMeio).paddingLeft);
+      wrapper.style.setProperty('--respiro-dados', `${sobra / lados}px`);
+      // A conta acima é estimativa (o piso do nome vem de letras, não de pixels): se o respiro empurrou a tabela
+      // para fora do cartão, devolve exatamente o que passou (a partir do respiro que valeu, já com o teto do CSS).
+      const excesso = wrapper.scrollWidth - wrapper.clientWidth;
+      if (excesso > 0) {
+        const respiroAplicado = parseFloat(getComputedStyle(primeiraDoMeio).paddingLeft) - paddingSemRespiro;
+        wrapper.style.setProperty('--respiro-dados', `${Math.max(0, respiroAplicado - (excesso + 1) / lados)}px`);
+      }
+    };
+    const atualizarRolagem = () => {
       wrapper.toggleAttribute('data-rola-esquerda', wrapper.scrollLeft > 0);
       wrapper.toggleAttribute(
         'data-rola-direita',
         wrapper.scrollLeft + wrapper.clientWidth < wrapper.scrollWidth - 1,
       );
+    };
+    // Tudo medido com respiro zero, para o respiro não entrar na própria conta; as curtas somam o respiro no CSS
+    // (min-width acima), e as do mesmo tipo continuam iguais.
+    const atualizar = () => {
+      wrapper.style.setProperty('--respiro-dados', '0px');
+      medirCurtas();
+      ajustarTextoAcoes();
+      ajustarRespiro();
+      const colunaId = wrapper.querySelector('th.crud-tabela__col--id');
+      const deslocamento = colunaId ? colunaId.getBoundingClientRect().width : 0;
+      wrapper.style.setProperty('--deslocamento-nome', `${deslocamento}px`);
+      atualizarRolagem();
     };
     atualizar();
     const observador = new ResizeObserver(atualizar);
@@ -399,12 +473,12 @@ export function GenericTable<T extends Linha>({
     if (tabela) {
       observador.observe(tabela);
     }
-    wrapper.addEventListener('scroll', atualizar, { passive: true });
+    wrapper.addEventListener('scroll', atualizarRolagem, { passive: true });
     return () => {
       observador.disconnect();
-      wrapper.removeEventListener('scroll', atualizar);
+      wrapper.removeEventListener('scroll', atualizarRolagem);
     };
-  }, [carregando, textosCurtos]);
+  }, [carregando, textosMedidos]);
 
   const { totalPaginas, paginaAtual, itensPagina: linhasPagina } = paginarClientSide(linhasOrdenadas, pagina, tamanhoPagina);
 
@@ -458,7 +532,7 @@ export function GenericTable<T extends Linha>({
       {carregando ? (
         // Esqueleto (mesmas colunas) em vez de "Carregando...": a tela não "pula" quando os dados chegam.
         <div className="crud-tabela__wrapper">
-          <table className="crud-tabela">
+          <table className="crud-tabela" data-distribuicao={DISTRIBUICAO_COLUNAS}>
             <thead>
               <tr>
                 {colunas.map((coluna) => (
@@ -490,7 +564,7 @@ export function GenericTable<T extends Linha>({
       ) : (
         <>
           <div className="crud-tabela__wrapper" ref={wrapperRef}>
-            <table className="crud-tabela">
+            <table className="crud-tabela" data-distribuicao={DISTRIBUICAO_COLUNAS}>
               <thead>
                 <tr>
                   {colunas.map((coluna) => (
