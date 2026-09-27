@@ -13,7 +13,7 @@ import type {
 export const termoUsoApi = {
   // GET /termos-uso/ativo é público (sem guard no Nest, ver nest/src/5-termo-uso): usa fetch puro, não
   // authFetch, pelo mesmo motivo de auth.api.ts: quem chama isso (tela de Cadastro) ainda não tem sessão
-  // nenhuma. `tipo` obrigatório: há 1 termo ativo por trilha, então "o termo ativo" sem dizer qual trilha é
+  // nenhuma. `tipo` obrigatório: há 1 versão ativa por termo, então "o termo ativo" sem dizer qual é
   // ambíguo.
   buscarAtivo: (tipo: TipoTermo): Promise<TermoUsoResponseAtivo> =>
     fetch(`${API_BASE_URL}/termos-uso/ativo?tipo=${tipo}`).then(tratarResposta<TermoUsoResponseAtivo>),

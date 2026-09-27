@@ -16,6 +16,7 @@ import { perfilPesquisadorApi } from '../../services/6-perfil-pesquisador/api/pe
 import { arquivoApi } from '../../services/25-arquivo/api/arquivo.api';
 import { tipoLinkApi } from '../../services/9-tipo-link/api/tipo-link.api';
 import { ErroHttp, tratarResposta } from '../../services/constant/api/http.util';
+import { SENHA_DEV } from '../../services/constant/constants/senha-dev.constants';
 import {
   ROTULO_STATUS_PESQUISADOR,
   ROTULO_TIPO_VINCULO,
@@ -61,10 +62,6 @@ import type { EntradaRegistroChamada } from '../../services/campo-testes/context
 // (nome/perfil/avatar/papéis): não depende de uma linha pré-carregada pelo componente pai, então serve tanto
 // para listar-usuarios.tsx (linha sem perfil_pesquisador embutido) quanto para bancada-pesquisador.tsx (linha
 // já com tudo, mas ignorada por este componente).
-
-// Só existe em desenvolvimento: em `npm run build` o Vite troca `import.meta.env.DEV` por `false` e a senha
-// some do pacote de produção.
-const SENHA_DEV = import.meta.env.DEV ? 'DevTcc123!' : '';
 
 // Aproximação consciente: em sucesso, a camada tipada (`usuarioApi` etc.)
 // nunca expõe o status HTTP real (só o corpo já tratado por

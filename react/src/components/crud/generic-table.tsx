@@ -29,7 +29,7 @@ interface Coluna<T extends Linha> {
 interface FiltroFacetado<T extends Linha> {
   chave: keyof T & string;
   rotulo: string;
-  ordem?: string[];
+  ordem?: readonly string[];
   // `rotulos`: opcional, traduz o valor CRU para um texto amigável só na exibição do dropdown (botão + opções);
   // o filtro em si continua comparando/gravando na URL o valor cru (`atualizarParametros`), nunca o traduzido.
   // Mesmo espírito de permissao-nomes-amigaveis.ts: camada de exibição por cima do dado, sem mudar o dado.

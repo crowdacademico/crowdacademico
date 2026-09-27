@@ -66,11 +66,11 @@ const SECOES_MODAL_TERMO_USO = [
     titulo: 'Por que várias linhas',
     conteudo: (
       <p>
-        O sistema sempre tem exatamente 1 Termo de Uso vigente <strong>por tipo</strong> -
-        cadastro (aceito uma vez, na criação da conta), contribuição a campanha (aceito a
-        cada contribuição) e upgrade de perfil de pesquisador (aceito ao solicitar o
-        upgrade). São trilhas independentes: publicar ou tornar vigente uma versão de um
-        tipo nunca afeta os outros.
+        O sistema sempre tem exatamente 1 Termo de Uso vigente <strong>por tipo</strong> - o
+        da conta (aceito na criação da conta e confirmado a cada contribuição, que registra a
+        versão vigente naquele momento) e o de upgrade de perfil de pesquisador (aceito ao
+        solicitar o upgrade). São independentes: publicar ou tornar vigente uma versão de um
+        tipo nunca afeta o outro.
       </p>
     ),
   },

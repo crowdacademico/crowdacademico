@@ -5,8 +5,8 @@ import { UsuarioResponseTermoAceito } from '../dto/response/usuario.response-ter
 // "Onde fica registrado" o aceite do Termo de Uso, para Consultar Usuário: join simples de usuario_termo com
 // termos_de_uso (para mostrar versão/tipo, não só o id_termo cru).
 //
-// SÓ usuario_termo aqui (cadastro E upgrade de perfil de pesquisador, as 2 trilhas que gravam nessa tabela).
-// aceite_termo_contribuicao fica de fora de propósito: é por CONTRIBUIÇÃO, não por usuário direto, e o módulo
+// SÓ usuario_termo aqui (cadastro E upgrade de perfil de pesquisador, os 2 termos).
+// aceite_termo_contribuicao (o termo da conta aceito de novo a cada contribuição) fica de fora de propósito: é por CONTRIBUIÇÃO, não por usuário direto, e o módulo
 // de contribuição (22-contribuicao) ainda não existe; juntar isso aqui exigiria um join a mais por uma tabela
 // que ainda não tem linha no sistema. Próximo passo natural quando esse módulo nascer.
 @Injectable()

@@ -911,10 +911,10 @@ Devolve `totalUsuarios`, `totalPesquisadores`, `totalPapeis`, `totalPermissoes`,
 
 ### `5-termo-uso` (19 arquivos, 7 endpoints)
 
-Versões dos termos de uso, de 3 tipos (`cadastro`, `contribuicao`, `upgrade_pesquisador`); cada tipo tem no máximo uma versão **vigente** (`ativo = TRUE`). Só `GET /termos-uso/ativo?tipo=...` é público; o resto exige login e a permissão é decidida pela RLS.
+Versões dos termos de uso, de 2 tipos: `cadastro` (o termo da conta, que cobre também as contribuições e é confirmado a cada uma, com a versão registrada em `aceite_termo_contribuicao`) e `upgrade_pesquisador`; cada tipo tem no máximo uma versão **vigente** (`ativo = TRUE`). Só `GET /termos-uso/ativo?tipo=...` é público; o resto exige login e a permissão é decidida pela RLS.
 
 - **`GET /termos-uso/ativo?tipo=X`** devolve a versão vigente do tipo (`tipo` é obrigatório). Estruturalmente importante: `AuthServiceCadastro` injeta `TermoUsoServiceAtivo` para gravar o aceite do termo **ativo resolvido pelo servidor**, nunca um id vindo do cliente.
-- **`GET /termos-uso`** lista todas as versões dos 3 tipos misturadas, por id crescente; **`GET /termos-uso/:id`** busca uma.
+- **`GET /termos-uso`** lista todas as versões dos 2 tipos misturadas, por id crescente; **`GET /termos-uso/:id`** busca uma.
 - **`POST /termos-uso` (Criar)** só cria rascunho: sempre `ativo = FALSE`, nunca ativa sozinho nem mexe em outra linha. O fluxo é criar, a equipe revisar o texto e só então um administrador tornar a versão vigente.
 - **`PATCH /termos-uso/:id/ativar`** torna a versão a vigente do seu tipo e, na mesma transação, desativa a vigente anterior do mesmo tipo (idempotente se o alvo já é a vigente). Serve tanto para promover um rascunho quanto para voltar a uma versão antiga.
 - **`PATCH /termos-uso/:id` (Alterar)** só edita `conteudo`, e só enquanto **ninguém aceitou** aquela versão (confere `usuario_termo` e `aceite_termo_contribuicao`); depois do primeiro aceite a versão fica somente leitura, para preservar o valor probatório do que foi aceito. `versao` e `tipo` são imutáveis.

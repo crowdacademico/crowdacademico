@@ -79,13 +79,17 @@ export function ToastProvider({ children }: ToastProviderProps) {
           pointer-events-none no container (não deve bloquear clique fora do toast em si; só o toast
           individual, mais abaixo, reativa com pointer-events-auto). max-w-lg para caber confortável com
           ícone + botão de fechar. items-stretch (não items-center): cada toast ocupa a largura cheia do
-          container, senão a barra lateral colorida fica "flutuando" com tamanhos diferentes por toast. */}
-      <div className="fixed top-32 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-3 items-stretch w-full max-w-lg px-4 pointer-events-none">
+          container, senão a barra lateral colorida fica "flutuando" com tamanhos diferentes por toast.
+          z-[300]: ACIMA dos modais (z-[200]); um aviso disparado de dentro de um modal (ex.: "falta orçamento"
+          ao enviar a campanha) ficava escondido atrás dele e a pessoa não sabia se tinha dado certo. */}
+      <div className="fixed top-32 left-1/2 -translate-x-1/2 z-[300] flex flex-col gap-3 items-stretch w-full max-w-lg px-4 pointer-events-none">
         {toasts.map((toast) => {
           const config = CONFIG_TIPO[toast.tipo];
           return (
             <div
               key={toast.id}
+              // Leitor de tela: erro é anunciado na hora (alerta); sucesso e aviso, sem interromper (status).
+              role={toast.tipo === 'erro' ? 'alert' : 'status'}
               className={
                 'pointer-events-auto w-full flex fundo-cartao rounded-xl shadow-lg border borda-padrao border-l-4 overflow-hidden ' +
                 config.corBorda

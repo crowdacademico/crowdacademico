@@ -1,9 +1,10 @@
-import { useId, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { termoUsoApi } from '../../services/5-termo-uso/api/termo-uso.api';
 import { ErroHttp } from '../../services/constant/api/http.util';
+import { useFocoPreso } from '../../services/constant/hook/use-foco-preso';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { TermoUsoResponseAtivo } from '../../services/5-termo-uso/type/termo-uso.type';
 
@@ -61,6 +62,10 @@ export function CadastroPage({ auth }: PropsPagina) {
 
   const [erroEmailDuplicado, setErroEmailDuplicado] = useState(false);
   const [modalTermoAberto, setModalTermoAberto] = useState(false);
+  // Janela dos termos: anunciada como diálogo, com o foco preso nela enquanto aberta; Esc fecha.
+  const janelaTermoRef = useRef<HTMLDivElement>(null);
+  const idTituloTermo = useId();
+  useFocoPreso(janelaTermoRef, modalTermoAberto);
   const [termo, setTermo] = useState<TermoUsoResponseAtivo | null>(null);
   const [carregandoTermo, setCarregandoTermo] = useState(false);
 
@@ -295,14 +300,26 @@ export function CadastroPage({ auth }: PropsPagina) {
         <div
           className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/40"
           onClick={() => setModalTermoAberto(false)}
+          // Clique no FUNDO não tira o foco da janela (ver o mesmo trecho em modal-ficha.tsx).
+          onMouseDown={(evento) => {
+            if (evento.target === evento.currentTarget) evento.preventDefault();
+          }}
         >
           <div
-            className="w-full max-w-lg max-h-[80vh] fundo-elevado rounded-2xl shadow-2xl border borda-forte overflow-hidden flex flex-col"
+            ref={janelaTermoRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={idTituloTermo}
+            tabIndex={-1}
+            onKeyDown={(evento) => {
+              if (evento.key === 'Escape') setModalTermoAberto(false);
+            }}
+            className="outline-none w-full max-w-lg max-h-[80vh] fundo-elevado rounded-2xl shadow-2xl border borda-forte overflow-hidden flex flex-col"
             onClick={(evento) => evento.stopPropagation()}
           >
             <div className="px-6 py-4 border-b borda-padrao flex items-center justify-between shrink-0">
               <div>
-                <p className="font-bold texto-forte">Termos de Uso</p>
+                <h2 id={idTituloTermo} className="font-sans font-bold texto-forte">Termos de Uso</h2>
                 {termo && <p className="text-xs texto-fraco">Versão {termo.versao}</p>}
               </div>
               <button

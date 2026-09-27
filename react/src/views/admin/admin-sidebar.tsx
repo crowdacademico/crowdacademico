@@ -1,7 +1,9 @@
+import { useRef } from 'react';
 import { NavLink } from 'react-router';
 import { abrirBuscaGlobal } from '../../components/layout/cabecalho/busca-global-evento';
 import { Dica, Tooltip } from '../../components/layout/tooltip';
 import { GRUPOS_MENU_ADMIN } from './admin-menu.constants';
+import { useFocoPreso } from '../../services/constant/hook/use-foco-preso';
 
 // Menu lateral: coluna fixa a partir de 1377px (grid em .admin-shell, 6-admin-shell.css), gaveta (drawer) por
 // cima do conteúdo em telas menores. `min-[1377px]:` é um breakpoint ARBITRÁRIO do Tailwind (não um dos padrão
@@ -30,6 +32,12 @@ interface AdminSidebarProps {
 }
 
 export function AdminSidebar({ aberto, aoFechar }: AdminSidebarProps) {
+  // Aberta como gaveta (só existe abaixo de 1377px, pelo botão "Menu"): é uma janela por cima da página,
+  // anunciada como diálogo, com o foco preso nela e Esc para fechar. Fechada nessa largura, fica invisível
+  // (`invisible`), senão os links fora da tela continuariam recebendo o Tab.
+  const gavetaRef = useRef<HTMLElement>(null);
+  useFocoPreso(gavetaRef, aberto);
+
   return (
     <>
       {/* Fundo escuro atrás da gaveta - só existe abrindo (clique fora) e só no mobile. */}
@@ -42,11 +50,19 @@ export function AdminSidebar({ aberto, aoFechar }: AdminSidebarProps) {
       )}
 
       <aside
+        ref={gavetaRef}
+        role={aberto ? 'dialog' : undefined}
+        aria-modal={aberto ? true : undefined}
+        aria-label={aberto ? 'Menu do painel' : undefined}
+        tabIndex={aberto ? -1 : undefined}
+        onKeyDown={(evento) => {
+          if (aberto && evento.key === 'Escape') aoFechar();
+        }}
         className={
           'admin-sidebar fixed top-16 bottom-0 left-0 z-40 w-[260px] overflow-y-auto ' +
           'transition-transform duration-200 min-[1377px]:relative min-[1377px]:top-auto min-[1377px]:bottom-auto min-[1377px]:z-auto ' +
           'min-[1377px]:w-auto min-[1377px]:translate-x-0 ' +
-          (aberto ? 'translate-x-0' : '-translate-x-full')
+          (aberto ? 'translate-x-0 outline-none' : '-translate-x-full max-[1376px]:invisible')
         }
       >
         <div className="admin-sidebar__titulo">Painel Administrativo</div>

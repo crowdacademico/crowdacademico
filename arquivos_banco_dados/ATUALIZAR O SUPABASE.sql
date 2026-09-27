@@ -2488,3 +2488,224 @@ BEGIN
     RETURN v_reativados;
 END;
 $$;
+
+-- ============================================================================
+-- 26-09-2026 - GRUPO N: mensagens de orçamento e cronograma em português correto (idempotente)
+-- "pelo menos 1 item" (não "1 itens"), "3 marcos"; sem o nome da chave técnica na mensagem de limite.
+-- Só o texto do RAISE muda: regra, ERRCODE e gatilhos continuam os mesmos.
+-- ============================================================================
+CREATE OR REPLACE FUNCTION public.fn_valida_limite_max_orcamento_campanha()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+    v_max INT;
+    v_qtd INT;
+BEGIN
+    v_max := public.config_numero('orcamento_max_itens', 10)::INT;
+
+    SELECT COUNT(*) INTO v_qtd FROM orcamento_campanha WHERE id_campanha = NEW.id_campanha;
+
+    IF v_qtd >= v_max THEN
+        RAISE EXCEPTION 'A campanha já atingiu o limite de % % de orçamento.', v_max, CASE WHEN v_max = 1 THEN 'item' ELSE 'itens' END
+            USING ERRCODE = '91012';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.fn_valida_limite_max_marco_cronograma()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+    v_max INT;
+    v_qtd INT;
+BEGIN
+    v_max := public.config_numero('cronograma_max_marcos', 20)::INT;
+
+    SELECT COUNT(*) INTO v_qtd FROM marco_cronograma WHERE id_campanha = NEW.id_campanha;
+
+    IF v_qtd >= v_max THEN
+        RAISE EXCEPTION 'A campanha já atingiu o limite de % % de cronograma.', v_max, CASE WHEN v_max = 1 THEN 'marco' ELSE 'marcos' END
+            USING ERRCODE = '91014';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.fn_valida_completude_campanha()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+    v_min_orcamento  INT;
+    v_min_marcos     INT;
+    v_qtd_orcamento  INT;
+    v_qtd_marcos     INT;
+    v_soma_orcamento DECIMAL(10,2);
+BEGIN
+    v_min_orcamento := public.config_numero('orcamento_min_itens', 1)::INT;
+    v_min_marcos    := public.config_numero('cronograma_min_marcos', 3)::INT;
+
+    SELECT COUNT(*), COALESCE(SUM(valor), 0)
+      INTO v_qtd_orcamento, v_soma_orcamento
+      FROM orcamento_campanha
+      WHERE id_campanha = NEW.id_campanha;
+
+    SELECT COUNT(*)
+      INTO v_qtd_marcos
+      FROM marco_cronograma
+      WHERE id_campanha = NEW.id_campanha;
+
+    IF v_qtd_orcamento < v_min_orcamento THEN
+        RAISE EXCEPTION 'A campanha precisa de pelo menos % % de orçamento, mas tem %.',
+            v_min_orcamento, CASE WHEN v_min_orcamento = 1 THEN 'item' ELSE 'itens' END, v_qtd_orcamento
+            USING ERRCODE = '90009';
+    END IF;
+
+    IF v_qtd_marcos < v_min_marcos THEN
+        RAISE EXCEPTION 'A campanha precisa de pelo menos % % de cronograma, mas tem %.',
+            v_min_marcos, CASE WHEN v_min_marcos = 1 THEN 'marco' ELSE 'marcos' END, v_qtd_marcos
+            USING ERRCODE = '90010';
+    END IF;
+
+    IF v_soma_orcamento <> NEW.meta_financeira THEN
+        RAISE EXCEPTION 'A soma dos itens de orçamento (%) precisa ser exatamente igual à meta financeira (%).', v_soma_orcamento, NEW.meta_financeira
+            USING ERRCODE = '90011';
+    END IF;
+
+    -- Prazo vencido bloqueia envio e aprovação, só por data_fim. Ver DOCUMENTACAO_BD.md [05-K-2-B].
+    IF NEW.data_fim IS NULL OR NEW.data_fim <= NOW() THEN
+        RAISE EXCEPTION 'O prazo da campanha já venceu (fim em %). Atualize as datas antes de enviar.', NEW.data_fim
+            USING ERRCODE = '90015';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+-- ============================================================================
+-- 26-09-2026 - GRUPO O: ler não exige permissão de alterar, e toda conta logada lê tudo (desenvolvimento) (idempotente)
+-- Três leituras que dependiam de permissão de ALTERAR (papéis dos usuários, parâmetros não públicos, histórico
+-- de rejeição) passam a aceitar também a leitura administrativa (relatorio_visualizar). E o papel 'usuario' ganha
+-- só as permissões de LEITURA. Nenhuma permissão de alterar muda. Reverter no modo produção.
+-- PARE o Nest (npm run start:dev) antes de colar: trocar política tranca a tabela, e com o Nest lendo
+-- usuario_papel a cada pedido o Postgres acusa "deadlock detected" e desfaz o bloco inteiro. Suba de novo depois.
+-- ============================================================================
+DROP POLICY IF EXISTS pol_config_select ON configuracoes;
+CREATE POLICY pol_config_select ON configuracoes FOR SELECT TO app_nestjs USING (
+    (id_usuario IS NULL AND (publica = TRUE OR (SELECT public.tem_permissao('configuracao_gerenciar'))
+        OR (SELECT public.tem_permissao('relatorio_visualizar'))))
+    OR id_usuario = (SELECT public.id_usuario_atual())
+);
+
+DROP POLICY IF EXISTS pol_usuariopapel_select ON usuario_papel;
+CREATE POLICY pol_usuariopapel_select ON usuario_papel FOR SELECT TO app_nestjs USING (
+    id_usuario = (SELECT public.id_usuario_atual()) OR (SELECT public.tem_permissao('papel_gerenciar'))
+    OR (SELECT public.tem_permissao('relatorio_visualizar'))
+);
+
+DROP POLICY IF EXISTS pol_historicorej_select ON historico_rejeicao;
+CREATE POLICY pol_historicorej_select ON historico_rejeicao FOR SELECT TO app_nestjs USING (
+    (SELECT public.tem_permissao('campanha_rejeitar'))
+    OR (SELECT public.tem_permissao('relatorio_visualizar'))
+    OR id_usuario_dono = (SELECT public.id_usuario_atual())
+);
+
+-- DESENVOLVIMENTO: toda conta logada VÊ tudo (nunca altera). O papel 'usuario', que todo cadastro
+-- recebe, ganha só as permissões de LEITURA, para qualquer papel conseguir testar todas as telas. As de alterar
+-- (gerenciar, editar, aprovar, suspender...) continuam só com quem já tinha. REMOVER antes do deploy (entra no
+-- bloco "modo produção", ver PENDENCIAS e correcoes.md).
+INSERT INTO papel_permissao (id_papel, id_permissao)
+SELECT p.id_papel, perm.id_permissao
+FROM papel p
+JOIN permissao perm ON TRUE
+WHERE p.codigo = 'usuario'
+  AND perm.nome IN (
+    'relatorio_visualizar',
+    'usuario_visualizar_sensivel',
+    'perfil_pesquisador_visualizar_sensivel',
+    'contribuicao_visualizar_sensivel',
+    'auditoria_financeira_visualizar',
+    'score_visualizar',
+    'log_visualizar'
+  )
+ON CONFLICT DO NOTHING;
+
+-- Toda conta existente ganha também o papel 'usuario', como no cadastro real (as contas do seed nasceram sem ele).
+INSERT INTO usuario_papel (id_usuario, id_papel)
+SELECT u.id_usuario, p.id_papel
+FROM usuario u
+JOIN papel p ON p.codigo = 'usuario'
+ON CONFLICT DO NOTHING;
+
+-- ============================================================================
+-- 26-09-2026 - GRUPO P: um termo só para a conta e as contribuições; o de pesquisador continua à parte (idempotente)
+-- PARE o Nest (npm run start:dev) antes de colar: trocar o tipo da coluna tranca a tabela termos_de_uso, e com
+-- o Nest lendo os termos o Postgres pode acusar "deadlock detected" e desfazer o bloco inteiro. Suba de novo depois.
+-- 1) publica a v4 do termo da conta (cobre as contribuições) como vigente;
+-- 2) aceite de contribuição que apontasse para o termo de contribuição passa a apontar para a versão do termo
+--    da conta vigente naquele dia; 3) o termo de contribuição sai; 4) o tipo 'contribuicao' sai do enum.
+-- ============================================================================
+UPDATE termos_de_uso SET ativo = FALSE WHERE tipo = 'cadastro' AND ativo = TRUE AND versao <> 'v4-2026-09-26';
+INSERT INTO termos_de_uso (tipo, versao, conteudo, ativo, criado_em) VALUES
+('cadastro', 'v4-2026-09-26', 'TERMOS DE USO E POLÍTICA DE PRIVACIDADE - CROWDACADÊMICO
+
+Estes Termos valem para a conta e para todas as contribuições feitas na plataforma. O aceite é registrado no cadastro e novamente a cada contribuição, com a versão vigente naquele momento.
+
+1. OBJETO
+O CrowdAcadêmico é uma plataforma de financiamento coletivo (crowdfunding) dedicada exclusivamente a projetos de pesquisa científica e tecnológica brasileira. Estes Termos regem o uso da plataforma por pesquisadores, apoiadores e demais usuários, cadastrados ou não.
+
+2. CADASTRO E CONTA
+O cadastro exige informações verdadeiras, completas e atualizadas. Cada pessoa pode manter apenas uma conta ativa. O usuário é responsável por manter a confidencialidade de sua senha e por toda atividade realizada em sua conta.
+
+3. PERFIL DE PESQUISADOR
+Para submeter e gerenciar campanhas, o usuário deve solicitar o upgrade para perfil de pesquisador, que tem termo próprio, aceito no momento do upgrade.
+
+4. CAMPANHAS
+Toda campanha passa por aprovação administrativa antes de ficar visível ao público. O CrowdAcadêmico não garante o sucesso de nenhuma campanha nem se responsabiliza pelo uso dos recursos arrecadados após o repasse ao pesquisador responsável.
+
+5. CONTRIBUIÇÕES
+5.1. Natureza. A contribuição é voluntária e destinada ao financiamento do projeto de pesquisa descrito na campanha. O CrowdAcadêmico atua como intermediário entre apoiador e pesquisador, não é parte na relação de pesquisa e não garante os resultados científicos do projeto apoiado.
+5.2. Modelo de arrecadação e repasse. Conforme o modelo da campanha, informado na própria página antes da contribuição, o valor é repassado ao pesquisador somente se a meta for atingida (tudo ou nada) ou pode ser repassado mesmo sem atingi-la (flexível).
+5.3. Reembolso. A contribuição é devolvida nos casos previstos nas regras da plataforma, como a campanha tudo ou nada que não atinge a meta ou a campanha encerrada por moderação antes do repasse. Fora desses casos, a contribuição é definitiva a partir da confirmação do pagamento.
+5.4. Aceite por contribuição. A cada contribuição, o apoiador confirma estes Termos e as regras do modelo da campanha. A plataforma registra a data, a hora, a versão destes Termos vigente naquele momento e o identificador da transação, para fins de auditoria e de defesa em eventual contestação do pagamento. A versão registrada é a que se aplica àquela contribuição, mesmo que uma versão nova seja publicada depois.
+5.5. Dados de pagamento. Os dados de pagamento são processados pelo meio de pagamento escolhido (Pix, cartão ou boleto). A plataforma guarda o registro da contribuição e do aceite pelo prazo exigido em lei, mesmo que a conta seja encerrada.
+
+6. PROPRIEDADE INTELECTUAL
+O conteúdo publicado por pesquisadores (descrição de projeto, atualizações, materiais anexados) permanece de titularidade do autor. Ao publicar, o pesquisador concede ao CrowdAcadêmico licença não exclusiva para exibição pública do conteúdo na plataforma, pelo tempo em que a campanha ou o perfil permanecerem ativos.
+
+7. PROTEÇÃO DE DADOS PESSOAIS (LGPD)
+O tratamento de dados pessoais nesta plataforma segue a Lei Geral de Proteção de Dados Pessoais (Lei 13.709/2018). Coletamos apenas os dados necessários para cadastro, validação de identidade, processamento de contribuições e cumprimento de obrigações legais. O titular dos dados tem direito a: confirmação da existência de tratamento; acesso aos dados; correção de dados incompletos ou desatualizados; anonimização, bloqueio ou eliminação de dados desnecessários; portabilidade; e revogação do consentimento, a qualquer momento, mediante solicitação pelos canais oficiais da plataforma. Dados sensíveis, como CPF, são armazenados de forma protegida e nunca exibidos publicamente em sua forma completa.
+
+8. MODERAÇÃO E DENÚNCIAS
+A equipe administrativa pode suspender ou encerrar campanhas, perfis ou contas que violem estes Termos, mediante denúncia fundamentada ou verificação própria, assegurado o direito de manifestação do usuário afetado.
+
+9. ENCERRAMENTO DE CONTA
+O usuário pode solicitar o encerramento de sua conta a qualquer momento. Dados vinculados a obrigações legais ou financeiras, como o histórico de contribuições, podem ser mantidos pelo prazo exigido pela legislação aplicável, mesmo após o encerramento.
+
+10. ALTERAÇÕES DESTES TERMOS
+Estes Termos podem ser atualizados periodicamente. A versão vigente é sempre a mais recente publicada, e o usuário é notificado para revisar e aceitar o texto atualizado.
+
+11. FORO
+Fica eleito o foro da comarca do domicílio do usuário para dirimir eventuais controvérsias, conforme o Código de Defesa do Consumidor, quando aplicável.', TRUE, '2026-09-26 00:00:00')
+ON CONFLICT (tipo, versao) DO NOTHING;
+
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_enum e JOIN pg_type t ON t.oid = e.enumtypid
+               WHERE t.typname = 'tipo_termo' AND e.enumlabel = 'contribuicao') THEN
+        UPDATE aceite_termo_contribuicao a
+        SET id_termo = (SELECT tc.id_termo FROM termos_de_uso tc
+                        WHERE tc.tipo = 'cadastro' AND tc.criado_em <= a.aceito_em
+                        ORDER BY tc.criado_em DESC LIMIT 1)
+        WHERE a.id_termo IN (SELECT id_termo FROM termos_de_uso WHERE tipo::text = 'contribuicao');
+
+        DELETE FROM termos_de_uso WHERE tipo::text = 'contribuicao';
+
+        ALTER TYPE tipo_termo RENAME TO tipo_termo_antigo;
+        CREATE TYPE tipo_termo AS ENUM ('cadastro', 'upgrade_pesquisador');
+        ALTER TABLE termos_de_uso ALTER COLUMN tipo DROP DEFAULT;
+        ALTER TABLE termos_de_uso ALTER COLUMN tipo TYPE tipo_termo USING tipo::text::tipo_termo;
+        ALTER TABLE termos_de_uso ALTER COLUMN tipo SET DEFAULT 'cadastro';
+        DROP TYPE tipo_termo_antigo;
+    END IF;
+END;
+$$;

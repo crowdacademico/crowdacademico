@@ -1,7 +1,8 @@
-// Espelha nest/src/commons/database/db.types.ts (TIPOS_TERMO/TipoTermo): o sistema sempre tem Termos de Uso
-// vigentes por momento de aceite (cadastro geral, contribuição a campanha, upgrade de perfil de pesquisador),
-// cada um com sua própria versão/histórico independente.
-export type TipoTermo = 'cadastro' | 'contribuicao' | 'upgrade_pesquisador';
+import type { TIPOS_TERMO } from '../constants/termo-uso-tipos';
+
+// Espelha nest/src/commons/database/db.types.ts (TIPOS_TERMO/TipoTermo): o termo da conta ('cadastro', que
+// cobre também as contribuições) e o de pesquisador, cada um com sua própria versão/histórico independente.
+export type TipoTermo = (typeof TIPOS_TERMO)[number];
 
 // Espelha nest/src/5-termo-uso/dto/response/termo-uso.response-ativo.ts.
 export interface TermoUsoResponseAtivo {

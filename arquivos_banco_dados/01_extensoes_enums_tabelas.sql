@@ -92,9 +92,10 @@ CREATE TYPE status_encerramento   AS ENUM ('pendente', 'aprovado', 'rejeitado', 
 CREATE TYPE tipo_motivo_denuncia  AS ENUM ('campanha', 'perfil');
 CREATE TYPE status_notificacao    AS ENUM ('pendente', 'enviado', 'falhou', 'cancelado');
 CREATE TYPE tipo_recompensa       AS ENUM ('digital', 'reconhecimento', 'acesso_antecipado');
--- Cada tipo de termo (cadastro, contribuicao, upgrade_pesquisador) tem sempre 1 versão vigente,
--- uma por momento de aceite; ver termos_de_uso abaixo.
-CREATE TYPE tipo_termo            AS ENUM ('cadastro', 'contribuicao', 'upgrade_pesquisador');
+-- Dois termos, cada um com sempre 1 versão vigente: 'cadastro' (o termo da conta, que cobre também as
+-- contribuições; o aceite dele é registrado no cadastro e de novo a cada contribuição, em
+-- aceite_termo_contribuicao) e 'upgrade_pesquisador' (aceito ao virar pesquisador). Ver termos_de_uso abaixo.
+CREATE TYPE tipo_termo            AS ENUM ('cadastro', 'upgrade_pesquisador');
 
 -- ============================================================
 -- [01-B] RBAC (3 tabelas)
@@ -370,8 +371,8 @@ CREATE TABLE termos_de_uso (
     criado_em TIMESTAMPTZ   DEFAULT NOW(),      -- [melhoria] registra quando cada versão entrou em vigor
 
     CONSTRAINT "PK_TERMOS_DE_USO" PRIMARY KEY (id_termo),
-    -- Único POR TIPO: cada trilha numera sua própria sequência de versão ("v1" de cadastro e "v1" de
-    -- contribuicao podem coexistir).
+    -- Único POR TIPO: cada termo numera sua própria sequência de versão ("v1" de cadastro e "v1" de
+    -- upgrade_pesquisador podem coexistir).
     CONSTRAINT "UK_TERMOS_DE_USO_TIPO_VERSAO" UNIQUE (tipo, versao)
 );
 
@@ -804,6 +805,9 @@ CREATE TABLE contribuicao_recompensa (
     CONSTRAINT "UK_CONTRIBUICAO_RECOMPENSA_CONTRIBUICAO_RECOMPENSA" UNIQUE (id_contribuicao, id_recompensa) -- 1 linha por par; quantidade acumula em vez de duplicar linha
 );
 
+-- Versão do termo da CONTA ('cadastro') vigente no momento de cada contribuição (RF-081/RF-082): prova, numa
+-- contestação de pagamento, quais regras valiam naquele dia. Vale também para a contribuição anônima, que
+-- nunca passou pelo cadastro.
 CREATE TABLE aceite_termo_contribuicao (
     id_aceite_contrib SERIAL,
     id_contribuicao   INT NOT NULL,

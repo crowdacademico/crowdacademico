@@ -1,5 +1,6 @@
-import { useId } from 'react';
+import { useId, useRef } from 'react';
 import type { ReactNode } from 'react';
+import { useFocoPreso } from '../../services/constant/hook/use-foco-preso';
 
 // Modal genérico de "detalhe explicado": nasceu para explicar uma permissão (o quê, por que existe, quem tem
 // hoje), mas não tem nada específico de permissão: título, legenda em fonte mono (a "chave" técnica), um badge
@@ -40,16 +41,32 @@ export function ModalDetalhe({
 }: ModalDetalheProps) {
   // Nome acessível da janela: o leitor de tela anuncia "diálogo, <título>" ao abrir.
   const idTitulo = useId();
+  // Foco do teclado preso na janela enquanto ela está aberta, e devolvido a quem abriu ao fechar.
+  const janelaRef = useRef<HTMLDivElement>(null);
+  useFocoPreso(janelaRef);
   return (
     <div
       className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/40"
       onClick={aoFechar}
+      // Clique no FUNDO não tira o foco da janela (ver o mesmo trecho em modal-ficha.tsx).
+      onMouseDown={(evento) => {
+        if (evento.target === evento.currentTarget) evento.preventDefault();
+      }}
     >
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby={idTitulo}
-        className="w-full max-w-lg max-h-[85vh] fundo-elevado rounded-2xl shadow-2xl border borda-forte overflow-hidden flex flex-col"
+        ref={janelaRef}
+        tabIndex={-1}
+        // Esc fecha: o foco está dentro da janela (useFocoPreso), então basta ouvir aqui.
+        onKeyDown={(evento) => {
+          if (evento.key === 'Escape') {
+            evento.stopPropagation();
+            aoFechar();
+          }
+        }}
+        className="outline-none w-full max-w-lg max-h-[85vh] fundo-elevado rounded-2xl shadow-2xl border borda-forte overflow-hidden flex flex-col"
         onClick={(evento) => evento.stopPropagation()}
       >
         {rotuloAcao && (

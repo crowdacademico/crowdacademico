@@ -1,30 +1,28 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useErroToast } from '../toast/use-erro-toast';
+import { SENHA_DEV } from '../../../services/constant/constants/senha-dev.constants';
 import type { UseAuthReturn } from '../../../services/3-auth/hook/use-auth';
 
 // <dev>: login instantâneo com uma conta que JÁ existe no seed (07_seed_dados.sql, [07-D-1]), sem digitar nada.
 // Não cria conta nem senha nova, só reaproveita a senha de dev que é a mesma para os usuários seedados. Clique
-// no rótulo: entra como Admin direto (o atalho mais usado). Seta: abre a lista com os outros 6 papéis, na mesma
-// ordem de poder do seed (07_seed_dados.sql [07-B-1], id_papel 1=admin...7=usuario), um e-mail seedado por
-// papel, escolhido direto de usuario_papel ([07-D-2]).
+// no rótulo: entra como Admin direto (o atalho mais usado). Seta: abre a lista com as contas "Sistema", uma por
+// papel e sem nome de gente, na ordem de poder do seed (Admin Sistema 2 fica de fora: é o admin de reserva).
 //
 // A lista vive só aqui, autocontida: este componente é uma ferramenta independente do Campo de Testes (troca de
 // conta ÚNICA da sessão real do painel).
 interface ContaDev {
   rotulo: string;
   email: string;
-  senha: string;
 }
 
 const CONTAS_DEV: ContaDev[] = [
-  { rotulo: 'Admin', email: 'admin@crowdacademico.com.br', senha: 'DevTcc123!' },
-  { rotulo: 'Moderador', email: 'diego.martins@crowdacademico.com.br', senha: 'DevTcc123!' },
-  { rotulo: 'Revisor', email: 'camila.nunes@crowdacademico.com.br', senha: 'DevTcc123!' },
-  { rotulo: 'Suporte', email: 'larissa.pinto@crowdacademico.com.br', senha: 'DevTcc123!' },
-  { rotulo: 'Curador', email: 'thiago.almeida@crowdacademico.com.br', senha: 'DevTcc123!' },
-  { rotulo: 'Pesquisador', email: 'ana.santos@usp.br', senha: 'DevTcc123!' },
-  { rotulo: 'Usuário comum', email: 'fernanda.souza@gmail.com', senha: 'DevTcc123!' },
+  { rotulo: 'Admin', email: 'admin@crowdacademico.com.br' },
+  { rotulo: 'Moderador', email: 'moderador@crowdacademico.com.br' },
+  { rotulo: 'Revisor', email: 'revisor@crowdacademico.com.br' },
+  { rotulo: 'Suporte', email: 'suporte.sistema@crowdacademico.com.br' },
+  { rotulo: 'Curador', email: 'curador@crowdacademico.com.br' },
+  { rotulo: 'Pesquisador', email: 'pesquisador@crowdacademico.com.br' },
 ];
 
 interface DevLoginRapidoProps {
@@ -45,7 +43,7 @@ export function DevLoginRapido({ auth }: DevLoginRapidoProps) {
     setEntrando(true);
     limparErro();
     try {
-      await auth.login(conta.email, conta.senha);
+      await auth.login(conta.email, SENHA_DEV);
       void navigate('/');
     } catch (erroRequisicao) {
       reportarErro(erroRequisicao);

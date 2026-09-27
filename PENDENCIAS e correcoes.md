@@ -429,6 +429,16 @@ Feitos nesta ordem, cada um com suíte própria no PGlite (14 suítes, 1.213 cas
 
 O admin recebe, por padrão, permissões que só existem para as ferramentas do Campo de Testes: `campanha_criar_para_outro` e `campanha_excluir_forcado` (claramente de teste) e `perfil_pesquisador_criar_para_outro`. Esconder o Campo de Testes do build só esconde a interface; quem tiver um token de admin ainda chama essas rotas direto. A barreira real é o banco: um SQL curto, rodado uma vez no dia do deploy, que apaga essas permissões do `papel_permissao` do admin (a trigger `trg_permissao_auto_admin` só age em permissão nova, então não as devolve). **Decisão a tomar antes:** `perfil_pesquisador_corrigir_cpf` e `perfil_pesquisador_alterar_de_outro` parecem ferramenta de teste, mas são funções reais de suporte previstas nos requisitos; ficam ou saem? O arquivo deve ser preparado e testado no PGlite, sem nunca rodar antes do deploy. Sem urgência até o deploy (decisão do Lucas em 26-09-2026: focar no que está em andamento).
 
+**Acrescentado em 26-09-2026 (Grupo O):** o mesmo bloco tem de tirar a leitura liberada a toda conta durante o desenvolvimento. SQL:
+
+```sql
+DELETE FROM papel_permissao
+WHERE id_papel = (SELECT id_papel FROM papel WHERE codigo = 'usuario')
+  AND id_permissao IN (SELECT id_permissao FROM permissao WHERE nome IN (
+    'relatorio_visualizar', 'usuario_visualizar_sensivel', 'perfil_pesquisador_visualizar_sensivel',
+    'contribuicao_visualizar_sensivel', 'auditoria_financeira_visualizar', 'score_visualizar', 'log_visualizar'));
+```
+
 ### 🔴 Pendência aberta (26-09-2026): remover o executor de migrações (`aplicar-migrations.script.ts`)
 
 Ninguém usa: a Alexia recria o banco do zero com os arquivos `01` a `08`, e as mudanças pequenas entram pelo `ATUALIZAR O SUPABASE.sql`. Para remover: `nest/src/commons/database/aplicar-migrations.script.ts`, os dois comandos `db:migrate` e `db:migrate:adotar` em `nest/package.json`, a tabela `schema_migrations` (se existir em algum banco) e as menções no `.Tutorial-rodar-projeto.md`, no `DOCUMENTACAO_BACKEND.md` e no `DOCUMENTACAO_FRONTEND.md`. A revisão externa sugeria o contrário (uma pasta de migrações registradas); a recomendação daqui é remover. Decisão do Lucas (26-09-2026): deixar parado, sem gastar tempo agora. Alternativa considerada: reunir tudo numa pasta numerada por importância para apagar depois; com um script só, o registro aqui já basta.
@@ -551,3 +561,35 @@ Uma guarda só, no `AdminLayout`: sem sessão, qualquer página do painel vai pa
 - Conta comum vê o botão "Criar" em Usuários, Termos de Uso, Áreas, Tipos de Link e Motivos de Denúncia (o backend recusa ao salvar). Resolve com a permissão por rota (opção B).
 - Busca global (Ctrl+K), modal de termos do cadastro e gaveta do menu ainda sem `role="dialog"`.
 - O Excluir do T2 continua próprio (tem "forçar exclusão" e a trava das campanhas de demonstração).
+
+### 🟢 FEITO (26-09-2026, mesmo dia): aviso atrás do modal, mensagens de orçamento/cronograma e janelas acessíveis
+
+- **Aviso escondido atrás do modal:** ao clicar em "Enviar para aprovação" sem orçamento ou cronograma, o erro aparecia ATRÁS do modal (os avisos ficavam numa camada abaixo dos modais) e a pessoa não sabia o que tinha acontecido. Agora os avisos ficam por cima de qualquer modal, no sistema inteiro. Provado ao vivo.
+- **Mensagens em português correto (banco, `05_regras_negocio.sql`):** "pelo menos 1 item de orçamento, mas tem 0" (antes "1 itens ... (tem 0)"), "3 marcos de cronograma, mas tem 0", e os limites sem o nome técnico da chave ("A campanha já atingiu o limite de 10 itens de orçamento."). Singular/plural seguem o número configurado. Provado no PGlite com mínimo/limite 1 e 2+, com e sem o ATUALIZAR; suítes 1.227 casos verdes. **Precisa colar o GRUPO N no Supabase** (fim do `ATUALIZAR O SUPABASE.sql`): só troca o texto de 3 funções, regra e ERRCODE iguais. Até lá a tela mostra a frase antiga.
+- **Janelas anunciadas e foco do teclado:** busca Ctrl+K, termos do cadastro e gaveta do menu no celular agora são anunciados como janela (como os modais principais). Em todas: o foco entra ao abrir, o Tab não escapa, Esc fecha só a janela de cima (antes fechava as duas, quando havia uma sobre a outra), o foco volta para quem abriu; a gaveta fechada no celular não recebe mais o Tab. Os avisos de erro passaram a ser lidos pelo leitor de tela. Provado ao vivo (20 verificações de teclado), G1, G7, G8, G12 e G14 verdes (a G14 foi atualizada: sem login o painel vai para o login, e o aviso único é provado com a pesquisadora).
+
+### 🟢 FEITO (26-09-2026, mesmo dia): toda conta logada VÊ tudo nesta etapa de desenvolvimento (Grupo O)
+
+Pedido do Lucas: qualquer papel logado precisa conseguir visualizar tudo para testar; ver e alterar continuam separados. A pesquisadora Ana via "Sem permissão para ver as métricas do painel" e "Você não tem permissão para listar os usuários".
+- **Causa:** era só permissão (nada no código). As leituras exigem permissões `*_visualizar*`, que só o admin tinha. E as 22 contas do seed (admin, moderação, suporte, pesquisa) nasciam sem o papel `usuario`, que no cadastro real toda conta recebe.
+- **Conserto, só no banco:** o papel `usuario` ganha as 7 permissões de LEITURA (nenhuma de alterar), e toda conta do seed ganha o papel `usuario`, como no cadastro real. Três leituras que exigiam permissão de ALTERAR agora aceitam a leitura administrativa (`relatorio_visualizar`): papéis dos usuários (antes `papel_gerenciar`), parâmetros não públicos (antes `configuracao_gerenciar`) e histórico de rejeição (antes `campanha_rejeitar`).
+- **Provado no PGlite:** pesquisadora, moderador, suporte e usuário comum leem usuários, métricas, papéis de todos e parâmetros internos, e NÃO conseguem alterar parâmetro, renomear papel nem se dar o papel admin (suíte nova 17, 28 casos). As suítes que testam as regras de produção (8, 9 e 11) rodam sem essas permissões. Total 1.255 casos verdes, com e sem o ATUALIZAR.
+- **Precisa colar o GRUPO O** no Supabase (fim do `ATUALIZAR O SUPABASE.sql`). Não precisa sair e entrar de novo: a permissão é conferida a cada pedido.
+- **Antes do deploy:** tirar as 7 permissões do `usuario` (SQL na pendência "modo produção", acima).
+- **Anotado para quando os módulos existirem:** outras leituras ainda presas a permissão de alterar: atualizações e comentários ocultos, denúncias, solicitações de encerramento, repasses e recompensas.
+
+
+### 🟢 FEITO (26-09-2026, mesmo dia): dois termos de uso em vez de três (Grupo P)
+
+- **Decisão de Lucas e Alexia:** um termo só para a conta, aceito no cadastro, que agora cobre também as contribuições (natureza, tudo ou nada/flexível e repasse, reembolso, dados de pagamento); e o termo de pesquisador, à parte. O termo de contribuição separado deixou de existir.
+- **Mantido:** cada contribuição continua registrando a versão do termo da conta vigente naquele momento (prova em contestação de pagamento, e cobre a contribuição anônima).
+- **Banco:** tipo de termo com 2 valores; versão nova `v4-2026-09-26` do termo da conta (v3 + seção de contribuições) como vigente; seed sem `id_termo` fixo. **Frontend:** a lista de tipos é a fonte única do tipo TypeScript e da validação (sem lista repetida na tela de publicar).
+- **Provado no PGlite:** sobre o banco antigo (3 tipos), o Grupo P aponta o aceite de contribuição para a versão do termo da conta vigente no dia, não perde nenhum aceite e pode ser colado 2 vezes. 1.255 casos verdes, com e sem o ATUALIZAR.
+- **Precisa colar o GRUPO P** no Supabase, com o Nest PARADO (troca o tipo da coluna).
+
+### 🟢 FEITO (27-09-2026): seed sem furo e login rápido só com as contas "Sistema"
+
+- **Seed:** o Pesquisador Sistema (7) ganhou perfil e aceite do termo de pesquisador; ninguém mais contribui, denuncia ou cria campanha antes de a própria conta existir; todo aceite é da versão que valia na data (o termo de pesquisador ganhou uma v1 de 2024, e o texto atual virou a v2); toda conta tem e-mail verificado, menos as 5 comuns zeradas (24 a 28). Scores dos pesquisadores idênticos aos de antes.
+- **Suíte 18 nova no PGlite** (17 regras de coerência do seed). 1.272 casos verdes.
+- **Login rápido:** Admin, Moderador, Revisor, Suporte, Curador e Pesquisador "Sistema" (ids 1, 3 a 7), sem usuário comum; senha numa constante só (`SENHA_DEV`), compartilhada com o "Redefinir senha" de dev.
+- **Supabase:** os aceites de cadastro de todo mundo sumiram lá em 14-09 (testes excluíram, com "forçar", as versões v1/v2 do termo de cadastro, e o aceite vai junto). Não tem patch: o conserto é recriar o banco do zero com 01 a 08.

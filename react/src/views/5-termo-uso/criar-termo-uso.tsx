@@ -6,13 +6,14 @@ import { RodapeFormulario } from '../../components/crud/rodape-formulario';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
 import { termoUsoApi } from '../../services/5-termo-uso/api/termo-uso.api';
-import { ROTULO_TIPO_TERMO, TIPOS_TERMO } from '../../services/5-termo-uso/constants/termo-uso-tipos';
+import {
+  DESCRICAO_TIPO_TERMO,
+  ROTULO_TIPO_TERMO,
+  TIPOS_TERMO,
+  ehTipoTermo,
+} from '../../services/5-termo-uso/constants/termo-uso-tipos';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { TipoTermo } from '../../services/5-termo-uso/type/termo-uso.type';
-
-function ehTipoTermo(valor: string | null): valor is TipoTermo {
-  return valor === 'cadastro' || valor === 'contribuicao' || valor === 'upgrade_pesquisador';
-}
 
 // Publicar versão NOVA: fica registrada como RASCUNHO, `ativo = false` sempre. O fluxo real é criar o rascunho,
 // a "staff" revisar (erro de português etc.), e SÓ DEPOIS um administrador tornar essa versão vigente
@@ -20,8 +21,8 @@ function ehTipoTermo(valor: string | null): valor is TipoTermo {
 // isso).
 //
 // `tipo`: campo obrigatório e imutável depois de criado (ver TermoUsoRequestAlterar). Aceita pré-seleção via
-// `?tipo=contribuicao` na URL: usado pelo link "Publicar nova versão" do card de Termo de Uso em Regras do
-// Negócio, que já sabe qual trilha o admin estava olhando.
+// `?tipo=upgrade_pesquisador` na URL: usado pelo link "Publicar nova versão" do card de Termo de Uso em Regras
+// do Negócio, que já sabe qual termo o admin estava olhando.
 export function CriarTermoUso({ auth }: PropsPagina) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -70,7 +71,9 @@ export function CriarTermoUso({ auth }: PropsPagina) {
           <select
             id={idTipo}
             value={tipo}
-            onChange={(evento) => setTipo(evento.target.value as TipoTermo)}
+            onChange={(evento) => {
+              if (ehTipoTermo(evento.target.value)) setTipo(evento.target.value);
+            }}
             className="input-padrao"
           >
             {TIPOS_TERMO.map((valor) => (
@@ -80,9 +83,7 @@ export function CriarTermoUso({ auth }: PropsPagina) {
             ))}
           </select>
           <p className="text-xs texto-fraco mt-1">
-            Não pode ser alterado depois de publicado. &quot;Cadastro&quot; é aceito uma vez, no
-            cadastro da conta; &quot;Contribuição&quot; é aceito a cada contribuição a uma
-            campanha; &quot;Upgrade Pesquisador&quot; é aceito ao solicitar o upgrade de perfil.
+            Não pode ser alterado depois de publicado. {DESCRICAO_TIPO_TERMO[tipo]}
           </p>
         </div>
 

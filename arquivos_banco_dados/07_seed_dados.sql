@@ -58,7 +58,7 @@
 --  [07-D] usuario, usuario_papel                (Camada 1, Camada 2)
 --  [07-D] termos_de_uso, usuario_termo           (Camada 1, Camada 2)
 --  [07-C] configuracoes (vem depois de D de propósito - ver acima) (Camada 2)
---  [07-D] perfil_pesquisador                              (Camada 2)
+--  [07-D] perfil_pesquisador, verificacao_email          (Camada 2)
 --  [07-F] link_academico                                  (Camada 2)
 --  [07-E] campanha                                        (Camada 2)
 --  [07-E] seguir_campanha                                 (Camada 3)
@@ -315,6 +315,26 @@ WHERE (p.nome, perm.nome) IN (
 )
 ON CONFLICT DO NOTHING;
 
+-- [07-B-4] DESENVOLVIMENTO: toda conta logada VÊ tudo (nunca altera). O papel 'usuario', que todo cadastro
+-- recebe, ganha só as permissões de LEITURA, para qualquer papel conseguir testar todas as telas. As de alterar
+-- (gerenciar, editar, aprovar, suspender...) continuam só com quem já tinha. REMOVER antes do deploy (entra no
+-- bloco "modo produção", ver PENDENCIAS e correcoes.md).
+INSERT INTO papel_permissao (id_papel, id_permissao)
+SELECT p.id_papel, perm.id_permissao
+FROM papel p
+JOIN permissao perm ON TRUE
+WHERE p.codigo = 'usuario'
+  AND perm.nome IN (
+    'relatorio_visualizar',
+    'usuario_visualizar_sensivel',
+    'perfil_pesquisador_visualizar_sensivel',
+    'contribuicao_visualizar_sensivel',
+    'auditoria_financeira_visualizar',
+    'score_visualizar',
+    'log_visualizar'
+  )
+ON CONFLICT DO NOTHING;
+
 -- [07-C-1] tipo_link
 -- Allowlist fechada definida pela equipe (SITE_INSTITUCIONAL/OUTRO não existem porque permitiam links sem
 -- verificação). `codigo`: chave natural estável (ver [01-C]), usada por link_academico logo abaixo em vez do id
@@ -551,9 +571,9 @@ INSERT INTO usuario (nome, email, senha_hash, id_imagem_perfil, criado_em) VALUE
 ('Carlos Eduardo Melo',   'carlos.melo@unicamp.br',     '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', 2, '2024-01-15 10:30:00'),
 ('Beatriz Lima Alves',    'beatriz.lima@ufmg.br',       '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG',    3, '2024-02-01 08:45:00'),
 ('Rafael Costa Nunes',    'rafael.costa@ufrj.br',       '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG',    4, '2024-02-10 14:00:00'),
-('Juliana Ferreira Paz',  'juliana.ferreira@ufsc.br',   '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG',    5, '2024-03-05 11:20:00'),
-('Marcos Oliveira Ramos', 'marcos.oliveira@unesp.br',   '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG',    6, '2024-03-12 16:00:00'),
-('Patrícia Rocha Silva',  'patricia.rocha@unifesp.br',  '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG',    7, '2024-04-01 09:30:00'),
+('Juliana Ferreira Paz',  'juliana.ferreira@ufsc.br',   '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG',    5, '2024-02-15 11:20:00'),
+('Marcos Oliveira Ramos', 'marcos.oliveira@unesp.br',   '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG',    6, '2024-03-01 16:00:00'),
+('Patrícia Rocha Silva',  'patricia.rocha@unifesp.br',  '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG',    7, '2024-02-17 09:30:00'),
 -- Continuam pesquisadores: já têm um "laboratório de teste" inteiro montado (perfil, campanha, denúncias,
 -- links) desenhado para cobrir as 4 faixas de score_rotulo; virar "usuario comum" apagaria tudo isso. Só a
 -- posição/ID mudou, para ficarem agrupados com o resto dos pesquisadores.
@@ -562,7 +582,7 @@ INSERT INTO usuario (nome, email, senha_hash, id_imagem_perfil, criado_em) VALUE
 ('Eduardo Barbosa Nogueira','eduardo.barbosa@ufba.br',  '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-05-25 09:00:00'),
 ('Vinícius Almeida Ferraz','vinicius.ferraz@ufc.br',    '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-05-28 09:00:00'),
 
-('Fernanda Souza Lima',   'fernanda.souza@gmail.com',            '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-04-10 10:00:00'), -- usuario comum (apoiador, nunca virou pesquisador)
+('Fernanda Souza Lima',   'fernanda.souza@gmail.com',            '$2b$10$t/InWEsjsIoCpA9uz/E4F.hc37lCZLvpjzp3YUJui7J9fiVhyPbjG', NULL, '2024-02-24 10:00:00'), -- usuario comum (apoiador, nunca virou pesquisador)
 -- 2 contas "usuario comum" zeradas, sem NENHUMA dependência (sem campanha, sem link, sem denúncia), para sempre
 -- sobrar gente para testar o fluxo de "2ª conta tentando o mesmo CPF" sem mexer nos 12-21 (donos de campanha
 -- no seed; 19-22 foram desenhados a dedo para as 4 faixas de score_rotulo, ver comentário perto do bloco de
@@ -611,6 +631,14 @@ FROM (VALUES
 JOIN papel p ON p.nome = v.papel_nome
 ON CONFLICT DO NOTHING;
 
+-- Toda conta tem também o papel 'usuario', como no cadastro real (atribuir_papel_padrao, 08): as contas deste
+-- seed são inseridas direto, sem passar pelo cadastro. O papel 'usuario' não tem nenhuma permissão de alterar.
+INSERT INTO usuario_papel (id_usuario, id_papel)
+SELECT u.id_usuario, p.id_papel
+FROM usuario u
+JOIN papel p ON p.codigo = 'usuario'
+ON CONFLICT DO NOTHING;
+
 -- [07-D-6] termos_de_uso / usuario_termo
 -- Sustentam o RF-011 (aceite obrigatório no cadastro); o texto real dos termos entra quando a equipe/jurídico
 -- definir. v1 é a versão vigente durante todo o período em que os usuários deste seed se cadastraram (por isso
@@ -621,8 +649,8 @@ ON CONFLICT DO NOTHING;
 -- erro do índice parcial uq_termos_uso_ativo (02), que só permite 1 linha ativa POR TIPO. O UPDATE que desativa
 -- a versão velha e o INSERT da versão nova precisam estar na MESMA transação (é o que este bloco já faz).
 --
--- `tipo` explícito em toda linha abaixo, mesmo v1/v2/v3 sendo todas 'cadastro': o sistema sempre tem 1 Termo de
--- Uso vigente por momento de aceite (cadastro, contribuição a campanha, upgrade de pesquisador), cada um com a
+-- `tipo` explícito em toda linha abaixo: o sistema sempre tem 1 versão vigente de cada termo, o da conta
+-- ('cadastro', que cobre também as contribuições) e o de pesquisador ('upgrade_pesquisador'), cada um com a
 -- sua PRÓPRIA versão/histórico.
 INSERT INTO termos_de_uso (tipo, versao, conteudo, ativo, criado_em) VALUES
 ('cadastro', 'v1-2024-01-01', '[PLACEHOLDER] Texto dos Termos de Uso e Política de Privacidade - versão 1. Conteúdo jurídico definitivo entra aqui quando a equipe/jurídico validar.', FALSE, '2024-01-01 00:00:00');
@@ -671,33 +699,60 @@ Estes Termos podem ser atualizados periodicamente. A versão vigente é sempre a
 10. FORO
 Fica eleito o foro da comarca do domicílio do usuário para dirimir eventuais controvérsias, conforme o Código de Defesa do Consumidor, quando aplicável.', TRUE, '2026-09-13 00:00:00');
 
--- Primeira versão do tipo 'contribuicao'. Mesmo aviso do v3 acima: rascunho REALISTA inspirado na LGPD e em
--- política de reembolso comum de crowdfunding, NÃO é texto jurídico validado.
+-- v4: o termo da CONTA passa a cobrir também as contribuições (antes havia um termo de contribuição à parte;
+-- decisão de Lucas e Alexia, 26-09-2026). Versão nova, não edição da v3: versão já aceita não se altera.
+UPDATE termos_de_uso SET ativo = FALSE WHERE tipo = 'cadastro' AND ativo = TRUE AND versao <> 'v4-2026-09-26';
 INSERT INTO termos_de_uso (tipo, versao, conteudo, ativo, criado_em) VALUES
-('contribuicao', 'v1-2026-09-13', 'TERMOS DE CONTRIBUIÇÃO - CROWDACADÊMICO
+('cadastro', 'v4-2026-09-26', 'TERMOS DE USO E POLÍTICA DE PRIVACIDADE - CROWDACADÊMICO
+
+Estes Termos valem para a conta e para todas as contribuições feitas na plataforma. O aceite é registrado no cadastro e novamente a cada contribuição, com a versão vigente naquele momento.
 
 1. OBJETO
-Este termo é exibido no momento em que um apoiador confirma uma contribuição financeira a uma campanha de pesquisa no CrowdAcadêmico, complementando os Termos de Uso gerais aceitos no cadastro.
+O CrowdAcadêmico é uma plataforma de financiamento coletivo (crowdfunding) dedicada exclusivamente a projetos de pesquisa científica e tecnológica brasileira. Estes Termos regem o uso da plataforma por pesquisadores, apoiadores e demais usuários, cadastrados ou não.
 
-2. NATUREZA DA CONTRIBUIÇÃO
-A contribuição é voluntária e destinada ao financiamento do projeto de pesquisa descrito na campanha. O CrowdAcadêmico atua como intermediário entre apoiador e pesquisador, não sendo parte na relação de pesquisa em si, e não garante os resultados científicos do projeto apoiado.
+2. CADASTRO E CONTA
+O cadastro exige informações verdadeiras, completas e atualizadas. Cada pessoa pode manter apenas uma conta ativa. O usuário é responsável por manter a confidencialidade de sua senha e por toda atividade realizada em sua conta.
 
-3. MODELO DE ARRECADAÇÃO E REPASSE
-Dependendo do modelo da campanha (tudo ou nada / flexível), o valor pode ser repassado ao pesquisador somente se a meta for atingida, ou repassado progressivamente. O apoiador é informado do modelo antes de contribuir, na própria página da campanha.
+3. PERFIL DE PESQUISADOR
+Para submeter e gerenciar campanhas, o usuário deve solicitar o upgrade para perfil de pesquisador, que tem termo próprio, aceito no momento do upgrade.
 
-4. POLÍTICA DE REEMBOLSO
-Contribuições podem ser reembolsadas total ou parcialmente nos casos previstos nas regras da plataforma (ex.: campanha não atinge a meta em modelo "tudo ou nada", campanha encerrada por moderação antes do repasse). Fora desses casos, a contribuição é considerada definitiva a partir da confirmação do pagamento.
+4. CAMPANHAS
+Toda campanha passa por aprovação administrativa antes de ficar visível ao público. O CrowdAcadêmico não garante o sucesso de nenhuma campanha nem se responsabiliza pelo uso dos recursos arrecadados após o repasse ao pesquisador responsável.
 
-5. DADOS PESSOAIS E DE PAGAMENTO (LGPD)
-Dados de pagamento são processados pelo meio de pagamento escolhido (Pix, cartão, boleto) e tratados conforme a Lei 13.709/2018 (LGPD). O CrowdAcadêmico armazena o registro da contribuição e o aceite deste termo (com data e IP) para fins de auditoria e cumprimento de obrigação legal, mesmo que a conta do apoiador seja futuramente encerrada.
+5. CONTRIBUIÇÕES
+5.1. Natureza. A contribuição é voluntária e destinada ao financiamento do projeto de pesquisa descrito na campanha. O CrowdAcadêmico atua como intermediário entre apoiador e pesquisador, não é parte na relação de pesquisa e não garante os resultados científicos do projeto apoiado.
+5.2. Modelo de arrecadação e repasse. Conforme o modelo da campanha, informado na própria página antes da contribuição, o valor é repassado ao pesquisador somente se a meta for atingida (tudo ou nada) ou pode ser repassado mesmo sem atingi-la (flexível).
+5.3. Reembolso. A contribuição é devolvida nos casos previstos nas regras da plataforma, como a campanha tudo ou nada que não atinge a meta ou a campanha encerrada por moderação antes do repasse. Fora desses casos, a contribuição é definitiva a partir da confirmação do pagamento.
+5.4. Aceite por contribuição. A cada contribuição, o apoiador confirma estes Termos e as regras do modelo da campanha. A plataforma registra a data, a hora, a versão destes Termos vigente naquele momento e o identificador da transação, para fins de auditoria e de defesa em eventual contestação do pagamento. A versão registrada é a que se aplica àquela contribuição, mesmo que uma versão nova seja publicada depois.
+5.5. Dados de pagamento. Os dados de pagamento são processados pelo meio de pagamento escolhido (Pix, cartão ou boleto). A plataforma guarda o registro da contribuição e do aceite pelo prazo exigido em lei, mesmo que a conta seja encerrada.
 
-6. ALTERAÇÕES DESTE TERMO
-Este termo pode ser atualizado periodicamente; a versão vigente no momento da confirmação da contribuição é a que se aplica àquela contribuição específica, mesmo que uma versão nova seja publicada depois.', TRUE, '2026-09-13 00:00:00');
+6. PROPRIEDADE INTELECTUAL
+O conteúdo publicado por pesquisadores (descrição de projeto, atualizações, materiais anexados) permanece de titularidade do autor. Ao publicar, o pesquisador concede ao CrowdAcadêmico licença não exclusiva para exibição pública do conteúdo na plataforma, pelo tempo em que a campanha ou o perfil permanecerem ativos.
 
--- Primeira versão do tipo 'upgrade_pesquisador' (o 3º momento de aceite: upgrade de perfil de pesquisador).
--- Mesmo aviso de sempre: rascunho REALISTA, NÃO é texto jurídico validado.
+7. PROTEÇÃO DE DADOS PESSOAIS (LGPD)
+O tratamento de dados pessoais nesta plataforma segue a Lei Geral de Proteção de Dados Pessoais (Lei 13.709/2018). Coletamos apenas os dados necessários para cadastro, validação de identidade, processamento de contribuições e cumprimento de obrigações legais. O titular dos dados tem direito a: confirmação da existência de tratamento; acesso aos dados; correção de dados incompletos ou desatualizados; anonimização, bloqueio ou eliminação de dados desnecessários; portabilidade; e revogação do consentimento, a qualquer momento, mediante solicitação pelos canais oficiais da plataforma. Dados sensíveis, como CPF, são armazenados de forma protegida e nunca exibidos publicamente em sua forma completa.
+
+8. MODERAÇÃO E DENÚNCIAS
+A equipe administrativa pode suspender ou encerrar campanhas, perfis ou contas que violem estes Termos, mediante denúncia fundamentada ou verificação própria, assegurado o direito de manifestação do usuário afetado.
+
+9. ENCERRAMENTO DE CONTA
+O usuário pode solicitar o encerramento de sua conta a qualquer momento. Dados vinculados a obrigações legais ou financeiras, como o histórico de contribuições, podem ser mantidos pelo prazo exigido pela legislação aplicável, mesmo após o encerramento.
+
+10. ALTERAÇÕES DESTES TERMOS
+Estes Termos podem ser atualizados periodicamente. A versão vigente é sempre a mais recente publicada, e o usuário é notificado para revisar e aceitar o texto atualizado.
+
+11. FORO
+Fica eleito o foro da comarca do domicílio do usuário para dirimir eventuais controvérsias, conforme o Código de Defesa do Consumidor, quando aplicável.', TRUE, '2026-09-26 00:00:00')
+ON CONFLICT (tipo, versao) DO NOTHING;
+
+-- Termo de quem vira pesquisador. v1 é [PLACEHOLDER] como a v1/v2 do termo da conta: é a que valia quando os
+-- pesquisadores do seed fizeram o upgrade (2024), por isso é ela que aparece nos aceites deles. v2 é o rascunho
+-- REALISTA vigente, NÃO é texto jurídico validado.
 INSERT INTO termos_de_uso (tipo, versao, conteudo, ativo, criado_em) VALUES
-('upgrade_pesquisador', 'v1-2026-09-13', 'TERMOS DE UPGRADE DE PERFIL DE PESQUISADOR - CROWDACADÊMICO
+('upgrade_pesquisador', 'v1-2024-01-01', '[PLACEHOLDER] Texto do Termo de Upgrade de Perfil de Pesquisador - versão 1. Conteúdo jurídico definitivo entra aqui quando a equipe/jurídico validar.', FALSE, '2024-01-01 00:00:00');
+
+INSERT INTO termos_de_uso (tipo, versao, conteudo, ativo, criado_em) VALUES
+('upgrade_pesquisador', 'v2-2026-09-13', 'TERMOS DE UPGRADE DE PERFIL DE PESQUISADOR - CROWDACADÊMICO
 
 1. OBJETO
 Este termo é exibido no momento em que um usuário comum solicita o upgrade de sua conta para perfil de pesquisador, complementando os Termos de Uso gerais aceitos no cadastro.
@@ -717,14 +772,16 @@ O CPF é armazenado de forma cifrada e nunca exibido publicamente em sua forma c
 6. ALTERAÇÕES DESTE TERMO
 Este termo pode ser atualizado periodicamente; a versão vigente no momento da solicitação do upgrade é a que se aplica.', TRUE, '2026-09-13 00:00:00');
 
--- Todos os usuários aceitaram a v1 no próprio cadastro (aceito_em = pouco
--- depois de usuario.criado_em) - nenhum ainda re-aceitou v2 nem v3,
--- propositalmente (cenário realista: ninguém foi reavisado depois que uma
--- versão nova é publicada, exatamente o que uma tela de admin de verdade
--- deveria eventualmente cobrar dos usuários no próximo login).
+-- Cada usuário aceitou, no próprio cadastro (aceito_em = pouco depois de usuario.criado_em), a versão do termo
+-- da conta vigente naquele momento. Ninguém re-aceitou as versões publicadas depois, de propósito (cenário
+-- realista: ninguém foi reavisado depois que uma versão nova é publicada).
 INSERT INTO usuario_termo (id_usuario, id_termo, aceito_em, ip_aceite)
-SELECT id_usuario, 1, criado_em + INTERVAL '2 minutes', '187.10.20.30'
-FROM usuario;
+SELECT u.id_usuario,
+       (SELECT t.id_termo FROM termos_de_uso t
+        WHERE t.tipo = 'cadastro' AND t.criado_em <= u.criado_em + INTERVAL '2 minutes'
+        ORDER BY t.criado_em DESC LIMIT 1),
+       u.criado_em + INTERVAL '2 minutes', '187.10.20.30'
+FROM usuario u;
 
 -- [07-C-5] configuracoes: por que este bloco vem depois de usuario (ver DOCUMENTACAO_BD.md)
 -- Agrupado por domínio (A,D,E,F,H,I, mesma ordem de [07-B-2]): configuracao.service.findall.ts ordena por
@@ -866,14 +923,15 @@ ON CONFLICT (chave) DO NOTHING;
 -- (AFTER INSERT), que dispara recalcular_score_pesquisador() assim que a linha é criada, e qualquer valor
 -- digitado aqui seria sobrescrito no mesmo instante. O score de cada um é 100% produto dos dados reais dos
 -- blocos abaixo (link_academico, campanha, atualizacao_campanha, denuncia).
--- cpf_criptografado: os 11 valores abaixo são CPFs FALSOS de verdade (dígito verificador válido, nenhum de
+-- cpf_criptografado: os 12 valores abaixo são CPFs FALSOS de verdade (dígito verificador válido, nenhum de
 -- dígito repetido), cifrados com commons/seguranca/cpf-cifra.util.ts (AES-256-GCM, formato
 -- "v1:iv:tag:ciphertext") usando as chaves CPF_ENCRYPTION_KEY/CPF_INDEX_KEY do .env de desenvolvimento (ver
 -- DOCUMENTACAO_BD.md); cpf_hash é o índice cego correspondente (HMAC-SHA256). Gerados por script descartável,
--- nunca CPF de pessoa real. Se CPF_ENCRYPTION_KEY/CPF_INDEX_KEY forem trocadas, estas 11 linhas passam a ser
+-- nunca CPF de pessoa real. Se CPF_ENCRYPTION_KEY/CPF_INDEX_KEY forem trocadas, estas 12 linhas passam a ser
 -- indecifráveis (como qualquer dado cifrado com chave antiga): para um banco de dev/seed, basta rodar o seed de
 -- novo com uma chave nova.
 INSERT INTO perfil_pesquisador (id_usuario, cpf_criptografado, cpf_hash, vinculo_institucional, titulo_academico, status_pesquisador, ativado_em) VALUES
+(7,  'v1:uUtOS/UIKkMBczzR:wKf1XU/T4DU7wxlBRIN9XA==:EdujkWtk43mcH08=', 'e44f434dd801bdcb2846daafc2646d428b8b8fe6ef64b37513c8c25ec219b639', 'CrowdAcadêmico (conta de teste)',                   'doutor',     'ativo', '2024-01-01 00:10:00'), -- Pesquisador Sistema, sem campanha
 (12, 'v1:mWTFzqRm8FMW14/u:iMiDqsRSTJ4KUyzcmKP18w==:bR7wgOpNkI+vSJ4=', '1610ee8b3555955f9e79eba6efa88324a4c30ced46b4bee5e6f2b6b3ed605797', 'Universidade de São Paulo (USP)',                   'doutor',     'ativo', '2024-01-10 09:05:00'),
 (13, 'v1:biXIzmT/+Z0OVzgl:y8lT16d44wlXzCKzGAsK9A==:HxBEvdcXcZk8bHY=', 'b3b4544a4ec41edae5514228ab14306250a0fce3bc3f149f8a0ed92be2536dd8', 'Universidade Estadual de Campinas (UNICAMP)',       'mestre',      'ativo', '2024-01-15 10:35:00'),
 (14, 'v1:/qWUrRI/9fzjm9Kh:uU6qNuQlvvFjghnTLVr8Og==:N5DdmozsScRBV8A=', '93d76c0ae76d371c84ead92cdc597742cd149067fe7f234552e10abe75ee5e7f', 'Universidade Federal de Minas Gerais (UFMG)',       'doutor',      'ativo', '2024-02-01 08:50:00'),
@@ -890,17 +948,34 @@ INSERT INTO perfil_pesquisador (id_usuario, cpf_criptografado, cpf_hash, vinculo
 (21, 'v1:Irign/aW5mMCv4Ug:EQxzkR0lXxnJhmu8xAEhcw==:2lmUgJVYjExvdAM=', 'b5944441f2b1f45294195783812f36bc72c9bf38d2ef3d8a231c1a8d8f538ec5', 'Universidade Federal da Bahia (UFBA)',              'mestre',   'ativo', '2024-05-25 09:00:00'), -- Eduardo:  alvo = Em Construção
 (22, 'v1:m7z9uq+435l0syBo:wVQB6djPxdi38eWcfpnUAQ==:45Hee0oUAA3IDek=', '469f49af437e577be058f668669a27ec903aa9ddc42895750ef3e1d45f05c380', 'Universidade Federal do Ceará (UFC)',               'graduado', 'ativo', '2024-05-28 09:00:00'); -- Vinícius: alvo = Atenção
 
--- Estes 11 pesquisadores já nascem com perfil pronto acima, então "aceitaram" o Termo de Upgrade de
--- Pesquisador na mesma data em que o próprio perfil foi ativado (ativado_em). Usa subquery pelo id_termo ATIVO
--- do tipo 'upgrade_pesquisador' (não um id fixo): continua correto mesmo se a versão vigente desse tipo mudar
--- antes deste seed rodar.
+-- Estes pesquisadores já nascem com perfil pronto acima, então aceitaram o Termo de Upgrade de Pesquisador na
+-- data em que o próprio perfil foi ativado (ativado_em), na versão vigente naquela data.
 INSERT INTO usuario_termo (id_usuario, id_termo, aceito_em, ip_aceite)
 SELECT
-    id_usuario,
-    (SELECT id_termo FROM termos_de_uso WHERE tipo = 'upgrade_pesquisador' AND ativo = TRUE),
-    ativado_em,
+    pp.id_usuario,
+    (SELECT t.id_termo FROM termos_de_uso t
+     WHERE t.tipo = 'upgrade_pesquisador' AND t.criado_em <= pp.ativado_em
+     ORDER BY t.criado_em DESC LIMIT 1),
+    pp.ativado_em,
     '187.10.20.30'
-FROM perfil_pesquisador;
+FROM perfil_pesquisador pp;
+
+-- [07-D-8] verificacao_email: toda conta confirmou o e-mail logo depois do cadastro, pelo mesmo caminho do
+-- sistema (um token em verificacao_email, depois email_verificado = TRUE). Exceção de propósito: as 5 contas
+-- comuns zeradas (24 a 28) seguem com o e-mail não verificado, para testar esse estado. O token é só um hash
+-- de preenchimento: já nasce confirmado, nunca é usado. A validade vem de verificacao_email_horas_validade.
+INSERT INTO verificacao_email (id_usuario, token_hash, criado_em, expira_em, confirmado_em)
+SELECT u.id_usuario,
+       encode(sha256(convert_to('seed-verificacao-' || u.id_usuario, 'UTF8')), 'hex'),
+       u.criado_em + INTERVAL '1 minute',
+       u.criado_em + INTERVAL '1 minute'
+         + (SELECT valor::INT FROM configuracoes WHERE chave = 'verificacao_email_horas_validade' AND id_usuario IS NULL) * INTERVAL '1 hour',
+       u.criado_em + INTERVAL '10 minutes'
+FROM usuario u
+WHERE u.id_usuario NOT BETWEEN 24 AND 28;
+
+UPDATE usuario u SET email_verificado = TRUE
+WHERE EXISTS (SELECT 1 FROM verificacao_email v WHERE v.id_usuario = u.id_usuario AND v.confirmado_em IS NOT NULL);
 
 -- [07-F-1] link_academico
 -- Bruno (19) recebe os 3 links que a fórmula de score realmente soma (calcular_score_perfil_academico, 05):
@@ -952,7 +1027,7 @@ INSERT INTO campanha (id_usuario, id_admin, id_area_conhecimento, titulo, modelo
 -- score esperado.
 (19, 1, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '1.03.00.00'), 'Nova Plataforma de Diagnóstico por Imagem com Machine Learning',              'all-or-nothing', 30000.00, 5.00, 'Sistema de apoio ao diagnóstico radiológico baseado em visão computacional, validado com dados de dois hospitais universitários.',                      '2024-06-01', '2024-07-16', 'sucesso',             '2024-06-01', '2024-05-20 10:00:00', NULL),
 (20, 1, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '4.05.00.00'), 'Estudo sobre Microbiota Intestinal em Pacientes Oncológicos',                 'flexivel',       20000.00, 5.00, 'Caracterização da microbiota intestinal e sua relação com resposta a quimioterapia em pacientes com câncer colorretal.',                                '2024-06-01', '2024-07-21', 'sucesso',             '2024-06-01', '2024-05-22 09:30:00', NULL),
-(21, 1, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '2.05.00.00'), 'Levantamento de Espécies Invasoras em Ecossistemas Costeiros',                'all-or-nothing', 25000.00, 5.00, 'Mapeamento de espécies exóticas invasoras em restingas e manguezais do litoral nordestino e seu impacto na fauna nativa.',                              '2024-06-01', '2024-08-20', 'ativo',               '2024-06-01', '2024-05-25 08:30:00', NULL);
+(21, 1, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '2.05.00.00'), 'Levantamento de Espécies Invasoras em Ecossistemas Costeiros',                'all-or-nothing', 25000.00, 5.00, 'Mapeamento de espécies exóticas invasoras em restingas e manguezais do litoral nordestino e seu impacto na fauna nativa.',                              '2024-06-01', '2024-08-20', 'ativo',               '2024-06-01', '2024-05-25 10:30:00', NULL);
 
 ALTER TABLE campanha ENABLE TRIGGER trg_campanha_valida_prazo_negocio;
 
@@ -1070,11 +1145,15 @@ ALTER TABLE contribuicao ENABLE TRIGGER trg_contribuicao_all_or_nothing_pix;
 -- [07-H-3] aceite_termo_contribuicao
 -- Sustenta o RF-054/RF-055: a Etapa 2 descreve essa trilha (aceite dos termos por transação) como a defesa
 -- principal da plataforma numa disputa de chargeback com operadora de cartão. Gerado a partir da própria tabela
--- contribuicao (não digitado linha por linha): cada contribuição aceitou a versão de termos vigente na época (v1,
--- id_termo=1; ver [07-D-6]), no mesmo instante da contribuição.
+-- contribuicao (não digitado linha por linha): cada contribuição aceitou a versão do termo da conta vigente no
+-- instante da contribuição (ver [07-D-6]).
 INSERT INTO aceite_termo_contribuicao (id_contribuicao, id_termo, aceito_em, ip_aceite)
-SELECT id_contribuicao, 1, criado_em, '187.10.20.30'
-FROM contribuicao;
+SELECT c.id_contribuicao,
+       (SELECT t.id_termo FROM termos_de_uso t
+        WHERE t.tipo = 'cadastro' AND t.criado_em <= c.criado_em
+        ORDER BY t.criado_em DESC LIMIT 1),
+       c.criado_em, '187.10.20.30'
+FROM contribuicao c;
 
 -- [07-H-2] auditoria_financeira
 INSERT INTO auditoria_financeira (id_contribuicao, valor, status_novo, status_anterior, evento, timestamp) VALUES

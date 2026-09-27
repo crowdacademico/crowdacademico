@@ -6,7 +6,7 @@ import type { TipoTermo } from '../../commons/database/db.types';
 // pol_termos_select (04_rls_policies.sql) é USING(true): leitura pública de propósito, precisa ser lida até por
 // quem ainda não tem sessão nenhuma (a tela de Cadastro é o próprio caso de uso). uq_termos_uso_ativo (02)
 // garante no máximo 1 linha ativa POR TIPO, por isso `executar` exige `tipo`: "a versão ativa" só é não-ambígua
-// depois de dizer QUAL trilha (cadastro/contribuicao/upgrade_pesquisador) se quer.
+// depois de dizer QUAL termo (cadastro/upgrade_pesquisador) se quer.
 @Injectable()
 export class TermoUsoServiceAtivo {
   constructor(private readonly database: DatabaseService) {}

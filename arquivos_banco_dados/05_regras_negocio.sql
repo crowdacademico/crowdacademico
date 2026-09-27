@@ -1551,7 +1551,7 @@ BEGIN
     SELECT COUNT(*) INTO v_qtd FROM orcamento_campanha WHERE id_campanha = NEW.id_campanha;
 
     IF v_qtd >= v_max THEN
-        RAISE EXCEPTION 'A campanha já atingiu o limite de % itens de orçamento (configuracoes.orcamento_max_itens).', v_max
+        RAISE EXCEPTION 'A campanha já atingiu o limite de % % de orçamento.', v_max, CASE WHEN v_max = 1 THEN 'item' ELSE 'itens' END
             USING ERRCODE = '91012';
     END IF;
 
@@ -1729,7 +1729,7 @@ BEGIN
     SELECT COUNT(*) INTO v_qtd FROM marco_cronograma WHERE id_campanha = NEW.id_campanha;
 
     IF v_qtd >= v_max THEN
-        RAISE EXCEPTION 'A campanha já atingiu o limite de % marcos de cronograma (configuracoes.cronograma_max_marcos).', v_max
+        RAISE EXCEPTION 'A campanha já atingiu o limite de % % de cronograma.', v_max, CASE WHEN v_max = 1 THEN 'marco' ELSE 'marcos' END
             USING ERRCODE = '91014';
     END IF;
 
@@ -2024,12 +2024,14 @@ BEGIN
       WHERE id_campanha = NEW.id_campanha;
 
     IF v_qtd_orcamento < v_min_orcamento THEN
-        RAISE EXCEPTION 'A campanha precisa de pelo menos % itens de orçamento (tem %).', v_min_orcamento, v_qtd_orcamento
+        RAISE EXCEPTION 'A campanha precisa de pelo menos % % de orçamento, mas tem %.',
+            v_min_orcamento, CASE WHEN v_min_orcamento = 1 THEN 'item' ELSE 'itens' END, v_qtd_orcamento
             USING ERRCODE = '90009';
     END IF;
 
     IF v_qtd_marcos < v_min_marcos THEN
-        RAISE EXCEPTION 'A campanha precisa de pelo menos % marcos de cronograma (tem %).', v_min_marcos, v_qtd_marcos
+        RAISE EXCEPTION 'A campanha precisa de pelo menos % % de cronograma, mas tem %.',
+            v_min_marcos, CASE WHEN v_min_marcos = 1 THEN 'marco' ELSE 'marcos' END, v_qtd_marcos
             USING ERRCODE = '90010';
     END IF;
 

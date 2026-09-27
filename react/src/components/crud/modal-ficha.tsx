@@ -1,5 +1,6 @@
-import { useEffect, useId } from 'react';
+import { useId, useRef } from 'react';
 import type { ReactNode } from 'react';
+import { useFocoPreso } from '../../services/constant/hook/use-foco-preso';
 
 interface ModalFichaProps {
   titulo: string;
@@ -55,31 +56,36 @@ export function ModalFicha({
   const badgesExibidos = carregando ? undefined : badges;
   // Nome acessível da janela: o leitor de tela anuncia "diálogo, <título>" ao abrir.
   const idTitulo = useId();
+  // Foco do teclado preso na janela enquanto ela está aberta, e devolvido a quem abriu ao fechar.
+  const janelaRef = useRef<HTMLDivElement>(null);
+  useFocoPreso(janelaRef);
 
-  // Esc fecha: listener no `document`, não um `onKeyDown` no próprio card: um <div> não recebe evento de
-  // teclado sem `tabIndex`/foco nele, e forçar foco só para isso complicaria mais que ajuda. O efeito só existe
-  // enquanto ESTE modal está montado (cada modal do painel é `{aberto && <ModalFicha ...>}`), então isto
-  // liga/desliga sozinho com abrir/fechar, sem guarda extra "só se estiver aberto" aqui dentro.
-  useEffect(() => {
-    const aoTeclar = (evento: KeyboardEvent) => {
-      if (evento.key === 'Escape') {
-        aoFechar();
-      }
-    };
-    document.addEventListener('keydown', aoTeclar);
-    return () => document.removeEventListener('keydown', aoTeclar);
-  }, [aoFechar]);
 
   return (
     <div
       className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/40"
       onClick={fecharAoClicarFora ? aoFechar : undefined}
+      // Clique no FUNDO (só nele, não nos cliques de dentro da janela, que sobem até aqui) não tira o foco da
+      // janela: senão o Esc, tratado dentro dela, pararia de funcionar.
+      onMouseDown={(evento) => {
+        if (evento.target === evento.currentTarget) evento.preventDefault();
+      }}
     >
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby={idTitulo}
-        className="w-full max-w-5xl max-h-[90vh] fundo-cartao rounded-2xl shadow-2xl border borda-padrao overflow-hidden flex flex-col"
+        ref={janelaRef}
+        tabIndex={-1}
+        // Esc fecha SÓ esta janela: o foco está dentro dela (useFocoPreso), e parar a propagação impede que uma
+        // janela aberta por baixo (ex.: o Alterar, com o detalhe de um item por cima) feche junto.
+        onKeyDown={(evento) => {
+          if (evento.key === 'Escape') {
+            evento.stopPropagation();
+            aoFechar();
+          }
+        }}
+        className="outline-none w-full max-w-5xl max-h-[90vh] fundo-cartao rounded-2xl shadow-2xl border borda-padrao overflow-hidden flex flex-col"
         onClick={(evento) => evento.stopPropagation()}
       >
         {/* O X é irmão direto no flex externo (sem `flex-wrap` ali), e os badges moram DENTRO do bloco da

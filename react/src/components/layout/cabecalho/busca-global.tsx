@@ -6,6 +6,7 @@ import { usuarioApi } from '../../../services/1-usuario/api/usuario.api';
 import { papelApi, permissaoApi } from '../../../services/2-papel-permissao/api/papel-permissao.api';
 import { configuracaoApi } from '../../../services/11-configuracoes/api/configuracao.api';
 import { EVENTO_ABRIR_BUSCA_GLOBAL as EVENTO_ABRIR } from './busca-global-evento';
+import { useFocoPreso } from '../../../services/constant/hook/use-foco-preso';
 import type { UseAuthReturn } from '../../../services/3-auth/hook/use-auth';
 import type { UsuarioResponse } from '../../../services/1-usuario/type/usuario.type';
 import type { PapelResponse, PermissaoResponse } from '../../../services/2-papel-permissao/type/papel-permissao.type';
@@ -64,6 +65,10 @@ export function BuscaGlobal({ auth }: BuscaGlobalProps) {
   const [dados, setDados] = useState<DadosCatalogos | null>(null); // null = ainda não carregou
   const [carregando, setCarregando] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  // Janela da busca: anunciada como diálogo e com o foco do teclado preso nela enquanto aberta (declarado antes
+  // do efeito que foca o campo, para lembrar quem tinha o foco ANTES de abrir e devolver ao fechar).
+  const janelaRef = useRef<HTMLDivElement>(null);
+  useFocoPreso(janelaRef, aberto);
 
   const carregarDados = useCallback(() => {
     if (dados || carregando) {
@@ -218,9 +223,18 @@ export function BuscaGlobal({ auth }: BuscaGlobalProps) {
     <div
       className="fixed inset-0 z-[200] flex items-start justify-center pt-24 px-4 bg-black/40"
       onClick={fechar}
+      // Clique no FUNDO não tira o foco da janela (ver o mesmo trecho em modal-ficha.tsx).
+      onMouseDown={(evento) => {
+        if (evento.target === evento.currentTarget) evento.preventDefault();
+      }}
     >
       <div
-        className="w-full max-w-lg fundo-elevado rounded-2xl shadow-2xl border borda-forte overflow-hidden"
+        ref={janelaRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Busca global"
+        tabIndex={-1}
+        className="outline-none w-full max-w-lg fundo-elevado rounded-2xl shadow-2xl border borda-forte overflow-hidden"
         onClick={(evento) => evento.stopPropagation()}
       >
         <div className="flex items-center gap-3 px-4 py-3 border-b borda-padrao">

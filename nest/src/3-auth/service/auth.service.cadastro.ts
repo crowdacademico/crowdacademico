@@ -43,7 +43,7 @@ export class AuthServiceCadastro {
 
     // Resolvido pelo SERVIDOR, nunca aceito do corpo da requisição (ver comentário de registrar_aceite_termo(),
     // 03_funcoes_seguranca.sql, [03-D-1], sobre por que isso importa). `'cadastro'` explícito: o cadastro
-    // sempre aceita a trilha "cadastro", nunca a de "contribuicao".
+    // aceita o termo da conta, nunca o de "upgrade_pesquisador".
     const termoAtivo = await this.termoUsoServiceAtivo.executar('cadastro');
     await sql`SELECT public.registrar_aceite_termo(${usuario.idUsuario}, ${termoAtivo.idTermo}, ${ip ?? null})`.execute(
       db,

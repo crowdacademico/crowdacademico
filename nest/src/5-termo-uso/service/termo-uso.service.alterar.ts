@@ -11,7 +11,8 @@ import { TermoUsoResponse } from '../dto/response/termo-uso.response';
 // disparar aqui.
 //
 // Precisa checar as DUAS tabelas de aceite que referenciam termos_de_uso: usuario_termo (aceite
-// geral/cadastro/upgrade_pesquisador) E aceite_termo_contribuicao (aceite por contribuição a campanha); um
+// no cadastro e no upgrade de pesquisador) E aceite_termo_contribuicao (o termo da conta aceito de novo a cada
+// contribuição); um
 // termo pode estar "usado" por qualquer uma das duas.
 @Injectable()
 export class TermoUsoServiceAlterar {

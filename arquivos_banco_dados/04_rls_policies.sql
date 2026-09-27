@@ -96,7 +96,8 @@ ALTER TABLE arquivo              FORCE ROW LEVEL SECURITY;
 -- sempre visível só para o próprio dono, pública ou não.
 DROP POLICY IF EXISTS pol_config_select ON configuracoes;
 CREATE POLICY pol_config_select ON configuracoes FOR SELECT TO app_nestjs USING (
-    (id_usuario IS NULL AND (publica = TRUE OR (SELECT public.tem_permissao('configuracao_gerenciar'))))
+    (id_usuario IS NULL AND (publica = TRUE OR (SELECT public.tem_permissao('configuracao_gerenciar'))
+        OR (SELECT public.tem_permissao('relatorio_visualizar'))))
     OR id_usuario = (SELECT public.id_usuario_atual())
 );
 -- [04-C-1] configuracoes: por que existem policies de escrita (ver DOCUMENTACAO_BD.md)
@@ -246,10 +247,13 @@ CREATE POLICY pol_perfil_insert ON perfil_pesquisador FOR INSERT TO app_nestjs W
 DROP POLICY IF EXISTS pol_perfil_update ON perfil_pesquisador;
 CREATE POLICY pol_perfil_update ON perfil_pesquisador FOR UPDATE TO app_nestjs USING (id_usuario = (SELECT public.id_usuario_atual()));
 
--- [04-D-4b] usuario_papel (SELECT): cada pessoa vê os próprios papéis; quem tem papel_gerenciar vê os de todos (coluna "papel" da listagem de Usuários).
+-- [04-D-4b] usuario_papel (SELECT): cada pessoa vê os próprios papéis; quem tem papel_gerenciar ou a leitura
+-- administrativa (relatorio_visualizar) vê os de todos (coluna "papel" da listagem de Usuários). Ler não exige
+-- permissão de alterar.
 DROP POLICY IF EXISTS pol_usuariopapel_select ON usuario_papel;
 CREATE POLICY pol_usuariopapel_select ON usuario_papel FOR SELECT TO app_nestjs USING (
     id_usuario = (SELECT public.id_usuario_atual()) OR (SELECT public.tem_permissao('papel_gerenciar'))
+    OR (SELECT public.tem_permissao('relatorio_visualizar'))
 );
 DROP POLICY IF EXISTS pol_usuariopapel_insert ON usuario_papel;
 CREATE POLICY pol_usuariopapel_insert ON usuario_papel FOR INSERT TO app_nestjs WITH CHECK ((SELECT public.tem_permissao('papel_atribuir')));
@@ -537,6 +541,7 @@ CREATE POLICY pol_solicitacao_update ON solicitacao_encerramento FOR UPDATE TO a
 DROP POLICY IF EXISTS pol_historicorej_select ON historico_rejeicao;
 CREATE POLICY pol_historicorej_select ON historico_rejeicao FOR SELECT TO app_nestjs USING (
     (SELECT public.tem_permissao('campanha_rejeitar'))
+    OR (SELECT public.tem_permissao('relatorio_visualizar'))
     OR id_usuario_dono = (SELECT public.id_usuario_atual())
 );
 -- [04-E-6] historico_rejeicao: por que existem policies de escrita (ver DOCUMENTACAO_BD.md)

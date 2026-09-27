@@ -133,15 +133,11 @@ export interface LogAuditoriaTable {
 
 // Espelham 01_extensoes_enums_tabelas.sql, tabelas termos_de_uso/usuario_termo (módulo 5-termo-uso).
 //
-// `tipo`: o sistema sempre tem 1 Termo de Uso vigente por momento de aceite (cadastro, contribuição a campanha,
-// upgrade de pesquisador). `Generated` porque a coluna tem DEFAULT 'cadastro' no banco (para as versões
+// `tipo`: o sistema sempre tem 1 versão vigente de cada termo: 'cadastro' (o termo da conta, que cobre também as
+// contribuições e é aceito de novo a cada uma, em aceite_termo_contribuicao) e 'upgrade_pesquisador'. `Generated` porque a coluna tem DEFAULT 'cadastro' no banco (para as versões
 // anteriores à coluna), mas todo INSERT novo passa `tipo` explícito, mesmo espírito de `ativo`, que também é
 // `Generated` e mesmo assim sempre especificado.
-export const TIPOS_TERMO = [
-  'cadastro',
-  'contribuicao',
-  'upgrade_pesquisador',
-] as const;
+export const TIPOS_TERMO = ['cadastro', 'upgrade_pesquisador'] as const;
 export type TipoTermo = (typeof TIPOS_TERMO)[number];
 
 export interface TermosDeUsoTable {
