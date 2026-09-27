@@ -5,6 +5,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { DatabaseModule } from '../commons/database/database.module';
 import { LoggingModule } from '../commons/logging/logging.module';
 import { RequestLoggerMiddleware } from '../commons/logging/request-logger.middleware';
+import { mensagemLimiteTentativas } from '../commons/seguranca/mensagem-limite-tentativas.util';
 import { UsuarioModule } from '../1-usuario/usuario.module';
 import { TermoUsoModule } from '../5-termo-uso/termo-uso.module';
 import { PapelPermissaoModule } from '../2-papel-permissao/papel-permissao.module';
@@ -45,7 +46,11 @@ import { ConfiguracaoValorModule } from '../commons/configuracao/configuracao-va
     // Regra do projeto: toda rota com limite de frequência declara o PRÓPRIO `@Throttle()` no controller; o
     // default aqui embaixo é só rede de segurança genérica, nunca a fonte do valor de uma rota sensível. Este
     // valor (60/min) não protege login nem exportação: ambos têm o limite deles decorado no próprio controller.
-    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 60 }]),
+    // `errorMessage`: o 429 sai em português, com o tempo de espera (commons/seguranca).
+    ThrottlerModule.forRoot({
+      throttlers: [{ ttl: 60_000, limit: 60 }],
+      errorMessage: mensagemLimiteTentativas,
+    }),
     DatabaseModule,
     // Log de requisição com id (ver configure() logo abaixo: é lá que o middleware é aplicado de verdade a toda
     // rota).

@@ -11,10 +11,10 @@
 --  mesma ordem de blocos de domínio do arquivo 01. RBAC e CONFIG não têm
 --  bloco próprio aqui porque as chaves primárias e UNIQUE já criam índice
 --  automático suficiente para as consultas dessas tabelas - EXCETO
---  area_conhecimento.id_pai (ver [02-C]).
+--  area_conhecimento.id_pai e os índices únicos de nome dos catálogos (ver [02-C]).
 --
 --  Inventário Mapeado:
---  - 44 Índices (CREATE INDEX / CREATE UNIQUE INDEX) em 7 blocos de domínio
+--  - 52 Índices (CREATE INDEX / CREATE UNIQUE INDEX) em 8 blocos de domínio
 --  (o Postgres não cria índice automático em FK; os de FK estão nos blocos de domínio abaixo)
 -- ----------------------------------------------------------------------------
 --  SUMÁRIO DOS BLOCOS DE CÓDIGO
@@ -26,6 +26,7 @@
 --  [02-G] ARQUIVO
 --  [02-H] CONTRIBUIÇÃO
 --  [02-I] SCORE
+--  [02-J] LOG DE AUDITORIA
 -- ============================================================================
 -- [02-C] CONFIG
 -- ============================================================
@@ -33,6 +34,17 @@
 -- linhas é pouco hoje, mas é o mesmo padrão já usado em idx_score_config_pai ([02-I]) para uma
 -- hierarquia idêntica.
 CREATE INDEX idx_area_conhecimento_pai      ON area_conhecimento(id_pai);
+
+-- [02-C-1] Nome único ignorando acentos, maiúsculas e espaços repetidos (public.texto_normalizado, 01 [01-A-1]):
+-- "Matemática" e "matematica " contam como o mesmo nome. Tipo de link: único no sistema. Área: único dentro da
+-- mesma área-mãe (as grandes áreas, sem mãe, formam um grupo só). Motivo de denúncia: único dentro do mesmo tipo
+-- (o mesmo motivo pode valer para campanha e para perfil). O Nest traduz a violação para 409 com mensagem própria
+-- (commons/database/mensagens-duplicidade.constants.ts).
+CREATE UNIQUE INDEX uq_tipo_link_nome_normalizado ON tipo_link (public.texto_normalizado(nome));
+CREATE UNIQUE INDEX uq_area_conhecimento_nome_normalizado
+    ON area_conhecimento (COALESCE(id_pai, 0), public.texto_normalizado(nome));
+CREATE UNIQUE INDEX uq_motivo_denuncia_descricao_normalizada
+    ON motivo_denuncia (tipo, public.texto_normalizado(descricao));
 
 -- ============================================================
 -- [02-D] USUÁRIO

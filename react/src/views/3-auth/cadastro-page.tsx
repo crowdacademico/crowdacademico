@@ -1,6 +1,8 @@
 import { useId, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
+import { MensagemErro } from '../../components/crud/mensagem-erro';
+import { Campo } from '../../components/input/campo';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { termoUsoApi } from '../../services/5-termo-uso/api/termo-uso.api';
 import { ErroHttp } from '../../services/constant/api/http.util';
@@ -45,10 +47,6 @@ export function CadastroPage({ auth }: PropsPagina) {
   const [aceiteTermos, setAceiteTermos] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const { erro, reportarErro, limparErro } = useErroToast();
-  const idNome = useId();
-  const idEmail = useId();
-  const idSenha = useId();
-  const idConfirmarSenha = useId();
 
   // "Tocado" (blur), não a cada tecla: validar enquanto a pessoa ainda está digitando o e-mail acusa erro antes
   // de ela terminar de escrever.
@@ -130,132 +128,141 @@ export function CadastroPage({ auth }: PropsPagina) {
           onSubmit={aoCadastrar}
           className="p-10 space-y-5 overflow-y-auto min-h-0 flex-1"
         >
-          {erro && <p className="texto-erro text-sm font-bold text-center">{erro}</p>}
+          <MensagemErro texto={erro} />
 
-          <div>
-            <label htmlFor={idNome} className="rotulo-campo">Nome</label>
-            <input
-              id={idNome}
-              type="text"
-              value={nome}
-              onChange={(evento) => setNome(evento.target.value)}
-              onBlur={() => marcarTocado('nome')}
-              className="input-padrao"
-              placeholder="Seu nome"
-              autoComplete="name"
-            />
-            {tocado.nome && nome.trim().length < 2 && (
-              <p className="text-xs texto-erro mt-1">Nome precisa ter pelo menos 2 caracteres.</p>
-            )}
-          </div>
-
-          <div>
-            <label htmlFor={idEmail} className="rotulo-campo">E-mail</label>
-            <input
-              id={idEmail}
-              type="email"
-              value={email}
-              onChange={(evento) => {
-                setEmail(evento.target.value);
-                setErroEmailDuplicado(false);
-              }}
-              onBlur={() => marcarTocado('email')}
-              className="input-padrao"
-              placeholder="seu@email.com"
-              autoComplete="email"
-            />
-            {tocado.email && email.length > 0 && !emailValido && (
-              <p className="text-xs texto-erro mt-1">E-mail inválido.</p>
-            )}
-            {erroEmailDuplicado && (
-              <p className="text-xs texto-erro mt-1">
-                Já existe conta com este e-mail.{' '}
-                <Link to="/login" className="font-bold underline">
-                  Já tem conta? Entrar
-                </Link>
-              </p>
-            )}
-          </div>
-
-          <div>
-            <label htmlFor={idSenha} className="rotulo-campo">Senha</label>
-            <div className="relative">
+          <Campo rotulo="Nome" erro={tocado.nome && nome.trim().length < 2 && 'Nome precisa ter pelo menos 2 caracteres.'}>
+            {({ atributos, classeErro }) => (
               <input
-                id={idSenha}
+                {...atributos}
+                type="text"
+                value={nome}
+                onChange={(evento) => setNome(evento.target.value)}
+                onBlur={() => marcarTocado('nome')}
+                className={'input-padrao' + classeErro}
+                placeholder="Seu nome"
+                autoComplete="name"
+              />
+            )}
+          </Campo>
+
+          <Campo
+            rotulo="E-mail"
+            erro={
+              erroEmailDuplicado ? (
+                <>
+                  Já existe conta com este e-mail.{' '}
+                  <Link to="/login" className="font-bold underline">
+                    Já tem conta? Entrar
+                  </Link>
+                </>
+              ) : (
+                tocado.email && email.length > 0 && !emailValido && 'E-mail inválido.'
+              )
+            }
+          >
+            {({ atributos, classeErro }) => (
+              <input
+                {...atributos}
+                type="email"
+                value={email}
+                onChange={(evento) => {
+                  setEmail(evento.target.value);
+                  setErroEmailDuplicado(false);
+                }}
+                onBlur={() => marcarTocado('email')}
+                className={'input-padrao' + classeErro}
+                placeholder="seu@email.com"
+                autoComplete="email"
+              />
+            )}
+          </Campo>
+
+          <Campo rotulo="Senha">
+            {({ atributos }) => (
+              <>
+                <div className="relative">
+                  <input
+                    {...atributos}
+                    type={mostrarSenha ? 'text' : 'password'}
+                    value={senha}
+                    onChange={(evento) => setSenha(evento.target.value)}
+                    onBlur={() => marcarTocado('senha')}
+                    className="input-padrao pr-10"
+                    placeholder="••••••••"
+                    autoComplete="new-password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setMostrarSenha((atual) => !atual)}
+                    aria-label={mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 texto-fraco hover-texto-forte"
+                  >
+                    <i className={'fa-solid ' + (mostrarSenha ? 'fa-eye-slash' : 'fa-eye')}></i>
+                  </button>
+                </div>
+
+                {/* Medidor de força - barra + requisitos marcados conforme
+                    cumpridos, não uma mensagem de erro só depois do submit. */}
+                {senha.length > 0 && (
+                  <div className="mt-2 space-y-1.5">
+                    <div className="flex gap-1">
+                      {REQUISITOS_SENHA.map((r, indice) => (
+                        <div
+                          key={r.chave}
+                          className={
+                            'h-1 flex-1 rounded-full ' +
+                            (indice < requisitosCumpridos ? 'fundo-marca' : 'fundo-sutil')
+                          }
+                        ></div>
+                      ))}
+                    </div>
+                    <ul className="grid grid-cols-2 gap-x-2 gap-y-1">
+                      {REQUISITOS_SENHA.map((r) => {
+                        const cumprido = r.testar(senha);
+                        return (
+                          <li
+                            key={r.chave}
+                            className={'text-xs flex items-center gap-1.5 ' + (cumprido ? 'texto-sucesso' : 'texto-fraco')}
+                          >
+                            <i className={'fa-solid ' + (cumprido ? 'fa-circle-check' : 'fa-circle') + ' text-[10px]'}></i>
+                            {r.rotulo}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                )}
+              </>
+            )}
+          </Campo>
+
+          <Campo
+            rotulo="Confirmar senha"
+            erro={confirmarSenha.length > 0 && !senhasIguais && 'As senhas não são iguais.'}
+            dica={
+              confirmarSenha.length > 0 &&
+              senhasIguais && (
+                <span className="texto-sucesso">
+                  <i className="fa-solid fa-circle-check"></i> Senhas conferem.
+                </span>
+              )
+            }
+          >
+            {/* Em tempo real, não só no blur: comparar com a 1ª senha é o único campo onde "digitando ainda" já
+                vale avisar. */}
+            {({ atributos, classeErro }) => (
+              <input
+                {...atributos}
                 type={mostrarSenha ? 'text' : 'password'}
-                value={senha}
-                onChange={(evento) => setSenha(evento.target.value)}
-                onBlur={() => marcarTocado('senha')}
-                className="input-padrao pr-10"
+                value={confirmarSenha}
+                onChange={(evento) => setConfirmarSenha(evento.target.value)}
+                onBlur={() => marcarTocado('confirmar')}
+                className={'input-padrao' + classeErro}
                 placeholder="••••••••"
                 autoComplete="new-password"
               />
-              <button
-                type="button"
-                onClick={() => setMostrarSenha((atual) => !atual)}
-                aria-label={mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'}
-                className="absolute right-3 top-1/2 -translate-y-1/2 texto-fraco hover-texto-forte"
-              >
-                <i className={'fa-solid ' + (mostrarSenha ? 'fa-eye-slash' : 'fa-eye')}></i>
-              </button>
-            </div>
-
-            {/* Medidor de força - barra + requisitos marcados conforme
-                cumpridos, não uma mensagem de erro só depois do submit. */}
-            {senha.length > 0 && (
-              <div className="mt-2 space-y-1.5">
-                <div className="flex gap-1">
-                  {REQUISITOS_SENHA.map((r, indice) => (
-                    <div
-                      key={r.chave}
-                      className={
-                        'h-1 flex-1 rounded-full ' +
-                        (indice < requisitosCumpridos ? 'fundo-marca' : 'fundo-sutil')
-                      }
-                    ></div>
-                  ))}
-                </div>
-                <ul className="grid grid-cols-2 gap-x-2 gap-y-1">
-                  {REQUISITOS_SENHA.map((r) => {
-                    const cumprido = r.testar(senha);
-                    return (
-                      <li
-                        key={r.chave}
-                        className={'text-xs flex items-center gap-1.5 ' + (cumprido ? 'texto-sucesso' : 'texto-fraco')}
-                      >
-                        <i className={'fa-solid ' + (cumprido ? 'fa-circle-check' : 'fa-circle') + ' text-[10px]'}></i>
-                        {r.rotulo}
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
             )}
-          </div>
-
-          <div>
-            <label htmlFor={idConfirmarSenha} className="rotulo-campo">Confirmar senha</label>
-            <input
-              id={idConfirmarSenha}
-              type={mostrarSenha ? 'text' : 'password'}
-              value={confirmarSenha}
-              onChange={(evento) => setConfirmarSenha(evento.target.value)}
-              onBlur={() => marcarTocado('confirmar')}
-              className="input-padrao"
-              placeholder="••••••••"
-              autoComplete="new-password"
-            />
-            {/* Em tempo real, não só no blur: comparar com a 1ª senha é o único campo onde "digitando ainda"
-                já vale avisar. */}
-            {confirmarSenha.length > 0 && !senhasIguais && (
-              <p className="text-xs texto-erro mt-1">As senhas não são iguais.</p>
-            )}
-            {confirmarSenha.length > 0 && senhasIguais && (
-              <p className="text-xs texto-sucesso mt-1">
-                <i className="fa-solid fa-circle-check"></i> Senhas conferem.
-              </p>
-            )}
-          </div>
+          </Campo>
 
           <label className="flex items-start gap-2.5 text-sm texto-padrao">
             <input

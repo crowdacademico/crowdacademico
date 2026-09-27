@@ -1,8 +1,4 @@
-import { API_BASE_URL } from '../../constant/constants/api.constants';
-import { tratarResposta } from '../../constant/api/http.util';
-import type { AuthFetch } from '../../3-auth/type/auth.type';
-import type { ResultadoPaginado } from '../../constant/type/paginacao.type';
-import { desembrulharPaginado } from '../../constant/type/paginacao.type';
+import { criarApiCatalogo } from '../../constant/api/api-catalogo';
 import type {
   AreaConhecimentoRequestCreate,
   AreaConhecimentoRequestUpdate,
@@ -14,63 +10,17 @@ import type {
 // 'area_conhecimento_gerenciar', garantida pela RLS (o Nest só tem RequireAuthGuard para exigir login; quem não
 // tiver a permissão recebe 403 do próprio Postgres, traduzido por postgres-exception.filter.ts). remover() pode
 // voltar 409 se a área ainda estiver em uso por campanha/área filha (ver area-conhecimento.service.remove.ts).
+//
+// Filtro: `raiz: true` lista só as grandes áreas; `idPai` lista as filhas de uma grande área.
 interface FiltroAreaConhecimento {
   raiz?: boolean;
   idPai?: number;
   ativo?: boolean;
 }
 
-function paraQueryString(filtro?: FiltroAreaConhecimento): string {
-  if (!filtro) {
-    return '';
-  }
-  const params = new URLSearchParams();
-  if (filtro.raiz !== undefined) params.set('raiz', String(filtro.raiz));
-  if (filtro.idPai !== undefined) params.set('idPai', String(filtro.idPai));
-  if (filtro.ativo !== undefined) params.set('ativo', String(filtro.ativo));
-  const texto = params.toString();
-  return texto ? `?${texto}` : '';
-}
-
-export const areaConhecimentoApi = {
-  // GET /area-conhecimento devolve { dados, total, pagina, tamanho } -
-  // `.dados` desembrulhado aqui, mesmo padrão de usuarioApi.listar/
-  // configuracaoApi.listar, pra GenericTable e o combo de Criar
-  // continuarem recebendo um array puro. `filtro` opcional: { raiz,
-  // idPai, ativo } - mesmos nomes de ListarAreaConhecimentoQueryDto no
-  // backend (ex.: `{ raiz: true }` lista só as grandes áreas).
-  listar: (authFetch: AuthFetch, filtro?: FiltroAreaConhecimento): Promise<AreaConhecimentoResponse[]> =>
-    authFetch(`/area-conhecimento${paraQueryString(filtro)}`)
-      .then(tratarResposta<ResultadoPaginado<AreaConhecimentoResponse>>)
-      .then(desembrulharPaginado('áreas do conhecimento')),
-  // Sem authFetch de propósito, mesmo padrão de configuracaoApi.
-  // buscarPublicas: pol_area_select já libera pra qualquer um, logado ou
-  // não. Ainda sem nenhuma tela pública chamando isto (o formulário de
-  // campanha, que vai precisar do combo Grande Área/Área, é de outro
-  // módulo) - já deixado pronto pra quando existir, em vez de duplicar
-  // este arquivo inteiro depois só pra adicionar uma função.
-  listarPublico: (filtro?: FiltroAreaConhecimento): Promise<AreaConhecimentoResponse[]> =>
-    fetch(`${API_BASE_URL}/area-conhecimento${paraQueryString(filtro)}`)
-      .then(tratarResposta<ResultadoPaginado<AreaConhecimentoResponse>>)
-      .then(desembrulharPaginado('áreas do conhecimento')),
-  buscar: (authFetch: AuthFetch, id: number | string): Promise<AreaConhecimentoResponse> =>
-    authFetch(`/area-conhecimento/${id}`).then(tratarResposta<AreaConhecimentoResponse>),
-  criar: (authFetch: AuthFetch, dados: AreaConhecimentoRequestCreate): Promise<AreaConhecimentoResponse> =>
-    authFetch('/area-conhecimento', {
-      method: 'POST',
-      body: JSON.stringify(dados),
-    }).then(tratarResposta<AreaConhecimentoResponse>),
-  // Só nome/ativo são aceitos (ver AtualizarAreaConhecimentoRequestDto no
-  // backend) - codigoCnpq e idPai são imutáveis depois de criada a linha.
-  atualizar: (
-    authFetch: AuthFetch,
-    id: number | string,
-    dados: AreaConhecimentoRequestUpdate,
-  ): Promise<AreaConhecimentoResponse> =>
-    authFetch(`/area-conhecimento/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify(dados),
-    }).then(tratarResposta<AreaConhecimentoResponse>),
-  remover: (authFetch: AuthFetch, id: number | string): Promise<void> =>
-    authFetch(`/area-conhecimento/${id}`, { method: 'DELETE' }).then(tratarResposta<void>),
-};
+export const areaConhecimentoApi = criarApiCatalogo<
+  AreaConhecimentoResponse,
+  AreaConhecimentoRequestCreate,
+  AreaConhecimentoRequestUpdate,
+  FiltroAreaConhecimento
+>('/area-conhecimento', 'áreas do conhecimento');

@@ -10,13 +10,19 @@
 // ErroHttp carrega o `status` HTTP junto da mensagem: o backend categoriza erro em 4 faixas de HTTP pelo
 // ERRCODE (postgres-exception.filter.ts), e sem o status `traduzir-erro.util.ts` não teria como tratar
 // 429/5xx/etc de forma diferente do resto. `instanceof Error` continua funcionando normalmente em todo `catch`.
+//
+// `campos`: erros por campo do formulário, quando o backend manda ({ <campo>: [mensagens] }; validação do DTO
+// e duplicidade, ver nest/src/commons/validacao e mensagens-duplicidade.constants.ts). useErroToast os guarda
+// para o componente `Campo` mostrar embaixo do campo certo.
 export class ErroHttp extends Error {
   status: number;
+  campos?: Record<string, string[]>;
 
-  constructor(mensagem: string, status: number) {
+  constructor(mensagem: string, status: number, campos?: Record<string, string[]>) {
     super(mensagem);
     this.name = 'ErroHttp';
     this.status = status;
+    this.campos = campos;
   }
 }
 
@@ -32,16 +38,13 @@ export class ErroHttp extends Error {
 // em nenhum outro lugar.
 export async function tratarResposta<T>(resposta: Response): Promise<T> {
   if (!resposta.ok) {
-    // `message` pode ser texto ou lista de textos - validação por DTO no
-    // Nest (class-validator) devolve lista quando mais de uma regra falha
-    // no mesmo campo. Comportamento atual (concatenar a lista virando
-    // string) preservado exatamente: `new Error(array)` já fazia esse
-    // join sozinho (vírgula, sem espaço) - aqui só ficou explícito.
+    // `message` pode ser texto ou lista de textos (validação por DTO no Nest devolve lista); a lista vira um
+    // texto só, separado por vírgula.
     const corpo = (await resposta.json().catch(() => null)) as
-      | { message?: string | string[] }
+      | { message?: string | string[]; campos?: Record<string, string[]> }
       | null;
     const mensagem = Array.isArray(corpo?.message) ? corpo.message.join(',') : corpo?.message;
-    throw new ErroHttp(mensagem || `Erro HTTP ${resposta.status}`, resposta.status);
+    throw new ErroHttp(mensagem || `Erro HTTP ${resposta.status}`, resposta.status, corpo?.campos);
   }
   const texto = await resposta.text();
   return texto ? (JSON.parse(texto) as T) : (undefined as T);

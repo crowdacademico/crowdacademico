@@ -1,16 +1,13 @@
-import { useId } from 'react';
+import { Campo } from '../../components/input/campo';
+import {
+  ROTULO_TIPO_VINCULO,
+  ROTULO_TITULO_ACADEMICO,
+} from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
 import type { TipoVinculo, TituloAcademico } from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
 
-const TIPOS_VINCULO: TipoVinculo[] = ['institucional', 'independente'];
-const TITULOS_ACADEMICOS: TituloAcademico[] = ['graduado', 'especialista', 'mestre', 'doutor'];
-
-function ehTipoVinculo(valor: string): valor is TipoVinculo {
-  return valor === 'institucional' || valor === 'independente';
-}
-
-function ehTituloAcademico(valor: string): valor is TituloAcademico {
-  return valor === 'graduado' || valor === 'especialista' || valor === 'mestre' || valor === 'doutor';
-}
+// As listas de opções e as guardas saem dos mapas de rótulo (lista única de cada ENUM no React).
+const ehTipoVinculo = (valor: string): valor is TipoVinculo => Object.hasOwn(ROTULO_TIPO_VINCULO, valor);
+const ehTituloAcademico = (valor: string): valor is TituloAcademico => Object.hasOwn(ROTULO_TITULO_ACADEMICO, valor);
 
 interface CamposVinculoPerfilProps {
   tipoVinculo: TipoVinculo;
@@ -36,63 +33,59 @@ export function CamposVinculoPerfil({
   aoAlterarVinculoInstitucional,
   aoAlterarTituloAcademico,
 }: CamposVinculoPerfilProps) {
-  const idTipoVinculo = useId();
-  const idVinculoInstitucional = useId();
-  const idTituloAcademico = useId();
   return (
     <>
-      <div>
-        <label htmlFor={idTipoVinculo} className="rotulo-campo">Tipo de vínculo</label>
-        <select
-          id={idTipoVinculo}
-          value={tipoVinculo}
-          onChange={(evento) => {
-            if (ehTipoVinculo(evento.target.value)) {
-              aoAlterarTipoVinculo(evento.target.value);
-            }
-          }}
-          className="input-padrao"
-        >
-          {TIPOS_VINCULO.map((tipo) => (
-            <option key={tipo} value={tipo}>
-              {tipo}
-            </option>
-          ))}
-        </select>
-      </div>
+      <Campo rotulo="Tipo de vínculo">
+        {({ atributos }) => (
+          <select
+            {...atributos}
+            value={tipoVinculo}
+            onChange={(evento) => {
+              if (ehTipoVinculo(evento.target.value)) aoAlterarTipoVinculo(evento.target.value);
+            }}
+            className="input-padrao"
+          >
+            {Object.entries(ROTULO_TIPO_VINCULO).map(([valor, rotulo]) => (
+              <option key={valor} value={valor}>
+                {rotulo}
+              </option>
+            ))}
+          </select>
+        )}
+      </Campo>
 
       {tipoVinculo === 'institucional' && (
-        <div>
-          <label htmlFor={idVinculoInstitucional} className="rotulo-campo">{rotuloVinculoInstitucional}</label>
-          <input
-            id={idVinculoInstitucional}
-            type="text"
-            value={vinculoInstitucional}
-            onChange={(evento) => aoAlterarVinculoInstitucional(evento.target.value)}
-            className="input-padrao"
-          />
-        </div>
+        <Campo rotulo={rotuloVinculoInstitucional}>
+          {({ atributos }) => (
+            <input
+              {...atributos}
+              type="text"
+              value={vinculoInstitucional}
+              onChange={(evento) => aoAlterarVinculoInstitucional(evento.target.value)}
+              className="input-padrao"
+            />
+          )}
+        </Campo>
       )}
 
-      <div>
-        <label htmlFor={idTituloAcademico} className="rotulo-campo">Título acadêmico</label>
-        <select
-          id={idTituloAcademico}
-          value={tituloAcademico}
-          onChange={(evento) => {
-            if (ehTituloAcademico(evento.target.value)) {
-              aoAlterarTituloAcademico(evento.target.value);
-            }
-          }}
-          className="input-padrao"
-        >
-          {TITULOS_ACADEMICOS.map((titulo) => (
-            <option key={titulo} value={titulo}>
-              {titulo}
-            </option>
-          ))}
-        </select>
-      </div>
+      <Campo rotulo="Título acadêmico">
+        {({ atributos }) => (
+          <select
+            {...atributos}
+            value={tituloAcademico}
+            onChange={(evento) => {
+              if (ehTituloAcademico(evento.target.value)) aoAlterarTituloAcademico(evento.target.value);
+            }}
+            className="input-padrao"
+          >
+            {Object.entries(ROTULO_TITULO_ACADEMICO).map(([valor, rotulo]) => (
+              <option key={valor} value={valor}>
+                {rotulo}
+              </option>
+            ))}
+          </select>
+        )}
+      </Campo>
     </>
   );
 }

@@ -1,8 +1,4 @@
-import {
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { sql } from 'kysely';
 import { DatabaseService } from '../../commons/database/database.service';
 import { PerfilPesquisadorRequestUpdate } from '../dto/request/perfil-pesquisador.request-update';
@@ -21,29 +17,13 @@ export class PerfilPesquisadorServiceAlterarDeOutro {
     idUsuario: number,
     dto: PerfilPesquisadorRequestUpdate,
   ): Promise<void> {
-    try {
-      const resultado = await sql<{
-        alterar_perfil_pesquisador_de_outro: boolean;
-      }>`SELECT public.alterar_perfil_pesquisador_de_outro(${idUsuario}, ${dto.tipoVinculo}, ${dto.vinculoInstitucional ?? null}, ${dto.tituloAcademico})`.execute(
-        this.database.getDb(),
-      );
-      if (resultado.rows[0]?.alterar_perfil_pesquisador_de_outro !== true) {
-        throw new NotFoundException('Perfil de pesquisador não encontrado.');
-      }
-    } catch (erro) {
-      if (erro instanceof NotFoundException) {
-        throw erro;
-      }
-      // Mesma checagem de corrigir_cpf_pesquisador (acima) - a única
-      // RAISE EXCEPTION dentro da função é a de permissão, sem ERRCODE
-      // customizado (código P0001 padrão do Postgres).
-      if ((erro as { code?: string }).code === 'P0001') {
-        throw new ForbiddenException(
-          (erro as Error).message ||
-            'Sem permissão para alterar perfil de pesquisador de outro usuário.',
-        );
-      }
-      throw erro;
+    const resultado = await sql<{
+      alterar_perfil_pesquisador_de_outro: boolean;
+    }>`SELECT public.alterar_perfil_pesquisador_de_outro(${idUsuario}, ${dto.tipoVinculo}, ${dto.vinculoInstitucional ?? null}, ${dto.tituloAcademico})`.execute(
+      this.database.getDb(),
+    );
+    if (resultado.rows[0]?.alterar_perfil_pesquisador_de_outro !== true) {
+      throw new NotFoundException('Perfil de pesquisador não encontrado.');
     }
   }
 }

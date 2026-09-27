@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { sql } from 'kysely';
 import { DatabaseService } from '../../commons/database/database.service';
 
@@ -15,28 +15,14 @@ export class UsuarioPapelServiceSuspender {
     idPapel: number,
     ate: string,
   ): Promise<void> {
-    try {
-      await sql`SELECT public.suspender_papel_usuario(${idUsuario}, ${idPapel}, ${ate}::timestamptz)`.execute(
-        this.database.getDb(),
-      );
-    } catch (erro) {
-      throw new ForbiddenException(
-        (erro as Error).message ||
-          "Sem permissão 'papel_gerenciar' para suspender papel.",
-      );
-    }
+    await sql`SELECT public.suspender_papel_usuario(${idUsuario}, ${idPapel}, ${ate}::timestamptz)`.execute(
+      this.database.getDb(),
+    );
   }
 
   async revogar(idUsuario: number, idPapel: number): Promise<void> {
-    try {
-      await sql`SELECT public.revogar_suspensao_papel_usuario(${idUsuario}, ${idPapel})`.execute(
-        this.database.getDb(),
-      );
-    } catch (erro) {
-      throw new ForbiddenException(
-        (erro as Error).message ||
-          "Sem permissão 'papel_gerenciar' para revogar suspensão de papel.",
-      );
-    }
+    await sql`SELECT public.revogar_suspensao_papel_usuario(${idUsuario}, ${idPapel})`.execute(
+      this.database.getDb(),
+    );
   }
 }

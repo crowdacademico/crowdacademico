@@ -3,6 +3,8 @@ import type { CSSProperties, FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { IconeGoogle } from '../../components/3-auth/icone-google';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
+import { Campo } from '../../components/input/campo';
+import { useEnvio } from '../../services/constant/hook/use-envio';
 import type { PropsPagina } from '../../services/router/pagina.type';
 
 // Cópia fiel de telas/login/login.html do Projeto de Interface real, com uma mudança deliberada em relação ao
@@ -32,23 +34,16 @@ export function LoginPage({ auth }: PropsPagina) {
   const local = useLocation();
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
-  const [enviando, setEnviando] = useState(false);
   const { erro, reportarErro, limparErro } = useErroToast();
-  const idEmail = useId();
+  const { ocupado: enviando, executar: executarEnviando } = useEnvio(reportarErro, limparErro);
   const idSenha = useId();
 
   const aoEntrar = async (evento: FormEvent<HTMLFormElement>) => {
     evento.preventDefault();
-    limparErro();
-    setEnviando(true);
-    try {
+    await executarEnviando(async () => {
       await auth.login(email, senha);
       void navigate(destinoDepoisDoLogin(local.state), { replace: true });
-    } catch (erroRequisicao) {
-      reportarErro(erroRequisicao);
-    } finally {
-      setEnviando(false);
-    }
+    });
   };
 
   return (
@@ -75,18 +70,19 @@ export function LoginPage({ auth }: PropsPagina) {
             </p>
           )}
 
-          <div>
-            <label htmlFor={idEmail} className="rotulo-campo">Seu E-mail</label>
-            <input
-              id={idEmail}
-              type="email"
-              value={email}
-              onChange={(evento) => setEmail(evento.target.value)}
-              required
-              className="input-padrao"
-              placeholder="seu@email.com"
-            />
-          </div>
+          <Campo rotulo="Seu E-mail">
+            {({ atributos }) => (
+              <input
+                {...atributos}
+                type="email"
+                value={email}
+                onChange={(evento) => setEmail(evento.target.value)}
+                required
+                className="input-padrao"
+                placeholder="seu@email.com"
+              />
+            )}
+          </Campo>
 
           <div>
             <div className="flex justify-between items-center mb-2">

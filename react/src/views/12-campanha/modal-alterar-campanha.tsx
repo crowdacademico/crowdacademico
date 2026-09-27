@@ -1,15 +1,20 @@
-import { useEffect, useId, useState } from 'react';
+import { useId, useState } from 'react';
 import type { ReactNode } from 'react';
 import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
 import { SecaoFicha } from '../../components/crud/ficha-consulta';
 import { ModalFicha } from '../../components/crud/modal-ficha';
+import { CaixaAviso } from '../../components/crud/caixa-aviso';
+import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
+import { Campo } from '../../components/input/campo';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
 import { ROTULO_STATUS_CAMPANHA } from '../../services/12-campanha/constants/status-campanha.constants';
 import { duracaoEmDias } from '../../services/12-campanha/util/prazo-campanha.util';
-import { areaConhecimentoApi } from '../../services/8-area-conhecimento/api/area-conhecimento.api';
+import { useAreasDaCampanha } from '../../services/8-area-conhecimento/hook/use-areas-da-campanha';
 import { formatarData, formatarDataHora, formatarMoeda } from '../../services/constant/utils/formatacao.util';
+import { useEnvio } from '../../services/constant/hook/use-envio';
+import { useBuscar } from '../../services/constant/hook/use-buscar';
 import { PainelOrcamentoCronograma } from './painel-orcamento-cronograma';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type {
@@ -17,7 +22,6 @@ import type {
   CampanhaResponse,
   HistoricoRejeicaoResponse,
 } from '../../services/12-campanha/type/campanha.type';
-import type { AreaConhecimentoResponse } from '../../services/8-area-conhecimento/type/area-conhecimento.type';
 import type { OrcamentoCampanhaResponse } from '../../services/13-orcamento-campanha/type/orcamento-campanha.type';
 import type { MarcoCronogramaResponse } from '../../services/14-marco-cronograma/type/marco-cronograma.type';
 
@@ -97,41 +101,39 @@ export function ModalAlterarCampanha({
   aoFechar,
 }: ModalAlterarCampanhaProps) {
   const { mostrar } = useToast();
-  const { reportarErro } = useErroToast();
-  const prefixoId = useId();
-  const idCampo = (nome: string) => `${prefixoId}-${nome}`;
-  const [campanha, setCampanha] = useState<CampanhaResponse | null>(null);
+  const errosDaTela = useErroToast();
+  const { reportarErro } = errosDaTela;
+  const { ocupado: trabalhando, executar: executarTrabalhando } = useEnvio(reportarErro);
+  const idAvisoBloqueio = useId();
   const [form, setForm] = useState<FormCampanha | null>(null);
-  const [areas, setAreas] = useState<AreaConhecimentoResponse[]>([]);
-  const [historico, setHistorico] = useState<HistoricoRejeicaoResponse[]>([]);
+  const areas = useAreasDaCampanha(auth.authFetch);
   const [orcamento, setOrcamento] = useState<OrcamentoCampanhaResponse[]>([]);
   const [cronograma, setCronograma] = useState<MarcoCronogramaResponse[]>([]);
   const [ofertaDatas, setOfertaDatas] = useState(false);
-  const [trabalhando, setTrabalhando] = useState(false);
 
-  useEffect(() => {
-    campanhaApi
-      .buscar(auth.authFetch, idCampanha)
-      .then((dados) => {
-        setCampanha(dados);
-        setForm(paraForm(dados));
-        if (dados.status === 'rejeitado') {
-          campanhaApi.listarHistoricoRejeicao(auth.authFetch, idCampanha).then(setHistorico).catch(reportarErro);
-        }
-      })
-      .catch(reportarErro);
-    areaConhecimentoApi
-      .listar(auth.authFetch)
-      .then((lista) => setAreas(lista.filter((area) => area.idPai !== null)))
-      .catch(reportarErro);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idCampanha]);
+  // Campanha rejeitada traz junto o histórico de rejeições (o motivo aparece no topo do modal).
+  const { dado } = useBuscar(
+    async () => {
+      const campanhaBuscada = await campanhaApi.buscar(auth.authFetch, idCampanha);
+      const historicoBuscado: HistoricoRejeicaoResponse[] =
+        campanhaBuscada.status === 'rejeitado'
+          ? await campanhaApi.listarHistoricoRejeicao(auth.authFetch, idCampanha).catch((erroHistorico: unknown) => {
+              reportarErro(erroHistorico);
+              return [];
+            })
+          : [];
+      return { campanha: campanhaBuscada, historico: historicoBuscado };
+    },
+    [idCampanha],
+    { aoChegar: ({ campanha: dados }) => setForm(paraForm(dados)), erros: errosDaTela },
+  );
+  const campanha: CampanhaResponse | null = dado?.campanha ?? null;
+  const historico = dado?.historico ?? [];
 
   const rejeitadaSomenteLeitura = campanha?.status === 'rejeitado' && campanha.somenteLeitura;
   const edicaoTravada = Boolean(motivoBloqueio) || rejeitadaSomenteLeitura;
   const camposBloqueados = new Set(campanha?.camposBloqueados ?? []);
   const travado = (campo: string) => edicaoTravada || camposBloqueados.has(campo);
-  const idAvisoBloqueio = idCampo('aviso-bloqueio');
   const descreveBloqueio = (campo: string) => (camposBloqueados.has(campo) ? idAvisoBloqueio : undefined);
   const podeEditarItens = !edicaoTravada && campanha !== null && STATUS_EDITAVEIS.has(campanha.status);
   const podeEnviar = !edicaoTravada && (campanha?.status === 'rascunho' || campanha?.status === 'rejeitado');
@@ -149,17 +151,12 @@ export function ModalAlterarCampanha({
 
   const salvar = async () => {
     if (!form || !form.titulo.trim()) return;
-    setTrabalhando(true);
-    try {
+    await executarTrabalhando(async () => {
       await campanhaApi.atualizar(auth.authFetch, idCampanha, corpo(form));
       mostrar('Campanha alterada com sucesso.', `ID: ${idCampanha} foi alterada`);
       aoMudar();
       aoFechar();
-    } catch (erro) {
-      reportarErro(erro);
-    } finally {
-      setTrabalhando(false);
-    }
+    });
   };
 
   const enviar = async (comDatasAtualizadas = false) => {
@@ -169,8 +166,7 @@ export function ModalAlterarCampanha({
       setOfertaDatas(true);
       return;
     }
-    setTrabalhando(true);
-    try {
+    await executarTrabalhando(async () => {
       await campanhaApi.atualizar(auth.authFetch, idCampanha, corpo(form));
       if (comDatasAtualizadas) {
         await campanhaApi.deslizarDatas(auth.authFetch, idCampanha, new Date().toISOString());
@@ -179,27 +175,24 @@ export function ModalAlterarCampanha({
       mostrar('Campanha enviada para aprovação.', `ID: ${idCampanha}`);
       aoMudar();
       aoFechar();
-    } catch (erro) {
-      reportarErro(erro);
-    } finally {
-      setTrabalhando(false);
-    }
+    });
   };
 
   const campoTexto = (campo: keyof FormCampanha, rotulo: string, largura = 'sm:col-span-2', tipo = 'text') =>
     form && (
-      <div className={largura}>
-        <label htmlFor={idCampo(campo)} className="rotulo-campo">{rotulo}</label>
-        <input
-          id={idCampo(campo)}
-          type={tipo}
-          value={form[campo]}
-          onChange={(evento) => setForm({ ...form, [campo]: evento.target.value })}
-          className="input-padrao"
-          disabled={travado(campo)}
-          aria-describedby={descreveBloqueio(campo)}
-        />
-      </div>
+      <Campo rotulo={rotulo} className={largura}>
+        {({ atributos }) => (
+          <input
+            {...atributos}
+            type={tipo}
+            value={form[campo]}
+            onChange={(evento) => setForm({ ...form, [campo]: evento.target.value })}
+            className="input-padrao"
+            disabled={travado(campo)}
+            aria-describedby={descreveBloqueio(campo)}
+          />
+        )}
+      </Campo>
     );
 
   return (
@@ -209,39 +202,36 @@ export function ModalAlterarCampanha({
       subtitulo={subtitulo}
       aoFechar={aoFechar}
       rodape={
-        <div className="flex gap-3 max-w-xl ml-auto">
-          <button type="button" onClick={aoFechar} className="btn btn-secondary flex-1">
-            {edicaoTravada ? 'Fechar' : 'Cancelar'}
-          </button>
-          {!edicaoTravada && (
-            <button type="button" onClick={salvar} disabled={trabalhando} className="btn btn-primary flex-1">
-              Salvar
-            </button>
-          )}
-          {podeEnviar && (
-            <button type="button" onClick={() => enviar()} disabled={trabalhando} className="btn btn-primary flex-1">
-              {trabalhando ? 'Enviando...' : campanha.status === 'rejeitado' ? 'Corrigir e reenviar' : 'Enviar para aprovação'}
-            </button>
-          )}
-        </div>
+        <RodapeAcoes
+          aoCancelar={aoFechar}
+          rotuloCancelar={edicaoTravada ? 'Fechar' : 'Cancelar'}
+          largura="xl"
+          acao={[
+            ...(edicaoTravada ? [] : [{ rotulo: 'Salvar', ocupado: trabalhando, aoClicar: () => void salvar() }]),
+            ...(podeEnviar
+              ? [
+                  {
+                    rotulo: campanha.status === 'rejeitado' ? 'Corrigir e reenviar' : 'Enviar para aprovação',
+                    rotuloOcupado: 'Enviando...',
+                    ocupado: trabalhando,
+                    aoClicar: () => void enviar(),
+                  },
+                ]
+              : []),
+          ]}
+        />
       }
     >
       {campanha && form && (
         <>
           {motivoBloqueio && (
-            <div className="rounded-lg border borda-forte fundo-erro p-4 text-sm texto-erro">
-              <p className="font-bold mb-1">
-                <i className="fa-solid fa-lock mr-1"></i> Não dá pra alterar esta campanha
-              </p>
+            <CaixaAviso titulo="Não dá pra alterar esta campanha" tom="erro" icone="fa-lock">
               <p>{motivoBloqueio}</p>
-            </div>
+            </CaixaAviso>
           )}
 
           {campanha.status === 'rejeitado' && (
-            <div className="rounded-lg border borda-forte fundo-erro p-4 text-sm texto-erro space-y-3">
-              <p className="font-bold">
-                <i className="fa-solid fa-circle-exclamation mr-1"></i> Campanha rejeitada
-              </p>
+            <CaixaAviso titulo="Campanha rejeitada" tom="erro" icone="fa-circle-exclamation" espacado>
               {campanha.somenteLeitura ? (
                 <p>
                   Esta campanha usou todos os reenvios permitidos e agora é somente leitura.
@@ -265,16 +255,13 @@ export function ModalAlterarCampanha({
                   ))}
                 </ul>
               )}
-            </div>
+            </CaixaAviso>
           )}
 
           {ofertaDatas && (
-            <div className="rounded-lg border borda-forte fundo-aviso p-4 text-sm texto-aviso space-y-3">
-              <p className="font-bold">
-                <i className="fa-solid fa-calendar-xmark mr-1"></i> As datas desta campanha já venceram
-              </p>
+            <CaixaAviso titulo="As datas desta campanha já venceram" icone="fa-calendar-xmark" espacado>
               <p>
-                O prazo terminou em {formatarData(new Date(form.dataFim).toISOString())}, e uma campanha com prazo vencido não
+                O prazo terminou em {formatarData(form.dataFim)}, e uma campanha com prazo vencido não
                 pode ser enviada para aprovação. Você pode começar agora mantendo a mesma duração
                 {duracao !== null && duracao > 0 ? ` de ${duracao} dias` : ''}, ou escolher outras datas mais abaixo.
               </p>
@@ -286,7 +273,7 @@ export function ModalAlterarCampanha({
                   Escolher outras datas
                 </button>
               </div>
-            </div>
+            </CaixaAviso>
           )}
 
           {camposBloqueados.size > 0 && !rejeitadaSomenteLeitura && (
@@ -305,35 +292,37 @@ export function ModalAlterarCampanha({
             <div className="lg:col-span-2 space-y-6">
               <SecaoFicha titulo="Dados">
                 {campoTexto('titulo', 'Título')}
-                <div>
-                  <label htmlFor={idCampo('idAreaConhecimento')} className="rotulo-campo">Área do conhecimento</label>
-                  <select
-                    id={idCampo('idAreaConhecimento')}
-                    value={form.idAreaConhecimento}
-                    onChange={(evento) => setForm({ ...form, idAreaConhecimento: evento.target.value })}
-                    className="input-padrao"
-                    disabled={travado('idAreaConhecimento')}
-                    aria-describedby={descreveBloqueio('idAreaConhecimento')}
-                  >
-                    {areas.map((area) => (
-                      <option key={area.idAreaConhecimento} value={area.idAreaConhecimento}>
-                        {area.nome}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="sm:col-span-2">
-                  <label htmlFor={idCampo('descricao')} className="rotulo-campo">Descrição</label>
-                  <textarea
-                    id={idCampo('descricao')}
-                    rows={3}
-                    value={form.descricao}
-                    onChange={(evento) => setForm({ ...form, descricao: evento.target.value })}
-                    className="input-padrao"
-                    disabled={travado('descricao')}
-                    aria-describedby={descreveBloqueio('descricao')}
-                  />
-                </div>
+                <Campo rotulo="Área do conhecimento">
+                  {({ atributos }) => (
+                    <select
+                      {...atributos}
+                      value={form.idAreaConhecimento}
+                      onChange={(evento) => setForm({ ...form, idAreaConhecimento: evento.target.value })}
+                      className="input-padrao"
+                      disabled={travado('idAreaConhecimento')}
+                      aria-describedby={descreveBloqueio('idAreaConhecimento')}
+                    >
+                      {areas.map((area) => (
+                        <option key={area.idAreaConhecimento} value={area.idAreaConhecimento}>
+                          {area.nome}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </Campo>
+                <Campo rotulo="Descrição" className="sm:col-span-2">
+                  {({ atributos }) => (
+                    <textarea
+                      {...atributos}
+                      rows={3}
+                      value={form.descricao}
+                      onChange={(evento) => setForm({ ...form, descricao: evento.target.value })}
+                      className="input-padrao"
+                      disabled={travado('descricao')}
+                      aria-describedby={descreveBloqueio('descricao')}
+                    />
+                  )}
+                </Campo>
                 {campoTexto('videoApresentacaoUrl', 'URL do vídeo de apresentação', 'sm:col-span-2', 'url')}
               </SecaoFicha>
 

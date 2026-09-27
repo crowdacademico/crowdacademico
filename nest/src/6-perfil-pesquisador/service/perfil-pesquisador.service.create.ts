@@ -25,11 +25,9 @@ import { PerfilPesquisadorResponse } from '../dto/response/perfil-pesquisador.re
 // destravar.
 //
 // Duas UNIQUE constraints podem disparar 23505 aqui: a PK (id_usuario, se a pessoa já tem perfil) e
-// UK_PERFIL_PESQUISADOR_CPF_HASH (se o CPF já pertence a outra conta). Nenhum try/catch próprio aqui: o
-// PostgresExceptionFilter global (commons/database) já traduz 23505 para 409 com mensagem genérica, e
-// diferenciar as duas causas por nome de constraint precisa de um Postgres de verdade rodando para confirmar o
-// formato exato do erro do driver `pg`. Ver DOCUMENTACAO_BD.md se um dia isso virar um problema real (mensagem
-// genérica demais para o usuário).
+// UK_PERFIL_PESQUISADOR_CPF_HASH (se o CPF já pertence a outra conta). Sem try/catch próprio: o filtro global
+// distingue as duas pelo nome da constraint (commons/database/mensagens-duplicidade.constants.ts) e o CPF
+// repetido ainda volta marcado no campo `cpf`.
 @Injectable()
 export class PerfilPesquisadorServiceCreate {
   constructor(

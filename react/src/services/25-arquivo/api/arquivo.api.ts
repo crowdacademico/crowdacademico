@@ -1,5 +1,6 @@
 import { API_BASE_URL } from '../../constant/constants/api.constants';
 import { tratarResposta } from '../../constant/api/http.util';
+import { acompanharRequisicao } from '../../../components/layout/barra-carregamento/atividade-rede';
 import type { AuthFetch } from '../../3-auth/type/auth.type';
 import type {
   ArquivoRequestConfirmarUpload,
@@ -39,21 +40,34 @@ export const arquivoApi = {
   // ver commons/storage/s3-compativel-armazenamento.service.ts). Sem
   // tratarResposta aqui: a resposta do bucket não é JSON e não segue o
   // formato do nosso backend.
-  enviarParaBucket: async (
+  //
+  // XMLHttpRequest em vez de fetch: é o único jeito do navegador contar quantos bytes já SUBIRAM
+  // (`upload.onprogress`); `aoProgresso` recebe 0 a 100. Entra na barra de carregamento do topo como qualquer
+  // chamada do authFetch.
+  enviarParaBucket: (
     uploadPreAssinado: ArquivoResponseUploadIniciado,
     arquivo: Blob | File,
-  ): Promise<void> => {
-    const resposta = await fetch(uploadPreAssinado.urlUpload, {
-      method: uploadPreAssinado.metodo,
-      headers: uploadPreAssinado.cabecalhosObrigatorios,
-      body: arquivo,
-    });
-    if (!resposta.ok) {
-      throw new Error(
-        'Falha ao enviar o arquivo para o armazenamento (URL pode ter expirado - tente de novo).',
-      );
-    }
-  },
+    aoProgresso?: (percentual: number) => void,
+  ): Promise<void> =>
+    acompanharRequisicao(
+      new Promise<void>((resolver, rejeitar) => {
+        const falha = () =>
+          new Error('Falha ao enviar o arquivo para o armazenamento (URL pode ter expirado - tente de novo).');
+        const requisicao = new XMLHttpRequest();
+        requisicao.open(uploadPreAssinado.metodo, uploadPreAssinado.urlUpload);
+        Object.entries(uploadPreAssinado.cabecalhosObrigatorios).forEach(([chave, valor]) =>
+          requisicao.setRequestHeader(chave, valor),
+        );
+        requisicao.upload.onprogress = (evento) => {
+          if (aoProgresso && evento.lengthComputable) {
+            aoProgresso(Math.round((evento.loaded / evento.total) * 100));
+          }
+        };
+        requisicao.onload = () => (requisicao.status >= 200 && requisicao.status < 300 ? resolver() : rejeitar(falha()));
+        requisicao.onerror = () => rejeitar(falha());
+        requisicao.send(arquivo);
+      }),
+    ),
 
   buscar: (id: number | string): Promise<ArquivoResponse> =>
     fetch(`${API_BASE_URL}/arquivo/${id}`).then(tratarResposta<ArquivoResponse>),

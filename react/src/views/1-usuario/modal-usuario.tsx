@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { AvatarUsuario } from '../../components/layout/avatar-usuario';
 import { Dica } from '../../components/layout/tooltip';
 import { SeletorFotoPerfil } from '../../components/input/seletor-foto-perfil';
@@ -7,11 +7,17 @@ import { useToast } from '../../components/layout/toast/use-toast';
 import { useConfiguracoes } from '../../services/11-configuracoes/hook/use-configuracoes';
 import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
+import { MensagemErro } from '../../components/crud/mensagem-erro';
+import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { TabelaLinksAcademicos } from '../../components/crud/tabelas/1-tabela-links-academicos';
 import type { DadosLinkAcademico, LinkAcademico } from '../../components/crud/tabelas/1-tabela-links-academicos';
 import { TabelaDimensoesScore } from '../../components/crud/tabelas/2-tabela-dimensoes-score';
 import { confirmarSaida, useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
+import { CaixaAviso } from '../../components/crud/caixa-aviso';
+import { Campo } from '../../components/input/campo';
+import { ConfirmacaoDigitada } from '../../components/input/confirmacao-digitada';
+import { confirmacaoConfere } from '../../components/input/confirmacao-confere';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { usuarioPapelApi, papelApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
 import { perfilPesquisadorApi } from '../../services/6-perfil-pesquisador/api/perfil-pesquisador.api';
@@ -26,10 +32,13 @@ import {
   classeBadgeStatusPesquisador,
 } from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
 import { formatarCpf, formatarCpfOuMotivoOculto, formatarData, formatarDataHora } from '../../services/constant/utils/formatacao.util';
+import { useEnvio } from '../../services/constant/hook/use-envio';
+import { useBuscar } from '../../services/constant/hook/use-buscar';
 import { ROTULO_TIPO_TERMO } from '../../services/5-termo-uso/constants/termo-uso-tipos';
 import { CamposVinculoPerfil } from '../6-perfil-pesquisador/campos-vinculo-perfil';
 import { SecaoModeracaoPesquisador } from '../6-perfil-pesquisador/secao-moderacao-pesquisador';
 import { SecaoModeracao } from './secao-moderacao';
+import { Carregando } from '../../components/layout/carregando';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { UsuarioResponse, UsuarioResponseLoginHistorico, UsuarioResponseTermoAceito } from '../../services/1-usuario/type/usuario.type';
 import type { PapelResponse, UsuarioPapelResponse } from '../../services/2-papel-permissao/type/papel-permissao.type';
@@ -109,53 +118,54 @@ async function comRegistro<T>(
 }
 
 // Os dois modais abaixo abrem com o MESMO Promise.all de 4 chamadas (usuário, perfil de pesquisador, avatar,
-// papéis). `perfilPesquisador` e `papeis` continuam expostos com setter porque NÃO são só leitura em
-// ModalAlterarUsuario: `criarPerfil()` reatribui o primeiro depois de criar um perfil, e as 4 ações de papel
-// (atribuir/suspender/reativar/revogar) reatribuem o segundo depois de cada uma (em Consultar, os dois são só
-// leitura, o setter simplesmente não é usado). `carregando` é true até o Promise.all assentar (sucesso OU
-// erro).
-// `reportarErro` é recebido do chamador (em vez de um `useErroToast()` próprio aqui dentro) de propósito: em
-// ModalAlterarUsuario, o mesmo erro dessa busca inicial precisa cair na MESMA faixa de erro que as outras ~10
-// ações do modal (atribuir papel, criar perfil, etc.) já usam; um `useErroToast()` isolado aqui dentro criaria
-// um segundo estado de erro que a busca inicial nunca alimentaria.
+// papéis), pelo useBuscar. `papeis` continua com setter porque não é só leitura em ModalAlterarUsuario: as 4 ações
+// de papel (atribuir/suspender/reativar/revogar) reatribuem depois de cada uma. `erros` é o useErroToast do
+// próprio modal: o erro dessa busca cai na MESMA faixa de erro das outras ações. `aoChegar` preenche o
+// formulário de edição quando os dados chegam.
+interface DadosUsuario {
+  usuario: UsuarioResponse;
+  perfilPesquisador: PerfilPesquisadorResponse | null;
+  avatarUrl: string | null;
+  papeis: UsuarioPapelResponse[];
+}
+
 function useDadosUsuario(
   idUsuario: number,
   auth: Pick<UseAuthReturn, 'authFetch'>,
   aoRegistrarChamada: ((entrada: EntradaRegistroChamada) => void) | undefined,
-  reportarErro: (erro: unknown) => void,
+  erros: ReturnType<typeof useErroToast>,
+  aoChegar?: (dados: DadosUsuario) => void,
 ) {
-  const [usuario, setUsuario] = useState<UsuarioResponse | null>(null);
-  const [perfilPesquisador, setPerfilPesquisador] = useState<PerfilPesquisadorResponse | null>(null);
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [papeis, setPapeis] = useState<UsuarioPapelResponse[] | null>(null);
-  const [carregando, setCarregando] = useState(true);
+  const { dado, carregando } = useBuscar(
+    async (): Promise<DadosUsuario> => {
+      const [usuario, perfilPesquisador, avatar, papeisDoUsuario] = await Promise.all([
+        comRegistro(aoRegistrarChamada, 'GET', `/usuario/${idUsuario}`, null, () => usuarioApi.buscar(auth.authFetch, idUsuario)),
+        comRegistro(aoRegistrarChamada, 'GET', `/perfil-pesquisador/${idUsuario}`, null, () => perfilPesquisadorApi.buscar(auth.authFetch, idUsuario)).catch(() => null),
+        // Avatar não é registrado (endpoint público, cosmético).
+        arquivoApi.buscarAvatarPorUsuario(idUsuario).catch(() => null),
+        comRegistro(aoRegistrarChamada, 'GET', `/usuario-papel/${idUsuario}`, null, () => usuarioPapelApi.listarPorUsuario(auth.authFetch, idUsuario)).catch(() => []),
+      ]);
+      return { usuario, perfilPesquisador, avatarUrl: avatar?.url ?? null, papeis: papeisDoUsuario };
+    },
+    [idUsuario],
+    {
+      erros,
+      aoChegar: (dados) => {
+        setPapeis(dados.papeis);
+        aoChegar?.(dados);
+      },
+    },
+  );
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setCarregando(true);
-    setUsuario(null);
-    setPerfilPesquisador(null);
-    setAvatarUrl(null);
-    setPapeis(null);
-    Promise.all([
-      comRegistro(aoRegistrarChamada, 'GET', `/usuario/${idUsuario}`, null, () => usuarioApi.buscar(auth.authFetch, idUsuario)),
-      comRegistro(aoRegistrarChamada, 'GET', `/perfil-pesquisador/${idUsuario}`, null, () => perfilPesquisadorApi.buscar(auth.authFetch, idUsuario)).catch(() => null),
-      // Avatar não é registrado (endpoint público, cosmético).
-      arquivoApi.buscarAvatarPorUsuario(idUsuario).catch(() => null),
-      comRegistro(aoRegistrarChamada, 'GET', `/usuario-papel/${idUsuario}`, null, () => usuarioPapelApi.listarPorUsuario(auth.authFetch, idUsuario)).catch(() => []),
-    ])
-      .then(([dadosUsuario, perfil, avatar, papeisDoUsuario]) => {
-        setUsuario(dadosUsuario);
-        setPerfilPesquisador(perfil);
-        setAvatarUrl(avatar?.url ?? null);
-        setPapeis(papeisDoUsuario);
-      })
-      .catch(reportarErro)
-      .finally(() => setCarregando(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idUsuario]);
-
-  return { usuario, perfilPesquisador, setPerfilPesquisador, avatarUrl, papeis, setPapeis, carregando };
+  return {
+    usuario: dado?.usuario ?? null,
+    perfilPesquisador: dado?.perfilPesquisador ?? null,
+    avatarUrl: dado?.avatarUrl ?? null,
+    papeis,
+    setPapeis,
+    carregando,
+  };
 }
 
 interface BotaoVerFotoPerfilProps {
@@ -351,8 +361,9 @@ interface ModalConsultarUsuarioProps {
 // Acesso/histórico de login, Papéis) + Perfil de Pesquisador/Score (só se a
 // pessoa for pesquisadora) - tudo buscado ao abrir, não precisa de rota.
 export function ModalConsultarUsuario({ auth, idUsuario, aoFechar, aoRegistrarChamada }: ModalConsultarUsuarioProps) {
-  const { erro, reportarErro } = useErroToast();
-  const { usuario, perfilPesquisador, avatarUrl, papeis } = useDadosUsuario(idUsuario, auth, aoRegistrarChamada, reportarErro);
+  const errosDaTela = useErroToast();
+  const { erro } = errosDaTela;
+  const { usuario, perfilPesquisador, avatarUrl, papeis } = useDadosUsuario(idUsuario, auth, aoRegistrarChamada, errosDaTela);
   const [logins, setLogins] = useState<UsuarioResponseLoginHistorico[] | null>(null);
   const [carregandoLogins, setCarregandoLogins] = useState(false);
   const [loginsAbertos, setLoginsAbertos] = useState(false);
@@ -466,7 +477,7 @@ export function ModalConsultarUsuario({ auth, idUsuario, aoFechar, aoRegistrarCh
                   {loginsAbertos && (
                     <div className="mt-2 rounded-lg border borda-padrao fundo-sutil p-3 text-sm max-h-64 overflow-y-auto">
                       {carregandoLogins ? (
-                        <p className="texto-fraco">Carregando...</p>
+                        <Carregando />
                       ) : loginsAnteriores.length === 0 ? (
                         <p className="texto-fraco">Nenhum login anterior registrado.</p>
                       ) : (
@@ -485,7 +496,7 @@ export function ModalConsultarUsuario({ auth, idUsuario, aoFechar, aoRegistrarCh
 
               {termosAceitos === null ? (
                 <SecaoFicha titulo="Termos de Uso Aceitos" colunas={1}>
-                  <p className="texto-fraco text-sm">Carregando...</p>
+                  <Carregando />
                 </SecaoFicha>
               ) : termosAceitos.length === 0 ? (
                 <SecaoFicha titulo="Termos de Uso Aceitos" colunas={1}>
@@ -569,23 +580,18 @@ interface ModalAlterarUsuarioProps {
 // na Bancada do Pesquisador (Campo de Testes): duplicar aqui daria o mesmo poder sem passar pelo Termo de Uso.
 export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado, aoRegistrarChamada }: ModalAlterarUsuarioProps) {
   const { mostrar } = useToast();
-  const { erro, reportarErro, limparErro } = useErroToast();
+  const errosDaTela = useErroToast();
+  const { erro, reportarErro, limparErro } = errosDaTela;
+  const { ocupado: redefinindoSenhaDev, executar: executarRedefinindoSenhaDev } = useEnvio(reportarErro, limparErro);
+  const { ocupado: desbloqueando, executar: executarDesbloqueando } = useEnvio(reportarErro, limparErro);
+  const { ocupado: atribuindoPapel, executar: executarAtribuindoPapel } = useEnvio(reportarErro, limparErro);
   const [tiposLink, setTiposLink] = useState<TipoLinkResponse[]>([]);
 
-  const { usuario, perfilPesquisador, avatarUrl, papeis, setPapeis, carregando } = useDadosUsuario(
-    idUsuario,
-    auth,
-    aoRegistrarChamada,
-    reportarErro,
-  );
-  const papeisAtuais = papeis ?? [];
 
   const [nomeEdicao, setNomeEdicao] = useState('');
   const [novaSenhaEdicao, setNovaSenhaEdicao] = useState('');
   const [idImagemPerfilNovo, setIdImagemPerfilNovo] = useState<number | null | undefined>(undefined);
   const [avatarUrlNovo, setAvatarUrlNovo] = useState<string | null>(null);
-  const [desbloqueando, setDesbloqueando] = useState(false);
-  const [redefinindoSenhaDev, setRedefinindoSenhaDev] = useState(false);
 
   const [formEdicaoPerfil, setFormEdicaoPerfil] = useState<{
     tipoVinculo: TipoVinculo;
@@ -594,40 +600,37 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado, a
   } | null>(null);
   const [cpfCorrecao, setCpfCorrecao] = useState('');
 
+  // Quando os dados chegam (1x por abertura), o formulário de edição começa com eles.
+  const { usuario, perfilPesquisador, avatarUrl, papeis, setPapeis, carregando } = useDadosUsuario(
+    idUsuario,
+    auth,
+    aoRegistrarChamada,
+    errosDaTela,
+    (dados) => {
+      setNomeEdicao(dados.usuario.nome);
+      setNovaSenhaEdicao('');
+      setIdImagemPerfilNovo(undefined);
+      setAvatarUrlNovo(null);
+      setFormEdicaoPerfil(
+        dados.perfilPesquisador
+          ? {
+              tipoVinculo: dados.perfilPesquisador.tipoVinculo,
+              vinculoInstitucional: dados.perfilPesquisador.vinculoInstitucional ?? '',
+              tituloAcademico: dados.perfilPesquisador.tituloAcademico,
+            }
+          : null,
+      );
+      setCpfCorrecao('');
+    },
+  );
+  const papeisAtuais = papeis ?? [];
+
   const [catalogoPapeis, setCatalogoPapeis] = useState<PapelResponse[]>([]);
   const [idPapelParaAtribuir, setIdPapelParaAtribuir] = useState('');
-  const [atribuindoPapel, setAtribuindoPapel] = useState(false);
   const [papelSuspendendoId, setPapelSuspendendoId] = useState<number | null>(null);
   const [enviandoSuspensaoPapel, setEnviandoSuspensaoPapel] = useState<number | null>(null);
   const [reativandoPapel, setReativandoPapel] = useState<number | null>(null);
   const [revogandoPapel, setRevogandoPapel] = useState<number | null>(null);
-  const idNomeEdicao = useId();
-  const idNovaSenha = useId();
-
-  // Reseta o formulário de edição sempre que uma busca nova de `usuario`
-  // termina (dep só em `usuario`, de propósito - ele nunca muda por nenhuma
-  // outra ação deste modal, só pela busca inicial de `useDadosUsuario`, então
-  // dispara exatamente 1x por abertura, igual ao `.then()` único de antes da
-  // extração).
-  useEffect(() => {
-    if (!usuario) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setNomeEdicao(usuario.nome);
-    setNovaSenhaEdicao('');
-    setIdImagemPerfilNovo(undefined);
-    setAvatarUrlNovo(null);
-    setFormEdicaoPerfil(
-      perfilPesquisador
-        ? {
-            tipoVinculo: perfilPesquisador.tipoVinculo,
-            vinculoInstitucional: perfilPesquisador.vinculoInstitucional ?? '',
-            tituloAcademico: perfilPesquisador.tituloAcademico,
-          }
-        : null,
-    );
-    setCpfCorrecao('');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [usuario]);
 
   // Catálogos exclusivos deste modal (Consultar não precisa deles) - mesma
   // dependência `[idUsuario]` que a busca principal tinha antes da extração.
@@ -690,9 +693,7 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado, a
 
   const aoAtribuirPapel = async () => {
     if (!idPapelParaAtribuir) return;
-    limparErro();
-    setAtribuindoPapel(true);
-    try {
+    await executarAtribuindoPapel(async () => {
       const papelEscolhido = catalogoPapeis.find((papel) => papel.idPapel === Number(idPapelParaAtribuir));
       await comRegistro(aoRegistrarChamada, 'POST', '/usuario-papel', { idUsuario, idPapel: Number(idPapelParaAtribuir) }, () =>
         usuarioPapelApi.atribuir(auth.authFetch, idUsuario, Number(idPapelParaAtribuir)),
@@ -704,11 +705,7 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado, a
       setIdPapelParaAtribuir('');
       mostrar('Papel atribuído com sucesso.', `ID: ${idUsuario} agora tem o papel "${papelEscolhido?.nome}"`);
       aoAtualizado();
-    } catch (erroRequisicao) {
-      reportarErro(erroRequisicao);
-    } finally {
-      setAtribuindoPapel(false);
-    }
+    });
   };
 
   const aoSuspenderPapel = async (papel: UsuarioPapelResponse, dias: number) => {
@@ -773,33 +770,21 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado, a
   };
 
   const aoDesbloquear = async () => {
-    limparErro();
-    setDesbloqueando(true);
-    try {
+    await executarDesbloqueando(async () => {
       await comRegistro(aoRegistrarChamada, 'POST', `/usuario/${idUsuario}/desbloquear`, null, () =>
         usuarioApi.desbloquear(auth.authFetch, idUsuario),
       );
       mostrar('Login desbloqueado com sucesso.', `ID: ${idUsuario} pode tentar logar novamente`);
-    } catch (erroRequisicao) {
-      reportarErro(erroRequisicao);
-    } finally {
-      setDesbloqueando(false);
-    }
+    });
   };
 
   const aoRedefinirSenhaDev = async () => {
-    limparErro();
-    setRedefinindoSenhaDev(true);
-    try {
+    await executarRedefinindoSenhaDev(async () => {
       await comRegistro(aoRegistrarChamada, 'PATCH', `/usuario/${idUsuario}`, { novaSenha: SENHA_DEV }, () =>
         usuarioApi.atualizar(auth.authFetch, idUsuario, { novaSenha: SENHA_DEV }),
       );
       mostrar('Senha redefinida com sucesso.', `ID: ${idUsuario} teve a senha redefinida para "${SENHA_DEV}"`);
-    } catch (erroRequisicao) {
-      reportarErro(erroRequisicao);
-    } finally {
-      setRedefinindoSenhaDev(false);
-    }
+    });
   };
 
   const salvarCorrecaoCpf = async () => {
@@ -863,52 +848,47 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado, a
       aoFechar={fechar}
       rodape={
         usuario && (
-          <div className="flex gap-3 max-w-sm ml-auto">
-            <button type="button" onClick={fechar} className="btn btn-secondary flex-1">
-              Cancelar
-            </button>
-            <button type="button" onClick={salvarEdicao} className="btn btn-primary flex-1">
-              Salvar
-            </button>
-          </div>
+          <RodapeAcoes aoCancelar={fechar} acao={{ rotulo: 'Salvar', aoClicar: () => void salvarEdicao() }} />
         )
       }
     >
       {carregando || carregandoCatalogos ? (
-        <p className="p-6 text-center text-sm texto-fraco">Carregando...</p>
+        <Carregando className="p-6 text-center" />
       ) : !usuario ? (
         <p className="p-6 text-center texto-erro text-sm font-bold">{erro}</p>
       ) : (
         <>
-          {erro && <p className="texto-erro text-sm font-bold text-center">{erro}</p>}
+          <MensagemErro texto={erro} />
 
           <div className="grid lg:grid-cols-3 gap-6 items-start">
             <div className="lg:col-span-2 space-y-6">
               <SecaoFicha titulo="Dados da conta">
-                <div className="sm:col-span-2">
-                  <label htmlFor={idNomeEdicao} className="rotulo-campo">Nome</label>
-                  <input
-                    id={idNomeEdicao}
-                    type="text"
-                    value={nomeEdicao}
-                    onChange={(evento) => setNomeEdicao(evento.target.value)}
-                    className="input-padrao"
-                  />
-                </div>
+                <Campo rotulo="Nome" className="sm:col-span-2">
+                  {({ atributos }) => (
+                    <input
+                      {...atributos}
+                      type="text"
+                      value={nomeEdicao}
+                      onChange={(evento) => setNomeEdicao(evento.target.value)}
+                      className="input-padrao"
+                    />
+                  )}
+                </Campo>
               </SecaoFicha>
 
               <SecaoFicha titulo="Acesso">
-                <div className="sm:col-span-2">
-                  <label htmlFor={idNovaSenha} className="rotulo-campo">Nova senha (opcional)</label>
-                  <input
-                    id={idNovaSenha}
-                    type="password"
-                    value={novaSenhaEdicao}
-                    onChange={(evento) => setNovaSenhaEdicao(evento.target.value)}
-                    className="input-padrao"
-                    placeholder="••••••••"
-                  />
-                </div>
+                <Campo rotulo="Nova senha (opcional)" className="sm:col-span-2">
+                  {({ atributos }) => (
+                    <input
+                      {...atributos}
+                      type="password"
+                      value={novaSenhaEdicao}
+                      onChange={(evento) => setNovaSenhaEdicao(evento.target.value)}
+                      className="input-padrao"
+                      placeholder="••••••••"
+                    />
+                  )}
+                </Campo>
 
                 <div className="sm:col-span-2 flex items-center justify-between gap-3 rounded-lg border borda-forte p-3">
                   <p className="text-xs texto-fraco">
@@ -1139,26 +1119,19 @@ interface ModalExcluirUsuarioProps {
 export function ModalExcluirUsuario({ idUsuario, nome, email, emailVerificado, auth, aoFechar, aoExcluido, aoRegistrarChamada }: ModalExcluirUsuarioProps) {
   const { mostrar } = useToast();
   const { erro, reportarErro, limparErro } = useErroToast();
+  const { ocupado: excluindo, executar: executarExcluindo } = useEnvio(reportarErro, limparErro);
   const [confirmacao, setConfirmacao] = useState('');
-  const [excluindo, setExcluindo] = useState(false);
-  const idConfirmacao = useId();
-  const confirmado = confirmacao.trim().toLowerCase() === email.toLowerCase();
+  const confirmado = confirmacaoConfere(confirmacao, email);
 
   const excluir = async () => {
-    limparErro();
-    setExcluindo(true);
-    try {
+    await executarExcluindo(async () => {
       await comRegistro(aoRegistrarChamada, 'DELETE', `/usuario/${idUsuario}`, null, () =>
         usuarioApi.remover(auth.authFetch, idUsuario),
       );
       mostrar('Usuário excluído com sucesso.', `ID: ${idUsuario} foi excluído`);
       aoExcluido();
       aoFechar();
-    } catch (erroRequisicao) {
-      reportarErro(erroRequisicao);
-    } finally {
-      setExcluindo(false);
-    }
+    });
   };
 
   return (
@@ -1167,18 +1140,20 @@ export function ModalExcluirUsuario({ idUsuario, nome, email, emailVerificado, a
       subtitulo="Não existe botão de desfazer no painel."
       aoFechar={aoFechar}
       rodape={
-        <div className="flex gap-3 max-w-sm ml-auto">
-          <button type="button" onClick={aoFechar} className="btn btn-secondary flex-1">
-            Cancelar
-          </button>
-          <button type="button" onClick={excluir} disabled={excluindo || !confirmado} className="btn btn-danger flex-1">
-            {excluindo ? 'Excluindo...' : 'Confirmar exclusão'}
-          </button>
-        </div>
+        <RodapeAcoes
+          aoCancelar={aoFechar}
+          acao={{
+            rotulo: 'Confirmar exclusão',
+            rotuloOcupado: 'Excluindo...',
+            ocupado: excluindo,
+            desabilitado: !confirmado,
+            aoClicar: () => void excluir(),
+            perigo: true,
+          }}
+        />
       }
+      erro={erro}
     >
-      {erro && <p className="texto-erro text-sm font-bold text-center">{erro}</p>}
-
       <SecaoFicha titulo="O que será excluído">
         <CampoFicha rotulo="id" valor={idUsuario} />
         <CampoFicha rotulo="Nome" valor={nome} />
@@ -1186,32 +1161,16 @@ export function ModalExcluirUsuario({ idUsuario, nome, email, emailVerificado, a
         <CampoFicha rotulo="E-mail verificado" valor={emailVerificado ? 'Sim' : 'Não'} />
       </SecaoFicha>
 
-      <div className="rounded-lg border borda-forte fundo-aviso p-4 text-sm texto-aviso">
-        <p className="font-bold mb-1">
-          <i className="fa-solid fa-circle-info mr-1"></i> O que acontece de verdade
-        </p>
+      <CaixaAviso titulo="O que acontece de verdade">
         <p>
           A conta é marcada como excluída (exclusão lógica), não apagada do banco: o login
           deixa de funcionar e o perfil some do público na hora, mas o registro continua
           existindo pra auditoria e conformidade com a LGPD. Não existe um botão de
           "restaurar" no painel - reverter isso hoje exige acesso direto ao banco.
         </p>
-      </div>
+      </CaixaAviso>
 
-      <div>
-        <label htmlFor={idConfirmacao} className="rotulo-campo">
-          Digite o e-mail "{email}" pra confirmar
-        </label>
-        <input
-          id={idConfirmacao}
-          type="text"
-          value={confirmacao}
-          onChange={(evento) => setConfirmacao(evento.target.value)}
-          className="input-padrao"
-          placeholder={email}
-          autoComplete="off"
-        />
-      </div>
+      <ConfirmacaoDigitada oQue="o e-mail" esperado={email} valor={confirmacao} aoMudar={setConfirmacao} />
     </ModalFicha>
   );
 }

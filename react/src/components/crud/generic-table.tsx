@@ -1,14 +1,15 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { useSearchParams } from 'react-router';
 import { TIPOS_COLUNA, type NomeTipoColuna } from './colunas/tipos-coluna';
 import { DISTRIBUICAO_COLUNAS } from './colunas/distribuicao';
 import { CabecalhoAcoes, CelulaAcoes, type AcoesLinha } from './colunas/5-coluna-acoes';
 import { BarraFiltros } from '../search/barra-filtros';
-import { useErroToast } from '../layout/toast/use-erro-toast';
 import { paginarClientSide } from '../../services/constant/utils/paginacao.util';
 import { RodapePaginacao } from '../pagination/rodape-paginacao';
 import { TAMANHOS_PAGINA } from '../pagination/tamanhos-pagina.constants';
+import { normalizarBusca } from '../../services/constant/utils/busca.util';
+import { useBuscar } from '../../services/constant/hook/use-buscar';
 
 // `object`, não `Record<string, unknown>`: toda linha real é uma interface nomeada espelhando um DTO do Nest
 // (UsuarioResponse, etc.); interface sem assinatura de índice própria não satisfaz `Record<string, unknown>`
@@ -107,9 +108,8 @@ export function GenericTable<T extends Linha>({
 }: GenericTableProps<T>) {
   // A coluna Ações existe se pelo menos 1 handler foi passado em `acoes`.
   const temAcoes = Boolean(acoes?.alterar || acoes?.consultar || acoes?.excluir);
-  const [linhas, setLinhas] = useState<T[]>([]);
-  const [carregando, setCarregando] = useState(true);
-  const { erro, reportarErro, limparErro } = useErroToast();
+  const { dado, carregando, erro } = useBuscar(listar, [listar]);
+  const linhas = useMemo(() => dado ?? [], [dado]);
   // Filtro/página/ordenação/faceta vivem na URL (query string), não em useState local: uma navegação que
   // desmontasse a página de listagem resetaria o filtro escolhido, e useState não sobrevive a isso. `{ replace:
   // true }` em toda escrita: cada clique em filtro/página/ordenação SUBSTITUI a entrada atual do histórico em
@@ -156,19 +156,6 @@ export function GenericTable<T extends Linha>({
     });
     return resultado;
   }, [searchParams, filtrosFacetados]);
-  useEffect(() => {
-    // Padrão comum de "buscar dado ao montar/quando a query mudar" (mesmo
-    // exemplo dos docs do React) - a regra nova react-hooks/set-state-in-effect
-    // marca a chamada de setCarregando/setErro como suspeita mesmo assim.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setCarregando(true);
-    limparErro();
-    listar()
-      .then(setLinhas)
-      .catch(reportarErro)
-      .finally(() => setCarregando(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [listar]);
 
   // Opções de CADA dropdown de faceta - derivadas dos dados que já
   // chegaram (não da lista FILTRADA, senão as opções desapareceriam/
@@ -234,7 +221,7 @@ export function GenericTable<T extends Linha>({
       }
     });
 
-    const termo = filtro.trim().toLowerCase();
+    const termo = normalizarBusca(filtro);
     if (!termo) {
       return base;
     }
@@ -243,7 +230,7 @@ export function GenericTable<T extends Linha>({
       colunas.some((coluna) => {
         const valor = linha[coluna.chave];
         const visto = TIPOS_COLUNA[coluna.tipo].texto(valor);
-        return `${visto} ${String(valor ?? '')}`.toLowerCase().includes(termo);
+        return normalizarBusca(`${visto} ${String(valor ?? '')}`).includes(termo);
       }),
     );
   }, [linhas, filtro, colunas, filtrosFacetados, selecoesPorFaceta]);
@@ -509,6 +496,13 @@ export function GenericTable<T extends Linha>({
         mostrarBusca
         valorBusca={filtro}
         aoMudarBusca={(valor) => atualizarParametros({ q: valor, pagina: null })}
+        aoLimparTudo={() =>
+          atualizarParametros({
+            q: null,
+            pagina: null,
+            ...Object.fromEntries((filtrosFacetados ?? []).map((faceta) => [faceta.chave, null])),
+          })
+        }
         facetas={(filtrosFacetados ?? []).map((faceta) => ({
           chave: faceta.chave,
           rotulo: faceta.rotulo,

@@ -1,14 +1,8 @@
-import {
-  ConflictException,
-  ForbiddenException,
-  Injectable,
-} from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
-import {
-  CODIGO_PG_UNIQUE_VIOLATION,
-  CODIGO_PG_RLS_VIOLATION,
-} from '../../commons/database/postgres-exception.filter';
+import { CODIGO_PG_RLS_VIOLATION } from '../../commons/database/postgres-exception.filter';
 import { PapelPermissaoRequestCreate } from '../dto/request/papel-permissao.request-create';
+import { temCodigoPostgres } from '../../commons/database/codigo-postgres.util';
 
 @Injectable()
 export class PapelPermissaoServiceCreate {
@@ -23,11 +17,8 @@ export class PapelPermissaoServiceCreate {
         .values({ id_papel: dto.idPapel, id_permissao: dto.idPermissao })
         .execute();
     } catch (erro) {
-      const codigo = (erro as { code?: string }).code;
-      if (codigo === CODIGO_PG_UNIQUE_VIOLATION) {
-        throw new ConflictException('Este papel já tem esta permissão.');
-      }
-      if (codigo === CODIGO_PG_RLS_VIOLATION) {
+      // Permissão já concedida segue para o filtro global (mensagens-duplicidade.constants.ts).
+      if (temCodigoPostgres(erro, CODIGO_PG_RLS_VIOLATION)) {
         throw new ForbiddenException(
           "Sem permissão 'papel_gerenciar' para conceder permissões.",
         );

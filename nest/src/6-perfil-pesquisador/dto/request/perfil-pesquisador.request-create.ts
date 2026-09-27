@@ -41,8 +41,7 @@ export class PerfilPesquisadorRequestCreate {
   // não-vazio; independente exige ausente. @ValidateIf evita cravar
   // @IsNotEmpty incondicional (quebraria o caso independente) - a palavra
   // final de qualquer combinação inválida continua sendo a CHECK constraint
-  // do banco (o service traduz a violação numa mensagem amigável, mesmo
-  // padrão de CODIGO_PG_UNIQUE_VIOLATION em papel-permissao.service.create).
+  // do banco (o service traduz a violação numa mensagem amigável).
   @ValidateIf(
     (dto: PerfilPesquisadorRequestCreate) =>
       dto.tipoVinculo === 'institucional',

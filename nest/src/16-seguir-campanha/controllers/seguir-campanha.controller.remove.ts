@@ -4,12 +4,12 @@ import {
   HttpCode,
   Param,
   ParseIntPipe,
-  Req,
   UseGuards,
 } from '@nestjs/common';
-import type { Request } from 'express';
 import { RequireAuthGuard } from '../../3-auth/guards/require-auth.guard';
 import { SeguirCampanhaServiceRemove } from '../service/seguir-campanha.service.remove';
+import { UsuarioAtual } from '../../commons/auth/usuario-atual.decorator';
+import type { UsuarioAutenticado } from '../../commons/auth/usuario-autenticado.interface';
 
 @Controller('seguir-campanha')
 export class SeguirCampanhaControllerRemove {
@@ -20,8 +20,8 @@ export class SeguirCampanhaControllerRemove {
   @UseGuards(RequireAuthGuard)
   async remover(
     @Param('idCampanha', ParseIntPipe) idCampanha: number,
-    @Req() request: Request,
+    @UsuarioAtual() usuario: UsuarioAutenticado,
   ) {
-    await this.service.executar(idCampanha, request.user!.idUsuario);
+    await this.service.executar(idCampanha, usuario.idUsuario);
   }
 }

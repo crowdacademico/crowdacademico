@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { ModalFicha } from '../../components/crud/modal-ficha';
+import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
 import {
   ROTULO_STATUS_CAMPANHA,
   classeBadgeStatusCampanha,
 } from '../../services/12-campanha/constants/status-campanha.constants';
-import { useBuscarPorId } from '../../services/constant/hook/use-buscar-por-id';
+import { useBuscar } from '../../services/constant/hook/use-buscar';
 import { formatarDataHora, formatarMoeda } from '../../services/constant/utils/formatacao.util';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { HistoricoRejeicaoResponse } from '../../services/12-campanha/type/campanha.type';
@@ -21,11 +22,11 @@ interface ModalConsultarCampanhaProps {
 // propósito: diferente dos catálogos simples (ver modal-motivo-denuncia.tsx), a linha de `listar-campanhas.tsx`
 // é TRANSFORMADA para exibição (`status` vira rótulo em português, `metaFinanceira`/`valorBrutoArrecadado`
 // viram string já formatada em R$): usar a linha direto quebraria o badge de status e formataria moeda em cima
-// de moeda já formatada. `useBuscarPorId` pega o dado cru de verdade.
+// de moeda já formatada. `useBuscar` pega o dado cru de verdade.
 export function ModalConsultarCampanha({ auth, idCampanha, aoFechar }: ModalConsultarCampanhaProps) {
-  const { dado: campanha, carregando, erro } = useBuscarPorId(
-    (id) => campanhaApi.buscar(auth.authFetch, id),
-    String(idCampanha),
+  const { dado: campanha, carregando, erro } = useBuscar(
+    () => campanhaApi.buscar(auth.authFetch, String(idCampanha)),
+    [idCampanha],
   );
   const [historicoRejeicao, setHistoricoRejeicao] = useState<HistoricoRejeicaoResponse[]>([]);
 
@@ -45,9 +46,7 @@ export function ModalConsultarCampanha({ auth, idCampanha, aoFechar }: ModalCons
         titulo={`#${idCampanha}`}
         aoFechar={aoFechar}
         rodape={
-          <button type="button" onClick={aoFechar} className="btn btn-secondary w-full max-w-sm ml-auto">
-            Fechar
-          </button>
+          <RodapeAcoes aoCancelar={aoFechar} rotuloCancelar="Fechar" />
         }
       >
         <p className="texto-erro text-sm font-bold text-center">{erro}</p>
@@ -74,9 +73,7 @@ export function ModalConsultarCampanha({ auth, idCampanha, aoFechar }: ModalCons
       }
       aoFechar={aoFechar}
       rodape={
-        <button type="button" onClick={aoFechar} className="btn btn-secondary w-full max-w-sm ml-auto">
-          Fechar
-        </button>
+        <RodapeAcoes aoCancelar={aoFechar} rotuloCancelar="Fechar" />
       }
     >
       {campanha && (

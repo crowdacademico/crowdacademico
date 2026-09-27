@@ -1,16 +1,21 @@
-import { useId, useState } from 'react';
+import { useState } from 'react';
 import { BadgeBooleano } from '../../components/crud/badge-booleano';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { confirmarSaida, useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
+import { RodapeAcoes } from '../../components/crud/rodape-acoes';
+import { ModalExcluirItem } from '../../components/crud/modal-excluir-item';
+import { Campo } from '../../components/input/campo';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
+import { CaixaMarcacao } from '../../components/input/caixa-marcacao';
 import { motivoDenunciaApi } from '../../services/10-motivo-denuncia/api/motivo-denuncia.api';
 import {
   ehTipoMotivoDenuncia,
   LIMITE_DESCRICAO_MOTIVO_DENUNCIA,
   ROTULO_TIPO_MOTIVO_DENUNCIA as ROTULO_TIPO,
 } from '../../services/10-motivo-denuncia/constants/motivo-denuncia.constants';
+import { useEnvio } from '../../services/constant/hook/use-envio';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { MotivoDenunciaResponse, TipoMotivoDenuncia } from '../../services/10-motivo-denuncia/type/motivo-denuncia.type';
 
@@ -37,9 +42,7 @@ export function ModalConsultarMotivoDenuncia({ motivo, aoFechar }: ModalConsulta
       ]}
       aoFechar={aoFechar}
       rodape={
-        <button type="button" onClick={aoFechar} className="btn btn-secondary w-full max-w-sm ml-auto">
-          Fechar
-        </button>
+        <RodapeAcoes aoCancelar={aoFechar} rotuloCancelar="Fechar" />
       }
     >
       <SecaoFicha titulo="Dados">
@@ -60,13 +63,11 @@ interface ModalAlterarMotivoDenunciaProps {
 
 export function ModalAlterarMotivoDenuncia({ auth, motivo, aoFechar, aoAtualizado }: ModalAlterarMotivoDenunciaProps) {
   const { mostrar } = useToast();
-  const { erro, reportarErro, limparErro } = useErroToast();
+  const { erro, reportarErro, limparErro, errosCampo, limparErroCampo } = useErroToast();
+  const { ocupado: enviando, executar: executarEnviando } = useEnvio(reportarErro, limparErro);
   const [descricao, setDescricao] = useState(motivo.descricao);
   const [tipo, setTipo] = useState<TipoMotivoDenuncia>(motivo.tipo);
   const [ativo, setAtivo] = useState(motivo.ativo);
-  const [enviando, setEnviando] = useState(false);
-  const idTipo = useId();
-  const idDescricao = useId();
 
   const sujo = descricao !== motivo.descricao || tipo !== motivo.tipo || ativo !== motivo.ativo;
   useAvisoAlteracaoNaoSalva(sujo);
@@ -79,18 +80,12 @@ export function ModalAlterarMotivoDenuncia({ auth, motivo, aoFechar, aoAtualizad
   };
 
   const aoSalvar = async () => {
-    limparErro();
-    setEnviando(true);
-    try {
+    await executarEnviando(async () => {
       await motivoDenunciaApi.atualizar(auth.authFetch, motivo.idMotivo, { descricao, tipo, ativo });
       mostrar('Motivo de denúncia alterado com sucesso.', `ID: ${motivo.idMotivo} foi alterado`);
       aoAtualizado();
       aoFechar();
-    } catch (erroRequisicao) {
-      reportarErro(erroRequisicao);
-    } finally {
-      setEnviando(false);
-    }
+    });
   };
 
   return (
@@ -98,63 +93,67 @@ export function ModalAlterarMotivoDenuncia({ auth, motivo, aoFechar, aoAtualizad
       titulo={`Alterar "${motivo.descricao}"`}
       aoFechar={fechar}
       rodape={
-        <div className="flex gap-3 max-w-sm ml-auto">
-          <button type="button" onClick={fechar} className="btn btn-secondary flex-1">
-            Cancelar
-          </button>
-          <button
-            type="button"
-            onClick={() => void aoSalvar()}
-            disabled={enviando || !sujo || descricao.trim() === ''}
-            className="btn btn-primary flex-1"
-          >
-            {enviando ? 'Salvando...' : 'Salvar'}
-          </button>
-        </div>
+        <RodapeAcoes
+          aoCancelar={fechar}
+          acao={{
+            rotulo: 'Salvar',
+            rotuloOcupado: 'Salvando...',
+            ocupado: enviando,
+            desabilitado: !sujo || descricao.trim() === '',
+            aoClicar: () => void aoSalvar(),
+          }}
+        />
       }
+      erro={erro}
     >
-      {erro && <p className="texto-erro text-sm font-bold text-center">{erro}</p>}
-
       <SecaoFicha titulo="Editar">
-        <div className="sm:col-span-2">
-          <label htmlFor={idTipo} className="rotulo-campo">Tipo</label>
-          <select
-            id={idTipo}
-            value={tipo}
-            onChange={(evento) => {
-              if (ehTipoMotivoDenuncia(evento.target.value)) {
-                setTipo(evento.target.value);
-              }
-            }}
-            required
-            className="input-padrao"
-          >
-            <option value="campanha">Campanha</option>
-            <option value="perfil">Perfil</option>
-          </select>
-          <p className="text-xs texto-fraco mt-1">
-            Alterar isto muda em qual tela de denúncia este motivo aparece daqui pra frente -
-            denúncias antigas que já usaram este motivo não são afetadas retroativamente.
-          </p>
-        </div>
+        <Campo
+          rotulo="Tipo"
+          erro={errosCampo.tipo}
+          dica="Alterar isto muda em qual tela de denúncia este motivo aparece daqui pra frente, denúncias antigas que já usaram este motivo não são afetadas retroativamente."
+          className="sm:col-span-2"
+        >
+          {({ atributos, classeErro }) => (
+            <select
+              {...atributos}
+              value={tipo}
+              onChange={(evento) => {
+                if (ehTipoMotivoDenuncia(evento.target.value)) {
+                  setTipo(evento.target.value);
+                  limparErroCampo('tipo');
+                  limparErroCampo('descricao');
+                }
+              }}
+              required
+              className={'input-padrao' + classeErro}
+            >
+              {Object.entries(ROTULO_TIPO).map(([valor, rotulo]) => (
+                <option key={valor} value={valor}>
+                  {rotulo}
+                </option>
+              ))}
+            </select>
+          )}
+        </Campo>
 
-        <div className="sm:col-span-2">
-          <label htmlFor={idDescricao} className="rotulo-campo">Descrição</label>
-          <input
-            id={idDescricao}
-            type="text"
-            value={descricao}
-            onChange={(evento) => setDescricao(evento.target.value)}
-            required
-            maxLength={LIMITE_DESCRICAO_MOTIVO_DENUNCIA}
-            className="input-padrao"
-          />
-        </div>
+        <Campo rotulo="Descrição" erro={errosCampo.descricao} className="sm:col-span-2">
+          {({ atributos, classeErro }) => (
+            <input
+              {...atributos}
+              type="text"
+              value={descricao}
+              onChange={(evento) => {
+                setDescricao(evento.target.value);
+                limparErroCampo('descricao');
+              }}
+              required
+              maxLength={LIMITE_DESCRICAO_MOTIVO_DENUNCIA}
+              className={'input-padrao' + classeErro}
+            />
+          )}
+        </Campo>
 
-        <label className="sm:col-span-2 flex items-center gap-2 text-sm font-semibold texto-padrao">
-          <input type="checkbox" checked={ativo} onChange={(evento) => setAtivo(evento.target.checked)} />
-          Ativo
-        </label>
+        <CaixaMarcacao rotulo="Ativo" marcado={ativo} aoMudar={setAtivo} className="sm:col-span-2" />
       </SecaoFicha>
     </ModalFicha>
   );
@@ -168,63 +167,21 @@ interface ModalExcluirMotivoDenunciaProps {
 }
 
 export function ModalExcluirMotivoDenuncia({ auth, motivo, aoFechar, aoExcluido }: ModalExcluirMotivoDenunciaProps) {
-  const { mostrar } = useToast();
-  const { erro, reportarErro, limparErro } = useErroToast();
-  const [excluindo, setExcluindo] = useState(false);
-
-  const excluir = async () => {
-    limparErro();
-    setExcluindo(true);
-    try {
-      await motivoDenunciaApi.remover(auth.authFetch, motivo.idMotivo);
-      mostrar('Motivo de denúncia excluído com sucesso.', `ID: ${motivo.idMotivo} foi excluído`);
-      aoExcluido();
-      aoFechar();
-    } catch (erroRequisicao) {
-      reportarErro(erroRequisicao);
-    } finally {
-      setExcluindo(false);
-    }
-  };
-
   return (
-    <ModalFicha
-      titulo={`Excluir "${motivo.descricao}"`}
-      subtitulo="Esta ação não pode ser desfeita."
-      aoFechar={aoFechar}
-      rodape={
-        <div className="flex gap-3 max-w-sm ml-auto">
-          <button type="button" onClick={aoFechar} className="btn btn-secondary flex-1">
-            Cancelar
-          </button>
-          <button
-            type="button"
-            onClick={() => void excluir()}
-            disabled={excluindo}
-            className="btn btn-danger flex-1"
-          >
-            {excluindo ? 'Excluindo...' : 'Confirmar exclusão'}
-          </button>
-        </div>
+    <ModalExcluirItem
+      nome={motivo.descricao}
+      campos={
+        <>
+          <CampoFicha rotulo="Descrição" valor={motivo.descricao} largura="cheia" />
+          <CampoFicha rotulo="Tipo" valor={ROTULO_TIPO[motivo.tipo]} />
+        </>
       }
-    >
-      {erro && <p className="texto-erro text-sm font-bold text-center">{erro}</p>}
-
-      <SecaoFicha titulo="O que será excluído">
-        <CampoFicha rotulo="Descrição" valor={motivo.descricao} largura="cheia" />
-        <CampoFicha rotulo="Tipo" valor={ROTULO_TIPO[motivo.tipo]} />
-      </SecaoFicha>
-
-      <div className="rounded-lg border borda-forte fundo-erro p-4 text-sm texto-erro">
-        <p className="font-bold mb-1">
-          <i className="fa-solid fa-circle-info mr-1"></i> O que acontece de verdade
-        </p>
-        <p>
-          Se este motivo já tiver sido usado em alguma denúncia, a exclusão é bloqueada pelo
-          próprio banco - desative-o em vez de excluir. Se não estiver em uso, some do catálogo
-          pra sempre, sem exclusão lógica.
-        </p>
-      </div>
-    </ModalFicha>
+      explicacao="Se este motivo já tiver sido usado em alguma denúncia, a exclusão é bloqueada pelo próprio banco: desative-o em vez de excluir. Se não estiver em uso, some do catálogo pra sempre, sem exclusão lógica."
+      remover={() => motivoDenunciaApi.remover(auth.authFetch, motivo.idMotivo)}
+      mensagemSucesso="Motivo de denúncia excluído com sucesso."
+      detalheSucesso={`ID: ${motivo.idMotivo} foi excluído`}
+      aoFechar={aoFechar}
+      aoExcluido={aoExcluido}
+    />
   );
 }

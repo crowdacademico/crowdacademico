@@ -1,11 +1,14 @@
-import { useId, useState } from 'react';
+import { useState } from 'react';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { SecaoFicha } from '../../components/crud/ficha-consulta';
+import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { SeletorFotoPerfil } from '../../components/input/seletor-foto-perfil';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
+import { Campo } from '../../components/input/campo';
 import { arquivoApi } from '../../services/25-arquivo/api/arquivo.api';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
+import { useEnvio } from '../../services/constant/hook/use-envio';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { UsuarioResponse } from '../../services/1-usuario/type/usuario.type';
 
@@ -20,6 +23,7 @@ interface ModalCriarUsuarioProps {
 export function ModalCriarUsuario({ auth, aoFechar, aoCriado }: ModalCriarUsuarioProps) {
   const { mostrar } = useToast();
   const { erro, reportarErro, limparErro } = useErroToast();
+  const { ocupado: enviando, executar: executarEnviando } = useEnvio(reportarErro, limparErro);
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
@@ -27,10 +31,6 @@ export function ModalCriarUsuario({ auth, aoFechar, aoCriado }: ModalCriarUsuari
   // foto trocada/removida: best-effort, apaga na hora o upload anterior órfão.
   const [idImagemPerfil, setIdImagemPerfil] = useState<number | null>(null);
   const [urlImagemPerfil, setUrlImagemPerfil] = useState<string | null>(null);
-  const [enviando, setEnviando] = useState(false);
-  const idNome = useId();
-  const idEmail = useId();
-  const idSenha = useId();
 
   const aoAlterarFoto = (idArquivo: number | null, novaUrl: string | null) => {
     const idAnterior = idImagemPerfil;
@@ -45,9 +45,7 @@ export function ModalCriarUsuario({ auth, aoFechar, aoCriado }: ModalCriarUsuari
 
   const aoCriar = async () => {
     if (!nome || !email || !senha) return;
-    limparErro();
-    setEnviando(true);
-    try {
+    await executarEnviando(async () => {
       const usuarioCriado = await usuarioApi.criar(auth.authFetch, {
         nome,
         email,
@@ -57,11 +55,7 @@ export function ModalCriarUsuario({ auth, aoFechar, aoCriado }: ModalCriarUsuari
       mostrar('Usuário cadastrado com sucesso.', `O novo usuário possui o ID: ${usuarioCriado.idUsuario}`);
       aoCriado(usuarioCriado);
       aoFechar();
-    } catch (erroRequisicao) {
-      reportarErro(erroRequisicao);
-    } finally {
-      setEnviando(false);
-    }
+    });
   };
 
   return (
@@ -79,62 +73,61 @@ export function ModalCriarUsuario({ auth, aoFechar, aoCriado }: ModalCriarUsuari
       }
       aoFechar={aoFechar}
       rodape={
-        <div className="flex gap-3 max-w-sm ml-auto">
-          <button type="button" onClick={aoFechar} className="btn btn-secondary flex-1">
-            Cancelar
-          </button>
-          <button
-            type="button"
-            onClick={aoCriar}
-            disabled={enviando || !nome || !email || !senha}
-            className="btn btn-primary flex-1"
-          >
-            {enviando ? 'Criando...' : 'Criar'}
-          </button>
-        </div>
+        <RodapeAcoes
+          aoCancelar={aoFechar}
+          acao={{
+            rotulo: 'Criar',
+            rotuloOcupado: 'Criando...',
+            ocupado: enviando,
+            desabilitado: !nome || !email || !senha,
+            aoClicar: () => void aoCriar(),
+          }}
+        />
       }
+      erro={erro}
     >
-      {erro && <p className="texto-erro text-sm font-bold text-center">{erro}</p>}
-
       <SecaoFicha titulo="Dados da conta">
-        <div className="sm:col-span-2">
-          <label htmlFor={idNome} className="rotulo-campo">Nome</label>
-          <input
-            id={idNome}
-            type="text"
-            value={nome}
-            onChange={(evento) => setNome(evento.target.value)}
-            required
-            className="input-padrao"
-            placeholder="Nome completo"
-          />
-        </div>
+        <Campo rotulo="Nome" className="sm:col-span-2">
+          {({ atributos }) => (
+            <input
+              {...atributos}
+              type="text"
+              value={nome}
+              onChange={(evento) => setNome(evento.target.value)}
+              required
+              className="input-padrao"
+              placeholder="Nome completo"
+            />
+          )}
+        </Campo>
 
-        <div className="sm:col-span-2">
-          <label htmlFor={idEmail} className="rotulo-campo">E-mail</label>
-          <input
-            id={idEmail}
-            type="email"
-            value={email}
-            onChange={(evento) => setEmail(evento.target.value)}
-            required
-            className="input-padrao"
-            placeholder="seu@email.com"
-          />
-        </div>
+        <Campo rotulo="E-mail" className="sm:col-span-2">
+          {({ atributos }) => (
+            <input
+              {...atributos}
+              type="email"
+              value={email}
+              onChange={(evento) => setEmail(evento.target.value)}
+              required
+              className="input-padrao"
+              placeholder="seu@email.com"
+            />
+          )}
+        </Campo>
 
-        <div className="sm:col-span-2">
-          <label htmlFor={idSenha} className="rotulo-campo">Senha</label>
-          <input
-            id={idSenha}
-            type="password"
-            value={senha}
-            onChange={(evento) => setSenha(evento.target.value)}
-            required
-            className="input-padrao"
-            placeholder="••••••••"
-          />
-        </div>
+        <Campo rotulo="Senha" className="sm:col-span-2">
+          {({ atributos }) => (
+            <input
+              {...atributos}
+              type="password"
+              value={senha}
+              onChange={(evento) => setSenha(evento.target.value)}
+              required
+              className="input-padrao"
+              placeholder="••••••••"
+            />
+          )}
+        </Campo>
       </SecaoFicha>
     </ModalFicha>
   );

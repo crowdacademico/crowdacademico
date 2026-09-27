@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { ModalFicha } from '../../components/crud/modal-ficha';
+import { RodapeAcoes } from '../../components/crud/rodape-acoes';
+import { CaixaAviso } from '../../components/crud/caixa-aviso';
 import { papelPermissaoApi, permissaoApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
 import { detalhePermissao } from '../../services/2-papel-permissao/constants/permissao-nomes-amigaveis';
 import { ModalDetalhePermissao } from './modal-detalhe-permissao';
+import { Carregando } from '../../components/layout/carregando';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { PapelResponse, PermissaoResponse } from '../../services/2-papel-permissao/type/papel-permissao.type';
 
@@ -39,9 +42,7 @@ export function ModalConsultarPapel({ auth, papel, aoFechar }: ModalConsultarPap
         titulo={papel.nome}
         aoFechar={aoFechar}
         rodape={
-          <button type="button" onClick={aoFechar} className="btn btn-secondary w-full max-w-sm ml-auto">
-            Fechar
-          </button>
+          <RodapeAcoes aoCancelar={aoFechar} rotuloCancelar="Fechar" />
         }
       >
         <SecaoFicha titulo="Dados">
@@ -51,7 +52,7 @@ export function ModalConsultarPapel({ auth, papel, aoFechar }: ModalConsultarPap
 
         <SecaoFicha titulo="Permissões deste papel" colunas={1}>
           {permissoes === null ? (
-            <p className="text-sm texto-fraco">Carregando...</p>
+            <Carregando />
           ) : permissoes.length === 0 ? (
             <p className="text-sm texto-fraco">Nenhuma permissão concedida a este papel ainda.</p>
           ) : (
@@ -100,22 +101,17 @@ export function ModalExcluirPapel({ papel, aoFechar }: ModalExcluirPapelProps) {
       titulo={`Excluir "${papel.nome}"?`}
       aoFechar={aoFechar}
       rodape={
-        <button type="button" onClick={aoFechar} className="btn btn-secondary w-full max-w-sm ml-auto">
-          Entendi
-        </button>
+        <RodapeAcoes aoCancelar={aoFechar} rotuloCancelar="Entendi" />
       }
     >
-      <div className="rounded-lg border borda-forte fundo-aviso p-4 text-sm texto-aviso">
-        <p className="font-bold mb-1">
-          <i className="fa-solid fa-triangle-exclamation mr-1"></i> Não é possível excluir papéis pelo painel
-        </p>
+      <CaixaAviso titulo="Não é possível excluir papéis pelo painel" icone="fa-triangle-exclamation">
         <p>
           Excluir "{papel.nome}" apagaria, na hora e sem aviso, o vínculo de TODOS os usuários que
           têm este papel e TODAS as permissões concedidas a ele - qualquer conta com este papel
           perderia essa autoridade instantaneamente, em todo o sistema. Por isso este botão nunca
           executa a exclusão de verdade, só explica por que ela não existe aqui.
         </p>
-      </div>
+      </CaixaAviso>
     </ModalFicha>
   );
 }

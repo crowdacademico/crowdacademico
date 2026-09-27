@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { sql } from 'kysely';
 import { DatabaseService } from '../../commons/database/database.service';
 import { AutorizacaoService } from '../../commons/seguranca/autorizacao.service';
@@ -6,7 +6,8 @@ import { PerfilPesquisadorResponseSuspend } from '../dto/response/perfil-pesquis
 
 // suspender_pesquisador() (03_funcoes_seguranca.sql, [03-P]): dá ao Admin poder completo sobre o pesquisador na
 // Bancada. Idempotente por design (a própria função devolve FALSE sem fazer nada se já estava suspenso): nenhum
-// erro é levantado nesse caso, só o RAISE EXCEPTION de permissão.
+// erro é levantado nesse caso, só as recusas (sem permissão 92014 = 403, motivo vazio 90020 = 400), traduzidas
+// pelo filtro global.
 //
 // Aceita ate/motivo (mesmo padrão de UsuarioServiceSuspender) e tem buscarSuspensao(), espelhando
 // UsuarioServiceSuspender.buscarSuspensao, inclusive o mesmo SAVEPOINT de segurança (esta busca roda
@@ -54,14 +55,8 @@ export class PerfilPesquisadorServiceSuspender {
     ate: string,
     motivo: string,
   ): Promise<void> {
-    try {
-      await sql`SELECT public.suspender_pesquisador(${idUsuario}, ${ate}::timestamptz, ${motivo})`.execute(
-        this.database.getDb(),
-      );
-    } catch (erro) {
-      throw new ForbiddenException(
-        (erro as Error).message || 'Sem permissão para suspender pesquisador.',
-      );
-    }
+    await sql`SELECT public.suspender_pesquisador(${idUsuario}, ${ate}::timestamptz, ${motivo})`.execute(
+      this.database.getDb(),
+    );
   }
 }

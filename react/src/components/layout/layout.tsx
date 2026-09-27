@@ -1,7 +1,9 @@
 import { Outlet } from 'react-router';
+import { BarraCarregamento } from './barra-carregamento/barra-carregamento';
 import { Breadcrumb } from './breadcrumb';
 import { Footer } from './footer';
 import { Header } from './header';
+import { LimiteErro } from './limite-erro';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 
 interface LayoutProps {
@@ -16,10 +18,13 @@ interface LayoutProps {
 export function Layout({ auth }: LayoutProps) {
   return (
     <>
+      <BarraCarregamento />
       <Header auth={auth} />
       <Breadcrumb />
       <main className="flex flex-col flex-1">
-        <Outlet />
+        <LimiteErro>
+          <Outlet />
+        </LimiteErro>
       </main>
       <Footer />
     </>

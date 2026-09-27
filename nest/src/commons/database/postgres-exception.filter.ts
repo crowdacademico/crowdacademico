@@ -5,6 +5,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { BaseExceptionFilter } from '@nestjs/core';
+import { DUPLICIDADE_POR_INDICE_UNICO } from './mensagens-duplicidade.constants';
 
 // Códigos exportados: qualquer service que trata um código específico no próprio `catch` (em vez de deixar cair
 // nesta rede de segurança global) deve importar daqui, nunca redeclarar o literal.
@@ -33,13 +34,14 @@ const FAIXA_ERRCODE_REGRA_NEGOCIO: Record<string, HttpStatus> = {
 interface ErroPostgres extends Error {
   code?: string;
   detail?: string;
+  // Nome da constraint/índice violado (23505, 23503...): escolhe a mensagem do 409 de duplicidade.
+  constraint?: string;
 }
 
-// Rede de segurança GLOBAL para erro de Postgres que nenhum service tratou localmente (ex.: e-mail duplicado
-// num INSERT sem try/catch viraria 500 cru em vez de 409). Services que já têm try/catch próprio (ex.:
-// configuracao.service.create.ts, usuario-papel.service.create.ts) nunca chegam aqui para esses casos: a
-// mensagem específica deles é melhor que a genérica daqui, então continuam como estão. Isto é só a rede
-// embaixo.
+// Tradução GLOBAL de erro de Postgres para HTTP (ex.: e-mail duplicado num INSERT sem try/catch viraria 500 cru
+// em vez de 409). Duplicidade (23505) é tratada SÓ aqui, com mensagem e campo por índice
+// (mensagens-duplicidade.constants.ts): services não repetem esse `catch`. O que continua no service é o que
+// só ele sabe dizer (ex.: 42501 com o nome da permissão que faltou para aquela operação).
 @Catch()
 export class PostgresExceptionFilter extends BaseExceptionFilter {
   catch(excecao: unknown, host: ArgumentsHost): void {
@@ -70,12 +72,19 @@ export class PostgresExceptionFilter extends BaseExceptionFilter {
 
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     switch (erro?.code) {
-      case CODIGO_PG_UNIQUE_VIOLATION:
+      case CODIGO_PG_UNIQUE_VIOLATION: {
+        const conhecida = erro.constraint
+          ? DUPLICIDADE_POR_INDICE_UNICO[erro.constraint]
+          : undefined;
+        const mensagem =
+          conhecida?.mensagem ?? 'Já existe um registro com estes dados.';
         return this.montar(
           erro,
-          'Já existe um registro com estes dados.',
+          mensagem,
           HttpStatus.CONFLICT,
+          conhecida?.campo ? { [conhecida.campo]: [mensagem] } : undefined,
         );
+      }
       case CODIGO_PG_FOREIGN_KEY_VIOLATION:
         return this.montar(
           erro,
@@ -118,16 +127,20 @@ export class PostgresExceptionFilter extends BaseExceptionFilter {
   // mais `codigo` (o SQLSTATE: 9xxxx de regra de negócio, ou 23505/23503/23502/23514/42501/P0001 dos nativos)
   // para o front distinguir a regra pelo código estável em vez do texto da mensagem. `dados` é opcional: só
   // aparece se o RAISE mandou um DETAIL em JSON (nenhum manda ainda, o gancho está pronto). O nome da
-  // constraint violada NÃO vai no corpo, é detalhe interno.
+  // constraint violada NÃO vai no corpo, é detalhe interno. `campos` (opcional, mesmo formato do erro de
+  // validação do ValidationPipe, ver commons/validacao): { <campo do formulário>: [mensagens] }, para a tela
+  // mostrar o erro embaixo do campo certo.
   private montar(
     erro: ErroPostgres,
     mensagem: string,
     status: HttpStatus,
+    campos?: Record<string, string[]>,
   ): HttpException {
     const corpo: Record<string, unknown> = {
       statusCode: status,
       codigo: erro.code,
       message: mensagem,
+      ...(campos ? { campos } : {}),
     };
     const dados = this.lerDetalheJson(erro.detail);
     if (dados) {

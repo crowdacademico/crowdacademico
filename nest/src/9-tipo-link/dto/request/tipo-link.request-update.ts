@@ -7,6 +7,7 @@ import {
   IsString,
   MaxLength,
 } from 'class-validator';
+import { TextoLimpo } from '../../../commons/validacao/transformacoes.decorator';
 
 // Sem `codigo`, de propósito - mesma razão de `area_conhecimento.
 // codigoCnpq`/`papel.codigo`: é a chave estável que
@@ -15,6 +16,7 @@ import {
 // silêncio se alguém renomeasse por engano. `nome` (rótulo livre) e todo
 // o resto podem mudar sem risco nenhum.
 export class TipoLinkRequestUpdate {
+  @TextoLimpo()
   @IsOptional()
   @IsString()
   @IsNotEmpty()

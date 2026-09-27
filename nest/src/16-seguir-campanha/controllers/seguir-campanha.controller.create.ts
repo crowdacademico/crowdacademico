@@ -1,8 +1,9 @@
-import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
-import type { Request } from 'express';
+import { Body, Controller, Post, UseGuards } from '@nestjs/common';
 import { RequireAuthGuard } from '../../3-auth/guards/require-auth.guard';
 import { SeguirCampanhaRequestCreate } from '../dto/request/seguir-campanha.request-create';
 import { SeguirCampanhaServiceCreate } from '../service/seguir-campanha.service.create';
+import { UsuarioAtual } from '../../commons/auth/usuario-atual.decorator';
+import type { UsuarioAutenticado } from '../../commons/auth/usuario-autenticado.interface';
 
 @Controller('seguir-campanha')
 export class SeguirCampanhaControllerCreate {
@@ -10,7 +11,10 @@ export class SeguirCampanhaControllerCreate {
 
   @Post()
   @UseGuards(RequireAuthGuard)
-  criar(@Body() dto: SeguirCampanhaRequestCreate, @Req() request: Request) {
-    return this.service.executar(dto, request.user!.idUsuario);
+  criar(
+    @Body() dto: SeguirCampanhaRequestCreate,
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+  ) {
+    return this.service.executar(dto, usuario.idUsuario);
   }
 }

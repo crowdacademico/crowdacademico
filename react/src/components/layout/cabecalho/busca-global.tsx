@@ -7,6 +7,8 @@ import { papelApi, permissaoApi } from '../../../services/2-papel-permissao/api/
 import { configuracaoApi } from '../../../services/11-configuracoes/api/configuracao.api';
 import { EVENTO_ABRIR_BUSCA_GLOBAL as EVENTO_ABRIR } from './busca-global-evento';
 import { useFocoPreso } from '../../../services/constant/hook/use-foco-preso';
+import { contemTermo, normalizarBusca } from '../../../services/constant/utils/busca.util';
+import { Carregando } from '../carregando';
 import type { UseAuthReturn } from '../../../services/3-auth/hook/use-auth';
 import type { UsuarioResponse } from '../../../services/1-usuario/type/usuario.type';
 import type { PapelResponse, PermissaoResponse } from '../../../services/2-papel-permissao/type/papel-permissao.type';
@@ -44,10 +46,6 @@ const NAVEGACAO: ResultadoBusca[] = ROTAS_ADMIN.filter((rota) => rota.rotuloMenu
 // isso contra 17 linhas de teste"). Revisar se algum catálogo crescer bem
 // além disso.
 const LIMITE_POR_CATEGORIA = 5;
-
-function contem(texto: string | null | undefined, termo: string): boolean {
-  return (texto ?? '').toLowerCase().includes(termo);
-}
 
 interface BuscaGlobalProps {
   auth: Pick<UseAuthReturn, 'authFetch'>;
@@ -122,18 +120,18 @@ export function BuscaGlobal({ auth }: BuscaGlobalProps) {
   }, [aberto]);
 
   const resultados = useMemo(() => {
-    const termoBusca = termo.trim().toLowerCase();
+    const termoBusca = normalizarBusca(termo);
 
     if (!termoBusca) {
       return NAVEGACAO;
     }
 
-    const lista = NAVEGACAO.filter((item) => contem(item.rotulo, termoBusca));
+    const lista = NAVEGACAO.filter((item) => contemTermo(item.rotulo, termoBusca));
 
     if (dados) {
       lista.push(
         ...dados.usuarios
-          .filter((u) => contem(u.nome, termoBusca) || contem(u.email, termoBusca))
+          .filter((u) => contemTermo(u.nome, termoBusca) || contemTermo(u.email, termoBusca))
           .slice(0, LIMITE_POR_CATEGORIA)
           .map((u) => ({
             categoria: 'Usuários',
@@ -143,7 +141,7 @@ export function BuscaGlobal({ auth }: BuscaGlobalProps) {
             icone: 'fa-user',
           })),
         ...dados.papeis
-          .filter((p) => contem(p.nome, termoBusca))
+          .filter((p) => contemTermo(p.nome, termoBusca))
           .slice(0, LIMITE_POR_CATEGORIA)
           .map((p) => ({
             categoria: 'Papéis',
@@ -155,7 +153,7 @@ export function BuscaGlobal({ auth }: BuscaGlobalProps) {
         // existem rotas /:id/consultar e /:id/alterar. Permissão não tem tela própria (catálogo só-leitura):
         // manda para Papéis & Permissões, onde ela aparece na matriz/listagem.
         ...dados.permissoes
-          .filter((p) => contem(p.nome, termoBusca))
+          .filter((p) => contemTermo(p.nome, termoBusca))
           .slice(0, LIMITE_POR_CATEGORIA)
           .map((p) => ({
             categoria: 'Permissões',
@@ -164,7 +162,7 @@ export function BuscaGlobal({ auth }: BuscaGlobalProps) {
             icone: 'fa-key',
           })),
         ...dados.configuracoes
-          .filter((c) => contem(c.chave, termoBusca) || contem(c.descricao, termoBusca))
+          .filter((c) => contemTermo(c.chave, termoBusca) || contemTermo(c.descricao, termoBusca))
           .slice(0, LIMITE_POR_CATEGORIA)
           .map((c) => ({
             categoria: 'Parâmetros',
@@ -254,7 +252,7 @@ export function BuscaGlobal({ auth }: BuscaGlobalProps) {
         </div>
 
         <div className="max-h-96 overflow-y-auto py-2">
-          {carregando && <p className="px-4 py-3 text-sm texto-fraco">Carregando...</p>}
+          {carregando && <Carregando className="px-4 py-3" />}
           {!carregando && resultados.length === 0 && (
             <p className="px-4 py-3 text-sm texto-fraco">Nada encontrado para "{termo}".</p>
           )}

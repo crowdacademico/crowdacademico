@@ -1,16 +1,10 @@
-import {
-  ConflictException,
-  ForbiddenException,
-  Injectable,
-} from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
-import {
-  CODIGO_PG_UNIQUE_VIOLATION,
-  CODIGO_PG_RLS_VIOLATION,
-} from '../../commons/database/postgres-exception.filter';
+import { CODIGO_PG_RLS_VIOLATION } from '../../commons/database/postgres-exception.filter';
 import { ConfiguracaoConverter } from '../dto/converter/configuracao.converter';
 import { ConfiguracaoRequestCreate } from '../dto/request/configuracao.request-create';
 import { ConfiguracaoResponse } from '../dto/response/configuracao.response';
+import { temCodigoPostgres } from '../../commons/database/codigo-postgres.util';
 
 @Injectable()
 export class ConfiguracaoServiceCreate {
@@ -46,13 +40,8 @@ export class ConfiguracaoServiceCreate {
 
       return ConfiguracaoConverter.paraResponseDto(linha);
     } catch (erro) {
-      const codigo = (erro as { code?: string }).code;
-      if (codigo === CODIGO_PG_UNIQUE_VIOLATION) {
-        throw new ConflictException(
-          `Já existe uma configuração com a chave "${dto.chave}".`,
-        );
-      }
-      if (codigo === CODIGO_PG_RLS_VIOLATION) {
+      // Chave duplicada segue para o filtro global (mensagens-duplicidade.constants.ts).
+      if (temCodigoPostgres(erro, CODIGO_PG_RLS_VIOLATION)) {
         throw new ForbiddenException(
           dto.global
             ? "Sem permissão 'configuracao_gerenciar' para criar configuração global."

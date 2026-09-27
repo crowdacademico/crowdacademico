@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { sql } from 'kysely';
 import { DatabaseService } from '../../commons/database/database.service';
 
@@ -11,14 +11,8 @@ export class PerfilPesquisadorServiceReativar {
   constructor(private readonly database: DatabaseService) {}
 
   async executar(idUsuario: number): Promise<void> {
-    try {
-      await sql`SELECT public.reativar_pesquisador(${idUsuario})`.execute(
-        this.database.getDb(),
-      );
-    } catch (erro) {
-      throw new ForbiddenException(
-        (erro as Error).message || 'Sem permissão para reativar pesquisador.',
-      );
-    }
+    await sql`SELECT public.reativar_pesquisador(${idUsuario})`.execute(
+      this.database.getDb(),
+    );
   }
 }

@@ -1,8 +1,4 @@
-import { API_BASE_URL } from '../../constant/constants/api.constants';
-import { tratarResposta } from '../../constant/api/http.util';
-import type { AuthFetch } from '../../3-auth/type/auth.type';
-import type { ResultadoPaginado } from '../../constant/type/paginacao.type';
-import { desembrulharPaginado } from '../../constant/type/paginacao.type';
+import { criarApiCatalogo } from '../../constant/api/api-catalogo';
 import type {
   EscopoTipoLink,
   TipoLinkRequestCreate,
@@ -14,63 +10,15 @@ import type {
 // 04_rls_policies.sql [04-C-2]); POST/PATCH/DELETE exigem a permissão 'tipolink_gerenciar', garantida pela RLS
 // (o Nest só tem RequireAuthGuard para exigir login). remover() pode voltar 409 se o tipo ainda estiver em uso
 // em algum link (ver tipo-link.service.remove.ts).
+//
+// Filtro: `escopo` é 'perfil' | 'atualizacao' | 'recompensa', os mesmos valores de TipoLinkRequestList no
+// backend (filtra pelo campo permite_* correspondente).
 interface FiltroTipoLink {
   ativo?: boolean;
   escopo?: EscopoTipoLink;
 }
 
-function paraQueryString(filtro?: FiltroTipoLink): string {
-  if (!filtro) {
-    return '';
-  }
-  const params = new URLSearchParams();
-  if (filtro.ativo !== undefined) params.set('ativo', String(filtro.ativo));
-  if (filtro.escopo !== undefined) params.set('escopo', filtro.escopo);
-  const texto = params.toString();
-  return texto ? `?${texto}` : '';
-}
-
-export const tipoLinkApi = {
-  // GET /tipo-link devolve { dados, total, pagina, tamanho } - `.dados`
-  // desembrulhado aqui, mesmo padrão de areaConhecimentoApi.listar/
-  // configuracaoApi.listar, pra GenericTable continuar recebendo um
-  // array puro. `filtro` opcional: { ativo, escopo } - `escopo` é
-  // 'perfil' | 'atualizacao' | 'recompensa', mesmos valores de
-  // ListarTipoLinkQueryDto no backend (filtra pelo campo permite_*
-  // correspondente).
-  listar: (authFetch: AuthFetch, filtro?: FiltroTipoLink): Promise<TipoLinkResponse[]> =>
-    authFetch(`/tipo-link${paraQueryString(filtro)}`)
-      .then(tratarResposta<ResultadoPaginado<TipoLinkResponse>>)
-      .then(desembrulharPaginado('tipos de link')),
-  // Sem authFetch de propósito, mesmo padrão de areaConhecimentoApi.
-  // listarPublico/configuracaoApi.buscarPublicas: pol_tipolink_select já
-  // libera pra qualquer um, logado ou não. Ainda sem nenhuma tela
-  // pública chamando isto (o formulário de link acadêmico, que vai
-  // precisar do combo de tipos com `escopo=perfil`, é de outro módulo) -
-  // já deixado pronto pra quando existir.
-  listarPublico: (filtro?: FiltroTipoLink): Promise<TipoLinkResponse[]> =>
-    fetch(`${API_BASE_URL}/tipo-link${paraQueryString(filtro)}`)
-      .then(tratarResposta<ResultadoPaginado<TipoLinkResponse>>)
-      .then(desembrulharPaginado('tipos de link')),
-  buscar: (authFetch: AuthFetch, id: number | string): Promise<TipoLinkResponse> =>
-    authFetch(`/tipo-link/${id}`).then(tratarResposta<TipoLinkResponse>),
-  criar: (authFetch: AuthFetch, dados: TipoLinkRequestCreate): Promise<TipoLinkResponse> =>
-    authFetch('/tipo-link', {
-      method: 'POST',
-      body: JSON.stringify(dados),
-    }).then(tratarResposta<TipoLinkResponse>),
-  // Só nome/ativo/regex/dominio/permitePerfil/permiteAtualizacao/
-  // permiteRecompensa são aceitos (ver AtualizarTipoLinkRequestDto no
-  // backend) - codigo é imutável depois de criado.
-  atualizar: (
-    authFetch: AuthFetch,
-    id: number | string,
-    dados: TipoLinkRequestUpdate,
-  ): Promise<TipoLinkResponse> =>
-    authFetch(`/tipo-link/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify(dados),
-    }).then(tratarResposta<TipoLinkResponse>),
-  remover: (authFetch: AuthFetch, id: number | string): Promise<void> =>
-    authFetch(`/tipo-link/${id}`, { method: 'DELETE' }).then(tratarResposta<void>),
-};
+export const tipoLinkApi = criarApiCatalogo<TipoLinkResponse, TipoLinkRequestCreate, TipoLinkRequestUpdate, FiltroTipoLink>(
+  '/tipo-link',
+  'tipos de link',
+);

@@ -1,17 +1,14 @@
 import {
   BadRequestException,
-  ConflictException,
   ForbiddenException,
   Injectable,
 } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
-import {
-  CODIGO_PG_UNIQUE_VIOLATION,
-  CODIGO_PG_RLS_VIOLATION,
-} from '../../commons/database/postgres-exception.filter';
+import { CODIGO_PG_RLS_VIOLATION } from '../../commons/database/postgres-exception.filter';
 import { AreaConhecimentoConverter } from '../dto/converter/area-conhecimento.converter';
 import { AreaConhecimentoRequestCreate } from '../dto/request/area-conhecimento.request-create';
 import { AreaConhecimentoResponse } from '../dto/response/area-conhecimento.response';
+import { temCodigoPostgres } from '../../commons/database/codigo-postgres.util';
 
 @Injectable()
 export class AreaConhecimentoServiceCreate {
@@ -60,13 +57,8 @@ export class AreaConhecimentoServiceCreate {
 
       return AreaConhecimentoConverter.paraResponseDto(linha);
     } catch (erro) {
-      const codigo = (erro as { code?: string }).code;
-      if (codigo === CODIGO_PG_UNIQUE_VIOLATION) {
-        throw new ConflictException(
-          `Já existe uma área de conhecimento com o código CNPq "${dto.codigoCnpq}".`,
-        );
-      }
-      if (codigo === CODIGO_PG_RLS_VIOLATION) {
+      // Código CNPq ou nome duplicado seguem para o filtro global (mensagens-duplicidade.constants.ts).
+      if (temCodigoPostgres(erro, CODIGO_PG_RLS_VIOLATION)) {
         throw new ForbiddenException(
           "Sem permissão 'area_conhecimento_gerenciar' para cadastrar área de conhecimento.",
         );

@@ -1,4 +1,5 @@
 import { tratarResposta } from '../../constant/api/http.util';
+import { paraQueryString } from '../../constant/api/query-string.util';
 import type { AuthFetch } from '../../3-auth/type/auth.type';
 import type { ResultadoPaginado } from '../../constant/type/paginacao.type';
 import { desembrulharPaginado, TAMANHO_PAGINA_MAXIMO_API } from '../../constant/type/paginacao.type';
@@ -22,19 +23,6 @@ interface FiltroCampanha {
   idAreaConhecimento?: number;
   idUsuario?: number;
   tamanho?: number;
-}
-
-function paraQueryString(filtro?: FiltroCampanha): string {
-  if (!filtro) {
-    return '';
-  }
-  const params = new URLSearchParams();
-  if (filtro.status !== undefined) params.set('status', filtro.status);
-  if (filtro.idAreaConhecimento !== undefined) params.set('idAreaConhecimento', String(filtro.idAreaConhecimento));
-  if (filtro.idUsuario !== undefined) params.set('idUsuario', String(filtro.idUsuario));
-  if (filtro.tamanho !== undefined) params.set('tamanho', String(filtro.tamanho));
-  const texto = params.toString();
-  return texto ? `?${texto}` : '';
 }
 
 export const campanhaApi = {

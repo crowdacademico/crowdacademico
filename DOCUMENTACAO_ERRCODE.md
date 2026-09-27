@@ -6,7 +6,7 @@ Referência rápida dos `RAISE EXCEPTION` com ERRCODE customizado dos arquivos `
 
 **Nada foi alterado além disso**: nenhuma mensagem, nenhuma lógica, nenhuma trigger foi tocada - só a cláusula `USING ERRCODE` foi adicionada ao final de cada `RAISE EXCEPTION`. O diff é puramente aditivo (conferido linha a linha).
 
-Este documento traz a tabela de códigos e o **contrato do corpo de erro da API** (seção no fim): o Nest devolve `codigo` (o SQLSTATE) junto de `statusCode` e `message`, ver `postgres-exception.filter.ts`. A contagem de códigos não é citada aqui (hoje são 59: 90001 a 90019, 91001 a 91028, 92001 a 92010, 93001 e 93002); conte pelas tabelas abaixo.
+Este documento traz a tabela de códigos e o **contrato do corpo de erro da API** (seção no fim): o Nest devolve `codigo` (o SQLSTATE) junto de `statusCode` e `message`, ver `postgres-exception.filter.ts`. A contagem de códigos não é citada aqui (hoje são 75: 90001 a 90021, 91001 a 91028, 92001 a 92024, 93001 e 93002); conte pelas tabelas abaixo.
 
 ---
 
@@ -46,6 +46,8 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 90017 | `fn_valida_soma_pesos_score_config` | `score_config` | Soma dos pesos raiz precisa ser exatamente 100 (23-09-2026) |
 | 90018 | `fn_valida_cobertura_score_rotulo` | `score_rotulo` | Faixas ativas precisam cobrir 0-100 sem buraco nem sobreposição (23-09-2026) |
 | 90019 | `fn_valida_pares_min_max_configuracoes` | `configuracoes` | O mínimo de um par (prazo, orçamento, cronograma, tamanho de arquivo) não pode ser maior que o máximo (constraint trigger, roda no `COMMIT`). Leva `dados` no corpo: `chaveMinimo`, `valorMinimo`, `chaveMaximo`, `valorMaximo` |
+| 90020 | `suspender_usuario` / `suspender_pesquisador` | `usuario` / `perfil_pesquisador` | Motivo da suspensão é obrigatório (27-09-2026) |
+| 90021 | `criar_campanha_para_outro` | `campanha` | O usuário escolhido não é um pesquisador ativo (27-09-2026) |
 
 ## 91xxx - Conflito de estado/regra de negócio (409)
 
@@ -95,6 +97,19 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 92009 | `fn_valida_transicao_campanha` | `campanha` | Pesquisador suspenso não pode enviar nem reenviar campanha para aprovação (21-09-2026) |
 | 92010 | `deslizar_datas_campanha` | `campanha` | Só o dono (ou quem tem `campanha_editar`) reagenda datas de campanha em rascunho ou rejeitada (21-09-2026) |
 | 92011 | `contar_metricas_dashboard` | `dashboard` (várias tabelas) | Só quem tem `relatorio_visualizar` recebe as métricas do painel (25-09-2026) |
+| 92012 | `liberar_bloqueio_login` | `usuario` | Sem permissão para desbloquear login (27-09-2026) |
+| 92013 | `excluir_conta_usuario` | `usuario` | Sem permissão para excluir a conta de outro usuário (27-09-2026) |
+| 92014 | `suspender_pesquisador` | `perfil_pesquisador` | Sem permissão para suspender pesquisador (27-09-2026) |
+| 92015 | `reativar_pesquisador` | `perfil_pesquisador` | Sem permissão para reativar pesquisador (27-09-2026) |
+| 92016 | `corrigir_cpf_pesquisador` | `perfil_pesquisador` | Sem permissão para corrigir CPF de pesquisador (27-09-2026) |
+| 92017 | `criar_perfil_pesquisador_para_outro` | `perfil_pesquisador` | Sem permissão para criar perfil de pesquisador em nome de outro usuário (27-09-2026) |
+| 92018 | `criar_campanha_para_outro` | `campanha` | Sem permissão para criar campanha em nome de outro pesquisador (27-09-2026) |
+| 92019 | `forcar_exclusao_campanha` | `campanha` | Sem permissão para excluir campanha à força (27-09-2026) |
+| 92020 | `suspender_usuario` | `usuario` | Sem permissão para suspender usuário (27-09-2026) |
+| 92021 | `revogar_suspensao_usuario` | `usuario` | Sem permissão para revogar suspensão de usuário (27-09-2026) |
+| 92022 | `suspender_papel_usuario` | `usuario_papel` | Sem permissão para suspender papel de usuário (27-09-2026) |
+| 92023 | `revogar_suspensao_papel_usuario` | `usuario_papel` | Sem permissão para revogar suspensão de papel de usuário (27-09-2026) |
+| 92024 | `alterar_perfil_pesquisador_de_outro` | `perfil_pesquisador` | Sem permissão para alterar perfil de pesquisador de outro usuário (27-09-2026) |
 
 ## 93xxx - Limite de taxa (429)
 

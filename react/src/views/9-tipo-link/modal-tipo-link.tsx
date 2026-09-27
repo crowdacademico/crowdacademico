@@ -1,34 +1,27 @@
-import { useId, useState } from 'react';
+import { useState } from 'react';
 import { BadgeBooleano } from '../../components/crud/badge-booleano';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { confirmarSaida, useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
+import { RodapeAcoes } from '../../components/crud/rodape-acoes';
+import { ModalExcluirItem } from '../../components/crud/modal-excluir-item';
+import { Campo } from '../../components/input/campo';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
+import { CaixaMarcacao } from '../../components/input/caixa-marcacao';
+import { EscoposTipoLink } from './escopos-tipo-link';
 import { tipoLinkApi } from '../../services/9-tipo-link/api/tipo-link.api';
-import { LIMITE_NOME_TIPO_LINK } from '../../services/9-tipo-link/constants/tipo-link.constants';
+import {
+  DICA_DOMINIOS_TIPO_LINK,
+  DICA_REGEX_TIPO_LINK,
+  LIMITE_NOME_TIPO_LINK,
+  paraDominios,
+  regexValida,
+} from '../../services/9-tipo-link/constants/tipo-link.constants';
+import { useEnvio } from '../../services/constant/hook/use-envio';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { TipoLinkResponse } from '../../services/9-tipo-link/type/tipo-link.type';
-
-function regexValida(padrao: string): boolean {
-  if (!padrao) {
-    return true;
-  }
-  try {
-    new RegExp(padrao);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function paraDominios(texto: string): string[] {
-  return texto
-    .split(',')
-    .map((valor) => valor.trim())
-    .filter(Boolean);
-}
 
 // Consultar/Alterar/Excluir em modal: recebem a linha (`tipo: TipoLinkResponse`) inteira do chamador, mesmo
 // motivo de modal-motivo-denuncia.tsx. Criar fica em arquivo separado.
@@ -62,9 +55,7 @@ export function ModalConsultarTipoLink({ tipo, aoFechar }: ModalConsultarTipoLin
       ]}
       aoFechar={aoFechar}
       rodape={
-        <button type="button" onClick={aoFechar} className="btn btn-secondary w-full max-w-sm ml-auto">
-          Fechar
-        </button>
+        <RodapeAcoes aoCancelar={aoFechar} rotuloCancelar="Fechar" />
       }
     >
       <SecaoFicha titulo="Dados">
@@ -94,7 +85,8 @@ interface ModalAlterarTipoLinkProps {
 // academico() lê pra reconhecer Lattes/ORCID.
 export function ModalAlterarTipoLink({ auth, tipo, aoFechar, aoAtualizado }: ModalAlterarTipoLinkProps) {
   const { mostrar } = useToast();
-  const { erro, reportarErro, limparErro } = useErroToast();
+  const { erro, reportarErro, limparErro, errosCampo, limparErroCampo } = useErroToast();
+  const { ocupado: enviando, executar: executarEnviando } = useEnvio(reportarErro, limparErro);
   const [nome, setNome] = useState(tipo.nome);
   const [ativo, setAtivo] = useState(tipo.ativo);
   const [regex, setRegex] = useState(tipo.regex ?? '');
@@ -102,7 +94,6 @@ export function ModalAlterarTipoLink({ auth, tipo, aoFechar, aoAtualizado }: Mod
   const [permitePerfil, setPermitePerfil] = useState(tipo.permitePerfil);
   const [permiteAtualizacao, setPermiteAtualizacao] = useState(tipo.permiteAtualizacao);
   const [permiteRecompensa, setPermiteRecompensa] = useState(tipo.permiteRecompensa);
-  const [enviando, setEnviando] = useState(false);
 
   const sujo =
     nome !== tipo.nome ||
@@ -115,11 +106,6 @@ export function ModalAlterarTipoLink({ auth, tipo, aoFechar, aoAtualizado }: Mod
   useAvisoAlteracaoNaoSalva(sujo);
 
   const regexInvalida = regex.length > 0 && !regexValida(regex);
-  // aria-describedby: ver modal-criar-area-conhecimento.tsx.
-  const idMensagemRegex = useId();
-  const idNome = useId();
-  const idDominios = useId();
-  const idRegex = useId();
   const nenhumEscopoMarcado = !permitePerfil && !permiteAtualizacao && !permiteRecompensa;
 
   const fechar = () => {
@@ -130,9 +116,7 @@ export function ModalAlterarTipoLink({ auth, tipo, aoFechar, aoAtualizado }: Mod
   };
 
   const aoSalvar = async () => {
-    limparErro();
-    setEnviando(true);
-    try {
+    await executarEnviando(async () => {
       await tipoLinkApi.atualizar(auth.authFetch, tipo.idTipolink, {
         nome,
         ativo,
@@ -145,11 +129,7 @@ export function ModalAlterarTipoLink({ auth, tipo, aoFechar, aoAtualizado }: Mod
       mostrar('Tipo de link alterado com sucesso.', `ID: ${tipo.idTipolink} foi alterado`);
       aoAtualizado();
       aoFechar();
-    } catch (erroRequisicao) {
-      reportarErro(erroRequisicao);
-    } finally {
-      setEnviando(false);
-    }
+    });
   };
 
   return (
@@ -157,115 +137,93 @@ export function ModalAlterarTipoLink({ auth, tipo, aoFechar, aoAtualizado }: Mod
       titulo={`Alterar "${tipo.nome}"`}
       aoFechar={fechar}
       rodape={
-        <div className="flex gap-3 max-w-sm ml-auto">
-          <button type="button" onClick={fechar} className="btn btn-secondary flex-1">
-            Cancelar
-          </button>
-          <button
-            type="button"
-            onClick={() => void aoSalvar()}
-            disabled={enviando || !sujo || regexInvalida || nenhumEscopoMarcado || nome.trim() === ''}
-            className="btn btn-primary flex-1"
-          >
-            {enviando ? 'Salvando...' : 'Salvar'}
-          </button>
-        </div>
+        <RodapeAcoes
+          aoCancelar={fechar}
+          acao={{
+            rotulo: 'Salvar',
+            rotuloOcupado: 'Salvando...',
+            ocupado: enviando,
+            desabilitado: !sujo || regexInvalida || nenhumEscopoMarcado || nome.trim() === '',
+            aoClicar: () => void aoSalvar(),
+          }}
+        />
       }
+      erro={erro}
     >
-      {erro && <p className="texto-erro text-sm font-bold text-center">{erro}</p>}
-
       <SecaoFicha titulo="Dados">
         <CampoSomenteLeitura rotulo="Código" valor={tipo.codigo} />
       </SecaoFicha>
 
       <SecaoFicha titulo="Editar">
-        <div className="sm:col-span-2">
-          <label htmlFor={idNome} className="rotulo-campo">Nome</label>
-          <input
-            id={idNome}
-            type="text"
-            value={nome}
-            onChange={(evento) => setNome(evento.target.value)}
-            required
-            maxLength={LIMITE_NOME_TIPO_LINK}
-            className="input-padrao"
-          />
-        </div>
-
-        <div className="sm:col-span-2">
-          <label htmlFor={idDominios} className="rotulo-campo">Domínios permitidos</label>
-          <input
-            id={idDominios}
-            type="text"
-            value={dominioTexto}
-            onChange={(evento) => setDominioTexto(evento.target.value)}
-            placeholder="ex.: github.com, gist.github.com"
-            className="input-padrao"
-          />
-          <p className="text-xs texto-fraco mt-1">
-            Mecanismo de validação principal: o host da URL precisa estar nesta lista. Um ou
-            mais domínios separados por vírgula. Deixe em branco pra aceitar qualquer domínio.
-          </p>
-        </div>
-
-        <div className="sm:col-span-2">
-          <label htmlFor={idRegex} className="rotulo-campo">Regex de validação (opcional)</label>
-          <input
-            id={idRegex}
-            type="text"
-            value={regex}
-            onChange={(evento) => setRegex(evento.target.value)}
-            aria-invalid={regexInvalida}
-            aria-describedby={idMensagemRegex}
-            className={'input-padrao font-mono' + (regexInvalida ? ' borda-erro' : '')}
-          />
-          {regexInvalida ? (
-            <p id={idMensagemRegex} className="text-xs texto-erro font-semibold mt-1">
-              Isto não é uma expressão regular válida.
-            </p>
-          ) : (
-            <p id={idMensagemRegex} className="text-xs texto-fraco mt-1">
-              Complemento opcional aos domínios acima. Deixe em branco quando o domínio já for
-              suficiente.
-            </p>
+        <Campo rotulo="Nome" erro={errosCampo.nome} className="sm:col-span-2">
+          {({ atributos, classeErro }) => (
+            <input
+              {...atributos}
+              type="text"
+              value={nome}
+              onChange={(evento) => {
+                setNome(evento.target.value);
+                limparErroCampo('nome');
+              }}
+              required
+              maxLength={LIMITE_NOME_TIPO_LINK}
+              className={'input-padrao' + classeErro}
+            />
           )}
-        </div>
+        </Campo>
 
-        <label className="sm:col-span-2 flex items-center gap-2 text-sm font-semibold texto-padrao">
-          <input type="checkbox" checked={ativo} onChange={(evento) => setAtivo(evento.target.checked)} />
-          Ativo
-        </label>
-
-        <div className="sm:col-span-2">
-          <span className="rotulo-campo">Onde este tipo pode ser usado</span>
-          <div className="space-y-2 mt-1">
-            <label className="flex items-center gap-2 text-sm font-semibold texto-padrao">
-              <input type="checkbox" checked={permitePerfil} onChange={(evento) => setPermitePerfil(evento.target.checked)} />
-              Perfil do pesquisador
-            </label>
-            <label className="flex items-center gap-2 text-sm font-semibold texto-padrao">
-              <input
-                type="checkbox"
-                checked={permiteAtualizacao}
-                onChange={(evento) => setPermiteAtualizacao(evento.target.checked)}
-              />
-              Atualização de campanha
-            </label>
-            <label className="flex items-center gap-2 text-sm font-semibold texto-padrao">
-              <input
-                type="checkbox"
-                checked={permiteRecompensa}
-                onChange={(evento) => setPermiteRecompensa(evento.target.checked)}
-              />
-              Recompensa
-            </label>
-          </div>
-          {nenhumEscopoMarcado && (
-            <p className="text-xs texto-erro font-semibold mt-1">
-              Pelo menos uma opção precisa ficar marcada.
-            </p>
+        <Campo
+          rotulo="Domínios permitidos"
+          erro={errosCampo.dominio}
+          dica={DICA_DOMINIOS_TIPO_LINK}
+          className="sm:col-span-2"
+        >
+          {({ atributos, classeErro }) => (
+            <input
+              {...atributos}
+              type="text"
+              value={dominioTexto}
+              onChange={(evento) => {
+                setDominioTexto(evento.target.value);
+                limparErroCampo('dominio');
+              }}
+              placeholder="ex.: github.com, gist.github.com"
+              className={'input-padrao' + classeErro}
+            />
           )}
-        </div>
+        </Campo>
+
+        <Campo
+          rotulo="Regex de validação (opcional)"
+          erro={regexInvalida ? 'Isto não é uma expressão regular válida.' : errosCampo.regex}
+          dica={DICA_REGEX_TIPO_LINK}
+          className="sm:col-span-2"
+        >
+          {({ atributos, classeErro }) => (
+            <input
+              {...atributos}
+              type="text"
+              value={regex}
+              onChange={(evento) => {
+                setRegex(evento.target.value);
+                limparErroCampo('regex');
+              }}
+              className={'input-padrao font-mono' + classeErro}
+            />
+          )}
+        </Campo>
+
+        <CaixaMarcacao rotulo="Ativo" marcado={ativo} aoMudar={setAtivo} className="sm:col-span-2" />
+
+        <EscoposTipoLink
+          className="sm:col-span-2"
+          permitePerfil={permitePerfil}
+          permiteAtualizacao={permiteAtualizacao}
+          permiteRecompensa={permiteRecompensa}
+          aoMudarPerfil={setPermitePerfil}
+          aoMudarAtualizacao={setPermiteAtualizacao}
+          aoMudarRecompensa={setPermiteRecompensa}
+        />
       </SecaoFicha>
     </ModalFicha>
   );
@@ -279,63 +237,21 @@ interface ModalExcluirTipoLinkProps {
 }
 
 export function ModalExcluirTipoLink({ auth, tipo, aoFechar, aoExcluido }: ModalExcluirTipoLinkProps) {
-  const { mostrar } = useToast();
-  const { erro, reportarErro, limparErro } = useErroToast();
-  const [excluindo, setExcluindo] = useState(false);
-
-  const excluir = async () => {
-    limparErro();
-    setExcluindo(true);
-    try {
-      await tipoLinkApi.remover(auth.authFetch, tipo.idTipolink);
-      mostrar('Tipo de link excluído com sucesso.', `ID: ${tipo.idTipolink} foi excluído`);
-      aoExcluido();
-      aoFechar();
-    } catch (erroRequisicao) {
-      reportarErro(erroRequisicao);
-    } finally {
-      setExcluindo(false);
-    }
-  };
-
   return (
-    <ModalFicha
-      titulo={`Excluir "${tipo.nome}"`}
-      subtitulo="Esta ação não pode ser desfeita."
-      aoFechar={aoFechar}
-      rodape={
-        <div className="flex gap-3 max-w-sm ml-auto">
-          <button type="button" onClick={aoFechar} className="btn btn-secondary flex-1">
-            Cancelar
-          </button>
-          <button
-            type="button"
-            onClick={() => void excluir()}
-            disabled={excluindo}
-            className="btn btn-danger flex-1"
-          >
-            {excluindo ? 'Excluindo...' : 'Confirmar exclusão'}
-          </button>
-        </div>
+    <ModalExcluirItem
+      nome={tipo.nome}
+      campos={
+        <>
+          <CampoFicha rotulo="Código" valor={tipo.codigo} />
+          <CampoFicha rotulo="Nome" valor={tipo.nome} largura="cheia" />
+        </>
       }
-    >
-      {erro && <p className="texto-erro text-sm font-bold text-center">{erro}</p>}
-
-      <SecaoFicha titulo="O que será excluído">
-        <CampoFicha rotulo="Código" valor={tipo.codigo} />
-        <CampoFicha rotulo="Nome" valor={tipo.nome} largura="cheia" />
-      </SecaoFicha>
-
-      <div className="rounded-lg border borda-forte fundo-erro p-4 text-sm texto-erro">
-        <p className="font-bold mb-1">
-          <i className="fa-solid fa-circle-info mr-1"></i> O que acontece de verdade
-        </p>
-        <p>
-          Se este tipo ainda estiver em uso em algum perfil, atualização de campanha ou
-          recompensa, a exclusão é bloqueada pelo próprio banco - desative-o em vez de excluir.
-          Se não estiver em uso, some do catálogo pra sempre, sem exclusão lógica.
-        </p>
-      </div>
-    </ModalFicha>
+      explicacao="Se este tipo ainda estiver em uso em algum perfil, atualização de campanha ou recompensa, a exclusão é bloqueada pelo próprio banco: desative-o em vez de excluir. Se não estiver em uso, some do catálogo pra sempre, sem exclusão lógica."
+      remover={() => tipoLinkApi.remover(auth.authFetch, tipo.idTipolink)}
+      mensagemSucesso="Tipo de link excluído com sucesso."
+      detalheSucesso={`ID: ${tipo.idTipolink} foi excluído`}
+      aoFechar={aoFechar}
+      aoExcluido={aoExcluido}
+    />
   );
 }

@@ -17,7 +17,7 @@ export class AuthControllerLogin {
   // ataque espalhado por várias contas diferentes não aciona o bloqueio do banco, mas aciona este.
   //
   // Limite maior fora de produção: o <dev> "Entrar como" (dev-login-rapido) dispara um POST /auth/login por
-  // clique, e tem 7 contas no dropdown: testar 6+ delas em menos de 1 minuto (uso normal do botão) esbarraria
+  // clique, e tem 6 contas no dropdown: testar todas elas em menos de 1 minuto (uso normal do botão) esbarraria
   // nos 5/60s e travaria, em silêncio, TODOS os logins (o limite é por IP, não por conta) pelo resto da janela.
   // 5/60s vale em produção (NODE_ENV=production); em dev fica 30/60s, folgado o bastante para passear pelo
   // dropdown inteiro.

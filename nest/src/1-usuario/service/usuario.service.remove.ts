@@ -1,4 +1,4 @@
-import { ForbiddenException, Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { sql } from 'kysely';
 import { DatabaseService } from '../../commons/database/database.service';
 import { ARMAZENAMENTO_SERVICE } from '../../commons/storage/storage.constants';
@@ -34,13 +34,7 @@ export class UsuarioServiceRemove {
     // caminho é a função excluir_conta_usuario(), que exige
     // p_id_usuario = id_usuario_atual() OU a permissão 'usuario_excluir'.
     // Controller aplica RequireAuthGuard (3-auth) - sem login, nem chega aqui.
-    try {
-      await sql`SELECT public.excluir_conta_usuario(${idUsuario})`.execute(db);
-    } catch (erro) {
-      throw new ForbiddenException(
-        (erro as Error).message || 'Sem permissão para excluir esta conta.',
-      );
-    }
+    await sql`SELECT public.excluir_conta_usuario(${idUsuario})`.execute(db);
 
     // A função SQL já desativa (ativo=false) a linha de `arquivo` vinculada como foto de perfil, na MESMA
     // transação da exclusão da conta (ver 03_funcoes_seguranca.sql): isso cobre a CONSISTÊNCIA DE DADOS,

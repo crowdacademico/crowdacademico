@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { textoSeguro } from '../../../services/constant/utils/formatacao.util';
+import { formatarDataHora, textoSeguro } from '../../../services/constant/utils/formatacao.util';
 import type { LogAuditoriaResponse, OperacaoLogAuditoria } from '../../../services/27-log-auditoria/type/log-auditoria.type';
 
 // Últimas alterações de uma tabela do banco (log_auditoria), mais recente primeiro. Só leitura. Usada pelo
@@ -65,7 +65,7 @@ export function TabelaHistoricoAlteracoes({ linhas, campoRenomeio }: TabelaHisto
                 <td>{linha.camposAlterados ? linha.camposAlterados.join(', ') : ''}</td>
               )}
               <td>{linha.nomeResponsavel ?? 'Sistema'}</td>
-              <td>{new Date(linha.ocorridoEm).toLocaleString('pt-BR')}</td>
+              <td>{formatarDataHora(linha.ocorridoEm)}</td>
             </tr>
           ))}
           {linhas.length === 0 && (

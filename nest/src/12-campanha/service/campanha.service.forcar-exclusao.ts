@@ -1,8 +1,4 @@
-import {
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { sql } from 'kysely';
 import { DatabaseService } from '../../commons/database/database.service';
 
@@ -16,22 +12,10 @@ export class CampanhaServiceForcarExclusao {
   constructor(private readonly database: DatabaseService) {}
 
   async executar(id: number): Promise<void> {
-    let excluiu: boolean;
-    try {
-      const resultado = await sql<{ forcar_exclusao_campanha: boolean }>`
-        SELECT public.forcar_exclusao_campanha(${id})
-      `.execute(this.database.getDb());
-      excluiu = resultado.rows[0].forcar_exclusao_campanha;
-    } catch (erro) {
-      // Única RAISE EXCEPTION da função é a checagem de permissão (sem
-      // ERRCODE customizado, P0001).
-      if ((erro as { code?: string }).code === 'P0001') {
-        throw new ForbiddenException((erro as Error).message);
-      }
-      throw erro;
-    }
-
-    if (!excluiu) {
+    const resultado = await sql<{ forcar_exclusao_campanha: boolean }>`
+      SELECT public.forcar_exclusao_campanha(${id})
+    `.execute(this.database.getDb());
+    if (!resultado.rows[0].forcar_exclusao_campanha) {
       throw new NotFoundException('Campanha não encontrada.');
     }
   }

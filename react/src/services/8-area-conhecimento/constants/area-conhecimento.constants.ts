@@ -3,3 +3,7 @@
 // o tamanho real da coluna no banco. Compartilhado entre Criar e Alterar: se a coluna crescer um dia, corrige
 // aqui e os dois formulários acompanham juntos.
 export const LIMITE_NOME_AREA_CONHECIMENTO = 100;
+
+// Formato oficial do código CNPq (grande área.área.subárea.especialidade, sempre 2 dígitos por nível, ex.:
+// '1.03.00.00').
+export const REGEX_CODIGO_CNPQ = /^\d{1,2}\.\d{2}\.\d{2}\.\d{2}$/;

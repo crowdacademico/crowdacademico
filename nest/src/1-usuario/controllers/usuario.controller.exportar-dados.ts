@@ -1,9 +1,10 @@
-import { Controller, Get, Header, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Header, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-import type { Request } from 'express';
 import { RequireAuthGuard } from '../../3-auth/guards/require-auth.guard';
 import { ExportarDadosThrottlerGuard } from '../guards/exportar-dados-throttler.guard';
 import { UsuarioServiceExportarDados } from '../service/usuario.service.exportar-dados';
+import { UsuarioAtual } from '../../commons/auth/usuario-atual.decorator';
+import type { UsuarioAutenticado } from '../../commons/auth/usuario-autenticado.interface';
 
 // LGPD Art. 18 (portabilidade/acesso), RF-016: exportação de dados.
 //
@@ -18,7 +19,7 @@ export class UsuarioControllerExportarDados {
 
   // RequireAuthGuard ANTES do throttler, de propósito - garante que
   // `request.user` sempre existe quando ExportarDadosThrottlerGuard tenta
-  // ler `request.user.idUsuario` (guards de um mesmo @UseGuards() rodam na
+  // ler `usuario.idUsuario` (guards de um mesmo @UseGuards() rodam na
   // ordem do array). @Throttle sobrescreve o default genérico do módulo
   // (app.module.ts, só rede de segurança) pro limite certo aqui: 1 por
   // hora, por CONTA (ver comentário completo em
@@ -29,7 +30,7 @@ export class UsuarioControllerExportarDados {
   // é o tipo de conteúdo que não pode ficar guardado em nenhum intermediário.
   @Header('Cache-Control', 'no-store')
   @Get('eu/exportar-dados')
-  exportar(@Req() request: Request) {
-    return this.service.executar(request.user!.idUsuario);
+  exportar(@UsuarioAtual() usuario: UsuarioAutenticado) {
+    return this.service.executar(usuario.idUsuario);
   }
 }

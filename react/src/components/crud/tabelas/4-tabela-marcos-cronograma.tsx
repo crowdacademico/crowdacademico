@@ -1,5 +1,6 @@
 import { TabelaEditavel } from './tabela-editavel';
 import type { ColunaEditavel } from './tabela-editavel';
+import { formatarData } from '../../../services/constant/utils/formatacao.util';
 import type { MarcoCronogramaResponse } from '../../../services/14-marco-cronograma/type/marco-cronograma.type';
 
 // Marcos do cronograma de uma campanha (título e data prevista), com edição na linha. Usada pelo painel de
@@ -17,7 +18,6 @@ interface FormMarco {
 
 const FORM_VAZIO: FormMarco = { titulo: '', dataPrevista: '' };
 
-const dataBr = (iso: string) => new Date(iso).toLocaleDateString('pt-BR');
 
 const paraDados = (form: FormMarco): DadosMarco | null =>
   form.titulo && form.dataPrevista ? { titulo: form.titulo, dataPrevista: new Date(form.dataPrevista).toISOString() } : null;
@@ -54,7 +54,7 @@ export function TabelaMarcosCronograma({
     },
     {
       rotulo: 'Data prevista',
-      exibir: (marco) => dataBr(marco.dataPrevista),
+      exibir: (marco) => formatarData(marco.dataPrevista),
       campo: (form, mudar) => (
         <input
           type="date"
@@ -107,7 +107,7 @@ export function TabelaMarcosCronograma({
           titulo: 'Marco de cronograma',
           secoes: [
             { titulo: 'Título', conteudo: marco.titulo },
-            { titulo: 'Data prevista', conteudo: dataBr(marco.dataPrevista) },
+            { titulo: 'Data prevista', conteudo: formatarData(marco.dataPrevista) },
           ],
         })}
       />

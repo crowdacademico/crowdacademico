@@ -1,7 +1,8 @@
-import { Controller, Get, Req, UseGuards } from '@nestjs/common';
-import type { Request } from 'express';
+import { Controller, Get, UseGuards } from '@nestjs/common';
 import { RequireAuthGuard } from '../../3-auth/guards/require-auth.guard';
 import { SeguirCampanhaServiceFindAll } from '../service/seguir-campanha.service.findall';
+import { UsuarioAtual } from '../../commons/auth/usuario-atual.decorator';
+import type { UsuarioAutenticado } from '../../commons/auth/usuario-autenticado.interface';
 
 @Controller('seguir-campanha')
 export class SeguirCampanhaControllerFindAll {
@@ -9,7 +10,7 @@ export class SeguirCampanhaControllerFindAll {
 
   @Get()
   @UseGuards(RequireAuthGuard)
-  listar(@Req() request: Request) {
-    return this.service.executar(request.user!.idUsuario);
+  listar(@UsuarioAtual() usuario: UsuarioAutenticado) {
+    return this.service.executar(usuario.idUsuario);
   }
 }

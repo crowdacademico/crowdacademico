@@ -1,15 +1,9 @@
-import {
-  ConflictException,
-  ForbiddenException,
-  Injectable,
-} from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
-import {
-  CODIGO_PG_UNIQUE_VIOLATION,
-  CODIGO_PG_RLS_VIOLATION,
-} from '../../commons/database/postgres-exception.filter';
+import { CODIGO_PG_RLS_VIOLATION } from '../../commons/database/postgres-exception.filter';
 import { TermoUsoRequestCriar } from '../dto/request/termo-uso.request-criar';
 import { TermoUsoResponse } from '../dto/response/termo-uso.response';
+import { temCodigoPostgres } from '../../commons/database/codigo-postgres.util';
 
 // Publicar versão nova NUNCA ativa sozinha: o fluxo real é criar rascunho, a "staff" revisar/procurar erro de
 // português, e SÓ DEPOIS o administrador tornar essa versão vigente manualmente (ver TermoUsoServiceAtivar). É
@@ -41,13 +35,8 @@ export class TermoUsoServiceCriar {
         criadoEm: linha.criado_em,
       };
     } catch (erro) {
-      const codigo = (erro as { code?: string }).code;
-      if (codigo === CODIGO_PG_UNIQUE_VIOLATION) {
-        throw new ConflictException(
-          `Já existe uma versão de Termos de Uso com o código "${dto.versao}" neste tipo.`,
-        );
-      }
-      if (codigo === CODIGO_PG_RLS_VIOLATION) {
+      // Versão duplicada no mesmo tipo segue para o filtro global (mensagens-duplicidade.constants.ts).
+      if (temCodigoPostgres(erro, CODIGO_PG_RLS_VIOLATION)) {
         throw new ForbiddenException(
           "Sem permissão 'termos_uso_gerenciar' para publicar uma nova versão dos Termos de Uso.",
         );

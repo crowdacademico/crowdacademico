@@ -4,13 +4,13 @@ import {
   Param,
   ParseIntPipe,
   Post,
-  Req,
   UseGuards,
 } from '@nestjs/common';
-import type { Request } from 'express';
 import { RequireAuthGuard } from '../../3-auth/guards/require-auth.guard';
 import { CampanhaRequestRejeitar } from '../dto/request/campanha.request-rejeitar';
 import { CampanhaServiceRejeitar } from '../service/campanha.service.rejeitar';
+import { UsuarioAtual } from '../../commons/auth/usuario-atual.decorator';
+import type { UsuarioAutenticado } from '../../commons/auth/usuario-autenticado.interface';
 
 @Controller('campanha')
 export class CampanhaControllerRejeitar {
@@ -21,8 +21,8 @@ export class CampanhaControllerRejeitar {
   rejeitar(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: CampanhaRequestRejeitar,
-    @Req() request: Request,
+    @UsuarioAtual() usuario: UsuarioAutenticado,
   ) {
-    return this.service.executar(id, request.user!.idUsuario, dto);
+    return this.service.executar(id, usuario.idUsuario, dto);
   }
 }

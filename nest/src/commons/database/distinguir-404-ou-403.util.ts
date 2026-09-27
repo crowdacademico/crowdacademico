@@ -19,22 +19,57 @@ import { DB } from './db.types';
 // CampanhaServiceEnviar) combinam a regra de permissão com uma regra de negócio na mesma frase ("só é possível
 // excluir uma campanha em rascunho, e só o dono..."), então forçar um "Sem permissão para {acao}" genérico
 // mudaria o texto que o usuário vê.
+type Filtro<TB extends keyof DB> = Partial<
+  Record<keyof DB[TB] & string, number | string | boolean>
+>;
+
+function condicoesDoFiltro<TB extends keyof DB>(filtro: Filtro<TB>) {
+  return sql.join(
+    Object.entries(filtro).map(
+      ([coluna, valor]) => sql`${sql.ref(coluna)} = ${valor}`,
+    ),
+    sql` AND `,
+  );
+}
+
 export async function distinguir404ou403<TB extends keyof DB>(
   db: Kysely<DB>,
   tabela: TB,
-  filtro: Partial<Record<keyof DB[TB] & string, number | string | boolean>>,
+  filtro: Filtro<TB>,
   mensagemNaoEncontrado: string,
   mensagemProibido: string,
 ): Promise<never> {
-  const condicoes = Object.entries(filtro).map(
-    ([coluna, valor]) => sql`${sql.ref(coluna)} = ${valor}`,
-  );
   const resultado = await sql<{ existe: number }>`
-    SELECT 1 AS existe FROM ${sql.table(tabela)} WHERE ${sql.join(condicoes, sql` AND `)} LIMIT 1
+    SELECT 1 AS existe FROM ${sql.table(tabela)} WHERE ${condicoesDoFiltro(filtro)} LIMIT 1
   `.execute(db);
 
   if (resultado.rows.length === 0) {
     throw new NotFoundException(mensagemNaoEncontrado);
   }
   throw new ForbiddenException(mensagemProibido);
+}
+
+// DELETE pelo filtro e, se nada foi apagado, 404 ou 403 (distinguir404ou403): o "excluir" inteiro de um registro
+// que nada mais referencia. Registro que outras tabelas podem estar usando vai por excluirComContagemDeUso, que
+// também diz onde está em uso.
+export async function excluirOu404ou403<TB extends keyof DB>(
+  db: Kysely<DB>,
+  tabela: TB,
+  filtro: Filtro<TB>,
+  mensagemNaoEncontrado: string,
+  mensagemProibido: string,
+): Promise<void> {
+  const resultado =
+    await sql`DELETE FROM ${sql.table(tabela)} WHERE ${condicoesDoFiltro(filtro)}`.execute(
+      db,
+    );
+  if ((resultado.numAffectedRows ?? 0n) === 0n) {
+    await distinguir404ou403(
+      db,
+      tabela,
+      filtro,
+      mensagemNaoEncontrado,
+      mensagemProibido,
+    );
+  }
 }

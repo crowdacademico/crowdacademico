@@ -1,8 +1,9 @@
-import { Body, Controller, Patch, Req, UseGuards } from '@nestjs/common';
-import type { Request } from 'express';
+import { Body, Controller, Patch, UseGuards } from '@nestjs/common';
 import { RequireAuthGuard } from '../../3-auth/guards/require-auth.guard';
 import { PerfilPesquisadorRequestUpdate } from '../dto/request/perfil-pesquisador.request-update';
 import { PerfilPesquisadorServiceUpdate } from '../service/perfil-pesquisador.service.update';
+import { UsuarioAtual } from '../../commons/auth/usuario-atual.decorator';
+import type { UsuarioAutenticado } from '../../commons/auth/usuario-autenticado.interface';
 
 // Sem `:id` de propósito - é sempre o próprio perfil de quem está logado
 // (a PK de perfil_pesquisador É id_usuario, um perfil por pessoa). Corrigir
@@ -15,8 +16,8 @@ export class PerfilPesquisadorControllerUpdate {
   @UseGuards(RequireAuthGuard)
   atualizar(
     @Body() dto: PerfilPesquisadorRequestUpdate,
-    @Req() request: Request,
+    @UsuarioAtual() usuario: UsuarioAutenticado,
   ) {
-    return this.service.executar(request.user!.idUsuario, dto);
+    return this.service.executar(usuario.idUsuario, dto);
   }
 }

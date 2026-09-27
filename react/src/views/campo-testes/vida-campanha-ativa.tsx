@@ -1,19 +1,20 @@
 // Campo de Testes é parte permanente do painel administrativo (não uma ferramenta de teste descartável), com o
 // mesmo padrão de dados/comportamento do resto do sistema (nunca uma versão simplificada à parte).
 
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { tratarResposta } from '../../services/constant/api/http.util';
-import { useFecharAoClicarFora } from '../../services/constant/hook/use-fechar-ao-clicar-fora';
 import { useConfiguracoes } from '../../services/11-configuracoes/hook/use-configuracoes';
 import { useChamadaRegistrada } from '../../services/campo-testes/hook/use-chamada-registrada';
 import { LIMITE_SUGESTOES_COMBOBOX } from '../../services/campo-testes/constants/campo-testes.constants';
+import { contemTermo, normalizarBusca } from '../../services/constant/utils/busca.util';
 import { RegistroChamadas } from './registro-chamadas';
 import { TabelaAtualizacoes } from '../../components/crud/tabelas/10-tabela-atualizacoes';
 import type { Atualizacao } from '../../components/crud/tabelas/10-tabela-atualizacoes';
 import { TabelaComentarios } from '../../components/crud/tabelas/11-tabela-comentarios';
 import type { Comentario } from '../../components/crud/tabelas/11-tabela-comentarios';
+import { CaixaBuscaSugestoes } from '../../components/input/caixa-busca-sugestoes';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { CampanhaResponse } from '../../services/12-campanha/type/campanha.type';
 import type { ResultadoPaginado } from '../../services/constant/type/paginacao.type';
@@ -45,9 +46,6 @@ export function VidaCampanhaAtiva({ auth }: PropsPagina) {
   const [campanhaFoco, setCampanhaFoco] = useState<number | null>(null);
   const [todasCampanhas, setTodasCampanhas] = useState<CampanhaResponse[]>([]);
   const [buscaCampanha, setBuscaCampanha] = useState('');
-  const idBuscaCampanha = useId();
-  const [sugestoesCampanhaAbertas, setSugestoesCampanhaAbertas] = useState(false);
-  const sugestoesCampanhaRef = useRef<HTMLDivElement>(null);
 
   const [campanha, setCampanha] = useState<CampanhaResponse | null>(null);
   const [nomesPorId, setNomesPorId] = useState<Map<number, string>>(new Map());
@@ -84,16 +82,12 @@ export function VidaCampanhaAtiva({ auth }: PropsPagina) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auth.carregando]);
 
-  // Fechar as sugestões da busca de campanha ao clicar fora: mesmo padrão do combobox "dono da campanha" em
-  // bancada-campanha.tsx (`useFecharAoClicarFora`).
-  useFecharAoClicarFora(sugestoesCampanhaRef, sugestoesCampanhaAbertas, () => setSugestoesCampanhaAbertas(false));
-
   // Busca por id OU pedaço do título (mesmo padrão do combobox de pesquisador em T2): até 5 resultados.
   const sugestoesCampanha = (() => {
-    const termo = buscaCampanha.trim().toLowerCase();
+    const termo = normalizarBusca(buscaCampanha);
     if (!termo) return [];
     return todasCampanhas
-      .filter((item) => String(item.idCampanha).includes(termo) || item.titulo.toLowerCase().includes(termo))
+      .filter((item) => String(item.idCampanha).includes(termo) || contemTermo(item.titulo, termo))
       .slice(0, LIMITE_SUGESTOES_COMBOBOX);
   })();
 
@@ -182,48 +176,25 @@ export function VidaCampanhaAtiva({ auth }: PropsPagina) {
         <h1 className="titulo-secao">Campo de Testes - Vida da Campanha Ativa</h1>
       </div>
 
-      {/* Busca própria de campanha: um só <input>, sempre (mesmo padrão do combobox "dono da campanha" de
-          bancada-campanha.tsx); o texto mostrado é a campanha escolhida, e digitar de novo invalida a
-          escolha atual até clicar numa sugestão. */}
-      <div className="relative mb-4 max-w-sm" ref={sugestoesCampanhaRef}>
-        <label htmlFor={idBuscaCampanha} className="rotulo-campo">Buscar campanha</label>
-        <input
-          id={idBuscaCampanha}
-          type="text"
-          value={buscaCampanha}
-          onChange={(evento) => {
-            setBuscaCampanha(evento.target.value);
-            setCampanhaFoco(null);
-            setSugestoesCampanhaAbertas(true);
-          }}
-          onFocus={() => setSugestoesCampanhaAbertas(true)}
-          placeholder="Digite o id ou o título..."
-          className="input-padrao"
-          autoComplete="off"
-        />
-        {sugestoesCampanhaAbertas && sugestoesCampanha.length > 0 && (
-          <div className="absolute left-0 right-0 mt-1 fundo-cartao border borda-padrao rounded-lg shadow-lg z-20 overflow-hidden">
-            {sugestoesCampanha.map((item) => (
-              <button
-                key={item.idCampanha}
-                type="button"
-                onClick={() => {
-                  setCampanhaFoco(item.idCampanha);
-                  setBuscaCampanha(item.titulo);
-                  setSugestoesCampanhaAbertas(false);
-                }}
-                className="w-full text-left px-3 py-2 text-sm border-b borda-padrao last:border-b-0 hover-fundo-marca-suave flex items-center justify-between gap-2"
-              >
-                <span className="texto-forte inline-flex items-baseline">
-                  <span className="inline-block w-16 shrink-0 tabular-nums">ID: {item.idCampanha}</span>
-                  <span>{item.titulo}</span>
-                </span>
-                <span className="badge badge-neutro">{item.status}</span>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+      <CaixaBuscaSugestoes
+        className="mb-4 max-w-sm"
+        rotulo="Buscar campanha"
+        placeholder="Digite o id ou o título..."
+        valor={buscaCampanha}
+        aoDigitar={(texto) => {
+          setBuscaCampanha(texto);
+          setCampanhaFoco(null);
+        }}
+        sugestoes={sugestoesCampanha.map((item) => ({
+          id: item.idCampanha,
+          texto: item.titulo,
+          extra: <span className="badge badge-neutro">{item.status}</span>,
+        }))}
+        aoEscolher={(sugestao) => {
+          setCampanhaFoco(sugestao.id);
+          setBuscaCampanha(sugestao.texto);
+        }}
+      />
 
       {!campanhaFoco && (
         <p className="texto-fraco">Nenhuma campanha selecionada ainda - busque uma acima (id ou título).</p>

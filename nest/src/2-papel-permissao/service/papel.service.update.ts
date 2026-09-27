@@ -1,17 +1,14 @@
 import {
-  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { distinguir404ou403 } from '../../commons/database/distinguir-404-ou-403.util';
 import { DatabaseService } from '../../commons/database/database.service';
-import {
-  CODIGO_PG_UNIQUE_VIOLATION,
-  CODIGO_PG_RLS_VIOLATION,
-} from '../../commons/database/postgres-exception.filter';
+import { CODIGO_PG_RLS_VIOLATION } from '../../commons/database/postgres-exception.filter';
 import { PapelRequestUpdate } from '../dto/request/papel.request-update';
 import { PapelResponse } from '../dto/response/papel.response';
+import { temCodigoPostgres } from '../../commons/database/codigo-postgres.util';
 
 @Injectable()
 export class PapelServiceUpdate {
@@ -55,11 +52,8 @@ export class PapelServiceUpdate {
       ) {
         throw erro;
       }
-      const codigo = (erro as { code?: string }).code;
-      if (codigo === CODIGO_PG_UNIQUE_VIOLATION) {
-        throw new ConflictException('Já existe um papel com este nome.');
-      }
-      if (codigo === CODIGO_PG_RLS_VIOLATION) {
+      // Nome duplicado segue para o filtro global (mensagens-duplicidade.constants.ts).
+      if (temCodigoPostgres(erro, CODIGO_PG_RLS_VIOLATION)) {
         throw new ForbiddenException(
           "Sem permissão 'papel_gerenciar' para renomear papéis.",
         );

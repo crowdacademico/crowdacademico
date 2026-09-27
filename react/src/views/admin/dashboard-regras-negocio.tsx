@@ -7,6 +7,7 @@ import { DESCRICAO_TIPO_TERMO, ROTULO_TIPO_TERMO, TIPOS_TERMO } from '../../serv
 import { ModalAlterarTermoUso } from '../5-termo-uso/modal-alterar-termo-uso';
 import { Tooltip } from '../../components/layout/tooltip';
 import { ModalDetalhe } from '../../components/crud/modal-detalhe';
+import { Carregando } from '../../components/layout/carregando';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { ConfiguracaoResponse } from '../../services/11-configuracoes/type/configuracao.type';
 import type { TermoUsoResponseAtivo, TipoTermo } from '../../services/5-termo-uso/type/termo-uso.type';
@@ -124,7 +125,7 @@ function CardTermoUso({ auth }: { auth: Pick<UseAuthReturn, 'authFetch'> }) {
   }, [auth.authFetch]);
 
   return (
-    <div className="fundo-cartao border borda-forte rounded-xl shadow-sm overflow-hidden">
+    <div className="cartao-painel overflow-hidden">
       <div className="px-5 py-3 border-b borda-padrao fundo-sutil flex items-center gap-2">
         <h2 className="subtitulo">Termo de Uso</h2>
         <Tooltip
@@ -218,10 +219,10 @@ export function DashboardRegrasNegocio({ auth }: DashboardRegrasNegocioProps) {
       <CardTermoUso auth={auth} />
 
       {grupos === null ? (
-        <p className="text-sm texto-fraco">Carregando...</p>
+        <Carregando />
       ) : (
         grupos.map(({ grupo, itens }) => (
-          <div key={grupo} className="fundo-cartao border borda-forte rounded-xl shadow-sm overflow-hidden">
+          <div key={grupo} className="cartao-painel overflow-hidden">
             <div className="px-5 py-3 border-b borda-padrao fundo-sutil flex items-center gap-2">
               <h2 className="subtitulo">{grupo}</h2>
               {grupo === 'Arquivo' && (

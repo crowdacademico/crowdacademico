@@ -72,6 +72,38 @@ $$;
 -- EXTENSÕES
 -- ============================================================
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+-- unaccent: base da comparação de nomes sem acento (texto_normalizado, logo abaixo). No Supabase as extensões
+-- moram no esquema `extensions`; num Postgres sem esse esquema (PGlite dos testes, Postgres local) vai para o
+-- padrão.
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = 'extensions') THEN
+        CREATE EXTENSION IF NOT EXISTS "unaccent" WITH SCHEMA extensions;
+    ELSE
+        CREATE EXTENSION IF NOT EXISTS "unaccent";
+    END IF;
+END
+$$;
+
+-- [01-A-1] texto_normalizado: o texto como ele é comparado para ver se "é o mesmo nome": sem acento, minúsculo,
+-- espaços repetidos viram um, sem espaço nas pontas ("  São   Paulo " -> "sao paulo"). Base dos índices únicos
+-- de nome dos catálogos (02, [02-C]). IMMUTABLE é exigência de índice; o search_path fixo garante que o
+-- dicionário `unaccent` seja sempre o mesmo, esteja a extensão em `public` ou em `extensions`.
+-- SECURITY DEFINER: o índice roda esta função como quem grava (app_nestjs), e o app_nestjs não tem USAGE no
+-- esquema `extensions` do Supabase; sem isso o unaccent "não existe" para ele e todo INSERT/UPDATE de nome de
+-- catálogo quebra. Assim só esta função enxerga a extensão, sem abrir o esquema inteiro para a aplicação.
+CREATE OR REPLACE FUNCTION public.texto_normalizado(valor TEXT)
+RETURNS TEXT
+LANGUAGE sql
+IMMUTABLE
+PARALLEL SAFE
+STRICT
+SECURITY DEFINER
+SET search_path = public, extensions
+AS $$
+    SELECT lower(unaccent('unaccent', btrim(regexp_replace(valor, '[[:space:]]+', ' ', 'g'))))
+$$;
 -- ============================================================
 -- ENUMS
 -- ============================================================

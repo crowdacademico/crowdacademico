@@ -4,6 +4,7 @@ import { CODIGO_PG_RLS_VIOLATION } from '../../commons/database/postgres-excepti
 import { MotivoDenunciaConverter } from '../dto/converter/motivo-denuncia.converter';
 import { MotivoDenunciaRequestCreate } from '../dto/request/motivo-denuncia.request-create';
 import { MotivoDenunciaResponse } from '../dto/response/motivo-denuncia.response';
+import { temCodigoPostgres } from '../../commons/database/codigo-postgres.util';
 
 @Injectable()
 export class MotivoDenunciaServiceCreate {
@@ -26,9 +27,9 @@ export class MotivoDenunciaServiceCreate {
 
       return MotivoDenunciaConverter.paraResponseDto(linha);
     } catch (erro) {
-      // Sem `codigo`, a tabela não tem nenhuma UNIQUE constraint própria: 23505 não é um caso possível aqui, só
-      // a checagem de RLS permanece.
-      if ((erro as { code?: string }).code === CODIGO_PG_RLS_VIOLATION) {
+      // Descrição duplicada no mesmo tipo (uq_motivo_denuncia_descricao_normalizada) segue para o filtro global,
+      // que tem a mensagem certa (mensagens-duplicidade.constants.ts); aqui fica só a checagem de RLS.
+      if (temCodigoPostgres(erro, CODIGO_PG_RLS_VIOLATION)) {
         throw new ForbiddenException(
           "Sem permissão 'motivo_denuncia_gerenciar' para cadastrar motivo de denúncia.",
         );

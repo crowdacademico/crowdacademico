@@ -3,12 +3,12 @@ import {
   Param,
   ParseIntPipe,
   Post,
-  Req,
   UseGuards,
 } from '@nestjs/common';
-import type { Request } from 'express';
 import { RequireAuthGuard } from '../../3-auth/guards/require-auth.guard';
 import { CampanhaServiceAprovar } from '../service/campanha.service.aprovar';
+import { UsuarioAtual } from '../../commons/auth/usuario-atual.decorator';
+import type { UsuarioAutenticado } from '../../commons/auth/usuario-autenticado.interface';
 
 @Controller('campanha')
 export class CampanhaControllerAprovar {
@@ -16,7 +16,10 @@ export class CampanhaControllerAprovar {
 
   @Post(':id/aprovar')
   @UseGuards(RequireAuthGuard)
-  aprovar(@Param('id', ParseIntPipe) id: number, @Req() request: Request) {
-    return this.service.executar(id, request.user!.idUsuario);
+  aprovar(
+    @Param('id', ParseIntPipe) id: number,
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+  ) {
+    return this.service.executar(id, usuario.idUsuario);
   }
 }

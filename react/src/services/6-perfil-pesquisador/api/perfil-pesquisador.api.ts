@@ -1,4 +1,5 @@
 import { tratarResposta } from '../../constant/api/http.util';
+import { paraQueryString } from '../../constant/api/query-string.util';
 import type { AuthFetch } from '../../3-auth/type/auth.type';
 import type { ResultadoPaginado } from '../../constant/type/paginacao.type';
 import { desembrulharPaginado, TAMANHO_PAGINA_MAXIMO_API } from '../../constant/type/paginacao.type';
@@ -23,18 +24,6 @@ interface FiltroPerfilPesquisador {
   statusPesquisador?: StatusPesquisador;
   tipoVinculo?: TipoVinculo;
   tamanho?: number;
-}
-
-function paraQueryString(filtro?: FiltroPerfilPesquisador): string {
-  if (!filtro) {
-    return '';
-  }
-  const params = new URLSearchParams();
-  if (filtro.statusPesquisador !== undefined) params.set('statusPesquisador', filtro.statusPesquisador);
-  if (filtro.tipoVinculo !== undefined) params.set('tipoVinculo', filtro.tipoVinculo);
-  if (filtro.tamanho !== undefined) params.set('tamanho', String(filtro.tamanho));
-  const texto = params.toString();
-  return texto ? `?${texto}` : '';
 }
 
 export const perfilPesquisadorApi = {

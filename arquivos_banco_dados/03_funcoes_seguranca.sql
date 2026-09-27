@@ -292,7 +292,7 @@ SET search_path = public
 AS $$
 BEGIN
     IF NOT public.tem_permissao('usuario_desbloquear') THEN
-        RAISE EXCEPTION 'Sem permissão para desbloquear login.';
+        RAISE EXCEPTION 'Sem permissão para desbloquear login.' USING ERRCODE = '92012';
     END IF;
 
     UPDATE usuario
@@ -361,7 +361,7 @@ DECLARE
     v_id_imagem_perfil INT;
 BEGIN
     IF NOT (p_id_usuario = public.id_usuario_atual() OR public.tem_permissao('usuario_excluir')) THEN
-        RAISE EXCEPTION 'Sem permissão para excluir a conta de outro usuário.';
+        RAISE EXCEPTION 'Sem permissão para excluir a conta de outro usuário.' USING ERRCODE = '92013';
     END IF;
 
     SELECT id_imagem_perfil INTO v_id_imagem_perfil
@@ -418,10 +418,10 @@ DECLARE
     v_linhas INT;
 BEGIN
     IF NOT public.tem_permissao('usuario_suspender') THEN
-        RAISE EXCEPTION 'Sem permissão para suspender pesquisador.';
+        RAISE EXCEPTION 'Sem permissão para suspender pesquisador.' USING ERRCODE = '92014';
     END IF;
     IF p_motivo IS NULL OR btrim(p_motivo) = '' THEN
-        RAISE EXCEPTION 'Motivo da suspensão é obrigatório.';
+        RAISE EXCEPTION 'Motivo da suspensão é obrigatório.' USING ERRCODE = '90020';
     END IF;
 
     UPDATE perfil_pesquisador
@@ -476,7 +476,7 @@ DECLARE
     v_linhas INT;
 BEGIN
     IF NOT public.tem_permissao('usuario_suspender') THEN
-        RAISE EXCEPTION 'Sem permissão para reativar pesquisador.';
+        RAISE EXCEPTION 'Sem permissão para reativar pesquisador.' USING ERRCODE = '92015';
     END IF;
 
     UPDATE perfil_pesquisador
@@ -512,7 +512,7 @@ DECLARE
     v_linhas INT;
 BEGIN
     IF NOT public.tem_permissao('perfil_pesquisador_corrigir_cpf') THEN
-        RAISE EXCEPTION 'Sem permissão para corrigir CPF de pesquisador.';
+        RAISE EXCEPTION 'Sem permissão para corrigir CPF de pesquisador.' USING ERRCODE = '92016';
     END IF;
 
     UPDATE perfil_pesquisador
@@ -547,7 +547,7 @@ SET search_path = public
 AS $$
 BEGIN
     IF NOT public.tem_permissao('perfil_pesquisador_criar_para_outro') THEN
-        RAISE EXCEPTION 'Sem permissão para criar perfil de pesquisador em nome de outro usuário.';
+        RAISE EXCEPTION 'Sem permissão para criar perfil de pesquisador em nome de outro usuário.' USING ERRCODE = '92017';
     END IF;
 
     INSERT INTO perfil_pesquisador (
@@ -588,14 +588,14 @@ DECLARE
     v_id_campanha INT;
 BEGIN
     IF NOT public.tem_permissao('campanha_criar_para_outro') THEN
-        RAISE EXCEPTION 'Sem permissão para criar campanha em nome de outro pesquisador.';
+        RAISE EXCEPTION 'Sem permissão para criar campanha em nome de outro pesquisador.' USING ERRCODE = '92018';
     END IF;
 
     IF NOT EXISTS (
         SELECT 1 FROM perfil_pesquisador
         WHERE id_usuario = p_id_usuario AND status_pesquisador = 'ativo'
     ) THEN
-        RAISE EXCEPTION 'O usuário escolhido não é um pesquisador ativo.';
+        RAISE EXCEPTION 'O usuário escolhido não é um pesquisador ativo.' USING ERRCODE = '90021';
     END IF;
 
     INSERT INTO campanha (
@@ -628,7 +628,7 @@ DECLARE
     v_linhas INT;
 BEGIN
     IF NOT public.tem_permissao('campanha_excluir_forcado') THEN
-        RAISE EXCEPTION 'Sem permissão para excluir campanha à força.';
+        RAISE EXCEPTION 'Sem permissão para excluir campanha à força.' USING ERRCODE = '92019';
     END IF;
 
     DELETE FROM campanha WHERE id_campanha = p_id_campanha;
@@ -654,10 +654,10 @@ SET search_path = public
 AS $$
 BEGIN
     IF NOT public.tem_permissao('usuario_suspender') THEN
-        RAISE EXCEPTION 'Sem permissão para suspender usuário.';
+        RAISE EXCEPTION 'Sem permissão para suspender usuário.' USING ERRCODE = '92020';
     END IF;
     IF p_motivo IS NULL OR btrim(p_motivo) = '' THEN
-        RAISE EXCEPTION 'Motivo da suspensão é obrigatório.';
+        RAISE EXCEPTION 'Motivo da suspensão é obrigatório.' USING ERRCODE = '90020';
     END IF;
 
     UPDATE usuario
@@ -684,7 +684,7 @@ SET search_path = public
 AS $$
 BEGIN
     IF NOT public.tem_permissao('usuario_suspender') THEN
-        RAISE EXCEPTION 'Sem permissão para revogar suspensão de usuário.';
+        RAISE EXCEPTION 'Sem permissão para revogar suspensão de usuário.' USING ERRCODE = '92021';
     END IF;
 
     UPDATE usuario
@@ -713,7 +713,7 @@ SET search_path = public
 AS $$
 BEGIN
     IF NOT public.tem_permissao('papel_gerenciar') THEN
-        RAISE EXCEPTION 'Sem permissão para suspender papel de usuário.';
+        RAISE EXCEPTION 'Sem permissão para suspender papel de usuário.' USING ERRCODE = '92022';
     END IF;
 
     UPDATE usuario_papel
@@ -730,7 +730,7 @@ SET search_path = public
 AS $$
 BEGIN
     IF NOT public.tem_permissao('papel_gerenciar') THEN
-        RAISE EXCEPTION 'Sem permissão para revogar suspensão de papel de usuário.';
+        RAISE EXCEPTION 'Sem permissão para revogar suspensão de papel de usuário.' USING ERRCODE = '92023';
     END IF;
 
     UPDATE usuario_papel
@@ -823,7 +823,7 @@ DECLARE
     v_linhas INT;
 BEGIN
     IF NOT public.tem_permissao('perfil_pesquisador_alterar_de_outro') THEN
-        RAISE EXCEPTION 'Sem permissão para alterar perfil de pesquisador de outro usuário.';
+        RAISE EXCEPTION 'Sem permissão para alterar perfil de pesquisador de outro usuário.' USING ERRCODE = '92024';
     END IF;
 
     UPDATE perfil_pesquisador

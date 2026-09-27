@@ -25,17 +25,24 @@ export function formatarReaisSemSimbolo(valor: string | number | null): string {
 // Só a MECÂNICA de formatar mora aqui: sempre 'pt-BR', sempre a mesma chamada de `Intl`. Qual das três
 // granularidades usar em qual tela continua decisão de cada view (varia de propósito: auditoria quer hora
 // exata, "membro desde" quer só mês/ano): cada call site escolhe a função certa para o próprio contexto.
+// Data sem hora ("2026-10-01", coluna DATE) vira meia-noite LOCAL. `new Date('2026-10-01')` leria como
+// meia-noite em UTC, que no Brasil ainda é o dia anterior: a tela mostraria 30/09.
+function paraData(iso: string): Date {
+  const soData = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  return soData ? new Date(Number(soData[1]), Number(soData[2]) - 1, Number(soData[3])) : new Date(iso);
+}
+
 export function formatarDataHora(iso: string | null | undefined): string {
-  return iso ? new Date(iso).toLocaleString('pt-BR') : 'Não definida';
+  return iso ? paraData(iso).toLocaleString('pt-BR') : 'Não definida';
 }
 
 export function formatarData(iso: string | null | undefined): string {
-  return iso ? new Date(iso).toLocaleDateString('pt-BR') : 'Não definida';
+  return iso ? paraData(iso).toLocaleDateString('pt-BR') : 'Não definida';
 }
 
 export function formatarMesAno(iso: string | null | undefined): string {
   return iso
-    ? new Date(iso).toLocaleDateString('pt-BR', { month: '2-digit', year: 'numeric' })
+    ? paraData(iso).toLocaleDateString('pt-BR', { month: '2-digit', year: 'numeric' })
     : 'Não definida';
 }
 

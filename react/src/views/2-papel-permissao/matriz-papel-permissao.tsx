@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Tooltip } from '../../components/layout/tooltip';
 import { TabelaPapelPermissao } from '../../components/crud/tabelas/6-tabela-papel-permissao';
 import { chaveCelula } from '../../services/2-papel-permissao/util/chave-celula-matriz.util';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
+import { useBuscar } from '../../services/constant/hook/use-buscar';
 import {
   papelApi,
   papelPermissaoApi,
@@ -49,40 +50,27 @@ interface MatrizPapelPermissaoProps {
 export function MatrizPapelPermissao({ authFetch }: MatrizPapelPermissaoProps) {
   const { mostrar } = useToast();
   const { erro, reportarErro, limparErro } = useErroToast();
-  const [papeis, setPapeis] = useState<PapelResponse[]>([]);
-  const [permissoes, setPermissoes] = useState<PermissaoResponse[]>([]);
-  const [concedidos, setConcedidos] = useState<Set<string>>(new Set());
-  const [carregando, setCarregando] = useState(true);
   const [celulaAlterando, setCelulaAlterando] = useState<string | null>(null);
 
-  const recarregar = useCallback(() => {
-    setCarregando(true);
-    limparErro();
-    Promise.all([
-      papelApi.listar(authFetch),
-      permissaoApi.listar(authFetch),
-      papelPermissaoApi.listar(authFetch),
-    ])
-      .then(([listaPapeis, listaPermissoes, vinculos]) => {
-        setPapeis([...listaPapeis].sort(ordenarPapeisPorPoder));
-        // Ordena pelo nome AMIGÁVEL, não pelo código cru: é o que aparece na tela, então é o que precisa estar
-        // em ordem alfabética visível para quem lê.
-        setPermissoes(
-          [...listaPermissoes].sort((a, b) =>
+  // Papéis do menor para o maior poder; permissões pelo nome AMIGÁVEL (é o que aparece na tela, então é o que
+  // precisa estar em ordem alfabética visível para quem lê).
+  const { dado, carregando, recarregar } = useBuscar(
+    () =>
+      Promise.all([papelApi.listar(authFetch), permissaoApi.listar(authFetch), papelPermissaoApi.listar(authFetch)]).then(
+        ([listaPapeis, listaPermissoes, vinculos]) => ({
+          papeis: [...listaPapeis].sort(ordenarPapeisPorPoder),
+          permissoes: [...listaPermissoes].sort((a, b) =>
             nomeAmigavelPermissao(a.nome).localeCompare(nomeAmigavelPermissao(b.nome)),
           ),
-        );
-        setConcedidos(new Set(vinculos.map((v) => chaveCelula(v.idPapel, v.idPermissao))));
-      })
-      .catch(reportarErro)
-      .finally(() => setCarregando(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authFetch]);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    recarregar();
-  }, [recarregar]);
+          concedidos: new Set(vinculos.map((v) => chaveCelula(v.idPapel, v.idPermissao))),
+        }),
+      ),
+    [authFetch],
+    { erros: { erro, reportarErro, limparErro } },
+  );
+  const papeis = dado?.papeis ?? [];
+  const permissoes = dado?.permissoes ?? [];
+  const concedidos = dado?.concedidos ?? new Set<string>();
 
   const alternar = async (papel: PapelResponse, permissao: PermissaoResponse, concedidoAtual: boolean) => {
     const { idPapel, nome: nomePapel } = papel;

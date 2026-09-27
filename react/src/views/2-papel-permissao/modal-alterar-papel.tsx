@@ -1,10 +1,13 @@
-import { useId, useState } from 'react';
+import { useState } from 'react';
 import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { confirmarSaida, useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
+import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
+import { Campo } from '../../components/input/campo';
 import { papelApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
+import { useEnvio } from '../../services/constant/hook/use-envio';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { PapelResponse } from '../../services/2-papel-permissao/type/papel-permissao.type';
 
@@ -25,9 +28,8 @@ interface ModalAlterarPapelProps {
 export function ModalAlterarPapel({ auth, papel, aoFechar, aoAtualizado }: ModalAlterarPapelProps) {
   const { mostrar } = useToast();
   const { erro, reportarErro, limparErro } = useErroToast();
+  const { ocupado: enviando, executar: executarEnviando } = useEnvio(reportarErro, limparErro);
   const [nome, setNome] = useState(papel.nome);
-  const [enviando, setEnviando] = useState(false);
-  const idNome = useId();
 
   const sujo = nome !== papel.nome;
   useAvisoAlteracaoNaoSalva(sujo);
@@ -40,18 +42,12 @@ export function ModalAlterarPapel({ auth, papel, aoFechar, aoAtualizado }: Modal
   };
 
   const aoSalvar = async () => {
-    limparErro();
-    setEnviando(true);
-    try {
+    await executarEnviando(async () => {
       await papelApi.atualizar(auth.authFetch, papel.idPapel, { nome });
       mostrar('Papel alterado com sucesso.', `ID: ${papel.idPapel} foi alterado`);
       aoAtualizado();
       aoFechar();
-    } catch (erroRequisicao) {
-      reportarErro(erroRequisicao);
-    } finally {
-      setEnviando(false);
-    }
+    });
   };
 
   return (
@@ -60,37 +56,34 @@ export function ModalAlterarPapel({ auth, papel, aoFechar, aoAtualizado }: Modal
       subtitulo="Só o nome exibido muda, o identificador interno usado pelas regras do sistema nunca é afetado."
       aoFechar={fechar}
       rodape={
-        <div className="flex gap-3 max-w-sm ml-auto">
-          <button type="button" onClick={fechar} className="btn btn-secondary flex-1">
-            Cancelar
-          </button>
-          <button
-            type="button"
-            onClick={() => void aoSalvar()}
-            disabled={enviando || !sujo || nome.trim() === ''}
-            className="btn btn-primary flex-1"
-          >
-            {enviando ? 'Salvando...' : 'Salvar'}
-          </button>
-        </div>
+        <RodapeAcoes
+          aoCancelar={fechar}
+          acao={{
+            rotulo: 'Salvar',
+            rotuloOcupado: 'Salvando...',
+            ocupado: enviando,
+            desabilitado: !sujo || nome.trim() === '',
+            aoClicar: () => void aoSalvar(),
+          }}
+        />
       }
+      erro={erro}
     >
-      {erro && <p className="texto-erro text-sm font-bold text-center">{erro}</p>}
-
       <CampoSomenteLeitura rotulo="id" valor={papel.idPapel} />
 
-      <div>
-        <label htmlFor={idNome} className="rotulo-campo">Nome</label>
-        <input
-          id={idNome}
-          type="text"
-          value={nome}
-          onChange={(evento) => setNome(evento.target.value)}
-          required
-          maxLength={50}
-          className="input-padrao"
-        />
-      </div>
+      <Campo rotulo="Nome">
+        {({ atributos }) => (
+          <input
+            {...atributos}
+            type="text"
+            value={nome}
+            onChange={(evento) => setNome(evento.target.value)}
+            required
+            maxLength={50}
+            className="input-padrao"
+          />
+        )}
+      </Campo>
     </ModalFicha>
   );
 }

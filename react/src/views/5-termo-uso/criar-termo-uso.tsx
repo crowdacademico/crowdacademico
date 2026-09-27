@@ -1,10 +1,12 @@
-import { useId, useState } from 'react';
+import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { CartaoFormulario } from '../../components/crud/cartao-formulario';
-import { RodapeFormulario } from '../../components/crud/rodape-formulario';
+import { RodapeAcoes } from '../../components/crud/rodape-acoes';
+import { MensagemErro } from '../../components/crud/mensagem-erro';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
+import { Campo } from '../../components/input/campo';
 import { termoUsoApi } from '../../services/5-termo-uso/api/termo-uso.api';
 import {
   DESCRICAO_TIPO_TERMO,
@@ -12,6 +14,7 @@ import {
   TIPOS_TERMO,
   ehTipoTermo,
 } from '../../services/5-termo-uso/constants/termo-uso-tipos';
+import { useEnvio } from '../../services/constant/hook/use-envio';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { TipoTermo } from '../../services/5-termo-uso/type/termo-uso.type';
 
@@ -23,38 +26,31 @@ import type { TipoTermo } from '../../services/5-termo-uso/type/termo-uso.type';
 // `tipo`: campo obrigatório e imutável depois de criado (ver TermoUsoRequestAlterar). Aceita pré-seleção via
 // `?tipo=upgrade_pesquisador` na URL: usado pelo link "Publicar nova versão" do card de Termo de Uso em Regras
 // do Negócio, que já sabe qual termo o admin estava olhando.
+const ID_FORMULARIO = 'form-criar-termo-uso';
+
 export function CriarTermoUso({ auth }: PropsPagina) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { mostrar } = useToast();
   const { erro, reportarErro, limparErro } = useErroToast();
+  const { ocupado: enviando, executar: executarEnviando } = useEnvio(reportarErro, limparErro);
   const tipoPreSelecionado = searchParams.get('tipo');
   const [tipo, setTipo] = useState<TipoTermo>(
     ehTipoTermo(tipoPreSelecionado) ? tipoPreSelecionado : 'cadastro',
   );
   const [versao, setVersao] = useState('');
   const [conteudo, setConteudo] = useState('');
-  const [enviando, setEnviando] = useState(false);
-  const idTipo = useId();
-  const idVersao = useId();
-  const idConteudo = useId();
 
   const aoCriar = async (evento: FormEvent<HTMLFormElement>) => {
     evento.preventDefault();
-    limparErro();
-    setEnviando(true);
-    try {
+    await executarEnviando(async () => {
       const termoCriado = await termoUsoApi.criar(auth.authFetch, { tipo, versao, conteudo });
       mostrar(
         'Rascunho de Termos de Uso criado com sucesso.',
         `Versão "${termoCriado.versao}" (${ROTULO_TIPO_TERMO[tipo]}) foi registrada, mas AINDA NÃO é a vigente - revise o texto e torne-a vigente manualmente quando estiver pronta.`,
       );
       void navigate(-1);
-    } catch (erroRequisicao) {
-      reportarErro(erroRequisicao);
-    } finally {
-      setEnviando(false);
-    }
+    });
   };
 
   return (
@@ -63,69 +59,71 @@ export function CriarTermoUso({ auth }: PropsPagina) {
       titulo="Publicar Termos de Uso"
       subtitulo="Cria um RASCUNHO novo (ainda não vigente). A versão vigente atual do mesmo tipo continua ativa até um administrador tornar este rascunho vigente manualmente."
     >
-      <form onSubmit={aoCriar} className="p-10 space-y-6">
-        {erro && <p className="texto-erro text-sm font-bold text-center">{erro}</p>}
+      <form id={ID_FORMULARIO} onSubmit={aoCriar} className="p-10 space-y-6">
+        <MensagemErro texto={erro} />
 
-        <div>
-          <label htmlFor={idTipo} className="rotulo-campo">Tipo</label>
-          <select
-            id={idTipo}
-            value={tipo}
-            onChange={(evento) => {
-              if (ehTipoTermo(evento.target.value)) setTipo(evento.target.value);
-            }}
-            className="input-padrao"
-          >
-            {TIPOS_TERMO.map((valor) => (
-              <option key={valor} value={valor}>
-                {ROTULO_TIPO_TERMO[valor]}
-              </option>
-            ))}
-          </select>
-          <p className="text-xs texto-fraco mt-1">
-            Não pode ser alterado depois de publicado. {DESCRICAO_TIPO_TERMO[tipo]}
-          </p>
-        </div>
+        <Campo rotulo="Tipo" dica={<>Não pode ser alterado depois de publicado. {DESCRICAO_TIPO_TERMO[tipo]}</>}>
+          {({ atributos }) => (
+            <select
+              {...atributos}
+              value={tipo}
+              onChange={(evento) => {
+                if (ehTipoTermo(evento.target.value)) setTipo(evento.target.value);
+              }}
+              className="input-padrao"
+            >
+              {TIPOS_TERMO.map((valor) => (
+                <option key={valor} value={valor}>
+                  {ROTULO_TIPO_TERMO[valor]}
+                </option>
+              ))}
+            </select>
+          )}
+        </Campo>
 
-        <div>
-          <label htmlFor={idVersao} className="rotulo-campo">Versão</label>
-          <input
-            id={idVersao}
-            type="text"
-            value={versao}
-            onChange={(evento) => setVersao(evento.target.value)}
-            required
-            maxLength={20}
-            placeholder="ex.: v3"
-            className="input-padrao"
-          />
-          <p className="text-xs texto-fraco mt-1">
-            Identificador curto da versão (até 20 caracteres) - precisa ser diferente de toda
-            versão já publicada antes DESTE MESMO TIPO (a mesma versão pode se repetir entre
-            tipos diferentes).
-          </p>
-        </div>
+        <Campo
+          rotulo="Versão"
+          dica="Identificador curto da versão (até 20 caracteres), precisa ser diferente de toda versão já publicada antes DESTE MESMO TIPO (a mesma versão pode se repetir entre tipos diferentes)."
+        >
+          {({ atributos }) => (
+            <input
+              {...atributos}
+              type="text"
+              value={versao}
+              onChange={(evento) => setVersao(evento.target.value)}
+              required
+              maxLength={20}
+              placeholder="ex.: v3"
+              className="input-padrao"
+            />
+          )}
+        </Campo>
 
-        <div>
-          <label htmlFor={idConteudo} className="rotulo-campo">Texto completo</label>
-          <textarea
-            id={idConteudo}
-            value={conteudo}
-            onChange={(evento) => setConteudo(evento.target.value)}
-            required
-            rows={18}
-            placeholder="Cole ou digite o texto integral dos Termos de Uso desta versão..."
-            className="input-padrao font-mono text-xs"
-          />
-        </div>
+        <Campo rotulo="Texto completo">
+          {({ atributos }) => (
+            <textarea
+              {...atributos}
+              value={conteudo}
+              onChange={(evento) => setConteudo(evento.target.value)}
+              required
+              rows={18}
+              placeholder="Cole ou digite o texto integral dos Termos de Uso desta versão..."
+              className="input-padrao font-mono text-xs"
+            />
+          )}
+        </Campo>
 
         <div className="pt-2">
-          <RodapeFormulario
+          <RodapeAcoes
             aoCancelar={() => navigate(-1)}
-            desabilitado={enviando || !versao.trim() || !conteudo.trim()}
-            enviando={enviando}
-            textoAcao="Publicar versão"
-            textoEnviando="Publicando..."
+            largura="cheia"
+            acao={{
+              rotulo: 'Publicar versão',
+              rotuloOcupado: 'Publicando...',
+              ocupado: enviando,
+              desabilitado: !versao.trim() || !conteudo.trim(),
+              formulario: ID_FORMULARIO,
+            }}
           />
         </div>
       </form>

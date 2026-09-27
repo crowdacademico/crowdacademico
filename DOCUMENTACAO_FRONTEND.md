@@ -103,6 +103,7 @@ react/
 ├── vite.config.js
 ├── eslint.config.js
 ├── .env                - só VITE_API_URL
+├── .env.example        - modelo comentado do .env (27-09-2026)
 └── src/
     ├── main.tsx        - createRoot + os providers globais
     ├── App.tsx         - monta as <Route> a partir de rotas.constants.ts
@@ -237,6 +238,8 @@ Antes do passo 2, se ainda não há access token mas há refresh token (F5 com s
 
 O comentário resume: *"SEMPRE manda Bearer quando tem accessToken. Se a resposta vier 401 (access token expirado - dura só 15min), tenta renovar UMA vez com o refresh token e repete a chamada original. Isso é o que todo o painel admin usa pra falar com a API - nunca `fetch()` cru direto."*
 
+📌 **Barra de carregamento (27-09-2026).** Toda chamada do `authFetch` (e o envio de arquivo ao armazenamento) passa por `acompanharRequisicao` (`components/layout/barra-carregamento/atividade-rede.ts`), um contador de requisições em andamento fora do React. `BarraCarregamento`, montada uma vez em `layout.tsx`, mostra uma faixa fina da cor da marca no topo da tela enquanto o contador for maior que zero. Só aparece depois de 300ms (CSS, `.barra-carregamento` em `4-componentes.css`), então resposta rápida não pisca nada; com "reduzir movimento" ligado no sistema, a faixa fica parada. As poucas chamadas públicas com `fetch` cru (login, listas públicas) não entram na contagem.
+
 ### Duas proteções contra corrida, ambas com bug de origem documentado
 
 📌 **Renovação única em voo (`refreshEmAndamentoRef`).** O refresh token é de **uso único** (o backend revoga a sessão antiga ao emitir a nova). O comentário descreve o sintoma original: *"o Lucas viu 'token de acesso inválido' 3x seguidas ao voltar de um tempo parado ... uma tela que dispara várias requisições de uma vez ... fazia CADA requisição tentar renovar por conta própria, ao mesmo tempo. ... a 1ª chamada a chegar no backend ganha, as outras recebem 'refresh token inválido'"*. A correção: existe no máximo **uma** promise de renovação por vez; quem chegar depois espera o resultado dela.
@@ -254,6 +257,8 @@ export const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:30
 ```
 
 O comentário registra que `react/.env` contém apenas essa URL, *"sem segredo nenhum - só a URL - por isso commitado normal, sem virar `.env.local`"*.
+
+`react/.env.example` (27-09-2026) é o modelo comentado, como o `nest/.env.example`: explica onde a variável é lida, o valor padrão se faltar e o formato em produção, e avisa que tudo que começa com `VITE_` vai para o navegador (nunca pôr segredo nele).
 
 ⚠️ Existe pendência aberta sobre isso: `PENDENCIAS e correcoes.md`, item 744 - `react/.gitignore` **não** cobre `.env` (diferente de `nest/.gitignore`). Hoje é inofensivo pelo conteúdo, mas a rede de segurança não existe. A correção (uma linha no `.gitignore`) foi deliberadamente adiada a pedido do Lucas. Confirmado nesta redação: `react/.gitignore` continua sem a linha.
 
@@ -286,13 +291,15 @@ export const usuarioApi = {
 
 📌 **`13-orcamento-campanha` e `14-marco-cronograma` ganharam `type/`+`api/` (23-09-2026).** Antes, `ItemOrcamento`/`MarcoCronograma` viviam como interface local dentro de `views/campo-testes/bancada-campanha.tsx`, com o comentário admitindo shape inferido do próprio uso (só a bancada consumia). Extraídos pro molde padrão (`OrcamentoCampanhaResponse`/`MarcoCronogramaResponse`, espelhando os DTOs reais do Nest, incluindo `descricao`/`ordem`/`criadoEm` que a bancada não usa hoje). `orcamentoCampanhaApi.listar`/`marcoCronogramaApi.listar` substituíram as 2 chamadas `authFetch` cruas de leitura. As 6 chamadas de escrita (criar/alterar/excluir dos 2 recursos) **continuam** via `chamarERegistrar` (o hook do Campo de Testes que também alimenta T4/Registro de Chamadas) - não passaram pra API nova de propósito, porque essa troca perderia o registro em T4.
 
+📌 **Filtro de listagem vira query string num lugar só (27-09-2026).** `paraQueryString(filtro)` (`services/constant/api/query-string.util.ts`) transforma qualquer objeto de filtro em `?chave=valor&...`, pulando o que for `undefined`. Eram cinco cópias da mesma função (motivo de denúncia, campanha, pesquisador, área, tipo de link), cada uma listando os campos à mão; um filtro novo agora é só um campo a mais na interface do filtro.
+
 📌 **A listagem que trunca em 500 avisa (20-09-2026).** O backend limita as listagens em 500 registros (`paginacao.util.ts`, teto de segurança, não paginação de tela). Antes, as 11 chamadas de listagem faziam `.then((resposta) => resposta.dados)` e descartavam o `total`: no registro 501 a tela passava a mentir em silêncio ("500 registros" existindo 3000). Agora todas passam por `desembrulharPaginado(rotulo)` (`services/constant/type/paginacao.type.ts`), que mantém o mesmo retorno (`T[]`) e dá um `console.warn` quando `total` é maior que o devolvido. Não é paginação no servidor (o volume atual não justifica), só o fim do silêncio.
 
 ### `tratarResposta` - `services/constant/api/http.util.ts`
 
 Todo `.api.ts` termina em `.then(tratarResposta)`. A função:
 
-- se `!resposta.ok`, lança um **`ErroHttp`** (subclasse de `Error` que carrega `status` além da mensagem);
+- se `!resposta.ok`, lança um **`ErroHttp`** (subclasse de `Error` que carrega `status` além da mensagem e, quando o backend manda, `campos`: `{ <campo>: [mensagens] }` da validação do DTO ou da duplicidade);
 - se ok, lê o corpo **como texto primeiro** e só faz `JSON.parse` se houver algo.
 
 📌 O segundo ponto tem origem documentada: *"achado do Lucas: 'Unexpected end of JSON input' ao atribuir permissão. Checar só `status === 204` não bastava. Endpoint que só cria um vínculo ... volta com corpo vazio, mas o Nest manda 201 (padrão de POST), não 204 ... Ler como texto primeiro e só fazer `JSON.parse` se tiver algo cobre QUALQUER status com corpo vazio."*
@@ -301,14 +308,15 @@ Todo `.api.ts` termina em `.then(tratarResposta)`. A função:
 
 ### `traduzirErro` - `services/constant/api/traduzir-erro.util.ts`
 
-Espelho, do lado do React, do `postgres-exception.filter.ts` do Nest. Trata só as duas categorias que o backend **não** consegue cobrir sozinho:
+Espelho, do lado do React, do `postgres-exception.filter.ts` do Nest. Trata só o que o backend **não** consegue cobrir sozinho: **falha de rede** (backend fora do ar, sem internet, CORS). O `fetch` rejeita antes de existir qualquer resposta HTTP, e `erro.message` seria o texto do navegador em inglês ("Failed to fetch").
 
-1. **falha de rede** (backend fora do ar, sem internet, CORS) - o `fetch` rejeita antes de existir qualquer resposta HTTP, e `erro.message` seria o texto do navegador em inglês ("Failed to fetch");
-2. **429** (rate limit do `@nestjs/throttler`) - a mensagem padrão do Nest não é escrita para o usuário final.
+📌 **O 429 não é mais sobrescrito aqui (27-09-2026).** Antes, o React trocava a mensagem do limite de tentativas por um texto fixo sem prazo. Agora o backend já manda "Tente de novo em 40 segundos" em português (`DOCUMENTACAO_BACKEND.md`, seção 3.4), e o texto passa direto.
 
 📌 Todo o resto passa direto: *"400/403/404/409... já vem em PT-BR, específico e correto direto do backend ... não faz sentido sobrescrever o que já está certo."*
 
 O par "texto de erro na tela + toast" está encapsulado em `components/layout/toast/use-erro-toast.ts` (`reportarErro(erro)`), que faz `setErro(traduzirErro(erro))` e dispara o toast numa chamada só - *"qualquer tela nova que adote isto ganha o toast de graça, sem precisar lembrar da 2ª linha"*.
+
+📌 **Erro embaixo do campo certo (27-09-2026).** Quando o erro traz `campos`, `useErroToast` também devolve `errosCampo` (a primeira mensagem de cada campo) e `limparErroCampo(campo)`. Nesse caso o texto vermelho do topo fica vazio (o erro já aparece no campo) e o toast continua avisando. O componente `Campo` (seção 9, `components/input/`) mostra a mensagem embaixo do campo, pinta a borda de vermelho e liga as duas coisas para o leitor de tela; ao digitar de novo no campo, o erro dele some. Hoje usado nos formulários de criar e alterar tipo de link, área do conhecimento e motivo de denúncia. Exemplo: código CNPq repetido volta 409 e aparece embaixo de "Código CNPq", não solto no topo.
 
 ---
 
@@ -321,7 +329,7 @@ O par "texto de erro na tela + toast" está encapsulado em `components/layout/to
 | Passo | Chamada | Vai para |
 |---|---|---|
 | 1 | `arquivoApi.iniciarUpload(authFetch, { nomeOriginal, tipoMime, tamanhoBytes })` → `POST /arquivo/upload/iniciar` | backend Nest (autenticado) |
-| 2 | `arquivoApi.enviarParaBucket(uploadPreAssinado, arquivo)` → `PUT` na URL pré-assinada | **direto no provedor de armazenamento** |
+| 2 | `arquivoApi.enviarParaBucket(uploadPreAssinado, arquivo, aoProgresso?)` → `PUT` na URL pré-assinada | **direto no provedor de armazenamento** |
 | 3 | `arquivoApi.confirmarUpload(authFetch, { chave, nomeOriginal, tipoMime, tamanhoBytes, contexto })` → `POST /arquivo/upload/confirmar` | backend Nest (autenticado) |
 
 📌 **O passo 2 nunca usa `authFetch`.** O comentário do arquivo é explícito: *"PUT direto no provedor de armazenamento, NUNCA via `authFetch` - é outro host, não deve levar `Authorization` nem `Content-Type: application/json`"*. Os `cabecalhosObrigatorios` devolvidos pelo passo 1 precisam ir **exatamente** como vieram, porque é isso que a assinatura da URL confere. Também não passa por `tratarResposta`: *"a resposta do bucket não é JSON e não segue o formato do nosso backend"*.
@@ -356,6 +364,8 @@ O componente é dirigido por props, não por herança nem por children:
 | `filtrosFacetados` | array de `{ chave, rotulo, ordem? }` - cada um vira um dropdown de múltipla escolha |
 
 Não existe prop de log - `BlocoLogAuditoria` é um componente IRMÃO (ver seção 9), colocado pela tela logo abaixo de `<GenericTable>`, não uma prop daqui (13-09-2026, achado do Lucas: "log de auditoria não é estrutura de tabela").
+
+📌 **Busca sem acento (27-09-2026).** Toda busca por texto do sistema passa por `services/constant/utils/busca.util.ts` (`normalizarBusca`, `contemTermo`): ignora acentos, maiúsculas e espaços repetidos, então "sao paulo" acha "São Paulo". Usada no `GenericTable`, na base das tabelas do Campo de Testes (`tabela-bancada.tsx`), na busca global (Ctrl+K) e nas caixas de escolha de pesquisador (T2) e de campanha (T3). Antes, só maiúsculas eram ignoradas. Os campos "digite o nome para confirmar a exclusão" continuam com comparação exata, de propósito.
 
 📌 **CRUD não acontece dentro da tabela.** Criar, Alterar, Consultar e Excluir abrem modal no componente pai, pelos handlers de `acoes` (nunca formulário ou `confirm()` embutido na tabela).
 
@@ -424,11 +434,12 @@ Todas as telas `listar-*.tsx`: `views/1-usuario/listar-usuarios.tsx`, `views/2-p
 | `ficha-consulta.tsx` | casca das telas "Consultar" (`<FichaConsulta>` + `<SecaoFicha>` + `<CampoFicha>`) |
 | `campo-somente-leitura.tsx` | um dado exibido, não editável, com o mesmo visual do `<label>` dos formulários |
 | `modal-detalhe.tsx` | modal genérico de "detalhe explicado" (título, chave em fonte mono, badge, seções) |
-| `modal-ficha.tsx` | casca larga dos modais de Consultar/Alterar/Criar (backdrop + cartão + rodapé). **Três caminhos de fechar**, todos passando por `aoFechar`: o X, o clique no fundo escurecido (desligável com `fecharAoClicarFora={false}`, usado no wizard de Criar Campanha para um clique perdido não descartar várias etapas) e a tecla **Esc** (sempre ligada, é ação deliberada como o X). Limite conhecido: dois `ModalFicha` empilhados fecham juntos no Esc, cada um registra o próprio listener, por isso o Campo de Testes evita modal sobre modal |
+| `modal-ficha.tsx` | casca larga dos modais de Consultar/Alterar/Criar (backdrop + cartão + rodapé; prop `erro` mostra o erro no topo do corpo). **Três caminhos de fechar**, todos passando por `aoFechar`: o X, o clique no fundo escurecido (desligável com `fecharAoClicarFora={false}`, usado no wizard de Criar Campanha para um clique perdido não descartar várias etapas) e a tecla **Esc** (sempre ligada, é ação deliberada como o X). Limite conhecido: dois `ModalFicha` empilhados fecham juntos no Esc, cada um registra o próprio listener, por isso o Campo de Testes evita modal sobre modal |
 | `log-auditoria-painel.tsx` (ver `bloco-log-auditoria.tsx`) | painel "Ver log" - componente IRMÃO colocado pela tela logo abaixo de `<GenericTable>`, não uma prop dela |
 | `acao-linha.tsx` | ícone + texto + dica de hover de cada ação de linha (Alterar/Consultar/Excluir) - usado por `GenericTable` E pelas bancadas do Campo de Testes |
 | `badge-booleano.tsx` | `<span className="badge ...">Sim/Não</span>` - versão avulsa do que `GenericTable` já faz sozinha pra colunas booleanas |
-| `rodape-formulario.tsx` | par Cancelar/Ação de formulários Criar/Alterar em página (extraído 14-09-2026 de 10 telas) |
+| `rodape-acoes.tsx` | `RodapeAcoes` (27-09-2026): botão secundário (Cancelar, Voltar, Fechar, Entendi) + ação opcional (ou uma lista de ações, como Salvar e Enviar no Alterar Campanha) (Salvar, Criar, Confirmar exclusão), que fica desabilitada e troca o texto ("Salvando...") enquanto `ocupado`. Sem ação, sobra só o "Fechar" dos Consultar. `perigo` usa o botão vermelho; `formulario` submete um `<form>` pelo id. Substituiu o `RodapeFormulario` (usado numa tela só) e o bloco copiado em 15 modais |
+| `mensagem-erro.tsx` | `MensagemErro` (27-09-2026): o texto de erro em destaque no topo; vazio, não desenha nada. O `ModalFicha` já o mostra pela prop `erro`, então os modais só passam `erro={erro}`; usado direto só fora de modal (cadastro, Criar Termo) ou quando o erro fica em outro ponto da tela |
 | `use-alteracao-nao-salva.ts` | `useAvisoAlteracaoNaoSalva(sujo)` - `beforeunload` nativo |
 
 ### `components/pagination/` e `components/search/` - extraídos do `GenericTable` (14-09-2026)
@@ -437,7 +448,9 @@ Todas as telas `listar-*.tsx`: `views/1-usuario/listar-usuarios.tsx`, `views/2-p
 |---|---|
 | `pagination/navegacao-pagina.tsx` | núcleo "Página X de Y (N registros) / Anterior / Próxima" (23-09-2026) - `RodapePaginacao` o compõe passando o seletor de tamanho como `children`; `log-auditoria-painel.tsx` (paginação no servidor, sem seletor) o usa direto; `unidade` troca o sufixo ("registros" / "no total") |
 | `pagination/rodape-paginacao.tsx` | rodapé "Página X de Y / Mostrar / Anterior / Próxima" - controlado, sem opinião de onde página/tamanho moram (URL no `GenericTable`, `useState` nas bancadas do Campo de Testes) |
-| `search/barra-filtros.tsx` | busca de texto + 1+ dropdowns de faceta - controlado; gerencia por conta própria qual dropdown está aberto (estado de UI, não filtro) |
+| `search/barra-filtros.tsx` | busca de texto + 1+ dropdowns de faceta - controlado; gerencia por conta própria qual dropdown está aberto (estado de UI, não filtro). Cada filtro ativo vira um chip com X logo abaixo (27-09-2026), e "Limpar filtros" aparece com mais de um |
+
+📌 **Chips de filtro (27-09-2026).** Saem das mesmas props que a barra já recebia (o X da busca chama `aoMudarBusca('')`, o de uma opção chama `aoAlternar(opcao)`), então as três telas que usam a barra (`GenericTable` e as duas bancadas) ganharam os chips sem mudar nada. "Limpar filtros" usa `aoLimparTudo` quando quem chama passa um: a `GenericTable` passa, porque guarda os filtros na URL e o `setSearchParams` do React Router recebe os parâmetros do último render, então várias chamadas seguidas se atropelariam. Sem `aoLimparTudo` (estado local, `useState`), a barra chama as limpezas uma a uma.
 
 📌 **Nasceram do segundo teste de prop** (ver seção 8: "se uma tela que não pode usar `GenericTable` ainda precisa disto, é irmão, não miolo") - as bancadas do Campo de Testes não podem usar a TABELA genérica (risco de linha), mas precisavam do rodapé e da barra de filtros, e reimplementavam os dois à mão em 3 lugares diferentes antes desta extração.
 
@@ -463,6 +476,10 @@ Todas as telas `listar-*.tsx`: `views/1-usuario/listar-usuarios.tsx`, `views/2-p
 
 📌 **Títulos e marcos da página (26-09-2026).** Toda página tem exatamente um `<main>` (em `layout.tsx`; o `AdminLayout` é um `<div>` dentro dele) e exatamente um `h1`: o título grande das páginas públicas (Login, Criar conta, Verificar e-mail), "Dashboard", o nome de Minha Conta, o título da bancada no Campo de Testes, o título do cartão de formulário (`CartaoFormulario`) e, nas listagens, o título da `GenericTable` (ver `nivelTitulo`). As seções abaixo são `h2`, e os blocos dentro de um modal (título `h2`) são `h3`; os títulos do rodapé são `h2`. `SecaoFicha` recebe `nivel` (3 em modal, 2 em página). A troca de nível não muda o visual: as classes continuam as mesmas, e onde a regra base de `h1`-`h3` (serif, em `3-base.css`) mudaria a fonte, a tag leva `font-sans`. Resultado: o axe não acusa nenhuma violação, nem moderada, nas 22 telas (painel, públicas, log aberto e modal de detalhe). Os modais `ModalFicha` e `ModalDetalhe` têm `role="dialog"`, `aria-modal` e o título como nome acessível (`aria-labelledby`): o leitor de tela anuncia a janela ao abrir. O mesmo vale para a busca global (Ctrl+K), o modal de termos do cadastro e a gaveta do menu no celular (só enquanto aberta; fechada nessa largura ela fica `invisible`, para os links fora da tela não receberem o Tab).
 
+📌 **`LimiteErro` (27-09-2026): erro numa tela não apaga o app inteiro.** `components/layout/limite-erro.tsx` é o "ErrorBoundary" do React: um erro de renderização mostra um aviso ("Algo deu errado ao mostrar esta tela", botão de recarregar e, só em desenvolvimento, a mensagem técnica) no lugar do trecho que quebrou. Antes, qualquer erro desmontava a aplicação e deixava a tela em branco. Fica em dois lugares: em volta do `<Outlet/>` de `layout.tsx` (todas as páginas) e do `<Outlet/>` da área de conteúdo do `AdminLayout` (erro numa tela do painel preserva o menu lateral e a busca). Recomeça ao trocar de página (`key` pelo caminho), senão o aviso ficaria preso ao navegar. Precisa ser componente de classe: é a única forma que o React oferece. Ideia vinda da auditoria de outro sistema acadêmico (Atlas).
+
+📌 **`useBuscar` (`services/constant/hook/use-buscar.ts`, 27-09-2026): um só "buscar dado quando algo muda".** A `GenericTable` (listagem), o `LogAuditoriaPainel` (página do log) e o Consultar de campanha repetiam o mesmo `useEffect` com estados de carregando e erro. Agora usam o hook, que também descarta resposta atrasada: se a pessoa troca de página duas vezes rápido e a primeira resposta chega por último, ela não sobrescreve a segunda nem mexe em tela já fechada. Substituiu o antigo `useBuscarPorId`, que só servia a busca por id e tinha sobrado com um uso. Também usam: o resumo do Dashboard, as grandes áreas do Criar Área e as áreas de Criar/Alterar Campanha, estas por um hook do módulo, `useAreasDaCampanha` (`services/8-area-conhecimento/hook/`), porque a busca era idêntica nas duas telas. "Carregar para editar" usa o mesmo hook (27-09-2026): `aoChegar` recebe o dado quando ele chega e preenche o formulário da tela, `erros` passa o `useErroToast` da própria tela (o erro de carregar e o de salvar aparecem no mesmo lugar) e `recarregar()` busca de novo. Assim funcionam Alterar Usuário (`useDadosUsuario`), Alterar Termo, Alterar Campanha e a matriz Papel × Permissão.
+
 📌 **Foco do teclado nas janelas (`services/constant/hook/use-foco-preso.ts`).** Ao abrir, o foco entra na janela (ela é anunciada pelo título); Tab e Shift+Tab circulam só lá dentro; ao fechar, o foco volta para quem abriu. Com uma janela sobre outra (ex.: o detalhe de um item dentro do Alterar), só a de cima prende o Tab, e o **Esc fecha só a janela de cima** (cada janela trata o próprio Esc e para a propagação; antes o Esc escutava a página inteira e fechava as duas). Clicar no fundo escurecido não tira o foco da janela, para o Esc continuar funcionando.
 
 📌 **Avisos (toasts) acima dos modais e anunciados.** Ficam numa camada acima dos modais (`z-[300]`; antes `z-[100]`, atrás dos modais, e o erro de "Enviar para aprovação" ficava escondido). Erro é `role="alert"` (o leitor de tela fala na hora); sucesso é `role="status"`.
@@ -479,9 +496,32 @@ Todas as telas `listar-*.tsx`: `views/1-usuario/listar-usuarios.tsx`, `views/2-p
 
 📌 **`DevLoginRapido` é ferramenta de desenvolvimento com senhas de seed em texto no código.** São as 6 contas "Sistema" do `07_seed_dados.sql` (Admin, Moderador, Revisor, Suporte, Curador e Pesquisador, uma por papel e sem nome de gente; o Admin Sistema 2 fica de fora por ser o admin de reserva, e não há atalho para usuário comum). A senha de dev vem de `SENHA_DEV` (`services/constant/constants/senha-dev.constants.ts`), a mesma constante usada pelo "Redefinir senha" de dev do modal de usuário, e some do pacote de produção. O comentário justifica (*"logar como admin toda hora pra testar o painel era chato"*) e afirma que não cria conta nem senha nova. **Protegido por `import.meta.env.DEV` desde 04-09-2026** (`header.tsx`), mesmo tratamento do Campo de Testes - some sozinho em qualquer `npm run build`, continua disponível em `npm run dev`. Antes disso, o componente era renderizado pelo `Header` em qualquer build, inclusive produção; foi corrigido depois de identificado como achado em `HISTORICO_ACHADOS_PARA_DISCUTIR.md`.
 
+### Peças centrais da rodada de otimização (27-09-2026)
+
+Uma varredura procurou trechos iguais repetidos pelo React e trocou cada grupo por uma peça só. Em uma linha cada:
+
+| Peça | Onde mora | O que substituiu |
+|---|---|---|
+| `Campo` | `components/input/campo.tsx` | rótulo + campo + dica ou erro montados à mão: agora em todo formulário (cadastro, login, Minha Conta, usuário, campanha, termo, configuração, papel, catálogos). Todo campo fica ligado ao rótulo e à mensagem para o leitor de tela; antes, as mensagens de validação do cadastro e o rótulo da confirmação de exclusão de conta não estavam |
+| `useEnvio` | `services/constant/hook/use-envio.ts` | o "enviar" (limpa erro, liga "Salvando...", chama a API, reporta erro, desliga), que se repetia 36 vezes em 21 arquivos |
+| `SecaoSuspensao` | `components/crud/secao-suspensao.tsx` | as duas seções de moderação (conta e poder de pesquisador), cerca de 156 linhas cada, que só mudavam textos e API; as duas viraram embrulhos finos |
+| `criarApiCatalogo` | `services/constant/api/api-catalogo.ts` | as 6 chamadas iguais de tipo de link, área e motivo (listar, listar público, buscar, criar, atualizar, remover) |
+| `ModalExcluirItem` | `components/crud/modal-excluir-item.tsx` | os 3 modais de excluir dos catálogos |
+| `ConfirmacaoDigitada` + `confirmacaoConfere` | `components/input/` | "Digite o e-mail para confirmar" em 5 lugares (o texto variava entre "pra" e "para") |
+| `CaixaAviso` | `components/crud/caixa-aviso.tsx` | a caixa colorida "O que acontece de verdade" / "Não dá para ...", 15 lugares |
+| `CaixaBuscaSugestoes` | `components/input/caixa-busca-sugestoes.tsx` | a caixa de busca com lista "ID: x  Nome" do Campo de Testes (dono da campanha em T2, campanha em T3), que fecha ao clicar fora |
+| `CaixaMarcacao` | `components/input/caixa-marcacao.tsx` | caixa de marcação com rótulo, 10 lugares |
+| `EscoposTipoLink` | `views/9-tipo-link/escopos-tipo-link.tsx` | o grupo "Onde este tipo pode ser usado", igual em Criar e Alterar tipo de link (agora um `fieldset`, anunciado como grupo) |
+| `Carregando` | `components/layout/carregando.tsx` | o "Carregando..." solto em 15 lugares; agora anunciado pelo leitor de tela (`role="status"`) |
+| `.cartao-painel` | `4-componentes.css` | a mesma sequência de 5 classes nos cartões do Dashboard |
+
+📌 **Bug achado no caminho: data sem hora aparecia um dia antes.** `new Date('2026-10-01')` é meia-noite em UTC, que no Brasil ainda é 30/09. Afetava a data prevista do cronograma, a revisão de campanha e o prazo vencido no Alterar Campanha. `formatarData`/`formatarDataHora`/`formatarMesAno` (`formatacao.util.ts`) agora leem a data pura como meia-noite local, e as datas que eram formatadas à mão (cronograma, histórico de alterações, sino, suspensão) passaram a usar essas funções.
+
+📌 **Listas de opção saem dos mapas de rótulo.** Tipo de vínculo, título acadêmico e tipo de motivo tinham a lista de opções e a guarda de tipo escritas à mão ao lado do mapa de rótulos; agora as duas saem do mapa (`Object.entries`/`Object.hasOwn`), então um valor novo no ENUM entra num lugar só. Efeito visível: o formulário de vínculo mostra "Institucional", não mais o valor cru "institucional".
+
 ### `components/input/`
 
-Hoje só tem `seletor-foto-perfil.tsx` (abaixo). `components/3-auth/icone-google.tsx` é um SVG inline do logo do Google, usado no botão "Continuar com Google" da tela de login - que hoje é apenas um `window.alert('Login social com Google simulado no protótipo.')`.
+`campo.tsx` (27-09-2026): o bloco rótulo + campo + dica ou erro que se repetia em todo formulário. Recebe `rotulo`, `dica` e `erro` (local, como "código fora do formato", ou do servidor, `errosCampo.nome`); o erro, quando existe, toma o lugar da dica. O campo em si vem por função (`{({ atributos, classeErro }) => <input {...atributos} className={'input-padrao' + classeErro} />}`), para servir a input, select e textarea: `atributos` traz o `id` e o `aria-invalid`/`aria-describedby`, `classeErro` a borda vermelha. Com isso os formulários de catálogo deixaram de criar `useId()` e `<p>` de erro na mão. `campo-cpf.tsx` é o campo de CPF com máscara. `seletor-foto-perfil.tsx` abaixo. `components/3-auth/icone-google.tsx` é um SVG inline do logo do Google, usado no botão "Continuar com Google" da tela de login - que hoje é apenas um `window.alert('Login social com Google simulado no protótipo.')`.
 
 ### `SeletorFotoPerfil` - o avatar editável
 
@@ -490,6 +530,8 @@ Hoje só tem `seletor-foto-perfil.tsx` (abaixo). `components/3-auth/icone-google
 📌 **Separação de responsabilidade:** *"Este componente NUNCA salva nada em `usuario` sozinho - ele só sobe (ou sinaliza a remoção d)o arquivo e devolve o resultado pro pai via `aoAlterar`."* Quem usa (`modal-criar-usuario.tsx`, `modal-usuario.tsx`, `minha-conta-page.tsx`) decide quando mandar isso ao backend.
 
 📌 **Três estados, não dois.** `aoAlterar(idArquivo, novaUrl)` = foto nova; `aoAlterar(null, null)` = remoção pedida; **não ter chamado `aoAlterar`** = nenhuma escolha feita. Por isso o pai guarda o id como `undefined` por padrão, nunca `null` - *"exatamente pra sobrar esse terceiro estado"*.
+
+📌 **Progresso do envio (27-09-2026).** Enquanto os bytes sobem para o armazenamento, o círculo sobre o avatar mostra a porcentagem em vez do ícone girando. `enviarParaBucket` usa `XMLHttpRequest` em vez de `fetch` só por isso: é o único jeito do navegador contar o que já subiu. O parâmetro `aoProgresso` é opcional, então qualquer upload futuro ganha o mesmo recurso. Nos outros passos (reduzir, iniciar, confirmar) continua o ícone girando.
 
 #### Redução de imagem no navegador (`reduzir-imagem.util.ts`)
 
@@ -817,10 +859,12 @@ Seção dentro de **Alterar Usuário** (não uma tela própria - é ação sobre
 
 | Aba | Componente | O que mostra |
 |---|---|---|
-| Visão Geral | (inline, no próprio `dashboard.tsx`) | Faixa de saúde (banco conectado/sessões ativas/notificações pendentes) + 6 cards de métrica (`GET /dashboard/resumo`) + prévia de notificações |
+| Visão Geral | (inline, no próprio `dashboard.tsx`) | Faixa de saúde (banco conectado/sessões ativas/notificações pendentes) + 6 cards de métrica (`GET /dashboard/resumo`) + acessados recentemente + prévia de notificações |
 | Regras do Negócio | `dashboard-regras-negocio.tsx` | As 38 chaves de `configuracoes`, agrupadas por assunto |
 | Identidade Visual | `dashboard-identidade-visual.tsx` | Placeholder - gerenciar logo/favicon ainda não foi construído |
 | Saúde | `dashboard-saude.tsx` | Mesmo estado da faixa de saúde da Visão Geral, sem refazer requisição, mais contagens agregadas |
+
+📌 **Acessados recentemente (27-09-2026).** Atalhos para as últimas 5 páginas do painel que a pessoa abriu neste navegador, mais recente primeiro (`services/router/acessados-recentemente.ts`). O `AdminLayout` registra cada troca de página; só entram rotas do menu, fora o próprio Dashboard. A lista guarda só o caminho, rótulo e ícone vêm sempre de `ROTAS_ADMIN`. A chave do `localStorage` leva o id do usuário, para quem troca de conta no mesmo navegador não ver o histórico da outra. Sem nada visitado, o bloco não aparece.
 
 📌 **Faixa de saúde e cards de métrica vêm de DUAS requisições independentes, de propósito** - não um `Promise.all` combinado. Achado do Lucas testando: se `GET /dashboard/resumo` falhasse (ex.: banco fora do ar), a tela inteira ficava em branco, bem no momento em que mais precisava mostrar "banco sem conexão". Cada uma tem seu próprio estado de carregando/erro agora.
 

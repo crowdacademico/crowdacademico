@@ -2,12 +2,15 @@ import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { SecaoFicha } from '../../components/crud/ficha-consulta';
 import { ModalFicha } from '../../components/crud/modal-ficha';
+import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { CampoCpf } from '../../components/input/campo-cpf';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
 import { perfilPesquisadorApi } from '../../services/6-perfil-pesquisador/api/perfil-pesquisador.api';
 import { termoUsoApi } from '../../services/5-termo-uso/api/termo-uso.api';
 import { CamposVinculoPerfil } from './campos-vinculo-perfil';
+import { useEnvio } from '../../services/constant/hook/use-envio';
+import { Carregando } from '../../components/layout/carregando';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { PerfilPesquisadorResponse } from '../../services/6-perfil-pesquisador/type/perfil-pesquisador.type';
 import type {
@@ -69,13 +72,13 @@ export function ModalUpgradePesquisador({
 }: ModalUpgradePesquisadorProps) {
   const { mostrar } = useToast();
   const { erro, reportarErro, limparErro } = useErroToast();
+  const { ocupado: enviando, executar: executarEnviando } = useEnvio(reportarErro, limparErro);
   const [etapa, setEtapa] = useState<Etapa>('termo');
   const [termo, setTermo] = useState<TermoUsoResponseAtivo | null>(null);
   const [carregandoTermo, setCarregandoTermo] = useState(true);
   const [termoIndisponivel, setTermoIndisponivel] = useState(false);
   const [aceitou, setAceitou] = useState(false);
   const [form, setForm] = useState<FormUpgrade>(FORM_VAZIO);
-  const [enviando, setEnviando] = useState(false);
 
   useEffect(() => {
     termoUsoApi
@@ -92,9 +95,7 @@ export function ModalUpgradePesquisador({
 
   const aoEnviar = async (evento: FormEvent<HTMLFormElement>) => {
     evento.preventDefault();
-    limparErro();
-    setEnviando(true);
-    try {
+    await executarEnviando(async () => {
       const dadosPerfil = {
         cpf: form.cpf,
         tipoVinculo: form.tipoVinculo,
@@ -114,11 +115,7 @@ export function ModalUpgradePesquisador({
       mostrar('Perfil de pesquisador criado com sucesso.', 'O upgrade de perfil foi concluído.');
       aoConcluido(perfilCriado);
       aoFechar();
-    } catch (erroRequisicao) {
-      reportarErro(erroRequisicao);
-    } finally {
-      setEnviando(false);
-    }
+    });
   };
 
   return (
@@ -131,41 +128,32 @@ export function ModalUpgradePesquisador({
       aoFechar={aoFechar}
       rodape={
         etapa === 'termo' ? (
-          <div className="flex gap-3 max-w-sm ml-auto">
-            <button type="button" onClick={aoFechar} className="btn btn-secondary flex-1">
-              Cancelar
-            </button>
-            <button
-              type="button"
-              onClick={() => setEtapa('formulario')}
-              disabled={carregandoTermo || termoIndisponivel || !aceitou}
-              className="btn btn-primary flex-1"
-            >
-              Aceitar
-            </button>
-          </div>
+          <RodapeAcoes
+            aoCancelar={aoFechar}
+            acao={{
+              rotulo: 'Aceitar',
+              desabilitado: carregandoTermo || termoIndisponivel || !aceitou,
+              aoClicar: () => setEtapa('formulario'),
+            }}
+          />
         ) : (
-          <div className="flex gap-3 max-w-sm ml-auto">
-            <button type="button" onClick={aoFechar} className="btn btn-secondary flex-1">
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              form="form-upgrade-pesquisador"
-              disabled={enviando || !form.cpf}
-              className="btn btn-primary flex-1"
-            >
-              {enviando ? 'Salvando...' : 'Salvar'}
-            </button>
-          </div>
+          <RodapeAcoes
+            aoCancelar={aoFechar}
+            acao={{
+              rotulo: 'Salvar',
+              rotuloOcupado: 'Salvando...',
+              ocupado: enviando,
+              desabilitado: !form.cpf,
+              formulario: 'form-upgrade-pesquisador',
+            }}
+          />
         )
       }
+      erro={erro}
     >
-      {erro && <p className="texto-erro text-sm font-bold text-center">{erro}</p>}
-
       {etapa === 'termo' ? (
         carregandoTermo ? (
-          <p className="text-sm texto-fraco text-center py-6">Carregando...</p>
+          <Carregando className="text-center py-6" />
         ) : termoIndisponivel || !termo ? (
           <p className="text-sm texto-erro text-center py-6">
             Termos de Uso deste tipo ainda não foram publicados. Peça a um administrador para

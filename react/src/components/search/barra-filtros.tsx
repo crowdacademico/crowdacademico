@@ -15,6 +15,10 @@ import { useFecharAoClicarFora } from '../../services/constant/hook/use-fechar-a
 // nativo agir (senão alterna 2x).
 // 2) fechar por mousedown no document comparando com contains(), NUNCA por onBlur/relatedTarget (checkbox
 // dentro de <label> dispara blur antes do clique completar, fechando o dropdown na hora errada).
+//
+// Chips: cada filtro ativo (texto da busca e cada opção marcada) vira um chip com X logo abaixo da barra, para
+// ver de relance o que está filtrando a lista e tirar um filtro só sem abrir o dropdown. Saem das mesmas props
+// (`aoMudarBusca('')`, `aoAlternar(opcao)`), então toda tela que usa a barra ganha os chips sem mudar nada.
 export interface FacetaFiltro {
   chave: string;
   rotulo: string;
@@ -31,6 +35,10 @@ interface BarraFiltrosProps {
   aoMudarBusca: (valor: string) => void;
   placeholderBusca?: string;
   facetas?: FacetaFiltro[];
+  // "Limpar filtros" numa atualização só. Sem isto, chama aoMudarBusca('') + aoLimpar de cada faceta em
+  // sequência, o que serve a estado local (useState) mas perde atualizações na URL: setSearchParams recebe os
+  // parâmetros do último render, não os da chamada anterior.
+  aoLimparTudo?: () => void;
 }
 
 export function BarraFiltros({
@@ -39,6 +47,7 @@ export function BarraFiltros({
   aoMudarBusca,
   placeholderBusca = 'Filtrar...',
   facetas,
+  aoLimparTudo,
 }: BarraFiltrosProps) {
   // Cada faceta só aparece se tiver mais de 1 valor possível (com 1 só,
   // filtrar não faria diferença nenhuma).
@@ -54,78 +63,121 @@ export function BarraFiltros({
     return null;
   }
 
+  const chips = [
+    ...(mostrarBusca && valorBusca.trim()
+      ? [{ chave: 'busca', texto: `Busca: "${valorBusca.trim()}"`, remover: () => aoMudarBusca('') }]
+      : []),
+    ...facetasComOpcoes.flatMap((faceta) =>
+      faceta.selecionados.map((opcao) => ({
+        chave: `${faceta.chave}:${opcao}`,
+        texto: `${faceta.rotulo}: ${faceta.rotulos?.[opcao] ?? opcao}`,
+        remover: () => faceta.aoAlternar(opcao),
+      })),
+    ),
+  ];
+  const limparTudo = aoLimparTudo ?? (() => {
+    if (mostrarBusca) aoMudarBusca('');
+    facetasComOpcoes.forEach((faceta) => {
+      if (faceta.selecionados.length > 0) faceta.aoLimpar();
+    });
+  });
+
   return (
-    <div className="flex items-center gap-3 flex-wrap mb-3">
-      {mostrarBusca && (
-        <input
-          type="search"
-          placeholder={placeholderBusca}
-          value={valorBusca}
-          onChange={(evento) => aoMudarBusca(evento.target.value)}
-          // py-2.5: mesma altura do botão de filtro ao lado (.btn), para a barra (e a tabela abaixo) ficar na
-          // mesma altura com ou sem filtro de lista.
-          className="w-full sm:w-64 border borda-forte rounded-lg fundo-sutil py-2.5 px-3 text-sm outline-none foco-marca"
-        />
-      )}
+    <div className="mb-3">
+      <div className="flex items-center gap-3 flex-wrap">
+        {mostrarBusca && (
+          <input
+            type="search"
+            placeholder={placeholderBusca}
+            value={valorBusca}
+            onChange={(evento) => aoMudarBusca(evento.target.value)}
+            // py-2.5: mesma altura do botão de filtro ao lado (.btn), para a barra (e a tabela abaixo) ficar na
+            // mesma altura com ou sem filtro de lista.
+            className="w-full sm:w-64 border borda-forte rounded-lg fundo-sutil py-2.5 px-3 text-sm outline-none foco-marca"
+          />
+        )}
 
-      {facetasComOpcoes.length > 0 && (
-        <div className="flex items-center gap-3 flex-wrap" ref={facetasRef}>
-          {facetasComOpcoes.map((faceta) => {
-            const aberta = facetaAbertaChave === faceta.chave;
+        {facetasComOpcoes.length > 0 && (
+          <div className="flex items-center gap-3 flex-wrap" ref={facetasRef}>
+            {facetasComOpcoes.map((faceta) => {
+              const aberta = facetaAbertaChave === faceta.chave;
 
-            return (
-              <div key={faceta.chave} className="relative">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setFacetaAbertaChave((atual) => (atual === faceta.chave ? null : faceta.chave))
-                  }
-                  className="btn btn-secondary text-sm flex items-center gap-2"
-                >
-                  <i className="fa-solid fa-filter"></i>
-                  {faceta.rotulo}
-                  {faceta.selecionados.length > 0 ? (
-                    <span className="badge badge-sucesso">{faceta.selecionados.length}</span>
-                  ) : (
-                    <span className="texto-padrao font-normal">(Todos)</span>
-                  )}
-                  <i className="fa-solid fa-chevron-down text-xs"></i>
-                </button>
+              return (
+                <div key={faceta.chave} className="relative">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFacetaAbertaChave((atual) => (atual === faceta.chave ? null : faceta.chave))
+                    }
+                    className="btn btn-secondary text-sm flex items-center gap-2"
+                  >
+                    <i className="fa-solid fa-filter"></i>
+                    {faceta.rotulo}
+                    {faceta.selecionados.length > 0 ? (
+                      <span className="badge badge-sucesso">{faceta.selecionados.length}</span>
+                    ) : (
+                      <span className="texto-padrao font-normal">(Todos)</span>
+                    )}
+                    <i className="fa-solid fa-chevron-down text-xs"></i>
+                  </button>
 
-                {aberta && (
-                  <div className="absolute left-0 mt-1 w-56 fundo-cartao border borda-padrao rounded-lg shadow-lg z-20 overflow-hidden">
-                    <button type="button" onClick={faceta.aoLimpar} className="dropdown-opcao">
-                      Todos
-                      {faceta.selecionados.length === 0 && (
-                        <i className="fa-solid fa-check texto-sucesso"></i>
-                      )}
-                    </button>
-                    <div className="max-h-64 overflow-y-auto">
-                      {faceta.opcoes.map((opcao) => {
-                        const marcado = faceta.selecionados.includes(opcao);
-                        const alternar = () => faceta.aoAlternar(opcao);
-                        return (
-                          <label
-                            key={opcao}
-                            className="combobox-opcao"
-                            onClick={(evento) => {
-                              if (evento.target instanceof Element && evento.target.tagName !== 'INPUT') {
-                                evento.preventDefault();
-                                alternar();
-                              }
-                            }}
-                          >
-                            <input type="checkbox" checked={marcado} onChange={alternar} />
-                            {faceta.rotulos?.[opcao] ?? opcao}
-                          </label>
-                        );
-                      })}
+                  {aberta && (
+                    <div className="absolute left-0 mt-1 w-56 fundo-cartao border borda-padrao rounded-lg shadow-lg z-20 overflow-hidden">
+                      <button type="button" onClick={faceta.aoLimpar} className="dropdown-opcao">
+                        Todos
+                        {faceta.selecionados.length === 0 && (
+                          <i className="fa-solid fa-check texto-sucesso"></i>
+                        )}
+                      </button>
+                      <div className="max-h-64 overflow-y-auto">
+                        {faceta.opcoes.map((opcao) => {
+                          const marcado = faceta.selecionados.includes(opcao);
+                          const alternar = () => faceta.aoAlternar(opcao);
+                          return (
+                            <label
+                              key={opcao}
+                              className="combobox-opcao"
+                              onClick={(evento) => {
+                                if (evento.target instanceof Element && evento.target.tagName !== 'INPUT') {
+                                  evento.preventDefault();
+                                  alternar();
+                                }
+                              }}
+                            >
+                              <input type="checkbox" checked={marcado} onChange={alternar} />
+                              {faceta.rotulos?.[opcao] ?? opcao}
+                            </label>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {chips.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap mt-2">
+          {chips.map((chip) => (
+            <button
+              key={chip.chave}
+              type="button"
+              onClick={chip.remover}
+              aria-label={`Remover filtro ${chip.texto}`}
+              className="badge badge-neutro gap-1.5 foco-marca"
+            >
+              {chip.texto}
+              <i className="fa-solid fa-xmark" aria-hidden="true"></i>
+            </button>
+          ))}
+          {chips.length > 1 && (
+            <button type="button" onClick={limparTudo} className="text-xs font-semibold texto-marca foco-marca">
+              Limpar filtros
+            </button>
+          )}
         </div>
       )}
     </div>

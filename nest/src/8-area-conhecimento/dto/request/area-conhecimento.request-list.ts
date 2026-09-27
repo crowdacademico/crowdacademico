@@ -1,18 +1,7 @@
-import { Transform, Type } from 'class-transformer';
+import { Type } from 'class-transformer';
 import { IsBoolean, IsInt, IsOptional, Min } from 'class-validator';
 import { PaginacaoQueryDto } from '../../../commons/database/dto/paginacao.query.dto';
-
-// Query string sempre chega como string - mesmo cuidado de PaginacaoQueryDto
-// (`@Type(() => Number)`) pra números; pra booleano, `@Type(() => Boolean)`
-// sozinho converteria "false" (string não-vazia) em `true`, então o
-// `@Transform` abaixo faz a conversão certa antes do class-validator rodar
-// (precisa de `transform: true` no ValidationPipe global, já ligado em
-// main.ts).
-function paraBooleano({ value }: { value: unknown }): unknown {
-  if (value === 'true') return true;
-  if (value === 'false') return false;
-  return value;
-}
+import { BooleanoDaQuery } from '../../../commons/validacao/transformacoes.decorator';
 
 // Filtros pensados pro caso de uso concreto de formulário em cascata
 // (grande área -> área, ver fn_valida_area_conhecimento_nivel2 em
@@ -29,12 +18,12 @@ export class AreaConhecimentoRequestList extends PaginacaoQueryDto {
   idPai?: number;
 
   @IsOptional()
-  @Transform(paraBooleano)
+  @BooleanoDaQuery()
   @IsBoolean()
   raiz?: boolean;
 
   @IsOptional()
-  @Transform(paraBooleano)
+  @BooleanoDaQuery()
   @IsBoolean()
   ativo?: boolean;
 }

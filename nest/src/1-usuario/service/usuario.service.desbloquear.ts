@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { sql } from 'kysely';
 import { DatabaseService } from '../../commons/database/database.service';
 
@@ -10,14 +10,8 @@ export class UsuarioServiceDesbloquear {
   // SECURITY DEFINER, exige a permissão 'usuario_desbloquear' internamente (checagem própria da função, não
   // RLS). É o único jeito de desbloquear, pelo painel, uma conta bloqueada por excesso de tentativas de login.
   async executar(idUsuario: number): Promise<void> {
-    try {
-      await sql`SELECT public.liberar_bloqueio_login(${idUsuario})`.execute(
-        this.database.getDb(),
-      );
-    } catch (erro) {
-      throw new ForbiddenException(
-        (erro as Error).message || 'Sem permissão para desbloquear esta conta.',
-      );
-    }
+    await sql`SELECT public.liberar_bloqueio_login(${idUsuario})`.execute(
+      this.database.getDb(),
+    );
   }
 }

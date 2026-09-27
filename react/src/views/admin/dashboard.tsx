@@ -1,19 +1,19 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router';
 import { Tooltip } from '../../components/layout/tooltip';
-import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { dashboardApi } from '../../services/admin/api/dashboard.api';
+import { useBuscar } from '../../services/constant/hook/use-buscar';
 import { formatarReaisSemSimbolo } from '../../services/constant/utils/formatacao.util';
 import { DashboardIdentidadeVisual } from './dashboard-identidade-visual';
 import { DashboardRegrasNegocio } from './dashboard-regras-negocio';
 import { DashboardSaude } from './dashboard-saude';
+import { lerAcessadosRecentemente } from '../../services/router/acessados-recentemente';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
-import type { DashboardResponseSummary } from '../../services/admin/type/dashboard.type';
 
-// Texto do tooltip de "sessões ativas": exportado porque a aba Saúde (dashboard-saude.tsx) mostra a MESMA
-// métrica e precisa do MESMO texto, não uma 2ª cópia que poderia divergir. "Sessões ativas agora" sugere gente
-// online neste instante, mas `contar_metricas_dashboard()` conta sessão não-revogada dentro da validade de 30
-// dias (REFRESH_TOKEN_DIAS_VALIDADE): sobe rápido em ambiente de teste, sem ninguém "online" de verdade.
-export const TEXTO_TOOLTIP_SESSOES_ATIVAS =
+// Texto do tooltip de "sessões abertas": exportado porque a aba Saúde (dashboard-saude.tsx) mostra a MESMA
+// métrica e precisa do MESMO texto. `contar_metricas_dashboard()` conta sessão não revogada dentro da validade
+// de 30 dias (REFRESH_TOKEN_DIAS_VALIDADE), não gente online agora: por isso o rótulo diz "(30 dias)".
+export const TEXTO_TOOLTIP_SESSOES_ABERTAS =
   'Contagem de sessões não-revogadas em 30 dias, não gente online.';
 
 // Abas: estrutura em abas em vez de empilhar seção atrás de seção (para o Dashboard não virar uma "tela onde
@@ -41,7 +41,7 @@ interface CardMetricaProps {
 
 function CardMetrica({ rotulo, valor, moeda = false }: CardMetricaProps) {
   return (
-    <div className="@container fundo-cartao border borda-forte rounded-xl shadow-sm p-5 min-w-0 break-words">
+    <div className="@container cartao-painel p-5 min-w-0 break-words">
       <div className="rotulo-leitura mb-1">
         {rotulo}
       </div>
@@ -71,7 +71,7 @@ function CardMetrica({ rotulo, valor, moeda = false }: CardMetricaProps) {
 
 // Bolinha de status de conexão: a Visão Geral (abaixo) e a aba Saúde (`dashboard-saude.tsx`) mostram a MESMA
 // bolinha, com a MESMA lógica de 3 estados: exportado daqui e importado lá, mesmo padrão de
-// `TEXTO_TOOLTIP_SESSOES_ATIVAS` acima. Cor vem de `.ponto-status--*` (1-cores.css), reaproveitando os mesmos
+// `TEXTO_TOOLTIP_SESSOES_ABERTAS` acima. Cor vem de `.ponto-status--*` (1-cores.css), reaproveitando os mesmos
 // tokens de status dos badges (se adapta ao tema escuro).
 export function PontoStatusConexao({ valor }: { valor: boolean | null }) {
   return (
@@ -95,25 +95,15 @@ interface DashboardProps {
 }
 
 export function Dashboard({ auth }: DashboardProps) {
-  const [resumo, setResumo] = useState<DashboardResponseSummary | null>(null);
-  const [carregandoResumo, setCarregandoResumo] = useState(true);
+  const {
+    dado: resumo,
+    carregando: carregandoResumo,
+    erro,
+  } = useBuscar(() => dashboardApi.buscarResumo(auth.authFetch), []);
   const [bancoConectado, setBancoConectado] = useState<boolean | null>(null); // null = ainda verificando
   const [abaAtiva, setAbaAtiva] = useState<AbaChave>('visao-geral');
-  const { erro, reportarErro } = useErroToast();
-
-  // Espera a sessão ser restaurada (F5): sem isso o 1º pedido saía sem token e voltava 401 (mesmo conserto de
-  // T2/T3).
-  useEffect(() => {
-    if (auth.carregando) {
-      return;
-    }
-    dashboardApi
-      .buscarResumo(auth.authFetch)
-      .then(setResumo)
-      .catch(reportarErro)
-      .finally(() => setCarregandoResumo(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [auth.carregando]);
+  // Lido uma vez ao abrir: o Dashboard é a página de partida, a lista não muda enquanto ela está na tela.
+  const [acessados] = useState(() => (auth.usuario ? lerAcessadosRecentemente(auth.usuario.idUsuario) : []));
 
   useEffect(() => {
     dashboardApi
@@ -154,7 +144,7 @@ export function Dashboard({ auth }: DashboardProps) {
         <div className="space-y-6">
           {/* (b) Faixa de saúde - sempre renderiza, mesmo se o resumo abaixo
               falhar (é precisamente aí que ela mais importa). */}
-          <div className="fundo-cartao border borda-forte rounded-xl shadow-sm p-5 flex flex-wrap items-center gap-x-8 gap-y-3 text-sm">
+          <div className="cartao-painel p-5 flex flex-wrap items-center gap-x-8 gap-y-3 text-sm">
             <span className="flex items-center gap-2 font-semibold texto-padrao">
               <PontoStatusConexao valor={bancoConectado} />
               {bancoConectado === null
@@ -167,8 +157,8 @@ export function Dashboard({ auth }: DashboardProps) {
               <strong className="texto-forte">
                 {resumo ? resumo.sessoesAtivas : '-'}
               </strong>{' '}
-              sessões ativas agora
-              <Tooltip texto={TEXTO_TOOLTIP_SESSOES_ATIVAS} />
+              sessões abertas (30 dias)
+              <Tooltip texto={TEXTO_TOOLTIP_SESSOES_ABERTAS} />
             </span>
             <span className="texto-fraco">
               <strong className="texto-forte">
@@ -211,10 +201,24 @@ export function Dashboard({ auth }: DashboardProps) {
             </>
           )}
 
+          {acessados.length > 0 && (
+            <div className="cartao-painel p-5">
+              <h2 className="subtitulo mb-3">Acessados recentemente</h2>
+              <div className="flex flex-wrap gap-2">
+                {acessados.map((rota) => (
+                  <Link key={rota.caminho} to={rota.caminho} className="btn btn-secondary text-sm flex items-center gap-2">
+                    {rota.icone && <i className={'fa-solid ' + rota.icone} aria-hidden="true"></i>}
+                    {rota.rotuloMenu}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* (c) Prévia: NOTIFICAÇÕES, não log de auditoria (log de auditoria já tem painel próprio, "Ver
               log", embaixo de cada tabela). Módulo 26-notificacao ainda não existe (nem tabela mapeada no
               Kysely, nem controller): mostra isso honestamente em vez de inventar dado. */}
-          <div className="fundo-cartao border borda-forte rounded-xl shadow-sm p-5">
+          <div className="cartao-painel p-5">
             <h2 className="subtitulo mb-2">Notificações</h2>
             <p className="text-sm texto-fraco">
               Módulo de notificações ainda não foi implementado, esta prévia vai listar as

@@ -8,11 +8,13 @@ import {
 } from 'class-validator';
 import { TIPOS_MOTIVO_DENUNCIA } from '../../../commons/database/db.types';
 import type { TipoMotivoDenuncia } from '../../../commons/database/db.types';
+import { TextoLimpo } from '../../../commons/validacao/transformacoes.decorator';
 
 export class MotivoDenunciaRequestCreate {
   // VARCHAR(255) no banco. Obrigatório: sem `codigo` (a chave estável tipo CAMP-001 não existe no catálogo,
   // porque nenhuma trigger/função de 05_regras_negocio.sql a lia), `descricao` é o ÚNICO identificador legível
   // do motivo.
+  @TextoLimpo()
   @IsNotEmpty()
   @IsString()
   @MaxLength(255)

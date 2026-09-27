@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router';
 import { BuscaGlobal } from '../../components/layout/cabecalho/busca-global';
+import { LimiteErro } from '../../components/layout/limite-erro';
 import { AdminSidebar } from './admin-sidebar';
+import { registrarAcesso } from '../../services/router/acessados-recentemente';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 
 interface AdminLayoutProps {
@@ -21,6 +23,12 @@ interface AdminLayoutProps {
 export function AdminLayout({ auth }: AdminLayoutProps) {
   const [menuAberto, setMenuAberto] = useState(false);
   const local = useLocation();
+  const idUsuario = auth.usuario?.idUsuario;
+
+  // Alimenta "Acessados recentemente" do Dashboard (services/router/acessados-recentemente.ts).
+  useEffect(() => {
+    if (idUsuario !== undefined) registrarAcesso(idUsuario, local.pathname);
+  }, [idUsuario, local.pathname]);
 
   // Guarda única do painel: sem login, qualquer /admin/* vai para o login, que devolve a pessoa para a página
   // pedida depois de entrar. Só confere se HÁ sessão, não o papel: qualquer conta logada vê o painel, e o que
@@ -61,7 +69,10 @@ export function AdminLayout({ auth }: AdminLayoutProps) {
 
         <div className="admin-content-area">
           <div className="admin-content-area__inner">
-            <Outlet />
+            {/* Erro numa tela do painel fica só na área de conteúdo: menu lateral e busca continuam usáveis. */}
+            <LimiteErro>
+              <Outlet />
+            </LimiteErro>
           </div>
         </div>
       </div>

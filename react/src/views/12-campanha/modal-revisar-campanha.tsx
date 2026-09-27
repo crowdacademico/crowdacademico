@@ -1,14 +1,16 @@
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
+import { Campo } from '../../components/input/campo';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
 import { ROTULO_STATUS_CAMPANHA, classeBadgeStatusCampanha } from '../../services/12-campanha/constants/status-campanha.constants';
 import { useRegrasCampanha } from '../../services/12-campanha/hook/use-regras-campanha';
 import { orcamentoCampanhaApi } from '../../services/13-orcamento-campanha/api/orcamento-campanha.api';
 import { marcoCronogramaApi } from '../../services/14-marco-cronograma/api/marco-cronograma.api';
 import { formatarData, formatarDataHora, formatarMoeda } from '../../services/constant/utils/formatacao.util';
+import { useEnvio } from '../../services/constant/hook/use-envio';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { CampanhaResponse, HistoricoRejeicaoResponse } from '../../services/12-campanha/type/campanha.type';
 import type { OrcamentoCampanhaResponse } from '../../services/13-orcamento-campanha/type/orcamento-campanha.type';
@@ -28,8 +30,8 @@ interface ModalRevisarCampanhaProps {
 export function ModalRevisarCampanha({ auth, idCampanha, aoFechar, aoConcluido }: ModalRevisarCampanhaProps) {
   const { mostrar } = useToast();
   const { erro, reportarErro, limparErro } = useErroToast();
+  const { ocupado: enviando, executar: executarEnviando } = useEnvio(reportarErro, limparErro);
   const { minimoItensOrcamento, minimoMarcosCronograma } = useRegrasCampanha();
-  const idJustificativa = useId();
 
   const [campanha, setCampanha] = useState<CampanhaResponse | null>(null);
   const [orcamento, setOrcamento] = useState<OrcamentoCampanhaResponse[]>([]);
@@ -37,7 +39,6 @@ export function ModalRevisarCampanha({ auth, idCampanha, aoFechar, aoConcluido }
   const [historico, setHistorico] = useState<HistoricoRejeicaoResponse[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [justificativa, setJustificativa] = useState('');
-  const [enviando, setEnviando] = useState(false);
 
   useEffect(() => {
     let ativo = true;
@@ -72,9 +73,7 @@ export function ModalRevisarCampanha({ auth, idCampanha, aoFechar, aoConcluido }
   const aguardando = campanha?.status === 'aguardando_aprovacao';
 
   const decidir = async (acao: 'aprovar' | 'rejeitar') => {
-    limparErro();
-    setEnviando(true);
-    try {
+    await executarEnviando(async () => {
       if (acao === 'aprovar') {
         await campanhaApi.aprovar(auth.authFetch, idCampanha);
         mostrar('Campanha aprovada com sucesso.', `ID: ${idCampanha} foi aprovada`);
@@ -84,11 +83,7 @@ export function ModalRevisarCampanha({ auth, idCampanha, aoFechar, aoConcluido }
       }
       aoConcluido();
       aoFechar();
-    } catch (e) {
-      reportarErro(e);
-    } finally {
-      setEnviando(false);
-    }
+    });
   };
 
   const itemChecklist = (ok: boolean, texto: string) => (
@@ -136,8 +131,8 @@ export function ModalRevisarCampanha({ auth, idCampanha, aoFechar, aoConcluido }
           )}
         </div>
       }
+      erro={erro}
     >
-      {erro && <p className="texto-erro text-sm font-bold text-center">{erro}</p>}
       {campanha && (
         <div className="grid lg:grid-cols-3 gap-6 items-start">
           <div className="lg:col-span-2 space-y-6">
@@ -201,19 +196,18 @@ export function ModalRevisarCampanha({ auth, idCampanha, aoFechar, aoConcluido }
               </ul>
             </div>
             {aguardando && (
-              <div className="space-y-2">
-                <label htmlFor={idJustificativa} className="rotulo-campo">
-                  Motivo da rejeição (obrigatório para rejeitar)
-                </label>
-                <textarea
-                  id={idJustificativa}
-                  className="input-padrao"
-                  rows={4}
-                  value={justificativa}
-                  onChange={(evento) => setJustificativa(evento.target.value)}
-                  placeholder="O pesquisador lê este texto para corrigir e reenviar."
-                />
-              </div>
+              <Campo rotulo="Motivo da rejeição (obrigatório para rejeitar)">
+                {({ atributos }) => (
+                  <textarea
+                    {...atributos}
+                    className="input-padrao"
+                    rows={4}
+                    value={justificativa}
+                    onChange={(evento) => setJustificativa(evento.target.value)}
+                    placeholder="O pesquisador lê este texto para corrigir e reenviar."
+                  />
+                )}
+              </Campo>
             )}
           </div>
         </div>

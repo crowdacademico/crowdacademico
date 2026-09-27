@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router';
 import { AvatarUsuario } from '../../components/layout/avatar-usuario';
@@ -8,6 +8,9 @@ import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { confirmarSaida } from '../../components/crud/use-alteracao-nao-salva';
+import { Campo } from '../../components/input/campo';
+import { ConfirmacaoDigitada } from '../../components/input/confirmacao-digitada';
+import { confirmacaoConfere } from '../../components/input/confirmacao-confere';
 import { sessaoApi } from '../../services/3-auth/api/sessao.api';
 import { usuarioPapelApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
@@ -19,8 +22,10 @@ import {
   classeBadgeStatusPesquisador,
 } from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
 import { formatarCpfExibicao, formatarDataHora, formatarMesAno } from '../../services/constant/utils/formatacao.util';
+import { useEnvio } from '../../services/constant/hook/use-envio';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import { ModalUpgradePesquisador } from '../6-perfil-pesquisador/modal-upgrade-pesquisador';
+import { Carregando } from '../../components/layout/carregando';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { SessaoResponse } from '../../services/3-auth/type/auth.type';
 import type { UsuarioPapelResponse } from '../../services/2-papel-permissao/type/papel-permissao.type';
@@ -249,9 +254,6 @@ interface DadosAtualizarPerfil {
 
 function AbaPerfil({ auth, aoVoltar }: AbaPerfilProps) {
   const [nome, setNome] = useState(auth.usuario?.nome ?? '');
-  const idNome = useId();
-  const idEmail = useId();
-  const [enviando, setEnviando] = useState(false);
   // undefined = carregando; null = não é pesquisador (404, mesma tolerância da aba Acadêmico).
   const [perfil, setPerfil] = useState<PerfilPesquisadorResponse | null | undefined>(undefined);
 
@@ -266,6 +268,7 @@ function AbaPerfil({ auth, aoVoltar }: AbaPerfilProps) {
   }, [auth.authFetch, auth.usuario]);
   const { mostrar } = useToast();
   const { erro, reportarErro, limparErro } = useErroToast();
+  const { ocupado: enviando, executar: executarEnviando } = useEnvio(reportarErro, limparErro);
 
   // Mesmo padrão de 3 estados de modal-usuario.tsx (botão "Remover foto"): `undefined` = nenhuma escolha nova
   // (mostra a foto que já existe), número = foto nova (upload já confirmado, só falta linkar no PATCH), `null`
@@ -282,26 +285,21 @@ function AbaPerfil({ auth, aoVoltar }: AbaPerfilProps) {
     // `auth.usuario` só é null antes do 1º carregamento de sessão - o
     // formulário nem aparece nesse estado, mas o TypeScript não sabe
     // disso; guarda defensiva, nunca dispara na prática.
-    if (!auth.usuario) {
+    const usuario = auth.usuario;
+    if (!usuario) {
       return;
     }
-    limparErro();
-    setEnviando(true);
-    try {
+    await executarEnviando(async () => {
       const dados: DadosAtualizarPerfil = { nome: nome.trim() };
       if (idImagemPerfilNovo !== undefined) {
         dados.idImagemPerfil = idImagemPerfilNovo;
       }
-      const usuarioAtualizado = await usuarioApi.atualizar(auth.authFetch, auth.usuario.idUsuario, dados);
+      const usuarioAtualizado = await usuarioApi.atualizar(auth.authFetch, usuario.idUsuario, dados);
       auth.atualizarUsuarioLocal(usuarioAtualizado);
       setIdImagemPerfilNovo(undefined);
       setAvatarUrlNovo(null);
       mostrar('Perfil atualizado com sucesso.');
-    } catch (erroRequisicao) {
-      reportarErro(erroRequisicao);
-    } finally {
-      setEnviando(false);
-    }
+    });
   };
 
   // "Cancelar" volta para a tela de antes de Minha Conta (pergunta antes, se houver alteração não salva).
@@ -339,20 +337,22 @@ function AbaPerfil({ auth, aoVoltar }: AbaPerfilProps) {
             </SecaoFicha>
 
             <SecaoFicha titulo="Dados da conta" nivel={2}>
-              <div>
-                <label htmlFor={idNome} className="rotulo-campo">Nome</label>
-                <input
-                  id={idNome}
-                  type="text"
-                  value={nome}
-                  onChange={(evento) => setNome(evento.target.value)}
-                  className="input-padrao"
-                />
-              </div>
-              <div>
-                <label htmlFor={idEmail} className="rotulo-campo">E-mail</label>
-                <input id={idEmail} type="email" value={auth.usuario?.email ?? ''} disabled className="input-padrao" />
-              </div>
+              <Campo rotulo="Nome">
+                {({ atributos }) => (
+                  <input
+                    {...atributos}
+                    type="text"
+                    value={nome}
+                    onChange={(evento) => setNome(evento.target.value)}
+                    className="input-padrao"
+                  />
+                )}
+              </Campo>
+              <Campo rotulo="E-mail">
+                {({ atributos }) => (
+                  <input {...atributos} type="email" value={auth.usuario?.email ?? ''} disabled className="input-padrao" />
+                )}
+              </Campo>
               <div className="sm:col-span-2 flex items-start gap-2 rounded-lg fundo-info texto-info p-3">
                 <i className="fa-solid fa-circle-info mt-0.5 shrink-0"></i>
                 <p className="text-xs">
@@ -364,7 +364,7 @@ function AbaPerfil({ auth, aoVoltar }: AbaPerfilProps) {
           </div>
 
           <SecaoFicha titulo="Vínculo acadêmico" colunas={1} nivel={2}>
-            {perfil === undefined && <p className="text-sm texto-fraco">Carregando...</p>}
+            {perfil === undefined && <Carregando />}
             {perfil === null && (
               <div className="flex items-start gap-2 rounded-lg fundo-info texto-info p-3">
                 <i className="fa-solid fa-circle-info mt-0.5 shrink-0"></i>
@@ -429,38 +429,31 @@ interface AbaSegurancaProps {
 
 function AbaSeguranca({ auth }: AbaSegurancaProps) {
   const [senhaAtual, setSenhaAtual] = useState('');
-  const idSenhaAtual = useId();
-  const idNovaSenha = useId();
   const [novaSenha, setNovaSenha] = useState('');
-  const [enviandoSenha, setEnviandoSenha] = useState(false);
   const { mostrar } = useToast();
   const { erro, reportarErro, limparErro } = useErroToast();
+  const { ocupado: encerrandoTodas, executar: executarEncerrandoTodas } = useEnvio(reportarErro);
+  const { ocupado: enviandoSenha, executar: executarEnviandoSenha } = useEnvio(reportarErro, limparErro);
 
   const aoTrocarSenha = async (evento: FormEvent<HTMLFormElement>) => {
     evento.preventDefault();
-    if (!auth.usuario) {
+    const usuario = auth.usuario;
+    if (!usuario) {
       return;
     }
-    limparErro();
-    setEnviandoSenha(true);
-    try {
-      await usuarioApi.atualizar(auth.authFetch, auth.usuario.idUsuario, {
+    await executarEnviandoSenha(async () => {
+      await usuarioApi.atualizar(auth.authFetch, usuario.idUsuario, {
         senhaAtual,
         novaSenha,
       });
       mostrar('Senha alterada com sucesso.');
       setSenhaAtual('');
       setNovaSenha('');
-    } catch (erroRequisicao) {
-      reportarErro(erroRequisicao);
-    } finally {
-      setEnviandoSenha(false);
-    }
+    });
   };
 
   const [sessoes, setSessoes] = useState<SessaoResponse[] | null>(null);
   const [encerrando, setEncerrando] = useState<number | null>(null);
-  const [encerrandoTodas, setEncerrandoTodas] = useState(false);
   // Colapsada por padrão: imagine um usuário com 10, 20, 30 sessões abertas. Expandida, a lista ainda ganha
   // scroll próprio (max-h-64): nunca empurra a página.
   const [sessoesAbertas, setSessoesAbertas] = useState(false);
@@ -490,16 +483,11 @@ function AbaSeguranca({ auth }: AbaSegurancaProps) {
     if (!window.confirm('Encerrar todas as outras sessões ativas?')) {
       return;
     }
-    setEncerrandoTodas(true);
-    try {
+    await executarEncerrandoTodas(async () => {
       const resultado = await sessaoApi.encerrarTodasMenosAtual(auth.authFetch);
       mostrar(`${resultado.encerradas} sessão(ões) encerrada(s).`);
       carregarSessoes();
-    } catch (erroRequisicao) {
-      reportarErro(erroRequisicao);
-    } finally {
-      setEncerrandoTodas(false);
-    }
+    });
   };
 
   return (
@@ -510,28 +498,30 @@ function AbaSeguranca({ auth }: AbaSegurancaProps) {
         </h2>
         <form onSubmit={aoTrocarSenha} className="space-y-4 max-w-md">
           {erro && <p className="text-sm texto-erro">{erro}</p>}
-          <div>
-            <label htmlFor={idSenhaAtual} className="rotulo-campo">Senha atual</label>
-            <input
-              id={idSenhaAtual}
-              type="password"
-              value={senhaAtual}
-              onChange={(evento) => setSenhaAtual(evento.target.value)}
-              className="input-padrao"
-              autoComplete="current-password"
-            />
-          </div>
-          <div>
-            <label htmlFor={idNovaSenha} className="rotulo-campo">Nova senha</label>
-            <input
-              id={idNovaSenha}
-              type="password"
-              value={novaSenha}
-              onChange={(evento) => setNovaSenha(evento.target.value)}
-              className="input-padrao"
-              autoComplete="new-password"
-            />
-          </div>
+          <Campo rotulo="Senha atual">
+            {({ atributos }) => (
+              <input
+                {...atributos}
+                type="password"
+                value={senhaAtual}
+                onChange={(evento) => setSenhaAtual(evento.target.value)}
+                className="input-padrao"
+                autoComplete="current-password"
+              />
+            )}
+          </Campo>
+          <Campo rotulo="Nova senha">
+            {({ atributos }) => (
+              <input
+                {...atributos}
+                type="password"
+                value={novaSenha}
+                onChange={(evento) => setNovaSenha(evento.target.value)}
+                className="input-padrao"
+                autoComplete="new-password"
+              />
+            )}
+          </Campo>
           <button
             type="submit"
             disabled={!senhaAtual || novaSenha.length < 8 || enviandoSenha}
@@ -572,7 +562,7 @@ function AbaSeguranca({ auth }: AbaSegurancaProps) {
 
         {sessoesAbertas &&
           (sessoes === null ? (
-            <p className="text-sm texto-fraco">Carregando...</p>
+            <Carregando />
           ) : sessoes.length === 0 ? (
             <p className="text-sm texto-fraco">Nenhuma sessão ativa encontrada.</p>
           ) : (
@@ -654,7 +644,7 @@ function AbaPapeis({ auth }: AbaPapeisProps) {
         fazer isso pelo painel de Usuários.
       </p>
       {papeis === null ? (
-        <p className="text-sm texto-fraco">Carregando...</p>
+        <Carregando />
       ) : papeis.length === 0 ? (
         <p className="text-sm texto-fraco">Nenhum papel atribuído.</p>
       ) : (
@@ -705,7 +695,7 @@ function AbaAcademico({ auth }: AbaAcademicoProps) {
   const suspensoAgora = suspensoAte !== null && new Date(suspensoAte) > new Date();
 
   if (carregando) {
-    return <p className="px-6 sm:px-8 py-8 text-sm texto-fraco">Carregando...</p>;
+    return <Carregando className="px-6 sm:px-8 py-8" />;
   }
 
   // Quem ainda não é pesquisador faz o upgrade da PRÓPRIA conta aqui (termos, CPF, vínculo, título): o mesmo
@@ -740,7 +730,7 @@ function AbaAcademico({ auth }: AbaAcademicoProps) {
       {suspensoAgora && (
         <div className="rounded-lg border borda-forte fundo-erro p-4">
           <p className="text-sm font-bold texto-erro">
-            Seu poder de pesquisador está suspenso até {suspensoAte && new Date(suspensoAte).toLocaleString('pt-BR')}
+            Seu poder de pesquisador está suspenso até {formatarDataHora(suspensoAte)}
           </p>
           <p className="text-xs texto-erro mt-1">Motivo: {suspensao?.motivoSuspensao}</p>
           <p className="text-xs texto-erro mt-2">
@@ -784,7 +774,7 @@ function AbaPrivacidade({ auth }: AbaPrivacidadeProps) {
   const [excluindo, setExcluindo] = useState(false);
   const { erro, reportarErro, limparErro } = useErroToast();
 
-  const confirmado = auth.usuario && confirmacao.trim().toLowerCase() === auth.usuario.email.toLowerCase();
+  const confirmado = auth.usuario && confirmacaoConfere(confirmacao, auth.usuario.email);
 
   const aoExcluir = async () => {
     if (!auth.usuario) {
@@ -823,15 +813,14 @@ function AbaPrivacidade({ auth }: AbaPrivacidadeProps) {
           Não existe desfazer pelo painel.
         </p>
         {erro && <p className="text-xs texto-erro mb-2 font-bold">{erro}</p>}
-        <label className="block text-xs font-bold texto-erro mb-1">
-          Digite "{auth.usuario?.email}" pra confirmar
-        </label>
-        <input
-          type="text"
-          value={confirmacao}
-          onChange={(evento) => setConfirmacao(evento.target.value)}
-          className="input-padrao mb-3"
-        />
+        <div className="mb-3">
+          <ConfirmacaoDigitada
+            oQue="o e-mail"
+            esperado={auth.usuario?.email ?? ''}
+            valor={confirmacao}
+            aoMudar={setConfirmacao}
+          />
+        </div>
         <button
           type="button"
           onClick={aoExcluir}

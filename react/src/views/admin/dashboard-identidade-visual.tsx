@@ -4,7 +4,7 @@
 // a tela de gerenciar logo/favicon que consumiria ele.
 export function DashboardIdentidadeVisual() {
   return (
-    <div className="fundo-cartao border borda-forte rounded-xl shadow-sm p-8 text-center">
+    <div className="cartao-painel p-8 text-center">
       <div className="w-14 h-14 fundo-sutil rounded-2xl mx-auto flex items-center justify-center texto-fraco text-2xl mb-4">
         <i className="fa-solid fa-image"></i>
       </div>

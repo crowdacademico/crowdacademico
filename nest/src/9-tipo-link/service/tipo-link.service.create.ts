@@ -1,17 +1,14 @@
 import {
   BadRequestException,
-  ConflictException,
   ForbiddenException,
   Injectable,
 } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
-import {
-  CODIGO_PG_UNIQUE_VIOLATION,
-  CODIGO_PG_RLS_VIOLATION,
-} from '../../commons/database/postgres-exception.filter';
+import { CODIGO_PG_RLS_VIOLATION } from '../../commons/database/postgres-exception.filter';
 import { TipoLinkConverter } from '../dto/converter/tipo-link.converter';
 import { TipoLinkRequestCreate } from '../dto/request/tipo-link.request-create';
 import { TipoLinkResponse } from '../dto/response/tipo-link.response';
+import { temCodigoPostgres } from '../../commons/database/codigo-postgres.util';
 
 @Injectable()
 export class TipoLinkServiceCreate {
@@ -62,13 +59,8 @@ export class TipoLinkServiceCreate {
 
       return TipoLinkConverter.paraResponseDto(linha);
     } catch (erro) {
-      const codigoErro = (erro as { code?: string }).code;
-      if (codigoErro === CODIGO_PG_UNIQUE_VIOLATION) {
-        throw new ConflictException(
-          `Já existe um tipo de link com o código "${dto.codigo}".`,
-        );
-      }
-      if (codigoErro === CODIGO_PG_RLS_VIOLATION) {
+      // Código ou nome duplicado seguem para o filtro global (mensagens-duplicidade.constants.ts).
+      if (temCodigoPostgres(erro, CODIGO_PG_RLS_VIOLATION)) {
         throw new ForbiddenException(
           "Sem permissão 'tipolink_gerenciar' para cadastrar tipo de link.",
         );

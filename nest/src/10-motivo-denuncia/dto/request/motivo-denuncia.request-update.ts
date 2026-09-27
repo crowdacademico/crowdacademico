@@ -8,11 +8,13 @@ import {
 } from 'class-validator';
 import { TIPOS_MOTIVO_DENUNCIA } from '../../../commons/database/db.types';
 import type { TipoMotivoDenuncia } from '../../../commons/database/db.types';
+import { TextoLimpo } from '../../../commons/validacao/transformacoes.decorator';
 
 export class MotivoDenunciaRequestUpdate {
   // NOT NULL no banco (`descricao` é o único identificador legível do motivo). Omitido = não muda; presente =
   // precisa ser uma string não vazia, `null` não é aceito aqui (diferente do padrão de `regex` em
   // TipoLinkRequestUpdate).
+  @TextoLimpo()
   @IsOptional()
   @IsNotEmpty()
   @IsString()

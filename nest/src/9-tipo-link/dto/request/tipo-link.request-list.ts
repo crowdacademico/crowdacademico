@@ -1,24 +1,13 @@
-import { Transform } from 'class-transformer';
 import { IsBoolean, IsIn, IsOptional } from 'class-validator';
 import { PaginacaoQueryDto } from '../../../commons/database/dto/paginacao.query.dto';
-
-// Mesmo cuidado de AreaConhecimentoRequestList (8-area-conhecimento):
-// `@Type(() => Boolean)` sozinho converteria "false" (string não-vazia)
-// em `true`, então o `@Transform` abaixo faz a conversão certa antes do
-// class-validator rodar (precisa de `transform: true` no ValidationPipe
-// global, já ligado em main.ts).
-function paraBooleano({ value }: { value: unknown }): unknown {
-  if (value === 'true') return true;
-  if (value === 'false') return false;
-  return value;
-}
+import { BooleanoDaQuery } from '../../../commons/validacao/transformacoes.decorator';
 
 const ESCOPOS_VALIDOS = ['perfil', 'atualizacao', 'recompensa'] as const;
 export type EscopoTipoLink = (typeof ESCOPOS_VALIDOS)[number];
 
 export class TipoLinkRequestList extends PaginacaoQueryDto {
   @IsOptional()
-  @Transform(paraBooleano)
+  @BooleanoDaQuery()
   @IsBoolean()
   ativo?: boolean;
 

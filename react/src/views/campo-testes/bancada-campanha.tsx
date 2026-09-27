@@ -1,12 +1,12 @@
 // Campo de Testes é parte permanente do painel administrativo (não uma ferramenta de teste descartável), com o
 // mesmo padrão de dados/comportamento do resto do sistema (nunca uma versão simplificada à parte).
 
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
 import { areaConhecimentoApi } from '../../services/8-area-conhecimento/api/area-conhecimento.api';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
-import { useFecharAoClicarFora } from '../../services/constant/hook/use-fechar-ao-clicar-fora';
 import { LIMITE_SUGESTOES_COMBOBOX } from '../../services/campo-testes/constants/campo-testes.constants';
+import { contemTermo, normalizarBusca } from '../../services/constant/utils/busca.util';
 import { useAuthFetchRegistrado, useChamadaRegistrada } from '../../services/campo-testes/hook/use-chamada-registrada';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
@@ -16,13 +16,19 @@ import { TabelaBancadaCampanha } from '../../components/crud/tabelas/9-tabela-ba
 import { TabelaCriteriosEnvio } from '../../components/crud/tabelas/7-tabela-criterios-envio';
 import { avaliarCriteriosEnvio } from '../../services/12-campanha/util/criterios-envio.util';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
+import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { ModalFicha } from '../../components/crud/modal-ficha';
+import { CaixaAviso } from '../../components/crud/caixa-aviso';
+import { ConfirmacaoDigitada } from '../../components/input/confirmacao-digitada';
+import { confirmacaoConfere } from '../../components/input/confirmacao-confere';
+import { CaixaBuscaSugestoes } from '../../components/input/caixa-busca-sugestoes';
 import { perfilPesquisadorApi } from '../../services/6-perfil-pesquisador/api/perfil-pesquisador.api';
 import {
   ROTULO_STATUS_CAMPANHA,
   classeBadgeStatusCampanha,
 } from '../../services/12-campanha/constants/status-campanha.constants';
 import { formatarDataHora, formatarMoeda } from '../../services/constant/utils/formatacao.util';
+import { useEnvio } from '../../services/constant/hook/use-envio';
 import { RegistroChamadas } from './registro-chamadas';
 import { ModalAlterarCampanha } from '../12-campanha/modal-alterar-campanha';
 import { ModalCriarCampanha } from '../12-campanha/modal-criar-campanha';
@@ -52,6 +58,10 @@ export function BancadaCampanha({ auth }: PropsPagina) {
   const chamarERegistrar = useChamadaRegistrada(auth);
   const { mostrar } = useToast();
   const { reportarErro } = useErroToast();
+  const { ocupado: excluindoForcado, executar: executarExcluindoForcado } = useEnvio(reportarErro);
+  const { ocupado: excluindo, executar: executarExcluindo } = useEnvio(reportarErro);
+  const { ocupado: rejeitando, executar: executarRejeitando } = useEnvio(reportarErro);
+  const { ocupado: aprovando, executar: executarAprovando } = useEnvio(reportarErro);
 
   // As chamadas do T2 aparecem no T4 (Registro de Chamadas), inclusive as do painel e do passo a passo
   // compartilhados (views/12-campanha), que recebem este `authFetch`.
@@ -78,16 +88,10 @@ export function BancadaCampanha({ auth }: PropsPagina) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [campanhaConsultada]);
   const [idCampanhaEditando, setIdCampanhaEditando] = useState<number | null>(null);
-  const prefixoId = useId();
-  const idCampo = (nome: string) => `${prefixoId}-${nome}`;
   const [justificativaRejeicaoEdicao, setJustificativaRejeicaoEdicao] = useState('');
-  const [aprovando, setAprovando] = useState(false);
-  const [rejeitando, setRejeitando] = useState(false);
   const [campanhaExcluindo, setCampanhaExcluindo] = useState<CampanhaResponse | null>(null);
   const [confirmacaoExclusao, setConfirmacaoExclusao] = useState('');
-  const [excluindo, setExcluindo] = useState(false);
   const [confirmacaoExclusaoForcada, setConfirmacaoExclusaoForcada] = useState('');
-  const [excluindoForcado, setExcluindoForcado] = useState(false);
 
   // Criar Campanha: o Admin cria uma campanha e ASSOCIA um pesquisador a ela; mesmo padrão de "Criar Perfil
   // Pesquisador" em T1. Usa POST /campanha/:idUsuario (endpoint de suporte/admin, ver
@@ -100,8 +104,6 @@ export function BancadaCampanha({ auth }: PropsPagina) {
   // pessoa nunca tentar).
   const [pesquisadorEscolhido, setPesquisadorEscolhido] = useState<UsuarioResponse | null>(null);
   const [buscaPesquisador, setBuscaPesquisador] = useState('');
-  const [sugestoesPesquisadorAbertas, setSugestoesPesquisadorAbertas] = useState(false);
-  const sugestoesPesquisadorRef = useRef<HTMLDivElement>(null);
 
   const carregarCampanhas = () => {
     campanhaApi.listar(auth.authFetch).then(setCampanhas).catch(() => {});
@@ -124,10 +126,6 @@ export function BancadaCampanha({ auth }: PropsPagina) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auth.carregando]);
 
-  // Fechar as sugestões do combobox de pesquisador ao clicar fora (`useFecharAoClicarFora`). O dropdown
-  // "Status" tem o próprio fechamento embutido em `BarraFiltros`.
-  useFecharAoClicarFora(sugestoesPesquisadorRef, sugestoesPesquisadorAbertas, () => setSugestoesPesquisadorAbertas(false));
-
   const nomeDe = (idUsuario: number): string => usuarios.find((u) => u.idUsuario === idUsuario)?.nome ?? `#${idUsuario}`;
 
   // 'ativo' = pode ser escolhido pra Criar Campanha; 'suspenso'/'sem-perfil'
@@ -143,10 +141,10 @@ export function BancadaCampanha({ auth }: PropsPagina) {
   // Busca por id OU pedaço do nome: até 5 resultados, sem filtro nenhum além do texto digitado (mostra
   // pesquisador e não-pesquisador juntos, cada um com seu próprio aviso).
   const sugestoesPesquisador = (() => {
-    const termo = buscaPesquisador.trim().toLowerCase();
+    const termo = normalizarBusca(buscaPesquisador);
     if (!termo) return [];
     return usuarios
-      .filter((usuario) => String(usuario.idUsuario).includes(termo) || usuario.nome.toLowerCase().includes(termo))
+      .filter((usuario) => String(usuario.idUsuario).includes(termo) || contemTermo(usuario.nome, termo))
       .slice(0, LIMITE_SUGESTOES_COMBOBOX);
   })();
 
@@ -160,23 +158,17 @@ export function BancadaCampanha({ auth }: PropsPagina) {
   // depois de aprovar/rejeitar).
   const aprovarEdicao = async () => {
     if (idCampanhaEditando === null) return;
-    setAprovando(true);
-    try {
+    await executarAprovando(async () => {
       await chamarERegistrar<void>(`/campanha/${idCampanhaEditando}/aprovar`, { method: 'POST' });
       mostrar('Campanha aprovada com sucesso.', `ID: ${idCampanhaEditando} foi aprovada`);
       setIdCampanhaEditando(null);
       carregarCampanhas();
-    } catch (erro) {
-      reportarErro(erro);
-    } finally {
-      setAprovando(false);
-    }
+    });
   };
 
   const rejeitarEdicao = async () => {
     if (idCampanhaEditando === null) return;
-    setRejeitando(true);
-    try {
+    await executarRejeitando(async () => {
       await chamarERegistrar<void>(`/campanha/${idCampanhaEditando}/rejeitar`, {
         method: 'POST',
         body: JSON.stringify({ justificativa: justificativaRejeicaoEdicao || undefined }),
@@ -184,11 +176,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
       mostrar('Campanha rejeitada com sucesso.', `ID: ${idCampanhaEditando} foi rejeitada`);
       setIdCampanhaEditando(null);
       carregarCampanhas();
-    } catch (erro) {
-      reportarErro(erro);
-    } finally {
-      setRejeitando(false);
-    }
+    });
   };
 
   // Só permitido em 'rascunho' (RLS: pol_campanha_delete, ver 04_rls_policies.sql): uma campanha rejeitada e
@@ -202,18 +190,13 @@ export function BancadaCampanha({ auth }: PropsPagina) {
   // Usuário (confirmação explícita no modal), ou mais.
   const excluirCampanha = async () => {
     if (!campanhaExcluindo) return;
-    setExcluindo(true);
-    try {
+    await executarExcluindo(async () => {
       await chamarERegistrar<void>(`/campanha/${campanhaExcluindo.idCampanha}`, { method: 'DELETE' });
       carregarCampanhas();
       mostrar('Campanha excluída com sucesso.', `ID: ${campanhaExcluindo.idCampanha} foi excluída`);
       setCampanhaExcluindo(null);
       setConfirmacaoExclusao('');
-    } catch (erro) {
-      reportarErro(erro);
-    } finally {
-      setExcluindo(false);
-    }
+    });
   };
 
   // forcar_exclusao_campanha(): o Admin precisa poder excluir forçadamente uma campanha, senão o Campo de
@@ -222,18 +205,13 @@ export function BancadaCampanha({ auth }: PropsPagina) {
   // demonstração: essas continuam protegidas de qualquer exclusão, forçada ou não.
   const forcarExclusaoCampanha = async () => {
     if (!campanhaExcluindo) return;
-    setExcluindoForcado(true);
-    try {
+    await executarExcluindoForcado(async () => {
       await chamarERegistrar<void>(`/campanha/${campanhaExcluindo.idCampanha}/forcar-exclusao`, { method: 'POST' });
       carregarCampanhas();
       mostrar('Campanha excluída à força com sucesso.', `ID: ${campanhaExcluindo.idCampanha} foi excluída`);
       setCampanhaExcluindo(null);
       setConfirmacaoExclusaoForcada('');
-    } catch (erro) {
-      reportarErro(erro);
-    } finally {
-      setExcluindoForcado(false);
-    }
+    });
   };
 
   // Fecha o modal de criação e limpa a escolha do dono. A campanha já criada FICA salva como rascunho.
@@ -423,31 +401,33 @@ export function BancadaCampanha({ auth }: PropsPagina) {
             subtitulo={bloqueadaDemo ? undefined : 'Não existe botão de desfazer no painel.'}
             aoFechar={fecharModal}
             rodape={
-              <div className="flex gap-3 max-w-sm ml-auto">
-                <button type="button" onClick={fecharModal} className="btn btn-secondary flex-1">
-                  {bloqueadaDemo ? 'Fechar' : 'Cancelar'}
-                </button>
-                {!bloqueadaDemo && !statusNaoElegivel && (
-                  <button
-                    type="button"
-                    onClick={excluirCampanha}
-                    disabled={excluindo || confirmacaoExclusao.trim().toLowerCase() !== campanhaExcluindo.titulo.trim().toLowerCase()}
-                    className="btn btn-danger flex-1"
-                  >
-                    {excluindo ? 'Excluindo...' : 'Confirmar exclusão'}
-                  </button>
-                )}
-                {statusNaoElegivel && (
-                  <button
-                    type="button"
-                    onClick={forcarExclusaoCampanha}
-                    disabled={excluindoForcado || confirmacaoExclusaoForcada.trim().toLowerCase() !== campanhaExcluindo.titulo.trim().toLowerCase()}
-                    className="btn btn-danger flex-1"
-                  >
-                    {excluindoForcado ? 'Excluindo...' : 'Forçar exclusão'}
-                  </button>
-                )}
-              </div>
+              <RodapeAcoes
+                aoCancelar={fecharModal}
+                rotuloCancelar={bloqueadaDemo ? 'Fechar' : 'Cancelar'}
+                acao={
+                  statusNaoElegivel
+                    ? {
+                        rotulo: 'Forçar exclusão',
+                        rotuloOcupado: 'Excluindo...',
+                        ocupado: excluindoForcado,
+                        desabilitado:
+                          !confirmacaoConfere(confirmacaoExclusaoForcada, campanhaExcluindo.titulo),
+                        aoClicar: () => void forcarExclusaoCampanha(),
+                        perigo: true,
+                      }
+                    : !bloqueadaDemo
+                      ? {
+                          rotulo: 'Confirmar exclusão',
+                          rotuloOcupado: 'Excluindo...',
+                          ocupado: excluindo,
+                          desabilitado:
+                            !confirmacaoConfere(confirmacaoExclusao, campanhaExcluindo.titulo),
+                          aoClicar: () => void excluirCampanha(),
+                          perigo: true,
+                        }
+                      : undefined
+                }
+              />
             }
           >
             <SecaoFicha titulo={bloqueadaDemo || statusNaoElegivel ? 'Dados da campanha' : 'O que será excluído'}>
@@ -459,80 +439,54 @@ export function BancadaCampanha({ auth }: PropsPagina) {
             </SecaoFicha>
 
             {bloqueadaDemo && (
-              <div className="rounded-lg border borda-forte fundo-erro p-4 text-sm texto-erro">
-                <p className="font-bold mb-1">
-                  <i className="fa-solid fa-lock mr-1"></i> Não dá pra excluir esta campanha
-                </p>
+              <CaixaAviso titulo="Não dá pra excluir esta campanha" tom="erro" icone="fa-lock">
                 <p>{motivoBloqueioCampanha()}</p>
-              </div>
+              </CaixaAviso>
             )}
 
             {statusNaoElegivel && (
               <>
-                <div className="rounded-lg border borda-forte fundo-aviso p-4 text-sm texto-aviso">
-                  <p className="font-bold mb-1">
-                    <i className="fa-solid fa-circle-info mr-1"></i> Exclusão normal indisponível
-                  </p>
+                <CaixaAviso titulo="Exclusão normal indisponível">
                   <p>
                     Só dá pra excluir campanhas em "rascunho" - esta já passou desse ponto
                     (foi enviada pra aprovação ou aprovada).
                   </p>
-                </div>
+                </CaixaAviso>
 
-                <div className="rounded-lg border borda-forte fundo-erro p-4 text-sm texto-erro">
-                  <p className="font-bold mb-1">
-                    <i className="fa-solid fa-triangle-exclamation mr-1"></i> Forçar exclusão (ignora a proteção acima)
-                  </p>
+                <CaixaAviso titulo="Forçar exclusão (ignora a proteção acima)" tom="erro" icone="fa-triangle-exclamation">
                   <p className="mb-3">
                     Ferramenta de limpeza do Campo de Testes - apaga a campanha de VERDADE
                     (`DELETE`, com cascata), não importa o status. Numa campanha real, com
                     contribuição/repasse em andamento, isso destruiria dado financeiro de
                     verdade - só use em campanha de teste.
                   </p>
-                  <label htmlFor={idCampo('excluir-forcada')} className="rotulo-campo">
-                    Digite o título "{campanhaExcluindo.titulo}" pra confirmar
-                  </label>
-                  <input
-                    id={idCampo('excluir-forcada')}
-                    type="text"
-                    value={confirmacaoExclusaoForcada}
-                    onChange={(evento) => setConfirmacaoExclusaoForcada(evento.target.value)}
-                    className="input-padrao"
-                    placeholder={campanhaExcluindo.titulo}
-                    autoComplete="off"
+                  <ConfirmacaoDigitada
+                    oQue="o título"
+                    esperado={campanhaExcluindo.titulo}
+                    valor={confirmacaoExclusaoForcada}
+                    aoMudar={setConfirmacaoExclusaoForcada}
                   />
-                </div>
+                </CaixaAviso>
               </>
             )}
 
             {!bloqueadaDemo && !statusNaoElegivel && (
               <>
-                <div className="rounded-lg border borda-forte fundo-aviso p-4 text-sm texto-aviso">
-                  <p className="font-bold mb-1">
-                    <i className="fa-solid fa-circle-info mr-1"></i> O que acontece de verdade
-                  </p>
+                <CaixaAviso titulo="O que acontece de verdade">
                   <p>
                     Diferente de excluir um usuário, isto é uma exclusão de VERDADE (`DELETE`), não
                     lógica - a linha some do banco pra sempre, junto com orçamento, cronograma e tudo
                     que já foi ligado a ela (cascata). Só é permitido enquanto a campanha ainda é
                     um "rascunho" - depois de enviada pra aprovação, o banco recusa.
                   </p>
-                </div>
+                </CaixaAviso>
 
-                <div>
-                  <label htmlFor={idCampo('excluir')} className="rotulo-campo">
-                    Digite o título "{campanhaExcluindo.titulo}" pra confirmar
-                  </label>
-                  <input
-                    id={idCampo('excluir')}
-                    type="text"
-                    value={confirmacaoExclusao}
-                    onChange={(evento) => setConfirmacaoExclusao(evento.target.value)}
-                    className="input-padrao"
-                    placeholder={campanhaExcluindo.titulo}
-                    autoComplete="off"
-                  />
-                </div>
+                <ConfirmacaoDigitada
+                  oQue="o título"
+                  esperado={campanhaExcluindo.titulo}
+                  valor={confirmacaoExclusao}
+                  aoMudar={setConfirmacaoExclusao}
+                />
               </>
             )}
           </ModalFicha>
@@ -554,65 +508,35 @@ export function BancadaCampanha({ auth }: PropsPagina) {
           }}
           camposExtras={
       <SecaoFicha titulo="Pesquisador">
-        <div className="sm:col-span-2 relative" ref={sugestoesPesquisadorRef}>
-          <label htmlFor={idCampo('criar-dono')} className="rotulo-campo">Dono da campanha</label>
-          {/* Um só <input>, sempre: não troca para um "chip" separado depois de escolher. O texto
-              mostrado É o nome escolhido; clicar/focar reabre a lista de sugestões já filtrada por esse
-              mesmo nome (ex.: "Maria da Silva" escolhida, clicar mostra "Maria da Silva", "Maria da
-              Silva Junior"...); a escolha atual continua valendo até a pessoa clicar numa sugestão
-              diferente ou digitar algo nesse meio tempo (que invalida a escolha, mesmo padrão de
-              qualquer combobox de busca). */}
-          <input
-            id={idCampo('criar-dono')}
-            type="text"
-            value={buscaPesquisador}
-            onChange={(evento) => {
-              setBuscaPesquisador(evento.target.value);
-              setPesquisadorEscolhido(null);
-              setSugestoesPesquisadorAbertas(true);
-            }}
-            onFocus={() => setSugestoesPesquisadorAbertas(true)}
-            placeholder="Digite o id ou o nome..."
-            className="input-padrao"
-            autoComplete="off"
-          />
-          {sugestoesPesquisadorAbertas && sugestoesPesquisador.length > 0 && (
-            <div className="absolute left-0 right-0 mt-1 fundo-cartao border borda-padrao rounded-lg shadow-lg z-20 overflow-hidden">
-              {sugestoesPesquisador.map((usuario) => {
-                const status = statusPesquisadorParaCriar(usuario.idUsuario);
-                const podeEscolher = status === 'ativo';
-                return (
-                  <button
-                    key={usuario.idUsuario}
-                    type="button"
-                    disabled={!podeEscolher}
-                    onClick={() => {
-                      if (!podeEscolher) return;
-                      setPesquisadorEscolhido(usuario);
-                      setBuscaPesquisador(usuario.nome);
-                      setSugestoesPesquisadorAbertas(false);
-                    }}
-                    className={
-                      'w-full text-left px-3 py-2 text-sm border-b borda-padrao last:border-b-0 flex items-center justify-between gap-2 ' +
-                      (podeEscolher ? 'hover-fundo-marca-suave' : 'opacity-60 cursor-not-allowed')
-                    }
-                  >
-                    <span className="texto-forte inline-flex items-baseline">
-                      <span className="inline-block w-16 shrink-0 tabular-nums">ID: {usuario.idUsuario}</span>
-                      <span>{usuario.nome}</span>
-                    </span>
-                    {status === 'sem-perfil' && <span className="text-xs texto-erro">não é pesquisador</span>}
-                    {status === 'suspenso' && <span className="text-xs texto-erro">pesquisador suspenso</span>}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-          <p className="text-xs texto-fraco mt-1">
-            Precisa ser um pesquisador ativo - quem não tem perfil de pesquisador ou está
-            suspenso aparece na lista, mas não dá pra escolher.
-          </p>
-        </div>
+        <CaixaBuscaSugestoes
+          className="sm:col-span-2"
+          rotulo="Dono da campanha"
+          dica="Precisa ser um pesquisador ativo: quem não tem perfil de pesquisador ou está suspenso aparece na lista, mas não dá pra escolher."
+          placeholder="Digite o id ou o nome..."
+          valor={buscaPesquisador}
+          aoDigitar={(texto) => {
+            setBuscaPesquisador(texto);
+            setPesquisadorEscolhido(null);
+          }}
+          sugestoes={sugestoesPesquisador.map((usuario) => {
+            const status = statusPesquisadorParaCriar(usuario.idUsuario);
+            return {
+              id: usuario.idUsuario,
+              texto: usuario.nome,
+              desabilitada: status !== 'ativo',
+              extra:
+                status === 'sem-perfil' ? (
+                  <span className="text-xs texto-erro">não é pesquisador</span>
+                ) : status === 'suspenso' ? (
+                  <span className="text-xs texto-erro">pesquisador suspenso</span>
+                ) : null,
+            };
+          })}
+          aoEscolher={(sugestao) => {
+            setPesquisadorEscolhido(sugestoesPesquisador.find((usuario) => usuario.idUsuario === sugestao.id) ?? null);
+            setBuscaPesquisador(sugestao.texto);
+          }}
+        />
       </SecaoFicha>
           }
           camposExtrasValidos={pesquisadorEscolhido !== null}

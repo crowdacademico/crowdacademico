@@ -1,14 +1,18 @@
-import { useId, useState } from 'react';
+import { useState } from 'react';
 import { BadgeBooleano } from '../../components/crud/badge-booleano';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { confirmarSaida, useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
+import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
+import { Campo } from '../../components/input/campo';
+import { CaixaMarcacao } from '../../components/input/caixa-marcacao';
 import { configuracaoApi } from '../../services/11-configuracoes/api/configuracao.api';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import { parMinMaxDaConfiguracao } from '../../services/11-configuracoes/constants/configuracao-pares-min-max';
+import { useEnvio } from '../../services/constant/hook/use-envio';
 import type { ConfiguracaoResponse } from '../../services/11-configuracoes/type/configuracao.type';
 
 // Consultar/Alterar em modal: recebem a linha (`configuracao: ConfiguracaoResponse`) inteira do
@@ -30,9 +34,7 @@ export function ModalConsultarConfiguracao({ configuracao, aoFechar }: ModalCons
       ]}
       aoFechar={aoFechar}
       rodape={
-        <button type="button" onClick={aoFechar} className="btn btn-secondary w-full max-w-sm ml-auto">
-          Fechar
-        </button>
+        <RodapeAcoes aoCancelar={aoFechar} rotuloCancelar="Fechar" />
       }
     >
       <SecaoFicha titulo="Dados">
@@ -59,14 +61,12 @@ interface ModalAlterarConfiguracaoProps {
 export function ModalAlterarConfiguracao({ auth, configuracao, aoFechar, aoAtualizado }: ModalAlterarConfiguracaoProps) {
   const { mostrar } = useToast();
   const { erro, reportarErro, limparErro } = useErroToast();
+  const { ocupado: enviando, executar: executarEnviando } = useEnvio(reportarErro, limparErro);
   const [valor, setValor] = useState(configuracao.valor ?? '');
   const [descricao, setDescricao] = useState(configuracao.descricao ?? '');
   const [ativo, setAtivo] = useState(configuracao.ativo);
   const [publica, setPublica] = useState(configuracao.publica);
-  const [enviando, setEnviando] = useState(false);
-  const idValor = useId();
   const par = parMinMaxDaConfiguracao(configuracao.chave);
-  const idDescricao = useId();
 
   const sujo =
     valor !== (configuracao.valor ?? '') ||
@@ -83,18 +83,12 @@ export function ModalAlterarConfiguracao({ auth, configuracao, aoFechar, aoAtual
   };
 
   const aoSalvar = async () => {
-    limparErro();
-    setEnviando(true);
-    try {
+    await executarEnviando(async () => {
       await configuracaoApi.atualizar(auth.authFetch, configuracao.idConfig, { valor, descricao, ativo, publica });
       mostrar('Parâmetro alterado com sucesso.', `ID: ${configuracao.idConfig} foi alterado`);
       aoAtualizado();
       aoFechar();
-    } catch (erroRequisicao) {
-      reportarErro(erroRequisicao);
-    } finally {
-      setEnviando(false);
-    }
+    });
   };
 
   return (
@@ -102,23 +96,19 @@ export function ModalAlterarConfiguracao({ auth, configuracao, aoFechar, aoAtual
       titulo={`Alterar "${configuracao.chave}"`}
       aoFechar={fechar}
       rodape={
-        <div className="flex gap-3 max-w-sm ml-auto">
-          <button type="button" onClick={fechar} className="btn btn-secondary flex-1">
-            Cancelar
-          </button>
-          <button
-            type="button"
-            onClick={() => void aoSalvar()}
-            disabled={enviando || !sujo}
-            className="btn btn-primary flex-1"
-          >
-            {enviando ? 'Salvando...' : 'Salvar'}
-          </button>
-        </div>
+        <RodapeAcoes
+          aoCancelar={fechar}
+          acao={{
+            rotulo: 'Salvar',
+            rotuloOcupado: 'Salvando...',
+            ocupado: enviando,
+            desabilitado: !sujo,
+            aoClicar: () => void aoSalvar(),
+          }}
+        />
       }
+      erro={erro}
     >
-      {erro && <p className="texto-erro text-sm font-bold text-center">{erro}</p>}
-
       <SecaoFicha titulo="Dados">
         <CampoSomenteLeitura rotulo="Chave" valor={configuracao.chave} />
         <CampoSomenteLeitura rotulo="Tipo" valor={configuracao.tipo} />
@@ -126,8 +116,17 @@ export function ModalAlterarConfiguracao({ auth, configuracao, aoFechar, aoAtual
 
       <SecaoFicha titulo="Editar">
         <div className="sm:col-span-2">
-          <label htmlFor={idValor} className="rotulo-campo">Valor</label>
-          <input id={idValor} type="text" value={valor} onChange={(evento) => setValor(evento.target.value)} className="input-padrao" />
+          <Campo rotulo="Valor">
+            {({ atributos }) => (
+              <input
+                {...atributos}
+                type="text"
+                value={valor}
+                onChange={(evento) => setValor(evento.target.value)}
+                className="input-padrao"
+              />
+            )}
+          </Campo>
           {par && (
             <div className="mt-2 flex items-start gap-2 rounded-lg fundo-aviso texto-aviso p-3 text-xs">
               <i className="fa-solid fa-triangle-exclamation mt-0.5 shrink-0"></i>
@@ -143,27 +142,25 @@ export function ModalAlterarConfiguracao({ auth, configuracao, aoFechar, aoAtual
           )}
         </div>
 
-        <div className="sm:col-span-2">
-          <label htmlFor={idDescricao} className="rotulo-campo">Descrição</label>
-          <input
-            id={idDescricao}
-            type="text"
-            value={descricao}
-            onChange={(evento) => setDescricao(evento.target.value)}
-            className="input-padrao"
-          />
-        </div>
+        <Campo rotulo="Descrição" className="sm:col-span-2">
+          {({ atributos }) => (
+            <input
+              {...atributos}
+              type="text"
+              value={descricao}
+              onChange={(evento) => setDescricao(evento.target.value)}
+              className="input-padrao"
+            />
+          )}
+        </Campo>
 
         <div>
-          <label className="flex items-center gap-2 text-sm font-semibold texto-padrao">
-            <input
-              type="checkbox"
-              checked={ativo}
-              disabled={configuracao.idUsuario === null}
-              onChange={(evento) => setAtivo(evento.target.checked)}
-            />
-            Ativo
-          </label>
+          <CaixaMarcacao
+            rotulo="Ativo"
+            marcado={ativo}
+            aoMudar={setAtivo}
+            desabilitado={configuracao.idUsuario === null}
+          />
           {configuracao.idUsuario === null && (
             <p className="text-xs texto-fraco mt-1">
               Parâmetro global não se desativa nem se exclui: faz parte do contrato do sistema. Para desligar
@@ -173,10 +170,7 @@ export function ModalAlterarConfiguracao({ auth, configuracao, aoFechar, aoAtual
         </div>
 
         <div className="sm:col-span-2">
-          <label className="flex items-center gap-2 text-sm font-semibold texto-padrao">
-            <input type="checkbox" checked={publica} onChange={(evento) => setPublica(evento.target.checked)} />
-            Pública
-          </label>
+          <CaixaMarcacao rotulo="Pública" marcado={publica} aoMudar={setPublica} />
           <p className="text-xs texto-fraco mt-1">
             Só tem efeito se este parâmetro for global (não uma preferência pessoal): marcado,
             aparece pra qualquer visitante em <code>GET /configuracoes</code>; desmarcado, só

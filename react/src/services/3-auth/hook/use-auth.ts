@@ -4,6 +4,7 @@ import { API_BASE_URL } from '../../constant/constants/api.constants';
 import * as authApi from '../api/auth.api';
 import type { AuthFetch, AuthResponseLogin, AuthResponseRefresh, AuthResponseRegister } from '../type/auth.type';
 import type { UsuarioResponse } from '../../1-usuario/type/usuario.type';
+import { acompanharRequisicao } from '../../../components/layout/barra-carregamento/atividade-rede';
 
 const CHAVE_REFRESH_TOKEN = 'crowdacademico.refreshToken';
 
@@ -231,12 +232,12 @@ export function useAuth(): UseAuthReturn {
       // vez, e cada quem pediu precisa da própria cópia para poder chamar `.json()`/`.text()` sem pisar no
       // outro.
       if (metodo !== 'GET') {
-        return executarFetch(caminho, opcoes);
+        return acompanharRequisicao(executarFetch(caminho, opcoes));
       }
 
       let promessa = requisicoesEmAndamentoRef.current.get(caminho);
       if (!promessa) {
-        promessa = executarFetch(caminho, opcoes);
+        promessa = acompanharRequisicao(executarFetch(caminho, opcoes));
         requisicoesEmAndamentoRef.current.set(caminho, promessa);
         void promessa.finally(() => {
           requisicoesEmAndamentoRef.current.delete(caminho);

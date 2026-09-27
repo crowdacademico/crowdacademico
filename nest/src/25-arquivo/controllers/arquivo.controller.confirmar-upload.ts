@@ -1,8 +1,9 @@
-import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
-import type { Request } from 'express';
+import { Body, Controller, Post, UseGuards } from '@nestjs/common';
 import { RequireAuthGuard } from '../../3-auth/guards/require-auth.guard';
 import { ArquivoRequestConfirmarUpload } from '../dto/request/arquivo.request-confirmar-upload';
 import { ArquivoServiceConfirmarUpload } from '../service/arquivo.service.confirmar-upload';
+import { UsuarioAtual } from '../../commons/auth/usuario-atual.decorator';
+import type { UsuarioAutenticado } from '../../commons/auth/usuario-autenticado.interface';
 
 @Controller('arquivo/upload')
 export class ArquivoControllerConfirmarUpload {
@@ -12,8 +13,8 @@ export class ArquivoControllerConfirmarUpload {
   @UseGuards(RequireAuthGuard)
   confirmar(
     @Body() dto: ArquivoRequestConfirmarUpload,
-    @Req() request: Request,
+    @UsuarioAtual() usuario: UsuarioAutenticado,
   ) {
-    return this.service.executar(dto, request.user!.idUsuario);
+    return this.service.executar(dto, usuario.idUsuario);
   }
 }

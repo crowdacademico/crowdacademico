@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
+import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { ModalFicha } from '../../components/crud/modal-ficha';
+import { CaixaAviso } from '../../components/crud/caixa-aviso';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
 import { termoUsoApi } from '../../services/5-termo-uso/api/termo-uso.api';
@@ -57,23 +59,20 @@ export function ModalExcluirTermoUso({ auth, termo, aoFechar, aoExcluido }: Moda
       subtitulo="Não existe botão de desfazer no painel."
       aoFechar={aoFechar}
       rodape={
-        <div className="flex gap-3 max-w-sm ml-auto">
-          <button type="button" onClick={aoFechar} className="btn btn-secondary flex-1">
-            Cancelar
-          </button>
-          <button
-            type="button"
-            onClick={() => void excluir(modoForcado)}
-            disabled={excluindo || (modoForcado && !entendi)}
-            className="btn btn-danger flex-1"
-          >
-            {excluindo ? 'Excluindo...' : modoForcado ? 'Excluir mesmo assim' : 'Confirmar exclusão'}
-          </button>
-        </div>
+        <RodapeAcoes
+          aoCancelar={aoFechar}
+          acao={{
+            rotulo: modoForcado ? 'Excluir mesmo assim' : 'Confirmar exclusão',
+            rotuloOcupado: 'Excluindo...',
+            ocupado: excluindo,
+            desabilitado: modoForcado && !entendi,
+            aoClicar: () => void excluir(modoForcado),
+            perigo: true,
+          }}
+        />
       }
+      erro={erro}
     >
-      {erro && <p className="texto-erro text-sm font-bold text-center">{erro}</p>}
-
       <SecaoFicha titulo="O que será excluído">
         <CampoFicha rotulo="id" valor={termo.idTermo} />
         <CampoFicha rotulo="Tipo" valor={ROTULO_TIPO_TERMO[termo.tipo]} />
@@ -81,10 +80,7 @@ export function ModalExcluirTermoUso({ auth, termo, aoFechar, aoExcluido }: Moda
       </SecaoFicha>
 
       {modoForcado && (
-        <div className="rounded-lg border borda-forte fundo-aviso p-4 text-sm texto-aviso">
-          <p className="font-bold mb-1">
-            <i className="fa-solid fa-triangle-exclamation mr-1"></i> Isto apaga o rastro de aceite
-          </p>
+        <CaixaAviso titulo="Isto apaga o rastro de aceite" icone="fa-triangle-exclamation">
           <p className="mb-3">
             Pelo menos uma pessoa já aceitou esta versão. Excluir mesmo assim apaga, junto com a
             versão, TODAS as linhas de aceite que registram quem aceitou ela - não vai mais ser
@@ -95,7 +91,7 @@ export function ModalExcluirTermoUso({ auth, termo, aoFechar, aoExcluido }: Moda
             <input type="checkbox" checked={entendi} onChange={(evento) => setEntendi(evento.target.checked)} />
             Entendi e quero excluir mesmo assim.
           </label>
-        </div>
+        </CaixaAviso>
       )}
     </ModalFicha>
   );

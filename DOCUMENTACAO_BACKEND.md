@@ -106,9 +106,12 @@ nest/src/
 ├── app/                       ← AppModule, GET /health
 ├── commons/                   ← infraestrutura compartilhada, sem domínio próprio
 │   ├── auth/                  ← formato de request.user (UsuarioAutenticado)
-│   ├── database/              ← ⭐ o coração do projeto (seção 2)
-│   ├── seguranca/             ← cifra de CPF, validador de CPF, decorator @IsCpf
-│   └── storage/               ← abstração de armazenamento de arquivo (seção 8)
+│   ├── configuracao/          ← leitura de valores de `configuracoes` pelo backend
+│   ├── database/              ← ⭐ o coração do projeto (seção 2); também duplicidade e exclusão em uso (5.1)
+│   ├── logging/               ← log de cada requisição
+│   ├── seguranca/             ← cifra de CPF, validador de CPF, decorator @IsCpf, mensagem do 429
+│   ├── storage/               ← abstração de armazenamento de arquivo (seção 8)
+│   └── validacao/             ← erro de validação por campo, @TextoLimpo, @BooleanoDaQuery (6.1)
 ├── 1-usuario/ … 28-dashboard/ ← 29 pastas numeradas, uma por domínio
 ```
 
@@ -300,13 +303,15 @@ Autenticação própria, JWT com par access + refresh, refresh token com **rota�
 
 ### 3.4 Rate limit
 
-`ThrottlerModule` é configurado em `auth.module.ts`, mas o `ThrottlerGuard` é aplicado em apenas **duas** rotas: `POST /auth/login` e `POST /auth/cadastro`.
+`ThrottlerModule` é registrado uma vez só, em `app.module.ts` (é `@Global()`: um segundo `forRoot()` em outro módulo sobrescrevia o primeiro, já foi bug). O limite de verdade de cada rota vem do `@Throttle()` no próprio controller: `POST /auth/login`, `POST /auth/cadastro` e `GET /usuario/eu/exportar-dados` (este por conta, não por IP, ver `1-usuario`).
+
+📌 **A resposta 429 sai em português, com o tempo de espera** (27-09-2026): o `errorMessage` do `ThrottlerModule` aponta para `commons/seguranca/mensagem-limite-tentativas.util.ts`, que lê `timeToBlockExpire` (segundos, o mesmo número do cabeçalho `Retry-After`) e devolve "Muitas tentativas em sequência. Tente de novo em 40 segundos" (ou minutos, ou horas). Antes saía o padrão do pacote, em inglês. Vale para toda rota com `@Throttle()`.
 
 📌 **Por que só nessas duas.** `bcrypt` é lento **de propósito** (~100ms por operação). Sem limite, derrubar o servidor por CPU é barato: basta mandar muitas requisições em paralelo, com senha errada e sem precisar de conta válida. Login é o endpoint público que dispara `bcrypt.compare` sem exigir login antes; cadastro dispara `bcrypt.hash` e, além do custo de CPU, é o tipo de endpoint público que atrai spam/automação sem exigir **nada** antes.
 
 📌 **Isto é ortogonal ao bloqueio por conta.** `configuracoes.limite_tentativas_login` + `registrar_falha_login()` já bloqueiam **uma conta** após N falhas. O throttler protege **o servidor**: um ataque espalhado por várias contas diferentes não aciona o bloqueio do banco, mas aciona este.
 
-📌 **Limite diferente fora de produção:** 5/60s em produção, 30/60s em dev. O motivo está no comentário: o botão `<dev>` "Entrar como" do front dispara um `POST /auth/login` por clique, com 7 contas no dropdown - testar 6 delas em menos de um minuto já esbarrava nos 5/60s e travava, em silêncio, **todos** os logins (o limite é por IP, não por conta).
+📌 **Limite diferente fora de produção:** 5/60s em produção, 30/60s em dev. O motivo está no comentário: o botão `<dev>` "Entrar como" do front dispara um `POST /auth/login` por clique, com 6 contas no dropdown - testar todas em menos de um minuto já esbarrava nos 5/60s e travava, em silêncio, **todos** os logins (o limite é por IP, não por conta).
 
 ---
 
@@ -359,6 +364,8 @@ if (!linha) {
 
 📌 **`commons/database/distinguir-404-ou-403.util.ts`.** O bloco acima (UPDATE/DELETE que afetou 0 linhas: "não existe" ou "a RLS bloqueou") vive num helper, `return await distinguir404ou403(db, 'campanha', { id_campanha: id }, 'Campanha não encontrada.', 'Sem permissão para aprovar esta campanha.')`, usado em 26 services. O 3º argumento é um **objeto de filtro**: chave simples (`{ id_campanha: id }`), composta (`{ id_usuario, id_papel }`) ou chave mais condição (`{ id_usuario, deletado: false }`); todas as colunas entram com `AND`. A mensagem 403 é passada inteira (não um template), porque alguns chamadores misturam permissão com regra de negócio. Usa `sql.table`/`sql.ref` (`SELECT 1 ... LIMIT 1`) em vez do query builder tipado, cujos genéricos não resolvem com tabela abstrata. O `return` explícito é o que faz o TypeScript estreitar `linha` depois do `if`. Fica fora de propósito `campanha.service.enviar` (lê `status` para escolher entre 2 mensagens 403). Os que já leem a linha antes do write (`comentario.update`, `termo-uso.ativar/excluir`) já discriminam sem SELECT extra.
 
+📌 **`excluirOu404ou403` (mesmo arquivo, 27-09-2026).** O "excluir" inteiro de um registro que nada mais referencia: DELETE pelo filtro e, se nada foi apagado, `distinguir404ou403`. Usado pelos serviços de remover de configuração, item de orçamento, marco, link de atualização, link acadêmico, papel × permissão e usuário × papel (cada um virou uma chamada só). Registro que outras tabelas podem estar usando vai por `excluirComContagemDeUso` (§5.1). "Deixar de seguir" fica de fora: responde sempre 404, de propósito.
+
 📌 **Por que o `SELECT` extra funciona como discriminador.** Só funciona quando a policy de `SELECT` daquela tabela é mais permissiva que a de escrita - o que é o caso geral aqui (`pol_arquivo_select` é `USING (TRUE)`, `pol_campanha_select` libera por status). Onde a policy de `SELECT` for tão restritiva quanto a de escrita, esse padrão devolve 404 para um caso que na verdade é 403; nesse cenário, 404 é a resposta mais honesta mesmo (a linha, para aquele usuário, de fato não existe).
 
 `arquivo.service.remove.ts` mostra a versão mais completa desse idioma, com **três** desfechos: não existe → 404; já estava inativo → sucesso silencioso (remoção é idempotente, repetir não é erro); existe e está ativo mas o `UPDATE` não pegou → 403.
@@ -402,7 +409,7 @@ O converter (`perfil-pesquisador.converter.ts`) recebe `cpfDecifrado` como **par
 
 | Código | Significado | HTTP | Mensagem |
 |---|---|---|---|
-| `23505` | unique_violation | 409 | "Já existe um registro com estes dados." |
+| `23505` | unique_violation | 409 | mensagem por índice violado (`commons/database/mensagens-duplicidade.constants.ts`, pelo `erro.constraint`), com `campos` quando o índice corresponde a um campo do formulário; índice fora do mapa: "Já existe um registro com estes dados." |
 | `23503` | foreign_key_violation | 400 | "Referência inválida: o registro relacionado não existe." |
 | `23502` | not_null_violation | 400 | "Campo obrigatório ausente." |
 | `23514` | check_violation | 400 | "Dado inválido para este campo." |
@@ -413,22 +420,29 @@ O converter (`perfil-pesquisador.converter.ts`) recebe `cpfDecifrado` como **par
 
 📌 **`P0001` vira 400, e o comentário justifica:** sem ERRCODE customizado não dá para saber se é permissão, validação ou conflito - 400 com a mensagem original é o mais honesto possível. Sobram nessa situação as funções fora de `05` que ainda não ganharam ERRCODE próprio (ex.: `excluir_conta_usuario()`, em `03_funcoes_seguranca.sql`).
 
-📌 **O corpo de erro traz `codigo`.** O filtro devolve `{ statusCode, codigo, message, dados? }`: `statusCode` e `message` como sempre, `codigo` é o SQLSTATE (`9xxxx` de regra de negócio ou os nativos `23505`, `23503`, `23502`, `23514`, `42501`, `P0001`), e `dados` só aparece se o `RAISE` mandou um `DETAIL` em JSON. O nome da constraint violada não vai no corpo. O front distingue a regra pelo código estável em vez do texto da mensagem. Contrato completo em `DOCUMENTACAO_ERRCODE.md`, seção "Contrato do corpo de erro da API".
+📌 **O corpo de erro traz `codigo`.** O filtro devolve `{ statusCode, codigo, message, dados?, campos? }`: `statusCode` e `message` como sempre, `codigo` é o SQLSTATE (`9xxxx` de regra de negócio ou os nativos `23505`, `23503`, `23502`, `23514`, `42501`, `P0001`), e `dados` só aparece se o `RAISE` mandou um `DETAIL` em JSON. `campos` (`{ <campo>: [mensagens] }`) aparece na duplicidade ligada a um campo e em todo 400 de validação de DTO (§6.1): é o que o React usa para mostrar o erro embaixo do campo certo. O nome da constraint violada não vai no corpo. O front distingue a regra pelo código estável em vez do texto da mensagem. Contrato completo em `DOCUMENTACAO_ERRCODE.md`, seção "Contrato do corpo de erro da API".
+
+📌 **Duplicidade com mensagem por índice (27-09-2026).** O Postgres informa em `erro.constraint` qual índice ou constraint único foi violado. O filtro procura esse nome em `DUPLICIDADE_POR_INDICE_UNICO` (`commons/database/mensagens-duplicidade.constants.ts`), que guarda a mensagem e, quando existe, o `campo` do formulário. É o **único** lugar do sistema que trata duplicidade: nenhum service tem `catch` de 23505 (os 7 que tinham foram limpos, só os ramos de 42501 ficaram). Estão no mapa os códigos e nomes dos catálogos (inclusive os três índices de nome normalizado do [02-C-1], com o aviso de que acentos, maiúsculas e espaços não contam como diferença), chave de configuração, versão de termo, nome de papel, e-mail, CPF e perfil repetido, e as repetições que um usuário comum pode provocar (seguir, denunciar, comentar duas vezes). Módulo novo com `UNIQUE` novo acrescenta uma linha no mapa.
+
+📌 **Excluir item de catálogo em uso diz onde e quantas vezes (27-09-2026).** Área do conhecimento, tipo de link e motivo de denúncia não têm `CASCADE` de propósito: excluir um item em uso falha com 23503. Antes, cada serviço devolvia 409 com texto fixo; agora a mensagem traz a contagem ("em uso em 2 campanhas", "em 4 perfis e 1 recompensa"), montada por `commons/database/mensagem-exclusao-em-uso.util.ts`. Os três serviços de remover chamam o mesmo helper, `excluirComContagemDeUso` (`commons/database/excluir-com-contagem-de-uso.util.ts`): ele faz o DELETE, devolve 404 ou 403 quando nada foi apagado e, no 23503, descobre sozinho pelo catálogo do Postgres (`pg_constraint`) quais tabelas apontam para o item, conta cada uma e monta o 409. Nenhuma lista de tabelas escrita à mão: uma FK nova entra na contagem sem mexer em código. O nome amigável de cada tabela ("campanhas", "perfis") vem de `rotulos-de-uso.constants.ts`; tabela sem rótulo aparece como "registro(s) em <tabela>". Detalhe técnico: toda requisição roda numa transação só (`GlobalDbInterceptor`), e depois de um comando que falha o Postgres recusa qualquer outro. Por isso o DELETE roda dentro de `comPontoDeRetorno` (`commons/database/ponto-de-retorno.util.ts`, um `SAVEPOINT`): se ele falhar, a transação volta só até ali e ainda aceita as contagens. Contar **antes** do DELETE não servia, porque quem não tem permissão receberia "em uso em 3 campanhas" em vez de 403. As contagens passam pela RLS; se nada for contado, volta o texto genérico em vez de "em uso em 0". Conferido na API: 409 com contagem, 404 e 403 inalterados.
+
+📌 **As funções de moderação do `03` recusam com código próprio (27-09-2026).** Suspender/revogar conta, suspender/reativar pesquisador, desbloquear login, excluir conta, corrigir CPF, criar perfil ou campanha para outro, excluir campanha à força, suspender papel e alterar perfil de outro davam `RAISE EXCEPTION` sem ERRCODE (P0001). Por isso 10 serviços tinham um `catch` próprio que devolvia 403 em **qualquer** erro, até "motivo é obrigatório" (que é 400) ou uma falha de banco. Agora as recusas têm código (92012 a 92024 = sem permissão, 90020/90021 = dado inválido, `DOCUMENTACAO_ERRCODE.md`) e os `catch` saíram: o filtro global responde com a mensagem da própria função. Suíte 20 do PGlite. No Supabase: Grupo S.
+
+📌 **`@UsuarioAtual()` (`commons/auth/usuario-atual.decorator.ts`).** Quem está logado, direto no parâmetro do controller, em vez de receber o `request` inteiro só para ler `request.user!.idUsuario` (o `!` era uma afirmação sem garantia). Se `request.user` faltar, responde 401. Usado em 15 controllers; ficam com o `request` inteiro os que precisam dele (login, cadastro e renovação leem IP e cabeçalhos) e as rotas de login opcional (perfil de pesquisador visto por visitante).
+
+📌 **`temCodigoPostgres(erro, codigo)` (`commons/database/codigo-postgres.util.ts`).** "Este erro veio do Postgres com este SQLSTATE?" conferido de verdade, sem o `as { code?: string }` que se repetia em 9 lugares.
 
 ### 5.2 Quando tratar localmente em vez de deixar cair no filtro
 
-O filtro nasceu como rede de segurança: `usuario.service.create` não tinha `try/catch` nenhum, e e-mail duplicado virava 500 cru em vez de 409.
+O filtro nasceu como rede de segurança: `usuario.service.create` não tinha `try/catch` nenhum, e e-mail duplicado virava 500 cru em vez de 409. Hoje ele é o lugar de toda duplicidade (§5.1).
 
-Mas onde o service consegue dar uma mensagem **melhor** que a genérica, ele trata. `configuracao.service.create.ts` é o exemplo canônico:
+O service só trata localmente o que o filtro não tem como saber: o **contexto** de um 42501. `configuracao.service.create.ts` é o exemplo:
 
 ```ts
-if (codigo === '23505') throw new ConflictException(`Já existe uma configuração com a chave "${dto.chave}".`);
 if (codigo === '42501') throw new ForbiddenException(
   dto.global ? "Sem permissão 'configuracao_gerenciar' para criar configuração global."
              : 'Sem permissão para criar esta configuração.');
 ```
-
-⚠️ **Onde ainda não dá para diferenciar.** `perfil-pesquisador.service.create.ts` tem **duas** constraints `UNIQUE` que disparam `23505` (a PK `id_usuario`, se a pessoa já tem perfil; e `UK_PERFIL_PESQUISADOR_CPF_HASH`, se o CPF já pertence a outra conta) - mas o service não as diferencia. O comentário registra o porquê: distinguir por nome de constraint exige confirmar o formato exato do erro do driver `pg` contra um Postgres real, o que não estava disponível quando o módulo foi escrito. O resultado é um 409 genérico onde caberia uma mensagem específica.
 
 ⚠️ **`try/catch` em volta de query continua sendo armadilha.** Ver §2.4 - tratar localmente **não** desfaz o aborto da transação. Os exemplos acima são seguros porque relançam sempre (o erro sobe, o interceptor faz `ROLLBACK`, a requisição termina); o perigo é *engolir* e seguir usando o mesmo `db`.
 
@@ -441,12 +455,17 @@ if (codigo === '42501') throw new ForbiddenException(
 Em `main.ts`:
 
 ```ts
-new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true })
+new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true, exceptionFactory: excecaoDeValidacao })
 ```
 
 - **`whitelist`** - descarta campo que não está no DTO.
 - **`forbidNonWhitelisted`** - rejeita a requisição inteira se vier campo a mais, em vez de só ignorar. 📌 O comentário explica a escolha: ignorar em silêncio esconderia erro de digitação no corpo da requisição.
 - **`transform`** - converte o corpo para instância real da classe do DTO (sem isso, os decorators não validam nada útil), e é o que faz `@Type(() => Number)` funcionar em query string.
+- **`exceptionFactory`** - `commons/validacao/erro-de-validacao.ts`: o 400 continua com a lista de mensagens em `message` e ganha `campos` (`{ nome: ["..."] }`, campo aninhado como `endereco.cep`), para a tela marcar o campo certo.
+
+📌 **Transformações de entrada centralizadas** (`commons/validacao/transformacoes.decorator.ts`), rodam antes da validação:
+- `@TextoLimpo()` - tira espaço das pontas e junta espaços repetidos ("  Site   Pessoal " vira "Site Pessoal"); só-espaço vira vazio e cai no `@IsNotEmpty`. Não mexe em maiúscula/minúscula de propósito (ORCID, GitHub, frases de motivo). Aplicado em nome/descrição de tipo de link, área do conhecimento e motivo de denúncia (criar e alterar).
+- `@BooleanoDaQuery()` - "true"/"false" da query string viram booleano (`@Type(() => Boolean)` transformaria "false" em `true`). Era uma função copiada igual em três DTOs de listagem.
 
 📌 **Isso não existia no começo do projeto.** O comentário registra o achado: nenhum DTO tinha decorator de validação e não havia `ValidationPipe` nenhum - e-mail vazio e senha de 1 caractere passavam direto para o Postgres.
 
@@ -1169,7 +1188,7 @@ Reunidos de todas as seções, para servir de checklist.
 ### Débitos técnicos
 
 7. ⚠️ **`db.types.ts` é escrito à mão**, com `npm run db:codegen` disponível e nunca rodado. Divergência com o `.sql` só aparece em runtime. (§2.6)
-8. ⚠️ **`perfil-pesquisador.service.create` não diferencia as duas `UNIQUE`** que disparam `23505` - 409 genérico onde caberia mensagem específica. (§5.2)
+8. ✅ **`perfil-pesquisador.service.create` diferencia as duas `UNIQUE`** pelo mapa central de duplicidade (perfil repetido e CPF repetido têm mensagens próprias). (§5.1)
 9. ✅ **`ordem_endosso` é calculada no banco** (trigger `validar_comentario_endosso_autor`, sob lock por campanha, desde 26-09-2026); a corrida teórica acabou. (§7.4)
 10. ✅ **`GET /dashboard/resumo` exige login e a permissão `relatorio_visualizar`** (checada dentro de `contar_metricas_dashboard()`, ERRCODE 92011, desde 25-09-2026). (§13)
 11. ⚠️ **`notificacoesPendentes` não vai começar a funcionar sozinho** quando `26-notificacao` existir - há precedente comentado no código. (§10)

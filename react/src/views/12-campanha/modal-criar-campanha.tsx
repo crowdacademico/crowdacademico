@@ -1,18 +1,20 @@
-import { useEffect, useId, useState } from 'react';
+import { useId, useState } from 'react';
 import type { ReactNode } from 'react';
 import { SecaoFicha } from '../../components/crud/ficha-consulta';
+import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { ModalFicha } from '../../components/crud/modal-ficha';
+import { Campo } from '../../components/input/campo';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
 import { useRegrasCampanha } from '../../services/12-campanha/hook/use-regras-campanha';
 import { duracaoEmDias, hojeISO } from '../../services/12-campanha/util/prazo-campanha.util';
-import { areaConhecimentoApi } from '../../services/8-area-conhecimento/api/area-conhecimento.api';
+import { useAreasDaCampanha } from '../../services/8-area-conhecimento/hook/use-areas-da-campanha';
 import { formatarMoeda } from '../../services/constant/utils/formatacao.util';
+import { useEnvio } from '../../services/constant/hook/use-envio';
 import { PainelOrcamentoCronograma } from './painel-orcamento-cronograma';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { CampanhaRequestCreate, CampanhaResponse } from '../../services/12-campanha/type/campanha.type';
-import type { AreaConhecimentoResponse } from '../../services/8-area-conhecimento/type/area-conhecimento.type';
 
 interface ModalCriarCampanhaProps {
   auth: Pick<UseAuthReturn, 'authFetch'>;
@@ -70,23 +72,14 @@ export function ModalCriarCampanha({
 }: ModalCriarCampanhaProps) {
   const { mostrar } = useToast();
   const { reportarErro } = useErroToast();
+  const { ocupado: trabalhando, executar: executarTrabalhando } = useEnvio(reportarErro);
   const regras = useRegrasCampanha();
-  const prefixoId = useId();
-  const idCampo = (nome: string) => `${prefixoId}-${nome}`;
-  const [areas, setAreas] = useState<AreaConhecimentoResponse[]>([]);
+  const idPrazoDica = useId();
+  const areas = useAreasDaCampanha(auth.authFetch);
   const [form, setForm] = useState<FormDadosCampanha>(FORM_VAZIO);
   const [etapa, setEtapa] = useState<Etapa>('dados');
   const [idCampanha, setIdCampanha] = useState<number | null>(null);
-  const [trabalhando, setTrabalhando] = useState(false);
 
-  // Só as áreas específicas (com pai): as grandes áreas CNPq são só agrupadoras.
-  useEffect(() => {
-    areaConhecimentoApi
-      .listar(auth.authFetch)
-      .then((lista) => setAreas(lista.filter((area) => area.idPai !== null)))
-      .catch(reportarErro);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const hoje = hojeISO();
   const duracao = duracaoEmDias(form.dataInicio, form.dataFim);
@@ -115,8 +108,7 @@ export function ModalCriarCampanha({
     if (!dadosValidos) {
       return;
     }
-    setTrabalhando(true);
-    try {
+    await executarTrabalhando(async () => {
       if (idCampanha === null) {
         const nova = criar ? await criar(corpo()) : await campanhaApi.criar(auth.authFetch, corpo());
         setIdCampanha(nova.idCampanha);
@@ -126,28 +118,19 @@ export function ModalCriarCampanha({
       }
       aoMudar();
       setEtapa('orcamento');
-    } catch (erro) {
-      reportarErro(erro);
-    } finally {
-      setTrabalhando(false);
-    }
+    });
   };
 
   const enviarParaAprovacao = async () => {
     if (idCampanha === null) {
       return;
     }
-    setTrabalhando(true);
-    try {
+    await executarTrabalhando(async () => {
       await campanhaApi.enviar(auth.authFetch, idCampanha);
       mostrar('Campanha enviada para aprovação.', `ID: ${idCampanha}`);
       aoMudar();
       aoFechar();
-    } catch (erro) {
-      reportarErro(erro);
-    } finally {
-      setTrabalhando(false);
-    }
+    });
   };
 
   const subtitulo =
@@ -159,32 +142,28 @@ export function ModalCriarCampanha({
 
   const rodape =
     etapa === 'dados' ? (
-      <div className="flex gap-3 max-w-sm ml-auto">
-        <button type="button" onClick={aoFechar} className="btn btn-secondary flex-1">
-          Cancelar
-        </button>
-        <button type="button" onClick={avancarDosDados} disabled={!dadosValidos || trabalhando} className="btn btn-primary flex-1">
-          Próximo
-        </button>
-      </div>
+      <RodapeAcoes
+        aoCancelar={aoFechar}
+        acao={{ rotulo: 'Próximo', ocupado: trabalhando, desabilitado: !dadosValidos, aoClicar: () => void avancarDosDados() }}
+      />
     ) : etapa === 'orcamento' ? (
-      <div className="flex gap-3 max-w-sm ml-auto">
-        <button type="button" onClick={() => setEtapa('dados')} className="btn btn-secondary flex-1">
-          Voltar
-        </button>
-        <button type="button" onClick={() => setEtapa('cronograma')} className="btn btn-primary flex-1">
-          Próximo
-        </button>
-      </div>
+      <RodapeAcoes
+        aoCancelar={() => setEtapa('dados')}
+        rotuloCancelar="Voltar"
+        acao={{ rotulo: 'Próximo', aoClicar: () => setEtapa('cronograma') }}
+      />
     ) : (
-      <div className="flex gap-3 max-w-md ml-auto">
-        <button type="button" onClick={() => setEtapa('orcamento')} className="btn btn-secondary flex-1">
-          Voltar
-        </button>
-        <button type="button" onClick={enviarParaAprovacao} disabled={trabalhando} className="btn btn-primary flex-1">
-          {trabalhando ? 'Enviando...' : 'Enviar para aprovação'}
-        </button>
-      </div>
+      <RodapeAcoes
+        aoCancelar={() => setEtapa('orcamento')}
+        rotuloCancelar="Voltar"
+        largura="md"
+        acao={{
+          rotulo: 'Enviar para aprovação',
+          rotuloOcupado: 'Enviando...',
+          ocupado: trabalhando,
+          aoClicar: () => void enviarParaAprovacao(),
+        }}
+      />
     );
 
   return (
@@ -218,100 +197,108 @@ export function ModalCriarCampanha({
         <>
           {camposExtras}
           <SecaoFicha titulo="Dados">
-            <div className="sm:col-span-2">
-              <label htmlFor={idCampo('titulo')} className="rotulo-campo">Título</label>
-              <input
-                id={idCampo('titulo')}
-                type="text"
-                value={form.titulo}
-                onChange={(evento) => setForm({ ...form, titulo: evento.target.value })}
-                className="input-padrao"
-              />
-            </div>
-            <div>
-              <label htmlFor={idCampo('area')} className="rotulo-campo">Área do conhecimento</label>
-              <select
-                id={idCampo('area')}
-                value={form.idAreaConhecimento}
-                onChange={(evento) => setForm({ ...form, idAreaConhecimento: evento.target.value })}
-                className="input-padrao"
-              >
-                <option value="">Selecione...</option>
-                {areas.map((area) => (
-                  <option key={area.idAreaConhecimento} value={area.idAreaConhecimento}>
-                    {area.nome}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label htmlFor={idCampo('meta')} className="rotulo-campo">Meta (R$)</label>
-              <input
-                id={idCampo('meta')}
-                type="number"
-                min={regras.metaMinima}
-                value={form.metaFinanceira}
-                onChange={(evento) => setForm({ ...form, metaFinanceira: evento.target.value })}
-                className={'input-padrao' + (metaAbaixoDoMinimo ? ' borda-erro' : '')}
-                aria-invalid={metaAbaixoDoMinimo}
-                aria-describedby={idCampo('meta-dica')}
-              />
-              <p id={idCampo('meta-dica')} className={'text-xs mt-1 ' + (metaAbaixoDoMinimo ? 'texto-erro font-semibold' : 'texto-fraco')}>
-                Meta mínima: {formatarMoeda(regras.metaMinima)}.
-              </p>
-            </div>
-            <div className="sm:col-span-2">
-              <label htmlFor={idCampo('descricao')} className="rotulo-campo">Descrição (opcional)</label>
-              <textarea
-                id={idCampo('descricao')}
-                rows={3}
-                value={form.descricao}
-                onChange={(evento) => setForm({ ...form, descricao: evento.target.value })}
-                className="input-padrao"
-              />
-            </div>
-            <div>
-              <label htmlFor={idCampo('inicio')} className="rotulo-campo">Início</label>
-              <input
-                id={idCampo('inicio')}
-                type="date"
-                value={form.dataInicio}
-                min={hoje}
-                onChange={(evento) => setForm({ ...form, dataInicio: evento.target.value })}
-                className="input-padrao"
-              />
-            </div>
-            <div>
-              <label htmlFor={idCampo('fim')} className="rotulo-campo">Fim</label>
-              <input
-                id={idCampo('fim')}
-                type="date"
-                value={form.dataFim}
-                min={form.dataInicio || hoje}
-                onChange={(evento) => setForm({ ...form, dataFim: evento.target.value })}
-                className={'input-padrao' + (duracao !== null && !duracaoValida ? ' borda-erro' : '')}
-                aria-invalid={duracao !== null && !duracaoValida}
-                aria-describedby={idCampo('prazo-dica')}
-              />
-            </div>
+            <Campo rotulo="Título" className="sm:col-span-2">
+              {({ atributos }) => (
+                <input
+                  {...atributos}
+                  type="text"
+                  value={form.titulo}
+                  onChange={(evento) => setForm({ ...form, titulo: evento.target.value })}
+                  className="input-padrao"
+                />
+              )}
+            </Campo>
+            <Campo rotulo="Área do conhecimento">
+              {({ atributos }) => (
+                <select
+                  {...atributos}
+                  value={form.idAreaConhecimento}
+                  onChange={(evento) => setForm({ ...form, idAreaConhecimento: evento.target.value })}
+                  className="input-padrao"
+                >
+                  <option value="">Selecione...</option>
+                  {areas.map((area) => (
+                    <option key={area.idAreaConhecimento} value={area.idAreaConhecimento}>
+                      {area.nome}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </Campo>
+            <Campo
+              rotulo="Meta (R$)"
+              dica={`Meta mínima: ${formatarMoeda(regras.metaMinima)}.`}
+              erro={metaAbaixoDoMinimo && `Meta mínima: ${formatarMoeda(regras.metaMinima)}.`}
+            >
+              {({ atributos, classeErro }) => (
+                <input
+                  {...atributos}
+                  type="number"
+                  min={regras.metaMinima}
+                  value={form.metaFinanceira}
+                  onChange={(evento) => setForm({ ...form, metaFinanceira: evento.target.value })}
+                  className={'input-padrao' + classeErro}
+                />
+              )}
+            </Campo>
+            <Campo rotulo="Descrição (opcional)" className="sm:col-span-2">
+              {({ atributos }) => (
+                <textarea
+                  {...atributos}
+                  rows={3}
+                  value={form.descricao}
+                  onChange={(evento) => setForm({ ...form, descricao: evento.target.value })}
+                  className="input-padrao"
+                />
+              )}
+            </Campo>
+            <Campo rotulo="Início">
+              {({ atributos }) => (
+                <input
+                  {...atributos}
+                  type="date"
+                  value={form.dataInicio}
+                  min={hoje}
+                  onChange={(evento) => setForm({ ...form, dataInicio: evento.target.value })}
+                  className="input-padrao"
+                />
+              )}
+            </Campo>
+            {/* O aviso de prazo vale para as duas datas e ocupa a linha inteira abaixo delas, por isso fica fora do
+                Campo e é ligado ao campo "Fim" à mão. */}
+            <Campo rotulo="Fim">
+              {({ atributos }) => (
+                <input
+                  {...atributos}
+                  aria-invalid={duracao !== null && !duracaoValida}
+                  aria-describedby={idPrazoDica}
+                  type="date"
+                  value={form.dataFim}
+                  min={form.dataInicio || hoje}
+                  onChange={(evento) => setForm({ ...form, dataFim: evento.target.value })}
+                  className={'input-padrao' + (duracao !== null && !duracaoValida ? ' borda-erro' : '')}
+                />
+              )}
+            </Campo>
             <p
-              id={idCampo('prazo-dica')}
+              id={idPrazoDica}
               className={'sm:col-span-2 text-xs -mt-2 ' + (duracao !== null && !duracaoValida ? 'texto-erro font-semibold' : 'texto-fraco')}
             >
               {duracao !== null ? `Duração: ${duracao} ${duracao === 1 ? 'dia' : 'dias'}. ` : ''}A campanha precisa durar
               entre {regras.prazoMinimoDias} e {regras.prazoMaximoDias} dias, começando hoje ou depois.
             </p>
-            <div className="sm:col-span-2">
-              <label htmlFor={idCampo('video')} className="rotulo-campo">URL do vídeo de apresentação (opcional)</label>
-              <input
-                id={idCampo('video')}
-                type="url"
-                value={form.videoApresentacaoUrl}
-                onChange={(evento) => setForm({ ...form, videoApresentacaoUrl: evento.target.value })}
-                className="input-padrao"
-                placeholder="https://"
-              />
-            </div>
+            <Campo rotulo="URL do vídeo de apresentação (opcional)" className="sm:col-span-2">
+              {({ atributos }) => (
+                <input
+                  {...atributos}
+                  type="url"
+                  value={form.videoApresentacaoUrl}
+                  onChange={(evento) => setForm({ ...form, videoApresentacaoUrl: evento.target.value })}
+                  className="input-padrao"
+                  placeholder="https://"
+                />
+              )}
+            </Campo>
           </SecaoFicha>
         </>
       )}

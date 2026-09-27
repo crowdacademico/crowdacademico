@@ -1,8 +1,4 @@
-import {
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { sql } from 'kysely';
 import {
   calcularHashCpf,
@@ -26,31 +22,13 @@ export class PerfilPesquisadorServiceCorrigirCpf {
     const cpfCriptografado = cifrarCpf(cpfNormalizado);
     const cpfHash = calcularHashCpf(cpfNormalizado);
 
-    try {
-      const resultado = await sql<{
-        corrigir_cpf_pesquisador: boolean;
-      }>`SELECT public.corrigir_cpf_pesquisador(${idUsuario}, ${cpfCriptografado}, ${cpfHash})`.execute(
-        this.database.getDb(),
-      );
-      if (resultado.rows[0]?.corrigir_cpf_pesquisador !== true) {
-        throw new NotFoundException('Perfil de pesquisador não encontrado.');
-      }
-    } catch (erro) {
-      if (erro instanceof NotFoundException) {
-        throw erro;
-      }
-      // A única RAISE EXCEPTION dentro da função é a checagem de permissão
-      // (sem ERRCODE customizado, código P0001) - um 23505 de verdade (CPF
-      // já pertence a outra conta, UK_PERFIL_PESQUISADOR_CPF_HASH) tem
-      // código diferente e segue pro PostgresExceptionFilter global, não é
-      // interceptado aqui.
-      if ((erro as { code?: string }).code === 'P0001') {
-        throw new ForbiddenException(
-          (erro as Error).message ||
-            'Sem permissão para corrigir CPF de pesquisador.',
-        );
-      }
-      throw erro;
+    const resultado = await sql<{
+      corrigir_cpf_pesquisador: boolean;
+    }>`SELECT public.corrigir_cpf_pesquisador(${idUsuario}, ${cpfCriptografado}, ${cpfHash})`.execute(
+      this.database.getDb(),
+    );
+    if (resultado.rows[0]?.corrigir_cpf_pesquisador !== true) {
+      throw new NotFoundException('Perfil de pesquisador não encontrado.');
     }
   }
 }

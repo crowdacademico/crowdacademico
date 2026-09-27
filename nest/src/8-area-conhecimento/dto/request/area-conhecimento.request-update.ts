@@ -5,6 +5,7 @@ import {
   IsString,
   MaxLength,
 } from 'class-validator';
+import { TextoLimpo } from '../../../commons/validacao/transformacoes.decorator';
 
 // Só `nome` e `ativo` - nunca `codigoCnpq` nem `idPai`, de propósito:
 // - `codigoCnpq` é o identificador estável do catálogo CNPq, mesmo
@@ -16,6 +17,7 @@ import {
 //   PAI`) - mudar o pai de uma área já existente é reorganização de
 //   catálogo que fica fora de escopo até essa regra existir no banco.
 export class AreaConhecimentoRequestUpdate {
+  @TextoLimpo()
   @IsOptional()
   @IsString()
   @IsNotEmpty()

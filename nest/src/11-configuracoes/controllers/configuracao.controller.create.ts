@@ -1,8 +1,9 @@
-import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
-import type { Request } from 'express';
+import { Body, Controller, Post, UseGuards } from '@nestjs/common';
 import { RequireAuthGuard } from '../../3-auth/guards/require-auth.guard';
 import { ConfiguracaoRequestCreate } from '../dto/request/configuracao.request-create';
 import { ConfiguracaoServiceCreate } from '../service/configuracao.service.create';
+import { UsuarioAtual } from '../../commons/auth/usuario-atual.decorator';
+import type { UsuarioAutenticado } from '../../commons/auth/usuario-autenticado.interface';
 
 @Controller('configuracoes')
 export class ConfiguracaoControllerCreate {
@@ -10,8 +11,10 @@ export class ConfiguracaoControllerCreate {
 
   @Post()
   @UseGuards(RequireAuthGuard)
-  criar(@Body() dto: ConfiguracaoRequestCreate, @Req() request: Request) {
-    // request.user sempre definido aqui - RequireAuthGuard já garantiu.
-    return this.service.executar(dto, request.user!.idUsuario);
+  criar(
+    @Body() dto: ConfiguracaoRequestCreate,
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+  ) {
+    return this.service.executar(dto, usuario.idUsuario);
   }
 }

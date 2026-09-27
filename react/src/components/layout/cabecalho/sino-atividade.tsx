@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Dica } from '../tooltip';
 import { logAuditoriaApi } from '../../../services/27-log-auditoria/api/log-auditoria.api';
 import { useFecharAoClicarFora } from '../../../services/constant/hook/use-fechar-ao-clicar-fora';
+import { formatarDataHora } from '../../../services/constant/utils/formatacao.util';
+import { Carregando } from '../carregando';
 import type { UseAuthReturn } from '../../../services/3-auth/hook/use-auth';
 import type { LogAuditoriaResponse, OperacaoLogAuditoria } from '../../../services/27-log-auditoria/type/log-auditoria.type';
 
@@ -101,7 +103,7 @@ export function SinoAtividade({ auth }: SinoAtividadeProps) {
 
           <div className="max-h-80 overflow-y-auto">
             {carregando ? (
-              <p className="px-4 py-6 text-sm texto-fraco text-center">Carregando...</p>
+              <Carregando className="px-4 py-6 text-center" />
             ) : itens.length === 0 ? (
               <p className="px-4 py-6 text-sm texto-fraco text-center">
                 Nenhuma ação recente sua registrada.
@@ -115,7 +117,7 @@ export function SinoAtividade({ auth }: SinoAtividadeProps) {
                     {item.identidadeRegistro}
                   </p>
                   <p className="text-xs texto-fraco mt-0.5">
-                    {new Date(item.ocorridoEm).toLocaleString('pt-BR')}
+                    {formatarDataHora(item.ocorridoEm)}
                   </p>
                 </div>
               ))

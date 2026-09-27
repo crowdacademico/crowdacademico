@@ -8,6 +8,7 @@ import {
   Matches,
   MaxLength,
 } from 'class-validator';
+import { TextoLimpo } from '../../../commons/validacao/transformacoes.decorator';
 
 export class TipoLinkRequestCreate {
   // Chave estável, nunca editável depois (ver comentário no response DTO)
@@ -23,6 +24,7 @@ export class TipoLinkRequestCreate {
   })
   codigo: string;
 
+  @TextoLimpo()
   @IsString()
   @IsNotEmpty()
   @MaxLength(100) // bate com tipo_link.nome VARCHAR(100)

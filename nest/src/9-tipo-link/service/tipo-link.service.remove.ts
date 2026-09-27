@@ -1,64 +1,22 @@
-import {
-  ConflictException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
-import { distinguir404ou403 } from '../../commons/database/distinguir-404-ou-403.util';
+import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
-import { CODIGO_PG_FOREIGN_KEY_VIOLATION } from '../../commons/database/postgres-exception.filter';
+import { excluirComContagemDeUso } from '../../commons/database/excluir-com-contagem-de-uso.util';
 
+// FK_LINK_ACADEMICO_TIPOLINK / FK_LINK_ATUALIZACAO_TIPOLINK / FK_LINK_RECOMPENSA_TIPOLINK não têm CASCADE de
+// propósito (ver tipo-link.module.ts): tipo em uso não se exclui, se desativa. pol_tipolink_delete (04) exige
+// tipolink_gerenciar.
 @Injectable()
 export class TipoLinkServiceRemove {
   constructor(private readonly database: DatabaseService) {}
 
   async executar(idTipolink: number): Promise<void> {
-    const db = this.database.getDb();
-
-    try {
-      const resultado = await db
-        .deleteFrom('tipo_link')
-        .where('id_tipolink', '=', idTipolink)
-        .executeTakeFirst();
-
-      // `resultado` nunca é undefined - mesmo motivo de
-      // motivo-denuncia.service.remove.ts (executeTakeFirst() de DELETE
-      // sempre resolve pro DeleteResult sintetizado pelo Kysely).
-      if (resultado.numDeletedRows === 0n) {
-        // pol_tipolink_delete (04): mesmo critério do update
-        // (tipolink_gerenciar).
-        await distinguir404ou403(
-          db,
-          'tipo_link',
-          { id_tipolink: idTipolink },
-          `Tipo de link ${idTipolink} não encontrado`,
-          'Sem permissão para excluir este tipo de link.',
-        );
-      }
-    } catch (erro) {
-      // FK_LINK_ACADEMICO_TIPOLINK / FK_LINK_ATUALIZACAO_TIPOLINK /
-      // FK_LINK_RECOMPENSA_TIPOLINK não têm CASCADE de propósito (módulo
-      // criado sem endpoint de remoção justamente por isso - ver
-      // comentário em tipo-link.module.ts). Mesmo tratamento de
-      // area-conhecimento.service.remove.ts: 23503 vira 409 com mensagem
-      // própria em vez do 400 genérico do filtro global.
-      if (
-        erro instanceof NotFoundException ||
-        erro instanceof ForbiddenException
-      ) {
-        throw erro;
-      }
-      // `erro` é `unknown` de verdade antes do `as` - `?.` fica de
-      // propósito, mesma justificativa de motivo-denuncia.service.remove.ts.
-      if (
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-        (erro as { code?: string })?.code === CODIGO_PG_FOREIGN_KEY_VIOLATION
-      ) {
-        throw new ConflictException(
-          'Não é possível excluir: este tipo de link está em uso em perfis, atualizações ou recompensas. Desative-o em vez de excluir.',
-        );
-      }
-      throw erro;
-    }
+    await excluirComContagemDeUso(this.database.getDb(), {
+      tabela: 'tipo_link',
+      coluna: 'id_tipolink',
+      id: idTipolink,
+      item: { descricao: 'este tipo de link', pronome: 'o' },
+      mensagemNaoEncontrado: `Tipo de link ${idTipolink} não encontrado`,
+      mensagemProibido: 'Sem permissão para excluir este tipo de link.',
+    });
   }
 }

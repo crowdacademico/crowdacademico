@@ -1,15 +1,20 @@
-import { useEffect, useId, useState } from 'react';
+import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
 import { SecaoFicha } from '../../components/crud/ficha-consulta';
+import { MensagemErro } from '../../components/crud/mensagem-erro';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { confirmarSaida, useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
+import { Campo } from '../../components/input/campo';
 import { termoUsoApi } from '../../services/5-termo-uso/api/termo-uso.api';
 import { ROTULO_TIPO_TERMO } from '../../services/5-termo-uso/constants/termo-uso-tipos';
+import { useEnvio } from '../../services/constant/hook/use-envio';
+import { useBuscar } from '../../services/constant/hook/use-buscar';
+import { Carregando } from '../../components/layout/carregando';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
-import type { TermoUsoResponse, TipoTermo } from '../../services/5-termo-uso/type/termo-uso.type';
+import type { TipoTermo } from '../../services/5-termo-uso/type/termo-uso.type';
 
 interface ModalAlterarTermoUsoProps {
   auth: Pick<UseAuthReturn, 'authFetch'>;
@@ -44,46 +49,20 @@ export function ModalAlterarTermoUso({
 }: ModalAlterarTermoUsoProps) {
   const { mostrar } = useToast();
   const { erro, reportarErro, limparErro } = useErroToast();
-  const [versoesDoTipo, setVersoesDoTipo] = useState<TermoUsoResponse[] | null>(null);
+  const { ocupado: ativando, executar: executarAtivando } = useEnvio(reportarErro, limparErro);
+  const { ocupado: enviando, executar: executarEnviando } = useEnvio(reportarErro, limparErro);
   const [idSelecionado, setIdSelecionado] = useState(idTermoInicial);
-  const [termo, setTermo] = useState<TermoUsoResponse | null>(null);
   const [conteudo, setConteudo] = useState('');
-  const [carregando, setCarregando] = useState(true);
-  const [enviando, setEnviando] = useState(false);
-  const [ativando, setAtivando] = useState(false);
-  const idSelecionarVersao = useId();
-  const idConteudo = useId();
+  const { dado: versoesDoTipo } = useBuscar(
+    () => termoUsoApi.listar(auth.authFetch).then((lista) => lista.filter((linha) => linha.tipo === tipo)),
+    [],
+  );
+  const { dado: termo, carregando } = useBuscar(() => termoUsoApi.buscar(auth.authFetch, idSelecionado), [idSelecionado], {
+    aoChegar: (dados) => setConteudo(dados.conteudo),
+    erros: { erro, reportarErro, limparErro },
+  });
 
-  useEffect(() => {
-    termoUsoApi
-      .listar(auth.authFetch)
-      .then((lista) => setVersoesDoTipo(lista.filter((linha) => linha.tipo === tipo)))
-      .catch(() => setVersoesDoTipo([]));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    termoUsoApi
-      .buscar(auth.authFetch, idSelecionado)
-      .then((dados) => {
-        setTermo(dados);
-        setConteudo(dados.conteudo);
-      })
-      .catch(reportarErro)
-      .finally(() => setCarregando(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idSelecionado]);
-
-  // `setCarregando(true)`/`limparErro()` moram AQUI, não dentro do efeito
-  // acima (react-hooks/set-state-in-effect não deixa chamar setState
-  // sincronamente no corpo de um efeito) - disparados pelo `<select>` no
-  // momento da troca, o efeito só reage à MUDANÇA de `idSelecionado` e cuida
-  // só do fetch em si.
-  const aoTrocarVersaoSelecionada = (novoId: number) => {
-    setCarregando(true);
-    limparErro();
-    setIdSelecionado(novoId);
-  };
+  const aoTrocarVersaoSelecionada = (novoId: number) => setIdSelecionado(novoId);
 
   const sujo = termo !== null && conteudo !== termo.conteudo;
   useAvisoAlteracaoNaoSalva(sujo);
@@ -97,24 +76,16 @@ export function ModalAlterarTermoUso({
 
   const aoSalvarForm = async (evento: FormEvent<HTMLFormElement>) => {
     evento.preventDefault();
-    limparErro();
-    setEnviando(true);
-    try {
+    await executarEnviando(async () => {
       await termoUsoApi.atualizar(auth.authFetch, idSelecionado, { conteudo });
       mostrar('Termos de Uso alterado com sucesso.', `Versão "${termo?.versao}" foi atualizada.`);
       aoSalvar?.();
       aoFechar();
-    } catch (erroRequisicao) {
-      reportarErro(erroRequisicao);
-    } finally {
-      setEnviando(false);
-    }
+    });
   };
 
   const aoTornarVigente = async () => {
-    limparErro();
-    setAtivando(true);
-    try {
+    await executarAtivando(async () => {
       const termoAtivado = await termoUsoApi.ativar(auth.authFetch, idSelecionado);
       mostrar(
         'Versão tornada vigente com sucesso.',
@@ -122,11 +93,7 @@ export function ModalAlterarTermoUso({
       );
       aoSalvar?.();
       aoFechar();
-    } catch (erroRequisicao) {
-      reportarErro(erroRequisicao);
-    } finally {
-      setAtivando(false);
-    }
+    });
   };
 
   return (
@@ -164,27 +131,28 @@ export function ModalAlterarTermoUso({
         <CampoSomenteLeitura rotulo="Tipo" valor={ROTULO_TIPO_TERMO[tipo]} />
       </SecaoFicha>
 
-      <div>
-        <label htmlFor={idSelecionarVersao} className="rotulo-campo">Selecionar versão para alterar</label>
-        <select
-          id={idSelecionarVersao}
-          value={idSelecionado}
-          onChange={(evento) => aoTrocarVersaoSelecionada(Number(evento.target.value))}
-          className="input-padrao"
-        >
-          {(versoesDoTipo ?? []).map((linha) => (
-            <option key={linha.idTermo} value={linha.idTermo}>
-              {linha.versao}
-              {linha.ativo ? ' (vigente)' : ''}
-            </option>
-          ))}
-        </select>
-      </div>
+      <Campo rotulo="Selecionar versão para alterar">
+        {({ atributos }) => (
+          <select
+            {...atributos}
+            value={idSelecionado}
+            onChange={(evento) => aoTrocarVersaoSelecionada(Number(evento.target.value))}
+            className="input-padrao"
+          >
+            {(versoesDoTipo ?? []).map((linha) => (
+              <option key={linha.idTermo} value={linha.idTermo}>
+                {linha.versao}
+                {linha.ativo ? ' (vigente)' : ''}
+              </option>
+            ))}
+          </select>
+        )}
+      </Campo>
 
-      {erro && <p className="texto-erro text-sm font-bold text-center">{erro}</p>}
+      <MensagemErro texto={erro} />
 
       {carregando ? (
-        <p className="text-center text-sm texto-fraco py-4">Carregando...</p>
+        <Carregando className="text-center py-4" />
       ) : (
         termo && (
           <form
@@ -192,17 +160,18 @@ export function ModalAlterarTermoUso({
             onSubmit={(evento) => void aoSalvarForm(evento)}
             className="space-y-6"
           >
-            <div>
-              <label htmlFor={idConteudo} className="rotulo-campo">Texto completo</label>
-              <textarea
-                id={idConteudo}
-                value={conteudo}
-                onChange={(evento) => setConteudo(evento.target.value)}
-                required
-                rows={14}
-                className="input-padrao font-mono text-xs"
-              />
-            </div>
+            <Campo rotulo="Texto completo">
+              {({ atributos }) => (
+                <textarea
+                  {...atributos}
+                  value={conteudo}
+                  onChange={(evento) => setConteudo(evento.target.value)}
+                  required
+                  rows={14}
+                  className="input-padrao font-mono text-xs"
+                />
+              )}
+            </Campo>
           </form>
         )
       )}

@@ -1,6 +1,7 @@
 import { useId, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { useFocoPreso } from '../../services/constant/hook/use-foco-preso';
+import { MensagemErro } from './mensagem-erro';
 
 interface ModalFichaProps {
   titulo: string;
@@ -8,6 +9,8 @@ interface ModalFichaProps {
   avatar?: ReactNode;
   badges?: ReactNode[];
   rodape?: ReactNode;
+  // Texto de erro (o `erro` de useErroToast): aparece no topo do corpo, antes de `children`.
+  erro?: string;
   // `carregando`: sem esta prop, cada modal (ModalConsultarUsuario/ModalAlterarUsuario/Alterar Campanha de T2)
   // reescreveria `titulo={dado?.campo ?? `#${id}`}` + `avatar={dado && (...)}`, e por uma fração de segundo
   // (entre abrir o modal e a requisição voltar) piscaria um "#id" cru e o "?" do AvatarUsuario sem nome (que
@@ -45,6 +48,7 @@ export function ModalFicha({
   avatar,
   badges,
   rodape,
+  erro,
   carregando,
   aoFechar,
   children,
@@ -59,7 +63,6 @@ export function ModalFicha({
   // Foco do teclado preso na janela enquanto ela está aberta, e devolvido a quem abriu ao fechar.
   const janelaRef = useRef<HTMLDivElement>(null);
   useFocoPreso(janelaRef);
-
 
   return (
     <div
@@ -113,7 +116,10 @@ export function ModalFicha({
           </button>
         </div>
 
-        <div className="px-8 py-6 space-y-6 overflow-y-auto">{children}</div>
+        <div className="px-8 py-6 space-y-6 overflow-y-auto">
+          <MensagemErro texto={erro} />
+          {children}
+        </div>
 
         {rodape && <div className="px-8 py-5 border-t borda-padrao fundo-cartao shrink-0">{rodape}</div>}
       </div>

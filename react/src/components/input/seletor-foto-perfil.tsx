@@ -60,6 +60,8 @@ export function SeletorFotoPerfil({
 }: SeletorFotoPerfilProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [enviando, setEnviando] = useState(false);
+  // 0 a 100 enquanto os bytes sobem para o armazenamento; null nos outros passos (reduzir, iniciar, confirmar).
+  const [progresso, setProgresso] = useState<number | null>(null);
   const [erroLocal, setErroLocal] = useState('');
 
   // `arquivo_tamanho_maximo_imagem_bytes` já vive em `configuracoes` (marcada `publica`): lida daqui em vez de
@@ -114,7 +116,8 @@ export function SeletorFotoPerfil({
         tamanhoBytes: arquivo.size,
       });
 
-      await arquivoApi.enviarParaBucket(uploadPreAssinado, arquivo);
+      await arquivoApi.enviarParaBucket(uploadPreAssinado, arquivo, setProgresso);
+      setProgresso(null);
 
       const arquivoConfirmado = await arquivoApi.confirmarUpload(authFetch, {
         chave: uploadPreAssinado.chave,
@@ -144,6 +147,7 @@ export function SeletorFotoPerfil({
       );
     } finally {
       setEnviando(false);
+      setProgresso(null);
     }
   };
 
@@ -177,7 +181,13 @@ export function SeletorFotoPerfil({
 
         {enviando && (
           <div className="absolute inset-0 rounded-full flex items-center justify-center bg-black/50 text-white">
-            <i className="fa-solid fa-spinner fa-spin"></i>
+            {progresso === null ? (
+              <i className="fa-solid fa-spinner fa-spin"></i>
+            ) : (
+              <span className="text-xs font-bold" role="status">
+                {progresso}%
+              </span>
+            )}
           </div>
         )}
 

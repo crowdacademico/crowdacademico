@@ -4,6 +4,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import type { Express } from 'express';
 import helmet from 'helmet';
 import { AppModule } from './app/app.module';
+import { excecaoDeValidacao } from './commons/validacao/erro-de-validacao';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -36,6 +37,8 @@ async function bootstrap() {
       whitelist: true,
       forbidNonWhitelisted: true,
       transform: true,
+      // Erros separados por campo (`campos`), além da lista em `message`: commons/validacao/erro-de-validacao.ts.
+      exceptionFactory: excecaoDeValidacao,
     }),
   );
   // Swagger/OpenAPI: documentação interativa da API em `/api`, gerada sozinha a partir dos DTOs

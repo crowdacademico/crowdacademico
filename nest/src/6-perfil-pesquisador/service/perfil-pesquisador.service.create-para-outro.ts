@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { sql } from 'kysely';
 import {
   calcularHashCpf,
@@ -45,30 +45,16 @@ export class PerfilPesquisadorServiceCreateParaOutro {
         : null;
     const db = this.database.getDb();
 
-    try {
-      await sql`
-        SELECT public.criar_perfil_pesquisador_para_outro(
-          ${idUsuarioAlvo},
-          ${cpfCriptografado},
-          ${cpfHash},
-          ${dto.tipoVinculo}::tipo_vinculo,
-          ${vinculoInstitucional},
-          ${dto.tituloAcademico}::titulo_academico
-        )
-      `.execute(db);
-    } catch (erro) {
-      // A única RAISE EXCEPTION dentro da função é a checagem de permissão
-      // (sem ERRCODE customizado, código P0001) - PK duplicada (usuário já
-      // tem perfil, 23505) ou FK inválida (id_usuario inexistente, 23503)
-      // têm código diferente e seguem pro PostgresExceptionFilter global.
-      if ((erro as { code?: string }).code === 'P0001') {
-        throw new ForbiddenException(
-          (erro as Error).message ||
-            'Sem permissão para criar perfil de pesquisador em nome de outro usuário.',
-        );
-      }
-      throw erro;
-    }
+    await sql`
+      SELECT public.criar_perfil_pesquisador_para_outro(
+        ${idUsuarioAlvo},
+        ${cpfCriptografado},
+        ${cpfHash},
+        ${dto.tipoVinculo}::tipo_vinculo,
+        ${vinculoInstitucional},
+        ${dto.tituloAcademico}::titulo_academico
+      )
+    `.execute(db);
 
     if (dto.aceiteTermos) {
       const termoAtivo = await this.termoUsoServiceAtivo.executar(

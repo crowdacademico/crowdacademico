@@ -1,12 +1,12 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { sql } from 'kysely';
 import { DatabaseService } from '../../commons/database/database.service';
 import { AutorizacaoService } from '../../commons/seguranca/autorizacao.service';
 import { UsuarioResponseSuspend } from '../dto/response/usuario.response-suspend';
 
 // suspender_usuario/revogar_suspensao_usuario (03_funcoes_seguranca.sql, [03-N]): mesmo padrão de
-// UsuarioServiceDesbloquear (SECURITY DEFINER que já exige a permissão internamente, não RLS); erro do Postgres
-// vira ForbiddenException aqui. "Reduzir a pena" não é um método à parte: é chamar `suspender` de novo com uma
+// UsuarioServiceDesbloquear (SECURITY DEFINER que já exige a permissão internamente, não RLS). A recusa sai com
+// ERRCODE 92020/92021 (403) ou 90020 (motivo vazio, 400), traduzida pelo filtro global. "Reduzir a pena" não é um método à parte: é chamar `suspender` de novo com uma
 // data mais próxima (a função já sobrescreve).
 @Injectable()
 export class UsuarioServiceSuspender {
@@ -50,27 +50,14 @@ export class UsuarioServiceSuspender {
     ate: string,
     motivo: string,
   ): Promise<void> {
-    try {
-      await sql`SELECT public.suspender_usuario(${idUsuario}, ${ate}::timestamptz, ${motivo})`.execute(
-        this.database.getDb(),
-      );
-    } catch (erro) {
-      throw new ForbiddenException(
-        (erro as Error).message || 'Sem permissão para suspender esta conta.',
-      );
-    }
+    await sql`SELECT public.suspender_usuario(${idUsuario}, ${ate}::timestamptz, ${motivo})`.execute(
+      this.database.getDb(),
+    );
   }
 
   async revogar(idUsuario: number): Promise<void> {
-    try {
-      await sql`SELECT public.revogar_suspensao_usuario(${idUsuario})`.execute(
-        this.database.getDb(),
-      );
-    } catch (erro) {
-      throw new ForbiddenException(
-        (erro as Error).message ||
-          'Sem permissão para revogar a suspensão desta conta.',
-      );
-    }
+    await sql`SELECT public.revogar_suspensao_usuario(${idUsuario})`.execute(
+      this.database.getDb(),
+    );
   }
 }

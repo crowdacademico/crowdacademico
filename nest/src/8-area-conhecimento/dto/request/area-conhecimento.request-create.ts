@@ -8,6 +8,7 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
+import { TextoLimpo } from '../../../commons/validacao/transformacoes.decorator';
 
 export class AreaConhecimentoRequestCreate {
   // Formato oficial da tabela de áreas do conhecimento do CNPq: grande
@@ -22,6 +23,7 @@ export class AreaConhecimentoRequestCreate {
   })
   codigoCnpq: string;
 
+  @TextoLimpo()
   @IsString()
   @IsNotEmpty()
   @MaxLength(100) // bate com area_conhecimento.nome VARCHAR(100), 01_extensoes_enums_tabelas.sql
