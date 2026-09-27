@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import type { ReactNode } from 'react';
 
 // Modal genérico de "detalhe explicado": nasceu para explicar uma permissão (o quê, por que existe, quem tem
@@ -37,12 +38,17 @@ export function ModalDetalhe({
   aoFechar,
   rotuloAcao,
 }: ModalDetalheProps) {
+  // Nome acessível da janela: o leitor de tela anuncia "diálogo, <título>" ao abrir.
+  const idTitulo = useId();
   return (
     <div
       className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/40"
       onClick={aoFechar}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={idTitulo}
         className="w-full max-w-lg max-h-[85vh] fundo-elevado rounded-2xl shadow-2xl border borda-forte overflow-hidden flex flex-col"
         onClick={(evento) => evento.stopPropagation()}
       >
@@ -66,7 +72,7 @@ export function ModalDetalhe({
 
         <div className={'px-6 py-4 flex items-start justify-between gap-3 shrink-0' + (rotuloAcao ? '' : ' border-b borda-padrao')}>
           <div className="min-w-0">
-            <h2 className="font-sans font-bold texto-forte truncate">{titulo}</h2>
+            <h2 id={idTitulo} className="font-sans font-bold texto-forte truncate">{titulo}</h2>
             {chave && <p className="paragrafo-denso mt-0.5">{chave}</p>}
           </div>
           <div className="flex items-center gap-3 shrink-0">

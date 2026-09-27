@@ -1,14 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useSearchParams } from 'react-router';
 import { TIPOS_COLUNA, type NomeTipoColuna } from './colunas/tipos-coluna';
-import { CabecalhoAcoes, CelulaAcoes, type AcoesLinha } from './colunas/9-coluna-acoes';
+import { CabecalhoAcoes, CelulaAcoes, type AcoesLinha } from './colunas/5-coluna-acoes';
 import { BarraFiltros } from '../search/barra-filtros';
 import { useErroToast } from '../layout/toast/use-erro-toast';
 import { paginarClientSide } from '../../services/constant/utils/paginacao.util';
 import { RodapePaginacao } from '../pagination/rodape-paginacao';
 import { TAMANHOS_PAGINA } from '../pagination/tamanhos-pagina.constants';
-import { LIMIAR_FILTRO } from '../search/limiar-filtro.constants';
 
 // `object`, não `Record<string, unknown>`: toda linha real é uma interface nomeada espelhando um DTO do Nest
 // (UsuarioResponse, etc.); interface sem assinatura de índice própria não satisfaz `Record<string, unknown>`
@@ -47,20 +46,20 @@ interface GenericTableProps<T extends Linha> {
   colunas: Coluna<T>[];
   chavePrimaria: keyof T & string;
   listar: () => Promise<T[]>;
-  // Contrato das ações (handler dentro da própria chave): ver 9-coluna-acoes.tsx.
+  // Contrato das ações (handler dentro da própria chave): ver 5-coluna-acoes.tsx.
   acoes?: AcoesLinha<T>;
   filtrosFacetados?: FiltroFacetado<T>[];
 }
 
 // Piso de largura de nome/texto pelo conteúdo: o maior valor da lista inteira em `ch` (+2 de respiro), limitado
 // por `--coluna-piso-maximo` (5-crud.css), que diminui em tela estreita para a coluna poder quebrar a linha.
-function pisoPeloConteudo<T extends Linha>(coluna: Coluna<T>, linhas: T[]): string {
+function maiorTexto<T extends Linha>(coluna: Coluna<T>, linhas: T[]): number {
   const tipo = TIPOS_COLUNA[coluna.tipo];
   let maior = coluna.rotulo.length;
   linhas.forEach((linha) => {
     maior = Math.max(maior, tipo.texto(linha[coluna.chave]).length);
   });
-  return `min(${maior + 2}ch, var(--coluna-piso-maximo))`;
+  return maior;
 }
 
 // Tabela genérica de LISTAGEM (leitura, filtro, ordenação, paginação) usada pelo painel admin: cada módulo novo
@@ -288,12 +287,25 @@ export function GenericTable<T extends Linha>({
     );
   };
 
-  // Piso de largura só para os tipos que crescem com o conteúdo (nome, texto), calculado pela lista inteira.
+  // Nome e texto: piso pelo maior valor da lista INTEIRA (não só a página visível), para a coluna não mudar ao
+  // virar a página, limitado por `--coluna-piso-maximo` (abaixo disso quebram a linha).
   const pisos = useMemo(() => {
     const resultado: Partial<Record<string, string>> = {};
     colunas.forEach((coluna) => {
-      if (TIPOS_COLUNA[coluna.tipo].larguraPeloConteudo) {
-        resultado[coluna.chave] = pisoPeloConteudo(coluna, linhas);
+      if (TIPOS_COLUNA[coluna.tipo].largura === 'conteudo') {
+        resultado[coluna.chave] = `min(${maiorTexto(coluna, linhas) + 2}ch, var(--coluna-piso-maximo))`;
+      }
+    });
+    return resultado;
+  }, [linhas, colunas]);
+
+  // Colunas curtas: o texto de TODAS as linhas (não só da página visível), medido em pixels no efeito abaixo.
+  const textosCurtos = useMemo(() => {
+    const resultado: Partial<Record<string, string[]>> = {};
+    colunas.forEach((coluna) => {
+      const tipo = TIPOS_COLUNA[coluna.tipo];
+      if (tipo.largura === 'curta') {
+        resultado[coluna.chave] = linhas.map((linha) => tipo.texto(linha[coluna.chave]));
       }
     });
     return resultado;
@@ -307,14 +319,56 @@ export function GenericTable<T extends Linha>({
   // Rolagem lateral (tabela maior que o cartão): id, nome e Ações ficam presos (position: sticky, 5-crud.css).
   // O nome precisa saber a largura real da coluna id para grudar logo depois dela; os atributos
   // `data-rola-esquerda`/`data-rola-direita` ligam a linha que separa a parte presa da que está rolando, só
-  // quando há algo escondido daquele lado.
+  // quando há algo escondido daquele lado. `useLayoutEffect`: mede antes de a tela ser pintada, para as colunas
+  // curtas não nascerem com uma largura e mudarem no quadro seguinte.
   const wrapperRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const wrapper = wrapperRef.current;
     if (!wrapper) {
       return;
     }
+    // Largura das colunas curtas medida em pixels de verdade (uma estimativa por número de letras sobrava ~20% e
+    // empurrava a tabela para a rolagem): o maior entre o cabeçalho, as células visíveis (inclui o badge
+    // Sim/Não) e o texto de todas as linhas da lista, na fonte da célula. As do mesmo tipo na mesma tabela ficam
+    // com a mesma largura (as 4 Sim/Não de Tipos de Link, meta e arrecadado em Campanhas). Mede o CONTEÚDO, não a
+    // célula, então aplicar o resultado não muda a próxima medição.
+    const medirCurtas = () => {
+      const larguraConteudo = (elemento: Element): number => {
+        const intervalo = document.createRange();
+        intervalo.selectNodeContents(elemento);
+        return intervalo.getBoundingClientRect().width;
+      };
+      const contexto = document.createElement('canvas').getContext('2d');
+      const grupos = new Map<string, { cabecalhos: HTMLTableCellElement[]; largura: number }>();
+      wrapper.querySelectorAll<HTMLTableCellElement>('thead th[data-tipo-curta]').forEach((th) => {
+        let maior = larguraConteudo(th);
+        const celulas = wrapper.querySelectorAll(`tbody tr td:nth-child(${th.cellIndex + 1})`);
+        celulas.forEach((td) => {
+          maior = Math.max(maior, larguraConteudo(td));
+        });
+        const primeira = celulas.item(0) as Element | null;
+        if (contexto && primeira) {
+          contexto.font = getComputedStyle(primeira).font;
+          (textosCurtos[th.dataset.chave ?? ''] ?? []).forEach((texto) => {
+            maior = Math.max(maior, contexto.measureText(texto).width);
+          });
+        }
+        const estilo = getComputedStyle(th);
+        maior += parseFloat(estilo.paddingLeft) + parseFloat(estilo.paddingRight);
+        const chaveGrupo = th.dataset.tipoCurta ?? '';
+        const grupo = grupos.get(chaveGrupo) ?? { cabecalhos: [], largura: 0 };
+        grupo.cabecalhos.push(th);
+        grupo.largura = Math.max(grupo.largura, maior);
+        grupos.set(chaveGrupo, grupo);
+      });
+      grupos.forEach(({ cabecalhos, largura }) => {
+        cabecalhos.forEach((th) => {
+          th.style.minWidth = `${Math.ceil(largura)}px`;
+        });
+      });
+    };
     const atualizar = () => {
+      medirCurtas();
       const colunaId = wrapper.querySelector('th.crud-tabela__col--id');
       const deslocamento = colunaId ? colunaId.getBoundingClientRect().width : 0;
       wrapper.style.setProperty('--deslocamento-nome', `${deslocamento}px`);
@@ -336,7 +390,7 @@ export function GenericTable<T extends Linha>({
       observador.disconnect();
       wrapper.removeEventListener('scroll', atualizar);
     };
-  }, [carregando]);
+  }, [carregando, textosCurtos]);
 
   const { totalPaginas, paginaAtual, itensPagina: linhasPagina } = paginarClientSide(linhasOrdenadas, pagina, tamanhoPagina);
 
@@ -359,109 +413,111 @@ export function GenericTable<T extends Linha>({
         {acaoTopo && <div className="crud-secao__acao-topo">{acaoTopo}</div>}
       </div>
 
-      {!carregando && (
-        <BarraFiltros
-          mostrarBusca={linhas.length > LIMIAR_FILTRO}
-          valorBusca={filtro}
-          aoMudarBusca={(valor) => atualizarParametros({ q: valor, pagina: null })}
-          facetas={(filtrosFacetados ?? []).map((faceta) => ({
-            chave: faceta.chave,
-            rotulo: faceta.rotulo,
-            opcoes: opcoesPorFaceta[faceta.chave] ?? [],
-            selecionados: selecoesPorFaceta[faceta.chave] ?? [],
-            rotulos: faceta.rotulos,
-            aoAlternar: (opcao) => {
-              const selecionados = selecoesPorFaceta[faceta.chave] ?? [];
-              const novoValor = selecionados.includes(opcao)
-                ? selecionados.filter((valor) => valor !== opcao)
-                : [...selecionados, opcao];
-              atualizarParametros({
-                [faceta.chave]: novoValor.length > 0 ? novoValor.join(',') : null,
-                pagina: null,
-              });
-            },
-            aoLimpar: () => atualizarParametros({ [faceta.chave]: null, pagina: null }),
-          }))}
-        />
-      )}
+      {/* Busca sempre visível, inclusive enquanto carrega: se ela aparecesse só depois (ou só em lista com mais
+          de 5 linhas), a tabela nasceria mais alta e pularia para baixo quando os dados chegassem, e cada tela
+          começaria a tabela numa altura diferente. Os filtros de lista entram na mesma linha quando os dados
+          chegam, sem mudar a altura. */}
+      <BarraFiltros
+        mostrarBusca
+        valorBusca={filtro}
+        aoMudarBusca={(valor) => atualizarParametros({ q: valor, pagina: null })}
+        facetas={(filtrosFacetados ?? []).map((faceta) => ({
+          chave: faceta.chave,
+          rotulo: faceta.rotulo,
+          opcoes: opcoesPorFaceta[faceta.chave] ?? [],
+          selecionados: selecoesPorFaceta[faceta.chave] ?? [],
+          rotulos: faceta.rotulos,
+          aoAlternar: (opcao) => {
+            const selecionados = selecoesPorFaceta[faceta.chave] ?? [];
+            const novoValor = selecionados.includes(opcao)
+              ? selecionados.filter((valor) => valor !== opcao)
+              : [...selecionados, opcao];
+            atualizarParametros({
+              [faceta.chave]: novoValor.length > 0 ? novoValor.join(',') : null,
+              pagina: null,
+            });
+          },
+          aoLimpar: () => atualizarParametros({ [faceta.chave]: null, pagina: null }),
+        }))}
+      />
 
       {carregando ? (
         // Esqueleto (mesmas colunas) em vez de "Carregando...": a tela não "pula" quando os dados chegam.
         <div className="crud-tabela__wrapper">
-        <table className="crud-tabela">
-          <thead>
-            <tr>
-              {colunas.map((coluna) => (
-                <th key={coluna.chave} className={classesCabecalho(coluna)} style={estiloColuna(coluna)}>
-                  {rotuloColuna(coluna)}
-                </th>
-              ))}
-              {temAcoes && <CabecalhoAcoes />}
-            </tr>
-          </thead>
-          <tbody>
-            {[0, 1, 2, 3].map((indice) => (
-              <tr key={indice} className="animate-pulse">
-                {colunas.map((coluna) => (
-                  <td key={coluna.chave}>
-                    <div className="h-3.5 fundo-sutil rounded"></div>
-                  </td>
-                ))}
-                {temAcoes && (
-                  <td>
-                    <div className="h-3.5 fundo-sutil rounded"></div>
-                  </td>
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        </div>
-      ) : (
-        <>
-          <div className="crud-tabela__wrapper" ref={wrapperRef}>
           <table className="crud-tabela">
             <thead>
               <tr>
                 {colunas.map((coluna) => (
-                  <th
-                    key={coluna.chave}
-                    className={'crud-tabela__ordenavel ' + classesCabecalho(coluna)}
-                    style={estiloColuna(coluna)}
-                    onClick={() => aoClicarColuna(coluna.chave)}
-                  >
+                  <th key={coluna.chave} className={classesCabecalho(coluna)} style={estiloColuna(coluna)}>
                     {rotuloColuna(coluna)}
-                    {ordenacao.chave === coluna.chave && (ordenacao.direcao === 'asc' ? ' ▲' : ' ▼')}
                   </th>
                 ))}
-                  {temAcoes && <CabecalhoAcoes />}
+                {temAcoes && <CabecalhoAcoes />}
               </tr>
             </thead>
             <tbody>
-              {linhasPagina.map((linha) => (
-                <tr key={String(linha[chavePrimaria])}>
-                  {colunas.map((coluna) => {
-                    const tipo = TIPOS_COLUNA[coluna.tipo];
-                    return (
-                      <td key={coluna.chave} className={tipo.classe} style={estiloColuna(coluna)}>
-                        {coluna.renderizar ? coluna.renderizar(linha) : tipo.exibir(linha[coluna.chave])}
-                      </td>
-                    );
-                  })}
-                  {acoes && temAcoes && <CelulaAcoes acoes={acoes} linha={linha} />}
+              {[0, 1, 2, 3].map((indice) => (
+                <tr key={indice} className="animate-pulse">
+                  {colunas.map((coluna) => (
+                    <td key={coluna.chave}>
+                      <div className="h-3.5 fundo-sutil rounded"></div>
+                    </td>
+                  ))}
+                  {temAcoes && (
+                    <td>
+                      <div className="h-3.5 fundo-sutil rounded"></div>
+                    </td>
+                  )}
                 </tr>
               ))}
-              {linhasPagina.length === 0 && !erro && (
-                <tr>
-                  <td colSpan={colunas.length + (temAcoes ? 1 : 0)}>
-                    {filtro || algumaFacetaAtiva
-                      ? 'Nenhum registro bate com o filtro.'
-                      : 'Nenhum registro.'}
-                  </td>
-                </tr>
-              )}
             </tbody>
           </table>
+        </div>
+      ) : (
+        <>
+          <div className="crud-tabela__wrapper" ref={wrapperRef}>
+            <table className="crud-tabela">
+              <thead>
+                <tr>
+                  {colunas.map((coluna) => (
+                    <th
+                      key={coluna.chave}
+                      className={'crud-tabela__ordenavel ' + classesCabecalho(coluna)}
+                      style={estiloColuna(coluna)}
+                      data-chave={coluna.chave}
+                      data-tipo-curta={TIPOS_COLUNA[coluna.tipo].largura === 'curta' ? coluna.tipo : undefined}
+                      onClick={() => aoClicarColuna(coluna.chave)}
+                    >
+                      {rotuloColuna(coluna)}
+                      {ordenacao.chave === coluna.chave && (ordenacao.direcao === 'asc' ? ' ▲' : ' ▼')}
+                    </th>
+                  ))}
+                  {temAcoes && <CabecalhoAcoes />}
+                </tr>
+              </thead>
+              <tbody>
+                {linhasPagina.map((linha) => (
+                  <tr key={String(linha[chavePrimaria])}>
+                    {colunas.map((coluna) => {
+                      const tipo = TIPOS_COLUNA[coluna.tipo];
+                      return (
+                        <td key={coluna.chave} className={tipo.classe} style={estiloColuna(coluna)}>
+                          {coluna.renderizar ? coluna.renderizar(linha) : tipo.exibir(linha[coluna.chave])}
+                        </td>
+                      );
+                    })}
+                    {acoes && temAcoes && <CelulaAcoes acoes={acoes} linha={linha} />}
+                  </tr>
+                ))}
+                {linhasPagina.length === 0 && !erro && (
+                  <tr>
+                    <td colSpan={colunas.length + (temAcoes ? 1 : 0)}>
+                      {filtro || algumaFacetaAtiva ? 'Nenhum registro bate com o filtro.' : 'Nenhum registro.'}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
 
           <RodapePaginacao

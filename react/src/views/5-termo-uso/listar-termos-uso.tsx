@@ -57,7 +57,7 @@ export function ListarTermosUso({ auth }: PropsPagina) {
           {
             chave: 'tipo',
             rotulo: 'tipo',
-            tipo: 'status',
+            tipo: 'texto',
             renderizar: (linha) => ROTULO_TIPO_TERMO[linha.tipo],
           },
           { chave: 'ativo', rotulo: 'ativo', tipo: 'simNao' },

@@ -2,14 +2,19 @@ import { tratarResposta } from '../../constant/api/http.util';
 import type { AuthFetch } from '../../3-auth/type/auth.type';
 import type { ResultadoPaginado } from '../../constant/type/paginacao.type';
 import { desembrulharPaginado, TAMANHO_PAGINA_MAXIMO_API } from '../../constant/type/paginacao.type';
-import type { CampanhaResponse, HistoricoRejeicaoResponse } from '../type/campanha.type';
+import type {
+  CampanhaRequestCreate,
+  CampanhaRequestUpdate,
+  CampanhaResponse,
+  HistoricoRejeicaoResponse,
+} from '../type/campanha.type';
 import type { StatusCampanha } from '../constants/status-campanha.constants';
 
 // Espelha nest/src/12-campanha. GET é público no backend (pol_campanha_select mostra status
 // público/dono/relatorio_visualizar, ver 04_rls_policies.sql [04-E]); aqui sempre passamos authFetch mesmo
 // assim porque quem usa este arquivo é sempre o painel admin (logado), e o admin com relatorio_visualizar
-// enxerga todos os status, não só os públicos. Sem criar() de propósito: campanha não tem POST genérico no
-// backend; a criação vive no Campo de Testes (views/campo-testes/bancada-campanha.tsx). `remover()` só funciona
+// enxerga todos os status, não só os públicos. `criar()` cria em nome de quem está logado (Minhas Campanhas);
+// `criarParaOutro()` é o endpoint de suporte/admin do Campo de Testes. `remover()` só funciona
 // em campanha 'rascunho' (pol_campanha_delete, 04): depois de enviada para a fila, só dá para
 // rejeitar/encerrar, nunca apagar de vez.
 interface FiltroCampanha {
@@ -44,6 +49,24 @@ export const campanhaApi = {
       .then(desembrulharPaginado('campanhas')),
   buscar: (authFetch: AuthFetch, id: number | string): Promise<CampanhaResponse> =>
     authFetch(`/campanha/${id}`).then(tratarResposta<CampanhaResponse>),
+  criar: (authFetch: AuthFetch, dados: CampanhaRequestCreate): Promise<CampanhaResponse> =>
+    authFetch('/campanha', { method: 'POST', body: JSON.stringify(dados) }).then(tratarResposta<CampanhaResponse>),
+  criarParaOutro: (authFetch: AuthFetch, idUsuario: number, dados: CampanhaRequestCreate): Promise<CampanhaResponse> =>
+    authFetch(`/campanha/${idUsuario}`, { method: 'POST', body: JSON.stringify(dados) }).then(
+      tratarResposta<CampanhaResponse>,
+    ),
+  atualizar: (authFetch: AuthFetch, id: number | string, dados: CampanhaRequestUpdate): Promise<CampanhaResponse> =>
+    authFetch(`/campanha/${id}`, { method: 'PATCH', body: JSON.stringify(dados) }).then(
+      tratarResposta<CampanhaResponse>,
+    ),
+  // Rascunho vai para a fila; rejeitada é reenviada. O banco cobra orçamento, cronograma e prazo aqui.
+  enviar: (authFetch: AuthFetch, id: number | string): Promise<CampanhaResponse> =>
+    authFetch(`/campanha/${id}/enviar`, { method: 'POST' }).then(tratarResposta<CampanhaResponse>),
+  // Prazo vencido: começa na nova data mantendo a duração (o fim e os marcos andam junto, no banco).
+  deslizarDatas: (authFetch: AuthFetch, id: number | string, novaDataInicio: string): Promise<CampanhaResponse> =>
+    authFetch(`/campanha/${id}/deslizar-datas`, { method: 'POST', body: JSON.stringify({ novaDataInicio }) }).then(
+      tratarResposta<CampanhaResponse>,
+    ),
   aprovar: (authFetch: AuthFetch, id: number | string): Promise<void> =>
     authFetch(`/campanha/${id}/aprovar`, { method: 'POST' }).then(tratarResposta<void>),
   rejeitar: (authFetch: AuthFetch, id: number | string, justificativa: string): Promise<void> =>

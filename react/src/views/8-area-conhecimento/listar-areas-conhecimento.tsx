@@ -76,7 +76,7 @@ export function ListarAreasConhecimento({ auth }: PropsPagina) {
         colunas={[
           { chave: 'idAreaConhecimento', rotulo: 'id', tipo: 'id' },
           { chave: 'nome', rotulo: 'nome', tipo: 'nome' },
-          { chave: 'codigoCnpq', rotulo: 'código CNPq', tipo: 'texto' },
+          { chave: 'codigoCnpq', rotulo: 'código CNPq', tipo: 'codigo' },
           {
             chave: 'nomePai',
             rotulo: 'grande área',

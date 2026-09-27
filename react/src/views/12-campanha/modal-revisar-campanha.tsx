@@ -5,7 +5,7 @@ import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
 import { ROTULO_STATUS_CAMPANHA, classeBadgeStatusCampanha } from '../../services/12-campanha/constants/status-campanha.constants';
-import { useConfiguracoes } from '../../services/11-configuracoes/hook/use-configuracoes';
+import { useRegrasCampanha } from '../../services/12-campanha/hook/use-regras-campanha';
 import { orcamentoCampanhaApi } from '../../services/13-orcamento-campanha/api/orcamento-campanha.api';
 import { marcoCronogramaApi } from '../../services/14-marco-cronograma/api/marco-cronograma.api';
 import { formatarData, formatarDataHora, formatarMoeda } from '../../services/constant/utils/formatacao.util';
@@ -28,11 +28,7 @@ interface ModalRevisarCampanhaProps {
 export function ModalRevisarCampanha({ auth, idCampanha, aoFechar, aoConcluido }: ModalRevisarCampanhaProps) {
   const { mostrar } = useToast();
   const { erro, reportarErro, limparErro } = useErroToast();
-  const { obterConfiguracao } = useConfiguracoes();
-  const valorMinimoOrcamento = obterConfiguracao('orcamento_min_itens', 1);
-  const minimoItensOrcamento = typeof valorMinimoOrcamento === 'number' ? valorMinimoOrcamento : 1;
-  const valorMinimoCronograma = obterConfiguracao('cronograma_min_marcos', 3);
-  const minimoMarcosCronograma = typeof valorMinimoCronograma === 'number' ? valorMinimoCronograma : 3;
+  const { minimoItensOrcamento, minimoMarcosCronograma } = useRegrasCampanha();
   const idJustificativa = useId();
 
   const [campanha, setCampanha] = useState<CampanhaResponse | null>(null);

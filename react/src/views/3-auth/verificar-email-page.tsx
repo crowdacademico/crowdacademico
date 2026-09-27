@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { verificarEmail } from '../../services/3-auth/api/auth.api';
 import { traduzirErro } from '../../services/constant/api/traduzir-erro.util';
@@ -19,10 +19,16 @@ export function VerificarEmailPage() {
     token ? '' : 'Link sem token, confira se copiou o endereço completo.',
   );
 
+  // O token só vale uma vez: no desenvolvimento o <StrictMode> roda este efeito duas vezes, e a 2ª chamada
+  // recebia "link já usado" (401) e mostrava "Não deu certo" por cima do sucesso da 1ª, com o e-mail já
+  // confirmado no banco. O ref (que sobrevive à remontagem do StrictMode) garante uma chamada por token.
+  const tokenEnviadoRef = useRef<string | null>(null);
+
   useEffect(() => {
-    if (!token) {
+    if (!token || tokenEnviadoRef.current === token) {
       return;
     }
+    tokenEnviadoRef.current = token;
     verificarEmail(token)
       .then(() => setEstado('ok'))
       .catch((erroRequisicao) => {

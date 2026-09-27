@@ -49,3 +49,19 @@ export interface HistoricoRejeicaoResponse {
   justificativa: string | null;
   rejeitadoEm: string;
 }
+
+// Espelha nest/src/12-campanha/dto/request/campanha.request-create.ts. Datas em ISO 8601. `modelo` fica de fora:
+// o banco aplica o padrão ('all-or-nothing'), único aceito hoje.
+export interface CampanhaRequestCreate {
+  titulo: string;
+  idAreaConhecimento: number;
+  metaFinanceira: number;
+  descricao?: string;
+  dataInicio?: string;
+  dataFim?: string;
+  videoApresentacaoUrl?: string;
+}
+
+// Espelha campanha.request-update.ts: os mesmos campos, todos opcionais. Status nunca muda por aqui (só por
+// enviar/aprovar/rejeitar).
+export type CampanhaRequestUpdate = Partial<CampanhaRequestCreate>;

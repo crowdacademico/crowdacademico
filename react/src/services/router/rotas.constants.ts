@@ -13,6 +13,7 @@ import { ListarTiposLink } from '../../views/9-tipo-link/listar-tipos-link';
 import { ListarMotivosDenuncia } from '../../views/10-motivo-denuncia/listar-motivos-denuncia';
 import { ListarPesquisadores } from '../../views/6-perfil-pesquisador/listar-pesquisadores';
 import { ListarCampanhas } from '../../views/12-campanha/listar-campanhas';
+import { MinhasCampanhas } from '../../views/12-campanha/minhas-campanhas';
 import { AprovarCampanhas } from '../../views/12-campanha/aprovar-campanhas';
 import { BancadaPesquisador } from '../../views/campo-testes/bancada-pesquisador';
 import { BancadaCampanha } from '../../views/campo-testes/bancada-campanha';
@@ -176,6 +177,18 @@ export const ROTAS_ADMIN: Rota[] = [
     rotuloBreadcrumb: 'Campanhas',
     grupoMenu: 'CAMPANHA',
     icone: 'fa-bullhorn',
+  },
+
+  // Minhas Campanhas: as campanhas de quem está logado (o pesquisador cria, completa, envia e corrige as suas).
+  // Visível para qualquer conta logada por enquanto; só pesquisador ativo vê o botão de criar.
+  {
+    caminho: '/admin/minhas-campanhas',
+    caminhoRelativo: 'minhas-campanhas',
+    elemento: MinhasCampanhas,
+    rotuloMenu: 'Minhas Campanhas',
+    rotuloBreadcrumb: 'Minhas Campanhas',
+    grupoMenu: 'CAMPANHA',
+    icone: 'fa-folder-open',
   },
 
   // Fila de aprovação: item do grupo MODERAÇÃO.

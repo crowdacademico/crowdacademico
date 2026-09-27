@@ -1,6 +1,6 @@
 import { useId, useState } from 'react';
 import type { CSSProperties, FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { Link, useLocation, useNavigate } from 'react-router';
 import { IconeGoogle } from '../../components/3-auth/icone-google';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import type { PropsPagina } from '../../services/router/pagina.type';
@@ -13,8 +13,23 @@ import type { PropsPagina } from '../../services/router/pagina.type';
 // (cadastro-page.tsx), tela própria com nome/confirmação de senha/aceite de termos; o link "Já tem conta?
 // Entrar" dela devolve para cá, e o link "Cadastre-se" abaixo leva para lá. O botão é só "Entrar" porque só faz
 // login. "Esqueceu a senha?" e o login social com Google são só alert() de protótipo, como no original.
+//
+// Depois de entrar, volta para a página do painel que a guarda do AdminLayout interceptou (`voltarPara`). Só
+// aceita caminho interno de /admin, nunca um endereço de fora, para um link montado não mandar a pessoa para
+// outro site depois do login.
+function destinoDepoisDoLogin(estado: unknown): string {
+  if (typeof estado === 'object' && estado !== null && 'voltarPara' in estado) {
+    const { voltarPara } = estado;
+    if (typeof voltarPara === 'string' && voltarPara.startsWith('/admin/')) {
+      return voltarPara;
+    }
+  }
+  return '/';
+}
+
 export function LoginPage({ auth }: PropsPagina) {
   const navigate = useNavigate();
+  const local = useLocation();
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [enviando, setEnviando] = useState(false);
@@ -28,7 +43,7 @@ export function LoginPage({ auth }: PropsPagina) {
     setEnviando(true);
     try {
       await auth.login(email, senha);
-      void navigate('/');
+      void navigate(destinoDepoisDoLogin(local.state), { replace: true });
     } catch (erroRequisicao) {
       reportarErro(erroRequisicao);
     } finally {

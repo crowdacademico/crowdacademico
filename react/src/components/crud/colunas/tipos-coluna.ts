@@ -1,25 +1,33 @@
 import { colunaId } from './1-coluna-id';
 import { colunaNome } from './2-coluna-nome';
 import { colunaTexto } from './3-coluna-texto';
-import { colunaNumero } from './4-coluna-numero';
-import { colunaSimNao } from './5-coluna-sim-nao';
-import { colunaStatus } from './6-coluna-status';
-import { colunaDinheiro } from './7-coluna-dinheiro';
-import { colunaData, colunaDataHora } from './8-coluna-data';
-import type { TipoColuna } from './tipo-coluna.type';
+import { colunaCurta } from './4-coluna-curta';
+import { FORMATOS, type Formato } from './formatos';
 
-// Catálogo dos tipos de coluna que a GenericTable aceita em `coluna.tipo`. Ações não está aqui: não é coluna
-// de dado, a tabela monta sozinha a partir de `acoes` (ver 9-coluna-acoes.tsx).
+// Um tipo de coluna da GenericTable = um FORMATO (formatos.tsx: como mostra, busca e ordena) + um ESPAÇO (os
+// arquivos numerados: id, nome, texto, curta). A tela só diz o tipo (`tipo: 'dinheiro'`); largura e alinhamento
+// ficam na classe CSS (5-crud.css). Ações não é tipo de coluna: a tabela monta sozinha a partir de `acoes`
+// (5-coluna-acoes.tsx).
+//
+// `largura`: `conteudo` (nome, texto) cresce e quebra, com piso pelo maior valor da lista inteira, para a coluna
+// não mudar ao virar a página; `curta` nunca quebra e divide a largura com as outras do mesmo tipo na tabela.
+export interface TipoColuna extends Formato {
+  classe: string;
+  largura?: 'conteudo' | 'curta';
+}
+
 export const TIPOS_COLUNA = {
   id: colunaId,
   nome: colunaNome,
   texto: colunaTexto,
-  numero: colunaNumero,
-  simNao: colunaSimNao,
-  status: colunaStatus,
-  dinheiro: colunaDinheiro,
-  data: colunaData,
-  dataHora: colunaDataHora,
+  numero: colunaCurta(FORMATOS.numero),
+  simNao: colunaCurta(FORMATOS.simNao),
+  status: colunaCurta(FORMATOS.texto),
+  // Código de formato fixo (ex.: código CNPq "1.00.00.00-3"): curto e centralizado como status, sem quebrar.
+  codigo: colunaCurta(FORMATOS.texto),
+  dinheiro: colunaCurta(FORMATOS.dinheiro),
+  data: colunaCurta(FORMATOS.data),
+  dataHora: colunaCurta(FORMATOS.dataHora),
 } satisfies Record<string, TipoColuna>;
 
 export type NomeTipoColuna = keyof typeof TIPOS_COLUNA;

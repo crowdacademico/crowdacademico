@@ -5,18 +5,17 @@ import { useCallback } from 'react';
 import { tratarResposta } from '../../constant/api/http.util';
 import { useCampoTestes } from './use-campo-testes';
 import type { UseAuthReturn } from '../../3-auth/hook/use-auth';
+import type { AuthFetch } from '../../3-auth/type/auth.type';
 
-// Equivalente do antigo `elenco.fetchComoAtor()`, sem o "ator": chama
-// `auth.authFetch()` de verdade (a sessão real do painel) e só acrescenta
-// cronometragem + registro pra T4 (Registro de Chamadas) continuar
-// funcionando. Devolve o corpo já tratado (`tratarResposta<T>`), mesmo
-// contrato de antes - quem chama não precisa mudar como lê o resultado, só
-// passa o tipo esperado (`chamarERegistrar<AlgumaResponse>(...)`).
-export function useChamadaRegistrada(auth: Pick<UseAuthReturn, 'authFetch'>) {
+// Um `authFetch` de verdade (a sessão real do painel) que também registra cada chamada no T4 (Registro de
+// Chamadas): método, caminho, status, tempo e os dois corpos. Com o mesmo formato de `auth.authFetch`, dá para
+// entregá-lo a qualquer componente ou API compartilhada (ex.: o painel de orçamento/cronograma, que também vive
+// fora do Campo de Testes) sem esse componente saber que o T4 existe.
+export function useAuthFetchRegistrado(auth: Pick<UseAuthReturn, 'authFetch'>): AuthFetch {
   const { registrarChamada } = useCampoTestes();
 
   return useCallback(
-    async <T,>(caminho: string, opcoes: RequestInit = {}): Promise<T> => {
+    async (caminho: string, opcoes: RequestInit = {}): Promise<Response> => {
       const metodo = (opcoes.method ?? 'GET').toUpperCase();
       const inicio = performance.now();
       const respostaFetch = await auth.authFetch(caminho, opcoes);
@@ -45,8 +44,19 @@ export function useChamadaRegistrada(auth: Pick<UseAuthReturn, 'authFetch'>) {
         ok: respostaFetch.ok,
       });
 
-      return tratarResposta<T>(respostaFetch);
+      return respostaFetch;
     },
     [auth, registrarChamada],
+  );
+}
+
+// O mesmo, já devolvendo o corpo tratado (`tratarResposta<T>`): `chamarERegistrar<AlgumaResponse>(...)`.
+export function useChamadaRegistrada(auth: Pick<UseAuthReturn, 'authFetch'>) {
+  const authFetchRegistrado = useAuthFetchRegistrado(auth);
+
+  return useCallback(
+    async <T,>(caminho: string, opcoes: RequestInit = {}): Promise<T> =>
+      tratarResposta<T>(await authFetchRegistrado(caminho, opcoes)),
+    [authFetchRegistrado],
   );
 }

@@ -62,7 +62,9 @@ export function BarraFiltros({
           placeholder={placeholderBusca}
           value={valorBusca}
           onChange={(evento) => aoMudarBusca(evento.target.value)}
-          className="w-full sm:w-64 border borda-forte rounded-lg fundo-sutil py-2 px-3 text-sm outline-none foco-marca"
+          // py-2.5: mesma altura do botão de filtro ao lado (.btn), para a barra (e a tabela abaixo) ficar na
+          // mesma altura com ou sem filtro de lista.
+          className="w-full sm:w-64 border borda-forte rounded-lg fundo-sutil py-2.5 px-3 text-sm outline-none foco-marca"
         />
       )}
 

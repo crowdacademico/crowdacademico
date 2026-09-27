@@ -19,6 +19,7 @@ import {
 } from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
 import { formatarCpfExibicao, formatarDataHora, formatarMesAno } from '../../services/constant/utils/formatacao.util';
 import type { PropsPagina } from '../../services/router/pagina.type';
+import { ModalUpgradePesquisador } from '../6-perfil-pesquisador/modal-upgrade-pesquisador';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { SessaoResponse } from '../../services/3-auth/type/auth.type';
 import type { UsuarioPapelResponse } from '../../services/2-papel-permissao/type/papel-permissao.type';
@@ -81,7 +82,10 @@ export function MinhaConta({ auth }: PropsPagina) {
         <FaixaIdentidade auth={auth} />
         <BarraAbas abaAtiva={aba} />
 
-        {aba === 'perfil' && <AbaPerfil auth={auth} />}
+        {/* `key`: aberta direto pela URL (ou depois de F5), a aba monta antes de a sessão terminar de carregar e
+            o formulário nasceria com o nome vazio. Trocar a key quando o usuário chega remonta a aba já com o
+            nome certo. */}
+        {aba === 'perfil' && <AbaPerfil key={auth.usuario?.idUsuario ?? 'carregando'} auth={auth} />}
         {aba === 'seguranca' && <AbaSeguranca auth={auth} />}
         {aba === 'papeis' && <AbaPapeis auth={auth} />}
         {aba === 'academico' && <AbaAcademico auth={auth} />}
@@ -641,6 +645,7 @@ interface AbaAcademicoProps {
 
 function AbaAcademico({ auth }: AbaAcademicoProps) {
   const [perfil, setPerfil] = useState<PerfilPesquisadorResponse | null>(null);
+  const [fazendoUpgrade, setFazendoUpgrade] = useState(false);
   const [suspensao, setSuspensao] = useState<PerfilPesquisadorResponseSuspend | null>(null);
   const [carregando, setCarregando] = useState(true);
 
@@ -669,13 +674,29 @@ function AbaAcademico({ auth }: AbaAcademicoProps) {
     return <p className="px-6 sm:px-8 py-8 text-sm texto-fraco">Carregando...</p>;
   }
 
+  // Quem ainda não é pesquisador faz o upgrade da PRÓPRIA conta aqui (termos, CPF, vínculo, título): o mesmo
+  // modal do Campo de Testes (T1), que usa o endpoint self-service quando o alvo é a própria conta. O T1 lista
+  // todos os usuários e por isso só funciona para quem administra; esta é a porta do usuário comum.
   if (!perfil) {
     return (
-      <div className="px-6 sm:px-8 py-8">
+      <div className="px-6 sm:px-8 py-8 space-y-4">
         <div className="flex items-start gap-2 rounded-lg fundo-info texto-info p-3 text-xs">
           <i className="fa-solid fa-circle-info mt-0.5 shrink-0"></i>
-          <p>Você ainda não é pesquisador nesta plataforma.</p>
+          <p>Você ainda não é pesquisador nesta plataforma. Como pesquisador, você pode criar campanhas para financiar suas pesquisas.</p>
         </div>
+        {auth.usuario && (
+          <button type="button" className="btn btn-primary" onClick={() => setFazendoUpgrade(true)}>
+            <i className="fa-solid fa-flask"></i> Tornar-me pesquisador
+          </button>
+        )}
+        {fazendoUpgrade && auth.usuario && (
+          <ModalUpgradePesquisador
+            auth={auth}
+            idUsuarioAlvo={auth.usuario.idUsuario}
+            aoFechar={() => setFazendoUpgrade(false)}
+            aoConcluido={setPerfil}
+          />
+        )}
       </div>
     );
   }

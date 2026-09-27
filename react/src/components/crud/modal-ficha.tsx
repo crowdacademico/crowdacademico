@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useId } from 'react';
 import type { ReactNode } from 'react';
 
 interface ModalFichaProps {
@@ -53,6 +53,8 @@ export function ModalFicha({
   const avatarExibido = carregando ? null : avatar;
   const subtituloExibido = carregando ? undefined : subtitulo;
   const badgesExibidos = carregando ? undefined : badges;
+  // Nome acessível da janela: o leitor de tela anuncia "diálogo, <título>" ao abrir.
+  const idTitulo = useId();
 
   // Esc fecha: listener no `document`, não um `onKeyDown` no próprio card: um <div> não recebe evento de
   // teclado sem `tabIndex`/foco nele, e forçar foco só para isso complicaria mais que ajuda. O efeito só existe
@@ -74,6 +76,9 @@ export function ModalFicha({
       onClick={fecharAoClicarFora ? aoFechar : undefined}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={idTitulo}
         className="w-full max-w-5xl max-h-[90vh] fundo-cartao rounded-2xl shadow-2xl border borda-padrao overflow-hidden flex flex-col"
         onClick={(evento) => evento.stopPropagation()}
       >
@@ -85,7 +90,7 @@ export function ModalFicha({
           <div className="flex items-start gap-3 min-w-0">
             {avatarExibido}
             <div className="min-w-0">
-              <h2 className="titulo-secao truncate">{tituloExibido}</h2>
+              <h2 id={idTitulo} className="titulo-secao truncate">{tituloExibido}</h2>
               {subtituloExibido && <p className="text-sm texto-fraco mt-1 break-words">{subtituloExibido}</p>}
               {badgesExibidos && badgesExibidos.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mt-2">{badgesExibidos}</div>

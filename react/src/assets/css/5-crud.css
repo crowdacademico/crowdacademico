@@ -18,7 +18,10 @@
 
   /* Título e botão de ação (ex.: "Criar") na MESMA linha. space-between empurra um para cada ponta; wrap
      para não quebrar feio em tela estreita. */
+  /* `min-height`: a linha reserva sempre a altura do botão de ação, com ou sem botão; senão a tabela das telas
+     com "Criar" ficava 7px mais baixa que a das telas sem, e ela "dançava" ao trocar de tela. */
   .crud-secao__cabecalho {
+    min-height: 2.75rem;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -57,6 +60,7 @@
   }
 
   .crud-tabela {
+    --padding-celula: clamp(0.6rem, 1.5vw, 1.1rem);
     border-collapse: collapse;
     width: 100%;
     font-size: var(--font-size-sm);
@@ -73,7 +77,7 @@
      vão ENTRE colunas (horizontal), não a altura da linha. */
   .crud-tabela th,
   .crud-tabela td {
-    padding: 0.85rem clamp(0.6rem, 1.5vw, 1.1rem);
+    padding: 0.85rem var(--padding-celula);
     text-align: left;
   }
 
@@ -110,24 +114,14 @@
   }
 
   /* ===== Tipos de coluna da GenericTable (components/crud/colunas/) =====
-     Cada tipo tem uma classe aqui e a largura vem destes tokens, iguais em toda tabela: a mesma espécie de
-     coluna nunca muda de tamanho de uma tabela para outra. Colunas de conteúdo curto e previsível têm largura
-     fixa (`width` numa tabela `table-layout: auto` também é piso: a coluna não encolhe abaixo dela). Nome e
-     texto crescem com o conteúdo: o piso sai do maior valor da lista (inline, generic-table.tsx), limitado por
-     `--coluna-piso-maximo`. O nome tem mínimo e máximo próprios. Ações ocupa só a largura dos
-     botões (`width: 1%` + nowrap), então nunca engolem o espaço que sobra numa tela larga.
+     Pelo ESPAÇO, só existem 5 tipos: id, nome, texto, curta e Ações. Nome e texto crescem com o conteúdo: o
+     piso sai do maior valor da lista (inline, generic-table.tsx), limitado por `--coluna-piso-maximo`; o nome
+     tem mínimo e máximo próprios. Curtas (Sim/Não, status, número, dinheiro, datas) NUNCA quebram, nem o valor
+     nem o cabeçalho: a largura é a do maior valor, e as do mesmo tipo na mesma tabela ficam iguais. Ações ocupa
+     só a largura dos botões (`width: 1%` + nowrap), então nunca engole o espaço que sobra numa tela larga.
      Ao diminuir a tela: primeiro some o espaço extra (as colunas se juntam), depois nome e texto encolhem
      quebrando a linha, e só então a tabela rola de lado dentro do cartão. */
-  /* `clamp(mínimo, vw, máximo)`: a largura das colunas fixas acompanha a JANELA (não o conteúdo), então as
-     colunas se juntam ao estreitar a tela e continuam iguais entre tabelas numa mesma largura de janela. O
-     máximo vale a partir de ~1400px. */
   .crud-tabela {
-    --coluna-sim-nao: clamp(5.5rem, 10.5vw, 9.25rem);
-    --coluna-status: clamp(6.5rem, 10.5vw, 9.25rem);
-    --coluna-numero: clamp(5rem, 8vw, 7rem);
-    --coluna-dinheiro: clamp(7.5rem, 11vw, 9.5rem);
-    --coluna-data: clamp(6.5rem, 9vw, 8rem);
-    --coluna-data-hora: clamp(7rem, 12.5vw, 11rem);
     --coluna-nome-min: 12rem;
     --coluna-nome-max: 32rem;
     --coluna-piso-maximo: 28ch;
@@ -139,30 +133,8 @@
     --coluna-piso-maximo: 18ch;
   }
 
-  .crud-tabela .crud-tabela__col--sim-nao {
-    width: var(--coluna-sim-nao);
-  }
-
-  .crud-tabela .crud-tabela__col--status {
-    width: var(--coluna-status);
-  }
-
-  .crud-tabela .crud-tabela__col--numero {
-    width: var(--coluna-numero);
-  }
-
-  .crud-tabela .crud-tabela__col--dinheiro {
-    width: var(--coluna-dinheiro);
+  .crud-tabela .crud-tabela__col--curta {
     white-space: nowrap;
-  }
-
-  .crud-tabela .crud-tabela__col--data {
-    width: var(--coluna-data);
-    white-space: nowrap;
-  }
-
-  .crud-tabela .crud-tabela__col--data-hora {
-    width: var(--coluna-data-hora);
   }
 
   .crud-tabela__nome {

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Outlet } from 'react-router';
+import { Navigate, Outlet, useLocation } from 'react-router';
 import { BuscaGlobal } from '../../components/layout/cabecalho/busca-global';
 import { AdminSidebar } from './admin-sidebar';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
@@ -20,6 +20,18 @@ interface AdminLayoutProps {
 // continuam recebendo `auth` direto de App.tsx.
 export function AdminLayout({ auth }: AdminLayoutProps) {
   const [menuAberto, setMenuAberto] = useState(false);
+  const local = useLocation();
+
+  // Guarda única do painel: sem login, qualquer /admin/* vai para o login, que devolve a pessoa para a página
+  // pedida depois de entrar. Só confere se HÁ sessão, não o papel: qualquer conta logada vê o painel, e o que
+  // cada papel pode ler ou alterar continua decidido pelo backend (guards do Nest e RLS). Enquanto a sessão
+  // salva está sendo restaurada (F5), espera em vez de mandar para o login por engano.
+  if (auth.carregando) {
+    return null;
+  }
+  if (!auth.usuario) {
+    return <Navigate to="/login" replace state={{ voltarPara: local.pathname + local.search }} />;
+  }
 
   return (
     <div className="admin-pagina">

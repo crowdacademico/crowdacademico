@@ -1,447 +1,43 @@
 // Campo de Testes é parte permanente do painel administrativo (não uma ferramenta de teste descartável), com o
 // mesmo padrão de dados/comportamento do resto do sistema (nunca uma versão simplificada à parte).
 
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
-import { orcamentoCampanhaApi } from '../../services/13-orcamento-campanha/api/orcamento-campanha.api';
-import { marcoCronogramaApi } from '../../services/14-marco-cronograma/api/marco-cronograma.api';
 import { areaConhecimentoApi } from '../../services/8-area-conhecimento/api/area-conhecimento.api';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { useFecharAoClicarFora } from '../../services/constant/hook/use-fechar-ao-clicar-fora';
 import { LIMITE_SUGESTOES_COMBOBOX } from '../../services/campo-testes/constants/campo-testes.constants';
-import { useChamadaRegistrada } from '../../services/campo-testes/hook/use-chamada-registrada';
+import { useAuthFetchRegistrado, useChamadaRegistrada } from '../../services/campo-testes/hook/use-chamada-registrada';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
-import { useConfiguracoes } from '../../services/11-configuracoes/hook/use-configuracoes';
+import { useRegrasCampanha } from '../../services/12-campanha/hook/use-regras-campanha';
 import { CAMPANHA_BLOQUEADA, motivoBloqueioCampanha } from '../../services/campo-testes/util/registros-bloqueados';
 import { AcaoLinha } from '../../components/crud/acao-linha';
-import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
-import { ModalDetalhe } from '../../components/crud/modal-detalhe';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { perfilPesquisadorApi } from '../../services/6-perfil-pesquisador/api/perfil-pesquisador.api';
 import {
   ROTULO_STATUS_CAMPANHA,
   classeBadgeStatusCampanha,
 } from '../../services/12-campanha/constants/status-campanha.constants';
-import { formatarData, formatarDataHora, formatarMoeda } from '../../services/constant/utils/formatacao.util';
+import { formatarDataHora, formatarMoeda } from '../../services/constant/utils/formatacao.util';
 import { paginarClientSide } from '../../services/constant/utils/paginacao.util';
 import { RodapePaginacao } from '../../components/pagination/rodape-paginacao';
 import { BarraFiltros } from '../../components/search/barra-filtros';
 import { LIMIAR_FILTRO } from '../../components/search/limiar-filtro.constants';
 import { RegistroChamadas } from './registro-chamadas';
+import { ModalAlterarCampanha } from '../12-campanha/modal-alterar-campanha';
+import { ModalCriarCampanha } from '../12-campanha/modal-criar-campanha';
+import { PainelOrcamentoCronograma } from '../12-campanha/painel-orcamento-cronograma';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { CampanhaResponse, HistoricoRejeicaoResponse } from '../../services/12-campanha/type/campanha.type';
-import type { OrcamentoCampanhaResponse } from '../../services/13-orcamento-campanha/type/orcamento-campanha.type';
-import type { MarcoCronogramaResponse } from '../../services/14-marco-cronograma/type/marco-cronograma.type';
 import type { StatusCampanha } from '../../services/12-campanha/constants/status-campanha.constants';
 import type { AreaConhecimentoResponse } from '../../services/8-area-conhecimento/type/area-conhecimento.type';
 import type { UsuarioResponse } from '../../services/1-usuario/type/usuario.type';
 import type { PerfilPesquisadorResponse } from '../../services/6-perfil-pesquisador/type/perfil-pesquisador.type';
-import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 
-// Tipos e API de orçamento/cronograma vivem em services/13-orcamento-campanha e services/14-marco-cronograma;
-// ver o comentário no arquivo de tipo de cada módulo.
-
-interface FormEdicaoCampanha {
-  titulo: string;
-  idAreaConhecimento: number | string;
-  metaFinanceira: number | string;
-  descricao: string;
-  dataInicio: string;
-  dataFim: string;
-  videoApresentacaoUrl: string;
-}
-
-interface PainelOrcamentoCronogramaProps {
-  auth: Pick<UseAuthReturn, 'authFetch'>;
-  idCampanha: number;
-  podeEditar: boolean;
-  // `aoCarregar`: callback opcional que devolve os dados toda vez que este painel (re)carrega, para quem usa (o
-  // modal de Alterar) manter as CONTAGENS em dia sem duplicar adicionar/remover. Só o Alterar passa isto, o
-  // Consultar não precisa.
-  aoCarregar?: (orcamento: OrcamentoCampanhaResponse[], cronograma: MarcoCronogramaResponse[]) => void;
-  // `abaFixa`: quando presente, trava a aba nesse valor e esconde os 2 botões de trocar aba (Orçamento e
-  // Cronograma são 2 etapas/modais diferentes dentro de Criar Campanha; não faz sentido oferecer "trocar para
-  // Cronograma" dentro da etapa que É a de Orçamento). Alterar/Consultar Campanha não passam isto e mantêm as 2
-  // abas.
-  abaFixa?: 'orcamento' | 'cronograma';
-  // `metaFinanceira`: opcional; quando presente, mostra "Soma X de Y" logo acima da tabela de Orçamento, com a
-  // diferença em destaque. O banco já EXIGE essa igualdade exata na aprovação (fn_valida_completude_campanha,
-  // RF-039/040); isto só adianta o feedback, como os avisos de prazo/meta mínima no formulário de Dados.
-  metaFinanceira?: number;
-  // `dataInicioCampanha`: `min` do campo "Data prevista" de um marco novo. SÓ o mínimo, de propósito:
-  // RF-042/`fn_valida_data_marco_cronograma` (05_regras_negocio.sql) bloqueiam data ANTERIOR ao início, mas
-  // permitem ultrapassar `data_fim` (um marco de divulgação de resultado costuma acontecer depois do prazo de
-  // arrecadação). Não existir `max` aqui não é um bug, é a regra de negócio.
-  dataInicioCampanha?: string;
-  // `minimoMarcosCronograma`: quando vem junto com `metaFinanceira`, mostra 2 tabelinhas simples (Meta/Soma
-  // atual em Orçamento; Mínimo de marcos/Marcos cadastrados em Cronograma, cada uma dentro da própria aba): só
-  // um par rótulo + textbox readonly com o valor já declarado, com borda vermelha quando não bate/não atinge o
-  // mínimo (não é o checklist "Pronta para aprovar?" de Alterar Campanha).
-  minimoMarcosCronograma?: number;
-}
-
-// Painel de Orçamento/Cronograma: mesmo padrão de <PainelLinksAcademicos> em T1: componente próprio com estado
-// próprio, porque Consultar/Alterar abrem campanhas diferentes. O checklist "Pronta para aprovar?" do modal de
-// Alterar recebe as contagens por `aoCarregar`, sem duplicar adicionar/remover.
-function PainelOrcamentoCronograma({
-  auth,
-  idCampanha,
-  podeEditar,
-  aoCarregar,
-  abaFixa,
-  metaFinanceira,
-  dataInicioCampanha,
-  minimoMarcosCronograma,
-}: PainelOrcamentoCronogramaProps) {
-  const chamarERegistrar = useChamadaRegistrada(auth);
-  const [orcamento, setOrcamento] = useState<OrcamentoCampanhaResponse[]>([]);
-  const [cronograma, setCronograma] = useState<MarcoCronogramaResponse[]>([]);
-  const [abaAtiva, setAbaAtiva] = useState<'orcamento' | 'cronograma'>(abaFixa ?? 'orcamento');
-  const [novoItemOrcamento, setNovoItemOrcamento] = useState({ categoria: '', valor: '' });
-  const [novoMarco, setNovoMarco] = useState({ titulo: '', dataPrevista: '' });
-  // Alterar/Consultar de item de orçamento e marco: mesmo padrão de edição em linha de Link Acadêmico em
-  // modal-usuario.tsx (linha vira input + Salvar/Cancelar; fora de edição, vira Alterar/Consultar/Excluir).
-  // Consultar é `ModalDetalhe` (mesmo componente, mesmo `rotuloAcao="Consultar"` que Link Acadêmico usa): não
-  // tem nada escondido para mostrar que a própria linha já não mostre, mas mantém os 3 ícones por consistência
-  // com o resto do painel.
-  const [idOrcamentoEditando, setIdOrcamentoEditando] = useState<number | null>(null);
-  const [formEdicaoOrcamento, setFormEdicaoOrcamento] = useState({ categoria: '', valor: '' });
-  const [itemOrcamentoConsultado, setItemOrcamentoConsultado] = useState<OrcamentoCampanhaResponse | null>(null);
-  const [idMarcoEditando, setIdMarcoEditando] = useState<number | null>(null);
-  const [formEdicaoMarco, setFormEdicaoMarco] = useState({ titulo: '', dataPrevista: '' });
-  const [marcoConsultado, setMarcoConsultado] = useState<MarcoCronogramaResponse | null>(null);
-
-  // Ref (não dependência de `carregar`): `aoCarregar` recebe uma arrow function nova a cada render do modal
-  // pai; colocá-la nas dependências de `useCallback` recriaria `carregar` toda hora, disparando o efeito de
-  // baixo em loop. O ref sempre lê a versão mais recente sem esse risco. Atualizado em `useEffect` (não direto
-  // no corpo do componente): mutar ref durante o render é proibido pela regra `react-hooks/refs`.
-  const aoCarregarRef = useRef(aoCarregar);
-  useEffect(() => {
-    aoCarregarRef.current = aoCarregar;
-  });
-
-  const carregar = useCallback(() => {
-    Promise.all([
-      orcamentoCampanhaApi.listar(auth.authFetch, idCampanha).catch(() => []),
-      marcoCronogramaApi.listar(auth.authFetch, idCampanha).catch(() => []),
-    ])
-      .then(([dadosOrcamento, dadosCronograma]) => {
-        setOrcamento(dadosOrcamento);
-        setCronograma(dadosCronograma);
-        aoCarregarRef.current?.(dadosOrcamento, dadosCronograma);
-      })
-      .catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idCampanha]);
-
-  useEffect(() => {
-    carregar();
-  }, [carregar]);
-
-  const adicionarItemOrcamento = async () => {
-    if (!novoItemOrcamento.categoria || !novoItemOrcamento.valor) return;
-    await chamarERegistrar<void>('/orcamento-campanha', {
-      method: 'POST',
-      body: JSON.stringify({ idCampanha, categoria: novoItemOrcamento.categoria, valor: Number(novoItemOrcamento.valor) }),
-    }).catch(() => {});
-    setNovoItemOrcamento({ categoria: '', valor: '' });
-    carregar();
-  };
-
-  const removerItemOrcamento = async (idOrcamento: number) => {
-    await chamarERegistrar<void>(`/orcamento-campanha/${idOrcamento}`, { method: 'DELETE' }).catch(() => {});
-    carregar();
-  };
-
-  const iniciarEdicaoOrcamento = (item: OrcamentoCampanhaResponse) => {
-    setIdOrcamentoEditando(item.idOrcamento);
-    setFormEdicaoOrcamento({ categoria: item.categoria, valor: String(item.valor) });
-  };
-
-  const salvarEdicaoOrcamento = async () => {
-    if (!formEdicaoOrcamento.categoria || !formEdicaoOrcamento.valor) return;
-    await chamarERegistrar<void>(`/orcamento-campanha/${idOrcamentoEditando}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ categoria: formEdicaoOrcamento.categoria, valor: Number(formEdicaoOrcamento.valor) }),
-    }).catch(() => {});
-    setIdOrcamentoEditando(null);
-    carregar();
-  };
-
-  const adicionarMarco = async () => {
-    if (!novoMarco.titulo || !novoMarco.dataPrevista) return;
-    await chamarERegistrar<void>('/marco-cronograma', {
-      method: 'POST',
-      body: JSON.stringify({ idCampanha, titulo: novoMarco.titulo, dataPrevista: new Date(novoMarco.dataPrevista).toISOString() }),
-    }).catch(() => {});
-    setNovoMarco({ titulo: '', dataPrevista: '' });
-    carregar();
-  };
-
-  const removerMarco = async (idMarco: number) => {
-    await chamarERegistrar<void>(`/marco-cronograma/${idMarco}`, { method: 'DELETE' }).catch(() => {});
-    carregar();
-  };
-
-  const iniciarEdicaoMarco = (marco: MarcoCronogramaResponse) => {
-    setIdMarcoEditando(marco.idMarco);
-    setFormEdicaoMarco({ titulo: marco.titulo, dataPrevista: marco.dataPrevista.slice(0, 10) });
-  };
-
-  const salvarEdicaoMarco = async () => {
-    if (!formEdicaoMarco.titulo || !formEdicaoMarco.dataPrevista) return;
-    await chamarERegistrar<void>(`/marco-cronograma/${idMarcoEditando}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ titulo: formEdicaoMarco.titulo, dataPrevista: new Date(formEdicaoMarco.dataPrevista).toISOString() }),
-    }).catch(() => {});
-    setIdMarcoEditando(null);
-    carregar();
-  };
-
-  return (
-    <div>
-      {!abaFixa && (
-        <div className="flex gap-2 mb-3">
-          <button type="button" className={`btn ${abaAtiva === 'orcamento' ? 'btn-primary' : 'btn-secondary'} text-xs`} onClick={() => setAbaAtiva('orcamento')}>
-            Orçamento
-          </button>
-          <button type="button" className={`btn ${abaAtiva === 'cronograma' ? 'btn-primary' : 'btn-secondary'} text-xs`} onClick={() => setAbaAtiva('cronograma')}>
-            Cronograma
-          </button>
-        </div>
-      )}
-
-      {abaAtiva === 'orcamento' && (
-        <>
-          {/* Meta/Soma em estilo tabela simples, 2 textbox readonly: rótulo + valor comparável lado a lado,
-              sem badge/palavra "aprovar" (isto é criação, não aprovação). `.borda-erro` (mesmo par usado no
-              resto do painel) marca a Soma quando ela não bate com a Meta, sem precisar de um badge ao lado
-              dizendo a mesma coisa 2x. */}
-          {metaFinanceira !== undefined && (() => {
-            const somaOrcamento = orcamento.reduce((soma, item) => soma + item.valor, 0);
-            const bate = somaOrcamento === metaFinanceira;
-            return (
-              <table className="crud-tabela mb-3">
-                <tbody>
-                  <tr>
-                    <td>Meta</td>
-                    <td><input type="text" readOnly value={formatarMoeda(metaFinanceira)} className="input-padrao" /></td>
-                  </tr>
-                  <tr>
-                    <td>Soma atual</td>
-                    <td><input type="text" readOnly value={formatarMoeda(somaOrcamento)} className={'input-padrao' + (bate ? '' : ' borda-erro')} /></td>
-                  </tr>
-                </tbody>
-              </table>
-            );
-          })()}
-          <div className="crud-tabela__wrapper">
-            <table className="crud-tabela mb-3">
-            <thead>
-              <tr>
-                <th>Categoria</th>
-                <th>Valor</th>
-                {podeEditar && <th>Ações</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {orcamento.map((item) => {
-                const emEdicao = idOrcamentoEditando === item.idOrcamento;
-                return (
-                  <tr key={item.idOrcamento}>
-                    {emEdicao ? (
-                      <>
-                        <td>
-                          <input
-                            type="text"
-                            value={formEdicaoOrcamento.categoria}
-                            onChange={(e) => setFormEdicaoOrcamento({ ...formEdicaoOrcamento, categoria: e.target.value })}
-                            className="input-padrao"
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="number"
-                            value={formEdicaoOrcamento.valor}
-                            onChange={(e) => setFormEdicaoOrcamento({ ...formEdicaoOrcamento, valor: e.target.value })}
-                            className="input-padrao"
-                          />
-                        </td>
-                        {podeEditar && (
-                          <td>
-                            <div className="crud-tabela__acoes">
-                              <AcaoLinha rotulo="Salvar" icone="fa-check" variante="alterar" onClick={salvarEdicaoOrcamento} />
-                              <AcaoLinha rotulo="Cancelar" icone="fa-xmark" onClick={() => setIdOrcamentoEditando(null)} />
-                            </div>
-                          </td>
-                        )}
-                      </>
-                    ) : (
-                      <>
-                        <td>{item.categoria}</td>
-                        <td>{formatarMoeda(item.valor)}</td>
-                        {podeEditar && (
-                          <td>
-                            <div className="crud-tabela__acoes">
-                              <AcaoLinha rotulo="Alterar" icone="fa-pen" variante="alterar" onClick={() => iniciarEdicaoOrcamento(item)} />
-                              <AcaoLinha rotulo="Consultar" icone="fa-eye" onClick={() => setItemOrcamentoConsultado(item)} />
-                              <AcaoLinha rotulo="Excluir" icone="fa-trash" variante="excluir" onClick={() => removerItemOrcamento(item.idOrcamento)} />
-                            </div>
-                          </td>
-                        )}
-                      </>
-                    )}
-                  </tr>
-                );
-              })}
-              {podeEditar && (
-                <tr>
-                  <td>
-                    <input type="text" value={novoItemOrcamento.categoria} onChange={(e) => setNovoItemOrcamento({ ...novoItemOrcamento, categoria: e.target.value })} className="input-padrao" placeholder="Categoria" />
-                  </td>
-                  <td>
-                    <input type="number" value={novoItemOrcamento.valor} onChange={(e) => setNovoItemOrcamento({ ...novoItemOrcamento, valor: e.target.value })} className="input-padrao" placeholder="Valor" />
-                  </td>
-                  <td>
-                    <button type="button" className="btn btn-sucesso text-xs" onClick={adicionarItemOrcamento}>
-                      + adicionar
-                    </button>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-            </table>
-          </div>
-        </>
-      )}
-
-      {abaAtiva === 'cronograma' && (
-        <>
-          {/* Mesmo estilo simples do Orçamento acima - mínimo/cadastrados
-              em textbox readonly, `.borda-erro` só no valor que não bate. */}
-          {minimoMarcosCronograma !== undefined && (
-            <table className="crud-tabela mb-3">
-              <tbody>
-                <tr>
-                  <td>Mínimo de marcos</td>
-                  <td><input type="text" readOnly value={minimoMarcosCronograma} className="input-padrao" /></td>
-                </tr>
-                <tr>
-                  <td>Marcos cadastrados</td>
-                  <td><input type="text" readOnly value={cronograma.length} className={'input-padrao' + (cronograma.length >= minimoMarcosCronograma ? '' : ' borda-erro')} /></td>
-                </tr>
-              </tbody>
-            </table>
-          )}
-        <div className="crud-tabela__wrapper">
-          <table className="crud-tabela mb-3">
-            <thead>
-              <tr>
-                <th>Título</th>
-                <th>Data prevista</th>
-                {podeEditar && <th>Ações</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {cronograma.map((marco) => {
-                const emEdicao = idMarcoEditando === marco.idMarco;
-                return (
-                  <tr key={marco.idMarco}>
-                    {emEdicao ? (
-                      <>
-                        <td>
-                          <input
-                            type="text"
-                            value={formEdicaoMarco.titulo}
-                            onChange={(e) => setFormEdicaoMarco({ ...formEdicaoMarco, titulo: e.target.value })}
-                            className="input-padrao"
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="date"
-                            value={formEdicaoMarco.dataPrevista}
-                            min={dataInicioCampanha}
-                            onChange={(e) => setFormEdicaoMarco({ ...formEdicaoMarco, dataPrevista: e.target.value })}
-                            className="input-padrao"
-                          />
-                        </td>
-                        {podeEditar && (
-                          <td>
-                            <div className="crud-tabela__acoes">
-                              <AcaoLinha rotulo="Salvar" icone="fa-check" variante="alterar" onClick={salvarEdicaoMarco} />
-                              <AcaoLinha rotulo="Cancelar" icone="fa-xmark" onClick={() => setIdMarcoEditando(null)} />
-                            </div>
-                          </td>
-                        )}
-                      </>
-                    ) : (
-                      <>
-                        <td>{marco.titulo}</td>
-                        <td>{new Date(marco.dataPrevista).toLocaleDateString('pt-BR')}</td>
-                        {podeEditar && (
-                          <td>
-                            <div className="crud-tabela__acoes">
-                              <AcaoLinha rotulo="Alterar" icone="fa-pen" variante="alterar" onClick={() => iniciarEdicaoMarco(marco)} />
-                              <AcaoLinha rotulo="Consultar" icone="fa-eye" onClick={() => setMarcoConsultado(marco)} />
-                              <AcaoLinha rotulo="Excluir" icone="fa-trash" variante="excluir" onClick={() => removerMarco(marco.idMarco)} />
-                            </div>
-                          </td>
-                        )}
-                      </>
-                    )}
-                  </tr>
-                );
-              })}
-              {podeEditar && (
-                <tr>
-                  <td>
-                    <input type="text" value={novoMarco.titulo} onChange={(e) => setNovoMarco({ ...novoMarco, titulo: e.target.value })} className="input-padrao" placeholder="Título" />
-                  </td>
-                  <td>
-                    <input type="date" value={novoMarco.dataPrevista} min={dataInicioCampanha} onChange={(e) => setNovoMarco({ ...novoMarco, dataPrevista: e.target.value })} className="input-padrao" />
-                  </td>
-                  <td>
-                    <button type="button" className="btn btn-secondary text-xs" onClick={adicionarMarco}>
-                      + adicionar
-                    </button>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-        </>
-      )}
-
-      {itemOrcamentoConsultado && (
-        <ModalDetalhe
-          titulo="Item de orçamento"
-          rotuloAcao="Consultar"
-          aoFechar={() => setItemOrcamentoConsultado(null)}
-          secoes={[
-            { titulo: 'Categoria', conteudo: itemOrcamentoConsultado.categoria },
-            { titulo: 'Valor', conteudo: formatarMoeda(itemOrcamentoConsultado.valor) },
-          ]}
-        />
-      )}
-
-      {marcoConsultado && (
-        <ModalDetalhe
-          titulo="Marco de cronograma"
-          rotuloAcao="Consultar"
-          aoFechar={() => setMarcoConsultado(null)}
-          secoes={[
-            { titulo: 'Título', conteudo: marcoConsultado.titulo },
-            { titulo: 'Data prevista', conteudo: new Date(marcoConsultado.dataPrevista).toLocaleDateString('pt-BR') },
-          ]}
-        />
-      )}
-    </div>
-  );
-}
+// O painel de orçamento/cronograma e o passo a passo de criação vivem em views/12-campanha (compartilhados com
+// Minhas Campanhas).
 
 // T2, Bancada da Campanha. Toda chamada usa a sessão REAL do painel (`auth`, sempre um admin): leituras sempre
 // funcionaram assim (relatorio_visualizar vê tudo); as ESCRITAS que fazem sentido aqui (Alterar,
@@ -454,43 +50,16 @@ function PainelOrcamentoCronograma({
 // Sem pré-filtro por pesquisador nem "Escolher"/"campanha em foco": o checklist "Pronta para aprovar?" +
 // Aprovar/Rejeitar + Orçamento/Cronograma fazem parte do modal de Alterar, e `CampoTestesContext` não guarda
 // `campanhaFoco`; T3 (Vida da Campanha Ativa) tem busca própria (ver vida-campanha-ativa.tsx).
-const ROTULO_CAMPO_BLOQUEADO: Record<string, string> = {
-  titulo: 'Título',
-  descricao: 'Descrição',
-  metaFinanceira: 'Meta',
-  modelo: 'Modelo de financiamento',
-  taxaPlataforma: 'Taxa da plataforma',
-  idAreaConhecimento: 'Área do conhecimento',
-  videoApresentacaoUrl: 'Vídeo de apresentação',
-  dataInicio: 'Início',
-  dataFim: 'Fim',
-};
 
 export function BancadaCampanha({ auth }: PropsPagina) {
   const chamarERegistrar = useChamadaRegistrada(auth);
   const { mostrar } = useToast();
   const { reportarErro } = useErroToast();
 
-  // Lidos ao vivo de `configuracoes` (nada fixo aqui): `orcamento_min_itens` mudou de valor (RF revisado) e uma
-  // constante fixa aqui deixaria o botão "Aprovar" desabilitado (`orcamentoOk` calculado com o número ERRADO)
-  // mesmo quando o banco já aceitaria. Mesmo padrão de `seletor-foto-perfil.tsx`; quem decide de verdade é o
-  // banco.
-  const { obterConfiguracao } = useConfiguracoes();
-  const valorMinimoOrcamento = obterConfiguracao('orcamento_min_itens', 1);
-  const minimoItensOrcamento = typeof valorMinimoOrcamento === 'number' ? valorMinimoOrcamento : 1;
-  const valorMinimoCronograma = obterConfiguracao('cronograma_min_marcos', 3);
-  const minimoMarcosCronograma = typeof valorMinimoCronograma === 'number' ? valorMinimoCronograma : 3;
-  // Mesmo padrão dos 2 acima: RF-066 já é aplicado de verdade no banco (`fn_valida_prazo_campanha_negocio`,
-  // 05_regras_negocio.sql), lendo estas 2 chaves; se o formulário de criação não as lesse, a pessoa só
-  // descobriria o limite batendo num erro 90012 cru do Postgres depois de enviar.
-  const valorPrazoMinimo = obterConfiguracao('prazo_minimo_campanha_dias', 15);
-  const prazoMinimoCampanha = typeof valorPrazoMinimo === 'number' ? valorPrazoMinimo : 15;
-  const valorPrazoMaximo = obterConfiguracao('prazo_maximo_campanha_dias', 60);
-  const prazoMaximoCampanha = typeof valorPrazoMaximo === 'number' ? valorPrazoMaximo : 60;
-  // Mesmo padrão dos 3 acima: `fn_valida_meta_campanha_negocio` (05_regras_negocio.sql, ver REQUISITOS_V7) já
-  // rejeita meta abaixo de `meta_minima_campanha`; o formulário lê a chave para avisar antes de enviar.
-  const valorMetaMinima = obterConfiguracao('meta_minima_campanha', 500);
-  const metaMinimaCampanha = typeof valorMetaMinima === 'number' ? valorMetaMinima : 500;
+  // As chamadas do T2 aparecem no T4 (Registro de Chamadas), inclusive as do painel e do passo a passo
+  // compartilhados (views/12-campanha), que recebem este `authFetch`.
+  const authRegistrado = { authFetch: useAuthFetchRegistrado(auth) };
+  const { minimoItensOrcamento, minimoMarcosCronograma } = useRegrasCampanha();
 
   const [areas, setAreas] = useState<AreaConhecimentoResponse[]>([]);
   const [usuarios, setUsuarios] = useState<UsuarioResponse[]>([]);
@@ -518,26 +87,11 @@ export function BancadaCampanha({ auth }: PropsPagina) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [campanhaConsultada]);
   const [idCampanhaEditando, setIdCampanhaEditando] = useState<number | null>(null);
-  const [formEdicaoCampanha, setFormEdicaoCampanha] = useState<FormEdicaoCampanha | null>(null);
   const prefixoId = useId();
   const idCampo = (nome: string) => `${prefixoId}-${nome}`;
-  // Checklist "Pronta para aprovar?" + Aprovar/Rejeitar dentro do modal de Alterar: as contagens vêm do
-  // `aoCarregar` de <PainelOrcamentoCronograma> (o mesmo componente que desenha Orçamento/Cronograma editável
-  // logo acima no modal), mantendo as duas listas sincronizadas sem duplicar adicionar/remover.
-  const [checklistOrcamento, setChecklistOrcamento] = useState<OrcamentoCampanhaResponse[]>([]);
-  const [checklistCronograma, setChecklistCronograma] = useState<MarcoCronogramaResponse[]>([]);
   const [justificativaRejeicaoEdicao, setJustificativaRejeicaoEdicao] = useState('');
   const [aprovando, setAprovando] = useState(false);
   const [rejeitando, setRejeitando] = useState(false);
-  // `detalheEdicao` vem de GET /campanha/:id (a listagem NÃO traz reenviosRestantes/prazo/somenteLeitura nem
-  // camposBloqueados, só a consulta individual), buscado ao abrir Alterar em qualquer campanha. Ciclo de
-  // rejeição e reenvio: ver REQUISITOS_V7. `ofertaDatas` liga o aviso "as datas venceram" dentro do próprio
-  // modal (e não um 2º modal empilhado: cada ModalFicha registra o seu próprio listener de Esc, e dois abertos
-  // fechariam juntos).
-  const [detalheEdicao, setDetalheEdicao] = useState<CampanhaResponse | null>(null);
-  const [historicoEdicao, setHistoricoEdicao] = useState<HistoricoRejeicaoResponse[]>([]);
-  const [ofertaDatas, setOfertaDatas] = useState(false);
-  const [enviando, setEnviando] = useState(false);
   const [campanhaExcluindo, setCampanhaExcluindo] = useState<CampanhaResponse | null>(null);
   const [confirmacaoExclusao, setConfirmacaoExclusao] = useState('');
   const [excluindo, setExcluindo] = useState(false);
@@ -548,25 +102,6 @@ export function BancadaCampanha({ auth }: PropsPagina) {
   // Pesquisador" em T1. Usa POST /campanha/:idUsuario (endpoint de suporte/admin, ver
   // campanha.controller.create-para-outro.ts).
   const [criandoCampanha, setCriandoCampanha] = useState(false);
-  const [formCriarCampanha, setFormCriarCampanha] = useState({
-    titulo: '',
-    idAreaConhecimento: '',
-    metaFinanceira: '',
-    descricao: '',
-    dataInicio: '',
-    dataFim: '',
-    videoApresentacaoUrl: '',
-  });
-  // Fase pós-criação: RF-040/RF-042 preveem orçamento/cronograma cadastrados "durante a criação da campanha",
-  // mas os itens só podem existir depois da campanha ter um `idCampanha` de verdade (FK). Nulo = ainda não
-  // criada.
-  const [idCampanhaRecemCriada, setIdCampanhaRecemCriada] = useState<number | null>(null);
-  // 3 etapas do MESMO modal: "Próximo" na etapa Dados, e Orçamento/Cronograma são 2 telas SEPARADAS e focadas,
-  // com Voltar/Próximo entre elas, em vez de uma tabela só com abas: `PainelOrcamentoCronograma` (também usado
-  // em Alterar Campanha) recebe a prop `abaFixa` só para travar numa aba e esconder o toggle entre elas, sem
-  // duplicar a tabela. "Voltar" de Orçamento para Dados PATCHa a campanha já criada (mesmo endpoint de Alterar
-  // Campanha) em vez de tentar criar de novo: ver `avancarDaEtapaDados`, abaixo.
-  const [etapaCriarCampanha, setEtapaCriarCampanha] = useState<'dados' | 'orcamento' | 'cronograma'>('dados');
   // Combobox de pesquisador (digitar "24" ou "marina", aparece até 5): não é um <select> (a lista de TODOS os
   // usuários seria enorme e sem indicar quem já é pesquisador de verdade). Busca por id OU pedaço do nome, até
   // 5 resultados; cada resultado mostra se dá para escolher (pesquisador ativo) ou não (sem perfil / suspenso),
@@ -644,98 +179,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
 
   const iniciarEdicaoCampanha = (item: CampanhaResponse) => {
     setIdCampanhaEditando(item.idCampanha);
-    setFormEdicaoCampanha({
-      titulo: item.titulo,
-      idAreaConhecimento: item.idAreaConhecimento,
-      metaFinanceira: item.metaFinanceira,
-      descricao: item.descricao ?? '',
-      dataInicio: item.dataInicio ? item.dataInicio.slice(0, 10) : '',
-      dataFim: item.dataFim ? item.dataFim.slice(0, 10) : '',
-      videoApresentacaoUrl: item.videoApresentacaoUrl ?? '',
-    });
-    // Checklist "Pronta pra aprovar?" recomeça vazio a cada abertura -
-    // <PainelOrcamentoCronograma> preenche via `aoCarregar` assim que
-    // busca os dados de verdade (mesmo idCampanha do modal).
-    setChecklistOrcamento([]);
-    setChecklistCronograma([]);
     setJustificativaRejeicaoEdicao('');
-    setDetalheEdicao(null);
-    setHistoricoEdicao([]);
-    setOfertaDatas(false);
-    campanhaApi
-      .buscar(auth.authFetch, item.idCampanha)
-      .then(setDetalheEdicao)
-      .catch(() => setDetalheEdicao(null));
-    if (item.status === 'rejeitado') {
-      campanhaApi
-        .listarHistoricoRejeicao(auth.authFetch, item.idCampanha)
-        .then(setHistoricoEdicao)
-        .catch(() => setHistoricoEdicao([]));
-    }
-  };
-
-  // PATCH /campanha/:id (dono OU campanha_editar) - sem status/id_admin/
-  // taxa_plataforma/modelo aqui de propósito, ver campanha.request-update.
-  // ts: quem muda status são aprovar/rejeitar, nunca este PATCH genérico.
-  const gravarEdicaoCampanha = (id: number, form: FormEdicaoCampanha) =>
-    chamarERegistrar<void>(`/campanha/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify({
-        titulo: form.titulo,
-        idAreaConhecimento: Number(form.idAreaConhecimento),
-        metaFinanceira: Number(form.metaFinanceira),
-        ...(form.descricao ? { descricao: form.descricao } : {}),
-        ...(form.dataInicio ? { dataInicio: new Date(form.dataInicio).toISOString() } : {}),
-        ...(form.dataFim ? { dataFim: new Date(form.dataFim).toISOString() } : {}),
-        ...(form.videoApresentacaoUrl ? { videoApresentacaoUrl: form.videoApresentacaoUrl } : {}),
-      }),
-    });
-
-  const salvarEdicaoCampanha = async () => {
-    if (!formEdicaoCampanha?.titulo || idCampanhaEditando === null) return;
-    try {
-      await gravarEdicaoCampanha(idCampanhaEditando, formEdicaoCampanha);
-      const idEditado = idCampanhaEditando;
-      setIdCampanhaEditando(null);
-      carregarCampanhas();
-      mostrar('Campanha alterada com sucesso.', `ID: ${idEditado} foi alterada`);
-    } catch (erro) {
-      reportarErro(erro);
-    }
-  };
-
-  // "Enviar para aprovação" (rascunho) e "Corrigir e reenviar" (rejeitada): grava o formulário ANTES de enviar,
-  // senão uma alteração ainda não salva se perderia em silêncio. Nenhuma checagem de completude aqui, de
-  // propósito: quem cobra orçamento, cronograma e prazo é trg_campanha_valida_completude (05), e o erro chega
-  // traduzido: o clique acontece e o sistema DIZ o que falta (Heurísticas de Nielsen), em vez de um botão
-  // desabilitado sem explicação. A única exceção é o prazo vencido: em vez de deixar o erro estourar, oferece
-  // atualizar as datas mantendo a duração (REQUISITOS_V7, "prazo vencido"), sempre com confirmação explícita.
-  const dataFimVencida = (form: FormEdicaoCampanha) => Boolean(form.dataFim) && new Date(form.dataFim) <= new Date();
-
-  const enviarEdicao = async (comDatasAtualizadas = false) => {
-    if (!formEdicaoCampanha || idCampanhaEditando === null) return;
-    if (!comDatasAtualizadas && dataFimVencida(formEdicaoCampanha)) {
-      setOfertaDatas(true);
-      return;
-    }
-    setEnviando(true);
-    try {
-      await gravarEdicaoCampanha(idCampanhaEditando, formEdicaoCampanha);
-      if (comDatasAtualizadas) {
-        await chamarERegistrar<CampanhaResponse>(`/campanha/${idCampanhaEditando}/deslizar-datas`, {
-          method: 'POST',
-          body: JSON.stringify({ novaDataInicio: new Date().toISOString() }),
-        });
-      }
-      await chamarERegistrar<CampanhaResponse>(`/campanha/${idCampanhaEditando}/enviar`, { method: 'POST' });
-      mostrar('Campanha enviada para aprovação.', `ID: ${idCampanhaEditando}`);
-      setIdCampanhaEditando(null);
-      carregarCampanhas();
-    } catch (erro) {
-      reportarErro(erro);
-    } finally {
-      setEnviando(false);
-    }
   };
 
   // Aprovar/Rejeitar dentro do modal de Alterar: escopados a `idCampanhaEditando` (o modal aberto). Fecham o
@@ -819,126 +263,11 @@ export function BancadaCampanha({ auth }: PropsPagina) {
     }
   };
 
-  // Hoje em formato de <input type="date"> (yyyy-mm-dd, fuso local): usado como `min` do campo Início, para o
-  // próprio navegador impedir escolher ontem ou antes. `toISOString()` sozinho usaria UTC, que pode cair no dia
-  // ERRADO para quem está em fuso negativo (ex.: 23h de 14/09 em Brasília já é 15/09 em UTC): por isso monta a
-  // string local campo a campo (`getFullYear`/`getMonth`/`getDate`), em vez de `toISOString().slice(0, 10)`.
-  const hojeISO = (() => {
-    const agora = new Date();
-    const ano = agora.getFullYear();
-    const mes = String(agora.getMonth() + 1).padStart(2, '0');
-    const dia = String(agora.getDate()).padStart(2, '0');
-    return `${ano}-${mes}-${dia}`;
-  })();
-
-  // Duração em dias corridos entre Início/Fim, pra validar contra
-  // RF-066 (`prazo_minimo_campanha_dias`/`prazo_maximo_campanha_dias`) ANTES
-  // de mandar pro backend - o banco já rejeita fora do intervalo
-  // (`fn_valida_prazo_campanha_negocio`), isto só adianta o aviso.
-  const duracaoDiasCriar =
-    formCriarCampanha.dataInicio && formCriarCampanha.dataFim
-      ? Math.round(
-          (new Date(formCriarCampanha.dataFim).getTime() - new Date(formCriarCampanha.dataInicio).getTime()) /
-            86400000,
-        )
-      : null;
-  const duracaoCriarValida =
-    duracaoDiasCriar !== null && duracaoDiasCriar >= prazoMinimoCampanha && duracaoDiasCriar <= prazoMaximoCampanha;
-
-  const formCriarCampanhaValido =
-    Boolean(pesquisadorEscolhido) &&
-    Boolean(formCriarCampanha.titulo) &&
-    Boolean(formCriarCampanha.idAreaConhecimento) &&
-    Boolean(formCriarCampanha.metaFinanceira) &&
-    Number(formCriarCampanha.metaFinanceira) >= metaMinimaCampanha &&
-    Boolean(formCriarCampanha.dataInicio) &&
-    Boolean(formCriarCampanha.dataFim) &&
-    formCriarCampanha.dataInicio >= hojeISO &&
-    duracaoCriarValida;
-
-  // Corpo do request é o mesmo pra criar e pra atualizar (os 2 DTOs do
-  // Nest aceitam os mesmos 7 campos) - só o método/rota mudam.
-  const corpoDadosCampanha = () => ({
-    idAreaConhecimento: Number(formCriarCampanha.idAreaConhecimento),
-    titulo: formCriarCampanha.titulo,
-    metaFinanceira: Number(formCriarCampanha.metaFinanceira),
-    dataInicio: new Date(formCriarCampanha.dataInicio).toISOString(),
-    dataFim: new Date(formCriarCampanha.dataFim).toISOString(),
-    ...(formCriarCampanha.descricao ? { descricao: formCriarCampanha.descricao } : {}),
-    ...(formCriarCampanha.videoApresentacaoUrl ? { videoApresentacaoUrl: formCriarCampanha.videoApresentacaoUrl } : {}),
-  });
-
-  // Botão "Próximo" da etapa Dados: na 1ª vez (idCampanhaRecemCriada ainda nulo) cria a campanha de verdade; se
-  // a pessoa voltou da etapa Orçamento para corrigir algo aqui, a campanha JÁ existe: "Próximo" de novo faz um
-  // PATCH (mesmo endpoint de Alterar Campanha) em vez de tentar criar outra. Nos dois casos, avança para
-  // Orçamento no final.
-  const avancarDaEtapaDados = async () => {
-    if (!formCriarCampanhaValido || !pesquisadorEscolhido) {
-      return;
-    }
-    try {
-      if (idCampanhaRecemCriada === null) {
-        const nova = await chamarERegistrar<CampanhaResponse>(`/campanha/${pesquisadorEscolhido.idUsuario}`, {
-          method: 'POST',
-          body: JSON.stringify(corpoDadosCampanha()),
-        });
-        carregarCampanhas();
-        setIdCampanhaRecemCriada(nova.idCampanha);
-        mostrar('Campanha criada com sucesso.', `ID: ${nova.idCampanha}, em nome de ${nomeDe(nova.idUsuario)}`);
-      } else {
-        await chamarERegistrar<void>(`/campanha/${idCampanhaRecemCriada}`, {
-          method: 'PATCH',
-          body: JSON.stringify(corpoDadosCampanha()),
-        });
-        carregarCampanhas();
-      }
-      setEtapaCriarCampanha('orcamento');
-    } catch (erro) {
-      reportarErro(erro);
-    }
-  };
-
-  // "Enviar para aprovação": de propósito NÃO tem validação client-side antes de chamar: quem cobra orçamento
-  // completo, soma batendo com a meta, cronograma e prazo não vencido é trg_campanha_valida_completude (05), e
-  // o erro chega aqui traduzido pelo PostgresExceptionFilter. O clique acontece e o sistema DIZ o que falta
-  // (Heurísticas de Nielsen), em vez de um botão desabilitado sem explicação.
-  //
-  // Se falhar, o modal fica aberto: a campanha continua em rascunho, o trabalho não se perde, e a pessoa pode
-  // voltar nas etapas e corrigir.
-  const enviarCampanhaParaAprovacao = async () => {
-    if (idCampanhaRecemCriada === null) {
-      return;
-    }
-    try {
-      await chamarERegistrar<CampanhaResponse>(`/campanha/${idCampanhaRecemCriada}/enviar`, {
-        method: 'POST',
-      });
-      carregarCampanhas();
-      mostrar('Campanha enviada para aprovação.', `ID: ${idCampanhaRecemCriada}`);
-      fecharModalCriarCampanha();
-    } catch (erro) {
-      reportarErro(erro);
-    }
-  };
-
-  // Fecha o modal de verdade e limpa tudo pra próxima abertura - chamado pelo
-  // "Cancelar"/X (a campanha já criada FICA salva como rascunho, nada se
-  // perde) e pelo sucesso do "Enviar para aprovação".
+  // Fecha o modal de criação e limpa a escolha do dono. A campanha já criada FICA salva como rascunho.
   const fecharModalCriarCampanha = () => {
     setCriandoCampanha(false);
     setPesquisadorEscolhido(null);
     setBuscaPesquisador('');
-    setIdCampanhaRecemCriada(null);
-    setEtapaCriarCampanha('dados');
-    setFormCriarCampanha({
-      titulo: '',
-      idAreaConhecimento: '',
-      metaFinanceira: '',
-      descricao: '',
-      dataInicio: '',
-      dataFim: '',
-      videoApresentacaoUrl: '',
-    });
   };
 
   return (
@@ -1103,7 +432,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
               {/* Orçamento/Cronograma acima de Datas: só leitura aqui (Consultar nunca edita nada). Linha
                   divisória dos dois lados, mesmo padrão entre Links Acadêmicos e Moderação em T1. */}
               <div className="border-t borda-padrao"></div>
-              <PainelOrcamentoCronograma auth={auth} idCampanha={campanhaConsultada.idCampanha} podeEditar={false} />
+              <PainelOrcamentoCronograma auth={authRegistrado} idCampanha={campanhaConsultada.idCampanha} podeEditar={false} />
               <div className="border-t borda-padrao"></div>
 
               <SecaoFicha titulo="Datas">
@@ -1144,362 +473,87 @@ export function BancadaCampanha({ auth }: PropsPagina) {
         </ModalFicha>
       )}
 
-      {idCampanhaEditando !== null && formEdicaoCampanha && (() => {
+      {/* Alterar: o mesmo modal de Minhas Campanhas (views/12-campanha/modal-alterar-campanha.tsx). O T2 só
+          acrescenta o que é de admin: o aviso das 10 campanhas de demonstração (só leitura) e, enquanto a
+          campanha aguarda aprovação, o checklist "Pronta para aprovar?" com Aprovar e Rejeitar. */}
+      {idCampanhaEditando !== null && (() => {
         const campanhaEmEdicao = campanhas.find((c) => c.idCampanha === idCampanhaEditando) ?? null;
-        // Alterar também sempre abre o modal (mesmo raciocínio do modal de Excluir): se for uma das 10
-        // campanhas de demonstração, um aviso aparece dentro (campos ficam só-leitura, Salvar some) em vez de o
-        // botão da tabela ficar cinza sem explicação nenhuma.
         const bloqueadaEdicao = CAMPANHA_BLOQUEADA(idCampanhaEditando);
-        // Rejeitada que já usou todos os reenvios é SÓ LEITURA (banco: 91027 nas
-        // 3 funções de congelamento). `edicaoTravada` junta isso com a proteção
-        // das 10 campanhas de demonstração pra decidir o que fica desabilitado.
-        const rejeitadaSomenteLeitura = campanhaEmEdicao?.status === 'rejeitado' && detalheEdicao?.somenteLeitura === true;
-        const edicaoTravada = bloqueadaEdicao || rejeitadaSomenteLeitura;
-        // Campos que o banco trava agora (fn_campanha_campos_bloqueados, via GET /campanha/:id): a tela desabilita exatamente
-        // o que o banco recusaria, sem lista própria aqui.
-        const camposBloqueados = new Set(detalheEdicao?.camposBloqueados ?? []);
-        const travado = (campo: string) => edicaoTravada || camposBloqueados.has(campo);
-        const idAvisoBloqueio = idCampo('aviso-bloqueio');
-        const descreveBloqueio = (campo: string) => (camposBloqueados.has(campo) ? idAvisoBloqueio : undefined);
-        const duracaoFormDias =
-          formEdicaoCampanha.dataInicio && formEdicaoCampanha.dataFim
-            ? Math.round((new Date(formEdicaoCampanha.dataFim).getTime() - new Date(formEdicaoCampanha.dataInicio).getTime()) / 86400000)
-            : 0;
-        // Checklist "Pronta para aprovar?": as contagens vêm de `checklistOrcamento`/`checklistCronograma`,
-        // preenchidas pelo `aoCarregar` de <PainelOrcamentoCronograma> logo abaixo (mesmo idCampanha, sempre em
-        // sincronia com o que a pessoa vê nas abas Orçamento/Cronograma).
-        const somaChecklistOrcamento = checklistOrcamento.reduce((total, item) => total + Number(item.valor), 0);
-        const metaBatendoChecklist = campanhaEmEdicao !== null && somaChecklistOrcamento === Number(campanhaEmEdicao.metaFinanceira);
-        const orcamentoOkChecklist = checklistOrcamento.length >= minimoItensOrcamento && metaBatendoChecklist;
-        const cronogramaOkChecklist = checklistCronograma.length >= minimoMarcosCronograma;
-        const prontaParaAprovarChecklist =
-          campanhaEmEdicao?.status === 'aguardando_aprovacao' && orcamentoOkChecklist && cronogramaOkChecklist;
-        const motivoAprovarDesabilitado = (): string => {
-          if (campanhaEmEdicao?.status !== 'aguardando_aprovacao') {
-            return `Status atual é "${campanhaEmEdicao?.status}", não dá pra aprovar.`;
-          }
-          if (!orcamentoOkChecklist) {
-            return `Orçamento incompleto (${checklistOrcamento.length}/${minimoItensOrcamento} itens, soma ${formatarMoeda(somaChecklistOrcamento)} de ${formatarMoeda(campanhaEmEdicao.metaFinanceira)}).`;
-          }
-          if (!cronogramaOkChecklist) {
-            return `Cronograma incompleto (${checklistCronograma.length}/${minimoMarcosCronograma} marcos).`;
-          }
-          return '';
-        };
         return (
-          <ModalFicha
-            // `carregando`: ModalFicha esconde o título de verdade sozinho enquanto `campanhaEmEdicao` não
-            // chega (ver comentário completo em modal-ficha.tsx).
-            carregando={!campanhaEmEdicao}
-            titulo={campanhaEmEdicao?.titulo ?? ''}
+          <ModalAlterarCampanha
+            auth={authRegistrado}
+            idCampanha={idCampanhaEditando}
             subtitulo={campanhaEmEdicao ? `Pesquisador: ${nomeDe(campanhaEmEdicao.idUsuario)}` : undefined}
+            motivoBloqueio={bloqueadaEdicao ? motivoBloqueioCampanha() : undefined}
+            aoMudar={carregarCampanhas}
             aoFechar={() => setIdCampanhaEditando(null)}
-            rodape={
-              <div className="flex gap-3 max-w-xl ml-auto">
-                <button
-                  type="button"
-                  onClick={() => setIdCampanhaEditando(null)}
-                  className="btn btn-secondary flex-1"
-                >
-                  {edicaoTravada ? 'Fechar' : 'Cancelar'}
-                </button>
-                {!edicaoTravada && (
-                  <button type="button" onClick={salvarEdicaoCampanha} className="btn btn-primary flex-1">
-                    Salvar
-                  </button>
-                )}
-                {!edicaoTravada && campanhaEmEdicao?.status === 'rascunho' && (
-                  <button type="button" onClick={() => enviarEdicao()} disabled={enviando} className="btn btn-primary flex-1">
-                    {enviando ? 'Enviando...' : 'Enviar para aprovação'}
-                  </button>
-                )}
-                {!edicaoTravada && campanhaEmEdicao?.status === 'rejeitado' && (
-                  <button type="button" onClick={() => enviarEdicao()} disabled={enviando} className="btn btn-primary flex-1">
-                    {enviando ? 'Enviando...' : 'Corrigir e reenviar'}
-                  </button>
-                )}
-              </div>
-            }
-          >
-            {bloqueadaEdicao && (
-              <div className="rounded-lg border borda-forte fundo-erro p-4 text-sm texto-erro">
-                <p className="font-bold mb-1">
-                  <i className="fa-solid fa-lock mr-1"></i> Não dá pra alterar esta campanha
-                </p>
-                <p>{motivoBloqueioCampanha()}</p>
-              </div>
-            )}
+            secaoAdmin={({ campanha, orcamento, cronograma }) => {
+              if (bloqueadaEdicao || campanha.status !== 'aguardando_aprovacao') {
+                return null;
+              }
+              const soma = orcamento.reduce((total, item) => total + Number(item.valor), 0);
+              const metaBatendo = soma === Number(campanha.metaFinanceira);
+              const orcamentoOk = orcamento.length >= minimoItensOrcamento && metaBatendo;
+              const cronogramaOk = cronograma.length >= minimoMarcosCronograma;
+              const pronta = orcamentoOk && cronogramaOk;
+              const motivo = !orcamentoOk
+                ? `Orçamento incompleto (${orcamento.length}/${minimoItensOrcamento} itens, soma ${formatarMoeda(soma)} de ${formatarMoeda(campanha.metaFinanceira)}).`
+                : !cronogramaOk
+                  ? `Cronograma incompleto (${cronograma.length}/${minimoMarcosCronograma} marcos).`
+                  : '';
+              const badge = (ok: boolean) => <span className={`badge ${ok ? 'badge-sucesso' : 'badge-erro'}`}>{ok ? 'OK' : 'Faltando'}</span>;
+              return (
+                <div className="fundo-sutil rounded-md p-4">
+                  <h3 className="subtitulo mb-3">Pronta para aprovar?</h3>
+                  <table className="crud-tabela mb-3">
+                    <thead>
+                      <tr>
+                        <th>Critério</th>
+                        <th className="crud-tabela__celula--centralizada">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>Orçamento: {orcamento.length} itens (mínimo {minimoItensOrcamento})</td>
+                        <td className="crud-tabela__celula--centralizada">{badge(orcamento.length >= minimoItensOrcamento)}</td>
+                      </tr>
+                      <tr>
+                        <td>
+                          Soma × meta: {formatarMoeda(soma)} de {formatarMoeda(campanha.metaFinanceira)}
+                          {!metaBatendo && ` (faltam ${formatarMoeda(Number(campanha.metaFinanceira) - soma)})`}
+                        </td>
+                        <td className="crud-tabela__celula--centralizada">{badge(metaBatendo)}</td>
+                      </tr>
+                      <tr>
+                        <td>Cronograma: {cronograma.length} marcos (mínimo {minimoMarcosCronograma})</td>
+                        <td className="crud-tabela__celula--centralizada">{badge(cronogramaOk)}</td>
+                      </tr>
+                    </tbody>
+                  </table>
 
-            {/* Campanha REJEITADA: o histórico de rejeições vem no topo porque é a primeira coisa que o
-                pesquisador precisa ler para saber o que corrigir, junto com quantos reenvios ainda tem e até
-                quando. Esgotados os reenvios, vira só leitura e a frase diz quando a campanha será excluída. */}
-            {campanhaEmEdicao?.status === 'rejeitado' && (
-              <div className="rounded-lg border borda-forte fundo-erro p-4 text-sm texto-erro space-y-3">
-                <p className="font-bold">
-                  <i className="fa-solid fa-circle-exclamation mr-1"></i> Campanha rejeitada
-                </p>
-                {detalheEdicao &&
-                  (detalheEdicao.somenteLeitura ? (
-                    <p>
-                      Esta campanha usou todos os reenvios permitidos e agora é somente leitura.
-                      {detalheEdicao.prazoReenvioAte && <> Ela será excluída em {formatarData(detalheEdicao.prazoReenvioAte)}.</>}
-                    </p>
-                  ) : (
-                    <p>
-                      Reenvios restantes: <strong>{detalheEdicao.reenviosRestantes}</strong>.
-                      {detalheEdicao.prazoReenvioAte && <> Prazo para reenviar: até <strong>{formatarData(detalheEdicao.prazoReenvioAte)}</strong>.</>}
-                    </p>
-                  ))}
-                {historicoEdicao.length > 0 && (
-                  <ul className="space-y-2">
-                    {historicoEdicao.map((item, indice) => (
-                      <li key={item.idRejeicao} className={indice === 0 ? 'font-semibold' : ''}>
-                        {formatarDataHora(item.rejeitadoEm)}
-                        {item.nomeAdmin ? ` por ${item.nomeAdmin}` : ''}: {item.justificativa ?? 'Sem justificativa.'}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            )}
+                  <div className="acao-com-motivo mt-3">
+                    <button type="button" className="btn btn-primary" disabled={!pronta || aprovando} onClick={aprovarEdicao}>
+                      {aprovando ? 'Aprovando...' : 'Aprovar (Admin)'}
+                    </button>
+                    {!pronta && <span className="acao-com-motivo__motivo">{motivo}</span>}
+                  </div>
 
-            {/* Datas vencidas no envio/reenvio: oferta EXPLÍCITA, nunca silenciosa (a data de início é o que
-                o pesquisador vai comunicar para a rede dele). */}
-            {ofertaDatas && (
-              <div className="rounded-lg border borda-forte fundo-aviso p-4 text-sm texto-aviso space-y-3">
-                <p className="font-bold">
-                  <i className="fa-solid fa-calendar-xmark mr-1"></i> As datas desta campanha já venceram
-                </p>
-                <p>
-                  O prazo terminou em {formatarData(new Date(formEdicaoCampanha.dataFim).toISOString())}, e uma campanha com prazo
-                  vencido não pode ser enviada para aprovação. Você pode começar agora mantendo a mesma duração
-                  {duracaoFormDias > 0 ? ` de ${duracaoFormDias} dias` : ''}, ou escolher outras datas nos campos de Datas mais abaixo.
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  <button type="button" className="btn btn-primary" disabled={enviando} onClick={() => enviarEdicao(true)}>
-                    {enviando ? 'Enviando...' : 'Começar agora, mantendo a duração'}
-                  </button>
-                  <button type="button" className="btn btn-secondary" onClick={() => setOfertaDatas(false)}>
-                    Escolher outras datas
-                  </button>
+                  <div className="flex gap-2 items-end mt-3">
+                    <textarea
+                      placeholder="Justificativa da rejeição (opcional)"
+                      value={justificativaRejeicaoEdicao}
+                      onChange={(evento) => setJustificativaRejeicaoEdicao(evento.target.value)}
+                      className="input-padrao flex-1"
+                      rows={2}
+                    />
+                    <button type="button" className="btn btn-secondary text-xs" disabled={rejeitando} onClick={rejeitarEdicao}>
+                      {rejeitando ? 'Rejeitando...' : 'Rejeitar (Admin)'}
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
-
-            {camposBloqueados.size > 0 && !rejeitadaSomenteLeitura && (
-              <div id={idAvisoBloqueio} className="rounded-lg border borda-forte fundo-info p-4 text-sm texto-info">
-                <p className="font-bold">
-                  <i className="fa-solid fa-lock mr-1"></i> Campos travados
-                </p>
-                <p>
-                  Depois da aprovação estes campos não mudam, para proteger quem já contribuiu:{' '}
-                  {[...camposBloqueados].map((campo) => ROTULO_CAMPO_BLOQUEADO[campo] ?? campo).join(', ')}.
-                </p>
-              </div>
-            )}
-
-            <div className="grid lg:grid-cols-3 gap-6 items-start">
-              <div className="lg:col-span-2 space-y-6">
-                <SecaoFicha titulo="Dados">
-                  <div className="sm:col-span-2">
-                    <label htmlFor={idCampo('edit-titulo')} className="rotulo-campo">Título</label>
-                    <input
-                      id={idCampo('edit-titulo')}
-                      type="text"
-                      value={formEdicaoCampanha.titulo}
-                      onChange={(evento) => setFormEdicaoCampanha({ ...formEdicaoCampanha, titulo: evento.target.value })}
-                      className="input-padrao"
-                      disabled={travado('titulo')}
-                      aria-describedby={descreveBloqueio('titulo')}
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor={idCampo('edit-area')} className="rotulo-campo">Área do conhecimento</label>
-                    <select
-                      id={idCampo('edit-area')}
-                      value={formEdicaoCampanha.idAreaConhecimento}
-                      onChange={(evento) => setFormEdicaoCampanha({ ...formEdicaoCampanha, idAreaConhecimento: evento.target.value })}
-                      className="input-padrao"
-                      disabled={travado('idAreaConhecimento')}
-                      aria-describedby={descreveBloqueio('idAreaConhecimento')}
-                    >
-                      {areas.map((area) => (
-                        <option key={area.idAreaConhecimento} value={area.idAreaConhecimento}>
-                          {area.nome}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="sm:col-span-2">
-                    <label htmlFor={idCampo('edit-descricao')} className="rotulo-campo">Descrição</label>
-                    <input
-                      id={idCampo('edit-descricao')}
-                      type="text"
-                      value={formEdicaoCampanha.descricao}
-                      onChange={(evento) => setFormEdicaoCampanha({ ...formEdicaoCampanha, descricao: evento.target.value })}
-                      className="input-padrao"
-                      disabled={travado('descricao')}
-                      aria-describedby={descreveBloqueio('descricao')}
-                    />
-                  </div>
-                  <div className="sm:col-span-2">
-                    <label htmlFor={idCampo('edit-video')} className="rotulo-campo">URL do vídeo de apresentação</label>
-                    <input
-                      id={idCampo('edit-video')}
-                      type="text"
-                      value={formEdicaoCampanha.videoApresentacaoUrl}
-                      onChange={(evento) => setFormEdicaoCampanha({ ...formEdicaoCampanha, videoApresentacaoUrl: evento.target.value })}
-                      className="input-padrao"
-                      disabled={travado('videoApresentacaoUrl')}
-                      aria-describedby={descreveBloqueio('videoApresentacaoUrl')}
-                    />
-                  </div>
-                </SecaoFicha>
-
-                {/* Orçamento/Cronograma acima de Datas: editável aqui também (mesmo padrão de Links
-                    Acadêmicos em T1), mas só quando a campanha ainda está em rascunho/aguardando aprovação e
-                    não é uma das 10 de demonstração. Linha divisória dos dois lados. */}
-                <div className="border-t borda-padrao"></div>
-                <PainelOrcamentoCronograma
-                  auth={auth}
-                  idCampanha={idCampanhaEditando}
-                  // 'rascunho' incluído: é justamente o status em que o pesquisador MAIS precisa mexer em
-                  // orçamento e cronograma; sem ele, abrir um rascunho em Alterar Campanha deixaria os 2
-                  // painéis só de leitura, o contrário do que o estado significa. 'aguardando_aprovacao'
-                  // continua editável porque o congelamento (fn_congela_*, 05) só começa em 'ativo': é por isso
-                  // que a checagem de completude roda de novo na aprovação, não só no envio.
-                  podeEditar={
-                    !edicaoTravada &&
-                    (campanhaEmEdicao?.status === 'rascunho' ||
-                      campanhaEmEdicao?.status === 'aguardando_aprovacao' ||
-                      campanhaEmEdicao?.status === 'rejeitado')
-                  }
-                  aoCarregar={(orcamentoCarregado, cronogramaCarregado) => {
-                    setChecklistOrcamento(orcamentoCarregado);
-                    setChecklistCronograma(cronogramaCarregado);
-                  }}
-                />
-
-                {/* "Pronta para aprovar?" + Aprovar/Rejeitar: só faz sentido enquanto a campanha ainda está
-                    aguardando aprovação e não é uma das 10 de demonstração. */}
-                {!bloqueadaEdicao && campanhaEmEdicao?.status === 'aguardando_aprovacao' && (
-                  <div className="fundo-sutil rounded-md p-4">
-                    <h3 className="subtitulo mb-3">Pronta para aprovar?</h3>
-                    <table className="crud-tabela mb-3">
-                      <thead>
-                        <tr>
-                          <th>Critério</th>
-                          <th className="crud-tabela__celula--centralizada">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr>
-                          <td>Orçamento: {checklistOrcamento.length} itens (mínimo {minimoItensOrcamento})</td>
-                          <td className="crud-tabela__celula--centralizada">
-                            <span className={`badge ${checklistOrcamento.length >= minimoItensOrcamento ? 'badge-sucesso' : 'badge-erro'}`}>
-                              {checklistOrcamento.length >= minimoItensOrcamento ? 'OK' : 'Faltando'}
-                            </span>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td>
-                            Soma × meta: {formatarMoeda(somaChecklistOrcamento)} de {formatarMoeda(campanhaEmEdicao.metaFinanceira)}
-                            {!metaBatendoChecklist && ` (faltam ${formatarMoeda(Number(campanhaEmEdicao.metaFinanceira) - somaChecklistOrcamento)})`}
-                          </td>
-                          <td className="crud-tabela__celula--centralizada">
-                            <span className={`badge ${metaBatendoChecklist ? 'badge-sucesso' : 'badge-erro'}`}>{metaBatendoChecklist ? 'OK' : 'Faltando'}</span>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td>Cronograma: {checklistCronograma.length} marcos (mínimo {minimoMarcosCronograma})</td>
-                          <td className="crud-tabela__celula--centralizada">
-                            <span className={`badge ${cronogramaOkChecklist ? 'badge-sucesso' : 'badge-erro'}`}>{cronogramaOkChecklist ? 'OK' : 'Faltando'}</span>
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-
-                    <div className="acao-com-motivo mt-3">
-                      <button type="button" className="btn btn-primary" disabled={!prontaParaAprovarChecklist || aprovando} onClick={aprovarEdicao}>
-                        {aprovando ? 'Aprovando...' : 'Aprovar (Admin)'}
-                      </button>
-                      {!prontaParaAprovarChecklist && <span className="acao-com-motivo__motivo">{motivoAprovarDesabilitado()}</span>}
-                    </div>
-
-                    <div className="flex gap-2 items-end mt-3">
-                      <textarea
-                        placeholder="Justificativa da rejeição (opcional)"
-                        value={justificativaRejeicaoEdicao}
-                        onChange={(evento) => setJustificativaRejeicaoEdicao(evento.target.value)}
-                        className="input-padrao flex-1"
-                        rows={2}
-                      />
-                      <button type="button" className="btn btn-secondary text-xs" disabled={rejeitando} onClick={rejeitarEdicao}>
-                        {rejeitando ? 'Rejeitando...' : 'Rejeitar (Admin)'}
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                <div className="border-t borda-padrao"></div>
-
-                <SecaoFicha titulo="Datas">
-                  <div>
-                    <label htmlFor={idCampo('edit-inicio')} className="rotulo-campo">Início</label>
-                    <input
-                      id={idCampo('edit-inicio')}
-                      type="date"
-                      value={formEdicaoCampanha.dataInicio}
-                      onChange={(evento) => setFormEdicaoCampanha({ ...formEdicaoCampanha, dataInicio: evento.target.value })}
-                      className="input-padrao"
-                      disabled={travado('dataInicio')}
-                      aria-describedby={descreveBloqueio('dataInicio')}
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor={idCampo('edit-fim')} className="rotulo-campo">Fim (previsto)</label>
-                    <input
-                      id={idCampo('edit-fim')}
-                      type="date"
-                      value={formEdicaoCampanha.dataFim}
-                      onChange={(evento) => setFormEdicaoCampanha({ ...formEdicaoCampanha, dataFim: evento.target.value })}
-                      className="input-padrao"
-                      disabled={travado('dataFim')}
-                      aria-describedby={descreveBloqueio('dataFim')}
-                    />
-                  </div>
-                </SecaoFicha>
-              </div>
-
-              <div className="space-y-6">
-                <SecaoFicha titulo="Financeiro">
-                  <div className="sm:col-span-2">
-                    <label htmlFor={idCampo('edit-meta')} className="rotulo-campo">Meta (R$)</label>
-                    <input
-                      id={idCampo('edit-meta')}
-                      type="number"
-                      value={formEdicaoCampanha.metaFinanceira}
-                      onChange={(evento) => setFormEdicaoCampanha({ ...formEdicaoCampanha, metaFinanceira: evento.target.value })}
-                      className="input-padrao"
-                      disabled={travado('metaFinanceira')}
-                      aria-describedby={descreveBloqueio('metaFinanceira')}
-                    />
-                  </div>
-                  <CampoSomenteLeitura rotulo="Arrecadado" valor={campanhaEmEdicao ? formatarMoeda(campanhaEmEdicao.valorBrutoArrecadado) : '-'} />
-                  <CampoSomenteLeitura
-                    rotulo="Taxa da plataforma"
-                    valor={campanhaEmEdicao?.taxaPlataforma === null || campanhaEmEdicao === null ? 'Ainda não carimbada' : `${campanhaEmEdicao.taxaPlataforma}%`}
-                  />
-                </SecaoFicha>
-
-                <SecaoFicha titulo="Metadados" colunas={1}>
-                  <CampoSomenteLeitura rotulo="id" valor={idCampanhaEditando} />
-                  <CampoSomenteLeitura rotulo="Status" valor={campanhaEmEdicao ? ROTULO_STATUS_CAMPANHA[campanhaEmEdicao.status] : '-'} />
-                  <CampoSomenteLeitura rotulo="Dono" valor={campanhaEmEdicao ? nomeDe(campanhaEmEdicao.idUsuario) : '-'} />
-                </SecaoFicha>
-              </div>
-            </div>
-          </ModalFicha>
+              );
+            }}
+          />
         );
       })()}
 
@@ -1642,258 +696,87 @@ export function BancadaCampanha({ auth }: PropsPagina) {
         );
       })()}
 
-      {/* Criar Campanha: o Admin cria uma campanha e ASSOCIA um pesquisador a ela, por id ou nome; o
-          dropdown mostra nome (id), o valor por baixo é o id. Mesmo endpoint de suporte/admin (POST
-          /campanha/:idUsuario). */}
+      {/* Criar Campanha: o Admin cria uma campanha e ASSOCIA um pesquisador a ela (POST /campanha/:idUsuario, o
+          endpoint de suporte/admin: a RLS exige id_usuario = id_usuario_atual(), então o endpoint normal não
+          cria "em nome de" outro). O passo a passo é o mesmo de Minhas Campanhas (ModalCriarCampanha); aqui
+          só entra o campo "Dono da campanha" e o criar em nome dele. */}
       {criandoCampanha && (
-        <ModalFicha
-          titulo="Criar Campanha"
-          // Miss-click no fundo escurecido derrubaria este wizard de 3 etapas: perder o progresso (ou até uma
-          // campanha já criada, se estava nas etapas 2/3) por um clique sem querer é caro aqui. Só fecha por
-          // "Cancelar"/"Concluir" ou pelo X.
-          fecharAoClicarFora={false}
-          subtitulo={
-            etapaCriarCampanha === 'dados'
-              ? 'Em nome de outro pesquisador - escolha quem é o dono abaixo. Etapa 1 de 3: Dados.'
-              : etapaCriarCampanha === 'orcamento'
-                ? `Campanha #${idCampanhaRecemCriada} - Etapa 2 de 3: Orçamento.`
-                : `Campanha #${idCampanhaRecemCriada} - Etapa 3 de 3: Cronograma.`
-          }
-          aoFechar={fecharModalCriarCampanha}
-          rodape={
-            etapaCriarCampanha === 'dados' ? (
-              <div className="flex gap-3 max-w-sm ml-auto">
-                <button type="button" onClick={fecharModalCriarCampanha} className="btn btn-secondary flex-1">
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  onClick={avancarDaEtapaDados}
-                  disabled={!formCriarCampanhaValido}
-                  className="btn btn-primary flex-1"
-                >
-                  Próximo
-                </button>
-              </div>
-            ) : etapaCriarCampanha === 'orcamento' ? (
-              <div className="flex gap-3 max-w-sm ml-auto">
-                <button type="button" onClick={() => setEtapaCriarCampanha('dados')} className="btn btn-secondary flex-1">
-                  Voltar
-                </button>
-                <button type="button" onClick={() => setEtapaCriarCampanha('cronograma')} className="btn btn-primary flex-1">
-                  Próximo
-                </button>
-              </div>
-            ) : (
-              <div className="flex gap-3 max-w-sm ml-auto">
-                <button type="button" onClick={() => setEtapaCriarCampanha('orcamento')} className="btn btn-secondary flex-1">
-                  Voltar
-                </button>
-                <button type="button" onClick={enviarCampanhaParaAprovacao} className="btn btn-primary flex-1">
-                  Enviar para aprovação
-                </button>
-              </div>
-            )
-          }
-        >
-          {etapaCriarCampanha !== 'dados' && idCampanhaRecemCriada !== null ? (
-            // Orçamento e Cronograma como 2 ETAPAS SEPARADAS e focadas (não uma tabela só com abas): RF-040/042
-            // preveem isso "durante a criação", mas os itens só existem depois de a campanha ter um id (FK para
-            // orcamento_campanha/marco_cronograma), por isso são etapas do MESMO modal, não campos do
-            // formulário de Dados. `abaFixa` trava o painel (também usado em Alterar Campanha) numa aba só, sem
-            // UI nova para a tabela em si. O mínimo de itens (RF-040/042) só é exigido na APROVAÇÃO, não aqui:
-            // pode ficar sem nenhum item e concluir, completando depois via Alterar, como o RF permite ("aos
-            // poucos").
-            <SecaoFicha titulo={etapaCriarCampanha === 'orcamento' ? 'Orçamento' : 'Cronograma'}>
-              <div className="sm:col-span-2">
-                <PainelOrcamentoCronograma
-                  // `key`: sem isto, React reaproveita a MESMA instância do componente ao trocar de etapa (é a
-                  // mesma posição na árvore JSX, só a prop `abaFixa` muda), e o `useState(abaFixa ??
-                  // 'orcamento')` só roda o inicializador na 1ª montagem: `abaAtiva` ficaria travado em
-                  // 'orcamento' para sempre, mesmo depois de `abaFixa` virar 'cronograma' (Cronograma mostrando
-                  // a tabela de Orçamento). `key` força remontar (nova instância = novo estado) toda vez que a
-                  // etapa muda.
-                  key={etapaCriarCampanha}
-                  auth={auth}
-                  idCampanha={idCampanhaRecemCriada}
-                  podeEditar={true}
-                  abaFixa={etapaCriarCampanha}
-                  metaFinanceira={Number(formCriarCampanha.metaFinanceira)}
-                  dataInicioCampanha={formCriarCampanha.dataInicio}
-                  minimoMarcosCronograma={minimoMarcosCronograma}
-                />
-              </div>
-            </SecaoFicha>
-          ) : (
-            <>
-          <SecaoFicha titulo="Pesquisador">
-            <div className="sm:col-span-2 relative" ref={sugestoesPesquisadorRef}>
-              <label htmlFor={idCampo('criar-dono')} className="rotulo-campo">Dono da campanha</label>
-              {/* Um só <input>, sempre: não troca para um "chip" separado depois de escolher. O texto
-                  mostrado É o nome escolhido; clicar/focar reabre a lista de sugestões já filtrada por esse
-                  mesmo nome (ex.: "Maria da Silva" escolhida, clicar mostra "Maria da Silva", "Maria da
-                  Silva Junior"...); a escolha atual continua valendo até a pessoa clicar numa sugestão
-                  diferente ou digitar algo nesse meio tempo (que invalida a escolha, mesmo padrão de
-                  qualquer combobox de busca). */}
-              <input
-                id={idCampo('criar-dono')}
-                type="text"
-                value={buscaPesquisador}
-                onChange={(evento) => {
-                  setBuscaPesquisador(evento.target.value);
-                  setPesquisadorEscolhido(null);
-                  setSugestoesPesquisadorAbertas(true);
-                }}
-                onFocus={() => setSugestoesPesquisadorAbertas(true)}
-                placeholder="Digite o id ou o nome..."
-                className="input-padrao"
-                autoComplete="off"
-              />
-              {sugestoesPesquisadorAbertas && sugestoesPesquisador.length > 0 && (
-                <div className="absolute left-0 right-0 mt-1 fundo-cartao border borda-padrao rounded-lg shadow-lg z-20 overflow-hidden">
-                  {sugestoesPesquisador.map((usuario) => {
-                    const status = statusPesquisadorParaCriar(usuario.idUsuario);
-                    const podeEscolher = status === 'ativo';
-                    return (
-                      <button
-                        key={usuario.idUsuario}
-                        type="button"
-                        disabled={!podeEscolher}
-                        onClick={() => {
-                          if (!podeEscolher) return;
-                          setPesquisadorEscolhido(usuario);
-                          setBuscaPesquisador(usuario.nome);
-                          setSugestoesPesquisadorAbertas(false);
-                        }}
-                        className={
-                          'w-full text-left px-3 py-2 text-sm border-b borda-padrao last:border-b-0 flex items-center justify-between gap-2 ' +
-                          (podeEscolher ? 'hover-fundo-marca-suave' : 'opacity-60 cursor-not-allowed')
-                        }
-                      >
-                        <span className="texto-forte inline-flex items-baseline">
-                          <span className="inline-block w-16 shrink-0 tabular-nums">ID: {usuario.idUsuario}</span>
-                          <span>{usuario.nome}</span>
-                        </span>
-                        {status === 'sem-perfil' && <span className="text-xs texto-erro">não é pesquisador</span>}
-                        {status === 'suspenso' && <span className="text-xs texto-erro">pesquisador suspenso</span>}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-              <p className="text-xs texto-fraco mt-1">
-                Precisa ser um pesquisador ativo - quem não tem perfil de pesquisador ou está
-                suspenso aparece na lista, mas não dá pra escolher.
-              </p>
+        <ModalCriarCampanha
+          auth={authRegistrado}
+          criar={(dados) => {
+            if (!pesquisadorEscolhido) {
+              return Promise.reject(new Error('Escolha o dono da campanha.'));
+            }
+            return campanhaApi.criarParaOutro(authRegistrado.authFetch, pesquisadorEscolhido.idUsuario, dados);
+          }}
+          camposExtras={
+      <SecaoFicha titulo="Pesquisador">
+        <div className="sm:col-span-2 relative" ref={sugestoesPesquisadorRef}>
+          <label htmlFor={idCampo('criar-dono')} className="rotulo-campo">Dono da campanha</label>
+          {/* Um só <input>, sempre: não troca para um "chip" separado depois de escolher. O texto
+              mostrado É o nome escolhido; clicar/focar reabre a lista de sugestões já filtrada por esse
+              mesmo nome (ex.: "Maria da Silva" escolhida, clicar mostra "Maria da Silva", "Maria da
+              Silva Junior"...); a escolha atual continua valendo até a pessoa clicar numa sugestão
+              diferente ou digitar algo nesse meio tempo (que invalida a escolha, mesmo padrão de
+              qualquer combobox de busca). */}
+          <input
+            id={idCampo('criar-dono')}
+            type="text"
+            value={buscaPesquisador}
+            onChange={(evento) => {
+              setBuscaPesquisador(evento.target.value);
+              setPesquisadorEscolhido(null);
+              setSugestoesPesquisadorAbertas(true);
+            }}
+            onFocus={() => setSugestoesPesquisadorAbertas(true)}
+            placeholder="Digite o id ou o nome..."
+            className="input-padrao"
+            autoComplete="off"
+          />
+          {sugestoesPesquisadorAbertas && sugestoesPesquisador.length > 0 && (
+            <div className="absolute left-0 right-0 mt-1 fundo-cartao border borda-padrao rounded-lg shadow-lg z-20 overflow-hidden">
+              {sugestoesPesquisador.map((usuario) => {
+                const status = statusPesquisadorParaCriar(usuario.idUsuario);
+                const podeEscolher = status === 'ativo';
+                return (
+                  <button
+                    key={usuario.idUsuario}
+                    type="button"
+                    disabled={!podeEscolher}
+                    onClick={() => {
+                      if (!podeEscolher) return;
+                      setPesquisadorEscolhido(usuario);
+                      setBuscaPesquisador(usuario.nome);
+                      setSugestoesPesquisadorAbertas(false);
+                    }}
+                    className={
+                      'w-full text-left px-3 py-2 text-sm border-b borda-padrao last:border-b-0 flex items-center justify-between gap-2 ' +
+                      (podeEscolher ? 'hover-fundo-marca-suave' : 'opacity-60 cursor-not-allowed')
+                    }
+                  >
+                    <span className="texto-forte inline-flex items-baseline">
+                      <span className="inline-block w-16 shrink-0 tabular-nums">ID: {usuario.idUsuario}</span>
+                      <span>{usuario.nome}</span>
+                    </span>
+                    {status === 'sem-perfil' && <span className="text-xs texto-erro">não é pesquisador</span>}
+                    {status === 'suspenso' && <span className="text-xs texto-erro">pesquisador suspenso</span>}
+                  </button>
+                );
+              })}
             </div>
-          </SecaoFicha>
-
-          <SecaoFicha titulo="Dados">
-            <div className="sm:col-span-2">
-              <label htmlFor={idCampo('criar-titulo')} className="rotulo-campo">Título</label>
-              <input
-                id={idCampo('criar-titulo')}
-                type="text"
-                value={formCriarCampanha.titulo}
-                onChange={(evento) => setFormCriarCampanha({ ...formCriarCampanha, titulo: evento.target.value })}
-                className="input-padrao"
-              />
-            </div>
-            <div>
-              <label htmlFor={idCampo('criar-area')} className="rotulo-campo">Área do conhecimento</label>
-              <select
-                id={idCampo('criar-area')}
-                value={formCriarCampanha.idAreaConhecimento}
-                onChange={(evento) => setFormCriarCampanha({ ...formCriarCampanha, idAreaConhecimento: evento.target.value })}
-                className="input-padrao"
-              >
-                <option value="">Selecione...</option>
-                {areas.map((area) => (
-                  <option key={area.idAreaConhecimento} value={area.idAreaConhecimento}>
-                    {area.nome}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label htmlFor={idCampo('criar-meta')} className="rotulo-campo">Meta (R$)</label>
-              <input
-                id={idCampo('criar-meta')}
-                type="number"
-                min={metaMinimaCampanha}
-                value={formCriarCampanha.metaFinanceira}
-                onChange={(evento) => setFormCriarCampanha({ ...formCriarCampanha, metaFinanceira: evento.target.value })}
-                className="input-padrao"
-              />
-              {/* Aviso de meta mínima (RF-067) - mesmo padrão do aviso de
-                  prazo, abaixo: o banco já rejeita (fn_valida_meta_
-                  campanha_negocio), isto só adianta o aviso. */}
-              {formCriarCampanha.metaFinanceira !== '' &&
-                Number(formCriarCampanha.metaFinanceira) < metaMinimaCampanha && (
-                  <p className="text-xs texto-erro font-semibold mt-1">
-                    Meta mínima: {formatarMoeda(metaMinimaCampanha)}.
-                  </p>
-                )}
-            </div>
-            <div className="sm:col-span-2">
-              <label htmlFor={idCampo('criar-descricao')} className="rotulo-campo">Descrição (opcional)</label>
-              <input
-                id={idCampo('criar-descricao')}
-                type="text"
-                value={formCriarCampanha.descricao}
-                onChange={(evento) => setFormCriarCampanha({ ...formCriarCampanha, descricao: evento.target.value })}
-                className="input-padrao"
-              />
-            </div>
-            <div>
-              {/* Início e Fim são obrigatórios: RF-066 exige as duas datas para checar o prazo (15-60 dias);
-                  `min={hojeISO}` impede escolher ontem ou antes direto no seletor do navegador, sem JS
-                  extra. */}
-              <label htmlFor={idCampo('criar-inicio')} className="rotulo-campo">Início</label>
-              <input
-                id={idCampo('criar-inicio')}
-                type="date"
-                value={formCriarCampanha.dataInicio}
-                min={hojeISO}
-                onChange={(evento) => setFormCriarCampanha({ ...formCriarCampanha, dataInicio: evento.target.value })}
-                className="input-padrao"
-              />
-            </div>
-            <div>
-              <label htmlFor={idCampo('criar-fim')} className="rotulo-campo">Fim</label>
-              <input
-                id={idCampo('criar-fim')}
-                type="date"
-                value={formCriarCampanha.dataFim}
-                min={formCriarCampanha.dataInicio || hojeISO}
-                onChange={(evento) => setFormCriarCampanha({ ...formCriarCampanha, dataFim: evento.target.value })}
-                className="input-padrao"
-              />
-            </div>
-            {/* Aviso de prazo (RF-066) - o banco já rejeita fora do
-                intervalo (fn_valida_prazo_campanha_negocio), isto só
-                adianta o aviso antes de mandar. Só aparece com as 2 datas
-                preenchidas, pra não assustar quem ainda não chegou lá. */}
-            {duracaoDiasCriar !== null && (
-              <p className={'sm:col-span-2 text-xs -mt-2 ' + (duracaoCriarValida ? 'texto-fraco' : 'texto-erro font-semibold')}>
-                Duração: {duracaoDiasCriar} {duracaoDiasCriar === 1 ? 'dia' : 'dias'} - precisa estar entre{' '}
-                {prazoMinimoCampanha} e {prazoMaximoCampanha} dias.
-              </p>
-            )}
-            <div className="sm:col-span-2">
-              <label htmlFor={idCampo('criar-video')} className="rotulo-campo">URL do vídeo de apresentação (opcional)</label>
-              <input
-                id={idCampo('criar-video')}
-                type="text"
-                value={formCriarCampanha.videoApresentacaoUrl}
-                onChange={(evento) => setFormCriarCampanha({ ...formCriarCampanha, videoApresentacaoUrl: evento.target.value })}
-                className="input-padrao"
-              />
-            </div>
-          </SecaoFicha>
-            </>
           )}
-        </ModalFicha>
+          <p className="text-xs texto-fraco mt-1">
+            Precisa ser um pesquisador ativo - quem não tem perfil de pesquisador ou está
+            suspenso aparece na lista, mas não dá pra escolher.
+          </p>
+        </div>
+      </SecaoFicha>
+          }
+          camposExtrasValidos={pesquisadorEscolhido !== null}
+          subtituloDados="Em nome de outro pesquisador - escolha quem é o dono abaixo. Etapa 1 de 3: Dados."
+          aoMudar={carregarCampanhas}
+          aoFechar={fecharModalCriarCampanha}
+        />
       )}
 
       <RodapePaginacao

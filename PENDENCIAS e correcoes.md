@@ -502,3 +502,52 @@ Consulta só de leitura no Supabase: 378 sessões não revogadas e dentro da val
 - **Rótulo:** trocar "sessões ativas agora" por "sessões abertas (30 dias)". Só texto.
 - **Métrica de verdade:** como cada renovação silenciosa (a cada ~15 min de uso) cria uma linha nova em `sessao`, dá para contar "com atividade na última meia hora" sem coluna nova: sessão não revogada com `criado_em` recente. Muda `contar_metricas_dashboard()` (03), então precisa de patch no `ATUALIZAR O SUPABASE.sql`.
 - **Testes:** os scripts de teste podem fazer logout no fim, para não acumular sessão.
+
+### 🟢 CORRIGIDO (26-09-2026, mesmo dia): tabela "dançando" ao trocar de tela no painel
+
+Medido nas 10 listagens a 1400 px, três causas somadas:
+- **Botão "Criar":** a linha do título tinha 43 px com o botão e 36 px sem; a tabela das telas com "Criar" ficava 7 px mais baixa. Agora a linha reserva sempre a altura do botão (`.crud-secao__cabecalho`, `min-height`).
+- **Barra de filtros:** a caixa "Filtrar..." tinha 38 px e o botão de filtro de lista 42 px; telas com filtro de lista ficavam 4 px mais baixas. Agora a caixa tem a mesma altura do botão.
+- **Carregamento:** a barra de filtros só aparecia depois que os dados chegavam (e só em lista com mais de 5 linhas); ao trocar de tela, a tabela nascia em 56 px e pulava para 110 px uns 120 ms depois. Agora a `GenericTable` mostra a busca sempre, inclusive enquanto carrega (também nas tabelas pequenas, como Tipos de Link e a fila de aprovação); os filtros de lista entram na mesma linha sem mudar a altura. As bancadas do Campo de Testes continuam com o limite de 5 linhas.
+- **Resultado:** as 10 tabelas começam exatamente na mesma altura (110 px abaixo do topo da seção), e a troca de tela pelo menu não tem mais salto. `tsc` e `eslint` limpos.
+
+### 🟢 FEITO (26-09-2026, mesmo dia): colunas curtas que nunca quebram e pasta de colunas enxuta
+
+- **Pasta `components/crud/colunas/` de 11 para 7 arquivos:** o tipo de coluna virou FORMATO (`formatos.tsx`: como mostra, busca e ordena) + ESPAÇO (5 arquivos: id, nome, texto, curta, Ações). As telas não mudaram (`tipo: 'dinheiro'` etc.).
+- **Colunas curtas nunca quebram** (Sim/Não, status, número, dinheiro, datas), nem o valor nem o cabeçalho: "Publicado em" e "Upgrade Pesquisador" (Termos de Uso) em uma linha só. Largura = a do maior valor da lista inteira, medida em pixels; as do mesmo tipo na mesma tabela ficam iguais (as 4 Sim/Não de Tipos de Link, a pedido do Lucas). Data-hora continua com os segundos (decisão do Lucas).
+- **Custo aceito:** Tipos de Link passa 48 px da tela entre ~1100 e 1400 px (as 4 colunas iguais à mais larga, "ATUALIZAÇÃO", somadas ao mínimo de 12rem do nome), e rola com id, nome e Ações presos. Em 900 px, Campanhas e Tipos de Link rolam mais que antes, porque as curtas não encolhem mais quebrando. O ajuste da coluna nome (mínimo e o quanto ela estica), que Lucas quer ver à parte, deve devolver esse espaço.
+
+### 🟢 CORRIGIDO (26-09-2026, mesmo dia): Minha Conta com o campo Nome vazio
+
+Aberta pela URL ou depois de F5, a aba Perfil montava antes de a sessão carregar e o formulário nascia com o nome vazio (salvar sem perceber mandaria nome em branco). A aba agora remonta quando a sessão chega (`key` pelo id do usuário). Provado: nome preenchido pela URL e depois do F5, e o que a pessoa digita não é sobrescrito.
+
+### 🟡 Anotado (26-09-2026): T3, "Ocultar" com fonte maior
+
+Na tabela de Atualizações do T3, o botão "Ocultar" (só texto) fica com fonte maior que o resto: a regra que aumenta os ícones de Ações quando a tela aperta também pega esse botão. Não mexer agora (T3 ainda não foi revisada de verdade); entra quando o T3 for trabalhado.
+
+### 🟢 FEITO (26-09-2026, mesmo dia): alinhamento de "código CNPq" e de "tipo" (Termos de Uso)
+
+Tipo de coluna novo `codigo` (código de formato fixo: curto, centralizado, não quebra) para o código CNPq em Áreas do Conhecimento. O "tipo" de Termos de Uso passou para `texto` (à esquerda). Nenhum arquivo novo: `codigo` é uma entrada do catálogo (`tipos-coluna.ts`).
+
+### 🟢 FEITO (26-09-2026, mesmo dia): guarda de login do painel `/admin/*`
+
+Uma guarda só, no `AdminLayout`: sem sessão, qualquer página do painel vai para o login, que devolve a pessoa para a página pedida depois de entrar (só caminho interno de `/admin/`). No F5 espera a sessão ser restaurada. Confere só se há sessão, não o papel: qualquer conta logada vê o painel, e o backend continua decidindo o que cada papel pode fazer. Provado ao vivo: anônimo em `/`, `/admin/usuarios` e `/admin/papeis` vai para o login; login volta para a página pedida (com a busca/ordem da URL); F5 mantém; pesquisadora abre o painel; sair leva ao login; páginas públicas continuam abertas; botão `<dev>` funciona. G1 23/23 (os 2 casos de logout que falhavam desde 25-09 passaram), G7 29/29, G8 14/14. **Depois, perto do fim:** permissão por rota em `rotas.constants.ts` (menu e guarda leem o mesmo campo). Ver `DOCUMENTACAO_FRONTEND.md`, "Guarda de login do painel".
+
+### 🟢 FEITO (26-09-2026): Minhas Campanhas e teste de ponta a ponta do pesquisador
+
+**Teste pedido pelo Lucas, do zero, com conta nova** (roteiro guardado como `informacoes/testes-banco/resultados/scripts/g15-ponta-a-ponta-pesquisador.mjs`): cadastro pela tela, verificação de e-mail, login; o que a conta comum vê e consegue fazer; upgrade para pesquisador sozinha; criar campanha com orçamento e cronograma e enviar; admin vê na fila. **Resultado final: tudo OK**, sem erro de console, sem resposta 5xx, sem vazamento de layout (1400 e 390 px), axe limpo nas telas e modais novos nos dois temas; G1, G7, G8 e G12 verdes; `tsc`, `eslint` limpos.
+
+**Problemas achados durante o teste, consertados, e o teste recomeçado do zero:**
+- **Verificação de e-mail mostrava "Não deu certo" com o e-mail já confirmado:** no desenvolvimento o `<StrictMode>` rodava o efeito duas vezes; a 2ª chamada recebia "link já usado" (401) e sobrescrevia o sucesso. Agora o token é enviado uma vez só.
+- **A conta comum não conseguia virar pesquisadora sozinha:** o upgrade só existia no T1, que lista todos os usuários (`GET /usuario`, 403 para quem não administra), então a pessoa nem via a própria linha. Agora a aba Acadêmico da Minha Conta tem **"Tornar-me pesquisador"**, com o mesmo modal de upgrade do T1 (endpoint self-service). O T1 continua como ferramenta do admin.
+- **Painel de orçamento/cronograma engolia os erros** (`.catch(() => {})`): uma data de marco antes do início era recusada pelo banco e nada aparecia. Agora o erro aparece.
+- **Modais sem `role="dialog"`:** `ModalFicha` e `ModalDetalhe` agora são anunciados como janela pelo leitor de tela.
+
+**Minhas Campanhas (item novo do menu CAMPANHA):** lista as campanhas do usuário logado; Criar (só pesquisador ativo; os outros veem o aviso com o caminho do upgrade), Consultar, Alterar (rascunho, orçamento/cronograma até a aprovação, corrigir e reenviar rejeitada, campos travados depois de aprovada) e Excluir (só rascunho). O passo a passo de criação, o Alterar, o painel de orçamento/cronograma e as regras de `configuracoes` saíram do T2 para `views/12-campanha/` e o T2 passou a usar as mesmas peças (de 1.922 para cerca de 800 linhas), sem perder o registro no T4. Detalhes em `DOCUMENTACAO_FRONTEND.md`, "Minhas Campanhas e as peças compartilhadas".
+
+**Dados de teste deixados no Supabase (para apagar quando quiser):** contas `teste.e2e.1790468548303@exemplo.com` (id 37), `teste.e2e.1790469511481@exemplo.com` (id 38), `teste.e2e.1790469677038@exemplo.com` (id 39, pesquisadora, senha `TesteE2e#2026`) e a campanha **#47 "Campanha E2E 77038: sensores de baixo custo para qualidade do ar"**, aguardando aprovação de propósito (para o Lucas ver na fila).
+
+**Anotado, não mexido:**
+- Conta comum vê o botão "Criar" em Usuários, Termos de Uso, Áreas, Tipos de Link e Motivos de Denúncia (o backend recusa ao salvar). Resolve com a permissão por rota (opção B).
+- Busca global (Ctrl+K), modal de termos do cadastro e gaveta do menu ainda sem `role="dialog"`.
+- O Excluir do T2 continua próprio (tem "forçar exclusão" e a trava das campanhas de demonstração).
