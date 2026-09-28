@@ -27,7 +27,7 @@ interface ModalAlterarPapelProps {
 // comentário completo em modal-papel.tsx sobre o ON DELETE CASCADE).
 export function ModalAlterarPapel({ auth, papel, aoFechar, aoAtualizado }: ModalAlterarPapelProps) {
   const { mostrar } = useToast();
-  const { erro, reportarErro, limparErro } = useErroToast();
+  const { erro, reportarErro, limparErro, errosCampo, limparErroCampo } = useErroToast();
   const { ocupado: enviando, executar: executarEnviando } = useEnvio(reportarErro, limparErro);
   const [nome, setNome] = useState(papel.nome);
 
@@ -71,13 +71,16 @@ export function ModalAlterarPapel({ auth, papel, aoFechar, aoAtualizado }: Modal
     >
       <CampoSomenteLeitura rotulo="id" valor={papel.idPapel} />
 
-      <Campo rotulo="Nome">
+      <Campo rotulo="Nome" erro={errosCampo.nome}>
         {({ atributos }) => (
           <input
             {...atributos}
             type="text"
             value={nome}
-            onChange={(evento) => setNome(evento.target.value)}
+            onChange={(evento) => {
+              setNome(evento.target.value);
+              limparErroCampo('nome');
+            }}
             required
             maxLength={50}
             className="input-padrao"

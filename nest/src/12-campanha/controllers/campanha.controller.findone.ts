@@ -1,5 +1,6 @@
 import { Controller, Get, Param, ParseIntPipe } from '@nestjs/common';
 import { CampanhaServiceFindOne } from '../service/campanha.service.findone';
+import { Publico } from '../../commons/auth/publico.decorator';
 
 // Sem @UseGuards - página pública de campanha. JwtAuthGuard é GLOBAL
 // (auth.module.ts) e já popula request.user quando existe Bearer válido,
@@ -11,6 +12,7 @@ export class CampanhaControllerFindOne {
   constructor(private readonly service: CampanhaServiceFindOne) {}
 
   @Get(':id')
+  @Publico()
   buscar(@Param('id', ParseIntPipe) id: number) {
     return this.service.executar(id);
   }

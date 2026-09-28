@@ -269,7 +269,7 @@ Autenticação própria, JWT com par access + refresh, refresh token com **rota�
 
 **`JwtAuthGuard`** - global (`APP_GUARD`), roda em toda rota. **Não bloqueia nada por conta própria.** Sem cabeçalho `Authorization`, deixa passar como anônimo (`request.user` fica `undefined`). Com um `Bearer` válido, preenche `request.user = { idUsuario, idSessao }`. Com um token **presente mas inválido/expirado**, lança 401 - porque isso é sempre erro: o cliente pensa que está autenticado e não está, o que é diferente de não mandar token nenhum.
 
-**`RequireAuthGuard`** - aplicado rota a rota com `@UseGuards(RequireAuthGuard)`. Só confere se existe sessão; devolve 401 *"Você precisa estar logado para fazer isso."* se não existir.
+**`RequireAuthGuard`** - global também (`APP_GUARD`, registrado depois da `JwtAuthGuard`, 27-09-2026): **toda rota exige login, menos as marcadas com `@Publico()`** (`commons/auth/publico.decorator.ts`). Só confere se existe sessão; devolve 401 *"Você precisa estar logado para fazer isso."* se não existir. Rota nova nasce fechada: esquecer a marcação deixa a rota fechada, nunca aberta. Antes era aplicado rota a rota com `@UseGuards(RequireAuthGuard)` (84 repetições), e foi assim que o `POST /usuario` ficou aberto a anônimo sem ninguém notar. As 33 rotas `@Publico()` são login, cadastro, renovação e saída de sessão, verificação de e-mail, `health`, as listas e leituras públicas de catálogo, o termo vigente, as configurações públicas, o avatar e as leituras que a página pública vai usar (campanha, orçamento, cronograma, atualizações, comentários, perfil de pesquisador); nas de login opcional, a `JwtAuthGuard` continua reconhecendo quem mandou token. Na troca, as 119 rotas foram chamadas sem login antes e depois: nenhuma diferença de status nem de conteúdo (roteiro de teste que chama cada rota sem login e compara as respostas).
 
 📌 **Por que existe um guard que só confere login.** Sem ele, um anônimo tentando `PATCH /usuario/5` esperaria a RLS devolver 0 linhas e receberia um erro confuso lá no fim. O guard pega o caso mais comum - *nem logado* - cedo e com mensagem clara. O comentário no código deixa a fronteira explícita: **este guard não sabe nada sobre papel/permissão**; quem já está logado mas sem a permissão certa nunca cai aqui, cai num 403 vindo da RLS.
 
@@ -324,7 +324,7 @@ Autenticação própria, JWT com par access + refresh, refresh token com **rota�
 | Camada | Responde a pergunta | Onde |
 |---|---|---|
 | `JwtAuthGuard` | *Quem é você?* | `3-auth/guards/` |
-| `RequireAuthGuard` | *Você está logado?* | `3-auth/guards/`, rota a rota |
+| `RequireAuthGuard` | *Você está logado?* | `3-auth/guards/`, global (menos `@Publico()`) |
 | **RLS do Postgres** | ***Você pode fazer isto com esta linha?*** | `04_rls_policies.sql` |
 | Triggers de `05` | *Esta operação é válida segundo as regras de negócio?* | `05_regras_negocio.sql` |
 | Service do Nest | *Como traduzir a recusa acima em HTTP?* | seção 5 |
@@ -429,6 +429,8 @@ O converter (`perfil-pesquisador.converter.ts`) recebe `cpfDecifrado` como **par
 📌 **As funções de moderação do `03` recusam com código próprio (27-09-2026).** Suspender/revogar conta, suspender/reativar pesquisador, desbloquear login, excluir conta, corrigir CPF, criar perfil ou campanha para outro, excluir campanha à força, suspender papel e alterar perfil de outro davam `RAISE EXCEPTION` sem ERRCODE (P0001). Por isso 10 serviços tinham um `catch` próprio que devolvia 403 em **qualquer** erro, até "motivo é obrigatório" (que é 400) ou uma falha de banco. Agora as recusas têm código (92012 a 92024 = sem permissão, 90020/90021 = dado inválido, `DOCUMENTACAO_ERRCODE.md`) e os `catch` saíram: o filtro global responde com a mensagem da própria função. Suíte 20 do PGlite. No Supabase: Grupo S.
 
 📌 **`@UsuarioAtual()` (`commons/auth/usuario-atual.decorator.ts`).** Quem está logado, direto no parâmetro do controller, em vez de receber o `request` inteiro só para ler `request.user!.idUsuario` (o `!` era uma afirmação sem garantia). Se `request.user` faltar, responde 401. Usado em 15 controllers; ficam com o `request` inteiro os que precisam dele (login, cadastro e renovação leem IP e cabeçalhos) e as rotas de login opcional (perfil de pesquisador visto por visitante).
+
+📌 **`POST /usuario` exige login (27-09-2026).** É o "Criar usuário" do painel; quem cria a própria conta usa o `POST /auth/cadastro`, que grava o aceite dos Termos de Uso. Antes, um anônimo criava conta por aqui pulando o aceite.
 
 📌 **`temCodigoPostgres(erro, codigo)` (`commons/database/codigo-postgres.util.ts`).** "Este erro veio do Postgres com este SQLSTATE?" conferido de verdade, sem o `as { code?: string }` que se repetia em 9 lugares.
 
@@ -546,16 +548,15 @@ export class ArquivoControllerIniciarUpload {
   constructor(private readonly service: ArquivoServiceIniciarUpload) {}
 
   @Post('iniciar')
-  @UseGuards(RequireAuthGuard)
-  iniciar(@Body() dto: ArquivoRequestIniciarUpload, @Req() request: Request) {
-    return this.service.executar(dto, request.user!.idUsuario);
+  iniciar(@Body() dto: ArquivoRequestIniciarUpload, @UsuarioAtual() usuario: UsuarioAutenticado) {
+    return this.service.executar(dto, usuario.idUsuario);
   }
 }
 ```
 
 Três coisas para notar:
-- **`request.user!.idUsuario` extraído no controller e passado como parâmetro** ao service. Nenhum service lê `request` - ele recebe o id. Isso mantém os services testáveis e livres de HTTP.
-- **O `!` é seguro aqui**, e só aqui: o `RequireAuthGuard` na mesma rota garante que `request.user` existe.
+- **O id de quem está logado vem do `@UsuarioAtual()` no controller e é passado como parâmetro** ao service. Nenhum service lê `request` - ele recebe o id. Isso mantém os services testáveis e livres de HTTP.
+- **Não há guarda na rota porque o login é o padrão:** a `RequireAuthGuard` global garante que `request.user` existe; só as rotas `@Publico()` aceitam anônimo.
 - **`@Param('id', ParseIntPipe)`** - conversão e validação de id de rota, sempre.
 
 📌 **Vários controllers com o mesmo `@Controller('usuario')`.** O Nest agrega as rotas normalmente. Há um comentário registrando o cuidado real que isso exige: `GET /usuario/:id/logins` não conflita com `GET /usuario/:id` porque o Nest casa rota por número de segmentos.
@@ -862,7 +863,7 @@ sharp(bytesOriginais)
 
 📌 **A chave `avatar_padrao_chave` foi removida do seed (05-09-2026) e do banco de produção (`DELETE`, 06-09-2026)** - não é mais um parâmetro válido em `configuracoes`, não confundir com nenhuma chave ativa.
 
-📌 **`GET /arquivo/avatar/:idUsuario` é pública de propósito** (sem `RequireAuthGuard`): um visitante anônimo olhando um perfil ou os comentários de uma campanha precisa ver o avatar.
+📌 **`GET /arquivo/avatar/:idUsuario` é pública de propósito** (`@Publico()`): um visitante anônimo olhando um perfil ou os comentários de uma campanha precisa ver o avatar.
 
 📌 **`UsuarioServiceUpdate` devolve `avatarUrl` já resolvida** na resposta do `PATCH`, para que o front só repasse o objeto e o cabeçalho reflita a troca na hora, sem recalcular nada.
 
@@ -997,7 +998,7 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 
 ## 13. Inventário de rotas HTTP
 
-119 handlers. `AUTH` = a rota tem `@UseGuards(RequireAuthGuard)`; `pub` = sem ele (o que **não** significa "sem proteção": significa que quem protege é a RLS, e que anônimo é um caso legítimo).
+119 handlers. `AUTH` = a rota exige login (o padrão, `RequireAuthGuard` global); `pub` = a rota tem `@Publico()` (o que **não** significa "sem proteção": significa que quem protege é a RLS, e que anônimo é um caso legítimo).
 
 | | Método | Rota |
 |---|---|---|
@@ -1011,7 +1012,7 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | AUTH | GET · DELETE | `/auth/sessoes` |
 | AUTH | DELETE | `/auth/sessoes/:id` |
 | **Usuário e RBAC** | | |
-| pub | POST | `/usuario` |
+| AUTH | POST | `/usuario` |
 | AUTH | GET | `/usuario` |
 | AUTH | GET | `/usuario/:id` |
 | AUTH | PATCH · DELETE | `/usuario/:id` |
@@ -1083,7 +1084,7 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | AUTH | GET | `/log-auditoria` · `/log-auditoria/minha-atividade` |
 | AUTH | GET | `/dashboard/resumo` |
 
-📌 **Rotas administrativas têm `RequireAuthGuard`.** `GET /usuario`, `GET /usuario/:id`, `GET /usuario-papel`, `GET /usuario-papel/:idUsuario` e `GET /dashboard/resumo` exigem login. Não vale o argumento "só o admin chega na tela": a API não sabe de tela nenhuma, qualquer requisição direta (um `curl`) chega na rota sem passar pelo `/admin`, e o `JwtAuthGuard` global deixa passar como anônima a requisição sem cabeçalho `Authorization` (comportamento documentado nele). Sobra a RLS, e a RLS de `usuario` é permissiva de propósito (o login precisa achar o usuário pelo e-mail antes de existir alguém autenticado); sem o guard, um visitante anônimo obteria os e-mails de todos os usuários, quem é administrador e as métricas internas.
+📌 **Rotas administrativas exigem login (não são `@Publico()`).** `GET /usuario`, `GET /usuario/:id`, `GET /usuario-papel`, `GET /usuario-papel/:idUsuario` e `GET /dashboard/resumo` exigem login. Não vale o argumento "só o admin chega na tela": a API não sabe de tela nenhuma, qualquer requisição direta (um `curl`) chega na rota sem passar pelo `/admin`, e o `JwtAuthGuard` global deixa passar como anônima a requisição sem cabeçalho `Authorization` (comportamento documentado nele). Sobra a RLS, e a RLS de `usuario` é permissiva de propósito (o login precisa achar o usuário pelo e-mail antes de existir alguém autenticado); sem o guard, um visitante anônimo obteria os e-mails de todos os usuários, quem é administrador e as métricas internas.
 
 📌 **Permissão além do login (25-09-2026).** O guard só impede o anônimo, e `pol_usuario_select` é permissiva de propósito, então a permissão é checada no Nest por `AutorizacaoService` (`commons/seguranca/autorizacao.service.ts`, global, usa `tem_permissao()` e `id_usuario_atual()` da própria sessão): `GET /usuario` exige `usuario_visualizar_sensivel`; `GET /usuario/:id` e `GET /usuario/:id/logins` exigem ser o próprio usuário ou ter `usuario_visualizar_sensivel`; `GET /usuario/:id/suspensao` e `GET /perfil-pesquisador/:id/suspensao` exigem ser o próprio ou `usuario_suspender`. Sem isso: 403 com mensagem em português. A checagem de `GET /usuario/:id` fica no controller, e não no service, porque login e refresh reaproveitam `UsuarioServiceFindOne` antes de existir alguém autenticado. `GET /usuario-papel` e `GET /usuario-papel/:idUsuario` são decididos pela RLS (`pol_usuariopapel_select`, ver `[04-D-4b]`) e `GET /dashboard/resumo` por `contar_metricas_dashboard()` (`relatorio_visualizar`, ERRCODE 92011). `GET /usuario/:id/logins` deixou de ser público: a tabela `sessao` é lida por qualquer sessão (o refresh precisa achar o token antes de existir usuário atual), então a RLS não protegia o histórico de login. `GET /usuario/:id/termos-aceitos` também exige login (a RLS de `usuario_termo` já limitava as linhas ao próprio ou a quem tem a permissão). Continuam públicos os catálogos (área, motivo, tipo de link). A solução maior, para depois: o login passa a usar uma função `SECURITY DEFINER` que devolve só o necessário para autenticar a partir do e-mail, e `pol_usuario_select` pode então ser fechada para anônimo no próprio banco.
 
@@ -1233,16 +1234,17 @@ function walk(d){let r=[];for(const e of fs.readdirSync(d,{withFileTypes:true}))
 const out=[];
 for(const p of walk('src')){const s=fs.readFileSync(p,'utf8');
   const b=s.match(/@Controller\(\s*'([^']*)'/); const base=b?b[1]:'';
-  const g=/@UseGuards\(\s*RequireAuthGuard/.test(s);
   const re=/@(Get|Post|Patch|Put|Delete)\(\s*(?:'([^']*)')?\s*\)/g; let m;
-  while((m=re.exec(s))) out.push([(g?'AUTH':'pub '), m[1].toUpperCase(), '/'+base+(m[2]?'/'+m[2]:'')]);}
+  while((m=re.exec(s))){const l=s.slice(m.index).split('\n');let k=1;while(k<l.length&&/^\s*(@|\/\/)/.test(l[k]))k++;
+    const pub=l.slice(0,k).some(x=>/@Publico\(\)/.test(x));
+    out.push([(pub?'pub ':'AUTH'), m[1].toUpperCase(), '/'+base+(m[2]?'/'+m[2]:'')]);}}
 out.sort((a,b)=>a[2].localeCompare(b[2]));
 for(const o of out) console.log(o[0], (o[1]+'      ').slice(0,7), o[2]);
 console.log('total de rotas:', out.length);
 "
 ```
 
-⚠️ **Um aviso sobre a coluna do guard:** ela é detectada **por arquivo**, não por handler. Um controller com duas rotas, uma guardada e outra não, aparece como `AUTH` nas duas. Como o padrão do projeto é um arquivo por ação, isso raramente engana - mas ao investigar uma rota específica, abra o arquivo. (Uma detecção por `grep` simples de `RequireAuthGuard` engana ainda mais: vários arquivos **citam o nome do guard em comentário justificando por que NÃO o usam** - `health.controller.ts` e `usuario.controller.listar-logins.ts` são dois exemplos. O regex acima procura `@UseGuards(RequireAuthGuard`, o que evita esses falsos positivos.)
+📌 **A coluna do guard é detectada por rota:** `pub` quando `@Publico()` está entre os decoradores daquele handler; todo o resto é `AUTH`.
 
 ### Documentos irmãos
 

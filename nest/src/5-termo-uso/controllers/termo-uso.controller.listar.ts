@@ -1,5 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
-import { RequireAuthGuard } from '../../3-auth/guards/require-auth.guard';
+import { Controller, Get } from '@nestjs/common';
 import { TermoUsoServiceListar } from '../service/termo-uso.service.listar';
 
 // Diferente de /termos-uso/ativo (público): esta é a listagem completa
@@ -9,7 +8,6 @@ export class TermoUsoControllerListar {
   constructor(private readonly service: TermoUsoServiceListar) {}
 
   @Get()
-  @UseGuards(RequireAuthGuard)
   listar() {
     return this.service.executar();
   }

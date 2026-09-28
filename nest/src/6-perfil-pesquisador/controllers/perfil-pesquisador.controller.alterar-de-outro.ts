@@ -5,9 +5,7 @@ import {
   Param,
   ParseIntPipe,
   Patch,
-  UseGuards,
 } from '@nestjs/common';
-import { RequireAuthGuard } from '../../3-auth/guards/require-auth.guard';
 import { PerfilPesquisadorRequestUpdate } from '../dto/request/perfil-pesquisador.request-update';
 import { PerfilPesquisadorServiceAlterarDeOutro } from '../service/perfil-pesquisador.service.alterar-de-outro';
 
@@ -24,7 +22,6 @@ export class PerfilPesquisadorControllerAlterarDeOutro {
 
   @Patch(':id')
   @HttpCode(204)
-  @UseGuards(RequireAuthGuard)
   alterarDeOutro(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: PerfilPesquisadorRequestUpdate,

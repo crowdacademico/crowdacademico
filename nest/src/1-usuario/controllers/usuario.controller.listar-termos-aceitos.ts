@@ -1,11 +1,4 @@
-import {
-  Controller,
-  Get,
-  Param,
-  ParseIntPipe,
-  UseGuards,
-} from '@nestjs/common';
-import { RequireAuthGuard } from '../../3-auth/guards/require-auth.guard';
+import { Controller, Get, Param, ParseIntPipe } from '@nestjs/common';
 import { UsuarioServiceListarTermosAceitos } from '../service/usuario.service.listar-termos-aceitos';
 
 // GET /usuario/:id/termos-aceitos - não conflita com GET /usuario/:id
@@ -13,7 +6,6 @@ import { UsuarioServiceListarTermosAceitos } from '../service/usuario.service.li
 // por número de segmentos. Exige login, mesmo motivo de
 // usuario.controller.listar-logins.ts (a RLS de usuario_termo já limita as linhas ao próprio ou a quem tem permissão).
 @Controller('usuario')
-@UseGuards(RequireAuthGuard)
 export class UsuarioControllerListarTermosAceitos {
   constructor(private readonly service: UsuarioServiceListarTermosAceitos) {}
 

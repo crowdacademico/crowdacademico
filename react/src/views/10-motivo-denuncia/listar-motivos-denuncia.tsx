@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { GenericTable } from '../../components/crud/generic-table';
 import { BlocoLogAuditoria } from '../../components/crud/bloco-log-auditoria';
+import { BotaoCriar } from '../../components/crud/botao-criar';
 import { useCrudModais } from '../../services/constant/hook/use-crud-modais';
 import { motivoDenunciaApi } from '../../services/10-motivo-denuncia/api/motivo-denuncia.api';
 import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
@@ -54,9 +55,7 @@ export function ListarMotivosDenuncia({ auth }: PropsPagina) {
       <GenericTable<MotivoDenunciaResponse>
         titulo="Motivos de Denúncia"
         acaoTopo={
-          <button type="button" className="btn btn-primary" onClick={abrirCriando}>
-            Criar
-          </button>
+          <BotaoCriar aoClicar={abrirCriando} />
         }
         colunas={[
           { chave: 'idMotivo', rotulo: 'id', tipo: 'id' },

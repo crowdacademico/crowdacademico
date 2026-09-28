@@ -1,12 +1,4 @@
-import {
-  Body,
-  Controller,
-  Param,
-  ParseIntPipe,
-  Post,
-  UseGuards,
-} from '@nestjs/common';
-import { RequireAuthGuard } from '../../3-auth/guards/require-auth.guard';
+import { Body, Controller, Param, ParseIntPipe, Post } from '@nestjs/common';
 import { CampanhaRequestCreate } from '../dto/request/campanha.request-create';
 import { CampanhaServiceCreateParaOutro } from '../service/campanha.service.create-para-outro';
 
@@ -18,7 +10,6 @@ export class CampanhaControllerCreateParaOutro {
   constructor(private readonly service: CampanhaServiceCreateParaOutro) {}
 
   @Post(':idUsuario')
-  @UseGuards(RequireAuthGuard)
   criarParaOutro(
     @Param('idUsuario', ParseIntPipe) idUsuario: number,
     @Body() dto: CampanhaRequestCreate,

@@ -5,9 +5,7 @@ import {
   Param,
   ParseIntPipe,
   Post,
-  UseGuards,
 } from '@nestjs/common';
-import { RequireAuthGuard } from '../../3-auth/guards/require-auth.guard';
 import { UsuarioPapelRequestSuspend } from '../dto/request/usuario-papel.request-suspend';
 import { UsuarioPapelServiceSuspender } from '../service/usuario-papel.service.suspender';
 
@@ -17,7 +15,6 @@ export class UsuarioPapelControllerSuspender {
 
   @Post(':idUsuario/:idPapel/suspender')
   @HttpCode(204)
-  @UseGuards(RequireAuthGuard)
   suspender(
     @Param('idUsuario', ParseIntPipe) idUsuario: number,
     @Param('idPapel', ParseIntPipe) idPapel: number,
@@ -28,7 +25,6 @@ export class UsuarioPapelControllerSuspender {
 
   @Post(':idUsuario/:idPapel/revogar-suspensao')
   @HttpCode(204)
-  @UseGuards(RequireAuthGuard)
   revogar(
     @Param('idUsuario', ParseIntPipe) idUsuario: number,
     @Param('idPapel', ParseIntPipe) idPapel: number,

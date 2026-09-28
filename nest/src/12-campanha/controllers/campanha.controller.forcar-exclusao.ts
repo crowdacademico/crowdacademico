@@ -4,9 +4,7 @@ import {
   Param,
   ParseIntPipe,
   Post,
-  UseGuards,
 } from '@nestjs/common';
-import { RequireAuthGuard } from '../../3-auth/guards/require-auth.guard';
 import { CampanhaServiceForcarExclusao } from '../service/campanha.service.forcar-exclusao';
 
 // POST, não DELETE /campanha/:id (rota já ocupada pelo self-service
@@ -18,7 +16,6 @@ export class CampanhaControllerForcarExclusao {
 
   @Post(':id/forcar-exclusao')
   @HttpCode(204)
-  @UseGuards(RequireAuthGuard)
   forcarExclusao(@Param('id', ParseIntPipe) id: number) {
     return this.service.executar(id);
   }

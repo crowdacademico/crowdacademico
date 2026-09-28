@@ -34,7 +34,9 @@ Três módulos pequenos e parecidos entre si - todos seguem o mesmo formato (uma
 - ✅ **`15-atualizacao-campanha`** - posts de acompanhamento do projeto (andamento, resultado preliminar, resultado final). Junto: `link_atualizacao` e `arquivo_atualizacao` (satélites sem pasta própria, dobrados neste módulo - ver `db.types.ts`). O vínculo de arquivo já funciona (INSERT normal), só não é testável de ponta a ponta até `25-arquivo` existir.
 - ✅ **`16-seguir-campanha`** - seguir/deixar de seguir uma campanha.
 - ✅ **`17-comentario`** - comentários e endosso, com moderação.
-- **`18-recompensa`** - recompensas oferecidas por faixa de contribuição. Junto (mesmo raciocínio de `15`): `link_recompensa` e `arquivo_recompensa`. **Ainda não implementado** - 22-08-2026, escopo explicitamente parado em `17-comentario` nesta rodada, a pedido do Lucas.
+
+- ❌ **`18-recompensa`** - recompensas oferecidas por faixa de contribuição. Junto (mesmo raciocínio de `15`): `link_recompensa` e `arquivo_recompensa`. **Ainda não implementado** - 22-08-2026, escopo explicitamente parado em `17-comentario` nesta rodada, a pedido do Lucas.
+
 
 ## Grupo 6 - Moderação e encerramento
 

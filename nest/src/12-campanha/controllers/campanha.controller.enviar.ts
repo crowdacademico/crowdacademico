@@ -1,11 +1,4 @@
-import {
-  Controller,
-  Param,
-  ParseIntPipe,
-  Post,
-  UseGuards,
-} from '@nestjs/common';
-import { RequireAuthGuard } from '../../3-auth/guards/require-auth.guard';
+import { Controller, Param, ParseIntPipe, Post } from '@nestjs/common';
 import { CampanhaServiceEnviar } from '../service/campanha.service.enviar';
 
 @Controller('campanha')
@@ -17,7 +10,6 @@ export class CampanhaControllerEnviar {
   // na linha, e a trigger de transição compara com `id_usuario_atual()`
   // direto no banco.
   @Post(':id/enviar')
-  @UseGuards(RequireAuthGuard)
   enviar(@Param('id', ParseIntPipe) id: number) {
     return this.service.executar(id);
   }

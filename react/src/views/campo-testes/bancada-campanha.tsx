@@ -19,6 +19,7 @@ import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { CaixaAviso } from '../../components/crud/caixa-aviso';
+import { BotaoCriar } from '../../components/crud/botao-criar';
 import { ConfirmacaoDigitada } from '../../components/input/confirmacao-digitada';
 import { confirmacaoConfere } from '../../components/input/confirmacao-confere';
 import { CaixaBuscaSugestoes } from '../../components/input/caixa-busca-sugestoes';
@@ -227,9 +228,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
       <div className="crud-secao__cabecalho">
         <h1 className="titulo-secao">Campo de Testes - Bancada da Campanha</h1>
         <div className="crud-secao__acao-topo">
-          <button type="button" className="btn btn-primary" onClick={() => setCriandoCampanha(true)}>
-            Criar
-          </button>
+          <BotaoCriar aoClicar={() => setCriandoCampanha(true)} />
         </div>
       </div>
 

@@ -6,9 +6,7 @@ import {
   ParseBoolPipe,
   ParseIntPipe,
   Query,
-  UseGuards,
 } from '@nestjs/common';
-import { RequireAuthGuard } from '../../3-auth/guards/require-auth.guard';
 import { TermoUsoServiceExcluir } from '../service/termo-uso.service.excluir';
 
 @Controller('termos-uso')
@@ -17,7 +15,6 @@ export class TermoUsoControllerExcluir {
 
   @Delete(':id')
   @HttpCode(204)
-  @UseGuards(RequireAuthGuard)
   excluir(
     @Param('id', ParseIntPipe) id: number,
     @Query('forcar', new ParseBoolPipe({ optional: true })) forcar?: boolean,

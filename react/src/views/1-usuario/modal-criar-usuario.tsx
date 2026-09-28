@@ -22,7 +22,7 @@ interface ModalCriarUsuarioProps {
 // só "Criar Perfil Pesquisador" para quem já é usuário): só usado pela página real de Usuário.
 export function ModalCriarUsuario({ auth, aoFechar, aoCriado }: ModalCriarUsuarioProps) {
   const { mostrar } = useToast();
-  const { erro, reportarErro, limparErro } = useErroToast();
+  const { erro, reportarErro, limparErro, errosCampo, limparErroCampo } = useErroToast();
   const { ocupado: enviando, executar: executarEnviando } = useEnvio(reportarErro, limparErro);
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
@@ -87,13 +87,16 @@ export function ModalCriarUsuario({ auth, aoFechar, aoCriado }: ModalCriarUsuari
       erro={erro}
     >
       <SecaoFicha titulo="Dados da conta">
-        <Campo rotulo="Nome" className="sm:col-span-2">
+        <Campo rotulo="Nome" erro={errosCampo.nome} className="sm:col-span-2">
           {({ atributos }) => (
             <input
               {...atributos}
               type="text"
               value={nome}
-              onChange={(evento) => setNome(evento.target.value)}
+              onChange={(evento) => {
+                setNome(evento.target.value);
+                limparErroCampo('nome');
+              }}
               required
               className="input-padrao"
               placeholder="Nome completo"
@@ -101,13 +104,16 @@ export function ModalCriarUsuario({ auth, aoFechar, aoCriado }: ModalCriarUsuari
           )}
         </Campo>
 
-        <Campo rotulo="E-mail" className="sm:col-span-2">
+        <Campo rotulo="E-mail" erro={errosCampo.email} className="sm:col-span-2">
           {({ atributos }) => (
             <input
               {...atributos}
               type="email"
               value={email}
-              onChange={(evento) => setEmail(evento.target.value)}
+              onChange={(evento) => {
+                setEmail(evento.target.value);
+                limparErroCampo('email');
+              }}
               required
               className="input-padrao"
               placeholder="seu@email.com"
@@ -115,13 +121,16 @@ export function ModalCriarUsuario({ auth, aoFechar, aoCriado }: ModalCriarUsuari
           )}
         </Campo>
 
-        <Campo rotulo="Senha" className="sm:col-span-2">
+        <Campo rotulo="Senha" erro={errosCampo.senha} className="sm:col-span-2">
           {({ atributos }) => (
             <input
               {...atributos}
               type="password"
               value={senha}
-              onChange={(evento) => setSenha(evento.target.value)}
+              onChange={(evento) => {
+                setSenha(evento.target.value);
+                limparErroCampo('senha');
+              }}
               required
               className="input-padrao"
               placeholder="••••••••"

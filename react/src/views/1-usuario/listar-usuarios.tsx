@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { GenericTable } from '../../components/crud/generic-table';
 import { BlocoLogAuditoria } from '../../components/crud/bloco-log-auditoria';
+import { BotaoCriar } from '../../components/crud/botao-criar';
 import { useCrudModais } from '../../services/constant/hook/use-crud-modais';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { usuarioPapelApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
@@ -89,9 +90,7 @@ export function ListarUsuarios({ auth }: PropsPagina) {
       <GenericTable<UsuarioLinha>
         titulo="Usuários"
         acaoTopo={
-          <button type="button" className="btn btn-primary" onClick={abrirCriando}>
-            Criar
-          </button>
+          <BotaoCriar aoClicar={abrirCriando} />
         }
         colunas={[
           { chave: 'idUsuario', rotulo: 'id', tipo: 'id' },

@@ -1,11 +1,4 @@
-import {
-  Controller,
-  Get,
-  Param,
-  ParseIntPipe,
-  UseGuards,
-} from '@nestjs/common';
-import { RequireAuthGuard } from '../../3-auth/guards/require-auth.guard';
+import { Controller, Get, Param, ParseIntPipe } from '@nestjs/common';
 import { TermoUsoServiceBuscar } from '../service/termo-uso.service.buscar';
 
 // Registrado no módulo DEPOIS de TermoUsoControllerAtivo de propósito - os
@@ -18,7 +11,6 @@ export class TermoUsoControllerBuscar {
   constructor(private readonly service: TermoUsoServiceBuscar) {}
 
   @Get(':id')
-  @UseGuards(RequireAuthGuard)
   buscar(@Param('id', ParseIntPipe) id: number) {
     return this.service.executar(id);
   }

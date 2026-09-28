@@ -11,6 +11,7 @@ import { AuthControllerRefresh } from './controllers/auth.controller.refresh';
 import { AuthControllerSessoes } from './controllers/auth.controller.sessoes';
 import { AuthControllerVerificarEmail } from './controllers/auth.controller.verificar-email';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { RequireAuthGuard } from './guards/require-auth.guard';
 import { AuthServiceCadastro } from './service/auth.service.cadastro';
 import { AuthServiceEncerrarSessao } from './service/auth.service.encerrar-sessao';
 import { AuthServiceListarSessoes } from './service/auth.service.listar-sessoes';
@@ -60,6 +61,8 @@ import { AuthServiceVerificarEmail } from './service/auth.service.verificar-emai
     // guards/jwt-auth.guard.ts sobre por que fica ANTES do GlobalDbInterceptor
     // no pipeline do Nest.
     { provide: APP_GUARD, useClass: JwtAuthGuard },
+    // Depois da JwtAuthGuard (que resolve quem é): toda rota exige login, menos as marcadas com @Publico().
+    { provide: APP_GUARD, useClass: RequireAuthGuard },
   ],
 })
 export class AuthModule {}

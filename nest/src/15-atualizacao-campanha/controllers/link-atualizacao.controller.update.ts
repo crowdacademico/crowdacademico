@@ -1,12 +1,4 @@
-import {
-  Body,
-  Controller,
-  Param,
-  ParseIntPipe,
-  Patch,
-  UseGuards,
-} from '@nestjs/common';
-import { RequireAuthGuard } from '../../3-auth/guards/require-auth.guard';
+import { Body, Controller, Param, ParseIntPipe, Patch } from '@nestjs/common';
 import { LinkAtualizacaoRequestUpdate } from '../dto/request/link-atualizacao.request-update';
 import { LinkAtualizacaoServiceUpdate } from '../service/link-atualizacao.service.update';
 
@@ -15,7 +7,6 @@ export class LinkAtualizacaoControllerUpdate {
   constructor(private readonly service: LinkAtualizacaoServiceUpdate) {}
 
   @Patch(':id')
-  @UseGuards(RequireAuthGuard)
   atualizar(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: LinkAtualizacaoRequestUpdate,

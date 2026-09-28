@@ -1,6 +1,5 @@
 import { Controller, Get, Header, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-import { RequireAuthGuard } from '../../3-auth/guards/require-auth.guard';
 import { ExportarDadosThrottlerGuard } from '../guards/exportar-dados-throttler.guard';
 import { UsuarioServiceExportarDados } from '../service/usuario.service.exportar-dados';
 import { UsuarioAtual } from '../../commons/auth/usuario-atual.decorator';
@@ -17,14 +16,12 @@ import type { UsuarioAutenticado } from '../../commons/auth/usuario-autenticado.
 export class UsuarioControllerExportarDados {
   constructor(private readonly service: UsuarioServiceExportarDados) {}
 
-  // RequireAuthGuard ANTES do throttler, de propósito - garante que
-  // `request.user` sempre existe quando ExportarDadosThrottlerGuard tenta
-  // ler `usuario.idUsuario` (guards de um mesmo @UseGuards() rodam na
-  // ordem do array). @Throttle sobrescreve o default genérico do módulo
+  // A guarda de login é global e roda antes de qualquer guarda de rota: `request.user` sempre existe quando
+  // ExportarDadosThrottlerGuard lê `idUsuario`. @Throttle sobrescreve o default genérico do módulo
   // (app.module.ts, só rede de segurança) pro limite certo aqui: 1 por
   // hora, por CONTA (ver comentário completo em
   // exportar-dados-throttler.guard.ts).
-  @UseGuards(RequireAuthGuard, ExportarDadosThrottlerGuard)
+  @UseGuards(ExportarDadosThrottlerGuard)
   @Throttle({ default: { limit: 1, ttl: 3_600_000 } })
   // Nunca cacheável, em lugar nenhum do caminho (proxy, CDN, navegador) -
   // é o tipo de conteúdo que não pode ficar guardado em nenhum intermediário.

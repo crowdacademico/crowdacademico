@@ -5,10 +5,8 @@ import {
   ParseIntPipe,
   Post,
   Req,
-  UseGuards,
 } from '@nestjs/common';
 import type { Request } from 'express';
-import { RequireAuthGuard } from '../../3-auth/guards/require-auth.guard';
 import { PerfilPesquisadorRequestCreateParaOutro } from '../dto/request/perfil-pesquisador.request-create-para-outro';
 import { PerfilPesquisadorServiceCreateParaOutro } from '../service/perfil-pesquisador.service.create-para-outro';
 
@@ -23,7 +21,6 @@ export class PerfilPesquisadorControllerCreateParaOutro {
   ) {}
 
   @Post(':id')
-  @UseGuards(RequireAuthGuard)
   criarParaOutro(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: PerfilPesquisadorRequestCreateParaOutro,

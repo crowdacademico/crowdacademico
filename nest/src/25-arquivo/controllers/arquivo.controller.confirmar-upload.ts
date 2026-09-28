@@ -1,5 +1,4 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
-import { RequireAuthGuard } from '../../3-auth/guards/require-auth.guard';
+import { Body, Controller, Post } from '@nestjs/common';
 import { ArquivoRequestConfirmarUpload } from '../dto/request/arquivo.request-confirmar-upload';
 import { ArquivoServiceConfirmarUpload } from '../service/arquivo.service.confirmar-upload';
 import { UsuarioAtual } from '../../commons/auth/usuario-atual.decorator';
@@ -10,7 +9,6 @@ export class ArquivoControllerConfirmarUpload {
   constructor(private readonly service: ArquivoServiceConfirmarUpload) {}
 
   @Post('confirmar')
-  @UseGuards(RequireAuthGuard)
   confirmar(
     @Body() dto: ArquivoRequestConfirmarUpload,
     @UsuarioAtual() usuario: UsuarioAutenticado,

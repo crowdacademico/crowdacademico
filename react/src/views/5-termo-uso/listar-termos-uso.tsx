@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
-import { Link } from 'react-router';
 import { GenericTable } from '../../components/crud/generic-table';
 import { ModalDetalhe } from '../../components/crud/modal-detalhe';
+import { BotaoCriar } from '../../components/crud/botao-criar';
 import { useCrudModais } from '../../services/constant/hook/use-crud-modais';
 import { ModalAlterarTermoUso } from './modal-alterar-termo-uso';
 import { ModalExcluirTermoUso } from './modal-excluir-termo-uso';
@@ -47,9 +47,7 @@ export function ListarTermosUso({ auth }: PropsPagina) {
       <GenericTable<TermoUsoResponse>
         titulo="Termos de Uso"
         acaoTopo={
-          <Link to="/admin/termos-uso/criar" className="btn btn-primary">
-            Criar
-          </Link>
+          <BotaoCriar para="/admin/termos-uso/criar" />
         }
         colunas={[
           { chave: 'idTermo', rotulo: 'id', tipo: 'id' },

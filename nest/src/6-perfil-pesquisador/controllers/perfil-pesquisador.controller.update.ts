@@ -1,5 +1,4 @@
-import { Body, Controller, Patch, UseGuards } from '@nestjs/common';
-import { RequireAuthGuard } from '../../3-auth/guards/require-auth.guard';
+import { Body, Controller, Patch } from '@nestjs/common';
 import { PerfilPesquisadorRequestUpdate } from '../dto/request/perfil-pesquisador.request-update';
 import { PerfilPesquisadorServiceUpdate } from '../service/perfil-pesquisador.service.update';
 import { UsuarioAtual } from '../../commons/auth/usuario-atual.decorator';
@@ -13,7 +12,6 @@ export class PerfilPesquisadorControllerUpdate {
   constructor(private readonly service: PerfilPesquisadorServiceUpdate) {}
 
   @Patch()
-  @UseGuards(RequireAuthGuard)
   atualizar(
     @Body() dto: PerfilPesquisadorRequestUpdate,
     @UsuarioAtual() usuario: UsuarioAutenticado,

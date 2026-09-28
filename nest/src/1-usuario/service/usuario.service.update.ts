@@ -104,7 +104,7 @@ export class UsuarioServiceUpdate {
     if (!usuario) {
       // pol_usuario_update (04_rls_policies.sql) exige id_usuario_atual() =
       // id_usuario (dono) OU permissão 'usuario_suspender'. Controller já
-      // aplica RequireAuthGuard (3-auth), então chegar aqui sem afetar
+      // passa pela guarda global de login (3-auth), então chegar aqui sem afetar
       // linha nenhuma só acontece pra quem está logado mas não é dono nem
       // tem a permissão - RLS bloqueou o UPDATE (0 linhas, sem erro do
       // Postgres). Diferencia de "não existe" checando a existência à parte.

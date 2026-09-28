@@ -1,12 +1,4 @@
-import {
-  Body,
-  Controller,
-  Param,
-  ParseIntPipe,
-  Patch,
-  UseGuards,
-} from '@nestjs/common';
-import { RequireAuthGuard } from '../../3-auth/guards/require-auth.guard';
+import { Body, Controller, Param, ParseIntPipe, Patch } from '@nestjs/common';
 import { AtualizacaoCampanhaRequestUpdate } from '../dto/request/atualizacao-campanha.request-update';
 import { AtualizacaoCampanhaServiceUpdate } from '../service/atualizacao-campanha.service.update';
 
@@ -15,7 +7,6 @@ export class AtualizacaoCampanhaControllerUpdate {
   constructor(private readonly service: AtualizacaoCampanhaServiceUpdate) {}
 
   @Patch(':id')
-  @UseGuards(RequireAuthGuard)
   atualizar(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: AtualizacaoCampanhaRequestUpdate,

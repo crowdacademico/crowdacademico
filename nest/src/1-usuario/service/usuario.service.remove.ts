@@ -33,7 +33,7 @@ export class UsuarioServiceRemove {
     // (soft delete de propósito, ver DOCUMENTACAO_BD.md, [03-O]). O único
     // caminho é a função excluir_conta_usuario(), que exige
     // p_id_usuario = id_usuario_atual() OU a permissão 'usuario_excluir'.
-    // Controller aplica RequireAuthGuard (3-auth) - sem login, nem chega aqui.
+    // A guarda global de login (3-auth) vale aqui - sem login, nem chega aqui.
     await sql`SELECT public.excluir_conta_usuario(${idUsuario})`.execute(db);
 
     // A função SQL já desativa (ativo=false) a linha de `arquivo` vinculada como foto de perfil, na MESMA

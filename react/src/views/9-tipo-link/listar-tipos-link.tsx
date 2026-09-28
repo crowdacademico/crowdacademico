@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { GenericTable } from '../../components/crud/generic-table';
 import { BlocoLogAuditoria } from '../../components/crud/bloco-log-auditoria';
+import { BotaoCriar } from '../../components/crud/botao-criar';
 import { useCrudModais } from '../../services/constant/hook/use-crud-modais';
 import { tipoLinkApi } from '../../services/9-tipo-link/api/tipo-link.api';
 import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
@@ -45,9 +46,7 @@ export function ListarTiposLink({ auth }: PropsPagina) {
       <GenericTable<TipoLinkResponse>
         titulo="Tipos de Link"
         acaoTopo={
-          <button type="button" className="btn btn-primary" onClick={abrirCriando}>
-            Criar
-          </button>
+          <BotaoCriar aoClicar={abrirCriando} />
         }
         // Ordem "id, nome, ...": padroniza com as outras tabelas (mesmo padrão de Áreas do Conhecimento).
         colunas={[

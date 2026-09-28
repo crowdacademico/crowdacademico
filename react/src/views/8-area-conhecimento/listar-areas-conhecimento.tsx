@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { GenericTable } from '../../components/crud/generic-table';
 import { BlocoLogAuditoria } from '../../components/crud/bloco-log-auditoria';
+import { BotaoCriar } from '../../components/crud/botao-criar';
 import { useCrudModais } from '../../services/constant/hook/use-crud-modais';
 import { areaConhecimentoApi } from '../../services/8-area-conhecimento/api/area-conhecimento.api';
 import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
@@ -67,9 +68,7 @@ export function ListarAreasConhecimento({ auth }: PropsPagina) {
       <GenericTable<AreaConhecimentoResponse>
         titulo="Áreas do Conhecimento"
         acaoTopo={
-          <button type="button" className="btn btn-primary" onClick={abrirCriando}>
-            Criar
-          </button>
+          <BotaoCriar aoClicar={abrirCriando} />
         }
         // Ordem "id, nome, ...": padroniza com as outras tabelas (Usuários/Pesquisadores/Campanhas colocam
         // "nome" logo depois de "id").

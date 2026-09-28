@@ -168,6 +168,7 @@ WHERE id_papel = (SELECT id_papel FROM papel WHERE codigo = 'usuario')
 - **Docker** do Nest e do React (F2 do roteiro do Atlas, com o `docker/` deles como referência).
 - **`react/.gitignore` não cobre `.env`:** inofensivo hoje (o `.env` só tem a URL da API); só volta à tona se o conteúdo do `.env` mudar ou no deploy.
 - **CORS por lista de endereços** (ver grupo 5, segurança): se não for feito antes, entra aqui.
+- **Roteiro de API `gapi-401-403-404.mjs` espera o modo produção:** hoje 2 casos falham porque toda conta logada vê tudo (Grupo O, leitura liberada de desenvolvimento). Rodar de novo depois do bloco "modo produção".
 
 ---
 
@@ -207,7 +208,8 @@ Lucas decide depois se ajudam o CrowdAcadêmico. Contexto em `informacoes/ROTEIR
 - **Configuração da sessão em cookie:** o Atlas usa cookie HttpOnly com tempo de vida e regras de envio (`SESSION_LIFETIME`, `SESSION_SECURE_COOKIE`, `SESSION_SAME_SITE`) no `.env`. Referência pronta para a pendência "refresh token em cookie HttpOnly".
 - **E-mail em "modo log" no desenvolvimento:** `MAIL_MAILER=log` faz o e-mail aparecer no log em vez de ser enviado. Serve para quando o módulo de e-mail (`nest/src/4-mail`, hoje vazio) for construído.
 
-- **Rota fechada por padrão no Nest:** hoje cada rota protegida repete `@UseGuards(RequireAuthGuard)` (84 lugares). A alternativa é uma guarda global com `@Publico()` só nas rotas abertas: rota nova nasce fechada, o que é mais seguro. Mudança de arquitetura (B4 da varredura de 27-09-2026).
+- **Leituras de papéis e permissões abertas a anônimo:** `GET /papel`, `GET /permissao` e `GET /papel-permissao` estão entre as 33 rotas `@Publico()` (eram abertas antes da guarda global e continuaram iguais). Decidir se deixam de ser públicas.
+- **Qualquer conta logada pode criar usuário:** a policy de INSERT em `usuario` é `WITH CHECK (true)` e o `POST /usuario` agora só exige login, não permissão. Decidir se o "Criar usuário" do painel exige uma permissão (ex.: `usuario_criar`, que não existe hoje).
 - **Permissão por rota no painel:** a guarda do `/admin/*` só exige login, não confere o papel (quem vê o quê continua decidido pelo backend). "Fica para perto do fim".
 
 ### Visual e marca
@@ -227,8 +229,6 @@ O Lucas registrou isto como pendência futura importante, explícito que não é
 
 **Como aplicar**: não iniciar varredura proativa. Quando tocar em qualquer formulário com esse padrão de "desabilitar submit se inválido" no futuro, considerar mostrar erro por campo em vez de (ou além de) só desabilitar o botão. Quando o Lucas pedir pra começar essa frente de verdade, o escopo natural é uma auditoria completa em TODOS os formulários de `react/src/views/` contra as 10 heurísticas, não só #1/#9.
 
-- **Erro do servidor embaixo do campo nos outros formulários:** hoje só nos catálogos (tipo de link, área, motivo). Faltam e-mail repetido (usuário), chave (configuração), nome (papel), versão (termo) e CPF. Faz parte do Nielsen acima.
-- **Botão "Criar" no topo das 5 listas:** o mesmo botão escrito em 5 telas; talvez nem valha um componente.
 
 #### 🟡 Anotado (26-09-2026): T3, "Ocultar" com fonte maior
 

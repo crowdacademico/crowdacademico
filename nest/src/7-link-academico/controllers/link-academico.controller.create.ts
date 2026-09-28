@@ -1,5 +1,4 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
-import { RequireAuthGuard } from '../../3-auth/guards/require-auth.guard';
+import { Body, Controller, Post } from '@nestjs/common';
 import { LinkAcademicoRequestCreate } from '../dto/request/link-academico.request-create';
 import { LinkAcademicoServiceCreate } from '../service/link-academico.service.create';
 import { UsuarioAtual } from '../../commons/auth/usuario-atual.decorator';
@@ -10,7 +9,6 @@ export class LinkAcademicoControllerCreate {
   constructor(private readonly service: LinkAcademicoServiceCreate) {}
 
   @Post()
-  @UseGuards(RequireAuthGuard)
   criar(
     @Body() dto: LinkAcademicoRequestCreate,
     @UsuarioAtual() usuario: UsuarioAutenticado,

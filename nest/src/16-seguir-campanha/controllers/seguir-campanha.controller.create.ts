@@ -1,5 +1,4 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
-import { RequireAuthGuard } from '../../3-auth/guards/require-auth.guard';
+import { Body, Controller, Post } from '@nestjs/common';
 import { SeguirCampanhaRequestCreate } from '../dto/request/seguir-campanha.request-create';
 import { SeguirCampanhaServiceCreate } from '../service/seguir-campanha.service.create';
 import { UsuarioAtual } from '../../commons/auth/usuario-atual.decorator';
@@ -10,7 +9,6 @@ export class SeguirCampanhaControllerCreate {
   constructor(private readonly service: SeguirCampanhaServiceCreate) {}
 
   @Post()
-  @UseGuards(RequireAuthGuard)
   criar(
     @Body() dto: SeguirCampanhaRequestCreate,
     @UsuarioAtual() usuario: UsuarioAutenticado,

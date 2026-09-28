@@ -1,5 +1,6 @@
 import { Controller, Get, ParseIntPipe, Query } from '@nestjs/common';
 import { HistoricoRejeicaoServiceListar } from '../service/historico-rejeicao.service.listar';
+import { Publico } from '../../commons/auth/publico.decorator';
 
 // Sem @UseGuards - pol_historicorej_select (04) decide sozinha: quem tem
 // campanha_rejeitar (admin/moderador) OU é o dono da campanha - mesmo
@@ -9,6 +10,7 @@ export class HistoricoRejeicaoControllerListar {
   constructor(private readonly service: HistoricoRejeicaoServiceListar) {}
 
   @Get()
+  @Publico()
   listar(@Query('idCampanha', ParseIntPipe) idCampanha: number) {
     return this.service.executar(idCampanha);
   }

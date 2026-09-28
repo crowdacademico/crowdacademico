@@ -13,7 +13,7 @@ import type { Request } from 'express';
 // por causa de uma exportação de outra pessoa).
 //
 // `getTracker` sobrescrito pra usar `req.user.idUsuario` em vez do IP -
-// `RequireAuthGuard` já roda antes (ver ordem em @UseGuards no controller),
+// `RequireAuthGuard` (global) já roda antes de qualquer guarda de rota,
 // então `req.user` sempre existe aqui dentro; JwtAuthGuard (global) é quem
 // preenche esse campo.
 @Injectable()

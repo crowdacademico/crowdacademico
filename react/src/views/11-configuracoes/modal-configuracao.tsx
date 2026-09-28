@@ -60,7 +60,7 @@ interface ModalAlterarConfiguracaoProps {
 // de criada a linha, só valor/descricao/ativo/publica podem mudar.
 export function ModalAlterarConfiguracao({ auth, configuracao, aoFechar, aoAtualizado }: ModalAlterarConfiguracaoProps) {
   const { mostrar } = useToast();
-  const { erro, reportarErro, limparErro } = useErroToast();
+  const { erro, reportarErro, limparErro, errosCampo, limparErroCampo } = useErroToast();
   const { ocupado: enviando, executar: executarEnviando } = useEnvio(reportarErro, limparErro);
   const [valor, setValor] = useState(configuracao.valor ?? '');
   const [descricao, setDescricao] = useState(configuracao.descricao ?? '');
@@ -116,13 +116,16 @@ export function ModalAlterarConfiguracao({ auth, configuracao, aoFechar, aoAtual
 
       <SecaoFicha titulo="Editar">
         <div className="sm:col-span-2">
-          <Campo rotulo="Valor">
+          <Campo rotulo="Valor" erro={errosCampo.valor}>
             {({ atributos }) => (
               <input
                 {...atributos}
                 type="text"
                 value={valor}
-                onChange={(evento) => setValor(evento.target.value)}
+                onChange={(evento) => {
+                  setValor(evento.target.value);
+                  limparErroCampo('valor');
+                }}
                 className="input-padrao"
               />
             )}
@@ -142,13 +145,16 @@ export function ModalAlterarConfiguracao({ auth, configuracao, aoFechar, aoAtual
           )}
         </div>
 
-        <Campo rotulo="Descrição" className="sm:col-span-2">
+        <Campo rotulo="Descrição" erro={errosCampo.descricao} className="sm:col-span-2">
           {({ atributos }) => (
             <input
               {...atributos}
               type="text"
               value={descricao}
-              onChange={(evento) => setDescricao(evento.target.value)}
+              onChange={(evento) => {
+                setDescricao(evento.target.value);
+                limparErroCampo('descricao');
+              }}
               className="input-padrao"
             />
           )}

@@ -4,23 +4,31 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
+import { CHAVE_ROTA_PUBLICA } from '../../commons/auth/publico.decorator';
 
-// Uso pontual (@UseGuards(RequireAuthGuard)), não global: bloqueia com 401
-// direto quem chega sem sessão nenhuma, pra rotas que sempre exigem login -
-// evita esperar a RLS devolver 0 linhas silenciosamente (UPDATE 0) só pra
-// descobrir depois que faltava autenticação. Autorização por PERMISSÃO
-// específica continua sendo responsabilidade da RLS (este guard não sabe
-// nada sobre papel/permissao) - ver tem_permissao() em 03_funcoes_seguranca.sql.
+// Global (APP_GUARD em auth.module.ts, depois da JwtAuthGuard): toda rota exige login, menos as marcadas com
+// @Publico(). Rota nova nasce fechada; esquecer a marcação deixa a rota fechada, nunca aberta. Bloqueia com 401
+// quem chega sem sessão, em vez de esperar a RLS devolver 0 linhas em silêncio. Autorização por PERMISSÃO
+// continua sendo da RLS (este guard não sabe nada de papel/permissão), ver tem_permissao() em
+// 03_funcoes_seguranca.sql.
 @Injectable()
 export class RequireAuthGuard implements CanActivate {
+  constructor(private readonly reflector: Reflector) {}
+
   canActivate(context: ExecutionContext): boolean {
+    const publica = this.reflector.getAllAndOverride<boolean>(
+      CHAVE_ROTA_PUBLICA,
+      [context.getHandler(), context.getClass()],
+    );
+    if (publica) {
+      return true;
+    }
     const request = context.switchToHttp().getRequest<Request>();
     if (!request.user) {
-      // Mensagem que diz o que fazer ("Esta rota exige login" não dizia). Este guard só confere SE existe
-      // sessão, não qual permissão ela tem (isso é RLS, ver comentário acima); por isso a mensagem fala em
-      // "logado", não em "administrador": quem já está logado mas sem a permissão certa nunca cai aqui, cai num
-      // 403 vindo da RLS.
+      // A mensagem fala em "logado", não em "administrador": quem já está logado mas sem a permissão certa nunca
+      // cai aqui, cai num 403 vindo da RLS.
       throw new UnauthorizedException(
         'Você precisa estar logado para fazer isso.',
       );

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { GenericTable } from '../../components/crud/generic-table';
+import { BotaoCriar } from '../../components/crud/botao-criar';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
 import {
   ORDEM_STATUS_CAMPANHA,
@@ -95,9 +96,7 @@ export function MinhasCampanhas({ auth }: PropsPagina) {
         titulo="Minhas Campanhas"
         acaoTopo={
           podeCriar && (
-            <button type="button" className="btn btn-primary" onClick={abrirCriando}>
-              Criar campanha
-            </button>
+            <BotaoCriar rotulo="Criar campanha" aoClicar={abrirCriando} />
           )
         }
         colunas={[

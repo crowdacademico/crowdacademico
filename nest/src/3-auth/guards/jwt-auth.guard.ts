@@ -12,7 +12,7 @@ import { Request } from 'express';
 // resolve `request.user` quando existe um Bearer token válido. Rota sem
 // token nenhum passa como anônima (request.user fica undefined) - quem
 // decide se isso é permitido é a RLS do banco (ou, pra rotas que exigem
-// login de qualquer forma, o RequireAuthGuard, aplicado rota a rota).
+// login de qualquer forma, o RequireAuthGuard, global, que só deixa passar sem login as rotas @Publico()).
 //
 // Roda ANTES do GlobalDbInterceptor (guards → interceptors, nessa ordem, no
 // pipeline do Nest) - é assim que o interceptor já encontra request.user

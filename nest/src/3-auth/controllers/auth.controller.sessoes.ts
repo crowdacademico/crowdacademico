@@ -5,16 +5,13 @@ import {
   HttpCode,
   Param,
   ParseIntPipe,
-  UseGuards,
 } from '@nestjs/common';
-import { RequireAuthGuard } from '../guards/require-auth.guard';
 import { AuthServiceEncerrarSessao } from '../service/auth.service.encerrar-sessao';
 import { AuthServiceListarSessoes } from '../service/auth.service.listar-sessoes';
 import { UsuarioAtual } from '../../commons/auth/usuario-atual.decorator';
 import type { UsuarioAutenticado } from '../../commons/auth/usuario-autenticado.interface';
 
 @Controller('auth/sessoes')
-@UseGuards(RequireAuthGuard)
 export class AuthControllerSessoes {
   constructor(
     private readonly listarSessoes: AuthServiceListarSessoes,

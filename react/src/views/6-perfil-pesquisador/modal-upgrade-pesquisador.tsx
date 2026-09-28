@@ -71,7 +71,7 @@ export function ModalUpgradePesquisador({
   aoConcluido,
 }: ModalUpgradePesquisadorProps) {
   const { mostrar } = useToast();
-  const { erro, reportarErro, limparErro } = useErroToast();
+  const { erro, reportarErro, limparErro, errosCampo, limparErroCampo } = useErroToast();
   const { ocupado: enviando, executar: executarEnviando } = useEnvio(reportarErro, limparErro);
   const [etapa, setEtapa] = useState<Etapa>('termo');
   const [termo, setTermo] = useState<TermoUsoResponseAtivo | null>(null);
@@ -179,7 +179,11 @@ export function ModalUpgradePesquisador({
           <SecaoFicha titulo="Criar Perfil Pesquisador">
             <CampoCpf
               valor={form.cpf}
-              onChange={(cpf) => setForm({ ...form, cpf })}
+              erro={errosCampo.cpf}
+              onChange={(cpf) => {
+                setForm({ ...form, cpf });
+                limparErroCampo('cpf');
+              }}
               gerarCpfDeTeste={gerarCpfDeTeste}
             />
 

@@ -1,5 +1,4 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
-import { RequireAuthGuard } from '../../3-auth/guards/require-auth.guard';
+import { Body, Controller, Post } from '@nestjs/common';
 import { ConfiguracaoRequestCreate } from '../dto/request/configuracao.request-create';
 import { ConfiguracaoServiceCreate } from '../service/configuracao.service.create';
 import { UsuarioAtual } from '../../commons/auth/usuario-atual.decorator';
@@ -10,7 +9,6 @@ export class ConfiguracaoControllerCreate {
   constructor(private readonly service: ConfiguracaoServiceCreate) {}
 
   @Post()
-  @UseGuards(RequireAuthGuard)
   criar(
     @Body() dto: ConfiguracaoRequestCreate,
     @UsuarioAtual() usuario: UsuarioAutenticado,

@@ -7,8 +7,9 @@ import {
 } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
 import { ArquivoServiceResolverAvatar } from '../service/arquivo.service.resolver-avatar';
+import { Publico } from '../../commons/auth/publico.decorator';
 
-// Pública (sem RequireAuthGuard) de propósito - foto de perfil é conteúdo
+// Pública (@Publico()) de propósito - foto de perfil é conteúdo
 // público por natureza (ver doc de arquitetura: "nenhum arquivo de vocês
 // é secreto"), um visitante anônimo olhando o perfil de um pesquisador ou
 // os comentários de uma campanha precisa conseguir ver o avatar sem estar
@@ -21,6 +22,7 @@ export class ArquivoControllerAvatar {
   ) {}
 
   @Get(':idUsuario')
+  @Publico()
   async buscar(@Param('idUsuario', ParseIntPipe) idUsuario: number) {
     const usuario = await this.database
       .getDb()

@@ -3,6 +3,7 @@ import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import type { Request } from 'express';
 import { AuthRequestLogin } from '../dto/request/auth.request-login';
 import { AuthServiceLogin } from '../service/auth.service.login';
+import { Publico } from '../../commons/auth/publico.decorator';
 
 @Controller('auth')
 export class AuthControllerLogin {
@@ -35,6 +36,7 @@ export class AuthControllerLogin {
   })
   @UseGuards(ThrottlerGuard)
   @Post('login')
+  @Publico()
   login(@Body() dto: AuthRequestLogin, @Req() request: Request) {
     return this.service.executar(
       dto,

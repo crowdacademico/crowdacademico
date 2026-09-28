@@ -25,6 +25,7 @@ import { formatarCpfExibicao, formatarDataHora, formatarMesAno } from '../../ser
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import { ModalUpgradePesquisador } from '../6-perfil-pesquisador/modal-upgrade-pesquisador';
+import { gerarCpfValido } from '../../services/campo-testes/util/gerar-cpf-valido';
 import { Carregando } from '../../components/layout/carregando';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { SessaoResponse } from '../../services/3-auth/type/auth.type';
@@ -719,6 +720,8 @@ function AbaAcademico({ auth }: AbaAcademicoProps) {
             idUsuarioAlvo={auth.usuario.idUsuario}
             aoFechar={() => setFazendoUpgrade(false)}
             aoConcluido={setPerfil}
+            // Botão "Gerar CPF válido" só em desenvolvimento (some no build de produção), para testar o upgrade.
+            gerarCpfDeTeste={import.meta.env.DEV ? gerarCpfValido : undefined}
           />
         )}
       </div>

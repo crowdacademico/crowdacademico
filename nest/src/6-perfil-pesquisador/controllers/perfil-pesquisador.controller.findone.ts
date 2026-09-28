@@ -2,6 +2,7 @@ import { Controller, Get, Param, ParseIntPipe, Req } from '@nestjs/common';
 import type { Request } from 'express';
 import { PerfilPesquisadorServiceFindOne } from '../service/perfil-pesquisador.service.findone';
 import { PerfilPesquisadorServiceFindOneScore } from '../service/perfil-pesquisador.service.findone-score';
+import { Publico } from '../../commons/auth/publico.decorator';
 
 // Sem @UseGuards - perfil de pesquisador é público de propósito (aparece na
 // página de campanha/perfil pra qualquer visitante). JwtAuthGuard é GLOBAL
@@ -17,11 +18,13 @@ export class PerfilPesquisadorControllerFindOne {
   ) {}
 
   @Get(':id')
+  @Publico()
   buscar(@Param('id', ParseIntPipe) id: number, @Req() request: Request) {
     return this.service.executar(id, request.user?.idUsuario ?? null);
   }
 
   @Get(':id/score')
+  @Publico()
   buscarScore(@Param('id', ParseIntPipe) id: number) {
     return this.serviceScore.executar(id);
   }

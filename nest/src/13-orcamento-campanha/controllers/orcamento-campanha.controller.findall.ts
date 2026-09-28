@@ -1,5 +1,6 @@
 import { Controller, Get, ParseIntPipe, Query } from '@nestjs/common';
 import { OrcamentoCampanhaServiceFindAll } from '../service/orcamento-campanha.service.findall';
+import { Publico } from '../../commons/auth/publico.decorator';
 
 // Sem @UseGuards - pol_orcamento_campanha_select (04) decide sozinha
 // (mesma visibilidade de pol_campanha_select: status público, dono, ou
@@ -10,6 +11,7 @@ export class OrcamentoCampanhaControllerFindAll {
   constructor(private readonly service: OrcamentoCampanhaServiceFindAll) {}
 
   @Get()
+  @Publico()
   listar(@Query('idCampanha', ParseIntPipe) idCampanha: number) {
     return this.service.executar(idCampanha);
   }

@@ -32,7 +32,7 @@ export function CriarTermoUso({ auth }: PropsPagina) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { mostrar } = useToast();
-  const { erro, reportarErro, limparErro } = useErroToast();
+  const { erro, reportarErro, limparErro, errosCampo, limparErroCampo } = useErroToast();
   const { ocupado: enviando, executar: executarEnviando } = useEnvio(reportarErro, limparErro);
   const tipoPreSelecionado = searchParams.get('tipo');
   const [tipo, setTipo] = useState<TipoTermo>(
@@ -83,6 +83,7 @@ export function CriarTermoUso({ auth }: PropsPagina) {
 
         <Campo
           rotulo="Versão"
+          erro={errosCampo.versao}
           dica="Identificador curto da versão (até 20 caracteres), precisa ser diferente de toda versão já publicada antes DESTE MESMO TIPO (a mesma versão pode se repetir entre tipos diferentes)."
         >
           {({ atributos }) => (
@@ -90,7 +91,10 @@ export function CriarTermoUso({ auth }: PropsPagina) {
               {...atributos}
               type="text"
               value={versao}
-              onChange={(evento) => setVersao(evento.target.value)}
+              onChange={(evento) => {
+                setVersao(evento.target.value);
+                limparErroCampo('versao');
+              }}
               required
               maxLength={20}
               placeholder="ex.: v3"
@@ -99,12 +103,15 @@ export function CriarTermoUso({ auth }: PropsPagina) {
           )}
         </Campo>
 
-        <Campo rotulo="Texto completo">
+        <Campo rotulo="Texto completo" erro={errosCampo.conteudo}>
           {({ atributos }) => (
             <textarea
               {...atributos}
               value={conteudo}
-              onChange={(evento) => setConteudo(evento.target.value)}
+              onChange={(evento) => {
+                setConteudo(evento.target.value);
+                limparErroCampo('conteudo');
+              }}
               required
               rows={18}
               placeholder="Cole ou digite o texto integral dos Termos de Uso desta versão..."

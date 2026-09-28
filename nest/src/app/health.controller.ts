@@ -7,9 +7,10 @@ import {
 } from '@nestjs/common';
 import { Pool } from 'pg';
 import { PG_POOL } from '../commons/database/database.constants';
+import { Publico } from '../commons/auth/publico.decorator';
 
 // GET /health: qualquer plataforma de deploy (Render, Railway, Fly) precisa disso para saber se a aplicação
-// está viva. Sem login, sem RequireAuthGuard: precisa responder mesmo antes de qualquer usuário existir/logar,
+// está viva. Sem login (@Publico()): precisa responder mesmo antes de qualquer usuário existir/logar,
 // e é isso que a plataforma de deploy chama periodicamente para decidir se reinicia o processo.
 //
 // `@Inject(PG_POOL)` direto (não `DatabaseService.getDb()`) de propósito: é o MESMO padrão que
@@ -22,6 +23,7 @@ export class HealthController {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
 
   @Get()
+  @Publico()
   async verificar() {
     try {
       await this.pool.query('SELECT 1');
