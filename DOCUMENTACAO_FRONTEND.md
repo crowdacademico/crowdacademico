@@ -860,7 +860,7 @@ Seção dentro de **Alterar Usuário** (não uma tela própria - é ação sobre
 
 | Aba | Componente | O que mostra |
 |---|---|---|
-| Visão Geral | (inline, no próprio `dashboard.tsx`) | Faixa de saúde (banco conectado/sessões ativas/notificações pendentes) + 6 cards de métrica (`GET /dashboard/resumo`) + acessados recentemente + prévia de notificações |
+| Visão Geral | (inline, no próprio `dashboard.tsx`) | Faixa de saúde (banco conectado/contas ativas/notificações pendentes) + 6 cards de métrica (`GET /dashboard/resumo`) + acessados recentemente + prévia de notificações |
 | Regras do Negócio | `dashboard-regras-negocio.tsx` | As 38 chaves de `configuracoes`, agrupadas por assunto |
 | Identidade Visual | `dashboard-identidade-visual.tsx` | Placeholder - gerenciar logo/favicon ainda não foi construído |
 | Saúde | `dashboard-saude.tsx` | Mesmo estado da faixa de saúde da Visão Geral, sem refazer requisição, mais contagens agregadas |

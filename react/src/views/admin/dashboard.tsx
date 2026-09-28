@@ -10,11 +10,12 @@ import { DashboardSaude } from './dashboard-saude';
 import { lerAcessadosRecentemente } from '../../services/router/acessados-recentemente';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 
-// Texto do tooltip de "sessões ativas": exportado porque a aba Saúde (dashboard-saude.tsx) mostra a MESMA
-// métrica e precisa do MESMO texto. `contar_metricas_dashboard()` conta sessão não revogada criada (login ou
-// renovação do token) dentro da janela de configuracoes.dashboard_sessao_ativa_minutos.
+// Texto do tooltip de "contas ativas": exportado porque a aba Saúde (dashboard-saude.tsx) mostra a MESMA
+// métrica e precisa do MESMO texto. `contar_metricas_dashboard()` conta PESSOAS distintas com sessão não revogada
+// criada (login ou renovação do token) dentro de configuracoes.dashboard_sessao_ativa_minutos. O campo da API
+// continua `sessoesAtivas`.
 export const TEXTO_TOOLTIP_SESSOES_ATIVAS =
-  'Sessões com login ou renovação recente (janela ajustável nas configurações, padrão 30 minutos): uma aproximação de quem está usando o sistema agora.';
+  'Pessoas com login ou renovação recente (janela ajustável nas configurações, padrão 30 minutos). Quem está em vários aparelhos conta uma vez só: uma aproximação de quem está usando o sistema agora.';
 
 // Abas: estrutura em abas em vez de empilhar seção atrás de seção (para o Dashboard não virar uma "tela onde
 // tudo cabe"). "Visão Geral" tem os cards + prévia de notificações; as outras 3 (Regras do Negócio, Identidade
@@ -157,7 +158,7 @@ export function Dashboard({ auth }: DashboardProps) {
               <strong className="texto-forte">
                 {resumo ? resumo.sessoesAtivas : '-'}
               </strong>{' '}
-              sessões ativas agora
+              contas ativas agora
               <Tooltip texto={TEXTO_TOOLTIP_SESSOES_ATIVAS} />
             </span>
             <span className="texto-fraco">

@@ -15,6 +15,8 @@ export interface DashboardResponseSummary {
   totalPermissoes: number;
   totalConfiguracoes: number;
   totalCampanhas: number;
+  // Pessoas (contas distintas) com atividade recente, não sessões: o nome do campo ficou o de antes porque o React
+  // já o lê. Ver contar_metricas_dashboard() (03, [03-M]).
   sessoesAtivas: number;
   notificacoesPendentes: null;
   campanhasAtivas: number;

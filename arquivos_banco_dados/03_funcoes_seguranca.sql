@@ -751,9 +751,11 @@ $$;
 --             conforme quem está logado, errado para "total do sistema" (mesmo raciocínio de
 --             contar_seguidores_pesquisador, [03-E]). Uma função só devolvendo TABLE porque o NestJS sempre pede os
 --             números juntos. Sem contagem de log_auditoria de propósito (ela tem o próprio painel "Ver log").
---             Exige a permissão relatorio_visualizar (ERRCODE 92011). `sessoes_ativas` conta só sessão com atividade
---             recente: login e cada renovação do token de acesso criam uma linha nova em `sessao`, então `criado_em`
---             dentro de configuracoes.dashboard_sessao_ativa_minutos (padrão 30) quer dizer alguém usando o sistema.
+--             Exige a permissão relatorio_visualizar (ERRCODE 92011). `sessoes_ativas` conta PESSOAS (contas distintas)
+--             com atividade recente: login e cada renovação do token de acesso criam uma linha nova em `sessao`, então
+--             `criado_em` dentro de configuracoes.dashboard_sessao_ativa_minutos (padrão 30) quer dizer alguém usando o
+--             sistema; a mesma pessoa em dois aparelhos conta uma vez. O nome da coluna ficou `sessoes_ativas` porque
+--             trocar o nome mudaria o tipo de retorno (DROP FUNCTION no Supabase) e o campo que o React lê.
 CREATE OR REPLACE FUNCTION public.contar_metricas_dashboard()
 RETURNS TABLE (
     total_usuarios                 INT,
@@ -790,7 +792,7 @@ BEGIN
         (SELECT count(*)::INT FROM permissao),
         (SELECT count(*)::INT FROM configuracoes),
         (SELECT count(*)::INT FROM campanha),
-        (SELECT count(*)::INT FROM sessao
+        (SELECT count(DISTINCT id_usuario)::INT FROM sessao
           WHERE revogado_em IS NULL AND expira_em > now()
             AND criado_em > now() - make_interval(mins => public.config_numero('dashboard_sessao_ativa_minutos', 30)::INT)),
         (SELECT count(*)::INT FROM campanha WHERE status = 'ativo'),
