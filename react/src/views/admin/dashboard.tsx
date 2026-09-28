@@ -10,11 +10,11 @@ import { DashboardSaude } from './dashboard-saude';
 import { lerAcessadosRecentemente } from '../../services/router/acessados-recentemente';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 
-// Texto do tooltip de "sessões abertas": exportado porque a aba Saúde (dashboard-saude.tsx) mostra a MESMA
-// métrica e precisa do MESMO texto. `contar_metricas_dashboard()` conta sessão não revogada dentro da validade
-// de 30 dias (REFRESH_TOKEN_DIAS_VALIDADE), não gente online agora: por isso o rótulo diz "(30 dias)".
-export const TEXTO_TOOLTIP_SESSOES_ABERTAS =
-  'Contagem de sessões não-revogadas em 30 dias, não gente online.';
+// Texto do tooltip de "sessões ativas": exportado porque a aba Saúde (dashboard-saude.tsx) mostra a MESMA
+// métrica e precisa do MESMO texto. `contar_metricas_dashboard()` conta sessão não revogada criada (login ou
+// renovação do token) dentro da janela de configuracoes.dashboard_sessao_ativa_minutos.
+export const TEXTO_TOOLTIP_SESSOES_ATIVAS =
+  'Sessões com login ou renovação recente (janela ajustável nas configurações, padrão 30 minutos): uma aproximação de quem está usando o sistema agora.';
 
 // Abas: estrutura em abas em vez de empilhar seção atrás de seção (para o Dashboard não virar uma "tela onde
 // tudo cabe"). "Visão Geral" tem os cards + prévia de notificações; as outras 3 (Regras do Negócio, Identidade
@@ -71,7 +71,7 @@ function CardMetrica({ rotulo, valor, moeda = false }: CardMetricaProps) {
 
 // Bolinha de status de conexão: a Visão Geral (abaixo) e a aba Saúde (`dashboard-saude.tsx`) mostram a MESMA
 // bolinha, com a MESMA lógica de 3 estados: exportado daqui e importado lá, mesmo padrão de
-// `TEXTO_TOOLTIP_SESSOES_ABERTAS` acima. Cor vem de `.ponto-status--*` (1-cores.css), reaproveitando os mesmos
+// `TEXTO_TOOLTIP_SESSOES_ATIVAS` acima. Cor vem de `.ponto-status--*` (1-cores.css), reaproveitando os mesmos
 // tokens de status dos badges (se adapta ao tema escuro).
 export function PontoStatusConexao({ valor }: { valor: boolean | null }) {
   return (
@@ -157,8 +157,8 @@ export function Dashboard({ auth }: DashboardProps) {
               <strong className="texto-forte">
                 {resumo ? resumo.sessoesAtivas : '-'}
               </strong>{' '}
-              sessões abertas (30 dias)
-              <Tooltip texto={TEXTO_TOOLTIP_SESSOES_ABERTAS} />
+              sessões ativas agora
+              <Tooltip texto={TEXTO_TOOLTIP_SESSOES_ATIVAS} />
             </span>
             <span className="texto-fraco">
               <strong className="texto-forte">

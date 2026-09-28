@@ -151,6 +151,9 @@ INSERT INTO permissao (nome) VALUES
 -- policies.
 ('arquivo_gerenciar'),
 -- D - USUÁRIO (Contas, Perfis, Autenticação, Termos e Sessões)
+-- Gate do "Criar usuário" do painel (POST /usuario, checado no Nest). Não é policy: pol_usuario_insert é WITH
+-- CHECK (true) porque o cadastro público grava a conta antes de existir sessão ([04-D-2]).
+('usuario_criar'),
 ('usuario_suspender'),
 ('usuario_visualizar_sensivel'),
 -- cpf_criptografado está no GRANT SELECT de perfil_pesquisador (06), então o app_nestjs pode ler a coluna. Esta
@@ -249,6 +252,7 @@ WHERE (p.nome, perm.nome) IN (
     ('admin', 'motivo_denuncia_gerenciar'),
     ('admin', 'arquivo_gerenciar'),
     -- D
+    ('admin', 'usuario_criar'),
     ('admin', 'usuario_suspender'),
     ('admin', 'usuario_visualizar_sensivel'),
     ('admin', 'perfil_pesquisador_visualizar_sensivel'),
@@ -809,6 +813,9 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, pub
 -- pelo Painel Admin.
 (NULL, 'refresh_token_dias_validade', '30',   'inteiro',  'Por quantos dias a sessão continua válida (refresh token) antes de precisar logar de novo', TRUE, FALSE),
 (NULL, 'verificacao_email_horas_validade', '24', 'inteiro', 'Validade do token de verificação de e-mail, em horas', TRUE, FALSE),
+-- Lida por contar_metricas_dashboard() (03, [03-M]): o card "sessões ativas" conta sessão criada (login ou
+-- renovação do token) dentro desta janela.
+(NULL, 'dashboard_sessao_ativa_minutos', '30', 'inteiro', 'Janela (em minutos) usada pelo painel para contar uma sessão como ativa agora', TRUE, FALSE),
 -- Opções de prazo sugeridas no seletor de "Suspender Usuário" do painel; lida pelo React
 -- (minha-conta/alterar-usuario), não por nenhuma trigger/função do banco.
 (NULL, 'suspensao_usuario_opcoes_dias', '1,3,7,30', 'texto', 'Opções de prazo (em dias) sugeridas no seletor de suspensão de usuário - lista separada por vírgula.', TRUE, TRUE),

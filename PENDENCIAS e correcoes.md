@@ -208,14 +208,11 @@ Lucas decide depois se ajudam o CrowdAcadêmico. Contexto em `informacoes/ROTEIR
 - **Configuração da sessão em cookie:** o Atlas usa cookie HttpOnly com tempo de vida e regras de envio (`SESSION_LIFETIME`, `SESSION_SECURE_COOKIE`, `SESSION_SAME_SITE`) no `.env`. Referência pronta para a pendência "refresh token em cookie HttpOnly".
 - **E-mail em "modo log" no desenvolvimento:** `MAIL_MAILER=log` faz o e-mail aparecer no log em vez de ser enviado. Serve para quando o módulo de e-mail (`nest/src/4-mail`, hoje vazio) for construído.
 
-- **Leituras de papéis e permissões abertas a anônimo:** `GET /papel`, `GET /permissao` e `GET /papel-permissao` estão entre as 33 rotas `@Publico()` (eram abertas antes da guarda global e continuaram iguais). Decidir se deixam de ser públicas.
-- **Qualquer conta logada pode criar usuário:** a policy de INSERT em `usuario` é `WITH CHECK (true)` e o `POST /usuario` agora só exige login, não permissão. Decidir se o "Criar usuário" do painel exige uma permissão (ex.: `usuario_criar`, que não existe hoje).
 - **Permissão por rota no painel:** a guarda do `/admin/*` só exige login, não confere o papel (quem vê o quê continua decidido pelo backend). "Fica para perto do fim".
 
 ### Visual e marca
 
 - **Verde do texto no tema escuro:** `#2fbf71` é provisório (6,14:1 sobre o cartão escuro); aguarda o Lucas confirmar o escopo da página de conferência de cores.
-- **Cores cruas no CSS:** 7 usos de `var(--color-*)` direto em `4-componentes.css` (`--color-white`, `--color-red-600`, `--color-emerald-600`) mais o footer. Decidir se viram apelidos em `1-cores.css` ou exceção documentada (achado da revisão da v23).
 - **Gestão de logo e favicon:** a aba Identidade Visual do Dashboard é só um espaço reservado.
 - **"Membro desde 12/2023"** na Minha Conta: adiado pelo Lucas.
 
@@ -235,15 +232,6 @@ O Lucas registrou isto como pendência futura importante, explícito que não é
 Na tabela de Atualizações do T3, o botão "Ocultar" (só texto) fica com fonte maior que o resto: a regra que aumenta os ícones de Ações quando a tela aperta também pega esse botão. Não mexer agora (T3 ainda não foi revisada de verdade); entra quando o T3 for trabalhado.
 
 ### Estrutura e ferramentas
-
-#### 🟡 Achado (26-09-2026): "sessões ativas agora" no Dashboard conta sessões de teste, não gente online
-
-Consulta só de leitura no Supabase: 378 sessões não revogadas e dentro da validade de 30 dias, 326 delas do admin, criadas pelos logins automáticos dos testes (Playwright, scripts de API com `node` e `curl`), que nunca fazem logout. Não é erro de código: a renovação do token revoga a sessão anterior, e a contagem já ignora sessão vencida ou revogada (o tooltip do card explica isso). O rótulo "agora" é que engana. Opções, para decidir:
-- **Rótulo:** trocar "sessões ativas agora" por "sessões abertas (30 dias)". Só texto.
-- **Métrica de verdade:** como cada renovação silenciosa (a cada ~15 min de uso) cria uma linha nova em `sessao`, dá para contar "com atividade na última meia hora" sem coluna nova: sessão não revogada com `criado_em` recente. Muda `contar_metricas_dashboard()` (03), então precisa de patch no `ATUALIZAR O SUPABASE.sql`.
-- **Testes:** os scripts de teste podem fazer logout no fim, para não acumular sessão.
-
-> FEITO em 27-09-2026: o rótulo virou "sessões abertas (30 dias)" e os roteiros de teste saem da conta no fim. Falta só decidir a métrica real (mexe numa função do 03).
 
 - **Comentários antigos do SQL:** 86 cabeçalhos foram condensados em 24-09-2026 e o texto original foi para `HISTORICO_COMENTARIOS_SQL.md`, que hoje é um arquivo morto. Falta, se o Lucas quiser, curar o que ainda vale e levar para as seções de `DOCUMENTACAO_BD.md`.
 - **husky e lint-staged** (F1 do roteiro do Atlas): lint só nos arquivos alterados, a cada commit. Pequeno.

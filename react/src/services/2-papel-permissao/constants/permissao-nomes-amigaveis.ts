@@ -166,6 +166,14 @@ export const DETALHE_PERMISSAO: Partial<Record<string, DetalhePermissao>> = {
     porQueExiste: 'Suporte técnico da fila de notificações, garantir que nada fique parado sem ser entregue.',
     impacto: 'baixo',
   },
+  usuario_criar: {
+    nome: 'Criar Usuário',
+    resumo: 'Criar a conta de outra pessoa pelo painel.',
+    oQueFaz: 'Permite usar o "Criar usuário" do painel administrativo para abrir uma conta em nome de outra pessoa.',
+    porQueExiste:
+      'Normalmente cada pessoa cria a própria conta no cadastro, aceitando os Termos de Uso; esta permissão existe só pra quando a administração precisa abrir uma conta.',
+    impacto: 'médio',
+  },
   usuario_excluir: {
     nome: 'Excluir Usuário',
     resumo: 'Excluir (logicamente) a conta de outra pessoa.',

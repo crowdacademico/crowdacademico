@@ -1,5 +1,5 @@
 import { Tooltip } from '../../components/layout/tooltip';
-import { PontoStatusConexao, TEXTO_TOOLTIP_SESSOES_ABERTAS } from './dashboard';
+import { PontoStatusConexao, TEXTO_TOOLTIP_SESSOES_ATIVAS } from './dashboard';
 import type { DashboardResponseSummary } from '../../services/admin/type/dashboard.type';
 
 interface DashboardSaudeProps {
@@ -33,8 +33,8 @@ export function DashboardSaude({ bancoConectado, resumo }: DashboardSaudeProps) 
         {resumo ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
             <p className="texto-fraco">
-              Sessões abertas (30 dias)
-              <Tooltip texto={TEXTO_TOOLTIP_SESSOES_ABERTAS} />
+              Sessões ativas agora
+              <Tooltip texto={TEXTO_TOOLTIP_SESSOES_ATIVAS} />
               <strong className="texto-forte block">{resumo.sessoesAtivas}</strong>
             </p>
             <p className="texto-fraco">

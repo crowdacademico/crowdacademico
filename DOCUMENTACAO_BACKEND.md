@@ -269,7 +269,7 @@ Autenticação própria, JWT com par access + refresh, refresh token com **rota�
 
 **`JwtAuthGuard`** - global (`APP_GUARD`), roda em toda rota. **Não bloqueia nada por conta própria.** Sem cabeçalho `Authorization`, deixa passar como anônimo (`request.user` fica `undefined`). Com um `Bearer` válido, preenche `request.user = { idUsuario, idSessao }`. Com um token **presente mas inválido/expirado**, lança 401 - porque isso é sempre erro: o cliente pensa que está autenticado e não está, o que é diferente de não mandar token nenhum.
 
-**`RequireAuthGuard`** - global também (`APP_GUARD`, registrado depois da `JwtAuthGuard`, 27-09-2026): **toda rota exige login, menos as marcadas com `@Publico()`** (`commons/auth/publico.decorator.ts`). Só confere se existe sessão; devolve 401 *"Você precisa estar logado para fazer isso."* se não existir. Rota nova nasce fechada: esquecer a marcação deixa a rota fechada, nunca aberta. Antes era aplicado rota a rota com `@UseGuards(RequireAuthGuard)` (84 repetições), e foi assim que o `POST /usuario` ficou aberto a anônimo sem ninguém notar. As 33 rotas `@Publico()` são login, cadastro, renovação e saída de sessão, verificação de e-mail, `health`, as listas e leituras públicas de catálogo, o termo vigente, as configurações públicas, o avatar e as leituras que a página pública vai usar (campanha, orçamento, cronograma, atualizações, comentários, perfil de pesquisador); nas de login opcional, a `JwtAuthGuard` continua reconhecendo quem mandou token. Na troca, as 119 rotas foram chamadas sem login antes e depois: nenhuma diferença de status nem de conteúdo (roteiro de teste que chama cada rota sem login e compara as respostas).
+**`RequireAuthGuard`** - global também (`APP_GUARD`, registrado depois da `JwtAuthGuard`, 27-09-2026): **toda rota exige login, menos as marcadas com `@Publico()`** (`commons/auth/publico.decorator.ts`). Só confere se existe sessão; devolve 401 *"Você precisa estar logado para fazer isso."* se não existir. Rota nova nasce fechada: esquecer a marcação deixa a rota fechada, nunca aberta. Antes era aplicado rota a rota com `@UseGuards(RequireAuthGuard)` (84 repetições), e foi assim que o `POST /usuario` ficou aberto a anônimo sem ninguém notar. As 30 rotas `@Publico()` são login, cadastro, renovação e saída de sessão, verificação de e-mail, `health`, as listas e leituras públicas de catálogo, o termo vigente, as configurações públicas, o avatar e as leituras que a página pública vai usar (campanha, orçamento, cronograma, atualizações, comentários, perfil de pesquisador); nas de login opcional, a `JwtAuthGuard` continua reconhecendo quem mandou token. Na troca, as 119 rotas foram chamadas sem login antes e depois: nenhuma diferença de status nem de conteúdo (roteiro de teste que chama cada rota sem login e compara as respostas).
 
 📌 **Por que existe um guard que só confere login.** Sem ele, um anônimo tentando `PATCH /usuario/5` esperaria a RLS devolver 0 linhas e receberia um erro confuso lá no fim. O guard pega o caso mais comum - *nem logado* - cedo e com mensagem clara. O comentário no código deixa a fronteira explícita: **este guard não sabe nada sobre papel/permissão**; quem já está logado mas sem a permissão certa nunca cai aqui, cai num 403 vindo da RLS.
 
@@ -430,7 +430,7 @@ O converter (`perfil-pesquisador.converter.ts`) recebe `cpfDecifrado` como **par
 
 📌 **`@UsuarioAtual()` (`commons/auth/usuario-atual.decorator.ts`).** Quem está logado, direto no parâmetro do controller, em vez de receber o `request` inteiro só para ler `request.user!.idUsuario` (o `!` era uma afirmação sem garantia). Se `request.user` faltar, responde 401. Usado em 15 controllers; ficam com o `request` inteiro os que precisam dele (login, cadastro e renovação leem IP e cabeçalhos) e as rotas de login opcional (perfil de pesquisador visto por visitante).
 
-📌 **`POST /usuario` exige login (27-09-2026).** É o "Criar usuário" do painel; quem cria a própria conta usa o `POST /auth/cadastro`, que grava o aceite dos Termos de Uso. Antes, um anônimo criava conta por aqui pulando o aceite.
+📌 **`POST /usuario` exige login e a permissão `usuario_criar` (28-09-2026, checada no controller porque o cadastro público reaproveita o mesmo service sem ninguém logado).** É o "Criar usuário" do painel; quem cria a própria conta usa o `POST /auth/cadastro`, que grava o aceite dos Termos de Uso. Antes, um anônimo criava conta por aqui pulando o aceite.
 
 📌 **`temCodigoPostgres(erro, codigo)` (`commons/database/codigo-postgres.util.ts`).** "Este erro veio do Postgres com este SQLSTATE?" conferido de verdade, sem o `as { code?: string }` que se repetia em 9 lugares.
 
@@ -1021,7 +1021,7 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | AUTH | GET | `/usuario/:id/termos-aceitos` |
 | AUTH | GET | `/usuario/eu/exportar-dados` |
 | AUTH | POST | `/usuario/:id/suspender` · `/usuario/:id/revogar-suspensao` · `/usuario/:id/desbloquear` |
-| pub | GET | `/papel` · `/permissao` · `/papel-permissao` |
+| AUTH | GET | `/papel` · `/permissao` · `/papel-permissao` |
 | AUTH | PATCH | `/papel/:id` |
 | AUTH | POST | `/papel-permissao` |
 | AUTH | DELETE | `/papel-permissao/:idPapel/:idPermissao` |
