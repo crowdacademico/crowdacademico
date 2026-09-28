@@ -45,6 +45,8 @@ Essencialmente o esqueleto padrão que o `nest new` gera, mas hoje já com as me
 
 Como funciona: a pessoa faz `git add` e `git commit`, o husky chama o lint-staged, e ele roda o ESLint só nos arquivos alterados. Se achar erro, o commit é recusado e o erro aparece na tela para ser corrigido; se estiver tudo certo, o commit passa normalmente. Serve para o erro ser pego na hora, por quem acabou de escrever o código, e não depois, quando outra pessoa baixa o projeto e ele não funciona. Diferença para o uso mais comum dessas ferramentas: aqui elas **não formatam** o código sozinhas (o Prettier ficou de fora, ver abaixo), só conferem.
 
+**Commit barrado?** Passo a passo para descobrir e resolver sozinho: `COMMIT_BARRADO.md`, na raiz do projeto.
+
 - **Decisão:** a cada `git commit`, o ESLint roda só nos arquivos alterados e prontos para o commit (`git add`); se tiver erro, o commit não acontece. O `package.json` da raiz existe só para isso (`husky` e `lint-staged`); o gancho está em `.husky/pre-commit` e as regras em `nest/.lintstagedrc.json` (`src/**/*.ts`) e `react/.lintstagedrc.json` (`src/**/*.{ts,tsx}`). Cada lado usa o próprio `eslint.config`.
 - **Motivo:** erro de lint não entra no repositório por esquecimento, e olhar só o que mudou deixa o commit rápido.
 - **Caso-limite aceito:** só barra **erro**, não aviso. Não roda o Prettier (no `react/` ele reformataria arquivos inteiros, porque não há `.prettierrc`). Só vale depois de `npm install` **na raiz**; quem não rodar commita sem a checagem. Para pular numa emergência: `git commit --no-verify`. Para desligar de vez: apagar `.husky/`, o `package.json` da raiz e os dois `.lintstagedrc.json`, e rodar `git config --unset core.hooksPath`.
