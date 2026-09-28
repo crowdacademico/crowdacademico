@@ -1,16 +1,13 @@
 import { Controller, Get, ParseIntPipe, Query } from '@nestjs/common';
-import { HistoricoRejeicaoServiceListar } from '../service/historico-rejeicao.service.findall';
-import { Publico } from '../../commons/auth/publico.decorator';
+import { HistoricoRejeicaoServiceFindAll } from '../service/historico-rejeicao.service.findall';
 
-// Sem @UseGuards - pol_historicorej_select (04) decide sozinha: quem tem
-// campanha_rejeitar (admin/moderador) OU é o dono da campanha - mesmo
-// padrão de orcamento-campanha.controller.findall.ts.
+// Exige login (guarda global, não é @Publico()): pol_historicorej_select (04) só mostra as linhas a quem tem
+// campanha_rejeitar ou relatorio_visualizar, ou ao dono da campanha. Sem login a lista vinha sempre vazia.
 @Controller('historico-rejeicao')
-export class HistoricoRejeicaoControllerListar {
-  constructor(private readonly service: HistoricoRejeicaoServiceListar) {}
+export class HistoricoRejeicaoControllerFindAll {
+  constructor(private readonly service: HistoricoRejeicaoServiceFindAll) {}
 
   @Get()
-  @Publico()
   listar(@Query('idCampanha', ParseIntPipe) idCampanha: number) {
     return this.service.executar(idCampanha);
   }

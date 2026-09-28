@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { ArquivoServiceResolverAvatar } from '../../25-arquivo/service/arquivo.service.resolve-avatar';
+import { ArquivoServiceResolveAvatar } from '../../25-arquivo/service/arquivo.service.resolve-avatar';
 import { DatabaseService } from '../../commons/database/database.service';
 import { USUARIO_COLUNAS_SELECT } from '../constants/usuario.constants';
 import { UsuarioConverter } from '../dto/converter/usuario.converter';
@@ -9,7 +9,7 @@ import { UsuarioResponse } from '../dto/response/usuario.response';
 export class UsuarioServiceFindOne {
   constructor(
     private readonly database: DatabaseService,
-    private readonly resolverAvatar: ArquivoServiceResolverAvatar,
+    private readonly resolverAvatar: ArquivoServiceResolveAvatar,
   ) {}
 
   async executar(idUsuario: number): Promise<UsuarioResponse> {

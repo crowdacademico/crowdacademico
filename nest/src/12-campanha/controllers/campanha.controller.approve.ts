@@ -1,11 +1,11 @@
 import { Controller, Param, ParseIntPipe, Post } from '@nestjs/common';
-import { CampanhaServiceAprovar } from '../service/campanha.service.approve';
+import { CampanhaServiceApprove } from '../service/campanha.service.approve';
 import { UsuarioAtual } from '../../commons/auth/usuario-atual.decorator';
 import type { UsuarioAutenticado } from '../../commons/auth/usuario-autenticado.interface';
 
 @Controller('campanha')
-export class CampanhaControllerAprovar {
-  constructor(private readonly service: CampanhaServiceAprovar) {}
+export class CampanhaControllerApprove {
+  constructor(private readonly service: CampanhaServiceApprove) {}
 
   @Post(':id/aprovar')
   aprovar(

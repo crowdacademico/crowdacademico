@@ -3,14 +3,14 @@ import { DatabaseService } from '../../commons/database/database.service';
 import { TermoUsoResponse } from '../dto/response/termo-uso.response';
 
 // Todas as versões, por id crescente (mesmo padrão de ordenação de
-// configuracao.service.findall.ts/area-conhecimento.service.findall.ts/tipo-link.service.findall.ts: por id,
+// configuracoes.service.findall.ts/area-conhecimento.service.findall.ts/tipo-link.service.findall.ts: por id,
 // não por data). pol_termos_select é USING(true), não filtra nada: a tela de admin é quem decide o que mostrar;
 // o guard de autenticação fica no controller.
 //
 // Lista todos os tipos juntos, misturados na mesma tabela (`tipo` é coluna visível): quem quiser só 1 tipo por
 // vez usa `termoUsoApi.buscarAtivo(tipo)` (card do dashboard), não esta listagem.
 @Injectable()
-export class TermoUsoServiceListar {
+export class TermoUsoServiceFindAll {
   constructor(private readonly database: DatabaseService) {}
 
   async executar(): Promise<TermoUsoResponse[]> {

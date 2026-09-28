@@ -46,7 +46,7 @@ Lista montada a partir da resposta da revisão externa de 24-09-2026 (a pasta de
    - Situação: ninguém usa.
    - Revisão externa: trocar o `ATUALIZAR` por uma pasta de migrações registradas.
    - Sugestão: discordo, porque a Alexia recria o banco do zero com os arquivos 01 a 08. Recomendo apagar o script. Precisa de OK.
-10. **Colar o Grupo I no Supabase (depois do H).** Sem ele, `/usuario-papel` e o dashboard continuam abertos à pesquisadora. Os Grupos F, G e H já foram colados; o E foi confirmado ao vivo pelo Playwright (o 5º envio foi recusado até para o admin).
+10. ✅ **FEITO (conferido no Supabase em 28-09-2026, só leitura: pol_usuariopapel_select já é a restrita): colar o Grupo I no Supabase (depois do H).** Sem ele, `/usuario-papel` e o dashboard continuam abertos à pesquisadora. Os Grupos F, G e H já foram colados; o E foi confirmado ao vivo pelo Playwright (o 5º envio foi recusado até para o admin).
 
 ## B. Precisam de decisão
 
@@ -73,10 +73,9 @@ Lista montada a partir da resposta da revisão externa de 24-09-2026 (a pasta de
    - Para mudar pelo painel: o Nest lê o horário quando liga, então seria preciso "reprogramar o despertador" com o sistema ligado, nos 6 jobs, e guardar os horários em `configuracoes`.
    - Sugestão: deixar fixo. O horário é de infraestrutura (em que momento a faxina roda), não regra de negócio; mudar na prática é raro, e o custo não é pequeno. Rever se a banca ou o uso real pedirem.
 14. **Nomes no Nest, próximas etapas (28-09-2026).** Os nomes de arquivo já seguem `entidade.camada.ação` em inglês (98 renomeados). Ficaram para depois, uma coisa de cada vez:
-   - **Classes e métodos:** padronizar o idioma no código inteiro (hoje `UsuarioServiceSuspender`, `.suspender()`, dentro de `usuario.service.suspend.ts`). Decidir se tudo vai para inglês ou tudo para português.
-   - **`11-configuracoes`:** a tabela é `configuracoes` (plural), os arquivos usam `configuracao` (singular) e o módulo usa o plural. Decidir qual forma vale.
+   - ✅ **FEITO (28-09-2026): classes e `11-configuracoes`.** A classe segue o nome do arquivo (104 renomeadas); o resto do código segue em português (regra em `DOCUMENTACAO_BACKEND.md` 7.1). `11-configuracoes` passou para o plural da tabela (14 arquivos).
    - **`3-auth/dto/response/sessao.response.ts`:** segue a regra (a tabela é `sessao`), mas fica deslocado dentro do módulo de auth. Pensar num lugar melhor.
-   - **Varredura de arquivos que podem se juntar** sem quebrar a regra de um arquivo por ação: fazer e trazer só a lista de candidatos.
+   - ✅ **FEITO (28-09-2026), os 4 candidatos e o extra: 15 arquivos a menos (18 saíram, 3 entraram em `commons`), ver `DOCUMENTACAO_BACKEND.md` 7.1.** Texto da varredura: 4 candidatos. (1) `usuario.request-suspend` = `perfil-pesquisador.request-suspend` e (2) `usuario.response-suspend` = `perfil-pesquisador.response-suspend`, idênticos, podem virar um DTO de suspensão em `commons`. (3) `atualizacao-campanha.request-list` = `comentario.request-list` (paginação + `idCampanha`), podem virar um "listar por campanha" em `commons`. (4) `auth.response-refresh` tem os mesmos campos de `auth.response-login` e pode estender dela. Opcional e maior: os 11 `entity/*.entity.ts` são uma linha cada (`Selectable<Tabela>`) e poderiam morar no `db.types.ts`. Os 5 grupos de `.module.ts` iguais na forma não são candidatos.
 
 ## C. Dependem de módulo (não antecipar)
 

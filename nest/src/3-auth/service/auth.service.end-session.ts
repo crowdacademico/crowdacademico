@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
 
 @Injectable()
-export class AuthServiceEncerrarSessao {
+export class AuthServiceEndSession {
   constructor(private readonly database: DatabaseService) {}
 
   // Encerra UMA sessão - sempre `.where('id_usuario', '=', idUsuario)`

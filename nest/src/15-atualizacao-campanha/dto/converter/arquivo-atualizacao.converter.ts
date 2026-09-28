@@ -1,4 +1,4 @@
-import { ArquivoAtualizacaoEntity } from '../../entity/arquivo-atualizacao.entity';
+import { ArquivoAtualizacaoEntity } from '../../../commons/database/db.types';
 import { ArquivoAtualizacaoResponse } from '../response/arquivo-atualizacao.response';
 
 export class ArquivoAtualizacaoConverter {

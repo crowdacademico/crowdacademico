@@ -1,9 +1,9 @@
 import { Controller, Param, ParseIntPipe, Post } from '@nestjs/common';
-import { CampanhaServiceEnviar } from '../service/campanha.service.submit';
+import { CampanhaServiceSubmit } from '../service/campanha.service.submit';
 
 @Controller('campanha')
-export class CampanhaControllerEnviar {
-  constructor(private readonly service: CampanhaServiceEnviar) {}
+export class CampanhaControllerSubmit {
+  constructor(private readonly service: CampanhaServiceSubmit) {}
 
   // Sem `request.user` aqui, diferente de aprovar/rejeitar: aqueles carimbam
   // `id_admin` com quem decidiu, este não carimba nada. Quem é o dono já está

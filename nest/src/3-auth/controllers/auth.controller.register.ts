@@ -2,12 +2,12 @@ import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import type { Request } from 'express';
 import { AuthRequestRegister } from '../dto/request/auth.request-register';
-import { AuthServiceCadastro } from '../service/auth.service.register';
+import { AuthServiceRegister } from '../service/auth.service.register';
 import { Publico } from '../../commons/auth/publico.decorator';
 
 @Controller('auth')
-export class AuthControllerCadastro {
-  constructor(private readonly service: AuthServiceCadastro) {}
+export class AuthControllerRegister {
+  constructor(private readonly service: AuthServiceRegister) {}
 
   // ThrottlerGuard aqui pelo mesmo motivo de POST /auth/login (ver auth.controller.login.ts): bcrypt.hash é
   // custoso de CPU, e criar conta é o tipo de endpoint público que atrai spam/automação sem exigir NADA antes

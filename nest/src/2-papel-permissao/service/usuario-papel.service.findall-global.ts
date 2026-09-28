@@ -4,7 +4,7 @@ import { DatabaseService } from '../../commons/database/database.service';
 import { UsuarioPapelResponse } from '../dto/response/usuario-papel.response';
 
 @Injectable()
-export class UsuarioPapelServiceFindAllGeral {
+export class UsuarioPapelServiceFindAllGlobal {
   constructor(private readonly database: DatabaseService) {}
 
   // Sem filtro de id_usuario: a coluna "papel" na listagem de Usuários precisa do vínculo de TODO MUNDO de uma

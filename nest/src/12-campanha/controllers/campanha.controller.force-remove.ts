@@ -5,14 +5,14 @@ import {
   ParseIntPipe,
   Post,
 } from '@nestjs/common';
-import { CampanhaServiceForcarExclusao } from '../service/campanha.service.force-remove';
+import { CampanhaServiceForceRemove } from '../service/campanha.service.force-remove';
 
 // POST, não DELETE /campanha/:id (rota já ocupada pelo self-service
 // restrito, CampanhaControllerRemove) - ação distinta, de propósito, não
 // um CRUD genérico (mesmo padrão de aprovar/rejeitar/suspender).
 @Controller('campanha')
-export class CampanhaControllerForcarExclusao {
-  constructor(private readonly service: CampanhaServiceForcarExclusao) {}
+export class CampanhaControllerForceRemove {
+  constructor(private readonly service: CampanhaServiceForceRemove) {}
 
   @Post(':id/forcar-exclusao')
   @HttpCode(204)

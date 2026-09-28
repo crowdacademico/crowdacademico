@@ -1,15 +1,15 @@
 import { Body, Controller, Param, ParseIntPipe, Post } from '@nestjs/common';
-import { CampanhaRequestDeslizarDatas } from '../dto/request/campanha.request-shift-dates';
-import { CampanhaServiceDeslizarDatas } from '../service/campanha.service.shift-dates';
+import { CampanhaRequestShiftDates } from '../dto/request/campanha.request-shift-dates';
+import { CampanhaServiceShiftDates } from '../service/campanha.service.shift-dates';
 
 @Controller('campanha')
-export class CampanhaControllerDeslizarDatas {
-  constructor(private readonly service: CampanhaServiceDeslizarDatas) {}
+export class CampanhaControllerShiftDates {
+  constructor(private readonly service: CampanhaServiceShiftDates) {}
 
   @Post(':id/deslizar-datas')
   deslizar(
     @Param('id', ParseIntPipe) id: number,
-    @Body() dto: CampanhaRequestDeslizarDatas,
+    @Body() dto: CampanhaRequestShiftDates,
   ) {
     return this.service.executar(id, dto.novaDataInicio);
   }

@@ -16,7 +16,7 @@ import { DB } from './db.types';
 // id_papel }) ou chave mais condição ({ id_usuario, deletado: false }); todas as colunas entram com AND.
 //
 // `mensagemProibido` é a mensagem INTEIRA, não um template: alguns chamadores (ex.: CampanhaServiceRemove,
-// CampanhaServiceEnviar) combinam a regra de permissão com uma regra de negócio na mesma frase ("só é possível
+// CampanhaServiceSubmit) combinam a regra de permissão com uma regra de negócio na mesma frase ("só é possível
 // excluir uma campanha em rascunho, e só o dono..."), então forçar um "Sem permissão para {acao}" genérico
 // mudaria o texto que o usuário vê.
 type Filtro<TB extends keyof DB> = Partial<

@@ -4,7 +4,7 @@ import { DatabaseService } from '../../commons/database/database.service';
 import { hashTokenVerificacaoEmail } from '../util/auth.util.email-verification-token';
 
 @Injectable()
-export class AuthServiceVerificarEmail {
+export class AuthServiceVerifyEmail {
   constructor(private readonly database: DatabaseService) {}
 
   async executar(token: string): Promise<void> {

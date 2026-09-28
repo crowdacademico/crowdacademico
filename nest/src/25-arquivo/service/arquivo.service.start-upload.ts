@@ -22,11 +22,11 @@ import {
   TAMANHO_MAXIMO_BYTES_POR_MIME_PADRAO,
   TAMANHO_MINIMO_BYTES_PADRAO,
 } from '../constants/arquivo.constants';
-import { ArquivoRequestIniciarUpload } from '../dto/request/arquivo.request-start-upload';
-import { ArquivoResponseUploadIniciado } from '../dto/response/arquivo.response-upload-started';
+import { ArquivoRequestStartUpload } from '../dto/request/arquivo.request-start-upload';
+import { ArquivoResponseUploadStarted } from '../dto/response/arquivo.response-upload-started';
 
 @Injectable()
-export class ArquivoServiceIniciarUpload {
+export class ArquivoServiceStartUpload {
   constructor(
     private readonly database: DatabaseService,
     private readonly configuracaoValor: ConfiguracaoValorService,
@@ -35,9 +35,9 @@ export class ArquivoServiceIniciarUpload {
   ) {}
 
   async executar(
-    dto: ArquivoRequestIniciarUpload,
+    dto: ArquivoRequestStartUpload,
     idUsuario: number,
-  ): Promise<ArquivoResponseUploadIniciado> {
+  ): Promise<ArquivoResponseUploadStarted> {
     // class-validator (@IsIn) já garante que dto.tipoMime é um dos 4
     // valores da lista - o cast só declara isso pro TypeScript, pra poder
     // indexar os Records abaixo por tipo.

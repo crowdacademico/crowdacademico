@@ -2,7 +2,7 @@ import { IsBoolean, IsIn, IsOptional, IsString } from 'class-validator';
 import { TIPOS_CONFIGURACAO } from '../../../commons/database/db.types';
 import type { TipoConfiguracao } from '../../../commons/database/db.types';
 
-export class ConfiguracaoRequestCreate {
+export class ConfiguracoesRequestCreate {
   @IsString()
   chave: string;
 

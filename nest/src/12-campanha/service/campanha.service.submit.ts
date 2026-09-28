@@ -15,7 +15,7 @@ import { CampanhaResponse } from '../dto/response/campanha.response';
 // autorização (dono, pesquisador ativo), e as condições próprias do reenvio (reenvios disponíveis, prazo) ficam
 // no banco, com ERRCODE distinto cada uma (91025, 91026), então este serviço não repete nenhuma delas.
 //
-// Nenhuma checagem de permissão aqui, mesmo desenho de CampanhaServiceAprovar (mesma pasta): quem decide se
+// Nenhuma checagem de permissão aqui, mesmo desenho de CampanhaServiceApprove (mesma pasta): quem decide se
 // este UPDATE é legítimo é o banco, em 3 camadas. pol_campanha_update (04) deixa a linha passar pela RLS;
 // trg_campanha_valida_transicao (05) exige que seja o DONO saindo de 'rascunho' (ERRCODE 92001 para qualquer
 // outro); e trg_campanha_valida_completude (05), cujo WHEN cobre esta transição, barra envio sem
@@ -25,7 +25,7 @@ import { CampanhaResponse } from '../dto/response/campanha.response';
 // `aprovado_em`/`id_admin` NÃO são tocados de propósito: a trigger de transição recusa a operação se eles
 // mudarem aqui, o que impede este endpoint de virar um caminho de autoaprovação.
 @Injectable()
-export class CampanhaServiceEnviar {
+export class CampanhaServiceSubmit {
   constructor(private readonly database: DatabaseService) {}
 
   async executar(id: number): Promise<CampanhaResponse> {

@@ -13,7 +13,7 @@ import { CampanhaResponse } from '../dto/response/campanha.response';
 // reenvios) chegam já traduzidos pelo PostgresExceptionFilter, por isso não há
 // try/catch aqui.
 @Injectable()
-export class CampanhaServiceDeslizarDatas {
+export class CampanhaServiceShiftDates {
   constructor(
     private readonly database: DatabaseService,
     private readonly findOne: CampanhaServiceFindOne,

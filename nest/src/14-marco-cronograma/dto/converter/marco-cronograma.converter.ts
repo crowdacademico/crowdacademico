@@ -1,4 +1,4 @@
-import { MarcoCronogramaEntity } from '../../entity/marco-cronograma.entity';
+import { MarcoCronogramaEntity } from '../../../commons/database/db.types';
 import { MarcoCronogramaResponse } from '../response/marco-cronograma.response';
 
 export class MarcoCronogramaConverter {

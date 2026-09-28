@@ -22,7 +22,7 @@ export class ArquivoServiceRemove {
   // Soft delete no BANCO (ativo=false), nunca DELETE de verdade na linha: 06_grants.sql só concede
   // INSERT/UPDATE em `arquivo` (sem DELETE), e faz sentido: um arquivo referenciado por
   // arquivo_atualizacao/arquivo_recompensa/usuario.id_imagem_perfil não pode simplesmente sumir do banco
-  // (quebraria FK). A linha fica, só marcada inativa; por isso ArquivoServiceResolverAvatar e qualquer outro
+  // (quebraria FK). A linha fica, só marcada inativa; por isso ArquivoServiceResolveAvatar e qualquer outro
   // lugar que exibe arquivo já filtram por `ativo=true` antes de mostrar.
   //
   // Também apaga o objeto de verdade no bucket (armazenamento.excluirObjeto): sem isso o arquivo ficaria

@@ -1,13 +1,13 @@
 import { ConflictException, Injectable } from '@nestjs/common';
 import { distinguir404ou403 } from '../../commons/database/distinguir-404-ou-403.util';
 import { DatabaseService } from '../../commons/database/database.service';
-import { TermoUsoRequestAlterar } from '../dto/request/termo-uso.request-update';
+import { TermoUsoRequestUpdate } from '../dto/request/termo-uso.request-update';
 import { TermoUsoResponse } from '../dto/response/termo-uso.response';
 
 // Alterar SÓ é permitido enquanto NINGUÉM aceitou esta versão específica ainda. Assim que a 1ª pessoa aceitar,
-// a versão trava e vira só-leitura para sempre (mesmo raciocínio de TermoUsoServiceCriar: editar depois do
+// a versão trava e vira só-leitura para sempre (mesmo raciocínio de TermoUsoServiceCreate: editar depois do
 // aceite destruiria o valor probatório de quem já aceitou um texto que deixaria de ser esse). Só `conteudo` é
-// editável: `versao`/`tipo` são imutáveis (ver TermoUsoRequestAlterar), então não há UNIQUE de `versao` para
+// editável: `versao`/`tipo` são imutáveis (ver TermoUsoRequestUpdate), então não há UNIQUE de `versao` para
 // disparar aqui.
 //
 // Precisa checar as DUAS tabelas de aceite que referenciam termos_de_uso: usuario_termo (aceite
@@ -15,12 +15,12 @@ import { TermoUsoResponse } from '../dto/response/termo-uso.response';
 // contribuição); um
 // termo pode estar "usado" por qualquer uma das duas.
 @Injectable()
-export class TermoUsoServiceAlterar {
+export class TermoUsoServiceUpdate {
   constructor(private readonly database: DatabaseService) {}
 
   async executar(
     id: number,
-    dto: TermoUsoRequestAlterar,
+    dto: TermoUsoRequestUpdate,
   ): Promise<TermoUsoResponse> {
     const [aceiteGeral, aceiteContribuicao] = await Promise.all([
       this.database

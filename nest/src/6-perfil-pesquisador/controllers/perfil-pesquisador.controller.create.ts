@@ -4,7 +4,7 @@ import { PerfilPesquisadorRequestCreate } from '../dto/request/perfil-pesquisado
 import { PerfilPesquisadorServiceCreate } from '../service/perfil-pesquisador.service.create';
 
 // "Tornar-se pesquisador" - sempre a própria conta logada, nunca em nome de
-// outra pessoa (mesmo padrão de ConfiguracaoControllerCreate).
+// outra pessoa (mesmo padrão de ConfiguracoesControllerCreate).
 @Controller('perfil-pesquisador')
 export class PerfilPesquisadorControllerCreate {
   constructor(private readonly service: PerfilPesquisadorServiceCreate) {}

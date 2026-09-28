@@ -14,7 +14,7 @@ import { LogAuditoriaResponse } from '../dto/response/log-auditoria.response';
 const LIMITE_ATIVIDADE_RECENTE = 10;
 
 @Injectable()
-export class LogAuditoriaServiceMinhaAtividade {
+export class LogAuditoriaServiceMyActivity {
   constructor(private readonly database: DatabaseService) {}
 
   async executar(idUsuario: number): Promise<LogAuditoriaResponse[]> {

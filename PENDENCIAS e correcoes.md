@@ -43,7 +43,7 @@ Quem atualiza os requisitos é o Lucas com a revisão externa; aqui fica só o q
 
 #### 🔴 Pendência aberta (lado Nest): falta o endpoint de "encerrar campanha por moderação" - só volta à tona quando `19-denuncia` nascer
 
-A autorização já está pronta no banco (item 57, acima - `campanha_encerrar_moderacao`, concedida a `admin` e `moderador`), mas não existe hoje nenhum controller/service no Nest que execute a transição `ativo → encerrado_moderacao` de verdade - `12-campanha` não tem esse endpoint, e `19-denuncia` (de onde a ação naturalmente parte, depois de uma denúncia julgada procedente) ainda é pasta vazia.
+A autorização já está pronta no banco (permissão `campanha_encerrar_moderacao`, concedida a `admin` e `moderador`), mas não existe hoje nenhum controller/service no Nest que execute a transição `ativo → encerrado_moderacao` de verdade - `12-campanha` não tem esse endpoint, e `19-denuncia` (de onde a ação naturalmente parte, depois de uma denúncia julgada procedente) ainda é pasta vazia.
 
 Não é trabalho extra por causa da correção de hoje - é o mesmo trabalho que já estava pendente antes, só que agora, quando alguém escrever esse endpoint (em `12-campanha` ou como parte de `19-denuncia`), a parte de "quem pode fazer isso" já vai estar certa pros dois papéis, sem precisar mexer em RLS/trigger depois.
 
@@ -55,17 +55,15 @@ Não é trabalho extra por causa da correção de hoje - é o mesmo trabalho que
 
 ### Módulo `4-mail` (ainda não existe)
 
-#### 🟡 6. Fluxo de autenticação completo - PARCIALMENTE RESOLVIDO (01-08-2026)
+#### 🟡 Fluxo de autenticação: falta o que depende de e-mail
 
-Signup, login, verificação de e-mail, recuperação de senha, refresh token.
+Já existe: cadastro, login, renovação de sessão (o token antigo é revogado a cada renovação), logout, bloqueio da conta por tentativas erradas e limite de tentativas por IP.
 
-> Sugestão da *** IA ***: os prazos que já estão documentados no `01` (token de recuperação de senha com expiração de 15-30 min, ver comentário da tabela) já batem com o padrão que plataformas como Catarse/Experiment usam pra esse tipo de fluxo - não mudaria nada aí. Um reforço que vale considerar: rate-limit de tentativa de login (mesmo simples, tipo "5 tentativas por IP a cada 15 min") é algo que sistemas de referência têm e que ainda não está no escopo - vale colocar na lista quando for implementar.
-
-**O que ficou pronto:** signup (já existia, módulo `1-usuario`), login, refresh (com rotação - token antigo é revogado a cada renovação) e logout (módulo `3-auth`), usando as funções que já existiam em `03_funcoes_seguranca.sql` (`registrar_falha_login`, `registrar_login_sucesso`, `liberar_bloqueio_login` - nenhuma função nova precisou ser criada no banco pra isso). **O que continua faltando:** verificação de e-mail e recuperação de senha (dependem do módulo `4-mail`, ainda não construído).
-
-> 🗑️➡️✅ **Rate-limit de login por IP - RESOLVIDO (07-08-2026), texto desta entrada estava desatualizado até 05-09-2026.** Este parágrafo dizia "por IP, não" - isso ficou pra trás: o throttler foi adicionado numa rodada posterior (achado 07-08-2026 do próprio `<dev> Entrar como`, ver comentário em `auth.module.ts`) e ninguém tinha voltado aqui pra atualizar o registro. **Confirmado direto no código (05-09-2026):** `ThrottlerModule.forRoot([{ ttl: 60_000, limit: 5 (produção) / 30 (dev) }])` em `auth.module.ts`, aplicado via `@UseGuards(ThrottlerGuard)` só em `POST /auth/login` (`auth.controller.login.ts`) - o rastreamento padrão do `@nestjs/throttler` é por IP. Duas travas complementares, não uma substituindo a outra: `registrar_falha_login` bloqueia a CONTA específica (protege contra alguém adivinhando a senha de uma pessoa); o throttler protege o SERVIDOR (protege contra alguém varrendo várias contas diferentes do mesmo IP, cenário que a trava por conta sozinha não pega). O item passa de 🟡 pra considerar esta parte específica **fechada** - resta só o que depende de `4-mail`.
-
-> Situação em 27-09-2026: o limite de tentativas de login (rate limit) está resolvido. Falta a recuperação de senha e o e-mail de verdade (hoje a verificação de e-mail usa um link de desenvolvimento). Também dependem do `4-mail`: o e-mail de rejeição de campanha com reenvios restantes e data limite (os dados já vêm em `GET /campanha/:id`) e o "modo log" no desenvolvimento (ideia do `.env` do Atlas, grupo 5).
+Falta, e depende do `4-mail`:
+- recuperação de senha (o prazo de 15 a 30 minutos do token já está documentado no `01`);
+- verificação de e-mail com e-mail de verdade (hoje usa um link de desenvolvimento);
+- e-mail de rejeição de campanha com os reenvios restantes e a data limite (os dados já vêm em `GET /campanha/:id`);
+- "modo log" no desenvolvimento, em que o e-mail aparece no log em vez de ser enviado (ideia do `.env` do Atlas, grupo 5).
 
 ### Pagamento: `22-contribuicao`, `23-repasse`, `24-auditoria-financeira`, gateway e checkout (por último, de propósito)
 
@@ -169,6 +167,7 @@ WHERE id_papel = (SELECT id_papel FROM papel WHERE codigo = 'usuario')
 - **Docker** do Nest e do React (F2 do roteiro do Atlas, com o `docker/` deles como referência).
 - **`react/.gitignore` não cobre `.env`:** inofensivo hoje (o `.env` só tem a URL da API); só volta à tona se o conteúdo do `.env` mudar ou no deploy.
 - **CORS por lista de endereços** (ver grupo 5, segurança): se não for feito antes, entra aqui.
+- **Roteiro de tela `g10-permissoes-na-tela.mjs`, caso "Pesquisadora: /admin/usuarios mostra erro de permissão", também espera o modo produção** (hoje a pesquisadora lista usuários, pela mesma leitura liberada de desenvolvimento). Visto em 28-09-2026.
 - **Roteiro de API `gapi-401-403-404.mjs` espera o modo produção:** hoje 2 casos falham porque toda conta logada vê tudo (Grupo O, leitura liberada de desenvolvimento). Rodar de novo depois do bloco "modo produção".
 
 ---
@@ -187,7 +186,7 @@ O `react/` não tem nenhum teste automatizado hoje (só `build`+`lint`). Um proj
 
 **Vamos usar eventualmente, mas ainda é cedo.** Só voltar a levantar este item quando o sistema estiver completo (todos os módulos prontos) - implementar teste agora, com o backend ainda mudando bastante módulo a módulo, geraria mais retrabalho de manutenção de teste do que benefício.
 
-> Até lá existem os roteiros avulsos de navegador em informacoes/testes-banco/resultados/scripts (g1 a g19).
+> Até lá existem os roteiros avulsos de navegador em informacoes/testes-banco/resultados/scripts (g1 a g20, mais o `rotas-sem-login.mjs`, que chama as 119 rotas sem login e compara com a gravação anterior).
 
 ---
 
@@ -215,7 +214,6 @@ Lucas decide depois se ajudam o CrowdAcadêmico. Contexto em `informacoes/ROTEIR
 
 - **Verde do texto no tema escuro:** `#2fbf71` é provisório (6,14:1 sobre o cartão escuro); aguarda o Lucas confirmar o escopo da página de conferência de cores.
 - **Gestão de logo e favicon:** a aba Identidade Visual do Dashboard é só um espaço reservado.
-- **"Membro desde 12/2023"** na Minha Conta: adiado pelo Lucas.
 
 ### Telas e formulários
 
@@ -234,7 +232,6 @@ Na tabela de Atualizações do T3, o botão "Ocultar" (só texto) fica com fonte
 
 ### Estrutura e ferramentas
 
-- **Comentários antigos do SQL:** 86 cabeçalhos foram condensados em 24-09-2026 e o texto original foi para `HISTORICO_COMENTARIOS_SQL.md`, que hoje é um arquivo morto. Falta, se o Lucas quiser, curar o que ainda vale e levar para as seções de `DOCUMENTACAO_BD.md`.
 
 ### Protótipo estático (sessão própria)
 
@@ -243,6 +240,8 @@ Na tabela de Atualizações do T3, o botão "Ocultar" (só texto) fica com fonte
 ---
 
 ## 6. Registros que não são pendência (para não se perderem)
+
+- **Roteiros de tela que dependem de dado criado à mão (28-09-2026):** `g5-campo-testes-api.mjs`, `g13-fila-aprovacao.mjs` e dois casos do `g10` usam o admin como pesquisador (criam campanha com ele, abrem o perfil de pesquisador dele). O seed não dá perfil de pesquisador ao admin; ele tinha sido criado à mão antes da rodada de 26-09, e o Supabase foi recriado depois. Para rodá-los de novo: dar um perfil de pesquisador ao admin (upgrade em Minha Conta) ou trocar o roteiro para usar uma pesquisadora do seed. O mesmo fluxo foi conferido pela API em 28-09-2026 com uma conta nova.
 
 - **Descartados de propósito do roteiro do Atlas** (escopo enxuto): Next.js, Tailwind no JSX, i18n, gerador de módulo, versão na URL, e a maiúscula automática nos nomes (ficou só a limpeza de espaços).
 - **Exceção consciente no T4:** a seção de suspensão (conta e pesquisador) chama a API direto, sem passar pelo registro de chamadas do Campo de Testes; é o mesmo componente da tela real. Ver o histórico (08-09-2026).

@@ -47,9 +47,9 @@ Como funciona: a pessoa faz `git add` e `git commit`, o husky chama o lint-stage
 
 **Commit barrado?** Passo a passo para descobrir e resolver sozinho: `COMMIT_BARRADO.md`, na raiz do projeto.
 
-- **Decisão:** a cada `git commit`, o ESLint roda só nos arquivos alterados e prontos para o commit (`git add`); se tiver erro, o commit não acontece. O `package.json` da raiz existe só para isso (`husky` e `lint-staged`); o gancho está em `.husky/pre-commit` e as regras em `nest/.lintstagedrc.json` (`src/**/*.ts`) e `react/.lintstagedrc.json` (`src/**/*.{ts,tsx}`). Cada lado usa o próprio `eslint.config`.
+- **Decisão:** a cada `git commit`, o ESLint roda só nos arquivos alterados e prontos para o commit (`git add`); se tiver erro, o commit não acontece. O `package.json` da raiz existe só para isso (`husky` e `lint-staged`); o gancho está em `.husky/pre-commit` e as regras em `nest/lint-staged.config.mjs` (`src/**/*.ts`) e `react/lint-staged.config.mjs` (`src/**/*.{ts,tsx}`); com mais de 40 arquivos no commit, o ESLint confere a pasta `src` inteira, porque a lista de nomes estoura o limite de tamanho da linha de comando do Windows. Cada lado usa o próprio `eslint.config`.
 - **Motivo:** erro de lint não entra no repositório por esquecimento, e olhar só o que mudou deixa o commit rápido.
-- **Caso-limite aceito:** só barra **erro**, não aviso. Não roda o Prettier (no `react/` ele reformataria arquivos inteiros, porque não há `.prettierrc`). Só vale depois de `npm install` **na raiz**; quem não rodar commita sem a checagem. Para pular numa emergência: `git commit --no-verify`. Para desligar de vez: apagar `.husky/`, o `package.json` da raiz e os dois `.lintstagedrc.json`, e rodar `git config --unset core.hooksPath`.
+- **Caso-limite aceito:** só barra **erro**, não aviso. Não roda o Prettier (no `react/` ele reformataria arquivos inteiros, porque não há `.prettierrc`). Só vale depois de `npm install` **na raiz**; quem não rodar commita sem a checagem. Para pular numa emergência: `git commit --no-verify`. Para desligar de vez: apagar `.husky/`, o `package.json` da raiz e os dois `lint-staged.config.mjs`, e rodar `git config --unset core.hooksPath`.
 
 ---
 

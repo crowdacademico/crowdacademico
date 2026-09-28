@@ -1,16 +1,16 @@
 import { Body, Controller, Post } from '@nestjs/common';
-import { ConfiguracaoRequestCreate } from '../dto/request/configuracao.request-create';
-import { ConfiguracaoServiceCreate } from '../service/configuracao.service.create';
+import { ConfiguracoesRequestCreate } from '../dto/request/configuracoes.request-create';
+import { ConfiguracoesServiceCreate } from '../service/configuracoes.service.create';
 import { UsuarioAtual } from '../../commons/auth/usuario-atual.decorator';
 import type { UsuarioAutenticado } from '../../commons/auth/usuario-autenticado.interface';
 
 @Controller('configuracoes')
-export class ConfiguracaoControllerCreate {
-  constructor(private readonly service: ConfiguracaoServiceCreate) {}
+export class ConfiguracoesControllerCreate {
+  constructor(private readonly service: ConfiguracoesServiceCreate) {}
 
   @Post()
   criar(
-    @Body() dto: ConfiguracaoRequestCreate,
+    @Body() dto: ConfiguracoesRequestCreate,
     @UsuarioAtual() usuario: UsuarioAutenticado,
   ) {
     return this.service.executar(dto, usuario.idUsuario);

@@ -1,18 +1,18 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
 import { CODIGO_PG_RLS_VIOLATION } from '../../commons/database/postgres-exception.filter';
-import { TermoUsoRequestCriar } from '../dto/request/termo-uso.request-create';
+import { TermoUsoRequestCreate } from '../dto/request/termo-uso.request-create';
 import { TermoUsoResponse } from '../dto/response/termo-uso.response';
 import { temCodigoPostgres } from '../../commons/database/codigo-postgres.util';
 
 // Publicar versão nova NUNCA ativa sozinha: o fluxo real é criar rascunho, a "staff" revisar/procurar erro de
-// português, e SÓ DEPOIS o administrador tornar essa versão vigente manualmente (ver TermoUsoServiceAtivar). É
+// português, e SÓ DEPOIS o administrador tornar essa versão vigente manualmente (ver TermoUsoServiceActivate). É
 // um INSERT simples, sempre `ativo: false`, sem tocar em mais nenhuma linha.
 @Injectable()
-export class TermoUsoServiceCriar {
+export class TermoUsoServiceCreate {
   constructor(private readonly database: DatabaseService) {}
 
-  async executar(dto: TermoUsoRequestCriar): Promise<TermoUsoResponse> {
+  async executar(dto: TermoUsoRequestCreate): Promise<TermoUsoResponse> {
     try {
       const linha = await this.database
         .getDb()

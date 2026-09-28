@@ -19,7 +19,7 @@ const TITULOS_ACADEMICOS_VALIDOS = [
 
 // Separado de PerfilPesquisadorRequestCreate: as duas classes têm os MESMOS 4 campos, mas são ações diferentes
 // (admin criando perfil PARA OUTRA pessoa, via criar_perfil_pesquisador_para_outro()).
-export class PerfilPesquisadorRequestCreateParaOutro {
+export class PerfilPesquisadorRequestCreateForOther {
   @IsString()
   @IsCpf()
   cpf: string;
@@ -30,7 +30,7 @@ export class PerfilPesquisadorRequestCreateParaOutro {
   tipoVinculo: TipoVinculo;
 
   @ValidateIf(
-    (dto: PerfilPesquisadorRequestCreateParaOutro) =>
+    (dto: PerfilPesquisadorRequestCreateForOther) =>
       dto.tipoVinculo === 'institucional',
   )
   @IsString()
@@ -49,7 +49,7 @@ export class PerfilPesquisadorRequestCreateParaOutro {
   // não de quem preencheu). Fica opcional (não `@Equals(true)` como no self-service) para não quebrar o card
   // "Criar Perfil Pesquisador" que já existe dentro de ModalAlterarUsuario: esse caminho continua sem passar
   // este campo, então continua sem gravar aceite nenhum (ver comentário em
-  // PerfilPesquisadorServiceCreateParaOutro).
+  // PerfilPesquisadorServiceCreateForOther).
   @IsOptional()
   @IsBoolean()
   aceiteTermos?: boolean;

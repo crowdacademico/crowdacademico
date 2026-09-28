@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
-import { UsuarioResponseTermoAceito } from '../dto/response/usuario.response-accepted-term';
+import { UsuarioResponseAcceptedTerm } from '../dto/response/usuario.response-accepted-term';
 
 // "Onde fica registrado" o aceite do Termo de Uso, para Consultar Usuário: join simples de usuario_termo com
 // termos_de_uso (para mostrar versão/tipo, não só o id_termo cru).
@@ -10,10 +10,10 @@ import { UsuarioResponseTermoAceito } from '../dto/response/usuario.response-acc
 // de contribuição (22-contribuicao) ainda não existe; juntar isso aqui exigiria um join a mais por uma tabela
 // que ainda não tem linha no sistema. Próximo passo natural quando esse módulo nascer.
 @Injectable()
-export class UsuarioServiceListarTermosAceitos {
+export class UsuarioServiceFindAllAcceptedTerms {
   constructor(private readonly database: DatabaseService) {}
 
-  async executar(idUsuario: number): Promise<UsuarioResponseTermoAceito[]> {
+  async executar(idUsuario: number): Promise<UsuarioResponseAcceptedTerm[]> {
     const linhas = await this.database
       .getDb()
       .selectFrom('usuario_termo')

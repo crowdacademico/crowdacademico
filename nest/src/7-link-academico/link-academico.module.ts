@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { LinkAcademicoControllerCreate } from './controllers/link-academico.controller.create';
-import { LinkAcademicoControllerCreateParaOutro } from './controllers/link-academico.controller.create-for-other';
+import { LinkAcademicoControllerCreateForOther } from './controllers/link-academico.controller.create-for-other';
 import { LinkAcademicoControllerFindAll } from './controllers/link-academico.controller.findall';
 import { LinkAcademicoControllerRemove } from './controllers/link-academico.controller.remove';
 import { LinkAcademicoControllerUpdate } from './controllers/link-academico.controller.update';
@@ -12,7 +12,7 @@ import { LinkAcademicoServiceUpdate } from './service/link-academico.service.upd
 @Module({
   controllers: [
     LinkAcademicoControllerCreate,
-    LinkAcademicoControllerCreateParaOutro,
+    LinkAcademicoControllerCreateForOther,
     LinkAcademicoControllerFindAll,
     LinkAcademicoControllerUpdate,
     LinkAcademicoControllerRemove,

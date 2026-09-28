@@ -1,4 +1,4 @@
-import { AtualizacaoCampanhaEntity } from '../../entity/atualizacao-campanha.entity';
+import { AtualizacaoCampanhaEntity } from '../../../commons/database/db.types';
 import { AtualizacaoCampanhaResponse } from '../response/atualizacao-campanha.response';
 
 export class AtualizacaoCampanhaConverter {

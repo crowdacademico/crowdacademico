@@ -35,7 +35,7 @@ import { ConfiguracaoValorModule } from '../commons/configuracao/configuracao-va
     ConfigModule.forRoot({ isGlobal: true }),
     // Habilita @Cron em qualquer service do app (RF-057): sem isso registrado uma vez aqui, o decorator @Cron
     // não faz nada sozinho, precisa do agendador do próprio módulo rodando por trás. Primeiro consumidor:
-    // CampanhaServiceEncerrarVencidas (12-campanha).
+    // CampanhaServiceCloseExpired (12-campanha).
     ScheduleModule.forRoot(),
     // Existir DOIS `ThrottlerModule.forRoot()` (auth.module.ts e usuario.module.ts) foi um bug: o módulo é
     // `@Global()` (conferido direto em node_modules/@nestjs/throttler) e `THROTTLER_OPTIONS` é um token de

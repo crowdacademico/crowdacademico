@@ -17,7 +17,7 @@ export interface AvatarResolvido {
 // outro módulo que precise mostrar um avatar) poder injetar isto
 // diretamente no futuro, sem duplicar a regra de fallback em dois lugares.
 @Injectable()
-export class ArquivoServiceResolverAvatar {
+export class ArquivoServiceResolveAvatar {
   constructor(
     private readonly database: DatabaseService,
     @Inject(ARMAZENAMENTO_SERVICE)

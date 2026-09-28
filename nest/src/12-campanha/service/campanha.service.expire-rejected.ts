@@ -8,11 +8,11 @@ import { PG_POOL } from '../../commons/database/database.constants';
 // reenviar, contados da ÚLTIMA rejeição. Sem reenvio nesse prazo, a campanha some, e o histórico de rejeições
 // dela permanece (não tem FK para campanha).
 //
-// Mesmo molde de CampanhaServiceExpirarRascunho (mesma pasta): `PG_POOL` direto porque o job roda fora do
+// Mesmo molde de CampanhaServiceExpireDrafts (mesma pasta): `PG_POOL` direto porque o job roda fora do
 // pipeline HTTP, função SECURITY DEFINER.
 @Injectable()
-export class CampanhaServiceExpirarRejeitadas {
-  private readonly logger = new Logger(CampanhaServiceExpirarRejeitadas.name);
+export class CampanhaServiceExpireRejected {
+  private readonly logger = new Logger(CampanhaServiceExpireRejected.name);
 
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
 

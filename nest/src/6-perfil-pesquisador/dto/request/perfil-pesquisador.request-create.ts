@@ -18,7 +18,7 @@ const TITULOS_ACADEMICOS_VALIDOS = [
 
 // "Tornar-se pesquisador" - usuário já cadastrado (comum, Grupo 1 do
 // cadastro) upgrada a própria conta. id_usuario NUNCA vem do corpo da
-// requisição (mesmo padrão de 11-configuracoes/configuracao.request-create):
+// requisição (mesmo padrão de 11-configuracoes/configuracoes.request-create):
 // o controller pega de request.user.idUsuario, senão qualquer um poderia
 // criar perfil de pesquisador em nome de outra pessoa (a RLS bloquearia via
 // pol_perfil_insert, mas nem deveria chegar nesse ponto).

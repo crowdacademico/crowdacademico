@@ -1,6 +1,6 @@
 import { IsBoolean, IsOptional, IsString } from 'class-validator';
 
-export class ConfiguracaoRequestUpdate {
+export class ConfiguracoesRequestUpdate {
   @IsOptional()
   @IsString()
   valor?: string;
@@ -13,7 +13,7 @@ export class ConfiguracaoRequestUpdate {
   @IsBoolean()
   ativo?: boolean;
 
-  // Ver comentário completo em configuracao.request-create.ts.
+  // Ver comentário completo em configuracoes.request-create.ts.
   @IsOptional()
   @IsBoolean()
   publica?: boolean;

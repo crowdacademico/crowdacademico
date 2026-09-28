@@ -270,7 +270,7 @@ DROP POLICY IF EXISTS pol_termos_insert ON termos_de_uso;
 CREATE POLICY pol_termos_insert ON termos_de_uso FOR INSERT TO app_nestjs WITH CHECK ((SELECT public.tem_permissao('termos_uso_gerenciar')));
 DROP POLICY IF EXISTS pol_termos_update ON termos_de_uso;
 CREATE POLICY pol_termos_update ON termos_de_uso FOR UPDATE TO app_nestjs USING ((SELECT public.tem_permissao('termos_uso_gerenciar')));
--- A trava de "só rascunho, nunca ativo/nunca aceito" mora no Nest (TermoUsoServiceExcluir), não aqui:
+-- A trava de "só rascunho, nunca ativo/nunca aceito" mora no Nest (TermoUsoServiceRemove), não aqui:
 -- esta policy só decide QUEM pode tentar, não O QUE pode ser apagado.
 DROP POLICY IF EXISTS pol_termos_delete ON termos_de_uso;
 CREATE POLICY pol_termos_delete ON termos_de_uso FOR DELETE TO app_nestjs USING ((SELECT public.tem_permissao('termos_uso_gerenciar')));
@@ -544,9 +544,14 @@ CREATE POLICY pol_historicorej_select ON historico_rejeicao FOR SELECT TO app_ne
     OR (SELECT public.tem_permissao('relatorio_visualizar'))
     OR id_usuario_dono = (SELECT public.id_usuario_atual())
 );
--- [04-E-6] historico_rejeicao: por que existem policies de escrita (ver DOCUMENTACAO_BD.md)
+-- [04-E-6] historico_rejeicao: só quem pode rejeitar grava, e só em nome próprio (id_admin). Com WITH CHECK (true),
+-- qualquer conta logada gravava rejeição falsa na campanha dos outros e consumia os reenvios dela. A cascata de
+-- suspender_pesquisador() (03) grava por função SECURITY DEFINER e não passa por esta policy.
 DROP POLICY IF EXISTS pol_historicorej_insert ON historico_rejeicao;
-CREATE POLICY pol_historicorej_insert ON historico_rejeicao FOR INSERT TO app_nestjs WITH CHECK (true);
+CREATE POLICY pol_historicorej_insert ON historico_rejeicao FOR INSERT TO app_nestjs WITH CHECK (
+    (SELECT public.tem_permissao('campanha_rejeitar'))
+    AND id_admin = (SELECT public.id_usuario_atual())
+);
 -- Sem policy de UPDATE (e sem GRANT, ver 06) em historico_rejeicao: histórico de moderação é IMUTÁVEL;
 -- senão qualquer pesquisador logado conseguiria reescrever a justificativa da própria rejeição.
 DROP POLICY IF EXISTS pol_historicorej_update ON historico_rejeicao;

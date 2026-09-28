@@ -3,7 +3,8 @@ import { distinguir404ou403 } from '../../commons/database/distinguir-404-ou-403
 import { DatabaseService } from '../../commons/database/database.service';
 import { CAMPANHA_COLUNAS_SELECT } from '../constants/campanha.constants';
 import { CampanhaConverter } from '../dto/converter/campanha.converter';
-import { CampanhaRequestRejeitar } from '../dto/request/campanha.request-reject';
+import { exigirAguardandoAprovacao } from '../util/campanha.util.require-pending';
+import { CampanhaRequestReject } from '../dto/request/campanha.request-reject';
 import { CampanhaResponse } from '../dto/response/campanha.response';
 
 // Dois writes (UPDATE campanha + INSERT historico_rejeicao) na mesma
@@ -14,13 +15,13 @@ import { CampanhaResponse } from '../dto/response/campanha.response';
 // Mesma proteção de aprovar.ts: trg_campanha_valida_transicao (05) só
 // deixa a mudança de status passar pra quem tem campanha_rejeitar.
 @Injectable()
-export class CampanhaServiceRejeitar {
+export class CampanhaServiceReject {
   constructor(private readonly database: DatabaseService) {}
 
   async executar(
     id: number,
     idAdmin: number,
-    dto: CampanhaRequestRejeitar,
+    dto: CampanhaRequestReject,
   ): Promise<CampanhaResponse> {
     const linha = await this.database
       .getDb()
@@ -30,10 +31,12 @@ export class CampanhaServiceRejeitar {
         id_admin: idAdmin,
       })
       .where('id_campanha', '=', id)
+      .where('status', '=', 'aguardando_aprovacao')
       .returning(CAMPANHA_COLUNAS_SELECT)
       .executeTakeFirst();
 
     if (!linha) {
+      await exigirAguardandoAprovacao(this.database.getDb(), id, 'rejeitar');
       return await distinguir404ou403(
         this.database.getDb(),
         'campanha',
@@ -51,7 +54,7 @@ export class CampanhaServiceRejeitar {
         id_usuario_dono: linha.id_usuario,
         titulo_campanha: linha.titulo,
         id_admin: idAdmin,
-        justificativa: dto.justificativa ?? null,
+        justificativa: dto.justificativa,
       })
       .execute();
 

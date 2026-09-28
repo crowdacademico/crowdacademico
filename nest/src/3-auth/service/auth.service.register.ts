@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { sql } from 'kysely';
 import { UsuarioServiceCreate } from '../../1-usuario/service/usuario.service.create';
-import { TermoUsoServiceAtivo } from '../../5-termo-uso/service/termo-uso.service.find-active';
+import { TermoUsoServiceFindActive } from '../../5-termo-uso/service/termo-uso.service.find-active';
 import { ConfiguracaoValorService } from '../../commons/configuracao/configuracao-valor.service';
 import { DatabaseService } from '../../commons/database/database.service';
 import {
@@ -19,11 +19,11 @@ import { gerarTokenVerificacaoEmail } from '../util/auth.util.email-verification
 // Diferente de "admin cria um usuário para outra pessoa": aqui é a própria pessoa se cadastrando, então termina
 // logada.
 @Injectable()
-export class AuthServiceCadastro {
+export class AuthServiceRegister {
   constructor(
     private readonly database: DatabaseService,
     private readonly usuarioServiceCreate: UsuarioServiceCreate,
-    private readonly termoUsoServiceAtivo: TermoUsoServiceAtivo,
+    private readonly termoUsoServiceAtivo: TermoUsoServiceFindActive,
     private readonly authServiceLogin: AuthServiceLogin,
     private readonly configuracaoValor: ConfiguracaoValorService,
   ) {}

@@ -1,5 +1,5 @@
 import { Controller, Get, ParseEnumPipe, Query } from '@nestjs/common';
-import { TermoUsoServiceAtivo } from '../service/termo-uso.service.find-active';
+import { TermoUsoServiceFindActive } from '../service/termo-uso.service.find-active';
 import { TIPOS_TERMO } from '../../commons/database/db.types';
 import type { TipoTermo } from '../../commons/database/db.types';
 import { Publico } from '../../commons/auth/publico.decorator';
@@ -11,8 +11,8 @@ import { Publico } from '../../commons/auth/publico.decorator';
 // ativo" sem dizer qual é ambíguo. `ParseEnumPipe` valida contra TIPOS_TERMO e já devolve 400 sozinho se
 // vier vazio/valor fora da lista.
 @Controller('termos-uso')
-export class TermoUsoControllerAtivo {
-  constructor(private readonly service: TermoUsoServiceAtivo) {}
+export class TermoUsoControllerFindActive {
+  constructor(private readonly service: TermoUsoServiceFindActive) {}
 
   @Get('ativo')
   @Publico()

@@ -11,7 +11,7 @@ import { LinkAcademicoServiceCreate } from '../service/link-academico.service.cr
 // 'link_academico_gerenciar' que já libera UPDATE/DELETE de link de outra pessoa, nenhuma permissão nova foi
 // criada.
 @Controller('link-academico')
-export class LinkAcademicoControllerCreateParaOutro {
+export class LinkAcademicoControllerCreateForOther {
   constructor(private readonly service: LinkAcademicoServiceCreate) {}
 
   @Post(':idUsuario')

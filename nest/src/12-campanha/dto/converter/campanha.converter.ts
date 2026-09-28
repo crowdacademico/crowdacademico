@@ -1,4 +1,4 @@
-import { CampanhaEntity } from '../../entity/campanha.entity';
+import { CampanhaEntity } from '../../../commons/database/db.types';
 import { CampanhaResponse } from '../response/campanha.response';
 
 // As três colunas extras só existem em listar e consultar (campanha.util.with-names.ts); nas

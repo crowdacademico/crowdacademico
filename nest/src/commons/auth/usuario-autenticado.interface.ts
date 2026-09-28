@@ -1,4 +1,4 @@
-// Vive em commons/ (não em 3-auth/) de propósito: tanto o JwtAuthGuard
+// Vive em commons/ (não em 3-auth/) de propósito: tanto o AuthGuardJwt
 // (3-auth) quanto o GlobalDbInterceptor (commons/database) precisam do mesmo
 // formato de `request.user` - colocar aqui evita commons/database importar
 // de dentro de 3-auth (dependência de módulo de "infra" apontando pra

@@ -1,4 +1,4 @@
-import { OrcamentoCampanhaEntity } from '../../entity/orcamento-campanha.entity';
+import { OrcamentoCampanhaEntity } from '../../../commons/database/db.types';
 import { OrcamentoCampanhaResponse } from '../response/orcamento-campanha.response';
 
 export class OrcamentoCampanhaConverter {

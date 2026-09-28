@@ -5,11 +5,11 @@ import {
   ParseIntPipe,
   Post,
 } from '@nestjs/common';
-import { UsuarioServiceDesbloquear } from '../service/usuario.service.unlock';
+import { UsuarioServiceUnlock } from '../service/usuario.service.unlock';
 
 @Controller('usuario')
-export class UsuarioControllerDesbloquear {
-  constructor(private readonly service: UsuarioServiceDesbloquear) {}
+export class UsuarioControllerUnlock {
+  constructor(private readonly service: UsuarioServiceUnlock) {}
 
   @Post(':id/desbloquear')
   @HttpCode(204)

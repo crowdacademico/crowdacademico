@@ -12,13 +12,13 @@ import { Request } from 'express';
 // resolve `request.user` quando existe um Bearer token válido. Rota sem
 // token nenhum passa como anônima (request.user fica undefined) - quem
 // decide se isso é permitido é a RLS do banco (ou, pra rotas que exigem
-// login de qualquer forma, o RequireAuthGuard, global, que só deixa passar sem login as rotas @Publico()).
+// login de qualquer forma, o AuthGuardRequireAuth, global, que só deixa passar sem login as rotas @Publico()).
 //
 // Roda ANTES do GlobalDbInterceptor (guards → interceptors, nessa ordem, no
 // pipeline do Nest) - é assim que o interceptor já encontra request.user
 // resolvido quando abre a transação e seta app.id_usuario_atual.
 @Injectable()
-export class JwtAuthGuard implements CanActivate {
+export class AuthGuardJwt implements CanActivate {
   constructor(private readonly jwtService: JwtService) {}
 
   canActivate(context: ExecutionContext): boolean {

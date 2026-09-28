@@ -20,8 +20,8 @@ import { PG_POOL } from '../../commons/database/database.constants';
 // em RNF-012. Se isso importar de verdade, a extensão pg_cron do Supabase resolve rodando dentro do próprio
 // banco, sem depender do Nest estar acordado.
 @Injectable()
-export class CampanhaServiceEncerrarVencidas {
-  private readonly logger = new Logger(CampanhaServiceEncerrarVencidas.name);
+export class CampanhaServiceCloseExpired {
+  private readonly logger = new Logger(CampanhaServiceCloseExpired.name);
 
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
 

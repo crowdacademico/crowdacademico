@@ -5,7 +5,7 @@ import { Publico } from '../../commons/auth/publico.decorator';
 
 // @Publico(), de propósito: catálogo público de leitura
 // (pol_tipolink_select é USING(true), ver 04_rls_policies.sql [04-C-2]) -
-// mesmo padrão de ConfiguracaoControllerFindAll/AreaConhecimentoControllerFindAll.
+// mesmo padrão de ConfiguracoesControllerFindAll/AreaConhecimentoControllerFindAll.
 @Controller('tipo-link')
 export class TipoLinkControllerFindAll {
   constructor(private readonly service: TipoLinkServiceFindAll) {}

@@ -1,5 +1,5 @@
 import { Controller, Get } from '@nestjs/common';
-import { UsuarioPapelServiceFindAllGeral } from '../service/usuario-papel.service.findall-global';
+import { UsuarioPapelServiceFindAllGlobal } from '../service/usuario-papel.service.findall-global';
 
 // GET /usuario-papel (sem :idUsuario) não conflita com o findall filtrado (GET /usuario-papel/:idUsuario)
 // porque o Nest casa rota por número de segmentos: esta exige zero segmentos extras, a outra exige exatamente
@@ -10,8 +10,8 @@ import { UsuarioPapelServiceFindAllGeral } from '../service/usuario-papel.servic
 // RLS (pol_usuariopapel_select, 04): cada pessoa vê os próprios vínculos, e quem tem papel_gerenciar vê os de
 // todos.
 @Controller('usuario-papel')
-export class UsuarioPapelControllerFindAllGeral {
-  constructor(private readonly service: UsuarioPapelServiceFindAllGeral) {}
+export class UsuarioPapelControllerFindAllGlobal {
+  constructor(private readonly service: UsuarioPapelServiceFindAllGlobal) {}
 
   @Get()
   listar() {

@@ -8,7 +8,7 @@ import { DatabaseService } from '../../commons/database/database.service';
 // contribuição/repasse em andamento), esta função ignora status de propósito, gateada por permissão própria
 // (campanha_excluir_forcado, nunca campanha_editar). É só ferramenta de bancada: nunca exposta no painel real.
 @Injectable()
-export class CampanhaServiceForcarExclusao {
+export class CampanhaServiceForceRemove {
   constructor(private readonly database: DatabaseService) {}
 
   async executar(id: number): Promise<void> {

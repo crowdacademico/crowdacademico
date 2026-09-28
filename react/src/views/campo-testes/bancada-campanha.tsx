@@ -172,7 +172,8 @@ export function BancadaCampanha({ auth }: PropsPagina) {
     await executarRejeitando(async () => {
       await chamarERegistrar<void>(`/campanha/${idCampanhaEditando}/rejeitar`, {
         method: 'POST',
-        body: JSON.stringify({ justificativa: justificativaRejeicaoEdicao || undefined }),
+        // Obrigatória na API: sem ela, a resposta 400 com o motivo aparece no registro de chamadas.
+        body: JSON.stringify({ justificativa: justificativaRejeicaoEdicao.trim() }),
       });
       mostrar('Campanha rejeitada com sucesso.', `ID: ${idCampanhaEditando} foi rejeitada`);
       setIdCampanhaEditando(null);
@@ -360,7 +361,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
 
                   <div className="flex gap-2 items-end mt-3">
                     <textarea
-                      placeholder="Justificativa da rejeição (opcional)"
+                      placeholder="Justificativa da rejeição (obrigatória)"
                       value={justificativaRejeicaoEdicao}
                       onChange={(evento) => setJustificativaRejeicaoEdicao(evento.target.value)}
                       className="input-padrao flex-1"

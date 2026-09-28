@@ -107,7 +107,6 @@ crowdacademico/                          (repo único na Organization)
 │       │   │   ├── converter/
 │       │   │   ├── request/
 │       │   │   └── response/
-│       │   ├── entity/
 │       │   ├── service/
 │       │   │   ├── <nome>.service.create.ts
 │       │   │   ├── <nome>.service.findall.ts

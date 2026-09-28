@@ -1,13 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
-import { ConfiguracaoConverter } from '../dto/converter/configuracao.converter';
-import { ConfiguracaoResponse } from '../dto/response/configuracao.response';
+import { ConfiguracoesConverter } from '../dto/converter/configuracoes.converter';
+import { ConfiguracoesResponse } from '../dto/response/configuracoes.response';
 
 @Injectable()
-export class ConfiguracaoServiceFindOne {
+export class ConfiguracoesServiceFindOne {
   constructor(private readonly database: DatabaseService) {}
 
-  async executar(idConfig: number): Promise<ConfiguracaoResponse> {
+  async executar(idConfig: number): Promise<ConfiguracoesResponse> {
     const linha = await this.database
       .getDb()
       .selectFrom('configuracoes')
@@ -19,6 +19,6 @@ export class ConfiguracaoServiceFindOne {
       throw new NotFoundException(`Configuração ${idConfig} não encontrada`);
     }
 
-    return ConfiguracaoConverter.paraResponseDto(linha);
+    return ConfiguracoesConverter.paraResponseDto(linha);
   }
 }

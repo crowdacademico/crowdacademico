@@ -34,7 +34,7 @@ export interface UsuarioResponseTermoAceito {
   aceitoEm: string;
 }
 
-// Espelha usuario.response-suspend.ts.
+// Espelha SuspensaoResponseDto (nest/src/commons/moderacao/dto/suspensao.response.dto.ts).
 export interface UsuarioResponseSuspend {
   suspensoAte: string | null;
   motivoSuspensao: string | null;

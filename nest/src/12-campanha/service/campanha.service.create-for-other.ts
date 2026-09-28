@@ -11,7 +11,7 @@ import { CampanhaServiceFindOne } from './campanha.service.findone';
 // função); o self-service (CampanhaServiceCreate) não o usa. Mesma classe de
 // perfil-pesquisador.service.create-for-other.ts.
 @Injectable()
-export class CampanhaServiceCreateParaOutro {
+export class CampanhaServiceCreateForOther {
   constructor(
     private readonly database: DatabaseService,
     private readonly findOne: CampanhaServiceFindOne,

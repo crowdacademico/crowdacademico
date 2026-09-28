@@ -8,7 +8,7 @@ import { IsCpf } from '../../../commons/seguranca/cpf-valido.decorator';
 // (03_funcoes_seguranca.sql, [03-Q]), nunca pelo próprio pesquisador via
 // PATCH comum. @IsCpf só confere FORMATO (dígito verificador) - mesmo
 // decorator do cadastro inicial.
-export class PerfilPesquisadorRequestCorrigirCpf {
+export class PerfilPesquisadorRequestFixCpf {
   @IsString()
   @IsCpf()
   cpf: string;

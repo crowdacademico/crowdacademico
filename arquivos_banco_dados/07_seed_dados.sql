@@ -73,6 +73,12 @@
 --         mas depende só de usuario - Camada 2)
 -- ============================================================================
 
+-- Todas as datas e horas escritas neste arquivo são do horário de Brasília. Sem isto, o Postgres (o Supabase roda
+-- em UTC) lê '2024-01-01 00:00:00' como meia-noite de Londres, que em Brasília é 21h do dia anterior: a conta
+-- criada em 01/01/2024 aparecia como "Membro desde 12/2023". SET LOCAL não serve aqui (o arquivo não roda numa
+-- transação só); o SET vale até o fim da conexão, e o RESET no fim do arquivo devolve o padrão.
+SET TIME ZONE 'America/Sao_Paulo';
+
 -- [07-I-1] score_config: dimensões raiz e subitens do motor de pontuação
 INSERT INTO score_config (nome, descricao, peso, id_pai) VALUES
     ('perfil_academico',     'Perfil Acadêmico Declarado',  30, NULL),
@@ -788,7 +794,7 @@ SELECT u.id_usuario,
 FROM usuario u;
 
 -- [07-C-5] configuracoes: por que este bloco vem depois de usuario (ver DOCUMENTACAO_BD.md)
--- Agrupado por domínio (A,D,E,F,H,I, mesma ordem de [07-B-2]): configuracao.service.findall.ts ordena por
+-- Agrupado por domínio (A,D,E,F,H,I, mesma ordem de [07-B-2]): configuracoes.service.findall.ts ordena por
 -- id_config, então a ordem do INSERT é a ordem que a tela mostra. Puramente cosmético para cada chave: `chave` é
 -- UNIQUE e toda leitura (NestJS) busca por nome, nunca por posição/id_config.
 --
@@ -1330,3 +1336,6 @@ INSERT INTO notificacao (id_usuario, email_destinatario, tipo_evento, status, te
 -- chamada existe só como rede de segurança: reprocessa todo mundo do zero, caso alguma trigger seja
 -- desligada/alterada no futuro e alguém esqueça de rodar isso manualmente depois.
 SELECT public.recalcular_todos_os_scores();
+
+-- Volta o fuso da conexão ao padrão (ver o SET TIME ZONE no início deste arquivo).
+RESET TIME ZONE;

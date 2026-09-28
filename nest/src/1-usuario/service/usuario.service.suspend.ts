@@ -2,14 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { sql } from 'kysely';
 import { DatabaseService } from '../../commons/database/database.service';
 import { AutorizacaoService } from '../../commons/seguranca/autorizacao.service';
-import { UsuarioResponseSuspend } from '../dto/response/usuario.response-suspend';
+import { SuspensaoResponseDto } from '../../commons/moderacao/dto/suspensao.response.dto';
 
 // suspender_usuario/revogar_suspensao_usuario (03_funcoes_seguranca.sql, [03-N]): mesmo padrão de
-// UsuarioServiceDesbloquear (SECURITY DEFINER que já exige a permissão internamente, não RLS). A recusa sai com
+// UsuarioServiceUnlock (SECURITY DEFINER que já exige a permissão internamente, não RLS). A recusa sai com
 // ERRCODE 92020/92021 (403) ou 90020 (motivo vazio, 400), traduzida pelo filtro global. "Reduzir a pena" não é um método à parte: é chamar `suspender` de novo com uma
 // data mais próxima (a função já sobrescreve).
 @Injectable()
-export class UsuarioServiceSuspender {
+export class UsuarioServiceSuspend {
   constructor(
     private readonly database: DatabaseService,
     private readonly autorizacao: AutorizacaoService,
@@ -19,7 +19,7 @@ export class UsuarioServiceSuspender {
   // explícita da pessoa; sem essa proteção, a tela inteira dependeria das colunas
   // suspenso_ate/motivo_suspensao/suspenso_por existirem no banco, e o endpoint sozinho derrubaria com 500 (o
   // endpoint deve responder certo, não depender de o cliente engolir o erro).
-  async buscarSuspensao(idUsuario: number): Promise<UsuarioResponseSuspend> {
+  async buscarSuspensao(idUsuario: number): Promise<SuspensaoResponseDto> {
     await this.autorizacao.exigirProprioOuPermissao(
       idUsuario,
       'usuario_suspender',

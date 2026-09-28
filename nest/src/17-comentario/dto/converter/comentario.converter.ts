@@ -1,4 +1,4 @@
-import { ComentarioEntity } from '../../entity/comentario.entity';
+import { ComentarioEntity } from '../../../commons/database/db.types';
 import { ComentarioResponse } from '../response/comentario.response';
 
 export class ComentarioConverter {

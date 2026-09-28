@@ -2,27 +2,25 @@ import { Injectable } from '@nestjs/common';
 import { sql } from 'kysely';
 import { DatabaseService } from '../../commons/database/database.service';
 import { AutorizacaoService } from '../../commons/seguranca/autorizacao.service';
-import { PerfilPesquisadorResponseSuspend } from '../dto/response/perfil-pesquisador.response-suspend';
+import { SuspensaoResponseDto } from '../../commons/moderacao/dto/suspensao.response.dto';
 
 // suspender_pesquisador() (03_funcoes_seguranca.sql, [03-P]): dá ao Admin poder completo sobre o pesquisador na
 // Bancada. Idempotente por design (a própria função devolve FALSE sem fazer nada se já estava suspenso): nenhum
 // erro é levantado nesse caso, só as recusas (sem permissão 92014 = 403, motivo vazio 90020 = 400), traduzidas
 // pelo filtro global.
 //
-// Aceita ate/motivo (mesmo padrão de UsuarioServiceSuspender) e tem buscarSuspensao(), espelhando
-// UsuarioServiceSuspender.buscarSuspensao, inclusive o mesmo SAVEPOINT de segurança (esta busca roda
+// Aceita ate/motivo (mesmo padrão de UsuarioServiceSuspend) e tem buscarSuspensao(), espelhando
+// UsuarioServiceSuspend.buscarSuspensao, inclusive o mesmo SAVEPOINT de segurança (esta busca roda
 // automaticamente ao abrir a tela, antes de qualquer ação explícita, e não pode derrubar a tela se as colunas
 // novas ainda não tiverem sido aplicadas no banco de alguém).
 @Injectable()
-export class PerfilPesquisadorServiceSuspender {
+export class PerfilPesquisadorServiceSuspend {
   constructor(
     private readonly database: DatabaseService,
     private readonly autorizacao: AutorizacaoService,
   ) {}
 
-  async buscarSuspensao(
-    idUsuario: number,
-  ): Promise<PerfilPesquisadorResponseSuspend> {
+  async buscarSuspensao(idUsuario: number): Promise<SuspensaoResponseDto> {
     await this.autorizacao.exigirProprioOuPermissao(
       idUsuario,
       'usuario_suspender',

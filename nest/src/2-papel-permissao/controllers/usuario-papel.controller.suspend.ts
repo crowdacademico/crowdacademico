@@ -7,11 +7,11 @@ import {
   Post,
 } from '@nestjs/common';
 import { UsuarioPapelRequestSuspend } from '../dto/request/usuario-papel.request-suspend';
-import { UsuarioPapelServiceSuspender } from '../service/usuario-papel.service.suspend';
+import { UsuarioPapelServiceSuspend } from '../service/usuario-papel.service.suspend';
 
 @Controller('usuario-papel')
-export class UsuarioPapelControllerSuspender {
-  constructor(private readonly service: UsuarioPapelServiceSuspender) {}
+export class UsuarioPapelControllerSuspend {
+  constructor(private readonly service: UsuarioPapelServiceSuspend) {}
 
   @Post(':idUsuario/:idPapel/suspender')
   @HttpCode(204)

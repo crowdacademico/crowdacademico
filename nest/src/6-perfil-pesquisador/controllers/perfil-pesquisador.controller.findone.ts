@@ -5,7 +5,7 @@ import { PerfilPesquisadorServiceFindOneScore } from '../service/perfil-pesquisa
 import { Publico } from '../../commons/auth/publico.decorator';
 
 // Sem @UseGuards - perfil de pesquisador é público de propósito (aparece na
-// página de campanha/perfil pra qualquer visitante). JwtAuthGuard é GLOBAL
+// página de campanha/perfil pra qualquer visitante). AuthGuardJwt é GLOBAL
 // (auth.module.ts) e já resolve request.user quando existe um Bearer token
 // válido, mesmo sem nenhum guard de rota aqui - é assim que o service
 // consegue saber "é o próprio dono vendo o CPF" sem exigir login pra ver o

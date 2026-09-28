@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
-import { DashboardControllerResumo } from './controllers/dashboard.controller.summary';
-import { DashboardServiceResumo } from './service/dashboard.service.summary';
+import { DashboardControllerSummary } from './controllers/dashboard.controller.summary';
+import { DashboardServiceSummary } from './service/dashboard.service.summary';
 
 @Module({
-  controllers: [DashboardControllerResumo],
-  providers: [DashboardServiceResumo],
+  controllers: [DashboardControllerSummary],
+  providers: [DashboardServiceSummary],
 })
 export class DashboardModule {}

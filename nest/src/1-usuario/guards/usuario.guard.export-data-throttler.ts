@@ -13,13 +13,13 @@ import type { Request } from 'express';
 // por causa de uma exportação de outra pessoa).
 //
 // `getTracker` sobrescrito pra usar `req.user.idUsuario` em vez do IP -
-// `RequireAuthGuard` (global) já roda antes de qualquer guarda de rota,
-// então `req.user` sempre existe aqui dentro; JwtAuthGuard (global) é quem
+// `AuthGuardRequireAuth` (global) já roda antes de qualquer guarda de rota,
+// então `req.user` sempre existe aqui dentro; AuthGuardJwt (global) é quem
 // preenche esse campo.
 @Injectable()
-export class ExportarDadosThrottlerGuard extends ThrottlerGuard {
+export class UsuarioGuardExportDataThrottler extends ThrottlerGuard {
   // Assinatura herdada de ThrottlerGuard exige Promise<string>; aqui não há
-  // nada pra aguardar (RequireAuthGuard já populou req.user antes deste
+  // nada pra aguardar (AuthGuardRequireAuth já populou req.user antes deste
   // guard rodar).
   // eslint-disable-next-line @typescript-eslint/require-await
   protected async getTracker(req: Request): Promise<string> {

@@ -6,7 +6,7 @@ import {
 } from '../../commons/database/paginacao.util';
 import { COMENTARIO_COLUNAS_SELECT } from '../constants/comentario.constants';
 import { ComentarioConverter } from '../dto/converter/comentario.converter';
-import { ComentarioRequestList } from '../dto/request/comentario.request-list';
+import { PorCampanhaQueryDto } from '../../commons/database/dto/por-campanha.query.dto';
 import { ComentarioResponse } from '../dto/response/comentario.response';
 
 // pol_comentario_select (04) já esconde comentário inativo/não-endossado
@@ -16,7 +16,7 @@ export class ComentarioServiceFindAll {
   constructor(private readonly database: DatabaseService) {}
 
   async executar(
-    filtro: ComentarioRequestList,
+    filtro: PorCampanhaQueryDto,
   ): Promise<ResultadoPaginado<ComentarioResponse>> {
     const query = this.database
       .getDb()

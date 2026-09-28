@@ -13,8 +13,8 @@ import type { ArmazenamentoService } from '../../commons/storage/storage.service
 //
 // Mesmo molde dos outros jobs (`PG_POOL` direto, porque o job roda fora do pipeline HTTP e sem sessão de usuário).
 @Injectable()
-export class ArquivoServiceLimparOrfaos {
-  private readonly logger = new Logger(ArquivoServiceLimparOrfaos.name);
+export class ArquivoServiceCleanOrphans {
+  private readonly logger = new Logger(ArquivoServiceCleanOrphans.name);
 
   constructor(
     @Inject(PG_POOL) private readonly pool: Pool,

@@ -17,7 +17,7 @@ export class AreaConhecimentoServiceFindAll {
   ): Promise<ResultadoPaginado<AreaConhecimentoResponse>> {
     // pol_area_select (04_rls_policies.sql [04-C-2]) é USING(true) - catálogo
     // público, lista mesmo sem login (mesmo padrão de
-    // ConfiguracaoControllerFindAll/PapelControllerFindAll).
+    // ConfiguracoesControllerFindAll/PapelControllerFindAll).
     let query = this.database
       .getDb()
       .selectFrom('area_conhecimento as area')

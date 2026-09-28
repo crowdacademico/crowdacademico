@@ -5,7 +5,7 @@ import { Publico } from '../../commons/auth/publico.decorator';
 
 // @Publico(), de propósito: catálogo público de leitura
 // (pol_area_select é USING(true), ver 04_rls_policies.sql [04-C-2]) -
-// mesmo padrão de ConfiguracaoControllerFindAll/PapelControllerFindAll.
+// mesmo padrão de ConfiguracoesControllerFindAll/PapelControllerFindAll.
 @Controller('area-conhecimento')
 export class AreaConhecimentoControllerFindAll {
   constructor(private readonly service: AreaConhecimentoServiceFindAll) {}

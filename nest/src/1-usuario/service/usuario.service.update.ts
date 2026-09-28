@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { ArquivoServiceRemove } from '../../25-arquivo/service/arquivo.service.remove';
-import { ArquivoServiceResolverAvatar } from '../../25-arquivo/service/arquivo.service.resolve-avatar';
+import { ArquivoServiceResolveAvatar } from '../../25-arquivo/service/arquivo.service.resolve-avatar';
 import { DatabaseService } from '../../commons/database/database.service';
 import { distinguir404ou403 } from '../../commons/database/distinguir-404-ou-403.util';
 import {
@@ -24,7 +24,7 @@ export class UsuarioServiceUpdate {
   constructor(
     private readonly database: DatabaseService,
     private readonly arquivoServiceRemove: ArquivoServiceRemove,
-    private readonly resolverAvatar: ArquivoServiceResolverAvatar,
+    private readonly resolverAvatar: ArquivoServiceResolveAvatar,
   ) {}
 
   async executar(

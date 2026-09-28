@@ -5,7 +5,7 @@
 // O QUE NÃO ENTRA, de propósito (dado de TERCEIRO, não do titular): denúncias feitas CONTRA ele
 // (revelaria/permitiria deduzir quem denunciou), comentários de OUTRAS pessoas nas campanhas dele, log de
 // auditoria (carrega identidade de quem administrou, não do titular).
-export class UsuarioResponseExportarDados {
+export class UsuarioResponseExportData {
   geradoEm: Date;
   secoesIncluidas: string[];
 
@@ -102,7 +102,7 @@ export class UsuarioResponseExportarDados {
   }>;
 
   // Histórico de login (origem='login', mesmo filtro de
-  // UsuarioServiceListarLogins - renovação silenciosa de token não conta
+  // UsuarioServiceFindAllLogins - renovação silenciosa de token não conta
   // como "sessão" pra este propósito).
   sessoes: Array<{ logadoEm: Date; ip: string | null }>;
 }

@@ -4,8 +4,8 @@ import { AuthServiceLogin } from './auth.service.login';
 import { DatabaseService } from '../../commons/database/database.service';
 import { UsuarioServiceFindOne } from '../../1-usuario/service/usuario.service.findone';
 import { AuthRequestRefreshToken } from '../dto/request/auth.request-refresh-token';
-import { AuthResponseRefresh } from '../dto/response/auth.response-refresh';
 import { parseRefreshToken } from '../util/auth.util.refresh-token';
+import { AuthResponseLogin } from '../dto/response/auth.response-login';
 
 @Injectable()
 export class AuthServiceRefresh {
@@ -19,7 +19,7 @@ export class AuthServiceRefresh {
     dto: AuthRequestRefreshToken,
     ip: string | undefined,
     userAgent: string | undefined,
-  ): Promise<AuthResponseRefresh> {
+  ): Promise<AuthResponseLogin> {
     const parseado = parseRefreshToken(dto.refreshToken);
     if (!parseado) {
       throw new UnauthorizedException('Refresh token mal formado.');

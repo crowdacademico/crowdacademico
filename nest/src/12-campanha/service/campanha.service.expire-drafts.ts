@@ -8,12 +8,12 @@ import { PG_POOL } from '../../commons/database/database.constants';
 // fechada, desistência), o rascunho some sozinho depois do prazo em `configuracoes.campanha_rascunho_ttl_horas`
 // (336h, 14 dias); sem este job, ficaria para sempre.
 //
-// Mesmo padrão de CampanhaServiceEncerrarVencidas (mesma pasta): `PG_POOL` direto (job agendado roda fora do
+// Mesmo padrão de CampanhaServiceCloseExpired (mesma pasta): `PG_POOL` direto (job agendado roda fora do
 // pipeline HTTP, sem GlobalDbInterceptor para abrir transação/CLS), função SECURITY DEFINER (bypassa RLS de
 // propósito, não precisa de app.id_usuario_atual setado).
 @Injectable()
-export class CampanhaServiceExpirarRascunho {
-  private readonly logger = new Logger(CampanhaServiceExpirarRascunho.name);
+export class CampanhaServiceExpireDrafts {
+  private readonly logger = new Logger(CampanhaServiceExpireDrafts.name);
 
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
 
@@ -26,8 +26,8 @@ export class CampanhaServiceExpirarRascunho {
   async executar(): Promise<void> {
     // try/catch: sem ele, uma exceção vinda da função SQL vira `unhandledRejection` (o @Cron chama este método
     // sem `await` de ninguém), e o Node moderno derruba o processo inteiro por causa de um job de limpeza.
-    // Mesmo tratamento nos 3 crons do sistema, ver CampanhaServiceEncerrarVencidas e
-    // PerfilPesquisadorServiceReativarVencidos.
+    // Mesmo tratamento nos 3 crons do sistema, ver CampanhaServiceCloseExpired e
+    // PerfilPesquisadorServiceReactivateExpired.
     try {
       const resultado = await this.pool.query<{
         expirar_campanhas_rascunho: number;

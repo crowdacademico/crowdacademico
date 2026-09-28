@@ -11,8 +11,8 @@ import { PG_POOL } from '../../commons/database/database.constants';
 // Mesmo molde dos jobs de campanha (`PG_POOL` direto, porque o job roda fora do
 // pipeline HTTP e sem sessão de usuário).
 @Injectable()
-export class LogAuditoriaServiceLimpar {
-  private readonly logger = new Logger(LogAuditoriaServiceLimpar.name);
+export class LogAuditoriaServiceClean {
+  private readonly logger = new Logger(LogAuditoriaServiceClean.name);
 
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
 

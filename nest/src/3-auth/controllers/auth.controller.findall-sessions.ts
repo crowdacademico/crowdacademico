@@ -6,16 +6,16 @@ import {
   Param,
   ParseIntPipe,
 } from '@nestjs/common';
-import { AuthServiceEncerrarSessao } from '../service/auth.service.end-session';
-import { AuthServiceListarSessoes } from '../service/auth.service.findall-sessions';
+import { AuthServiceEndSession } from '../service/auth.service.end-session';
+import { AuthServiceFindAllSessions } from '../service/auth.service.findall-sessions';
 import { UsuarioAtual } from '../../commons/auth/usuario-atual.decorator';
 import type { UsuarioAutenticado } from '../../commons/auth/usuario-autenticado.interface';
 
 @Controller('auth/sessoes')
-export class AuthControllerSessoes {
+export class AuthControllerFindAllSessions {
   constructor(
-    private readonly listarSessoes: AuthServiceListarSessoes,
-    private readonly encerrarSessao: AuthServiceEncerrarSessao,
+    private readonly listarSessoes: AuthServiceFindAllSessions,
+    private readonly encerrarSessao: AuthServiceEndSession,
   ) {}
 
   @Get()

@@ -7,12 +7,12 @@ import {
   ParseIntPipe,
   Post,
 } from '@nestjs/common';
-import { PerfilPesquisadorRequestSuspender } from '../dto/request/perfil-pesquisador.request-suspend';
-import { PerfilPesquisadorServiceSuspender } from '../service/perfil-pesquisador.service.suspend';
+import { SuspensaoRequestDto } from '../../commons/moderacao/dto/suspensao.request.dto';
+import { PerfilPesquisadorServiceSuspend } from '../service/perfil-pesquisador.service.suspend';
 
 @Controller('perfil-pesquisador')
-export class PerfilPesquisadorControllerSuspender {
-  constructor(private readonly service: PerfilPesquisadorServiceSuspender) {}
+export class PerfilPesquisadorControllerSuspend {
+  constructor(private readonly service: PerfilPesquisadorServiceSuspend) {}
 
   @Get(':id/suspensao')
   buscar(@Param('id', ParseIntPipe) id: number) {
@@ -23,7 +23,7 @@ export class PerfilPesquisadorControllerSuspender {
   @HttpCode(204)
   suspender(
     @Param('id', ParseIntPipe) id: number,
-    @Body() dto: PerfilPesquisadorRequestSuspender,
+    @Body() dto: SuspensaoRequestDto,
   ) {
     return this.service.executar(id, dto.ate, dto.motivo);
   }

@@ -6,7 +6,7 @@ import {
   ParseIntPipe,
 } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
-import { ArquivoServiceResolverAvatar } from '../service/arquivo.service.resolve-avatar';
+import { ArquivoServiceResolveAvatar } from '../service/arquivo.service.resolve-avatar';
 import { Publico } from '../../commons/auth/publico.decorator';
 
 // Pública (@Publico()) de propósito - foto de perfil é conteúdo
@@ -18,7 +18,7 @@ import { Publico } from '../../commons/auth/publico.decorator';
 export class ArquivoControllerAvatar {
   constructor(
     private readonly database: DatabaseService,
-    private readonly resolver: ArquivoServiceResolverAvatar,
+    private readonly resolver: ArquivoServiceResolveAvatar,
   ) {}
 
   @Get(':idUsuario')

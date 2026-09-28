@@ -1,4 +1,4 @@
-import { Generated } from 'kysely';
+import { Generated, Selectable } from 'kysely';
 
 // Tipos do Kysely, escritos à mão espelhando arquivos_banco_dados/01_extensoes_enums_tabelas.sql, só das
 // tabelas que os módulos já construídos usam. É este arquivo que a aplicação usa, não o gerado.
@@ -70,7 +70,7 @@ export interface SessaoTable {
 }
 
 // CREATE TYPE tipo_configuracao AS ENUM ('decimal','inteiro','texto','booleano') - 01
-// Array em runtime (não só o tipo) pra ConfiguracaoRequestCreate validar
+// Array em runtime (não só o tipo) pra ConfiguracoesRequestCreate validar
 // com @IsIn(TIPOS_CONFIGURACAO) sem duplicar a lista de novo - um hardcoded
 // só, o tipo é derivado dele, não o contrário.
 export const TIPOS_CONFIGURACAO = [
@@ -247,7 +247,7 @@ export interface PerfilPesquisadorTable {
   score_atualizado_em: Date | null;
   // Suspensão do PODER de pesquisador: nunca escritos por UPDATE direto (fora do GRANT, ver 06_grants.sql), só
   // via suspender_pesquisador()/reativar_pesquisador() (03). Selecionados normalmente por
-  // PerfilPesquisadorServiceSuspender.buscarSuspensao.
+  // PerfilPesquisadorServiceSuspend.buscarSuspensao.
   suspenso_ate: Date | null;
   motivo_suspensao: string | null;
   suspenso_por: number | null;
@@ -361,7 +361,7 @@ export interface CampanhaTable {
   criado_em: Generated<Date>;
 }
 
-// Só o INSERT é usado por enquanto (CampanhaServiceRejeitar, 12-campanha)
+// Só o INSERT é usado por enquanto (CampanhaServiceReject, 12-campanha)
 // - não tem módulo/pasta própria ainda (21-historico-rejeicao segue vazia,
 // ver ordem de prioridade combinada), mas o texto de justificativa da
 // rejeição só existe aqui, então o endpoint de rejeitar campanha precisa
@@ -593,3 +593,19 @@ export interface DB {
   arquivo_atualizacao: ArquivoAtualizacaoTable;
   arquivo_recompensa: ArquivoRecompensaTable;
 }
+
+// Entidades: a forma de uma linha LIDA de cada tabela (Selectable tira o Generated<>), com o nome que os converters
+// usam. Moravam cada uma num arquivo entity/<nome>.entity.ts de uma linha só; ficam aqui, junto da planta.
+// UsuarioEntity nunca traz senha_hash na prática: os SELECT usam USUARIO_COLUNAS_SELECT
+// (1-usuario/constants/usuario.constants.ts).
+export type UsuarioEntity = Selectable<UsuarioTable>;
+export type PerfilPesquisadorEntity = Selectable<PerfilPesquisadorTable>;
+export type LinkAcademicoEntity = Selectable<LinkAcademicoTable>;
+export type CampanhaEntity = Selectable<CampanhaTable>;
+export type OrcamentoCampanhaEntity = Selectable<OrcamentoCampanhaTable>;
+export type MarcoCronogramaEntity = Selectable<MarcoCronogramaTable>;
+export type AtualizacaoCampanhaEntity = Selectable<AtualizacaoCampanhaTable>;
+export type ArquivoAtualizacaoEntity = Selectable<ArquivoAtualizacaoTable>;
+export type LinkAtualizacaoEntity = Selectable<LinkAtualizacaoTable>;
+export type SeguirCampanhaEntity = Selectable<SeguirCampanhaTable>;
+export type ComentarioEntity = Selectable<ComentarioTable>;

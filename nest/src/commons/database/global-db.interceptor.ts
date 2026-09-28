@@ -27,7 +27,7 @@ import { KyselySingleConnectionDialect } from './kysely-single-connection.dialec
 // 2. Abre uma transação (BEGIN).
 // 3. Seta app.id_usuario_atual nessa transação via set_config() parametrizado
 //    (nunca SET LOCAL com string interpolada) - id do usuário já resolvido
-//    pelo JwtAuthGuard (3-auth), que roda ANTES deste interceptor no
+//    pelo AuthGuardJwt (3-auth), que roda ANTES deste interceptor no
 //    pipeline do Nest (guards → interceptors → handler). Rota sem login
 //    (request.user indefinido) seta '' - id_usuario_atual() vira NULL,
 //    igual anônimo de verdade, sem pular o interceptor.

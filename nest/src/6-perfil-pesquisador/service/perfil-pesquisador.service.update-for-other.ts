@@ -10,7 +10,7 @@ import { PerfilPesquisadorRequestUpdate } from '../dto/request/perfil-pesquisado
 // função SECURITY DEFINER, gateada por permissão própria (perfil_pesquisador_alterar_de_outro), que ignora RLS
 // de propósito.
 @Injectable()
-export class PerfilPesquisadorServiceAlterarDeOutro {
+export class PerfilPesquisadorServiceUpdateForOther {
   constructor(private readonly database: DatabaseService) {}
 
   async executar(

@@ -7,17 +7,17 @@ import { DatabaseService } from '../../commons/database/database.service';
 import { TermoUsoResponse } from '../dto/response/termo-uso.response';
 
 // Tornar UMA versão específica a vigente do seu tipo (ação separada de Criar, que NUNCA ativa sozinha, ver
-// TermoUsoServiceCriar). Fluxo real: cria-se um rascunho, a "staff" revisa (procura erro de português etc.), e
+// TermoUsoServiceCreate). Fluxo real: cria-se um rascunho, a "staff" revisa (procura erro de português etc.), e
 // SÓ DEPOIS um administrador vem aqui e torna essa versão a vigente manualmente, nunca automático.
 //
 // 2 writes na MESMA transação por requisição (GlobalDbInterceptor, mesmo padrão de
 // campanha.service.reject.ts): desativa a vigente atual DO MESMO TIPO (excluindo o próprio alvo: se o alvo já
 // for o vigente, isto é idempotente, não desativa e reativa à toa) e ativa o alvo. Funciona tanto para promover
 // um rascunho novo quanto para REVERTER para uma versão antiga (reativar algo já usado no passado): nenhuma
-// restrição de "já foi aceita" aqui, essa trava é só de TermoUsoServiceAlterar (editar conteúdo), não de "qual
+// restrição de "já foi aceita" aqui, essa trava é só de TermoUsoServiceUpdate (editar conteúdo), não de "qual
 // está vigente agora".
 @Injectable()
-export class TermoUsoServiceAtivar {
+export class TermoUsoServiceActivate {
   constructor(private readonly database: DatabaseService) {}
 
   async executar(id: number): Promise<TermoUsoResponse> {

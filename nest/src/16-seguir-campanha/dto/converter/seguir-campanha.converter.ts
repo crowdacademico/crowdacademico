@@ -1,4 +1,4 @@
-import { SeguirCampanhaEntity } from '../../entity/seguir-campanha.entity';
+import { SeguirCampanhaEntity } from '../../../commons/database/db.types';
 import { SeguirCampanhaResponse } from '../response/seguir-campanha.response';
 
 export class SeguirCampanhaConverter {

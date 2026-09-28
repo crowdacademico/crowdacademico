@@ -75,14 +75,14 @@ export interface PerfilPesquisadorRequestCorrigirCpf {
   cpf: string;
 }
 
-// Espelha perfil-pesquisador.request-suspend.ts: mesmo formato de UsuarioRequestSuspend (auth.type.ts): `ate`
+// Espelha SuspensaoRequestDto (nest/src/commons/moderacao/dto/suspensao.request.dto.ts), o mesmo da suspensão de conta: `ate`
 // ISO 8601, `motivo` obrigatório. Suspende só o PODER de pesquisador, não bloqueia login.
 export interface PerfilPesquisadorRequestSuspender {
   ate: string;
   motivo: string;
 }
 
-// Espelha perfil-pesquisador.response-suspend.ts - mesmo formato de
+// Espelha SuspensaoResponseDto (nest/src/commons/moderacao/dto/suspensao.response.dto.ts), o mesmo de
 // UsuarioResponseSuspend.
 export interface PerfilPesquisadorResponseSuspend {
   suspensoAte: string | null;

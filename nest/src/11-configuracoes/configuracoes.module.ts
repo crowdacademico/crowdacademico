@@ -1,29 +1,29 @@
 import { Module } from '@nestjs/common';
-import { ConfiguracaoControllerCreate } from './controllers/configuracao.controller.create';
-import { ConfiguracaoControllerFindAll } from './controllers/configuracao.controller.findall';
-import { ConfiguracaoControllerFindOne } from './controllers/configuracao.controller.findone';
-import { ConfiguracaoControllerRemove } from './controllers/configuracao.controller.remove';
-import { ConfiguracaoControllerUpdate } from './controllers/configuracao.controller.update';
-import { ConfiguracaoServiceCreate } from './service/configuracao.service.create';
-import { ConfiguracaoServiceFindAll } from './service/configuracao.service.findall';
-import { ConfiguracaoServiceFindOne } from './service/configuracao.service.findone';
-import { ConfiguracaoServiceRemove } from './service/configuracao.service.remove';
-import { ConfiguracaoServiceUpdate } from './service/configuracao.service.update';
+import { ConfiguracoesControllerCreate } from './controllers/configuracoes.controller.create';
+import { ConfiguracoesControllerFindAll } from './controllers/configuracoes.controller.findall';
+import { ConfiguracoesControllerFindOne } from './controllers/configuracoes.controller.findone';
+import { ConfiguracoesControllerRemove } from './controllers/configuracoes.controller.remove';
+import { ConfiguracoesControllerUpdate } from './controllers/configuracoes.controller.update';
+import { ConfiguracoesServiceCreate } from './service/configuracoes.service.create';
+import { ConfiguracoesServiceFindAll } from './service/configuracoes.service.findall';
+import { ConfiguracoesServiceFindOne } from './service/configuracoes.service.findone';
+import { ConfiguracoesServiceRemove } from './service/configuracoes.service.remove';
+import { ConfiguracoesServiceUpdate } from './service/configuracoes.service.update';
 
 @Module({
   controllers: [
-    ConfiguracaoControllerCreate,
-    ConfiguracaoControllerFindAll,
-    ConfiguracaoControllerFindOne,
-    ConfiguracaoControllerUpdate,
-    ConfiguracaoControllerRemove,
+    ConfiguracoesControllerCreate,
+    ConfiguracoesControllerFindAll,
+    ConfiguracoesControllerFindOne,
+    ConfiguracoesControllerUpdate,
+    ConfiguracoesControllerRemove,
   ],
   providers: [
-    ConfiguracaoServiceCreate,
-    ConfiguracaoServiceFindAll,
-    ConfiguracaoServiceFindOne,
-    ConfiguracaoServiceUpdate,
-    ConfiguracaoServiceRemove,
+    ConfiguracoesServiceCreate,
+    ConfiguracoesServiceFindAll,
+    ConfiguracoesServiceFindOne,
+    ConfiguracoesServiceUpdate,
+    ConfiguracoesServiceRemove,
   ],
 })
 export class ConfiguracoesModule {}

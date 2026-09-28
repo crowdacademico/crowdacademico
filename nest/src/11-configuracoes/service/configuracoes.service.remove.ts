@@ -3,7 +3,7 @@ import { excluirOu404ou403 } from '../../commons/database/distinguir-404-ou-403.
 import { DatabaseService } from '../../commons/database/database.service';
 
 @Injectable()
-export class ConfiguracaoServiceRemove {
+export class ConfiguracoesServiceRemove {
   constructor(private readonly database: DatabaseService) {}
 
   async executar(idConfig: number): Promise<void> {

@@ -8,13 +8,13 @@ import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
 import { CHAVE_ROTA_PUBLICA } from '../../commons/auth/publico.decorator';
 
-// Global (APP_GUARD em auth.module.ts, depois da JwtAuthGuard): toda rota exige login, menos as marcadas com
+// Global (APP_GUARD em auth.module.ts, depois da AuthGuardJwt): toda rota exige login, menos as marcadas com
 // @Publico(). Rota nova nasce fechada; esquecer a marcação deixa a rota fechada, nunca aberta. Bloqueia com 401
 // quem chega sem sessão, em vez de esperar a RLS devolver 0 linhas em silêncio. Autorização por PERMISSÃO
 // continua sendo da RLS (este guard não sabe nada de papel/permissão), ver tem_permissao() em
 // 03_funcoes_seguranca.sql.
 @Injectable()
-export class RequireAuthGuard implements CanActivate {
+export class AuthGuardRequireAuth implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {

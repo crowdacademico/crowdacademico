@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
 
-// Excluir: como Criar não ativa mais sozinho (ver TermoUsoServiceCriar), um rascunho com muito erro de
+// Excluir: como Criar não ativa mais sozinho (ver TermoUsoServiceCreate), um rascunho com muito erro de
 // português pode simplesmente ser apagado em vez de corrigido, sem sujar o banco.
 //
 // - `ativo = TRUE` bloqueia SEMPRE, sem exceção nem `forcar` (não dá para apagar a versão vigente: quebraria a
@@ -20,7 +20,7 @@ import { DatabaseService } from '../../commons/database/database.service';
 // log_auditoria (trigger genérico da tabela), então "quem excluiu, quando" nunca se perde, só o "quem tinha
 // aceitado" desaparece.
 @Injectable()
-export class TermoUsoServiceExcluir {
+export class TermoUsoServiceRemove {
   constructor(private readonly database: DatabaseService) {}
 
   async executar(id: number, forcar: boolean): Promise<void> {

@@ -1,5 +1,5 @@
 import { Controller, Get, Query } from '@nestjs/common';
-import { AtualizacaoCampanhaRequestList } from '../dto/request/atualizacao-campanha.request-list';
+import { PorCampanhaQueryDto } from '../../commons/database/dto/por-campanha.query.dto';
 import { AtualizacaoCampanhaServiceFindAll } from '../service/atualizacao-campanha.service.findall';
 import { Publico } from '../../commons/auth/publico.decorator';
 
@@ -11,7 +11,7 @@ export class AtualizacaoCampanhaControllerFindAll {
 
   @Get()
   @Publico()
-  listar(@Query() filtro: AtualizacaoCampanhaRequestList) {
+  listar(@Query() filtro: PorCampanhaQueryDto) {
     return this.service.executar(filtro);
   }
 }

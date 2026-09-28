@@ -3,6 +3,7 @@ import { distinguir404ou403 } from '../../commons/database/distinguir-404-ou-403
 import { DatabaseService } from '../../commons/database/database.service';
 import { CAMPANHA_COLUNAS_SELECT } from '../constants/campanha.constants';
 import { CampanhaConverter } from '../dto/converter/campanha.converter';
+import { exigirAguardandoAprovacao } from '../util/campanha.util.require-pending';
 import { CampanhaResponse } from '../dto/response/campanha.response';
 
 // Nenhuma checagem de permissão aqui - quem decide se este UPDATE é
@@ -18,7 +19,7 @@ import { CampanhaResponse } from '../dto/response/campanha.response';
 // cronograma completos (ERRCODE 90009/90010/90011) e com o prazo já
 // vencido (90015).
 @Injectable()
-export class CampanhaServiceAprovar {
+export class CampanhaServiceApprove {
   constructor(private readonly database: DatabaseService) {}
 
   async executar(id: number, idAdmin: number): Promise<CampanhaResponse> {
@@ -31,10 +32,12 @@ export class CampanhaServiceAprovar {
         id_admin: idAdmin,
       })
       .where('id_campanha', '=', id)
+      .where('status', '=', 'aguardando_aprovacao')
       .returning(CAMPANHA_COLUNAS_SELECT)
       .executeTakeFirst();
 
     if (!linha) {
+      await exigirAguardandoAprovacao(this.database.getDb(), id, 'aprovar');
       return await distinguir404ou403(
         this.database.getDb(),
         'campanha',

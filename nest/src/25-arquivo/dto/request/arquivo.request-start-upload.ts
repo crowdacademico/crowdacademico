@@ -12,7 +12,7 @@ import {
   TIPOS_MIME_PERMITIDOS,
 } from '../../constants/arquivo.constants';
 
-export class ArquivoRequestIniciarUpload {
+export class ArquivoRequestStartUpload {
   // Só pra guardar em arquivo.nome_original e (se for PDF) montar o
   // Content-Disposition - NUNCA usado pra decidir a chave do objeto no
   // bucket (isso é sempre randomUUID, gerado no service). Se o front

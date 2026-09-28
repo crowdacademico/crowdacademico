@@ -7,11 +7,11 @@ import {
   ParseIntPipe,
   Query,
 } from '@nestjs/common';
-import { TermoUsoServiceExcluir } from '../service/termo-uso.service.remove';
+import { TermoUsoServiceRemove } from '../service/termo-uso.service.remove';
 
 @Controller('termos-uso')
-export class TermoUsoControllerExcluir {
-  constructor(private readonly service: TermoUsoServiceExcluir) {}
+export class TermoUsoControllerRemove {
+  constructor(private readonly service: TermoUsoServiceRemove) {}
 
   @Delete(':id')
   @HttpCode(204)

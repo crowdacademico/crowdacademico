@@ -1,9 +1,9 @@
 import { Controller, Param, ParseIntPipe, Patch } from '@nestjs/common';
-import { TermoUsoServiceAtivar } from '../service/termo-uso.service.activate';
+import { TermoUsoServiceActivate } from '../service/termo-uso.service.activate';
 
 @Controller('termos-uso')
-export class TermoUsoControllerAtivar {
-  constructor(private readonly service: TermoUsoServiceAtivar) {}
+export class TermoUsoControllerActivate {
+  constructor(private readonly service: TermoUsoServiceActivate) {}
 
   @Patch(':id/ativar')
   ativar(@Param('id', ParseIntPipe) id: number) {

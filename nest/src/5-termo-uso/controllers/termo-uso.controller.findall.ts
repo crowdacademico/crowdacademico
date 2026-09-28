@@ -1,11 +1,11 @@
 import { Controller, Get } from '@nestjs/common';
-import { TermoUsoServiceListar } from '../service/termo-uso.service.findall';
+import { TermoUsoServiceFindAll } from '../service/termo-uso.service.findall';
 
 // Diferente de /termos-uso/ativo (público): esta é a listagem completa
 // (histórico incluso), pra tela de administração - exige sessão.
 @Controller('termos-uso')
-export class TermoUsoControllerListar {
-  constructor(private readonly service: TermoUsoServiceListar) {}
+export class TermoUsoControllerFindAll {
+  constructor(private readonly service: TermoUsoServiceFindAll) {}
 
   @Get()
   listar() {

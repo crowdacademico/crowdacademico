@@ -15,11 +15,11 @@ import {
   TIPOS_MIME_PERMITIDOS,
 } from '../../constants/arquivo.constants';
 
-// Repete nomeOriginal/tipoMime/tamanhoBytes de ArquivoRequestIniciarUpload
+// Repete nomeOriginal/tipoMime/tamanhoBytes de ArquivoRequestStartUpload
 // de propósito: o service confere os três contra o que está de verdade no
 // bucket (obterInfoObjeto + lerPrimeirosBytes) antes de gravar qualquer
 // linha em `arquivo` - nunca confia só no que o corpo desta requisição diz.
-export class ArquivoRequestConfirmarUpload {
+export class ArquivoRequestConfirmUpload {
   @IsString()
   @IsNotEmpty()
   @Matches(new RegExp(`^${PASTA_PENDENTE}`), {

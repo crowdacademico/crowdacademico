@@ -6,17 +6,17 @@ import {
   normalizarCpf,
 } from '../../commons/seguranca/cpf-cifra.util';
 import { DatabaseService } from '../../commons/database/database.service';
-import { PerfilPesquisadorRequestCorrigirCpf } from '../dto/request/perfil-pesquisador.request-fix-cpf';
+import { PerfilPesquisadorRequestFixCpf } from '../dto/request/perfil-pesquisador.request-fix-cpf';
 
 // Chama corrigir_cpf_pesquisador() (03_funcoes_seguranca.sql, [03-Q]): correção de CPF por Admin/suporte, na
 // Bancada do Pesquisador (Campo de Testes, hoje parte permanente do painel).
 @Injectable()
-export class PerfilPesquisadorServiceCorrigirCpf {
+export class PerfilPesquisadorServiceFixCpf {
   constructor(private readonly database: DatabaseService) {}
 
   async executar(
     idUsuario: number,
-    dto: PerfilPesquisadorRequestCorrigirCpf,
+    dto: PerfilPesquisadorRequestFixCpf,
   ): Promise<void> {
     const cpfNormalizado = normalizarCpf(dto.cpf);
     const cpfCriptografado = cifrarCpf(cpfNormalizado);

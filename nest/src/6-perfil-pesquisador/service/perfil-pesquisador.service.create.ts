@@ -6,19 +6,19 @@ import {
   normalizarCpf,
 } from '../../commons/seguranca/cpf-cifra.util';
 import { DatabaseService } from '../../commons/database/database.service';
-import { TermoUsoServiceAtivo } from '../../5-termo-uso/service/termo-uso.service.find-active';
+import { TermoUsoServiceFindActive } from '../../5-termo-uso/service/termo-uso.service.find-active';
 import { PERFIL_PESQUISADOR_COLUNAS_SELECT } from '../constants/perfil-pesquisador.constants';
 import { PerfilPesquisadorConverter } from '../dto/converter/perfil-pesquisador.converter';
 import { PerfilPesquisadorRequestCreate } from '../dto/request/perfil-pesquisador.request-create';
 import { PerfilPesquisadorResponse } from '../dto/response/perfil-pesquisador.response';
 
 // "Tornar-se pesquisador": upgrade de conta comum (não é admin criando para outra pessoa, é a própria pessoa se
-// declarando pesquisadora, mesmo espírito de AuthServiceCadastro para o cadastro inicial). id_usuario nunca vem
+// declarando pesquisadora, mesmo espírito de AuthServiceRegister para o cadastro inicial). id_usuario nunca vem
 // do dto, sempre do controller (request.user.idUsuario).
 //
 // Aceite do Termo de Uso (modal de upgrade em T1, Bancada do Pesquisador): gravado junto do INSERT do perfil,
 // na MESMA transação por requisição (GlobalDbInterceptor, mesmo padrão de
-// AuthServiceCadastro/campanha.service.reject.ts). De propósito SEM checar "já aceitou antes" nem persistir
+// AuthServiceRegister/campanha.service.reject.ts). De propósito SEM checar "já aceitou antes" nem persistir
 // nenhum estado intermediário: se o usuário clicar no cadeado, aceitar o termo, e fechar o navegador antes de
 // terminar o formulário, NADA foi gravado (nem perfil, nem aceite), e a próxima tentativa começa do zero,
 // mostrando o termo de novo. Isso evita qualquer "upgrade em progresso" travado: não existe estado parcial para
@@ -32,7 +32,7 @@ import { PerfilPesquisadorResponse } from '../dto/response/perfil-pesquisador.re
 export class PerfilPesquisadorServiceCreate {
   constructor(
     private readonly database: DatabaseService,
-    private readonly termoUsoServiceAtivo: TermoUsoServiceAtivo,
+    private readonly termoUsoServiceAtivo: TermoUsoServiceFindActive,
   ) {}
 
   async executar(
@@ -69,7 +69,7 @@ export class PerfilPesquisadorServiceCreate {
     // 'pesquisador' sozinha, AFTER INSERT - nada a fazer aqui.
 
     // Resolvido pelo SERVIDOR, nunca aceito do corpo da requisição - mesmo
-    // raciocínio de AuthServiceCadastro sobre registrar_aceite_termo().
+    // raciocínio de AuthServiceRegister sobre registrar_aceite_termo().
     const termoAtivo = await this.termoUsoServiceAtivo.executar(
       'upgrade_pesquisador',
     );

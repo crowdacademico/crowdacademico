@@ -5,7 +5,7 @@ import { TermoUsoResponse } from '../dto/response/termo-uso.response';
 // Buscar uma versão específica por id: a tela de Alterar precisa carregar os dados atuais antes de editar
 // (mesmo padrão de qualquer outro "Consultar/Alterar" do painel).
 @Injectable()
-export class TermoUsoServiceBuscar {
+export class TermoUsoServiceFindOne {
   constructor(private readonly database: DatabaseService) {}
 
   async executar(id: number): Promise<TermoUsoResponse> {

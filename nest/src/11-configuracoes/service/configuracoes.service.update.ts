@@ -1,18 +1,18 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { distinguir404ou403 } from '../../commons/database/distinguir-404-ou-403.util';
 import { DatabaseService } from '../../commons/database/database.service';
-import { ConfiguracaoConverter } from '../dto/converter/configuracao.converter';
-import { ConfiguracaoRequestUpdate } from '../dto/request/configuracao.request-update';
-import { ConfiguracaoResponse } from '../dto/response/configuracao.response';
+import { ConfiguracoesConverter } from '../dto/converter/configuracoes.converter';
+import { ConfiguracoesRequestUpdate } from '../dto/request/configuracoes.request-update';
+import { ConfiguracoesResponse } from '../dto/response/configuracoes.response';
 
 @Injectable()
-export class ConfiguracaoServiceUpdate {
+export class ConfiguracoesServiceUpdate {
   constructor(private readonly database: DatabaseService) {}
 
   async executar(
     idConfig: number,
-    dto: ConfiguracaoRequestUpdate,
-  ): Promise<ConfiguracaoResponse> {
+    dto: ConfiguracoesRequestUpdate,
+  ): Promise<ConfiguracoesResponse> {
     const db = this.database.getDb();
 
     const campos = {
@@ -45,6 +45,6 @@ export class ConfiguracaoServiceUpdate {
       );
     }
 
-    return ConfiguracaoConverter.paraResponseDto(linha);
+    return ConfiguracoesConverter.paraResponseDto(linha);
   }
 }

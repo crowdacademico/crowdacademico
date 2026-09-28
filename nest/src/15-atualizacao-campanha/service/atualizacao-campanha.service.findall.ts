@@ -6,7 +6,7 @@ import {
 } from '../../commons/database/paginacao.util';
 import { ATUALIZACAO_CAMPANHA_COLUNAS_SELECT } from '../constants/atualizacao-campanha.constants';
 import { AtualizacaoCampanhaConverter } from '../dto/converter/atualizacao-campanha.converter';
-import { AtualizacaoCampanhaRequestList } from '../dto/request/atualizacao-campanha.request-list';
+import { PorCampanhaQueryDto } from '../../commons/database/dto/por-campanha.query.dto';
 import { AtualizacaoCampanhaResponse } from '../dto/response/atualizacao-campanha.response';
 
 // pol_atualizacao_select (04) já filtra ativo=FALSE fora do alcance de
@@ -16,7 +16,7 @@ export class AtualizacaoCampanhaServiceFindAll {
   constructor(private readonly database: DatabaseService) {}
 
   async executar(
-    filtro: AtualizacaoCampanhaRequestList,
+    filtro: PorCampanhaQueryDto,
   ): Promise<ResultadoPaginado<AtualizacaoCampanhaResponse>> {
     const query = this.database
       .getDb()

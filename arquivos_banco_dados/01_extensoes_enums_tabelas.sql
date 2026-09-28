@@ -418,7 +418,7 @@ CREATE TABLE usuario_termo (
     CONSTRAINT "PK_USUARIO_TERMO" PRIMARY KEY (id_usuario_termo),
     CONSTRAINT "FK_USUARIO_TERMO_USUARIO" FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE CASCADE,
     -- CASCADE: Excluir com "forçar" precisa funcionar mesmo numa versão já aceita (ver
-    -- TermoUsoServiceExcluir). Apagar o termo com `forcar: true` apaga junto as linhas de aceite que
+    -- TermoUsoServiceRemove). Apagar o termo com `forcar: true` apaga junto as linhas de aceite que
     -- apontam para ele: perde o rastro de quem aceitou ESTA versão especificamente (a exclusão em si
     -- continua em log_auditoria).
     CONSTRAINT "FK_USUARIO_TERMO_TERMO" FOREIGN KEY (id_termo) REFERENCES termos_de_uso(id_termo) ON DELETE CASCADE,

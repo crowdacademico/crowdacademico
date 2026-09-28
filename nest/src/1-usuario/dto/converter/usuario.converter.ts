@@ -1,4 +1,4 @@
-import { UsuarioEntity } from '../../entity/usuario.entity';
+import { UsuarioEntity } from '../../../commons/database/db.types';
 import { UsuarioResponse } from '../response/usuario.response';
 
 // Pick, não UsuarioEntity inteiro: services nunca selecionam senha_hash (só

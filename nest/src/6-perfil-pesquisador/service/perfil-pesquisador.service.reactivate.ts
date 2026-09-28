@@ -7,7 +7,7 @@ import { DatabaseService } from '../../commons/database/database.service';
 // Mesma permissão de suspender ('usuario_suspender' - quem pode suspender
 // pode reverter). Idempotente (FALSE sem erro se já estava ativo).
 @Injectable()
-export class PerfilPesquisadorServiceReativar {
+export class PerfilPesquisadorServiceReactivate {
   constructor(private readonly database: DatabaseService) {}
 
   async executar(idUsuario: number): Promise<void> {

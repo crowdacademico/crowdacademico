@@ -3,7 +3,7 @@ import { DatabaseService } from '../../commons/database/database.service';
 import { HistoricoRejeicaoResponse } from '../dto/response/historico-rejeicao.response';
 
 // "Onde fica registrado" o motivo de uma campanha ter sido rejeitada, para Consultar Campanha: mesmo espírito
-// de UsuarioServiceListarTermosAceitos (1-usuario): join simples para mostrar o nome do admin em vez do
+// de UsuarioServiceFindAllAcceptedTerms (1-usuario): join simples para mostrar o nome do admin em vez do
 // id_admin cru, mais recente primeiro (uma campanha pode ser rejeitada mais de uma vez: o pesquisador corrige e
 // reenvia, ver o ciclo de rejeição e reenvio em REQUISITOS_V7).
 //
@@ -16,7 +16,7 @@ import { HistoricoRejeicaoResponse } from '../dto/response/historico-rejeicao.re
 // devolve `null` nesse caso, sem lógica extra aqui (mesmo comportamento já usado para dono de campanha
 // excluído).
 @Injectable()
-export class HistoricoRejeicaoServiceListar {
+export class HistoricoRejeicaoServiceFindAll {
   constructor(private readonly database: DatabaseService) {}
 
   async executar(idCampanha: number): Promise<HistoricoRejeicaoResponse[]> {

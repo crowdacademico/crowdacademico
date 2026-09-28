@@ -1,4 +1,4 @@
-import { LinkAcademicoEntity } from '../../entity/link-academico.entity';
+import { LinkAcademicoEntity } from '../../../commons/database/db.types';
 import { LinkAcademicoResponse } from '../response/link-academico.response';
 
 export class LinkAcademicoConverter {

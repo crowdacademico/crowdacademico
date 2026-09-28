@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
-import { TermoUsoResponseAtivo } from '../dto/response/termo-uso.response-active';
+import { TermoUsoResponseActive } from '../dto/response/termo-uso.response-active';
 import type { TipoTermo } from '../../commons/database/db.types';
 
 // pol_termos_select (04_rls_policies.sql) é USING(true): leitura pública de propósito, precisa ser lida até por
@@ -8,10 +8,10 @@ import type { TipoTermo } from '../../commons/database/db.types';
 // garante no máximo 1 linha ativa POR TIPO, por isso `executar` exige `tipo`: "a versão ativa" só é não-ambígua
 // depois de dizer QUAL termo (cadastro/upgrade_pesquisador) se quer.
 @Injectable()
-export class TermoUsoServiceAtivo {
+export class TermoUsoServiceFindActive {
   constructor(private readonly database: DatabaseService) {}
 
-  async executar(tipo: TipoTermo): Promise<TermoUsoResponseAtivo> {
+  async executar(tipo: TipoTermo): Promise<TermoUsoResponseActive> {
     const termo = await this.database
       .getDb()
       .selectFrom('termos_de_uso')

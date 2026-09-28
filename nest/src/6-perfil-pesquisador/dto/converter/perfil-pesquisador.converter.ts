@@ -1,4 +1,4 @@
-import { PerfilPesquisadorEntity } from '../../entity/perfil-pesquisador.entity';
+import { PerfilPesquisadorEntity } from '../../../commons/database/db.types';
 import { PerfilPesquisadorResponse } from '../response/perfil-pesquisador.response';
 
 type PerfilPesquisadorParaConverter = Pick<

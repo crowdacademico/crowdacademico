@@ -7,7 +7,7 @@ import { DatabaseService } from '../../commons/database/database.service';
 // sozinho no prazo. Exige 'papel_gerenciar' (mesma permissão da matriz Papel × Permissão), não
 // 'usuario_suspender': é decisão de RBAC, não de moderação de conta.
 @Injectable()
-export class UsuarioPapelServiceSuspender {
+export class UsuarioPapelServiceSuspend {
   constructor(private readonly database: DatabaseService) {}
 
   async suspender(

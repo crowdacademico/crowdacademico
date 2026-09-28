@@ -19,13 +19,13 @@ import {
   TIPOS_IMAGEM_PERMITIDOS,
 } from '../constants/arquivo.constants';
 import { ArquivoConverter } from '../dto/converter/arquivo.converter';
-import { ArquivoRequestConfirmarUpload } from '../dto/request/arquivo.request-confirm-upload';
+import { ArquivoRequestConfirmUpload } from '../dto/request/arquivo.request-confirm-upload';
 import { ArquivoResponse } from '../dto/response/arquivo.response';
 import { assinaturaCorrespondeAoTipo } from '../util/arquivo.util.signature';
 import { processarImagem } from '../util/arquivo.util.image-processing';
 
 @Injectable()
-export class ArquivoServiceConfirmarUpload {
+export class ArquivoServiceConfirmUpload {
   constructor(
     private readonly database: DatabaseService,
     private readonly configuracaoValor: ConfiguracaoValorService,
@@ -34,7 +34,7 @@ export class ArquivoServiceConfirmarUpload {
   ) {}
 
   async executar(
-    dto: ArquivoRequestConfirmarUpload,
+    dto: ArquivoRequestConfirmUpload,
     idUsuario: number,
   ): Promise<ArquivoResponse> {
     const info = await this.armazenamento.obterInfoObjeto(dto.chave);

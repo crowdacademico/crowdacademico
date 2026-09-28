@@ -27,7 +27,7 @@ interface LinhaMetricasDashboard {
 }
 
 @Injectable()
-export class DashboardServiceResumo {
+export class DashboardServiceSummary {
   constructor(private readonly database: DatabaseService) {}
 
   async executar(): Promise<DashboardResponseSummary> {

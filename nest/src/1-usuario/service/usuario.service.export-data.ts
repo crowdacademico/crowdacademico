@@ -3,7 +3,7 @@ import { sql } from 'kysely';
 import { DatabaseService } from '../../commons/database/database.service';
 import { decifrarCpf } from '../../commons/seguranca/cpf-cifra.util';
 import { USUARIO_COLUNAS_SELECT } from '../constants/usuario.constants';
-import { UsuarioResponseExportarDados } from '../dto/response/usuario.response-export-data';
+import { UsuarioResponseExportData } from '../dto/response/usuario.response-export-data';
 
 // Mascara o CPF (3 primeiros + 2 últimos dígitos): incluir o CPF em texto puro exigiria reautenticação por
 // senha antes de gerar a exportação, mecanismo que não existe em nenhum outro lugar do sistema (a exclusão de
@@ -15,10 +15,10 @@ function mascararCpf(cpfDecifrado: string): string {
 }
 
 @Injectable()
-export class UsuarioServiceExportarDados {
+export class UsuarioServiceExportData {
   constructor(private readonly database: DatabaseService) {}
 
-  async executar(idUsuario: number): Promise<UsuarioResponseExportarDados> {
+  async executar(idUsuario: number): Promise<UsuarioResponseExportData> {
     const db = this.database.getDb();
 
     const usuario = await db
@@ -108,7 +108,7 @@ export class UsuarioServiceExportarDados {
         .select(['id_termo', 'aceito_em'])
         .where('id_usuario', '=', idUsuario)
         .execute(),
-      // Mesmo filtro de UsuarioServiceListarLogins - renovação silenciosa de
+      // Mesmo filtro de UsuarioServiceFindAllLogins - renovação silenciosa de
       // token não conta como "sessão" pra este propósito.
       db
         .selectFrom('sessao')

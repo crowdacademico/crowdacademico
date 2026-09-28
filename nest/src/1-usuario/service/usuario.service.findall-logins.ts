@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
 import { AutorizacaoService } from '../../commons/seguranca/autorizacao.service';
-import { UsuarioResponseLoginHistorico } from '../dto/response/usuario.response-login-history';
+import { UsuarioResponseLoginHistory } from '../dto/response/usuario.response-login-history';
 
 @Injectable()
-export class UsuarioServiceListarLogins {
+export class UsuarioServiceFindAllLogins {
   constructor(
     private readonly database: DatabaseService,
     private readonly autorizacao: AutorizacaoService,
@@ -16,7 +16,7 @@ export class UsuarioServiceListarLogins {
   // origem = 'login': sem este filtro, toda renovação silenciosa do token de acesso (a cada ~15min de uso
   // normal) também apareceria aqui como se fosse um login novo. Ver comentário completo em
   // auth.service.login.ts.
-  async executar(idUsuario: number): Promise<UsuarioResponseLoginHistorico[]> {
+  async executar(idUsuario: number): Promise<UsuarioResponseLoginHistory[]> {
     // `sessao` é lida por qualquer sessão (o refresh precisa achar o token antes de existir usuário atual), então
     // a RLS não protege o histórico de login: só o próprio usuário ou quem tem usuario_visualizar_sensivel.
     await this.autorizacao.exigirProprioOuPermissao(

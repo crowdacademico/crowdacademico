@@ -7,7 +7,7 @@ import {
   Patch,
 } from '@nestjs/common';
 import { PerfilPesquisadorRequestUpdate } from '../dto/request/perfil-pesquisador.request-update';
-import { PerfilPesquisadorServiceAlterarDeOutro } from '../service/perfil-pesquisador.service.update-for-other';
+import { PerfilPesquisadorServiceUpdateForOther } from '../service/perfil-pesquisador.service.update-for-other';
 
 // PATCH /perfil-pesquisador/:id: o modal Alterar Usuário chama esta rota para salvar tipo de
 // vínculo/instituição/título acadêmico de QUEM está sendo editado; o self-service é PATCH /perfil-pesquisador
@@ -15,9 +15,9 @@ import { PerfilPesquisadorServiceAlterarDeOutro } from '../service/perfil-pesqui
 // Endpoint separado, nunca reaproveitando o self-service: mesma classe de corrigir-cpf/create-para-outro deste
 // módulo.
 @Controller('perfil-pesquisador')
-export class PerfilPesquisadorControllerAlterarDeOutro {
+export class PerfilPesquisadorControllerUpdateForOther {
   constructor(
-    private readonly service: PerfilPesquisadorServiceAlterarDeOutro,
+    private readonly service: PerfilPesquisadorServiceUpdateForOther,
   ) {}
 
   @Patch(':id')

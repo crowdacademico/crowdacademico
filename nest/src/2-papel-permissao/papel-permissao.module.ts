@@ -7,9 +7,9 @@ import { PapelControllerUpdate } from './controllers/papel.controller.update';
 import { PermissaoControllerFindAll } from './controllers/permissao.controller.findall';
 import { UsuarioPapelControllerCreate } from './controllers/usuario-papel.controller.create';
 import { UsuarioPapelControllerFindAll } from './controllers/usuario-papel.controller.findall';
-import { UsuarioPapelControllerFindAllGeral } from './controllers/usuario-papel.controller.findall-global';
+import { UsuarioPapelControllerFindAllGlobal } from './controllers/usuario-papel.controller.findall-global';
 import { UsuarioPapelControllerRemove } from './controllers/usuario-papel.controller.remove';
-import { UsuarioPapelControllerSuspender } from './controllers/usuario-papel.controller.suspend';
+import { UsuarioPapelControllerSuspend } from './controllers/usuario-papel.controller.suspend';
 import { PapelPermissaoServiceCreate } from './service/papel-permissao.service.create';
 import { PapelPermissaoServiceFindAll } from './service/papel-permissao.service.findall';
 import { PapelPermissaoServiceRemove } from './service/papel-permissao.service.remove';
@@ -18,9 +18,9 @@ import { PapelServiceUpdate } from './service/papel.service.update';
 import { PermissaoServiceFindAll } from './service/permissao.service.findall';
 import { UsuarioPapelServiceCreate } from './service/usuario-papel.service.create';
 import { UsuarioPapelServiceFindAll } from './service/usuario-papel.service.findall';
-import { UsuarioPapelServiceFindAllGeral } from './service/usuario-papel.service.findall-global';
+import { UsuarioPapelServiceFindAllGlobal } from './service/usuario-papel.service.findall-global';
 import { UsuarioPapelServiceRemove } from './service/usuario-papel.service.remove';
-import { UsuarioPapelServiceSuspender } from './service/usuario-papel.service.suspend';
+import { UsuarioPapelServiceSuspend } from './service/usuario-papel.service.suspend';
 
 // `papel`/`permissao` são quase todo só-leitura (catálogo gerenciado via seed/migração direta, de propósito:
 // CRIAR um papel ou permissão nova é decisão maior). `papel_permissao` tem insert/delete: o admin
@@ -42,10 +42,10 @@ import { UsuarioPapelServiceSuspender } from './service/usuario-papel.service.su
     PapelPermissaoControllerCreate,
     PapelPermissaoControllerRemove,
     UsuarioPapelControllerFindAll,
-    UsuarioPapelControllerFindAllGeral,
+    UsuarioPapelControllerFindAllGlobal,
     UsuarioPapelControllerCreate,
     UsuarioPapelControllerRemove,
-    UsuarioPapelControllerSuspender,
+    UsuarioPapelControllerSuspend,
   ],
   providers: [
     PapelServiceFindAll,
@@ -55,10 +55,10 @@ import { UsuarioPapelServiceSuspender } from './service/usuario-papel.service.su
     PapelPermissaoServiceCreate,
     PapelPermissaoServiceRemove,
     UsuarioPapelServiceFindAll,
-    UsuarioPapelServiceFindAllGeral,
+    UsuarioPapelServiceFindAllGlobal,
     UsuarioPapelServiceCreate,
     UsuarioPapelServiceRemove,
-    UsuarioPapelServiceSuspender,
+    UsuarioPapelServiceSuspend,
   ],
 })
 export class PapelPermissaoModule {}

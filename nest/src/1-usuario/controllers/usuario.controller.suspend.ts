@@ -7,12 +7,12 @@ import {
   ParseIntPipe,
   Post,
 } from '@nestjs/common';
-import { UsuarioRequestSuspend } from '../dto/request/usuario.request-suspend';
-import { UsuarioServiceSuspender } from '../service/usuario.service.suspend';
+import { SuspensaoRequestDto } from '../../commons/moderacao/dto/suspensao.request.dto';
+import { UsuarioServiceSuspend } from '../service/usuario.service.suspend';
 
 @Controller('usuario')
-export class UsuarioControllerSuspender {
-  constructor(private readonly service: UsuarioServiceSuspender) {}
+export class UsuarioControllerSuspend {
+  constructor(private readonly service: UsuarioServiceSuspend) {}
 
   @Get(':id/suspensao')
   buscar(@Param('id', ParseIntPipe) id: number) {
@@ -23,7 +23,7 @@ export class UsuarioControllerSuspender {
   @HttpCode(204)
   suspender(
     @Param('id', ParseIntPipe) id: number,
-    @Body() dto: UsuarioRequestSuspend,
+    @Body() dto: SuspensaoRequestDto,
   ) {
     return this.service.suspender(id, dto.ate, dto.motivo);
   }

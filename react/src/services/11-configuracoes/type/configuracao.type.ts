@@ -1,7 +1,7 @@
 // Espelha nest/src/commons/database/db.types.ts (TIPOS_CONFIGURACAO).
 export type TipoConfiguracao = 'decimal' | 'inteiro' | 'texto' | 'booleano';
 
-// Espelha nest/src/11-configuracoes/dto/response/configuracao.response.ts.
+// Espelha nest/src/11-configuracoes/dto/response/configuracoes.response.ts.
 export interface ConfiguracaoResponse {
   idConfig: number;
   idUsuario: number | null;
@@ -13,7 +13,7 @@ export interface ConfiguracaoResponse {
   publica: boolean;
 }
 
-// Espelha configuracao.request-update.ts.
+// Espelha configuracoes.request-update.ts.
 export interface ConfiguracaoRequestUpdate {
   valor?: string;
   descricao?: string;

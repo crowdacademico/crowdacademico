@@ -5,11 +5,11 @@ import {
   ParseIntPipe,
   Post,
 } from '@nestjs/common';
-import { PerfilPesquisadorServiceReativar } from '../service/perfil-pesquisador.service.reactivate';
+import { PerfilPesquisadorServiceReactivate } from '../service/perfil-pesquisador.service.reactivate';
 
 @Controller('perfil-pesquisador')
-export class PerfilPesquisadorControllerReativar {
-  constructor(private readonly service: PerfilPesquisadorServiceReativar) {}
+export class PerfilPesquisadorControllerReactivate {
+  constructor(private readonly service: PerfilPesquisadorServiceReactivate) {}
 
   @Post(':id/reativar')
   @HttpCode(204)

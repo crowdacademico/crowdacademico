@@ -1,10 +1,10 @@
 import { Controller, Get, Param, ParseIntPipe } from '@nestjs/common';
-import { ConfiguracaoServiceFindOne } from '../service/configuracao.service.findone';
+import { ConfiguracoesServiceFindOne } from '../service/configuracoes.service.findone';
 import { Publico } from '../../commons/auth/publico.decorator';
 
 @Controller('configuracoes')
-export class ConfiguracaoControllerFindOne {
-  constructor(private readonly service: ConfiguracaoServiceFindOne) {}
+export class ConfiguracoesControllerFindOne {
+  constructor(private readonly service: ConfiguracoesServiceFindOne) {}
 
   @Get(':id')
   @Publico()

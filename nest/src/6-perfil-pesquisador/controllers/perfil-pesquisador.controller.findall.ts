@@ -5,7 +5,7 @@ import { PerfilPesquisadorServiceFindAll } from '../service/perfil-pesquisador.s
 import { Publico } from '../../commons/auth/publico.decorator';
 
 // Sem @UseGuards - mesmo motivo de PerfilPesquisadorControllerFindOne
-// (catálogo de pesquisadores é público). JwtAuthGuard é GLOBAL e já
+// (catálogo de pesquisadores é público). AuthGuardJwt é GLOBAL e já
 // popula request.user quando existe Bearer válido, sem exigir login.
 @Controller('perfil-pesquisador')
 export class PerfilPesquisadorControllerFindAll {

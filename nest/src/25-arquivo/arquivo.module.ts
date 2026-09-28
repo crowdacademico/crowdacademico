@@ -1,40 +1,40 @@
 import { Module } from '@nestjs/common';
 import { ArquivoControllerAvatar } from './controllers/arquivo.controller.avatar';
-import { ArquivoControllerConfirmarUpload } from './controllers/arquivo.controller.confirm-upload';
+import { ArquivoControllerConfirmUpload } from './controllers/arquivo.controller.confirm-upload';
 import { ArquivoControllerFindOne } from './controllers/arquivo.controller.findone';
-import { ArquivoControllerIniciarUpload } from './controllers/arquivo.controller.start-upload';
+import { ArquivoControllerStartUpload } from './controllers/arquivo.controller.start-upload';
 import { ArquivoControllerRemove } from './controllers/arquivo.controller.remove';
-import { ArquivoServiceConfirmarUpload } from './service/arquivo.service.confirm-upload';
+import { ArquivoServiceConfirmUpload } from './service/arquivo.service.confirm-upload';
 import { ArquivoServiceFindOne } from './service/arquivo.service.findone';
-import { ArquivoServiceIniciarUpload } from './service/arquivo.service.start-upload';
-import { ArquivoServiceLimparOrfaos } from './service/arquivo.service.clean-orphans';
+import { ArquivoServiceStartUpload } from './service/arquivo.service.start-upload';
+import { ArquivoServiceCleanOrphans } from './service/arquivo.service.clean-orphans';
 import { ArquivoServiceRemove } from './service/arquivo.service.remove';
-import { ArquivoServiceResolverAvatar } from './service/arquivo.service.resolve-avatar';
+import { ArquivoServiceResolveAvatar } from './service/arquivo.service.resolve-avatar';
 
 // StorageModule NÃO é importado aqui de propósito: é @Global() (ver commons/storage/storage.module.ts),
 // registrado uma vez em app.module.ts, mesmo padrão de DatabaseModule/DatabaseService usado nos outros módulos.
 //
-// ArquivoServiceResolverAvatar e ArquivoServiceRemove saem em `exports`: ArquivoServiceResolverAvatar para
+// ArquivoServiceResolveAvatar e ArquivoServiceRemove saem em `exports`: ArquivoServiceResolveAvatar para
 // 1-usuario (ou outro módulo) injetar direto e incluir a URL do avatar já resolvida na própria resposta, sem
 // duplicar a regra de fallback; ArquivoServiceRemove para UsuarioServiceUpdate poder desativar a foto ANTERIOR
 // quando a pessoa troca de foto (sem isso, cada troca deixaria a foto antiga órfã: ativa no banco, ocupando
 // espaço no bucket para sempre).
 @Module({
   controllers: [
-    ArquivoControllerIniciarUpload,
-    ArquivoControllerConfirmarUpload,
+    ArquivoControllerStartUpload,
+    ArquivoControllerConfirmUpload,
     ArquivoControllerFindOne,
     ArquivoControllerRemove,
     ArquivoControllerAvatar,
   ],
   providers: [
-    ArquivoServiceIniciarUpload,
-    ArquivoServiceConfirmarUpload,
+    ArquivoServiceStartUpload,
+    ArquivoServiceConfirmUpload,
     ArquivoServiceFindOne,
     ArquivoServiceRemove,
-    ArquivoServiceResolverAvatar,
-    ArquivoServiceLimparOrfaos,
+    ArquivoServiceResolveAvatar,
+    ArquivoServiceCleanOrphans,
   ],
-  exports: [ArquivoServiceResolverAvatar, ArquivoServiceRemove],
+  exports: [ArquivoServiceResolveAvatar, ArquivoServiceRemove],
 })
 export class ArquivoModule {}

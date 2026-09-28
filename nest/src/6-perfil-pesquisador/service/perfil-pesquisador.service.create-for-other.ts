@@ -6,8 +6,8 @@ import {
   normalizarCpf,
 } from '../../commons/seguranca/cpf-cifra.util';
 import { DatabaseService } from '../../commons/database/database.service';
-import { TermoUsoServiceAtivo } from '../../5-termo-uso/service/termo-uso.service.find-active';
-import { PerfilPesquisadorRequestCreateParaOutro } from '../dto/request/perfil-pesquisador.request-create-for-other';
+import { TermoUsoServiceFindActive } from '../../5-termo-uso/service/termo-uso.service.find-active';
+import { PerfilPesquisadorRequestCreateForOther } from '../dto/request/perfil-pesquisador.request-create-for-other';
 import { PerfilPesquisadorResponse } from '../dto/response/perfil-pesquisador.response';
 import { PerfilPesquisadorServiceFindOne } from './perfil-pesquisador.service.findone';
 
@@ -23,16 +23,16 @@ import { PerfilPesquisadorServiceFindOne } from './perfil-pesquisador.service.fi
 // atual). Só grava quando `dto.aceiteTermos` vem `true`: o card "Criar Perfil Pesquisador" que já existe dentro
 // de ModalAlterarUsuario não manda esse campo, então continua funcionando sem gravar aceite nenhum.
 @Injectable()
-export class PerfilPesquisadorServiceCreateParaOutro {
+export class PerfilPesquisadorServiceCreateForOther {
   constructor(
     private readonly database: DatabaseService,
     private readonly findOne: PerfilPesquisadorServiceFindOne,
-    private readonly termoUsoServiceAtivo: TermoUsoServiceAtivo,
+    private readonly termoUsoServiceAtivo: TermoUsoServiceFindActive,
   ) {}
 
   async executar(
     idUsuarioAlvo: number,
-    dto: PerfilPesquisadorRequestCreateParaOutro,
+    dto: PerfilPesquisadorRequestCreateForOther,
     idUsuarioAutenticado: number,
     ip: string | undefined,
   ): Promise<PerfilPesquisadorResponse> {

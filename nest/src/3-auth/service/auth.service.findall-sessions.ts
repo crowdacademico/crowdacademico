@@ -6,7 +6,7 @@ import { SessaoResponse } from '../dto/response/sessao.response';
 // a autorização de "só as suas sessões" é feita AQUI, no WHERE, não no banco (mesmo raciocínio documentado em
 // auth.service.refresh.ts). NUNCA aceitar id_usuario vindo de fora: sempre o id de quem está logado.
 @Injectable()
-export class AuthServiceListarSessoes {
+export class AuthServiceFindAllSessions {
   constructor(private readonly database: DatabaseService) {}
 
   async executar(

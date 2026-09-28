@@ -1,4 +1,4 @@
-import { LinkAtualizacaoEntity } from '../../entity/link-atualizacao.entity';
+import { LinkAtualizacaoEntity } from '../../../commons/database/db.types';
 import { LinkAtualizacaoResponse } from '../response/link-atualizacao.response';
 
 export class LinkAtualizacaoConverter {

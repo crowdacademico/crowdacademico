@@ -3,7 +3,7 @@ import { sql } from 'kysely';
 import { DatabaseService } from '../../commons/database/database.service';
 
 @Injectable()
-export class UsuarioServiceDesbloquear {
+export class UsuarioServiceUnlock {
   constructor(private readonly database: DatabaseService) {}
 
   // liberar_bloqueio_login() (03_funcoes_seguranca.sql, [03-O]) zera tentativas_login_falhas e bloqueado_ate:

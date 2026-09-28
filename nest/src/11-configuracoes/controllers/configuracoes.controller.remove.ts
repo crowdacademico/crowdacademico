@@ -5,11 +5,11 @@ import {
   Param,
   ParseIntPipe,
 } from '@nestjs/common';
-import { ConfiguracaoServiceRemove } from '../service/configuracao.service.remove';
+import { ConfiguracoesServiceRemove } from '../service/configuracoes.service.remove';
 
 @Controller('configuracoes')
-export class ConfiguracaoControllerRemove {
-  constructor(private readonly service: ConfiguracaoServiceRemove) {}
+export class ConfiguracoesControllerRemove {
+  constructor(private readonly service: ConfiguracoesServiceRemove) {}
 
   @Delete(':id')
   @HttpCode(204)

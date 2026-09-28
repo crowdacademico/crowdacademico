@@ -17,8 +17,7 @@ export interface AuthResponseLogin {
   papeis: string[];
 }
 
-// Espelha auth.response-refresh.ts (AuthResponseRefresh) - mesmo formato
-// de AuthResponseLogin.
+// A renovação de sessão devolve o mesmo AuthResponseLogin do Nest (auth.response-login.ts).
 export type AuthResponseRefresh = AuthResponseLogin;
 
 // Espelha auth.response-register.ts (AuthResponseRegister extends

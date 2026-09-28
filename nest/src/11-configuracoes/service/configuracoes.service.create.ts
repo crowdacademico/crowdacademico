@@ -1,19 +1,19 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
 import { CODIGO_PG_RLS_VIOLATION } from '../../commons/database/postgres-exception.filter';
-import { ConfiguracaoConverter } from '../dto/converter/configuracao.converter';
-import { ConfiguracaoRequestCreate } from '../dto/request/configuracao.request-create';
-import { ConfiguracaoResponse } from '../dto/response/configuracao.response';
+import { ConfiguracoesConverter } from '../dto/converter/configuracoes.converter';
+import { ConfiguracoesRequestCreate } from '../dto/request/configuracoes.request-create';
+import { ConfiguracoesResponse } from '../dto/response/configuracoes.response';
 import { temCodigoPostgres } from '../../commons/database/codigo-postgres.util';
 
 @Injectable()
-export class ConfiguracaoServiceCreate {
+export class ConfiguracoesServiceCreate {
   constructor(private readonly database: DatabaseService) {}
 
   async executar(
-    dto: ConfiguracaoRequestCreate,
+    dto: ConfiguracoesRequestCreate,
     idUsuarioAutenticado: number,
-  ): Promise<ConfiguracaoResponse> {
+  ): Promise<ConfiguracoesResponse> {
     // id_usuario decidido aqui, nunca aceito do corpo da requisição - pol_
     // config_insert (04) exige, pra linha global (id_usuario NULL),
     // tem_permissao('configuracao_gerenciar'); pra linha pessoal, exige
@@ -38,7 +38,7 @@ export class ConfiguracaoServiceCreate {
         .returningAll()
         .executeTakeFirstOrThrow();
 
-      return ConfiguracaoConverter.paraResponseDto(linha);
+      return ConfiguracoesConverter.paraResponseDto(linha);
     } catch (erro) {
       // Chave duplicada segue para o filtro global (mensagens-duplicidade.constants.ts).
       if (temCodigoPostgres(erro, CODIGO_PG_RLS_VIOLATION)) {
