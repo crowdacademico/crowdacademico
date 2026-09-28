@@ -48,6 +48,7 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 90019 | `fn_valida_pares_min_max_configuracoes` | `configuracoes` | O mínimo de um par (prazo, orçamento, cronograma, tamanho de arquivo) não pode ser maior que o máximo (constraint trigger, roda no `COMMIT`). Leva `dados` no corpo: `chaveMinimo`, `valorMinimo`, `chaveMaximo`, `valorMaximo` |
 | 90020 | `suspender_usuario` / `suspender_pesquisador` | `usuario` / `perfil_pesquisador` | Motivo da suspensão é obrigatório (27-09-2026) |
 | 90021 | `criar_campanha_para_outro` | `campanha` | O usuário escolhido não é um pesquisador ativo (27-09-2026) |
+| 90022 | `fn_valida_posse_imagem_perfil` | `usuario` | A foto escolhida não existe mais ou foi removida (28-09-2026) |
 
 ## 91xxx - Conflito de estado/regra de negócio (409)
 
@@ -81,6 +82,7 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 91026 | `fn_valida_transicao_campanha` | `campanha` | Prazo para reenviar a campanha rejeitada já venceu (21-09-2026) |
 | 91027 | `fn_congela_regras_campanha` / `fn_congela_orcamento_campanha` / `fn_congela_marco_cronograma` | `campanha` / `orcamento_campanha` / `marco_cronograma` | Campanha rejeitada sem reenvios restantes é somente leitura (21-09-2026) |
 | 91028 | `fn_exige_historico_rejeicao` | `campanha` | Rejeição sem registro em `historico_rejeicao` na mesma transação (constraint trigger, roda no `COMMIT`) |
+| 91029 | `fn_valida_posse_imagem_perfil` | `usuario` | O arquivo escolhido como foto já está em uso em outro lugar (28-09-2026) |
 
 ## 92xxx - Autorização negada / conflito de interesse (403)
 
@@ -110,6 +112,7 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 92022 | `suspender_papel_usuario` | `usuario_papel` | Sem permissão para suspender papel de usuário (27-09-2026) |
 | 92023 | `revogar_suspensao_papel_usuario` | `usuario_papel` | Sem permissão para revogar suspensão de papel de usuário (27-09-2026) |
 | 92024 | `alterar_perfil_pesquisador_de_outro` | `perfil_pesquisador` | Sem permissão para alterar perfil de pesquisador de outro usuário (27-09-2026) |
+| 92025 | `fn_valida_posse_imagem_perfil` | `usuario` | Só é possível usar como foto um arquivo que você mesmo enviou (28-09-2026) |
 
 ## 93xxx - Limite de taxa (429)
 

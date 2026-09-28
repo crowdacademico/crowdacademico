@@ -815,6 +815,9 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, pub
 (NULL, 'verificacao_email_horas_validade', '24', 'inteiro', 'Validade do token de verificação de e-mail, em horas', TRUE, FALSE),
 -- Lida por contar_metricas_dashboard() (03, [03-M]): o card "sessões ativas" conta sessão criada (login ou
 -- renovação do token) dentro desta janela.
+-- Lida por desativar_arquivos_orfaos() (05, [05-G]): prazo para um arquivo enviado ser adotado por um dono
+-- (foto de perfil, anexo) antes de ser desativado e apagado do armazenamento. 0 = desligado.
+(NULL, 'arquivo_horas_para_vincular', '24', 'inteiro', 'Horas que um arquivo enviado pode ficar sem uso (sem virar foto ou anexo) antes de ser apagado', TRUE, FALSE),
 (NULL, 'dashboard_sessao_ativa_minutos', '30', 'inteiro', 'Janela (em minutos) usada pelo painel para contar uma sessão como ativa agora', TRUE, FALSE),
 -- Opções de prazo sugeridas no seletor de "Suspender Usuário" do painel; lida pelo React
 -- (minha-conta/alterar-usuario), não por nenhuma trigger/função do banco.

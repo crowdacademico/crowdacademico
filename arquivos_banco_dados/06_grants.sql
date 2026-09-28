@@ -398,3 +398,7 @@ GRANT SELECT ON log_auditoria TO app_nestjs;
 -- fn_peso_score: mesma higiene, EXECUTE só para app_nestjs.
 REVOKE EXECUTE ON FUNCTION public.fn_peso_score(INT, TEXT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.fn_peso_score(INT, TEXT) TO app_nestjs;
+
+-- desativar_arquivos_orfaos() (05, [05-G]): mesma higiene de limpar_log_auditoria (@Cron diário, sem sessão).
+REVOKE EXECUTE ON FUNCTION public.desativar_arquivos_orfaos() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.desativar_arquivos_orfaos() TO app_nestjs;

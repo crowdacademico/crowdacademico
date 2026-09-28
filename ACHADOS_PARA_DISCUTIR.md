@@ -4,7 +4,7 @@ Lista montada a partir da resposta da revisão externa de 24-09-2026 (a pasta de
 
 ## A. Dá para fazer agora, sem decisão de negócio
 
-1. **Tipos gerados do banco (B4).**
+1. ✅ **FEITO em parte (28-09-2026): tipos gerados do banco (B4).** O `pglite-socket` foi instalado só na pasta de testes do banco, e o `db.types.generated.ts` é gerado a partir dos arquivos 01 a 08. O manual continua em uso, e uma suíte de teste compara os dois (ver `DOCUMENTACAO_BACKEND.md`, seção 2.6). O `enums.gerado.ts` para o React não foi feito. Texto original:
    - Situação: o `db.types.ts` continua escrito à mão, com 660 linhas, e os enums de status estão repetidos no React.
    - Revisão externa: rodar o `kysely-codegen` contra o PGlite e gerar um `enums.gerado.ts` para o React. Serve de resposta para a banca ("o código bate com o banco").
    - Sugestão: concordo. Risco baixo, mas os erros de tipo que aparecerem vão mostrar divergências reais. Precisa de OK para instalar `@electric-sql/pglite-socket` como dependência de desenvolvimento.
@@ -68,6 +68,10 @@ Lista montada a partir da resposta da revisão externa de 24-09-2026 (a pasta de
 10. **Guarda de login em `/admin/*`.** Feita em 26-09-2026: uma guarda só no `AdminLayout` (confere sessão, não papel). A permissão por rota fica para perto do fim do sistema.
 11. **Moderados do axe** (sem h1, ordem dos títulos do rodapé). Resolvido em 26-09-2026 sem mudar o visual: axe zerado nas 22 telas.
 12. **Botão "Criar" de parâmetro global.** Decidido em 26-09-2026: saiu da tela.
+13. **Horário dos jobs agendados (28-09-2026).**
+   - Situação: o que cada job faz já é configurável pelo painel (ex.: `arquivo_horas_para_vincular`, `log_auditoria_retencao_dias`). Já o horário em que cada um roda está fixo no código do Nest. Job agendado é uma tarefa que o Nest roda sozinho, como um despertador. São 6: arquivos sem dono às 4h, limpeza do log às 3h, campanhas vencidas e fim de suspensão a cada 15 min, rascunho e rejeitada de hora em hora.
+   - Para mudar pelo painel: o Nest lê o horário quando liga, então seria preciso "reprogramar o despertador" com o sistema ligado, nos 6 jobs, e guardar os horários em `configuracoes`.
+   - Sugestão: deixar fixo. O horário é de infraestrutura (em que momento a faxina roda), não regra de negócio; mudar na prática é raro, e o custo não é pequeno. Rever se a banca ou o uso real pedirem.
 
 ## C. Dependem de módulo (não antecipar)
 

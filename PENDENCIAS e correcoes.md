@@ -145,7 +145,8 @@ O Lucas pediu detalhamento dessa ideia (citada de passagem pelo Lucas numa rodad
 
 **Onde moraria**: backend, `25-arquivo` (módulo já existe, dono natural) - 2 endpoints novos (resumo com agregados, listagem paginada com filtro), ambos protegidos por permissão de administrador. Frontend, uma tela de listagem no padrão já repetido há meses.
 
-- **Arquivo confirmado junto com o registro dono** (N6 do roteiro do Atlas): confirmar o upload na mesma transação que grava o dono (avatar, anexo), o que elimina a causa dos órfãos. Decisão de desenho antes; faz sentido decidir antes da tela acima.
+
+- **Anexo de atualização aceita arquivo de outra pessoa (achado 28-09-2026):** `pol_arqatu_insert` confere só se a atualização é da campanha de quem está logado, não quem enviou o arquivo. Um pesquisador pode anexar o arquivo de outra pessoa e, pela posse que o anexo dá em `pol_arquivo_update`, apagá-lo. É o mesmo buraco que a foto de perfil tinha (fechado em 28-09-2026, `[05-G]`). A correção é pequena (mesma regra de posse no INSERT de `arquivo_atualizacao` e `arquivo_recompensa`), mas antes precisa de uma decisão: o mesmo arquivo pode ser anexado em mais de uma atualização? Resolver quando o upload de anexos for ligado na tela (módulos 15 e 18).
 
 ---
 
@@ -234,9 +235,6 @@ Na tabela de Atualizações do T3, o botão "Ocultar" (só texto) fica com fonte
 ### Estrutura e ferramentas
 
 - **Comentários antigos do SQL:** 86 cabeçalhos foram condensados em 24-09-2026 e o texto original foi para `HISTORICO_COMENTARIOS_SQL.md`, que hoje é um arquivo morto. Falta, se o Lucas quiser, curar o que ainda vale e levar para as seções de `DOCUMENTACAO_BD.md`.
-- **husky e lint-staged** (F1 do roteiro do Atlas): lint só nos arquivos alterados, a cada commit. Pequeno.
-- **Formato "decisão, motivo, caso-limite aceito" na documentação** (D1 do roteiro do Atlas).
-- **Tipos do banco gerados automaticamente** (pglite-socket): adiado pelo Lucas.
 
 ### Protótipo estático (sessão própria)
 

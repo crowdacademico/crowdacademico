@@ -153,6 +153,16 @@ crowdacademico/                          (repo único na Organization)
             └── dash-pesquisador/
 ```
 
+# Como registrar uma decisão na documentação
+
+Desde 28-09-2026, toda decisão nova nos documentos `DOCUMENTACAO_*.md` vem em três linhas:
+
+- **Decisão:** o que foi decidido.
+- **Motivo:** por que foi assim, e não de outro jeito.
+- **Caso-limite aceito:** o que fica de fora ou pode falhar, e por que aceitamos.
+
+O que já estava escrito antes continua no formato antigo; não precisa reescrever.
+
 # Nomenclatura do DDL (`arquivos_banco_dados/*.sql`)
 
 *(Atualizado nesta revisão - esta seção descrevia um prefixo `CRW_` em maiúsculo que nunca foi adotado. A convenção real, usada desde o `01_extensoes_enums_tabelas.sql`: tabela e coluna em `snake_case` minúsculo, sem prefixo - só os nomes de CONSTRAINT ficam em `"SCREAMING_SNAKE_CASE"` entre aspas duplas, ver exemplo de `seguir_pesquisador` acima.)*

@@ -6,7 +6,8 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['eslint.config.mjs'],
+    // db.types.generated.ts: saída do kysely-codegen, regerada, nunca editada à mão.
+    ignores: ['eslint.config.mjs', 'src/commons/database/db.types.generated.ts'],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,

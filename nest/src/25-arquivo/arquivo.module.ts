@@ -7,6 +7,7 @@ import { ArquivoControllerRemove } from './controllers/arquivo.controller.remove
 import { ArquivoServiceConfirmarUpload } from './service/arquivo.service.confirmar-upload';
 import { ArquivoServiceFindOne } from './service/arquivo.service.findone';
 import { ArquivoServiceIniciarUpload } from './service/arquivo.service.iniciar-upload';
+import { ArquivoServiceLimparOrfaos } from './service/arquivo.service.limpar-orfaos';
 import { ArquivoServiceRemove } from './service/arquivo.service.remove';
 import { ArquivoServiceResolverAvatar } from './service/arquivo.service.resolver-avatar';
 
@@ -32,6 +33,7 @@ import { ArquivoServiceResolverAvatar } from './service/arquivo.service.resolver
     ArquivoServiceFindOne,
     ArquivoServiceRemove,
     ArquivoServiceResolverAvatar,
+    ArquivoServiceLimparOrfaos,
   ],
   exports: [ArquivoServiceResolverAvatar, ArquivoServiceRemove],
 })

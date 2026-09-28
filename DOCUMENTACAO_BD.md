@@ -1,5 +1,5 @@
 
-**Contagem do inventário** (`grep -c` nos `.sql`, para conferir contra as queries acima; **evite repetir estes números em outros documentos**, eles envelhecem, cite a seção "Como conferir este inventário"): **42 tabelas**, **121 policies**, **79 triggers** em `05` (75 comuns e 4 `CONSTRAINT TRIGGER`), **100 funções** (72 em `05`, 26 em `03`, 1 em `08`, 1 em `01`), **52 índices** em `02`, e **75 códigos de ERRCODE** customizado (tabelas em `DOCUMENTACAO_ERRCODE.md`).
+**Contagem do inventário** (`grep -c` nos `.sql`, para conferir contra as queries acima; **evite repetir estes números em outros documentos**, eles envelhecem, cite a seção "Como conferir este inventário"): **42 tabelas**, **121 policies**, **80 triggers** em `05` (76 comuns e 4 `CONSTRAINT TRIGGER`), **102 funções** (74 em `05`, 26 em `03`, 1 em `08`, 1 em `01`), **52 índices** em `02`, e **78 códigos de ERRCODE** customizado (tabelas em `DOCUMENTACAO_ERRCODE.md`).
 
 **Comentários dos `.sql`.** Cabeçalho curto (`Função`, `Assinatura`, `Bloco` e uma `Regra` objetiva, sem datas nem história) e, dentro de função, trigger e policy, só o comentário que explica uma regra difícil. Não há ponteiro para arquivo fora do git: o porquê longo mora aqui, na seção `[NN-Y]` correspondente, e a história (o que mudou, quando, por quê) fica no arquivo de histórico local, que não é versionado. Os comentários do `07` explicam dado de teste; o `ATUALIZAR O SUPABASE.sql` é o registro datado de cada patch e por isso mantém a narrativa.
 # 📚 Documentação Técnica do Banco de Dados - CrowdAcadêmico
@@ -746,6 +746,12 @@ Regras verificadas no PGlite com o banco montado inteiro, usando o papel real `a
 > 📌 **Por que `trg_permissao_auto_admin` existe:** é a rede de segurança da remoção do antigo `eh_admin()` das RLS policies (todas as policies do `04` passaram a checar `tem_permissao('x')` em vez de um bypass genérico de admin - ver Anexo B, ao final deste documento, que consolidou o `RBAC-pontos-discutidos.md` original, já removido do repositório). Sem esta trigger, toda permissão nova criada exigiria lembrar de inserir manualmente a linha correspondente em `papel_permissao` para `'admin'` - e um esquecimento faria o admin perder acesso a algo que antes vinha de graça via `eh_admin()`. Com a trigger, toda permissão nova já nasce atribuída ao papel `admin` automaticamente.
 
 ---
+
+### [05-G] Arquivo: posse da foto de perfil e limpeza de órfãos (28-09-2026)
+
+- **Decisão:** `trg_valida_posse_imagem_perfil` (`BEFORE INSERT OR UPDATE OF id_imagem_perfil ON usuario`, função `fn_valida_posse_imagem_perfil`, `SECURITY DEFINER`) só aceita como foto um arquivo ativo (90022), enviado por quem está logado (92025) e sem outro dono: foto de outra pessoa, anexo de atualização ou de recompensa (91029). `desativar_arquivos_orfaos()` desativa todo arquivo ativo que ninguém adotou em `configuracoes.arquivo_horas_para_vincular` (24h; 0 = desligado), devolve as chaves para o Nest apagar do armazenamento e deixa uma linha de rastro em `log_auditoria`. Chamada pelo job diário das 4h.
+- **Motivo:** o upload é confirmado antes de o dono existir (a tela mostra a foto antes de salvar), então o órfão nasce sempre que alguém envia e não salva. E `pol_arquivo_update` ([04]) dá posse do arquivo a quem o tem como foto: sem a trava, qualquer conta apontava a própria foto para o arquivo de outra pessoa e podia apagá-lo.
+- **Caso-limite aceito:** a regra só vale com alguém logado (o seed e a manutenção direta não têm sessão; o cadastro público não aceita foto). Tabela nova que aponte para `arquivo` precisa entrar nos `NOT EXISTS` da função de órfãos e na regra de posse. Coberto pela suíte de teste do banco de posse de arquivo e órfãos.
 
 ### Idempotência
 

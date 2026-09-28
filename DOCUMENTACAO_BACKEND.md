@@ -59,7 +59,7 @@ Este documento é o irmão do `DOCUMENTACAO_BD.md`. Ele cobre o backend em NestJ
 | **`@aws-sdk/client-s3` + `s3-request-presigner`** | Cliente S3 genérico - usado contra o Supabase Storage, não contra a AWS (ver seção 8). |
 | **`sharp`** | Processamento de imagem no servidor (redimensiona, converte pra WebP, remove EXIF). |
 | **`@nestjs/swagger`** | Documentação interativa da API (`/api`, só fora de produção) - gerada automaticamente a partir dos DTOs já existentes, ver §18. |
-| **`@nestjs/schedule`** | Agendamento (`@Cron`) - 5 jobs hoje: encerramento de campanha vencida, fim da suspensão de pesquisador, expiração de rascunho, expiração de campanha rejeitada e retenção do log de auditoria, ver §7.4. |
+| **`@nestjs/schedule`** | Agendamento (`@Cron`) - 6 jobs hoje: encerramento de campanha vencida, fim da suspensão de pesquisador, expiração de rascunho, expiração de campanha rejeitada, retenção do log de auditoria e limpeza de arquivos sem dono, ver §7.4. |
 
 📌 **Por que Kysely e não TypeORM/Prisma, e `class-validator` em vez de Joi.** Embora nos foi ensinado no semestre passado, pelo professor Francisco, do IFSP Birigui, a usar TypeORM + Joi (nos projetos de sala de aula da disciplina de Programação para Web 2), decidimos não utilizar isso aqui devido ao seguinte:
 
@@ -202,7 +202,10 @@ export type ModeloCampanha = (typeof MODELOS_CAMPANHA)[number];
 
 📌 **Uma fonte só para o ENUM.** O DTO valida contra a mesma constante que tipa a coluna. Adicionar um valor no ENUM do banco e esquecer de atualizar o DTO vira erro de compilação, não um 500 em produção.
 
-⚠️ **`db.types.ts` é manual, mas não precisava ser.** Existe `npm run db:codegen` (kysely-codegen, já em `devDependencies` e configurado), que introspecciona o Postgres real e gera `db.types.generated.ts` com todas as tabelas. O comentário no topo do arquivo explica que o codegen nunca foi rodado porque o ambiente onde o arquivo foi escrito não tinha um Postgres de pé - e deixa a instrução explícita: **rode o codegen com o banco no ar e, onde divergir, o gerado manda.** Enquanto isso não acontecer, o risco é o de sempre com tipo escrito de cabeça: uma coluna renomeada no `.sql` e não refletida aqui só aparece em runtime.
+📌 **Conferido contra o banco de verdade (28-09-2026).**
+- **Decisão:** o `db.types.ts` manual continua sendo o que a aplicação usa. Ao lado dele fica `db.types.generated.ts`, gerado pelo kysely-codegen a partir dos arquivos 01 a 08, e uma suíte de teste do banco (a de conferência de tipos, na pasta local de testes do banco) compara os dois a cada rodada. Ela falha se o manual tiver coluna que não existe, tipo diferente ou lista de valores diferente da do banco. Para gerar de novo: o script de geração de tipos da pasta de testes do banco, ou `npm run db:codegen` no `nest/` com o `.env` apontando para um banco.
+- **Motivo:** trocar direto pelo gerado quebrava 61 pontos de compilação, quase todos pela mesma causa: colunas com `DEFAULT` e sem `NOT NULL` (`criado_em`, `ativo`...), que o banco aceita nulas e o manual declara "nunca nulo". A conferência dá a proteção que importa (coluna errada vira teste vermelho) sem mexer em 61 lugares nem no banco.
+- **Caso-limite aceito:** 34 colunas continuam com nulidade diferente, listadas como aviso pela suíte. Colunas de texto com `CHECK (col IN (...))` aparecem como texto livre no gerado (o gerador não lê `CHECK`); a suíte confere a lista do manual contra o `CHECK` do 01. O arquivo gerado fica fora do lint.
 
 ### 2.7 `paginacao.util.ts` - teto de segurança, não paginação de tela
 
@@ -627,7 +630,7 @@ export class CampanhaServiceCreate {
 
 Pra comparação de escala: 96 chamadas por dia é um volume desprezível perto do tráfego normal de qualquer aplicação com usuário de verdade - não chega perto de nenhum limite de uso do plano gratuito do Supabase (que é sobre espaço em disco e certas cotas de API, não sobre "número de consultas simples" como esta). Resumindo: nem o intervalo de 15 minutos, nem a query em si, representam risco de lentidão pro sistema.
 
-**Os 5 jobs agendados do sistema.** Todos seguem o molde acima (`PG_POOL` direto, função `SECURITY DEFINER`, `@Cron`):
+**Os 6 jobs agendados do sistema.** Todos seguem o molde acima (`PG_POOL` direto, função `SECURITY DEFINER`, `@Cron`):
 
 | Job | Cron | Função SQL | O que faz |
 |---|---|---|---|
@@ -635,9 +638,10 @@ Pra comparação de escala: 96 chamadas por dia é um volume desprezível perto 
 | `PerfilPesquisadorServiceReativarVencidos` | a cada 15 min | `reativar_pesquisadores_vencidos()` | a suspensão do poder de pesquisador expira sozinha |
 | `CampanhaServiceExpirarRascunho` | de hora em hora | `expirar_campanhas_rascunho()` | apaga rascunho mais velho que `campanha_rascunho_ttl_horas` (336h), contado da criação |
 | `CampanhaServiceExpirarRejeitadas` | de hora em hora | `expirar_campanhas_rejeitadas()` | apaga campanha rejeitada cujo prazo de reenvio (`campanha_rejeitada_prazo_dias`, 30) venceu |
+| `ArquivoServiceLimparOrfaos` | 1x por dia, às 4h | `desativar_arquivos_orfaos()` | desativa arquivo que ninguém adotou (nem foto nem anexo) em `arquivo_horas_para_vincular` (24h; 0 = desligado), apaga o objeto do armazenamento e deixa uma linha de rastro |
 | `LogAuditoriaServiceLimpar` | 1x por dia, às 3h | `limpar_log_auditoria()` | apaga `log_auditoria` mais velho que `log_auditoria_retencao_dias` (365; 0 = guardar para sempre) e deixa uma linha de rastro com a quantidade e a data de corte |
 
-Os 5 têm `try/catch` com `logger.error` (incluindo o nome do job). Motivo: o `@Cron` chama o método sem `await` de ninguém, então uma exceção da função SQL vira `unhandledRejection`, e o Node moderno derruba o processo inteiro por causa de um job de limpeza. Só o registro da falha, sem repetir a tentativa: o job roda de novo no próximo ciclo.
+Os 6 têm `try/catch` com `logger.error` (incluindo o nome do job). Motivo: o `@Cron` chama o método sem `await` de ninguém, então uma exceção da função SQL vira `unhandledRejection`, e o Node moderno derruba o processo inteiro por causa de um job de limpeza. Só o registro da falha, sem repetir a tentativa: o job roda de novo no próximo ciclo.
 
 **Ciclo de vida da campanha no Nest** (ver `DOCUMENTACAO_BD.md`, [05-K-2-B], para as regras; o Nest só expõe os endpoints e deixa o banco decidir):
 - `POST /campanha/:id/enviar` (`CampanhaServiceEnviar`): `rascunho -> aguardando_aprovacao` e o reenvio `rejeitado -> aguardando_aprovacao`, no mesmo endpoint. Não repete nenhuma validação: completude, prazo, reenvios, suspensão e limite de simultâneas saem do banco com ERRCODE próprio (90009 a 90011, 90015, 91025, 91026, 92009, 91018).
@@ -866,6 +870,11 @@ sharp(bytesOriginais)
 📌 **`GET /arquivo/avatar/:idUsuario` é pública de propósito** (`@Publico()`): um visitante anônimo olhando um perfil ou os comentários de uma campanha precisa ver o avatar.
 
 📌 **`UsuarioServiceUpdate` devolve `avatarUrl` já resolvida** na resposta do `PATCH`, para que o front só repasse o objeto e o cabeçalho reflita a troca na hora, sem recalcular nada.
+
+📌 **Arquivo só fica se tiver dono (28-09-2026).**
+- **Decisão:** o upload continua sendo confirmado antes de salvar (`POST /arquivo/upload/confirmar`), e o banco cuida das duas pontas: ao salvar a foto de perfil, a trigger `trg_valida_posse_imagem_perfil` (05, `[05-G]`) exige que o arquivo esteja ativo (90022), tenha sido enviado por quem está logado (92025) e não esteja em uso em outro lugar (91029). E o job `ArquivoServiceLimparOrfaos` (4h) desativa e apaga do armazenamento o arquivo que ninguém adotou em 24h.
+- **Motivo:** confirmar o arquivo na mesma operação que salva a conta tiraria a prévia instantânea da foto (ela só existe depois de processada e publicada). O prazo para adoção resolve o órfão sem mudar a tela. A trava de posse fecha um buraco real: antes, qualquer conta podia apontar a própria foto para o arquivo de outra pessoa e, pela posse que a foto de perfil dá em `pol_arquivo_update`, apagá-lo.
+- **Caso-limite aceito:** um arquivo fica até 24h ocupando espaço (e contando na cota) antes de sumir. O admin que troca a foto de outra pessoa envia o arquivo ele mesmo, então passa na regra. Dono novo de arquivo (anexo de atualização ou de recompensa, quando os módulos 15 e 18 ligarem upload) precisa entrar na função de órfãos e na regra de posse.
 
 ### 8.8 Lembretes de infraestrutura (configurados no painel, não em código)
 

@@ -1,20 +1,13 @@
 import { Generated } from 'kysely';
 
-// Tipos do Kysely, escritos à mão espelhando arquivos_banco_dados/01_extensoes_
-// enums_tabelas.sql - só as tabelas que os módulos 1/2/3/11 já tocam, não o
-// banco inteiro (mesma lógica incremental da numeração de módulos: cresce
-// junto, não tudo de uma vez).
+// Tipos do Kysely, escritos à mão espelhando arquivos_banco_dados/01_extensoes_enums_tabelas.sql, só das
+// tabelas que os módulos já construídos usam. É este arquivo que a aplicação usa, não o gerado.
 //
-// NORMALMENTE isso seria gerado por `npm run db:codegen` (kysely-codegen,
-// já instalado em devDependencies e configurado em package.json), que
-// introspecciona o Postgres de verdade e nunca erra nome de coluna/tipo.
-// Não rodei o codegen porque este ambiente de execução não tem
-// acesso a um Postgres rodando - só ao código. Assim que rodar localmente
-// com o banco de pé, rode `npm run db:codegen` (gera
-// src/commons/database/db.types.generated.ts, TODAS as 41 tabelas) e
-// confira contra este arquivo; se divergir nas 7 tabelas que aparecem nos
-// dois, o gerado manda - este aqui foi escrito de cabeça, o gerado lê o
-// catálogo real.
+// db.types.generated.ts (ao lado) é o espelho automático do banco inteiro, gerado pelo kysely-codegen a partir
+// dos arquivos 01 a 08; serve de referência e de conferência. Uma suíte de teste do banco compara os dois e falha
+// se este arquivo tiver coluna que não existe, tipo diferente ou lista de valores diferente da do banco.
+// Diferença aceita: colunas com DEFAULT e sem NOT NULL (criado_em, ativo...) o banco aceita nulo, e aqui ficam
+// "nunca nulo" porque a aplicação nunca grava nulo nelas.
 export interface UsuarioTable {
   id_usuario: Generated<number>;
   nome: string;

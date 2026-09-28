@@ -1,0 +1,12 @@
+{
+  "name": "crowdacademico-raiz",
+  "private": true,
+  "description": "Só os ganchos de git (husky + lint-staged). O projeto de verdade está em nest/ e react/, cada um com o próprio package.json.",
+  "scripts": {
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "husky": "9.1.7",
+    "lint-staged": "17.6.0"
+  }
+}

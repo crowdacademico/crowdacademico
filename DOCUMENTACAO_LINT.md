@@ -36,6 +36,21 @@ Essencialmente o esqueleto padrão que o `nest new` gera, mas hoje já com as me
 
 ---
 
+## Checagem no commit (husky + lint-staged, 28-09-2026)
+
+**Em palavras simples.** O "lint" (ESLint) é um revisor automático de código: ele aponta erros comuns, como uma variável criada e nunca usada ou um tipo errado. Antes, ele só rodava quando alguém lembrava de mandar. Agora ele roda sozinho toda vez que alguém salva uma versão do código no git (o `git commit`). São duas ferramentas trabalhando juntas:
+
+- **husky** é o "porteiro": fica de olho no momento do commit e chama a revisão antes de deixar o commit acontecer.
+- **lint-staged** é o "revisor rápido": em vez de revisar o projeto inteiro (lento), revisa só os arquivos que a pessoa mudou e está commitando.
+
+Como funciona: a pessoa faz `git add` e `git commit`, o husky chama o lint-staged, e ele roda o ESLint só nos arquivos alterados. Se achar erro, o commit é recusado e o erro aparece na tela para ser corrigido; se estiver tudo certo, o commit passa normalmente. Serve para o erro ser pego na hora, por quem acabou de escrever o código, e não depois, quando outra pessoa baixa o projeto e ele não funciona. Diferença para o uso mais comum dessas ferramentas: aqui elas **não formatam** o código sozinhas (o Prettier ficou de fora, ver abaixo), só conferem.
+
+- **Decisão:** a cada `git commit`, o ESLint roda só nos arquivos alterados e prontos para o commit (`git add`); se tiver erro, o commit não acontece. O `package.json` da raiz existe só para isso (`husky` e `lint-staged`); o gancho está em `.husky/pre-commit` e as regras em `nest/.lintstagedrc.json` (`src/**/*.ts`) e `react/.lintstagedrc.json` (`src/**/*.{ts,tsx}`). Cada lado usa o próprio `eslint.config`.
+- **Motivo:** erro de lint não entra no repositório por esquecimento, e olhar só o que mudou deixa o commit rápido.
+- **Caso-limite aceito:** só barra **erro**, não aviso. Não roda o Prettier (no `react/` ele reformataria arquivos inteiros, porque não há `.prettierrc`). Só vale depois de `npm install` **na raiz**; quem não rodar commita sem a checagem. Para pular numa emergência: `git commit --no-verify`. Para desligar de vez: apagar `.husky/`, o `package.json` da raiz e os dois `.lintstagedrc.json`, e rodar `git config --unset core.hooksPath`.
+
+---
+
 ## Duas camadas de lint, não uma
 
 **Camada 1 - lint de forma.** O ESLint "básico" (`js.configs.recommended`, e o `tseslint.configs.recommended` sem checagem de tipo) olha só a sintaxe: variável não usada, import faltando, hook do React chamado condicionalmente. Não sabe o que cada valor É, só como o código está escrito. Isto sempre esteve ligado no projeto.
