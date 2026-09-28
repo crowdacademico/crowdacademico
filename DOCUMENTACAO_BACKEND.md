@@ -296,7 +296,7 @@ Autenticação própria, JWT com par access + refresh, refresh token com **rota�
 
 **Logout** (`POST /auth/logout`): confere o segredo e marca `revogado_em`. Sessão inexistente devolve sucesso, não erro - do ponto de vista do logout, o objetivo (a sessão não vale mais nada) já está satisfeito.
 
-**Cadastro público** (`POST /auth/cadastro` → `auth.service.cadastro.ts`): reaproveita `UsuarioServiceCreate` (a mesmíssima criação que `POST /usuario` do admin usa) e soma o que só faz sentido no auto-cadastro - grava o aceite do termo **ativo** via `registrar_aceite_termo()` (o id do termo é resolvido pelo servidor, **nunca** aceito do corpo da requisição), gera o token de verificação de e-mail em `verificacao_email` (validade em `configuracoes.verificacao_email_horas_validade`, padrão 24h, também configurável pelo Painel Admin desde 04-09-2026), e já devolve tokens de sessão (quem se cadastra termina logado).
+**Cadastro público** (`POST /auth/cadastro` → `auth.service.register.ts`): reaproveita `UsuarioServiceCreate` (a mesmíssima criação que `POST /usuario` do admin usa) e soma o que só faz sentido no auto-cadastro - grava o aceite do termo **ativo** via `registrar_aceite_termo()` (o id do termo é resolvido pelo servidor, **nunca** aceito do corpo da requisição), gera o token de verificação de e-mail em `verificacao_email` (validade em `configuracoes.verificacao_email_horas_validade`, padrão 24h, também configurável pelo Painel Admin desde 04-09-2026), e já devolve tokens de sessão (quem se cadastra termina logado).
 
 📌 **Por que estes dois viraram configuráveis, e o custo de bcrypt não.** `refresh_token_dias_validade` e `verificacao_email_horas_validade` eram constantes fixas em `auth.constants.ts` com um comentário dizendo "parâmetro técnico, não regra de negócio" - revisto em 04-09-2026: os dois são só **janelas de tempo de produto** (por quanto tempo alguém continua logado, por quanto tempo um link de verificação vale), mesmo tipo de número que `configuracoes.bloqueio_login_minutos` já era. Lidos via `ConfiguracaoValorService`, com fallback pro padrão hardcoded se a chave sumir/for desativada - mesmo padrão usado em `25-arquivo` (ver §8.6). `CUSTO_BCRYPT_REFRESH_TOKEN` continua fixo de propósito: é parâmetro de segurança (custo de hash), não regra de produto - baixar isso sem entender a troca enfraquece a defesa contra força bruta offline.
 
@@ -365,7 +365,7 @@ if (!linha) {
 }
 ```
 
-📌 **`commons/database/distinguir-404-ou-403.util.ts`.** O bloco acima (UPDATE/DELETE que afetou 0 linhas: "não existe" ou "a RLS bloqueou") vive num helper, `return await distinguir404ou403(db, 'campanha', { id_campanha: id }, 'Campanha não encontrada.', 'Sem permissão para aprovar esta campanha.')`, usado em 26 services. O 3º argumento é um **objeto de filtro**: chave simples (`{ id_campanha: id }`), composta (`{ id_usuario, id_papel }`) ou chave mais condição (`{ id_usuario, deletado: false }`); todas as colunas entram com `AND`. A mensagem 403 é passada inteira (não um template), porque alguns chamadores misturam permissão com regra de negócio. Usa `sql.table`/`sql.ref` (`SELECT 1 ... LIMIT 1`) em vez do query builder tipado, cujos genéricos não resolvem com tabela abstrata. O `return` explícito é o que faz o TypeScript estreitar `linha` depois do `if`. Fica fora de propósito `campanha.service.enviar` (lê `status` para escolher entre 2 mensagens 403). Os que já leem a linha antes do write (`comentario.update`, `termo-uso.ativar/excluir`) já discriminam sem SELECT extra.
+📌 **`commons/database/distinguir-404-ou-403.util.ts`.** O bloco acima (UPDATE/DELETE que afetou 0 linhas: "não existe" ou "a RLS bloqueou") vive num helper, `return await distinguir404ou403(db, 'campanha', { id_campanha: id }, 'Campanha não encontrada.', 'Sem permissão para aprovar esta campanha.')`, usado em 26 services. O 3º argumento é um **objeto de filtro**: chave simples (`{ id_campanha: id }`), composta (`{ id_usuario, id_papel }`) ou chave mais condição (`{ id_usuario, deletado: false }`); todas as colunas entram com `AND`. A mensagem 403 é passada inteira (não um template), porque alguns chamadores misturam permissão com regra de negócio. Usa `sql.table`/`sql.ref` (`SELECT 1 ... LIMIT 1`) em vez do query builder tipado, cujos genéricos não resolvem com tabela abstrata. O `return` explícito é o que faz o TypeScript estreitar `linha` depois do `if`. Fica fora de propósito `campanha.service.submit` (lê `status` para escolher entre 2 mensagens 403). Os que já leem a linha antes do write (`comentario.update`, `termo-uso.ativar/excluir`) já discriminam sem SELECT extra.
 
 📌 **`excluirOu404ou403` (mesmo arquivo, 27-09-2026).** O "excluir" inteiro de um registro que nada mais referencia: DELETE pelo filtro e, se nada foi apagado, `distinguir404ou403`. Usado pelos serviços de remover de configuração, item de orçamento, marco, link de atualização, link acadêmico, papel × permissão e usuário × papel (cada um virou uma chamada só). Registro que outras tabelas podem estar usando vai por `excluirComContagemDeUso` (§5.1). "Deixar de seguir" fica de fora: responde sempre 404, de propósito.
 
@@ -525,8 +525,15 @@ Este é o "modelo" a copiar ao construir um módulo novo. Os dois exemplos abaix
 ├── dto/response/<nome>.response[-<variante>].ts
 ├── dto/converter/<nome>.converter.ts
 ├── entity/<nome>.entity.ts               ← type alias sobre db.types.ts
-└── util/                                 ← só onde faz sentido (ex.: 25-arquivo)
+├── guards/<nome>.guard.<acao>.ts          ← só onde existe (1-usuario, 3-auth)
+└── util/<nome>.util.<acao>.ts            ← só onde faz sentido (3-auth, 12-campanha, 25-arquivo)
 ```
+
+📌 **Nome de arquivo: `entidade.camada.ação`, ação em inglês (28-09-2026).**
+- **Em palavras simples:** o nome do arquivo diz de qual tabela ele cuida, qual o papel dele e o que ele faz, sempre na mesma ordem. Assim, só pelo nome já se sabe onde procurar. Ex.: `usuario.controller.export-data.ts` é a "porta de entrada" (controller) da ação "exportar dados" do usuário.
+- **Decisão:** `<nome>` é a **tabela** que o arquivo trata, não o módulo (por isso `2-papel-permissao` tem arquivos `papel.`, `permissao.`, `papel-permissao.` e `usuario-papel.`). A ação é em inglês: o CRUD (`create`, `findall`, `findone`, `update`, `remove`) e o resto no mesmo idioma (`suspend`, `approve`, `reject`, `submit`, `export-data`, `create-for-other`...). Guardas e utilitários seguem a mesma ordem. 98 arquivos foram renomeados para isso, sem nenhuma rota mudar.
+- **Motivo:** a mistura de português e inglês no nome (`create-para-outro`, `termo-uso.service.criar` ao lado de `usuario.service.create`) deixava o padrão imprevisível.
+- **Caso-limite aceito:** só o **nome do arquivo** mudou. Os nomes das **classes e métodos** dentro deles (`UsuarioServiceSuspender`, `.suspender()`) continuam como estavam, e os endereços da API (`/usuario/:id/suspender`) também, porque o React depende deles. Padronizar classes e métodos fica para uma etapa futura.
 
 📌 **A regra mais visível do projeto: um arquivo por ação.** Não existe `UsuarioService` com 8 métodos - existem `UsuarioServiceCreate`, `UsuarioServiceUpdate`, `UsuarioServiceRemove`, `UsuarioServiceSuspender`, `UsuarioServiceDesbloquear`, `UsuarioServiceListarLogins`, `UsuarioServiceFindAll` e `UsuarioServiceFindOne`, cada um num arquivo, cada um com um único método público `executar()`. O mesmo vale para controllers.
 
@@ -651,7 +658,7 @@ Os 6 têm `try/catch` com `logger.error` (incluindo o nome do job). Motivo: o `@
 - `GET /historico-rejeicao?idCampanha=` devolve também `idUsuarioDono` e `tituloCampanha`, e continua funcionando para campanha já excluída (o histórico não tem FK para `campanha`).
 - `GET /usuario/eu/exportar-dados` inclui `historicoRejeicoes` das campanhas do titular, sem `id_admin` (quem rejeitou é dado do administrador).
 
-**Nome e sinal de score em listar e consultar campanha.** `GET /campanha` e `GET /campanha/:id` usam `selecionarCampanhaComNomes()` (`12-campanha/service/campanha-com-nomes.util.ts`): as colunas da campanha mais `nomePesquisador` e `nomeArea` (`LEFT JOIN` com `usuario` e `area_conhecimento`, porque a RLS pode esconder o usuário e a campanha continua aparecendo, só sem o nome) e `precisaRevisaoScore`. O front não precisa baixar o catálogo de usuários e de áreas para resolver dois nomes. `precisaRevisaoScore` é `fn_precisa_revisao_score` só para campanha `aguardando_aprovacao` **e** para quem tem `campanha_aprovar`; nos outros casos é `null` (o dono não fica sabendo do sinal). As outras respostas (criar, editar, aprovar...) devolvem os três campos como `null`.
+**Nome e sinal de score em listar e consultar campanha.** `GET /campanha` e `GET /campanha/:id` usam `selecionarCampanhaComNomes()` (`12-campanha/util/campanha.util.with-names.ts`): as colunas da campanha mais `nomePesquisador` e `nomeArea` (`LEFT JOIN` com `usuario` e `area_conhecimento`, porque a RLS pode esconder o usuário e a campanha continua aparecendo, só sem o nome) e `precisaRevisaoScore`. O front não precisa baixar o catálogo de usuários e de áreas para resolver dois nomes. `precisaRevisaoScore` é `fn_precisa_revisao_score` só para campanha `aguardando_aprovacao` **e** para quem tem `campanha_aprovar`; nos outros casos é `null` (o dono não fica sabendo do sinal). As outras respostas (criar, editar, aprovar...) devolvem os três campos como `null`.
 
 **`CampanhaServiceFindAll`** - filtros que **não** são autorização:
 > *"`pol_campanha_select` já decide QUAIS linhas aparecem (status público, ou dono, ou `relatorio_visualizar`) - os filtros abaixo são só conveniência de navegação por cima do que a RLS já deixou visível, nunca uma segunda camada de autorização."*
@@ -758,7 +765,7 @@ NAVEGADOR                       NEST                            BUCKET
 
 ### 8.4 Validação de conteúdo: o navegador mente
 
-`25-arquivo/util/arquivo.assinatura.util.ts`.
+`25-arquivo/util/arquivo.util.signature.ts`.
 
 📌 **O `Content-Type` que o navegador declara é uma afirmação, não um fato.** Renomear `virus.exe` para `foto.jpg` faz o navegador dizer "é JPEG". A única forma confiável de saber o que subiu é ler os primeiros bytes do objeto **já no bucket** e conferir a assinatura (*magic number*) do formato:
 
@@ -781,7 +788,7 @@ NAVEGADOR                       NEST                            BUCKET
 
 ### 8.5 Processamento de imagem com `sharp`
 
-`25-arquivo/util/arquivo.processamento-imagem.util.ts`. Roda em `confirmar-upload`, **depois** de a assinatura já ter sido conferida - nunca processar bytes que ainda não foram validados como o tipo que afirmam ser.
+`25-arquivo/util/arquivo.util.image-processing.ts`. Roda em `confirmar-upload`, **depois** de a assinatura já ter sido conferida - nunca processar bytes que ainda não foram validados como o tipo que afirmam ser.
 
 Três operações, sempre nesta ordem:
 

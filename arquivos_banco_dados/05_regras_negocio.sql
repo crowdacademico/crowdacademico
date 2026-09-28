@@ -3408,7 +3408,7 @@ BEGIN
         -- ultimo_login_em/ultimo_login_ip: mesmo motivo do filtro de score_atual acima (motor automático, não ação
         -- administrativa). tentativas_login_falhas/bloqueado_ate (zerados pela mesma função) ficam FORA desta lista de
         -- propósito: se um login limpa um bloqueio anterior, ou um admin desbloqueia manualmente
-        -- (usuario.service.desbloquear.ts), isso vale ficar no log; só o "logou normalmente" é ruído. O dado não sumiu,
+        -- (usuario.service.unlock.ts), isso vale ficar no log; só o "logou normalmente" é ruído. O dado não sumiu,
         -- só saiu do log: ultimo_login_em está em UsuarioResponseDto/Consultar Usuário (ultimo_login_ip nunca é exposto
         -- pela API).
         IF TG_TABLE_NAME = 'usuario' AND v_campos <@ ARRAY['ultimo_login_em', 'ultimo_login_ip'] THEN

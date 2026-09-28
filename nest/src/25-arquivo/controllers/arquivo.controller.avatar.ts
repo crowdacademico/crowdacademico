@@ -6,7 +6,7 @@ import {
   ParseIntPipe,
 } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
-import { ArquivoServiceResolverAvatar } from '../service/arquivo.service.resolver-avatar';
+import { ArquivoServiceResolverAvatar } from '../service/arquivo.service.resolve-avatar';
 import { Publico } from '../../commons/auth/publico.decorator';
 
 // Pública (@Publico()) de propósito - foto de perfil é conteúdo

@@ -96,7 +96,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
 
   // Criar Campanha: o Admin cria uma campanha e ASSOCIA um pesquisador a ela; mesmo padrão de "Criar Perfil
   // Pesquisador" em T1. Usa POST /campanha/:idUsuario (endpoint de suporte/admin, ver
-  // campanha.controller.create-para-outro.ts).
+  // campanha.controller.create-for-other.ts).
   const [criandoCampanha, setCriandoCampanha] = useState(false);
   // Combobox de pesquisador (digitar "24" ou "marina", aparece até 5): não é um <select> (a lista de TODOS os
   // usuários seria enorme e sem indicar quem já é pesquisador de verdade). Busca por id OU pedaço do nome, até

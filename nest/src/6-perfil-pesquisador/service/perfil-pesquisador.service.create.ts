@@ -6,7 +6,7 @@ import {
   normalizarCpf,
 } from '../../commons/seguranca/cpf-cifra.util';
 import { DatabaseService } from '../../commons/database/database.service';
-import { TermoUsoServiceAtivo } from '../../5-termo-uso/service/termo-uso.service.ativo';
+import { TermoUsoServiceAtivo } from '../../5-termo-uso/service/termo-uso.service.find-active';
 import { PERFIL_PESQUISADOR_COLUNAS_SELECT } from '../constants/perfil-pesquisador.constants';
 import { PerfilPesquisadorConverter } from '../dto/converter/perfil-pesquisador.converter';
 import { PerfilPesquisadorRequestCreate } from '../dto/request/perfil-pesquisador.request-create';
@@ -18,7 +18,7 @@ import { PerfilPesquisadorResponse } from '../dto/response/perfil-pesquisador.re
 //
 // Aceite do Termo de Uso (modal de upgrade em T1, Bancada do Pesquisador): gravado junto do INSERT do perfil,
 // na MESMA transação por requisição (GlobalDbInterceptor, mesmo padrão de
-// AuthServiceCadastro/campanha.service.rejeitar.ts). De propósito SEM checar "já aceitou antes" nem persistir
+// AuthServiceCadastro/campanha.service.reject.ts). De propósito SEM checar "já aceitou antes" nem persistir
 // nenhum estado intermediário: se o usuário clicar no cadeado, aceitar o termo, e fechar o navegador antes de
 // terminar o formulário, NADA foi gravado (nem perfil, nem aceite), e a próxima tentativa começa do zero,
 // mostrando o termo de novo. Isso evita qualquer "upgrade em progresso" travado: não existe estado parcial para

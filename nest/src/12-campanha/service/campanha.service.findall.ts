@@ -7,7 +7,7 @@ import {
 import { CampanhaConverter } from '../dto/converter/campanha.converter';
 import { CampanhaRequestList } from '../dto/request/campanha.request-list';
 import { CampanhaResponse } from '../dto/response/campanha.response';
-import { selecionarCampanhaComNomes } from './campanha-com-nomes.util';
+import { selecionarCampanhaComNomes } from '../util/campanha.util.with-names';
 
 // pol_campanha_select (04) já decide QUAIS linhas aparecem (status
 // público, ou dono, ou relatorio_visualizar) - os filtros abaixo são só

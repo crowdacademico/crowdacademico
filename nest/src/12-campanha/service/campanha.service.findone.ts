@@ -4,7 +4,7 @@ import { DatabaseService } from '../../commons/database/database.service';
 import { CAMPO_BLOQUEADO_PARA_DTO } from '../constants/campanha.constants';
 import { CampanhaConverter } from '../dto/converter/campanha.converter';
 import { CampanhaResponse } from '../dto/response/campanha.response';
-import { selecionarCampanhaComNomes } from './campanha-com-nomes.util';
+import { selecionarCampanhaComNomes } from '../util/campanha.util.with-names';
 
 @Injectable()
 export class CampanhaServiceFindOne {

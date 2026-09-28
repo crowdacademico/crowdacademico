@@ -18,7 +18,7 @@
 export interface ParametrosUploadPreAssinado {
   // Caminho completo do objeto dentro do bucket (ex.: "pendente/<uuid>.jpg")
   // - decidido pelo service de 25-arquivo, nunca pelo cliente. Ver
-  // arquivo.service.iniciar-upload.ts.
+  // arquivo.service.start-upload.ts.
   chave: string;
   tipoMime: string;
   // Assinado junto com a URL (vira Content-Length exigido no PUT) - o

@@ -5,7 +5,7 @@ import { traduzirErro } from '../../services/constant/api/traduzir-erro.util';
 
 // Tela que o link de "verificar e-mail" abre: hoje só alcançável pelo alert() de dev em cadastro-page.tsx (o
 // token de verdade viria por e-mail, quando 4-mail existir). Sem exigir sessão: o token em si já é a
-// autorização (ver auth.controller.verificar-email.ts).
+// autorização (ver auth.controller.verify-email.ts).
 export function VerificarEmailPage() {
   const [parametros] = useSearchParams();
   const token = parametros.get('token');

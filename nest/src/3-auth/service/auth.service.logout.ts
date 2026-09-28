@@ -2,7 +2,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { DatabaseService } from '../../commons/database/database.service';
 import { AuthRequestRefreshToken } from '../dto/request/auth.request-refresh-token';
-import { parseRefreshToken } from './refresh-token.util';
+import { parseRefreshToken } from '../util/auth.util.refresh-token';
 
 @Injectable()
 export class AuthServiceLogout {

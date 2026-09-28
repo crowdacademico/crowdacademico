@@ -14,7 +14,7 @@
 // função é só uma otimização de UX, nunca deve ser o motivo de um upload
 // falhar.
 
-// Espelha os tipos de imagem de nest/src/25-arquivo/arquivo.constants.ts (TIPOS_IMAGEM_PERMITIDOS): sem import entre os
+// Espelha os tipos de imagem de nest/src/25-arquivo/constants/arquivo.constants.ts (TIPOS_IMAGEM_PERMITIDOS): sem import entre os
 // repositórios, mude os dois juntos. Exportada para o seletor de foto usar a mesma lista.
 export const TIPOS_REDUZIVEIS: string[] = ['image/jpeg', 'image/png', 'image/webp'];
 

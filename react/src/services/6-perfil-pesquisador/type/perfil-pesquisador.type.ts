@@ -49,7 +49,7 @@ export interface PerfilPesquisadorRequestCreate {
   aceiteTermos: boolean;
 }
 
-// Espelha perfil-pesquisador.request-create-para-outro.ts: admin criando EM NOME de outra pessoa.
+// Espelha perfil-pesquisador.request-create-for-other.ts: admin criando EM NOME de outra pessoa.
 // `aceiteTermos` OPCIONAL (diferente do self-service, que exige `true`): o card "Criar Perfil Pesquisador"
 // dentro de ModalAlterarUsuario não manda esse campo (não registra aceite); o cadeado em T1 manda `true`
 // (mostrou o Termo de Uso vigente antes, aceite gravado em nome do ALVO).
@@ -69,13 +69,13 @@ export interface PerfilPesquisadorRequestUpdate {
   tituloAcademico: TituloAcademico;
 }
 
-// Espelha perfil-pesquisador.request-corrigir-cpf.ts: ação de suporte/admin (RF-017), endpoint separado do
+// Espelha perfil-pesquisador.request-fix-cpf.ts: ação de suporte/admin (RF-017), endpoint separado do
 // PATCH comum de propósito.
 export interface PerfilPesquisadorRequestCorrigirCpf {
   cpf: string;
 }
 
-// Espelha perfil-pesquisador.request-suspender.ts: mesmo formato de UsuarioRequestSuspend (auth.type.ts): `ate`
+// Espelha perfil-pesquisador.request-suspend.ts: mesmo formato de UsuarioRequestSuspend (auth.type.ts): `ate`
 // ISO 8601, `motivo` obrigatório. Suspende só o PODER de pesquisador, não bloqueia login.
 export interface PerfilPesquisadorRequestSuspender {
   ate: string;

@@ -22,12 +22,12 @@ export interface UsuarioResponse {
   avatarUrl?: string | null;
 }
 
-// Espelha usuario.response-login-historico.ts.
+// Espelha usuario.response-login-history.ts.
 export interface UsuarioResponseLoginHistorico {
   logadoEm: string;
 }
 
-// Espelha usuario.response-termo-aceito.ts (Consultar Usuário: onde fica registrado o aceite do Termo de Uso).
+// Espelha usuario.response-accepted-term.ts (Consultar Usuário: onde fica registrado o aceite do Termo de Uso).
 export interface UsuarioResponseTermoAceito {
   tipo: TipoTermo;
   versao: string;

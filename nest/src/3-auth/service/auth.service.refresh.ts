@@ -5,7 +5,7 @@ import { DatabaseService } from '../../commons/database/database.service';
 import { UsuarioServiceFindOne } from '../../1-usuario/service/usuario.service.findone';
 import { AuthRequestRefreshToken } from '../dto/request/auth.request-refresh-token';
 import { AuthResponseRefresh } from '../dto/response/auth.response-refresh';
-import { parseRefreshToken } from './refresh-token.util';
+import { parseRefreshToken } from '../util/auth.util.refresh-token';
 
 @Injectable()
 export class AuthServiceRefresh {

@@ -4,7 +4,7 @@ import type { TIPOS_TERMO } from '../constants/termo-uso-tipos';
 // cobre também as contribuições) e o de pesquisador, cada um com sua própria versão/histórico independente.
 export type TipoTermo = (typeof TIPOS_TERMO)[number];
 
-// Espelha nest/src/5-termo-uso/dto/response/termo-uso.response-ativo.ts.
+// Espelha nest/src/5-termo-uso/dto/response/termo-uso.response-active.ts.
 export interface TermoUsoResponseAtivo {
   idTermo: number;
   tipo: TipoTermo;
@@ -23,14 +23,14 @@ export interface TermoUsoResponse {
   criadoEm: string;
 }
 
-// Espelha nest/src/5-termo-uso/dto/request/termo-uso.request-criar.ts.
+// Espelha nest/src/5-termo-uso/dto/request/termo-uso.request-create.ts.
 export interface TermoUsoRequestCriar {
   tipo: TipoTermo;
   versao: string;
   conteudo: string;
 }
 
-// Espelha nest/src/5-termo-uso/dto/request/termo-uso.request-alterar.ts: só `conteudo` (Alterar só é permitido
+// Espelha nest/src/5-termo-uso/dto/request/termo-uso.request-update.ts: só `conteudo` (Alterar só é permitido
 // enquanto ninguém aceitou a versão ainda, ver TermoUsoServiceAlterar). Sem `tipo` nem `versao` de propósito:
 // ambos são imutáveis depois de criada a linha (identidade se escolhe pelo listbox de seleção, só o conteúdo se
 // edita).

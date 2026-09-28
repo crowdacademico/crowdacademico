@@ -1,7 +1,7 @@
 import { CampanhaEntity } from '../../entity/campanha.entity';
 import { CampanhaResponse } from '../response/campanha.response';
 
-// As três colunas extras só existem em listar e consultar (campanha-com-nomes.util.ts); nas
+// As três colunas extras só existem em listar e consultar (campanha.util.with-names.ts); nas
 // outras respostas (criar, editar, aprovar...) ficam null.
 type CampanhaComExtras = CampanhaEntity & {
   nome_pesquisador?: string | null;

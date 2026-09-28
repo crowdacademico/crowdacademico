@@ -808,7 +808,7 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, pub
 -- B
 (NULL, 'limite_tentativas_login',    '5',     'inteiro',  'Nº de tentativas de login falhas antes de bloquear a conta',    TRUE, FALSE),
 (NULL, 'bloqueio_login_minutos',     '15',    'inteiro',  'Duração do bloqueio de login após exceder o limite de tentativas (minutos)', TRUE, FALSE),
--- Lidas por ConfiguracaoValorService (commons/configuracao) em auth.service.login.ts/auth.service.cadastro.ts,
+-- Lidas por ConfiguracaoValorService (commons/configuracao) em auth.service.login.ts/auth.service.register.ts,
 -- mesmo padrão dos dois de cima (limite_tentativas_login/bloqueio_login_minutos): janelas de tempo configuráveis
 -- pelo Painel Admin.
 (NULL, 'refresh_token_dias_validade', '30',   'inteiro',  'Por quantos dias a sessão continua válida (refresh token) antes de precisar logar de novo', TRUE, FALSE),
@@ -913,7 +913,7 @@ ON CONFLICT (chave) DO NOTHING;
 -- Limites de tamanho, cota por usuário e ritmo de upload, configuráveis pelo Painel Admin. O limite técnico
 -- largo continua no código (TAMANHO_MAXIMO_BYTES_ABSOLUTO, arquivo.constants.ts, valida só a FORMA do DTO); o
 -- valor de negócio vem daqui, lido por ConfiguracaoValorService (commons/configuracao) em
--- arquivo.service.iniciar-upload.ts/confirmar-upload.ts.
+-- arquivo.service.start-upload.ts/confirmar-upload.ts.
 -- `publica`: os 4 tetos de tamanho/cota são úteis ao navegador para validar/avisar antes de subir um arquivo
 -- grande demais (ex.: "máximo 8MB" na tela de upload): PÚBLICA. Os 2 de rate limit (janela/intervalo) são
 -- anti-abuso, mesma categoria de limite_tentativas_login/bloqueio_login_minutos: INTERNA, não ajudam ninguém a

@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
 import { LogAuditoriaControllerFindAll } from './controllers/log-auditoria.controller.findall';
-import { LogAuditoriaControllerMinhaAtividade } from './controllers/log-auditoria.controller.minha-atividade';
+import { LogAuditoriaControllerMinhaAtividade } from './controllers/log-auditoria.controller.my-activity';
 import { LogAuditoriaServiceFindAll } from './service/log-auditoria.service.findall';
-import { LogAuditoriaServiceLimpar } from './service/log-auditoria.service.limpar';
-import { LogAuditoriaServiceMinhaAtividade } from './service/log-auditoria.service.minha-atividade';
+import { LogAuditoriaServiceLimpar } from './service/log-auditoria.service.clean';
+import { LogAuditoriaServiceMinhaAtividade } from './service/log-auditoria.service.my-activity';
 
 // Só leitura, de propósito - ninguém escreve em log_auditoria pela API
 // (nem teria GRANT: ver 06_grants.sql [06-L]), só a trigger SECURITY

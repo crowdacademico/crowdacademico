@@ -27,7 +27,7 @@ export interface AuthResponseRegister extends AuthResponseLogin {
   tokenVerificacaoEmailDev: string | null;
 }
 
-// auth.controller.verificar-email.ts devolve um objeto solto, sem DTO
+// auth.controller.verify-email.ts devolve um objeto solto, sem DTO
 // formal do lado do Nest (`{ verificado: true }`) - espelhado aqui mesmo
 // assim.
 export interface AuthResponseVerificarEmail {
@@ -45,7 +45,7 @@ export interface SessaoResponse {
   atual: boolean;
 }
 
-// auth.controller.sessoes.ts, encerrarTodasMenosAtual() devolve um objeto
+// auth.controller.findall-sessions.ts, encerrarTodasMenosAtual() devolve um objeto
 // solto (`{ encerradas: quantidade }`), sem DTO formal.
 export interface SessaoResponseEncerrarTodas {
   encerradas: number;

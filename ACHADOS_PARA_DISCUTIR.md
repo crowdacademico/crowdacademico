@@ -72,6 +72,11 @@ Lista montada a partir da resposta da revisão externa de 24-09-2026 (a pasta de
    - Situação: o que cada job faz já é configurável pelo painel (ex.: `arquivo_horas_para_vincular`, `log_auditoria_retencao_dias`). Já o horário em que cada um roda está fixo no código do Nest. Job agendado é uma tarefa que o Nest roda sozinho, como um despertador. São 6: arquivos sem dono às 4h, limpeza do log às 3h, campanhas vencidas e fim de suspensão a cada 15 min, rascunho e rejeitada de hora em hora.
    - Para mudar pelo painel: o Nest lê o horário quando liga, então seria preciso "reprogramar o despertador" com o sistema ligado, nos 6 jobs, e guardar os horários em `configuracoes`.
    - Sugestão: deixar fixo. O horário é de infraestrutura (em que momento a faxina roda), não regra de negócio; mudar na prática é raro, e o custo não é pequeno. Rever se a banca ou o uso real pedirem.
+14. **Nomes no Nest, próximas etapas (28-09-2026).** Os nomes de arquivo já seguem `entidade.camada.ação` em inglês (98 renomeados). Ficaram para depois, uma coisa de cada vez:
+   - **Classes e métodos:** padronizar o idioma no código inteiro (hoje `UsuarioServiceSuspender`, `.suspender()`, dentro de `usuario.service.suspend.ts`). Decidir se tudo vai para inglês ou tudo para português.
+   - **`11-configuracoes`:** a tabela é `configuracoes` (plural), os arquivos usam `configuracao` (singular) e o módulo usa o plural. Decidir qual forma vale.
+   - **`3-auth/dto/response/sessao.response.ts`:** segue a regra (a tabela é `sessao`), mas fica deslocado dentro do módulo de auth. Pensar num lugar melhor.
+   - **Varredura de arquivos que podem se juntar** sem quebrar a regra de um arquivo por ação: fazer e trazer só a lista de candidatos.
 
 ## C. Dependem de módulo (não antecipar)
 

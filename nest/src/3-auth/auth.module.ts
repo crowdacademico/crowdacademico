@@ -4,21 +4,21 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule, JwtSignOptions } from '@nestjs/jwt';
 import { UsuarioModule } from '../1-usuario/usuario.module';
 import { TermoUsoModule } from '../5-termo-uso/termo-uso.module';
-import { AuthControllerCadastro } from './controllers/auth.controller.cadastro';
+import { AuthControllerCadastro } from './controllers/auth.controller.register';
 import { AuthControllerLogin } from './controllers/auth.controller.login';
 import { AuthControllerLogout } from './controllers/auth.controller.logout';
 import { AuthControllerRefresh } from './controllers/auth.controller.refresh';
-import { AuthControllerSessoes } from './controllers/auth.controller.sessoes';
-import { AuthControllerVerificarEmail } from './controllers/auth.controller.verificar-email';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { RequireAuthGuard } from './guards/require-auth.guard';
-import { AuthServiceCadastro } from './service/auth.service.cadastro';
-import { AuthServiceEncerrarSessao } from './service/auth.service.encerrar-sessao';
-import { AuthServiceListarSessoes } from './service/auth.service.listar-sessoes';
+import { AuthControllerSessoes } from './controllers/auth.controller.findall-sessions';
+import { AuthControllerVerificarEmail } from './controllers/auth.controller.verify-email';
+import { JwtAuthGuard } from './guards/auth.guard.jwt';
+import { RequireAuthGuard } from './guards/auth.guard.require-auth';
+import { AuthServiceCadastro } from './service/auth.service.register';
+import { AuthServiceEncerrarSessao } from './service/auth.service.end-session';
+import { AuthServiceListarSessoes } from './service/auth.service.findall-sessions';
 import { AuthServiceLogin } from './service/auth.service.login';
 import { AuthServiceLogout } from './service/auth.service.logout';
 import { AuthServiceRefresh } from './service/auth.service.refresh';
-import { AuthServiceVerificarEmail } from './service/auth.service.verificar-email';
+import { AuthServiceVerificarEmail } from './service/auth.service.verify-email';
 
 @Module({
   imports: [
@@ -58,7 +58,7 @@ import { AuthServiceVerificarEmail } from './service/auth.service.verificar-emai
     AuthServiceListarSessoes,
     AuthServiceEncerrarSessao,
     // Global de verdade (roda em toda rota) - ver comentário em
-    // guards/jwt-auth.guard.ts sobre por que fica ANTES do GlobalDbInterceptor
+    // guards/auth.guard.jwt.ts sobre por que fica ANTES do GlobalDbInterceptor
     // no pipeline do Nest.
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     // Depois da JwtAuthGuard (que resolve quem é): toda rota exige login, menos as marcadas com @Publico().

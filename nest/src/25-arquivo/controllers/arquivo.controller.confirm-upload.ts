@@ -1,0 +1,18 @@
+import { Body, Controller, Post } from '@nestjs/common';
+import { ArquivoRequestConfirmarUpload } from '../dto/request/arquivo.request-confirm-upload';
+import { ArquivoServiceConfirmarUpload } from '../service/arquivo.service.confirm-upload';
+import { UsuarioAtual } from '../../commons/auth/usuario-atual.decorator';
+import type { UsuarioAutenticado } from '../../commons/auth/usuario-autenticado.interface';
+
+@Controller('arquivo/upload')
+export class ArquivoControllerConfirmarUpload {
+  constructor(private readonly service: ArquivoServiceConfirmarUpload) {}
+
+  @Post('confirmar')
+  confirmar(
+    @Body() dto: ArquivoRequestConfirmarUpload,
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+  ) {
+    return this.service.executar(dto, usuario.idUsuario);
+  }
+}

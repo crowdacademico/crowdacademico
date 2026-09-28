@@ -1,7 +1,7 @@
 import { tratarResposta } from '../../constant/api/http.util';
 import type { AuthFetch, SessaoResponse, SessaoResponseEncerrarTodas } from '../type/auth.type';
 
-// Sessões Ativas (Minha Conta > Segurança). Espelha nest/src/3-auth/controllers/auth.controller.sessoes.ts.
+// Sessões Ativas (Minha Conta > Segurança). Espelha nest/src/3-auth/controllers/auth.controller.findall-sessions.ts.
 export const sessaoApi = {
   listar: (authFetch: AuthFetch): Promise<SessaoResponse[]> =>
     authFetch('/auth/sessoes').then(tratarResposta<SessaoResponse[]>),

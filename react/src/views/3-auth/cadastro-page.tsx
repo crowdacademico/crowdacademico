@@ -93,7 +93,7 @@ export function CadastroPage({ auth }: PropsPagina) {
       const resultado = await auth.cadastrar(nome, email, senha, aceiteTermos);
       if (resultado.tokenVerificacaoEmailDev) {
         // Ambiente sem 4-mail ainda - link de verificação exibido direto,
-        // com aviso claro de que é só dev (ver auth.service.cadastro.ts).
+        // com aviso claro de que é só dev (ver auth.service.register.ts).
         window.alert(
           '[SÓ EM DEV] Link de verificação de e-mail (nenhum e-mail é enviado ainda):\n\n' +
             `${window.location.origin}/verificar-email?token=${resultado.tokenVerificacaoEmailDev}`,

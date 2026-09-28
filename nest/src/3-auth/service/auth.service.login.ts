@@ -178,7 +178,7 @@ export class AuthServiceLogin {
   // `origem`: toda RENOVAÇÃO silenciosa (a cada ~15min de uso, token de acesso vencendo) também passa por aqui
   // e também cria uma linha em `sessao`. A tela de "logins anteriores" (Consultar Usuário) lia `sessao`
   // inteira, sem diferenciar renovação de login de verdade, então mostraria dezenas de "logins" que eram só o
-  // token se renovando sozinho em segundo plano. `origem` marca qual é qual; usuario.service.listar-logins.ts
+  // token se renovando sozinho em segundo plano. `origem` marca qual é qual; usuario.service.findall-logins.ts
   // só mostra 'login'.
   async emitirTokens(
     idUsuario: number,
