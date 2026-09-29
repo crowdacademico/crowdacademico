@@ -792,8 +792,7 @@ O CPF é armazenado de forma cifrada e nunca exibido publicamente em sua forma c
 Este termo pode ser atualizado periodicamente; a versão vigente no momento da solicitação do upgrade é a que se aplica.', TRUE, '2026-09-13 00:00:00');
 
 -- Cada usuário aceitou, no próprio cadastro (aceito_em = pouco depois de usuario.criado_em), a versão do termo
--- da conta vigente naquele momento. Ninguém re-aceitou as versões publicadas depois, de propósito (cenário
--- realista: ninguém foi reavisado depois que uma versão nova é publicada).
+-- da conta vigente naquele momento.
 INSERT INTO usuario_termo (id_usuario, id_termo, aceito_em, ip_aceite)
 SELECT u.id_usuario,
        (SELECT t.id_termo FROM termos_de_uso t
@@ -801,6 +800,15 @@ SELECT u.id_usuario,
         ORDER BY t.criado_em DESC LIMIT 1),
        u.criado_em + INTERVAL '2 minutes', '187.10.20.30'
 FROM usuario u;
+
+-- RF-015: quando a versão vigente entrou, cada conta aceitou de novo no acesso seguinte (um dia depois), menos a
+-- conta 24 (Marina Torres), que fica com o aceite PENDENTE de propósito para demonstrar a tela de aceite.
+INSERT INTO usuario_termo (id_usuario, id_termo, aceito_em, ip_aceite)
+SELECT u.id_usuario, t.id_termo, t.criado_em + INTERVAL '1 day', '187.10.20.30'
+FROM usuario u
+JOIN termos_de_uso t ON t.tipo = 'cadastro' AND t.ativo
+WHERE u.id_usuario <> 24
+ON CONFLICT (id_usuario, id_termo) DO NOTHING;
 
 -- [07-C-5] configuracoes: por que este bloco vem depois de usuario (ver DOCUMENTACAO_BD.md)
 -- Agrupado por domínio (A,D,E,F,H,I, mesma ordem de [07-B-2]): configuracoes.service.findall.ts ordena por

@@ -255,10 +255,15 @@ interface DadosAtualizarPerfil {
 function AbaPerfil({ auth, aoVoltar }: AbaPerfilProps) {
   const [nome, setNome] = useState(auth.usuario?.nome ?? '');
   // undefined = carregando; null = não é pesquisador (404, mesma tolerância da aba Acadêmico).
-  const [perfil, setPerfil] = useState<PerfilPesquisadorResponse | null | undefined>(undefined);
+  const [perfilBuscado, setPerfil] = useState<PerfilPesquisadorResponse | null | undefined>(undefined);
+  // Quem não é pesquisador nem pede o perfil (seria um 404 certo). `undefined` (sessão antiga) ainda pede.
+  const perfil = auth.usuario?.ehPesquisador === false ? null : perfilBuscado;
 
   useEffect(() => {
     if (!auth.usuario) {
+      return;
+    }
+    if (auth.usuario.ehPesquisador === false) {
       return;
     }
     perfilPesquisadorApi
@@ -691,23 +696,26 @@ function AbaPapeis({ auth }: AbaPapeisProps) {
 // algo e sendo barrado sem explicação (a suspensão de pesquisador NUNCA bloqueia login: a pessoa continua tendo
 // acesso normal a Minha Conta). Quem não é pesquisador faz o upgrade aqui (ver abaixo).
 interface AbaAcademicoProps {
-  auth: Pick<UseAuthReturn, 'usuario' | 'authFetch'>;
+  auth: Pick<UseAuthReturn, 'usuario' | 'authFetch' | 'atualizarUsuarioLocal'>;
 }
 
 function AbaAcademico({ auth }: AbaAcademicoProps) {
   const [perfil, setPerfil] = useState<PerfilPesquisadorResponse | null>(null);
   const [fazendoUpgrade, setFazendoUpgrade] = useState(false);
   const [suspensao, setSuspensao] = useState<SuspensaoResponseDto | null>(null);
-  const [carregando, setCarregando] = useState(true);
+  const [carregandoPerfil, setCarregando] = useState(true);
+  // Quem não é pesquisador nem pede o perfil (seria um 404 certo). `undefined` (sessão antiga) ainda pede.
+  const carregando = carregandoPerfil && auth.usuario?.ehPesquisador !== false;
 
   useEffect(() => {
     if (!auth.usuario) {
       return;
     }
     const idUsuario = auth.usuario.idUsuario;
+    if (auth.usuario.ehPesquisador === false) {
+      return;
+    }
     void Promise.all([
-      // 404 = não é pesquisador (upgrade nunca feito) - mesma tolerância
-      // já usada em modal-usuario.tsx (Consultar/Alterar).
       perfilPesquisadorApi.buscar(auth.authFetch, idUsuario).catch(() => null),
       perfilPesquisadorApi.buscarSuspensao(auth.authFetch, idUsuario).catch(() => null),
     ])
@@ -745,7 +753,11 @@ function AbaAcademico({ auth }: AbaAcademicoProps) {
             auth={auth}
             idUsuarioAlvo={auth.usuario.idUsuario}
             aoFechar={() => setFazendoUpgrade(false)}
-            aoConcluido={setPerfil}
+            aoConcluido={(perfilCriado) => {
+              setPerfil(perfilCriado);
+              // As outras telas (Perfil, Minhas Campanhas) passam a saber na hora que a conta virou pesquisadora.
+              auth.atualizarUsuarioLocal((atual) => (atual ? { ...atual, ehPesquisador: true } : atual));
+            }}
             // Botão "Gerar CPF válido" só em desenvolvimento (some no build de produção), para testar o upgrade.
             gerarCpfDeTeste={import.meta.env.DEV ? gerarCpfValido : undefined}
           />

@@ -21,23 +21,7 @@ import {
 } from '../constants/auth.constants';
 import { AuthRequestLogin } from '../dto/request/auth.request-login';
 import { AuthResponseLogin } from '../dto/response/auth.response-login';
-
-// toISOString() cru ("...T00:28:27.382Z") não significa nada para quem não programa: as duas mensagens de
-// bloqueio/suspensão abaixo são as únicas do projeto que embutem uma data DENTRO de uma frase de erro (todo o
-// resto do app formata no React com toLocaleString('pt-BR'), mas aqui a data precisa estar pronta dentro do
-// texto do throw). timeZone explícito (não o padrão do processo Node) porque o servidor pode rodar em UTC mesmo
-// o público sendo brasileiro.
-function formatarDataHoraBr(data: Date): string {
-  const dataFormatada = data.toLocaleDateString('pt-BR', {
-    timeZone: 'America/Sao_Paulo',
-  });
-  const horaFormatada = data.toLocaleTimeString('pt-BR', {
-    timeZone: 'America/Sao_Paulo',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-  return `${dataFormatada} - ${horaFormatada}`;
-}
+import { formatarDataHoraBr } from '../util/auth.util.format-date-time';
 
 @Injectable()
 export class AuthServiceLogin {
@@ -109,19 +93,21 @@ export class AuthServiceLogin {
       db,
     );
 
-    const { accessToken, refreshToken } = await this.emitirTokens(
-      usuario.id_usuario,
-      ip,
-      userAgent,
-      'login',
-    );
+    const { accessToken, refreshToken, aceitePendente } =
+      await this.emitirTokens(usuario.id_usuario, ip, userAgent, 'login');
 
     const usuarioResponse = await this.usuarioServiceFindOne.executar(
       usuario.id_usuario,
     );
     const papeis = await this.listarPapeis(usuario.id_usuario);
 
-    return { accessToken, refreshToken, usuario: usuarioResponse, papeis };
+    return {
+      accessToken,
+      refreshToken,
+      usuario: usuarioResponse,
+      papeis,
+      aceitePendente,
+    };
   }
 
   // Ver comentário de chamada em executar() acima - SAVEPOINT protege o
@@ -176,6 +162,25 @@ export class AuthServiceLogin {
     }
   }
 
+  // RF-015: a conta ainda não aceitou a versão vigente do Termo de Uso. SAVEPOINT pelo mesmo motivo de
+  // listarPapeis: fn_termo_uso_pendente() só existe depois de colar ATUALIZAR O SUPABASE.sql; sem ela, ninguém
+  // fica pendente.
+  async termoPendente(idUsuario: number): Promise<boolean> {
+    const db = this.database.getDb();
+    await sql`SAVEPOINT sp_termo_pendente`.execute(db);
+    try {
+      const resultado = await sql<{
+        id_termo: number | null;
+      }>`SELECT public.fn_termo_uso_pendente(${idUsuario}) AS id_termo`.execute(
+        db,
+      );
+      return resultado.rows[0]?.id_termo != null;
+    } catch {
+      await sql`ROLLBACK TO SAVEPOINT sp_termo_pendente`.execute(db);
+      return false;
+    }
+  }
+
   // Reaproveitado por AuthServiceRefresh (rotação de refresh token): mesma lógica de emitir o par
   // access+refresh, só muda de onde é chamado.
   //
@@ -189,7 +194,11 @@ export class AuthServiceLogin {
     ip: string | undefined,
     userAgent: string | undefined,
     origem: 'login' | 'refresh',
-  ): Promise<{ accessToken: string; refreshToken: string }> {
+  ): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    aceitePendente: boolean;
+  }> {
     const db = this.database.getDb();
     const segredo = randomBytes(32).toString('hex');
     const segredoHash = await bcrypt.hash(segredo, CUSTO_BCRYPT_REFRESH_TOKEN);
@@ -225,12 +234,15 @@ export class AuthServiceLogin {
     // esta MESMA função, que cria uma sessao NOVA e devolve um accessToken novo com o `sid` atualizado; o
     // cliente sempre troca o token inteiro (salvarSessao), nunca fica com um `sid` velho apontando para uma
     // sessao já revogada.
+    // `tp`: termo pendente (RF-015), lido pelo AuthGuardJwt e barrado pelo AuthGuardRequireAuth.
+    const aceitePendente = await this.termoPendente(idUsuario);
     const accessToken = this.jwtService.sign({
       sub: idUsuario,
       sid: sessao.id_sessao,
+      tp: aceitePendente,
     });
     const refreshToken = `${sessao.id_sessao}${REFRESH_TOKEN_SEPARADOR}${segredo}`;
 
-    return { accessToken, refreshToken };
+    return { accessToken, refreshToken, aceitePendente };
   }
 }

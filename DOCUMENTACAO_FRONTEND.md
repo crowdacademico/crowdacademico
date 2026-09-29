@@ -1003,3 +1003,19 @@ CSS puro (`:hover`/`:focus`/`:focus-visible`), sem estado de React na bolha em s
   - "CPF inválido.,Nome da..." era difícil de ler;
   - o rodapé sem quebra de linha fazia a página passar 5px da largura em 375px.
 - **Caso-limite aceito:** nenhum.
+
+📌 **Tela de aceite da versão nova do Termo de Uso (RF-015).**
+- **Em palavras simples:** quando sai uma versão nova do Termo de Uso, quem entra vê o texto e dois botões, "Li e aceito" e "Sair". O painel só aparece depois do aceite.
+- **Decisão:** `useAuth` guarda `aceitePendente` (vem do login e da renovação) e ganhou `renovarSessaoAgora()`. Com pendência, `AdminLayout` mostra `TelaAceiteTermoUso` (`views/5-termo-uso/tela-aceite-termo-uso.tsx`) no lugar do painel inteiro, e o cabeçalho esconde o sino. "Li e aceito" chama `POST /termos-uso/:id/aceitar` e renova a sessão na hora.
+- **Motivo:** o backend já recusa as outras rotas com 403 `TERMO_PENDENTE`. Sem a tela, a pessoa veria um painel cheio de erros sem entender por quê.
+- **Caso-limite aceito:** se a versão vigente mudar enquanto a pessoa lê, o aceite responde 409 e a tela carrega o texto novo.
+
+📌 **Conta comum não busca mais perfil de pesquisador.**
+- **Decisão:** Minha Conta (Perfil e Acadêmico), Minhas Campanhas e o modal de usuário olham `usuario.ehPesquisador` antes de buscar `/perfil-pesquisador`. Depois do upgrade, a aba Acadêmico marca `ehPesquisador: true` no usuário local.
+- **Motivo:** toda abertura da Minha Conta de uma conta comum gerava um 404 no console.
+- **Caso-limite aceito:** quando o campo não vem (`undefined`), a tela busca o perfil como antes.
+
+📌 **Excluir Termo de Uso sem modo forçado.**
+- **Decisão:** `modal-excluir-termo-uso.tsx` virou uma confirmação simples. Versão vigente ou já aceita volta com a mensagem do backend.
+- **Motivo:** a exclusão forçada saiu do backend (RF-091, ver `DOCUMENTACAO_BACKEND.md`).
+- **Caso-limite aceito:** nenhum.

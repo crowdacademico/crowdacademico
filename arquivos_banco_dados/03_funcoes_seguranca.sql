@@ -151,6 +151,31 @@ AS $$
     ON CONFLICT (id_usuario, id_termo) DO NOTHING;
 $$;
 
+-- ----------------------------------------------------------------------------
+-- Função:     fn_termo_uso_pendente
+-- Assinatura: (p_id_usuario INT) -> INT
+-- Bloco:      [03-D-1]
+-- Regra:      RF-015: devolve o id da versão VIGENTE do Termo de Uso (tipo 'cadastro') quando a conta ainda não a
+--             aceitou, ou NULL quando está em dia. O login e a renovação de sessão perguntam isto; enquanto houver
+--             pendência, a pessoa só lê, aceita ou sai. O Termo de upgrade de pesquisador fica de fora: é aceito
+--             uma vez, no upgrade, e o RF-015 fala do Termo de Uso.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_termo_uso_pendente(p_id_usuario INT)
+RETURNS INT
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT t.id_termo
+    FROM termos_de_uso t
+    WHERE t.tipo = 'cadastro' AND t.ativo
+      AND NOT EXISTS (
+          SELECT 1 FROM usuario_termo ut
+          WHERE ut.id_usuario = p_id_usuario AND ut.id_termo = t.id_termo
+      );
+$$;
+
 -- ============================================================
 -- Função:     contar_seguidores_pesquisador / contar_seguidores_campanha
 -- Assinatura: (p_id INT) -> INT
@@ -381,6 +406,10 @@ BEGIN
     UPDATE usuario
     SET deletado = TRUE, deletado_em = NOW(), deletado_por = public.id_usuario_atual()
     WHERE id_usuario = p_id_usuario;
+
+    -- Conta excluída não renova mais nenhuma sessão (mesmo motivo de suspender_usuario).
+    UPDATE sessao SET revogado_em = NOW()
+    WHERE id_usuario = p_id_usuario AND revogado_em IS NULL;
 
     DELETE FROM campanha c
     WHERE c.id_usuario = p_id_usuario
@@ -735,6 +764,11 @@ BEGIN
         motivo_suspensao = p_motivo,
         suspenso_por = public.id_usuario_atual()
     WHERE id_usuario = p_id_usuario;
+
+    -- Quem já estava logado sai na hora: sem isto, a renovação automática mantinha a conta suspensa usando o
+    -- sistema enquanto a aba ficasse aberta (o token de acesso, de 15 min, é o único resto aceito).
+    UPDATE sessao SET revogado_em = NOW()
+    WHERE id_usuario = p_id_usuario AND revogado_em IS NULL;
 END;
 $$;
 

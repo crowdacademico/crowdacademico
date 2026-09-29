@@ -1,12 +1,17 @@
 import {
   CanActivate,
   ExecutionContext,
+  ForbiddenException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
+import { CHAVE_LIBERADO_COM_TERMO_PENDENTE } from '../../commons/auth/liberado-com-termo-pendente.decorator';
 import { CHAVE_ROTA_PUBLICA } from '../../commons/auth/publico.decorator';
+
+// Código do 403 de "aceite pendente" (RF-015): a tela reconhece por ele, não pelo texto.
+export const CODIGO_TERMO_PENDENTE = 'TERMO_PENDENTE';
 
 // Global (APP_GUARD em auth.module.ts, depois da AuthGuardJwt): toda rota exige login, menos as marcadas com
 // @Publico(). Rota nova nasce fechada; esquecer a marcação deixa a rota fechada, nunca aberta. Bloqueia com 401
@@ -32,6 +37,22 @@ export class AuthGuardRequireAuth implements CanActivate {
       throw new UnauthorizedException(
         'Você precisa estar logado para fazer isso.',
       );
+    }
+    // RF-015: com a versão nova do Termo de Uso pendente, só as rotas marcadas @LiberadoComTermoPendente() (ler,
+    // aceitar, sair). `codigo` estável para a tela saber que é isto, e não falta de permissão.
+    if (
+      request.user.termoPendente &&
+      !this.reflector.getAllAndOverride<boolean>(
+        CHAVE_LIBERADO_COM_TERMO_PENDENTE,
+        [context.getHandler(), context.getClass()],
+      )
+    ) {
+      throw new ForbiddenException({
+        statusCode: 403,
+        codigo: CODIGO_TERMO_PENDENTE,
+        message:
+          'Há uma versão nova do Termo de Uso. Leia e aceite para continuar usando a plataforma.',
+      });
     }
     return true;
   }

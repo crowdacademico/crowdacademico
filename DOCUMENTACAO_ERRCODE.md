@@ -6,7 +6,7 @@ Referência rápida dos `RAISE EXCEPTION` com ERRCODE customizado dos arquivos `
 
 **Nada foi alterado além disso**: nenhuma mensagem, nenhuma lógica, nenhuma trigger foi tocada - só a cláusula `USING ERRCODE` foi adicionada ao final de cada `RAISE EXCEPTION`. O diff é puramente aditivo (conferido linha a linha).
 
-Este documento traz a tabela de códigos e o **contrato do corpo de erro da API** (seção no fim): o Nest devolve `codigo` (o SQLSTATE) junto de `statusCode` e `message`, ver `postgres-exception.filter.ts`. A contagem de códigos não é citada aqui (hoje são 83: 90001 a 90023, 91001 a 91031, 92001 a 92027, 93001 e 93002); conte pelas tabelas abaixo.
+Este documento traz a tabela de códigos e o **contrato do corpo de erro da API** (seção no fim): o Nest devolve `codigo` (o SQLSTATE) junto de `statusCode` e `message`, ver `postgres-exception.filter.ts`. A contagem de códigos não é citada aqui (hoje são 87: 90001 a 90025, 91001 a 91033, 92001 a 92027, 93001 e 93002); conte pelas tabelas abaixo.
 
 ---
 
@@ -50,6 +50,8 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 90021 | `criar_campanha_para_outro` | `campanha` | O usuário escolhido não é um pesquisador ativo (27-09-2026) |
 | 90022 | `fn_valida_posse_imagem_perfil` / `fn_valida_posse_anexo` | `usuario` / `arquivo_atualizacao`, `arquivo_recompensa` | O arquivo escolhido (foto ou anexo) não existe mais ou foi removido (28 e 29-09-2026) |
 | 90023 | `suspender_usuario` / `suspender_papel_usuario` / `suspender_pesquisador` | `usuario` / `usuario_papel` / `perfil_pesquisador` | A data final da suspensão precisa estar no futuro (29-09-2026) |
+| 90024 | `trg_valida_escopo_tipolink` | `link_academico` / `link_atualizacao` / `link_recompensa` | O endereço do link não é de nenhum dos domínios do tipo (ex.: Lattes fora de lattes.cnpq.br), RF-022 (29-09-2026) |
+| 90025 | `trg_valida_escopo_tipolink` | `link_academico` / `link_atualizacao` / `link_recompensa` | O link não segue o formato (`regex`) do tipo (29-09-2026) |
 
 ## 91xxx - Conflito de estado/regra de negócio (409)
 
@@ -86,6 +88,8 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 91029 | `fn_valida_posse_imagem_perfil` / `fn_valida_posse_anexo` | `usuario` / `arquivo_atualizacao`, `arquivo_recompensa` | O arquivo escolhido (foto ou anexo) já está em uso em outro lugar (28 e 29-09-2026) |
 | 91030 | `suspender_usuario` / `suspender_papel_usuario` / `excluir_conta_usuario` / `fn_protege_ultimo_admin` | `usuario` / `usuario_papel` | Não é possível suspender, excluir ou tirar o papel do último administrador ativo do sistema (29-09-2026) |
 | 91031 | `excluir_conta_usuario` | `usuario` | Não é possível excluir a conta enquanto houver campanha ativa (29-09-2026) |
+| 91032 | `fn_protege_termo_aceito` | `termos_de_uso` | Versão do Termo já aceita não pode ser excluída, RF-091 (29-09-2026) |
+| 91033 | `fn_protege_termo_aceito` | `termos_de_uso` | Versão do Termo já aceita não pode ter texto, tipo ou versão alterados, RF-091 (29-09-2026) |
 
 ## 92xxx - Autorização negada / conflito de interesse (403)
 

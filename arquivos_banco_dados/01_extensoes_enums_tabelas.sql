@@ -422,11 +422,9 @@ CREATE TABLE usuario_termo (
 
     CONSTRAINT "PK_USUARIO_TERMO" PRIMARY KEY (id_usuario_termo),
     CONSTRAINT "FK_USUARIO_TERMO_USUARIO" FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE CASCADE,
-    -- CASCADE: Excluir com "forçar" precisa funcionar mesmo numa versão já aceita (ver
-    -- TermoUsoServiceRemove). Apagar o termo com `forcar: true` apaga junto as linhas de aceite que
-    -- apontam para ele: perde o rastro de quem aceitou ESTA versão especificamente (a exclusão em si
-    -- continua em log_auditoria).
-    CONSTRAINT "FK_USUARIO_TERMO_TERMO" FOREIGN KEY (id_termo) REFERENCES termos_de_uso(id_termo) ON DELETE CASCADE,
+    -- Sem CASCADE (RF-091): o aceite é a prova de quem concordou com ESTA versão; a versão aceita não pode ser
+    -- excluída (fn_protege_termo_aceito, 05), e esta FK é a segunda barreira.
+    CONSTRAINT "FK_USUARIO_TERMO_TERMO" FOREIGN KEY (id_termo) REFERENCES termos_de_uso(id_termo),
     CONSTRAINT "UK_USUARIO_TERMO_USUARIO_TERMO" UNIQUE (id_usuario, id_termo) -- [melhoria] mesmo usuário não aceita a mesma versão duas vezes
 );
 
@@ -858,8 +856,8 @@ CREATE TABLE aceite_termo_contribuicao (
 
     CONSTRAINT "PK_ACEITE_TERMO_CONTRIBUICAO" PRIMARY KEY (id_aceite_contrib),
     CONSTRAINT "FK_ACEITE_TERMO_CONTRIBUICAO_CONTRIBUICAO" FOREIGN KEY (id_contribuicao) REFERENCES contribuicao(id_contribuicao) ON DELETE CASCADE,
-    -- CASCADE, mesmo motivo de FK_USUARIO_TERMO_TERMO acima.
-    CONSTRAINT "FK_ACEITE_TERMO_CONTRIBUICAO_TERMO" FOREIGN KEY (id_termo) REFERENCES termos_de_uso(id_termo) ON DELETE CASCADE,
+    -- Sem CASCADE, mesmo motivo de FK_USUARIO_TERMO_TERMO acima (RF-091).
+    CONSTRAINT "FK_ACEITE_TERMO_CONTRIBUICAO_TERMO" FOREIGN KEY (id_termo) REFERENCES termos_de_uso(id_termo),
     CONSTRAINT "UK_ACEITE_TERMO_CONTRIBUICAO_CONTRIBUICAO" UNIQUE (id_contribuicao)
 );
 

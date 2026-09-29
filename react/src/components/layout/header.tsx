@@ -57,7 +57,7 @@ export function Header({ auth }: HeaderProps) {
           <ControleTema />
 
           {/* Sino só faz sentido logado: "atividade recente" é sempre de alguém. */}
-          {auth.autenticado && <SinoAtividade auth={auth} />}
+          {auth.autenticado && !auth.aceitePendente && <SinoAtividade auth={auth} />}
 
           <MenuUsuario auth={auth} />
         </div>

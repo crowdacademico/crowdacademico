@@ -144,13 +144,19 @@ function useDadosUsuario(
   const [papeis, setPapeis] = useState<UsuarioPapelResponse[] | null>(null);
   const { dado, carregando } = useBuscar(
     async (): Promise<DadosUsuario> => {
-      const [usuario, perfilPesquisador, avatar, papeisDoUsuario] = await Promise.all([
+      const [usuario, avatar, papeisDoUsuario] = await Promise.all([
         comRegistro(aoRegistrarChamada, 'GET', `/usuario/${idUsuario}`, null, () => usuarioApi.buscar(auth.authFetch, idUsuario)),
-        comRegistro(aoRegistrarChamada, 'GET', `/perfil-pesquisador/${idUsuario}`, null, () => perfilPesquisadorApi.buscar(auth.authFetch, idUsuario)).catch(() => null),
         // Avatar não é registrado (endpoint público, cosmético).
         arquivoApi.buscarAvatarPorUsuario(idUsuario).catch(() => null),
         comRegistro(aoRegistrarChamada, 'GET', `/usuario-papel/${idUsuario}`, null, () => usuarioPapelApi.listarPorUsuario(auth.authFetch, idUsuario)).catch(() => []),
       ]);
+      // Depois da conta, e só de quem é pesquisador: pedir de todo mundo dava 404 para quem não é.
+      const perfilPesquisador =
+        usuario.ehPesquisador === false
+          ? null
+          : await comRegistro(aoRegistrarChamada, 'GET', `/perfil-pesquisador/${idUsuario}`, null, () =>
+              perfilPesquisadorApi.buscar(auth.authFetch, idUsuario),
+            ).catch(() => null);
       return { usuario, perfilPesquisador, avatarUrl: avatar?.url ?? null, papeis: papeisDoUsuario };
     },
     [idUsuario],

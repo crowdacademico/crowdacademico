@@ -48,11 +48,12 @@ export const termoUsoApi = {
     authFetch(`/termos-uso/${id}/ativar`, { method: 'PATCH' }).then(
       tratarResposta<TermoUsoResponse>,
     ),
-  // DELETE /termos-uso/:id: nunca permitido na versão vigente. Numa versão já aceita por alguém, dá 409 a menos
-  // que `forcar: true` (checkbox "entendi" + "Excluir mesmo assim"): com `forcar`, apaga o termo e AS LINHAS DE
-  // ACEITE que apontam para ele (as FKs são CASCADE, ver TermoUsoServiceRemove no Nest).
-  excluir: (authFetch: AuthFetch, id: number, forcar?: boolean): Promise<void> =>
-    authFetch(`/termos-uso/${id}${forcar ? '?forcar=true' : ''}`, { method: 'DELETE' }).then(
-      tratarResposta<void>,
-    ),
+  // DELETE /termos-uso/:id: nunca permitido na versão vigente nem numa versão já aceita por alguém (RF-091: o
+  // aceite é a prova; o banco recusa com 409). Só a versão nunca aceita pode ser excluída.
+  excluir: (authFetch: AuthFetch, id: number): Promise<void> =>
+    authFetch(`/termos-uso/${id}`, { method: 'DELETE' }).then(tratarResposta<void>),
+  // POST /termos-uso/:id/aceitar: RF-015, a própria conta aceita a versão vigente que estava pendente. Depois disso a
+  // sessão precisa ser renovada para sair da tela de aceite (o crachá novo não tem mais a marca de pendência).
+  aceitar: (authFetch: AuthFetch, id: number): Promise<void> =>
+    authFetch(`/termos-uso/${id}/aceitar`, { method: 'POST' }).then(tratarResposta<void>),
 };

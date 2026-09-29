@@ -1,5 +1,10 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
+import { formatarDataHoraBr } from '../util/auth.util.format-date-time';
 import { AuthServiceLogin } from './auth.service.login';
 import { DatabaseService } from '../../commons/database/database.service';
 import { UsuarioServiceFindOne } from '../../1-usuario/service/usuario.service.findone';
@@ -65,6 +70,29 @@ export class AuthServiceRefresh {
       throw new UnauthorizedException('Refresh token inválido.');
     }
 
+    // A conta precisa continuar podendo entrar: excluída ou suspensa não renova (a suspensão e a exclusão já
+    // encerram as sessões no banco; isto cobre qualquer sessão que tenha escapado). Sobra só o token de acesso
+    // de até 15 minutos que já estava na mão, caso-limite aceito (é o padrão de mercado para JWT).
+    const conta = await db
+      .selectFrom('usuario')
+      .select('id_usuario')
+      .where('id_usuario', '=', sessao.id_usuario)
+      .where('deletado', '=', false)
+      .executeTakeFirst();
+    if (!conta) {
+      throw new UnauthorizedException(
+        'Sessão encerrada: esta conta não existe mais.',
+      );
+    }
+    const suspensao = await this.authServiceLogin.buscarSuspensao(
+      sessao.id_usuario,
+    );
+    if (suspensao.suspensoAte && suspensao.suspensoAte > new Date()) {
+      throw new ForbiddenException(
+        `Conta suspensa até ${formatarDataHoraBr(suspensao.suspensoAte)}\n\nMotivo: ${suspensao.motivoSuspensao}`,
+      );
+    }
+
     // Rotação: revoga a sessão usada e emite um par novo - impede reuso do
     // mesmo refresh token depois de consumido (se alguém roubar um token já
     // usado, ele já não vale mais nada).
@@ -74,7 +102,7 @@ export class AuthServiceRefresh {
       .where('id_sessao', '=', sessao.id_sessao)
       .execute();
 
-    const { accessToken, refreshToken } =
+    const { accessToken, refreshToken, aceitePendente } =
       await this.authServiceLogin.emitirTokens(
         sessao.id_usuario,
         ip,
@@ -86,6 +114,6 @@ export class AuthServiceRefresh {
     );
     const papeis = await this.authServiceLogin.listarPapeis(sessao.id_usuario);
 
-    return { accessToken, refreshToken, usuario, papeis };
+    return { accessToken, refreshToken, usuario, papeis, aceitePendente };
   }
 }

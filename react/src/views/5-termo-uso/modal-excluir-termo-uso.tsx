@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { ModalFicha } from '../../components/crud/modal-ficha';
-import { CaixaAviso } from '../../components/crud/caixa-aviso';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
 import { termoUsoApi } from '../../services/5-termo-uso/api/termo-uso.api';
@@ -18,36 +17,24 @@ interface ModalExcluirTermoUsoProps {
 }
 
 // Excluir: como Criar não ativa mais sozinho, um rascunho com muito erro de português pode simplesmente ser
-// apagado (para não sujar o banco). Confirmação simples (sem digitar nada, diferente de ModalExcluirUsuario): o
-// backend (TermoUsoServiceRemove) já bloqueia com 409 qualquer versão vigente ou aceita por alguém.
-//
-// "Excluir mesmo assim": se o 409 for especificamente o de "já foi aceita" (não o de "é a vigente", esse
-// continua bloqueado sem exceção), a tela troca para o modo forçado: mostra o aviso + checkbox "entendi" +
-// botão "Excluir mesmo assim", que reenvia com `forcar: true` (apaga o termo E as linhas de aceite que apontam
-// para ele: decisão consciente, sabendo que perde o rastro de quem aceitou).
+// apagado (para não sujar o banco). Confirmação simples (sem digitar nada, diferente de ModalExcluirUsuario). A
+// versão vigente e a versão já aceita por alguém nunca são excluídas (RF-091: o aceite é a prova do que a pessoa
+// aceitou); nesses casos o backend recusa e a mensagem dele aparece aqui.
 export function ModalExcluirTermoUso({ auth, termo, aoFechar, aoExcluido }: ModalExcluirTermoUsoProps) {
   const { mostrar } = useToast();
   const { erro, reportarErro, limparErro } = useErroToast();
   const [excluindo, setExcluindo] = useState(false);
-  const [modoForcado, setModoForcado] = useState(false);
-  const [entendi, setEntendi] = useState(false);
 
-  const excluir = async (forcar: boolean) => {
+  const excluir = async () => {
     limparErro();
     setExcluindo(true);
     try {
-      await termoUsoApi.excluir(auth.authFetch, termo.idTermo, forcar);
+      await termoUsoApi.excluir(auth.authFetch, termo.idTermo);
       mostrar('Excluído com sucesso.', `Versão "${termo.versao}" foi excluída.`);
       aoExcluido();
       aoFechar();
     } catch (erroRequisicao) {
-      const mensagem = reportarErro(erroRequisicao);
-      // Só oferece o modo forçado pro caso "já foi aceita" - o de "é a
-      // vigente" continua bloqueado sem exceção nenhuma (ver
-      // TermoUsoServiceRemove).
-      if (mensagem.includes('já foi aceita')) {
-        setModoForcado(true);
-      }
+      reportarErro(erroRequisicao);
     } finally {
       setExcluindo(false);
     }
@@ -62,11 +49,10 @@ export function ModalExcluirTermoUso({ auth, termo, aoFechar, aoExcluido }: Moda
         <RodapeAcoes
           aoCancelar={aoFechar}
           acao={{
-            rotulo: modoForcado ? 'Excluir mesmo assim' : 'Confirmar exclusão',
+            rotulo: 'Confirmar exclusão',
             rotuloOcupado: 'Excluindo...',
             ocupado: excluindo,
-            desabilitado: modoForcado && !entendi,
-            aoClicar: () => void excluir(modoForcado),
+            aoClicar: () => void excluir(),
             perigo: true,
           }}
         />
@@ -78,21 +64,6 @@ export function ModalExcluirTermoUso({ auth, termo, aoFechar, aoExcluido }: Moda
         <CampoFicha rotulo="Tipo" valor={ROTULO_TIPO_TERMO[termo.tipo]} />
         <CampoFicha rotulo="Versão" valor={termo.versao} />
       </SecaoFicha>
-
-      {modoForcado && (
-        <CaixaAviso titulo="Isto apaga o rastro de aceite" icone="fa-triangle-exclamation">
-          <p className="mb-3">
-            Pelo menos uma pessoa já aceitou esta versão. Excluir mesmo assim apaga, junto com a
-            versão, TODAS as linhas de aceite que registram quem aceitou ela - não vai mais ser
-            possível provar que essas pessoas aceitaram este texto especificamente. A exclusão em
-            si continua registrada no log de auditoria.
-          </p>
-          <label className="flex items-center gap-2 font-semibold">
-            <input type="checkbox" checked={entendi} onChange={(evento) => setEntendi(evento.target.checked)} />
-            Entendi e quero excluir mesmo assim.
-          </label>
-        </CaixaAviso>
-      )}
     </ModalFicha>
   );
 }

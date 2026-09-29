@@ -16,4 +16,6 @@ export class UsuarioResponse {
   // barata a mais); findAll (a listagem) nunca preenche, para não virar N+1 resolvendo avatar de cada linha da
   // tabela. `undefined` aqui = "não resolvido", diferente de `null` = "resolvido, é o avatar padrão/sem foto".
   avatarUrl?: string | null;
+  // Mesmo raciocínio de avatarUrl: só quem busca UM usuário (findOne, update) resolve; a listagem não preenche.
+  ehPesquisador?: boolean;
 }

@@ -4,6 +4,7 @@ import { DatabaseService } from '../../commons/database/database.service';
 import { USUARIO_COLUNAS_SELECT } from '../constants/usuario.constants';
 import { UsuarioConverter } from '../dto/converter/usuario.converter';
 import { UsuarioResponse } from '../dto/response/usuario.response';
+import { ehPesquisador } from '../util/usuario.util.is-researcher';
 
 @Injectable()
 export class UsuarioServiceFindOne {
@@ -33,6 +34,7 @@ export class UsuarioServiceFindOne {
     return {
       ...UsuarioConverter.paraResponseDto(usuario),
       avatarUrl: avatar.url,
+      ehPesquisador: await ehPesquisador(this.database.getDb(), idUsuario),
     };
   }
 }

@@ -273,7 +273,7 @@ Autenticação própria, JWT com par access + refresh, refresh token com **rota�
 
 **`AuthGuardJwt`** - global (`APP_GUARD`), roda em toda rota. **Não bloqueia nada por conta própria.** Sem cabeçalho `Authorization`, deixa passar como anônimo (`request.user` fica `undefined`). Com um `Bearer` válido, preenche `request.user = { idUsuario, idSessao }`. Com um token **presente mas inválido/expirado**, lança 401 - porque isso é sempre erro: o cliente pensa que está autenticado e não está, o que é diferente de não mandar token nenhum.
 
-**`AuthGuardRequireAuth`** - global também (`APP_GUARD`, registrado depois da `AuthGuardJwt`, 27-09-2026): **toda rota exige login, menos as marcadas com `@Publico()`** (`commons/auth/publico.decorator.ts`). Só confere se existe sessão; devolve 401 *"Você precisa estar logado para fazer isso."* se não existir. Rota nova nasce fechada: esquecer a marcação deixa a rota fechada, nunca aberta. Antes era aplicado rota a rota com `@UseGuards(AuthGuardRequireAuth)` (84 repetições), e foi assim que o `POST /usuario` ficou aberto a anônimo sem ninguém notar. As 29 rotas `@Publico()` são login, cadastro, renovação e saída de sessão, verificação de e-mail, `health`, as listas e leituras públicas de catálogo, o termo vigente, as configurações públicas, o avatar e as leituras que a página pública vai usar (campanha, orçamento, cronograma, atualizações, comentários, perfil de pesquisador); nas de login opcional, a `AuthGuardJwt` continua reconhecendo quem mandou token. Na troca, as 119 rotas foram chamadas sem login antes e depois: nenhuma diferença de status nem de conteúdo (roteiro de teste que chama cada rota sem login e compara as respostas).
+**`AuthGuardRequireAuth`** - global também (`APP_GUARD`, registrado depois da `AuthGuardJwt`, 27-09-2026): **toda rota exige login, menos as marcadas com `@Publico()`** (`commons/auth/publico.decorator.ts`). Só confere se existe sessão; devolve 401 *"Você precisa estar logado para fazer isso."* se não existir. Rota nova nasce fechada: esquecer a marcação deixa a rota fechada, nunca aberta. Antes era aplicado rota a rota com `@UseGuards(AuthGuardRequireAuth)` (84 repetições), e foi assim que o `POST /usuario` ficou aberto a anônimo sem ninguém notar. As 29 rotas `@Publico()` são login, cadastro, renovação e saída de sessão, verificação de e-mail, `health`, as listas e leituras públicas de catálogo, o termo vigente, as configurações públicas, o avatar e as leituras que a página pública vai usar (campanha, orçamento, cronograma, atualizações, comentários, perfil de pesquisador); nas de login opcional, a `AuthGuardJwt` continua reconhecendo quem mandou token. Na troca, as 119 rotas foram chamadas sem login antes e depois: nenhuma diferença de status nem de conteúdo (roteiro de teste que chama cada rota sem login e compara as respostas). O mesmo guard barra, com 403 e `codigo: "TERMO_PENDENTE"`, quem tem versão nova do Termo de Uso para aceitar (RF-015, ver seção 19); só passam as rotas `@Publico()` e as marcadas com `@LiberadoComTermoPendente()`.
 
 📌 **Por que existe um guard que só confere login.** Sem ele, um anônimo tentando `PATCH /usuario/5` esperaria a RLS devolver 0 linhas e receberia um erro confuso lá no fim. O guard pega o caso mais comum - *nem logado* - cedo e com mensagem clara. O comentário no código deixa a fronteira explícita: **este guard não sabe nada sobre papel/permissão**; quem já está logado mas sem a permissão certa nunca cai aqui, cai num 403 vindo da RLS.
 
@@ -966,8 +966,9 @@ Versões dos termos de uso, de 2 tipos: `cadastro` (o termo da conta, que cobre 
 - **`GET /termos-uso`** lista todas as versões dos 2 tipos misturadas, por id crescente; **`GET /termos-uso/:id`** busca uma.
 - **`POST /termos-uso` (Criar)** só cria rascunho: sempre `ativo = FALSE`, nunca ativa sozinho nem mexe em outra linha. O fluxo é criar, a equipe revisar o texto e só então um administrador tornar a versão vigente.
 - **`PATCH /termos-uso/:id/ativar`** torna a versão a vigente do seu tipo e, na mesma transação, desativa a vigente anterior do mesmo tipo (idempotente se o alvo já é a vigente). Serve tanto para promover um rascunho quanto para voltar a uma versão antiga.
-- **`PATCH /termos-uso/:id` (Alterar)** só edita `conteudo`, e só enquanto **ninguém aceitou** aquela versão (confere `usuario_termo` e `aceite_termo_contribuicao`); depois do primeiro aceite a versão fica somente leitura, para preservar o valor probatório do que foi aceito. `versao` e `tipo` são imutáveis.
-- **`DELETE /termos-uso/:id`**: nunca apaga a versão vigente (sempre precisa existir uma por tipo); versão com aceite registrado só apaga com `forcar: true`, ciente de que isso remove o rastro de quem aceitou.
+- **`PATCH /termos-uso/:id` (Alterar)** só edita `conteudo`, e só enquanto **ninguém aceitou** aquela versão; depois do primeiro aceite a versão fica somente leitura, para preservar o valor probatório do que foi aceito. Quem recusa é o banco (`trg_termos_de_uso_protege_aceito`, 409 `91033`). `versao` e `tipo` são imutáveis.
+- **`DELETE /termos-uso/:id`**: nunca apaga a versão vigente (sempre precisa existir uma por tipo) nem versão com aceite registrado (409 `91032`, RF-091). Não existe exclusão forçada.
+- **`POST /termos-uso/:id/aceitar`** (RF-015): quem já tem conta aceita a versão vigente nova do Termo de Uso. Só aceita o id da vigente de `cadastro` (outro id responde 409, a versão mudou enquanto a pessoa lia); aceitar de novo não é erro.
 
 ---
 
@@ -1027,7 +1028,7 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 
 ## 13. Inventário de rotas HTTP
 
-119 handlers. `AUTH` = a rota exige login (o padrão, `AuthGuardRequireAuth` global); `pub` = a rota tem `@Publico()` (o que **não** significa "sem proteção": significa que quem protege é a RLS, e que anônimo é um caso legítimo).
+120 handlers. `AUTH` = a rota exige login (o padrão, `AuthGuardRequireAuth` global); `pub` = a rota tem `@Publico()` (o que **não** significa "sem proteção": significa que quem protege é a RLS, e que anônimo é um caso legítimo).
 
 | | Método | Rota |
 |---|---|---|
@@ -1083,7 +1084,7 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | AUTH | PATCH · DELETE | `/configuracoes/:id` |
 | pub | GET | `/termos-uso/ativo` |
 | AUTH | GET | `/termos-uso` · `/termos-uso/:id` |
-| AUTH | POST | `/termos-uso` |
+| AUTH | POST | `/termos-uso` · `/termos-uso/:id/aceitar` |
 | AUTH | PATCH | `/termos-uso/:id` · `/termos-uso/:id/ativar` |
 | AUTH | DELETE | `/termos-uso/:id` |
 | **Campanha e satélites** | | |
@@ -1400,3 +1401,24 @@ Testado com o backend rodando de verdade contra o Postgres real (não só compil
 - **Decisão:** link de verificação de e-mail inválido responde 400 (era 401). Enviar para aprovação uma campanha que não está em rascunho nem rejeitada responde 409 (era 403).
 - **Motivo:** 401 é "não está logado" e faria a tela tentar renovar a sessão. O envio repetido é conflito de estado, o mesmo 409 do aprovar e do rejeitar.
 - **Caso-limite aceito:** nenhum.
+
+📌 **Versão nova do Termo de Uso precisa ser aceita (RF-015).**
+- **Em palavras simples:** quando o admin publica uma versão nova do Termo de Uso, quem já tem conta só volta a usar a plataforma depois de ler e aceitar.
+- **Decisão:** o login e a renovação de sessão perguntam ao banco (`fn_termo_uso_pendente`) se a conta aceitou a versão vigente de `cadastro`. A resposta vai no token (`tp`) e no corpo (`aceitePendente`). Com pendência, o `AuthGuardRequireAuth` responde 403 `TERMO_PENDENTE` em toda rota, menos nas públicas e em `POST /termos-uso/:id/aceitar` (`@LiberadoComTermoPendente()`). Depois do aceite, a tela renova a sessão e o token novo vem sem a pendência.
+- **Motivo:** o RF-015 pede o aceite da versão nova. Guardar a resposta no token evita uma consulta ao banco a cada clique.
+- **Caso-limite aceito:** quem já está logado quando a versão nova é publicada só é parado na próxima renovação (até 15 minutos). O Termo de upgrade de pesquisador fica de fora: é aceito uma vez, no upgrade. Até o banco ter `fn_termo_uso_pendente`, ninguém fica pendente (a consulta é protegida por SAVEPOINT, como `listarPapeis`).
+
+📌 **Termo aceito não é excluído nem alterado (RF-091).**
+- **Decisão:** a exclusão forçada (`forcar`) saiu. `termo-uso.service.remove.ts` e `termo-uso.service.update.ts` não conferem mais o aceite por conta própria: quem recusa é a trigger do banco (409 `91032` e `91033`).
+- **Motivo:** o aceite é a prova do que a pessoa aceitou. Apagar a versão apagava junto essa prova (as chaves estrangeiras eram `ON DELETE CASCADE`).
+- **Caso-limite aceito:** um rascunho aceito por engano não sai mais da lista. Ele fica inativo, e uma versão nova toma o lugar.
+
+📌 **Renovar a sessão confere se a conta ainda pode entrar.**
+- **Decisão:** `auth.service.refresh.ts` recusa a renovação de conta excluída (401 "Sessão encerrada: esta conta não existe mais.") e de conta suspensa (403 com a data e o motivo, a mesma mensagem do login). Suspender e excluir a conta também encerram as sessões dela no banco.
+- **Motivo:** a renovação só conferia o refresh token. Uma conta suspensa continuava usando o sistema por até 30 dias (a validade do refresh token), renovando sozinha a cada 15 minutos.
+- **Caso-limite aceito:** nenhum.
+
+📌 **O usuário diz se é pesquisador.**
+- **Decisão:** `UsuarioResponse` ganhou `ehPesquisador` (`1-usuario/util/usuario.util.is-researcher.ts`), preenchido na consulta e na alteração do usuário.
+- **Motivo:** a tela buscava o perfil de pesquisador de toda conta, e a conta comum respondia 404 em toda abertura da Minha Conta.
+- **Caso-limite aceito:** nas listagens o campo não vem (fica `undefined`), e a tela trata isso como "não sei" e busca o perfil como antes.

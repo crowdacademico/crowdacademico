@@ -1,5 +1,5 @@
 
-**Contagem do inventário** (`grep -c` nos `.sql`, para conferir contra as queries acima; **evite repetir estes números em outros documentos**, eles envelhecem, cite a seção "Como conferir este inventário"): **42 tabelas**, **121 policies**, **84 triggers** em `05` (80 comuns e 4 `CONSTRAINT TRIGGER`), **107 funções** (78 em `05`, 27 em `03`, 1 em `08`, 1 em `01`), **51 índices** em `02`, e **83 códigos de ERRCODE** customizado (tabelas em `DOCUMENTACAO_ERRCODE.md`).
+**Contagem do inventário** (`grep -c` nos `.sql`, para conferir contra as queries acima; **evite repetir estes números em outros documentos**, eles envelhecem, cite a seção "Como conferir este inventário"): **42 tabelas**, **121 policies**, **85 triggers** em `05` (81 comuns e 4 `CONSTRAINT TRIGGER`), **109 funções** (79 em `05`, 28 em `03`, 1 em `08`, 1 em `01`), **51 índices** em `02`, e **87 códigos de ERRCODE** customizado (tabelas em `DOCUMENTACAO_ERRCODE.md`).
 
 **Comentários dos `.sql`.** Cabeçalho curto (`Função`, `Assinatura`, `Bloco` e uma `Regra` objetiva, sem datas nem história) e, dentro de função, trigger e policy, só o comentário que explica uma regra difícil. Não há ponteiro para arquivo fora do git: o porquê longo mora aqui, na seção `[NN-Y]` correspondente, e a história (o que mudou, quando, por quê) fica no arquivo de histórico local, que não é versionado. Os comentários do `07` explicam dado de teste; o `ATUALIZAR O SUPABASE.sql` é o registro datado de cada patch e por isso mantém a narrativa.
 # 📚 Documentação Técnica do Banco de Dados - CrowdAcadêmico
@@ -1192,7 +1192,7 @@ Nada a implementar; `titulo_academico` e `meio_pagamento` ficam anotados como ca
 
 ## Correções da super auditoria (29-09-2026)
 
-**Em palavras simples:** a super auditoria (o relatório dela fica na pasta de informações, fora do repositório) achou regras que o banco não fazia. Todas estão nos arquivos 01 a 08, no Grupo Y do ATUALIZAR e na suíte PGlite 25 (correções da super auditoria). Os códigos de erro novos estão no `DOCUMENTACAO_ERRCODE.md`: 90023, 91030, 91031, 92026 e 92027.
+**Em palavras simples:** a super auditoria (o relatório dela fica na pasta de informações, fora do repositório) achou regras que o banco não fazia. Todas estão nos arquivos 01 a 08, nos Grupos Y e Z do ATUALIZAR e na suíte PGlite 25 (correções da super auditoria). Os códigos de erro novos estão no `DOCUMENTACAO_ERRCODE.md`: 90023, 90024, 90025, 91030, 91031, 91032, 91033, 92026 e 92027.
 
 📌 **O sistema nunca fica sem admin.**
 - **Decisão:** `fn_eh_ultimo_admin_ativo()` (03, [03-N]) diz se a conta é a única com o papel admin valendo agora. Com ela, recusam com 91030:
@@ -1234,6 +1234,26 @@ Nada a implementar; `titulo_academico` e `meio_pagamento` ficam anotados como ca
 - **Decisão:** a campanha 10 do `07` tem datas relativas a hoje (começou há 20 dias, termina em 25). As 4 contribuições e a atualização dela também.
 - **Motivo:** com a data final em 2024, a rotina automática encerrava a campanha na primeira hora depois de recriar o banco, e o sistema ficava sem nenhuma campanha ativa para demonstração.
 - **Caso-limite aceito:** nenhum.
+
+📌 **Link acadêmico confere o endereço do tipo.**
+- **Decisão:** `trg_valida_escopo_tipolink()` usa as colunas `dominio` e `regex` de `tipo_link`, que existiam mas ninguém lia. Com domínio cadastrado, o endereço do link precisa ser dele ou de um subdomínio (um endereço com `www.` na frente também vale), senão 90024. Com regex cadastrada, a URL inteira precisa seguir o formato, senão 90025. Vale para link acadêmico, de atualização e de recompensa.
+- **Motivo:** um link do tipo "Lattes" aceitava qualquer endereço, até de outro site.
+- **Caso-limite aceito:** tipo sem domínio e sem regex (o "Outro", por exemplo) continua aceitando qualquer URL. Os links que já existiam não são conferidos de novo: a regra vale na gravação.
+
+📌 **Termo aceito é prova e não sai (RF-091).**
+- **Decisão:** `trg_termos_de_uso_protege_aceito` recusa excluir (91032) e alterar `conteudo`, `tipo` ou `versao` (91033) de uma versão que alguém já aceitou, no cadastro (`usuario_termo`) ou numa contribuição (`aceite_termo_contribuicao`). As chaves `FK_USUARIO_TERMO_TERMO` e `FK_ACEITE_TERMO_CONTRIBUICAO_TERMO` deixaram de ser `ON DELETE CASCADE`.
+- **Motivo:** o Nest tinha uma exclusão "forçada" que apagava a versão e, pelo cascade, todos os aceites dela, justamente a prova que o RF-091 manda guardar.
+- **Caso-limite aceito:** ativar e desativar continuam livres (a coluna `ativo` não está na trigger), porque trocar a vigente não muda o que foi aceito.
+
+📌 **Quem está devendo o aceite da versão nova (RF-015).**
+- **Decisão:** `fn_termo_uso_pendente(id)` devolve o id da versão vigente do Termo de Uso (`cadastro`) quando a conta ainda não a aceitou, ou NULL. O Nest pergunta isso no login e em cada renovação de sessão. O seed `07` registra o aceite da versão vigente para todas as contas, menos a 24 (Marina), que fica pendente para demonstrar a tela de aceite.
+- **Motivo:** o RF-015 pede o aceite da versão nova por quem já tem conta.
+- **Caso-limite aceito:** o Termo de upgrade de pesquisador fica de fora. Ao colar o Grupo Z no Supabase, toda conta vê a tela de aceite uma vez, porque ninguém lá aceitou a versão vigente atual pelo sistema.
+
+📌 **Suspender ou excluir a conta encerra as sessões dela.**
+- **Decisão:** `suspender_usuario()` e `excluir_conta_usuario()` preenchem `sessao.revogado_em` de todas as sessões abertas da conta.
+- **Motivo:** a sessão aberta continuava renovando sozinha, e a conta suspensa seguia usando o sistema por até 30 dias.
+- **Caso-limite aceito:** a suspensão de um papel só não encerra sessão: a conta continua podendo entrar, só perde o que aquele papel dava.
 
 
 ## Como conferir este inventário

@@ -73,7 +73,7 @@ export class AuthServiceRegister {
       })
       .execute();
 
-    const { accessToken, refreshToken } =
+    const { accessToken, refreshToken, aceitePendente } =
       await this.authServiceLogin.emitirTokens(
         usuario.idUsuario,
         ip,
@@ -87,6 +87,7 @@ export class AuthServiceRegister {
       refreshToken,
       usuario,
       papeis,
+      aceitePendente,
       tokenVerificacaoEmailDev:
         process.env.NODE_ENV === 'production' ? null : token,
     };

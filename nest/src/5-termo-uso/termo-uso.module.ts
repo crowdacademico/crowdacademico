@@ -6,6 +6,7 @@ import { TermoUsoControllerFindOne } from './controllers/termo-uso.controller.fi
 import { TermoUsoControllerCreate } from './controllers/termo-uso.controller.create';
 import { TermoUsoControllerRemove } from './controllers/termo-uso.controller.remove';
 import { TermoUsoControllerFindAll } from './controllers/termo-uso.controller.findall';
+import { TermoUsoControllerAccept } from './controllers/termo-uso.controller.accept';
 import { TermoUsoServiceUpdate } from './service/termo-uso.service.update';
 import { TermoUsoServiceActivate } from './service/termo-uso.service.activate';
 import { TermoUsoServiceFindActive } from './service/termo-uso.service.find-active';
@@ -13,6 +14,7 @@ import { TermoUsoServiceFindOne } from './service/termo-uso.service.findone';
 import { TermoUsoServiceCreate } from './service/termo-uso.service.create';
 import { TermoUsoServiceRemove } from './service/termo-uso.service.remove';
 import { TermoUsoServiceFindAll } from './service/termo-uso.service.findall';
+import { TermoUsoServiceAccept } from './service/termo-uso.service.accept';
 
 // TermoUsoServiceFindActive exportado para 3-auth reaproveitar: POST /auth/cadastro precisa saber qual id_termo é o
 // ativo AGORA, resolvido pelo próprio servidor (nunca aceito de um valor vindo do cliente), para passar em
@@ -28,6 +30,8 @@ import { TermoUsoServiceFindAll } from './service/termo-uso.service.findall';
 // tanto para promover um rascunho revisado quanto para reverter para uma versão antiga.
 //
 // Excluir: só rascunho nunca vigente e nunca aceito por ninguém, ver TermoUsoServiceRemove.
+//
+// Aceitar: quem já tem conta aceita a versão vigente nova (RF-015), ver TermoUsoServiceAccept.
 @Module({
   controllers: [
     // TermoUsoControllerFindActive ANTES de TermoUsoControllerFindOne de propósito
@@ -42,6 +46,7 @@ import { TermoUsoServiceFindAll } from './service/termo-uso.service.findall';
     TermoUsoControllerCreate,
     TermoUsoControllerRemove,
     TermoUsoControllerFindAll,
+    TermoUsoControllerAccept,
   ],
   providers: [
     TermoUsoServiceUpdate,
@@ -51,6 +56,7 @@ import { TermoUsoServiceFindAll } from './service/termo-uso.service.findall';
     TermoUsoServiceCreate,
     TermoUsoServiceRemove,
     TermoUsoServiceFindAll,
+    TermoUsoServiceAccept,
   ],
   exports: [TermoUsoServiceFindActive],
 })

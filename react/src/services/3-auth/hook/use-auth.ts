@@ -13,6 +13,9 @@ export interface UseAuthReturn {
   usuario: UsuarioResponse | null;
   papeis: string[];
   ehAdmin: boolean;
+  // RF-015: a conta ainda não aceitou a versão vigente do Termo de Uso (AdminLayout mostra o aceite no lugar do
+  // painel).
+  aceitePendente: boolean;
   carregando: boolean;
   autenticado: boolean;
   login: (email: string, senha: string) => Promise<AuthResponseLogin>;
@@ -23,6 +26,8 @@ export interface UseAuthReturn {
     aceiteTermos: boolean,
   ) => Promise<AuthResponseRegister>;
   logout: () => Promise<void>;
+  // Troca o token na hora (sem esperar os ~15 min): depois de aceitar o Termo, o token novo vem sem a pendência.
+  renovarSessaoAgora: () => Promise<void>;
   authFetch: AuthFetch;
   atualizarUsuarioLocal: Dispatch<SetStateAction<UsuarioResponse | null>>;
 }
@@ -41,6 +46,7 @@ export function useAuth(): UseAuthReturn {
   // verdade, só decide o que aparece na UI; toda ação real continua validada pelo backend/RLS a cada
   // requisição.
   const [papeis, setPapeis] = useState<string[]>([]);
+  const [aceitePendente, setAceitePendente] = useState(false);
   const [carregando, setCarregando] = useState(true);
   const refreshTokenRef = useRef<string | null>(localStorage.getItem(CHAVE_REFRESH_TOKEN));
   // Promise compartilhada entre chamadas simultâneas de authFetch - ver
@@ -59,6 +65,7 @@ export function useAuth(): UseAuthReturn {
     localStorage.setItem(CHAVE_REFRESH_TOKEN, resultado.refreshToken);
     setUsuario(resultado.usuario);
     setPapeis(resultado.papeis);
+    setAceitePendente(resultado.aceitePendente);
   }, []);
 
   const limparSessao = useCallback(() => {
@@ -66,6 +73,7 @@ export function useAuth(): UseAuthReturn {
     accessTokenRef.current = null;
     setUsuario(null);
     setPapeis([]);
+    setAceitePendente(false);
     refreshTokenRef.current = null;
     localStorage.removeItem(CHAVE_REFRESH_TOKEN);
   }, []);
@@ -147,6 +155,13 @@ export function useAuth(): UseAuthReturn {
       .catch(() => limparSessao())
       .finally(() => setCarregando(false));
   }, [renovarSessao, limparSessao]);
+
+  const renovarSessaoAgora = useCallback(async (): Promise<void> => {
+    const refreshToken = refreshTokenRef.current;
+    if (refreshToken) {
+      await renovarSessao(refreshToken);
+    }
+  }, [renovarSessao]);
 
   const logout = useCallback(async (): Promise<void> => {
     const tokenAtual = refreshTokenRef.current;
@@ -253,11 +268,13 @@ export function useAuth(): UseAuthReturn {
     usuario,
     papeis,
     ehAdmin: papeis.includes('admin'),
+    aceitePendente,
     carregando,
     autenticado: accessToken !== null,
     login,
     cadastrar,
     logout,
+    renovarSessaoAgora,
     authFetch,
     // Minha Conta usa isto depois de PATCH /usuario/:id com o próprio id: atualiza o nome/etc mostrado no
     // cabeçalho na hora, sem precisar de um refresh de token só para refletir a mudança.

@@ -32,7 +32,7 @@ interface MinhaCampanhaLinha extends Omit<CampanhaResponse, 'status'> {
 // para os outros, a tela explica o porquê em vez de oferecer um botão que o banco recusaria.
 export function MinhasCampanhas({ auth }: PropsPagina) {
   const idUsuario = auth.usuario?.idUsuario ?? null;
-  const [statusPesquisador, setStatusPesquisador] = useState<StatusPesquisador | 'sem-perfil' | null>(null);
+  const [statusBuscado, setStatusPesquisador] = useState<StatusPesquisador | 'sem-perfil' | null>(null);
   const {
     criando,
     abrirCriando,
@@ -48,15 +48,21 @@ export function MinhasCampanhas({ auth }: PropsPagina) {
     acoesCompletas,
   } = useCrudModais<MinhaCampanhaLinha>();
 
+  const ehPesquisador = auth.usuario?.ehPesquisador;
+  // Quem não é pesquisador nem pede o perfil (seria um 404 certo). `undefined` (sessão antiga) ainda pede.
+  const statusPesquisador = ehPesquisador === false ? 'sem-perfil' : statusBuscado;
   useEffect(() => {
     if (idUsuario === null) {
+      return;
+    }
+    if (ehPesquisador === false) {
       return;
     }
     perfilPesquisadorApi
       .buscar(auth.authFetch, idUsuario)
       .then((perfil) => setStatusPesquisador(perfil.statusPesquisador))
       .catch(() => setStatusPesquisador('sem-perfil'));
-  }, [auth.authFetch, idUsuario]);
+  }, [auth.authFetch, idUsuario, ehPesquisador]);
 
   const listar = useCallback(async (): Promise<MinhaCampanhaLinha[]> => {
     if (idUsuario === null) {

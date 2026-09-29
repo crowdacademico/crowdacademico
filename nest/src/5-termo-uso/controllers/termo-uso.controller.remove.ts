@@ -3,9 +3,7 @@ import {
   Delete,
   HttpCode,
   Param,
-  ParseBoolPipe,
   ParseIntPipe,
-  Query,
 } from '@nestjs/common';
 import { TermoUsoServiceRemove } from '../service/termo-uso.service.remove';
 
@@ -15,10 +13,7 @@ export class TermoUsoControllerRemove {
 
   @Delete(':id')
   @HttpCode(204)
-  excluir(
-    @Param('id', ParseIntPipe) id: number,
-    @Query('forcar', new ParseBoolPipe({ optional: true })) forcar?: boolean,
-  ) {
-    return this.service.executar(id, forcar ?? false);
+  excluir(@Param('id', ParseIntPipe) id: number) {
+    return this.service.executar(id);
   }
 }

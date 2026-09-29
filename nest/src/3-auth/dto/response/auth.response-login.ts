@@ -12,4 +12,6 @@ export class AuthResponseLogin {
   // cabeçalho, nunca para checar permissão de verdade (isso continua sendo decidido pelo backend/RLS a cada
   // requisição).
   papeis: string[];
+  // RF-015: a conta ainda não aceitou a versão vigente do Termo de Uso; a tela mostra o aceite antes de tudo.
+  aceitePendente: boolean;
 }

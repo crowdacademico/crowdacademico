@@ -206,6 +206,9 @@ GRANT EXECUTE ON FUNCTION public.suspender_usuario(INT, TIMESTAMPTZ, TEXT)      
 GRANT EXECUTE ON FUNCTION public.revogar_suspensao_usuario(INT)                 TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.suspender_papel_usuario(INT, INT, TIMESTAMPTZ, TEXT) TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.fn_eh_ultimo_admin_ativo(INT)                  TO app_nestjs;
+-- fn_termo_uso_pendente: RF-015, chamada pelo login e pela renovação de sessão.
+REVOKE EXECUTE ON FUNCTION public.fn_termo_uso_pendente(INT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.fn_termo_uso_pendente(INT) TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.revogar_suspensao_papel_usuario(INT, INT)      TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.registrar_exportacao_dados(INT)               TO app_nestjs;
 -- usuario_termo sem UPDATE: é registro de aceite de termo, nunca deveria ser editável depois de criado (não há

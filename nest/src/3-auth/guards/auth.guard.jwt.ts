@@ -37,10 +37,16 @@ export class AuthGuardJwt implements CanActivate {
     }
 
     try {
-      const payload = this.jwtService.verify<{ sub: number; sid: number }>(
-        token,
-      );
-      request.user = { idUsuario: payload.sub, idSessao: payload.sid };
+      const payload = this.jwtService.verify<{
+        sub: number;
+        sid: number;
+        tp?: boolean;
+      }>(token);
+      request.user = {
+        idUsuario: payload.sub,
+        idSessao: payload.sid,
+        termoPendente: payload.tp === true,
+      };
       return true;
     } catch {
       // Token presente mas inválido/expirado - diferente de "sem token" (que

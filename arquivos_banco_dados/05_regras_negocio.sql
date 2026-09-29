@@ -978,12 +978,19 @@ CREATE TRIGGER trg_contrib_recompensa_valida
 --             alguém associe, por exemplo, "Orcid" (permite_perfil=TRUE apenas) a uma recompensa ou atualização: a FK
 --             sozinha só garante a existência do id_tipolink, não o contexto de uso.
 --             Link acadêmico novo só para quem tem perfil de pesquisador (92026): na conta comum não serve para nada.
+--             O endereço precisa ser de um dos domínios do tipo (90024; subdomínio vale: www.lattes.cnpq.br) e
+--             seguir o padrão `regex` do tipo (90025), RF-022. Tipo com a lista de domínios vazia não confere
+--             domínio; tipo sem regex não confere formato.
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.trg_valida_escopo_tipolink()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
 DECLARE
     v_coluna    TEXT;
     v_permitido BOOLEAN;
+    v_nome      TEXT;
+    v_regex     TEXT;
+    v_dominios  VARCHAR(255)[];
+    v_host      TEXT;
 BEGIN
     -- IF aninhado: NEW.id_usuario só existe em link_academico.
     IF TG_TABLE_NAME = 'link_academico' AND TG_OP = 'INSERT' THEN
@@ -1007,6 +1014,25 @@ BEGIN
             USING ERRCODE = '90002';
     END IF;
 
+    SELECT nome, regex, dominio INTO v_nome, v_regex, v_dominios
+    FROM tipo_link WHERE id_tipolink = NEW.id_tipolink;
+
+    IF cardinality(v_dominios) > 0 THEN
+        v_host := lower(substring(NEW.url FROM '^[A-Za-z][A-Za-z0-9+.-]*://([^/:?#@]+)'));
+        IF v_host IS NULL OR NOT EXISTS (
+            SELECT 1 FROM unnest(v_dominios) d
+            WHERE v_host = lower(d) OR v_host LIKE '%.' || lower(d)
+        ) THEN
+            RAISE EXCEPTION 'O link do tipo % precisa ser do endereço %.', v_nome, array_to_string(v_dominios, ' ou ')
+                USING ERRCODE = '90024';
+        END IF;
+    END IF;
+
+    IF v_regex IS NOT NULL AND btrim(v_regex) <> '' AND NEW.url !~ v_regex THEN
+        RAISE EXCEPTION 'O link não está no formato esperado para o tipo %. Confira o endereço completo do perfil.', v_nome
+            USING ERRCODE = '90025';
+    END IF;
+
     RETURN NEW;
 END;
 $$;
@@ -1017,7 +1043,7 @@ $$;
 -- Momento:   BEFORE INSERT OR UPDATE
 -- Função:    trg_valida_escopo_tipolink()
 -- Bloco:     [05-K-1]
--- Regra:     Só aceita id_tipolink com permite_perfil = TRUE.
+-- Regra:     Só aceita id_tipolink com permite_perfil = TRUE, de conta pesquisadora, no domínio e no formato do tipo.
 -- ----------------------------------------------------------------------------
 DROP TRIGGER IF EXISTS trg_link_academico_valida_tipo ON link_academico;
 CREATE TRIGGER trg_link_academico_valida_tipo
@@ -3361,6 +3387,40 @@ DROP TRIGGER IF EXISTS trg_usuario_normaliza_email ON usuario;
 CREATE TRIGGER trg_usuario_normaliza_email
 BEFORE INSERT OR UPDATE OF email ON usuario
 FOR EACH ROW EXECUTE FUNCTION public.fn_usuario_normaliza_email();
+
+-- ----------------------------------------------------------------------------
+-- Função:     fn_protege_termo_aceito
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-K-3]
+-- Regra:      RF-091: a versão do Termo que alguém já aceitou (no cadastro, no upgrade ou numa contribuição) não pode
+--             ser excluída (91032) nem ter texto, tipo ou versão alterados (91033), só substituída por uma versão
+--             nova. É a prova do que cada pessoa aceitou. Versão nunca aceita pode ser excluída e corrigida à
+--             vontade. SECURITY DEFINER: enxerga todos os aceites, independente da RLS de quem pede.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_protege_termo_aceito()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM usuario_termo WHERE id_termo = OLD.id_termo)
+       OR EXISTS (SELECT 1 FROM aceite_termo_contribuicao WHERE id_termo = OLD.id_termo) THEN
+        IF TG_OP = 'DELETE' THEN
+            RAISE EXCEPTION 'Esta versão já foi aceita por pelo menos uma pessoa e não pode ser excluída (é a prova do aceite). Publique uma versão nova para substituí-la.'
+                USING ERRCODE = '91032';
+        END IF;
+        RAISE EXCEPTION 'Esta versão já foi aceita por pelo menos uma pessoa e não pode mais ser alterada. Publique uma versão nova.'
+            USING ERRCODE = '91033';
+    END IF;
+    RETURN CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_termos_de_uso_protege_aceito ON termos_de_uso;
+CREATE TRIGGER trg_termos_de_uso_protege_aceito
+BEFORE DELETE OR UPDATE OF conteudo, tipo, versao ON termos_de_uso
+FOR EACH ROW EXECUTE FUNCTION public.fn_protege_termo_aceito();
 
 -- ----------------------------------------------------------------------------
 -- Função:     fn_atribuir_papel_pesquisador

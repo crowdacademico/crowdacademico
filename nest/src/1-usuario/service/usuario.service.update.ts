@@ -13,6 +13,7 @@ import {
 import { UsuarioConverter } from '../dto/converter/usuario.converter';
 import { UsuarioRequestUpdate } from '../dto/request/usuario.request-update';
 import { UsuarioResponse } from '../dto/response/usuario.response';
+import { ehPesquisador } from '../util/usuario.util.is-researcher';
 
 @Injectable()
 export class UsuarioServiceUpdate {
@@ -152,6 +153,7 @@ export class UsuarioServiceUpdate {
     return {
       ...UsuarioConverter.paraResponseDto(usuario),
       avatarUrl: avatar.url,
+      ehPesquisador: await ehPesquisador(db, idUsuario),
     };
   }
 }

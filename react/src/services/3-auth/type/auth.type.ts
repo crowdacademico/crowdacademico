@@ -15,6 +15,7 @@ export interface AuthResponseLogin {
   refreshToken: string;
   usuario: UsuarioResponse;
   papeis: string[];
+  aceitePendente: boolean;
 }
 
 // Espelha auth.response-register.ts (AuthResponseRegister extends

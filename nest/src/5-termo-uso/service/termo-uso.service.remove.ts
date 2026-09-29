@@ -5,26 +5,19 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
-import { emSequencia } from '../../commons/database/em-sequencia.util';
 
 // Excluir: como Criar não ativa mais sozinho (ver TermoUsoServiceCreate), um rascunho com muito erro de
 // português pode simplesmente ser apagado em vez de corrigido, sem sujar o banco.
 //
-// - `ativo = TRUE` bloqueia SEMPRE, sem exceção nem `forcar` (não dá para apagar a versão vigente: quebraria a
-// garantia de "sempre existe 1 termo ativo por tipo" de que Cadastro/Contribuição/Upgrade dependem; isso não é
-// sobre auditoria, é operacional).
-// - Aceite em usuario_termo OU aceite_termo_contribuicao bloqueia por padrão (409), MAS aceita `forcar: true`
-// (checkbox de "entendi" e botão "Excluir mesmo assim"): o admin decide, ciente de que isso apaga o rastro de
-// quem aceitou. Com `forcar`, o DELETE segue e o CASCADE das FKs
-// (FK_USUARIO_TERMO_TERMO/FK_ACEITE_TERMO_CONTRIBUICAO_TERMO) apaga as linhas de aceite junto: não sobra rastro
-// nenhum dessas pessoas terem aceitado esta versão especificamente. A EXCLUSÃO EM SI continua registrada em
-// log_auditoria (trigger genérico da tabela), então "quem excluiu, quando" nunca se perde, só o "quem tinha
-// aceitado" desaparece.
+// - `ativo = TRUE` bloqueia sempre (não dá para apagar a versão vigente: quebraria a garantia de "sempre existe 1
+// termo vigente por tipo" de que Cadastro/Contribuição/Upgrade dependem).
+// - Versão já aceita (cadastro, upgrade ou contribuição) não pode ser excluída, RF-091: quem recusa é o banco
+// (fn_protege_termo_aceito, 91032 -> 409), porque o aceite é a prova do que a pessoa aceitou.
 @Injectable()
 export class TermoUsoServiceRemove {
   constructor(private readonly database: DatabaseService) {}
 
-  async executar(id: number, forcar: boolean): Promise<void> {
+  async executar(id: number): Promise<void> {
     const termo = await this.database
       .getDb()
       .selectFrom('termos_de_uso')
@@ -40,31 +33,6 @@ export class TermoUsoServiceRemove {
       throw new ConflictException(
         'Não é possível excluir a versão vigente - torne outra versão vigente primeiro, ou apenas altere esta.',
       );
-    }
-
-    if (!forcar) {
-      const [aceiteGeral, aceiteContribuicao] = await emSequencia([
-        () =>
-          this.database
-            .getDb()
-            .selectFrom('usuario_termo')
-            .select('id_usuario_termo')
-            .where('id_termo', '=', id)
-            .executeTakeFirst(),
-        () =>
-          this.database
-            .getDb()
-            .selectFrom('aceite_termo_contribuicao')
-            .select('id_aceite_contrib')
-            .where('id_termo', '=', id)
-            .executeTakeFirst(),
-      ]);
-
-      if (aceiteGeral || aceiteContribuicao) {
-        throw new ConflictException(
-          'Esta versão já foi aceita por pelo menos uma pessoa - não pode mais ser excluída (rastro de auditoria).',
-        );
-      }
     }
 
     const resultado = await this.database

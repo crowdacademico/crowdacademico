@@ -25,7 +25,6 @@ Quem atualiza os requisitos é o Lucas com a revisão externa; aqui fica só o q
 - **Tipografia do painel padronizada** (6 classes em `2-tipografia.css`): citar no próximo pedido de revisão de interface, pedindo ideias para enxugar mais sem quebrar.
 - **Para o Lucas discutir com a revisão externa (29-09-2026; o Lucas acha que alguns pontos do V8 não batem):**
   - **Aceite pendente no próximo login:** vale para versão nova do Termo (RF-015). O V8 tirou a parte da conta criada pelo admin (nascer com senha provisória e aceite pendente), por ser ferramenta de teste; o Lucas quer rediscutir.
-  - **Gestão das versões do Termo (RF-091):** tirar o "Excluir com forçar", que apaga a prova dos aceites; versão já aceita só pode ser substituída.
   - **Modelo da campanha pode mudar até a aprovação:** o V8 deixou implícito (congelamento na aprovação); hoje o formulário nem envia o modelo.
   - **Links no upgrade, "Projetos Criados" e validação de domínio dos links:** a resposta da revisão externa à comparação V8 × código tem pontos que o Lucas vai revisar com ela.
 - **Como o Lucas quer esse pedido escrito:** "pegar no pé" da revisão externa, pedir que olhe sistemas de referência e traga ideias próprias, não só responda a lista.
@@ -211,11 +210,6 @@ Lucas decide depois se ajudam o CrowdAcadêmico. Contexto em `informacoes/ROTEIR
 - **Verde do texto no tema escuro:** `#2fbf71` é provisório (6,14:1 sobre o cartão escuro); aguarda o Lucas confirmar o escopo da página de conferência de cores.
 - **Gestão de logo e favicon:** a aba Identidade Visual do Dashboard é só um espaço reservado.
 
-### Requisitos do V8 a implementar (29-09-2026)
-
-- **RF-015, aceite da versão nova do Termo no próximo acesso:** quando uma versão nova entra em vigor, o próximo acesso só deixa ler o Termo, aceitar ou sair. Hoje o login e a renovação de sessão não conferem isso. Precisa: saber se falta aceite (banco), a "parada obrigatória" depois do login (Nest e React) e a tela de aceite. **Não** vale para conta criada pelo admin: criar conta pelo painel é ferramenta de teste, não requisito (decisão do V8), e continua existindo.
-- **RF-091, versão aceita não pode ser excluída:** o "Excluir" de Termo de Uso ainda aceita `forcar: true`, que apaga uma versão já aceita junto com os aceites (as FKs de `usuario_termo` e `aceite_termo_contribuicao` são `ON DELETE CASCADE`). Tirar o `forcar` e trocar o `CASCADE` por "impede apagar". O "Alterar" já recusa versão aceita.
-
 ### Telas e formulários
 
 #### 🔴 Pendência aberta (15-09-2026, importante, deliberadamente não iniciada): auditoria do painel contra as 10 Heurísticas de Nielsen
@@ -239,12 +233,8 @@ Na tabela de Atualizações do T3, o botão "Ocultar" (só texto) fica com fonte
 
 **Achados em `informacoes/SUPER_AUDITORIA_2026-09-29.md`:** 26 achados; a tabela "Andamento das correções" no topo do arquivo mostra a situação de cada um.
 
-- **Grupo Y colado no Supabase (29-09-2026, "Success"):** conferido só lendo: as 5 funções, as 2 triggers, as 3 constraints e as 2 colunas novas estão lá, e nenhum e-mail ficou fora do padrão.
-- **Decisões abertas do Lucas:**
-  - **Achado 4:** a conta suspensa ou excluída continua agindo por até 15 minutos, porque o token não é conferido contra a conta. A opção 1 é conferir a cada pedido; a opção 2 é aceitar os 15 minutos.
-  - **Achado 20:** o 404 do perfil de pesquisador aparece para quem não é pesquisador. A saída limpa é o backend dizer, junto com a conta, se ela é pesquisadora.
+- **Falta colar no Supabase o Grupo Z** do `ATUALIZAR O SUPABASE.sql` (29-09-2026), com o **Nest parado** (troca chaves estrangeiras). Ele traz o RF-015, o RF-091, a validação de domínio dos links e o encerramento das sessões ao suspender ou excluir a conta. Foi testado num banco igual ao Supabase de hoje, colado duas vezes. **Depois de colar, toda conta vê a tela de aceite do Termo de Uso uma vez**, porque ninguém no Supabase aceitou a versão vigente pelo sistema. O Nest novo precisa subir junto: sem ele, ninguém é parado; com ele e sem o Grupo Z, também ninguém é parado (a consulta falha em silêncio).
 - **Ainda não feito:**
-  - o passo 4 (validação de domínio dos links, RF-015, RF-091);
   - o item 13 (limpar o Supabase, precisa de autorização);
   - o envio de arquivo (grava no Storage pessoal);
   - o `NOT NULL`.
@@ -255,9 +245,9 @@ Na tabela de Atualizações do T3, o botão "Ocultar" (só texto) fica com fonte
 **Como:** um roteiro de auditoria módulo por módulo, rodado em partes, e uma lista de achados antes de corrigir; o Lucas decide o que corrigir e em que ordem.
 
 **Alimenta de uma vez:** o `NOT NULL` (abaixo), a auditoria de Nielsen (grupo "Telas e formulários") e os itens abaixo, levantados em 29-09-2026:
-1. Validação de domínio dos links acadêmicos (`tipo_link.regex`/`dominio` não são consultados por nada). Para o banco: completar `trg_valida_escopo_tipolink`, ignorando tipo com lista de domínios vazia.
-2. Mensagens de erro de validação em inglês ("must be a string") em outros DTOs, como havia no rejeitar campanha.
-3. Pedidos que dão erro sem necessidade (ex.: "Alterar usuário" pede o perfil de pesquisador de quem não é pesquisador e recebe 404).
+1. ~~Validação de domínio dos links acadêmicos.~~ **Feito (29-09-2026, Grupo Z).**
+2. ~~Mensagens de erro de validação em inglês.~~ **Feito (29-09-2026, Grupo Y).**
+3. ~~Pedidos que dão erro sem necessidade (o 404 do perfil de pesquisador).~~ **Feito (29-09-2026, `ehPesquisador`).**
 4. Os RFs marcados 🟡 "não conferido a fundo" na matriz de rastreabilidade: confirmar um por um. **Regra:** o React de hoje é só o painel administrativo; tela do painel nunca prova que um RF do usuário ou do pesquisador está cumprido ou descumprido (ver abaixo).
 5. Telas nunca vistas funcionando ao vivo (links acadêmicos no "Alterar usuário", suspensão na Minha Conta e as da memória da rodada de 24-09).
 6. Campo de Testes com o mesmo comportamento das telas reais (ex.: a justificativa da rejeição era opcional só lá).
@@ -265,10 +255,10 @@ Na tabela de Atualizações do T3, o botão "Ocultar" (só texto) fica com fonte
 8. Celular: todas as telas em tela estreita.
 9. Acessibilidade: axe em todas as telas e uso só com teclado.
 10. Textos: "Termo de Uso" em todo lugar, travessão "—" que escapou, mensagens confusas.
-11. Roteiros de teste que dependem de dado que sumiu (`g5`, `g13`, `g10` usam o admin como pesquisador).
+11. ~~Roteiros de teste que dependem de dado que sumiu.~~ **Feito (29-09-2026): `g5` e `g13` usam a pesquisadora Ana.**
 12. Simular o "modo produção" no PGlite para conferir as recusas de permissão que hoje não aparecem.
 13. Limpar os dados de teste dos roteiros no Supabase (contas "Teste G21", "Campanha E2E"...), com autorização do Lucas.
-14. Padrões que o projeto proíbe e que escaparam (ex.: duas consultas simultâneas na mesma conexão no `termo-uso.service.update.ts`).
+14. ~~Padrões que o projeto proíbe e que escaparam (duas consultas simultâneas na mesma conexão).~~ **Feito (29-09-2026, `emSequencia`).**
 15. Documentação que não bate com a tela.
 
 #### 🟡 Planejado (29-09-2026, "talvez amanhã"): `NOT NULL` nas colunas com valor padrão que aceitam vazio
@@ -279,6 +269,10 @@ Na tabela de Atualizações do T3, o botão "Ocultar" (só texto) fica com fonte
 3. **Testes no código inteiro:** PGlite nos dois modos, compilador e lint do Nest e do React.
 4. **Teste geral de ponta a ponta:** conta nova do zero, upgrade para pesquisador, criar campanha, entrar como admin e aprovar, criar um segundo pesquisador e comentar na campanha, voltar ao primeiro e endossar o comentário, e assim por diante.
 5. Grupo do `ATUALIZAR` com aviso de parar o Nest (é `ALTER TABLE`).
+
+#### 🟡 Para o futuro (29-09-2026): super auditoria de padrões de mercado
+
+Pedido do Lucas: comparar o sistema inteiro com o que os sistemas de referência fazem (login e sessão, termos, moderação, campanha, pagamento, mensagens de erro, telas), para cada diferença dizer qual é o padrão de mercado, o que o projeto faz e se vale mudar. Motivo: citar o padrão de mercado ajuda muito a decidir. Não começar sem pedido; é "bem no futuro".
 
 #### 🟡 Anotado (29-09-2026): dispatcher de triggers
 

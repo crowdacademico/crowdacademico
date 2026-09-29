@@ -20,6 +20,8 @@ export interface UsuarioResponse {
   // Opcional de propósito - só GET /usuario/:id e PATCH resolvem isto de
   // verdade; a listagem (GET /usuario) nunca preenche.
   avatarUrl?: string | null;
+  // Mesma regra de avatarUrl. `false` = a tela nem pede o perfil de pesquisador (seria 404).
+  ehPesquisador?: boolean;
 }
 
 // Espelha usuario.response-login-history.ts.

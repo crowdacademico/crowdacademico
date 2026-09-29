@@ -10,6 +10,10 @@ export interface UsuarioAutenticado {
   // o refresh token é): impossível marcar "sessão atual" na lista ou excluí-la de "encerrar todas as outras"
   // sem carregar esse dado no próprio token.
   idSessao: number;
+  // Vem do claim `tp` do JWT (RF-015): a conta ainda não aceitou a versão vigente do Termo de Uso. Calculado no
+  // login e em cada renovação (a cada ~15 min), então uma versão nova chega a quem já está logado na próxima
+  // renovação, sem consulta ao banco a cada clique.
+  termoPendente: boolean;
 }
 
 declare global {

@@ -3,6 +3,7 @@ import { Navigate, Outlet, useLocation } from 'react-router';
 import { BuscaGlobal } from '../../components/layout/cabecalho/busca-global';
 import { LimiteErro } from '../../components/layout/limite-erro';
 import { AdminSidebar } from './admin-sidebar';
+import { TelaAceiteTermoUso } from '../5-termo-uso/tela-aceite-termo-uso';
 import { registrarAcesso } from '../../services/router/acessados-recentemente';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 
@@ -39,6 +40,10 @@ export function AdminLayout({ auth }: AdminLayoutProps) {
   }
   if (!auth.usuario) {
     return <Navigate to="/login" replace state={{ voltarPara: local.pathname + local.search }} />;
+  }
+  // RF-015: versão nova do Termo de Uso ainda não aceita; o painel volta sozinho depois do aceite.
+  if (auth.aceitePendente) {
+    return <TelaAceiteTermoUso auth={auth} />;
   }
 
   return (
