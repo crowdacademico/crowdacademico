@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { distinguir404ou403 } from '../../commons/database/distinguir-404-ou-403.util';
 import { DatabaseService } from '../../commons/database/database.service';
 import { LINK_ACADEMICO_COLUNAS_SELECT } from '../constants/link-academico.constants';
@@ -14,14 +14,19 @@ export class LinkAcademicoServiceUpdate {
     id: number,
     dto: LinkAcademicoRequestUpdate,
   ): Promise<LinkAcademicoResponse> {
+    const campos = {
+      ...(dto.url !== undefined ? { url: dto.url } : {}),
+      ...(dto.rotulo !== undefined ? { rotulo: dto.rotulo } : {}),
+      ...(dto.ordem !== undefined ? { ordem: dto.ordem } : {}),
+    };
+    if (Object.keys(campos).length === 0) {
+      throw new BadRequestException('Nenhum campo para atualizar.');
+    }
+
     const linha = await this.database
       .getDb()
       .updateTable('link_academico')
-      .set({
-        url: dto.url,
-        rotulo: dto.rotulo ?? null,
-        ordem: dto.ordem ?? null,
-      })
+      .set(campos)
       .where('id_link_academico', '=', id)
       .returning(LINK_ACADEMICO_COLUNAS_SELECT)
       .executeTakeFirst();

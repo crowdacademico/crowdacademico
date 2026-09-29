@@ -322,10 +322,15 @@ CREATE TABLE usuario_papel (  -- fica aqui por depender de usuario; documentada 
     -- preserva o histórico (quando o papel foi atribuído) e volta sozinho no prazo, sem reatribuir
     -- manualmente. tem_permissao() (03, [03-B]) ignora papel com suspenso_ate no futuro.
     suspenso_ate TIMESTAMPTZ,
+    -- Motivo e quem suspendeu (RF-118): mesmo padrão de usuario.suspenso_ate/motivo_suspensao/suspenso_por.
+    motivo_suspensao TEXT,
+    suspenso_por     INT,
 
     CONSTRAINT "PK_USUARIO_PAPEL" PRIMARY KEY (id_usuario, id_papel),
     CONSTRAINT "FK_USUARIO_PAPEL_USUARIO" FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE CASCADE,
-    CONSTRAINT "FK_USUARIO_PAPEL_PAPEL" FOREIGN KEY (id_papel) REFERENCES papel(id_papel) ON DELETE CASCADE
+    CONSTRAINT "FK_USUARIO_PAPEL_PAPEL" FOREIGN KEY (id_papel) REFERENCES papel(id_papel) ON DELETE CASCADE,
+    CONSTRAINT "FK_USUARIO_PAPEL_SUSPENSO_POR" FOREIGN KEY (suspenso_por) REFERENCES usuario(id_usuario),
+    CONSTRAINT "CK_USUARIO_PAPEL_SUSPENSAO" CHECK ((suspenso_ate IS NULL) = (motivo_suspensao IS NULL))
 );
 
 CREATE TABLE perfil_pesquisador (
@@ -660,7 +665,9 @@ CREATE TABLE comentario (
     CONSTRAINT "FK_COMENTARIO_PESQUISADOR" FOREIGN KEY (id_pesquisador) REFERENCES perfil_pesquisador(id_usuario) ON DELETE SET NULL,
     CONSTRAINT "UK_COMENTARIO_CAMPANHA_PESQUISADOR" UNIQUE (id_campanha, id_pesquisador),
     CONSTRAINT "CK_COMENTARIO_ENDOSSO"
-        CHECK ((endossado = TRUE AND ordem_endosso IS NOT NULL) OR (endossado = FALSE AND ordem_endosso IS NULL))
+        CHECK ((endossado = TRUE AND ordem_endosso IS NOT NULL) OR (endossado = FALSE AND ordem_endosso IS NULL)),
+    -- Só espaço não é comentário: cada pesquisador comenta uma vez por campanha, e um texto vazio gastaria a vaga.
+    CONSTRAINT "CK_COMENTARIO_CONTEUDO_NAO_VAZIO" CHECK (btrim(conteudo) <> '')
 );
 
 CREATE TABLE denuncia (

@@ -90,7 +90,7 @@ export function CadastroPage({ auth }: PropsPagina) {
     email: email.trim() === '' ? 'Informe o e-mail.' : !emailValido && 'E-mail inválido.',
     senha: senha.length < 8 && 'A senha precisa ter pelo menos 8 caracteres.',
     confirmar: confirmarSenha === '' ? 'Confirme a senha.' : !senhasIguais && 'As senhas não são iguais.',
-    termos: !aceiteTermos && 'É preciso aceitar os Termos de Uso para criar a conta.',
+    termos: !aceiteTermos && 'É preciso aceitar o Termo de Uso para criar a conta.',
   }));
 
   const aoCadastrar = async (evento: FormEvent<HTMLFormElement>) => {
@@ -293,7 +293,7 @@ export function CadastroPage({ auth }: PropsPagina) {
                   onClick={abrirTermos}
                   className="texto-marca font-bold underline"
                 >
-                  Termos de Uso
+                  Termo de Uso
                 </button>
                 .
               </span>
@@ -347,7 +347,7 @@ export function CadastroPage({ auth }: PropsPagina) {
           >
             <div className="px-6 py-4 border-b borda-padrao flex items-center justify-between shrink-0">
               <div>
-                <h2 id={idTituloTermo} className="font-sans font-bold texto-forte">Termos de Uso</h2>
+                <h2 id={idTituloTermo} className="font-sans font-bold texto-forte">Termo de Uso</h2>
                 {termo && <p className="text-xs texto-fraco">Versão {termo.versao}</p>}
               </div>
               <button

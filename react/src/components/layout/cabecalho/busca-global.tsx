@@ -31,7 +31,7 @@ interface DadosCatalogos {
 
 // Derivado de ROTAS_ADMIN, não uma lista à mão (uma cópia manual das abas podia desalinhar, mesmo problema que
 // ROTAS_ADMIN/GRUPOS_MENU_ADMIN já resolveram para o menu lateral). Só entram rotas com rótulo de menu: as de
-// detalhe (Minha Conta, Publicar Termos de Uso) não têm nome e apareceriam como itens só com bolinha. O ícone é
+// detalhe (Minha Conta, Publicar Termo de Uso) não têm nome e apareceriam como itens só com bolinha. O ícone é
 // o MESMO do menu lateral (rota.icone).
 const NAVEGACAO: ResultadoBusca[] = ROTAS_ADMIN.filter((rota) => rota.rotuloMenu !== undefined).map((rota) => ({
   categoria: 'Navegação',

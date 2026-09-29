@@ -1,4 +1,8 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+} from '@nestjs/common';
 import { distinguir404ou403 } from '../../commons/database/distinguir-404-ou-403.util';
 import { DatabaseService } from '../../commons/database/database.service';
 import { TermoUsoRequestUpdate } from '../dto/request/termo-uso.request-update';
@@ -22,20 +26,22 @@ export class TermoUsoServiceUpdate {
     id: number,
     dto: TermoUsoRequestUpdate,
   ): Promise<TermoUsoResponse> {
-    const [aceiteGeral, aceiteContribuicao] = await Promise.all([
-      this.database
-        .getDb()
-        .selectFrom('usuario_termo')
-        .select('id_usuario_termo')
-        .where('id_termo', '=', id)
-        .executeTakeFirst(),
-      this.database
-        .getDb()
-        .selectFrom('aceite_termo_contribuicao')
-        .select('id_aceite_contrib')
-        .where('id_termo', '=', id)
-        .executeTakeFirst(),
-    ]);
+    if (dto.conteudo === undefined) {
+      throw new BadRequestException('Nenhum campo para atualizar.');
+    }
+
+    // Uma consulta depois da outra, não Promise.all: é uma conexão só por requisição (paginacao.util.ts).
+    const db = this.database.getDb();
+    const aceiteGeral = await db
+      .selectFrom('usuario_termo')
+      .select('id_usuario_termo')
+      .where('id_termo', '=', id)
+      .executeTakeFirst();
+    const aceiteContribuicao = await db
+      .selectFrom('aceite_termo_contribuicao')
+      .select('id_aceite_contrib')
+      .where('id_termo', '=', id)
+      .executeTakeFirst();
 
     if (aceiteGeral || aceiteContribuicao) {
       throw new ConflictException(
@@ -43,12 +49,9 @@ export class TermoUsoServiceUpdate {
       );
     }
 
-    const linha = await this.database
-      .getDb()
+    const linha = await db
       .updateTable('termos_de_uso')
-      .set({
-        ...(dto.conteudo !== undefined ? { conteudo: dto.conteudo } : {}),
-      })
+      .set({ conteudo: dto.conteudo })
       .where('id_termo', '=', id)
       .returningAll()
       .executeTakeFirst();
@@ -63,7 +66,7 @@ export class TermoUsoServiceUpdate {
         this.database.getDb(),
         'termos_de_uso',
         { id_termo: id },
-        'Versão de Termos de Uso não encontrada.',
+        'Versão do Termo de Uso não encontrada.',
         "Sem permissão 'termos_uso_gerenciar' para alterar esta versão.",
       );
     }

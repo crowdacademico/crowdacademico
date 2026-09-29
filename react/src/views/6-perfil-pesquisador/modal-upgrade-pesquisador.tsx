@@ -122,7 +122,7 @@ export function ModalUpgradePesquisador({
     <ModalFicha
       titulo={
         etapa === 'termo'
-          ? 'Upgrade de Perfil - Termos de Uso'
+          ? 'Upgrade de Perfil - Termo de Uso'
           : 'Upgrade de Perfil - Dados de Pesquisador'
       }
       aoFechar={aoFechar}
@@ -156,7 +156,7 @@ export function ModalUpgradePesquisador({
           <Carregando className="text-center py-6" />
         ) : termoIndisponivel || !termo ? (
           <p className="text-sm texto-erro text-center py-6">
-            Termos de Uso deste tipo ainda não foram publicados. Peça a um administrador para
+            O Termo de Uso deste tipo ainda não foi publicado. Peça a um administrador para
             publicar e tornar vigente em Regras do Negócio.
           </p>
         ) : (
@@ -170,7 +170,7 @@ export function ModalUpgradePesquisador({
                 checked={aceitou}
                 onChange={(evento) => setAceitou(evento.target.checked)}
               />
-              Li e aceito os Termos de Uso acima.
+              Li e aceito o Termo de Uso acima.
             </label>
           </>
         )

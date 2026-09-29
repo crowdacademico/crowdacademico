@@ -952,3 +952,54 @@ CSS puro (`:hover`/`:focus`/`:focus-visible`), sem estado de React na bolha em s
 - **`baixo`** - abre a dica pra BAIXO em vez de pra cima (padrão). **Todo controle do cabeçalho (A-, A+, tema, sino) usa `baixo`:** o cabeçalho fica colado no topo da janela, e a bolha padrão (pra cima) nascia a y = -20px, fora da tela. Usar quando o ícone fica perto do topo de um cartão com `overflow-hidden` (ex.: cabeçalho de grupo em `dashboard-regras-negocio.tsx`) - a dica padrão nascia cortada pela borda arredondada do cartão.
 - **`aoClicar`** - o ícone vira um `<button>` clicável (cursor de ponteiro em vez de "?"); o hover continua mostrando só `texto` (curto, tipo "Saiba mais"), e o clique dispara a função passada - normalmente pra abrir um `ModalDetalhe` com a explicação completa em seções/parágrafos, em vez de um bloco de texto só dentro do balão do tooltip.
 - **`badge`** - selo circular escuro sobreposto (não um ícone solto flutuando do lado), mesmo padrão visual de "editar foto" do Instagram/LinkedIn - usado em `modal-usuario.tsx` (`ModalConsultarUsuario`, módulo 1, seção 16) no canto inferior direito do avatar, abrindo a foto de perfil em outra guia.
+
+## 18. Correções da super auditoria (29-09-2026)
+
+**Em palavras simples:** mudanças nas telas por causa da super auditoria (o relatório dela fica na pasta de informações, fora do repositório).
+
+📌 **Trocar senha: a nova precisa ser diferente da atual.**
+- **Decisão:** em Minha Conta > Segurança, o erro aparece embaixo do campo antes de enviar. O backend confere de novo.
+- **Motivo:** pedido do Lucas, junto com a correção do RF-008.
+- **Caso-limite aceito:** nenhum.
+
+📌 **Papel suspenso aparece para a própria pessoa.**
+- **Decisão:** em Minha Conta > Papéis, o papel suspenso fica amarelo, com "suspenso até DD/MM/AAAA HH:MM".
+- **Motivo:** antes, a pessoa só descobria a suspensão tentando algo e sendo barrada.
+- **Caso-limite aceito:** nenhum.
+
+📌 **Suspender papel pede motivo, e os prazos vêm dos parâmetros.**
+- **Decisão:** no "Alterar usuário", suspender um papel mostra o campo de motivo. Os prazos vêm de `useOpcoesDiasSuspensao()` (`services/constant/hook/use-opcoes-dias-suspensao.ts`), a mesma lista da suspensão de conta (`suspensao_usuario_opcoes_dias`). Antes eram 1, 7 e 30 fixos no código.
+- **Motivo:** RF-118, e a regra do projeto de não ter valor fixo no código.
+- **Caso-limite aceito:** nenhum.
+
+📌 **Foto que não carrega vira a inicial.**
+- **Decisão:** `AvatarUsuario` troca para a inicial colorida quando a imagem falha (`onError`).
+- **Motivo:** foto apagada do Storage mostrava o ícone de imagem quebrada com o nome escrito por cima dos botões.
+- **Caso-limite aceito:** a troca é lembrada só para aquela URL. Uma foto nova tenta carregar de novo.
+
+📌 **Teclado: "Pular para o conteúdo" e a ordem do login.**
+- **Decisão:** `layout.tsx` ganhou o atalho "Pular para o conteúdo" como primeiro Tab da página. Ele fica invisível até receber o foco e leva à área marcada com `data-conteudo-principal` (no painel, a área ao lado do menu). No login, o campo de senha vem logo depois do e-mail na ordem do Tab. O link "Esqueceu a senha?" continua no mesmo lugar visual, por `order`.
+- **Motivo:** eram 34 Tabs até o primeiro botão de uma tabela, e no login o Tab passava por "Esqueceu a senha?" antes da senha.
+- **Caso-limite aceito:** nenhum.
+
+📌 **"Termo de Uso" no singular.**
+- **Decisão:** todos os textos de tela e mensagens do backend usam "Termo de Uso", inclusive o menu e o título "Publicar Termo de Uso". A seção do usuário virou "Aceites do Termo de Uso".
+- **Motivo:** o V8 padronizou o nome no singular (está no resumo das mudanças do V8, e todo RF e RNF que cita o termo usa "Termo de Uso").
+- **Caso-limite aceito:** nomes técnicos continuam como estão (`termos_de_uso`, `/termos-uso`).
+
+📌 **Editar link acadêmico não apaga mais a ordem.**
+- **Decisão:** o "Alterar usuário" manda `url` e `rotulo` (o rótulo apagado vai como `null`), e a ordem fica como estava.
+- **Motivo:** antes, o backend gravava a ordem como vazia em toda edição.
+- **Caso-limite aceito:** nenhum.
+
+📌 **Exportar meus dados ligado ao backend, mensagens de erro e celular.**
+- **Decisão:**
+  - Minha Conta > Privacidade > Exportar baixa o pacote de `GET /usuario/eu/exportar-dados` como arquivo JSON (uma vez por hora, limite do backend).
+  - Várias mensagens do backend são juntadas com espaço, e não com vírgula colada.
+  - O erro "Senha atual incorreta" também aparece embaixo do campo.
+  - O rodapé de paginação quebra linha no celular.
+- **Motivo:**
+  - a tela dizia "ainda não implementado", mas o backend já fazia a exportação;
+  - "CPF inválido.,Nome da..." era difícil de ler;
+  - o rodapé sem quebra de linha fazia a página passar 5px da largura em 375px.
+- **Caso-limite aceito:** nenhum.

@@ -29,7 +29,7 @@ export class TermoUsoServiceActivate {
       .executeTakeFirst();
 
     if (!alvo) {
-      throw new NotFoundException('Versão de Termos de Uso não encontrada.');
+      throw new NotFoundException('Versão do Termo de Uso não encontrada.');
     }
 
     await this.database

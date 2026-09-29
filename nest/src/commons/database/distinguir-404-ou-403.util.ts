@@ -49,6 +49,22 @@ export async function distinguir404ou403<TB extends keyof DB>(
   throw new ForbiddenException(mensagemProibido);
 }
 
+// Para ação feita por função do banco que não diz se achou o registro (devolve VOID): chamar DEPOIS da função,
+// que já recusou com 403 quem não tem permissão. Se o registro não existe, 404 em vez de um "deu certo" falso.
+export async function exigirQueExista<TB extends keyof DB>(
+  db: Kysely<DB>,
+  tabela: TB,
+  filtro: Filtro<TB>,
+  mensagemNaoEncontrado: string,
+): Promise<void> {
+  const resultado = await sql<{ existe: number }>`
+    SELECT 1 AS existe FROM ${sql.table(tabela)} WHERE ${condicoesDoFiltro(filtro)} LIMIT 1
+  `.execute(db);
+  if (resultado.rows.length === 0) {
+    throw new NotFoundException(mensagemNaoEncontrado);
+  }
+}
+
 // DELETE pelo filtro e, se nada foi apagado, 404 ou 403 (distinguir404ou403): o "excluir" inteiro de um registro
 // que nada mais referencia. Registro que outras tabelas podem estar usando vai por excluirComContagemDeUso, que
 // também diz onde está em uso.

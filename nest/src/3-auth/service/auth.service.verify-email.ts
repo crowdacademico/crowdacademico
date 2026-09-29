@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { sql } from 'kysely';
 import { DatabaseService } from '../../commons/database/database.service';
 import { hashTokenVerificacaoEmail } from '../util/auth.util.email-verification-token';
@@ -20,8 +20,9 @@ export class AuthServiceVerifyEmail {
     );
 
     const confirmou = resultado.rows[0]?.confirmar_email_por_token === true;
+    // 400, não 401: a pessoa não está "sem login", o link é que não serve (401 faria a tela tentar renovar sessão).
     if (!confirmou) {
-      throw new UnauthorizedException(
+      throw new BadRequestException(
         'Link de verificação inválido, expirado ou já usado.',
       );
     }

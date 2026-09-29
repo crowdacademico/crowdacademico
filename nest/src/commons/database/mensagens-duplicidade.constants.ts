@@ -44,7 +44,7 @@ export const DUPLICIDADE_POR_INDICE_UNICO: Readonly<
   UK_TERMOS_DE_USO_TIPO_VERSAO: {
     campo: 'versao',
     mensagem:
-      'Já existe uma versão de Termos de Uso com esse código neste tipo.',
+      'Já existe uma versão do Termo de Uso com esse código neste tipo.',
   },
   UK_PAPEL_NOME: {
     campo: 'nome',

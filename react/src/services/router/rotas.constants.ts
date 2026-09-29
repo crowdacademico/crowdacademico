@@ -35,7 +35,7 @@ import { CriarTermoUso } from '../../views/5-termo-uso/criar-termo-uso';
 // dela).
 //
 // `paiCaminho`: só nas rotas de detalhe: o `caminho` absoluto da listagem "dona" delas, para o breadcrumb montar
-// a cadeia completa (Início > Termos de Uso > Publicar Termos de Uso), não só o último nível.
+// a cadeia completa (Início > Termo de Uso > Publicar Termo de Uso), não só o último nível.
 //
 // grupoMenu diz a admin-menu.constants em qual grupo do menu lateral o item entra: `null` = fora de qualquer
 // grupo (item solo, sem título de seção acima dele); ausente (undefined) = nem aparece no menu (rotas de
@@ -105,7 +105,7 @@ export const ROTAS_ADMIN: Rota[] = [
     grupoMenu: 'CADASTROS',
     icone: 'fa-user-shield',
   },
-  // Termos de Uso (módulo 5-termo-uso): mesmo grupo de Parâmetros do Sistema (CONFIGURACOES): é
+  // Termo de Uso (módulo 5-termo-uso): mesmo grupo de Parâmetros do Sistema (CONFIGURACOES): é
   // configuração/documento do sistema, não caso individual de moderação nem cadastro sobre "quem é o usuário".
   // Fica ACIMA de Parâmetros do Sistema de propósito: `itensDoGrupo` (admin-menu.constants) preserva a ORDEM
   // deste array, então a posição aqui decide a posição no menu.
@@ -113,8 +113,8 @@ export const ROTAS_ADMIN: Rota[] = [
     caminho: '/admin/termos-uso',
     caminhoRelativo: 'termos-uso',
     elemento: ListarTermosUso,
-    rotuloMenu: 'Termos de Uso',
-    rotuloBreadcrumb: 'Termos de Uso',
+    rotuloMenu: 'Termo de Uso',
+    rotuloBreadcrumb: 'Termo de Uso',
     grupoMenu: 'CONFIGURACOES',
     icone: 'fa-file-contract',
   },
@@ -222,13 +222,13 @@ export const ROTAS_ADMIN: Rota[] = [
   // Parâmetro do Sistema, Área de Conhecimento, Tipo de Link e Motivo de Denúncia; Alterar de Papel; Consultar
   // de Campanha e de Pesquisador; Consultar e Alterar de Termo de Uso (ModalAlterarTermoUso).
 
-  // Termos de Uso: filhas de /admin/termos-uso. Sem Excluir de propósito (nenhuma versão pode desaparecer:
+  // Termo de Uso: filhas de /admin/termos-uso. Sem Excluir de propósito (nenhuma versão pode desaparecer:
   // rastro de auditoria).
   {
     caminho: '/admin/termos-uso/criar',
     caminhoRelativo: 'termos-uso/criar',
     elemento: CriarTermoUso,
-    rotuloBreadcrumb: 'Publicar Termos de Uso',
+    rotuloBreadcrumb: 'Publicar Termo de Uso',
     paiCaminho: '/admin/termos-uso',
   },
 

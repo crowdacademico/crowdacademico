@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 const PALETA_AVATAR: string[] = [
   'var(--cor-avatar-1)',
   'var(--cor-avatar-2)',
@@ -56,12 +58,16 @@ export function AvatarUsuario({ nome, foto, tamanho = 'md', forma = 'circulo' }:
   const classeTamanho = CLASSE_TAMANHO[tamanho];
   const classeForma = CLASSE_FORMA[forma];
   const nomeSeguro = nome?.trim() || '?';
+  // Foto que não carrega (arquivo apagado do armazenamento, link quebrado) cai na inicial, em vez de mostrar o
+  // ícone de imagem quebrada com o nome por cima. Guarda QUAL foto falhou: trocar de foto tenta de novo.
+  const [fotoQuebrada, setFotoQuebrada] = useState<string | null>(null);
 
-  if (foto) {
+  if (foto && foto !== fotoQuebrada) {
     return (
       <img
         src={foto}
         alt={nomeSeguro}
+        onError={() => setFotoQuebrada(foto)}
         className={classeTamanho + ' ' + classeForma + ' object-cover shrink-0'}
       />
     );

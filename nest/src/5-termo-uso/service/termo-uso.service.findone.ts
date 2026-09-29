@@ -18,7 +18,7 @@ export class TermoUsoServiceFindOne {
 
     if (!linha) {
       throw new NotFoundException(
-        `Versão de Termos de Uso ${id} não encontrada.`,
+        `Versão do Termo de Uso ${id} não encontrada.`,
       );
     }
 

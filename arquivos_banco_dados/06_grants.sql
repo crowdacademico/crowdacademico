@@ -182,7 +182,9 @@ REVOKE EXECUTE ON FUNCTION public.forcar_exclusao_campanha(INT) FROM PUBLIC;
 -- suspender_usuario / revogar_suspensao_usuario / suspender_papel_usuario / revogar_suspensao_papel_usuario: ver [03-N].
 REVOKE EXECUTE ON FUNCTION public.suspender_usuario(INT, TIMESTAMPTZ, TEXT)         FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.revogar_suspensao_usuario(INT)                    FROM PUBLIC;
-REVOKE EXECUTE ON FUNCTION public.suspender_papel_usuario(INT, INT, TIMESTAMPTZ)    FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.suspender_papel_usuario(INT, INT, TIMESTAMPTZ, TEXT) FROM PUBLIC;
+-- fn_eh_ultimo_admin_ativo: usada dentro das funções acima e da trigger de usuario_papel (roda como quem apaga).
+REVOKE EXECUTE ON FUNCTION public.fn_eh_ultimo_admin_ativo(INT)                   FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.revogar_suspensao_papel_usuario(INT, INT)         FROM PUBLIC;
 -- registrar_exportacao_dados(INT): ver [03-O].
 REVOKE EXECUTE ON FUNCTION public.registrar_exportacao_dados(INT)                   FROM PUBLIC;
@@ -202,7 +204,8 @@ GRANT EXECUTE ON FUNCTION public.criar_campanha_para_outro(INT, INT, TEXT, model
 GRANT EXECUTE ON FUNCTION public.forcar_exclusao_campanha(INT) TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.suspender_usuario(INT, TIMESTAMPTZ, TEXT)      TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.revogar_suspensao_usuario(INT)                 TO app_nestjs;
-GRANT EXECUTE ON FUNCTION public.suspender_papel_usuario(INT, INT, TIMESTAMPTZ) TO app_nestjs;
+GRANT EXECUTE ON FUNCTION public.suspender_papel_usuario(INT, INT, TIMESTAMPTZ, TEXT) TO app_nestjs;
+GRANT EXECUTE ON FUNCTION public.fn_eh_ultimo_admin_ativo(INT)                  TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.revogar_suspensao_papel_usuario(INT, INT)      TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.registrar_exportacao_dados(INT)               TO app_nestjs;
 -- usuario_termo sem UPDATE: é registro de aceite de termo, nunca deveria ser editável depois de criado (não há
@@ -291,6 +294,9 @@ REVOKE EXECUTE ON FUNCTION public.fn_campanha_campos_bloqueados(public.campanha)
 GRANT EXECUTE ON FUNCTION public.fn_campanha_campos_bloqueados(public.campanha) TO app_nestjs;
 REVOKE EXECUTE ON FUNCTION public.fn_campanha_erro_congelamento(TEXT, BOOLEAN) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.fn_campanha_erro_congelamento(TEXT, BOOLEAN) TO app_nestjs;
+-- fn_usuario_excluido: chamada pela trigger de transição de campanha (roda como quem escreve).
+REVOKE EXECUTE ON FUNCTION public.fn_usuario_excluido(INT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.fn_usuario_excluido(INT) TO app_nestjs;
 -- seguir_campanha sem UPDATE: só existe inserir/apagar "seguir campanha", não faz sentido "editar" essa linha
 -- (não há policy de UPDATE).
 GRANT INSERT, DELETE ON seguir_campanha TO app_nestjs;

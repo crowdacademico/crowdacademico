@@ -350,6 +350,10 @@ $$;
 --             Via de mão única de propósito: não existe função para reverter. O próprio usuário exclui a própria
 --             conta sem permissão nenhuma; quem tem usuario_excluir (só o admin, auto-atribuída por
 --             trg_admin_recebe_toda_permissao) exclui a de outra pessoa.
+--             Campanhas da conta (RF-016): com campanha ATIVA a exclusão é recusada (91031); rascunho e campanha
+--             aguardando aprovação que nunca foi avaliada somem junto; a que aguarda por REENVIO de uma rejeitada
+--             volta a 'rejeitado' e segue o caminho normal da rejeição (o histórico dela fica). O resto (sucesso,
+--             não atingido, encerrada, rejeitada) fica como está. O último admin ativo não pode ser excluído (91030).
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.excluir_conta_usuario(p_id_usuario INT)
 RETURNS VOID
@@ -363,6 +367,13 @@ BEGIN
     IF NOT (p_id_usuario = public.id_usuario_atual() OR public.tem_permissao('usuario_excluir')) THEN
         RAISE EXCEPTION 'Sem permissão para excluir a conta de outro usuário.' USING ERRCODE = '92013';
     END IF;
+    IF public.fn_eh_ultimo_admin_ativo(p_id_usuario) THEN
+        RAISE EXCEPTION 'Não é possível excluir a conta do último administrador ativo do sistema.' USING ERRCODE = '91030';
+    END IF;
+    IF EXISTS (SELECT 1 FROM campanha WHERE id_usuario = p_id_usuario AND status = 'ativo') THEN
+        RAISE EXCEPTION 'Não é possível excluir a conta enquanto houver campanha ativa. A exclusão fica liberada quando a campanha terminar.'
+            USING ERRCODE = '91031';
+    END IF;
 
     SELECT id_imagem_perfil INTO v_id_imagem_perfil
     FROM usuario WHERE id_usuario = p_id_usuario;
@@ -370,6 +381,24 @@ BEGIN
     UPDATE usuario
     SET deletado = TRUE, deletado_em = NOW(), deletado_por = public.id_usuario_atual()
     WHERE id_usuario = p_id_usuario;
+
+    DELETE FROM campanha c
+    WHERE c.id_usuario = p_id_usuario
+      AND (c.status = 'rascunho'
+           OR (c.status = 'aguardando_aprovacao'
+               AND NOT EXISTS (SELECT 1 FROM historico_rejeicao h WHERE h.id_campanha = c.id_campanha)));
+
+    -- A volta a 'rejeitado' pede linha em historico_rejeicao na mesma transação (trg_campanha_exige_historico_rejeicao,
+    -- 05); id_admin NULL porque ninguém da moderação rejeitou.
+    WITH devolvidas AS (
+        UPDATE campanha SET status = 'rejeitado'
+        WHERE id_usuario = p_id_usuario AND status = 'aguardando_aprovacao'
+        RETURNING id_campanha, id_usuario, titulo
+    )
+    INSERT INTO historico_rejeicao (id_campanha, id_usuario_dono, titulo_campanha, id_admin, justificativa)
+    SELECT id_campanha, id_usuario, titulo, NULL,
+           'Reenvio cancelado: o pesquisador excluiu a própria conta.'
+    FROM devolvidas;
 
     -- Desativa a foto de
     -- perfil vinculada na mesma transação - sem isto, a linha em `arquivo`
@@ -422,6 +451,9 @@ BEGIN
     END IF;
     IF p_motivo IS NULL OR btrim(p_motivo) = '' THEN
         RAISE EXCEPTION 'Motivo da suspensão é obrigatório.' USING ERRCODE = '90020';
+    END IF;
+    IF p_ate IS NULL OR p_ate <= NOW() THEN
+        RAISE EXCEPTION 'A data final da suspensão precisa estar no futuro.' USING ERRCODE = '90023';
     END IF;
 
     UPDATE perfil_pesquisador
@@ -637,6 +669,34 @@ BEGIN
 END;
 $$;
 
+-- ----------------------------------------------------------------------------
+-- Função:     fn_eh_ultimo_admin_ativo
+-- Assinatura: (p_id_usuario INT) -> BOOLEAN
+-- Bloco:      [03-N]
+-- Regra:      TRUE quando a conta é a ÚNICA com o papel admin valendo agora (papel não suspenso, conta não excluída
+--             nem suspensa). Suspender, excluir ou tirar o papel dessa conta deixaria o sistema sem nenhum admin,
+--             sem caminho pela tela para desfazer: quem chama recusa com 91030.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_eh_ultimo_admin_ativo(p_id_usuario INT)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    WITH admins AS (
+        SELECT up.id_usuario
+        FROM usuario_papel up
+        JOIN papel p ON p.id_papel = up.id_papel AND p.codigo = 'admin'
+        JOIN usuario u ON u.id_usuario = up.id_usuario
+        WHERE (up.suspenso_ate IS NULL OR up.suspenso_ate <= NOW())
+          AND u.deletado IS NOT TRUE
+          AND (u.suspenso_ate IS NULL OR u.suspenso_ate <= NOW())
+    )
+    SELECT EXISTS (SELECT 1 FROM admins WHERE id_usuario = p_id_usuario)
+       AND NOT EXISTS (SELECT 1 FROM admins WHERE id_usuario <> p_id_usuario);
+$$;
+
 -- ============================================================
 -- Função:     suspender_usuario
 -- Assinatura: (p_id_usuario INT, p_ate TIMESTAMPTZ, p_motivo TEXT) -> VOID
@@ -644,7 +704,8 @@ $$;
 -- Regra:      Exige 'usuario_suspender' (mesma permissão de suspender_pesquisador, [03-P]: mesma categoria de ação
 --             administrativa). Motivo OBRIGATÓRIO (RAISE EXCEPTION se vazio): reforça em código o
 --             CK_USUARIO_SUSPENSAO (01) com uma mensagem melhor que o erro cru de CHECK. "Reduzir a pena" usa esta
---             MESMA função de novo, com uma p_ate mais próxima: suspender de novo já sobrescreve.
+--             MESMA função de novo, com uma p_ate mais próxima: suspender de novo já sobrescreve. A data final
+--             precisa estar no futuro (90023); ninguém suspende a própria conta (92027) nem o último admin (91030).
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.suspender_usuario(p_id_usuario INT, p_ate TIMESTAMPTZ, p_motivo TEXT)
 RETURNS VOID
@@ -658,6 +719,15 @@ BEGIN
     END IF;
     IF p_motivo IS NULL OR btrim(p_motivo) = '' THEN
         RAISE EXCEPTION 'Motivo da suspensão é obrigatório.' USING ERRCODE = '90020';
+    END IF;
+    IF p_ate IS NULL OR p_ate <= NOW() THEN
+        RAISE EXCEPTION 'A data final da suspensão precisa estar no futuro.' USING ERRCODE = '90023';
+    END IF;
+    IF p_id_usuario = public.id_usuario_atual() THEN
+        RAISE EXCEPTION 'Você não pode suspender a sua própria conta.' USING ERRCODE = '92027';
+    END IF;
+    IF public.fn_eh_ultimo_admin_ativo(p_id_usuario) THEN
+        RAISE EXCEPTION 'Não é possível suspender o último administrador ativo do sistema.' USING ERRCODE = '91030';
     END IF;
 
     UPDATE usuario
@@ -697,15 +767,17 @@ $$;
 
 -- ----------------------------------------------------------------------------
 -- Função:     suspender_papel_usuario / revogar_suspensao_papel_usuario
--- Assinatura: (p_id_usuario INT, p_id_papel INT, p_ate TIMESTAMPTZ) -> VOID /
+-- Assinatura: (p_id_usuario INT, p_id_papel INT, p_ate TIMESTAMPTZ, p_motivo TEXT) -> VOID /
 --             (p_id_usuario INT, p_id_papel INT) -> VOID
 -- Bloco:      [03-N]
 -- Regra:      Exige 'papel_gerenciar' (não 'usuario_suspender'): suspender UM papel é decisão de RBAC (o que aquela
 --             pessoa pode fazer), não de moderação de conta inteira; mesma permissão que governa a matriz Papel x
 --             Permissão. Preferível a REMOVER o vínculo porque preserva quando foi atribuído e volta sozinho no
---             prazo; tem_permissao() ([03-B]) ignora papel com suspenso_ate no futuro.
+--             prazo; tem_permissao() ([03-B]) ignora papel com suspenso_ate no futuro. Motivo obrigatório e quem
+--             suspendeu ficam gravados (RF-118, mesmo padrão da suspensão da conta); data no futuro (90023); o papel
+--             admin do último admin ativo não pode ser suspenso (91030).
 -- ----------------------------------------------------------------------------
-CREATE OR REPLACE FUNCTION public.suspender_papel_usuario(p_id_usuario INT, p_id_papel INT, p_ate TIMESTAMPTZ)
+CREATE OR REPLACE FUNCTION public.suspender_papel_usuario(p_id_usuario INT, p_id_papel INT, p_ate TIMESTAMPTZ, p_motivo TEXT)
 RETURNS VOID
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -715,9 +787,21 @@ BEGIN
     IF NOT public.tem_permissao('papel_gerenciar') THEN
         RAISE EXCEPTION 'Sem permissão para suspender papel de usuário.' USING ERRCODE = '92022';
     END IF;
+    IF p_motivo IS NULL OR btrim(p_motivo) = '' THEN
+        RAISE EXCEPTION 'Motivo da suspensão é obrigatório.' USING ERRCODE = '90020';
+    END IF;
+    IF p_ate IS NULL OR p_ate <= NOW() THEN
+        RAISE EXCEPTION 'A data final da suspensão precisa estar no futuro.' USING ERRCODE = '90023';
+    END IF;
+    IF EXISTS (SELECT 1 FROM papel WHERE id_papel = p_id_papel AND codigo = 'admin')
+       AND public.fn_eh_ultimo_admin_ativo(p_id_usuario) THEN
+        RAISE EXCEPTION 'Não é possível suspender o papel do último administrador ativo do sistema.' USING ERRCODE = '91030';
+    END IF;
 
     UPDATE usuario_papel
-    SET suspenso_ate = p_ate
+    SET suspenso_ate = p_ate,
+        motivo_suspensao = p_motivo,
+        suspenso_por = public.id_usuario_atual()
     WHERE id_usuario = p_id_usuario AND id_papel = p_id_papel;
 END;
 $$;
@@ -734,7 +818,9 @@ BEGIN
     END IF;
 
     UPDATE usuario_papel
-    SET suspenso_ate = NULL
+    SET suspenso_ate = NULL,
+        motivo_suspensao = NULL,
+        suspenso_por = NULL
     WHERE id_usuario = p_id_usuario AND id_papel = p_id_papel;
 END;
 $$;

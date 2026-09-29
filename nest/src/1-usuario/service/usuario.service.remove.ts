@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { sql } from 'kysely';
 import { DatabaseService } from '../../commons/database/database.service';
 import { ARMAZENAMENTO_SERVICE } from '../../commons/storage/storage.constants';
@@ -35,12 +35,16 @@ export class UsuarioServiceRemove {
     // p_id_usuario = id_usuario_atual() OU a permissão 'usuario_excluir'.
     // A guarda global de login (3-auth) vale aqui - sem login, nem chega aqui.
     await sql`SELECT public.excluir_conta_usuario(${idUsuario})`.execute(db);
+    // Depois da função (que já recusou quem não tem permissão): conta que não existe, ou já excluída, é 404.
+    if (!usuarioAntes) {
+      throw new NotFoundException(`Usuário ${idUsuario} não encontrado`);
+    }
 
     // A função SQL já desativa (ativo=false) a linha de `arquivo` vinculada como foto de perfil, na MESMA
     // transação da exclusão da conta (ver 03_funcoes_seguranca.sql): isso cobre a CONSISTÊNCIA DE DADOS,
     // garantida não importa quem chamou. Falta só o lado que o Postgres não alcança: os bytes de verdade no
     // bucket.
-    if (usuarioAntes?.id_imagem_perfil) {
+    if (usuarioAntes.id_imagem_perfil) {
       const arquivo = await db
         .selectFrom('arquivo')
         .select('chave')

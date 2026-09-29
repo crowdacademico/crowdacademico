@@ -129,11 +129,11 @@ export const DETALHE_PERMISSAO: Partial<Record<string, DetalhePermissao>> = {
     impacto: 'alto',
   },
   termos_uso_gerenciar: {
-    nome: 'Gerenciar Termos de Uso',
-    resumo: 'Publicar uma nova versão dos Termos de Uso.',
-    oQueFaz: 'Permite publicar uma nova versão dos Termos de Uso do sistema.',
+    nome: 'Gerenciar Termo de Uso',
+    resumo: 'Publicar uma nova versão do Termo de Uso.',
+    oQueFaz: 'Permite publicar uma nova versão do Termo de Uso do sistema.',
     porQueExiste:
-      'Termos de uso têm peso jurídico, só quem tem essa permissão pode "trocar o contrato" que todo mundo aceita.',
+      'O Termo de Uso tem peso jurídico, só quem tem essa permissão pode "trocar o contrato" que todo mundo aceita.',
     impacto: 'alto',
   },
   sessao_revogar: {
@@ -171,7 +171,7 @@ export const DETALHE_PERMISSAO: Partial<Record<string, DetalhePermissao>> = {
     resumo: 'Criar a conta de outra pessoa pelo painel.',
     oQueFaz: 'Permite usar o "Criar usuário" do painel administrativo para abrir uma conta em nome de outra pessoa.',
     porQueExiste:
-      'Normalmente cada pessoa cria a própria conta no cadastro, aceitando os Termos de Uso; esta permissão existe só pra quando a administração precisa abrir uma conta.',
+      'Normalmente cada pessoa cria a própria conta no cadastro, aceitando o Termo de Uso; esta permissão existe só pra quando a administração precisa abrir uma conta.',
     impacto: 'médio',
   },
   usuario_excluir: {

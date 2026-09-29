@@ -1,5 +1,5 @@
 
-**Contagem do inventário** (`grep -c` nos `.sql`, para conferir contra as queries acima; **evite repetir estes números em outros documentos**, eles envelhecem, cite a seção "Como conferir este inventário"): **42 tabelas**, **121 policies**, **82 triggers** em `05` (78 comuns e 4 `CONSTRAINT TRIGGER`), **103 funções** (75 em `05`, 26 em `03`, 1 em `08`, 1 em `01`), **51 índices** em `02`, e **78 códigos de ERRCODE** customizado (tabelas em `DOCUMENTACAO_ERRCODE.md`).
+**Contagem do inventário** (`grep -c` nos `.sql`, para conferir contra as queries acima; **evite repetir estes números em outros documentos**, eles envelhecem, cite a seção "Como conferir este inventário"): **42 tabelas**, **121 policies**, **84 triggers** em `05` (80 comuns e 4 `CONSTRAINT TRIGGER`), **107 funções** (78 em `05`, 27 em `03`, 1 em `08`, 1 em `01`), **51 índices** em `02`, e **83 códigos de ERRCODE** customizado (tabelas em `DOCUMENTACAO_ERRCODE.md`).
 
 **Comentários dos `.sql`.** Cabeçalho curto (`Função`, `Assinatura`, `Bloco` e uma `Regra` objetiva, sem datas nem história) e, dentro de função, trigger e policy, só o comentário que explica uma regra difícil. Não há ponteiro para arquivo fora do git: o porquê longo mora aqui, na seção `[NN-Y]` correspondente, e a história (o que mudou, quando, por quê) fica no arquivo de histórico local, que não é versionado. Os comentários do `07` explicam dado de teste; o `ATUALIZAR O SUPABASE.sql` é o registro datado de cada patch e por isso mantém a narrativa.
 # 📚 Documentação Técnica do Banco de Dados - CrowdAcadêmico
@@ -1189,6 +1189,52 @@ A trigger de validação deixaria de ter qualquer `CASE`/nome de contexto hardco
 Nada a implementar; `titulo_academico` e `meio_pagamento` ficam anotados como candidatos futuros.
 
 ---
+
+## Correções da super auditoria (29-09-2026)
+
+**Em palavras simples:** a super auditoria (o relatório dela fica na pasta de informações, fora do repositório) achou regras que o banco não fazia. Todas estão nos arquivos 01 a 08, no Grupo Y do ATUALIZAR e na suíte PGlite 25 (correções da super auditoria). Os códigos de erro novos estão no `DOCUMENTACAO_ERRCODE.md`: 90023, 91030, 91031, 92026 e 92027.
+
+📌 **O sistema nunca fica sem admin.**
+- **Decisão:** `fn_eh_ultimo_admin_ativo()` (03, [03-N]) diz se a conta é a única com o papel admin valendo agora. Com ela, recusam com 91030:
+  - `suspender_usuario()`;
+  - `suspender_papel_usuario()`, no papel admin;
+  - `excluir_conta_usuario()`;
+  - a trigger `trg_usuario_papel_protege_ultimo_admin`, em `DELETE` de `usuario_papel`.
+
+  Ninguém suspende a própria conta (92027).
+- **Motivo:** o último admin conseguia tirar o próprio papel, se suspender ou se excluir. O sistema ficava sem ninguém para administrar, sem caminho pela tela para desfazer.
+- **Caso-limite aceito:** "admin valendo agora" ignora papel suspenso e conta suspensa ou excluída. Então com dois admins em que um está suspenso, o outro conta como o último.
+
+📌 **Suspensão só com data no futuro, e a de papel com motivo (RF-118).**
+- **Decisão:** as três funções de suspensão recusam data passada (90023). `usuario_papel` ganhou `motivo_suspensao` e `suspenso_por`, com `CK_USUARIO_PAPEL_SUSPENSAO` (data e motivo juntos ou nenhum). `suspender_papel_usuario()` passou a receber o motivo (90020 se vazio).
+- **Motivo:** a suspensão "até ontem" era aceita e ficava registrada sem efeito. O RF-118 pede motivo também para a suspensão de papel.
+- **Caso-limite aceito:** no Supabase, as suspensões de papel que já existiam ganharam o motivo "Suspensão registrada antes de o motivo ser obrigatório." (Grupo Y).
+
+📌 **Excluir a própria conta com campanhas (RF-016, decisão do Lucas em 29-09-2026).**
+- **Decisão:** `excluir_conta_usuario()` recusa com campanha `ativo` (91031). Com a exclusão, a campanha em rascunho e a que está aguardando aprovação sem nunca ter sido avaliada são apagadas. A que aguarda por reenvio de uma rejeitada volta a `rejeitado`, com uma linha em `historico_rejeicao` ("Reenvio cancelado: o pesquisador excluiu a própria conta.", `id_admin` vazio), e segue o caminho normal da rejeição. As outras ficam como estão. A transição aguardando para rejeitado ganhou o ramo 9 em `fn_valida_transicao_campanha()`, autoverificável: só vale com o dono já excluído (`fn_usuario_excluido()`).
+- **Motivo:** a campanha ativa continuava arrecadando com a dona excluída. O RF-016 não dizia o que fazer.
+- **Caso-limite aceito:** a linha nova no histórico conta como mais uma rejeição daquela campanha. Não há efeito prático, porque a dona não existe mais.
+
+📌 **Comentário: nem vazio, nem em campanha não publicada.**
+- **Decisão:** `CK_COMENTARIO_CONTEUDO_NAO_VAZIO` (texto só com espaços é recusado). `fn_valida_comentario_campanha_ativa()` também recusa `rascunho` e `aguardando_aprovacao` (91020).
+- **Motivo:** cada pesquisador comenta uma vez por campanha, e o texto vazio gastava a vaga. O rascunho e a campanha aguardando aprovação não são públicos.
+- **Caso-limite aceito:** no Supabase, a CHECK entra como `NOT VALID`: vale para todo comentário novo ou editado, e os antigos não são conferidos.
+
+📌 **Link acadêmico só de pesquisador.**
+- **Decisão:** `trg_valida_escopo_tipolink()` recusa `INSERT` em `link_academico` de conta sem `perfil_pesquisador` (92026).
+- **Motivo:** decisão do Lucas: a conta comum não ganha nada com link acadêmico.
+- **Caso-limite aceito:** os links que já existiam ficam. A regra vale só para link novo.
+
+📌 **E-mail em minúsculas.**
+- **Decisão:** `trg_usuario_normaliza_email` grava `lower(btrim(email))`. O Grupo Y normaliza os e-mails que já existem, e para antes de mudar qualquer coisa se achar e-mail repetido com maiúsculas diferentes.
+- **Motivo:** `UK_USUARIO_EMAIL` só barra texto igual. "Alice@" e "alice@" viravam duas contas.
+- **Caso-limite aceito:** nenhum.
+
+📌 **Seed com campanha ativa de verdade.**
+- **Decisão:** a campanha 10 do `07` tem datas relativas a hoje (começou há 20 dias, termina em 25). As 4 contribuições e a atualização dela também.
+- **Motivo:** com a data final em 2024, a rotina automática encerrava a campanha na primeira hora depois de recriar o banco, e o sistema ficava sem nenhuma campanha ativa para demonstração.
+- **Caso-limite aceito:** nenhum.
+
 
 ## Como conferir este inventário
 

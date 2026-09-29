@@ -45,7 +45,7 @@ export const usuarioApi = {
   // Histórico de login: cada linha de `sessao` já É um login, mais recente primeiro.
   listarLogins: (authFetch: AuthFetch, id: number | string): Promise<UsuarioResponseLoginHistory[]> =>
     authFetch(`/usuario/${id}/logins`).then(tratarResposta<UsuarioResponseLoginHistory[]>),
-  // Termos de Uso aceitos ("onde fica registrado" o aceite): join de usuario_termo com termos_de_uso, mais
+  // Termo de Uso aceitos ("onde fica registrado" o aceite): join de usuario_termo com termos_de_uso, mais
   // recente primeiro. Cobre cadastro e upgrade de perfil de pesquisador; aceite por contribuição a campanha
   // fica de fora (aceite_termo_contribuicao é por CONTRIBUIÇÃO, não por usuário direto, e o módulo de
   // contribuição ainda não existe).
@@ -71,4 +71,8 @@ export const usuarioApi = {
     }).then(tratarResposta<void>),
   revogarSuspensao: (authFetch: AuthFetch, id: number | string): Promise<void> =>
     authFetch(`/usuario/${id}/revogar-suspensao`, { method: 'POST' }).then(tratarResposta<void>),
+  // Portabilidade (LGPD Art. 18): o pacote inteiro dos dados da própria conta. O backend limita a 1 por hora e
+  // deixa rastro no log de auditoria. `unknown`: a tela só grava o pacote num arquivo, não lê campo nenhum.
+  exportarMeusDados: (authFetch: AuthFetch): Promise<unknown> =>
+    authFetch('/usuario/eu/exportar-dados').then(tratarResposta<unknown>),
 };

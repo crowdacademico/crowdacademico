@@ -23,6 +23,11 @@ Ninguém usa: a Alexia recria o banco do zero com os arquivos `01` a `08`, e as 
 Quem atualiza os requisitos é o Lucas com a revisão externa; aqui fica só o que precisa ir no próximo pedido. O V8 (`informacoes/REQUISITOS_V8.md`, 29-09-2026) já absorveu o termo único, o 2FA (fica sem RF, como ideia do fim do projeto), o modelo flexível e o Alterar/Excluir do admin.
 
 - **Tipografia do painel padronizada** (6 classes em `2-tipografia.css`): citar no próximo pedido de revisão de interface, pedindo ideias para enxugar mais sem quebrar.
+- **Para o Lucas discutir com a revisão externa (29-09-2026; o Lucas acha que alguns pontos do V8 não batem):**
+  - **Aceite pendente no próximo login:** vale para versão nova do Termo (RF-015). O V8 tirou a parte da conta criada pelo admin (nascer com senha provisória e aceite pendente), por ser ferramenta de teste; o Lucas quer rediscutir.
+  - **Gestão das versões do Termo (RF-091):** tirar o "Excluir com forçar", que apaga a prova dos aceites; versão já aceita só pode ser substituída.
+  - **Modelo da campanha pode mudar até a aprovação:** o V8 deixou implícito (congelamento na aprovação); hoje o formulário nem envia o modelo.
+  - **Links no upgrade, "Projetos Criados" e validação de domínio dos links:** a resposta da revisão externa à comparação V8 × código tem pontos que o Lucas vai revisar com ela.
 - **Como o Lucas quer esse pedido escrito:** "pegar no pé" da revisão externa, pedir que olhe sistemas de referência e traga ideias próprias, não só responda a lista.
 
 ---
@@ -229,6 +234,42 @@ O Lucas registrou isto como pendência futura importante, explícito que não é
 Na tabela de Atualizações do T3, o botão "Ocultar" (só texto) fica com fonte maior que o resto: a regra que aumenta os ícones de Ações quando a tela aperta também pega esse botão. Não mexer agora (T3 ainda não foi revisada de verdade); entra quando o T3 for trabalhado.
 
 ### Estrutura e ferramentas
+
+#### 🟠 Rodada 1 feita (29-09-2026): SUPER AUDITORIA do sistema inteiro, na prática
+
+**Achados em `informacoes/SUPER_AUDITORIA_2026-09-29.md`:** 26 achados; a tabela "Andamento das correções" no topo do arquivo mostra a situação de cada um.
+
+- **Grupo Y colado no Supabase (29-09-2026, "Success"):** conferido só lendo: as 5 funções, as 2 triggers, as 3 constraints e as 2 colunas novas estão lá, e nenhum e-mail ficou fora do padrão.
+- **Decisões abertas do Lucas:**
+  - **Achado 4:** a conta suspensa ou excluída continua agindo por até 15 minutos, porque o token não é conferido contra a conta. A opção 1 é conferir a cada pedido; a opção 2 é aceitar os 15 minutos.
+  - **Achado 20:** o 404 do perfil de pesquisador aparece para quem não é pesquisador. A saída limpa é o backend dizer, junto com a conta, se ela é pesquisadora.
+- **Ainda não feito:**
+  - o passo 4 (validação de domínio dos links, RF-015, RF-091);
+  - o item 13 (limpar o Supabase, precisa de autorização);
+  - o envio de arquivo (grava no Storage pessoal);
+  - o `NOT NULL`.
+
+
+**O que é:** não só rodar os testes automáticos. É usar o sistema de verdade, módulo por módulo, como uma pessoa usaria, com cada tipo de conta (admin, pesquisador, conta comum, suspensa), passando por todas as telas e ações, inclusive os caminhos de erro. Cada módulo de hoje: usuário, papéis, auth, termos, pesquisador, links, catálogos, configurações, campanha, orçamento, cronograma, atualização, seguir, comentário, histórico de rejeição, arquivos, log, dashboard e Campo de Testes. Criar, consultar, alterar e excluir pela tela conferindo o que foi gravado; cada papel tentando o que pode e o que não pode; os fluxos que atravessam módulos (conta nova, upgrade, campanha, admin aprova, outro pesquisador comenta, o dono endossa...); anotar tudo, até o que "funciona mas confunde".
+
+**Como:** um roteiro de auditoria módulo por módulo, rodado em partes, e uma lista de achados antes de corrigir; o Lucas decide o que corrigir e em que ordem.
+
+**Alimenta de uma vez:** o `NOT NULL` (abaixo), a auditoria de Nielsen (grupo "Telas e formulários") e os itens abaixo, levantados em 29-09-2026:
+1. Validação de domínio dos links acadêmicos (`tipo_link.regex`/`dominio` não são consultados por nada). Para o banco: completar `trg_valida_escopo_tipolink`, ignorando tipo com lista de domínios vazia.
+2. Mensagens de erro de validação em inglês ("must be a string") em outros DTOs, como havia no rejeitar campanha.
+3. Pedidos que dão erro sem necessidade (ex.: "Alterar usuário" pede o perfil de pesquisador de quem não é pesquisador e recebe 404).
+4. Os RFs marcados 🟡 "não conferido a fundo" na matriz de rastreabilidade: confirmar um por um. **Regra:** o React de hoje é só o painel administrativo; tela do painel nunca prova que um RF do usuário ou do pesquisador está cumprido ou descumprido (ver abaixo).
+5. Telas nunca vistas funcionando ao vivo (links acadêmicos no "Alterar usuário", suspensão na Minha Conta e as da memória da rodada de 24-09).
+6. Campo de Testes com o mesmo comportamento das telas reais (ex.: a justificativa da rejeição era opcional só lá).
+7. Tema escuro e contraste em todas as telas (verde provisório `#2fbf71`, borda de campo 1,48:1).
+8. Celular: todas as telas em tela estreita.
+9. Acessibilidade: axe em todas as telas e uso só com teclado.
+10. Textos: "Termo de Uso" em todo lugar, travessão "—" que escapou, mensagens confusas.
+11. Roteiros de teste que dependem de dado que sumiu (`g5`, `g13`, `g10` usam o admin como pesquisador).
+12. Simular o "modo produção" no PGlite para conferir as recusas de permissão que hoje não aparecem.
+13. Limpar os dados de teste dos roteiros no Supabase (contas "Teste G21", "Campanha E2E"...), com autorização do Lucas.
+14. Padrões que o projeto proíbe e que escaparam (ex.: duas consultas simultâneas na mesma conexão no `termo-uso.service.update.ts`).
+15. Documentação que não bate com a tela.
 
 #### 🟡 Planejado (29-09-2026, "talvez amanhã"): `NOT NULL` nas colunas com valor padrão que aceitam vazio
 

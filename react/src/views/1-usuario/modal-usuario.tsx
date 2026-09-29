@@ -7,6 +7,7 @@ import { useToast } from '../../components/layout/toast/use-toast';
 import { useConfiguracoes } from '../../services/11-configuracoes/hook/use-configuracoes';
 import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
+import { useOpcoesDiasSuspensao } from '../../services/constant/hook/use-opcoes-dias-suspensao';
 import { MensagemErro } from '../../components/crud/mensagem-erro';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { ModalFicha } from '../../components/crud/modal-ficha';
@@ -273,9 +274,9 @@ function PainelLinksAcademicos({ auth, idUsuario, tiposLink, aoRegistrarChamada 
     }
   };
 
-  // O tipo não muda depois de criado: o PATCH leva só url e rótulo.
+  // O tipo não muda depois de criado: o PATCH leva url e rótulo (rótulo apagado vai como null; a ordem fica).
   const salvarLink = async (link: LinkAcademicoResponse, { url, rotulo }: LinkAcademicoRequestCreate) => {
-    const corpo = { url, ...(rotulo ? { rotulo } : {}) };
+    const corpo = { url, rotulo: rotulo ? rotulo : null };
     try {
       await comRegistro(aoRegistrarChamada, 'PATCH', `/link-academico/${link.idLinkAcademico}`, corpo, () =>
         linkAcademicoApi.alterar(auth.authFetch, link.idLinkAcademico, corpo),
@@ -370,7 +371,7 @@ export function ModalConsultarUsuario({ auth, idUsuario, aoFechar, aoRegistrarCh
   const [logins, setLogins] = useState<UsuarioResponseLoginHistory[] | null>(null);
   const [carregandoLogins, setCarregandoLogins] = useState(false);
   const [loginsAbertos, setLoginsAbertos] = useState(false);
-  // Termos de Uso aceitos ("onde fica registrado" o aceite): buscado sempre (não atrás de um toggle, como os
+  // Termo de Uso aceitos ("onde fica registrado" o aceite): buscado sempre (não atrás de um toggle, como os
   // logins) porque é informação de conformidade que faz sentido já vir visível ao consultar a conta, não um
   // detalhe auxiliar raramente checado.
   const [termosAceitos, setTermosAceitos] = useState<UsuarioResponseAcceptedTerm[] | null>(null);
@@ -498,15 +499,15 @@ export function ModalConsultarUsuario({ auth, idUsuario, aoFechar, aoRegistrarCh
               </SecaoFicha>
 
               {termosAceitos === null ? (
-                <SecaoFicha titulo="Termos de Uso Aceitos" colunas={1}>
+                <SecaoFicha titulo="Aceites do Termo de Uso" colunas={1}>
                   <Carregando />
                 </SecaoFicha>
               ) : termosAceitos.length === 0 ? (
-                <SecaoFicha titulo="Termos de Uso Aceitos" colunas={1}>
+                <SecaoFicha titulo="Aceites do Termo de Uso" colunas={1}>
                   <p className="texto-fraco text-sm">Nenhum termo aceito registrado.</p>
                 </SecaoFicha>
               ) : (
-                <SecaoFicha titulo="Termos de Uso Aceitos">
+                <SecaoFicha titulo="Aceites do Termo de Uso">
                   {termosAceitos.map((termo, indice) => (
                     <CampoFicha
                       key={indice}
@@ -632,6 +633,9 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado, a
   const [idPapelParaAtribuir, setIdPapelParaAtribuir] = useState('');
   const [papelSuspendendoId, setPapelSuspendendoId] = useState<number | null>(null);
   const [enviandoSuspensaoPapel, setEnviandoSuspensaoPapel] = useState<number | null>(null);
+  const [motivoSuspensaoPapel, setMotivoSuspensaoPapel] = useState('');
+  const [erroMotivoPapel, setErroMotivoPapel] = useState<string | null>(null);
+  const opcoesDiasSuspensao = useOpcoesDiasSuspensao();
   const [reativandoPapel, setReativandoPapel] = useState<number | null>(null);
   const [revogandoPapel, setRevogandoPapel] = useState<number | null>(null);
 
@@ -713,18 +717,25 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado, a
 
   const aoSuspenderPapel = async (papel: UsuarioPapelResponse, dias: number) => {
     limparErro();
+    const motivo = motivoSuspensaoPapel.trim();
+    if (motivo.length < 3) {
+      setErroMotivoPapel('Informe o motivo (pelo menos 3 caracteres).');
+      return;
+    }
+    setErroMotivoPapel(null);
     setEnviandoSuspensaoPapel(papel.idPapel);
     try {
       // eslint-disable-next-line react-hooks/purity
       const ate = new Date(Date.now() + dias * 24 * 60 * 60 * 1000).toISOString();
-      await comRegistro(aoRegistrarChamada, 'POST', `/usuario-papel/${idUsuario}/${papel.idPapel}/suspender`, { ate }, () =>
-        usuarioPapelApi.suspender(auth.authFetch, idUsuario, papel.idPapel, ate),
+      await comRegistro(aoRegistrarChamada, 'POST', `/usuario-papel/${idUsuario}/${papel.idPapel}/suspender`, { ate, motivo }, () =>
+        usuarioPapelApi.suspender(auth.authFetch, idUsuario, papel.idPapel, ate, motivo),
       );
       const papeisAtualizados = await comRegistro(aoRegistrarChamada, 'GET', `/usuario-papel/${idUsuario}`, null, () =>
         usuarioPapelApi.listarPorUsuario(auth.authFetch, idUsuario),
       );
       setPapeis(papeisAtualizados);
       setPapelSuspendendoId(null);
+      setMotivoSuspensaoPapel('');
       mostrar('Papel suspenso com sucesso.', `"${papel.nomePapel}" suspenso até ${formatarData(ate)}`);
     } catch (erroRequisicao) {
       reportarErro(erroRequisicao);
@@ -1030,18 +1041,29 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado, a
                             )}
                           </span>
                           {papelSuspendendoId === papel.idPapel && (
-                            <span className="flex gap-1 fundo-cartao border borda-forte rounded-lg p-1.5">
-                              {[1, 7, 30].map((dias) => (
-                                <button
-                                  key={dias}
-                                  type="button"
-                                  onClick={() => aoSuspenderPapel(papel, dias)}
-                                  disabled={enviandoSuspensaoPapel === papel.idPapel}
-                                  className="text-[10px] font-bold texto-padrao hover-fundo-sutil px-1.5 py-0.5 rounded"
-                                >
-                                  {dias}d
-                                </button>
-                              ))}
+                            <span className="flex flex-col gap-1 fundo-cartao border borda-forte rounded-lg p-1.5">
+                              <input
+                                value={motivoSuspensaoPapel}
+                                onChange={(evento) => setMotivoSuspensaoPapel(evento.target.value)}
+                                placeholder="Motivo (obrigatório)"
+                                aria-label={`Motivo da suspensão de "${papel.nomePapel}"`}
+                                aria-invalid={Boolean(erroMotivoPapel)}
+                                className={'input-padrao text-xs py-1' + (erroMotivoPapel ? ' borda-erro' : '')}
+                              />
+                              {erroMotivoPapel && <span className="text-[10px] texto-erro font-semibold">{erroMotivoPapel}</span>}
+                              <span className="flex gap-1">
+                                {opcoesDiasSuspensao.map((dias) => (
+                                  <button
+                                    key={dias}
+                                    type="button"
+                                    onClick={() => aoSuspenderPapel(papel, dias)}
+                                    disabled={enviandoSuspensaoPapel === papel.idPapel}
+                                    className="text-[10px] font-bold texto-padrao hover-fundo-sutil px-1.5 py-0.5 rounded"
+                                  >
+                                    {dias}d
+                                  </button>
+                                ))}
+                              </span>
                             </span>
                           )}
                         </span>

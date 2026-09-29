@@ -6,7 +6,7 @@ Referência rápida dos `RAISE EXCEPTION` com ERRCODE customizado dos arquivos `
 
 **Nada foi alterado além disso**: nenhuma mensagem, nenhuma lógica, nenhuma trigger foi tocada - só a cláusula `USING ERRCODE` foi adicionada ao final de cada `RAISE EXCEPTION`. O diff é puramente aditivo (conferido linha a linha).
 
-Este documento traz a tabela de códigos e o **contrato do corpo de erro da API** (seção no fim): o Nest devolve `codigo` (o SQLSTATE) junto de `statusCode` e `message`, ver `postgres-exception.filter.ts`. A contagem de códigos não é citada aqui (hoje são 75: 90001 a 90021, 91001 a 91028, 92001 a 92024, 93001 e 93002); conte pelas tabelas abaixo.
+Este documento traz a tabela de códigos e o **contrato do corpo de erro da API** (seção no fim): o Nest devolve `codigo` (o SQLSTATE) junto de `statusCode` e `message`, ver `postgres-exception.filter.ts`. A contagem de códigos não é citada aqui (hoje são 83: 90001 a 90023, 91001 a 91031, 92001 a 92027, 93001 e 93002); conte pelas tabelas abaixo.
 
 ---
 
@@ -49,6 +49,7 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 90020 | `suspender_usuario` / `suspender_pesquisador` | `usuario` / `perfil_pesquisador` | Motivo da suspensão é obrigatório (27-09-2026) |
 | 90021 | `criar_campanha_para_outro` | `campanha` | O usuário escolhido não é um pesquisador ativo (27-09-2026) |
 | 90022 | `fn_valida_posse_imagem_perfil` / `fn_valida_posse_anexo` | `usuario` / `arquivo_atualizacao`, `arquivo_recompensa` | O arquivo escolhido (foto ou anexo) não existe mais ou foi removido (28 e 29-09-2026) |
+| 90023 | `suspender_usuario` / `suspender_papel_usuario` / `suspender_pesquisador` | `usuario` / `usuario_papel` / `perfil_pesquisador` | A data final da suspensão precisa estar no futuro (29-09-2026) |
 
 ## 91xxx - Conflito de estado/regra de negócio (409)
 
@@ -83,6 +84,8 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 91027 | `fn_congela_regras_campanha` / `fn_congela_orcamento_campanha` / `fn_congela_marco_cronograma` | `campanha` / `orcamento_campanha` / `marco_cronograma` | Campanha rejeitada sem reenvios restantes é somente leitura (21-09-2026) |
 | 91028 | `fn_exige_historico_rejeicao` | `campanha` | Rejeição sem registro em `historico_rejeicao` na mesma transação (constraint trigger, roda no `COMMIT`) |
 | 91029 | `fn_valida_posse_imagem_perfil` / `fn_valida_posse_anexo` | `usuario` / `arquivo_atualizacao`, `arquivo_recompensa` | O arquivo escolhido (foto ou anexo) já está em uso em outro lugar (28 e 29-09-2026) |
+| 91030 | `suspender_usuario` / `suspender_papel_usuario` / `excluir_conta_usuario` / `fn_protege_ultimo_admin` | `usuario` / `usuario_papel` | Não é possível suspender, excluir ou tirar o papel do último administrador ativo do sistema (29-09-2026) |
+| 91031 | `excluir_conta_usuario` | `usuario` | Não é possível excluir a conta enquanto houver campanha ativa (29-09-2026) |
 
 ## 92xxx - Autorização negada / conflito de interesse (403)
 
@@ -113,6 +116,8 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 92023 | `revogar_suspensao_papel_usuario` | `usuario_papel` | Sem permissão para revogar suspensão de papel de usuário (27-09-2026) |
 | 92024 | `alterar_perfil_pesquisador_de_outro` | `perfil_pesquisador` | Sem permissão para alterar perfil de pesquisador de outro usuário (27-09-2026) |
 | 92025 | `fn_valida_posse_imagem_perfil` / `fn_valida_posse_anexo` | `usuario` / `arquivo_atualizacao`, `arquivo_recompensa` | Só é possível usar como foto ou anexar um arquivo que você mesmo enviou (28 e 29-09-2026) |
+| 92026 | `trg_valida_escopo_tipolink` | `link_academico` | Só pesquisador tem links acadêmicos (29-09-2026) |
+| 92027 | `suspender_usuario` | `usuario` | Ninguém suspende a própria conta (29-09-2026) |
 
 ## 93xxx - Limite de taxa (429)
 

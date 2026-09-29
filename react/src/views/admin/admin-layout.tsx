@@ -68,7 +68,7 @@ export function AdminLayout({ auth }: AdminLayoutProps) {
         <AdminSidebar aberto={menuAberto} aoFechar={() => setMenuAberto(false)} />
 
         <div className="admin-content-area">
-          <div className="admin-content-area__inner">
+          <div className="admin-content-area__inner outline-none" data-conteudo-principal tabIndex={-1}>
             {/* Erro numa tela do painel fica só na área de conteúdo: menu lateral e busca continuam usáveis. */}
             <LimiteErro>
               <Outlet />

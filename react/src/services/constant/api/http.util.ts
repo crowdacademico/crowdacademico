@@ -39,11 +39,11 @@ export class ErroHttp extends Error {
 export async function tratarResposta<T>(resposta: Response): Promise<T> {
   if (!resposta.ok) {
     // `message` pode ser texto ou lista de textos (validação por DTO no Nest devolve lista); a lista vira um
-    // texto só, separado por vírgula.
+    // texto só. Cada mensagem já termina em ponto, então o separador é um espaço ("CPF inválido. Nome...").
     const corpo = (await resposta.json().catch(() => null)) as
       | { message?: string | string[]; campos?: Record<string, string[]> }
       | null;
-    const mensagem = Array.isArray(corpo?.message) ? corpo.message.join(',') : corpo?.message;
+    const mensagem = Array.isArray(corpo?.message) ? corpo.message.join(' ') : corpo?.message;
     throw new ErroHttp(mensagem || `Erro HTTP ${resposta.status}`, resposta.status, corpo?.campos);
   }
   const texto = await resposta.text();

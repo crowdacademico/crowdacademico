@@ -46,7 +46,7 @@ export function CriarTermoUso({ auth }: PropsPagina) {
     await executarEnviando(async () => {
       const termoCriado = await termoUsoApi.criar(auth.authFetch, { tipo, versao, conteudo });
       mostrar(
-        'Rascunho de Termos de Uso criado com sucesso.',
+        'Rascunho do Termo de Uso criado com sucesso.',
         `Versão "${termoCriado.versao}" (${ROTULO_TIPO_TERMO[tipo]}) foi registrada, mas AINDA NÃO é a vigente - revise o texto e torne-a vigente manualmente quando estiver pronta.`,
       );
       void navigate(-1);
@@ -56,7 +56,7 @@ export function CriarTermoUso({ auth }: PropsPagina) {
   return (
     <CartaoFormulario
       icone="fa-file-contract"
-      titulo="Publicar Termos de Uso"
+      titulo="Publicar Termo de Uso"
       subtitulo="Cria um RASCUNHO novo (ainda não vigente). A versão vigente atual do mesmo tipo continua ativa até um administrador tornar este rascunho vigente manualmente."
     >
       <form id={ID_FORMULARIO} onSubmit={aoCriar} className="p-10 space-y-6">
@@ -114,7 +114,7 @@ export function CriarTermoUso({ auth }: PropsPagina) {
               }}
               required
               rows={18}
-              placeholder="Cole ou digite o texto integral dos Termos de Uso desta versão..."
+              placeholder="Cole ou digite o texto integral do Termo de Uso desta versão..."
               className="input-padrao font-mono text-xs"
             />
           )}

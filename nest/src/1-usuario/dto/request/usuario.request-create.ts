@@ -5,12 +5,14 @@ import {
   IsString,
   MinLength,
 } from 'class-validator';
+import { EmailNormalizado } from '../../../commons/validacao/transformacoes.decorator';
 
 export class UsuarioRequestCreate {
   @IsString()
   @MinLength(2, { message: 'Nome precisa ter pelo menos 2 caracteres.' })
   nome: string;
 
+  @EmailNormalizado()
   @IsEmail({}, { message: 'E-mail inválido.' })
   email: string;
 

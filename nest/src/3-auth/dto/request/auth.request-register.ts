@@ -1,4 +1,5 @@
 import { Equals, IsEmail, IsString, MinLength } from 'class-validator';
+import { EmailNormalizado } from '../../../commons/validacao/transformacoes.decorator';
 
 // Mesmas regras de UsuarioRequestCreate (1-usuario) - o cadastro público
 // cria a mesma linha em `usuario`, só que auto-serviço, com um passo a
@@ -8,6 +9,7 @@ export class AuthRequestRegister {
   @MinLength(2, { message: 'Nome precisa ter pelo menos 2 caracteres.' })
   nome: string;
 
+  @EmailNormalizado()
   @IsEmail({}, { message: 'E-mail inválido.' })
   email: string;
 
@@ -21,7 +23,7 @@ export class AuthRequestRegister {
   // chega no corpo desta requisição - o backend sempre resolve a versão
   // ATIVA sozinho (GET /termos-uso/ativo é só pra exibir na tela).
   @Equals(true, {
-    message: 'É preciso aceitar os Termos de Uso pra criar a conta.',
+    message: 'É preciso aceitar o Termo de Uso pra criar a conta.',
   })
   aceiteTermos: boolean;
 }

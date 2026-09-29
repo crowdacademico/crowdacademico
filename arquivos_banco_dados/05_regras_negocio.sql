@@ -977,6 +977,7 @@ CREATE TRIGGER trg_contrib_recompensa_valida
 -- Regra:      tipo_link é compartilhado por 3 tabelas (link_academico, link_atualizacao, link_recompensa). Impede que
 --             alguém associe, por exemplo, "Orcid" (permite_perfil=TRUE apenas) a uma recompensa ou atualização: a FK
 --             sozinha só garante a existência do id_tipolink, não o contexto de uso.
+--             Link acadêmico novo só para quem tem perfil de pesquisador (92026): na conta comum não serve para nada.
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.trg_valida_escopo_tipolink()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
@@ -984,6 +985,14 @@ DECLARE
     v_coluna    TEXT;
     v_permitido BOOLEAN;
 BEGIN
+    -- IF aninhado: NEW.id_usuario só existe em link_academico.
+    IF TG_TABLE_NAME = 'link_academico' AND TG_OP = 'INSERT' THEN
+        IF NOT EXISTS (SELECT 1 FROM perfil_pesquisador WHERE id_usuario = NEW.id_usuario) THEN
+            RAISE EXCEPTION 'Só pesquisador tem links acadêmicos. Faça o upgrade para pesquisador primeiro.'
+                USING ERRCODE = '92026';
+        END IF;
+    END IF;
+
     v_coluna := CASE TG_TABLE_NAME
         WHEN 'link_academico'   THEN 'permite_perfil'
         WHEN 'link_atualizacao' THEN 'permite_atualizacao'
@@ -1775,6 +1784,14 @@ EXECUTE FUNCTION public.fn_valida_limite_max_marco_cronograma();
 --                  único caminho que grava esse status é suspender_pesquisador() (03, [03-P]).
 --               8. Encerramento por moderação de denúncia (RF-108): 'campanha_encerrar_moderacao' faz SÓ ativo ->
 --                  encerrado_moderacao (escopo estreito de propósito: um moderador não vira aprovador por isso).
+--               9. Conta do dono excluída (RF-016), AUTOVERIFICÁVEL: só aguardando_aprovacao -> rejeitado e só com o dono
+--                  já marcado como excluído; o único caminho é excluir_conta_usuario() (03, [03-O]).
+-- Conta excluída, sem passar pela RLS de usuario (que esconde a linha excluída de quem consulta).
+CREATE OR REPLACE FUNCTION public.fn_usuario_excluido(p_id_usuario INT)
+RETURNS BOOLEAN LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+    SELECT EXISTS (SELECT 1 FROM usuario WHERE id_usuario = p_id_usuario AND deletado IS TRUE);
+$$;
+
 CREATE OR REPLACE FUNCTION public.fn_valida_transicao_campanha()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN
@@ -1870,6 +1887,14 @@ BEGIN
        AND NEW.id_admin IS NOT DISTINCT FROM OLD.id_admin
        AND OLD.status = 'ativo' AND NEW.status = 'encerrado_moderacao'
        AND public.tem_permissao('campanha_encerrar_moderacao')
+    THEN
+        RETURN NEW;
+    END IF;
+
+    IF NEW.aprovado_em IS NOT DISTINCT FROM OLD.aprovado_em
+       AND NEW.id_admin IS NOT DISTINCT FROM OLD.id_admin
+       AND OLD.status = 'aguardando_aprovacao' AND NEW.status = 'rejeitado'
+       AND public.fn_usuario_excluido(NEW.id_usuario)
     THEN
         RETURN NEW;
     END IF;
@@ -2813,7 +2838,8 @@ EXECUTE FUNCTION validar_atualizacao_campanha();
 -- Bloco:      [05-K-3]
 -- Regra:      Bloqueia novos comentários em campanhas que foram rejeitadas
 --             ou banidas pela moderação (status 'rejeitado' ou
---             'encerrado_moderacao').
+--             'encerrado_moderacao') e em campanha que ainda não foi publicada
+--             ('rascunho' ou 'aguardando_aprovacao'), que só o dono enxerga.
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION fn_valida_comentario_campanha_ativa()
 RETURNS TRIGGER AS $$
@@ -2826,6 +2852,10 @@ BEGIN
 
     IF v_status IN ('rejeitado', 'encerrado_moderacao') THEN
         RAISE EXCEPTION 'Operação bloqueada: não é possível comentar em campanhas rejeitadas ou sob moderação.'
+            USING ERRCODE = '91020';
+    END IF;
+    IF v_status IN ('rascunho', 'aguardando_aprovacao') THEN
+        RAISE EXCEPTION 'Operação bloqueada: esta campanha ainda não foi publicada, então não recebe comentários.'
             USING ERRCODE = '91020';
     END IF;
 
@@ -3285,6 +3315,52 @@ DROP TRIGGER IF EXISTS trg_permissao_auto_admin ON permissao;
 CREATE TRIGGER trg_permissao_auto_admin
 AFTER INSERT ON permissao
 FOR EACH ROW EXECUTE FUNCTION public.trg_admin_recebe_toda_permissao();
+
+-- ----------------------------------------------------------------------------
+-- Função:     fn_protege_ultimo_admin
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-K-3]
+-- Regra:      Tirar o papel admin do último admin ativo deixaria o sistema sem ninguém para administrar, e pela tela não
+--             haveria como desfazer (91030). Mesma regra de fn_eh_ultimo_admin_ativo (03, [03-N]) usada na suspensão e
+--             na exclusão de conta.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_protege_ultimo_admin()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM papel WHERE id_papel = OLD.id_papel AND codigo = 'admin')
+       AND public.fn_eh_ultimo_admin_ativo(OLD.id_usuario) THEN
+        RAISE EXCEPTION 'Não é possível tirar o papel do último administrador ativo do sistema.'
+            USING ERRCODE = '91030';
+    END IF;
+    RETURN OLD;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_usuario_papel_protege_ultimo_admin ON usuario_papel;
+CREATE TRIGGER trg_usuario_papel_protege_ultimo_admin
+BEFORE DELETE ON usuario_papel
+FOR EACH ROW EXECUTE FUNCTION public.fn_protege_ultimo_admin();
+
+-- ----------------------------------------------------------------------------
+-- Função:     fn_usuario_normaliza_email
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-K-3]
+-- Regra:      E-mail gravado sempre sem espaço nas pontas e em minúsculas: "Ana@USP.br" e "ana@usp.br" são a mesma
+--             conta, e UK_USUARIO_EMAIL (01) só enxerga isso se o texto gravado for o mesmo. O Nest já manda
+--             normalizado; esta trigger garante para qualquer outro caminho de escrita.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_usuario_normaliza_email()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+    NEW.email := lower(btrim(NEW.email));
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_usuario_normaliza_email ON usuario;
+CREATE TRIGGER trg_usuario_normaliza_email
+BEFORE INSERT OR UPDATE OF email ON usuario
+FOR EACH ROW EXECUTE FUNCTION public.fn_usuario_normaliza_email();
 
 -- ----------------------------------------------------------------------------
 -- Função:     fn_atribuir_papel_pesquisador

@@ -87,7 +87,7 @@ const SECOES_MODAL_TERMO_USO = [
         pessoa aceitar, ela trava pra sempre (o valor probatório do aceite se perderia se o
         texto pudesse mudar depois). Veja o histórico completo (todos os tipos) em{' '}
         <Link to="/admin/termos-uso" className="texto-marca font-bold underline">
-          Termos de Uso
+          Termo de Uso
         </Link>
         .
       </p>

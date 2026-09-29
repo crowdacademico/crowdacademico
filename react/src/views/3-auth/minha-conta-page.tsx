@@ -431,7 +431,7 @@ function AbaSeguranca({ auth }: AbaSegurancaProps) {
   const [senhaAtual, setSenhaAtual] = useState('');
   const [novaSenha, setNovaSenha] = useState('');
   const { mostrar } = useToast();
-  const { erro, reportarErro, limparErro } = useErroToast();
+  const { erro, reportarErro, limparErro, errosCampo } = useErroToast();
   const { ocupado: encerrandoTodas, executar: executarEncerrandoTodas } = useEnvio(reportarErro);
   const { ocupado: enviandoSenha, executar: executarEnviandoSenha } = useEnvio(reportarErro, limparErro);
   // "Alterar senha" fica sempre clicável; faltando algo, o erro aparece embaixo do campo.
@@ -441,7 +441,10 @@ function AbaSeguranca({ auth }: AbaSegurancaProps) {
     limpar: limparErrosSenha,
   } = useErrosFormulario(() => ({
     atual: senhaAtual === '' && 'Informe a senha atual.',
-    nova: novaSenha.length < 8 && 'A nova senha precisa ter pelo menos 8 caracteres.',
+    nova:
+      novaSenha.length < 8
+        ? 'A nova senha precisa ter pelo menos 8 caracteres.'
+        : novaSenha === senhaAtual && 'A nova senha precisa ser diferente da senha atual.',
   }));
 
   const aoTrocarSenha = async (evento: FormEvent<HTMLFormElement>) => {
@@ -508,7 +511,8 @@ function AbaSeguranca({ auth }: AbaSegurancaProps) {
         </h2>
         <form onSubmit={aoTrocarSenha} className="space-y-4 max-w-md">
           {erro && <p className="text-sm texto-erro">{erro}</p>}
-          <Campo rotulo="Senha atual" erro={erroSenhaDe('atual')}>
+          {/* O erro do backend (senha atual incorreta) também cai embaixo do campo, não só no aviso. */}
+          <Campo rotulo="Senha atual" erro={erroSenhaDe('atual') || errosCampo.senhaAtual}>
             {({ atributos, classeErro }) => (
               <input
                 {...atributos}
@@ -520,7 +524,7 @@ function AbaSeguranca({ auth }: AbaSegurancaProps) {
               />
             )}
           </Campo>
-          <Campo rotulo="Nova senha" erro={erroSenhaDe('nova')}>
+          <Campo rotulo="Nova senha" erro={erroSenhaDe('nova') || errosCampo.novaSenha}>
             {({ atributos, classeErro }) => (
               <input
                 {...atributos}
@@ -659,11 +663,24 @@ function AbaPapeis({ auth }: AbaPapeisProps) {
         <p className="text-sm texto-fraco">Nenhum papel atribuído.</p>
       ) : (
         <div className="flex flex-wrap gap-2">
-          {papeis.map((papel) => (
-            <span key={papel.idPapel} className="badge badge-neutro">
-              {papel.nomePapel}
-            </span>
-          ))}
+          {papeis.map((papel) => {
+            // Papel suspenso não vale até a data: a própria pessoa precisa ver isso aqui, não só descobrir barrada.
+            const suspenso = papel.suspensoAte !== null && new Date(papel.suspensoAte) > new Date();
+            return (
+              <span
+                key={papel.idPapel}
+                className={'badge flex items-center gap-1 ' + (suspenso ? 'fundo-aviso texto-aviso' : 'badge-neutro')}
+              >
+                {papel.nomePapel}
+                {suspenso && (
+                  <>
+                    <i className="fa-solid fa-clock text-[10px]" aria-hidden="true"></i>
+                    suspenso até {formatarDataHora(papel.suspensoAte)}
+                  </>
+                )}
+              </span>
+            );
+          })}
         </div>
       )}
     </div>
@@ -772,8 +789,8 @@ function AbaAcademico({ auth }: AbaAcademicoProps) {
 }
 
 // 5. PRIVACIDADE - última aba de propósito (ação destrutiva nunca na
-// primeira). Exportar dados (LGPD Art. 18) ainda não existe (fica
-// registrado honestamente); excluir conta reaproveita
+// primeira). Exportar dados (LGPD Art. 18) baixa o pacote de GET
+// /usuario/eu/exportar-dados como arquivo JSON; excluir conta reaproveita
 // excluir_conta_usuario() (03_funcoes_seguranca.sql, [03-O]), que já
 // valida que só o próprio dono (ou quem tem usuario_excluir) pode chamar.
 interface AbaPrivacidadeProps {
@@ -787,6 +804,22 @@ function AbaPrivacidade({ auth }: AbaPrivacidadeProps) {
   const { erro, reportarErro, limparErro } = useErroToast();
 
   const confirmado = auth.usuario && confirmacaoConfere(confirmacao, auth.usuario.email);
+  const { mostrar } = useToast();
+  const { erro: erroExportar, reportarErro: reportarErroExportar } = useErroToast();
+  const { ocupado: exportando, executar: executarExportando } = useEnvio(reportarErroExportar);
+
+  const aoExportar = async () => {
+    await executarExportando(async () => {
+      const pacote = await usuarioApi.exportarMeusDados(auth.authFetch);
+      const arquivo = new Blob([JSON.stringify(pacote, null, 2)], { type: 'application/json' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(arquivo);
+      link.download = `meus-dados-crowdacademico-${new Date().toISOString().slice(0, 10)}.json`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+      mostrar('Seus dados foram exportados.', 'O arquivo foi baixado pelo navegador.');
+    });
+  };
 
   const aoExcluir = async () => {
     if (!auth.usuario) {
@@ -810,11 +843,13 @@ function AbaPrivacidade({ auth }: AbaPrivacidadeProps) {
         <div>
           <p className="text-sm font-semibold texto-padrao">Exportar meus dados</p>
           <p className="text-xs texto-fraco">
-            Direito de portabilidade (LGPD Art. 18), ainda não implementado neste protótipo.
+            Direito de portabilidade (LGPD Art. 18): baixa um arquivo com os dados da sua conta. Uma vez por
+            hora.
           </p>
+          {erroExportar && <p className="text-xs texto-erro font-bold mt-1">{erroExportar}</p>}
         </div>
-        <button type="button" disabled className="btn btn-secondary opacity-50 cursor-not-allowed">
-          Exportar
+        <button type="button" onClick={() => void aoExportar()} disabled={exportando} className="btn btn-secondary">
+          {exportando ? 'Exportando...' : 'Exportar'}
         </button>
       </div>
 

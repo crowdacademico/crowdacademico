@@ -2,7 +2,7 @@ import { useEffect, useId, useState } from 'react';
 import { SecaoFicha } from './ficha-consulta';
 import { useErroToast } from '../layout/toast/use-erro-toast';
 import { useToast } from '../layout/toast/use-toast';
-import { useConfiguracoes } from '../../services/11-configuracoes/hook/use-configuracoes';
+import { useOpcoesDiasSuspensao } from '../../services/constant/hook/use-opcoes-dias-suspensao';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
 import { formatarDataHora } from '../../services/constant/util/formatacao.util';
@@ -25,8 +25,6 @@ interface SecaoSuspensaoProps {
   revogar: () => Promise<unknown>;
 }
 
-const PADRAO_OPCOES_DIAS = '1,3,7,30';
-
 // Card de moderação "suspender por X dias, com motivo" / "revogar", usado para a conta (1-usuario) e para o
 // poder de pesquisador (6-perfil-pesquisador): a mecânica é a mesma, mudam só os textos e as chamadas de API,
 // que cada módulo passa. As opções de prazo vêm de `configuracoes.suspensao_usuario_opcoes_dias` (a mesma
@@ -45,12 +43,7 @@ export function SecaoSuspensao({
   const { mostrar } = useToast();
   const { erro, reportarErro, limparErro } = useErroToast();
   const { ocupado: enviando, executar } = useEnvio(reportarErro, limparErro);
-  const { obterConfiguracao } = useConfiguracoes();
-  const valorOpcoesDias = obterConfiguracao('suspensao_usuario_opcoes_dias', PADRAO_OPCOES_DIAS);
-  const opcoesDias = (typeof valorOpcoesDias === 'string' ? valorOpcoesDias : PADRAO_OPCOES_DIAS)
-    .split(',')
-    .map((s) => Number(s.trim()))
-    .filter((n) => Number.isFinite(n) && n > 0);
+  const opcoesDias = useOpcoesDiasSuspensao();
 
   const [suspensao, setSuspensao] = useState<EstadoSuspensao | null>(null);
   const [dias, setDias] = useState('');

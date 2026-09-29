@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -48,8 +49,9 @@ export class CampanhaServiceSubmit {
       if (!existe) {
         throw new NotFoundException('Campanha não encontrada.');
       }
+      // 409: é o estado da campanha que não deixa, não falta de permissão (mesmo código do aprovar/rejeitar).
       if (existe.status !== 'rascunho' && existe.status !== 'rejeitado') {
-        throw new ForbiddenException(
+        throw new ConflictException(
           'Só uma campanha em rascunho ou rejeitada pode ser enviada para aprovação.',
         );
       }

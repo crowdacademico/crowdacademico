@@ -10,7 +10,7 @@ import type { PropsPagina } from '../../services/router/pagina.type';
 // Cópia fiel de telas/login/login.html do Projeto de Interface real, com uma mudança deliberada em relação ao
 // original, não só estética:
 //
-// O original tem um botão único "Entrar / Criar Conta" + checkbox de Termos de Uso, pensado como login/cadastro
+// O original tem um botão único "Entrar / Criar Conta" + checkbox do Termo de Uso, pensado como login/cadastro
 // combinado. Esta tela NÃO coleta nome (só e-mail/senha): o cadastro público de verdade é /cadastro
 // (cadastro-page.tsx), tela própria com nome/confirmação de senha/aceite de termos; o link "Já tem conta?
 // Entrar" dela devolve para cá, e o link "Cadastre-se" abaixo leva para lá. O botão é só "Entrar" porque só faz
@@ -84,28 +84,28 @@ export function LoginPage({ auth }: PropsPagina) {
             )}
           </Campo>
 
-          <div>
-            <div className="flex justify-between items-center mb-2">
-              <label htmlFor={idSenha} className="rotulo-campo mb-0">
-                Sua Senha
-              </label>
-              <button
-                type="button"
-                onClick={() => window.alert('Recuperação de senha simulada no protótipo.')}
-                className="text-xs texto-marca font-bold hover:underline"
-              >
-                Esqueceu a senha?
-              </button>
-            </div>
+          {/* Mesmo desenho do protótipo (link à direita do rótulo), mas o campo vem ANTES do link no HTML: com
+              Tab, o e-mail vai direto para a senha. `order` recoloca o link no lugar visual de sempre. */}
+          <div className="flex flex-wrap justify-between items-center">
+            <label htmlFor={idSenha} className="rotulo-campo mb-2 order-1">
+              Sua Senha
+            </label>
             <input
               id={idSenha}
               type="password"
               value={senha}
               onChange={(evento) => setSenha(evento.target.value)}
               required
-              className="input-padrao"
+              className="input-padrao order-3 w-full"
               placeholder="••••••••"
             />
+            <button
+              type="button"
+              onClick={() => window.alert('Recuperação de senha simulada no protótipo.')}
+              className="text-xs texto-marca font-bold hover:underline mb-2 order-2"
+            >
+              Esqueceu a senha?
+            </button>
           </div>
 
           <button

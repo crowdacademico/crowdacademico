@@ -46,12 +46,43 @@ interface ErroPostgres extends Error {
 export class PostgresExceptionFilter extends BaseExceptionFilter {
   catch(excecao: unknown, host: ArgumentsHost): void {
     if (excecao instanceof HttpException) {
-      super.catch(excecao, host);
+      super.catch(this.traduzirPipe(excecao), host);
       return;
     }
 
     const traduzido = this.traduzir(excecao as ErroPostgres);
     super.catch(traduzido ?? excecao, host);
+  }
+
+  // Os pipes de parâmetro do Nest (ParseIntPipe, ParseEnumPipe...) respondem em inglês ("Validation failed (numeric
+  // string is expected)"), inclusive quando falta um filtro obrigatório na URL (ex.: ?idCampanha=).
+  private traduzirPipe(excecao: HttpException): HttpException {
+    const corpo = excecao.getResponse();
+    const mensagem =
+      typeof corpo === 'string'
+        ? corpo
+        : (corpo as { message?: unknown }).message;
+    const tipo =
+      typeof mensagem === 'string'
+        ? /^Validation failed \((\w+) string is expected\)$/.exec(mensagem)?.[1]
+        : undefined;
+    if (!tipo) {
+      return excecao;
+    }
+    const esperado: Record<string, string> = {
+      numeric: 'um número',
+      enum: 'um dos valores aceitos',
+      boolean: 'verdadeiro ou falso',
+      uuid: 'um identificador válido',
+    };
+    return new HttpException(
+      {
+        statusCode: excecao.getStatus(),
+        error: 'Bad Request',
+        message: `Parâmetro da requisição ausente ou inválido: era esperado ${esperado[tipo] ?? 'outro formato'}.`,
+      },
+      excecao.getStatus(),
+    );
   }
 
   // `erro: ErroPostgres` chega aqui via `excecao as ErroPostgres` no

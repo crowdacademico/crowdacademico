@@ -45,7 +45,7 @@ export function ListarTermosUso({ auth }: PropsPagina) {
   return (
     <div className="admin-content-painel">
       <GenericTable<TermoUsoResponse>
-        titulo="Termos de Uso"
+        titulo="Termo de Uso"
         acaoTopo={
           <BotaoCriar para="/admin/termos-uso/criar" />
         }
@@ -73,7 +73,7 @@ export function ListarTermosUso({ auth }: PropsPagina) {
 
       {consultando && (
         <ModalDetalhe
-          titulo={`Termos de Uso ${consultando.versao} (${ROTULO_TIPO_TERMO[consultando.tipo]})`}
+          titulo={`Termo de Uso ${consultando.versao} (${ROTULO_TIPO_TERMO[consultando.tipo]})`}
           chave={consultando.ativo ? 'Versão ativa' : 'Versão histórica (substituída)'}
           aoFechar={fecharConsultando}
           secoes={[

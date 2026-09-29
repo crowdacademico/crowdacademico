@@ -23,9 +23,8 @@ export class UsuarioRequestUpdate {
   @MinLength(8, { message: 'Senha precisa ter pelo menos 8 caracteres.' })
   novaSenha?: string;
 
-  // Opcional ("Alterar senha exigindo a atual" em Minha Conta): quando presente, o service exige bcrypt.compare
-  // contra a senha atual antes de aceitar `novaSenha`. Ausente = reset administrativo (quem tem
-  // `usuario_suspender` não precisa saber a senha antiga de outra pessoa): mesmo endpoint, dois usos.
+  // Obrigatória para trocar a senha da PRÓPRIA conta (o service confere). Em conta de outra pessoa (reset
+  // administrativo, com `usuario_suspender`) fica ausente: mesmo endpoint, dois usos.
   @IsOptional()
   @IsString()
   senhaAtual?: string;

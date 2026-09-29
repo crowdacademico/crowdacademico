@@ -20,7 +20,7 @@ export function VerificarEmailPage() {
   );
 
   // O token só vale uma vez: no desenvolvimento o <StrictMode> roda este efeito duas vezes, e a 2ª chamada
-  // recebia "link já usado" (401) e mostrava "Não deu certo" por cima do sucesso da 1ª, com o e-mail já
+  // recebia "link já usado" (400) e mostrava "Não deu certo" por cima do sucesso da 1ª, com o e-mail já
   // confirmado no banco. O ref (que sobrevive à remontagem do StrictMode) garante uma chamada por token.
   const tokenEnviadoRef = useRef<string | null>(null);
 

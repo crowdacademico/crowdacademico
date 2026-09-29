@@ -1,4 +1,4 @@
-import { IsInt, IsString, MaxLength } from 'class-validator';
+import { IsInt, IsString, Matches, MaxLength } from 'class-validator';
 
 // id_pesquisador NUNCA vem daqui (sempre request.user.idUsuario): a RLS (pol_comentario_insert, 04) exige isso,
 // e validar_comentario_autor (05, [05-K-3]) já barra o dono da campanha comentar na própria.
@@ -12,7 +12,14 @@ export class ComentarioRequestCreate {
   @IsInt()
   idCampanha: number;
 
+  // Precisa ter algum caractere que não seja espaço: cada pesquisador comenta uma vez por campanha, e um texto
+  // vazio gastaria a vaga (o banco também barra, CK_COMENTARIO_CONTEUDO_NAO_VAZIO).
   @IsString()
-  @MaxLength(500)
+  @Matches(/\S/, {
+    message: 'Escreva o comentário (não pode ficar em branco).',
+  })
+  @MaxLength(500, {
+    message: 'O comentário pode ter no máximo 500 caracteres.',
+  })
   conteudo: string;
 }

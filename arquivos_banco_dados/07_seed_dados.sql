@@ -1052,7 +1052,7 @@ INSERT INTO campanha (id_usuario, id_admin, id_area_conhecimento, titulo, modelo
 -- score esperado.
 (19, 1, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '1.03.00.00'), 'Nova Plataforma de Diagnóstico por Imagem com Machine Learning',              'all-or-nothing', 30000.00, 5.00, 'Sistema de apoio ao diagnóstico radiológico baseado em visão computacional, validado com dados de dois hospitais universitários.',                      '2024-06-01', '2024-07-16', 'sucesso',             '2024-06-01', '2024-05-20 10:00:00', NULL),
 (20, 1, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '4.05.00.00'), 'Estudo sobre Microbiota Intestinal em Pacientes Oncológicos',                 'flexivel',       20000.00, 5.00, 'Caracterização da microbiota intestinal e sua relação com resposta a quimioterapia em pacientes com câncer colorretal.',                                '2024-06-01', '2024-07-21', 'sucesso',             '2024-06-01', '2024-05-22 09:30:00', NULL),
-(21, 1, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '2.05.00.00'), 'Levantamento de Espécies Invasoras em Ecossistemas Costeiros',                'all-or-nothing', 25000.00, 5.00, 'Mapeamento de espécies exóticas invasoras em restingas e manguezais do litoral nordestino e seu impacto na fauna nativa.',                              '2024-06-01', '2024-08-20', 'ativo',               '2024-06-01', '2024-05-25 10:30:00', NULL);
+(21, 1, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '2.05.00.00'), 'Levantamento de Espécies Invasoras em Ecossistemas Costeiros',                'all-or-nothing', 25000.00, 5.00, 'Mapeamento de espécies exóticas invasoras em restingas e manguezais do litoral nordestino e seu impacto na fauna nativa.',                              NOW() - INTERVAL '20 days', NOW() + INTERVAL '25 days', 'ativo', NOW() - INTERVAL '20 days', NOW() - INTERVAL '25 days', NULL);
 
 ALTER TABLE campanha ENABLE TRIGGER trg_campanha_valida_prazo_negocio;
 
@@ -1159,10 +1159,10 @@ INSERT INTO contribuicao (id_campanha, id_usuario, valor, meio_pagamento, status
 
 -- Campanha 10 ('ativo', em andamento): 'confirmado', ainda não há repasse porque
 -- a campanha nem terminou.
-(10, 12, 3000.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0045', '2024-06-10 10:00:00'),
-(10, 13, 2500.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0046', '2024-06-15 11:00:00'),
-(10, 14, 2000.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0047', '2024-06-20 09:00:00'),
-(10, 15, 1500.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0048', '2024-06-25 10:00:00');
+(10, 12, 3000.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0045', NOW() - INTERVAL '15 days'),
+(10, 13, 2500.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0046', NOW() - INTERVAL '12 days'),
+(10, 14, 2000.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0047', NOW() - INTERVAL '8 days'),
+(10, 15, 1500.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0048', NOW() - INTERVAL '3 days');
 
 ALTER TABLE contribuicao ENABLE TRIGGER trg_valida_status_contribuicao;
 ALTER TABLE contribuicao ENABLE TRIGGER trg_contribuicao_all_or_nothing_pix;
@@ -1203,7 +1203,7 @@ INSERT INTO atualizacao_campanha (id_campanha, titulo, conteudo, publicado_em, f
 (1, 'Artigo submetido à Nature Medicine',        'Artigo submetido ao periódico Nature Medicine. Código e dataset disponibilizados em repositório público.',                     '2024-04-10 16:00:00', 'resultado_final',    'linkexterno'),
 (8,  'Modelo de visão computacional treinado',    'Primeira versão do modelo treinada com 15 mil exames anotados por 2 hospitais parceiros. Acurácia inicial de 91% em validação.', '2024-06-20 10:00:00', 'andamento',          'texto'),
 (8,  'Validação clínica concluída',               'Validação prospectiva concluída com radiologistas de referência. Resultados finais submetidos para publicação.',                  '2024-07-10 14:00:00', 'resultado_final',    'texto'),
-(10, 'Primeiras trilhas de campo mapeadas',        'Concluído o mapeamento de 3 das 8 trilhas previstas em restingas do litoral. Catalogação de espécies em andamento.',             '2024-07-05 09:00:00', 'andamento',          'texto');
+(10, 'Primeiras trilhas de campo mapeadas',        'Concluído o mapeamento de 3 das 8 trilhas previstas em restingas do litoral. Catalogação de espécies em andamento.',             NOW() - INTERVAL '5 days', 'andamento',          'texto');
 
 ALTER TABLE atualizacao_campanha ENABLE TRIGGER trg_atualizacao_campanha_status;
 

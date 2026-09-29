@@ -1,14 +1,11 @@
-import {
-  BadRequestException,
-  Injectable,
-  Logger,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { ArquivoServiceRemove } from '../../25-arquivo/service/arquivo.service.remove';
 import { ArquivoServiceResolveAvatar } from '../../25-arquivo/service/arquivo.service.resolve-avatar';
+import type { UsuarioAutenticado } from '../../commons/auth/usuario-autenticado.interface';
 import { DatabaseService } from '../../commons/database/database.service';
 import { distinguir404ou403 } from '../../commons/database/distinguir-404-ou-403.util';
+import { erroNoCampo } from '../../commons/validacao/erro-de-validacao';
 import {
   CUSTO_BCRYPT_SENHA,
   USUARIO_COLUNAS_SELECT,
@@ -30,21 +27,37 @@ export class UsuarioServiceUpdate {
   async executar(
     idUsuario: number,
     dto: UsuarioRequestUpdate,
+    quemPede: UsuarioAutenticado,
   ): Promise<UsuarioResponse> {
     const db = this.database.getDb();
+    const propriaConta = idUsuario === quemPede.idUsuario;
 
-    // `senhaAtual` presente = troca autoatendida (Minha Conta > Segurança): exige conferir a senha de verdade
-    // antes de trocar. Ausente = reset administrativo (AlterarUsuario, painel admin), sem essa checagem.
-    if (dto.senhaAtual !== undefined) {
+    // Na própria conta, trocar a senha exige a senha atual (RF-008): sem isso, quem pegasse uma sessão aberta
+    // tomaria a conta. Em conta de outra pessoa é o reset administrativo, que a RLS de `usuario` só deixa para
+    // quem tem permissão, e aí a senha atual não é pedida.
+    if (dto.novaSenha !== undefined) {
+      if (propriaConta && dto.senhaAtual === undefined) {
+        throw erroNoCampo(
+          'senhaAtual',
+          'Para trocar a sua senha, informe a senha atual.',
+        );
+      }
       const atual = await db
         .selectFrom('usuario')
         .select('senha_hash')
         .where('id_usuario', '=', idUsuario)
         .executeTakeFirst();
-      const confere =
-        atual && (await bcrypt.compare(dto.senhaAtual, atual.senha_hash));
-      if (!confere) {
-        throw new UnauthorizedException('Senha atual incorreta.');
+      if (
+        dto.senhaAtual !== undefined &&
+        !(atual && (await bcrypt.compare(dto.senhaAtual, atual.senha_hash)))
+      ) {
+        throw erroNoCampo('senhaAtual', 'Senha atual incorreta.');
+      }
+      if (atual && (await bcrypt.compare(dto.novaSenha, atual.senha_hash))) {
+        throw erroNoCampo(
+          'novaSenha',
+          'A nova senha precisa ser diferente da senha atual.',
+        );
       }
     }
 
@@ -115,6 +128,20 @@ export class UsuarioServiceUpdate {
         `Usuário ${idUsuario} não encontrado`,
         'Sem permissão para editar este usuário.',
       );
+    }
+
+    // Senha trocada: as outras sessões abertas da conta caem, só fica a de quem trocou (na própria conta). No
+    // reset administrativo caem todas, inclusive a de quem esqueceu ou teve a senha exposta.
+    if (senhaHash !== undefined) {
+      let sessoes = db
+        .updateTable('sessao')
+        .set({ revogado_em: new Date() })
+        .where('id_usuario', '=', idUsuario)
+        .where('revogado_em', 'is', null);
+      if (propriaConta) {
+        sessoes = sessoes.where('id_sessao', '!=', quemPede.idSessao);
+      }
+      await sessoes.execute();
     }
 
     // Resposta já vem com a avatarUrl fresca: quem chama (ex.: Minha Conta > aoSalvar) só passa este objeto

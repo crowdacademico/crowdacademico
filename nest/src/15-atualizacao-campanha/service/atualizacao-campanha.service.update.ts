@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { distinguir404ou403 } from '../../commons/database/distinguir-404-ou-403.util';
 import { DatabaseService } from '../../commons/database/database.service';
 import { ATUALIZACAO_CAMPANHA_COLUNAS_SELECT } from '../constants/atualizacao-campanha.constants';
@@ -14,16 +14,22 @@ export class AtualizacaoCampanhaServiceUpdate {
     id: number,
     dto: AtualizacaoCampanhaRequestUpdate,
   ): Promise<AtualizacaoCampanhaResponse> {
+    const campos = {
+      ...(dto.titulo !== undefined ? { titulo: dto.titulo } : {}),
+      ...(dto.conteudo !== undefined ? { conteudo: dto.conteudo } : {}),
+      ...(dto.fase !== undefined ? { fase: dto.fase } : {}),
+      ...(dto.tipo !== undefined ? { tipo: dto.tipo } : {}),
+      ...(dto.ativo !== undefined ? { ativo: dto.ativo } : {}),
+    };
+    if (Object.keys(campos).length === 0) {
+      // `UPDATE ... SET WHERE` sem coluna é SQL inválido: 400 claro em vez do 500 do Postgres.
+      throw new BadRequestException('Nenhum campo para atualizar.');
+    }
+
     const linha = await this.database
       .getDb()
       .updateTable('atualizacao_campanha')
-      .set({
-        ...(dto.titulo !== undefined ? { titulo: dto.titulo } : {}),
-        ...(dto.conteudo !== undefined ? { conteudo: dto.conteudo } : {}),
-        ...(dto.fase !== undefined ? { fase: dto.fase } : {}),
-        ...(dto.tipo !== undefined ? { tipo: dto.tipo } : {}),
-        ...(dto.ativo !== undefined ? { ativo: dto.ativo } : {}),
-      })
+      .set(campos)
       .where('id_atualizacao', '=', id)
       .returning(ATUALIZACAO_CAMPANHA_COLUNAS_SELECT)
       .executeTakeFirst();

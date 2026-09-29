@@ -33,7 +33,9 @@ export function NavegacaoPagina({
       <span>
         Página {paginaAtual} de {totalPaginas} ({total} {unidade})
       </span>
-      <div className="flex items-center gap-3">
+      {/* flex-wrap: no celular (375px) o seletor de tamanho e os 2 botões não cabem numa linha; sem quebrar, a
+          página inteira passava 5px da largura da tela. */}
+      <div className="flex items-center flex-wrap gap-3">
         {children}
         <div className="flex gap-2">
           <button

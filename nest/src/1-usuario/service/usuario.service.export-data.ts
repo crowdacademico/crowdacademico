@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { sql } from 'kysely';
 import { DatabaseService } from '../../commons/database/database.service';
+import { emSequencia } from '../../commons/database/em-sequencia.util';
 import { decifrarCpf } from '../../commons/seguranca/cpf-cifra.util';
 import { USUARIO_COLUNAS_SELECT } from '../constants/usuario.constants';
 import { UsuarioResponseExportData } from '../dto/response/usuario.response-export-data';
@@ -41,96 +42,106 @@ export class UsuarioServiceExportData {
       aceitesTermos,
       sessoes,
       historicoRejeicoes,
-    ] = await Promise.all([
-      db
-        .selectFrom('perfil_pesquisador')
-        .selectAll()
-        .where('id_usuario', '=', idUsuario)
-        .executeTakeFirst(),
-      db
-        .selectFrom('link_academico as la')
-        .innerJoin('tipo_link as tl', 'tl.id_tipolink', 'la.id_tipolink')
-        .select(['tl.nome as tipo', 'la.url', 'la.rotulo', 'la.ordem'])
-        .where('la.id_usuario', '=', idUsuario)
-        .orderBy('la.ordem')
-        .execute(),
-      db
-        .selectFrom('campanha')
-        .select([
-          'id_campanha',
-          'titulo',
-          'descricao',
-          'status',
-          'modelo',
-          'meta_financeira',
-          'valor_bruto_arrecadado',
-          'criado_em',
-        ])
-        .where('id_usuario', '=', idUsuario)
-        .orderBy('criado_em', 'desc')
-        .execute(),
+    ] = await emSequencia([
+      () =>
+        db
+          .selectFrom('perfil_pesquisador')
+          .selectAll()
+          .where('id_usuario', '=', idUsuario)
+          .executeTakeFirst(),
+      () =>
+        db
+          .selectFrom('link_academico as la')
+          .innerJoin('tipo_link as tl', 'tl.id_tipolink', 'la.id_tipolink')
+          .select(['tl.nome as tipo', 'la.url', 'la.rotulo', 'la.ordem'])
+          .where('la.id_usuario', '=', idUsuario)
+          .orderBy('la.ordem')
+          .execute(),
+      () =>
+        db
+          .selectFrom('campanha')
+          .select([
+            'id_campanha',
+            'titulo',
+            'descricao',
+            'status',
+            'modelo',
+            'meta_financeira',
+            'valor_bruto_arrecadado',
+            'criado_em',
+          ])
+          .where('id_usuario', '=', idUsuario)
+          .orderBy('criado_em', 'desc')
+          .execute(),
       // Só o que ELE escreveu (id_pesquisador = titular) - nunca comentário
       // recebido de outro pesquisador nas campanhas dele (dado de terceiro).
-      db
-        .selectFrom('comentario')
-        .select(['id_campanha', 'conteudo', 'endossado', 'criado_em'])
-        .where('id_pesquisador', '=', idUsuario)
-        .orderBy('criado_em', 'desc')
-        .execute(),
-      db
-        .selectFrom('seguir_campanha')
-        .select(['id_campanha', 'seguido_em'])
-        .where('id_usuario', '=', idUsuario)
-        .execute(),
-      db
-        .selectFrom('seguir_pesquisador')
-        .select(['id_pesquisador', 'seguido_em'])
-        .where('id_usuario', '=', idUsuario)
-        .execute(),
+      () =>
+        db
+          .selectFrom('comentario')
+          .select(['id_campanha', 'conteudo', 'endossado', 'criado_em'])
+          .where('id_pesquisador', '=', idUsuario)
+          .orderBy('criado_em', 'desc')
+          .execute(),
+      () =>
+        db
+          .selectFrom('seguir_campanha')
+          .select(['id_campanha', 'seguido_em'])
+          .where('id_usuario', '=', idUsuario)
+          .execute(),
+      () =>
+        db
+          .selectFrom('seguir_pesquisador')
+          .select(['id_pesquisador', 'seguido_em'])
+          .where('id_usuario', '=', idUsuario)
+          .execute(),
       // Só contribuição IDENTIFICADA (id_usuario preenchido) - contribuição
       // anônima nunca é ligada a nenhuma conta, não existe "minha
       // contribuição anônima" pra exportar.
-      db
-        .selectFrom('contribuicao')
-        .select([
-          'id_campanha',
-          'valor',
-          'meio_pagamento',
-          'status',
-          'anonima',
-          'criado_em',
-        ])
-        .where('id_usuario', '=', idUsuario)
-        .orderBy('criado_em', 'desc')
-        .execute(),
-      db
-        .selectFrom('usuario_termo')
-        .select(['id_termo', 'aceito_em'])
-        .where('id_usuario', '=', idUsuario)
-        .execute(),
+      () =>
+        db
+          .selectFrom('contribuicao')
+          .select([
+            'id_campanha',
+            'valor',
+            'meio_pagamento',
+            'status',
+            'anonima',
+            'criado_em',
+          ])
+          .where('id_usuario', '=', idUsuario)
+          .orderBy('criado_em', 'desc')
+          .execute(),
+      () =>
+        db
+          .selectFrom('usuario_termo')
+          .select(['id_termo', 'aceito_em'])
+          .where('id_usuario', '=', idUsuario)
+          .execute(),
       // Mesmo filtro de UsuarioServiceFindAllLogins - renovação silenciosa de
       // token não conta como "sessão" pra este propósito.
-      db
-        .selectFrom('sessao')
-        .select(['criado_em', 'ip'])
-        .where('id_usuario', '=', idUsuario)
-        .where('origem', '=', 'login')
-        .orderBy('criado_em', 'desc')
-        .execute(),
+      () =>
+        db
+          .selectFrom('sessao')
+          .select(['criado_em', 'ip'])
+          .where('id_usuario', '=', idUsuario)
+          .where('origem', '=', 'login')
+          .orderBy('criado_em', 'desc')
+          .execute(),
       // Nunca seleciona id_admin: quem rejeitou é dado do administrador, não do
       // titular. Sobrevive à exclusão da campanha (sem FK, ver 01), então
       // inclui rejeições de campanhas que já foram apagadas.
-      db
-        .selectFrom('historico_rejeicao')
-        .select([
-          'id_campanha',
-          'titulo_campanha',
-          'justificativa',
-          'rejeitado_em',
-        ])
-        .where('id_usuario_dono', '=', idUsuario)
-        .orderBy('rejeitado_em', 'desc')
-        .execute(),
+      () =>
+        db
+          .selectFrom('historico_rejeicao')
+          .select([
+            'id_campanha',
+            'titulo_campanha',
+            'justificativa',
+            'rejeitado_em',
+          ])
+          .where('id_usuario_dono', '=', idUsuario)
+          .orderBy('rejeitado_em', 'desc')
+          .execute(),
     ]);
 
     // Satélites de campanha (orçamento/cronograma/atualizações) buscados
@@ -141,28 +152,31 @@ export class UsuarioServiceExportData {
     const [orcamentos, marcos, atualizacoes] =
       idsCampanhas.length === 0
         ? [[], [], []]
-        : await Promise.all([
-            db
-              .selectFrom('orcamento_campanha')
-              .select(['id_campanha', 'categoria', 'descricao', 'valor'])
-              .where('id_campanha', 'in', idsCampanhas)
-              .execute(),
-            db
-              .selectFrom('marco_cronograma')
-              .select(['id_campanha', 'titulo', 'descricao', 'data_prevista'])
-              .where('id_campanha', 'in', idsCampanhas)
-              .execute(),
-            db
-              .selectFrom('atualizacao_campanha')
-              .select([
-                'id_campanha',
-                'titulo',
-                'conteudo',
-                'fase',
-                'publicado_em',
-              ])
-              .where('id_campanha', 'in', idsCampanhas)
-              .execute(),
+        : await emSequencia([
+            () =>
+              db
+                .selectFrom('orcamento_campanha')
+                .select(['id_campanha', 'categoria', 'descricao', 'valor'])
+                .where('id_campanha', 'in', idsCampanhas)
+                .execute(),
+            () =>
+              db
+                .selectFrom('marco_cronograma')
+                .select(['id_campanha', 'titulo', 'descricao', 'data_prevista'])
+                .where('id_campanha', 'in', idsCampanhas)
+                .execute(),
+            () =>
+              db
+                .selectFrom('atualizacao_campanha')
+                .select([
+                  'id_campanha',
+                  'titulo',
+                  'conteudo',
+                  'fase',
+                  'publicado_em',
+                ])
+                .where('id_campanha', 'in', idsCampanhas)
+                .execute(),
           ]);
 
     // Score só existe (score_pesquisador) se ele já é/foi pesquisador -

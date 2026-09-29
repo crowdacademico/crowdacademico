@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { distinguir404ou403 } from '../../commons/database/distinguir-404-ou-403.util';
 import { DatabaseService } from '../../commons/database/database.service';
 import { CAMPANHA_COLUNAS_SELECT } from '../constants/campanha.constants';
@@ -14,28 +14,32 @@ export class CampanhaServiceUpdate {
     id: number,
     dto: CampanhaRequestUpdate,
   ): Promise<CampanhaResponse> {
+    const campos = {
+      ...(dto.titulo !== undefined ? { titulo: dto.titulo } : {}),
+      ...(dto.idAreaConhecimento !== undefined
+        ? { id_area_conhecimento: dto.idAreaConhecimento }
+        : {}),
+      ...(dto.metaFinanceira !== undefined
+        ? { meta_financeira: dto.metaFinanceira.toString() }
+        : {}),
+      ...(dto.descricao !== undefined ? { descricao: dto.descricao } : {}),
+      ...(dto.dataInicio !== undefined
+        ? { data_inicio: new Date(dto.dataInicio) }
+        : {}),
+      ...(dto.dataFim !== undefined ? { data_fim: new Date(dto.dataFim) } : {}),
+      ...(dto.videoApresentacaoUrl !== undefined
+        ? { video_apresentacao_url: dto.videoApresentacaoUrl }
+        : {}),
+    };
+    if (Object.keys(campos).length === 0) {
+      // `UPDATE ... SET WHERE` sem coluna é SQL inválido: 400 claro em vez do 500 do Postgres.
+      throw new BadRequestException('Nenhum campo para atualizar.');
+    }
+
     const linha = await this.database
       .getDb()
       .updateTable('campanha')
-      .set({
-        ...(dto.titulo !== undefined ? { titulo: dto.titulo } : {}),
-        ...(dto.idAreaConhecimento !== undefined
-          ? { id_area_conhecimento: dto.idAreaConhecimento }
-          : {}),
-        ...(dto.metaFinanceira !== undefined
-          ? { meta_financeira: dto.metaFinanceira.toString() }
-          : {}),
-        ...(dto.descricao !== undefined ? { descricao: dto.descricao } : {}),
-        ...(dto.dataInicio !== undefined
-          ? { data_inicio: new Date(dto.dataInicio) }
-          : {}),
-        ...(dto.dataFim !== undefined
-          ? { data_fim: new Date(dto.dataFim) }
-          : {}),
-        ...(dto.videoApresentacaoUrl !== undefined
-          ? { video_apresentacao_url: dto.videoApresentacaoUrl }
-          : {}),
-      })
+      .set(campos)
       .where('id_campanha', '=', id)
       .returning(CAMPANHA_COLUNAS_SELECT)
       .executeTakeFirst();

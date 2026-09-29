@@ -23,7 +23,6 @@
             ".request-reject.ts",
             ".request-shift-dates.ts",
             ".request-start-upload.ts",
-            ".request-suspend.ts",
             ".request-update.ts",
             ".request-verify-email.ts",
             ".response.ts",

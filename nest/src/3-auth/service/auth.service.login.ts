@@ -1,5 +1,6 @@
 import {
   ForbiddenException,
+  Inject,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -7,6 +8,8 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
 import { sql } from 'kysely';
+import { Pool } from 'pg';
+import { PG_POOL } from '../../commons/database/database.constants';
 import { UsuarioServiceFindOne } from '../../1-usuario/service/usuario.service.findone';
 import { ConfiguracaoValorService } from '../../commons/configuracao/configuracao-valor.service';
 import { DatabaseService } from '../../commons/database/database.service';
@@ -40,6 +43,7 @@ function formatarDataHoraBr(data: Date): string {
 export class AuthServiceLogin {
   constructor(
     private readonly database: DatabaseService,
+    @Inject(PG_POOL) private readonly pool: Pool,
     private readonly jwtService: JwtService,
     private readonly usuarioServiceFindOne: UsuarioServiceFindOne,
     private readonly configuracaoValor: ConfiguracaoValorService,
@@ -91,13 +95,13 @@ export class AuthServiceLogin {
 
     const senhaValida = await bcrypt.compare(dto.senha, usuario.senha_hash);
     if (!senhaValida) {
-      // SECURITY DEFINER (03_funcoes_seguranca.sql) - roda antes de existir
-      // sessão (id_usuario_atual() é NULL neste momento), por isso não passa
-      // pela RLS normal de UPDATE em usuario. p_id_usuario vem do e-mail já
+      // Conexão PRÓPRIA do pool, fora da transação da requisição: o 401 logo abaixo faz o GlobalDbInterceptor
+      // dar ROLLBACK, e a falha registrada dentro da transação sumiria junto (o bloqueio do RF-005 nunca
+      // chegaria). SECURITY DEFINER (03_funcoes_seguranca.sql), roda sem sessão; p_id_usuario vem do e-mail já
       // consultado acima, nunca de um parâmetro cru do cliente.
-      await sql`SELECT public.registrar_falha_login(${usuario.id_usuario})`.execute(
-        db,
-      );
+      await this.pool.query('SELECT public.registrar_falha_login($1)', [
+        usuario.id_usuario,
+      ]);
       throw new UnauthorizedException('Credenciais inválidas.');
     }
 

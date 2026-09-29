@@ -78,7 +78,7 @@ export function ModalAlterarTermoUso({
     evento.preventDefault();
     await executarEnviando(async () => {
       await termoUsoApi.atualizar(auth.authFetch, idSelecionado, { conteudo });
-      mostrar('Termos de Uso alterado com sucesso.', `Versão "${termo?.versao}" foi atualizada.`);
+      mostrar('Termo de Uso alterado com sucesso.', `Versão "${termo?.versao}" foi atualizada.`);
       aoSalvar?.();
       aoFechar();
     });
@@ -98,7 +98,7 @@ export function ModalAlterarTermoUso({
 
   return (
     <ModalFicha
-      titulo={`Alterar Termos de Uso - ${ROTULO_TIPO_TERMO[tipo]}`}
+      titulo={`Alterar Termo de Uso - ${ROTULO_TIPO_TERMO[tipo]}`}
       subtitulo="Editar o texto só é possível enquanto ninguém tiver aceitado a versão selecionada. Depois do primeiro aceite, ela trava e a correção precisa virar uma versão nova."
       aoFechar={fechar}
       rodape={

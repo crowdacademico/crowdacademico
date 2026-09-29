@@ -4,7 +4,7 @@ import { UsuarioRequestCreate } from '../dto/request/usuario.request-create';
 import { UsuarioServiceCreate } from '../service/usuario.service.create';
 
 // "Criar usuário" do painel: exige login (guarda global) e a permissão usuario_criar. Quem cria a própria conta
-// passa pelo POST /auth/cadastro, que também grava o aceite dos Termos de Uso; esta rota não pode virar
+// passa pelo POST /auth/cadastro, que também grava o aceite do Termo de Uso; esta rota não pode virar
 // @Publico(), senão um anônimo criaria conta por aqui pulando o aceite. A checagem da permissão fica aqui e não
 // no service porque o cadastro público reaproveita UsuarioServiceCreate sem ninguém logado (e a policy de INSERT
 // em usuario é WITH CHECK (true) pelo mesmo motivo, ver [04-D-2]).

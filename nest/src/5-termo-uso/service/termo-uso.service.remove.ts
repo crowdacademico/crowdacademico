@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
+import { emSequencia } from '../../commons/database/em-sequencia.util';
 
 // Excluir: como Criar não ativa mais sozinho (ver TermoUsoServiceCreate), um rascunho com muito erro de
 // português pode simplesmente ser apagado em vez de corrigido, sem sujar o banco.
@@ -32,7 +33,7 @@ export class TermoUsoServiceRemove {
       .executeTakeFirst();
 
     if (!termo) {
-      throw new NotFoundException('Versão de Termos de Uso não encontrada.');
+      throw new NotFoundException('Versão do Termo de Uso não encontrada.');
     }
 
     if (termo.ativo) {
@@ -42,19 +43,21 @@ export class TermoUsoServiceRemove {
     }
 
     if (!forcar) {
-      const [aceiteGeral, aceiteContribuicao] = await Promise.all([
-        this.database
-          .getDb()
-          .selectFrom('usuario_termo')
-          .select('id_usuario_termo')
-          .where('id_termo', '=', id)
-          .executeTakeFirst(),
-        this.database
-          .getDb()
-          .selectFrom('aceite_termo_contribuicao')
-          .select('id_aceite_contrib')
-          .where('id_termo', '=', id)
-          .executeTakeFirst(),
+      const [aceiteGeral, aceiteContribuicao] = await emSequencia([
+        () =>
+          this.database
+            .getDb()
+            .selectFrom('usuario_termo')
+            .select('id_usuario_termo')
+            .where('id_termo', '=', id)
+            .executeTakeFirst(),
+        () =>
+          this.database
+            .getDb()
+            .selectFrom('aceite_termo_contribuicao')
+            .select('id_aceite_contrib')
+            .where('id_termo', '=', id)
+            .executeTakeFirst(),
       ]);
 
       if (aceiteGeral || aceiteContribuicao) {

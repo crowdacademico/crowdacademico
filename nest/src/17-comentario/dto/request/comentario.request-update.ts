@@ -1,4 +1,10 @@
-import { IsBoolean, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  IsBoolean,
+  IsOptional,
+  IsString,
+  Matches,
+  MaxLength,
+} from 'class-validator';
 
 // `ativo` incluso pro autor conseguir ocultar o próprio comentário (ou
 // moderador com comentario_moderar ocultar/reverter qualquer um) -
@@ -8,7 +14,12 @@ import { IsBoolean, IsOptional, IsString, MaxLength } from 'class-validator';
 export class ComentarioRequestUpdate {
   @IsOptional()
   @IsString()
-  @MaxLength(500)
+  @Matches(/\S/, {
+    message: 'Escreva o comentário (não pode ficar em branco).',
+  })
+  @MaxLength(500, {
+    message: 'O comentário pode ter no máximo 500 caracteres.',
+  })
   conteudo?: string;
 
   @IsOptional()

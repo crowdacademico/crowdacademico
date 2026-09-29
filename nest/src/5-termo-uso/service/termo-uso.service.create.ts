@@ -38,7 +38,7 @@ export class TermoUsoServiceCreate {
       // Versão duplicada no mesmo tipo segue para o filtro global (mensagens-duplicidade.constants.ts).
       if (temCodigoPostgres(erro, CODIGO_PG_RLS_VIOLATION)) {
         throw new ForbiddenException(
-          "Sem permissão 'termos_uso_gerenciar' para publicar uma nova versão dos Termos de Uso.",
+          "Sem permissão 'termos_uso_gerenciar' para publicar uma nova versão do Termo de Uso.",
         );
       }
       throw erro;

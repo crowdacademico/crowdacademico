@@ -15,8 +15,10 @@ export interface LinkAcademicoRequestCreate {
   rotulo?: string;
 }
 
-// Espelha link-academico.request-update.ts: o tipo não muda depois de criado, só url e rótulo.
+// Espelha link-academico.request-update.ts: o tipo não muda depois de criado; muda só o que vier (url, rótulo,
+// ordem). `rotulo: null` apaga o rótulo.
 export interface LinkAcademicoRequestUpdate {
-  url: string;
-  rotulo?: string;
+  url?: string;
+  rotulo?: string | null;
+  ordem?: number;
 }

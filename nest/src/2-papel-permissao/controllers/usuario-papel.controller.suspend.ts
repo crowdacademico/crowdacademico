@@ -6,7 +6,7 @@ import {
   ParseIntPipe,
   Post,
 } from '@nestjs/common';
-import { UsuarioPapelRequestSuspend } from '../dto/request/usuario-papel.request-suspend';
+import { SuspensaoRequestDto } from '../../commons/moderacao/dto/suspensao.request.dto';
 import { UsuarioPapelServiceSuspend } from '../service/usuario-papel.service.suspend';
 
 @Controller('usuario-papel')
@@ -18,9 +18,9 @@ export class UsuarioPapelControllerSuspend {
   suspender(
     @Param('idUsuario', ParseIntPipe) idUsuario: number,
     @Param('idPapel', ParseIntPipe) idPapel: number,
-    @Body() dto: UsuarioPapelRequestSuspend,
+    @Body() dto: SuspensaoRequestDto,
   ) {
-    return this.service.suspender(idUsuario, idPapel, dto.ate);
+    return this.service.suspender(idUsuario, idPapel, dto.ate, dto.motivo);
   }
 
   @Post(':idUsuario/:idPapel/revogar-suspensao')

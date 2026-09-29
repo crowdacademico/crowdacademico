@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { sql } from 'kysely';
 import { DatabaseService } from '../../commons/database/database.service';
+import { exigirQueExista } from '../../commons/database/distinguir-404-ou-403.util';
 import { AutorizacaoService } from '../../commons/seguranca/autorizacao.service';
 import { SuspensaoResponseDto } from '../../commons/moderacao/dto/suspensao.response.dto';
 
@@ -56,8 +57,15 @@ export class UsuarioServiceSuspend {
   }
 
   async revogar(idUsuario: number): Promise<void> {
+    const db = this.database.getDb();
     await sql`SELECT public.revogar_suspensao_usuario(${idUsuario})`.execute(
-      this.database.getDb(),
+      db,
+    );
+    await exigirQueExista(
+      db,
+      'usuario',
+      { id_usuario: idUsuario, deletado: false },
+      `Usuário ${idUsuario} não encontrado`,
     );
   }
 }

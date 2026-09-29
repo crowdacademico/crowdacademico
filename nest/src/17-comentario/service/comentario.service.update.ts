@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
 import { distinguir404ou403 } from '../../commons/database/distinguir-404-ou-403.util';
 import { COMENTARIO_COLUNAS_SELECT } from '../constants/comentario.constants';
@@ -17,13 +17,19 @@ export class ComentarioServiceUpdate {
     const db = this.database.getDb();
 
     // ordem_endosso não é enviada: a trigger validar_comentario_endosso_autor (05) calcula ao endossar e zera ao remover.
+    const campos = {
+      ...(dto.conteudo !== undefined ? { conteudo: dto.conteudo } : {}),
+      ...(dto.endossado !== undefined ? { endossado: dto.endossado } : {}),
+      ...(dto.ativo !== undefined ? { ativo: dto.ativo } : {}),
+    };
+    if (Object.keys(campos).length === 0) {
+      // `UPDATE ... SET WHERE` sem coluna é SQL inválido: 400 claro em vez do 500 do Postgres.
+      throw new BadRequestException('Nenhum campo para atualizar.');
+    }
+
     const linha = await db
       .updateTable('comentario')
-      .set({
-        ...(dto.conteudo !== undefined ? { conteudo: dto.conteudo } : {}),
-        ...(dto.endossado !== undefined ? { endossado: dto.endossado } : {}),
-        ...(dto.ativo !== undefined ? { ativo: dto.ativo } : {}),
-      })
+      .set(campos)
       .where('id_comentario', '=', id)
       .returning(COMENTARIO_COLUNAS_SELECT)
       .executeTakeFirst();

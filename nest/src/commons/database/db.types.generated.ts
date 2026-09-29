@@ -462,7 +462,9 @@ export interface Usuario {
 export interface UsuarioPapel {
   id_papel: number;
   id_usuario: number;
+  motivo_suspensao: string | null;
   suspenso_ate: Timestamp | null;
+  suspenso_por: number | null;
 }
 
 export interface UsuarioTermo {

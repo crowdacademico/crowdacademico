@@ -553,7 +553,7 @@ export type UsuarioEntity = Selectable<UsuarioTable>;
 - **Em palavras simples:** quando dois módulos precisavam de um "formulário" ou "resposta" exatamente igual, cada um tinha a sua cópia. Agora existe uma só, na pasta de peças compartilhadas (`commons`), e os dois usam a mesma.
 - **Decisão:** os 11 arquivos `entity/<nome>.entity.ts` (uma linha cada) viraram 11 linhas no fim do `db.types.ts`, e as pastas `entity/` sumiram. `SuspensaoRequestDto` e `SuspensaoResponseDto` (`commons/moderacao/dto/`) servem à suspensão de conta e à de pesquisador. `PorCampanhaQueryDto` (`commons/database/dto/`) serve às listagens de atualizações e de comentários. A renovação de sessão devolve o mesmo `AuthResponseLogin` do login. Saíram 18 arquivos e entraram 3 em `commons`: 15 a menos.
 - **Motivo:** eram cópias idênticas; mudar uma e esquecer a outra seria questão de tempo.
-- **Caso-limite aceito:** a suspensão de um **papel** (`usuario-papel.request-suspend.ts`) continua separada, porque não pede motivo. Se um dia uma das suspensões precisar de um campo que a outra não tem, ela volta a ter DTO próprio.
+- **Caso-limite aceito:** a suspensão de um **papel** (arquivo `usuario-papel.request-suspend`, removido em 29-09-2026, ver "Correções da super auditoria") continuava separada, porque não pedia motivo. Se um dia uma das suspensões precisar de um campo que a outra não tem, ela volta a ter DTO próprio.
 
 ### 7.2 Anatomia de um controller
 
@@ -1351,3 +1351,52 @@ Esse "ler sozinho" só funciona pro plugin **conseguir achar o arquivo do DTO em
 ### 18.7 Confirmação de que está funcionando (04-09-2026)
 
 Testado com o backend rodando de verdade contra o Postgres real (não só compilado): `npm run build` limpo (sem aviso do plugin), `/api` devolvendo `200`, `/api-json` com o schema do `UsuarioRequestCreate` batendo exatamente com os decorators de `class-validator` já existentes no arquivo, e `security`/`securitySchemes` do documento confirmando que o cadeado de "exige login" aparece certo em toda rota por padrão.
+
+## 19. Correções da super auditoria (29-09-2026)
+
+**Em palavras simples:** a super auditoria (o relatório dela fica na pasta de informações, fora do repositório) usou o sistema de verdade e achou regras que não funcionavam como o requisito pede. Esta seção registra o que mudou no Nest por causa disso. As regras do banco estão na seção equivalente do `DOCUMENTACAO_BD.md`.
+
+📌 **Bloqueio por senha errada (RF-005) gravado fora da transação.**
+- **Decisão:** `auth.service.login.ts` chama `registrar_falha_login()` por uma conexão própria do pool (`PG_POOL`), e não pelo `db` da requisição.
+- **Motivo:** o login com senha errada termina em 401. Qualquer exceção faz o `GlobalDbInterceptor` dar `ROLLBACK`, e isso levava junto a anotação da falha. O contador nunca passava de zero, então o bloqueio depois de 5 tentativas nunca acontecia.
+- **Caso-limite aceito:** a anotação é gravada mesmo que algo depois dela falhe na mesma requisição. É o comportamento certo para uma trava de segurança.
+
+📌 **Trocar a própria senha exige a senha atual (RF-008).**
+- **Decisão:** em `usuario.service.update.ts`, `novaSenha` na própria conta sem `senhaAtual` responde 400, com o erro embaixo do campo (`erroNoCampo`). A senha nova igual à atual também responde 400. Depois da troca, as outras sessões da conta são encerradas: na própria conta fica só a sessão de quem trocou; no reset feito pelo admin caem todas.
+- **Motivo:** antes, a ausência de `senhaAtual` era tratada como reset administrativo sem conferir quem pedia. Quem pegasse uma sessão aberta tomava a conta.
+- **Caso-limite aceito:** o botão "Redefinir senha dev" do painel continua funcionando para outras contas. Na conta do próprio admin, ele passa a pedir a senha atual.
+
+📌 **E-mail sempre em minúsculas.**
+- **Decisão:** a transformação `EmailNormalizado()` (`commons/validacao/transformacoes.decorator.ts`) entra no cadastro, no login e na criação de usuário. O banco normaliza de novo, com a trigger `trg_usuario_normaliza_email`.
+- **Motivo:** `ALICE@X.COM` e `alice@x.com` viravam duas contas, e o login com maiúsculas falhava.
+- **Caso-limite aceito:** nenhum.
+
+📌 **Alteração sem nenhum campo responde 400, não 500.**
+- **Decisão:** campanha, comentário, atualização de campanha, Termo de Uso e link acadêmico conferem "Nenhum campo para atualizar." antes do `UPDATE`, como os outros módulos já faziam. O link acadêmico passou a alterar só o que vier (`url`, `rotulo` e `ordem` opcionais; `rotulo: null` apaga o rótulo).
+- **Motivo:** `UPDATE ... SET WHERE` sem coluna é SQL inválido e virava "Internal server error". No link, a URL era obrigatória até para reordenar, e editar o link apagava a ordem dele sem aviso.
+- **Caso-limite aceito:** nenhum.
+
+📌 **Ação sobre registro que não existe responde 404.**
+- **Decisão:** `exigirQueExista()` (`distinguir-404-ou-403.util.ts`) roda **depois** da função do banco em desbloquear, revogar suspensão (de conta e de papel) e reativar pesquisador. A exclusão de conta confere a mesma coisa pela leitura que já fazia antes.
+- **Motivo:** essas funções do banco devolvem VOID e não dizem se acharam a linha, então um id inexistente respondia 204 ("deu certo").
+- **Caso-limite aceito:** chamar depois da função mantém o 403 para quem não tem permissão. Por isso, um registro inexistente só vira 404 para quem pode fazer a ação.
+
+📌 **Mensagens de validação em português.**
+- **Decisão:** `errosPorCampo()` traduz a mensagem padrão do class-validator quando ela vem em inglês. A mensagem escrita no DTO fica como está. O filtro global traduz a mensagem dos pipes de parâmetro ("Validation failed (numeric string is expected)").
+- **Motivo:** a maioria dos formulários respondia "must be a string", "should not be empty" etc.
+- **Caso-limite aceito:** a mensagem traduzida usa o nome técnico do campo (`idCampanha precisa ser um número inteiro.`). A tela mostra o erro embaixo do campo certo, então o nome serve de referência.
+
+📌 **`emSequencia` no lugar de `Promise.all`.**
+- **Decisão:** a exportação de dados e a exclusão de Termo de Uso usam `emSequencia()` (`commons/database/em-sequencia.util.ts`). A alteração de Termo de Uso faz as duas consultas uma depois da outra.
+- **Motivo:** é uma conexão só por requisição (`paginacao.util.ts`). O `Promise.all` nunca rodava em paralelo de verdade e dependia de um enfileiramento que o driver `pg` já avisa que vai remover.
+- **Caso-limite aceito:** nenhum.
+
+📌 **Suspensão de papel com motivo (RF-118).**
+- **Decisão:** `POST /usuario-papel/:idUsuario/:idPapel/suspender` recebe o mesmo `SuspensaoRequestDto` (data e motivo) da suspensão de conta e de pesquisador. O DTO próprio, que só tinha a data, saiu.
+- **Motivo:** o RF-118 pede motivo obrigatório também para a suspensão de um papel.
+- **Caso-limite aceito:** nenhum.
+
+📌 **Códigos de resposta.**
+- **Decisão:** link de verificação de e-mail inválido responde 400 (era 401). Enviar para aprovação uma campanha que não está em rascunho nem rejeitada responde 409 (era 403).
+- **Motivo:** 401 é "não está logado" e faria a tela tentar renovar a sessão. O envio repetido é conflito de estado, o mesmo 409 do aprovar e do rejeitar.
+- **Caso-limite aceito:** nenhum.

@@ -53,6 +53,8 @@ export interface UsuarioPapelTable {
   id_papel: number;
   // Espelha 01_extensoes_enums_tabelas.sql [01-B]. NULL = papel valendo normalmente.
   suspenso_ate: Date | null;
+  motivo_suspensao: string | null;
+  suspenso_por: number | null;
 }
 
 export interface SessaoTable {

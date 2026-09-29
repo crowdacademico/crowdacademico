@@ -25,7 +25,7 @@ export class TermoUsoServiceFindActive {
       // viraria 404 aqui) em vez de deixar o Cadastro/Contribuição seguir
       // sem termo nenhum pra aceitar.
       throw new NotFoundException(
-        `Nenhuma versão de Termos de Uso do tipo "${tipo}" está ativa no momento.`,
+        `Nenhuma versão do Termo de Uso do tipo "${tipo}" está ativa no momento.`,
       );
     }
 

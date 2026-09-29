@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { sql } from 'kysely';
 import { DatabaseService } from '../../commons/database/database.service';
+import { exigirQueExista } from '../../commons/database/distinguir-404-ou-403.util';
 
 @Injectable()
 export class UsuarioServiceUnlock {
@@ -10,8 +11,13 @@ export class UsuarioServiceUnlock {
   // SECURITY DEFINER, exige a permissão 'usuario_desbloquear' internamente (checagem própria da função, não
   // RLS). É o único jeito de desbloquear, pelo painel, uma conta bloqueada por excesso de tentativas de login.
   async executar(idUsuario: number): Promise<void> {
-    await sql`SELECT public.liberar_bloqueio_login(${idUsuario})`.execute(
-      this.database.getDb(),
+    const db = this.database.getDb();
+    await sql`SELECT public.liberar_bloqueio_login(${idUsuario})`.execute(db);
+    await exigirQueExista(
+      db,
+      'usuario',
+      { id_usuario: idUsuario, deletado: false },
+      `Usuário ${idUsuario} não encontrado`,
     );
   }
 }

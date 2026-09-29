@@ -1,6 +1,8 @@
 import { IsEmail, IsString, MinLength } from 'class-validator';
+import { EmailNormalizado } from '../../../commons/validacao/transformacoes.decorator';
 
 export class AuthRequestLogin {
+  @EmailNormalizado()
   @IsEmail({}, { message: 'E-mail inválido.' })
   email: string;
 
