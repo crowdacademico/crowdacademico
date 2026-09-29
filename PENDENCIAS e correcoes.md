@@ -246,10 +246,6 @@ Na tabela de Atualizações do T3, o botão "Ocultar" (só texto) fica com fonte
 
 Hoje `campanha` tem 17 triggers e `comentario` tem 8. Quando várias rodam no mesmo momento, o Postgres escolhe a ordem pela ordem alfabética do nome; o dispatcher seria uma trigger só por momento, chamando as regras numa ordem escrita. Ganho: ordem explícita e mensagem de erro previsível quando duas regras falhariam juntas. Custo: mexer nas regras mais críticas (aprovação, congelamento, prazo), com risco de regressão; as suítes de caracterização (1.050 casos) são a rede de proteção. Recomendação atual: não fazer. **O Lucas quer, mais para frente, uma documentação completa sobre isto para estudar pessoalmente** (como funciona a ordem hoje, o que mudaria, exemplos com as triggers reais), antes de decidir.
 
-#### 🟡 Para depois (29-09-2026): comentários longos do `02` e do `06`
-
-Os dois ainda têm cerca de 63% de comentário, boa parte histórico ("CORRIGIDO em..."). Fazer o mesmo que foi feito com o `03` e o `05`: o código fica só com a regra e a história vai para o histórico, com a ferramenta que já existe. Só mexe em comentário.
-
 ### Protótipo estático (sessão própria)
 
 - Reputação em 4 faixas, seguir campanha e recompensas não têm presença visual no protótipo. Levantar como decisão, não encaixar numa rodada de "embelezar".

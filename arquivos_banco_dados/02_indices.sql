@@ -13,9 +13,8 @@
 --  automático suficiente para as consultas dessas tabelas - EXCETO
 --  area_conhecimento.id_pai e os índices únicos de nome dos catálogos (ver [02-C]).
 --
---  Inventário Mapeado:
---  - 52 Índices (CREATE INDEX / CREATE UNIQUE INDEX) em 8 blocos de domínio
---  (o Postgres não cria índice automático em FK; os de FK estão nos blocos de domínio abaixo)
+--  O Postgres não cria índice automático em FK; os de FK estão nos blocos de domínio abaixo. A contagem de
+--  índices fica em DOCUMENTACAO_BD.md, conferida por teste.
 -- ----------------------------------------------------------------------------
 --  SUMÁRIO DOS BLOCOS DE CÓDIGO
 -- ----------------------------------------------------------------------------
@@ -79,9 +78,8 @@ CREATE INDEX idx_sessao_usuario            ON sessao(id_usuario);
 -- (id_usuario, status): serve à regra de simultâneas, ao score e a "minhas campanhas", e à FK.
 CREATE INDEX idx_campanha_usuario           ON campanha(id_usuario, status);
 CREATE INDEX idx_campanha_status_data_fim   ON campanha(status, data_fim);
--- O índice de maior impacto: a busca pública principal do site (filtrar campanha por área, o RF que
--- justificou investir nas 81 áreas de nível 2, ver [01-C]) fazia varredura completa da tabela sem
--- ele.
+-- O índice de maior impacto: a busca pública principal do site (filtrar campanha por área, ver [01-C]); sem
+-- ele, a busca varre a tabela inteira.
 CREATE INDEX idx_campanha_area_conhecimento ON campanha(id_area_conhecimento);
 CREATE INDEX idx_seguir_campanha_campanha   ON seguir_campanha(id_campanha);
 CREATE INDEX idx_atualizacao_campanha       ON atualizacao_campanha(id_campanha);
@@ -95,8 +93,8 @@ CREATE INDEX idx_historico_rejeicao_campanha ON historico_rejeicao(id_campanha);
 -- FK sem índice que o score consulta.
 CREATE INDEX idx_historico_rejeicao_dono    ON historico_rejeicao(id_usuario_dono);
 CREATE INDEX idx_comentario_campanha        ON comentario(id_campanha);
--- Acelera "meus endossos"/painel de moderação por autor do comentário.
--- (id_pesquisador, criado_em): é exatamente a consulta do limite de frequência de comentário.
+-- (id_pesquisador, criado_em): a consulta do limite de frequência de comentário e a busca por autor ("meus
+-- endossos", painel de moderação).
 CREATE INDEX idx_comentario_pesquisador     ON comentario(id_pesquisador, criado_em);
 CREATE INDEX idx_denuncia_alvo_campanha     ON denuncia(id_campanha_alvo);
 CREATE INDEX idx_denuncia_alvo_pesq         ON denuncia(id_pesquisador_alvo);
@@ -132,8 +130,7 @@ CREATE INDEX idx_contribuicao_campanha      ON contribuicao(id_campanha);
 CREATE INDEX idx_contribuicao_usuario       ON contribuicao(id_usuario);
 CREATE INDEX idx_contrib_recompensa_recompensa ON contribuicao_recompensa(id_recompensa);
 CREATE INDEX idx_aceite_termo_contribuicao_termo        ON aceite_termo_contribuicao(id_termo);
--- RNF-007 (auditoria financeira): consultar o histórico de eventos de uma contribuição específica
--- fazia varredura completa de auditoria_financeira sem este índice.
+-- RNF-007 (auditoria financeira): o histórico de eventos de uma contribuição é lido por id_contribuicao.
 CREATE INDEX idx_auditoria_financeira_contribuicao ON auditoria_financeira(id_contribuicao);
 
 -- ============================================================
@@ -144,10 +141,9 @@ CREATE INDEX idx_score_config_pai           ON score_config(id_pai);
 -- ============================================================
 -- [02-J] LOG DE AUDITORIA
 -- ============================================================
--- As duas consultas que a tela de "Histórico de alterações" (futura) vai fazer o tempo todo - "tudo que mudou neste
--- registro" (tabela+identidade) e "tudo que este usuário mexeu" (dono da
--- FK). Sem estes dois, qualquer uma das duas vira sequential scan na
--- tabela de log inteira conforme ela cresce.
+-- As duas consultas mais frequentes do log: "tudo que mudou neste registro" (tabela + identidade, o histórico de
+-- alterações de cada tela) e "tudo que este usuário mexeu" (índice seguinte). Sem eles, as duas varrem a tabela
+-- de log inteira, cada vez mais lenta conforme ela cresce.
 CREATE INDEX idx_log_auditoria_registro    ON log_auditoria(tabela, identidade_registro);
 -- `ocorrido_em DESC` no fim: cobre o ORDER BY do sino "Atividade recente" (minha-atividade.ts);
 -- id_usuario_responsavel sozinho cobria só o filtro. Ainda serve sozinho para qualquer "WHERE

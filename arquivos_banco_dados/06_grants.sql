@@ -15,12 +15,8 @@
 --  operação falha antes com "permission denied". Segue a mesma ordem de
 --  blocos de domínio do arquivo 01.
 --
---  Inventário Mapeado:
---  - 3 Grants globais de schema/sequência
---  - 2 Grants/Revokes de coluna (proteção de dados sensíveis)
---  - Grants de tabela para 7 blocos de domínio (RBAC não precisa de grant
---    adicional - cobertura só de leitura, ver [06-B])
---  - 2 Grants de EXECUTE em função (motor de score)
+--  Tem, nesta ordem: os GRANTs gerais (schema e sequências), os de tabela e de coluna por bloco de domínio, e os
+--  de EXECUTE nas funções que o Nest chama direto, cada um junto do bloco da sua tabela.
 -- ----------------------------------------------------------------------------
 --  SUMÁRIO DOS BLOCOS DE CÓDIGO
 -- ----------------------------------------------------------------------------
@@ -148,23 +144,18 @@ GRANT UPDATE (
     titulo_academico, ativado_em
 ) ON public.perfil_pesquisador TO app_nestjs;
 
--- usuario: restrição por coluna sozinha não bastava aqui - email_verificado,
--- tentativas_login_falhas, bloqueado_ate, ultimo_login_em, ultimo_login_ip e deletado
--- são todos escritos LEGITIMAMENTE pelo mesmo app_nestjs que atende o endpoint de
--- perfil, então nenhuma lista de colunas separa "edição de perfil" de "operação de
--- autenticação" nesse nível. Solução: essas 6 colunas saem do GRANT por completo e só
--- mudam via função SECURITY DEFINER dedicada (mesmo padrão de atribuir_papel_padrao/
--- recalcular_score_pesquisador) - ver [03-O] em 03_funcoes_seguranca.sql. O GRANT
--- direto sobra só pro que é edição de perfil de verdade.
+-- usuario: email_verificado, tentativas_login_falhas, bloqueado_ate, ultimo_login_em, ultimo_login_ip e deletado
+-- são escritos pelo mesmo app_nestjs que atende a edição de perfil, então nenhuma lista de colunas separaria
+-- "editar perfil" de "operação de autenticação". Por isso essas 6 ficam fora do GRANT e só mudam por função
+-- SECURITY DEFINER ([03-O] em 03_funcoes_seguranca.sql). O GRANT direto é só do que é edição de perfil.
 GRANT UPDATE (nome, id_imagem_perfil, senha_hash) ON public.usuario TO app_nestjs;
 
--- [06-D-2b] Funções de autenticação (ver [03-O] em 03_funcoes_seguranca.sql):
--- único jeito de mudar email_verificado, tentativas_login_falhas, bloqueado_ate,
--- ultimo_login_em, ultimo_login_ip e deletado agora que saíram do GRANT direto acima.
--- Função nova no Postgres já nasce com EXECUTE liberado para PUBLIC (mesmo motivo do comentário em [06-I-1]
--- sobre usuario_visivel/tem_permissao); para função que apaga conta ou muda estado de autenticação isso é folga
--- desnecessária. REVOKE explícito antes do GRANT, nas 5, mesmo não sendo hoje explorável (só app_nestjs conecta
--- ao banco).
+-- [06-D-2b] Funções de autenticação e de moderação (ver [03-O], [03-N], [03-P] a [03-U] em 03_funcoes_seguranca.sql):
+-- o único jeito de mudar as colunas que ficaram fora do GRANT direto acima.
+-- HIGIENE (vale para todo REVOKE ... FROM PUBLIC deste arquivo): função nova no Postgres nasce com EXECUTE
+-- liberado para PUBLIC. Para função que apaga conta, muda estado de autenticação, escreve em nome de outra pessoa
+-- ou roda sem sessão (@Cron), isso é folga desnecessária; por isso o REVOKE explícito antes do GRANT só para o
+-- app_nestjs, mesmo não sendo explorável hoje (só o app_nestjs conecta ao banco).
 REVOKE EXECUTE ON FUNCTION public.confirmar_email_por_token(TEXT)         FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.registrar_falha_login(INT)              FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.liberar_bloqueio_login(INT)             FROM PUBLIC;
@@ -174,30 +165,26 @@ REVOKE EXECUTE ON FUNCTION public.excluir_conta_usuario(INT)              FROM P
 -- público (POST /auth/cadastro, 3-auth) pra gravar o aceite de termo no
 -- mesmo instante em que a conta é criada, sem sessão ainda existindo.
 REVOKE EXECUTE ON FUNCTION public.registrar_aceite_termo(INT, INT, TEXT)  FROM PUBLIC;
--- suspender_pesquisador(INT, TIMESTAMPTZ, TEXT): ver [03-P]. Mesma higiene das demais funções privilegiadas:
--- nasce com EXECUTE liberado para PUBLIC por padrão, precisa ser revogado antes do GRANT explícito.
+-- suspender_pesquisador(INT, TIMESTAMPTZ, TEXT): ver [03-P].
 REVOKE EXECUTE ON FUNCTION public.suspender_pesquisador(INT, TIMESTAMPTZ, TEXT) FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.reativar_pesquisador(INT)               FROM PUBLIC;
--- reativar_pesquisadores_vencidos(): ver 05_regras_negocio.sql. Mesma higiene.
+-- reativar_pesquisadores_vencidos(): ver 05_regras_negocio.sql (@Cron, sem sessão).
 REVOKE EXECUTE ON FUNCTION public.reativar_pesquisadores_vencidos()       FROM PUBLIC;
--- corrigir_cpf_pesquisador(INT, TEXT, TEXT): ver [03-Q] em 03_funcoes_seguranca.sql e o comentário do GRANT
--- UPDATE de perfil_pesquisador logo acima. Mesma higiene.
+-- corrigir_cpf_pesquisador(INT, TEXT, TEXT): ver [03-Q] e o comentário do GRANT UPDATE de perfil_pesquisador acima.
 REVOKE EXECUTE ON FUNCTION public.corrigir_cpf_pesquisador(INT, TEXT, TEXT) FROM PUBLIC;
--- criar_perfil_pesquisador_para_outro(...): ver [03-R] em 03_funcoes_seguranca.sql. Mesma higiene.
+-- criar_perfil_pesquisador_para_outro(...): ver [03-R].
 REVOKE EXECUTE ON FUNCTION public.criar_perfil_pesquisador_para_outro(INT, TEXT, TEXT, tipo_vinculo, TEXT, titulo_academico) FROM PUBLIC;
--- alterar_perfil_pesquisador_de_outro(...): ver [03-U] em 03_funcoes_seguranca.sql. Mesma higiene.
+-- alterar_perfil_pesquisador_de_outro(...): ver [03-U].
 REVOKE EXECUTE ON FUNCTION public.alterar_perfil_pesquisador_de_outro(INT, tipo_vinculo, TEXT, titulo_academico) FROM PUBLIC;
--- criar_campanha_para_outro(...)/forcar_exclusao_campanha(INT): ver [03-S]/[03-T] em 03_funcoes_seguranca.sql.
--- Mesma higiene.
+-- criar_campanha_para_outro(...) / forcar_exclusao_campanha(INT): ver [03-S] e [03-T].
 REVOKE EXECUTE ON FUNCTION public.criar_campanha_para_outro(INT, INT, TEXT, modelo_campanha, DECIMAL, TEXT, TIMESTAMPTZ, TIMESTAMPTZ, TEXT) FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.forcar_exclusao_campanha(INT) FROM PUBLIC;
--- suspender_usuario/revogar_suspensao_usuario/suspender_papel_usuario/
--- revogar_suspensao_papel_usuario - ver [03-N]. Mesma higiene.
+-- suspender_usuario / revogar_suspensao_usuario / suspender_papel_usuario / revogar_suspensao_papel_usuario: ver [03-N].
 REVOKE EXECUTE ON FUNCTION public.suspender_usuario(INT, TIMESTAMPTZ, TEXT)         FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.revogar_suspensao_usuario(INT)                    FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.suspender_papel_usuario(INT, INT, TIMESTAMPTZ)    FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.revogar_suspensao_papel_usuario(INT, INT)         FROM PUBLIC;
--- registrar_exportacao_dados(INT): ver [03-O] em 03_funcoes_seguranca.sql. Mesma higiene.
+-- registrar_exportacao_dados(INT): ver [03-O].
 REVOKE EXECUTE ON FUNCTION public.registrar_exportacao_dados(INT)                   FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.confirmar_email_por_token(TEXT)          TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.registrar_falha_login(INT)               TO app_nestjs;
@@ -277,19 +264,14 @@ GRANT INSERT, UPDATE, DELETE ON orcamento_campanha, marco_cronograma TO app_nest
 REVOKE EXECUTE ON FUNCTION public.atualizar_status_repasse(INT, VARCHAR, TIMESTAMP) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.atualizar_status_repasse(INT, VARCHAR, TIMESTAMP) TO app_nestjs;
 
--- encerrar_campanhas_vencidas() é chamada por agendamento (@Cron no NestJS), sem sessão de usuário: mesma
--- categoria de higiene das outras funções pré-autorizadas ([03-O], atualizar_status_contribuicao/
--- atualizar_status_repasse, acima).
+-- Funções chamadas por agendamento (@Cron no NestJS), sem sessão de usuário: encerrar_campanhas_vencidas(),
+-- expirar_campanhas_rascunho(), expirar_campanhas_rejeitadas() e limpar_log_auditoria(). Mesma higiene de [06-D-2b].
 REVOKE EXECUTE ON FUNCTION public.encerrar_campanhas_vencidas() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.encerrar_campanhas_vencidas() TO app_nestjs;
--- expirar_campanhas_rascunho(): ver [05-K-2] em 05_regras_negocio.sql. Mesma higiene, mesmo motivo (chamada por
--- @Cron, sem sessão de usuário).
 REVOKE EXECUTE ON FUNCTION public.expirar_campanhas_rascunho() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.expirar_campanhas_rascunho() TO app_nestjs;
--- expirar_campanhas_rejeitadas(): mesma higiene e mesmo motivo (chamada por @Cron, sem sessão de usuário).
 REVOKE EXECUTE ON FUNCTION public.expirar_campanhas_rejeitadas() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.expirar_campanhas_rejeitadas() TO app_nestjs;
--- limpar_log_auditoria(): mesma higiene e mesmo motivo (@Cron diário, sem sessão).
 REVOKE EXECUTE ON FUNCTION public.limpar_log_auditoria() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.limpar_log_auditoria() TO app_nestjs;
 -- deslizar_datas_campanha(): chamada pelo pesquisador pelo Nest. Quem pode usar é decidido DENTRO da função
@@ -336,7 +318,8 @@ TO app_nestjs;
 -- própria doação (ou a de qualquer um) direto por UPDATE, e a página pública passaria a exibir arrecadação sem
 -- pagamento real. status/id_transacao_api só mudam via atualizar_status_contribuicao() (05, SECURITY DEFINER,
 -- [05-K-2]); ver GRANT EXECUTE mais abaixo.
--- auditoria_financeira continua com GRANT UPDATE de tabela inteira, de propósito (decisão consciente, ainda em aberto).
+-- auditoria_financeira continua com GRANT UPDATE de tabela inteira, de propósito: a escrita financeira fica para o
+-- módulo de pagamento (ver PENDENCIAS, "Validação de escrevibilidade financeira").
 GRANT INSERT ON contribuicao TO app_nestjs;
 GRANT INSERT, UPDATE ON auditoria_financeira TO app_nestjs;
 
@@ -360,8 +343,7 @@ GRANT INSERT, UPDATE ON score_config, score_rotulo TO app_nestjs;
 -- [06-I-1] Funções do motor de score: por que precisam de GRANT EXECUTE (ver DOCUMENTACAO_BD.md)
 -- As duas escrevem (score_pesquisador/perfil_pesquisador): recalcular_todos_os_scores() em especial, sem custo
 -- nenhum para quem chama, seria negação de serviço barata se ficasse aberta a PUBLIC (percorre todos os
--- pesquisadores a cada chamada). REVOKE explícito, mesmo padrão das 5 funções de [03-O] e de
--- atribuir_papel_padrao (08).
+-- pesquisadores a cada chamada). REVOKE explícito, mesma higiene de [06-D-2b] e de atribuir_papel_padrao (08).
 REVOKE EXECUTE ON FUNCTION public.recalcular_score_pesquisador(INT) FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.recalcular_todos_os_scores()     FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.recalcular_score_pesquisador(INT) TO app_nestjs;
@@ -395,10 +377,10 @@ GRANT EXECUTE ON FUNCTION public.contar_metricas_dashboard() TO app_nestjs;
 -- que existe. Ver 01_extensoes_enums_tabelas.sql [01-L].
 GRANT SELECT ON log_auditoria TO app_nestjs;
 
--- fn_peso_score: mesma higiene, EXECUTE só para app_nestjs.
+-- fn_peso_score: EXECUTE só para app_nestjs (higiene de [06-D-2b]).
 REVOKE EXECUTE ON FUNCTION public.fn_peso_score(INT, TEXT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.fn_peso_score(INT, TEXT) TO app_nestjs;
 
--- desativar_arquivos_orfaos() (05, [05-G]): mesma higiene de limpar_log_auditoria (@Cron diário, sem sessão).
+-- desativar_arquivos_orfaos() (05, [05-G]): @Cron diário, sem sessão (higiene de [06-D-2b]).
 REVOKE EXECUTE ON FUNCTION public.desativar_arquivos_orfaos() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.desativar_arquivos_orfaos() TO app_nestjs;

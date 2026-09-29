@@ -63,7 +63,7 @@ Lista montada a partir da resposta da revisão externa de 24-09-2026 (a pasta de
 7. **Log de auditoria só com diff (A5).**
    - Revisão externa: sim, é barato.
    - Sugestão: recomendo não mudar. O UPDATE perde o estado completo, e o espaço não pesa (uns 5 MB por ano).
-8. **Comentários dos `.sql`.** Revisão externa: fazer junto do dispatcher. Já houve a primeira passada em `03` e `05`; `02` e `06` seguem com uns 63% de comentário.
+8. ✅ **FEITO (29-09-2026): comentários dos `.sql` `02` e `06`** (ver o histórico de pendências). Texto original: **Comentários dos `.sql`.** Revisão externa: fazer junto do dispatcher. Já houve a primeira passada em `03` e `05`; `02` e `06` seguem com uns 63% de comentário.
 9. **Verde do tema escuro (#2fbf71) e borda de campo com 1,48:1.** Decidir olhando o Guia de Estilo, com a Alexia.
 10. **Guarda de login em `/admin/*`.** Feita em 26-09-2026: uma guarda só no `AdminLayout` (confere sessão, não papel). A permissão por rota fica para perto do fim do sistema.
 11. **Moderados do axe** (sem h1, ordem dos títulos do rodapé). Resolvido em 26-09-2026 sem mudar o visual: axe zerado nas 22 telas.
