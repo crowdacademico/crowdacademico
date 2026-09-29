@@ -4,7 +4,7 @@
 **Comentários dos `.sql`.** Cabeçalho curto (`Função`, `Assinatura`, `Bloco` e uma `Regra` objetiva, sem datas nem história) e, dentro de função, trigger e policy, só o comentário que explica uma regra difícil. Não há ponteiro para arquivo fora do git: o porquê longo mora aqui, na seção `[NN-Y]` correspondente, e a história (o que mudou, quando, por quê) fica no arquivo de histórico local, que não é versionado. Os comentários do `07` explicam dado de teste; o `ATUALIZAR O SUPABASE.sql` é o registro datado de cada patch e por isso mantém a narrativa.
 # 📚 Documentação Técnica do Banco de Dados - CrowdAcadêmico
 
-> 📌 **Numeração de RF (21-09-2026):** os requisitos vigentes são o `informacoes/REQUISITOS_V7.md` (120 RFs). Citações de RF por número neste documento foram escritas em datas diferentes e podem estar em qualquer numeração anterior (pré-06-09-2026, V6 ou V7). A `MATRIZ-RASTREABILIDADE-RF.md` já está inteira na numeração do V7 e traz a conversão. Confira pelo texto do requisito antes de confiar no número.
+> 📌 **Numeração de RF (29-09-2026):** os requisitos vigentes são o `informacoes/REQUISITOS_V8.md` (122 RFs). Citações de RF por número neste documento foram escritas em datas diferentes e podem estar em qualquer numeração anterior (pré-06-09-2026, V6, V7 ou V8). A `MATRIZ-RASTREABILIDADE-RF.md` já está inteira na numeração do V8 e traz a conversão. Confira pelo texto do requisito antes de confiar no número.
 
 Este documento centraliza as explicações de arquitetura, regras de negócio e decisões de modelagem do PostgreSQL. Seu objetivo é manter os scripts `.sql` enxutos, sem poluição de comentários extensos inline.
 

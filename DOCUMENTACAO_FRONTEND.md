@@ -1,6 +1,6 @@
 # ⚛️ Documentação Técnica do Frontend React - CrowdAcadêmico
 
-> 📌 **Numeração de RF (21-09-2026):** os requisitos vigentes são o `informacoes/REQUISITOS_V7.md` (120 RFs). Citações de RF por número neste documento foram escritas em datas diferentes e podem estar em qualquer numeração anterior (pré-06-09-2026, V6 ou V7). A `MATRIZ-RASTREABILIDADE-RF.md` já está inteira na numeração do V7 e traz a conversão. Confira pelo texto do requisito antes de confiar no número.
+> 📌 **Numeração de RF (29-09-2026):** os requisitos vigentes são o `informacoes/REQUISITOS_V8.md` (122 RFs). Citações de RF por número neste documento foram escritas em datas diferentes e podem estar em qualquer numeração anterior (pré-06-09-2026, V6, V7 ou V8). A `MATRIZ-RASTREABILIDADE-RF.md` já está inteira na numeração do V8 e traz a conversão. Confira pelo texto do requisito antes de confiar no número.
 
 Este documento é o equivalente do `DOCUMENTACAO_BD.md` para o **app React** que vive em `react/`. O objetivo é o mesmo: explicar as decisões de arquitetura e o *porquê* de cada padrão, de forma que os arquivos `.tsx`/`.ts` não precisem carregar toda a explicação inline - e que quem chegar depois entenda a estrutura sem ter que abrir 100 arquivos.
 

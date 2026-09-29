@@ -1,6 +1,6 @@
 # ⚙️ Documentação Técnica do Backend (NestJS) - CrowdAcadêmico
 
-> 📌 **Numeração de RF (21-09-2026):** os requisitos vigentes são o `informacoes/REQUISITOS_V7.md` (120 RFs). Citações de RF por número neste documento foram escritas em datas diferentes e podem estar em qualquer numeração anterior (pré-06-09-2026, V6 ou V7). A `MATRIZ-RASTREABILIDADE-RF.md` já está inteira na numeração do V7 e traz a conversão. Confira pelo texto do requisito antes de confiar no número.
+> 📌 **Numeração de RF (29-09-2026):** os requisitos vigentes são o `informacoes/REQUISITOS_V8.md` (122 RFs). Citações de RF por número neste documento foram escritas em datas diferentes e podem estar em qualquer numeração anterior (pré-06-09-2026, V6, V7 ou V8). A `MATRIZ-RASTREABILIDADE-RF.md` já está inteira na numeração do V8 e traz a conversão. Confira pelo texto do requisito antes de confiar no número.
 
 Este documento é o irmão do `DOCUMENTACAO_BD.md`. Ele cobre o backend em NestJS (`nest/`): como a aplicação conversa com o Postgres, como a autenticação funciona, onde mora a autorização, qual é o padrão que todo módulo segue, e como o módulo de upload de arquivo está montado hoje.
 

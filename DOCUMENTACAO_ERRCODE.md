@@ -1,6 +1,6 @@
 # ERRCODE customizado - `05_regras_negocio.sql`
 
-> 📌 **Numeração de RF (21-09-2026):** os requisitos vigentes são o `informacoes/REQUISITOS_V7.md` (120 RFs). Citações de RF por número neste documento foram escritas em datas diferentes e podem estar em qualquer numeração anterior (pré-06-09-2026, V6 ou V7). A `MATRIZ-RASTREABILIDADE-RF.md` já está inteira na numeração do V7 e traz a conversão. Confira pelo texto do requisito antes de confiar no número.
+> 📌 **Numeração de RF (29-09-2026):** os requisitos vigentes são o `informacoes/REQUISITOS_V8.md` (122 RFs). Citações de RF por número neste documento foram escritas em datas diferentes e podem estar em qualquer numeração anterior (pré-06-09-2026, V6, V7 ou V8). A `MATRIZ-RASTREABILIDADE-RF.md` já está inteira na numeração do V8 e traz a conversão. Confira pelo texto do requisito antes de confiar no número.
 
 Referência rápida dos `RAISE EXCEPTION` com ERRCODE customizado dos arquivos `arquivos_banco_dados/05_regras_negocio.sql` (e de `deslizar_datas_campanha`/`suspender_pesquisador`, quando aplicável). Nasceu com 42 códigos em 03-08-2026 e hoje tem 55, todos com `USING ERRCODE = '<código>'`. Antes desta mudança, todas caíam no SQLSTATE genérico do Postgres para qualquer `RAISE EXCEPTION` sem código explícito (`P0001`) - o que impedia o Nest de diferenciar "sem permissão" de "dado inválido" de "estado conflitante".
 

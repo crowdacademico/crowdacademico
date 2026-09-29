@@ -2,7 +2,7 @@
 
 > Só o que ainda NÃO foi feito, organizado por grupo. O que já está pronto ou fechado mora em `informacoes/HISTORICO/HISTORICO_PENDENCIAS_E_CORRECOES.md` (duas limpezas: 26-09-2026 e 27-09-2026), com o texto original. Citações de outros documentos a um item ou parte deste arquivo ("item 7", "parte 10", "Onda 1 das ideias do sistema Atlas") que não estejam aqui estão lá.
 
-> 📌 **Numeração de RF (21-09-2026):** os requisitos vigentes são o `informacoes/REQUISITOS_V7.md` (120 RFs). Citações de RF por número neste documento foram escritas em datas diferentes e podem estar em qualquer numeração anterior (pré-06-09-2026, V6 ou V7). A `MATRIZ-RASTREABILIDADE-RF.md` já está inteira na numeração do V7 e traz a conversão. Confira pelo texto do requisito antes de confiar no número.
+> 📌 **Numeração de RF (29-09-2026):** os requisitos vigentes são o `informacoes/REQUISITOS_V8.md` (122 RFs). Citações de RF por número neste documento foram escritas em datas diferentes e podem estar em qualquer numeração anterior (pré-06-09-2026, V6, V7 ou V8). A `MATRIZ-RASTREABILIDADE-RF.md` já está inteira na numeração do V8 e traz a conversão. Confira pelo texto do requisito antes de confiar no número.
 
 **Grupos:** 0. Para a Alexia ler · 1. Levar para a revisão externa (Requisitos) · 2. Dependem de outro módulo · 3. No dia do deploy · 4. Fim do projeto · 5. Decisões do Lucas, sem pressa · 6. Registros que não são pendência.
 
@@ -18,18 +18,10 @@ Ninguém usa: a Alexia recria o banco do zero com os arquivos `01` a `08`, e as 
 
 ---
 
-## 1. Levar para a revisão externa (documento de Requisitos, próximo V8)
+## 1. Levar para a revisão externa
 
-Quem atualiza os requisitos é o Lucas com a revisão externa; aqui fica só o que precisa ir no próximo pedido.
+Quem atualiza os requisitos é o Lucas com a revisão externa; aqui fica só o que precisa ir no próximo pedido. O V8 (`informacoes/REQUISITOS_V8.md`, 29-09-2026) já absorveu o termo único, o 2FA (fica sem RF, como ideia do fim do projeto), o modelo flexível e o Alterar/Excluir do admin.
 
-- **Termo único (27-09-2026), texto do Lucas:**
-  - RF-081: hoje fala em checkbox dos "Termos de Pagamento", "adicional ao Termo de Uso Geral ... específico por transação". Passaria a ser: a cada contribuição, o apoiador confirma o Termo de Uso da conta, que já inclui as regras de contribuição. Não existe mais termo de pagamento separado.
-  - RF-082: a regra continua a mesma: registrar data, hora, versão aceita e transação, sem poder alterar depois. Só troca o nome: a versão registrada é a do Termo de Uso da conta.
-  - RF-011: o aceite no cadastro continua obrigatório. Vale acrescentar que esse termo cobre também as contribuições.
-  - Contribuição anônima (V7, linha 447): o aceite registrado passa a ser o do Termo de Uso da conta, não de um termo de contribuição.
-- **2FA precisa de RF novo** (ver grupo 4). Não existe nenhum requisito cobrindo.
-- **Modelo flexível:** decidir se o modelo da campanha pode mudar depois de criada (ver grupo 2, Pagamento).
-- **Alterar e Excluir campanha na tela real "Campanhas" do admin** (hoje só em T2 e em Minhas Campanhas, para as próprias): a pergunta foi levada à revisão externa em 14-09-2026, sem resposta registrada.
 - **Tipografia do painel padronizada** (6 classes em `2-tipografia.css`): citar no próximo pedido de revisão de interface, pedindo ideias para enxugar mais sem quebrar.
 - **Como o Lucas quer esse pedido escrito:** "pegar no pé" da revisão externa, pedir que olhe sistemas de referência e traga ideias próprias, não só responda a lista.
 
@@ -87,7 +79,7 @@ Apontado pela revisão externa (resposta de 20-09) como "metade dos modelos não
 - **Aviso ao doador:** o aviso destacado e a confirmação de ciência antes da contribuição dependem da tela de checkout, que não existe.
 - **Só existe em dado:** `07_seed_dados.sql` tem uma campanha flexível (a do repasse `parcial_processando`), e o tipo aparece em `db.types.ts` e `campanha.type.ts`.
 
-**Depende de:** módulo de contribuição/pagamento (Grupo 8) e checkout. Não iniciar antes. Quando esses módulos nascerem, decidir também se o modelo pode mudar depois de criada a campanha.
+**Depende de:** módulo de contribuição/pagamento (Grupo 8) e checkout. Não iniciar antes. Decidido no V8: o modelo pode mudar enquanto a campanha não foi aprovada e congela na aprovação (o banco já congela). **Decisão em aberto, sem pressa:** gravar ou não o IP do contribuinte anônimo no aceite do Termo; volta quando o módulo de contribuição for construído.
 
 - **Gateway:** fica por último. Os testes serão em sandbox, mas sandbox não é desculpa para fazer mal feito: assinatura do webhook, idempotência, reconciliação, máquina de estados de `contribuicao`/`repasse` (`PROXIMOS_MODULOS.md`).
 - **Painel do doador** (`views/dash-doador`, pasta vazia) e **checkout** (`views/checkout`, vazia).
@@ -173,7 +165,7 @@ WHERE id_papel = (SELECT id_papel FROM papel WHERE codigo = 'usuario')
 
 ## 4. Fim do projeto (só quando todos os módulos estiverem prontos)
 
-#### 🔴 Pendência aberta: Autenticação em duas etapas (2FA) - vai precisar de RF novo também
+#### 🟡 Ideia para o fim do projeto: Autenticação em duas etapas (2FA), sem RF (decisão do V8: avançado demais para o escopo do TCC agora)
 
 Toda banca de TCC de sistema hoje em dia costuma perguntar sobre segurança logo de cara, e 2FA é um dos primeiros itens que costuma vir à tona nessa conversa. Hoje o CrowdAcademico não tem nenhuma camada de 2FA (só e-mail+senha, com bloqueio por tentativas). Quando for implementar, também vai precisar de um RF novo na Etapa 3 descrevendo o requisito (não existe nenhum hoje cobrindo isso).
 
@@ -213,6 +205,11 @@ Lucas decide depois se ajudam o CrowdAcadêmico. Contexto em `informacoes/ROTEIR
 
 - **Verde do texto no tema escuro:** `#2fbf71` é provisório (6,14:1 sobre o cartão escuro); aguarda o Lucas confirmar o escopo da página de conferência de cores.
 - **Gestão de logo e favicon:** a aba Identidade Visual do Dashboard é só um espaço reservado.
+
+### Requisitos do V8 a implementar (29-09-2026)
+
+- **RF-015, aceite da versão nova do Termo no próximo acesso:** quando uma versão nova entra em vigor, o próximo acesso só deixa ler o Termo, aceitar ou sair. Hoje o login e a renovação de sessão não conferem isso. Precisa: saber se falta aceite (banco), a "parada obrigatória" depois do login (Nest e React) e a tela de aceite. **Não** vale para conta criada pelo admin: criar conta pelo painel é ferramenta de teste, não requisito (decisão do V8), e continua existindo.
+- **RF-091, versão aceita não pode ser excluída:** o "Excluir" de Termo de Uso ainda aceita `forcar: true`, que apaga uma versão já aceita junto com os aceites (as FKs de `usuario_termo` e `aceite_termo_contribuicao` são `ON DELETE CASCADE`). Tirar o `forcar` e trocar o `CASCADE` por "impede apagar". O "Alterar" já recusa versão aceita.
 
 ### Telas e formulários
 
