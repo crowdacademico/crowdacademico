@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { SecaoFicha } from './ficha-consulta';
 import { useErroToast } from '../layout/toast/use-erro-toast';
 import { useToast } from '../layout/toast/use-toast';
 import { useConfiguracoes } from '../../services/11-configuracoes/hook/use-configuracoes';
 import { useEnvio } from '../../services/constant/hook/use-envio';
+import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
 import { formatarDataHora } from '../../services/constant/util/formatacao.util';
 
 export interface EstadoSuspensao {
@@ -54,6 +55,15 @@ export function SecaoSuspensao({
   const [suspensao, setSuspensao] = useState<EstadoSuspensao | null>(null);
   const [dias, setDias] = useState('');
   const [motivo, setMotivo] = useState('');
+  const idErroDias = useId();
+  const idErroMotivo = useId();
+  // O botão fica sempre clicável; faltando prazo ou motivo, o erro aparece embaixo de cada um. O motivo precisa de
+  // 3 caracteres, a mesma regra do backend (SuspensaoRequestDto).
+  const diasNumero = Number(dias);
+  const { erroDe, tentarEnviar, limpar } = useErrosFormulario(() => ({
+    dias: (!diasNumero || diasNumero <= 0) && 'Escolha um prazo ou digite quantos dias.',
+    motivo: motivo.trim().length < 3 && 'Informe o motivo (pelo menos 3 caracteres).',
+  }));
 
   const carregar = () => {
     buscar()
@@ -67,8 +77,7 @@ export function SecaoSuspensao({
   const suspensoAgora = suspensoAte !== null && new Date(suspensoAte) > new Date();
 
   const aoSuspender = async () => {
-    const diasNumero = Number(dias);
-    if (!diasNumero || diasNumero <= 0) {
+    if (!tentarEnviar()) {
       return;
     }
     await executar(async () => {
@@ -77,6 +86,7 @@ export function SecaoSuspensao({
       mostrar(mensagemSuspenso, `Até ${formatarDataHora(ate)}`);
       setDias('');
       setMotivo('');
+      limpar();
       carregar();
     });
   };
@@ -128,23 +138,37 @@ export function SecaoSuspensao({
                 min="1"
                 placeholder="outro (dias)"
                 aria-label="Outro prazo, em dias"
+                aria-invalid={Boolean(erroDe('dias'))}
+                aria-describedby={erroDe('dias') ? idErroDias : undefined}
                 value={dias}
                 onChange={(evento) => setDias(evento.target.value)}
-                className="input-padrao w-36 py-1.5"
+                className={'input-padrao w-36 py-1.5' + (erroDe('dias') ? ' borda-erro' : '')}
               />
             </div>
+            {erroDe('dias') && (
+              <p id={idErroDias} className="text-xs texto-erro font-semibold -mt-1">
+                {erroDe('dias')}
+              </p>
+            )}
             <textarea
               placeholder="Motivo da suspensão (obrigatório)"
               aria-label="Motivo da suspensão"
+              aria-invalid={Boolean(erroDe('motivo'))}
+              aria-describedby={erroDe('motivo') ? idErroMotivo : undefined}
               value={motivo}
               onChange={(evento) => setMotivo(evento.target.value)}
-              className="input-padrao"
+              className={'input-padrao' + (erroDe('motivo') ? ' borda-erro' : '')}
               rows={2}
             />
+            {erroDe('motivo') && (
+              <p id={idErroMotivo} className="text-xs texto-erro font-semibold -mt-1">
+                {erroDe('motivo')}
+              </p>
+            )}
             <button
               type="button"
               onClick={() => void aoSuspender()}
-              disabled={!dias || !motivo.trim() || enviando}
+              disabled={enviando}
               className="btn btn-danger"
             >
               {enviando ? 'Suspendendo...' : rotuloSuspender}

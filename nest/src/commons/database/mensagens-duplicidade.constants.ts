@@ -61,6 +61,15 @@ export const DUPLICIDADE_POR_INDICE_UNICO: Readonly<
   PK_PERFIL_PESQUISADOR: {
     mensagem: 'Esta conta já tem perfil de pesquisador.',
   },
+  // Um arquivo mora num lugar só (01 [01-G]); fn_valida_posse_anexo (05 [05-G]) costuma recusar antes, com 91029.
+  UK_ARQUIVO_ATUALIZACAO_ARQUIVO: {
+    campo: 'idArquivo',
+    mensagem: 'Este arquivo já está anexado em outro lugar.',
+  },
+  UK_ARQUIVO_RECOMPENSA_ARQUIVO: {
+    campo: 'idArquivo',
+    mensagem: 'Este arquivo já está anexado em outro lugar.',
+  },
   UK_SEGUIR_CAMPANHA_USUARIO_CAMPANHA: {
     mensagem: 'Você já segue esta campanha.',
   },

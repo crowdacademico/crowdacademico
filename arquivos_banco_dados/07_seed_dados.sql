@@ -547,7 +547,16 @@ INSERT INTO arquivo (chave, nome_original, tipo_mime, tamanho_bytes) VALUES
 ('publico/seed-juliana-ferreira.jpg', 'juliana_ferreira.jpg', 'image/jpeg',      131072),
 ('publico/seed-marcos-oliveira.jpg',  'marcos_oliveira.jpg',  'image/jpeg',       94208),
 ('publico/seed-patricia-rocha.jpg',   'patricia_rocha.jpg',   'image/jpeg',      109568),
-('publico/seed-relatorio-q1.pdf',     'relatorio_q1.pdf',     'application/pdf', 512000);
+('publico/seed-relatorio-q1.pdf',     'relatorio_q1.pdf',     'application/pdf', 512000),
+-- Anexos das atualizações (ids 9 a 14): arquivos próprios, separados das fotos de perfil (1 a 7). Cada arquivo mora
+-- num lugar só (fn_valida_posse_anexo, 05 [05-G]); antes, os anexos reaproveitavam as fotos, e trocar a foto de
+-- alguém apagava o anexo junto.
+('publico/seed-anexo-atualizacao-1.jpg', 'coleta_campo.jpg',     'image/jpeg',       96000),
+('publico/seed-anexo-atualizacao-2.jpg', 'laboratorio.jpg',      'image/jpeg',       88000),
+('publico/seed-anexo-atualizacao-3.jpg', 'prototipo.jpg',        'image/jpeg',      104000),
+('publico/seed-anexo-atualizacao-4.jpg', 'equipe.jpg',           'image/jpeg',       91000),
+('publico/seed-anexo-atualizacao-5.jpg', 'grafico_parcial.jpg',  'image/jpeg',       77000),
+('publico/seed-anexo-atualizacao-6.jpg', 'trilhas_mapeadas.jpg', 'image/jpeg',      112000);
 
 -- [07-D-1] usuario
 -- senha_hash: hash bcrypt de verdade (custo 10, igual CUSTO_BCRYPT_SENHA em usuario.constants.ts), o MESMO para
@@ -1200,13 +1209,13 @@ ALTER TABLE atualizacao_campanha ENABLE TRIGGER trg_atualizacao_campanha_status;
 
 -- [07-G-1] arquivo_atualizacao
 INSERT INTO arquivo_atualizacao (id_arquivo, id_atualizacao) VALUES
-(3, 3),
+(9, 3),
 (8, 6),
-(1, 1),
-(2, 2),
-(4, 4),
-(5, 5),
-(6, 7);
+(10, 1),
+(11, 2),
+(12, 4),
+(13, 5),
+(14, 7);
 
 -- [07-E-4] repasse
 ALTER TABLE repasse DISABLE TRIGGER trg_valida_repasse;

@@ -1,8 +1,7 @@
-import type { TIPOS_TERMO } from '../constants/termo-uso-tipos.constants';
-
-// Espelha nest/src/commons/database/db.types.ts (TIPOS_TERMO/TipoTermo): o termo da conta ('cadastro', que
-// cobre também as contribuições) e o de pesquisador, cada um com sua própria versão/histórico independente.
-export type TipoTermo = (typeof TIPOS_TERMO)[number];
+// Valores do ENUM tipo_termo, vindos do banco (enums-do-banco.gerado.ts): o termo da conta ('cadastro', que cobre
+// também as contribuições) e o de pesquisador, cada um com sua própria versão/histórico independente.
+import type { TipoTermo } from '../../constant/type/enums-do-banco.gerado';
+export type { TipoTermo };
 
 // Espelha nest/src/5-termo-uso/dto/response/termo-uso.response-active.ts.
 export interface TermoUsoResponseActive {

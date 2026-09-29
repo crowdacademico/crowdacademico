@@ -3567,12 +3567,12 @@ AFTER INSERT OR UPDATE OR DELETE ON score_rotulo
 FOR EACH ROW EXECUTE FUNCTION public.fn_log_auditoria('id_rotulo');
 
 -- ============================================================
--- [05-G] ARQUIVO: posse da foto de perfil e limpeza de órfãos
+-- [05-G] ARQUIVO: posse da foto de perfil e dos anexos, e limpeza de órfãos
 -- ============================================================
 -- Um arquivo enviado só "fica" se algum registro dono o adotar (foto de perfil, anexo de atualização ou de
 -- recompensa). O upload é confirmado antes do dono existir (a tela mostra a foto na hora, antes de salvar), então
 -- o banco garante as duas pontas: quem adota tem de ter enviado o arquivo, e quem ninguém adotou some depois de um
--- prazo.
+-- prazo. E cada arquivo mora num lugar só (uma foto, ou um anexo de uma atualização, ou de uma recompensa).
 
 -- ----------------------------------------------------------------------------
 -- Função:     fn_valida_posse_imagem_perfil
@@ -3630,6 +3630,74 @@ BEFORE INSERT OR UPDATE OF id_imagem_perfil ON usuario
 FOR EACH ROW EXECUTE FUNCTION public.fn_valida_posse_imagem_perfil();
 
 -- ----------------------------------------------------------------------------
+-- Função:     fn_valida_posse_anexo
+-- Uso:        Invocada por trg_valida_posse_anexo_atualizacao e trg_valida_posse_anexo_recompensa
+-- Bloco:      [05-G]
+-- Regra:      Mesma regra da foto de perfil (fn_valida_posse_imagem_perfil, acima), para anexo de atualização e de
+--             recompensa: o arquivo precisa existir e estar ativo (90022), ter sido enviado por quem está logado
+--             (92025) e não estar em uso em nenhum outro lugar (91029): nem como foto de alguém, nem como anexo de
+--             outra atualização ou recompensa. Um arquivo mora num lugar só; para usar o mesmo PDF em dois lugares,
+--             envia-se de novo. Sem isso, quem é dono da atualização anexava o arquivo de outra pessoa e, pela
+--             posse que o anexo dá em pol_arquivo_update (04), podia apagá-lo; e apagar o anexo de um lugar sumia
+--             com o do outro. Só vale com alguém logado (o seed e a manutenção direta não têm sessão). No UPDATE só
+--             confere quando id_arquivo muda. SECURITY DEFINER para enxergar vínculos que a RLS esconde.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_valida_posse_anexo()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_atual   INT := public.id_usuario_atual();
+    v_arquivo arquivo%ROWTYPE;
+    v_em_uso  BOOLEAN;
+BEGIN
+    IF v_atual IS NULL OR (TG_OP = 'UPDATE' AND NEW.id_arquivo IS NOT DISTINCT FROM OLD.id_arquivo) THEN
+        RETURN NEW;
+    END IF;
+
+    SELECT * INTO v_arquivo FROM arquivo WHERE id_arquivo = NEW.id_arquivo;
+    IF NOT FOUND OR v_arquivo.ativo IS NOT TRUE THEN
+        RAISE EXCEPTION 'O arquivo escolhido não existe mais ou foi removido. Envie o arquivo de novo.' USING ERRCODE = '90022';
+    END IF;
+    IF v_arquivo.id_usuario_upload IS DISTINCT FROM v_atual THEN
+        RAISE EXCEPTION 'Só é possível anexar um arquivo que você mesmo enviou.' USING ERRCODE = '92025';
+    END IF;
+
+    -- Em uso em outro lugar: a própria linha (num UPDATE) não conta.
+    IF TG_TABLE_NAME = 'arquivo_atualizacao' THEN
+        v_em_uso := EXISTS (SELECT 1 FROM arquivo_atualizacao WHERE id_arquivo = NEW.id_arquivo AND id_arq_atu IS DISTINCT FROM NEW.id_arq_atu)
+                 OR EXISTS (SELECT 1 FROM arquivo_recompensa WHERE id_arquivo = NEW.id_arquivo);
+    ELSE
+        v_em_uso := EXISTS (SELECT 1 FROM arquivo_recompensa WHERE id_arquivo = NEW.id_arquivo AND id_arq_recompensa IS DISTINCT FROM NEW.id_arq_recompensa)
+                 OR EXISTS (SELECT 1 FROM arquivo_atualizacao WHERE id_arquivo = NEW.id_arquivo);
+    END IF;
+    IF v_em_uso OR EXISTS (SELECT 1 FROM usuario WHERE id_imagem_perfil = NEW.id_arquivo) THEN
+        RAISE EXCEPTION 'Este arquivo já está em uso em outro lugar.' USING ERRCODE = '91029';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_valida_posse_anexo_atualizacao / trg_valida_posse_anexo_recompensa
+-- Tabela:    arquivo_atualizacao / arquivo_recompensa
+-- Momento:   BEFORE INSERT OR UPDATE OF id_arquivo
+-- Função:    fn_valida_posse_anexo()
+-- Bloco:     [05-G]
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_valida_posse_anexo_atualizacao ON arquivo_atualizacao;
+CREATE TRIGGER trg_valida_posse_anexo_atualizacao
+BEFORE INSERT OR UPDATE OF id_arquivo ON arquivo_atualizacao
+FOR EACH ROW EXECUTE FUNCTION public.fn_valida_posse_anexo();
+
+DROP TRIGGER IF EXISTS trg_valida_posse_anexo_recompensa ON arquivo_recompensa;
+CREATE TRIGGER trg_valida_posse_anexo_recompensa
+BEFORE INSERT OR UPDATE OF id_arquivo ON arquivo_recompensa
+FOR EACH ROW EXECUTE FUNCTION public.fn_valida_posse_anexo();
+
+-- ----------------------------------------------------------------------------
 -- Função:     desativar_arquivos_orfaos
 -- Assinatura: () -> TABLE(id_arquivo INT, chave TEXT)
 -- Bloco:      [05-G]
@@ -3637,8 +3705,9 @@ FOR EACH ROW EXECUTE FUNCTION public.fn_valida_posse_imagem_perfil();
 --             configuracoes.arquivo_horas_para_vincular (24) que nenhum dono adotou: não é foto de perfil de ninguém
 --             nem anexo de atualização ou de recompensa. 0 ou negativo = desligado. Devolve as chaves para o Nest
 --             apagar os objetos do armazenamento, e deixa UMA linha de rastro em log_auditoria quando desativa algo.
---             Dono novo de arquivo (tabela nova que aponte para arquivo) tem de entrar nos NOT EXISTS abaixo e em
---             fn_valida_posse_imagem_perfil. SECURITY DEFINER, chamada por @Cron diário, sem sessão de usuário.
+--             Dono novo de arquivo (tabela nova que aponte para arquivo) tem de entrar nos NOT EXISTS abaixo e nas
+--             duas regras de posse (fn_valida_posse_imagem_perfil e fn_valida_posse_anexo). SECURITY DEFINER,
+--             chamada por @Cron diário, sem sessão de usuário.
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.desativar_arquivos_orfaos()
 RETURNS TABLE (id_arquivo INT, chave TEXT)

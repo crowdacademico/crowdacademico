@@ -1,0 +1,6 @@
+# Regras de "ignorar" do projeto inteiro: este arquivo vai para o git e vale para todo mundo.
+# O que for só de uma máquina (rascunhos, backups, pastas pessoais) vai em .git/info/exclude, que nunca vai para o git.
+# nest/ e react/ têm cada um o próprio .gitignore.
+
+# Ferramentas da raiz (husky e lint-staged), instaladas com npm install na raiz.
+/node_modules

@@ -144,7 +144,6 @@ O Lucas pediu detalhamento dessa ideia (citada de passagem pelo Lucas numa rodad
 **Onde moraria**: backend, `25-arquivo` (módulo já existe, dono natural) - 2 endpoints novos (resumo com agregados, listagem paginada com filtro), ambos protegidos por permissão de administrador. Frontend, uma tela de listagem no padrão já repetido há meses.
 
 
-- **Anexo de atualização aceita arquivo de outra pessoa (achado 28-09-2026):** `pol_arqatu_insert` confere só se a atualização é da campanha de quem está logado, não quem enviou o arquivo. Um pesquisador pode anexar o arquivo de outra pessoa e, pela posse que o anexo dá em `pol_arquivo_update`, apagá-lo. É o mesmo buraco que a foto de perfil tinha (fechado em 28-09-2026, `[05-G]`). A correção é pequena (mesma regra de posse no INSERT de `arquivo_atualizacao` e `arquivo_recompensa`), mas antes precisa de uma decisão: o mesmo arquivo pode ser anexado em mais de uma atualização? Resolver quando o upload de anexos for ligado na tela (módulos 15 e 18).
 
 ---
 
@@ -223,6 +222,8 @@ O Lucas registrou isto como pendência futura importante, explícito que não é
 
 **Onde esse padrão já existe hoje** (achado no mesmo dia, construindo o wizard de Criar Campanha): `formCriarCampanhaValido` (`bancada-campanha.tsx`) desabilita "Próximo" com base num booleano combinado grande (título, área, meta ≥ mínimo, datas, duração 15-60 dias), só ALGUMAS dessas sub-condições aparecem como aviso inline (meta mínima e duração têm texto vermelho; título/área/pesquisador escolhido não). É o exato antipadrão que ele está descrevendo - provavelmente se repete em outros formulários do painel (Alterar Campanha, Alterar Usuário, etc.) nunca auditados especificamente por isso.
 
+**Andamento (29-09-2026):** o padrão "erro embaixo do campo" já existe (`useErrosFormulario`) e foi aplicado em 4 formulários: criar campanha, cadastro, suspensão e alterar senha. Falta a auditoria completa contra as 10 heurísticas.
+
 **Como aplicar**: não iniciar varredura proativa. Quando tocar em qualquer formulário com esse padrão de "desabilitar submit se inválido" no futuro, considerar mostrar erro por campo em vez de (ou além de) só desabilitar o botão. Quando o Lucas pedir pra começar essa frente de verdade, o escopo natural é uma auditoria completa em TODOS os formulários de `react/src/views/` contra as 10 heurísticas, não só #1/#9.
 
 
@@ -232,6 +233,22 @@ Na tabela de Atualizações do T3, o botão "Ocultar" (só texto) fica com fonte
 
 ### Estrutura e ferramentas
 
+#### 🟡 Planejado (29-09-2026, "talvez amanhã"): `NOT NULL` nas colunas com valor padrão que aceitam vazio
+
+34 colunas têm `DEFAULT` (ex.: `criado_em DEFAULT NOW()`, `ativo DEFAULT TRUE`), mas o banco aceita gravar vazio nelas; quem garante que nunca ficam vazias é o costume do código, não o banco. A lista sai da suíte de teste de conferência de tipos (aviso "nulidade diferente"). **Nem todas devem mudar**: `contribuicao.token_sessao`, por exemplo, fica vazia de propósito quando a contribuição não é anônima. Plano pedido pelo Lucas:
+1. **Auditoria no código inteiro:** coluna por coluna, onde é gravada e lida (SQL, Nest, React), e a lista de quais mudam e quais ficam, com o motivo, para o Lucas aprovar.
+2. **Conferir o Supabase** (só leitura): nenhuma linha vazia nas colunas que vão mudar.
+3. **Testes no código inteiro:** PGlite nos dois modos, compilador e lint do Nest e do React.
+4. **Teste geral de ponta a ponta:** conta nova do zero, upgrade para pesquisador, criar campanha, entrar como admin e aprovar, criar um segundo pesquisador e comentar na campanha, voltar ao primeiro e endossar o comentário, e assim por diante.
+5. Grupo do `ATUALIZAR` com aviso de parar o Nest (é `ALTER TABLE`).
+
+#### 🟡 Anotado (29-09-2026): dispatcher de triggers
+
+Hoje `campanha` tem 17 triggers e `comentario` tem 8. Quando várias rodam no mesmo momento, o Postgres escolhe a ordem pela ordem alfabética do nome; o dispatcher seria uma trigger só por momento, chamando as regras numa ordem escrita. Ganho: ordem explícita e mensagem de erro previsível quando duas regras falhariam juntas. Custo: mexer nas regras mais críticas (aprovação, congelamento, prazo), com risco de regressão; as suítes de caracterização (1.050 casos) são a rede de proteção. Recomendação atual: não fazer. **O Lucas quer, mais para frente, uma documentação completa sobre isto para estudar pessoalmente** (como funciona a ordem hoje, o que mudaria, exemplos com as triggers reais), antes de decidir.
+
+#### 🟡 Para depois (29-09-2026): comentários longos do `02` e do `06`
+
+Os dois ainda têm cerca de 63% de comentário, boa parte histórico ("CORRIGIDO em..."). Fazer o mesmo que foi feito com o `03` e o `05`: o código fica só com a regra e a história vai para o histórico, com a ferramenta que já existe. Só mexe em comentário.
 
 ### Protótipo estático (sessão própria)
 

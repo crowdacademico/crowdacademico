@@ -1,7 +1,8 @@
 import type { StatusCampanha } from '../constants/status-campanha.constants';
 
-// Espelha nest/src/commons/database/db.types.ts (MODELOS_CAMPANHA).
-export type ModeloCampanha = 'all-or-nothing' | 'flexivel';
+// Valores do ENUM modelo_campanha, vindos do banco (enums-do-banco.gerado.ts).
+import type { ModeloCampanha } from '../../constant/type/enums-do-banco.gerado';
+export type { ModeloCampanha };
 
 // Espelha nest/src/12-campanha/dto/response/campanha.response.ts.
 // StatusCampanha reaproveitado da fase 1 (constants/status-campanha.constants.ts).

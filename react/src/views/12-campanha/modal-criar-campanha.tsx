@@ -12,6 +12,7 @@ import { duracaoEmDias, hojeISO } from '../../services/12-campanha/util/prazo-ca
 import { useAreasDaCampanha } from '../../services/8-area-conhecimento/hook/use-areas-da-campanha';
 import { formatarMoeda } from '../../services/constant/util/formatacao.util';
 import { useEnvio } from '../../services/constant/hook/use-envio';
+import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
 import { PainelOrcamentoCronograma } from './painel-orcamento-cronograma';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { CampanhaRequestCreate, CampanhaResponse } from '../../services/12-campanha/type/campanha.type';
@@ -80,19 +81,21 @@ export function ModalCriarCampanha({
   const [etapa, setEtapa] = useState<Etapa>('dados');
   const [idCampanha, setIdCampanha] = useState<number | null>(null);
 
-
   const hoje = hojeISO();
   const duracao = duracaoEmDias(form.dataInicio, form.dataFim);
   const duracaoValida = duracao !== null && duracao >= regras.prazoMinimoDias && duracao <= regras.prazoMaximoDias;
   const metaAbaixoDoMinimo = form.metaFinanceira !== '' && Number(form.metaFinanceira) < regras.metaMinima;
-  const dadosValidos =
-    camposExtrasValidos &&
-    form.titulo.trim() !== '' &&
-    form.idAreaConhecimento !== '' &&
-    form.metaFinanceira !== '' &&
-    !metaAbaixoDoMinimo &&
-    form.dataInicio >= hoje &&
-    duracaoValida;
+  const textoMetaMinima = `Meta mínima: ${formatarMoeda(regras.metaMinima)}.`;
+  // "Próximo" fica sempre clicável: clicando com algo faltando, cada campo mostra o próprio erro.
+  const { erroDe, tentarEnviar } = useErrosFormulario(() => ({
+    extras: !camposExtrasValidos && 'Preencha os campos acima.',
+    titulo: form.titulo.trim() === '' && 'Informe o título.',
+    area: form.idAreaConhecimento === '' && 'Escolha a área do conhecimento.',
+    meta: form.metaFinanceira === '' ? 'Informe a meta.' : metaAbaixoDoMinimo && textoMetaMinima,
+    inicio: form.dataInicio === '' ? 'Informe a data de início.' : form.dataInicio < hoje && 'O início precisa ser hoje ou depois.',
+    fim: (form.dataFim === '' || !duracaoValida) && 'prazo',
+  }));
+  const prazoComErro = Boolean(erroDe('fim')) || (duracao !== null && !duracaoValida);
 
   const corpo = (): CampanhaRequestCreate => ({
     titulo: form.titulo.trim(),
@@ -105,7 +108,7 @@ export function ModalCriarCampanha({
   });
 
   const avancarDosDados = async () => {
-    if (!dadosValidos) {
+    if (!tentarEnviar()) {
       return;
     }
     await executarTrabalhando(async () => {
@@ -144,7 +147,7 @@ export function ModalCriarCampanha({
     etapa === 'dados' ? (
       <RodapeAcoes
         aoCancelar={aoFechar}
-        acao={{ rotulo: 'Próximo', ocupado: trabalhando, desabilitado: !dadosValidos, aoClicar: () => void avancarDosDados() }}
+        acao={{ rotulo: 'Próximo', ocupado: trabalhando, aoClicar: () => void avancarDosDados() }}
       />
     ) : etapa === 'orcamento' ? (
       <RodapeAcoes
@@ -196,25 +199,26 @@ export function ModalCriarCampanha({
       ) : (
         <>
           {camposExtras}
+          {erroDe('extras') && <p className="text-xs texto-erro font-semibold -mt-2 mb-3">{erroDe('extras')}</p>}
           <SecaoFicha titulo="Dados">
-            <Campo rotulo="Título" className="sm:col-span-2">
-              {({ atributos }) => (
+            <Campo rotulo="Título" className="sm:col-span-2" erro={erroDe('titulo')}>
+              {({ atributos, classeErro }) => (
                 <input
                   {...atributos}
                   type="text"
                   value={form.titulo}
                   onChange={(evento) => setForm({ ...form, titulo: evento.target.value })}
-                  className="input-padrao"
+                  className={'input-padrao' + classeErro}
                 />
               )}
             </Campo>
-            <Campo rotulo="Área do conhecimento">
-              {({ atributos }) => (
+            <Campo rotulo="Área do conhecimento" erro={erroDe('area')}>
+              {({ atributos, classeErro }) => (
                 <select
                   {...atributos}
                   value={form.idAreaConhecimento}
                   onChange={(evento) => setForm({ ...form, idAreaConhecimento: evento.target.value })}
-                  className="input-padrao"
+                  className={'input-padrao' + classeErro}
                 >
                   <option value="">Selecione...</option>
                   {areas.map((area) => (
@@ -228,7 +232,7 @@ export function ModalCriarCampanha({
             <Campo
               rotulo="Meta (R$)"
               dica={`Meta mínima: ${formatarMoeda(regras.metaMinima)}.`}
-              erro={metaAbaixoDoMinimo && `Meta mínima: ${formatarMoeda(regras.metaMinima)}.`}
+              erro={erroDe('meta') ?? (metaAbaixoDoMinimo && textoMetaMinima)}
             >
               {({ atributos, classeErro }) => (
                 <input
@@ -252,38 +256,40 @@ export function ModalCriarCampanha({
                 />
               )}
             </Campo>
-            <Campo rotulo="Início">
-              {({ atributos }) => (
+            <Campo rotulo="Início" erro={erroDe('inicio')}>
+              {({ atributos, classeErro }) => (
                 <input
                   {...atributos}
                   type="date"
                   value={form.dataInicio}
                   min={hoje}
                   onChange={(evento) => setForm({ ...form, dataInicio: evento.target.value })}
-                  className="input-padrao"
+                  className={'input-padrao' + classeErro}
                 />
               )}
             </Campo>
             {/* O aviso de prazo vale para as duas datas e ocupa a linha inteira abaixo delas, por isso fica fora do
-                Campo e é ligado ao campo "Fim" à mão. */}
+                Campo e é ligado ao campo "Fim" à mão; fica vermelho também quando o fim está vazio e já houve uma
+                tentativa de avançar. */}
             <Campo rotulo="Fim">
               {({ atributos }) => (
                 <input
                   {...atributos}
-                  aria-invalid={duracao !== null && !duracaoValida}
+                  aria-invalid={prazoComErro}
                   aria-describedby={idPrazoDica}
                   type="date"
                   value={form.dataFim}
                   min={form.dataInicio || hoje}
                   onChange={(evento) => setForm({ ...form, dataFim: evento.target.value })}
-                  className={'input-padrao' + (duracao !== null && !duracaoValida ? ' borda-erro' : '')}
+                  className={'input-padrao' + (prazoComErro ? ' borda-erro' : '')}
                 />
               )}
             </Campo>
             <p
               id={idPrazoDica}
-              className={'sm:col-span-2 text-xs -mt-2 ' + (duracao !== null && !duracaoValida ? 'texto-erro font-semibold' : 'texto-fraco')}
+              className={'sm:col-span-2 text-xs -mt-2 ' + (prazoComErro ? 'texto-erro font-semibold' : 'texto-fraco')}
             >
+              {form.dataFim === '' && erroDe('fim') ? 'Informe a data de fim. ' : ''}
               {duracao !== null ? `Duração: ${duracao} ${duracao === 1 ? 'dia' : 'dias'}. ` : ''}A campanha precisa durar
               entre {regras.prazoMinimoDias} e {regras.prazoMaximoDias} dias, começando hoje ou depois.
             </p>

@@ -145,6 +145,48 @@ Nem tudo mapeia para um módulo do Nest. Essas ganham nome próprio, no mesmo n�
 - **Motivo:** mesma regra do Nest ("inglês para a estrutura, português para o assunto"): o papel do arquivo segue o padrão do mercado, e o nome da tela é o que a pessoa vê.
 - **Caso-limite aceito:** o sufixo `-page` continua só nas telas de `3-auth`, e os hooks ficam em três lugares (`services/*/hook`, `components/crud`, `components/layout/toast`); mexer nisso não trazia ganho que pagasse a troca.
 
+### Listas de valores do banco geradas para o React (29-09-2026)
+
+**Em palavras simples.** O banco tem listas fechadas de valores, os ENUMs. Por exemplo, o status de uma campanha só pode ser `rascunho`, `aguardando_aprovacao`, `ativo`, `sucesso`, `nao_atingido`, `rejeitado`, `encerrado` ou `encerrado_moderacao`. Antes, o React tinha essas listas **copiadas à mão**: se o banco ganhasse um status novo e ninguém lembrasse do React, a tela mostraria o valor cru (`encerrado_novo`) e nenhum teste avisaria. Agora o React **lê as listas de um arquivo gerado a partir do banco**. Os rótulos que a pessoa vê ("Aguardando aprovação") continuam escritos à mão, mas o compilador acusa se faltar o rótulo de algum valor.
+
+**O caminho de um valor, do banco até a tela:**
+
+1. **Banco:** o ENUM é criado no `01_extensoes_enums_tabelas.sql` (ex.: `CREATE TYPE status_campanha AS ENUM (...)`).
+2. **Nest:** o kysely-codegen lê o banco e escreve `nest/src/commons/database/db.types.generated.ts`, com `export type StatusCampanha = "aguardando_aprovacao" | "ativo" | ...` (ver `DOCUMENTACAO_BACKEND.md`, seção 2.6).
+3. **React:** `react/scripts/gerar-enums-do-banco.mjs` lê esse arquivo e escreve `react/src/services/constant/type/enums-do-banco.gerado.ts`, com a lista e o tipo: `STATUS_CAMPANHA = ['aguardando_aprovacao', ...] as const` e `StatusCampanha`. São 16 listas hoje, em ordem alfabética.
+4. **Constantes de cada módulo:** o tipo é importado do arquivo gerado e reexportado com o mesmo nome de antes (por isso nenhuma tela precisou mudar o `import`). Ali ficam o que é só de tela: a **ordem de exibição**, o **rótulo** e a **cor do selo**.
+
+**Onde cada lista é usada hoje:**
+
+| Tipo | Arquivo que reexporta | O que fica escrito à mão ali |
+|---|---|---|
+| `StatusCampanha` | `services/12-campanha/constants/status-campanha.constants.ts` | ordem do ciclo de vida, rótulo, cor do selo |
+| `ModeloCampanha` | `services/12-campanha/type/campanha.type.ts` | nada |
+| `StatusPesquisador`, `TituloAcademico`, `TipoVinculo` | `services/6-perfil-pesquisador/constants/status-pesquisador.constants.ts` | rótulos |
+| `TipoTermo` (e a lista `TIPOS_TERMO`) | `services/5-termo-uso/type/termo-uso.type.ts` e `constants/termo-uso-tipos.constants.ts` | rótulo e descrição de quando cada termo aparece |
+| `TipoMotivoDenuncia` | `services/10-motivo-denuncia/type/motivo-denuncia.type.ts` | nada |
+| `TipoConfiguracao` | `services/11-configuracoes/type/configuracoes.type.ts` | nada |
+
+As outras listas geradas (status de contribuição, de denúncia, de notificação, meio de pagamento, fase e tipo de atualização, tipo de recompensa...) já estão no arquivo, prontas para quando os módulos delas ganharem tela.
+
+**As duas travas do compilador:**
+
+- **Rótulo faltando.** Os rótulos são `Record<StatusCampanha, string>` ("para cada valor, um texto"). Se o banco ganhar um valor e o rótulo não, o `npx tsc` dá erro dizendo qual falta (ex.: *Property 'sucesso' is missing*).
+- **Valor faltando numa lista de ordem.** A ordem dos status de campanha é escrita à mão, porque segue o ciclo de vida e não a ordem alfabética. Ela passa por `listaCompleta<StatusCampanha>()` (`services/constant/util/lista-completa.util.ts`); se faltar um valor, o erro diz qual (ex.: *faltando: "encerrado_moderacao"*).
+
+**Passo a passo para acrescentar (ou tirar) um valor de um ENUM:**
+
+1. Mudar o ENUM no `01` e preparar o grupo do `ATUALIZAR O SUPABASE.sql` (`ALTER TYPE ... ADD VALUE`).
+2. Regerar os tipos do banco no Nest: `npm run db:codegen` dentro de `nest/` (lê o banco do `.env`), ou o script de geração de tipos da pasta local de testes do banco (lê os arquivos 01 a 08).
+3. Atualizar a lista escrita à mão do Nest, se houver (ex.: `STATUS_CAMPANHA` em `db.types.ts`); a suíte de teste de conferência de tipos acusa se ficar diferente.
+4. Regerar as listas do React: `npm run gerar:enums` dentro de `react/`.
+5. Rodar `npx tsc --noEmit` no `react/`: ele aponta cada rótulo e cada lista de ordem que precisa do valor novo. Escrever os rótulos.
+6. Conferir que está tudo em dia: `npm run gerar:enums -- --conferir` (não grava nada; sai com erro se o arquivo gerado estiver velho). A mesma suíte de teste de conferência de tipos roda isso a cada rodada.
+
+- **Decisão:** o React não repete mais nenhum valor de ENUM do banco à mão; só a ordem de exibição, o rótulo e a cor. O arquivo gerado vai para o git (quem clona o projeto não precisa gerar nada para compilar).
+- **Motivo:** fechar um tipo de erro silencioso (valor novo no banco que a tela não conhece) e usar o compilador como fiscal.
+- **Caso-limite aceito:** o arquivo só se atualiza quando alguém roda `npm run gerar:enums`; esquecer não quebra nada na hora, mas a conferência da suíte de testes acusa. Tipos do React que não são ENUM do banco continuam escritos à mão (ex.: `EscopoTipoLink`, `ContextoArquivo`, que são regras do Nest, não do banco). O nome da lista gerada segue o nome do tipo no banco (`TipoTermo` vira `TIPO_TERMO`); onde o React já usava outro nome (`TIPOS_TERMO`), ficou um apelido.
+
 ### Subpastas dentro de cada módulo de `services/` - convenção oficial (fechada em 06-09-2026)
 
 **`api/constants/hook/type[/context][/util]`** - esqueleto oficial pra todo módulo novo daqui pra frente, criado com `.gitkeep` mesmo antes de existir código. As 4 primeiras são a base; `context/` e `util/` só entram quando o módulo precisa mesmo delas (critério de cada uma, abaixo). Não existe mais "duas convenções coexistindo" - `11-configuracoes` (que tinha `provider/` separado de `context/`) já foi unificada nesse formato numa rodada anterior; o que restava era só formalizar por escrito que este é o padrão pra módulo NOVO, não migrar nada em módulo antigo.
@@ -490,6 +532,12 @@ Todas as telas `listar-*.tsx`: `views/1-usuario/listar-usuarios.tsx`, `views/2-p
 
 📌 **`LimiteErro` (27-09-2026): erro numa tela não apaga o app inteiro.** `components/layout/limite-erro.tsx` é o "ErrorBoundary" do React: um erro de renderização mostra um aviso ("Algo deu errado ao mostrar esta tela", botão de recarregar e, só em desenvolvimento, a mensagem técnica) no lugar do trecho que quebrou. Antes, qualquer erro desmontava a aplicação e deixava a tela em branco. Fica em dois lugares: em volta do `<Outlet/>` de `layout.tsx` (todas as páginas) e do `<Outlet/>` da área de conteúdo do `AdminLayout` (erro numa tela do painel preserva o menu lateral e a busca). Recomeça ao trocar de página (`key` pelo caminho), senão o aviso ficaria preso ao navegar. Precisa ser componente de classe: é a única forma que o React oferece. Ideia vinda da auditoria de outro sistema acadêmico (Atlas).
 
+📌 **Erro embaixo do campo, não botão desabilitado (29-09-2026).**
+- **Em palavras simples:** antes, com algo faltando, o botão ("Próximo", "Criar conta", "Suspender", "Alterar senha") ficava cinza e a pessoa não sabia por quê. Agora o botão sempre funciona; clicando com algo errado, cada campo mostra embaixo o que falta, em vermelho, e o cursor vai para o primeiro deles. Corrigiu, o aviso some sozinho.
+- **Decisão:** `useErrosFormulario(validar)`: `validar` devolve a mensagem de cada campo com problema; `tentarEnviar()` marca a tentativa e diz se pode seguir; `erroDe(campo)` vai na prop `erro` do `<Campo>` (ou num `<p>` com `aria-invalid`/`aria-describedby` quando o campo não usa `<Campo>`). Aplicado em: criar campanha (etapa Dados), cadastro público (inclusive o aceite dos Termos), seção de suspensão (conta e pesquisador) e "Alterar senha" da Minha Conta.
+- **Motivo:** heurísticas de Nielsen 1 (mostrar o que está acontecendo) e 9 (ajudar a reconhecer e corrigir o erro); o exemplo que o Lucas deu na pendência de Nielsen era exatamente este.
+- **Caso-limite aceito:** os avisos que já apareciam enquanto a pessoa digita (meta abaixo do mínimo, e-mail inválido ao sair do campo, senhas diferentes, prazo fora do intervalo) continuam aparecendo na hora; o hook só acrescenta os que faltavam, na tentativa. Os outros formulários do painel continuam no padrão antigo até a auditoria de Nielsen passar por eles.
+
 📌 **`useBuscar` (`services/constant/hook/use-buscar.ts`, 27-09-2026): um só "buscar dado quando algo muda".** A `GenericTable` (listagem), o `LogAuditoriaPainel` (página do log) e o Consultar de campanha repetiam o mesmo `useEffect` com estados de carregando e erro. Agora usam o hook, que também descarta resposta atrasada: se a pessoa troca de página duas vezes rápido e a primeira resposta chega por último, ela não sobrescreve a segunda nem mexe em tela já fechada. Substituiu o antigo `useBuscarPorId`, que só servia a busca por id e tinha sobrado com um uso. Também usam: o resumo do Dashboard, as grandes áreas do Criar Área e as áreas de Criar/Alterar Campanha, estas por um hook do módulo, `useAreasDaCampanha` (`services/8-area-conhecimento/hook/`), porque a busca era idêntica nas duas telas. "Carregar para editar" usa o mesmo hook (27-09-2026): `aoChegar` recebe o dado quando ele chega e preenche o formulário da tela, `erros` passa o `useErroToast` da própria tela (o erro de carregar e o de salvar aparecem no mesmo lugar) e `recarregar()` busca de novo. Assim funcionam Alterar Usuário (`useDadosUsuario`), Alterar Termo, Alterar Campanha e a matriz Papel × Permissão.
 
 📌 **Foco do teclado nas janelas (`services/constant/hook/use-foco-preso.ts`).** Ao abrir, o foco entra na janela (ela é anunciada pelo título); Tab e Shift+Tab circulam só lá dentro; ao fechar, o foco volta para quem abriu. Com uma janela sobre outra (ex.: o detalhe de um item dentro do Alterar), só a de cima prende o Tab, e o **Esc fecha só a janela de cima** (cada janela trata o próprio Esc e para a propagação; antes o Esc escutava a página inteira e fechava as duas). Clicar no fundo escurecido não tira o foco da janela, para o Esc continuar funcionando.
@@ -516,6 +564,7 @@ Uma varredura procurou trechos iguais repetidos pelo React e trocou cada grupo p
 |---|---|---|
 | `Campo` | `components/input/campo.tsx` | rótulo + campo + dica ou erro montados à mão: agora em todo formulário (cadastro, login, Minha Conta, usuário, campanha, termo, configuração, papel, catálogos). Todo campo fica ligado ao rótulo e à mensagem para o leitor de tela; antes, as mensagens de validação do cadastro e o rótulo da confirmação de exclusão de conta não estavam |
 | `useEnvio` | `services/constant/hook/use-envio.ts` | o "enviar" (limpa erro, liga "Salvando...", chama a API, reporta erro, desliga), que se repetia 36 vezes em 21 arquivos |
+| `useErrosFormulario` | `services/constant/hook/use-erros-formulario.ts` | erro por campo no lugar do botão desabilitado (ver abaixo) |
 | `SecaoSuspensao` | `components/crud/secao-suspensao.tsx` | as duas seções de moderação (conta e poder de pesquisador), cerca de 156 linhas cada, que só mudavam textos e API; as duas viraram embrulhos finos |
 | `criarApiCatalogo` | `services/constant/api/api-catalogo.ts` | as 6 chamadas iguais de tipo de link, área e motivo (listar, listar público, buscar, criar, atualizar, remover) |
 | `ModalExcluirItem` | `components/crud/modal-excluir-item.tsx` | os 3 modais de excluir dos catálogos |

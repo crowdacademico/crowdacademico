@@ -1,5 +1,6 @@
-// Espelha nest/src/commons/database/db.types.ts (TIPOS_CONFIGURACAO).
-export type TipoConfiguracao = 'decimal' | 'inteiro' | 'texto' | 'booleano';
+// Valores do ENUM tipo_configuracao, vindos do banco (enums-do-banco.gerado.ts).
+import type { TipoConfiguracao } from '../../constant/type/enums-do-banco.gerado';
+export type { TipoConfiguracao };
 
 // Espelha nest/src/11-configuracoes/dto/response/configuracoes.response.ts.
 export interface ConfiguracoesResponse {

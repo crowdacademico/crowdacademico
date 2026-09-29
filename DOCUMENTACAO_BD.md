@@ -1,5 +1,5 @@
 
-**Contagem do inventário** (`grep -c` nos `.sql`, para conferir contra as queries acima; **evite repetir estes números em outros documentos**, eles envelhecem, cite a seção "Como conferir este inventário"): **42 tabelas**, **121 policies**, **80 triggers** em `05` (76 comuns e 4 `CONSTRAINT TRIGGER`), **102 funções** (74 em `05`, 26 em `03`, 1 em `08`, 1 em `01`), **52 índices** em `02`, e **78 códigos de ERRCODE** customizado (tabelas em `DOCUMENTACAO_ERRCODE.md`).
+**Contagem do inventário** (`grep -c` nos `.sql`, para conferir contra as queries acima; **evite repetir estes números em outros documentos**, eles envelhecem, cite a seção "Como conferir este inventário"): **42 tabelas**, **121 policies**, **82 triggers** em `05` (78 comuns e 4 `CONSTRAINT TRIGGER`), **103 funções** (75 em `05`, 26 em `03`, 1 em `08`, 1 em `01`), **51 índices** em `02`, e **78 códigos de ERRCODE** customizado (tabelas em `DOCUMENTACAO_ERRCODE.md`).
 
 **Comentários dos `.sql`.** Cabeçalho curto (`Função`, `Assinatura`, `Bloco` e uma `Regra` objetiva, sem datas nem história) e, dentro de função, trigger e policy, só o comentário que explica uma regra difícil. Não há ponteiro para arquivo fora do git: o porquê longo mora aqui, na seção `[NN-Y]` correspondente, e a história (o que mudou, quando, por quê) fica no arquivo de histórico local, que não é versionado. Os comentários do `07` explicam dado de teste; o `ATUALIZAR O SUPABASE.sql` é o registro datado de cada patch e por isso mantém a narrativa.
 # 📚 Documentação Técnica do Banco de Dados - CrowdAcadêmico
@@ -763,6 +763,27 @@ Regras verificadas no PGlite com o banco montado inteiro, usando o papel real `a
 ---
 
 ### [05-G] Arquivo: posse da foto de perfil e limpeza de órfãos (28-09-2026)
+
+> 📌 **Anexos também: cada arquivo mora num lugar só (29-09-2026).**
+> - **Em palavras simples:** um arquivo enviado pode virar a foto de alguém **ou** o anexo de **uma** atualização **ou** o de **uma** recompensa, nunca dois ao mesmo tempo. Só quem enviou o arquivo pode anexá-lo. Para usar o mesmo PDF em dois lugares, envia-se de novo.
+> - **Decisão:** `fn_valida_posse_anexo()` (`SECURITY DEFINER`), ligada por `trg_valida_posse_anexo_atualizacao` e `trg_valida_posse_anexo_recompensa` (`BEFORE INSERT OR UPDATE OF id_arquivo`), com as mesmas três recusas da foto: arquivo inexistente ou removido (90022), enviado por outra pessoa (92025), em uso em outro lugar (91029). Como segunda proteção, a regra de valor único das duas tabelas passou de "(arquivo, atualização)" para só "arquivo" (`UK_ARQUIVO_ATUALIZACAO_ARQUIVO` e `UK_ARQUIVO_RECOMPENSA_ARQUIVO`, `01`); o índice `arquivo_recompensa(id_arquivo)` do `02` saiu porque a regra já cria um. O Nest traduz essas duas regras em "Este arquivo já está anexado em outro lugar." (`mensagens-duplicidade.constants.ts`).
+> - **Motivo:** a rota `POST /arquivo-atualizacao` já existia e `pol_arqatu_insert` (04) só conferia se a atualização era de quem está logado, não quem enviou o arquivo. O dono de uma atualização anexava o arquivo de outra pessoa e, pela posse que o anexo dá em `pol_arquivo_update`, podia apagá-lo. E compartilhar um arquivo entre dois lugares fazia a remoção de um levar o outro junto: no próprio seed, os anexos das atualizações reaproveitavam as fotos de perfil, e trocar a foto da Ana sumia com o anexo da atualização 1. O seed agora tem arquivos próprios para os anexos (ids 9 a 14).
+> - **Caso-limite aceito:** a regra só vale com alguém logado (seed e manutenção direta passam), mas a regra de valor único vale sempre. No Supabase, o Grupo X separou os 6 anexos que reaproveitavam fotos, criando uma linha nova em `arquivo` para cada um, com a chave antiga mais `.anexo-<id>` (os objetos de seed não existem no armazenamento de qualquer jeito). Coberto pela suíte de teste do banco de posse de arquivo e órfãos.
+>
+> **O que acontece quando... (foto e anexos, com alguém logado):**
+>
+> | Situação | Resultado |
+> |---|---|
+> | A pessoa usa como foto, ou anexa, um arquivo que ela mesma enviou e que não está em uso | Passa |
+> | O arquivo foi enviado por outra pessoa | Recusa, 92025 (o Nest responde 403) |
+> | O arquivo não existe ou já foi removido (`ativo = false`) | Recusa, 90022 (400) |
+> | O arquivo já é a foto de alguém, ou anexo de outra atualização ou recompensa | Recusa, 91029 (409) |
+> | Um anexo tem o arquivo trocado (`UPDATE ... SET id_arquivo`) por um de outra pessoa | Recusa, 92025 |
+> | Alguém sem sessão (seed, SQL direto) tenta pôr o mesmo arquivo em dois anexos da mesma tabela | Recusa pela regra de valor único (23505); o Nest mostra "Este arquivo já está anexado em outro lugar." |
+> | A pessoa tira a foto (`id_imagem_perfil = NULL`) | Passa sempre |
+> | Um arquivo enviado não vira foto nem anexo em 24 horas | A faxina das 4h desativa e apaga do armazenamento (`desativar_arquivos_orfaos`) |
+>
+> **Por que o admin passa:** quem troca a foto de outra pessoa (ou anexa por ela) é quem envia o arquivo naquele momento, então "enviado por quem está logado" continua valendo.
 
 - **Em palavras simples:** duas regras do banco para arquivos. A primeira é uma "trava" (trigger, uma regra que o banco roda sozinho a cada gravação): só deixa usar como foto um arquivo que a própria pessoa enviou e que ninguém mais está usando. A segunda é uma "faxina" (função chamada todo dia às 4h): apaga o arquivo que ninguém usou em 24 horas.
 - **Decisão:** `trg_valida_posse_imagem_perfil` (`BEFORE INSERT OR UPDATE OF id_imagem_perfil ON usuario`, função `fn_valida_posse_imagem_perfil`, `SECURITY DEFINER`) só aceita como foto um arquivo ativo (90022), enviado por quem está logado (92025) e sem outro dono: foto de outra pessoa, anexo de atualização ou de recompensa (91029). `desativar_arquivos_orfaos()` desativa todo arquivo ativo que ninguém adotou em `configuracoes.arquivo_horas_para_vincular` (24h; 0 = desligado), devolve as chaves para o Nest apagar do armazenamento e deixa uma linha de rastro em `log_auditoria`. Chamada pelo job diário das 4h.

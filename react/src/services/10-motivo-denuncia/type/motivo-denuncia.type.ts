@@ -1,5 +1,6 @@
-// Espelha nest/src/commons/database/db.types.ts (TIPOS_MOTIVO_DENUNCIA).
-export type TipoMotivoDenuncia = 'campanha' | 'perfil';
+// Valores do ENUM tipo_motivo_denuncia, vindos do banco (enums-do-banco.gerado.ts).
+import type { TipoMotivoDenuncia } from '../../constant/type/enums-do-banco.gerado';
+export type { TipoMotivoDenuncia };
 
 // Espelha nest/src/10-motivo-denuncia/dto/response/motivo-denuncia.response.ts.
 export interface MotivoDenunciaResponse {

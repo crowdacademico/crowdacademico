@@ -767,7 +767,8 @@ CREATE TABLE arquivo_atualizacao (
     CONSTRAINT "PK_ARQUIVO_ATUALIZACAO" PRIMARY KEY (id_arq_atu),
     CONSTRAINT "FK_ARQUIVO_ATUALIZACAO_ARQUIVO" FOREIGN KEY (id_arquivo) REFERENCES arquivo(id_arquivo) ON DELETE CASCADE,
     CONSTRAINT "FK_ARQUIVO_ATUALIZACAO_ATUALIZACAO" FOREIGN KEY (id_atualizacao) REFERENCES atualizacao_campanha(id_atualizacao) ON DELETE CASCADE,
-    CONSTRAINT "UK_ARQUIVO_ATUALIZACAO_ARQUIVO_ATUALIZACAO" UNIQUE (id_arquivo, id_atualizacao)
+    -- Um arquivo é anexo de UMA atualização só (e de nenhum outro lugar, ver fn_valida_posse_anexo, 05 [05-G]).
+    CONSTRAINT "UK_ARQUIVO_ATUALIZACAO_ARQUIVO" UNIQUE (id_arquivo)
 );
 
 CREATE TABLE arquivo_recompensa (
@@ -780,7 +781,8 @@ CREATE TABLE arquivo_recompensa (
     CONSTRAINT "PK_ARQUIVO_RECOMPENSA" PRIMARY KEY (id_arq_recompensa),
     CONSTRAINT "FK_ARQUIVO_RECOMPENSA_RECOMPENSA" FOREIGN KEY (id_recompensa) REFERENCES recompensa(id_recompensa) ON DELETE CASCADE,
     CONSTRAINT "FK_ARQUIVO_RECOMPENSA_ARQUIVO" FOREIGN KEY (id_arquivo) REFERENCES arquivo(id_arquivo) ON DELETE CASCADE,
-    CONSTRAINT "UK_ARQUIVO_RECOMPENSA_RECOMPENSA_ARQUIVO" UNIQUE (id_recompensa, id_arquivo)
+    -- Um arquivo é anexo de UMA recompensa só (e de nenhum outro lugar, ver fn_valida_posse_anexo, 05 [05-G]).
+    CONSTRAINT "UK_ARQUIVO_RECOMPENSA_ARQUIVO" UNIQUE (id_arquivo)
 );
 
 -- ============================================================

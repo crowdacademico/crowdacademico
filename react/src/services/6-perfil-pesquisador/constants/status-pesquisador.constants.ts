@@ -1,5 +1,8 @@
-// Espelha o ENUM status_pesquisador (01_extensoes_enums_tabelas.sql).
-export type StatusPesquisador = 'ativo' | 'suspenso';
+import type { StatusPesquisador, TipoVinculo, TituloAcademico } from '../../constant/type/enums-do-banco.gerado';
+
+// Os VALORES dos três ENUMs abaixo vêm do banco (enums-do-banco.gerado.ts); aqui ficam só os rótulos. Os rótulos são
+// Record<Tipo, string>: um valor novo no banco sem rótulo aqui vira erro de compilação.
+export type { StatusPesquisador, TipoVinculo, TituloAcademico };
 
 export const ROTULO_STATUS_PESQUISADOR: Record<StatusPesquisador, string> = {
   ativo: 'Ativo',
@@ -10,18 +13,12 @@ export function classeBadgeStatusPesquisador(status: StatusPesquisador): string 
   return status === 'ativo' ? 'badge-sucesso' : 'badge-erro';
 }
 
-// Espelha o ENUM titulo_academico.
-export type TituloAcademico = 'graduado' | 'especialista' | 'mestre' | 'doutor';
-
 export const ROTULO_TITULO_ACADEMICO: Record<TituloAcademico, string> = {
   graduado: 'Graduado',
   especialista: 'Especialista',
   mestre: 'Mestre',
   doutor: 'Doutor',
 };
-
-// Espelha o ENUM tipo_vinculo.
-export type TipoVinculo = 'institucional' | 'independente';
 
 export const ROTULO_TIPO_VINCULO: Record<TipoVinculo, string> = {
   institucional: 'Institucional',

@@ -9,6 +9,7 @@ import { ErroHttp } from '../../services/constant/api/http.util';
 import { useFocoPreso } from '../../services/constant/hook/use-foco-preso';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { TermoUsoResponseActive } from '../../services/5-termo-uso/type/termo-uso.type';
+import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
 
 const REGEX_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -63,6 +64,7 @@ export function CadastroPage({ auth }: PropsPagina) {
   // Janela dos termos: anunciada como diálogo, com o foco preso nela enquanto aberta; Esc fecha.
   const janelaTermoRef = useRef<HTMLDivElement>(null);
   const idTituloTermo = useId();
+  const idErroTermos = useId();
   useFocoPreso(janelaTermoRef, modalTermoAberto);
   const [termo, setTermo] = useState<TermoUsoResponseActive | null>(null);
   const [carregandoTermo, setCarregandoTermo] = useState(false);
@@ -81,11 +83,21 @@ export function CadastroPage({ auth }: PropsPagina) {
   const emailValido = REGEX_EMAIL.test(email);
   const senhasIguais = senha.length > 0 && senha === confirmarSenha;
   const requisitosCumpridos = REQUISITOS_SENHA.filter((r) => r.testar(senha)).length;
-  const formularioValido =
-    nome.trim().length >= 2 && emailValido && senha.length >= 8 && senhasIguais && aceiteTermos;
+  // "Criar conta" fica sempre clicável: clicando com algo faltando, cada campo mostra o próprio erro (inclusive o
+  // aceite dos Termos, que antes só deixava o botão cinza sem dizer por quê).
+  const { erroDe, tentarEnviar } = useErrosFormulario(() => ({
+    nome: nome.trim().length < 2 && 'Nome precisa ter pelo menos 2 caracteres.',
+    email: email.trim() === '' ? 'Informe o e-mail.' : !emailValido && 'E-mail inválido.',
+    senha: senha.length < 8 && 'A senha precisa ter pelo menos 8 caracteres.',
+    confirmar: confirmarSenha === '' ? 'Confirme a senha.' : !senhasIguais && 'As senhas não são iguais.',
+    termos: !aceiteTermos && 'É preciso aceitar os Termos de Uso para criar a conta.',
+  }));
 
   const aoCadastrar = async (evento: FormEvent<HTMLFormElement>) => {
     evento.preventDefault();
+    if (!tentarEnviar()) {
+      return;
+    }
     limparErro();
     setErroEmailDuplicado(false);
     setEnviando(true);
@@ -130,7 +142,7 @@ export function CadastroPage({ auth }: PropsPagina) {
         >
           <MensagemErro texto={erro} />
 
-          <Campo rotulo="Nome" erro={tocado.nome && nome.trim().length < 2 && 'Nome precisa ter pelo menos 2 caracteres.'}>
+          <Campo rotulo="Nome" erro={erroDe('nome') ?? (tocado.nome && nome.trim().length < 2 && 'Nome precisa ter pelo menos 2 caracteres.')}>
             {({ atributos, classeErro }) => (
               <input
                 {...atributos}
@@ -156,7 +168,7 @@ export function CadastroPage({ auth }: PropsPagina) {
                   </Link>
                 </>
               ) : (
-                tocado.email && email.length > 0 && !emailValido && 'E-mail inválido.'
+                erroDe('email') ?? (tocado.email && email.length > 0 && !emailValido && 'E-mail inválido.')
               )
             }
           >
@@ -177,8 +189,8 @@ export function CadastroPage({ auth }: PropsPagina) {
             )}
           </Campo>
 
-          <Campo rotulo="Senha">
-            {({ atributos }) => (
+          <Campo rotulo="Senha" erro={erroDe('senha')}>
+            {({ atributos, classeErro }) => (
               <>
                 <div className="relative">
                   <input
@@ -187,7 +199,7 @@ export function CadastroPage({ auth }: PropsPagina) {
                     value={senha}
                     onChange={(evento) => setSenha(evento.target.value)}
                     onBlur={() => marcarTocado('senha')}
-                    className="input-padrao pr-10"
+                    className={'input-padrao pr-10' + classeErro}
                     placeholder="••••••••"
                     autoComplete="new-password"
                   />
@@ -238,7 +250,7 @@ export function CadastroPage({ auth }: PropsPagina) {
 
           <Campo
             rotulo="Confirmar senha"
-            erro={confirmarSenha.length > 0 && !senhasIguais && 'As senhas não são iguais.'}
+            erro={erroDe('confirmar') ?? (confirmarSenha.length > 0 && !senhasIguais && 'As senhas não são iguais.')}
             dica={
               confirmarSenha.length > 0 &&
               senhasIguais && (
@@ -264,32 +276,41 @@ export function CadastroPage({ auth }: PropsPagina) {
             )}
           </Campo>
 
-          <label className="flex items-start gap-2.5 text-sm texto-padrao">
-            <input
-              type="checkbox"
-              checked={aceiteTermos}
-              onChange={(evento) => setAceiteTermos(evento.target.checked)}
-              className="mt-0.5"
-            />
-            <span>
-              Li e aceito os{' '}
-              <button
-                type="button"
-                onClick={abrirTermos}
-                className="texto-marca font-bold underline"
-              >
-                Termos de Uso
-              </button>
-              .
-            </span>
-          </label>
+          <div>
+            <label className="flex items-start gap-2.5 text-sm texto-padrao">
+              <input
+                type="checkbox"
+                checked={aceiteTermos}
+                onChange={(evento) => setAceiteTermos(evento.target.checked)}
+                aria-invalid={Boolean(erroDe('termos'))}
+                aria-describedby={erroDe('termos') ? idErroTermos : undefined}
+                className="mt-0.5"
+              />
+              <span>
+                Li e aceito os{' '}
+                <button
+                  type="button"
+                  onClick={abrirTermos}
+                  className="texto-marca font-bold underline"
+                >
+                  Termos de Uso
+                </button>
+                .
+              </span>
+            </label>
+            {erroDe('termos') && (
+              <p id={idErroTermos} className="text-xs texto-erro font-semibold mt-1">
+                {erroDe('termos')}
+              </p>
+            )}
+          </div>
         </form>
 
         <div className="p-6 border-t borda-padrao fundo-cartao shrink-0 space-y-3">
           <button
             type="submit"
             form="form-cadastro"
-            disabled={!formularioValido || enviando}
+            disabled={enviando}
             className="btn btn-primary w-full py-3.5 text-sm"
           >
             {enviando ? 'Criando conta...' : 'Criar conta'}

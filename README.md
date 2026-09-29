@@ -152,6 +152,13 @@ crowdacademico/                          (repo único na Organization)
             └── dash-pesquisador/
 ```
 
+# Arquivos que o git ignora
+
+- **Em palavras simples:** alguns arquivos nunca devem ir para o GitHub, como as pastas `node_modules` (as bibliotecas instaladas, que cada computador baixa sozinho), as pastas `dist` (o código compilado) e o `.env` do Nest (a senha do banco). Os arquivos `.gitignore` são a lista do que o git deve ignorar.
+- **Decisão (29-09-2026):** existem três `.gitignore`, todos no git e valendo para todo mundo: o da raiz, o do `nest/` e o do `react/`. O que for só de um computador (rascunhos, backups, a pasta `informacoes`) vai no `.git/info/exclude` daquela máquina, que funciona igual mas nunca vai para o git.
+- **Motivo:** até 29-09-2026 o `.gitignore` da raiz tinha uma linha ignorando "`.gitignore`", e ela valia para todas as pastas. Nenhum dos três ia para o git, então no computador de quem clonasse o projeto nada mandava ignorar `node_modules`, `dist` ou o `.env` do Nest.
+- **Caso-limite aceito:** o `react/.env` continua no git de propósito (só tem o endereço da API); ver PENDENCIAS, grupo do deploy.
+
 # Como registrar uma decisão na documentação
 
 Desde 28-09-2026, toda decisão nova nos documentos `DOCUMENTACAO_*.md` vem em três linhas:

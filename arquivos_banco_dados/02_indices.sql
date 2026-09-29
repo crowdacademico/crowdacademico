@@ -120,7 +120,7 @@ CREATE INDEX idx_link_recompensa_tipolink      ON link_recompensa(id_tipolink);
 -- enviou" (limitar upload/hora, localizar upload de conta banida) sem full scan em `arquivo`.
 CREATE INDEX idx_arquivo_usuario_upload ON arquivo(id_usuario_upload);
 CREATE INDEX idx_arquivo_atualizacao_atualizacao ON arquivo_atualizacao(id_atualizacao);
-CREATE INDEX idx_arquivo_recompensa_arquivo ON arquivo_recompensa(id_arquivo);
+-- arquivo_recompensa(id_arquivo) não precisa de índice aqui: UK_ARQUIVO_RECOMPENSA_ARQUIVO (01) já cria um.
 
 -- Garante no máximo 1 imagem "principal" por recompensa
 CREATE UNIQUE INDEX uq_arquivo_recompensa_principal ON arquivo_recompensa (id_recompensa) WHERE principal = TRUE;

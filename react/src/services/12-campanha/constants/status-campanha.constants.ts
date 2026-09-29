@@ -1,20 +1,13 @@
-// Espelha o ENUM status_campanha (01_extensoes_enums_tabelas.sql) -
-// rótulo legível + classe de badge, compartilhado entre a listagem e a
-// consulta (services/12-campanha/*). Mesma ordem de "poder"/ciclo de
-// vida do enum, não alfabética - ajuda o filtro facetado de GenericTable
-// (`ordem`) a mostrar as opções numa sequência que faz sentido de
-// fluxo, não embaralhada.
-export type StatusCampanha =
-  | 'rascunho'
-  | 'aguardando_aprovacao'
-  | 'ativo'
-  | 'sucesso'
-  | 'nao_atingido'
-  | 'rejeitado'
-  | 'encerrado'
-  | 'encerrado_moderacao';
+import type { StatusCampanha } from '../../constant/type/enums-do-banco.gerado';
+import { listaCompleta } from '../../constant/util/lista-completa.util';
 
-export const ORDEM_STATUS_CAMPANHA: StatusCampanha[] = [
+// Os VALORES vêm do banco (ENUM status_campanha, via enums-do-banco.gerado.ts); aqui ficam só a ordem de exibição,
+// o rótulo legível e a classe de badge, compartilhados entre a listagem e a consulta (services/12-campanha/*).
+export type { StatusCampanha };
+
+// Ordem do ciclo de vida, não alfabética: o filtro facetado de GenericTable (`ordem`) mostra as opções numa
+// sequência que faz sentido de fluxo. `listaCompleta` faz o compilador acusar se um status do banco faltar aqui.
+export const ORDEM_STATUS_CAMPANHA = listaCompleta<StatusCampanha>()([
   'rascunho',
   'aguardando_aprovacao',
   'ativo',
@@ -23,7 +16,7 @@ export const ORDEM_STATUS_CAMPANHA: StatusCampanha[] = [
   'rejeitado',
   'encerrado',
   'encerrado_moderacao',
-];
+] as const);
 
 export const ROTULO_STATUS_CAMPANHA: Record<StatusCampanha, string> = {
   rascunho: 'Rascunho',

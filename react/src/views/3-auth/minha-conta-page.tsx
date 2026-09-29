@@ -23,6 +23,7 @@ import {
 } from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
 import { formatarCpfExibicao, formatarDataHora, formatarMesAno } from '../../services/constant/util/formatacao.util';
 import { useEnvio } from '../../services/constant/hook/use-envio';
+import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import { ModalUpgradePesquisador } from '../6-perfil-pesquisador/modal-upgrade-pesquisador';
 import { gerarCpfValido } from '../../services/campo-testes/util/gerar-cpf-valido.util';
@@ -433,11 +434,20 @@ function AbaSeguranca({ auth }: AbaSegurancaProps) {
   const { erro, reportarErro, limparErro } = useErroToast();
   const { ocupado: encerrandoTodas, executar: executarEncerrandoTodas } = useEnvio(reportarErro);
   const { ocupado: enviandoSenha, executar: executarEnviandoSenha } = useEnvio(reportarErro, limparErro);
+  // "Alterar senha" fica sempre clicável; faltando algo, o erro aparece embaixo do campo.
+  const {
+    erroDe: erroSenhaDe,
+    tentarEnviar: tentarTrocarSenha,
+    limpar: limparErrosSenha,
+  } = useErrosFormulario(() => ({
+    atual: senhaAtual === '' && 'Informe a senha atual.',
+    nova: novaSenha.length < 8 && 'A nova senha precisa ter pelo menos 8 caracteres.',
+  }));
 
   const aoTrocarSenha = async (evento: FormEvent<HTMLFormElement>) => {
     evento.preventDefault();
     const usuario = auth.usuario;
-    if (!usuario) {
+    if (!usuario || !tentarTrocarSenha()) {
       return;
     }
     await executarEnviandoSenha(async () => {
@@ -448,6 +458,7 @@ function AbaSeguranca({ auth }: AbaSegurancaProps) {
       mostrar('Senha alterada com sucesso.');
       setSenhaAtual('');
       setNovaSenha('');
+      limparErrosSenha();
     });
   };
 
@@ -497,33 +508,33 @@ function AbaSeguranca({ auth }: AbaSegurancaProps) {
         </h2>
         <form onSubmit={aoTrocarSenha} className="space-y-4 max-w-md">
           {erro && <p className="text-sm texto-erro">{erro}</p>}
-          <Campo rotulo="Senha atual">
-            {({ atributos }) => (
+          <Campo rotulo="Senha atual" erro={erroSenhaDe('atual')}>
+            {({ atributos, classeErro }) => (
               <input
                 {...atributos}
                 type="password"
                 value={senhaAtual}
                 onChange={(evento) => setSenhaAtual(evento.target.value)}
-                className="input-padrao"
+                className={'input-padrao' + classeErro}
                 autoComplete="current-password"
               />
             )}
           </Campo>
-          <Campo rotulo="Nova senha">
-            {({ atributos }) => (
+          <Campo rotulo="Nova senha" erro={erroSenhaDe('nova')}>
+            {({ atributos, classeErro }) => (
               <input
                 {...atributos}
                 type="password"
                 value={novaSenha}
                 onChange={(evento) => setNovaSenha(evento.target.value)}
-                className="input-padrao"
+                className={'input-padrao' + classeErro}
                 autoComplete="new-password"
               />
             )}
           </Campo>
           <button
             type="submit"
-            disabled={!senhaAtual || novaSenha.length < 8 || enviandoSenha}
+            disabled={enviandoSenha}
             className="btn btn-secondary"
           >
             {enviandoSenha ? 'Alterando...' : 'Alterar senha'}

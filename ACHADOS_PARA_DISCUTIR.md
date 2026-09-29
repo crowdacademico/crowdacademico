@@ -4,7 +4,7 @@ Lista montada a partir da resposta da revisão externa de 24-09-2026 (a pasta de
 
 ## A. Dá para fazer agora, sem decisão de negócio
 
-1. ✅ **FEITO em parte (28-09-2026): tipos gerados do banco (B4).** O `pglite-socket` foi instalado só na pasta de testes do banco, e o `db.types.generated.ts` é gerado a partir dos arquivos 01 a 08. O manual continua em uso, e uma suíte de teste compara os dois (ver `DOCUMENTACAO_BACKEND.md`, seção 2.6). O `enums.gerado.ts` para o React não foi feito. Texto original:
+1. ✅ **FEITO em parte (28-09-2026): tipos gerados do banco (B4).** O `pglite-socket` foi instalado só na pasta de testes do banco, e o `db.types.generated.ts` é gerado a partir dos arquivos 01 a 08. O manual continua em uso, e uma suíte de teste compara os dois (ver `DOCUMENTACAO_BACKEND.md`, seção 2.6). A parte do React foi feita em 29-09-2026: `react/src/services/constant/type/enums-do-banco.gerado.ts`, gerado por `npm run gerar:enums` (ver `DOCUMENTACAO_FRONTEND.md`, seção 3). Texto original:
    - Situação: o `db.types.ts` continua escrito à mão, com 660 linhas, e os enums de status estão repetidos no React.
    - Revisão externa: rodar o `kysely-codegen` contra o PGlite e gerar um `enums.gerado.ts` para o React. Serve de resposta para a banca ("o código bate com o banco").
    - Sugestão: concordo. Risco baixo, mas os erros de tipo que aparecerem vão mostrar divergências reais. Precisa de OK para instalar `@electric-sql/pglite-socket` como dependência de desenvolvimento.
@@ -53,7 +53,7 @@ Lista montada a partir da resposta da revisão externa de 24-09-2026 (a pasta de
 1. **"Minhas campanhas" do pesquisador, com o wizard extraído do Campo de Testes.**
    - Revisão externa: é o maior risco do TCC. Numa banca pedem "me mostra o pesquisador criando uma campanha", e hoje só existe a bancada de testes.
    - Decidido em 26-09-2026: dentro do painel, item novo do menu, só para pesquisador. FEITO em 26-09-2026 (Minhas Campanhas).
-2. **Hook `useErrosFormulario`.** Revisão externa: umas 60 linhas, aplicar primeiro no wizard. Sugestão: só faz sentido junto com o item 1.
+2. ✅ **FEITO (29-09-2026): hook `useErrosFormulario`**, aplicado em criar campanha, cadastro, suspensão e alterar senha (ver `DOCUMENTACAO_FRONTEND.md`). Texto original: Revisão externa: umas 60 linhas, aplicar primeiro no wizard. Sugestão: só faz sentido junto com o item 1.
 3. **Alterar e Excluir campanha na tela real.** Revisão externa: dentro de "Minhas campanhas", com D4, e Excluir só em rascunho. Sugestão: concordo, depende do item 1 e do D4 (A.2).
 4. **Página pública da campanha.** Revisão externa: não depende do gateway, com o botão "Contribuir em breve". Sugestão: concordo. A decisão é o escopo.
 5. **Score, Parte C.** Adiada. Patch pronto; precisa de tela de admin, dos números (10, 15 e 3 denúncias) e do texto dos Termos de Uso.
