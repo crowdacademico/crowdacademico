@@ -6,7 +6,7 @@ import { CaixaAviso } from '../../components/crud/caixa-aviso';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
 import { termoUsoApi } from '../../services/5-termo-uso/api/termo-uso.api';
-import { ROTULO_TIPO_TERMO } from '../../services/5-termo-uso/constants/termo-uso-tipos';
+import { ROTULO_TIPO_TERMO } from '../../services/5-termo-uso/constants/termo-uso-tipos.constants';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { TermoUsoResponse } from '../../services/5-termo-uso/type/termo-uso.type';
 
@@ -19,7 +19,7 @@ interface ModalExcluirTermoUsoProps {
 
 // Excluir: como Criar não ativa mais sozinho, um rascunho com muito erro de português pode simplesmente ser
 // apagado (para não sujar o banco). Confirmação simples (sem digitar nada, diferente de ModalExcluirUsuario): o
-// backend (TermoUsoServiceExcluir) já bloqueia com 409 qualquer versão vigente ou aceita por alguém.
+// backend (TermoUsoServiceRemove) já bloqueia com 409 qualquer versão vigente ou aceita por alguém.
 //
 // "Excluir mesmo assim": se o 409 for especificamente o de "já foi aceita" (não o de "é a vigente", esse
 // continua bloqueado sem exceção), a tela troca para o modo forçado: mostra o aviso + checkbox "entendi" +
@@ -44,7 +44,7 @@ export function ModalExcluirTermoUso({ auth, termo, aoFechar, aoExcluido }: Moda
       const mensagem = reportarErro(erroRequisicao);
       // Só oferece o modo forçado pro caso "já foi aceita" - o de "é a
       // vigente" continua bloqueado sem exceção nenhuma (ver
-      // TermoUsoServiceExcluir).
+      // TermoUsoServiceRemove).
       if (mensagem.includes('já foi aceita')) {
         setModoForcado(true);
       }

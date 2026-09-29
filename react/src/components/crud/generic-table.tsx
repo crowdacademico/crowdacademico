@@ -5,10 +5,10 @@ import { TIPOS_COLUNA, type NomeTipoColuna } from './colunas/tipos-coluna';
 import { DISTRIBUICAO_COLUNAS } from './colunas/distribuicao';
 import { CabecalhoAcoes, CelulaAcoes, type AcoesLinha } from './colunas/5-coluna-acoes';
 import { BarraFiltros } from '../search/barra-filtros';
-import { paginarClientSide } from '../../services/constant/utils/paginacao.util';
+import { paginarClientSide } from '../../services/constant/util/paginacao.util';
 import { RodapePaginacao } from '../pagination/rodape-paginacao';
 import { TAMANHOS_PAGINA } from '../pagination/tamanhos-pagina.constants';
-import { normalizarBusca } from '../../services/constant/utils/busca.util';
+import { normalizarBusca } from '../../services/constant/util/busca.util';
 import { useBuscar } from '../../services/constant/hook/use-buscar';
 
 // `object`, não `Record<string, unknown>`: toda linha real é uma interface nomeada espelhando um DTO do Nest
@@ -34,7 +34,7 @@ interface FiltroFacetado<T extends Linha> {
   ordem?: readonly string[];
   // `rotulos`: opcional, traduz o valor CRU para um texto amigável só na exibição do dropdown (botão + opções);
   // o filtro em si continua comparando/gravando na URL o valor cru (`atualizarParametros`), nunca o traduzido.
-  // Mesmo espírito de permissao-nomes-amigaveis.ts: camada de exibição por cima do dado, sem mudar o dado.
+  // Mesmo espírito de permissao-nomes-amigaveis.constants.ts: camada de exibição por cima do dado, sem mudar o dado.
   rotulos?: Record<string, string>;
 }
 

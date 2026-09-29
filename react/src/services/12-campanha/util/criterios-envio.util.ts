@@ -1,4 +1,4 @@
-import { formatarMoeda } from '../../constant/utils/formatacao.util';
+import { formatarMoeda } from '../../constant/util/formatacao.util';
 import type { OrcamentoCampanhaResponse } from '../../13-orcamento-campanha/type/orcamento-campanha.type';
 import type { MarcoCronogramaResponse } from '../../14-marco-cronograma/type/marco-cronograma.type';
 

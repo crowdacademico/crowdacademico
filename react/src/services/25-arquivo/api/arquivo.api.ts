@@ -3,10 +3,10 @@ import { tratarResposta } from '../../constant/api/http.util';
 import { acompanharRequisicao } from '../../../components/layout/barra-carregamento/atividade-rede';
 import type { AuthFetch } from '../../3-auth/type/auth.type';
 import type {
-  ArquivoRequestConfirmarUpload,
-  ArquivoRequestIniciarUpload,
+  ArquivoRequestConfirmUpload,
+  ArquivoRequestStartUpload,
   ArquivoResponse,
-  ArquivoResponseUploadIniciado,
+  ArquivoResponseUploadStarted,
   AvatarResolvido,
 } from '../type/arquivo.type';
 
@@ -22,14 +22,14 @@ import type {
 export const arquivoApi = {
   iniciarUpload: (
     authFetch: AuthFetch,
-    dados: ArquivoRequestIniciarUpload,
-  ): Promise<ArquivoResponseUploadIniciado> =>
+    dados: ArquivoRequestStartUpload,
+  ): Promise<ArquivoResponseUploadStarted> =>
     authFetch('/arquivo/upload/iniciar', {
       method: 'POST',
       body: JSON.stringify(dados),
-    }).then(tratarResposta<ArquivoResponseUploadIniciado>),
+    }).then(tratarResposta<ArquivoResponseUploadStarted>),
 
-  confirmarUpload: (authFetch: AuthFetch, dados: ArquivoRequestConfirmarUpload): Promise<ArquivoResponse> =>
+  confirmarUpload: (authFetch: AuthFetch, dados: ArquivoRequestConfirmUpload): Promise<ArquivoResponse> =>
     authFetch('/arquivo/upload/confirmar', {
       method: 'POST',
       body: JSON.stringify(dados),
@@ -45,7 +45,7 @@ export const arquivoApi = {
   // (`upload.onprogress`); `aoProgresso` recebe 0 a 100. Entra na barra de carregamento do topo como qualquer
   // chamada do authFetch.
   enviarParaBucket: (
-    uploadPreAssinado: ArquivoResponseUploadIniciado,
+    uploadPreAssinado: ArquivoResponseUploadStarted,
     arquivo: Blob | File,
     aoProgresso?: (percentual: number) => void,
   ): Promise<void> =>

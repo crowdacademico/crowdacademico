@@ -1,6 +1,6 @@
 import { TabelaEditavel } from './tabela-editavel';
 import type { ColunaEditavel } from './tabela-editavel';
-import { formatarMoeda } from '../../../services/constant/utils/formatacao.util';
+import { formatarMoeda } from '../../../services/constant/util/formatacao.util';
 import type { OrcamentoCampanhaResponse } from '../../../services/13-orcamento-campanha/type/orcamento-campanha.type';
 
 // Itens de orçamento de uma campanha (categoria e valor), com edição na linha. Usada pelo painel de Orçamento e

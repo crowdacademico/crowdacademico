@@ -4,37 +4,37 @@ import type { AuthFetch } from '../../3-auth/type/auth.type';
 import type { ResultadoPaginado } from '../../constant/type/paginacao.type';
 import { desembrulharPaginado } from '../../constant/type/paginacao.type';
 import type {
-  ConfiguracaoRequestUpdate,
-  ConfiguracaoResponse,
-} from '../type/configuracao.type';
+  ConfiguracoesRequestUpdate,
+  ConfiguracoesResponse,
+} from '../type/configuracoes.type';
 
-export const configuracaoApi = {
+export const configuracoesApi = {
   // GET /configuracoes devolve { dados, total, pagina, tamanho } (mesmo motivo de usuarioApi.listar, ver
   // comentário lá): `.dados` desembrulhado aqui para as duas funções abaixo continuarem devolvendo um array
   // puro.
-  listar: (authFetch: AuthFetch): Promise<ConfiguracaoResponse[]> =>
+  listar: (authFetch: AuthFetch): Promise<ConfiguracoesResponse[]> =>
     authFetch('/configuracoes')
-      .then(tratarResposta<ResultadoPaginado<ConfiguracaoResponse>>)
+      .then(tratarResposta<ResultadoPaginado<ConfiguracoesResponse>>)
       .then(desembrulharPaginado('configurações')),
   // Sem authFetch de propósito: pol_config_select (04_rls_policies.sql) já
   // libera as configurações globais (id_usuario IS NULL) pra qualquer um,
   // logado ou não - é o que sustenta useConfiguracoes() em página pública
   // (campanha, home), que roda fora de <ConfiguracoesProvider> autenticado.
-  buscarPublicas: (): Promise<ConfiguracaoResponse[]> =>
+  buscarPublicas: (): Promise<ConfiguracoesResponse[]> =>
     fetch(`${API_BASE_URL}/configuracoes`)
-      .then(tratarResposta<ResultadoPaginado<ConfiguracaoResponse>>)
+      .then(tratarResposta<ResultadoPaginado<ConfiguracoesResponse>>)
       .then(desembrulharPaginado('configurações')),
-  buscar: (authFetch: AuthFetch, id: number | string): Promise<ConfiguracaoResponse> =>
-    authFetch(`/configuracoes/${id}`).then(tratarResposta<ConfiguracaoResponse>),
+  buscar: (authFetch: AuthFetch, id: number | string): Promise<ConfiguracoesResponse> =>
+    authFetch(`/configuracoes/${id}`).then(tratarResposta<ConfiguracoesResponse>),
   atualizar: (
     authFetch: AuthFetch,
     id: number | string,
-    dados: ConfiguracaoRequestUpdate,
-  ): Promise<ConfiguracaoResponse> =>
+    dados: ConfiguracoesRequestUpdate,
+  ): Promise<ConfiguracoesResponse> =>
     authFetch(`/configuracoes/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(dados),
-    }).then(tratarResposta<ConfiguracaoResponse>),
+    }).then(tratarResposta<ConfiguracoesResponse>),
   remover: (authFetch: AuthFetch, id: number | string): Promise<void> =>
     authFetch(`/configuracoes/${id}`, { method: 'DELETE' }).then(tratarResposta<void>),
 };

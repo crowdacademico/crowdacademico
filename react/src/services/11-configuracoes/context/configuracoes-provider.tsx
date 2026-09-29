@@ -1,15 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import { configuracaoApi } from '../api/configuracao.api';
+import { configuracoesApi } from '../api/configuracoes.api';
 import { ConfiguracoesContext } from './configuracoes-context';
 import type { ValorConfiguracao } from './configuracoes-context';
-import type { ConfiguracaoResponse } from '../type/configuracao.type';
+import type { ConfiguracoesResponse } from '../type/configuracoes.type';
 
 // Converte o `valor` (sempre string ou null na coluna) pro tipo real,
 // usando o `tipo` que a própria linha declara (mesmo domínio de
 // TIPOS_CONFIGURACAO do lado do Nest, db.types.ts - aqui só o parse, sem
 // decisão de negócio nenhuma).
-function converterValor(linha: ConfiguracaoResponse): ValorConfiguracao | null {
+function converterValor(linha: ConfiguracoesResponse): ValorConfiguracao | null {
   if (linha.valor === null) {
     return null;
   }
@@ -31,7 +31,7 @@ interface ConfiguracoesProviderProps {
 
 // Carrega 1x (na montagem) TODAS as configurações globais públicas: hoje isso é o GET /configuracoes inteiro,
 // que a RLS já restringe a `id_usuario IS NULL` para quem não está logado (ver comentário em
-// configuracao.api.ts). Existe para qualquer tela (admin ou pública, futura) conseguir ler
+// configuracoes.api.ts). Existe para qualquer tela (admin ou pública, futura) conseguir ler
 // `taxa_plataforma_padrao`, `valor_minimo_contribuicao` etc. direto do banco via `obterConfiguracao(...)`, em
 // vez de escrever esses valores de negócio direto no HTML/JSX.
 export function ConfiguracoesProvider({ children }: ConfiguracoesProviderProps) {
@@ -40,7 +40,7 @@ export function ConfiguracoesProvider({ children }: ConfiguracoesProviderProps) 
   const [erro, setErro] = useState<Error | null>(null);
 
   useEffect(() => {
-    configuracaoApi
+    configuracoesApi
       .buscarPublicas()
       .then((linhas) => {
         const mapa: Record<string, ValorConfiguracao | null> = {};

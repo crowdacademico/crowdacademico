@@ -17,9 +17,6 @@ export interface AuthResponseLogin {
   papeis: string[];
 }
 
-// A renovação de sessão devolve o mesmo AuthResponseLogin do Nest (auth.response-login.ts).
-export type AuthResponseRefresh = AuthResponseLogin;
-
 // Espelha auth.response-register.ts (AuthResponseRegister extends
 // AuthResponseLogin).
 export interface AuthResponseRegister extends AuthResponseLogin {
@@ -29,7 +26,7 @@ export interface AuthResponseRegister extends AuthResponseLogin {
 // auth.controller.verify-email.ts devolve um objeto solto, sem DTO
 // formal do lado do Nest (`{ verificado: true }`) - espelhado aqui mesmo
 // assim.
-export interface AuthResponseVerificarEmail {
+export interface AuthResponseVerifyEmail {
   verificado: boolean;
 }
 
@@ -46,6 +43,6 @@ export interface SessaoResponse {
 
 // auth.controller.findall-sessions.ts, encerrarTodasMenosAtual() devolve um objeto
 // solto (`{ encerradas: quantidade }`), sem DTO formal.
-export interface SessaoResponseEncerrarTodas {
+export interface SessaoResponseEndAll {
   encerradas: number;
 }

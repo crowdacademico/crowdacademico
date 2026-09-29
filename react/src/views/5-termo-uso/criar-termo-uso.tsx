@@ -13,7 +13,7 @@ import {
   ROTULO_TIPO_TERMO,
   TIPOS_TERMO,
   ehTipoTermo,
-} from '../../services/5-termo-uso/constants/termo-uso-tipos';
+} from '../../services/5-termo-uso/constants/termo-uso-tipos.constants';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { TipoTermo } from '../../services/5-termo-uso/type/termo-uso.type';
@@ -23,7 +23,7 @@ import type { TipoTermo } from '../../services/5-termo-uso/type/termo-uso.type';
 // manualmente em Regras do Negócio ou na listagem (ModalAlterarTermoUso tem o botão "Tornar vigente" para
 // isso).
 //
-// `tipo`: campo obrigatório e imutável depois de criado (ver TermoUsoRequestAlterar). Aceita pré-seleção via
+// `tipo`: campo obrigatório e imutável depois de criado (ver TermoUsoRequestUpdate). Aceita pré-seleção via
 // `?tipo=upgrade_pesquisador` na URL: usado pelo link "Publicar nova versão" do card de Termo de Uso em Regras
 // do Negócio, que já sabe qual termo o admin estava olhando.
 const ID_FORMULARIO = 'form-criar-termo-uso';

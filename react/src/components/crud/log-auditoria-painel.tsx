@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { NavegacaoPagina } from '../pagination/navegacao-pagina';
 import { useBuscar } from '../../services/constant/hook/use-buscar';
 import { TabelaHistoricoAlteracoes } from './tabelas/5-tabela-historico-alteracoes';
-import { Carregando } from '../../components/layout/carregando';
+import { Carregando } from '../layout/carregando';
 import type { ResultadoPaginado } from '../../services/constant/type/paginacao.type';
 import type { LogAuditoriaResponse } from '../../services/27-log-auditoria/type/log-auditoria.type';
 

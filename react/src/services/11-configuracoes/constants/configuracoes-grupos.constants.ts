@@ -1,5 +1,5 @@
 // Agrupamento de configurações por assunto: mesmo espírito da tradução de permissões
-// (permissao-nomes-amigaveis.ts), puramente camada de exibição, sem coluna nova no banco. A tabela
+// (permissao-nomes-amigaveis.constants.ts), puramente camada de exibição, sem coluna nova no banco. A tabela
 // `configuracoes` crua (todas juntas, sem contexto) vira uma lista organizada por tema: um admin não deveria
 // precisar saber o que é "prazo_maximo_campanha_dias" para entender que aquilo é sobre CAMPANHA.
 //
@@ -68,7 +68,7 @@ export function grupoConfiguracao(chave: string): string {
 // Genérico de propósito (fase 1 - `type/` ainda não existe, fase 2) - só
 // exige que o item tenha `chave`, preserva o resto do formato de quem
 // chamar (ex.: quando dashboard-regras-negocio.tsx for tipado na fase 6,
-// isto já aceita ConfiguracaoResponse[] sem precisar mudar nada aqui).
+// isto já aceita ConfiguracoesResponse[] sem precisar mudar nada aqui).
 export function agruparConfiguracoes<T extends { chave: string }>(
   configuracoes: T[],
 ): { grupo: string; itens: T[] }[] {

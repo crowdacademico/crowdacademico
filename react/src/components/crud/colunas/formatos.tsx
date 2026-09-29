@@ -6,7 +6,7 @@ import {
   formatarDataHora,
   formatarMoeda,
   textoSeguro,
-} from '../../../services/constant/utils/formatacao.util';
+} from '../../../services/constant/util/formatacao.util';
 
 // O FORMATO de um valor (como aparece, como a busca lê, como ordena), separado do ESPAÇO que a coluna ocupa
 // (os arquivos numerados desta pasta). Dinheiro e data chegam crus da API: ordenam pelo valor, e o texto

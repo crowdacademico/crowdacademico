@@ -8,7 +8,7 @@ import { tratarResposta } from '../../services/constant/api/http.util';
 import { useConfiguracoes } from '../../services/11-configuracoes/hook/use-configuracoes';
 import { useChamadaRegistrada } from '../../services/campo-testes/hook/use-chamada-registrada';
 import { LIMITE_SUGESTOES_COMBOBOX } from '../../services/campo-testes/constants/campo-testes.constants';
-import { contemTermo, normalizarBusca } from '../../services/constant/utils/busca.util';
+import { contemTermo, normalizarBusca } from '../../services/constant/util/busca.util';
 import { RegistroChamadas } from './registro-chamadas';
 import { TabelaAtualizacoes } from '../../components/crud/tabelas/10-tabela-atualizacoes';
 import type { Atualizacao } from '../../components/crud/tabelas/10-tabela-atualizacoes';

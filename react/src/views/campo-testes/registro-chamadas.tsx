@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { API_BASE_URL } from '../../services/constant/constants/api.constants';
-import { paginarClientSide } from '../../services/constant/utils/paginacao.util';
+import { paginarClientSide } from '../../services/constant/util/paginacao.util';
 import { RodapePaginacao } from '../../components/pagination/rodape-paginacao';
 import { useCampoTestes } from '../../services/campo-testes/hook/use-campo-testes';
 import type { RegistroChamada } from '../../services/campo-testes/context/campo-testes-context';

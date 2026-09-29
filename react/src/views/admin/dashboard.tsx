@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { Tooltip } from '../../components/layout/tooltip';
-import { dashboardApi } from '../../services/admin/api/dashboard.api';
+import { dashboardApi } from '../../services/28-dashboard/api/dashboard.api';
 import { useBuscar } from '../../services/constant/hook/use-buscar';
-import { formatarReaisSemSimbolo } from '../../services/constant/utils/formatacao.util';
+import { formatarReaisSemSimbolo } from '../../services/constant/util/formatacao.util';
 import { DashboardIdentidadeVisual } from './dashboard-identidade-visual';
 import { DashboardRegrasNegocio } from './dashboard-regras-negocio';
 import { DashboardSaude } from './dashboard-saude';

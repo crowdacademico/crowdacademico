@@ -1,4 +1,4 @@
-import { formatarNomeDimensao } from '../../../services/constant/utils/formatacao.util';
+import { formatarNomeDimensao } from '../../../services/constant/util/formatacao.util';
 import type { PerfilPesquisadorResponseScore } from '../../../services/6-perfil-pesquisador/type/perfil-pesquisador.type';
 
 // Dimensões que compõem o score de um pesquisador (pontos obtidos e peso de cada uma). Só leitura. Usada no

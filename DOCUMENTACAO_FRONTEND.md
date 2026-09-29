@@ -127,12 +127,23 @@ Nem tudo mapeia para um módulo do Nest. Essas ganham nome próprio, no mesmo n�
 
 | Pasta | Conteúdo |
 |---|---|
-| `services/constant/` | o que é compartilhado por todos os módulos: `constants/api.constants.ts` (a URL base), `api/http.util.ts` (tratamento de resposta), `api/traduzir-erro.util.ts`, `utils/formatacao.util.ts` (moeda/percentual/CPF em pt-BR) |
+| `services/constant/` | o que é compartilhado por todos os módulos: `constants/api.constants.ts` (a URL base), `api/http.util.ts` (tratamento de resposta), `api/traduzir-erro.util.ts`, `util/formatacao.util.ts` (moeda/percentual/CPF em pt-BR), `type/suspensao.type.ts` (formulário e resposta de suspensão, os mesmos para conta e pesquisador) |
 | `services/router/` | `rotas.constants.ts` - a fonte única de "quais páginas existem" |
-| `services/admin/` | `api/dashboard.api.ts` (métricas do painel, módulo `28-dashboard` no Nest) |
 | `services/campo-testes/` | contexto, hooks e utilitários da bancada de testes (ver seção 12) |
 | `views/admin/` | a casca do painel (layout, sidebar, menu) e as telas de Dashboard |
 | `views/campo-testes/` | as telas T1/T2/T3/T4 |
+
+### Nomes de arquivo (28-09-2026)
+
+- **Em palavras simples:** o nome de cada arquivo diz o assunto e o papel dele, sempre do mesmo jeito, para achar as coisas sem abrir pasta por pasta. O React já seguia isso quase sempre; uma auditoria acertou o que escapava.
+- **Decisão:**
+  - Em `services/`: `<assunto>.<papel>.ts`, com o papel sendo `api`, `type`, `constants` ou `util` (ex.: `configuracoes.api.ts`, `papel-ordem-poder.constants.ts`, `gerar-cpf-valido.util.ts`). Hooks começam com `use-`. A pasta é sempre `util`, no singular.
+  - A pasta do módulo tem o mesmo número e nome do módulo do Nest (`services/28-dashboard`, `services/11-configuracoes` com arquivos no plural, como a tabela).
+  - Os tipos que espelham DTOs do Nest têm o **mesmo nome da classe do Nest** (`ConfiguracoesResponse`, `TermoUsoRequestCreate`, `SuspensaoRequestDto`). A renovação de sessão usa o mesmo `AuthResponseLogin` do login.
+  - Toda chamada à API passa por um `<assunto>.api.ts` em `services/`, nunca direto da tela (o `/link-academico` da tela de usuário foi para `services/7-link-academico`). Exceção: o Campo de Testes, que chama direto de propósito, para o registro de chamadas.
+  - Em `views/` e `components/`, o arquivo tem o nome do componente, em português (`modal-criar-usuario.tsx` exporta `ModalCriarUsuario`). Um arquivo pode guardar um par que anda junto (`modal-usuario.tsx` exporta Consultar e Alterar).
+- **Motivo:** mesma regra do Nest ("inglês para a estrutura, português para o assunto"): o papel do arquivo segue o padrão do mercado, e o nome da tela é o que a pessoa vê.
+- **Caso-limite aceito:** o sufixo `-page` continua só nas telas de `3-auth`, e os hooks ficam em três lugares (`services/*/hook`, `components/crud`, `components/layout/toast`); mexer nisso não trazia ganho que pagasse a troca.
 
 ### Subpastas dentro de cada módulo de `services/` - convenção oficial (fechada em 06-09-2026)
 
@@ -283,7 +294,7 @@ export const usuarioApi = {
 
 📌 **Rota pública usa `fetch` cru, com o motivo escrito ao lado.** Onde a RLS do banco já libera a leitura para qualquer um, a função chama `fetch(`${API_BASE_URL}...`)` diretamente e o comentário diz por quê. Exemplos:
 
-- `configuracao.api.ts` → `buscarPublicas()`: *"Sem `authFetch` de propósito: `pol_config_select` já libera as configurações globais (`id_usuario IS NULL`) pra qualquer um, logado ou não - é o que sustenta `useConfiguracoes()` em página pública (campanha, home), que roda fora de `<ConfiguracoesProvider>` autenticado."*
+- `configuracoes.api.ts` → `buscarPublicas()`: *"Sem `authFetch` de propósito: `pol_config_select` já libera as configurações globais (`id_usuario IS NULL`) pra qualquer um, logado ou não - é o que sustenta `useConfiguracoes()` em página pública (campanha, home), que roda fora de `<ConfiguracoesProvider>` autenticado."*
 - `tipo-link.api.ts` → `listarPublico()`: mesma justificativa, apontando `pol_tipolink_select`.
 - `arquivo.api.ts` → `buscar()` e `buscarAvatarPorUsuario()`: *"são públicos no backend (`pol_arquivo_select` é `USING(true)`)"*.
 
@@ -365,7 +376,7 @@ O componente é dirigido por props, não por herança nem por children:
 
 Não existe prop de log - `BlocoLogAuditoria` é um componente IRMÃO (ver seção 9), colocado pela tela logo abaixo de `<GenericTable>`, não uma prop daqui (13-09-2026, achado do Lucas: "log de auditoria não é estrutura de tabela").
 
-📌 **Busca sem acento (27-09-2026).** Toda busca por texto do sistema passa por `services/constant/utils/busca.util.ts` (`normalizarBusca`, `contemTermo`): ignora acentos, maiúsculas e espaços repetidos, então "sao paulo" acha "São Paulo". Usada no `GenericTable`, na base das tabelas do Campo de Testes (`tabela-bancada.tsx`), na busca global (Ctrl+K) e nas caixas de escolha de pesquisador (T2) e de campanha (T3). Antes, só maiúsculas eram ignoradas. Os campos "digite o nome para confirmar a exclusão" continuam com comparação exata, de propósito.
+📌 **Busca sem acento (27-09-2026).** Toda busca por texto do sistema passa por `services/constant/util/busca.util.ts` (`normalizarBusca`, `contemTermo`): ignora acentos, maiúsculas e espaços repetidos, então "sao paulo" acha "São Paulo". Usada no `GenericTable`, na base das tabelas do Campo de Testes (`tabela-bancada.tsx`), na busca global (Ctrl+K) e nas caixas de escolha de pesquisador (T2) e de campanha (T3). Antes, só maiúsculas eram ignoradas. Os campos "digite o nome para confirmar a exclusão" continuam com comparação exata, de propósito.
 
 📌 **CRUD não acontece dentro da tabela.** Criar, Alterar, Consultar e Excluir abrem modal no componente pai, pelos handlers de `acoes` (nunca formulário ou `confirm()` embutido na tabela).
 
@@ -459,7 +470,7 @@ Todas as telas `listar-*.tsx`: `views/1-usuario/listar-usuarios.tsx`, `views/2-p
 
 📌 **`CartaoFormulario` nasceu de duplicação real:** *"era a MESMA estrutura ... copiada e colada em 7 arquivos ..., já levemente divergente entre eles"*.
 
-📌 **`ModalDetalhe`/`ModalDetalhePermissao` - "Papéis com esta permissão" lido ao vivo, nunca de dicionário estático.** `views/2-papel-permissao/modal-detalhe-permissao.tsx` monta o modal genérico (`modal-detalhe.tsx`) com um detalhe fixo (nome amigável, o que faz, por que existe, badge de impacto - `services/2-papel-permissao/constants/permissao-nomes-amigaveis.ts`, dicionário `nome → rótulo` sem coluna nova no banco) e uma lista que **não** vem desse dicionário: refaz as mesmas duas chamadas de `matriz-papel-permissao.tsx` (`papelApi.listar` + `papelPermissaoApi.listar`) para saber quem tem a permissão agora. O comentário do arquivo explica por quê: *"o dicionário só sabe o que a permissão FAZ, não quem tem ela agora - isso muda toda vez que um admin mexe na matriz."* A listagem de Permissões usa o mesmo dicionário para exibir o nome amigável como "nome" e o código cru (`permissao.nome`) como "chave".
+📌 **`ModalDetalhe`/`ModalDetalhePermissao` - "Papéis com esta permissão" lido ao vivo, nunca de dicionário estático.** `views/2-papel-permissao/modal-detalhe-permissao.tsx` monta o modal genérico (`modal-detalhe.tsx`) com um detalhe fixo (nome amigável, o que faz, por que existe, badge de impacto - `services/2-papel-permissao/constants/permissao-nomes-amigaveis.constants.ts`, dicionário `nome → rótulo` sem coluna nova no banco) e uma lista que **não** vem desse dicionário: refaz as mesmas duas chamadas de `matriz-papel-permissao.tsx` (`papelApi.listar` + `papelPermissaoApi.listar`) para saber quem tem a permissão agora. O comentário do arquivo explica por quê: *"o dicionário só sabe o que a permissão FAZ, não quem tem ela agora - isso muda toda vez que um admin mexe na matriz."* A listagem de Permissões usa o mesmo dicionário para exibir o nome amigável como "nome" e o código cru (`permissao.nome`) como "chave".
 
 📌 **`CartaoFormulario` e `FichaConsulta` compartilham duas larguras canônicas** - `'media'` (`max-w-2xl`) e `'larga'` (`max-w-5xl`) - decisão registrada de definir larguras canônicas em vez de cada tela escolher a sua. O comentário de `cartao-formulario.tsx` explica a causa raiz do redesenho: a versão anterior tinha medida e comportamento de modal (centralizado na tela, altura travada com *scroll* próprio), mesmo sendo usada como página em todo lugar - daí a queixa de que ficava "um monte de card empilhado, confuso".
 
@@ -582,7 +593,7 @@ return import.meta.env.DEV ? <CampoTestesProvider>{rotas}</CampoTestesProvider> 
 
 📌 **`11-configuracoes` mudou de duas pastas (`context/`+`provider/` separadas) pra uma só (05-09-2026)** - era o único módulo divergente do formato acima (ver "Critério" logo abaixo). Contexto e provider continuam em **arquivos separados** dentro da mesma pasta (nunca no mesmo arquivo - Fast Refresh do Vite quebra o hot-reload quando um arquivo mistura componente e hook/contexto, mesmo motivo do `toast-context.ts`), só a pasta que uniu.
 
-📌 **`ConfiguracoesProvider` existe para não hardcodar regra de negócio no JSX.** O comentário: *"Existe pra qualquer tela (admin ou pública, futura) conseguir ler `taxa_plataforma_padrao`, `valor_minimo_contribuicao` etc. direto do banco via `obterConfiguracao(...)`, em vez de escrever esses valores de negócio direto no HTML/JSX."* Ele converte o `valor` (sempre string ou `null` na coluna) para o tipo real usando o `tipo` que a própria linha declara (`decimal`/`inteiro`/`booleano`), e só considera linhas com `ativo = true`. Usa `configuracaoApi.buscarPublicas()` - `fetch` cru, sem token (ver seção 6).
+📌 **`ConfiguracoesProvider` existe para não hardcodar regra de negócio no JSX.** O comentário: *"Existe pra qualquer tela (admin ou pública, futura) conseguir ler `taxa_plataforma_padrao`, `valor_minimo_contribuicao` etc. direto do banco via `obterConfiguracao(...)`, em vez de escrever esses valores de negócio direto no HTML/JSX."* Ele converte o `valor` (sempre string ou `null` na coluna) para o tipo real usando o `tipo` que a própria linha declara (`decimal`/`inteiro`/`booleano`), e só considera linhas com `ativo = true`. Usa `configuracoesApi.buscarPublicas()` - `fetch` cru, sem token (ver seção 6).
 
 ⚠️ **Não existe provider/estado global de autenticação.** `auth` é passado por prop desde `App.tsx` (seção 5). É consistente hoje, mas significa que toda página nova precisa aceitar `auth` como prop explicitamente.
 
@@ -636,9 +647,9 @@ Utilitários novos: `.fundo-marca-forte` e `.hover-fundo-marca-forte-hover`. **R
 
 📌 **`LIMITE_ENDOSSOS` vem de `configuracoes`.** `vida-campanha-ativa.tsx` (T3) lê `useConfiguracoes().obterConfiguracao('limite_endossos_campanha', 4)`, o mesmo padrão de `bancada-campanha.tsx`; o `4` é só reserva enquanto a configuração carrega.
 
-📌 **`SENHA_DEV` e o botão "Redefinir senha dev" só existem em desenvolvimento.** `SENHA_DEV = import.meta.env.DEV ? 'DevTcc123!' : ''` e o cartão `<dev>` do modal de Alterar Usuário só renderiza dentro de `{import.meta.env.DEV && ( ... )}`. `import.meta.env.DEV` é uma constante embutida do Vite (verdadeira em `npm run dev`, falsa em `npm run build`), **não é lida de nenhum `.env`**. No `dist` de produção há zero ocorrências de `DevTcc123` e do texto do botão. `registros-bloqueados.ts` só é importado por telas do Campo de Testes, cujas rotas só existem com `import.meta.env.DEV`; o Vite descarta essas telas do build. Efeito prático: quem roda com `npm run dev` não percebe nada; num build de produção o botão de redefinir senha some.
+📌 **`SENHA_DEV` e o botão "Redefinir senha dev" só existem em desenvolvimento.** `SENHA_DEV = import.meta.env.DEV ? 'DevTcc123!' : ''` e o cartão `<dev>` do modal de Alterar Usuário só renderiza dentro de `{import.meta.env.DEV && ( ... )}`. `import.meta.env.DEV` é uma constante embutida do Vite (verdadeira em `npm run dev`, falsa em `npm run build`), **não é lida de nenhum `.env`**. No `dist` de produção há zero ocorrências de `DevTcc123` e do texto do botão. `registros-bloqueados.util.ts` só é importado por telas do Campo de Testes, cujas rotas só existem com `import.meta.env.DEV`; o Vite descarta essas telas do build. Efeito prático: quem roda com `npm run dev` não percebe nada; num build de produção o botão de redefinir senha some.
 
-📌 **Alerta de mínimo e máximo no modal de Alterar Parâmetro.** Quando a chave editada faz parte de um par mínimo/máximo que o banco confere (`fn_valida_pares_min_max_configuracoes`, erro 90019: prazo, orçamento, cronograma e tamanho de arquivo), o modal mostra uma caixa de aviso amarela dizendo se aquele valor é o MÍNIMO ou o MÁXIMO, com qual chave ele precisa se manter coerente e em que ordem editar (para subir o mínimo acima do máximo atual, suba o máximo primeiro, e o contrário para baixar). O aviso vem de `services/11-configuracoes/constants/configuracao-pares-min-max.ts`, que **só espelha** os pares para explicar antes de salvar; a regra de verdade é a do banco, que recusa com a mensagem própria (exibida no mesmo modal). Se um par novo entrar no banco, entra nessa lista também.
+📌 **Alerta de mínimo e máximo no modal de Alterar Parâmetro.** Quando a chave editada faz parte de um par mínimo/máximo que o banco confere (`fn_valida_pares_min_max_configuracoes`, erro 90019: prazo, orçamento, cronograma e tamanho de arquivo), o modal mostra uma caixa de aviso amarela dizendo se aquele valor é o MÍNIMO ou o MÁXIMO, com qual chave ele precisa se manter coerente e em que ordem editar (para subir o mínimo acima do máximo atual, suba o máximo primeiro, e o contrário para baixar). O aviso vem de `services/11-configuracoes/constants/configuracoes-pares-min-max.constants.ts`, que **só espelha** os pares para explicar antes de salvar; a regra de verdade é a do banco, que recusa com a mensagem própria (exibida no mesmo modal). Se um par novo entrar no banco, entra nessa lista também.
 
 📌 **`npm run contraste`.** `react/scripts/contraste-tokens.mjs` lê os tokens de `1-cores.css` e confere o contraste WCAG AA (4,5:1) de 20 pares nos dois temas (lista em `views/campo-testes/guia-estilo/6-pares-contraste.json`, a mesma que o Guia de Estilo mostra na tela): texto sobre cartão, texto de estado sobre o fundo do badge, texto branco sobre os fundos sólidos e sobre os 7 avatares. Sai com código 1 se algum par ficar abaixo, então serve de guarda antes de mexer em `1-cores.css`. Limites: só mede cor sólida (hex, `rgba` sobre o cartão, `var()`); `color-mix()` aparece como "não medido"; não enxerga herança, opacidade nem gradiente, então não substitui olhar a tela nem uma auditoria com axe. Não está ligado a nenhum passo automático.
 
@@ -688,7 +699,7 @@ Página **só de desenvolvimento**, item "Guia de Estilo" no grupo CAMPO DE TEST
 
 - **Listar e consultar campanha** usam `nomePesquisador` e `nomeArea` que o backend manda (sem baixar `GET /usuario` e `GET /area-conhecimento`). A tabela tem a coluna "atenção" ("Score baixo") e o modal um aviso amarelo, só para quem pode aprovar e só na fila de aprovação; é um sinal, nunca bloqueia.
 - **Dashboard:** o card "Fila com score baixo" (`campanhasParaRevisaoScore`) fica na faixa de campanhas por status. A busca do resumo espera a sessão ser restaurada (`auth.carregando`).
-- **Parâmetros do Sistema:** sem botão Excluir (a chave global não se apaga, ver `DOCUMENTACAO_BD.md` `[05-K-2-C]`), e o "Ativo" fica desabilitado nas globais com o motivo escrito. `configuracaoApi.remover` existe para a configuração pessoal.
+- **Parâmetros do Sistema:** sem botão Excluir (a chave global não se apaga, ver `DOCUMENTACAO_BD.md` `[05-K-2-C]`), e o "Ativo" fica desabilitado nas globais com o motivo escrito. `configuracoesApi.remover` existe para a configuração pessoal.
 
 ### Protegido por `import.meta.env.DEV` em três lugares
 
@@ -738,11 +749,11 @@ Regras no banco em `DOCUMENTACAO_BD.md` [05-K-2-B]; aqui o que a tela faz. Rótu
 
 ### Trabalha sobre dados reais, com uma trava explícita
 
-📌 `services/campo-testes/util/registros-bloqueados.ts` marca os pesquisadores de id **12 a 22** e as campanhas de id **1 a 10** como bloqueados dentro do Campo de Testes: eles aparecem nas listas (riscados, com cadeado), mas sem botão de ação. Motivo: *"já nascem com uma 'demo' inteira montada desde `07_seed_dados.sql` ... Mexer neles pra testar quebraria a demonstração que já existe pronta."*
+📌 `services/campo-testes/util/registros-bloqueados.util.ts` marca os pesquisadores de id **12 a 22** e as campanhas de id **1 a 10** como bloqueados dentro do Campo de Testes: eles aparecem nas listas (riscados, com cadeado), mas sem botão de ação. Motivo: *"já nascem com uma 'demo' inteira montada desde `07_seed_dados.sql` ... Mexer neles pra testar quebraria a demonstração que já existe pronta."*
 
 ⚠️ Esses limites (12, 22, 10) são constantes fixas no arquivo, casadas com os ids do seed. Se o seed mudar, elas silenciosamente passam a bloquear/liberar os registros errados.
 
-📌 `services/campo-testes/util/gerar-cpf-valido.ts` existe porque o backend valida o dígito verificador de CPF - coerente com `PENDENCIAS e correcoes.md`, item 745 (todos os CPFs de desenvolvimento são inventados; não há verificação de existência real).
+📌 `services/campo-testes/util/gerar-cpf-valido.util.ts` existe porque o backend valida o dígito verificador de CPF - coerente com `PENDENCIAS e correcoes.md`, item 745 (todos os CPFs de desenvolvimento são inventados; não há verificação de existência real).
 
 ⚠️ **T4 não grava o Bearer**, e por isso o `curl` gerado não é autenticado. É decisão consciente: *"gravar token de sessão num log que fica na tela o tempo todo seria pior que não ter o cURL pronto."*
 
@@ -875,7 +886,7 @@ Seção dentro de **Alterar Usuário** (não uma tela própria - é ação sobre
 
 Segunda forma de olhar pro mesmo dado da aba "Configurações" (CRUD cru, `11-configuracoes`) - aqui as chaves de `configuracoes` aparecem **agrupadas por tema** (Segurança, Financeiro, Campanha, Score / Reputação, Arquivo, Geral, Outras), cada grupo num cartão com título + lista de `chave: valor` + botão "Alterar" indo pra mesma tela de edição de sempre. Não duplica formulário nenhum, só organiza a leitura.
 
-- **`services/11-configuracoes/constants/configuracao-grupos.ts`** - `GRUPO_CONFIGURACAO` é um dicionário `chave → nome do grupo`, mantido à mão (mesmo espírito de `permissao-nomes-amigaveis.ts`). Uma chave nova em `configuracoes` que não ganhar entrada aqui cai automaticamente no grupo "Outras" - nunca quebra a tela, só fica sem organização até alguém lembrar de classificar. `agruparConfiguracoes()` devolve os grupos já na ordem certa de exibição (`ORDEM_GRUPOS`) - "Outras" sempre por último, mesmo tendo o maior número de linhas.
+- **`services/11-configuracoes/constants/configuracoes-grupos.constants.ts`** - `GRUPO_CONFIGURACAO` é um dicionário `chave → nome do grupo`, mantido à mão (mesmo espírito de `permissao-nomes-amigaveis.constants.ts`). Uma chave nova em `configuracoes` que não ganhar entrada aqui cai automaticamente no grupo "Outras" - nunca quebra a tela, só fica sem organização até alguém lembrar de classificar. `agruparConfiguracoes()` devolve os grupos já na ordem certa de exibição (`ORDEM_GRUPOS`) - "Outras" sempre por último, mesmo tendo o maior número de linhas.
 - **Grupo "Arquivo" tem um ícone ⓘ ao lado do título, que abre um modal** (`ModalDetalhe`, mesmo componente da seção 9) com a explicação completa dos 7 limites de upload configuráveis e por que o teto do Supabase Storage (50MB/arquivo, 1GB total) importa. Nasceu de um pedido do Lucas: a explicação era grande demais pra caber num tooltip comum, então o ícone virou clicável (`aoClicar`) em vez de só mostrar texto no hover.
 
 ### Dica de hover - dois contratos, um primitivo só (`components/layout/tooltip.tsx`)

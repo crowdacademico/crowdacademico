@@ -2,8 +2,8 @@ import { AcaoLinha } from '../acao-linha';
 import { Dica } from '../../layout/tooltip';
 import { TabelaBancada } from './tabela-bancada';
 import type { ColunaBancada } from './tabela-bancada';
-import { ORDEM_PODER_PAPEL, PAPEL_SEM_EXTRA } from '../../../services/2-papel-permissao/constants/papel-ordem-poder';
-import { PESQUISADOR_BLOQUEADO, motivoBloqueioPesquisador } from '../../../services/campo-testes/util/registros-bloqueados';
+import { ORDEM_PODER_PAPEL, PAPEL_SEM_EXTRA } from '../../../services/2-papel-permissao/constants/papel-ordem-poder.constants';
+import { PESQUISADOR_BLOQUEADO, motivoBloqueioPesquisador } from '../../../services/campo-testes/util/registros-bloqueados.util';
 import {
   ROTULO_STATUS_PESQUISADOR,
   ROTULO_TITULO_ACADEMICO,

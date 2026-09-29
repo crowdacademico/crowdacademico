@@ -53,7 +53,7 @@ export interface PerfilPesquisadorRequestCreate {
 // `aceiteTermos` OPCIONAL (diferente do self-service, que exige `true`): o card "Criar Perfil Pesquisador"
 // dentro de ModalAlterarUsuario não manda esse campo (não registra aceite); o cadeado em T1 manda `true`
 // (mostrou o Termo de Uso vigente antes, aceite gravado em nome do ALVO).
-export interface PerfilPesquisadorRequestCreateParaOutro {
+export interface PerfilPesquisadorRequestCreateForOther {
   cpf: string;
   tipoVinculo: TipoVinculo;
   vinculoInstitucional?: string;
@@ -62,7 +62,7 @@ export interface PerfilPesquisadorRequestCreateParaOutro {
 }
 
 // Espelha perfil-pesquisador.request-update.ts. Nunca inclui `cpf`, de
-// propósito - ver PerfilPesquisadorRequestCorrigirCpf, abaixo.
+// propósito - ver PerfilPesquisadorRequestFixCpf, abaixo.
 export interface PerfilPesquisadorRequestUpdate {
   tipoVinculo: TipoVinculo;
   vinculoInstitucional?: string;
@@ -71,21 +71,7 @@ export interface PerfilPesquisadorRequestUpdate {
 
 // Espelha perfil-pesquisador.request-fix-cpf.ts: ação de suporte/admin (RF-017), endpoint separado do
 // PATCH comum de propósito.
-export interface PerfilPesquisadorRequestCorrigirCpf {
+export interface PerfilPesquisadorRequestFixCpf {
   cpf: string;
 }
 
-// Espelha SuspensaoRequestDto (nest/src/commons/moderacao/dto/suspensao.request.dto.ts), o mesmo da suspensão de conta: `ate`
-// ISO 8601, `motivo` obrigatório. Suspende só o PODER de pesquisador, não bloqueia login.
-export interface PerfilPesquisadorRequestSuspender {
-  ate: string;
-  motivo: string;
-}
-
-// Espelha SuspensaoResponseDto (nest/src/commons/moderacao/dto/suspensao.response.dto.ts), o mesmo de
-// UsuarioResponseSuspend.
-export interface PerfilPesquisadorResponseSuspend {
-  suspensoAte: string | null;
-  motivoSuspensao: string | null;
-  suspensoPor: number | null;
-}

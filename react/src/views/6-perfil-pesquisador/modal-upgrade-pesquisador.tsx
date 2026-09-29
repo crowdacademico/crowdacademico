@@ -17,7 +17,7 @@ import type {
   TipoVinculo,
   TituloAcademico,
 } from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
-import type { TermoUsoResponseAtivo } from '../../services/5-termo-uso/type/termo-uso.type';
+import type { TermoUsoResponseActive } from '../../services/5-termo-uso/type/termo-uso.type';
 
 interface ModalUpgradePesquisadorProps {
   auth: Pick<UseAuthReturn, 'authFetch' | 'usuario'>;
@@ -74,7 +74,7 @@ export function ModalUpgradePesquisador({
   const { erro, reportarErro, limparErro, errosCampo, limparErroCampo } = useErroToast();
   const { ocupado: enviando, executar: executarEnviando } = useEnvio(reportarErro, limparErro);
   const [etapa, setEtapa] = useState<Etapa>('termo');
-  const [termo, setTermo] = useState<TermoUsoResponseAtivo | null>(null);
+  const [termo, setTermo] = useState<TermoUsoResponseActive | null>(null);
   const [carregandoTermo, setCarregandoTermo] = useState(true);
   const [termoIndisponivel, setTermoIndisponivel] = useState(false);
   const [aceitou, setAceitou] = useState(false);

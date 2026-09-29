@@ -1,20 +1,20 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
-import { configuracaoApi } from '../../services/11-configuracoes/api/configuracao.api';
-import { agruparConfiguracoes } from '../../services/11-configuracoes/constants/configuracao-grupos';
+import { configuracoesApi } from '../../services/11-configuracoes/api/configuracoes.api';
+import { agruparConfiguracoes } from '../../services/11-configuracoes/constants/configuracoes-grupos.constants';
 import { termoUsoApi } from '../../services/5-termo-uso/api/termo-uso.api';
-import { DESCRICAO_TIPO_TERMO, ROTULO_TIPO_TERMO, TIPOS_TERMO } from '../../services/5-termo-uso/constants/termo-uso-tipos';
+import { DESCRICAO_TIPO_TERMO, ROTULO_TIPO_TERMO, TIPOS_TERMO } from '../../services/5-termo-uso/constants/termo-uso-tipos.constants';
 import { ModalAlterarTermoUso } from '../5-termo-uso/modal-alterar-termo-uso';
 import { Tooltip } from '../../components/layout/tooltip';
 import { ModalDetalhe } from '../../components/crud/modal-detalhe';
 import { Carregando } from '../../components/layout/carregando';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
-import type { ConfiguracaoResponse } from '../../services/11-configuracoes/type/configuracao.type';
-import type { TermoUsoResponseAtivo, TipoTermo } from '../../services/5-termo-uso/type/termo-uso.type';
+import type { ConfiguracoesResponse } from '../../services/11-configuracoes/type/configuracoes.type';
+import type { TermoUsoResponseActive, TipoTermo } from '../../services/5-termo-uso/type/termo-uso.type';
 
 interface GrupoConfiguracoes {
   grupo: string;
-  itens: ConfiguracaoResponse[];
+  itens: ConfiguracoesResponse[];
 }
 
 // Conteúdo do modal "Saiba mais" do grupo Arquivo: a explicação é grande demais para caber num tooltip, por
@@ -58,9 +58,9 @@ const SECOES_MODAL_ARQUIVO = [
 ];
 
 // Estado de 1 tipo de termo no card novo - carregando (undefined), ativo
-// encontrado (TermoUsoResponseAtivo), ou nenhuma versão ativa desse tipo
+// encontrado (TermoUsoResponseActive), ou nenhuma versão ativa desse tipo
 // (null, tratado como estado real, não erro - ver `buscarTermosAtivos`).
-type EstadoTermoAtivo = TermoUsoResponseAtivo | null | undefined;
+type EstadoTermoAtivo = TermoUsoResponseActive | null | undefined;
 
 const SECOES_MODAL_TERMO_USO = [
   {
@@ -208,7 +208,7 @@ export function DashboardRegrasNegocio({ auth }: DashboardRegrasNegocioProps) {
   const [modalArquivoAberto, setModalArquivoAberto] = useState(false);
 
   useEffect(() => {
-    configuracaoApi
+    configuracoesApi
       .listar(auth.authFetch)
       .then((lista) => setGrupos(agruparConfiguracoes(lista)))
       .catch(() => setGrupos([]));

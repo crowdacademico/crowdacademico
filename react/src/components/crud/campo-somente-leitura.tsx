@@ -1,4 +1,4 @@
-import { textoSeguro } from '../../services/constant/utils/formatacao.util';
+import { textoSeguro } from '../../services/constant/util/formatacao.util';
 
 // Campo exibido (não editável) nas páginas de Alterar/Excluir - mesmo
 // visual do <label> dos formulários (modal-criar-usuario.tsx), só sem <input>.

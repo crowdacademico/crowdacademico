@@ -12,7 +12,7 @@ import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
 import { ROTULO_STATUS_CAMPANHA } from '../../services/12-campanha/constants/status-campanha.constants';
 import { duracaoEmDias } from '../../services/12-campanha/util/prazo-campanha.util';
 import { useAreasDaCampanha } from '../../services/8-area-conhecimento/hook/use-areas-da-campanha';
-import { formatarData, formatarDataHora, formatarMoeda } from '../../services/constant/utils/formatacao.util';
+import { formatarData, formatarDataHora, formatarMoeda } from '../../services/constant/util/formatacao.util';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import { useBuscar } from '../../services/constant/hook/use-buscar';
 import { PainelOrcamentoCronograma } from './painel-orcamento-cronograma';

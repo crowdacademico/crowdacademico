@@ -5,15 +5,14 @@ import type { ResultadoPaginado } from '../../constant/type/paginacao.type';
 import { desembrulharPaginado, TAMANHO_PAGINA_MAXIMO_API } from '../../constant/type/paginacao.type';
 import type { StatusPesquisador, TipoVinculo } from '../constants/status-pesquisador.constants';
 import type {
-  PerfilPesquisadorRequestCorrigirCpf,
+  PerfilPesquisadorRequestFixCpf,
   PerfilPesquisadorRequestCreate,
-  PerfilPesquisadorRequestCreateParaOutro,
-  PerfilPesquisadorRequestSuspender,
+  PerfilPesquisadorRequestCreateForOther,
   PerfilPesquisadorRequestUpdate,
   PerfilPesquisadorResponse,
   PerfilPesquisadorResponseScore,
-  PerfilPesquisadorResponseSuspend,
 } from '../type/perfil-pesquisador.type';
+import type { SuspensaoRequestDto, SuspensaoResponseDto } from '../../constant/type/suspensao.type';
 
 // Espelha nest/src/6-perfil-pesquisador. GET é público no backend (pol_perfil_select usa usuario_visivel()):
 // CPF vem mascarado (`null`) para quem não é o próprio dono nem tem perfil_pesquisador_visualizar_sensivel; o
@@ -46,7 +45,7 @@ export const perfilPesquisadorApi = {
   criarParaOutro: (
     authFetch: AuthFetch,
     id: number | string,
-    dados: PerfilPesquisadorRequestCreateParaOutro,
+    dados: PerfilPesquisadorRequestCreateForOther,
   ): Promise<PerfilPesquisadorResponse> =>
     authFetch(`/perfil-pesquisador/${id}`, {
       method: 'POST',
@@ -66,16 +65,16 @@ export const perfilPesquisadorApi = {
     }).then(tratarResposta<void>),
   // Endpoint separado do atualizar() acima, de propósito (RF-017): correção de CPF é ação de suporte/admin
   // (perfil_pesquisador_corrigir_cpf), nunca um PATCH comum.
-  corrigirCpf: (authFetch: AuthFetch, id: number | string, dados: PerfilPesquisadorRequestCorrigirCpf): Promise<void> =>
+  corrigirCpf: (authFetch: AuthFetch, id: number | string, dados: PerfilPesquisadorRequestFixCpf): Promise<void> =>
     authFetch(`/perfil-pesquisador/${id}/cpf`, {
       method: 'PATCH',
       body: JSON.stringify(dados),
     }).then(tratarResposta<void>),
   // Suspende só o PODER de pesquisador (login continua funcionando): mesmo formato de
   // usuarioApi.suspender/buscarSuspensao/revogarSuspensao (mesmo padrão de Moderação de usuário).
-  buscarSuspensao: (authFetch: AuthFetch, id: number | string): Promise<PerfilPesquisadorResponseSuspend> =>
-    authFetch(`/perfil-pesquisador/${id}/suspensao`).then(tratarResposta<PerfilPesquisadorResponseSuspend>),
-  suspender: (authFetch: AuthFetch, id: number | string, dados: PerfilPesquisadorRequestSuspender): Promise<void> =>
+  buscarSuspensao: (authFetch: AuthFetch, id: number | string): Promise<SuspensaoResponseDto> =>
+    authFetch(`/perfil-pesquisador/${id}/suspensao`).then(tratarResposta<SuspensaoResponseDto>),
+  suspender: (authFetch: AuthFetch, id: number | string, dados: SuspensaoRequestDto): Promise<void> =>
     authFetch(`/perfil-pesquisador/${id}/suspender`, {
       method: 'POST',
       body: JSON.stringify(dados),

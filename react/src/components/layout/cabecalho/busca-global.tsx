@@ -4,15 +4,15 @@ import { useNavigate } from 'react-router';
 import { ROTAS_ADMIN } from '../../../services/router/rotas.constants';
 import { usuarioApi } from '../../../services/1-usuario/api/usuario.api';
 import { papelApi, permissaoApi } from '../../../services/2-papel-permissao/api/papel-permissao.api';
-import { configuracaoApi } from '../../../services/11-configuracoes/api/configuracao.api';
+import { configuracoesApi } from '../../../services/11-configuracoes/api/configuracoes.api';
 import { EVENTO_ABRIR_BUSCA_GLOBAL as EVENTO_ABRIR } from './busca-global-evento';
 import { useFocoPreso } from '../../../services/constant/hook/use-foco-preso';
-import { contemTermo, normalizarBusca } from '../../../services/constant/utils/busca.util';
+import { contemTermo, normalizarBusca } from '../../../services/constant/util/busca.util';
 import { Carregando } from '../carregando';
 import type { UseAuthReturn } from '../../../services/3-auth/hook/use-auth';
 import type { UsuarioResponse } from '../../../services/1-usuario/type/usuario.type';
 import type { PapelResponse, PermissaoResponse } from '../../../services/2-papel-permissao/type/papel-permissao.type';
-import type { ConfiguracaoResponse } from '../../../services/11-configuracoes/type/configuracao.type';
+import type { ConfiguracoesResponse } from '../../../services/11-configuracoes/type/configuracoes.type';
 
 interface ResultadoBusca {
   categoria: string;
@@ -26,7 +26,7 @@ interface DadosCatalogos {
   usuarios: UsuarioResponse[];
   papeis: PapelResponse[];
   permissoes: PermissaoResponse[];
-  configuracoes: ConfiguracaoResponse[];
+  configuracoes: ConfiguracoesResponse[];
 }
 
 // Derivado de ROTAS_ADMIN, não uma lista à mão (uma cópia manual das abas podia desalinhar, mesmo problema que
@@ -77,7 +77,7 @@ export function BuscaGlobal({ auth }: BuscaGlobalProps) {
       usuarioApi.listar(auth.authFetch),
       papelApi.listar(auth.authFetch),
       permissaoApi.listar(auth.authFetch),
-      configuracaoApi.listar(auth.authFetch),
+      configuracoesApi.listar(auth.authFetch),
     ])
       .then(([usuarios, papeis, permissoes, configuracoes]) => {
         setDados({ usuarios, papeis, permissoes, configuracoes });

@@ -8,7 +8,7 @@ import { usuarioPapelApi } from '../../services/2-papel-permissao/api/papel-perm
 import {
   ORDEM_PODER_PAPEL,
   PAPEL_SEM_EXTRA,
-} from '../../services/2-papel-permissao/constants/papel-ordem-poder';
+} from '../../services/2-papel-permissao/constants/papel-ordem-poder.constants';
 import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
 import { ModalAlterarUsuario, ModalConsultarUsuario, ModalExcluirUsuario } from './modal-usuario';
 import { ModalCriarUsuario } from './modal-criar-usuario';

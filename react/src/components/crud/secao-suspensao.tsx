@@ -4,7 +4,7 @@ import { useErroToast } from '../layout/toast/use-erro-toast';
 import { useToast } from '../layout/toast/use-toast';
 import { useConfiguracoes } from '../../services/11-configuracoes/hook/use-configuracoes';
 import { useEnvio } from '../../services/constant/hook/use-envio';
-import { formatarDataHora } from '../../services/constant/utils/formatacao.util';
+import { formatarDataHora } from '../../services/constant/util/formatacao.util';
 
 export interface EstadoSuspensao {
   suspensoAte: string | null;

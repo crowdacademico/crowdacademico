@@ -1,4 +1,4 @@
-import { textoSeguro } from '../../../services/constant/utils/formatacao.util';
+import { textoSeguro } from '../../../services/constant/util/formatacao.util';
 import { comQuebrasNaturais, FORMATOS } from './formatos';
 import type { TipoColuna } from './tipos-coluna';
 

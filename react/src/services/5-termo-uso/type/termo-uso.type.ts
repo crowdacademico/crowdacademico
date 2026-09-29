@@ -1,11 +1,11 @@
-import type { TIPOS_TERMO } from '../constants/termo-uso-tipos';
+import type { TIPOS_TERMO } from '../constants/termo-uso-tipos.constants';
 
 // Espelha nest/src/commons/database/db.types.ts (TIPOS_TERMO/TipoTermo): o termo da conta ('cadastro', que
 // cobre também as contribuições) e o de pesquisador, cada um com sua própria versão/histórico independente.
 export type TipoTermo = (typeof TIPOS_TERMO)[number];
 
 // Espelha nest/src/5-termo-uso/dto/response/termo-uso.response-active.ts.
-export interface TermoUsoResponseAtivo {
+export interface TermoUsoResponseActive {
   idTermo: number;
   tipo: TipoTermo;
   versao: string;
@@ -24,16 +24,16 @@ export interface TermoUsoResponse {
 }
 
 // Espelha nest/src/5-termo-uso/dto/request/termo-uso.request-create.ts.
-export interface TermoUsoRequestCriar {
+export interface TermoUsoRequestCreate {
   tipo: TipoTermo;
   versao: string;
   conteudo: string;
 }
 
 // Espelha nest/src/5-termo-uso/dto/request/termo-uso.request-update.ts: só `conteudo` (Alterar só é permitido
-// enquanto ninguém aceitou a versão ainda, ver TermoUsoServiceAlterar). Sem `tipo` nem `versao` de propósito:
+// enquanto ninguém aceitou a versão ainda, ver TermoUsoServiceUpdate). Sem `tipo` nem `versao` de propósito:
 // ambos são imutáveis depois de criada a linha (identidade se escolhe pelo listbox de seleção, só o conteúdo se
 // edita).
-export interface TermoUsoRequestAlterar {
+export interface TermoUsoRequestUpdate {
   conteudo?: string;
 }

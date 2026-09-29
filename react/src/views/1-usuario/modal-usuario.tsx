@@ -11,7 +11,11 @@ import { MensagemErro } from '../../components/crud/mensagem-erro';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { TabelaLinksAcademicos } from '../../components/crud/tabelas/1-tabela-links-academicos';
-import type { DadosLinkAcademico, LinkAcademico } from '../../components/crud/tabelas/1-tabela-links-academicos';
+import type {
+  LinkAcademicoRequestCreate,
+  LinkAcademicoResponse,
+} from '../../services/7-link-academico/type/link-academico.type';
+import { linkAcademicoApi } from '../../services/7-link-academico/api/link-academico.api';
 import { TabelaDimensoesScore } from '../../components/crud/tabelas/2-tabela-dimensoes-score';
 import { confirmarSaida, useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
 import { CaixaAviso } from '../../components/crud/caixa-aviso';
@@ -23,7 +27,7 @@ import { usuarioPapelApi, papelApi } from '../../services/2-papel-permissao/api/
 import { perfilPesquisadorApi } from '../../services/6-perfil-pesquisador/api/perfil-pesquisador.api';
 import { arquivoApi } from '../../services/25-arquivo/api/arquivo.api';
 import { tipoLinkApi } from '../../services/9-tipo-link/api/tipo-link.api';
-import { ErroHttp, tratarResposta } from '../../services/constant/api/http.util';
+import { ErroHttp } from '../../services/constant/api/http.util';
 import { SENHA_DEV } from '../../services/constant/constants/senha-dev.constants';
 import {
   ROTULO_STATUS_PESQUISADOR,
@@ -31,16 +35,16 @@ import {
   ROTULO_TITULO_ACADEMICO,
   classeBadgeStatusPesquisador,
 } from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
-import { formatarCpf, formatarCpfOuMotivoOculto, formatarData, formatarDataHora } from '../../services/constant/utils/formatacao.util';
+import { formatarCpf, formatarCpfOuMotivoOculto, formatarData, formatarDataHora } from '../../services/constant/util/formatacao.util';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import { useBuscar } from '../../services/constant/hook/use-buscar';
-import { ROTULO_TIPO_TERMO } from '../../services/5-termo-uso/constants/termo-uso-tipos';
+import { ROTULO_TIPO_TERMO } from '../../services/5-termo-uso/constants/termo-uso-tipos.constants';
 import { CamposVinculoPerfil } from '../6-perfil-pesquisador/campos-vinculo-perfil';
 import { SecaoModeracaoPesquisador } from '../6-perfil-pesquisador/secao-moderacao-pesquisador';
 import { SecaoModeracao } from './secao-moderacao';
 import { Carregando } from '../../components/layout/carregando';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
-import type { UsuarioResponse, UsuarioResponseLoginHistorico, UsuarioResponseTermoAceito } from '../../services/1-usuario/type/usuario.type';
+import type { UsuarioResponse, UsuarioResponseLoginHistory, UsuarioResponseAcceptedTerm } from '../../services/1-usuario/type/usuario.type';
 import type { PapelResponse, UsuarioPapelResponse } from '../../services/2-papel-permissao/type/papel-permissao.type';
 import type {
   PerfilPesquisadorResponse,
@@ -227,12 +231,11 @@ function PainelLinksAcademicos({ auth, idUsuario, tiposLink, aoRegistrarChamada 
   const valorLimiteLinks = obterConfiguracao('limite_links_academicos_perfil', 5);
   const limiteLinks = typeof valorLimiteLinks === 'number' ? valorLimiteLinks : 5;
 
-  const [links, setLinks] = useState<LinkAcademico[]>([]);
+  const [links, setLinks] = useState<LinkAcademicoResponse[]>([]);
 
   const carregarLinks = useCallback(() => {
-    const caminho = `/link-academico?idUsuario=${idUsuario}`;
-    comRegistro(aoRegistrarChamada, 'GET', caminho, null, () =>
-      auth.authFetch(caminho).then(tratarResposta<LinkAcademico[]>),
+    comRegistro(aoRegistrarChamada, 'GET', linkAcademicoApi.caminhoListarDoUsuario(idUsuario), null, () =>
+      linkAcademicoApi.listarDoUsuario(auth.authFetch, idUsuario),
     )
       .then(setLinks)
       .catch(() => {});
@@ -244,10 +247,10 @@ function PainelLinksAcademicos({ auth, idUsuario, tiposLink, aoRegistrarChamada 
   }, [carregarLinks]);
 
   // Chamadas da tabela (components/crud/tabelas/1-tabela-links-academicos.tsx): devolvem true quando deu certo.
-  const adicionarLink = async (dados: DadosLinkAcademico) => {
+  const adicionarLink = async (dados: LinkAcademicoRequestCreate) => {
     try {
       await comRegistro(aoRegistrarChamada, 'POST', `/link-academico/${idUsuario}`, dados, () =>
-        auth.authFetch(`/link-academico/${idUsuario}`, { method: 'POST', body: JSON.stringify(dados) }).then(tratarResposta<LinkAcademico>),
+        linkAcademicoApi.criarParaOutro(auth.authFetch, idUsuario, dados),
       );
       carregarLinks();
       mostrar('Link acadêmico adicionado com sucesso.');
@@ -258,10 +261,10 @@ function PainelLinksAcademicos({ auth, idUsuario, tiposLink, aoRegistrarChamada 
     }
   };
 
-  const removerLink = async (link: LinkAcademico) => {
+  const removerLink = async (link: LinkAcademicoResponse) => {
     try {
       await comRegistro(aoRegistrarChamada, 'DELETE', `/link-academico/${link.idLinkAcademico}`, null, () =>
-        auth.authFetch(`/link-academico/${link.idLinkAcademico}`, { method: 'DELETE' }).then(tratarResposta<void>),
+        linkAcademicoApi.remover(auth.authFetch, link.idLinkAcademico),
       );
       carregarLinks();
       mostrar('Link acadêmico excluído com sucesso.');
@@ -271,11 +274,11 @@ function PainelLinksAcademicos({ auth, idUsuario, tiposLink, aoRegistrarChamada 
   };
 
   // O tipo não muda depois de criado: o PATCH leva só url e rótulo.
-  const salvarLink = async (link: LinkAcademico, { url, rotulo }: DadosLinkAcademico) => {
+  const salvarLink = async (link: LinkAcademicoResponse, { url, rotulo }: LinkAcademicoRequestCreate) => {
     const corpo = { url, ...(rotulo ? { rotulo } : {}) };
     try {
       await comRegistro(aoRegistrarChamada, 'PATCH', `/link-academico/${link.idLinkAcademico}`, corpo, () =>
-        auth.authFetch(`/link-academico/${link.idLinkAcademico}`, { method: 'PATCH', body: JSON.stringify(corpo) }).then(tratarResposta<void>),
+        linkAcademicoApi.alterar(auth.authFetch, link.idLinkAcademico, corpo),
       );
       carregarLinks();
       mostrar('Link acadêmico alterado com sucesso.');
@@ -364,13 +367,13 @@ export function ModalConsultarUsuario({ auth, idUsuario, aoFechar, aoRegistrarCh
   const errosDaTela = useErroToast();
   const { erro } = errosDaTela;
   const { usuario, perfilPesquisador, avatarUrl, papeis } = useDadosUsuario(idUsuario, auth, aoRegistrarChamada, errosDaTela);
-  const [logins, setLogins] = useState<UsuarioResponseLoginHistorico[] | null>(null);
+  const [logins, setLogins] = useState<UsuarioResponseLoginHistory[] | null>(null);
   const [carregandoLogins, setCarregandoLogins] = useState(false);
   const [loginsAbertos, setLoginsAbertos] = useState(false);
   // Termos de Uso aceitos ("onde fica registrado" o aceite): buscado sempre (não atrás de um toggle, como os
   // logins) porque é informação de conformidade que faz sentido já vir visível ao consultar a conta, não um
   // detalhe auxiliar raramente checado.
-  const [termosAceitos, setTermosAceitos] = useState<UsuarioResponseTermoAceito[] | null>(null);
+  const [termosAceitos, setTermosAceitos] = useState<UsuarioResponseAcceptedTerm[] | null>(null);
 
   useEffect(() => {
     comRegistro(aoRegistrarChamada, 'GET', `/usuario/${idUsuario}/termos-aceitos`, null, () =>

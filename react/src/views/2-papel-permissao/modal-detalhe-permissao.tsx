@@ -4,7 +4,7 @@ import {
   papelApi,
   papelPermissaoApi,
 } from '../../services/2-papel-permissao/api/papel-permissao.api';
-import { detalhePermissao } from '../../services/2-papel-permissao/constants/permissao-nomes-amigaveis';
+import { detalhePermissao } from '../../services/2-papel-permissao/constants/permissao-nomes-amigaveis.constants';
 import type { AuthFetch } from '../../services/3-auth/type/auth.type';
 import type { PermissaoResponse } from '../../services/2-papel-permissao/type/papel-permissao.type';
 

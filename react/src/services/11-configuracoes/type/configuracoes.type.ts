@@ -2,7 +2,7 @@
 export type TipoConfiguracao = 'decimal' | 'inteiro' | 'texto' | 'booleano';
 
 // Espelha nest/src/11-configuracoes/dto/response/configuracoes.response.ts.
-export interface ConfiguracaoResponse {
+export interface ConfiguracoesResponse {
   idConfig: number;
   idUsuario: number | null;
   chave: string;
@@ -14,7 +14,7 @@ export interface ConfiguracaoResponse {
 }
 
 // Espelha configuracoes.request-update.ts.
-export interface ConfiguracaoRequestUpdate {
+export interface ConfiguracoesRequestUpdate {
   valor?: string;
   descricao?: string;
   ativo?: boolean;

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { formatarDataHora, textoSeguro } from '../../../services/constant/utils/formatacao.util';
+import { formatarDataHora, textoSeguro } from '../../../services/constant/util/formatacao.util';
 import type { LogAuditoriaResponse, OperacaoLogAuditoria } from '../../../services/27-log-auditoria/type/log-auditoria.type';
 
 // Últimas alterações de uma tabela do banco (log_auditoria), mais recente primeiro. Só leitura. Usada pelo

@@ -2,10 +2,10 @@ import { API_BASE_URL } from '../../constant/constants/api.constants';
 import { tratarResposta } from '../../constant/api/http.util';
 import type { AuthFetch } from '../../3-auth/type/auth.type';
 import type {
-  TermoUsoRequestAlterar,
-  TermoUsoRequestCriar,
+  TermoUsoRequestUpdate,
+  TermoUsoRequestCreate,
   TermoUsoResponse,
-  TermoUsoResponseAtivo,
+  TermoUsoResponseActive,
   TipoTermo,
 } from '../type/termo-uso.type';
 
@@ -15,13 +15,13 @@ export const termoUsoApi = {
   // authFetch, pelo mesmo motivo de auth.api.ts: quem chama isso (tela de Cadastro) ainda não tem sessão
   // nenhuma. `tipo` obrigatório: há 1 versão ativa por termo, então "o termo ativo" sem dizer qual é
   // ambíguo.
-  buscarAtivo: (tipo: TipoTermo): Promise<TermoUsoResponseAtivo> =>
-    fetch(`${API_BASE_URL}/termos-uso/ativo?tipo=${tipo}`).then(tratarResposta<TermoUsoResponseAtivo>),
+  buscarAtivo: (tipo: TipoTermo): Promise<TermoUsoResponseActive> =>
+    fetch(`${API_BASE_URL}/termos-uso/ativo?tipo=${tipo}`).then(tratarResposta<TermoUsoResponseActive>),
   // GET /termos-uso (sem "/ativo") - listagem completa (histórico incluso),
   // exige sessão - só a tela de administração usa.
   listar: (authFetch: AuthFetch): Promise<TermoUsoResponse[]> =>
     authFetch('/termos-uso').then(tratarResposta<TermoUsoResponse[]>),
-  criar: (authFetch: AuthFetch, dados: TermoUsoRequestCriar): Promise<TermoUsoResponse> =>
+  criar: (authFetch: AuthFetch, dados: TermoUsoRequestCreate): Promise<TermoUsoResponse> =>
     authFetch('/termos-uso', {
       method: 'POST',
       body: JSON.stringify(dados),
@@ -31,26 +31,26 @@ export const termoUsoApi = {
   buscar: (authFetch: AuthFetch, id: number): Promise<TermoUsoResponse> =>
     authFetch(`/termos-uso/${id}`).then(tratarResposta<TermoUsoResponse>),
   // PATCH /termos-uso/:id - só funciona enquanto ninguém aceitou a versão
-  // ainda (ver TermoUsoServiceAlterar no Nest); o backend responde 409 caso
+  // ainda (ver TermoUsoServiceUpdate no Nest); o backend responde 409 caso
   // contrário.
   atualizar: (
     authFetch: AuthFetch,
     id: number,
-    dados: TermoUsoRequestAlterar,
+    dados: TermoUsoRequestUpdate,
   ): Promise<TermoUsoResponse> =>
     authFetch(`/termos-uso/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(dados),
     }).then(tratarResposta<TermoUsoResponse>),
   // PATCH /termos-uso/:id/ativar: torna esta versão a vigente do seu tipo (ação separada de criar/atualizar:
-  // Criar não ativa sozinho, ver TermoUsoServiceCriar no Nest).
+  // Criar não ativa sozinho, ver TermoUsoServiceCreate no Nest).
   ativar: (authFetch: AuthFetch, id: number): Promise<TermoUsoResponse> =>
     authFetch(`/termos-uso/${id}/ativar`, { method: 'PATCH' }).then(
       tratarResposta<TermoUsoResponse>,
     ),
   // DELETE /termos-uso/:id: nunca permitido na versão vigente. Numa versão já aceita por alguém, dá 409 a menos
   // que `forcar: true` (checkbox "entendi" + "Excluir mesmo assim"): com `forcar`, apaga o termo e AS LINHAS DE
-  // ACEITE que apontam para ele (as FKs são CASCADE, ver TermoUsoServiceExcluir no Nest).
+  // ACEITE que apontam para ele (as FKs são CASCADE, ver TermoUsoServiceRemove no Nest).
   excluir: (authFetch: AuthFetch, id: number, forcar?: boolean): Promise<void> =>
     authFetch(`/termos-uso/${id}${forcar ? '?forcar=true' : ''}`, { method: 'DELETE' }).then(
       tratarResposta<void>,

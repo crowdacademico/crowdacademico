@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Campo } from './campo';
-import { formatarCpf } from '../../services/constant/utils/formatacao.util';
+import { formatarCpf } from '../../services/constant/util/formatacao.util';
 
 interface CampoCpfProps {
   // Sempre só dígitos (até 11), nunca formatado: quem formata para exibição é este componente por dentro.

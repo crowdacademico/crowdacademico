@@ -1,6 +1,6 @@
 import type { TipoTermo } from '../type/termo-uso.type';
 
-// Tradução code -> rótulo amigável, mesmo espírito de permissao-nomes-amigaveis.ts: `tipo` é o identificador
+// Tradução code -> rótulo amigável, mesmo espírito de permissao-nomes-amigaveis.constants.ts: `tipo` é o identificador
 // estável usado pelo banco (enum tipo_termo, 01_extensoes_enums_tabelas.sql), esta tabela é só a camada de
 // exibição. A lista é a fonte do tipo TipoTermo (termo-uso.type.ts).
 export const TIPOS_TERMO = ['cadastro', 'upgrade_pesquisador'] as const;

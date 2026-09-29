@@ -1,6 +1,6 @@
 import { TabelaEditavel } from './tabela-editavel';
 import type { ColunaEditavel } from './tabela-editavel';
-import { formatarData } from '../../../services/constant/utils/formatacao.util';
+import { formatarData } from '../../../services/constant/util/formatacao.util';
 import type { MarcoCronogramaResponse } from '../../../services/14-marco-cronograma/type/marco-cronograma.type';
 
 // Marcos do cronograma de uma campanha (título e data prevista), com edição na linha. Usada pelo painel de

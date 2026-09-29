@@ -1,4 +1,4 @@
-import { formatarMoeda } from '../../../services/constant/utils/formatacao.util';
+import { formatarMoeda } from '../../../services/constant/util/formatacao.util';
 import { avaliarCriteriosEnvio } from '../../../services/12-campanha/util/criterios-envio.util';
 import type { CriteriosEnvio } from '../../../services/12-campanha/util/criterios-envio.util';
 

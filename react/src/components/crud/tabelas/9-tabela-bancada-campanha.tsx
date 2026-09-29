@@ -1,12 +1,12 @@
 import { AcaoLinha } from '../acao-linha';
 import { TabelaBancada } from './tabela-bancada';
 import type { ColunaBancada } from './tabela-bancada';
-import { CAMPANHA_BLOQUEADA } from '../../../services/campo-testes/util/registros-bloqueados';
+import { CAMPANHA_BLOQUEADA } from '../../../services/campo-testes/util/registros-bloqueados.util';
 import {
   ROTULO_STATUS_CAMPANHA,
   classeBadgeStatusCampanha,
 } from '../../../services/12-campanha/constants/status-campanha.constants';
-import { formatarMoeda } from '../../../services/constant/utils/formatacao.util';
+import { formatarMoeda } from '../../../services/constant/util/formatacao.util';
 import type { CampanhaResponse } from '../../../services/12-campanha/type/campanha.type';
 
 // Campanhas do Campo de Testes (T2, views/campo-testes/bancada-campanha.tsx, que busca e abre os modais). As

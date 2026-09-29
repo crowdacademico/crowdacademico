@@ -21,19 +21,17 @@ import {
   ROTULO_TITULO_ACADEMICO,
   classeBadgeStatusPesquisador,
 } from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
-import { formatarCpfExibicao, formatarDataHora, formatarMesAno } from '../../services/constant/utils/formatacao.util';
+import { formatarCpfExibicao, formatarDataHora, formatarMesAno } from '../../services/constant/util/formatacao.util';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import { ModalUpgradePesquisador } from '../6-perfil-pesquisador/modal-upgrade-pesquisador';
-import { gerarCpfValido } from '../../services/campo-testes/util/gerar-cpf-valido';
+import { gerarCpfValido } from '../../services/campo-testes/util/gerar-cpf-valido.util';
 import { Carregando } from '../../components/layout/carregando';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { SessaoResponse } from '../../services/3-auth/type/auth.type';
 import type { UsuarioPapelResponse } from '../../services/2-papel-permissao/type/papel-permissao.type';
-import type {
-  PerfilPesquisadorResponse,
-  PerfilPesquisadorResponseSuspend,
-} from '../../services/6-perfil-pesquisador/type/perfil-pesquisador.type';
+import type { PerfilPesquisadorResponse } from '../../services/6-perfil-pesquisador/type/perfil-pesquisador.type';
+import type { SuspensaoResponseDto } from '../../services/constant/type/suspensao.type';
 
 // Minha Conta: não é um formulário só, é uma área com seções independentes, cada uma salva por conta própria.
 //
@@ -671,7 +669,7 @@ interface AbaAcademicoProps {
 function AbaAcademico({ auth }: AbaAcademicoProps) {
   const [perfil, setPerfil] = useState<PerfilPesquisadorResponse | null>(null);
   const [fazendoUpgrade, setFazendoUpgrade] = useState(false);
-  const [suspensao, setSuspensao] = useState<PerfilPesquisadorResponseSuspend | null>(null);
+  const [suspensao, setSuspensao] = useState<SuspensaoResponseDto | null>(null);
   const [carregando, setCarregando] = useState(true);
 
   useEffect(() => {

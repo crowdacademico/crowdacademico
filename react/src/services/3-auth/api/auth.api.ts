@@ -2,9 +2,8 @@ import { API_BASE_URL } from '../../constant/constants/api.constants';
 import { tratarResposta } from '../../constant/api/http.util';
 import type {
   AuthResponseLogin,
-  AuthResponseRefresh,
   AuthResponseRegister,
-  AuthResponseVerificarEmail,
+  AuthResponseVerifyEmail,
 } from '../type/auth.type';
 
 // Espelha 3-auth/controllers do nest (login/refresh/logout). Sem header Authorization aqui de propósito:
@@ -24,13 +23,14 @@ export async function login(email: string, senha: string): Promise<AuthResponseL
   return tratarResposta<AuthResponseLogin>(resposta);
 }
 
-export async function refresh(refreshToken: string): Promise<AuthResponseRefresh> {
+// A renovação devolve o mesmo formato do login (AuthResponseLogin do Nest), com `usuario` e `papeis`.
+export async function refresh(refreshToken: string): Promise<AuthResponseLogin> {
   const resposta = await fetch(`${API_BASE_URL}/auth/refresh`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ refreshToken }),
   });
-  return tratarResposta<AuthResponseRefresh>(resposta);
+  return tratarResposta<AuthResponseLogin>(resposta);
 }
 
 export async function logout(refreshToken: string): Promise<void> {
@@ -58,11 +58,11 @@ export async function cadastro(
   return tratarResposta<AuthResponseRegister>(resposta);
 }
 
-export async function verificarEmail(token: string): Promise<AuthResponseVerificarEmail> {
+export async function verificarEmail(token: string): Promise<AuthResponseVerifyEmail> {
   const resposta = await fetch(`${API_BASE_URL}/auth/verificar-email`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ token }),
   });
-  return tratarResposta<AuthResponseVerificarEmail>(resposta);
+  return tratarResposta<AuthResponseVerifyEmail>(resposta);
 }

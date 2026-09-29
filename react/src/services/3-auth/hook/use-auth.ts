@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import { API_BASE_URL } from '../../constant/constants/api.constants';
 import * as authApi from '../api/auth.api';
-import type { AuthFetch, AuthResponseLogin, AuthResponseRefresh, AuthResponseRegister } from '../type/auth.type';
+import type { AuthFetch, AuthResponseLogin, AuthResponseRegister } from '../type/auth.type';
 import type { UsuarioResponse } from '../../1-usuario/type/usuario.type';
 import { acompanharRequisicao } from '../../../components/layout/barra-carregamento/atividade-rede';
 
@@ -45,7 +45,7 @@ export function useAuth(): UseAuthReturn {
   const refreshTokenRef = useRef<string | null>(localStorage.getItem(CHAVE_REFRESH_TOKEN));
   // Promise compartilhada entre chamadas simultâneas de authFetch - ver
   // renovarSessao() logo abaixo.
-  const refreshEmAndamentoRef = useRef<Promise<AuthResponseRefresh> | null>(null);
+  const refreshEmAndamentoRef = useRef<Promise<AuthResponseLogin> | null>(null);
   // Espelho síncrono do accessToken: authFetch precisa saber se JÁ existe token no instante da chamada, mesmo que
   // quem chamou tenha vindo de uma renderização anterior à renovação (o estado `accessToken` ficaria defasado).
   const accessTokenRef = useRef<string | null>(null);
@@ -109,7 +109,7 @@ export function useAuth(): UseAuthReturn {
   // conseguir provar, no ponto de CHAMADA, que o valor não é nulo: dentro desta função o ref já teria voltado a
   // ser `string | null` de qualquer forma.
   const renovarSessao = useCallback(
-    (refreshToken: string): Promise<AuthResponseRefresh> => {
+    (refreshToken: string): Promise<AuthResponseLogin> => {
       if (!refreshEmAndamentoRef.current) {
         refreshEmAndamentoRef.current = authApi
           .refresh(refreshToken)

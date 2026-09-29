@@ -1,5 +1,5 @@
 import { Dica } from '../../layout/tooltip';
-import { nomeAmigavelPermissao } from '../../../services/2-papel-permissao/constants/permissao-nomes-amigaveis';
+import { nomeAmigavelPermissao } from '../../../services/2-papel-permissao/constants/permissao-nomes-amigaveis.constants';
 import { chaveCelula } from '../../../services/2-papel-permissao/util/chave-celula-matriz.util';
 import type { PapelResponse, PermissaoResponse } from '../../../services/2-papel-permissao/type/papel-permissao.type';
 

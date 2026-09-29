@@ -9,7 +9,7 @@ import { ConfirmacaoDigitada } from '../../components/input/confirmacao-digitada
 import { confirmacaoConfere } from '../../components/input/confirmacao-confere';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
 import { ROTULO_STATUS_CAMPANHA } from '../../services/12-campanha/constants/status-campanha.constants';
-import { formatarMoeda } from '../../services/constant/utils/formatacao.util';
+import { formatarMoeda } from '../../services/constant/util/formatacao.util';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { CampanhaResponse } from '../../services/12-campanha/type/campanha.type';

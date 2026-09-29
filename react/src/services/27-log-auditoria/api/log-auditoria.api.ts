@@ -5,7 +5,7 @@ import type { LogAuditoriaResponse } from '../type/log-auditoria.type';
 
 // `tabela` é o nome físico da tabela no Postgres (ex.: 'usuario'), o mesmo valor que fn_log_auditoria() grava
 // via TG_TABLE_NAME. Devolve o objeto paginado inteiro ({ dados, total, pagina, tamanho }), sem desembrulhar
-// `.dados` aqui (diferente de usuarioApi.listar/configuracaoApi.listar): quem usa isso
+// `.dados` aqui (diferente de usuarioApi.listar/configuracoesApi.listar): quem usa isso
 // (log-auditoria-painel.tsx) quer saber o total também.
 export const logAuditoriaApi = {
   // `pagina`: o backend (log-auditoria.service.findall.ts) já pagina de verdade (LIMIT/OFFSET, 20 por página),

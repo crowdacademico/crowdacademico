@@ -6,10 +6,10 @@ import type {
   UsuarioRequestCreate,
   UsuarioRequestUpdate,
   UsuarioResponse,
-  UsuarioResponseLoginHistorico,
-  UsuarioResponseSuspend,
-  UsuarioResponseTermoAceito,
+  UsuarioResponseLoginHistory,
+  UsuarioResponseAcceptedTerm,
 } from '../type/usuario.type';
+import type { SuspensaoResponseDto } from '../../constant/type/suspensao.type';
 
 // authFetch vem de use-auth.js (services/3-auth/hook) - injetado, não
 // importado direto, pra este arquivo não precisar saber nada de token.
@@ -43,8 +43,8 @@ export const usuarioApi = {
   desbloquear: (authFetch: AuthFetch, id: number | string): Promise<void> =>
     authFetch(`/usuario/${id}/desbloquear`, { method: 'POST' }).then(tratarResposta<void>),
   // Histórico de login: cada linha de `sessao` já É um login, mais recente primeiro.
-  listarLogins: (authFetch: AuthFetch, id: number | string): Promise<UsuarioResponseLoginHistorico[]> =>
-    authFetch(`/usuario/${id}/logins`).then(tratarResposta<UsuarioResponseLoginHistorico[]>),
+  listarLogins: (authFetch: AuthFetch, id: number | string): Promise<UsuarioResponseLoginHistory[]> =>
+    authFetch(`/usuario/${id}/logins`).then(tratarResposta<UsuarioResponseLoginHistory[]>),
   // Termos de Uso aceitos ("onde fica registrado" o aceite): join de usuario_termo com termos_de_uso, mais
   // recente primeiro. Cobre cadastro e upgrade de perfil de pesquisador; aceite por contribuição a campanha
   // fica de fora (aceite_termo_contribuicao é por CONTRIBUIÇÃO, não por usuário direto, e o módulo de
@@ -52,13 +52,13 @@ export const usuarioApi = {
   listarTermosAceitos: (
     authFetch: AuthFetch,
     id: number | string,
-  ): Promise<UsuarioResponseTermoAceito[]> =>
-    authFetch(`/usuario/${id}/termos-aceitos`).then(tratarResposta<UsuarioResponseTermoAceito[]>),
+  ): Promise<UsuarioResponseAcceptedTerm[]> =>
+    authFetch(`/usuario/${id}/termos-aceitos`).then(tratarResposta<UsuarioResponseAcceptedTerm[]>),
   // Suspensão de MODERAÇÃO: diferente de `desbloquear` acima (aquele é bloqueio automático por senha errada).
   // `ate` é ISO string. "Reduzir a pena" é chamar `suspender` de novo com uma data mais próxima, não existe
   // endpoint separado para isso.
-  buscarSuspensao: (authFetch: AuthFetch, id: number | string): Promise<UsuarioResponseSuspend> =>
-    authFetch(`/usuario/${id}/suspensao`).then(tratarResposta<UsuarioResponseSuspend>),
+  buscarSuspensao: (authFetch: AuthFetch, id: number | string): Promise<SuspensaoResponseDto> =>
+    authFetch(`/usuario/${id}/suspensao`).then(tratarResposta<SuspensaoResponseDto>),
   suspender: (
     authFetch: AuthFetch,
     id: number | string,

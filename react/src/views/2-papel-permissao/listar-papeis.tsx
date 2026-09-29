@@ -7,8 +7,8 @@ import {
   papelPermissaoApi,
   permissaoApi,
 } from '../../services/2-papel-permissao/api/papel-permissao.api';
-import { ORDEM_PODER_PAPEL } from '../../services/2-papel-permissao/constants/papel-ordem-poder';
-import { detalhePermissao } from '../../services/2-papel-permissao/constants/permissao-nomes-amigaveis';
+import { ORDEM_PODER_PAPEL } from '../../services/2-papel-permissao/constants/papel-ordem-poder.constants';
+import { detalhePermissao } from '../../services/2-papel-permissao/constants/permissao-nomes-amigaveis.constants';
 import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
 import { MatrizPapelPermissao } from './matriz-papel-permissao';
 import { ModalDetalhePermissao } from './modal-detalhe-permissao';
@@ -53,7 +53,7 @@ export function ListarPapeis({ auth }: PropsPagina) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [auth.authFetch, chaveRecarga],
   );
-  // Nome amigável + descrição: tradução 100% no frontend (ver permissao-nomes-amigaveis.ts), o `nome` cru do
+  // Nome amigável + descrição: tradução 100% no frontend (ver permissao-nomes-amigaveis.constants.ts), o `nome` cru do
   // banco não muda em lugar nenhum, só ganha uma 2ª coluna "chave" para quem precisa do valor literal.
   //
   // `papeis`/`impacto`: filtro duplo, mesmo espírito do filtro de papel em ListarUsuarios; não viram coluna

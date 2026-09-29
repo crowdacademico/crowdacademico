@@ -6,12 +6,12 @@ import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
 import { areaConhecimentoApi } from '../../services/8-area-conhecimento/api/area-conhecimento.api';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { LIMITE_SUGESTOES_COMBOBOX } from '../../services/campo-testes/constants/campo-testes.constants';
-import { contemTermo, normalizarBusca } from '../../services/constant/utils/busca.util';
+import { contemTermo, normalizarBusca } from '../../services/constant/util/busca.util';
 import { useAuthFetchRegistrado, useChamadaRegistrada } from '../../services/campo-testes/hook/use-chamada-registrada';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
 import { useRegrasCampanha } from '../../services/12-campanha/hook/use-regras-campanha';
-import { CAMPANHA_BLOQUEADA, motivoBloqueioCampanha } from '../../services/campo-testes/util/registros-bloqueados';
+import { CAMPANHA_BLOQUEADA, motivoBloqueioCampanha } from '../../services/campo-testes/util/registros-bloqueados.util';
 import { TabelaBancadaCampanha } from '../../components/crud/tabelas/9-tabela-bancada-campanha';
 import { TabelaCriteriosEnvio } from '../../components/crud/tabelas/7-tabela-criterios-envio';
 import { avaliarCriteriosEnvio } from '../../services/12-campanha/util/criterios-envio.util';
@@ -28,7 +28,7 @@ import {
   ROTULO_STATUS_CAMPANHA,
   classeBadgeStatusCampanha,
 } from '../../services/12-campanha/constants/status-campanha.constants';
-import { formatarDataHora, formatarMoeda } from '../../services/constant/utils/formatacao.util';
+import { formatarDataHora, formatarMoeda } from '../../services/constant/util/formatacao.util';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import { RegistroChamadas } from './registro-chamadas';
 import { ModalAlterarCampanha } from '../12-campanha/modal-alterar-campanha';

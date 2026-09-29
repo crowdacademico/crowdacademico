@@ -7,8 +7,8 @@ import type { PesquisadorLinha } from '../../components/crud/tabelas/8-tabela-ba
 import { perfilPesquisadorApi } from '../../services/6-perfil-pesquisador/api/perfil-pesquisador.api';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { usuarioPapelApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
-import { PAPEL_SEM_EXTRA } from '../../services/2-papel-permissao/constants/papel-ordem-poder';
-import { gerarCpfValido } from '../../services/campo-testes/util/gerar-cpf-valido';
+import { PAPEL_SEM_EXTRA } from '../../services/2-papel-permissao/constants/papel-ordem-poder.constants';
+import { gerarCpfValido } from '../../services/campo-testes/util/gerar-cpf-valido.util';
 import { useCampoTestes } from '../../services/campo-testes/hook/use-campo-testes';
 import { ModalAlterarUsuario, ModalConsultarUsuario, ModalExcluirUsuario } from '../1-usuario/modal-usuario';
 import { ModalUpgradePesquisador } from '../6-perfil-pesquisador/modal-upgrade-pesquisador';

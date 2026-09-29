@@ -8,7 +8,7 @@ import {
   classeBadgeStatusCampanha,
 } from '../../services/12-campanha/constants/status-campanha.constants';
 import { useBuscar } from '../../services/constant/hook/use-buscar';
-import { formatarDataHora, formatarMoeda } from '../../services/constant/utils/formatacao.util';
+import { formatarDataHora, formatarMoeda } from '../../services/constant/util/formatacao.util';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { HistoricoRejeicaoResponse } from '../../services/12-campanha/type/campanha.type';
 

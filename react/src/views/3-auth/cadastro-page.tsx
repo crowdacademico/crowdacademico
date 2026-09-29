@@ -8,7 +8,7 @@ import { termoUsoApi } from '../../services/5-termo-uso/api/termo-uso.api';
 import { ErroHttp } from '../../services/constant/api/http.util';
 import { useFocoPreso } from '../../services/constant/hook/use-foco-preso';
 import type { PropsPagina } from '../../services/router/pagina.type';
-import type { TermoUsoResponseAtivo } from '../../services/5-termo-uso/type/termo-uso.type';
+import type { TermoUsoResponseActive } from '../../services/5-termo-uso/type/termo-uso.type';
 
 const REGEX_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -64,7 +64,7 @@ export function CadastroPage({ auth }: PropsPagina) {
   const janelaTermoRef = useRef<HTMLDivElement>(null);
   const idTituloTermo = useId();
   useFocoPreso(janelaTermoRef, modalTermoAberto);
-  const [termo, setTermo] = useState<TermoUsoResponseAtivo | null>(null);
+  const [termo, setTermo] = useState<TermoUsoResponseActive | null>(null);
   const [carregandoTermo, setCarregandoTermo] = useState(false);
 
   const abrirTermos = () => {

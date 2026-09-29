@@ -167,7 +167,7 @@ WHERE id_papel = (SELECT id_papel FROM papel WHERE codigo = 'usuario')
 - **Docker** do Nest e do React (F2 do roteiro do Atlas, com o `docker/` deles como referência).
 - **`react/.gitignore` não cobre `.env`:** inofensivo hoje (o `.env` só tem a URL da API); só volta à tona se o conteúdo do `.env` mudar ou no deploy.
 - **CORS por lista de endereços** (ver grupo 5, segurança): se não for feito antes, entra aqui.
-- **Roteiro de tela `g10-permissoes-na-tela.mjs`, caso "Pesquisadora: /admin/usuarios mostra erro de permissão", também espera o modo produção** (hoje a pesquisadora lista usuários, pela mesma leitura liberada de desenvolvimento). Visto em 28-09-2026.
+- **Roteiros de tela que esperam o modo produção** (hoje toda conta logada lê tudo, pela leitura liberada de desenvolvimento): `g10-permissoes-na-tela.mjs`, caso "Pesquisadora: /admin/usuarios mostra erro de permissão", e `g14-toast-e-busca.mjs`, caso "Conta sem permissão abre o dashboard: UM aviso de erro". Vistos em 28-09-2026.
 - **Roteiro de API `gapi-401-403-404.mjs` espera o modo produção:** hoje 2 casos falham porque toda conta logada vê tudo (Grupo O, leitura liberada de desenvolvimento). Rodar de novo depois do bloco "modo produção".
 
 ---

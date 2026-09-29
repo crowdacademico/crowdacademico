@@ -23,22 +23,15 @@ export interface UsuarioResponse {
 }
 
 // Espelha usuario.response-login-history.ts.
-export interface UsuarioResponseLoginHistorico {
+export interface UsuarioResponseLoginHistory {
   logadoEm: string;
 }
 
 // Espelha usuario.response-accepted-term.ts (Consultar Usuário: onde fica registrado o aceite do Termo de Uso).
-export interface UsuarioResponseTermoAceito {
+export interface UsuarioResponseAcceptedTerm {
   tipo: TipoTermo;
   versao: string;
   aceitoEm: string;
-}
-
-// Espelha SuspensaoResponseDto (nest/src/commons/moderacao/dto/suspensao.response.dto.ts).
-export interface UsuarioResponseSuspend {
-  suspensoAte: string | null;
-  motivoSuspensao: string | null;
-  suspensoPor: number | null;
 }
 
 // Espelha nest/src/1-usuario/dto/request/*.ts.

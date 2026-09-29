@@ -1,6 +1,6 @@
 import { Tooltip } from '../../components/layout/tooltip';
 import { PontoStatusConexao, TEXTO_TOOLTIP_SESSOES_ATIVAS } from './dashboard';
-import type { DashboardResponseSummary } from '../../services/admin/type/dashboard.type';
+import type { DashboardResponseSummary } from '../../services/28-dashboard/type/dashboard.type';
 
 interface DashboardSaudeProps {
   bancoConectado: boolean | null;

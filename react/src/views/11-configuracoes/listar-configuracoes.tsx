@@ -2,14 +2,14 @@ import { useCallback } from 'react';
 import { GenericTable } from '../../components/crud/generic-table';
 import { BlocoLogAuditoria } from '../../components/crud/bloco-log-auditoria';
 import { useCrudModais } from '../../services/constant/hook/use-crud-modais';
-import { configuracaoApi } from '../../services/11-configuracoes/api/configuracao.api';
+import { configuracoesApi } from '../../services/11-configuracoes/api/configuracoes.api';
 import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
 import {
   ModalAlterarConfiguracao,
   ModalConsultarConfiguracao,
 } from './modal-configuracao';
 import type { PropsPagina } from '../../services/router/pagina.type';
-import type { ConfiguracaoResponse } from '../../services/11-configuracoes/type/configuracao.type';
+import type { ConfiguracoesResponse } from '../../services/11-configuracoes/type/configuracoes.type';
 
 // Aba "Parâmetros do Sistema" do painel admin: rota /admin/configuracoes (URL/tabela/variáveis internas
 // continuam "configuracoes" de propósito, só o nome visível na tela mudou; ver rotas.constants.ts).
@@ -26,10 +26,10 @@ export function ListarConfiguracoes({ auth }: PropsPagina) {
     chaveRecarga,
     recarregar,
     acoesCompletas,
-  } = useCrudModais<ConfiguracaoResponse>();
+  } = useCrudModais<ConfiguracoesResponse>();
 
   const listarConfiguracoes = useCallback(
-    () => configuracaoApi.listar(auth.authFetch),
+    () => configuracoesApi.listar(auth.authFetch),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [auth.authFetch, chaveRecarga],
   );
@@ -42,7 +42,7 @@ export function ListarConfiguracoes({ auth }: PropsPagina) {
 
   return (
     <div className="admin-content-painel">
-      <GenericTable<ConfiguracaoResponse>
+      <GenericTable<ConfiguracoesResponse>
         titulo="Parâmetros do Sistema"
         colunas={[
           { chave: 'idConfig', rotulo: 'id', tipo: 'id' },

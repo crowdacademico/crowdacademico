@@ -9,7 +9,7 @@ import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
 import { Campo } from '../../components/input/campo';
 import { termoUsoApi } from '../../services/5-termo-uso/api/termo-uso.api';
-import { ROTULO_TIPO_TERMO } from '../../services/5-termo-uso/constants/termo-uso-tipos';
+import { ROTULO_TIPO_TERMO } from '../../services/5-termo-uso/constants/termo-uso-tipos.constants';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import { useBuscar } from '../../services/constant/hook/use-buscar';
 import { Carregando } from '../../components/layout/carregando';
@@ -28,7 +28,7 @@ interface ModalAlterarTermoUsoProps {
 }
 
 // Modal de Alterar (mesmo padrão de ModalAlterarUsuario): substitui a página `/admin/termos-uso/:id/alterar`.
-// Regra de negócio: só edita conteúdo enquanto ninguém aceitou a versão (ver TermoUsoServiceAlterar no Nest).
+// Regra de negócio: só edita conteúdo enquanto ninguém aceitou a versão (ver TermoUsoServiceUpdate no Nest).
 //
 // LISTBOX de versões existentes: abrir "Alterar" a partir do card mostra só a versão vigente daquele tipo, mas
 // ela pode já estar travada (alguém aceitou); o listbox deixa trocar, sem fechar o modal, para QUALQUER outra
@@ -38,7 +38,7 @@ interface ModalAlterarTermoUsoProps {
 // SEM campo "Versão" separado: 2 caixas de texto mostrando a mesma versão (o listbox e um input editável) não
 // faria sentido. `versao`/`tipo` são imutáveis; só `conteudo` se edita aqui.
 //
-// "Tornar vigente": ação separada de "Salvar" (editar conteúdo), chama `TermoUsoServiceAtivar` no Nest (Criar
+// "Tornar vigente": ação separada de "Salvar" (editar conteúdo), chama `TermoUsoServiceActivate` no Nest (Criar
 // não ativa sozinho). Só aparece quando a versão selecionada AINDA NÃO é a vigente.
 export function ModalAlterarTermoUso({
   auth,

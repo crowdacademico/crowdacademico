@@ -10,7 +10,7 @@ import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
 import { useRegrasCampanha } from '../../services/12-campanha/hook/use-regras-campanha';
 import { duracaoEmDias, hojeISO } from '../../services/12-campanha/util/prazo-campanha.util';
 import { useAreasDaCampanha } from '../../services/8-area-conhecimento/hook/use-areas-da-campanha';
-import { formatarMoeda } from '../../services/constant/utils/formatacao.util';
+import { formatarMoeda } from '../../services/constant/util/formatacao.util';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import { PainelOrcamentoCronograma } from './painel-orcamento-cronograma';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';

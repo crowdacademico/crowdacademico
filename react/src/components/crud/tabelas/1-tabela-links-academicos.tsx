@@ -1,23 +1,13 @@
 import { TabelaEditavel } from './tabela-editavel';
 import type { ColunaEditavel } from './tabela-editavel';
 import type { TipoLinkResponse } from '../../../services/9-tipo-link/type/tipo-link.type';
+import type {
+  LinkAcademicoRequestCreate,
+  LinkAcademicoResponse,
+} from '../../../services/7-link-academico/type/link-academico.type';
 
 // Links acadêmicos de um pesquisador (Lattes, ORCID...), com edição na linha. Usada no modal de Alterar Usuário
 // (views/1-usuario/modal-usuario.tsx, PainelLinksAcademicos), que busca e salva.
-
-export interface LinkAcademico {
-  idLinkAcademico: number;
-  idTipoLink: number;
-  url: string;
-  rotulo: string | null;
-}
-
-// O que a tabela devolve ao adicionar/salvar, já no formato da API (rótulo vazio não é enviado).
-export interface DadosLinkAcademico {
-  idTipoLink: number;
-  url: string;
-  rotulo?: string;
-}
 
 interface FormLink {
   idTipoLink: string;
@@ -34,24 +24,24 @@ function truncarUrl(url: string): string {
   return url.length > TAMANHO_MAXIMO_URL_NA_LINHA ? `${url.slice(0, TAMANHO_MAXIMO_URL_NA_LINHA)} ...` : url;
 }
 
-function paraDados(form: FormLink): DadosLinkAcademico {
+function paraDados(form: FormLink): LinkAcademicoRequestCreate {
   return { idTipoLink: Number(form.idTipoLink), url: form.url, ...(form.rotulo ? { rotulo: form.rotulo } : {}) };
 }
 
 interface TabelaLinksAcademicosProps {
-  links: LinkAcademico[];
+  links: LinkAcademicoResponse[];
   tiposLink: TipoLinkResponse[];
   // Falso quando o pesquisador já atingiu o limite de links (configuracoes.limite_links_academicos_perfil).
   podeAdicionar: boolean;
-  aoAdicionar: (dados: DadosLinkAcademico) => Promise<boolean>;
-  aoSalvar: (link: LinkAcademico, dados: DadosLinkAcademico) => Promise<boolean>;
-  aoExcluir: (link: LinkAcademico) => void;
+  aoAdicionar: (dados: LinkAcademicoRequestCreate) => Promise<boolean>;
+  aoSalvar: (link: LinkAcademicoResponse, dados: LinkAcademicoRequestCreate) => Promise<boolean>;
+  aoExcluir: (link: LinkAcademicoResponse) => void;
 }
 
 export function TabelaLinksAcademicos({ links, tiposLink, podeAdicionar, aoAdicionar, aoSalvar, aoExcluir }: TabelaLinksAcademicosProps) {
   const nomeTipo = (idTipoLink: number) => tiposLink.find((tipo) => tipo.idTipolink === idTipoLink)?.nome;
 
-  const colunas: ColunaEditavel<LinkAcademico, FormLink>[] = [
+  const colunas: ColunaEditavel<LinkAcademicoResponse, FormLink>[] = [
     {
       rotulo: 'Tipo',
       centralizada: true,

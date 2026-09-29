@@ -12,8 +12,8 @@ export interface ArquivoResponse {
   desativadoEm: string | null;
 }
 
-// Espelha arquivo.response-upload-started.ts (ArquivoResponseUploadIniciado).
-export interface ArquivoResponseUploadIniciado {
+// Espelha arquivo.response-upload-started.ts (ArquivoResponseUploadStarted).
+export interface ArquivoResponseUploadStarted {
   chave: string;
   urlUpload: string;
   metodo: 'PUT';
@@ -36,14 +36,14 @@ export type ContextoArquivo = 'avatar' | 'campanha' | 'atualizacao';
 // Espelha arquivo.request-start-upload.ts. `tipoMime` é `string` aqui
 // (não união literal de TIPOS_MIME_PERMITIDOS), mesma simplificação já
 // usada em ArquivoResponse.tipoMime (Fase 2).
-export interface ArquivoRequestIniciarUpload {
+export interface ArquivoRequestStartUpload {
   nomeOriginal: string;
   tipoMime: string;
   tamanhoBytes: number;
 }
 
 // Espelha arquivo.request-confirm-upload.ts.
-export interface ArquivoRequestConfirmarUpload {
+export interface ArquivoRequestConfirmUpload {
   chave: string;
   nomeOriginal: string;
   tipoMime: string;

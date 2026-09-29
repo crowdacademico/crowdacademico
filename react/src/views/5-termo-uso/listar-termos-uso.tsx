@@ -6,7 +6,7 @@ import { useCrudModais } from '../../services/constant/hook/use-crud-modais';
 import { ModalAlterarTermoUso } from './modal-alterar-termo-uso';
 import { ModalExcluirTermoUso } from './modal-excluir-termo-uso';
 import { termoUsoApi } from '../../services/5-termo-uso/api/termo-uso.api';
-import { ROTULO_TIPO_TERMO, TIPOS_TERMO } from '../../services/5-termo-uso/constants/termo-uso-tipos';
+import { ROTULO_TIPO_TERMO, TIPOS_TERMO } from '../../services/5-termo-uso/constants/termo-uso-tipos.constants';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { TermoUsoResponse } from '../../services/5-termo-uso/type/termo-uso.type';
 
@@ -18,7 +18,7 @@ import type { TermoUsoResponse } from '../../services/5-termo-uso/type/termo-uso
 // logo depois do id, igual ao padrão (id, nome, ..., Ações) de todo o resto do painel.
 // "tipo"/"ativo"/"publicado em" ficam centralizados (cabeçalho e célula juntos).
 //
-// Excluir: só rascunho nunca vigente e nunca aceito por ninguém (TermoUsoServiceExcluir bloqueia o resto com
+// Excluir: só rascunho nunca vigente e nunca aceito por ninguém (TermoUsoServiceRemove bloqueia o resto com
 // 409/403).
 //
 // Filtro por tipo: "Todos" marcado por padrão (mesmo padrão do facet de Papel em Usuários), com rótulo amigável

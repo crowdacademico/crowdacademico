@@ -9,7 +9,7 @@ import { ROTULO_STATUS_CAMPANHA, classeBadgeStatusCampanha } from '../../service
 import { useRegrasCampanha } from '../../services/12-campanha/hook/use-regras-campanha';
 import { orcamentoCampanhaApi } from '../../services/13-orcamento-campanha/api/orcamento-campanha.api';
 import { marcoCronogramaApi } from '../../services/14-marco-cronograma/api/marco-cronograma.api';
-import { formatarData, formatarDataHora, formatarMoeda } from '../../services/constant/utils/formatacao.util';
+import { formatarData, formatarDataHora, formatarMoeda } from '../../services/constant/util/formatacao.util';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { CampanhaResponse, HistoricoRejeicaoResponse } from '../../services/12-campanha/type/campanha.type';

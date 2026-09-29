@@ -4,7 +4,7 @@ import { ModalFicha } from '../../components/crud/modal-ficha';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { CaixaAviso } from '../../components/crud/caixa-aviso';
 import { papelPermissaoApi, permissaoApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
-import { detalhePermissao } from '../../services/2-papel-permissao/constants/permissao-nomes-amigaveis';
+import { detalhePermissao } from '../../services/2-papel-permissao/constants/permissao-nomes-amigaveis.constants';
 import { ModalDetalhePermissao } from './modal-detalhe-permissao';
 import { Carregando } from '../../components/layout/carregando';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';

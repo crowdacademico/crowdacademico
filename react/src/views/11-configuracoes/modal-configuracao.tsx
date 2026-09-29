@@ -9,17 +9,17 @@ import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
 import { Campo } from '../../components/input/campo';
 import { CaixaMarcacao } from '../../components/input/caixa-marcacao';
-import { configuracaoApi } from '../../services/11-configuracoes/api/configuracao.api';
+import { configuracoesApi } from '../../services/11-configuracoes/api/configuracoes.api';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
-import { parMinMaxDaConfiguracao } from '../../services/11-configuracoes/constants/configuracao-pares-min-max';
+import { parMinMaxDaConfiguracao } from '../../services/11-configuracoes/constants/configuracoes-pares-min-max.constants';
 import { useEnvio } from '../../services/constant/hook/use-envio';
-import type { ConfiguracaoResponse } from '../../services/11-configuracoes/type/configuracao.type';
+import type { ConfiguracoesResponse } from '../../services/11-configuracoes/type/configuracoes.type';
 
-// Consultar/Alterar em modal: recebem a linha (`configuracao: ConfiguracaoResponse`) inteira do
+// Consultar/Alterar em modal: recebem a linha (`configuracao: ConfiguracoesResponse`) inteira do
 // chamador, mesmo motivo de modal-motivo-denuncia.tsx.
 
 interface ModalConsultarConfiguracaoProps {
-  configuracao: ConfiguracaoResponse;
+  configuracao: ConfiguracoesResponse;
   aoFechar: () => void;
 }
 
@@ -50,7 +50,7 @@ export function ModalConsultarConfiguracao({ configuracao, aoFechar }: ModalCons
 
 interface ModalAlterarConfiguracaoProps {
   auth: Pick<UseAuthReturn, 'authFetch'>;
-  configuracao: ConfiguracaoResponse;
+  configuracao: ConfiguracoesResponse;
   aoFechar: () => void;
   aoAtualizado: () => void;
 }
@@ -84,7 +84,7 @@ export function ModalAlterarConfiguracao({ auth, configuracao, aoFechar, aoAtual
 
   const aoSalvar = async () => {
     await executarEnviando(async () => {
-      await configuracaoApi.atualizar(auth.authFetch, configuracao.idConfig, { valor, descricao, ativo, publica });
+      await configuracoesApi.atualizar(auth.authFetch, configuracao.idConfig, { valor, descricao, ativo, publica });
       mostrar('Parâmetro alterado com sucesso.', `ID: ${configuracao.idConfig} foi alterado`);
       aoAtualizado();
       aoFechar();
