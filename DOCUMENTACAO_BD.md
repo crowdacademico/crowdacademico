@@ -1297,6 +1297,16 @@ Nada a implementar; `titulo_academico` e `meio_pagamento` ficam anotados como ca
 - **Caso-limite aceito:** `perfil_pesquisador_corrigir_cpf` e `perfil_pesquisador_alterar_de_outro` continuam com o admin: são funções reais de suporte (decisão do Lucas ainda em aberto).
 
 
+## Colunas com valor padrão não aceitam vazio (30-09-2026)
+
+**Em palavras simples:** 39 colunas (datas "quando aconteceu", sim/não como `ativo`, e `campanha.valor_bruto_arrecadado`) já se preenchiam sozinhas quando ninguém informava nada, mas aceitavam "vazio" se alguém mandasse de propósito. Agora o banco recusa o vazio. Nada muda para quem usa o sistema: nenhum código gravava vazio nelas.
+
+📌 **`NOT NULL` em toda coluna com `DEFAULT`, fora uma.**
+- **Decisão:** as 39 colunas ganharam `NOT NULL` no `CREATE TABLE` do 01; o Grupo AD do ATUALIZAR preenche qualquer linha vazia com o valor padrão e depois põe a trava. A suíte PGlite 28 falha se aparecer coluna nova com `DEFAULT` que aceite vazio.
+- **Motivo:** o padrão só vale quando a coluna não é informada; um `null` mandado por engano ficava gravado em silêncio (ex.: valor arrecadado vazio some das somas). É o padrão de mercado (Django e Rails já criam a coluna assim). O Nest devolve 400 "Falta preencher um campo obrigatório" com o campo marcado quando isso acontece.
+- **Caso-limite aceito:** `contribuicao.token_sessao` (chave do doador anônimo) continua aceitando vazio, para poder ficar sem chave quando a contribuição não é anônima ou ser apagada sem apagar a doação.
+
+
 ## Como conferir este inventário
 
 *(Adicionado 03-08-2026, sugestão de uma ferramenta de IA depois de auditar a documentação e achar 4 números desatualizados neste arquivo - tabelas, policies, triggers e funções não tinham sido atualizados nas últimas 3 rodadas, apesar de `log_auditoria`/`orcamento_campanha`/`marco_cronograma` terem sido adicionadas. Em vez de outra pessoa ter que contar `CREATE TABLE`/`CREATE POLICY`/`CREATE TRIGGER` na mão (ou confiar de olho num número escrito num comentário), estas 4 queries dizem a verdade direto do banco - rode no SQL Editor do Supabase sempre que for atualizar os números deste documento.)*

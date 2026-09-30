@@ -363,3 +363,152 @@ BEGIN
     END IF;
 END;
 $$;
+
+-- ============================================================================
+-- GRUPO AD (30-09-2026) - colunas com valor padrão deixam de aceitar vazio. IDEMPOTENTE (pode colar de novo).
+-- *** PARE O NEST ANTES DE COLAR *** (ALTER TABLE: com o Nest ligado pode travar esperando as conexões dele).
+-- Religue o Nest depois do "Success".
+--
+-- Em palavras simples: 39 colunas (datas "quando aconteceu", sim/não como "ativo", e o valor arrecadado)
+-- já se preenchem sozinhas quando ninguém informa nada, mas aceitavam "vazio" se alguém mandasse de propósito.
+-- Agora o banco recusa o vazio. Nada muda para quem usa o sistema: nenhum código grava vazio nelas hoje.
+--
+-- O que muda:
+--   1. Antes da trava, qualquer linha vazia recebe o valor padrão da coluna (então colar nunca dá erro).
+--   2. NOT NULL nas 39 colunas. Fica de fora contribuicao.token_sessao (chave do doador anônimo: pode ser
+--      apagada no futuro sem apagar a doação).
+-- ============================================================================
+
+UPDATE public.aceite_termo_contribuicao SET aceito_em = NOW() WHERE aceito_em IS NULL;
+ALTER TABLE public.aceite_termo_contribuicao
+    ALTER COLUMN aceito_em SET NOT NULL;
+
+UPDATE public.area_conhecimento SET ativo = TRUE WHERE ativo IS NULL;
+ALTER TABLE public.area_conhecimento
+    ALTER COLUMN ativo SET NOT NULL;
+
+UPDATE public.arquivo SET ativo = TRUE WHERE ativo IS NULL;
+UPDATE public.arquivo SET criado_em = NOW() WHERE criado_em IS NULL;
+ALTER TABLE public.arquivo
+    ALTER COLUMN ativo SET NOT NULL,
+    ALTER COLUMN criado_em SET NOT NULL;
+
+UPDATE public.arquivo_recompensa SET principal = FALSE WHERE principal IS NULL;
+ALTER TABLE public.arquivo_recompensa
+    ALTER COLUMN principal SET NOT NULL;
+
+UPDATE public.atualizacao_campanha SET publicado_em = NOW() WHERE publicado_em IS NULL;
+ALTER TABLE public.atualizacao_campanha
+    ALTER COLUMN publicado_em SET NOT NULL;
+
+UPDATE public.auditoria_financeira SET "timestamp" = NOW() WHERE "timestamp" IS NULL;
+ALTER TABLE public.auditoria_financeira
+    ALTER COLUMN "timestamp" SET NOT NULL;
+
+UPDATE public.campanha SET criado_em = NOW() WHERE criado_em IS NULL;
+UPDATE public.campanha SET valor_bruto_arrecadado = 0 WHERE valor_bruto_arrecadado IS NULL;
+ALTER TABLE public.campanha
+    ALTER COLUMN criado_em SET NOT NULL,
+    ALTER COLUMN valor_bruto_arrecadado SET NOT NULL;
+
+UPDATE public.comentario SET criado_em = NOW() WHERE criado_em IS NULL;
+UPDATE public.comentario SET endossado = FALSE WHERE endossado IS NULL;
+ALTER TABLE public.comentario
+    ALTER COLUMN criado_em SET NOT NULL,
+    ALTER COLUMN endossado SET NOT NULL;
+
+UPDATE public.configuracoes SET ativo = TRUE WHERE ativo IS NULL;
+ALTER TABLE public.configuracoes
+    ALTER COLUMN ativo SET NOT NULL;
+
+UPDATE public.contribuicao SET anonima = FALSE WHERE anonima IS NULL;
+UPDATE public.contribuicao SET criado_em = NOW() WHERE criado_em IS NULL;
+ALTER TABLE public.contribuicao
+    ALTER COLUMN anonima SET NOT NULL,
+    ALTER COLUMN criado_em SET NOT NULL;
+
+UPDATE public.contribuicao_recompensa SET adquirida_em = NOW() WHERE adquirida_em IS NULL;
+ALTER TABLE public.contribuicao_recompensa
+    ALTER COLUMN adquirida_em SET NOT NULL;
+
+UPDATE public.denuncia SET criado_em = NOW() WHERE criado_em IS NULL;
+ALTER TABLE public.denuncia
+    ALTER COLUMN criado_em SET NOT NULL;
+
+UPDATE public.historico_rejeicao SET rejeitado_em = NOW() WHERE rejeitado_em IS NULL;
+ALTER TABLE public.historico_rejeicao
+    ALTER COLUMN rejeitado_em SET NOT NULL;
+
+UPDATE public.marco_cronograma SET criado_em = NOW() WHERE criado_em IS NULL;
+ALTER TABLE public.marco_cronograma
+    ALTER COLUMN criado_em SET NOT NULL;
+
+UPDATE public.notificacao SET criado_em = NOW() WHERE criado_em IS NULL;
+ALTER TABLE public.notificacao
+    ALTER COLUMN criado_em SET NOT NULL;
+
+UPDATE public.orcamento_campanha SET criado_em = NOW() WHERE criado_em IS NULL;
+ALTER TABLE public.orcamento_campanha
+    ALTER COLUMN criado_em SET NOT NULL;
+
+UPDATE public.recompensa SET ativo = TRUE WHERE ativo IS NULL;
+UPDATE public.recompensa SET criado_em = NOW() WHERE criado_em IS NULL;
+ALTER TABLE public.recompensa
+    ALTER COLUMN ativo SET NOT NULL,
+    ALTER COLUMN criado_em SET NOT NULL;
+
+UPDATE public.repasse SET meta_atingida = FALSE WHERE meta_atingida IS NULL;
+ALTER TABLE public.repasse
+    ALTER COLUMN meta_atingida SET NOT NULL;
+
+UPDATE public.score_config SET ativo = TRUE WHERE ativo IS NULL;
+UPDATE public.score_config SET atualizado_em = NOW() WHERE atualizado_em IS NULL;
+UPDATE public.score_config SET criado_em = NOW() WHERE criado_em IS NULL;
+ALTER TABLE public.score_config
+    ALTER COLUMN ativo SET NOT NULL,
+    ALTER COLUMN atualizado_em SET NOT NULL,
+    ALTER COLUMN criado_em SET NOT NULL;
+
+UPDATE public.score_pesquisador SET calculado_em = NOW() WHERE calculado_em IS NULL;
+ALTER TABLE public.score_pesquisador
+    ALTER COLUMN calculado_em SET NOT NULL;
+
+UPDATE public.score_rotulo SET ativo = TRUE WHERE ativo IS NULL;
+UPDATE public.score_rotulo SET atualizado_em = NOW() WHERE atualizado_em IS NULL;
+UPDATE public.score_rotulo SET criado_em = NOW() WHERE criado_em IS NULL;
+ALTER TABLE public.score_rotulo
+    ALTER COLUMN ativo SET NOT NULL,
+    ALTER COLUMN atualizado_em SET NOT NULL,
+    ALTER COLUMN criado_em SET NOT NULL;
+
+UPDATE public.seguir_campanha SET seguido_em = NOW() WHERE seguido_em IS NULL;
+ALTER TABLE public.seguir_campanha
+    ALTER COLUMN seguido_em SET NOT NULL;
+
+UPDATE public.seguir_pesquisador SET seguido_em = NOW() WHERE seguido_em IS NULL;
+ALTER TABLE public.seguir_pesquisador
+    ALTER COLUMN seguido_em SET NOT NULL;
+
+UPDATE public.solicitacao_encerramento SET solicitado_em = NOW() WHERE solicitado_em IS NULL;
+ALTER TABLE public.solicitacao_encerramento
+    ALTER COLUMN solicitado_em SET NOT NULL;
+
+UPDATE public.termos_de_uso SET ativo = TRUE WHERE ativo IS NULL;
+UPDATE public.termos_de_uso SET criado_em = NOW() WHERE criado_em IS NULL;
+ALTER TABLE public.termos_de_uso
+    ALTER COLUMN ativo SET NOT NULL,
+    ALTER COLUMN criado_em SET NOT NULL;
+
+UPDATE public.tipo_link SET ativo = TRUE WHERE ativo IS NULL;
+ALTER TABLE public.tipo_link
+    ALTER COLUMN ativo SET NOT NULL;
+
+UPDATE public.usuario SET criado_em = NOW() WHERE criado_em IS NULL;
+UPDATE public.usuario SET deletado = FALSE WHERE deletado IS NULL;
+ALTER TABLE public.usuario
+    ALTER COLUMN criado_em SET NOT NULL,
+    ALTER COLUMN deletado SET NOT NULL;
+
+UPDATE public.usuario_termo SET aceito_em = NOW() WHERE aceito_em IS NULL;
+ALTER TABLE public.usuario_termo
+    ALTER COLUMN aceito_em SET NOT NULL;

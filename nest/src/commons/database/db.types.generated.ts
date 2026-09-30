@@ -60,7 +60,7 @@ export type TipoVinculo = "independente" | "institucional";
 export type TituloAcademico = "doutor" | "especialista" | "graduado" | "mestre";
 
 export interface AceiteTermoContribuicao {
-  aceito_em: Generated<Timestamp | null>;
+  aceito_em: Generated<Timestamp>;
   id_aceite_contrib: Generated<number>;
   id_contribuicao: number;
   id_termo: number;
@@ -68,7 +68,7 @@ export interface AceiteTermoContribuicao {
 }
 
 export interface AreaConhecimento {
-  ativo: Generated<boolean | null>;
+  ativo: Generated<boolean>;
   codigo_cnpq: string;
   id_area_conhecimento: Generated<number>;
   id_pai: number | null;
@@ -76,9 +76,9 @@ export interface AreaConhecimento {
 }
 
 export interface Arquivo {
-  ativo: Generated<boolean | null>;
+  ativo: Generated<boolean>;
   chave: string;
-  criado_em: Generated<Timestamp | null>;
+  criado_em: Generated<Timestamp>;
   desativado_em: Timestamp | null;
   id_arquivo: Generated<number>;
   id_usuario_upload: number | null;
@@ -98,7 +98,7 @@ export interface ArquivoRecompensa {
   id_arquivo: number;
   id_recompensa: number;
   ordem: number | null;
-  principal: Generated<boolean | null>;
+  principal: Generated<boolean>;
 }
 
 export interface AtualizacaoCampanha {
@@ -107,7 +107,7 @@ export interface AtualizacaoCampanha {
   fase: FaseAtualizacao | null;
   id_atualizacao: Generated<number>;
   id_campanha: number;
-  publicado_em: Generated<Timestamp | null>;
+  publicado_em: Generated<Timestamp>;
   tipo: TipoAtualizacao | null;
   titulo: string;
 }
@@ -120,13 +120,13 @@ export interface AuditoriaFinanceira {
   meio_pagamento: MeioPagamento | null;
   status_anterior: string | null;
   status_novo: string;
-  timestamp: Generated<Timestamp | null>;
+  timestamp: Generated<Timestamp>;
   valor: Numeric;
 }
 
 export interface Campanha {
   aprovado_em: Timestamp | null;
-  criado_em: Generated<Timestamp | null>;
+  criado_em: Generated<Timestamp>;
   data_fim: Timestamp | null;
   data_inicio: Timestamp | null;
   descricao: string | null;
@@ -140,15 +140,15 @@ export interface Campanha {
   status: Generated<StatusCampanha>;
   taxa_plataforma: Numeric | null;
   titulo: string;
-  valor_bruto_arrecadado: Generated<Numeric | null>;
+  valor_bruto_arrecadado: Generated<Numeric>;
   video_apresentacao_url: string | null;
 }
 
 export interface Comentario {
   ativo: Generated<boolean>;
   conteudo: string;
-  criado_em: Generated<Timestamp | null>;
-  endossado: Generated<boolean | null>;
+  criado_em: Generated<Timestamp>;
+  endossado: Generated<boolean>;
   id_campanha: number;
   id_comentario: Generated<number>;
   id_pesquisador: number | null;
@@ -156,7 +156,7 @@ export interface Comentario {
 }
 
 export interface Configuracoes {
-  ativo: Generated<boolean | null>;
+  ativo: Generated<boolean>;
   chave: string;
   descricao: string | null;
   id_config: Generated<number>;
@@ -167,8 +167,8 @@ export interface Configuracoes {
 }
 
 export interface Contribuicao {
-  anonima: Generated<boolean | null>;
-  criado_em: Generated<Timestamp | null>;
+  anonima: Generated<boolean>;
+  criado_em: Generated<Timestamp>;
   id_campanha: number;
   id_contribuicao: Generated<number>;
   id_transacao_api: string | null;
@@ -180,7 +180,7 @@ export interface Contribuicao {
 }
 
 export interface ContribuicaoRecompensa {
-  adquirida_em: Generated<Timestamp | null>;
+  adquirida_em: Generated<Timestamp>;
   id_contrib_recompensa: Generated<number>;
   id_contribuicao: number;
   id_recompensa: number;
@@ -188,7 +188,7 @@ export interface ContribuicaoRecompensa {
 }
 
 export interface Denuncia {
-  criado_em: Generated<Timestamp | null>;
+  criado_em: Generated<Timestamp>;
   id_campanha_alvo: number | null;
   id_denuncia: Generated<number>;
   id_motivo: number;
@@ -204,7 +204,7 @@ export interface HistoricoRejeicao {
   id_rejeicao: Generated<number>;
   id_usuario_dono: number;
   justificativa: string | null;
-  rejeitado_em: Generated<Timestamp | null>;
+  rejeitado_em: Generated<Timestamp>;
   titulo_campanha: string;
 }
 
@@ -246,7 +246,7 @@ export interface LogAuditoria {
 }
 
 export interface MarcoCronograma {
-  criado_em: Generated<Timestamp | null>;
+  criado_em: Generated<Timestamp>;
   data_prevista: Timestamp;
   descricao: string | null;
   id_campanha: number;
@@ -263,7 +263,7 @@ export interface MotivoDenuncia {
 }
 
 export interface Notificacao {
-  criado_em: Generated<Timestamp | null>;
+  criado_em: Generated<Timestamp>;
   email_destinatario: string;
   enviado_em: Timestamp | null;
   id_notificacao: Generated<number>;
@@ -276,7 +276,7 @@ export interface Notificacao {
 
 export interface OrcamentoCampanha {
   categoria: string;
-  criado_em: Generated<Timestamp | null>;
+  criado_em: Generated<Timestamp>;
   descricao: string | null;
   id_campanha: number;
   id_orcamento: Generated<number>;
@@ -317,8 +317,8 @@ export interface Permissao {
 }
 
 export interface Recompensa {
-  ativo: Generated<boolean | null>;
-  criado_em: Generated<Timestamp | null>;
+  ativo: Generated<boolean>;
+  criado_em: Generated<Timestamp>;
   descricao: string | null;
   id_campanha: number;
   id_recompensa: Generated<number>;
@@ -340,7 +340,7 @@ export interface RecuperacaoSenha {
 export interface Repasse {
   id_campanha: number;
   id_repasse: Generated<number>;
-  meta_atingida: Generated<boolean | null>;
+  meta_atingida: Generated<boolean>;
   repassado_em: Timestamp | null;
   status: string | null;
   taxa_relativa: Numeric | null;
@@ -349,9 +349,9 @@ export interface Repasse {
 }
 
 export interface ScoreConfig {
-  ativo: Generated<boolean | null>;
-  atualizado_em: Generated<Timestamp | null>;
-  criado_em: Generated<Timestamp | null>;
+  ativo: Generated<boolean>;
+  atualizado_em: Generated<Timestamp>;
+  criado_em: Generated<Timestamp>;
   descricao: string | null;
   id_pai: number | null;
   id_score_config: Generated<number>;
@@ -360,7 +360,7 @@ export interface ScoreConfig {
 }
 
 export interface ScorePesquisador {
-  calculado_em: Generated<Timestamp | null>;
+  calculado_em: Generated<Timestamp>;
   id_rotulo: number | null;
   id_score_config: number;
   id_score_pesq: Generated<number>;
@@ -371,9 +371,9 @@ export interface ScorePesquisador {
 }
 
 export interface ScoreRotulo {
-  ativo: Generated<boolean | null>;
-  atualizado_em: Generated<Timestamp | null>;
-  criado_em: Generated<Timestamp | null>;
+  ativo: Generated<boolean>;
+  atualizado_em: Generated<Timestamp>;
+  criado_em: Generated<Timestamp>;
   descricao: string | null;
   id_rotulo: Generated<number>;
   rotulo: string;
@@ -385,14 +385,14 @@ export interface SeguirCampanha {
   id_campanha: number;
   id_seg_campanha: Generated<number>;
   id_usuario: number;
-  seguido_em: Generated<Timestamp | null>;
+  seguido_em: Generated<Timestamp>;
 }
 
 export interface SeguirPesquisador {
   id_pesquisador: number;
   id_seg_pesquisador: Generated<number>;
   id_usuario: number;
-  seguido_em: Generated<Timestamp | null>;
+  seguido_em: Generated<Timestamp>;
 }
 
 export interface Sessao {
@@ -414,21 +414,21 @@ export interface SolicitacaoEncerramento {
   id_solicitacao_encerramento: Generated<number>;
   justificativa_admin: string | null;
   justificativa_pesquisador: string | null;
-  solicitado_em: Generated<Timestamp | null>;
+  solicitado_em: Generated<Timestamp>;
   status: Generated<StatusEncerramento>;
 }
 
 export interface TermosDeUso {
-  ativo: Generated<boolean | null>;
+  ativo: Generated<boolean>;
   conteudo: string;
-  criado_em: Generated<Timestamp | null>;
+  criado_em: Generated<Timestamp>;
   id_termo: Generated<number>;
   tipo: Generated<TipoTermo>;
   versao: string;
 }
 
 export interface TipoLink {
-  ativo: Generated<boolean | null>;
+  ativo: Generated<boolean>;
   codigo: string;
   dominio: Generated<string[]>;
   id_tipolink: Generated<number>;
@@ -441,8 +441,8 @@ export interface TipoLink {
 
 export interface Usuario {
   bloqueado_ate: Timestamp | null;
-  criado_em: Generated<Timestamp | null>;
-  deletado: Generated<boolean | null>;
+  criado_em: Generated<Timestamp>;
+  deletado: Generated<boolean>;
   deletado_em: Timestamp | null;
   deletado_por: number | null;
   email: string;
@@ -468,7 +468,7 @@ export interface UsuarioPapel {
 }
 
 export interface UsuarioTermo {
-  aceito_em: Generated<Timestamp | null>;
+  aceito_em: Generated<Timestamp>;
   id_termo: number;
   id_usuario: number;
   id_usuario_termo: Generated<number>;

@@ -221,8 +221,8 @@ Lucas decide depois se ajudam o CrowdAcadêmico. Contexto em `informacoes/ROTEIR
 - **Grupo Z colado no Supabase (29-09-2026, "Success").**
 - **Ainda não feito:**
   - o item 13 (limpar o Supabase, precisa de autorização);
-  - o envio de arquivo (grava no Storage pessoal);
-  - o `NOT NULL`.
+  - o envio de arquivo (grava no Storage pessoal).
+- **`NOT NULL` feito (30-09-2026): falta colar o Grupo AD, com o Nest PARADO.**
 
 
 **O que é:** não só rodar os testes automáticos. É usar o sistema de verdade, módulo por módulo, como uma pessoa usaria, com cada tipo de conta (admin, pesquisador, conta comum, suspensa), passando por todas as telas e ações, inclusive os caminhos de erro. Cada módulo de hoje: usuário, papéis, auth, termos, pesquisador, links, catálogos, configurações, campanha, orçamento, cronograma, atualização, seguir, comentário, histórico de rejeição, arquivos, log, dashboard e Campo de Testes. Criar, consultar, alterar e excluir pela tela conferindo o que foi gravado; cada papel tentando o que pode e o que não pode; os fluxos que atravessam módulos (conta nova, upgrade, campanha, admin aprova, outro pesquisador comenta, o dono endossa...); anotar tudo, até o que "funciona mas confunde".
@@ -254,7 +254,11 @@ A regra do banco diz que o autor oculta o próprio comentário e só a moderaç�
 
 `sessao` tem regra de acesso aberta (`USING (true)`) de propósito: login e renovação acontecem antes de haver alguém logado. Quem decide de quem é a sessão é o Nest (confere o segredo do token e o dono). Na simulação, qualquer papel encerra a sessão de qualquer conta direto no banco. Não é brecha pela API hoje; fica anotado como defesa em profundidade a pensar no deploy.
 
-#### 🟡 Planejado (29-09-2026, "talvez amanhã"): `NOT NULL` nas colunas com valor padrão que aceitam vazio
+#### ✅ Feito (30-09-2026), falta colar o Grupo AD com o Nest parado: `NOT NULL` nas colunas com valor padrão que aceitam vazio
+
+**Resultado:** 39 colunas (as 34 da suíte de tipos e mais 6 que o Nest ainda não usa), menos `contribuicao.token_sessao`, que fica. Supabase conferido só lendo: nenhuma linha vazia. Suítes PGlite verdes nos dois modos (mais a suíte 28 nova), simulação da colagem dupla com linhas vazias de propósito, compilador do Nest, e ponta a ponta no banco local (roteiros `_aud-f1` e `_aud-f2`: conta nova, senha, upgrade, campanha com orçamento e cronograma, envio, catálogos, papéis, suspensão, fila aprovar/rejeitar, exclusões; tudo passou). Detalhes em `DOCUMENTACAO_BD.md`, "Colunas com valor padrão não aceitam vazio".
+
+Plano original:
 
 34 colunas têm `DEFAULT` (ex.: `criado_em DEFAULT NOW()`, `ativo DEFAULT TRUE`), mas o banco aceita gravar vazio nelas; quem garante que nunca ficam vazias é o costume do código, não o banco. A lista sai da suíte de teste de conferência de tipos (aviso "nulidade diferente"). **Nem todas devem mudar**: `contribuicao.token_sessao`, por exemplo, fica vazia de propósito quando a contribuição não é anônima. Plano pedido pelo Lucas:
 1. **Auditoria no código inteiro:** coluna por coluna, onde é gravada e lida (SQL, Nest, React), e a lista de quais mudam e quais ficam, com o motivo, para o Lucas aprovar.
