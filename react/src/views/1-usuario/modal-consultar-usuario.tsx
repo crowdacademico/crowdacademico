@@ -68,7 +68,8 @@ export function ModalConsultarUsuario({ auth, idUsuario, aoFechar }: ModalConsul
     <ModalFicha
       // `carregando`: ModalFicha já esconde título/avatar sozinho enquanto `usuario` não chega, mostrando
       // "Carregando..." no lugar (ver comentário completo em modal-ficha.tsx).
-      carregando={!usuario}
+      // Espera também os aceites do Termo, que vêm numa busca à parte: senão a janela crescia depois de aparecer.
+      carregando={!usuario || termosAceitos === null}
       titulo={usuario?.nome ?? ''}
       subtitulo={usuario?.email}
       avatar={

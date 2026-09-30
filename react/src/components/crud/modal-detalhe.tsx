@@ -47,7 +47,7 @@ export function ModalDetalhe({
   useFocoPreso(janelaRef, true, aoFechar);
   return (
     <div
-      className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/40"
+      className="fixed inset-0 z-[200] flex items-start justify-center px-4 pt-[5vh] pb-4 bg-black/40"
       onClick={aoFechar}
       // Clique no FUNDO não tira o foco da janela (ver o mesmo trecho em modal-ficha.tsx).
       onMouseDown={(evento) => {

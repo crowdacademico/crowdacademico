@@ -180,6 +180,7 @@ export function ModalCriarCampanha({
 
   return (
     <ModalFicha
+      variasTelas
       titulo="Criar Campanha"
       // Um clique sem querer no fundo escurecido derrubaria o passo a passo; só fecha por Cancelar ou pelo X.
       // Depois da etapa 1 a campanha já está salva como rascunho: fechar não perde nada.

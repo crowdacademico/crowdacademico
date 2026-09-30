@@ -215,6 +215,7 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
 
   return (
     <ModalFicha
+      variasTelas
       // `carregando`: mesmo mecanismo de ModalConsultarUsuario.
       carregando={!usuario}
       titulo={base.nome}
