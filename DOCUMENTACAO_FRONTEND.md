@@ -794,6 +794,11 @@ Regras no banco em `DOCUMENTACAO_BD.md` [05-K-2-B]; aqui o que a tela faz. Rótu
 - `services/12-campanha/hook/use-regras-campanha.ts`: meta mínima, prazo mínimo/máximo, mínimo de itens e de marcos, lidos de `configuracoes` num lugar só (também usado pela fila de aprovação); `util/prazo-campanha.util.ts`: `hojeISO` e `duracaoEmDias`.
 - `campanhaApi` ganhou `criar`, `criarParaOutro`, `atualizar`, `enviar` e `deslizarDatas`.
 
+📌 **Comentários recebidos no Consultar do dono (30-09-2026).**
+- **Decisão:** o Consultar de Minhas Campanhas (`comoDono`) mostra a seção "Comentários recebidos" (`views/12-campanha/secao-comentarios-recebidos.tsx`): autor, data e texto, Endossar/Remover endosso (contador "N de limite endossados", limite de `configuracoes`), Excluir e Excluir e bloquear (`components/crud/modal-excluir-comentario.tsx`). A API é `services/17-comentario/` (`comentarioApi`, `ComentarioResponse`), a mesma que o T3 usa; `GET /comentario` passou a trazer `nomePesquisador`.
+- **Motivo:** o RF-093 põe os comentários no painel privado do criador, e o painel do pesquisador hoje é Minhas Campanhas; a `GenericTable` só tem as três ações fixas, e o Consultar já é onde o dono abre a campanha.
+- **Caso-limite aceito:** o Consultar da lista geral (Campanhas) não mostra a seção. Campanha que nunca foi ao ar só mostra a seção se tiver algum comentário (RF-098).
+
 📌 **T4 continua registrando tudo.** `useAuthFetchRegistrado` (`services/campo-testes/hook/use-chamada-registrada.ts`) é um `authFetch` que registra cada chamada no T4. O T2 o entrega às peças compartilhadas, que usam as APIs normais sem saber que o T4 existe.
 
 ### Trabalha sobre dados reais, com uma trava explícita

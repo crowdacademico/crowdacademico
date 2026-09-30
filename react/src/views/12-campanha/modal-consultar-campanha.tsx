@@ -10,12 +10,15 @@ import {
 import { useBuscar } from '../../services/constant/hook/use-buscar';
 import { formatarData, formatarDataHora, formatarMoeda } from '../../services/constant/util/formatacao.util';
 import { MensagemErro } from '../../components/crud/mensagem-erro';
+import { SecaoComentariosRecebidos } from './secao-comentarios-recebidos';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { HistoricoRejeicaoResponse } from '../../services/12-campanha/type/campanha.type';
 
 interface ModalConsultarCampanhaProps {
   auth: Pick<UseAuthReturn, 'authFetch'>;
   idCampanha: number;
+  // Aberto pelo dono (Minhas Campanhas): mostra os comentários recebidos, com endossar e excluir.
+  comoDono?: boolean;
   aoFechar: () => void;
 }
 
@@ -24,7 +27,7 @@ interface ModalConsultarCampanhaProps {
 // é TRANSFORMADA para exibição (`status` vira rótulo em português, `metaFinanceira`/`valorBrutoArrecadado`
 // viram string já formatada em R$): usar a linha direto quebraria o badge de status e formataria moeda em cima
 // de moeda já formatada. `useBuscar` pega o dado cru de verdade.
-export function ModalConsultarCampanha({ auth, idCampanha, aoFechar }: ModalConsultarCampanhaProps) {
+export function ModalConsultarCampanha({ auth, idCampanha, comoDono = false, aoFechar }: ModalConsultarCampanhaProps) {
   const { dado: campanha, carregando, erro } = useBuscar(
     () => campanhaApi.buscar(auth.authFetch, String(idCampanha)),
     [idCampanha],
@@ -127,6 +130,12 @@ export function ModalConsultarCampanha({ auth, idCampanha, aoFechar }: ModalCons
               />
             </SecaoFicha>
           </div>
+
+          {comoDono && (
+            <div className="lg:col-span-3">
+              <SecaoComentariosRecebidos auth={auth} idCampanha={campanha.idCampanha} publicada={campanha.aprovadoEm !== null} />
+            </div>
+          )}
         </div>
       )}
     </ModalFicha>

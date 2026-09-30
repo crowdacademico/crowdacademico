@@ -26,7 +26,7 @@ interface MinhaCampanhaLinha extends Omit<CampanhaResponse, 'status'> {
 // suas). Criar abre o passo a passo (Dados, Orçamento, Cronograma, Enviar); Alterar serve para completar um
 // rascunho, ajustar orçamento/cronograma enquanto não foi aprovada, e corrigir e reenviar uma rejeitada; depois
 // de aprovada, os campos travados aparecem desabilitados. Excluir só vale para rascunho (o modal explica quando
-// não pode).
+// não pode). Consultar mostra também os comentários recebidos (endossar, excluir, bloquear).
 //
 // Criar só aparece para quem tem perfil de pesquisador ATIVO (a mesma condição de pol_campanha_insert, 04):
 // para os outros, a tela explica o porquê em vez de oferecer um botão que o banco recusaria.
@@ -151,7 +151,7 @@ export function MinhasCampanhas({ auth }: PropsPagina) {
       )}
 
       {consultando && (
-        <ModalConsultarCampanha auth={auth} idCampanha={consultando.idCampanha} aoFechar={fecharConsultando} />
+        <ModalConsultarCampanha auth={auth} idCampanha={consultando.idCampanha} comoDono aoFechar={fecharConsultando} />
       )}
 
       {excluindo && (

@@ -13,6 +13,8 @@ import { ComentarioResponse } from '../dto/response/comentario.response';
 // pol_comentario_select (04) já esconde comentário inativo/não-endossado
 // de quem não é dono/moderador. Além disso, o comentário bloqueado pelo dono
 // (inativo) some da lista dele; continua visível ao autor e à moderação.
+// O nome do autor vem por LEFT JOIN (RF-093), como em campanha.util.with-names.ts:
+// conta excluída deixa o comentário sem nome, não o esconde.
 @Injectable()
 export class ComentarioServiceFindAll {
   constructor(private readonly database: DatabaseService) {}
@@ -23,12 +25,18 @@ export class ComentarioServiceFindAll {
     const query = this.database
       .getDb()
       .selectFrom('comentario')
-      .select(COMENTARIO_COLUNAS_SELECT)
-      .where('id_campanha', '=', filtro.idCampanha)
-      .where(
-        sql<boolean>`(ativo OR id_pesquisador = public.id_usuario_atual() OR public.tem_permissao('comentario_moderar'))`,
+      .leftJoin('usuario', 'usuario.id_usuario', 'comentario.id_pesquisador')
+      .select(
+        COMENTARIO_COLUNAS_SELECT.map(
+          (coluna) => `comentario.${coluna}` as const,
+        ),
       )
-      .orderBy('criado_em', 'desc');
+      .select('usuario.nome as nome_pesquisador')
+      .where('comentario.id_campanha', '=', filtro.idCampanha)
+      .where(
+        sql<boolean>`(comentario.ativo OR comentario.id_pesquisador = public.id_usuario_atual() OR public.tem_permissao('comentario_moderar'))`,
+      )
+      .orderBy('comentario.criado_em', 'desc');
 
     const resultado = await paginar(query, {
       pagina: filtro.pagina,

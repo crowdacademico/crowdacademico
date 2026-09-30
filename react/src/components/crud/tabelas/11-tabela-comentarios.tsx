@@ -1,24 +1,13 @@
-// Comentários de uma campanha (autor, texto e posição do endosso), com Endossar/Remover endosso e Excluir para o
-// dono da campanha. Usada no Campo de Testes (T3, views/campo-testes/vida-campanha-ativa.tsx), que busca, endossa
-// e abre o modal de exclusão.
+// Comentários de uma campanha (autor, data, texto e posição do endosso), com Endossar/Remover endosso e Excluir para
+// o dono da campanha. Usada nos Comentários recebidos de Minhas Campanhas (views/12-campanha/
+// secao-comentarios-recebidos.tsx) e no Campo de Testes (T3, views/campo-testes/vida-campanha-ativa.tsx).
 
 import { AcaoLinha } from '../acao-linha';
-
-// `comentario` ainda não tem type/api formal em services/: formato do DTO do Nest.
-export interface Comentario {
-  idComentario: number;
-  idCampanha: number;
-  // `null`: o autor pode não existir mais (conta excluída/anonimizada).
-  idPesquisador: number | null;
-  conteudo: string;
-  endossado: boolean;
-  ativo: boolean;
-  ordemEndosso: number | null;
-}
+import { formatarData } from '../../../services/constant/util/formatacao.util';
+import type { ComentarioResponse as Comentario } from '../../../services/17-comentario/type/comentario.type';
 
 interface TabelaComentariosProps {
   comentarios: Comentario[];
-  nomeDe: (idUsuario: number | null) => string;
   // Só o dono da campanha endossa e exclui: sem isso a coluna Ações nem aparece.
   ehDono: boolean;
   // Endossar fica indisponível (com o motivo na dica) quando os endossos ativos já chegaram ao limite (configuracoes).
@@ -27,13 +16,14 @@ interface TabelaComentariosProps {
   aoExcluir: (comentario: Comentario) => void;
 }
 
-export function TabelaComentarios({ comentarios, nomeDe, ehDono, limiteAtingido, aoAlternarEndosso, aoExcluir }: TabelaComentariosProps) {
+export function TabelaComentarios({ comentarios, ehDono, limiteAtingido, aoAlternarEndosso, aoExcluir }: TabelaComentariosProps) {
   return (
     <div className="crud-tabela__wrapper">
       <table className="crud-tabela mb-4">
         <thead>
           <tr>
             <th>Autor</th>
+            <th>Data</th>
             <th>Comentário</th>
             <th>Endosso</th>
             {ehDono && <th>Ações</th>}
@@ -42,7 +32,8 @@ export function TabelaComentarios({ comentarios, nomeDe, ehDono, limiteAtingido,
         <tbody>
           {comentarios.map((item) => (
             <tr key={item.idComentario}>
-              <td>{nomeDe(item.idPesquisador)}</td>
+              <td>{item.nomePesquisador ?? 'Pesquisador removido'}</td>
+              <td>{formatarData(item.criadoEm)}</td>
               <td>{item.conteudo}</td>
               <td>{item.endossado ? <span className="badge badge-sucesso">#{item.ordemEndosso}</span> : '-'}</td>
               {ehDono && (

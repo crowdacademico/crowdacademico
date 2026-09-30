@@ -13,14 +13,15 @@ import { RegistroChamadas } from './registro-chamadas';
 import { TabelaAtualizacoes } from '../../components/crud/tabelas/10-tabela-atualizacoes';
 import type { Atualizacao } from '../../components/crud/tabelas/10-tabela-atualizacoes';
 import { TabelaComentarios } from '../../components/crud/tabelas/11-tabela-comentarios';
-import type { Comentario } from '../../components/crud/tabelas/11-tabela-comentarios';
+import type { ComentarioResponse as Comentario } from '../../services/17-comentario/type/comentario.type';
 import { ModalExcluirComentario } from '../../components/crud/modal-excluir-comentario';
+import { comentarioApi } from '../../services/17-comentario/api/comentario.api';
 import { CaixaBuscaSugestoes } from '../../components/input/caixa-busca-sugestoes';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { CampanhaResponse } from '../../services/12-campanha/type/campanha.type';
 import type { ResultadoPaginado } from '../../services/constant/type/paginacao.type';
 
-// `atualizacao-campanha`/`comentario`/`seguir-campanha` não têm type/
+// `atualizacao-campanha`/`seguir-campanha` não têm type/
 // formal ainda - só o Campo de Testes fala com eles, via authFetch cru +
 // tratarResposta<T>/chamarERegistrar<T>. Shape inferido do próprio uso
 // real aqui.
@@ -101,10 +102,9 @@ export function VidaCampanhaAtiva({ auth }: PropsPagina) {
       .then(tratarResposta<ResultadoPaginado<Atualizacao>>)
       .then((r) => setAtualizacoes(r.dados))
       .catch(() => {});
-    auth
-      .authFetch(`/comentario?idCampanha=${id}&tamanho=50`)
-      .then(tratarResposta<ResultadoPaginado<Comentario>>)
-      .then((r) => setComentarios(r.dados))
+    comentarioApi
+      .listar(auth.authFetch, id)
+      .then(setComentarios)
       .catch(() => {});
     // GET /seguir-campanha só devolve "minha lista" (pol_seg_campanha_select,
     // 04) - sem Elenco, só dá pra saber se A PRÓPRIA sessão logada segue.
@@ -270,7 +270,6 @@ export function VidaCampanhaAtiva({ auth }: PropsPagina) {
           </p>
           <TabelaComentarios
             comentarios={comentarios}
-            nomeDe={nomeDe}
             ehDono={donoEhSessaoReal}
             limiteAtingido={endossosAtivos >= LIMITE_ENDOSSOS}
             aoAlternarEndosso={(item) => void alternarEndosso(item.idComentario, item.endossado)}
@@ -278,7 +277,7 @@ export function VidaCampanhaAtiva({ auth }: PropsPagina) {
           />
           {excluindoComentario && (
             <ModalExcluirComentario
-              autor={nomeDe(excluindoComentario.idPesquisador)}
+              autor={excluindoComentario.nomePesquisador ?? 'Pesquisador removido'}
               conteudo={excluindoComentario.conteudo}
               excluir={(bloquear) => excluirComentario(excluindoComentario.idComentario, bloquear)}
               aoFechar={() => setExcluindoComentario(null)}
