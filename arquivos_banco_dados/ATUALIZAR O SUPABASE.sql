@@ -512,3 +512,29 @@ ALTER TABLE public.usuario
 UPDATE public.usuario_termo SET aceito_em = NOW() WHERE aceito_em IS NULL;
 ALTER TABLE public.usuario_termo
     ALTER COLUMN aceito_em SET NOT NULL;
+
+-- ============================================================================
+-- GRUPO AE (30-09-2026) - o dono da campanha exclui comentário recebido. IDEMPOTENTE (pode colar de novo).
+-- *** PARE O NEST ANTES DE COLAR *** (DROP/CREATE POLICY: com o Nest ligado pode travar esperando as conexões dele).
+-- Religue o Nest depois do "Success".
+--
+-- Em palavras simples: o dono da campanha passa a poder apagar de vez um comentário que recebeu (o autor pode
+-- comentar de novo). "Excluir e bloquear" já funcionava: deixa o comentário inativo, guardado, e o autor não
+-- comenta mais naquela campanha. Um comentário bloqueado não pode ser apagado, para o bloqueio não se desfazer.
+--
+-- O que muda:
+--   1. GRANT DELETE em comentario para o app_nestjs.
+--   2. Regra de acesso pol_comentario_delete: só o dono da campanha, e só comentário ativo.
+-- ============================================================================
+
+GRANT DELETE ON comentario TO app_nestjs;
+
+DROP POLICY IF EXISTS pol_comentario_delete ON comentario;
+CREATE POLICY pol_comentario_delete ON comentario FOR DELETE TO app_nestjs USING (
+    ativo = TRUE
+    AND EXISTS (
+        SELECT 1 FROM campanha
+        WHERE id_campanha = comentario.id_campanha
+          AND id_usuario = (SELECT public.id_usuario_atual())
+    )
+);

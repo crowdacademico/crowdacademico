@@ -1,5 +1,5 @@
 
-**Contagem do inventário** (`grep -c` nos `.sql`, para conferir contra as queries acima; **evite repetir estes números em outros documentos**, eles envelhecem, cite a seção "Como conferir este inventário"): **42 tabelas**, **121 policies**, **85 triggers** em `05` (81 comuns e 4 `CONSTRAINT TRIGGER`), **110 funções** (79 em `05`, 29 em `03`, 1 em `08`, 1 em `01`), **51 índices** em `02`, e **87 códigos de ERRCODE** customizado (tabelas em `DOCUMENTACAO_ERRCODE.md`).
+**Contagem do inventário** (`grep -c` nos `.sql`, para conferir contra as queries acima; **evite repetir estes números em outros documentos**, eles envelhecem, cite a seção "Como conferir este inventário"): **42 tabelas**, **122 policies**, **85 triggers** em `05` (81 comuns e 4 `CONSTRAINT TRIGGER`), **110 funções** (79 em `05`, 29 em `03`, 1 em `08`, 1 em `01`), **51 índices** em `02`, e **87 códigos de ERRCODE** customizado (tabelas em `DOCUMENTACAO_ERRCODE.md`).
 
 **Comentários dos `.sql`.** Cabeçalho curto (`Função`, `Assinatura`, `Bloco` e uma `Regra` objetiva, sem datas nem história) e, dentro de função, trigger e policy, só o comentário que explica uma regra difícil. Não há ponteiro para arquivo fora do git: o porquê longo mora aqui, na seção `[NN-Y]` correspondente, e a história (o que mudou, quando, por quê) fica no arquivo de histórico local, que não é versionado. Os comentários do `07` explicam dado de teste; o `ATUALIZAR O SUPABASE.sql` é o registro datado de cada patch e por isso mantém a narrativa.
 # 📚 Documentação Técnica do Banco de Dados - CrowdAcadêmico
@@ -1305,6 +1305,16 @@ Nada a implementar; `titulo_academico` e `meio_pagamento` ficam anotados como ca
 - **Decisão:** as 39 colunas ganharam `NOT NULL` no `CREATE TABLE` do 01; o Grupo AD do ATUALIZAR preenche qualquer linha vazia com o valor padrão e depois põe a trava. A suíte PGlite 28 falha se aparecer coluna nova com `DEFAULT` que aceite vazio.
 - **Motivo:** o padrão só vale quando a coluna não é informada; um `null` mandado por engano ficava gravado em silêncio (ex.: valor arrecadado vazio some das somas). É o padrão de mercado (Django e Rails já criam a coluna assim). O Nest devolve 400 "Falta preencher um campo obrigatório" com o campo marcado quando isso acontece.
 - **Caso-limite aceito:** `contribuicao.token_sessao` (chave do doador anônimo) continua aceitando vazio, para poder ficar sem chave quando a contribuição não é anônima ou ser apagada sem apagar a doação.
+
+
+## Excluir e bloquear comentário recebido (30-09-2026)
+
+**Em palavras simples:** comentário não é rede social: só o dono da campanha (e o autor e a moderação) vê o comentário, e o público só vê os que o dono endossa. O dono agora pode excluir um comentário que recebeu, de duas formas, num modal só: **Excluir** (apaga de vez; o autor pode comentar de novo) ou **Excluir e bloquear** (para ofensa, ameaça ou spam: o comentário fica guardado e o autor não comenta mais naquela campanha). Ninguém é avisado. Cabe no RF-093 ("gerenciar esses comentários sem que os autores sejam notificados"), sem mudança de requisito.
+
+📌 **Bloquear reaproveita o "um comentário por campanha", sem tabela nova.**
+- **Decisão:** "Excluir" é `DELETE` (`pol_comentario_delete`: só o dono da campanha, e só comentário ativo; `GRANT DELETE` no 06). "Excluir e bloquear" é o `UPDATE ativo = FALSE` que já existia: a linha guardada ocupa a vaga de `UK_COMENTARIO_CAMPANHA_PESQUISADOR`, e `fn_bloqueia_reversao_moderacao_comentario` impede o autor de reativar. A lista (`GET /comentario`) esconde do dono o comentário inativo; o autor e a moderação continuam vendo. Grupo AE do ATUALIZAR; suíte PGlite 29.
+- **Motivo:** decisão do Lucas: sem denúncia nem bloqueio, não guardar lixo; bloqueio só naquela campanha (o comentário é preso à campanha) e nunca automático, porque nem todo comentário excluído é ofensivo.
+- **Caso-limite aceito:** o comentário bloqueado não pode ser apagado depois (desfaria o bloqueio), e não existe "desbloquear" pela tela. Denunciar o comentário à moderação fica para o módulo `19-denuncia` (a denúncia contra o perfil do autor já está prevista no RF-107).
 
 
 ## Como conferir este inventário

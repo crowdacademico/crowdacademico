@@ -1,5 +1,6 @@
-// Comentários de uma campanha (autor, texto e posição do endosso), com Endossar/Remover endosso para o dono da
-// campanha. Usada no Campo de Testes (T3, views/campo-testes/vida-campanha-ativa.tsx), que busca e endossa.
+// Comentários de uma campanha (autor, texto e posição do endosso), com Endossar/Remover endosso e Excluir para o
+// dono da campanha. Usada no Campo de Testes (T3, views/campo-testes/vida-campanha-ativa.tsx), que busca, endossa
+// e abre o modal de exclusão.
 
 import { AcaoLinha } from '../acao-linha';
 
@@ -18,14 +19,15 @@ export interface Comentario {
 interface TabelaComentariosProps {
   comentarios: Comentario[];
   nomeDe: (idUsuario: number | null) => string;
-  // Só o dono da campanha endossa: sem isso a coluna Ações nem aparece.
-  podeEndossar: boolean;
+  // Só o dono da campanha endossa e exclui: sem isso a coluna Ações nem aparece.
+  ehDono: boolean;
   // Endossar fica indisponível (com o motivo na dica) quando os endossos ativos já chegaram ao limite (configuracoes).
   limiteAtingido: boolean;
   aoAlternarEndosso: (comentario: Comentario) => void;
+  aoExcluir: (comentario: Comentario) => void;
 }
 
-export function TabelaComentarios({ comentarios, nomeDe, podeEndossar, limiteAtingido, aoAlternarEndosso }: TabelaComentariosProps) {
+export function TabelaComentarios({ comentarios, nomeDe, ehDono, limiteAtingido, aoAlternarEndosso, aoExcluir }: TabelaComentariosProps) {
   return (
     <div className="crud-tabela__wrapper">
       <table className="crud-tabela mb-4">
@@ -34,7 +36,7 @@ export function TabelaComentarios({ comentarios, nomeDe, podeEndossar, limiteAti
             <th>Autor</th>
             <th>Comentário</th>
             <th>Endosso</th>
-            {podeEndossar && <th>Ações</th>}
+            {ehDono && <th>Ações</th>}
           </tr>
         </thead>
         <tbody>
@@ -43,18 +45,21 @@ export function TabelaComentarios({ comentarios, nomeDe, podeEndossar, limiteAti
               <td>{nomeDe(item.idPesquisador)}</td>
               <td>{item.conteudo}</td>
               <td>{item.endossado ? <span className="badge badge-sucesso">#{item.ordemEndosso}</span> : '-'}</td>
-              {podeEndossar && (
+              {ehDono && (
                 <td>
-                  <AcaoLinha
-                    rotulo={item.endossado ? 'Remover endosso' : 'Endossar'}
-                    icone={item.endossado ? 'fa-heart-crack' : 'fa-heart'}
-                    onClick={() => aoAlternarEndosso(item)}
-                    indisponivel={
-                      !item.endossado && limiteAtingido
-                        ? 'O limite de endossos ativos desta campanha já foi atingido. Remova um endosso para endossar outro comentário.'
-                        : undefined
-                    }
-                  />
+                  <div className="crud-tabela__acoes">
+                    <AcaoLinha
+                      rotulo={item.endossado ? 'Remover endosso' : 'Endossar'}
+                      icone={item.endossado ? 'fa-heart-crack' : 'fa-heart'}
+                      onClick={() => aoAlternarEndosso(item)}
+                      indisponivel={
+                        !item.endossado && limiteAtingido
+                          ? 'O limite de endossos ativos desta campanha já foi atingido. Remova um endosso para endossar outro comentário.'
+                          : undefined
+                      }
+                    />
+                    <AcaoLinha rotulo="Excluir" icone="fa-trash" variante="excluir" onClick={() => aoExcluir(item)} />
+                  </div>
                 </td>
               )}
             </tr>

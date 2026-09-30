@@ -14,6 +14,7 @@ import { TabelaAtualizacoes } from '../../components/crud/tabelas/10-tabela-atua
 import type { Atualizacao } from '../../components/crud/tabelas/10-tabela-atualizacoes';
 import { TabelaComentarios } from '../../components/crud/tabelas/11-tabela-comentarios';
 import type { Comentario } from '../../components/crud/tabelas/11-tabela-comentarios';
+import { ModalExcluirComentario } from '../../components/crud/modal-excluir-comentario';
 import { CaixaBuscaSugestoes } from '../../components/input/caixa-busca-sugestoes';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { CampanhaResponse } from '../../services/12-campanha/type/campanha.type';
@@ -58,6 +59,7 @@ export function VidaCampanhaAtiva({ auth }: PropsPagina) {
   // depois, numa ação separada (ver `alternarEndosso`, abaixo). O banco bloqueia o autoendosso
   // incondicionalmente (trg_comentario_ignora_endosso_criacao, 05_regras_negocio.sql, RF-089).
   const [novoComentario, setNovoComentario] = useState({ conteudo: '' });
+  const [excluindoComentario, setExcluindoComentario] = useState<Comentario | null>(null);
 
   const [euSigo, setEuSigo] = useState(false);
 
@@ -160,6 +162,16 @@ export function VidaCampanhaAtiva({ auth }: PropsPagina) {
     recarregarTudo(campanhaFoco);
   };
 
+  // Excluir apaga de vez (DELETE); excluir e bloquear deixa inativo (PATCH): o comentário fica guardado e ocupa a
+  // vaga de um comentário por campanha. Sem .catch: o erro aparece no próprio modal.
+  const excluirComentario = async (idComentario: number, bloquear: boolean) => {
+    if (bloquear) {
+      await chamarERegistrar<void>(`/comentario/${idComentario}`, { method: 'PATCH', body: JSON.stringify({ ativo: false }) });
+    } else {
+      await chamarERegistrar<void>(`/comentario/${idComentario}`, { method: 'DELETE' });
+    }
+  };
+
   const alternarSeguir = async () => {
     if (euSigo) {
       await chamarERegistrar<void>(`/seguir-campanha/${campanhaFoco}`, { method: 'DELETE' }).catch(() => {});
@@ -252,17 +264,27 @@ export function VidaCampanhaAtiva({ auth }: PropsPagina) {
             </button>
           </div>
           <p className="texto-fraco text-xs mb-2">
-            Comenta sempre a sessão logada - o banco bloqueia comentário na própria campanha. Endossar é ação
-            separada, só do dono da campanha (RF-089) - sem endossar aqui, só é possível testando logado como o
-            próprio dono.
+            Comenta sempre a sessão logada - o banco bloqueia comentário na própria campanha. Endossar e excluir
+            são ações separadas, só do dono da campanha (RF-089) - só é possível testando logado como o próprio
+            dono.
           </p>
           <TabelaComentarios
             comentarios={comentarios}
             nomeDe={nomeDe}
-            podeEndossar={donoEhSessaoReal}
+            ehDono={donoEhSessaoReal}
             limiteAtingido={endossosAtivos >= LIMITE_ENDOSSOS}
             aoAlternarEndosso={(item) => void alternarEndosso(item.idComentario, item.endossado)}
+            aoExcluir={setExcluindoComentario}
           />
+          {excluindoComentario && (
+            <ModalExcluirComentario
+              autor={nomeDe(excluindoComentario.idPesquisador)}
+              conteudo={excluindoComentario.conteudo}
+              excluir={(bloquear) => excluirComentario(excluindoComentario.idComentario, bloquear)}
+              aoFechar={() => setExcluindoComentario(null)}
+              aoExcluido={() => recarregarTudo(campanhaFoco)}
+            />
+          )}
 
           <div className="border-t borda-padrao my-8"></div>
 

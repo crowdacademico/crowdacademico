@@ -482,6 +482,17 @@ CREATE POLICY pol_comentario_update ON comentario FOR UPDATE TO app_nestjs USING
           AND id_usuario = (SELECT public.id_usuario_atual())
     )
 );
+-- Excluir de vez: só o dono da campanha, e só comentário ativo. "Excluir e bloquear" deixa o comentário inativo
+-- (fica guardado e ocupa a vaga de um comentário por campanha); apagá-lo depois desfaria o bloqueio.
+DROP POLICY IF EXISTS pol_comentario_delete ON comentario;
+CREATE POLICY pol_comentario_delete ON comentario FOR DELETE TO app_nestjs USING (
+    ativo = TRUE
+    AND EXISTS (
+        SELECT 1 FROM campanha
+        WHERE id_campanha = comentario.id_campanha
+          AND id_usuario = (SELECT public.id_usuario_atual())
+    )
+);
 
 DROP POLICY IF EXISTS pol_denuncia_select ON denuncia;
 CREATE POLICY pol_denuncia_select ON denuncia FOR SELECT TO app_nestjs USING (id_usuario = (SELECT public.id_usuario_atual()) OR (SELECT public.tem_permissao('denuncia_responder')));

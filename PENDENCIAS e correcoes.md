@@ -222,7 +222,7 @@ Lucas decide depois se ajudam o CrowdAcadêmico. Contexto em `informacoes/ROTEIR
 - **Ainda não feito:**
   - o item 13 (limpar o Supabase, precisa de autorização);
   - o envio de arquivo (grava no Storage pessoal).
-- **`NOT NULL` feito (30-09-2026): falta colar o Grupo AD, com o Nest PARADO.**
+- **`NOT NULL` feito (30-09-2026); Grupo AD colado no Supabase (30-09-2026).**
 
 
 **O que é:** não só rodar os testes automáticos. É usar o sistema de verdade, módulo por módulo, como uma pessoa usaria, com cada tipo de conta (admin, pesquisador, conta comum, suspensa), passando por todas as telas e ações, inclusive os caminhos de erro. Cada módulo de hoje: usuário, papéis, auth, termos, pesquisador, links, catálogos, configurações, campanha, orçamento, cronograma, atualização, seguir, comentário, histórico de rejeição, arquivos, log, dashboard e Campo de Testes. Criar, consultar, alterar e excluir pela tela conferindo o que foi gravado; cada papel tentando o que pode e o que não pode; os fluxos que atravessam módulos (conta nova, upgrade, campanha, admin aprova, outro pesquisador comenta, o dono endossa...); anotar tudo, até o que "funciona mas confunde".
@@ -246,15 +246,18 @@ Lucas decide depois se ajudam o CrowdAcadêmico. Contexto em `informacoes/ROTEIR
 14. ~~Padrões que o projeto proíbe e que escaparam (duas consultas simultâneas na mesma conexão).~~ **Feito (29-09-2026, `emSequencia`).**
 15. Documentação que não bate com a tela.
 
-#### 🟡 Decisão do Lucas (30-09-2026, achado da simulação do modo produção): o dono da campanha pode ocultar o comentário de outro pesquisador
+#### ✅ Feito (30-09-2026), Grupo AE colado: excluir e bloquear comentário recebido
 
-A regra do banco diz que o autor oculta o próprio comentário e só a moderação reverte. Mas a regra de acesso deixa o dono da campanha alterar os comentários dela (é o que permite endossar), e nada impede que ele mude também o `ativo`: na simulação, o dono ocultou o comentário de outra pessoa. Em plataforma de pesquisa, isso deixaria o dono esconder a crítica de um colega. Opções: (A) o dono só endossa, e ocultar fica com o autor e a moderação (uma trigger pequena); (B) o dono pode ocultar na própria campanha, como o YouTube deixa o dono do canal. Recomendação: A, porque o comentário aqui é avaliação entre pesquisadores, não conversa de fã.
+**Em palavras simples:** comentário não é rede social: só o dono da campanha (e o autor e a moderação) vê o comentário, e o público só vê os endossados. O dono agora exclui um comentário recebido num modal com duas saídas: **Excluir** (apaga de vez; o autor pode comentar de novo) e **Excluir e bloquear** (fica guardado e o autor não comenta mais naquela campanha). Ninguém é avisado. Sem mudança de requisito (cabe no RF-093) e sem tabela nova: o bloqueio reaproveita a regra de um comentário por campanha. Feito no banco (Grupo AE), no Nest (`DELETE /comentario/:id`) e na tela (T3 do Campo de Testes, reaproveitável no painel do pesquisador). Testado: suíte PGlite 29, simulação da colagem, ponta a ponta `_aud-g-excluir-comentario.mjs`. Detalhes em `DOCUMENTACAO_BD.md`, "Excluir e bloquear comentário recebido".
+
+- **Falta:** denunciar o comentário à moderação, quando o módulo `19-denuncia` existir (denúncia contra o perfil do autor, já prevista no RF-107; o comentário denunciado fica guardado).
+- **Roteiro `rotas-sem-login.mjs`:** a rota nova muda a contagem de 119 para 120; regravar a referência na próxima rodada.
 
 #### 🟡 Anotado (30-09-2026): sessões sem regra de acesso por dono
 
 `sessao` tem regra de acesso aberta (`USING (true)`) de propósito: login e renovação acontecem antes de haver alguém logado. Quem decide de quem é a sessão é o Nest (confere o segredo do token e o dono). Na simulação, qualquer papel encerra a sessão de qualquer conta direto no banco. Não é brecha pela API hoje; fica anotado como defesa em profundidade a pensar no deploy.
 
-#### ✅ Feito (30-09-2026), falta colar o Grupo AD com o Nest parado: `NOT NULL` nas colunas com valor padrão que aceitam vazio
+#### ✅ Feito (30-09-2026), Grupo AD colado: `NOT NULL` nas colunas com valor padrão que aceitam vazio
 
 **Resultado:** 39 colunas (as 34 da suíte de tipos e mais 6 que o Nest ainda não usa), menos `contribuicao.token_sessao`, que fica. Supabase conferido só lendo: nenhuma linha vazia. Suítes PGlite verdes nos dois modos (mais a suíte 28 nova), simulação da colagem dupla com linhas vazias de propósito, compilador do Nest, e ponta a ponta no banco local (roteiros `_aud-f1` e `_aud-f2`: conta nova, senha, upgrade, campanha com orçamento e cronograma, envio, catálogos, papéis, suspensão, fila aprovar/rejeitar, exclusões; tudo passou). Detalhes em `DOCUMENTACAO_BD.md`, "Colunas com valor padrão não aceitam vazio".
 

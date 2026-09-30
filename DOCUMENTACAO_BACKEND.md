@@ -1104,6 +1104,7 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | pub | GET | `/comentario` |
 | AUTH | POST | `/comentario` |
 | AUTH | PATCH | `/comentario/:id` |
+| AUTH | DELETE | `/comentario/:id` |
 | AUTH | GET · POST | `/seguir-campanha` |
 | AUTH | DELETE | `/seguir-campanha/:idCampanha` |
 | **Arquivo** | | |
