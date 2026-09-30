@@ -11,7 +11,7 @@ interface EscoposTipoLinkProps {
 }
 
 // "Onde este tipo pode ser usado", igual em Criar e Alterar tipo de link. Pelo menos um precisa ficar marcado
-// (CK_TIPO_LINK_ALGUM_ESCOPO no banco); o aviso aparece aqui, e cada tela também trava o botão de salvar.
+// (CK_TIPO_LINK_ALGUM_ESCOPO no banco); o aviso aparece aqui, e cada tela não salva enquanto ele estiver visível.
 export function EscoposTipoLink({
   permitePerfil,
   permiteAtualizacao,

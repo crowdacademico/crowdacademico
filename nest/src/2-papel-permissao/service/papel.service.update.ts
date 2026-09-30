@@ -44,7 +44,11 @@ export class PapelServiceUpdate {
         );
       }
 
-      return { idPapel: linha.id_papel, nome: linha.nome };
+      return {
+        idPapel: linha.id_papel,
+        nome: linha.nome,
+        codigo: linha.codigo,
+      };
     } catch (erro) {
       if (
         erro instanceof NotFoundException ||

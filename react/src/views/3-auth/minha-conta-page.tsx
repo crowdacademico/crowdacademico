@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { MensagemErro } from '../../components/crud/mensagem-erro';
 import type { FormEvent } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router';
 import { AvatarUsuario } from '../../components/layout/avatar-usuario';
@@ -9,6 +10,7 @@ import { useToast } from '../../components/layout/toast/use-toast';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { confirmarSaida } from '../../components/crud/use-alteracao-nao-salva';
 import { Campo } from '../../components/input/campo';
+import { MedidorSenha } from '../../components/input/medidor-senha';
 import { ConfirmacaoDigitada } from '../../components/input/confirmacao-digitada';
 import { confirmacaoConfere } from '../../components/input/confirmacao-confere';
 import { sessaoApi } from '../../services/3-auth/api/sessao.api';
@@ -272,7 +274,7 @@ function AbaPerfil({ auth, aoVoltar }: AbaPerfilProps) {
       .catch(() => setPerfil(null));
   }, [auth.authFetch, auth.usuario]);
   const { mostrar } = useToast();
-  const { erro, reportarErro, limparErro } = useErroToast();
+  const { erro, reportarErro, limparErro } = useErroToast({ mostraTexto: true });
   const { ocupado: enviando, executar: executarEnviando } = useEnvio(reportarErro, limparErro);
 
   // Mesmo padrão de 3 estados de modal-usuario.tsx (botão "Remover foto"): `undefined` = nenhuma escolha nova
@@ -281,9 +283,11 @@ function AbaPerfil({ auth, aoVoltar }: AbaPerfilProps) {
   const [idImagemPerfilNovo, setIdImagemPerfilNovo] = useState<number | null | undefined>(undefined);
   const [avatarUrlNovo, setAvatarUrlNovo] = useState<string | null>(null);
 
-  const sujo =
-    (nome.trim() !== (auth.usuario?.nome ?? '') && nome.trim().length >= 2) ||
-    idImagemPerfilNovo !== undefined;
+  const sujo = nome.trim() !== (auth.usuario?.nome ?? '') || idImagemPerfilNovo !== undefined;
+  // Nome apagado conta como alteração: "Salvar" fica clicável e o erro aparece embaixo do campo.
+  const { erroDe, tentarEnviar } = useErrosFormulario(() => ({
+    nome: nome.trim().length < 2 && 'Nome precisa ter pelo menos 2 caracteres.',
+  }));
 
   const aoSalvar = async (evento: FormEvent<HTMLFormElement>) => {
     evento.preventDefault();
@@ -291,7 +295,7 @@ function AbaPerfil({ auth, aoVoltar }: AbaPerfilProps) {
     // formulário nem aparece nesse estado, mas o TypeScript não sabe
     // disso; guarda defensiva, nunca dispara na prática.
     const usuario = auth.usuario;
-    if (!usuario) {
+    if (!usuario || !tentarEnviar()) {
       return;
     }
     await executarEnviando(async () => {
@@ -318,7 +322,7 @@ function AbaPerfil({ auth, aoVoltar }: AbaPerfilProps) {
   return (
     <form id="form-minha-conta-perfil" onSubmit={aoSalvar}>
       <div className="px-6 sm:px-8 py-8">
-        {erro && <p className="text-sm texto-erro mb-6">{erro}</p>}
+        <MensagemErro texto={erro} className="text-sm texto-erro mb-6" />
 
         <div className="grid lg:grid-cols-3 gap-6 items-start">
           <div className="lg:col-span-2 space-y-6">
@@ -342,14 +346,14 @@ function AbaPerfil({ auth, aoVoltar }: AbaPerfilProps) {
             </SecaoFicha>
 
             <SecaoFicha titulo="Dados da conta" nivel={2}>
-              <Campo rotulo="Nome">
-                {({ atributos }) => (
+              <Campo rotulo="Nome" erro={erroDe('nome')}>
+                {({ atributos, classeErro }) => (
                   <input
                     {...atributos}
                     type="text"
                     value={nome}
                     onChange={(evento) => setNome(evento.target.value)}
-                    className="input-padrao"
+                    className={'input-padrao' + classeErro}
                   />
                 )}
               </Campo>
@@ -435,8 +439,11 @@ interface AbaSegurancaProps {
 function AbaSeguranca({ auth }: AbaSegurancaProps) {
   const [senhaAtual, setSenhaAtual] = useState('');
   const [novaSenha, setNovaSenha] = useState('');
+  // Mesmo formulário de senha do Cadastro: medidor de força, mostrar a senha e confirmar a nova.
+  const [confirmarSenha, setConfirmarSenha] = useState('');
+  const [mostrarSenha, setMostrarSenha] = useState(false);
   const { mostrar } = useToast();
-  const { erro, reportarErro, limparErro, errosCampo } = useErroToast();
+  const { erro, reportarErro, limparErro, errosCampo } = useErroToast({ mostraTexto: true });
   const { ocupado: encerrandoTodas, executar: executarEncerrandoTodas } = useEnvio(reportarErro);
   const { ocupado: enviandoSenha, executar: executarEnviandoSenha } = useEnvio(reportarErro, limparErro);
   // "Alterar senha" fica sempre clicável; faltando algo, o erro aparece embaixo do campo.
@@ -450,6 +457,7 @@ function AbaSeguranca({ auth }: AbaSegurancaProps) {
       novaSenha.length < 8
         ? 'A nova senha precisa ter pelo menos 8 caracteres.'
         : novaSenha === senhaAtual && 'A nova senha precisa ser diferente da senha atual.',
+    confirmar: confirmarSenha === '' ? 'Confirme a nova senha.' : confirmarSenha !== novaSenha && 'As senhas não são iguais.',
   }));
 
   const aoTrocarSenha = async (evento: FormEvent<HTMLFormElement>) => {
@@ -466,6 +474,7 @@ function AbaSeguranca({ auth }: AbaSegurancaProps) {
       mostrar('Senha alterada com sucesso.');
       setSenhaAtual('');
       setNovaSenha('');
+      setConfirmarSenha('');
       limparErrosSenha();
     });
   };
@@ -515,7 +524,7 @@ function AbaSeguranca({ auth }: AbaSegurancaProps) {
           Trocar senha
         </h2>
         <form onSubmit={aoTrocarSenha} className="space-y-4 max-w-md">
-          {erro && <p className="text-sm texto-erro">{erro}</p>}
+          <MensagemErro texto={erro} className="text-sm texto-erro" />
           {/* O erro do backend (senha atual incorreta) também cai embaixo do campo, não só no aviso. */}
           <Campo rotulo="Senha atual" erro={erroSenhaDe('atual') || errosCampo.senhaAtual}>
             {({ atributos, classeErro }) => (
@@ -531,11 +540,39 @@ function AbaSeguranca({ auth }: AbaSegurancaProps) {
           </Campo>
           <Campo rotulo="Nova senha" erro={erroSenhaDe('nova') || errosCampo.novaSenha}>
             {({ atributos, classeErro }) => (
+              <>
+                <div className="relative">
+                  <input
+                    {...atributos}
+                    type={mostrarSenha ? 'text' : 'password'}
+                    value={novaSenha}
+                    onChange={(evento) => setNovaSenha(evento.target.value)}
+                    className={'input-padrao pr-10' + classeErro}
+                    autoComplete="new-password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setMostrarSenha((atual) => !atual)}
+                    aria-label={mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 texto-fraco hover-texto-forte"
+                  >
+                    <i className={'fa-solid ' + (mostrarSenha ? 'fa-eye-slash' : 'fa-eye')}></i>
+                  </button>
+                </div>
+                <MedidorSenha senha={novaSenha} />
+              </>
+            )}
+          </Campo>
+          <Campo
+            rotulo="Confirmar nova senha"
+            erro={erroSenhaDe('confirmar') || (confirmarSenha.length > 0 && confirmarSenha !== novaSenha ? 'As senhas não são iguais.' : undefined)}
+          >
+            {({ atributos, classeErro }) => (
               <input
                 {...atributos}
-                type="password"
-                value={novaSenha}
-                onChange={(evento) => setNovaSenha(evento.target.value)}
+                type={mostrarSenha ? 'text' : 'password'}
+                value={confirmarSenha}
+                onChange={(evento) => setConfirmarSenha(evento.target.value)}
                 className={'input-padrao' + classeErro}
                 autoComplete="new-password"
               />
@@ -813,11 +850,11 @@ function AbaPrivacidade({ auth }: AbaPrivacidadeProps) {
   const navigate = useNavigate();
   const [confirmacao, setConfirmacao] = useState('');
   const [excluindo, setExcluindo] = useState(false);
-  const { erro, reportarErro, limparErro } = useErroToast();
+  const { erro, reportarErro, limparErro } = useErroToast({ mostraTexto: true });
 
   const confirmado = auth.usuario && confirmacaoConfere(confirmacao, auth.usuario.email);
   const { mostrar } = useToast();
-  const { erro: erroExportar, reportarErro: reportarErroExportar } = useErroToast();
+  const { erro: erroExportar, reportarErro: reportarErroExportar } = useErroToast({ mostraTexto: true });
   const { ocupado: exportando, executar: executarExportando } = useEnvio(reportarErroExportar);
 
   const aoExportar = async () => {
@@ -858,7 +895,7 @@ function AbaPrivacidade({ auth }: AbaPrivacidadeProps) {
             Direito de portabilidade (LGPD Art. 18): baixa um arquivo com os dados da sua conta. Uma vez por
             hora.
           </p>
-          {erroExportar && <p className="text-xs texto-erro font-bold mt-1">{erroExportar}</p>}
+          <MensagemErro texto={erroExportar} className="text-xs texto-erro font-bold mt-1" />
         </div>
         <button type="button" onClick={() => void aoExportar()} disabled={exportando} className="btn btn-secondary">
           {exportando ? 'Exportando...' : 'Exportar'}
@@ -871,7 +908,7 @@ function AbaPrivacidade({ auth }: AbaPrivacidadeProps) {
           Marca sua conta como excluída (exclusão lógica), o login para de funcionar na hora.
           Não existe desfazer pelo painel.
         </p>
-        {erro && <p className="text-xs texto-erro mb-2 font-bold">{erro}</p>}
+        <MensagemErro texto={erro} className="text-xs texto-erro mb-2 font-bold" />
         <div className="mb-3">
           <ConfirmacaoDigitada
             oQue="o e-mail"

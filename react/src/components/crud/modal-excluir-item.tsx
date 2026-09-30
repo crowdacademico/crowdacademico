@@ -34,7 +34,7 @@ export function ModalExcluirItem({
   aoExcluido,
 }: ModalExcluirItemProps) {
   const { mostrar } = useToast();
-  const { erro, reportarErro, limparErro } = useErroToast();
+  const { erro, reportarErro, limparErro } = useErroToast({ mostraTexto: true });
   const { ocupado: excluindo, executar } = useEnvio(reportarErro, limparErro);
 
   const excluir = () =>

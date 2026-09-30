@@ -22,7 +22,7 @@ interface ModalExcluirTermoUsoProps {
 // aceitou); nesses casos o backend recusa e a mensagem dele aparece aqui.
 export function ModalExcluirTermoUso({ auth, termo, aoFechar, aoExcluido }: ModalExcluirTermoUsoProps) {
   const { mostrar } = useToast();
-  const { erro, reportarErro, limparErro } = useErroToast();
+  const { erro, reportarErro, limparErro } = useErroToast({ mostraTexto: true });
   const [excluindo, setExcluindo] = useState(false);
 
   const excluir = async () => {

@@ -4,11 +4,12 @@ import { ModalFicha } from '../../components/crud/modal-ficha';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
 import {
-  ROTULO_STATUS_CAMPANHA,
+  ROTULO_MODELO_CAMPANHA, ROTULO_STATUS_CAMPANHA,
   classeBadgeStatusCampanha,
 } from '../../services/12-campanha/constants/status-campanha.constants';
 import { useBuscar } from '../../services/constant/hook/use-buscar';
-import { formatarDataHora, formatarMoeda } from '../../services/constant/util/formatacao.util';
+import { formatarData, formatarDataHora, formatarMoeda } from '../../services/constant/util/formatacao.util';
+import { MensagemErro } from '../../components/crud/mensagem-erro';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { HistoricoRejeicaoResponse } from '../../services/12-campanha/type/campanha.type';
 
@@ -49,7 +50,7 @@ export function ModalConsultarCampanha({ auth, idCampanha, aoFechar }: ModalCons
           <RodapeAcoes aoCancelar={aoFechar} rotuloCancelar="Fechar" />
         }
       >
-        <p className="texto-erro text-sm font-bold text-center">{erro}</p>
+        <MensagemErro texto={erro} />
       </ModalFicha>
     );
   }
@@ -66,7 +67,7 @@ export function ModalConsultarCampanha({ auth, idCampanha, aoFechar }: ModalCons
                 {ROTULO_STATUS_CAMPANHA[campanha.status]}
               </span>,
               <span key="modelo" className="badge badge-neutro">
-                {campanha.modelo}
+                {ROTULO_MODELO_CAMPANHA[campanha.modelo]}
               </span>,
             ]
           : undefined
@@ -93,8 +94,8 @@ export function ModalConsultarCampanha({ auth, idCampanha, aoFechar }: ModalCons
             </SecaoFicha>
 
             <SecaoFicha titulo="Datas">
-              <CampoFicha rotulo="Início" valor={formatarDataHora(campanha.dataInicio)} />
-              <CampoFicha rotulo="Fim (previsto)" valor={formatarDataHora(campanha.dataFim)} />
+              <CampoFicha rotulo="Início" valor={formatarData(campanha.dataInicio)} />
+              <CampoFicha rotulo="Fim (previsto)" valor={formatarData(campanha.dataFim)} />
               <CampoFicha rotulo="Criada em" valor={formatarDataHora(campanha.criadoEm)} />
               <CampoFicha rotulo="Aprovada em" valor={formatarDataHora(campanha.aprovadoEm)} />
               <CampoFicha rotulo="Encerrada em" valor={formatarDataHora(campanha.encerradoEm)} />

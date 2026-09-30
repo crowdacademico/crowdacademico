@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { SecaoFicha } from '../../components/crud/ficha-consulta';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
+import { confirmarSaida, useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
 import { SeletorFotoPerfil } from '../../components/input/seletor-foto-perfil';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
@@ -9,6 +10,7 @@ import { Campo } from '../../components/input/campo';
 import { arquivoApi } from '../../services/25-arquivo/api/arquivo.api';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { useEnvio } from '../../services/constant/hook/use-envio';
+import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { UsuarioResponse } from '../../services/1-usuario/type/usuario.type';
 
@@ -22,7 +24,7 @@ interface ModalCriarUsuarioProps {
 // só "Criar Perfil Pesquisador" para quem já é usuário): só usado pela página real de Usuário.
 export function ModalCriarUsuario({ auth, aoFechar, aoCriado }: ModalCriarUsuarioProps) {
   const { mostrar } = useToast();
-  const { erro, reportarErro, limparErro, errosCampo, limparErroCampo } = useErroToast();
+  const { erro, reportarErro, limparErro, errosCampo, limparErroCampo } = useErroToast({ mostraTexto: true });
   const { ocupado: enviando, executar: executarEnviando } = useEnvio(reportarErro, limparErro);
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
@@ -43,8 +45,15 @@ export function ModalCriarUsuario({ auth, aoFechar, aoCriado }: ModalCriarUsuari
     }
   };
 
+  // "Criar" fica sempre clicável: clicando com algo faltando, cada campo mostra o próprio erro.
+  const { erroDe, tentarEnviar } = useErrosFormulario(() => ({
+    nome: nome.trim().length < 2 && 'Nome precisa ter pelo menos 2 caracteres.',
+    email: email.trim() === '' && 'Informe o e-mail.',
+    senha: senha.length < 8 && 'Senha precisa ter pelo menos 8 caracteres.',
+  }));
+
   const aoCriar = async () => {
-    if (!nome || !email || !senha) return;
+    if (!tentarEnviar()) return;
     await executarEnviando(async () => {
       const usuarioCriado = await usuarioApi.criar(auth.authFetch, {
         nome,
@@ -56,6 +65,13 @@ export function ModalCriarUsuario({ auth, aoFechar, aoCriado }: ModalCriarUsuari
       aoCriado(usuarioCriado);
       aoFechar();
     });
+  };
+
+  // Criar também pergunta antes de fechar com algo digitado, como o Alterar.
+  const sujo = nome !== '' || email !== '' || senha !== '' || idImagemPerfil !== null;
+  useAvisoAlteracaoNaoSalva(sujo);
+  const fechar = () => {
+    if (confirmarSaida(sujo)) aoFechar();
   };
 
   return (
@@ -71,15 +87,14 @@ export function ModalCriarUsuario({ auth, aoFechar, aoCriado }: ModalCriarUsuari
           aoAlterar={aoAlterarFoto}
         />
       }
-      aoFechar={aoFechar}
+      aoFechar={fechar}
       rodape={
         <RodapeAcoes
-          aoCancelar={aoFechar}
+          aoCancelar={fechar}
           acao={{
             rotulo: 'Criar',
             rotuloOcupado: 'Criando...',
             ocupado: enviando,
-            desabilitado: !nome || !email || !senha,
             aoClicar: () => void aoCriar(),
           }}
         />
@@ -87,7 +102,7 @@ export function ModalCriarUsuario({ auth, aoFechar, aoCriado }: ModalCriarUsuari
       erro={erro}
     >
       <SecaoFicha titulo="Dados da conta">
-        <Campo rotulo="Nome" erro={errosCampo.nome} className="sm:col-span-2">
+        <Campo rotulo="Nome" erro={erroDe('nome') ?? errosCampo.nome} className="sm:col-span-2">
           {({ atributos }) => (
             <input
               {...atributos}
@@ -104,7 +119,7 @@ export function ModalCriarUsuario({ auth, aoFechar, aoCriado }: ModalCriarUsuari
           )}
         </Campo>
 
-        <Campo rotulo="E-mail" erro={errosCampo.email} className="sm:col-span-2">
+        <Campo rotulo="E-mail" erro={erroDe('email') ?? errosCampo.email} className="sm:col-span-2">
           {({ atributos }) => (
             <input
               {...atributos}
@@ -121,7 +136,7 @@ export function ModalCriarUsuario({ auth, aoFechar, aoCriado }: ModalCriarUsuari
           )}
         </Campo>
 
-        <Campo rotulo="Senha" erro={errosCampo.senha} className="sm:col-span-2">
+        <Campo rotulo="Senha" erro={erroDe('senha') ?? errosCampo.senha} className="sm:col-span-2">
           {({ atributos }) => (
             <input
               {...atributos}

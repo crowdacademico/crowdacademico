@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { termoUsoApi } from '../../services/5-termo-uso/api/termo-uso.api';
 import { useBuscar } from '../../services/constant/hook/use-buscar';
+import { MensagemErro } from '../../components/crud/mensagem-erro';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 
 interface TelaAceiteTermoUsoProps {
@@ -19,7 +20,7 @@ export function TelaAceiteTermoUso({ auth }: TelaAceiteTermoUsoProps) {
     reportarErro,
     limparErro,
     recarregar,
-  } = useBuscar(() => termoUsoApi.buscarAtivo('cadastro'), []);
+  } = useBuscar(() => termoUsoApi.buscarAtivo('cadastro'), [], { mostraTexto: true });
   const [aceitando, setAceitando] = useState(false);
 
   const aceitar = async () => {
@@ -57,7 +58,7 @@ export function TelaAceiteTermoUso({ auth }: TelaAceiteTermoUsoProps) {
           {carregando ? 'Carregando...' : (termo?.conteudo ?? 'Não foi possível carregar o Termo de Uso.')}
         </div>
 
-        {erro && <p className="px-8 pb-2 text-xs texto-erro font-semibold">{erro}</p>}
+        <MensagemErro texto={erro} className="px-8 pb-2 text-xs texto-erro font-semibold" />
 
         <div className="px-8 py-5 border-t borda-padrao flex flex-wrap justify-end gap-3">
           <button type="button" className="btn btn-secondary" onClick={() => void auth.logout()}>

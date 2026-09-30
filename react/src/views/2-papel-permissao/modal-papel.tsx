@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
-import { CaixaAviso } from '../../components/crud/caixa-aviso';
 import { papelPermissaoApi, permissaoApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
 import { detalhePermissao } from '../../services/2-papel-permissao/constants/permissao-nomes-amigaveis.constants';
+import { descricaoPapel } from '../../services/2-papel-permissao/constants/papel-descricoes.constants';
 import { ModalDetalhePermissao } from './modal-detalhe-permissao';
 import { Carregando } from '../../components/layout/carregando';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
@@ -18,7 +18,7 @@ interface ModalConsultarPapelProps {
 
 // Consultar: mostra as permissões concedidas ao papel, lidas ao vivo da matriz Papel × Permissão (mesmas 2
 // chamadas de matriz-papel-permissao.tsx/modal-detalhe-permissao.tsx), nunca hardcoded. `PapelResponse` só tem
-// `idPapel`/`nome` (o `codigo` estável nunca é exposto pela API, de propósito). Cada badge abre o MESMO
+// `idPapel`/`nome`/`codigo` (o `codigo` fixo acha a descrição do papel). Cada badge abre o MESMO
 // `ModalDetalhePermissao` que a tabela de Permissões usa no botão "Saiba mais": zero lógica de detalhe
 // duplicada.
 export function ModalConsultarPapel({ auth, papel, aoFechar }: ModalConsultarPapelProps) {
@@ -48,6 +48,7 @@ export function ModalConsultarPapel({ auth, papel, aoFechar }: ModalConsultarPap
         <SecaoFicha titulo="Dados">
           <CampoFicha rotulo="id" valor={papel.idPapel} />
           <CampoFicha rotulo="Nome" valor={papel.nome} largura="cheia" />
+          <CampoFicha rotulo="Para que serve" valor={descricaoPapel(papel.codigo) ?? '-'} largura="cheia" />
         </SecaoFicha>
 
         <SecaoFicha titulo="Permissões deste papel" colunas={1}>
@@ -80,38 +81,5 @@ export function ModalConsultarPapel({ auth, papel, aoFechar }: ModalConsultarPap
         />
       )}
     </>
-  );
-}
-
-interface ModalExcluirPapelProps {
-  papel: PapelResponse;
-  aoFechar: () => void;
-}
-
-// Excluir: só explicativo, de propósito: nunca chama a API. `usuario_papel`/`papel_permissao` apontam para
-// `papel` com `ON DELETE CASCADE` (01_extensoes_enums_tabelas.sql): excluir um papel apagaria, na hora e sem
-// aviso, o vínculo de TODOS os usuários que têm esse papel e TODAS as permissões concedidas a ele: qualquer
-// conta com este papel perderia a autoridade instantaneamente, sistema inteiro. Diferente de Excluir
-// Usuário/Motivo de Denúncia/etc (exclusão lógica ou bloqueada por FK com mensagem própria), aqui o risco é
-// grande demais para existir como ação de painel: o ícone continua no lugar certo (padroniza a coluna Ações com
-// todo o resto do sistema), só que clicar nele explica o motivo em vez de perguntar "tem certeza?".
-export function ModalExcluirPapel({ papel, aoFechar }: ModalExcluirPapelProps) {
-  return (
-    <ModalFicha
-      titulo={`Excluir "${papel.nome}"?`}
-      aoFechar={aoFechar}
-      rodape={
-        <RodapeAcoes aoCancelar={aoFechar} rotuloCancelar="Entendi" />
-      }
-    >
-      <CaixaAviso titulo="Não é possível excluir papéis pelo painel" icone="fa-triangle-exclamation">
-        <p>
-          Excluir "{papel.nome}" apagaria, na hora e sem aviso, o vínculo de TODOS os usuários que
-          têm este papel e TODAS as permissões concedidas a ele - qualquer conta com este papel
-          perderia essa autoridade instantaneamente, em todo o sistema. Por isso este botão nunca
-          executa a exclusão de verdade, só explica por que ela não existe aqui.
-        </p>
-      </CaixaAviso>
-    </ModalFicha>
   );
 }

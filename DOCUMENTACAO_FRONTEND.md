@@ -1019,3 +1019,73 @@ CSS puro (`:hover`/`:focus`/`:focus-visible`), sem estado de React na bolha em s
 - **Decisão:** `modal-excluir-termo-uso.tsx` virou uma confirmação simples. Versão vigente ou já aceita volta com a mensagem do backend.
 - **Motivo:** a exclusão forçada saiu do backend (RF-091, ver `DOCUMENTACAO_BACKEND.md`).
 - **Caso-limite aceito:** nenhum.
+
+## 19. Correções da auditoria de Nielsen (29-09-2026)
+
+**Em palavras simples:** a auditoria das 10 heurísticas de Nielsen (o relatório fica na pasta de informações, fora do repositório) conferiu se as telas são fáceis de usar. Só o comportamento foi corrigido: a aparência vai mudar com o visual novo, e o comportamento continua valendo.
+
+📌 **Datas da campanha no fuso de quem usa.**
+- **Decisão:** `inicioDoDia()`, `fimDoDia()` e `dataLocal()` (`services/12-campanha/util/prazo-campanha.util.ts`) montam o instante enviado (00:00 do início, 23:59:59 do fim) e voltam o instante para o dia do formulário. Criar e Alterar campanha e os marcos do cronograma usam as três. As fichas mostram só a data.
+- **Motivo:** `new Date('2026-10-04').toISOString()` é meia-noite em UTC, 21:00 do dia 3 em Brasília: a campanha aparecia e terminava um dia antes. `slice(0, 10)` do instante também pegava o dia errado.
+- **Caso-limite aceito:** campanha criada antes da correção continua com o horário antigo.
+
+📌 **Botão sempre clicável, erro embaixo do campo.**
+- **Decisão:** `useErrosFormulario` em mais 14 botões: Criar usuário, área, tipo de link e motivo; Salvar de área, motivo, papel e tipo de link com o nome apagado; Publicar Termo; o aceite e o formulário do upgrade (CPF e instituição); Atribuir papel; Salvar CPF; Salvar perfil em Minha Conta; Rejeitar na fila. Quem ainda fica desabilitado: Salvar sem alteração nenhuma (padrão de mercado), Aprovar (a lista "Pronta para aprovar?" ao lado diz o que falta), as exclusões que pedem para digitar o nome e o que está enviando.
+- **Motivo:** heurísticas 1, 5 e 9. O botão cinza não dizia o que faltava, e foi o exemplo do Lucas em 15-09.
+- **Caso-limite aceito:** o formato do código (área e tipo de link), a regex e "pelo menos uma opção" continuam avisando enquanto se digita.
+
+📌 **Criar pergunta antes de descartar, como o Alterar.**
+- **Decisão:** os modais de Criar (usuário, área, tipo de link, motivo, campanha) e a página Publicar Termo usam `confirmarSaida` e `useAvisoAlteracaoNaoSalva`. No Criar Campanha, só antes do primeiro "Próximo": depois disso já é rascunho. Publicar Termo volta sempre para a lista de Termos (era `navigate(-1)`).
+- **Motivo:** clique fora, Esc ou X jogavam fora o que foi digitado. Aberta direto pelo endereço, a página de Termo saía para a página anterior do navegador.
+- **Caso-limite aceito:** nenhum.
+
+📌 **Revogar papel pede confirmação.**
+- **Decisão:** o "×" do papel em Alterar Usuário pergunta antes de revogar.
+- **Motivo:** o botão é pequeno e fica colado no nome do papel. Um clique sem querer tirava o papel na hora.
+- **Caso-limite aceito:** a alternativa do mercado ("Desfazer" no aviso, como o Gmail) ficou para o visual novo, porque o aviso ainda não tem botão de ação.
+
+📌 **Ação que não se aplica aparece apagada, com o motivo.**
+- **Decisão:** `GenericTable` ganhou `acaoIndisponivel`: a ação fica no lugar, apagada, não reage ao clique e a dica diz por quê (`aria-disabled`, continua focável). Os Termos usam isso na lixeira da versão vigente. A lixeira de Papéis saiu: ela só abria uma explicação, nunca excluía.
+- **Motivo:** heurística 4. Um ícone de excluir que não exclui confunde.
+- **Caso-limite aceito:** a lista de Termos não sabe quem aceitou cada versão: a recusa de excluir uma versão aceita continua vindo do backend.
+
+📌 **Um aviso por vez; o de erro fica.**
+- **Decisão:** o aviso novo toma o lugar do anterior. O de sucesso some em 4 segundos; o de erro fica até a pessoa fechar ou até o próximo aviso.
+- **Motivo:** "Campanha criada" ficava empilhado com o erro seguinte, e o erro sumia em 5 segundos. É o padrão do Material Design e do GOV.BR.
+- **Caso-limite aceito:** num formulário, o erro aparece no aviso e no texto vermelho ao mesmo tempo (anotado para o visual novo).
+
+📌 **Parâmetros do Sistema na língua de quem administra.**
+- **Decisão:** a lista mostra a descrição como nome (a chave fica ao lado). O campo Valor segue o tipo: Sim/Não para booleano, teclado numérico e conferência para inteiro e decimal (a vírgula dos centavos vira ponto ao salvar). O tipo aparece como "Número inteiro", "Sim ou não"... A ajuda de "Pública" não cita mais rota nem permissão.
+- **Motivo:** o admin precisava decorar o que `arquivo_horas_para_vincular` significa, e "abc" num número só era recusado pelo banco.
+- **Caso-limite aceito:** nenhum.
+
+📌 **Outros ajustes.**
+- **Decisão:**
+  - Minha Conta > Segurança tem o medidor de força, mostrar senha e confirmar a nova. O medidor virou componente (`components/input/medidor-senha.tsx`), usado também no Cadastro.
+  - Os números do Dashboard levam à lista (as campanhas já filtradas pelo status).
+  - "Notificações: em breve" no lugar de um traço.
+  - O modelo aparece como "Tudo ou nada".
+  - Os Termos mostram "vigente" e a data sem hora.
+  - O Tipo de Link tem "Testar com um link", que diz na hora se um link de exemplo passaria pelo domínio e pela regex.
+- **Motivo:** heurísticas 2, 4, 7 e 10.
+- **Caso-limite aceito:** o teste de link usa a regex do JavaScript. É igual à do banco nos casos comuns, mas não garantidamente em todos.
+
+📌 **Termo aceito na lista e no Alterar.**
+- **Decisão:** a lixeira fica apagada em versão com aceite (e na vigente), com o motivo na dica. O lápis continua: o modal de Alterar é também onde se torna vigente uma versão antiga. Lá, a versão aceita mostra o texto só para leitura, com um aviso, e sem o botão Salvar. O Consultar mostra quantos aceites a versão tem.
+- **Motivo:** antes, a pessoa abria o modal, editava e só no fim o banco recusava.
+- **Caso-limite aceito:** antes de colar o Grupo AB, a lista não tem a contagem e se comporta como antes.
+
+📌 **Para que serve cada papel.**
+- **Decisão:** `services/2-papel-permissao/constants/papel-descricoes.constants.ts`, um dicionário pelo `codigo` do papel, no mesmo padrão do de permissões. A descrição aparece na coluna "para que serve" da lista de Papéis, no Consultar Papel e embaixo do "Atribuir papel" (do papel escolhido). As 6 permissões que estavam sem explicação ganharam a delas: 39 de 39.
+- **Motivo:** o nome cru ("revisor", "curador") não dizia o que o papel libera, e a pessoa atribuía sem saber.
+- **Caso-limite aceito:** o texto descreve a intenção do papel. Se alguém mudar a matriz Papel × Permissão pela tela, a matriz continua sendo a verdade.
+
+📌 **"Submeter Pesquisa" abre o Criar Campanha.**
+- **Decisão:** o botão do cabeçalho leva a Minhas Campanhas com `?criar=1`. Quem pode criar vê o modal aberto. Quem não é pesquisador, ou está suspenso, vê o aviso da própria página explicando por quê. Quem não está logado passa pelo login antes. Fechar o modal tira o `?criar=1` do endereço.
+- **Motivo:** pedido do Lucas para agilizar os testes. O resto dos botões de enfeite fica como está: os módulos deles vão nascer.
+- **Caso-limite aceito:** o visual não é o final (o botão fica no cabeçalho público).
+
+📌 **Erro de formulário aparece uma vez só.**
+- **Decisão:** `useErroToast({ mostraTexto: true })` nas 23 telas que mostram o próprio erro (texto vermelho ou embaixo do campo): o aviso flutuante não aparece, e a tela rola até o erro (e põe o cursor no campo, quando o erro é de um campo). As ações sem texto vermelho (enviar campanha, links acadêmicos, Campo de Testes) continuam com o aviso flutuante. Todo texto de erro passou a ser `MensagemErro`, com `role="alert"` e a marca `data-mensagem-erro`. As buscas que mostram o erro na própria tela (tabelas, log, Dashboard, tela de aceite) usam `useBuscar(..., { mostraTexto: true })`.
+- **Motivo:** a mesma frase saía no aviso e no texto vermelho. É o padrão do Stripe e do GitHub: o erro fica ao lado de onde se corrige, e o aviso é para o que acontece fora de um formulário. Resolve o caso-limite anotado na entrada "Um aviso por vez; o de erro fica".
+- **Caso-limite aceito:** se a tela não tiver nada visível para mostrar (erro de um campo que a tela não desenha), o aviso flutuante volta, para o erro nunca ficar escondido. O leitor de tela passa a anunciar o texto vermelho, porque ele tem o papel de alerta que era do aviso.

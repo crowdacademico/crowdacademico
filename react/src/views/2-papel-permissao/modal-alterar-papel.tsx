@@ -8,6 +8,7 @@ import { useToast } from '../../components/layout/toast/use-toast';
 import { Campo } from '../../components/input/campo';
 import { papelApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
 import { useEnvio } from '../../services/constant/hook/use-envio';
+import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { PapelResponse } from '../../services/2-papel-permissao/type/papel-permissao.type';
 
@@ -27,7 +28,7 @@ interface ModalAlterarPapelProps {
 // comentário completo em modal-papel.tsx sobre o ON DELETE CASCADE).
 export function ModalAlterarPapel({ auth, papel, aoFechar, aoAtualizado }: ModalAlterarPapelProps) {
   const { mostrar } = useToast();
-  const { erro, reportarErro, limparErro, errosCampo, limparErroCampo } = useErroToast();
+  const { erro, reportarErro, limparErro, errosCampo, limparErroCampo } = useErroToast({ mostraTexto: true });
   const { ocupado: enviando, executar: executarEnviando } = useEnvio(reportarErro, limparErro);
   const [nome, setNome] = useState(papel.nome);
 
@@ -41,7 +42,11 @@ export function ModalAlterarPapel({ auth, papel, aoFechar, aoAtualizado }: Modal
     aoFechar();
   };
 
+  // "Salvar" só espera haver alteração; com o campo obrigatório apagado, o erro aparece embaixo dele.
+  const { erroDe, tentarEnviar } = useErrosFormulario(() => ({ nome: nome.trim() === '' && 'Informe o nome.' }));
+
   const aoSalvar = async () => {
+    if (!tentarEnviar()) return;
     await executarEnviando(async () => {
       await papelApi.atualizar(auth.authFetch, papel.idPapel, { nome });
       mostrar('Papel alterado com sucesso.', `ID: ${papel.idPapel} foi alterado`);
@@ -62,7 +67,7 @@ export function ModalAlterarPapel({ auth, papel, aoFechar, aoAtualizado }: Modal
             rotulo: 'Salvar',
             rotuloOcupado: 'Salvando...',
             ocupado: enviando,
-            desabilitado: !sujo || nome.trim() === '',
+            desabilitado: !sujo,
             aoClicar: () => void aoSalvar(),
           }}
         />
@@ -71,7 +76,7 @@ export function ModalAlterarPapel({ auth, papel, aoFechar, aoAtualizado }: Modal
     >
       <CampoSomenteLeitura rotulo="id" valor={papel.idPapel} />
 
-      <Campo rotulo="Nome" erro={errosCampo.nome}>
+      <Campo rotulo="Nome" erro={erroDe('nome') ?? errosCampo.nome}>
         {({ atributos }) => (
           <input
             {...atributos}

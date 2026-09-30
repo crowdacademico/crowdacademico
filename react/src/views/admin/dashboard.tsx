@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { Tooltip } from '../../components/layout/tooltip';
 import { dashboardApi } from '../../services/28-dashboard/api/dashboard.api';
+import { ROTULO_STATUS_CAMPANHA, type StatusCampanha } from '../../services/12-campanha/constants/status-campanha.constants';
 import { useBuscar } from '../../services/constant/hook/use-buscar';
 import { formatarReaisSemSimbolo } from '../../services/constant/util/formatacao.util';
 import { DashboardIdentidadeVisual } from './dashboard-identidade-visual';
 import { DashboardRegrasNegocio } from './dashboard-regras-negocio';
 import { DashboardSaude } from './dashboard-saude';
 import { lerAcessadosRecentemente } from '../../services/router/acessados-recentemente';
+import { MensagemErro } from '../../components/crud/mensagem-erro';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 
 // Texto do tooltip de "contas ativas": exportado porque a aba Saúde (dashboard-saude.tsx) mostra a MESMA
@@ -38,11 +40,13 @@ interface CardMetricaProps {
   rotulo: string;
   valor: number | string | null;
   moeda?: boolean;
+  // Lista que o número resume (já filtrada, quando dá): clicar no card leva direto a ela.
+  para?: string;
 }
 
-function CardMetrica({ rotulo, valor, moeda = false }: CardMetricaProps) {
-  return (
-    <div className="@container cartao-painel p-5 min-w-0 break-words">
+function CardMetrica({ rotulo, valor, moeda = false, para }: CardMetricaProps) {
+  const conteudo = (
+    <>
       <div className="rotulo-leitura mb-1">
         {rotulo}
       </div>
@@ -66,9 +70,21 @@ function CardMetrica({ rotulo, valor, moeda = false }: CardMetricaProps) {
           valor
         )}
       </div>
-    </div>
+    </>
+  );
+  const classe = '@container cartao-painel p-5 min-w-0 break-words';
+  return para ? (
+    <Link to={para} className={classe + ' block hover-fundo-sutil transition-colors'} aria-label={`${rotulo}: ver a lista`}>
+      {conteudo}
+    </Link>
+  ) : (
+    <div className={classe}>{conteudo}</div>
   );
 }
+
+// Lista de campanhas já filtrada pelo status (o filtro mora no endereço, com o rótulo do status).
+const campanhasCom = (status: StatusCampanha) =>
+  `/admin/campanhas?status=${encodeURIComponent(ROTULO_STATUS_CAMPANHA[status])}`;
 
 // Bolinha de status de conexão: a Visão Geral (abaixo) e a aba Saúde (`dashboard-saude.tsx`) mostram a MESMA
 // bolinha, com a MESMA lógica de 3 estados: exportado daqui e importado lá, mesmo padrão de
@@ -100,7 +116,7 @@ export function Dashboard({ auth }: DashboardProps) {
     dado: resumo,
     carregando: carregandoResumo,
     erro,
-  } = useBuscar(() => dashboardApi.buscarResumo(auth.authFetch), []);
+  } = useBuscar(() => dashboardApi.buscarResumo(auth.authFetch), [], { mostraTexto: true });
   const [bancoConectado, setBancoConectado] = useState<boolean | null>(null); // null = ainda verificando
   const [abaAtiva, setAbaAtiva] = useState<AbaChave>('visao-geral');
   // Lido uma vez ao abrir: o Dashboard é a página de partida, a lista não muda enquanto ela está na tela.
@@ -162,12 +178,14 @@ export function Dashboard({ auth }: DashboardProps) {
               <Tooltip texto={TEXTO_TOOLTIP_SESSOES_ATIVAS} />
             </span>
             <span className="texto-fraco">
-              <strong className="texto-forte">
-                {resumo?.notificacoesPendentes === null || resumo === null
-                  ? '-'
-                  : resumo.notificacoesPendentes}
-              </strong>{' '}
-              notificações pendentes
+              {/* Sem o módulo de notificações o número não existe: "em breve", não um traço solto. */}
+              {resumo?.notificacoesPendentes === null || resumo === null ? (
+                'Notificações: em breve'
+              ) : (
+                <>
+                  <strong className="texto-forte">{resumo.notificacoesPendentes}</strong> notificações pendentes
+                </>
+              )}
             </span>
           </div>
 
@@ -175,16 +193,16 @@ export function Dashboard({ auth }: DashboardProps) {
           {carregandoResumo ? (
             <p className="text-sm texto-fraco">Carregando métricas...</p>
           ) : !resumo ? (
-            <p className="crud-erro">{erro}</p>
+            <MensagemErro texto={erro} className="crud-erro" />
           ) : (
             <>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <CardMetrica rotulo="Usuários" valor={resumo.totalUsuarios} />
-                <CardMetrica rotulo="Pesquisadores" valor={resumo.totalPesquisadores} />
-                <CardMetrica rotulo="Papéis" valor={resumo.totalPapeis} />
-                <CardMetrica rotulo="Permissões" valor={resumo.totalPermissoes} />
-                <CardMetrica rotulo="Configurações" valor={resumo.totalConfiguracoes} />
-                <CardMetrica rotulo="Campanhas" valor={resumo.totalCampanhas} />
+                <CardMetrica rotulo="Usuários" valor={resumo.totalUsuarios} para="/admin/usuarios" />
+                <CardMetrica rotulo="Pesquisadores" valor={resumo.totalPesquisadores} para="/admin/pesquisadores" />
+                <CardMetrica rotulo="Papéis" valor={resumo.totalPapeis} para="/admin/papeis" />
+                <CardMetrica rotulo="Permissões" valor={resumo.totalPermissoes} para="/admin/papeis" />
+                <CardMetrica rotulo="Configurações" valor={resumo.totalConfiguracoes} para="/admin/configuracoes" />
+                <CardMetrica rotulo="Campanhas" valor={resumo.totalCampanhas} para="/admin/campanhas" />
                 <CardMetrica rotulo="Denúncias pendentes" valor={resumo.denunciasPendentes} />
                 <CardMetrica rotulo="Arrecadado (total)" valor={resumo.valorTotalArrecadado} moeda />
               </div>
@@ -193,11 +211,23 @@ export function Dashboard({ auth }: DashboardProps) {
                   score baixo" é a 5ª parte do RF-084: campanha aguardando aprovação cujo pesquisador está
                   abaixo do score mínimo, só um sinal para revisar com mais cuidado. */}
               <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                <CardMetrica rotulo="Campanhas ativas" valor={resumo.campanhasAtivas} />
-                <CardMetrica rotulo="Campanhas com sucesso" valor={resumo.campanhasSucesso} />
-                <CardMetrica rotulo="Campanhas não atingidas" valor={resumo.campanhasNaoAtingida} />
-                <CardMetrica rotulo="Aguardando aprovação" valor={resumo.campanhasAguardandoAprovacao} />
-                <CardMetrica rotulo="Fila com score baixo" valor={resumo.campanhasParaRevisaoScore} />
+                <CardMetrica rotulo="Campanhas ativas" valor={resumo.campanhasAtivas} para={campanhasCom('ativo')} />
+                <CardMetrica rotulo="Campanhas com sucesso" valor={resumo.campanhasSucesso} para={campanhasCom('sucesso')} />
+                <CardMetrica
+                  rotulo="Campanhas não atingidas"
+                  valor={resumo.campanhasNaoAtingida}
+                  para={campanhasCom('nao_atingido')}
+                />
+                <CardMetrica
+                  rotulo="Aguardando aprovação"
+                  valor={resumo.campanhasAguardandoAprovacao}
+                  para="/admin/aprovar-campanhas"
+                />
+                <CardMetrica
+                  rotulo="Fila com score baixo"
+                  valor={resumo.campanhasParaRevisaoScore}
+                  para="/admin/aprovar-campanhas"
+                />
               </div>
             </>
           )}

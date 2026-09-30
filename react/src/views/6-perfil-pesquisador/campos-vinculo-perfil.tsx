@@ -17,6 +17,7 @@ interface CamposVinculoPerfilProps {
   aoAlterarTipoVinculo: (tipo: TipoVinculo) => void;
   aoAlterarVinculoInstitucional: (valor: string) => void;
   aoAlterarTituloAcademico: (titulo: TituloAcademico) => void;
+  erroVinculoInstitucional?: string;
 }
 
 // Os 3 campos abaixo (tipo de vínculo, vínculo institucional condicional, título acadêmico) são idênticos em 3
@@ -32,6 +33,7 @@ export function CamposVinculoPerfil({
   aoAlterarTipoVinculo,
   aoAlterarVinculoInstitucional,
   aoAlterarTituloAcademico,
+  erroVinculoInstitucional,
 }: CamposVinculoPerfilProps) {
   return (
     <>
@@ -55,14 +57,14 @@ export function CamposVinculoPerfil({
       </Campo>
 
       {tipoVinculo === 'institucional' && (
-        <Campo rotulo={rotuloVinculoInstitucional}>
-          {({ atributos }) => (
+        <Campo rotulo={rotuloVinculoInstitucional} erro={erroVinculoInstitucional}>
+          {({ atributos, classeErro }) => (
             <input
               {...atributos}
               type="text"
               value={vinculoInstitucional}
               onChange={(evento) => aoAlterarVinculoInstitucional(evento.target.value)}
-              className="input-padrao"
+              className={'input-padrao' + classeErro}
             />
           )}
         </Campo>

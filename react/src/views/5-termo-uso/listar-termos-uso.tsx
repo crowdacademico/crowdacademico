@@ -58,8 +58,8 @@ export function ListarTermosUso({ auth }: PropsPagina) {
             tipo: 'texto',
             renderizar: (linha) => ROTULO_TIPO_TERMO[linha.tipo],
           },
-          { chave: 'ativo', rotulo: 'ativo', tipo: 'simNao' },
-          { chave: 'criadoEm', rotulo: 'publicado em', tipo: 'dataHora' },
+          { chave: 'ativo', rotulo: 'vigente', tipo: 'simNao' },
+          { chave: 'criadoEm', rotulo: 'publicado em', tipo: 'data' },
         ]}
         chavePrimaria="idTermo"
         listar={listarTermos}
@@ -69,12 +69,25 @@ export function ListarTermosUso({ auth }: PropsPagina) {
           { chave: 'tipo', rotulo: 'Tipo', ordem: TIPOS_TERMO, rotulos: ROTULO_TIPO_TERMO },
         ]}
         acoes={acoesCompletas}
+        // Versão aceita por alguém não se exclui (RF-091), e a vigente nunca (sempre existe uma por tipo): a lixeira fica
+        // apagada, com o motivo na dica, em vez de abrir o modal e o banco recusar no fim. O lápis fica sempre: o modal
+        // de Alterar também é onde se torna vigente uma versão antiga, e lá o texto de versão aceita vem só para leitura.
+        acaoIndisponivel={(linha, acao) => {
+          if (acao !== 'excluir') return undefined;
+          if ((linha.aceites ?? 0) > 0) {
+            return `Já tem ${linha.aceites} aceite(s) registrado(s): é a prova do que foi aceito e não pode ser excluída.`;
+          }
+          return linha.ativo ? 'A versão vigente não pode ser excluída. Torne outra versão vigente primeiro.' : undefined;
+        }}
       />
 
       {consultando && (
         <ModalDetalhe
           titulo={`Termo de Uso ${consultando.versao} (${ROTULO_TIPO_TERMO[consultando.tipo]})`}
-          chave={consultando.ativo ? 'Versão ativa' : 'Versão histórica (substituída)'}
+          chave={
+            (consultando.ativo ? 'Versão vigente' : 'Versão histórica (substituída)') +
+            (consultando.aceites !== undefined ? ` · ${consultando.aceites} aceite(s) registrado(s)` : '')
+          }
           aoFechar={fecharConsultando}
           secoes={[
             {

@@ -205,6 +205,27 @@ AS $$
     SELECT count(*)::INT FROM seguir_campanha WHERE id_campanha = p_id;
 $$;
 
+-- ----------------------------------------------------------------------------
+-- Função:     contar_aceites_termo
+-- Assinatura: (p_id_termo INT) -> INT
+-- Bloco:      [03-E]
+-- Regra:      RF-091: quantas vezes a versão foi aceita (no cadastro e nas contribuições). A tela de Termos usa para
+--             apagar Alterar e Excluir de versão aceita (trg_termos_de_uso_protege_aceito recusaria). Pela RLS, o
+--             aceite de contribuição só aparece para quem vê dado sensível de contribuição, e o admin de Termos
+--             veria "ninguém aceitou" sem ser verdade. SECURITY DEFINER e só o número, mesmo motivo das
+--             contagens de seguidores acima: nenhum dado de quem aceitou sai daqui.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.contar_aceites_termo(p_id_termo INT)
+RETURNS INT
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT ((SELECT count(*) FROM usuario_termo WHERE id_termo = p_id_termo)
+          + (SELECT count(*) FROM aceite_termo_contribuicao WHERE id_termo = p_id_termo))::INT;
+$$;
+
 -- ============================================================
 -- [03-O] OPERAÇÕES DE AUTENTICAÇÃO
 -- Descrição: email_verificado, tentativas_login_falhas, bloqueado_ate, ultimo_login_em, ultimo_login_ip e

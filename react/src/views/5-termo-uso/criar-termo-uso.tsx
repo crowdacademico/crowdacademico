@@ -1,9 +1,10 @@
 import { useState } from 'react';
+import { MensagemErro } from '../../components/crud/mensagem-erro';
 import type { FormEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { CartaoFormulario } from '../../components/crud/cartao-formulario';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
-import { MensagemErro } from '../../components/crud/mensagem-erro';
+import { confirmarSaida, useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
 import { Campo } from '../../components/input/campo';
@@ -15,6 +16,7 @@ import {
   ehTipoTermo,
 } from '../../services/5-termo-uso/constants/termo-uso-tipos.constants';
 import { useEnvio } from '../../services/constant/hook/use-envio';
+import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { TipoTermo } from '../../services/5-termo-uso/type/termo-uso.type';
 
@@ -32,7 +34,7 @@ export function CriarTermoUso({ auth }: PropsPagina) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { mostrar } = useToast();
-  const { erro, reportarErro, limparErro, errosCampo, limparErroCampo } = useErroToast();
+  const { erro, reportarErro, limparErro, errosCampo, limparErroCampo } = useErroToast({ mostraTexto: true });
   const { ocupado: enviando, executar: executarEnviando } = useEnvio(reportarErro, limparErro);
   const tipoPreSelecionado = searchParams.get('tipo');
   const [tipo, setTipo] = useState<TipoTermo>(
@@ -40,16 +42,32 @@ export function CriarTermoUso({ auth }: PropsPagina) {
   );
   const [versao, setVersao] = useState('');
   const [conteudo, setConteudo] = useState('');
+  // Volta sempre para a lista de Termos: "voltar" no navegador sairia do sistema quando a página foi aberta direto
+  // pelo endereço.
+  const sujo = versao !== '' || conteudo !== '';
+  useAvisoAlteracaoNaoSalva(sujo);
+  const irParaLista = () => void navigate('/admin/termos-uso');
+  const cancelar = () => {
+    if (confirmarSaida(sujo)) irParaLista();
+  };
+
+  // "Publicar" fica sempre clicável: clicando com algo faltando, cada campo mostra o próprio erro (noValidate no form:
+  // o balão do navegador não aparece por cima).
+  const { erroDe, tentarEnviar } = useErrosFormulario(() => ({
+    versao: versao.trim() === '' && 'Informe a versão.',
+    conteudo: conteudo.trim() === '' && 'Cole ou digite o texto do Termo.',
+  }));
 
   const aoCriar = async (evento: FormEvent<HTMLFormElement>) => {
     evento.preventDefault();
+    if (!tentarEnviar()) return;
     await executarEnviando(async () => {
       const termoCriado = await termoUsoApi.criar(auth.authFetch, { tipo, versao, conteudo });
       mostrar(
         'Rascunho do Termo de Uso criado com sucesso.',
         `Versão "${termoCriado.versao}" (${ROTULO_TIPO_TERMO[tipo]}) foi registrada, mas AINDA NÃO é a vigente - revise o texto e torne-a vigente manualmente quando estiver pronta.`,
       );
-      void navigate(-1);
+      irParaLista();
     });
   };
 
@@ -59,7 +77,7 @@ export function CriarTermoUso({ auth }: PropsPagina) {
       titulo="Publicar Termo de Uso"
       subtitulo="Cria um RASCUNHO novo (ainda não vigente). A versão vigente atual do mesmo tipo continua ativa até um administrador tornar este rascunho vigente manualmente."
     >
-      <form id={ID_FORMULARIO} onSubmit={aoCriar} className="p-10 space-y-6">
+      <form id={ID_FORMULARIO} onSubmit={aoCriar} noValidate className="p-10 space-y-6">
         <MensagemErro texto={erro} />
 
         <Campo rotulo="Tipo" dica={<>Não pode ser alterado depois de publicado. {DESCRICAO_TIPO_TERMO[tipo]}</>}>
@@ -83,7 +101,7 @@ export function CriarTermoUso({ auth }: PropsPagina) {
 
         <Campo
           rotulo="Versão"
-          erro={errosCampo.versao}
+          erro={erroDe('versao') ?? errosCampo.versao}
           dica="Identificador curto da versão (até 20 caracteres), precisa ser diferente de toda versão já publicada antes DESTE MESMO TIPO (a mesma versão pode se repetir entre tipos diferentes)."
         >
           {({ atributos }) => (
@@ -103,7 +121,7 @@ export function CriarTermoUso({ auth }: PropsPagina) {
           )}
         </Campo>
 
-        <Campo rotulo="Texto completo" erro={errosCampo.conteudo}>
+        <Campo rotulo="Texto completo" erro={erroDe('conteudo') ?? errosCampo.conteudo}>
           {({ atributos }) => (
             <textarea
               {...atributos}
@@ -122,13 +140,12 @@ export function CriarTermoUso({ auth }: PropsPagina) {
 
         <div className="pt-2">
           <RodapeAcoes
-            aoCancelar={() => navigate(-1)}
+            aoCancelar={cancelar}
             largura="cheia"
             acao={{
               rotulo: 'Publicar versão',
               rotuloOcupado: 'Publicando...',
               ocupado: enviando,
-              desabilitado: !versao.trim() || !conteudo.trim(),
               formulario: ID_FORMULARIO,
             }}
           />

@@ -10,6 +10,8 @@ interface OpcoesBuscar<T> {
   aoChegar?: (dado: T) => void;
   // O useErroToast da própria tela, quando o erro de carregar e o de salvar devem aparecer no mesmo lugar.
   erros?: ErrosDaTela;
+  // A tela mostra o `erro` devolvido (ver useErroToast, `mostraTexto`): o aviso flutuante não repete a frase.
+  mostraTexto?: boolean;
 }
 
 // Único lugar do "buscar dado quando algo muda": mostra Carregando, guarda o resultado, reporta o erro (texto +
@@ -20,7 +22,7 @@ interface OpcoesBuscar<T> {
 // rápido, fechou o modal no meio), a resposta velha é descartada, nunca sobrescreve a nova nem mexe em estado de
 // componente já desmontado. Em caso de erro, `dado` continua com o último valor bom.
 export function useBuscar<T>(buscar: () => Promise<T>, dependencias: DependencyList, opcoes: OpcoesBuscar<T> = {}) {
-  const errosProprios = useErroToast();
+  const errosProprios = useErroToast({ mostraTexto: opcoes.mostraTexto });
   const { erro, reportarErro, limparErro } = opcoes.erros ?? errosProprios;
   const [dado, setDado] = useState<T | null>(null);
   const [carregando, setCarregando] = useState(true);

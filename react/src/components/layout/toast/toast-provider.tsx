@@ -3,8 +3,9 @@ import type { ReactNode } from 'react';
 import { ToastContext } from './toast-context';
 import type { TipoToast } from './toast-context';
 
-// Duração por tipo: erro fica 1s a mais que sucesso (mais tempo para notar/ler antes de sumir).
-const DURACAO_MS: Record<TipoToast, number> = { sucesso: 4000, erro: 5000 };
+// Sucesso some sozinho; erro fica até a pessoa fechar ou até o próximo aviso tomar o lugar dele (quem lê devagar ou
+// olhou para o lado não perde a mensagem). Mesmo padrão do Material Design e do GOV.BR.
+const DURACAO_SUCESSO_MS = 4000;
 
 // Sucesso e erro têm a MESMA estrutura: cartão branco + barra colorida de 4px na esquerda + ícone. A cor é
 // ACENTO (a barra/ícone), não fundo; texto sempre escuro (nunca branco sobre colorido), o que resolve a
@@ -60,14 +61,17 @@ export function ToastProvider({ children }: ToastProviderProps) {
   const mostrar = useCallback(
     (titulo: string, descricao?: string, tipo: TipoToast = 'sucesso') => {
       const id = proximoId.current++;
-      // Aviso idêntico ao que já está na tela não empilha de novo (o <StrictMode> do desenvolvimento dispara cada efeito
-      // duas vezes e o mesmo erro chegava em dobro).
+      // Um aviso por vez: o novo toma o lugar do anterior (antes o "Campanha criada" ficava empilhado com o erro
+      // seguinte). Aviso idêntico ao que já está na tela fica como está (o <StrictMode> do desenvolvimento dispara
+      // cada efeito duas vezes e o mesmo erro chegava em dobro).
       setToasts((atuais) =>
         atuais.some((t) => t.titulo === titulo && t.descricao === descricao && t.tipo === tipo)
           ? atuais
-          : [...atuais, { id, titulo, descricao, tipo }],
+          : [{ id, titulo, descricao, tipo }],
       );
-      setTimeout(() => remover(id), DURACAO_MS[tipo]);
+      if (tipo === 'sucesso') {
+        setTimeout(() => remover(id), DURACAO_SUCESSO_MS);
+      }
     },
     [remover],
   );

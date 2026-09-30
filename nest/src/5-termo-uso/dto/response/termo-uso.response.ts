@@ -10,4 +10,7 @@ export class TermoUsoResponse {
   conteudo: string;
   ativo: boolean;
   criadoEm: Date;
+  // Só na listagem: quantos aceites a versão tem (RF-091). Versão aceita não se altera nem se exclui, e a tela
+  // apaga essas ações em vez de deixar clicar e receber a recusa.
+  aceites?: number;
 }

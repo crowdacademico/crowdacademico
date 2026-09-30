@@ -1010,7 +1010,11 @@ BEGIN
         INTO v_permitido USING NEW.id_tipolink;
 
     IF NOT COALESCE(v_permitido, FALSE) THEN
-        RAISE EXCEPTION 'Este tipo de link não é permitido para %', TG_TABLE_NAME
+        RAISE EXCEPTION 'Este tipo de link não pode ser usado %.', CASE TG_TABLE_NAME
+            WHEN 'link_academico'   THEN 'no perfil do pesquisador'
+            WHEN 'link_atualizacao' THEN 'em atualização de campanha'
+            ELSE 'em recompensa'
+        END
             USING ERRCODE = '90002';
     END IF;
 
@@ -2087,13 +2091,13 @@ BEGIN
     END IF;
 
     IF v_soma_orcamento <> NEW.meta_financeira THEN
-        RAISE EXCEPTION 'A soma dos itens de orçamento (%) precisa ser exatamente igual à meta financeira (%).', v_soma_orcamento, NEW.meta_financeira
+        RAISE EXCEPTION 'A soma dos itens de orçamento (%) precisa ser exatamente igual à meta financeira (%).', 'R$ ' || replace(to_char(v_soma_orcamento, 'FM999999990.00'), '.', ','), 'R$ ' || replace(to_char(NEW.meta_financeira, 'FM999999990.00'), '.', ',')
             USING ERRCODE = '90011';
     END IF;
 
     -- Prazo vencido bloqueia envio e aprovação, só por data_fim. Ver DOCUMENTACAO_BD.md [05-K-2-B].
     IF NEW.data_fim IS NULL OR NEW.data_fim <= NOW() THEN
-        RAISE EXCEPTION 'O prazo da campanha já venceu (fim em %). Atualize as datas antes de enviar.', NEW.data_fim
+        RAISE EXCEPTION 'O prazo da campanha já venceu. Atualize as datas antes de enviar.'
             USING ERRCODE = '90015';
     END IF;
 
@@ -2457,10 +2461,12 @@ BEGIN
     -- EXTRACT(EPOCH FROM intervalo) / 86400 dá o total de dias corridos, sem o
     -- risco de EXTRACT(DAY FROM ...) ler só o componente "dias" de um intervalo
     -- que também tenha meses (mesmo padrão já usado em calcular_score_atualizacao).
-    v_duracao_dias := EXTRACT(EPOCH FROM (NEW.data_fim - NEW.data_inicio)) / 86400;
+    -- FLOOR: a campanha vai do começo do dia de início ao fim do dia de fim (23:59:59); sem arredondar para baixo,
+    -- 60 dias de calendário contariam 60,99 e passariam do máximo.
+    v_duracao_dias := FLOOR(EXTRACT(EPOCH FROM (NEW.data_fim - NEW.data_inicio)) / 86400);
 
     IF v_duracao_dias < v_prazo_minimo OR v_duracao_dias > v_prazo_maximo THEN
-        RAISE EXCEPTION 'A duração da campanha precisa estar entre % e % dias (configuracoes).', v_prazo_minimo, v_prazo_maximo
+        RAISE EXCEPTION 'A duração da campanha precisa estar entre % e % dias.', v_prazo_minimo, v_prazo_maximo
             USING ERRCODE = '90012';
     END IF;
 
@@ -2507,7 +2513,7 @@ BEGIN
     v_meta_minima := public.config_numero('meta_minima_campanha', 500.00);
 
     IF NEW.meta_financeira < v_meta_minima THEN
-        RAISE EXCEPTION 'A meta financeira precisa ser de pelo menos % (configuracoes.meta_minima_campanha).', v_meta_minima
+        RAISE EXCEPTION 'A meta financeira precisa ser de pelo menos %.', 'R$ ' || replace(to_char(v_meta_minima, 'FM999999990.00'), '.', ',')
             USING ERRCODE = '90013';
     END IF;
 
@@ -2652,7 +2658,7 @@ BEGIN
     v_valor_minimo := public.config_numero('valor_minimo_contribuicao', 5.00);
 
     IF NEW.valor < v_valor_minimo THEN
-        RAISE EXCEPTION 'O valor da contribuição precisa ser de pelo menos % (configuracoes.valor_minimo_contribuicao).', v_valor_minimo
+        RAISE EXCEPTION 'O valor da contribuição precisa ser de pelo menos %.', 'R$ ' || replace(to_char(v_valor_minimo, 'FM999999990.00'), '.', ',')
             USING ERRCODE = '90014';
     END IF;
 

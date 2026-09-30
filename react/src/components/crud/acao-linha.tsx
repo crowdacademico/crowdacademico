@@ -13,6 +13,8 @@ interface AcaoLinhaProps {
   icone: string;
   variante?: VarianteAcaoLinha;
   onClick?: () => void;
+  // Motivo de a ação não se aplicar a esta linha: o botão fica apagado, não reage ao clique e a dica mostra o motivo.
+  indisponivel?: string;
 }
 
 const CLASSE_VARIANTE: Record<VarianteAcaoLinha, string> = {
@@ -22,14 +24,22 @@ const CLASSE_VARIANTE: Record<VarianteAcaoLinha, string> = {
   neutra: '',
 };
 
-export function AcaoLinha({ rotulo, icone, variante = 'neutra', onClick }: AcaoLinhaProps) {
-  const className = 'crud-tabela__acao dica' + CLASSE_VARIANTE[variante];
+export function AcaoLinha({ rotulo, icone, variante = 'neutra', onClick, indisponivel }: AcaoLinhaProps) {
+  const className =
+    'crud-tabela__acao dica' + CLASSE_VARIANTE[variante] + (indisponivel ? ' crud-tabela__acao--indisponivel' : '');
 
+  // aria-disabled (não disabled): continua focável pelo teclado, para a dica com o motivo aparecer.
   return (
-    <button type="button" className={className} onClick={onClick} aria-label={rotulo}>
+    <button
+      type="button"
+      className={className}
+      onClick={indisponivel ? undefined : onClick}
+      aria-label={indisponivel ? `${rotulo}: ${indisponivel}` : rotulo}
+      aria-disabled={indisponivel ? true : undefined}
+    >
       <i className={`fa-solid ${icone}`}></i>
       <span className="crud-tabela__acao-texto">{rotulo}</span>
-      <Dica texto={rotulo} curta />
+      <Dica texto={indisponivel ?? rotulo} curta={!indisponivel} direita={Boolean(indisponivel)} />
     </button>
   );
 }

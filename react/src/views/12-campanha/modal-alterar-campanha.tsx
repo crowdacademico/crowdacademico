@@ -10,7 +10,7 @@ import { useToast } from '../../components/layout/toast/use-toast';
 import { Campo } from '../../components/input/campo';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
 import { ROTULO_STATUS_CAMPANHA } from '../../services/12-campanha/constants/status-campanha.constants';
-import { duracaoEmDias } from '../../services/12-campanha/util/prazo-campanha.util';
+import { dataLocal, duracaoEmDias, fimDoDia, inicioDoDia } from '../../services/12-campanha/util/prazo-campanha.util';
 import { useAreasDaCampanha } from '../../services/8-area-conhecimento/hook/use-areas-da-campanha';
 import { formatarData, formatarDataHora, formatarMoeda } from '../../services/constant/util/formatacao.util';
 import { useEnvio } from '../../services/constant/hook/use-envio';
@@ -75,8 +75,8 @@ const paraForm = (campanha: CampanhaResponse): FormCampanha => ({
   idAreaConhecimento: String(campanha.idAreaConhecimento),
   metaFinanceira: String(campanha.metaFinanceira),
   descricao: campanha.descricao ?? '',
-  dataInicio: campanha.dataInicio ? campanha.dataInicio.slice(0, 10) : '',
-  dataFim: campanha.dataFim ? campanha.dataFim.slice(0, 10) : '',
+  dataInicio: campanha.dataInicio ? dataLocal(campanha.dataInicio) : '',
+  dataFim: campanha.dataFim ? dataLocal(campanha.dataFim) : '',
   videoApresentacaoUrl: campanha.videoApresentacaoUrl ?? '',
 });
 
@@ -144,8 +144,8 @@ export function ModalAlterarCampanha({
     idAreaConhecimento: Number(dados.idAreaConhecimento),
     metaFinanceira: Number(dados.metaFinanceira),
     ...(dados.descricao.trim() ? { descricao: dados.descricao.trim() } : {}),
-    ...(dados.dataInicio ? { dataInicio: new Date(dados.dataInicio).toISOString() } : {}),
-    ...(dados.dataFim ? { dataFim: new Date(dados.dataFim).toISOString() } : {}),
+    ...(dados.dataInicio ? { dataInicio: inicioDoDia(dados.dataInicio) } : {}),
+    ...(dados.dataFim ? { dataFim: fimDoDia(dados.dataFim) } : {}),
     ...(dados.videoApresentacaoUrl.trim() ? { videoApresentacaoUrl: dados.videoApresentacaoUrl.trim() } : {}),
   });
 
@@ -161,7 +161,7 @@ export function ModalAlterarCampanha({
 
   const enviar = async (comDatasAtualizadas = false) => {
     if (!form) return;
-    const prazoVencido = Boolean(form.dataFim) && new Date(form.dataFim) <= new Date();
+    const prazoVencido = Boolean(form.dataFim) && new Date(fimDoDia(form.dataFim)) <= new Date();
     if (!comDatasAtualizadas && prazoVencido) {
       setOfertaDatas(true);
       return;

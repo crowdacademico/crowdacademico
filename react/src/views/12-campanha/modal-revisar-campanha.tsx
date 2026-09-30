@@ -5,12 +5,13 @@ import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
 import { Campo } from '../../components/input/campo';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
-import { ROTULO_STATUS_CAMPANHA, classeBadgeStatusCampanha } from '../../services/12-campanha/constants/status-campanha.constants';
+import { ROTULO_MODELO_CAMPANHA, ROTULO_STATUS_CAMPANHA, classeBadgeStatusCampanha } from '../../services/12-campanha/constants/status-campanha.constants';
 import { useRegrasCampanha } from '../../services/12-campanha/hook/use-regras-campanha';
 import { orcamentoCampanhaApi } from '../../services/13-orcamento-campanha/api/orcamento-campanha.api';
 import { marcoCronogramaApi } from '../../services/14-marco-cronograma/api/marco-cronograma.api';
 import { formatarData, formatarDataHora, formatarMoeda } from '../../services/constant/util/formatacao.util';
 import { useEnvio } from '../../services/constant/hook/use-envio';
+import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { CampanhaResponse, HistoricoRejeicaoResponse } from '../../services/12-campanha/type/campanha.type';
 import type { OrcamentoCampanhaResponse } from '../../services/13-orcamento-campanha/type/orcamento-campanha.type';
@@ -29,7 +30,7 @@ interface ModalRevisarCampanhaProps {
 // 90009 a 90011).
 export function ModalRevisarCampanha({ auth, idCampanha, aoFechar, aoConcluido }: ModalRevisarCampanhaProps) {
   const { mostrar } = useToast();
-  const { erro, reportarErro, limparErro } = useErroToast();
+  const { erro, reportarErro, limparErro } = useErroToast({ mostraTexto: true });
   const { ocupado: enviando, executar: executarEnviando } = useEnvio(reportarErro, limparErro);
   const { minimoItensOrcamento, minimoMarcosCronograma } = useRegrasCampanha();
 
@@ -72,7 +73,13 @@ export function ModalRevisarCampanha({ auth, idCampanha, aoFechar, aoConcluido }
   const cronogramaOk = cronograma.length >= minimoMarcosCronograma;
   const aguardando = campanha?.status === 'aguardando_aprovacao';
 
+  // "Rejeitar" fica sempre clicável: sem motivo, o erro aparece embaixo do campo (antes só aparecia passando o mouse).
+  const rejeicao = useErrosFormulario(() => ({
+    justificativa: justificativa.trim() === '' && 'Escreva o motivo da rejeição: o pesquisador lê este texto para corrigir.',
+  }));
+
   const decidir = async (acao: 'aprovar' | 'rejeitar') => {
+    if (acao === 'rejeitar' && !rejeicao.tentarEnviar()) return;
     await executarEnviando(async () => {
       if (acao === 'aprovar') {
         await campanhaApi.aprovar(auth.authFetch, idCampanha);
@@ -118,9 +125,8 @@ export function ModalRevisarCampanha({ auth, idCampanha, aoFechar, aoConcluido }
               <button
                 type="button"
                 onClick={() => void decidir('rejeitar')}
-                disabled={enviando || justificativa.trim().length === 0}
+                disabled={enviando}
                 className="btn btn-danger"
-                title={justificativa.trim().length === 0 ? 'Escreva o motivo da rejeição para poder rejeitar.' : undefined}
               >
                 Rejeitar
               </button>
@@ -148,13 +154,13 @@ export function ModalRevisarCampanha({ auth, idCampanha, aoFechar, aoConcluido }
             )}
             <SecaoFicha titulo="Dados">
               <CampoFicha rotulo="Área do conhecimento" valor={campanha.nomeArea ?? `#${campanha.idAreaConhecimento}`} />
-              <CampoFicha rotulo="Modelo" valor={campanha.modelo} />
+              <CampoFicha rotulo="Modelo" valor={ROTULO_MODELO_CAMPANHA[campanha.modelo]} />
               <CampoFicha rotulo="Descrição" valor={campanha.descricao} largura="cheia" />
               <CampoFicha rotulo="Vídeo de apresentação" valor={campanha.videoApresentacaoUrl} largura="cheia" />
             </SecaoFicha>
             <SecaoFicha titulo="Datas">
-              <CampoFicha rotulo="Início" valor={formatarDataHora(campanha.dataInicio)} />
-              <CampoFicha rotulo="Fim (previsto)" valor={formatarDataHora(campanha.dataFim)} />
+              <CampoFicha rotulo="Início" valor={formatarData(campanha.dataInicio)} />
+              <CampoFicha rotulo="Fim (previsto)" valor={formatarData(campanha.dataFim)} />
               <CampoFicha rotulo="Criada em" valor={formatarDataHora(campanha.criadoEm)} />
             </SecaoFicha>
             <SecaoFicha titulo={`Orçamento (${orcamento.length} ${orcamento.length === 1 ? 'item' : 'itens'})`}>
@@ -196,11 +202,11 @@ export function ModalRevisarCampanha({ auth, idCampanha, aoFechar, aoConcluido }
               </ul>
             </div>
             {aguardando && (
-              <Campo rotulo="Motivo da rejeição (obrigatório para rejeitar)">
-                {({ atributos }) => (
+              <Campo rotulo="Motivo da rejeição (obrigatório para rejeitar)" erro={rejeicao.erroDe('justificativa')}>
+                {({ atributos, classeErro }) => (
                   <textarea
                     {...atributos}
-                    className="input-padrao"
+                    className={'input-padrao' + classeErro}
                     rows={4}
                     value={justificativa}
                     onChange={(evento) => setJustificativa(evento.target.value)}

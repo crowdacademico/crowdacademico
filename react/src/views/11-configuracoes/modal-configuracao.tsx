@@ -13,7 +13,26 @@ import { configuracoesApi } from '../../services/11-configuracoes/api/configurac
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import { parMinMaxDaConfiguracao } from '../../services/11-configuracoes/constants/configuracoes-pares-min-max.constants';
 import { useEnvio } from '../../services/constant/hook/use-envio';
-import type { ConfiguracoesResponse } from '../../services/11-configuracoes/type/configuracoes.type';
+import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
+import type { ConfiguracoesResponse, TipoConfiguracao } from '../../services/11-configuracoes/type/configuracoes.type';
+
+// O tipo do parâmetro na língua de quem usa, e o que o campo Valor aceita em cada um.
+const ROTULO_TIPO_CONFIGURACAO: Record<TipoConfiguracao, string> = {
+  inteiro: 'Número inteiro',
+  decimal: 'Número com casas decimais',
+  booleano: 'Sim ou não',
+  texto: 'Texto',
+};
+const DICA_TIPO_CONFIGURACAO: Record<TipoConfiguracao, string | undefined> = {
+  inteiro: 'Só números, sem vírgula nem ponto (ex.: 30).',
+  decimal: 'Número com vírgula ou ponto para os centavos (ex.: 5,50).',
+  booleano: undefined,
+  texto: undefined,
+};
+const REGEX_VALOR: Partial<Record<TipoConfiguracao, RegExp>> = {
+  inteiro: /^[0-9]+$/,
+  decimal: /^[0-9]+([.,][0-9]+)?$/,
+};
 
 // Consultar/Alterar em modal: recebem a linha (`configuracao: ConfiguracoesResponse`) inteira do
 // chamador, mesmo motivo de modal-motivo-denuncia.tsx.
@@ -39,8 +58,12 @@ export function ModalConsultarConfiguracao({ configuracao, aoFechar }: ModalCons
     >
       <SecaoFicha titulo="Dados">
         <CampoFicha rotulo="id" valor={configuracao.idConfig} />
-        <CampoFicha rotulo="Tipo" valor={configuracao.tipo} />
-        <CampoFicha rotulo="Id do usuário" valor={configuracao.idUsuario} largura="cheia" />
+        <CampoFicha rotulo="Tipo" valor={ROTULO_TIPO_CONFIGURACAO[configuracao.tipo]} />
+        <CampoFicha
+          rotulo="Alcance"
+          valor={configuracao.idUsuario === null ? 'Global (vale para todo o sistema)' : `Pessoal (conta ${configuracao.idUsuario})`}
+          largura="cheia"
+        />
         <CampoFicha rotulo="Valor" valor={configuracao.valor} largura="cheia" />
         <CampoFicha rotulo="Descrição" valor={configuracao.descricao} largura="cheia" />
       </SecaoFicha>
@@ -60,7 +83,7 @@ interface ModalAlterarConfiguracaoProps {
 // de criada a linha, só valor/descricao/ativo/publica podem mudar.
 export function ModalAlterarConfiguracao({ auth, configuracao, aoFechar, aoAtualizado }: ModalAlterarConfiguracaoProps) {
   const { mostrar } = useToast();
-  const { erro, reportarErro, limparErro, errosCampo, limparErroCampo } = useErroToast();
+  const { erro, reportarErro, limparErro, errosCampo, limparErroCampo } = useErroToast({ mostraTexto: true });
   const { ocupado: enviando, executar: executarEnviando } = useEnvio(reportarErro, limparErro);
   const [valor, setValor] = useState(configuracao.valor ?? '');
   const [descricao, setDescricao] = useState(configuracao.descricao ?? '');
@@ -82,9 +105,17 @@ export function ModalAlterarConfiguracao({ auth, configuracao, aoFechar, aoAtual
     aoFechar();
   };
 
+  // O valor precisa combinar com o tipo; a vírgula dos centavos vira ponto, que é o que o banco guarda.
+  const regexValor = REGEX_VALOR[configuracao.tipo];
+  const { erroDe, tentarEnviar } = useErrosFormulario(() => ({
+    valor: regexValor !== undefined && !regexValor.test(valor.trim()) && (DICA_TIPO_CONFIGURACAO[configuracao.tipo] ?? ''),
+  }));
+
   const aoSalvar = async () => {
+    if (!tentarEnviar()) return;
+    const valorGravado = configuracao.tipo === 'decimal' ? valor.trim().replace(',', '.') : valor;
     await executarEnviando(async () => {
-      await configuracoesApi.atualizar(auth.authFetch, configuracao.idConfig, { valor, descricao, ativo, publica });
+      await configuracoesApi.atualizar(auth.authFetch, configuracao.idConfig, { valor: valorGravado, descricao, ativo, publica });
       mostrar('Parâmetro alterado com sucesso.', `ID: ${configuracao.idConfig} foi alterado`);
       aoAtualizado();
       aoFechar();
@@ -111,24 +142,40 @@ export function ModalAlterarConfiguracao({ auth, configuracao, aoFechar, aoAtual
     >
       <SecaoFicha titulo="Dados">
         <CampoSomenteLeitura rotulo="Chave" valor={configuracao.chave} />
-        <CampoSomenteLeitura rotulo="Tipo" valor={configuracao.tipo} />
+        <CampoSomenteLeitura rotulo="Tipo" valor={ROTULO_TIPO_CONFIGURACAO[configuracao.tipo]} />
       </SecaoFicha>
 
       <SecaoFicha titulo="Editar">
         <div className="sm:col-span-2">
-          <Campo rotulo="Valor" erro={errosCampo.valor}>
-            {({ atributos }) => (
-              <input
-                {...atributos}
-                type="text"
-                value={valor}
-                onChange={(evento) => {
-                  setValor(evento.target.value);
-                  limparErroCampo('valor');
-                }}
-                className="input-padrao"
-              />
-            )}
+          <Campo rotulo="Valor" erro={erroDe('valor') ?? errosCampo.valor} dica={DICA_TIPO_CONFIGURACAO[configuracao.tipo]}>
+            {({ atributos, classeErro }) =>
+              configuracao.tipo === 'booleano' ? (
+                <select
+                  {...atributos}
+                  value={valor}
+                  onChange={(evento) => {
+                    setValor(evento.target.value);
+                    limparErroCampo('valor');
+                  }}
+                  className={'input-padrao' + classeErro}
+                >
+                  <option value="true">Sim</option>
+                  <option value="false">Não</option>
+                </select>
+              ) : (
+                <input
+                  {...atributos}
+                  type="text"
+                  inputMode={configuracao.tipo === 'texto' ? 'text' : configuracao.tipo === 'inteiro' ? 'numeric' : 'decimal'}
+                  value={valor}
+                  onChange={(evento) => {
+                    setValor(evento.target.value);
+                    limparErroCampo('valor');
+                  }}
+                  className={'input-padrao' + classeErro}
+                />
+              )
+            }
           </Campo>
           {par && (
             <div className="mt-2 flex items-start gap-2 rounded-lg fundo-aviso texto-aviso p-3 text-xs">
@@ -178,9 +225,8 @@ export function ModalAlterarConfiguracao({ auth, configuracao, aoFechar, aoAtual
         <div className="sm:col-span-2">
           <CaixaMarcacao rotulo="Pública" marcado={publica} aoMudar={setPublica} />
           <p className="text-xs texto-fraco mt-1">
-            Só tem efeito se este parâmetro for global (não uma preferência pessoal): marcado,
-            aparece pra qualquer visitante em <code>GET /configuracoes</code>; desmarcado, só
-            aparece pra quem tem a permissão &quot;configuracao_gerenciar&quot;.
+            Marcado: qualquer visitante do site pode ver este valor (por exemplo, a meta mínima, para a tela avisar
+            antes de enviar). Desmarcado: só quem administra os parâmetros vê. Vale só para parâmetro global.
           </p>
         </div>
       </SecaoFicha>

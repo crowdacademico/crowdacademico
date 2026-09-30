@@ -1,7 +1,7 @@
 import { useId, useRef } from 'react';
+import { MensagemErro } from './mensagem-erro';
 import type { ReactNode } from 'react';
 import { useFocoPreso } from '../../services/constant/hook/use-foco-preso';
-import { MensagemErro } from './mensagem-erro';
 
 interface ModalFichaProps {
   titulo: string;

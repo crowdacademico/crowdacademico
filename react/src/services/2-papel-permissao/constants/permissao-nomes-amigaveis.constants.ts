@@ -128,6 +128,31 @@ export const DETALHE_PERMISSAO: Partial<Record<string, DetalhePermissao>> = {
       'O perfil de pesquisador tem campos que não deveriam ser públicos por padrão, só quem investiga precisa ver.',
     impacto: 'alto',
   },
+  perfil_pesquisador_corrigir_cpf: {
+    nome: 'Corrigir CPF de Pesquisador',
+    resumo: 'Trocar o CPF de um pesquisador que foi cadastrado errado.',
+    oQueFaz:
+      'Permite corrigir o CPF gravado no perfil de outro pesquisador. O próprio pesquisador não troca o CPF sozinho, só por quem tem esta permissão.',
+    porQueExiste:
+      'O CPF identifica o pesquisador e pesa na confiança da plataforma: se qualquer um pudesse trocar o próprio, ficaria fácil fugir de um histórico ruim.',
+    impacto: 'alto',
+  },
+  perfil_pesquisador_criar_para_outro: {
+    nome: 'Criar Perfil de Pesquisador para Outro',
+    resumo: 'Fazer o upgrade para pesquisador em nome de outra conta.',
+    oQueFaz:
+      'Permite criar o perfil de pesquisador (CPF, vínculo, título) de outra pessoa. O aceite do Termo de upgrade fica registrado em nome dela.',
+    porQueExiste: 'Serve para o administrador preparar contas de teste ou ajudar quem não conseguiu fazer o upgrade sozinho.',
+    impacto: 'alto',
+  },
+  perfil_pesquisador_alterar_de_outro: {
+    nome: 'Alterar Perfil de Outro Pesquisador',
+    resumo: 'Editar o vínculo e o título acadêmico de outro pesquisador.',
+    oQueFaz:
+      'Permite mudar o tipo de vínculo, a instituição e o título acadêmico do perfil de outra pessoa. O CPF fica de fora (tem permissão própria).',
+    porQueExiste: 'Corrige dado acadêmico preenchido errado sem precisar pedir para a própria pessoa refazer o perfil.',
+    impacto: 'médio',
+  },
   termos_uso_gerenciar: {
     nome: 'Gerenciar Termo de Uso',
     resumo: 'Publicar uma nova versão do Termo de Uso.',
@@ -248,6 +273,32 @@ export const DETALHE_PERMISSAO: Partial<Record<string, DetalhePermissao>> = {
     resumo: 'Liberar a transferência do dinheiro arrecadado.',
     oQueFaz: 'Permite liberar a transferência de dinheiro arrecadado pra conta do pesquisador.',
     porQueExiste: 'É o ponto onde dinheiro de verdade sai do sistema, exige aprovação explícita, nunca automático.',
+    impacto: 'alto',
+  },
+  campanha_criar_para_outro: {
+    nome: 'Criar Campanha para Outro Pesquisador',
+    resumo: 'Criar uma campanha em nome de outro pesquisador.',
+    oQueFaz:
+      'Permite criar uma campanha cujo dono é outro pesquisador ativo. Hoje só o Campo de Testes usa isto, para montar cenários.',
+    porQueExiste:
+      'Ferramenta de teste: sem ela, cada cenário exigiria entrar com a conta de cada pesquisador. Deve ficar desligada em produção.',
+    impacto: 'alto',
+  },
+  campanha_excluir_forcado: {
+    nome: 'Excluir Campanha à Força',
+    resumo: 'Apagar uma campanha em qualquer situação, não só em rascunho.',
+    oQueFaz:
+      'Permite excluir uma campanha ignorando a regra normal (o pesquisador só exclui rascunho). Hoje só o Campo de Testes usa isto.',
+    porQueExiste:
+      'Ferramenta de teste para limpar os cenários. Nunca deve virar botão no painel real: uma campanha com dinheiro envolvido não pode sumir.',
+    impacto: 'alto',
+  },
+  campanha_encerrar_moderacao: {
+    nome: 'Encerrar Campanha por Moderação',
+    resumo: 'Encerrar uma campanha ativa por causa de uma denúncia.',
+    oQueFaz:
+      'Permite levar uma campanha ativa para "encerrada por moderação", e só isso: não dá poder de aprovar nem de editar campanha.',
+    porQueExiste: 'É a resposta a uma denúncia procedente contra uma campanha que já está arrecadando (RF-108).',
     impacto: 'alto',
   },
   // F - LINK

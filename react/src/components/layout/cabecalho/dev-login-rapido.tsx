@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useErroToast } from '../toast/use-erro-toast';
 import { SENHA_DEV } from '../../../services/constant/constants/senha-dev.constants';
+import { MensagemErro } from '../../crud/mensagem-erro';
 import type { UseAuthReturn } from '../../../services/3-auth/hook/use-auth';
 
 // <dev>: login instantâneo com uma conta que JÁ existe no seed (07_seed_dados.sql, [07-D-1]), sem digitar nada.
@@ -33,7 +34,7 @@ export function DevLoginRapido({ auth }: DevLoginRapidoProps) {
   const navigate = useNavigate();
   const [menuAberto, setMenuAberto] = useState(false);
   const [entrando, setEntrando] = useState(false);
-  const { erro, reportarErro, limparErro } = useErroToast();
+  const { erro, reportarErro, limparErro } = useErroToast({ mostraTexto: true });
 
   // O erro não é engolido em silêncio: um atalho de dev que esconde o erro parece só "travado" (ex.: o limite
   // de 5 login/60s por IP, auth.module.ts, estoura ao testar 6+ contas do dropdown rápido). Não trava a tela
@@ -99,11 +100,10 @@ export function DevLoginRapido({ auth }: DevLoginRapidoProps) {
         </div>
       )}
 
-      {erro && (
-        <div className="absolute right-0 mt-1 w-56 bg-red-50 border border-red-200 texto-erro text-xs rounded-lg shadow-lg z-50 px-3 py-2">
-          {erro}
-        </div>
-      )}
+      <MensagemErro
+        texto={erro}
+        className="absolute right-0 mt-1 w-56 bg-red-50 border border-red-200 texto-erro text-xs rounded-lg shadow-lg z-50 px-3 py-2"
+      />
     </div>
   );
 }

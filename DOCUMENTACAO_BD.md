@@ -1,5 +1,5 @@
 
-**Contagem do inventário** (`grep -c` nos `.sql`, para conferir contra as queries acima; **evite repetir estes números em outros documentos**, eles envelhecem, cite a seção "Como conferir este inventário"): **42 tabelas**, **121 policies**, **85 triggers** em `05` (81 comuns e 4 `CONSTRAINT TRIGGER`), **109 funções** (79 em `05`, 28 em `03`, 1 em `08`, 1 em `01`), **51 índices** em `02`, e **87 códigos de ERRCODE** customizado (tabelas em `DOCUMENTACAO_ERRCODE.md`).
+**Contagem do inventário** (`grep -c` nos `.sql`, para conferir contra as queries acima; **evite repetir estes números em outros documentos**, eles envelhecem, cite a seção "Como conferir este inventário"): **42 tabelas**, **121 policies**, **85 triggers** em `05` (81 comuns e 4 `CONSTRAINT TRIGGER`), **110 funções** (79 em `05`, 29 em `03`, 1 em `08`, 1 em `01`), **51 índices** em `02`, e **87 códigos de ERRCODE** customizado (tabelas em `DOCUMENTACAO_ERRCODE.md`).
 
 **Comentários dos `.sql`.** Cabeçalho curto (`Função`, `Assinatura`, `Bloco` e uma `Regra` objetiva, sem datas nem história) e, dentro de função, trigger e policy, só o comentário que explica uma regra difícil. Não há ponteiro para arquivo fora do git: o porquê longo mora aqui, na seção `[NN-Y]` correspondente, e a história (o que mudou, quando, por quê) fica no arquivo de histórico local, que não é versionado. Os comentários do `07` explicam dado de teste; o `ATUALIZAR O SUPABASE.sql` é o registro datado de cada patch e por isso mantém a narrativa.
 # 📚 Documentação Técnica do Banco de Dados - CrowdAcadêmico
@@ -1254,6 +1254,32 @@ Nada a implementar; `titulo_academico` e `meio_pagamento` ficam anotados como ca
 - **Decisão:** `suspender_usuario()` e `excluir_conta_usuario()` preenchem `sessao.revogado_em` de todas as sessões abertas da conta.
 - **Motivo:** a sessão aberta continuava renovando sozinha, e a conta suspensa seguia usando o sistema por até 30 dias.
 - **Caso-limite aceito:** a suspensão de um papel só não encerra sessão: a conta continua podendo entrar, só perde o que aquele papel dava.
+
+
+## Correções da auditoria de Nielsen (29-09-2026)
+
+**Em palavras simples:** a auditoria das 10 heurísticas de Nielsen (o relatório fica na pasta de informações, fora do repositório) achou um defeito de datas e mensagens com palavra técnica. Estão nos arquivos 01 a 08, no Grupo AA do ATUALIZAR e na suíte PGlite 26 (correções da auditoria de Nielsen).
+
+📌 **Duração da campanha em dias de calendário.**
+- **Decisão:** `fn_valida_prazo_campanha_negocio()` conta a duração com `FLOOR` (dias inteiros entre o início e o fim).
+- **Motivo:** a tela passou a mandar o começo do dia de início (00:00) e o fim do dia de fim (23:59:59), no fuso de quem usa. Antes mandava meia-noite em UTC, que no Brasil é 21:00 do dia anterior: a campanha começava e terminava um dia antes, e perdia o último dia inteiro de arrecadação. Sem o `FLOOR`, 60 dias de calendário contariam 60,99 e seriam recusados.
+- **Caso-limite aceito:** as campanhas que já existem ficam como estão (com o horário antigo). O marco do cronograma não precisou mudar: a tela manda 00:00 do dia, o mesmo instante do início.
+
+📌 **Mensagens de erro sem palavra técnica.**
+- **Decisão:** 5 mensagens reescritas: a duração da campanha e a meta mínima não citam mais `configuracoes`; valores em dinheiro aparecem como "R$ 500,00"; o prazo vencido não mostra mais a data crua em UTC; o tipo de link não permitido diz o lugar ("no perfil do pesquisador"), e não o nome da tabela.
+- **Motivo:** essas mensagens chegam à tela como estão (faixa 90 a 93).
+- **Caso-limite aceito:** nenhum. Os códigos (ERRCODE) não mudaram.
+
+📌 **Descrição dos parâmetros para quem administra.**
+- **Decisão:** 22 descrições do `07` reescritas sem número de RF, sem nome de coluna e sem nome de outra chave. A tela de Parâmetros mostra a descrição como nome do parâmetro. O Grupo AA só troca a descrição que ainda é a original.
+- **Motivo:** a descrição virou o que o admin lê primeiro. Números de RF também mudam de uma versão dos requisitos para outra.
+- **Caso-limite aceito:** descrição que alguém já editou pelo painel fica como está.
+
+
+📌 **Contagem de aceites por versão do Termo (RF-091).**
+- **Decisão:** `contar_aceites_termo(id)` (`03`, `[03-E]`) soma os aceites do cadastro (`usuario_termo`) e das contribuições (`aceite_termo_contribuicao`) e devolve só o número. É `SECURITY DEFINER`, com `EXECUTE` só para `app_nestjs` (Grupo AB do ATUALIZAR).
+- **Motivo:** pela RLS, o aceite de contribuição só aparece para quem vê dado sensível de contribuição. O admin de Termos contaria "nenhum aceite" numa versão aceita. É o mesmo raciocínio das contagens de seguidores: número público, identidade privada.
+- **Caso-limite aceito:** nenhum.
 
 
 ## Como conferir este inventário

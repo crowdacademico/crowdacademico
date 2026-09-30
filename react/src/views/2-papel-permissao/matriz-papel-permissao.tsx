@@ -11,6 +11,7 @@ import {
   permissaoApi,
 } from '../../services/2-papel-permissao/api/papel-permissao.api';
 import { nomeAmigavelPermissao } from '../../services/2-papel-permissao/constants/permissao-nomes-amigaveis.constants';
+import { MensagemErro } from '../../components/crud/mensagem-erro';
 import type { AuthFetch } from '../../services/3-auth/type/auth.type';
 import type { PapelResponse, PermissaoResponse } from '../../services/2-papel-permissao/type/papel-permissao.type';
 
@@ -49,7 +50,7 @@ interface MatrizPapelPermissaoProps {
 
 export function MatrizPapelPermissao({ authFetch }: MatrizPapelPermissaoProps) {
   const { mostrar } = useToast();
-  const { erro, reportarErro, limparErro } = useErroToast();
+  const { erro, reportarErro, limparErro } = useErroToast({ mostraTexto: true });
   const [celulaAlterando, setCelulaAlterando] = useState<string | null>(null);
 
   // Papéis do menor para o maior poder; permissões pelo nome AMIGÁVEL (é o que aparece na tela, então é o que
@@ -119,7 +120,7 @@ export function MatrizPapelPermissao({ authFetch }: MatrizPapelPermissaoProps) {
         />
       )}
 
-      {erro && <p className="crud-erro">{erro}</p>}
+      <MensagemErro texto={erro} className="crud-erro" />
     </section>
   );
 }

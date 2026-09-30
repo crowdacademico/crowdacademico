@@ -2,13 +2,14 @@ import { useId, useState } from 'react';
 import type { ReactNode } from 'react';
 import { SecaoFicha } from '../../components/crud/ficha-consulta';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
+import { confirmarSaida, useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { Campo } from '../../components/input/campo';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
 import { useRegrasCampanha } from '../../services/12-campanha/hook/use-regras-campanha';
-import { duracaoEmDias, hojeISO } from '../../services/12-campanha/util/prazo-campanha.util';
+import { duracaoEmDias, fimDoDia, hojeISO, inicioDoDia } from '../../services/12-campanha/util/prazo-campanha.util';
 import { useAreasDaCampanha } from '../../services/8-area-conhecimento/hook/use-areas-da-campanha';
 import { formatarMoeda } from '../../services/constant/util/formatacao.util';
 import { useEnvio } from '../../services/constant/hook/use-envio';
@@ -101,8 +102,8 @@ export function ModalCriarCampanha({
     titulo: form.titulo.trim(),
     idAreaConhecimento: Number(form.idAreaConhecimento),
     metaFinanceira: Number(form.metaFinanceira),
-    dataInicio: new Date(form.dataInicio).toISOString(),
-    dataFim: new Date(form.dataFim).toISOString(),
+    dataInicio: inicioDoDia(form.dataInicio),
+    dataFim: fimDoDia(form.dataFim),
     ...(form.descricao.trim() ? { descricao: form.descricao.trim() } : {}),
     ...(form.videoApresentacaoUrl.trim() ? { videoApresentacaoUrl: form.videoApresentacaoUrl.trim() } : {}),
   });
@@ -136,6 +137,14 @@ export function ModalCriarCampanha({
     });
   };
 
+  // Antes do primeiro "Próximo" nada foi salvo: fechar jogaria fora o que foi digitado. Depois, a campanha já é
+  // rascunho e fechar não perde nada.
+  const sujo = idCampanha === null && JSON.stringify(form) !== JSON.stringify(FORM_VAZIO);
+  useAvisoAlteracaoNaoSalva(sujo);
+  const fechar = () => {
+    if (confirmarSaida(sujo)) aoFechar();
+  };
+
   const subtitulo =
     etapa === 'dados'
       ? subtituloDados
@@ -146,7 +155,7 @@ export function ModalCriarCampanha({
   const rodape =
     etapa === 'dados' ? (
       <RodapeAcoes
-        aoCancelar={aoFechar}
+        aoCancelar={fechar}
         acao={{ rotulo: 'Próximo', ocupado: trabalhando, aoClicar: () => void avancarDosDados() }}
       />
     ) : etapa === 'orcamento' ? (
@@ -176,7 +185,7 @@ export function ModalCriarCampanha({
       // Depois da etapa 1 a campanha já está salva como rascunho: fechar não perde nada.
       fecharAoClicarFora={false}
       subtitulo={subtitulo}
-      aoFechar={aoFechar}
+      aoFechar={fechar}
       rodape={rodape}
     >
       {etapa !== 'dados' && idCampanha !== null ? (

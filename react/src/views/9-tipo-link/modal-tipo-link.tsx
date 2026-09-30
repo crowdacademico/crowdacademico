@@ -11,6 +11,7 @@ import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
 import { CaixaMarcacao } from '../../components/input/caixa-marcacao';
 import { EscoposTipoLink } from './escopos-tipo-link';
+import { TesteLinkTipo } from './teste-link-tipo';
 import { tipoLinkApi } from '../../services/9-tipo-link/api/tipo-link.api';
 import {
   DICA_DOMINIOS_TIPO_LINK,
@@ -20,6 +21,7 @@ import {
   regexValida,
 } from '../../services/9-tipo-link/constants/tipo-link.constants';
 import { useEnvio } from '../../services/constant/hook/use-envio';
+import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { TipoLinkResponse } from '../../services/9-tipo-link/type/tipo-link.type';
 
@@ -85,7 +87,7 @@ interface ModalAlterarTipoLinkProps {
 // academico() lê pra reconhecer Lattes/ORCID.
 export function ModalAlterarTipoLink({ auth, tipo, aoFechar, aoAtualizado }: ModalAlterarTipoLinkProps) {
   const { mostrar } = useToast();
-  const { erro, reportarErro, limparErro, errosCampo, limparErroCampo } = useErroToast();
+  const { erro, reportarErro, limparErro, errosCampo, limparErroCampo } = useErroToast({ mostraTexto: true });
   const { ocupado: enviando, executar: executarEnviando } = useEnvio(reportarErro, limparErro);
   const [nome, setNome] = useState(tipo.nome);
   const [ativo, setAtivo] = useState(tipo.ativo);
@@ -115,7 +117,11 @@ export function ModalAlterarTipoLink({ auth, tipo, aoFechar, aoAtualizado }: Mod
     aoFechar();
   };
 
+  // "Salvar" só espera haver alteração; nome apagado, regex inválida e nenhuma opção marcada mostram o erro no campo.
+  const { erroDe, tentarEnviar } = useErrosFormulario(() => ({ nome: nome.trim() === '' && 'Informe o nome.' }));
+
   const aoSalvar = async () => {
+    if (!tentarEnviar() || regexInvalida || nenhumEscopoMarcado) return;
     await executarEnviando(async () => {
       await tipoLinkApi.atualizar(auth.authFetch, tipo.idTipolink, {
         nome,
@@ -143,7 +149,7 @@ export function ModalAlterarTipoLink({ auth, tipo, aoFechar, aoAtualizado }: Mod
             rotulo: 'Salvar',
             rotuloOcupado: 'Salvando...',
             ocupado: enviando,
-            desabilitado: !sujo || regexInvalida || nenhumEscopoMarcado || nome.trim() === '',
+            desabilitado: !sujo,
             aoClicar: () => void aoSalvar(),
           }}
         />
@@ -155,7 +161,7 @@ export function ModalAlterarTipoLink({ auth, tipo, aoFechar, aoAtualizado }: Mod
       </SecaoFicha>
 
       <SecaoFicha titulo="Editar">
-        <Campo rotulo="Nome" erro={errosCampo.nome} className="sm:col-span-2">
+        <Campo rotulo="Nome" erro={erroDe('nome') ?? errosCampo.nome} className="sm:col-span-2">
           {({ atributos, classeErro }) => (
             <input
               {...atributos}
@@ -212,6 +218,10 @@ export function ModalAlterarTipoLink({ auth, tipo, aoFechar, aoAtualizado }: Mod
             />
           )}
         </Campo>
+
+        <div className="sm:col-span-2">
+          <TesteLinkTipo dominioTexto={dominioTexto} regex={regex} />
+        </div>
 
         <CaixaMarcacao rotulo="Ativo" marcado={ativo} aoMudar={setAtivo} className="sm:col-span-2" />
 

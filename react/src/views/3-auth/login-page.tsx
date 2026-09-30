@@ -1,4 +1,5 @@
 import { useId, useState } from 'react';
+import { MensagemErro } from '../../components/crud/mensagem-erro';
 import type { CSSProperties, FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { IconeGoogle } from '../../components/3-auth/icone-google';
@@ -34,7 +35,7 @@ export function LoginPage({ auth }: PropsPagina) {
   const local = useLocation();
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
-  const { erro, reportarErro, limparErro } = useErroToast();
+  const { erro, reportarErro, limparErro } = useErroToast({ mostraTexto: true });
   const { ocupado: enviando, executar: executarEnviando } = useEnvio(reportarErro, limparErro);
   const idSenha = useId();
 
@@ -64,11 +65,7 @@ export function LoginPage({ auth }: PropsPagina) {
         </div>
 
         <form onSubmit={aoEntrar} className="p-10 space-y-6">
-          {erro && (
-            <p className="texto-erro text-sm font-bold text-center whitespace-pre-line">
-              {erro}
-            </p>
-          )}
+          <MensagemErro texto={erro} className="texto-erro text-sm font-bold text-center whitespace-pre-line" />
 
           <Campo rotulo="Seu E-mail">
             {({ atributos }) => (

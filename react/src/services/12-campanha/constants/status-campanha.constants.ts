@@ -1,4 +1,4 @@
-import type { StatusCampanha } from '../../constant/type/enums-do-banco.gerado';
+import type { ModeloCampanha, StatusCampanha } from '../../constant/type/enums-do-banco.gerado';
 import { listaCompleta } from '../../constant/util/lista-completa.util';
 
 // Os VALORES vêm do banco (ENUM status_campanha, via enums-do-banco.gerado.ts); aqui ficam só a ordem de exibição,
@@ -46,3 +46,9 @@ const CLASSE_BADGE_STATUS_CAMPANHA: Record<StatusCampanha, string> = {
 export function classeBadgeStatusCampanha(status: StatusCampanha): string {
   return CLASSE_BADGE_STATUS_CAMPANHA[status];
 }
+
+// Rótulo do modelo de financiamento: o valor do banco ("all-or-nothing") é nome técnico, em inglês.
+export const ROTULO_MODELO_CAMPANHA: Record<ModeloCampanha, string> = {
+  'all-or-nothing': 'Tudo ou nada',
+  flexivel: 'Flexível',
+};

@@ -4,6 +4,7 @@
 export interface PapelResponse {
   idPapel: number;
   nome: string;
+  codigo: string;
 }
 
 // Espelha papel.request-update.ts.

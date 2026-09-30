@@ -20,6 +20,8 @@ export interface TermoUsoResponse {
   conteudo: string;
   ativo: boolean;
   criadoEm: string;
+  // Só na listagem (RF-091): quantos aceites a versão tem. Ausente enquanto o banco não tem a contagem.
+  aceites?: number;
 }
 
 // Espelha nest/src/5-termo-uso/dto/request/termo-uso.request-create.ts.

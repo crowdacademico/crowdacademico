@@ -14,163 +14,55 @@
 -- vai vir com um aviso bem visível.
 -- ============================================================================
 
+
 -- ============================================================================
--- GRUPO Z (29-09-2026) - decisões 1A e 2A e o passo 4 da super auditoria. IDEMPOTENTE (pode colar de novo).
--- (O Grupo Y já foi colado em 29-09-2026 e saiu deste arquivo.)
--- ⚠️ PARE O NEST ANTES DE COLAR: tem ALTER TABLE (as FKs de aceite do Termo), que trava com o Nest rodando.
+-- GRUPO AA (29-09-2026) - correções da auditoria de Nielsen. IDEMPOTENTE (pode colar de novo).
+-- (O Grupo Z já foi colado em 29-09-2026 e saiu deste arquivo.)
+-- Só troca funções (CREATE OR REPLACE) e textos: pode colar com o Nest ligado.
 --
 -- O que muda:
---   1. Suspender ou excluir uma conta encerra as sessões abertas dela (antes a conta suspensa continuava usando o
---      sistema pela renovação automática, por até 30 dias).
---   2. RF-091: versão do Termo já aceita não pode ser excluída nem ter o texto alterado; os aceites não são mais
---      apagados em cascata junto com a versão.
---   3. RF-022: link novo ou editado precisa ser do domínio do tipo (Lattes em lattes.cnpq.br...) e seguir o
---      formato do tipo. Links que já existem não são tocados.
---   4. RF-015: função que diz se a conta tem aceite pendente da versão vigente do Termo de Uso.
---      ATENÇÃO: nenhuma conta do Supabase aceitou a versão vigente (v4), então TODAS vão ver a tela de aceite uma
---      vez, no próximo acesso depois do Nest novo. É o que o RF-015 pede.
+--   1. Datas da campanha: a tela passa a mandar o começo do dia de início (00:00) e o fim do dia de fim (23:59:59)
+--      no horário de Brasília. Antes mandava meia-noite de Londres, e a campanha terminava às 21:00 do dia ANTERIOR
+--      ao fim escolhido. A duração passa a contar dias de calendário, senão 60 dias com fim às 23:59 contariam
+--      60,99 e seriam recusados. As campanhas que já existem não mudam.
+--   2. Mensagens de erro sem palavra técnica: sai "(configuracoes)", o nome da tabela do link e a data crua em UTC;
+--      valores em dinheiro aparecem como "R$ 500,00".
+--   3. Descrição dos parâmetros em Parâmetros do Sistema sem número de RF nem nome de coluna. Só troca a descrição que
+--      ainda é a original (se alguém já editou pelo painel, fica como está).
 -- ============================================================================
 
--- 1. Sessões encerradas ao suspender e ao excluir
+-- 1. Duração da campanha em dias de calendário (e mensagem sem "(configuracoes)")
 
-CREATE OR REPLACE FUNCTION public.suspender_usuario(p_id_usuario INT, p_ate TIMESTAMPTZ, p_motivo TEXT)
-RETURNS VOID
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-BEGIN
-    IF NOT public.tem_permissao('usuario_suspender') THEN
-        RAISE EXCEPTION 'Sem permissão para suspender usuário.' USING ERRCODE = '92020';
-    END IF;
-    IF p_motivo IS NULL OR btrim(p_motivo) = '' THEN
-        RAISE EXCEPTION 'Motivo da suspensão é obrigatório.' USING ERRCODE = '90020';
-    END IF;
-    IF p_ate IS NULL OR p_ate <= NOW() THEN
-        RAISE EXCEPTION 'A data final da suspensão precisa estar no futuro.' USING ERRCODE = '90023';
-    END IF;
-    IF p_id_usuario = public.id_usuario_atual() THEN
-        RAISE EXCEPTION 'Você não pode suspender a sua própria conta.' USING ERRCODE = '92027';
-    END IF;
-    IF public.fn_eh_ultimo_admin_ativo(p_id_usuario) THEN
-        RAISE EXCEPTION 'Não é possível suspender o último administrador ativo do sistema.' USING ERRCODE = '91030';
-    END IF;
-
-    UPDATE usuario
-    SET suspenso_ate = p_ate,
-        motivo_suspensao = p_motivo,
-        suspenso_por = public.id_usuario_atual()
-    WHERE id_usuario = p_id_usuario;
-
-    -- Quem já estava logado sai na hora: sem isto, a renovação automática mantinha a conta suspensa usando o
-    -- sistema enquanto a aba ficasse aberta (o token de acesso, de 15 min, é o único resto aceito).
-    UPDATE sessao SET revogado_em = NOW()
-    WHERE id_usuario = p_id_usuario AND revogado_em IS NULL;
-END;
-$$;
-
-CREATE OR REPLACE FUNCTION public.excluir_conta_usuario(p_id_usuario INT)
-RETURNS VOID
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
+CREATE OR REPLACE FUNCTION fn_valida_prazo_campanha_negocio()
+RETURNS TRIGGER AS $$
 DECLARE
-    v_id_imagem_perfil INT;
+    v_prazo_minimo INT;
+    v_prazo_maximo INT;
+    v_duracao_dias DECIMAL;
 BEGIN
-    IF NOT (p_id_usuario = public.id_usuario_atual() OR public.tem_permissao('usuario_excluir')) THEN
-        RAISE EXCEPTION 'Sem permissão para excluir a conta de outro usuário.' USING ERRCODE = '92013';
-    END IF;
-    IF public.fn_eh_ultimo_admin_ativo(p_id_usuario) THEN
-        RAISE EXCEPTION 'Não é possível excluir a conta do último administrador ativo do sistema.' USING ERRCODE = '91030';
-    END IF;
-    IF EXISTS (SELECT 1 FROM campanha WHERE id_usuario = p_id_usuario AND status = 'ativo') THEN
-        RAISE EXCEPTION 'Não é possível excluir a conta enquanto houver campanha ativa. A exclusão fica liberada quando a campanha terminar.'
-            USING ERRCODE = '91031';
+    IF NEW.data_fim IS NULL OR NEW.data_inicio IS NULL THEN
+        RETURN NEW;
     END IF;
 
-    SELECT id_imagem_perfil INTO v_id_imagem_perfil
-    FROM usuario WHERE id_usuario = p_id_usuario;
+    v_prazo_minimo := public.config_numero('prazo_minimo_campanha_dias', 15);
+    v_prazo_maximo := public.config_numero('prazo_maximo_campanha_dias', 60);
+    -- EXTRACT(EPOCH FROM intervalo) / 86400 dá o total de dias corridos, sem o
+    -- risco de EXTRACT(DAY FROM ...) ler só o componente "dias" de um intervalo
+    -- que também tenha meses (mesmo padrão já usado em calcular_score_atualizacao).
+    -- FLOOR: a campanha vai do começo do dia de início ao fim do dia de fim (23:59:59); sem arredondar para baixo,
+    -- 60 dias de calendário contariam 60,99 e passariam do máximo.
+    v_duracao_dias := FLOOR(EXTRACT(EPOCH FROM (NEW.data_fim - NEW.data_inicio)) / 86400);
 
-    UPDATE usuario
-    SET deletado = TRUE, deletado_em = NOW(), deletado_por = public.id_usuario_atual()
-    WHERE id_usuario = p_id_usuario;
-
-    -- Conta excluída não renova mais nenhuma sessão (mesmo motivo de suspender_usuario).
-    UPDATE sessao SET revogado_em = NOW()
-    WHERE id_usuario = p_id_usuario AND revogado_em IS NULL;
-
-    DELETE FROM campanha c
-    WHERE c.id_usuario = p_id_usuario
-      AND (c.status = 'rascunho'
-           OR (c.status = 'aguardando_aprovacao'
-               AND NOT EXISTS (SELECT 1 FROM historico_rejeicao h WHERE h.id_campanha = c.id_campanha)));
-
-    -- A volta a 'rejeitado' pede linha em historico_rejeicao na mesma transação (trg_campanha_exige_historico_rejeicao,
-    -- 05); id_admin NULL porque ninguém da moderação rejeitou.
-    WITH devolvidas AS (
-        UPDATE campanha SET status = 'rejeitado'
-        WHERE id_usuario = p_id_usuario AND status = 'aguardando_aprovacao'
-        RETURNING id_campanha, id_usuario, titulo
-    )
-    INSERT INTO historico_rejeicao (id_campanha, id_usuario_dono, titulo_campanha, id_admin, justificativa)
-    SELECT id_campanha, id_usuario, titulo, NULL,
-           'Reenvio cancelado: o pesquisador excluiu a própria conta.'
-    FROM devolvidas;
-
-    -- Desativa a foto de
-    -- perfil vinculada na mesma transação - sem isto, a linha em `arquivo`
-    -- ficava ativo=true pra sempre, mesmo com a conta dona já excluída.
-    -- SECURITY DEFINER bypassa pol_arquivo_update DE PROPÓSITO aqui: quem
-    -- executou a exclusão da conta já foi autorizado acima (dono OU
-    -- 'usuario_excluir') - não faz sentido também exigir 'arquivo_gerenciar'
-    -- ou posse sobre o arquivo em si só pra essa consequência automática.
-    -- Os BYTES de verdade no bucket NÃO são apagados aqui - Postgres não
-    -- fala com o provedor de armazenamento (B2/R2/Supabase Storage). Isso é
-    -- feito depois, do lado da aplicação (ver
-    -- nest/src/1-usuario/service/usuario.service.remove.ts), que lê
-    -- `arquivo.chave` (ainda intacta, só `ativo` mudou) e chama
-    -- armazenamento.excluirObjeto().
-    IF v_id_imagem_perfil IS NOT NULL THEN
-        UPDATE arquivo
-        SET ativo = FALSE, desativado_em = NOW()
-        WHERE id_arquivo = v_id_imagem_perfil;
+    IF v_duracao_dias < v_prazo_minimo OR v_duracao_dias > v_prazo_maximo THEN
+        RAISE EXCEPTION 'A duração da campanha precisa estar entre % e % dias.', v_prazo_minimo, v_prazo_maximo
+            USING ERRCODE = '90012';
     END IF;
+
+    RETURN NEW;
 END;
-$$;
+$$ LANGUAGE plpgsql;
 
--- 2. RF-091: aceite não some mais junto com a versão; a versão aceita fica protegida
-ALTER TABLE usuario_termo DROP CONSTRAINT IF EXISTS "FK_USUARIO_TERMO_TERMO";
-ALTER TABLE usuario_termo ADD CONSTRAINT "FK_USUARIO_TERMO_TERMO" FOREIGN KEY (id_termo) REFERENCES termos_de_uso(id_termo);
-ALTER TABLE aceite_termo_contribuicao DROP CONSTRAINT IF EXISTS "FK_ACEITE_TERMO_CONTRIBUICAO_TERMO";
-ALTER TABLE aceite_termo_contribuicao ADD CONSTRAINT "FK_ACEITE_TERMO_CONTRIBUICAO_TERMO" FOREIGN KEY (id_termo) REFERENCES termos_de_uso(id_termo);
-
-CREATE OR REPLACE FUNCTION public.fn_protege_termo_aceito()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-BEGIN
-    IF EXISTS (SELECT 1 FROM usuario_termo WHERE id_termo = OLD.id_termo)
-       OR EXISTS (SELECT 1 FROM aceite_termo_contribuicao WHERE id_termo = OLD.id_termo) THEN
-        IF TG_OP = 'DELETE' THEN
-            RAISE EXCEPTION 'Esta versão já foi aceita por pelo menos uma pessoa e não pode ser excluída (é a prova do aceite). Publique uma versão nova para substituí-la.'
-                USING ERRCODE = '91032';
-        END IF;
-        RAISE EXCEPTION 'Esta versão já foi aceita por pelo menos uma pessoa e não pode mais ser alterada. Publique uma versão nova.'
-            USING ERRCODE = '91033';
-    END IF;
-    RETURN CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END;
-END;
-$$;
-
-DROP TRIGGER IF EXISTS trg_termos_de_uso_protege_aceito ON termos_de_uso;
-CREATE TRIGGER trg_termos_de_uso_protege_aceito
-BEFORE DELETE OR UPDATE OF conteudo, tipo, versao ON termos_de_uso
-FOR EACH ROW EXECUTE FUNCTION public.fn_protege_termo_aceito();
-
--- 3. RF-022: domínio e formato do link
+-- 2. Mensagens de erro na língua de quem usa
 
 CREATE OR REPLACE FUNCTION public.trg_valida_escopo_tipolink()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
@@ -200,7 +92,11 @@ BEGIN
         INTO v_permitido USING NEW.id_tipolink;
 
     IF NOT COALESCE(v_permitido, FALSE) THEN
-        RAISE EXCEPTION 'Este tipo de link não é permitido para %', TG_TABLE_NAME
+        RAISE EXCEPTION 'Este tipo de link não pode ser usado %.', CASE TG_TABLE_NAME
+            WHEN 'link_academico'   THEN 'no perfil do pesquisador'
+            WHEN 'link_atualizacao' THEN 'em atualização de campanha'
+            ELSE 'em recompensa'
+        END
             USING ERRCODE = '90002';
     END IF;
 
@@ -227,23 +123,158 @@ BEGIN
 END;
 $$;
 
--- 4. RF-015: aceite pendente
+CREATE OR REPLACE FUNCTION public.fn_valida_completude_campanha()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+    v_min_orcamento  INT;
+    v_min_marcos     INT;
+    v_qtd_orcamento  INT;
+    v_qtd_marcos     INT;
+    v_soma_orcamento DECIMAL(10,2);
+BEGIN
+    v_min_orcamento := public.config_numero('orcamento_min_itens', 1)::INT;
+    v_min_marcos    := public.config_numero('cronograma_min_marcos', 3)::INT;
 
-CREATE OR REPLACE FUNCTION public.fn_termo_uso_pendente(p_id_usuario INT)
+    SELECT COUNT(*), COALESCE(SUM(valor), 0)
+      INTO v_qtd_orcamento, v_soma_orcamento
+      FROM orcamento_campanha
+      WHERE id_campanha = NEW.id_campanha;
+
+    SELECT COUNT(*)
+      INTO v_qtd_marcos
+      FROM marco_cronograma
+      WHERE id_campanha = NEW.id_campanha;
+
+    IF v_qtd_orcamento < v_min_orcamento THEN
+        RAISE EXCEPTION 'A campanha precisa de pelo menos % % de orçamento, mas tem %.',
+            v_min_orcamento, CASE WHEN v_min_orcamento = 1 THEN 'item' ELSE 'itens' END, v_qtd_orcamento
+            USING ERRCODE = '90009';
+    END IF;
+
+    IF v_qtd_marcos < v_min_marcos THEN
+        RAISE EXCEPTION 'A campanha precisa de pelo menos % % de cronograma, mas tem %.',
+            v_min_marcos, CASE WHEN v_min_marcos = 1 THEN 'marco' ELSE 'marcos' END, v_qtd_marcos
+            USING ERRCODE = '90010';
+    END IF;
+
+    IF v_soma_orcamento <> NEW.meta_financeira THEN
+        RAISE EXCEPTION 'A soma dos itens de orçamento (%) precisa ser exatamente igual à meta financeira (%).', 'R$ ' || replace(to_char(v_soma_orcamento, 'FM999999990.00'), '.', ','), 'R$ ' || replace(to_char(NEW.meta_financeira, 'FM999999990.00'), '.', ',')
+            USING ERRCODE = '90011';
+    END IF;
+
+    -- Prazo vencido bloqueia envio e aprovação, só por data_fim. Ver DOCUMENTACAO_BD.md [05-K-2-B].
+    IF NEW.data_fim IS NULL OR NEW.data_fim <= NOW() THEN
+        RAISE EXCEPTION 'O prazo da campanha já venceu. Atualize as datas antes de enviar.'
+            USING ERRCODE = '90015';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION fn_valida_meta_campanha_negocio()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_meta_minima DECIMAL;
+BEGIN
+    v_meta_minima := public.config_numero('meta_minima_campanha', 500.00);
+
+    IF NEW.meta_financeira < v_meta_minima THEN
+        RAISE EXCEPTION 'A meta financeira precisa ser de pelo menos %.', 'R$ ' || replace(to_char(v_meta_minima, 'FM999999990.00'), '.', ',')
+            USING ERRCODE = '90013';
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION fn_valida_contribuicao_valor_minimo()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_valor_minimo DECIMAL;
+BEGIN
+    v_valor_minimo := public.config_numero('valor_minimo_contribuicao', 5.00);
+
+    IF NEW.valor < v_valor_minimo THEN
+        RAISE EXCEPTION 'O valor da contribuição precisa ser de pelo menos %.', 'R$ ' || replace(to_char(v_valor_minimo, 'FM999999990.00'), '.', ',')
+            USING ERRCODE = '90014';
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 3. Descrições dos parâmetros na língua de quem usa
+
+
+
+UPDATE configuracoes SET descricao = 'Nº máximo de campanhas ao mesmo tempo por pesquisador (ativas ou aguardando aprovação)'
+    WHERE chave = 'limite_campanhas_simultaneas' AND id_usuario IS NULL AND descricao = 'Nº máximo de campanhas simultâneas (aguardando_aprovacao/ativo) por pesquisador (RF-029)';
+UPDATE configuracoes SET descricao = 'Nº máximo de endossos ativos ao mesmo tempo por campanha'
+    WHERE chave = 'limite_endossos_campanha' AND id_usuario IS NULL AND descricao = 'Nº máximo de endossos ativos simultâneos por campanha (RF-063)';
+UPDATE configuracoes SET descricao = 'Nº máximo de denúncias que um usuário pode fazer dentro da janela de tempo das denúncias'
+    WHERE chave = 'limite_denuncias_24h' AND id_usuario IS NULL AND descricao = 'Nº máximo de denúncias por usuário dentro da janela de configuracoes.janela_denuncias_horas (RF-076)';
+UPDATE configuracoes SET descricao = 'Janela de tempo das denúncias, em horas (usada pelo limite de denúncias por usuário)'
+    WHERE chave = 'janela_denuncias_horas' AND id_usuario IS NULL AND descricao = 'Janela de tempo (em horas) usada por limite_denuncias_24h (RF-076)';
+UPDATE configuracoes SET descricao = 'Nº máximo de comentários que um usuário pode fazer dentro da janela de tempo dos comentários'
+    WHERE chave = 'limite_comentarios_por_hora' AND id_usuario IS NULL AND descricao = 'Nº máximo de comentários por usuário dentro da janela de configuracoes.janela_comentarios_horas';
+UPDATE configuracoes SET descricao = 'Janela de tempo dos comentários, em horas (usada pelo limite de comentários por usuário)'
+    WHERE chave = 'janela_comentarios_horas' AND id_usuario IS NULL AND descricao = 'Janela de tempo (em horas) usada por limite_comentarios_por_hora';
+UPDATE configuracoes SET descricao = 'Nº máximo de caracteres na descrição da campanha'
+    WHERE chave = 'limite_caracteres_descricao_campanha' AND id_usuario IS NULL AND descricao = 'Nº máximo de caracteres em campanha.descricao (RF)';
+UPDATE configuracoes SET descricao = 'Nº máximo de caracteres no texto de uma atualização de campanha'
+    WHERE chave = 'limite_caracteres_conteudo_atualizacao' AND id_usuario IS NULL AND descricao = 'Nº máximo de caracteres em atualizacao_campanha.conteudo';
+UPDATE configuracoes SET descricao = 'Nº máximo de caracteres no relato de uma denúncia'
+    WHERE chave = 'limite_caracteres_relato_denuncia' AND id_usuario IS NULL AND descricao = 'Nº máximo de caracteres em denuncia.relato (sugestão de uma IA)';
+UPDATE configuracoes SET descricao = 'Nº máximo de caracteres em cada justificativa do pedido de encerramento antecipado'
+    WHERE chave = 'limite_caracteres_justificativa_encerramento' AND id_usuario IS NULL AND descricao = 'Nº máximo de caracteres em solicitacao_encerramento.justificativa_pesquisador/justificativa_admin';
+UPDATE configuracoes SET descricao = 'Nº máximo de caracteres na descrição de uma recompensa'
+    WHERE chave = 'limite_caracteres_descricao_recompensa' AND id_usuario IS NULL AND descricao = 'Nº máximo de caracteres em recompensa.descricao';
+UPDATE configuracoes SET descricao = 'Nº mínimo de itens de orçamento exigido para aprovar uma campanha'
+    WHERE chave = 'orcamento_min_itens' AND id_usuario IS NULL AND descricao = 'Nº mínimo de itens de orçamento exigido para aprovar uma campanha (RF-039)';
+UPDATE configuracoes SET descricao = 'Nº máximo de caracteres na descrição de um item de orçamento'
+    WHERE chave = 'limite_caracteres_descricao_orcamento' AND id_usuario IS NULL AND descricao = 'Nº máximo de caracteres em orcamento_campanha.descricao';
+UPDATE configuracoes SET descricao = 'Nº máximo de caracteres na descrição de um marco do cronograma'
+    WHERE chave = 'limite_caracteres_descricao_marco' AND id_usuario IS NULL AND descricao = 'Nº máximo de caracteres em marco_cronograma.descricao';
+UPDATE configuracoes SET descricao = 'Valor mínimo de meta financeira aceito para uma campanha, em R$'
+    WHERE chave = 'meta_minima_campanha' AND id_usuario IS NULL AND descricao = 'Valor mínimo de meta financeira aceito para uma campanha (RF)';
+UPDATE configuracoes SET descricao = 'Nº máximo de links acadêmicos por pesquisador'
+    WHERE chave = 'limite_links_academicos_perfil' AND id_usuario IS NULL AND descricao = 'Nº máximo de links acadêmicos por pesquisador (RF-014/016/018)';
+UPDATE configuracoes SET descricao = 'Valor mínimo aceito por contribuição, em R$'
+    WHERE chave = 'valor_minimo_contribuicao' AND id_usuario IS NULL AND descricao = 'Valor mínimo aceito por contribuição, em R$ (RF-056)';
+UPDATE configuracoes SET descricao = 'Tamanho máximo aceito por imagem enviada (JPEG/PNG/WebP), em bytes'
+    WHERE chave = 'arquivo_tamanho_maximo_imagem_bytes' AND id_usuario IS NULL AND descricao = 'Tamanho máximo aceito por imagem enviada (JPEG/PNG/WebP), em bytes (RF-017)';
+UPDATE configuracoes SET descricao = 'Tamanho máximo aceito por documento enviado (PDF), em bytes'
+    WHERE chave = 'arquivo_tamanho_maximo_documento_bytes' AND id_usuario IS NULL AND descricao = 'Tamanho máximo aceito por documento enviado (PDF), em bytes (RF-017)';
+UPDATE configuracoes SET descricao = 'Cota total de armazenamento ativo por usuário, em bytes'
+    WHERE chave = 'arquivo_cota_bytes_por_usuario' AND id_usuario IS NULL AND descricao = 'Cota total de armazenamento ativo por usuário, em bytes (RNF-017)';
+UPDATE configuracoes SET descricao = 'Nº máximo de uploads confirmados por usuário dentro da janela de tempo dos uploads'
+    WHERE chave = 'arquivo_limite_uploads_janela' AND id_usuario IS NULL AND descricao = 'Nº máximo de uploads confirmados por usuário dentro da janela de configuracoes.arquivo_janela_limite_uploads_minutos';
+UPDATE configuracoes SET descricao = 'Janela de tempo dos uploads, em minutos (1440 = 24 horas)'
+    WHERE chave = 'arquivo_janela_limite_uploads_minutos' AND id_usuario IS NULL AND descricao = 'Janela de tempo (em minutos) usada por arquivo_limite_uploads_janela - padrão 1440 = 24h';
+
+-- ============================================================================
+-- GRUPO AB (29-09-2026) - RF-091 na tela de Termos. IDEMPOTENTE (pode colar de novo).
+-- Só cria uma função: pode colar com o Nest ligado.
+--
+-- O que muda:
+--   1. contar_aceites_termo(id): quantos aceites cada versão do Termo tem, só o número, sem dado de quem aceitou.
+--      A lista de Termos passa a apagar a lixeira de versão já aceita, e o Alterar mostra o texto só para leitura.
+--      Antes de colar, a lista funciona como antes (o Nest percebe que a função não existe e segue sem a contagem).
+-- ============================================================================
+
+-- 1. Contagem de aceites por versão do Termo
+
+CREATE OR REPLACE FUNCTION public.contar_aceites_termo(p_id_termo INT)
 RETURNS INT
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
 SET search_path = public
 AS $$
-    SELECT t.id_termo
-    FROM termos_de_uso t
-    WHERE t.tipo = 'cadastro' AND t.ativo
-      AND NOT EXISTS (
-          SELECT 1 FROM usuario_termo ut
-          WHERE ut.id_usuario = p_id_usuario AND ut.id_termo = t.id_termo
-      );
+    SELECT ((SELECT count(*) FROM usuario_termo WHERE id_termo = p_id_termo)
+          + (SELECT count(*) FROM aceite_termo_contribuicao WHERE id_termo = p_id_termo))::INT;
 $$;
 
-REVOKE EXECUTE ON FUNCTION public.fn_termo_uso_pendente(INT) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.fn_termo_uso_pendente(INT) TO app_nestjs;
+REVOKE EXECUTE ON FUNCTION public.contar_aceites_termo(INT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.contar_aceites_termo(INT) TO app_nestjs;

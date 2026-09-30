@@ -222,8 +222,8 @@ export const ROTAS_ADMIN: Rota[] = [
   // Parâmetro do Sistema, Área de Conhecimento, Tipo de Link e Motivo de Denúncia; Alterar de Papel; Consultar
   // de Campanha e de Pesquisador; Consultar e Alterar de Termo de Uso (ModalAlterarTermoUso).
 
-  // Termo de Uso: filhas de /admin/termos-uso. Sem Excluir de propósito (nenhuma versão pode desaparecer:
-  // rastro de auditoria).
+  // Termo de Uso: filha de /admin/termos-uso. Consultar, Alterar e Excluir são modais da lista (Excluir só apaga
+  // rascunho que ninguém aceitou).
   {
     caminho: '/admin/termos-uso/criar',
     caminhoRelativo: 'termos-uso/criar',

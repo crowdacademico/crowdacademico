@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { SecaoFicha } from '../../components/crud/ficha-consulta';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
+import { confirmarSaida, useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
 import { Campo } from '../../components/input/campo';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
@@ -12,6 +13,7 @@ import {
   ROTULO_TIPO_MOTIVO_DENUNCIA,
 } from '../../services/10-motivo-denuncia/constants/motivo-denuncia.constants';
 import { useEnvio } from '../../services/constant/hook/use-envio';
+import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { MotivoDenunciaResponse, TipoMotivoDenuncia } from '../../services/10-motivo-denuncia/type/motivo-denuncia.type';
 
@@ -24,13 +26,19 @@ interface ModalCriarMotivoDenunciaProps {
 // Criar em modal, mesmo padrão de ModalCriarUsuario.
 export function ModalCriarMotivoDenuncia({ auth, aoFechar, aoCriado }: ModalCriarMotivoDenunciaProps) {
   const { mostrar } = useToast();
-  const { erro, reportarErro, limparErro, errosCampo, limparErroCampo } = useErroToast();
+  const { erro, reportarErro, limparErro, errosCampo, limparErroCampo } = useErroToast({ mostraTexto: true });
   const { ocupado: enviando, executar: executarEnviando } = useEnvio(reportarErro, limparErro);
   const [descricao, setDescricao] = useState('');
   const [tipo, setTipo] = useState<TipoMotivoDenuncia | ''>('');
 
+  // "Criar" fica sempre clicável: clicando com algo faltando, cada campo mostra o próprio erro.
+  const { erroDe, tentarEnviar } = useErrosFormulario(() => ({
+    tipo: tipo === '' && 'Escolha o tipo.',
+    descricao: descricao.trim() === '' && 'Informe a descrição.',
+  }));
+
   const aoCriar = async () => {
-    if (tipo === '') return;
+    if (!tentarEnviar() || tipo === '') return;
     await executarEnviando(async () => {
       const motivoCriado = await motivoDenunciaApi.criar(auth.authFetch, { descricao, tipo });
       mostrar(
@@ -42,19 +50,25 @@ export function ModalCriarMotivoDenuncia({ auth, aoFechar, aoCriado }: ModalCria
     });
   };
 
+  // Criar também pergunta antes de fechar com algo digitado, como o Alterar.
+  const sujo = descricao !== '' || tipo !== '';
+  useAvisoAlteracaoNaoSalva(sujo);
+  const fechar = () => {
+    if (confirmarSaida(sujo)) aoFechar();
+  };
+
   return (
     <ModalFicha
       titulo="Criar Motivo de Denúncia"
       subtitulo="Preencha os dados abaixo para cadastrar um novo motivo de denúncia."
-      aoFechar={aoFechar}
+      aoFechar={fechar}
       rodape={
         <RodapeAcoes
-          aoCancelar={aoFechar}
+          aoCancelar={fechar}
           acao={{
             rotulo: 'Criar',
             rotuloOcupado: 'Criando...',
             ocupado: enviando,
-            desabilitado: descricao.trim() === '' || tipo === '',
             aoClicar: () => void aoCriar(),
           }}
         />
@@ -64,7 +78,7 @@ export function ModalCriarMotivoDenuncia({ auth, aoFechar, aoCriado }: ModalCria
       <SecaoFicha titulo="Dados">
         <Campo
           rotulo="Tipo"
-          erro={errosCampo.tipo}
+          erro={erroDe('tipo') ?? errosCampo.tipo}
           dica="Decide em qual tela de denúncia (de campanha ou de perfil) este motivo aparece como opção, a validação é garantida pelo próprio banco na hora de gravar a denúncia."
           className="sm:col-span-2"
         >
@@ -96,7 +110,7 @@ export function ModalCriarMotivoDenuncia({ auth, aoFechar, aoCriado }: ModalCria
 
         <Campo
           rotulo="Descrição"
-          erro={errosCampo.descricao}
+          erro={erroDe('descricao') ?? errosCampo.descricao}
           dica="Texto exibido pra quem for escolher este motivo na tela de denúncia, é o único identificador do motivo, então precisa ser claro por si só."
           className="sm:col-span-2"
         >

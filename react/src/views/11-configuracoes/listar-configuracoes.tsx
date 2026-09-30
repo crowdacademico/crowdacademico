@@ -46,7 +46,9 @@ export function ListarConfiguracoes({ auth }: PropsPagina) {
         titulo="Parâmetros do Sistema"
         colunas={[
           { chave: 'idConfig', rotulo: 'id', tipo: 'id' },
-          { chave: 'chave', rotulo: 'chave', tipo: 'nome' },
+          // A descrição é o que o admin lê; a chave fica ao lado, para quem precisa dela (documentação, suporte).
+          { chave: 'descricao', rotulo: 'parâmetro', tipo: 'nome' },
+          { chave: 'chave', rotulo: 'chave', tipo: 'texto' },
           { chave: 'valor', rotulo: 'valor', tipo: 'texto' },
           { chave: 'tipo', rotulo: 'tipo', tipo: 'status' },
           { chave: 'ativo', rotulo: 'ativo', tipo: 'simNao' },

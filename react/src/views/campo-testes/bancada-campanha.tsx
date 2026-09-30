@@ -25,10 +25,10 @@ import { confirmacaoConfere } from '../../components/input/confirmacao-confere';
 import { CaixaBuscaSugestoes } from '../../components/input/caixa-busca-sugestoes';
 import { perfilPesquisadorApi } from '../../services/6-perfil-pesquisador/api/perfil-pesquisador.api';
 import {
-  ROTULO_STATUS_CAMPANHA,
+  ROTULO_MODELO_CAMPANHA, ROTULO_STATUS_CAMPANHA,
   classeBadgeStatusCampanha,
 } from '../../services/12-campanha/constants/status-campanha.constants';
-import { formatarDataHora, formatarMoeda } from '../../services/constant/util/formatacao.util';
+import { formatarData, formatarDataHora, formatarMoeda } from '../../services/constant/util/formatacao.util';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import { RegistroChamadas } from './registro-chamadas';
 import { ModalAlterarCampanha } from '../12-campanha/modal-alterar-campanha';
@@ -255,7 +255,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
               {ROTULO_STATUS_CAMPANHA[campanhaConsultada.status]}
             </span>,
             <span key="modelo" className="badge badge-neutro">
-              {campanhaConsultada.modelo}
+              {ROTULO_MODELO_CAMPANHA[campanhaConsultada.modelo]}
             </span>,
           ]}
           aoFechar={() => setCampanhaConsultada(null)}
@@ -284,8 +284,8 @@ export function BancadaCampanha({ auth }: PropsPagina) {
               <div className="border-t borda-padrao"></div>
 
               <SecaoFicha titulo="Datas">
-                <CampoFicha rotulo="Início" valor={formatarDataHora(campanhaConsultada.dataInicio)} />
-                <CampoFicha rotulo="Fim (previsto)" valor={formatarDataHora(campanhaConsultada.dataFim)} />
+                <CampoFicha rotulo="Início" valor={formatarData(campanhaConsultada.dataInicio)} />
+                <CampoFicha rotulo="Fim (previsto)" valor={formatarData(campanhaConsultada.dataFim)} />
                 <CampoFicha rotulo="Criada em" valor={formatarDataHora(campanhaConsultada.criadoEm)} />
                 <CampoFicha rotulo="Aprovada em" valor={formatarDataHora(campanhaConsultada.aprovadoEm)} />
                 <CampoFicha rotulo="Encerrada em" valor={formatarDataHora(campanhaConsultada.encerradoEm)} />

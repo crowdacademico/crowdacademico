@@ -28,7 +28,7 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | Código | Função | Tabela | Mensagem |
 |---|---|---|---|
 | 90001 | `trg_valida_contribuicao_recompensa` | `contribuicao_recompensa` | A recompensa não pertence à campanha da contribuição |
-| 90002 | `trg_valida_escopo_tipolink` | `link_academico` / `link_atualizacao` / `link_recompensa` | Este tipo de link não é permitido para a tabela |
+| 90002 | `trg_valida_escopo_tipolink` | `link_academico` / `link_atualizacao` / `link_recompensa` | Este tipo de link não pode ser usado no perfil do pesquisador / em atualização de campanha / em recompensa |
 | 90003 | `fn_valida_limite_texto_livre` | `denuncia`, `campanha`, `atualizacao_campanha`, `solicitacao_encerramento`, `recompensa`, `orcamento_campanha`, `marco_cronograma` (genérica via `TG_ARGV`) | Campo excede o limite de caracteres configurado (só quando o texto muda; a mensagem não cita o nome da chave) |
 | 90004 | `fn_valida_area_conhecimento_nivel2` | `campanha` | Área de conhecimento precisa ser nível 2 (não a grande área raiz) |
 | 90005 | `trg_valida_tipo_motivo_denuncia` | `denuncia` | Motivo selecionado não é válido para denúncia de campanha |

@@ -1,8 +1,8 @@
 import { useState } from 'react';
+import { MensagemErro } from '../../components/crud/mensagem-erro';
 import type { FormEvent } from 'react';
 import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
 import { SecaoFicha } from '../../components/crud/ficha-consulta';
-import { MensagemErro } from '../../components/crud/mensagem-erro';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { confirmarSaida, useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
@@ -48,7 +48,7 @@ export function ModalAlterarTermoUso({
   aoSalvar,
 }: ModalAlterarTermoUsoProps) {
   const { mostrar } = useToast();
-  const { erro, reportarErro, limparErro } = useErroToast();
+  const { erro, reportarErro, limparErro } = useErroToast({ mostraTexto: true });
   const { ocupado: ativando, executar: executarAtivando } = useEnvio(reportarErro, limparErro);
   const { ocupado: enviando, executar: executarEnviando } = useEnvio(reportarErro, limparErro);
   const [idSelecionado, setIdSelecionado] = useState(idTermoInicial);
@@ -57,6 +57,9 @@ export function ModalAlterarTermoUso({
     () => termoUsoApi.listar(auth.authFetch).then((lista) => lista.filter((linha) => linha.tipo === tipo)),
     [],
   );
+  // Versão já aceita: o texto vem só para leitura (o banco recusaria salvar), e "Tornar vigente" continua valendo.
+  const aceitesSelecionada = versoesDoTipo?.find((linha) => linha.idTermo === idSelecionado)?.aceites ?? 0;
+  const somenteLeitura = aceitesSelecionada > 0;
   const { dado: termo, carregando } = useBuscar(() => termoUsoApi.buscar(auth.authFetch, idSelecionado), [idSelecionado], {
     aoChegar: (dados) => setConteudo(dados.conteudo),
     erros: { erro, reportarErro, limparErro },
@@ -116,14 +119,16 @@ export function ModalAlterarTermoUso({
               {ativando ? 'Ativando...' : 'Tornar vigente'}
             </button>
           )}
-          <button
-            type="submit"
-            form="form-modal-alterar-termo-uso"
-            disabled={enviando || ativando || carregando || !termo || !sujo || !conteudo.trim()}
-            className="btn btn-primary flex-1"
-          >
-            {enviando ? 'Salvando...' : 'Salvar'}
-          </button>
+          {!somenteLeitura && (
+            <button
+              type="submit"
+              form="form-modal-alterar-termo-uso"
+              disabled={enviando || ativando || carregando || !termo || !sujo || !conteudo.trim()}
+              className="btn btn-primary flex-1"
+            >
+              {enviando ? 'Salvando...' : 'Salvar'}
+            </button>
+          )}
         </div>
       }
     >
@@ -160,12 +165,19 @@ export function ModalAlterarTermoUso({
             onSubmit={(evento) => void aoSalvarForm(evento)}
             className="space-y-6"
           >
+            {somenteLeitura && (
+              <p className="fundo-aviso texto-aviso rounded-lg p-3 text-xs font-semibold">
+                Esta versão já tem {aceitesSelecionada} aceite(s) registrado(s): o texto é a prova do que foi aceito e não
+                pode mais mudar. Para corrigir, publique uma versão nova. Tornar esta versão vigente continua possível.
+              </p>
+            )}
             <Campo rotulo="Texto completo">
               {({ atributos }) => (
                 <textarea
                   {...atributos}
                   value={conteudo}
                   onChange={(evento) => setConteudo(evento.target.value)}
+                  readOnly={somenteLeitura}
                   required
                   rows={14}
                   className="input-padrao font-mono text-xs"

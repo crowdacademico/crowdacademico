@@ -10,6 +10,7 @@ import { perfilPesquisadorApi } from '../../services/6-perfil-pesquisador/api/pe
 import { termoUsoApi } from '../../services/5-termo-uso/api/termo-uso.api';
 import { CamposVinculoPerfil } from './campos-vinculo-perfil';
 import { useEnvio } from '../../services/constant/hook/use-envio';
+import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
 import { Carregando } from '../../components/layout/carregando';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { PerfilPesquisadorResponse } from '../../services/6-perfil-pesquisador/type/perfil-pesquisador.type';
@@ -71,7 +72,7 @@ export function ModalUpgradePesquisador({
   aoConcluido,
 }: ModalUpgradePesquisadorProps) {
   const { mostrar } = useToast();
-  const { erro, reportarErro, limparErro, errosCampo, limparErroCampo } = useErroToast();
+  const { erro, reportarErro, limparErro, errosCampo, limparErroCampo } = useErroToast({ mostraTexto: true });
   const { ocupado: enviando, executar: executarEnviando } = useEnvio(reportarErro, limparErro);
   const [etapa, setEtapa] = useState<Etapa>('termo');
   const [termo, setTermo] = useState<TermoUsoResponseActive | null>(null);
@@ -79,6 +80,14 @@ export function ModalUpgradePesquisador({
   const [termoIndisponivel, setTermoIndisponivel] = useState(false);
   const [aceitou, setAceitou] = useState(false);
   const [form, setForm] = useState<FormUpgrade>(FORM_VAZIO);
+  // Botões sempre clicáveis: clicando com algo faltando, o erro aparece no lugar certo (a caixa do aceite, o CPF, a
+  // instituição). Só "Aceitar" sem Termo publicado continua travado, com a explicação no corpo.
+  const aceite = useErrosFormulario(() => ({ aceite: !aceitou && 'Marque a caixa para aceitar o Termo e continuar.' }));
+  const { erroDe, tentarEnviar } = useErrosFormulario(() => ({
+    cpf: form.cpf.trim() === '' && 'Informe o CPF.',
+    vinculoInstitucional:
+      form.tipoVinculo === 'institucional' && form.vinculoInstitucional.trim() === '' && 'Informe a instituição.',
+  }));
 
   useEffect(() => {
     termoUsoApi
@@ -95,6 +104,7 @@ export function ModalUpgradePesquisador({
 
   const aoEnviar = async (evento: FormEvent<HTMLFormElement>) => {
     evento.preventDefault();
+    if (!tentarEnviar()) return;
     await executarEnviando(async () => {
       const dadosPerfil = {
         cpf: form.cpf,
@@ -132,8 +142,10 @@ export function ModalUpgradePesquisador({
             aoCancelar={aoFechar}
             acao={{
               rotulo: 'Aceitar',
-              desabilitado: carregandoTermo || termoIndisponivel || !aceitou,
-              aoClicar: () => setEtapa('formulario'),
+              desabilitado: carregandoTermo || termoIndisponivel,
+              aoClicar: () => {
+                if (aceite.tentarEnviar()) setEtapa('formulario');
+              },
             }}
           />
         ) : (
@@ -143,7 +155,6 @@ export function ModalUpgradePesquisador({
               rotulo: 'Salvar',
               rotuloOcupado: 'Salvando...',
               ocupado: enviando,
-              desabilitado: !form.cpf,
               formulario: 'form-upgrade-pesquisador',
             }}
           />
@@ -169,17 +180,21 @@ export function ModalUpgradePesquisador({
                 type="checkbox"
                 checked={aceitou}
                 onChange={(evento) => setAceitou(evento.target.checked)}
+                aria-invalid={Boolean(aceite.erroDe('aceite'))}
               />
               Li e aceito o Termo de Uso acima.
             </label>
+            {aceite.erroDe('aceite') && (
+              <p className="text-xs texto-erro font-semibold mt-1">{aceite.erroDe('aceite')}</p>
+            )}
           </>
         )
       ) : (
-        <form id="form-upgrade-pesquisador" onSubmit={(evento) => void aoEnviar(evento)}>
+        <form id="form-upgrade-pesquisador" onSubmit={(evento) => void aoEnviar(evento)} noValidate>
           <SecaoFicha titulo="Criar Perfil Pesquisador">
             <CampoCpf
               valor={form.cpf}
-              erro={errosCampo.cpf}
+              erro={erroDe('cpf') ?? errosCampo.cpf}
               onChange={(cpf) => {
                 setForm({ ...form, cpf });
                 limparErroCampo('cpf');
@@ -195,6 +210,7 @@ export function ModalUpgradePesquisador({
               aoAlterarTipoVinculo={(tipo) => setForm({ ...form, tipoVinculo: tipo })}
               aoAlterarVinculoInstitucional={(valor) => setForm({ ...form, vinculoInstitucional: valor })}
               aoAlterarTituloAcademico={(titulo) => setForm({ ...form, tituloAcademico: titulo })}
+              erroVinculoInstitucional={erroDe('vinculoInstitucional') ?? errosCampo.vinculoInstitucional}
             />
           </SecaoFicha>
         </form>

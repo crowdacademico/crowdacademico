@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
+import { confirmarSaida, useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
 import { Campo } from '../../components/input/campo';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
 import { areaConhecimentoApi } from '../../services/8-area-conhecimento/api/area-conhecimento.api';
 import { useBuscar } from '../../services/constant/hook/use-buscar';
 import { useEnvio } from '../../services/constant/hook/use-envio';
+import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
 import {
   LIMITE_NOME_AREA_CONHECIMENTO,
   REGEX_CODIGO_CNPQ,
@@ -23,7 +25,7 @@ interface ModalCriarAreaConhecimentoProps {
 // Criar em modal.
 export function ModalCriarAreaConhecimento({ auth, aoFechar, aoCriado }: ModalCriarAreaConhecimentoProps) {
   const { mostrar } = useToast();
-  const { erro, reportarErro, limparErro, errosCampo, limparErroCampo } = useErroToast();
+  const { erro, reportarErro, limparErro, errosCampo, limparErroCampo } = useErroToast({ mostraTexto: true });
   const { ocupado: enviando, executar: executarEnviando } = useEnvio(reportarErro, limparErro);
   const [codigoCnpq, setCodigoCnpq] = useState('');
   const [nome, setNome] = useState('');
@@ -38,8 +40,15 @@ export function ModalCriarAreaConhecimento({ auth, aoFechar, aoCriado }: ModalCr
 
   const codigoInvalido = codigoCnpq.length > 0 && !REGEX_CODIGO_CNPQ.test(codigoCnpq);
 
+  // "Criar" fica sempre clicável: clicando com algo faltando, cada campo mostra o próprio erro. O formato do código
+  // aparece enquanto se digita.
+  const { erroDe, tentarEnviar } = useErrosFormulario(() => ({
+    codigoCnpq: codigoCnpq.trim() === '' && 'Informe o código CNPq.',
+    nome: nome.trim() === '' && 'Informe o nome.',
+  }));
+
   const aoCriar = async () => {
-    if (codigoInvalido || codigoCnpq.trim() === '' || nome.trim() === '') return;
+    if (!tentarEnviar() || codigoInvalido) return;
     await executarEnviando(async () => {
       const areaCriada = await areaConhecimentoApi.criar(auth.authFetch, {
         codigoCnpq,
@@ -55,19 +64,25 @@ export function ModalCriarAreaConhecimento({ auth, aoFechar, aoCriado }: ModalCr
     });
   };
 
+  // Criar também pergunta antes de fechar com algo digitado, como o Alterar.
+  const sujo = codigoCnpq !== '' || nome !== '' || idPai !== '';
+  useAvisoAlteracaoNaoSalva(sujo);
+  const fechar = () => {
+    if (confirmarSaida(sujo)) aoFechar();
+  };
+
   return (
     <ModalFicha
       titulo="Criar Área de Conhecimento"
       subtitulo="Preencha os dados abaixo para cadastrar uma nova área do conhecimento."
-      aoFechar={aoFechar}
+      aoFechar={fechar}
       rodape={
         <RodapeAcoes
-          aoCancelar={aoFechar}
+          aoCancelar={fechar}
           acao={{
             rotulo: 'Criar',
             rotuloOcupado: 'Criando...',
             ocupado: enviando,
-            desabilitado: codigoInvalido || codigoCnpq.trim() === '' || nome.trim() === '',
             aoClicar: () => void aoCriar(),
           }}
         />
@@ -79,7 +94,7 @@ export function ModalCriarAreaConhecimento({ auth, aoFechar, aoCriado }: ModalCr
         erro={
           codigoInvalido
             ? 'Precisa seguir o formato do CNPq: 4 níveis de 2 dígitos separados por ponto (ex.: "1.03.00.00").'
-            : errosCampo.codigoCnpq
+            : (erroDe('codigoCnpq') ?? errosCampo.codigoCnpq)
         }
         dica="Formato de classificação utilizado pelo CNPq: grande área.área.subárea.especialidade."
       >
@@ -99,7 +114,7 @@ export function ModalCriarAreaConhecimento({ auth, aoFechar, aoCriado }: ModalCr
         )}
       </Campo>
 
-      <Campo rotulo="Nome" erro={errosCampo.nome}>
+      <Campo rotulo="Nome" erro={erroDe('nome') ?? errosCampo.nome}>
         {({ atributos, classeErro }) => (
           <input
             {...atributos}

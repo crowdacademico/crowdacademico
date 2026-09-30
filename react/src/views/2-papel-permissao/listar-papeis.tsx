@@ -9,11 +9,12 @@ import {
 } from '../../services/2-papel-permissao/api/papel-permissao.api';
 import { ORDEM_PODER_PAPEL } from '../../services/2-papel-permissao/constants/papel-ordem-poder.constants';
 import { detalhePermissao } from '../../services/2-papel-permissao/constants/permissao-nomes-amigaveis.constants';
+import { descricaoPapel } from '../../services/2-papel-permissao/constants/papel-descricoes.constants';
 import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
 import { MatrizPapelPermissao } from './matriz-papel-permissao';
 import { ModalDetalhePermissao } from './modal-detalhe-permissao';
 import { ModalAlterarPapel } from './modal-alterar-papel';
-import { ModalConsultarPapel, ModalExcluirPapel } from './modal-papel';
+import { ModalConsultarPapel } from './modal-papel';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { PapelResponse, PermissaoResponse } from '../../services/2-papel-permissao/type/papel-permissao.type';
 
@@ -39,10 +40,8 @@ export function ListarPapeis({ auth }: PropsPagina) {
   const {
     alterando,
     consultando,
-    excluindo,
     fecharAlterando,
     fecharConsultando,
-    fecharExcluindo,
     chaveRecarga,
     recarregar,
     acoesCompletas,
@@ -107,11 +106,20 @@ export function ListarPapeis({ auth }: PropsPagina) {
           titulo="Papéis"
           colunas={[
             { chave: 'idPapel', rotulo: 'id', tipo: 'id' },
-            { chave: 'nome', rotulo: 'nome', tipo: 'nome' },
+            { chave: 'nome', rotulo: 'nome', tipo: 'texto' },
+            // A descrição fica com a coluna larga: é o texto longo da linha.
+            {
+              chave: 'codigo',
+              rotulo: 'para que serve',
+              tipo: 'nome',
+              renderizar: (linha) => descricaoPapel(linha.codigo) ?? '-',
+            },
           ]}
           chavePrimaria="idPapel"
           listar={listarPapeis}
-          acoes={acoesCompletas}
+          // Sem Excluir: apagar um papel tiraria na hora a autoridade de todas as contas que o têm (o banco apaga
+          // os vínculos em cascata). Um ícone que não exclui confundia mais do que ajudava.
+          acoes={{ alterar: acoesCompletas.alterar, consultar: acoesCompletas.consultar }}
         />
         {/* "De"/"Para" em vez de "Campos alterados": só "nome" muda em papel (codigo é fixo), mas o recurso
             é genérico (ver LogAuditoriaPainel), não hardcoded aqui além do nome do campo. */}
@@ -180,9 +188,6 @@ export function ListarPapeis({ auth }: PropsPagina) {
         <ModalConsultarPapel auth={auth} papel={consultando} aoFechar={fecharConsultando} />
       )}
 
-      {excluindo && (
-        <ModalExcluirPapel papel={excluindo} aoFechar={fecharExcluindo} />
-      )}
     </>
   );
 }

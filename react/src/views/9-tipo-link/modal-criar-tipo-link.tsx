@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
+import { confirmarSaida, useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
 import { Campo } from '../../components/input/campo';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
 import { EscoposTipoLink } from './escopos-tipo-link';
+import { TesteLinkTipo } from './teste-link-tipo';
 import { tipoLinkApi } from '../../services/9-tipo-link/api/tipo-link.api';
 import {
   DICA_DOMINIOS_TIPO_LINK,
@@ -16,6 +18,7 @@ import {
   regexValida,
 } from '../../services/9-tipo-link/constants/tipo-link.constants';
 import { useEnvio } from '../../services/constant/hook/use-envio';
+import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { TipoLinkResponse } from '../../services/9-tipo-link/type/tipo-link.type';
 
@@ -28,7 +31,7 @@ interface ModalCriarTipoLinkProps {
 // Criar em modal.
 export function ModalCriarTipoLink({ auth, aoFechar, aoCriado }: ModalCriarTipoLinkProps) {
   const { mostrar } = useToast();
-  const { erro, reportarErro, limparErro, errosCampo, limparErroCampo } = useErroToast();
+  const { erro, reportarErro, limparErro, errosCampo, limparErroCampo } = useErroToast({ mostraTexto: true });
   const { ocupado: enviando, executar: executarEnviando } = useEnvio(reportarErro, limparErro);
   const [codigo, setCodigo] = useState('');
   const [nome, setNome] = useState('');
@@ -42,8 +45,15 @@ export function ModalCriarTipoLink({ auth, aoFechar, aoCriado }: ModalCriarTipoL
   const regexInvalida = regex.length > 0 && !regexValida(regex);
   const nenhumEscopoMarcado = !permitePerfil && !permiteAtualizacao && !permiteRecompensa;
 
+  // "Criar" fica sempre clicável: clicando com algo faltando, cada campo mostra o próprio erro. Formato do código, regex
+  // e "pelo menos uma opção" já aparecem enquanto se preenche.
+  const { erroDe, tentarEnviar } = useErrosFormulario(() => ({
+    codigo: codigo.trim() === '' && 'Informe o código.',
+    nome: nome.trim() === '' && 'Informe o nome.',
+  }));
+
   const aoCriar = async () => {
-    if (codigoInvalido || regexInvalida || nenhumEscopoMarcado || codigo.trim() === '' || nome.trim() === '') return;
+    if (!tentarEnviar() || codigoInvalido || regexInvalida || nenhumEscopoMarcado) return;
     await executarEnviando(async () => {
       const tipoCriado = await tipoLinkApi.criar(auth.authFetch, {
         codigo,
@@ -63,19 +73,25 @@ export function ModalCriarTipoLink({ auth, aoFechar, aoCriado }: ModalCriarTipoL
     });
   };
 
+  // Criar também pergunta antes de fechar com algo digitado, como o Alterar.
+  const sujo = codigo !== '' || nome !== '' || regex !== '' || dominioTexto !== '' || !permitePerfil || permiteAtualizacao || permiteRecompensa;
+  useAvisoAlteracaoNaoSalva(sujo);
+  const fechar = () => {
+    if (confirmarSaida(sujo)) aoFechar();
+  };
+
   return (
     <ModalFicha
       titulo="Criar Tipo de Link"
       subtitulo="Preencha os dados abaixo para cadastrar um novo tipo de link."
-      aoFechar={aoFechar}
+      aoFechar={fechar}
       rodape={
         <RodapeAcoes
-          aoCancelar={aoFechar}
+          aoCancelar={fechar}
           acao={{
             rotulo: 'Criar',
             rotuloOcupado: 'Criando...',
             ocupado: enviando,
-            desabilitado: codigoInvalido || regexInvalida || nenhumEscopoMarcado || codigo.trim() === '' || nome.trim() === '',
             aoClicar: () => void aoCriar(),
           }}
         />
@@ -87,7 +103,7 @@ export function ModalCriarTipoLink({ auth, aoFechar, aoCriado }: ModalCriarTipoL
         erro={
           codigoInvalido
             ? 'Só letras maiúsculas, números e underscore, sem espaço, minúscula ou acento.'
-            : errosCampo.codigo
+            : (erroDe('codigo') ?? errosCampo.codigo)
         }
         dica="Identificador interno, nunca editável depois de criado (usado por regras internas do sistema, ex.: reconhecer Lattes/ORCID no cálculo de score)."
       >
@@ -108,7 +124,7 @@ export function ModalCriarTipoLink({ auth, aoFechar, aoCriado }: ModalCriarTipoL
         )}
       </Campo>
 
-      <Campo rotulo="Nome" erro={errosCampo.nome}>
+      <Campo rotulo="Nome" erro={erroDe('nome') ?? errosCampo.nome}>
         {({ atributos, classeErro }) => (
           <input
             {...atributos}
@@ -161,6 +177,8 @@ export function ModalCriarTipoLink({ auth, aoFechar, aoCriado }: ModalCriarTipoL
           />
         )}
       </Campo>
+
+      <TesteLinkTipo dominioTexto={dominioTexto} regex={regex} />
 
       <EscoposTipoLink
         permitePerfil={permitePerfil}

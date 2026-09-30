@@ -9,6 +9,9 @@ export type AcaoPadrao = 'alterar' | 'consultar' | 'excluir';
 
 export type AcoesLinha<T> = Partial<Record<AcaoPadrao, (linha: T) => void>>;
 
+// Motivo de uma ação não se aplicar a uma linha específica (ex.: excluir a versão vigente); `undefined` = disponível.
+export type AcaoIndisponivel<T> = (linha: T, acao: AcaoPadrao) => string | undefined;
+
 const CLASSE_COLUNA_ACOES = 'crud-tabela__celula--centralizada crud-tabela__col--acoes';
 
 export function CabecalhoAcoes() {
@@ -18,9 +21,10 @@ export function CabecalhoAcoes() {
 interface CelulaAcoesProps<T> {
   acoes: AcoesLinha<T>;
   linha: T;
+  indisponivel?: AcaoIndisponivel<T>;
 }
 
-export function CelulaAcoes<T>({ acoes, linha }: CelulaAcoesProps<T>) {
+export function CelulaAcoes<T>({ acoes, linha, indisponivel }: CelulaAcoesProps<T>) {
   // Handlers em const: o estreitamento de `acoes.alterar &&` não chega dentro da closure do `onClick`, e `!` é
   // proibido pelo eslint do projeto.
   const { alterar, consultar, excluir } = acoes;
@@ -28,11 +32,23 @@ export function CelulaAcoes<T>({ acoes, linha }: CelulaAcoesProps<T>) {
     <td className={CLASSE_COLUNA_ACOES}>
       <div className="crud-tabela__acoes">
         {alterar && (
-          <AcaoLinha rotulo="Alterar" icone="fa-pen" variante="alterar" onClick={() => alterar(linha)} />
+          <AcaoLinha
+            rotulo="Alterar"
+            icone="fa-pen"
+            variante="alterar"
+            onClick={() => alterar(linha)}
+            indisponivel={indisponivel?.(linha, 'alterar')}
+          />
         )}
         {consultar && <AcaoLinha rotulo="Consultar" icone="fa-eye" onClick={() => consultar(linha)} />}
         {excluir && (
-          <AcaoLinha rotulo="Excluir" icone="fa-trash" variante="excluir" onClick={() => excluir(linha)} />
+          <AcaoLinha
+            rotulo="Excluir"
+            icone="fa-trash"
+            variante="excluir"
+            onClick={() => excluir(linha)}
+            indisponivel={indisponivel?.(linha, 'excluir')}
+          />
         )}
       </div>
     </td>

@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { sql } from 'kysely';
 import { DatabaseService } from '../../commons/database/database.service';
 import { TermoUsoResponse } from '../dto/response/termo-uso.response';
 
@@ -14,12 +15,13 @@ export class TermoUsoServiceFindAll {
   constructor(private readonly database: DatabaseService) {}
 
   async executar(): Promise<TermoUsoResponse[]> {
-    const linhas = await this.database
-      .getDb()
+    const db = this.database.getDb();
+    const linhas = await db
       .selectFrom('termos_de_uso')
       .select(['id_termo', 'tipo', 'versao', 'conteudo', 'ativo', 'criado_em'])
       .orderBy('id_termo')
       .execute();
+    const aceites = await this.contarAceites();
 
     return linhas.map((linha) => ({
       idTermo: linha.id_termo,
@@ -28,6 +30,27 @@ export class TermoUsoServiceFindAll {
       conteudo: linha.conteudo,
       ativo: linha.ativo,
       criadoEm: linha.criado_em,
+      aceites: aceites?.get(linha.id_termo),
     }));
+  }
+
+  // contar_aceites_termo() (03) só existe depois de colar o ATUALIZAR: sem ela, a lista sai sem a contagem (a tela
+  // deixa as ações como antes e o banco continua recusando). SAVEPOINT pelo mesmo motivo de listarPapeis
+  // (auth.service.login.ts): um erro de Postgres sem ele aborta a transação inteira da requisição.
+  private async contarAceites(): Promise<Map<number, number> | null> {
+    const db = this.database.getDb();
+    await sql`SAVEPOINT sp_contar_aceites`.execute(db);
+    try {
+      const resultado = await sql<{ id_termo: number; aceites: number }>`
+        SELECT id_termo, public.contar_aceites_termo(id_termo) AS aceites FROM termos_de_uso`.execute(
+        db,
+      );
+      return new Map(
+        resultado.rows.map((linha) => [linha.id_termo, linha.aceites]),
+      );
+    } catch {
+      await sql`ROLLBACK TO SAVEPOINT sp_contar_aceites`.execute(db);
+      return null;
+    }
   }
 }

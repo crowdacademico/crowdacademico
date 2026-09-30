@@ -16,6 +16,7 @@ import {
   ROTULO_TIPO_MOTIVO_DENUNCIA as ROTULO_TIPO,
 } from '../../services/10-motivo-denuncia/constants/motivo-denuncia.constants';
 import { useEnvio } from '../../services/constant/hook/use-envio';
+import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { MotivoDenunciaResponse, TipoMotivoDenuncia } from '../../services/10-motivo-denuncia/type/motivo-denuncia.type';
 
@@ -63,7 +64,7 @@ interface ModalAlterarMotivoDenunciaProps {
 
 export function ModalAlterarMotivoDenuncia({ auth, motivo, aoFechar, aoAtualizado }: ModalAlterarMotivoDenunciaProps) {
   const { mostrar } = useToast();
-  const { erro, reportarErro, limparErro, errosCampo, limparErroCampo } = useErroToast();
+  const { erro, reportarErro, limparErro, errosCampo, limparErroCampo } = useErroToast({ mostraTexto: true });
   const { ocupado: enviando, executar: executarEnviando } = useEnvio(reportarErro, limparErro);
   const [descricao, setDescricao] = useState(motivo.descricao);
   const [tipo, setTipo] = useState<TipoMotivoDenuncia>(motivo.tipo);
@@ -79,7 +80,11 @@ export function ModalAlterarMotivoDenuncia({ auth, motivo, aoFechar, aoAtualizad
     aoFechar();
   };
 
+  // "Salvar" só espera haver alteração; com o campo obrigatório apagado, o erro aparece embaixo dele.
+  const { erroDe, tentarEnviar } = useErrosFormulario(() => ({ descricao: descricao.trim() === '' && 'Informe a descrição.' }));
+
   const aoSalvar = async () => {
+    if (!tentarEnviar()) return;
     await executarEnviando(async () => {
       await motivoDenunciaApi.atualizar(auth.authFetch, motivo.idMotivo, { descricao, tipo, ativo });
       mostrar('Motivo de denúncia alterado com sucesso.', `ID: ${motivo.idMotivo} foi alterado`);
@@ -99,7 +104,7 @@ export function ModalAlterarMotivoDenuncia({ auth, motivo, aoFechar, aoAtualizad
             rotulo: 'Salvar',
             rotuloOcupado: 'Salvando...',
             ocupado: enviando,
-            desabilitado: !sujo || descricao.trim() === '',
+            desabilitado: !sujo,
             aoClicar: () => void aoSalvar(),
           }}
         />
@@ -136,7 +141,7 @@ export function ModalAlterarMotivoDenuncia({ auth, motivo, aoFechar, aoAtualizad
           )}
         </Campo>
 
-        <Campo rotulo="Descrição" erro={errosCampo.descricao} className="sm:col-span-2">
+        <Campo rotulo="Descrição" erro={erroDe('descricao') ?? errosCampo.descricao} className="sm:col-span-2">
           {({ atributos, classeErro }) => (
             <input
               {...atributos}

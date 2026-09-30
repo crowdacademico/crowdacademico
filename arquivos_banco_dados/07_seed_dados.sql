@@ -853,29 +853,29 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, pub
 (NULL, 'prazo_minimo_campanha_dias', '15',    'inteiro',  'Duração mínima permitida de uma campanha em dias',     TRUE, TRUE),
 -- Prazo máximo de campanha: 60 dias (decisão de produto: 15 a 60).
 (NULL, 'prazo_maximo_campanha_dias', '60',    'inteiro',  'Duração máxima permitida de uma campanha em dias',     TRUE, TRUE),
-(NULL, 'limite_campanhas_simultaneas','2',    'inteiro',  'Nº máximo de campanhas simultâneas (aguardando_aprovacao/ativo) por pesquisador (RF-029)', TRUE, TRUE),
-(NULL, 'limite_endossos_campanha',   '4',     'inteiro',  'Nº máximo de endossos ativos simultâneos por campanha (RF-063)', TRUE, TRUE),
-(NULL, 'limite_denuncias_24h',       '5',     'inteiro',  'Nº máximo de denúncias por usuário dentro da janela de configuracoes.janela_denuncias_horas (RF-076)', TRUE, TRUE),
+(NULL, 'limite_campanhas_simultaneas','2',    'inteiro',  'Nº máximo de campanhas ao mesmo tempo por pesquisador (ativas ou aguardando aprovação)', TRUE, TRUE),
+(NULL, 'limite_endossos_campanha',   '4',     'inteiro',  'Nº máximo de endossos ativos ao mesmo tempo por campanha', TRUE, TRUE),
+(NULL, 'limite_denuncias_24h',       '5',     'inteiro',  'Nº máximo de denúncias que um usuário pode fazer dentro da janela de tempo das denúncias', TRUE, TRUE),
 -- Janela de tempo do limite de denúncias (RF-076), lida por validar_denuncia_frequencia() em 05, [05-K-3].
-(NULL, 'janela_denuncias_horas',     '24',    'inteiro',  'Janela de tempo (em horas) usada por limite_denuncias_24h (RF-076)', TRUE, TRUE),
+(NULL, 'janela_denuncias_horas',     '24',    'inteiro',  'Janela de tempo das denúncias, em horas (usada pelo limite de denúncias por usuário)', TRUE, TRUE),
 -- `comentario` tem limite de frequência como denúncia (par acima), no mesmo padrão de 2 chaves (contagem +
 -- janela) de limite_denuncias_24h/janela_denuncias_horas; 5 comentários por hora é o valor de partida, ajustável
 -- sem migração.
-(NULL, 'limite_comentarios_por_hora', '5',     'inteiro',  'Nº máximo de comentários por usuário dentro da janela de configuracoes.janela_comentarios_horas', TRUE, TRUE),
-(NULL, 'janela_comentarios_horas',    '1',     'inteiro',  'Janela de tempo (em horas) usada por limite_comentarios_por_hora', TRUE, TRUE),
+(NULL, 'limite_comentarios_por_hora', '5',     'inteiro',  'Nº máximo de comentários que um usuário pode fazer dentro da janela de tempo dos comentários', TRUE, TRUE),
+(NULL, 'janela_comentarios_horas',    '1',     'inteiro',  'Janela de tempo dos comentários, em horas (usada pelo limite de comentários por usuário)', TRUE, TRUE),
 -- Limite de negócio (menor, configurável) por cima do limite técnico largo das colunas (01): mesmo padrão
 -- config + trigger do prazo de campanha.
-(NULL, 'limite_caracteres_descricao_campanha',     '5000', 'inteiro', 'Nº máximo de caracteres em campanha.descricao (RF)',                        TRUE, TRUE),
-(NULL, 'limite_caracteres_conteudo_atualizacao',   '5000', 'inteiro', 'Nº máximo de caracteres em atualizacao_campanha.conteudo',                  TRUE, TRUE),
-(NULL, 'limite_caracteres_relato_denuncia',        '1000', 'inteiro', 'Nº máximo de caracteres em denuncia.relato (sugestão de uma IA)',       TRUE, TRUE),
-(NULL, 'limite_caracteres_justificativa_encerramento', '2000', 'inteiro', 'Nº máximo de caracteres em solicitacao_encerramento.justificativa_pesquisador/justificativa_admin', TRUE, TRUE),
-(NULL, 'limite_caracteres_descricao_recompensa',   '2000', 'inteiro', 'Nº máximo de caracteres em recompensa.descricao',                            TRUE, TRUE),
+(NULL, 'limite_caracteres_descricao_campanha',     '5000', 'inteiro', 'Nº máximo de caracteres na descrição da campanha',                        TRUE, TRUE),
+(NULL, 'limite_caracteres_conteudo_atualizacao',   '5000', 'inteiro', 'Nº máximo de caracteres no texto de uma atualização de campanha',                  TRUE, TRUE),
+(NULL, 'limite_caracteres_relato_denuncia',        '1000', 'inteiro', 'Nº máximo de caracteres no relato de uma denúncia',       TRUE, TRUE),
+(NULL, 'limite_caracteres_justificativa_encerramento', '2000', 'inteiro', 'Nº máximo de caracteres em cada justificativa do pedido de encerramento antecipado', TRUE, TRUE),
+(NULL, 'limite_caracteres_descricao_recompensa',   '2000', 'inteiro', 'Nº máximo de caracteres na descrição de uma recompensa',                            TRUE, TRUE),
 -- Orçamento e cronograma estruturados (01, [01-E]): mudar o mínimo/máximo exigido, ou o limite de texto, é um
 -- UPDATE nesta tabela, não uma migração. Ver fn_valida_completude_campanha e
 -- fn_valida_limite_max_orcamento_campanha/fn_valida_limite_max_marco_cronograma (05, [05-K-2]). Os valores
 -- 10/20 são o TETO (nº máximo por campanha), não o piso para aprovar; os pisos são orcamento_min_itens = 1
 -- (RF-039: "valores padrão de 1 (mínimo) e 10 (máximo)") e cronograma_min_marcos = 3 (RF-041).
-(NULL, 'orcamento_min_itens',                      '1',    'inteiro', 'Nº mínimo de itens de orçamento exigido para aprovar uma campanha (RF-039)', TRUE, TRUE),
+(NULL, 'orcamento_min_itens',                      '1',    'inteiro', 'Nº mínimo de itens de orçamento exigido para aprovar uma campanha', TRUE, TRUE),
 (NULL, 'orcamento_max_itens',                      '10',   'inteiro', 'Nº máximo de itens de orçamento permitido por campanha',                    TRUE, TRUE),
 (NULL, 'cronograma_min_marcos',                    '3',    'inteiro', 'Nº mínimo de marcos de cronograma exigido para aprovar uma campanha',       TRUE, TRUE),
 (NULL, 'cronograma_max_marcos',                    '20',   'inteiro', 'Nº máximo de marcos de cronograma permitido por campanha',                  TRUE, TRUE),
@@ -891,18 +891,18 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, pub
 -- expirar_campanhas_rejeitadas() (05).
 (NULL, 'campanha_rejeitada_max_reenvios',          '3',    'inteiro', 'Nº máximo de reenvios de uma campanha rejeitada, depois da 1ª rejeição',       TRUE, TRUE),
 (NULL, 'campanha_rejeitada_prazo_dias',            '30',   'inteiro', 'Dias que uma campanha rejeitada fica disponível para reenvio, contados da última rejeição', TRUE, TRUE),
-(NULL, 'limite_caracteres_descricao_orcamento',    '2000', 'inteiro', 'Nº máximo de caracteres em orcamento_campanha.descricao',                    TRUE, TRUE),
-(NULL, 'limite_caracteres_descricao_marco',        '2000', 'inteiro', 'Nº máximo de caracteres em marco_cronograma.descricao',                      TRUE, TRUE),
+(NULL, 'limite_caracteres_descricao_orcamento',    '2000', 'inteiro', 'Nº máximo de caracteres na descrição de um item de orçamento',                    TRUE, TRUE),
+(NULL, 'limite_caracteres_descricao_marco',        '2000', 'inteiro', 'Nº máximo de caracteres na descrição de um marco do cronograma',                      TRUE, TRUE),
 -- Meta 0.00 seria sucesso instantâneo numa campanha all-or-nothing. Mesmo padrão do prazo: limite técnico
 -- largo na constraint (01, > 0), mínimo de negócio de verdade aqui.
-(NULL, 'meta_minima_campanha',       '500.00', 'decimal',  'Valor mínimo de meta financeira aceito para uma campanha (RF)',            TRUE, TRUE),
+(NULL, 'meta_minima_campanha',       '500.00', 'decimal',  'Valor mínimo de meta financeira aceito para uma campanha, em R$',            TRUE, TRUE),
 -- F
-(NULL, 'limite_links_academicos_perfil', '5', 'inteiro',  'Nº máximo de links acadêmicos por pesquisador (RF-014/016/018)', TRUE, TRUE),
+(NULL, 'limite_links_academicos_perfil', '5', 'inteiro',  'Nº máximo de links acadêmicos por pesquisador', TRUE, TRUE),
 -- H
 -- valor_minimo_contribuicao (RF-056): mesmo padrão de meta_minima_campanha, acima. R$5,00 não é piso do gateway
 -- de pagamento (o PIX em si não impõe mínimo), é política de negócio da própria plataforma, por isso
 -- configurável.
-(NULL, 'valor_minimo_contribuicao',  '5.00',  'decimal',  'Valor mínimo aceito por contribuição, em R$ (RF-056)',                       TRUE, TRUE),
+(NULL, 'valor_minimo_contribuicao',  '5.00',  'decimal',  'Valor mínimo aceito por contribuição, em R$',                       TRUE, TRUE),
 -- I
 -- score_minimo_campanha: o score NUNCA bloqueia a criação de campanha (nem Catarse nem Experiment fazem isso; o
 -- filtro real é a aprovação manual do Admin). Este número é só um sinal para o painel do Admin destacar, na
@@ -943,11 +943,11 @@ ON CONFLICT (chave) DO NOTHING;
 -- montar tela, só quem tenta abusar saberia o intervalo exato de espera.
 INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, publica) VALUES
 (NULL, 'arquivo_tamanho_minimo_bytes',          '100',      'inteiro', 'Tamanho mínimo aceito por arquivo enviado, em bytes - barra arquivo vazio/corrompido', TRUE, TRUE),
-(NULL, 'arquivo_tamanho_maximo_imagem_bytes',   '8388608',  'inteiro', 'Tamanho máximo aceito por imagem enviada (JPEG/PNG/WebP), em bytes (RF-017)', TRUE, TRUE),
-(NULL, 'arquivo_tamanho_maximo_documento_bytes','5242880',  'inteiro', 'Tamanho máximo aceito por documento enviado (PDF), em bytes (RF-017)', TRUE, TRUE),
-(NULL, 'arquivo_cota_bytes_por_usuario',        '52428800', 'inteiro', 'Cota total de armazenamento ativo por usuário, em bytes (RNF-017)', TRUE, TRUE),
-(NULL, 'arquivo_limite_uploads_janela',         '20',       'inteiro', 'Nº máximo de uploads confirmados por usuário dentro da janela de configuracoes.arquivo_janela_limite_uploads_minutos', TRUE, FALSE),
-(NULL, 'arquivo_janela_limite_uploads_minutos', '1440',     'inteiro', 'Janela de tempo (em minutos) usada por arquivo_limite_uploads_janela - padrão 1440 = 24h', TRUE, FALSE),
+(NULL, 'arquivo_tamanho_maximo_imagem_bytes',   '8388608',  'inteiro', 'Tamanho máximo aceito por imagem enviada (JPEG/PNG/WebP), em bytes', TRUE, TRUE),
+(NULL, 'arquivo_tamanho_maximo_documento_bytes','5242880',  'inteiro', 'Tamanho máximo aceito por documento enviado (PDF), em bytes', TRUE, TRUE),
+(NULL, 'arquivo_cota_bytes_por_usuario',        '52428800', 'inteiro', 'Cota total de armazenamento ativo por usuário, em bytes', TRUE, TRUE),
+(NULL, 'arquivo_limite_uploads_janela',         '20',       'inteiro', 'Nº máximo de uploads confirmados por usuário dentro da janela de tempo dos uploads', TRUE, FALSE),
+(NULL, 'arquivo_janela_limite_uploads_minutos', '1440',     'inteiro', 'Janela de tempo dos uploads, em minutos (1440 = 24 horas)', TRUE, FALSE),
 (NULL, 'arquivo_intervalo_minimo_segundos',     '5',        'inteiro', 'Intervalo mínimo (em segundos) entre um upload confirmado e o próximo início de upload do mesmo usuário', TRUE, FALSE)
 ON CONFLICT (chave) DO NOTHING;
 

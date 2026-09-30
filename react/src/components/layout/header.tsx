@@ -10,14 +10,10 @@ import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 // estrutura), único em toda tela (App.tsx). Adaptações, porque este React só tem o painel admin (home) e a tela
 // de login, nenhuma outra tela pública:
 // 1. A marca navega de verdade para "/" (home).
-// 2. "Explorar Projetos"/"Como Funciona"/"Transparência LGPD"/"Submeter Pesquisa" são um alert() de
-// placeholder: mesmo espírito do showAction() do protótipo original, que também só simula ação para seção que
-// não existe ainda.
+// 2. "Submeter Pesquisa" abre o Criar Campanha em Minhas Campanhas (`?criar=1`). Quem não é pesquisador cai na
+// mesma página, que explica por que não pode criar; quem não está logado passa pelo login antes.
 // 3. "Meu Painel"/"Entrar" (canto direito): logado mostra nome real + Sair; deslogado é um link de verdade para
 // "/login" (views/3-auth/login-page.tsx).
-function placeholder(mensagem: string): () => void {
-  return () => window.alert(mensagem);
-}
 
 interface HeaderProps {
   auth: UseAuthReturn;
@@ -46,12 +42,12 @@ export function Header({ auth }: HeaderProps) {
             dentro dele, mesmo por último, alargaria o grupo inteiro e o `justify-between` do cabeçalho
             empurraria tudo para a esquerda junto, deixando o login sobrando no meio da tela, longe do canto. */}
         <div className="flex items-center gap-3">
-          <button
-            onClick={placeholder('Submeter Pesquisa ainda não existe neste protótipo.')}
+          <Link
+            to="/admin/minhas-campanhas?criar=1"
             className="fundo-marca-forte hover-fundo-marca-forte-hover text-white px-5 py-2.5 rounded-lg font-bold transition-all text-sm shadow-md hidden lg:block mr-10"
           >
             Submeter Pesquisa
-          </button>
+          </Link>
 
           <ControleFonte />
           <ControleTema />

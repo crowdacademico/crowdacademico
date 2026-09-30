@@ -18,10 +18,14 @@ export class PapelServiceFindAll {
     const papeis = await this.database
       .getDb()
       .selectFrom('papel')
-      .select(['id_papel', 'nome'])
+      .select(['id_papel', 'nome', 'codigo'])
       .orderBy('id_papel')
       .execute();
 
-    return papeis.map((p) => ({ idPapel: p.id_papel, nome: p.nome }));
+    return papeis.map((p) => ({
+      idPapel: p.id_papel,
+      nome: p.nome,
+      codigo: p.codigo,
+    }));
   }
 }

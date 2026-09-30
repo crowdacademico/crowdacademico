@@ -38,6 +38,8 @@ import {
 } from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
 import { formatarCpf, formatarCpfOuMotivoOculto, formatarData, formatarDataHora } from '../../services/constant/util/formatacao.util';
 import { useEnvio } from '../../services/constant/hook/use-envio';
+import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
+import { descricaoPapel } from '../../services/2-papel-permissao/constants/papel-descricoes.constants';
 import { useBuscar } from '../../services/constant/hook/use-buscar';
 import { ROTULO_TIPO_TERMO } from '../../services/5-termo-uso/constants/termo-uso-tipos.constants';
 import { CamposVinculoPerfil } from '../6-perfil-pesquisador/campos-vinculo-perfil';
@@ -371,7 +373,7 @@ interface ModalConsultarUsuarioProps {
 // Acesso/histórico de login, Papéis) + Perfil de Pesquisador/Score (só se a
 // pessoa for pesquisadora) - tudo buscado ao abrir, não precisa de rota.
 export function ModalConsultarUsuario({ auth, idUsuario, aoFechar, aoRegistrarChamada }: ModalConsultarUsuarioProps) {
-  const errosDaTela = useErroToast();
+  const errosDaTela = useErroToast({ mostraTexto: true });
   const { erro } = errosDaTela;
   const { usuario, perfilPesquisador, avatarUrl, papeis } = useDadosUsuario(idUsuario, auth, aoRegistrarChamada, errosDaTela);
   const [logins, setLogins] = useState<UsuarioResponseLoginHistory[] | null>(null);
@@ -441,7 +443,11 @@ export function ModalConsultarUsuario({ auth, idUsuario, aoFechar, aoRegistrarCh
       }
     >
       {!usuario ? (
-        <p className="p-6 text-center text-sm texto-fraco">{erro || 'Carregando...'}</p>
+        erro ? (
+          <MensagemErro texto={erro} className="p-6 text-center texto-erro text-sm font-bold" />
+        ) : (
+          <p className="p-6 text-center text-sm texto-fraco">Carregando...</p>
+        )
       ) : (
         <>
           <div className="grid lg:grid-cols-3 gap-6 items-start">
@@ -590,7 +596,7 @@ interface ModalAlterarUsuarioProps {
 // na Bancada do Pesquisador (Campo de Testes): duplicar aqui daria o mesmo poder sem passar pelo Termo de Uso.
 export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado, aoRegistrarChamada }: ModalAlterarUsuarioProps) {
   const { mostrar } = useToast();
-  const errosDaTela = useErroToast();
+  const errosDaTela = useErroToast({ mostraTexto: true });
   const { erro, reportarErro, limparErro } = errosDaTela;
   const { ocupado: redefinindoSenhaDev, executar: executarRedefinindoSenhaDev } = useEnvio(reportarErro, limparErro);
   const { ocupado: desbloqueando, executar: executarDesbloqueando } = useEnvio(reportarErro, limparErro);
@@ -704,8 +710,19 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado, a
     }
   };
 
+  // "Atribuir" e "Salvar CPF" ficam sempre clicáveis: sem papel escolhido ou com CPF incompleto, o erro aparece
+  // embaixo do campo.
+  const codigoPapelEscolhido = catalogoPapeis.find((papel) => papel.idPapel === Number(idPapelParaAtribuir))?.codigo;
+  const descricaoPapelEscolhido = codigoPapelEscolhido ? descricaoPapel(codigoPapelEscolhido) : undefined;
+  const papelFormulario = useErrosFormulario(() => ({
+    papel: idPapelParaAtribuir === '' && 'Escolha um papel para atribuir.',
+  }));
+  const cpfFormulario = useErrosFormulario(() => ({
+    cpf: cpfCorrecao.length !== 11 && 'Digite os 11 números do CPF.',
+  }));
+
   const aoAtribuirPapel = async () => {
-    if (!idPapelParaAtribuir) return;
+    if (!papelFormulario.tentarEnviar()) return;
     await executarAtribuindoPapel(async () => {
       const papelEscolhido = catalogoPapeis.find((papel) => papel.idPapel === Number(idPapelParaAtribuir));
       await comRegistro(aoRegistrarChamada, 'POST', '/usuario-papel', { idUsuario, idPapel: Number(idPapelParaAtribuir) }, () =>
@@ -770,6 +787,10 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado, a
   };
 
   const aoRevogarPapel = async (papel: UsuarioPapelResponse) => {
+    // O "×" é pequeno e fica colado no nome do papel: um clique sem querer tirava o papel na hora.
+    if (!window.confirm(`Revogar o papel "${papel.nomePapel}"? A conta perde na hora o que este papel permite.`)) {
+      return;
+    }
     limparErro();
     setRevogandoPapel(papel.idPapel);
     try {
@@ -808,7 +829,7 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado, a
   };
 
   const salvarCorrecaoCpf = async () => {
-    if (!cpfCorrecao) return;
+    if (!cpfFormulario.tentarEnviar()) return;
     try {
       await comRegistro(aoRegistrarChamada, 'PATCH', `/perfil-pesquisador/${idUsuario}/cpf`, { cpf: cpfCorrecao }, () =>
         perfilPesquisadorApi.corrigirCpf(auth.authFetch, idUsuario, { cpf: cpfCorrecao }),
@@ -875,7 +896,7 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado, a
       {carregando || carregandoCatalogos ? (
         <Carregando className="p-6 text-center" />
       ) : !usuario ? (
-        <p className="p-6 text-center texto-erro text-sm font-bold">{erro}</p>
+        <MensagemErro texto={erro} className="p-6 text-center texto-erro text-sm font-bold" />
       ) : (
         <>
           <MensagemErro texto={erro} />
@@ -951,13 +972,16 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado, a
                           type="text"
                           value={formatarCpf(cpfCorrecao)}
                           onChange={(evento) => setCpfCorrecao(evento.target.value.replace(/\D/g, '').slice(0, 11))}
-                          className="input-padrao"
+                          aria-invalid={Boolean(cpfFormulario.erroDe('cpf'))}
+                          className={'input-padrao' + (cpfFormulario.erroDe('cpf') ? ' borda-erro' : '')}
                         />
+                        {cpfFormulario.erroDe('cpf') && (
+                          <span className="texto-erro font-semibold">{cpfFormulario.erroDe('cpf')}</span>
+                        )}
                       </label>
                       <button
                         type="button"
                         className="btn btn-secondary shrink-0"
-                        disabled={!cpfCorrecao}
                         onClick={salvarCorrecaoCpf}
                       >
                         Salvar CPF
@@ -1087,7 +1111,8 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado, a
                       <select
                         value={idPapelParaAtribuir}
                         onChange={(evento) => setIdPapelParaAtribuir(evento.target.value)}
-                        className="input-padrao"
+                        aria-invalid={Boolean(papelFormulario.erroDe('papel'))}
+                        className={'input-padrao' + (papelFormulario.erroDe('papel') ? ' borda-erro' : '')}
                       >
                         <option value="">Selecione um papel...</option>
                         {papeisDisponiveis.map((papel) => (
@@ -1096,10 +1121,15 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado, a
                           </option>
                         ))}
                       </select>
+                      {papelFormulario.erroDe('papel') && (
+                        <p className="text-xs texto-erro font-semibold">{papelFormulario.erroDe('papel')}</p>
+                      )}
+                      {/* O que o papel escolhido libera, antes de atribuir. */}
+                      {descricaoPapelEscolhido && <p className="text-xs texto-fraco">{descricaoPapelEscolhido}</p>}
                       <button
                         type="button"
                         onClick={aoAtribuirPapel}
-                        disabled={!idPapelParaAtribuir || atribuindoPapel}
+                        disabled={atribuindoPapel}
                         className="btn btn-primary"
                       >
                         {atribuindoPapel ? 'Atribuindo...' : 'Atribuir'}
@@ -1149,7 +1179,7 @@ interface ModalExcluirUsuarioProps {
 // buscar nada sozinho (nome/e-mail já vêm da linha da tabela do chamador).
 export function ModalExcluirUsuario({ idUsuario, nome, email, emailVerificado, auth, aoFechar, aoExcluido, aoRegistrarChamada }: ModalExcluirUsuarioProps) {
   const { mostrar } = useToast();
-  const { erro, reportarErro, limparErro } = useErroToast();
+  const { erro, reportarErro, limparErro } = useErroToast({ mostraTexto: true });
   const { ocupado: excluindo, executar: executarExcluindo } = useEnvio(reportarErro, limparErro);
   const [confirmacao, setConfirmacao] = useState('');
   const confirmado = confirmacaoConfere(confirmacao, email);

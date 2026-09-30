@@ -2,6 +2,7 @@ import { TabelaEditavel } from './tabela-editavel';
 import type { ColunaEditavel } from './tabela-editavel';
 import { formatarData } from '../../../services/constant/util/formatacao.util';
 import type { MarcoCronogramaResponse } from '../../../services/14-marco-cronograma/type/marco-cronograma.type';
+import { dataLocal, inicioDoDia } from '../../../services/12-campanha/util/prazo-campanha.util';
 
 // Marcos do cronograma de uma campanha (título e data prevista), com edição na linha. Usada pelo painel de
 // Orçamento e Cronograma (views/12-campanha/painel-orcamento-cronograma.tsx), que busca e salva.
@@ -20,7 +21,7 @@ const FORM_VAZIO: FormMarco = { titulo: '', dataPrevista: '' };
 
 
 const paraDados = (form: FormMarco): DadosMarco | null =>
-  form.titulo && form.dataPrevista ? { titulo: form.titulo, dataPrevista: new Date(form.dataPrevista).toISOString() } : null;
+  form.titulo && form.dataPrevista ? { titulo: form.titulo, dataPrevista: inicioDoDia(form.dataPrevista) } : null;
 
 interface TabelaMarcosCronogramaProps {
   marcos: MarcoCronogramaResponse[];
@@ -92,7 +93,7 @@ export function TabelaMarcosCronograma({
         chave={(marco) => marco.idMarco}
         colunas={colunas}
         formVazio={FORM_VAZIO}
-        paraForm={(marco) => ({ titulo: marco.titulo, dataPrevista: marco.dataPrevista.slice(0, 10) })}
+        paraForm={(marco) => ({ titulo: marco.titulo, dataPrevista: dataLocal(marco.dataPrevista) })}
         podeEditar={podeEditar}
         aoAdicionar={(form) => {
           const dados = paraDados(form);

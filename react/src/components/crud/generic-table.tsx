@@ -1,9 +1,10 @@
 import { useLayoutEffect, useMemo, useRef } from 'react';
+import { MensagemErro } from './mensagem-erro';
 import type { ReactNode } from 'react';
 import { useSearchParams } from 'react-router';
 import { TIPOS_COLUNA, type NomeTipoColuna } from './colunas/tipos-coluna';
 import { DISTRIBUICAO_COLUNAS } from './colunas/distribuicao';
-import { CabecalhoAcoes, CelulaAcoes, type AcoesLinha } from './colunas/5-coluna-acoes';
+import { CabecalhoAcoes, CelulaAcoes, type AcaoIndisponivel, type AcoesLinha } from './colunas/5-coluna-acoes';
 import { BarraFiltros } from '../search/barra-filtros';
 import { paginarClientSide } from '../../services/constant/util/paginacao.util';
 import { RodapePaginacao } from '../pagination/rodape-paginacao';
@@ -50,6 +51,8 @@ interface GenericTableProps<T extends Linha> {
   listar: () => Promise<T[]>;
   // Contrato das ações (handler dentro da própria chave): ver 5-coluna-acoes.tsx.
   acoes?: AcoesLinha<T>;
+  // Ação que existe na tabela mas não se aplica a uma linha: aparece apagada, com o motivo na dica.
+  acaoIndisponivel?: AcaoIndisponivel<T>;
   filtrosFacetados?: FiltroFacetado<T>[];
 }
 
@@ -95,6 +98,7 @@ export function GenericTable<T extends Linha>({
   chavePrimaria,
   listar,
   acoes,
+  acaoIndisponivel,
   // Filtros por faceta: array de `{ chave, rotulo, ordem? }`. Genérico: funciona para QUALQUER coluna com
   // valores discretos (ex.: papel, impacto), e as opções de cada dropdown são derivadas sozinhas a partir dos
   // valores que já aparecem em `linha[chave]` (célula com vários valores separada por ", ", mesma convenção da
@@ -108,7 +112,7 @@ export function GenericTable<T extends Linha>({
 }: GenericTableProps<T>) {
   // A coluna Ações existe se pelo menos 1 handler foi passado em `acoes`.
   const temAcoes = Boolean(acoes?.alterar || acoes?.consultar || acoes?.excluir);
-  const { dado, carregando, erro } = useBuscar(listar, [listar]);
+  const { dado, carregando, erro } = useBuscar(listar, [listar], { mostraTexto: true });
   const linhas = useMemo(() => dado ?? [], [dado]);
   // Filtro/página/ordenação/faceta vivem na URL (query string), não em useState local: uma navegação que
   // desmontasse a página de listagem resetaria o filtro escolhido, e useState não sobrevive a isso. `{ replace:
@@ -588,7 +592,7 @@ export function GenericTable<T extends Linha>({
                         </td>
                       );
                     })}
-                    {acoes && temAcoes && <CelulaAcoes acoes={acoes} linha={linha} />}
+                    {acoes && temAcoes && <CelulaAcoes acoes={acoes} linha={linha} indisponivel={acaoIndisponivel} />}
                   </tr>
                 ))}
                 {linhasPagina.length === 0 && !erro && (
@@ -618,7 +622,7 @@ export function GenericTable<T extends Linha>({
         </>
       )}
 
-      {erro && <p className="crud-erro">{erro}</p>}
+      <MensagemErro texto={erro} className="crud-erro" />
     </section>
   );
 }

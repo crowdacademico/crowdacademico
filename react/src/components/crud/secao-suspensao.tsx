@@ -6,6 +6,7 @@ import { useOpcoesDiasSuspensao } from '../../services/constant/hook/use-opcoes-
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
 import { formatarDataHora } from '../../services/constant/util/formatacao.util';
+import { MensagemErro } from './mensagem-erro';
 
 export interface EstadoSuspensao {
   suspensoAte: string | null;
@@ -41,7 +42,7 @@ export function SecaoSuspensao({
   revogar,
 }: SecaoSuspensaoProps) {
   const { mostrar } = useToast();
-  const { erro, reportarErro, limparErro } = useErroToast();
+  const { erro, reportarErro, limparErro } = useErroToast({ mostraTexto: true });
   const { ocupado: enviando, executar } = useEnvio(reportarErro, limparErro);
   const opcoesDias = useOpcoesDiasSuspensao();
 
@@ -95,7 +96,7 @@ export function SecaoSuspensao({
   return (
     <SecaoFicha titulo={titulo}>
       <div className="sm:col-span-2 space-y-3">
-        {erro && <p className="text-xs texto-erro font-bold">{erro}</p>}
+        <MensagemErro texto={erro} className="text-xs texto-erro font-bold" />
 
         {suspensoAgora ? (
           <div className="rounded-lg border borda-forte fundo-erro p-4">

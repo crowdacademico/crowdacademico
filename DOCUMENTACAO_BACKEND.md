@@ -414,9 +414,9 @@ O converter (`perfil-pesquisador.converter.ts`) recebe `cpfDecifrado` como **par
 | Código | Significado | HTTP | Mensagem |
 |---|---|---|---|
 | `23505` | unique_violation | 409 | mensagem por índice violado (`commons/database/mensagens-duplicidade.constants.ts`, pelo `erro.constraint`), com `campos` quando o índice corresponde a um campo do formulário; índice fora do mapa: "Já existe um registro com estes dados." |
-| `23503` | foreign_key_violation | 400 | "Referência inválida: o registro relacionado não existe." |
-| `23502` | not_null_violation | 400 | "Campo obrigatório ausente." |
-| `23514` | check_violation | 400 | "Dado inválido para este campo." |
+| `23503` | foreign_key_violation | 400 | "Um dos itens escolhidos não existe mais (pode ter sido excluído). Recarregue a página e tente de novo." |
+| `23502` | not_null_violation | 400 | "Falta preencher um campo obrigatório.", com `campos` apontando a coluna vazia (`erro.column`, em camelCase) |
+| `23514` | check_violation | 400 | mensagem por regra violada (`commons/database/mensagens-regra-violada.constants.ts`, pelo `erro.constraint`), com `campos` quando a regra corresponde a um campo; regra fora do mapa: "Um dos valores informados está fora do permitido. Confira os campos e tente de novo." |
 | `42501` | **RLS violation** | **403** | "Sem permissão para esta operação." |
 | `P0001` | `RAISE EXCEPTION` sem ERRCODE | 400 | mensagem original da função |
 
@@ -1422,3 +1422,22 @@ Testado com o backend rodando de verdade contra o Postgres real (não só compil
 - **Decisão:** `UsuarioResponse` ganhou `ehPesquisador` (`1-usuario/util/usuario.util.is-researcher.ts`), preenchido na consulta e na alteração do usuário.
 - **Motivo:** a tela buscava o perfil de pesquisador de toda conta, e a conta comum respondia 404 em toda abertura da Minha Conta.
 - **Caso-limite aceito:** nas listagens o campo não vem (fica `undefined`), e a tela trata isso como "não sei" e busca o perfil como antes.
+
+## 20. Correções da auditoria de Nielsen (29-09-2026)
+
+**Em palavras simples:** a auditoria das 10 heurísticas de Nielsen (o relatório fica na pasta de informações, fora do repositório) conferiu se as telas são fáceis de usar. No Nest, o que mudou foram as mensagens de erro que vêm do banco. As telas estão no `DOCUMENTACAO_FRONTEND.md` e as regras do banco no `DOCUMENTACAO_BD.md`.
+
+📌 **Regra do banco violada diz qual é e onde.**
+- **Decisão:** `commons/database/mensagens-regra-violada.constants.ts` tem uma mensagem e um campo para cada regra (`CHECK`) que uma tela consegue atingir, no mesmo formato do dicionário de duplicidade. O filtro global usa o nome da regra (`erro.constraint`) para escolher a mensagem e manda `campos`, para o erro aparecer embaixo do campo certo. Campo obrigatório vazio (`23502`) usa a coluna que o Postgres informa. Referência que sumiu (`23503`) passou a dizer o que fazer: recarregar a página.
+- **Motivo:** as mensagens eram "Dado inválido para este campo.", "Campo obrigatório ausente." e "Referência inválida". Não diziam qual campo, nem o que fazer. Exemplo real: parâmetro inteiro com "abc".
+- **Caso-limite aceito:** as regras internas (sessão, notificação, log, tokens) ficam fora do dicionário. Se uma delas falhar, é defeito do sistema, e a mensagem genérica basta.
+
+📌 **A lista de Termos diz quantos aceites cada versão tem.**
+- **Decisão:** `GET /termos-uso` devolve `aceites` em cada versão, pela função `contar_aceites_termo()` do banco. Se a função ainda não existe no banco, a lista sai sem o campo (SAVEPOINT, mesmo jeito de `listarPapeis`).
+- **Motivo:** a tela apagava a lixeira só da versão vigente; a versão já aceita só era recusada depois do clique.
+- **Caso-limite aceito:** só a listagem traz o número. Criar, alterar, ativar e consultar uma versão não trazem.
+
+📌 **Papel com `codigo` na resposta.**
+- **Decisão:** `PapelResponse` ganhou `codigo` (listagem e alteração).
+- **Motivo:** a tela acha a descrição de cada papel pelo código, que é fixo. O nome pode ser renomeado pelo painel. O código não é segredo: o login já devolve os papéis da conta por código.
+- **Caso-limite aceito:** nenhum.

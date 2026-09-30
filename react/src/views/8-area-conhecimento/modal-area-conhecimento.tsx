@@ -13,6 +13,7 @@ import { CaixaMarcacao } from '../../components/input/caixa-marcacao';
 import { areaConhecimentoApi } from '../../services/8-area-conhecimento/api/area-conhecimento.api';
 import { LIMITE_NOME_AREA_CONHECIMENTO } from '../../services/8-area-conhecimento/constants/area-conhecimento.constants';
 import { useEnvio } from '../../services/constant/hook/use-envio';
+import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { AreaConhecimentoResponse } from '../../services/8-area-conhecimento/type/area-conhecimento.type';
 
@@ -72,7 +73,7 @@ interface ModalAlterarAreaConhecimentoProps {
 // os aceita, só nome/ativo podem mudar.
 export function ModalAlterarAreaConhecimento({ auth, area, aoFechar, aoAtualizado }: ModalAlterarAreaConhecimentoProps) {
   const { mostrar } = useToast();
-  const { erro, reportarErro, limparErro, errosCampo, limparErroCampo } = useErroToast();
+  const { erro, reportarErro, limparErro, errosCampo, limparErroCampo } = useErroToast({ mostraTexto: true });
   const { ocupado: enviando, executar: executarEnviando } = useEnvio(reportarErro, limparErro);
   const [nome, setNome] = useState(area.nome);
   const [ativo, setAtivo] = useState(area.ativo);
@@ -87,7 +88,11 @@ export function ModalAlterarAreaConhecimento({ auth, area, aoFechar, aoAtualizad
     aoFechar();
   };
 
+  // "Salvar" só espera haver alteração; com o campo obrigatório apagado, o erro aparece embaixo dele.
+  const { erroDe, tentarEnviar } = useErrosFormulario(() => ({ nome: nome.trim() === '' && 'Informe o nome.' }));
+
   const aoSalvar = async () => {
+    if (!tentarEnviar()) return;
     await executarEnviando(async () => {
       await areaConhecimentoApi.atualizar(auth.authFetch, area.idAreaConhecimento, { nome, ativo });
       mostrar('Área de conhecimento alterada com sucesso.', `ID: ${area.idAreaConhecimento} foi alterada`);
@@ -107,7 +112,7 @@ export function ModalAlterarAreaConhecimento({ auth, area, aoFechar, aoAtualizad
             rotulo: 'Salvar',
             rotuloOcupado: 'Salvando...',
             ocupado: enviando,
-            desabilitado: !sujo || nome.trim() === '',
+            desabilitado: !sujo,
             aoClicar: () => void aoSalvar(),
           }}
         />
@@ -120,7 +125,7 @@ export function ModalAlterarAreaConhecimento({ auth, area, aoFechar, aoAtualizad
       </SecaoFicha>
 
       <SecaoFicha titulo="Editar">
-        <Campo rotulo="Nome" erro={errosCampo.nome} className="sm:col-span-2">
+        <Campo rotulo="Nome" erro={erroDe('nome') ?? errosCampo.nome} className="sm:col-span-2">
           {({ atributos, classeErro }) => (
             <input
               {...atributos}

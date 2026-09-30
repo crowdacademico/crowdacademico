@@ -3,6 +3,7 @@ import { NavegacaoPagina } from '../pagination/navegacao-pagina';
 import { useBuscar } from '../../services/constant/hook/use-buscar';
 import { TabelaHistoricoAlteracoes } from './tabelas/5-tabela-historico-alteracoes';
 import { Carregando } from '../layout/carregando';
+import { MensagemErro } from './mensagem-erro';
 import type { ResultadoPaginado } from '../../services/constant/type/paginacao.type';
 import type { LogAuditoriaResponse } from '../../services/27-log-auditoria/type/log-auditoria.type';
 
@@ -20,7 +21,7 @@ export function LogAuditoriaPainel({ buscar, campoRenomeio }: LogAuditoriaPainel
   // Página: o backend já pagina de verdade (LIMIT/OFFSET); sem isto o painel nunca pediria página nenhuma além
   // da 1ª e viraria uma "listona" conforme o sistema cresce.
   const [pagina, setPagina] = useState(1);
-  const { dado, carregando, erro } = useBuscar(() => buscar(pagina), [buscar, pagina]);
+  const { dado, carregando, erro } = useBuscar(() => buscar(pagina), [buscar, pagina], { mostraTexto: true });
   const linhas = dado?.dados ?? [];
   const total = dado?.total ?? 0;
   const tamanho = dado?.tamanho ?? 20;
@@ -34,7 +35,7 @@ export function LogAuditoriaPainel({ buscar, campoRenomeio }: LogAuditoriaPainel
       </h2>
 
       {carregando && <Carregando />}
-      {erro && <p className="crud-erro">{erro}</p>}
+      <MensagemErro texto={erro} className="crud-erro" />
 
       {!carregando && !erro && <TabelaHistoricoAlteracoes linhas={linhas} campoRenomeio={campoRenomeio} />}
 

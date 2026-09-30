@@ -1,8 +1,9 @@
 import { useId, useRef, useState } from 'react';
+import { MensagemErro } from '../../components/crud/mensagem-erro';
 import type { FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { MensagemErro } from '../../components/crud/mensagem-erro';
 import { Campo } from '../../components/input/campo';
+import { MedidorSenha } from '../../components/input/medidor-senha';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { termoUsoApi } from '../../services/5-termo-uso/api/termo-uso.api';
 import { ErroHttp } from '../../services/constant/api/http.util';
@@ -12,26 +13,6 @@ import type { TermoUsoResponseActive } from '../../services/5-termo-uso/type/ter
 import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
 
 const REGEX_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-// Requisitos do medidor de força de senha: só GUIA visual, o piso de verdade continua sendo o backend
-// (CadastroRequestDto, @MinLength(8)): não faz sentido bloquear o clique aqui por maiúscula/número/símbolo se o
-// servidor aceitaria com menos.
-interface RequisitoSenha {
-  chave: string;
-  rotulo: string;
-  testar: (s: string) => boolean;
-}
-
-const REQUISITOS_SENHA: RequisitoSenha[] = [
-  { chave: 'tamanho', rotulo: 'Pelo menos 8 caracteres', testar: (s) => s.length >= 8 },
-  { chave: 'maiuscula', rotulo: 'Uma letra maiúscula', testar: (s) => /[A-Z]/.test(s) },
-  { chave: 'numero', rotulo: 'Um número', testar: (s) => /[0-9]/.test(s) },
-  {
-    chave: 'simbolo',
-    rotulo: 'Um símbolo (!@#$...)',
-    testar: (s) => /[^A-Za-z0-9]/.test(s),
-  },
-];
 
 type CampoTocado = 'nome' | 'email' | 'senha' | 'confirmar';
 
@@ -47,7 +28,7 @@ export function CadastroPage({ auth }: PropsPagina) {
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [aceiteTermos, setAceiteTermos] = useState(false);
   const [enviando, setEnviando] = useState(false);
-  const { erro, reportarErro, limparErro } = useErroToast();
+  const { erro, reportarErro, limparErro } = useErroToast({ mostraTexto: true });
 
   // "Tocado" (blur), não a cada tecla: validar enquanto a pessoa ainda está digitando o e-mail acusa erro antes
   // de ela terminar de escrever.
@@ -82,7 +63,6 @@ export function CadastroPage({ auth }: PropsPagina) {
 
   const emailValido = REGEX_EMAIL.test(email);
   const senhasIguais = senha.length > 0 && senha === confirmarSenha;
-  const requisitosCumpridos = REQUISITOS_SENHA.filter((r) => r.testar(senha)).length;
   // "Criar conta" fica sempre clicável: clicando com algo faltando, cada campo mostra o próprio erro (inclusive o
   // aceite dos Termos, que antes só deixava o botão cinza sem dizer por quê).
   const { erroDe, tentarEnviar } = useErrosFormulario(() => ({
@@ -213,37 +193,7 @@ export function CadastroPage({ auth }: PropsPagina) {
                   </button>
                 </div>
 
-                {/* Medidor de força - barra + requisitos marcados conforme
-                    cumpridos, não uma mensagem de erro só depois do submit. */}
-                {senha.length > 0 && (
-                  <div className="mt-2 space-y-1.5">
-                    <div className="flex gap-1">
-                      {REQUISITOS_SENHA.map((r, indice) => (
-                        <div
-                          key={r.chave}
-                          className={
-                            'h-1 flex-1 rounded-full ' +
-                            (indice < requisitosCumpridos ? 'fundo-marca' : 'fundo-sutil')
-                          }
-                        ></div>
-                      ))}
-                    </div>
-                    <ul className="grid grid-cols-2 gap-x-2 gap-y-1">
-                      {REQUISITOS_SENHA.map((r) => {
-                        const cumprido = r.testar(senha);
-                        return (
-                          <li
-                            key={r.chave}
-                            className={'text-xs flex items-center gap-1.5 ' + (cumprido ? 'texto-sucesso' : 'texto-fraco')}
-                          >
-                            <i className={'fa-solid ' + (cumprido ? 'fa-circle-check' : 'fa-circle') + ' text-[10px]'}></i>
-                            {r.rotulo}
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </div>
-                )}
+                <MedidorSenha senha={senha} />
               </>
             )}
           </Campo>

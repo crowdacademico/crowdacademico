@@ -218,7 +218,7 @@ O Lucas registrou isto como pendência futura importante, explícito que não é
 
 **Onde esse padrão já existe hoje** (achado no mesmo dia, construindo o wizard de Criar Campanha): `formCriarCampanhaValido` (`bancada-campanha.tsx`) desabilita "Próximo" com base num booleano combinado grande (título, área, meta ≥ mínimo, datas, duração 15-60 dias), só ALGUMAS dessas sub-condições aparecem como aviso inline (meta mínima e duração têm texto vermelho; título/área/pesquisador escolhido não). É o exato antipadrão que ele está descrevendo - provavelmente se repete em outros formulários do painel (Alterar Campanha, Alterar Usuário, etc.) nunca auditados especificamente por isso.
 
-**Andamento (29-09-2026):** o padrão "erro embaixo do campo" já existe (`useErrosFormulario`) e foi aplicado em 4 formulários: criar campanha, cadastro, suspensão e alterar senha. Falta a auditoria completa contra as 10 heurísticas.
+**Andamento (29-09-2026):** o padrão "erro embaixo do campo" já existe (`useErrosFormulario`) e foi aplicado em 4 formulários: criar campanha, cadastro, suspensão e alterar senha. **Auditoria completa feita em 29-09-2026:** 26 achados mais 1 defeito (a data da campanha anda 1 dia para trás, gravidade 4), em `informacoes/NIELSEN_AUDITORIA_2026-09-29.md`. **Corrigido no mesmo dia** o que é comportamento (tabela "Andamento das correções" no topo do arquivo). **Grupo AA colado no Supabase (29-09-2026, "Success").** **Grupo AB colado no Supabase (29-09-2026, "Success").** **Decisões do Lucas (29-09-2026):** o erro de formulário ficou só no texto vermelho (feito em 29-09-2026, com rolagem até o erro); Alterar Usuário vira abas, cada uma com seu botão (próximo, não precisa esperar o visual novo); os botões de enfeite ficam como estão (os módulos deles vão nascer), menos "Submeter Pesquisa", que já abre o Criar Campanha; descrição dos papéis e contagem de aceites dos Termos, feitas.
 
 **Como aplicar**: não iniciar varredura proativa. Quando tocar em qualquer formulário com esse padrão de "desabilitar submit se inválido" no futuro, considerar mostrar erro por campo em vez de (ou além de) só desabilitar o botão. Quando o Lucas pedir pra começar essa frente de verdade, o escopo natural é uma auditoria completa em TODOS os formulários de `react/src/views/` contra as 10 heurísticas, não só #1/#9.
 
@@ -233,7 +233,7 @@ Na tabela de Atualizações do T3, o botão "Ocultar" (só texto) fica com fonte
 
 **Achados em `informacoes/SUPER_AUDITORIA_2026-09-29.md`:** 26 achados; a tabela "Andamento das correções" no topo do arquivo mostra a situação de cada um.
 
-- **Falta colar no Supabase o Grupo Z** do `ATUALIZAR O SUPABASE.sql` (29-09-2026), com o **Nest parado** (troca chaves estrangeiras). Ele traz o RF-015, o RF-091, a validação de domínio dos links e o encerramento das sessões ao suspender ou excluir a conta. Foi testado num banco igual ao Supabase de hoje, colado duas vezes. **Depois de colar, toda conta vê a tela de aceite do Termo de Uso uma vez**, porque ninguém no Supabase aceitou a versão vigente pelo sistema. O Nest novo precisa subir junto: sem ele, ninguém é parado; com ele e sem o Grupo Z, também ninguém é parado (a consulta falha em silêncio).
+- **Grupo Z colado no Supabase (29-09-2026, "Success").**
 - **Ainda não feito:**
   - o item 13 (limpar o Supabase, precisa de autorização);
   - o envio de arquivo (grava no Storage pessoal);
