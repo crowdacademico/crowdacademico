@@ -33,6 +33,7 @@ export function AprovarCampanhas({ auth }: PropsPagina) {
     <div className="admin-content-painel">
       <GenericTable<LinhaFila>
         titulo="Aprovar Campanhas"
+        subtitulo="Campanhas enviadas pelos pesquisadores, esperando a sua avaliação."
         colunas={[
           { chave: 'idCampanha', rotulo: 'id', tipo: 'id' },
           { chave: 'titulo', rotulo: 'título', tipo: 'nome' },
@@ -42,6 +43,11 @@ export function AprovarCampanhas({ auth }: PropsPagina) {
           { chave: 'criadoEm', rotulo: 'criada em', tipo: 'data' },
         ]}
         chavePrimaria="idCampanha"
+        vazio={{
+          icone: 'fa-circle-check',
+          titulo: 'Nenhuma campanha esperando aprovação.',
+          texto: 'Tudo em dia. Quando um pesquisador enviar uma campanha, ela aparece aqui.',
+        }}
         listar={listarFila}
         acoes={{ consultar: (linha) => setRevisandoId(linha.idCampanha) }}
         filtrosFacetados={[{ chave: 'area', rotulo: 'Área' }]}

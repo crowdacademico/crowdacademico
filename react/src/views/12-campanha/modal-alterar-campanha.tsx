@@ -1,7 +1,7 @@
 import { useId, useState } from 'react';
 import type { ReactNode } from 'react';
-import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
-import { SecaoFicha } from '../../components/crud/ficha-consulta';
+import { BarraProgresso } from '../../components/crud/barra-progresso';
+import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { CaixaAviso } from '../../components/crud/caixa-aviso';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
@@ -9,7 +9,12 @@ import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
 import { Campo } from '../../components/input/campo';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
-import { ROTULO_STATUS_CAMPANHA } from '../../services/12-campanha/constants/status-campanha.constants';
+import {
+  ROTULO_MODELO_CAMPANHA,
+  ROTULO_STATUS_CAMPANHA,
+  classeBadgeStatusCampanha,
+} from '../../services/12-campanha/constants/status-campanha.constants';
+import { useRegrasCampanha } from '../../services/12-campanha/hook/use-regras-campanha';
 import { dataLocal, duracaoEmDias, fimDoDia, inicioDoDia } from '../../services/12-campanha/util/prazo-campanha.util';
 import { useAreasDaCampanha } from '../../services/8-area-conhecimento/hook/use-areas-da-campanha';
 import { formatarData, formatarDataHora, formatarMoeda } from '../../services/constant/util/formatacao.util';
@@ -81,8 +86,9 @@ const paraForm = (campanha: CampanhaResponse): FormCampanha => ({
 });
 
 // Alterar campanha (dono, ou o admin pelo Campo de Testes). Os campos que o banco trava agora
-// (fn_campanha_campos_bloqueados, via GET /campanha/:id) ficam desabilitados, com o aviso de quais são: a tela
-// desabilita exatamente o que o banco recusaria, sem lista própria.
+// (fn_campanha_campos_bloqueados, via GET /campanha/:id) aparecem como texto de leitura, não como campo
+// desabilitado, com uma linha discreta dizendo quais são: a tela trava exatamente o que o banco recusaria, sem
+// lista própria. Orçamento e cronograma aparecem juntos, um embaixo do outro, e a coluna da direita é o resumo.
 //
 // Rejeitada: o histórico de rejeições vem no topo (é o que o pesquisador precisa ler para corrigir), junto com
 // os reenvios restantes e o prazo. Esgotados os reenvios, fica só leitura.
@@ -110,6 +116,7 @@ export function ModalAlterarCampanha({
   const [orcamento, setOrcamento] = useState<OrcamentoCampanhaResponse[]>([]);
   const [cronograma, setCronograma] = useState<MarcoCronogramaResponse[]>([]);
   const [ofertaDatas, setOfertaDatas] = useState(false);
+  const regras = useRegrasCampanha();
 
   // Campanha rejeitada traz junto o histórico de rejeições (o motivo aparece no topo do modal).
   const { dado } = useBuscar(
@@ -179,7 +186,14 @@ export function ModalAlterarCampanha({
   };
 
   const campoTexto = (campo: keyof FormCampanha, rotulo: string, largura = 'sm:col-span-2', tipo = 'text') =>
-    form && (
+    form &&
+    (travado(campo) ? (
+      <CampoFicha
+        rotulo={rotulo}
+        valor={tipo === 'date' ? formatarData(`${form[campo]}T12:00:00`) : tipo === 'number' ? formatarMoeda(form[campo]) : form[campo]}
+        largura={largura ? 'cheia' : undefined}
+      />
+    ) : (
       <Campo rotulo={rotulo} className={largura}>
         {({ atributos }) => (
           <input
@@ -193,13 +207,25 @@ export function ModalAlterarCampanha({
           />
         )}
       </Campo>
-    );
+    ));
 
   return (
     <ModalFicha
       carregando={!campanha || !form}
       titulo={campanha?.titulo ?? ''}
       subtitulo={subtitulo}
+      badges={
+        campanha
+          ? [
+              <span key="status" className={`badge ${classeBadgeStatusCampanha(campanha.status)}`}>
+                {ROTULO_STATUS_CAMPANHA[campanha.status]}
+              </span>,
+              <span key="modelo" className="badge badge-neutro">
+                {ROTULO_MODELO_CAMPANHA[campanha.modelo]}
+              </span>,
+            ]
+          : undefined
+      }
       aoFechar={aoFechar}
       rodape={
         <RodapeAcoes
@@ -277,60 +303,71 @@ export function ModalAlterarCampanha({
           )}
 
           {camposBloqueados.size > 0 && !rejeitadaSomenteLeitura && (
-            <div id={idAvisoBloqueio} className="rounded-lg border borda-forte fundo-info p-4 text-sm texto-info">
-              <p className="font-bold">
-                <i className="fa-solid fa-lock mr-1"></i> Campos travados
-              </p>
-              <p>
-                Depois da aprovação estes campos não mudam, para proteger quem já contribuiu:{' '}
-                {[...camposBloqueados].map((campo) => ROTULO_CAMPO_BLOQUEADO[campo] ?? campo).join(', ')}.
-              </p>
-            </div>
+            <p id={idAvisoBloqueio} className="flex items-start gap-2 text-sm texto-fraco">
+              <i className="fa-solid fa-shield-halved mt-0.5 texto-marca" aria-hidden="true"></i>
+              <span>
+                <strong className="texto-forte">Campos protegidos depois da aprovação</strong>, para proteger quem já
+                contribuiu: {[...camposBloqueados].map((campo) => ROTULO_CAMPO_BLOQUEADO[campo] ?? campo).join(', ')}.
+              </span>
+            </p>
           )}
 
           <div className="grid lg:grid-cols-3 gap-6 items-start">
             <div className="lg:col-span-2 space-y-6">
-              <SecaoFicha titulo="Dados">
+              <SecaoFicha titulo="Informações da campanha">
                 {campoTexto('titulo', 'Título')}
-                <Campo rotulo="Área do conhecimento">
-                  {({ atributos }) => (
-                    <select
-                      {...atributos}
-                      value={form.idAreaConhecimento}
-                      onChange={(evento) => setForm({ ...form, idAreaConhecimento: evento.target.value })}
-                      className="input-padrao"
-                      disabled={travado('idAreaConhecimento')}
-                      aria-describedby={descreveBloqueio('idAreaConhecimento')}
-                    >
-                      {areas.map((area) => (
-                        <option key={area.idAreaConhecimento} value={area.idAreaConhecimento}>
-                          {area.nome}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                </Campo>
-                <Campo rotulo="Descrição" className="sm:col-span-2">
-                  {({ atributos }) => (
-                    <textarea
-                      {...atributos}
-                      rows={3}
-                      value={form.descricao}
-                      onChange={(evento) => setForm({ ...form, descricao: evento.target.value })}
-                      className="input-padrao"
-                      disabled={travado('descricao')}
-                      aria-describedby={descreveBloqueio('descricao')}
-                    />
-                  )}
-                </Campo>
-                {campoTexto('videoApresentacaoUrl', 'URL do vídeo de apresentação', 'sm:col-span-2', 'url')}
+                {travado('idAreaConhecimento') ? (
+                  <CampoFicha rotulo="Área do conhecimento" valor={areas.find((area) => String(area.idAreaConhecimento) === form.idAreaConhecimento)?.nome ?? campanha.nomeArea} />
+                ) : (
+                  <Campo rotulo="Área do conhecimento">
+                    {({ atributos }) => (
+                      <select
+                        {...atributos}
+                        value={form.idAreaConhecimento}
+                        onChange={(evento) => setForm({ ...form, idAreaConhecimento: evento.target.value })}
+                        className="input-padrao"
+                        aria-describedby={descreveBloqueio('idAreaConhecimento')}
+                      >
+                        {areas.map((area) => (
+                          <option key={area.idAreaConhecimento} value={area.idAreaConhecimento}>
+                            {area.nome}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </Campo>
+                )}
+                {travado('descricao') ? (
+                  <CampoFicha rotulo="Descrição" valor={form.descricao} largura="cheia" />
+                ) : (
+                  <Campo rotulo="Descrição" className="sm:col-span-2">
+                    {({ atributos }) => (
+                      <textarea
+                        {...atributos}
+                        rows={3}
+                        value={form.descricao}
+                        onChange={(evento) => setForm({ ...form, descricao: evento.target.value })}
+                        className="input-padrao"
+                        aria-describedby={descreveBloqueio('descricao')}
+                      />
+                    )}
+                  </Campo>
+                )}
+                {campoTexto('videoApresentacaoUrl', 'Vídeo de apresentação', 'sm:col-span-2', 'url')}
               </SecaoFicha>
 
-              <div className="border-t borda-padrao"></div>
+              <SecaoFicha titulo="Período">
+                {campoTexto('dataInicio', 'Início', '', 'date')}
+                {campoTexto('dataFim', 'Fim (previsto)', '', 'date')}
+              </SecaoFicha>
+
               <PainelOrcamentoCronograma
                 auth={auth}
                 idCampanha={idCampanha}
                 podeEditar={podeEditarItens}
+                metaFinanceira={Number(form.metaFinanceira)}
+                dataInicioCampanha={form.dataInicio}
+                minimoMarcosCronograma={regras.minimoMarcosCronograma}
                 aoCarregar={(itens, marcos) => {
                   setOrcamento(itens);
                   setCronograma(marcos);
@@ -338,28 +375,39 @@ export function ModalAlterarCampanha({
               />
 
               {secaoAdmin?.({ campanha, orcamento, cronograma })}
-
-              <div className="border-t borda-padrao"></div>
-              <SecaoFicha titulo="Datas">
-                {campoTexto('dataInicio', 'Início', '', 'date')}
-                {campoTexto('dataFim', 'Fim (previsto)', '', 'date')}
-              </SecaoFicha>
             </div>
 
-            <div className="space-y-6">
-              <SecaoFicha titulo="Financeiro">
-                {campoTexto('metaFinanceira', 'Meta (R$)', 'sm:col-span-2', 'number')}
-                <CampoSomenteLeitura rotulo="Arrecadado" valor={formatarMoeda(campanha.valorBrutoArrecadado)} />
-                <CampoSomenteLeitura
-                  rotulo="Taxa da plataforma"
-                  valor={campanha.taxaPlataforma === null ? 'Ainda não carimbada' : `${campanha.taxaPlataforma}%`}
-                />
-              </SecaoFicha>
-
-              <SecaoFicha titulo="Metadados" colunas={1}>
-                <CampoSomenteLeitura rotulo="id" valor={campanha.idCampanha} />
-                <CampoSomenteLeitura rotulo="Status" valor={ROTULO_STATUS_CAMPANHA[campanha.status]} />
-              </SecaoFicha>
+            {/* Resumo: o que só se consulta aqui (arrecadado, taxa, status, id) e a meta, que só é campo enquanto a
+                campanha não foi aprovada. */}
+            <div className="rounded-xl border borda-padrao fundo-sutil p-5 space-y-5">
+              <h3 className="titulo-bloco pb-2 border-b borda-padrao">Resumo</h3>
+              <CampoFicha
+                rotulo="Status"
+                valor={
+                  <span className={`badge ${classeBadgeStatusCampanha(campanha.status)}`}>
+                    {ROTULO_STATUS_CAMPANHA[campanha.status]}
+                  </span>
+                }
+              />
+              {campoTexto('metaFinanceira', 'Meta (R$)', '', 'number')}
+              <CampoFicha
+                rotulo="Arrecadado"
+                valor={
+                  <span className="flex flex-col gap-1.5">
+                    <span>{formatarMoeda(campanha.valorBrutoArrecadado)}</span>
+                    <BarraProgresso
+                      valor={Number(campanha.valorBrutoArrecadado)}
+                      total={Number(form.metaFinanceira)}
+                      rotulo="Arrecadado em relação à meta"
+                    />
+                  </span>
+                }
+              />
+              <CampoFicha
+                rotulo="Taxa da plataforma"
+                valor={campanha.taxaPlataforma === null ? 'Definida na aprovação' : `${campanha.taxaPlataforma}%`}
+              />
+              <CampoFicha rotulo="id" valor={campanha.idCampanha} />
             </div>
           </div>
         </>

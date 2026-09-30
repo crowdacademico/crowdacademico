@@ -1,25 +1,30 @@
-import { useId, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import type { ReactNode } from 'react';
 import { SecaoFicha } from '../../components/crud/ficha-consulta';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { confirmarSaida, useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
 import { ModalFicha } from '../../components/crud/modal-ficha';
+import { IndicadorEtapas } from '../../components/crud/indicador-etapas';
 import { Campo } from '../../components/input/campo';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
 import { useRegrasCampanha } from '../../services/12-campanha/hook/use-regras-campanha';
-import { duracaoEmDias, fimDoDia, hojeISO, inicioDoDia } from '../../services/12-campanha/util/prazo-campanha.util';
+import { dataLocal, duracaoEmDias, fimDoDia, hojeISO, inicioDoDia } from '../../services/12-campanha/util/prazo-campanha.util';
 import { useAreasDaCampanha } from '../../services/8-area-conhecimento/hook/use-areas-da-campanha';
 import { formatarMoeda } from '../../services/constant/util/formatacao.util';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
 import { PainelOrcamentoCronograma } from './painel-orcamento-cronograma';
+import { EtapaRevisaoCampanha } from './etapa-revisao-campanha';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { CampanhaRequestCreate, CampanhaResponse } from '../../services/12-campanha/type/campanha.type';
 
 interface ModalCriarCampanhaProps {
   auth: Pick<UseAuthReturn, 'authFetch'>;
+  // Continuar um rascunho que já existe: o mesmo passo a passo, com os dados dele, sempre a partir da etapa 1. O
+  // rascunho só é editado aqui (Minhas Campanhas e T2 mandam para cá); o Alterar comum fica para os outros status.
+  idRascunho?: number;
   // Cria a campanha com os dados da etapa 1. Padrão: em nome de quem está logado (POST /campanha). O Campo de
   // Testes passa o endpoint de suporte, em nome do pesquisador escolhido.
   criar?: (dados: CampanhaRequestCreate) => Promise<CampanhaResponse>;
@@ -27,6 +32,8 @@ interface ModalCriarCampanhaProps {
   camposExtras?: ReactNode;
   camposExtrasValidos?: boolean;
   subtituloDados?: string;
+  // Texto que fica na frente do subtítulo em todas as etapas (o T2 põe "Pesquisador: fulano.").
+  contexto?: string;
   // A lista de quem abriu precisa recarregar (campanha criada, alterada ou enviada).
   aoMudar: () => void;
   aoFechar: () => void;
@@ -52,12 +59,20 @@ const FORM_VAZIO: FormDadosCampanha = {
   videoApresentacaoUrl: '',
 };
 
-type Etapa = 'dados' | 'orcamento' | 'cronograma';
+type Etapa = 'dados' | 'orcamento' | 'cronograma' | 'revisao';
 
-// Criar campanha em 3 etapas do MESMO modal: Dados, Orçamento e Cronograma. Os itens de orçamento e os marcos só
-// existem depois de a campanha ter um id (FK), por isso "Próximo" na etapa Dados já cria a campanha como
-// rascunho; voltando para Dados e avançando de novo, ela é ALTERADA (PATCH), nunca criada outra vez. O mínimo
-// de itens e de marcos só é exigido no envio: dá para concluir depois, pelo Alterar.
+const ETAPAS = [
+  { chave: 'dados', rotulo: 'Dados' },
+  { chave: 'orcamento', rotulo: 'Orçamento' },
+  { chave: 'cronograma', rotulo: 'Cronograma' },
+  { chave: 'revisao', rotulo: 'Revisão' },
+] as const;
+
+// Criar campanha em 4 etapas do MESMO modal: Dados, Orçamento, Cronograma e Revisão, com o indicador de etapas no
+// topo. Os itens de orçamento e os marcos só existem depois de a campanha ter um id (FK), por isso "Próximo" na
+// etapa Dados já cria a campanha como rascunho; voltando para Dados e avançando de novo, ela é ALTERADA (PATCH),
+// nunca criada outra vez. O mínimo de itens e de marcos só é exigido no envio: dá para fechar e continuar depois,
+// e o rascunho reabre neste mesmo passo a passo (idRascunho).
 //
 // "Enviar para aprovação" não tem checagem no front, de propósito: quem cobra orçamento, soma, cronograma e
 // prazo é o banco (trg_campanha_valida_completude), e o erro chega traduzido. O clique acontece e o sistema DIZ o
@@ -65,10 +80,12 @@ type Etapa = 'dados' | 'orcamento' | 'cronograma';
 // continua rascunho: nada se perde.
 export function ModalCriarCampanha({
   auth,
+  idRascunho,
   criar,
   camposExtras,
   camposExtrasValidos = true,
-  subtituloDados = 'Etapa 1 de 3: Dados.',
+  subtituloDados = 'A campanha é salva como rascunho a cada etapa: dá para fechar e continuar depois.',
+  contexto,
   aoMudar,
   aoFechar,
 }: ModalCriarCampanhaProps) {
@@ -79,8 +96,36 @@ export function ModalCriarCampanha({
   const idPrazoDica = useId();
   const areas = useAreasDaCampanha(auth.authFetch);
   const [form, setForm] = useState<FormDadosCampanha>(FORM_VAZIO);
+  // O que está gravado no banco (vazio antes de o rascunho existir): diz se a etapa Dados tem mudança não salva.
+  const [formSalvo, setFormSalvo] = useState<FormDadosCampanha>(FORM_VAZIO);
   const [etapa, setEtapa] = useState<Etapa>('dados');
-  const [idCampanha, setIdCampanha] = useState<number | null>(null);
+  const [idCampanha, setIdCampanha] = useState<number | null>(idRascunho ?? null);
+  const [carregandoRascunho, setCarregandoRascunho] = useState(idRascunho !== undefined);
+
+  // Rascunho que já existe: o formulário da etapa 1 começa com o que está salvo.
+  useEffect(() => {
+    if (idRascunho === undefined) {
+      return;
+    }
+    campanhaApi
+      .buscar(auth.authFetch, String(idRascunho))
+      .then((campanha) => {
+        const salvo: FormDadosCampanha = {
+          titulo: campanha.titulo,
+          idAreaConhecimento: String(campanha.idAreaConhecimento),
+          metaFinanceira: String(campanha.metaFinanceira),
+          descricao: campanha.descricao ?? '',
+          dataInicio: campanha.dataInicio ? dataLocal(campanha.dataInicio) : '',
+          dataFim: campanha.dataFim ? dataLocal(campanha.dataFim) : '',
+          videoApresentacaoUrl: campanha.videoApresentacaoUrl ?? '',
+        };
+        setForm(salvo);
+        setFormSalvo(salvo);
+      })
+      .catch(reportarErro)
+      .finally(() => setCarregandoRascunho(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idRascunho]);
 
   const hoje = hojeISO();
   const duracao = duracaoEmDias(form.dataInicio, form.dataFim);
@@ -108,7 +153,17 @@ export function ModalCriarCampanha({
     ...(form.videoApresentacaoUrl.trim() ? { videoApresentacaoUrl: form.videoApresentacaoUrl.trim() } : {}),
   });
 
-  const avancarDosDados = async () => {
+  // Mudança na etapa Dados que ainda não foi gravada (antes de o rascunho existir, qualquer coisa digitada).
+  const sujo = JSON.stringify(form) !== JSON.stringify(formSalvo);
+
+  // Sair da etapa Dados (pelo Próximo ou clicando noutra etapa) grava o formulário antes: cria o rascunho na
+  // primeira vez, altera nas outras. Rascunho sem mudança nos Dados só troca de etapa: um rascunho antigo (com o
+  // início já no passado, por exemplo) ainda deixa ver orçamento e cronograma, e a Revisão aponta o que corrigir.
+  const avancarDosDados = async (destino: Etapa = 'orcamento') => {
+    if (idCampanha !== null && !sujo) {
+      setEtapa(destino);
+      return;
+    }
     if (!tentarEnviar()) {
       return;
     }
@@ -120,9 +175,18 @@ export function ModalCriarCampanha({
       } else {
         await campanhaApi.atualizar(auth.authFetch, idCampanha, corpo());
       }
+      setFormSalvo(form);
       aoMudar();
-      setEtapa('orcamento');
+      setEtapa(destino);
     });
+  };
+
+  const irPara = (destino: Etapa) => {
+    if (etapa === 'dados') {
+      void avancarDosDados(destino);
+    } else {
+      setEtapa(destino);
+    }
   };
 
   const enviarParaAprovacao = async () => {
@@ -137,20 +201,18 @@ export function ModalCriarCampanha({
     });
   };
 
-  // Antes do primeiro "Próximo" nada foi salvo: fechar jogaria fora o que foi digitado. Depois, a campanha já é
-  // rascunho e fechar não perde nada.
-  const sujo = idCampanha === null && JSON.stringify(form) !== JSON.stringify(FORM_VAZIO);
+  // Fechar com mudança não gravada na etapa Dados pergunta antes. Orçamento e cronograma gravam na hora.
   useAvisoAlteracaoNaoSalva(sujo);
   const fechar = () => {
     if (confirmarSaida(sujo)) aoFechar();
   };
 
-  const subtitulo =
-    etapa === 'dados'
-      ? subtituloDados
-      : etapa === 'orcamento'
-        ? `Campanha #${idCampanha} - Etapa 2 de 3: Orçamento.`
-        : `Campanha #${idCampanha} - Etapa 3 de 3: Cronograma.`;
+  const subtitulo = [
+    contexto,
+    idCampanha === null ? subtituloDados : `Rascunho #${idCampanha}. Cada etapa é salva ao avançar; dá para fechar e continuar depois.`,
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   const rodape =
     etapa === 'dados' ? (
@@ -164,9 +226,15 @@ export function ModalCriarCampanha({
         rotuloCancelar="Voltar"
         acao={{ rotulo: 'Próximo', aoClicar: () => setEtapa('cronograma') }}
       />
-    ) : (
+    ) : etapa === 'cronograma' ? (
       <RodapeAcoes
         aoCancelar={() => setEtapa('orcamento')}
+        rotuloCancelar="Voltar"
+        acao={{ rotulo: 'Próximo', aoClicar: () => setEtapa('revisao') }}
+      />
+    ) : (
+      <RodapeAcoes
+        aoCancelar={() => setEtapa('cronograma')}
         rotuloCancelar="Voltar"
         largura="md"
         acao={{
@@ -180,7 +248,8 @@ export function ModalCriarCampanha({
 
   return (
     <ModalFicha
-      titulo="Criar Campanha"
+      titulo={idRascunho === undefined ? 'Criar Campanha' : 'Continuar rascunho'}
+      carregando={carregandoRascunho}
       // Um clique sem querer no fundo escurecido derrubaria o passo a passo; só fecha por Cancelar ou pelo X.
       // Depois da etapa 1 a campanha já está salva como rascunho: fechar não perde nada.
       fecharAoClicarFora={false}
@@ -188,7 +257,28 @@ export function ModalCriarCampanha({
       aoFechar={fechar}
       rodape={rodape}
     >
-      {etapa !== 'dados' && idCampanha !== null ? (
+      <IndicadorEtapas
+        etapas={ETAPAS}
+        atual={etapa}
+        aoEscolher={trabalhando ? undefined : irPara}
+        // Antes de o rascunho existir, só dá para avançar pelo Próximo (que valida e cria).
+        liberada={(chave) => chave === 'dados' || idCampanha !== null}
+      />
+      {etapa === 'revisao' && idCampanha !== null ? (
+        <EtapaRevisaoCampanha
+          auth={auth}
+          idCampanha={idCampanha}
+          titulo={form.titulo}
+          nomeArea={areas.find((area) => String(area.idAreaConhecimento) === form.idAreaConhecimento)?.nome ?? ''}
+          meta={Number(form.metaFinanceira)}
+          dataInicio={form.dataInicio}
+          dataFim={form.dataFim}
+          duracaoDias={duracao}
+          prazoValido={duracaoValida && form.dataInicio >= hoje}
+          minimoItensOrcamento={regras.minimoItensOrcamento}
+          minimoMarcosCronograma={regras.minimoMarcosCronograma}
+        />
+      ) : (etapa === 'orcamento' || etapa === 'cronograma') && idCampanha !== null ? (
         <SecaoFicha titulo={etapa === 'orcamento' ? 'Orçamento' : 'Cronograma'}>
           <div className="sm:col-span-2">
             <PainelOrcamentoCronograma

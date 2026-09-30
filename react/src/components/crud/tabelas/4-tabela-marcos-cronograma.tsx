@@ -29,7 +29,7 @@ interface TabelaMarcosCronogramaProps {
   // `min` da data prevista. Só mínimo, de propósito: RF-042/fn_valida_data_marco_cronograma barram data anterior
   // ao início, mas permitem passar do fim (a divulgação de resultado costuma vir depois do prazo).
   dataInicioCampanha?: string;
-  // Quando presente, mostra Mínimo de marcos e Marcos cadastrados acima da tabela, em vermelho se faltar.
+  // Quando presente, mostra acima da tabela quantos marcos há e o mínimo, em vermelho se faltar.
   minimoMarcos?: number;
   aoAdicionar: (dados: DadosMarco) => Promise<boolean>;
   aoSalvar: (marco: MarcoCronogramaResponse, dados: DadosMarco) => Promise<boolean>;
@@ -71,22 +71,13 @@ export function TabelaMarcosCronograma({
   return (
     <>
       {minimoMarcos !== undefined && (
-        <table className="crud-tabela mb-3">
-          <tbody>
-            <tr>
-              <td>Mínimo de marcos</td>
-              <td>
-                <input type="text" readOnly value={minimoMarcos} className="input-padrao" />
-              </td>
-            </tr>
-            <tr>
-              <td>Marcos cadastrados</td>
-              <td>
-                <input type="text" readOnly value={marcos.length} className={'input-padrao' + (marcos.length >= minimoMarcos ? '' : ' borda-erro')} />
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <p className={'flex items-center gap-2 mb-3 text-sm ' + (marcos.length >= minimoMarcos ? 'texto-fraco' : 'texto-erro font-semibold')}>
+          <i
+            className={'fa-solid ' + (marcos.length >= minimoMarcos ? 'fa-circle-check texto-sucesso' : 'fa-circle-xmark')}
+            aria-hidden="true"
+          ></i>
+          {marcos.length} de pelo menos {minimoMarcos} marcos.
+        </p>
       )}
       <TabelaEditavel
         linhas={marcos}

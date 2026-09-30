@@ -105,7 +105,7 @@ export function CadastroPage({ auth }: PropsPagina) {
   return (
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 fundo-pagina">
       <div className="max-w-md w-full max-h-[calc(100vh-2rem)] fundo-cartao rounded-3xl shadow-2xl border borda-padrao overflow-hidden flex flex-col">
-        <div className="p-10 text-center border-b borda-padrao fundo-sutil shrink-0">
+        <div className="p-10 text-center border-b borda-padrao faixa-marca shrink-0">
           <div className="w-14 h-14 fundo-marca rounded-2xl mx-auto flex items-center justify-center text-white font-bold text-2xl mb-5 shadow-lg">
             <i className="fa-solid fa-user-plus"></i>
           </div>
@@ -256,7 +256,7 @@ export function CadastroPage({ auth }: PropsPagina) {
           </div>
         </form>
 
-        <div className="p-6 border-t borda-padrao fundo-cartao shrink-0 space-y-3">
+        <div className="p-6 border-t borda-padrao faixa-marca shrink-0 space-y-3">
           <button
             type="submit"
             form="form-cadastro"

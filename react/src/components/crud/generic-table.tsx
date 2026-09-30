@@ -1,5 +1,6 @@
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import { MensagemErro } from './mensagem-erro';
+import { EstadoVazio, type ConteudoEstadoVazio } from './estado-vazio';
 import type { ReactNode } from 'react';
 import { useSearchParams } from 'react-router';
 import { TIPOS_COLUNA, type NomeTipoColuna } from './colunas/tipos-coluna';
@@ -45,6 +46,8 @@ interface GenericTableProps<T extends Linha> {
   // e axe esperam). Numa página com mais de uma seção (Papéis e Permissões), as seguintes passam `2`. O visual
   // é o mesmo nos dois níveis (classe `titulo-secao`).
   nivelTitulo?: 1 | 2;
+  // Uma frase embaixo do título dizendo para que serve a lista (padrão de mercado: "Gerencie...", "Acompanhe...").
+  subtitulo?: string;
   acaoTopo?: ReactNode;
   colunas: Coluna<T>[];
   chavePrimaria: keyof T & string;
@@ -54,7 +57,16 @@ interface GenericTableProps<T extends Linha> {
   // Ação que existe na tabela mas não se aplica a uma linha: aparece apagada, com o motivo na dica.
   acaoIndisponivel?: AcaoIndisponivel<T>;
   filtrosFacetados?: FiltroFacetado<T>[];
+  // Lista vazia (sem filtro): o que apareceria aqui e o próximo passo. Sem isto, uma mensagem genérica.
+  vazio?: ConteudoEstadoVazio;
 }
+
+const VAZIO_PADRAO: ConteudoEstadoVazio = { icone: 'fa-inbox', titulo: 'Nada por aqui ainda.' };
+const VAZIO_FILTRO: ConteudoEstadoVazio = {
+  icone: 'fa-magnifying-glass',
+  titulo: 'Nenhum registro bate com o filtro.',
+  texto: 'Tente outro termo ou limpe os filtros.',
+};
 
 // Piso de largura de nome/texto pelo conteúdo: o maior valor da lista inteira em `ch` (+2 de respiro), limitado
 // por `--coluna-piso-maximo` (5-crud.css), que diminui em tela estreita para a coluna poder quebrar a linha.
@@ -93,6 +105,7 @@ function maiorTexto<T extends Linha>(coluna: Coluna<T>, linhas: T[]): number {
 export function GenericTable<T extends Linha>({
   titulo,
   nivelTitulo = 1,
+  subtitulo,
   acaoTopo,
   colunas,
   chavePrimaria,
@@ -109,6 +122,7 @@ export function GenericTable<T extends Linha>({
   // sem isso, cai no alfabético (pt-BR). Valor que aparecer nos dados mas não estiver em `ordem` vai para o
   // final da lista, não desaparece.
   filtrosFacetados,
+  vazio,
 }: GenericTableProps<T>) {
   // A coluna Ações existe se pelo menos 1 handler foi passado em `acoes`.
   const temAcoes = Boolean(acoes?.alterar || acoes?.consultar || acoes?.excluir);
@@ -484,11 +498,14 @@ export function GenericTable<T extends Linha>({
   return (
     <section className="crud-secao">
       <div className="crud-secao__cabecalho">
-        {nivelTitulo === 1 ? (
-          <h1 className="titulo-secao">{titulo}</h1>
-        ) : (
-          <h2 className="titulo-secao">{titulo}</h2>
-        )}
+        <div>
+          {nivelTitulo === 1 ? (
+            <h1 className="titulo-secao">{titulo}</h1>
+          ) : (
+            <h2 className="titulo-secao">{titulo}</h2>
+          )}
+          {subtitulo && <p className="paragrafo crud-secao__subtitulo">{subtitulo}</p>}
+        </div>
         {acaoTopo && <div className="crud-secao__acao-topo">{acaoTopo}</div>}
       </div>
 
@@ -598,7 +615,7 @@ export function GenericTable<T extends Linha>({
                 {linhasPagina.length === 0 && !erro && (
                   <tr>
                     <td colSpan={colunas.length + (temAcoes ? 1 : 0)}>
-                      {filtro || algumaFacetaAtiva ? 'Nenhum registro bate com o filtro.' : 'Nenhum registro.'}
+                      <EstadoVazio {...(filtro || algumaFacetaAtiva ? VAZIO_FILTRO : (vazio ?? VAZIO_PADRAO))} />
                     </td>
                   </tr>
                 )}

@@ -29,11 +29,19 @@
 
   .btn-primary {
     background-color: var(--cor-fundo-marca-forte);
+    background-image: var(--cor-degrade-marca);
+    box-shadow: var(--cor-sombra-brilho-marca);
     color: var(--cor-texto-sobre-cor);
   }
 
   .btn-primary:hover:not(:disabled) {
     background-color: var(--cor-fundo-marca-forte-hover);
+    background-image: var(--cor-degrade-marca-hover);
+    box-shadow: var(--cor-sombra-brilho-marca-hover);
+  }
+
+  .btn-primary:disabled {
+    box-shadow: none;
   }
 
   .btn-secondary {
@@ -148,6 +156,204 @@
   .badge-erro {
     background-color: var(--cor-fundo-erro);
     color: var(--cor-texto-erro);
+  }
+
+  /* Barra de progresso (components/crud/barra-progresso.tsx): largura FIXA do trilho, para caber numa coluna
+     curta da GenericTable sem entrar na medição de largura dela (uma largura em % cresceria junto com a
+     coluna). Completa (100% ou mais): o preenchimento passa para o verde forte. */
+  .barra-progresso {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .barra-progresso__trilho {
+    display: inline-block;
+    width: 5rem;
+    height: 0.375rem;
+    border-radius: var(--radius-full);
+    background-color: var(--cor-borda);
+    overflow: hidden;
+  }
+
+  .barra-progresso__preenchido {
+    display: block;
+    height: 100%;
+    border-radius: var(--radius-full);
+    background-color: var(--cor-marca);
+  }
+
+  .barra-progresso__trilho--completo .barra-progresso__preenchido {
+    background-color: var(--cor-fundo-marca-forte);
+  }
+
+  .barra-progresso__porcentagem {
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    color: var(--cor-texto-fraco);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Indicador de etapas (components/crud/indicador-etapas.tsx): número em círculo, rótulo embaixo, linha ligando
+     as etapas (o ::before de cada etapa depois da primeira). Feita: verde com ✓; atual: verde forte; futura: cinza. */
+  .indicador-etapas {
+    display: flex;
+    margin-bottom: 1.5rem;
+  }
+
+  .indicador-etapas__etapa {
+    position: relative;
+    flex: 1;
+    display: flex;
+    justify-content: center;
+  }
+
+  .indicador-etapas__etapa + .indicador-etapas__etapa::before {
+    content: '';
+    position: absolute;
+    top: 1rem;
+    right: calc(50% + 1.25rem);
+    left: calc(-50% + 1.25rem);
+    height: 2px;
+    border-radius: var(--radius-full);
+    background-color: var(--cor-borda);
+  }
+
+  .indicador-etapas__etapa--feita + .indicador-etapas__etapa::before {
+    background-color: var(--cor-marca);
+  }
+
+  .indicador-etapas__botao {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    border-radius: var(--radius-md);
+    padding: 0 0.25rem;
+  }
+
+  button.indicador-etapas__botao {
+    cursor: pointer;
+  }
+
+  button.indicador-etapas__botao:hover .indicador-etapas__rotulo {
+    color: var(--cor-texto-forte);
+    text-decoration: underline;
+  }
+
+  .indicador-etapas__numero {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: var(--radius-full);
+    border: 2px solid var(--cor-borda);
+    background-color: var(--cor-fundo-cartao);
+    color: var(--cor-texto-fraco);
+    font-size: var(--font-size-sm);
+    font-weight: 700;
+  }
+
+  .indicador-etapas__etapa--feita .indicador-etapas__numero {
+    border-color: var(--cor-marca);
+    background-color: var(--cor-fundo-sucesso);
+    color: var(--cor-texto-sucesso);
+  }
+
+  .indicador-etapas__etapa--atual .indicador-etapas__numero {
+    border-color: var(--cor-fundo-marca-forte);
+    background-image: var(--cor-degrade-marca);
+    box-shadow: var(--cor-sombra-brilho-marca);
+    color: var(--cor-texto-sobre-cor);
+  }
+
+  .indicador-etapas__rotulo {
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    color: var(--cor-texto-fraco);
+  }
+
+  .indicador-etapas__etapa--atual .indicador-etapas__rotulo {
+    color: var(--cor-texto-forte);
+  }
+
+  /* Linha do tempo (cronograma na Revisão da campanha): bolinha verde por marco, ligadas por uma linha vertical. */
+  .linha-tempo {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .linha-tempo__item {
+    position: relative;
+    padding: 0 0 1rem 1.5rem;
+  }
+
+  .linha-tempo__item::before {
+    content: '';
+    position: absolute;
+    top: 0.3rem;
+    left: 0;
+    width: 0.65rem;
+    height: 0.65rem;
+    border-radius: var(--radius-full);
+    background-color: var(--cor-marca);
+  }
+
+  .linha-tempo__item:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    top: 1.1rem;
+    bottom: 0.1rem;
+    left: calc(0.325rem - 1px);
+    width: 2px;
+    background-color: var(--cor-borda);
+  }
+
+  .linha-tempo__data {
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    color: var(--cor-texto-fraco);
+  }
+
+  .linha-tempo__titulo {
+    font-size: var(--font-size-sm);
+    color: var(--cor-texto-forte);
+  }
+
+  /* Estado vazio (components/crud/estado-vazio.tsx): ícone num círculo suave, frase e próximo passo. */
+  .estado-vazio {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 2.5rem 1rem;
+    text-align: center;
+  }
+
+  .estado-vazio__icone {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 3rem;
+    height: 3rem;
+    margin-bottom: 0.5rem;
+    border-radius: var(--radius-full);
+    background-color: var(--cor-fundo-sutil);
+    color: var(--cor-texto-fraco);
+    font-size: var(--font-size-lg);
+  }
+
+  .estado-vazio__titulo {
+    font-size: var(--font-size-sm);
+    font-weight: 700;
+    color: var(--cor-texto-forte);
+  }
+
+  .estado-vazio__texto {
+    font-size: var(--font-size-sm);
+    color: var(--cor-texto-fraco);
+    max-width: 28rem;
   }
 
   /* Selo <dev>: marca qualquer recurso que existe só para facilitar desenvolvimento/teste (ex.: redefinir
@@ -350,6 +556,13 @@
      tela. */
   .brilho-marca {
     background-color: color-mix(in srgb, var(--cor-marca) var(--opacidade-brilho-marca, 10%), transparent);
+  }
+
+  /* Faixa verde do cabeçalho E do rodapé dos modais e das fichas (modal-ficha, ficha-consulta, cartao-formulario,
+     cadastro, aceite do Termo): uma classe só, para os dois mudarem juntos. */
+  .faixa-marca {
+    background-color: var(--cor-fundo-sutil);
+    background-image: var(--cor-degrade-faixa);
   }
 
   /* Cartão do painel (cards do Dashboard e das suas abas): fundo de cartão, borda, canto arredondado e sombra

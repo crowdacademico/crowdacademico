@@ -54,7 +54,7 @@ export function CartaoFormulario({
             (`rounded-t-3xl`/`rounded-b-3xl`) em vez de depender de recorte do pai (mesma lição do artefato
             de cantinho de toast-provider/admin-sidebar). */}
         <div className="fundo-cartao rounded-3xl shadow-2xl border borda-forte">
-          <div className="p-10 text-center border-b borda-padrao fundo-sutil rounded-t-3xl">
+          <div className="p-10 text-center border-b borda-padrao faixa-marca rounded-t-3xl">
             <div
               className={
                 'w-14 h-14 rounded-2xl mx-auto flex items-center justify-center font-bold text-2xl mb-5 shadow-lg ' +
@@ -70,7 +70,7 @@ export function CartaoFormulario({
           {children}
 
           {rodape && (
-            <div className="p-6 border-t borda-padrao fundo-cartao rounded-b-3xl sticky bottom-0">
+            <div className="p-6 border-t borda-padrao faixa-marca rounded-b-3xl sticky bottom-0">
               {rodape}
             </div>
           )}

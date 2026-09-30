@@ -25,6 +25,26 @@
      5,41:1 com branco. */
   --cor-fundo-marca-forte: var(--color-primary-dark);
   --cor-fundo-marca-forte-hover: color-mix(in srgb, var(--color-primary-dark) 85%, black);
+  /* "Brilho" do botão principal: degradê de um verde um pouco mais claro no topo para o tom forte embaixo, e
+     uma sombra verde suave. O topo leva só 35% da marca, para o texto branco continuar perto de 5:1. */
+  --cor-degrade-marca: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--color-primary) 35%, var(--color-primary-dark)) 0%,
+    var(--color-primary-dark) 100%
+  );
+  --cor-degrade-marca-hover: linear-gradient(
+    180deg,
+    var(--color-primary-dark) 0%,
+    color-mix(in srgb, var(--color-primary-dark) 85%, black) 100%
+  );
+  --cor-sombra-brilho-marca: 0 4px 14px -4px color-mix(in srgb, var(--color-primary) 60%, transparent);
+  --cor-sombra-brilho-marca-hover: 0 6px 20px -4px color-mix(in srgb, var(--color-primary) 75%, transparent);
+  /* Cabeçalho e rodapé de modal e de ficha (a MESMA faixa nos dois): verde inteiro, mais forte à esquerda e
+     mais claro à direita, com um brilho no canto superior esquerdo, para separar do corpo branco. Por cima do
+     fundo sutil de cada tema: funciona no claro e no escuro. */
+  --cor-degrade-faixa:
+    radial-gradient(70% 180% at 0% 0%, color-mix(in srgb, var(--color-primary) 32%, transparent) 0%, transparent 70%),
+    linear-gradient(90deg, color-mix(in srgb, var(--color-primary) 28%, transparent) 0%, color-mix(in srgb, var(--color-primary) 14%, transparent) 100%);
   --cor-texto-marca: var(--color-primary-dark);
   --cor-superficie: var(--color-surface);
   --cor-escura: var(--color-dark);

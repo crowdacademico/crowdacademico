@@ -13,6 +13,7 @@ import { ModalAlterarCampanha } from './modal-alterar-campanha';
 import { ModalConsultarCampanha } from './modal-consultar-campanha';
 import { ModalCriarCampanha } from './modal-criar-campanha';
 import { ModalExcluirCampanha } from './modal-excluir-campanha';
+import { renderizarArrecadado, renderizarStatus } from './colunas-campanha';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { CampanhaResponse } from '../../services/12-campanha/type/campanha.type';
 import type { StatusPesquisador } from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
@@ -23,9 +24,10 @@ interface MinhaCampanhaLinha extends Omit<CampanhaResponse, 'status'> {
 }
 
 // Minhas Campanhas: as campanhas do PRÓPRIO usuário logado, em qualquer status (a RLS deixa o dono ver as
-// suas). Criar abre o passo a passo (Dados, Orçamento, Cronograma, Enviar); Alterar serve para completar um
-// rascunho, ajustar orçamento/cronograma enquanto não foi aprovada, e corrigir e reenviar uma rejeitada; depois
-// de aprovada, os campos travados aparecem desabilitados. Excluir só vale para rascunho (o modal explica quando
+// suas). Criar abre o passo a passo (Dados, Orçamento, Cronograma, Revisão); o rascunho continua SEMPRE nele
+// (Alterar de um rascunho reabre o passo a passo). Para os outros status, Alterar serve para ajustar
+// orçamento/cronograma enquanto não foi aprovada e corrigir e reenviar uma rejeitada; depois de aprovada, os campos
+// travados aparecem desabilitados. Excluir só vale para rascunho (o modal explica quando
 // não pode). Consultar mostra também os comentários recebidos (endossar, excluir, bloquear).
 //
 // Criar só aparece para quem tem perfil de pesquisador ATIVO (a mesma condição de pol_campanha_insert, 04):
@@ -116,6 +118,7 @@ export function MinhasCampanhas({ auth }: PropsPagina) {
 
       <GenericTable<MinhaCampanhaLinha>
         titulo="Minhas Campanhas"
+        subtitulo="Crie, acompanhe e ajuste as suas campanhas. Os comentários recebidos ficam no Consultar."
         acaoTopo={
           podeCriar && (
             <BotaoCriar rotulo="Criar campanha" aoClicar={abrirCriando} />
@@ -124,12 +127,19 @@ export function MinhasCampanhas({ auth }: PropsPagina) {
         colunas={[
           { chave: 'idCampanha', rotulo: 'id', tipo: 'id' },
           { chave: 'titulo', rotulo: 'título', tipo: 'nome' },
-          { chave: 'status', rotulo: 'status', tipo: 'status' },
+          { chave: 'status', rotulo: 'status', tipo: 'status', renderizar: renderizarStatus },
           { chave: 'metaFinanceira', rotulo: 'meta', tipo: 'dinheiro' },
-          { chave: 'valorBrutoArrecadado', rotulo: 'arrecadado', tipo: 'dinheiro' },
+          { chave: 'valorBrutoArrecadado', rotulo: 'arrecadado', tipo: 'dinheiro', renderizar: renderizarArrecadado },
           { chave: 'dataFim', rotulo: 'termina em', tipo: 'data' },
         ]}
         chavePrimaria="idCampanha"
+        vazio={{
+          icone: 'fa-flask',
+          titulo: 'Você ainda não tem campanhas.',
+          texto: podeCriar
+            ? 'Clique em "Criar campanha" para começar: dados, orçamento e cronograma, em 3 etapas.'
+            : 'Campanhas são criadas por pesquisadores (veja o aviso no topo da página).',
+        }}
         listar={listar}
         acoes={acoesCompletas}
         filtrosFacetados={[
@@ -141,7 +151,11 @@ export function MinhasCampanhas({ auth }: PropsPagina) {
         <ModalCriarCampanha auth={auth} aoMudar={recarregar} aoFechar={fecharCriar} />
       )}
 
-      {alterando && (
+      {alterando?.statusOriginal === 'rascunho' && (
+        <ModalCriarCampanha auth={auth} idRascunho={alterando.idCampanha} aoMudar={recarregar} aoFechar={fecharAlterando} />
+      )}
+
+      {alterando && alterando.statusOriginal !== 'rascunho' && (
         <ModalAlterarCampanha
           auth={auth}
           idCampanha={alterando.idCampanha}

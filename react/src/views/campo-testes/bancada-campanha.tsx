@@ -327,6 +327,18 @@ export function BancadaCampanha({ auth }: PropsPagina) {
       {idCampanhaEditando !== null && (() => {
         const campanhaEmEdicao = campanhas.find((c) => c.idCampanha === idCampanhaEditando) ?? null;
         const bloqueadaEdicao = CAMPANHA_BLOQUEADA(idCampanhaEditando);
+        // Rascunho continua no passo a passo, como em Minhas Campanhas.
+        if (campanhaEmEdicao?.status === 'rascunho' && !bloqueadaEdicao) {
+          return (
+            <ModalCriarCampanha
+              auth={authRegistrado}
+              idRascunho={idCampanhaEditando}
+              contexto={`Pesquisador: ${nomeDe(campanhaEmEdicao.idUsuario)}.`}
+              aoMudar={carregarCampanhas}
+              aoFechar={() => setIdCampanhaEditando(null)}
+            />
+          );
+        }
         return (
           <ModalAlterarCampanha
             auth={authRegistrado}
@@ -540,7 +552,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
       </SecaoFicha>
           }
           camposExtrasValidos={pesquisadorEscolhido !== null}
-          subtituloDados="Em nome de outro pesquisador - escolha quem é o dono abaixo. Etapa 1 de 3: Dados."
+          subtituloDados="Em nome de outro pesquisador - escolha quem é o dono abaixo."
           aoMudar={carregarCampanhas}
           aoFechar={fecharModalCriarCampanha}
         />

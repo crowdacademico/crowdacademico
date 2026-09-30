@@ -24,12 +24,11 @@ interface PainelOrcamentoCronogramaProps {
   // modal de Alterar) manter as CONTAGENS em dia sem duplicar adicionar/remover. Só o Alterar passa isto, o
   // Consultar não precisa.
   aoCarregar?: (orcamento: OrcamentoCampanhaResponse[], cronograma: MarcoCronogramaResponse[]) => void;
-  // `abaFixa`: quando presente, trava a aba nesse valor e esconde os 2 botões de trocar aba (Orçamento e
-  // Cronograma são 2 etapas/modais diferentes dentro de Criar Campanha; não faz sentido oferecer "trocar para
-  // Cronograma" dentro da etapa que É a de Orçamento). Alterar/Consultar Campanha não passam isto e mantêm as 2
-  // abas.
+  // `abaFixa`: mostra só uma das duas partes (Orçamento e Cronograma são etapas diferentes de Criar Campanha).
+  // Sem isto (Alterar Campanha, consulta do T2), as duas aparecem uma embaixo da outra, cada uma com o seu título:
+  // nada escondido atrás de botões de trocar.
   abaFixa?: 'orcamento' | 'cronograma';
-  // `metaFinanceira`: opcional; quando presente, a tabela de Orçamento mostra Meta e Soma atual acima dela.
+  // `metaFinanceira`: opcional; quando presente, a tabela de Orçamento mostra o total em relação à meta acima dela.
   metaFinanceira?: number;
   // `dataInicioCampanha`: mínimo da data prevista de um marco (ver 4-tabela-marcos-cronograma.tsx).
   dataInicioCampanha?: string;
@@ -50,7 +49,10 @@ export function PainelOrcamentoCronograma({
   const { reportarErro } = useErroToast();
   const [orcamento, setOrcamento] = useState<OrcamentoCampanhaResponse[]>([]);
   const [cronograma, setCronograma] = useState<MarcoCronogramaResponse[]>([]);
-  const [abaAtiva, setAbaAtiva] = useState<'orcamento' | 'cronograma'>(abaFixa ?? 'orcamento');
+  const mostrarOrcamento = abaFixa !== 'cronograma';
+  const mostrarCronograma = abaFixa !== 'orcamento';
+  // Título de cada parte só quando as duas aparecem juntas (com `abaFixa`, quem usa já dá o título).
+  const titulo = (texto: string) => !abaFixa && <h3 className="titulo-bloco mb-3 pb-2 border-b borda-padrao">{texto}</h3>;
 
   // Ref (não dependência de `carregar`): `aoCarregar` recebe uma arrow function nova a cada render do modal
   // pai; colocá-la nas dependências de `useCallback` recriaria `carregar` toda hora, disparando o efeito de
@@ -92,39 +94,34 @@ export function PainelOrcamentoCronograma({
   };
 
   return (
-    <div>
-      {!abaFixa && (
-        <div className="flex gap-2 mb-3">
-          <button type="button" className={`btn ${abaAtiva === 'orcamento' ? 'btn-primary' : 'btn-secondary'} text-xs`} onClick={() => setAbaAtiva('orcamento')}>
-            Orçamento
-          </button>
-          <button type="button" className={`btn ${abaAtiva === 'cronograma' ? 'btn-primary' : 'btn-secondary'} text-xs`} onClick={() => setAbaAtiva('cronograma')}>
-            Cronograma
-          </button>
+    <div className="space-y-6">
+      {mostrarOrcamento && (
+        <div>
+          {titulo('Orçamento')}
+          <TabelaItensOrcamento
+            itens={orcamento}
+            podeEditar={podeEditar}
+            metaFinanceira={metaFinanceira}
+            aoAdicionar={(dados: DadosItemOrcamento) => executar(() => orcamentoCampanhaApi.criar(auth.authFetch, { idCampanha, ...dados }))}
+            aoSalvar={(item, dados) => executar(() => orcamentoCampanhaApi.atualizar(auth.authFetch, item.idOrcamento, dados))}
+            aoExcluir={(item) => void executar(() => orcamentoCampanhaApi.remover(auth.authFetch, item.idOrcamento))}
+          />
         </div>
       )}
 
-      {abaAtiva === 'orcamento' && (
-        <TabelaItensOrcamento
-          itens={orcamento}
-          podeEditar={podeEditar}
-          metaFinanceira={metaFinanceira}
-          aoAdicionar={(dados: DadosItemOrcamento) => executar(() => orcamentoCampanhaApi.criar(auth.authFetch, { idCampanha, ...dados }))}
-          aoSalvar={(item, dados) => executar(() => orcamentoCampanhaApi.atualizar(auth.authFetch, item.idOrcamento, dados))}
-          aoExcluir={(item) => void executar(() => orcamentoCampanhaApi.remover(auth.authFetch, item.idOrcamento))}
-        />
-      )}
-
-      {abaAtiva === 'cronograma' && (
-        <TabelaMarcosCronograma
-          marcos={cronograma}
-          podeEditar={podeEditar}
-          dataInicioCampanha={dataInicioCampanha}
-          minimoMarcos={minimoMarcosCronograma}
-          aoAdicionar={(dados: DadosMarco) => executar(() => marcoCronogramaApi.criar(auth.authFetch, { idCampanha, ...dados }))}
-          aoSalvar={(marco, dados) => executar(() => marcoCronogramaApi.atualizar(auth.authFetch, marco.idMarco, dados))}
-          aoExcluir={(marco) => void executar(() => marcoCronogramaApi.remover(auth.authFetch, marco.idMarco))}
-        />
+      {mostrarCronograma && (
+        <div>
+          {titulo('Cronograma')}
+          <TabelaMarcosCronograma
+            marcos={cronograma}
+            podeEditar={podeEditar}
+            dataInicioCampanha={dataInicioCampanha}
+            minimoMarcos={minimoMarcosCronograma}
+            aoAdicionar={(dados: DadosMarco) => executar(() => marcoCronogramaApi.criar(auth.authFetch, { idCampanha, ...dados }))}
+            aoSalvar={(marco, dados) => executar(() => marcoCronogramaApi.atualizar(auth.authFetch, marco.idMarco, dados))}
+            aoExcluir={(marco) => void executar(() => marcoCronogramaApi.remover(auth.authFetch, marco.idMarco))}
+          />
+        </div>
       )}
     </div>
   );

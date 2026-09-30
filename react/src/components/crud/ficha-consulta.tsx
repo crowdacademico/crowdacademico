@@ -62,7 +62,7 @@ export function FichaConsulta({
             cartão inteiro: overflow-hidden quebraria o rodapé `sticky` (cria um contexto de scroll próprio
             que o sticky não atravessa); cada pedaço arredonda o PRÓPRIO canto, não depende de recorte de um
             pai. */}
-        <div className="px-8 py-6 border-b borda-padrao fundo-sutil rounded-t-2xl flex items-start justify-between gap-4 flex-wrap">
+        <div className="px-8 py-6 border-b borda-padrao faixa-marca rounded-t-2xl flex items-start justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3 min-w-0">
             {avatar}
             <div className="min-w-0">
@@ -81,7 +81,7 @@ export function FichaConsulta({
         <div className="px-8 py-6 space-y-6">{children}</div>
 
         {acoes && (
-          <div className="px-8 py-5 border-t borda-padrao fundo-cartao rounded-b-2xl sticky bottom-0">
+          <div className="px-8 py-5 border-t borda-padrao faixa-marca rounded-b-2xl sticky bottom-0">
             {acoes}
           </div>
         )}

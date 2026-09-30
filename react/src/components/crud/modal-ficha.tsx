@@ -88,7 +88,7 @@ export function ModalFicha({
             esquerda (podem quebrar livre, sem afetar nada): se o X vivesse no mesmo grupo flex-wrap que os
             badges, com título comprido + 2 badges esse grupo inteiro quebraria linha e cairia embaixo do
             título, em vez de ficar fixo no canto superior direito. */}
-        <div className="px-8 py-6 border-b borda-padrao fundo-sutil flex items-start justify-between gap-4 shrink-0">
+        <div className="px-8 py-6 border-b borda-padrao faixa-marca flex items-start justify-between gap-4 shrink-0">
           <div className="flex items-start gap-3 min-w-0">
             {avatarExibido}
             <div className="min-w-0">
@@ -114,7 +114,7 @@ export function ModalFicha({
           {children}
         </div>
 
-        {rodape && <div className="px-8 py-5 border-t borda-padrao fundo-cartao shrink-0">{rodape}</div>}
+        {rodape && <div className="px-8 py-5 border-t borda-padrao faixa-marca shrink-0">{rodape}</div>}
       </div>
     </div>
   );

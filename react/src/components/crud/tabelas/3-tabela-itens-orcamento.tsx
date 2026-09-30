@@ -1,5 +1,6 @@
 import { TabelaEditavel } from './tabela-editavel';
 import type { ColunaEditavel } from './tabela-editavel';
+import { BarraProgresso } from '../barra-progresso';
 import { formatarMoeda } from '../../../services/constant/util/formatacao.util';
 import type { OrcamentoCampanhaResponse } from '../../../services/13-orcamento-campanha/type/orcamento-campanha.type';
 
@@ -41,7 +42,7 @@ const COLUNAS: ColunaEditavel<OrcamentoCampanhaResponse, FormItem>[] = [
 interface TabelaItensOrcamentoProps {
   itens: OrcamentoCampanhaResponse[];
   podeEditar: boolean;
-  // Quando presente, mostra Meta e Soma atual acima da tabela; a Soma fica em vermelho se não bater com a meta
+  // Quando presente, mostra acima da tabela o total dos itens em relação à meta, com a barra; em vermelho se não bater
   // (o banco exige a igualdade exata na aprovação, RF-039/040; isto só adianta o aviso).
   metaFinanceira?: number;
   aoAdicionar: (dados: DadosItemOrcamento) => Promise<boolean>;
@@ -55,22 +56,13 @@ export function TabelaItensOrcamento({ itens, podeEditar, metaFinanceira, aoAdic
   return (
     <>
       {metaFinanceira !== undefined && (
-        <table className="crud-tabela mb-3">
-          <tbody>
-            <tr>
-              <td>Meta</td>
-              <td>
-                <input type="text" readOnly value={formatarMoeda(metaFinanceira)} className="input-padrao" />
-              </td>
-            </tr>
-            <tr>
-              <td>Soma atual</td>
-              <td>
-                <input type="text" readOnly value={formatarMoeda(soma)} className={'input-padrao' + (soma === metaFinanceira ? '' : ' borda-erro')} />
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-3 text-sm">
+          <span className={soma === metaFinanceira ? 'texto-fraco' : 'texto-erro font-semibold'}>
+            Total dos itens: <strong>{formatarMoeda(soma)}</strong> de {formatarMoeda(metaFinanceira)}
+            {soma !== metaFinanceira && ' (precisa ser igual à meta)'}
+          </span>
+          <BarraProgresso valor={soma} total={metaFinanceira} rotulo="Total do orçamento em relação à meta" />
+        </div>
       )}
       <TabelaEditavel
         linhas={itens}

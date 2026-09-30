@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { RodapePaginacao } from '../../pagination/rodape-paginacao';
+import { EstadoVazio } from '../estado-vazio';
 import { BarraFiltros } from '../../search/barra-filtros';
 import { LIMIAR_FILTRO } from '../../search/limiar-filtro.constants';
 import { paginarClientSide } from '../../../services/constant/util/paginacao.util';
@@ -75,7 +76,16 @@ export function TabelaBancada<T>({
   const { totalPaginas, paginaAtual, itensPagina } = paginarClientSide(filtradas, pagina, tamanhoPagina);
 
   const colunasTotais = colunas.length + 1;
-  const mensagem = carregando ? 'Carregando...' : erro ? erro : itensPagina.length === 0 ? (termo ? 'Nenhum registro bate com o filtro.' : 'Nenhum registro.') : null;
+  // Lista vazia: o mesmo estado vazio da GenericTable (ícone e frase), não um texto solto.
+  const mensagem: ReactNode = carregando
+    ? 'Carregando...'
+    : erro
+      ? erro
+      : itensPagina.length === 0
+        ? termo
+          ? <EstadoVazio icone="fa-magnifying-glass" titulo="Nenhum registro bate com o filtro." texto="Tente outro termo ou limpe o filtro." />
+          : <EstadoVazio icone="fa-inbox" titulo="Nada por aqui ainda." />
+        : null;
 
   return (
     <>
