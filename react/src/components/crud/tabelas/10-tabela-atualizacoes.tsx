@@ -1,6 +1,8 @@
 // Atualizações publicadas numa campanha (título, fase, se está visível), com o botão de ocultar/reverter. Usada no
 // Campo de Testes (T3, views/campo-testes/vida-campanha-ativa.tsx), que busca e faz a alteração.
 
+import { AcaoLinha } from '../acao-linha';
+
 // `atualizacao-campanha` ainda não tem type/api formal em services/: formato do DTO do Nest.
 export interface Atualizacao {
   idAtualizacao: number;
@@ -39,9 +41,13 @@ export function TabelaAtualizacoes({ atualizacoes, aoAlternarAtivo }: TabelaAtua
                 <span className={`badge ${item.ativo ? 'badge-sucesso' : 'badge-neutro'}`}>{item.ativo ? 'Sim' : 'Não'}</span>
               </td>
               <td>
-                <button type="button" className="crud-tabela__acao" onClick={() => aoAlternarAtivo(item)}>
-                  {item.ativo ? 'Ocultar' : 'Reverter'}
-                </button>
+                {/* AcaoLinha (ícone + texto), como nas outras tabelas: quando a tabela aperta, o texto some e o ícone
+                    fica, em vez de o texto crescer junto com os ícones. */}
+                <AcaoLinha
+                  rotulo={item.ativo ? 'Ocultar' : 'Reverter'}
+                  icone={item.ativo ? 'fa-eye-slash' : 'fa-rotate-left'}
+                  onClick={() => aoAlternarAtivo(item)}
+                />
               </td>
             </tr>
           ))}

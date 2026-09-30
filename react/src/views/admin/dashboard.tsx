@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { Tooltip } from '../../components/layout/tooltip';
+import { BarraAbasBotoes } from '../../components/layout/barra-abas-botoes';
 import { dashboardApi } from '../../services/28-dashboard/api/dashboard.api';
 import { ROTULO_STATUS_CAMPANHA, type StatusCampanha } from '../../services/12-campanha/constants/status-campanha.constants';
 import { useBuscar } from '../../services/constant/hook/use-buscar';
@@ -138,24 +139,7 @@ export function Dashboard({ auth }: DashboardProps) {
     <div className="space-y-6 pt-6">
       <h1 className="text-3xl font-serif font-bold texto-forte">Dashboard</h1>
 
-      <div className="barra-abas gap-1">
-        {ABAS.map((aba) => (
-          <button
-            key={aba.chave}
-            type="button"
-            onClick={() => setAbaAtiva(aba.chave)}
-            className={
-              'px-4 py-2.5 text-sm font-semibold flex items-center gap-2 border-b-2 whitespace-nowrap transition-colors ' +
-              (abaAtiva === aba.chave
-                ? 'borda-marca texto-marca'
-                : 'border-transparent texto-fraco hover-texto-forte')
-            }
-          >
-            <i className={'fa-solid ' + aba.icone}></i>
-            {aba.rotulo}
-          </button>
-        ))}
-      </div>
+      <BarraAbasBotoes abas={ABAS} ativa={abaAtiva} aoTrocar={setAbaAtiva} />
 
       {abaAtiva === 'visao-geral' && (
         <div className="space-y-6">

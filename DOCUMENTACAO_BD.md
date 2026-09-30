@@ -1282,6 +1282,21 @@ Nada a implementar; `titulo_academico` e `meio_pagamento` ficam anotados como ca
 - **Caso-limite aceito:** nenhum.
 
 
+## Simulação do modo produção (30-09-2026)
+
+**Em palavras simples:** a suíte PGlite 27 monta o banco exatamente como ficará no dia do deploy (sem a leitura liberada de desenvolvimento e sem as ferramentas de teste no admin) e mostra, papel por papel, o que cada um consegue ler e fazer. A tabela sai num arquivo de resultado da pasta de testes, e o snapshot acusa qualquer mudança de permissão daqui para a frente.
+
+📌 **Excluir conta sem login era aceito pelo banco.**
+- **Decisão:** `excluir_conta_usuario()` compara com `COALESCE(p_id_usuario = id_usuario_atual(), FALSE)`.
+- **Motivo:** sem ninguém logado, `id_usuario_atual()` é NULL; "25 = NULL" é NULL, e `IF NOT (NULL OR FALSE)` também é NULL, então a recusa não disparava. A rota do Nest já exigia login, então ninguém chegava aqui sem login, mas o banco é a última barreira e não pode depender disso. Grupo AC do ATUALIZAR.
+- **Caso-limite aceito:** nenhum. Era a única comparação desse tipo dentro de um IF nos arquivos 01 a 08.
+
+📌 **O bloco "modo produção" do deploy, montado igual nos testes.**
+- **Decisão:** `SQL_REMOVER_LEITURA_DE_DESENVOLVIMENTO` e `SQL_REMOVER_FERRAMENTAS_DE_TESTE` (tira do admin `campanha_criar_para_outro`, `campanha_excluir_forcado` e `perfil_pesquisador_criar_para_outro`) ficam no apoio das suítes; `montarBancoDoDeploy()` aplica os dois. É o mesmo SQL que entra no deploy.
+- **Motivo:** conferir antes do deploy o que cada papel teria recusado, e não descobrir no ar.
+- **Caso-limite aceito:** `perfil_pesquisador_corrigir_cpf` e `perfil_pesquisador_alterar_de_outro` continuam com o admin: são funções reais de suporte (decisão do Lucas ainda em aberto).
+
+
 ## Como conferir este inventário
 
 *(Adicionado 03-08-2026, sugestão de uma ferramenta de IA depois de auditar a documentação e achar 4 números desatualizados neste arquivo - tabelas, policies, triggers e funções não tinham sido atualizados nas últimas 3 rodadas, apesar de `log_auditoria`/`orcamento_campanha`/`marco_cronograma` terem sido adicionadas. Em vez de outra pessoa ter que contar `CREATE TABLE`/`CREATE POLICY`/`CREATE TRIGGER` na mão (ou confiar de olho num número escrito num comentário), estas 4 queries dizem a verdade direto do banco - rode no SQL Editor do Supabase sempre que for atualizar os números deste documento.)*

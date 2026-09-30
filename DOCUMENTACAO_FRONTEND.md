@@ -141,7 +141,7 @@ Nem tudo mapeia para um módulo do Nest. Essas ganham nome próprio, no mesmo n�
   - A pasta do módulo tem o mesmo número e nome do módulo do Nest (`services/28-dashboard`, `services/11-configuracoes` com arquivos no plural, como a tabela).
   - Os tipos que espelham DTOs do Nest têm o **mesmo nome da classe do Nest** (`ConfiguracoesResponse`, `TermoUsoRequestCreate`, `SuspensaoRequestDto`). A renovação de sessão usa o mesmo `AuthResponseLogin` do login.
   - Toda chamada à API passa por um `<assunto>.api.ts` em `services/`, nunca direto da tela (o `/link-academico` da tela de usuário foi para `services/7-link-academico`). Exceção: o Campo de Testes, que chama direto de propósito, para o registro de chamadas.
-  - Em `views/` e `components/`, o arquivo tem o nome do componente, em português (`modal-criar-usuario.tsx` exporta `ModalCriarUsuario`). Um arquivo pode guardar um par que anda junto (`modal-usuario.tsx` exporta Consultar e Alterar).
+  - Em `views/` e `components/`, o arquivo tem o nome do componente, em português (`modal-criar-usuario.tsx` exporta `ModalCriarUsuario`). Um arquivo pode guardar um par que anda junto (`modal-area-conhecimento.tsx` exporta Consultar e Alterar).
 - **Motivo:** mesma regra do Nest ("inglês para a estrutura, português para o assunto"): o papel do arquivo segue o padrão do mercado, e o nome da tela é o que a pessoa vê.
 - **Caso-limite aceito:** o sufixo `-page` continua só nas telas de `3-auth`, e os hooks ficam em três lugares (`services/*/hook`, `components/crud`, `components/layout/toast`); mexer nisso não trazia ganho que pagasse a troca.
 
@@ -508,7 +508,7 @@ Todas as telas `listar-*.tsx`: `views/1-usuario/listar-usuarios.tsx`, `views/2-p
 
 📌 **Nasceram do segundo teste de prop** (ver seção 8: "se uma tela que não pode usar `GenericTable` ainda precisa disto, é irmão, não miolo") - as bancadas do Campo de Testes não podem usar a TABELA genérica (risco de linha), mas precisavam do rodapé e da barra de filtros, e reimplementavam os dois à mão em 3 lugares diferentes antes desta extração.
 
-📌 **`ModalExcluirUsuario` (`modal-usuario.tsx`) exige confirmação por digitação do e-mail, não um `window.confirm()`.** Mostra os dados reais do usuário antes de excluir (mesma casca `ModalFicha`/`SecaoFicha`/`CampoFicha` de Consultar) e só habilita o botão de confirmar quando o texto digitado bate com o e-mail da conta, exatamente (case-insensitive). O comentário do arquivo explica o critério que separa este caso do de Configuração (que hoje nem tem Excluir: parâmetro global não se apaga, e a exclusão de configuração pessoal, sem tela, também seria com confirmação simples): *"exclusão de USUÁRIO exige digitar o e-mail - configuração é um dado técnico, não a conta de uma pessoa."*
+📌 **`ModalExcluirUsuario` (`modal-excluir-usuario.tsx`) exige confirmação por digitação do e-mail, não um `window.confirm()`.** Mostra os dados reais do usuário antes de excluir (mesma casca `ModalFicha`/`SecaoFicha`/`CampoFicha` de Consultar) e só habilita o botão de confirmar quando o texto digitado bate com o e-mail da conta, exatamente (case-insensitive). O comentário do arquivo explica o critério que separa este caso do de Configuração (que hoje nem tem Excluir: parâmetro global não se apaga, e a exclusão de configuração pessoal, sem tela, também seria com confirmação simples): *"exclusão de USUÁRIO exige digitar o e-mail - configuração é um dado técnico, não a conta de uma pessoa."*
 
 📌 **`CartaoFormulario` nasceu de duplicação real:** *"era a MESMA estrutura ... copiada e colada em 7 arquivos ..., já levemente divergente entre eles"*.
 
@@ -516,7 +516,7 @@ Todas as telas `listar-*.tsx`: `views/1-usuario/listar-usuarios.tsx`, `views/2-p
 
 📌 **`CartaoFormulario` e `FichaConsulta` compartilham duas larguras canônicas** - `'media'` (`max-w-2xl`) e `'larga'` (`max-w-5xl`) - decisão registrada de definir larguras canônicas em vez de cada tela escolher a sua. O comentário de `cartao-formulario.tsx` explica a causa raiz do redesenho: a versão anterior tinha medida e comportamento de modal (centralizado na tela, altura travada com *scroll* próprio), mesmo sendo usada como página em todo lugar - daí a queixa de que ficava "um monte de card empilhado, confuso".
 
-📌 **Telas "Alterar" com conteúdo substancial usam 2 colunas dentro do `CartaoFormulario` largo (`largura="larga"`).** `modal-usuario.tsx` (`ModalAlterarUsuario`) é o exemplo: `grid lg:grid-cols-3`, coluna principal (`lg:col-span-2`) com o que se edita (Dados da conta, Acesso, Perfil de Pesquisador - este último desabilitado de propósito, campos demonstrativos até o módulo `6-perfil-pesquisador` existir), coluna lateral (1/3) com contexto/consulta e ações administrativas (Metadados, Papéis, `SecaoModeracao` - ver seção 16, card `<dev>` isolado). Empilha em 1 coluna abaixo do breakpoint `lg`, mesmo comportamento de sempre no celular. O comentário do arquivo cita o mesmo padrão usado por painéis de referência (Stripe/Linear/Vercel) para tela de edição de registro.
+📌 **Telas "Alterar" com conteúdo substancial usam 2 colunas dentro do `CartaoFormulario` largo (`largura="larga"`).** `modal-consultar-usuario.tsx` e a aba Conta de `modal-alterar-usuario.tsx` são o exemplo: `grid lg:grid-cols-3`, coluna principal (`lg:col-span-2`) com o conteúdo principal, coluna lateral (1/3) com metadados e o card `<dev>` isolado. Desde 29-09-2026 o Alterar Usuário é dividido em abas (ver a seção 19). Empilha em 1 coluna abaixo do breakpoint `lg`, mesmo comportamento de sempre no celular. O comentário do arquivo cita o mesmo padrão usado por painéis de referência (Stripe/Linear/Vercel) para tela de edição de registro.
 
 📌 **`FichaConsulta` existe porque campo desabilitado comunica a coisa errada:** *"'campo desabilitado' é o jeito errado de comunicar 'isto nunca foi editável' (o desabilitado promete 'você poderia editar, mas não pode' - aqui nada promete isso)"*.
 
@@ -588,7 +588,7 @@ Uma varredura procurou trechos iguais repetidos pelo React e trocou cada grupo p
 
 `components/input/seletor-foto-perfil.tsx` é o avatar com botão de câmera, `<input type="file">` escondido, botão de remover e o fluxo de upload inteiro.
 
-📌 **Separação de responsabilidade:** *"Este componente NUNCA salva nada em `usuario` sozinho - ele só sobe (ou sinaliza a remoção d)o arquivo e devolve o resultado pro pai via `aoAlterar`."* Quem usa (`modal-criar-usuario.tsx`, `modal-usuario.tsx`, `minha-conta-page.tsx`) decide quando mandar isso ao backend.
+📌 **Separação de responsabilidade:** *"Este componente NUNCA salva nada em `usuario` sozinho - ele só sobe (ou sinaliza a remoção d)o arquivo e devolve o resultado pro pai via `aoAlterar`."* Quem usa (`modal-criar-usuario.tsx`, `modal-alterar-usuario.tsx`, `minha-conta-page.tsx`) decide quando mandar isso ao backend.
 
 📌 **Três estados, não dois.** `aoAlterar(idArquivo, novaUrl)` = foto nova; `aoAlterar(null, null)` = remoção pedida; **não ter chamado `aoAlterar`** = nenhuma escolha feita. Por isso o pai guarda o id como `undefined` por padrão, nunca `null` - *"exatamente pra sobrar esse terceiro estado"*.
 
@@ -951,7 +951,7 @@ CSS puro (`:hover`/`:focus`/`:focus-visible`), sem estado de React na bolha em s
 
 - **`baixo`** - abre a dica pra BAIXO em vez de pra cima (padrão). **Todo controle do cabeçalho (A-, A+, tema, sino) usa `baixo`:** o cabeçalho fica colado no topo da janela, e a bolha padrão (pra cima) nascia a y = -20px, fora da tela. Usar quando o ícone fica perto do topo de um cartão com `overflow-hidden` (ex.: cabeçalho de grupo em `dashboard-regras-negocio.tsx`) - a dica padrão nascia cortada pela borda arredondada do cartão.
 - **`aoClicar`** - o ícone vira um `<button>` clicável (cursor de ponteiro em vez de "?"); o hover continua mostrando só `texto` (curto, tipo "Saiba mais"), e o clique dispara a função passada - normalmente pra abrir um `ModalDetalhe` com a explicação completa em seções/parágrafos, em vez de um bloco de texto só dentro do balão do tooltip.
-- **`badge`** - selo circular escuro sobreposto (não um ícone solto flutuando do lado), mesmo padrão visual de "editar foto" do Instagram/LinkedIn - usado em `modal-usuario.tsx` (`ModalConsultarUsuario`, módulo 1, seção 16) no canto inferior direito do avatar, abrindo a foto de perfil em outra guia.
+- **`badge`** - selo circular escuro sobreposto (não um ícone solto flutuando do lado), mesmo padrão visual de "editar foto" do Instagram/LinkedIn - usado em `modal-consultar-usuario.tsx` (`ModalConsultarUsuario`, módulo 1, seção 16) no canto inferior direito do avatar, abrindo a foto de perfil em outra guia.
 
 ## 18. Correções da super auditoria (29-09-2026)
 
@@ -1089,3 +1089,30 @@ CSS puro (`:hover`/`:focus`/`:focus-visible`), sem estado de React na bolha em s
 - **Decisão:** `useErroToast({ mostraTexto: true })` nas 23 telas que mostram o próprio erro (texto vermelho ou embaixo do campo): o aviso flutuante não aparece, e a tela rola até o erro (e põe o cursor no campo, quando o erro é de um campo). As ações sem texto vermelho (enviar campanha, links acadêmicos, Campo de Testes) continuam com o aviso flutuante. Todo texto de erro passou a ser `MensagemErro`, com `role="alert"` e a marca `data-mensagem-erro`. As buscas que mostram o erro na própria tela (tabelas, log, Dashboard, tela de aceite) usam `useBuscar(..., { mostraTexto: true })`.
 - **Motivo:** a mesma frase saía no aviso e no texto vermelho. É o padrão do Stripe e do GitHub: o erro fica ao lado de onde se corrige, e o aviso é para o que acontece fora de um formulário. Resolve o caso-limite anotado na entrada "Um aviso por vez; o de erro fica".
 - **Caso-limite aceito:** se a tela não tiver nada visível para mostrar (erro de um campo que a tela não desenha), o aviso flutuante volta, para o erro nunca ficar escondido. O leitor de tela passa a anunciar o texto vermelho, porque ele tem o papel de alerta que era do aviso.
+
+📌 **Alterar Usuário em abas, e o arquivo dividido.**
+- **Em palavras simples:** a janela de Alterar Usuário misturava coisas que gravavam na hora com um "Salvar" que valia só para parte dela. Agora cada aba tem um jeito só de gravar, e o arquivo gigante virou peças menores.
+- **Decisão:**
+  - Abas (`BarraAbasBotoes`, `components/layout/barra-abas-botoes.tsx`, também usada pelo Dashboard): **Conta** (foto, nome, senha e metadados, com o próprio Salvar), **Papéis** e **Moderação** (gravam na hora, com o aviso "valem na hora do clique"), **Pesquisador** (só de quem é: o perfil com o próprio Salvar; CPF, links e suspensão do pesquisador gravam na hora). A aba com alteração não salva ganha "•". Salvar uma aba não fecha o modal.
+  - O arquivo único antigo do modal de usuário (1.237 linhas, 3 modais e 5 peças) virou `modal-alterar-usuario.tsx`, `modal-consultar-usuario.tsx`, `modal-excluir-usuario.tsx`, `painel-papeis-usuario.tsx`, `painel-links-academicos.tsx`, `painel-score.tsx`, `botao-ver-foto-perfil.tsx` e o hook `services/1-usuario/hook/use-dados-usuario.ts`. Mesmo padrão do módulo de campanha (um arquivo por modal).
+  - O painel de papéis tem um estado de "ocupado" e uma recarga da lista, no lugar de 4 de cada.
+  - `comRegistro` e a prop `aoRegistrarChamada` saíram: o Campo de Testes (T1) passa uma `auth` com `useAuthFetchRegistrado`, o mesmo mecanismo do T2. Tudo aparece no Registro de Chamadas, inclusive a moderação, com o status HTTP de verdade.
+  - As 3 buscas feitas à mão com efeito (catálogos, score, Termos aceitos) passaram para `useBuscar`: zero `eslint-disable` nos arquivos novos (eram 7).
+  - Nome com menos de 2 letras e senha nova com menos de 8 dão erro embaixo do campo, e a senha nova tem o `MedidorSenha`.
+- **Motivo:** heurísticas 1, 3 e 8 (auditoria de Nielsen). E um defeito: a foto nova só gravava no "Salvar", mas não contava como alteração não salva; fechar o modal descartava a foto sem perguntar.
+- **Caso-limite aceito:** salvar uma aba não fecha o modal, diferente de antes, para não perder o que está em edição na outra aba. O "Redefinir senha dev" continua gravando na hora (ferramenta de teste).
+
+📌 **Esc ouvido na página inteira, e só a janela de cima fecha.**
+- **Decisão:** `useFocoPreso(ref, ativo, aoEsc)`: o hook que já prendia o Tab e já guardava a pilha de janelas abertas passou a tratar o Esc também, ouvindo a página inteira. Só a janela do topo da pilha fecha. `ModalFicha`, `ModalDetalhe`, a janela do Termo no Cadastro e a gaveta do menu lateral passam o próprio "fechar" e não ouvem mais o Esc sozinhos. A busca global continua com o Esc dela (fecha as sugestões primeiro).
+- **Motivo:** cada janela só ouvia o Esc com o foco dentro dela. Quando o botão clicado sumia da tela ("Remover foto"), o foco ia para a página e o Esc parava de funcionar. É o padrão de Radix, Headless UI e MUI.
+- **Caso-limite aceito:** um Esc que um componente de dentro já tratou (`preventDefault`) não fecha a janela.
+
+📌 **Recusa por permissão com o nome, não o código.**
+- **Decisão:** `traduzirErro` troca o código citado na mensagem (`'papel_gerenciar'`) pelo nome que o painel usa em Papéis & Permissões ("Gerenciar Papéis"). Código fora do dicionário fica como veio. Junto: "Não foi possível carregar o Termo de Uso." no Cadastro (era "os termos").
+- **Motivo:** as 22 mensagens de "Sem permissão" do backend citam o código interno. O código ajuda quem administra a saber o que conceder; só precisava ser legível. Trocar na tela, num lugar só, evita repetir o dicionário no backend.
+- **Caso-limite aceito:** nenhum.
+
+📌 **Ações de texto do T3 viraram `AcaoLinha`.**
+- **Decisão:** "Ocultar/Reverter" (atualizações) e "Endossar/Remover endosso" (comentários) usam `AcaoLinha` com ícone, como as outras tabelas. "Endossar" no limite fica apagado, com o motivo na dica (`indisponivel`).
+- **Motivo:** eram botões só de texto com a classe das ações de ícone. Quando a tabela apertava, a regra que aumenta os ícones aumentava o texto junto.
+- **Caso-limite aceito:** nenhum.

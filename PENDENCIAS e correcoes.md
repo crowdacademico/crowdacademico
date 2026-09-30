@@ -212,21 +212,6 @@ Lucas decide depois se ajudam o CrowdAcadêmico. Contexto em `informacoes/ROTEIR
 
 ### Telas e formulários
 
-#### 🔴 Pendência aberta (15-09-2026, importante, deliberadamente não iniciada): auditoria do painel contra as 10 Heurísticas de Nielsen
-
-O Lucas registrou isto como pendência futura importante, explícito que não é pra começar agora. Exemplo concreto que ele deu: desabilitar silenciosamente um botão ("Próximo"/"Criar"/etc.) quando um campo obrigatório está inválido não é o certo - o certo é deixar clicar e mostrar o problema de verdade (borda do campo em vermelho + mensagem de erro explicando o quê e o porquê). Mapeia direto pras heurísticas #1 (visibilidade do status do sistema) e #9 (ajudar a reconhecer, diagnosticar e corrigir erros) - desabilitar sem feedback é diagnóstico zero.
-
-**Onde esse padrão já existe hoje** (achado no mesmo dia, construindo o wizard de Criar Campanha): `formCriarCampanhaValido` (`bancada-campanha.tsx`) desabilita "Próximo" com base num booleano combinado grande (título, área, meta ≥ mínimo, datas, duração 15-60 dias), só ALGUMAS dessas sub-condições aparecem como aviso inline (meta mínima e duração têm texto vermelho; título/área/pesquisador escolhido não). É o exato antipadrão que ele está descrevendo - provavelmente se repete em outros formulários do painel (Alterar Campanha, Alterar Usuário, etc.) nunca auditados especificamente por isso.
-
-**Andamento (29-09-2026):** o padrão "erro embaixo do campo" já existe (`useErrosFormulario`) e foi aplicado em 4 formulários: criar campanha, cadastro, suspensão e alterar senha. **Auditoria completa feita em 29-09-2026:** 26 achados mais 1 defeito (a data da campanha anda 1 dia para trás, gravidade 4), em `informacoes/NIELSEN_AUDITORIA_2026-09-29.md`. **Corrigido no mesmo dia** o que é comportamento (tabela "Andamento das correções" no topo do arquivo). **Grupo AA colado no Supabase (29-09-2026, "Success").** **Grupo AB colado no Supabase (29-09-2026, "Success").** **Decisões do Lucas (29-09-2026):** o erro de formulário ficou só no texto vermelho (feito em 29-09-2026, com rolagem até o erro); Alterar Usuário vira abas, cada uma com seu botão (próximo, não precisa esperar o visual novo); os botões de enfeite ficam como estão (os módulos deles vão nascer), menos "Submeter Pesquisa", que já abre o Criar Campanha; descrição dos papéis e contagem de aceites dos Termos, feitas.
-
-**Como aplicar**: não iniciar varredura proativa. Quando tocar em qualquer formulário com esse padrão de "desabilitar submit se inválido" no futuro, considerar mostrar erro por campo em vez de (ou além de) só desabilitar o botão. Quando o Lucas pedir pra começar essa frente de verdade, o escopo natural é uma auditoria completa em TODOS os formulários de `react/src/views/` contra as 10 heurísticas, não só #1/#9.
-
-
-#### 🟡 Anotado (26-09-2026): T3, "Ocultar" com fonte maior
-
-Na tabela de Atualizações do T3, o botão "Ocultar" (só texto) fica com fonte maior que o resto: a regra que aumenta os ícones de Ações quando a tela aperta também pega esse botão. Não mexer agora (T3 ainda não foi revisada de verdade); entra quando o T3 for trabalhado.
-
 ### Estrutura e ferramentas
 
 #### 🟠 Rodada 1 feita (29-09-2026): SUPER AUDITORIA do sistema inteiro, na prática
@@ -254,12 +239,20 @@ Na tabela de Atualizações do T3, o botão "Ocultar" (só texto) fica com fonte
 7. Tema escuro e contraste em todas as telas (verde provisório `#2fbf71`, borda de campo 1,48:1).
 8. Celular: todas as telas em tela estreita.
 9. Acessibilidade: axe em todas as telas e uso só com teclado.
-10. Textos: "Termo de Uso" em todo lugar, travessão "—" que escapou, mensagens confusas.
+10. ~~Textos.~~ **Feito (30-09-2026): nenhum travessão nem "Termos" no plural na tela; a recusa por permissão mostra o nome, não o código.**
 11. ~~Roteiros de teste que dependem de dado que sumiu.~~ **Feito (29-09-2026): `g5` e `g13` usam a pesquisadora Ana.**
-12. Simular o "modo produção" no PGlite para conferir as recusas de permissão que hoje não aparecem.
+12. ~~Simular o "modo produção".~~ **Feito (30-09-2026): suíte PGlite 27 (papel × ação), achou a exclusão de conta sem login (corrigida, Grupo AC). Grupo AC colado no Supabase (30-09-2026).**
 13. Limpar os dados de teste dos roteiros no Supabase (contas "Teste G21", "Campanha E2E"...), com autorização do Lucas.
 14. ~~Padrões que o projeto proíbe e que escaparam (duas consultas simultâneas na mesma conexão).~~ **Feito (29-09-2026, `emSequencia`).**
 15. Documentação que não bate com a tela.
+
+#### 🟡 Decisão do Lucas (30-09-2026, achado da simulação do modo produção): o dono da campanha pode ocultar o comentário de outro pesquisador
+
+A regra do banco diz que o autor oculta o próprio comentário e só a moderação reverte. Mas a regra de acesso deixa o dono da campanha alterar os comentários dela (é o que permite endossar), e nada impede que ele mude também o `ativo`: na simulação, o dono ocultou o comentário de outra pessoa. Em plataforma de pesquisa, isso deixaria o dono esconder a crítica de um colega. Opções: (A) o dono só endossa, e ocultar fica com o autor e a moderação (uma trigger pequena); (B) o dono pode ocultar na própria campanha, como o YouTube deixa o dono do canal. Recomendação: A, porque o comentário aqui é avaliação entre pesquisadores, não conversa de fã.
+
+#### 🟡 Anotado (30-09-2026): sessões sem regra de acesso por dono
+
+`sessao` tem regra de acesso aberta (`USING (true)`) de propósito: login e renovação acontecem antes de haver alguém logado. Quem decide de quem é a sessão é o Nest (confere o segredo do token e o dono). Na simulação, qualquer papel encerra a sessão de qualquer conta direto no banco. Não é brecha pela API hoje; fica anotado como defesa em profundidade a pensar no deploy.
 
 #### 🟡 Planejado (29-09-2026, "talvez amanhã"): `NOT NULL` nas colunas com valor padrão que aceitam vazio
 
@@ -286,8 +279,6 @@ Hoje `campanha` tem 17 triggers e `comentario` tem 8. Quando várias rodam no me
 
 ## 6. Registros que não são pendência (para não se perderem)
 
-- **Roteiros de tela que dependem de dado criado à mão (28-09-2026):** `g5-campo-testes-api.mjs`, `g13-fila-aprovacao.mjs` e dois casos do `g10` usam o admin como pesquisador (criam campanha com ele, abrem o perfil de pesquisador dele). O seed não dá perfil de pesquisador ao admin; ele tinha sido criado à mão antes da rodada de 26-09, e o Supabase foi recriado depois. Para rodá-los de novo: dar um perfil de pesquisador ao admin (upgrade em Minha Conta) ou trocar o roteiro para usar uma pesquisadora do seed. O mesmo fluxo foi conferido pela API em 28-09-2026 com uma conta nova.
 
 - **Descartados de propósito do roteiro do Atlas** (escopo enxuto): Next.js, Tailwind no JSX, i18n, gerador de módulo, versão na URL, e a maiúscula automática nos nomes (ficou só a limpeza de espaços).
-- **Exceção consciente no T4:** a seção de suspensão (conta e pesquisador) chama a API direto, sem passar pelo registro de chamadas do Campo de Testes; é o mesmo componente da tela real. Ver o histórico (08-09-2026).
 - **Roteiro completo do Atlas:** `informacoes/ROTEIRO_INCORPORACAO_ATLAS.md` (Ondas 1 e 2 feitas).

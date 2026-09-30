@@ -410,7 +410,10 @@ AS $$
 DECLARE
     v_id_imagem_perfil INT;
 BEGIN
-    IF NOT (p_id_usuario = public.id_usuario_atual() OR public.tem_permissao('usuario_excluir')) THEN
+    -- COALESCE: sem ninguém logado, id_usuario_atual() é NULL, e "p_id_usuario = NULL" é NULL, não FALSE;
+    -- "NOT (NULL OR FALSE)" também é NULL, e o IF deixava passar sem login.
+    IF NOT (COALESCE(p_id_usuario = public.id_usuario_atual(), FALSE)
+            OR COALESCE(public.tem_permissao('usuario_excluir'), FALSE)) THEN
         RAISE EXCEPTION 'Sem permissão para excluir a conta de outro usuário.' USING ERRCODE = '92013';
     END IF;
     IF public.fn_eh_ultimo_admin_ativo(p_id_usuario) THEN

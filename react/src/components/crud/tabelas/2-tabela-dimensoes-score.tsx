@@ -2,7 +2,7 @@ import { formatarNomeDimensao } from '../../../services/constant/util/formatacao
 import type { PerfilPesquisadorResponseScore } from '../../../services/6-perfil-pesquisador/type/perfil-pesquisador.type';
 
 // Dimensões que compõem o score de um pesquisador (pontos obtidos e peso de cada uma). Só leitura. Usada no
-// modal de usuário (views/1-usuario/modal-usuario.tsx, PainelScore), que busca o score.
+// modal de usuário (views/1-usuario/painel-score.tsx), que busca o score.
 interface TabelaDimensoesScoreProps {
   dimensoes: PerfilPesquisadorResponseScore['dimensoes'];
 }

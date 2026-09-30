@@ -36,7 +36,7 @@ export function AdminSidebar({ aberto, aoFechar }: AdminSidebarProps) {
   // anunciada como diálogo, com o foco preso nela e Esc para fechar. Fechada nessa largura, fica invisível
   // (`invisible`), senão os links fora da tela continuariam recebendo o Tab.
   const gavetaRef = useRef<HTMLElement>(null);
-  useFocoPreso(gavetaRef, aberto);
+  useFocoPreso(gavetaRef, aberto, aoFechar);
 
   return (
     <>
@@ -55,9 +55,6 @@ export function AdminSidebar({ aberto, aoFechar }: AdminSidebarProps) {
         aria-modal={aberto ? true : undefined}
         aria-label={aberto ? 'Menu do painel' : undefined}
         tabIndex={aberto ? -1 : undefined}
-        onKeyDown={(evento) => {
-          if (aberto && evento.key === 'Escape') aoFechar();
-        }}
         className={
           'admin-sidebar fixed top-16 bottom-0 left-0 z-40 w-[260px] overflow-y-auto ' +
           'transition-transform duration-200 min-[1377px]:relative min-[1377px]:top-auto min-[1377px]:bottom-auto min-[1377px]:z-auto ' +

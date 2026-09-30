@@ -43,7 +43,8 @@ export function ModalDetalhe({
   const idTitulo = useId();
   // Foco do teclado preso na janela enquanto ela está aberta, e devolvido a quem abriu ao fechar.
   const janelaRef = useRef<HTMLDivElement>(null);
-  useFocoPreso(janelaRef);
+  // Esc fecha só esta janela, a de cima (ver useFocoPreso).
+  useFocoPreso(janelaRef, true, aoFechar);
   return (
     <div
       className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/40"
@@ -59,13 +60,6 @@ export function ModalDetalhe({
         aria-labelledby={idTitulo}
         ref={janelaRef}
         tabIndex={-1}
-        // Esc fecha: o foco está dentro da janela (useFocoPreso), então basta ouvir aqui.
-        onKeyDown={(evento) => {
-          if (evento.key === 'Escape') {
-            evento.stopPropagation();
-            aoFechar();
-          }
-        }}
         className="outline-none w-full max-w-lg max-h-[85vh] fundo-elevado rounded-2xl shadow-2xl border borda-forte overflow-hidden flex flex-col"
         onClick={(evento) => evento.stopPropagation()}
       >

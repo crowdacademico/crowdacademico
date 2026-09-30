@@ -1,6 +1,6 @@
 // Casca compartilhada de Criar/Alterar/Excluir: ícone circular + título + subtítulo + cartão branco, usada por
 // todas as páginas de formulário (nenhum modal usa este componente: os modais usam `ModalFicha`, ver
-// modal-usuario.tsx/modal-criar-usuario.tsx). Extraída pelo mesmo motivo de FichaConsulta: um lugar só para
+// modal-alterar-usuario.tsx/modal-criar-usuario.tsx). Extraída pelo mesmo motivo de FichaConsulta: um lugar só para
 // ajustar o visual do "cartão de formulário" inteiro do painel.
 //
 // É uma página normal: sem centralização vertical, sem trava de altura, rodapé `sticky bottom-0` (mesmo padrão

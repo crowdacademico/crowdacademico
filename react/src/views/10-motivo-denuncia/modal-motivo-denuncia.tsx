@@ -24,7 +24,7 @@ import type { MotivoDenunciaResponse, TipoMotivoDenuncia } from '../../services/
 // `GenericTable` já tem o dado completo em memória (`aoAlterar`/`aoConsultar`/`aoExcluir` recebem `linha: T`),
 // não precisa refazer a busca por id como ModalAlterarUsuario faz (que precisa de MUITO mais dado do que a
 // linha da tabela tem). Criar fica em arquivo separado (modal-criar-motivo-denuncia.tsx), mesmo padrão de
-// modal-usuario.tsx/modal-criar-usuario.tsx.
+// modal-alterar-usuario.tsx/modal-criar-usuario.tsx.
 
 interface ModalConsultarMotivoDenunciaProps {
   motivo: MotivoDenunciaResponse;

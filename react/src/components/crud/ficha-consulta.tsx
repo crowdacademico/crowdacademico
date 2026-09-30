@@ -12,7 +12,7 @@
 //
 // `largura`: 2 medidas próprias deste componente: 'media' (max-w-2xl, padrão: ficha simples) e 'larga'
 // (max-w-5xl: Consultar Usuário, com 2 colunas). O layout em colunas não mora AQUI dentro: quem usa
-// `largura="larga"` monta o próprio `grid lg:grid-cols-3` nos `children`, como em modal-usuario.tsx
+// `largura="larga"` monta o próprio `grid lg:grid-cols-3` nos `children`, como em modal-consultar-usuario.tsx
 // (ModalAlterarUsuario); este componente só garante o espaço para isso caber.
 //
 // `largura` aqui é um vocabulário PRÓPRIO e independente: `CartaoFormulario` só tem 'media', e `ModalFicha` nem
@@ -129,7 +129,7 @@ export function SecaoFicha({ titulo, children, colunas = 2, nivel = 3 }: SecaoFi
 // `largura="cheia"` ocupa as 2 colunas da seção (campo com valor longo, ou
 // que tem controle extra - ver `acao`/`children`).
 // `acao` - controle pequeno ao lado do valor (ex.: a setinha de expandir
-// histórico de login em modal-usuario.tsx, ModalConsultarUsuario).
+// histórico de login em modal-consultar-usuario.tsx, ModalConsultarUsuario).
 // `children` - conteúdo extra ABAIXO do valor (ex.: a lista expandida em
 // si), continua fora do fluxo normal de rótulo/valor.
 interface CampoFichaProps {

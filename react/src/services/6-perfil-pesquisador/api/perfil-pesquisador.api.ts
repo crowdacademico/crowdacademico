@@ -53,7 +53,7 @@ export const perfilPesquisadorApi = {
     }).then(tratarResposta<PerfilPesquisadorResponse>),
   // PATCH /perfil-pesquisador/:id: rota separada do self-service (PATCH /perfil-pesquisador, sem id, sempre a
   // própria conta), usada pelo modal de Alterar Usuário. `Promise<void>` (204), não
-  // `PerfilPesquisadorResponse`: o único chamador (modal-usuario.tsx) descarta o retorno e recarrega a lista.
+  // `PerfilPesquisadorResponse`: o único chamador (modal-alterar-usuario.tsx) descarta o retorno e recarrega a lista.
   atualizar: (
     authFetch: AuthFetch,
     id: number | string,

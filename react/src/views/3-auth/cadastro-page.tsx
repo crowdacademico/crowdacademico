@@ -46,7 +46,7 @@ export function CadastroPage({ auth }: PropsPagina) {
   const janelaTermoRef = useRef<HTMLDivElement>(null);
   const idTituloTermo = useId();
   const idErroTermos = useId();
-  useFocoPreso(janelaTermoRef, modalTermoAberto);
+  useFocoPreso(janelaTermoRef, modalTermoAberto, () => setModalTermoAberto(false));
   const [termo, setTermo] = useState<TermoUsoResponseActive | null>(null);
   const [carregandoTermo, setCarregandoTermo] = useState(false);
 
@@ -289,9 +289,6 @@ export function CadastroPage({ auth }: PropsPagina) {
             aria-modal="true"
             aria-labelledby={idTituloTermo}
             tabIndex={-1}
-            onKeyDown={(evento) => {
-              if (evento.key === 'Escape') setModalTermoAberto(false);
-            }}
             className="outline-none w-full max-w-lg max-h-[80vh] fundo-elevado rounded-2xl shadow-2xl border borda-forte overflow-hidden flex flex-col"
             onClick={(evento) => evento.stopPropagation()}
           >
@@ -310,7 +307,7 @@ export function CadastroPage({ auth }: PropsPagina) {
               </button>
             </div>
             <div className="px-6 py-4 overflow-y-auto text-sm texto-padrao whitespace-pre-line">
-              {carregandoTermo ? 'Carregando...' : (termo?.conteudo ?? 'Não foi possível carregar os termos.')}
+              {carregandoTermo ? 'Carregando...' : (termo?.conteudo ?? 'Não foi possível carregar o Termo de Uso.')}
             </div>
           </div>
         </div>

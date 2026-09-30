@@ -278,3 +278,88 @@ $$;
 
 REVOKE EXECUTE ON FUNCTION public.contar_aceites_termo(INT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.contar_aceites_termo(INT) TO app_nestjs;
+
+-- ============================================================================
+-- GRUPO AC (30-09-2026) - achado da simulação do modo produção. IDEMPOTENTE (pode colar de novo).
+-- Só troca uma função: pode colar com o Nest ligado.
+-- 
+-- O que muda:
+--   1. excluir_conta_usuario: sem ninguém logado, a checagem "é a própria conta OU tem permissão" dava NULL (e não
+--      FALSE) e deixava passar. Hoje a rota do Nest já exige login, então ninguém chegava aqui sem login; o banco
+--      passa a recusar por conta própria (92013).
+-- ============================================================================
+
+-- 1. Excluir conta: sem login é sempre recusado
+
+CREATE OR REPLACE FUNCTION public.excluir_conta_usuario(p_id_usuario INT)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_id_imagem_perfil INT;
+BEGIN
+    -- COALESCE: sem ninguém logado, id_usuario_atual() é NULL, e "p_id_usuario = NULL" é NULL, não FALSE;
+    -- "NOT (NULL OR FALSE)" também é NULL, e o IF deixava passar sem login.
+    IF NOT (COALESCE(p_id_usuario = public.id_usuario_atual(), FALSE)
+            OR COALESCE(public.tem_permissao('usuario_excluir'), FALSE)) THEN
+        RAISE EXCEPTION 'Sem permissão para excluir a conta de outro usuário.' USING ERRCODE = '92013';
+    END IF;
+    IF public.fn_eh_ultimo_admin_ativo(p_id_usuario) THEN
+        RAISE EXCEPTION 'Não é possível excluir a conta do último administrador ativo do sistema.' USING ERRCODE = '91030';
+    END IF;
+    IF EXISTS (SELECT 1 FROM campanha WHERE id_usuario = p_id_usuario AND status = 'ativo') THEN
+        RAISE EXCEPTION 'Não é possível excluir a conta enquanto houver campanha ativa. A exclusão fica liberada quando a campanha terminar.'
+            USING ERRCODE = '91031';
+    END IF;
+
+    SELECT id_imagem_perfil INTO v_id_imagem_perfil
+    FROM usuario WHERE id_usuario = p_id_usuario;
+
+    UPDATE usuario
+    SET deletado = TRUE, deletado_em = NOW(), deletado_por = public.id_usuario_atual()
+    WHERE id_usuario = p_id_usuario;
+
+    -- Conta excluída não renova mais nenhuma sessão (mesmo motivo de suspender_usuario).
+    UPDATE sessao SET revogado_em = NOW()
+    WHERE id_usuario = p_id_usuario AND revogado_em IS NULL;
+
+    DELETE FROM campanha c
+    WHERE c.id_usuario = p_id_usuario
+      AND (c.status = 'rascunho'
+           OR (c.status = 'aguardando_aprovacao'
+               AND NOT EXISTS (SELECT 1 FROM historico_rejeicao h WHERE h.id_campanha = c.id_campanha)));
+
+    -- A volta a 'rejeitado' pede linha em historico_rejeicao na mesma transação (trg_campanha_exige_historico_rejeicao,
+    -- 05); id_admin NULL porque ninguém da moderação rejeitou.
+    WITH devolvidas AS (
+        UPDATE campanha SET status = 'rejeitado'
+        WHERE id_usuario = p_id_usuario AND status = 'aguardando_aprovacao'
+        RETURNING id_campanha, id_usuario, titulo
+    )
+    INSERT INTO historico_rejeicao (id_campanha, id_usuario_dono, titulo_campanha, id_admin, justificativa)
+    SELECT id_campanha, id_usuario, titulo, NULL,
+           'Reenvio cancelado: o pesquisador excluiu a própria conta.'
+    FROM devolvidas;
+
+    -- Desativa a foto de
+    -- perfil vinculada na mesma transação - sem isto, a linha em `arquivo`
+    -- ficava ativo=true pra sempre, mesmo com a conta dona já excluída.
+    -- SECURITY DEFINER bypassa pol_arquivo_update DE PROPÓSITO aqui: quem
+    -- executou a exclusão da conta já foi autorizado acima (dono OU
+    -- 'usuario_excluir') - não faz sentido também exigir 'arquivo_gerenciar'
+    -- ou posse sobre o arquivo em si só pra essa consequência automática.
+    -- Os BYTES de verdade no bucket NÃO são apagados aqui - Postgres não
+    -- fala com o provedor de armazenamento (B2/R2/Supabase Storage). Isso é
+    -- feito depois, do lado da aplicação (ver
+    -- nest/src/1-usuario/service/usuario.service.remove.ts), que lê
+    -- `arquivo.chave` (ainda intacta, só `ativo` mudou) e chama
+    -- armazenamento.excluirObjeto().
+    IF v_id_imagem_perfil IS NOT NULL THEN
+        UPDATE arquivo
+        SET ativo = FALSE, desativado_em = NOW()
+        WHERE id_arquivo = v_id_imagem_perfil;
+    END IF;
+END;
+$$;

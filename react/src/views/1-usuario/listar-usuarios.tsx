@@ -10,7 +10,9 @@ import {
   PAPEL_SEM_EXTRA,
 } from '../../services/2-papel-permissao/constants/papel-ordem-poder.constants';
 import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
-import { ModalAlterarUsuario, ModalConsultarUsuario, ModalExcluirUsuario } from './modal-usuario';
+import { ModalAlterarUsuario } from './modal-alterar-usuario';
+import { ModalConsultarUsuario } from './modal-consultar-usuario';
+import { ModalExcluirUsuario } from './modal-excluir-usuario';
 import { ModalCriarUsuario } from './modal-criar-usuario';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { UsuarioResponse } from '../../services/1-usuario/type/usuario.type';
@@ -29,8 +31,8 @@ const PAPEL_PADRAO = 'usuario';
 // ROTAS_ADMIN). Renderizada dentro do <Outlet/> de views/admin/admin-layout.tsx (sidebar + área de conteúdo já
 // prontos por fora, esta view só cuida do próprio conteúdo).
 //
-// Criar/Alterar/Consultar/Excluir são MODAIS (`modal-usuario.tsx`/`modal-criar-usuario.tsx`), não páginas
-// próprias: os MESMOS componentes que a Bancada do Pesquisador (Campo de Testes) usa, sem duplicar nada. A prop
+// Criar/Alterar/Consultar/Excluir são MODAIS (modal-criar-usuario.tsx, modal-alterar-usuario.tsx,
+// modal-consultar-usuario.tsx, modal-excluir-usuario.tsx), não páginas próprias: os MESMOS componentes que a Bancada do Pesquisador (Campo de Testes) usa, sem duplicar nada. A prop
 // `acoes` do `GenericTable` só existe nesse formato (handler por chave, ver comentário da prop em
 // generic-table.tsx).
 export function ListarUsuarios({ auth }: PropsPagina) {

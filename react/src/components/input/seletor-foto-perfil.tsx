@@ -31,7 +31,7 @@ const PERFIL_REDUCAO_AVATAR = { larguraMaxima: 512, qualidade: 80 };
 // para o bucket -> confirmar -> devolve o novo id/URL para o componente pai via `aoAlterar`).
 //
 // Este componente NUNCA salva nada em `usuario` sozinho: só sobe o arquivo (ou sinaliza a remoção dele) e
-// devolve o resultado para o pai via `aoAlterar`. Quem usa isto (modal-criar-usuario.tsx, modal-usuario.tsx,
+// devolve o resultado para o pai via `aoAlterar`. Quem usa isto (modal-criar-usuario.tsx, modal-alterar-usuario.tsx,
 // minha-conta-page.tsx) decide quando mandar isso para o backend (no create, ou no PATCH de alterar/Minha
 // Conta): mesma separação de responsabilidade do resto do app (componente de input nunca chama usuarioApi
 // diretamente).
@@ -40,7 +40,7 @@ const PERFIL_REDUCAO_AVATAR = { larguraMaxima: 512, qualidade: 80 };
 // null)` ("Remover foto"): a pessoa pediu para tirar a foto atual; quem usa este componente distingue "nenhuma
 // escolha feita ainda" (não chamou aoAlterar) de "removida de propósito" (chamou com null) guardando o id como
 // `undefined` por padrão, nunca `null`, exatamente para sobrar esse terceiro estado (ver
-// modal-usuario.tsx/minha-conta-page.tsx).
+// modal-alterar-usuario.tsx/minha-conta-page.tsx).
 interface SeletorFotoPerfilProps {
   authFetch: AuthFetch;
   nome?: string | null;

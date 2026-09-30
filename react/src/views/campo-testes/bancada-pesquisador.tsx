@@ -9,8 +9,10 @@ import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { usuarioPapelApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
 import { PAPEL_SEM_EXTRA } from '../../services/2-papel-permissao/constants/papel-ordem-poder.constants';
 import { gerarCpfValido } from '../../services/campo-testes/util/gerar-cpf-valido.util';
-import { useCampoTestes } from '../../services/campo-testes/hook/use-campo-testes';
-import { ModalAlterarUsuario, ModalConsultarUsuario, ModalExcluirUsuario } from '../1-usuario/modal-usuario';
+import { useAuthFetchRegistrado } from '../../services/campo-testes/hook/use-chamada-registrada';
+import { ModalAlterarUsuario } from '../1-usuario/modal-alterar-usuario';
+import { ModalConsultarUsuario } from '../1-usuario/modal-consultar-usuario';
+import { ModalExcluirUsuario } from '../1-usuario/modal-excluir-usuario';
 import { ModalUpgradePesquisador } from '../6-perfil-pesquisador/modal-upgrade-pesquisador';
 import { RegistroChamadas } from './registro-chamadas';
 import type { PropsPagina } from '../../services/router/pagina.type';
@@ -23,23 +25,20 @@ import type { PropsPagina } from '../../services/router/pagina.type';
 //
 // Toda escrita usa a sessão REAL do painel (`auth`).
 //
-// Esta tela não tem modal próprio: abre os componentes compartilhados de `views/1-usuario/modal-usuario.tsx`
-// (Alterar/Consultar/Excluir, unificando conta + Perfil de Pesquisador), que também são o CRUD real de Usuário
-// (`listar-usuarios.tsx`); não duplica nome/senha/foto/papéis/moderação/CPF/score/links acadêmicos aqui dentro.
+// Esta tela não tem modal próprio: abre os modais de Usuário de `views/1-usuario/` (Alterar, Consultar, Excluir,
+// unificando conta + Perfil de Pesquisador), que também são o CRUD real de Usuário (`listar-usuarios.tsx`); não
+// duplica nome/senha/foto/papéis/moderação/CPF/score/links acadêmicos aqui dentro.
 // A tabela (linha riscada/cadeado, filtro, faceta e paginação) mora em
 // components/crud/tabelas/8-tabela-bancada-pesquisador.tsx; aqui fica buscar os dados e abrir os modais.
 export function BancadaPesquisador({ auth }: PropsPagina) {
-  // O modal compartilhado (`modal-usuario.tsx`) não pode usar `chamarERegistrar`/`useCampoTestes()`
-  // internamente (quebraria a página real em produção, ver comentário no topo daquele arquivo). Para T1
-  // continuar aparecendo no T4 (Registro de Chamadas), que é a ferramenta que ajuda a ver de perto o que
-  // "testar upgrade de perfil, scores, etc." dispara de verdade, `registrarChamada` (só existe aqui, dentro do
-  // Provider) é passado como prop para o modal; a página real nunca recebe essa prop, continua sem nenhuma
-  // dependência do Provider.
-  const { registrarChamada } = useCampoTestes();
+  // Os modais de Usuário são os mesmos da página real e não sabem que o T4 (Registro de Chamadas) existe. Para as
+  // chamadas deles aparecerem no T4, recebem uma `auth` cujo `authFetch` registra cada chamada (mesmo jeito do
+  // T2): tudo aparece, inclusive a moderação, com o status HTTP de verdade.
+  const authRegistrado = { authFetch: useAuthFetchRegistrado(auth) };
   const [pesquisadores, setPesquisadores] = useState<PesquisadorLinha[]>([]);
   const [carregandoLista, setCarregandoLista] = useState(true);
   const [erroListagem, setErroListagem] = useState<string | null>(null);
-  // Qual modal está aberto - o conteúdo de cada um vive em modal-usuario.tsx
+  // Qual modal está aberto - o conteúdo de cada um vive em views/1-usuario/
   // (compartilhado com o CRUD real de Usuário), aqui só se guarda QUEM.
   const [idUsuarioConsultando, setIdUsuarioConsultando] = useState<number | null>(null);
   const [idUsuarioAlterando, setIdUsuarioAlterando] = useState<number | null>(null);
@@ -112,20 +111,18 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
 
       {idUsuarioConsultando !== null && (
         <ModalConsultarUsuario
-          auth={auth}
+          auth={authRegistrado}
           idUsuario={idUsuarioConsultando}
           aoFechar={() => setIdUsuarioConsultando(null)}
-          aoRegistrarChamada={registrarChamada}
         />
       )}
 
       {idUsuarioAlterando !== null && (
         <ModalAlterarUsuario
-          auth={auth}
+          auth={authRegistrado}
           idUsuario={idUsuarioAlterando}
           aoFechar={() => setIdUsuarioAlterando(null)}
           aoAtualizado={carregarPesquisadores}
-          aoRegistrarChamada={registrarChamada}
         />
       )}
 
@@ -141,14 +138,13 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
 
       {usuarioExcluindo && (
         <ModalExcluirUsuario
-          auth={auth}
+          auth={authRegistrado}
           idUsuario={usuarioExcluindo.idUsuario}
           nome={usuarioExcluindo.usuario.nome}
           email={usuarioExcluindo.usuario.email}
           emailVerificado={usuarioExcluindo.usuario.emailVerificado}
           aoFechar={() => setUsuarioExcluindo(null)}
           aoExcluido={carregarPesquisadores}
-          aoRegistrarChamada={registrarChamada}
         />
       )}
 

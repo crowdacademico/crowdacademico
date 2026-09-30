@@ -1,6 +1,8 @@
 // Comentários de uma campanha (autor, texto e posição do endosso), com Endossar/Remover endosso para o dono da
 // campanha. Usada no Campo de Testes (T3, views/campo-testes/vida-campanha-ativa.tsx), que busca e endossa.
 
+import { AcaoLinha } from '../acao-linha';
+
 // `comentario` ainda não tem type/api formal em services/: formato do DTO do Nest.
 export interface Comentario {
   idComentario: number;
@@ -18,7 +20,7 @@ interface TabelaComentariosProps {
   nomeDe: (idUsuario: number | null) => string;
   // Só o dono da campanha endossa: sem isso a coluna Ações nem aparece.
   podeEndossar: boolean;
-  // Endossar fica desabilitado quando os endossos ativos já chegaram ao limite (configuracoes).
+  // Endossar fica indisponível (com o motivo na dica) quando os endossos ativos já chegaram ao limite (configuracoes).
   limiteAtingido: boolean;
   aoAlternarEndosso: (comentario: Comentario) => void;
 }
@@ -43,14 +45,16 @@ export function TabelaComentarios({ comentarios, nomeDe, podeEndossar, limiteAti
               <td>{item.endossado ? <span className="badge badge-sucesso">#{item.ordemEndosso}</span> : '-'}</td>
               {podeEndossar && (
                 <td>
-                  <button
-                    type="button"
-                    className="crud-tabela__acao"
+                  <AcaoLinha
+                    rotulo={item.endossado ? 'Remover endosso' : 'Endossar'}
+                    icone={item.endossado ? 'fa-heart-crack' : 'fa-heart'}
                     onClick={() => aoAlternarEndosso(item)}
-                    disabled={!item.endossado && limiteAtingido}
-                  >
-                    {item.endossado ? 'Remover endosso' : 'Endossar'}
-                  </button>
+                    indisponivel={
+                      !item.endossado && limiteAtingido
+                        ? 'O limite de endossos ativos desta campanha já foi atingido. Remova um endosso para endossar outro comentário.'
+                        : undefined
+                    }
+                  />
                 </td>
               )}
             </tr>

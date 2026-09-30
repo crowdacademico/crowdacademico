@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import type { RefObject } from 'react';
 
 const SELETOR_FOCAVEIS =
@@ -12,7 +12,17 @@ const pilhaDeJanelas: HTMLElement[] = [];
 // janela, que o leitor de tela anuncia pelo título, a menos que algo lá dentro já tenha foco, como o campo da
 // busca); enquanto aberta, Tab e Shift+Tab circulam só lá dentro, em vez de passear pela página escondida atrás;
 // ao fechar, devolve o foco para quem abriu. A janela precisa de `tabIndex={-1}` para poder receber o foco.
-export function useFocoPreso(ref: RefObject<HTMLElement | null>, ativo = true) {
+//
+// `aoEsc`: o Esc é ouvido na página inteira e só a janela de CIMA fecha (padrão de Radix, Headless UI e MUI). Ouvir
+// dentro da janela falhava quando o foco saía dela (ex.: o botão clicado sumia da tela, como "Remover foto"). Um Esc
+// que um componente de dentro já tratou (lista de sugestões, por exemplo) não chega até aqui.
+export function useFocoPreso(ref: RefObject<HTMLElement | null>, ativo = true, aoEsc?: () => void) {
+  // Sempre a versão mais nova do `aoEsc`, sem refazer o efeito (e sem mexer na pilha) a cada desenho da tela.
+  const aoEscRef = useRef(aoEsc);
+  useEffect(() => {
+    aoEscRef.current = aoEsc;
+  });
+
   useEffect(() => {
     const janela = ref.current;
     if (!ativo || !janela) {
@@ -28,7 +38,17 @@ export function useFocoPreso(ref: RefObject<HTMLElement | null>, ativo = true) {
       [...janela.querySelectorAll<HTMLElement>(SELETOR_FOCAVEIS)].filter((elemento) => elemento.getClientRects().length > 0);
 
     const aoTeclar = (evento: KeyboardEvent) => {
-      if (evento.key !== 'Tab' || pilhaDeJanelas[pilhaDeJanelas.length - 1] !== janela) {
+      if (pilhaDeJanelas[pilhaDeJanelas.length - 1] !== janela) {
+        return;
+      }
+      if (evento.key === 'Escape') {
+        if (aoEscRef.current && !evento.defaultPrevented) {
+          evento.preventDefault();
+          aoEscRef.current();
+        }
+        return;
+      }
+      if (evento.key !== 'Tab') {
         return;
       }
       const lista = focaveis();

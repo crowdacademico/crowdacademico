@@ -243,7 +243,7 @@ function BarraAbas({ abaAtiva }: BarraAbasProps) {
 // 1. PERFIL - a aba mais importante, é o "portfólio": foto, nome, e-mail e o vínculo acadêmico (só leitura,
 // vem do perfil de pesquisador; quem não é pesquisador vê o convite para a aba Acadêmico). 2 colunas dentro da
 // aba (pedido explícito: "campo de nome não precisa de 900px de largura") + rodapé sticky Salvar/Cancelar,
-// mesmo padrão de modal-usuario.tsx (ModalAlterarUsuario).
+// mesmo padrão de modal-alterar-usuario.tsx (ModalAlterarUsuario).
 interface AbaPerfilProps {
   auth: Pick<UseAuthReturn, 'usuario' | 'authFetch' | 'atualizarUsuarioLocal'>;
   aoVoltar: () => void;
@@ -277,7 +277,7 @@ function AbaPerfil({ auth, aoVoltar }: AbaPerfilProps) {
   const { erro, reportarErro, limparErro } = useErroToast({ mostraTexto: true });
   const { ocupado: enviando, executar: executarEnviando } = useEnvio(reportarErro, limparErro);
 
-  // Mesmo padrão de 3 estados de modal-usuario.tsx (botão "Remover foto"): `undefined` = nenhuma escolha nova
+  // Mesmo padrão de 3 estados de modal-alterar-usuario.tsx (botão "Remover foto"): `undefined` = nenhuma escolha nova
   // (mostra a foto que já existe), número = foto nova (upload já confirmado, só falta linkar no PATCH), `null`
   // = removida de propósito.
   const [idImagemPerfilNovo, setIdImagemPerfilNovo] = useState<number | null | undefined>(undefined);
@@ -405,7 +405,7 @@ function AbaPerfil({ auth, aoVoltar }: AbaPerfilProps) {
       </div>
 
       {/* Rodapé sticky, mesmo padrão de cartao-formulario.tsx/
-          modal-usuario.tsx - arredonda o PRÓPRIO canto de baixo
+          modal-alterar-usuario.tsx - arredonda o PRÓPRIO canto de baixo
           (rounded-b-2xl), não depende do wrapper. */}
       <div className="px-6 sm:px-8 py-5 border-t borda-padrao fundo-cartao rounded-b-2xl sticky bottom-0 flex gap-3 justify-end">
         <button type="button" onClick={aoCancelar} className="btn btn-secondary">

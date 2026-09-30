@@ -91,7 +91,19 @@ export class ArquivoServiceConfirmUpload {
       const bytesOriginais = await this.armazenamento.lerObjetoCompleto(
         dto.chave,
       );
-      bufferProcessado = await processarImagem(bytesOriginais, dto.contexto);
+      // Imagem com a assinatura certa, mas corrompida por dentro: o sharp não consegue ler. Mesma limpeza imediata
+      // da assinatura errada acima (sem ela, o arquivo ficava em pendente/ e a resposta era 500).
+      bufferProcessado = await processarImagem(
+        bytesOriginais,
+        dto.contexto,
+      ).catch(async () => {
+        await this.armazenamento
+          .excluirObjeto(dto.chave)
+          .catch(() => undefined);
+        throw new BadRequestException(
+          'Não foi possível ler esta imagem (o arquivo pode estar corrompido). Tente outra imagem.',
+        );
+      });
       tipoMimeFinal = 'image/webp';
       tamanhoFinal = bufferProcessado.length;
       // Nome base é sempre um randomUUID (gerado em iniciar-upload.ts,

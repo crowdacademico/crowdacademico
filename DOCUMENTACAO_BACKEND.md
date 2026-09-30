@@ -1441,3 +1441,8 @@ Testado com o backend rodando de verdade contra o Postgres real (não só compil
 - **Decisão:** `PapelResponse` ganhou `codigo` (listagem e alteração).
 - **Motivo:** a tela acha a descrição de cada papel pelo código, que é fixo. O nome pode ser renomeado pelo painel. O código não é segredo: o login já devolve os papéis da conta por código.
 - **Caso-limite aceito:** nenhum.
+
+📌 **Imagem corrompida no upload responde 400 e sai do armazenamento.**
+- **Decisão:** em `arquivo.service.confirm-upload.ts`, se o `sharp` não conseguir ler a imagem, o arquivo é apagado de `pendente/` na hora e a resposta é 400 ("Não foi possível ler esta imagem...").
+- **Motivo:** achado no teste da tela de Alterar Usuário: um PNG com a assinatura certa, mas quebrado por dentro, dava 500 e deixava o arquivo em `pendente/`. A assinatura errada já tinha essa limpeza; a imagem ilegível não.
+- **Caso-limite aceito:** nenhum.

@@ -7,7 +7,7 @@ import type {
 } from '../../../services/7-link-academico/type/link-academico.type';
 
 // Links acadêmicos de um pesquisador (Lattes, ORCID...), com edição na linha. Usada no modal de Alterar Usuário
-// (views/1-usuario/modal-usuario.tsx, PainelLinksAcademicos), que busca e salva.
+// (views/1-usuario/painel-links-academicos.tsx), que busca e salva.
 
 interface FormLink {
   idTipoLink: string;
