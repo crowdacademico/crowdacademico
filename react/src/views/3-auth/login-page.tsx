@@ -15,7 +15,8 @@ import type { PropsPagina } from '../../services/router/pagina.type';
 // combinado. Esta tela NÃO coleta nome (só e-mail/senha): o cadastro público de verdade é /cadastro
 // (cadastro-page.tsx), tela própria com nome/confirmação de senha/aceite de termos; o link "Já tem conta?
 // Entrar" dela devolve para cá, e o link "Cadastre-se" abaixo leva para lá. O botão é só "Entrar" porque só faz
-// login. "Esqueceu a senha?" e o login social com Google são só alert() de protótipo, como no original.
+// login. O login social com Google é só alert() de protótipo, como no original; "Esqueceu a senha?" leva a
+// /esqueci-senha.
 //
 // Depois de entrar, volta para a página do painel que a guarda do AdminLayout interceptou (`voltarPara`). Só
 // aceita caminho interno de /admin, nunca um endereço de fora, para um link montado não mandar a pessoa para
@@ -49,7 +50,7 @@ export function LoginPage({ auth }: PropsPagina) {
 
   return (
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 fundo-pagina">
-      <div className="max-w-md w-full fundo-cartao rounded-3xl shadow-2xl border borda-padrao overflow-hidden">
+      <div className="max-w-md w-full fundo-cartao rounded-3xl sombra-cartao-solto border borda-padrao overflow-hidden">
         <div className="p-10 text-center border-b borda-padrao relative overflow-hidden fundo-sutil">
           <div
             className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-32 brilho-marca rounded-full blur-3xl"
@@ -96,13 +97,9 @@ export function LoginPage({ auth }: PropsPagina) {
               className="input-padrao order-3 w-full"
               placeholder="••••••••"
             />
-            <button
-              type="button"
-              onClick={() => window.alert('Recuperação de senha simulada no protótipo.')}
-              className="text-xs texto-marca font-bold hover:underline mb-2 order-2"
-            >
+            <Link to="/esqueci-senha" className="text-xs texto-marca font-bold hover:underline mb-2 order-2">
               Esqueceu a senha?
-            </button>
+            </Link>
           </div>
 
           <button

@@ -8,8 +8,12 @@ import { Link } from 'react-router';
 export function Footer() {
   return (
     <footer className="bg-dark text-slate-400 py-16 border-t border-slate-800 mt-auto">
-      <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-12">
-        <div className="col-span-1 md:col-span-1">
+      {/* Mesma caixa do cabeçalho (.largura-site): a marca começa onde a de cima começa e a última coluna termina
+          onde o cabeçalho termina. Na tela larga, as 4 colunas ficam com o MESMO espaço entre elas
+          (justify-between); a marca e "Segurança" têm largura limitada, as duas de links ocupam só o que precisam.
+          Na média, 2 por linha; no celular, uma embaixo da outra. */}
+      <div className="largura-site grid grid-cols-1 sm:grid-cols-2 gap-12 lg:flex lg:justify-between">
+        <div className="lg:max-w-xs">
           <Link to="/" className="flex items-center gap-3 mb-5">
             <div className="w-10 h-10 fundo-marca rounded-lg flex items-center justify-center text-white font-bold">
               <i className="fa-solid fa-flask"></i>
@@ -74,7 +78,7 @@ export function Footer() {
           </ul>
         </div>
 
-        <div>
+        <div className="lg:max-w-xs">
           <h2 className="font-sans text-white font-black mb-6 text-[11px] tracking-widest uppercase">
             Segurança e Pagamentos
           </h2>
@@ -98,7 +102,7 @@ export function Footer() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 mt-16 pt-8 border-t border-slate-800 text-xs text-center font-medium uppercase tracking-wider text-slate-400">
+      <div className="largura-site mt-16 pt-8 border-t border-slate-800 text-xs text-center font-medium uppercase tracking-wider text-slate-400">
         &copy; 2026 CrowdAcadêmico. Protótipo UI TCC - TSI - IFSP.
       </div>
     </footer>

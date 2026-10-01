@@ -558,6 +558,17 @@ export interface VerificacaoEmailTable {
   confirmado_em: Date | null;
 }
 
+// Mesmo hash determinístico (SHA-256) de VerificacaoEmailTable: redefinir_senha_por_token() (03, [03-O]) busca por
+// igualdade.
+export interface RecuperacaoSenhaTable {
+  id_recuperacao: Generated<number>;
+  id_usuario: number;
+  token_hash: string;
+  criado_em: Generated<Date>;
+  expira_em: Date;
+  usado_em: Date | null;
+}
+
 export interface DB {
   usuario: UsuarioTable;
   papel: PapelTable;
@@ -571,6 +582,7 @@ export interface DB {
   usuario_termo: UsuarioTermoTable;
   aceite_termo_contribuicao: AceiteTermoContribuicaoTable;
   verificacao_email: VerificacaoEmailTable;
+  recuperacao_senha: RecuperacaoSenhaTable;
   area_conhecimento: AreaConhecimentoTable;
   tipo_link: TipoLinkTable;
   motivo_denuncia: MotivoDenunciaTable;

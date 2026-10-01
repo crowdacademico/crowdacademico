@@ -39,7 +39,7 @@ export function VerificarEmailPage() {
 
   return (
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 fundo-pagina">
-      <div className="max-w-md w-full fundo-cartao rounded-3xl shadow-2xl border borda-padrao overflow-hidden p-10 text-center">
+      <div className="max-w-md w-full fundo-cartao rounded-3xl sombra-cartao-solto border borda-padrao overflow-hidden p-10 text-center">
         {estado === 'carregando' && (
           <>
             <i className="fa-solid fa-spinner fa-spin text-3xl texto-fraco mb-4"></i>

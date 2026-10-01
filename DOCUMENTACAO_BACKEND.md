@@ -1447,3 +1447,8 @@ Testado com o backend rodando de verdade contra o Postgres real (não só compil
 - **Decisão:** em `arquivo.service.confirm-upload.ts`, se o `sharp` não conseguir ler a imagem, o arquivo é apagado de `pendente/` na hora e a resposta é 400 ("Não foi possível ler esta imagem...").
 - **Motivo:** achado no teste da tela de Alterar Usuário: um PNG com a assinatura certa, mas quebrado por dentro, dava 500 e deixava o arquivo em `pendente/`. A assinatura errada já tinha essa limpeza; a imagem ilegível não.
 - **Caso-limite aceito:** nenhum.
+
+📌 **"Esqueci minha senha" (RF-006) pronto antes do e-mail (01-10-2026).**
+- **Decisão:** `POST /auth/esqueci-senha` grava um token em `recuperacao_senha` (um ativo por pessoa: pedir de novo apaga o anterior) com a validade de `recuperacao_senha_minutos_validade` (30, Parâmetros do Sistema) e responde igual exista ou não a conta. `POST /auth/redefinir-senha` chama `redefinir_senha_por_token` (03, [03-O], SECURITY DEFINER): usa o token uma vez, troca a senha, zera o bloqueio por senha errada e encerra as sessões do dono. Os dois são públicos e com limite de pedidos. Fora de produção o link volta em `tokenRecuperacaoSenhaDev` (botão <dev> na tela), igual ao token de verificar e-mail.
+- **Motivo:** a tabela, os índices, a RLS e as permissões já existiam; faltavam a função e as telas. Não revelar se o e-mail tem conta e derrubar as sessões ao trocar a senha são padrão de mercado.
+- **Caso-limite aceito:** em produção, até o módulo de e-mail existir, o link é gravado e ninguém o recebe.

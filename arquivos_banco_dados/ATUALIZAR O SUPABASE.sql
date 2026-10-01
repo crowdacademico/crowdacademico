@@ -538,3 +538,63 @@ CREATE POLICY pol_comentario_delete ON comentario FOR DELETE TO app_nestjs USING
           AND id_usuario = (SELECT public.id_usuario_atual())
     )
 );
+
+-- ============================================================================
+-- GRUPO AF (01-10-2026) - "Esqueci minha senha" (RF-006). IDEMPOTENTE (pode colar de novo).
+-- Não precisa parar o Nest (só função nova, permissão e uma linha de configuração).
+--
+-- Em palavras simples: cria a função que troca a senha pelo link de "Esqueci minha senha" (vale uma vez,
+-- com validade, e desconecta a conta de todos os aparelhos) e a chave da validade do link em Parâmetros do
+-- Sistema (30 minutos, o administrador pode mudar). A tabela recuperacao_senha já existia.
+--
+-- O que muda:
+--   1. Função redefinir_senha_por_token (03, [03-O]).
+--   2. Só o app_nestjs pode executar a função.
+--   3. Chave recuperacao_senha_minutos_validade (30) em configuracoes, se ainda não existir.
+-- ============================================================================
+
+-- ----------------------------------------------------------------------------
+-- Função:     redefinir_senha_por_token
+-- Assinatura: (p_token_hash TEXT, p_senha_hash TEXT) -> BOOLEAN
+-- Bloco:      [03-O]
+-- Regra:      "Esqueci minha senha" (RF-006). Mesmo desenho de confirmar_email_por_token: recebe o token e resolve o
+--             dono sozinha. Numa transação: marca o token de recuperacao_senha como usado (só se não expirou nem foi
+--             usado), troca a senha do dono (o NestJS manda a senha já com bcrypt), zera o bloqueio por senha
+--             errada e encerra todas as sessões abertas dele (quem invadiu a conta perde o acesso). Retorna FALSE
+--             se o token não existe, expirou ou já foi usado (o NestJS decide a mensagem).
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.redefinir_senha_por_token(p_token_hash TEXT, p_senha_hash TEXT)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_id_usuario INT;
+BEGIN
+    UPDATE recuperacao_senha
+    SET usado_em = NOW()
+    WHERE token_hash = p_token_hash
+      AND usado_em IS NULL
+      AND expira_em > NOW()
+    RETURNING id_usuario INTO v_id_usuario;
+
+    IF v_id_usuario IS NULL THEN
+        RETURN FALSE;
+    END IF;
+
+    UPDATE usuario
+    SET senha_hash = p_senha_hash, tentativas_login_falhas = 0, bloqueado_ate = NULL
+    WHERE id_usuario = v_id_usuario AND deletado = FALSE;
+
+    UPDATE sessao SET revogado_em = NOW() WHERE id_usuario = v_id_usuario AND revogado_em IS NULL;
+    RETURN TRUE;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.redefinir_senha_por_token(TEXT, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.redefinir_senha_por_token(TEXT, TEXT) TO app_nestjs;
+
+INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, publica)
+VALUES (NULL, 'recuperacao_senha_minutos_validade', '30', 'inteiro', 'Validade do link de "Esqueci minha senha", em minutos', TRUE, FALSE)
+ON CONFLICT (chave) DO NOTHING;

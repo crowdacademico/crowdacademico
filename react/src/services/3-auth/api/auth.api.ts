@@ -4,6 +4,7 @@ import type {
   AuthResponseLogin,
   AuthResponseRegister,
   AuthResponseVerifyEmail,
+  AuthResponseForgotPassword,
 } from '../type/auth.type';
 
 // Espelha 3-auth/controllers do nest (login/refresh/logout). Sem header Authorization aqui de propósito:
@@ -56,6 +57,24 @@ export async function cadastro(
     body: JSON.stringify({ nome, email, senha, aceiteTermos }),
   });
   return tratarResposta<AuthResponseRegister>(resposta);
+}
+
+export async function esqueciSenha(email: string): Promise<AuthResponseForgotPassword> {
+  const resposta = await fetch(`${API_BASE_URL}/auth/esqueci-senha`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+  return tratarResposta<AuthResponseForgotPassword>(resposta);
+}
+
+export async function redefinirSenha(token: string, senha: string): Promise<{ redefinida: boolean }> {
+  const resposta = await fetch(`${API_BASE_URL}/auth/redefinir-senha`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, senha }),
+  });
+  return tratarResposta<{ redefinida: boolean }>(resposta);
 }
 
 export async function verificarEmail(token: string): Promise<AuthResponseVerifyEmail> {

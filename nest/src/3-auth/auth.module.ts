@@ -10,6 +10,8 @@ import { AuthControllerLogout } from './controllers/auth.controller.logout';
 import { AuthControllerRefresh } from './controllers/auth.controller.refresh';
 import { AuthControllerFindAllSessions } from './controllers/auth.controller.findall-sessions';
 import { AuthControllerVerifyEmail } from './controllers/auth.controller.verify-email';
+import { AuthControllerForgotPassword } from './controllers/auth.controller.forgot-password';
+import { AuthControllerResetPassword } from './controllers/auth.controller.reset-password';
 import { AuthGuardJwt } from './guards/auth.guard.jwt';
 import { AuthGuardRequireAuth } from './guards/auth.guard.require-auth';
 import { AuthServiceRegister } from './service/auth.service.register';
@@ -19,6 +21,8 @@ import { AuthServiceLogin } from './service/auth.service.login';
 import { AuthServiceLogout } from './service/auth.service.logout';
 import { AuthServiceRefresh } from './service/auth.service.refresh';
 import { AuthServiceVerifyEmail } from './service/auth.service.verify-email';
+import { AuthServiceForgotPassword } from './service/auth.service.forgot-password';
+import { AuthServiceResetPassword } from './service/auth.service.reset-password';
 
 @Module({
   imports: [
@@ -47,6 +51,8 @@ import { AuthServiceVerifyEmail } from './service/auth.service.verify-email';
     AuthControllerLogout,
     AuthControllerRegister,
     AuthControllerVerifyEmail,
+    AuthControllerForgotPassword,
+    AuthControllerResetPassword,
     AuthControllerFindAllSessions,
   ],
   providers: [
@@ -55,6 +61,8 @@ import { AuthServiceVerifyEmail } from './service/auth.service.verify-email';
     AuthServiceLogout,
     AuthServiceRegister,
     AuthServiceVerifyEmail,
+    AuthServiceForgotPassword,
+    AuthServiceResetPassword,
     AuthServiceFindAllSessions,
     AuthServiceEndSession,
     // Global de verdade (roda em toda rota) - ver comentário em

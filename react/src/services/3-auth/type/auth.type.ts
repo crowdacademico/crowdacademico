@@ -31,6 +31,12 @@ export interface AuthResponseVerifyEmail {
   verificado: boolean;
 }
 
+// "Esqueci minha senha" (auth.controller.forgot-password.ts): o link só volta fora de produção, enquanto o
+// módulo de e-mail não existe. Mesma resposta exista ou não a conta.
+export interface AuthResponseForgotPassword {
+  tokenRecuperacaoSenhaDev: string | null;
+}
+
 // Espelha sessao.response.ts (SessaoResponse).
 export interface SessaoResponse {
   idSessao: number;

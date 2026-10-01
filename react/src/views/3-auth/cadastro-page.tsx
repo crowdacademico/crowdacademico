@@ -1,13 +1,15 @@
-import { useId, useRef, useState } from 'react';
+import { useId, useState } from 'react';
 import { MensagemErro } from '../../components/crud/mensagem-erro';
-import type { FormEvent } from 'react';
+import { ModalFicha } from '../../components/crud/modal-ficha';
+import { RodapeAcoes } from '../../components/crud/rodape-acoes';
+import { TelaCheia } from '../../components/crud/tela-cheia';
+import type { CSSProperties, FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { Campo } from '../../components/input/campo';
 import { MedidorSenha } from '../../components/input/medidor-senha';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { termoUsoApi } from '../../services/5-termo-uso/api/termo-uso.api';
 import { ErroHttp } from '../../services/constant/api/http.util';
-import { useFocoPreso } from '../../services/constant/hook/use-foco-preso';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { TermoUsoResponseActive } from '../../services/5-termo-uso/type/termo-uso.type';
 import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
@@ -42,11 +44,9 @@ export function CadastroPage({ auth }: PropsPagina) {
 
   const [erroEmailDuplicado, setErroEmailDuplicado] = useState(false);
   const [modalTermoAberto, setModalTermoAberto] = useState(false);
-  // Janela dos termos: anunciada como diálogo, com o foco preso nela enquanto aberta; Esc fecha.
-  const janelaTermoRef = useRef<HTMLDivElement>(null);
-  const idTituloTermo = useId();
+  // Termo no modal padrão (largo), com "Tela cheia" ao lado do X.
+  const [termoTelaCheia, setTermoTelaCheia] = useState(false);
   const idErroTermos = useId();
-  useFocoPreso(janelaTermoRef, modalTermoAberto, () => setModalTermoAberto(false));
   const [termo, setTermo] = useState<TermoUsoResponseActive | null>(null);
   const [carregandoTermo, setCarregandoTermo] = useState(false);
 
@@ -104,8 +104,14 @@ export function CadastroPage({ auth }: PropsPagina) {
 
   return (
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 fundo-pagina">
-      <div className="max-w-md w-full max-h-[calc(100vh-2rem)] fundo-cartao rounded-3xl shadow-2xl border borda-padrao overflow-hidden flex flex-col">
-        <div className="p-10 text-center border-b borda-padrao fundo-sutil shrink-0">
+      <div className="max-w-md w-full max-h-[calc(100vh-2rem)] fundo-cartao rounded-3xl sombra-cartao-solto border borda-padrao overflow-hidden flex flex-col">
+        {/* `isolate` + `-z-10`: o brilho verde (o mesmo do Login) fica atrás do ícone e do texto sem precisar de
+            z-index em cada um. */}
+        <div className="p-10 text-center border-b borda-padrao fundo-sutil shrink-0 relative isolate overflow-hidden">
+          <div
+            className="pointer-events-none absolute -z-10 top-0 left-1/2 -translate-x-1/2 w-32 h-32 brilho-marca rounded-full blur-3xl"
+            style={{ '--opacidade-brilho-marca': '20%' } as CSSProperties}
+          ></div>
           <div className="w-14 h-14 fundo-marca rounded-2xl mx-auto flex items-center justify-center text-white font-bold text-2xl mb-5 shadow-lg">
             <i className="fa-solid fa-user-plus"></i>
           </div>
@@ -275,42 +281,45 @@ export function CadastroPage({ auth }: PropsPagina) {
       </div>
 
       {modalTermoAberto && (
-        <div
-          className="fixed inset-0 z-[200] flex items-start justify-center px-4 pt-[5vh] pb-4 bg-black/40"
-          onClick={() => setModalTermoAberto(false)}
-          // Clique no FUNDO não tira o foco da janela (ver o mesmo trecho em modal-ficha.tsx).
-          onMouseDown={(evento) => {
-            if (evento.target === evento.currentTarget) evento.preventDefault();
-          }}
-        >
-          <div
-            ref={janelaTermoRef}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby={idTituloTermo}
-            tabIndex={-1}
-            className="outline-none w-full max-w-lg max-h-[80vh] fundo-elevado rounded-2xl shadow-2xl border borda-forte overflow-hidden flex flex-col"
-            onClick={(evento) => evento.stopPropagation()}
-          >
-            <div className="px-6 py-4 border-b borda-padrao flex items-center justify-between shrink-0">
-              <div>
-                <h2 id={idTituloTermo} className="font-sans font-bold texto-forte">Termo de Uso</h2>
-                {termo && <p className="text-xs texto-fraco">Versão {termo.versao}</p>}
-              </div>
-              <button
-                type="button"
-                onClick={() => setModalTermoAberto(false)}
-                aria-label="Fechar"
-                className="texto-fraco hover-texto-forte"
-              >
-                <i className="fa-solid fa-xmark"></i>
+        <ModalFicha
+          titulo="Termo de Uso"
+          subtitulo={termo ? `Versão ${termo.versao}` : undefined}
+          carregando={carregandoTermo}
+          variasTelas
+          aoFechar={() => setModalTermoAberto(false)}
+          // Concordar marca a caixinha do aceite e fecha; Cancelar só fecha (igual ao X, ao Esc e ao clique fora).
+          rodape={
+            termo && (
+              <RodapeAcoes
+                aoCancelar={() => setModalTermoAberto(false)}
+                acao={{
+                  rotulo: 'Li e concordo',
+                  aoClicar: () => {
+                    setAceiteTermos(true);
+                    setModalTermoAberto(false);
+                  },
+                }}
+              />
+            )
+          }
+          acoesCabecalho={
+            termo && (
+              <button type="button" onClick={() => setTermoTelaCheia(true)} className="btn-pilula btn-pilula-rotulo">
+                <i className="fa-solid fa-expand"></i> Tela cheia
               </button>
+            )
+          }
+        >
+          <TelaCheia
+            ativa={termoTelaCheia}
+            titulo={`Termo de Uso - versão ${termo?.versao ?? ''}`}
+            aoSair={() => setTermoTelaCheia(false)}
+          >
+            <div className="flex-1 overflow-y-auto text-[15px] leading-relaxed texto-padrao whitespace-pre-line">
+              {termo?.conteudo ?? 'Não foi possível carregar o Termo de Uso.'}
             </div>
-            <div className="px-6 py-4 overflow-y-auto text-sm texto-padrao whitespace-pre-line">
-              {carregandoTermo ? 'Carregando...' : (termo?.conteudo ?? 'Não foi possível carregar o Termo de Uso.')}
-            </div>
-          </div>
-        </div>
+          </TelaCheia>
+        </ModalFicha>
       )}
     </div>
   );

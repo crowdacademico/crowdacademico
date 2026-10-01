@@ -14,6 +14,7 @@ export const GRUPO_CONFIGURACAO: Record<string, string> = {
   // 3-auth/constants/auth.constants.ts).
   refresh_token_dias_validade: 'Segurança',
   verificacao_email_horas_validade: 'Segurança',
+  recuperacao_senha_minutos_validade: 'Segurança',
   // Financeiro
   taxa_plataforma_padrao: 'Financeiro',
   meta_minima_campanha: 'Financeiro',

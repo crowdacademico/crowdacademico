@@ -157,6 +157,7 @@ GRANT UPDATE (nome, id_imagem_perfil, senha_hash) ON public.usuario TO app_nestj
 -- ou roda sem sessão (@Cron), isso é folga desnecessária; por isso o REVOKE explícito antes do GRANT só para o
 -- app_nestjs, mesmo não sendo explorável hoje (só o app_nestjs conecta ao banco).
 REVOKE EXECUTE ON FUNCTION public.confirmar_email_por_token(TEXT)         FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.redefinir_senha_por_token(TEXT, TEXT)   FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.registrar_falha_login(INT)              FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.liberar_bloqueio_login(INT)             FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.registrar_login_sucesso(INT, TEXT)      FROM PUBLIC;
@@ -189,6 +190,7 @@ REVOKE EXECUTE ON FUNCTION public.revogar_suspensao_papel_usuario(INT, INT)     
 -- registrar_exportacao_dados(INT): ver [03-O].
 REVOKE EXECUTE ON FUNCTION public.registrar_exportacao_dados(INT)                   FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.confirmar_email_por_token(TEXT)          TO app_nestjs;
+GRANT EXECUTE ON FUNCTION public.redefinir_senha_por_token(TEXT, TEXT)    TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.registrar_falha_login(INT)               TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.liberar_bloqueio_login(INT)              TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.registrar_login_sucesso(INT, TEXT)       TO app_nestjs;

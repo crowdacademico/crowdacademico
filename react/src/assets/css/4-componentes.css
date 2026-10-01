@@ -586,6 +586,31 @@
      a regra de ouro sem exceção - `--opacidade-brilho-marca` deixa a
      tela escolher 10 ou 20 via style inline, sem inventar uma classe por
      tela. */
+  /* Largura do site: cabeçalho, faixa do "Início >" e rodapé usam a MESMA caixa (largura máxima e margens
+     laterais iguais em cada tamanho de tela), então o logo de cima e o de baixo ficam sempre na mesma linha, e
+     o fim do rodapé no mesmo ponto do fim do cabeçalho. */
+  .largura-site {
+    max-width: 80rem;
+    margin-inline: auto;
+    padding-inline: 1rem;
+  }
+
+  @media (min-width: 640px) {
+    .largura-site {
+      padding-inline: 1.5rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .largura-site {
+      padding-inline: 2rem;
+    }
+  }
+
+  .sombra-cartao-solto {
+    box-shadow: var(--shadow-cartao-solto);
+  }
+
   .brilho-marca {
     background-color: color-mix(in srgb, var(--cor-marca) var(--opacidade-brilho-marca, 10%), transparent);
   }

@@ -25,3 +25,9 @@ export const REFRESH_TOKEN_SEPARADOR = '.';
 export const VERIFICACAO_EMAIL_HORAS_VALIDADE_PADRAO = 24;
 export const CHAVE_CONFIG_VERIFICACAO_EMAIL_HORAS_VALIDADE =
   'verificacao_email_horas_validade';
+
+// Validade do link de "Esqueci minha senha" (minutos): DEFAULT, mesmo tratamento de
+// VERIFICACAO_EMAIL_HORAS_VALIDADE_PADRAO acima. Curta de propósito: o link troca a senha da conta.
+export const RECUPERACAO_SENHA_MINUTOS_VALIDADE_PADRAO = 30;
+export const CHAVE_CONFIG_RECUPERACAO_SENHA_MINUTOS_VALIDADE =
+  'recuperacao_senha_minutos_validade';

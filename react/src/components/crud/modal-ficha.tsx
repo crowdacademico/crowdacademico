@@ -10,6 +10,8 @@ interface ModalFichaProps {
   subtitulo?: string;
   // Explicação da tela num "ⓘ" ao lado do título (aparece ao passar o mouse), no lugar de um subtítulo longo.
   ajuda?: string;
+  // Botões do cabeçalho, à esquerda do X (ex.: "Tela cheia" do Termo de Uso no Cadastro).
+  acoesCabecalho?: ReactNode;
   avatar?: ReactNode;
   badges?: ReactNode[];
   rodape?: ReactNode;
@@ -54,6 +56,7 @@ export function ModalFicha({
   titulo,
   subtitulo,
   ajuda,
+  acoesCabecalho,
   avatar,
   badges,
   rodape,
@@ -165,14 +168,12 @@ export function ModalFicha({
               )}
             </div>
           </div>
-          <button
-            type="button"
-            onClick={aoFechar}
-            aria-label="Fechar"
-            className="texto-fraco hover-texto-forte shrink-0"
-          >
-            <i className="fa-solid fa-xmark text-lg"></i>
-          </button>
+          <div className="flex items-center gap-4 shrink-0">
+            {!carregando && acoesCabecalho}
+            <button type="button" onClick={aoFechar} aria-label="Fechar" className="texto-fraco hover-texto-forte">
+              <i className="fa-solid fa-xmark text-lg"></i>
+            </button>
+          </div>
         </div>
 
         <div className={'flex-1 px-8 py-6 space-y-6 overflow-y-auto' + (variasTelas ? ' flex flex-col' : '')}>

@@ -3,6 +3,8 @@ import type { PropsPagina } from './pagina.type';
 import { LoginPage } from '../../views/3-auth/login-page';
 import { CadastroPage } from '../../views/3-auth/cadastro-page';
 import { VerificarEmailPage } from '../../views/3-auth/verificar-email-page';
+import { EsqueciSenhaPage } from '../../views/3-auth/esqueci-senha-page';
+import { RedefinirSenhaPage } from '../../views/3-auth/redefinir-senha-page';
 import { MinhaConta } from '../../views/3-auth/minha-conta-page';
 import { Dashboard } from '../../views/admin/dashboard';
 import { ListarUsuarios } from '../../views/1-usuario/listar-usuarios';
@@ -60,6 +62,8 @@ export const ROTAS: Rota[] = [
     elemento: VerificarEmailPage,
     rotuloBreadcrumb: 'Verificar e-mail',
   },
+  { caminho: '/esqueci-senha', elemento: EsqueciSenhaPage, rotuloBreadcrumb: 'Esqueci minha senha' },
+  { caminho: '/redefinir-senha', elemento: RedefinirSenhaPage, rotuloBreadcrumb: 'Criar nova senha' },
 ];
 
 export const ROTAS_ADMIN: Rota[] = [

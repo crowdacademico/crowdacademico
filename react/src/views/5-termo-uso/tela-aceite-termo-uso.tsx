@@ -41,8 +41,10 @@ export function TelaAceiteTermoUso({ auth }: TelaAceiteTermoUsoProps) {
 
   return (
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 fundo-pagina">
-      <div className="max-w-2xl w-full fundo-cartao rounded-3xl shadow-2xl border borda-padrao overflow-hidden flex flex-col max-h-[85vh]">
-        <div className="px-8 py-6 border-b borda-padrao fundo-sutil">
+      <div className="max-w-2xl w-full fundo-cartao rounded-3xl sombra-cartao-solto border borda-padrao overflow-hidden flex flex-col max-h-[85vh]">
+        {/* Brilho verde discreto no canto, o mesmo da Minha Conta. */}
+        <div className="px-8 py-6 border-b borda-padrao fundo-sutil relative isolate overflow-hidden">
+          <div className="pointer-events-none absolute -z-10 -top-12 -right-12 w-56 h-56 brilho-marca rounded-full blur-3xl"></div>
           <h1 className="titulo-pagina">Termo de Uso atualizado</h1>
           <p className="text-sm texto-fraco mt-1">
             Publicamos uma versão nova do Termo de Uso. Leia e aceite para continuar usando a plataforma.

@@ -287,6 +287,45 @@ END;
 $$;
 
 -- ----------------------------------------------------------------------------
+-- Função:     redefinir_senha_por_token
+-- Assinatura: (p_token_hash TEXT, p_senha_hash TEXT) -> BOOLEAN
+-- Bloco:      [03-O]
+-- Regra:      "Esqueci minha senha" (RF-006). Mesmo desenho de confirmar_email_por_token: recebe o token e resolve o
+--             dono sozinha. Numa transação: marca o token de recuperacao_senha como usado (só se não expirou nem foi
+--             usado), troca a senha do dono (o NestJS manda a senha já com bcrypt), zera o bloqueio por senha
+--             errada e encerra todas as sessões abertas dele (quem invadiu a conta perde o acesso). Retorna FALSE
+--             se o token não existe, expirou ou já foi usado (o NestJS decide a mensagem).
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.redefinir_senha_por_token(p_token_hash TEXT, p_senha_hash TEXT)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_id_usuario INT;
+BEGIN
+    UPDATE recuperacao_senha
+    SET usado_em = NOW()
+    WHERE token_hash = p_token_hash
+      AND usado_em IS NULL
+      AND expira_em > NOW()
+    RETURNING id_usuario INTO v_id_usuario;
+
+    IF v_id_usuario IS NULL THEN
+        RETURN FALSE;
+    END IF;
+
+    UPDATE usuario
+    SET senha_hash = p_senha_hash, tentativas_login_falhas = 0, bloqueado_ate = NULL
+    WHERE id_usuario = v_id_usuario AND deletado = FALSE;
+
+    UPDATE sessao SET revogado_em = NOW() WHERE id_usuario = v_id_usuario AND revogado_em IS NULL;
+    RETURN TRUE;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
 -- Função:     registrar_falha_login
 -- Assinatura: (p_id_usuario INT) -> VOID
 -- Bloco:      [03-O]

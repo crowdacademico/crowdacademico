@@ -24,9 +24,9 @@ export function Header({ auth }: HeaderProps) {
     // `relative`: âncora para o DevLoginRapido absoluto lá embaixo, fora do fluxo do grupo da direita de
     // propósito (ver comentário completo perto dele).
     <header className="fundo-cartao border-b borda-padrao sticky top-0 z-50 shadow-sm relative">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-        {/* w-10 h-10 / text-2xl: mesmo tamanho exato do ícone+texto do <footer>; os dois títulos ficam
-            visualmente idênticos, só a posição (topo/rodapé) muda. */}
+      <div className="largura-site h-16 flex items-center justify-between">
+        {/* Espelho da marca do <footer>: mesmo tamanho (w-10 h-10 / text-2xl) e mesma caixa (.largura-site),
+            então as duas ficam na mesma linha vertical em qualquer tela. */}
         <Link to="/" className="flex items-center gap-3">
           <div className="w-10 h-10 fundo-marca rounded-lg flex items-center justify-center text-white font-bold shadow-inner">
             <i className="fa-solid fa-flask"></i>

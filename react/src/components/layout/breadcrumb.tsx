@@ -44,7 +44,7 @@ export function Breadcrumb() {
     // <Header> (h-16), que também é sticky top-0; z-40 (menor que o z-50 do Header) garante que o cabeçalho
     // sempre fica por cima quando os dois grudam juntos no topo.
     <nav className="fundo-sutil border-b borda-padrao sticky top-16 z-40">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center gap-2 text-sm flex-wrap">
+      <div className="largura-site py-3 flex items-center gap-2 text-sm flex-wrap">
         <Link to="/" className="texto-marca font-bold hover:underline">
           Início
         </Link>
