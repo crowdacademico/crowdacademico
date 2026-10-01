@@ -27,6 +27,7 @@ import { tipoLinkApi } from '../../services/9-tipo-link/api/tipo-link.api';
 import { useConfiguracoes } from '../../services/11-configuracoes/hook/use-configuracoes';
 import { SENHA_DEV } from '../../services/constant/constants/senha-dev.constants';
 import { useBuscar } from '../../services/constant/hook/use-buscar';
+import { SecaoAceitesTermo } from './secao-aceites-termo';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
 import { useOpcoesDiasSuspensao } from '../../services/constant/hook/use-opcoes-dias-suspensao';
@@ -76,6 +77,11 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
   const { mostrar } = useToast();
   const errosDaTela = useErroToast({ mostraTexto: true });
   const { erro, reportarErro, limparErro } = errosDaTela;
+  // Aceites do Termo (último de cada tipo, na coluna de Metadados). Leitura auxiliar: falha aqui não trava o modal.
+  const { dado: termosAceitos } = useBuscar(
+    () => usuarioApi.listarTermosAceitos(auth.authFetch, idUsuario).catch(() => []),
+    [idUsuario],
+  );
   const { ocupado: salvando, executar: executarSalvando } = useEnvio(reportarErro, limparErro);
   const { ocupado: desbloqueando, executar: executarDesbloqueando } = useEnvio(reportarErro, limparErro);
   const { ocupado: redefinindoSenhaDev, executar: executarRedefinindoSenhaDev } = useEnvio(reportarErro, limparErro);
@@ -264,7 +270,7 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
   return (
     <ModalFicha
       // `carregando`: mesmo mecanismo de ModalConsultarUsuario.
-      carregando={!usuario}
+      carregando={!usuario || termosAceitos === null}
       titulo={base.nome}
       subtitulo={usuario?.email}
       avatar={usuario && <AvatarUsuario nome={base.nome} foto={fotoNova !== undefined ? fotoNova.url : base.avatarUrl} tamanho="lg" />}
@@ -300,8 +306,10 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
           <FiltroPartes partes={partes} atual={parte} aoEscolher={setParte} />
           <MensagemErro texto={erro} />
 
-          <div className={ve('conta') + ' grid lg:grid-cols-3 gap-6 items-start'}>
-            <div className="lg:col-span-2 space-y-6">
+          {/* Duas linhas alinhadas: "Dados da conta" ao lado de Metadados e "Perfil de Pesquisador" ao lado dos
+              Aceites do Termo. Sem perfil de pesquisador, os Aceites continuam na coluna da direita (col-start-3). */}
+          <div className={ve('conta') + ' grid lg:grid-cols-3 gap-x-8 gap-y-10 items-start'}>
+            <div className="lg:col-span-2">
               <SecaoFicha titulo="Dados da conta">
                 <div className="sm:col-span-2 flex items-center gap-4">
                   <SeletorFotoPerfil
@@ -347,15 +355,37 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
                     )}
                   </Campo>
                 ) : (
-                  <div className="sm:col-span-2">
+                  <div className="sm:col-span-2 flex flex-wrap gap-3">
                     <button type="button" onClick={() => setTrocandoSenha(true)} className="btn btn-secondary">
                       <i className="fa-solid fa-key"></i> Trocar senha
                     </button>
+                    {/* Só em desenvolvimento: põe a senha da pessoa em SENHA_DEV na hora, para testar login. Fica aqui
+                        (e não na Minha Conta) porque trocar a senha de OUTRA pessoa não pede a senha atual. */}
+                    {import.meta.env.DEV && (
+                      <button
+                        type="button"
+                        onClick={aoRedefinirSenhaDev}
+                        disabled={redefinindoSenhaDev}
+                        className="btn btn-dev-acao"
+                        title={`Redefine a senha para "${SENHA_DEV}", sem digitar nada.`}
+                      >
+                        <i className="fa-solid fa-wand-magic-sparkles"></i>{' '}
+                        {redefinindoSenhaDev ? 'Redefinindo...' : 'Redefinir senha dev'}
+                      </button>
+                    )}
                   </div>
                 )}
               </SecaoFicha>
+            </div>
 
-              {formPerfil && perfilPesquisador && (
+            <SecaoFicha titulo="Metadados" colunas={1}>
+              <CampoSomenteLeitura rotulo="id" valor={idUsuario} />
+              <CampoSomenteLeitura rotulo="Criado em" valor={usuario.criadoEm && formatarData(usuario.criadoEm)} />
+              <CampoSomenteLeitura rotulo="Último login" valor={usuario.ultimoLoginEm ? formatarData(usuario.ultimoLoginEm) : 'Nunca'} />
+            </SecaoFicha>
+
+            {formPerfil && perfilPesquisador && (
+              <div className="lg:col-span-2">
                 <SecaoFicha titulo="Perfil de Pesquisador">
                   <CamposVinculoPerfil
                     tipoVinculo={formPerfil.tipoVinculo}
@@ -369,27 +399,11 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
                   />
                   <CampoFicha rotulo="Score atual" valor={perfilPesquisador.scoreAtual} />
                 </SecaoFicha>
-              )}
-            </div>
+              </div>
+            )}
 
-            <div className="space-y-6">
-              <SecaoFicha titulo="Metadados" colunas={1}>
-                <CampoSomenteLeitura rotulo="id" valor={idUsuario} />
-                <CampoSomenteLeitura rotulo="Criado em" valor={usuario.criadoEm && formatarData(usuario.criadoEm)} />
-                <CampoSomenteLeitura rotulo="Último login" valor={usuario.ultimoLoginEm ? formatarData(usuario.ultimoLoginEm) : 'Nunca'} />
-              </SecaoFicha>
-
-              {import.meta.env.DEV && (
-                <div className="fundo-cartao border border-dashed borda-dev fundo-dev-sutil rounded-xl p-4">
-                  <span className="badge badge-dev">&lt;dev&gt;</span>
-                  <p className="text-xs texto-fraco mt-2 mb-3">
-                    Redefine a senha direto pra "{SENHA_DEV}", na hora, sem digitar nada. Só pra testar login.
-                  </p>
-                  <button type="button" onClick={aoRedefinirSenhaDev} disabled={redefinindoSenhaDev} className="btn btn-secondary w-full">
-                    {redefinindoSenhaDev ? 'Redefinindo...' : 'Redefinir senha dev'}
-                  </button>
-                </div>
-              )}
+            <div className="lg:col-start-3">
+              <SecaoAceitesTermo auth={auth} termosAceitos={termosAceitos} aoErro={reportarErro} />
             </div>
           </div>
 

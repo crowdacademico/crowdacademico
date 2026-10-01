@@ -3,15 +3,12 @@ import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { MensagemErro } from '../../components/crud/mensagem-erro';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
-import { TelaCheia } from '../../components/crud/tela-cheia';
 import { AvatarUsuario } from '../../components/layout/avatar-usuario';
 import { Carregando } from '../../components/layout/carregando';
 import { Dica } from '../../components/layout/tooltip';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { useDadosUsuario } from '../../services/1-usuario/hook/use-dados-usuario';
-import { termoUsoApi } from '../../services/5-termo-uso/api/termo-uso.api';
-import { ROTULO_TIPO_TERMO } from '../../services/5-termo-uso/constants/termo-uso-tipos.constants';
 import {
   ROTULO_STATUS_PESQUISADOR,
   ROTULO_TIPO_VINCULO,
@@ -22,9 +19,9 @@ import { useBuscar } from '../../services/constant/hook/use-buscar';
 import { formatarCpfOuMotivoOculto, formatarData, formatarDataHora } from '../../services/constant/util/formatacao.util';
 import { BotaoVerFotoPerfil } from './botao-ver-foto-perfil';
 import { PainelScore } from './painel-score';
+import { SecaoAceitesTermo } from './secao-aceites-termo';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { UsuarioResponseLoginHistory } from '../../services/1-usuario/type/usuario.type';
-import type { TermoUsoResponse } from '../../services/5-termo-uso/type/termo-uso.type';
 
 interface ModalConsultarUsuarioProps {
   auth: Pick<UseAuthReturn, 'authFetch'>;
@@ -44,10 +41,6 @@ export function ModalConsultarUsuario({ auth, idUsuario, aoFechar }: ModalConsul
     () => usuarioApi.listarTermosAceitos(auth.authFetch, idUsuario).catch(() => []),
     [idUsuario],
   );
-  // Clicar num aceite abre o texto daquela versão em tela cheia.
-  const [termoLido, setTermoLido] = useState<TermoUsoResponse | null>(null);
-  const lerTermo = (idTermo: number) =>
-    void termoUsoApi.buscar(auth.authFetch, idTermo).then(setTermoLido, errosDaTela.reportarErro);
   const [logins, setLogins] = useState<UsuarioResponseLoginHistory[] | null>(null);
   const [carregandoLogins, setCarregandoLogins] = useState(false);
   const [loginsAbertos, setLoginsAbertos] = useState(false);
@@ -103,8 +96,10 @@ export function ModalConsultarUsuario({ auth, idUsuario, aoFechar }: ModalConsul
         )
       ) : (
         <>
-          <div className="grid lg:grid-cols-3 gap-6 items-start">
-            <div className="lg:col-span-2 space-y-6">
+          {/* Linhas alinhadas: "Dados da conta" ao lado de Papéis, "Acesso" ao lado dos Aceites do Termo; o Perfil de
+              Pesquisador (quando houver) vem embaixo, na largura das duas primeiras colunas. */}
+          <div className="grid lg:grid-cols-3 gap-x-8 gap-y-10 items-start">
+            <div className="lg:col-span-2">
               <SecaoFicha titulo="Dados da conta">
                 <CampoFicha rotulo="id" valor={usuario.idUsuario} />
                 <CampoFicha
@@ -123,7 +118,21 @@ export function ModalConsultarUsuario({ auth, idUsuario, aoFechar }: ModalConsul
                 <CampoFicha rotulo="Criado em" valor={formatarData(usuario.criadoEm)} />
                 <CampoFicha rotulo="E-mail verificado" valor={usuario.emailVerificado ? 'Sim' : 'Não'} />
               </SecaoFicha>
-
+            </div>
+            <SecaoFicha titulo="Papéis">
+              <CampoFicha
+                rotulo="Papéis atribuídos"
+                largura="cheia"
+                valor={
+                  papeis === null
+                    ? undefined
+                    : papeis.length === 0
+                      ? null
+                      : papeis.map((papel) => papel.nomePapel).join(', ')
+                }
+              />
+            </SecaoFicha>
+            <div className="lg:col-span-2">
               <SecaoFicha titulo="Acesso">
                 <CampoFicha
                   rotulo="Último login em"
@@ -162,47 +171,10 @@ export function ModalConsultarUsuario({ auth, idUsuario, aoFechar }: ModalConsul
                   )}
                 </CampoFicha>
               </SecaoFicha>
-
-              {termosAceitos === null ? (
-                <SecaoFicha titulo="Aceites do Termo de Uso" colunas={1}>
-                  <Carregando />
-                </SecaoFicha>
-              ) : termosAceitos.length === 0 ? (
-                <SecaoFicha titulo="Aceites do Termo de Uso" colunas={1}>
-                  <p className="texto-fraco text-sm">Nenhum termo aceito registrado.</p>
-                </SecaoFicha>
-              ) : (
-                <SecaoFicha titulo="Aceites do Termo de Uso">
-                  {termosAceitos.map((termo, indice) => (
-                    <CampoFicha
-                      key={indice}
-                      rotulo={ROTULO_TIPO_TERMO[termo.tipo]}
-                      valor={
-                        <button
-                          type="button"
-                          onClick={() => lerTermo(termo.idTermo)}
-                          className="texto-marca underline underline-offset-2 hover-texto-forte text-left"
-                        >
-                          {termo.versao} - {formatarDataHora(termo.aceitoEm)}
-                        </button>
-                      }
-                    />
-                  ))}
-                </SecaoFicha>
-              )}
-              {termoLido && (
-                <TelaCheia
-                  ativa
-                  titulo={`${ROTULO_TIPO_TERMO[termoLido.tipo]} - versão ${termoLido.versao}`}
-                  aoSair={() => setTermoLido(null)}
-                >
-                  <pre className="flex-1 overflow-y-auto whitespace-pre-wrap font-sans text-sm texto-padrao">
-                    {termoLido.conteudo}
-                  </pre>
-                </TelaCheia>
-              )}
-
-              {perfilPesquisador && (
+            </div>
+            <SecaoAceitesTermo auth={auth} termosAceitos={termosAceitos} aoErro={errosDaTela.reportarErro} />
+            {perfilPesquisador && (
+              <div className="lg:col-span-2">
                 <SecaoFicha titulo="Perfil de Pesquisador">
                   <CampoFicha rotulo="CPF" valor={formatarCpfOuMotivoOculto(perfilPesquisador.cpf)} />
                   <CampoFicha
@@ -222,24 +194,8 @@ export function ModalConsultarUsuario({ auth, idUsuario, aoFechar }: ModalConsul
                     valor={perfilPesquisador.ativadoEm ? formatarDataHora(perfilPesquisador.ativadoEm) : undefined}
                   />
                 </SecaoFicha>
-              )}
-            </div>
-
-            <div className="space-y-6">
-              <SecaoFicha titulo="Papéis">
-                <CampoFicha
-                  rotulo="Papéis atribuídos"
-                  largura="cheia"
-                  valor={
-                    papeis === null
-                      ? undefined
-                      : papeis.length === 0
-                        ? null
-                        : papeis.map((papel) => papel.nomePapel).join(', ')
-                  }
-                />
-              </SecaoFicha>
-            </div>
+              </div>
+            )}
           </div>
 
           {perfilPesquisador && (

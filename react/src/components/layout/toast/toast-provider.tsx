@@ -3,9 +3,11 @@ import type { ReactNode } from 'react';
 import { ToastContext } from './toast-context';
 import type { TipoToast } from './toast-context';
 
-// Sucesso some sozinho; erro fica até a pessoa fechar ou até o próximo aviso tomar o lugar dele (quem lê devagar ou
-// olhou para o lado não perde a mensagem). Mesmo padrão do Material Design e do GOV.BR.
+// Os dois somem sozinhos (decisão do Lucas: o erro preso na tela, até alguém fechar, atrapalhava). O erro fica o
+// dobro do tempo, porque costuma ter mais o que ler; o X fecha antes, e o próximo aviso toma o lugar dele.
 const DURACAO_SUCESSO_MS = 4000;
+const DURACAO_ERRO_MS = 8000;
+const MAXIMO_NA_TELA = 3;
 
 // Sucesso e erro têm a MESMA estrutura: cartão branco + barra colorida de 4px na esquerda + ícone. A cor é
 // ACENTO (a barra/ícone), não fundo; texto sempre escuro (nunca branco sobre colorido), o que resolve a
@@ -61,17 +63,16 @@ export function ToastProvider({ children }: ToastProviderProps) {
   const mostrar = useCallback(
     (titulo: string, descricao?: string, tipo: TipoToast = 'sucesso') => {
       const id = proximoId.current++;
-      // Um aviso por vez: o novo toma o lugar do anterior (antes o "Campanha criada" ficava empilhado com o erro
-      // seguinte). Aviso idêntico ao que já está na tela fica como está (o <StrictMode> do desenvolvimento dispara
-      // cada efeito duas vezes e o mesmo erro chegava em dobro).
+      // Fila: o novo entra EMBAIXO dos que já estão na tela (ordem de chegada, de cima para baixo); cada um some no
+      // seu tempo e os de baixo sobem. No máximo MAXIMO_NA_TELA: chegando mais um, sai o mais antigo. Aviso
+      // idêntico ao que já está na tela fica como está (o <StrictMode> do desenvolvimento dispara cada efeito duas
+      // vezes e o mesmo erro chegava em dobro).
       setToasts((atuais) =>
         atuais.some((t) => t.titulo === titulo && t.descricao === descricao && t.tipo === tipo)
           ? atuais
-          : [{ id, titulo, descricao, tipo }],
+          : [...atuais, { id, titulo, descricao, tipo }].slice(-MAXIMO_NA_TELA),
       );
-      if (tipo === 'sucesso') {
-        setTimeout(() => remover(id), DURACAO_SUCESSO_MS);
-      }
+      setTimeout(() => remover(id), tipo === 'sucesso' ? DURACAO_SUCESSO_MS : DURACAO_ERRO_MS);
     },
     [remover],
   );

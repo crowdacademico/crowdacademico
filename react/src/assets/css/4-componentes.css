@@ -398,6 +398,18 @@
   /* components/layout/dev-login-rapido.tsx: feio DE PROPÓSITO (roxo sólido, borda tracejada, fonte
      monoespaçada): "roxo feio e em destaque, claramente mostrando que não vai ficar ali". Não é refinamento
      esquecido, é sinalização visual. */
+  /* Botão de desenvolvimento DENTRO de um formulário, ao lado de um botão comum: mesmo tamanho e mesma letra de
+     .btn-secondary (usa .btn), só que roxo e com a borda tracejada do .btn-dev, para não ser confundido. */
+  .btn-dev-acao {
+    background-color: var(--cor-dev-texto);
+    color: var(--cor-texto-sobre-cor);
+    border: 1px dashed var(--cor-dev-fundo-selo);
+  }
+
+  .btn-dev-acao:hover:not(:disabled) {
+    filter: brightness(1.1);
+  }
+
   .btn-dev {
     display: inline-flex;
     align-items: center;
