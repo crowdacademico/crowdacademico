@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { MensagemErro } from '../../components/crud/mensagem-erro';
 import { ModalFicha } from '../../components/crud/modal-ficha';
+import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { TelaCheia } from '../../components/crud/tela-cheia';
 import { AvatarUsuario } from '../../components/layout/avatar-usuario';
 import { Carregando } from '../../components/layout/carregando';
@@ -92,11 +93,7 @@ export function ModalConsultarUsuario({ auth, idUsuario, aoFechar }: ModalConsul
         )
       }
       aoFechar={aoFechar}
-      rodape={
-        <button type="button" onClick={aoFechar} className="btn btn-secondary w-full">
-          Fechar
-        </button>
-      }
+      rodape={<RodapeAcoes aoCancelar={aoFechar} rotuloCancelar="Fechar" />}
     >
       {!usuario ? (
         erro ? (

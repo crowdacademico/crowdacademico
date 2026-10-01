@@ -1,6 +1,6 @@
 // Rodapé de modal e de formulário: botão secundário (Cancelar, Voltar, Fechar) + ações (Salvar, Criar, Confirmar
 // exclusão...). Enquanto `ocupado`, a ação fica desabilitada e mostra `rotuloOcupado` ("Salvando..."). Sem
-// `acao`, sobra só o botão secundário, na largura toda (rodapé "Fechar" do Consultar). Mais de uma ação (ex.:
+// `acao`, sobra só o botão secundário, no tamanho normal e à direita (rodapé "Fechar" do Consultar). Mais de uma ação (ex.:
 // Salvar e Enviar para aprovação): passe uma lista; ficam na ordem dada, depois do secundário.
 //
 // `formulario`: o botão de ação vira `type="submit"` e submete o `<form>` com esse id, mesmo que o form viva
@@ -28,6 +28,16 @@ const CLASSE_LARGURA = { sm: ' max-w-sm ml-auto', md: ' max-w-md ml-auto', xl: '
 
 export function RodapeAcoes({ aoCancelar, rotuloCancelar = 'Cancelar', acao, largura = 'sm' }: RodapeAcoesProps) {
   const acoes = Array.isArray(acao) ? acao : acao ? [acao] : [];
+  // Botão sozinho esticado ocupava o rodapé inteiro e ficava desproporcional.
+  if (acoes.length === 0) {
+    return (
+      <div className="flex justify-end">
+        <button type="button" onClick={aoCancelar} className="btn btn-secondary">
+          {rotuloCancelar}
+        </button>
+      </div>
+    );
+  }
   return (
     <div className={'flex gap-3' + CLASSE_LARGURA[largura]}>
       <button type="button" onClick={aoCancelar} className="btn btn-secondary flex-1">

@@ -1,5 +1,6 @@
 import { CaixaTextoLongo } from '../../components/crud/caixa-texto-longo';
 import { ModalFicha } from '../../components/crud/modal-ficha';
+import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { ROTULO_TIPO_TERMO } from '../../services/5-termo-uso/constants/termo-uso-tipos.constants';
 import { formatarData } from '../../services/constant/util/formatacao.util';
 import type { TermoUsoResponse } from '../../services/5-termo-uso/type/termo-uso.type';
@@ -18,13 +19,7 @@ export function ModalConsultarTermoUso({ termo, aoFechar }: ModalConsultarTermoU
       badges={etiquetasTermoUso(termo)}
       variasTelas
       aoFechar={aoFechar}
-      rodape={
-        <div className="flex justify-end">
-          <button type="button" onClick={aoFechar} className="btn btn-secondary">
-            Fechar
-          </button>
-        </div>
-      }
+      rodape={<RodapeAcoes aoCancelar={aoFechar} rotuloCancelar="Fechar" />}
     >
       <p className="text-xs texto-fraco">Criada em {formatarData(termo.criadoEm)}</p>
       <CaixaTextoLongo rotulo="Texto completo" tituloTelaCheia={`Versão ${termo.versao}`} valor={termo.conteudo} />

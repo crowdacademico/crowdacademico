@@ -259,11 +259,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
             </span>,
           ]}
           aoFechar={() => setCampanhaConsultada(null)}
-          rodape={
-            <button type="button" onClick={() => setCampanhaConsultada(null)} className="btn btn-secondary w-full">
-              Fechar
-            </button>
-          }
+          rodape={<RodapeAcoes aoCancelar={() => setCampanhaConsultada(null)} rotuloCancelar="Fechar" />}
         >
           <div className="grid lg:grid-cols-3 gap-6 items-start">
             <div className="lg:col-span-2 space-y-6">
