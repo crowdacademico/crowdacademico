@@ -24,6 +24,9 @@ interface SecaoSuspensaoProps {
   buscar: () => Promise<EstadoSuspensao>;
   suspender: (ate: string, motivo: string) => Promise<unknown>;
   revogar: () => Promise<unknown>;
+  // Avisa quem usa sempre que o estado é lido de novo (ao abrir, depois de suspender ou revogar): o Alterar Usuário
+  // mostra a suspensão no cabeçalho.
+  aoMudar?: (estado: EstadoSuspensao | null) => void;
 }
 
 // Card de moderação "suspender por X dias, com motivo" / "revogar", usado para a conta (1-usuario) e para o
@@ -40,6 +43,7 @@ export function SecaoSuspensao({
   buscar,
   suspender,
   revogar,
+  aoMudar,
 }: SecaoSuspensaoProps) {
   const { mostrar } = useToast();
   const { erro, reportarErro, limparErro } = useErroToast({ mostraTexto: true });
@@ -61,8 +65,14 @@ export function SecaoSuspensao({
 
   const carregar = () => {
     buscar()
-      .then(setSuspensao)
-      .catch(() => setSuspensao(null));
+      .then((estado) => {
+        setSuspensao(estado);
+        aoMudar?.(estado);
+      })
+      .catch(() => {
+        setSuspensao(null);
+        aoMudar?.(null);
+      });
   };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(carregar, []);

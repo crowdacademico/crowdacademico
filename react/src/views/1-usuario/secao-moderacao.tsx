@@ -1,15 +1,16 @@
-import { SecaoSuspensao } from '../../components/crud/secao-suspensao';
+import { SecaoSuspensao, type EstadoSuspensao } from '../../components/crud/secao-suspensao';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 
 interface SecaoModeracaoProps {
   auth: Pick<UseAuthReturn, 'authFetch'>;
   idUsuario: number | string;
+  aoMudar?: (estado: EstadoSuspensao | null) => void;
 }
 
 // Moderação: suspender/revogar CONTA, dentro de Alterar Usuário porque é ação sobre a MESMA conta que a tela já
 // edita, não uma tela própria.
-export function SecaoModeracao({ auth, idUsuario }: SecaoModeracaoProps) {
+export function SecaoModeracao({ auth, idUsuario, aoMudar }: SecaoModeracaoProps) {
   return (
     <SecaoSuspensao
       titulo="Moderação"
@@ -21,6 +22,7 @@ export function SecaoModeracao({ auth, idUsuario }: SecaoModeracaoProps) {
       buscar={() => usuarioApi.buscarSuspensao(auth.authFetch, idUsuario)}
       suspender={(ate, motivo) => usuarioApi.suspender(auth.authFetch, idUsuario, ate, motivo)}
       revogar={() => usuarioApi.revogarSuspensao(auth.authFetch, idUsuario)}
+      aoMudar={aoMudar}
     />
   );
 }

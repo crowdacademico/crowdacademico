@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
 import { MensagemErro } from '../../components/crud/mensagem-erro';
+import type { EstadoSuspensao } from '../../components/crud/secao-suspensao';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { TabelaLinksAcademicos } from '../../components/crud/tabelas/1-tabela-links-academicos';
@@ -63,11 +64,13 @@ function AvisoValeNaHora() {
   );
 }
 
-// Alterar Usuário: uma tela só, que rola. Em cima, o que espera o Salvar do rodapé (foto, nome, senha e, de quem é
-// pesquisador, o perfil); embaixo, o que grava na hora do clique (papéis, moderação, CPF, links e suspensão do
-// pesquisador), cada parte com o aviso "vale na hora". O Salvar grava a conta e o perfil juntos, só o que mudou, e
-// não fecha o modal. Criar perfil para quem ainda não é pesquisador fica no upgrade (modal-upgrade-pesquisador.tsx),
-// que passa pelo Termo de upgrade.
+// Alterar Usuário: uma tela só, que rola. O filtro fixo no topo mostra tudo ("Geral", o padrão) ou só uma parte
+// (Conta, Papéis, Pesquisador, Moderação): as outras ficam escondidas, não desmontadas, então nada do que está sendo
+// editado se perde. Em cima, o que espera o Salvar do rodapé (foto, nome, senha e, de quem é pesquisador, o perfil); o
+// rodapé diz o que mudou, inclusive numa parte escondida. Embaixo, o que grava na hora do clique (papéis, CPF, links,
+// desbloquear login) e, por último, as suspensões. O cabeçalho mostra a situação da conta (e-mail, suspensões, papéis).
+// Campos raros (trocar senha, corrigir CPF) só abrem quando alguém clica. O Salvar não fecha o modal. Criar perfil
+// para quem ainda não é pesquisador fica no upgrade (modal-upgrade-pesquisador.tsx), que passa pelo Termo.
 export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }: ModalAlterarUsuarioProps) {
   const { mostrar } = useToast();
   const errosDaTela = useErroToast({ mostraTexto: true });
@@ -75,21 +78,29 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
   const { ocupado: salvando, executar: executarSalvando } = useEnvio(reportarErro, limparErro);
   const { ocupado: desbloqueando, executar: executarDesbloqueando } = useEnvio(reportarErro, limparErro);
   const { ocupado: redefinindoSenhaDev, executar: executarRedefinindoSenhaDev } = useEnvio(reportarErro, limparErro);
+  const [parte, setParte] = useState<Parte>('geral');
+  const ve = (alvo: Parte) => (parte === 'geral' || parte === alvo ? '' : 'hidden');
 
   // Conta: o que está gravado (`base`) e o que está sendo editado.
   const [base, setBase] = useState({ nome: '', avatarUrl: null as string | null });
   const [nome, setNome] = useState('');
+  const [trocandoSenha, setTrocandoSenha] = useState(false);
   const [novaSenha, setNovaSenha] = useState('');
   const [fotoNova, setFotoNova] = useState<FotoNova>(undefined);
   // Pesquisador: idem.
   const [basePerfil, setBasePerfil] = useState<FormPerfil | null>(null);
   const [formPerfil, setFormPerfil] = useState<FormPerfil | null>(null);
+  const [corrigindoCpf, setCorrigindoCpf] = useState(false);
   const [cpfCorrecao, setCpfCorrecao] = useState('');
+  // Suspensões, lidas pelas seções de moderação: aparecem também no cabeçalho.
+  const [suspensaoConta, setSuspensaoConta] = useState<EstadoSuspensao | null>(null);
+  const [suspensaoPesquisador, setSuspensaoPesquisador] = useState<EstadoSuspensao | null>(null);
 
   const { usuario, perfilPesquisador, papeis, setPapeis, carregando } = useDadosUsuario(idUsuario, auth, errosDaTela, (dados) => {
     setBase({ nome: dados.usuario.nome, avatarUrl: dados.avatarUrl });
     setNome(dados.usuario.nome);
     setNovaSenha('');
+    setTrocandoSenha(false);
     setFotoNova(undefined);
     const perfil = dados.perfilPesquisador
       ? {
@@ -101,15 +112,26 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
     setBasePerfil(perfil);
     setFormPerfil(perfil);
     setCpfCorrecao('');
+    setCorrigindoCpf(false);
   });
 
-  const sujoConta = nome !== base.nome || novaSenha !== '' || fotoNova !== undefined;
-  const sujoPerfil =
-    formPerfil !== null &&
-    basePerfil !== null &&
-    (formPerfil.tipoVinculo !== basePerfil.tipoVinculo ||
-      formPerfil.vinculoInstitucional !== basePerfil.vinculoInstitucional ||
-      formPerfil.tituloAcademico !== basePerfil.tituloAcademico);
+  // O que mudou e ainda não foi salvo, pelo nome que a pessoa vê (o rodapé lista).
+  const mudancasConta = [
+    fotoNova !== undefined && 'foto',
+    nome !== base.nome && 'nome',
+    novaSenha !== '' && 'senha',
+  ].filter((item): item is string => Boolean(item));
+  const mudancasPerfil =
+    formPerfil && basePerfil
+      ? [
+          (formPerfil.tipoVinculo !== basePerfil.tipoVinculo || formPerfil.vinculoInstitucional !== basePerfil.vinculoInstitucional) &&
+            'vínculo',
+          formPerfil.tituloAcademico !== basePerfil.tituloAcademico && 'título acadêmico',
+        ].filter((item): item is string => Boolean(item))
+      : [];
+  const sujoConta = mudancasConta.length > 0;
+  const sujoPerfil = mudancasPerfil.length > 0;
+  const mudancas = [...mudancasConta, ...mudancasPerfil];
   useAvisoAlteracaoNaoSalva(sujoConta || sujoPerfil);
 
   const fechar = () => {
@@ -145,10 +167,11 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
         });
         setBase({ nome, avatarUrl: fotoNova !== undefined ? fotoNova.url : base.avatarUrl });
         setNovaSenha('');
+        setTrocandoSenha(false);
         setFotoNova(undefined);
         conta.limpar();
       }
-      if (sujoPerfil) {
+      if (sujoPerfil && formPerfil) {
         await perfilPesquisadorApi.atualizar(auth.authFetch, idUsuario, {
           tipoVinculo: formPerfil.tipoVinculo,
           ...(formPerfil.tipoVinculo === 'institucional' ? { vinculoInstitucional: formPerfil.vinculoInstitucional } : {}),
@@ -162,11 +185,24 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
     });
   };
 
+  const cancelarTrocaSenha = () => {
+    setTrocandoSenha(false);
+    setNovaSenha('');
+    conta.limpar();
+  };
+
+  const cancelarCorrecaoCpf = () => {
+    setCorrigindoCpf(false);
+    setCpfCorrecao('');
+    cpf.limpar();
+  };
+
   const salvarCorrecaoCpf = async () => {
     if (!cpf.tentarEnviar()) return;
     await executarSalvando(async () => {
       await perfilPesquisadorApi.corrigirCpf(auth.authFetch, idUsuario, { cpf: cpfCorrecao });
       setCpfCorrecao('');
+      setCorrigindoCpf(false);
       cpf.limpar();
       mostrar('CPF corrigido com sucesso.');
       aoAtualizado();
@@ -185,6 +221,45 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
       mostrar('Senha redefinida com sucesso.', `ID: ${idUsuario} teve a senha redefinida para "${SENHA_DEV}"`);
     });
 
+  const partes: { chave: Parte; rotulo: string }[] = [
+    { chave: 'geral', rotulo: 'Geral' },
+    { chave: 'conta', rotulo: 'Conta' },
+    { chave: 'papeis', rotulo: 'Papéis' },
+    ...(perfilPesquisador ? [{ chave: 'pesquisador' as const, rotulo: 'Pesquisador' }] : []),
+    { chave: 'moderacao', rotulo: 'Moderação' },
+  ];
+
+  const contaSuspensaAte = vigente(suspensaoConta);
+  const pesquisadorSuspensoAte = vigente(suspensaoPesquisador);
+  const etiquetas = usuario
+    ? [
+        contaSuspensaAte && (
+          <span key="conta" className="badge badge-erro">
+            <i className="fa-solid fa-lock mr-1"></i> Conta suspensa até {formatarData(contaSuspensaAte)}
+          </span>
+        ),
+        <span key="email" className={'badge ' + (usuario.emailVerificado ? 'badge-sucesso' : 'badge-aviso')}>
+          {usuario.emailVerificado ? 'E-mail verificado' : 'E-mail não verificado'}
+        </span>,
+        perfilPesquisador &&
+          (pesquisadorSuspensoAte ? (
+            <span key="pesquisador" className="badge badge-aviso">
+              Pesquisador suspenso até {formatarData(pesquisadorSuspensoAte)}
+            </span>
+          ) : (
+            <span key="pesquisador" className="badge badge-sucesso">
+              Pesquisador {ROTULO_STATUS_PESQUISADOR[perfilPesquisador.statusPesquisador].toLowerCase()}
+            </span>
+          )),
+        ...(papeis ?? []).map((papel) => (
+          <span key={`papel-${papel.idPapel}`} className={'badge ' + (vigente(papel) ? 'badge-aviso' : 'badge-neutro')}>
+            {papel.nomePapel}
+            {vigente(papel) && <i className="fa-solid fa-clock ml-1 text-[10px]"></i>}
+          </span>
+        )),
+      ].filter(Boolean)
+    : undefined;
+
   return (
     <ModalFicha
       // `carregando`: mesmo mecanismo de ModalConsultarUsuario.
@@ -192,20 +267,30 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
       titulo={base.nome}
       subtitulo={usuario?.email}
       avatar={usuario && <AvatarUsuario nome={base.nome} foto={fotoNova !== undefined ? fotoNova.url : base.avatarUrl} tamanho="lg" />}
+      badges={etiquetas}
       aoFechar={fechar}
       rodape={
         usuario && (
-          <RodapeAcoes
-            aoCancelar={fechar}
-            rotuloCancelar="Fechar"
-            acao={{
-              rotulo: 'Salvar',
-              rotuloOcupado: 'Salvando...',
-              ocupado: salvando,
-              desabilitado: !sujoConta && !sujoPerfil,
-              aoClicar: () => void salvar(),
-            }}
-          />
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className={'text-sm ' + (mudancas.length ? 'texto-aviso font-semibold' : 'texto-fraco')}>
+              {mudancas.length
+                ? `${mudancas.length} ${mudancas.length === 1 ? 'alteração não salva' : 'alterações não salvas'}: ${mudancas.join(', ')}.`
+                : 'Nenhuma alteração para salvar.'}
+            </p>
+            <div className="flex-1">
+              <RodapeAcoes
+                aoCancelar={fechar}
+                rotuloCancelar="Fechar"
+                acao={{
+                  rotulo: 'Salvar',
+                  rotuloOcupado: 'Salvando...',
+                  ocupado: salvando,
+                  desabilitado: !sujoConta && !sujoPerfil,
+                  aoClicar: () => void salvar(),
+                }}
+              />
+            </div>
+          </div>
         )
       }
     >
@@ -215,9 +300,10 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
         <MensagemErro texto={erro} className="p-6 text-center texto-erro text-sm font-bold" />
       ) : (
         <>
+          <FiltroPartes partes={partes} atual={parte} aoEscolher={setParte} />
           <MensagemErro texto={erro} />
 
-          <div className="grid lg:grid-cols-3 gap-6 items-start">
+          <div className={ve('conta') + ' grid lg:grid-cols-3 gap-6 items-start'}>
             <div className="lg:col-span-2 space-y-6">
               <SecaoFicha titulo="Dados da conta">
                 <div className="sm:col-span-2 flex items-center gap-4">
@@ -241,25 +327,35 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
                     />
                   )}
                 </Campo>
-              </SecaoFicha>
-
-              <SecaoFicha titulo="Senha">
-                <Campo rotulo="Nova senha (opcional)" erro={conta.erroDe('senha')} className="sm:col-span-2">
-                  {({ atributos, classeErro }) => (
-                    <>
-                      <input
-                        {...atributos}
-                        type="password"
-                        value={novaSenha}
-                        onChange={(evento) => setNovaSenha(evento.target.value)}
-                        className={'input-padrao' + classeErro}
-                        placeholder="Deixe em branco para não trocar"
-                        autoComplete="new-password"
-                      />
-                      <MedidorSenha senha={novaSenha} />
-                    </>
-                  )}
-                </Campo>
+                {trocandoSenha ? (
+                  <Campo rotulo="Nova senha" erro={conta.erroDe('senha')} className="sm:col-span-2">
+                    {({ atributos, classeErro }) => (
+                      <>
+                        <div className="flex gap-2">
+                          <input
+                            {...atributos}
+                            type="password"
+                            value={novaSenha}
+                            onChange={(evento) => setNovaSenha(evento.target.value)}
+                            className={'input-padrao flex-1' + classeErro}
+                            autoComplete="new-password"
+                            autoFocus
+                          />
+                          <button type="button" onClick={cancelarTrocaSenha} className="btn btn-secondary shrink-0">
+                            Cancelar
+                          </button>
+                        </div>
+                        <MedidorSenha senha={novaSenha} />
+                      </>
+                    )}
+                  </Campo>
+                ) : (
+                  <div className="sm:col-span-2">
+                    <button type="button" onClick={() => setTrocandoSenha(true)} className="btn btn-secondary">
+                      <i className="fa-solid fa-key"></i> Trocar senha
+                    </button>
+                  </div>
+                )}
               </SecaoFicha>
 
               {formPerfil && perfilPesquisador && (
@@ -282,15 +378,8 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
             <div className="space-y-6">
               <SecaoFicha titulo="Metadados" colunas={1}>
                 <CampoSomenteLeitura rotulo="id" valor={idUsuario} />
-                <CampoSomenteLeitura rotulo="E-mail" valor={usuario.email} />
-                <CampoSomenteLeitura rotulo="E-mail verificado" valor={usuario.emailVerificado ? 'Sim' : 'Não'} />
                 <CampoSomenteLeitura rotulo="Criado em" valor={usuario.criadoEm && formatarData(usuario.criadoEm)} />
-                {perfilPesquisador && (
-                  <CampoSomenteLeitura
-                    rotulo="Status (pesquisador)"
-                    valor={ROTULO_STATUS_PESQUISADOR[perfilPesquisador.statusPesquisador]}
-                  />
-                )}
+                <CampoSomenteLeitura rotulo="Último login" valor={usuario.ultimoLoginEm ? formatarData(usuario.ultimoLoginEm) : 'Nunca'} />
               </SecaoFicha>
 
               {import.meta.env.DEV && (
@@ -307,61 +396,121 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
             </div>
           </div>
 
-          <div className="border-t borda-padrao"></div>
-          <AvisoValeNaHora />
+          {parte === 'geral' && <div className="border-t borda-padrao"></div>}
+          {parte !== 'conta' && <AvisoValeNaHora />}
 
-          <SecaoFicha titulo="Papéis" colunas={1}>
-            <PapeisDoUsuario
-              auth={auth}
-              idUsuario={idUsuario}
-              papeis={papeis ?? []}
-              aoMudarPapeis={setPapeis}
-              aoAtualizado={aoAtualizado}
-            />
-          </SecaoFicha>
-
-          <SecaoFicha titulo="Moderação" colunas={1}>
-            <div className="flex items-center justify-between gap-3 rounded-lg border borda-forte p-3">
-              <p className="text-xs texto-fraco">
-                Zera o contador de tentativas de login falhas e libera a conta, caso esteja bloqueada temporariamente.
-              </p>
-              <button type="button" onClick={aoDesbloquear} disabled={desbloqueando} className="btn btn-secondary shrink-0">
-                {desbloqueando ? 'Desbloqueando...' : 'Desbloquear login'}
-              </button>
-            </div>
-            <SecaoModeracao auth={auth} idUsuario={idUsuario} />
-          </SecaoFicha>
+          <div className={ve('papeis')}>
+            <SecaoFicha titulo="Papéis" colunas={1}>
+              <PapeisDoUsuario
+                auth={auth}
+                idUsuario={idUsuario}
+                papeis={papeis ?? []}
+                aoMudarPapeis={setPapeis}
+                aoAtualizado={aoAtualizado}
+              />
+            </SecaoFicha>
+          </div>
 
           {perfilPesquisador && (
-            <>
+            <div className={ve('pesquisador') + ' space-y-6'}>
               <SecaoFicha titulo="CPF">
-                <CampoFicha rotulo="CPF atual" valor={formatarCpfOuMotivoOculto(perfilPesquisador.cpf)} largura="cheia" />
-                <div className="sm:col-span-2 flex items-end gap-2 rounded-lg border borda-forte p-3">
-                  <label className="text-xs flex-1 flex flex-col gap-1">
-                    Corrigir CPF (suporte/admin)
-                    <input
-                      type="text"
-                      value={formatarCpf(cpfCorrecao)}
-                      onChange={(evento) => setCpfCorrecao(evento.target.value.replace(/\D/g, '').slice(0, 11))}
-                      aria-invalid={Boolean(cpf.erroDe('cpf'))}
-                      className={'input-padrao' + (cpf.erroDe('cpf') ? ' borda-erro' : '')}
-                    />
-                    {cpf.erroDe('cpf') && <span className="texto-erro font-semibold">{cpf.erroDe('cpf')}</span>}
-                  </label>
-                  <button type="button" className="btn btn-secondary shrink-0" onClick={() => void salvarCorrecaoCpf()}>
-                    Salvar CPF
-                  </button>
-                </div>
+                <CampoFicha rotulo="CPF atual" valor={formatarCpfOuMotivoOculto(perfilPesquisador.cpf)} />
+                {corrigindoCpf ? (
+                  <div className="sm:col-span-2 flex items-end gap-2 rounded-lg border borda-forte p-3">
+                    <label className="text-xs flex-1 flex flex-col gap-1">
+                      CPF correto (suporte/admin)
+                      <input
+                        type="text"
+                        value={formatarCpf(cpfCorrecao)}
+                        onChange={(evento) => setCpfCorrecao(evento.target.value.replace(/\D/g, '').slice(0, 11))}
+                        aria-invalid={Boolean(cpf.erroDe('cpf'))}
+                        className={'input-padrao' + (cpf.erroDe('cpf') ? ' borda-erro' : '')}
+                        autoFocus
+                      />
+                      {cpf.erroDe('cpf') && <span className="texto-erro font-semibold">{cpf.erroDe('cpf')}</span>}
+                    </label>
+                    <button type="button" className="btn btn-secondary shrink-0" onClick={cancelarCorrecaoCpf}>
+                      Cancelar
+                    </button>
+                    <button type="button" className="btn btn-primary shrink-0" onClick={() => void salvarCorrecaoCpf()}>
+                      Salvar CPF
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-end">
+                    <button type="button" className="btn btn-secondary" onClick={() => setCorrigindoCpf(true)}>
+                      <i className="fa-solid fa-pen"></i> Corrigir CPF
+                    </button>
+                  </div>
+                )}
               </SecaoFicha>
 
               <LinksAcademicosDoUsuario auth={auth} idUsuario={idUsuario} />
-
-              <SecaoModeracaoPesquisador auth={auth} idUsuario={idUsuario} />
-            </>
+            </div>
           )}
+
+          <div className={ve('moderacao') + ' space-y-6'}>
+            <SecaoFicha titulo="Acesso" colunas={1}>
+              <div className="flex items-center justify-between gap-3 rounded-lg border borda-forte p-3">
+                <p className="text-xs texto-fraco">
+                  Zera o contador de tentativas de login falhas e libera a conta, caso esteja bloqueada temporariamente.
+                </p>
+                <button type="button" onClick={aoDesbloquear} disabled={desbloqueando} className="btn btn-secondary shrink-0">
+                  {desbloqueando ? 'Desbloqueando...' : 'Desbloquear login'}
+                </button>
+              </div>
+            </SecaoFicha>
+
+            <SecaoModeracao auth={auth} idUsuario={idUsuario} aoMudar={setSuspensaoConta} />
+            {perfilPesquisador && (
+              <SecaoModeracaoPesquisador auth={auth} idUsuario={idUsuario} aoMudar={setSuspensaoPesquisador} />
+            )}
+          </div>
         </>
       )}
     </ModalFicha>
+  );
+}
+
+// Data até quando a suspensão vale, ou null se não há suspensão em vigor.
+function vigente(suspensao: { suspensoAte: string | null } | null): string | null {
+  return suspensao?.suspensoAte && new Date(suspensao.suspensoAte) > new Date() ? suspensao.suspensoAte : null;
+}
+
+type Parte = 'geral' | 'conta' | 'papeis' | 'pesquisador' | 'moderacao';
+
+// Filtro fixo no topo do corpo do modal: "Geral" mostra tudo; cada outra opção mostra só aquela parte. Trocar volta
+// a rolagem para o topo, para a parte escolhida aparecer inteira.
+function FiltroPartes({
+  partes,
+  atual,
+  aoEscolher,
+}: {
+  partes: { chave: Parte; rotulo: string }[];
+  atual: Parte;
+  aoEscolher: (parte: Parte) => void;
+}) {
+  const ref = useRef<HTMLElement>(null);
+  return (
+    <nav ref={ref} aria-label="Partes da tela" className="sticky -top-6 z-10 -mx-8 px-8 py-2 fundo-cartao border-b borda-padrao flex flex-wrap gap-1">
+      {partes.map((parte) => (
+        <button
+          key={parte.chave}
+          type="button"
+          aria-pressed={atual === parte.chave}
+          onClick={() => {
+            aoEscolher(parte.chave);
+            ref.current?.closest('.overflow-y-auto')?.scrollTo({ top: 0 });
+          }}
+          className={
+            'px-3 py-1.5 rounded-lg text-sm font-semibold ' +
+            (atual === parte.chave ? 'fundo-sutil texto-marca' : 'texto-fraco hover-texto-forte')
+          }
+        >
+          {parte.rotulo}
+        </button>
+      ))}
+    </nav>
   );
 }
 
