@@ -4,6 +4,7 @@ import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura
 import { MensagemErro } from '../../components/crud/mensagem-erro';
 import type { EstadoSuspensao } from '../../components/crud/secao-suspensao';
 import { ModalFicha } from '../../components/crud/modal-ficha';
+import { ResumoAlteracoes } from '../../components/crud/resumo-alteracoes';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { TabelaLinksAcademicos } from '../../components/crud/tabelas/1-tabela-links-academicos';
 import { confirmarSaida, useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
@@ -272,11 +273,7 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
       rodape={
         usuario && (
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className={'text-sm ' + (mudancas.length ? 'texto-aviso font-semibold' : 'texto-fraco')}>
-              {mudancas.length
-                ? `${mudancas.length} ${mudancas.length === 1 ? 'alteração não salva' : 'alterações não salvas'}: ${mudancas.join(', ')}.`
-                : 'Nenhuma alteração para salvar.'}
-            </p>
+            <ResumoAlteracoes mudancas={mudancas} />
             <div className="flex-1">
               <RodapeAcoes
                 aoCancelar={fechar}

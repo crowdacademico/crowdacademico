@@ -1,12 +1,15 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { MensagemErro } from './mensagem-erro';
 import { Carregando } from '../layout/carregando';
+import { Tooltip } from '../layout/tooltip';
 import type { ReactNode } from 'react';
 import { useFocoPreso } from '../../services/constant/hook/use-foco-preso';
 
 interface ModalFichaProps {
   titulo: string;
   subtitulo?: string;
+  // Explicação da tela num "ⓘ" ao lado do título (aparece ao passar o mouse), no lugar de um subtítulo longo.
+  ajuda?: string;
   avatar?: ReactNode;
   badges?: ReactNode[];
   rodape?: ReactNode;
@@ -29,7 +32,8 @@ interface ModalFichaProps {
   // deste).
   fecharAoClicarFora?: boolean;
   // Modal com mais de uma tela (abas ou etapas): abre já na altura cheia, e cada tela rola por dentro. Assim o
-  // rodapé fica no mesmo lugar desde o começo, mesmo quando a próxima aba é mais alta que a primeira.
+  // rodapé fica no mesmo lugar desde o começo, mesmo quando a próxima aba é mais alta que a primeira. O corpo vira
+  // coluna flex: um filho com `flex-1` ocupa o espaço que sobra (ex.: a caixa de texto do Alterar Termo).
   variasTelas?: boolean;
 }
 
@@ -49,6 +53,7 @@ interface ModalFichaProps {
 export function ModalFicha({
   titulo,
   subtitulo,
+  ajuda,
   avatar,
   badges,
   rodape,
@@ -150,7 +155,10 @@ export function ModalFicha({
           <div className="flex items-start gap-3 min-w-0">
             {avatarExibido}
             <div className="min-w-0">
-              <h2 id={idTitulo} className="titulo-secao truncate">{tituloExibido}</h2>
+              <div className="flex items-center gap-2 min-w-0">
+                <h2 id={idTitulo} className="titulo-secao truncate">{tituloExibido}</h2>
+                {ajuda && !carregando && <Tooltip texto={ajuda} baixo />}
+              </div>
               {subtituloExibido && <p className="text-sm texto-fraco mt-1 break-words">{subtituloExibido}</p>}
               {badgesExibidos && badgesExibidos.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mt-2">{badgesExibidos}</div>
@@ -167,7 +175,7 @@ export function ModalFicha({
           </button>
         </div>
 
-        <div className="flex-1 px-8 py-6 space-y-6 overflow-y-auto">
+        <div className={'flex-1 px-8 py-6 space-y-6 overflow-y-auto' + (variasTelas ? ' flex flex-col' : '')}>
           <MensagemErro texto={erro} />
           {children}
         </div>

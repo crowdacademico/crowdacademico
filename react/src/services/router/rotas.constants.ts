@@ -20,7 +20,6 @@ import { BancadaCampanha } from '../../views/campo-testes/bancada-campanha';
 import { VidaCampanhaAtiva } from '../../views/campo-testes/vida-campanha-ativa';
 import { GuiaEstilo } from '../../views/campo-testes/guia-estilo/1-guia-estilo';
 import { ListarTermosUso } from '../../views/5-termo-uso/listar-termos-uso';
-import { CriarTermoUso } from '../../views/5-termo-uso/criar-termo-uso';
 
 // Fonte única de verdade para "quais páginas existem": App.tsx monta as <Route> daqui e breadcrumb.tsx monta
 // o rótulo daqui. rotuloBreadcrumb: null = não aparece no breadcrumb.
@@ -220,17 +219,7 @@ export const ROTAS_ADMIN: Rota[] = [
 
   // Sem rota própria (são modais abertos direto pela listagem): Criar/Alterar/Consultar/Excluir de Usuário,
   // Parâmetro do Sistema, Área de Conhecimento, Tipo de Link e Motivo de Denúncia; Alterar de Papel; Consultar
-  // de Campanha e de Pesquisador; Consultar e Alterar de Termo de Uso (ModalAlterarTermoUso).
-
-  // Termo de Uso: filha de /admin/termos-uso. Consultar, Alterar e Excluir são modais da lista (Excluir só apaga
-  // rascunho que ninguém aceitou).
-  {
-    caminho: '/admin/termos-uso/criar',
-    caminhoRelativo: 'termos-uso/criar',
-    elemento: CriarTermoUso,
-    rotuloBreadcrumb: 'Publicar Termo de Uso',
-    paiCaminho: '/admin/termos-uso',
-  },
+  // de Campanha e de Pesquisador; Criar, Consultar, Alterar e Excluir de Termo de Uso.
 
   // O Campo de Testes vive só neste trecho e NÃO está nos requisitos funcionais (o arquivo inteiro é a
   // fonte única de verdade de TODAS as rotas, não só as dele).

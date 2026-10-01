@@ -1,9 +1,10 @@
 import { useCallback } from 'react';
 import { GenericTable } from '../../components/crud/generic-table';
-import { ModalDetalhe } from '../../components/crud/modal-detalhe';
 import { BotaoCriar } from '../../components/crud/botao-criar';
 import { useCrudModais } from '../../services/constant/hook/use-crud-modais';
 import { ModalAlterarTermoUso } from './modal-alterar-termo-uso';
+import { ModalConsultarTermoUso } from './modal-consultar-termo-uso';
+import { ModalCriarTermoUso } from './modal-criar-termo-uso';
 import { ModalExcluirTermoUso } from './modal-excluir-termo-uso';
 import { termoUsoApi } from '../../services/5-termo-uso/api/termo-uso.api';
 import { ROTULO_TIPO_TERMO, TIPOS_TERMO } from '../../services/5-termo-uso/constants/termo-uso-tipos.constants';
@@ -11,8 +12,8 @@ import type { PropsPagina } from '../../services/router/pagina.type';
 import type { TermoUsoResponse } from '../../services/5-termo-uso/type/termo-uso.type';
 
 // Criar/Listar/Consultar/Alterar/Excluir EM MODAL, mesmo padrão de Usuário/Pesquisadores. `conteudo` não vira
-// coluna (texto integral, longo demais para tabela): Consultar abre no MESMO ModalDetalhe já usado por
-// Permissões; Alterar abre ModalAlterarTermoUso (o mesmo componente que o card de Regras do Negócio usa).
+// coluna (texto integral, longo demais para tabela): Consultar, Alterar e Criar mostram o texto numa caixa que
+// estica até o fim do modal, com "Tela cheia". Alterar e Criar são os mesmos que o card de Regras do Negócio usa.
 //
 // Ordem das colunas: "versão" é o identificador visível (mesmo papel de "nome" nas outras tabelas), então vem
 // logo depois do id, igual ao padrão (id, nome, ..., Ações) de todo o resto do painel.
@@ -26,6 +27,9 @@ import type { TermoUsoResponse } from '../../services/5-termo-uso/type/termo-uso
 export function ListarTermosUso({ auth }: PropsPagina) {
   // Nomes padronizados via `useCrudModais`, o mesmo hook das outras telas de listagem.
   const {
+    criando,
+    abrirCriando,
+    fecharCriando,
     alterando,
     consultando,
     excluindo,
@@ -47,7 +51,7 @@ export function ListarTermosUso({ auth }: PropsPagina) {
       <GenericTable<TermoUsoResponse>
         titulo="Termo de Uso"
         acaoTopo={
-          <BotaoCriar para="/admin/termos-uso/criar" />
+          <BotaoCriar aoClicar={abrirCriando} />
         }
         colunas={[
           { chave: 'idTermo', rotulo: 'id', tipo: 'id' },
@@ -81,22 +85,9 @@ export function ListarTermosUso({ auth }: PropsPagina) {
         }}
       />
 
-      {consultando && (
-        <ModalDetalhe
-          titulo={`Termo de Uso ${consultando.versao} (${ROTULO_TIPO_TERMO[consultando.tipo]})`}
-          chave={
-            (consultando.ativo ? 'Versão vigente' : 'Versão histórica (substituída)') +
-            (consultando.aceites !== undefined ? ` · ${consultando.aceites} aceite(s) registrado(s)` : '')
-          }
-          aoFechar={fecharConsultando}
-          secoes={[
-            {
-              titulo: 'Texto completo',
-              conteudo: <div className="whitespace-pre-wrap">{consultando.conteudo}</div>,
-            },
-          ]}
-        />
-      )}
+      {criando && <ModalCriarTermoUso auth={auth} aoFechar={fecharCriando} aoCriado={recarregar} />}
+
+      {consultando && <ModalConsultarTermoUso termo={consultando} aoFechar={fecharConsultando} />}
 
       {alterando && (
         <ModalAlterarTermoUso

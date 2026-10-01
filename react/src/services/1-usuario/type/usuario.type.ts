@@ -31,6 +31,7 @@ export interface UsuarioResponseLoginHistory {
 
 // Espelha usuario.response-accepted-term.ts (Consultar Usuário: onde fica registrado o aceite do Termo de Uso).
 export interface UsuarioResponseAcceptedTerm {
+  idTermo: number;
   tipo: TipoTermo;
   versao: string;
   aceitoEm: string;

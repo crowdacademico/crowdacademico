@@ -23,6 +23,7 @@ export class UsuarioServiceFindAllAcceptedTerms {
         'usuario_termo.id_termo',
       )
       .select([
+        'termos_de_uso.id_termo',
         'termos_de_uso.tipo',
         'termos_de_uso.versao',
         'usuario_termo.aceito_em',
@@ -32,6 +33,7 @@ export class UsuarioServiceFindAllAcceptedTerms {
       .execute();
 
     return linhas.map((linha) => ({
+      idTermo: linha.id_termo,
       tipo: linha.tipo,
       versao: linha.versao,
       aceitoEm: linha.aceito_em,

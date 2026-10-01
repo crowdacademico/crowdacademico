@@ -1126,3 +1126,18 @@ CSS puro (`:hover`/`:focus`/`:focus-visible`), sem estado de React na bolha em s
 - **Decisão:** "Ocultar/Reverter" (atualizações) e "Endossar/Remover endosso" (comentários) usam `AcaoLinha` com ícone, como as outras tabelas. "Endossar" no limite fica apagado, com o motivo na dica (`indisponivel`).
 - **Motivo:** eram botões só de texto com a classe das ações de ícone. Quando a tabela apertava, a regra que aumenta os ícones aumentava o texto junto.
 - **Caso-limite aceito:** nenhum.
+
+📌 **Alterar Usuário: filtro de partes, pílulas de situação e rodapé que diz o que mudou (01-10-2026).**
+- **Decisão:** no topo do corpo, um filtro fixo: "Geral" (padrão) mostra tudo; Conta, Papéis, Pesquisador e Moderação mostram só aquela parte. As outras ficam escondidas, não desmontadas, então nada do que se está editando se perde. O cabeçalho mostra pílulas (conta suspensa, e-mail verificado, situação do pesquisador, papéis). "Trocar senha" e "Corrigir CPF" ficam fechados até o clique. O rodapé diz "N alterações não salvas: ..." (`ResumoAlteracoes`, usado também por Papel, Termo de Uso e Criar Termo). As seções de suspensão continuam com os títulos "Moderação" e "Moderação (Pesquisador)", sem bloco vermelho.
+- **Motivo:** a tela única ficou longa; o filtro deixa ver uma parte só sem voltar às abas (que dançavam e espalhavam código). A situação da pessoa aparece sem rolar. O Lucas recusou o rótulo "Zona de risco" e o contorno vermelho.
+- **Caso-limite aceito:** uma alteração numa parte escondida continua valendo e aparece no rodapé, mesmo sem estar à vista.
+
+📌 **Termo de Uso: Criar, Consultar, Alterar e Excluir em modal, com caixa de texto longo e tela cheia (01-10-2026).**
+- **Decisão:** Criar virou modal (a página `/admin/termos-uso/criar` saiu; o "Publicar primeira versão" de Regras do Negócio abre o mesmo modal com o tipo escolhido). O texto mora em `CaixaTextoLongo`: a caixa estica até o fim do modal de altura cheia (o corpo de `ModalFicha` com `variasTelas` virou coluna flex), rola por dentro só quando o texto não cabe, mostra a contagem de caracteres e tem a pílula "Tela cheia" (`TelaCheia`, que fecha com Esc sem fechar o modal). Consultar Usuário abre o termo aceito em tela cheia ao clicar no aceite (a lista de aceites passou a trazer `idTermo`). As pílulas (versão, Vigente/Substituída/Rascunho, aceites) vêm de `etiquetasTermoUso`. Criar tem "Começar da vigente" e barra versão repetida antes do banco. O subtítulo longo virou ⓘ (prop `ajuda` do `ModalFicha`).
+- **Motivo:** esticar a caixa com o mouse dentro de um modal que rola era lento; a tela cheia resolve a leitura longa e a mesma peça serve para editar e para ler. Uma nova versão quase sempre é a anterior corrigida.
+- **Caso-limite aceito:** o banco não guarda se uma versão já foi vigente. Não vigente com aceite aparece como "Substituída"; sem aceite, "Rascunho" (a mesma regra que libera o Excluir).
+
+📌 **Dica (tooltip) só abre com foco de teclado.**
+- **Decisão:** a bolha `.dica__bolha` abre com `:hover` e `:focus-visible`; `:focus` comum só no ⓘ avulso (`.dica--info`).
+- **Motivo:** ao fechar um modal, o foco volta para o botão que o abriu, e com `:focus` a dica dele ficava presa na tela depois de um clique de mouse.
+- **Caso-limite aceito:** ao fechar um modal com Esc, a dica do botão aparece (o foco de teclado está ali, de propósito). No celular, o ⓘ continua abrindo ao toque.
