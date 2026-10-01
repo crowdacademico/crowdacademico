@@ -1,7 +1,7 @@
 /* ESTE ARQUIVO EXISTE SOLENEMENTE PARA O CAMPO DE TESTES. NÃO ESTÁ NOS REQUISITOS FUNCIONAIS E NEM ESTARÁ.
 
    EXCEÇÃO: `.links-academicos-wrapper`, mais abaixo, também é usado pelos links acadêmicos do Alterar Usuário
-   (`views/1-usuario/painel-links-academicos.tsx`), que deixou de ser exclusivo do Campo de Testes ao virar parte do
+   (`LinksAcademicosDoUsuario`, em `views/1-usuario/modal-alterar-usuario.tsx`), que deixou de ser exclusivo do Campo de Testes ao virar parte do
    CRUD real de Usuário. Não vale a pena mover essa única regra para outro arquivo; fica registrado aqui para este
    comentário não mentir. */
 
