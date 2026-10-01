@@ -590,13 +590,6 @@
     background-color: color-mix(in srgb, var(--cor-marca) var(--opacidade-brilho-marca, 10%), transparent);
   }
 
-  /* Faixa verde do cabeçalho E do rodapé dos modais e das fichas (modal-ficha, ficha-consulta, cartao-formulario,
-     cadastro, aceite do Termo): uma classe só, para os dois mudarem juntos. */
-  .faixa-marca {
-    background-color: var(--cor-fundo-sutil);
-    background-image: var(--cor-degrade-faixa);
-  }
-
   /* Cartão do painel (cards do Dashboard e das suas abas): fundo de cartão, borda, canto arredondado e sombra
      leve. O espaçamento interno fica em cada uso (p-5, p-8, overflow-hidden...). */
   .cartao-painel {

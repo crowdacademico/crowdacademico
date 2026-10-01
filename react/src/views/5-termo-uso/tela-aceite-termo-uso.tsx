@@ -42,7 +42,7 @@ export function TelaAceiteTermoUso({ auth }: TelaAceiteTermoUsoProps) {
   return (
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 fundo-pagina">
       <div className="max-w-2xl w-full fundo-cartao rounded-3xl shadow-2xl border borda-padrao overflow-hidden flex flex-col max-h-[85vh]">
-        <div className="px-8 py-6 border-b borda-padrao faixa-marca">
+        <div className="px-8 py-6 border-b borda-padrao fundo-sutil">
           <h1 className="titulo-pagina">Termo de Uso atualizado</h1>
           <p className="text-sm texto-fraco mt-1">
             Publicamos uma versão nova do Termo de Uso. Leia e aceite para continuar usando a plataforma.
@@ -60,7 +60,7 @@ export function TelaAceiteTermoUso({ auth }: TelaAceiteTermoUsoProps) {
 
         <MensagemErro texto={erro} className="px-8 pb-2 text-xs texto-erro font-semibold" />
 
-        <div className="px-8 py-5 border-t borda-padrao faixa-marca flex flex-wrap justify-end gap-3">
+        <div className="px-8 py-5 border-t borda-padrao flex flex-wrap justify-end gap-3">
           <button type="button" className="btn btn-secondary" onClick={() => void auth.logout()}>
             Sair
           </button>
