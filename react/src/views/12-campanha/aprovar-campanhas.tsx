@@ -33,7 +33,7 @@ export function AprovarCampanhas({ auth }: PropsPagina) {
     <div className="admin-content-painel">
       <GenericTable<LinhaFila>
         titulo="Aprovar Campanhas"
-        subtitulo="Campanhas enviadas pelos pesquisadores, esperando a sua avaliação."
+        ajuda="Campanhas enviadas pelos pesquisadores, esperando a sua avaliação."
         colunas={[
           { chave: 'idCampanha', rotulo: 'id', tipo: 'id' },
           { chave: 'titulo', rotulo: 'título', tipo: 'nome' },

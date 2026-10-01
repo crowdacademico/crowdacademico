@@ -30,21 +30,6 @@
     margin-bottom: 0.75rem;
   }
 
-  /* Frase embaixo do título da lista ("Acompanhe todas as campanhas..."): mesmo tamanho de .paragrafo, cor fraca. */
-  .crud-secao__subtitulo {
-    margin-top: 0.25rem;
-    color: var(--cor-texto-fraco);
-  }
-
-  /* Arrecadado + barra da meta (views/12-campanha/celula-arrecadacao.tsx), um embaixo do outro, centralizados como
-     o resto das colunas curtas. */
-  .celula-arrecadacao {
-    display: inline-flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.3rem;
-  }
-
   /* Embaixo da tabela, não em cima - se não tem dado (por erro ou por estar
      vazio mesmo), a mensagem faz mais sentido perto de onde o "vazio"
      apareceria, não lá no topo antes de qualquer coisa. */

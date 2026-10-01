@@ -512,6 +512,19 @@
     transform: none;
   }
 
+  /* Variante --solta: a bolha desenhada fora da tabela, direto no <body> (motivo de ação indisponível em
+     acao-linha.tsx), fixa na tela. Assim a caixa da tabela, que rola de lado, não a corta. top/left vêm do botão:
+     a bolha fica acima dele e termina na borda direita dele. */
+  .dica__bolha--solta {
+    position: fixed;
+    display: block;
+    opacity: 1;
+    bottom: auto;
+    right: auto;
+    transform: translate(-100%, -100%);
+    z-index: 400;
+  }
+
   /* Variante --curta: rótulo de 1 palavra (ações de tabela), sem quebra de linha, padding menor que a versão
      de texto explicativo. */
   .dica__bolha--curta {

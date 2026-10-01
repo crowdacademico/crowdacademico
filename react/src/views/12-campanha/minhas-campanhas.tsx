@@ -13,7 +13,7 @@ import { ModalAlterarCampanha } from './modal-alterar-campanha';
 import { ModalConsultarCampanha } from './modal-consultar-campanha';
 import { ModalCriarCampanha } from './modal-criar-campanha';
 import { ModalExcluirCampanha } from './modal-excluir-campanha';
-import { renderizarArrecadado, renderizarStatus } from './colunas-campanha';
+import { renderizarStatus } from './colunas-campanha';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { CampanhaResponse } from '../../services/12-campanha/type/campanha.type';
 import type { StatusPesquisador } from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
@@ -118,7 +118,7 @@ export function MinhasCampanhas({ auth }: PropsPagina) {
 
       <GenericTable<MinhaCampanhaLinha>
         titulo="Minhas Campanhas"
-        subtitulo="Crie, acompanhe e ajuste as suas campanhas. Os comentários recebidos ficam no Consultar."
+        ajuda="Crie, acompanhe e ajuste as suas campanhas. Os comentários recebidos ficam no Consultar."
         acaoTopo={
           podeCriar && (
             <BotaoCriar rotulo="Criar campanha" aoClicar={abrirCriando} />
@@ -129,7 +129,7 @@ export function MinhasCampanhas({ auth }: PropsPagina) {
           { chave: 'titulo', rotulo: 'título', tipo: 'nome' },
           { chave: 'status', rotulo: 'status', tipo: 'status', renderizar: renderizarStatus },
           { chave: 'metaFinanceira', rotulo: 'meta', tipo: 'dinheiro' },
-          { chave: 'valorBrutoArrecadado', rotulo: 'arrecadado', tipo: 'dinheiro', renderizar: renderizarArrecadado },
+          { chave: 'valorBrutoArrecadado', rotulo: 'arrecadado', tipo: 'dinheiro' },
           { chave: 'dataFim', rotulo: 'termina em', tipo: 'data' },
         ]}
         chavePrimaria="idCampanha"

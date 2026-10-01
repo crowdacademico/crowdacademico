@@ -8,7 +8,7 @@ import {
 } from '../../services/12-campanha/constants/status-campanha.constants';
 import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
 import { ModalConsultarCampanha } from './modal-consultar-campanha';
-import { renderizarArrecadado, renderizarStatus } from './colunas-campanha';
+import { renderizarStatus } from './colunas-campanha';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { CampanhaResponse } from '../../services/12-campanha/type/campanha.type';
 
@@ -50,14 +50,14 @@ export function ListarCampanhas({ auth }: PropsPagina) {
     <div className="admin-content-painel">
       <GenericTable
         titulo="Campanhas"
-        subtitulo="Acompanhe todas as campanhas da plataforma, em qualquer status."
+        ajuda="Acompanhe todas as campanhas da plataforma, em qualquer status."
         colunas={[
           { chave: 'idCampanha', rotulo: 'id', tipo: 'id' },
           { chave: 'titulo', rotulo: 'título', tipo: 'nome' },
           { chave: 'status', rotulo: 'status', tipo: 'status', renderizar: renderizarStatus },
           { chave: 'pesquisador', rotulo: 'pesquisador', tipo: 'texto' },
           { chave: 'metaFinanceira', rotulo: 'meta', tipo: 'dinheiro' },
-          { chave: 'valorBrutoArrecadado', rotulo: 'arrecadado', tipo: 'dinheiro', renderizar: renderizarArrecadado },
+          { chave: 'valorBrutoArrecadado', rotulo: 'arrecadado', tipo: 'dinheiro' },
         ]}
         vazio={{ icone: 'fa-bullhorn', titulo: 'Nenhuma campanha na plataforma ainda.' }}
         chavePrimaria="idCampanha"

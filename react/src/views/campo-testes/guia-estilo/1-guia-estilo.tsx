@@ -22,6 +22,7 @@ import { useEffect, useId, useState, type ReactNode } from 'react';
 import { CoresDoSistema, ComparadorVerdeTexto } from './2-guia-estilo-cores';
 import { ComparativoTemas } from './4-guia-estilo-temas';
 import { Avatares, BordasComContraste, BotaoDev, CamposExtras, InterativosGlobais } from './3-guia-estilo-extras';
+import { PilulaCarregandoModal } from '../../../components/crud/modal-ficha';
 
 const CLASSES_TIPOGRAFICAS = [
   { classe: 'titulo-pagina', exemplo: 'Título de página' },
@@ -226,6 +227,16 @@ export function GuiaEstilo() {
         descricao="Componentes globais: seguem o tema do cabeçalho, então troque o tema lá em cima para vê-los no claro e no escuro."
       >
         <InterativosGlobais />
+      </Secao>
+
+      {/* O mesmo componente do modal, parado: na tela de verdade ele some em menos de 1 segundo e é difícil de ver. */}
+      <Secao
+        titulo="Carregando do modal"
+        descricao='A pílula "Carregando..." que aparece no lugar de um modal enquanto ele busca os dados (ModalFicha). Aqui fica parada, sobre o mesmo fundo escurecido, para dar para olhar com calma.'
+      >
+        <div className="relative h-40 rounded-xl bg-black/40 flex items-start justify-center pt-6">
+          <PilulaCarregandoModal />
+        </div>
       </Secao>
     </div>
   );

@@ -7,6 +7,7 @@ import { TIPOS_COLUNA, type NomeTipoColuna } from './colunas/tipos-coluna';
 import { DISTRIBUICAO_COLUNAS } from './colunas/distribuicao';
 import { CabecalhoAcoes, CelulaAcoes, type AcaoIndisponivel, type AcoesLinha } from './colunas/5-coluna-acoes';
 import { BarraFiltros } from '../search/barra-filtros';
+import { Tooltip } from '../layout/tooltip';
 import { paginarClientSide } from '../../services/constant/util/paginacao.util';
 import { RodapePaginacao } from '../pagination/rodape-paginacao';
 import { TAMANHOS_PAGINA } from '../pagination/tamanhos-pagina.constants';
@@ -47,7 +48,9 @@ interface GenericTableProps<T extends Linha> {
   // é o mesmo nos dois níveis (classe `titulo-secao`).
   nivelTitulo?: 1 | 2;
   // Uma frase embaixo do título dizendo para que serve a lista (padrão de mercado: "Gerencie...", "Acompanhe...").
-  subtitulo?: string;
+  // Explicação da tela num "ⓘ" ao lado do título (aparece ao passar o mouse). Não é um subtítulo de propósito:
+  // um parágrafo a mais deixava o cabeçalho mais alto que o das outras listas e a tela "dançava" ao trocar.
+  ajuda?: string;
   acaoTopo?: ReactNode;
   colunas: Coluna<T>[];
   chavePrimaria: keyof T & string;
@@ -105,7 +108,7 @@ function maiorTexto<T extends Linha>(coluna: Coluna<T>, linhas: T[]): number {
 export function GenericTable<T extends Linha>({
   titulo,
   nivelTitulo = 1,
-  subtitulo,
+  ajuda,
   acaoTopo,
   colunas,
   chavePrimaria,
@@ -499,12 +502,14 @@ export function GenericTable<T extends Linha>({
     <section className="crud-secao">
       <div className="crud-secao__cabecalho">
         <div>
-          {nivelTitulo === 1 ? (
-            <h1 className="titulo-secao">{titulo}</h1>
-          ) : (
-            <h2 className="titulo-secao">{titulo}</h2>
-          )}
-          {subtitulo && <p className="paragrafo crud-secao__subtitulo">{subtitulo}</p>}
+          <div className="flex items-center gap-2">
+            {nivelTitulo === 1 ? (
+              <h1 className="titulo-secao">{titulo}</h1>
+            ) : (
+              <h2 className="titulo-secao">{titulo}</h2>
+            )}
+            {ajuda && <Tooltip texto={ajuda} baixo />}
+          </div>
         </div>
         {acaoTopo && <div className="crud-secao__acao-topo">{acaoTopo}</div>}
       </div>

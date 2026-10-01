@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
+import { BarraProgresso } from '../../components/crud/barra-progresso';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
@@ -126,7 +127,20 @@ export function ModalConsultarCampanha({ auth, idCampanha, comoDono = false, aoF
           <div className="space-y-6">
             <SecaoFicha titulo="Financeiro">
               <CampoFicha rotulo="Meta" valor={formatarMoeda(campanha.metaFinanceira)} />
-              <CampoFicha rotulo="Arrecadado" valor={formatarMoeda(campanha.valorBrutoArrecadado)} />
+              {/* Arrecadado com a barra de quanto da meta já foi atingido (como no Kickstarter e no Catarse). */}
+              <CampoFicha
+                rotulo="Arrecadado"
+                valor={
+                  <span className="block space-y-1.5">
+                    <span className="block">{formatarMoeda(campanha.valorBrutoArrecadado)}</span>
+                    <BarraProgresso
+                      valor={campanha.valorBrutoArrecadado}
+                      total={campanha.metaFinanceira}
+                      rotulo="Arrecadado em relação à meta"
+                    />
+                  </span>
+                }
+              />
               <CampoFicha
                 rotulo="Taxa da plataforma"
                 valor={campanha.taxaPlataforma === null ? 'Ainda não carimbada (não aprovada)' : `${campanha.taxaPlataforma}%`}

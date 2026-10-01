@@ -39,6 +39,16 @@ interface ModalFichaProps {
   variasTelas?: boolean;
 }
 
+// O "Carregando..." que aparece no lugar da janela enquanto ela ainda não está pronta (ver `pronto` abaixo). Componente
+// próprio para o Guia de Estilo mostrar o mesmo, parado (na tela de verdade ele dura menos de 1 segundo).
+export function PilulaCarregandoModal() {
+  return (
+    <div className="fundo-cartao rounded-full px-5 py-2 shadow-lg">
+      <Carregando />
+    </div>
+  );
+}
+
 // Mesma moldura de ModalDetalhe (backdrop + cartão + botão fechar), só que largo (max-w-5xl, igual
 // FichaConsulta largura="larga") e recebendo children livre em vez de uma lista fixa de `secoes`: pensado para
 // Consultar/Alterar que já usam <SecaoFicha>/<CampoFicha> (os MESMOS blocos da página real), só que dentro de
@@ -131,8 +141,8 @@ export function ModalFicha({
       }}
     >
       {!pronto && (
-        <div className="absolute top-[5vh] left-1/2 -translate-x-1/2 fundo-cartao rounded-full px-5 py-2 shadow-lg">
-          <Carregando />
+        <div className="absolute top-[5vh] left-1/2 -translate-x-1/2">
+          <PilulaCarregandoModal />
         </div>
       )}
       <div
