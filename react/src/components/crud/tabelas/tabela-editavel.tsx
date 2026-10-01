@@ -98,7 +98,7 @@ export function TabelaEditavel<T, F>({
               return (
                 <tr key={chave(linha)}>
                   {colunas.map((coluna) => (
-                    <td key={coluna.rotulo} className={classeCelula(coluna.centralizada)}>
+                    <td key={coluna.rotulo} className={classeCelula(coluna.centralizada)} data-rotulo={coluna.rotulo}>
                       {emEdicao && coluna.editavel !== false ? coluna.campo(edicao, mudarEdicao) : coluna.exibir(linha)}
                     </td>
                   ))}
@@ -134,7 +134,9 @@ export function TabelaEditavel<T, F>({
             {podeAdicionar && (
               <tr>
                 {colunas.map((coluna) => (
-                  <td key={coluna.rotulo}>{coluna.campo(novo, mudarNovo)}</td>
+                  <td key={coluna.rotulo} data-rotulo={coluna.rotulo}>
+                    {coluna.campo(novo, mudarNovo)}
+                  </td>
                 ))}
                 <td className="crud-tabela__celula--centralizada">
                   <button type="button" className="btn btn-sucesso text-xs whitespace-nowrap" onClick={() => void adicionar()}>

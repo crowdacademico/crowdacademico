@@ -104,6 +104,7 @@ export function ListarPapeis({ auth }: PropsPagina) {
       <div className="admin-content-painel">
         <GenericTable<PapelResponse>
           titulo="Papéis"
+          subtitulo="O que cada papel pode fazer no painel."
           colunas={[
             { chave: 'idPapel', rotulo: 'id', tipo: 'id' },
             { chave: 'nome', rotulo: 'nome', tipo: 'texto' },

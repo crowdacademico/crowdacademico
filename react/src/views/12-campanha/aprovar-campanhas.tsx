@@ -11,6 +11,8 @@ interface LinhaFila extends CampanhaResponse {
   atencao: string;
 }
 
+const ORDEM_FILA = { chave: 'criadoEm', direcao: 'asc' } as const;
+
 // Fila de aprovação do admin (grupo MODERAÇÃO do menu): só campanhas 'aguardando_aprovacao', com o sinal de
 // score baixo na coluna "atenção" (só aparece para quem pode aprovar). "Revisar" abre o modal com tudo o que é
 // preciso ler e os botões Aprovar e Rejeitar; quem barra de verdade é o banco.
@@ -43,6 +45,8 @@ export function AprovarCampanhas({ auth }: PropsPagina) {
           { chave: 'criadoEm', rotulo: 'criada em', tipo: 'data' },
         ]}
         chavePrimaria="idCampanha"
+        // Fila: quem chegou primeiro é revisado primeiro (padrão de fila de moderação).
+        ordenacaoInicial={ORDEM_FILA}
         vazio={{
           icone: 'fa-circle-check',
           titulo: 'Nenhuma campanha esperando aprovação.',

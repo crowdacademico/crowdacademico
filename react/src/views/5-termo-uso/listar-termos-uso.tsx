@@ -50,6 +50,7 @@ export function ListarTermosUso({ auth }: PropsPagina) {
     <div className="admin-content-painel">
       <GenericTable<TermoUsoResponse>
         titulo="Termo de Uso"
+        subtitulo="As versões dos termos que as pessoas aceitam. De cada tipo, só uma vale por vez."
         acaoTopo={
           <BotaoCriar aoClicar={abrirCriando} />
         }

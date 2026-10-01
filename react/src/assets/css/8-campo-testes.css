@@ -139,6 +139,52 @@
   white-space: nowrap;
 }
 
+/* Caixa estreita (celular): cada link vira um cartão (rótulo pequeno em cima de cada valor), em vez de uma linha
+   de tabela que transbordava e escondia o "+ adicionar" à direita. O rótulo vem de `data-rotulo` de cada célula
+   (tabela-editavel.tsx). */
+@container (max-width: 30rem) {
+  .links-academicos-wrapper .crud-tabela,
+  .links-academicos-wrapper .crud-tabela tbody,
+  .links-academicos-wrapper .crud-tabela tr {
+    display: block;
+    width: 100%;
+  }
+
+  .links-academicos-wrapper .crud-tabela thead {
+    display: none;
+  }
+
+  .links-academicos-wrapper .crud-tabela tr {
+    border: 1px solid var(--cor-borda);
+    border-radius: var(--radius-md);
+    padding: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .links-academicos-wrapper .crud-tabela td:nth-child(n) {
+    display: block;
+    width: 100%;
+    border: none;
+    white-space: normal;
+    text-align: left;
+  }
+
+  .links-academicos-wrapper .crud-tabela td[data-rotulo]::before {
+    content: attr(data-rotulo);
+    display: block;
+    font-size: var(--font-size-rotulo);
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--cor-texto-fraco);
+    margin-bottom: 0.25rem;
+  }
+
+  .links-academicos-wrapper .crud-tabela td:last-child .btn {
+    width: 100%;
+  }
+}
+
 @container (max-width: 60em) {
   .links-academicos-wrapper .crud-tabela__acao-texto {
     display: none;

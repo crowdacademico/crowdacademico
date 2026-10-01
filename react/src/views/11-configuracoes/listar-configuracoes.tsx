@@ -44,11 +44,24 @@ export function ListarConfiguracoes({ auth }: PropsPagina) {
     <div className="admin-content-painel">
       <GenericTable<ConfiguracoesResponse>
         titulo="Parâmetros do Sistema"
+        subtitulo="Regras do sistema que o administrador ajusta sem mexer no código."
         colunas={[
           { chave: 'idConfig', rotulo: 'id', tipo: 'id' },
-          // A descrição é o que o admin lê; a chave fica ao lado, para quem precisa dela (documentação, suporte).
-          { chave: 'descricao', rotulo: 'parâmetro', tipo: 'nome' },
-          { chave: 'chave', rotulo: 'chave', tipo: 'texto' },
+          // A descrição é o que o admin lê; a chave técnica vem embaixo, pequena, para quem precisa dela
+          // (documentação, suporte). Na mesma célula, não numa coluna própria: com ela a tabela não cabia e a
+          // coluna "tipo" ficava cortada atrás de "Ações". O filtro continua achando pela chave (`busca`).
+          {
+            chave: 'descricao',
+            rotulo: 'parâmetro',
+            tipo: 'nome',
+            renderizar: (linha) => (
+              <>
+                <span className="block">{linha.descricao}</span>
+                <code className="block text-xs texto-fraco mt-0.5 break-all">{linha.chave}</code>
+              </>
+            ),
+            busca: (linha) => linha.chave,
+          },
           { chave: 'valor', rotulo: 'valor', tipo: 'texto' },
           { chave: 'tipo', rotulo: 'tipo', tipo: 'status' },
           { chave: 'ativo', rotulo: 'ativo', tipo: 'simNao' },

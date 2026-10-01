@@ -45,6 +45,7 @@ export function ListarTiposLink({ auth }: PropsPagina) {
     <div className="admin-content-painel">
       <GenericTable<TipoLinkResponse>
         titulo="Tipos de Link"
+        subtitulo="Os sites aceitos nos links acadêmicos do pesquisador (Lattes, ORCID...)."
         acaoTopo={
           <BotaoCriar aoClicar={abrirCriando} />
         }

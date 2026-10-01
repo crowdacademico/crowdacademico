@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { AvatarUsuario } from '../../components/layout/avatar-usuario';
 import { GenericTable } from '../../components/crud/generic-table';
 import { BlocoLogAuditoria } from '../../components/crud/bloco-log-auditoria';
 import { BotaoCriar } from '../../components/crud/botao-criar';
@@ -91,12 +92,25 @@ export function ListarUsuarios({ auth }: PropsPagina) {
     <div className="admin-content-painel">
       <GenericTable<UsuarioLinha>
         titulo="Usuários"
+        subtitulo="Todas as contas da plataforma, com o papel e a situação de cada pessoa."
         acaoTopo={
           <BotaoCriar aoClicar={abrirCriando} />
         }
         colunas={[
           { chave: 'idUsuario', rotulo: 'id', tipo: 'id' },
-          { chave: 'nome', rotulo: 'nome', tipo: 'nome' },
+          {
+            chave: 'nome',
+            rotulo: 'nome',
+            tipo: 'nome',
+            // Inicial colorida ao lado do nome, para escanear a lista (padrão de Stripe e Linear). A foto real
+            // não vem na listagem (cada uma pede um link assinado), só ao abrir a pessoa.
+            renderizar: (linha) => (
+              <span className="flex items-center gap-3">
+                <AvatarUsuario nome={linha.nome} tamanho="sm" />
+                <span className="min-w-0">{linha.nome}</span>
+              </span>
+            ),
+          },
           { chave: 'papel', rotulo: 'papel', tipo: 'texto' },
           { chave: 'email', rotulo: 'email', tipo: 'texto' },
           { chave: 'emailVerificado', rotulo: 'e-mail verificado', tipo: 'simNao', quebrarRotulo: true },

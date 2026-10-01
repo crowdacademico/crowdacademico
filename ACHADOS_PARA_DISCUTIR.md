@@ -114,6 +114,38 @@ Mover regra de trigger para o Nest, recálculo de score sob demanda, trocar o lo
 - **`GET /campanha` (listagem) traz as mesmas colunas pesadas do detalhe** (`CAMPANHA_COLUNAS_SELECT`, inclui `descricao` de até 20 mil caracteres). Inofensivo hoje; rever o contrato quando a página pública existir.
 - **Constantes duplicadas entre `nest/` e `react/`:** conferido em 26-09-2026. A duplicação dentro de cada lado foi eliminada; sobram, de propósito, a lista de tipos de imagem e o perfil de redução do avatar (512 px, qualidade 80), sem código compartilhado entre os repositórios (cada lado comenta o outro). Sem mais nada a fazer.
 
+## G. Pesquisa de mercado em plataformas de crowdfunding (01-10-2026)
+
+Em palavras simples: olhamos como Kickstarter, Catarse e Experiment.com (o mais parecido com o CrowdAcadêmico, só ciência) organizam o painel de quem cria campanha. Quatro coisas que eles têm e nós não chamaram atenção. Nenhuma foi feita: são para pensar a melhor solução antes. O item 5 saiu da revisão do painel feita no mesmo dia.
+
+1. **Gráfico da arrecadação ao longo do tempo na campanha.**
+   - Como é lá: no Kickstarter, o painel do criador tem um gráfico da arrecadação dia a dia, com uma linha verde marcando a meta; passando o mouse num dia, aparece o total daquele dia.
+   - Como é aqui: o V8 já pede gráficos na página pública (RF-046: orçamento por categoria e cronograma como linha do tempo), mas não a arrecadação ao longo do tempo. Hoje mostramos só a barra de progresso.
+   - Para pensar: depende do módulo de contribuição (é ele que tem as datas de cada apoio). Daria para mostrar ao pesquisador (Minhas Campanhas) e ao admin (Consultar Campanha). Fica fora do V8: seria requisito novo.
+   - Fontes: [Kickstarter, Project Dashboard](https://www.kickstarter.com/blog/project-dashboard); [Kickstarter, The New Creator Dashboard](https://www.kickstarter.com/blog/the-new-creator-dashboard).
+
+2. **Seção "Resultados" ao final da campanha.**
+   - Como é lá: no Experiment.com, cada projeto tem seções próprias de Métodos e de Resultados, além das "Lab Notes" (um caderno de laboratório público). Eles fazem questão de dizer que "resultado negativo também é resultado".
+   - Como é aqui: o V8 já tem metade disso. Cada atualização de progresso registra a fase (andamento, resultado preliminar ou resultado final, RF-052). Falta só dar destaque: uma seção "Resultados" na página da campanha que mostra a atualização de resultado final em primeiro lugar, em vez de ela ficar misturada na lista.
+   - Para pensar: é a ideia que mais combina com um site de ciência e quase não muda requisito (é exibição do que o RF-052 já guarda).
+   - Fontes: [Experiment.com, Researcher Guide: Share](https://experiment.com/guide/share); [Experiment.com](https://experiment.com/).
+
+3. **Exportar apoiadores em CSV para o pesquisador.**
+   - Como é lá: no Kickstarter, o "backer report" lista os apoiadores com filtros e busca e baixa em CSV. No Catarse, o realizador baixa o histórico de apoios e os dados dos apoiadores em Excel ou CSV.
+   - Como é aqui: o V8 só tem a exportação dos PRÓPRIOS dados (LGPD, RF-017). Não existe exportação de apoiadores para o pesquisador.
+   - Para pensar: depende do módulo de contribuição. Cuidado de LGPD: decidir quais dados do apoiador o pesquisador pode ver (o Catarse entrega nome, CPF, e-mail e endereço porque entrega recompensa física; aqui talvez só nome, valor e data, e nada do anônimo).
+   - Fontes: [Kickstarter, How can I use my project's backer report?](https://help.kickstarter.com/hc/en-us/articles/48619766244251-How-can-I-use-my-project-s-backer-report); [Catarse, Quais informações o realizador recebe dos seus apoiadores?](https://suporte.catarse.me/hc/pt-br/articles/203074427-Quais-informa%C3%A7%C3%B5es-o-a-realizador-a-recebe-dos-seus-apoiadores); [Blog Catarse, funcionalidades do Novo Catarse em 2026](https://blog.catarse.com.br/post/confira-algumas-das-funcionalidades-que-chegam-no-novo-catarse-em-2026).
+
+4. **Atualização só para apoiadores, e não pública.**
+   - Como é lá: no Catarse, a novidade tem três destinos: pública (vai por e-mail e aparece na página), só para apoiadores (só e-mail), ou só para apoiadores de uma recompensa.
+   - Como é aqui: conferido no V8, não está previsto. O RF-051 diz que as atualizações ficam visíveis na página pública, em ordem cronológica; não há atualização privada.
+   - Para pensar: seria mudança de requisito (RF-051), e depende do módulo de e-mail. Para ciência pode fazer sentido (um resultado preliminar que o pesquisador ainda não quer tornar público), mas abre a pergunta de quem é "apoiador" (o anônimo não tem conta).
+   - Fonte: [Catarse, Como enviar novidades para seus apoiadores?](https://suporte.catarse.me/hc/pt-br/articles/360024077731-Como-enviar-novidades-para-seus-apoiadores).
+
+5. **Aprovar Campanhas: mostrar há quanto tempo cada campanha espera.**
+   - Situação: a fila agora abre com as mais antigas primeiro (pela data de criação). Mas a campanha não guarda QUANDO foi enviada para aprovação, só quando foi criada; um rascunho pode ficar semanas parado antes do envio, então "esperando há X dias" contado da criação seria enganoso.
+   - Para pensar: uma coluna nova em `campanha` (data do envio para aprovação, gravada na transição para `aguardando_aprovacao`). Precisa de um grupo novo no ATUALIZAR. Boa prática de fila de moderação: [Stream, moderation queue](https://getstream.io/resources/projects/moderation-course/admin/queue/).
+
 ## Sugestão de ordem
 
 Se o foco é otimizar: A.4, A.3, A.2, A.1 e A.7 (o A.1 com OK para a dependência), todos sem decisão de negócio, com teste no PGlite e prova ao vivo. Em seguida, a fila de aprovação (A.5). O dispatcher fica para depois de "Minhas campanhas".

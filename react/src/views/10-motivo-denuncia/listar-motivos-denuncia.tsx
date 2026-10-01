@@ -54,6 +54,7 @@ export function ListarMotivosDenuncia({ auth }: PropsPagina) {
     <div className="admin-content-painel">
       <GenericTable<MotivoDenunciaResponse>
         titulo="Motivos de Denúncia"
+        subtitulo="As opções que aparecem para quem denuncia um conteúdo."
         acaoTopo={
           <BotaoCriar aoClicar={abrirCriando} />
         }

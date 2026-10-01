@@ -3,9 +3,10 @@ import { Link } from 'react-router';
 import { Tooltip } from '../../components/layout/tooltip';
 import { BarraAbasBotoes } from '../../components/layout/barra-abas-botoes';
 import { dashboardApi } from '../../services/28-dashboard/api/dashboard.api';
+import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
 import { ROTULO_STATUS_CAMPANHA, type StatusCampanha } from '../../services/12-campanha/constants/status-campanha.constants';
 import { useBuscar } from '../../services/constant/hook/use-buscar';
-import { formatarReaisSemSimbolo } from '../../services/constant/util/formatacao.util';
+import { formatarDataHora, formatarReaisSemSimbolo } from '../../services/constant/util/formatacao.util';
 import { DashboardIdentidadeVisual } from './dashboard-identidade-visual';
 import { DashboardRegrasNegocio } from './dashboard-regras-negocio';
 import { DashboardSaude } from './dashboard-saude';
@@ -21,8 +22,8 @@ export const TEXTO_TOOLTIP_SESSOES_ATIVAS =
   'Pessoas com login ou renovação recente (janela ajustável nas configurações, padrão 30 minutos). Quem está em vários aparelhos conta uma vez só: uma aproximação de quem está usando o sistema agora.';
 
 // Abas: estrutura em abas em vez de empilhar seção atrás de seção (para o Dashboard não virar uma "tela onde
-// tudo cabe"). "Visão Geral" tem os cards + prévia de notificações; as outras 3 (Regras do Negócio, Identidade
-// Visual, Saúde) são visões do painel global.
+// tudo cabe"). "Visão Geral" tem "Precisa de você", os totais, a atividade recente e os acessados recentemente;
+// as outras 3 (Regras do Negócio, Identidade Visual, Saúde) são visões do painel global.
 type AbaChave = 'visao-geral' | 'regras' | 'identidade' | 'saude';
 
 const ABAS: { chave: AbaChave; rotulo: string; icone: string }[] = [
@@ -32,56 +33,83 @@ const ABAS: { chave: AbaChave; rotulo: string; icone: string }[] = [
   { chave: 'saude', rotulo: 'Saúde', icone: 'fa-heart-pulse' },
 ];
 
-// Card de total: só rótulo pequeno em cinza maiúsculo + número grande, sem ícone/fundo colorido: é assim que o
-// Experiment.com mostra número, cor vira acento raro, não preenchimento. `valor === null` = módulo ainda não
-// existe (hoje só notificação): mostra "-" em vez de esconder o card ou fingir que é 0. Borda slate-300, o
-// mesmo tom das bordas de tabela. `moeda`: o "R$" sai menor, na frente, e o número nunca quebra no meio
-// ("R$ 257.800,00" inteiro no tamanho grande não cabia no card e quebrava o último zero para a linha de baixo).
+// Card de total: ícone num quadradinho de cor suave, rótulo pequeno em maiúsculas e número grande. `tom`:
+// "aviso" pinta o card de amarelo claro (algo esperando alguém, ver "Precisa de você"); "ok" diz que está em dia.
+// `valor === null` = módulo ainda não existe: mostra "-" em vez de fingir que é 0. `moeda`: o "R$" sai menor, na
+// frente, e o número nunca quebra no meio. `para`: clicar leva à lista que o número resume (já filtrada).
 interface CardMetricaProps {
   rotulo: string;
   valor: number | string | null;
+  icone: string;
   moeda?: boolean;
-  // Lista que o número resume (já filtrada, quando dá): clicar no card leva direto a ela.
+  tom?: 'neutro' | 'aviso' | 'ok';
   para?: string;
 }
 
-function CardMetrica({ rotulo, valor, moeda = false, para }: CardMetricaProps) {
+function CardMetrica({ rotulo, valor, icone, moeda = false, tom = 'neutro', para }: CardMetricaProps) {
   const conteudo = (
-    <>
-      <div className="rotulo-leitura mb-1">
-        {rotulo}
+    <div className="flex items-start justify-between gap-3">
+      <div className="min-w-0">
+        <div className="rotulo-leitura mb-1">{rotulo}</div>
+        <div
+          className={
+            // Moeda: acompanha a largura do card (`cqi`), entre text-base e text-3xl, para caber no celular.
+            (moeda ? 'text-[clamp(1rem,11cqi,1.875rem)] leading-9 ' : 'text-3xl ') +
+            'font-extrabold whitespace-nowrap ' +
+            (valor === null ? 'texto-fraco opacity-50' : tom === 'aviso' ? 'texto-aviso' : 'texto-forte')
+          }
+        >
+          {valor === null ? (
+            '-'
+          ) : moeda ? (
+            <>
+              <span className="text-lg mr-1">R$</span>
+              {formatarReaisSemSimbolo(valor)}
+            </>
+          ) : (
+            valor
+          )}
+        </div>
+        {tom === 'ok' && <p className="text-xs texto-sucesso font-semibold mt-1">Tudo em dia</p>}
       </div>
-      <div
+      <span
         className={
-          // Moeda: acompanha a largura do card (`cqi`), entre text-base e text-3xl, com a mesma altura de
-          // linha do text-3xl, para caber no celular sem desalinhar dos cards vizinhos.
-          (moeda ? 'text-[clamp(1rem,13.5cqi,1.875rem)] leading-9 ' : 'text-3xl ') +
-          'font-extrabold whitespace-nowrap ' +
-          (valor === null ? 'texto-fraco opacity-50' : 'texto-forte')
+          'w-10 h-10 shrink-0 rounded-xl flex items-center justify-center ' +
+          (tom === 'aviso'
+            ? 'fundo-cartao texto-aviso'
+            : tom === 'ok'
+              ? 'fundo-sucesso texto-sucesso'
+              : 'brilho-marca texto-marca')
         }
+        aria-hidden="true"
       >
-        {valor === null ? (
-          '-'
-        ) : moeda ? (
-          <>
-            <span className="text-lg mr-1">R$</span>
-            {formatarReaisSemSimbolo(valor)}
-          </>
-        ) : (
-          valor
-        )}
-      </div>
-    </>
+        <i className={'fa-solid ' + icone}></i>
+      </span>
+    </div>
   );
-  const classe = '@container cartao-painel p-5 min-w-0 break-words';
+  const classe = '@container cartao-painel p-5 min-w-0 break-words' + (tom === 'aviso' ? ' cartao-painel--aviso' : '');
   return para ? (
-    <Link to={para} className={classe + ' block hover-fundo-sutil transition-colors'} aria-label={`${rotulo}: ver a lista`}>
+    <Link
+      to={para}
+      className={classe + ' block hover:-translate-y-0.5 hover:shadow-md transition-all'}
+      aria-label={`${rotulo}: ver a lista`}
+    >
       {conteudo}
     </Link>
   ) : (
     <div className={classe}>{conteudo}</div>
   );
 }
+
+// "Precisa de você": com número, o card fica amarelo; zerado, "Tudo em dia".
+const tomPendencia = (valor: number | null): 'aviso' | 'ok' | 'neutro' =>
+  valor === null ? 'neutro' : valor > 0 ? 'aviso' : 'ok';
+
+const OPERACAO: Record<string, { verbo: string; icone: string }> = {
+  INSERT: { verbo: 'criou', icone: 'fa-plus' },
+  UPDATE: { verbo: 'alterou', icone: 'fa-pen' },
+  DELETE: { verbo: 'excluiu', icone: 'fa-trash' },
+};
 
 // Lista de campanhas já filtrada pelo status (o filtro mora no endereço, com o rótulo do status).
 const campanhasCom = (status: StatusCampanha) =>
@@ -120,6 +148,9 @@ export function Dashboard({ auth }: DashboardProps) {
   } = useBuscar(() => dashboardApi.buscarResumo(auth.authFetch), [], { mostraTexto: true });
   const [bancoConectado, setBancoConectado] = useState<boolean | null>(null); // null = ainda verificando
   const [abaAtiva, setAbaAtiva] = useState<AbaChave>('visao-geral');
+  // Atividade recente: o banco hoje só entrega a da própria pessoa (a mesma do sino do cabeçalho). Leitura
+  // auxiliar: se falhar, o bloco só mostra que não há nada.
+  const { dado: atividade } = useBuscar(() => logAuditoriaApi.minhaAtividade(auth.authFetch).catch(() => []), []);
   // Lido uma vez ao abrir: o Dashboard é a página de partida, a lista não muda enquanto ela está na tela.
   const [acessados] = useState(() => (auth.usuario ? lerAcessadosRecentemente(auth.usuario.idUsuario) : []));
 
@@ -142,9 +173,8 @@ export function Dashboard({ auth }: DashboardProps) {
       <BarraAbasBotoes abas={ABAS} ativa={abaAtiva} aoTrocar={setAbaAtiva} />
 
       {abaAtiva === 'visao-geral' && (
-        <div className="space-y-6">
-          {/* (b) Faixa de saúde - sempre renderiza, mesmo se o resumo abaixo
-              falhar (é precisamente aí que ela mais importa). */}
+        <div className="space-y-8">
+          {/* Faixa de saúde: sempre aparece, mesmo se o resumo abaixo falhar (é aí que ela mais importa). */}
           <div className="cartao-painel p-5 flex flex-wrap items-center gap-x-8 gap-y-3 text-sm">
             <span className="flex items-center gap-2 font-semibold texto-padrao">
               <PontoStatusConexao valor={bancoConectado} />
@@ -155,10 +185,7 @@ export function Dashboard({ auth }: DashboardProps) {
                   : 'Banco sem conexão'}
             </span>
             <span className="texto-fraco">
-              <strong className="texto-forte">
-                {resumo ? resumo.sessoesAtivas : '-'}
-              </strong>{' '}
-              contas ativas agora
+              <strong className="texto-forte">{resumo ? resumo.sessoesAtivas : '-'}</strong> contas ativas agora
               <Tooltip texto={TEXTO_TOOLTIP_SESSOES_ATIVAS} />
             </span>
             <span className="texto-fraco">
@@ -173,45 +200,150 @@ export function Dashboard({ auth }: DashboardProps) {
             </span>
           </div>
 
-          {/* (a) Cards de total */}
           {carregandoResumo ? (
             <p className="text-sm texto-fraco">Carregando métricas...</p>
           ) : !resumo ? (
             <MensagemErro texto={erro} className="crud-erro" />
           ) : (
             <>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <CardMetrica rotulo="Usuários" valor={resumo.totalUsuarios} para="/admin/usuarios" />
-                <CardMetrica rotulo="Pesquisadores" valor={resumo.totalPesquisadores} para="/admin/pesquisadores" />
-                <CardMetrica rotulo="Papéis" valor={resumo.totalPapeis} para="/admin/papeis" />
-                <CardMetrica rotulo="Permissões" valor={resumo.totalPermissoes} para="/admin/papeis" />
-                <CardMetrica rotulo="Configurações" valor={resumo.totalConfiguracoes} para="/admin/configuracoes" />
-                <CardMetrica rotulo="Campanhas" valor={resumo.totalCampanhas} para="/admin/campanhas" />
-                <CardMetrica rotulo="Denúncias pendentes" valor={resumo.denunciasPendentes} />
-                <CardMetrica rotulo="Arrecadado (total)" valor={resumo.valorTotalArrecadado} moeda />
-              </div>
+              {/* O que espera uma decisão do painel vem primeiro. "Fila com score baixo" (RF-084): campanha
+                  aguardando aprovação cujo pesquisador está abaixo do score mínimo. */}
+              <section className="space-y-3">
+                <h2 className="subtitulo">Precisa de você</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <CardMetrica
+                    rotulo="Aguardando aprovação"
+                    valor={resumo.campanhasAguardandoAprovacao}
+                    icone="fa-hourglass-half"
+                    tom={tomPendencia(resumo.campanhasAguardandoAprovacao)}
+                    para="/admin/aprovar-campanhas"
+                  />
+                  <CardMetrica
+                    rotulo="Denúncias pendentes"
+                    valor={resumo.denunciasPendentes}
+                    icone="fa-flag"
+                    tom={tomPendencia(resumo.denunciasPendentes)}
+                  />
+                  <CardMetrica
+                    rotulo="Fila com score baixo"
+                    valor={resumo.campanhasParaRevisaoScore}
+                    icone="fa-star-half-stroke"
+                    tom={tomPendencia(resumo.campanhasParaRevisaoScore)}
+                    para="/admin/aprovar-campanhas"
+                  />
+                </div>
+              </section>
 
-              {/* Campanhas por status (RF-084): o requisito pede essa quebra, não só o total. "Fila com
-                  score baixo" é a 5ª parte do RF-084: campanha aguardando aprovação cujo pesquisador está
-                  abaixo do score mínimo, só um sinal para revisar com mais cuidado. */}
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                <CardMetrica rotulo="Campanhas ativas" valor={resumo.campanhasAtivas} para={campanhasCom('ativo')} />
-                <CardMetrica rotulo="Campanhas com sucesso" valor={resumo.campanhasSucesso} para={campanhasCom('sucesso')} />
-                <CardMetrica
-                  rotulo="Campanhas não atingidas"
-                  valor={resumo.campanhasNaoAtingida}
-                  para={campanhasCom('nao_atingido')}
-                />
-                <CardMetrica
-                  rotulo="Aguardando aprovação"
-                  valor={resumo.campanhasAguardandoAprovacao}
-                  para="/admin/aprovar-campanhas"
-                />
-                <CardMetrica
-                  rotulo="Fila com score baixo"
-                  valor={resumo.campanhasParaRevisaoScore}
-                  para="/admin/aprovar-campanhas"
-                />
+              <section className="space-y-3">
+                <h2 className="subtitulo">Plataforma</h2>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <CardMetrica rotulo="Usuários" valor={resumo.totalUsuarios} icone="fa-users" para="/admin/usuarios" />
+                  <CardMetrica
+                    rotulo="Pesquisadores"
+                    valor={resumo.totalPesquisadores}
+                    icone="fa-flask"
+                    para="/admin/pesquisadores"
+                  />
+                  <CardMetrica
+                    rotulo="Campanhas"
+                    valor={resumo.totalCampanhas}
+                    icone="fa-bullhorn"
+                    para="/admin/campanhas"
+                  />
+                  <CardMetrica
+                    rotulo="Arrecadado (total)"
+                    valor={resumo.valorTotalArrecadado}
+                    icone="fa-sack-dollar"
+                    moeda
+                  />
+                </div>
+              </section>
+
+              {/* Campanhas por status (RF-084): o requisito pede essa quebra, não só o total. */}
+              <section className="space-y-3">
+                <h2 className="subtitulo">Campanhas por situação</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <CardMetrica
+                    rotulo="Ativas"
+                    valor={resumo.campanhasAtivas}
+                    icone="fa-rocket"
+                    para={campanhasCom('ativo')}
+                  />
+                  <CardMetrica
+                    rotulo="Com sucesso"
+                    valor={resumo.campanhasSucesso}
+                    icone="fa-trophy"
+                    para={campanhasCom('sucesso')}
+                  />
+                  <CardMetrica
+                    rotulo="Não atingidas"
+                    valor={resumo.campanhasNaoAtingida}
+                    icone="fa-arrow-trend-down"
+                    para={campanhasCom('nao_atingido')}
+                  />
+                </div>
+              </section>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+                {/* Feed de atividade (como o painel do Kickstarter): as últimas ações, com ícone por tipo. */}
+                <section className="cartao-painel p-5 lg:col-span-2">
+                  <h2 className="subtitulo mb-3">Sua atividade recente</h2>
+                  {!atividade?.length ? (
+                    <p className="text-sm texto-fraco">Nenhuma ação registrada ainda.</p>
+                  ) : (
+                    <ul>
+                      {atividade.slice(0, 6).map((item) => {
+                        const operacao = OPERACAO[item.operacao] ?? { verbo: item.operacao.toLowerCase(), icone: 'fa-circle' };
+                        return (
+                          <li
+                            key={item.idLog}
+                            className="py-2.5 flex items-center gap-3 text-sm border-b borda-padrao last:border-b-0"
+                          >
+                            <span
+                              className="w-8 h-8 shrink-0 rounded-lg brilho-marca texto-marca flex items-center justify-center text-xs"
+                              aria-hidden="true"
+                            >
+                              <i className={'fa-solid ' + operacao.icone}></i>
+                            </span>
+                            <span className="flex-1 min-w-0 texto-padrao">
+                              Você {operacao.verbo} <span className="font-semibold">{item.tabela}</span> #
+                              {item.identidadeRegistro}
+                            </span>
+                            <span className="text-xs texto-fraco shrink-0">{formatarDataHora(item.ocorridoEm)}</span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </section>
+
+                {/* Números que mudam pouco: lista compacta em vez de 3 cards grandes. */}
+                <section className="cartao-painel p-5">
+                  <h2 className="subtitulo mb-3">Sistema</h2>
+                  <ul className="space-y-1 text-sm">
+                    {[
+                      { rotulo: 'Papéis', valor: resumo.totalPapeis, icone: 'fa-user-shield', para: '/admin/papeis' },
+                      { rotulo: 'Permissões', valor: resumo.totalPermissoes, icone: 'fa-key', para: '/admin/papeis' },
+                      {
+                        rotulo: 'Parâmetros do sistema',
+                        valor: resumo.totalConfiguracoes,
+                        icone: 'fa-sliders',
+                        para: '/admin/configuracoes',
+                      },
+                    ].map((linha) => (
+                      <li key={linha.rotulo}>
+                        <Link
+                          to={linha.para}
+                          className="flex items-center gap-3 rounded-lg px-2 py-2 hover-fundo-sutil transition-colors"
+                        >
+                          <i className={'fa-solid w-4 text-center texto-marca ' + linha.icone} aria-hidden="true"></i>
+                          <span className="flex-1 texto-padrao">{linha.rotulo}</span>
+                          <span className="font-bold texto-forte">{linha.valor}</span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
               </div>
             </>
           )}
@@ -229,17 +361,6 @@ export function Dashboard({ auth }: DashboardProps) {
               </div>
             </div>
           )}
-
-          {/* (c) Prévia: NOTIFICAÇÕES, não log de auditoria (log de auditoria já tem painel próprio, "Ver
-              log", embaixo de cada tabela). Módulo 26-notificacao ainda não existe (nem tabela mapeada no
-              Kysely, nem controller): mostra isso honestamente em vez de inventar dado. */}
-          <div className="cartao-painel p-5">
-            <h2 className="subtitulo mb-2">Notificações</h2>
-            <p className="text-sm texto-fraco">
-              Módulo de notificações ainda não foi implementado, esta prévia vai listar as
-              pendências assim que existir.
-            </p>
-          </div>
         </div>
       )}
 

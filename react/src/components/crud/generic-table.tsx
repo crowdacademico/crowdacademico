@@ -22,12 +22,14 @@ type Linha = object;
 // `tipo` decide largura, alinhamento, formato, ordenação e busca da coluna (ver components/crud/colunas/): a
 // tela nunca escreve largura nem alinhamento na mão, e a mesma espécie de coluna fica igual em toda tabela.
 // `renderizar` troca só o que aparece na célula (ex.: um rótulo traduzido); o resto continua vindo do tipo.
+// `busca`: texto a mais que o filtro procura nesta coluna (ex.: a chave técnica mostrada embaixo da descrição).
 interface Coluna<T extends Linha> {
   chave: keyof T & string;
   rotulo: string;
   tipo: NomeTipoColuna;
   quebrarRotulo?: boolean;
   renderizar?: (linha: T) => ReactNode;
+  busca?: (linha: T) => string;
 }
 
 interface FiltroFacetado<T extends Linha> {
@@ -48,6 +50,8 @@ interface GenericTableProps<T extends Linha> {
   nivelTitulo?: 1 | 2;
   // Uma frase embaixo do título dizendo para que serve a lista (padrão de mercado: "Gerencie...", "Acompanhe...").
   subtitulo?: string;
+  // Ordem com que a lista abre quando o endereço não diz outra (ex.: a fila de aprovação, mais antigas primeiro).
+  ordenacaoInicial?: { chave: keyof T & string; direcao: 'asc' | 'desc' };
   acaoTopo?: ReactNode;
   colunas: Coluna<T>[];
   chavePrimaria: keyof T & string;
@@ -106,6 +110,7 @@ export function GenericTable<T extends Linha>({
   titulo,
   nivelTitulo = 1,
   subtitulo,
+  ordenacaoInicial,
   acaoTopo,
   colunas,
   chavePrimaria,
@@ -158,11 +163,14 @@ export function GenericTable<T extends Linha>({
   // a cada render, e o useMemo de linhasOrdenadas (que depende disto)
   // recalcularia sempre, mesmo sem a ordenação ter mudado de verdade.
   const ordenacao = useMemo(
-    () => ({
-      chave: searchParams.get('ordenar') || null,
-      direcao: searchParams.get('dir') === 'desc' ? 'desc' : 'asc',
-    }),
-    [searchParams],
+    () =>
+      searchParams.get('ordenar') || !ordenacaoInicial
+        ? {
+            chave: searchParams.get('ordenar') || null,
+            direcao: searchParams.get('dir') === 'desc' ? 'desc' : 'asc',
+          }
+        : { chave: ordenacaoInicial.chave as string, direcao: ordenacaoInicial.direcao },
+    [searchParams, ordenacaoInicial],
   );
   // Seleção de cada faceta, independente: { [chave]: string[] }. Faceta
   // sem entrada aqui (ou array vazio) = "Todos" pra ela.
@@ -248,7 +256,7 @@ export function GenericTable<T extends Linha>({
       colunas.some((coluna) => {
         const valor = linha[coluna.chave];
         const visto = TIPOS_COLUNA[coluna.tipo].texto(valor);
-        return normalizarBusca(`${visto} ${String(valor ?? '')}`).includes(termo);
+        return normalizarBusca(`${visto} ${String(valor ?? '')} ${coluna.busca?.(linha) ?? ''}`).includes(termo);
       }),
     );
   }, [linhas, filtro, colunas, filtrosFacetados, selecoesPorFaceta]);
@@ -499,11 +507,21 @@ export function GenericTable<T extends Linha>({
     <section className="crud-secao">
       <div className="crud-secao__cabecalho">
         <div>
-          {nivelTitulo === 1 ? (
-            <h1 className="titulo-secao">{titulo}</h1>
-          ) : (
-            <h2 className="titulo-secao">{titulo}</h2>
-          )}
+          {/* Total ao lado do título (padrão de Stripe e Linear): "28", ou "3 de 28" com filtro. */}
+          <div className="flex items-center gap-3 flex-wrap">
+            {nivelTitulo === 1 ? (
+              <h1 className="titulo-secao">{titulo}</h1>
+            ) : (
+              <h2 className="titulo-secao">{titulo}</h2>
+            )}
+            {dado && (
+              <span className="badge badge-neutro">
+                {linhasFiltradas.length === linhas.length
+                  ? linhas.length
+                  : `${linhasFiltradas.length} de ${linhas.length}`}
+              </span>
+            )}
+          </div>
           {subtitulo && <p className="paragrafo crud-secao__subtitulo">{subtitulo}</p>}
         </div>
         {acaoTopo && <div className="crud-secao__acao-topo">{acaoTopo}</div>}

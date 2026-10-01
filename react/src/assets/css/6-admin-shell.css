@@ -232,6 +232,13 @@
     grid-template-columns: 260px minmax(0, 1fr);
   }
 
+  /* Com a sidebar fixa ao lado, o botão "Menu" não serve para nada: a faixa dele aparecia como uma tira branca
+     vazia entre o "Início >" e o conteúdo. A faixa some (`min-[1377px]:hidden` em admin-layout.tsx: uma regra
+     aqui perderia para a utilidade `flex` do Tailwind) e o conteúdo sobe para o padding normal. */
+  .admin-content-area {
+    padding-top: 1.5rem;
+  }
+
   .admin-sidebar {
     /* Lado a lado com o conteúdo agora - a borda de baixo (empilhado no
        mobile) vira borda da direita (a "parede" entre coluna e conteúdo). */

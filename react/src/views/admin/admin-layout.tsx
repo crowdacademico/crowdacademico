@@ -60,7 +60,7 @@ export function AdminLayout({ auth }: AdminLayoutProps) {
           de 1377px) e para de cobrir a faixa, o botão reaparece sozinho, exposto, sem CSS nenhum decidindo
           isso. */}
       <div className="admin-shell">
-        <div className="absolute inset-x-0 top-0 flex items-center px-4 py-3 fundo-cartao border-b borda-padrao">
+        <div className="absolute inset-x-0 top-0 flex min-[1377px]:hidden items-center px-4 py-3 fundo-cartao border-b borda-padrao">
           <button
             type="button"
             onClick={() => setMenuAberto(true)}

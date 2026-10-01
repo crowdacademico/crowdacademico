@@ -67,6 +67,7 @@ export function ListarAreasConhecimento({ auth }: PropsPagina) {
     <div className="admin-content-painel">
       <GenericTable<AreaConhecimentoResponse>
         titulo="Áreas do Conhecimento"
+        subtitulo="As áreas em que uma campanha pode ser classificada."
         acaoTopo={
           <BotaoCriar aoClicar={abrirCriando} />
         }

@@ -624,6 +624,12 @@
     box-shadow: var(--shadow-sm);
   }
 
+  /* Cartão que pede atenção (Dashboard, "Precisa de você" com número): amarelo claro, borda no mesmo tom. */
+  .cartao-painel--aviso {
+    background-color: var(--cor-fundo-aviso);
+    border-color: color-mix(in srgb, var(--cor-texto-aviso) 30%, transparent);
+  }
+
   /* Barra de abas (Minha Conta, Dashboard): rola na horizontal no celular. A linha de base é uma sombra
      interna, não border-bottom: o sublinhado de 2px da aba ativa fica DENTRO da barra e cobre a linha. Com
      border-bottom, a aba precisaria descer 1px (-mb-px) para cobrir a linha, esse 1px sairia da área de rolagem

@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { AvatarUsuario } from '../../components/layout/avatar-usuario';
 import { GenericTable } from '../../components/crud/generic-table';
 import { BlocoLogAuditoria } from '../../components/crud/bloco-log-auditoria';
 import { useCrudModais } from '../../services/constant/hook/use-crud-modais';
@@ -72,9 +73,22 @@ export function ListarPesquisadores({ auth }: PropsPagina) {
     <div className="admin-content-painel">
       <GenericTable
         titulo="Pesquisadores"
+        subtitulo="Contas com perfil de pesquisador, com o vínculo e a situação de cada uma."
         colunas={[
           { chave: 'idUsuario', rotulo: 'id', tipo: 'id' },
-          { chave: 'nome', rotulo: 'nome', tipo: 'nome' },
+          {
+            chave: 'nome',
+            rotulo: 'nome',
+            tipo: 'nome',
+            // Inicial colorida ao lado do nome, para escanear a lista (padrão de Stripe e Linear). A foto real
+            // não vem na listagem (cada uma pede um link assinado), só ao abrir a pessoa.
+            renderizar: (linha) => (
+              <span className="flex items-center gap-3">
+                <AvatarUsuario nome={linha.nome} tamanho="sm" />
+                <span className="min-w-0">{linha.nome}</span>
+              </span>
+            ),
+          },
           { chave: 'tituloAcademico', rotulo: 'título', tipo: 'status' },
           { chave: 'statusPesquisador', rotulo: 'status', tipo: 'status' },
           { chave: 'scoreAtual', rotulo: 'score', tipo: 'numero' },
