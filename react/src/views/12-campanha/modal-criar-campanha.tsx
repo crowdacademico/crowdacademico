@@ -248,6 +248,7 @@ export function ModalCriarCampanha({
 
   return (
     <ModalFicha
+      variasTelas
       titulo={idRascunho === undefined ? 'Criar Campanha' : 'Continuar rascunho'}
       carregando={carregandoRascunho}
       // Um clique sem querer no fundo escurecido derrubaria o passo a passo; só fecha por Cancelar ou pelo X.

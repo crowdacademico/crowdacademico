@@ -130,6 +130,7 @@ export function ModalUpgradePesquisador({
 
   return (
     <ModalFicha
+      variasTelas
       titulo={
         etapa === 'termo'
           ? 'Upgrade de Perfil - Termo de Uso'

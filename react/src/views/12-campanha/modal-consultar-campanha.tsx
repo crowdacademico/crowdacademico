@@ -33,13 +33,16 @@ export function ModalConsultarCampanha({ auth, idCampanha, comoDono = false, aoF
     [idCampanha],
   );
   const [historicoRejeicao, setHistoricoRejeicao] = useState<HistoricoRejeicaoResponse[]>([]);
+  // O histórico vem numa busca à parte: o modal só aparece quando ele chega, para não crescer depois de aberto.
+  const [historicoCarregado, setHistoricoCarregado] = useState(false);
 
   useEffect(() => {
     if (campanha) {
       campanhaApi
         .listarHistoricoRejeicao(auth.authFetch, campanha.idCampanha)
         .then(setHistoricoRejeicao)
-        .catch(() => {});
+        .catch(() => {})
+        .finally(() => setHistoricoCarregado(true));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [campanha]);
@@ -61,7 +64,7 @@ export function ModalConsultarCampanha({ auth, idCampanha, comoDono = false, aoF
   return (
     <ModalFicha
       titulo={campanha?.titulo ?? `#${idCampanha}`}
-      carregando={carregando || !campanha}
+      carregando={carregando || !campanha || !historicoCarregado}
       subtitulo={campanha?.nomePesquisador ? `Pesquisador: ${campanha.nomePesquisador}` : undefined}
       badges={
         campanha

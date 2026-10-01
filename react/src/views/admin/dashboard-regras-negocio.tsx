@@ -5,6 +5,7 @@ import { agruparConfiguracoes } from '../../services/11-configuracoes/constants/
 import { termoUsoApi } from '../../services/5-termo-uso/api/termo-uso.api';
 import { DESCRICAO_TIPO_TERMO, ROTULO_TIPO_TERMO, TIPOS_TERMO } from '../../services/5-termo-uso/constants/termo-uso-tipos.constants';
 import { ModalAlterarTermoUso } from '../5-termo-uso/modal-alterar-termo-uso';
+import { ModalCriarTermoUso } from '../5-termo-uso/modal-criar-termo-uso';
 import { Tooltip } from '../../components/layout/tooltip';
 import { ModalDetalhe } from '../../components/crud/modal-detalhe';
 import { Carregando } from '../../components/layout/carregando';
@@ -111,6 +112,7 @@ function CardTermoUso({ auth }: { auth: Pick<UseAuthReturn, 'authFetch'> }) {
   );
   const [modalAberto, setModalAberto] = useState(false);
   const [tipoAlterando, setTipoAlterando] = useState<TipoTermo | null>(null);
+  const [tipoCriando, setTipoCriando] = useState<TipoTermo | null>(null);
   const termoParaAlterar = tipoAlterando ? termosAtivos[tipoAlterando] : null;
 
   const recarregarTermoAtivo = (tipo: TipoTermo) => {
@@ -150,12 +152,13 @@ function CardTermoUso({ auth }: { auth: Pick<UseAuthReturn, 'authFetch'> }) {
                 {termo === undefined ? (
                   <span className="text-sm texto-fraco">Carregando...</span>
                 ) : termo === null ? (
-                  <Link
-                    to={`/admin/termos-uso/criar?tipo=${tipo}`}
+                  <button
+                    type="button"
+                    onClick={() => setTipoCriando(tipo)}
                     className="crud-tabela__acao crud-tabela__acao--alterar"
                   >
                     <i className="fa-solid fa-plus"></i> Publicar primeira versão
-                  </Link>
+                  </button>
                 ) : (
                   <>
                     <span className="text-sm font-bold texto-forte">{termo.versao}</span>
@@ -179,6 +182,15 @@ function CardTermoUso({ auth }: { auth: Pick<UseAuthReturn, 'authFetch'> }) {
           titulo="Termo de Uso"
           secoes={SECOES_MODAL_TERMO_USO}
           aoFechar={() => setModalAberto(false)}
+        />
+      )}
+
+      {tipoCriando && (
+        <ModalCriarTermoUso
+          auth={auth}
+          tipoInicial={tipoCriando}
+          aoFechar={() => setTipoCriando(null)}
+          aoCriado={() => recarregarTermoAtivo(tipoCriando)}
         />
       )}
 

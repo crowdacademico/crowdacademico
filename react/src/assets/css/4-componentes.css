@@ -78,6 +78,35 @@
     color: var(--cor-texto-sobre-cor);
   }
 
+  /* Botão pequeno em pílula, com um brilho verde em volta: ação de apoio que precisa ser vista (ex.: "Tela cheia"). */
+  .btn-pilula {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    border: 1px solid var(--cor-marca);
+    color: var(--cor-texto-marca);
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--cor-marca) 15%, transparent);
+    transition: var(--transition-normal);
+  }
+
+  .btn-pilula:hover {
+    background-color: color-mix(in srgb, var(--cor-marca) 10%, transparent);
+  }
+
+  /* Pílula na mesma linha de um rótulo de campo: mesma letra do .rotulo-campo, para as duas palavras casarem. */
+  .btn-pilula-rotulo {
+    padding: 0.125rem 0.625rem;
+    font-size: var(--font-size-rotulo);
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    line-height: 1.5;
+  }
+
   /* Input/select de formulário fora da tabela de CRUD (login, criar
      usuário) - mesma moldura em todo lugar: borda, fundo levemente cinza,
      foco em verde. */
@@ -433,8 +462,11 @@
     z-index: 20;
   }
 
+  /* Foco só abre a bolha quando é de teclado (:focus-visible). Com :focus comum, o botão que abriu um modal
+     recebia o foco de volta ao fechar e a bolha ficava presa na tela. O "ⓘ" avulso continua abrindo com
+     qualquer foco: no celular, tocar nele é o único jeito de ler a dica. */
   .dica:hover .dica__bolha,
-  .dica:focus .dica__bolha,
+  .dica--info:focus .dica__bolha,
   .dica:focus-visible .dica__bolha {
     display: block;
     opacity: 1;
@@ -442,7 +474,7 @@
 
   @starting-style {
     .dica:hover .dica__bolha,
-    .dica:focus .dica__bolha,
+    .dica--info:focus .dica__bolha,
     .dica:focus-visible .dica__bolha {
       opacity: 0;
     }

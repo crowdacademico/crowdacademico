@@ -63,7 +63,7 @@ export const usuarioPapelApi = {
     authFetch(`/usuario-papel/${idUsuario}`).then(tratarResposta<UsuarioPapelResponse[]>),
   // Mesmo caso de papelPermissaoApi.atribuir, acima: UsuarioPapelServiceCreate.executar() também é
   // `Promise<void>` de verdade (só INSERT, sem SELECT de volta), controller sem `@HttpCode`, 201 com corpo
-  // vazio. Único ponto de chamada (painel-papeis-usuario.tsx, PainelPapeisUsuario) só faz `await`, nunca lê o valor.
+  // vazio. Único ponto de chamada (modal-alterar-usuario.tsx, PapeisDoUsuario) só faz `await`, nunca lê o valor.
   atribuir: (
     authFetch: AuthFetch,
     idUsuario: number | string,

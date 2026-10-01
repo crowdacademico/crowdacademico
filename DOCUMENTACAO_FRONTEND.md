@@ -1107,6 +1107,11 @@ CSS puro (`:hover`/`:focus`/`:focus-visible`), sem estado de React na bolha em s
 - **Motivo:** heurísticas 1, 3 e 8 (auditoria de Nielsen). E um defeito: a foto nova só gravava no "Salvar", mas não contava como alteração não salva; fechar o modal descartava a foto sem perguntar.
 - **Caso-limite aceito:** salvar uma aba não fecha o modal, diferente de antes, para não perder o que está em edição na outra aba. O "Redefinir senha dev" continua gravando na hora (ferramenta de teste).
 
+📌 **Alterar Usuário volta a ser uma tela só, num arquivo só (01-10-2026, substitui as abas acima).**
+- **Decisão:** sem abas. Em cima, o que espera o Salvar (foto, nome, senha e, de quem é pesquisador, o perfil), com os metadados à direita; embaixo, depois do aviso "valem na hora do clique", Papéis, Moderação e, de quem é pesquisador, CPF, links acadêmicos e moderação do pesquisador. Um Salvar só no rodapé, que confere e grava a conta e o perfil juntos (só o que mudou) e não fecha o modal. O painel de papéis e o de links voltaram para dentro de `modal-alterar-usuario.tsx` como funções internas; `painel-papeis-usuario.tsx` e `painel-links-academicos.tsx` saíram. Consultar e Excluir continuam em arquivos próprios, e o hook `use-dados-usuario.ts` continua compartilhado com o Consultar.
+- **Motivo:** decisão do Lucas. As abas espalharam o mesmo código em mais arquivos sem diminuir linhas (antes: 4 arquivos e 1.568 linhas; com as abas: 12 e 1.523), trocar de aba fazia a janela "dançar" e apareceram defeitos entre as abas. Uma tela que rola mantém tudo à vista e a janela parada.
+- **Caso-limite aceito:** a tela ficou longa (rola dentro do modal); melhorias visuais nela ficam para depois ("upgrades", a combinar).
+
 📌 **Esc ouvido na página inteira, e só a janela de cima fecha.**
 - **Decisão:** `useFocoPreso(ref, ativo, aoEsc)`: o hook que já prendia o Tab e já guardava a pilha de janelas abertas passou a tratar o Esc também, ouvindo a página inteira. Só a janela do topo da pilha fecha. `ModalFicha`, `ModalDetalhe`, a janela do Termo no Cadastro e a gaveta do menu lateral passam o próprio "fechar" e não ouvem mais o Esc sozinhos. A busca global continua com o Esc dela (fecha as sugestões primeiro).
 - **Motivo:** cada janela só ouvia o Esc com o foco dentro dela. Quando o botão clicado sumia da tela ("Remover foto"), o foco ia para a página e o Esc parava de funcionar. É o padrão de Radix, Headless UI e MUI.
@@ -1121,3 +1126,18 @@ CSS puro (`:hover`/`:focus`/`:focus-visible`), sem estado de React na bolha em s
 - **Decisão:** "Ocultar/Reverter" (atualizações) e "Endossar/Remover endosso" (comentários) usam `AcaoLinha` com ícone, como as outras tabelas. "Endossar" no limite fica apagado, com o motivo na dica (`indisponivel`).
 - **Motivo:** eram botões só de texto com a classe das ações de ícone. Quando a tabela apertava, a regra que aumenta os ícones aumentava o texto junto.
 - **Caso-limite aceito:** nenhum.
+
+📌 **Alterar Usuário: filtro de partes, pílulas de situação e rodapé que diz o que mudou (01-10-2026).**
+- **Decisão:** no topo do corpo, um filtro fixo: "Geral" (padrão) mostra tudo; Conta, Papéis, Pesquisador e Moderação mostram só aquela parte. As outras ficam escondidas, não desmontadas, então nada do que se está editando se perde. O cabeçalho mostra pílulas (conta suspensa, e-mail verificado, situação do pesquisador, papéis). "Trocar senha" e "Corrigir CPF" ficam fechados até o clique. O rodapé diz "N alterações não salvas: ..." (`ResumoAlteracoes`, usado também por Papel, Termo de Uso e Criar Termo). As seções de suspensão continuam com os títulos "Moderação" e "Moderação (Pesquisador)", sem bloco vermelho.
+- **Motivo:** a tela única ficou longa; o filtro deixa ver uma parte só sem voltar às abas (que dançavam e espalhavam código). A situação da pessoa aparece sem rolar. O Lucas recusou o rótulo "Zona de risco" e o contorno vermelho.
+- **Caso-limite aceito:** uma alteração numa parte escondida continua valendo e aparece no rodapé, mesmo sem estar à vista.
+
+📌 **Termo de Uso: Criar, Consultar, Alterar e Excluir em modal, com caixa de texto longo e tela cheia (01-10-2026).**
+- **Decisão:** Criar virou modal (a página `/admin/termos-uso/criar` saiu; o "Publicar primeira versão" de Regras do Negócio abre o mesmo modal com o tipo escolhido). O texto mora em `CaixaTextoLongo`: a caixa estica até o fim do modal de altura cheia (o corpo de `ModalFicha` com `variasTelas` virou coluna flex), rola por dentro só quando o texto não cabe, mostra a contagem de caracteres e tem a pílula "Tela cheia" (`TelaCheia`, que fecha com Esc sem fechar o modal). Consultar Usuário abre o termo aceito em tela cheia ao clicar no aceite (a lista de aceites passou a trazer `idTermo`). As pílulas (versão, Vigente/Substituída/Rascunho, aceites) vêm de `etiquetasTermoUso`. Criar tem "Começar da vigente" e barra versão repetida antes do banco. O subtítulo longo virou ⓘ (prop `ajuda` do `ModalFicha`).
+- **Motivo:** esticar a caixa com o mouse dentro de um modal que rola era lento; a tela cheia resolve a leitura longa e a mesma peça serve para editar e para ler. Uma nova versão quase sempre é a anterior corrigida.
+- **Caso-limite aceito:** o banco não guarda se uma versão já foi vigente. Não vigente com aceite aparece como "Substituída"; sem aceite, "Rascunho" (a mesma regra que libera o Excluir).
+
+📌 **Dica (tooltip) só abre com foco de teclado.**
+- **Decisão:** a bolha `.dica__bolha` abre com `:hover` e `:focus-visible`; `:focus` comum só no ⓘ avulso (`.dica--info`).
+- **Motivo:** ao fechar um modal, o foco volta para o botão que o abriu, e com `:focus` a dica dele ficava presa na tela depois de um clique de mouse.
+- **Caso-limite aceito:** ao fechar um modal com Esc, a dica do botão aparece (o foco de teclado está ali, de propósito). No celular, o ⓘ continua abrindo ao toque.

@@ -2,11 +2,17 @@ import { useState } from 'react';
 import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { confirmarSaida, useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
+import { ResumoAlteracoes } from '../../components/crud/resumo-alteracoes';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
 import { Campo } from '../../components/input/campo';
-import { papelApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
+import {
+  papelApi,
+  papelPermissaoApi,
+  usuarioPapelApi,
+} from '../../services/2-papel-permissao/api/papel-permissao.api';
+import { useBuscar } from '../../services/constant/hook/use-buscar';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
@@ -31,6 +37,18 @@ export function ModalAlterarPapel({ auth, papel, aoFechar, aoAtualizado }: Modal
   const { erro, reportarErro, limparErro, errosCampo, limparErroCampo } = useErroToast({ mostraTexto: true });
   const { ocupado: enviando, executar: executarEnviando } = useEnvio(reportarErro, limparErro);
   const [nome, setNome] = useState(papel.nome);
+
+  // Quantos usuários e permissões o papel tem: aparecem no cabeçalho, para quem renomeia saber o alcance.
+  const { dado: alcance } = useBuscar(
+    () =>
+      Promise.all([usuarioPapelApi.listarTudo(auth.authFetch), papelPermissaoApi.listar(auth.authFetch)]).then(
+        ([vinculos, permissoes]) => ({
+          pessoas: new Set(vinculos.filter((v) => v.idPapel === papel.idPapel).map((v) => v.idUsuario)).size,
+          permissoes: permissoes.filter((p) => p.idPapel === papel.idPapel).length,
+        }),
+      ),
+    [papel.idPapel],
+  );
 
   const sujo = nome !== papel.nome;
   useAvisoAlteracaoNaoSalva(sujo);
@@ -59,18 +77,34 @@ export function ModalAlterarPapel({ auth, papel, aoFechar, aoAtualizado }: Modal
     <ModalFicha
       titulo={`Alterar "${papel.nome}"`}
       subtitulo="Só o nome exibido muda, o identificador interno usado pelas regras do sistema nunca é afetado."
+      carregando={!alcance}
+      badges={
+        alcance ? [
+          <span key="pessoas" className="badge badge-neutro">
+            {alcance.pessoas} {alcance.pessoas === 1 ? 'usuário' : 'usuários'}
+          </span>,
+          <span key="permissoes" className="badge badge-neutro">
+            {alcance.permissoes} {alcance.permissoes === 1 ? 'permissão' : 'permissões'}
+          </span>,
+        ] : undefined
+      }
       aoFechar={fechar}
       rodape={
-        <RodapeAcoes
-          aoCancelar={fechar}
-          acao={{
-            rotulo: 'Salvar',
-            rotuloOcupado: 'Salvando...',
-            ocupado: enviando,
-            desabilitado: !sujo,
-            aoClicar: () => void aoSalvar(),
-          }}
-        />
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <ResumoAlteracoes mudancas={sujo ? ['nome'] : []} />
+          <div className="flex-1">
+            <RodapeAcoes
+              aoCancelar={fechar}
+              acao={{
+                rotulo: 'Salvar',
+                rotuloOcupado: 'Salvando...',
+                ocupado: enviando,
+                desabilitado: !sujo,
+                aoClicar: () => void aoSalvar(),
+              }}
+            />
+          </div>
+        </div>
       }
       erro={erro}
     >
@@ -92,6 +126,20 @@ export function ModalAlterarPapel({ auth, papel, aoFechar, aoAtualizado }: Modal
           />
         )}
       </Campo>
+
+      {/* Prévia: é assim que o papel aparece no cabeçalho das fichas de quem o tem. */}
+      <div className="space-y-1.5">
+        <p className="text-xs font-semibold texto-fraco">Como aparece nas fichas</p>
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          {sujo && (
+            <>
+              <span className="badge badge-neutro line-through opacity-60">{papel.nome}</span>
+              <i className="fa-solid fa-arrow-right texto-fraco text-xs"></i>
+            </>
+          )}
+          <span className="badge badge-neutro">{nome.trim() || 'sem nome'}</span>
+        </div>
+      </div>
     </ModalFicha>
   );
 }

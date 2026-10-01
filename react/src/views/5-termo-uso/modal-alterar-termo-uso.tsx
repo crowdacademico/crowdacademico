@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { MensagemErro } from '../../components/crud/mensagem-erro';
-import type { FormEvent } from 'react';
-import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
-import { SecaoFicha } from '../../components/crud/ficha-consulta';
 import { ModalFicha } from '../../components/crud/modal-ficha';
+import { ResumoAlteracoes } from '../../components/crud/resumo-alteracoes';
+import { CaixaTextoLongo } from '../../components/crud/caixa-texto-longo';
 import { confirmarSaida, useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
@@ -12,9 +11,11 @@ import { termoUsoApi } from '../../services/5-termo-uso/api/termo-uso.api';
 import { ROTULO_TIPO_TERMO } from '../../services/5-termo-uso/constants/termo-uso-tipos.constants';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import { useBuscar } from '../../services/constant/hook/use-buscar';
+import { formatarData } from '../../services/constant/util/formatacao.util';
 import { Carregando } from '../../components/layout/carregando';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { TipoTermo } from '../../services/5-termo-uso/type/termo-uso.type';
+import { etiquetasTermoUso } from './etiquetas-termo-uso';
 
 interface ModalAlterarTermoUsoProps {
   auth: Pick<UseAuthReturn, 'authFetch'>;
@@ -58,7 +59,8 @@ export function ModalAlterarTermoUso({
     [],
   );
   // Versão já aceita: o texto vem só para leitura (o banco recusaria salvar), e "Tornar vigente" continua valendo.
-  const aceitesSelecionada = versoesDoTipo?.find((linha) => linha.idTermo === idSelecionado)?.aceites ?? 0;
+  const selecionada = versoesDoTipo?.find((linha) => linha.idTermo === idSelecionado);
+  const aceitesSelecionada = selecionada?.aceites ?? 0;
   const somenteLeitura = aceitesSelecionada > 0;
   const { dado: termo, carregando } = useBuscar(() => termoUsoApi.buscar(auth.authFetch, idSelecionado), [idSelecionado], {
     aoChegar: (dados) => setConteudo(dados.conteudo),
@@ -77,8 +79,7 @@ export function ModalAlterarTermoUso({
     aoFechar();
   };
 
-  const aoSalvarForm = async (evento: FormEvent<HTMLFormElement>) => {
-    evento.preventDefault();
+  const aoSalvarTexto = async () => {
     await executarEnviando(async () => {
       await termoUsoApi.atualizar(auth.authFetch, idSelecionado, { conteudo });
       mostrar('Termo de Uso alterado com sucesso.', `Versão "${termo?.versao}" foi atualizada.`);
@@ -102,55 +103,60 @@ export function ModalAlterarTermoUso({
   return (
     <ModalFicha
       titulo={`Alterar Termo de Uso - ${ROTULO_TIPO_TERMO[tipo]}`}
-      subtitulo="Editar o texto só é possível enquanto ninguém tiver aceitado a versão selecionada. Depois do primeiro aceite, ela trava e a correção precisa virar uma versão nova."
+      ajuda="Editar o texto só é possível enquanto ninguém tiver aceitado a versão selecionada. Depois do primeiro aceite, ela trava e a correção precisa virar uma versão nova."
+      carregando={!versoesDoTipo}
+      variasTelas
+      badges={selecionada && etiquetasTermoUso(selecionada)}
       aoFechar={fechar}
       rodape={
-        <div className="flex gap-3">
-          <button type="button" onClick={fechar} className="btn btn-secondary flex-1">
-            Cancelar
-          </button>
-          {termo && !termo.ativo && (
-            <button
-              type="button"
-              onClick={() => void aoTornarVigente()}
-              disabled={ativando || enviando}
-              className="btn btn-secondary flex-1"
-            >
-              {ativando ? 'Ativando...' : 'Tornar vigente'}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <ResumoAlteracoes mudancas={sujo ? ['texto'] : []} />
+          <div className="flex flex-1 justify-end gap-3">
+            <button type="button" onClick={fechar} className="btn btn-secondary">
+              Cancelar
             </button>
-          )}
-          {!somenteLeitura && (
-            <button
-              type="submit"
-              form="form-modal-alterar-termo-uso"
-              disabled={enviando || ativando || carregando || !termo || !sujo || !conteudo.trim()}
-              className="btn btn-primary flex-1"
-            >
-              {enviando ? 'Salvando...' : 'Salvar'}
-            </button>
-          )}
+            {termo && !termo.ativo && (
+              <button
+                type="button"
+                onClick={() => void aoTornarVigente()}
+                disabled={ativando || enviando}
+                className="btn btn-secondary"
+              >
+                {ativando ? 'Ativando...' : 'Tornar vigente'}
+              </button>
+            )}
+            {!somenteLeitura && (
+              <button
+                type="button"
+                onClick={() => void aoSalvarTexto()}
+                disabled={enviando || ativando || carregando || !termo || !sujo || !conteudo.trim()}
+                className="btn btn-primary"
+              >
+                {enviando ? 'Salvando...' : 'Salvar'}
+              </button>
+            )}
+          </div>
         </div>
       }
     >
-      <SecaoFicha titulo="Dados">
-        <CampoSomenteLeitura rotulo="Tipo" valor={ROTULO_TIPO_TERMO[tipo]} />
-      </SecaoFicha>
-
+      {/* Seletor à esquerda e, na mesma linha e centrada nele, a data de criação da versão. */}
       <Campo rotulo="Selecionar versão para alterar">
         {({ atributos }) => (
-          <select
-            {...atributos}
-            value={idSelecionado}
-            onChange={(evento) => aoTrocarVersaoSelecionada(Number(evento.target.value))}
-            className="input-padrao"
-          >
-            {(versoesDoTipo ?? []).map((linha) => (
-              <option key={linha.idTermo} value={linha.idTermo}>
-                {linha.versao}
-                {linha.ativo ? ' (vigente)' : ''}
-              </option>
-            ))}
-          </select>
+          <div className="flex items-center gap-6">
+            <select
+              {...atributos}
+              value={idSelecionado}
+              onChange={(evento) => aoTrocarVersaoSelecionada(Number(evento.target.value))}
+              className="input-padrao flex-1 min-w-0"
+            >
+              {(versoesDoTipo ?? []).map((linha) => (
+                <option key={linha.idTermo} value={linha.idTermo}>
+                  {linha.versao}
+                </option>
+              ))}
+            </select>
+            {termo && <p className="text-xs texto-fraco shrink-0">Criada em {formatarData(termo.criadoEm)}</p>}
+          </div>
         )}
       </Campo>
 
@@ -160,31 +166,20 @@ export function ModalAlterarTermoUso({
         <Carregando className="text-center py-4" />
       ) : (
         termo && (
-          <form
-            id="form-modal-alterar-termo-uso"
-            onSubmit={(evento) => void aoSalvarForm(evento)}
-            className="space-y-6"
-          >
+          <div className="flex-1 flex flex-col space-y-6">
             {somenteLeitura && (
               <p className="fundo-aviso texto-aviso rounded-lg p-3 text-xs font-semibold">
                 Esta versão já tem {aceitesSelecionada} aceite(s) registrado(s): o texto é a prova do que foi aceito e não
                 pode mais mudar. Para corrigir, publique uma versão nova. Tornar esta versão vigente continua possível.
               </p>
             )}
-            <Campo rotulo="Texto completo">
-              {({ atributos }) => (
-                <textarea
-                  {...atributos}
-                  value={conteudo}
-                  onChange={(evento) => setConteudo(evento.target.value)}
-                  readOnly={somenteLeitura}
-                  required
-                  rows={14}
-                  className="input-padrao font-mono text-xs"
-                />
-              )}
-            </Campo>
-          </form>
+            <CaixaTextoLongo
+              rotulo="Texto completo"
+              tituloTelaCheia={`Versão ${termo.versao}`}
+              valor={conteudo}
+              aoMudar={somenteLeitura ? undefined : setConteudo}
+            />
+          </div>
         )
       )}
     </ModalFicha>

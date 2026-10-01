@@ -8,6 +8,8 @@
    mistura tipografia (e cor) com box-model e tem uma história própria (o bug de `@layer` documentado lá),
    então continua inteiro num lugar só em vez de fragmentado entre arquivos. */
 :root {
+  /* Rótulo de campo (.rotulo-campo) e o que precisa casar com ele na mesma linha (.btn-pilula-rotulo). */
+  --font-size-rotulo: 11px;
   --font-size-xs: 0.75rem;
   --font-size-sm: 0.875rem;
   --font-size-base: 1rem;
@@ -38,7 +40,7 @@
      facilita tanto o dark mode (troca 1 lugar, não 15) quanto qualquer ajuste futuro de estilo do rótulo. */
   .rotulo-campo {
     display: block;
-    font-size: 11px;
+    font-size: var(--font-size-rotulo);
     font-weight: 900;
     color: var(--cor-texto-fraco);
     text-transform: uppercase;

@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { MensagemErro } from '../../components/crud/mensagem-erro';
 import { ModalFicha } from '../../components/crud/modal-ficha';
+import { TelaCheia } from '../../components/crud/tela-cheia';
 import { AvatarUsuario } from '../../components/layout/avatar-usuario';
 import { Carregando } from '../../components/layout/carregando';
 import { Dica } from '../../components/layout/tooltip';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { useDadosUsuario } from '../../services/1-usuario/hook/use-dados-usuario';
+import { termoUsoApi } from '../../services/5-termo-uso/api/termo-uso.api';
 import { ROTULO_TIPO_TERMO } from '../../services/5-termo-uso/constants/termo-uso-tipos.constants';
 import {
   ROTULO_STATUS_PESQUISADOR,
@@ -21,6 +23,7 @@ import { BotaoVerFotoPerfil } from './botao-ver-foto-perfil';
 import { PainelScore } from './painel-score';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { UsuarioResponseLoginHistory } from '../../services/1-usuario/type/usuario.type';
+import type { TermoUsoResponse } from '../../services/5-termo-uso/type/termo-uso.type';
 
 interface ModalConsultarUsuarioProps {
   auth: Pick<UseAuthReturn, 'authFetch'>;
@@ -40,6 +43,10 @@ export function ModalConsultarUsuario({ auth, idUsuario, aoFechar }: ModalConsul
     () => usuarioApi.listarTermosAceitos(auth.authFetch, idUsuario).catch(() => []),
     [idUsuario],
   );
+  // Clicar num aceite abre o texto daquela versão em tela cheia.
+  const [termoLido, setTermoLido] = useState<TermoUsoResponse | null>(null);
+  const lerTermo = (idTermo: number) =>
+    void termoUsoApi.buscar(auth.authFetch, idTermo).then(setTermoLido, errosDaTela.reportarErro);
   const [logins, setLogins] = useState<UsuarioResponseLoginHistory[] | null>(null);
   const [carregandoLogins, setCarregandoLogins] = useState(false);
   const [loginsAbertos, setLoginsAbertos] = useState(false);
@@ -68,7 +75,8 @@ export function ModalConsultarUsuario({ auth, idUsuario, aoFechar }: ModalConsul
     <ModalFicha
       // `carregando`: ModalFicha já esconde título/avatar sozinho enquanto `usuario` não chega, mostrando
       // "Carregando..." no lugar (ver comentário completo em modal-ficha.tsx).
-      carregando={!usuario}
+      // Espera também os aceites do Termo, que vêm numa busca à parte: senão a janela crescia depois de aparecer.
+      carregando={!usuario || termosAceitos === null}
       titulo={usuario?.nome ?? ''}
       subtitulo={usuario?.email}
       avatar={
@@ -172,10 +180,29 @@ export function ModalConsultarUsuario({ auth, idUsuario, aoFechar }: ModalConsul
                     <CampoFicha
                       key={indice}
                       rotulo={ROTULO_TIPO_TERMO[termo.tipo]}
-                      valor={`${termo.versao} - ${formatarDataHora(termo.aceitoEm)}`}
+                      valor={
+                        <button
+                          type="button"
+                          onClick={() => lerTermo(termo.idTermo)}
+                          className="texto-marca underline underline-offset-2 hover-texto-forte text-left"
+                        >
+                          {termo.versao} - {formatarDataHora(termo.aceitoEm)}
+                        </button>
+                      }
                     />
                   ))}
                 </SecaoFicha>
+              )}
+              {termoLido && (
+                <TelaCheia
+                  ativa
+                  titulo={`${ROTULO_TIPO_TERMO[termoLido.tipo]} - versão ${termoLido.versao}`}
+                  aoSair={() => setTermoLido(null)}
+                >
+                  <pre className="flex-1 overflow-y-auto whitespace-pre-wrap font-sans text-sm texto-padrao">
+                    {termoLido.conteudo}
+                  </pre>
+                </TelaCheia>
               )}
 
               {perfilPesquisador && (

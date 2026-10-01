@@ -1,16 +1,17 @@
-import { SecaoSuspensao } from '../../components/crud/secao-suspensao';
+import { SecaoSuspensao, type EstadoSuspensao } from '../../components/crud/secao-suspensao';
 import { perfilPesquisadorApi } from '../../services/6-perfil-pesquisador/api/perfil-pesquisador.api';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 
 interface SecaoModeracaoPesquisadorProps {
   auth: Pick<UseAuthReturn, 'authFetch'>;
   idUsuario: number | string;
+  aoMudar?: (estado: EstadoSuspensao | null) => void;
 }
 
 // Moderação: suspender/reativar o PODER de pesquisador. A diferença para a suspensão de conta é conceitual:
 // isto NUNCA bloqueia login (a conta continua normal), só a autoridade de pesquisador (criar campanha nova,
 // endossar, etc.), por isso o pesquisador continua vendo o motivo em Minha Conta > Acadêmico.
-export function SecaoModeracaoPesquisador({ auth, idUsuario }: SecaoModeracaoPesquisadorProps) {
+export function SecaoModeracaoPesquisador({ auth, idUsuario, aoMudar }: SecaoModeracaoPesquisadorProps) {
   return (
     <SecaoSuspensao
       titulo="Moderação (Pesquisador)"
@@ -22,6 +23,7 @@ export function SecaoModeracaoPesquisador({ auth, idUsuario }: SecaoModeracaoPes
       buscar={() => perfilPesquisadorApi.buscarSuspensao(auth.authFetch, idUsuario)}
       suspender={(ate, motivo) => perfilPesquisadorApi.suspender(auth.authFetch, idUsuario, { ate, motivo })}
       revogar={() => perfilPesquisadorApi.reativar(auth.authFetch, idUsuario)}
+      aoMudar={aoMudar}
     />
   );
 }
