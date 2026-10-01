@@ -35,7 +35,7 @@ const ORDEM_IMPACTO = ['alto', 'médio', 'baixo', IMPACTO_NAO_CLASSIFICADO];
 // Aba "Papéis & Permissões" do painel admin: rota /admin/papeis. Reúne 3 blocos read-only/de gestão do módulo
 // 2-papel-permissao (ver nest/src/2-papel-permissao) numa página só, porque nenhum dos 3 sozinho justifica uma
 // aba própria no menu. Atribuir/revogar papel de um usuário mora na seção "Papéis" de Alterar Usuário
-// (painel-papeis-usuario.tsx, aba Papéis do Alterar Usuário: etiquetas + menu suspenso só com o que falta atribuir), não aqui.
+// (modal-alterar-usuario.tsx, seção Papéis do Alterar Usuário: etiquetas + menu suspenso só com o que falta atribuir), não aqui.
 export function ListarPapeis({ auth }: PropsPagina) {
   const {
     alterando,
