@@ -10,7 +10,7 @@ interface BotaoVerFotoPerfilProps {
 // avatar pequeno, já processada pelo `sharp` no upload (RNF-016). `badge` desenha o selo circular sobreposto no
 // canto inferior direito do avatar (cabeçalho do modal); sem `badge`, é o ícone inline usado dentro de "Dados
 // da conta".
-export function BotaoVerFotoPerfil({ url, tamanho = 'text-base', badge = false }: BotaoVerFotoPerfilProps) {
+export function BotaoVerFotoPerfil({ url, tamanho = 'icone-grande', badge = false }: BotaoVerFotoPerfilProps) {
   if (badge) {
     return (
       <a
@@ -18,14 +18,9 @@ export function BotaoVerFotoPerfil({ url, tamanho = 'text-base', badge = false }
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Abrir imagem em outra guia"
-        className="dica w-7 h-7 rounded-full flex items-center justify-center border-2 transition-opacity hover:opacity-80"
-        style={{
-          backgroundColor: 'var(--color-dark)',
-          borderColor: 'var(--cor-fundo-cartao)',
-          color: 'var(--color-white)',
-        }}
+        className="dica w-7 h-7 rounded-full flex items-center justify-center border-2 fundo-escuro borda-cartao texto-sobre-cor transition-opacity hover:opacity-80"
       >
-        <i className="fa-solid fa-eye text-xs"></i>
+        <i className="fa-solid fa-eye icone-pequeno"></i>
         <Dica texto="Abrir imagem em outra guia" curta />
       </a>
     );

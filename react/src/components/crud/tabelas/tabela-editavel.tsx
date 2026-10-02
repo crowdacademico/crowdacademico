@@ -137,7 +137,7 @@ export function TabelaEditavel<T, F>({
                   <td key={coluna.rotulo}>{coluna.campo(novo, mudarNovo)}</td>
                 ))}
                 <td className="crud-tabela__celula--centralizada">
-                  <button type="button" className="btn btn-sucesso text-xs whitespace-nowrap" onClick={() => void adicionar()}>
+                  <button type="button" className="btn btn-sucesso btn-pequeno whitespace-nowrap" onClick={() => void adicionar()}>
                     + adicionar
                   </button>
                 </td>

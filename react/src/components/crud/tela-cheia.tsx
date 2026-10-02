@@ -23,7 +23,7 @@ export function TelaCheia({ ativa, titulo, aoSair, children }: TelaCheiaProps) {
       role={ativa ? 'dialog' : undefined}
       aria-modal={ativa || undefined}
       aria-label={ativa ? titulo : undefined}
-      className={ativa ? 'fixed inset-0 z-[210] fundo-cartao p-6 flex flex-col gap-3 outline-none' : 'contents'}
+      className={ativa ? 'fixed inset-0 z-(--camada-tela-cheia) fundo-cartao p-6 flex flex-col gap-3 outline-none' : 'contents'}
     >
       {ativa && (
         <div className="flex items-center justify-between gap-3">

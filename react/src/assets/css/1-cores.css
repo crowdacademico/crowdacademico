@@ -42,6 +42,13 @@
   --cor-texto-marca: var(--color-primary-dark);
   --cor-superficie: var(--color-surface);
   --cor-escura: var(--color-dark);
+  /* Rodapé do site: sempre escuro, em qualquer tema (por isso estas cores não são redefinidas no tema escuro). */
+  --cor-rodape-texto: #94a3b8; /* slate-400 */
+  --cor-rodape-forte: #ffffff;
+  --cor-rodape-apagado: #475569; /* slate-600 */
+  --cor-rodape-borda: #1e293b; /* slate-800 */
+  /* Fundo escuro translúcido atrás de modal e gaveta (o mesmo nos dois temas). */
+  --cor-fundo-escurecido: rgba(0, 0, 0, 0.4);
 
   --color-white: #ffffff;
 
@@ -360,6 +367,39 @@
 
   .texto-sobre-cor {
     color: var(--cor-texto-sobre-cor);
+  }
+
+  /* Rodapé do site: fundo escuro fixo, que não muda com o tema (é sempre escuro). Cores próprias, em variáveis. */
+  .rodape {
+    background-color: var(--cor-escura);
+    color: var(--cor-rodape-texto);
+  }
+
+  .texto-rodape-forte {
+    color: var(--cor-rodape-forte);
+  }
+
+  .texto-rodape-apagado {
+    color: var(--cor-rodape-apagado);
+  }
+
+  .borda-rodape {
+    border-color: var(--cor-rodape-borda);
+  }
+
+  /* Fundo escuro translúcido atrás de modal, gaveta do menu e foto em envio. */
+  .fundo-escurecido {
+    background-color: var(--cor-fundo-escurecido);
+  }
+
+  /* Fundo escuro sólido (botão da câmera em cima do avatar). */
+  .fundo-escuro {
+    background-color: var(--cor-escura);
+  }
+
+  /* Borda da mesma cor do cartão: "anel" em volta de um selo em cima do avatar, que some no claro e no escuro. */
+  .borda-cartao {
+    border-color: var(--cor-fundo-cartao);
   }
 
   /* Par de .texto-erro, mesmo papel de .hover-texto-forte para .texto-fraco: intensifica ao passar o mouse,

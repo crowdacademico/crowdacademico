@@ -43,7 +43,7 @@ export function MenuUsuario({ auth }: MenuUsuarioProps) {
             <i className="fa-solid fa-user"></i>
           </div>
         )}
-        <i className="fa-solid fa-chevron-down text-xs texto-fraco"></i>
+        <i className="fa-solid fa-chevron-down icone-pequeno texto-fraco"></i>
       </button>
 
       {aberto && (

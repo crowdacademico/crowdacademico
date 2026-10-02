@@ -20,6 +20,19 @@
   --shadow-lg: 0 18px 45px rgba(15, 23, 42, 0.08);
   /* Cartão solto no meio da página (login, cadastro): sombra embaixo E em cima, para o cabeçalho também se
      separar do fundo. */
+  /* Medidas que as telas escreviam entre colchetes: usadas no JSX como `z-(--camada-modal)`, `h-(--altura-modal)`. */
+  /* Ordem das camadas, de baixo para cima (a ordem importa: a dica tem de ficar acima do modal e dos avisos). */
+  --camada-dica: 20;
+  --camada-pular-para-conteudo: 100;
+  --camada-modal: 200;
+  --camada-tela-cheia: 210;
+  --camada-aviso: 300;
+  --camada-barra-carregamento: 300;
+  --camada-dica-solta: 400;
+  --distancia-topo-modal: 5vh;
+  --altura-modal: 90vh;
+  --altura-cartao-solto: calc(100vh - 2rem);
+  --largura-sidebar: 260px;
   --shadow-cartao-solto: 0 -12px 40px -12px rgba(15, 23, 42, 0.2), 0 25px 50px -12px rgba(15, 23, 42, 0.25);
 
   --transition-normal: all 0.2s ease;

@@ -34,7 +34,7 @@ function LinhaPar({ texto, fundo }: { texto: string; fundo: string }) {
     <div className="fundo-cartao flex items-center gap-3 rounded-lg border borda-padrao p-2">
       <span
         ref={medir}
-        className="rounded px-3 py-1 text-sm font-bold"
+        className="rounded px-3 py-1 paragrafo-destaque texto-herdado"
         style={{ color: `var(${texto})`, backgroundColor: `var(${fundo})` }}
       >
         Aa
@@ -133,9 +133,9 @@ function LinhaVerde({ rotulo, cor, valor, emPrevia, aoEscolher }: LinhaVerdeProp
     <div ref={medir} className="fundo-cartao flex flex-wrap items-center gap-3 rounded-lg border borda-padrao p-3">
       <span className="paragrafo-denso w-40 shrink-0">{rotulo}</span>
       <span data-amostra style={{ color: cor }} className="min-w-0 flex-1">
-        <span className="text-xs">Texto pequeno de marca. </span>
-        <span className="text-base font-bold">Texto de marca em negrito </span>
-        <span className="text-sm underline">link</span>
+        <span className="legenda texto-herdado">Texto pequeno de marca. </span>
+        <span className="paragrafo-destaque texto-herdado">Texto de marca em negrito </span>
+        <span className="paragrafo texto-herdado underline">link</span>
       </span>
       <button
         type="button"
@@ -181,7 +181,7 @@ export function ComparadorVerdeTexto({ previa, personalizada, aoEscolher, aoMuda
           emPrevia={previa === personalizada}
           aoEscolher={aoEscolher}
         />
-        <label className="flex items-center gap-2 text-sm texto-padrao">
+        <label className="flex items-center gap-2 paragrafo texto-padrao">
           <input
             type="color"
             value={personalizada}

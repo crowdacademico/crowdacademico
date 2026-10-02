@@ -55,8 +55,8 @@ function CardMetrica({ rotulo, valor, moeda = false, para }: CardMetricaProps) {
         className={
           // Moeda: acompanha a largura do card (`cqi`), entre text-base e text-3xl, com a mesma altura de
           // linha do text-3xl, para caber no celular sem desalinhar dos cards vizinhos.
-          (moeda ? 'text-[clamp(1rem,13.5cqi,1.875rem)] leading-9 ' : 'text-3xl ') +
-          'font-extrabold whitespace-nowrap ' +
+          (moeda ? 'numero-metrica numero-metrica--moeda ' : 'numero-metrica ') +
+          '' +
           (valor === null ? 'texto-fraco opacity-50' : 'texto-forte')
         }
       >
@@ -64,7 +64,7 @@ function CardMetrica({ rotulo, valor, moeda = false, para }: CardMetricaProps) {
           '-'
         ) : moeda ? (
           <>
-            <span className="text-lg mr-1">R$</span>
+            <span className="numero-metrica__simbolo">R$</span>
             {formatarReaisSemSimbolo(valor)}
           </>
         ) : (
@@ -146,7 +146,7 @@ export function Dashboard({ auth }: DashboardProps) {
           {/* (b) Faixa de saúde - sempre renderiza, mesmo se o resumo abaixo
               falhar (é precisamente aí que ela mais importa). */}
           <div className="paragrafo cartao-painel p-5 flex flex-wrap items-center gap-x-8 gap-y-3 texto-herdado">
-            <span className="flex items-center gap-2 font-semibold texto-padrao">
+            <span className="flex items-center gap-2 enfase texto-padrao">
               <PontoStatusConexao valor={bancoConectado} />
               {bancoConectado === null
                 ? 'Verificando banco...'

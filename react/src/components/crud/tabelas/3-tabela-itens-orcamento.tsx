@@ -57,7 +57,7 @@ export function TabelaItensOrcamento({ itens, podeEditar, metaFinanceira, aoAdic
     <>
       {metaFinanceira !== undefined && (
         <div className="paragrafo flex flex-wrap items-center justify-between gap-3 mb-3 texto-herdado">
-          <span className={soma === metaFinanceira ? 'texto-fraco' : 'texto-erro font-semibold'}>
+          <span className={soma === metaFinanceira ? 'texto-fraco' : 'texto-erro enfase'}>
             Total dos itens: <strong>{formatarMoeda(soma)}</strong> de {formatarMoeda(metaFinanceira)}
             {soma !== metaFinanceira && ' (precisa ser igual à meta)'}
           </span>

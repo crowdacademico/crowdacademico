@@ -387,7 +387,7 @@ export function ModalCriarCampanha({
             </Campo>
             <p
               id={idPrazoDica}
-              className={'legenda sm:col-span-2 -mt-2 texto-herdado ' + (prazoComErro ? 'texto-erro font-semibold' : 'texto-fraco')}
+              className={'legenda sm:col-span-2 -mt-2 texto-herdado ' + (prazoComErro ? 'texto-erro enfase' : 'texto-fraco')}
             >
               {form.dataFim === '' && erroDe('fim') ? 'Informe a data de fim. ' : ''}
               {duracao !== null ? `Duração: ${duracao} ${duracao === 1 ? 'dia' : 'dias'}. ` : ''}A campanha precisa durar

@@ -1,6 +1,7 @@
 import { useCallback, useId, useState } from 'react';
 import { GenericTable } from '../../../components/crud/generic-table';
 import { ModalFicha } from '../../../components/crud/modal-ficha';
+import { RodapeAcoes } from '../../../components/crud/rodape-acoes';
 import { AvatarUsuario } from '../../../components/layout/avatar-usuario';
 import { useToast } from '../../../components/layout/toast/use-toast';
 import { Dica } from '../../../components/layout/tooltip';
@@ -29,17 +30,17 @@ export function CamposExtras() {
         <label htmlFor={idTexto} className="rotulo-campo">Textarea</label>
         <textarea id={idTexto} className="input-padrao" rows={2} defaultValue="Texto em várias linhas" />
       </div>
-      <div className="flex flex-wrap items-center gap-4 text-sm texto-padrao">
-        <label className="flex items-center gap-2 font-semibold">
+      <div className="flex flex-wrap items-center gap-4 paragrafo texto-padrao">
+        <label className="flex items-center gap-2 enfase">
           <input type="checkbox" defaultChecked /> Marcado
         </label>
-        <label className="flex items-center gap-2 font-semibold">
+        <label className="flex items-center gap-2 enfase">
           <input type="checkbox" /> Desmarcado
         </label>
-        <label className="flex items-center gap-2 font-semibold">
+        <label className="flex items-center gap-2 enfase">
           <input type="radio" name={nomeRadio} defaultChecked /> Radio A
         </label>
-        <label className="flex items-center gap-2 font-semibold">
+        <label className="flex items-center gap-2 enfase">
           <input type="radio" name={nomeRadio} /> Radio B
         </label>
       </div>
@@ -62,6 +63,15 @@ export function BotaoDev() {
           <i className="fa-solid fa-chevron-down"></i>
         </button>
       </div>
+      <p className="legenda mt-3 mb-2">Dentro de formulário, ao lado de um botão comum (mesmo tamanho dele):</p>
+      <div className="flex flex-wrap gap-3">
+        <button type="button" className="btn btn-secondary">
+          <i className="fa-solid fa-key"></i> Trocar senha
+        </button>
+        <button type="button" className="btn btn-dev-acao">
+          <i className="fa-solid fa-wand-magic-sparkles"></i> Redefinir senha dev
+        </button>
+      </div>
     </div>
   );
 }
@@ -75,7 +85,7 @@ export function Avatares() {
         {[1, 2, 3, 4, 5, 6, 7].map((n) => (
           <span
             key={n}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold texto-sobre-cor"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full paragrafo-destaque texto-sobre-cor"
             style={{ backgroundColor: `var(--cor-avatar-${n})` }}
             title={`--cor-avatar-${n}`}
           >
@@ -154,7 +164,7 @@ export function InterativosGlobais() {
       <div className="fundo-cartao rounded-xl border borda-padrao p-4 space-y-4">
         <p className="legenda">Estes usam o tema escolhido no cabeçalho (sol, lua ou sistema), porque são globais.</p>
         <div className="flex flex-wrap items-center gap-3">
-          <span className="dica inline-flex items-center gap-2 rounded-lg border borda-padrao px-3 py-2 text-sm texto-padrao">
+          <span className="dica inline-flex items-center gap-2 rounded-lg border borda-padrao px-3 py-2 paragrafo texto-padrao">
             <i className="fa-solid fa-circle-info"></i> Passe o mouse aqui
             <Dica texto="Exemplo de dica (tooltip) do sistema" curta baixo />
           </span>
@@ -163,6 +173,18 @@ export function InterativosGlobais() {
           </button>
           <button type="button" className="btn btn-danger" onClick={() => mostrar('Algo deu errado', 'Exemplo de aviso de erro.', 'erro')}>
             Toast de erro
+          </button>
+          {/* Fila de avisos (DS-50): o novo entra embaixo, até 3 na tela. */}
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => {
+              mostrar('Primeiro aviso', 'Entra em cima.', 'sucesso');
+              mostrar('Segundo aviso', 'Entra embaixo do primeiro.', 'erro');
+              mostrar('Terceiro aviso', 'Entra embaixo do segundo.', 'sucesso');
+            }}
+          >
+            Fila de avisos
           </button>
           <button type="button" className="btn btn-secondary" onClick={() => setModalAberto(true)}>
             Abrir modal
@@ -187,13 +209,9 @@ export function InterativosGlobais() {
       {modalAberto && (
         <ModalFicha
           titulo="Exemplo de modal"
-          subtitulo="Assim o sistema mostra uma ficha"
+          ajuda="Exemplo do ⓘ de ajuda: a explicação longa fica aqui, não num subtítulo (DS-32)."
           aoFechar={() => setModalAberto(false)}
-          rodape={
-            <button type="button" className="btn btn-secondary w-full max-w-sm ml-auto" onClick={() => setModalAberto(false)}>
-              Fechar
-            </button>
-          }
+          rodape={<RodapeAcoes aoCancelar={() => setModalAberto(false)} rotuloCancelar="Fechar" />}
         >
           <p className="paragrafo">Conteúdo de exemplo dentro do modal, com o mesmo cartão, título e rodapé das telas reais.</p>
         </ModalFicha>

@@ -31,7 +31,7 @@ function PularParaConteudo() {
     <a
       href="#conteudo"
       onClick={pular}
-      className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] btn btn-primary"
+      className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-(--camada-pular-para-conteudo) btn btn-primary"
     >
       Pular para o conteúdo
     </a>

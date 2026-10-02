@@ -28,10 +28,10 @@ export function Header({ auth }: HeaderProps) {
         {/* Espelho da marca do <footer>: mesmo tamanho (w-10 h-10 / text-2xl) e mesma caixa (.largura-site),
             então as duas ficam na mesma linha vertical em qualquer tela. */}
         <Link to="/" className="flex items-center gap-3">
-          <div className="w-10 h-10 fundo-marca rounded-lg flex items-center justify-center text-white font-bold shadow-inner">
+          <div className="w-10 h-10 fundo-marca rounded-lg flex items-center justify-center texto-sobre-cor shadow-inner">
             <i className="fa-solid fa-flask"></i>
           </div>
-          <span className="font-bold text-2xl tracking-tight texto-forte hidden sm:block">
+          <span className="titulo-secao hidden sm:block">
             CrowdAcadêmico
           </span>
         </Link>

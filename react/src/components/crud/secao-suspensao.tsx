@@ -130,7 +130,7 @@ export function SecaoSuspensao({
                   className={
                     'legenda-destaque px-3 py-1.5 rounded-lg border texto-herdado ' +
                     (dias === String(d)
-                      ? 'fundo-marca-forte text-white borda-marca'
+                      ? 'fundo-marca-forte texto-sobre-cor borda-marca'
                       : 'texto-padrao borda-forte hover-fundo-sutil')
                   }
                 >

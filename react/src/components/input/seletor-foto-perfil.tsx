@@ -180,7 +180,7 @@ export function SeletorFotoPerfil({
         <AvatarUsuario nome={nome} foto={url} tamanho={tamanho} forma="circulo" />
 
         {enviando && (
-          <div className="absolute inset-0 rounded-full flex items-center justify-center bg-black/50 text-white">
+          <div className="absolute inset-0 rounded-full flex items-center justify-center fundo-escurecido texto-sobre-cor">
             {progresso === null ? (
               <i className="fa-solid fa-spinner fa-spin"></i>
             ) : (
@@ -197,7 +197,7 @@ export function SeletorFotoPerfil({
             onClick={() => inputRef.current?.click()}
             disabled={enviando}
             aria-label="Alterar foto de perfil"
-            className="legenda dica absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-dark hover:bg-black text-white flex items-center justify-center border-2 border-white shadow transition-colors disabled:opacity-60"
+            className="legenda dica absolute -bottom-1 -right-1 w-7 h-7 rounded-full fundo-escuro hover:opacity-80 texto-sobre-cor flex items-center justify-center border-2 borda-cartao shadow transition-colors disabled:opacity-60"
           >
             <i className="fa-solid fa-camera"></i>
             <Dica texto="Alterar foto de perfil" curta />
@@ -210,7 +210,7 @@ export function SeletorFotoPerfil({
             onClick={aoRemover}
             disabled={enviando}
             aria-label="Remover foto de perfil"
-            className="legenda dica absolute -bottom-1 -left-1 w-7 h-7 rounded-full fundo-erro-forte hover:opacity-80 texto-sobre-cor flex items-center justify-center border-2 border-white shadow transition-colors disabled:opacity-60"
+            className="legenda dica absolute -bottom-1 -left-1 w-7 h-7 rounded-full fundo-erro-forte hover:opacity-80 texto-sobre-cor flex items-center justify-center border-2 borda-cartao shadow transition-colors disabled:opacity-60"
           >
             <i className="fa-solid fa-trash"></i>
             <Dica texto="Remover foto de perfil" curta />
@@ -226,7 +226,7 @@ export function SeletorFotoPerfil({
         />
       </div>
 
-      {erroLocal && <p className="legenda-destaque texto-erro mt-1.5 max-w-[10rem]">{erroLocal}</p>}
+      {erroLocal && <p className="legenda-destaque texto-erro mt-1.5 max-w-40">{erroLocal}</p>}
     </div>
   );
 }

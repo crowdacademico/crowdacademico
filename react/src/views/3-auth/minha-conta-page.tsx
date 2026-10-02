@@ -181,7 +181,7 @@ function FaixaIdentidade({ auth }: FaixaIdentidadeProps) {
             >
               <i
                 className={
-                  'fa-solid text-[10px] ' +
+                  'fa-solid icone-pequeno ' +
                   (usuario?.emailVerificado ? 'fa-check' : 'fa-triangle-exclamation')
                 }
               ></i>
@@ -379,7 +379,7 @@ function AbaPerfil({ auth, aoVoltar }: AbaPerfilProps) {
                 <i className="fa-solid fa-circle-info mt-0.5 shrink-0"></i>
                 <p className="legenda texto-herdado">
                   Você ainda não é pesquisador. O upgrade fica na aba{' '}
-                  <Link to="/admin/minha-conta/academico" className="font-bold underline">
+                  <Link to="/admin/minha-conta/academico" className="enfase underline">
                     Acadêmico
                   </Link>
                   .
@@ -393,7 +393,7 @@ function AbaPerfil({ auth, aoVoltar }: AbaPerfilProps) {
                 <CampoFicha rotulo="Vínculo institucional" valor={perfil.vinculoInstitucional} />
                 <p className="legenda texto-fraco">
                   O perfil completo de pesquisador fica na aba{' '}
-                  <Link to="/admin/minha-conta/academico" className="font-bold underline">
+                  <Link to="/admin/minha-conta/academico" className="enfase underline">
                     Acadêmico
                   </Link>
                   .
@@ -596,10 +596,10 @@ function AbaSeguranca({ auth }: AbaSegurancaProps) {
             className="titulo-bloco flex items-center gap-2"
           >
             Sessões ativas
-            {sessoes && <span className="font-normal normal-case tracking-normal">({sessoes.length})</span>}
+            {sessoes && <span className="legenda texto-herdado normal-case">({sessoes.length})</span>}
             <i
               className={
-                'fa-solid fa-chevron-down text-[10px] transition-transform' +
+                'fa-solid fa-chevron-down icone-pequeno transition-transform' +
                 (sessoesAbertas ? ' rotate-180' : '')
               }
             ></i>
@@ -630,7 +630,7 @@ function AbaSeguranca({ auth }: AbaSegurancaProps) {
                 >
                   <i
                     className={
-                      'fa-solid ' + iconePorDispositivo(sessao.userAgent) + ' texto-fraco text-lg shrink-0'
+                      'fa-solid ' + iconePorDispositivo(sessao.userAgent) + ' texto-fraco icone-grande shrink-0'
                     }
                   ></i>
                   <div className="min-w-0 flex-1">
@@ -660,7 +660,7 @@ function AbaSeguranca({ auth }: AbaSegurancaProps) {
                     >
                       <i
                         className={
-                          'fa-solid text-sm ' + (encerrando === sessao.idSessao ? 'fa-spinner fa-spin' : 'fa-power-off')
+                          'fa-solid icone-pequeno ' + (encerrando === sessao.idSessao ? 'fa-spinner fa-spin' : 'fa-power-off')
                         }
                       ></i>
                       <Dica texto="Encerrar sessão" curta />
@@ -716,7 +716,7 @@ function AbaPapeis({ auth }: AbaPapeisProps) {
                 {papel.nomePapel}
                 {suspenso && (
                   <>
-                    <i className="fa-solid fa-clock text-[10px]" aria-hidden="true"></i>
+                    <i className="fa-solid fa-clock icone-pequeno" aria-hidden="true"></i>
                     suspenso até {formatarDataHora(papel.suspensoAte)}
                   </>
                 )}

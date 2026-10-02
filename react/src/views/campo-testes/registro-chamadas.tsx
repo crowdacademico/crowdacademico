@@ -44,7 +44,7 @@ export function RegistroChamadas() {
 
   return (
     <div className="registro-chamadas">
-      <button type="button" className="btn btn-secondary text-xs" onClick={() => setAberto((atual) => !atual)}>
+      <button type="button" className="btn btn-secondary btn-pequeno" onClick={() => setAberto((atual) => !atual)}>
         <i className={`fa-solid fa-chevron-${aberto ? 'down' : 'right'}`}></i> T4 - Registro de Chamadas (
         {registroChamadas.length})
       </button>
@@ -58,7 +58,7 @@ export function RegistroChamadas() {
           {registroChamadas.length > 0 && (
             <button
               type="button"
-              className="btn btn-secondary text-xs mb-2"
+              className="btn btn-secondary btn-pequeno mb-2"
               onClick={() => {
                 limparRegistro();
                 setPagina(1);
@@ -95,13 +95,13 @@ export function RegistroChamadas() {
 
               {linhaExpandida === chamada.id && (
                 <div className="legenda fundo-sutil rounded-md p-3 my-1 texto-herdado">
-                  <p className="font-bold mb-1">Enviado</p>
+                  <p className="enfase mb-1">Enviado</p>
                   <pre className="overflow-x-auto">{JSON.stringify(chamada.corpoEnviado, null, 2)}</pre>
-                  <p className="font-bold mt-2 mb-1">Recebido</p>
+                  <p className="enfase mt-2 mb-1">Recebido</p>
                   <pre className="overflow-x-auto">{JSON.stringify(chamada.corpoRecebido, null, 2)}</pre>
                   <button
                     type="button"
-                    className="btn btn-secondary text-xs mt-2"
+                    className="btn btn-secondary btn-pequeno mt-2"
                     onClick={() => {
                       // `navigator.clipboard` (`no-unnecessary-condition`): o tipo do lib.dom.d.ts afirma
                       // sempre presente, mas a Clipboard API de verdade só existe em contexto seguro

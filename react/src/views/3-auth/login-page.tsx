@@ -1,6 +1,6 @@
 import { useId, useState } from 'react';
 import { MensagemErro } from '../../components/crud/mensagem-erro';
-import type { CSSProperties, FormEvent } from 'react';
+import type { FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { IconeGoogle } from '../../components/3-auth/icone-google';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
@@ -49,18 +49,17 @@ export function LoginPage({ auth }: PropsPagina) {
   };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 fundo-pagina">
+    <div className="pagina-centralizada">
       <div className="max-w-md w-full fundo-cartao rounded-3xl sombra-cartao-solto border borda-padrao overflow-hidden">
         <div className="p-10 text-center border-b borda-padrao relative overflow-hidden fundo-sutil">
           <div
-            className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-32 brilho-marca rounded-full blur-3xl"
-            style={{ '--opacidade-brilho-marca': '20%' } as CSSProperties}
+            className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-32 brilho-marca brilho-marca-forte rounded-full blur-3xl"
           ></div>
-          <div className="w-14 h-14 fundo-marca rounded-2xl mx-auto flex items-center justify-center text-white font-bold text-2xl mb-5 shadow-lg relative z-10">
+          <div className="w-14 h-14 fundo-marca rounded-2xl mx-auto flex items-center justify-center texto-sobre-cor icone-destaque mb-5 shadow-lg relative z-10">
             <i className="fa-solid fa-flask"></i>
           </div>
           <h1 className="titulo-pagina mb-2 relative z-10">Bem-vindo(a)</h1>
-          <p className="paragrafo texto-fraco font-medium relative z-10">
+          <p className="paragrafo texto-fraco relative z-10">
             Acesse sua conta para apoiar a ciência brasileira.
           </p>
         </div>
@@ -105,7 +104,7 @@ export function LoginPage({ auth }: PropsPagina) {
           <button
             type="submit"
             disabled={enviando}
-            className="w-full bg-dark hover:bg-black text-white font-bold text-lg py-4 rounded-xl transition-all shadow-lg hover:shadow-xl mt-4 disabled:opacity-60"
+            className="btn btn-primary btn-destaque w-full py-3.5 mt-4"
           >
             {enviando ? 'Entrando...' : 'Entrar'}
           </button>
@@ -136,7 +135,7 @@ export function LoginPage({ auth }: PropsPagina) {
               acima. Continua sendo link, não um 2º botão cheio (dois botões grandes competiriam entre si). */}
           <p className="paragrafo texto-fraco text-center pt-2">
             Ainda não tem cadastro?{' '}
-            <Link to="/cadastro" className="texto-marca font-bold underline">
+            <Link to="/cadastro" className="texto-marca enfase underline">
               Clique aqui
             </Link>
           </p>

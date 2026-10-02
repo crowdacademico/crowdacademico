@@ -48,7 +48,7 @@ export function MedidorSenha({ senha }: MedidorSenhaProps) {
               key={r.chave}
               className={'legenda flex items-center gap-1.5 texto-herdado ' + (cumprido ? 'texto-sucesso' : 'texto-fraco')}
             >
-              <i className={'fa-solid ' + (cumprido ? 'fa-circle-check' : 'fa-circle') + ' text-[10px]'}></i>
+              <i className={'fa-solid ' + (cumprido ? 'fa-circle-check' : 'fa-circle') + ' icone-pequeno'}></i>
               {r.rotulo}
             </li>
           );

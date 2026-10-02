@@ -25,7 +25,7 @@ export function CaixaTextoLongo({ rotulo, tituloTelaCheia, valor, aoMudar, erro,
     <div className="relative flex-1 flex flex-col">
       {!telaCheia && (
         // Na mesma linha do rótulo, com a mesma letra dele (.btn-pilula-rotulo).
-        <div className="absolute right-0 -top-[3px] flex gap-2">
+        <div className="absolute right-0 -top-0.75 flex gap-2">
           {extra}
           <button type="button" onClick={() => setTelaCheia(true)} className="btn-pilula btn-pilula-rotulo">
             <i className="fa-solid fa-expand"></i> Tela cheia
@@ -41,7 +41,7 @@ export function CaixaTextoLongo({ rotulo, tituloTelaCheia, valor, aoMudar, erro,
               onChange={(evento) => aoMudar?.(evento.target.value)}
               readOnly={!aoMudar}
               placeholder={placeholder}
-              className={'input-padrao font-mono resize-none flex-1 ' + (telaCheia ? 'text-sm' : 'text-xs min-h-64')}
+              className={'input-padrao input-padrao--codigo resize-none flex-1' + (telaCheia ? '' : ' input-padrao--pequeno min-h-64')}
             />
           )}
         </Campo>

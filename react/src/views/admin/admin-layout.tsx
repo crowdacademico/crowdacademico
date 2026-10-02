@@ -12,8 +12,7 @@ interface AdminLayoutProps {
 }
 
 // Casca do painel administrativo: menu lateral (admin-sidebar.tsx: coluna fixa à esquerda a partir de 1377px
-// (min-[1377px]:, ver comentário completo em admin-sidebar.tsx sobre por que é um valor literal, não um token
-// de tema), gaveta com hambúrguer em telas menores) + área de conteúdo. Cada aba
+// (variação `painel:`, o ponto de quebra declarado no tema; ver admin-sidebar.tsx), gaveta com hambúrguer em telas menores) + área de conteúdo. Cada aba
 // (Usuários/Papéis/Configurações) é uma rota de verdade dentro de /admin/* (ver
 // services/router/rotas.constants.ts, ROTAS_ADMIN) e renderiza aqui dentro do <Outlet/>: esta casca não sabe
 // qual aba está ativa, só monta a moldura.
@@ -52,7 +51,7 @@ export function AdminLayout({ auth }: AdminLayoutProps) {
           (`absolute`, primeiro filho de `.admin-shell`, que tem `position:relative` em 6-admin-shell.css só
           para servir de âncora para isto), e a sidebar continua no fluxo normal do grid (sem ser empurrada,
           encosta direto no breadcrumb). É o PRÓPRIO fundo opaco da sidebar + vir DEPOIS no HTML
-          (min-[1377px]:relative em admin-sidebar.tsx) que cobre/esconde a faixa atrás dela sozinha, sem
+          (painel:relative em admin-sidebar.tsx) que cobre/esconde a faixa atrás dela sozinha, sem
           display/visibility condicional aqui. Só a área de CONTEÚDO (.admin-content-area, padding-top maior,
           ver 6-admin-shell.css) reserva espaço de verdade: é onde a faixa aparece, dando o respiro entre
           breadcrumb e tabela. Como o botão nunca é escondido via CSS (nem hidden, nem invisible), ele fica

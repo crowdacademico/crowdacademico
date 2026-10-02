@@ -63,7 +63,7 @@ export function ModalConsultarPapel({ auth, papel, aoFechar }: ModalConsultarPap
                   key={permissao.idPermissao}
                   type="button"
                   onClick={() => setPermissaoDetalhada(permissao)}
-                  className="btn btn-secondary text-xs py-1.5 px-3"
+                  className="btn btn-secondary btn-pequeno"
                 >
                   {detalhePermissao(permissao.nome).nome}
                 </button>

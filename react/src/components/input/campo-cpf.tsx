@@ -32,7 +32,7 @@ export function CampoCpf({ valor, onChange, erro, gerarCpfDeTeste }: CampoCpfPro
           {gerarCpfDeTeste && (
             <button
               type="button"
-              className="btn btn-secondary text-xs whitespace-nowrap"
+              className="btn btn-secondary btn-pequeno whitespace-nowrap"
               onClick={() => onChange(gerarCpfDeTeste())}
             >
               Gerar CPF válido

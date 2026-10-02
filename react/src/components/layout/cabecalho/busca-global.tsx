@@ -219,7 +219,7 @@ export function BuscaGlobal({ auth }: BuscaGlobalProps) {
 
   return (
     <div
-      className="fixed inset-0 z-[200] flex items-start justify-center pt-24 px-4 bg-black/40"
+      className="fixed inset-0 z-(--camada-modal) flex items-start justify-center pt-24 px-4 fundo-escurecido"
       onClick={fechar}
       // Clique no FUNDO não tira o foco da janela (ver o mesmo trecho em modal-ficha.tsx).
       onMouseDown={(evento) => {
@@ -246,7 +246,7 @@ export function BuscaGlobal({ auth }: BuscaGlobalProps) {
             placeholder="Buscar usuário, papel, permissão, parâmetro..."
             className="paragrafo flex-1 outline-none texto-forte bg-transparent placeholder:texto-fraco"
           />
-          <kbd className="text-[10px] font-bold texto-fraco border borda-forte rounded px-1.5 py-0.5">
+          <kbd className="legenda-destaque texto-fraco border borda-forte rounded px-1.5 py-0.5">
             Esc
           </kbd>
         </div>
@@ -279,7 +279,7 @@ export function BuscaGlobal({ auth }: BuscaGlobalProps) {
                       className={'fa-solid ' + (item.icone ?? 'fa-circle') + ' texto-fraco w-4'}
                     ></i>
                     <span className="flex-1 min-w-0">
-                      <span className="block texto-forte font-medium truncate">
+                      <span className="block texto-forte truncate">
                         {item.rotulo}
                       </span>
                       {item.subtitulo && (

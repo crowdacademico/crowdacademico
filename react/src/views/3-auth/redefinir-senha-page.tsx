@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { CSSProperties, FormEvent } from 'react';
+import type { FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { MensagemErro } from '../../components/crud/mensagem-erro';
 import { Campo } from '../../components/input/campo';
@@ -39,18 +39,17 @@ export function RedefinirSenhaPage() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 fundo-pagina">
+    <div className="pagina-centralizada">
       <div className="max-w-md w-full fundo-cartao rounded-3xl sombra-cartao-solto border borda-padrao overflow-hidden">
         <div className="p-10 text-center border-b borda-padrao fundo-sutil relative isolate overflow-hidden">
           <div
-            className="pointer-events-none absolute -z-10 top-0 left-1/2 -translate-x-1/2 w-32 h-32 brilho-marca rounded-full blur-3xl"
-            style={{ '--opacidade-brilho-marca': '20%' } as CSSProperties}
+            className="pointer-events-none absolute -z-10 top-0 left-1/2 -translate-x-1/2 w-32 h-32 brilho-marca brilho-marca-forte rounded-full blur-3xl"
           ></div>
-          <div className="w-14 h-14 fundo-marca rounded-2xl mx-auto flex items-center justify-center text-white font-bold text-2xl mb-5 shadow-lg">
+          <div className="w-14 h-14 fundo-marca rounded-2xl mx-auto flex items-center justify-center texto-sobre-cor icone-destaque mb-5 shadow-lg">
             <i className="fa-solid fa-lock"></i>
           </div>
           <h1 className="titulo-pagina mb-2">Criar nova senha</h1>
-          <p className="paragrafo texto-fraco font-medium">Escolha uma senha nova para a sua conta.</p>
+          <p className="paragrafo texto-fraco">Escolha uma senha nova para a sua conta.</p>
         </div>
 
         {!token ? (
@@ -62,7 +61,7 @@ export function RedefinirSenhaPage() {
           </div>
         ) : concluido ? (
           <div className="p-10 space-y-5 text-center">
-            <i className="fa-solid fa-circle-check text-4xl texto-sucesso"></i>
+            <i className="fa-solid fa-circle-check icone-destaque texto-sucesso"></i>
             <p className="paragrafo texto-padrao">
               Senha alterada. Por segurança, sua conta foi desconectada de todos os aparelhos.
             </p>

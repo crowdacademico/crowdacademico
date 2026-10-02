@@ -144,7 +144,7 @@ export function TabelaBancada<T>({
           <tbody>
             {mensagem !== null && (
               <tr>
-                <td colSpan={colunasTotais} className={!carregando && erro ? 'texto-erro font-bold' : 'texto-fraco'}>
+                <td colSpan={colunasTotais} className={!carregando && erro ? 'texto-erro enfase' : 'texto-fraco'}>
                   {mensagem}
                 </td>
               </tr>

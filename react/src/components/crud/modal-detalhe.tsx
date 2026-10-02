@@ -47,7 +47,7 @@ export function ModalDetalhe({
   useFocoPreso(janelaRef, true, aoFechar);
   return (
     <div
-      className="fixed inset-0 z-[200] flex items-start justify-center px-4 pt-[5vh] pb-4 bg-black/40"
+      className="fixed inset-0 z-(--camada-modal) flex items-start justify-center px-4 pt-(--distancia-topo-modal) pb-4 fundo-escurecido"
       onClick={aoFechar}
       // Clique no FUNDO não tira o foco da janela (ver o mesmo trecho em modal-ficha.tsx).
       onMouseDown={(evento) => {
@@ -60,14 +60,14 @@ export function ModalDetalhe({
         aria-labelledby={idTitulo}
         ref={janelaRef}
         tabIndex={-1}
-        className="outline-none w-full max-w-lg max-h-[85vh] fundo-elevado rounded-2xl shadow-2xl border borda-forte overflow-hidden flex flex-col"
+        className="outline-none w-full max-w-lg max-h-(--altura-modal) fundo-elevado rounded-2xl shadow-2xl border borda-forte overflow-hidden flex flex-col"
         onClick={(evento) => evento.stopPropagation()}
       >
         {rotuloAcao && (
           <>
             <div className="px-6 pt-5 pb-3 flex items-center justify-between gap-3 shrink-0">
               <span className="w-4"></span>
-              <p className="text-center font-black uppercase tracking-widest texto-forte text-lg">{rotuloAcao}</p>
+              <p className="subtitulo text-center uppercase">{rotuloAcao}</p>
               <button
                 type="button"
                 onClick={aoFechar}
@@ -83,14 +83,14 @@ export function ModalDetalhe({
 
         <div className={'px-6 py-4 flex items-start justify-between gap-3 shrink-0' + (rotuloAcao ? '' : ' border-b borda-padrao')}>
           <div className="min-w-0">
-            <h2 id={idTitulo} className="font-sans font-bold texto-forte truncate">{titulo}</h2>
+            <h2 id={idTitulo} className="paragrafo-destaque truncate">{titulo}</h2>
             {chave && <p className="paragrafo-denso mt-0.5">{chave}</p>}
           </div>
           <div className="flex items-center gap-3 shrink-0">
             {badgeImpacto && (
               <span
                 className={
-                  'text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ' +
+                  'rotulo-leitura texto-herdado px-2 py-0.5 rounded-full ' +
                   CLASSE_BADGE_IMPACTO[badgeImpacto]
                 }
               >

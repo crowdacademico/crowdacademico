@@ -116,9 +116,9 @@ export function BarraFiltros({
                     {faceta.selecionados.length > 0 ? (
                       <span className="badge badge-sucesso">{faceta.selecionados.length}</span>
                     ) : (
-                      <span className="texto-padrao font-normal">(Todos)</span>
+                      <span className="paragrafo texto-padrao">(Todos)</span>
                     )}
-                    <i className="fa-solid fa-chevron-down text-xs"></i>
+                    <i className="fa-solid fa-chevron-down icone-pequeno"></i>
                   </button>
 
                   {aberta && (
@@ -174,7 +174,7 @@ export function BarraFiltros({
             </button>
           ))}
           {chips.length > 1 && (
-            <button type="button" onClick={limparTudo} className="text-xs font-semibold texto-marca foco-marca">
+            <button type="button" onClick={limparTudo} className="legenda-destaque texto-marca foco-marca">
               Limpar filtros
             </button>
           )}

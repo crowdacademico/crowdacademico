@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { CSSProperties, FormEvent } from 'react';
+import type { FormEvent } from 'react';
 import { Link } from 'react-router';
 import { MensagemErro } from '../../components/crud/mensagem-erro';
 import { Campo } from '../../components/input/campo';
@@ -34,25 +34,24 @@ export function EsqueciSenhaPage() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 fundo-pagina">
+    <div className="pagina-centralizada">
       <div className="max-w-md w-full fundo-cartao rounded-3xl sombra-cartao-solto border borda-padrao overflow-hidden">
         <div className="p-10 text-center border-b borda-padrao fundo-sutil relative isolate overflow-hidden">
           <div
-            className="pointer-events-none absolute -z-10 top-0 left-1/2 -translate-x-1/2 w-32 h-32 brilho-marca rounded-full blur-3xl"
-            style={{ '--opacidade-brilho-marca': '20%' } as CSSProperties}
+            className="pointer-events-none absolute -z-10 top-0 left-1/2 -translate-x-1/2 w-32 h-32 brilho-marca brilho-marca-forte rounded-full blur-3xl"
           ></div>
-          <div className="w-14 h-14 fundo-marca rounded-2xl mx-auto flex items-center justify-center text-white font-bold text-2xl mb-5 shadow-lg">
+          <div className="w-14 h-14 fundo-marca rounded-2xl mx-auto flex items-center justify-center texto-sobre-cor icone-destaque mb-5 shadow-lg">
             <i className="fa-solid fa-key"></i>
           </div>
           <h1 className="titulo-pagina mb-2">Esqueceu a senha?</h1>
-          <p className="paragrafo texto-fraco font-medium">
+          <p className="paragrafo texto-fraco">
             Digite o e-mail da sua conta e enviamos um link para você criar uma senha nova.
           </p>
         </div>
 
         {enviado ? (
           <div className="p-10 space-y-5 text-center">
-            <i className="fa-solid fa-envelope-circle-check text-4xl texto-marca"></i>
+            <i className="fa-solid fa-envelope-circle-check icone-destaque texto-marca"></i>
             <p className="paragrafo texto-padrao">
               Se existir uma conta com <strong>{email.trim()}</strong>, enviamos um link para criar uma senha nova. O
               link vale por pouco tempo e só pode ser usado uma vez.
@@ -64,7 +63,7 @@ export function EsqueciSenhaPage() {
             )}
             <p className="legenda texto-fraco">
               Não chegou?{' '}
-              <button type="button" onClick={() => setEnviado(false)} className="texto-marca font-bold underline">
+              <button type="button" onClick={() => setEnviado(false)} className="texto-marca enfase underline">
                 Pedir de novo
               </button>
             </p>
@@ -93,7 +92,7 @@ export function EsqueciSenhaPage() {
 
         <p className="legenda pb-8 texto-fraco text-center">
           Lembrou a senha?{' '}
-          <Link to="/login" className="texto-marca font-bold underline">
+          <Link to="/login" className="texto-marca enfase underline">
             Entrar
           </Link>
         </p>

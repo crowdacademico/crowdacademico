@@ -214,7 +214,7 @@ export function ModalAlterarTipoLink({ auth, tipo, aoFechar, aoAtualizado }: Mod
                 setRegex(evento.target.value);
                 limparErroCampo('regex');
               }}
-              className={'input-padrao font-mono' + classeErro}
+              className={'input-padrao input-padrao--codigo' + classeErro}
             />
           )}
         </Campo>

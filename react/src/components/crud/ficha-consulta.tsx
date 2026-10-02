@@ -73,7 +73,7 @@ export function CampoFicha({ rotulo, valor, largura, acao, children }: CampoFich
         <span
           className={
             'paragrafo min-w-0 break-words texto-herdado ' +
-            (temValor ? 'font-medium texto-forte' : 'texto-fraco opacity-50')
+            (temValor ? 'texto-forte' : 'texto-fraco opacity-50')
           }
         >
           {temValor ? valor : '-'}

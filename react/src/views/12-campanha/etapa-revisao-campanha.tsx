@@ -102,7 +102,7 @@ export function EtapaRevisaoCampanha({
             {orcamento.map((itemOrcamento) => (
               <li key={itemOrcamento.idOrcamento} className="paragrafo flex justify-between gap-4 texto-herdado">
                 <span>{itemOrcamento.categoria}</span>
-                <span className="font-semibold">{formatarMoeda(itemOrcamento.valor)}</span>
+                <span className="enfase">{formatarMoeda(itemOrcamento.valor)}</span>
               </li>
             ))}
           </ul>

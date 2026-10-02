@@ -21,6 +21,8 @@
   /* Fonte só para o selo <dev> (.badge-dev, 4-componentes.css): qualquer coisa marcada como "só para
      desenvolvimento" usa essa combinação (roxo + monoespaçada), nunca hardcoded caso a caso. */
   --font-mono-dev: 'Courier New', monospace;
+  /* Monoespaçada de leitura (código, chave, padrão de domínio): a do sistema operacional, não a "de dev". */
+  --font-codigo: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
 /* Escala tipográfica única do painel: 3 títulos + 1 subtítulo + 1-2 parágrafos (mesma lógica do protótipo de
@@ -40,8 +42,9 @@
      facilita tanto o dark mode (troca 1 lugar, não 15) quanto qualquer ajuste futuro de estilo do rótulo. */
   .rotulo-campo {
     display: block;
+    font-family: var(--font-sans);
     font-size: var(--font-size-rotulo);
-    font-weight: 900;
+    font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     margin-bottom: 0.5rem;
@@ -52,6 +55,7 @@
      (CampoFicha, card de métrica do Dashboard, cabeçalho de categoria da Busca Global), nunca um campo de
      formulário editável (isso continua sendo `.rotulo-campo`). */
   .rotulo-leitura {
+    font-family: var(--font-sans);
     font-size: var(--font-size-rotulo);
     font-weight: 700;
     text-transform: uppercase;
@@ -87,6 +91,7 @@
   .paragrafo {
     font-family: var(--font-sans);
     font-size: var(--font-size-sm);
+    font-weight: 400;
   }
 
   /* Texto técnico denso (chave, log, id): padrão de fato em ModalDetalhe e dashboard-regras-negocio.tsx. */
@@ -98,6 +103,13 @@
   .legenda {
     font-family: var(--font-sans);
     font-size: var(--font-size-xs);
+    font-weight: 400;
+  }
+
+  /* Ênfase DENTRO de um texto (um valor, um nome, um link, a parte em erro de uma frase): só o peso. O tamanho
+     e a cor continuam os do texto em volta, por isso não tem cor padrão. */
+  .enfase {
+    font-weight: 600;
   }
 
   /* Texto com destaque: o mesmo .paragrafo / .legenda em semi-negrito (nome no menu, item de lista, mensagem de

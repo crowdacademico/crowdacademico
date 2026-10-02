@@ -5,7 +5,7 @@
 export function DashboardIdentidadeVisual() {
   return (
     <div className="cartao-painel p-8 text-center">
-      <div className="w-14 h-14 fundo-sutil rounded-2xl mx-auto flex items-center justify-center texto-fraco text-2xl mb-4">
+      <div className="w-14 h-14 fundo-sutil rounded-2xl mx-auto flex items-center justify-center texto-fraco icone-destaque mb-4">
         <i className="fa-solid fa-image"></i>
       </div>
       <h2 className="subtitulo mb-2">Ainda não implementado</h2>

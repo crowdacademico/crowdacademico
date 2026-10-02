@@ -49,6 +49,11 @@ export function PilulaCarregandoModal() {
   );
 }
 
+// Tempos do "só aparece pronto" (ver `pronto` abaixo): a janela aparece quando o tamanho fica parado por
+// ESPERA_TAMANHO_PARADO_MS; se continuar mudando, aparece de qualquer jeito em LIMITE_PARA_APARECER_MS.
+const ESPERA_TAMANHO_PARADO_MS = 200;
+const LIMITE_PARA_APARECER_MS = 1500;
+
 // Mesma moldura de ModalDetalhe (backdrop + cartão + botão fechar), só que largo (max-w-5xl) e recebendo children livre em vez de uma lista fixa de `secoes`: pensado para
 // Consultar/Alterar que já usam <SecaoFicha>/<CampoFicha> (os MESMOS blocos da página real), só que dentro de
 // um modal (T1 do Campo de Testes replica a aparência exata de Consultar/Alterar Usuário, sem reinventar o
@@ -115,11 +120,11 @@ export function ModalFicha({
     if (pronto || carregando || !janela) {
       return;
     }
-    let espera = setTimeout(() => setPronto(true), 200);
-    const limite = setTimeout(() => setPronto(true), 1500);
+    let espera = setTimeout(() => setPronto(true), ESPERA_TAMANHO_PARADO_MS);
+    const limite = setTimeout(() => setPronto(true), LIMITE_PARA_APARECER_MS);
     const observador = new ResizeObserver(() => {
       clearTimeout(espera);
-      espera = setTimeout(() => setPronto(true), 200);
+      espera = setTimeout(() => setPronto(true), ESPERA_TAMANHO_PARADO_MS);
     });
     observador.observe(janela);
     return () => {
@@ -131,7 +136,7 @@ export function ModalFicha({
 
   return (
     <div
-      className="fixed inset-0 z-[200] flex items-start justify-center px-4 pt-[5vh] pb-4 bg-black/40"
+      className="fixed inset-0 z-(--camada-modal) flex items-start justify-center px-4 pt-(--distancia-topo-modal) pb-4 fundo-escurecido"
       onClick={fecharAoClicarFora ? aoFechar : undefined}
       // Clique no FUNDO (só nele, não nos cliques de dentro da janela, que sobem até aqui) não tira o foco da
       // janela: senão o Esc, tratado dentro dela, pararia de funcionar.
@@ -140,7 +145,7 @@ export function ModalFicha({
       }}
     >
       {!pronto && (
-        <div className="absolute top-[5vh] left-1/2 -translate-x-1/2">
+        <div className="absolute top-(--distancia-topo-modal) left-1/2 -translate-x-1/2">
           <PilulaCarregandoModal />
         </div>
       )}
@@ -151,8 +156,8 @@ export function ModalFicha({
         ref={janelaRef}
         tabIndex={-1}
         className={
-          'outline-none w-full max-w-5xl max-h-[90vh] fundo-cartao rounded-2xl shadow-2xl border borda-padrao overflow-hidden flex flex-col' +
-          (variasTelas ? ' h-[90vh]' : '') +
+          'outline-none w-full max-w-5xl max-h-(--altura-modal) fundo-cartao rounded-2xl shadow-2xl border borda-padrao overflow-hidden flex flex-col' +
+          (variasTelas ? ' h-(--altura-modal)' : '') +
           (pronto ? ' opacity-100 transition-opacity duration-150' : ' opacity-0 pointer-events-none')
         }
         aria-busy={!pronto}
@@ -180,7 +185,7 @@ export function ModalFicha({
           <div className="flex items-center gap-4 shrink-0">
             {!carregando && acoesCabecalho}
             <button type="button" onClick={aoFechar} aria-label="Fechar" className="texto-fraco hover-texto-forte">
-              <i className="fa-solid fa-xmark text-lg"></i>
+              <i className="fa-solid fa-xmark icone-grande"></i>
             </button>
           </div>
         </div>

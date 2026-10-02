@@ -60,7 +60,7 @@
 
 .admin-sidebar__titulo {
   font-family: var(--font-sans);
-  font-weight: 900;
+  font-weight: 800;
   font-size: var(--font-size-sm);
   color: var(--cor-texto-forte);
 }
@@ -218,7 +218,8 @@
 }
 
 /* 1377px: as colunas terminam de se espremer confortavelmente até 1377px, e a sidebar some abaixo disso.
-   PRECISA bater exato com `min-[1377px]:` em admin-sidebar.tsx/admin-layout.tsx: dois números DIFERENTES e
+   PRECISA bater exato com `--breakpoint-painel` (tailwind-theme.css), que as telas usam como `painel:`. Este
+   @media é o único outro lugar com o número, porque @media não aceita variável. Dois números DIFERENTES e
    sem nada em comum visualmente (um `xl:` fixo de 1280px no JSX e outro valor aqui) causariam uma faixa em
    que a sidebar já virou position:static pelo Tailwind antes de o grid reservar a coluna para ela: ela
    tentaria esticar para ocupar a única coluna do grid inteiro, empurrando o resto (tela branca/quebrada). Um
@@ -229,7 +230,7 @@
    "1377px" no projeto para achar o outro lado. */
 @media (min-width: 1377px) {
   .admin-shell {
-    grid-template-columns: 260px minmax(0, 1fr);
+    grid-template-columns: var(--largura-sidebar) minmax(0, 1fr);
   }
 
   .admin-sidebar {

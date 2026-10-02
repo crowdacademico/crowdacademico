@@ -27,16 +27,16 @@ export type TamanhoAvatar = 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
 export type FormaAvatar = 'circulo' | 'quadrado';
 
 const CLASSE_TAMANHO: Record<TamanhoAvatar, string> = {
-  sm: 'w-8 h-8 text-xs',
-  md: 'w-9 h-9 text-sm',
-  lg: 'w-14 h-14 text-xl',
+  sm: 'w-8 h-8',
+  md: 'w-9 h-9',
+  lg: 'w-14 h-14',
   // 'xl': card de perfil largo do Minha Conta; grande o bastante para ser o elemento visual principal de um
   // card lateral, sem exigir upload de foto de verdade para já parecer "de gente grande" (a inicial colorida já
   // resolve isso).
-  xl: 'w-24 h-24 text-4xl',
+  xl: 'w-24 h-24',
   // 'xxl': faixa de identidade do Minha Conta (estilo perfil acadêmico tipo ORCID/Google Acadêmico): 112px, o
   // maior da escala, âncora visual de uma faixa larga no topo da página.
-  xxl: 'w-28 h-28 text-5xl',
+  xxl: 'w-28 h-28',
 };
 
 // 'quadrado': rounded-2xl, não rounded-lg nem cantos retos: segue o mesmo raio generoso dos cartões do painel
@@ -79,12 +79,13 @@ export function AvatarUsuario({ nome, foto, tamanho = 'md', forma = 'circulo' }:
         classeTamanho +
         ' ' +
         classeForma +
-        ' flex items-center justify-center font-bold text-white shrink-0'
+        // A letra (o <span>) é proporcional ao círculo em qualquer tamanho: regra .avatar-inicial (4-componentes.css).
+        ' avatar-inicial flex items-center justify-center shrink-0'
       }
       style={{ backgroundColor: corPorNome(nomeSeguro) }}
       aria-hidden="true"
     >
-      {nomeSeguro[0].toUpperCase()}
+      <span>{nomeSeguro[0].toUpperCase()}</span>
     </div>
   );
 }

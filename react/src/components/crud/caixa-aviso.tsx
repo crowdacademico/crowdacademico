@@ -19,8 +19,8 @@ interface CaixaAvisoProps {
 // texto explicativo embaixo.
 export function CaixaAviso({ titulo, tom = 'aviso', icone = 'fa-circle-info', espacado = false, children }: CaixaAvisoProps) {
   return (
-    <div className={`rounded-lg border borda-forte p-4 text-sm ${CLASSE_TOM[tom]} ${espacado ? 'space-y-3' : 'space-y-1'}`}>
-      <p className="font-bold">
+    <div className={`rounded-lg border borda-forte p-4 paragrafo ${CLASSE_TOM[tom]} ${espacado ? 'space-y-3' : 'space-y-1'}`}>
+      <p className="enfase">
         <i className={`fa-solid ${icone} mr-1`}></i> {titulo}
       </p>
       {children}

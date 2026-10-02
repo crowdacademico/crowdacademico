@@ -3,7 +3,7 @@ import { MensagemErro } from '../../components/crud/mensagem-erro';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { TelaCheia } from '../../components/crud/tela-cheia';
-import type { CSSProperties, FormEvent } from 'react';
+import type { FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { Campo } from '../../components/input/campo';
 import { MedidorSenha } from '../../components/input/medidor-senha';
@@ -103,20 +103,19 @@ export function CadastroPage({ auth }: PropsPagina) {
   };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 fundo-pagina">
-      <div className="max-w-md w-full max-h-[calc(100vh-2rem)] fundo-cartao rounded-3xl sombra-cartao-solto border borda-padrao overflow-hidden flex flex-col">
+    <div className="pagina-centralizada">
+      <div className="max-w-md w-full max-h-(--altura-cartao-solto) fundo-cartao rounded-3xl sombra-cartao-solto border borda-padrao overflow-hidden flex flex-col">
         {/* `isolate` + `-z-10`: o brilho verde (o mesmo do Login) fica atrás do ícone e do texto sem precisar de
             z-index em cada um. */}
         <div className="p-10 text-center border-b borda-padrao fundo-sutil shrink-0 relative isolate overflow-hidden">
           <div
-            className="pointer-events-none absolute -z-10 top-0 left-1/2 -translate-x-1/2 w-32 h-32 brilho-marca rounded-full blur-3xl"
-            style={{ '--opacidade-brilho-marca': '20%' } as CSSProperties}
+            className="pointer-events-none absolute -z-10 top-0 left-1/2 -translate-x-1/2 w-32 h-32 brilho-marca brilho-marca-forte rounded-full blur-3xl"
           ></div>
-          <div className="w-14 h-14 fundo-marca rounded-2xl mx-auto flex items-center justify-center text-white font-bold text-2xl mb-5 shadow-lg">
+          <div className="w-14 h-14 fundo-marca rounded-2xl mx-auto flex items-center justify-center texto-sobre-cor icone-destaque mb-5 shadow-lg">
             <i className="fa-solid fa-user-plus"></i>
           </div>
           <h1 className="titulo-pagina mb-2">Criar conta</h1>
-          <p className="paragrafo texto-fraco font-medium">
+          <p className="paragrafo texto-fraco">
             Leva menos de um minuto, o resto você completa depois, em Minha Conta.
           </p>
         </div>
@@ -149,7 +148,7 @@ export function CadastroPage({ auth }: PropsPagina) {
               erroEmailDuplicado ? (
                 <>
                   Já existe conta com este e-mail.{' '}
-                  <Link to="/login" className="font-bold underline">
+                  <Link to="/login" className="enfase underline">
                     Já tem conta? Entrar
                   </Link>
                 </>
@@ -247,7 +246,7 @@ export function CadastroPage({ auth }: PropsPagina) {
                 <button
                   type="button"
                   onClick={abrirTermos}
-                  className="texto-marca font-bold underline"
+                  className="texto-marca enfase underline"
                 >
                   Termo de Uso
                 </button>
@@ -273,7 +272,7 @@ export function CadastroPage({ auth }: PropsPagina) {
           </button>
           <p className="legenda texto-fraco text-center">
             Já tem conta?{' '}
-            <Link to="/login" className="texto-marca font-bold underline">
+            <Link to="/login" className="texto-marca enfase underline">
               Entrar
             </Link>
           </p>
@@ -315,7 +314,7 @@ export function CadastroPage({ auth }: PropsPagina) {
             titulo={`Termo de Uso - versão ${termo?.versao ?? ''}`}
             aoSair={() => setTermoTelaCheia(false)}
           >
-            <div className="flex-1 overflow-y-auto text-[15px] leading-relaxed texto-padrao whitespace-pre-line">
+            <div className="flex-1 overflow-y-auto paragrafo texto-padrao whitespace-pre-line">
               {termo?.conteudo ?? 'Não foi possível carregar o Termo de Uso.'}
             </div>
           </TelaCheia>

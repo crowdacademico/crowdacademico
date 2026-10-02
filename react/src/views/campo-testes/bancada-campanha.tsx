@@ -375,7 +375,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
                       className="input-padrao flex-1"
                       rows={2}
                     />
-                    <button type="button" className="btn btn-secondary text-xs" disabled={rejeitando} onClick={rejeitarEdicao}>
+                    <button type="button" className="btn btn-secondary btn-pequeno" disabled={rejeitando} onClick={rejeitarEdicao}>
                       {rejeitando ? 'Rejeitando...' : 'Rejeitar (Admin)'}
                     </button>
                   </div>

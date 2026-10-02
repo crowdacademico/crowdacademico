@@ -18,33 +18,66 @@
 // Detalhes: DOCUMENTACAO_FRONTEND.md, seção "Guia de Estilo".
 // ============================================================================
 
-import { useEffect, useId, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { CoresDoSistema, ComparadorVerdeTexto } from './2-guia-estilo-cores';
 import { ComparativoTemas } from './4-guia-estilo-temas';
 import { Avatares, BordasComContraste, BotaoDev, CamposExtras, InterativosGlobais } from './3-guia-estilo-extras';
 import { PilulaCarregandoModal } from '../../../components/crud/modal-ficha';
 
+// Todas as classes de texto do sistema (2-tipografia.css), na ordem da escala, com o papel de cada uma (DS-10).
 const CLASSES_TIPOGRAFICAS = [
-  { classe: 'titulo-pagina', exemplo: 'Título de página' },
-  { classe: 'titulo-secao', exemplo: 'Título de seção' },
-  { classe: 'subtitulo', exemplo: 'Subtítulo' },
-  { classe: 'paragrafo', exemplo: 'Parágrafo: texto corrido do sistema, em tamanho pequeno.' },
-  { classe: 'paragrafo-denso', exemplo: 'parágrafo-denso: chave, id, log' },
-  { classe: 'legenda', exemplo: 'Legenda e texto auxiliar' },
-  { classe: 'titulo-bloco', exemplo: 'Título de bloco' },
-  { classe: 'rotulo-campo', exemplo: 'Rótulo de campo' },
-  { classe: 'rotulo-leitura', exemplo: 'Rótulo de leitura' },
+  { classe: 'titulo-pagina', papel: 'título da página e dos cartões soltos', exemplo: 'Título de página' },
+  { classe: 'titulo-secao', papel: 'título de lista e de modal; nome da marca', exemplo: 'Título de seção' },
+  { classe: 'subtitulo', papel: 'título de bloco grande', exemplo: 'Subtítulo' },
+  { classe: 'paragrafo', papel: 'texto corrido (sempre peso normal)', exemplo: 'Parágrafo: texto corrido do sistema.' },
+  { classe: 'paragrafo-destaque', papel: 'texto com destaque: nome, item de menu, mensagem de erro', exemplo: 'Parágrafo com destaque' },
+  { classe: 'legenda', papel: 'texto de apoio pequeno (sempre peso normal)', exemplo: 'Legenda e texto auxiliar' },
+  { classe: 'legenda-destaque', papel: 'legenda com destaque: erro ou aviso embaixo de um campo', exemplo: 'Legenda com destaque' },
+  { classe: 'paragrafo-denso', papel: 'texto técnico: chave, id, log', exemplo: 'parágrafo-denso: chave_tecnica_123' },
+  { classe: 'titulo-bloco', papel: 'título pequeno de seção (Dados da conta, Metadados)', exemplo: 'Título de bloco' },
+  { classe: 'rotulo-campo', papel: 'rótulo de campo de formulário', exemplo: 'Rótulo de campo' },
+  { classe: 'rotulo-leitura', papel: 'rótulo de um valor exibido; contador', exemplo: 'Rótulo de leitura' },
 ];
+
+// Amostra com o tamanho, o peso e a fonte MEDIDOS no texto (getComputedStyle), não escritos à mão: se a classe
+// mudar no CSS, o número aqui muda junto.
+function AmostraTipografia({ classe, papel, exemplo }: { classe: string; papel: string; exemplo: string }) {
+  const ref = useRef<HTMLParagraphElement>(null);
+  const [medida, setMedida] = useState('');
+  useEffect(() => {
+    if (!ref.current) return;
+    const estilo = getComputedStyle(ref.current);
+    setMedida(`${estilo.fontSize} · peso ${estilo.fontWeight} · ${estilo.fontFamily.split(',')[0].replace(/"/g, '')}`);
+  }, []);
+  return (
+    <div className="fundo-cartao rounded-lg border borda-padrao p-3">
+      <p className="paragrafo-denso mb-1">
+        .{classe} <span className="texto-fraco">({medida})</span>
+      </p>
+      <p className="legenda mb-2">{papel}</p>
+      <p ref={ref} className={classe}>
+        {exemplo}
+      </p>
+    </div>
+  );
+}
 
 function Tipografia() {
   return (
     <div className="space-y-3">
-      {CLASSES_TIPOGRAFICAS.map(({ classe, exemplo }) => (
-        <div key={classe} className="fundo-cartao rounded-lg border borda-padrao p-3">
-          <p className="paragrafo-denso mb-1">.{classe}</p>
-          <p className={classe}>{exemplo}</p>
-        </div>
+      {CLASSES_TIPOGRAFICAS.map((item) => (
+        <AmostraTipografia key={item.classe} {...item} />
       ))}
+      <div className="fundo-cartao rounded-lg border borda-padrao p-3 space-y-1">
+        <p className="paragrafo-denso">.enfase · .texto-herdado</p>
+        <p className="paragrafo">
+          Dentro de um texto, <span className="enfase">.enfase</span> deixa só uma parte em semi-negrito, sem mudar o
+          tamanho. Link de texto: <span className="texto-marca enfase underline">texto-marca enfase underline</span>.
+        </p>
+        <p className="legenda">
+          Numa legenda, a <span className="enfase">ênfase</span> continua do tamanho da legenda.
+        </p>
+      </div>
     </div>
   );
 }
@@ -71,6 +104,41 @@ function Componentes() {
           <button type="button" className="btn btn-danger">Perigo</button>
           <button type="button" className="btn btn-sucesso">Sucesso</button>
           <button type="button" className="btn btn-primary" disabled>Desabilitado</button>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 mt-3">
+          <button type="button" className="btn btn-primary btn-destaque">Chamada (btn-destaque)</button>
+          <button type="button" className="btn btn-secondary btn-pequeno">Pequeno (btn-pequeno)</button>
+          <button type="button" className="btn-pilula">
+            <i className="fa-solid fa-expand"></i> Pílula
+          </button>
+          <button type="button" className="btn-pilula btn-pilula-rotulo">
+            <i className="fa-solid fa-expand"></i> Pílula na linha do rótulo
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <p className="rotulo-leitura mb-2">Ícones (sozinhos; dentro de texto, herdam o tamanho)</p>
+        <div className="flex flex-wrap items-end gap-6 paragrafo texto-padrao">
+          <span className="flex items-center gap-2">
+            <i className="fa-solid fa-clock icone-pequeno"></i> icone-pequeno
+          </span>
+          <span className="flex items-center gap-2">
+            <i className="fa-solid fa-xmark icone-grande"></i> icone-grande
+          </span>
+          <span className="flex items-center gap-2">
+            <i className="fa-solid fa-flask icone-destaque texto-marca"></i> icone-destaque
+          </span>
+        </div>
+      </div>
+
+      <div>
+        <p className="rotulo-leitura mb-2">Número de métrica (cards do Dashboard)</p>
+        <div className="flex flex-wrap gap-8">
+          <span className="numero-metrica texto-forte">28</span>
+          <span className="numero-metrica texto-forte">
+            <span className="numero-metrica__simbolo">R$</span>257.800,00
+          </span>
         </div>
       </div>
 
@@ -107,7 +175,7 @@ function Componentes() {
         <p className="rotulo-leitura mb-2">Avisos</p>
         <div className="space-y-2">
           {AVISOS.map(({ fundo, texto, rotulo }) => (
-            <p key={rotulo} className={`${fundo} ${texto} rounded-lg p-3 text-xs font-semibold`}>
+            <p key={rotulo} className={`${fundo} ${texto} rounded-lg p-3 legenda-destaque texto-herdado`}>
               {rotulo}: mensagem de exemplo para conferir a cor do texto sobre o fundo.
             </p>
           ))}
@@ -123,9 +191,9 @@ function Componentes() {
       <div>
         <p className="rotulo-leitura mb-2">Cartões</p>
         <div className="grid gap-2 sm:grid-cols-3">
-          <p className="fundo-cartao rounded-lg border borda-padrao p-3 text-xs texto-padrao">fundo-cartao</p>
-          <p className="fundo-elevado rounded-lg border borda-padrao p-3 text-xs texto-padrao">fundo-elevado</p>
-          <p className="fundo-sutil rounded-lg border borda-padrao p-3 text-xs texto-padrao">fundo-sutil</p>
+          <p className="fundo-cartao rounded-lg border borda-padrao p-3 legenda texto-padrao">fundo-cartao</p>
+          <p className="fundo-elevado rounded-lg border borda-padrao p-3 legenda texto-padrao">fundo-elevado</p>
+          <p className="fundo-sutil rounded-lg border borda-padrao p-3 legenda texto-padrao">fundo-sutil</p>
         </div>
       </div>
     </div>
@@ -186,18 +254,6 @@ export function GuiaEstilo() {
       </div>
 
       <div key={versao} className="space-y-8">
-        <Secao
-          titulo="Verde do texto no tema escuro"
-          descricao="Compara candidatos sobre o cartão e sobre a página escura, com o contraste medido. É a decisão que estava pendente."
-        >
-          <ComparadorVerdeTexto
-            previa={previaVerde}
-            personalizada={verdePersonalizado}
-            aoEscolher={escolherPrevia}
-            aoMudarPersonalizada={setVerdePersonalizado}
-          />
-        </Secao>
-
         <div key={versaoPrevia} className="space-y-8">
         <Secao
           titulo="Cores do sistema"
@@ -234,10 +290,31 @@ export function GuiaEstilo() {
         titulo="Carregando do modal"
         descricao='A pílula "Carregando..." que aparece no lugar de um modal enquanto ele busca os dados (ModalFicha). Aqui fica parada, sobre o mesmo fundo escurecido, para dar para olhar com calma.'
       >
-        <div className="relative h-40 rounded-xl bg-black/40 flex items-start justify-center pt-6">
+        <div className="relative h-40 rounded-xl fundo-escurecido flex items-start justify-center pt-6">
           <PilulaCarregandoModal />
         </div>
       </Secao>
+
+      {/* PENDÊNCIAS: comparações para uma decisão em aberto ficam sempre aqui no fim, separadas do que já vale. Quando
+          a decisão sai, a seção sai junto. */}
+      <div className="border-t borda-padrao pt-8 space-y-8">
+        <div>
+          <h2 className="titulo-pagina">Pendências</h2>
+          <p className="paragrafo mt-1">Comparações para decidir. Nada daqui é o visual atual do sistema.</p>
+        </div>
+        <Secao
+          titulo="Verde do texto no tema escuro"
+          descricao="Escolha qual verde o texto em verde (links, nomes de marca) usa no tema escuro. Hoje é o #2fbf71, provisório. Clique num candidato para ver a prévia no resto da página e compare o contraste medido (precisa passar de 4,5:1)."
+        >
+          <ComparadorVerdeTexto
+            previa={previaVerde}
+            personalizada={verdePersonalizado}
+            aoEscolher={escolherPrevia}
+            aoMudarPersonalizada={setVerdePersonalizado}
+          />
+        </Secao>
+      </div>
+
     </div>
   );
 }

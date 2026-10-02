@@ -109,7 +109,7 @@ export function ModalCriarAreaConhecimento({ auth, aoFechar, aoCriado }: ModalCr
             }}
             required
             placeholder="ex.: 1.03.00.00"
-            className={'input-padrao font-mono' + classeErro}
+            className={'input-padrao input-padrao--codigo' + classeErro}
           />
         )}
       </Campo>

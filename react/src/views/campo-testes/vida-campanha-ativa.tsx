@@ -238,7 +238,7 @@ export function VidaCampanhaAtiva({ auth }: PropsPagina) {
                   </option>
                 ))}
               </select>
-              <button type="button" className="btn btn-secondary text-xs" disabled={!donoEhSessaoReal} onClick={publicarAtualizacao}>
+              <button type="button" className="btn btn-secondary btn-pequeno" disabled={!donoEhSessaoReal} onClick={publicarAtualizacao}>
                 Publicar ({donoChave ? nomeDe(donoChave) : '?'})
               </button>
             </div>
@@ -259,7 +259,7 @@ export function VidaCampanhaAtiva({ auth }: PropsPagina) {
           </h3>
           <div className="flex gap-2 flex-wrap items-end mb-2">
             <input type="text" placeholder="Comentário" value={novoComentario.conteudo} onChange={(e) => setNovoComentario({ ...novoComentario, conteudo: e.target.value })} className="input-padrao flex-1" />
-            <button type="button" className="btn btn-secondary text-xs" onClick={enviarComentario}>
+            <button type="button" className="btn btn-secondary btn-pequeno" onClick={enviarComentario}>
               Enviar (como {auth.usuario?.nome})
             </button>
           </div>
@@ -292,7 +292,7 @@ export function VidaCampanhaAtiva({ auth }: PropsPagina) {
             Sem Elenco só dá pra simular a própria sessão logada seguindo ou não - um roster de vários
             seguidores ao mesmo tempo fica pro redesenho de T3.
           </p>
-          <button type="button" className={`btn ${euSigo ? 'btn-primary' : 'btn-secondary'} text-xs`} onClick={alternarSeguir}>
+          <button type="button" className={`btn ${euSigo ? 'btn-primary' : 'btn-secondary'} btn-pequeno`} onClick={alternarSeguir}>
             {euSigo ? '✓ ' : ''}
             {auth.usuario?.nome} segue
           </button>

@@ -49,7 +49,7 @@ export function TabelaPapelPermissao({ papeis, permissoes, concedidos, celulaAlt
                       disabled={celulaAlterando === chave}
                       aria-label={texto}
                       className={
-                        'dica w-7 h-7 rounded-md font-bold transition-colors disabled:opacity-50 disabled:cursor-wait ' +
+                        'dica w-7 h-7 rounded-md enfase transition-colors disabled:opacity-50 disabled:cursor-wait ' +
                         (temPermissao
                           ? 'texto-sucesso hover-fundo-sucesso'
                           : 'texto-fraco opacity-50 hover-fundo-sutil hover:opacity-100')

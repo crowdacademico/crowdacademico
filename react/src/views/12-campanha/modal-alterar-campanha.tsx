@@ -274,7 +274,7 @@ export function ModalAlterarCampanha({
               {historico.length > 0 && (
                 <ul className="space-y-2">
                   {historico.map((item, indice) => (
-                    <li key={item.idRejeicao} className={indice === 0 ? 'font-semibold' : ''}>
+                    <li key={item.idRejeicao} className={indice === 0 ? 'enfase' : ''}>
                       {formatarDataHora(item.rejeitadoEm)}
                       {item.nomeAdmin ? ` por ${item.nomeAdmin}` : ''}: {item.justificativa ?? 'Sem justificativa.'}
                     </li>

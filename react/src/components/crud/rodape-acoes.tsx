@@ -32,10 +32,10 @@ export function RodapeAcoes({ aoCancelar, rotuloCancelar = 'Cancelar', acao, lar
   // rodapé inteiro; só do tamanho do texto, ficava miúdo perto dos outros rodapés.
   if (acoes.length === 0) {
     return (
-      // Largura exata de um botão de dupla: metade da caixa menos metade do espaço entre os dois (gap-3 = 0.75rem).
-      // Um <span> vazio com flex-1 ao lado não servia: o botão tem padding e o span não, e o botão saía mais largo.
-      <div className={'flex justify-end' + CLASSE_LARGURA[largura]}>
-        <button type="button" onClick={aoCancelar} className="btn btn-secondary w-[calc(50%-0.375rem)]">
+      // Grade de 2 colunas com o mesmo espaço entre elas do rodapé de dupla: o botão na 2ª coluna sai com a largura
+      // exata de um botão de dupla, sem medida escrita à mão.
+      <div className={'grid grid-cols-2 gap-3' + CLASSE_LARGURA[largura]}>
+        <button type="button" onClick={aoCancelar} className="btn btn-secondary col-start-2">
           {rotuloCancelar}
         </button>
       </div>

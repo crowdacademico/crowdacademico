@@ -38,17 +38,17 @@ export function VerificarEmailPage() {
   }, [token]);
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 fundo-pagina">
+    <div className="pagina-centralizada">
       <div className="max-w-md w-full fundo-cartao rounded-3xl sombra-cartao-solto border borda-padrao overflow-hidden p-10 text-center">
         {estado === 'carregando' && (
           <>
-            <i className="fa-solid fa-spinner fa-spin text-3xl texto-fraco mb-4"></i>
+            <i className="fa-solid fa-spinner fa-spin icone-destaque texto-fraco mb-4"></i>
             <p className="texto-padrao">Confirmando seu e-mail...</p>
           </>
         )}
         {estado === 'ok' && (
           <>
-            <div className="w-14 h-14 fundo-sucesso rounded-2xl mx-auto flex items-center justify-center texto-sucesso text-2xl mb-5">
+            <div className="w-14 h-14 fundo-sucesso rounded-2xl mx-auto flex items-center justify-center texto-sucesso icone-destaque mb-5">
               <i className="fa-solid fa-check"></i>
             </div>
             <h1 className="titulo-pagina mb-2">E-mail confirmado</h1>
@@ -60,7 +60,7 @@ export function VerificarEmailPage() {
         )}
         {estado === 'erro' && (
           <>
-            <div className="w-14 h-14 fundo-erro rounded-2xl mx-auto flex items-center justify-center texto-erro text-2xl mb-5">
+            <div className="w-14 h-14 fundo-erro rounded-2xl mx-auto flex items-center justify-center texto-erro icone-destaque mb-5">
               <i className="fa-solid fa-triangle-exclamation"></i>
             </div>
             <h1 className="titulo-pagina mb-2">Não deu certo</h1>

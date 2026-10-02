@@ -261,7 +261,7 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
         ...(papeis ?? []).map((papel) => (
           <span key={`papel-${papel.idPapel}`} className={'badge ' + (vigente(papel) ? 'badge-aviso' : 'badge-neutro')}>
             {papel.nomePapel}
-            {vigente(papel) && <i className="fa-solid fa-clock ml-1 text-[10px]"></i>}
+            {vigente(papel) && <i className="fa-solid fa-clock ml-1 icone-pequeno"></i>}
           </span>
         )),
       ].filter(Boolean)
@@ -438,7 +438,7 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
                         className={'input-padrao' + (cpf.erroDe('cpf') ? ' borda-erro' : '')}
                         autoFocus
                       />
-                      {cpf.erroDe('cpf') && <span className="texto-erro font-semibold">{cpf.erroDe('cpf')}</span>}
+                      {cpf.erroDe('cpf') && <span className="texto-erro enfase">{cpf.erroDe('cpf')}</span>}
                     </label>
                     <button type="button" className="btn btn-secondary shrink-0" onClick={cancelarCorrecaoCpf}>
                       Cancelar
@@ -645,13 +645,13 @@ function PapeisDoUsuario({ auth, idUsuario, papeis, aoMudarPapeis, aoAtualizado 
             <span key={papel.idPapel} className="inline-flex flex-col items-start gap-1">
               <span className={'badge flex items-center gap-2 ' + (suspenso ? 'fundo-aviso texto-aviso' : 'badge-neutro')}>
                 {papel.nomePapel}
-                {suspenso && <i className="fa-solid fa-clock text-[10px]"></i>}
+                {suspenso && <i className="fa-solid fa-clock icone-pequeno"></i>}
                 {suspenso ? (
                   <button
                     type="button"
                     onClick={() => aoReativar(papel)}
                     disabled={ocupado === papel.idPapel}
-                    className="dica font-bold hover:underline disabled:opacity-50"
+                    className="dica enfase hover:underline disabled:opacity-50"
                   >
                     {ocupado === papel.idPapel ? '…' : 'reativar'}
                     <Dica texto="Reativar agora" curta />
@@ -664,14 +664,14 @@ function PapeisDoUsuario({ auth, idUsuario, papeis, aoMudarPapeis, aoAtualizado 
                       className="dica texto-fraco hover-texto-forte"
                       aria-label={`Suspender "${papel.nomePapel}" por um tempo`}
                     >
-                      <i className="fa-solid fa-clock text-[10px]"></i>
+                      <i className="fa-solid fa-clock icone-pequeno"></i>
                       <Dica texto={`Suspender "${papel.nomePapel}" por um tempo`} curta />
                     </button>
                     <button
                       type="button"
                       onClick={() => aoRevogar(papel)}
                       disabled={ocupado === papel.idPapel}
-                      className="dica texto-erro font-bold hover-texto-erro disabled:opacity-50"
+                      className="dica texto-erro enfase hover-texto-erro disabled:opacity-50"
                       aria-label={`Revogar "${papel.nomePapel}"`}
                     >
                       ×
@@ -688,10 +688,10 @@ function PapeisDoUsuario({ auth, idUsuario, papeis, aoMudarPapeis, aoAtualizado 
                     placeholder="Motivo (obrigatório)"
                     aria-label={`Motivo da suspensão de "${papel.nomePapel}"`}
                     aria-invalid={Boolean(suspensao.erroDe('motivo'))}
-                    className={'input-padrao text-xs py-1' + (suspensao.erroDe('motivo') ? ' borda-erro' : '')}
+                    className={'input-padrao input-padrao--pequeno py-1' + (suspensao.erroDe('motivo') ? ' borda-erro' : '')}
                   />
                   {suspensao.erroDe('motivo') && (
-                    <span className="text-[10px] texto-erro font-semibold">{suspensao.erroDe('motivo')}</span>
+                    <span className="legenda-destaque texto-erro">{suspensao.erroDe('motivo')}</span>
                   )}
                   <span className="flex gap-1">
                     {opcoesDiasSuspensao.map((dias) => (
@@ -700,7 +700,7 @@ function PapeisDoUsuario({ auth, idUsuario, papeis, aoMudarPapeis, aoAtualizado 
                         type="button"
                         onClick={() => void aoSuspender(papel, dias)}
                         disabled={ocupado === papel.idPapel}
-                        className="text-[10px] font-bold texto-padrao hover-fundo-sutil px-1.5 py-0.5 rounded"
+                        className="legenda-destaque texto-padrao hover-fundo-sutil px-1.5 py-0.5 rounded"
                       >
                         {dias}d
                       </button>

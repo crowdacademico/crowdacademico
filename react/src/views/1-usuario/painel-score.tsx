@@ -16,9 +16,9 @@ export function PainelScore({ auth, idUsuario }: PainelScoreProps) {
     <>
       <h3 className="titulo-bloco mb-3 pb-2 border-b borda-padrao">Score</h3>
       <div className="fundo-erro texto-erro rounded-md p-4 mb-3 flex items-start gap-3">
-        <i className="fa-solid fa-triangle-exclamation text-xl"></i>
+        <i className="fa-solid fa-triangle-exclamation icone-grande"></i>
         <div>
-          <p className="font-bold">Ainda não está pronto</p>
+          <p className="enfase">Ainda não está pronto</p>
           <p className="paragrafo texto-herdado">
             A regra de negócio de pontuação (pesos e dimensões abaixo) ainda não foi fechada. Os números
             são só uma prévia da estrutura, não confie neles pra testar nada que dependa do valor final.

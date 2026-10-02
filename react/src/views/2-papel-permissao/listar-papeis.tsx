@@ -145,7 +145,7 @@ export function ListarPapeis({ auth }: PropsPagina) {
                 <button
                   type="button"
                   onClick={() => setPermissaoDetalhada(linha)}
-                  className="btn btn-secondary text-xs py-1.5 px-3"
+                  className="btn btn-secondary btn-pequeno"
                 >
                   <i className="fa-solid fa-circle-info"></i> Saiba mais
                 </button>

@@ -87,7 +87,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
           container, senão a barra lateral colorida fica "flutuando" com tamanhos diferentes por toast.
           z-[300]: ACIMA dos modais (z-[200]); um aviso disparado de dentro de um modal (ex.: "falta orçamento"
           ao enviar a campanha) ficava escondido atrás dele e a pessoa não sabia se tinha dado certo. */}
-      <div className="fixed top-32 left-1/2 -translate-x-1/2 z-[300] flex flex-col gap-3 items-stretch w-full max-w-lg px-4 pointer-events-none">
+      <div className="fixed top-32 left-1/2 -translate-x-1/2 z-(--camada-aviso) flex flex-col gap-3 items-stretch w-full max-w-lg px-4 pointer-events-none">
         {toasts.map((toast) => {
           const config = CONFIG_TIPO[toast.tipo];
           return (
@@ -101,7 +101,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
               }
             >
               <div className="flex-1 flex items-start gap-3 pl-3 pr-2 py-3">
-                <i className={config.icone + ' ' + config.corIcone + ' text-lg mt-0.5 shrink-0'}></i>
+                <i className={config.icone + ' ' + config.corIcone + ' icone-grande mt-0.5 shrink-0'}></i>
                 {/* Alinhado à esquerda (não centralizado) - texto centralizado
                     numa caixa larga é mais difícil de ler e não é o padrão de
                     painel profissional (Experiment/Catarse usam à esquerda). */}

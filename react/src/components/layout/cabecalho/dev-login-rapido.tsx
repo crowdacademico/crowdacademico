@@ -102,7 +102,7 @@ export function DevLoginRapido({ auth }: DevLoginRapidoProps) {
 
       <MensagemErro
         texto={erro}
-        className="legenda absolute right-0 mt-1 w-56 bg-red-50 border border-red-200 texto-erro rounded-lg shadow-lg z-50 px-3 py-2"
+        className="legenda absolute right-0 mt-1 w-56 fundo-erro border borda-erro texto-erro rounded-lg shadow-lg z-50 px-3 py-2"
       />
     </div>
   );

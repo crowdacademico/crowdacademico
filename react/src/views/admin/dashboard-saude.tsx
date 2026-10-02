@@ -18,7 +18,7 @@ export function DashboardSaude({ bancoConectado, resumo }: DashboardSaudeProps) 
         <h2 className="subtitulo mb-3">Conexão com o banco</h2>
         <div className="paragrafo flex items-center gap-2 texto-herdado">
           <PontoStatusConexao valor={bancoConectado} />
-          <span className="texto-padrao font-semibold">
+          <span className="texto-padrao enfase">
             {bancoConectado === null
               ? 'Verificando...'
               : bancoConectado

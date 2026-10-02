@@ -21,4 +21,8 @@
   --color-dark: #0f172a;
   --font-sans: 'Inter', sans-serif;
   --font-serif: 'DM Serif Display', serif;
+  /* Largura em que o menu lateral do painel deixa de ser gaveta e vira coluna fixa: as telas usam `painel:` e
+     `max-painel:` (admin-sidebar.tsx, admin-layout.tsx). O CSS do grid (6-admin-shell.css) repete o número uma
+     vez no @media, porque @media não aceita variável: ao mudar aqui, mude lá também. */
+  --breakpoint-painel: 1377px;
 }

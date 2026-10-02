@@ -87,7 +87,7 @@ const SECOES_MODAL_TERMO_USO = [
         conteúdo só é aceito enquanto NINGUÉM aceitou aquela versão ainda - assim que a 1ª
         pessoa aceitar, ela trava pra sempre (o valor probatório do aceite se perderia se o
         texto pudesse mudar depois). Veja o histórico completo (todos os tipos) em{' '}
-        <Link to="/admin/termos-uso" className="texto-marca font-bold underline">
+        <Link to="/admin/termos-uso" className="texto-marca enfase underline">
           Termo de Uso
         </Link>
         .
@@ -136,7 +136,7 @@ function CardTermoUso({ auth }: { auth: Pick<UseAuthReturn, 'authFetch'> }) {
           aoClicar={() => setModalAberto(true)}
         />
       </div>
-      <div className="divide-y divide-solid" style={{ borderColor: 'var(--cor-borda)' }}>
+      <div className="divide-y divide-solid divide-(--cor-borda)">
         {TIPOS_TERMO.map((tipo) => {
           const termo = termosAtivos[tipo];
           return (
@@ -241,7 +241,7 @@ export function DashboardRegrasNegocio({ auth }: DashboardRegrasNegocioProps) {
                 <Tooltip texto="Saiba mais" baixo aoClicar={() => setModalArquivoAberto(true)} />
               )}
             </div>
-            <div className="divide-y divide-solid" style={{ borderColor: 'var(--cor-borda)' }}>
+            <div className="divide-y divide-solid divide-(--cor-borda)">
               {itens.map((config) => (
                 <div
                   key={config.idConfig}

@@ -87,7 +87,7 @@ export function SinoAtividade({ auth }: SinoAtividadeProps) {
       >
         <i className="fa-solid fa-bell"></i>
         {naoLidos > 0 && (
-          <span className="absolute -top-1 -right-1 min-w-[1.1rem] h-[1.1rem] px-1 rounded-full fundo-erro-forte texto-sobre-cor text-[10px] font-bold flex items-center justify-center">
+          <span className="absolute -top-1 -right-1 min-w-4.5 h-4.5 px-1 rounded-full fundo-erro-forte texto-sobre-cor rotulo-leitura texto-herdado flex items-center justify-center">
             {naoLidos > 9 ? '9+' : naoLidos}
           </span>
         )}
@@ -113,7 +113,7 @@ export function SinoAtividade({ auth }: SinoAtividadeProps) {
                 <div key={item.idLog} className="px-4 py-3 border-b borda-padrao last:border-b-0">
                   <p className="paragrafo texto-forte">
                     Você {ROTULO_OPERACAO[item.operacao] ?? item.operacao.toLowerCase()}{' '}
-                    <span className="font-semibold">{item.tabela}</span> #
+                    <span className="enfase">{item.tabela}</span> #
                     {item.identidadeRegistro}
                   </p>
                   <p className="legenda texto-fraco mt-0.5">

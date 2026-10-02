@@ -6,19 +6,15 @@ import { GRUPOS_MENU_ADMIN } from './admin-menu.constants';
 import { useFocoPreso } from '../../services/constant/hook/use-foco-preso';
 
 // Menu lateral: coluna fixa a partir de 1377px (grid em .admin-shell, 6-admin-shell.css), gaveta (drawer) por
-// cima do conteúdo em telas menores. `min-[1377px]:` é um breakpoint ARBITRÁRIO do Tailwind (não um dos padrão
-// tipo lg/xl), só para este componente: com `xl:` fixo em 1280px e a media query do grid (6-admin-shell.css) em
-// outro valor, a faixa entre os dois viraria um estado quebrado ("bug da tela branca"): a sidebar já teria
-// virado `position:static` pelo Tailwind, mas o grid ainda só reservaria 1 coluna, sem espaço para ela. Um
-// token `--breakpoint-sidebar` central (@theme) não funciona aqui: este componente é escaneado pelo Tailwind
-// normalmente (JSX sempre é), mas 6-admin-shell.css entra por um pipeline de CSS separado do de
-// tailwind-theme.css (ver comentário completo em 6-admin-shell.css, e o mesmo problema documentado para
-// @utility em 1-cores.css): `theme()` não resolve lá. Por isso o número (1377px) é literal aqui E lá: ao mudar
-// um, busque pelo mesmo valor ("1377px") no projeto para achar o outro lado e trocar junto. Itens com `caminho`
+// cima do conteúdo em telas menores. `painel:` é um ponto de quebra próprio, declarado uma vez no tema
+// (`--breakpoint-painel`, tailwind-theme.css), não um dos padrão (lg/xl): com `xl:` fixo em 1280px e a media
+// query do grid (6-admin-shell.css) em outro valor, a faixa entre os dois viraria um estado quebrado ("bug da
+// tela branca"): a sidebar já teria virado `position:static`, mas o grid ainda só reservaria 1 coluna. O CSS
+// do grid repete o mesmo número no @media (que não aceita variável): ao mudar um, mude o outro. Itens com `caminho`
 // são NavLink de verdade (URL muda, dá para linkar direto, botão Voltar funciona, F5 mantém a aba): item ativo
 // é quem o próprio NavLink decide, comparando com a URL atual, não um state comparado à mão.
 //
-// `min-[1377px]:relative` (e não `static`): a faixa do botão "Menu" (ver admin-layout.tsx) precisa ficar por
+// `painel:relative` (e não `static`): a faixa do botão "Menu" (ver admin-layout.tsx) precisa ficar por
 // BAIXO da sidebar, escondida atrás dela, não empurrando ela para baixo. `position:static` NÃO participa de
 // z-index de jeito nenhum (regra do CSS: z-index só tem efeito em elemento posicionado); `relative`
 // (visualmente idêntico, mesma posição no fluxo normal do grid) deixa a sidebar entrar na mesma "categoria" de
@@ -43,7 +39,7 @@ export function AdminSidebar({ aberto, aoFechar }: AdminSidebarProps) {
       {/* Fundo escuro atrás da gaveta - só existe abrindo (clique fora) e só no mobile. */}
       {aberto && (
         <div
-          className="fixed inset-0 bg-black/40 z-30 min-[1377px]:hidden"
+          className="fixed inset-0 fundo-escurecido z-30 painel:hidden"
           onClick={aoFechar}
           aria-hidden="true"
         />
@@ -56,10 +52,10 @@ export function AdminSidebar({ aberto, aoFechar }: AdminSidebarProps) {
         aria-label={aberto ? 'Menu do painel' : undefined}
         tabIndex={aberto ? -1 : undefined}
         className={
-          'admin-sidebar fixed top-16 bottom-0 left-0 z-40 w-[260px] overflow-y-auto ' +
-          'transition-transform duration-200 min-[1377px]:relative min-[1377px]:top-auto min-[1377px]:bottom-auto min-[1377px]:z-auto ' +
-          'min-[1377px]:w-auto min-[1377px]:translate-x-0 ' +
-          (aberto ? 'translate-x-0 outline-none' : '-translate-x-full max-[1376px]:invisible')
+          'admin-sidebar fixed top-16 bottom-0 left-0 z-40 w-(--largura-sidebar) overflow-y-auto ' +
+          'transition-transform duration-200 painel:relative painel:top-auto painel:bottom-auto painel:z-auto ' +
+          'painel:w-auto painel:translate-x-0 ' +
+          (aberto ? 'translate-x-0 outline-none' : '-translate-x-full max-painel:invisible')
         }
       >
         <div className="admin-sidebar__titulo">Painel Administrativo</div>
@@ -75,7 +71,7 @@ export function AdminSidebar({ aberto, aoFechar }: AdminSidebarProps) {
           <span className="flex items-center gap-2">
             <i className="fa-solid fa-magnifying-glass"></i> Buscar
           </span>
-          <kbd className="text-[10px] font-bold border borda-forte rounded px-1.5 py-0.5 fundo-cartao">
+          <kbd className="legenda-destaque texto-herdado border borda-forte rounded px-1.5 py-0.5 fundo-cartao">
             Ctrl K
           </kbd>
         </button>

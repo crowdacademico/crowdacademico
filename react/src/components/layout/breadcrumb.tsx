@@ -45,19 +45,19 @@ export function Breadcrumb() {
     // sempre fica por cima quando os dois grudam juntos no topo.
     <nav className="fundo-sutil border-b borda-padrao sticky top-16 z-40">
       <div className="paragrafo largura-site py-3 flex items-center gap-2 flex-wrap texto-herdado">
-        <Link to="/" className="texto-marca font-bold hover:underline">
+        <Link to="/" className="texto-marca enfase hover:underline">
           Início
         </Link>
         {cadeia.map((r, indice) => (
           <span key={r.caminho} className="flex items-center gap-2">
-            <i className="fa-solid fa-chevron-right texto-fraco text-xs"></i>
+            <i className="fa-solid fa-chevron-right texto-fraco icone-pequeno"></i>
             {/* Ancestral (Usuários, Configurações...) é sempre a própria
                 listagem, sem parâmetro - pode virar link de verdade. Só o
                 ÚLTIMO nível (a página atual) fica como texto simples. */}
             {indice === ultimoIndice ? (
-              <span className="texto-padrao font-medium">{r.rotuloBreadcrumb}</span>
+              <span className="texto-padrao">{r.rotuloBreadcrumb}</span>
             ) : (
-              <Link to={r.caminho} className="texto-marca font-bold hover:underline">
+              <Link to={r.caminho} className="texto-marca enfase hover:underline">
                 {r.rotuloBreadcrumb}
               </Link>
             )}

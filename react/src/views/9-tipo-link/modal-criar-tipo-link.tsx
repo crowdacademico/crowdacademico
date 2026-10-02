@@ -119,7 +119,7 @@ export function ModalCriarTipoLink({ auth, aoFechar, aoCriado }: ModalCriarTipoL
             required
             maxLength={LIMITE_CODIGO_TIPO_LINK}
             placeholder="ex.: SITE_INSTITUCIONAL"
-            className={'input-padrao font-mono' + classeErro}
+            className={'input-padrao input-padrao--codigo' + classeErro}
           />
         )}
       </Campo>
@@ -173,7 +173,7 @@ export function ModalCriarTipoLink({ auth, aoFechar, aoCriado }: ModalCriarTipoL
               limparErroCampo('regex');
             }}
             placeholder="ex.: ^https?://(www\.)?github\.com/[\w\-]+/?$"
-            className={'input-padrao font-mono' + classeErro}
+            className={'input-padrao input-padrao--codigo' + classeErro}
           />
         )}
       </Campo>
