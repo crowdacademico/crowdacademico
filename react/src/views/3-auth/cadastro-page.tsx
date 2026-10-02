@@ -104,7 +104,7 @@ export function CadastroPage({ auth }: PropsPagina) {
 
   return (
     <div className="pagina-centralizada">
-      <div className="max-w-md w-full max-h-(--altura-cartao-solto) fundo-cartao rounded-3xl sombra-cartao-solto border borda-padrao overflow-hidden flex flex-col">
+      <div className="max-w-(--largura-cartao-solto) w-full max-h-(--altura-cartao-solto) fundo-cartao rounded-3xl sombra-cartao-solto border borda-padrao overflow-hidden flex flex-col">
         {/* `isolate` + `-z-10`: o brilho verde (o mesmo do Login) fica atrás do ícone e do texto sem precisar de
             z-index em cada um. */}
         <div className="p-10 text-center border-b borda-padrao fundo-sutil shrink-0 relative isolate overflow-hidden">

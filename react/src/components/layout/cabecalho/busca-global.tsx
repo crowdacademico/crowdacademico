@@ -232,7 +232,7 @@ export function BuscaGlobal({ auth }: BuscaGlobalProps) {
         aria-modal="true"
         aria-label="Busca global"
         tabIndex={-1}
-        className="outline-none w-full max-w-lg fundo-elevado rounded-2xl shadow-2xl border borda-forte overflow-hidden"
+        className="outline-none w-full max-w-(--largura-janela-estreita) fundo-elevado rounded-2xl shadow-2xl border borda-forte overflow-hidden"
         onClick={(evento) => evento.stopPropagation()}
       >
         <div className="flex items-center gap-3 px-4 py-3 border-b borda-padrao">

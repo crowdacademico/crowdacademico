@@ -24,7 +24,12 @@ interface RodapeAcoesProps {
   largura?: 'sm' | 'md' | 'xl' | 'cheia';
 }
 
-const CLASSE_LARGURA = { sm: ' max-w-sm ml-auto', md: ' max-w-md ml-auto', xl: ' max-w-xl ml-auto', cheia: '' };
+const CLASSE_LARGURA = {
+  sm: ' max-w-(--largura-rodape-acoes) ml-auto',
+  md: ' max-w-(--largura-rodape-acoes-media) ml-auto',
+  xl: ' max-w-(--largura-rodape-acoes-larga) ml-auto',
+  cheia: '',
+};
 
 export function RodapeAcoes({ aoCancelar, rotuloCancelar = 'Cancelar', acao, largura = 'sm' }: RodapeAcoesProps) {
   const acoes = Array.isArray(acao) ? acao : acao ? [acao] : [];

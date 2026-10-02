@@ -50,7 +50,7 @@ export function LoginPage({ auth }: PropsPagina) {
 
   return (
     <div className="pagina-centralizada">
-      <div className="max-w-md w-full fundo-cartao rounded-3xl sombra-cartao-solto border borda-padrao overflow-hidden">
+      <div className="max-w-(--largura-cartao-solto) w-full fundo-cartao rounded-3xl sombra-cartao-solto border borda-padrao overflow-hidden">
         <div className="p-10 text-center border-b borda-padrao relative overflow-hidden fundo-sutil">
           <div
             className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-32 brilho-marca brilho-marca-forte rounded-full blur-3xl"

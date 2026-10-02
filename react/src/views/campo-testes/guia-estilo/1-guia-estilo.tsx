@@ -19,7 +19,7 @@
 // ============================================================================
 
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
-import { CoresDoSistema, ComparadorVerdeTexto } from './2-guia-estilo-cores';
+import { CoresDoSistema } from './2-guia-estilo-cores';
 import { ComparativoTemas } from './4-guia-estilo-temas';
 import { Avatares, BordasComContraste, BotaoDev, CamposExtras, InterativosGlobais } from './3-guia-estilo-extras';
 import { PilulaCarregandoModal } from '../../../components/crud/modal-ficha';
@@ -217,16 +217,6 @@ export function GuiaEstilo() {
   // e mede de novo: acontece sozinho quando o Vite aplica uma edição de CSS, e
   // pelo botão, se a edição não tiver sido percebida.
   const [versao, setVersao] = useState(0);
-  // Só a prévia do verde muda este: remonta as seções de baixo, mas NÃO o comparador (senão o seletor de cor
-  // é destruído no meio do arrasto e a janelinha do navegador fecha no primeiro clique).
-  const [versaoPrevia, setVersaoPrevia] = useState(0);
-  // Prévia do verde do texto no tema escuro (só nesta página); estado aqui para sobreviver ao remedir.
-  const [previaVerde, setPreviaVerde] = useState<string | null>(null);
-  const [verdePersonalizado, setVerdePersonalizado] = useState('#2fbf71');
-  const escolherPrevia = (valor: string | null) => {
-    setPreviaVerde(valor);
-    setVersaoPrevia((atual) => atual + 1);
-  };
   useEffect(() => {
     const hot = import.meta.hot;
     if (!hot) {
@@ -243,7 +233,7 @@ export function GuiaEstilo() {
         <div>
           <span className="badge badge-dev">&lt;dev&gt;</span>
           <h1 className="titulo-pagina mt-2">Guia de Estilo</h1>
-          <p className="paragrafo mt-1 max-w-3xl">
+          <p className="paragrafo mt-1">
             Lê os tokens e classes reais do sistema, sem cópia: se uma cor mudar em <code>1-cores.css</code>, esta
             página muda junto. Só existe em <code>npm run dev</code>.
           </p>
@@ -254,28 +244,26 @@ export function GuiaEstilo() {
       </div>
 
       <div key={versao} className="space-y-8">
-        <div key={versaoPrevia} className="space-y-8">
         <Secao
           titulo="Cores do sistema"
           descricao="Cada par texto/fundo nos dois temas, com a razão de contraste vista pelo navegador (verde = passa do 4,5:1 do WCAG AA). Os pares são os mesmos do npm run contraste."
         >
-          <ComparativoTemas verdePrevia={previaVerde}>
+          <ComparativoTemas>
             <CoresDoSistema />
           </ComparativoTemas>
         </Secao>
 
         <Secao titulo="Tipografia" descricao="As classes de tipografia do sistema (2-tipografia.css).">
-          <ComparativoTemas verdePrevia={previaVerde}>
+          <ComparativoTemas>
             <Tipografia />
           </ComparativoTemas>
         </Secao>
 
         <Secao titulo="Componentes" descricao="Botões, badges, campos, avisos e cartões como o sistema os usa (4-componentes.css). São só exemplos visuais: os botões não fazem nada, mas hover e foco funcionam.">
-          <ComparativoTemas verdePrevia={previaVerde}>
+          <ComparativoTemas>
             <Componentes />
           </ComparativoTemas>
         </Secao>
-        </div>
       </div>
 
       <Secao
@@ -294,26 +282,6 @@ export function GuiaEstilo() {
           <PilulaCarregandoModal />
         </div>
       </Secao>
-
-      {/* PENDÊNCIAS: comparações para uma decisão em aberto ficam sempre aqui no fim, separadas do que já vale. Quando
-          a decisão sai, a seção sai junto. */}
-      <div className="border-t borda-padrao pt-8 space-y-8">
-        <div>
-          <h2 className="titulo-pagina">Pendências</h2>
-          <p className="paragrafo mt-1">Comparações para decidir. Nada daqui é o visual atual do sistema.</p>
-        </div>
-        <Secao
-          titulo="Verde do texto no tema escuro"
-          descricao="Escolha qual verde o texto em verde (links, nomes de marca) usa no tema escuro. Hoje é o #2fbf71, provisório. Clique num candidato para ver a prévia no resto da página e compare o contraste medido (precisa passar de 4,5:1)."
-        >
-          <ComparadorVerdeTexto
-            previa={previaVerde}
-            personalizada={verdePersonalizado}
-            aoEscolher={escolherPrevia}
-            aoMudarPersonalizada={setVerdePersonalizado}
-          />
-        </Secao>
-      </div>
 
     </div>
   );

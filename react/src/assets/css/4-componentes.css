@@ -610,8 +610,10 @@
 
   /* Variante --curta: rótulo de 1 palavra (ações de tabela), sem quebra de linha, padding menor que a versão
      de texto explicativo. */
+  /* Sem limite de largura: numa linha só, um rótulo um pouco maior passava dos 16rem da bolha e era cortado. */
   .dica__bolha--curta {
     white-space: nowrap;
+    max-width: none;
     padding: 0.35rem 0.65rem;
   }
 

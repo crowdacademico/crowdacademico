@@ -6,9 +6,9 @@ type Tema = 'claro' | 'escuro' | 'sistema';
 const CHAVE_LOCALSTORAGE = 'crowdacademico.tema';
 const TEMAS: Tema[] = ['claro', 'escuro', 'sistema'];
 const CONFIG_TEMA: Record<Tema, { icone: string; rotulo: string }> = {
-  claro: { icone: 'fa-sun', rotulo: 'Tema claro (clique pra escuro)' },
-  escuro: { icone: 'fa-moon', rotulo: 'Tema escuro (clique pra seguir o sistema)' },
-  sistema: { icone: 'fa-circle-half-stroke', rotulo: 'Seguindo o tema do sistema (clique pro claro)' },
+  claro: { icone: 'fa-sun', rotulo: 'Tema claro' },
+  escuro: { icone: 'fa-moon', rotulo: 'Tema escuro' },
+  sistema: { icone: 'fa-circle-half-stroke', rotulo: 'Seguindo o tema do sistema' },
 };
 
 // Guarda de tipo em vez de `TEMAS.includes(salvo)` direto: `salvo` vem de

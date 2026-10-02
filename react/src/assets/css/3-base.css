@@ -33,6 +33,14 @@
   --altura-modal: 90vh;
   --altura-cartao-solto: calc(100vh - 2rem);
   --largura-sidebar: 260px;
+  /* Larguras máximas por PAPEL (usadas no JSX como `max-w-(--largura-ficha)`): mudar a largura de todos os modais
+     é mudar uma linha aqui. Uso avulso, que não se repete, continua no degrau do Tailwind (`max-w-md`...). */
+  --largura-ficha: 64rem; /* modal de Consultar/Alterar e a página Minha Conta */
+  --largura-janela-estreita: 32rem; /* modal de detalhe, janela da busca, coluna dos avisos */
+  --largura-cartao-solto: 28rem; /* Login, Cadastro, Esqueci a senha, Criar nova senha, Verificar e-mail */
+  --largura-rodape-acoes: 24rem; /* caixa dos botões de rodapé (RodapeAcoes) */
+  --largura-rodape-acoes-media: 28rem;
+  --largura-rodape-acoes-larga: 36rem;
   --shadow-cartao-solto: 0 -12px 40px -12px rgba(15, 23, 42, 0.2), 0 25px 50px -12px rgba(15, 23, 42, 0.25);
 
   --transition-normal: all 0.2s ease;

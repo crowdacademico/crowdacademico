@@ -60,7 +60,7 @@ export function ModalDetalhe({
         aria-labelledby={idTitulo}
         ref={janelaRef}
         tabIndex={-1}
-        className="outline-none w-full max-w-lg max-h-(--altura-modal) fundo-elevado rounded-2xl shadow-2xl border borda-forte overflow-hidden flex flex-col"
+        className="outline-none w-full max-w-(--largura-janela-estreita) max-h-(--altura-modal) fundo-elevado rounded-2xl shadow-2xl border borda-forte overflow-hidden flex flex-col"
         onClick={(evento) => evento.stopPropagation()}
       >
         {rotuloAcao && (

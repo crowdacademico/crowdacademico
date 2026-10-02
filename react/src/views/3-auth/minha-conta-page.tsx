@@ -97,9 +97,9 @@ export function MinhaConta({ auth }: PropsPagina) {
     // CONTEÚDO da barra (~600px) e empurra a página inteira para a largura horizontal, em vez do próprio nav
     // rolar sozinho, mesmo em telas pequenas. `width: 0` tira este bloco do cálculo de "largura mínima pelo
     // conteúdo" (passa a ter uma largura EXPLÍCITA, não automática); `min-width: 100%` devolve ele ao tamanho
-    // normal (cheio do container, até o teto do max-w-5xl) na hora de desenhar de verdade. Troque só se remover
+    // normal (cheio do container, até o teto de --largura-ficha) na hora de desenhar de verdade. Troque só se remover
     // a barra de abas.
-    <div className="w-0 min-w-full max-w-5xl mx-auto p-4 sm:p-8">
+    <div className="w-0 min-w-full max-w-(--largura-ficha) mx-auto p-4 sm:p-8">
       {/* Um cartão só, do topo ao rodapé - SEM overflow-hidden (mesma
           lição já aprendida nas antigas páginas de formulário e de ficha:
           overflow-hidden cria um contexto de scroll que o `sticky` do

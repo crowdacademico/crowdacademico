@@ -39,7 +39,7 @@ export function VerificarEmailPage() {
 
   return (
     <div className="pagina-centralizada">
-      <div className="max-w-md w-full fundo-cartao rounded-3xl sombra-cartao-solto border borda-padrao overflow-hidden p-10 text-center">
+      <div className="max-w-(--largura-cartao-solto) w-full fundo-cartao rounded-3xl sombra-cartao-solto border borda-padrao overflow-hidden p-10 text-center">
         {estado === 'carregando' && (
           <>
             <i className="fa-solid fa-spinner fa-spin icone-destaque texto-fraco mb-4"></i>

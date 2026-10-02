@@ -1,7 +1,6 @@
 import { useCallback, useState } from 'react';
 import { comporSobre, LIMITE_TEXTO_AA, lerCor, paraHex, razaoContraste } from './5-contraste-cor.util';
 import paresContraste from './6-pares-contraste.json';
-import { PainelTema } from './4-guia-estilo-temas';
 
 const formatarRazao = (razao: number) => razao.toFixed(2).replace('.', ',') + ':1';
 
@@ -98,103 +97,5 @@ export function CoresDoSistema() {
         </div>
       ))}
     </div>
-  );
-}
-
-// ---- Comparador do verde do texto no tema escuro ----
-
-// Valores de EXPERIMENTO (não são tokens): candidatos para `--cor-texto-marca`
-// no tema escuro. Escolhido um, a troca é uma linha em 1-cores.css.
-const CANDIDATOS_VERDE = ['#1fae66', '#2fbf71', '#3ecf8e', '#4ade80'];
-
-interface LinhaVerdeProps {
-  rotulo: string;
-  cor: string;
-  // hex que esta linha põe em prévia (null = voltar ao valor do sistema)
-  valor: string | null;
-  emPrevia: boolean;
-  aoEscolher: (valor: string | null) => void;
-}
-
-function LinhaVerde({ rotulo, cor, valor, emPrevia, aoEscolher }: LinhaVerdeProps) {
-  const [razoes, setRazoes] = useState<{ cartao: number; pagina: number } | null>(null);
-  const medir = useCallback((linha: HTMLElement | null) => {
-    if (!linha) {
-      return;
-    }
-    const texto = comporSobre(lerCor(getComputedStyle(linha.querySelector('[data-amostra]') ?? linha).color), [0, 0, 0, 1]);
-    const cartao = comporSobre(lerCor(getComputedStyle(linha).backgroundColor), [0, 0, 0, 1]);
-    const painel = linha.closest('[data-tema-local]') ?? linha;
-    const pagina = comporSobre(lerCor(getComputedStyle(painel).backgroundColor), [0, 0, 0, 1]);
-    setRazoes({ cartao: razaoContraste(texto, cartao), pagina: razaoContraste(texto, pagina) });
-  }, []);
-
-  return (
-    <div ref={medir} className="fundo-cartao flex flex-wrap items-center gap-3 rounded-lg border borda-padrao p-3">
-      <span className="paragrafo-denso w-40 shrink-0">{rotulo}</span>
-      <span data-amostra style={{ color: cor }} className="min-w-0 flex-1">
-        <span className="legenda texto-herdado">Texto pequeno de marca. </span>
-        <span className="paragrafo-destaque texto-herdado">Texto de marca em negrito </span>
-        <span className="paragrafo texto-herdado underline">link</span>
-      </span>
-      <button
-        type="button"
-        onClick={() => aoEscolher(valor)}
-        aria-pressed={emPrevia}
-        className={`btn ${emPrevia ? 'btn-primary' : 'btn-secondary'}`}
-      >
-        {emPrevia ? 'Em prévia' : 'Ver nas amostras'}
-      </button>
-      {razoes && (
-        <span className="flex gap-1">
-          {([['cartão', razoes.cartao], ['página', razoes.pagina]] as const).map(([onde, razao]) => (
-            <span key={onde} className={`badge ${razao >= LIMITE_TEXTO_AA ? 'badge-sucesso' : 'badge-erro'}`}>
-              {onde} {formatarRazao(razao)}
-            </span>
-          ))}
-        </span>
-      )}
-    </div>
-  );
-}
-
-interface ComparadorVerdeTextoProps {
-  previa: string | null;
-  personalizada: string;
-  aoEscolher: (valor: string | null) => void;
-  aoMudarPersonalizada: (hex: string) => void;
-}
-
-export function ComparadorVerdeTexto({ previa, personalizada, aoEscolher, aoMudarPersonalizada }: ComparadorVerdeTextoProps) {
-  return (
-    <PainelTema tema="escuro" titulo="Tema escuro: candidatos para o texto verde">
-      <div className="space-y-2">
-        <LinhaVerde rotulo="Atual (texto-marca)" cor="var(--cor-texto-marca)" valor={null} emPrevia={previa === null} aoEscolher={aoEscolher} />
-        {CANDIDATOS_VERDE.map((hex) => (
-          <LinhaVerde key={hex} rotulo={hex} cor={hex} valor={hex} emPrevia={previa === hex} aoEscolher={aoEscolher} />
-        ))}
-        <LinhaVerde
-          key={personalizada}
-          rotulo={`Outra: ${personalizada}`}
-          cor={personalizada}
-          valor={personalizada}
-          emPrevia={previa === personalizada}
-          aoEscolher={aoEscolher}
-        />
-        <label className="flex items-center gap-2 paragrafo texto-padrao">
-          <input
-            type="color"
-            value={personalizada}
-            onChange={(evento) => aoMudarPersonalizada(evento.target.value)}
-          />
-          Escolher outra cor (só a última linha acompanha; use "Ver nas amostras" nela para aplicar)
-        </label>
-        <p className="legenda">
-          "Ver nas amostras" aplica a cor só nos painéis escuros desta página (Cores, Tipografia e Componentes abaixo), para
-          você julgar em contexto; o sistema não muda. Para valer de verdade, troque <code>--cor-texto-marca</code> no bloco
-          escuro de <code>1-cores.css</code> e rode <code>npm run contraste</code>.
-        </p>
-      </div>
-    </PainelTema>
   );
 }
