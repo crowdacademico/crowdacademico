@@ -829,6 +829,11 @@ A tabela da seção 2 já resume versão e um comentário de uma linha por peça
 | **`react-router`** | Roteamento client-side. **Não é `react-router-dom`** - decisão registrada em `PENDENCIAS e correcoes.md` (parte 17): `react-router-dom` estava travado numa versão 7.x com vulnerabilidade alta conhecida (*RSC Mode CSRF Bypass*); o pacote `react-router` v8 já inclui os bindings de DOM (não precisa dos dois pacotes juntos) e está fora da faixa vulnerável. Trocar de pacote no meio do projeto foi reação a uma CVE, não preferência de estilo. |
 | **`tailwindcss` + `@tailwindcss/vite`** | Utilitários CSS, integrados como **plugin de build**, não `<script>` de CDN. Isto foi uma correção, não a escolha original - ver 13.2. |
 
+📌 **Aviso `EBADENGINE` do `react-router` no `npm install`.**
+- **Decisão:** fica como está. O `react-router` 8 (todas as versões 8.x) pede Node 22.22 ou mais novo; num computador com Node mais antigo (os da escola tinham o 22.16 em 30-09-2026), o `npm install` mostra o aviso amarelo `EBADENGINE`, mas instala e o sistema funciona.
+- **Motivo:** não é vulnerabilidade, é só a versão mínima do Node que a biblioteca declara. Sumir com o aviso pelo código exigiria voltar ao `react-router` 7, que tinha falhas de segurança (ver o 📌 sobre `react-router` acima). A solução de verdade é atualizar o Node do computador para 22.22 ou mais novo.
+- **Caso-limite aceito:** onde não der para atualizar o Node, o aviso continua aparecendo. As vulnerabilidades do `npm audit` são outro assunto, tratado em `DOCUMENTACAO_BACKEND.md`, §15.10.
+
 ### 13.2 A correção do Tailwind: de CDN pra dependência de build
 
 Registrada com comentário direto no código (`react/vite.config.js`): o Tailwind saiu do `<script>` CDN do `index.html` em 02-08-2026, depois de uma auditoria achar que o `dist/` gerado não continha nenhuma classe Tailwind de verdade, porque tudo era gerado em runtime pelo navegador baixando o CDN. Ou seja: o problema não era estético, era funcional - o CSS inteiro do app dependia de uma requisição de rede em runtime pra um CDN de terceiro, toda vez que alguém abria a página, e um build de produção "pronto" não continha nenhuma classe Tailwind de verdade dentro dele.

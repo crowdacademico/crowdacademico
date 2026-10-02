@@ -1154,7 +1154,7 @@ A tabela da seção 1.1 já dá o resumo de uma linha por peça. Este capítulo 
 
 ### 15.1 Núcleo do framework - exigido pelo NestJS, não é escolha do projeto
 
-`@nestjs/common`, `@nestjs/core`, `@nestjs/platform-express`, `reflect-metadata`, `rxjs`. Essas cinco não representam uma decisão de arquitetura - são o próprio NestJS. `@nestjs/platform-express` escolhe **Express** como servidor HTTP por baixo (a alternativa seria `@nestjs/platform-fastify`); nada neste projeto depende de recurso exclusivo de Express, então a escolha é a opção padrão/mais documentada, não uma necessidade técnica específica. `reflect-metadata` existe porque o Nest usa decorators (`@Controller`, `@Injectable`, `@Body`) para descrever metadado de tipo em tempo de execução - sem ele, a injeção de dependência do framework simplesmente não funciona. `rxjs` é a base dos `Observable` que interceptors/pipes do Nest usam internamente; o código deste projeto quase não usa RxJS diretamente (não há stream de evento nem programação reativa de propósito aqui), é consumido pela infraestrutura do framework. ⚠️ `nest/package.json` tem `"overrides": { "multer": "^2.4.0" }` (21-09-2026): `@nestjs/platform-express` fixa `multer` em versão exata e vulnerável (4 avisos de negação de serviço). O sistema nunca executa o `multer` (o upload é por URL pré-assinada e não passa pelo Nest), então o override é higiene de `npm audit` (de 6 vulnerabilidades altas para 0). No dia em que alguma rota usar `FileInterceptor`, ele deixa de ser cosmético. Não remover. Detalhe em `ACHADOS_PARA_DISCUTIR.md`.
+`@nestjs/common`, `@nestjs/core`, `@nestjs/platform-express`, `reflect-metadata`, `rxjs`. Essas cinco não representam uma decisão de arquitetura - são o próprio NestJS. `@nestjs/platform-express` escolhe **Express** como servidor HTTP por baixo (a alternativa seria `@nestjs/platform-fastify`); nada neste projeto depende de recurso exclusivo de Express, então a escolha é a opção padrão/mais documentada, não uma necessidade técnica específica. `reflect-metadata` existe porque o Nest usa decorators (`@Controller`, `@Injectable`, `@Body`) para descrever metadado de tipo em tempo de execução - sem ele, a injeção de dependência do framework simplesmente não funciona. `rxjs` é a base dos `Observable` que interceptors/pipes do Nest usam internamente; o código deste projeto quase não usa RxJS diretamente (não há stream de evento nem programação reativa de propósito aqui), é consumido pela infraestrutura do framework. ⚠️ `nest/package.json` tem `"overrides": { "multer": "^2.4.0" }` (21-09-2026): `@nestjs/platform-express` fixa `multer` em versão exata e vulnerável (4 avisos de negação de serviço). O sistema nunca executa o `multer` (o upload é por URL pré-assinada e não passa pelo Nest), então o override é higiene de `npm audit` (de 6 vulnerabilidades altas para 0). No dia em que alguma rota usar `FileInterceptor`, ele deixa de ser cosmético. Não remover. Todas as substituições e o que fazer quando o `npm audit` reclamar: §15.10.
 
 ### 15.2 Banco de dados - `kysely` + `pg`
 
@@ -1203,6 +1203,31 @@ Nenhuma delas roda em produção - ficam de fora do processo que o Render execut
 | Carregamento de `.env` em script avulso | `dotenv` | Usado fora do ciclo de vida do Nest (que já resolve `.env` via `@nestjs/config`) - em `aplicar-migrations.script.ts`, que roda como script Node solto, sem o `ConfigService` disponível. |
 
 ---
+
+### 15.10 Substituições (`overrides`) e o `npm audit`
+
+**Em palavras simples:** o `npm audit` avisa quando alguma biblioteca instalada tem uma falha conhecida. Às vezes a falha não está numa biblioteca que o projeto escolheu, mas numa biblioteca que ELA usa por dentro, numa versão travada. Para não trocar a biblioteca principal inteira (o que pode quebrar coisas), o `nest/package.json` tem uma lista `"overrides"` ("substituições"): ela manda o npm usar a versão corrigida só daquela peça de dentro. Os avisos voltam de tempos em tempos (todo dia sai aviso novo no mundo inteiro), então esta seção também diz o que fazer quando isso acontecer.
+
+**O que está substituído hoje** (`nest/package.json`, chave `"overrides"`):
+
+| Peça | Quem usa por dentro | Por que | Desde |
+|---|---|---|---|
+| `multer` → `^2.4.0` | `@nestjs/platform-express`, que trava o `multer` numa versão exata e vulnerável (4 avisos de negação de serviço) | O sistema nunca executa o `multer` (o upload vai direto ao armazenamento por URL pré-assinada, sem passar pelo Nest), então é só higiene do `npm audit`. No dia em que alguma rota usar `FileInterceptor`, a substituição deixa de ser só cosmética. | 21-09-2026 |
+| `js-yaml` → `^5.4.2`, só dentro de `@nestjs/swagger` | `@nestjs/swagger` 11.4.7, que trava o `js-yaml` em 5.3.0 (aviso moderado: `maxTotalMergeKeys` não limita o uso de CPU, GHSA-r3ph-w7gj-g6xm) | O `npm audit fix --force` "resolveria" subindo o `@nestjs/swagger` para a versão 12, que é uma mudança grande e podia quebrar a documentação da API (`/api`, §18). A substituição corrige só o `js-yaml` e deixa o swagger na 11. É escrita aninhada (`"@nestjs/swagger": { "js-yaml": ... }`) de propósito: outras bibliotecas usam o `js-yaml` 4, que não tem o problema, e uma substituição global as forçaria para a 5. Conferido em 02-10-2026: compila, o Nest sobe e a página `/api` abre. | 02-10-2026 |
+
+📌 **Substituir a peça de dentro em vez de `npm audit fix --force`.**
+- **Decisão:** quando o `npm audit` só oferece correção com `--force` (que sobe a biblioteca principal de versão "grande"), a correção é uma entrada em `"overrides"` apontando a peça de dentro para a versão corrigida, e a linha entra na tabela acima.
+- **Motivo:** `--force` troca a versão principal (ex.: `@nestjs/swagger` 11 → 12) sem ninguém revisar o que mudou; a substituição mexe só no que tem a falha. Mesmo jeito do `multer`.
+- **Caso-limite aceito:** a peça de dentro passa a usar uma versão que a biblioteca principal não testou. Por isso, depois de cada substituição: compilar, subir o Nest e abrir a tela que usa a biblioteca (no caso do swagger, `/api`). Quando a biblioteca principal lançar uma versão que já traga a peça corrigida, a substituição pode sair.
+
+**Quando o `npm audit` reclamar de novo (passo a passo):**
+1. Rodar `npm audit` e ler, para cada aviso, se a correção vem com `npm audit fix` ou só com `--force`.
+2. O que vem com `npm audit fix` (sem `--force`): rodar `npm audit fix`. Ele só sobe versões dentro das faixas já permitidas e mexe quase só no `package-lock.json`.
+3. O que só vem com `--force`: NÃO usar `--force`. Ver qual peça de dentro tem a falha (`npm ls <peça>`) e qual versão a corrige (o link do aviso diz), e criar uma substituição como as da tabela.
+4. Conferir: `npm audit` dando 0, `npm run build`, o Nest subindo, e a tela da biblioteca afetada funcionando.
+5. Commitar o `package.json` e o `package-lock.json` juntos. Em outro computador, depois do `git pull`, basta `npm install` (ele segue o `package-lock.json`); não precisa repetir o `npm audit fix`.
+
+**Histórico:** 21-09-2026, `multer` (6 vulnerabilidades altas para 0). 02-10-2026, relatado nos computadores da escola em 30-09-2026: Nest com 4 (`brace-expansion` alto e `fast-uri` moderado, resolvidos por `npm audit fix`; `js-yaml` moderado, resolvido pela substituição) e React com 1 (`brace-expansion` alto, `npm audit fix`). Resultado: 0 nos dois.
 
 ## 16. Pontos de atenção consolidados
 

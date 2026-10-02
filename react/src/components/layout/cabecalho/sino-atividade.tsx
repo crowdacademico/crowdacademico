@@ -91,7 +91,7 @@ export function SinoAtividade({ auth }: SinoAtividadeProps) {
             {naoLidos > 9 ? '9+' : naoLidos}
           </span>
         )}
-        <Dica texto="Atividade recente" curta baixo />
+        <Dica texto="Atividade recente" curta baixo direita />
       </button>
 
       {aberto && (
