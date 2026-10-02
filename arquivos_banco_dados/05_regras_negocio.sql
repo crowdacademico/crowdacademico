@@ -2161,6 +2161,50 @@ WHEN (NEW.status IS DISTINCT FROM OLD.status)
 EXECUTE FUNCTION fn_preenche_encerramento_campanha();
 
 -- ----------------------------------------------------------------------------
+-- Função:     fn_carimba_envio_aprovacao
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-K-2]
+-- Regra:      Grava em campanha.enviado_aprovacao_em o momento em que a campanha entrou na fila de aprovação (envio de
+--             rascunho ou reenvio de rejeitada), para a fila mostrar "esperando há X dias" (tempo de atendimento). Cada
+--             reenvio carimba de novo: conta a espera da versão atual, não a da primeira. Ao sair da fila (aprovada ou
+--             rejeitada) o valor fica, e aprovado_em - enviado_aprovacao_em é quanto a avaliação levou. No INSERT o
+--             valor enviado é ignorado: ninguém escolhe a própria data para furar a fila.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION fn_carimba_envio_aprovacao()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        NEW.enviado_aprovacao_em := CASE WHEN NEW.status = 'aguardando_aprovacao' THEN NOW() END;
+    ELSIF NEW.status = 'aguardando_aprovacao' THEN
+        NEW.enviado_aprovacao_em := NOW();
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_campanha_carimba_envio_aprovacao / trg_campanha_carimba_envio_aprovacao_update
+-- Tabela:    campanha
+-- Momento:   BEFORE INSERT / BEFORE UPDATE (só quando status muda)
+-- Função:    fn_carimba_envio_aprovacao()
+-- Bloco:     [05-K-2]
+-- Regra:     Grava a data de entrada na fila de aprovação automaticamente.
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_campanha_carimba_envio_aprovacao ON campanha;
+CREATE TRIGGER trg_campanha_carimba_envio_aprovacao
+BEFORE INSERT ON campanha
+FOR EACH ROW
+EXECUTE FUNCTION fn_carimba_envio_aprovacao();
+
+DROP TRIGGER IF EXISTS trg_campanha_carimba_envio_aprovacao_update ON campanha;
+CREATE TRIGGER trg_campanha_carimba_envio_aprovacao_update
+BEFORE UPDATE ON campanha
+FOR EACH ROW
+WHEN (NEW.status IS DISTINCT FROM OLD.status)
+EXECUTE FUNCTION fn_carimba_envio_aprovacao();
+
+-- ----------------------------------------------------------------------------
 -- Função:     encerrar_campanhas_vencidas
 -- Assinatura: () -> INT
 -- Bloco:      [05-K-2]

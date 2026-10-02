@@ -14,7 +14,7 @@ export function PainelScore({ auth, idUsuario }: PainelScoreProps) {
 
   return (
     <>
-      <h3 className="titulo-bloco mb-3 pb-2 border-b borda-padrao">Score</h3>
+      <h3 className="titulo-bloco titulo-bloco--linha">Score</h3>
       <div className="fundo-erro texto-erro rounded-md p-4 mb-3 flex items-start gap-3">
         <i className="fa-solid fa-triangle-exclamation icone-grande"></i>
         <div>

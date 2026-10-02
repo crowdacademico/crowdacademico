@@ -85,7 +85,7 @@ export function ModalConsultarCampanha({ auth, idCampanha, comoDono = false, aoF
       }
     >
       {campanha && (
-        <div className="grid lg:grid-cols-3 gap-6 items-start">
+        <div className="grade-ficha">
           <div className="lg:col-span-2 space-y-6">
             {campanha.precisaRevisaoScore && (
               <p className="legenda-destaque fundo-aviso texto-aviso rounded-lg p-3">

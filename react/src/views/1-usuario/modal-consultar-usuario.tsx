@@ -98,7 +98,7 @@ export function ModalConsultarUsuario({ auth, idUsuario, aoFechar }: ModalConsul
         <>
           {/* Linhas alinhadas: "Dados da conta" ao lado de Papéis, "Acesso" ao lado dos Aceites do Termo; o Perfil de
               Pesquisador (quando houver) vem embaixo, na largura das duas primeiras colunas. */}
-          <div className="grid lg:grid-cols-3 gap-x-8 gap-y-10 items-start">
+          <div className="grade-ficha gap-x-8 gap-y-10">
             <div className="lg:col-span-2">
               <SecaoFicha titulo="Dados da conta">
                 <CampoFicha rotulo="id" valor={usuario.idUsuario} />

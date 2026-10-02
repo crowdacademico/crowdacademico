@@ -148,7 +148,7 @@ export function CadastroPage({ auth }: PropsPagina) {
               erroEmailDuplicado ? (
                 <>
                   Já existe conta com este e-mail.{' '}
-                  <Link to="/login" className="enfase underline">
+                  <Link to="/login" className="link-texto link-texto--cor-herdada">
                     Já tem conta? Entrar
                   </Link>
                 </>
@@ -246,7 +246,7 @@ export function CadastroPage({ auth }: PropsPagina) {
                 <button
                   type="button"
                   onClick={abrirTermos}
-                  className="texto-marca enfase underline"
+                  className="link-texto"
                 >
                   Termo de Uso
                 </button>
@@ -254,7 +254,7 @@ export function CadastroPage({ auth }: PropsPagina) {
               </span>
             </label>
             {erroDe('termos') && (
-              <p id={idErroTermos} className="legenda-destaque texto-erro mt-1">
+              <p id={idErroTermos} className="legenda-destaque erro-campo">
                 {erroDe('termos')}
               </p>
             )}
@@ -272,7 +272,7 @@ export function CadastroPage({ auth }: PropsPagina) {
           </button>
           <p className="legenda texto-fraco text-center">
             Já tem conta?{' '}
-            <Link to="/login" className="texto-marca enfase underline">
+            <Link to="/login" className="link-texto">
               Entrar
             </Link>
           </p>

@@ -55,7 +55,7 @@ export function RedefinirSenhaPage() {
         {!token ? (
           <div className="p-10 space-y-4 text-center">
             <p className="paragrafo-destaque texto-erro">Link sem token, confira se copiou o endereço completo.</p>
-            <Link to="/esqueci-senha" className="paragrafo-destaque texto-marca underline">
+            <Link to="/esqueci-senha" className="paragrafo-destaque link-texto">
               Pedir um link novo
             </Link>
           </div>
@@ -73,7 +73,7 @@ export function RedefinirSenhaPage() {
           <form onSubmit={aoSalvar} noValidate className="p-10 space-y-5">
             <MensagemErro texto={erro} />
             {erro && (
-              <Link to="/esqueci-senha" className="paragrafo-destaque texto-marca underline">
+              <Link to="/esqueci-senha" className="paragrafo-destaque link-texto">
                 Pedir um link novo
               </Link>
             )}

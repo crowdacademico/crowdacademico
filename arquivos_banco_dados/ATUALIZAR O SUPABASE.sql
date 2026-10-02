@@ -598,3 +598,92 @@ GRANT EXECUTE ON FUNCTION public.redefinir_senha_por_token(TEXT, TEXT) TO app_ne
 INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, publica)
 VALUES (NULL, 'recuperacao_senha_minutos_validade', '30', 'inteiro', 'Validade do link de "Esqueci minha senha", em minutos', TRUE, FALSE)
 ON CONFLICT (chave) DO NOTHING;
+
+-- ============================================================================
+-- GRUPO AG (02-10-2026) - "esperando há X dias" na fila de Aprovar Campanhas. IDEMPOTENTE (pode colar de novo).
+-- PARE O NEST ANTES DE COLAR (ALTER TABLE em campanha trava com o Nest rodando).
+--
+-- Em palavras simples: a campanha ganha a data em que entrou na fila de aprovação. O banco preenche sozinho
+-- a cada envio ou reenvio, e o painel mostra há quantos dias cada campanha espera, a mais antiga primeiro.
+-- Para as campanhas que já estão esperando hoje, a data vem do log de auditoria (a última vez que entraram
+-- na fila); sem registro no log, usa a data de criação.
+--
+-- O que muda:
+--   1. Coluna enviado_aprovacao_em em campanha (01).
+--   2. Função fn_carimba_envio_aprovacao e as 2 triggers que a chamam (05, [05-K-2]).
+--   3. Preenche a coluna das campanhas que já estão aguardando aprovação.
+-- ============================================================================
+
+ALTER TABLE campanha ADD COLUMN IF NOT EXISTS enviado_aprovacao_em TIMESTAMPTZ;
+
+-- ----------------------------------------------------------------------------
+-- Função:     fn_carimba_envio_aprovacao
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-K-2]
+-- Regra:      Grava em campanha.enviado_aprovacao_em o momento em que a campanha entrou na fila de aprovação (envio de
+--             rascunho ou reenvio de rejeitada), para a fila mostrar "esperando há X dias" (tempo de atendimento). Cada
+--             reenvio carimba de novo: conta a espera da versão atual, não a da primeira. Ao sair da fila (aprovada ou
+--             rejeitada) o valor fica, e aprovado_em - enviado_aprovacao_em é quanto a avaliação levou. No INSERT o
+--             valor enviado é ignorado: ninguém escolhe a própria data para furar a fila.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION fn_carimba_envio_aprovacao()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        NEW.enviado_aprovacao_em := CASE WHEN NEW.status = 'aguardando_aprovacao' THEN NOW() END;
+    ELSIF NEW.status = 'aguardando_aprovacao' THEN
+        NEW.enviado_aprovacao_em := NOW();
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_campanha_carimba_envio_aprovacao / trg_campanha_carimba_envio_aprovacao_update
+-- Tabela:    campanha
+-- Momento:   BEFORE INSERT / BEFORE UPDATE (só quando status muda)
+-- Função:    fn_carimba_envio_aprovacao()
+-- Bloco:     [05-K-2]
+-- Regra:     Grava a data de entrada na fila de aprovação automaticamente.
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_campanha_carimba_envio_aprovacao ON campanha;
+CREATE TRIGGER trg_campanha_carimba_envio_aprovacao
+BEFORE INSERT ON campanha
+FOR EACH ROW
+EXECUTE FUNCTION fn_carimba_envio_aprovacao();
+
+DROP TRIGGER IF EXISTS trg_campanha_carimba_envio_aprovacao_update ON campanha;
+CREATE TRIGGER trg_campanha_carimba_envio_aprovacao_update
+BEFORE UPDATE ON campanha
+FOR EACH ROW
+WHEN (NEW.status IS DISTINCT FROM OLD.status)
+EXECUTE FUNCTION fn_carimba_envio_aprovacao();
+
+UPDATE campanha c
+SET enviado_aprovacao_em = COALESCE(
+    (SELECT max(l.ocorrido_em) FROM log_auditoria l
+      WHERE l.tabela = 'campanha' AND l.operacao = 'UPDATE'
+        AND l.identidade_registro = c.id_campanha::TEXT
+        AND l.dados_novos ->> 'status' = 'aguardando_aprovacao'),
+    c.criado_em)
+WHERE c.status = 'aguardando_aprovacao' AND c.enviado_aprovacao_em IS NULL;
+
+-- ============================================================================
+-- GRUPO AH (02-10-2026) - campanha sempre nasce rascunho. IDEMPOTENTE (pode colar de novo).
+-- PARE O NEST ANTES DE COLAR (mexe na permissão da tabela campanha).
+--
+-- Em palavras simples: o banco aceitava criar uma campanha já "ativa" ou "aguardando aprovação", pulando a
+-- aprovação do admin e a conferência de orçamento e cronograma. O sistema nunca fazia isso (o Nest não manda o
+-- status ao criar), mas o banco é a última barreira e precisa recusar sozinho. Agora, ao criar, o Nest só pode
+-- preencher os campos do formulário; o resto nasce no valor padrão (status 'rascunho').
+--
+-- O que muda:
+--   1. Tira a permissão de INSERT na tabela inteira e devolve só nas colunas do formulário (06).
+-- ============================================================================
+
+REVOKE INSERT ON campanha FROM app_nestjs;
+GRANT INSERT (
+    id_usuario, id_area_conhecimento, titulo, modelo, meta_financeira,
+    descricao, data_inicio, data_fim, video_apresentacao_url
+) ON campanha TO app_nestjs;

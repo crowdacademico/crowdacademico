@@ -4,6 +4,7 @@ import { BadgeBooleano } from '../badge-booleano';
 import {
   formatarData,
   formatarDataHora,
+  formatarEspera,
   formatarMoeda,
   textoSeguro,
 } from '../../../services/constant/util/formatacao.util';
@@ -76,5 +77,11 @@ export const FORMATOS = {
     exibir: (valor) => formatarDataHora(iso(valor)),
     texto: (valor) => formatarDataHora(iso(valor)),
     comparar: (a, b) => compararNumero(instante(a), instante(b)),
+  },
+  // Tempo de espera ("há 3 dias") a partir de uma data. Ordem crescente = quem espera menos primeiro.
+  espera: {
+    exibir: (valor) => formatarEspera(iso(valor)),
+    texto: (valor) => formatarEspera(iso(valor)),
+    comparar: (a, b) => compararNumero(instante(b), instante(a)),
   },
 } satisfies Record<string, Formato>;

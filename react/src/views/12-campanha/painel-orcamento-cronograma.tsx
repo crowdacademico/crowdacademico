@@ -52,7 +52,7 @@ export function PainelOrcamentoCronograma({
   const mostrarOrcamento = abaFixa !== 'cronograma';
   const mostrarCronograma = abaFixa !== 'orcamento';
   // Título de cada parte só quando as duas aparecem juntas (com `abaFixa`, quem usa já dá o título).
-  const titulo = (texto: string) => !abaFixa && <h3 className="titulo-bloco mb-3 pb-2 border-b borda-padrao">{texto}</h3>;
+  const titulo = (texto: string) => !abaFixa && <h3 className="titulo-bloco titulo-bloco--linha">{texto}</h3>;
 
   // Ref (não dependência de `carregar`): `aoCarregar` recebe uma arrow function nova a cada render do modal
   // pai; colocá-la nas dependências de `useCallback` recriaria `carregar` toda hora, disparando o efeito de

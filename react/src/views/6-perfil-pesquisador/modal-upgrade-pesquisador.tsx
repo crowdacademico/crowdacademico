@@ -186,7 +186,7 @@ export function ModalUpgradePesquisador({
               Li e aceito o Termo de Uso acima.
             </label>
             {aceite.erroDe('aceite') && (
-              <p className="legenda-destaque texto-erro mt-1">{aceite.erroDe('aceite')}</p>
+              <p className="legenda-destaque erro-campo">{aceite.erroDe('aceite')}</p>
             )}
           </>
         )

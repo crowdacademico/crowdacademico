@@ -483,8 +483,7 @@ Todas as telas `listar-*.tsx`: `views/1-usuario/listar-usuarios.tsx`, `views/2-p
 | Componente | Papel |
 |---|---|
 | `generic-table.tsx` | ver seção 8 |
-| `cartao-formulario.tsx` | casca de Criar/Alterar/Excluir: ícone circular + título + subtítulo + cartão |
-| `ficha-consulta.tsx` | casca das telas "Consultar" (`<FichaConsulta>` + `<SecaoFicha>` + `<CampoFicha>`) |
+| `ficha-consulta.tsx` | seções e campos das telas "Consultar" (`<SecaoFicha>` + `<CampoFicha>`), usados dentro do `ModalFicha` |
 | `campo-somente-leitura.tsx` | um dado exibido, não editável, com o mesmo visual do `<label>` dos formulários |
 | `modal-detalhe.tsx` | modal genérico de "detalhe explicado" (título, chave em fonte mono, badge, seções) |
 | `modal-ficha.tsx` | casca larga dos modais de Consultar/Alterar/Criar (backdrop + cartão + rodapé; prop `erro` mostra o erro no topo do corpo). **Três caminhos de fechar**, todos passando por `aoFechar`: o X, o clique no fundo escurecido (desligável com `fecharAoClicarFora={false}`, usado no wizard de Criar Campanha para um clique perdido não descartar várias etapas) e a tecla **Esc** (sempre ligada, é ação deliberada como o X). Limite conhecido: dois `ModalFicha` empilhados fecham juntos no Esc, cada um registra o próprio listener, por isso o Campo de Testes evita modal sobre modal |
@@ -515,6 +514,7 @@ Todas as telas `listar-*.tsx`: `views/1-usuario/listar-usuarios.tsx`, `views/2-p
 📌 **`ModalDetalhe`/`ModalDetalhePermissao` - "Papéis com esta permissão" lido ao vivo, nunca de dicionário estático.** `views/2-papel-permissao/modal-detalhe-permissao.tsx` monta o modal genérico (`modal-detalhe.tsx`) com um detalhe fixo (nome amigável, o que faz, por que existe, badge de impacto - `services/2-papel-permissao/constants/permissao-nomes-amigaveis.constants.ts`, dicionário `nome → rótulo` sem coluna nova no banco) e uma lista que **não** vem desse dicionário: refaz as mesmas duas chamadas de `matriz-papel-permissao.tsx` (`papelApi.listar` + `papelPermissaoApi.listar`) para saber quem tem a permissão agora. O comentário do arquivo explica por quê: *"o dicionário só sabe o que a permissão FAZ, não quem tem ela agora - isso muda toda vez que um admin mexe na matriz."* A listagem de Permissões usa o mesmo dicionário para exibir o nome amigável como "nome" e o código cru (`permissao.nome`) como "chave".
 
 📌 **`CartaoFormulario` e `FichaConsulta` compartilham duas larguras canônicas** - `'media'` (`max-w-2xl`) e `'larga'` (`max-w-5xl`) - decisão registrada de definir larguras canônicas em vez de cada tela escolher a sua. O comentário de `cartao-formulario.tsx` explica a causa raiz do redesenho: a versão anterior tinha medida e comportamento de modal (centralizado na tela, altura travada com *scroll* próprio), mesmo sendo usada como página em todo lugar - daí a queixa de que ficava "um monte de card empilhado, confuso".
+  - **Atualização (02-10-2026):** `CartaoFormulario` e `FichaConsulta` saíram, porque todo CRUD virou modal (`ModalFicha`). A largura canônica agora é a variável `--largura-ficha` em `3-base.css`.
 
 📌 **Telas "Alterar" com conteúdo substancial usam 2 colunas dentro do `CartaoFormulario` largo (`largura="larga"`).** `modal-consultar-usuario.tsx` e a aba Conta de `modal-alterar-usuario.tsx` são o exemplo: `grid lg:grid-cols-3`, coluna principal (`lg:col-span-2`) com o conteúdo principal, coluna lateral (1/3) com metadados e o card `<dev>` isolado. Desde 29-09-2026 o Alterar Usuário é dividido em abas (ver a seção 19). Empilha em 1 coluna abaixo do breakpoint `lg`, mesmo comportamento de sempre no celular. O comentário do arquivo cita o mesmo padrão usado por painéis de referência (Stripe/Linear/Vercel) para tela de edição de registro.
 
@@ -1146,3 +1146,13 @@ CSS puro (`:hover`/`:focus`/`:focus-visible`), sem estado de React na bolha em s
 - **Decisão:** a bolha `.dica__bolha` abre com `:hover` e `:focus-visible`; `:focus` comum só no ⓘ avulso (`.dica--info`).
 - **Motivo:** ao fechar um modal, o foco volta para o botão que o abriu, e com `:focus` a dica dele ficava presa na tela depois de um clique de mouse.
 - **Caso-limite aceito:** ao fechar um modal com Esc, a dica do botão aparece (o foco de teclado está ali, de propósito). No celular, o ⓘ continua abrindo ao toque.
+
+📌 **Fila de avisos: repetido recomeça o tempo, e quem sai desliza (02-10-2026).** Substitui "Um aviso por vez; o de erro fica" (acima): desde 01-10-2026 a fila mostra até 3 avisos, o de sucesso some em 4 segundos e o de erro em 8.
+- **Decisão:** aviso igual a um que já está na tela não empilha: o tempo dele recomeça do zero e ele dá uma pulsada leve (`.aviso-pulso`). Quando um aviso sai (pelo tempo, pelo X ou por ter chegado o 4º), a altura dele encolhe até zero enquanto some (`.aviso-envoltorio--saindo`, em `4-componentes.css`) e os de baixo sobem junto; o React apaga o aviso quando a animação termina. Só CSS, sem biblioteca nova.
+- **Motivo:** repetir uma ação perto do fim do tempo fazia o aviso sumir logo em seguida, e parecia que o clique não tinha chegado. Os de baixo pulavam de uma vez para cima, o mesmo "dançar" que não se aceita nos modais. É o que fazem o Sonner, o react-hot-toast e o Material Design.
+- **Caso-limite aceito:** o mesmo aviso chegando duas vezes em menos de meio segundo (a chamada dupla do `<StrictMode>` em desenvolvimento) recomeça o tempo sem pulsar. Com "reduzir movimento" ligado no sistema, não há pulsada e a saída é imediata.
+
+📌 **"Esperando há X dias" na fila de Aprovar Campanhas (02-10-2026).**
+- **Decisão:** a coluna "criada em" virou "esperando" (`enviadoAprovacaoEm`, carimbada pelo banco a cada envio ou reenvio; ver `DOCUMENTACAO_BD.md`), com o formato de coluna novo `espera` (`formatarEspera`: "hoje", "há 1 dia", "há 5 dias", em dias de calendário). A fila abre com quem espera há mais tempo no topo.
+- **Motivo:** "criada em" enganava: uma campanha reenviada ontem parecia esperar desde a criação. Mostrar a espera é o padrão de qualquer fila de atendimento (SLA).
+- **Caso-limite aceito:** ordenar pela coluna "esperando" em ordem crescente mostra quem espera MENOS primeiro (é a ordem natural de um tempo de espera); a ordem de abertura, sem clique, é a contrária.

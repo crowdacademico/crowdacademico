@@ -21,6 +21,7 @@ export interface CampanhaResponse {
   dataFim: string | null;
   status: StatusCampanha;
   aprovadoEm: string | null;
+  enviadoAprovacaoEm: string | null;
   encerradoEm: string | null;
   videoApresentacaoUrl: string | null;
   criadoEm: string;

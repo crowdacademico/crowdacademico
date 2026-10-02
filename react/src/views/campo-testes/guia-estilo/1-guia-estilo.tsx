@@ -72,7 +72,7 @@ function Tipografia() {
         <p className="paragrafo-denso">.enfase · .texto-herdado</p>
         <p className="paragrafo">
           Dentro de um texto, <span className="enfase">.enfase</span> deixa só uma parte em semi-negrito, sem mudar o
-          tamanho. Link de texto: <span className="texto-marca enfase underline">texto-marca enfase underline</span>.
+          tamanho. Link de texto: <span className="link-texto">link-texto</span>.
         </p>
         <p className="legenda">
           Numa legenda, a <span className="enfase">ênfase</span> continua do tamanho da legenda.

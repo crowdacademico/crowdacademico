@@ -261,7 +261,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
           aoFechar={() => setCampanhaConsultada(null)}
           rodape={<RodapeAcoes aoCancelar={() => setCampanhaConsultada(null)} rotuloCancelar="Fechar" />}
         >
-          <div className="grid lg:grid-cols-3 gap-6 items-start">
+          <div className="grade-ficha">
             <div className="lg:col-span-2 space-y-6">
               <SecaoFicha titulo="Dados">
                 <CampoFicha rotulo="id" valor={campanhaConsultada.idCampanha} />

@@ -31,6 +31,7 @@ export class CampanhaConverter {
       dataFim: entity.data_fim,
       status: entity.status,
       aprovadoEm: entity.aprovado_em,
+      enviadoAprovacaoEm: entity.enviado_aprovacao_em,
       encerradoEm: entity.encerrado_em,
       videoApresentacaoUrl: entity.video_apresentacao_url,
       criadoEm: entity.criado_em,

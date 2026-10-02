@@ -1028,7 +1028,7 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 
 ## 13. Inventário de rotas HTTP
 
-120 handlers. `AUTH` = a rota exige login (o padrão, `AuthGuardRequireAuth` global); `pub` = a rota tem `@Publico()` (o que **não** significa "sem proteção": significa que quem protege é a RLS, e que anônimo é um caso legítimo).
+122 handlers. `AUTH` = a rota exige login (o padrão, `AuthGuardRequireAuth` global); `pub` = a rota tem `@Publico()` (o que **não** significa "sem proteção": significa que quem protege é a RLS, e que anônimo é um caso legítimo).
 
 | | Método | Rota |
 |---|---|---|
@@ -1039,6 +1039,8 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | pub | POST | `/auth/refresh` |
 | pub | POST | `/auth/logout` |
 | pub | POST | `/auth/verificar-email` |
+| pub | POST | `/auth/esqueci-senha` *(throttled)* |
+| pub | POST | `/auth/redefinir-senha` *(throttled)* |
 | AUTH | GET · DELETE | `/auth/sessoes` |
 | AUTH | DELETE | `/auth/sessoes/:id` |
 | **Usuário e RBAC** | | |

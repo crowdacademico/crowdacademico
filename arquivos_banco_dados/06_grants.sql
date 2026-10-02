@@ -259,8 +259,15 @@ GRANT INSERT ON historico_rejeicao TO app_nestjs;
 -- campanha tem DELETE: pol_campanha_delete (04) restringe a 'rascunho' + dono/campanha_editar; sem este GRANT a
 -- policy nunca chega a ser avaliada (mesmo padrão do comentário de orcamento_campanha/marco_cronograma logo
 -- abaixo).
-GRANT INSERT, DELETE ON campanha TO app_nestjs;
--- UPDATE por coluna: campo calculado (valor_bruto_arrecadado, taxa_plataforma, encerrado_em) e imutável (modelo,
+GRANT DELETE ON campanha TO app_nestjs;
+-- INSERT por coluna: só o que o pesquisador preenche ao criar. Status, aprovação, valores calculados e datas de
+-- carimbo ficam de fora, então toda campanha nasce 'rascunho' (o DEFAULT) e só chega à fila ou ao ar pelas
+-- transições que fn_valida_transicao_campanha e fn_valida_completude_campanha (05) conferem.
+GRANT INSERT (
+    id_usuario, id_area_conhecimento, titulo, modelo, meta_financeira,
+    descricao, data_inicio, data_fim, video_apresentacao_url
+) ON campanha TO app_nestjs;
+-- UPDATE por coluna: campo calculado (valor_bruto_arrecadado, taxa_plataforma, encerrado_em, enviado_aprovacao_em) e imutável (modelo,
 -- id_usuario) só mudam por função SECURITY DEFINER ou trigger. Ver DOCUMENTACAO_BD.md [05-K-2-C].
 GRANT UPDATE (
     titulo, descricao, id_area_conhecimento, meta_financeira,

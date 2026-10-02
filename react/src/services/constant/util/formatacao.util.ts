@@ -40,6 +40,17 @@ export function formatarData(iso: string | null | undefined): string {
   return iso ? paraData(iso).toLocaleDateString('pt-BR') : 'Não definida';
 }
 
+// Tempo de espera em dias de calendário ("hoje", "há 1 dia", "há 5 dias"): conta viradas de dia, não blocos de 24h
+// (enviada ontem às 23h é "há 1 dia" hoje às 8h).
+export function formatarEspera(iso: string | null | undefined): string {
+  if (!iso) {
+    return '';
+  }
+  const inicioDoDia = (data: Date) => new Date(data.getFullYear(), data.getMonth(), data.getDate()).getTime();
+  const dias = Math.round((inicioDoDia(new Date()) - inicioDoDia(paraData(iso))) / 86_400_000);
+  return dias <= 0 ? 'hoje' : dias === 1 ? 'há 1 dia' : `há ${dias} dias`;
+}
+
 export function formatarMesAno(iso: string | null | undefined): string {
   return iso
     ? paraData(iso).toLocaleDateString('pt-BR', { month: '2-digit', year: 'numeric' })

@@ -28,7 +28,7 @@ export function SecaoFicha({ titulo, children, colunas = 2, nivel = 3 }: SecaoFi
   const Titulo = nivel === 2 ? 'h2' : 'h3';
   return (
     <div>
-      <Titulo className="titulo-bloco mb-3 pb-2 border-b borda-padrao">{titulo}</Titulo>
+      <Titulo className="titulo-bloco titulo-bloco--linha">{titulo}</Titulo>
       <div
         className={
           'grid gap-x-6 gap-y-4 ' + (colunas === 1 ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2')

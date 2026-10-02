@@ -308,7 +308,7 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
 
           {/* Duas linhas alinhadas: "Dados da conta" ao lado de Metadados e "Perfil de Pesquisador" ao lado dos
               Aceites do Termo. Sem perfil de pesquisador, os Aceites continuam na coluna da direita (col-start-3). */}
-          <div className={ve('conta') + ' grid lg:grid-cols-3 gap-x-8 gap-y-10 items-start'}>
+          <div className={ve('conta') + ' grade-ficha gap-x-8 gap-y-10'}>
             <div className="lg:col-span-2">
               <SecaoFicha titulo="Dados da conta">
                 <div className="sm:col-span-2 flex items-center gap-4">
@@ -716,7 +716,7 @@ function PapeisDoUsuario({ auth, idUsuario, papeis, aoMudarPapeis, aoAtualizado 
       {catalogo !== null && papeisDisponiveis.length === 0 ? (
         <p className="legenda texto-fraco">Esta conta já tem todos os papéis que existem.</p>
       ) : (
-        <div className="flex flex-col gap-2 max-w-md">
+        <div className="flex flex-col gap-2 max-w-(--largura-formulario)">
           <select
             value={idPapelParaAtribuir}
             onChange={(evento) => setIdPapelParaAtribuir(evento.target.value)}
@@ -789,7 +789,7 @@ function LinksAcademicosDoUsuario({ auth, idUsuario }: LinksAcademicosDoUsuarioP
 
   return (
     <div>
-      <h3 className="titulo-bloco mb-3 pb-2 border-b borda-padrao">
+      <h3 className="titulo-bloco titulo-bloco--linha">
         Links acadêmicos ({links.length} de {limiteLinks})
       </h3>
       <TabelaLinksAcademicos

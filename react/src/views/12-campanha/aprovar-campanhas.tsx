@@ -12,7 +12,8 @@ interface LinhaFila extends CampanhaResponse {
 }
 
 // Fila de aprovação do admin (grupo MODERAÇÃO do menu): só campanhas 'aguardando_aprovacao', com o sinal de
-// score baixo na coluna "atenção" (só aparece para quem pode aprovar). "Revisar" abre o modal com tudo o que é
+// score baixo na coluna "atenção" (só aparece para quem pode aprovar). Quem espera há mais tempo vem primeiro
+// ("esperando", contado da última entrada na fila: um reenvio zera a espera). "Revisar" abre o modal com tudo o que é
 // preciso ler e os botões Aprovar e Rejeitar; quem barra de verdade é o banco.
 export function AprovarCampanhas({ auth }: PropsPagina) {
   const [revisandoId, setRevisandoId] = useState<number | null>(null);
@@ -20,7 +21,10 @@ export function AprovarCampanhas({ auth }: PropsPagina) {
 
   const listarFila = useCallback(async (): Promise<LinhaFila[]> => {
     const campanhas = await campanhaApi.listar(auth.authFetch, { status: 'aguardando_aprovacao' });
-    return campanhas.map((campanha) => ({
+    const maisAntigaPrimeiro = [...campanhas].sort((a, b) =>
+      (a.enviadoAprovacaoEm ?? a.criadoEm).localeCompare(b.enviadoAprovacaoEm ?? b.criadoEm),
+    );
+    return maisAntigaPrimeiro.map((campanha) => ({
       ...campanha,
       pesquisador: campanha.nomePesquisador ?? `#${campanha.idUsuario}`,
       area: campanha.nomeArea ?? `#${campanha.idAreaConhecimento}`,
@@ -33,14 +37,14 @@ export function AprovarCampanhas({ auth }: PropsPagina) {
     <div className="admin-content-painel">
       <GenericTable<LinhaFila>
         titulo="Aprovar Campanhas"
-        ajuda="Campanhas enviadas pelos pesquisadores, esperando a sua avaliação."
+        ajuda="Campanhas enviadas pelos pesquisadores, esperando a sua avaliação. Quem espera há mais tempo aparece primeiro."
         colunas={[
           { chave: 'idCampanha', rotulo: 'id', tipo: 'id' },
           { chave: 'titulo', rotulo: 'título', tipo: 'nome' },
           { chave: 'pesquisador', rotulo: 'pesquisador', tipo: 'texto' },
           { chave: 'atencao', rotulo: 'atenção', tipo: 'status' },
           { chave: 'metaFinanceira', rotulo: 'meta', tipo: 'dinheiro' },
-          { chave: 'criadoEm', rotulo: 'criada em', tipo: 'data' },
+          { chave: 'enviadoAprovacaoEm', rotulo: 'esperando', tipo: 'espera' },
         ]}
         chavePrimaria="idCampanha"
         vazio={{

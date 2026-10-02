@@ -312,7 +312,7 @@ export function ModalAlterarCampanha({
             </p>
           )}
 
-          <div className="grid lg:grid-cols-3 gap-6 items-start">
+          <div className="grade-ficha">
             <div className="lg:col-span-2 space-y-6">
               <SecaoFicha titulo="Informações da campanha">
                 {campoTexto('titulo', 'Título')}
@@ -380,7 +380,7 @@ export function ModalAlterarCampanha({
             {/* Resumo: o que só se consulta aqui (arrecadado, taxa, status, id) e a meta, que só é campo enquanto a
                 campanha não foi aprovada. */}
             <div className="rounded-xl border borda-padrao fundo-sutil p-5 space-y-5">
-              <h3 className="titulo-bloco pb-2 border-b borda-padrao">Resumo</h3>
+              <h3 className="titulo-bloco titulo-bloco--linha mb-0">Resumo</h3>
               <CampoFicha
                 rotulo="Status"
                 valor={

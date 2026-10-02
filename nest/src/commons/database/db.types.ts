@@ -358,6 +358,7 @@ export interface CampanhaTable {
   data_fim: Date | null;
   status: Generated<StatusCampanha>;
   aprovado_em: Date | null;
+  enviado_aprovacao_em: Date | null;
   encerrado_em: Date | null;
   video_apresentacao_url: string | null;
   criado_em: Generated<Date>;

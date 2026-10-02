@@ -131,6 +131,7 @@ export interface Campanha {
   data_inicio: Timestamp | null;
   descricao: string | null;
   encerrado_em: Timestamp | null;
+  enviado_aprovacao_em: Timestamp | null;
   id_admin: number | null;
   id_area_conhecimento: number;
   id_campanha: Generated<number>;

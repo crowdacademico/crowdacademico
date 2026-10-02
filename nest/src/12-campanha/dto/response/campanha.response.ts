@@ -18,6 +18,8 @@ export class CampanhaResponse {
   dataFim: Date | null;
   status: StatusCampanha;
   aprovadoEm: Date | null;
+  // Última entrada na fila de aprovação (preenchida pelo banco); a fila mostra "esperando há X dias" a partir dela.
+  enviadoAprovacaoEm: Date | null;
   encerradoEm: Date | null;
   videoApresentacaoUrl: string | null;
   criadoEm: Date;

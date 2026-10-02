@@ -788,4 +788,81 @@
       animation: barra-carregamento-aparecer 0s linear 300ms forwards;
     }
   }
+
+  /* Aviso (toast) saindo da fila: em vez de sumir e os de baixo pularem para cima, a altura dele encolhe até zero
+     (linha da grade de 1fr para 0fr) enquanto some, e os de baixo sobem junto. O React apaga o aviso quando a
+     transição termina (transitionend). Com "reduzir movimento", a transição dura 1ms: sai na hora, e o fim
+     continua sendo avisado. */
+  .aviso-envoltorio {
+    display: grid;
+    grid-template-rows: 1fr;
+    transition:
+      grid-template-rows 250ms ease,
+      opacity 250ms ease;
+  }
+  .aviso-envoltorio > * {
+    min-height: 0;
+  }
+  .aviso-envoltorio--saindo {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+  .aviso-envoltorio--saindo > * {
+    overflow: hidden;
+  }
+  /* Aviso repetido: uma pulsada leve mostra que a ação chegou de novo e o tempo dele recomeçou. */
+  .aviso-pulso {
+    animation: aviso-pulso 300ms ease;
+  }
+  @keyframes aviso-pulso {
+    50% {
+      transform: scale(1.03);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .aviso-envoltorio {
+      transition-duration: 1ms;
+    }
+    .aviso-pulso {
+      animation: none;
+    }
+  }
+
+  /* Link dentro de um texto ("Clique aqui", "Voltar para o login"): semi-negrito, cor da marca, sublinhado. O
+     tamanho é o do texto em volta. `--cor-herdada`: o mesmo link dentro de um aviso colorido, na cor do aviso. */
+  .link-texto {
+    font-weight: 600;
+    color: var(--cor-texto-marca);
+    text-decoration: underline;
+  }
+  .link-texto--cor-herdada {
+    color: inherit;
+  }
+
+  /* Título de bloco com uma linha embaixo, separando o bloco do conteúdo (as seções das fichas). Vai junto de
+     `.titulo-bloco`, que dá a fonte. */
+  .titulo-bloco--linha {
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--cor-borda);
+  }
+
+  /* Mensagem de erro embaixo de um campo ou de uma escolha. Vai junto de `.legenda-destaque`, que dá a fonte. */
+  .erro-campo {
+    margin-top: 0.25rem;
+    color: var(--cor-texto-erro);
+  }
+
+  /* As 2 colunas das fichas (modais de Consultar/Alterar e Minha Conta): uma coluna no celular; a partir de
+     1024px, 3 partes, com o conteúdo principal ocupando 2 (`lg:col-span-2`) e os metadados 1. */
+  .grade-ficha {
+    display: grid;
+    gap: 1.5rem;
+    align-items: start;
+  }
+  @media (min-width: 1024px) {
+    .grade-ficha {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
 }

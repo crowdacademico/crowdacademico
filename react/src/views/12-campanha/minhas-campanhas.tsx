@@ -107,7 +107,7 @@ export function MinhasCampanhas({ auth }: PropsPagina) {
           ) : (
             <p>
               Só pesquisadores criam campanhas.{' '}
-              <Link to="/admin/minha-conta/academico" className="enfase underline">
+              <Link to="/admin/minha-conta/academico" className="link-texto link-texto--cor-herdada">
                 Tornar-me pesquisador
               </Link>{' '}
               (Minha Conta, aba Acadêmico).

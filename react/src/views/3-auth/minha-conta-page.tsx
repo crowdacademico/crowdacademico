@@ -324,7 +324,7 @@ function AbaPerfil({ auth, aoVoltar }: AbaPerfilProps) {
       <div className="px-6 sm:px-8 py-8">
         <MensagemErro texto={erro} className="paragrafo texto-erro mb-6" />
 
-        <div className="grid lg:grid-cols-3 gap-6 items-start">
+        <div className="grade-ficha">
           <div className="lg:col-span-2 space-y-6">
             <SecaoFicha titulo="Foto do perfil" nivel={2}>
               <div className="sm:col-span-2 flex items-center gap-4">
@@ -379,7 +379,7 @@ function AbaPerfil({ auth, aoVoltar }: AbaPerfilProps) {
                 <i className="fa-solid fa-circle-info mt-0.5 shrink-0"></i>
                 <p className="legenda texto-herdado">
                   Você ainda não é pesquisador. O upgrade fica na aba{' '}
-                  <Link to="/admin/minha-conta/academico" className="enfase underline">
+                  <Link to="/admin/minha-conta/academico" className="link-texto link-texto--cor-herdada">
                     Acadêmico
                   </Link>
                   .
@@ -393,7 +393,7 @@ function AbaPerfil({ auth, aoVoltar }: AbaPerfilProps) {
                 <CampoFicha rotulo="Vínculo institucional" valor={perfil.vinculoInstitucional} />
                 <p className="legenda texto-fraco">
                   O perfil completo de pesquisador fica na aba{' '}
-                  <Link to="/admin/minha-conta/academico" className="enfase underline">
+                  <Link to="/admin/minha-conta/academico" className="link-texto link-texto--cor-herdada">
                     Acadêmico
                   </Link>
                   .
@@ -520,10 +520,10 @@ function AbaSeguranca({ auth }: AbaSegurancaProps) {
   return (
     <div className="px-6 sm:px-8 py-8 space-y-8">
       <div>
-        <h2 className="titulo-bloco mb-3 pb-2 border-b borda-padrao">
+        <h2 className="titulo-bloco titulo-bloco--linha">
           Trocar senha
         </h2>
-        <form onSubmit={aoTrocarSenha} className="space-y-4 max-w-md">
+        <form onSubmit={aoTrocarSenha} className="space-y-4 max-w-(--largura-formulario)">
           <MensagemErro texto={erro} className="paragrafo texto-erro" />
           {/* O erro do backend (senha atual incorreta) também cai embaixo do campo, não só no aviso. */}
           <Campo rotulo="Senha atual" erro={erroSenhaDe('atual') || errosCampo.senhaAtual}>
@@ -895,7 +895,7 @@ function AbaPrivacidade({ auth }: AbaPrivacidadeProps) {
             Direito de portabilidade (LGPD Art. 18): baixa um arquivo com os dados da sua conta. Uma vez por
             hora.
           </p>
-          <MensagemErro texto={erroExportar} className="legenda-destaque texto-erro mt-1" />
+          <MensagemErro texto={erroExportar} className="legenda-destaque erro-campo" />
         </div>
         <button type="button" onClick={() => void aoExportar()} disabled={exportando} className="btn btn-secondary">
           {exportando ? 'Exportando...' : 'Exportar'}

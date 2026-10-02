@@ -135,7 +135,7 @@ export function LoginPage({ auth }: PropsPagina) {
               acima. Continua sendo link, não um 2º botão cheio (dois botões grandes competiriam entre si). */}
           <p className="paragrafo texto-fraco text-center pt-2">
             Ainda não tem cadastro?{' '}
-            <Link to="/cadastro" className="texto-marca enfase underline">
+            <Link to="/cadastro" className="link-texto">
               Clique aqui
             </Link>
           </p>

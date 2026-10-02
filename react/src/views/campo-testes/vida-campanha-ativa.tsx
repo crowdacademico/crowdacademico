@@ -189,7 +189,7 @@ export function VidaCampanhaAtiva({ auth }: PropsPagina) {
       </div>
 
       <CaixaBuscaSugestoes
-        className="mb-4 max-w-sm"
+        className="mb-4 max-w-(--largura-campo-busca)"
         rotulo="Buscar campanha"
         placeholder="Digite o id ou o título..."
         valor={buscaCampanha}

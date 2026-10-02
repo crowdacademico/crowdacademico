@@ -226,7 +226,7 @@ export function SeletorFotoPerfil({
         />
       </div>
 
-      {erroLocal && <p className="legenda-destaque texto-erro mt-1.5 max-w-40">{erroLocal}</p>}
+      {erroLocal && <p className="legenda-destaque erro-campo max-w-(--largura-legenda-foto)">{erroLocal}</p>}
     </div>
   );
 }

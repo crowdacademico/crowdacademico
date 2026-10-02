@@ -87,7 +87,7 @@ const SECOES_MODAL_TERMO_USO = [
         conteúdo só é aceito enquanto NINGUÉM aceitou aquela versão ainda - assim que a 1ª
         pessoa aceitar, ela trava pra sempre (o valor probatório do aceite se perderia se o
         texto pudesse mudar depois). Veja o histórico completo (todos os tipos) em{' '}
-        <Link to="/admin/termos-uso" className="texto-marca enfase underline">
+        <Link to="/admin/termos-uso" className="link-texto">
           Termo de Uso
         </Link>
         .

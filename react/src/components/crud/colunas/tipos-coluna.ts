@@ -28,6 +28,7 @@ export const TIPOS_COLUNA = {
   dinheiro: colunaCurta(FORMATOS.dinheiro),
   data: colunaCurta(FORMATOS.data),
   dataHora: colunaCurta(FORMATOS.dataHora),
+  espera: colunaCurta(FORMATOS.espera),
 } satisfies Record<string, TipoColuna>;
 
 export type NomeTipoColuna = keyof typeof TIPOS_COLUNA;

@@ -63,7 +63,7 @@ export function EsqueciSenhaPage() {
             )}
             <p className="legenda texto-fraco">
               Não chegou?{' '}
-              <button type="button" onClick={() => setEnviado(false)} className="texto-marca enfase underline">
+              <button type="button" onClick={() => setEnviado(false)} className="link-texto">
                 Pedir de novo
               </button>
             </p>
@@ -92,7 +92,7 @@ export function EsqueciSenhaPage() {
 
         <p className="legenda pb-8 texto-fraco text-center">
           Lembrou a senha?{' '}
-          <Link to="/login" className="texto-marca enfase underline">
+          <Link to="/login" className="link-texto">
             Entrar
           </Link>
         </p>

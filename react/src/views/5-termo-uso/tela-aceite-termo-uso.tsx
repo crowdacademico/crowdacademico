@@ -41,7 +41,7 @@ export function TelaAceiteTermoUso({ auth }: TelaAceiteTermoUsoProps) {
 
   return (
     <div className="pagina-centralizada">
-      <div className="max-w-2xl w-full fundo-cartao rounded-3xl sombra-cartao-solto border borda-padrao overflow-hidden flex flex-col max-h-(--altura-cartao-solto)">
+      <div className="max-w-(--largura-cartao-largo) w-full fundo-cartao rounded-3xl sombra-cartao-solto border borda-padrao overflow-hidden flex flex-col max-h-(--altura-cartao-solto)">
         {/* Brilho verde discreto no canto, o mesmo da Minha Conta. */}
         <div className="px-8 py-6 border-b borda-padrao fundo-sutil relative isolate overflow-hidden">
           <div className="pointer-events-none absolute -z-10 -top-12 -right-12 w-56 h-56 brilho-marca rounded-full blur-3xl"></div>

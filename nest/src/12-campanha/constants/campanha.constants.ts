@@ -13,6 +13,7 @@ export const CAMPANHA_COLUNAS_SELECT = [
   'data_fim',
   'status',
   'aprovado_em',
+  'enviado_aprovacao_em',
   'encerrado_em',
   'video_apresentacao_url',
   'criado_em',

@@ -509,6 +509,9 @@ CREATE TABLE campanha (
     data_fim             TIMESTAMPTZ,
     status               status_campanha NOT NULL DEFAULT 'rascunho',
     aprovado_em          TIMESTAMPTZ,
+    -- Quando a campanha entrou por último na fila de aprovação (envio ou reenvio). Preenchida só pelo banco
+    -- (fn_carimba_envio_aprovacao, 05): a fila mostra "esperando há X dias" a partir dela.
+    enviado_aprovacao_em TIMESTAMPTZ,
     -- data_fim é a promessa (congelada por fn_congela_regras_campanha, 05); encerrado_em registra quando
     -- a campanha de fato terminou (natural, antecipado ou por moderação): RF-042/RF-058.
     encerrado_em         TIMESTAMPTZ,
