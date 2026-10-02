@@ -64,7 +64,7 @@ export function ModalExcluirTermoUso({ auth, termo, aoFechar, aoExcluido }: Moda
         <CampoFicha
           rotulo="Início do texto"
           largura="cheia"
-          valor={<span className="whitespace-pre-wrap font-mono text-xs line-clamp-6">{termo.conteudo}</span>}
+          valor={<span className="paragrafo-denso whitespace-pre-wrap line-clamp-6 texto-herdado">{termo.conteudo}</span>}
         />
       </SecaoFicha>
     </ModalFicha>

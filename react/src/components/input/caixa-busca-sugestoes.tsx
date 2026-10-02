@@ -73,7 +73,7 @@ export function CaixaBuscaSugestoes({
                       setAberta(false);
                     }}
                     className={
-                      'w-full text-left px-3 py-2 text-sm border-b borda-padrao last:border-b-0 flex items-center justify-between gap-2 ' +
+                      'paragrafo w-full text-left px-3 py-2 border-b borda-padrao last:border-b-0 flex items-center justify-between gap-2 texto-herdado ' +
                       (sugestao.desabilitada ? 'opacity-60 cursor-not-allowed' : 'hover-fundo-marca-suave')
                     }
                   >

@@ -64,7 +64,7 @@ export function AdminLayout({ auth }: AdminLayoutProps) {
           <button
             type="button"
             onClick={() => setMenuAberto(true)}
-            className="flex items-center gap-2 font-semibold text-sm texto-padrao"
+            className="paragrafo-destaque flex items-center gap-2 texto-padrao"
           >
             <i className="fa-solid fa-bars"></i> Menu
           </button>

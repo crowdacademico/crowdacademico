@@ -40,7 +40,7 @@ const CLASSE_TAMANHO: Record<TamanhoAvatar, string> = {
 };
 
 // 'quadrado': rounded-2xl, não rounded-lg nem cantos retos: segue o mesmo raio generoso dos cartões do painel
-// (cartao-formulario.tsx usa rounded-3xl), só um degrau abaixo. 'circulo' é o padrão em todo o resto do app
+// (os cartões soltos de Login e Cadastro usam rounded-3xl), só um degrau abaixo. 'circulo' é o padrão em todo o resto do app
 // (cabeçalho, tabelas, dropdown).
 const CLASSE_FORMA: Record<FormaAvatar, string> = {
   circulo: 'rounded-full',

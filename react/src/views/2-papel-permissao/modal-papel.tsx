@@ -55,7 +55,7 @@ export function ModalConsultarPapel({ auth, papel, aoFechar }: ModalConsultarPap
           {permissoes === null ? (
             <Carregando />
           ) : permissoes.length === 0 ? (
-            <p className="text-sm texto-fraco">Nenhuma permissão concedida a este papel ainda.</p>
+            <p className="paragrafo texto-fraco">Nenhuma permissão concedida a este papel ainda.</p>
           ) : (
             <div className="flex flex-wrap gap-2">
               {permissoes.map((permissao) => (

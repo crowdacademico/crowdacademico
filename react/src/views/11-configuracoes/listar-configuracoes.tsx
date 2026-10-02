@@ -3,6 +3,7 @@ import { GenericTable } from '../../components/crud/generic-table';
 import { BlocoLogAuditoria } from '../../components/crud/bloco-log-auditoria';
 import { useCrudModais } from '../../services/constant/hook/use-crud-modais';
 import { configuracoesApi } from '../../services/11-configuracoes/api/configuracoes.api';
+import { grupoConfiguracao } from '../../services/11-configuracoes/constants/configuracoes-grupos.constants';
 import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
 import {
   ModalAlterarConfiguracao,
@@ -17,6 +18,10 @@ import type { ConfiguracoesResponse } from '../../services/11-configuracoes/type
 //
 // Sem Criar: uma chave nova só tem efeito se alguma regra do banco ou do Nest a ler (config_numero('...')),
 // então parâmetro novo entra por SQL (07_seed_dados.sql), junto com a regra que o usa.
+// `assunto`: o grupo do parâmetro (Segurança, Financeiro, Campanha...), o mesmo da aba Regras do Negócio do
+// Dashboard. Não vira coluna: serve ao filtro "Assunto", para achar um parâmetro sem rolar a lista inteira.
+type LinhaParametro = ConfiguracoesResponse & { assunto: string };
+
 export function ListarConfiguracoes({ auth }: PropsPagina) {
   const {
     alterando,
@@ -26,10 +31,13 @@ export function ListarConfiguracoes({ auth }: PropsPagina) {
     chaveRecarga,
     recarregar,
     acoesCompletas,
-  } = useCrudModais<ConfiguracoesResponse>();
+  } = useCrudModais<LinhaParametro>();
 
   const listarConfiguracoes = useCallback(
-    () => configuracoesApi.listar(auth.authFetch),
+    () =>
+      configuracoesApi
+        .listar(auth.authFetch)
+        .then((lista) => lista.map((linha) => ({ ...linha, assunto: grupoConfiguracao(linha.chave) }))),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [auth.authFetch, chaveRecarga],
   );
@@ -42,7 +50,7 @@ export function ListarConfiguracoes({ auth }: PropsPagina) {
 
   return (
     <div className="admin-content-painel">
-      <GenericTable<ConfiguracoesResponse>
+      <GenericTable<LinhaParametro>
         titulo="Parâmetros do Sistema"
         colunas={[
           { chave: 'idConfig', rotulo: 'id', tipo: 'id' },
@@ -57,6 +65,7 @@ export function ListarConfiguracoes({ auth }: PropsPagina) {
           { chave: 'publica', rotulo: 'pública', tipo: 'simNao' },
         ]}
         chavePrimaria="idConfig"
+        filtrosFacetados={[{ chave: 'assunto', rotulo: 'Assunto' }]}
         listar={listarConfiguracoes}
         // Sem Excluir: parâmetro global é contrato do sistema, o banco não deixa apagar (pol_config_delete,
         // 04); para desligar uma regra, muda-se o valor.

@@ -119,7 +119,7 @@ export function ModalDetalhe({
               {/* texto-forte (mesmo tom do título: slate-800/quase-branco no escuro) no corpo principal do
                   modal, sem perder a hierarquia com o rótulo da seção (que continua texto-fraco, acima):
                   texto-padrão (slate-700) ficava claro demais. */}
-              <div className="text-sm texto-forte">{secao.conteudo}</div>
+              <div className="paragrafo texto-forte">{secao.conteudo}</div>
             </div>
           ))}
         </div>

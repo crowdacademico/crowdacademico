@@ -4,7 +4,7 @@
 // Salvar e Enviar para aprovação): passe uma lista; ficam na ordem dada, depois do secundário.
 //
 // `formulario`: o botão de ação vira `type="submit"` e submete o `<form>` com esse id, mesmo que o form viva
-// fora do rodapé (rodapé sticky de `CartaoFormulario`). Sem ele, é um botão comum que chama `aoClicar`.
+// fora do rodapé (o rodapé do ModalFicha fica fora do `<form>`). Sem ele, é um botão comum que chama `aoClicar`.
 export interface AcaoRodape {
   rotulo: string;
   rotuloOcupado?: string;
@@ -32,9 +32,10 @@ export function RodapeAcoes({ aoCancelar, rotuloCancelar = 'Cancelar', acao, lar
   // rodapé inteiro; só do tamanho do texto, ficava miúdo perto dos outros rodapés.
   if (acoes.length === 0) {
     return (
-      <div className={'flex gap-3' + CLASSE_LARGURA[largura]}>
-        <span className="flex-1" aria-hidden="true"></span>
-        <button type="button" onClick={aoCancelar} className="btn btn-secondary flex-1">
+      // Largura exata de um botão de dupla: metade da caixa menos metade do espaço entre os dois (gap-3 = 0.75rem).
+      // Um <span> vazio com flex-1 ao lado não servia: o botão tem padding e o span não, e o botão saía mais largo.
+      <div className={'flex justify-end' + CLASSE_LARGURA[largura]}>
+        <button type="button" onClick={aoCancelar} className="btn btn-secondary w-[calc(50%-0.375rem)]">
           {rotuloCancelar}
         </button>
       </div>

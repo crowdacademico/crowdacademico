@@ -21,7 +21,7 @@ export function ModalConsultarTermoUso({ termo, aoFechar }: ModalConsultarTermoU
       aoFechar={aoFechar}
       rodape={<RodapeAcoes aoCancelar={aoFechar} rotuloCancelar="Fechar" />}
     >
-      <p className="text-xs texto-fraco">Criada em {formatarData(termo.criadoEm)}</p>
+      <p className="legenda texto-fraco">Criada em {formatarData(termo.criadoEm)}</p>
       <CaixaTextoLongo rotulo="Texto completo" tituloTelaCheia={`Versão ${termo.versao}`} valor={termo.conteudo} />
     </ModalFicha>
   );

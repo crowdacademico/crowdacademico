@@ -16,7 +16,7 @@ export function DashboardSaude({ bancoConectado, resumo }: DashboardSaudeProps) 
     <div className="space-y-4">
       <div className="cartao-painel p-5">
         <h2 className="subtitulo mb-3">Conexão com o banco</h2>
-        <div className="flex items-center gap-2 text-sm">
+        <div className="paragrafo flex items-center gap-2 texto-herdado">
           <PontoStatusConexao valor={bancoConectado} />
           <span className="texto-padrao font-semibold">
             {bancoConectado === null
@@ -31,7 +31,7 @@ export function DashboardSaude({ bancoConectado, resumo }: DashboardSaudeProps) 
       <div className="cartao-painel p-5">
         <h2 className="subtitulo mb-3">Contagens agregadas</h2>
         {resumo ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
+          <div className="paragrafo grid grid-cols-2 sm:grid-cols-3 gap-4 texto-herdado">
             <p className="texto-fraco">
               Contas ativas agora
               <Tooltip texto={TEXTO_TOOLTIP_SESSOES_ATIVAS} />
@@ -45,12 +45,12 @@ export function DashboardSaude({ bancoConectado, resumo }: DashboardSaudeProps) 
             </p>
           </div>
         ) : (
-          <p className="text-sm texto-fraco">Sem dados agregados carregados.</p>
+          <p className="paragrafo texto-fraco">Sem dados agregados carregados.</p>
         )}
       </div>
 
       <div className="rounded-lg border borda-padrao fundo-sutil p-4">
-        <p className="text-xs texto-fraco">
+        <p className="legenda texto-fraco">
           <i className="fa-solid fa-circle-info mr-1"></i>
           Rastreamento de versão de schema (última migration aplicada, divergência de hash)
           ainda não existe neste projeto, o histórico de mudança de banco vive nos arquivos

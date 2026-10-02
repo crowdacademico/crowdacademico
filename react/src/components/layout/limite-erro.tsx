@@ -32,13 +32,13 @@ class LimiteErroInterno extends Component<LimiteErroInternoProps, LimiteErroInte
     return (
       <div role="alert" className="fundo-cartao rounded-2xl border borda-padrao p-8 my-8 text-center space-y-4">
         <p className="texto-erro font-bold">Algo deu errado ao mostrar esta tela.</p>
-        <p className="text-sm texto-fraco">Os outros menus continuam funcionando. Recarregar a página costuma resolver.</p>
+        <p className="paragrafo texto-fraco">Os outros menus continuam funcionando. Recarregar a página costuma resolver.</p>
         <button type="button" className="btn btn-secondary" onClick={() => window.location.reload()}>
           Recarregar página
         </button>
         {/* Detalhe técnico só em desenvolvimento: em produção a mensagem crua não é para o usuário. */}
         {import.meta.env.DEV && (
-          <pre className="text-left text-xs texto-fraco fundo-sutil rounded p-3 whitespace-pre-wrap">{erro.message}</pre>
+          <pre className="legenda text-left texto-fraco fundo-sutil rounded p-3 whitespace-pre-wrap">{erro.message}</pre>
         )}
       </div>
     );

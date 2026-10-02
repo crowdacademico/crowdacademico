@@ -7,8 +7,7 @@ import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { esqueciSenha } from '../../services/3-auth/api/auth.api';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
-
-const REGEX_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+import { emailValido } from '../../services/constant/util/validacao.util';
 
 // "Esqueci minha senha" (RF-006), passo 1: pede o link. A resposta é sempre a mesma, exista ou não a conta (não
 // revela quem tem cadastro, padrão de mercado). Enquanto o módulo de e-mail não existe, o link aparece aqui só em
@@ -21,7 +20,7 @@ export function EsqueciSenhaPage() {
   const [tokenDev, setTokenDev] = useState<string | null>(null);
 
   const { erroDe, tentarEnviar } = useErrosFormulario(() => ({
-    email: email.trim() === '' ? 'Informe seu e-mail.' : !REGEX_EMAIL.test(email.trim()) && 'E-mail inválido.',
+    email: email.trim() === '' ? 'Informe seu e-mail.' : !emailValido(email) && 'E-mail inválido.',
   }));
 
   const aoEnviar = (evento: FormEvent<HTMLFormElement>) => {
@@ -45,8 +44,8 @@ export function EsqueciSenhaPage() {
           <div className="w-14 h-14 fundo-marca rounded-2xl mx-auto flex items-center justify-center text-white font-bold text-2xl mb-5 shadow-lg">
             <i className="fa-solid fa-key"></i>
           </div>
-          <h1 className="text-3xl font-serif font-bold texto-forte mb-2">Esqueceu a senha?</h1>
-          <p className="text-sm texto-fraco font-medium">
+          <h1 className="titulo-pagina mb-2">Esqueceu a senha?</h1>
+          <p className="paragrafo texto-fraco font-medium">
             Digite o e-mail da sua conta e enviamos um link para você criar uma senha nova.
           </p>
         </div>
@@ -54,7 +53,7 @@ export function EsqueciSenhaPage() {
         {enviado ? (
           <div className="p-10 space-y-5 text-center">
             <i className="fa-solid fa-envelope-circle-check text-4xl texto-marca"></i>
-            <p className="text-sm texto-padrao">
+            <p className="paragrafo texto-padrao">
               Se existir uma conta com <strong>{email.trim()}</strong>, enviamos um link para criar uma senha nova. O
               link vale por pouco tempo e só pode ser usado uma vez.
             </p>
@@ -63,7 +62,7 @@ export function EsqueciSenhaPage() {
                 &lt;dev&gt; Abrir o link (o e-mail ainda não existe)
               </Link>
             )}
-            <p className="text-xs texto-fraco">
+            <p className="legenda texto-fraco">
               Não chegou?{' '}
               <button type="button" onClick={() => setEnviado(false)} className="texto-marca font-bold underline">
                 Pedir de novo
@@ -86,13 +85,13 @@ export function EsqueciSenhaPage() {
                 />
               )}
             </Campo>
-            <button type="submit" disabled={enviando} className="btn btn-primary w-full py-3.5 text-sm">
+            <button type="submit" disabled={enviando} className="btn btn-primary btn-destaque w-full py-3.5">
               {enviando ? 'Enviando...' : 'Enviar link'}
             </button>
           </form>
         )}
 
-        <p className="pb-8 text-xs texto-fraco text-center">
+        <p className="legenda pb-8 texto-fraco text-center">
           Lembrou a senha?{' '}
           <Link to="/login" className="texto-marca font-bold underline">
             Entrar

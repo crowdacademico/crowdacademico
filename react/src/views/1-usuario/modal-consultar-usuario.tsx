@@ -90,9 +90,9 @@ export function ModalConsultarUsuario({ auth, idUsuario, aoFechar }: ModalConsul
     >
       {!usuario ? (
         erro ? (
-          <MensagemErro texto={erro} className="p-6 text-center texto-erro text-sm font-bold" />
+          <MensagemErro texto={erro} className="paragrafo-destaque p-6 text-center texto-erro" />
         ) : (
-          <p className="p-6 text-center text-sm texto-fraco">Carregando...</p>
+          <p className="paragrafo p-6 text-center texto-fraco">Carregando...</p>
         )
       ) : (
         <>
@@ -153,7 +153,7 @@ export function ModalConsultarUsuario({ auth, idUsuario, aoFechar }: ModalConsul
                   }
                 >
                   {loginsAbertos && (
-                    <div className="mt-2 rounded-lg border borda-padrao fundo-sutil p-3 text-sm max-h-64 overflow-y-auto">
+                    <div className="paragrafo mt-2 rounded-lg border borda-padrao fundo-sutil p-3 max-h-64 overflow-y-auto texto-herdado">
                       {carregandoLogins ? (
                         <Carregando />
                       ) : loginsAnteriores.length === 0 ? (

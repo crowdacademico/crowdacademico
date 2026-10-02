@@ -59,7 +59,7 @@ type FotoNova = { id: number | null; url: string | null } | undefined;
 // "Vale na hora": as ações destas partes gravam no clique, sem esperar o Salvar.
 function AvisoValeNaHora() {
   return (
-    <p className="text-xs texto-fraco flex items-center gap-2">
+    <p className="legenda texto-fraco flex items-center gap-2">
       <i className="fa-solid fa-bolt"></i>
       As ações abaixo valem na hora do clique, sem botão Salvar.
     </p>
@@ -300,7 +300,7 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
       {carregando ? (
         <Carregando className="p-6 text-center" />
       ) : !usuario ? (
-        <MensagemErro texto={erro} className="p-6 text-center texto-erro text-sm font-bold" />
+        <MensagemErro texto={erro} className="paragrafo-destaque p-6 text-center texto-erro" />
       ) : (
         <>
           <FiltroPartes partes={partes} atual={parte} aoEscolher={setParte} />
@@ -319,7 +319,7 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
                     tamanho="lg"
                     aoAlterar={(id, url) => setFotoNova({ id, url })}
                   />
-                  <p className="text-xs texto-fraco">A foto nova só vale depois de "Salvar".</p>
+                  <p className="legenda texto-fraco">A foto nova só vale depois de "Salvar".</p>
                 </div>
                 <Campo rotulo="Nome" erro={conta.erroDe('nome')} className="sm:col-span-2">
                   {({ atributos, classeErro }) => (
@@ -428,7 +428,7 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
                 <CampoFicha rotulo="CPF atual" valor={formatarCpfOuMotivoOculto(perfilPesquisador.cpf)} />
                 {corrigindoCpf ? (
                   <div className="sm:col-span-2 flex items-end gap-2 rounded-lg border borda-forte p-3">
-                    <label className="text-xs flex-1 flex flex-col gap-1">
+                    <label className="legenda flex-1 flex flex-col gap-1 texto-herdado">
                       CPF correto (suporte/admin)
                       <input
                         type="text"
@@ -463,7 +463,7 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
           <div className={ve('moderacao') + ' space-y-6'}>
             <SecaoFicha titulo="Acesso" colunas={1}>
               <div className="flex items-center justify-between gap-3 rounded-lg border borda-forte p-3">
-                <p className="text-xs texto-fraco">
+                <p className="legenda texto-fraco">
                   Zera o contador de tentativas de login falhas e libera a conta, caso esteja bloqueada temporariamente.
                 </p>
                 <button type="button" onClick={aoDesbloquear} disabled={desbloqueando} className="btn btn-secondary shrink-0">
@@ -514,7 +514,7 @@ function FiltroPartes({
             ref.current?.closest('.overflow-y-auto')?.scrollTo({ top: 0 });
           }}
           className={
-            'px-3 py-1.5 rounded-lg text-sm font-semibold ' +
+            'paragrafo-destaque px-3 py-1.5 rounded-lg texto-herdado ' +
             (atual === parte.chave ? 'fundo-sutil texto-marca' : 'texto-fraco hover-texto-forte')
           }
         >
@@ -638,7 +638,7 @@ function PapeisDoUsuario({ auth, idUsuario, papeis, aoMudarPapeis, aoAtualizado 
       <MensagemErro texto={erro} />
 
       <div className="flex flex-wrap gap-2">
-        {papeis.length === 0 && <p className="text-xs texto-fraco">Nenhum papel atribuído ainda.</p>}
+        {papeis.length === 0 && <p className="legenda texto-fraco">Nenhum papel atribuído ainda.</p>}
         {papeis.map((papel) => {
           const suspenso = papel.suspensoAte && new Date(papel.suspensoAte) > new Date();
           return (
@@ -714,7 +714,7 @@ function PapeisDoUsuario({ auth, idUsuario, papeis, aoMudarPapeis, aoAtualizado 
       </div>
 
       {catalogo !== null && papeisDisponiveis.length === 0 ? (
-        <p className="text-xs texto-fraco">Esta conta já tem todos os papéis que existem.</p>
+        <p className="legenda texto-fraco">Esta conta já tem todos os papéis que existem.</p>
       ) : (
         <div className="flex flex-col gap-2 max-w-md">
           <select
@@ -731,9 +731,9 @@ function PapeisDoUsuario({ auth, idUsuario, papeis, aoMudarPapeis, aoAtualizado 
               </option>
             ))}
           </select>
-          {atribuicao.erroDe('papel') && <p className="text-xs texto-erro font-semibold">{atribuicao.erroDe('papel')}</p>}
+          {atribuicao.erroDe('papel') && <p className="legenda-destaque texto-erro">{atribuicao.erroDe('papel')}</p>}
           {/* O que o papel escolhido libera, antes de atribuir. */}
-          {descricaoEscolhido && <p className="text-xs texto-fraco">{descricaoEscolhido}</p>}
+          {descricaoEscolhido && <p className="legenda texto-fraco">{descricaoEscolhido}</p>}
           <button type="button" onClick={() => void aoAtribuir()} disabled={ocupado === 'atribuir'} className="btn btn-primary">
             {ocupado === 'atribuir' ? 'Atribuindo...' : 'Atribuir'}
           </button>

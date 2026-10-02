@@ -58,13 +58,13 @@ export function SecaoComentariosRecebidos({ auth, idCampanha, publicada }: Secao
 
   return (
     <SecaoFicha titulo={`Comentários recebidos (${endossosAtivos} de ${limiteEndossos} endossados)`} colunas={1}>
-      <p className="text-xs texto-fraco">
+      <p className="legenda texto-fraco">
         Só você vê estes comentários. Os que você endossar aparecem na página pública da campanha. O autor não é
         avisado quando você endossa, remove o endosso ou exclui.
       </p>
       <div>
         {comentarios.length === 0 ? (
-          <p className="texto-fraco text-sm">Nenhum comentário recebido ainda.</p>
+          <p className="paragrafo texto-fraco">Nenhum comentário recebido ainda.</p>
         ) : (
           <TabelaComentarios
             comentarios={comentarios}

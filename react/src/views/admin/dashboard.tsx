@@ -137,7 +137,7 @@ export function Dashboard({ auth }: DashboardProps) {
     // (Usuários/Papéis/Configurações) não sentem esse aperto porque o conteúdo delas já nasce dentro de
     // .admin-content-painel (padding de 2rem). Por isso ganha um respiro extra só aqui.
     <div className="space-y-6 pt-6">
-      <h1 className="text-3xl font-serif font-bold texto-forte">Dashboard</h1>
+      <h1 className="titulo-pagina">Dashboard</h1>
 
       <BarraAbasBotoes abas={ABAS} ativa={abaAtiva} aoTrocar={setAbaAtiva} />
 
@@ -145,7 +145,7 @@ export function Dashboard({ auth }: DashboardProps) {
         <div className="space-y-6">
           {/* (b) Faixa de saúde - sempre renderiza, mesmo se o resumo abaixo
               falhar (é precisamente aí que ela mais importa). */}
-          <div className="cartao-painel p-5 flex flex-wrap items-center gap-x-8 gap-y-3 text-sm">
+          <div className="paragrafo cartao-painel p-5 flex flex-wrap items-center gap-x-8 gap-y-3 texto-herdado">
             <span className="flex items-center gap-2 font-semibold texto-padrao">
               <PontoStatusConexao valor={bancoConectado} />
               {bancoConectado === null
@@ -175,7 +175,7 @@ export function Dashboard({ auth }: DashboardProps) {
 
           {/* (a) Cards de total */}
           {carregandoResumo ? (
-            <p className="text-sm texto-fraco">Carregando métricas...</p>
+            <p className="paragrafo texto-fraco">Carregando métricas...</p>
           ) : !resumo ? (
             <MensagemErro texto={erro} className="crud-erro" />
           ) : (
@@ -221,7 +221,7 @@ export function Dashboard({ auth }: DashboardProps) {
               <h2 className="subtitulo mb-3">Acessados recentemente</h2>
               <div className="flex flex-wrap gap-2">
                 {acessados.map((rota) => (
-                  <Link key={rota.caminho} to={rota.caminho} className="btn btn-secondary text-sm flex items-center gap-2">
+                  <Link key={rota.caminho} to={rota.caminho} className="btn btn-secondary flex items-center gap-2">
                     {rota.icone && <i className={'fa-solid ' + rota.icone} aria-hidden="true"></i>}
                     {rota.rotuloMenu}
                   </Link>
@@ -235,7 +235,7 @@ export function Dashboard({ auth }: DashboardProps) {
               Kysely, nem controller): mostra isso honestamente em vez de inventar dado. */}
           <div className="cartao-painel p-5">
             <h2 className="subtitulo mb-2">Notificações</h2>
-            <p className="text-sm texto-fraco">
+            <p className="paragrafo texto-fraco">
               Módulo de notificações ainda não foi implementado, esta prévia vai listar as
               pendências assim que existir.
             </p>

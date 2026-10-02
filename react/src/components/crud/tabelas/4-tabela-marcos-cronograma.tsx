@@ -71,7 +71,7 @@ export function TabelaMarcosCronograma({
   return (
     <>
       {minimoMarcos !== undefined && (
-        <p className={'flex items-center gap-2 mb-3 text-sm ' + (marcos.length >= minimoMarcos ? 'texto-fraco' : 'texto-erro font-semibold')}>
+        <p className={'paragrafo flex items-center gap-2 mb-3 texto-herdado ' + (marcos.length >= minimoMarcos ? 'texto-fraco' : 'texto-erro font-semibold')}>
           <i
             className={'fa-solid ' + (marcos.length >= minimoMarcos ? 'fa-circle-check texto-sucesso' : 'fa-circle-xmark')}
             aria-hidden="true"

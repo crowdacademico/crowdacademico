@@ -60,7 +60,7 @@ export function EtapaRevisaoCampanha({
   const tudoPronto = orcamentoOk && cronogramaOk && prazoValido;
 
   const item = (ok: boolean, texto: string) => (
-    <li className={'flex items-start gap-2 text-sm ' + (ok ? 'texto-sucesso' : 'texto-erro')}>
+    <li className={'paragrafo flex items-start gap-2 texto-herdado ' + (ok ? 'texto-sucesso' : 'texto-erro')}>
       <i className={'fa-solid mt-1 ' + (ok ? 'fa-circle-check' : 'fa-circle-xmark')} aria-hidden="true"></i>
       <span>{texto}</span>
     </li>
@@ -69,7 +69,7 @@ export function EtapaRevisaoCampanha({
   return (
     <div className="space-y-6">
       <div className={'rounded-lg border p-4 ' + (tudoPronto ? 'fundo-sucesso borda-sucesso' : 'fundo-aviso borda-padrao')}>
-        <p className="font-bold text-sm mb-2">
+        <p className="paragrafo-destaque mb-2 texto-herdado">
           {tudoPronto ? 'Tudo pronto para enviar.' : 'Antes de enviar, confira o que ainda falta:'}
         </p>
         <ul className="space-y-1">
@@ -96,18 +96,18 @@ export function EtapaRevisaoCampanha({
 
       <SecaoFicha titulo={`Orçamento (${orcamento.length} ${orcamento.length === 1 ? 'item' : 'itens'})`} colunas={1}>
         {orcamento.length === 0 ? (
-          <p className="texto-fraco text-sm">Nenhum item ainda: volte à etapa Orçamento.</p>
+          <p className="paragrafo texto-fraco">Nenhum item ainda: volte à etapa Orçamento.</p>
         ) : (
           <ul className="space-y-1">
             {orcamento.map((itemOrcamento) => (
-              <li key={itemOrcamento.idOrcamento} className="flex justify-between gap-4 text-sm">
+              <li key={itemOrcamento.idOrcamento} className="paragrafo flex justify-between gap-4 texto-herdado">
                 <span>{itemOrcamento.categoria}</span>
                 <span className="font-semibold">{formatarMoeda(itemOrcamento.valor)}</span>
               </li>
             ))}
           </ul>
         )}
-        <div className="flex items-center justify-between gap-4 text-sm">
+        <div className="paragrafo flex items-center justify-between gap-4 texto-herdado">
           <span className="texto-fraco">Soma dos itens em relação à meta</span>
           <BarraProgresso valor={soma} total={meta} rotulo="Soma do orçamento em relação à meta" />
         </div>
@@ -115,7 +115,7 @@ export function EtapaRevisaoCampanha({
 
       <SecaoFicha titulo={`Cronograma (${cronograma.length} marcos)`} colunas={1}>
         {cronograma.length === 0 ? (
-          <p className="texto-fraco text-sm">Nenhum marco ainda: volte à etapa Cronograma.</p>
+          <p className="paragrafo texto-fraco">Nenhum marco ainda: volte à etapa Cronograma.</p>
         ) : (
           <ol className="linha-tempo">
             {cronograma.map((marco) => (

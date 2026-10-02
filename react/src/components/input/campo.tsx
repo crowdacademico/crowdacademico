@@ -42,12 +42,12 @@ export function Campo({ rotulo, dica, erro, className, children }: CampoProps) {
         classeErro: temErro ? ' borda-erro' : '',
       })}
       {temErro ? (
-        <p id={idMensagem} className="text-xs texto-erro font-semibold mt-1">
+        <p id={idMensagem} className="legenda-destaque texto-erro mt-1">
           {erro}
         </p>
       ) : (
         dica && (
-          <p id={idMensagem} className="text-xs texto-fraco mt-1">
+          <p id={idMensagem} className="legenda texto-fraco mt-1">
             {dica}
           </p>
         )

@@ -13,8 +13,8 @@ import { ErroHttp } from '../../services/constant/api/http.util';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { TermoUsoResponseActive } from '../../services/5-termo-uso/type/termo-uso.type';
 import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
+import { emailValido } from '../../services/constant/util/validacao.util';
 
-const REGEX_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type CampoTocado = 'nome' | 'email' | 'senha' | 'confirmar';
 
@@ -61,13 +61,13 @@ export function CadastroPage({ auth }: PropsPagina) {
     }
   };
 
-  const emailValido = REGEX_EMAIL.test(email);
+  const emailEhValido = emailValido(email);
   const senhasIguais = senha.length > 0 && senha === confirmarSenha;
   // "Criar conta" fica sempre clicável: clicando com algo faltando, cada campo mostra o próprio erro (inclusive o
   // aceite dos Termos, que antes só deixava o botão cinza sem dizer por quê).
   const { erroDe, tentarEnviar } = useErrosFormulario(() => ({
     nome: nome.trim().length < 2 && 'Nome precisa ter pelo menos 2 caracteres.',
-    email: email.trim() === '' ? 'Informe o e-mail.' : !emailValido && 'E-mail inválido.',
+    email: email.trim() === '' ? 'Informe o e-mail.' : !emailEhValido && 'E-mail inválido.',
     senha: senha.length < 8 && 'A senha precisa ter pelo menos 8 caracteres.',
     confirmar: confirmarSenha === '' ? 'Confirme a senha.' : !senhasIguais && 'As senhas não são iguais.',
     termos: !aceiteTermos && 'É preciso aceitar o Termo de Uso para criar a conta.',
@@ -115,8 +115,8 @@ export function CadastroPage({ auth }: PropsPagina) {
           <div className="w-14 h-14 fundo-marca rounded-2xl mx-auto flex items-center justify-center text-white font-bold text-2xl mb-5 shadow-lg">
             <i className="fa-solid fa-user-plus"></i>
           </div>
-          <h1 className="text-3xl font-serif font-bold texto-forte mb-2">Criar conta</h1>
-          <p className="text-sm texto-fraco font-medium">
+          <h1 className="titulo-pagina mb-2">Criar conta</h1>
+          <p className="paragrafo texto-fraco font-medium">
             Leva menos de um minuto, o resto você completa depois, em Minha Conta.
           </p>
         </div>
@@ -154,7 +154,7 @@ export function CadastroPage({ auth }: PropsPagina) {
                   </Link>
                 </>
               ) : (
-                erroDe('email') ?? (tocado.email && email.length > 0 && !emailValido && 'E-mail inválido.')
+                erroDe('email') ?? (tocado.email && email.length > 0 && !emailEhValido && 'E-mail inválido.')
               )
             }
           >
@@ -233,7 +233,7 @@ export function CadastroPage({ auth }: PropsPagina) {
           </Campo>
 
           <div>
-            <label className="flex items-start gap-2.5 text-sm texto-padrao">
+            <label className="paragrafo flex items-start gap-2.5 texto-padrao">
               <input
                 type="checkbox"
                 checked={aceiteTermos}
@@ -255,7 +255,7 @@ export function CadastroPage({ auth }: PropsPagina) {
               </span>
             </label>
             {erroDe('termos') && (
-              <p id={idErroTermos} className="text-xs texto-erro font-semibold mt-1">
+              <p id={idErroTermos} className="legenda-destaque texto-erro mt-1">
                 {erroDe('termos')}
               </p>
             )}
@@ -267,11 +267,11 @@ export function CadastroPage({ auth }: PropsPagina) {
             type="submit"
             form="form-cadastro"
             disabled={enviando}
-            className="btn btn-primary w-full py-3.5 text-sm"
+            className="btn btn-primary btn-destaque w-full py-3.5"
           >
             {enviando ? 'Criando conta...' : 'Criar conta'}
           </button>
-          <p className="text-xs texto-fraco text-center">
+          <p className="legenda texto-fraco text-center">
             Já tem conta?{' '}
             <Link to="/login" className="texto-marca font-bold underline">
               Entrar

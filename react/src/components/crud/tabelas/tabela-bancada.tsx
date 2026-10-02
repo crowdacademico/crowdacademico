@@ -91,7 +91,7 @@ export function TabelaBancada<T>({
     <>
       <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
         <h2 className="subtitulo">{titulo}</h2>
-        <label className="text-xs flex items-center gap-1.5">
+        <label className="legenda flex items-center gap-1.5 texto-herdado">
           <input
             type="checkbox"
             checked={ocultarBloqueados}

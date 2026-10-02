@@ -31,7 +31,7 @@ export function SecaoAceitesTermo({ auth, termosAceitos, aoErro }: SecaoAceitesT
         {termosAceitos === null ? (
           <Carregando />
         ) : ultimos.length === 0 ? (
-          <p className="texto-fraco text-sm">Nenhum termo aceito registrado.</p>
+          <p className="paragrafo texto-fraco">Nenhum termo aceito registrado.</p>
         ) : (
           ultimos.map((termo) => (
             <CampoFicha
@@ -56,7 +56,7 @@ export function SecaoAceitesTermo({ auth, termosAceitos, aoErro }: SecaoAceitesT
           titulo={`${ROTULO_TIPO_TERMO[termoLido.tipo]} - versão ${termoLido.versao}`}
           aoSair={() => setTermoLido(null)}
         >
-          <pre className="flex-1 overflow-y-auto whitespace-pre-wrap font-sans text-sm texto-padrao">
+          <pre className="paragrafo flex-1 overflow-y-auto whitespace-pre-wrap texto-padrao">
             {termoLido.conteudo}
           </pre>
         </TelaCheia>

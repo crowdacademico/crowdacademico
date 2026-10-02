@@ -45,7 +45,7 @@ export function CaixaTextoLongo({ rotulo, tituloTelaCheia, valor, aoMudar, erro,
             />
           )}
         </Campo>
-        <p className="text-xs texto-fraco mt-2">{valor.length} caracteres</p>
+        <p className="legenda texto-fraco mt-2">{valor.length} caracteres</p>
       </TelaCheia>
     </div>
   );

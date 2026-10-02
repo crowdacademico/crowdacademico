@@ -19,7 +19,7 @@ export function PainelScore({ auth, idUsuario }: PainelScoreProps) {
         <i className="fa-solid fa-triangle-exclamation text-xl"></i>
         <div>
           <p className="font-bold">Ainda não está pronto</p>
-          <p className="text-sm">
+          <p className="paragrafo texto-herdado">
             A regra de negócio de pontuação (pesos e dimensões abaixo) ainda não foi fechada. Os números
             são só uma prévia da estrutura, não confie neles pra testar nada que dependa do valor final.
           </p>
@@ -33,7 +33,7 @@ export function PainelScore({ auth, idUsuario }: PainelScoreProps) {
           <TabelaDimensoesScore dimensoes={score.dimensoes} />
         </>
       ) : (
-        <p className="texto-fraco text-xs">carregando...</p>
+        <p className="legenda texto-fraco">carregando...</p>
       )}
     </>
   );

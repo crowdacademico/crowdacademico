@@ -59,14 +59,14 @@ export function LoginPage({ auth }: PropsPagina) {
           <div className="w-14 h-14 fundo-marca rounded-2xl mx-auto flex items-center justify-center text-white font-bold text-2xl mb-5 shadow-lg relative z-10">
             <i className="fa-solid fa-flask"></i>
           </div>
-          <h1 className="text-3xl font-serif font-bold texto-forte mb-2 relative z-10">Bem-vindo(a)</h1>
-          <p className="text-sm texto-fraco font-medium relative z-10">
+          <h1 className="titulo-pagina mb-2 relative z-10">Bem-vindo(a)</h1>
+          <p className="paragrafo texto-fraco font-medium relative z-10">
             Acesse sua conta para apoiar a ciência brasileira.
           </p>
         </div>
 
         <form onSubmit={aoEntrar} className="p-10 space-y-6">
-          <MensagemErro texto={erro} className="texto-erro text-sm font-bold text-center whitespace-pre-line" />
+          <MensagemErro texto={erro} className="paragrafo-destaque texto-erro text-center whitespace-pre-line" />
 
           <Campo rotulo="Seu E-mail">
             {({ atributos }) => (
@@ -97,7 +97,7 @@ export function LoginPage({ auth }: PropsPagina) {
               className="input-padrao order-3 w-full"
               placeholder="••••••••"
             />
-            <Link to="/esqueci-senha" className="text-xs texto-marca font-bold hover:underline mb-2 order-2">
+            <Link to="/esqueci-senha" className="legenda-destaque texto-marca hover:underline mb-2 order-2">
               Esqueceu a senha?
             </Link>
           </div>
@@ -112,7 +112,7 @@ export function LoginPage({ auth }: PropsPagina) {
 
           <div className="relative flex py-4 items-center">
             <div className="flex-grow border-t-2 borda-padrao"></div>
-            <span className="flex-shrink-0 mx-4 texto-fraco text-[10px] font-black uppercase tracking-widest">
+            <span className="rotulo-leitura flex-shrink-0 mx-4 texto-fraco">
               Ou acesse com
             </span>
             <div className="flex-grow border-t-2 borda-padrao"></div>
@@ -127,14 +127,14 @@ export function LoginPage({ auth }: PropsPagina) {
           <button
             type="button"
             onClick={() => window.alert('Login social com Google simulado no protótipo.')}
-            className="w-full border-2 borda-padrao fundo-cartao texto-forte font-bold py-3.5 rounded-xl hover-fundo-sutil transition flex items-center justify-center gap-3 text-sm"
+            className="paragrafo-destaque w-full border-2 borda-padrao fundo-cartao texto-forte py-3.5 rounded-xl hover-fundo-sutil transition flex items-center justify-center gap-3"
           >
             <IconeGoogle /> Continuar com Google
           </button>
 
           {/* Chamada de cadastro: a segunda ação mais importante da tela, por isso text-sm e mais respiro
               acima. Continua sendo link, não um 2º botão cheio (dois botões grandes competiriam entre si). */}
-          <p className="text-sm texto-fraco text-center pt-2">
+          <p className="paragrafo texto-fraco text-center pt-2">
             Ainda não tem cadastro?{' '}
             <Link to="/cadastro" className="texto-marca font-bold underline">
               Clique aqui

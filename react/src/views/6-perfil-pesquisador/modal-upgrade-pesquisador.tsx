@@ -167,16 +167,16 @@ export function ModalUpgradePesquisador({
         carregandoTermo ? (
           <Carregando className="text-center py-6" />
         ) : termoIndisponivel || !termo ? (
-          <p className="text-sm texto-erro text-center py-6">
+          <p className="paragrafo texto-erro text-center py-6">
             O Termo de Uso deste tipo ainda não foi publicado. Peça a um administrador para
             publicar e tornar vigente em Regras do Negócio.
           </p>
         ) : (
           <>
-            <div className="max-h-96 overflow-y-auto whitespace-pre-wrap text-sm border borda-padrao rounded-lg p-4">
+            <div className="paragrafo max-h-96 overflow-y-auto whitespace-pre-wrap border borda-padrao rounded-lg p-4 texto-herdado">
               {termo.conteudo}
             </div>
-            <label className="flex items-center gap-2 text-sm font-semibold texto-padrao mt-4">
+            <label className="paragrafo-destaque flex items-center gap-2 texto-padrao mt-4">
               <input
                 type="checkbox"
                 checked={aceitou}
@@ -186,7 +186,7 @@ export function ModalUpgradePesquisador({
               Li e aceito o Termo de Uso acima.
             </label>
             {aceite.erroDe('aceite') && (
-              <p className="text-xs texto-erro font-semibold mt-1">{aceite.erroDe('aceite')}</p>
+              <p className="legenda-destaque texto-erro mt-1">{aceite.erroDe('aceite')}</p>
             )}
           </>
         )

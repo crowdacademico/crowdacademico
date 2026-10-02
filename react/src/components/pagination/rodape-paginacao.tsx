@@ -47,7 +47,7 @@ export function RodapePaginacao({
       aoMudarPagina={aoMudarPagina}
       className={className}
     >
-      <label className="flex items-center gap-2 text-xs font-semibold texto-padrao">
+      <label className="legenda-destaque flex items-center gap-2 texto-padrao">
         Mostrar
         <select
           value={tamanhoPagina}
@@ -55,7 +55,7 @@ export function RodapePaginacao({
             const valor = evento.target.value;
             aoMudarTamanho(valor === 'todos' ? 'todos' : Number(valor));
           }}
-          className="border borda-padrao rounded-md fundo-sutil py-1 px-2 text-xs outline-none foco-marca"
+          className="legenda border borda-padrao rounded-md fundo-sutil py-1 px-2 outline-none foco-marca texto-herdado"
         >
           {TAMANHOS_PAGINA.map((tamanho) => (
             <option key={tamanho} value={tamanho}>

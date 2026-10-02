@@ -51,8 +51,8 @@ export function VerificarEmailPage() {
             <div className="w-14 h-14 fundo-sucesso rounded-2xl mx-auto flex items-center justify-center texto-sucesso text-2xl mb-5">
               <i className="fa-solid fa-check"></i>
             </div>
-            <h1 className="text-2xl font-serif font-bold texto-forte mb-2">E-mail confirmado</h1>
-            <p className="text-sm texto-fraco mb-6">Sua conta já está com o e-mail verificado.</p>
+            <h1 className="titulo-pagina mb-2">E-mail confirmado</h1>
+            <p className="paragrafo texto-fraco mb-6">Sua conta já está com o e-mail verificado.</p>
             <Link to="/" className="btn btn-primary inline-block">
               Ir para o painel
             </Link>
@@ -63,8 +63,8 @@ export function VerificarEmailPage() {
             <div className="w-14 h-14 fundo-erro rounded-2xl mx-auto flex items-center justify-center texto-erro text-2xl mb-5">
               <i className="fa-solid fa-triangle-exclamation"></i>
             </div>
-            <h1 className="text-2xl font-serif font-bold texto-forte mb-2">Não deu certo</h1>
-            <p className="text-sm texto-fraco mb-6">{mensagemErro}</p>
+            <h1 className="titulo-pagina mb-2">Não deu certo</h1>
+            <p className="paragrafo texto-fraco mb-6">{mensagemErro}</p>
             <Link to="/" className="btn btn-secondary inline-block">
               Voltar
             </Link>

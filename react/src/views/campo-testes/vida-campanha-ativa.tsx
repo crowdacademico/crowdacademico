@@ -216,7 +216,7 @@ export function VidaCampanhaAtiva({ auth }: PropsPagina) {
         <>
           <div className="fundo-sutil rounded-md p-4 mb-4">
             <span className="badge badge-sucesso">{campanha.status}</span> <strong>#{campanha.idCampanha}: {campanha.titulo}</strong>{' '}
-            <span className="texto-fraco text-xs">dono: {nomeDe(campanha.idUsuario)}</span>
+            <span className="legenda texto-fraco">dono: {nomeDe(campanha.idUsuario)}</span>
           </div>
 
           <h2 className="subtitulo mb-2">Atualizações</h2>
@@ -248,7 +248,7 @@ export function VidaCampanhaAtiva({ auth }: PropsPagina) {
             atualizacoes={atualizacoes}
             aoAlternarAtivo={(item) => void alternarAtivoAtualizacao(item.idAtualizacao, item.ativo)}
           />
-          <p className="texto-fraco text-xs mb-4">
+          <p className="legenda texto-fraco mb-4">
             <i className="fa-solid fa-ban"></i> Anexos (arquivo_atualizacao): aguardando o módulo 25-arquivo existir de verdade.
           </p>
 
@@ -263,7 +263,7 @@ export function VidaCampanhaAtiva({ auth }: PropsPagina) {
               Enviar (como {auth.usuario?.nome})
             </button>
           </div>
-          <p className="texto-fraco text-xs mb-2">
+          <p className="legenda texto-fraco mb-2">
             Comenta sempre a sessão logada - o banco bloqueia comentário na própria campanha. Endossar e excluir
             são ações separadas, só do dono da campanha (RF-089) - só é possível testando logado como o próprio
             dono.
@@ -288,7 +288,7 @@ export function VidaCampanhaAtiva({ auth }: PropsPagina) {
           <div className="border-t borda-padrao my-8"></div>
 
           <h2 className="subtitulo mb-2">Seguidores</h2>
-          <p className="texto-fraco text-xs mb-2">
+          <p className="legenda texto-fraco mb-2">
             Sem Elenco só dá pra simular a própria sessão logada seguindo ou não - um roster de vários
             seguidores ao mesmo tempo fica pro redesenho de T3.
           </p>

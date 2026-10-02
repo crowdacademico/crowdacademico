@@ -44,7 +44,7 @@ export function Header({ auth }: HeaderProps) {
         <div className="flex items-center gap-3">
           <Link
             to="/admin/minhas-campanhas?criar=1"
-            className="fundo-marca-forte hover-fundo-marca-forte-hover text-white px-5 py-2.5 rounded-lg font-bold transition-all text-sm shadow-md hidden lg:block mr-10"
+            className="btn btn-primary btn-destaque hidden lg:inline-flex mr-10"
           >
             Submeter Pesquisa
           </Link>

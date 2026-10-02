@@ -101,7 +101,7 @@ export function MinhaConta({ auth }: PropsPagina) {
     // a barra de abas.
     <div className="w-0 min-w-full max-w-5xl mx-auto p-4 sm:p-8">
       {/* Um cartão só, do topo ao rodapé - SEM overflow-hidden (mesma
-          lição já aprendida em cartao-formulario.tsx/ficha-consulta.tsx:
+          lição já aprendida nas antigas páginas de formulário e de ficha:
           overflow-hidden cria um contexto de scroll que o `sticky` do
           rodapé da aba Perfil não atravessa). A faixa (fundo-sutil,
           diferente do corpo) arredonda o PRÓPRIO canto de cima
@@ -168,10 +168,10 @@ function FaixaIdentidade({ auth }: FaixaIdentidadeProps) {
         </div>
 
         <div className="min-w-0 flex-1">
-          <h1 className="text-2xl sm:text-3xl font-serif font-bold texto-forte break-words">
+          <h1 className="titulo-pagina break-words">
             {usuario?.nome}
           </h1>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 mt-2 text-sm texto-fraco">
+          <div className="paragrafo flex flex-wrap items-center gap-x-3 gap-y-1.5 mt-2 texto-fraco">
             <span className="break-words">{usuario?.email}</span>
             <span
               className={
@@ -226,7 +226,7 @@ function BarraAbas({ abaAtiva }: BarraAbasProps) {
           key={item.chave}
           to={`/admin/minha-conta/${item.chave}`}
           className={
-            'flex items-center gap-2 px-4 py-3.5 text-sm font-bold whitespace-nowrap border-b-2 transition-colors ' +
+            'paragrafo-destaque flex items-center gap-2 px-4 py-3.5 whitespace-nowrap border-b-2 transition-colors texto-herdado ' +
             (item.chave === abaAtiva
               ? 'borda-marca texto-marca'
               : 'border-transparent texto-fraco hover-texto-forte')
@@ -322,7 +322,7 @@ function AbaPerfil({ auth, aoVoltar }: AbaPerfilProps) {
   return (
     <form id="form-minha-conta-perfil" onSubmit={aoSalvar}>
       <div className="px-6 sm:px-8 py-8">
-        <MensagemErro texto={erro} className="text-sm texto-erro mb-6" />
+        <MensagemErro texto={erro} className="paragrafo texto-erro mb-6" />
 
         <div className="grid lg:grid-cols-3 gap-6 items-start">
           <div className="lg:col-span-2 space-y-6">
@@ -338,7 +338,7 @@ function AbaPerfil({ auth, aoVoltar }: AbaPerfilProps) {
                     setAvatarUrlNovo(novaUrl);
                   }}
                 />
-                <p className="text-xs texto-forte">
+                <p className="legenda texto-forte">
                   Clique no ícone de câmera pra trocar, ou no de lixeira pra remover.
                   Lembre de clicar em "Salvar" no fim da página pra confirmar.
                 </p>
@@ -364,7 +364,7 @@ function AbaPerfil({ auth, aoVoltar }: AbaPerfilProps) {
               </Campo>
               <div className="sm:col-span-2 flex items-start gap-2 rounded-lg fundo-info texto-info p-3">
                 <i className="fa-solid fa-circle-info mt-0.5 shrink-0"></i>
-                <p className="text-xs">
+                <p className="legenda texto-herdado">
                   Trocar o e-mail ainda não é possível neste protótipo, exigiria
                   reverificação, que depende do módulo de e-mail.
                 </p>
@@ -377,7 +377,7 @@ function AbaPerfil({ auth, aoVoltar }: AbaPerfilProps) {
             {perfil === null && (
               <div className="flex items-start gap-2 rounded-lg fundo-info texto-info p-3">
                 <i className="fa-solid fa-circle-info mt-0.5 shrink-0"></i>
-                <p className="text-xs">
+                <p className="legenda texto-herdado">
                   Você ainda não é pesquisador. O upgrade fica na aba{' '}
                   <Link to="/admin/minha-conta/academico" className="font-bold underline">
                     Acadêmico
@@ -391,7 +391,7 @@ function AbaPerfil({ auth, aoVoltar }: AbaPerfilProps) {
                 <CampoFicha rotulo="Título acadêmico" valor={ROTULO_TITULO_ACADEMICO[perfil.tituloAcademico]} />
                 <CampoFicha rotulo="Tipo de vínculo" valor={ROTULO_TIPO_VINCULO[perfil.tipoVinculo]} />
                 <CampoFicha rotulo="Vínculo institucional" valor={perfil.vinculoInstitucional} />
-                <p className="text-xs texto-fraco">
+                <p className="legenda texto-fraco">
                   O perfil completo de pesquisador fica na aba{' '}
                   <Link to="/admin/minha-conta/academico" className="font-bold underline">
                     Acadêmico
@@ -404,8 +404,8 @@ function AbaPerfil({ auth, aoVoltar }: AbaPerfilProps) {
         </div>
       </div>
 
-      {/* Rodapé sticky, mesmo padrão de cartao-formulario.tsx/
-          modal-alterar-usuario.tsx - arredonda o PRÓPRIO canto de baixo
+      {/* Rodapé sticky, mesmo padrão do rodapé dos
+          modais - arredonda o PRÓPRIO canto de baixo
           (rounded-b-2xl), não depende do wrapper. */}
       <div className="px-6 sm:px-8 py-5 border-t borda-padrao fundo-cartao rounded-b-2xl sticky bottom-0 flex gap-3 justify-end">
         <button type="button" onClick={aoCancelar} className="btn btn-secondary">
@@ -524,7 +524,7 @@ function AbaSeguranca({ auth }: AbaSegurancaProps) {
           Trocar senha
         </h2>
         <form onSubmit={aoTrocarSenha} className="space-y-4 max-w-md">
-          <MensagemErro texto={erro} className="text-sm texto-erro" />
+          <MensagemErro texto={erro} className="paragrafo texto-erro" />
           {/* O erro do backend (senha atual incorreta) também cai embaixo do campo, não só no aviso. */}
           <Campo rotulo="Senha atual" erro={erroSenhaDe('atual') || errosCampo.senhaAtual}>
             {({ atributos, classeErro }) => (
@@ -609,7 +609,7 @@ function AbaSeguranca({ auth }: AbaSegurancaProps) {
               type="button"
               onClick={aoEncerrarTodas}
               disabled={encerrandoTodas}
-              className="text-xs font-bold texto-erro hover:underline"
+              className="legenda-destaque texto-erro hover:underline"
             >
               {encerrandoTodas ? 'Encerrando...' : 'Encerrar todas as outras'}
             </button>
@@ -620,13 +620,13 @@ function AbaSeguranca({ auth }: AbaSegurancaProps) {
           (sessoes === null ? (
             <Carregando />
           ) : sessoes.length === 0 ? (
-            <p className="text-sm texto-fraco">Nenhuma sessão ativa encontrada.</p>
+            <p className="paragrafo texto-fraco">Nenhuma sessão ativa encontrada.</p>
           ) : (
             <ul className="space-y-2 max-h-64 overflow-y-auto pr-1">
               {sessoes.map((sessao) => (
                 <li
                   key={sessao.idSessao}
-                  className="flex items-center gap-3 rounded-lg border borda-padrao p-3 text-sm"
+                  className="paragrafo flex items-center gap-3 rounded-lg border borda-padrao p-3 texto-herdado"
                 >
                   <i
                     className={
@@ -645,7 +645,7 @@ function AbaSeguranca({ auth }: AbaSegurancaProps) {
                         <span className="badge badge-sucesso shrink-0">Esta sessão</span>
                       )}
                     </p>
-                    <p className="text-xs texto-fraco">
+                    <p className="legenda texto-fraco">
                       {sessao.ip ?? 'IP desconhecido'} · desde{' '}
                       {formatarDataHora(sessao.criadoEm)}
                     </p>
@@ -695,14 +695,14 @@ function AbaPapeis({ auth }: AbaPapeisProps) {
 
   return (
     <div className="px-6 sm:px-8 py-8">
-      <p className="text-sm texto-fraco mb-4">
+      <p className="paragrafo texto-fraco mb-4">
         O que você é na plataforma, só leitura aqui - pra alterar, um administrador precisa
         fazer isso pelo painel de Usuários.
       </p>
       {papeis === null ? (
         <Carregando />
       ) : papeis.length === 0 ? (
-        <p className="text-sm texto-fraco">Nenhum papel atribuído.</p>
+        <p className="paragrafo texto-fraco">Nenhum papel atribuído.</p>
       ) : (
         <div className="flex flex-wrap gap-2">
           {papeis.map((papel) => {
@@ -776,7 +776,7 @@ function AbaAcademico({ auth }: AbaAcademicoProps) {
   if (!perfil) {
     return (
       <div className="px-6 sm:px-8 py-8 space-y-4">
-        <div className="flex items-start gap-2 rounded-lg fundo-info texto-info p-3 text-xs">
+        <div className="legenda flex items-start gap-2 rounded-lg fundo-info texto-info p-3">
           <i className="fa-solid fa-circle-info mt-0.5 shrink-0"></i>
           <p>Você ainda não é pesquisador nesta plataforma. Como pesquisador, você pode criar campanhas para financiar suas pesquisas.</p>
         </div>
@@ -807,11 +807,11 @@ function AbaAcademico({ auth }: AbaAcademicoProps) {
     <div className="px-6 sm:px-8 py-8 space-y-6">
       {suspensoAgora && (
         <div className="rounded-lg border borda-forte fundo-erro p-4">
-          <p className="text-sm font-bold texto-erro">
+          <p className="paragrafo-destaque texto-erro">
             Seu poder de pesquisador está suspenso até {formatarDataHora(suspensoAte)}
           </p>
-          <p className="text-xs texto-erro mt-1">Motivo: {suspensao?.motivoSuspensao}</p>
-          <p className="text-xs texto-erro mt-2">
+          <p className="legenda texto-erro mt-1">Motivo: {suspensao?.motivoSuspensao}</p>
+          <p className="legenda texto-erro mt-2">
             Sua conta continua funcionando normalmente - só a autoridade de pesquisador (criar
             campanha, endossar, etc.) fica suspensa até o prazo acima.
           </p>
@@ -890,12 +890,12 @@ function AbaPrivacidade({ auth }: AbaPrivacidadeProps) {
     <div className="px-6 sm:px-8 py-8 space-y-6">
       <div className="flex items-center justify-between gap-3 rounded-lg border borda-padrao p-4">
         <div>
-          <p className="text-sm font-semibold texto-padrao">Exportar meus dados</p>
-          <p className="text-xs texto-fraco">
+          <p className="paragrafo-destaque texto-padrao">Exportar meus dados</p>
+          <p className="legenda texto-fraco">
             Direito de portabilidade (LGPD Art. 18): baixa um arquivo com os dados da sua conta. Uma vez por
             hora.
           </p>
-          <MensagemErro texto={erroExportar} className="text-xs texto-erro font-bold mt-1" />
+          <MensagemErro texto={erroExportar} className="legenda-destaque texto-erro mt-1" />
         </div>
         <button type="button" onClick={() => void aoExportar()} disabled={exportando} className="btn btn-secondary">
           {exportando ? 'Exportando...' : 'Exportar'}
@@ -903,12 +903,12 @@ function AbaPrivacidade({ auth }: AbaPrivacidadeProps) {
       </div>
 
       <div className="rounded-lg border borda-forte fundo-erro p-4">
-        <p className="text-sm font-bold texto-erro mb-2">Excluir minha conta</p>
-        <p className="text-xs texto-erro mb-3">
+        <p className="paragrafo-destaque texto-erro mb-2">Excluir minha conta</p>
+        <p className="legenda texto-erro mb-3">
           Marca sua conta como excluída (exclusão lógica), o login para de funcionar na hora.
           Não existe desfazer pelo painel.
         </p>
-        <MensagemErro texto={erro} className="text-xs texto-erro mb-2 font-bold" />
+        <MensagemErro texto={erro} className="legenda-destaque texto-erro mb-2" />
         <div className="mb-3">
           <ConfirmacaoDigitada
             oQue="o e-mail"

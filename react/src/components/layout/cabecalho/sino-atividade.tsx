@@ -97,26 +97,26 @@ export function SinoAtividade({ auth }: SinoAtividadeProps) {
       {aberto && (
         <div className="absolute right-0 mt-2 w-80 fundo-elevado rounded-xl shadow-2xl border borda-forte overflow-hidden z-50">
           <div className="px-4 py-3 border-b borda-padrao fundo-sutil">
-            <p className="text-sm font-bold texto-forte">Atividade recente</p>
-            <p className="text-xs texto-fraco">Últimas ações feitas por você</p>
+            <p className="paragrafo-destaque texto-forte">Atividade recente</p>
+            <p className="legenda texto-fraco">Últimas ações feitas por você</p>
           </div>
 
           <div className="max-h-80 overflow-y-auto">
             {carregando ? (
               <Carregando className="px-4 py-6 text-center" />
             ) : itens.length === 0 ? (
-              <p className="px-4 py-6 text-sm texto-fraco text-center">
+              <p className="paragrafo px-4 py-6 texto-fraco text-center">
                 Nenhuma ação recente sua registrada.
               </p>
             ) : (
               itens.map((item) => (
                 <div key={item.idLog} className="px-4 py-3 border-b borda-padrao last:border-b-0">
-                  <p className="text-sm texto-forte">
+                  <p className="paragrafo texto-forte">
                     Você {ROTULO_OPERACAO[item.operacao] ?? item.operacao.toLowerCase()}{' '}
                     <span className="font-semibold">{item.tabela}</span> #
                     {item.identidadeRegistro}
                   </p>
-                  <p className="text-xs texto-fraco mt-0.5">
+                  <p className="legenda texto-fraco mt-0.5">
                     {formatarDataHora(item.ocorridoEm)}
                   </p>
                 </div>

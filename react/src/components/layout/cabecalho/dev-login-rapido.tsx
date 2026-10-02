@@ -91,10 +91,10 @@ export function DevLoginRapido({ auth }: DevLoginRapidoProps) {
               key={conta.email}
               type="button"
               onClick={() => entrarComo(conta)}
-              className="w-full text-left px-3 py-2 text-sm hover-fundo-dev-sutil"
+              className="paragrafo w-full text-left px-3 py-2 hover-fundo-dev-sutil texto-herdado"
             >
               {conta.rotulo}
-              <span className="block texto-fraco text-xs">{conta.email}</span>
+              <span className="legenda block texto-fraco">{conta.email}</span>
             </button>
           ))}
         </div>
@@ -102,7 +102,7 @@ export function DevLoginRapido({ auth }: DevLoginRapidoProps) {
 
       <MensagemErro
         texto={erro}
-        className="absolute right-0 mt-1 w-56 bg-red-50 border border-red-200 texto-erro text-xs rounded-lg shadow-lg z-50 px-3 py-2"
+        className="legenda absolute right-0 mt-1 w-56 bg-red-50 border border-red-200 texto-erro rounded-lg shadow-lg z-50 px-3 py-2"
       />
     </div>
   );

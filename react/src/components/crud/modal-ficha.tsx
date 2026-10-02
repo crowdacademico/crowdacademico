@@ -49,8 +49,7 @@ export function PilulaCarregandoModal() {
   );
 }
 
-// Mesma moldura de ModalDetalhe (backdrop + cartão + botão fechar), só que largo (max-w-5xl, igual
-// FichaConsulta largura="larga") e recebendo children livre em vez de uma lista fixa de `secoes`: pensado para
+// Mesma moldura de ModalDetalhe (backdrop + cartão + botão fechar), só que largo (max-w-5xl) e recebendo children livre em vez de uma lista fixa de `secoes`: pensado para
 // Consultar/Alterar que já usam <SecaoFicha>/<CampoFicha> (os MESMOS blocos da página real), só que dentro de
 // um modal (T1 do Campo de Testes replica a aparência exata de Consultar/Alterar Usuário, sem reinventar o
 // layout).
@@ -172,7 +171,7 @@ export function ModalFicha({
                 <h2 id={idTitulo} className="titulo-secao truncate">{tituloExibido}</h2>
                 {ajuda && !carregando && <Tooltip texto={ajuda} baixo />}
               </div>
-              {subtituloExibido && <p className="text-sm texto-fraco mt-1 break-words">{subtituloExibido}</p>}
+              {subtituloExibido && <p className="paragrafo texto-fraco mt-1 break-words">{subtituloExibido}</p>}
               {badgesExibidos && badgesExibidos.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mt-2">{badgesExibidos}</div>
               )}

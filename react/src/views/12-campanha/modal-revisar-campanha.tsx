@@ -94,7 +94,7 @@ export function ModalRevisarCampanha({ auth, idCampanha, aoFechar, aoConcluido }
   };
 
   const itemChecklist = (ok: boolean, texto: string) => (
-    <li className={'flex items-start gap-2 text-sm ' + (ok ? 'texto-sucesso' : 'texto-erro')}>
+    <li className={'paragrafo flex items-start gap-2 texto-herdado ' + (ok ? 'texto-sucesso' : 'texto-erro')}>
       <i className={'fa-solid mt-1 ' + (ok ? 'fa-circle-check' : 'fa-circle-xmark')} aria-hidden="true"></i>
       <span>{texto}</span>
     </li>
@@ -143,12 +143,12 @@ export function ModalRevisarCampanha({ auth, idCampanha, aoFechar, aoConcluido }
         <div className="grid lg:grid-cols-3 gap-6 items-start">
           <div className="lg:col-span-2 space-y-6">
             {campanha.precisaRevisaoScore && (
-              <p className="fundo-aviso texto-aviso rounded-lg p-3 text-xs font-semibold">
+              <p className="legenda-destaque fundo-aviso texto-aviso rounded-lg p-3">
                 O pesquisador está abaixo do score mínimo para campanhas. É só um sinal para revisar com mais cuidado; não impede a aprovação.
               </p>
             )}
             {!aguardando && (
-              <p className="fundo-info texto-info rounded-lg p-3 text-sm font-semibold">
+              <p className="paragrafo-destaque fundo-info texto-info rounded-lg p-3">
                 Esta campanha não está mais aguardando aprovação ({ROTULO_STATUS_CAMPANHA[campanha.status]}).
               </p>
             )}

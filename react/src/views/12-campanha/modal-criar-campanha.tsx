@@ -299,7 +299,7 @@ export function ModalCriarCampanha({
       ) : (
         <>
           {camposExtras}
-          {erroDe('extras') && <p className="text-xs texto-erro font-semibold -mt-2 mb-3">{erroDe('extras')}</p>}
+          {erroDe('extras') && <p className="legenda-destaque texto-erro -mt-2 mb-3">{erroDe('extras')}</p>}
           <SecaoFicha titulo="Dados">
             <Campo rotulo="Título" className="sm:col-span-2" erro={erroDe('titulo')}>
               {({ atributos, classeErro }) => (
@@ -387,7 +387,7 @@ export function ModalCriarCampanha({
             </Campo>
             <p
               id={idPrazoDica}
-              className={'sm:col-span-2 text-xs -mt-2 ' + (prazoComErro ? 'texto-erro font-semibold' : 'texto-fraco')}
+              className={'legenda sm:col-span-2 -mt-2 texto-herdado ' + (prazoComErro ? 'texto-erro font-semibold' : 'texto-fraco')}
             >
               {form.dataFim === '' && erroDe('fim') ? 'Informe a data de fim. ' : ''}
               {duracao !== null ? `Duração: ${duracao} ${duracao === 1 ? 'dia' : 'dias'}. ` : ''}A campanha precisa durar

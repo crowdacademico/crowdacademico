@@ -25,7 +25,7 @@ export function MenuUsuario({ auth }: MenuUsuarioProps) {
   useFecharAoClicarFora(containerRef, aberto, () => setAberto(false));
 
   if (auth.carregando) {
-    return <span className="text-sm texto-fraco">Carregando sessão...</span>;
+    return <span className="paragrafo texto-fraco">Carregando sessão...</span>;
   }
 
   return (
@@ -51,14 +51,14 @@ export function MenuUsuario({ auth }: MenuUsuarioProps) {
           {auth.autenticado ? (
             <>
               <div className="px-4 py-3 border-b borda-padrao fundo-sutil">
-                <p className="text-sm font-bold texto-forte truncate">{auth.usuario?.nome}</p>
-                <p className="text-xs texto-fraco truncate">{auth.usuario?.email}</p>
+                <p className="paragrafo-destaque texto-forte truncate">{auth.usuario?.nome}</p>
+                <p className="legenda texto-fraco truncate">{auth.usuario?.email}</p>
               </div>
 
               <Link
                 to="/admin/minha-conta"
                 onClick={() => setAberto(false)}
-                className="flex items-center gap-3 px-4 py-2.5 text-sm font-semibold texto-padrao hover-fundo-sutil transition-colors"
+                className="paragrafo-destaque flex items-center gap-3 px-4 py-2.5 texto-padrao hover-fundo-sutil transition-colors"
               >
                 <i className="fa-solid fa-user w-4"></i>
                 Minha Conta
@@ -77,7 +77,7 @@ export function MenuUsuario({ auth }: MenuUsuarioProps) {
                   <Link
                     to="/admin/dashboard"
                     onClick={() => setAberto(false)}
-                    className="flex items-center gap-3 px-4 py-2.5 text-sm font-semibold texto-marca hover-fundo-sutil transition-colors"
+                    className="paragrafo-destaque flex items-center gap-3 px-4 py-2.5 texto-marca hover-fundo-sutil transition-colors"
                   >
                     <i className="fa-solid fa-shield-halved w-4"></i>
                     Painel Admin
@@ -89,7 +89,7 @@ export function MenuUsuario({ auth }: MenuUsuarioProps) {
               <button
                 type="button"
                 onClick={auth.logout}
-                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold texto-erro hover-fundo-sutil transition-colors text-left"
+                className="paragrafo-destaque w-full flex items-center gap-3 px-4 py-2.5 texto-erro hover-fundo-sutil transition-colors text-left"
               >
                 <i className="fa-solid fa-right-from-bracket w-4"></i>
                 Sair da Conta
@@ -100,7 +100,7 @@ export function MenuUsuario({ auth }: MenuUsuarioProps) {
               <Link
                 to="/login"
                 onClick={() => setAberto(false)}
-                className="flex items-center gap-3 px-4 py-2.5 text-sm font-semibold texto-padrao hover-fundo-sutil transition-colors"
+                className="paragrafo-destaque flex items-center gap-3 px-4 py-2.5 texto-padrao hover-fundo-sutil transition-colors"
               >
                 <i className="fa-solid fa-right-to-bracket w-4"></i>
                 Entrar
@@ -108,7 +108,7 @@ export function MenuUsuario({ auth }: MenuUsuarioProps) {
               <Link
                 to="/cadastro"
                 onClick={() => setAberto(false)}
-                className="flex items-center gap-3 px-4 py-2.5 text-sm font-semibold texto-marca hover-fundo-sutil transition-colors"
+                className="paragrafo-destaque flex items-center gap-3 px-4 py-2.5 texto-marca hover-fundo-sutil transition-colors"
               >
                 <i className="fa-solid fa-user-plus w-4"></i>
                 Cadastre-se
@@ -132,7 +132,7 @@ function ItemMenu({ icone, rotulo, onClick }: ItemMenuProps) {
     <button
       type="button"
       onClick={onClick}
-      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold texto-padrao hover-fundo-sutil transition-colors text-left"
+      className="paragrafo-destaque w-full flex items-center gap-3 px-4 py-2.5 texto-padrao hover-fundo-sutil transition-colors text-left"
     >
       <i className={'fa-solid ' + icone + ' w-4'}></i>
       {rotulo}

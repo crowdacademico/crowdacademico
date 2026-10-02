@@ -155,7 +155,7 @@ export function ModalAlterarTermoUso({
                 </option>
               ))}
             </select>
-            {termo && <p className="text-xs texto-fraco shrink-0">Criada em {formatarData(termo.criadoEm)}</p>}
+            {termo && <p className="legenda texto-fraco shrink-0">Criada em {formatarData(termo.criadoEm)}</p>}
           </div>
         )}
       </Campo>
@@ -168,7 +168,7 @@ export function ModalAlterarTermoUso({
         termo && (
           <div className="flex-1 flex flex-col space-y-6">
             {somenteLeitura && (
-              <p className="fundo-aviso texto-aviso rounded-lg p-3 text-xs font-semibold">
+              <p className="legenda-destaque fundo-aviso texto-aviso rounded-lg p-3">
                 Esta versão já tem {aceitesSelecionada} aceite(s) registrado(s): o texto é a prova do que foi aceito e não
                 pode mais mudar. Para corrigir, publique uma versão nova. Tornar esta versão vigente continua possível.
               </p>

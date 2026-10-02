@@ -100,7 +100,7 @@ export function MinhasCampanhas({ auth }: PropsPagina) {
   return (
     <div className="admin-content-painel">
       {statusPesquisador !== null && !podeCriar && (
-        <div className="flex items-start gap-2 rounded-lg fundo-info texto-info p-3 text-sm mb-6">
+        <div className="paragrafo flex items-start gap-2 rounded-lg fundo-info texto-info p-3 mb-6">
           <i className="fa-solid fa-circle-info mt-0.5 shrink-0"></i>
           {statusPesquisador === 'suspenso' ? (
             <p>Seu perfil de pesquisador está suspenso: enquanto durar a suspensão, não é possível criar campanhas.</p>

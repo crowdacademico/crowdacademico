@@ -70,7 +70,7 @@ export function AdminSidebar({ aberto, aoFechar }: AdminSidebarProps) {
         <button
           type="button"
           onClick={abrirBuscaGlobal}
-          className="w-full flex items-center justify-between gap-2 px-3 py-2 my-3 rounded-md border borda-forte fundo-sutil text-sm texto-fraco hover-fundo-sutil transition-colors"
+          className="paragrafo w-full flex items-center justify-between gap-2 px-3 py-2 my-3 rounded-md border borda-forte fundo-sutil texto-fraco hover-fundo-sutil transition-colors"
         >
           <span className="flex items-center gap-2">
             <i className="fa-solid fa-magnifying-glass"></i> Buscar

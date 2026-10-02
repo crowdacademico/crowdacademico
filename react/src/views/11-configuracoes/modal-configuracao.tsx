@@ -178,7 +178,7 @@ export function ModalAlterarConfiguracao({ auth, configuracao, aoFechar, aoAtual
             }
           </Campo>
           {par && (
-            <div className="mt-2 flex items-start gap-2 rounded-lg fundo-aviso texto-aviso p-3 text-xs">
+            <div className="legenda mt-2 flex items-start gap-2 rounded-lg fundo-aviso texto-aviso p-3">
               <i className="fa-solid fa-triangle-exclamation mt-0.5 shrink-0"></i>
               <p>
                 Este é o valor {par.papel === 'minimo' ? 'MÍNIMO' : 'MÁXIMO'} e precisa ficar
@@ -215,7 +215,7 @@ export function ModalAlterarConfiguracao({ auth, configuracao, aoFechar, aoAtual
             desabilitado={configuracao.idUsuario === null}
           />
           {configuracao.idUsuario === null && (
-            <p className="text-xs texto-fraco mt-1">
+            <p className="legenda texto-fraco mt-1">
               Parâmetro global não se desativa nem se exclui: faz parte do contrato do sistema. Para desligar
               uma regra, mude o valor.
             </p>
@@ -224,7 +224,7 @@ export function ModalAlterarConfiguracao({ auth, configuracao, aoFechar, aoAtual
 
         <div className="sm:col-span-2">
           <CaixaMarcacao rotulo="Pública" marcado={publica} aoMudar={setPublica} />
-          <p className="text-xs texto-fraco mt-1">
+          <p className="legenda texto-fraco mt-1">
             Marcado: qualquer visitante do site pode ver este valor (por exemplo, a meta mínima, para a tela avisar
             antes de enviar). Desmarcado: só quem administra os parâmetros vê. Vale só para parâmetro global.
           </p>

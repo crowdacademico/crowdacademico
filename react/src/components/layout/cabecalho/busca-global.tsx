@@ -244,7 +244,7 @@ export function BuscaGlobal({ auth }: BuscaGlobalProps) {
             onChange={(evento) => setTermo(evento.target.value)}
             onKeyDown={aoTeclarInput}
             placeholder="Buscar usuário, papel, permissão, parâmetro..."
-            className="flex-1 outline-none text-sm texto-forte bg-transparent placeholder:texto-fraco"
+            className="paragrafo flex-1 outline-none texto-forte bg-transparent placeholder:texto-fraco"
           />
           <kbd className="text-[10px] font-bold texto-fraco border borda-forte rounded px-1.5 py-0.5">
             Esc
@@ -254,7 +254,7 @@ export function BuscaGlobal({ auth }: BuscaGlobalProps) {
         <div className="max-h-96 overflow-y-auto py-2">
           {carregando && <Carregando className="px-4 py-3" />}
           {!carregando && resultados.length === 0 && (
-            <p className="px-4 py-3 text-sm texto-fraco">Nada encontrado para "{termo}".</p>
+            <p className="paragrafo px-4 py-3 texto-fraco">Nada encontrado para "{termo}".</p>
           )}
           {grupos.map((grupo) => (
             <div key={grupo.categoria}>
@@ -271,7 +271,7 @@ export function BuscaGlobal({ auth }: BuscaGlobalProps) {
                     onClick={() => irPara(item)}
                     onMouseEnter={() => setIndiceSelecionado(indice)}
                     className={
-                      'w-full flex items-center gap-3 px-4 py-2 text-left text-sm ' +
+                      'paragrafo w-full flex items-center gap-3 px-4 py-2 text-left texto-herdado ' +
                       (selecionado ? 'fundo-realce' : '')
                     }
                   >
@@ -283,7 +283,7 @@ export function BuscaGlobal({ auth }: BuscaGlobalProps) {
                         {item.rotulo}
                       </span>
                       {item.subtitulo && (
-                        <span className="block text-xs texto-fraco truncate">
+                        <span className="legenda block texto-fraco truncate">
                           {item.subtitulo}
                         </span>
                       )}

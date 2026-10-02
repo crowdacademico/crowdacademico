@@ -46,21 +46,21 @@ export function TelaAceiteTermoUso({ auth }: TelaAceiteTermoUsoProps) {
         <div className="px-8 py-6 border-b borda-padrao fundo-sutil relative isolate overflow-hidden">
           <div className="pointer-events-none absolute -z-10 -top-12 -right-12 w-56 h-56 brilho-marca rounded-full blur-3xl"></div>
           <h1 className="titulo-pagina">Termo de Uso atualizado</h1>
-          <p className="text-sm texto-fraco mt-1">
+          <p className="paragrafo texto-fraco mt-1">
             Publicamos uma versão nova do Termo de Uso. Leia e aceite para continuar usando a plataforma.
             {termo && ` Versão ${termo.versao}.`}
           </p>
         </div>
 
         <div
-          className="px-8 py-6 overflow-y-auto text-sm texto-padrao whitespace-pre-line flex-1"
+          className="paragrafo px-8 py-6 overflow-y-auto texto-padrao whitespace-pre-line flex-1"
           tabIndex={0}
           aria-label="Texto do Termo de Uso"
         >
           {carregando ? 'Carregando...' : (termo?.conteudo ?? 'Não foi possível carregar o Termo de Uso.')}
         </div>
 
-        <MensagemErro texto={erro} className="px-8 pb-2 text-xs texto-erro font-semibold" />
+        <MensagemErro texto={erro} className="legenda-destaque px-8 pb-2 texto-erro" />
 
         <div className="px-8 py-5 border-t borda-padrao flex flex-wrap justify-end gap-3">
           <button type="button" className="btn btn-secondary" onClick={() => void auth.logout()}>

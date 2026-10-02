@@ -45,7 +45,7 @@ export function ControleFonte() {
         onClick={() => mudar(-PASSO)}
         disabled={escala <= ESCALA_MINIMA}
         aria-label="Diminuir fonte"
-        className="dica px-2.5 py-1.5 text-xs font-bold texto-padrao hover-fundo-sutil transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+        className="legenda-destaque dica px-2.5 py-1.5 texto-padrao hover-fundo-sutil transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
       >
         A-
         <Dica texto="Diminuir fonte" curta baixo />
@@ -55,7 +55,7 @@ export function ControleFonte() {
         onClick={() => mudar(PASSO)}
         disabled={escala >= ESCALA_MAXIMA}
         aria-label="Aumentar fonte"
-        className="dica px-2.5 py-1.5 text-xs font-bold texto-padrao hover-fundo-sutil transition-colors border-l borda-forte disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+        className="legenda-destaque dica px-2.5 py-1.5 texto-padrao hover-fundo-sutil transition-colors border-l borda-forte disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
       >
         A+
         <Dica texto="Aumentar fonte" curta baixo />

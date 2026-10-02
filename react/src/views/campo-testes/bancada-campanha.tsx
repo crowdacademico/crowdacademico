@@ -534,9 +534,9 @@ export function BancadaCampanha({ auth }: PropsPagina) {
               desabilitada: status !== 'ativo',
               extra:
                 status === 'sem-perfil' ? (
-                  <span className="text-xs texto-erro">não é pesquisador</span>
+                  <span className="legenda texto-erro">não é pesquisador</span>
                 ) : status === 'suspenso' ? (
-                  <span className="text-xs texto-erro">pesquisador suspenso</span>
+                  <span className="legenda texto-erro">pesquisador suspenso</span>
                 ) : null,
             };
           })}

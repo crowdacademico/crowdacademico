@@ -27,15 +27,26 @@
     cursor: not-allowed;
   }
 
+  /* Botão principal do painel e dos modais: verde sólido, sem brilho (como os painéis de Stripe, Linear e Vercel).
+     O brilho fica só no .btn-destaque, abaixo. */
   .btn-primary {
     background-color: var(--cor-fundo-marca-forte);
-    background-image: var(--cor-degrade-marca);
-    box-shadow: var(--cor-sombra-brilho-marca);
     color: var(--cor-texto-sobre-cor);
   }
 
   .btn-primary:hover:not(:disabled) {
     background-color: var(--cor-fundo-marca-forte-hover);
+  }
+
+  /* Botão de CHAMADA (com .btn .btn-primary): o "brilho", degradê verde mais claro no topo e sombra verde suave.
+     Só nos poucos botões que convidam a pessoa a entrar ou submeter (Criar conta, Enviar link, Salvar nova senha,
+     Submeter Pesquisa). Em todo botão ele perdia o destaque e o painel ficava com cara de página de propaganda. */
+  .btn-destaque {
+    background-image: var(--cor-degrade-marca);
+    box-shadow: var(--cor-sombra-brilho-marca);
+  }
+
+  .btn-destaque:hover:not(:disabled) {
     background-image: var(--cor-degrade-marca-hover);
     box-shadow: var(--cor-sombra-brilho-marca-hover);
   }

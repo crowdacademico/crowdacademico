@@ -42,7 +42,6 @@
     display: block;
     font-size: var(--font-size-rotulo);
     font-weight: 900;
-    color: var(--cor-texto-fraco);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     margin-bottom: 0.5rem;
@@ -53,9 +52,8 @@
      (CampoFicha, card de métrica do Dashboard, cabeçalho de categoria da Busca Global), nunca um campo de
      formulário editável (isso continua sendo `.rotulo-campo`). */
   .rotulo-leitura {
-    font-size: 11px;
+    font-size: var(--font-size-rotulo);
     font-weight: 700;
-    color: var(--cor-texto-fraco);
     text-transform: uppercase;
     letter-spacing: 0.1em;
   }
@@ -66,47 +64,108 @@
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    color: var(--cor-texto-fraco);
   }
 
   .titulo-pagina {
     font-family: var(--font-serif);
     font-size: var(--font-size-3xl);
     font-weight: 700;
-    color: var(--cor-texto-forte);
   }
 
   .titulo-secao {
     font-family: var(--font-sans);
     font-size: var(--font-size-2xl);
     font-weight: 800;
-    color: var(--cor-texto-forte);
   }
 
   .subtitulo {
     font-family: var(--font-sans);
     font-size: var(--font-size-xl);
     font-weight: 700;
-    color: var(--cor-texto-forte);
   }
 
   .paragrafo {
     font-family: var(--font-sans);
     font-size: var(--font-size-sm);
-    color: var(--cor-texto-forte);
   }
 
   /* Texto técnico denso (chave, log, id): padrão de fato em ModalDetalhe e dashboard-regras-negocio.tsx. */
   .paragrafo-denso {
     font-family: var(--font-mono-dev);
     font-size: var(--font-size-xs);
-    color: var(--cor-texto-fraco);
   }
 
   .legenda {
     font-family: var(--font-sans);
     font-size: var(--font-size-xs);
+  }
+
+  /* Texto com destaque: o mesmo .paragrafo / .legenda em semi-negrito (nome no menu, item de lista, mensagem de
+     erro, aviso embaixo de um campo). */
+  .paragrafo-destaque {
+    font-family: var(--font-sans);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+  }
+
+  .legenda-destaque {
+    font-family: var(--font-sans);
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+  }
+
+  /* COR PADRÃO de cada classe de tipografia, com prioridade zero (:where). Uma classe de cor ao lado sempre
+     ganha (ex.: "legenda texto-erro" sai vermelha), em qualquer ordem de carregamento. Sem isto, a cor da classe
+     de tipografia (que carrega depois de 1-cores.css, na mesma camada) vencia a classe de cor. */
+  :where(.rotulo-campo) {
     color: var(--cor-texto-fraco);
+  }
+
+  :where(.rotulo-leitura) {
+    color: var(--cor-texto-fraco);
+  }
+
+  :where(.titulo-bloco) {
+    color: var(--cor-texto-fraco);
+  }
+
+  :where(.titulo-pagina) {
+    color: var(--cor-texto-forte);
+  }
+
+  :where(.titulo-secao) {
+    color: var(--cor-texto-forte);
+  }
+
+  :where(.subtitulo) {
+    color: var(--cor-texto-forte);
+  }
+
+  :where(.paragrafo) {
+    color: var(--cor-texto-forte);
+  }
+
+  :where(.paragrafo-denso) {
+    color: var(--cor-texto-fraco);
+  }
+
+  :where(.legenda) {
+    color: var(--cor-texto-fraco);
+  }
+
+  :where(.paragrafo-destaque) {
+    color: var(--cor-texto-forte);
+  }
+
+  :where(.legenda-destaque) {
+    color: var(--cor-texto-fraco);
+  }
+
+  /* `texto-herdado`: usa a cor de quem está em volta (texto dentro de botão, de aviso colorido, de aba que troca
+     de cor). Também com prioridade zero e depois das cores padrão acima: vence só a cor padrão da classe de
+     tipografia, nunca uma classe de cor de verdade (ex.: o verde da aba ativa, posto por outro pedaço do código). */
+  :where(.texto-herdado) {
+    color: inherit;
   }
 }
 

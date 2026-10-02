@@ -303,7 +303,7 @@ export function ModalAlterarCampanha({
           )}
 
           {camposBloqueados.size > 0 && !rejeitadaSomenteLeitura && (
-            <p id={idAvisoBloqueio} className="flex items-start gap-2 text-sm texto-fraco">
+            <p id={idAvisoBloqueio} className="paragrafo flex items-start gap-2 texto-fraco">
               <i className="fa-solid fa-shield-halved mt-0.5 texto-marca" aria-hidden="true"></i>
               <span>
                 <strong className="texto-forte">Campos protegidos depois da aprovação</strong>, para proteger quem já

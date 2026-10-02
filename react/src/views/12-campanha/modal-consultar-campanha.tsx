@@ -88,7 +88,7 @@ export function ModalConsultarCampanha({ auth, idCampanha, comoDono = false, aoF
         <div className="grid lg:grid-cols-3 gap-6 items-start">
           <div className="lg:col-span-2 space-y-6">
             {campanha.precisaRevisaoScore && (
-              <p className="fundo-aviso texto-aviso rounded-lg p-3 text-xs font-semibold">
+              <p className="legenda-destaque fundo-aviso texto-aviso rounded-lg p-3">
                 O pesquisador está abaixo do score mínimo para campanhas. É só um sinal para revisar esta campanha
                 com mais cuidado; não impede a aprovação.
               </p>

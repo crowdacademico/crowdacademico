@@ -52,7 +52,7 @@ export function RegistroChamadas() {
       {aberto && (
         <div className="mt-2">
           {registroChamadas.length === 0 && (
-            <p className="texto-fraco text-xs">Nenhuma chamada registrada ainda nesta aba.</p>
+            <p className="legenda texto-fraco">Nenhuma chamada registrada ainda nesta aba.</p>
           )}
 
           {registroChamadas.length > 0 && (
@@ -94,7 +94,7 @@ export function RegistroChamadas() {
               </div>
 
               {linhaExpandida === chamada.id && (
-                <div className="fundo-sutil rounded-md p-3 my-1 text-xs">
+                <div className="legenda fundo-sutil rounded-md p-3 my-1 texto-herdado">
                   <p className="font-bold mb-1">Enviado</p>
                   <pre className="overflow-x-auto">{JSON.stringify(chamada.corpoEnviado, null, 2)}</pre>
                   <p className="font-bold mt-2 mb-1">Recebido</p>

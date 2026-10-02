@@ -26,7 +26,7 @@ export function BarraAbasBotoes<Chave extends string>({ abas, ativa, aoTrocar, c
           aria-selected={ativa === aba.chave}
           onClick={() => aoTrocar(aba.chave)}
           className={
-            'px-4 py-2.5 text-sm font-semibold flex items-center gap-2 border-b-2 whitespace-nowrap transition-colors ' +
+            'paragrafo-destaque px-4 py-2.5 flex items-center gap-2 border-b-2 whitespace-nowrap transition-colors texto-herdado ' +
             (ativa === aba.chave ? 'borda-marca texto-marca' : 'border-transparent texto-fraco hover-texto-forte')
           }
         >

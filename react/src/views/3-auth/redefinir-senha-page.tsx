@@ -49,24 +49,24 @@ export function RedefinirSenhaPage() {
           <div className="w-14 h-14 fundo-marca rounded-2xl mx-auto flex items-center justify-center text-white font-bold text-2xl mb-5 shadow-lg">
             <i className="fa-solid fa-lock"></i>
           </div>
-          <h1 className="text-3xl font-serif font-bold texto-forte mb-2">Criar nova senha</h1>
-          <p className="text-sm texto-fraco font-medium">Escolha uma senha nova para a sua conta.</p>
+          <h1 className="titulo-pagina mb-2">Criar nova senha</h1>
+          <p className="paragrafo texto-fraco font-medium">Escolha uma senha nova para a sua conta.</p>
         </div>
 
         {!token ? (
           <div className="p-10 space-y-4 text-center">
-            <p className="text-sm texto-erro font-semibold">Link sem token, confira se copiou o endereço completo.</p>
-            <Link to="/esqueci-senha" className="texto-marca font-bold underline text-sm">
+            <p className="paragrafo-destaque texto-erro">Link sem token, confira se copiou o endereço completo.</p>
+            <Link to="/esqueci-senha" className="paragrafo-destaque texto-marca underline">
               Pedir um link novo
             </Link>
           </div>
         ) : concluido ? (
           <div className="p-10 space-y-5 text-center">
             <i className="fa-solid fa-circle-check text-4xl texto-sucesso"></i>
-            <p className="text-sm texto-padrao">
+            <p className="paragrafo texto-padrao">
               Senha alterada. Por segurança, sua conta foi desconectada de todos os aparelhos.
             </p>
-            <Link to="/login" className="btn btn-primary w-full py-3.5 text-sm">
+            <Link to="/login" className="btn btn-primary btn-destaque w-full py-3.5">
               Entrar com a senha nova
             </Link>
           </div>
@@ -74,7 +74,7 @@ export function RedefinirSenhaPage() {
           <form onSubmit={aoSalvar} noValidate className="p-10 space-y-5">
             <MensagemErro texto={erro} />
             {erro && (
-              <Link to="/esqueci-senha" className="texto-marca font-bold underline text-sm">
+              <Link to="/esqueci-senha" className="paragrafo-destaque texto-marca underline">
                 Pedir um link novo
               </Link>
             )}
@@ -120,7 +120,7 @@ export function RedefinirSenhaPage() {
                 />
               )}
             </Campo>
-            <button type="submit" disabled={salvando} className="btn btn-primary w-full py-3.5 text-sm">
+            <button type="submit" disabled={salvando} className="btn btn-primary btn-destaque w-full py-3.5">
               {salvando ? 'Salvando...' : 'Salvar nova senha'}
             </button>
           </form>
