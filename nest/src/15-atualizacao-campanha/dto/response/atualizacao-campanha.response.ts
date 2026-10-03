@@ -9,7 +9,7 @@ export class AtualizacaoCampanhaResponse {
   titulo: string;
   conteudo: string;
   publicadoEm: Date;
-  fase: FaseAtualizacao | null;
-  tipo: TipoAtualizacao | null;
+  fase: FaseAtualizacao;
+  tipo: TipoAtualizacao;
   ativo: boolean;
 }

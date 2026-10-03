@@ -7,8 +7,8 @@ import type { CampanhaResponse } from '../../services/12-campanha/type/campanha.
 import type { OrcamentoCampanhaResponse } from '../../services/13-orcamento-campanha/type/orcamento-campanha.type';
 import type { MarcoCronogramaResponse } from '../../services/14-marco-cronograma/type/marco-cronograma.type';
 
-// As peças de aprovar ou rejeitar uma campanha, usadas pela fila real (modal-revisar-campanha.tsx) e pelo T2 do
-// Campo de Testes (SecaoDecisaoAprovacao, abaixo): o mesmo checklist, o mesmo campo de motivo e os mesmos botões.
+// As peças de aprovar ou rejeitar uma campanha, usadas pela fila real (modal-revisar-campanha.tsx) e pela Bancada
+// da Campanha (SecaoDecisaoAprovacao, abaixo): o mesmo checklist, o mesmo campo de motivo e os mesmos botões.
 
 type DadosDecisao = Parameters<typeof usePronta>[0];
 
@@ -63,7 +63,7 @@ export function BotoesDecisao({ decisao, pronta }: { decisao: DecisaoAprovacao; 
   );
 }
 
-// Versão em bloco para o T2: checklist, motivo e botões juntos, dentro do Alterar Campanha. Montada de novo a cada
+// Versão em bloco para a Bancada da Campanha: checklist, motivo e botões juntos, dentro do Alterar Campanha. Montada de novo a cada
 // campanha (`key`), então o motivo começa vazio.
 export function SecaoDecisaoAprovacao({
   authFetch,

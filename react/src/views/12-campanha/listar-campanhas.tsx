@@ -2,10 +2,7 @@ import { useCallback, useState } from 'react';
 import { GenericTable } from '../../components/crud/generic-table';
 import { BlocoLogAuditoria } from '../../components/crud/bloco-log-auditoria';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
-import {
-  ORDEM_STATUS_CAMPANHA,
-  ROTULO_STATUS_CAMPANHA,
-} from '../../services/12-campanha/constants/status-campanha.constants';
+import { ORDEM_ROTULOS_STATUS_CAMPANHA, rotuloStatusCampanha } from '../../services/12-campanha/constants/status-campanha.constants';
 import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
 import { ModalConsultarCampanha } from './modal-consultar-campanha';
 import { renderizarStatus } from './colunas-campanha';
@@ -21,8 +18,8 @@ interface CampanhaLinha extends Omit<CampanhaResponse, 'status'> {
 
 // Aba "Campanhas" do painel admin: rota /admin/campanhas. Sem Alterar/Excluir aqui: os campos editáveis
 // dependem do status (congelados depois de aprovada) e a aprovação/rejeição têm regras próprias (fila de
-// aprovação, aprovar-campanhas.tsx). Por isso só listar + consultar (em modal); quem precisa criar/aprovar
-// campanha de teste usa o Campo de Testes.
+// aprovação, aprovar-campanhas.tsx). Por isso só listar + consultar (em modal); criar é em Minhas Campanhas
+// e aprovar é na fila.
 export function ListarCampanhas({ auth }: PropsPagina) {
   const [consultandoId, setConsultandoId] = useState<number | null>(null);
 
@@ -34,7 +31,7 @@ export function ListarCampanhas({ auth }: PropsPagina) {
 
     return campanhas.map((campanha) => ({
       ...campanha,
-      status: ROTULO_STATUS_CAMPANHA[campanha.status],
+      status: rotuloStatusCampanha(campanha),
       statusOriginal: campanha.status,
       pesquisador: campanha.nomePesquisador ?? `#${campanha.idUsuario}`,
       area: campanha.nomeArea ?? `#${campanha.idAreaConhecimento}`,
@@ -67,7 +64,7 @@ export function ListarCampanhas({ auth }: PropsPagina) {
         // de listarCampanhas, e o filtro por faceta não depende da coluna existir na tabela, só do campo
         // existir na linha.
         filtrosFacetados={[
-          { chave: 'status', rotulo: 'Status', ordem: ORDEM_STATUS_CAMPANHA.map((s) => ROTULO_STATUS_CAMPANHA[s]) },
+          { chave: 'status', rotulo: 'Status', ordem: ORDEM_ROTULOS_STATUS_CAMPANHA },
           { chave: 'area', rotulo: 'Área' },
         ]}
       />

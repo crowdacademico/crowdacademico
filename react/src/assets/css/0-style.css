@@ -7,7 +7,7 @@
    componente existir.
    - 4 a 6: COMPONENTES: painel admin de verdade (botão/input/badge, tela de CRUD, casca do admin).
    - 7 a 8: TRANSVERSAL/FERRAMENTA: 7 (responsividade) se aplica por CIMA de tudo que já veio antes, não é um
-   passo posterior; 8 é só o Campo de Testes (ferramenta interna, não é tela de produto). */
+   passo posterior; 8 é só a área de testes (ferramenta interna, não é tela de produto). */
 
 @import url('./1-cores.css');
 @import url('./2-tipografia.css');

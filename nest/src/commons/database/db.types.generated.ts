@@ -104,11 +104,11 @@ export interface ArquivoRecompensa {
 export interface AtualizacaoCampanha {
   ativo: Generated<boolean>;
   conteudo: string;
-  fase: FaseAtualizacao | null;
+  fase: FaseAtualizacao;
   id_atualizacao: Generated<number>;
   id_campanha: number;
   publicado_em: Generated<Timestamp>;
-  tipo: TipoAtualizacao | null;
+  tipo: TipoAtualizacao;
   titulo: string;
 }
 
@@ -195,6 +195,7 @@ export interface Denuncia {
   id_motivo: number;
   id_pesquisador_alvo: number | null;
   id_usuario: number;
+  justificativa_moderacao: string | null;
   relato: string | null;
   status: Generated<StatusDenuncia>;
 }

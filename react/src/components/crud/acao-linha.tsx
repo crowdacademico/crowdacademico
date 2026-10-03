@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { Dica } from '../layout/tooltip';
 
 // Ícone + texto (escondido via CSS quando a coluna aperta) + dica de hover: bloco que `GenericTable` monta 6x
-// (3 ações × botão) e que `bancada-pesquisador.tsx`/`bancada-campanha.tsx` (Campo de Testes, tabelas manuais
+// (3 ações × botão) e que `bancada-pesquisador.tsx`/`bancada-campanha.tsx` (tabelas manuais
 // que não podem usar `GenericTable` por causa do risco de linha) reimplementariam à mão, idêntico. Só
 // `<button>`: a variante `<Link to=...>` (páginas de verdade, `rotaBase`) não tem consumidor desde que a
 // migração CRUD→Modal terminou.

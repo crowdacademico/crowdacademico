@@ -82,8 +82,8 @@
   }
 
   /* Coluna de valor curto (id, Sim/Não, status, dinheiro, data) centralizada, cabeçalho e célula: na
-     GenericTable quem liga esta classe é o tipo da coluna (components/crud/colunas/); as tabelas manuais do
-     Campo de Testes usam direto. `text-align: center` sozinho já centraliza tanto texto solto quanto o badge
+     GenericTable quem liga esta classe é o tipo da coluna (components/crud/colunas/); as tabelas manuais
+     (bancadas) usam direto. `text-align: center` sozinho já centraliza tanto texto solto quanto o badge
      (ambos são conteúdo inline), sem precisar de flexbox. Padding horizontal 1.1rem: coluna de valor curto com texto à esquerda numa coluna
      larga deixa muito vão sobrando de um lado só, enquanto a coluna de texto vizinha (nome/descrição) fica
      com pouco respiro; centralizar reparte o vão dos dois lados, e o padding maior dá o mesmo respiro extra
@@ -459,7 +459,7 @@
   }
 
   /* Verde (--cor-texto-sucesso/--cor-fundo-sucesso), mesmo padrão exato de --alterar/--excluir acima: usada
-     pelo "Escolher" do Campo de Testes, a 3ª cor da família Alterar=azul/Excluir=vermelho. */
+     pelo "Escolher" das bancadas, a 3ª cor da família Alterar=azul/Excluir=vermelho. */
   .crud-tabela__acao--escolher i {
     color: var(--cor-texto-sucesso);
     opacity: 0.75;

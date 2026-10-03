@@ -205,6 +205,29 @@ export type TipoMotivoDenuncia = (typeof TIPOS_MOTIVO_DENUNCIA)[number];
 // denúncia de campanha ou de perfil: trg_valida_tipo_motivo_denuncia (05_regras_negocio.sql [05-K-1]) barra em
 // denuncia.id_motivo qualquer motivo cujo `tipo` não bate com o alvo escolhido (id_campanha_alvo x
 // id_pesquisador_alvo).
+// CREATE TYPE status_denuncia AS ENUM (...) - 01. Array em runtime para o @IsIn dos DTOs de denúncia.
+export const STATUS_DENUNCIA = [
+  'pendente',
+  'em_analise',
+  'resolvida',
+  'improcedente',
+] as const;
+export type StatusDenuncia = (typeof STATUS_DENUNCIA)[number];
+
+// Espelha 01_extensoes_enums_tabelas.sql (tabela denuncia). Exatamente um alvo (campanha ou perfil), pela
+// CK_DENUNCIA_ALVO_XOR; quem julga só muda status e justificativa_moderacao (GRANT por coluna, 06).
+export interface DenunciaTable {
+  id_denuncia: Generated<number>;
+  id_usuario: number;
+  id_campanha_alvo: number | null;
+  id_pesquisador_alvo: number | null;
+  id_motivo: number;
+  relato: string | null;
+  status: Generated<StatusDenuncia>;
+  justificativa_moderacao: string | null;
+  criado_em: Generated<Date>;
+}
+
 export interface MotivoDenunciaTable {
   id_motivo: Generated<number>;
   // NOT NULL: `descricao` é o único identificador legível do motivo (`codigo` saiu do catálogo, não era lido
@@ -443,8 +466,8 @@ export interface AtualizacaoCampanhaTable {
   titulo: string;
   conteudo: string;
   publicado_em: Generated<Date>;
-  fase: FaseAtualizacao | null;
-  tipo: TipoAtualizacao | null;
+  fase: FaseAtualizacao;
+  tipo: TipoAtualizacao;
   ativo: Generated<boolean>;
 }
 
@@ -587,6 +610,7 @@ export interface DB {
   area_conhecimento: AreaConhecimentoTable;
   tipo_link: TipoLinkTable;
   motivo_denuncia: MotivoDenunciaTable;
+  denuncia: DenunciaTable;
   perfil_pesquisador: PerfilPesquisadorTable;
   link_academico: LinkAcademicoTable;
   score_config: ScoreConfigTable;
@@ -617,6 +641,7 @@ export type UsuarioEntity = Selectable<UsuarioTable>;
 export type PerfilPesquisadorEntity = Selectable<PerfilPesquisadorTable>;
 export type LinkAcademicoEntity = Selectable<LinkAcademicoTable>;
 export type CampanhaEntity = Selectable<CampanhaTable>;
+export type DenunciaEntity = Selectable<DenunciaTable>;
 export type OrcamentoCampanhaEntity = Selectable<OrcamentoCampanhaTable>;
 export type MarcoCronogramaEntity = Selectable<MarcoCronogramaTable>;
 export type AtualizacaoCampanhaEntity = Selectable<AtualizacaoCampanhaTable>;

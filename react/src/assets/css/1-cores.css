@@ -7,7 +7,7 @@
    (`body`/`h1-h3`/`button` dentro de `@layer base`). Aquele bloco usa `color`/`background-color` em algumas
    linhas, mas é o RESET (box-model + defaults de tag), com uma história própria (o bug de `@layer`
    documentado lá), e continua inteiro num lugar só em vez de fragmentado. */
-/* [data-tema-local]: só o Guia de Estilo (Campo de Testes, só em desenvolvimento) usa, pra mostrar os dois
+/* [data-tema-local]: só o Guia de Estilo (área de testes, só em desenvolvimento) usa, pra mostrar os dois
    temas lado a lado na mesma tela. Mesmos valores, mesma fonte: o seletor extra não duplica nenhum token. */
 :root,
 [data-tema-local='claro'] {
@@ -298,8 +298,13 @@
   /* Campo de busca/filtro fora de `.input-padrao` (que já tem seu
      próprio `:focus` embutido) - mesmo destaque visual de foco em verde,
      aplicado junto de `outline-none` no JSX. */
+  /* Mesmo anel do `.input-padrao:focus`: só trocar a cor da borda era sutil demais para quem navega pelo teclado. */
   .foco-marca:focus {
     border-color: var(--cor-marca);
+  }
+
+  .foco-marca:focus-visible {
+    box-shadow: 0 0 0 3px var(--cor-anel-foco);
   }
 
   .texto-forte {

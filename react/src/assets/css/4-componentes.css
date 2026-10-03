@@ -264,8 +264,13 @@
     color: var(--cor-texto-aviso);
   }
 
-  /* .badge-erro: utilitário genérico (usado na listagem de Campanhas, views/12-campanha, para status
-     rejeitado/encerrado_moderacao), não algo exclusivo do Campo de Testes. */
+  /* .badge-info: estado bom que ainda não começou ("Em breve": campanha aprovada com início no futuro). */
+  .badge-info {
+    background-color: var(--cor-fundo-info);
+    color: var(--cor-texto-info);
+  }
+
+  /* .badge-erro: utilitário genérico (status rejeitado/encerrado_moderacao das campanhas, entre outros). */
   .badge-erro {
     background-color: var(--cor-fundo-erro);
     color: var(--cor-texto-erro);
@@ -457,6 +462,34 @@
     font-size: var(--font-size-lg);
   }
 
+  .estado-vazio > div {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  /* Variante compacta: seção pequena dentro de ficha ou modal. Ícone ao lado do texto, sem o respiro grande. */
+  .estado-vazio--compacto {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+    text-align: left;
+  }
+
+  .estado-vazio--compacto > div {
+    align-items: flex-start;
+    gap: 0.15rem;
+  }
+
+  .estado-vazio--compacto .estado-vazio__icone {
+    width: 2.25rem;
+    height: 2.25rem;
+    margin-bottom: 0;
+    flex-shrink: 0;
+  }
+
   .estado-vazio__titulo {
     font-size: var(--font-size-sm);
     font-weight: 700;
@@ -635,6 +668,12 @@
     outline: none;
   }
 
+  /* Pelo teclado, o ⓘ precisa de contorno: só a troca de cor não mostra onde o foco está. */
+  .dica--info:focus-visible {
+    border-radius: 9999px;
+    box-shadow: 0 0 0 3px var(--cor-anel-foco);
+  }
+
   /* Variante --clicavel: o ícone também abre um modal ao clicar (ver prop `aoClicar` em tooltip.tsx); reset
      dos estilos padrão de <button> (fundo, borda, fonte) para ficar visualmente idêntico à variante só-hover
      (<span>), só trocando o cursor de "help" para "pointer", que é o sinal certo para algo clicável. */
@@ -657,8 +696,7 @@
     background-color: color-mix(in srgb, var(--cor-marca) 10%, transparent);
   }
 
-  /* Linha de opção de dropdown/faceta com checkbox múltiplo (facet do GenericTable e das 2 bancadas do Campo
-     de Testes): a MESMA cadeia de classes Tailwind aparecia idêntica em 3 arquivos (generic-table.tsx,
+  /* Linha de opção de dropdown/faceta com checkbox múltiplo (facet do GenericTable e das 2 bancadas): a MESMA cadeia de classes Tailwind aparecia idêntica em 3 arquivos (generic-table.tsx,
      bancada-pesquisador.tsx, bancada-campanha.tsx); é o padrão inteiro, não só a cor. */
   .dropdown-opcao {
     display: flex;
@@ -675,7 +713,7 @@
     background-color: color-mix(in srgb, var(--cor-marca) 10%, transparent);
   }
 
-  /* Linha de opção de combobox de busca (sugestão de pesquisador/campanha no Campo de Testes): mesmo achado
+  /* Linha de opção de combobox de busca (sugestão de pesquisador/campanha): mesmo achado
      do `.dropdown-opcao` acima, cadeia diferente (sem borda embaixo, com gap de ícone). */
   .combobox-opcao {
     display: flex;

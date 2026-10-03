@@ -8,6 +8,7 @@ import { formatarDataHora } from '../../services/constant/util/formatacao.util';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { UsuarioResponseAcceptedTerm } from '../../services/1-usuario/type/usuario.type';
 import type { TermoUsoResponse } from '../../services/5-termo-uso/type/termo-uso.type';
+import { EstadoVazio } from '../../components/crud/estado-vazio';
 
 interface SecaoAceitesTermoProps {
   auth: Pick<UseAuthReturn, 'authFetch'>;
@@ -31,7 +32,7 @@ export function SecaoAceitesTermo({ auth, termosAceitos, aoErro }: SecaoAceitesT
         {termosAceitos === null ? (
           <Carregando />
         ) : ultimos.length === 0 ? (
-          <p className="paragrafo texto-fraco">Nenhum termo aceito registrado.</p>
+          <EstadoVazio compacto icone="fa-file-signature" titulo="Nenhum termo aceito registrado." />
         ) : (
           ultimos.map((termo) => (
             <CampoFicha

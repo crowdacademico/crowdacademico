@@ -1,17 +1,20 @@
 import { useEffect, useState } from 'react';
+import { BadgeStatusCampanha } from '../../components/crud/badge-status-campanha';
+import { ROTULO_MODELO_CAMPANHA, STATUS_PUBLICADA } from '../../services/12-campanha/constants/status-campanha.constants';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { BarraProgresso } from '../../components/crud/barra-progresso';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
-import {
-  ROTULO_MODELO_CAMPANHA, ROTULO_STATUS_CAMPANHA,
-  classeBadgeStatusCampanha,
-} from '../../services/12-campanha/constants/status-campanha.constants';
+
 import { useBuscar } from '../../services/constant/hook/use-buscar';
 import { formatarData, formatarDataHora, formatarMoeda } from '../../services/constant/util/formatacao.util';
 import { MensagemErro } from '../../components/crud/mensagem-erro';
 import { SecaoComentariosRecebidos } from './secao-comentarios-recebidos';
+import { SecaoDenunciasCampanha } from '../19-denuncia/secao-denuncias-campanha';
+import { SecaoComentariosEndossados, SecaoComentariosTodos } from './secao-comentarios-campanha';
+import { SecaoAtualizacoesCampanha } from './secao-atualizacoes-campanha';
+import { PainelOrcamentoCronograma } from './painel-orcamento-cronograma';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { HistoricoRejeicaoResponse } from '../../services/12-campanha/type/campanha.type';
 
@@ -70,9 +73,7 @@ export function ModalConsultarCampanha({ auth, idCampanha, comoDono = false, aoF
       badges={
         campanha
           ? [
-              <span key="status" className={`badge ${classeBadgeStatusCampanha(campanha.status)}`}>
-                {ROTULO_STATUS_CAMPANHA[campanha.status]}
-              </span>,
+              <BadgeStatusCampanha key="status" campanha={campanha} />,
               <span key="modelo" className="badge badge-neutro">
                 {ROTULO_MODELO_CAMPANHA[campanha.modelo]}
               </span>,
@@ -148,10 +149,43 @@ export function ModalConsultarCampanha({ auth, idCampanha, comoDono = false, aoF
             </SecaoFicha>
           </div>
 
-          {comoDono && (
+          {/* Orçamento e cronograma, só para ler: a consulta mostra a campanha inteira. */}
+          <div className="lg:col-span-3">
+            <PainelOrcamentoCronograma auth={auth} idCampanha={campanha.idCampanha} podeEditar={false} />
+          </div>
+
+          {/* Atualizações publicadas, só para ler: o que a página pública mostra e o que quem segue recebe. Publicar e
+              ocultar ficam no Alterar do dono. */}
+          {STATUS_PUBLICADA.has(campanha.status) && (
+            <div className="lg:col-span-3">
+              <SecaoAtualizacoesCampanha auth={auth} idCampanha={campanha.idCampanha} podePublicar={false} podeGerenciar={false} />
+            </div>
+          )}
+
+          {comoDono ? (
+            // O dono endossa, exclui e denuncia o autor (Minhas Campanhas).
             <div className="lg:col-span-3">
               <SecaoComentariosRecebidos auth={auth} idCampanha={campanha.idCampanha} publicada={campanha.aprovadoEm !== null} />
             </div>
+          ) : (
+            // A gestão (Campanhas) só lê: os endossados (o que a página pública mostra), as denúncias e todos os
+            // comentários, os dois últimos paginados pelo servidor. Contribuições e seguidores entram aqui quando os
+            // módulos deles existirem.
+            <>
+              {campanha.aprovadoEm !== null && (
+                <div className="lg:col-span-3">
+                  <SecaoComentariosEndossados authFetch={auth.authFetch} idCampanha={campanha.idCampanha} />
+                </div>
+              )}
+              <div className="lg:col-span-3">
+                <SecaoDenunciasCampanha authFetch={auth.authFetch} idCampanha={campanha.idCampanha} />
+              </div>
+              {campanha.aprovadoEm !== null && (
+                <div className="lg:col-span-3">
+                  <SecaoComentariosTodos authFetch={auth.authFetch} idCampanha={campanha.idCampanha} />
+                </div>
+              )}
+            </>
           )}
         </div>
       )}

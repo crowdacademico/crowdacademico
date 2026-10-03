@@ -17,9 +17,10 @@ import { ListarPesquisadores } from '../../views/6-perfil-pesquisador/listar-pes
 import { ListarCampanhas } from '../../views/12-campanha/listar-campanhas';
 import { MinhasCampanhas } from '../../views/12-campanha/minhas-campanhas';
 import { AprovarCampanhas } from '../../views/12-campanha/aprovar-campanhas';
+import { ListarDenuncias } from '../../views/19-denuncia/listar-denuncias';
 import { BancadaPesquisador } from '../../views/campo-testes/bancada-pesquisador';
 import { BancadaCampanha } from '../../views/campo-testes/bancada-campanha';
-import { VidaCampanhaAtiva } from '../../views/campo-testes/vida-campanha-ativa';
+import { CampanhasSeguidas } from '../../views/campo-testes/campanhas-seguidas';
 import { GuiaEstilo } from '../../views/campo-testes/guia-estilo/1-guia-estilo';
 import { ListarTermosUso } from '../../views/5-termo-uso/listar-termos-uso';
 
@@ -192,6 +193,15 @@ export const ROTAS_ADMIN: Rota[] = [
     grupoMenu: 'MODERACAO',
     icone: 'fa-clipboard-check',
   },
+  {
+    caminho: '/admin/denuncias',
+    caminhoRelativo: 'denuncias',
+    elemento: ListarDenuncias,
+    rotuloMenu: 'Denúncias',
+    rotuloBreadcrumb: 'Denúncias',
+    grupoMenu: 'MODERACAO',
+    icone: 'fa-flag',
+  },
 
   // Minha Conta: dentro do painel (sidebar visível), mas sem rotuloMenu/grupoMenu: não é uma aba clicável
   // do menu (o acesso é pelo dropdown do cabeçalho), só ganha a moldura. Sem paiCaminho: não é filha de
@@ -213,7 +223,7 @@ export const ROTAS_ADMIN: Rota[] = [
   // Parâmetro do Sistema, Área de Conhecimento, Tipo de Link e Motivo de Denúncia; Alterar de Papel; Consultar
   // de Campanha e de Pesquisador; Criar, Consultar, Alterar e Excluir de Termo de Uso.
 
-  // O Campo de Testes vive só neste trecho e NÃO está nos requisitos funcionais (o arquivo inteiro é a
+  // A área de testes vive só neste trecho e NÃO está nos requisitos funcionais (o arquivo inteiro é a
   // fonte única de verdade de TODAS as rotas, não só as dele).
   //
   // `import.meta.env.DEV`: em build de produção este array fica vazio, a rota nem existe e o grupo some do
@@ -251,13 +261,14 @@ export const ROTAS_ADMIN: Rota[] = [
           icone: 'fa-folder-open',
         },
         {
-          caminho: '/admin/campo-testes/vida-campanha',
-          caminhoRelativo: 'campo-testes/vida-campanha',
-          elemento: VidaCampanhaAtiva,
-          rotuloMenu: 'T4 - Vida da Campanha Ativa',
-          rotuloBreadcrumb: 'T4 - Vida da Campanha Ativa',
+          // Campanhas que a conta logada segue (seguir, deixar de seguir, consultar as atualizações).
+          caminho: '/admin/campo-testes/campanhas-seguidas',
+          caminhoRelativo: 'campo-testes/campanhas-seguidas',
+          elemento: CampanhasSeguidas,
+          rotuloMenu: 'T4 - Campanhas Seguidas',
+          rotuloBreadcrumb: 'T4 - Campanhas Seguidas',
           grupoMenu: 'CAMPO_TESTES',
-          icone: 'fa-comments',
+          icone: 'fa-bell',
         },
         {
           // Guia de Estilo: cores nos dois temas, tipografia e componentes reais.

@@ -67,10 +67,18 @@ export function ConfiguracoesProvider({ children }: ConfiguracoesProviderProps) 
         chave in valores ? valores[chave] : valorPadrao,
     [valores],
   );
+  const obterNumero = useMemo(
+    () =>
+      (chave: string, valorPadrao: number): number => {
+        const valor = chave in valores ? valores[chave] : valorPadrao;
+        return typeof valor === 'number' ? valor : valorPadrao;
+      },
+    [valores],
+  );
 
   return (
     <ConfiguracoesContext.Provider
-      value={{ carregando, erro, obterConfiguracao }}
+      value={{ carregando, erro, obterConfiguracao, obterNumero }}
     >
       {children}
     </ConfiguracoesContext.Provider>

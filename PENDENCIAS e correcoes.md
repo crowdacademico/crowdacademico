@@ -10,7 +10,7 @@
 
 ## 0. 📌 Para a Alexia ler (conversar antes de fazer)
 
-Nada aberto (03-10-2026).
+Nada aberto (03-10-2026). O "Aguardando" (pagamento que chega depois do fim da campanha) foi decidido e feito; a explicação continua no topo do `ACHADOS_PARA_DISCUTIR.md`.
 
 ---
 
@@ -29,15 +29,7 @@ Quem atualiza os requisitos é o Lucas com a revisão externa; aqui fica só o q
 
 ## 2. Dependem de outro módulo ou de outra coisa existir
 
-> **Nota do Lucas (27-09-2026):** 18, 19, 20 e 26 podem ganhar tela na área administrativa (nem que seja no Campo de Testes) antes da página pública existir. Não é para fazer agora, mas o lado Nest desses módulos não depende da página pública.
-
-### Módulo `19-denuncia` (ainda não existe)
-
-#### 🔴 Pendência aberta (lado Nest): falta o endpoint de "encerrar campanha por moderação" - só volta à tona quando `19-denuncia` nascer
-
-A autorização já está pronta no banco (permissão `campanha_encerrar_moderacao`, concedida a `admin` e `moderador`), mas não existe hoje nenhum controller/service no Nest que execute a transição `ativo → encerrado_moderacao` de verdade - `12-campanha` não tem esse endpoint, e `19-denuncia` (de onde a ação naturalmente parte, depois de uma denúncia julgada procedente) ainda é pasta vazia.
-
-Não é trabalho extra por causa da correção de hoje - é o mesmo trabalho que já estava pendente antes, só que agora, quando alguém escrever esse endpoint (em `12-campanha` ou como parte de `19-denuncia`), a parte de "quem pode fazer isso" já vai estar certa pros dois papéis, sem precisar mexer em RLS/trigger depois.
+> **Nota do Lucas (27-09-2026):** 18, 19, 20 e 26 podem ganhar tela na área administrativa (nem que seja na área de testes) antes da página pública existir. Não é para fazer agora, mas o lado Nest desses módulos não depende da página pública.
 
 ### Módulos `18-recompensa`, `20-solicitacao-encerramento` e `26-notificacao` (ainda não existem)
 
@@ -59,15 +51,16 @@ Falta, e depende do `4-mail`:
 
 ### Pagamento: `22-contribuicao`, `23-repasse`, `24-auditoria-financeira`, gateway e checkout (por último, de propósito)
 
-#### 🔴 9. Validação de escrevibilidade financeira
+#### 🔴 O que o banco do dinheiro ainda deixa passar (sondagem de 03-10-2026)
 
-`auditoria_financeira` e `repasse` têm policies de escrita `USING (true)` - a RLS não valida quem grava aí, fica 100% a cargo do serviço do NestJS.
-
-> Sugestão da *** IA ***: seguindo o padrão de qualquer plataforma de pagamento séria (inclusive Catarse/Experiment, que também dependem de gateway externo pra processar pagamento), eu isolaria a escrita em `auditoria_financeira`/`repasse` dentro de um único serviço interno do NestJS, chamado só pelo webhook do gateway de pagamento - nunca exposto como um endpoint CRUD genérico que outra parte do app possa chamar por engano.
-
-> Correção de foco (27-07-2026): o risco real aqui não é "ter que escrever a regra duas vezes" (uma vez em SQL, outra no NestJS) - é que hoje, especificamente no caminho do dinheiro (`repasse`, `auditoria_financeira`, `historico_rejeicao`), a RLS está `USING (true)` e não protege nada, exatamente onde mais importaria proteger. Isso já foi testado de verdade: inserir um `repasse` com `valor_liquido = 0` numa campanha `all-or-nothing` abaixo da meta (permitido, RF-038) e depois fazer `UPDATE` pro valor cheio passava direto, sem revalidar a regra all-or-nothing. **Esse teste específico já não funciona mais** - foi corrigido em 27-07-2026 (ver `A3` na seção de resolvidos: `trg_valida_repasse` agora também dispara em `UPDATE`, não só `INSERT`). O ponto de fundo continua válido: `auditoria_financeira`/`repasse`/`historico_rejeicao` seguem com escrita aberta por decisão consciente, então o serviço isolado do NestJS sugerido acima continua sendo a defesa que falta.
-
-> **Trava de dependência (05-09-2026):** este item só pode ser implementado DEPOIS do gateway de pagamento ser escolhido (`PROXIMOS_MODULOS.md`, Grupo 8) - a lógica real de "quando gravar `auditoria_financeira`/`repasse`" só existe quando o webhook do gateway chamar de volta confirmando uma transação; sem gateway, não há webhook, e sem webhook não há destinatário natural pro serviço isolado sugerido acima. Construir esse isolamento antes protegeria um caminho que nenhum código ainda percorre - trabalho sem efeito. **Decisão de produto do Lucas:** não citar mais este item numa lista geral de pendências até o gateway estar definido - quando isso acontecer, este serviço isolado deve ser a PRIMEIRA peça do módulo de pagamento a ser construída, antes até do endpoint de webhook em si (evita a janela em que a escrita fica exposta por alguns commits).
+Provado no PGlite (`informacoes/testes-banco/_aud-contribuicao-sondagem.mjs`); detalhe e comparação com o Catarse no relatório `informacoes/SUPER_AUDITORIA_PREPARACAO_03-10-2026.md`, seção 7. Fazer no começo do módulo, antes do gateway:
+- **Ordem de status da contribuição:** hoje o status pode voltar para trás (devolvido para confirmado, pendente para repassado). Inclui recusar a confirmação que chega depois de a campanha ser encerrada.
+- **Transação do gateway única:** `id_transacao_api` sem `UNIQUE`; o gateway reenvia o mesmo aviso. E o webhook precisa achar a contribuição pela transação, não pelo nosso id.
+- **Repasse:** um por campanha, líquido menor ou igual ao bruto, e só de campanha encerrada.
+- **Auditoria financeira imutável e automática:** DECIDIDO (03-10-2026), ver `DOCUMENTACAO_BD.md`, [05-K-2-F].
+- **Escrita de `repasse` e `auditoria_financeira` sem regra no banco** (regra de acesso `USING (true)`): a escrita fica num serviço único do Nest, chamado só pelo webhook do gateway (com a assinatura conferida), nunca numa rota comum. Por isso só fecha junto do gateway.
+- **Gravar o IP no aceite de cada contribuição:** o Termo v5, o prazo de 5 anos (parâmetro) e a limpeza diária já estão feitos (03-10-2026, `DOCUMENTACAO_BD.md`, retenção do log). Falta, no módulo: o Nest pegar o IP da requisição de quem contribui (inclusive anônimo) e gravar em `aceite_termo_contribuicao.ip_aceite`. No deploy, atrás de um proxy, o Nest precisa confiar no proxy para ler o IP real (`trust proxy`).
+- **Contribuições no Consultar da campanha:** a consulta da gestão (Campanhas) passa a mostrar as contribuições (quantas, quanto, por meio de pagamento) quando o módulo existir.
 
 #### 🟡 Pendência aberta (24-09-2026): modelo de campanha `flexivel` existe no banco, no seed e no V7, mas o sistema não o exercita de ponta a ponta
 
@@ -79,7 +72,7 @@ Apontado pela revisão externa (resposta de 20-09) como "metade dos modelos não
 - **Aviso ao doador:** o aviso destacado e a confirmação de ciência antes da contribuição dependem da tela de checkout, que não existe.
 - **Só existe em dado:** `07_seed_dados.sql` tem uma campanha flexível (a do repasse `parcial_processando`), e o tipo aparece em `db.types.ts` e `campanha.type.ts`.
 
-**Depende de:** módulo de contribuição/pagamento (Grupo 8) e checkout. Não iniciar antes. Decidido no V8: o modelo pode mudar enquanto a campanha não foi aprovada e congela na aprovação (o banco já congela). **Decisão em aberto, sem pressa:** gravar ou não o IP do contribuinte anônimo no aceite do Termo; volta quando o módulo de contribuição for construído.
+**Depende de:** módulo de contribuição/pagamento (Grupo 8) e checkout. Não iniciar antes. Decidido no V8: o modelo pode mudar enquanto a campanha não foi aprovada e congela na aprovação (o banco já congela). O IP do contribuinte anônimo tem sugestão registrada na lista acima.
 
 - **Gateway:** fica por último. Os testes serão em sandbox, mas sandbox não é desculpa para fazer mal feito: assinatura do webhook, idempotência, reconciliação, máquina de estados de `contribuicao`/`repasse` (`PROXIMOS_MODULOS.md`).
 - **Painel do doador** (`views/dash-doador`, pasta vazia) e **checkout** (`views/checkout`, vazia).
@@ -87,11 +80,12 @@ Apontado pela revisão externa (resposta de 20-09) como "metade dos modelos não
 ### Página pública da campanha (ainda não existe)
 
 - **Botões de compartilhar** (WhatsApp, Facebook, copiar link) e **prévia de link** (Open Graph, um endpoint pequeno no Nest que devolve as meta tags). Ideias do Atlas (P1 e P2 do roteiro).
-- Telas públicas de denúncia, recompensa, atualização, comentário e seguir (hoje atualização, comentário e seguir só existem no T3 do Campo de Testes). Painel do pesquisador (`views/dash-pesquisador`, pasta vazia).
+- **Quantas pessoas seguem a campanha:** hoje cada conta só enxerga o próprio "seguir" (regra de acesso de `seguir_campanha`). Mostrar o número no Consultar e na página pública pede uma contagem que o banco devolve sem expor quem segue.
+- Telas públicas de denúncia, recompensa, atualização, comentário e seguir (hoje atualização, comentário e seguir só existem nas telas de teste do painel). Painel do pesquisador (`views/dash-pesquisador`, pasta vazia).
 
 ### Motor do score (a Parte C foi adiada pelo Lucas)
 
-#### 🟡 DECIDIDO PARA DEPOIS (24-09-2026): motor do score (Parte C) e gateway
+#### 🟡 DECIDIDO PARA DEPOIS (24-09-2026): motor do score (Parte C)
 
 Registro do que o Lucas decidiu ao ver a lista das quatro pendências que dependiam dele. Nada disto foi implementado agora, de propósito.
 
@@ -102,15 +96,11 @@ Registro do que o Lucas decidiu ao ver a lista das quatro pendências que depend
   - **O que a Parte C também traz:** `calcular_score_atualizacao` sem laço (uma consulta) e `calcular_score_historico` com uma leitura só de `campanha`; gancho comentado para gravidade por motivo no módulo 19 (`SUM(COALESCE(m.gravidade, 1))`); recálculo mais estreito (denúncia pendente não recalcula; denúncia contra campanha recalcula o dono).
   - **O que falta para fazer (esforço, não risco):** patch pronto em `3_patch_parteC_score_24-09-2026.sql`, na pasta de contra-prompt de 24-09 dentro de `informacoes/` (a pasta é só leitura); incorporar ao `05` e ao `07`, atualizar `DOCUMENTACAO_BD.md`, e **rever o texto dos Termos de Uso** (a explicação da pontuação exigida pela LGPD precisa dizer "denúncias procedentes contra o perfil e contra as campanhas"). Risco baixo no código, médio na percepção (muda números públicos).
   - **Tela própria do admin (o Lucas já entendeu que será necessária):** só edita `peso` e `ativo` dos itens de `score_config` (nunca `nome` nem `id_pai`, que são a estrutura que o código lê) e as faixas de `score_rotulo`. Dois `PATCH` em lote (todos os pesos numa requisição só, para caber na transação que as constraint triggers de soma e de cobertura conferem no `COMMIT`) e uma tela. Não cria nem apaga item. A permissão `score_editar` já existe e já está nas policies. **Ordem certa:** motor, depois tela, e a contestação junto com o módulo 19 (o V7 diz que ela segue o mesmo fluxo de análise das denúncias). Ponto de atenção para quando houver volume: mudar um peso recalcula todos os pesquisadores dentro da requisição do admin.
-- **Gateway de pagamento: fica por último, sem mudança.** Regra reforçada pelo Lucas: os testes serão todos em sandbox, **mas sandbox não é desculpa para fazer mal feito**; quando chegar a hora tem que funcionar perfeitamente (assinatura do webhook, idempotência, reconciliação, máquina de estados de `contribuicao`/`repasse`, ver `PROXIMOS_MODULOS.md`).
-
-> O item "gateway" deste bloco está também no grupo 2. O "guia de estilo de cores", que também estava aqui, foi fechado em 02-10-2026 (histórico).
-
 #### 🔴 Pendência aberta (11-09-2026): RF-031 (contestação de score) só faz sentido implementar depois do motor de score estar fechado de vez
 
 RF-031 já tem o texto do requisito escrito (pesquisador abre solicitação de revisão junto ao Administrador se achar uma penalização injusta/desatualizada, mesmo fluxo de análise das denúncias) - mas nunca teve nenhuma implementação (Banco ❌, Nest ❌ na `MATRIZ-RASTREABILIDADE-RF.md`, confirmado no item 59 acima).
 
-**Ponto levantado pelo Lucas (11-09-2026):** construir o fluxo de contestação antes do motor de score estar com as regras de cálculo fechadas de vez não faz sentido - estaria montando um processo de revisão pra contestar um número cuja fórmula ainda pode mudar por baixo. O item 13 (Lista C, acima) já fechou 4 decisões pontuais de regra (denúncia improcedente, dupla penalização, encerramento antecipado, reconhecimento de GitHub), mas o próprio painel (`PainelScore`, Campo de Testes T1/T2, ambos Consultar e o card solto) ainda exibe um aviso explícito dizendo que "a regra de negócio de pontuação (pesos e dimensões) ainda não foi fechada, os números são só uma prévia da estrutura" - ou seja, mesmo com aquelas 4 correções pontuais, o motor como um todo (pesos por dimensão, principalmente) continua sinalizado como provisório na própria interface.
+**Ponto levantado pelo Lucas (11-09-2026):** construir o fluxo de contestação antes do motor de score estar com as regras de cálculo fechadas de vez não faz sentido - estaria montando um processo de revisão pra contestar um número cuja fórmula ainda pode mudar por baixo. O item 13 (Lista C, acima) já fechou 4 decisões pontuais de regra (denúncia improcedente, dupla penalização, encerramento antecipado, reconhecimento de GitHub), mas o próprio painel (`PainelScore`, nos Consultar de usuário e pesquisador e no cartão solto) ainda exibe um aviso explícito dizendo que "a regra de negócio de pontuação (pesos e dimensões) ainda não foi fechada, os números são só uma prévia da estrutura" - ou seja, mesmo com aquelas 4 correções pontuais, o motor como um todo (pesos por dimensão, principalmente) continua sinalizado como provisório na própria interface.
 
 **Não resolvido ainda se esse aviso está desatualizado ou genuinamente reflete o estado atual** - só registrado aqui que RF-031 depende dessa resposta antes de virar trabalho técnico de verdade. Ordem sugerida: (1) decidir se o motor de score está de fato fechado (e, se estiver, tirar o aviso "ainda não está pronto" da interface); (2) só depois disso implementar RF-031 (Banco + Nest).
 
@@ -140,26 +130,13 @@ O Lucas pediu detalhamento dessa ideia (citada de passagem pelo Lucas numa rodad
 
 ## 3. No dia do deploy
 
-#### 🔴 Pendência aberta (26-09-2026): bloco SQL "modo produção" das permissões de teste
-
-O admin recebe, por padrão, permissões que só existem para as ferramentas do Campo de Testes: `campanha_criar_para_outro` e `campanha_excluir_forcado` (claramente de teste) e `perfil_pesquisador_criar_para_outro`. Esconder o Campo de Testes do build só esconde a interface; quem tiver um token de admin ainda chama essas rotas direto. A barreira real é o banco: um SQL curto, rodado uma vez no dia do deploy, que apaga essas permissões do `papel_permissao` do admin (a trigger `trg_permissao_auto_admin` só age em permissão nova, então não as devolve). **Decisão a tomar antes:** `perfil_pesquisador_corrigir_cpf` e `perfil_pesquisador_alterar_de_outro` parecem ferramenta de teste, mas são funções reais de suporte previstas nos requisitos; ficam ou saem? O arquivo deve ser preparado e testado no PGlite, sem nunca rodar antes do deploy. Sem urgência até o deploy (decisão do Lucas em 26-09-2026: focar no que está em andamento).
-
-**Acrescentado em 26-09-2026 (Grupo O):** o mesmo bloco tem de tirar a leitura liberada a toda conta durante o desenvolvimento. SQL:
-
-```sql
-DELETE FROM papel_permissao
-WHERE id_papel = (SELECT id_papel FROM papel WHERE codigo = 'usuario')
-  AND id_permissao IN (SELECT id_permissao FROM permissao WHERE nome IN (
-    'relatorio_visualizar', 'usuario_visualizar_sensivel', 'perfil_pesquisador_visualizar_sensivel',
-    'contribuicao_visualizar_sensivel', 'auditoria_financeira_visualizar', 'score_visualizar', 'log_visualizar'));
-```
-
-- **Banco depois do deploy: mudança vira arquivo novo numerado** (começando em 09, depois 10, e assim por diante), nunca edição do `01` a `08` nem só o `ATUALIZAR`. O executor de migrações (`npm run db:migrate`) aplica só o que é novo e avisa, sem reaplicar, quando um arquivo já aplicado muda. No primeiro deploy: `npm run db:migrate:adotar` no banco que já tem tudo, e `DATABASE_URL_MIGRATIONS` com a credencial de administrador do banco.
+- **Banco de produção:** rodar o `07_seed_dados.sql` só até o marcador `[07-DEMONSTRACAO]` e promover a primeira conta a admin uma vez (ver `.Tutorial-rodar-projeto.md`).
+- **Banco depois do deploy: mudança vira arquivo novo numerado** (começando em 09, depois 10, e assim por diante), nunca edição dos arquivos `01` a `08` nem só o `ATUALIZAR`. O executor de migrações (`npm run db:migrate`) aplica só o que é novo e avisa, sem reaplicar, quando um arquivo já aplicado muda. No primeiro deploy: `npm run db:migrate:adotar` no banco que já tem tudo, e `DATABASE_URL_MIGRATIONS` com a credencial de administrador do banco.
 - **Docker** do Nest e do React (F2 do roteiro do Atlas, com o `docker/` deles como referência).
 - **`react/.gitignore` não cobre `.env`:** inofensivo hoje (o `.env` só tem a URL da API); só volta à tona se o conteúdo do `.env` mudar ou no deploy.
 - **CORS por lista de endereços** (ver grupo 5, segurança): se não for feito antes, entra aqui.
 - **Roteiros de tela que esperam o modo produção** (hoje toda conta logada lê tudo, pela leitura liberada de desenvolvimento): `g10-permissoes-na-tela.mjs`, caso "Pesquisadora: /admin/usuarios mostra erro de permissão", e `g14-toast-e-busca.mjs`, caso "Conta sem permissão abre o dashboard: UM aviso de erro". Vistos em 28-09-2026.
-- **Roteiro de API `gapi-401-403-404.mjs` espera o modo produção:** hoje 2 casos falham porque toda conta logada vê tudo (Grupo O, leitura liberada de desenvolvimento). Rodar de novo depois do bloco "modo produção".
+- **Roteiro de API `gapi-401-403-404.mjs` espera o modo produção:** hoje 2 casos falham porque toda conta logada vê tudo (Grupo O, leitura liberada de desenvolvimento). Rodar de novo num banco montado sem a parte de demonstração do `07`.
 
 ---
 
@@ -207,65 +184,16 @@ Lucas decide depois se ajudam o CrowdAcadêmico. Contexto em `informacoes/ROTEIR
 
 - **Gestão de logo e favicon:** a aba Identidade Visual do Dashboard é só um espaço reservado.
 
-### Telas e formulários
-
 ### Estrutura e ferramentas
 
-#### 🟠 Rodada 1 feita (29-09-2026): SUPER AUDITORIA do sistema inteiro, na prática
+#### 🟡 Aberto da super auditoria de 29-09-2026
 
-**Achados em `informacoes/SUPER_AUDITORIA_2026-09-29.md`:** 26 achados; a tabela "Andamento das correções" no topo do arquivo mostra a situação de cada um.
-
-- **Grupo Z colado no Supabase (29-09-2026, "Success").**
-- **Ainda não feito:**
-  - o item 13 (limpar o Supabase, precisa de autorização);
-  - o envio de arquivo (grava no Storage pessoal).
-- **`NOT NULL` feito (30-09-2026); Grupo AD colado no Supabase (30-09-2026).**
-
-
-**O que é:** não só rodar os testes automáticos. É usar o sistema de verdade, módulo por módulo, como uma pessoa usaria, com cada tipo de conta (admin, pesquisador, conta comum, suspensa), passando por todas as telas e ações, inclusive os caminhos de erro. Cada módulo de hoje: usuário, papéis, auth, termos, pesquisador, links, catálogos, configurações, campanha, orçamento, cronograma, atualização, seguir, comentário, histórico de rejeição, arquivos, log, dashboard e Campo de Testes. Criar, consultar, alterar e excluir pela tela conferindo o que foi gravado; cada papel tentando o que pode e o que não pode; os fluxos que atravessam módulos (conta nova, upgrade, campanha, admin aprova, outro pesquisador comenta, o dono endossa...); anotar tudo, até o que "funciona mas confunde".
-
-**Como:** um roteiro de auditoria módulo por módulo, rodado em partes, e uma lista de achados antes de corrigir; o Lucas decide o que corrigir e em que ordem.
-
-**Alimenta de uma vez:** o `NOT NULL` (abaixo), a auditoria de Nielsen (grupo "Telas e formulários") e os itens abaixo, levantados em 29-09-2026:
-1. ~~Validação de domínio dos links acadêmicos.~~ **Feito (29-09-2026, Grupo Z).**
-2. ~~Mensagens de erro de validação em inglês.~~ **Feito (29-09-2026, Grupo Y).**
-3. ~~Pedidos que dão erro sem necessidade (o 404 do perfil de pesquisador).~~ **Feito (29-09-2026, `ehPesquisador`).**
-4. Os RFs marcados 🟡 "não conferido a fundo" na matriz de rastreabilidade: confirmar um por um. **Regra:** o React de hoje é só o painel administrativo; tela do painel nunca prova que um RF do usuário ou do pesquisador está cumprido ou descumprido (ver abaixo). **02-10-2026:** RF-019, 050, 069, 070, 071, 072, 104, 117 e 120 conferidos e saíram da lista (achado: faltava a sugestão de 30 dias do RF-069, feita, Grupo AI). Os que ficam dependem de módulo que ainda não existe (e-mail, contribuição, repasse, denúncia, página pública).
-5. ~~Telas nunca vistas funcionando ao vivo.~~ **Feito (02-10-2026, `_aud-v-nunca-vistas-02-10.mjs`, banco local):** links acadêmicos no Alterar Usuário (adicionar e domínio errado recusado), suspensão na Minha Conta, 92009 e 91026 com mensagem na tela, F5 no T3, dica do tema e menu do celular. A paginação do "T4" não existe mais (o Campo de Testes tem T1 a T3 e a Guia).
-6. ~~Campo de Testes com o mesmo comportamento das telas reais.~~ **Feito (03-10-2026):** o T2 e a fila real (Aprovar Campanhas) usam as mesmas peças de decisão (`useDecisaoAprovacao` e `decisao-aprovacao.tsx`): Rejeitar sem motivo mostra o erro no campo nos dois. Minhas Campanhas virou o T3 do Campo de Testes (o pesquisador não usa a área restrita); a Vida da Campanha Ativa virou T4.
-7. ~~Tema escuro e contraste em todas as telas.~~ **Feito (02-10-2026):** axe nas 26 telas e 8 modais, nos dois temas: zero violações. Borda de campo passou de 1,48:1 para 3,26:1 (`--cor-borda-campo`), com anel no foco; rótulo da caixa de excluir conta corrigido (3,89 para a cor do erro).
-8. ~~Celular: todas as telas em tela estreita.~~ **Feito (02-10-2026, `_aud-v-celular-todas-02-10.mjs`):** 390px, todas as telas e 6 modais, nenhuma rolagem lateral nem elemento saindo da tela.
-9. ~~Acessibilidade: axe em todas as telas e uso só com teclado.~~ **Feito (02-10-2026, `_aud-v-axe-todas-02-10.mjs`):** zero violações; 100 ícones decorativos ganharam `aria-hidden` (o leitor de tela lia o desenho do ícone, o botão "Menu" era lido com um símbolo antes); campos das tabelas editáveis ganharam nome; foco de teclado visível em todas as telas do painel.
-10. ~~Textos.~~ **Feito (30-09-2026): nenhum travessão nem "Termos" no plural na tela; a recusa por permissão mostra o nome, não o código.**
-11. ~~Roteiros de teste que dependem de dado que sumiu.~~ **Feito (29-09-2026): `g5` e `g13` usam a pesquisadora Ana.**
-12. ~~Simular o "modo produção".~~ **Feito (30-09-2026): suíte PGlite 27 (papel × ação), achou a exclusão de conta sem login (corrigida, Grupo AC). Grupo AC colado no Supabase (30-09-2026).**
-13. Limpar os dados de teste dos roteiros no Supabase (contas "Teste G21", "Campanha E2E"...), com autorização do Lucas. **03-10-2026: autorizado; Grupo AJ do ATUALIZAR pronto para colar** (9 contas, 5 campanhas e as rejeições TESTE-PW; testado no banco local, com trava se houver contribuição, repasse, encerramento ou denúncia). Ficam de fora os testes à mão: contas teste@teste.com e teste2@teste2.com, campanhas "Campanha teste01" e "teste33".
-14. ~~Padrões que o projeto proíbe e que escaparam (duas consultas simultâneas na mesma conexão).~~ **Feito (29-09-2026, `emSequencia`).**
-15. Documentação que não bate com a tela. **02-10-2026:** as suítes 7 e 10 (documentação contra o código) passam; corrigidos o inventário de rotas (2 do "Esqueci a senha"), as contagens de funções e triggers, a tabela de componentes (`CartaoFormulario` e `FichaConsulta` saíram) e o `nest-cli.json` (2 DTOs que o Swagger não documentava).
-
-#### ✅ Feito (30-09-2026), Grupo AE colado: excluir e bloquear comentário recebido
-
-**Em palavras simples:** comentário não é rede social: só o dono da campanha (e o autor e a moderação) vê o comentário, e o público só vê os endossados. O dono agora exclui um comentário recebido num modal com duas saídas: **Excluir** (apaga de vez; o autor pode comentar de novo) e **Excluir e bloquear** (fica guardado e o autor não comenta mais naquela campanha). Ninguém é avisado. Sem mudança de requisito (cabe no RF-093) e sem tabela nova: o bloqueio reaproveita a regra de um comentário por campanha. Feito no banco (Grupo AE), no Nest (`DELETE /comentario/:id`) e na tela (T3 do Campo de Testes, reaproveitável no painel do pesquisador). Testado: suíte PGlite 29, simulação da colagem, ponta a ponta `_aud-g-excluir-comentario.mjs`. Detalhes em `DOCUMENTACAO_BD.md`, "Excluir e bloquear comentário recebido".
-
-- **Comentários recebidos em Minhas Campanhas (30-09-2026, feito):** o Consultar do dono mostra os comentários (autor, data, texto) com Endossar, Excluir e Excluir e bloquear. Só React e Nest (nome do autor na listagem), sem mudança no banco. Testado: `_aud-g-comentarios-minhas-campanhas.mjs` (11 passos). Detalhes em `DOCUMENTACAO_FRONTEND.md`, "Comentários recebidos no Consultar do dono".
-- **Falta:** denunciar o comentário à moderação, quando o módulo `19-denuncia` existir (denúncia contra o perfil do autor, já prevista no RF-107; o comentário denunciado fica guardado).
+- **RFs 🟡 "não conferido a fundo" na matriz:** os que ficam dependem de módulo que ainda não existe (e-mail, contribuição, repasse, denúncia, página pública); conferir cada um quando o módulo nascer. **Regra:** o React de hoje é só o painel administrativo; tela do painel nunca prova que um RF do usuário ou do pesquisador está cumprido ou descumprido.
+- **Envio de arquivo nunca testado por roteiro:** grava no Storage pessoal do Lucas, mesmo com banco local; testar à mão ou com um Storage separado.
 
 #### 🟡 Anotado (30-09-2026): sessões sem regra de acesso por dono
 
 `sessao` tem regra de acesso aberta (`USING (true)`) de propósito: login e renovação acontecem antes de haver alguém logado. Quem decide de quem é a sessão é o Nest (confere o segredo do token e o dono). Na simulação, qualquer papel encerra a sessão de qualquer conta direto no banco. Não é brecha pela API hoje; fica anotado como defesa em profundidade a pensar no deploy.
-
-#### ✅ Feito (30-09-2026), Grupo AD colado: `NOT NULL` nas colunas com valor padrão que aceitam vazio
-
-**Resultado:** 39 colunas (as 34 da suíte de tipos e mais 6 que o Nest ainda não usa), menos `contribuicao.token_sessao`, que fica. Supabase conferido só lendo: nenhuma linha vazia. Suítes PGlite verdes nos dois modos (mais a suíte 28 nova), simulação da colagem dupla com linhas vazias de propósito, compilador do Nest, e ponta a ponta no banco local (roteiros `_aud-f1` e `_aud-f2`: conta nova, senha, upgrade, campanha com orçamento e cronograma, envio, catálogos, papéis, suspensão, fila aprovar/rejeitar, exclusões; tudo passou). Detalhes em `DOCUMENTACAO_BD.md`, "Colunas com valor padrão não aceitam vazio".
-
-Plano original:
-
-34 colunas têm `DEFAULT` (ex.: `criado_em DEFAULT NOW()`, `ativo DEFAULT TRUE`), mas o banco aceita gravar vazio nelas; quem garante que nunca ficam vazias é o costume do código, não o banco. A lista sai da suíte de teste de conferência de tipos (aviso "nulidade diferente"). **Nem todas devem mudar**: `contribuicao.token_sessao`, por exemplo, fica vazia de propósito quando a contribuição não é anônima. Plano pedido pelo Lucas:
-1. **Auditoria no código inteiro:** coluna por coluna, onde é gravada e lida (SQL, Nest, React), e a lista de quais mudam e quais ficam, com o motivo, para o Lucas aprovar.
-2. **Conferir o Supabase** (só leitura): nenhuma linha vazia nas colunas que vão mudar.
-3. **Testes no código inteiro:** PGlite nos dois modos, compilador e lint do Nest e do React.
-4. **Teste geral de ponta a ponta:** conta nova do zero, upgrade para pesquisador, criar campanha, entrar como admin e aprovar, criar um segundo pesquisador e comentar na campanha, voltar ao primeiro e endossar o comentário, e assim por diante.
-5. Grupo do `ATUALIZAR` com aviso de parar o Nest (é `ALTER TABLE`).
 
 #### 🟡 Para o futuro (29-09-2026): super auditoria de padrões de mercado
 
@@ -285,4 +213,5 @@ Hoje `campanha` tem 17 triggers e `comentario` tem 8. Quando várias rodam no me
 
 
 - **Descartados de propósito do roteiro do Atlas** (escopo enxuto): Next.js, Tailwind no JSX, i18n, gerador de módulo, versão na URL, e a maiúscula automática nos nomes (ficou só a limpeza de espaços).
+- **Documentação contra o código:** as suítes PGlite 7 e 10 conferem a cada rodada; ficam verdes a cada módulo novo.
 - **Roteiro completo do Atlas:** `informacoes/ROTEIRO_INCORPORACAO_ATLAS.md` (Ondas 1 e 2 feitas).

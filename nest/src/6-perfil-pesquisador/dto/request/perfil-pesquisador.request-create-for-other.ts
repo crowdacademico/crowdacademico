@@ -44,7 +44,7 @@ export class PerfilPesquisadorRequestCreateForOther {
   })
   tituloAcademico: (typeof TITULOS_ACADEMICOS_VALIDOS)[number];
 
-  // OPCIONAL, diferente de PerfilPesquisadorRequestCreate: o cadeado em T1 mostra o Termo de Uso vigente ANTES
+  // OPCIONAL, diferente de PerfilPesquisadorRequestCreate: o cadeado da Bancada do Pesquisador mostra o Termo de Uso vigente ANTES
   // do formulário para QUALQUER conta, inclusive a de outra pessoa (o aceite fica registrado em nome do ALVO,
   // não de quem preencheu). Fica opcional (não `@Equals(true)` como no self-service) para não quebrar o card
   // "Criar Perfil Pesquisador" que já existe dentro de ModalAlterarUsuario: esse caminho continua sem passar

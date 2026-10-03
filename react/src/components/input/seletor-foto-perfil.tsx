@@ -68,13 +68,7 @@ export function SeletorFotoPerfil({
   // duplicada à mão (uma constante fixa neste arquivo e no Nest ao mesmo tempo ficaria sincronizada só de boa
   // vontade). O valor padrão abaixo é só o que aparece por uma fração de segundo antes do
   // `ConfiguracoesProvider` terminar de carregar; depois disso, sempre reflete o que o Admin configurou.
-  const { obterConfiguracao } = useConfiguracoes();
-  const valorConfigurado = obterConfiguracao('arquivo_tamanho_maximo_imagem_bytes', 8 * 1024 * 1024);
-  // `obterConfiguracao` devolve `string | number | boolean | null` (o
-  // armazém de config guarda tipos heterogêneos) - narrow explícito em vez
-  // de confiar que esta chave específica é sempre numérica, mesmo default
-  // (8 * 1024 * 1024) preservado exatamente como padrão de verdade.
-  const tamanhoMaximoAvatarBytes = typeof valorConfigurado === 'number' ? valorConfigurado : 8 * 1024 * 1024;
+  const tamanhoMaximoAvatarBytes = useConfiguracoes().obterNumero('arquivo_tamanho_maximo_imagem_bytes', 8 * 1024 * 1024);
 
   const processarArquivo = async (arquivoEscolhido: File) => {
     setErroLocal('');

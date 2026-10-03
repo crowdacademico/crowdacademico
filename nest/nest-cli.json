@@ -12,6 +12,7 @@
           "introspectComments": true,
           "dtoFileNameSuffix": [
             ".dto.ts",
+            ".request-close-campaign.ts",
             ".request-confirm-upload.ts",
             ".request-create-for-other.ts",
             ".request-create.ts",

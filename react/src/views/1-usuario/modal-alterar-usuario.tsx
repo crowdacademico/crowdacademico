@@ -31,7 +31,7 @@ import { SecaoAceitesTermo } from './secao-aceites-termo';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
 import { useOpcoesDiasSuspensao } from '../../services/constant/hook/use-opcoes-dias-suspensao';
-import { formatarCpf, formatarCpfOuMotivoOculto, formatarData } from '../../services/constant/util/formatacao.util';
+import { formatarCpf, formatarCpfOuMotivoOculto, formatarData, instanteDaquiADias } from '../../services/constant/util/formatacao.util';
 import { CamposVinculoPerfil } from '../6-perfil-pesquisador/campos-vinculo-perfil';
 import { SecaoModeracaoPesquisador } from '../6-perfil-pesquisador/secao-moderacao-pesquisador';
 import { SecaoModeracao } from './secao-moderacao';
@@ -39,6 +39,7 @@ import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { UsuarioPapelResponse } from '../../services/2-papel-permissao/type/papel-permissao.type';
 import type { TipoVinculo, TituloAcademico } from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
 import type { LinkAcademicoRequestCreate, LinkAcademicoResponse } from '../../services/7-link-academico/type/link-academico.type';
+import { EstadoVazio } from '../../components/crud/estado-vazio';
 
 interface ModalAlterarUsuarioProps {
   auth: Pick<UseAuthReturn, 'authFetch'>;
@@ -525,11 +526,6 @@ function FiltroPartes({
   );
 }
 
-// Fora do componente: é chamado só no clique, nunca durante o desenho da tela.
-function daquiADias(dias: number): string {
-  return new Date(Date.now() + dias * 24 * 60 * 60 * 1000).toISOString();
-}
-
 interface PapeisDoUsuarioProps {
   auth: Pick<UseAuthReturn, 'authFetch'>;
   idUsuario: number;
@@ -598,7 +594,7 @@ function PapeisDoUsuario({ auth, idUsuario, papeis, aoMudarPapeis, aoAtualizado 
   const aoSuspender = async (papel: UsuarioPapelResponse, dias: number) => {
     if (!suspensao.tentarEnviar()) return;
     const motivo = motivoSuspensao.trim();
-    const ate = daquiADias(dias);
+    const ate = instanteDaquiADias(dias);
     const ok = await executar(
       papel.idPapel,
       () => usuarioPapelApi.suspender(auth.authFetch, idUsuario, papel.idPapel, ate, motivo),
@@ -638,7 +634,7 @@ function PapeisDoUsuario({ auth, idUsuario, papeis, aoMudarPapeis, aoAtualizado 
       <MensagemErro texto={erro} />
 
       <div className="flex flex-wrap gap-2">
-        {papeis.length === 0 && <p className="legenda texto-fraco">Nenhum papel atribuído ainda.</p>}
+        {papeis.length === 0 && <EstadoVazio compacto icone="fa-user-tag" titulo="Nenhum papel atribuído ainda." texto="Escolha um papel no campo abaixo para atribuir." />}
         {papeis.map((papel) => {
           const suspenso = papel.suspensoAte && new Date(papel.suspensoAte) > new Date();
           return (
@@ -753,9 +749,7 @@ interface LinksAcademicosDoUsuarioProps {
 function LinksAcademicosDoUsuario({ auth, idUsuario }: LinksAcademicosDoUsuarioProps) {
   const { mostrar } = useToast();
   const { reportarErro } = useErroToast();
-  const { obterConfiguracao } = useConfiguracoes();
-  const valorLimiteLinks = obterConfiguracao('limite_links_academicos_perfil', 5);
-  const limiteLinks = typeof valorLimiteLinks === 'number' ? valorLimiteLinks : 5;
+  const limiteLinks = useConfiguracoes().obterNumero('limite_links_academicos_perfil', 5);
   const { dado, recarregar } = useBuscar(() => linkAcademicoApi.listarDoUsuario(auth.authFetch, idUsuario), [idUsuario]);
   const links = dado ?? [];
   // Só os tipos que podem ir no perfil do pesquisador.

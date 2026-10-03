@@ -19,8 +19,8 @@ export class AtualizacaoCampanhaServiceCreate {
         id_campanha: dto.idCampanha,
         titulo: dto.titulo,
         conteudo: dto.conteudo,
-        fase: dto.fase ?? null,
-        tipo: dto.tipo ?? null,
+        fase: dto.fase,
+        tipo: dto.tipo,
       })
       .returning(ATUALIZACAO_CAMPANHA_COLUNAS_SELECT)
       .executeTakeFirstOrThrow();

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { formatarDataHora, textoSeguro } from '../../../services/constant/util/formatacao.util';
 import type { LogAuditoriaResponse, OperacaoLogAuditoria } from '../../../services/27-log-auditoria/type/log-auditoria.type';
+import { CaixaTabela } from './caixa-tabela';
 
 // Últimas alterações de uma tabela do banco (log_auditoria), mais recente primeiro. Só leitura. Usada pelo
 // painel "Ver log" (components/crud/log-auditoria-painel.tsx), que busca e pagina.
@@ -33,7 +34,7 @@ interface TabelaHistoricoAlteracoesProps {
 
 export function TabelaHistoricoAlteracoes({ linhas, campoRenomeio }: TabelaHistoricoAlteracoesProps) {
   return (
-    <div className="crud-tabela__wrapper">
+    <CaixaTabela rotulo="Histórico de alterações">
       <table className="crud-tabela">
         <thead>
           <tr>
@@ -75,6 +76,6 @@ export function TabelaHistoricoAlteracoes({ linhas, campoRenomeio }: TabelaHisto
           )}
         </tbody>
       </table>
-    </div>
+    </CaixaTabela>
   );
 }

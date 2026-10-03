@@ -82,7 +82,7 @@ Todas as regras da Camada 2 testadas até hoje acabaram adotadas - não sobrou n
 | `@typescript-eslint/no-base-to-string` | tipo | 08-09-2026 | As 4 ocorrências (`campo-somente-leitura.tsx`, `generic-table.tsx`, `log-auditoria-painel.tsx`) passaram a usar um util novo e compartilhado, `textoSeguro()` (`formatacao.util.ts`) - trata `object` explicitamente via `JSON.stringify` em vez de confiar no `toString()` padrão, então um valor-objeto real nunca mais viraria `"[object Object]"` visível. `use-chamada-registrada.ts` era um caso diferente (corpo de requisição, não valor de exibição), corrigido separadamente. |
 | `@typescript-eslint/restrict-template-expressions` | tipo | 08-09-2026 | As 3 ocorrências (`generic-table.tsx`) - `linha[chavePrimaria]` envolto em `String(...)` explícito antes de entrar no template literal, mesmo padrão que a própria `key` da linha já usava. |
 | `@typescript-eslint/no-unsafe-argument` | tipo | 08-09-2026 | `configuracoes-provider.tsx` - `.catch()` ganhou `instanceof Error` antes de guardar no estado, mesmo padrão de narrowing já usado no resto do projeto. |
-| `@typescript-eslint/no-unnecessary-condition` | tipo | 12-09-2026 | As 57 ocorrências (cresceram de 41 pra 57 entre 07 e 12-09, com o trabalho novo em Campo de Testes) foram conferidas uma a uma contra o DTO Nest/tipo real correspondente - ver seção própria abaixo. |
+| `@typescript-eslint/no-unnecessary-condition` | tipo | 12-09-2026 | As 57 ocorrências (cresceram de 41 pra 57 entre 07 e 12-09, com o trabalho novo) foram conferidas uma a uma contra o DTO Nest/tipo real correspondente - ver seção própria abaixo. |
 
 Detalhamento completo do achado original (arquivo, linha, e o raciocínio de cada classificação) em `HISTORICO_ACHADOS_PARA_DISCUTIR.md`, item 14.
 

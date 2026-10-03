@@ -1,4 +1,6 @@
 import { useId, useState } from 'react';
+import { BadgeStatusCampanha } from '../../components/crud/badge-status-campanha';
+import { ROTULO_MODELO_CAMPANHA, STATUS_ACEITA_ATUALIZACAO, STATUS_PUBLICADA } from '../../services/12-campanha/constants/status-campanha.constants';
 import type { ReactNode } from 'react';
 import { BarraProgresso } from '../../components/crud/barra-progresso';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
@@ -9,11 +11,7 @@ import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
 import { Campo } from '../../components/input/campo';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
-import {
-  ROTULO_MODELO_CAMPANHA,
-  ROTULO_STATUS_CAMPANHA,
-  classeBadgeStatusCampanha,
-} from '../../services/12-campanha/constants/status-campanha.constants';
+
 import { useRegrasCampanha } from '../../services/12-campanha/hook/use-regras-campanha';
 import { ContadorCaracteres } from '../../components/input/contador-caracteres';
 import { dataLocal, duracaoEmDias, fimDoDia, inicioDoDia } from '../../services/12-campanha/util/prazo-campanha.util';
@@ -22,6 +20,8 @@ import { formatarData, formatarDataHora, formatarMoeda } from '../../services/co
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import { useBuscar } from '../../services/constant/hook/use-buscar';
 import { PainelOrcamentoCronograma } from './painel-orcamento-cronograma';
+import { SecaoAtualizacoesCampanha } from './secao-atualizacoes-campanha';
+import { SecaoComentariosRecebidos } from './secao-comentarios-recebidos';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type {
   CampanhaRequestUpdate,
@@ -31,7 +31,7 @@ import type {
 import type { OrcamentoCampanhaResponse } from '../../services/13-orcamento-campanha/type/orcamento-campanha.type';
 import type { MarcoCronogramaResponse } from '../../services/14-marco-cronograma/type/marco-cronograma.type';
 
-// O que o Campo de Testes (T2) encaixa abaixo do orçamento/cronograma: checklist e Aprovar/Rejeitar, com as
+// O que a Bancada da Campanha encaixa abaixo do orçamento/cronograma: checklist e Aprovar/Rejeitar, com as
 // contagens já carregadas pelo painel.
 export interface ContextoAdminCampanha {
   campanha: CampanhaResponse;
@@ -43,9 +43,12 @@ interface ModalAlterarCampanhaProps {
   auth: Pick<UseAuthReturn, 'authFetch'>;
   idCampanha: number;
   subtitulo?: string;
-  // Motivo para a campanha inteira ficar só leitura (as 10 de demonstração, no Campo de Testes).
+  // Motivo para a campanha inteira ficar só leitura (as de demonstração do seed, na Bancada da Campanha).
   motivoBloqueio?: string;
   secaoAdmin?: (contexto: ContextoAdminCampanha) => ReactNode;
+  // Aberto pelo dono (Minhas Campanhas): com a campanha já publicada, mostra as atualizações (publicar e ocultar) e
+  // os comentários recebidos (endossar e excluir).
+  ehDono?: boolean;
   aoMudar: () => void;
   aoFechar: () => void;
 }
@@ -86,7 +89,7 @@ const paraForm = (campanha: CampanhaResponse): FormCampanha => ({
   videoApresentacaoUrl: campanha.videoApresentacaoUrl ?? '',
 });
 
-// Alterar campanha (dono, ou o admin pelo Campo de Testes). Os campos que o banco trava agora
+// Alterar campanha (dono, ou o admin pela Bancada da Campanha). Os campos que o banco trava agora
 // (fn_campanha_campos_bloqueados, via GET /campanha/:id) aparecem como texto de leitura, não como campo
 // desabilitado, com uma linha discreta dizendo quais são: a tela trava exatamente o que o banco recusaria, sem
 // lista própria. Orçamento e cronograma aparecem juntos, um embaixo do outro, e a coluna da direita é o resumo.
@@ -104,6 +107,7 @@ export function ModalAlterarCampanha({
   subtitulo,
   motivoBloqueio,
   secaoAdmin,
+  ehDono = false,
   aoMudar,
   aoFechar,
 }: ModalAlterarCampanhaProps) {
@@ -218,9 +222,7 @@ export function ModalAlterarCampanha({
       badges={
         campanha
           ? [
-              <span key="status" className={`badge ${classeBadgeStatusCampanha(campanha.status)}`}>
-                {ROTULO_STATUS_CAMPANHA[campanha.status]}
-              </span>,
+              <BadgeStatusCampanha key="status" campanha={campanha} />,
               <span key="modelo" className="badge badge-neutro">
                 {ROTULO_MODELO_CAMPANHA[campanha.modelo]}
               </span>,
@@ -378,6 +380,13 @@ export function ModalAlterarCampanha({
                 }}
               />
 
+              {ehDono && STATUS_PUBLICADA.has(campanha.status) && (
+                <>
+                  <SecaoAtualizacoesCampanha auth={auth} idCampanha={idCampanha} podePublicar={STATUS_ACEITA_ATUALIZACAO.has(campanha.status)} />
+                  <SecaoComentariosRecebidos auth={auth} idCampanha={idCampanha} publicada />
+                </>
+              )}
+
               {secaoAdmin?.({ campanha, orcamento, cronograma })}
             </div>
 
@@ -388,9 +397,7 @@ export function ModalAlterarCampanha({
               <CampoFicha
                 rotulo="Status"
                 valor={
-                  <span className={`badge ${classeBadgeStatusCampanha(campanha.status)}`}>
-                    {ROTULO_STATUS_CAMPANHA[campanha.status]}
-                  </span>
+                  <BadgeStatusCampanha campanha={campanha} />
                 }
               />
               {campoTexto('metaFinanceira', 'Meta (R$)', '', 'number')}

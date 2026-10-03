@@ -20,8 +20,8 @@ interface ModalCriarUsuarioProps {
   aoCriado: (usuarioCriado: UsuarioResponse) => void;
 }
 
-// Criar: nome/e-mail/senha/foto. Não tem equivalente em T1 (Campo de Testes nunca precisou criar conta do zero,
-// só "Criar Perfil Pesquisador" para quem já é usuário): só usado pela página real de Usuário.
+// Criar: nome/e-mail/senha/foto. Só a lista de Usuários usa (a Bancada do Pesquisador só cria perfil de
+// pesquisador para quem já é usuário).
 export function ModalCriarUsuario({ auth, aoFechar, aoCriado }: ModalCriarUsuarioProps) {
   const { mostrar } = useToast();
   const { erro, reportarErro, limparErro, errosCampo, limparErroCampo } = useErroToast({ mostraTexto: true });

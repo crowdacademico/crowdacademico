@@ -17,7 +17,7 @@ interface ModalFichaProps {
   rodape?: ReactNode;
   // Texto de erro (o `erro` de useErroToast): aparece no topo do corpo, antes de `children`.
   erro?: string;
-  // `carregando`: sem esta prop, cada modal (ModalConsultarUsuario/ModalAlterarUsuario/Alterar Campanha de T2)
+  // `carregando`: sem esta prop, cada modal (ModalConsultarUsuario/ModalAlterarUsuario/Alterar Campanha)
   // reescreveria `titulo={dado?.campo ?? `#${id}`}` + `avatar={dado && (...)}`, e por uma fração de segundo
   // (entre abrir o modal e a requisição voltar) piscaria um "#id" cru e o "?" do AvatarUsuario sem nome (que
   // cairia numa cor de fundo vermelha por coincidência de hash, parecendo erro). Com `carregando={true}`, este
@@ -58,7 +58,7 @@ const LIMITE_PARA_APARECER_MS = 1500;
 
 // Mesma moldura de ModalDetalhe (backdrop + cartão + botão fechar), só que largo (--largura-ficha) e recebendo children livre em vez de uma lista fixa de `secoes`: pensado para
 // Consultar/Alterar que já usam <SecaoFicha>/<CampoFicha> (os MESMOS blocos da página real), só que dentro de
-// um modal (T1 do Campo de Testes replica a aparência exata de Consultar/Alterar Usuário, sem reinventar o
+// um modal (a Bancada do Pesquisador replica a aparência exata de Consultar/Alterar Usuário, sem reinventar o
 // layout).
 //
 // NOTA: os 3 caminhos de fechar (botão de fechar, clique no fundo escurecido, desligável via

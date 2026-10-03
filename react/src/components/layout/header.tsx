@@ -10,7 +10,7 @@ import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 // estrutura), único em toda tela (App.tsx). Adaptações, porque este React só tem o painel admin (home) e a tela
 // de login, nenhuma outra tela pública:
 // 1. A marca navega de verdade para "/" (home).
-// 2. "Submeter Pesquisa" abre o Criar Campanha no T3 - Minhas Campanhas do Campo de Testes (`?criar=1`), só em desenvolvimento. Quem não é pesquisador cai na
+// 2. "Submeter Pesquisa" abre o Criar Campanha em Minhas Campanhas (`?criar=1`), só em desenvolvimento. Quem não é pesquisador cai na
 // mesma página, que explica por que não pode criar; quem não está logado passa pelo login antes.
 // 3. "Meu Painel"/"Entrar" (canto direito): logado mostra nome real + Sair; deslogado é um link de verdade para
 // "/login" (views/3-auth/login-page.tsx).
@@ -27,7 +27,7 @@ export function Header({ auth }: HeaderProps) {
       <div className="largura-site h-16 flex items-center justify-between">
         {/* Espelho da marca do <footer>: mesmo tamanho (w-10 h-10 / text-2xl) e mesma caixa (.largura-site),
             então as duas ficam na mesma linha vertical em qualquer tela. */}
-        <Link to="/" className="flex items-center gap-3">
+        <Link to="/" className="flex items-center gap-3" aria-label="CrowdAcadêmico, página inicial">
           <div className="w-10 h-10 fundo-marca rounded-lg flex items-center justify-center texto-sobre-cor shadow-inner">
             <i className="fa-solid fa-flask" aria-hidden="true"></i>
           </div>
@@ -42,7 +42,7 @@ export function Header({ auth }: HeaderProps) {
             dentro dele, mesmo por último, alargaria o grupo inteiro e o `justify-between` do cabeçalho
             empurraria tudo para a esquerda junto, deixando o login sobrando no meio da tela, longe do canto. */}
         <div className="flex items-center gap-3">
-          {/* Por enquanto abre o T3 (Minhas Campanhas) do Campo de Testes, que só existe em desenvolvimento. */}
+          {/* Por enquanto abre Minhas Campanhas da área de testes, que só existe em desenvolvimento. */}
           {import.meta.env.DEV && (
             <Link
               to="/admin/campo-testes/minhas-campanhas?criar=1"
@@ -67,7 +67,7 @@ export function Header({ auth }: HeaderProps) {
           `justify-between` de cima só enxerga o grupo normal (Submeter Pesquisa...MenuUsuario), que continua
           exatamente no canto dele.
 
-          import.meta.env.DEV: mesmo tratamento do Campo de Testes: some sozinho em qualquer `npm run build`,
+          import.meta.env.DEV: mesmo tratamento da área de testes: some sozinho em qualquer `npm run build`,
           continua disponível em `npm run dev`. Sem isso, o botão iria para o build de produção também, e
           qualquer link público (deploy de teste, preview, demonstração para banca) exporia login instantâneo
           como admin com uma senha de seed conhecida, sem digitar nada. Ver `DOCUMENTACAO_FRONTEND.md`, seção

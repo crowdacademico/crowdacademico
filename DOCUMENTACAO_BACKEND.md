@@ -204,7 +204,7 @@ export type ModeloCampanha = (typeof MODELOS_CAMPANHA)[number];
 
 📌 **Conferido contra o banco de verdade (28-09-2026).**
 - **Em palavras simples:** o `db.types.ts` é a "planta" das tabelas que o Nest usa para não errar nome de coluna. Ela é desenhada à mão, então pode ficar diferente do banco real sem ninguém perceber. Agora uma ferramenta tira uma "foto" do banco de verdade, e um teste compara a planta com a foto: se alguém mudar uma coluna no banco e esquecer a planta, o teste fica vermelho.
-- **Decisão:** o `db.types.ts` manual continua sendo o que a aplicação usa. Ao lado dele fica `db.types.generated.ts`, gerado pelo kysely-codegen a partir dos arquivos 01 a 08, e uma suíte de teste do banco (a de conferência de tipos, na pasta local de testes do banco) compara os dois a cada rodada. Ela falha se o manual tiver coluna que não existe, tipo diferente ou lista de valores diferente da do banco. Para gerar de novo: o script de geração de tipos da pasta de testes do banco, ou `npm run db:codegen` no `nest/` com o `.env` apontando para um banco.
+- **Decisão:** o `db.types.ts` manual continua sendo o que a aplicação usa. Ao lado dele fica `db.types.generated.ts`, gerado pelo kysely-codegen a partir dos arquivos `.sql` do banco, e uma suíte de teste do banco (a de conferência de tipos, na pasta local de testes do banco) compara os dois a cada rodada. Ela falha se o manual tiver coluna que não existe, tipo diferente ou lista de valores diferente da do banco. Para gerar de novo: o script de geração de tipos da pasta de testes do banco, ou `npm run db:codegen` no `nest/` com o `.env` apontando para um banco.
 - **Motivo:** trocar direto pelo gerado quebrava 61 pontos de compilação, quase todos pela mesma causa: colunas com `DEFAULT` e sem `NOT NULL` (`criado_em`, `ativo`...), que o banco aceita nulas e o manual declara "nunca nulo". A conferência dá a proteção que importa (coluna errada vira teste vermelho) sem mexer em 61 lugares nem no banco.
 - **Caso-limite aceito:** 34 colunas continuam com nulidade diferente, listadas como aviso pela suíte. Colunas de texto com `CHECK (col IN (...))` aparecem como texto livre no gerado (o gerador não lê `CHECK`); a suíte confere a lista do manual contra o `CHECK` do 01. O arquivo gerado fica fora do lint.
 
@@ -615,7 +615,7 @@ export class CampanhaServiceCreate {
 
 > Achado numa revisão de sistema completa: `encerrar_campanhas_vencidas()` (Postgres, `[05-K-2]`) sempre existiu e sempre esteve correta, mas nada nunca a chamava - nenhum `@nestjs/schedule` instalado, nenhum `@Cron`, nenhum `pg_cron`. Na prática, uma campanha vencida continuava `'ativo'` para sempre.
 
-- **`@Cron('*/15 * * * *')`** (`@nestjs/schedule`, registrado uma vez em `AppModule` via `ScheduleModule.forRoot()`) chama `SELECT public.encerrar_campanhas_vencidas()` a cada 15 minutos.
+- **`@Cron('*/15 * * * *')`** (`@nestjs/schedule`, registrado uma vez em `AppModule` via `ScheduleModule.forRoot()`) chama `SELECT public.encerrar_campanhas_vencidas()` a cada 15 minutos. Antes dela, no mesmo ciclo, chama `expirar_contribuicoes_pendentes()` (desde 03-10-2026): o Pix pendente que passou de `pix_validade_horas` vence, e a campanha vencida só é encerrada quando não sobra Pix pendente válido (ver `DOCUMENTACAO_BD.md`, [05-K-2-F]).
 - **Não precisa de `app.id_usuario_atual` setado** porque a função é `SECURITY DEFINER` - o mesmo motivo por trás dela existir: bypassa a RLS por desenho (dono da função, não a sessão de quem chama), então não importa que o job não tenha "usuário logado" nenhum. Mesma categoria de `registrar_falha_login`/`registrar_login_sucesso` (`[03-O]`), que também rodam sem sessão.
 - **`@Cron` sozinho não faz nada** sem `ScheduleModule.forRoot()` registrado uma vez em algum módulo raiz (`AppModule`, neste projeto) - é o agendador de verdade rodando por trás; o decorator só registra o handler nele.
 
@@ -653,7 +653,7 @@ Pra comparação de escala: 96 chamadas por dia é um volume desprezível perto 
 | `CampanhaServiceExpireDrafts` | de hora em hora | `expirar_campanhas_rascunho()` | apaga rascunho mais velho que `campanha_rascunho_ttl_horas` (336h), contado da criação |
 | `CampanhaServiceExpireRejected` | de hora em hora | `expirar_campanhas_rejeitadas()` | apaga campanha rejeitada cujo prazo de reenvio (`campanha_rejeitada_prazo_dias`, 30) venceu |
 | `ArquivoServiceCleanOrphans` | 1x por dia, às 4h | `desativar_arquivos_orfaos()` | desativa arquivo que ninguém adotou (nem foto nem anexo) em `arquivo_horas_para_vincular` (24h; 0 = desligado), apaga o objeto do armazenamento e deixa uma linha de rastro |
-| `LogAuditoriaServiceClean` | 1x por dia, às 3h | `limpar_log_auditoria()` | apaga `log_auditoria` mais velho que `log_auditoria_retencao_dias` (365; 0 = guardar para sempre) e deixa uma linha de rastro com a quantidade e a data de corte |
+| `LogAuditoriaServiceClean` | 1x por dia, às 3h | `limpar_log_auditoria()` e `limpar_ip_aceite_contribuicao()` | apaga `log_auditoria` mais velho que `log_auditoria_retencao_dias` (365; 0 = guardar para sempre) e deixa uma linha de rastro com a quantidade e a data de corte; depois apaga o IP do aceite de contribuição mais velho que `ip_aceite_contribuicao_retencao_dias` (1825, 5 anos, o prazo do Termo) |
 
 Os 6 têm `try/catch` com `logger.error` (incluindo o nome do job). Motivo: o `@Cron` chama o método sem `await` de ninguém, então uma exceção da função SQL vira `unhandledRejection`, e o Node moderno derruba o processo inteiro por causa de um job de limpeza. Só o registro da falha, sem repetir a tentativa: o job roda de novo no próximo ciclo.
 
@@ -938,6 +938,20 @@ Este é o único dado do sistema que é **cifrado** (não apenas hasheado). O ra
 
 Módulos pequenos, mas reais e em uso pelo painel administrativo.
 
+### `19-denuncia` (17 arquivos, 4 endpoints)
+
+**Em palavras simples:** qualquer conta logada denuncia uma campanha ativa ou o perfil de um pesquisador; a moderação (admin e moderador, permissão `denuncia_responder`) lista, julga e, se a denúncia de campanha procede, encerra a campanha. As regras estão no banco; o Nest só monta as consultas.
+
+- **`POST /denuncia`** - cria em nome de quem está logado, sempre `pendente`. Exatamente um alvo (`idCampanhaAlvo` ou `idPesquisadorAlvo`), `idMotivo` e `relato` opcional. O banco recusa: campanha que não está ativa (91035), perfil que não é de pesquisador (90026), a própria campanha ou o próprio perfil (92029), motivo do tipo errado (90005/90006), denúncia repetida (23505) e o limite por janela (93001).
+- **`GET /denuncia`** - filtros `tipo` (campanha ou perfil), `status`, `idCampanha`, `idPesquisador`. Traz junto o motivo, quem denunciou (nome e e-mail), o título e o status da campanha ou o nome do pesquisador (RF-113, RF-116). Quem tem `denuncia_responder` vê todas; os outros, só as próprias (`pol_denuncia_select`).
+- **`PATCH /denuncia/:id`** - julga (RF-111): `status` e, ao decidir (procedente ou improcedente), a `justificativa` obrigatória. Quem denunciou não julga a própria (92006, RF-112). O banco só deixa mudar essas duas colunas.
+- **`POST /denuncia/:id/encerrar-campanha`** - chama `encerrar_campanha_por_denuncia()` (03): a denúncia vira procedente com a justificativa e a campanha vira `encerrado_moderacao`, juntas (RF-114). A campanha some da página pública pela própria RLS. Quem decidiu, quando e por quê ficam no log de auditoria (RF-115).
+
+📌 **Decisão: encerrar por moderação sai da denúncia (03-10-2026).**
+- **Decisão:** o encerramento por moderação não é uma rota de campanha solta: acontece a partir de uma denúncia de campanha, numa função do banco que resolve a denúncia e encerra a campanha na mesma transação.
+- **Motivo:** o RF-114 fala em encerrar "após averiguação" de uma denúncia; amarrar as duas coisas garante que todo encerramento por moderação tem uma denúncia procedente e uma justificativa por trás. A função é `SECURITY DEFINER` porque a regra de acesso de `campanha` não abre a campanha ao moderador.
+- **Caso-limite aceito:** as outras denúncias pendentes da mesma campanha continuam pendentes; a moderação decide cada uma. A devolução do dinheiro (RF-114) entra com o módulo de contribuição.
+
 ### `27-log-auditoria` (9 arquivos, 2 endpoints)
 
 Somente leitura - a escrita em `log_auditoria` é feita por trigger genérica no banco (letra `L` do `DOCUMENTACAO_BD.md`), nunca pelo Nest.
@@ -1033,7 +1047,7 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 
 ## 13. Inventário de rotas HTTP
 
-122 handlers. `AUTH` = a rota exige login (o padrão, `AuthGuardRequireAuth` global); `pub` = a rota tem `@Publico()` (o que **não** significa "sem proteção": significa que quem protege é a RLS, e que anônimo é um caso legítimo).
+127 handlers. `AUTH` = a rota exige login (o padrão, `AuthGuardRequireAuth` global); `pub` = a rota tem `@Publico()` (o que **não** significa "sem proteção": significa que quem protege é a RLS, e que anônimo é um caso legítimo).
 
 | | Método | Rota |
 |---|---|---|
@@ -1096,7 +1110,7 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | AUTH | DELETE | `/termos-uso/:id` |
 | **Campanha e satélites** | | |
 | pub | GET | `/campanha` · `/campanha/:id` |
-| AUTH | POST | `/campanha` · `/campanha/:idUsuario` *(criar em nome de outro, Campo de Testes)* |
+| AUTH | POST | `/campanha` · `/campanha/:idUsuario` *(criar em nome de outro: a permissão não existe num banco de produção)* |
 | AUTH | PATCH · DELETE | `/campanha/:id` |
 | AUTH | POST | `/campanha/:id/enviar` · `/campanha/:id/deslizar-datas` *(21-09-2026, ciclo de vida da campanha)* |
 | AUTH | POST | `/campanha/:id/aprovar` · `/campanha/:id/rejeitar` · `/campanha/:id/forcar-exclusao` |
@@ -1108,12 +1122,17 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | AUTH | POST | `/atualizacao-campanha` · `/link-atualizacao` · `/arquivo-atualizacao` |
 | AUTH | PATCH | `/atualizacao-campanha/:id` · `/link-atualizacao/:id` |
 | AUTH | DELETE | `/link-atualizacao/:id` |
-| pub | GET | `/comentario` |
+| pub | GET | `/comentario` *(filtro `endossado`: só os endossados, na ordem do endosso)* |
 | AUTH | POST | `/comentario` |
+| AUTH | POST | `/comentario/:idPesquisador` |
 | AUTH | PATCH | `/comentario/:id` |
 | AUTH | DELETE | `/comentario/:id` |
 | AUTH | GET · POST | `/seguir-campanha` |
 | AUTH | DELETE | `/seguir-campanha/:idCampanha` |
+| **Moderação** | | |
+| AUTH | GET · POST | `/denuncia` |
+| AUTH | PATCH | `/denuncia/:id` |
+| AUTH | POST | `/denuncia/:id/encerrar-campanha` |
 | **Arquivo** | | |
 | AUTH | POST | `/arquivo/upload/iniciar` · `/arquivo/upload/confirmar` |
 | pub | GET | `/arquivo/:id` · `/arquivo/avatar/:idUsuario` |
@@ -1130,13 +1149,12 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 
 ## 14. O que ainda não existe (pastas vazias)
 
-Conferido em 21-09-2026: as 8 pastas abaixo contêm **exatamente um arquivo `.gitkeep`** e **zero `.ts`**. (`21-historico-rejeicao` saiu da lista: ganhou código em 14-09-2026.)
+Conferido em 21-09-2026 (`19-denuncia` saiu em 03-10-2026): as 7 pastas abaixo contêm **exatamente um arquivo `.gitkeep`** e **zero `.ts`**. (`21-historico-rejeicao` saiu da lista: ganhou código em 14-09-2026.)
 
 | Pasta | Grupo em `PROXIMOS_MODULOS.md` |
 |---|---|
 | `4-mail` | Comunicação |
 | `18-recompensa` | Engajamento |
-| `19-denuncia` | Moderação |
 | `20-solicitacao-encerramento` | Moderação |
 | `22-contribuicao` | Pagamento |
 | `23-repasse` | Pagamento |

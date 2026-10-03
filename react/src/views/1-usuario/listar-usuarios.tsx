@@ -32,7 +32,7 @@ const PAPEL_PADRAO = 'usuario';
 // prontos por fora, esta view só cuida do próprio conteúdo).
 //
 // Criar/Alterar/Consultar/Excluir são MODAIS (modal-criar-usuario.tsx, modal-alterar-usuario.tsx,
-// modal-consultar-usuario.tsx, modal-excluir-usuario.tsx), não páginas próprias: os MESMOS componentes que a Bancada do Pesquisador (Campo de Testes) usa, sem duplicar nada. A prop
+// modal-consultar-usuario.tsx, modal-excluir-usuario.tsx), não páginas próprias: os MESMOS componentes que a Bancada do Pesquisador usa, sem duplicar nada. A prop
 // `acoes` do `GenericTable` só existe nesse formato (handler por chave, ver comentário da prop em
 // generic-table.tsx).
 export function ListarUsuarios({ auth }: PropsPagina) {

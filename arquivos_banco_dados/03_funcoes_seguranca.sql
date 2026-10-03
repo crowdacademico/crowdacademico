@@ -736,8 +736,84 @@ BEGIN
 END;
 $$;
 
--- [03-T] forcar_exclusao_campanha: o Admin precisa poder excluir forçadamente uma campanha (senão o Campo
--- de Testes fica sujo). IGNORA o status de propósito: pol_campanha_delete (04) só libera 'rascunho',
+-- encerrar_campanha_por_denuncia: julga procedente uma denúncia de campanha e encerra a campanha por moderação
+-- (RF-114), as duas coisas juntas. SECURITY DEFINER porque pol_campanha_update (04) não abre a campanha ao
+-- moderador; a função confere as duas permissões (julgar denúncia e encerrar por moderação), e as triggers continuam
+-- valendo por baixo: fn_valida_transicao_campanha só deixa ativo -> encerrado_moderacao, quem denunciou não julga a
+-- própria denúncia (92006), e o log de auditoria registra a decisão (com a justificativa) e o encerramento.
+CREATE OR REPLACE FUNCTION public.encerrar_campanha_por_denuncia(p_id_denuncia INT, p_justificativa TEXT)
+RETURNS INT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_id_campanha INT;
+    v_linhas      INT;
+BEGIN
+    IF NOT (public.tem_permissao('denuncia_responder') AND public.tem_permissao('campanha_encerrar_moderacao')) THEN
+        RAISE EXCEPTION 'Sem permissão para encerrar campanha por moderação.' USING ERRCODE = '92030';
+    END IF;
+    IF p_justificativa IS NULL OR btrim(p_justificativa) = '' THEN
+        RAISE EXCEPTION 'Escreva por que a campanha está sendo encerrada.' USING ERRCODE = '90027';
+    END IF;
+
+    SELECT id_campanha_alvo INTO v_id_campanha FROM denuncia WHERE id_denuncia = p_id_denuncia;
+    IF v_id_campanha IS NULL THEN
+        RAISE EXCEPTION 'Esta denúncia não é contra uma campanha.' USING ERRCODE = '91036';
+    END IF;
+
+    UPDATE denuncia
+    SET status = 'resolvida', justificativa_moderacao = btrim(p_justificativa)
+    WHERE id_denuncia = p_id_denuncia;
+
+    UPDATE campanha SET status = 'encerrado_moderacao'
+    WHERE id_campanha = v_id_campanha AND status = 'ativo';
+    GET DIAGNOSTICS v_linhas = ROW_COUNT;
+    IF v_linhas = 0 THEN
+        RAISE EXCEPTION 'Só uma campanha ativa pode ser encerrada por moderação.' USING ERRCODE = '91037';
+    END IF;
+
+    RETURN v_id_campanha;
+END;
+$$;
+
+-- comentar_campanha_para_outro: o Admin comenta uma campanha EM NOME de um pesquisador ativo (ferramenta para
+-- montar cenários de comentário e endosso sem trocar de conta). Mesma classe de criar_campanha_para_outro: gateada
+-- por comentario_criar_para_outro (ver 07), que sai do admin no modo produção. SECURITY DEFINER pula a RLS
+-- (pol_comentario_insert), então a função confere sozinha que o autor é pesquisador ativo; as outras regras
+-- (campanha publicada, não comentar na própria, limite por hora, um comentário por campanha, tamanho) são triggers
+-- e continuam valendo.
+CREATE OR REPLACE FUNCTION public.comentar_campanha_para_outro(p_id_pesquisador INT, p_id_campanha INT, p_conteudo TEXT)
+RETURNS INT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_id_comentario INT;
+BEGIN
+    IF NOT public.tem_permissao('comentario_criar_para_outro') THEN
+        RAISE EXCEPTION 'Sem permissão para comentar em nome de outro pesquisador.' USING ERRCODE = '92028';
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM perfil_pesquisador
+        WHERE id_usuario = p_id_pesquisador AND status_pesquisador = 'ativo'
+    ) THEN
+        RAISE EXCEPTION 'O usuário escolhido não é um pesquisador ativo.' USING ERRCODE = '90021';
+    END IF;
+
+    INSERT INTO comentario (id_campanha, id_pesquisador, conteudo)
+    VALUES (p_id_campanha, p_id_pesquisador, p_conteudo)
+    RETURNING id_comentario INTO v_id_comentario;
+
+    RETURN v_id_comentario;
+END;
+$$;
+
+-- [03-T] forcar_exclusao_campanha: o Admin precisa poder excluir forçadamente uma campanha (senão os
+-- cenários de teste ficam sujos). IGNORA o status de propósito: pol_campanha_delete (04) só libera 'rascunho',
 -- proteção correta para campanha REAL, com contribuição/repasse em andamento, que continua intacta para o
 -- DELETE normal. Gateada por campanha_excluir_forcado (ver 07), NUNCA reaproveitando campanha_editar: um
 -- papel futuro com campanha_editar (ex.: moderador) não ganha este poder destrutivo de brinde. É

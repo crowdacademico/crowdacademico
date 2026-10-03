@@ -10,7 +10,7 @@ import type { UseAuthReturn } from '../../../services/3-auth/hook/use-auth';
 // no rótulo: entra como Admin direto (o atalho mais usado). Seta: abre a lista com as contas "Sistema", uma por
 // papel e sem nome de gente, na ordem de poder do seed (Admin Sistema 2 fica de fora: é o admin de reserva).
 //
-// A lista vive só aqui, autocontida: este componente é uma ferramenta independente do Campo de Testes (troca de
+// A lista vive só aqui, autocontida: este componente é uma ferramenta independente da área de testes (troca de
 // conta ÚNICA da sessão real do painel).
 interface ContaDev {
   rotulo: string;

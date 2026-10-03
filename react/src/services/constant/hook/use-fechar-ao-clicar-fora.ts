@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import type { RefObject } from 'react';
 
 // Dropdown/faceta/combobox que fecha ao clicar fora dele (usado por sino-atividade.tsx, menu-usuario.tsx,
-// generic-table.tsx, bancada-pesquisador.tsx, bancada-campanha.tsx, vida-campanha-ativa.tsx). Mesmo padrão em
+// generic-table.tsx, bancada-pesquisador.tsx, bancada-campanha.tsx). Mesmo padrão em
 // todos: listener de `mousedown` no documento (não `click`, para fechar ANTES do próximo clique completar),
 // comparando o alvo do clique com um container via `ref.contains()`, sem depender de foco (funciona clicando em
 // qualquer coisa não-focável também, ex.: texto dentro de um <label>).

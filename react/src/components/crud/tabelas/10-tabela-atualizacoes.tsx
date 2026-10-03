@@ -1,58 +1,58 @@
-// Atualizações publicadas numa campanha (título, fase, se está visível), com o botão de ocultar/reverter. Usada no
-// Campo de Testes (T4, views/campo-testes/vida-campanha-ativa.tsx), que busca e faz a alteração.
-
 import { AcaoLinha } from '../acao-linha';
+import { BadgeBooleano } from '../badge-booleano';
+import { formatarDataHora } from '../../../services/constant/util/formatacao.util';
+import {
+  ROTULO_FASE_ATUALIZACAO,
+  ROTULO_TIPO_ATUALIZACAO,
+} from '../../../services/15-atualizacao-campanha/constants/atualizacao-campanha.constants';
+import type { AtualizacaoCampanhaResponse } from '../../../services/15-atualizacao-campanha/type/atualizacao-campanha.type';
+import { CaixaTabela } from './caixa-tabela';
 
-// `atualizacao-campanha` ainda não tem type/api formal em services/: formato do DTO do Nest.
-export interface Atualizacao {
-  idAtualizacao: number;
-  idCampanha: number;
-  titulo: string;
-  conteudo: string;
-  // `fase`/`tipo` são `null` de verdade no DTO do Nest.
-  fase: string | null;
-  tipo: string | null;
-  ativo: boolean;
-}
-
+// Atualizações publicadas numa campanha (título, fase, formato, data, se está visível), com o botão de ocultar ou
+// mostrar de novo. Quem busca e faz a alteração é a tela que usa a tabela.
 interface TabelaAtualizacoesProps {
-  atualizacoes: Atualizacao[];
-  aoAlternarAtivo: (atualizacao: Atualizacao) => void;
+  atualizacoes: AtualizacaoCampanhaResponse[];
+  // Sem ele (quem só lê), a coluna Ações não aparece.
+  aoAlternarAtivo?: (atualizacao: AtualizacaoCampanhaResponse) => void;
 }
 
 export function TabelaAtualizacoes({ atualizacoes, aoAlternarAtivo }: TabelaAtualizacoesProps) {
   return (
-    <div className="crud-tabela__wrapper">
-      <table className="crud-tabela mb-4">
+    <CaixaTabela rotulo="Atualizações da campanha">
+      <table className="crud-tabela">
         <thead>
           <tr>
             <th>Título</th>
             <th>Fase</th>
-            <th className="crud-tabela__celula--centralizada">Ativo</th>
-            <th>Ações</th>
+            <th>Formato</th>
+            <th>Publicada em</th>
+            <th className="crud-tabela__celula--centralizada">Visível</th>
+            {aoAlternarAtivo && <th>Ações</th>}
           </tr>
         </thead>
         <tbody>
           {atualizacoes.map((item) => (
             <tr key={item.idAtualizacao}>
               <td>{item.titulo}</td>
-              <td>{item.fase ?? '-'}</td>
+              <td>{ROTULO_FASE_ATUALIZACAO[item.fase]}</td>
+              <td>{ROTULO_TIPO_ATUALIZACAO[item.tipo]}</td>
+              <td>{formatarDataHora(item.publicadoEm)}</td>
               <td className="crud-tabela__celula--centralizada">
-                <span className={`badge ${item.ativo ? 'badge-sucesso' : 'badge-neutro'}`}>{item.ativo ? 'Sim' : 'Não'}</span>
+                <BadgeBooleano valor={item.ativo} />
               </td>
-              <td>
-                {/* AcaoLinha (ícone + texto), como nas outras tabelas: quando a tabela aperta, o texto some e o ícone
-                    fica, em vez de o texto crescer junto com os ícones. */}
-                <AcaoLinha
-                  rotulo={item.ativo ? 'Ocultar' : 'Reverter'}
-                  icone={item.ativo ? 'fa-eye-slash' : 'fa-rotate-left'}
-                  onClick={() => aoAlternarAtivo(item)}
-                />
-              </td>
+              {aoAlternarAtivo && (
+                <td>
+                  <AcaoLinha
+                    rotulo={item.ativo ? 'Ocultar' : 'Mostrar'}
+                    icone={item.ativo ? 'fa-eye-slash' : 'fa-eye'}
+                    onClick={() => aoAlternarAtivo(item)}
+                  />
+                </td>
+              )}
             </tr>
           ))}
         </tbody>
       </table>
-    </div>
+    </CaixaTabela>
   );
 }

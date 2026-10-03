@@ -1,4 +1,3 @@
-// Limite de sugestões dos comboboxes de busca do Campo de Testes (combobox de pesquisador em
-// bancada-campanha.tsx, combobox de campanha em vida-campanha-ativa.tsx): mesmo número, mesmo propósito (evitar
-// uma lista enorme abaixo do campo de busca), compartilhado para não duplicar.
+// Limite de sugestões das caixas de busca da área de testes (pesquisador na Bancada da Campanha, campanha em
+// Campanhas Seguidas): evita uma lista enorme abaixo do campo de busca.
 export const LIMITE_SUGESTOES_COMBOBOX = 5;

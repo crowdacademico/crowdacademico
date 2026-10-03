@@ -18,10 +18,8 @@ import { usuarioPapelApi } from '../../services/2-papel-permissao/api/papel-perm
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { perfilPesquisadorApi } from '../../services/6-perfil-pesquisador/api/perfil-pesquisador.api';
 import {
-  ROTULO_STATUS_PESQUISADOR,
   ROTULO_TIPO_VINCULO,
   ROTULO_TITULO_ACADEMICO,
-  classeBadgeStatusPesquisador,
 } from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
 import { formatarCpfExibicao, formatarDataHora, formatarMesAno } from '../../services/constant/util/formatacao.util';
 import { useEnvio } from '../../services/constant/hook/use-envio';
@@ -35,6 +33,8 @@ import type { SessaoResponse } from '../../services/3-auth/type/auth.type';
 import type { UsuarioPapelResponse } from '../../services/2-papel-permissao/type/papel-permissao.type';
 import type { PerfilPesquisadorResponse } from '../../services/6-perfil-pesquisador/type/perfil-pesquisador.type';
 import type { SuspensaoResponseDto } from '../../services/constant/type/suspensao.type';
+import { EstadoVazio } from '../../components/crud/estado-vazio';
+import { BadgeStatusPesquisador } from '../../components/crud/badge-status-pesquisador';
 
 // Minha Conta: não é um formulário só, é uma área com seções independentes, cada uma salva por conta própria.
 //
@@ -620,7 +620,7 @@ function AbaSeguranca({ auth }: AbaSegurancaProps) {
           (sessoes === null ? (
             <Carregando />
           ) : sessoes.length === 0 ? (
-            <p className="paragrafo texto-fraco">Nenhuma sessão ativa encontrada.</p>
+            <EstadoVazio compacto icone="fa-laptop" titulo="Nenhuma sessão ativa encontrada." />
           ) : (
             <ul className="space-y-2 max-h-64 overflow-y-auto pr-1">
               {sessoes.map((sessao) => (
@@ -702,7 +702,7 @@ function AbaPapeis({ auth }: AbaPapeisProps) {
       {papeis === null ? (
         <Carregando />
       ) : papeis.length === 0 ? (
-        <p className="paragrafo texto-fraco">Nenhum papel atribuído.</p>
+        <EstadoVazio compacto icone="fa-user-tag" titulo="Nenhum papel atribuído." />
       ) : (
         <div className="flex flex-wrap gap-2">
           {papeis.map((papel) => {
@@ -771,7 +771,7 @@ function AbaAcademico({ auth }: AbaAcademicoProps) {
   }
 
   // Quem ainda não é pesquisador faz o upgrade da PRÓPRIA conta aqui (termos, CPF, vínculo, título): o mesmo
-  // modal do Campo de Testes (T1), que usa o endpoint self-service quando o alvo é a própria conta. O T1 lista
+  // modal da Bancada do Pesquisador, que usa o endpoint self-service quando o alvo é a própria conta. A bancada lista
   // todos os usuários e por isso só funciona para quem administra; esta é a porta do usuário comum.
   if (!perfil) {
     return (
@@ -823,9 +823,7 @@ function AbaAcademico({ auth }: AbaAcademicoProps) {
         <CampoFicha
           rotulo="Status"
           valor={
-            <span className={'badge ' + classeBadgeStatusPesquisador(perfil.statusPesquisador)}>
-              {ROTULO_STATUS_PESQUISADOR[perfil.statusPesquisador]}
-            </span>
+            <BadgeStatusPesquisador status={perfil.statusPesquisador} />
           }
         />
         <CampoFicha rotulo="Título acadêmico" valor={ROTULO_TITULO_ACADEMICO[perfil.tituloAcademico]} />

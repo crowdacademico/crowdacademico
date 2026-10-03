@@ -2,6 +2,8 @@
 // mesmo padrão de dados/comportamento do resto do sistema (nunca uma versão simplificada à parte).
 
 import { useEffect, useState } from 'react';
+import { BadgeStatusCampanha } from '../../components/crud/badge-status-campanha';
+import { ROTULO_MODELO_CAMPANHA, ROTULO_STATUS_CAMPANHA } from '../../services/12-campanha/constants/status-campanha.constants';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
 import { areaConhecimentoApi } from '../../services/8-area-conhecimento/api/area-conhecimento.api';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
@@ -21,13 +23,11 @@ import { ConfirmacaoDigitada } from '../../components/input/confirmacao-digitada
 import { confirmacaoConfere } from '../../components/input/confirmacao-confere';
 import { CaixaBuscaSugestoes } from '../../components/input/caixa-busca-sugestoes';
 import { perfilPesquisadorApi } from '../../services/6-perfil-pesquisador/api/perfil-pesquisador.api';
-import {
-  ROTULO_MODELO_CAMPANHA, ROTULO_STATUS_CAMPANHA,
-  classeBadgeStatusCampanha,
-} from '../../services/12-campanha/constants/status-campanha.constants';
+
 import { formatarData, formatarDataHora, formatarMoeda } from '../../services/constant/util/formatacao.util';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import { RegistroChamadas } from './registro-chamadas';
+import { ModalComentarParaOutro } from './modal-comentar-para-outro';
 import { ModalAlterarCampanha } from '../12-campanha/modal-alterar-campanha';
 import { ModalCriarCampanha } from '../12-campanha/modal-criar-campanha';
 import { PainelOrcamentoCronograma } from '../12-campanha/painel-orcamento-cronograma';
@@ -51,7 +51,7 @@ import type { PerfilPesquisadorResponse } from '../../services/6-perfil-pesquisa
 //
 // Sem pré-filtro por pesquisador nem "Escolher"/"campanha em foco": o checklist "Pronta para aprovar?" +
 // Aprovar/Rejeitar + Orçamento/Cronograma fazem parte do modal de Alterar, e `CampoTestesContext` não guarda
-// `campanhaFoco`; T4 (Vida da Campanha Ativa) tem busca própria (ver vida-campanha-ativa.tsx).
+// `campanhaFoco`.
 
 export function BancadaCampanha({ auth }: PropsPagina) {
   const chamarERegistrar = useChamadaRegistrada(auth);
@@ -60,7 +60,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
   const { ocupado: excluindoForcado, executar: executarExcluindoForcado } = useEnvio(reportarErro);
   const { ocupado: excluindo, executar: executarExcluindo } = useEnvio(reportarErro);
 
-  // As chamadas do T2 aparecem no T4 (Registro de Chamadas), inclusive as do painel e do passo a passo
+  // As chamadas do T2 aparecem no Registro de Chamadas, inclusive as do painel e do passo a passo
   // compartilhados (views/12-campanha), que recebem este `authFetch`.
   const authRegistrado = { authFetch: useAuthFetchRegistrado(auth) };
 
@@ -85,6 +85,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
   }, [campanhaConsultada]);
   const [idCampanhaEditando, setIdCampanhaEditando] = useState<number | null>(null);
   const [campanhaExcluindo, setCampanhaExcluindo] = useState<CampanhaResponse | null>(null);
+  const [campanhaComentando, setCampanhaComentando] = useState<CampanhaResponse | null>(null);
   const [confirmacaoExclusao, setConfirmacaoExclusao] = useState('');
   const [confirmacaoExclusaoForcada, setConfirmacaoExclusaoForcada] = useState('');
 
@@ -205,7 +206,20 @@ export function BancadaCampanha({ auth }: PropsPagina) {
         aoAlterar={iniciarEdicaoCampanha}
         aoConsultar={setCampanhaConsultada}
         aoExcluir={setCampanhaExcluindo}
+        aoComentar={setCampanhaComentando}
       />
+
+      {campanhaComentando && (
+        <ModalComentarParaOutro
+          authFetch={authRegistrado.authFetch}
+          campanha={campanhaComentando}
+          pesquisadores={perfisPesquisador
+            .filter((perfil) => perfil.statusPesquisador === 'ativo' && perfil.idUsuario !== campanhaComentando.idUsuario)
+            .map((perfil) => ({ idUsuario: perfil.idUsuario, nome: nomeDe(perfil.idUsuario) }))
+            .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))}
+          aoFechar={() => setCampanhaComentando(null)}
+        />
+      )}
 
       {/* Consultar/Alterar/Excluir em MODAL, mesmo padrão de T1 (ModalFicha + SecaoFicha/CampoFicha).
           Diferença de T1: não existe página real de Alterar/Excluir Campanha no painel admin para copiar (só
@@ -217,9 +231,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
           titulo={campanhaConsultada.titulo}
           subtitulo={`Pesquisador: ${nomeDe(campanhaConsultada.idUsuario)}`}
           badges={[
-            <span key="status" className={`badge ${classeBadgeStatusCampanha(campanhaConsultada.status)}`}>
-              {ROTULO_STATUS_CAMPANHA[campanhaConsultada.status]}
-            </span>,
+            <BadgeStatusCampanha key="status" campanha={campanhaConsultada} />,
             <span key="modelo" className="badge badge-neutro">
               {ROTULO_MODELO_CAMPANHA[campanhaConsultada.modelo]}
             </span>,

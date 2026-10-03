@@ -1161,6 +1161,12 @@ CREATE TRIGGER trg_denuncia_valida_limite_texto
     FOR EACH ROW
     EXECUTE FUNCTION public.fn_valida_limite_texto_livre('relato', 'limite_caracteres_relato_denuncia', '1000');
 
+DROP TRIGGER IF EXISTS trg_denuncia_valida_limite_justificativa ON denuncia;
+CREATE TRIGGER trg_denuncia_valida_limite_justificativa
+    BEFORE INSERT OR UPDATE ON denuncia
+    FOR EACH ROW
+    EXECUTE FUNCTION public.fn_valida_limite_texto_livre('justificativa_moderacao', 'limite_caracteres_justificativa_denuncia', '1000');
+
 DROP TRIGGER IF EXISTS trg_solicitacao_valida_limite_texto_pesq ON solicitacao_encerramento;
 CREATE TRIGGER trg_solicitacao_valida_limite_texto_pesq
     BEFORE INSERT OR UPDATE ON solicitacao_encerramento
@@ -1192,6 +1198,13 @@ CREATE TRIGGER trg_marco_cronograma_valida_limite_texto
     BEFORE INSERT OR UPDATE ON marco_cronograma
     FOR EACH ROW
     EXECUTE FUNCTION public.fn_valida_limite_texto_livre('descricao', 'limite_caracteres_descricao_marco', '2000');
+
+-- comentario.conteudo: o tipo da coluna (VARCHAR(500)) é o teto técnico; o limite de negócio vem de configuracoes.
+DROP TRIGGER IF EXISTS trg_comentario_valida_limite_texto ON comentario;
+CREATE TRIGGER trg_comentario_valida_limite_texto
+    BEFORE INSERT OR UPDATE ON comentario
+    FOR EACH ROW
+    EXECUTE FUNCTION public.fn_valida_limite_texto_livre('conteudo', 'limite_caracteres_comentario', '500');
 
 -- ----------------------------------------------------------------------------
 -- Trigger:   trg_link_atualizacao_valida_tipo
@@ -1318,6 +1331,62 @@ CREATE TRIGGER trg_denuncia_valida_tipo_motivo
     BEFORE INSERT OR UPDATE ON denuncia
     FOR EACH ROW
     EXECUTE FUNCTION public.trg_valida_tipo_motivo_denuncia();
+
+-- ----------------------------------------------------------------------------
+-- Função:     fn_valida_denuncia_alvo
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-K-1]
+-- Regra:      O alvo da denúncia tem de fazer sentido: campanha só se estiver ativa (RF-106; "Em breve" é ativa),
+--             perfil só se for de pesquisador (RF-029), e ninguém denuncia a própria campanha nem o próprio perfil
+--             (conflito de interesse, como no comentário e no julgamento). SECURITY DEFINER: lê campanha e perfil
+--             sem depender do que a RLS mostra a quem denuncia.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_valida_denuncia_alvo()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_status status_campanha;
+    v_dono   INT;
+BEGIN
+    IF NEW.id_campanha_alvo IS NOT NULL THEN
+        SELECT status, id_usuario INTO v_status, v_dono FROM campanha WHERE id_campanha = NEW.id_campanha_alvo;
+        IF v_dono = NEW.id_usuario THEN
+            RAISE EXCEPTION 'Não é possível denunciar a própria campanha.' USING ERRCODE = '92029';
+        END IF;
+        IF v_status IS DISTINCT FROM 'ativo' THEN
+            RAISE EXCEPTION 'Só é possível denunciar uma campanha ativa.' USING ERRCODE = '91035';
+        END IF;
+    END IF;
+
+    IF NEW.id_pesquisador_alvo IS NOT NULL THEN
+        IF NEW.id_pesquisador_alvo = NEW.id_usuario THEN
+            RAISE EXCEPTION 'Não é possível denunciar o próprio perfil.' USING ERRCODE = '92029';
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM perfil_pesquisador WHERE id_usuario = NEW.id_pesquisador_alvo) THEN
+            RAISE EXCEPTION 'O perfil denunciado não é de um pesquisador.' USING ERRCODE = '90026';
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_denuncia_valida_alvo
+-- Tabela:    denuncia
+-- Momento:   BEFORE INSERT
+-- Função:    fn_valida_denuncia_alvo()
+-- Bloco:     [05-K-1]
+-- Regra:     Só na criação: a campanha pode ser encerrada depois, e a denúncia continua valendo para o julgamento.
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_denuncia_valida_alvo ON denuncia;
+CREATE TRIGGER trg_denuncia_valida_alvo
+    BEFORE INSERT ON denuncia
+    FOR EACH ROW
+    EXECUTE FUNCTION public.fn_valida_denuncia_alvo();
 
 -- ============================================================================
 --  [05-K-2] REGRAS TRANSVERSAIS - CAMPANHAS E FINANCEIRO
@@ -2218,6 +2287,12 @@ EXECUTE FUNCTION fn_carimba_envio_aprovacao();
 --             registrar_falha_login/registrar_login_sucesso ([03-O]). Retorna a quantidade de campanhas encerradas, para o
 --             job logar. O CASE que escolhe o status precisa do cast ::status_campanha (senão resolve para text e dá 42804:
 --             o Postgres não aplica cast de atribuição a um CASE de dois literais).
+--             Espera os pagamentos pendentes: campanha vencida que ainda tem Pix pendente dentro da validade
+--             (configuracoes.pix_validade_horas) não é encerrada neste ciclo. Ela já não recebe apoio novo (91017),
+--             e o resultado (sucesso ou não atingida) só sai quando cada pendente foi pago ou venceu, no máximo
+--             pix_validade_horas depois do fim. Sem isso, um Pix pago no último minuto, com o aviso chegando depois
+--             do encerramento, faria uma campanha que bateu a meta ser dada como não atingida. Mesmo princípio do
+--             "Aguardando" do Catarse. Ver DOCUMENTACAO_BD.md [05-K-2-E].
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.encerrar_campanhas_vencidas()
 RETURNS INT
@@ -2235,6 +2310,13 @@ BEGIN
     FOR v_id IN
         SELECT c.id_campanha FROM campanha c
         WHERE c.status = 'ativo' AND c.data_fim IS NOT NULL AND c.data_fim <= NOW()
+          AND NOT EXISTS (
+              SELECT 1 FROM contribuicao ct
+              WHERE ct.id_campanha = c.id_campanha
+                AND ct.status = 'pendente'
+                AND ct.meio_pagamento = 'pix'
+                AND ct.criado_em > NOW() - (public.config_numero('pix_validade_horas', 24) * INTERVAL '1 hour')
+          )
         ORDER BY c.id_campanha
     LOOP
         BEGIN
@@ -2252,6 +2334,34 @@ BEGIN
     END LOOP;
 
     RETURN v_encerradas;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Função:     expirar_contribuicoes_pendentes
+-- Assinatura: () -> INT
+-- Bloco:      [05-K-2]
+-- Regra:      O Pix pendente que passou da validade (configuracoes.pix_validade_horas, padrão 24, o mesmo prazo
+--             que o gateway recebe ao gerar o código) vira 'expirado'. Sem isto, um Pix gerado e nunca pago
+--             ficaria 'pendente' para sempre. SECURITY DEFINER, chamada por @Cron, sem sessão de usuário (o
+--             app_nestjs não tem UPDATE em contribuicao). Retorna quantas expiraram.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.expirar_contribuicoes_pendentes()
+RETURNS INT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_expiradas INT;
+BEGIN
+    UPDATE contribuicao
+    SET status = 'expirado'
+    WHERE status = 'pendente'
+      AND meio_pagamento = 'pix'
+      AND criado_em <= NOW() - (public.config_numero('pix_validade_horas', 24) * INTERVAL '1 hour');
+    GET DIAGNOSTICS v_expiradas = ROW_COUNT;
+    RETURN v_expiradas;
 END;
 $$;
 
@@ -2955,6 +3065,47 @@ FOR EACH ROW
 EXECUTE FUNCTION fn_valida_comentario_campanha_ativa();
 
 -- ----------------------------------------------------------------------------
+-- Função:     fn_valida_seguir_campanha_publicada
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-K-3]
+-- Regra:      Só se segue campanha publicada (ativa, inclusive "Em breve", sucesso, não atingida ou encerrada), o
+--             mesmo conjunto que pol_campanha_select (04) mostra a qualquer pessoa. Rascunho, aguardando aprovação,
+--             rejeitada e encerrada por moderação não são públicas. Vale só na hora de seguir: quem já segue
+--             continua seguindo se a campanha mudar de status depois.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION fn_valida_seguir_campanha_publicada()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_status status_campanha;
+BEGIN
+    SELECT status INTO v_status
+    FROM campanha
+    WHERE id_campanha = NEW.id_campanha;
+
+    IF v_status NOT IN ('ativo', 'sucesso', 'nao_atingido', 'encerrado') THEN
+        RAISE EXCEPTION 'Só é possível seguir uma campanha publicada.'
+            USING ERRCODE = '91034';
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_seguir_campanha_valida_publicada
+-- Tabela:    seguir_campanha
+-- Momento:   BEFORE INSERT
+-- Função:    fn_valida_seguir_campanha_publicada()
+-- Bloco:     [05-K-3]
+-- Regra:     Impede seguir campanha que não é pública.
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_seguir_campanha_valida_publicada ON seguir_campanha;
+CREATE TRIGGER trg_seguir_campanha_valida_publicada
+BEFORE INSERT ON seguir_campanha
+FOR EACH ROW
+EXECUTE FUNCTION fn_valida_seguir_campanha_publicada();
+
+-- ----------------------------------------------------------------------------
 -- Função:     validar_comentario_endosso
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-3]
@@ -3621,6 +3772,40 @@ BEGIN
     END IF;
 
     RETURN NULL;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Função:     limpar_ip_aceite_contribuicao
+-- Assinatura: () -> INT
+-- Bloco:      [05-L]
+-- Regra:      Apaga (deixa vazio) o IP do aceite de contribuição mais velho que
+--             configuracoes.ip_aceite_contribuicao_retencao_dias (1825, 5 anos; 0 = guardar para sempre), o prazo
+--             que o Termo de Uso promete (item 5.4). O resto do aceite (termo, data) continua: só o IP sai.
+--             SECURITY DEFINER (app_nestjs não tem UPDATE na tabela), chamada pelo job diário do Nest. Retorna
+--             quantos IPs foram apagados.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.limpar_ip_aceite_contribuicao()
+RETURNS INT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_dias     INT;
+    v_apagados INT;
+BEGIN
+    v_dias := public.config_numero('ip_aceite_contribuicao_retencao_dias', 1825)::INT;
+    IF v_dias <= 0 THEN
+        RETURN 0;
+    END IF;
+
+    UPDATE aceite_termo_contribuicao
+    SET ip_aceite = NULL
+    WHERE ip_aceite IS NOT NULL
+      AND aceito_em < NOW() - (v_dias * INTERVAL '1 day');
+    GET DIAGNOSTICS v_apagados = ROW_COUNT;
+    RETURN v_apagados;
 END;
 $$;
 

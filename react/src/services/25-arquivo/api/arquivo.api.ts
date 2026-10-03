@@ -69,9 +69,6 @@ export const arquivoApi = {
       }),
     ),
 
-  buscar: (id: number | string): Promise<ArquivoResponse> =>
-    fetch(`${API_BASE_URL}/arquivo/${id}`).then(tratarResposta<ArquivoResponse>),
-
   remover: (authFetch: AuthFetch, id: number | string): Promise<void> =>
     authFetch(`/arquivo/${id}`, { method: 'DELETE' }).then(tratarResposta<void>),
 

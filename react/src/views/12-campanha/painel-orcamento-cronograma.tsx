@@ -11,7 +11,7 @@ import type { OrcamentoCampanhaResponse } from '../../services/13-orcamento-camp
 import type { MarcoCronogramaResponse } from '../../services/14-marco-cronograma/type/marco-cronograma.type';
 
 // Orçamento e cronograma de UMA campanha: lista, adiciona, altera e exclui itens. Usado por Minhas Campanhas
-// (o pesquisador) e pelo Campo de Testes (T2), que passa um `authFetch` que também registra as chamadas no T4.
+// (o pesquisador) e pela Bancada da Campanha, que passa um `authFetch` que também registra as chamadas.
 // Quem barra item inválido é o banco (valor, data de marco antes do início, limite de itens, campanha já
 // congelada): o erro aparece na tela, nunca some calado. As tabelas moram em components/crud/tabelas/ (3 e 4);
 // aqui fica só buscar e salvar.
@@ -25,7 +25,7 @@ interface PainelOrcamentoCronogramaProps {
   // Consultar não precisa.
   aoCarregar?: (orcamento: OrcamentoCampanhaResponse[], cronograma: MarcoCronogramaResponse[]) => void;
   // `abaFixa`: mostra só uma das duas partes (Orçamento e Cronograma são etapas diferentes de Criar Campanha).
-  // Sem isto (Alterar Campanha, consulta do T2), as duas aparecem uma embaixo da outra, cada uma com o seu título:
+  // Sem isto (Alterar Campanha, consulta da Bancada da Campanha), as duas aparecem uma embaixo da outra, cada uma com o seu título:
   // nada escondido atrás de botões de trocar.
   abaFixa?: 'orcamento' | 'cronograma';
   // `metaFinanceira`: opcional; quando presente, a tabela de Orçamento mostra o total em relação à meta acima dela.

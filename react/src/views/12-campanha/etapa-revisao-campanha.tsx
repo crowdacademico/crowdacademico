@@ -8,6 +8,7 @@ import { formatarData, formatarMoeda } from '../../services/constant/util/format
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { OrcamentoCampanhaResponse } from '../../services/13-orcamento-campanha/type/orcamento-campanha.type';
 import type { MarcoCronogramaResponse } from '../../services/14-marco-cronograma/type/marco-cronograma.type';
+import { EstadoVazio } from '../../components/crud/estado-vazio';
 
 interface EtapaRevisaoCampanhaProps {
   auth: Pick<UseAuthReturn, 'authFetch'>;
@@ -96,7 +97,7 @@ export function EtapaRevisaoCampanha({
 
       <SecaoFicha titulo={`Orçamento (${orcamento.length} ${orcamento.length === 1 ? 'item' : 'itens'})`} colunas={1}>
         {orcamento.length === 0 ? (
-          <p className="paragrafo texto-fraco">Nenhum item ainda: volte à etapa Orçamento.</p>
+          <EstadoVazio compacto icone="fa-coins" titulo="Nenhum item de orçamento ainda." texto="Volte à etapa Orçamento para adicionar." />
         ) : (
           <ul className="space-y-1">
             {orcamento.map((itemOrcamento) => (
@@ -115,7 +116,7 @@ export function EtapaRevisaoCampanha({
 
       <SecaoFicha titulo={`Cronograma (${cronograma.length} marcos)`} colunas={1}>
         {cronograma.length === 0 ? (
-          <p className="paragrafo texto-fraco">Nenhum marco ainda: volte à etapa Cronograma.</p>
+          <EstadoVazio compacto icone="fa-calendar-days" titulo="Nenhum marco no cronograma ainda." texto="Volte à etapa Cronograma para adicionar." />
         ) : (
           <ol className="linha-tempo">
             {cronograma.map((marco) => (

@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { API_BASE_URL } from '../../services/constant/constants/api.constants';
 import { paginarClientSide } from '../../services/constant/util/paginacao.util';
 import { RodapePaginacao } from '../../components/pagination/rodape-paginacao';
+import { EstadoVazio } from '../../components/crud/estado-vazio';
 import { useCampoTestes } from '../../services/campo-testes/hook/use-campo-testes';
 import type { RegistroChamada } from '../../services/campo-testes/context/campo-testes-context';
 
@@ -30,7 +31,7 @@ function montarCurl(chamada: RegistroChamada): string {
   return partes.join(' \\\n  ');
 }
 
-// T4, gaveta recolhível, presente em toda tela do Campo de Testes. Substituto direto do Thunder Client: toda
+// Gaveta recolhível, presente nas bancadas da área de testes (T1 e T2). Substituto direto do Thunder Client: toda
 // chamada feita via useChamadaRegistrada (qualquer tela) aparece aqui, mais recente primeiro. Sem coluna
 // "Ator": só existe um "ator" possível, a sessão real logada.
 export function RegistroChamadas() {
@@ -45,14 +46,14 @@ export function RegistroChamadas() {
   return (
     <div className="registro-chamadas">
       <button type="button" className="btn btn-secondary btn-pequeno" onClick={() => setAberto((atual) => !atual)}>
-        <i className={`fa-solid fa-chevron-${aberto ? 'down' : 'right'}`} aria-hidden="true"></i> T4 - Registro de Chamadas (
+        <i className={`fa-solid fa-chevron-${aberto ? 'down' : 'right'}`} aria-hidden="true"></i> Registro de Chamadas (
         {registroChamadas.length})
       </button>
 
       {aberto && (
         <div className="mt-2">
           {registroChamadas.length === 0 && (
-            <p className="legenda texto-fraco">Nenhuma chamada registrada ainda nesta aba.</p>
+            <EstadoVazio compacto icone="fa-list" titulo="Nenhuma chamada registrada ainda nesta aba." texto="Use a tela acima: cada pedido ao servidor aparece aqui." />
           )}
 
           {registroChamadas.length > 0 && (

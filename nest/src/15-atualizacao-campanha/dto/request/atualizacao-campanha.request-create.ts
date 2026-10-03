@@ -1,4 +1,4 @@
-import { IsIn, IsInt, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsIn, IsInt, IsString, MaxLength } from 'class-validator';
 import {
   FASES_ATUALIZACAO,
   TIPOS_ATUALIZACAO,
@@ -24,11 +24,10 @@ export class AtualizacaoCampanhaRequestCreate {
   @MaxLength(20000)
   conteudo: string;
 
-  @IsOptional()
+  // RF-052: fase e formato obrigatórios (NOT NULL no banco).
   @IsIn(FASES_ATUALIZACAO)
-  fase?: FaseAtualizacao;
+  fase: FaseAtualizacao;
 
-  @IsOptional()
   @IsIn(TIPOS_ATUALIZACAO)
-  tipo?: TipoAtualizacao;
+  tipo: TipoAtualizacao;
 }

@@ -7,7 +7,7 @@ import { LIMIAR_FILTRO } from '../../search/limiar-filtro.constants';
 import { paginarClientSide } from '../../../services/constant/util/paginacao.util';
 import { contemTermo, normalizarBusca } from '../../../services/constant/util/busca.util';
 
-// Base das listagens do Campo de Testes (bancada do pesquisador e da campanha): registros de demonstração
+// Base das bancadas (do pesquisador e da campanha): registros de demonstração
 // aparecem riscados e sem ações ("bloqueados"), com uma caixa para escondê-los (ligada por padrão), busca por
 // texto, uma faceta e paginação. O GenericTable não faz linha bloqueada, por isso esta base própria.
 

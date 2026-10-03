@@ -24,8 +24,6 @@ export const configuracoesApi = {
     fetch(`${API_BASE_URL}/configuracoes`)
       .then(tratarResposta<ResultadoPaginado<ConfiguracoesResponse>>)
       .then(desembrulharPaginado('configurações')),
-  buscar: (authFetch: AuthFetch, id: number | string): Promise<ConfiguracoesResponse> =>
-    authFetch(`/configuracoes/${id}`).then(tratarResposta<ConfiguracoesResponse>),
   atualizar: (
     authFetch: AuthFetch,
     id: number | string,
@@ -35,6 +33,4 @@ export const configuracoesApi = {
       method: 'PATCH',
       body: JSON.stringify(dados),
     }).then(tratarResposta<ConfiguracoesResponse>),
-  remover: (authFetch: AuthFetch, id: number | string): Promise<void> =>
-    authFetch(`/configuracoes/${id}`, { method: 'DELETE' }).then(tratarResposta<void>),
 };

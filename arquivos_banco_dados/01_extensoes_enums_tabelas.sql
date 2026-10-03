@@ -556,8 +556,8 @@ CREATE TABLE atualizacao_campanha (
     titulo         VARCHAR(150)     NOT NULL,
     conteudo       TEXT             NOT NULL,
     publicado_em   TIMESTAMPTZ        NOT NULL DEFAULT NOW(),
-    fase           fase_atualizacao,
-    tipo           tipo_atualizacao,
+    fase           fase_atualizacao NOT NULL,  -- RF-052: toda atualização registra a fase e o formato
+    tipo           tipo_atualizacao NOT NULL,
     ativo          BOOLEAN          NOT NULL DEFAULT TRUE, -- SOFT DELETE E MODERAÇÃO DAS ATUALIZAÇÕES
 
     CONSTRAINT "PK_ATUALIZACAO_CAMPANHA" PRIMARY KEY (id_atualizacao),
@@ -679,6 +679,9 @@ CREATE TABLE denuncia (
     id_motivo           INT  NOT NULL,
     relato              TEXT,-- descrição adicional pro denunciante.
     status              status_denuncia NOT NULL DEFAULT 'pendente',
+    -- Por que a moderação decidiu (procedente ou improcedente). Quem decidiu e quando ficam no log de auditoria
+    -- (trg_log_auditoria_denuncia_status, 05).
+    justificativa_moderacao TEXT,
     criado_em           TIMESTAMPTZ    NOT NULL DEFAULT NOW(),
 
     CONSTRAINT "PK_DENUNCIA" PRIMARY KEY (id_denuncia),
@@ -699,7 +702,8 @@ CREATE TABLE denuncia (
     -- Sem limite, um campo de denúncia pública viraria vetor de abuso (o limite de 5 denúncias/24h não
     -- impede megabytes de texto POR denúncia). Limite técnico largo aqui; limite de negócio configurável
     -- via trigger, ver [05-K-1].
-    CONSTRAINT "CK_DENUNCIA_RELATO_TAMANHO" CHECK (relato IS NULL OR char_length(relato) <= 5000)
+    CONSTRAINT "CK_DENUNCIA_RELATO_TAMANHO" CHECK (relato IS NULL OR char_length(relato) <= 5000),
+    CONSTRAINT "CK_DENUNCIA_JUSTIFICATIVA_TAMANHO" CHECK (justificativa_moderacao IS NULL OR char_length(justificativa_moderacao) <= 5000)
 );
 
 CREATE TABLE recompensa (

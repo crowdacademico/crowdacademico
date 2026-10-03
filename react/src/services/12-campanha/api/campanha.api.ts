@@ -15,7 +15,7 @@ import type { StatusCampanha } from '../constants/status-campanha.constants';
 // público/dono/relatorio_visualizar, ver 04_rls_policies.sql [04-E]); aqui sempre passamos authFetch mesmo
 // assim porque quem usa este arquivo é sempre o painel admin (logado), e o admin com relatorio_visualizar
 // enxerga todos os status, não só os públicos. `criar()` cria em nome de quem está logado (Minhas Campanhas);
-// `criarParaOutro()` é o endpoint de suporte/admin do Campo de Testes. `remover()` só funciona
+// `criarParaOutro()` é o endpoint de suporte/admin (ferramenta de teste). `remover()` só funciona
 // em campanha 'rascunho' (pol_campanha_delete, 04): depois de enviada para a fila, só dá para
 // rejeitar/encerrar, nunca apagar de vez.
 interface FiltroCampanha {

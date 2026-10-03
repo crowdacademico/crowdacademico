@@ -1,5 +1,5 @@
 import { Controller, Get, Query } from '@nestjs/common';
-import { PorCampanhaQueryDto } from '../../commons/database/dto/por-campanha.query.dto';
+import { ComentarioRequestList } from '../dto/request/comentario.request-list';
 import { ComentarioServiceFindAll } from '../service/comentario.service.findall';
 import { Publico } from '../../commons/auth/publico.decorator';
 
@@ -10,7 +10,7 @@ export class ComentarioControllerFindAll {
 
   @Get()
   @Publico()
-  listar(@Query() filtro: PorCampanhaQueryDto) {
+  listar(@Query() filtro: ComentarioRequestList) {
     return this.service.executar(filtro);
   }
 }

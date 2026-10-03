@@ -26,7 +26,7 @@ interface PesquisadorLinha extends Omit<PerfilPesquisadorResponse, 'tituloAcadem
 // Aba "Pesquisadores": Alterar/Consultar/Excluir EM MODAL, reaproveitando os MESMOS modais de Usuário: as 3
 // ações agem sobre o USUÁRIO por trás da linha
 // (`ModalAlterarUsuario`/`ModalConsultarUsuario`/`ModalExcluirUsuario`, os MESMOS de `listar-usuarios.tsx`),
-// não sobre o perfil de pesquisador em si (mesmo raciocínio de T1, Bancada do Pesquisador, Campo de Testes),
+// não sobre o perfil de pesquisador em si (mesmo raciocínio da Bancada do Pesquisador),
 // por isso não precisou de nenhum endpoint novo.
 export function ListarPesquisadores({ auth }: PropsPagina) {
   const {

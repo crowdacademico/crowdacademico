@@ -279,7 +279,7 @@ export const DETALHE_PERMISSAO: Partial<Record<string, DetalhePermissao>> = {
     nome: 'Criar Campanha para Outro Pesquisador',
     resumo: 'Criar uma campanha em nome de outro pesquisador.',
     oQueFaz:
-      'Permite criar uma campanha cujo dono é outro pesquisador ativo. Hoje só o Campo de Testes usa isto, para montar cenários.',
+      'Permite criar uma campanha cujo dono é outro pesquisador ativo. Só as telas de teste do painel usam isto, para montar cenários.',
     porQueExiste:
       'Ferramenta de teste: sem ela, cada cenário exigiria entrar com a conta de cada pesquisador. Deve ficar desligada em produção.',
     impacto: 'alto',
@@ -288,7 +288,7 @@ export const DETALHE_PERMISSAO: Partial<Record<string, DetalhePermissao>> = {
     nome: 'Excluir Campanha à Força',
     resumo: 'Apagar uma campanha em qualquer situação, não só em rascunho.',
     oQueFaz:
-      'Permite excluir uma campanha ignorando a regra normal (o pesquisador só exclui rascunho). Hoje só o Campo de Testes usa isto.',
+      'Permite excluir uma campanha ignorando a regra normal (o pesquisador só exclui rascunho). Só as telas de teste do painel usam isto.',
     porQueExiste:
       'Ferramenta de teste para limpar os cenários. Nunca deve virar botão no painel real: uma campanha com dinheiro envolvido não pode sumir.',
     impacto: 'alto',

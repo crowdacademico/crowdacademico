@@ -33,7 +33,7 @@
    deste arquivo de propósito (ver comentário no topo).
 
    `.titulo-bloco`: o rótulo pequeno/maiúsculo que `SecaoFicha` (ficha-consulta.tsx) usa, também em Minha
-   Conta e no Campo de Testes. Só a parte tipográfica mora aqui (mesma regra dos outros tokens desta escala):
+   Conta e na área de testes. Só a parte tipográfica mora aqui (mesma regra dos outros tokens desta escala):
    espaçamento/borda (`mb-3 pb-2 border-b borda-padrao`) continuam como utilitário solto em cada lugar que
    usa, porque isso é decisão de LAYOUT de quem chama, não de tipografia. */
 @layer components {

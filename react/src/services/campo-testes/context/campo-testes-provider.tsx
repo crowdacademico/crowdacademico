@@ -18,7 +18,7 @@ interface CampoTestesProviderProps {
 // agir "em nome de" outro usuário, então toda chamada de rede do Campo de Testes usa a MESMA sessão real do
 // painel (`auth`, prop já recebida por toda tela).
 //
-// `registroChamadas`: alimentado por use-chamada-registrada.ts; T4 (Registro de Chamadas) tem um único "ator"
+// `registroChamadas`: alimentado por use-chamada-registrada.ts; o Registro de Chamadas tem um único "ator"
 // possível (quem estiver realmente logado).
 //
 // SEM `pesquisadorSelecionado` NEM `campanhaFoco` (ver campo-testes-context.ts): eram alimentados por uma

@@ -1,8 +1,8 @@
 import { useRef, useState } from 'react';
 import { useFecharAoClicarFora } from '../../services/constant/hook/use-fechar-ao-clicar-fora';
 
-// Busca de texto + 1+ dropdowns de faceta, compartilhada por `generic-table.tsx` e pelas bancadas do Campo de
-// Testes (`bancada-campanha.tsx`/`bancada-pesquisador.tsx`, que não podem usar `GenericTable` por causa do
+// Busca de texto + 1+ dropdowns de faceta, compartilhada por `generic-table.tsx` e pelas bancadas
+// (`bancada-campanha.tsx`/`bancada-pesquisador.tsx`, que não podem usar `GenericTable` por causa do
 // risco de linha): pelo teste-de-prop de `generic-table.tsx`, é um IRMÃO, não um miolo.
 //
 // CONTROLADO, sem opinião de onde o valor/seleção mora (`GenericTable` guarda na URL, as bancadas em `useState`

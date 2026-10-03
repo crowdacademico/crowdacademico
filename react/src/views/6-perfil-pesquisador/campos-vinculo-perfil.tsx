@@ -22,7 +22,7 @@ interface CamposVinculoPerfilProps {
 
 // Os 3 campos abaixo (tipo de vínculo, vínculo institucional condicional, título acadêmico) são idênticos em 3
 // lugares (edição e criação dentro do modal de Usuário, e ModalUpgradePesquisador, o formulário de upgrade de
-// perfil em T1): só o objeto de estado por trás muda. O rótulo do campo condicional é o único texto que varia
+// perfil na Bancada do Pesquisador): só o objeto de estado por trás muda. O rótulo do campo condicional é o único texto que varia
 // entre os consumidores ("Vínculo institucional" na edição admin, "Instituição" na criação admin/upgrade de
 // perfil), por isso vem como prop, preservando o texto exato de cada lugar.
 export function CamposVinculoPerfil({

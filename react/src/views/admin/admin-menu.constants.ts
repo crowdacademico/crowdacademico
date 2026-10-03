@@ -74,11 +74,10 @@ export const GRUPOS_MENU_ADMIN: GrupoMenuAdmin[] = [
   },
   {
     titulo: 'MODERAÇÃO',
-    // Itens com tela vêm de `itensDoGrupo('MODERACAO')` (hoje Aprovar Campanhas); os demais são placeholders
+    // Itens com tela vêm de `itensDoGrupo('MODERACAO')` (Aprovar Campanhas e Denúncias); os demais são placeholders
     // desabilitados até ganharem tela.
     itens: [
       ...itensDoGrupo('MODERACAO'),
-      { rotulo: 'Denúncias', desabilitado: true },
       { rotulo: 'Solicitações', desabilitado: true },
       { rotulo: 'Enc. Antecipados', desabilitado: true },
     ],

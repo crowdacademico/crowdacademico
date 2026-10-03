@@ -10,10 +10,8 @@ import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { useDadosUsuario } from '../../services/1-usuario/hook/use-dados-usuario';
 import {
-  ROTULO_STATUS_PESQUISADOR,
   ROTULO_TIPO_VINCULO,
   ROTULO_TITULO_ACADEMICO,
-  classeBadgeStatusPesquisador,
 } from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
 import { useBuscar } from '../../services/constant/hook/use-buscar';
 import { formatarCpfOuMotivoOculto, formatarData, formatarDataHora } from '../../services/constant/util/formatacao.util';
@@ -22,6 +20,8 @@ import { PainelScore } from './painel-score';
 import { SecaoAceitesTermo } from './secao-aceites-termo';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { UsuarioResponseLoginHistory } from '../../services/1-usuario/type/usuario.type';
+import { EstadoVazio } from '../../components/crud/estado-vazio';
+import { BadgeStatusPesquisador } from '../../components/crud/badge-status-pesquisador';
 
 interface ModalConsultarUsuarioProps {
   auth: Pick<UseAuthReturn, 'authFetch'>;
@@ -31,7 +31,7 @@ interface ModalConsultarUsuarioProps {
 
 // Consultar: dados da conta, acesso (histórico de login), aceites do Termo de Uso, papéis e, de quem é pesquisador, o
 // perfil e o score. Tudo buscado ao abrir; recebe só o `idUsuario`, então serve para qualquer lista (Usuários,
-// Pesquisadores, Campo de Testes).
+// Pesquisadores, bancadas).
 export function ModalConsultarUsuario({ auth, idUsuario, aoFechar }: ModalConsultarUsuarioProps) {
   const errosDaTela = useErroToast({ mostraTexto: true });
   const { erro } = errosDaTela;
@@ -92,7 +92,7 @@ export function ModalConsultarUsuario({ auth, idUsuario, aoFechar }: ModalConsul
         erro ? (
           <MensagemErro texto={erro} className="paragrafo-destaque p-6 text-center texto-erro" />
         ) : (
-          <p className="paragrafo p-6 text-center texto-fraco">Carregando...</p>
+          <Carregando className="p-6 text-center" />
         )
       ) : (
         <>
@@ -157,7 +157,7 @@ export function ModalConsultarUsuario({ auth, idUsuario, aoFechar }: ModalConsul
                       {carregandoLogins ? (
                         <Carregando />
                       ) : loginsAnteriores.length === 0 ? (
-                        <p className="texto-fraco">Nenhum login anterior registrado.</p>
+                        <EstadoVazio compacto icone="fa-clock-rotate-left" titulo="Nenhum login anterior registrado." texto="Os acessos aparecem aqui a partir do segundo login desta conta." />
                       ) : (
                         <ul className="space-y-1">
                           {loginsAnteriores.map((login, indice) => (
@@ -180,9 +180,7 @@ export function ModalConsultarUsuario({ auth, idUsuario, aoFechar }: ModalConsul
                   <CampoFicha
                     rotulo="Status"
                     valor={
-                      <span className={'badge ' + classeBadgeStatusPesquisador(perfilPesquisador.statusPesquisador)}>
-                        {ROTULO_STATUS_PESQUISADOR[perfilPesquisador.statusPesquisador]}
-                      </span>
+                      <BadgeStatusPesquisador status={perfilPesquisador.statusPesquisador} />
                     }
                   />
                   <CampoFicha rotulo="Título acadêmico" valor={ROTULO_TITULO_ACADEMICO[perfilPesquisador.tituloAcademico]} />

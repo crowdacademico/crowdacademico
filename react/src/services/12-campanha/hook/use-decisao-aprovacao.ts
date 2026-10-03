@@ -18,8 +18,8 @@ interface OpcoesDecisao {
   aoConcluido: () => void;
 }
 
-// Aprovar ou rejeitar uma campanha da fila: a MESMA regra na fila real (Aprovar Campanhas) e no T2 do Campo de
-// Testes. Rejeitar fica sempre clicável: sem motivo, o erro aparece embaixo do campo e nada vai ao servidor.
+// Aprovar ou rejeitar uma campanha da fila: a MESMA regra na fila real (Aprovar Campanhas) e na Bancada
+// da Campanha. Rejeitar fica sempre clicável: sem motivo, o erro aparece embaixo do campo e nada vai ao servidor.
 export function useDecisaoAprovacao({ authFetch, idCampanha, reportarErro, limparErro, aoConcluido }: OpcoesDecisao) {
   const { mostrar } = useToast();
   const [justificativa, setJustificativa] = useState('');

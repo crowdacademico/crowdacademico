@@ -5,9 +5,11 @@ import { TabelaComentarios } from '../../components/crud/tabelas/11-tabela-comen
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
 import { comentarioApi } from '../../services/17-comentario/api/comentario.api';
+import { ModalDenunciar } from '../19-denuncia/modal-denunciar';
 import { useConfiguracoes } from '../../services/11-configuracoes/hook/use-configuracoes';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { ComentarioResponse } from '../../services/17-comentario/type/comentario.type';
+import { EstadoVazio } from '../../components/crud/estado-vazio';
 
 interface SecaoComentariosRecebidosProps {
   auth: Pick<UseAuthReturn, 'authFetch'>;
@@ -23,12 +25,11 @@ interface SecaoComentariosRecebidosProps {
 export function SecaoComentariosRecebidos({ auth, idCampanha, publicada }: SecaoComentariosRecebidosProps) {
   const [comentarios, setComentarios] = useState<ComentarioResponse[] | null>(null);
   const [excluindo, setExcluindo] = useState<ComentarioResponse | null>(null);
+  const [denunciando, setDenunciando] = useState<ComentarioResponse | null>(null);
   const [chaveRecarga, setChaveRecarga] = useState(0);
   const { reportarErro } = useErroToast();
   const { mostrar } = useToast();
-  const { obterConfiguracao } = useConfiguracoes();
-  const valorLimite = obterConfiguracao('limite_endossos_campanha', 4);
-  const limiteEndossos = typeof valorLimite === 'number' ? valorLimite : 4;
+  const limiteEndossos = useConfiguracoes().obterNumero('limite_endossos_campanha', 4);
 
   useEffect(() => {
     comentarioApi
@@ -64,7 +65,12 @@ export function SecaoComentariosRecebidos({ auth, idCampanha, publicada }: Secao
       </p>
       <div>
         {comentarios.length === 0 ? (
-          <p className="paragrafo texto-fraco">Nenhum comentário recebido ainda.</p>
+          <EstadoVazio
+            compacto
+            icone="fa-comments"
+            titulo="Nenhum comentário recebido ainda."
+            texto="Quando alguém comentar, o comentário aparece aqui para você endossar ou excluir."
+          />
         ) : (
           <TabelaComentarios
             comentarios={comentarios}
@@ -72,9 +78,19 @@ export function SecaoComentariosRecebidos({ auth, idCampanha, publicada }: Secao
             limiteAtingido={endossosAtivos >= limiteEndossos}
             aoAlternarEndosso={(item) => void alternarEndosso(item)}
             aoExcluir={setExcluindo}
+            aoDenunciar={setDenunciando}
           />
         )}
       </div>
+      {denunciando && denunciando.idPesquisador !== null && (
+        <ModalDenunciar
+          authFetch={auth.authFetch}
+          alvo={{ idPesquisadorAlvo: denunciando.idPesquisador }}
+          nomeAlvo={denunciando.nomePesquisador ?? 'Pesquisador removido'}
+          relatoInicial={`Comentário denunciado: "${denunciando.conteudo}"`}
+          aoFechar={() => setDenunciando(null)}
+        />
+      )}
       {excluindo && (
         <ModalExcluirComentario
           autor={excluindo.nomePesquisador ?? 'Pesquisador removido'}

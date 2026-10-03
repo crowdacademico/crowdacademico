@@ -31,8 +31,8 @@ import type { PropsPagina } from '../../services/router/pagina.type';
 // A tabela (linha riscada/cadeado, filtro, faceta e paginação) mora em
 // components/crud/tabelas/8-tabela-bancada-pesquisador.tsx; aqui fica buscar os dados e abrir os modais.
 export function BancadaPesquisador({ auth }: PropsPagina) {
-  // Os modais de Usuário são os mesmos da página real e não sabem que o T4 (Registro de Chamadas) existe. Para as
-  // chamadas deles aparecerem no T4, recebem uma `auth` cujo `authFetch` registra cada chamada (mesmo jeito do
+  // Os modais de Usuário são os mesmos da página real e não sabem que o Registro de Chamadas existe. Para as
+  // chamadas deles aparecerem nele, recebem uma `auth` cujo `authFetch` registra cada chamada (mesmo jeito do
   // T2): tudo aparece, inclusive a moderação, com o status HTTP de verdade.
   const authRegistrado = { authFetch: useAuthFetchRegistrado(auth) };
   const [pesquisadores, setPesquisadores] = useState<PesquisadorLinha[]>([]);

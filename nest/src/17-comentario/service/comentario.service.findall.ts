@@ -7,7 +7,7 @@ import {
 } from '../../commons/database/paginacao.util';
 import { COMENTARIO_COLUNAS_SELECT } from '../constants/comentario.constants';
 import { ComentarioConverter } from '../dto/converter/comentario.converter';
-import { PorCampanhaQueryDto } from '../../commons/database/dto/por-campanha.query.dto';
+import { ComentarioRequestList } from '../dto/request/comentario.request-list';
 import { ComentarioResponse } from '../dto/response/comentario.response';
 
 // pol_comentario_select (04) já esconde comentário inativo/não-endossado
@@ -20,9 +20,9 @@ export class ComentarioServiceFindAll {
   constructor(private readonly database: DatabaseService) {}
 
   async executar(
-    filtro: PorCampanhaQueryDto,
+    filtro: ComentarioRequestList,
   ): Promise<ResultadoPaginado<ComentarioResponse>> {
-    const query = this.database
+    let query = this.database
       .getDb()
       .selectFrom('comentario')
       .leftJoin('usuario', 'usuario.id_usuario', 'comentario.id_pesquisador')
@@ -37,6 +37,17 @@ export class ComentarioServiceFindAll {
         sql<boolean>`(comentario.ativo OR comentario.id_pesquisador = public.id_usuario_atual() OR public.tem_permissao('comentario_moderar'))`,
       )
       .orderBy('comentario.criado_em', 'desc');
+    if (filtro.endossado !== undefined) {
+      query = query
+        .where('comentario.endossado', '=', filtro.endossado)
+        .clearOrderBy()
+        .orderBy(
+          filtro.endossado
+            ? 'comentario.ordem_endosso'
+            : 'comentario.criado_em',
+          filtro.endossado ? 'asc' : 'desc',
+        );
+    }
 
     const resultado = await paginar(query, {
       pagina: filtro.pagina,

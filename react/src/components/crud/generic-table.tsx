@@ -103,7 +103,7 @@ function maiorTexto<T extends Linha>(coluna: Coluna<T>, linhas: T[]): number {
 // componente ainda assim precisa de algo que hoje mora aqui dentro, isto é um IRMÃO, não um miolo: foi esse
 // critério que fez o `BlocoLogAuditoria` nascer, e o mesmo que tirou o rodapé de paginação e a barra de filtros
 // de dentro daqui (ver `components/pagination/rodape-paginacao.tsx` e `components/search/barra-filtros.tsx`):
-// as bancadas do Campo de Testes (risco de linha impede usar a tabela) precisavam dos dois mesmo assim.
+// as bancadas (risco de linha impede usar a tabela) precisavam dos dois mesmo assim.
 
 export function GenericTable<T extends Linha>({
   titulo,

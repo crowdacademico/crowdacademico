@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { Tooltip } from '../../components/layout/tooltip';
 import { BarraAbasBotoes } from '../../components/layout/barra-abas-botoes';
+import { Carregando } from '../../components/layout/carregando';
 import { dashboardApi } from '../../services/28-dashboard/api/dashboard.api';
 import { ROTULO_STATUS_CAMPANHA, type StatusCampanha } from '../../services/12-campanha/constants/status-campanha.constants';
 import { useBuscar } from '../../services/constant/hook/use-buscar';
@@ -56,7 +57,6 @@ function CardMetrica({ rotulo, valor, moeda = false, para }: CardMetricaProps) {
           // Moeda: acompanha a largura do card (`cqi`), entre text-base e text-3xl, com a mesma altura de
           // linha do text-3xl, para caber no celular sem desalinhar dos cards vizinhos.
           (moeda ? 'numero-metrica numero-metrica--moeda ' : 'numero-metrica ') +
-          '' +
           (valor === null ? 'texto-fraco opacity-50' : 'texto-forte')
         }
       >
@@ -175,7 +175,7 @@ export function Dashboard({ auth }: DashboardProps) {
 
           {/* (a) Cards de total */}
           {carregandoResumo ? (
-            <p className="paragrafo texto-fraco">Carregando métricas...</p>
+            <Carregando />
           ) : !resumo ? (
             <MensagemErro texto={erro} className="crud-erro" />
           ) : (

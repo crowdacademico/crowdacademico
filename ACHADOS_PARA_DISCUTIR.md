@@ -2,6 +2,52 @@
 
 Lista montada a partir da resposta da revisão externa de 24-09-2026 (a pasta de contra-prompt de 24-09 dentro de `informacoes/`), conferida item por item contra o código. Os achados antigos (itens 1 a 20, quase todos resolvidos) estão em `informacoes/HISTORICO/HISTORICO_ACHADOS_PARA_DISCUTIR.md`; qualquer citação "`ACHADOS_PARA_DISCUTIR.md`, item N" em documento ou comentário antigo aponta para lá.
 
+## 📌 Para a Alexia ler primeiro (03-10-2026): o pagamento que chega depois do fim da campanha
+
+> ✅ **DECIDIDO E FEITO (03-10-2026):** o Lucas escolheu a opção D, com validade de 24 horas para o Pix. Já está no banco (Grupo AM do `ATUALIZAR`) e documentado no `DOCUMENTACAO_BD.md`, [05-K-2-F]. Fica aqui para a Alexia saber o que mudou e por quê.
+
+**Em palavras simples:** quando alguém apoia por Pix, o sistema primeiro registra a contribuição como "pendente" e só depois, quando o banco avisa que o Pix foi pago, ela vira "confirmada" e passa a contar na meta. Entre gerar o código Pix e o aviso de pagamento chegar, passam segundos, minutos ou horas. Se a campanha termina nesse meio-tempo, o nosso sistema decide "bateu ou não bateu a meta" **sem esperar** esse dinheiro. O Catarse espera.
+
+### O problema, com um exemplo
+
+Campanha Tudo ou Nada, meta de R$ 10.000, termina hoje às 23:59.
+- 23:50: R$ 9.800 confirmados. Uma pessoa gera um Pix de R$ 300 (fica "pendente").
+- 23:58: ela paga. O aviso do pagamento costuma chegar em segundos, mas às vezes demora.
+- 00:00: a tarefa automática encerra a campanha. Conta só o confirmado (R$ 9.800) e marca **"não atingida"**. No Tudo ou Nada, isso quer dizer devolver o dinheiro de todo mundo.
+- 00:02: chega o aviso do Pix. O banco **aceita** a confirmação (testado), e a campanha fica com R$ 10.100 arrecadados e o status "não atingida". O pesquisador perde a campanha que tinha batido a meta, e todos os apoiadores recebem o dinheiro de volta.
+
+Tem também o outro lado: um Pix gerado e nunca pago fica "pendente" **para sempre**. O status `expirado` existe, mas nada o aplica.
+
+### Como o mercado faz
+
+- **Catarse:** se, no fim do prazo, ainda existem apoios pendentes, a campanha fica **"Aguardando"** por até 4 dias úteis. Só depois de cada pendente ser pago ou cancelado ela é dada como financiada ou não. O Pix vence em 2 dias corridos; se não for pago, o Catarse gera uma 2ª via com mais 2 dias e depois cancela. O boleto leva até 4 dias úteis (2 até vencer e 2 de compensação).
+- **Pix em geral (padrão do Banco Central):** toda cobrança Pix nasce com um tempo de validade (o padrão da API Pix é 24 horas). Depois disso, o código não pode mais ser pago.
+- **Kickstarter:** o cartão só é cobrado no fim, e quem tem cartão recusado ganha alguns dias para atualizar o pagamento. É a mesma ideia: existe uma janela de acerto depois do fim.
+
+### As opções
+
+| Opção | Como funciona | Problema |
+|---|---|---|
+| A. Como está | decide na hora | o exemplo acima: campanha que bateu a meta é dada como não atingida |
+| B. Decide na hora e recusa o que chegar depois | o Pix pago depois do fim é devolvido | a pessoa pagou dentro do prazo e mesmo assim tem o dinheiro devolvido; o pesquisador perde o valor |
+| C. Decide na hora e corrige depois | se a confirmação tardia fizer bater a meta, a campanha muda de "não atingida" para "sucesso" | o status vai e volta; avisos e devoluções já podem ter começado |
+| **D. Espera (o "Aguardando" do Catarse)** | no fim do prazo, a campanha para de receber apoio novo, mas só é encerrada quando não existe mais nenhum pendente válido | a decisão demora até a validade do último Pix (no máximo 1 dia) |
+
+### A recomendação: D, do jeito mais enxuto
+
+1. **Todo Pix pendente vence.** Parâmetro novo em `configuracoes`, `pix_validade_horas` (sugestão: 24, o padrão do Pix). Uma tarefa automática, igual às que já existem, marca como `expirado` o pendente que passou da validade, e o gateway recebe o mesmo prazo ao gerar o código.
+2. **A tarefa que encerra a campanha espera os pendentes.** Ela só encerra a campanha vencida que não tem nenhum Pix pendente ainda válido. Como nenhum Pix novo pode ser gerado depois do fim (regra que já existe, código 91017), a espera dura no máximo `pix_validade_horas` depois do fim. Nunca fica presa.
+3. **Nenhum status novo.** Igual ao "Em breve", o "Aguardando" é calculado: campanha `ativo`, prazo vencido, com pendente válido. A tela mostra "Encerrada, confirmando pagamentos".
+4. **Depois de encerrada, a confirmação tardia é recusada pelo banco** (não muda mais o arrecadado). Com a validade, isso só acontece se o gateway mandar um aviso fora do prazo, e aí o caminho é devolver aquele valor.
+
+**Por que esta:** é o que o Catarse faz, é justa com quem pagou dentro do prazo, não cria status novo e tem fim garantido. É uma tarefa a mais, uma condição a mais numa tarefa que já existe e um parâmetro.
+
+**Quando:** junto do módulo de contribuição, antes do gateway. Nada mudou no banco ainda.
+
+**Outros pontos do dinheiro achados na mesma conferência** (status que volta para trás, transação repetida, repasse em dobro, auditoria editável): `informacoes/SUPER_AUDITORIA_PREPARACAO_03-10-2026.md`, seção 7.
+
+---
+
 ## A. Dá para fazer agora, sem decisão de negócio
 
 1. ✅ **FEITO em parte (28-09-2026): tipos gerados do banco (B4).** O `pglite-socket` foi instalado só na pasta de testes do banco, e o `db.types.generated.ts` é gerado a partir dos arquivos 01 a 08. O manual continua em uso, e uma suíte de teste compara os dois (ver `DOCUMENTACAO_BACKEND.md`, seção 2.6). A parte do React foi feita em 29-09-2026: `react/src/services/constant/type/enums-do-banco.gerado.ts`, gerado por `npm run gerar:enums` (ver `DOCUMENTACAO_FRONTEND.md`, seção 3). Texto original:
@@ -35,7 +81,7 @@ Lista montada a partir da resposta da revisão externa de 24-09-2026 (a pasta de
    - Sugestão: dá para fazer sem decisão: ativar o menu e montar a tela.
 6. ➡️ **MOVIDO PARA `PENDENCIAS e correcoes.md` (26-09-2026, decisão do Lucas: sem urgência até o deploy).** Bloco SQL "modo produção" (E3). Descrição original:
    - Situação: não existe.
-   - Revisão externa: a barreira real das ferramentas do Campo de Testes é o banco (tirar essas permissões do admin), não `NODE_ENV`.
+   - Revisão externa: a barreira real das ferramentas de teste é o banco (tirar essas permissões do admin), não `NODE_ENV`. **Resolvido em 03-10-2026:** essas permissões só existem na parte de demonstração do `07` (depois do marcador `[07-DEMONSTRACAO]`), que não roda em produção.
    - Sugestão: deixar o arquivo pronto e testado no PGlite, sem rodar nunca. É para o dia do deploy.
 7. ✅ **FEITO (26-09-2026): caso do 92009 no PGlite (pesquisador suspenso).** Suíte 15, 7 casos; o banco já barrava, faltava o teste.
 8. ✅ **FEITO (26-09-2026): jobs linha a linha (F4.5).** Grupo M do `ATUALIZAR` (colar depois do L), suíte 16. Descrição original:
@@ -50,11 +96,11 @@ Lista montada a partir da resposta da revisão externa de 24-09-2026 (a pasta de
 
 ## B. Precisam de decisão
 
-1. ✅ **FEITO (26-09-2026); 03-10-2026: virou o T3 do Campo de Testes, porque o pesquisador não usa a área restrita (ele terá a área dele na parte pública).** Texto original: **"Minhas campanhas" do pesquisador, com o wizard extraído do Campo de Testes.**
+1. ✅ **FEITO (26-09-2026); 03-10-2026: virou uma tela de teste do painel, porque o pesquisador não usa a área restrita (ele terá a área dele na parte pública).** Texto original: **"Minhas campanhas" do pesquisador, com o wizard extraído da área de testes.**
    - Revisão externa: é o maior risco do TCC. Numa banca pedem "me mostra o pesquisador criando uma campanha", e hoje só existe a bancada de testes.
    - Decidido em 26-09-2026: dentro do painel, item novo do menu, só para pesquisador. FEITO em 26-09-2026 (Minhas Campanhas).
 2. ✅ **FEITO (29-09-2026): hook `useErrosFormulario`**, aplicado em criar campanha, cadastro, suspensão e alterar senha (ver `DOCUMENTACAO_FRONTEND.md`). Texto original: Revisão externa: umas 60 linhas, aplicar primeiro no wizard. Sugestão: só faz sentido junto com o item 1.
-3. ✅ **FEITO (26-09-2026, Minhas Campanhas, hoje T3 do Campo de Testes; decidido no V8: o admin modera, o pesquisador altera e exclui as próprias).** Texto original: **Alterar e Excluir campanha na tela real.** Revisão externa: dentro de "Minhas campanhas", com D4, e Excluir só em rascunho. Sugestão: concordo, depende do item 1 e do D4 (A.2).
+3. ✅ **FEITO (26-09-2026, Minhas Campanhas, hoje tela de teste do painel; decidido no V8: o admin modera, o pesquisador altera e exclui as próprias).** Texto original: **Alterar e Excluir campanha na tela real.** Revisão externa: dentro de "Minhas campanhas", com D4, e Excluir só em rascunho. Sugestão: concordo, depende do item 1 e do D4 (A.2).
 4. **Página pública da campanha.** Revisão externa: não depende do gateway, com o botão "Contribuir em breve". Sugestão: concordo. A decisão é o escopo.
 5. **Score, Parte C.** Adiada. Patch pronto; precisa de tela de admin, dos números (10, 15 e 3 denúncias) e do texto dos Termos de Uso.
 6. **Dispatcher de triggers** (`campanha` de 17 para 5, `comentario` de 8 para 2).
@@ -81,14 +127,14 @@ Lista montada a partir da resposta da revisão externa de 24-09-2026 (a pasta de
    - **`11-configuracoes` no singular** (`configuracoes.api.ts`, `configuracoes.type.ts`), igual ao Nest antes.
    - **Constantes sem o final `.constants`**: `configuracoes-grupos.constants.ts`, `configuracoes-pares-min-max.constants.ts`, `papel-ordem-poder.constants.ts`, `permissao-nomes-amigaveis.constants.ts`, `termo-uso-tipos.constants.ts`. Utilitários sem `.util`: `gerar-cpf-valido.util.ts`, `registros-bloqueados.util.ts`. Pasta `services/constant/util` no plural, as outras `util`.
    - **`services/admin`** corresponde ao `28-dashboard` do Nest.
-   - **Telas chamando a API sem passar por `services`**: `modal-usuario.tsx` chama `/link-academico` direto (a pasta `services/7-link-academico` está vazia); o Campo de Testes chama comentário, atualização e seguir direto (de propósito, pelo registro de chamadas).
+   - **Telas chamando a API sem passar por `services`**: `modal-usuario.tsx` chama `/link-academico` direto (a pasta `services/7-link-academico` está vazia). **03-10-2026:** comentário, atualização e seguir ganharam `services` (`15-atualizacao-campanha`, `16-seguir-campanha`, `comentarioApi.comentar`).
    - **Sufixo `-page` só no `3-auth`** (`login-page.tsx`...); as outras telas não têm. **Hooks em três lugares** (`services/*/hook`, `components/crud/use-alteracao-nao-salva.ts`, `components/layout/toast`). **Pastas vazias com `.gitkeep`** para módulos que ainda não existem.
    - Sugestão: renomear os 20 tipos, `configuracoes`, os sufixos de constantes/utilitários e `utils`→`util` (mecânico, o compilador confere); levar a chamada de `/link-academico` para `services`. Deixar os nomes das telas em português (é o nome do componente que a pessoa vê) e o resto como está.
 
 ## C. Dependem de módulo (não antecipar)
 
 - **18-recompensa:** congelamento de `recompensa` e `FOR UPDATE` no estoque.
-- **19-denúncia:** gravidade por motivo, fundir as triggers, contestação do score, endpoint de encerrar por moderação.
+- **19-denúncia (feito em 03-10-2026):** o endpoint de encerrar por moderação existe. Ficam, com o motor do score: gravidade por motivo, fundir as triggers e a contestação do score.
 - **22-contribuição:** `UNIQUE` em `id_transacao_api`, máquina de estados de `status_contribuicao`, e a regra de `SECURITY DEFINER` com checagem interna (F3.2).
 - **23-repasse:** checagem em `atualizar_status_repasse()`.
 - **26-notificacao:** `contar_metricas_dashboard()` também precisa ganhar a contagem de notificações; o módulo sozinho não resolve `notificacoesPendentes: null`.
@@ -106,7 +152,7 @@ Lista montada a partir da resposta da revisão externa de 24-09-2026 (a pasta de
 
 ## E. A revisão externa recomenda não fazer
 
-Mover regra de trigger para o Nest, recálculo de score sob demanda, trocar o log por pgAudit ou `supa_audit`, endpoint de enums, auditar Nielsen no Campo de Testes, dispatcher nas tabelas pequenas, `NODE_ENV` como barreira de segurança. Concordamos com tudo.
+Mover regra de trigger para o Nest, recálculo de score sob demanda, trocar o log por pgAudit ou `supa_audit`, endpoint de enums, auditar Nielsen nas telas de teste, dispatcher nas tabelas pequenas, `NODE_ENV` como barreira de segurança. Concordamos com tudo.
 
 ## F. Registrados de antes, ainda válidos
 

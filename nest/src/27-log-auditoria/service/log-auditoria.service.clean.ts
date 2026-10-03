@@ -8,6 +8,10 @@ import { PG_POOL } from '../../commons/database/database.constants';
 // inteira mora na função SQL `limpar_log_auditoria()` (SECURITY DEFINER, 05 [05-L]),
 // que também deixa uma linha de rastro quando apaga algo; aqui só agenda e loga.
 //
+// No mesmo horário, apaga o IP do aceite de contribuição mais velho que
+// `configuracoes.ip_aceite_contribuicao_retencao_dias` (5 anos, o prazo que o Termo
+// de Uso promete no item 5.4), pela função `limpar_ip_aceite_contribuicao()`.
+//
 // Mesmo molde dos jobs de campanha (`PG_POOL` direto, porque o job roda fora do
 // pipeline HTTP e sem sessão de usuário).
 @Injectable()
@@ -33,9 +37,19 @@ export class LogAuditoriaServiceClean {
           `${quantidade} registro(s) de log_auditoria apagado(s) por passar do prazo de retenção.`,
         );
       }
+
+      const ips = await this.pool.query<{
+        limpar_ip_aceite_contribuicao: number;
+      }>('SELECT public.limpar_ip_aceite_contribuicao()');
+      const quantidadeIps = ips.rows[0]?.limpar_ip_aceite_contribuicao ?? 0;
+      if (quantidadeIps > 0) {
+        this.logger.log(
+          `${quantidadeIps} IP(s) de aceite de contribuição apagado(s) por passar do prazo de retenção.`,
+        );
+      }
     } catch (erro) {
       this.logger.error(
-        `Falha ao limpar log_auditoria: ${erro instanceof Error ? erro.message : String(erro)}`,
+        `Falha na limpeza por prazo de retenção (log de auditoria ou IP de aceite): ${erro instanceof Error ? erro.message : String(erro)}`,
       );
     }
   }

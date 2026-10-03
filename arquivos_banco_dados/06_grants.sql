@@ -180,6 +180,7 @@ REVOKE EXECUTE ON FUNCTION public.alterar_perfil_pesquisador_de_outro(INT, tipo_
 -- criar_campanha_para_outro(...) / forcar_exclusao_campanha(INT): ver [03-S] e [03-T].
 REVOKE EXECUTE ON FUNCTION public.criar_campanha_para_outro(INT, INT, TEXT, modelo_campanha, DECIMAL, TEXT, TIMESTAMPTZ, TIMESTAMPTZ, TEXT) FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.forcar_exclusao_campanha(INT) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.comentar_campanha_para_outro(INT, INT, TEXT) FROM PUBLIC;
 -- suspender_usuario / revogar_suspensao_usuario / suspender_papel_usuario / revogar_suspensao_papel_usuario: ver [03-N].
 REVOKE EXECUTE ON FUNCTION public.suspender_usuario(INT, TIMESTAMPTZ, TEXT)         FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.revogar_suspensao_usuario(INT)                    FROM PUBLIC;
@@ -204,6 +205,7 @@ GRANT EXECUTE ON FUNCTION public.criar_perfil_pesquisador_para_outro(INT, TEXT, 
 GRANT EXECUTE ON FUNCTION public.alterar_perfil_pesquisador_de_outro(INT, tipo_vinculo, TEXT, titulo_academico) TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.criar_campanha_para_outro(INT, INT, TEXT, modelo_campanha, DECIMAL, TEXT, TIMESTAMPTZ, TIMESTAMPTZ, TEXT) TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.forcar_exclusao_campanha(INT) TO app_nestjs;
+GRANT EXECUTE ON FUNCTION public.comentar_campanha_para_outro(INT, INT, TEXT) TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.suspender_usuario(INT, TIMESTAMPTZ, TEXT)      TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.revogar_suspensao_usuario(INT)                 TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.suspender_papel_usuario(INT, INT, TIMESTAMPTZ, TEXT) TO app_nestjs;
@@ -248,9 +250,15 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON verificacao_email, recuperacao_senha, se
 -- atualizar_status_repasse() (05, SECURITY DEFINER, [05-K-2]).
 GRANT INSERT, UPDATE ON
     atualizacao_campanha,
-    solicitacao_encerramento, comentario, denuncia,
+    solicitacao_encerramento, comentario,
     recompensa
 TO app_nestjs;
+-- denuncia: quem julga só muda o status e a justificativa (pol_denuncia_update, 04); motivo, alvo, relato e autor
+-- ficam como o denunciante registrou.
+GRANT INSERT ON denuncia TO app_nestjs;
+GRANT UPDATE (status, justificativa_moderacao) ON denuncia TO app_nestjs;
+REVOKE EXECUTE ON FUNCTION public.encerrar_campanha_por_denuncia(INT, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.encerrar_campanha_por_denuncia(INT, TEXT) TO app_nestjs;
 -- comentario tem DELETE: pol_comentario_delete (04) restringe ao dono da campanha e a comentário ativo.
 GRANT DELETE ON comentario TO app_nestjs;
 -- historico_rejeicao: só INSERT. Histórico de moderação é imutável, e nenhum código faz UPDATE nele (a policy de
@@ -288,10 +296,14 @@ GRANT EXECUTE ON FUNCTION public.atualizar_status_repasse(INT, VARCHAR, TIMESTAM
 -- expirar_campanhas_rascunho(), expirar_campanhas_rejeitadas() e limpar_log_auditoria(). Mesma higiene de [06-D-2b].
 REVOKE EXECUTE ON FUNCTION public.encerrar_campanhas_vencidas() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.encerrar_campanhas_vencidas() TO app_nestjs;
+REVOKE EXECUTE ON FUNCTION public.expirar_contribuicoes_pendentes() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.expirar_contribuicoes_pendentes() TO app_nestjs;
 REVOKE EXECUTE ON FUNCTION public.expirar_campanhas_rascunho() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.expirar_campanhas_rascunho() TO app_nestjs;
 REVOKE EXECUTE ON FUNCTION public.expirar_campanhas_rejeitadas() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.expirar_campanhas_rejeitadas() TO app_nestjs;
+REVOKE EXECUTE ON FUNCTION public.limpar_ip_aceite_contribuicao() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.limpar_ip_aceite_contribuicao() TO app_nestjs;
 REVOKE EXECUTE ON FUNCTION public.limpar_log_auditoria() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.limpar_log_auditoria() TO app_nestjs;
 -- deslizar_datas_campanha(): chamada pelo pesquisador pelo Nest. Quem pode usar é decidido DENTRO da função

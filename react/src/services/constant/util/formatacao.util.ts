@@ -40,6 +40,11 @@ export function formatarData(iso: string | null | undefined): string {
   return iso ? paraData(iso).toLocaleDateString('pt-BR') : 'Não definida';
 }
 
+// Instante (ISO) daqui a N dias de 24h, para o "suspenso até" das suspensões.
+export function instanteDaquiADias(dias: number): string {
+  return new Date(Date.now() + dias * 86_400_000).toISOString();
+}
+
 // Tempo de espera em dias de calendário ("hoje", "há 1 dia", "há 5 dias"): conta viradas de dia, não blocos de 24h
 // (enviada ontem às 23h é "há 1 dia" hoje às 8h).
 export function formatarEspera(iso: string | null | undefined): string {
@@ -95,7 +100,7 @@ export function formatarCpfExibicao(cpf: string): string {
 
 // `formatarCpfOuMotivoOculto`: formata o CPF quando visível ou explica por que não está (a API só devolve `cpf`
 // de verdade para o dono ou quem tem permissão sensível); compartilhada por `consultar-pesquisador.tsx` e
-// `bancada-pesquisador.tsx` (Campo de Testes).
+// `bancada-pesquisador.tsx`.
 export function formatarCpfOuMotivoOculto(cpf: string | null | undefined): string {
   return cpf ? formatarCpfExibicao(cpf) : 'Não visível (sem permissão sensível ou não é o dono)';
 }
@@ -106,7 +111,7 @@ export function formatarCpfOuMotivoOculto(cpf: string | null | undefined): strin
 // Nenhum chamador conhecido passa objeto de verdade por aqui: é rede de segurança, não deveria aparecer na
 // prática.
 // `nomeDimensao` (Score de pesquisador) vem cru do banco (snake_case, ex.: "atualizacao_campanha"):
-// centralizado aqui (usado por consultar-pesquisador.tsx e bancada-pesquisador.tsx, T1 do Campo de Testes) para
+// centralizado aqui (usado por consultar-pesquisador.tsx e bancada-pesquisador.tsx) para
 // as cópias não divergirem.
 export function formatarNomeDimensao(nome: string): string {
   return nome

@@ -52,6 +52,8 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 90023 | `suspender_usuario` / `suspender_papel_usuario` / `suspender_pesquisador` | `usuario` / `usuario_papel` / `perfil_pesquisador` | A data final da suspensão precisa estar no futuro (29-09-2026) |
 | 90024 | `trg_valida_escopo_tipolink` | `link_academico` / `link_atualizacao` / `link_recompensa` | O endereço do link não é de nenhum dos domínios do tipo (ex.: Lattes fora de lattes.cnpq.br), RF-022 (29-09-2026) |
 | 90025 | `trg_valida_escopo_tipolink` | `link_academico` / `link_atualizacao` / `link_recompensa` | O link não segue o formato (`regex`) do tipo (29-09-2026) |
+| 90026 | `fn_valida_denuncia_alvo` | `denuncia` | O perfil denunciado não é de um pesquisador (03-10-2026) |
+| 90027 | `encerrar_campanha_por_denuncia` | `denuncia`, `campanha` | Justificativa obrigatória para encerrar campanha por moderação (03-10-2026) |
 
 ## 91xxx - Conflito de estado/regra de negócio (409)
 
@@ -90,6 +92,10 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 91031 | `excluir_conta_usuario` | `usuario` | Não é possível excluir a conta enquanto houver campanha ativa (29-09-2026) |
 | 91032 | `fn_protege_termo_aceito` | `termos_de_uso` | Versão do Termo já aceita não pode ser excluída, RF-091 (29-09-2026) |
 | 91033 | `fn_protege_termo_aceito` | `termos_de_uso` | Versão do Termo já aceita não pode ter texto, tipo ou versão alterados, RF-091 (29-09-2026) |
+| 91034 | `fn_valida_seguir_campanha_publicada` | `seguir_campanha` | Só é possível seguir uma campanha publicada (03-10-2026) |
+| 91035 | `fn_valida_denuncia_alvo` | `denuncia` | Só é possível denunciar uma campanha ativa (RF-106, 03-10-2026) |
+| 91036 | `encerrar_campanha_por_denuncia` | `denuncia` | A denúncia não é contra uma campanha (03-10-2026) |
+| 91037 | `encerrar_campanha_por_denuncia` | `campanha` | Só campanha ativa pode ser encerrada por moderação (03-10-2026) |
 
 ## 92xxx - Autorização negada / conflito de interesse (403)
 
@@ -122,6 +128,9 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 92025 | `fn_valida_posse_imagem_perfil` / `fn_valida_posse_anexo` | `usuario` / `arquivo_atualizacao`, `arquivo_recompensa` | Só é possível usar como foto ou anexar um arquivo que você mesmo enviou (28 e 29-09-2026) |
 | 92026 | `trg_valida_escopo_tipolink` | `link_academico` | Só pesquisador tem links acadêmicos (29-09-2026) |
 | 92027 | `suspender_usuario` | `usuario` | Ninguém suspende a própria conta (29-09-2026) |
+| 92028 | `comentar_campanha_para_outro` | `comentario` | Sem permissão para comentar em nome de outro pesquisador (03-10-2026) |
+| 92029 | `fn_valida_denuncia_alvo` | `denuncia` | Não é possível denunciar a própria campanha nem o próprio perfil (03-10-2026) |
+| 92030 | `encerrar_campanha_por_denuncia` | `denuncia`, `campanha` | Sem permissão para julgar a denúncia e encerrar a campanha por moderação (03-10-2026) |
 
 ## 93xxx - Limite de taxa (429)
 

@@ -4,7 +4,9 @@ import { Pool } from 'pg';
 import { PG_POOL } from '../../commons/database/database.constants';
 
 // Chama encerrar_campanhas_vencidas() (05_regras_negocio.sql, [05-K-2]) por agendamento (RF-057): sem isso, uma
-// campanha cujo prazo vence continuaria 'ativo' para sempre e aceitando contribuição além do prazo.
+// campanha cujo prazo vence continuaria 'ativo' para sempre e aceitando contribuição além do prazo. Antes, vence o
+// Pix pendente que passou da validade (expirar_contribuicoes_pendentes): a campanha vencida só é encerrada quando
+// não sobra Pix pendente válido.
 //
 // `PG_POOL` direto, NUNCA `DatabaseService.getDb()`: um job agendado roda fora do pipeline HTTP, sem nenhuma
 // requisição por trás. GlobalDbInterceptor (que abre a transação e guarda o Kysely no CLS) só roda em rota HTTP
@@ -34,6 +36,15 @@ export class CampanhaServiceCloseExpired {
     // sem `await` de ninguém), e o Node moderno derruba o processo inteiro por causa de um job periódico. Mesmo
     // tratamento nos 3 crons do sistema.
     try {
+      const expiradas = await this.pool.query<{
+        expirar_contribuicoes_pendentes: number;
+      }>('SELECT public.expirar_contribuicoes_pendentes()');
+      const quantidadeExpiradas =
+        expiradas.rows[0]?.expirar_contribuicoes_pendentes ?? 0;
+      if (quantidadeExpiradas > 0) {
+        this.logger.log(`${quantidadeExpiradas} Pix pendente(s) vencido(s).`);
+      }
+
       const resultado = await this.pool.query<{
         encerrar_campanhas_vencidas: number;
       }>('SELECT public.encerrar_campanhas_vencidas()');

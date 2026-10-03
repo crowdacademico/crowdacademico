@@ -80,6 +80,14 @@ export const REGRA_POR_CONSTRAINT: Readonly<Record<string, RegraConhecida>> = {
     mensagem: 'Escreva o comentário antes de enviar.',
   },
   CK_DENUNCIA_RELATO_TAMANHO: { campo: 'relato', mensagem: TEXTO_LONGO },
+  CK_DENUNCIA_JUSTIFICATIVA_TAMANHO: {
+    campo: 'justificativa',
+    mensagem: TEXTO_LONGO,
+  },
+  CK_DENUNCIA_ALVO_XOR: {
+    campo: 'idCampanhaAlvo',
+    mensagem: 'Escolha um alvo só: a campanha ou o perfil do pesquisador.',
+  },
   CK_RECOMPENSA_VALOR_MINIMO: {
     campo: 'valorMinimo',
     mensagem: 'O valor mínimo da recompensa precisa ser maior que zero.',

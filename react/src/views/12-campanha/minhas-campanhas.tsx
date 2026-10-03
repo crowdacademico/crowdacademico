@@ -3,10 +3,7 @@ import { Link, useSearchParams } from 'react-router';
 import { GenericTable } from '../../components/crud/generic-table';
 import { BotaoCriar } from '../../components/crud/botao-criar';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
-import {
-  ORDEM_STATUS_CAMPANHA,
-  ROTULO_STATUS_CAMPANHA,
-} from '../../services/12-campanha/constants/status-campanha.constants';
+import { ORDEM_ROTULOS_STATUS_CAMPANHA, rotuloStatusCampanha } from '../../services/12-campanha/constants/status-campanha.constants';
 import { perfilPesquisadorApi } from '../../services/6-perfil-pesquisador/api/perfil-pesquisador.api';
 import { useCrudModais } from '../../services/constant/hook/use-crud-modais';
 import { ModalAlterarCampanha } from './modal-alterar-campanha';
@@ -73,7 +70,7 @@ export function MinhasCampanhas({ auth }: PropsPagina) {
     const campanhas = await campanhaApi.listar(auth.authFetch, { idUsuario });
     return campanhas.map((campanha) => ({
       ...campanha,
-      status: ROTULO_STATUS_CAMPANHA[campanha.status],
+      status: rotuloStatusCampanha(campanha),
       statusOriginal: campanha.status,
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -143,7 +140,7 @@ export function MinhasCampanhas({ auth }: PropsPagina) {
         listar={listar}
         acoes={acoesCompletas}
         filtrosFacetados={[
-          { chave: 'status', rotulo: 'Status', ordem: ORDEM_STATUS_CAMPANHA.map((s) => ROTULO_STATUS_CAMPANHA[s]) },
+          { chave: 'status', rotulo: 'Status', ordem: ORDEM_ROTULOS_STATUS_CAMPANHA },
         ]}
       />
 
@@ -159,6 +156,7 @@ export function MinhasCampanhas({ auth }: PropsPagina) {
         <ModalAlterarCampanha
           auth={auth}
           idCampanha={alterando.idCampanha}
+          ehDono
           aoMudar={recarregar}
           aoFechar={fecharAlterando}
         />

@@ -1,5 +1,5 @@
 // O rodapé "Página X de Y / Mostrar / Anterior / Próxima", compartilhado por `generic-table.tsx`,
-// `bancada-campanha.tsx`, `bancada-pesquisador.tsx` e `registro-chamadas.tsx`: as bancadas do Campo de Testes
+// `bancada-campanha.tsx`, `bancada-pesquisador.tsx` e `registro-chamadas.tsx`: as bancadas
 // não podem usar `GenericTable` (risco de linha), mas precisam do MESMO rodapé; pelo teste-de-prop de
 // `generic-table.tsx`, isso é um IRMÃO, não um miolo.
 //

@@ -25,16 +25,16 @@ import type { CampanhaRequestCreate, CampanhaResponse } from '../../services/12-
 interface ModalCriarCampanhaProps {
   auth: Pick<UseAuthReturn, 'authFetch'>;
   // Continuar um rascunho que já existe: o mesmo passo a passo, com os dados dele, sempre a partir da etapa 1. O
-  // rascunho só é editado aqui (Minhas Campanhas e T2 mandam para cá); o Alterar comum fica para os outros status.
+  // rascunho só é editado aqui (Minhas Campanhas e a Bancada da Campanha mandam para cá); o Alterar comum fica para os outros status.
   idRascunho?: number;
-  // Cria a campanha com os dados da etapa 1. Padrão: em nome de quem está logado (POST /campanha). O Campo de
-  // Testes passa o endpoint de suporte, em nome do pesquisador escolhido.
+  // Cria a campanha com os dados da etapa 1. Padrão: em nome de quem está logado (POST /campanha). A Bancada
+  // da Campanha passa o endpoint de suporte, em nome do pesquisador escolhido.
   criar?: (dados: CampanhaRequestCreate) => Promise<CampanhaResponse>;
-  // Campos a mais no topo da etapa 1 (o Campo de Testes põe o "Dono da campanha") e se eles já estão válidos.
+  // Campos a mais no topo da etapa 1 (a Bancada da Campanha põe o "Dono da campanha") e se eles já estão válidos.
   camposExtras?: ReactNode;
   camposExtrasValidos?: boolean;
   subtituloDados?: string;
-  // Texto que fica na frente do subtítulo em todas as etapas (o T2 põe "Pesquisador: fulano.").
+  // Texto que fica na frente do subtítulo em todas as etapas (a Bancada da Campanha põe "Pesquisador: fulano.").
   contexto?: string;
   // A lista de quem abriu precisa recarregar (campanha criada, alterada ou enviada).
   aoMudar: () => void;

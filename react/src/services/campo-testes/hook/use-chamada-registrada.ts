@@ -7,10 +7,10 @@ import { useCampoTestes } from './use-campo-testes';
 import type { UseAuthReturn } from '../../3-auth/hook/use-auth';
 import type { AuthFetch } from '../../3-auth/type/auth.type';
 
-// Um `authFetch` de verdade (a sessão real do painel) que também registra cada chamada no T4 (Registro de
-// Chamadas): método, caminho, status, tempo e os dois corpos. Com o mesmo formato de `auth.authFetch`, dá para
+// Um `authFetch` de verdade (a sessão real do painel) que também registra cada chamada no Registro de
+// Chamadas: método, caminho, status, tempo e os dois corpos. Com o mesmo formato de `auth.authFetch`, dá para
 // entregá-lo a qualquer componente ou API compartilhada (ex.: o painel de orçamento/cronograma, que também vive
-// fora do Campo de Testes) sem esse componente saber que o T4 existe.
+// fora do Campo de Testes) sem esse componente saber que o registro existe.
 export function useAuthFetchRegistrado(auth: Pick<UseAuthReturn, 'authFetch'>): AuthFetch {
   const { registrarChamada } = useCampoTestes();
 
@@ -38,7 +38,7 @@ export function useAuthFetchRegistrado(auth: Pick<UseAuthReturn, 'authFetch'>): 
         // SEMPRE mandando `JSON.stringify(...)`, nunca um desses outros formatos): `String()` num Blob/FormData
         // não dá o JSON de volta, dá "[object Blob]" (`no-base-to-string`). Só tenta interpretar quando já é
         // string de verdade; outro formato de corpo vira `null` aqui (nunca aconteceu até hoje, mas ser honesto
-        // é melhor que dado enganoso no T4).
+        // é melhor que dado enganoso no registro).
         corpoEnviado: typeof opcoes.body === 'string' ? JSON.parse(opcoes.body) : null,
         corpoRecebido,
         ok: respostaFetch.ok,

@@ -22,13 +22,13 @@ import type { TermoUsoResponseActive } from '../../services/5-termo-uso/type/ter
 
 interface ModalUpgradePesquisadorProps {
   auth: Pick<UseAuthReturn, 'authFetch' | 'usuario'>;
-  // Conta que vai virar pesquisadora: pode ser a própria conta logada OU a de outra pessoa (o cadeado em T1,
+  // Conta que vai virar pesquisadora: pode ser a própria conta logada OU a de outra pessoa (o cadeado da Bancada do Pesquisador,
   // Bancada do Pesquisador, precisa funcionar em qualquer linha, não só na própria). O Termo de Uso aparece
   // sempre, para qualquer conta: o aceite fica registrado em nome DESTE `idUsuarioAlvo`, nunca de quem está
   // preenchendo a tela.
   idUsuarioAlvo: number;
-  // Botão "Gerar CPF válido" (mesmo padrão de ModalAlterarUsuario): ausente por padrão; só quem chama de dentro
-  // do Campo de Testes passa isso (bancada-pesquisador.tsx), nunca um consumidor de verdade.
+  // Botão "Gerar CPF válido" (mesmo padrão de ModalAlterarUsuario): ausente por padrão; só a Bancada do
+  // Pesquisador passa isso (bancada-pesquisador.tsx), nunca um consumidor de verdade.
   gerarCpfDeTeste?: () => string;
   aoFechar: () => void;
   aoConcluido: (perfil: PerfilPesquisadorResponse) => void;
@@ -50,7 +50,7 @@ const FORM_VAZIO: FormUpgrade = {
   tituloAcademico: 'mestre',
 };
 
-// Upgrade de perfil de pesquisador (cadeado em T1, Bancada do Pesquisador, mas pensado para qualquer tela
+// Upgrade de perfil de pesquisador (cadeado da Bancada do Pesquisador, mas pensado para qualquer tela
 // futura que precise do mesmo botão). 2 etapas, SEMPRE do zero: de propósito SEM nenhum estado "já aceitei
 // antes"/"upgrade em progresso" persistido em lugar nenhum (nem localStorage, nem backend): a etapa 1 (termo) é
 // só estado local deste componente, NENHUMA requisição grava aceite até a etapa 2 ser enviada de verdade. Se a

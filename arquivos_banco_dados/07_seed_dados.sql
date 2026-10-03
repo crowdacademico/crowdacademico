@@ -2,75 +2,19 @@
 --  CROWDACADÊMICO - SISTEMA DE CROWDFUNDING PARA PESQUISA CIENTÍFICA
 -- ============================================================================
 --  Arquivo:     07_seed_dados.sql
---  Módulo:      Seed de Dados (mínimo 7 registros por tabela)
---  Depende de:  01 a 06 (precisa das tabelas, RLS, grants e das funções de
---               score já criadas - o INSERT final chama
---               public.recalcular_todos_os_scores(), definida em 05)
---  Próximo:     08_trigger_signup_usuario.sql (opcional/manual)
-
---  Senha de todo mundo no seed = DevTcc123!
--- ----------------------------------------------------------------------------
---  Descrição:
---  Povoa o banco com dados de demonstração/teste, na ordem física exigida
---  pelas dependências de Foreign Key - que NÃO é a mesma ordem alfabética
---  do índice global de letras (ver DOCUMENTACAO_BD.md). Alguns blocos são
---  intercalados de propósito: por exemplo, o seed de `configuracoes`
---  (letra C) só roda depois do de `usuario` (letra D) porque duas de suas
---  linhas referenciam o usuário admin. Os marcadores `[07-X]` abaixo
---  indicam a que domínio cada bloco pertence, mesmo fora de ordem.
+--  Módulo:      Dados iniciais (referência e demonstração)
+--  Depende de:  01 a 06
+--  Próximo:     08_trigger_signup_usuario.sql
 --
---  Inventário Mapeado: 30 blocos de INSERT cobrindo as 39 tabelas com
---  dados obrigatórios de seed (tabelas só de associação/log ficam vazias
---  até o primeiro uso real da aplicação).
+--  Senha de todo mundo neste seed = DevTcc123!
 -- ----------------------------------------------------------------------------
---  CAMADAS DE DEPENDÊNCIA (o critério real por trás da ordem abaixo)
--- ----------------------------------------------------------------------------
---  Camada 1 - Tabelas-base: não dependem de nenhuma linha inserida por este
---  arquivo, só das tabelas fixas do 01 (ENUMs, etc). Podem ser inseridas em
---  qualquer ordem entre si.
---    score_config, score_rotulo, papel, permissao, papel_permissao,
---    tipo_link, area_conhecimento, motivo_denuncia, arquivo, usuario,
---    termos_de_uso
---
---  Camada 2 - Dependem de uma linha da Camada 1 já existir (o `usuario`
---  admin, sobretudo): usuario_papel, usuario_termo, configuracoes,
---  perfil_pesquisador, link_academico, campanha, seguir_pesquisador,
---  notificacao
---
---  Camada 3 - Dependem de uma linha da Camada 2 (principalmente de
---  `campanha` ou `contribuicao` já existirem): seguir_campanha,
---  contribuicao, aceite_termo_contribuicao, auditoria_financeira,
---  atualizacao_campanha, arquivo_atualizacao, repasse,
---  solicitacao_encerramento, historico_rejeicao, comentario, denuncia
---
---  Por isso o arquivo não segue a ordem alfabética do índice global de
---  letras (ver DOCUMENTACAO_BD.md) - a ordem física real é por camada de
---  dependência, e uma letra pode aparecer em mais de uma camada (ex.:
---  `configuracoes`, letra C, só entra na Camada 2 porque duas de suas
---  linhas referenciam o usuário admin).
--- ----------------------------------------------------------------------------
---  SUMÁRIO DOS BLOCOS DE CÓDIGO (ordem de execução, não alfabética)
--- ----------------------------------------------------------------------------
---  [07-I] score_config, score_rotulo                    (Camada 1)
---  [07-B] papel, permissao, papel_permissao              (Camada 1)
---  [07-C] tipo_link, area_conhecimento, motivo_denuncia,
---         arquivo                                        (Camada 1)
---  [07-D] usuario, usuario_papel                (Camada 1, Camada 2)
---  [07-D] termos_de_uso, usuario_termo           (Camada 1, Camada 2)
---  [07-C] configuracoes (vem depois de D de propósito - ver acima) (Camada 2)
---  [07-D] perfil_pesquisador, verificacao_email          (Camada 2)
---  [07-F] link_academico                                  (Camada 2)
---  [07-E] campanha                                        (Camada 2)
---  [07-E] seguir_campanha                                 (Camada 3)
---  [07-D] seguir_pesquisador                              (Camada 2)
---  [07-H] contribuicao, aceite_termo_contribuicao,
---         auditoria_financeira                            (Camada 3)
---  [07-E] atualizacao_campanha                            (Camada 3)
---  [07-G] arquivo_atualizacao                             (Camada 3)
---  [07-E] repasse, solicitacao_encerramento, historico_rejeicao,
---         comentario, denuncia                            (Camada 3)
---  [07-D] notificacao (posicionado no fim do arquivo, fisicamente,
---         mas depende só de usuario - Camada 2)
+--  Em palavras simples: o arquivo tem duas partes.
+--  1. Referência: o que o sistema precisa para funcionar em qualquer banco (pontuação do score, papéis e
+--     permissões, tipos de link, áreas do conhecimento, motivos de denúncia, a versão vigente de cada termo e os
+--     parâmetros).
+--  2. Demonstração, a partir do marcador [07-DEMONSTRACAO]: contas, pesquisadores, campanhas, contribuições,
+--     comentários, denúncias, termos antigos, as permissões das ferramentas de teste e a leitura liberada de
+--     desenvolvimento. Num banco de produção, a segunda parte não roda (rodar o arquivo só até o marcador).
 -- ============================================================================
 
 -- Todas as datas e horas escritas neste arquivo são do horário de Brasília. Sem isto, o Postgres (o Supabase roda
@@ -170,19 +114,10 @@ INSERT INTO permissao (nome) VALUES
 -- de perfil_pesquisador (06): o próprio pesquisador não pode alterar o próprio CPF (RF-017, correção só via
 -- suporte); esta permissão decide quem pode chamar a função de correção.
 ('perfil_pesquisador_corrigir_cpf'),
--- Gate de criar_perfil_pesquisador_para_outro() (03, [03-R]). O self-service (POST /perfil-pesquisador) sempre
--- cria em nome de quem está logado; esta permissão decide quem pode criar perfil de pesquisador em nome de
--- OUTRA pessoa (Bancada do Pesquisador, Campo de Testes).
-('perfil_pesquisador_criar_para_outro'),
 -- Gate de alterar_perfil_pesquisador_de_outro() (03, [03-U]): o modal de Alterar Usuário salva
 -- vínculo/título acadêmico de QUEM está sendo editado (PATCH /perfil-pesquisador/:id); o self-service (sem id)
 -- só edita o próprio perfil.
 ('perfil_pesquisador_alterar_de_outro'),
--- Campo de Testes: Admin cria campanha em nome de outro pesquisador (mesma classe de
--- perfil_pesquisador_criar_para_outro, acima) e exclui campanha à força, ignorando status (limpeza de dado de
--- teste; nunca oferecida no painel real).
-('campanha_criar_para_outro'),
-('campanha_excluir_forcado'),
 ('termos_uso_gerenciar'),
 -- NOTA: estas 3 são propositalmente sem policy de RLS - verificacao_email,
 -- recuperacao_senha e sessao já têm policy FOR ALL USING(true) de propósito (o
@@ -263,10 +198,7 @@ WHERE (p.nome, perm.nome) IN (
     ('admin', 'usuario_visualizar_sensivel'),
     ('admin', 'perfil_pesquisador_visualizar_sensivel'),
     ('admin', 'perfil_pesquisador_corrigir_cpf'),
-    ('admin', 'perfil_pesquisador_criar_para_outro'),
     ('admin', 'perfil_pesquisador_alterar_de_outro'),
-    ('admin', 'campanha_criar_para_outro'),
-    ('admin', 'campanha_excluir_forcado'),
     ('admin', 'termos_uso_gerenciar'),
     ('admin', 'sessao_revogar'),
     ('admin', 'recuperacao_senha_revogar'),
@@ -323,26 +255,6 @@ WHERE (p.nome, perm.nome) IN (
     ('curador', 'termos_uso_gerenciar'),
     ('curador', 'score_visualizar')
 )
-ON CONFLICT DO NOTHING;
-
--- [07-B-4] DESENVOLVIMENTO: toda conta logada VÊ tudo (nunca altera). O papel 'usuario', que todo cadastro
--- recebe, ganha só as permissões de LEITURA, para qualquer papel conseguir testar todas as telas. As de alterar
--- (gerenciar, editar, aprovar, suspender...) continuam só com quem já tinha. REMOVER antes do deploy (entra no
--- bloco "modo produção", ver PENDENCIAS e correcoes.md).
-INSERT INTO papel_permissao (id_papel, id_permissao)
-SELECT p.id_papel, perm.id_permissao
-FROM papel p
-JOIN permissao perm ON TRUE
-WHERE p.codigo = 'usuario'
-  AND perm.nome IN (
-    'relatorio_visualizar',
-    'usuario_visualizar_sensivel',
-    'perfil_pesquisador_visualizar_sensivel',
-    'contribuicao_visualizar_sensivel',
-    'auditoria_financeira_visualizar',
-    'score_visualizar',
-    'log_visualizar'
-  )
 ON CONFLICT DO NOTHING;
 
 -- [07-C-1] tipo_link
@@ -537,6 +449,277 @@ INSERT INTO motivo_denuncia (descricao, tipo) VALUES
 ('Usurpação de identidade de pesquisador real',              'perfil'),
 ('Vínculo institucional falso ou não comprovável',           'perfil');
 
+-- [07-D-6] termos_de_uso / usuario_termo
+-- Sustentam o RF-011 (aceite obrigatório no cadastro); o texto real dos termos entra quando a equipe/jurídico
+-- definir. v1 é a versão vigente durante todo o período em que os usuários deste seed se cadastraram (por isso
+-- é ela que aparece em usuario_termo, abaixo). v2 é a versão atual, publicada depois e ainda sem aceite
+-- registrado: cenário realista de "termo novo no ar, usuários antigos ainda não foram re-avisados".
+--
+-- PEGADINHA (vale para o NestJS, ao publicar uma versão nova): publicar v2 sem antes desativar v1 quebra com o
+-- erro do índice parcial uq_termos_uso_ativo (02), que só permite 1 linha ativa POR TIPO. O UPDATE que desativa
+-- a versão velha e o INSERT da versão nova precisam estar na MESMA transação (é o que este bloco já faz).
+--
+-- `tipo` explícito em toda linha abaixo: o sistema sempre tem 1 versão vigente de cada termo, o da conta
+-- ('cadastro', que cobre também as contribuições) e o de pesquisador ('upgrade_pesquisador'), cada um com a
+-- sua PRÓPRIA versão/histórico.
+-- v5: o item 5.4 passa a dizer que o IP de onde a contribuição foi feita é registrado (inclusive na anônima) e
+-- guardado por 5 anos (configuracoes.ip_aceite_contribuicao_retencao_dias). Versão nova, não edição da v4: versão
+-- já aceita não se altera, e toda conta aceita a v5 no próximo login.
+INSERT INTO termos_de_uso (tipo, versao, conteudo, ativo, criado_em) VALUES
+('cadastro', 'v5-2026-10-03', 'TERMOS DE USO E POLÍTICA DE PRIVACIDADE - CROWDACADÊMICO
+
+Estes Termos valem para a conta e para todas as contribuições feitas na plataforma. O aceite é registrado no cadastro e novamente a cada contribuição, com a versão vigente naquele momento.
+
+1. OBJETO
+O CrowdAcadêmico é uma plataforma de financiamento coletivo (crowdfunding) dedicada exclusivamente a projetos de pesquisa científica e tecnológica brasileira. Estes Termos regem o uso da plataforma por pesquisadores, apoiadores e demais usuários, cadastrados ou não.
+
+2. CADASTRO E CONTA
+O cadastro exige informações verdadeiras, completas e atualizadas. Cada pessoa pode manter apenas uma conta ativa. O usuário é responsável por manter a confidencialidade de sua senha e por toda atividade realizada em sua conta.
+
+3. PERFIL DE PESQUISADOR
+Para submeter e gerenciar campanhas, o usuário deve solicitar o upgrade para perfil de pesquisador, que tem termo próprio, aceito no momento do upgrade.
+
+4. CAMPANHAS
+Toda campanha passa por aprovação administrativa antes de ficar visível ao público. O CrowdAcadêmico não garante o sucesso de nenhuma campanha nem se responsabiliza pelo uso dos recursos arrecadados após o repasse ao pesquisador responsável.
+
+5. CONTRIBUIÇÕES
+5.1. Natureza. A contribuição é voluntária e destinada ao financiamento do projeto de pesquisa descrito na campanha. O CrowdAcadêmico atua como intermediário entre apoiador e pesquisador, não é parte na relação de pesquisa e não garante os resultados científicos do projeto apoiado.
+5.2. Modelo de arrecadação e repasse. Conforme o modelo da campanha, informado na própria página antes da contribuição, o valor é repassado ao pesquisador somente se a meta for atingida (tudo ou nada) ou pode ser repassado mesmo sem atingi-la (flexível).
+5.3. Reembolso. A contribuição é devolvida nos casos previstos nas regras da plataforma, como a campanha tudo ou nada que não atinge a meta ou a campanha encerrada por moderação antes do repasse. Fora desses casos, a contribuição é definitiva a partir da confirmação do pagamento.
+5.4. Aceite por contribuição. A cada contribuição, o apoiador confirma estes Termos e as regras do modelo da campanha. A plataforma registra a data, a hora, a versão destes Termos vigente naquele momento, o identificador da transação e o endereço IP de onde a contribuição foi feita (inclusive na contribuição anônima), para fins de auditoria e de defesa em eventual contestação do pagamento. O endereço IP é guardado por 5 (cinco) anos, o prazo para reclamações de consumo (Código de Defesa do Consumidor, art. 27), e depois é apagado; os demais registros da contribuição seguem o item 5.5. A versão registrada é a que se aplica àquela contribuição, mesmo que uma versão nova seja publicada depois.
+5.5. Dados de pagamento. Os dados de pagamento são processados pelo meio de pagamento escolhido (Pix, cartão ou boleto). A plataforma guarda o registro da contribuição e do aceite pelo prazo exigido em lei, mesmo que a conta seja encerrada.
+
+6. PROPRIEDADE INTELECTUAL
+O conteúdo publicado por pesquisadores (descrição de projeto, atualizações, materiais anexados) permanece de titularidade do autor. Ao publicar, o pesquisador concede ao CrowdAcadêmico licença não exclusiva para exibição pública do conteúdo na plataforma, pelo tempo em que a campanha ou o perfil permanecerem ativos.
+
+7. PROTEÇÃO DE DADOS PESSOAIS (LGPD)
+O tratamento de dados pessoais nesta plataforma segue a Lei Geral de Proteção de Dados Pessoais (Lei 13.709/2018). Coletamos apenas os dados necessários para cadastro, validação de identidade, processamento de contribuições e cumprimento de obrigações legais. O titular dos dados tem direito a: confirmação da existência de tratamento; acesso aos dados; correção de dados incompletos ou desatualizados; anonimização, bloqueio ou eliminação de dados desnecessários; portabilidade; e revogação do consentimento, a qualquer momento, mediante solicitação pelos canais oficiais da plataforma. Dados sensíveis, como CPF, são armazenados de forma protegida e nunca exibidos publicamente em sua forma completa.
+
+8. MODERAÇÃO E DENÚNCIAS
+A equipe administrativa pode suspender ou encerrar campanhas, perfis ou contas que violem estes Termos, mediante denúncia fundamentada ou verificação própria, assegurado o direito de manifestação do usuário afetado.
+
+9. ENCERRAMENTO DE CONTA
+O usuário pode solicitar o encerramento de sua conta a qualquer momento. Dados vinculados a obrigações legais ou financeiras, como o histórico de contribuições, podem ser mantidos pelo prazo exigido pela legislação aplicável, mesmo após o encerramento.
+
+10. ALTERAÇÕES DESTES TERMOS
+Estes Termos podem ser atualizados periodicamente. A versão vigente é sempre a mais recente publicada, e o usuário é notificado para revisar e aceitar o texto atualizado.
+
+11. FORO
+Fica eleito o foro da comarca do domicílio do usuário para dirimir eventuais controvérsias, conforme o Código de Defesa do Consumidor, quando aplicável.', TRUE, '2026-10-03 00:00:00')
+ON CONFLICT (tipo, versao) DO NOTHING;
+
+INSERT INTO termos_de_uso (tipo, versao, conteudo, ativo, criado_em) VALUES
+('upgrade_pesquisador', 'v2-2026-09-13', 'TERMOS DE UPGRADE DE PERFIL DE PESQUISADOR - CROWDACADÊMICO
+
+1. OBJETO
+Este termo é exibido no momento em que um usuário comum solicita o upgrade de sua conta para perfil de pesquisador, complementando os Termos de Uso gerais aceitos no cadastro.
+
+2. RESPONSABILIDADE PELAS INFORMAÇÕES DECLARADAS
+Ao solicitar o upgrade, o usuário declara que o CPF, o vínculo institucional (quando aplicável) e o título acadêmico informados são verdadeiros. Informações falsas podem levar à suspensão do perfil de pesquisador e das campanhas vinculadas a ele.
+
+3. RESPONSABILIDADES DO PERFIL DE PESQUISADOR
+O perfil de pesquisador autoriza submeter e gerenciar campanhas de financiamento coletivo. O pesquisador é responsável pela veracidade das informações de cada campanha, pela execução do projeto descrito e pela prestação de contas aos apoiadores, conforme as regras de moderação da plataforma.
+
+4. PONTUAÇÃO E REPUTAÇÃO
+O perfil de pesquisador está sujeito ao sistema de pontuação (score) da plataforma, que reflete o histórico de campanhas, cumprimento de prazos e conduta. A pontuação pode influenciar a visibilidade de campanhas futuras.
+
+5. DADOS PESSOAIS (LGPD)
+O CPF é armazenado de forma cifrada e nunca exibido publicamente em sua forma completa, conforme a Lei 13.709/2018 (LGPD). O vínculo institucional e o título acadêmico são exibidos publicamente no perfil, por serem informações de natureza profissional/acadêmica relevantes para os apoiadores.
+
+6. ALTERAÇÕES DESTE TERMO
+Este termo pode ser atualizado periodicamente; a versão vigente no momento da solicitação do upgrade é a que se aplica.', TRUE, '2026-09-13 00:00:00');
+
+
+-- [07-C-5] configuracoes: por que este bloco vem depois de usuario (ver DOCUMENTACAO_BD.md)
+-- Agrupado por domínio (A,D,E,F,H,I, mesma ordem de [07-B-2]): configuracoes.service.findall.ts ordena por
+-- id_config, então a ordem do INSERT é a ordem que a tela mostra. Puramente cosmético para cada chave: `chave` é
+-- UNIQUE e toda leitura (NestJS) busca por nome, nunca por posição/id_config.
+--
+-- Não pode haver "alavanca fantasma": chave sem nenhum consumidor faz o Admin mudar algo no painel e nada
+-- acontecer (pior que um valor fixo no código, porque parece que devia funcionar). email_suporte e
+-- notificar_novas_campanhas (mais abaixo) são lidas pelo NestJS, não pelo banco; chave sem consumidor não entra
+-- no seed (ver os comentários no final deste bloco).
+-- `publica`: PÚBLICA é o que o navegador precisa para montar/validar uma tela (admin ou pública); INTERNA é
+-- parâmetro de segurança/moderação (tudo que envolve tentativa de login, bloqueio, validade de token/sessão) ou
+-- constante que só uma trigger/service interno lê, nunca exibida a ninguém. `suspensao_usuario_opcoes_dias` é
+-- PÚBLICA por necessidade técnica: `ConfiguracoesProvider` usa `configuracaoApi.buscarPublicas()`, que NUNCA
+-- manda token (nem para o próprio admin); se essa chave fosse interna, o seletor de "Suspender Usuário" no
+-- painel perderia as opções de prazo.
+INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, publica) VALUES
+-- A
+(NULL, 'email_suporte',              'suporte@crowdacademico.com.br', 'texto', 'E-mail de suporte ao usuário',   TRUE, TRUE), -- lida pelo NestJS (rodapé/e-mails transacionais), não pelo banco - nenhum .sql precisa dela
+-- B
+(NULL, 'limite_tentativas_login',    '5',     'inteiro',  'Nº de tentativas de login falhas antes de bloquear a conta',    TRUE, FALSE),
+(NULL, 'bloqueio_login_minutos',     '15',    'inteiro',  'Duração do bloqueio de login após exceder o limite de tentativas (minutos)', TRUE, FALSE),
+-- Lidas por ConfiguracaoValorService (commons/configuracao) em auth.service.login.ts/auth.service.register.ts,
+-- mesmo padrão dos dois de cima (limite_tentativas_login/bloqueio_login_minutos): janelas de tempo configuráveis
+-- pelo Painel Admin.
+(NULL, 'refresh_token_dias_validade', '30',   'inteiro',  'Por quantos dias a sessão continua válida (refresh token) antes de precisar logar de novo', TRUE, FALSE),
+(NULL, 'verificacao_email_horas_validade', '24', 'inteiro', 'Validade do token de verificação de e-mail, em horas', TRUE, FALSE),
+(NULL, 'recuperacao_senha_minutos_validade', '30', 'inteiro', 'Validade do link de "Esqueci minha senha", em minutos', TRUE, FALSE),
+-- Lida por contar_metricas_dashboard() (03, [03-M]): o card "sessões ativas" conta sessão criada (login ou
+-- renovação do token) dentro desta janela.
+-- Lida por desativar_arquivos_orfaos() (05, [05-G]): prazo para um arquivo enviado ser adotado por um dono
+-- (foto de perfil, anexo) antes de ser desativado e apagado do armazenamento. 0 = desligado.
+(NULL, 'arquivo_horas_para_vincular', '24', 'inteiro', 'Horas que um arquivo enviado pode ficar sem uso (sem virar foto ou anexo) antes de ser apagado', TRUE, FALSE),
+(NULL, 'dashboard_sessao_ativa_minutos', '30', 'inteiro', 'Janela (em minutos) usada pelo painel para contar uma sessão como ativa agora', TRUE, FALSE),
+-- Opções de prazo sugeridas no seletor de "Suspender Usuário" do painel; lida pelo React
+-- (minha-conta/alterar-usuario), não por nenhuma trigger/função do banco.
+(NULL, 'suspensao_usuario_opcoes_dias', '1,3,7,30', 'texto', 'Opções de prazo (em dias) sugeridas no seletor de suspensão de usuário - lista separada por vírgula.', TRUE, TRUE),
+-- E
+-- prazo_minimo_campanha_dias e os limites de negócio (campanhas simultâneas, endossos, denúncias/24h) são lidos
+-- pelas triggers de 05 (ver as funções correspondentes); mudar a política é um UPDATE numa linha.
+(NULL, 'taxa_plataforma_padrao',     '5.00',  'decimal',  'Taxa padrão cobrada pela plataforma (%)',              TRUE, TRUE),
+-- Lida por expirar_contribuicoes_pendentes() e encerrar_campanhas_vencidas() (05, [05-K-2]): o Pix pendente vence
+-- depois disto, e a campanha vencida espera os pendentes ainda válidos antes de sair o resultado.
+(NULL, 'pix_validade_horas',         '24',    'inteiro',  'Horas que um Pix gerado pode ser pago; depois disso a contribuição pendente vence', TRUE, TRUE),
+(NULL, 'prazo_minimo_campanha_dias', '15',    'inteiro',  'Duração mínima permitida de uma campanha em dias',     TRUE, TRUE),
+-- Prazo máximo de campanha: 60 dias (decisão de produto: 15 a 60).
+(NULL, 'prazo_maximo_campanha_dias', '60',    'inteiro',  'Duração máxima permitida de uma campanha em dias',     TRUE, TRUE),
+-- Lida só pelo React (formulário de criação, RF-069): sugestão, não regra. Fica entre o mínimo e o máximo acima.
+(NULL, 'prazo_sugerido_campanha_dias', '30', 'inteiro', 'Duração que o formulário de criação de campanha sugere, em dias (a pessoa pode mudar)', TRUE, TRUE),
+(NULL, 'limite_campanhas_simultaneas','2',    'inteiro',  'Nº máximo de campanhas ao mesmo tempo por pesquisador (ativas ou aguardando aprovação)', TRUE, TRUE),
+(NULL, 'limite_endossos_campanha',   '4',     'inteiro',  'Nº máximo de endossos ativos ao mesmo tempo por campanha', TRUE, TRUE),
+(NULL, 'limite_denuncias_24h',       '5',     'inteiro',  'Nº máximo de denúncias que um usuário pode fazer dentro da janela de tempo das denúncias', TRUE, TRUE),
+-- Janela de tempo do limite de denúncias (RF-076), lida por validar_denuncia_frequencia() em 05, [05-K-3].
+(NULL, 'janela_denuncias_horas',     '24',    'inteiro',  'Janela de tempo das denúncias, em horas (usada pelo limite de denúncias por usuário)', TRUE, TRUE),
+-- `comentario` tem limite de frequência como denúncia (par acima), no mesmo padrão de 2 chaves (contagem +
+-- janela) de limite_denuncias_24h/janela_denuncias_horas; 5 comentários por hora é o valor de partida, ajustável
+-- sem migração.
+(NULL, 'limite_comentarios_por_hora', '5',     'inteiro',  'Nº máximo de comentários que um usuário pode fazer dentro da janela de tempo dos comentários', TRUE, TRUE),
+(NULL, 'janela_comentarios_horas',    '1',     'inteiro',  'Janela de tempo dos comentários, em horas (usada pelo limite de comentários por usuário)', TRUE, TRUE),
+-- Limite de negócio (menor, configurável) por cima do limite técnico largo das colunas (01): mesmo padrão
+-- config + trigger do prazo de campanha.
+(NULL, 'limite_caracteres_descricao_campanha',     '5000', 'inteiro', 'Nº máximo de caracteres na descrição da campanha',                        TRUE, TRUE),
+(NULL, 'limite_caracteres_conteudo_atualizacao',   '5000', 'inteiro', 'Nº máximo de caracteres no texto de uma atualização de campanha',                  TRUE, TRUE),
+(NULL, 'limite_caracteres_relato_denuncia',        '1000', 'inteiro', 'Nº máximo de caracteres no relato de uma denúncia',       TRUE, TRUE),
+(NULL, 'limite_caracteres_justificativa_denuncia', '1000', 'inteiro', 'Nº máximo de caracteres na justificativa da decisão sobre uma denúncia', TRUE, TRUE),
+(NULL, 'limite_caracteres_justificativa_encerramento', '2000', 'inteiro', 'Nº máximo de caracteres em cada justificativa do pedido de encerramento antecipado', TRUE, TRUE),
+(NULL, 'limite_caracteres_descricao_recompensa',   '2000', 'inteiro', 'Nº máximo de caracteres na descrição de uma recompensa',                            TRUE, TRUE),
+(NULL, 'limite_caracteres_comentario',             '500',  'inteiro', 'Nº máximo de caracteres de um comentário (até 500)',                       TRUE, TRUE),
+-- Orçamento e cronograma estruturados (01, [01-E]): mudar o mínimo/máximo exigido, ou o limite de texto, é um
+-- UPDATE nesta tabela, não uma migração. Ver fn_valida_completude_campanha e
+-- fn_valida_limite_max_orcamento_campanha/fn_valida_limite_max_marco_cronograma (05, [05-K-2]). Os valores
+-- 10/20 são o TETO (nº máximo por campanha), não o piso para aprovar; os pisos são orcamento_min_itens = 1
+-- (RF-039: "valores padrão de 1 (mínimo) e 10 (máximo)") e cronograma_min_marcos = 3 (RF-041).
+(NULL, 'orcamento_min_itens',                      '1',    'inteiro', 'Nº mínimo de itens de orçamento exigido para aprovar uma campanha', TRUE, TRUE),
+(NULL, 'orcamento_max_itens',                      '10',   'inteiro', 'Nº máximo de itens de orçamento permitido por campanha',                    TRUE, TRUE),
+(NULL, 'cronograma_min_marcos',                    '3',    'inteiro', 'Nº mínimo de marcos de cronograma exigido para aprovar uma campanha',       TRUE, TRUE),
+(NULL, 'cronograma_max_marcos',                    '20',   'inteiro', 'Nº máximo de marcos de cronograma permitido por campanha',                  TRUE, TRUE),
+-- Prazo do RASCUNHO de campanha: gate de expirar_campanhas_rascunho() (05, [05-K-2]). A campanha nasce
+-- 'rascunho' e só vai para a fila de aprovação por envio explícito do pesquisador. Se a pessoa nunca voltar
+-- (queda de energia, aba fechada, desistência), o rascunho some sozinho depois deste prazo, contado da CRIAÇÃO e
+-- não da última edição (ver REQUISITOS_V7). 336h = 14 dias: prazos curtos (como 48h) contradizem a própria
+-- justificativa do sistema ("cadastrar aos poucos"): quem preenchia na segunda e voltava na quarta perdia tudo.
+(NULL, 'campanha_rascunho_ttl_horas',              '336',  'inteiro', 'Horas até uma campanha em rascunho ser apagada automaticamente (contadas da criação)', TRUE, TRUE),
+-- Regra de rejeição e reenvio (ver REQUISITOS_V7). Máximo de reenvios após a 1ª rejeição: 3 reenvios = até 4
+-- rejeições no total (a 4ª esgota). Prazo, em dias, que a campanha rejeitada continua disponível ao
+-- pesquisador, contado da ÚLTIMA rejeição; sem reenvio nesse prazo, a campanha é excluída por
+-- expirar_campanhas_rejeitadas() (05).
+(NULL, 'campanha_rejeitada_max_reenvios',          '3',    'inteiro', 'Nº máximo de reenvios de uma campanha rejeitada, depois da 1ª rejeição',       TRUE, TRUE),
+(NULL, 'campanha_rejeitada_prazo_dias',            '30',   'inteiro', 'Dias que uma campanha rejeitada fica disponível para reenvio, contados da última rejeição', TRUE, TRUE),
+(NULL, 'limite_caracteres_descricao_orcamento',    '2000', 'inteiro', 'Nº máximo de caracteres na descrição de um item de orçamento',                    TRUE, TRUE),
+(NULL, 'limite_caracteres_descricao_marco',        '2000', 'inteiro', 'Nº máximo de caracteres na descrição de um marco do cronograma',                      TRUE, TRUE),
+-- Meta 0.00 seria sucesso instantâneo numa campanha all-or-nothing. Mesmo padrão do prazo: limite técnico
+-- largo na constraint (01, > 0), mínimo de negócio de verdade aqui.
+(NULL, 'meta_minima_campanha',       '500.00', 'decimal',  'Valor mínimo de meta financeira aceito para uma campanha, em R$',            TRUE, TRUE),
+-- F
+(NULL, 'limite_links_academicos_perfil', '5', 'inteiro',  'Nº máximo de links acadêmicos por pesquisador', TRUE, TRUE),
+-- H
+-- valor_minimo_contribuicao (RF-056): mesmo padrão de meta_minima_campanha, acima. R$5,00 não é piso do gateway
+-- de pagamento (o PIX em si não impõe mínimo), é política de negócio da própria plataforma, por isso
+-- configurável.
+(NULL, 'valor_minimo_contribuicao',  '5.00',  'decimal',  'Valor mínimo aceito por contribuição, em R$',                       TRUE, TRUE),
+-- I
+-- score_minimo_campanha: o score NUNCA bloqueia a criação de campanha (nem Catarse nem Experiment fazem isso; o
+-- filtro real é a aprovação manual do Admin). Este número é só um sinal para o painel do Admin destacar, na
+-- fila de aprovação, campanhas de pesquisador abaixo do mínimo, para revisão mais cuidadosa (ver
+-- public.fn_precisa_revisao_score() em 05_regras_negocio.sql, [05-I-1]). De propósito, sem trigger de
+-- bloqueio.
+(NULL, 'score_minimo_campanha',      '25.00', 'decimal',  'Score mínimo para criar campanha (sinal de revisão manual, nunca bloqueio automático)', TRUE, FALSE);
+-- Chaves que NÃO existem, de propósito: 'permitir_campanha_anonima' (campanha.id_usuario é NOT NULL, toda
+-- campanha tem um pesquisador identificado, o que a curadoria RF-068/069 exige; contribuição anônima já existe
+-- via contribuicao.token_sessao) e 'limite_denuncias_suspensao' (nenhuma trigger suspende perfil
+-- automaticamente por denúncias procedentes: suspensão é decisão do Admin via curadoria manual; se um dia isso
+-- mudar, a chave volta junto com a trigger que a usa).
+
+-- [07-I-2] configuracoes: constantes do motor de score (ver DOCUMENTACAO_BD.md)
+-- Continua o grupo "I" de [07-C-5] (que termina em score_minimo_campanha, logo acima); id_config sai em
+-- sequência, sem interrupção de domínio. Os custos por denúncia (volume_denuncias/gravidade_denuncias) não
+-- estão aqui: vivem em score_config (ver [07-I-1]), a tabela que o Painel Admin edita e que tem trigger de
+-- recálculo; chave aqui sem nenhuma função lendo seria uma constante seedada que não move nada.
+INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, publica) VALUES
+(NULL, 'score_penalidade_abandono',         '3',  'decimal', 'Pontos descontados por campanha não atingida e nunca encerrada formalmente (sem solicitação de encerramento)', TRUE, FALSE),
+(NULL, 'score_penalidade_sem_justificativa','2',  'decimal', 'Pontos descontados por campanha não atingida cuja solicitação de encerramento não tem justificativa', TRUE, FALSE),
+(NULL, 'score_frequencia_esperada_mensal',  '1',  'decimal', 'Nº de atualizações de campanha esperadas por mês de duração, usado na dimensão Atualização da Campanha', TRUE, FALSE)
+ON CONFLICT (chave) DO NOTHING;
+
+-- [07-I-3] configuracoes: retenção do log de auditoria (ver DOCUMENTACAO_BD.md [05-L])
+INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, publica) VALUES
+(NULL, 'log_auditoria_retencao_dias', '365', 'inteiro', 'Dias que o log de auditoria é guardado antes de ser apagado por job diário (0 = guardar para sempre)', TRUE, FALSE),
+-- Lida por limpar_ip_aceite_contribuicao() (05, [05-L]). 1825 dias = 5 anos, prazo do Código de Defesa do Consumidor
+-- (art. 27) e o que o Termo de Uso promete (item 5.4): mudar o prazo pede uma versão nova do Termo.
+(NULL, 'ip_aceite_contribuicao_retencao_dias', '1825', 'inteiro', 'Dias que o IP do aceite de cada contribuição é guardado antes de ser apagado (0 = guardar para sempre). O prazo está escrito no Termo de Uso: mudar aqui pede uma versão nova do Termo.', TRUE, FALSE)
+ON CONFLICT (chave) DO NOTHING;
+
+-- [07-G] configuracoes: limites de upload de arquivo (ARQUIVO)
+-- Limites de tamanho, cota por usuário e ritmo de upload, configuráveis pelo Painel Admin. O limite técnico
+-- largo continua no código (TAMANHO_MAXIMO_BYTES_ABSOLUTO, arquivo.constants.ts, valida só a FORMA do DTO); o
+-- valor de negócio vem daqui, lido por ConfiguracaoValorService (commons/configuracao) em
+-- arquivo.service.start-upload.ts/confirmar-upload.ts.
+-- `publica`: os 4 tetos de tamanho/cota são úteis ao navegador para validar/avisar antes de subir um arquivo
+-- grande demais (ex.: "máximo 8MB" na tela de upload): PÚBLICA. Os 2 de rate limit (janela/intervalo) são
+-- anti-abuso, mesma categoria de limite_tentativas_login/bloqueio_login_minutos: INTERNA, não ajudam ninguém a
+-- montar tela, só quem tenta abusar saberia o intervalo exato de espera.
+INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, publica) VALUES
+(NULL, 'arquivo_tamanho_minimo_bytes',          '100',      'inteiro', 'Tamanho mínimo aceito por arquivo enviado, em bytes - barra arquivo vazio/corrompido', TRUE, TRUE),
+(NULL, 'arquivo_tamanho_maximo_imagem_bytes',   '8388608',  'inteiro', 'Tamanho máximo aceito por imagem enviada (JPEG/PNG/WebP), em bytes', TRUE, TRUE),
+(NULL, 'arquivo_tamanho_maximo_documento_bytes','5242880',  'inteiro', 'Tamanho máximo aceito por documento enviado (PDF), em bytes', TRUE, TRUE),
+(NULL, 'arquivo_cota_bytes_por_usuario',        '52428800', 'inteiro', 'Cota total de armazenamento ativo por usuário, em bytes', TRUE, TRUE),
+(NULL, 'arquivo_limite_uploads_janela',         '20',       'inteiro', 'Nº máximo de uploads confirmados por usuário dentro da janela de tempo dos uploads', TRUE, FALSE),
+(NULL, 'arquivo_janela_limite_uploads_minutos', '1440',     'inteiro', 'Janela de tempo dos uploads, em minutos (1440 = 24 horas)', TRUE, FALSE),
+(NULL, 'arquivo_intervalo_minimo_segundos',     '5',        'inteiro', 'Intervalo mínimo (em segundos) entre um upload confirmado e o próximo início de upload do mesmo usuário', TRUE, FALSE)
+ON CONFLICT (chave) DO NOTHING;
+
+-- ============================================================================
+-- [07-DEMONSTRACAO] DAQUI PARA BAIXO: SÓ DESENVOLVIMENTO E AULA
+-- Contas de teste (senha DevTcc123!), campanhas, contribuições e as ferramentas de teste. Num banco de produção,
+-- rode este arquivo só até a linha acima deste bloco.
+-- ============================================================================
+
+-- Permissões das ferramentas de teste do painel. trg_permissao_auto_admin (05) dá cada uma ao admin assim que a
+-- linha nasce; um banco de produção não roda esta parte, então nasce sem elas.
+--   perfil_pesquisador_criar_para_outro: criar_perfil_pesquisador_para_outro() (03, [03-R]), Bancada do Pesquisador.
+--   campanha_criar_para_outro e campanha_excluir_forcado: criar campanha em nome de outro pesquisador e excluir
+--   campanha à força, ignorando status (limpeza de dado de teste; nunca oferecida no painel real).
+--   comentario_criar_para_outro: comentar_campanha_para_outro() (03), Bancada da Campanha.
+INSERT INTO permissao (nome) VALUES
+('perfil_pesquisador_criar_para_outro'),
+('campanha_criar_para_outro'),
+('campanha_excluir_forcado'),
+('comentario_criar_para_outro')
+ON CONFLICT (nome) DO NOTHING;
+
+-- [07-B-4] DESENVOLVIMENTO: toda conta logada VÊ tudo (nunca altera). O papel 'usuario', que todo cadastro
+-- recebe, ganha só as permissões de LEITURA, para qualquer papel conseguir testar todas as telas. As de alterar
+-- (gerenciar, editar, aprovar, suspender...) continuam só com quem já tinha. REMOVER antes do deploy (entra no
+-- bloco "modo produção", ver PENDENCIAS e correcoes.md).
+INSERT INTO papel_permissao (id_papel, id_permissao)
+SELECT p.id_papel, perm.id_permissao
+FROM papel p
+JOIN permissao perm ON TRUE
+WHERE p.codigo = 'usuario'
+  AND perm.nome IN (
+    'relatorio_visualizar',
+    'usuario_visualizar_sensivel',
+    'perfil_pesquisador_visualizar_sensivel',
+    'contribuicao_visualizar_sensivel',
+    'auditoria_financeira_visualizar',
+    'score_visualizar',
+    'log_visualizar'
+  )
+ON CONFLICT DO NOTHING;
+
 -- [07-C-4] arquivo (imagens de perfil - sem FK ainda ativa no INSERT)
 -- ativo omitido: DEFAULT TRUE aplicado automaticamente
 INSERT INTO arquivo (chave, nome_original, tipo_mime, tamanho_bytes) VALUES
@@ -658,23 +841,12 @@ FROM usuario u
 JOIN papel p ON p.codigo = 'usuario'
 ON CONFLICT DO NOTHING;
 
--- [07-D-6] termos_de_uso / usuario_termo
--- Sustentam o RF-011 (aceite obrigatório no cadastro); o texto real dos termos entra quando a equipe/jurídico
--- definir. v1 é a versão vigente durante todo o período em que os usuários deste seed se cadastraram (por isso
--- é ela que aparece em usuario_termo, abaixo). v2 é a versão atual, publicada depois e ainda sem aceite
--- registrado: cenário realista de "termo novo no ar, usuários antigos ainda não foram re-avisados".
---
--- PEGADINHA (vale para o NestJS, ao publicar uma versão nova): publicar v2 sem antes desativar v1 quebra com o
--- erro do índice parcial uq_termos_uso_ativo (02), que só permite 1 linha ativa POR TIPO. O UPDATE que desativa
--- a versão velha e o INSERT da versão nova precisam estar na MESMA transação (é o que este bloco já faz).
---
--- `tipo` explícito em toda linha abaixo: o sistema sempre tem 1 versão vigente de cada termo, o da conta
--- ('cadastro', que cobre também as contribuições) e o de pesquisador ('upgrade_pesquisador'), cada um com a
--- sua PRÓPRIA versão/histórico.
+-- [07-D-6] termos_de_uso (versões antigas) / usuario_termo
+-- As versões vigentes estão na parte de referência deste arquivo; aqui entram as antigas, já desativadas, que os usuários
+-- deste seed aceitaram quando se cadastraram (o histórico de aceites aponta para elas pela data).
 INSERT INTO termos_de_uso (tipo, versao, conteudo, ativo, criado_em) VALUES
 ('cadastro', 'v1-2024-01-01', '[PLACEHOLDER] Texto dos Termos de Uso e Política de Privacidade - versão 1. Conteúdo jurídico definitivo entra aqui quando a equipe/jurídico validar.', FALSE, '2024-01-01 00:00:00');
 
-UPDATE termos_de_uso SET ativo = FALSE WHERE tipo = 'cadastro' AND versao = 'v1-2024-01-01';
 INSERT INTO termos_de_uso (tipo, versao, conteudo, ativo, criado_em) VALUES
 ('cadastro', 'v2-2025-01-01', '[PLACEHOLDER] Texto dos Termos de Uso e Política de Privacidade - versão 2 (revisão anual). Conteúdo jurídico definitivo entra aqui quando a equipe/jurídico validar.', FALSE, '2025-01-01 00:00:00');
 
@@ -684,7 +856,6 @@ INSERT INTO termos_de_uso (tipo, versao, conteudo, ativo, criado_em) VALUES
 -- v1/v2 continuam [PLACEHOLDER] de propósito: são histórico, e texto de versão já substituída não se corrige
 -- depois (mesma regra que a tela de administração aplica a qualquer versão nova; ver
 -- views/5-termo-uso/criar-termo-uso.tsx).
-UPDATE termos_de_uso SET ativo = FALSE WHERE tipo = 'cadastro' AND versao = 'v2-2025-01-01';
 INSERT INTO termos_de_uso (tipo, versao, conteudo, ativo, criado_em) VALUES
 ('cadastro', 'v3-2026-09-13', 'TERMOS DE USO E POLÍTICA DE PRIVACIDADE - CROWDACADÊMICO
 
@@ -716,11 +887,9 @@ O usuário pode solicitar o encerramento de sua conta a qualquer momento. Dados 
 Estes Termos podem ser atualizados periodicamente. A versão vigente é sempre a mais recente publicada nesta tela, e o usuário é notificado para revisar e reaceitar o texto atualizado.
 
 10. FORO
-Fica eleito o foro da comarca do domicílio do usuário para dirimir eventuais controvérsias, conforme o Código de Defesa do Consumidor, quando aplicável.', TRUE, '2026-09-13 00:00:00');
+Fica eleito o foro da comarca do domicílio do usuário para dirimir eventuais controvérsias, conforme o Código de Defesa do Consumidor, quando aplicável.', FALSE, '2026-09-13 00:00:00');
 
--- v4: o termo da CONTA passa a cobrir também as contribuições (antes havia um termo de contribuição à parte;
--- decisão de Lucas e Alexia, 26-09-2026). Versão nova, não edição da v3: versão já aceita não se altera.
-UPDATE termos_de_uso SET ativo = FALSE WHERE tipo = 'cadastro' AND ativo = TRUE AND versao <> 'v4-2026-09-26';
+-- v4 (26-09-2026): o termo da CONTA passou a cobrir também as contribuições. Substituída pela v5, que cita o IP.
 INSERT INTO termos_de_uso (tipo, versao, conteudo, ativo, criado_em) VALUES
 ('cadastro', 'v4-2026-09-26', 'TERMOS DE USO E POLÍTICA DE PRIVACIDADE - CROWDACADÊMICO
 
@@ -761,7 +930,7 @@ O usuário pode solicitar o encerramento de sua conta a qualquer momento. Dados 
 Estes Termos podem ser atualizados periodicamente. A versão vigente é sempre a mais recente publicada, e o usuário é notificado para revisar e aceitar o texto atualizado.
 
 11. FORO
-Fica eleito o foro da comarca do domicílio do usuário para dirimir eventuais controvérsias, conforme o Código de Defesa do Consumidor, quando aplicável.', TRUE, '2026-09-26 00:00:00')
+Fica eleito o foro da comarca do domicílio do usuário para dirimir eventuais controvérsias, conforme o Código de Defesa do Consumidor, quando aplicável.', FALSE, '2026-09-26 00:00:00')
 ON CONFLICT (tipo, versao) DO NOTHING;
 
 -- Termo de quem vira pesquisador. v1 é [PLACEHOLDER] como a v1/v2 do termo da conta: é a que valia quando os
@@ -769,27 +938,6 @@ ON CONFLICT (tipo, versao) DO NOTHING;
 -- REALISTA vigente, NÃO é texto jurídico validado.
 INSERT INTO termos_de_uso (tipo, versao, conteudo, ativo, criado_em) VALUES
 ('upgrade_pesquisador', 'v1-2024-01-01', '[PLACEHOLDER] Texto do Termo de Upgrade de Perfil de Pesquisador - versão 1. Conteúdo jurídico definitivo entra aqui quando a equipe/jurídico validar.', FALSE, '2024-01-01 00:00:00');
-
-INSERT INTO termos_de_uso (tipo, versao, conteudo, ativo, criado_em) VALUES
-('upgrade_pesquisador', 'v2-2026-09-13', 'TERMOS DE UPGRADE DE PERFIL DE PESQUISADOR - CROWDACADÊMICO
-
-1. OBJETO
-Este termo é exibido no momento em que um usuário comum solicita o upgrade de sua conta para perfil de pesquisador, complementando os Termos de Uso gerais aceitos no cadastro.
-
-2. RESPONSABILIDADE PELAS INFORMAÇÕES DECLARADAS
-Ao solicitar o upgrade, o usuário declara que o CPF, o vínculo institucional (quando aplicável) e o título acadêmico informados são verdadeiros. Informações falsas podem levar à suspensão do perfil de pesquisador e das campanhas vinculadas a ele.
-
-3. RESPONSABILIDADES DO PERFIL DE PESQUISADOR
-O perfil de pesquisador autoriza submeter e gerenciar campanhas de financiamento coletivo. O pesquisador é responsável pela veracidade das informações de cada campanha, pela execução do projeto descrito e pela prestação de contas aos apoiadores, conforme as regras de moderação da plataforma.
-
-4. PONTUAÇÃO E REPUTAÇÃO
-O perfil de pesquisador está sujeito ao sistema de pontuação (score) da plataforma, que reflete o histórico de campanhas, cumprimento de prazos e conduta. A pontuação pode influenciar a visibilidade de campanhas futuras.
-
-5. DADOS PESSOAIS (LGPD)
-O CPF é armazenado de forma cifrada e nunca exibido publicamente em sua forma completa, conforme a Lei 13.709/2018 (LGPD). O vínculo institucional e o título acadêmico são exibidos publicamente no perfil, por serem informações de natureza profissional/acadêmica relevantes para os apoiadores.
-
-6. ALTERAÇÕES DESTE TERMO
-Este termo pode ser atualizado periodicamente; a versão vigente no momento da solicitação do upgrade é a que se aplica.', TRUE, '2026-09-13 00:00:00');
 
 -- Cada usuário aceitou, no próprio cadastro (aceito_em = pouco depois de usuario.criado_em), a versão do termo
 -- da conta vigente naquele momento.
@@ -804,155 +952,15 @@ FROM usuario u;
 -- RF-015: quando a versão vigente entrou, cada conta aceitou de novo no acesso seguinte (um dia depois), menos a
 -- conta 24 (Marina Torres), que fica com o aceite PENDENTE de propósito para demonstrar a tela de aceite.
 INSERT INTO usuario_termo (id_usuario, id_termo, aceito_em, ip_aceite)
-SELECT u.id_usuario, t.id_termo, t.criado_em + INTERVAL '1 day', '187.10.20.30'
+SELECT u.id_usuario, t.id_termo, LEAST(t.criado_em + INTERVAL '1 day', NOW()), '187.10.20.30'
 FROM usuario u
 JOIN termos_de_uso t ON t.tipo = 'cadastro' AND t.ativo
 WHERE u.id_usuario <> 24
 ON CONFLICT (id_usuario, id_termo) DO NOTHING;
 
--- [07-C-5] configuracoes: por que este bloco vem depois de usuario (ver DOCUMENTACAO_BD.md)
--- Agrupado por domínio (A,D,E,F,H,I, mesma ordem de [07-B-2]): configuracoes.service.findall.ts ordena por
--- id_config, então a ordem do INSERT é a ordem que a tela mostra. Puramente cosmético para cada chave: `chave` é
--- UNIQUE e toda leitura (NestJS) busca por nome, nunca por posição/id_config.
---
--- Não pode haver "alavanca fantasma": chave sem nenhum consumidor faz o Admin mudar algo no painel e nada
--- acontecer (pior que um valor fixo no código, porque parece que devia funcionar). email_suporte e
--- notificar_novas_campanhas (mais abaixo) são lidas pelo NestJS, não pelo banco; chave sem consumidor não entra
--- no seed (ver os comentários no final deste bloco).
--- `publica`: PÚBLICA é o que o navegador precisa para montar/validar uma tela (admin ou pública); INTERNA é
--- parâmetro de segurança/moderação (tudo que envolve tentativa de login, bloqueio, validade de token/sessão) ou
--- constante que só uma trigger/service interno lê, nunca exibida a ninguém. `suspensao_usuario_opcoes_dias` é
--- PÚBLICA por necessidade técnica: `ConfiguracoesProvider` usa `configuracaoApi.buscarPublicas()`, que NUNCA
--- manda token (nem para o próprio admin); se essa chave fosse interna, o seletor de "Suspender Usuário" no
--- painel perderia as opções de prazo.
+-- Parâmetro de uma conta específica (o admin da demonstração): só existe porque a conta existe.
 INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, publica) VALUES
--- A
-(NULL, 'email_suporte',              'suporte@crowdacademico.com.br', 'texto', 'E-mail de suporte ao usuário',   TRUE, TRUE), -- lida pelo NestJS (rodapé/e-mails transacionais), não pelo banco - nenhum .sql precisa dela
--- B
-(NULL, 'limite_tentativas_login',    '5',     'inteiro',  'Nº de tentativas de login falhas antes de bloquear a conta',    TRUE, FALSE),
-(NULL, 'bloqueio_login_minutos',     '15',    'inteiro',  'Duração do bloqueio de login após exceder o limite de tentativas (minutos)', TRUE, FALSE),
--- Lidas por ConfiguracaoValorService (commons/configuracao) em auth.service.login.ts/auth.service.register.ts,
--- mesmo padrão dos dois de cima (limite_tentativas_login/bloqueio_login_minutos): janelas de tempo configuráveis
--- pelo Painel Admin.
-(NULL, 'refresh_token_dias_validade', '30',   'inteiro',  'Por quantos dias a sessão continua válida (refresh token) antes de precisar logar de novo', TRUE, FALSE),
-(NULL, 'verificacao_email_horas_validade', '24', 'inteiro', 'Validade do token de verificação de e-mail, em horas', TRUE, FALSE),
-(NULL, 'recuperacao_senha_minutos_validade', '30', 'inteiro', 'Validade do link de "Esqueci minha senha", em minutos', TRUE, FALSE),
--- Lida por contar_metricas_dashboard() (03, [03-M]): o card "sessões ativas" conta sessão criada (login ou
--- renovação do token) dentro desta janela.
--- Lida por desativar_arquivos_orfaos() (05, [05-G]): prazo para um arquivo enviado ser adotado por um dono
--- (foto de perfil, anexo) antes de ser desativado e apagado do armazenamento. 0 = desligado.
-(NULL, 'arquivo_horas_para_vincular', '24', 'inteiro', 'Horas que um arquivo enviado pode ficar sem uso (sem virar foto ou anexo) antes de ser apagado', TRUE, FALSE),
-(NULL, 'dashboard_sessao_ativa_minutos', '30', 'inteiro', 'Janela (em minutos) usada pelo painel para contar uma sessão como ativa agora', TRUE, FALSE),
--- Opções de prazo sugeridas no seletor de "Suspender Usuário" do painel; lida pelo React
--- (minha-conta/alterar-usuario), não por nenhuma trigger/função do banco.
-(NULL, 'suspensao_usuario_opcoes_dias', '1,3,7,30', 'texto', 'Opções de prazo (em dias) sugeridas no seletor de suspensão de usuário - lista separada por vírgula.', TRUE, TRUE),
-(1,   'notificar_novas_campanhas',   'true',  'booleano', 'Admin recebe e-mail sobre novas campanhas',            TRUE, FALSE), -- lida pelo worker de notificação do NestJS, não pelo banco - nenhuma trigger/função a consulta; `publica` é irrelevante aqui (linha pessoal, id_usuario=1, RLS já restringe ao dono)
--- E
--- prazo_minimo_campanha_dias e os limites de negócio (campanhas simultâneas, endossos, denúncias/24h) são lidos
--- pelas triggers de 05 (ver as funções correspondentes); mudar a política é um UPDATE numa linha.
-(NULL, 'taxa_plataforma_padrao',     '5.00',  'decimal',  'Taxa padrão cobrada pela plataforma (%)',              TRUE, TRUE),
-(NULL, 'prazo_minimo_campanha_dias', '15',    'inteiro',  'Duração mínima permitida de uma campanha em dias',     TRUE, TRUE),
--- Prazo máximo de campanha: 60 dias (decisão de produto: 15 a 60).
-(NULL, 'prazo_maximo_campanha_dias', '60',    'inteiro',  'Duração máxima permitida de uma campanha em dias',     TRUE, TRUE),
--- Lida só pelo React (formulário de criação, RF-069): sugestão, não regra. Fica entre o mínimo e o máximo acima.
-(NULL, 'prazo_sugerido_campanha_dias', '30', 'inteiro', 'Duração que o formulário de criação de campanha sugere, em dias (a pessoa pode mudar)', TRUE, TRUE),
-(NULL, 'limite_campanhas_simultaneas','2',    'inteiro',  'Nº máximo de campanhas ao mesmo tempo por pesquisador (ativas ou aguardando aprovação)', TRUE, TRUE),
-(NULL, 'limite_endossos_campanha',   '4',     'inteiro',  'Nº máximo de endossos ativos ao mesmo tempo por campanha', TRUE, TRUE),
-(NULL, 'limite_denuncias_24h',       '5',     'inteiro',  'Nº máximo de denúncias que um usuário pode fazer dentro da janela de tempo das denúncias', TRUE, TRUE),
--- Janela de tempo do limite de denúncias (RF-076), lida por validar_denuncia_frequencia() em 05, [05-K-3].
-(NULL, 'janela_denuncias_horas',     '24',    'inteiro',  'Janela de tempo das denúncias, em horas (usada pelo limite de denúncias por usuário)', TRUE, TRUE),
--- `comentario` tem limite de frequência como denúncia (par acima), no mesmo padrão de 2 chaves (contagem +
--- janela) de limite_denuncias_24h/janela_denuncias_horas; 5 comentários por hora é o valor de partida, ajustável
--- sem migração.
-(NULL, 'limite_comentarios_por_hora', '5',     'inteiro',  'Nº máximo de comentários que um usuário pode fazer dentro da janela de tempo dos comentários', TRUE, TRUE),
-(NULL, 'janela_comentarios_horas',    '1',     'inteiro',  'Janela de tempo dos comentários, em horas (usada pelo limite de comentários por usuário)', TRUE, TRUE),
--- Limite de negócio (menor, configurável) por cima do limite técnico largo das colunas (01): mesmo padrão
--- config + trigger do prazo de campanha.
-(NULL, 'limite_caracteres_descricao_campanha',     '5000', 'inteiro', 'Nº máximo de caracteres na descrição da campanha',                        TRUE, TRUE),
-(NULL, 'limite_caracteres_conteudo_atualizacao',   '5000', 'inteiro', 'Nº máximo de caracteres no texto de uma atualização de campanha',                  TRUE, TRUE),
-(NULL, 'limite_caracteres_relato_denuncia',        '1000', 'inteiro', 'Nº máximo de caracteres no relato de uma denúncia',       TRUE, TRUE),
-(NULL, 'limite_caracteres_justificativa_encerramento', '2000', 'inteiro', 'Nº máximo de caracteres em cada justificativa do pedido de encerramento antecipado', TRUE, TRUE),
-(NULL, 'limite_caracteres_descricao_recompensa',   '2000', 'inteiro', 'Nº máximo de caracteres na descrição de uma recompensa',                            TRUE, TRUE),
--- Orçamento e cronograma estruturados (01, [01-E]): mudar o mínimo/máximo exigido, ou o limite de texto, é um
--- UPDATE nesta tabela, não uma migração. Ver fn_valida_completude_campanha e
--- fn_valida_limite_max_orcamento_campanha/fn_valida_limite_max_marco_cronograma (05, [05-K-2]). Os valores
--- 10/20 são o TETO (nº máximo por campanha), não o piso para aprovar; os pisos são orcamento_min_itens = 1
--- (RF-039: "valores padrão de 1 (mínimo) e 10 (máximo)") e cronograma_min_marcos = 3 (RF-041).
-(NULL, 'orcamento_min_itens',                      '1',    'inteiro', 'Nº mínimo de itens de orçamento exigido para aprovar uma campanha', TRUE, TRUE),
-(NULL, 'orcamento_max_itens',                      '10',   'inteiro', 'Nº máximo de itens de orçamento permitido por campanha',                    TRUE, TRUE),
-(NULL, 'cronograma_min_marcos',                    '3',    'inteiro', 'Nº mínimo de marcos de cronograma exigido para aprovar uma campanha',       TRUE, TRUE),
-(NULL, 'cronograma_max_marcos',                    '20',   'inteiro', 'Nº máximo de marcos de cronograma permitido por campanha',                  TRUE, TRUE),
--- Prazo do RASCUNHO de campanha: gate de expirar_campanhas_rascunho() (05, [05-K-2]). A campanha nasce
--- 'rascunho' e só vai para a fila de aprovação por envio explícito do pesquisador. Se a pessoa nunca voltar
--- (queda de energia, aba fechada, desistência), o rascunho some sozinho depois deste prazo, contado da CRIAÇÃO e
--- não da última edição (ver REQUISITOS_V7). 336h = 14 dias: prazos curtos (como 48h) contradizem a própria
--- justificativa do sistema ("cadastrar aos poucos"): quem preenchia na segunda e voltava na quarta perdia tudo.
-(NULL, 'campanha_rascunho_ttl_horas',              '336',  'inteiro', 'Horas até uma campanha em rascunho ser apagada automaticamente (contadas da criação)', TRUE, TRUE),
--- Regra de rejeição e reenvio (ver REQUISITOS_V7). Máximo de reenvios após a 1ª rejeição: 3 reenvios = até 4
--- rejeições no total (a 4ª esgota). Prazo, em dias, que a campanha rejeitada continua disponível ao
--- pesquisador, contado da ÚLTIMA rejeição; sem reenvio nesse prazo, a campanha é excluída por
--- expirar_campanhas_rejeitadas() (05).
-(NULL, 'campanha_rejeitada_max_reenvios',          '3',    'inteiro', 'Nº máximo de reenvios de uma campanha rejeitada, depois da 1ª rejeição',       TRUE, TRUE),
-(NULL, 'campanha_rejeitada_prazo_dias',            '30',   'inteiro', 'Dias que uma campanha rejeitada fica disponível para reenvio, contados da última rejeição', TRUE, TRUE),
-(NULL, 'limite_caracteres_descricao_orcamento',    '2000', 'inteiro', 'Nº máximo de caracteres na descrição de um item de orçamento',                    TRUE, TRUE),
-(NULL, 'limite_caracteres_descricao_marco',        '2000', 'inteiro', 'Nº máximo de caracteres na descrição de um marco do cronograma',                      TRUE, TRUE),
--- Meta 0.00 seria sucesso instantâneo numa campanha all-or-nothing. Mesmo padrão do prazo: limite técnico
--- largo na constraint (01, > 0), mínimo de negócio de verdade aqui.
-(NULL, 'meta_minima_campanha',       '500.00', 'decimal',  'Valor mínimo de meta financeira aceito para uma campanha, em R$',            TRUE, TRUE),
--- F
-(NULL, 'limite_links_academicos_perfil', '5', 'inteiro',  'Nº máximo de links acadêmicos por pesquisador', TRUE, TRUE),
--- H
--- valor_minimo_contribuicao (RF-056): mesmo padrão de meta_minima_campanha, acima. R$5,00 não é piso do gateway
--- de pagamento (o PIX em si não impõe mínimo), é política de negócio da própria plataforma, por isso
--- configurável.
-(NULL, 'valor_minimo_contribuicao',  '5.00',  'decimal',  'Valor mínimo aceito por contribuição, em R$',                       TRUE, TRUE),
--- I
--- score_minimo_campanha: o score NUNCA bloqueia a criação de campanha (nem Catarse nem Experiment fazem isso; o
--- filtro real é a aprovação manual do Admin). Este número é só um sinal para o painel do Admin destacar, na
--- fila de aprovação, campanhas de pesquisador abaixo do mínimo, para revisão mais cuidadosa (ver
--- public.fn_precisa_revisao_score() em 05_regras_negocio.sql, [05-I-1]). De propósito, sem trigger de
--- bloqueio.
-(NULL, 'score_minimo_campanha',      '25.00', 'decimal',  'Score mínimo para criar campanha (sinal de revisão manual, nunca bloqueio automático)', TRUE, FALSE);
--- Chaves que NÃO existem, de propósito: 'permitir_campanha_anonima' (campanha.id_usuario é NOT NULL, toda
--- campanha tem um pesquisador identificado, o que a curadoria RF-068/069 exige; contribuição anônima já existe
--- via contribuicao.token_sessao) e 'limite_denuncias_suspensao' (nenhuma trigger suspende perfil
--- automaticamente por denúncias procedentes: suspensão é decisão do Admin via curadoria manual; se um dia isso
--- mudar, a chave volta junto com a trigger que a usa).
-
--- [07-I-2] configuracoes: constantes do motor de score (ver DOCUMENTACAO_BD.md)
--- Continua o grupo "I" de [07-C-5] (que termina em score_minimo_campanha, logo acima); id_config sai em
--- sequência, sem interrupção de domínio. Os custos por denúncia (volume_denuncias/gravidade_denuncias) não
--- estão aqui: vivem em score_config (ver [07-I-1]), a tabela que o Painel Admin edita e que tem trigger de
--- recálculo; chave aqui sem nenhuma função lendo seria uma constante seedada que não move nada.
-INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, publica) VALUES
-(NULL, 'score_penalidade_abandono',         '3',  'decimal', 'Pontos descontados por campanha não atingida e nunca encerrada formalmente (sem solicitação de encerramento)', TRUE, FALSE),
-(NULL, 'score_penalidade_sem_justificativa','2',  'decimal', 'Pontos descontados por campanha não atingida cuja solicitação de encerramento não tem justificativa', TRUE, FALSE),
-(NULL, 'score_frequencia_esperada_mensal',  '1',  'decimal', 'Nº de atualizações de campanha esperadas por mês de duração, usado na dimensão Atualização da Campanha', TRUE, FALSE)
-ON CONFLICT (chave) DO NOTHING;
-
--- [07-I-3] configuracoes: retenção do log de auditoria (ver DOCUMENTACAO_BD.md [05-L])
-INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, publica) VALUES
-(NULL, 'log_auditoria_retencao_dias', '365', 'inteiro', 'Dias que o log de auditoria é guardado antes de ser apagado por job diário (0 = guardar para sempre)', TRUE, FALSE)
-ON CONFLICT (chave) DO NOTHING;
-
--- [07-G] configuracoes: limites de upload de arquivo (ARQUIVO)
--- Limites de tamanho, cota por usuário e ritmo de upload, configuráveis pelo Painel Admin. O limite técnico
--- largo continua no código (TAMANHO_MAXIMO_BYTES_ABSOLUTO, arquivo.constants.ts, valida só a FORMA do DTO); o
--- valor de negócio vem daqui, lido por ConfiguracaoValorService (commons/configuracao) em
--- arquivo.service.start-upload.ts/confirmar-upload.ts.
--- `publica`: os 4 tetos de tamanho/cota são úteis ao navegador para validar/avisar antes de subir um arquivo
--- grande demais (ex.: "máximo 8MB" na tela de upload): PÚBLICA. Os 2 de rate limit (janela/intervalo) são
--- anti-abuso, mesma categoria de limite_tentativas_login/bloqueio_login_minutos: INTERNA, não ajudam ninguém a
--- montar tela, só quem tenta abusar saberia o intervalo exato de espera.
-INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, publica) VALUES
-(NULL, 'arquivo_tamanho_minimo_bytes',          '100',      'inteiro', 'Tamanho mínimo aceito por arquivo enviado, em bytes - barra arquivo vazio/corrompido', TRUE, TRUE),
-(NULL, 'arquivo_tamanho_maximo_imagem_bytes',   '8388608',  'inteiro', 'Tamanho máximo aceito por imagem enviada (JPEG/PNG/WebP), em bytes', TRUE, TRUE),
-(NULL, 'arquivo_tamanho_maximo_documento_bytes','5242880',  'inteiro', 'Tamanho máximo aceito por documento enviado (PDF), em bytes', TRUE, TRUE),
-(NULL, 'arquivo_cota_bytes_por_usuario',        '52428800', 'inteiro', 'Cota total de armazenamento ativo por usuário, em bytes', TRUE, TRUE),
-(NULL, 'arquivo_limite_uploads_janela',         '20',       'inteiro', 'Nº máximo de uploads confirmados por usuário dentro da janela de tempo dos uploads', TRUE, FALSE),
-(NULL, 'arquivo_janela_limite_uploads_minutos', '1440',     'inteiro', 'Janela de tempo dos uploads, em minutos (1440 = 24 horas)', TRUE, FALSE),
-(NULL, 'arquivo_intervalo_minimo_segundos',     '5',        'inteiro', 'Intervalo mínimo (em segundos) entre um upload confirmado e o próximo início de upload do mesmo usuário', TRUE, FALSE)
-ON CONFLICT (chave) DO NOTHING;
+(1,   'notificar_novas_campanhas',   'true',  'booleano', 'Admin recebe e-mail sobre novas campanhas',            TRUE, FALSE);
 
 -- [07-D-3] perfil_pesquisador
 -- score_atual e score_atualizado_em não estão no INSERT de propósito: a tabela tem trg_perfil_recalcula_score
@@ -1063,7 +1071,12 @@ INSERT INTO campanha (id_usuario, id_admin, id_area_conhecimento, titulo, modelo
 -- score esperado.
 (19, 1, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '1.03.00.00'), 'Nova Plataforma de Diagnóstico por Imagem com Machine Learning',              'all-or-nothing', 30000.00, 5.00, 'Sistema de apoio ao diagnóstico radiológico baseado em visão computacional, validado com dados de dois hospitais universitários.',                      '2024-06-01', '2024-07-16', 'sucesso',             '2024-06-01', '2024-05-20 10:00:00', NULL),
 (20, 1, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '4.05.00.00'), 'Estudo sobre Microbiota Intestinal em Pacientes Oncológicos',                 'flexivel',       20000.00, 5.00, 'Caracterização da microbiota intestinal e sua relação com resposta a quimioterapia em pacientes com câncer colorretal.',                                '2024-06-01', '2024-07-21', 'sucesso',             '2024-06-01', '2024-05-22 09:30:00', NULL),
-(21, 1, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '2.05.00.00'), 'Levantamento de Espécies Invasoras em Ecossistemas Costeiros',                'all-or-nothing', 25000.00, 5.00, 'Mapeamento de espécies exóticas invasoras em restingas e manguezais do litoral nordestino e seu impacto na fauna nativa.',                              NOW() - INTERVAL '20 days', NOW() + INTERVAL '25 days', 'ativo', NOW() - INTERVAL '20 days', NOW() - INTERVAL '25 days', NULL);
+(21, 1, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '2.05.00.00'), 'Levantamento de Espécies Invasoras em Ecossistemas Costeiros',                'all-or-nothing', 25000.00, 5.00, 'Mapeamento de espécies exóticas invasoras em restingas e manguezais do litoral nordestino e seu impacto na fauna nativa.',                              NOW() - INTERVAL '20 days', NOW() + INTERVAL '25 days', 'ativo', NOW() - INTERVAL '20 days', NOW() - INTERVAL '25 days', NULL),
+-- Campanha 11: ativa e sem comentário, para testar comentário e endosso. A dona é a "Pesquisador Sistema" (7), que
+-- entra pelo login rápido de desenvolvimento e vê a campanha em Minhas Campanhas; os outros pesquisadores comentam
+-- pela Bancada da Campanha (ids acima de 10 não são da demonstração protegida). Datas relativas: ativa por 40 dias
+-- depois de o banco ser montado.
+(7, 1, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '6.07.00.00'), 'Campanha de Teste: Comentários e Endosso',                           'flexivel',       10000.00, public.config_numero('taxa_plataforma_padrao', 5.00), 'Campanha ativa para testar comentários, endosso e atualizações. Comente em nome de um pesquisador na Bancada da Campanha; endosse entrando como Pesquisador Sistema, em Minhas Campanhas.', NOW() - INTERVAL '5 days', NOW() + INTERVAL '40 days', 'ativo', NOW() - INTERVAL '5 days', NOW() - INTERVAL '7 days', NULL);
 
 ALTER TABLE campanha ENABLE TRIGGER trg_campanha_valida_prazo_negocio;
 
@@ -1268,47 +1281,96 @@ FROM (VALUES
 JOIN campanha c ON c.id_campanha = v.id_campanha;
 
 -- [07-E-7] comentario
-INSERT INTO comentario (id_campanha, id_pesquisador, conteudo, endossado, criado_em, ordem_endosso) VALUES
-(1, 13, 'Pesquisa extremamente relevante! A detecção precoce de Alzheimer pode mudar vidas. Apoio totalmente.',          TRUE,  '2024-02-15 10:00:00', 1),
-(1, 14, 'Parabéns pela metodologia robusta com redes neurais. Seria interessante publicar o dataset aberto.',            TRUE,  '2024-02-18 14:00:00', 2),
-(1, 18, 'Acompanhei cada etapa desta campanha. Exemplo de transparência e rigor científico.',                           TRUE,  '2024-04-12 13:00:00', 3),
-(2, 12, 'Iniciativa incrível de engenharia aplicada. A parceria com o SUS é essencial para o impacto real.',            FALSE, '2024-03-01 09:00:00', NULL),
-(3, 16, 'Bioprospecção da Caatinga é subutilizada. Fico feliz em ver investimento nessa área tão rica.',                TRUE,  '2024-03-10 11:00:00', 1),
-(5, 18, 'Estudo importantíssimo para as comunidades quilombolas. A metodologia participativa é um diferencial.',         FALSE, '2024-04-15 16:00:00', NULL),
-(7, 13, 'Ensaio clínico com resultado impressionante de 34% de redução de sepse. Esse trabalho merece publicação top.', TRUE,  '2024-09-05 10:00:00', 1);
+-- Comentários de pesquisadores (só pesquisador comenta) nas campanhas publicadas, nunca na própria. Todos nascem sem
+-- endosso: trg_comentario_ignora_endosso_criacao (05) zera o endosso na criação, então endossar é o passo seguinte,
+-- feito como o dono da campanha (bloco logo abaixo). Os da campanha 10 (ativa) têm datas relativas a hoje.
+INSERT INTO comentario (id_campanha, id_pesquisador, conteudo, criado_em) VALUES
+(1, 13, 'Pesquisa extremamente relevante! A detecção precoce de Alzheimer pode mudar vidas. Apoio totalmente.',          '2024-02-15 10:00:00'),
+(1, 14, 'Parabéns pela metodologia robusta com redes neurais. Seria interessante publicar o dataset aberto.',            '2024-02-18 14:00:00'),
+(1, 18, 'Acompanhei cada etapa desta campanha. Exemplo de transparência e rigor científico.',                           '2024-04-12 13:00:00'),
+(2, 12, 'Iniciativa incrível de engenharia aplicada. A parceria com o SUS é essencial para o impacto real.',            '2024-03-01 09:00:00'),
+(2, 15, 'Como fica a manutenção das próteses depois da entrega? Seria bom prever isso no orçamento.',                   '2024-03-20 11:00:00'),
+(2, 17, 'O custo por unidade ficou muito abaixo do mercado. Ótimo exemplo de pesquisa com retorno direto à sociedade.', '2024-04-02 15:30:00'),
+(3, 16, 'Bioprospecção da Caatinga é subutilizada. Fico feliz em ver investimento nessa área tão rica.',                '2024-03-10 11:00:00'),
+(3, 12, 'Vocês pretendem depositar as cepas numa coleção de referência? Isso ajudaria outros grupos.',                  '2024-04-05 09:30:00'),
+(4, 16, 'Pena que não atingiu a meta. O tema é urgente; espero que tentem de novo com um recorte menor.',               '2024-04-25 10:00:00'),
+(4, 18, 'Os dados de 2024 da Baixada são valiosos mesmo sem a meta cheia. Torço por uma nova campanha.',                '2024-04-20 14:00:00'),
+(5, 18, 'Estudo importantíssimo para as comunidades quilombolas. A metodologia participativa é um diferencial.',         '2024-04-15 16:00:00'),
+(5, 14, 'A devolutiva dos resultados às comunidades está prevista? Esse cuidado faz toda a diferença.',                 '2024-05-02 10:15:00'),
+(7, 13, 'Ensaio clínico com resultado impressionante de 34% de redução de sepse. Esse trabalho merece publicação top.', '2024-09-05 10:00:00'),
+(7, 17, 'Qual foi o tamanho final da amostra? Gostaria de entender melhor o desenho do estudo.',                         '2024-09-10 08:45:00'),
+(8, 12, 'Validar com dados de dois hospitais universitários dá muita confiança ao modelo. Parabéns.',                   '2024-06-20 11:00:00'),
+(8, 20, 'Excelente proposta. O código vai ser aberto? Seria ótimo para outros grupos de pesquisa.',                     '2024-07-01 16:20:00'),
+(9, 13, 'Tema muito promissor. Vocês vão acompanhar os pacientes depois da quimioterapia também?',                      '2024-06-25 09:00:00'),
+(10, 12, 'Mapear espécies invasoras no litoral nordestino é urgente. Contem comigo para divulgar.',                     NOW() - INTERVAL '15 days'),
+(10, 13, 'Vocês vão publicar o mapa das espécies em formato aberto, para as prefeituras usarem?',                       NOW() - INTERVAL '12 days'),
+(10, 16, 'Trabalho de campo em manguezal é caro e difícil. O orçamento parece bem dimensionado.',                       NOW() - INTERVAL '9 days'),
+(10, 22, 'Acho que o cronograma está apertado para cobrir tantos pontos de coleta.',                                    NOW() - INTERVAL '4 days');
+
+-- Endossos, feitos como o dono de cada campanha (o mesmo caminho da tela): validar_comentario_endosso_autor (05)
+-- confere que quem endossa é o dono e calcula a posição do endosso na ordem em que eles acontecem.
+DO $$
+DECLARE
+    r RECORD;
+BEGIN
+    FOR r IN
+        SELECT c.id_comentario, ca.id_usuario AS dono
+        FROM comentario c
+        JOIN campanha ca ON ca.id_campanha = c.id_campanha
+        JOIN (VALUES (1, 13), (1, 14), (1, 18), (2, 17), (3, 16), (4, 18), (5, 14), (7, 13), (8, 12), (8, 20), (10, 12), (10, 16))
+            AS e(id_campanha, id_pesquisador)
+          ON e.id_campanha = c.id_campanha AND e.id_pesquisador = c.id_pesquisador
+        ORDER BY c.criado_em
+    LOOP
+        PERFORM set_config('app.id_usuario_atual', r.dono::TEXT, TRUE);
+        UPDATE comentario SET endossado = TRUE WHERE id_comentario = r.id_comentario;
+    END LOOP;
+    PERFORM set_config('app.id_usuario_atual', '', TRUE);
+END;
+$$;
 
 -- [07-E-8] denuncia
--- Resolve o motivo por `descricao` (a coluna `codigo` não existe mais no catálogo, ver
--- 01_extensoes_enums_tabelas.sql); `descricao` é única o bastante neste seed para servir de chave de leitura só
--- aqui, sem precisar de id_motivo cru (frágil à ordem do INSERT acima).
-INSERT INTO denuncia (id_usuario, id_campanha_alvo, id_pesquisador_alvo, id_motivo, status, criado_em)
-SELECT v.id_usuario, v.id_campanha_alvo, v.id_pesquisador_alvo, md.id_motivo, v.status::status_denuncia, v.criado_em::timestamptz
+-- Resolve o motivo por `descricao`, única o bastante neste seed para servir de chave de leitura.
+-- trg_denuncia_valida_alvo (05) só aceita denúncia de campanha ATIVA; a maioria das denúncias abaixo é histórica,
+-- feita quando a campanha ainda estava ativa, então a trigger fica desligada só durante esta carga (mesmo raciocínio
+-- das triggers de contribuição, [07-H-1]). Quem decidiu explica por quê em `justificativa_moderacao`.
+ALTER TABLE denuncia DISABLE TRIGGER trg_denuncia_valida_alvo;
+
+INSERT INTO denuncia (id_usuario, id_campanha_alvo, id_pesquisador_alvo, id_motivo, relato, status, justificativa_moderacao, criado_em)
+SELECT v.id_usuario, v.id_campanha_alvo, v.id_pesquisador_alvo, md.id_motivo, v.relato, v.status::status_denuncia, v.justificativa, v.criado_em::timestamptz
 FROM (VALUES
-    (13, 6,    NULL::int, 'Campanha com informações falsas ou enganosas', 'improcedente', '2025-04-11 09:00:00'),
-    (14, NULL, 17,        'Perfil com dados acadêmicos falsos',           'pendente',     '2025-04-12 10:00:00'),
-    (15, 4,    NULL,      'Campanha com informações falsas ou enganosas', 'resolvida',    '2024-03-16 11:00:00'),
-    (16, NULL, 15,        'Comportamento abusivo ou ofensivo',            'em_analise',   '2024-03-20 14:00:00'),
-    (17, 2,    NULL,      'Campanha duplicada ou já existente',           'improcedente', '2024-03-02 08:00:00'),
-    (18, NULL, 17,        'Usurpação de identidade de pesquisador real',  'pendente',     '2025-04-13 15:00:00'),
-    (12, 6,    NULL,      'Campanha fora do escopo acadêmico',            'pendente',     '2025-04-14 10:00:00'),
-    -- Denúncias que alimentam de propósito a dimensão Reputação da Comunidade (calcular_score_reputacao, 05) dos 2
-    -- pesquisadores novos que precisam de reputação imperfeita.
-    -- Eduardo (21): 2 denúncias 'pendente' (ainda não procedentes) não custam ponto nenhum, pois só 'resolvida'
-    -- penaliza; a reputação dele fica intacta e ele só precisa ficar em "Em Construção" (25-49), não em
-    -- "Atenção".
-    (13, NULL, 21, 'Perfil com dados acadêmicos falsos',          'pendente',  '2024-06-10 09:00:00'),
-    (23, NULL, 21, 'Comportamento abusivo ou ofensivo',           'pendente',  '2024-06-12 10:00:00'),
-    -- Vinícius (22): 4 denúncias 'resolvida' (= procedente) de 4 denunciantes
-    -- diferentes (a UNIQUE de denuncia é por par usuário/alvo, por isso não repito
-    -- denunciante) - cada uma custa 1+3=4 pontos (25 → 9), derrubando a reputação
-    -- o bastante pra, somada ao resto do perfil dele (sem link, sem campanha),
-    -- garantir a faixa "Atenção" (0-24).
-    (12, NULL, 22, 'Perfil com dados acadêmicos falsos',          'resolvida', '2024-06-01 09:00:00'),
-    (15, NULL, 22, 'Comportamento abusivo ou ofensivo',           'resolvida', '2024-06-02 10:00:00'),
-    (9,  NULL, 22, 'Usurpação de identidade de pesquisador real', 'resolvida', '2024-06-03 11:00:00'),
-    (11, NULL, 22, 'Perfil com dados acadêmicos falsos',          'resolvida', '2024-06-04 12:00:00')
-) AS v(id_usuario, id_campanha_alvo, id_pesquisador_alvo, motivo_descricao, status, criado_em)
+    (13, 6,    NULL::int, 'Campanha com informações falsas ou enganosas', 'Os números de alcance citados na descrição não batem com a fonte.', 'improcedente', 'Os números conferem com a fonte citada; a denúncia não procede.', '2025-04-11 09:00:00'),
+    (14, NULL, 17,        'Perfil com dados acadêmicos falsos',           'O título de doutor não aparece no Lattes dele.', 'pendente', NULL, '2025-04-12 10:00:00'),
+    (12, 4,    NULL,      'Campanha com informações falsas ou enganosas', 'O orçamento cita um laboratório que não participa do projeto.', 'resolvida', 'Confirmado com a instituição: o laboratório não participa. Pesquisador orientado a corrigir.', '2024-03-16 11:00:00'),
+    (16, NULL, 15,        'Comportamento abusivo ou ofensivo',            'Respostas agressivas a quem fez perguntas na campanha.', 'em_analise', NULL, '2024-03-20 14:00:00'),
+    (17, 2,    NULL,      'Campanha duplicada ou já existente',           NULL, 'improcedente', 'É a segunda fase do mesmo projeto, com outro objetivo; não é duplicada.', '2024-03-02 08:00:00'),
+    (18, NULL, 17,        'Usurpação de identidade de pesquisador real',  NULL, 'pendente', NULL, '2025-04-13 15:00:00'),
+    (12, 6,    NULL,      'Campanha fora do escopo acadêmico',            NULL, 'pendente', NULL, '2025-04-14 10:00:00'),
+    -- Denúncias que alimentam de propósito a dimensão Reputação da Comunidade (calcular_score_reputacao, 05): só
+    -- 'resolvida' contra o perfil custa pontos (1+3=4). Eduardo (21): 1 procedente (25 -> 21) e 1 pendente, que não
+    -- custa nada; é o que o deixa em "Em Construção" (25-49).
+    (13, NULL, 21, 'Perfil com dados acadêmicos falsos',          NULL, 'resolvida', 'O título informado não foi confirmado pela instituição.', '2024-06-10 09:00:00'),
+    (23, NULL, 21, 'Comportamento abusivo ou ofensivo',           NULL, 'pendente',  NULL, '2024-06-12 10:00:00'),
+    -- Vinícius (22): 4 denúncias 'resolvida' (procedentes) de 4 denunciantes diferentes (a UNIQUE é por par
+    -- usuário/alvo); cada uma custa 1+3=4 pontos (25 -> 9), o que o leva à faixa "Atenção" (0-24).
+    (12, NULL, 22, 'Perfil com dados acadêmicos falsos',          NULL, 'resolvida', 'O vínculo informado não existe; confirmado com a universidade.', '2024-06-01 09:00:00'),
+    (15, NULL, 22, 'Comportamento abusivo ou ofensivo',           NULL, 'resolvida', 'Mensagens ofensivas confirmadas.', '2024-06-02 10:00:00'),
+    (9,  NULL, 22, 'Usurpação de identidade de pesquisador real', NULL, 'resolvida', 'Usava fotos e publicações de outro pesquisador.', '2024-06-03 11:00:00'),
+    (11, NULL, 22, 'Perfil com dados acadêmicos falsos',          NULL, 'resolvida', 'Título acadêmico não comprovado.', '2024-06-04 12:00:00')
+) AS v(id_usuario, id_campanha_alvo, id_pesquisador_alvo, motivo_descricao, relato, status, justificativa, criado_em)
 JOIN motivo_denuncia md ON md.descricao = v.motivo_descricao;
+
+-- Campanha 10 (ativa): denúncias recentes, uma em cada etapa da análise, para a moderação ter o que julgar.
+INSERT INTO denuncia (id_usuario, id_campanha_alvo, id_motivo, relato, status, justificativa_moderacao, criado_em)
+SELECT v.id_usuario, 10, md.id_motivo, v.relato, v.status::status_denuncia, v.justificativa, NOW() - v.dias * INTERVAL '1 day'
+FROM (VALUES
+    (12, 'Campanha com informações falsas ou enganosas', 'A área de coleta descrita inclui uma reserva onde a pesquisa não tem autorização.', 'pendente', NULL, 3),
+    (16, 'Campanha sem viabilidade metodológica',        'Não dá para cobrir tantos pontos de coleta com o prazo e a equipe informados.', 'em_analise', NULL, 2),
+    (23, 'Campanha duplicada ou já existente',           'Parece igual a outra campanha sobre espécies invasoras.', 'improcedente', 'A outra campanha é de outra região e de outro grupo; não é duplicada.', 6)
+) AS v(id_usuario, motivo_descricao, relato, status, justificativa, dias)
+JOIN motivo_denuncia md ON md.descricao = v.motivo_descricao;
+
+ALTER TABLE denuncia ENABLE TRIGGER trg_denuncia_valida_alvo;
 
 -- [07-D-7] notificacao
 -- 7 linhas em estados diferentes, para exercitar a permissão notificacao_processar e o índice
@@ -1332,7 +1394,7 @@ INSERT INTO notificacao (id_usuario, email_destinatario, tipo_evento, status, te
 --                    Perfil acad. Histórico Atualização Reputação  Total  Faixa
 -- Bruno    (19)          30          25          20         25     100  Referência (75-100)
 -- Renata   (20)          10          25           0         25      60  Confiável  (50-74)
--- Eduardo  (21)          10          10           3         23      46  Em Construção (25-49)
+-- Eduardo  (21)          10          10           5         21      46  Em Construção (25-49)
 -- Vinícius (22)          10           0           0          9      19  Atenção    (0-24)
 --
 -- Perfil acadêmico: Bruno tem Lattes+ORCID+LinkedIn+instituição+título (8+8+4+5+5=30);
@@ -1342,9 +1404,9 @@ INSERT INTO notificacao (id_usuario, email_destinatario, tipo_evento, status, te
 --   campanha 'ativo' aprovada mas ainda não encerrada (só os 10 da aprovação); Vinícius
 --   não tem nenhuma campanha (0).
 -- Atualização: Bruno publicou 2 atualizações numa campanha curta = crédito cheio (20);
---   Eduardo publicou 1 numa campanha mais longa = crédito parcial (3); Renata e Vinícius
+--   Eduardo publicou 1 numa campanha mais longa = crédito parcial (5); Renata e Vinícius
 --   não têm nenhuma atualização (0).
--- Reputação: Bruno e Renata não têm denúncia (25); Eduardo tem 2 pendentes (25−2=23);
+-- Reputação: Bruno e Renata não têm denúncia (25); Eduardo tem 1 procedente (25−4=21) e 1 pendente;
 --   Vinícius tem 4 procedentes (25−4×4=9).
 -- ----------------------------------------------------------------------------
 

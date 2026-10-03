@@ -16,7 +16,7 @@ import { PerfilPesquisadorResponse } from '../dto/response/perfil-pesquisador.re
 // declarando pesquisadora, mesmo espírito de AuthServiceRegister para o cadastro inicial). id_usuario nunca vem
 // do dto, sempre do controller (request.user.idUsuario).
 //
-// Aceite do Termo de Uso (modal de upgrade em T1, Bancada do Pesquisador): gravado junto do INSERT do perfil,
+// Aceite do Termo de Uso (modal de upgrade, Minha Conta ou Bancada do Pesquisador): gravado junto do INSERT do perfil,
 // na MESMA transação por requisição (GlobalDbInterceptor, mesmo padrão de
 // AuthServiceRegister/campanha.service.reject.ts). De propósito SEM checar "já aceitou antes" nem persistir
 // nenhum estado intermediário: se o usuário clicar no cadeado, aceitar o termo, e fechar o navegador antes de

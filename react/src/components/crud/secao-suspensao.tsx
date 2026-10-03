@@ -5,7 +5,7 @@ import { useToast } from '../layout/toast/use-toast';
 import { useOpcoesDiasSuspensao } from '../../services/constant/hook/use-opcoes-dias-suspensao';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
-import { formatarDataHora } from '../../services/constant/util/formatacao.util';
+import { formatarDataHora, instanteDaquiADias } from '../../services/constant/util/formatacao.util';
 import { MensagemErro } from './mensagem-erro';
 
 export interface EstadoSuspensao {
@@ -85,7 +85,7 @@ export function SecaoSuspensao({
       return;
     }
     await executar(async () => {
-      const ate = new Date(Date.now() + diasNumero * 24 * 60 * 60 * 1000).toISOString();
+      const ate = instanteDaquiADias(diasNumero);
       await suspender(ate, motivo);
       mostrar(mensagemSuspenso, `Até ${formatarDataHora(ate)}`);
       setDias('');

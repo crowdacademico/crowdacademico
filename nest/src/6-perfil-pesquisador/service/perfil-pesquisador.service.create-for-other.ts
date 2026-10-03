@@ -17,7 +17,7 @@ import { PerfilPesquisadorServiceFindOne } from './perfil-pesquisador.service.fi
 // PRÓPRIO perfil do Admin (já existe), sem nunca criar nada de verdade para ninguém. Endpoint separado, gateado
 // por permissão própria ('perfil_pesquisador_criar_para_outro'); o self-service não o usa.
 //
-// Aceite do Termo de Uso, OPCIONAL: o cadeado em T1 (Bancada do Pesquisador) mostra o Termo de Uso vigente
+// Aceite do Termo de Uso, OPCIONAL: o cadeado da Bancada do Pesquisador mostra o Termo de Uso vigente
 // antes do formulário para QUALQUER conta, mesmo a de outra pessoa; o aceite é gravado em nome do ALVO
 // (`registrar_aceite_termo` é SECURITY DEFINER, então grava por qualquer id_usuario passado, não só o da sessão
 // atual). Só grava quando `dto.aceiteTermos` vem `true`: o card "Criar Perfil Pesquisador" que já existe dentro

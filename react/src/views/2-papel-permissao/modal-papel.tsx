@@ -9,6 +9,7 @@ import { ModalDetalhePermissao } from './modal-detalhe-permissao';
 import { Carregando } from '../../components/layout/carregando';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { PapelResponse, PermissaoResponse } from '../../services/2-papel-permissao/type/papel-permissao.type';
+import { EstadoVazio } from '../../components/crud/estado-vazio';
 
 interface ModalConsultarPapelProps {
   auth: Pick<UseAuthReturn, 'authFetch'>;
@@ -55,7 +56,7 @@ export function ModalConsultarPapel({ auth, papel, aoFechar }: ModalConsultarPap
           {permissoes === null ? (
             <Carregando />
           ) : permissoes.length === 0 ? (
-            <p className="paragrafo texto-fraco">Nenhuma permissão concedida a este papel ainda.</p>
+            <EstadoVazio compacto icone="fa-key" titulo="Nenhuma permissão concedida a este papel ainda." />
           ) : (
             <div className="flex flex-wrap gap-2">
               {permissoes.map((permissao) => (

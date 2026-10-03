@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
+import { BadgeStatusCampanha } from '../../components/crud/badge-status-campanha';
+import { ROTULO_MODELO_CAMPANHA, ROTULO_STATUS_CAMPANHA } from '../../services/12-campanha/constants/status-campanha.constants';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
-import { ROTULO_MODELO_CAMPANHA, ROTULO_STATUS_CAMPANHA, classeBadgeStatusCampanha } from '../../services/12-campanha/constants/status-campanha.constants';
+
 import { useDecisaoAprovacao, usePronta } from '../../services/12-campanha/hook/use-decisao-aprovacao';
 import { BotoesDecisao, CampoMotivoRejeicao, ChecklistAprovacao } from './decisao-aprovacao';
 import { orcamentoCampanhaApi } from '../../services/13-orcamento-campanha/api/orcamento-campanha.api';
@@ -27,7 +29,7 @@ interface ModalRevisarCampanhaProps {
 // 90009 a 90011).
 export function ModalRevisarCampanha({ auth, idCampanha, aoFechar, aoConcluido }: ModalRevisarCampanhaProps) {
   const { erro, reportarErro, limparErro } = useErroToast({ mostraTexto: true });
-  // Aprovar/Rejeitar: a mesma regra e as mesmas peças do T2 do Campo de Testes (decisao-aprovacao.tsx).
+  // Aprovar/Rejeitar: a mesma regra e as mesmas peças da Bancada da Campanha (decisao-aprovacao.tsx).
   const decisao = useDecisaoAprovacao({
     authFetch: auth.authFetch,
     idCampanha,
@@ -84,9 +86,7 @@ export function ModalRevisarCampanha({ auth, idCampanha, aoFechar, aoConcluido }
       badges={
         campanha
           ? [
-              <span key="status" className={`badge ${classeBadgeStatusCampanha(campanha.status)}`}>
-                {ROTULO_STATUS_CAMPANHA[campanha.status]}
-              </span>,
+              <BadgeStatusCampanha key="status" campanha={campanha} />,
             ]
           : undefined
       }
