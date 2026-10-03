@@ -15,6 +15,7 @@ import {
   classeBadgeStatusCampanha,
 } from '../../services/12-campanha/constants/status-campanha.constants';
 import { useRegrasCampanha } from '../../services/12-campanha/hook/use-regras-campanha';
+import { ContadorCaracteres } from '../../components/input/contador-caracteres';
 import { dataLocal, duracaoEmDias, fimDoDia, inicioDoDia } from '../../services/12-campanha/util/prazo-campanha.util';
 import { useAreasDaCampanha } from '../../services/8-area-conhecimento/hook/use-areas-da-campanha';
 import { formatarData, formatarDataHora, formatarMoeda } from '../../services/constant/util/formatacao.util';
@@ -342,14 +343,17 @@ export function ModalAlterarCampanha({
                 ) : (
                   <Campo rotulo="Descrição" className="sm:col-span-2">
                     {({ atributos }) => (
-                      <textarea
-                        {...atributos}
-                        rows={3}
-                        value={form.descricao}
-                        onChange={(evento) => setForm({ ...form, descricao: evento.target.value })}
-                        className="input-padrao"
-                        aria-describedby={descreveBloqueio('descricao')}
-                      />
+                      <>
+                        <textarea
+                          {...atributos}
+                          rows={3}
+                          value={form.descricao}
+                          onChange={(evento) => setForm({ ...form, descricao: evento.target.value })}
+                          className="input-padrao"
+                          aria-describedby={descreveBloqueio('descricao')}
+                        />
+                        <ContadorCaracteres texto={form.descricao} limite={regras.limiteDescricao} />
+                      </>
                     )}
                   </Campo>
                 )}

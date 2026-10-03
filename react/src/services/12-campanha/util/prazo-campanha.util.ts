@@ -36,3 +36,9 @@ export function duracaoEmDias(inicio: string, fim: string): number | null {
   }
   return Math.round((new Date(fim).getTime() - new Date(inicio).getTime()) / 86400000);
 }
+
+// Data yyyy-mm-dd somada de N dias (no calendário local), no mesmo formato. Usada para sugerir a data de fim.
+export function somarDias(data: string, dias: number): string {
+  const [ano, mes, dia] = data.split('-').map(Number);
+  return dataLocal(new Date(ano, mes - 1, dia + dias, 12).toISOString());
+}

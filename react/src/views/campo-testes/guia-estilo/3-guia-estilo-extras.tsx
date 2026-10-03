@@ -60,16 +60,16 @@ export function BotaoDev() {
       <div className="flex items-center">
         <button type="button" className="btn-dev rounded-l-lg">&lt;dev&gt; Entrar como Admin</button>
         <button type="button" className="btn-dev btn-dev--seta rounded-r-lg" aria-label="Mais opções">
-          <i className="fa-solid fa-chevron-down"></i>
+          <i className="fa-solid fa-chevron-down" aria-hidden="true"></i>
         </button>
       </div>
       <p className="legenda mt-3 mb-2">Dentro de formulário, ao lado de um botão comum (mesmo tamanho dele):</p>
       <div className="flex flex-wrap gap-3">
         <button type="button" className="btn btn-secondary">
-          <i className="fa-solid fa-key"></i> Trocar senha
+          <i className="fa-solid fa-key" aria-hidden="true"></i> Trocar senha
         </button>
         <button type="button" className="btn btn-dev-acao">
-          <i className="fa-solid fa-wand-magic-sparkles"></i> Redefinir senha dev
+          <i className="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> Redefinir senha dev
         </button>
       </div>
     </div>
@@ -165,7 +165,7 @@ export function InterativosGlobais() {
         <p className="legenda">Estes usam o tema escolhido no cabeçalho (sol, lua ou sistema), porque são globais.</p>
         <div className="flex flex-wrap items-center gap-3">
           <span className="dica inline-flex items-center gap-2 rounded-lg border borda-padrao px-3 py-2 paragrafo texto-padrao">
-            <i className="fa-solid fa-circle-info"></i> Passe o mouse aqui
+            <i className="fa-solid fa-circle-info" aria-hidden="true"></i> Passe o mouse aqui
             <Dica texto="Exemplo de dica (tooltip) do sistema" curta baixo />
           </span>
           <button type="button" className="btn btn-sucesso" onClick={() => mostrar('Tudo certo', 'Exemplo de aviso de sucesso.', 'sucesso')}>

@@ -236,7 +236,7 @@ export function BuscaGlobal({ auth }: BuscaGlobalProps) {
         onClick={(evento) => evento.stopPropagation()}
       >
         <div className="flex items-center gap-3 px-4 py-3 border-b borda-padrao">
-          <i className="fa-solid fa-magnifying-glass texto-fraco"></i>
+          <i className="fa-solid fa-magnifying-glass texto-fraco" aria-hidden="true"></i>
           <input
             ref={inputRef}
             type="text"
@@ -276,7 +276,7 @@ export function BuscaGlobal({ auth }: BuscaGlobalProps) {
                     }
                   >
                     <i
-                      className={'fa-solid ' + (item.icone ?? 'fa-circle') + ' texto-fraco w-4'}
+                      className={'fa-solid ' + (item.icone ?? 'fa-circle') + ' texto-fraco w-4'} aria-hidden="true"
                     ></i>
                     <span className="flex-1 min-w-0">
                       <span className="block texto-forte truncate">

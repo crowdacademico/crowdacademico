@@ -60,7 +60,7 @@ type FotoNova = { id: number | null; url: string | null } | undefined;
 function AvisoValeNaHora() {
   return (
     <p className="legenda texto-fraco flex items-center gap-2">
-      <i className="fa-solid fa-bolt"></i>
+      <i className="fa-solid fa-bolt" aria-hidden="true"></i>
       As ações abaixo valem na hora do clique, sem botão Salvar.
     </p>
   );
@@ -242,7 +242,7 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
     ? [
         contaSuspensaAte && (
           <span key="conta" className="badge badge-erro">
-            <i className="fa-solid fa-lock mr-1"></i> Conta suspensa até {formatarData(contaSuspensaAte)}
+            <i className="fa-solid fa-lock mr-1" aria-hidden="true"></i> Conta suspensa até {formatarData(contaSuspensaAte)}
           </span>
         ),
         <span key="email" className={'badge ' + (usuario.emailVerificado ? 'badge-sucesso' : 'badge-aviso')}>
@@ -261,7 +261,7 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
         ...(papeis ?? []).map((papel) => (
           <span key={`papel-${papel.idPapel}`} className={'badge ' + (vigente(papel) ? 'badge-aviso' : 'badge-neutro')}>
             {papel.nomePapel}
-            {vigente(papel) && <i className="fa-solid fa-clock ml-1 icone-pequeno"></i>}
+            {vigente(papel) && <i className="fa-solid fa-clock ml-1 icone-pequeno" aria-hidden="true"></i>}
           </span>
         )),
       ].filter(Boolean)
@@ -357,7 +357,7 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
                 ) : (
                   <div className="sm:col-span-2 flex flex-wrap gap-3">
                     <button type="button" onClick={() => setTrocandoSenha(true)} className="btn btn-secondary">
-                      <i className="fa-solid fa-key"></i> Trocar senha
+                      <i className="fa-solid fa-key" aria-hidden="true"></i> Trocar senha
                     </button>
                     {/* Só em desenvolvimento: põe a senha da pessoa em SENHA_DEV na hora, para testar login. Fica aqui
                         (e não na Minha Conta) porque trocar a senha de OUTRA pessoa não pede a senha atual. */}
@@ -369,7 +369,7 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
                         className="btn btn-dev-acao"
                         title={`Redefine a senha para "${SENHA_DEV}", sem digitar nada.`}
                       >
-                        <i className="fa-solid fa-wand-magic-sparkles"></i>{' '}
+                        <i className="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>{' '}
                         {redefinindoSenhaDev ? 'Redefinindo...' : 'Redefinir senha dev'}
                       </button>
                     )}
@@ -450,7 +450,7 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
                 ) : (
                   <div className="flex items-end">
                     <button type="button" className="btn btn-secondary" onClick={() => setCorrigindoCpf(true)}>
-                      <i className="fa-solid fa-pen"></i> Corrigir CPF
+                      <i className="fa-solid fa-pen" aria-hidden="true"></i> Corrigir CPF
                     </button>
                   </div>
                 )}
@@ -645,7 +645,7 @@ function PapeisDoUsuario({ auth, idUsuario, papeis, aoMudarPapeis, aoAtualizado 
             <span key={papel.idPapel} className="inline-flex flex-col items-start gap-1">
               <span className={'badge flex items-center gap-2 ' + (suspenso ? 'fundo-aviso texto-aviso' : 'badge-neutro')}>
                 {papel.nomePapel}
-                {suspenso && <i className="fa-solid fa-clock icone-pequeno"></i>}
+                {suspenso && <i className="fa-solid fa-clock icone-pequeno" aria-hidden="true"></i>}
                 {suspenso ? (
                   <button
                     type="button"
@@ -664,7 +664,7 @@ function PapeisDoUsuario({ auth, idUsuario, papeis, aoMudarPapeis, aoAtualizado 
                       className="dica texto-fraco hover-texto-forte"
                       aria-label={`Suspender "${papel.nomePapel}" por um tempo`}
                     >
-                      <i className="fa-solid fa-clock icone-pequeno"></i>
+                      <i className="fa-solid fa-clock icone-pequeno" aria-hidden="true"></i>
                       <Dica texto={`Suspender "${papel.nomePapel}" por um tempo`} curta />
                     </button>
                     <button

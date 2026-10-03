@@ -182,18 +182,6 @@ export const ROTAS_ADMIN: Rota[] = [
     icone: 'fa-bullhorn',
   },
 
-  // Minhas Campanhas: as campanhas de quem está logado (o pesquisador cria, completa, envia e corrige as suas).
-  // Visível para qualquer conta logada por enquanto; só pesquisador ativo vê o botão de criar.
-  {
-    caminho: '/admin/minhas-campanhas',
-    caminhoRelativo: 'minhas-campanhas',
-    elemento: MinhasCampanhas,
-    rotuloMenu: 'Minhas Campanhas',
-    rotuloBreadcrumb: 'Minhas Campanhas',
-    grupoMenu: 'CAMPANHA',
-    icone: 'fa-folder-open',
-  },
-
   // Fila de aprovação: item do grupo MODERAÇÃO.
   {
     caminho: '/admin/aprovar-campanhas',
@@ -252,11 +240,22 @@ export const ROTAS_ADMIN: Rota[] = [
           icone: 'fa-bullhorn',
         },
         {
+          // Minhas Campanhas: o pesquisador não usa a área restrita (ele terá a área dele na parte pública);
+          // aqui fica só para testar o fluxo dele (criar, completar, enviar, corrigir).
+          caminho: '/admin/campo-testes/minhas-campanhas',
+          caminhoRelativo: 'campo-testes/minhas-campanhas',
+          elemento: MinhasCampanhas,
+          rotuloMenu: 'T3 - Minhas Campanhas',
+          rotuloBreadcrumb: 'T3 - Minhas Campanhas',
+          grupoMenu: 'CAMPO_TESTES',
+          icone: 'fa-folder-open',
+        },
+        {
           caminho: '/admin/campo-testes/vida-campanha',
           caminhoRelativo: 'campo-testes/vida-campanha',
           elemento: VidaCampanhaAtiva,
-          rotuloMenu: 'T3 - Vida da Campanha Ativa',
-          rotuloBreadcrumb: 'T3 - Vida da Campanha Ativa',
+          rotuloMenu: 'T4 - Vida da Campanha Ativa',
+          rotuloBreadcrumb: 'T4 - Vida da Campanha Ativa',
           grupoMenu: 'CAMPO_TESTES',
           icone: 'fa-comments',
         },

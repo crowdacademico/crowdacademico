@@ -179,7 +179,7 @@ export function ModalAlterarConfiguracao({ auth, configuracao, aoFechar, aoAtual
           </Campo>
           {par && (
             <div className="legenda mt-2 flex items-start gap-2 rounded-lg fundo-aviso texto-aviso p-3">
-              <i className="fa-solid fa-triangle-exclamation mt-0.5 shrink-0"></i>
+              <i className="fa-solid fa-triangle-exclamation mt-0.5 shrink-0" aria-hidden="true"></i>
               <p>
                 Este é o valor {par.papel === 'minimo' ? 'MÍNIMO' : 'MÁXIMO'} e precisa ficar
                 {par.papel === 'minimo' ? ' menor ou igual ' : ' maior ou igual '}

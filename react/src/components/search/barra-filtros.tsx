@@ -111,14 +111,14 @@ export function BarraFiltros({
                     }
                     className="btn btn-secondary flex items-center gap-2"
                   >
-                    <i className="fa-solid fa-filter"></i>
+                    <i className="fa-solid fa-filter" aria-hidden="true"></i>
                     {faceta.rotulo}
                     {faceta.selecionados.length > 0 ? (
                       <span className="badge badge-sucesso">{faceta.selecionados.length}</span>
                     ) : (
                       <span className="paragrafo texto-padrao">(Todos)</span>
                     )}
-                    <i className="fa-solid fa-chevron-down icone-pequeno"></i>
+                    <i className="fa-solid fa-chevron-down icone-pequeno" aria-hidden="true"></i>
                   </button>
 
                   {aberta && (
@@ -126,7 +126,7 @@ export function BarraFiltros({
                       <button type="button" onClick={faceta.aoLimpar} className="dropdown-opcao">
                         Todos
                         {faceta.selecionados.length === 0 && (
-                          <i className="fa-solid fa-check texto-sucesso"></i>
+                          <i className="fa-solid fa-check texto-sucesso" aria-hidden="true"></i>
                         )}
                       </button>
                       <div className="max-h-64 overflow-y-auto">

@@ -1156,3 +1156,13 @@ CSS puro (`:hover`/`:focus`/`:focus-visible`), sem estado de React na bolha em s
 - **Decisão:** a coluna "criada em" virou "esperando" (`enviadoAprovacaoEm`, carimbada pelo banco a cada envio ou reenvio; ver `DOCUMENTACAO_BD.md`), com o formato de coluna novo `espera` (`formatarEspera`: "hoje", "há 1 dia", "há 5 dias", em dias de calendário). A fila abre com quem espera há mais tempo no topo.
 - **Motivo:** "criada em" enganava: uma campanha reenviada ontem parecia esperar desde a criação. Mostrar a espera é o padrão de qualquer fila de atendimento (SLA).
 - **Caso-limite aceito:** ordenar pela coluna "esperando" em ordem crescente mostra quem espera MENOS primeiro (é a ordem natural de um tempo de espera); a ordem de abertura, sem clique, é a contrária.
+
+📌 **Formulário de campanha: sugestão de 30 dias e contador de caracteres (02-10-2026).**
+- **Decisão:** ao escolher o início com o fim vazio, o formulário preenche o fim com a duração sugerida (`prazoSugeridoDias` de `useRegrasCampanha`, chave `prazo_sugerido_campanha_dias`, 30), e a dica de prazo diz "Sugestão: 30 dias". A descrição mostra `ContadorCaracteres` ("120 de 5.000 caracteres", limite `limite_caracteres_descricao_campanha`) no Criar e no Alterar; acima do limite, fica vermelho e o Criar não avança. A contagem usa `contarCaracteres` (`validacao.util.ts`), igual ao `char_length` do banco.
+- **Motivo:** o RF-069 pede a sugestão de 30 dias, e ela não existia; o RF-072 pede limite em todo texto livre, e a pessoa só descobria o limite no erro do banco.
+- **Caso-limite aceito:** a sugestão só entra com o fim vazio (mudar o início depois não mexe no fim escolhido). Os outros textos com limite (atualização, recompensa, denúncia) ainda não têm tela.
+
+📌 **Acessibilidade conferida em todas as telas (02-10-2026).**
+- **Decisão:** todo ícone decorativo tem `aria-hidden="true"` (100 corrigidos); os 3 ícones de pagamento do rodapé são `role="img"` com nome. Campos sem rótulo visível (tabelas editáveis de links, orçamento e cronograma; motivo de rejeição do T2) têm `aria-label`. Borda de campo `--cor-borda-campo` (3:1) e anel de foco `--cor-anel-foco`. `ConfirmacaoDigitada` ganhou `classeRotulo`, para o rótulo sobre fundo colorido. Regras DS-80 a DS-84 em `informacoes/DESIGN_SYSTEM.md`.
+- **Motivo:** o axe (ferramenta padrão de teste de acessibilidade, WCAG 2.1 AA) e o teste no leitor de nome acessível acharam: o leitor de tela lia o desenho do ícone dentro do nome dos botões, um seletor sem nome (crítico), um rótulo com contraste 3,89:1 e a borda do campo com 1,48:1.
+- **Caso-limite aceito:** a borda dos campos ficou um pouco mais escura que antes (o cinza mais claro que passa de 3:1).

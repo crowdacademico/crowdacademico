@@ -186,7 +186,7 @@
   .input-padrao {
     width: 100%;
     background-color: var(--cor-fundo-sutil);
-    border: 2px solid var(--cor-borda-forte);
+    border: 2px solid var(--cor-borda-campo);
     border-radius: var(--radius-lg);
     padding: 0.875rem;
     font-size: var(--font-size-sm);
@@ -212,6 +212,7 @@
   .input-padrao:focus {
     outline: none;
     border-color: var(--cor-marca);
+    box-shadow: 0 0 0 3px var(--cor-anel-foco);
     background-color: var(--cor-fundo-cartao);
   }
 

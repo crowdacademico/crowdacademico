@@ -30,7 +30,7 @@ export function BarraAbasBotoes<Chave extends string>({ abas, ativa, aoTrocar, c
             (ativa === aba.chave ? 'borda-marca texto-marca' : 'border-transparent texto-fraco hover-texto-forte')
           }
         >
-          {aba.icone && <i className={'fa-solid ' + aba.icone}></i>}
+          {aba.icone && <i className={'fa-solid ' + aba.icone} aria-hidden="true"></i>}
           {aba.rotulo}
         </button>
       ))}

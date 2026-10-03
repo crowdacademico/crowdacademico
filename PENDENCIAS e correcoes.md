@@ -10,11 +10,7 @@
 
 ## 0. 📌 Para a Alexia ler (conversar antes de fazer)
 
-#### 🔴 Pendência aberta (26-09-2026): remover o executor de migrações (`aplicar-migrations.script.ts`)
-
-Ninguém usa: a Alexia recria o banco do zero com os arquivos `01` a `08`, e as mudanças pequenas entram pelo `ATUALIZAR O SUPABASE.sql`. Para remover: `nest/src/commons/database/aplicar-migrations.script.ts`, os dois comandos `db:migrate` e `db:migrate:adotar` em `nest/package.json`, a tabela `schema_migrations` (se existir em algum banco) e as menções no `.Tutorial-rodar-projeto.md`, no `DOCUMENTACAO_BACKEND.md` e no `DOCUMENTACAO_FRONTEND.md`. A revisão externa sugeria o contrário (uma pasta de migrações registradas); a recomendação daqui é remover. Decisão do Lucas (26-09-2026): deixar parado, sem gastar tempo agora. Alternativa considerada: reunir tudo numa pasta numerada por importância para apagar depois; com um script só, o registro aqui já basta.
-
-> Não é prioridade. O Lucas quer conversar com a Alexia antes de remover (27-09-2026).
+Nada aberto (03-10-2026).
 
 ---
 
@@ -95,7 +91,7 @@ Apontado pela revisão externa (resposta de 20-09) como "metade dos modelos não
 
 ### Motor do score (a Parte C foi adiada pelo Lucas)
 
-#### 🟡 DECIDIDO PARA DEPOIS (24-09-2026): motor do score (Parte C), guia de estilo de cores e gateway
+#### 🟡 DECIDIDO PARA DEPOIS (24-09-2026): motor do score (Parte C) e gateway
 
 Registro do que o Lucas decidiu ao ver a lista das quatro pendências que dependiam dele. Nada disto foi implementado agora, de propósito.
 
@@ -106,10 +102,9 @@ Registro do que o Lucas decidiu ao ver a lista das quatro pendências que depend
   - **O que a Parte C também traz:** `calcular_score_atualizacao` sem laço (uma consulta) e `calcular_score_historico` com uma leitura só de `campanha`; gancho comentado para gravidade por motivo no módulo 19 (`SUM(COALESCE(m.gravidade, 1))`); recálculo mais estreito (denúncia pendente não recalcula; denúncia contra campanha recalcula o dono).
   - **O que falta para fazer (esforço, não risco):** patch pronto em `3_patch_parteC_score_24-09-2026.sql`, na pasta de contra-prompt de 24-09 dentro de `informacoes/` (a pasta é só leitura); incorporar ao `05` e ao `07`, atualizar `DOCUMENTACAO_BD.md`, e **rever o texto dos Termos de Uso** (a explicação da pontuação exigida pela LGPD precisa dizer "denúncias procedentes contra o perfil e contra as campanhas"). Risco baixo no código, médio na percepção (muda números públicos).
   - **Tela própria do admin (o Lucas já entendeu que será necessária):** só edita `peso` e `ativo` dos itens de `score_config` (nunca `nome` nem `id_pai`, que são a estrutura que o código lê) e as faixas de `score_rotulo`. Dois `PATCH` em lote (todos os pesos numa requisição só, para caber na transação que as constraint triggers de soma e de cobertura conferem no `COMMIT`) e uma tela. Não cria nem apaga item. A permissão `score_editar` já existe e já está nas policies. **Ordem certa:** motor, depois tela, e a contestação junto com o módulo 19 (o V7 diz que ela segue o mesmo fluxo de análise das denúncias). Ponto de atenção para quando houver volume: mudar um peso recalcula todos os pesquisadores dentro da requisição do admin.
-- **Guia de estilo de cores (verde do texto no tema escuro): PENDENTE, ideia do Lucas.** Uma página de teste sem dependências, só para conferir o visual do site. Proposta detalhada dada ao Lucas na conversa; **aguarda ele confirmar o escopo**. Enquanto isso o `#2fbf71` continua como valor provisório (6,14:1 sobre o cartão escuro).
 - **Gateway de pagamento: fica por último, sem mudança.** Regra reforçada pelo Lucas: os testes serão todos em sandbox, **mas sandbox não é desculpa para fazer mal feito**; quando chegar a hora tem que funcionar perfeitamente (assinatura do webhook, idempotência, reconciliação, máquina de estados de `contribuicao`/`repasse`, ver `PROXIMOS_MODULOS.md`).
 
-> Os itens "guia de estilo de cores" e "gateway" deste bloco estão também nos grupos 5 e 2.
+> O item "gateway" deste bloco está também no grupo 2. O "guia de estilo de cores", que também estava aqui, foi fechado em 02-10-2026 (histórico).
 
 #### 🔴 Pendência aberta (11-09-2026): RF-031 (contestação de score) só faz sentido implementar depois do motor de score estar fechado de vez
 
@@ -159,6 +154,7 @@ WHERE id_papel = (SELECT id_papel FROM papel WHERE codigo = 'usuario')
     'contribuicao_visualizar_sensivel', 'auditoria_financeira_visualizar', 'score_visualizar', 'log_visualizar'));
 ```
 
+- **Banco depois do deploy: mudança vira arquivo novo numerado** (começando em 09, depois 10, e assim por diante), nunca edição do `01` a `08` nem só o `ATUALIZAR`. O executor de migrações (`npm run db:migrate`) aplica só o que é novo e avisa, sem reaplicar, quando um arquivo já aplicado muda. No primeiro deploy: `npm run db:migrate:adotar` no banco que já tem tudo, e `DATABASE_URL_MIGRATIONS` com a credencial de administrador do banco.
 - **Docker** do Nest e do React (F2 do roteiro do Atlas, com o `docker/` deles como referência).
 - **`react/.gitignore` não cobre `.env`:** inofensivo hoje (o `.env` só tem a URL da API); só volta à tona se o conteúdo do `.env` mudar ou no deploy.
 - **CORS por lista de endereços** (ver grupo 5, segurança): se não for feito antes, entra aqui.
@@ -181,7 +177,7 @@ O `react/` não tem nenhum teste automatizado hoje (só `build`+`lint`). Um proj
 
 **Vamos usar eventualmente, mas ainda é cedo.** Só voltar a levantar este item quando o sistema estiver completo (todos os módulos prontos) - implementar teste agora, com o backend ainda mudando bastante módulo a módulo, geraria mais retrabalho de manutenção de teste do que benefício.
 
-> Até lá existem os roteiros avulsos de navegador em informacoes/testes-banco/resultados/scripts (g1 a g20, mais o `rotas-sem-login.mjs`, que chama as 119 rotas sem login e compara com a gravação anterior).
+> Até lá existem os roteiros avulsos de navegador em informacoes/testes-banco/resultados/scripts (g1 a g20, mais o `rotas-sem-login.mjs`, que chama todas as rotas sem login, 123 em 02-10-2026, e compara com a gravação anterior).
 
 ---
 
@@ -206,6 +202,8 @@ Lucas decide depois se ajudam o CrowdAcadêmico. Contexto em `informacoes/ROTEIR
 - **Permissão por rota no painel:** a guarda do `/admin/*` só exige login, não confere o papel (quem vê o quê continua decidido pelo backend). "Fica para perto do fim".
 
 ### Visual e marca
+
+- **Branch `feat/novas-telas-teste` (02-10-2026):** tem o Dashboard em seções ("Precisa de você") e os links acadêmicos em cartões no celular, feitos antes das regras visuais novas. Decidir se entram no main, refeitos com as regras do `DESIGN_SYSTEM.md`, ou se a branch é descartada.
 
 - **Gestão de logo e favicon:** a aba Identidade Visual do Dashboard é só um espaço reservado.
 
@@ -232,18 +230,18 @@ Lucas decide depois se ajudam o CrowdAcadêmico. Contexto em `informacoes/ROTEIR
 1. ~~Validação de domínio dos links acadêmicos.~~ **Feito (29-09-2026, Grupo Z).**
 2. ~~Mensagens de erro de validação em inglês.~~ **Feito (29-09-2026, Grupo Y).**
 3. ~~Pedidos que dão erro sem necessidade (o 404 do perfil de pesquisador).~~ **Feito (29-09-2026, `ehPesquisador`).**
-4. Os RFs marcados 🟡 "não conferido a fundo" na matriz de rastreabilidade: confirmar um por um. **Regra:** o React de hoje é só o painel administrativo; tela do painel nunca prova que um RF do usuário ou do pesquisador está cumprido ou descumprido (ver abaixo).
-5. Telas nunca vistas funcionando ao vivo (links acadêmicos no "Alterar usuário", suspensão na Minha Conta e as da memória da rodada de 24-09).
-6. Campo de Testes com o mesmo comportamento das telas reais (ex.: a justificativa da rejeição era opcional só lá).
-7. Tema escuro e contraste em todas as telas (verde provisório `#2fbf71`, borda de campo 1,48:1).
-8. Celular: todas as telas em tela estreita.
-9. Acessibilidade: axe em todas as telas e uso só com teclado.
+4. Os RFs marcados 🟡 "não conferido a fundo" na matriz de rastreabilidade: confirmar um por um. **Regra:** o React de hoje é só o painel administrativo; tela do painel nunca prova que um RF do usuário ou do pesquisador está cumprido ou descumprido (ver abaixo). **02-10-2026:** RF-019, 050, 069, 070, 071, 072, 104, 117 e 120 conferidos e saíram da lista (achado: faltava a sugestão de 30 dias do RF-069, feita, Grupo AI). Os que ficam dependem de módulo que ainda não existe (e-mail, contribuição, repasse, denúncia, página pública).
+5. ~~Telas nunca vistas funcionando ao vivo.~~ **Feito (02-10-2026, `_aud-v-nunca-vistas-02-10.mjs`, banco local):** links acadêmicos no Alterar Usuário (adicionar e domínio errado recusado), suspensão na Minha Conta, 92009 e 91026 com mensagem na tela, F5 no T3, dica do tema e menu do celular. A paginação do "T4" não existe mais (o Campo de Testes tem T1 a T3 e a Guia).
+6. ~~Campo de Testes com o mesmo comportamento das telas reais.~~ **Feito (03-10-2026):** o T2 e a fila real (Aprovar Campanhas) usam as mesmas peças de decisão (`useDecisaoAprovacao` e `decisao-aprovacao.tsx`): Rejeitar sem motivo mostra o erro no campo nos dois. Minhas Campanhas virou o T3 do Campo de Testes (o pesquisador não usa a área restrita); a Vida da Campanha Ativa virou T4.
+7. ~~Tema escuro e contraste em todas as telas.~~ **Feito (02-10-2026):** axe nas 26 telas e 8 modais, nos dois temas: zero violações. Borda de campo passou de 1,48:1 para 3,26:1 (`--cor-borda-campo`), com anel no foco; rótulo da caixa de excluir conta corrigido (3,89 para a cor do erro).
+8. ~~Celular: todas as telas em tela estreita.~~ **Feito (02-10-2026, `_aud-v-celular-todas-02-10.mjs`):** 390px, todas as telas e 6 modais, nenhuma rolagem lateral nem elemento saindo da tela.
+9. ~~Acessibilidade: axe em todas as telas e uso só com teclado.~~ **Feito (02-10-2026, `_aud-v-axe-todas-02-10.mjs`):** zero violações; 100 ícones decorativos ganharam `aria-hidden` (o leitor de tela lia o desenho do ícone, o botão "Menu" era lido com um símbolo antes); campos das tabelas editáveis ganharam nome; foco de teclado visível em todas as telas do painel.
 10. ~~Textos.~~ **Feito (30-09-2026): nenhum travessão nem "Termos" no plural na tela; a recusa por permissão mostra o nome, não o código.**
 11. ~~Roteiros de teste que dependem de dado que sumiu.~~ **Feito (29-09-2026): `g5` e `g13` usam a pesquisadora Ana.**
 12. ~~Simular o "modo produção".~~ **Feito (30-09-2026): suíte PGlite 27 (papel × ação), achou a exclusão de conta sem login (corrigida, Grupo AC). Grupo AC colado no Supabase (30-09-2026).**
-13. Limpar os dados de teste dos roteiros no Supabase (contas "Teste G21", "Campanha E2E"...), com autorização do Lucas.
+13. Limpar os dados de teste dos roteiros no Supabase (contas "Teste G21", "Campanha E2E"...), com autorização do Lucas. **03-10-2026: autorizado; Grupo AJ do ATUALIZAR pronto para colar** (9 contas, 5 campanhas e as rejeições TESTE-PW; testado no banco local, com trava se houver contribuição, repasse, encerramento ou denúncia). Ficam de fora os testes à mão: contas teste@teste.com e teste2@teste2.com, campanhas "Campanha teste01" e "teste33".
 14. ~~Padrões que o projeto proíbe e que escaparam (duas consultas simultâneas na mesma conexão).~~ **Feito (29-09-2026, `emSequencia`).**
-15. Documentação que não bate com a tela.
+15. Documentação que não bate com a tela. **02-10-2026:** as suítes 7 e 10 (documentação contra o código) passam; corrigidos o inventário de rotas (2 do "Esqueci a senha"), as contagens de funções e triggers, a tabela de componentes (`CartaoFormulario` e `FichaConsulta` saíram) e o `nest-cli.json` (2 DTOs que o Swagger não documentava).
 
 #### ✅ Feito (30-09-2026), Grupo AE colado: excluir e bloquear comentário recebido
 
@@ -251,7 +249,6 @@ Lucas decide depois se ajudam o CrowdAcadêmico. Contexto em `informacoes/ROTEIR
 
 - **Comentários recebidos em Minhas Campanhas (30-09-2026, feito):** o Consultar do dono mostra os comentários (autor, data, texto) com Endossar, Excluir e Excluir e bloquear. Só React e Nest (nome do autor na listagem), sem mudança no banco. Testado: `_aud-g-comentarios-minhas-campanhas.mjs` (11 passos). Detalhes em `DOCUMENTACAO_FRONTEND.md`, "Comentários recebidos no Consultar do dono".
 - **Falta:** denunciar o comentário à moderação, quando o módulo `19-denuncia` existir (denúncia contra o perfil do autor, já prevista no RF-107; o comentário denunciado fica guardado).
-- **Roteiro `rotas-sem-login.mjs`:** a rota nova muda a contagem de 119 para 120; regravar a referência na próxima rodada.
 
 #### 🟡 Anotado (30-09-2026): sessões sem regra de acesso por dono
 

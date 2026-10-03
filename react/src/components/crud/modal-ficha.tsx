@@ -41,9 +41,11 @@ interface ModalFichaProps {
 
 // O "Carregando..." que aparece no lugar da janela enquanto ela ainda não está pronta (ver `pronto` abaixo). Componente
 // próprio para o Guia de Estilo mostrar o mesmo, parado (na tela de verdade ele dura menos de 1 segundo).
+// Bolinha girando na cor da marca ao lado do texto (o giro do Font Awesome para sozinho com "reduzir movimento").
 export function PilulaCarregandoModal() {
   return (
-    <div className="fundo-cartao rounded-full px-5 py-2 shadow-lg">
+    <div className="fundo-cartao border borda-padrao rounded-full px-5 py-2 shadow-lg flex items-center gap-2">
+      <i className="fa-solid fa-circle-notch fa-spin icone-pequeno texto-marca" aria-hidden="true"></i>
       <Carregando />
     </div>
   );
@@ -185,7 +187,7 @@ export function ModalFicha({
           <div className="flex items-center gap-4 shrink-0">
             {!carregando && acoesCabecalho}
             <button type="button" onClick={aoFechar} aria-label="Fechar" className="texto-fraco hover-texto-forte">
-              <i className="fa-solid fa-xmark icone-grande"></i>
+              <i className="fa-solid fa-xmark icone-grande" aria-hidden="true"></i>
             </button>
           </div>
         </div>

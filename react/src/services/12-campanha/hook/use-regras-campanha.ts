@@ -9,8 +9,12 @@ export interface RegrasCampanha {
   metaMinima: number;
   prazoMinimoDias: number;
   prazoMaximoDias: number;
+  // Duração que o formulário sugere ao escolher o início (RF-069); sugestão, não regra.
+  prazoSugeridoDias: number;
   minimoItensOrcamento: number;
   minimoMarcosCronograma: number;
+  // Máximo de caracteres da descrição da campanha (RF-072).
+  limiteDescricao: number;
 }
 
 export function useRegrasCampanha(): RegrasCampanha {
@@ -23,7 +27,9 @@ export function useRegrasCampanha(): RegrasCampanha {
     metaMinima: numero('meta_minima_campanha', 500),
     prazoMinimoDias: numero('prazo_minimo_campanha_dias', 15),
     prazoMaximoDias: numero('prazo_maximo_campanha_dias', 60),
+    prazoSugeridoDias: numero('prazo_sugerido_campanha_dias', 30),
     minimoItensOrcamento: numero('orcamento_min_itens', 1),
     minimoMarcosCronograma: numero('cronograma_min_marcos', 3),
+    limiteDescricao: numero('limite_caracteres_descricao_campanha', 5000),
   };
 }

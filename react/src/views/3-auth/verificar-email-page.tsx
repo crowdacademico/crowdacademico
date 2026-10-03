@@ -42,14 +42,14 @@ export function VerificarEmailPage() {
       <div className="max-w-(--largura-cartao-solto) w-full fundo-cartao rounded-3xl sombra-cartao-solto border borda-padrao overflow-hidden p-10 text-center">
         {estado === 'carregando' && (
           <>
-            <i className="fa-solid fa-spinner fa-spin icone-destaque texto-fraco mb-4"></i>
+            <i className="fa-solid fa-spinner fa-spin icone-destaque texto-fraco mb-4" aria-hidden="true"></i>
             <p className="texto-padrao">Confirmando seu e-mail...</p>
           </>
         )}
         {estado === 'ok' && (
           <>
             <div className="w-14 h-14 fundo-sucesso rounded-2xl mx-auto flex items-center justify-center texto-sucesso icone-destaque mb-5">
-              <i className="fa-solid fa-check"></i>
+              <i className="fa-solid fa-check" aria-hidden="true"></i>
             </div>
             <h1 className="titulo-pagina mb-2">E-mail confirmado</h1>
             <p className="paragrafo texto-fraco mb-6">Sua conta já está com o e-mail verificado.</p>
@@ -61,7 +61,7 @@ export function VerificarEmailPage() {
         {estado === 'erro' && (
           <>
             <div className="w-14 h-14 fundo-erro rounded-2xl mx-auto flex items-center justify-center texto-erro icone-destaque mb-5">
-              <i className="fa-solid fa-triangle-exclamation"></i>
+              <i className="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
             </div>
             <h1 className="titulo-pagina mb-2">Não deu certo</h1>
             <p className="paragrafo texto-fraco mb-6">{mensagemErro}</p>

@@ -117,11 +117,23 @@ async function aplicar(pool: Pool): Promise<void> {
     if (resultado.rows.length === 0) {
       algumPendente = true;
       console.log(`Aplicando ${nomeArquivo}...`);
-      await pool.query(conteudo);
-      await pool.query(
-        'INSERT INTO schema_migrations (nome_arquivo, hash) VALUES ($1, $2)',
-        [nomeArquivo, hash],
-      );
+      // Arquivo e registro numa transação só, na mesma conexão: se o arquivo falhar no meio, nada dele fica
+      // gravado (senão sobrava metade aplicada e sem registro, e a próxima rodada quebrava em "já existe").
+      const cliente = await pool.connect();
+      try {
+        await cliente.query('BEGIN');
+        await cliente.query(conteudo);
+        await cliente.query(
+          'INSERT INTO schema_migrations (nome_arquivo, hash) VALUES ($1, $2)',
+          [nomeArquivo, hash],
+        );
+        await cliente.query('COMMIT');
+      } catch (erro) {
+        await cliente.query('ROLLBACK');
+        throw erro;
+      } finally {
+        cliente.release();
+      }
       console.log(`  OK - aplicado e registrado.`);
     } else if (resultado.rows[0].hash !== hash) {
       console.warn(

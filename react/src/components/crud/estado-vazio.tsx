@@ -14,7 +14,7 @@ export function EstadoVazio({ icone, titulo, texto }: ConteudoEstadoVazio) {
   return (
     <div className="estado-vazio">
       <span className="estado-vazio__icone" aria-hidden="true">
-        <i className={`fa-solid ${icone}`}></i>
+        <i className={`fa-solid ${icone}`} aria-hidden="true"></i>
       </span>
       <p className="estado-vazio__titulo">{titulo}</p>
       {texto && <p className="estado-vazio__texto">{texto}</p>}

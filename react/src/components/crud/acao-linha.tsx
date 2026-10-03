@@ -60,7 +60,7 @@ export function AcaoLinha({ rotulo, icone, variante = 'neutra', onClick, indispo
       aria-label={indisponivel ? `${rotulo}: ${indisponivel}` : rotulo}
       aria-disabled={indisponivel ? true : undefined}
     >
-      <i className={`fa-solid ${icone}`}></i>
+      <i className={`fa-solid ${icone}`} aria-hidden="true"></i>
       <span className="crud-tabela__acao-texto">{rotulo}</span>
       {!indisponivel && <Dica texto={rotulo} curta />}
       {indisponivel &&

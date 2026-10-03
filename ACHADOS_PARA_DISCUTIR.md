@@ -50,11 +50,11 @@ Lista montada a partir da resposta da revisão externa de 24-09-2026 (a pasta de
 
 ## B. Precisam de decisão
 
-1. **"Minhas campanhas" do pesquisador, com o wizard extraído do Campo de Testes.**
+1. ✅ **FEITO (26-09-2026); 03-10-2026: virou o T3 do Campo de Testes, porque o pesquisador não usa a área restrita (ele terá a área dele na parte pública).** Texto original: **"Minhas campanhas" do pesquisador, com o wizard extraído do Campo de Testes.**
    - Revisão externa: é o maior risco do TCC. Numa banca pedem "me mostra o pesquisador criando uma campanha", e hoje só existe a bancada de testes.
    - Decidido em 26-09-2026: dentro do painel, item novo do menu, só para pesquisador. FEITO em 26-09-2026 (Minhas Campanhas).
 2. ✅ **FEITO (29-09-2026): hook `useErrosFormulario`**, aplicado em criar campanha, cadastro, suspensão e alterar senha (ver `DOCUMENTACAO_FRONTEND.md`). Texto original: Revisão externa: umas 60 linhas, aplicar primeiro no wizard. Sugestão: só faz sentido junto com o item 1.
-3. **Alterar e Excluir campanha na tela real.** Revisão externa: dentro de "Minhas campanhas", com D4, e Excluir só em rascunho. Sugestão: concordo, depende do item 1 e do D4 (A.2).
+3. ✅ **FEITO (26-09-2026, Minhas Campanhas, hoje T3 do Campo de Testes; decidido no V8: o admin modera, o pesquisador altera e exclui as próprias).** Texto original: **Alterar e Excluir campanha na tela real.** Revisão externa: dentro de "Minhas campanhas", com D4, e Excluir só em rascunho. Sugestão: concordo, depende do item 1 e do D4 (A.2).
 4. **Página pública da campanha.** Revisão externa: não depende do gateway, com o botão "Contribuir em breve". Sugestão: concordo. A decisão é o escopo.
 5. **Score, Parte C.** Adiada. Patch pronto; precisa de tela de admin, dos números (10, 15 e 3 denúncias) e do texto dos Termos de Uso.
 6. **Dispatcher de triggers** (`campanha` de 17 para 5, `comentario` de 8 para 2).
@@ -64,7 +64,7 @@ Lista montada a partir da resposta da revisão externa de 24-09-2026 (a pasta de
    - Revisão externa: sim, é barato.
    - Sugestão: recomendo não mudar. O UPDATE perde o estado completo, e o espaço não pesa (uns 5 MB por ano).
 8. ✅ **FEITO (29-09-2026): comentários dos `.sql` `02` e `06`** (ver o histórico de pendências). Texto original: **Comentários dos `.sql`.** Revisão externa: fazer junto do dispatcher. Já houve a primeira passada em `03` e `05`; `02` e `06` seguem com uns 63% de comentário.
-9. **Verde do tema escuro (#2fbf71) e borda de campo com 1,48:1.** Decidir olhando o Guia de Estilo, com a Alexia.
+9. ✅ **FEITO (02-10-2026):** o verde `#2fbf71` ficou (passa de 4,5:1 nos três fundos escuros) e a borda de campo passou para 3,26:1 (`--cor-borda-campo`). Texto original: **Verde do tema escuro (#2fbf71) e borda de campo com 1,48:1.** Decidir olhando o Guia de Estilo, com a Alexia.
 10. **Guarda de login em `/admin/*`.** Feita em 26-09-2026: uma guarda só no `AdminLayout` (confere sessão, não papel). A permissão por rota fica para perto do fim do sistema.
 11. **Moderados do axe** (sem h1, ordem dos títulos do rodapé). Resolvido em 26-09-2026 sem mudar o visual: axe zerado nas 22 telas.
 12. **Botão "Criar" de parâmetro global.** Decidido em 26-09-2026: saiu da tela.
@@ -113,6 +113,51 @@ Mover regra de trigger para o Nest, recálculo de score sob demanda, trocar o lo
 - **Não remover o `overrides` do `multer` em `nest/package.json`.** Hoje é cosmético (nenhuma rota usa upload multipart pelo Nest). No dia em que qualquer rota usar `FileInterceptor`, vira correção de segurança real. O `package.json` não aceita comentário, por isso o aviso mora aqui.
 - **`GET /campanha` (listagem) traz as mesmas colunas pesadas do detalhe** (`CAMPANHA_COLUNAS_SELECT`, inclui `descricao` de até 20 mil caracteres). Inofensivo hoje; rever o contrato quando a página pública existir.
 - **Constantes duplicadas entre `nest/` e `react/`:** conferido em 26-09-2026. A duplicação dentro de cada lado foi eliminada; sobram, de propósito, a lista de tipos de imagem e o perfil de redução do avatar (512 px, qualidade 80), sem código compartilhado entre os repositórios (cada lado comenta o outro). Sem mais nada a fazer.
+
+## G. Pesquisa de mercado em plataformas de crowdfunding (01-10-2026)
+
+Em palavras simples: olhamos como Kickstarter, Catarse e Experiment.com (o mais parecido com o CrowdAcadêmico, só ciência) organizam o painel de quem cria campanha. Quatro coisas que eles têm e nós não chamaram atenção (itens 1 a 4); o item 5 saiu da revisão do painel feita no mesmo dia, e os itens 6 a 8 de uma segunda olhada, em 02-10-2026. Só o item 5 foi feito: os outros são para pensar a melhor solução antes.
+
+1. **Gráfico da arrecadação ao longo do tempo na campanha.**
+   - Como é lá: no Kickstarter, o painel do criador tem um gráfico da arrecadação dia a dia, com uma linha verde marcando a meta; passando o mouse num dia, aparece o total daquele dia.
+   - Como é aqui: o V8 já pede gráficos na página pública (RF-046: orçamento por categoria e cronograma como linha do tempo), mas não a arrecadação ao longo do tempo. Hoje mostramos só a barra de progresso.
+   - Para pensar: depende do módulo de contribuição (é ele que tem as datas de cada apoio). Daria para mostrar ao pesquisador (Minhas Campanhas) e ao admin (Consultar Campanha). Fica fora do V8: seria requisito novo.
+   - Fontes: [Kickstarter, Project Dashboard](https://www.kickstarter.com/blog/project-dashboard); [Kickstarter, The New Creator Dashboard](https://www.kickstarter.com/blog/the-new-creator-dashboard).
+
+2. **Seção "Resultados" ao final da campanha.**
+   - Como é lá: no Experiment.com, cada projeto tem seções próprias de Métodos e de Resultados, além das "Lab Notes" (um caderno de laboratório público). Eles fazem questão de dizer que "resultado negativo também é resultado".
+   - Como é aqui: o V8 já tem metade disso. Cada atualização de progresso registra a fase (andamento, resultado preliminar ou resultado final, RF-052). Falta só dar destaque: uma seção "Resultados" na página da campanha que mostra a atualização de resultado final em primeiro lugar, em vez de ela ficar misturada na lista.
+   - Para pensar: é a ideia que mais combina com um site de ciência e quase não muda requisito (é exibição do que o RF-052 já guarda).
+   - Fontes: [Experiment.com, Researcher Guide: Share](https://experiment.com/guide/share); [Experiment.com](https://experiment.com/).
+
+3. **Exportar apoiadores em CSV para o pesquisador.**
+   - Como é lá: no Kickstarter, o "backer report" lista os apoiadores com filtros e busca e baixa em CSV. No Catarse, o realizador baixa o histórico de apoios e os dados dos apoiadores em Excel ou CSV.
+   - Como é aqui: o V8 só tem a exportação dos PRÓPRIOS dados (LGPD, RF-017). Não existe exportação de apoiadores para o pesquisador.
+   - Para pensar: depende do módulo de contribuição. Cuidado de LGPD: decidir quais dados do apoiador o pesquisador pode ver (o Catarse entrega nome, CPF, e-mail e endereço porque entrega recompensa física; aqui talvez só nome, valor e data, e nada do anônimo).
+   - Fontes: [Kickstarter, How can I use my project's backer report?](https://help.kickstarter.com/hc/en-us/articles/48619766244251-How-can-I-use-my-project-s-backer-report); [Catarse, Quais informações o realizador recebe dos seus apoiadores?](https://suporte.catarse.me/hc/pt-br/articles/203074427-Quais-informa%C3%A7%C3%B5es-o-a-realizador-a-recebe-dos-seus-apoiadores); [Blog Catarse, funcionalidades do Novo Catarse em 2026](https://blog.catarse.com.br/post/confira-algumas-das-funcionalidades-que-chegam-no-novo-catarse-em-2026).
+
+4. **Atualização só para apoiadores, e não pública.**
+   - Como é lá: no Catarse, a novidade tem três destinos: pública (vai por e-mail e aparece na página), só para apoiadores (só e-mail), ou só para apoiadores de uma recompensa.
+   - Como é aqui: conferido no V8, não está previsto. O RF-051 diz que as atualizações ficam visíveis na página pública, em ordem cronológica; não há atualização privada.
+   - Para pensar: seria mudança de requisito (RF-051), e depende do módulo de e-mail. Para ciência pode fazer sentido (um resultado preliminar que o pesquisador ainda não quer tornar público), mas abre a pergunta de quem é "apoiador" (o anônimo não tem conta).
+   - Fonte: [Catarse, Como enviar novidades para seus apoiadores?](https://suporte.catarse.me/hc/pt-br/articles/360024077731-Como-enviar-novidades-para-seus-apoiadores).
+
+5. ~~**Aprovar Campanhas: mostrar há quanto tempo cada campanha espera.**~~ **Feito (02-10-2026).** A campanha ganhou a data de entrada na fila (`enviado_aprovacao_em`, carimbada pelo banco a cada envio ou reenvio), e a fila mostra "esperando há X dias", com a mais antiga no topo. Ver `DOCUMENTACAO_BD.md`, "Esperando há X dias na fila de aprovação". Boa prática de fila de moderação: [Stream, moderation queue](https://getstream.io/resources/projects/moderation-course/admin/queue/).
+
+6. **Motivos prontos para a rejeição.**
+   - Como é lá: as lojas de aplicativo (App Store e Google Play) recusam citando a regra exata que o envio descumpriu, com um texto padrão da própria regra, e o revisor só acrescenta o detalhe do caso.
+   - Como é aqui: o admin escreve o motivo inteiro à mão, toda vez (o campo é obrigatório e livre).
+   - Para pensar: uma lista curta de motivos comuns (orçamento que não fecha, cronograma vago, área errada, descrição sem método) que preenche o começo do texto, e o admin completa. Os motivos seriam dados editáveis, nunca escritos no código. Não muda requisito: é ajuda para escrever o mesmo campo.
+
+7. **Previsão de repasse para o pesquisador.**
+   - Como é lá: o Kickstarter avisa o criador de que o dinheiro é cobrado no fim da campanha e repassado cerca de 14 dias depois; o Catarse mostra o prazo do repasse no painel do realizador.
+   - Como é aqui: o repasse existe no banco, mas o pesquisador não vê quando o dinheiro deve chegar.
+   - Para pensar: depende do módulo de pagamento (o prazo vem do gateway escolhido). Quando existir, mostrar a data prevista em Minhas Campanhas evita a pergunta "cadê o dinheiro?".
+
+8. **Atividade recente no Dashboard.**
+   - Como é lá: painéis administrativos de referência (Stripe, por exemplo) abrem com uma lista dos últimos acontecimentos do sistema: quem fez o quê, e quando.
+   - Como é aqui: o `log_auditoria` já guarda as mudanças importantes (status de campanha, papéis, configurações), mas só aparece dentro de cada tela, no "Ver log".
+   - Para pensar: um bloco "Atividade recente" no Dashboard com as últimas linhas do log, em texto simples ("Campanha 12 aprovada por Admin Sistema, há 2 horas"). Não precisa de tabela nova. Fica fora do V8 como tela, mas não como dado.
 
 ## Sugestão de ordem
 

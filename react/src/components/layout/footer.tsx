@@ -19,7 +19,7 @@ function ColunaDeLinks({ titulo, links }: { titulo: string; links: string[] }) {
         {links.map((rotulo) => (
           <li key={rotulo}>
             <a href="#" className="hover-texto-marca transition-colors flex items-center gap-2">
-              <i className="fa-solid fa-angle-right icone-pequeno texto-rodape-apagado"></i> {rotulo}
+              <i className="fa-solid fa-angle-right icone-pequeno texto-rodape-apagado" aria-hidden="true"></i> {rotulo}
             </a>
           </li>
         ))}
@@ -39,7 +39,7 @@ export function Footer() {
         <div className="lg:max-w-(--largura-coluna-rodape)">
           <Link to="/" className="flex items-center gap-3 mb-5">
             <div className="w-10 h-10 fundo-marca rounded-lg flex items-center justify-center texto-sobre-cor">
-              <i className="fa-solid fa-flask"></i>
+              <i className="fa-solid fa-flask" aria-hidden="true"></i>
             </div>
             <span className="titulo-secao texto-rodape-forte">CrowdAcadêmico</span>
           </Link>
@@ -61,14 +61,20 @@ export function Footer() {
             <i
               className="fa-brands fa-pix hover-texto-marca transition-colors cursor-pointer"
               title="PIX Instantâneo"
+              role="img"
+              aria-label="PIX Instantâneo"
             ></i>
             <i
               className="fa-brands fa-cc-visa hover-texto-marca transition-colors cursor-pointer"
               title="Cartões de Crédito"
+              role="img"
+              aria-label="Cartões de Crédito"
             ></i>
             <i
               className="fa-solid fa-shield-check hover-texto-marca transition-colors cursor-pointer"
               title="Conformidade LGPD"
+              role="img"
+              aria-label="Conformidade LGPD"
             ></i>
           </div>
           <p className="legenda texto-herdado">

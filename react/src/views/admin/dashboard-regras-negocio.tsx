@@ -157,7 +157,7 @@ function CardTermoUso({ auth }: { auth: Pick<UseAuthReturn, 'authFetch'> }) {
                     onClick={() => setTipoCriando(tipo)}
                     className="crud-tabela__acao crud-tabela__acao--alterar"
                   >
-                    <i className="fa-solid fa-plus"></i> Publicar primeira versão
+                    <i className="fa-solid fa-plus" aria-hidden="true"></i> Publicar primeira versão
                   </button>
                 ) : (
                   <>
@@ -167,7 +167,7 @@ function CardTermoUso({ auth }: { auth: Pick<UseAuthReturn, 'authFetch'> }) {
                       onClick={() => setTipoAlterando(tipo)}
                       className="crud-tabela__acao crud-tabela__acao--alterar"
                     >
-                      <i className="fa-solid fa-pen"></i> Alterar
+                      <i className="fa-solid fa-pen" aria-hidden="true"></i> Alterar
                     </button>
                   </>
                 )}
@@ -259,7 +259,7 @@ export function DashboardRegrasNegocio({ auth }: DashboardRegrasNegocioProps) {
                       to={`/configuracoes/${config.idConfig}/alterar`}
                       className="crud-tabela__acao crud-tabela__acao--alterar"
                     >
-                      <i className="fa-solid fa-pen"></i> Alterar
+                      <i className="fa-solid fa-pen" aria-hidden="true"></i> Alterar
                     </Link>
                   </div>
                 </div>

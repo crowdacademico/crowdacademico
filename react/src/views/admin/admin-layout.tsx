@@ -65,7 +65,7 @@ export function AdminLayout({ auth }: AdminLayoutProps) {
             onClick={() => setMenuAberto(true)}
             className="paragrafo-destaque flex items-center gap-2 texto-padrao"
           >
-            <i className="fa-solid fa-bars"></i> Menu
+            <i className="fa-solid fa-bars" aria-hidden="true"></i> Menu
           </button>
         </div>
 

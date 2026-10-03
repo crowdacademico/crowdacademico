@@ -147,7 +147,7 @@ export function ListarPapeis({ auth }: PropsPagina) {
                   onClick={() => setPermissaoDetalhada(linha)}
                   className="btn btn-secondary btn-pequeno"
                 >
-                  <i className="fa-solid fa-circle-info"></i> Saiba mais
+                  <i className="fa-solid fa-circle-info" aria-hidden="true"></i> Saiba mais
                 </button>
               ),
             },

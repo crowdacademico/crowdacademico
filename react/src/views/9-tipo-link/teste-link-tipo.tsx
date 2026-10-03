@@ -19,7 +19,7 @@ export function TesteLinkTipo({ dominioTexto, regex }: TesteLinkTipoProps) {
       dica={
         resultado && (
           <span className={resultado.ok ? 'texto-sucesso' : 'texto-erro'}>
-            <i className={'fa-solid ' + (resultado.ok ? 'fa-circle-check' : 'fa-circle-xmark')}></i> {resultado.texto}
+            <i className={'fa-solid ' + (resultado.ok ? 'fa-circle-check' : 'fa-circle-xmark')} aria-hidden="true"></i> {resultado.texto}
           </span>
         )
       }

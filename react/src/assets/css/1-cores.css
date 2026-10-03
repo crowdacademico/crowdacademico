@@ -94,6 +94,11 @@
   --cor-borda: var(--color-slate-200); /* borda padrão */
   --cor-borda-forte: var(--color-slate-300); /* divisória de cabeçalho */
   --cor-fundo-sutil: var(--color-slate-50); /* hover, fundo de seção */
+  /* Borda dos campos de formulário: 3,26:1 sobre o cartão branco e 3,12:1 sobre o fundo do campo (WCAG 1.4.11, a
+     borda é o que mostra onde o campo está, e pede 3:1). O cinza mais claro que passa; o slate-300 dava 1,48:1. */
+  --cor-borda-campo: #848fa3;
+  /* Anel em volta do campo com foco, além da borda verde: o foco de teclado fica fácil de achar. */
+  --cor-anel-foco: color-mix(in srgb, var(--cor-marca) 30%, transparent);
 
   /* Tokens de FUNDO (base do dark mode): o fundo branco das telas/cartões não pode ficar implícito (bg-white
      do Tailwind direto no JSX), porque é exatamente o que precisa inverter no escuro. Cada um marca uma
@@ -191,6 +196,8 @@
   --cor-borda: #334155;
   --cor-borda-forte: #475569;
   --cor-fundo-sutil: #1e2836;
+  /* 3,64:1 sobre o cartão escuro, 3,70:1 sobre o fundo do campo e 3,17:1 sobre o fundo elevado. */
+  --cor-borda-campo: #718096;
 
   --cor-fundo-pagina: #0f172a;
   --cor-fundo-cartao: #1e293b;

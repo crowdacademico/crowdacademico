@@ -109,10 +109,10 @@ function Componentes() {
           <button type="button" className="btn btn-primary btn-destaque">Chamada (btn-destaque)</button>
           <button type="button" className="btn btn-secondary btn-pequeno">Pequeno (btn-pequeno)</button>
           <button type="button" className="btn-pilula">
-            <i className="fa-solid fa-expand"></i> Pílula
+            <i className="fa-solid fa-expand" aria-hidden="true"></i> Pílula
           </button>
           <button type="button" className="btn-pilula btn-pilula-rotulo">
-            <i className="fa-solid fa-expand"></i> Pílula na linha do rótulo
+            <i className="fa-solid fa-expand" aria-hidden="true"></i> Pílula na linha do rótulo
           </button>
         </div>
       </div>
@@ -121,13 +121,13 @@ function Componentes() {
         <p className="rotulo-leitura mb-2">Ícones (sozinhos; dentro de texto, herdam o tamanho)</p>
         <div className="flex flex-wrap items-end gap-6 paragrafo texto-padrao">
           <span className="flex items-center gap-2">
-            <i className="fa-solid fa-clock icone-pequeno"></i> icone-pequeno
+            <i className="fa-solid fa-clock icone-pequeno" aria-hidden="true"></i> icone-pequeno
           </span>
           <span className="flex items-center gap-2">
-            <i className="fa-solid fa-xmark icone-grande"></i> icone-grande
+            <i className="fa-solid fa-xmark icone-grande" aria-hidden="true"></i> icone-grande
           </span>
           <span className="flex items-center gap-2">
-            <i className="fa-solid fa-flask icone-destaque texto-marca"></i> icone-destaque
+            <i className="fa-solid fa-flask icone-destaque texto-marca" aria-hidden="true"></i> icone-destaque
           </span>
         </div>
       </div>

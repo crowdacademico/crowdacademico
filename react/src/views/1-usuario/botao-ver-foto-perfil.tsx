@@ -20,7 +20,7 @@ export function BotaoVerFotoPerfil({ url, tamanho = 'icone-grande', badge = fals
         aria-label="Abrir imagem em outra guia"
         className="dica w-7 h-7 rounded-full flex items-center justify-center border-2 fundo-escuro borda-cartao texto-sobre-cor transition-opacity hover:opacity-80"
       >
-        <i className="fa-solid fa-eye icone-pequeno"></i>
+        <i className="fa-solid fa-eye icone-pequeno" aria-hidden="true"></i>
         <Dica texto="Abrir imagem em outra guia" curta />
       </a>
     );
@@ -34,7 +34,7 @@ export function BotaoVerFotoPerfil({ url, tamanho = 'icone-grande', badge = fals
       aria-label="Abrir imagem em outra guia"
       className={'dica texto-forte hover:opacity-70 transition-opacity shrink-0 ' + tamanho}
     >
-      <i className="fa-solid fa-eye"></i>
+      <i className="fa-solid fa-eye" aria-hidden="true"></i>
       <Dica texto='Abrir imagem em outra guia (no tamanho "máximo" - já reduzido pelo servidor, o original não é guardado)' />
     </a>
   );

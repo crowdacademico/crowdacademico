@@ -21,6 +21,7 @@ export const GRUPO_CONFIGURACAO: Record<string, string> = {
   valor_minimo_contribuicao: 'Financeiro',
   // Campanha
   prazo_minimo_campanha_dias: 'Campanha',
+  prazo_sugerido_campanha_dias: 'Campanha',
   prazo_maximo_campanha_dias: 'Campanha',
   limite_campanhas_simultaneas: 'Campanha',
   limite_endossos_campanha: 'Campanha',

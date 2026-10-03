@@ -66,7 +66,7 @@ export function ControleTema() {
       aria-label={rotulo}
       className="dica flex items-center justify-center w-9 h-9 borda-padrao border rounded-lg texto-padrao hover-fundo-sutil transition-colors"
     >
-      <i className={'fa-solid ' + icone}></i>
+      <i className={'fa-solid ' + icone} aria-hidden="true"></i>
       <Dica texto={rotulo} curta baixo direita />
     </button>
   );

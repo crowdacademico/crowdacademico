@@ -74,7 +74,7 @@ export function ModalDetalhe({
                 aria-label="Fechar"
                 className="texto-fraco hover-texto-forte"
               >
-                <i className="fa-solid fa-xmark"></i>
+                <i className="fa-solid fa-xmark" aria-hidden="true"></i>
               </button>
             </div>
             <div className="border-t borda-padrao"></div>
@@ -104,7 +104,7 @@ export function ModalDetalhe({
                 aria-label="Fechar"
                 className="texto-fraco hover-texto-forte"
               >
-                <i className="fa-solid fa-xmark"></i>
+                <i className="fa-solid fa-xmark" aria-hidden="true"></i>
               </button>
             )}
           </div>

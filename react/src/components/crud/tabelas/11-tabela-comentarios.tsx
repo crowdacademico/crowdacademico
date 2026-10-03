@@ -1,6 +1,6 @@
 // Comentários de uma campanha (autor, data, texto e posição do endosso), com Endossar/Remover endosso e Excluir para
 // o dono da campanha. Usada nos Comentários recebidos de Minhas Campanhas (views/12-campanha/
-// secao-comentarios-recebidos.tsx) e no Campo de Testes (T3, views/campo-testes/vida-campanha-ativa.tsx).
+// secao-comentarios-recebidos.tsx) e no Campo de Testes (T4, views/campo-testes/vida-campanha-ativa.tsx).
 
 import { AcaoLinha } from '../acao-linha';
 import { formatarData } from '../../../services/constant/util/formatacao.util';

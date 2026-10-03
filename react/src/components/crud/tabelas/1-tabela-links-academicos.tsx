@@ -48,7 +48,7 @@ export function TabelaLinksAcademicos({ links, tiposLink, podeAdicionar, aoAdici
       editavel: false,
       exibir: (link) => nomeTipo(link.idTipoLink) ?? link.idTipoLink,
       campo: (form, mudar) => (
-        <select value={form.idTipoLink} onChange={(evento) => mudar({ idTipoLink: evento.target.value })} className="input-padrao">
+        <select aria-label="Tipo do link" value={form.idTipoLink} onChange={(evento) => mudar({ idTipoLink: evento.target.value })} className="input-padrao">
           <option value="">Tipo...</option>
           {tiposLink.map((tipo) => (
             <option key={tipo.idTipolink} value={tipo.idTipolink}>
@@ -62,7 +62,7 @@ export function TabelaLinksAcademicos({ links, tiposLink, podeAdicionar, aoAdici
       rotulo: 'URL',
       exibir: (link) => <span className="whitespace-nowrap">{truncarUrl(link.url)}</span>,
       campo: (form, mudar) => (
-        <input type="text" placeholder="URL" value={form.url} onChange={(evento) => mudar({ url: evento.target.value })} className="input-padrao" />
+        <input type="text" aria-label="URL do link" placeholder="URL" value={form.url} onChange={(evento) => mudar({ url: evento.target.value })} className="input-padrao" />
       ),
     },
     {
@@ -72,6 +72,7 @@ export function TabelaLinksAcademicos({ links, tiposLink, podeAdicionar, aoAdici
       campo: (form, mudar) => (
         <input
           type="text"
+          aria-label="Rótulo do link (opcional)"
           placeholder="Rótulo (opcional)"
           value={form.rotulo}
           onChange={(evento) => mudar({ rotulo: evento.target.value })}

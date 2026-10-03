@@ -80,7 +80,7 @@ export function DevLoginRapido({ auth }: DevLoginRapidoProps) {
           aria-label="Mais contas de desenvolvimento"
           className="btn-dev btn-dev--seta"
         >
-          <i className="fa-solid fa-chevron-down"></i>
+          <i className="fa-solid fa-chevron-down" aria-hidden="true"></i>
         </button>
       </div>
 

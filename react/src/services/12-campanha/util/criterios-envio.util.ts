@@ -4,7 +4,7 @@ import type { MarcoCronogramaResponse } from '../../14-marco-cronograma/type/mar
 
 // Critérios para uma campanha aguardando aprovação estar pronta: itens de orçamento no mínimo, soma igual à meta
 // e marcos de cronograma no mínimo (o banco exige os mesmos na aprovação, fn_valida_completude_campanha). Usado
-// pela tabela de critérios (components/crud/tabelas/7-tabela-criterios-envio.tsx) e pelo botão Aprovar do T2.
+// pelo Aprovar da fila e do T2 (usePronta, em use-decisao-aprovacao.ts).
 export interface CriteriosEnvio {
   orcamento: OrcamentoCampanhaResponse[];
   cronograma: MarcoCronogramaResponse[];

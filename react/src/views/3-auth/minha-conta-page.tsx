@@ -183,7 +183,7 @@ function FaixaIdentidade({ auth }: FaixaIdentidadeProps) {
                 className={
                   'fa-solid icone-pequeno ' +
                   (usuario?.emailVerificado ? 'fa-check' : 'fa-triangle-exclamation')
-                }
+                } aria-hidden="true"
               ></i>
               {usuario?.emailVerificado ? 'E-mail verificado' : 'E-mail não verificado'}
             </span>
@@ -202,7 +202,7 @@ function FaixaIdentidade({ auth }: FaixaIdentidadeProps) {
         </div>
 
         <Link to="/admin/minha-conta/perfil" className="btn btn-secondary shrink-0 sm:self-start">
-          <i className="fa-solid fa-pen"></i> Editar perfil
+          <i className="fa-solid fa-pen" aria-hidden="true"></i> Editar perfil
         </Link>
       </div>
     </div>
@@ -232,7 +232,7 @@ function BarraAbas({ abaAtiva }: BarraAbasProps) {
               : 'border-transparent texto-fraco hover-texto-forte')
           }
         >
-          <i className={'fa-solid ' + item.icone}></i>
+          <i className={'fa-solid ' + item.icone} aria-hidden="true"></i>
           {item.rotulo}
         </Link>
       ))}
@@ -363,7 +363,7 @@ function AbaPerfil({ auth, aoVoltar }: AbaPerfilProps) {
                 )}
               </Campo>
               <div className="sm:col-span-2 flex items-start gap-2 rounded-lg fundo-info texto-info p-3">
-                <i className="fa-solid fa-circle-info mt-0.5 shrink-0"></i>
+                <i className="fa-solid fa-circle-info mt-0.5 shrink-0" aria-hidden="true"></i>
                 <p className="legenda texto-herdado">
                   Trocar o e-mail ainda não é possível neste protótipo, exigiria
                   reverificação, que depende do módulo de e-mail.
@@ -376,7 +376,7 @@ function AbaPerfil({ auth, aoVoltar }: AbaPerfilProps) {
             {perfil === undefined && <Carregando />}
             {perfil === null && (
               <div className="flex items-start gap-2 rounded-lg fundo-info texto-info p-3">
-                <i className="fa-solid fa-circle-info mt-0.5 shrink-0"></i>
+                <i className="fa-solid fa-circle-info mt-0.5 shrink-0" aria-hidden="true"></i>
                 <p className="legenda texto-herdado">
                   Você ainda não é pesquisador. O upgrade fica na aba{' '}
                   <Link to="/admin/minha-conta/academico" className="link-texto link-texto--cor-herdada">
@@ -556,7 +556,7 @@ function AbaSeguranca({ auth }: AbaSegurancaProps) {
                     aria-label={mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'}
                     className="absolute right-3 top-1/2 -translate-y-1/2 texto-fraco hover-texto-forte"
                   >
-                    <i className={'fa-solid ' + (mostrarSenha ? 'fa-eye-slash' : 'fa-eye')}></i>
+                    <i className={'fa-solid ' + (mostrarSenha ? 'fa-eye-slash' : 'fa-eye')} aria-hidden="true"></i>
                   </button>
                 </div>
                 <MedidorSenha senha={novaSenha} />
@@ -601,7 +601,7 @@ function AbaSeguranca({ auth }: AbaSegurancaProps) {
               className={
                 'fa-solid fa-chevron-down icone-pequeno transition-transform' +
                 (sessoesAbertas ? ' rotate-180' : '')
-              }
+              } aria-hidden="true"
             ></i>
           </button>
           {sessoesAbertas && sessoes && sessoes.length > 1 && (
@@ -631,7 +631,7 @@ function AbaSeguranca({ auth }: AbaSegurancaProps) {
                   <i
                     className={
                       'fa-solid ' + iconePorDispositivo(sessao.userAgent) + ' texto-fraco icone-grande shrink-0'
-                    }
+                    } aria-hidden="true"
                   ></i>
                   <div className="min-w-0 flex-1">
                     {/* truncate no <span> do texto, não no <p> inteiro: user-agent de verdade é longo, e
@@ -661,7 +661,7 @@ function AbaSeguranca({ auth }: AbaSegurancaProps) {
                       <i
                         className={
                           'fa-solid icone-pequeno ' + (encerrando === sessao.idSessao ? 'fa-spinner fa-spin' : 'fa-power-off')
-                        }
+                        } aria-hidden="true"
                       ></i>
                       <Dica texto="Encerrar sessão" curta />
                     </button>
@@ -777,12 +777,12 @@ function AbaAcademico({ auth }: AbaAcademicoProps) {
     return (
       <div className="px-6 sm:px-8 py-8 space-y-4">
         <div className="legenda flex items-start gap-2 rounded-lg fundo-info texto-info p-3">
-          <i className="fa-solid fa-circle-info mt-0.5 shrink-0"></i>
+          <i className="fa-solid fa-circle-info mt-0.5 shrink-0" aria-hidden="true"></i>
           <p>Você ainda não é pesquisador nesta plataforma. Como pesquisador, você pode criar campanhas para financiar suas pesquisas.</p>
         </div>
         {auth.usuario && (
           <button type="button" className="btn btn-primary" onClick={() => setFazendoUpgrade(true)}>
-            <i className="fa-solid fa-flask"></i> Tornar-me pesquisador
+            <i className="fa-solid fa-flask" aria-hidden="true"></i> Tornar-me pesquisador
           </button>
         )}
         {fazendoUpgrade && auth.usuario && (
@@ -915,6 +915,7 @@ function AbaPrivacidade({ auth }: AbaPrivacidadeProps) {
             esperado={auth.usuario?.email ?? ''}
             valor={confirmacao}
             aoMudar={setConfirmacao}
+            classeRotulo="texto-erro"
           />
         </div>
         <button

@@ -854,6 +854,8 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, pub
 (NULL, 'prazo_minimo_campanha_dias', '15',    'inteiro',  'Duração mínima permitida de uma campanha em dias',     TRUE, TRUE),
 -- Prazo máximo de campanha: 60 dias (decisão de produto: 15 a 60).
 (NULL, 'prazo_maximo_campanha_dias', '60',    'inteiro',  'Duração máxima permitida de uma campanha em dias',     TRUE, TRUE),
+-- Lida só pelo React (formulário de criação, RF-069): sugestão, não regra. Fica entre o mínimo e o máximo acima.
+(NULL, 'prazo_sugerido_campanha_dias', '30', 'inteiro', 'Duração que o formulário de criação de campanha sugere, em dias (a pessoa pode mudar)', TRUE, TRUE),
 (NULL, 'limite_campanhas_simultaneas','2',    'inteiro',  'Nº máximo de campanhas ao mesmo tempo por pesquisador (ativas ou aguardando aprovação)', TRUE, TRUE),
 (NULL, 'limite_endossos_campanha',   '4',     'inteiro',  'Nº máximo de endossos ativos ao mesmo tempo por campanha', TRUE, TRUE),
 (NULL, 'limite_denuncias_24h',       '5',     'inteiro',  'Nº máximo de denúncias que um usuário pode fazer dentro da janela de tempo das denúncias', TRUE, TRUE),

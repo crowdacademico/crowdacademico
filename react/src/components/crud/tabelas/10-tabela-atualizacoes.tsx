@@ -1,5 +1,5 @@
 // Atualizações publicadas numa campanha (título, fase, se está visível), com o botão de ocultar/reverter. Usada no
-// Campo de Testes (T3, views/campo-testes/vida-campanha-ativa.tsx), que busca e faz a alteração.
+// Campo de Testes (T4, views/campo-testes/vida-campanha-ativa.tsx), que busca e faz a alteração.
 
 import { AcaoLinha } from '../acao-linha';
 

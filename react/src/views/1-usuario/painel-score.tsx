@@ -16,7 +16,7 @@ export function PainelScore({ auth, idUsuario }: PainelScoreProps) {
     <>
       <h3 className="titulo-bloco titulo-bloco--linha">Score</h3>
       <div className="fundo-erro texto-erro rounded-md p-4 mb-3 flex items-start gap-3">
-        <i className="fa-solid fa-triangle-exclamation icone-grande"></i>
+        <i className="fa-solid fa-triangle-exclamation icone-grande" aria-hidden="true"></i>
         <div>
           <p className="enfase">Ainda não está pronto</p>
           <p className="paragrafo texto-herdado">

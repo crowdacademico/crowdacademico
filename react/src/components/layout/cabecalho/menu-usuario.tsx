@@ -40,10 +40,10 @@ export function MenuUsuario({ auth }: MenuUsuarioProps) {
           <AvatarUsuario nome={auth.usuario?.nome} foto={auth.usuario?.avatarUrl} />
         ) : (
           <div className="w-9 h-9 rounded-full fundo-sutil border borda-padrao flex items-center justify-center texto-fraco">
-            <i className="fa-solid fa-user"></i>
+            <i className="fa-solid fa-user" aria-hidden="true"></i>
           </div>
         )}
-        <i className="fa-solid fa-chevron-down icone-pequeno texto-fraco"></i>
+        <i className="fa-solid fa-chevron-down icone-pequeno texto-fraco" aria-hidden="true"></i>
       </button>
 
       {aberto && (
@@ -60,7 +60,7 @@ export function MenuUsuario({ auth }: MenuUsuarioProps) {
                 onClick={() => setAberto(false)}
                 className="paragrafo-destaque flex items-center gap-3 px-4 py-2.5 texto-padrao hover-fundo-sutil transition-colors"
               >
-                <i className="fa-solid fa-user w-4"></i>
+                <i className="fa-solid fa-user w-4" aria-hidden="true"></i>
                 Minha Conta
               </Link>
               <ItemMenu
@@ -79,7 +79,7 @@ export function MenuUsuario({ auth }: MenuUsuarioProps) {
                     onClick={() => setAberto(false)}
                     className="paragrafo-destaque flex items-center gap-3 px-4 py-2.5 texto-marca hover-fundo-sutil transition-colors"
                   >
-                    <i className="fa-solid fa-shield-halved w-4"></i>
+                    <i className="fa-solid fa-shield-halved w-4" aria-hidden="true"></i>
                     Painel Admin
                   </Link>
                 </>
@@ -91,7 +91,7 @@ export function MenuUsuario({ auth }: MenuUsuarioProps) {
                 onClick={auth.logout}
                 className="paragrafo-destaque w-full flex items-center gap-3 px-4 py-2.5 texto-erro hover-fundo-sutil transition-colors text-left"
               >
-                <i className="fa-solid fa-right-from-bracket w-4"></i>
+                <i className="fa-solid fa-right-from-bracket w-4" aria-hidden="true"></i>
                 Sair da Conta
               </button>
             </>
@@ -102,7 +102,7 @@ export function MenuUsuario({ auth }: MenuUsuarioProps) {
                 onClick={() => setAberto(false)}
                 className="paragrafo-destaque flex items-center gap-3 px-4 py-2.5 texto-padrao hover-fundo-sutil transition-colors"
               >
-                <i className="fa-solid fa-right-to-bracket w-4"></i>
+                <i className="fa-solid fa-right-to-bracket w-4" aria-hidden="true"></i>
                 Entrar
               </Link>
               <Link
@@ -110,7 +110,7 @@ export function MenuUsuario({ auth }: MenuUsuarioProps) {
                 onClick={() => setAberto(false)}
                 className="paragrafo-destaque flex items-center gap-3 px-4 py-2.5 texto-marca hover-fundo-sutil transition-colors"
               >
-                <i className="fa-solid fa-user-plus w-4"></i>
+                <i className="fa-solid fa-user-plus w-4" aria-hidden="true"></i>
                 Cadastre-se
               </Link>
             </>
@@ -134,7 +134,7 @@ function ItemMenu({ icone, rotulo, onClick }: ItemMenuProps) {
       onClick={onClick}
       className="paragrafo-destaque w-full flex items-center gap-3 px-4 py-2.5 texto-padrao hover-fundo-sutil transition-colors text-left"
     >
-      <i className={'fa-solid ' + icone + ' w-4'}></i>
+      <i className={'fa-solid ' + icone + ' w-4'} aria-hidden="true"></i>
       {rotulo}
     </button>
   );

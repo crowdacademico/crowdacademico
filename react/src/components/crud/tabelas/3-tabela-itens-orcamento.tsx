@@ -27,14 +27,14 @@ const COLUNAS: ColunaEditavel<OrcamentoCampanhaResponse, FormItem>[] = [
     rotulo: 'Categoria',
     exibir: (item) => item.categoria,
     campo: (form, mudar) => (
-      <input type="text" placeholder="Categoria" value={form.categoria} onChange={(evento) => mudar({ categoria: evento.target.value })} className="input-padrao" />
+      <input type="text" aria-label="Categoria do item" placeholder="Categoria" value={form.categoria} onChange={(evento) => mudar({ categoria: evento.target.value })} className="input-padrao" />
     ),
   },
   {
     rotulo: 'Valor',
     exibir: (item) => formatarMoeda(item.valor),
     campo: (form, mudar) => (
-      <input type="number" placeholder="Valor" value={form.valor} onChange={(evento) => mudar({ valor: evento.target.value })} className="input-padrao" />
+      <input type="number" aria-label="Valor do item" placeholder="Valor" value={form.valor} onChange={(evento) => mudar({ valor: evento.target.value })} className="input-padrao" />
     ),
   },
 ];

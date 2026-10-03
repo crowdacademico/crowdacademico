@@ -46,7 +46,7 @@ export function RedefinirSenhaPage() {
             className="pointer-events-none absolute -z-10 top-0 left-1/2 -translate-x-1/2 w-32 h-32 brilho-marca brilho-marca-forte rounded-full blur-3xl"
           ></div>
           <div className="w-14 h-14 fundo-marca rounded-2xl mx-auto flex items-center justify-center texto-sobre-cor icone-destaque mb-5 shadow-lg">
-            <i className="fa-solid fa-lock"></i>
+            <i className="fa-solid fa-lock" aria-hidden="true"></i>
           </div>
           <h1 className="titulo-pagina mb-2">Criar nova senha</h1>
           <p className="paragrafo texto-fraco">Escolha uma senha nova para a sua conta.</p>
@@ -61,7 +61,7 @@ export function RedefinirSenhaPage() {
           </div>
         ) : concluido ? (
           <div className="p-10 space-y-5 text-center">
-            <i className="fa-solid fa-circle-check icone-destaque texto-sucesso"></i>
+            <i className="fa-solid fa-circle-check icone-destaque texto-sucesso" aria-hidden="true"></i>
             <p className="paragrafo texto-padrao">
               Senha alterada. Por segurança, sua conta foi desconectada de todos os aparelhos.
             </p>
@@ -96,7 +96,7 @@ export function RedefinirSenhaPage() {
                       aria-label={mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'}
                       className="absolute right-3 top-1/2 -translate-y-1/2 texto-fraco hover-texto-forte"
                     >
-                      <i className={'fa-solid ' + (mostrarSenha ? 'fa-eye-slash' : 'fa-eye')}></i>
+                      <i className={'fa-solid ' + (mostrarSenha ? 'fa-eye-slash' : 'fa-eye')} aria-hidden="true"></i>
                     </button>
                   </div>
                   <MedidorSenha senha={senha} />

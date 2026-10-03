@@ -201,7 +201,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
                       aria-label="Fechar aviso"
                       className="shrink-0 -mr-1 -mt-1 p-1.5 texto-fraco hover-texto-forte transition-colors"
                     >
-                      <i className="fa-solid fa-xmark"></i>
+                      <i className="fa-solid fa-xmark" aria-hidden="true"></i>
                     </button>
                   </div>
                 </div>

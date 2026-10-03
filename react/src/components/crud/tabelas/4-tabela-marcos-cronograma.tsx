@@ -50,7 +50,7 @@ export function TabelaMarcosCronograma({
       rotulo: 'Título',
       exibir: (marco) => marco.titulo,
       campo: (form, mudar) => (
-        <input type="text" placeholder="Título" value={form.titulo} onChange={(evento) => mudar({ titulo: evento.target.value })} className="input-padrao" />
+        <input type="text" aria-label="Título do marco" placeholder="Título" value={form.titulo} onChange={(evento) => mudar({ titulo: evento.target.value })} className="input-padrao" />
       ),
     },
     {
@@ -59,6 +59,7 @@ export function TabelaMarcosCronograma({
       campo: (form, mudar) => (
         <input
           type="date"
+          aria-label="Data prevista do marco"
           value={form.dataPrevista}
           min={dataInicioCampanha}
           onChange={(evento) => mudar({ dataPrevista: evento.target.value })}

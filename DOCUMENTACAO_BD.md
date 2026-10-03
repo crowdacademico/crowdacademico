@@ -1336,6 +1336,15 @@ Nada a implementar; `titulo_academico` e `meio_pagamento` ficam anotados como ca
 - **Motivo:** o `UPDATE` de `campanha` já era por coluna desde o começo; o `INSERT` tinha ficado na tabela inteira, e a transição (`fn_valida_transicao_campanha`) e a completude (`fn_valida_completude_campanha`) só olham `UPDATE`. Restringir a permissão fecha a porta sem mexer em nenhuma das duas funções.
 - **Caso-limite aceito:** quem tem privilégio de verdade (o seed rodado como dono do banco e as funções `SECURITY DEFINER`, como `criar_campanha_para_outro`) continua podendo inserir em qualquer coluna; é assim que o seed cria campanhas históricas já encerradas. `criar_campanha_para_outro` só preenche as mesmas colunas do formulário.
 
+## Sugestão de 30 dias no formulário de campanha (02-10-2026)
+
+**Em palavras simples:** o requisito RF-069 diz que o formulário de criação deve sugerir 30 dias de duração. Os 30 dias moram em Parâmetros do Sistema, como os outros prazos, e não no código.
+
+📌 **Uma chave nova em `configuracoes`, lida só pela tela.**
+- **Decisão:** `prazo_sugerido_campanha_dias` = 30 (`07`, pública, ativa). Nenhuma função do banco lê a chave; o React a usa para preencher a data de fim. Grupo AI do ATUALIZAR.
+- **Motivo:** é sugestão, não regra; a regra de verdade continua sendo o mínimo e o máximo (`fn_valida_prazo_campanha_negocio`).
+- **Caso-limite aceito:** a chave não entra no par mínimo/máximo conferido por `fn_valida_pares_min_max_configuracoes`. Se o admin puser uma sugestão fora do intervalo, a tela sugere uma data que o próprio aviso de prazo mostra em vermelho, e o banco recusa no envio.
+
 ## Como conferir este inventário
 
 *(Adicionado 03-08-2026, sugestão de uma ferramenta de IA depois de auditar a documentação e achar 4 números desatualizados neste arquivo - tabelas, policies, triggers e funções não tinham sido atualizados nas últimas 3 rodadas, apesar de `log_auditoria`/`orcamento_campanha`/`marco_cronograma` terem sido adicionadas. Em vez de outra pessoa ter que contar `CREATE TABLE`/`CREATE POLICY`/`CREATE TRIGGER` na mão (ou confiar de olho num número escrito num comentário), estas 4 queries dizem a verdade direto do banco - rode no SQL Editor do Supabase sempre que for atualizar os números deste documento.)*

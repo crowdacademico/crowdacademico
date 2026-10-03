@@ -146,7 +146,7 @@ export function ModalConsultarUsuario({ auth, idUsuario, aoFechar }: ModalConsul
                         aria-label="Ver logins anteriores"
                         className="dica texto-fraco hover-texto-forte transition-colors shrink-0"
                       >
-                        <i className={'fa-solid fa-chevron-down transition-transform' + (loginsAbertos ? ' rotate-180' : '')}></i>
+                        <i className={'fa-solid fa-chevron-down transition-transform' + (loginsAbertos ? ' rotate-180' : '')} aria-hidden="true"></i>
                         <Dica texto="Ver logins anteriores" curta />
                       </button>
                     )

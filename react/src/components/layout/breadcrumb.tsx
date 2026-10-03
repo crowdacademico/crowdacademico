@@ -50,7 +50,7 @@ export function Breadcrumb() {
         </Link>
         {cadeia.map((r, indice) => (
           <span key={r.caminho} className="flex items-center gap-2">
-            <i className="fa-solid fa-chevron-right texto-fraco icone-pequeno"></i>
+            <i className="fa-solid fa-chevron-right texto-fraco icone-pequeno" aria-hidden="true"></i>
             {/* Ancestral (Usuários, Configurações...) é sempre a própria
                 listagem, sem parâmetro - pode virar link de verdade. Só o
                 ÚLTIMO nível (a página atual) fica como texto simples. */}

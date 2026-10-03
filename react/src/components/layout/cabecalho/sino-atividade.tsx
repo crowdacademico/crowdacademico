@@ -85,7 +85,7 @@ export function SinoAtividade({ auth }: SinoAtividadeProps) {
         aria-label="Atividade recente"
         className="dica relative flex items-center justify-center w-9 h-9 borda-padrao border rounded-lg texto-padrao hover-fundo-sutil transition-colors"
       >
-        <i className="fa-solid fa-bell"></i>
+        <i className="fa-solid fa-bell" aria-hidden="true"></i>
         {naoLidos > 0 && (
           <span className="absolute -top-1 -right-1 min-w-4.5 h-4.5 px-1 rounded-full fundo-erro-forte texto-sobre-cor rotulo-leitura texto-herdado flex items-center justify-center">
             {naoLidos > 9 ? '9+' : naoLidos}

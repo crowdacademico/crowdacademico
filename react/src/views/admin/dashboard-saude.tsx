@@ -51,7 +51,7 @@ export function DashboardSaude({ bancoConectado, resumo }: DashboardSaudeProps) 
 
       <div className="rounded-lg border borda-padrao fundo-sutil p-4">
         <p className="legenda texto-fraco">
-          <i className="fa-solid fa-circle-info mr-1"></i>
+          <i className="fa-solid fa-circle-info mr-1" aria-hidden="true"></i>
           Rastreamento de versão de schema (última migration aplicada, divergência de hash)
           ainda não existe neste projeto, o histórico de mudança de banco vive nos arquivos
           numerados (01-08) e em "ATUALIZAR O SUPABASE.sql", não numa tabela de controle

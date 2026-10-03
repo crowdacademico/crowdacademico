@@ -25,7 +25,7 @@ export function IndicadorEtapas<C extends string>({ etapas, atual, aoEscolher, l
         const conteudo = (
           <>
             <span className="indicador-etapas__numero" aria-hidden="true">
-              {estado === 'feita' ? <i className="fa-solid fa-check"></i> : indice + 1}
+              {estado === 'feita' ? <i className="fa-solid fa-check" aria-hidden="true"></i> : indice + 1}
             </span>
             <span className="indicador-etapas__rotulo">{etapa.rotulo}</span>
           </>

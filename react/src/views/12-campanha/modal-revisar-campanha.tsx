@@ -2,16 +2,13 @@ import { useEffect, useState } from 'react';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
-import { useToast } from '../../components/layout/toast/use-toast';
-import { Campo } from '../../components/input/campo';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
 import { ROTULO_MODELO_CAMPANHA, ROTULO_STATUS_CAMPANHA, classeBadgeStatusCampanha } from '../../services/12-campanha/constants/status-campanha.constants';
-import { useRegrasCampanha } from '../../services/12-campanha/hook/use-regras-campanha';
+import { useDecisaoAprovacao, usePronta } from '../../services/12-campanha/hook/use-decisao-aprovacao';
+import { BotoesDecisao, CampoMotivoRejeicao, ChecklistAprovacao } from './decisao-aprovacao';
 import { orcamentoCampanhaApi } from '../../services/13-orcamento-campanha/api/orcamento-campanha.api';
 import { marcoCronogramaApi } from '../../services/14-marco-cronograma/api/marco-cronograma.api';
 import { formatarData, formatarDataHora, formatarMoeda } from '../../services/constant/util/formatacao.util';
-import { useEnvio } from '../../services/constant/hook/use-envio';
-import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { CampanhaResponse, HistoricoRejeicaoResponse } from '../../services/12-campanha/type/campanha.type';
 import type { OrcamentoCampanhaResponse } from '../../services/13-orcamento-campanha/type/orcamento-campanha.type';
@@ -29,17 +26,24 @@ interface ModalRevisarCampanhaProps {
 // "Pronta para aprovar?" só ajuda a decidir; quem barra de verdade é o banco (fn_valida_completude_campanha,
 // 90009 a 90011).
 export function ModalRevisarCampanha({ auth, idCampanha, aoFechar, aoConcluido }: ModalRevisarCampanhaProps) {
-  const { mostrar } = useToast();
   const { erro, reportarErro, limparErro } = useErroToast({ mostraTexto: true });
-  const { ocupado: enviando, executar: executarEnviando } = useEnvio(reportarErro, limparErro);
-  const { minimoItensOrcamento, minimoMarcosCronograma } = useRegrasCampanha();
+  // Aprovar/Rejeitar: a mesma regra e as mesmas peças do T2 do Campo de Testes (decisao-aprovacao.tsx).
+  const decisao = useDecisaoAprovacao({
+    authFetch: auth.authFetch,
+    idCampanha,
+    reportarErro,
+    limparErro,
+    aoConcluido: () => {
+      aoConcluido();
+      aoFechar();
+    },
+  });
 
   const [campanha, setCampanha] = useState<CampanhaResponse | null>(null);
   const [orcamento, setOrcamento] = useState<OrcamentoCampanhaResponse[]>([]);
   const [cronograma, setCronograma] = useState<MarcoCronogramaResponse[]>([]);
   const [historico, setHistorico] = useState<HistoricoRejeicaoResponse[]>([]);
   const [carregando, setCarregando] = useState(true);
-  const [justificativa, setJustificativa] = useState('');
 
   useEffect(() => {
     let ativo = true;
@@ -68,37 +72,9 @@ export function ModalRevisarCampanha({ auth, idCampanha, aoFechar, aoConcluido }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auth.authFetch, idCampanha]);
 
-  const somaOrcamento = orcamento.reduce((total, item) => total + Number(item.valor), 0);
-  const orcamentoOk = campanha !== null && orcamento.length >= minimoItensOrcamento && somaOrcamento === Number(campanha.metaFinanceira);
-  const cronogramaOk = cronograma.length >= minimoMarcosCronograma;
+  const dadosDecisao = { orcamento, cronograma, metaFinanceira: campanha?.metaFinanceira ?? 0 };
+  const { soma: somaOrcamento, pronta } = usePronta(dadosDecisao);
   const aguardando = campanha?.status === 'aguardando_aprovacao';
-
-  // "Rejeitar" fica sempre clicável: sem motivo, o erro aparece embaixo do campo (antes só aparecia passando o mouse).
-  const rejeicao = useErrosFormulario(() => ({
-    justificativa: justificativa.trim() === '' && 'Escreva o motivo da rejeição: o pesquisador lê este texto para corrigir.',
-  }));
-
-  const decidir = async (acao: 'aprovar' | 'rejeitar') => {
-    if (acao === 'rejeitar' && !rejeicao.tentarEnviar()) return;
-    await executarEnviando(async () => {
-      if (acao === 'aprovar') {
-        await campanhaApi.aprovar(auth.authFetch, idCampanha);
-        mostrar('Campanha aprovada com sucesso.', `ID: ${idCampanha} foi aprovada`);
-      } else {
-        await campanhaApi.rejeitar(auth.authFetch, idCampanha, justificativa.trim());
-        mostrar('Campanha rejeitada com sucesso.', `ID: ${idCampanha} foi rejeitada`);
-      }
-      aoConcluido();
-      aoFechar();
-    });
-  };
-
-  const itemChecklist = (ok: boolean, texto: string) => (
-    <li className={'paragrafo flex items-start gap-2 texto-herdado ' + (ok ? 'texto-sucesso' : 'texto-erro')}>
-      <i className={'fa-solid mt-1 ' + (ok ? 'fa-circle-check' : 'fa-circle-xmark')} aria-hidden="true"></i>
-      <span>{texto}</span>
-    </li>
-  );
 
   return (
     <ModalFicha
@@ -120,21 +96,7 @@ export function ModalRevisarCampanha({ auth, idCampanha, aoFechar, aoConcluido }
           <button type="button" onClick={aoFechar} className="btn btn-secondary">
             Fechar
           </button>
-          {aguardando && (
-            <>
-              <button
-                type="button"
-                onClick={() => void decidir('rejeitar')}
-                disabled={enviando}
-                className="btn btn-danger"
-              >
-                Rejeitar
-              </button>
-              <button type="button" onClick={() => void decidir('aprovar')} disabled={enviando || !orcamentoOk || !cronogramaOk} className="btn btn-primary">
-                {enviando ? 'Enviando...' : 'Aprovar'}
-              </button>
-            </>
-          )}
+          {aguardando && <BotoesDecisao decisao={decisao} pronta={pronta} />}
         </div>
       }
       erro={erro}
@@ -194,27 +156,8 @@ export function ModalRevisarCampanha({ auth, idCampanha, aoFechar, aoConcluido }
               <CampoFicha rotulo="Meta" valor={formatarMoeda(campanha.metaFinanceira)} />
               <CampoFicha rotulo="Soma do orçamento" valor={formatarMoeda(somaOrcamento)} />
             </SecaoFicha>
-            <div className="fundo-cartao rounded-xl border borda-padrao p-4 space-y-2">
-              <p className="rotulo-leitura">Pronta para aprovar?</p>
-              <ul className="space-y-1">
-                {itemChecklist(orcamentoOk, `Orçamento: ${orcamento.length}/${minimoItensOrcamento} itens e soma igual à meta`)}
-                {itemChecklist(cronogramaOk, `Cronograma: ${cronograma.length}/${minimoMarcosCronograma} marcos`)}
-              </ul>
-            </div>
-            {aguardando && (
-              <Campo rotulo="Motivo da rejeição (obrigatório para rejeitar)" erro={rejeicao.erroDe('justificativa')}>
-                {({ atributos, classeErro }) => (
-                  <textarea
-                    {...atributos}
-                    className={'input-padrao' + classeErro}
-                    rows={4}
-                    value={justificativa}
-                    onChange={(evento) => setJustificativa(evento.target.value)}
-                    placeholder="O pesquisador lê este texto para corrigir e reenviar."
-                  />
-                )}
-              </Campo>
-            )}
+            <ChecklistAprovacao {...dadosDecisao} />
+            {aguardando && <CampoMotivoRejeicao decisao={decisao} />}
           </div>
         </div>
       )}

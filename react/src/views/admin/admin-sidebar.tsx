@@ -69,7 +69,7 @@ export function AdminSidebar({ aberto, aoFechar }: AdminSidebarProps) {
           className="paragrafo w-full flex items-center justify-between gap-2 px-3 py-2 my-3 rounded-md border borda-forte fundo-sutil texto-fraco hover-fundo-sutil transition-colors"
         >
           <span className="flex items-center gap-2">
-            <i className="fa-solid fa-magnifying-glass"></i> Buscar
+            <i className="fa-solid fa-magnifying-glass" aria-hidden="true"></i> Buscar
           </span>
           <kbd className="legenda-destaque texto-herdado border borda-forte rounded px-1.5 py-0.5 fundo-cartao">
             Ctrl K
@@ -121,7 +121,7 @@ export function AdminSidebar({ aberto, aoFechar }: AdminSidebarProps) {
                       direita de cada botão, alinhado verticalmente com os outros (mesma largura de coluna).
                       Cor vem de herdar o `color` do item (cinza no normal, escuro no ativo), sem classe
                       própria. */}
-                  {item.icone && <i className={'fa-solid ' + item.icone}></i>}
+                  {item.icone && <i className={'fa-solid ' + item.icone} aria-hidden="true"></i>}
                 </NavLink>
               ),
             )}

@@ -41,7 +41,7 @@ export function EsqueciSenhaPage() {
             className="pointer-events-none absolute -z-10 top-0 left-1/2 -translate-x-1/2 w-32 h-32 brilho-marca brilho-marca-forte rounded-full blur-3xl"
           ></div>
           <div className="w-14 h-14 fundo-marca rounded-2xl mx-auto flex items-center justify-center texto-sobre-cor icone-destaque mb-5 shadow-lg">
-            <i className="fa-solid fa-key"></i>
+            <i className="fa-solid fa-key" aria-hidden="true"></i>
           </div>
           <h1 className="titulo-pagina mb-2">Esqueceu a senha?</h1>
           <p className="paragrafo texto-fraco">
@@ -51,7 +51,7 @@ export function EsqueciSenhaPage() {
 
         {enviado ? (
           <div className="p-10 space-y-5 text-center">
-            <i className="fa-solid fa-envelope-circle-check icone-destaque texto-marca"></i>
+            <i className="fa-solid fa-envelope-circle-check icone-destaque texto-marca" aria-hidden="true"></i>
             <p className="paragrafo texto-padrao">
               Se existir uma conta com <strong>{email.trim()}</strong>, enviamos um link para criar uma senha nova. O
               link vale por pouco tempo e só pode ser usado uma vez.

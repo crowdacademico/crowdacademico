@@ -10,11 +10,13 @@ import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
 import { useRegrasCampanha } from '../../services/12-campanha/hook/use-regras-campanha';
-import { dataLocal, duracaoEmDias, fimDoDia, hojeISO, inicioDoDia } from '../../services/12-campanha/util/prazo-campanha.util';
+import { dataLocal, duracaoEmDias, fimDoDia, hojeISO, inicioDoDia, somarDias } from '../../services/12-campanha/util/prazo-campanha.util';
 import { useAreasDaCampanha } from '../../services/8-area-conhecimento/hook/use-areas-da-campanha';
 import { formatarMoeda } from '../../services/constant/util/formatacao.util';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
+import { ContadorCaracteres } from '../../components/input/contador-caracteres';
+import { contarCaracteres } from '../../services/constant/util/validacao.util';
 import { PainelOrcamentoCronograma } from './painel-orcamento-cronograma';
 import { EtapaRevisaoCampanha } from './etapa-revisao-campanha';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
@@ -140,6 +142,9 @@ export function ModalCriarCampanha({
     meta: form.metaFinanceira === '' ? 'Informe a meta.' : metaAbaixoDoMinimo && textoMetaMinima,
     inicio: form.dataInicio === '' ? 'Informe a data de início.' : form.dataInicio < hoje && 'O início precisa ser hoje ou depois.',
     fim: (form.dataFim === '' || !duracaoValida) && 'prazo',
+    descricao:
+      contarCaracteres(form.descricao) > regras.limiteDescricao &&
+      `A descrição passou do limite de ${regras.limiteDescricao.toLocaleString('pt-BR')} caracteres.`,
   }));
   const prazoComErro = Boolean(erroDe('fim')) || (duracao !== null && !duracaoValida);
 
@@ -345,15 +350,18 @@ export function ModalCriarCampanha({
                 />
               )}
             </Campo>
-            <Campo rotulo="Descrição (opcional)" className="sm:col-span-2">
-              {({ atributos }) => (
-                <textarea
-                  {...atributos}
-                  rows={3}
-                  value={form.descricao}
-                  onChange={(evento) => setForm({ ...form, descricao: evento.target.value })}
-                  className="input-padrao"
-                />
+            <Campo rotulo="Descrição (opcional)" className="sm:col-span-2" erro={erroDe('descricao')}>
+              {({ atributos, classeErro }) => (
+                <>
+                  <textarea
+                    {...atributos}
+                    rows={3}
+                    value={form.descricao}
+                    onChange={(evento) => setForm({ ...form, descricao: evento.target.value })}
+                    className={'input-padrao' + classeErro}
+                  />
+                  <ContadorCaracteres texto={form.descricao} limite={regras.limiteDescricao} />
+                </>
               )}
             </Campo>
             <Campo rotulo="Início" erro={erroDe('inicio')}>
@@ -363,7 +371,13 @@ export function ModalCriarCampanha({
                   type="date"
                   value={form.dataInicio}
                   min={hoje}
-                  onChange={(evento) => setForm({ ...form, dataInicio: evento.target.value })}
+                  // Sem data de fim ainda, sugere a duração padrão (RF-069); a pessoa muda o fim se quiser.
+                  onChange={(evento) => {
+                    const dataInicio = evento.target.value;
+                    const dataFim =
+                      form.dataFim === '' && dataInicio !== '' ? somarDias(dataInicio, regras.prazoSugeridoDias) : form.dataFim;
+                    setForm({ ...form, dataInicio, dataFim });
+                  }}
                   className={'input-padrao' + classeErro}
                 />
               )}
@@ -391,7 +405,8 @@ export function ModalCriarCampanha({
             >
               {form.dataFim === '' && erroDe('fim') ? 'Informe a data de fim. ' : ''}
               {duracao !== null ? `Duração: ${duracao} ${duracao === 1 ? 'dia' : 'dias'}. ` : ''}A campanha precisa durar
-              entre {regras.prazoMinimoDias} e {regras.prazoMaximoDias} dias, começando hoje ou depois.
+              entre {regras.prazoMinimoDias} e {regras.prazoMaximoDias} dias, começando hoje ou depois. Sugestão:{' '}
+              {regras.prazoSugeridoDias} dias.
             </p>
             <Campo rotulo="URL do vídeo de apresentação (opcional)" className="sm:col-span-2">
               {({ atributos }) => (

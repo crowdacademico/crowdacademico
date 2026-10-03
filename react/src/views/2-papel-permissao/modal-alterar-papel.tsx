@@ -134,7 +134,7 @@ export function ModalAlterarPapel({ auth, papel, aoFechar, aoAtualizado }: Modal
           {sujo && (
             <>
               <span className="badge badge-neutro line-through opacity-60">{papel.nome}</span>
-              <i className="fa-solid fa-arrow-right texto-fraco icone-pequeno"></i>
+              <i className="fa-solid fa-arrow-right texto-fraco icone-pequeno" aria-hidden="true"></i>
             </>
           )}
           <span className="badge badge-neutro">{nome.trim() || 'sem nome'}</span>

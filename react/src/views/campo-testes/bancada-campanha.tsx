@@ -10,11 +10,8 @@ import { contemTermo, normalizarBusca } from '../../services/constant/util/busca
 import { useAuthFetchRegistrado, useChamadaRegistrada } from '../../services/campo-testes/hook/use-chamada-registrada';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
-import { useRegrasCampanha } from '../../services/12-campanha/hook/use-regras-campanha';
 import { CAMPANHA_BLOQUEADA, motivoBloqueioCampanha } from '../../services/campo-testes/util/registros-bloqueados.util';
 import { TabelaBancadaCampanha } from '../../components/crud/tabelas/9-tabela-bancada-campanha';
-import { TabelaCriteriosEnvio } from '../../components/crud/tabelas/7-tabela-criterios-envio';
-import { avaliarCriteriosEnvio } from '../../services/12-campanha/util/criterios-envio.util';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { ModalFicha } from '../../components/crud/modal-ficha';
@@ -34,6 +31,7 @@ import { RegistroChamadas } from './registro-chamadas';
 import { ModalAlterarCampanha } from '../12-campanha/modal-alterar-campanha';
 import { ModalCriarCampanha } from '../12-campanha/modal-criar-campanha';
 import { PainelOrcamentoCronograma } from '../12-campanha/painel-orcamento-cronograma';
+import { SecaoDecisaoAprovacao } from '../12-campanha/decisao-aprovacao';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { CampanhaResponse, HistoricoRejeicaoResponse } from '../../services/12-campanha/type/campanha.type';
 import type { AreaConhecimentoResponse } from '../../services/8-area-conhecimento/type/area-conhecimento.type';
@@ -53,7 +51,7 @@ import type { PerfilPesquisadorResponse } from '../../services/6-perfil-pesquisa
 //
 // Sem pré-filtro por pesquisador nem "Escolher"/"campanha em foco": o checklist "Pronta para aprovar?" +
 // Aprovar/Rejeitar + Orçamento/Cronograma fazem parte do modal de Alterar, e `CampoTestesContext` não guarda
-// `campanhaFoco`; T3 (Vida da Campanha Ativa) tem busca própria (ver vida-campanha-ativa.tsx).
+// `campanhaFoco`; T4 (Vida da Campanha Ativa) tem busca própria (ver vida-campanha-ativa.tsx).
 
 export function BancadaCampanha({ auth }: PropsPagina) {
   const chamarERegistrar = useChamadaRegistrada(auth);
@@ -61,13 +59,10 @@ export function BancadaCampanha({ auth }: PropsPagina) {
   const { reportarErro } = useErroToast();
   const { ocupado: excluindoForcado, executar: executarExcluindoForcado } = useEnvio(reportarErro);
   const { ocupado: excluindo, executar: executarExcluindo } = useEnvio(reportarErro);
-  const { ocupado: rejeitando, executar: executarRejeitando } = useEnvio(reportarErro);
-  const { ocupado: aprovando, executar: executarAprovando } = useEnvio(reportarErro);
 
   // As chamadas do T2 aparecem no T4 (Registro de Chamadas), inclusive as do painel e do passo a passo
   // compartilhados (views/12-campanha), que recebem este `authFetch`.
   const authRegistrado = { authFetch: useAuthFetchRegistrado(auth) };
-  const { minimoItensOrcamento, minimoMarcosCronograma } = useRegrasCampanha();
 
   const [areas, setAreas] = useState<AreaConhecimentoResponse[]>([]);
   const [usuarios, setUsuarios] = useState<UsuarioResponse[]>([]);
@@ -89,7 +84,6 @@ export function BancadaCampanha({ auth }: PropsPagina) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [campanhaConsultada]);
   const [idCampanhaEditando, setIdCampanhaEditando] = useState<number | null>(null);
-  const [justificativaRejeicaoEdicao, setJustificativaRejeicaoEdicao] = useState('');
   const [campanhaExcluindo, setCampanhaExcluindo] = useState<CampanhaResponse | null>(null);
   const [confirmacaoExclusao, setConfirmacaoExclusao] = useState('');
   const [confirmacaoExclusaoForcada, setConfirmacaoExclusaoForcada] = useState('');
@@ -151,34 +145,6 @@ export function BancadaCampanha({ auth }: PropsPagina) {
 
   const iniciarEdicaoCampanha = (item: CampanhaResponse) => {
     setIdCampanhaEditando(item.idCampanha);
-    setJustificativaRejeicaoEdicao('');
-  };
-
-  // Aprovar/Rejeitar dentro do modal de Alterar: escopados a `idCampanhaEditando` (o modal aberto). Fecham o
-  // modal ao terminar (mudar de status torna o resto do formulário obsoleto: "Salvar" não faz mais sentido
-  // depois de aprovar/rejeitar).
-  const aprovarEdicao = async () => {
-    if (idCampanhaEditando === null) return;
-    await executarAprovando(async () => {
-      await chamarERegistrar<void>(`/campanha/${idCampanhaEditando}/aprovar`, { method: 'POST' });
-      mostrar('Campanha aprovada com sucesso.', `ID: ${idCampanhaEditando} foi aprovada`);
-      setIdCampanhaEditando(null);
-      carregarCampanhas();
-    });
-  };
-
-  const rejeitarEdicao = async () => {
-    if (idCampanhaEditando === null) return;
-    await executarRejeitando(async () => {
-      await chamarERegistrar<void>(`/campanha/${idCampanhaEditando}/rejeitar`, {
-        method: 'POST',
-        // Obrigatória na API: sem ela, a resposta 400 com o motivo aparece no registro de chamadas.
-        body: JSON.stringify({ justificativa: justificativaRejeicaoEdicao.trim() }),
-      });
-      mostrar('Campanha rejeitada com sucesso.', `ID: ${idCampanhaEditando} foi rejeitada`);
-      setIdCampanhaEditando(null);
-      carregarCampanhas();
-    });
   };
 
   // Só permitido em 'rascunho' (RLS: pol_campanha_delete, ver 04_rls_policies.sql): uma campanha rejeitada e
@@ -347,39 +313,21 @@ export function BancadaCampanha({ auth }: PropsPagina) {
               if (bloqueadaEdicao || campanha.status !== 'aguardando_aprovacao') {
                 return null;
               }
-              const criterios = {
-                orcamento,
-                cronograma,
-                metaFinanceira: campanha.metaFinanceira,
-                minimoItensOrcamento,
-                minimoMarcosCronograma,
-              };
-              const { pronta, motivo } = avaliarCriteriosEnvio(criterios);
+              // A mesma decisão da fila real (Aprovar Campanhas). Aprovar ou rejeitar fecha o modal: mudar de status
+              // torna o resto do formulário obsoleto. As chamadas aparecem no Registro de Chamadas.
               return (
-                <div className="fundo-sutil rounded-md p-4">
-                  <h3 className="subtitulo mb-3">Pronta para aprovar?</h3>
-                  <TabelaCriteriosEnvio {...criterios} />
-
-                  <div className="acao-com-motivo mt-3">
-                    <button type="button" className="btn btn-primary" disabled={!pronta || aprovando} onClick={aprovarEdicao}>
-                      {aprovando ? 'Aprovando...' : 'Aprovar (Admin)'}
-                    </button>
-                    {!pronta && <span className="acao-com-motivo__motivo">{motivo}</span>}
-                  </div>
-
-                  <div className="flex gap-2 items-end mt-3">
-                    <textarea
-                      placeholder="Justificativa da rejeição (obrigatória)"
-                      value={justificativaRejeicaoEdicao}
-                      onChange={(evento) => setJustificativaRejeicaoEdicao(evento.target.value)}
-                      className="input-padrao flex-1"
-                      rows={2}
-                    />
-                    <button type="button" className="btn btn-secondary btn-pequeno" disabled={rejeitando} onClick={rejeitarEdicao}>
-                      {rejeitando ? 'Rejeitando...' : 'Rejeitar (Admin)'}
-                    </button>
-                  </div>
-                </div>
+                <SecaoDecisaoAprovacao
+                  key={campanha.idCampanha}
+                  authFetch={authRegistrado.authFetch}
+                  campanha={campanha}
+                  orcamento={orcamento}
+                  cronograma={cronograma}
+                  reportarErro={reportarErro}
+                  aoConcluido={() => {
+                    setIdCampanhaEditando(null);
+                    carregarCampanhas();
+                  }}
+                />
               );
             }}
           />

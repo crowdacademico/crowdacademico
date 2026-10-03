@@ -182,7 +182,7 @@ export function SeletorFotoPerfil({
         {enviando && (
           <div className="absolute inset-0 rounded-full flex items-center justify-center fundo-escurecido texto-sobre-cor">
             {progresso === null ? (
-              <i className="fa-solid fa-spinner fa-spin"></i>
+              <i className="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>
             ) : (
               <span className="legenda-destaque texto-herdado" role="status">
                 {progresso}%
@@ -199,7 +199,7 @@ export function SeletorFotoPerfil({
             aria-label="Alterar foto de perfil"
             className="legenda dica absolute -bottom-1 -right-1 w-7 h-7 rounded-full fundo-escuro hover:opacity-80 texto-sobre-cor flex items-center justify-center border-2 borda-cartao shadow transition-colors disabled:opacity-60"
           >
-            <i className="fa-solid fa-camera"></i>
+            <i className="fa-solid fa-camera" aria-hidden="true"></i>
             <Dica texto="Alterar foto de perfil" curta />
           </button>
         )}
@@ -212,7 +212,7 @@ export function SeletorFotoPerfil({
             aria-label="Remover foto de perfil"
             className="legenda dica absolute -bottom-1 -left-1 w-7 h-7 rounded-full fundo-erro-forte hover:opacity-80 texto-sobre-cor flex items-center justify-center border-2 borda-cartao shadow transition-colors disabled:opacity-60"
           >
-            <i className="fa-solid fa-trash"></i>
+            <i className="fa-solid fa-trash" aria-hidden="true"></i>
             <Dica texto="Remover foto de perfil" curta />
           </button>
         )}

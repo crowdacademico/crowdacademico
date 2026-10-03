@@ -19,7 +19,7 @@ export function etiquetasTermoUso(termo: TermoUsoResponse) {
     ),
     aceites > 0 ? (
       <span key="aceites" className="badge badge-aviso">
-        <i className="fa-solid fa-lock mr-1"></i> Travada: {aceites} {aceites === 1 ? 'aceite' : 'aceites'}
+        <i className="fa-solid fa-lock mr-1" aria-hidden="true"></i> Travada: {aceites} {aceites === 1 ? 'aceite' : 'aceites'}
       </span>
     ) : (
       <span key="aceites" className="badge badge-sucesso">

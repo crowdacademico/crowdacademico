@@ -45,7 +45,7 @@ export function RegistroChamadas() {
   return (
     <div className="registro-chamadas">
       <button type="button" className="btn btn-secondary btn-pequeno" onClick={() => setAberto((atual) => !atual)}>
-        <i className={`fa-solid fa-chevron-${aberto ? 'down' : 'right'}`}></i> T4 - Registro de Chamadas (
+        <i className={`fa-solid fa-chevron-${aberto ? 'down' : 'right'}`} aria-hidden="true"></i> T4 - Registro de Chamadas (
         {registroChamadas.length})
       </button>
 
@@ -111,7 +111,7 @@ export function RegistroChamadas() {
                       void navigator.clipboard?.writeText(montarCurl(chamada));
                     }}
                   >
-                    <i className="fa-solid fa-copy"></i> Copiar como cURL
+                    <i className="fa-solid fa-copy" aria-hidden="true"></i> Copiar como cURL
                   </button>
                 </div>
               )}

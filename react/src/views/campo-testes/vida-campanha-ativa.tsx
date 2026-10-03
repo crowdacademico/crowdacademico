@@ -32,11 +32,11 @@ interface SeguirCampanha {
 const FASES = ['andamento', 'resultado_preliminar', 'resultado_final'];
 const TIPOS = ['texto', 'imagem', 'pdf', 'linkexterno'];
 
-// T3, depende de uma campanha já ATIVA. Toda ação usa a sessão REAL do painel, sem escolha de ator: publicar
+// T4, depende de uma campanha já ATIVA. Toda ação usa a sessão REAL do painel, sem escolha de ator: publicar
 // atualização e comentar só têm efeito quando a própria sessão logada É o dono/o autor pretendido; "Seguidores"
 // é um único toggle ("Eu sigo"), não dá para simular vários seguidores ao mesmo tempo dentro da ferramenta.
 //
-// Busca própria: T3 não depende de nenhuma seleção feita em outra tela. `campanhaFoco` é estado local (mesmo
+// Busca própria: T4 não depende de nenhuma seleção feita em outra tela. `campanhaFoco` é estado local (mesmo
 // padrão do combobox "dono da campanha" de T2/Criar Campanha: digita id ou pedaço do título, até 5 resultados).
 export function VidaCampanhaAtiva({ auth }: PropsPagina) {
   const chamarERegistrar = useChamadaRegistrada(auth);
@@ -80,7 +80,7 @@ export function VidaCampanhaAtiva({ auth }: PropsPagina) {
       .catch(() => {});
     // Todas as campanhas, uma vez só ao montar (mesmo padrão do combobox "dono da campanha" em
     // bancada-campanha.tsx: filtra client-side por id/título em vez de buscar a cada tecla): alimenta a busca
-    // própria de T3, ver `sugestoesCampanha` abaixo.
+    // própria de T4, ver `sugestoesCampanha` abaixo.
     campanhaApi.listar(auth.authFetch).then(setTodasCampanhas).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auth.carregando]);
@@ -249,7 +249,7 @@ export function VidaCampanhaAtiva({ auth }: PropsPagina) {
             aoAlternarAtivo={(item) => void alternarAtivoAtualizacao(item.idAtualizacao, item.ativo)}
           />
           <p className="legenda texto-fraco mb-4">
-            <i className="fa-solid fa-ban"></i> Anexos (arquivo_atualizacao): aguardando o módulo 25-arquivo existir de verdade.
+            <i className="fa-solid fa-ban" aria-hidden="true"></i> Anexos (arquivo_atualizacao): aguardando o módulo 25-arquivo existir de verdade.
           </p>
 
           <div className="border-t borda-padrao my-8"></div>
@@ -290,7 +290,7 @@ export function VidaCampanhaAtiva({ auth }: PropsPagina) {
           <h2 className="subtitulo mb-2">Seguidores</h2>
           <p className="legenda texto-fraco mb-2">
             Sem Elenco só dá pra simular a própria sessão logada seguindo ou não - um roster de vários
-            seguidores ao mesmo tempo fica pro redesenho de T3.
+            seguidores ao mesmo tempo fica pro redesenho de T4.
           </p>
           <button type="button" className={`btn ${euSigo ? 'btn-primary' : 'btn-secondary'} btn-pequeno`} onClick={alternarSeguir}>
             {euSigo ? '✓ ' : ''}

@@ -162,7 +162,7 @@ export function ModalCriarTermoUso({ auth, tipoInicial = 'cadastro', aoFechar, a
         extra={
           vigente && (
             <button type="button" onClick={comecarDaVigente} className="btn-pilula btn-pilula-rotulo">
-              <i className="fa-solid fa-copy"></i> Começar da vigente <span className="normal-case">({vigente.versao})</span>
+              <i className="fa-solid fa-copy" aria-hidden="true"></i> Começar da vigente <span className="normal-case">({vigente.versao})</span>
             </button>
           )
         }

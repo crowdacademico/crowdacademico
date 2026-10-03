@@ -112,7 +112,7 @@ export function CadastroPage({ auth }: PropsPagina) {
             className="pointer-events-none absolute -z-10 top-0 left-1/2 -translate-x-1/2 w-32 h-32 brilho-marca brilho-marca-forte rounded-full blur-3xl"
           ></div>
           <div className="w-14 h-14 fundo-marca rounded-2xl mx-auto flex items-center justify-center texto-sobre-cor icone-destaque mb-5 shadow-lg">
-            <i className="fa-solid fa-user-plus"></i>
+            <i className="fa-solid fa-user-plus" aria-hidden="true"></i>
           </div>
           <h1 className="titulo-pagina mb-2">Criar conta</h1>
           <p className="paragrafo texto-fraco">
@@ -194,7 +194,7 @@ export function CadastroPage({ auth }: PropsPagina) {
                     aria-label={mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'}
                     className="absolute right-3 top-1/2 -translate-y-1/2 texto-fraco hover-texto-forte"
                   >
-                    <i className={'fa-solid ' + (mostrarSenha ? 'fa-eye-slash' : 'fa-eye')}></i>
+                    <i className={'fa-solid ' + (mostrarSenha ? 'fa-eye-slash' : 'fa-eye')} aria-hidden="true"></i>
                   </button>
                 </div>
 
@@ -210,7 +210,7 @@ export function CadastroPage({ auth }: PropsPagina) {
               confirmarSenha.length > 0 &&
               senhasIguais && (
                 <span className="texto-sucesso">
-                  <i className="fa-solid fa-circle-check"></i> Senhas conferem.
+                  <i className="fa-solid fa-circle-check" aria-hidden="true"></i> Senhas conferem.
                 </span>
               )
             }
@@ -304,7 +304,7 @@ export function CadastroPage({ auth }: PropsPagina) {
           acoesCabecalho={
             termo && (
               <button type="button" onClick={() => setTermoTelaCheia(true)} className="btn-pilula btn-pilula-rotulo">
-                <i className="fa-solid fa-expand"></i> Tela cheia
+                <i className="fa-solid fa-expand" aria-hidden="true"></i> Tela cheia
               </button>
             )
           }

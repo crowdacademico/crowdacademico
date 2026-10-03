@@ -70,7 +70,7 @@ export function TabelaBancadaPesquisador({ linhas, carregando, erro, aoAlterar, 
             aria-label="Fazer upgrade de perfil pra pesquisador"
             className="dica"
           >
-            <i className="fa-solid fa-lock texto-aviso"></i>
+            <i className="fa-solid fa-lock texto-aviso" aria-hidden="true"></i>
             <Dica texto="Fazer upgrade de perfil pra pesquisador" curta />
           </button>
         ),
@@ -105,7 +105,7 @@ export function TabelaBancadaPesquisador({ linhas, carregando, erro, aoAlterar, 
       acoes={(linha, bloqueada) =>
         bloqueada ? (
           <span className="dica" tabIndex={0} role="note" aria-label={motivoBloqueioPesquisador()}>
-            <i className="fa-solid fa-lock"></i> bloqueado
+            <i className="fa-solid fa-lock" aria-hidden="true"></i> bloqueado
             <Dica texto={motivoBloqueioPesquisador()} />
           </span>
         ) : (

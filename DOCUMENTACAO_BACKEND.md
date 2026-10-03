@@ -1024,6 +1024,11 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 
 🐛➡️✅ **Bug real, achado pelo Lucas rodando `--adotar` de verdade contra o Supabase (05-09-2026), corrigido no mesmo dia.** `listarArquivosSqlEmOrdem()` filtrava só "termina em `.sql`" - como `arquivos_banco_dados/ATUALIZAR O SUPABASE.sql` mora na mesma pasta dos 8 numerados, ele também foi listado, hasheado e "adotado" como se fosse um 9º arquivo rastreado. O problema de fundo: `ATUALIZAR O SUPABASE.sql` é um rascunho **vivo** (cresce a cada ajuste pequeno - RF-108, limites de upload, validade de sessão configurável, etc.), nunca um bloco fechado como os 8 numerados - tratá-lo como um deles faria o hash mudar a cada adição, disparando pra sempre o aviso de "conteúdo mudou, não reaplicado" só por causa dele, mesmo sem nenhum problema real. **Corrigido:** o filtro agora exige exatamente dois dígitos no início do nome (`/^\d{2}_.*\.sql$/`) - só `01_...` a `08_...` passam; `ATUALIZAR O SUPABASE.sql` nunca mais entra na lista. A linha órfã que o `--adotar` já tinha gravado pra ele em `schema_migrations` (antes da correção) fica inofensiva, sem efeito - o script simplesmente não procura mais por esse nome de arquivo.
 
+📌 **Fica, e cada arquivo vai numa transação (03-10-2026).**
+- **Decisão:** a Alexia decidiu manter o executor: depois do deploy, toda mudança no banco de produção entra como arquivo novo numerado (começando em 09, depois 10, e assim por diante), nunca editando o `01` a `08`, e o executor aplica só o que é novo. Cada arquivo roda numa transação, junto com o registro em `schema_migrations`, na mesma conexão.
+- **Motivo:** sem a transação, um arquivo que falhasse no meio ficava pela metade e sem registro, e a rodada seguinte quebrava em "já existe". Testado num Postgres vazio e descartável, 8 casos: aplicar do zero, pular os já aplicados, avisar arquivo alterado, `--adotar`, e falha no meio sem deixar nada aplicado.
+- **Caso-limite aceito:** um arquivo novo não pode ter `BEGIN`/`COMMIT` próprio nem comando que o Postgres não aceita dentro de transação (`CREATE INDEX CONCURRENTLY`, `VACUUM`). Os `BEGIN` de dentro das funções (corpo PL/pgSQL) não contam.
+
 ---
 
 ## 13. Inventário de rotas HTTP

@@ -6,3 +6,9 @@ const REGEX_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export function emailValido(email: string): boolean {
   return REGEX_EMAIL.test(email.trim());
 }
+
+// Caracteres de verdade, como o `char_length` do banco: um emoji vale 1 (o `.length` do JavaScript conta 2).
+// Usada no contador e na validação dos campos de texto livre com limite (RF-072).
+export function contarCaracteres(texto: string): number {
+  return [...texto].length;
+}

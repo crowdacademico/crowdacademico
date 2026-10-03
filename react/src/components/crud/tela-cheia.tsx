@@ -29,7 +29,7 @@ export function TelaCheia({ ativa, titulo, aoSair, children }: TelaCheiaProps) {
         <div className="flex items-center justify-between gap-3">
           <p className="titulo-bloco">{titulo}</p>
           <button type="button" onClick={aoSair} className="btn-pilula">
-            <i className="fa-solid fa-compress"></i> Sair da tela cheia (Esc)
+            <i className="fa-solid fa-compress" aria-hidden="true"></i> Sair da tela cheia (Esc)
           </button>
         </div>
       )}

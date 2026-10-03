@@ -28,7 +28,7 @@ export function CaixaTextoLongo({ rotulo, tituloTelaCheia, valor, aoMudar, erro,
         <div className="absolute right-0 -top-0.75 flex gap-2">
           {extra}
           <button type="button" onClick={() => setTelaCheia(true)} className="btn-pilula btn-pilula-rotulo">
-            <i className="fa-solid fa-expand"></i> Tela cheia
+            <i className="fa-solid fa-expand" aria-hidden="true"></i> Tela cheia
           </button>
         </div>
       )}
