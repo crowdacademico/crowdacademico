@@ -131,7 +131,7 @@ export function LoginPage({ auth }: PropsPagina) {
             <IconeGoogle /> Continuar com Google
           </button>
 
-          {/* Chamada de cadastro: a segunda ação mais importante da tela, por isso text-sm e mais respiro
+          {/* Chamada de cadastro: a segunda ação mais importante da tela, por isso tem mais respiro
               acima. Continua sendo link, não um 2º botão cheio (dois botões grandes competiriam entre si). */}
           <p className="paragrafo texto-fraco text-center pt-2">
             Ainda não tem cadastro?{' '}

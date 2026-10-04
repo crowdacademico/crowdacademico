@@ -37,8 +37,8 @@ export interface AuthResponseForgotPassword {
   tokenRecuperacaoSenhaDev: string | null;
 }
 
-// Espelha sessao.response.ts (SessaoResponse).
-export interface SessaoResponse {
+// Espelha auth.response-sessions.ts (AuthResponseSessions).
+export interface AuthResponseSessions {
   idSessao: number;
   criadoEm: string;
   expiraEm: string;

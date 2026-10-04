@@ -93,6 +93,7 @@ function Componentes() {
   const idNormal = useId();
   const idErro = useId();
   const idDesabilitado = useId();
+  const idCompacto = useId();
 
   return (
     <div className="space-y-4">
@@ -168,6 +169,12 @@ function Componentes() {
         <div>
           <label htmlFor={idDesabilitado} className="rotulo-campo">Desabilitado</label>
           <input id={idDesabilitado} type="text" className="input-padrao" defaultValue="Não editável" disabled />
+        </div>
+        {/* Campo compacto (filtro das tabelas, "Mostrar" da paginação): não usa o estilo de campo inteiro, só o anel
+            de foco, com .foco-marca. Clique nos dois para comparar o anel. */}
+        <div>
+          <label htmlFor={idCompacto} className="rotulo-campo">Compacto (foco-marca)</label>
+          <input id={idCompacto} type="text" className="paragrafo w-full sm:w-64 border borda-forte rounded-lg fundo-sutil py-2.5 px-3 outline-none foco-marca texto-herdado" placeholder="Filtrar..." />
         </div>
       </div>
 

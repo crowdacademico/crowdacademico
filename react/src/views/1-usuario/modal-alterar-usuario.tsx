@@ -615,7 +615,7 @@ function PapeisDoUsuario({ auth, idUsuario, papeis, aoMudarPapeis, aoAtualizado 
                     type="button"
                     onClick={() => aoReativar(papel)}
                     disabled={ocupado === papel.idPapel}
-                    className="dica enfase hover:underline disabled:opacity-50"
+                    className="dica enfase hover:underline disabled:opacity-60"
                   >
                     {ocupado === papel.idPapel ? '…' : 'reativar'}
                     <Dica texto="Reativar agora" curta />
@@ -635,7 +635,7 @@ function PapeisDoUsuario({ auth, idUsuario, papeis, aoMudarPapeis, aoAtualizado 
                       type="button"
                       onClick={() => aoRevogar(papel)}
                       disabled={ocupado === papel.idPapel}
-                      className="dica texto-erro enfase hover-texto-erro disabled:opacity-50"
+                      className="dica texto-erro enfase hover-texto-erro disabled:opacity-60"
                       aria-label={`Revogar "${papel.nomePapel}"`}
                     >
                       ×

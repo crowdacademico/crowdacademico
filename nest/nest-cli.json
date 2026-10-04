@@ -37,6 +37,7 @@
             ".response-login.ts",
             ".response-register.ts",
             ".response-score.ts",
+            ".response-sessions.ts",
             ".response-summary.ts",
             ".response-upload-started.ts"
           ]

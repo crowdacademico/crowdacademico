@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
-import { SessaoResponse } from '../dto/response/sessao.response';
+import { AuthResponseSessions } from '../dto/response/auth.response-sessions';
 
 // Minha Conta > Segurança > Sessões Ativas. `sessao` (pol_sessao_all, USING(true)) não filtra por dono na RLS:
 // a autorização de "só as suas sessões" é feita AQUI, no WHERE, não no banco (mesmo raciocínio documentado em
@@ -12,7 +12,7 @@ export class AuthServiceFindAllSessions {
   async executar(
     idUsuario: number,
     idSessaoAtual: number,
-  ): Promise<SessaoResponse[]> {
+  ): Promise<AuthResponseSessions[]> {
     const linhas = await this.database
       .getDb()
       .selectFrom('sessao')

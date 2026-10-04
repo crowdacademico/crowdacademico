@@ -1,4 +1,4 @@
-export class SessaoResponse {
+export class AuthResponseSessions {
   idSessao: number;
   criadoEm: Date;
   expiraEm: Date;

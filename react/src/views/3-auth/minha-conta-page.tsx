@@ -29,7 +29,7 @@ import { ModalUpgradePesquisador } from '../6-perfil-pesquisador/modal-upgrade-p
 import { gerarCpfValido } from '../../services/campo-testes/util/gerar-cpf-valido.util';
 import { Carregando } from '../../components/layout/carregando';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
-import type { SessaoResponse } from '../../services/3-auth/type/auth.type';
+import type { AuthResponseSessions } from '../../services/3-auth/type/auth.type';
 import type { UsuarioPapelResponse } from '../../services/2-papel-permissao/type/papel-permissao.type';
 import type { PerfilPesquisadorResponse } from '../../services/6-perfil-pesquisador/type/perfil-pesquisador.type';
 import type { SuspensaoResponseDto } from '../../services/constant/type/suspensao.type';
@@ -480,7 +480,7 @@ function AbaSeguranca({ auth }: AbaSegurancaProps) {
     });
   };
 
-  const [sessoes, setSessoes] = useState<SessaoResponse[] | null>(null);
+  const [sessoes, setSessoes] = useState<AuthResponseSessions[] | null>(null);
   const [encerrando, setEncerrando] = useState<number | null>(null);
   // Colapsada por padrão: imagine um usuário com 10, 20, 30 sessões abertas. Expandida, a lista ainda ganha
   // scroll próprio (max-h-64): nunca empurra a página.
@@ -657,7 +657,7 @@ function AbaSeguranca({ auth }: AbaSegurancaProps) {
                       onClick={() => aoEncerrarUma(sessao.idSessao)}
                       disabled={encerrando === sessao.idSessao}
                       aria-label="Encerrar sessão"
-                      className="dica shrink-0 w-8 h-8 rounded-full flex items-center justify-center texto-erro hover-fundo-sutil transition-colors disabled:opacity-50"
+                      className="dica shrink-0 w-8 h-8 rounded-full flex items-center justify-center texto-erro hover-fundo-sutil transition-colors disabled:opacity-60"
                     >
                       <i
                         className={

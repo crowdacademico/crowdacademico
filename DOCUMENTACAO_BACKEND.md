@@ -143,6 +143,11 @@ Para a RLS funcionar, então, **toda query precisa rodar numa conexão onde `app
 
 📌 **Rota anônima não pula o interceptor.** Quando não há `request.user`, o interceptor seta `''` (string vazia) em vez de pular o passo 3 - `id_usuario_atual()` então devolve `NULL`, que é exatamente o que "anônimo de verdade" significa para as policies. Pular o passo deixaria a variável com o valor da *requisição anterior* naquela conexão.
 
+📌 **Cada requisição segura uma conexão do começo ao fim (registrado em 04-10-2026).**
+- **Decisão:** o interceptor tira uma conexão do pool e só a devolve no fim da requisição, inclusive em `GET` anônimo e enquanto espera o Storage.
+- **Motivo:** o `SET LOCAL` da identidade e a transação só valem dentro de uma conexão; é o que faz a RLS saber quem pede.
+- **Caso-limite aceito:** o número de requisições ao mesmo tempo fica limitado ao tamanho do pool (com o pooler do Supabase, também ao dele). No volume do TCC não pesa. Se pesar, o caminho é não abrir transação em rota de leitura anônima.
+
 📌 **Ordem no pipeline do Nest.** Guards rodam **antes** de interceptors. É por isso que o `AuthGuardJwt` (global, seção 3) consegue resolver `request.user` a tempo de o interceptor encontrá-lo já pronto no passo 3. Essa ordem não é acidente - é o que faz o desenho inteiro fechar.
 
 📌 **Por que `nestjs-cls` e não `Scope.REQUEST` do Nest.** `Scope.REQUEST` contaminaria toda a árvore de injeção que toca o banco: cada módulo novo teria que lembrar de marcar o escopo certo, e esquecer produziria um bug silencioso. Com `AsyncLocalStorage`, o contexto viaja por fora - nenhum service precisa saber que ele existe. (Registrado em `PENDENCIAS e correcoes.md`, item 5.)

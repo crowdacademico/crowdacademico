@@ -3,6 +3,7 @@ import {
   Catch,
   HttpException,
   HttpStatus,
+  NotFoundException,
 } from '@nestjs/common';
 import { BaseExceptionFilter } from '@nestjs/core';
 import { DUPLICIDADE_POR_INDICE_UNICO } from './mensagens-duplicidade.constants';
@@ -69,6 +70,16 @@ export class PostgresExceptionFilter extends BaseExceptionFilter {
       typeof corpo === 'string'
         ? corpo
         : (corpo as { message?: unknown }).message;
+    // Rota que não existe: o Nest responde "Cannot DELETE /x".
+    const rota =
+      typeof mensagem === 'string'
+        ? /^Cannot (\w+) (\S+)$/.exec(mensagem)
+        : null;
+    if (rota) {
+      return new NotFoundException(
+        `Rota não encontrada: ${rota[1]} ${rota[2]}.`,
+      );
+    }
     const tipo =
       typeof mensagem === 'string'
         ? /^Validation failed \((\w+) string is expected\)$/.exec(mensagem)?.[1]
