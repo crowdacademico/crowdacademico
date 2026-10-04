@@ -6,6 +6,8 @@ import { BarraProgresso } from '../../components/crud/barra-progresso';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { CaixaAviso } from '../../components/crud/caixa-aviso';
+import { FiltroPartes } from '../../components/crud/filtro-partes';
+import type { ParteTela } from '../../components/crud/filtro-partes';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
@@ -123,6 +125,11 @@ export function ModalAlterarCampanha({
   const [cronograma, setCronograma] = useState<MarcoCronogramaResponse[]>([]);
   const [ofertaDatas, setOfertaDatas] = useState(false);
   const regras = useRegrasCampanha();
+  // Filtro com cara de aba (o mesmo do Consultar): as partes escondidas não são desmontadas, então nada do que está
+  // sendo editado se perde ao trocar. Avisos do topo e a decisão da Bancada aparecem em todas as partes.
+  const [parte, setParte] = useState<ParteAlterar>('geral');
+  const ve = (alvo: ParteAlterar) => (parte === 'geral' || parte === alvo ? '' : ' hidden');
+  const comResumo = parte === 'geral' || parte === 'dados';
 
   // Campanha rejeitada traz junto o histórico de rejeições (o motivo aparece no topo do modal).
   const { dado } = useBuscar(
@@ -254,6 +261,23 @@ export function ModalAlterarCampanha({
     >
       {campanha && form && (
         <>
+          <FiltroPartes
+            partes={[
+              { chave: 'geral', rotulo: 'Geral' },
+              { chave: 'dados', rotulo: 'Dados' },
+              { chave: 'orcamento', rotulo: 'Orçamento e cronograma' },
+              ...(ehDono && STATUS_PUBLICADA.has(campanha.status)
+                ? [
+                    { chave: 'atualizacoes' as const, rotulo: 'Atualizações' },
+                    { chave: 'comentarios' as const, rotulo: 'Comentários' },
+                  ]
+                : []),
+              ...(ehDono && campanha.status === 'ativo' ? [{ chave: 'encerramento' as const, rotulo: 'Encerramento' }] : []),
+            ] satisfies ParteTela<ParteAlterar>[]}
+            atual={parte}
+            aoEscolher={setParte}
+          />
+
           {motivoBloqueio && (
             <CaixaAviso titulo="Não dá pra alterar esta campanha" tom="erro" icone="fa-lock">
               <p>{motivoBloqueio}</p>
@@ -293,13 +317,16 @@ export function ModalAlterarCampanha({
               <p>
                 O prazo terminou em {formatarData(form.dataFim)}, e uma campanha com prazo vencido não
                 pode ser enviada para aprovação. Você pode começar agora mantendo a mesma duração
-                {duracao !== null && duracao > 0 ? ` de ${duracao} dias` : ''}, ou escolher outras datas mais abaixo.
+                {duracao !== null && duracao > 0 ? ` de ${duracao} dias` : ''}, ou escolher outras datas em Dados.
               </p>
               <div className="flex flex-wrap gap-2">
                 <button type="button" className="btn btn-primary" disabled={trabalhando} onClick={() => enviar(true)}>
                   {trabalhando ? 'Enviando...' : 'Começar agora, mantendo a duração'}
                 </button>
-                <button type="button" className="btn btn-secondary" onClick={() => setOfertaDatas(false)}>
+                <button type="button" className="btn btn-secondary" onClick={() => {
+                    setOfertaDatas(false);
+                    setParte('dados');
+                  }}>
                   Escolher outras datas
                 </button>
               </div>
@@ -307,7 +334,7 @@ export function ModalAlterarCampanha({
           )}
 
           {camposBloqueados.size > 0 && !rejeitadaSomenteLeitura && (
-            <p id={idAvisoBloqueio} className="paragrafo flex items-start gap-2 texto-fraco">
+            <p id={idAvisoBloqueio} className={'paragrafo flex items-start gap-2 texto-fraco' + ve('dados')}>
               <i className="fa-solid fa-shield-halved mt-0.5 texto-marca" aria-hidden="true"></i>
               <span>
                 <strong className="texto-forte">Campos protegidos depois da aprovação</strong>, para proteger quem já
@@ -317,87 +344,97 @@ export function ModalAlterarCampanha({
           )}
 
           <div className="grade-ficha">
-            <div className="lg:col-span-2 space-y-6">
-              <SecaoFicha titulo="Informações da campanha">
-                {campoTexto('titulo', 'Título')}
-                {travado('idAreaConhecimento') ? (
-                  <CampoFicha rotulo="Área do conhecimento" valor={areas.find((area) => String(area.idAreaConhecimento) === form.idAreaConhecimento)?.nome ?? campanha.nomeArea} />
-                ) : (
-                  <Campo rotulo="Área do conhecimento">
-                    {({ atributos }) => (
-                      <select
-                        {...atributos}
-                        value={form.idAreaConhecimento}
-                        onChange={(evento) => setForm({ ...form, idAreaConhecimento: evento.target.value })}
-                        className="input-padrao"
-                        aria-describedby={descreveBloqueio('idAreaConhecimento')}
-                      >
-                        {areas.map((area) => (
-                          <option key={area.idAreaConhecimento} value={area.idAreaConhecimento}>
-                            {area.nome}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                  </Campo>
-                )}
-                {travado('descricao') ? (
-                  <CampoFicha rotulo="Descrição" valor={form.descricao} largura="cheia" />
-                ) : (
-                  <Campo rotulo="Descrição" className="sm:col-span-2">
-                    {({ atributos }) => (
-                      <>
-                        <textarea
+            <div className={(comResumo ? 'lg:col-span-2' : 'lg:col-span-3') + ' space-y-6'}>
+              <div className={'space-y-6' + ve('dados')}>
+                <SecaoFicha titulo="Informações da campanha">
+                  {campoTexto('titulo', 'Título')}
+                  {travado('idAreaConhecimento') ? (
+                    <CampoFicha rotulo="Área do conhecimento" valor={areas.find((area) => String(area.idAreaConhecimento) === form.idAreaConhecimento)?.nome ?? campanha.nomeArea} />
+                  ) : (
+                    <Campo rotulo="Área do conhecimento">
+                      {({ atributos }) => (
+                        <select
                           {...atributos}
-                          rows={3}
-                          value={form.descricao}
-                          onChange={(evento) => setForm({ ...form, descricao: evento.target.value })}
+                          value={form.idAreaConhecimento}
+                          onChange={(evento) => setForm({ ...form, idAreaConhecimento: evento.target.value })}
                           className="input-padrao"
-                          aria-describedby={descreveBloqueio('descricao')}
-                        />
-                        <ContadorCaracteres texto={form.descricao} limite={regras.limiteDescricao} />
-                      </>
-                    )}
-                  </Campo>
-                )}
-                {campoTexto('videoApresentacaoUrl', 'Vídeo de apresentação', 'sm:col-span-2', 'url')}
-              </SecaoFicha>
+                          aria-describedby={descreveBloqueio('idAreaConhecimento')}
+                        >
+                          {areas.map((area) => (
+                            <option key={area.idAreaConhecimento} value={area.idAreaConhecimento}>
+                              {area.nome}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </Campo>
+                  )}
+                  {travado('descricao') ? (
+                    <CampoFicha rotulo="Descrição" valor={form.descricao} largura="cheia" />
+                  ) : (
+                    <Campo rotulo="Descrição" className="sm:col-span-2">
+                      {({ atributos }) => (
+                        <>
+                          <textarea
+                            {...atributos}
+                            rows={3}
+                            value={form.descricao}
+                            onChange={(evento) => setForm({ ...form, descricao: evento.target.value })}
+                            className="input-padrao"
+                            aria-describedby={descreveBloqueio('descricao')}
+                          />
+                          <ContadorCaracteres texto={form.descricao} limite={regras.limiteDescricao} />
+                        </>
+                      )}
+                    </Campo>
+                  )}
+                  {campoTexto('videoApresentacaoUrl', 'Vídeo de apresentação', 'sm:col-span-2', 'url')}
+                </SecaoFicha>
 
-              <SecaoFicha titulo="Período">
-                {campoTexto('dataInicio', 'Início', '', 'date')}
-                {campoTexto('dataFim', 'Fim (previsto)', '', 'date')}
-              </SecaoFicha>
+                <SecaoFicha titulo="Período">
+                  {campoTexto('dataInicio', 'Início', '', 'date')}
+                  {campoTexto('dataFim', 'Fim (previsto)', '', 'date')}
+                </SecaoFicha>
+              </div>
 
-              <PainelOrcamentoCronograma
-                auth={auth}
-                idCampanha={idCampanha}
-                podeEditar={podeEditarItens}
-                metaFinanceira={Number(form.metaFinanceira)}
-                dataInicioCampanha={form.dataInicio}
-                minimoMarcosCronograma={regras.minimoMarcosCronograma}
-                aoCarregar={(itens, marcos) => {
-                  setOrcamento(itens);
-                  setCronograma(marcos);
-                }}
-              />
+              <div className={ve('orcamento').trim()}>
+                <PainelOrcamentoCronograma
+                  auth={auth}
+                  idCampanha={idCampanha}
+                  podeEditar={podeEditarItens}
+                  metaFinanceira={Number(form.metaFinanceira)}
+                  dataInicioCampanha={form.dataInicio}
+                  minimoMarcosCronograma={regras.minimoMarcosCronograma}
+                  aoCarregar={(itens, marcos) => {
+                    setOrcamento(itens);
+                    setCronograma(marcos);
+                  }}
+                />
+              </div>
 
               {ehDono && STATUS_PUBLICADA.has(campanha.status) && (
                 <>
-                  <SecaoAtualizacoesCampanha auth={auth} idCampanha={idCampanha} podePublicar={STATUS_ACEITA_ATUALIZACAO.has(campanha.status)} />
-                  <SecaoComentariosRecebidos auth={auth} idCampanha={idCampanha} publicada />
+                  <div className={ve('atualizacoes').trim()}>
+                    <SecaoAtualizacoesCampanha auth={auth} idCampanha={idCampanha} podePublicar={STATUS_ACEITA_ATUALIZACAO.has(campanha.status)} />
+                  </div>
+                  <div className={ve('comentarios').trim()}>
+                    <SecaoComentariosRecebidos auth={auth} idCampanha={idCampanha} publicada />
+                  </div>
                 </>
               )}
 
               {ehDono && campanha.status === 'ativo' && (
-                <SecaoEncerramentoAntecipado
-                  authFetch={auth.authFetch}
-                  idCampanha={idCampanha}
-                  valorArrecadado={campanha.valorBrutoArrecadado}
-                  aoEncerrada={() => {
-                    aoMudar();
-                    aoFechar();
-                  }}
-                />
+                <div className={ve('encerramento').trim()}>
+                  <SecaoEncerramentoAntecipado
+                    authFetch={auth.authFetch}
+                    idCampanha={idCampanha}
+                    valorArrecadado={campanha.valorBrutoArrecadado}
+                    aoEncerrada={() => {
+                      aoMudar();
+                      aoFechar();
+                    }}
+                  />
+                </div>
               )}
 
               {secaoAdmin?.({ campanha, orcamento, cronograma })}
@@ -405,7 +442,7 @@ export function ModalAlterarCampanha({
 
             {/* Resumo: o que só se consulta aqui (arrecadado, taxa, status, id) e a meta, que só é campo enquanto a
                 campanha não foi aprovada. */}
-            <div className="rounded-xl border borda-padrao fundo-sutil p-5 space-y-5">
+            <div className={'rounded-xl border borda-padrao fundo-sutil p-5 space-y-5' + (comResumo ? '' : ' hidden')}>
               <h3 className="titulo-bloco titulo-bloco--linha mb-0">Resumo</h3>
               <CampoFicha
                 rotulo="Status"
@@ -439,3 +476,5 @@ export function ModalAlterarCampanha({
     </ModalFicha>
   );
 }
+
+type ParteAlterar = 'geral' | 'dados' | 'orcamento' | 'atualizacoes' | 'comentarios' | 'encerramento';
