@@ -242,7 +242,6 @@ export function ModalAlterarCampanha({
         <RodapeAcoes
           aoCancelar={aoFechar}
           rotuloCancelar={edicaoTravada ? 'Fechar' : 'Cancelar'}
-          largura="xl"
           acao={[
             ...(edicaoTravada ? [] : [{ rotulo: 'Salvar', ocupado: trabalhando, aoClicar: () => void salvar() }]),
             ...(podeEnviar

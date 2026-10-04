@@ -3,6 +3,9 @@
 // `acao`, sobra só o botão secundário, à direita, com a largura de um botão de dupla (rodapé "Fechar" do Consultar). Mais de uma ação (ex.:
 // Salvar e Enviar para aprovação): passe uma lista; ficam na ordem dada, depois do secundário.
 //
+// Todo par de ações do sistema (cancelar ou desfazer + confirmar) passa por aqui, no rodapé do modal ou no fim de
+// uma seção: é o que garante a mesma largura em toda tela.
+//
 // `formulario`: o botão de ação vira `type="submit"` e submete o `<form>` com esse id, mesmo que o form viva
 // fora do rodapé (o rodapé do ModalFicha fica fora do `<form>`). Sem ele, é um botão comum que chama `aoClicar`.
 export interface AcaoRodape {
@@ -18,9 +21,11 @@ export interface AcaoRodape {
 interface RodapeAcoesProps {
   aoCancelar: () => void;
   rotuloCancelar?: string;
+  // Botão secundário que não se aplica agora (ex.: Desfazer sem nada alterado).
+  cancelarDesabilitado?: boolean;
   acao?: AcaoRodape | AcaoRodape[];
-  // Largura máxima do conjunto, alinhado à direita: 'sm' é o padrão dos modais; 'md' para rótulo de ação longo;
-  // 'xl' para três botões; 'cheia' ocupa o espaço todo (rodapé de página).
+  // Largura máxima do conjunto, alinhado à direita. Sem ela, sai pelo número de botões: 'sm' para dois, 'xl' para
+  // três. 'md' para rótulo de ação longo; 'cheia' ocupa o espaço todo (rodapé de página).
   largura?: 'sm' | 'md' | 'xl' | 'cheia';
 }
 
@@ -31,8 +36,15 @@ const CLASSE_LARGURA = {
   cheia: '',
 };
 
-export function RodapeAcoes({ aoCancelar, rotuloCancelar = 'Cancelar', acao, largura = 'sm' }: RodapeAcoesProps) {
+export function RodapeAcoes({
+  aoCancelar,
+  rotuloCancelar = 'Cancelar',
+  cancelarDesabilitado = false,
+  acao,
+  largura: larguraPedida,
+}: RodapeAcoesProps) {
   const acoes = Array.isArray(acao) ? acao : acao ? [acao] : [];
+  const largura = larguraPedida ?? (acoes.length >= 2 ? 'xl' : 'sm');
   // Botão sozinho: mesma largura de um botão de dupla (metade direita da mesma caixa). Esticado ele ocupava o
   // rodapé inteiro; só do tamanho do texto, ficava miúdo perto dos outros rodapés.
   if (acoes.length === 0) {
@@ -48,7 +60,7 @@ export function RodapeAcoes({ aoCancelar, rotuloCancelar = 'Cancelar', acao, lar
   }
   return (
     <div className={'flex gap-3' + CLASSE_LARGURA[largura]}>
-      <button type="button" onClick={aoCancelar} className="btn btn-secondary flex-1">
+      <button type="button" onClick={aoCancelar} disabled={cancelarDesabilitado} className="btn btn-secondary flex-1">
         {rotuloCancelar}
       </button>
       {acoes.map((item) => (

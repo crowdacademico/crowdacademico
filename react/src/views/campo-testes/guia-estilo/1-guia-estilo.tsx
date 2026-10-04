@@ -221,8 +221,7 @@ function Secao({ titulo, descricao, children }: { titulo: string; descricao: str
 
 export function GuiaEstilo() {
   // Nas amostras a medição roda uma vez, ao montar. Trocar a chave remonta tudo
-  // e mede de novo: acontece sozinho quando o Vite aplica uma edição de CSS, e
-  // pelo botão, se a edição não tiver sido percebida.
+  // e mede de novo: acontece sozinho quando o Vite aplica uma edição de CSS.
   const [versao, setVersao] = useState(0);
   useEffect(() => {
     const hot = import.meta.hot;
@@ -236,18 +235,13 @@ export function GuiaEstilo() {
 
   return (
     <div className="admin-content-painel space-y-8">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <span className="badge badge-dev">&lt;dev&gt;</span>
-          <h1 className="titulo-pagina mt-2">Guia de Estilo</h1>
-          <p className="paragrafo mt-1">
-            Lê os tokens e classes reais do sistema, sem cópia: se uma cor mudar em <code>1-cores.css</code>, esta
-            página muda junto. Só existe em <code>npm run dev</code>.
-          </p>
-        </div>
-        <button type="button" className="btn btn-secondary" onClick={() => setVersao((atual) => atual + 1)}>
-          Remedir agora
-        </button>
+      <div>
+        <span className="badge badge-dev">&lt;dev&gt;</span>
+        <h1 className="titulo-pagina mt-2">Guia de Estilo</h1>
+        <p className="paragrafo mt-1">
+          Lê os tokens e classes reais do sistema, sem cópia: se uma cor mudar em <code>1-cores.css</code>, esta
+          página muda junto. Só existe em <code>npm run dev</code>.
+        </p>
       </div>
 
       <div key={versao} className="space-y-8">

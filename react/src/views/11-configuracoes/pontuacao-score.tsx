@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { MensagemErro } from '../../components/crud/mensagem-erro';
+import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { CaixaTabela } from '../../components/crud/tabelas/caixa-tabela';
 import { Tooltip } from '../../components/layout/tooltip';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
@@ -255,23 +256,19 @@ export function PontuacaoScore({ auth }: PropsPagina) {
                 {problemaPesos}
               </p>
             )}
-            <div className="flex justify-end gap-2 mt-3 mb-8">
-              <button
-                type="button"
-                className="btn btn-secondary"
-                disabled={!pesosMudaram || envioPesos.ocupado}
-                onClick={() => original && setDimensoes(dimensoesEditaveis(original.dimensoes))}
-              >
-                Desfazer
-              </button>
-              <button
-                type="button"
-                className="btn btn-primary"
-                disabled={!pesosMudaram || problemaPesos !== null || envioPesos.ocupado}
-                onClick={() => void salvarPesos()}
-              >
-                {envioPesos.ocupado ? 'Salvando...' : 'Salvar pesos'}
-              </button>
+            <div className="mt-3 mb-8">
+              <RodapeAcoes
+                rotuloCancelar="Desfazer"
+                aoCancelar={() => original && setDimensoes(dimensoesEditaveis(original.dimensoes))}
+                cancelarDesabilitado={!pesosMudaram || envioPesos.ocupado}
+                acao={{
+                  rotulo: 'Salvar pesos',
+                  rotuloOcupado: 'Salvando...',
+                  ocupado: envioPesos.ocupado,
+                  desabilitado: !pesosMudaram || problemaPesos !== null,
+                  aoClicar: () => void salvarPesos(),
+                }}
+              />
             </div>
 
             <h2 className="titulo-bloco titulo-bloco--linha">Faixas de reputação</h2>
@@ -349,23 +346,19 @@ export function PontuacaoScore({ auth }: PropsPagina) {
                 {problemaFaixas}
               </p>
             )}
-            <div className="flex justify-end gap-2 mt-3">
-              <button
-                type="button"
-                className="btn btn-secondary"
-                disabled={!faixasMudaram || envioFaixas.ocupado}
-                onClick={() => original && setFaixas(faixasEditaveis(original.faixas))}
-              >
-                Desfazer
-              </button>
-              <button
-                type="button"
-                className="btn btn-primary"
-                disabled={!faixasMudaram || problemaFaixas !== null || envioFaixas.ocupado}
-                onClick={() => void salvarFaixas()}
-              >
-                {envioFaixas.ocupado ? 'Salvando...' : 'Salvar faixas'}
-              </button>
+            <div className="mt-3">
+              <RodapeAcoes
+                rotuloCancelar="Desfazer"
+                aoCancelar={() => original && setFaixas(faixasEditaveis(original.faixas))}
+                cancelarDesabilitado={!faixasMudaram || envioFaixas.ocupado}
+                acao={{
+                  rotulo: 'Salvar faixas',
+                  rotuloOcupado: 'Salvando...',
+                  ocupado: envioFaixas.ocupado,
+                  desabilitado: !faixasMudaram || problemaFaixas !== null,
+                  aoClicar: () => void salvarFaixas(),
+                }}
+              />
             </div>
           </>
         )}

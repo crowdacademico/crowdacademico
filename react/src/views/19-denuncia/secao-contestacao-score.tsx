@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { EstadoVazio } from '../../components/crud/estado-vazio';
 import { MensagemErro } from '../../components/crud/mensagem-erro';
+import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { Campo } from '../../components/input/campo';
 import { ContadorCaracteres } from '../../components/input/contador-caracteres';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
@@ -131,14 +132,12 @@ export function SecaoContestacaoScore({ authFetch }: SecaoContestacaoScoreProps)
                           </>
                         )}
                       </Campo>
-                      <div className="flex flex-wrap justify-end gap-2">
-                        <button type="button" className="btn btn-secondary" disabled={ocupado} onClick={() => setContestando(null)}>
-                          Cancelar
-                        </button>
-                        <button type="button" className="btn btn-primary" disabled={ocupado} onClick={() => void enviar(denuncia.idDenuncia)}>
-                          {ocupado ? 'Enviando...' : 'Enviar pedido de revisão'}
-                        </button>
-                      </div>
+                      <RodapeAcoes
+                        aoCancelar={() => setContestando(null)}
+                        cancelarDesabilitado={ocupado}
+                        largura="md"
+                        acao={{ rotulo: 'Enviar pedido de revisão', rotuloOcupado: 'Enviando...', ocupado, aoClicar: () => void enviar(denuncia.idDenuncia) }}
+                      />
                     </div>
                   ) : (
                     <div>

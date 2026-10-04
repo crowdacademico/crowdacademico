@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { BotaoMostrarEsconder } from './botao-mostrar-esconder';
 import { LogAuditoriaPainel } from './log-auditoria-painel';
 import type { ResultadoPaginado } from '../../services/constant/type/paginacao.type';
 import type { LogAuditoriaResponse } from '../../services/27-log-auditoria/type/log-auditoria.type';
@@ -18,9 +19,7 @@ export function BlocoLogAuditoria({ buscar, campoRenomeio }: BlocoLogAuditoriaPr
 
   return (
     <>
-      <button type="button" onClick={() => setAberto((atual) => !atual)} className="btn btn-secondary mt-4">
-        {aberto ? 'Esconder log' : 'Ver log'}
-      </button>
+      <BotaoMostrarEsconder aberto={aberto} aoAlternar={() => setAberto((atual) => !atual)} rotulo="log" className="mt-4" />
       {aberto && <LogAuditoriaPainel buscar={buscar} campoRenomeio={campoRenomeio} />}
     </>
   );

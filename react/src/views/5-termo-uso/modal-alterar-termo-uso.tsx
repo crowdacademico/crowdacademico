@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { MensagemErro } from '../../components/crud/mensagem-erro';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { ResumoAlteracoes } from '../../components/crud/resumo-alteracoes';
+import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { CaixaTextoLongo } from '../../components/crud/caixa-texto-longo';
 import { confirmarSaida, useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
@@ -111,30 +112,34 @@ export function ModalAlterarTermoUso({
       rodape={
         <div className="flex flex-wrap items-center justify-between gap-3">
           <ResumoAlteracoes mudancas={sujo ? ['texto'] : []} />
-          <div className="flex flex-1 justify-end gap-3">
-            <button type="button" onClick={fechar} className="btn btn-secondary">
-              Cancelar
-            </button>
-            {termo && !termo.ativo && (
-              <button
-                type="button"
-                onClick={() => void aoTornarVigente()}
-                disabled={ativando || enviando}
-                className="btn btn-secondary"
-              >
-                {ativando ? 'Ativando...' : 'Tornar vigente'}
-              </button>
-            )}
-            {!somenteLeitura && (
-              <button
-                type="button"
-                onClick={() => void aoSalvarTexto()}
-                disabled={enviando || ativando || carregando || !termo || !sujo || !conteudo.trim()}
-                className="btn btn-primary"
-              >
-                {enviando ? 'Salvando...' : 'Salvar'}
-              </button>
-            )}
+          <div className="flex-1">
+            <RodapeAcoes
+              aoCancelar={fechar}
+              acao={[
+                ...(somenteLeitura
+                  ? []
+                  : [
+                      {
+                        rotulo: 'Salvar',
+                        rotuloOcupado: 'Salvando...',
+                        ocupado: enviando,
+                        desabilitado: ativando || carregando || !termo || !sujo || !conteudo.trim(),
+                        aoClicar: () => void aoSalvarTexto(),
+                      },
+                    ]),
+                ...(termo && !termo.ativo
+                  ? [
+                      {
+                        rotulo: 'Tornar vigente',
+                        rotuloOcupado: 'Ativando...',
+                        ocupado: ativando,
+                        desabilitado: enviando,
+                        aoClicar: () => void aoTornarVigente(),
+                      },
+                    ]
+                  : []),
+              ]}
+            />
           </div>
         </div>
       }

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { MensagemErro } from '../../components/crud/mensagem-erro';
+import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import type { FormEvent } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router';
 import { AvatarUsuario } from '../../components/layout/avatar-usuario';
@@ -408,13 +409,11 @@ function AbaPerfil({ auth, aoVoltar }: AbaPerfilProps) {
       {/* Rodapé sticky, mesmo padrão do rodapé dos
           modais - arredonda o PRÓPRIO canto de baixo
           (rounded-b-2xl), não depende do wrapper. */}
-      <div className="px-6 sm:px-8 py-5 border-t borda-padrao fundo-cartao rounded-b-2xl sticky bottom-0 flex gap-3 justify-end">
-        <button type="button" onClick={aoCancelar} className="btn btn-secondary">
-          Cancelar
-        </button>
-        <button type="submit" disabled={!sujo || enviando} className="btn btn-primary">
-          {enviando ? 'Salvando...' : 'Salvar'}
-        </button>
+      <div className="px-6 sm:px-8 py-5 border-t borda-padrao fundo-cartao rounded-b-2xl sticky bottom-0">
+        <RodapeAcoes
+          aoCancelar={aoCancelar}
+          acao={{ rotulo: 'Salvar', rotuloOcupado: 'Salvando...', ocupado: enviando, desabilitado: !sujo, formulario: 'form-minha-conta-perfil' }}
+        />
       </div>
     </form>
   );

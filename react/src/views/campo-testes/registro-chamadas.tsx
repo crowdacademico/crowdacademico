@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { API_BASE_URL } from '../../services/constant/constants/api.constants';
 import { paginarClientSide } from '../../services/constant/util/paginacao.util';
 import { RodapePaginacao } from '../../components/pagination/rodape-paginacao';
+import { BotaoMostrarEsconder } from '../../components/crud/botao-mostrar-esconder';
 import { EstadoVazio } from '../../components/crud/estado-vazio';
 import { useCampoTestes } from '../../services/campo-testes/hook/use-campo-testes';
 import type { RegistroChamada } from '../../services/campo-testes/context/campo-testes-context';
@@ -45,10 +46,12 @@ export function RegistroChamadas() {
 
   return (
     <div className="registro-chamadas">
-      <button type="button" className="btn btn-secondary btn-pequeno" onClick={() => setAberto((atual) => !atual)}>
-        <i className={`fa-solid fa-chevron-${aberto ? 'down' : 'right'}`} aria-hidden="true"></i> Registro de Chamadas (
-        {registroChamadas.length})
-      </button>
+      <BotaoMostrarEsconder
+        aberto={aberto}
+        aoAlternar={() => setAberto((atual) => !atual)}
+        rotulo="registro de chamadas"
+        contador={registroChamadas.length}
+      />
 
       {aberto && (
         <div className="mt-2">

@@ -43,7 +43,6 @@ export function ModalExcluirComentario({ autor, conteudo, excluir, aoFechar, aoE
       rodape={
         <RodapeAcoes
           aoCancelar={aoFechar}
-          largura="xl"
           acao={[
             { rotulo: 'Excluir', rotuloOcupado: 'Excluindo...', ocupado: ocupado && !bloqueando, desabilitado: ocupado, aoClicar: () => confirmar(false), perigo: true },
             { rotulo: 'Excluir e bloquear', rotuloOcupado: 'Bloqueando...', ocupado: ocupado && bloqueando, desabilitado: ocupado, aoClicar: () => confirmar(true), perigo: true },

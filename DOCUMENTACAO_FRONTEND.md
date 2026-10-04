@@ -239,7 +239,7 @@ Cada módulo tem `services/<n>-<nome>/api/<nome>.api.ts` exportando **um objeto*
 | `modal-ficha.tsx` | casca de todo modal de Consultar, Alterar e Criar: fundo escurecido, cartão preso no topo, cabeçalho (título, subtítulo, ⓘ `ajuda`, `badges`, `acoesCabecalho`), corpo e rodapé. Só aparece pronto (`carregando` mostra a pílula "Carregando..."); `variasTelas` abre na altura cheia. Fecha pelo X, pelo clique no fundo (desligável) e pelo Esc. Ver "Modal não dança" no design system |
 | `modal-detalhe.tsx` | modal de explicação (título, chave técnica, selo, seções) |
 | `ficha-consulta.tsx` | `SecaoFicha` e `CampoFicha`: as seções e campos dos modais de Consultar (campo de leitura, não campo desabilitado: desabilitado promete "poderia editar") |
-| `rodape-acoes.tsx` | `RodapeAcoes`: secundário à esquerda (Cancelar, Fechar), ações à direita, com "Salvando..." enquanto `ocupado`; `perigo` usa o botão vermelho; `formulario` submete um `<form>` pelo id; `largura` escolhe entre os três tamanhos de rodapé |
+| `rodape-acoes.tsx` | `RodapeAcoes`: secundário à esquerda (Cancelar, Fechar), ações à direita, com "Salvando..." enquanto `ocupado`; `perigo` usa o botão vermelho; `formulario` submete um `<form>` pelo id; `cancelarDesabilitado` para o secundário que não se aplica (Desfazer sem nada alterado). Sem `largura`, ela sai pelo número de botões (dois ou três); `md` é para rótulo de ação longo. Todo par de ações do sistema passa por ele, também no fim de uma seção (Pontuação, contestação do score) |
 | `resumo-alteracoes.tsx` | a frase do rodapé dos Alterar: o que mudou e ainda não foi salvo |
 | `use-alteracao-nao-salva.ts` | aviso nativo do navegador (`beforeunload`) com alteração não salva; a confirmação ao fechar o modal é da tela |
 | `badge-status-campanha.tsx` | o selo de status de uma campanha, igual em todo lugar, com "Em breve" (seção 12) |
@@ -261,6 +261,7 @@ Cada módulo tem `services/<n>-<nome>/api/<nome>.api.ts` exportando **um objeto*
 | `modal-excluir-item.tsx` e `modal-excluir-comentario.tsx` | exclusões com confirmação |
 | `barra-progresso.tsx` | quanto da meta já foi arrecadado |
 | `bloco-log-auditoria.tsx` + `log-auditoria-painel.tsx` | o "Ver log" abaixo de uma listagem, com paginação no servidor |
+| `botao-mostrar-esconder.tsx` | `BotaoMostrarEsconder`: o botão que mostra e esconde um painel logo abaixo ("Ver log", "Ver registro de chamadas"), com a setinha e o contador opcional; `aria-expanded` diz ao leitor de tela se está aberto |
 
 ### `components/input/`
 

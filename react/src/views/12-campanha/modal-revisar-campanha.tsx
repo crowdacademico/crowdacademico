@@ -3,11 +3,12 @@ import { BadgeStatusCampanha } from '../../components/crud/badge-status-campanha
 import { ROTULO_MODELO_CAMPANHA, ROTULO_STATUS_CAMPANHA } from '../../services/12-campanha/constants/status-campanha.constants';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { ModalFicha } from '../../components/crud/modal-ficha';
+import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
 
-import { useDecisaoAprovacao, usePronta } from '../../services/12-campanha/hook/use-decisao-aprovacao';
-import { BotoesDecisao, CampoMotivoRejeicao, ChecklistAprovacao } from './decisao-aprovacao';
+import { acoesDecisao, useDecisaoAprovacao, usePronta } from '../../services/12-campanha/hook/use-decisao-aprovacao';
+import { CampoMotivoRejeicao, ChecklistAprovacao } from './decisao-aprovacao';
 import { orcamentoCampanhaApi } from '../../services/13-orcamento-campanha/api/orcamento-campanha.api';
 import { marcoCronogramaApi } from '../../services/14-marco-cronograma/api/marco-cronograma.api';
 import { formatarData, formatarDataHora, formatarMoeda } from '../../services/constant/util/formatacao.util';
@@ -92,12 +93,7 @@ export function ModalRevisarCampanha({ auth, idCampanha, aoFechar, aoConcluido }
       }
       aoFechar={aoFechar}
       rodape={
-        <div className="flex flex-wrap gap-3 justify-end">
-          <button type="button" onClick={aoFechar} className="btn btn-secondary">
-            Fechar
-          </button>
-          {aguardando && <BotoesDecisao decisao={decisao} pronta={pronta} />}
-        </div>
+        <RodapeAcoes aoCancelar={aoFechar} rotuloCancelar="Fechar" acao={aguardando ? acoesDecisao(decisao, pronta) : undefined} />
       }
       erro={erro}
     >

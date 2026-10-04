@@ -8,6 +8,7 @@ import { avaliarCriteriosEnvio } from '../util/criterios-envio.util';
 import type { AuthFetch } from '../../3-auth/type/auth.type';
 import type { OrcamentoCampanhaResponse } from '../../13-orcamento-campanha/type/orcamento-campanha.type';
 import type { MarcoCronogramaResponse } from '../../14-marco-cronograma/type/marco-cronograma.type';
+import type { AcaoRodape } from '../../../components/crud/rodape-acoes';
 
 interface OpcoesDecisao {
   authFetch: AuthFetch;
@@ -51,4 +52,12 @@ export type DecisaoAprovacao = ReturnType<typeof useDecisaoAprovacao>;
 export function usePronta(dados: { orcamento: OrcamentoCampanhaResponse[]; cronograma: MarcoCronogramaResponse[]; metaFinanceira: number }) {
   const { minimoItensOrcamento, minimoMarcosCronograma } = useRegrasCampanha();
   return avaliarCriteriosEnvio({ ...dados, minimoItensOrcamento, minimoMarcosCronograma });
+}
+
+// Rejeitar e Aprovar como ações do RodapeAcoes (o rodapé do modal de revisão, depois do Fechar).
+export function acoesDecisao(decisao: DecisaoAprovacao, pronta: boolean): AcaoRodape[] {
+  return [
+    { rotulo: 'Rejeitar', perigo: true, desabilitado: decisao.ocupado, aoClicar: () => void decisao.decidir('rejeitar') },
+    { rotulo: 'Aprovar', rotuloOcupado: 'Enviando...', ocupado: decisao.ocupado, desabilitado: !pronta, aoClicar: () => void decisao.decidir('aprovar') },
+  ];
 }
