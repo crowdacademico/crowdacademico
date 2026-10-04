@@ -41,7 +41,7 @@ Três módulos pequenos e parecidos entre si - todos seguem o mesmo formato (uma
 ## Grupo 6 - Moderação e encerramento
 
 - ✅ **`19-denuncia`** - denúncia de campanha ou perfil (03-10-2026): criar, listar, julgar e encerrar campanha por moderação a partir de uma denúncia procedente; tela Denúncias (moderação), seção no Consultar da campanha, "Denunciar autor" nos comentários recebidos. Ver `DOCUMENTACAO_BACKEND.md`.
-- **`20-solicitacao-encerramento`** - pedido de encerramento antecipado de campanha, com decisão do admin.
+- ✅ **`20-solicitacao-encerramento`** - encerramento antecipado (03-10-2026): sem contribuição confirmada o dono encerra direto; com contribuição, pede e o admin aprova ou rejeita; cancelar enquanto pendente. Tela Encerramentos (moderação), seção no Alterar do dono e no Consultar da campanha. Ver `DOCUMENTACAO_BACKEND.md`.
 - ✅ **`21-historico-rejeicao`** - histórico de rejeições de campanha, consulta pura (14-09-2026; desde 21-09-2026 sobrevive à exclusão da campanha e guarda dono e título, ver `DOCUMENTACAO_BD.md`). `GET /historico-rejeicao?idCampanha=` (nome do admin já resolvido via join, mais recente primeiro) - sem tela própria, virou seção "Histórico de Rejeições" dentro de Consultar Campanha (fila de aprovação e telas de teste), escondida quando a campanha nunca foi rejeitada.
 
 ## Grupo 7 - Comunicação

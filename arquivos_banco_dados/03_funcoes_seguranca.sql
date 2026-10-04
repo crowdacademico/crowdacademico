@@ -155,10 +155,10 @@ $$;
 -- Função:     fn_termo_uso_pendente
 -- Assinatura: (p_id_usuario INT) -> INT
 -- Bloco:      [03-D-1]
--- Regra:      RF-015: devolve o id da versão VIGENTE do Termo de Uso (tipo 'cadastro') quando a conta ainda não a
---             aceitou, ou NULL quando está em dia. O login e a renovação de sessão perguntam isto; enquanto houver
---             pendência, a pessoa só lê, aceita ou sai. O Termo de upgrade de pesquisador fica de fora: é aceito
---             uma vez, no upgrade, e o RF-015 fala do Termo de Uso.
+-- Regra:      RF-015: devolve o id de uma versão VIGENTE de termo que a conta ainda não aceitou, ou NULL quando está
+--             em dia: o termo da conta ('cadastro') primeiro e, para quem é pesquisador, o de pesquisador
+--             ('upgrade_pesquisador'). O login e a renovação de sessão perguntam isto; enquanto houver pendência, a
+--             pessoa só lê, aceita ou sai.
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_termo_uso_pendente(p_id_usuario INT)
 RETURNS INT
@@ -169,11 +169,15 @@ SET search_path = public
 AS $$
     SELECT t.id_termo
     FROM termos_de_uso t
-    WHERE t.tipo = 'cadastro' AND t.ativo
+    WHERE t.ativo
+      AND (t.tipo = 'cadastro'
+           OR EXISTS (SELECT 1 FROM perfil_pesquisador pp WHERE pp.id_usuario = p_id_usuario))
       AND NOT EXISTS (
           SELECT 1 FROM usuario_termo ut
           WHERE ut.id_usuario = p_id_usuario AND ut.id_termo = t.id_termo
-      );
+      )
+    ORDER BY t.tipo = 'cadastro' DESC
+    LIMIT 1;
 $$;
 
 -- ============================================================
@@ -736,6 +740,100 @@ BEGIN
 END;
 $$;
 
+-- encerrar_campanha_sem_contribuicao: o dono encerra direto uma campanha ativa que não tem nenhuma contribuição
+-- confirmada (RF-064), sem passar pelo administrador. Registra o encerramento como um pedido já aprovado e sem admin
+-- (id_admin vazio = encerrado pelo próprio pesquisador), com a justificativa dele, e encerra a campanha. Também recusa
+-- enquanto houver Pix pendente ainda válido: o pagamento pode ser confirmado a qualquer momento. SECURITY DEFINER:
+-- o app_nestjs só insere a justificativa (GRANT por coluna, 06); fn_valida_transicao_campanha (05) só deixa o dono
+-- encerrar com esse pedido aprovado e sem contribuição confirmada.
+CREATE OR REPLACE FUNCTION public.encerrar_campanha_sem_contribuicao(p_id_campanha INT, p_justificativa TEXT)
+RETURNS INT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_dono   INT;
+    v_status status_campanha;
+    v_id     INT;
+BEGIN
+    SELECT id_usuario, status INTO v_dono, v_status FROM campanha WHERE id_campanha = p_id_campanha;
+    IF v_dono IS DISTINCT FROM public.id_usuario_atual() THEN
+        RAISE EXCEPTION 'Só o dono da campanha pode encerrá-la.' USING ERRCODE = '92031';
+    END IF;
+    IF p_justificativa IS NULL OR btrim(p_justificativa) = '' THEN
+        RAISE EXCEPTION 'Escreva por que a campanha está sendo encerrada.' USING ERRCODE = '90028';
+    END IF;
+    IF v_status IS DISTINCT FROM 'ativo' THEN
+        RAISE EXCEPTION 'Só uma campanha ativa pode ser encerrada antecipadamente.' USING ERRCODE = '91038';
+    END IF;
+    IF EXISTS (SELECT 1 FROM contribuicao WHERE id_campanha = p_id_campanha AND status IN ('confirmado', 'repassado')) THEN
+        RAISE EXCEPTION 'Esta campanha já tem contribuição confirmada: envie um pedido de encerramento ao administrador.'
+            USING ERRCODE = '91040';
+    END IF;
+    IF EXISTS (
+        SELECT 1 FROM contribuicao
+        WHERE id_campanha = p_id_campanha AND status = 'pendente' AND meio_pagamento = 'pix'
+          AND criado_em > NOW() - (public.config_numero('pix_validade_horas', 24) * INTERVAL '1 hour')
+    ) THEN
+        RAISE EXCEPTION 'Há um pagamento Pix em andamento nesta campanha. Espere ele ser confirmado ou vencer, ou envie um pedido ao administrador.'
+            USING ERRCODE = '91043';
+    END IF;
+
+    -- Um pedido ainda pendente perde o sentido: a campanha vai ser encerrada agora.
+    UPDATE solicitacao_encerramento SET status = 'cancelado' WHERE id_campanha = p_id_campanha AND status = 'pendente';
+
+    INSERT INTO solicitacao_encerramento (id_campanha, justificativa_pesquisador, status, avaliado_em)
+    VALUES (p_id_campanha, btrim(p_justificativa), 'aprovado', NOW())
+    RETURNING id_solicitacao_encerramento INTO v_id;
+
+    UPDATE campanha SET status = 'encerrado' WHERE id_campanha = p_id_campanha;
+    RETURN v_id;
+END;
+$$;
+
+-- decidir_solicitacao_encerramento: o administrador aprova ou rejeita um pedido pendente (RF-065). Rejeitar exige
+-- justificativa; aprovar encerra a campanha na mesma operação (RF-066; a devolução ou o repasse do dinheiro entram com
+-- o módulo de contribuição). Grava quem decidiu e quando. SECURITY DEFINER pelo mesmo motivo: o app_nestjs só muda
+-- o status (o dono, para cancelar).
+CREATE OR REPLACE FUNCTION public.decidir_solicitacao_encerramento(p_id_solicitacao INT, p_aprovar BOOLEAN, p_justificativa TEXT)
+RETURNS INT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_id_campanha INT;
+    v_status      status_encerramento;
+BEGIN
+    IF NOT public.tem_permissao('solicitacao_encerramento_decidir') THEN
+        RAISE EXCEPTION 'Sem permissão para decidir pedidos de encerramento.' USING ERRCODE = '92032';
+    END IF;
+    SELECT id_campanha, status INTO v_id_campanha, v_status FROM solicitacao_encerramento WHERE id_solicitacao_encerramento = p_id_solicitacao;
+    IF v_status IS DISTINCT FROM 'pendente' THEN
+        RAISE EXCEPTION 'Só um pedido pendente pode ser decidido.' USING ERRCODE = '91041';
+    END IF;
+    IF NOT p_aprovar AND (p_justificativa IS NULL OR btrim(p_justificativa) = '') THEN
+        RAISE EXCEPTION 'Escreva por que o pedido foi rejeitado.' USING ERRCODE = '90029';
+    END IF;
+    IF p_aprovar AND NOT EXISTS (SELECT 1 FROM campanha WHERE id_campanha = v_id_campanha AND status = 'ativo') THEN
+        RAISE EXCEPTION 'A campanha já não está ativa: o pedido não pode ser aprovado.' USING ERRCODE = '91042';
+    END IF;
+
+    UPDATE solicitacao_encerramento
+    SET status = CASE WHEN p_aprovar THEN 'aprovado' ELSE 'rejeitado' END::status_encerramento,
+        id_admin = public.id_usuario_atual(),
+        justificativa_admin = NULLIF(btrim(COALESCE(p_justificativa, '')), ''),
+        avaliado_em = NOW()
+    WHERE id_solicitacao_encerramento = p_id_solicitacao;
+
+    IF p_aprovar THEN
+        UPDATE campanha SET status = 'encerrado' WHERE id_campanha = v_id_campanha;
+    END IF;
+    RETURN v_id_campanha;
+END;
+$$;
+
 -- encerrar_campanha_por_denuncia: julga procedente uma denúncia de campanha e encerra a campanha por moderação
 -- (RF-114), as duas coisas juntas. SECURITY DEFINER porque pol_campanha_update (04) não abre a campanha ao
 -- moderador; a função confere as duas permissões (julgar denúncia e encerrar por moderação), e as triggers continuam
@@ -776,6 +874,108 @@ BEGIN
 
     RETURN v_id_campanha;
 END;
+$$;
+
+-- contestar_denuncia: o pesquisador penalizado por uma denúncia procedente pede revisão (RF-033): o alvo da denúncia
+-- de perfil ou o dono da campanha denunciada. Uma vez por denúncia e uma esperando análise por vez. SECURITY DEFINER:
+-- o pesquisador não lê nem altera a linha da denúncia (pol_denuncia_select/update, 04).
+CREATE OR REPLACE FUNCTION public.contestar_denuncia(p_id_denuncia INT, p_texto TEXT)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_penalizado  INT;
+    v_status      status_denuncia;
+    v_contestacao status_contestacao;
+BEGIN
+    SELECT COALESCE(d.id_pesquisador_alvo, c.id_usuario), d.status, d.contestacao_status
+    INTO v_penalizado, v_status, v_contestacao
+    FROM denuncia d LEFT JOIN campanha c ON c.id_campanha = d.id_campanha_alvo
+    WHERE d.id_denuncia = p_id_denuncia;
+    IF v_penalizado IS DISTINCT FROM public.id_usuario_atual() THEN
+        RAISE EXCEPTION 'Só o pesquisador penalizado por esta denúncia pode contestá-la.' USING ERRCODE = '92034';
+    END IF;
+    IF p_texto IS NULL OR btrim(p_texto) = '' THEN
+        RAISE EXCEPTION 'Escreva por que a penalidade é injusta.' USING ERRCODE = '90032';
+    END IF;
+    IF v_contestacao IS NOT NULL THEN
+        RAISE EXCEPTION 'Esta denúncia já foi contestada.' USING ERRCODE = '91045';
+    END IF;
+    IF v_status IS DISTINCT FROM 'resolvida' THEN
+        RAISE EXCEPTION 'Só uma denúncia julgada procedente pode ser contestada.' USING ERRCODE = '91044';
+    END IF;
+    IF EXISTS (
+        SELECT 1 FROM denuncia d LEFT JOIN campanha c ON c.id_campanha = d.id_campanha_alvo
+        WHERE COALESCE(d.id_pesquisador_alvo, c.id_usuario) = v_penalizado AND d.contestacao_status = 'pendente'
+    ) THEN
+        RAISE EXCEPTION 'Você já tem uma contestação esperando análise.' USING ERRCODE = '91046';
+    END IF;
+
+    UPDATE denuncia
+    SET contestacao = btrim(p_texto), contestacao_status = 'pendente', contestada_em = NOW()
+    WHERE id_denuncia = p_id_denuncia;
+END;
+$$;
+
+-- decidir_contestacao: a moderação aceita ou recusa uma contestação esperando análise, sempre com justificativa
+-- (RF-033). Aceitar corrige o dado que causou a penalidade: a denúncia vira improcedente na mesma operação, e a nota
+-- se recalcula sozinha (trg_denuncia_recalcula_score, 05). Nunca mexe na nota nem reabre campanha encerrada por
+-- moderação. Quem registrou a denúncia não decide a contestação dela (mesmo conflito de interesse do 92006).
+CREATE OR REPLACE FUNCTION public.decidir_contestacao(p_id_denuncia INT, p_aceitar BOOLEAN, p_justificativa TEXT)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_denunciante INT;
+    v_contestacao status_contestacao;
+BEGIN
+    IF NOT public.tem_permissao('denuncia_responder') THEN
+        RAISE EXCEPTION 'Sem permissão para decidir contestações.' USING ERRCODE = '92035';
+    END IF;
+    SELECT id_usuario, contestacao_status INTO v_denunciante, v_contestacao FROM denuncia WHERE id_denuncia = p_id_denuncia;
+    IF v_contestacao IS DISTINCT FROM 'pendente' THEN
+        RAISE EXCEPTION 'Só uma contestação esperando análise pode ser decidida.' USING ERRCODE = '91047';
+    END IF;
+    IF v_denunciante = public.id_usuario_atual() THEN
+        RAISE EXCEPTION 'Quem registrou a denúncia não pode julgar a própria denúncia.' USING ERRCODE = '92006';
+    END IF;
+    IF p_justificativa IS NULL OR btrim(p_justificativa) = '' THEN
+        RAISE EXCEPTION 'Escreva a justificativa da decisão.' USING ERRCODE = '90033';
+    END IF;
+
+    UPDATE denuncia
+    SET contestacao_status = CASE WHEN p_aceitar THEN 'aceita' ELSE 'recusada' END::status_contestacao,
+        justificativa_contestacao = btrim(p_justificativa),
+        status = CASE WHEN p_aceitar THEN 'improcedente'::status_denuncia ELSE status END
+    WHERE id_denuncia = p_id_denuncia;
+END;
+$$;
+
+-- denuncias_contra_mim: as denúncias procedentes contra o pesquisador logado (contra o perfil ou contra as
+-- campanhas dele) e as já contestadas, para ele ver e contestar (RF-033). Nunca mostra quem denunciou.
+CREATE OR REPLACE FUNCTION public.denuncias_contra_mim()
+RETURNS TABLE (
+    id_denuncia INT, id_campanha_alvo INT, titulo_campanha VARCHAR, motivo VARCHAR, status status_denuncia,
+    justificativa_moderacao TEXT, criado_em TIMESTAMPTZ, contestacao TEXT, contestacao_status status_contestacao,
+    contestada_em TIMESTAMPTZ, justificativa_contestacao TEXT
+)
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT d.id_denuncia, d.id_campanha_alvo, c.titulo, m.descricao, d.status, d.justificativa_moderacao, d.criado_em,
+           d.contestacao, d.contestacao_status, d.contestada_em, d.justificativa_contestacao
+    FROM denuncia d
+    JOIN motivo_denuncia m ON m.id_motivo = d.id_motivo
+    LEFT JOIN campanha c ON c.id_campanha = d.id_campanha_alvo
+    WHERE COALESCE(d.id_pesquisador_alvo, c.id_usuario) = public.id_usuario_atual()
+      AND (d.status = 'resolvida' OR d.contestacao_status IS NOT NULL)
+    ORDER BY d.criado_em DESC;
 $$;
 
 -- comentar_campanha_para_outro: o Admin comenta uma campanha EM NOME de um pesquisador ativo (ferramenta para

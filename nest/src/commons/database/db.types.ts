@@ -205,6 +205,28 @@ export type TipoMotivoDenuncia = (typeof TIPOS_MOTIVO_DENUNCIA)[number];
 // denúncia de campanha ou de perfil: trg_valida_tipo_motivo_denuncia (05_regras_negocio.sql [05-K-1]) barra em
 // denuncia.id_motivo qualquer motivo cujo `tipo` não bate com o alvo escolhido (id_campanha_alvo x
 // id_pesquisador_alvo).
+// CREATE TYPE status_encerramento AS ENUM (...) - 01. Array em runtime para o @IsIn do filtro da lista.
+export const STATUS_ENCERRAMENTO = [
+  'pendente',
+  'aprovado',
+  'rejeitado',
+  'cancelado',
+] as const;
+export type StatusEncerramento = (typeof STATUS_ENCERRAMENTO)[number];
+
+// Espelha 01_extensoes_enums_tabelas.sql (tabela solicitacao_encerramento). id_admin vazio num pedido aprovado =
+// encerrado pelo próprio pesquisador, sem contribuição confirmada (encerrar_campanha_sem_contribuicao, 03).
+export interface SolicitacaoEncerramentoTable {
+  id_solicitacao_encerramento: Generated<number>;
+  id_campanha: number;
+  id_admin: number | null;
+  justificativa_pesquisador: string | null;
+  justificativa_admin: string | null;
+  status: Generated<StatusEncerramento>;
+  solicitado_em: Generated<Date>;
+  avaliado_em: Date | null;
+}
+
 // CREATE TYPE status_denuncia AS ENUM (...) - 01. Array em runtime para o @IsIn dos DTOs de denúncia.
 export const STATUS_DENUNCIA = [
   'pendente',
@@ -213,6 +235,10 @@ export const STATUS_DENUNCIA = [
   'improcedente',
 ] as const;
 export type StatusDenuncia = (typeof STATUS_DENUNCIA)[number];
+
+// CREATE TYPE status_contestacao AS ENUM (...) - 01. A contestação do score (RF-033), na própria denúncia.
+export const STATUS_CONTESTACAO = ['pendente', 'aceita', 'recusada'] as const;
+export type StatusContestacao = (typeof STATUS_CONTESTACAO)[number];
 
 // Espelha 01_extensoes_enums_tabelas.sql (tabela denuncia). Exatamente um alvo (campanha ou perfil), pela
 // CK_DENUNCIA_ALVO_XOR; quem julga só muda status e justificativa_moderacao (GRANT por coluna, 06).
@@ -225,6 +251,11 @@ export interface DenunciaTable {
   relato: string | null;
   status: Generated<StatusDenuncia>;
   justificativa_moderacao: string | null;
+  // Contestação (RF-033): só pelas funções contestar_denuncia e decidir_contestacao (03).
+  contestacao: string | null;
+  contestacao_status: StatusContestacao | null;
+  contestada_em: Date | null;
+  justificativa_contestacao: string | null;
   criado_em: Generated<Date>;
 }
 
@@ -611,6 +642,7 @@ export interface DB {
   tipo_link: TipoLinkTable;
   motivo_denuncia: MotivoDenunciaTable;
   denuncia: DenunciaTable;
+  solicitacao_encerramento: SolicitacaoEncerramentoTable;
   perfil_pesquisador: PerfilPesquisadorTable;
   link_academico: LinkAcademicoTable;
   score_config: ScoreConfigTable;
@@ -642,6 +674,8 @@ export type PerfilPesquisadorEntity = Selectable<PerfilPesquisadorTable>;
 export type LinkAcademicoEntity = Selectable<LinkAcademicoTable>;
 export type CampanhaEntity = Selectable<CampanhaTable>;
 export type DenunciaEntity = Selectable<DenunciaTable>;
+export type SolicitacaoEncerramentoEntity =
+  Selectable<SolicitacaoEncerramentoTable>;
 export type OrcamentoCampanhaEntity = Selectable<OrcamentoCampanhaTable>;
 export type MarcoCronogramaEntity = Selectable<MarcoCronogramaTable>;
 export type AtualizacaoCampanhaEntity = Selectable<AtualizacaoCampanhaTable>;

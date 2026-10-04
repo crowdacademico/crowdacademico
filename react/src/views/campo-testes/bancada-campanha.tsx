@@ -2,10 +2,8 @@
 // mesmo padrão de dados/comportamento do resto do sistema (nunca uma versão simplificada à parte).
 
 import { useEffect, useState } from 'react';
-import { BadgeStatusCampanha } from '../../components/crud/badge-status-campanha';
-import { ROTULO_MODELO_CAMPANHA, ROTULO_STATUS_CAMPANHA } from '../../services/12-campanha/constants/status-campanha.constants';
+import { ROTULO_STATUS_CAMPANHA } from '../../services/12-campanha/constants/status-campanha.constants';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
-import { areaConhecimentoApi } from '../../services/8-area-conhecimento/api/area-conhecimento.api';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { LIMITE_SUGESTOES_COMBOBOX } from '../../services/campo-testes/constants/campo-testes.constants';
 import { contemTermo, normalizarBusca } from '../../services/constant/util/busca.util';
@@ -24,17 +22,16 @@ import { confirmacaoConfere } from '../../components/input/confirmacao-confere';
 import { CaixaBuscaSugestoes } from '../../components/input/caixa-busca-sugestoes';
 import { perfilPesquisadorApi } from '../../services/6-perfil-pesquisador/api/perfil-pesquisador.api';
 
-import { formatarData, formatarDataHora, formatarMoeda } from '../../services/constant/util/formatacao.util';
+import { formatarMoeda } from '../../services/constant/util/formatacao.util';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import { RegistroChamadas } from './registro-chamadas';
 import { ModalComentarParaOutro } from './modal-comentar-para-outro';
 import { ModalAlterarCampanha } from '../12-campanha/modal-alterar-campanha';
+import { ModalConsultarCampanha } from '../12-campanha/modal-consultar-campanha';
 import { ModalCriarCampanha } from '../12-campanha/modal-criar-campanha';
-import { PainelOrcamentoCronograma } from '../12-campanha/painel-orcamento-cronograma';
 import { SecaoDecisaoAprovacao } from '../12-campanha/decisao-aprovacao';
 import type { PropsPagina } from '../../services/router/pagina.type';
-import type { CampanhaResponse, HistoricoRejeicaoResponse } from '../../services/12-campanha/type/campanha.type';
-import type { AreaConhecimentoResponse } from '../../services/8-area-conhecimento/type/area-conhecimento.type';
+import type { CampanhaResponse } from '../../services/12-campanha/type/campanha.type';
 import type { UsuarioResponse } from '../../services/1-usuario/type/usuario.type';
 import type { PerfilPesquisadorResponse } from '../../services/6-perfil-pesquisador/type/perfil-pesquisador.type';
 
@@ -64,25 +61,11 @@ export function BancadaCampanha({ auth }: PropsPagina) {
   // compartilhados (views/12-campanha), que recebem este `authFetch`.
   const authRegistrado = { authFetch: useAuthFetchRegistrado(auth) };
 
-  const [areas, setAreas] = useState<AreaConhecimentoResponse[]>([]);
   const [usuarios, setUsuarios] = useState<UsuarioResponse[]>([]);
   const [perfisPesquisador, setPerfisPesquisador] = useState<PerfilPesquisadorResponse[]>([]);
   const [campanhas, setCampanhas] = useState<CampanhaResponse[]>([]);
   const [campanhaConsultada, setCampanhaConsultada] = useState<CampanhaResponse | null>(null);
-  const [historicoRejeicaoConsultada, setHistoricoRejeicaoConsultada] = useState<HistoricoRejeicaoResponse[]>([]);
 
-  // Histórico de rejeições da campanha aberta em Consultar: mesmo dado/mesma chamada de
-  // modal-consultar-campanha.tsx (esta tela é uma cópia manual da página real, ver comentário grande perto do
-  // modal, "Consultar replica a página real"); manter os dois em sincronia.
-  useEffect(() => {
-    if (campanhaConsultada) {
-      campanhaApi
-        .listarHistoricoRejeicao(auth.authFetch, campanhaConsultada.idCampanha)
-        .then(setHistoricoRejeicaoConsultada)
-        .catch(() => setHistoricoRejeicaoConsultada([]));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [campanhaConsultada]);
   const [idCampanhaEditando, setIdCampanhaEditando] = useState<number | null>(null);
   const [campanhaExcluindo, setCampanhaExcluindo] = useState<CampanhaResponse | null>(null);
   const [campanhaComentando, setCampanhaComentando] = useState<CampanhaResponse | null>(null);
@@ -112,10 +95,6 @@ export function BancadaCampanha({ auth }: PropsPagina) {
     if (auth.carregando) {
       return;
     }
-    areaConhecimentoApi
-      .listar(auth.authFetch)
-      .then((lista) => setAreas(lista.filter((area) => area.idPai !== null)))
-      .catch(() => {});
     usuarioApi.listar(auth.authFetch).then(setUsuarios).catch(() => {});
     perfilPesquisadorApi.listar(auth.authFetch).then(setPerfisPesquisador).catch(() => {});
     carregarCampanhas();
@@ -221,78 +200,10 @@ export function BancadaCampanha({ auth }: PropsPagina) {
         />
       )}
 
-      {/* Consultar/Alterar/Excluir em MODAL, mesmo padrão de T1 (ModalFicha + SecaoFicha/CampoFicha).
-          Diferença de T1: não existe página real de Alterar/Excluir Campanha no painel admin para copiar (só
-          Consultar existe, ver modal-consultar-campanha.tsx; editar/excluir campanha é ação do dono, painel
-          dele ainda não construído): Consultar replica a página real; Alterar e Excluir são desenho novo,
-          seguindo o mesmo padrão visual. */}
+      {/* Consultar: o mesmo modal da tela Campanhas (views/12-campanha/modal-consultar-campanha.tsx), com as chamadas
+          aparecendo no Registro de Chamadas. */}
       {campanhaConsultada && (
-        <ModalFicha
-          titulo={campanhaConsultada.titulo}
-          subtitulo={`Pesquisador: ${nomeDe(campanhaConsultada.idUsuario)}`}
-          badges={[
-            <BadgeStatusCampanha key="status" campanha={campanhaConsultada} />,
-            <span key="modelo" className="badge badge-neutro">
-              {ROTULO_MODELO_CAMPANHA[campanhaConsultada.modelo]}
-            </span>,
-          ]}
-          aoFechar={() => setCampanhaConsultada(null)}
-          rodape={<RodapeAcoes aoCancelar={() => setCampanhaConsultada(null)} rotuloCancelar="Fechar" />}
-        >
-          <div className="grade-ficha">
-            <div className="lg:col-span-2 space-y-6">
-              <SecaoFicha titulo="Dados">
-                <CampoFicha rotulo="id" valor={campanhaConsultada.idCampanha} />
-                <CampoFicha
-                  rotulo="Área do conhecimento"
-                  valor={areas.find((a) => a.idAreaConhecimento === campanhaConsultada.idAreaConhecimento)?.nome ?? `#${campanhaConsultada.idAreaConhecimento}`}
-                />
-                <CampoFicha rotulo="Descrição" valor={campanhaConsultada.descricao} largura="cheia" />
-                <CampoFicha rotulo="Vídeo de apresentação" valor={campanhaConsultada.videoApresentacaoUrl} largura="cheia" />
-              </SecaoFicha>
-
-              {/* Orçamento/Cronograma acima de Datas: só leitura aqui (Consultar nunca edita nada). Linha
-                  divisória dos dois lados, mesmo padrão entre Links Acadêmicos e Moderação em T1. */}
-              <div className="border-t borda-padrao"></div>
-              <PainelOrcamentoCronograma auth={authRegistrado} idCampanha={campanhaConsultada.idCampanha} podeEditar={false} />
-              <div className="border-t borda-padrao"></div>
-
-              <SecaoFicha titulo="Datas">
-                <CampoFicha rotulo="Início" valor={formatarData(campanhaConsultada.dataInicio)} />
-                <CampoFicha rotulo="Fim (previsto)" valor={formatarData(campanhaConsultada.dataFim)} />
-                <CampoFicha rotulo="Criada em" valor={formatarDataHora(campanhaConsultada.criadoEm)} />
-                <CampoFicha rotulo="Aprovada em" valor={formatarDataHora(campanhaConsultada.aprovadoEm)} />
-                <CampoFicha rotulo="Encerrada em" valor={formatarDataHora(campanhaConsultada.encerradoEm)} />
-              </SecaoFicha>
-
-              {/* Escondida quando vazia, mesmo critério de
-                  consultar-campanha.tsx - rejeição é minoria. */}
-              {historicoRejeicaoConsultada.length > 0 && (
-                <SecaoFicha titulo="Histórico de Rejeições">
-                  {historicoRejeicaoConsultada.map((item) => (
-                    <CampoFicha
-                      key={item.idRejeicao}
-                      rotulo={formatarDataHora(item.rejeitadoEm)}
-                      valor={`${item.justificativa ?? 'Sem justificativa registrada.'} (${item.nomeAdmin ?? 'Administrador removido'})`}
-                      largura="cheia"
-                    />
-                  ))}
-                </SecaoFicha>
-              )}
-            </div>
-
-            <div className="space-y-6">
-              <SecaoFicha titulo="Financeiro">
-                <CampoFicha rotulo="Meta" valor={formatarMoeda(campanhaConsultada.metaFinanceira)} />
-                <CampoFicha rotulo="Arrecadado" valor={formatarMoeda(campanhaConsultada.valorBrutoArrecadado)} />
-                <CampoFicha
-                  rotulo="Taxa da plataforma"
-                  valor={campanhaConsultada.taxaPlataforma === null ? 'Ainda não carimbada (não aprovada)' : `${campanhaConsultada.taxaPlataforma}%`}
-                />
-              </SecaoFicha>
-            </div>
-          </div>
-        </ModalFicha>
+        <ModalConsultarCampanha auth={authRegistrado} idCampanha={campanhaConsultada.idCampanha} aoFechar={() => setCampanhaConsultada(null)} />
       )}
 
       {/* Alterar: o mesmo modal de Minhas Campanhas (views/12-campanha/modal-alterar-campanha.tsx). O T2 só

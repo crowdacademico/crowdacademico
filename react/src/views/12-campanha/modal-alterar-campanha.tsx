@@ -22,6 +22,7 @@ import { useBuscar } from '../../services/constant/hook/use-buscar';
 import { PainelOrcamentoCronograma } from './painel-orcamento-cronograma';
 import { SecaoAtualizacoesCampanha } from './secao-atualizacoes-campanha';
 import { SecaoComentariosRecebidos } from './secao-comentarios-recebidos';
+import { SecaoEncerramentoAntecipado } from '../20-solicitacao-encerramento/secao-encerramento-antecipado';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type {
   CampanhaRequestUpdate,
@@ -385,6 +386,18 @@ export function ModalAlterarCampanha({
                   <SecaoAtualizacoesCampanha auth={auth} idCampanha={idCampanha} podePublicar={STATUS_ACEITA_ATUALIZACAO.has(campanha.status)} />
                   <SecaoComentariosRecebidos auth={auth} idCampanha={idCampanha} publicada />
                 </>
+              )}
+
+              {ehDono && campanha.status === 'ativo' && (
+                <SecaoEncerramentoAntecipado
+                  authFetch={auth.authFetch}
+                  idCampanha={idCampanha}
+                  valorArrecadado={campanha.valorBrutoArrecadado}
+                  aoEncerrada={() => {
+                    aoMudar();
+                    aoFechar();
+                  }}
+                />
               )}
 
               {secaoAdmin?.({ campanha, orcamento, cronograma })}

@@ -2,6 +2,53 @@
 
 Lista montada a partir da resposta da revisão externa de 24-09-2026 (a pasta de contra-prompt de 24-09 dentro de `informacoes/`), conferida item por item contra o código. Os achados antigos (itens 1 a 20, quase todos resolvidos) estão em `informacoes/HISTORICO/HISTORICO_ACHADOS_PARA_DISCUTIR.md`; qualquer citação "`ACHADOS_PARA_DISCUTIR.md`, item N" em documento ou comentário antigo aponta para lá.
 
+## 📌 Contestação do score (RF-033): DECIDIDO E FEITO (03-10-2026)
+
+> ✅ O Lucas escolheu a B2 (a contestação na própria denúncia). Feito e documentado em `DOCUMENTACAO_BD.md`, [05-K-2-J]. O risco (c) foi aceito e documentado; o pedido de revisão ficou na Minha Conta, aba Acadêmico. Fica aqui para a Alexia ler.
+
+**Em palavras simples:** o pesquisador que acha uma penalidade injusta pede revisão; a moderação analisa; se ele tiver razão, a moderação corrige o dado que causou a penalidade (nunca a nota), e a nota se recalcula sozinha. Na prática, a única penalidade que vem de uma decisão humana é a **denúncia julgada procedente**: perfil se corrige pelo próprio pesquisador, e histórico e atualizações são fatos. Por isso a contestação aponta para uma denúncia, como no Mercado Livre (contesta-se uma avaliação, não a nota) e na Uber (pede-se revisão de uma avaliação ou desativação).
+
+**O Lucas quer reaproveitar a tabela `denuncia` (opção B) junto com "contestar esta denúncia" (opção C).** Há dois jeitos de fazer isso:
+
+**B1. A contestação é uma linha nova em `denuncia`**, com uma coluna nova apontando para a denúncia contestada. Riscos, e como zerar cada um:
+
+| Risco | O que daria errado | Como zerar |
+|---|---|---|
+| Score | Contestação aceita ("resolvida") contaria como denúncia procedente contra o próprio pesquisador e **baixaria** a nota dele | Filtrar contestação no cálculo da reputação e no gatilho de recálculo; teste provando que contestação nunca mexe na nota |
+| Regras do alvo | Hoje ninguém denuncia a si mesmo (92029), o alvo precisa estar ativo, o motivo é obrigatório e do tipo certo | Um ramo próprio para contestação em cada uma dessas regras |
+| Limite de denúncias | Contestar contaria no limite de 5 denúncias por dia | Mais um ramo |
+| Listas e contadores | Tela Denúncias, seção do Consultar da campanha, card do Dashboard e exportação de dados passariam a misturar os dois | Um filtro em cada lugar |
+| Privacidade | Ao ler a denúncia contestada, o pesquisador poderia ver quem o denunciou | Ler só por uma função que devolve motivo, data e justificativa |
+| Banca | "Por que recurso mora na tabela de denúncia?" | Documentar: o RF-033 diz "o mesmo fluxo das denúncias" |
+
+Dá para chegar a risco perto de zero, mas são ramos e filtros espalhados por muita coisa: o contrário de enxuto.
+
+**B2. A contestação mora na própria linha da denúncia contestada** (recomendado): 4 colunas novas em `denuncia` (o texto da contestação, a situação dela, a data e a justificativa da decisão), uma função para contestar e uma para decidir.
+- Contestação aceita: a denúncia vira "improcedente" na mesma operação, e a nota se recalcula sozinha (já funciona hoje).
+- Contestação recusada: a denúncia continua procedente, com a justificativa da recusa.
+- Os riscos de B1 somem por construção: não nasce nenhuma linha nova, então não há alvo, motivo, limite diário, lista ou contador para ajustar, e o score não tem como contar errado.
+- "Uma por vez" vira uma checagem na função de contestar. "Uma vez por denúncia" vem de graça: são colunas, não linhas.
+- Riscos que sobram: (a) a privacidade do denunciante, resolvida do mesmo jeito (o pesquisador só vê motivo, data e justificativa); (b) a contestação aceita não reabre uma campanha encerrada por moderação, só corrige a nota (documentar); (c) quem julgou a denúncia não deveria julgar o recurso (padrão de mercado), e hoje o banco não guarda quem julgou, só o log de auditoria; dá para conferir pelo log, ou aceitar e documentar.
+
+**Ponto de atenção sobre o requisito:** o RF-033 diz "alguma penalidade". Limitar a contestação a denúncias precisa estar justificado na documentação (o motivo acima), para a banca não ler como requisito incompleto.
+
+**Dependências:** o botão fica na área do pesquisador (até lá, no Campo de Testes); o aviso do resultado por e-mail depende do `4-mail` (até lá, na tela).
+
+## 📌 Para discutir (03-10-2026): denúncias no score, gravidade e acúmulo
+
+**Em palavras simples:** desde 03-10-2026, a reputação do pesquisador (25 dos 100 pontos) tem duas partes: denúncias procedentes contra o perfil (10 pontos) e contra as campanhas (15). Cada parte zera em 3 denúncias procedentes. Duas perguntas ficaram para depois.
+
+**1. Gravidade por motivo.** Cada motivo de denúncia ganharia um peso de 1 a 3: "fraude" contaria 3, "conteúdo impróprio" 1. Assim, uma fraude confirmada zeraria a parte de uma vez.
+- A favor: um caso grave não vale o mesmo que um leve.
+- Contra (ponto do Lucas): denúncia grave e verdadeira já encerra a campanha na hora, por moderação; o score pesar mais seria quase redundante. E é mais uma coisa para o administrador calibrar.
+
+**2. Acúmulo.** Se 3 pessoas denunciam a mesma campanha pelo mesmo motivo e a moderação confirma as 3, a parte "campanhas" zera, como se fossem 3 fraudes diferentes.
+- Opção A (hoje): contar denúncias. Simples, mas pune o volume de denunciantes, não o número de problemas.
+- Opção B: contar campanhas com pelo menos uma denúncia procedente. Uma campanha fraudulenta vale 1, não importa quantos denunciaram.
+- Opção C: B para campanhas, e no perfil contar motivos diferentes.
+
+**Efeito colateral já visível:** pesquisador sem nenhuma campanha fica com os 15 da parte "campanhas" inteiros, então nunca cai abaixo de 25 (faixa "Em Construção"), por mais denúncias procedentes que tenha contra o perfil.
+
 ## 📌 Para a Alexia ler primeiro (03-10-2026): o pagamento que chega depois do fim da campanha
 
 > ✅ **DECIDIDO E FEITO (03-10-2026):** o Lucas escolheu a opção D, com validade de 24 horas para o Pix. Já está no banco (Grupo AM do `ATUALIZAR`) e documentado no `DOCUMENTACAO_BD.md`, [05-K-2-F]. Fica aqui para a Alexia saber o que mudou e por quê.

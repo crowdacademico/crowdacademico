@@ -250,15 +250,29 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON verificacao_email, recuperacao_senha, se
 -- atualizar_status_repasse() (05, SECURITY DEFINER, [05-K-2]).
 GRANT INSERT, UPDATE ON
     atualizacao_campanha,
-    solicitacao_encerramento, comentario,
+    comentario,
     recompensa
 TO app_nestjs;
--- denuncia: quem julga só muda o status e a justificativa (pol_denuncia_update, 04); motivo, alvo, relato e autor
--- ficam como o denunciante registrou.
-GRANT INSERT ON denuncia TO app_nestjs;
+-- solicitacao_encerramento: o dono cria o pedido só com a campanha e a justificativa, e só muda o status (para
+-- cancelar, fn_valida_transicao_solicitacao, 05). Aprovar, rejeitar e o encerramento direto são funções (03).
+GRANT INSERT (id_campanha, justificativa_pesquisador) ON solicitacao_encerramento TO app_nestjs;
+GRANT UPDATE (status) ON solicitacao_encerramento TO app_nestjs;
+REVOKE EXECUTE ON FUNCTION public.encerrar_campanha_sem_contribuicao(INT, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.encerrar_campanha_sem_contribuicao(INT, TEXT) TO app_nestjs;
+REVOKE EXECUTE ON FUNCTION public.decidir_solicitacao_encerramento(INT, BOOLEAN, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.decidir_solicitacao_encerramento(INT, BOOLEAN, TEXT) TO app_nestjs;
+-- denuncia: quem denuncia grava só autor, alvo, motivo e relato (a denúncia nasce pendente, sem contestação); quem
+-- julga só muda o status e a justificativa (pol_denuncia_update, 04). A contestação só pelas funções (03).
+GRANT INSERT (id_usuario, id_campanha_alvo, id_pesquisador_alvo, id_motivo, relato) ON denuncia TO app_nestjs;
 GRANT UPDATE (status, justificativa_moderacao) ON denuncia TO app_nestjs;
 REVOKE EXECUTE ON FUNCTION public.encerrar_campanha_por_denuncia(INT, TEXT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.encerrar_campanha_por_denuncia(INT, TEXT) TO app_nestjs;
+REVOKE EXECUTE ON FUNCTION public.contestar_denuncia(INT, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.contestar_denuncia(INT, TEXT) TO app_nestjs;
+REVOKE EXECUTE ON FUNCTION public.decidir_contestacao(INT, BOOLEAN, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.decidir_contestacao(INT, BOOLEAN, TEXT) TO app_nestjs;
+REVOKE EXECUTE ON FUNCTION public.denuncias_contra_mim() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.denuncias_contra_mim() TO app_nestjs;
 -- comentario tem DELETE: pol_comentario_delete (04) restringe ao dono da campanha e a comentário ativo.
 GRANT DELETE ON comentario TO app_nestjs;
 -- historico_rejeicao: só INSERT. Histórico de moderação é imutável, e nenhum código faz UPDATE nele (a policy de
@@ -368,7 +382,11 @@ GRANT INSERT ON contribuicao_recompensa, aceite_termo_contribuicao TO app_nestjs
 --  [06-I] SCORE
 -- ============================================================================
 -- Nenhuma das duas tem policy de DELETE (ver [06-I] no DOCUMENTACAO_BD.md).
-GRANT INSERT, UPDATE ON score_config, score_rotulo TO app_nestjs;
+-- A tela do score edita só peso e ativo dos itens (nome e id_pai são a estrutura que o motor lê) e o texto e os
+-- limites das faixas.
+GRANT INSERT ON score_config, score_rotulo TO app_nestjs;
+GRANT UPDATE (peso, ativo) ON score_config TO app_nestjs;
+GRANT UPDATE (rotulo, descricao, score_minimo, score_maximo) ON score_rotulo TO app_nestjs;
 
 -- NOTA: score_pesquisador não recebe GRANT de tabela direto - toda escrita
 -- passa pela função recalcular_score_pesquisador() (SECURITY DEFINER, ver
@@ -412,9 +430,9 @@ GRANT EXECUTE ON FUNCTION public.contar_metricas_dashboard() TO app_nestjs;
 -- que existe. Ver 01_extensoes_enums_tabelas.sql [01-L].
 GRANT SELECT ON log_auditoria TO app_nestjs;
 
--- fn_peso_score: EXECUTE só para app_nestjs (higiene de [06-D-2b]).
-REVOKE EXECUTE ON FUNCTION public.fn_peso_score(INT, TEXT) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.fn_peso_score(INT, TEXT) TO app_nestjs;
+-- fn_fator_subitem: EXECUTE só para app_nestjs (higiene de [06-D-2b]).
+REVOKE EXECUTE ON FUNCTION public.fn_fator_subitem(INT, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.fn_fator_subitem(INT, TEXT) TO app_nestjs;
 
 -- desativar_arquivos_orfaos() (05, [05-G]): @Cron diário, sem sessão (higiene de [06-D-2b]).
 REVOKE EXECUTE ON FUNCTION public.desativar_arquivos_orfaos() FROM PUBLIC;

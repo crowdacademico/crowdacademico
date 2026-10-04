@@ -16,6 +16,7 @@
             ".request-confirm-upload.ts",
             ".request-create-for-other.ts",
             ".request-create.ts",
+            ".request-decide.ts",
             ".request-fix-cpf.ts",
             ".request-forgot-password.ts",
             ".request-list.ts",

@@ -40,7 +40,9 @@
 -- perfil_pesquisador.score_atual/score_pesquisador, atualizado por TRIGGER sempre que campanha, denuncia,
 -- atualizacao_campanha, link_academico, perfil_pesquisador ou score_config mudam, então vale para QUALQUER
 -- registro novo, sem o app precisar lembrar de chamar nada. Todos os pesos vêm de score_config.peso (nenhum
--- número fixo no código): editar o peso no Painel Admin recalcula o score de todo mundo.
+-- número fixo no código): editar o peso no Painel Admin recalcula o score de todo mundo. O peso da dimensão (raiz)
+-- é o máximo dela; o subitem vale a sua PARTE da dimensão (peso do subitem / soma dos subitens ativos,
+-- fn_fator_subitem), então mudar o peso da dimensão não exige mexer nos subitens.
 -- ----------------------------------------------------------------------------
 
 -- ----------------------------------------------------------------------------
@@ -104,8 +106,8 @@ $$;
 -- Função:     calcular_score_perfil_academico
 -- Assinatura: (p_id_usuario INT) -> INTEGER
 -- Bloco:      [05-I-2]
--- Regra:      Dimensão 1 - Perfil Acadêmico Declarado. Soma os pesos (vindos de score_config, subitens do pai
---             'perfil_academico') de: link Lattes, link ORCID, outro link acadêmico (qualquer tipo_link que não seja
+-- Regra:      Dimensão 1 - Perfil Acadêmico Declarado. Soma as partes dos subitens de 'perfil_academico'
+--             (fn_fator_subitem) e multiplica pelo peso da dimensão: link Lattes, link ORCID, outro link acadêmico (qualquer tipo_link que não seja
 --             Lattes/ORCID), vínculo institucional preenchido e título acadêmico informado no perfil_pesquisador. O link é
 --             reconhecido por tipo_link.codigo (chave estável), não pelo nome de exibição: tipos novos no catálogo (ex.:
 --             GitHub) pontuam sem editar esta função.
@@ -117,52 +119,41 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-    v_id_pai      INT;
-    v_peso_raiz   DECIMAL;
-    v_peso_lattes DECIMAL := 0;
-    v_peso_orcid  DECIMAL := 0;
-    v_peso_site   DECIMAL := 0;
-    v_peso_inst   DECIMAL := 0;
-    v_peso_titulo DECIMAL := 0;
-    v_total       DECIMAL := 0;
+    v_id_pai    INT;
+    v_peso_raiz DECIMAL;
+    v_fracao    DECIMAL := 0;
 BEGIN
     SELECT id_score_config, peso INTO v_id_pai, v_peso_raiz
-    FROM score_config WHERE nome = 'perfil_academico' AND ativo = TRUE;
+    FROM score_config WHERE nome = 'perfil_academico' AND id_pai IS NULL AND ativo = TRUE;
 
     IF v_id_pai IS NULL THEN RETURN 0; END IF;
 
-    v_peso_lattes := public.fn_peso_score(v_id_pai, 'lattes');
-    v_peso_orcid := public.fn_peso_score(v_id_pai, 'orcid');
-    v_peso_site := public.fn_peso_score(v_id_pai, 'linkedin');
-    v_peso_inst := public.fn_peso_score(v_id_pai, 'instituicao');
-    v_peso_titulo := public.fn_peso_score(v_id_pai, 'titulo');
-
     IF EXISTS (SELECT 1 FROM link_academico la JOIN tipo_link tl ON tl.id_tipolink = la.id_tipolink
                WHERE la.id_usuario = p_id_usuario AND tl.codigo = 'LATTES') THEN
-        v_total := v_total + v_peso_lattes;
+        v_fracao := v_fracao + public.fn_fator_subitem(v_id_pai, 'lattes');
     END IF;
 
     IF EXISTS (SELECT 1 FROM link_academico la JOIN tipo_link tl ON tl.id_tipolink = la.id_tipolink
                WHERE la.id_usuario = p_id_usuario AND tl.codigo = 'ORCID') THEN
-        v_total := v_total + v_peso_orcid;
+        v_fracao := v_fracao + public.fn_fator_subitem(v_id_pai, 'orcid');
     END IF;
 
     IF EXISTS (SELECT 1 FROM link_academico la JOIN tipo_link tl ON tl.id_tipolink = la.id_tipolink
                WHERE la.id_usuario = p_id_usuario AND tl.codigo NOT IN ('LATTES', 'ORCID')) THEN
-        v_total := v_total + v_peso_site;
+        v_fracao := v_fracao + public.fn_fator_subitem(v_id_pai, 'linkedin');
     END IF;
 
     IF EXISTS (SELECT 1 FROM perfil_pesquisador WHERE id_usuario = p_id_usuario
                AND vinculo_institucional IS NOT NULL AND btrim(vinculo_institucional) <> '') THEN
-        v_total := v_total + v_peso_inst;
+        v_fracao := v_fracao + public.fn_fator_subitem(v_id_pai, 'instituicao');
     END IF;
 
     IF EXISTS (SELECT 1 FROM perfil_pesquisador WHERE id_usuario = p_id_usuario
                AND titulo_academico IS NOT NULL) THEN
-        v_total := v_total + v_peso_titulo;
+        v_fracao := v_fracao + public.fn_fator_subitem(v_id_pai, 'titulo');
     END IF;
 
-    RETURN ROUND(LEAST(GREATEST(v_total, 0), v_peso_raiz))::INTEGER;
+    RETURN ROUND(LEAST(GREATEST(v_fracao, 0), 1) * v_peso_raiz)::INTEGER;
 END;
 $$;
 
@@ -170,10 +161,9 @@ $$;
 -- Função:     calcular_score_historico
 -- Assinatura: (p_id_usuario INT) -> INTEGER
 -- Bloco:      [05-I-2]
--- Regra:      Dimensão 2 - Histórico na Plataforma. conclusao = (campanhas concluídas com sucesso / total encerradas) *
---             peso_conclusao; aprovacao = (aprovadas pela moderação / total submetidas) * peso_aprovacao; desconta
---             penalidade_abandono por campanha abandonada e penalidade_sem_justificativa por campanha não atingida sem
---             justificativa na solicitação de encerramento.
+-- Regra:      Dimensão 2 - Histórico na Plataforma. conclusao = sucesso / (sucesso + não concluídas) * fator_conclusao;
+--             aprovacao = aprovadas pela moderação / (aprovadas + rejeitadas definitivas) * fator_aprovacao; o total é a
+--             soma vezes o peso da dimensão. Sem penalidade fixa: não concluir já baixa a taxa de conclusão.
 CREATE OR REPLACE FUNCTION public.calcular_score_historico(p_id_usuario INT)
 RETURNS INTEGER
 LANGUAGE plpgsql
@@ -182,67 +172,48 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-    v_id_pai                INT;
-    v_peso_raiz             DECIMAL;
-    v_peso_conclusao        DECIMAL := 0;
-    v_peso_aprovacao        DECIMAL := 0;
-    v_total_encerradas      INT := 0;
-    v_concluidas_sucesso    INT := 0;
-    v_total_submetidas      INT := 0;
-    v_aprovadas             INT := 0;
-    v_rejeitadas_definitivas INT := 0;
-    v_abandonadas           INT := 0;
-    v_sem_justificativa     INT := 0;
-    v_conclusao             DECIMAL := 0;
-    v_aprovacao             DECIMAL := 0;
-    v_penalidade_abandono   DECIMAL;
-    v_penalidade_sem_just   DECIMAL;
-    v_total                 DECIMAL := 0;
+    v_id_pai          INT;
+    v_peso_raiz       DECIMAL;
+    v_aprovadas       INT := 0;
+    v_rej_definitivas INT := 0;
+    v_sucesso         INT := 0;
+    v_nao_concluidas  INT := 0;
+    v_fracao          DECIMAL := 0;
 BEGIN
     SELECT id_score_config, peso INTO v_id_pai, v_peso_raiz
-    FROM score_config WHERE nome = 'historico_plataforma' AND ativo = TRUE;
+    FROM score_config WHERE nome = 'historico_plataforma' AND id_pai IS NULL AND ativo = TRUE;
 
     IF v_id_pai IS NULL THEN RETURN 0; END IF;
 
-    v_peso_conclusao := public.fn_peso_score(v_id_pai, 'campanhas_concluidas');
-    v_peso_aprovacao := public.fn_peso_score(v_id_pai, 'taxa_aprovacao');
+    -- Não concluída: venceu sem a meta, ou foi encerrada antes do prazo com a aprovação do administrador (havia
+    -- contribuição). O encerramento direto (sem contribuição, pedido aprovado sem id_admin) não entra; o
+    -- encerramento por moderação também não, porque já pesa na reputação (denúncia procedente contra a campanha).
+    SELECT count(*) FILTER (WHERE c.aprovado_em IS NOT NULL),
+           count(*) FILTER (WHERE c.status = 'sucesso'),
+           count(*) FILTER (WHERE c.status = 'nao_atingido'
+                               OR (c.status = 'encerrado' AND EXISTS (
+                                       SELECT 1 FROM solicitacao_encerramento se
+                                       WHERE se.id_campanha = c.id_campanha AND se.status = 'aprovado'
+                                         AND se.id_admin IS NOT NULL)))
+    INTO v_aprovadas, v_sucesso, v_nao_concluidas
+    FROM campanha c WHERE c.id_usuario = p_id_usuario;
 
-    v_penalidade_abandono := public.config_numero('score_penalidade_abandono', 3);
-    v_penalidade_sem_just := public.config_numero('score_penalidade_sem_justificativa', 2);
-
-    SELECT count(*) INTO v_aprovadas FROM campanha WHERE id_usuario = p_id_usuario AND aprovado_em IS NOT NULL;
-    SELECT count(DISTINCT h.id_campanha) INTO v_rejeitadas_definitivas
+    SELECT count(DISTINCT h.id_campanha) INTO v_rej_definitivas
     FROM historico_rejeicao h
     WHERE h.id_usuario_dono = p_id_usuario
       AND NOT EXISTS (SELECT 1 FROM campanha c WHERE c.id_campanha = h.id_campanha);
-    v_total_submetidas := v_aprovadas + v_rejeitadas_definitivas;
-    SELECT count(*) INTO v_total_encerradas FROM campanha WHERE id_usuario = p_id_usuario
-        AND status IN ('sucesso','nao_atingido');
-    SELECT count(*) INTO v_concluidas_sucesso FROM campanha WHERE id_usuario = p_id_usuario
-        AND status = 'sucesso';
 
-    SELECT count(*) INTO v_abandonadas FROM campanha c
-    WHERE c.id_usuario = p_id_usuario AND c.status = 'nao_atingido'
-      AND NOT EXISTS (SELECT 1 FROM solicitacao_encerramento se WHERE se.id_campanha = c.id_campanha);
-
-    SELECT count(*) INTO v_sem_justificativa FROM campanha c
-    WHERE c.id_usuario = p_id_usuario AND c.status = 'nao_atingido'
-      AND EXISTS (SELECT 1 FROM solicitacao_encerramento se WHERE se.id_campanha = c.id_campanha
-                  AND (se.justificativa_pesquisador IS NULL OR btrim(se.justificativa_pesquisador) = ''));
-
-    IF v_total_encerradas > 0 THEN
-        v_conclusao := (v_concluidas_sucesso::DECIMAL / v_total_encerradas) * v_peso_conclusao;
+    IF v_sucesso + v_nao_concluidas > 0 THEN
+        v_fracao := v_fracao + public.fn_fator_subitem(v_id_pai, 'campanhas_concluidas')
+                             * v_sucesso::DECIMAL / (v_sucesso + v_nao_concluidas);
     END IF;
 
-    IF v_total_submetidas > 0 THEN
-        v_aprovacao := (v_aprovadas::DECIMAL / v_total_submetidas) * v_peso_aprovacao;
+    IF v_aprovadas + v_rej_definitivas > 0 THEN
+        v_fracao := v_fracao + public.fn_fator_subitem(v_id_pai, 'taxa_aprovacao')
+                             * v_aprovadas::DECIMAL / (v_aprovadas + v_rej_definitivas);
     END IF;
 
-    v_total := v_conclusao + v_aprovacao
-               - (v_abandonadas * v_penalidade_abandono)
-               - (v_sem_justificativa * v_penalidade_sem_just);
-
-    RETURN ROUND(LEAST(GREATEST(v_total, 0), v_peso_raiz))::INTEGER;
+    RETURN ROUND(LEAST(GREATEST(v_fracao, 0), 1) * v_peso_raiz)::INTEGER;
 END;
 $$;
 
@@ -250,8 +221,9 @@ $$;
 -- Função:     calcular_score_atualizacao
 -- Assinatura: (p_id_usuario INT) -> INTEGER
 -- Bloco:      [05-I-2]
--- Regra:      Dimensão 3 - Atualização da Campanha. regularidade = SUM(realizadas)/SUM(esperadas) * peso_regularidade;
---             tempestividade = (% de campanhas em que realizadas >= esperadas) * peso_tempestividade. Considera campanhas
+-- Regra:      Dimensão 3 - Atualização da Campanha. regularidade = SUM(realizadas)/SUM(esperadas) * fator_regularidade;
+--             tempestividade = (% de campanhas em que realizadas >= esperadas) * fator_tempestividade; o total é a soma
+--             vezes o peso da dimensão. Considera campanhas
 --             que já começaram (ativo/sucesso/nao_atingido/encerrado). atualizacoesEsperadas = duracaoEmMeses *
 --             frequencia_esperada_mensal (configurável via score_frequencia_esperada_mensal).
 CREATE OR REPLACE FUNCTION public.calcular_score_atualizacao(p_id_usuario INT)
@@ -262,63 +234,40 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-    v_id_pai             INT;
-    v_peso_raiz          DECIMAL;
-    v_peso_regularidade  DECIMAL := 0;
-    v_peso_tempestividade DECIMAL := 0;
-    v_frequencia_mensal  DECIMAL;
-    v_soma_esperadas     DECIMAL := 0;
-    v_soma_realizadas    DECIMAL := 0;
-    v_qtd_campanhas      INT := 0;
-    v_qtd_em_dia         INT := 0;
-    v_regularidade       DECIMAL := 0;
-    v_tempestividade     DECIMAL := 0;
-    rec                  RECORD;
-    v_duracao_meses      DECIMAL;
-    v_esperadas_campanha DECIMAL;
-    v_realizadas_campanha INT;
+    v_id_pai     INT;
+    v_peso_raiz  DECIMAL;
+    v_frequencia DECIMAL := public.config_numero('score_frequencia_esperada_mensal', 1);
+    v_esperadas  DECIMAL;
+    v_realizadas DECIMAL;
+    v_qtd        INT;
+    v_em_dia     INT;
+    v_fracao     DECIMAL := 0;
 BEGIN
     SELECT id_score_config, peso INTO v_id_pai, v_peso_raiz
-    FROM score_config WHERE nome = 'atualizacao_campanha' AND ativo = TRUE;
+    FROM score_config WHERE nome = 'atualizacao_campanha' AND id_pai IS NULL AND ativo = TRUE;
 
     IF v_id_pai IS NULL THEN RETURN 0; END IF;
 
-    v_peso_regularidade := public.fn_peso_score(v_id_pai, 'regularidade_atualizacoes');
-    v_peso_tempestividade := public.fn_peso_score(v_id_pai, 'tempestividade_atualizacoes');
+    SELECT SUM(esperadas), SUM(realizadas), count(*), count(*) FILTER (WHERE realizadas >= esperadas)
+    INTO v_esperadas, v_realizadas, v_qtd, v_em_dia
+    FROM (
+        SELECT GREATEST(1, EXTRACT(EPOCH FROM (COALESCE(c.data_fim, NOW()) - c.data_inicio)) / 2629800.0) * v_frequencia AS esperadas,
+               (SELECT count(*) FROM atualizacao_campanha a WHERE a.id_campanha = c.id_campanha AND a.ativo = TRUE) AS realizadas
+        FROM campanha c
+        WHERE c.id_usuario = p_id_usuario
+          AND c.status IN ('ativo', 'sucesso', 'nao_atingido', 'encerrado')
+          AND c.data_inicio IS NOT NULL
+    ) t;
 
-    v_frequencia_mensal := public.config_numero('score_frequencia_esperada_mensal', 1);
-
-    FOR rec IN
-        SELECT id_campanha, data_inicio, data_fim
-        FROM campanha
-        WHERE id_usuario = p_id_usuario
-          AND status IN ('ativo','sucesso','nao_atingido','encerrado')
-          AND data_inicio IS NOT NULL
-    LOOP
-        v_duracao_meses := GREATEST(1, EXTRACT(EPOCH FROM (COALESCE(rec.data_fim, NOW()) - rec.data_inicio)) / 2629800.0);
-        v_esperadas_campanha := v_duracao_meses * v_frequencia_mensal;
-
-        SELECT count(*) INTO v_realizadas_campanha FROM atualizacao_campanha
-        WHERE id_campanha = rec.id_campanha AND ativo = TRUE;
-
-        v_qtd_campanhas := v_qtd_campanhas + 1;
-        v_soma_esperadas := v_soma_esperadas + v_esperadas_campanha;
-        v_soma_realizadas := v_soma_realizadas + v_realizadas_campanha;
-
-        IF v_realizadas_campanha >= v_esperadas_campanha THEN
-            v_qtd_em_dia := v_qtd_em_dia + 1;
-        END IF;
-    END LOOP;
-
-    IF v_soma_esperadas > 0 THEN
-        v_regularidade := LEAST(v_soma_realizadas / v_soma_esperadas, 1) * v_peso_regularidade;
+    IF v_esperadas > 0 THEN
+        v_fracao := v_fracao + public.fn_fator_subitem(v_id_pai, 'regularidade_atualizacoes') * LEAST(v_realizadas / v_esperadas, 1);
     END IF;
 
-    IF v_qtd_campanhas > 0 THEN
-        v_tempestividade := (v_qtd_em_dia::DECIMAL / v_qtd_campanhas) * v_peso_tempestividade;
+    IF v_qtd > 0 THEN
+        v_fracao := v_fracao + public.fn_fator_subitem(v_id_pai, 'tempestividade_atualizacoes') * v_em_dia::DECIMAL / v_qtd;
     END IF;
 
-    RETURN ROUND(LEAST(GREATEST(v_regularidade + v_tempestividade, 0), v_peso_raiz))::INTEGER;
+    RETURN ROUND(LEAST(GREATEST(v_fracao, 0), 1) * v_peso_raiz)::INTEGER;
 END;
 $$;
 
@@ -326,10 +275,10 @@ $$;
 -- Função:     calcular_score_reputacao
 -- Assinatura: (p_id_usuario INT) -> INTEGER
 -- Bloco:      [05-I-2]
--- Regra:      Dimensão 4 - Reputação da Comunidade. reputacaoScore = peso_raiz - totalDenuncias*custo -
---             totalProcedentes*custo_procedente. Só denúncias com status 'resolvida' (= procedente, confirmada pela
---             moderação) penalizam: 'pendente', 'em_analise' e 'improcedente' (descartada após análise, RF-077) não contam.
---             Os custos vêm de score_config (volume_denuncias/gravidade_denuncias), a única fonte de verdade.
+-- Regra:      Dimensão 4 - Reputação da Comunidade. Dois subitens: denúncias procedentes contra o PERFIL e contra as
+--             CAMPANHAS do pesquisador. Cada um perde a sua parte de forma linear até zerar em
+--             score_denuncias_para_zerar denúncias procedentes. Só 'resolvida' (procedente) conta: 'pendente',
+--             'em_analise' e 'improcedente' não.
 CREATE OR REPLACE FUNCTION public.calcular_score_reputacao(p_id_usuario INT)
 RETURNS INTEGER
 LANGUAGE plpgsql
@@ -338,20 +287,28 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-    v_peso_raiz   DECIMAL;
-    v_id_pai      INT;
-    v_procedentes INT;
-    v_custo       DECIMAL;
+    v_id_pai     INT;
+    v_peso_raiz  DECIMAL;
+    v_para_zerar DECIMAL := GREATEST(public.config_numero('score_denuncias_para_zerar', 3), 1);
+    v_perfil     INT;
+    v_campanhas  INT;
 BEGIN
-    SELECT id_score_config, peso INTO v_id_pai, v_peso_raiz FROM score_config WHERE nome = 'reputacao_comunidade' AND ativo = TRUE;
-    IF v_peso_raiz IS NULL THEN RETURN 0; END IF;
+    SELECT id_score_config, peso INTO v_id_pai, v_peso_raiz
+    FROM score_config WHERE nome = 'reputacao_comunidade' AND id_pai IS NULL AND ativo = TRUE;
 
-    v_custo := public.fn_peso_score(v_id_pai, 'volume_denuncias')
-             + public.fn_peso_score(v_id_pai, 'gravidade_denuncias');
+    IF v_id_pai IS NULL THEN RETURN 0; END IF;
 
-    SELECT count(*) INTO v_procedentes FROM denuncia WHERE id_pesquisador_alvo = p_id_usuario AND status = 'resolvida';
+    SELECT count(*) INTO v_perfil
+    FROM denuncia d WHERE d.id_pesquisador_alvo = p_id_usuario AND d.status = 'resolvida';
 
-    RETURN ROUND(LEAST(GREATEST(v_peso_raiz - v_procedentes * v_custo, 0), v_peso_raiz))::INTEGER;
+    SELECT count(*) INTO v_campanhas
+    FROM denuncia d JOIN campanha c ON c.id_campanha = d.id_campanha_alvo
+    WHERE c.id_usuario = p_id_usuario AND d.status = 'resolvida';
+
+    RETURN ROUND(v_peso_raiz * (
+          public.fn_fator_subitem(v_id_pai, 'denuncias_perfil')   * GREATEST(0, 1 - v_perfil / v_para_zerar)
+        + public.fn_fator_subitem(v_id_pai, 'denuncias_campanha') * GREATEST(0, 1 - v_campanhas / v_para_zerar)
+    ))::INTEGER;
 END;
 $$;
 
@@ -526,20 +483,32 @@ CREATE TRIGGER trg_campanha_recalcula_score_update
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-I-4]
 -- Uso:        Invocada por trg_denuncia_recalcula_score
--- Regra:      denuncia afeta reputação - recalcula o score de
---             id_pesquisador_alvo (quem foi denunciado), quando preenchido.
+-- Regra:      denuncia afeta reputação - recalcula o pesquisador denunciado ou o dono da campanha denunciada,
+--             só quando a denúncia entra em 'resolvida' ou sai dela (denúncia pendente não muda score nenhum).
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.trg_recalcular_por_denuncia()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
+DECLARE
+    v_pesquisador INT;
+    v_campanha    INT;
 BEGIN
+    IF TG_OP = 'INSERT' AND NEW.status IS DISTINCT FROM 'resolvida' THEN RETURN NULL; END IF;
+    IF TG_OP = 'DELETE' AND OLD.status IS DISTINCT FROM 'resolvida' THEN RETURN NULL; END IF;
+    IF TG_OP = 'UPDATE' AND (OLD.status = 'resolvida') = (NEW.status = 'resolvida') THEN RETURN NULL; END IF;
+
     IF TG_OP = 'DELETE' THEN
-        IF OLD.id_pesquisador_alvo IS NOT NULL THEN
-            PERFORM public.recalcular_score_pesquisador(OLD.id_pesquisador_alvo);
-        END IF;
+        v_pesquisador := OLD.id_pesquisador_alvo;
+        v_campanha := OLD.id_campanha_alvo;
     ELSE
-        IF NEW.id_pesquisador_alvo IS NOT NULL THEN
-            PERFORM public.recalcular_score_pesquisador(NEW.id_pesquisador_alvo);
-        END IF;
+        v_pesquisador := NEW.id_pesquisador_alvo;
+        v_campanha := NEW.id_campanha_alvo;
+    END IF;
+
+    IF v_pesquisador IS NULL THEN
+        SELECT id_usuario INTO v_pesquisador FROM campanha WHERE id_campanha = v_campanha;
+    END IF;
+    IF v_pesquisador IS NOT NULL THEN
+        PERFORM public.recalcular_score_pesquisador(v_pesquisador);
     END IF;
     RETURN NULL;
 END;
@@ -551,8 +520,8 @@ $$;
 -- Momento:   AFTER INSERT OR UPDATE OR DELETE
 -- Função:    trg_recalcular_por_denuncia()
 -- Bloco:     [05-I-4]
--- Regra:     Dispara o recálculo de score do pesquisador denunciado a cada
---            inserção, alteração ou remoção de denúncia.
+-- Regra:     Dispara o recálculo de score de quem foi denunciado (perfil ou dono da campanha); a função
+--            ignora o que não mexe em 'resolvida'.
 -- ----------------------------------------------------------------------------
 DROP TRIGGER IF EXISTS trg_denuncia_recalcula_score ON denuncia;
 CREATE TRIGGER trg_denuncia_recalcula_score
@@ -726,7 +695,8 @@ CREATE TRIGGER trg_score_config_recalcula_todos
 -- Função:     fn_valida_soma_pesos_score_config
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-I-4]
--- Regra:      Os 4 pesos raiz de score_config (id_pai IS NULL) precisam somar 100: score_rotulo (faixas 0-100) assume que o
+-- Regra:      Nenhum peso negativo (90030); toda dimensão ativa com subitens precisa de pelo menos um subitem ativo com
+--             peso maior que zero (90031), senão ela nunca pontua; e os pesos raiz ativos (id_pai IS NULL) precisam somar 100: score_rotulo (faixas 0-100) assume que o
 --             score MÁXIMO possível é 100 (com soma 200, ninguém cairia na faixa "Referência" e um score de 150 não teria
 --             rótulo: recalcular_score_pesquisador devolveria NULL). CONSTRAINT TRIGGER (não trigger comum) porque só
 --             assim dá para ser DEFERRABLE: editar os 4 pesos em 4 UPDATEs separados não reprova o 1º sozinho. FOR EACH
@@ -736,13 +706,31 @@ CREATE TRIGGER trg_score_config_recalcula_todos
 CREATE OR REPLACE FUNCTION public.fn_valida_soma_pesos_score_config()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
 DECLARE
-    v_soma DECIMAL;
+    v_soma     DECIMAL;
+    v_dimensao TEXT;
 BEGIN
+    IF EXISTS (SELECT 1 FROM score_config WHERE peso < 0) THEN
+        RAISE EXCEPTION 'Peso não pode ser negativo.'
+            USING ERRCODE = '90030';
+    END IF;
+
     SELECT SUM(peso) INTO v_soma FROM score_config WHERE id_pai IS NULL AND ativo = TRUE;
     IF v_soma IS DISTINCT FROM 100 THEN
-        RAISE EXCEPTION 'A soma dos pesos raiz de score_config precisa ser exatamente 100 (está %).', v_soma
+        RAISE EXCEPTION 'Os pesos das dimensões ativas precisam somar 100 (hoje somam %).', COALESCE(v_soma, 0)
             USING ERRCODE = '90017';
     END IF;
+
+    SELECT r.descricao INTO v_dimensao
+    FROM score_config r
+    WHERE r.id_pai IS NULL AND r.ativo = TRUE
+      AND EXISTS (SELECT 1 FROM score_config s WHERE s.id_pai = r.id_score_config)
+      AND NOT EXISTS (SELECT 1 FROM score_config s WHERE s.id_pai = r.id_score_config AND s.ativo = TRUE AND s.peso > 0)
+    LIMIT 1;
+    IF v_dimensao IS NOT NULL THEN
+        RAISE EXCEPTION 'A dimensão "%" precisa de pelo menos um item ativo com peso maior que zero.', v_dimensao
+            USING ERRCODE = '90031';
+    END IF;
+
     RETURN NULL;
 END;
 $$;
@@ -815,6 +803,20 @@ $$;
 -- Regra:     Bloqueia terminar uma transação com buraco entre faixas ativas,
 --            ou sem cobrir 0-100. Ver comentário completo na função acima.
 -- ----------------------------------------------------------------------------
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_score_rotulo_recalcula_todos
+-- Tabela:    score_rotulo
+-- Momento:   AFTER INSERT OR UPDATE OR DELETE, uma vez por comando
+-- Função:    trg_recalcular_por_score_config()
+-- Bloco:     [05-I-4]
+-- Regra:     Mudar uma faixa muda o rótulo de quem está nela: recalcula todos, como a edição de peso.
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_score_rotulo_recalcula_todos ON score_rotulo;
+CREATE TRIGGER trg_score_rotulo_recalcula_todos
+    AFTER INSERT OR UPDATE OR DELETE ON score_rotulo
+    FOR EACH STATEMENT
+    EXECUTE FUNCTION public.trg_recalcular_por_score_config();
+
 DROP TRIGGER IF EXISTS trg_score_rotulo_cobertura ON score_rotulo;
 CREATE CONSTRAINT TRIGGER trg_score_rotulo_cobertura
     AFTER INSERT OR UPDATE OR DELETE ON score_rotulo
@@ -822,11 +824,12 @@ CREATE CONSTRAINT TRIGGER trg_score_rotulo_cobertura
     FOR EACH ROW
     EXECUTE FUNCTION public.fn_valida_cobertura_score_rotulo();
 
--- fn_peso_score: peso de subitem de score, 0 quando desativado (DOCUMENTACAO_BD.md [05-K-2-C]).
-CREATE OR REPLACE FUNCTION public.fn_peso_score(p_id_pai INT, p_nome TEXT)
+-- fn_fator_subitem: a parte de um subitem na sua dimensão (peso dele / soma dos subitens ativos); 0 quando desativado.
+CREATE OR REPLACE FUNCTION public.fn_fator_subitem(p_id_pai INT, p_nome TEXT)
 RETURNS DECIMAL LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
     SELECT COALESCE(
-        (SELECT peso FROM score_config WHERE id_pai = p_id_pai AND nome = p_nome AND ativo = TRUE),
+        (SELECT peso FROM score_config WHERE id_pai = p_id_pai AND nome = p_nome AND ativo = TRUE)
+        / NULLIF((SELECT SUM(peso) FROM score_config WHERE id_pai = p_id_pai AND ativo = TRUE), 0),
         0);
 $$;
 
@@ -1885,6 +1888,9 @@ EXECUTE FUNCTION public.fn_valida_limite_max_marco_cronograma();
 --                  encerrado_moderacao (escopo estreito de propósito: um moderador não vira aprovador por isso).
 --               9. Conta do dono excluída (RF-016), AUTOVERIFICÁVEL: só aguardando_aprovacao -> rejeitado e só com o dono
 --                  já marcado como excluído; o único caminho é excluir_conta_usuario() (03, [03-O]).
+--              10. Encerramento antecipado pelo próprio dono (RF-064), AUTOVERIFICÁVEL: ativo -> encerrado só se quem muda é
+--                  o dono, a campanha não tem contribuição confirmada e já existe o pedido aprovado sem admin, que só
+--                  encerrar_campanha_sem_contribuicao() (03) consegue gravar.
 -- Conta excluída, sem passar pela RLS de usuario (que esconde a linha excluída de quem consulta).
 CREATE OR REPLACE FUNCTION public.fn_usuario_excluido(p_id_usuario INT)
 RETURNS BOOLEAN LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
@@ -1994,6 +2000,16 @@ BEGIN
        AND NEW.id_admin IS NOT DISTINCT FROM OLD.id_admin
        AND OLD.status = 'aguardando_aprovacao' AND NEW.status = 'rejeitado'
        AND public.fn_usuario_excluido(NEW.id_usuario)
+    THEN
+        RETURN NEW;
+    END IF;
+
+    IF NEW.aprovado_em IS NOT DISTINCT FROM OLD.aprovado_em
+       AND NEW.id_admin IS NOT DISTINCT FROM OLD.id_admin
+       AND OLD.status = 'ativo' AND NEW.status = 'encerrado'
+       AND NEW.id_usuario = public.id_usuario_atual()
+       AND NOT EXISTS (SELECT 1 FROM contribuicao ct WHERE ct.id_campanha = OLD.id_campanha AND ct.status IN ('confirmado', 'repassado'))
+       AND EXISTS (SELECT 1 FROM solicitacao_encerramento se WHERE se.id_campanha = OLD.id_campanha AND se.status = 'aprovado' AND se.id_admin IS NULL)
     THEN
         RETURN NEW;
     END IF;
@@ -2388,9 +2404,10 @@ BEGIN
     -- uma vez). Ver DOCUMENTACAO_BD.md [05-K-2-B].
     v_ttl_horas := public.config_numero('campanha_rascunho_ttl_horas', 336);
 
-    -- Linha a linha: um rascunho que ainda tenha filho que impede o DELETE (ex.: solicitação de
-    -- encerramento, que só um dado de teste cria) derrubava o lote inteiro toda hora. Só violação de chave
-    -- estrangeira é engolida; qualquer outro erro continua aparecendo.
+    -- Linha a linha: um rascunho que ainda tenha filho que impede o DELETE (ex.: denúncia, que só um dado de
+    -- teste cria num rascunho) derrubava o lote inteiro toda hora. Só a violação de chave estrangeira é engolida,
+    -- nos dois tipos (NO ACTION dá 23503; RESTRICT, como FK_DENUNCIA_CAMPANHA_ALVO, dá 23001); qualquer outro
+    -- erro continua aparecendo.
     v_expiradas := 0;
     FOR v_id IN
         SELECT c.id_campanha FROM campanha c
@@ -2400,7 +2417,7 @@ BEGIN
         BEGIN
             DELETE FROM campanha WHERE id_campanha = v_id AND status = 'rascunho';
             v_expiradas := v_expiradas + 1;
-        EXCEPTION WHEN foreign_key_violation THEN
+        EXCEPTION WHEN foreign_key_violation OR restrict_violation THEN
             NULL;
         END;
     END LOOP;
@@ -2698,17 +2715,53 @@ WHEN (NEW.meta_financeira IS DISTINCT FROM OLD.meta_financeira)
 EXECUTE FUNCTION fn_valida_meta_campanha_negocio();
 
 -- ----------------------------------------------------------------------------
+-- Função:     fn_valida_solicitacao_encerramento
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-K-2]
+-- Regra:      Pedido de encerramento só de campanha ativa (91038) e sempre com justificativa (90028), RF-064. Um pendente
+--             por vez é o índice uq_solicitacao_encerramento_pendente (02). SECURITY DEFINER: lê a campanha sem depender
+--             do que a RLS mostra.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_valida_solicitacao_encerramento()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    IF NEW.justificativa_pesquisador IS NULL OR btrim(NEW.justificativa_pesquisador) = '' THEN
+        RAISE EXCEPTION 'Escreva por que a campanha está sendo encerrada.' USING ERRCODE = '90028';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM campanha WHERE id_campanha = NEW.id_campanha AND status = 'ativo') THEN
+        RAISE EXCEPTION 'Só uma campanha ativa pode ser encerrada antecipadamente.' USING ERRCODE = '91038';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_solicitacao_valida_criacao ON solicitacao_encerramento;
+CREATE TRIGGER trg_solicitacao_valida_criacao
+BEFORE INSERT ON solicitacao_encerramento
+FOR EACH ROW
+EXECUTE FUNCTION public.fn_valida_solicitacao_encerramento();
+
+-- ----------------------------------------------------------------------------
 -- Função:     fn_valida_transicao_solicitacao
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-2]
 -- Regra:      pol_solicitacao_update (04) libera UPDATE também ao dono da campanha (não só a quem decide), para destravar o
 --             valor 'cancelado' do ENUM status_encerramento. Esta trigger garante que o dono só consegue cancelar a própria
---             solicitação enquanto ainda está 'pendente': nenhuma outra coluna, nenhuma outra transição. Quem tem
---             solicitacao_encerramento_decidir continua sem restrição.
+--             solicitação enquanto ainda está 'pendente': nenhuma outra coluna, nenhuma outra transição. Para todos, um
+--             pedido já decidido ou cancelado não muda mais de situação (91041); quem decide usa
+--             decidir_solicitacao_encerramento() (03), que também encerra a campanha.
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_valida_transicao_solicitacao()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN
+    IF NEW.status IS DISTINCT FROM OLD.status AND OLD.status <> 'pendente' THEN
+        RAISE EXCEPTION 'Só um pedido pendente pode mudar de situação.' USING ERRCODE = '91041';
+    END IF;
+
     IF NOT public.tem_permissao('solicitacao_encerramento_decidir') THEN
         IF OLD.status <> 'pendente' OR NEW.status <> 'cancelado' THEN
             RAISE EXCEPTION 'O pesquisador só pode cancelar a própria solicitação enquanto ela estiver pendente.'
@@ -2720,6 +2773,12 @@ BEGIN
             RAISE EXCEPTION 'Só é permitido alterar o status para cancelado.'
                 USING ERRCODE = '92003';
         END IF;
+    END IF;
+
+    -- Aprovar ou rejeitar só por decidir_solicitacao_encerramento() (03), que grava quem decidiu e quando e, ao aprovar,
+    -- encerra a campanha: uma mudança direta de status deixaria o pedido aprovado com a campanha ainda ativa.
+    IF NEW.status IN ('aprovado', 'rejeitado') AND NEW.status IS DISTINCT FROM OLD.status AND NEW.avaliado_em IS NULL THEN
+        RAISE EXCEPTION 'Aprovar ou rejeitar um pedido de encerramento é pela decisão do administrador.' USING ERRCODE = '92033';
     END IF;
 
     RETURN NEW;
@@ -3508,6 +3567,32 @@ WHEN (NEW.status IS DISTINCT FROM OLD.status)
 EXECUTE FUNCTION fn_valida_denuncia_sem_autojulgamento();
 
 -- ----------------------------------------------------------------------------
+-- Função:     fn_valida_contestacao_pendente
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-K-3]
+-- Regra:      Com uma contestação esperando análise, a situação da denúncia só muda pela decisão da contestação
+--             (decidir_contestacao, 03), que fecha as duas juntas; senão a contestação ficaria aberta sobre uma
+--             denúncia já mudada.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_valida_contestacao_pendente()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+    IF OLD.contestacao_status = 'pendente' AND NEW.contestacao_status = 'pendente'
+       AND NEW.status IS DISTINCT FROM OLD.status THEN
+        RAISE EXCEPTION 'Esta denúncia tem uma contestação esperando análise: decida a contestação primeiro.'
+            USING ERRCODE = '91048';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_denuncia_valida_contestacao_pendente ON denuncia;
+CREATE TRIGGER trg_denuncia_valida_contestacao_pendente
+BEFORE UPDATE OF status ON denuncia
+FOR EACH ROW
+EXECUTE FUNCTION public.fn_valida_contestacao_pendente();
+
+-- ----------------------------------------------------------------------------
 -- Função:     trg_admin_recebe_toda_permissao
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-3]
@@ -3925,6 +4010,13 @@ CREATE TRIGGER trg_log_auditoria_denuncia_status
 AFTER UPDATE ON denuncia
 FOR EACH ROW
 WHEN (OLD.status IS DISTINCT FROM NEW.status)
+EXECUTE FUNCTION public.fn_log_auditoria('id_denuncia');
+
+DROP TRIGGER IF EXISTS trg_log_auditoria_denuncia_contestacao ON denuncia;
+CREATE TRIGGER trg_log_auditoria_denuncia_contestacao
+AFTER UPDATE ON denuncia
+FOR EACH ROW
+WHEN (OLD.contestacao_status IS DISTINCT FROM NEW.contestacao_status)
 EXECUTE FUNCTION public.fn_log_auditoria('id_denuncia');
 
 DROP TRIGGER IF EXISTS trg_log_auditoria_score_config ON score_config;

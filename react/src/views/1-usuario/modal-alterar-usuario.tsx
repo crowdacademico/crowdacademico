@@ -1,5 +1,7 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
+import { FiltroPartes } from '../../components/crud/filtro-partes';
+import type { ParteTela } from '../../components/crud/filtro-partes';
 import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
 import { MensagemErro } from '../../components/crud/mensagem-erro';
 import type { EstadoSuspensao } from '../../components/crud/secao-suspensao';
@@ -229,7 +231,7 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
       mostrar('Senha redefinida com sucesso.', `ID: ${idUsuario} teve a senha redefinida para "${SENHA_DEV}"`);
     });
 
-  const partes: { chave: Parte; rotulo: string }[] = [
+  const partes: ParteTela<Parte>[] = [
     { chave: 'geral', rotulo: 'Geral' },
     { chave: 'conta', rotulo: 'Conta' },
     { chave: 'papeis', rotulo: 'Papéis' },
@@ -491,40 +493,6 @@ function vigente(suspensao: { suspensoAte: string | null } | null): string | nul
 
 type Parte = 'geral' | 'conta' | 'papeis' | 'pesquisador' | 'moderacao';
 
-// Filtro fixo no topo do corpo do modal: "Geral" mostra tudo; cada outra opção mostra só aquela parte. Trocar volta
-// a rolagem para o topo, para a parte escolhida aparecer inteira.
-function FiltroPartes({
-  partes,
-  atual,
-  aoEscolher,
-}: {
-  partes: { chave: Parte; rotulo: string }[];
-  atual: Parte;
-  aoEscolher: (parte: Parte) => void;
-}) {
-  const ref = useRef<HTMLElement>(null);
-  return (
-    <nav ref={ref} aria-label="Partes da tela" className="sticky -top-6 z-10 -mx-8 px-8 py-2 fundo-cartao border-b borda-padrao flex flex-wrap gap-1">
-      {partes.map((parte) => (
-        <button
-          key={parte.chave}
-          type="button"
-          aria-pressed={atual === parte.chave}
-          onClick={() => {
-            aoEscolher(parte.chave);
-            ref.current?.closest('.overflow-y-auto')?.scrollTo({ top: 0 });
-          }}
-          className={
-            'paragrafo-destaque px-3 py-1.5 rounded-lg texto-herdado ' +
-            (atual === parte.chave ? 'fundo-sutil texto-marca' : 'texto-fraco hover-texto-forte')
-          }
-        >
-          {parte.rotulo}
-        </button>
-      ))}
-    </nav>
-  );
-}
 
 interface PapeisDoUsuarioProps {
   auth: Pick<UseAuthReturn, 'authFetch'>;

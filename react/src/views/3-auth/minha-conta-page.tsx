@@ -35,6 +35,7 @@ import type { PerfilPesquisadorResponse } from '../../services/6-perfil-pesquisa
 import type { SuspensaoResponseDto } from '../../services/constant/type/suspensao.type';
 import { EstadoVazio } from '../../components/crud/estado-vazio';
 import { BadgeStatusPesquisador } from '../../components/crud/badge-status-pesquisador';
+import { SecaoContestacaoScore } from '../19-denuncia/secao-contestacao-score';
 
 // Minha Conta: não é um formulário só, é uma área com seções independentes, cada uma salva por conta própria.
 //
@@ -831,6 +832,8 @@ function AbaAcademico({ auth }: AbaAcademicoProps) {
         <CampoFicha rotulo="Vínculo institucional" valor={perfil.vinculoInstitucional} />
         <CampoFicha rotulo="Score atual" valor={perfil.scoreAtual} />
       </SecaoFicha>
+
+      <SecaoContestacaoScore authFetch={auth.authFetch} />
     </div>
   );
 }

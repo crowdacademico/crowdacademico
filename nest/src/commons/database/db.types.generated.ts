@@ -33,6 +33,8 @@ export type Numeric = ColumnType<string, number | string, number | string>;
 
 export type StatusCampanha = "aguardando_aprovacao" | "ativo" | "encerrado" | "encerrado_moderacao" | "nao_atingido" | "rascunho" | "rejeitado" | "sucesso";
 
+export type StatusContestacao = "aceita" | "pendente" | "recusada";
+
 export type StatusContribuicao = "a_devolver" | "confirmado" | "devolvido" | "erro" | "expirado" | "pendente" | "reembolsado" | "reembolso_manual" | "repassado";
 
 export type StatusDenuncia = "em_analise" | "improcedente" | "pendente" | "resolvida";
@@ -189,12 +191,16 @@ export interface ContribuicaoRecompensa {
 }
 
 export interface Denuncia {
+  contestacao: string | null;
+  contestacao_status: StatusContestacao | null;
+  contestada_em: Timestamp | null;
   criado_em: Generated<Timestamp>;
   id_campanha_alvo: number | null;
   id_denuncia: Generated<number>;
   id_motivo: number;
   id_pesquisador_alvo: number | null;
   id_usuario: number;
+  justificativa_contestacao: string | null;
   justificativa_moderacao: string | null;
   relato: string | null;
   status: Generated<StatusDenuncia>;

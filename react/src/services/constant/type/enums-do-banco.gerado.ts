@@ -15,6 +15,9 @@ export type ModeloCampanha = (typeof MODELO_CAMPANHA)[number];
 export const STATUS_CAMPANHA = ['aguardando_aprovacao', 'ativo', 'encerrado', 'encerrado_moderacao', 'nao_atingido', 'rascunho', 'rejeitado', 'sucesso'] as const;
 export type StatusCampanha = (typeof STATUS_CAMPANHA)[number];
 
+export const STATUS_CONTESTACAO = ['aceita', 'pendente', 'recusada'] as const;
+export type StatusContestacao = (typeof STATUS_CONTESTACAO)[number];
+
 export const STATUS_CONTRIBUICAO = ['a_devolver', 'confirmado', 'devolvido', 'erro', 'expirado', 'pendente', 'reembolsado', 'reembolso_manual', 'repassado'] as const;
 export type StatusContribuicao = (typeof STATUS_CONTRIBUICAO)[number];
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { SecaoFicha } from '../../components/crud/ficha-consulta';
 import { ModalFicha } from '../../components/crud/modal-ficha';
+import { BotaoTelaCheia, TextoTermo } from '../../components/crud/modal-termo';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { CampoCpf } from '../../components/input/campo-cpf';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
@@ -76,6 +77,7 @@ export function ModalUpgradePesquisador({
   const { ocupado: enviando, executar: executarEnviando } = useEnvio(reportarErro, limparErro);
   const [etapa, setEtapa] = useState<Etapa>('termo');
   const [termo, setTermo] = useState<TermoUsoResponseActive | null>(null);
+  const [termoTelaCheia, setTermoTelaCheia] = useState(false);
   const [carregandoTermo, setCarregandoTermo] = useState(true);
   const [termoIndisponivel, setTermoIndisponivel] = useState(false);
   const [aceitou, setAceitou] = useState(false);
@@ -137,6 +139,8 @@ export function ModalUpgradePesquisador({
           : 'Upgrade de Perfil - Dados de Pesquisador'
       }
       aoFechar={aoFechar}
+      // Na etapa do termo, o mesmo texto e o mesmo "Tela cheia" do termo do Criar conta.
+      acoesCabecalho={etapa === 'termo' && termo && <BotaoTelaCheia aoClicar={() => setTermoTelaCheia(true)} />}
       rodape={
         etapa === 'termo' ? (
           <RodapeAcoes
@@ -173,9 +177,12 @@ export function ModalUpgradePesquisador({
           </p>
         ) : (
           <>
-            <div className="paragrafo max-h-96 overflow-y-auto whitespace-pre-wrap border borda-padrao rounded-lg p-4 texto-herdado">
-              {termo.conteudo}
-            </div>
+            <TextoTermo
+              titulo={`Termo de Pesquisador - versão ${termo.versao}`}
+              conteudo={termo.conteudo}
+              telaCheia={termoTelaCheia}
+              aoSairTelaCheia={() => setTermoTelaCheia(false)}
+            />
             <label className="paragrafo-destaque flex items-center gap-2 texto-padrao mt-4">
               <input
                 type="checkbox"

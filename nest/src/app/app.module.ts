@@ -26,6 +26,7 @@ import { AtualizacaoCampanhaModule } from '../15-atualizacao-campanha/atualizaca
 import { SeguirCampanhaModule } from '../16-seguir-campanha/seguir-campanha.module';
 import { ComentarioModule } from '../17-comentario/comentario.module';
 import { DenunciaModule } from '../19-denuncia/denuncia.module';
+import { SolicitacaoEncerramentoModule } from '../20-solicitacao-encerramento/solicitacao-encerramento.module';
 import { ArquivoModule } from '../25-arquivo/arquivo.module';
 import { HistoricoRejeicaoModule } from '../21-historico-rejeicao/historico-rejeicao.module';
 import { StorageModule } from '../commons/storage/storage.module';
@@ -80,6 +81,7 @@ import { ConfiguracaoValorModule } from '../commons/configuracao/configuracao-va
     SeguirCampanhaModule,
     ComentarioModule,
     DenunciaModule,
+    SolicitacaoEncerramentoModule,
     HistoricoRejeicaoModule,
     ArquivoModule,
     LogAuditoriaModule,

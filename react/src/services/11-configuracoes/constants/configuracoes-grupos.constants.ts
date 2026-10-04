@@ -41,8 +41,7 @@ export const GRUPO_CONFIGURACAO: Record<string, string> = {
   limite_links_academicos_perfil: 'Campanha',
   // Score / Reputação
   score_minimo_campanha: 'Score / Reputação',
-  score_penalidade_abandono: 'Score / Reputação',
-  score_penalidade_sem_justificativa: 'Score / Reputação',
+  score_denuncias_para_zerar: 'Score / Reputação',
   score_frequencia_esperada_mensal: 'Score / Reputação',
   // Arquivo: limites de upload configuráveis.
   arquivo_tamanho_minimo_bytes: 'Arquivo',

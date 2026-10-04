@@ -52,12 +52,12 @@ SELECT 'regularidade_atualizacoes',   'Regularidade de atualizações de progres
 INSERT INTO score_config (nome, descricao, peso, id_pai)
 SELECT 'tempestividade_atualizacoes', 'Qualidade e tempestividade das atualizações',   12, id_score_config FROM score_config WHERE nome = 'atualizacao_campanha';
 
--- volume_denuncias/gravidade_denuncias (1 e 3): calcular_score_reputacao lê estes valores daqui, a tabela que o
--- Painel Admin realmente controla (editar o peso recalcula o score de todos).
+-- Reputação: denúncia procedente contra a campanha pesa mais que contra o perfil (fraude de campanha atinge quem
+-- apoia). Cada parte zera em score_denuncias_para_zerar denúncias procedentes ([07-I-2]).
 INSERT INTO score_config (nome, descricao, peso, id_pai)
-SELECT 'volume_denuncias',    'Custo por denúncia confirmada (pontos descontados por denúncia)', 1, id_score_config FROM score_config WHERE nome = 'reputacao_comunidade';
+SELECT 'denuncias_perfil',   'Sem denúncias procedentes contra o perfil',       10, id_score_config FROM score_config WHERE nome = 'reputacao_comunidade';
 INSERT INTO score_config (nome, descricao, peso, id_pai)
-SELECT 'gravidade_denuncias', 'Custo extra por denúncia confirmada procedente',                  3, id_score_config FROM score_config WHERE nome = 'reputacao_comunidade';
+SELECT 'denuncias_campanha', 'Sem denúncias procedentes contra as campanhas',   15, id_score_config FROM score_config WHERE nome = 'reputacao_comunidade';
 
 INSERT INTO score_rotulo (rotulo, descricao, score_minimo, score_maximo) VALUES
 ('Atenção',       'Pesquisador com perfil incompleto ou histórico problemático',  0,  24),
@@ -508,8 +508,11 @@ Estes Termos podem ser atualizados periodicamente. A versão vigente é sempre a
 Fica eleito o foro da comarca do domicílio do usuário para dirimir eventuais controvérsias, conforme o Código de Defesa do Consumidor, quando aplicável.', TRUE, '2026-10-03 00:00:00')
 ON CONFLICT (tipo, versao) DO NOTHING;
 
+-- v3: a seção 4 explica como a pontuação é calculada (as quatro dimensões, as denúncias procedentes contra o perfil
+-- e contra as campanhas, o encerramento direto fora do histórico) e o pedido de revisão (LGPD, art. 20). Versão
+-- nova, não edição da v2: versão já aceita não se altera.
 INSERT INTO termos_de_uso (tipo, versao, conteudo, ativo, criado_em) VALUES
-('upgrade_pesquisador', 'v2-2026-09-13', 'TERMOS DE UPGRADE DE PERFIL DE PESQUISADOR - CROWDACADÊMICO
+('upgrade_pesquisador', 'v3-2026-10-03', 'TERMOS DE UPGRADE DE PERFIL DE PESQUISADOR - CROWDACADÊMICO
 
 1. OBJETO
 Este termo é exibido no momento em que um usuário comum solicita o upgrade de sua conta para perfil de pesquisador, complementando os Termos de Uso gerais aceitos no cadastro.
@@ -521,13 +524,18 @@ Ao solicitar o upgrade, o usuário declara que o CPF, o vínculo institucional (
 O perfil de pesquisador autoriza submeter e gerenciar campanhas de financiamento coletivo. O pesquisador é responsável pela veracidade das informações de cada campanha, pela execução do projeto descrito e pela prestação de contas aos apoiadores, conforme as regras de moderação da plataforma.
 
 4. PONTUAÇÃO E REPUTAÇÃO
-O perfil de pesquisador está sujeito ao sistema de pontuação (score) da plataforma, que reflete o histórico de campanhas, cumprimento de prazos e conduta. A pontuação pode influenciar a visibilidade de campanhas futuras.
+4.1. O perfil de pesquisador recebe uma pontuação (score) de 0 a 100, calculada automaticamente pela plataforma e exibida publicamente junto com uma faixa de reputação.
+4.2. A pontuação considera quatro dimensões: (a) o perfil acadêmico declarado (links acadêmicos, vínculo institucional e título); (b) o histórico na plataforma (campanhas concluídas com sucesso e campanhas aprovadas pela moderação); (c) a regularidade das atualizações publicadas nas campanhas; e (d) a reputação na comunidade, que diminui com denúncias julgadas procedentes pela moderação, tanto contra o perfil quanto contra as campanhas do pesquisador.
+4.3. Denúncias pendentes, em análise ou julgadas improcedentes não afetam a pontuação. A campanha encerrada pelo próprio pesquisador antes do prazo, sem nenhuma contribuição confirmada, não entra no histórico.
+4.4. Os pesos de cada dimensão e as faixas de reputação são definidos pela administração da plataforma e podem ser ajustados. A pontuação é recalculada sempre que os dados do pesquisador ou esses pesos mudam.
+4.5. A pontuação não impede a criação de campanhas: uma pontuação baixa apenas sinaliza à moderação que a campanha merece uma revisão mais cuidadosa.
+4.6. O pesquisador pode pedir a revisão de uma pontuação que considere incorreta pelo canal de suporte da plataforma, conforme o artigo 20 da Lei 13.709/2018 (LGPD).
 
 5. DADOS PESSOAIS (LGPD)
 O CPF é armazenado de forma cifrada e nunca exibido publicamente em sua forma completa, conforme a Lei 13.709/2018 (LGPD). O vínculo institucional e o título acadêmico são exibidos publicamente no perfil, por serem informações de natureza profissional/acadêmica relevantes para os apoiadores.
 
 6. ALTERAÇÕES DESTE TERMO
-Este termo pode ser atualizado periodicamente; a versão vigente no momento da solicitação do upgrade é a que se aplica.', TRUE, '2026-09-13 00:00:00');
+Este termo pode ser atualizado periodicamente; a versão vigente no momento da solicitação do upgrade é a que se aplica.', TRUE, '2026-10-03 00:00:00');
 
 
 -- [07-C-5] configuracoes: por que este bloco vem depois de usuario (ver DOCUMENTACAO_BD.md)
@@ -645,12 +653,10 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, pub
 
 -- [07-I-2] configuracoes: constantes do motor de score (ver DOCUMENTACAO_BD.md)
 -- Continua o grupo "I" de [07-C-5] (que termina em score_minimo_campanha, logo acima); id_config sai em
--- sequência, sem interrupção de domínio. Os custos por denúncia (volume_denuncias/gravidade_denuncias) não
--- estão aqui: vivem em score_config (ver [07-I-1]), a tabela que o Painel Admin edita e que tem trigger de
--- recálculo; chave aqui sem nenhuma função lendo seria uma constante seedada que não move nada.
+-- sequência, sem interrupção de domínio. Os pesos não estão aqui: vivem em score_config (ver [07-I-1]), a tabela
+-- que a tela do score edita e que tem trigger de recálculo.
 INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, publica) VALUES
-(NULL, 'score_penalidade_abandono',         '3',  'decimal', 'Pontos descontados por campanha não atingida e nunca encerrada formalmente (sem solicitação de encerramento)', TRUE, FALSE),
-(NULL, 'score_penalidade_sem_justificativa','2',  'decimal', 'Pontos descontados por campanha não atingida cuja solicitação de encerramento não tem justificativa', TRUE, FALSE),
+(NULL, 'score_denuncias_para_zerar',        '3',  'inteiro', 'Nº de denúncias procedentes que zeram uma parte da reputação (contra o perfil ou contra as campanhas)', TRUE, FALSE),
 (NULL, 'score_frequencia_esperada_mensal',  '1',  'decimal', 'Nº de atualizações de campanha esperadas por mês de duração, usado na dimensão Atualização da Campanha', TRUE, FALSE)
 ON CONFLICT (chave) DO NOTHING;
 
@@ -934,10 +940,31 @@ Fica eleito o foro da comarca do domicílio do usuário para dirimir eventuais c
 ON CONFLICT (tipo, versao) DO NOTHING;
 
 -- Termo de quem vira pesquisador. v1 é [PLACEHOLDER] como a v1/v2 do termo da conta: é a que valia quando os
--- pesquisadores do seed fizeram o upgrade (2024), por isso é ela que aparece nos aceites deles. v2 é o rascunho
--- REALISTA vigente, NÃO é texto jurídico validado.
+-- pesquisadores do seed fizeram o upgrade (2024), por isso é ela que aparece nos aceites deles. v2 foi o primeiro
+-- rascunho REALISTA (substituído pela v3, na parte de referência); nenhum dos dois é texto jurídico validado.
 INSERT INTO termos_de_uso (tipo, versao, conteudo, ativo, criado_em) VALUES
 ('upgrade_pesquisador', 'v1-2024-01-01', '[PLACEHOLDER] Texto do Termo de Upgrade de Perfil de Pesquisador - versão 1. Conteúdo jurídico definitivo entra aqui quando a equipe/jurídico validar.', FALSE, '2024-01-01 00:00:00');
+
+INSERT INTO termos_de_uso (tipo, versao, conteudo, ativo, criado_em) VALUES
+('upgrade_pesquisador', 'v2-2026-09-13', 'TERMOS DE UPGRADE DE PERFIL DE PESQUISADOR - CROWDACADÊMICO
+
+1. OBJETO
+Este termo é exibido no momento em que um usuário comum solicita o upgrade de sua conta para perfil de pesquisador, complementando os Termos de Uso gerais aceitos no cadastro.
+
+2. RESPONSABILIDADE PELAS INFORMAÇÕES DECLARADAS
+Ao solicitar o upgrade, o usuário declara que o CPF, o vínculo institucional (quando aplicável) e o título acadêmico informados são verdadeiros. Informações falsas podem levar à suspensão do perfil de pesquisador e das campanhas vinculadas a ele.
+
+3. RESPONSABILIDADES DO PERFIL DE PESQUISADOR
+O perfil de pesquisador autoriza submeter e gerenciar campanhas de financiamento coletivo. O pesquisador é responsável pela veracidade das informações de cada campanha, pela execução do projeto descrito e pela prestação de contas aos apoiadores, conforme as regras de moderação da plataforma.
+
+4. PONTUAÇÃO E REPUTAÇÃO
+O perfil de pesquisador está sujeito ao sistema de pontuação (score) da plataforma, que reflete o histórico de campanhas, cumprimento de prazos e conduta. A pontuação pode influenciar a visibilidade de campanhas futuras.
+
+5. DADOS PESSOAIS (LGPD)
+O CPF é armazenado de forma cifrada e nunca exibido publicamente em sua forma completa, conforme a Lei 13.709/2018 (LGPD). O vínculo institucional e o título acadêmico são exibidos publicamente no perfil, por serem informações de natureza profissional/acadêmica relevantes para os apoiadores.
+
+6. ALTERAÇÕES DESTE TERMO
+Este termo pode ser atualizado periodicamente; a versão vigente no momento da solicitação do upgrade é a que se aplica.', FALSE, '2026-09-13 00:00:00');
 
 -- Cada usuário aceitou, no próprio cadastro (aceito_em = pouco depois de usuario.criado_em), a versão do termo
 -- da conta vigente naquele momento.
@@ -1004,6 +1031,15 @@ SELECT
     '187.10.20.30'
 FROM perfil_pesquisador pp;
 
+-- RF-015 vale também para o termo de pesquisador: quando a versão vigente entrou, cada pesquisador aceitou de novo
+-- no acesso seguinte, menos o Vinícius (22), que fica com o aceite PENDENTE de propósito para demonstrar a tela.
+INSERT INTO usuario_termo (id_usuario, id_termo, aceito_em, ip_aceite)
+SELECT pp.id_usuario, t.id_termo, LEAST(t.criado_em + INTERVAL '1 day', NOW()), '187.10.20.30'
+FROM perfil_pesquisador pp
+JOIN termos_de_uso t ON t.tipo = 'upgrade_pesquisador' AND t.ativo
+WHERE pp.id_usuario <> 22
+ON CONFLICT (id_usuario, id_termo) DO NOTHING;
+
 -- [07-D-8] verificacao_email: toda conta confirmou o e-mail logo depois do cadastro, pelo mesmo caminho do
 -- sistema (um token em verificacao_email, depois email_verificado = TRUE). Exceção de propósito: as 5 contas
 -- comuns zeradas (24 a 28) seguem com o e-mail não verificado, para testar esse estado. O token é só um hash
@@ -1065,7 +1101,7 @@ INSERT INTO campanha (id_usuario, id_admin, id_area_conhecimento, titulo, modelo
 (15, 1, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '4.06.00.00'), 'Estudo Epidemiológico do Impacto da Dengue na Baixada Fluminense 2024',          'all-or-nothing', 25000.00, 5.00, 'Levantamento epidemiológico detalhado dos casos de dengue em municípios da Baixada Fluminense durante o surto de 2024.',                                 '2024-03-10', '2024-04-24', 'nao_atingido',        '2024-03-10', '2024-03-01 14:00:00', NULL),
 (16, 1, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '6.06.00.00'), 'Mapeamento Socioeconômico de Comunidades Quilombolas de Santa Catarina',         'flexivel',       22000.00, 5.00, 'Pesquisa quantitativa e qualitativa sobre indicadores socioeconômicos, acesso a direitos e identidade cultural em quilombos catarinenses.',              '2024-04-01', '2024-06-01', 'sucesso',             '2024-04-01', '2024-03-20 08:00:00', NULL),
 (17, NULL, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '7.02.00.00'), 'Análise Discursiva das Fake News sobre Vacinas no Twitter (2022–2024)',       'all-or-nothing', 15000.00, 5.00, 'Estudo linguístico-computacional sobre estratégias discursivas de desinformação vacinal em redes sociais brasileiras.',                                  NULL,          NULL,         'rascunho',             NULL,        NOW(),                 NULL),
-(18, 1, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '4.01.00.00'), 'Eficácia de Probióticos na Redução de Infecções Hospitalares em UTI Neonatal',  'all-or-nothing', 45000.00, 5.00, 'Ensaio clínico randomizado avaliando o uso de probióticos na microbiota intestinal de neonatos para prevenção de sepse hospitalar.',                    '2024-05-01', '2024-07-30', 'encerrado',           '2024-05-01', '2024-04-15 10:00:00', '2024-08-06 11:00:00'),
+(18, 1, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '4.01.00.00'), 'Eficácia de Probióticos na Redução de Infecções Hospitalares em UTI Neonatal',  'all-or-nothing', 45000.00, 5.00, 'Ensaio clínico randomizado avaliando o uso de probióticos na microbiota intestinal de neonatos para prevenção de sepse hospitalar.',                    '2024-05-01', '2024-07-30', 'encerrado',           '2024-05-01', '2024-04-15 10:00:00', '2024-07-21 11:00:00'),
 -- 3 campanhas novas (ids 8, 9, 10 nesta ordem de inserção), uma para cada pesquisador novo que precisa de
 -- histórico real: ver o comentário completo depois do bloco de denuncia sobre por que cada uma dá o resultado de
 -- score esperado.
@@ -1076,7 +1112,11 @@ INSERT INTO campanha (id_usuario, id_admin, id_area_conhecimento, titulo, modelo
 -- entra pelo login rápido de desenvolvimento e vê a campanha em Minhas Campanhas; os outros pesquisadores comentam
 -- pela Bancada da Campanha (ids acima de 10 não são da demonstração protegida). Datas relativas: ativa por 40 dias
 -- depois de o banco ser montado.
-(7, 1, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '6.07.00.00'), 'Campanha de Teste: Comentários e Endosso',                           'flexivel',       10000.00, public.config_numero('taxa_plataforma_padrao', 5.00), 'Campanha ativa para testar comentários, endosso e atualizações. Comente em nome de um pesquisador na Bancada da Campanha; endosse entrando como Pesquisador Sistema, em Minhas Campanhas.', NOW() - INTERVAL '5 days', NOW() + INTERVAL '40 days', 'ativo', NOW() - INTERVAL '5 days', NOW() - INTERVAL '7 days', NULL);
+(7, 1, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '6.07.00.00'), 'Campanha de Teste: Comentários e Endosso',                           'flexivel',       10000.00, public.config_numero('taxa_plataforma_padrao', 5.00), 'Campanha ativa para testar comentários, endosso e atualizações. Comente em nome de um pesquisador na Bancada da Campanha; endosse entrando como Pesquisador Sistema, em Minhas Campanhas.', NOW() - INTERVAL '5 days', NOW() + INTERVAL '40 days', 'ativo', NOW() - INTERVAL '5 days', NOW() - INTERVAL '7 days', NULL),
+-- Campanha 12: a do Vinícius (22), encerrada por moderação depois de 3 denúncias procedentes (dados inventados). É o
+-- que o leva à faixa "Atenção": sem ela, a parte "campanhas" da reputação ficaria inteira (ver o resumo depois das
+-- denúncias).
+(22, 1, (SELECT id_area_conhecimento FROM area_conhecimento WHERE codigo_cnpq = '7.08.00.00'), 'Avaliação de Programa de Reforço Escolar em Escolas Públicas de Fortaleza', 'flexivel', 18000.00, 5.00, 'Avaliação do impacto de um programa de reforço escolar em matemática nas escolas municipais de Fortaleza.', '2024-07-01 00:00:00', '2024-08-15 23:59:59', 'encerrado_moderacao', '2024-06-28 10:00:00', '2024-06-20 09:00:00', '2024-07-20 15:00:00');
 
 ALTER TABLE campanha ENABLE TRIGGER trg_campanha_valida_prazo_negocio;
 
@@ -1255,14 +1295,20 @@ INSERT INTO repasse (id_campanha, valor_bruto, valor_liquido, meta_atingida, rep
 ALTER TABLE repasse ENABLE TRIGGER trg_valida_repasse;
 
 -- [07-E-5] solicitacao_encerramento
-INSERT INTO solicitacao_encerramento (id_campanha, id_admin, justificativa_pesquisador, status, solicitado_em, avaliado_em) VALUES
-(7, 1,   'Todos os objetivos do ensaio clínico foram atingidos e resultados publicados. Solicito encerramento formal.', 'aprovado',  '2024-08-05 09:00:00', '2024-08-06 11:00:00'),
-(1, 1,   'Artigo publicado e resultados divulgados à comunidade. Encerrando ciclo da campanha.',                         'aprovado',  '2024-04-12 10:00:00', '2024-04-13 09:00:00'),
-(3, 1,   'Análises laboratoriais concluídas e relatório final entregue. Solicito encerramento.',                         'aprovado',  '2024-06-15 14:00:00', '2024-06-16 10:00:00'),
-(4, 1,   'Meta financeira não atingida. Solicitando encerramento e devolução de valores aos apoiadores.',                'aprovado',  '2024-04-25 00:00:00', '2024-04-25 08:00:00'),
-(5, 1,   'Relatório de pesquisa entregue à UFSC e comunidades. Encerrando formalmente a campanha.',                     'aprovado',  '2024-06-12 11:00:00', '2024-06-13 09:00:00'),
-(2, 1,   'Distribuição das próteses concluída. Solicito encerramento e repasse dos valores arrecadados.',               'aprovado',  '2024-05-12 08:00:00', '2024-05-13 10:00:00'),
-(6, NULL,'Desejo encerrar a campanha antes da aprovação por motivos pessoais de agenda.',                                'cancelado', '2025-04-15 12:00:00', NULL);
+-- Um caso de cada situação, todos pedidos com a campanha ainda ativa (RF-064): aprovado (a campanha 7 ficou
+-- 'encerrado', com encerrado_em igual ao avaliado_em), rejeitado com o porquê do admin, cancelado pelo próprio
+-- pesquisador, e um pendente na campanha 10 (ativa, com contribuição confirmada) para o administrador decidir.
+-- trg_solicitacao_valida_criacao (05) só aceita pedido de campanha ativa; os históricos são de quando ela estava
+-- ativa, então a trigger fica desligada só durante esta carga.
+ALTER TABLE solicitacao_encerramento DISABLE TRIGGER trg_solicitacao_valida_criacao;
+
+INSERT INTO solicitacao_encerramento (id_campanha, id_admin, justificativa_pesquisador, justificativa_admin, status, solicitado_em, avaliado_em) VALUES
+(7, 1,    'Os objetivos do ensaio clínico foram atingidos antes do prazo e os resultados já foram submetidos para publicação. Solicito o encerramento antecipado.', NULL, 'aprovado', '2024-07-20 09:00:00', '2024-07-21 11:00:00'),
+(4, 1,    'A coleta de dados ficou inviável com o fim do surto. Solicito encerrar antes do prazo.', 'O surto ainda está em andamento na região; a coleta continua viável até o fim do prazo.', 'rejeitado', '2024-04-05 10:00:00', '2024-04-06 09:00:00'),
+(2, NULL, 'Pensei em encerrar antes do prazo para começar a fabricação, mas vou esperar a campanha terminar.', NULL, 'cancelado', '2024-03-25 15:00:00', NULL),
+(10, NULL, 'A equipe de campo foi reduzida e não conseguiremos cobrir todos os pontos de coleta. Solicito encerrar antes do prazo.', NULL, 'pendente', NOW() - INTERVAL '1 day', NULL);
+
+ALTER TABLE solicitacao_encerramento ENABLE TRIGGER trg_solicitacao_valida_criacao;
 
 -- [07-E-6] historico_rejeicao
 -- id_usuario_dono e titulo_campanha são o snapshot gravado na rejeição (ver 01):
@@ -1347,16 +1393,20 @@ FROM (VALUES
     (18, NULL, 17,        'Usurpação de identidade de pesquisador real',  NULL, 'pendente', NULL, '2025-04-13 15:00:00'),
     (12, 6,    NULL,      'Campanha fora do escopo acadêmico',            NULL, 'pendente', NULL, '2025-04-14 10:00:00'),
     -- Denúncias que alimentam de propósito a dimensão Reputação da Comunidade (calcular_score_reputacao, 05): só
-    -- 'resolvida' contra o perfil custa pontos (1+3=4). Eduardo (21): 1 procedente (25 -> 21) e 1 pendente, que não
-    -- custa nada; é o que o deixa em "Em Construção" (25-49).
+    -- 'resolvida' custa pontos. Eduardo (21): 1 procedente contra o perfil (a parte "perfil", 10, cai para 6,67) e 1
+    -- pendente, que não custa nada.
     (13, NULL, 21, 'Perfil com dados acadêmicos falsos',          NULL, 'resolvida', 'O título informado não foi confirmado pela instituição.', '2024-06-10 09:00:00'),
     (23, NULL, 21, 'Comportamento abusivo ou ofensivo',           NULL, 'pendente',  NULL, '2024-06-12 10:00:00'),
     -- Vinícius (22): 4 denúncias 'resolvida' (procedentes) de 4 denunciantes diferentes (a UNIQUE é por par
-    -- usuário/alvo); cada uma custa 1+3=4 pontos (25 -> 9), o que o leva à faixa "Atenção" (0-24).
+    -- usuário/alvo): zeram a parte "perfil" da reputação.
     (12, NULL, 22, 'Perfil com dados acadêmicos falsos',          NULL, 'resolvida', 'O vínculo informado não existe; confirmado com a universidade.', '2024-06-01 09:00:00'),
     (15, NULL, 22, 'Comportamento abusivo ou ofensivo',           NULL, 'resolvida', 'Mensagens ofensivas confirmadas.', '2024-06-02 10:00:00'),
     (9,  NULL, 22, 'Usurpação de identidade de pesquisador real', NULL, 'resolvida', 'Usava fotos e publicações de outro pesquisador.', '2024-06-03 11:00:00'),
-    (11, NULL, 22, 'Perfil com dados acadêmicos falsos',          NULL, 'resolvida', 'Título acadêmico não comprovado.', '2024-06-04 12:00:00')
+    (11, NULL, 22, 'Perfil com dados acadêmicos falsos',          NULL, 'resolvida', 'Título acadêmico não comprovado.', '2024-06-04 12:00:00'),
+    -- Campanha 12 (do Vinícius): 3 procedentes de 3 denunciantes; a última levou ao encerramento por moderação.
+    (13, 12, NULL, 'Campanha com informações falsas ou enganosas', NULL, 'resolvida', 'As escolas citadas não confirmaram nenhuma parceria.', '2024-07-10 09:00:00'),
+    (16, 12, NULL, 'Campanha sem viabilidade metodológica',        NULL, 'resolvida', 'Não há autorização da secretaria de educação para a coleta.', '2024-07-12 10:00:00'),
+    (19, 12, NULL, 'Campanha com informações falsas ou enganosas', NULL, 'resolvida', 'Fraude confirmada; campanha encerrada por moderação.', '2024-07-20 14:00:00')
 ) AS v(id_usuario, id_campanha_alvo, id_pesquisador_alvo, motivo_descricao, relato, status, justificativa, criado_em)
 JOIN motivo_denuncia md ON md.descricao = v.motivo_descricao;
 
@@ -1371,6 +1421,18 @@ FROM (VALUES
 JOIN motivo_denuncia md ON md.descricao = v.motivo_descricao;
 
 ALTER TABLE denuncia ENABLE TRIGGER trg_denuncia_valida_alvo;
+
+-- Contestações (RF-033), uma de cada situação que a moderação lê: o Eduardo contesta a dele e espera a análise; o
+-- Vinícius contestou uma das dele, e a moderação recusou.
+UPDATE denuncia SET
+    contestacao = 'O título de mestre foi emitido pela UFBA em 2022; anexei o diploma ao perfil. Peço a revisão.',
+    contestacao_status = 'pendente', contestada_em = NOW() - INTERVAL '1 day'
+WHERE id_pesquisador_alvo = 21 AND status = 'resolvida';
+UPDATE denuncia SET
+    contestacao = 'O vínculo com a universidade existe; trabalho como pesquisador voluntário.',
+    contestacao_status = 'recusada', contestada_em = '2024-06-05 10:00:00',
+    justificativa_contestacao = 'A universidade confirmou por escrito que não há vínculo de nenhum tipo.'
+WHERE id_pesquisador_alvo = 22 AND id_usuario = 12;
 
 -- [07-D-7] notificacao
 -- 7 linhas em estados diferentes, para exercitar a permissão notificacao_processar e o índice
@@ -1394,20 +1456,22 @@ INSERT INTO notificacao (id_usuario, email_destinatario, tipo_evento, status, te
 --                    Perfil acad. Histórico Atualização Reputação  Total  Faixa
 -- Bruno    (19)          30          25          20         25     100  Referência (75-100)
 -- Renata   (20)          10          25           0         25      60  Confiável  (50-74)
--- Eduardo  (21)          10          10           5         21      46  Em Construção (25-49)
--- Vinícius (22)          10           0           0          9      19  Atenção    (0-24)
+-- Eduardo  (21)          10          10           5         22      47  Em Construção (25-49)
+-- Vinícius (22)          10          10           0          0      20  Atenção    (0-24)
 --
+-- Cada subitem vale a sua parte da dimensão (peso do subitem / soma dos subitens ativos, vezes o peso da dimensão).
 -- Perfil acadêmico: Bruno tem Lattes+ORCID+LinkedIn+instituição+título (8+8+4+5+5=30);
 --   os outros 3 só têm instituição+título (5+5=10, obrigatório desde que a coluna virou
 --   NOT NULL - não dá pra zerar essa dimensão de propósito).
 -- Histórico: Bruno e Renata têm campanha 'sucesso' e aprovada (15+10=25); Eduardo tem
---   campanha 'ativo' aprovada mas ainda não encerrada (só os 10 da aprovação); Vinícius
---   não tem nenhuma campanha (0).
+--   campanha 'ativo' aprovada mas ainda não encerrada (só os 10 da aprovação); Vinícius teve a
+--   campanha 12 aprovada (10) e encerrada por moderação, que não entra na conclusão (já pesa na reputação).
 -- Atualização: Bruno publicou 2 atualizações numa campanha curta = crédito cheio (20);
 --   Eduardo publicou 1 numa campanha mais longa = crédito parcial (5); Renata e Vinícius
---   não têm nenhuma atualização (0).
--- Reputação: Bruno e Renata não têm denúncia (25); Eduardo tem 1 procedente (25−4=21) e 1 pendente;
---   Vinícius tem 4 procedentes (25−4×4=9).
+--   não têm nenhuma atualização (0; a campanha encerrada por moderação não conta).
+-- Reputação: perfil (10) e campanhas (15), cada parte zera em 3 procedentes. Bruno e Renata não têm denúncia
+--   (25); Eduardo tem 1 procedente contra o perfil (6,67 + 15 = 22) e 1 pendente; Vinícius tem 4 contra o perfil e
+--   3 contra a campanha 12 (0 + 0).
 -- ----------------------------------------------------------------------------
 
 -- [07-D-5] Como logar no app depois deste seed (autenticação própria, ver DOCUMENTACAO_BD.md)

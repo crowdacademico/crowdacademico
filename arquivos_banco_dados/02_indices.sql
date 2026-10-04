@@ -89,6 +89,8 @@ CREATE INDEX idx_orcamento_campanha         ON orcamento_campanha(id_campanha);
 CREATE INDEX idx_marco_cronograma_campanha  ON marco_cronograma(id_campanha);
 CREATE INDEX idx_repasse_campanha           ON repasse(id_campanha);
 CREATE INDEX idx_sol_encerramento_campanha  ON solicitacao_encerramento(id_campanha);
+-- Um pedido de encerramento pendente por vez em cada campanha (RF-064).
+CREATE UNIQUE INDEX uq_solicitacao_encerramento_pendente ON solicitacao_encerramento(id_campanha) WHERE status = 'pendente';
 CREATE INDEX idx_historico_rejeicao_campanha ON historico_rejeicao(id_campanha);
 -- FK sem índice que o score consulta.
 CREATE INDEX idx_historico_rejeicao_dono    ON historico_rejeicao(id_usuario_dono);

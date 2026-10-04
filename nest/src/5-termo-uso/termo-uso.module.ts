@@ -7,6 +7,7 @@ import { TermoUsoControllerCreate } from './controllers/termo-uso.controller.cre
 import { TermoUsoControllerRemove } from './controllers/termo-uso.controller.remove';
 import { TermoUsoControllerFindAll } from './controllers/termo-uso.controller.findall';
 import { TermoUsoControllerAccept } from './controllers/termo-uso.controller.accept';
+import { TermoUsoControllerFindPending } from './controllers/termo-uso.controller.find-pending';
 import { TermoUsoServiceUpdate } from './service/termo-uso.service.update';
 import { TermoUsoServiceActivate } from './service/termo-uso.service.activate';
 import { TermoUsoServiceFindActive } from './service/termo-uso.service.find-active';
@@ -15,6 +16,7 @@ import { TermoUsoServiceCreate } from './service/termo-uso.service.create';
 import { TermoUsoServiceRemove } from './service/termo-uso.service.remove';
 import { TermoUsoServiceFindAll } from './service/termo-uso.service.findall';
 import { TermoUsoServiceAccept } from './service/termo-uso.service.accept';
+import { TermoUsoServiceFindPending } from './service/termo-uso.service.find-pending';
 
 // TermoUsoServiceFindActive exportado para 3-auth reaproveitar: POST /auth/cadastro precisa saber qual id_termo é o
 // ativo AGORA, resolvido pelo próprio servidor (nunca aceito de um valor vindo do cliente), para passar em
@@ -31,10 +33,11 @@ import { TermoUsoServiceAccept } from './service/termo-uso.service.accept';
 //
 // Excluir: só rascunho nunca vigente e nunca aceito por ninguém, ver TermoUsoServiceRemove.
 //
-// Aceitar: quem já tem conta aceita a versão vigente nova (RF-015), ver TermoUsoServiceAccept.
+// Aceitar: quem já tem conta aceita a versão vigente nova (RF-015), ver TermoUsoServiceAccept. Pendente: qual termo
+// a tela de aceite mostra (o da conta e, para pesquisador, o de pesquisador).
 @Module({
   controllers: [
-    // TermoUsoControllerFindActive ANTES de TermoUsoControllerFindOne de propósito
+    // TermoUsoControllerFindActive e TermoUsoControllerFindPending ANTES de TermoUsoControllerFindOne de propósito
     // - ver comentário em termo-uso.controller.findone.ts (os dois disputam
     // GET no mesmo prefixo, resolvido por ordem de registro). Ativar/Excluir
     // não disputam nada (métodos/profundidade de caminho diferentes de
@@ -42,6 +45,7 @@ import { TermoUsoServiceAccept } from './service/termo-uso.service.accept';
     TermoUsoControllerUpdate,
     TermoUsoControllerActivate,
     TermoUsoControllerFindActive,
+    TermoUsoControllerFindPending,
     TermoUsoControllerFindOne,
     TermoUsoControllerCreate,
     TermoUsoControllerRemove,
@@ -57,6 +61,7 @@ import { TermoUsoServiceAccept } from './service/termo-uso.service.accept';
     TermoUsoServiceRemove,
     TermoUsoServiceFindAll,
     TermoUsoServiceAccept,
+    TermoUsoServiceFindPending,
   ],
   exports: [TermoUsoServiceFindActive],
 })

@@ -938,7 +938,7 @@ Este é o único dado do sistema que é **cifrado** (não apenas hasheado). O ra
 
 Módulos pequenos, mas reais e em uso pelo painel administrativo.
 
-### `19-denuncia` (17 arquivos, 4 endpoints)
+### `19-denuncia` (26 arquivos, 7 endpoints)
 
 **Em palavras simples:** qualquer conta logada denuncia uma campanha ativa ou o perfil de um pesquisador; a moderação (admin e moderador, permissão `denuncia_responder`) lista, julga e, se a denúncia de campanha procede, encerra a campanha. As regras estão no banco; o Nest só monta as consultas.
 
@@ -951,6 +951,43 @@ Módulos pequenos, mas reais e em uso pelo painel administrativo.
 - **Decisão:** o encerramento por moderação não é uma rota de campanha solta: acontece a partir de uma denúncia de campanha, numa função do banco que resolve a denúncia e encerra a campanha na mesma transação.
 - **Motivo:** o RF-114 fala em encerrar "após averiguação" de uma denúncia; amarrar as duas coisas garante que todo encerramento por moderação tem uma denúncia procedente e uma justificativa por trás. A função é `SECURITY DEFINER` porque a regra de acesso de `campanha` não abre a campanha ao moderador.
 - **Caso-limite aceito:** as outras denúncias pendentes da mesma campanha continuam pendentes; a moderação decide cada uma. A devolução do dinheiro (RF-114) entra com o módulo de contribuição.
+
+#### Contestação do score (RF-033, 3 endpoints, 03-10-2026)
+
+**Em palavras simples:** o pesquisador pede revisão de uma denúncia procedente contra ele; a moderação aceita (a denúncia vira improcedente e a nota se recalcula) ou recusa. Tudo mora na própria denúncia ([05-K-2-J] do `DOCUMENTACAO_BD.md`).
+
+- **`GET /denuncia/contra-mim`** - `denuncias_contra_mim()`: as procedentes e as já contestadas do pesquisador logado, sem quem denunciou.
+- **`POST /denuncia/:id/contestar`** - `texto`; 204. O banco recusa quem não é o penalizado (92034), denúncia não procedente (91044), já contestada (91045) e uma segunda esperando análise (91046).
+- **`POST /denuncia/:id/decidir-contestacao`** - `aceitar` e `justificativa` (obrigatória); devolve a denúncia. `GET /denuncia` traz os campos da contestação para a tela de Denúncias.
+
+### `20-solicitacao-encerramento` (18 arquivos, 5 endpoints)
+
+**Em palavras simples:** o pesquisador encerra uma campanha ativa antes do prazo. Sem nenhuma contribuição confirmada, encerra sozinho; com contribuição, pede ao administrador, que aprova (a campanha é encerrada) ou rejeita com justificativa. Enquanto o pedido está pendente, o pesquisador pode cancelá-lo (RF-064 a RF-066).
+
+- **`POST /solicitacao-encerramento`** - o pedido (`idCampanha`, `justificativa`), sempre pendente. O banco recusa: quem não é dono (RLS), campanha que não está ativa (91038), sem justificativa (90028), segundo pedido pendente (23505).
+- **`POST /solicitacao-encerramento/encerrar-direto`** - `encerrar_campanha_sem_contribuicao()` (03): só o dono (92031), sem contribuição confirmada (91040) e sem Pix pendente válido (91043). Grava o encerramento como pedido aprovado sem admin, cancela um pedido pendente que houver e encerra a campanha.
+- **`GET /solicitacao-encerramento`** - filtros `status` e `idCampanha`. Traz o que o RF-065 pede: título, modelo e arrecadado da campanha, quem pediu, quantas contribuições confirmadas, a justificativa, e quem decidiu. Quem decide vê todos; o dono, os das próprias campanhas.
+- **`POST /solicitacao-encerramento/:id/cancelar`** - o dono desiste enquanto está pendente (92002 fora disso).
+- **`POST /solicitacao-encerramento/:id/decidir`** - `decidir_solicitacao_encerramento()` (03): `aprovar` e, para rejeitar, `justificativa` obrigatória (90029). Só pedido pendente (91041); aprovar exige campanha ainda ativa (91042) e encerra a campanha. Grava quem decidiu e quando.
+
+📌 **Decisão: aprovar, rejeitar e encerrar direto são funções do banco (03-10-2026).**
+- **Decisão:** o app só cria o pedido (campanha e justificativa) e só muda o status para cancelar (GRANT por coluna); decidir e encerrar direto passam por funções `SECURITY DEFINER`, que gravam quem decidiu e quando e encerram a campanha na mesma operação. Uma mudança direta de status para aprovado ou rejeitado é recusada (92033).
+- **Motivo:** o pedido aprovado e a campanha encerrada são uma coisa só; feitos em passos separados, um podia acontecer sem o outro. E o dono não pode gravar um pedido já "aprovado" para fugir do administrador.
+- **Caso-limite aceito:** a devolução (Tudo ou Nada) ou o repasse (Flexível) do dinheiro na aprovação entram com o módulo de contribuição; os e-mails, com o `4-mail`.
+
+### `11-configuracoes`: a tela do score (3 endpoints, 03-10-2026)
+
+**Em palavras simples:** a tela Pontuação (Score) lê os pesos e as faixas e salva tudo de uma vez. O cálculo continua inteiro no banco ([05-K-2-I] do `DOCUMENTACAO_BD.md`); o Nest só lê e grava.
+
+- **`GET /score-config`** - as dimensões (com os itens de cada uma) e as faixas ativas, em ordem.
+- **`PATCH /score-config/pesos`** - `itens: [{ idScoreConfig, peso, ativo }]`, todos num `UPDATE ... FROM (VALUES ...)` só, e `SET CONSTRAINTS ALL IMMEDIATE` logo depois: a soma 100 (90017), o peso negativo (90030) e a dimensão sem item ativo (90031) voltam como 400 na própria requisição. Devolve a configuração nova.
+- **`PATCH /score-config/faixas`** - `faixas: [{ idRotulo, rotulo, descricao, scoreMinimo, scoreMaximo }]`, do mesmo jeito: buraco (90018) e sobreposição (23P01, vira 400 com mensagem própria) são conferidos no estado final.
+- Sem a permissão `score_editar`, a RLS não deixa alterar nenhuma linha: o serviço responde 403. Id repetido no corpo: 400; id que não existe: 404.
+
+📌 **Decisão: um comando só para todos os pesos (03-10-2026).**
+- **Decisão:** a tela manda todos os pesos (ou todas as faixas) juntos, e o serviço grava num único `UPDATE`.
+- **Motivo:** a trigger de recálculo roda uma vez por comando; item por item, salvar 13 pesos recalcularia todos os pesquisadores 13 vezes. E as regras de soma só fazem sentido no estado final.
+- **Caso-limite aceito:** a requisição do administrador espera o recálculo de todos os pesquisadores terminar.
 
 ### `27-log-auditoria` (9 arquivos, 2 endpoints)
 
@@ -982,7 +1019,8 @@ Versões dos termos de uso, de 2 tipos: `cadastro` (o termo da conta, que cobre 
 - **`PATCH /termos-uso/:id/ativar`** torna a versão a vigente do seu tipo e, na mesma transação, desativa a vigente anterior do mesmo tipo (idempotente se o alvo já é a vigente). Serve tanto para promover um rascunho quanto para voltar a uma versão antiga.
 - **`PATCH /termos-uso/:id` (Alterar)** só edita `conteudo`, e só enquanto **ninguém aceitou** aquela versão; depois do primeiro aceite a versão fica somente leitura, para preservar o valor probatório do que foi aceito. Quem recusa é o banco (`trg_termos_de_uso_protege_aceito`, 409 `91033`). `versao` e `tipo` são imutáveis.
 - **`DELETE /termos-uso/:id`**: nunca apaga a versão vigente (sempre precisa existir uma por tipo) nem versão com aceite registrado (409 `91032`, RF-091). Não existe exclusão forçada.
-- **`POST /termos-uso/:id/aceitar`** (RF-015): quem já tem conta aceita a versão vigente nova do Termo de Uso. Só aceita o id da vigente de `cadastro` (outro id responde 409, a versão mudou enquanto a pessoa lia); aceitar de novo não é erro.
+- **`GET /termos-uso/pendente`** (RF-015, liberada com termo pendente): o termo que a tela de aceite mostra, decidido por `fn_termo_uso_pendente()`: o da conta primeiro e, para quem é pesquisador, o de pesquisador (03-10-2026). 404 sem nada pendente.
+- **`POST /termos-uso/:id/aceitar`** (RF-015): quem já tem conta aceita a versão vigente nova do Termo de Uso. **Desde 03-10-2026** aceita o id que está pendente para a conta (o da conta ou o de pesquisador); o texto abaixo descreve a versão anterior. Só aceita o id da vigente de `cadastro` (outro id responde 409, a versão mudou enquanto a pessoa lia); aceitar de novo não é erro.
 
 ---
 
@@ -1047,7 +1085,7 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 
 ## 13. Inventário de rotas HTTP
 
-127 handlers. `AUTH` = a rota exige login (o padrão, `AuthGuardRequireAuth` global); `pub` = a rota tem `@Publico()` (o que **não** significa "sem proteção": significa que quem protege é a RLS, e que anônimo é um caso legítimo).
+139 handlers. `AUTH` = a rota exige login (o padrão, `AuthGuardRequireAuth` global); `pub` = a rota tem `@Publico()` (o que **não** significa "sem proteção": significa que quem protege é a RLS, e que anônimo é um caso legítimo).
 
 | | Método | Rota |
 |---|---|---|
@@ -1103,8 +1141,10 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | pub | GET | `/configuracoes` · `/configuracoes/:id` |
 | AUTH | POST | `/configuracoes` |
 | AUTH | PATCH · DELETE | `/configuracoes/:id` |
+| AUTH | GET | `/score-config` |
+| AUTH | PATCH | `/score-config/pesos` · `/score-config/faixas` |
 | pub | GET | `/termos-uso/ativo` |
-| AUTH | GET | `/termos-uso` · `/termos-uso/:id` |
+| AUTH | GET | `/termos-uso` · `/termos-uso/:id` · `/termos-uso/pendente` |
 | AUTH | POST | `/termos-uso` · `/termos-uso/:id/aceitar` |
 | AUTH | PATCH | `/termos-uso/:id` · `/termos-uso/:id/ativar` |
 | AUTH | DELETE | `/termos-uso/:id` |
@@ -1133,6 +1173,10 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | AUTH | GET · POST | `/denuncia` |
 | AUTH | PATCH | `/denuncia/:id` |
 | AUTH | POST | `/denuncia/:id/encerrar-campanha` |
+| AUTH | GET | `/denuncia/contra-mim` |
+| AUTH | POST | `/denuncia/:id/contestar` · `/denuncia/:id/decidir-contestacao` |
+| AUTH | GET · POST | `/solicitacao-encerramento` |
+| AUTH | POST | `/solicitacao-encerramento/encerrar-direto` · `/solicitacao-encerramento/:id/cancelar` · `/solicitacao-encerramento/:id/decidir` |
 | **Arquivo** | | |
 | AUTH | POST | `/arquivo/upload/iniciar` · `/arquivo/upload/confirmar` |
 | pub | GET | `/arquivo/:id` · `/arquivo/avatar/:idUsuario` |
@@ -1149,13 +1193,12 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 
 ## 14. O que ainda não existe (pastas vazias)
 
-Conferido em 21-09-2026 (`19-denuncia` saiu em 03-10-2026): as 7 pastas abaixo contêm **exatamente um arquivo `.gitkeep`** e **zero `.ts`**. (`21-historico-rejeicao` saiu da lista: ganhou código em 14-09-2026.)
+Conferido em 21-09-2026 (`19-denuncia` e `20-solicitacao-encerramento` saíram em 03-10-2026): as 6 pastas abaixo contêm **exatamente um arquivo `.gitkeep`** e **zero `.ts`**. (`21-historico-rejeicao` saiu da lista: ganhou código em 14-09-2026.)
 
 | Pasta | Grupo em `PROXIMOS_MODULOS.md` |
 |---|---|
 | `4-mail` | Comunicação |
 | `18-recompensa` | Engajamento |
-| `20-solicitacao-encerramento` | Moderação |
 | `22-contribuicao` | Pagamento |
 | `23-repasse` | Pagamento |
 | `24-auditoria-financeira` | Pagamento |

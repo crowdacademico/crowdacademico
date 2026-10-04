@@ -74,13 +74,8 @@ export const GRUPOS_MENU_ADMIN: GrupoMenuAdmin[] = [
   },
   {
     titulo: 'MODERAÇÃO',
-    // Itens com tela vêm de `itensDoGrupo('MODERACAO')` (Aprovar Campanhas e Denúncias); os demais são placeholders
-    // desabilitados até ganharem tela.
-    itens: [
-      ...itensDoGrupo('MODERACAO'),
-      { rotulo: 'Solicitações', desabilitado: true },
-      { rotulo: 'Enc. Antecipados', desabilitado: true },
-    ],
+    // Aprovar Campanhas, Denúncias e Encerramentos (os pedidos de encerramento antecipado).
+    itens: itensDoGrupo('MODERACAO'),
   },
   // ESTE BLOCO EXISTE SOLENEMENTE PARA O CAMPO DE TESTES. NÃO ESTÁ NOS REQUISITOS FUNCIONAIS E NEM ESTARÁ.
   //

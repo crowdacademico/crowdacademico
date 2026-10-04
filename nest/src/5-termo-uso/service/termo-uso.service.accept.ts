@@ -1,16 +1,17 @@
 import { ConflictException, Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../commons/database/database.service';
-import { TermoUsoServiceFindActive } from './termo-uso.service.find-active';
+import { TermoUsoServiceFindPending } from './termo-uso.service.find-pending';
 
-// RF-015: aceite da versão vigente do Termo de Uso por quem já tem conta. Só a versão vigente de 'cadastro':
-// aceitar uma versão velha ou um rascunho não prova nada. O `id` vem da tela para garantir que a pessoa aceita
-// exatamente o texto que leu; se a vigente mudou nesse meio tempo, 409 e a tela recarrega o texto novo.
-// pol_usuario_termo_insert (04) só deixa gravar o próprio aceite. Aceitar de novo não é erro (ON CONFLICT).
+// RF-015: aceite da versão vigente de um termo por quem já tem conta (o da conta ou, para pesquisador, o de
+// pesquisador). Só a versão que está pendente para esta conta: aceitar uma versão velha ou um rascunho não prova
+// nada. O `id` vem da tela para garantir que a pessoa aceita exatamente o texto que leu; se a vigente mudou nesse
+// meio tempo, 409 e a tela recarrega o texto novo. pol_usuario_termo_insert (04) só deixa gravar o próprio aceite.
+// Sem nada pendente, não é erro (aceitar de novo).
 @Injectable()
 export class TermoUsoServiceAccept {
   constructor(
     private readonly database: DatabaseService,
-    private readonly termoUsoServiceAtivo: TermoUsoServiceFindActive,
+    private readonly termoPendente: TermoUsoServiceFindPending,
   ) {}
 
   async executar(
@@ -18,10 +19,11 @@ export class TermoUsoServiceAccept {
     idUsuario: number,
     ip: string | undefined,
   ): Promise<void> {
-    const vigente = await this.termoUsoServiceAtivo.executar('cadastro');
-    if (vigente.idTermo !== idTermo) {
+    const pendente = await this.termoPendente.idPendente(idUsuario);
+    if (pendente === null) return;
+    if (pendente !== idTermo) {
       throw new ConflictException(
-        'Esta não é mais a versão vigente do Termo de Uso. Recarregue a página para ler a versão atual.',
+        'Esta não é mais a versão vigente do termo. Recarregue a página para ler a versão atual.',
       );
     }
 

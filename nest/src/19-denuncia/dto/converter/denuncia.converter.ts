@@ -34,6 +34,10 @@ export class DenunciaConverter {
       relato: linha.relato,
       status: linha.status,
       justificativaModeracao: linha.justificativa_moderacao,
+      contestacao: linha.contestacao,
+      contestacaoStatus: linha.contestacao_status,
+      contestadaEm: linha.contestada_em,
+      justificativaContestacao: linha.justificativa_contestacao,
       criadoEm: linha.criado_em,
     };
   }

@@ -18,11 +18,13 @@ import { ListarCampanhas } from '../../views/12-campanha/listar-campanhas';
 import { MinhasCampanhas } from '../../views/12-campanha/minhas-campanhas';
 import { AprovarCampanhas } from '../../views/12-campanha/aprovar-campanhas';
 import { ListarDenuncias } from '../../views/19-denuncia/listar-denuncias';
+import { ListarEncerramentos } from '../../views/20-solicitacao-encerramento/listar-encerramentos';
 import { BancadaPesquisador } from '../../views/campo-testes/bancada-pesquisador';
 import { BancadaCampanha } from '../../views/campo-testes/bancada-campanha';
 import { CampanhasSeguidas } from '../../views/campo-testes/campanhas-seguidas';
 import { GuiaEstilo } from '../../views/campo-testes/guia-estilo/1-guia-estilo';
 import { ListarTermosUso } from '../../views/5-termo-uso/listar-termos-uso';
+import { PontuacaoScore } from '../../views/11-configuracoes/pontuacao-score';
 
 // Fonte única de verdade para "quais páginas existem": App.tsx monta as <Route> daqui e breadcrumb.tsx monta
 // o rótulo daqui. rotuloBreadcrumb: null = não aparece no breadcrumb.
@@ -136,6 +138,16 @@ export const ROTAS_ADMIN: Rota[] = [
     grupoMenu: 'CONFIGURACOES',
     icone: 'fa-sliders',
   },
+  // Pontuação (Score): pesos das dimensões e faixas de reputação (tabelas score_config e score_rotulo).
+  {
+    caminho: '/admin/pontuacao',
+    caminhoRelativo: 'pontuacao',
+    elemento: PontuacaoScore,
+    rotuloMenu: 'Pontuação (Score)',
+    rotuloBreadcrumb: 'Pontuação (Score)',
+    grupoMenu: 'CONFIGURACOES',
+    icone: 'fa-star-half-stroke',
+  },
 
   {
     caminho: '/admin/areas-conhecimento',
@@ -201,6 +213,15 @@ export const ROTAS_ADMIN: Rota[] = [
     rotuloBreadcrumb: 'Denúncias',
     grupoMenu: 'MODERACAO',
     icone: 'fa-flag',
+  },
+  {
+    caminho: '/admin/encerramentos',
+    caminhoRelativo: 'encerramentos',
+    elemento: ListarEncerramentos,
+    rotuloMenu: 'Encerramentos',
+    rotuloBreadcrumb: 'Encerramentos',
+    grupoMenu: 'MODERACAO',
+    icone: 'fa-flag-checkered',
   },
 
   // Minha Conta: dentro do painel (sidebar visível), mas sem rotuloMenu/grupoMenu: não é uma aba clicável

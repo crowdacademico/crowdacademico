@@ -1,5 +1,6 @@
 import type {
   StatusCampanha,
+  StatusContestacao,
   StatusDenuncia,
   TipoMotivoDenuncia,
 } from '../../../commons/database/db.types';
@@ -20,5 +21,10 @@ export class DenunciaResponse {
   relato: string | null;
   status: StatusDenuncia;
   justificativaModeracao: string | null;
+  // Contestação do pesquisador penalizado (RF-033), quando houver.
+  contestacao: string | null;
+  contestacaoStatus: StatusContestacao | null;
+  contestadaEm: Date | null;
+  justificativaContestacao: string | null;
   criadoEm: Date;
 }

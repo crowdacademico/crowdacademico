@@ -1,8 +1,7 @@
 import { useId, useState } from 'react';
 import { MensagemErro } from '../../components/crud/mensagem-erro';
-import { ModalFicha } from '../../components/crud/modal-ficha';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
-import { TelaCheia } from '../../components/crud/tela-cheia';
+import { ModalTermo } from '../../components/crud/modal-termo';
 import type { FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { Campo } from '../../components/input/campo';
@@ -44,8 +43,6 @@ export function CadastroPage({ auth }: PropsPagina) {
 
   const [erroEmailDuplicado, setErroEmailDuplicado] = useState(false);
   const [modalTermoAberto, setModalTermoAberto] = useState(false);
-  // Termo no modal padrão (largo), com "Tela cheia" ao lado do X.
-  const [termoTelaCheia, setTermoTelaCheia] = useState(false);
   const idErroTermos = useId();
   const [termo, setTermo] = useState<TermoUsoResponseActive | null>(null);
   const [carregandoTermo, setCarregandoTermo] = useState(false);
@@ -280,11 +277,11 @@ export function CadastroPage({ auth }: PropsPagina) {
       </div>
 
       {modalTermoAberto && (
-        <ModalFicha
+        <ModalTermo
           titulo="Termo de Uso"
-          subtitulo={termo ? `Versão ${termo.versao}` : undefined}
+          versao={termo?.versao}
+          conteudo={termo?.conteudo ?? null}
           carregando={carregandoTermo}
-          variasTelas
           aoFechar={() => setModalTermoAberto(false)}
           // Concordar marca a caixinha do aceite e fecha; Cancelar só fecha (igual ao X, ao Esc e ao clique fora).
           rodape={
@@ -301,24 +298,7 @@ export function CadastroPage({ auth }: PropsPagina) {
               />
             )
           }
-          acoesCabecalho={
-            termo && (
-              <button type="button" onClick={() => setTermoTelaCheia(true)} className="btn-pilula btn-pilula-rotulo">
-                <i className="fa-solid fa-expand" aria-hidden="true"></i> Tela cheia
-              </button>
-            )
-          }
-        >
-          <TelaCheia
-            ativa={termoTelaCheia}
-            titulo={`Termo de Uso - versão ${termo?.versao ?? ''}`}
-            aoSair={() => setTermoTelaCheia(false)}
-          >
-            <div className="flex-1 overflow-y-auto paragrafo texto-padrao whitespace-pre-line">
-              {termo?.conteudo ?? 'Não foi possível carregar o Termo de Uso.'}
-            </div>
-          </TelaCheia>
-        </ModalFicha>
+        />
       )}
     </div>
   );

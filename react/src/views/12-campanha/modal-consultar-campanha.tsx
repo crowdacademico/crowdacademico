@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { BadgeStatusCampanha } from '../../components/crud/badge-status-campanha';
 import { ROTULO_MODELO_CAMPANHA, STATUS_PUBLICADA } from '../../services/12-campanha/constants/status-campanha.constants';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
+import { FiltroPartes } from '../../components/crud/filtro-partes';
+import type { ParteTela } from '../../components/crud/filtro-partes';
 import { BarraProgresso } from '../../components/crud/barra-progresso';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
@@ -12,6 +14,7 @@ import { formatarData, formatarDataHora, formatarMoeda } from '../../services/co
 import { MensagemErro } from '../../components/crud/mensagem-erro';
 import { SecaoComentariosRecebidos } from './secao-comentarios-recebidos';
 import { SecaoDenunciasCampanha } from '../19-denuncia/secao-denuncias-campanha';
+import { SecaoPedidosEncerramento } from '../20-solicitacao-encerramento/secao-pedidos-encerramento';
 import { SecaoComentariosEndossados, SecaoComentariosTodos } from './secao-comentarios-campanha';
 import { SecaoAtualizacoesCampanha } from './secao-atualizacoes-campanha';
 import { PainelOrcamentoCronograma } from './painel-orcamento-cronograma';
@@ -37,6 +40,12 @@ export function ModalConsultarCampanha({ auth, idCampanha, comoDono = false, aoF
     [idCampanha],
   );
   const [historicoRejeicao, setHistoricoRejeicao] = useState<HistoricoRejeicaoResponse[]>([]);
+  // Filtro com cara de aba (o mesmo do Alterar Usuário): "Geral" mostra tudo; as outras partes ficam escondidas, não
+  // desmontadas, então a troca é instantânea. Moderação só aparece quando há denúncia ou pedido de encerramento.
+  const [parte, setParte] = useState<ParteConsultar>('geral');
+  const [denuncias, setDenuncias] = useState(0);
+  const [pedidos, setPedidos] = useState(0);
+  const ve = (alvo: ParteConsultar) => (parte === 'geral' || parte === alvo ? '' : ' hidden');
   // O histórico vem numa busca à parte: o modal só aparece quando ele chega, para não crescer depois de aberto.
   const [historicoCarregado, setHistoricoCarregado] = useState(false);
 
@@ -86,8 +95,22 @@ export function ModalConsultarCampanha({ auth, idCampanha, comoDono = false, aoF
       }
     >
       {campanha && (
+        <FiltroPartes
+          partes={[
+            { chave: 'geral', rotulo: 'Geral' },
+            { chave: 'dados', rotulo: 'Dados' },
+            { chave: 'orcamento', rotulo: 'Orçamento e cronograma' },
+            ...(STATUS_PUBLICADA.has(campanha.status) ? [{ chave: 'atualizacoes' as const, rotulo: 'Atualizações' }] : []),
+            ...(comoDono || campanha.aprovadoEm !== null ? [{ chave: 'comentarios' as const, rotulo: 'Comentários' }] : []),
+            ...(!comoDono && denuncias + pedidos > 0 ? [{ chave: 'moderacao' as const, rotulo: 'Moderação' }] : []),
+          ] satisfies ParteTela<ParteConsultar>[]}
+          atual={parte}
+          aoEscolher={setParte}
+        />
+      )}
+      {campanha && (
         <div className="grade-ficha">
-          <div className="lg:col-span-2 space-y-6">
+          <div className={'lg:col-span-2 space-y-6' + ve('dados')}>
             {campanha.precisaRevisaoScore && (
               <p className="legenda-destaque fundo-aviso texto-aviso rounded-lg p-3">
                 O pesquisador está abaixo do score mínimo para campanhas. É só um sinal para revisar esta campanha
@@ -125,7 +148,7 @@ export function ModalConsultarCampanha({ auth, idCampanha, comoDono = false, aoF
             )}
           </div>
 
-          <div className="space-y-6">
+          <div className={'space-y-6' + ve('dados')}>
             <SecaoFicha titulo="Financeiro">
               <CampoFicha rotulo="Meta" valor={formatarMoeda(campanha.metaFinanceira)} />
               {/* Arrecadado com a barra de quanto da meta já foi atingido (como no Kickstarter e no Catarse). */}
@@ -150,21 +173,21 @@ export function ModalConsultarCampanha({ auth, idCampanha, comoDono = false, aoF
           </div>
 
           {/* Orçamento e cronograma, só para ler: a consulta mostra a campanha inteira. */}
-          <div className="lg:col-span-3">
+          <div className={'lg:col-span-3' + ve('orcamento')}>
             <PainelOrcamentoCronograma auth={auth} idCampanha={campanha.idCampanha} podeEditar={false} />
           </div>
 
           {/* Atualizações publicadas, só para ler: o que a página pública mostra e o que quem segue recebe. Publicar e
               ocultar ficam no Alterar do dono. */}
           {STATUS_PUBLICADA.has(campanha.status) && (
-            <div className="lg:col-span-3">
+            <div className={'lg:col-span-3' + ve('atualizacoes')}>
               <SecaoAtualizacoesCampanha auth={auth} idCampanha={campanha.idCampanha} podePublicar={false} podeGerenciar={false} />
             </div>
           )}
 
           {comoDono ? (
             // O dono endossa, exclui e denuncia o autor (Minhas Campanhas).
-            <div className="lg:col-span-3">
+            <div className={'lg:col-span-3' + ve('comentarios')}>
               <SecaoComentariosRecebidos auth={auth} idCampanha={campanha.idCampanha} publicada={campanha.aprovadoEm !== null} />
             </div>
           ) : (
@@ -173,15 +196,18 @@ export function ModalConsultarCampanha({ auth, idCampanha, comoDono = false, aoF
             // módulos deles existirem.
             <>
               {campanha.aprovadoEm !== null && (
-                <div className="lg:col-span-3">
+                <div className={'lg:col-span-3' + ve('comentarios')}>
                   <SecaoComentariosEndossados authFetch={auth.authFetch} idCampanha={campanha.idCampanha} />
                 </div>
               )}
-              <div className="lg:col-span-3">
-                <SecaoDenunciasCampanha authFetch={auth.authFetch} idCampanha={campanha.idCampanha} />
+              <div className={'lg:col-span-3' + ve('moderacao')}>
+                <SecaoDenunciasCampanha authFetch={auth.authFetch} idCampanha={campanha.idCampanha} aoContar={setDenuncias} />
+              </div>
+              <div className={'lg:col-span-3' + ve('moderacao')}>
+                <SecaoPedidosEncerramento authFetch={auth.authFetch} idCampanha={campanha.idCampanha} aoContar={setPedidos} />
               </div>
               {campanha.aprovadoEm !== null && (
-                <div className="lg:col-span-3">
+                <div className={'lg:col-span-3' + ve('comentarios')}>
                   <SecaoComentariosTodos authFetch={auth.authFetch} idCampanha={campanha.idCampanha} />
                 </div>
               )}
@@ -192,3 +218,5 @@ export function ModalConsultarCampanha({ auth, idCampanha, comoDono = false, aoF
     </ModalFicha>
   );
 }
+
+type ParteConsultar = 'geral' | 'dados' | 'orcamento' | 'atualizacoes' | 'comentarios' | 'moderacao';

@@ -1,7 +1,13 @@
 import { tratarResposta } from '../../constant/api/http.util';
 import type { AuthFetch } from '../../3-auth/type/auth.type';
 import type { ResultadoPaginado } from '../../constant/type/paginacao.type';
-import type { DenunciaRequestCreate, DenunciaResponse, FiltroDenuncia, StatusDenuncia } from '../type/denuncia.type';
+import type {
+  DenunciaContraMimResponse,
+  DenunciaRequestCreate,
+  DenunciaResponse,
+  FiltroDenuncia,
+  StatusDenuncia,
+} from '../type/denuncia.type';
 
 // Espelha nest/src/19-denuncia. Quem vê e quem julga é decidido pelo banco (pol_denuncia_*, 04): a moderação
 // (denuncia_responder) vê todas e julga; as outras contas só veem as próprias. Encerrar a campanha por moderação
@@ -32,6 +38,15 @@ export const denunciaApi = {
     ),
   encerrarCampanha: (authFetch: AuthFetch, id: number, justificativa: string): Promise<DenunciaResponse> =>
     authFetch(`/denuncia/${id}/encerrar-campanha`, { method: 'POST', body: JSON.stringify({ justificativa }) }).then(
+      tratarResposta<DenunciaResponse>,
+    ),
+  // Contestação do score (RF-033): o pesquisador vê as procedentes contra ele e contesta; a moderação decide.
+  contraMim: (authFetch: AuthFetch): Promise<DenunciaContraMimResponse[]> =>
+    authFetch('/denuncia/contra-mim').then(tratarResposta<DenunciaContraMimResponse[]>),
+  contestar: (authFetch: AuthFetch, id: number, texto: string): Promise<void> =>
+    authFetch(`/denuncia/${id}/contestar`, { method: 'POST', body: JSON.stringify({ texto }) }).then(tratarResposta<void>),
+  decidirContestacao: (authFetch: AuthFetch, id: number, aceitar: boolean, justificativa: string): Promise<DenunciaResponse> =>
+    authFetch(`/denuncia/${id}/decidir-contestacao`, { method: 'POST', body: JSON.stringify({ aceitar, justificativa }) }).then(
       tratarResposta<DenunciaResponse>,
     ),
 };

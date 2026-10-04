@@ -43,7 +43,7 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 90014 | `fn_valida_contribuicao_valor_minimo` | `contribuicao` | Valor da contribuição abaixo do mínimo configurado |
 | 90015 | `fn_valida_completude_campanha` | `campanha` | Prazo da campanha já vencido no envio/aprovação (20-09-2026) - atualize as datas antes de enviar |
 | 90016 | `deslizar_datas_campanha` | `campanha` | Campanha sem data de início não pode ter as datas reagendadas (21-09-2026) |
-| 90017 | `fn_valida_soma_pesos_score_config` | `score_config` | Soma dos pesos raiz precisa ser exatamente 100 (23-09-2026) |
+| 90017 | `fn_valida_soma_pesos_score_config` | `score_config` | Soma dos pesos das dimensões ativas precisa ser exatamente 100 (23-09-2026; mensagem nova em 03-10-2026) |
 | 90018 | `fn_valida_cobertura_score_rotulo` | `score_rotulo` | Faixas ativas precisam cobrir 0-100 sem buraco nem sobreposição (23-09-2026) |
 | 90019 | `fn_valida_pares_min_max_configuracoes` | `configuracoes` | O mínimo de um par (prazo, orçamento, cronograma, tamanho de arquivo) não pode ser maior que o máximo (constraint trigger, roda no `COMMIT`). Leva `dados` no corpo: `chaveMinimo`, `valorMinimo`, `chaveMaximo`, `valorMaximo` |
 | 90020 | `suspender_usuario` / `suspender_pesquisador` | `usuario` / `perfil_pesquisador` | Motivo da suspensão é obrigatório (27-09-2026) |
@@ -54,6 +54,12 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 90025 | `trg_valida_escopo_tipolink` | `link_academico` / `link_atualizacao` / `link_recompensa` | O link não segue o formato (`regex`) do tipo (29-09-2026) |
 | 90026 | `fn_valida_denuncia_alvo` | `denuncia` | O perfil denunciado não é de um pesquisador (03-10-2026) |
 | 90027 | `encerrar_campanha_por_denuncia` | `denuncia`, `campanha` | Justificativa obrigatória para encerrar campanha por moderação (03-10-2026) |
+| 90028 | `fn_valida_solicitacao_encerramento`, `encerrar_campanha_sem_contribuicao` | `solicitacao_encerramento` | Justificativa obrigatória para encerrar a campanha antes do prazo (03-10-2026) |
+| 90029 | `decidir_solicitacao_encerramento` | `solicitacao_encerramento` | Justificativa obrigatória para rejeitar um pedido de encerramento (03-10-2026) |
+| 90030 | `fn_valida_soma_pesos_score_config` | `score_config` | Peso não pode ser negativo (03-10-2026) |
+| 90031 | `fn_valida_soma_pesos_score_config` | `score_config` | Dimensão ativa precisa de pelo menos um item ativo com peso maior que zero (03-10-2026) |
+| 90032 | `contestar_denuncia` | `denuncia` | Contestação sem texto (03-10-2026) |
+| 90033 | `decidir_contestacao` | `denuncia` | Decidir contestação sem justificativa (03-10-2026) |
 
 ## 91xxx - Conflito de estado/regra de negócio (409)
 
@@ -96,6 +102,16 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 91035 | `fn_valida_denuncia_alvo` | `denuncia` | Só é possível denunciar uma campanha ativa (RF-106, 03-10-2026) |
 | 91036 | `encerrar_campanha_por_denuncia` | `denuncia` | A denúncia não é contra uma campanha (03-10-2026) |
 | 91037 | `encerrar_campanha_por_denuncia` | `campanha` | Só campanha ativa pode ser encerrada por moderação (03-10-2026) |
+| 91038 | `fn_valida_solicitacao_encerramento`, `encerrar_campanha_sem_contribuicao` | `solicitacao_encerramento` | Só campanha ativa pode ser encerrada antecipadamente (RF-064, 03-10-2026) |
+| 91040 | `encerrar_campanha_sem_contribuicao` | `campanha` | Campanha com contribuição confirmada: precisa de pedido ao administrador (RF-064, 03-10-2026) |
+| 91041 | `fn_valida_transicao_solicitacao`, `decidir_solicitacao_encerramento` | `solicitacao_encerramento` | Só um pedido pendente muda de situação (03-10-2026) |
+| 91042 | `decidir_solicitacao_encerramento` | `campanha` | A campanha já não está ativa: o pedido não pode ser aprovado (03-10-2026) |
+| 91043 | `encerrar_campanha_sem_contribuicao` | `contribuicao` | Há Pix pendente ainda válido: espere ou envie pedido ao administrador (03-10-2026) |
+| 91044 | `contestar_denuncia` | `denuncia` | Só denúncia julgada procedente se contesta (03-10-2026) |
+| 91045 | `contestar_denuncia` | `denuncia` | Denúncia já contestada: uma contestação por denúncia (03-10-2026) |
+| 91046 | `contestar_denuncia` | `denuncia` | O pesquisador já tem uma contestação esperando análise (03-10-2026) |
+| 91047 | `decidir_contestacao` | `denuncia` | Só contestação esperando análise se decide (03-10-2026) |
+| 91048 | `fn_valida_contestacao_pendente` | `denuncia` | Com contestação esperando, a situação da denúncia só muda pela decisão dela (03-10-2026) |
 
 ## 92xxx - Autorização negada / conflito de interesse (403)
 
@@ -131,6 +147,11 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 92028 | `comentar_campanha_para_outro` | `comentario` | Sem permissão para comentar em nome de outro pesquisador (03-10-2026) |
 | 92029 | `fn_valida_denuncia_alvo` | `denuncia` | Não é possível denunciar a própria campanha nem o próprio perfil (03-10-2026) |
 | 92030 | `encerrar_campanha_por_denuncia` | `denuncia`, `campanha` | Sem permissão para julgar a denúncia e encerrar a campanha por moderação (03-10-2026) |
+| 92031 | `encerrar_campanha_sem_contribuicao` | `campanha` | Só o dono da campanha pode encerrá-la antecipadamente (03-10-2026) |
+| 92032 | `decidir_solicitacao_encerramento` | `solicitacao_encerramento` | Sem permissão para decidir pedidos de encerramento (03-10-2026) |
+| 92033 | `fn_valida_transicao_solicitacao` | `solicitacao_encerramento` | Aprovar ou rejeitar só pela decisão do administrador, nunca por mudança direta de status (03-10-2026) |
+| 92034 | `contestar_denuncia` | `denuncia` | Só o pesquisador penalizado pela denúncia a contesta (03-10-2026) |
+| 92035 | `decidir_contestacao` | `denuncia` | Sem permissão (`denuncia_responder`) para decidir contestação (03-10-2026) |
 
 ## 93xxx - Limite de taxa (429)
 

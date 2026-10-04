@@ -54,6 +54,9 @@ export const termoUsoApi = {
     authFetch(`/termos-uso/${id}`, { method: 'DELETE' }).then(tratarResposta<void>),
   // POST /termos-uso/:id/aceitar: RF-015, a própria conta aceita a versão vigente que estava pendente. Depois disso a
   // sessão precisa ser renovada para sair da tela de aceite (o crachá novo não tem mais a marca de pendência).
+  // GET /termos-uso/pendente: o termo que a tela de aceite mostra (o da conta e, para pesquisador, o de pesquisador).
+  buscarPendente: (authFetch: AuthFetch): Promise<TermoUsoResponseActive> =>
+    authFetch('/termos-uso/pendente').then(tratarResposta<TermoUsoResponseActive>),
   aceitar: (authFetch: AuthFetch, id: number): Promise<void> =>
     authFetch(`/termos-uso/${id}/aceitar`, { method: 'POST' }).then(tratarResposta<void>),
 };

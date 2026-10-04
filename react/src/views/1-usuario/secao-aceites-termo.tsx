@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
-import { TelaCheia } from '../../components/crud/tela-cheia';
+import { ModalTermo } from '../../components/crud/modal-termo';
+import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { Carregando } from '../../components/layout/carregando';
 import { termoUsoApi } from '../../services/5-termo-uso/api/termo-uso.api';
 import { ROTULO_TIPO_TERMO, TIPOS_TERMO } from '../../services/5-termo-uso/constants/termo-uso-tipos.constants';
@@ -20,7 +21,7 @@ interface SecaoAceitesTermoProps {
 // Aceites do Termo de Uso de uma pessoa (Consultar e Alterar Usuário): só o ÚLTIMO aceite de cada tipo, um embaixo
 // do outro, "Conta e contribuições" primeiro e o de pesquisador depois, se houver (decisão do Lucas: o histórico
 // inteiro não ajuda aqui). A lista vem do mais novo para o mais antigo, então o primeiro de cada tipo é o último
-// aceite. Clicar num aceite abre o texto daquela versão em tela cheia.
+// aceite. Clicar num aceite abre o texto daquela versão no modal de termo do Criar conta.
 export function SecaoAceitesTermo({ auth, termosAceitos, aoErro }: SecaoAceitesTermoProps) {
   const [termoLido, setTermoLido] = useState<TermoUsoResponse | null>(null);
   const lerTermo = (idTermo: number) => void termoUsoApi.buscar(auth.authFetch, idTermo).then(setTermoLido, aoErro);
@@ -52,15 +53,13 @@ export function SecaoAceitesTermo({ auth, termosAceitos, aoErro }: SecaoAceitesT
         )}
       </SecaoFicha>
       {termoLido && (
-        <TelaCheia
-          ativa
-          titulo={`${ROTULO_TIPO_TERMO[termoLido.tipo]} - versão ${termoLido.versao}`}
-          aoSair={() => setTermoLido(null)}
-        >
-          <pre className="paragrafo flex-1 overflow-y-auto whitespace-pre-wrap texto-padrao">
-            {termoLido.conteudo}
-          </pre>
-        </TelaCheia>
+        <ModalTermo
+          titulo={`Termo de Uso - ${ROTULO_TIPO_TERMO[termoLido.tipo]}`}
+          versao={termoLido.versao}
+          conteudo={termoLido.conteudo}
+          aoFechar={() => setTermoLido(null)}
+          rodape={<RodapeAcoes aoCancelar={() => setTermoLido(null)} rotuloCancelar="Fechar" />}
+        />
       )}
     </>
   );

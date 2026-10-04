@@ -121,6 +121,7 @@ CREATE TYPE fase_atualizacao      AS ENUM ('andamento', 'resultado_preliminar', 
 CREATE TYPE tipo_atualizacao      AS ENUM ('texto', 'imagem', 'pdf', 'linkexterno');
 CREATE TYPE status_denuncia       AS ENUM ('pendente', 'em_analise', 'resolvida', 'improcedente');
 CREATE TYPE status_encerramento   AS ENUM ('pendente', 'aprovado', 'rejeitado', 'cancelado');
+CREATE TYPE status_contestacao    AS ENUM ('pendente', 'aceita', 'recusada');
 CREATE TYPE tipo_motivo_denuncia  AS ENUM ('campanha', 'perfil');
 CREATE TYPE status_notificacao    AS ENUM ('pendente', 'enviado', 'falhou', 'cancelado');
 CREATE TYPE tipo_recompensa       AS ENUM ('digital', 'reconhecimento', 'acesso_antecipado');
@@ -682,6 +683,13 @@ CREATE TABLE denuncia (
     -- Por que a moderação decidiu (procedente ou improcedente). Quem decidiu e quando ficam no log de auditoria
     -- (trg_log_auditoria_denuncia_status, 05).
     justificativa_moderacao TEXT,
+    -- Contestação (RF-033): o pesquisador penalizado pede revisão de uma denúncia procedente, uma vez por denúncia.
+    -- Na própria linha porque é 1 para 1: cada denúncia tem no máximo uma contestação. Só pelas funções
+    -- contestar_denuncia e decidir_contestacao (03).
+    contestacao                TEXT,
+    contestacao_status         status_contestacao,
+    contestada_em              TIMESTAMPTZ,
+    justificativa_contestacao  TEXT,
     criado_em           TIMESTAMPTZ    NOT NULL DEFAULT NOW(),
 
     CONSTRAINT "PK_DENUNCIA" PRIMARY KEY (id_denuncia),
@@ -703,7 +711,15 @@ CREATE TABLE denuncia (
     -- impede megabytes de texto POR denúncia). Limite técnico largo aqui; limite de negócio configurável
     -- via trigger, ver [05-K-1].
     CONSTRAINT "CK_DENUNCIA_RELATO_TAMANHO" CHECK (relato IS NULL OR char_length(relato) <= 5000),
-    CONSTRAINT "CK_DENUNCIA_JUSTIFICATIVA_TAMANHO" CHECK (justificativa_moderacao IS NULL OR char_length(justificativa_moderacao) <= 5000)
+    CONSTRAINT "CK_DENUNCIA_JUSTIFICATIVA_TAMANHO" CHECK (justificativa_moderacao IS NULL OR char_length(justificativa_moderacao) <= 5000),
+    -- Contestação inteira ou nada; a justificativa existe exatamente quando já foi decidida.
+    CONSTRAINT "CK_DENUNCIA_CONTESTACAO_COERENTE" CHECK (
+        (contestacao IS NULL AND contestacao_status IS NULL AND contestada_em IS NULL AND justificativa_contestacao IS NULL)
+        OR (contestacao IS NOT NULL AND contestacao_status IS NOT NULL AND contestada_em IS NOT NULL
+            AND (contestacao_status = 'pendente') = (justificativa_contestacao IS NULL))
+    ),
+    CONSTRAINT "CK_DENUNCIA_CONTESTACAO_TAMANHO" CHECK (contestacao IS NULL OR char_length(contestacao) <= 5000),
+    CONSTRAINT "CK_DENUNCIA_JUST_CONTESTACAO_TAMANHO" CHECK (justificativa_contestacao IS NULL OR char_length(justificativa_contestacao) <= 5000)
 );
 
 CREATE TABLE recompensa (

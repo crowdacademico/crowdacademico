@@ -5,6 +5,7 @@ import { BadgeStatusDenuncia } from '../../components/crud/badge-status-denuncia
 import { denunciaApi } from '../../services/19-denuncia/api/denuncia.api';
 import {
   ORDEM_STATUS_DENUNCIA,
+  ROTULO_STATUS_CONTESTACAO,
   ROTULO_STATUS_DENUNCIA,
   ROTULO_TIPO_DENUNCIA,
 } from '../../services/19-denuncia/constants/status-denuncia.constants';
@@ -19,6 +20,7 @@ interface DenunciaLinha extends Omit<DenunciaResponse, 'status'> {
   tipo: string;
   alvo: string;
   denunciante: string;
+  contestacaoSituacao: string;
 }
 
 // Denúncias (moderação): campanhas e perfis denunciados, com motivo, quem denunciou, data e situação (RF-113,
@@ -39,6 +41,7 @@ export function ListarDenuncias({ auth }: PropsPagina) {
           ? `#${denuncia.idCampanhaAlvo} ${denuncia.tituloCampanha ?? ''}`
           : `#${denuncia.idPesquisadorAlvo} ${denuncia.nomePesquisadorAlvo ?? ''}`,
       denunciante: denuncia.nomeDenunciante ?? `#${denuncia.idUsuario}`,
+      contestacaoSituacao: denuncia.contestacaoStatus ? ROTULO_STATUS_CONTESTACAO[denuncia.contestacaoStatus] : '-',
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auth.authFetch, chaveRecarga]);
@@ -52,7 +55,7 @@ export function ListarDenuncias({ auth }: PropsPagina) {
     <div className="admin-content-painel">
       <GenericTable
         titulo="Denúncias"
-        ajuda="Campanhas e perfis de pesquisador denunciados. Consultar abre a denúncia para julgar; numa campanha ativa, a decisão pode encerrá-la por moderação."
+        ajuda="Campanhas e perfis de pesquisador denunciados. Consultar abre a denúncia para julgar; numa campanha ativa, a decisão pode encerrá-la por moderação. Uma contestação do pesquisador esperando análise é decidida no mesmo lugar."
         colunas={[
           { chave: 'idDenuncia', rotulo: 'id', tipo: 'id' },
           { chave: 'tipo', rotulo: 'tipo', tipo: 'status' },
@@ -66,14 +69,16 @@ export function ListarDenuncias({ auth }: PropsPagina) {
             tipo: 'status',
             renderizar: (linha: DenunciaLinha) => <BadgeStatusDenuncia status={linha.statusOriginal} />,
           },
+          { chave: 'contestacaoSituacao', rotulo: 'contestação', tipo: 'status' },
         ]}
         vazio={{ icone: 'fa-flag', titulo: 'Nenhuma denúncia registrada.', texto: 'Quando alguém denunciar uma campanha ou um perfil, a denúncia aparece aqui para julgar.' }}
         chavePrimaria="idDenuncia"
         listar={listar}
-        acoes={{ consultar: (linha) => setJulgando(linha as unknown as DenunciaResponse) }}
+        acoes={{ consultar: (linha) => setJulgando({ ...linha, status: linha.statusOriginal }) }}
         filtrosFacetados={[
           { chave: 'status', rotulo: 'Situação', ordem: ORDEM_STATUS_DENUNCIA.map((status) => ROTULO_STATUS_DENUNCIA[status]) },
           { chave: 'tipo', rotulo: 'Tipo' },
+          { chave: 'contestacaoSituacao', rotulo: 'Contestação' },
         ]}
       />
       <BlocoLogAuditoria buscar={buscarLog} />

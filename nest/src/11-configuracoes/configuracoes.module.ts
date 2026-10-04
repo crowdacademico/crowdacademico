@@ -9,6 +9,12 @@ import { ConfiguracoesServiceFindAll } from './service/configuracoes.service.fin
 import { ConfiguracoesServiceFindOne } from './service/configuracoes.service.findone';
 import { ConfiguracoesServiceRemove } from './service/configuracoes.service.remove';
 import { ConfiguracoesServiceUpdate } from './service/configuracoes.service.update';
+import { ScoreConfigControllerFindAll } from './controllers/score-config.controller.findall';
+import { ScoreConfigControllerUpdate } from './controllers/score-config.controller.update';
+import { ScoreRotuloControllerUpdate } from './controllers/score-rotulo.controller.update';
+import { ScoreConfigServiceFindAll } from './service/score-config.service.findall';
+import { ScoreConfigServiceUpdate } from './service/score-config.service.update';
+import { ScoreRotuloServiceUpdate } from './service/score-rotulo.service.update';
 
 @Module({
   controllers: [
@@ -17,6 +23,9 @@ import { ConfiguracoesServiceUpdate } from './service/configuracoes.service.upda
     ConfiguracoesControllerFindOne,
     ConfiguracoesControllerUpdate,
     ConfiguracoesControllerRemove,
+    ScoreConfigControllerFindAll,
+    ScoreConfigControllerUpdate,
+    ScoreRotuloControllerUpdate,
   ],
   providers: [
     ConfiguracoesServiceCreate,
@@ -24,6 +33,9 @@ import { ConfiguracoesServiceUpdate } from './service/configuracoes.service.upda
     ConfiguracoesServiceFindOne,
     ConfiguracoesServiceUpdate,
     ConfiguracoesServiceRemove,
+    ScoreConfigServiceFindAll,
+    ScoreConfigServiceUpdate,
+    ScoreRotuloServiceUpdate,
   ],
 })
 export class ConfiguracoesModule {}
