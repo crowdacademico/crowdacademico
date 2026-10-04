@@ -1,6 +1,6 @@
 # ⚙️ Documentação Técnica do Backend (NestJS) - CrowdAcadêmico
 
-> 📌 **Numeração de RF (29-09-2026):** os requisitos vigentes são o `informacoes/REQUISITOS_V8.md` (122 RFs). Citações de RF por número neste documento foram escritas em datas diferentes e podem estar em qualquer numeração anterior (pré-06-09-2026, V6, V7 ou V8). A `MATRIZ-RASTREABILIDADE-RF.md` já está inteira na numeração do V8 e traz a conversão. Confira pelo texto do requisito antes de confiar no número.
+> 📌 **Numeração de RF:** os requisitos têm 122 RFs. Citações de RF por número neste documento foram escritas em datas diferentes e podem estar numa numeração anterior (a numeração mudou em 06-09, 21-09 e 29-09-2026). A `MATRIZ-RASTREABILIDADE-RF.md` está inteira na numeração vigente e traz a conversão. Confira pelo texto do requisito antes de confiar no número.
 
 Este documento é o irmão do `DOCUMENTACAO_BD.md`. Ele cobre o backend em NestJS (`nest/`): como a aplicação conversa com o Postgres, como a autenticação funciona, onde mora a autorização, qual é o padrão que todo módulo segue, e como o módulo de upload de arquivo está montado hoje.
 
@@ -496,7 +496,7 @@ Padrões de validação em uso: `@IsIn(CONSTANTE_DO_DB_TYPES)` para ENUMs; `@IsO
 - **`Pick<>` em vez da entity inteira** (`usuario.converter.ts`): os services nunca selecionam `senha_hash`, então exigir a entity completa quebraria a tipagem de toda query que usa `USUARIO_COLUNAS_SELECT`. O `Pick` aceita qualquer objeto que tenha *pelo menos* os campos usados.
 - **Converter que recebe uma dependência** (`arquivo.converter.ts`): recebe `armazenamento` como parâmetro porque montar a URL pública exige saber `STORAGE_PUBLIC_BASE_URL`. Continua sem estado próprio - só delega a montagem para quem já tem a configuração carregada. É o único converter assim.
 
-📌 **`CampanhaRequestCreate.modelo` aceita só `'all-or-nothing'`.** O V7 prevê os dois modelos, mas as regras do flexível (repasse independente da meta, aviso ao doador, encerramento) dependem do módulo de pagamento e do checkout; aceitar `'flexivel'` criaria uma campanha sem nenhuma dessas proteções. O valor continua no enum e no seed, e o DTO volta a aceitar os dois quando o módulo de pagamento existir.
+📌 **`CampanhaRequestCreate.modelo` aceita só `'all-or-nothing'`.** Os requisitos preveem os dois modelos, mas as regras do flexível (repasse independente da meta, aviso ao doador, encerramento) dependem do módulo de pagamento e do checkout; aceitar `'flexivel'` criaria uma campanha sem nenhuma dessas proteções. O valor continua no enum e no seed, e o DTO volta a aceitar os dois quando o módulo de pagamento existir.
 
 ### 6.3 Constante de colunas por módulo
 

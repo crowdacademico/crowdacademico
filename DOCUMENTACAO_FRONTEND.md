@@ -2,7 +2,7 @@
 
 > **Em palavras simples:** este documento explica como o app React (`react/`) está organizado hoje e por quê, para quem for criar uma tela nova (os módulos que faltam e a área pública) encontrar o padrão pronto e não reinventar nada. Ele descreve o **estado atual**: a história das decisões antigas foi guardada na pasta de informações, fora do repositório, em 03-10-2026. As regras visuais (cores, tipografia, larguras, componentes de interface) ficam no documento de design system da mesma pasta.
 
-> 📌 **Requisitos:** os vigentes são os do `REQUISITOS_V8.md` (122 RFs). A `MATRIZ-RASTREABILIDADE-RF.md` está na numeração do V8.
+> 📌 **Requisitos:** 122 RFs. A numeração de RF citada aqui é a mesma da `MATRIZ-RASTREABILIDADE-RF.md`.
 
 | Símbolo | Significado |
 |---|---|

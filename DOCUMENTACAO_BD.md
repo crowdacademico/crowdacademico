@@ -4,7 +4,7 @@
 **Comentários dos `.sql`.** Cabeçalho curto (`Função`, `Assinatura`, `Bloco` e uma `Regra` objetiva, sem datas nem história) e, dentro de função, trigger e policy, só o comentário que explica uma regra difícil. Não há ponteiro para arquivo fora do git: o porquê longo mora aqui, na seção `[NN-Y]` correspondente, e a história (o que mudou, quando, por quê) fica no arquivo de histórico local, que não é versionado. Os comentários do `07` explicam dado de teste; o `ATUALIZAR O SUPABASE.sql` é o registro datado de cada patch e por isso mantém a narrativa.
 # 📚 Documentação Técnica do Banco de Dados - CrowdAcadêmico
 
-> 📌 **Numeração de RF (29-09-2026):** os requisitos vigentes são o `informacoes/REQUISITOS_V8.md` (122 RFs). Citações de RF por número neste documento foram escritas em datas diferentes e podem estar em qualquer numeração anterior (pré-06-09-2026, V6, V7 ou V8). A `MATRIZ-RASTREABILIDADE-RF.md` já está inteira na numeração do V8 e traz a conversão. Confira pelo texto do requisito antes de confiar no número.
+> 📌 **Numeração de RF:** os requisitos têm 122 RFs. Citações de RF por número neste documento foram escritas em datas diferentes e podem estar numa numeração anterior (a numeração mudou em 06-09, 21-09 e 29-09-2026). A `MATRIZ-RASTREABILIDADE-RF.md` está inteira na numeração vigente e traz a conversão. Confira pelo texto do requisito antes de confiar no número.
 
 Este documento centraliza as explicações de arquitetura, regras de negócio e decisões de modelagem do PostgreSQL. Seu objetivo é manter os scripts `.sql` enxutos, sem poluição de comentários extensos inline.
 
@@ -654,7 +654,7 @@ Cada trigger observa uma tabela que alimenta alguma dimensão do score e recalcu
 > - **Por quê:** `pol_campanha_update` (04) exige ser o dono ou ter permissão, e sem `app.id_usuario_atual` definido ninguém é nenhum dos dois. A RLS esconde todas as linhas antes mesmo de `trg_campanha_valida_transicao` rodar. É o comportamento certo (aprovar, rejeitar e encerrar precisam ser atribuíveis a alguém), só que silencioso.
 > - **Como fazer:** antes do UPDATE manual, rode `SET app.id_usuario_atual = '<id de um usuário com a permissão certa>';`. Os jobs (encerrar vencidas, expirar rascunho etc.) não precisam disso, porque usam funções `SECURITY DEFINER` que já passam pela trigger de transição.
 
-### [05-K-2-B] Campanha: rascunho, rejeição e reenvio (20 e 21-09-2026, ver REQUISITOS_V7)
+### [05-K-2-B] Campanha: rascunho, rejeição e reenvio (20 e 21-09-2026)
 
 Regras novas de ciclo de vida da campanha, todas no banco (o Nest só expõe os endpoints). Decisão de produto do Lucas com a Alexia.
 
@@ -893,9 +893,9 @@ Regras verificadas no PGlite com o banco montado inteiro, usando o papel real `a
 | `comentario` | `fn_valida_comentario_campanha_ativa()` | `trg_valida_comentario_status` | Bloqueia novo comentário em campanha `rejeitado` ou `encerrado_moderacao`. |
 | `comentario` | `validar_comentario_endosso()` | `trg_comentario_limite_endosso` | No máximo `configuracoes.limite_endossos_campanha` endossos ativos simultâneos por campanha (RF-063; conta só `ordem_endosso IS NOT NULL AND ativo = TRUE` - um endosso removido por moderação libera a vaga). 🗑️➡️✅ **CORRIGIDO (28-07-2026, item 16 da Lista C):** limite (4) estava hardcoded; passou a ler `configuracoes`, mesmo valor de hoje como `DEFAULT`. |
 | `comentario` | `validar_comentario_endosso_autor()` | `trg_comentario_endosso_autor` | Só o dono da campanha (ou quem tem `comentario_moderar`) muda `endossado` (ERRCODE 92008). **Desde 26-09-2026 também calcula `ordem_endosso`:** ao endossar, `MAX(ordem_endosso) + 1` dos comentários ativos da campanha, sob `pg_advisory_xact_lock(92008, id_campanha)` (a segunda pessoa espera a primeira, então não há ordem repetida nem limite estourado); ao remover o endosso, zera. Roda antes de `trg_comentario_limite_endosso` (ordem alfabética dos nomes), que por isso confere `NEW.endossado` e não `ordem_endosso`. Suíte `13-ordem-endosso-no-banco.mjs`. |
-| `comentario` | `validar_comentario_autor()` | `trg_comentario_sem_autoria` | O dono da campanha não pode comentar na própria campanha (RF-095 no V7). |
-| `comentario` | `fn_comentario_ignora_endosso_na_criacao()` | `trg_comentario_ignora_endosso_criacao` | `BEFORE INSERT`. Zera `endossado` e `ordem_endosso` em todo comentário novo. Só o dono da campanha endossa (RF-092 no V7); sem isso, um pesquisador se autoendossava ao comentar na campanha de outro, porque `pol_comentario_insert` só confere a autoria. Não confia no Nest deixar de mandar o campo (defesa em profundidade). |
-| `comentario` | `validar_comentario_edicao_conteudo()` | `trg_comentario_edicao_conteudo` | `BEFORE UPDATE`. O `conteudo` só pode ser editado pelo próprio autor e só enquanto o comentário não está endossado (RF-094 no V7). `pol_comentario_update` libera o UPDATE para autor, dono da campanha e moderador sem distinguir coluna; esta trigger é que separa quem pode mudar o texto. Ocultar (`ativo`) fica em `fn_bloqueia_reversao_moderacao_comentario`. |
+| `comentario` | `validar_comentario_autor()` | `trg_comentario_sem_autoria` | O dono da campanha não pode comentar na própria campanha (RF-097). |
+| `comentario` | `fn_comentario_ignora_endosso_na_criacao()` | `trg_comentario_ignora_endosso_criacao` | `BEFORE INSERT`. Zera `endossado` e `ordem_endosso` em todo comentário novo. Só o dono da campanha endossa (RF-094); sem isso, um pesquisador se autoendossava ao comentar na campanha de outro, porque `pol_comentario_insert` só confere a autoria. Não confia no Nest deixar de mandar o campo (defesa em profundidade). |
+| `comentario` | `validar_comentario_edicao_conteudo()` | `trg_comentario_edicao_conteudo` | `BEFORE UPDATE`. O `conteudo` só pode ser editado pelo próprio autor e só enquanto o comentário não está endossado (RF-096). `pol_comentario_update` libera o UPDATE para autor, dono da campanha e moderador sem distinguir coluna; esta trigger é que separa quem pode mudar o texto. Ocultar (`ativo`) fica em `fn_bloqueia_reversao_moderacao_comentario`. |
 | `comentario` | `validar_comentario_frequencia()` | `trg_comentario_limite_taxa` | `BEFORE INSERT`. No máximo `configuracoes.limite_comentarios_por_hora` (5) comentários por pesquisador dentro de `janela_comentarios_horas` (1), somando todas as campanhas: é limite anti-rajada, não de volume por campanha (ERRCODE 93002). |
 | `comentario` | `fn_bloqueia_reversao_moderacao_comentario()` | `trg_comentario_bloqueia_reversao_moderacao` | Bloqueia a transição `ativo: FALSE → TRUE` (reverter uma moderação) por quem não tem a permissão `comentario_moderar`. Fecha a brecha em que `pol_comentario_update` (`04`) libera `UPDATE` para o autor sem restringir coluna - ver `[04-E-4]`. |
 | `denuncia` | `validar_denuncia_frequencia()` | `trg_denuncia_limite_taxa` | No máximo `configuracoes.limite_denuncias_24h` denúncias por usuário dentro da janela `configuracoes.janela_denuncias_horas` (RF-076). 🗑️➡️✅ **CORRIGIDO (28-07-2026, item 16 da Lista C):** limite (5) estava hardcoded; passou a ler `configuracoes`, mesmo valor de hoje como `DEFAULT`. 🗑️➡️✅ **CORRIGIDO (11-08-2026):** só a contagem tinha virado configurável em 28-07 - a janela de tempo (24h) continuou fixa em `INTERVAL '24 hours'` até agora; passou a ler `configuracoes.janela_denuncias_horas`, mesmo valor de hoje (24) como `DEFAULT`. |
@@ -985,6 +985,19 @@ Registro genérico de INSERT/UPDATE/DELETE, pensado pra fechar um buraco real: o
   - mudar o parâmetro não muda o Termo, que tem o prazo escrito: mudar o prazo pede uma versão nova do Termo (a descrição do parâmetro avisa);
   - gravar o IP na hora do pagamento fica para o módulo de contribuição (o Nest pega o IP da requisição e grava em `ip_aceite`). Sem esse módulo, nenhum IP novo nasce hoje; a limpeza já vale para os do seed.
 - **Teste:** suíte PGlite 35.
+
+📌 **IP: base legal e anonimato do Pix (04-10-2026).**
+- **Em palavras simples:** guardar o IP é uma obrigação legal para sites comerciais, serve de prova numa contestação e não quebra o anonimato da contribuição anônima, porque o próprio Pix já não é anônimo para o sistema de pagamento.
+- **Decisão:** o registro do IP no aceite de toda contribuição, inclusive a anônima, fica mantido.
+- **Motivo:**
+  - o Marco Civil da Internet (Lei 12.965/2014, art. 15) obriga o provedor de aplicação que atua como pessoa jurídica, de forma profissional e com fins econômicos, a guardar os registros de acesso (IP, data e hora) por 6 meses, para qualquer usuário, anônimo ou não;
+  - numa contestação de pagamento ou fraude, o IP ligado ao aceite mostra de onde e quando o Termo foi aceito: é a defesa da plataforma;
+  - o Pix anônimo é anônimo para o público, não para o sistema: o banco de quem pagou sabe quem pagou, e o recebedor costuma ver o nome e parte do CPF do pagador. O IP não tira um anonimato que o Pix já não dá.
+- **Caso-limite aceito:**
+  - o art. 15 pede o registro de **cada acesso**, não só do aceite. Hoje o IP fica em três lugares: `usuario_termo.ip_aceite`, `aceite_termo_contribuicao.ip_aceite` e `usuario.ultimo_login_ip` (sobrescrito a cada login). Não existe registro de acessos que atenda ao art. 15. A obrigação só vale quando o sistema operar como empresa; enquanto for TCC sem operação real, não se aplica. Fazer esse registro é item para antes de entrar em operação;
+  - os 5 anos do IP do aceite vão além dos 6 meses do Marco Civil: a justificativa é o prazo do CDC (art. 27, decisão acima). A LGPD pede o período mínimo necessário, então o prazo precisa continuar justificado no Termo;
+  - o parâmetro aceita 0 (guardar para sempre), que não combina com o "período mínimo necessário" da LGPD. Mantido de propósito (decisão do Lucas, 04-10): é prático para testes. Em operação, o valor fica no prazo que o Termo promete.
+
 - 🗑️➡️✅ **Já é feature de tela (achado desatualizado, corrigido nesta revisão):** este parágrafo dizia "não é feature de tela ainda" - isso ficou pra trás. O módulo `nest/src/27-log-auditoria` (`GET /log-auditoria`, só leitura) e o componente `react/src/components/crud/log-auditoria-painel.jsx` (botão "Ver log" no rodapé de cada `GenericTable`) já existem e consomem esta tabela.
 
 ---
