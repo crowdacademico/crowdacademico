@@ -91,7 +91,7 @@ Tem também o outro lado: um Pix gerado e nunca pago fica "pendente" **para semp
 
 **Quando:** junto do módulo de contribuição, antes do gateway. Nada mudou no banco ainda.
 
-**Outros pontos do dinheiro achados na mesma conferência** (status que volta para trás, transação repetida, repasse em dobro, auditoria editável): `informacoes/SUPER_AUDITORIA_PREPARACAO_03-10-2026.md`, seção 7.
+**Outros pontos do dinheiro achados na mesma conferência** (status que volta para trás, transação repetida, repasse em dobro, auditoria editável): relatório da super auditoria de 03-10-2026, seção 7 (fora do repositório).
 
 ---
 

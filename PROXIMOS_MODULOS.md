@@ -46,8 +46,8 @@ Três módulos pequenos e parecidos entre si - todos seguem o mesmo formato (uma
 
 ## Grupo 7 - Comunicação
 
-- **`4-mail`** - envio de e-mail (verificação de conta, recuperação de senha, notificações, **e-mail de rejeição de campanha com reenvios restantes e data limite**: os dados já são devolvidos por `GET /campanha/:id`, falta só o módulo). Hoje nada disso é enviado de verdade - é o único módulo que bloqueia outros dois RFs já prontos no banco (verificação de e-mail e recuperação de senha, ver `PENDENCIAS e correcoes.md`, item 6). **Textos de e-mail:** quando o módulo entrar, o conteúdo (aprovação, reprovação, meta atingida) não deveria nascer fixo num `.ts`: muda por decisão de produto e é candidato natural a uma tabela `template_email` editável pelo admin, sem risco, porque nenhuma regra do sistema depende do texto de um e-mail.
-- **`26-notificacao`** - fila/histórico de notificações (o que já existe na tabela `notificacao`, expor pelo Nest).
+- ❌ **`4-mail`** - envio de e-mail (verificação de conta, recuperação de senha, notificações, **e-mail de rejeição de campanha com reenvios restantes e data limite**: os dados já são devolvidos por `GET /campanha/:id`, falta só o módulo). Hoje nada disso é enviado de verdade - é o único módulo que bloqueia outros dois RFs já prontos no banco (verificação de e-mail e recuperação de senha, ver `PENDENCIAS e correcoes.md`, item 6). **Textos de e-mail:** quando o módulo entrar, o conteúdo (aprovação, reprovação, meta atingida) não deveria nascer fixo num `.ts`: muda por decisão de produto e é candidato natural a uma tabela `template_email` editável pelo admin, sem risco, porque nenhuma regra do sistema depende do texto de um e-mail.
+- ❌ **`26-notificacao`** - fila/histórico de notificações (o que já existe na tabela `notificacao`, expor pelo Nest).
 - ✅ **`5-termo-uso`** - versionamento de termos de uso e aceite pelo usuário. **(esta lista tinha ficado desatualizada aqui - o módulo já existia, 4 arquivos, conferido em 01-09-2026)**
 
 ## Grupo 8 - Pagamento (por último, de propósito)
@@ -66,9 +66,9 @@ Esta parte só começa depois que o resto do sistema - principalmente o painel a
 
 Riscos de decidir mal ou tarde: escolher um sem split e descobrir depois que o repasse não é automático; escolher um que exige CNPJ para a funcionalidade necessária e ter de trocar no meio do caminho; decidir com pressa quando restar pouco tempo de TCC. Perguntas para decidir: existe CNPJ ou MEI disponível, ou os testes serão só com CPF pessoal (sandbox)? Vale a complexidade de um split automático, ou o repasse manual é simples o bastante para o tamanho deste TCC? **Status:** gateway ainda não escolhido.
 
-- **`22-contribuicao`** - registrar contribuição/doação, incluindo o recebimento da confirmação de pagamento do gateway escolhido.
-- **`23-repasse`** - repasse do dinheiro arrecadado pro pesquisador, depois da campanha aprovada/bem-sucedida.
-- **`24-auditoria-financeira`** - trilha de auditoria dos eventos financeiros (a tabela já existe e já é usada por trigger do banco; expor pelo Nest é o que falta).
+- ❌ **`22-contribuicao`** - registrar contribuição/doação, incluindo o recebimento da confirmação de pagamento do gateway escolhido.
+- ❌ **`23-repasse`** - repasse do dinheiro arrecadado pro pesquisador, depois da campanha aprovada/bem-sucedida.
+- ❌ **`24-auditoria-financeira`** - trilha de auditoria dos eventos financeiros (a tabela já existe e já é usada por trigger do banco; expor pelo Nest é o que falta).
 
 **Já conhecidos antes de construir o 22 e o 23** (achados da revisão de 24-09-2026, registrados aqui para ninguém depender de lembrar; nada disto foi feito ainda, porque só faz sentido junto com os módulos):
 
@@ -96,5 +96,5 @@ Estes dois módulos ficaram de fora da lista original - construídos direto, sem
 
 ## Fora do backend (Nest) - vale registrar também
 
-- **Página pública de campanha (React)** - hoje só existe o painel administrativo; a página que um doador visita e compartilha ainda não foi construída. Faz mais sentido depois que `12-campanha` existir de verdade no backend.
-- **Open Graph** (prévia de link ao compartilhar no WhatsApp) - depende da página pública existir primeiro.
+- ❌ **Página pública de campanha (React)** - hoje só existe o painel administrativo; a página que um doador visita e compartilha ainda não foi construída. Faz mais sentido depois que `12-campanha` existir de verdade no backend.
+- ❌ **Open Graph** (prévia de link ao compartilhar no WhatsApp) - depende da página pública existir primeiro.

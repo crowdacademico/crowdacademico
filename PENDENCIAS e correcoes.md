@@ -54,7 +54,7 @@ Falta, e depende do `4-mail`:
 
 #### 🔴 O que o banco do dinheiro ainda deixa passar (sondagem de 03-10-2026)
 
-Provado no PGlite (`informacoes/testes-banco/_aud-contribuicao-sondagem.mjs`); detalhe e comparação com o Catarse no relatório `informacoes/SUPER_AUDITORIA_PREPARACAO_03-10-2026.md`, seção 7. Fazer no começo do módulo, antes do gateway:
+Provado no PGlite (`informacoes/testes-banco/_aud-contribuicao-sondagem.mjs`); detalhe e comparação com o Catarse no relatório `informacoes/todas as auditorias/SUPER_AUDITORIA_PREPARACAO_03-10-2026.md`, seção 7. Fazer no começo do módulo, antes do gateway:
 - **Ordem de status da contribuição:** hoje o status pode voltar para trás (devolvido para confirmado, pendente para repassado). Inclui recusar a confirmação que chega depois de a campanha ser encerrada.
 - **Transação do gateway única:** `id_transacao_api` sem `UNIQUE`; o gateway reenvia o mesmo aviso. E o webhook precisa achar a contribuição pela transação, não pelo nosso id.
 - **Repasse:** um por campanha, líquido menor ou igual ao bruto, e só de campanha encerrada.
@@ -157,7 +157,7 @@ Achado revisando um projeto de referência da disciplina (04-09-2026): hoje o Cr
 
 #### 🟡 Anotado para pensar com calma (27-09-2026): 3 ideias vindas do `.env` do sistema Atlas
 
-Lucas decide depois se ajudam o CrowdAcadêmico. Contexto em `informacoes/ROTEIRO_INCORPORACAO_ATLAS.md`.
+Lucas decide depois se ajudam o CrowdAcadêmico. Contexto em `informacoes/todas as auditorias/ROTEIRO_INCORPORACAO_ATLAS.md`.
 
 - **Lista de origens permitidas (CORS):** a API do Atlas só aceita chamadas dos endereços de uma lista no `.env`. A nossa aceita chamadas de qualquer site (`app.enableCors()` sem opções, `nest/src/main.ts`). Correção pequena e pré-requisito da pendência do cookie HttpOnly (cookie com credencial exige origem explícita).
 - **Configuração da sessão em cookie:** o Atlas usa cookie HttpOnly com tempo de vida e regras de envio (`SESSION_LIFETIME`, `SESSION_SECURE_COOKIE`, `SESSION_SAME_SITE`) no `.env`. Referência pronta para a pendência "refresh token em cookie HttpOnly".
@@ -201,4 +201,4 @@ Hoje `campanha` tem 17 triggers e `comentario` tem 8. Quando várias rodam no me
 
 - **Descartados de propósito do roteiro do Atlas** (escopo enxuto): Next.js, Tailwind no JSX, i18n, gerador de módulo, versão na URL, e a maiúscula automática nos nomes (ficou só a limpeza de espaços).
 - **Documentação contra o código:** as suítes PGlite 7 e 10 conferem a cada rodada; ficam verdes a cada módulo novo.
-- **Roteiro completo do Atlas:** `informacoes/ROTEIRO_INCORPORACAO_ATLAS.md` (Ondas 1 e 2 feitas).
+- **Roteiro completo do Atlas:** `informacoes/todas as auditorias/ROTEIRO_INCORPORACAO_ATLAS.md` (Ondas 1 e 2 feitas).

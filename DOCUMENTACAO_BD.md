@@ -798,7 +798,7 @@ Não existe transição `aguardando_aprovacao -> rascunho` ("recolher") nem esta
 **Em palavras simples:** a pontuação de 0 a 100 de cada pesquisador soma quatro dimensões. O peso de cada dimensão é o máximo de pontos dela; cada item de dentro vale a sua parte desse máximo. A reputação perde pontos com denúncias procedentes contra o perfil e contra as campanhas. Não existe mais desconto fixo por "abandono". O administrador muda pesos e faixas numa tela própria (Configurações > Pontuação (Score)).
 
 📌 **Cada item vale a sua parte da dimensão.**
-- **Decisão:** `fn_fator_subitem(p_id_pai, p_nome)` (05) devolve peso do item / soma dos itens ligados da mesma dimensão (0 se desligado); cada função de dimensão soma as partes conquistadas e multiplica pelo peso da dimensão. Substitui `fn_peso_score`, que devolvia o peso cru.
+- **Decisão:** `fn_fator_subitem(p_id_pai, p_nome)` (05) devolve peso do item / soma dos itens ligados da mesma dimensão (0 se desligado); cada função de dimensão soma as partes conquistadas e multiplica pelo peso da dimensão. Substitui a função antiga, que devolvia o peso cru.
 - **Motivo:** antes, `peso` queria dizer "parte da dimensão" em três dimensões e "custo por denúncia" na reputação, e mudar o peso de uma dimensão obrigava a mexer em todos os itens dela para a conta fechar. Agora mudar a dimensão não mexe nos itens, e desligar um item passa a parte dele para os outros.
 - **Caso-limite aceito:** com o seed (itens somando o peso da dimensão) perfil, histórico e atualização dão exatamente os mesmos números de antes. Dimensão ligada com itens, mas nenhum ligado com peso maior que zero, é recusada (90031), porque nunca pontuaria; peso negativo também (90030); a soma 100 das dimensões continua (90017, com mensagem nova).
 
@@ -875,7 +875,7 @@ Regras verificadas no PGlite com o banco montado inteiro, usando o papel real `a
 
 **Score**
 
-* **Peso de subitem desativado vale 0, não NULL** (`fn_fator_subitem`, que substituiu `fn_peso_score` em 03-10-2026, e as 4 funções de score): `SELECT COALESCE(peso,0) INTO x` com **zero linhas** deixa `x = NULL` (o `COALESCE` nunca roda), então desativar o subitem `lattes` zeraria a dimensão inteira de quem tem Lattes. `calcular_score_reputacao` faz uma contagem só.
+* **Peso de subitem desativado vale 0, não NULL** (`fn_fator_subitem`, que substituiu a função antiga de peso em 03-10-2026, e as 4 funções de score): `SELECT COALESCE(peso,0) INTO x` com **zero linhas** deixa `x = NULL` (o `COALESCE` nunca roda), então desativar o subitem `lattes` zeraria a dimensão inteira de quem tem Lattes. `calcular_score_reputacao` faz uma contagem só.
 * **Soma dos pesos raiz = 100 ao inserir, alterar ou apagar** (`trg_score_config_soma_pesos`, `INSERT OR UPDATE OR DELETE`, sem filtro de `id_pai`); `trg_score_config_recalcula_todos` cobre INSERT, DELETE e mudança de `ativo`.
 * **Pesos e faixas entram no log de auditoria** (`trg_log_auditoria_score_config`, `trg_log_auditoria_score_rotulo`): mudar um peso altera o score público de todos, então precisa deixar rastro.
 * `contar_metricas_dashboard()` acha o papel por `codigo`, não por `nome` (renomear o papel pelo painel não zera a métrica; mesma regra do `08`).
