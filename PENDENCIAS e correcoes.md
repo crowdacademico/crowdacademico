@@ -23,6 +23,17 @@ Quem atualiza os requisitos é o Lucas com a revisão externa; aqui fica só o q
   - **Aceite pendente no próximo login:** vale para versão nova do Termo (RF-015). O V8 tirou a parte da conta criada pelo admin (nascer com senha provisória e aceite pendente), por ser ferramenta de teste; o Lucas quer rediscutir.
   - **Modelo da campanha pode mudar até a aprovação:** o V8 deixou implícito (congelamento na aprovação); hoje o formulário nem envia o modelo.
   - **Links no upgrade, "Projetos Criados" e validação de domínio dos links:** a resposta da revisão externa à comparação V8 × código tem pontos que o Lucas vai revisar com ela.
+- **Taxas e página de Transparência (anotado em 05-10-2026, levar na semana de 12-10-2026; não mexer até lá):**
+  - **Problema:** nenhum RF fala da página de Transparência, o RF-060 só define a taxa da plataforma (5% do valor bruto) e não está definido quem paga a tarifa do intermediador de pagamento. O Lucas quer que a página mostre as taxas de cartão, boleto, PIX e plataforma. A tela do protótipo mostra hoje uma divisão "88% / 7% / 5%" e taxas extras de cartão e boleto, nada disso vem de RF.
+  - **Mercado (consultado em 05-10-2026):** Catarse 13%, com cerca de 4% para o intermediador (Pagar.me), cobrado do criador; Vakinha 6,4% + R$ 0,50 por doação, já incluindo as tarifas de PIX, boleto e cartão, cobrado do beneficiário; Kickante 10%, já incluindo tributos e tarifas; Benfeitoria com comissão livre (sugere 8%) mais 5% do intermediador, separados; Vaquinhas Online 7% + tarifa por transação, cobrados do doador (exceção). Intermediadores: Mercado Pago PIX 0%, cartão de 3,99% a 4,98% conforme o prazo, boleto R$ 3,49; Asaas PIX R$ 1,99, boleto R$ 1,99, cartão 1,99% + R$ 0,49.
+  - **Opções levantadas:** (a) taxa única "tudo incluído" (padrão do mercado), com a Transparência mostrando a composição por meio de pagamento; (b) taxa da plataforma mais a tarifa do meio descontada do pesquisador; (c) a tarifa do meio paga por quem apoia, somada no pagamento. A sugestão foi (a).
+  - **Textos propostos para os requisitos, se (a) for aprovada:**
+    - **RF-060, acrescentar ao fim:** "A taxa da plataforma já inclui os custos do intermediador de pagamento, qualquer que seja o meio de pagamento, e o contribuinte não paga nenhum valor além da contribuição."
+    - **RF novo:** "O sistema deve exibir uma página pública de transparência financeira, acessível sem login, contendo: a taxa vigente da plataforma; a composição dessa taxa, separando o custo do intermediador de pagamento por meio de pagamento (PIX, cartão de crédito, cartão de débito e boleto) e a parte que fica com a plataforma; e uma simulação do valor líquido que chega ao pesquisador a partir de um valor informado. Os custos de cada meio de pagamento são parâmetros configuráveis pelo Administrador." Origem sugerida: RU-02 e RU-16, ou um RU novo do visitante ("consultar as taxas antes de contribuir").
+    - **RF-090:** acrescentar "custos de cada meio de pagamento" à lista de parâmetros configuráveis.
+  - **Ponto de negócio, sem pressa:** com 5% de taxa e o cartão custando de 4% a 5%, a plataforma fica perto de zero em cada contribuição por cartão.
+  - **Depois da decisão:** refazer a tela de Transparência do protótipo, tirando o "88/7/5".
+  - **Fontes:** Catarse (crowdfunding.catarse.com.br/nossa-taxa e /legal/termos-de-uso), Vakinha (vakinha.com.br/taxas-e-prazos), Kickante (kickante.com.br, "Como funciona o crowdfunding"), Benfeitoria (parcerias.benfeitoria.com/faq), Clube de Apoio (clubedeapoio.com.br/taxas), Mercado Pago (blog "Quanto custa receber pagamentos via Pix" e calculadoradetaxas.com.br/mercado-pago/taxas), Asaas (blog.asaas.com/taxas-asaas).
 - **Como o Lucas quer esse pedido escrito:** "pegar no pé" da revisão externa, pedir que olhe sistemas de referência e traga ideias próprias, não só responda a lista.
 
 ---
@@ -195,6 +206,7 @@ Hoje `campanha` tem 17 triggers e `comentario` tem 8. Quando várias rodam no me
 ### Protótipo estático (sessão própria)
 
 - Reputação em 4 faixas, seguir campanha e recompensas não têm presença visual no protótipo. Levantar como decisão, não encaixar numa rodada de "embelezar".
+- **Cadastro do protótipo simula uma verificação do Lattes que o sistema não faz (anotado em 05-10-2026).** Onde ver: painel "Telas do protótipo" > "10. Cadastro" > escolher "Sou pesquisador" > avançar até o passo 3. O botão "Validar" do ID Lattes mostra "Vínculo encontrado no Lattes" e bloqueia o avanço até essa validação. O RF-022 diz outra coisa: o pesquisador escolhe o tipo de link (Lattes, ORCID, ResearchGate, LinkedIn ou GitHub) e cola o endereço, o sistema só confere se o endereço é do site certo, e os links são opcionais (até 5). Sugestão: trocar o botão por tipo + endereço, conferido enquanto a pessoa digita e sem bloquear o avanço. Diferença anotada, sem mudar agora: pelo RF-022 quem vira pesquisador é um usuário já cadastrado, que pede o upgrade depois; o protótipo faz isso no próprio cadastro.
 
 ---
 

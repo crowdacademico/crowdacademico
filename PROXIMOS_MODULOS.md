@@ -80,6 +80,7 @@ Riscos de decidir mal ou tarde: escolher um sem split e descobrir depois que o r
   - Job para expirar contribuição pendente (`status_contribuicao = 'expirado'` existe no enum e nada o escreve).
   - Lembrar que, desde 24-09-2026, `app_nestjs` **não** atualiza `valor_bruto_arrecadado` (nem `taxa_plataforma` nem `encerrado_em`): o total é mantido pela trigger `trg_sincroniza_arrecadado_campanha`, que é `SECURITY DEFINER`. O service de contribuição só faz `INSERT` em `contribuicao`.
 - **`23-repasse`:** `atualizar_status_repasse()` tem o mesmo problema de `atualizar_status_contribuicao()` (qualquer status, sem checagem). O modelo de campanha `flexivel` (repasse independente da meta) também espera este módulo; hoje o DTO só aceita `all-or-nothing`.
+  - **Observação:** de acordo com consulta feita no dia 05/10/2026, o mercado repassa no fim da campanha, também no modelo flexível: o Catarse libera o valor 15 dias corridos após o encerramento (Termos de Uso, cláusula 7.4) e o Indiegogo, no flexível, em até 15 dias úteis. Por isso, o repasse do flexível acontece no encerramento, não a cada contribuição.
 
 ## Grupo 9 - Painel administrativo (não estavam nesta lista, mas já existem)
 
