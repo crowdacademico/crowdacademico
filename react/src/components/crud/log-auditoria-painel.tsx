@@ -4,14 +4,9 @@ import { useErroToast } from '../layout/toast/use-erro-toast';
 import { TabelaHistoricoAlteracoes } from './tabelas/5-tabela-historico-alteracoes';
 import { Carregando } from '../layout/carregando';
 import { MensagemErro } from './mensagem-erro';
+import { quantasLinhasVazias } from './use-linhas-vazias';
 import type { ResultadoPaginado } from '../../services/constant/type/paginacao.type';
 import type { LogAuditoriaResponse } from '../../services/27-log-auditoria/type/log-auditoria.type';
-
-// Página incompleta (a última, com mais de uma página) completa com linhas vazias até o tamanho escolhido: a tabela
-// não encolhe ao chegar no fim.
-function linhasVazias(rodape: { totalPaginas: number; tamanhoPagina: number | 'todos' }, quantas: number): number {
-  return rodape.totalPaginas > 1 && rodape.tamanhoPagina !== 'todos' ? Math.max(0, rodape.tamanhoPagina - quantas) : 0;
-}
 
 interface LogAuditoriaPainelProps {
   buscar: (pagina: number, tamanho: number) => Promise<ResultadoPaginado<LogAuditoriaResponse>>;
@@ -34,7 +29,7 @@ export function LogAuditoriaPainel({ buscar }: LogAuditoriaPainelProps) {
       {!erro && dados === null && <Carregando />}
       {!erro && dados !== null && (
         <>
-          <TabelaHistoricoAlteracoes linhas={dados} linhasVazias={linhasVazias(rodape, dados.length)} />
+          <TabelaHistoricoAlteracoes linhas={dados} linhasVazias={quantasLinhasVazias(rodape.totalPaginas, rodape.tamanhoPagina, dados.length)} />
           <RodapePaginacao {...rodape} />
         </>
       )}

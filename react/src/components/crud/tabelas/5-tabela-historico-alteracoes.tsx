@@ -3,6 +3,8 @@ import { formatarDataHora, textoSeguro } from '../../../services/constant/util/f
 import type { LogAuditoriaResponse, OperacaoLogAuditoria } from '../../../services/27-log-auditoria/type/log-auditoria.type';
 import { CaixaTabela } from './caixa-tabela';
 import { TIPOS_COLUNA } from '../colunas/tipos-coluna';
+import { LinhasVazias } from '../linhas-vazias';
+import { useLinhasVazias } from '../use-linhas-vazias';
 
 // Últimas alterações de uma tabela do banco (log_auditoria), mais recente primeiro. Só leitura. Usada pelo
 // painel "Ver log" (components/crud/log-auditoria-painel.tsx), que busca e pagina.
@@ -70,6 +72,7 @@ function CelulaLinhas({ textos, aberta, aoAlternar }: { textos: string[]; aberta
 
 export function TabelaHistoricoAlteracoes({ linhas, linhasVazias = 0 }: { linhas: LogAuditoriaResponse[]; linhasVazias?: number }) {
   const [abertas, setAbertas] = useState<ReadonlySet<number>>(new Set());
+  const { corpoRef, alturaDa } = useLinhasVazias(linhas, linhasVazias);
   const alternar = (idLog: number) =>
     setAbertas((atual) => {
       const nova = new Set(atual);
@@ -101,7 +104,7 @@ export function TabelaHistoricoAlteracoes({ linhas, linhasVazias = 0 }: { linhas
             <th>Quando</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody ref={corpoRef}>
           {linhas.map((linha) => {
             const campos = linha.operacao === 'UPDATE' ? (linha.camposAlterados ?? []) : [];
             const aberta = abertas.has(linha.idLog);
@@ -124,11 +127,7 @@ export function TabelaHistoricoAlteracoes({ linhas, linhasVazias = 0 }: { linhas
               </tr>
             );
           })}
-          {Array.from({ length: linhasVazias }, (_, indice) => (
-            <tr key={`vazia-${indice}`} className="crud-tabela__linha-vazia" aria-hidden="true">
-              <td colSpan={7}>&nbsp;</td>
-            </tr>
-          ))}
+          <LinhasVazias quantas={linhasVazias} colunas={7} alturaDa={alturaDa} />
           {linhas.length === 0 && (
             <tr>
               <td colSpan={7}>Nenhuma alteração registrada ainda.</td>

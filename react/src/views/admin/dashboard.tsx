@@ -185,7 +185,7 @@ export function Dashboard({ auth }: DashboardProps) {
                 <CardMetrica rotulo="Pesquisadores" valor={resumo.totalPesquisadores} para="/admin/pesquisadores" />
                 <CardMetrica rotulo="Papéis" valor={resumo.totalPapeis} para="/admin/papeis" />
                 <CardMetrica rotulo="Permissões" valor={resumo.totalPermissoes} para="/admin/papeis" />
-                <CardMetrica rotulo="Configurações" valor={resumo.totalConfiguracoes} para="/admin/configuracoes" />
+                <CardMetrica rotulo="Configurações" valor={resumo.totalConfiguracoes} para="/admin/parametros-sistema" />
                 <CardMetrica rotulo="Campanhas" valor={resumo.totalCampanhas} para="/admin/campanhas" />
                 <CardMetrica rotulo="Denúncias pendentes" valor={resumo.denunciasPendentes} />
                 <CardMetrica rotulo="Arrecadado (total)" valor={resumo.valorTotalArrecadado} moeda />

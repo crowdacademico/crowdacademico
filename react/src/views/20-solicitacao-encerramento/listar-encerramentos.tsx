@@ -34,7 +34,7 @@ export function ListarEncerramentos({ auth }: PropsPagina) {
       ...pedido,
       status: ROTULO_STATUS_ENCERRAMENTO[pedido.status],
       statusOriginal: pedido.status,
-      campanha: `#${pedido.idCampanha} ${pedido.tituloCampanha ?? ''}`,
+      campanha: pedido.tituloCampanha ?? '-',
       pesquisador: pedido.nomePesquisador ?? '-',
       modelo: pedido.modeloCampanha ? ROTULO_MODELO_CAMPANHA[pedido.modeloCampanha] : '-',
     }));
@@ -49,7 +49,7 @@ export function ListarEncerramentos({ auth }: PropsPagina) {
   return (
     <div className="admin-content-painel">
       <GenericTable
-        titulo="Encerramentos"
+        titulo="Pedidos de Encerramento"
         ajuda="Pedidos de pesquisadores para encerrar uma campanha antes do prazo. Aprovar encerra a campanha; rejeitar exige justificativa e a campanha segue ativa."
         colunas={[
           { chave: 'idSolicitacao', rotulo: 'id', tipo: 'id' },

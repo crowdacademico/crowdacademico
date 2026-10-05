@@ -127,11 +127,12 @@ export const ROTAS_ADMIN: Rota[] = [
 
   // Parâmetros do Sistema: grupo próprio (CONFIGURACOES): um item chamado Configurações dentro de um grupo
   // também chamado Configurações ficaria esquisito. O rótulo descreve o que a tabela `configuracoes` guarda
-  // (limites, taxas e prazos que o banco lê via config_numero()); `caminho`/`caminhoRelativo` continuam
-  // '/admin/configuracoes': só o RÓTULO difere, a URL/tabela/API são "configuracoes".
+  // (limites, taxas e prazos que o banco lê via config_numero()). A URL segue o nome da tela, como as outras
+  // ('/admin/parametros-sistema'); a tabela, a API e os arquivos continuam "configuracoes". O endereço antigo
+  // redireciona (App.tsx).
   {
-    caminho: '/admin/configuracoes',
-    caminhoRelativo: 'configuracoes',
+    caminho: '/admin/parametros-sistema',
+    caminhoRelativo: 'parametros-sistema',
     elemento: ListarConfiguracoes,
     rotuloMenu: 'Parâmetros do Sistema',
     rotuloBreadcrumb: 'Parâmetros do Sistema',
@@ -215,11 +216,11 @@ export const ROTAS_ADMIN: Rota[] = [
     icone: 'fa-flag',
   },
   {
-    caminho: '/admin/encerramentos',
-    caminhoRelativo: 'encerramentos',
+    caminho: '/admin/pedidos-encerramento',
+    caminhoRelativo: 'pedidos-encerramento',
     elemento: ListarEncerramentos,
-    rotuloMenu: 'Encerramentos',
-    rotuloBreadcrumb: 'Encerramentos',
+    rotuloMenu: 'Pedidos de Encerramento',
+    rotuloBreadcrumb: 'Pedidos de Encerramento',
     grupoMenu: 'MODERACAO',
     icone: 'fa-flag-checkered',
   },

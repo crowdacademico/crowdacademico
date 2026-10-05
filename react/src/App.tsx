@@ -32,6 +32,10 @@ function App() {
             element={<Navigate to="/admin/minha-conta/perfil" replace />}
           />
 
+          {/* Endereços antigos (as telas ganharam o nome que aparece no menu): link salvo continua funcionando. */}
+          <Route path="configuracoes" element={<Navigate to="/admin/parametros-sistema" replace />} />
+          <Route path="encerramentos" element={<Navigate to="/admin/pedidos-encerramento" replace />} />
+
           {ROTAS_ADMIN.map(({ caminhoRelativo, elemento: Elemento }) => (
             <Route
               key={caminhoRelativo}

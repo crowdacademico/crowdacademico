@@ -168,7 +168,7 @@ export function BuscaGlobal({ auth }: BuscaGlobalProps) {
             categoria: 'Parâmetros',
             rotulo: c.chave,
             subtitulo: c.descricao,
-            caminho: `/admin/configuracoes?q=${encodeURIComponent(c.chave)}`,
+            caminho: `/admin/parametros-sistema?q=${encodeURIComponent(c.chave)}`,
             icone: 'fa-sliders',
           })),
       );

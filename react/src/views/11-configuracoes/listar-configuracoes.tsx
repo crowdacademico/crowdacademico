@@ -12,8 +12,8 @@ import {
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { ConfiguracoesResponse } from '../../services/11-configuracoes/type/configuracoes.type';
 
-// Aba "Parâmetros do Sistema" do painel admin: rota /admin/configuracoes (URL/tabela/variáveis internas
-// continuam "configuracoes" de propósito, só o nome visível na tela mudou; ver rotas.constants.ts).
+// Aba "Parâmetros do Sistema" do painel admin: rota /admin/parametros-sistema (a tabela, a API e as variáveis
+// internas continuam "configuracoes"; ver rotas.constants.ts).
 // Alterar/Consultar em modal, mesmo padrão de listar-usuarios.tsx/listar-motivos-denuncia.tsx.
 //
 // Sem Criar: uma chave nova só tem efeito se alguma regra do banco ou do Nest a ler (config_numero('...')),
@@ -55,10 +55,10 @@ export function ListarConfiguracoes({ auth }: PropsPagina) {
         colunas={[
           { chave: 'idConfig', rotulo: 'id', tipo: 'id' },
           // A descrição é o que o admin lê; a chave fica ao lado, para quem precisa dela (documentação, suporte).
-          { chave: 'descricao', rotulo: 'parâmetro', tipo: 'nome' },
+          { chave: 'descricao', rotulo: 'parâmetro', tipo: 'nome', umaLinha: true },
           { chave: 'chave', rotulo: 'chave', tipo: 'texto' },
           { chave: 'valor', rotulo: 'valor', tipo: 'texto' },
-          { chave: 'tipo', rotulo: 'tipo', tipo: 'status' },
+          { chave: 'tipo', rotulo: 'tipo', tipo: 'texto' },
           { chave: 'ativo', rotulo: 'ativo', tipo: 'simNao' },
           // `publica`: se a linha global aparece para quem não tem 'configuracao_gerenciar' (GET /configuracoes
           // sem token). Sem efeito numa linha pessoal.

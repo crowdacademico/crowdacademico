@@ -74,7 +74,7 @@ export const GRUPOS_MENU_ADMIN: GrupoMenuAdmin[] = [
   },
   {
     titulo: 'MODERAÇÃO',
-    // Aprovar Campanhas, Denúncias e Encerramentos (os pedidos de encerramento antecipado).
+    // Aprovar Campanhas, Denúncias e Pedidos de Encerramento (os pedidos de encerramento antecipado).
     itens: itensDoGrupo('MODERACAO'),
   },
   // ESTE BLOCO EXISTE SOLENEMENTE PARA O CAMPO DE TESTES. NÃO ESTÁ NOS REQUISITOS FUNCIONAIS E NEM ESTARÁ.

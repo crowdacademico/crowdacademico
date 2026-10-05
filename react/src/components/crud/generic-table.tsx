@@ -1,6 +1,8 @@
-import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef } from 'react';
 import { MensagemErro } from './mensagem-erro';
 import { TextoResumido } from './texto-resumido';
+import { LinhasVazias } from './linhas-vazias';
+import { quantasLinhasVazias, useLinhasVazias } from './use-linhas-vazias';
 import { EstadoVazio, type ConteudoEstadoVazio } from './estado-vazio';
 import type { ReactNode } from 'react';
 import { useSearchParams } from 'react-router';
@@ -503,31 +505,9 @@ export function GenericTable<T extends Linha>({
 
   const { totalPaginas, paginaAtual, itensPagina: linhasPagina } = paginarClientSide(linhasOrdenadas, pagina, tamanhoPagina);
 
-  // Altura da linha vazia que completa a última página, medida numa linha de verdade (pílula e botões de ação deixam
-  // a linha mais alta que uma linha só de texto). As bordas mudam meio pixel por linha: a 1ª linha encosta na linha
-  // grossa do cabeçalho (fica mais alta) e a última não tem borda embaixo (fica mais baixa). Por isso o modelo é uma
-  // linha do meio; com um registro só, desconta da 1ª a diferença da borda do cabeçalho; e a última vazia desconta a
-  // borda que não tem.
-  const corpoRef = useRef<HTMLTableSectionElement>(null);
-  const [linhaVazia, setLinhaVazia] = useState<{ altura: number; borda: number } | null>(null);
-  useLayoutEffect(() => {
-    const corpo = corpoRef.current;
-    const reais = [...(corpo?.querySelectorAll('tr:not(.crud-tabela__linha-vazia)') ?? [])];
-    const primeira = reais.at(0);
-    if (!corpo || !primeira) return;
-    // A linha fina entre as linhas mora na própria linha (tr), não na célula (5-crud.css).
-    const borda = parseFloat(getComputedStyle(primeira).borderBottomWidth) || 0;
-    const cabecalho = corpo.parentElement?.querySelector('thead th');
-    const bordaCabecalho = cabecalho ? parseFloat(getComputedStyle(cabecalho).borderBottomWidth) || 0 : borda;
-    const altura =
-      reais.length >= 2
-        ? reais[1].getBoundingClientRect().height
-        : primeira.getBoundingClientRect().height - (bordaCabecalho - borda) / 2;
-    // Só grava se a medida mudou: `linhasPagina` é um array novo a cada desenho, e gravar sempre um objeto novo
-    // redesenhava a tabela sem parar.
-    setLinhaVazia((atual) => (atual?.altura === altura && atual.borda === borda ? atual : { altura, borda }));
-  }, [linhasPagina]);
-  const quantasVazias = totalPaginas > 1 && tamanhoPagina !== 'todos' ? Math.max(0, tamanhoPagina - linhasPagina.length) : 0;
+  // Última página incompleta: linhas vazias até o tamanho escolhido, na altura de uma linha de verdade.
+  const quantasVazias = quantasLinhasVazias(totalPaginas, tamanhoPagina, linhasPagina.length);
+  const { corpoRef, alturaDa } = useLinhasVazias(linhasPagina, quantasVazias);
 
   const aoClicarColuna = (chave: keyof T & string) => {
     const novaDirecao = ordenacao.chave === chave && ordenacao.direcao === 'asc' ? 'desc' : 'asc';
@@ -664,23 +644,7 @@ export function GenericTable<T extends Linha>({
                     {acoes && temAcoes && <CelulaAcoes acoes={acoes} linha={linha} indisponivel={acaoIndisponivel} />}
                   </tr>
                 ))}
-                {/* Última página incompleta: linhas vazias até o tamanho escolhido, para a tabela não encolher. */}
-                {Array.from({ length: quantasVazias }, (_, indice) => (
-                  <tr
-                    key={`vazia-${indice}`}
-                    className="crud-tabela__linha-vazia"
-                    aria-hidden="true"
-                    style={{
-                      height: linhaVazia
-                        ? indice === quantasVazias - 1
-                          ? linhaVazia.altura - linhaVazia.borda / 2
-                          : linhaVazia.altura
-                        : undefined,
-                    }}
-                  >
-                    <td colSpan={colunas.length + (temAcoes ? 1 : 0)}>&nbsp;</td>
-                  </tr>
-                ))}
+                <LinhasVazias quantas={quantasVazias} colunas={colunas.length + (temAcoes ? 1 : 0)} alturaDa={alturaDa} />
                 {linhasPagina.length === 0 && !erro && (
                   <tr>
                     <td colSpan={colunas.length + (temAcoes ? 1 : 0)}>

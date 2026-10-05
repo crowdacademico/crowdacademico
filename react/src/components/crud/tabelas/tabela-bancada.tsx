@@ -2,6 +2,8 @@ import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { RodapePaginacao } from '../../pagination/rodape-paginacao';
 import { EstadoVazio } from '../estado-vazio';
+import { LinhasVazias } from '../linhas-vazias';
+import { quantasLinhasVazias, useLinhasVazias } from '../use-linhas-vazias';
 import { BarraFiltros } from '../../search/barra-filtros';
 import { LIMIAR_FILTRO } from '../../search/limiar-filtro.constants';
 import { paginarClientSide } from '../../../services/constant/util/paginacao.util';
@@ -74,6 +76,9 @@ export function TabelaBancada<T>({
     .filter((linha) => selecionados.length === 0 || faceta.valores(linha).some((valor) => selecionados.includes(valor)))
     .filter((linha) => !termo || textosBusca(linha).some((valor) => contemTermo(valor, termo)));
   const { totalPaginas, paginaAtual, itensPagina } = paginarClientSide(filtradas, pagina, tamanhoPagina);
+  // Última página incompleta: linhas vazias na altura de uma linha de verdade (o mesmo da tabela genérica).
+  const quantasVazias = carregando || erro ? 0 : quantasLinhasVazias(totalPaginas, tamanhoPagina, itensPagina.length);
+  const { corpoRef, alturaDa } = useLinhasVazias(itensPagina, quantasVazias);
 
   const colunasTotais = colunas.length + 1;
   // Lista vazia: o mesmo estado vazio da GenericTable (ícone e frase), não um texto solto.
@@ -141,7 +146,7 @@ export function TabelaBancada<T>({
               <th className="crud-tabela__celula--centralizada">Ações</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody ref={corpoRef}>
             {mensagem !== null && (
               <tr>
                 <td colSpan={colunasTotais} className={!carregando && erro ? 'texto-erro enfase' : 'texto-fraco'}>
@@ -168,6 +173,7 @@ export function TabelaBancada<T>({
                   </tr>
                 );
               })}
+            <LinhasVazias quantas={quantasVazias} colunas={colunasTotais} alturaDa={alturaDa} />
           </tbody>
         </table>
       </div>

@@ -71,9 +71,9 @@ export function ListarDenuncias({ auth }: PropsPagina) {
         ajuda="Campanhas e perfis de pesquisador denunciados. Alterar abre a denúncia para julgar, e Consultar só para ler; numa campanha ativa, a decisão pode encerrá-la por moderação. Uma contestação do pesquisador esperando análise é decidida no mesmo lugar."
         colunas={[
           { chave: 'idDenuncia', rotulo: 'id', tipo: 'id' },
+          { chave: 'motivo', rotulo: 'motivo', tipo: 'nome' },
           { chave: 'tipo', rotulo: 'tipo', tipo: 'status' },
-          { chave: 'alvo', rotulo: 'alvo', tipo: 'nome', umaLinha: true },
-          { chave: 'motivo', rotulo: 'motivo', tipo: 'texto' },
+          { chave: 'alvo', rotulo: 'alvo', tipo: 'texto', umaLinha: true },
           { chave: 'esperandoDesde', rotulo: 'esperando', tipo: 'espera' },
           {
             chave: 'status',
