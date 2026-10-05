@@ -41,7 +41,7 @@
   --largura-cartao-solto: 28rem; /* Login, Cadastro, Esqueci a senha, Criar nova senha, Verificar e-mail */
   --largura-rodape-acoes: 24rem; /* caixa dos botões de rodapé (RodapeAcoes) */
   --largura-rodape-acoes-media: 28rem;
-  --largura-rodape-acoes-larga: 36rem;
+  --largura-rodape-acoes-larga: 40rem;
   --largura-formulario: 28rem; /* coluna de formulário curto: Trocar senha, Atribuir papel */
   --largura-texto-curto: 28rem; /* parágrafo curto centralizado: aviso de espaço reservado */
   --largura-campo-busca: 24rem; /* caixa de busca solta, fora da barra de filtros */

@@ -64,7 +64,7 @@ export function ListarPesquisadores({ auth }: PropsPagina) {
   }, [auth.authFetch, chaveRecarga]);
 
   const buscarLogPerfil = useCallback(
-    (pagina: number) => logAuditoriaApi.listarPorTabela(auth.authFetch, 'perfil_pesquisador', pagina),
+    (pagina: number, tamanho: number) => logAuditoriaApi.listarPorTabela(auth.authFetch, 'perfil_pesquisador', pagina, tamanho),
     [auth.authFetch],
   );
 

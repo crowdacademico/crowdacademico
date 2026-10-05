@@ -83,7 +83,7 @@ export function ListarUsuarios({ auth }: PropsPagina) {
   // 'usuario' é o nome FÍSICO da tabela no Postgres (bate com
   // fn_log_auditoria() via TG_TABLE_NAME), não o nome da rota.
   const buscarLogUsuario = useCallback(
-    (pagina: number) => logAuditoriaApi.listarPorTabela(auth.authFetch, 'usuario', pagina),
+    (pagina: number, tamanho: number) => logAuditoriaApi.listarPorTabela(auth.authFetch, 'usuario', pagina, tamanho),
     [auth.authFetch],
   );
 
@@ -114,7 +114,7 @@ export function ListarUsuarios({ auth }: PropsPagina) {
       {/* "De"/"Para": "nome" é o único campo de texto editável de usuario que faz sentido rastrear assim
           (senha nunca entra no log, ver fn_log_auditoria() [strip de senha_hash]; e-mail não é editável pelo
           painel). */}
-      <BlocoLogAuditoria buscar={buscarLogUsuario} campoRenomeio="nome" />
+      <BlocoLogAuditoria buscar={buscarLogUsuario} />
 
       {criando && (
         <ModalCriarUsuario auth={auth} aoFechar={fecharCriando} aoCriado={recarregar} />

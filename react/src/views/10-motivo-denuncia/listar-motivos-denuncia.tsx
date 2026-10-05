@@ -46,7 +46,7 @@ export function ListarMotivosDenuncia({ auth }: PropsPagina) {
   // trg_log_auditoria_motivo_denuncia, 05_regras_negocio.sql), não o nome
   // da rota - mesma convenção de buscarLogTipos/buscarLogAreas.
   const buscarLogMotivos = useCallback(
-    (pagina: number) => logAuditoriaApi.listarPorTabela(auth.authFetch, 'motivo_denuncia', pagina),
+    (pagina: number, tamanho: number) => logAuditoriaApi.listarPorTabela(auth.authFetch, 'motivo_denuncia', pagina, tamanho),
     [auth.authFetch],
   );
 
@@ -71,7 +71,7 @@ export function ListarMotivosDenuncia({ auth }: PropsPagina) {
         // de um tipo (mesma ideia do filtro de papel em ListarUsuarios).
         filtrosFacetados={[{ chave: 'tipo', rotulo: 'Tipo', ordem: ORDEM_TIPO }]}
       />
-      <BlocoLogAuditoria buscar={buscarLogMotivos} campoRenomeio="descricao" />
+      <BlocoLogAuditoria buscar={buscarLogMotivos} />
 
       {criando && (
         <ModalCriarMotivoDenuncia auth={auth} aoFechar={fecharCriando} aoCriado={recarregar} />

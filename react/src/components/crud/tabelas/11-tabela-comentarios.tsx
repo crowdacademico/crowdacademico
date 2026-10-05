@@ -44,7 +44,7 @@ export function TabelaComentarios({ comentarios, ehDono, limiteAtingido = false,
               <td>{item.nomePesquisador ?? 'Pesquisador removido'}</td>
               <td>{formatarData(item.criadoEm)}</td>
               <td>
-                <TextoResumido texto={item.conteudo} titulo={`Comentário de ${item.nomePesquisador ?? 'pesquisador removido'}`} />
+                <TextoResumido texto={item.conteudo} />
               </td>
               <td>{item.endossado ? <span className="badge badge-sucesso">#{item.ordemEndosso}</span> : '-'}</td>
               {ehDono && (

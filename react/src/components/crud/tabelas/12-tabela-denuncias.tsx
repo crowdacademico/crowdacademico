@@ -30,13 +30,13 @@ export function TabelaDenuncias({ denuncias }: { denuncias: DenunciaResponse[] }
               <td>{item.nomeDenunciante ?? `#${item.idUsuario}`}</td>
               <td>{item.motivo}</td>
               <td>
-                <TextoResumido texto={item.relato} titulo={`Relato da denúncia #${item.idDenuncia}`} />
+                <TextoResumido texto={item.relato} />
               </td>
               <td>
                 <BadgeStatusDenuncia status={item.status} />
               </td>
               <td>
-                <TextoResumido texto={item.justificativaModeracao} titulo={`Decisão da denúncia #${item.idDenuncia}`} />
+                <TextoResumido texto={item.justificativaModeracao} />
               </td>
             </tr>
           ))}

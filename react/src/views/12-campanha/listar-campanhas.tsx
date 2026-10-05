@@ -39,7 +39,7 @@ export function ListarCampanhas({ auth }: PropsPagina) {
   }, [auth.authFetch]);
 
   const buscarLogCampanha = useCallback(
-    (pagina: number) => logAuditoriaApi.listarPorTabela(auth.authFetch, 'campanha', pagina),
+    (pagina: number, tamanho: number) => logAuditoriaApi.listarPorTabela(auth.authFetch, 'campanha', pagina, tamanho),
     [auth.authFetch],
   );
 
@@ -50,7 +50,7 @@ export function ListarCampanhas({ auth }: PropsPagina) {
         ajuda="Acompanhe todas as campanhas da plataforma, em qualquer status."
         colunas={[
           { chave: 'idCampanha', rotulo: 'id', tipo: 'id' },
-          { chave: 'titulo', rotulo: 'título', tipo: 'nome' },
+          { chave: 'titulo', rotulo: 'título', tipo: 'nome', umaLinha: true },
           { chave: 'status', rotulo: 'status', tipo: 'status', renderizar: renderizarStatus },
           { chave: 'pesquisador', rotulo: 'pesquisador', tipo: 'texto' },
           { chave: 'metaFinanceira', rotulo: 'meta', tipo: 'dinheiro' },

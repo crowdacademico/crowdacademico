@@ -5,8 +5,7 @@ import type { ResultadoPaginado } from '../../services/constant/type/paginacao.t
 import type { LogAuditoriaResponse } from '../../services/27-log-auditoria/type/log-auditoria.type';
 
 interface BlocoLogAuditoriaProps {
-  buscar: (pagina: number) => Promise<ResultadoPaginado<LogAuditoriaResponse>>;
-  campoRenomeio?: string;
+  buscar: (pagina: number, tamanho: number) => Promise<ResultadoPaginado<LogAuditoriaResponse>>;
 }
 
 // Log de auditoria não é estrutura de tabela: é outra funcionalidade, com dados próprios, paginação própria e
@@ -14,13 +13,13 @@ interface BlocoLogAuditoriaProps {
 // colocado logo abaixo do `<GenericTable>` nas telas que precisam (mesmo `mt-4` que o botão "Ver log" tinha
 // dentro do GenericTable). O teste que importa não é "quantos usam", é "uma tela SEM tabela consegue mostrar
 // log de auditoria hoje?": embutido no GenericTable, não conseguia, sem montar um GenericTable falso.
-export function BlocoLogAuditoria({ buscar, campoRenomeio }: BlocoLogAuditoriaProps) {
+export function BlocoLogAuditoria({ buscar }: BlocoLogAuditoriaProps) {
   const [aberto, setAberto] = useState(false);
 
   return (
     <>
       <BotaoMostrarEsconder aberto={aberto} aoAlternar={() => setAberto((atual) => !atual)} rotulo="log" className="mt-4" />
-      {aberto && <LogAuditoriaPainel buscar={buscar} campoRenomeio={campoRenomeio} />}
+      {aberto && <LogAuditoriaPainel buscar={buscar} />}
     </>
   );
 }

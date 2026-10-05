@@ -1,5 +1,6 @@
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import { MensagemErro } from './mensagem-erro';
+import { TextoResumido } from './texto-resumido';
 import { EstadoVazio, type ConteudoEstadoVazio } from './estado-vazio';
 import type { ReactNode } from 'react';
 import { useSearchParams } from 'react-router';
@@ -29,6 +30,8 @@ interface Coluna<T extends Linha> {
   tipo: NomeTipoColuna;
   quebrarRotulo?: boolean;
   renderizar?: (linha: T) => ReactNode;
+  // Texto que pode ser longo (alvo, título de campanha): uma linha só, com "ler tudo" que expande a linha.
+  umaLinha?: boolean;
 }
 
 interface FiltroFacetado<T extends Linha> {
@@ -269,7 +272,17 @@ export function GenericTable<T extends Linha>({
     const { chave, tipo } = colunaOrdenada;
     const comparar = TIPOS_COLUNA[tipo].comparar;
     const sinal = ordenacao.direcao === 'asc' ? 1 : -1;
-    return [...linhasFiltradas].sort((a, b) => comparar(a[chave], b[chave]) * sinal);
+    // Vazio fica sempre no fim, nas duas direções (padrão de planilha): senão, ao inverter, as linhas sem valor
+    // pulavam para o topo, na frente do maior valor.
+    const vazio = (valor: unknown) => valor === null || valor === undefined || valor === '';
+    return [...linhasFiltradas].sort((a, b) => {
+      const vazioA = vazio(a[chave]);
+      const vazioB = vazio(b[chave]);
+      if (vazioA || vazioB) {
+        return Number(vazioA) - Number(vazioB);
+      }
+      return comparar(a[chave], b[chave]) * sinal;
+    });
   }, [linhasFiltradas, ordenacao, colunas]);
 
   // `quebrarRotulo`: um rótulo como "e-mail verificado" quebraria pelo espaço sobrando na coluna, que pula
@@ -610,13 +623,29 @@ export function GenericTable<T extends Linha>({
                       const tipo = TIPOS_COLUNA[coluna.tipo];
                       return (
                         <td key={coluna.chave} className={tipo.classe} style={estiloColuna(coluna)}>
-                          {coluna.renderizar ? coluna.renderizar(linha) : tipo.exibir(linha[coluna.chave])}
+                          {coluna.renderizar ? (
+                            coluna.renderizar(linha)
+                          ) : coluna.umaLinha ? (
+                            <span className={coluna.tipo === 'nome' ? 'crud-tabela__nome' : undefined}>
+                              <TextoResumido texto={tipo.texto(linha[coluna.chave]) || null} />
+                            </span>
+                          ) : (
+                            tipo.exibir(linha[coluna.chave])
+                          )}
                         </td>
                       );
                     })}
                     {acoes && temAcoes && <CelulaAcoes acoes={acoes} linha={linha} indisponivel={acaoIndisponivel} />}
                   </tr>
                 ))}
+                {/* Última página incompleta: linhas vazias até o tamanho escolhido, para a tabela não encolher. */}
+                {totalPaginas > 1 &&
+                  tamanhoPagina !== 'todos' &&
+                  Array.from({ length: Math.max(0, tamanhoPagina - linhasPagina.length) }, (_, indice) => (
+                    <tr key={`vazia-${indice}`} className="crud-tabela__linha-vazia" aria-hidden="true">
+                      <td colSpan={colunas.length + (temAcoes ? 1 : 0)}>&nbsp;</td>
+                    </tr>
+                  ))}
                 {linhasPagina.length === 0 && !erro && (
                   <tr>
                     <td colSpan={colunas.length + (temAcoes ? 1 : 0)}>

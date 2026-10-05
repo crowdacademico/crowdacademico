@@ -59,7 +59,7 @@ export function ListarAreasConhecimento({ auth }: PropsPagina) {
   // nome da rota - mesma convenção de buscarLogConfiguracoes/
   // buscarLogUsuario.
   const buscarLogAreas = useCallback(
-    (pagina: number) => logAuditoriaApi.listarPorTabela(auth.authFetch, 'area_conhecimento', pagina),
+    (pagina: number, tamanho: number) => logAuditoriaApi.listarPorTabela(auth.authFetch, 'area_conhecimento', pagina, tamanho),
     [auth.authFetch],
   );
 
@@ -95,7 +95,7 @@ export function ListarAreasConhecimento({ auth }: PropsPagina) {
         // opção primeiro na lista, o resto continua alfabético.
         filtrosFacetados={[{ chave: 'nomePai', rotulo: 'Grande área', ordem: ['Base'] }]}
       />
-      <BlocoLogAuditoria buscar={buscarLogAreas} campoRenomeio="nome" />
+      <BlocoLogAuditoria buscar={buscarLogAreas} />
 
       {criando && (
         <ModalCriarAreaConhecimento auth={auth} aoFechar={fecharCriando} aoCriado={recarregar} />

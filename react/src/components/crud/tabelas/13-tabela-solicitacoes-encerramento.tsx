@@ -34,14 +34,14 @@ export function TabelaSolicitacoesEncerramento({ solicitacoes }: { solicitacoes:
               <td className="crud-tabela__col--id">{item.idSolicitacao}</td>
               <td>{formatarData(item.solicitadoEm)}</td>
               <td>
-                <TextoResumido texto={item.justificativaPesquisador} titulo={`Justificativa do pedido #${item.idSolicitacao}`} />
+                <TextoResumido texto={item.justificativaPesquisador} />
               </td>
               <td>
                 <BadgeStatusEncerramento status={item.status} />
               </td>
               <td>{quemDecidiu(item)}</td>
               <td>
-                <TextoResumido texto={item.justificativaAdmin} titulo={`Decisão do pedido #${item.idSolicitacao}`} />
+                <TextoResumido texto={item.justificativaAdmin} />
               </td>
             </tr>
           ))}

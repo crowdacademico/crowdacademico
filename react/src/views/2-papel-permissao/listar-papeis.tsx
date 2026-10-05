@@ -95,7 +95,7 @@ export function ListarPapeis({ auth }: PropsPagina) {
   // 'papel' é o nome FÍSICO da tabela no Postgres (bate com TG_TABLE_NAME em fn_log_auditoria(),
   // trg_log_auditoria_papel): mesma convenção de buscarLogUsuario em listar-usuarios.tsx.
   const buscarLogPapel = useCallback(
-    (pagina: number) => logAuditoriaApi.listarPorTabela(auth.authFetch, 'papel', pagina),
+    (pagina: number, tamanho: number) => logAuditoriaApi.listarPorTabela(auth.authFetch, 'papel', pagina, tamanho),
     [auth.authFetch],
   );
 
@@ -123,7 +123,7 @@ export function ListarPapeis({ auth }: PropsPagina) {
         />
         {/* "De"/"Para" em vez de "Campos alterados": só "nome" muda em papel (codigo é fixo), mas o recurso
             é genérico (ver LogAuditoriaPainel), não hardcoded aqui além do nome do campo. */}
-        <BlocoLogAuditoria buscar={buscarLogPapel} campoRenomeio="nome" />
+        <BlocoLogAuditoria buscar={buscarLogPapel} />
       </div>
       <div className="admin-content-painel">
         <GenericTable

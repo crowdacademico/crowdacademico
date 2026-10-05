@@ -23,12 +23,14 @@ interface ModalDecidirEncerramentoProps {
   pedido: SolicitacaoEncerramentoResponse;
   aoFechar: () => void;
   aoDecidido: () => void;
+  // Consultar (olho): só para ler, mesmo com o pedido pendente.
+  somenteLeitura?: boolean;
 }
 
 // Decidir um pedido de encerramento antecipado (RF-065): o que o pesquisador pediu, com o modelo, o arrecadado e as
 // contribuições confirmadas. Aprovar encerra a campanha na hora (pede confirmação); rejeitar exige justificativa e a
 // campanha segue ativa. Pedido já decidido ou cancelado só se consulta.
-export function ModalDecidirEncerramento({ authFetch, pedido, aoFechar, aoDecidido }: ModalDecidirEncerramentoProps) {
+export function ModalDecidirEncerramento({ authFetch, pedido, aoFechar, aoDecidido, somenteLeitura = false }: ModalDecidirEncerramentoProps) {
   const [justificativa, setJustificativa] = useState('');
   const [confirmandoAprovar, setConfirmandoAprovar] = useState(false);
   const [rejeitando, setRejeitando] = useState(false);
@@ -36,7 +38,7 @@ export function ModalDecidirEncerramento({ authFetch, pedido, aoFechar, aoDecidi
   const { mostrar } = useToast();
   const { ocupado, executar } = useEnvio(reportarErro, limparErro);
   const limite = useConfiguracoes().obterNumero('limite_caracteres_justificativa_encerramento', 2000);
-  const pendente = pedido.status === 'pendente';
+  const pendente = pedido.status === 'pendente' && !somenteLeitura;
 
   const erros = useErrosFormulario(() => ({
     justificativa:

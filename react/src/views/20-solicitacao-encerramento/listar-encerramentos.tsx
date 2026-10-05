@@ -22,10 +22,10 @@ interface PedidoLinha extends Omit<SolicitacaoEncerramentoResponse, 'status'> {
 }
 
 // Encerramentos (moderação): os pedidos de encerramento antecipado (RF-065), com pesquisador, campanha, modelo,
-// arrecadado, contribuições confirmadas e situação; os pendentes pedem decisão. Consultar abre o pedido para aprovar
-// (encerra a campanha) ou rejeitar (com justificativa).
+// arrecadado, contribuições confirmadas e situação; os pendentes pedem decisão. Alterar abre o pedido pendente para
+// aprovar (encerra a campanha) ou rejeitar (com justificativa); Consultar abre qualquer pedido só para ler.
 export function ListarEncerramentos({ auth }: PropsPagina) {
-  const [consultando, setConsultando] = useState<SolicitacaoEncerramentoResponse | null>(null);
+  const [aberto, setAberto] = useState<{ pedido: SolicitacaoEncerramentoResponse; somenteLeitura: boolean } | null>(null);
   const [chaveRecarga, setChaveRecarga] = useState(0);
 
   const listar = useCallback(async (): Promise<PedidoLinha[]> => {
@@ -42,7 +42,7 @@ export function ListarEncerramentos({ auth }: PropsPagina) {
   }, [auth.authFetch, chaveRecarga]);
 
   const buscarLog = useCallback(
-    (pagina: number) => logAuditoriaApi.listarPorTabela(auth.authFetch, 'solicitacao_encerramento', pagina),
+    (pagina: number, tamanho: number) => logAuditoriaApi.listarPorTabela(auth.authFetch, 'solicitacao_encerramento', pagina, tamanho),
     [auth.authFetch],
   );
 
@@ -53,7 +53,7 @@ export function ListarEncerramentos({ auth }: PropsPagina) {
         ajuda="Pedidos de pesquisadores para encerrar uma campanha antes do prazo. Aprovar encerra a campanha; rejeitar exige justificativa e a campanha segue ativa."
         colunas={[
           { chave: 'idSolicitacao', rotulo: 'id', tipo: 'id' },
-          { chave: 'campanha', rotulo: 'campanha', tipo: 'nome' },
+          { chave: 'campanha', rotulo: 'campanha', tipo: 'nome', umaLinha: true },
           { chave: 'pesquisador', rotulo: 'pesquisador', tipo: 'texto' },
           { chave: 'modelo', rotulo: 'modelo', tipo: 'status' },
           { chave: 'valorArrecadado', rotulo: 'arrecadado', tipo: 'dinheiro' },
@@ -69,7 +69,13 @@ export function ListarEncerramentos({ auth }: PropsPagina) {
         vazio={{ icone: 'fa-flag-checkered', titulo: 'Nenhum pedido de encerramento.', texto: 'Quando um pesquisador pedir para encerrar uma campanha antes do prazo, o pedido aparece aqui.' }}
         chavePrimaria="idSolicitacao"
         listar={listar}
-        acoes={{ consultar: (linha) => setConsultando({ ...linha, status: linha.statusOriginal }) }}
+        acoes={{
+          alterar: (linha) => setAberto({ pedido: { ...linha, status: linha.statusOriginal }, somenteLeitura: false }),
+          consultar: (linha) => setAberto({ pedido: { ...linha, status: linha.statusOriginal }, somenteLeitura: true }),
+        }}
+        acaoIndisponivel={(linha, acao) =>
+          acao === 'alterar' && linha.statusOriginal !== 'pendente' ? 'Este pedido já foi decidido ou cancelado.' : undefined
+        }
         filtrosFacetados={[
           { chave: 'status', rotulo: 'Situação', ordem: ORDEM_STATUS_ENCERRAMENTO.map((status) => ROTULO_STATUS_ENCERRAMENTO[status]) },
           { chave: 'modelo', rotulo: 'Modelo' },
@@ -77,11 +83,12 @@ export function ListarEncerramentos({ auth }: PropsPagina) {
       />
       <BlocoLogAuditoria buscar={buscarLog} />
 
-      {consultando && (
+      {aberto && (
         <ModalDecidirEncerramento
           authFetch={auth.authFetch}
-          pedido={consultando}
-          aoFechar={() => setConsultando(null)}
+          pedido={aberto.pedido}
+          somenteLeitura={aberto.somenteLeitura}
+          aoFechar={() => setAberto(null)}
           aoDecidido={() => setChaveRecarga((atual) => atual + 1)}
         />
       )}

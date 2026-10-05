@@ -81,6 +81,65 @@
     text-align: left;
   }
 
+  /* A caixa da tabela recebe foco para rolar pelo teclado (CaixaTabela): o contorno aparece só pelo teclado, não
+     no clique do mouse dentro dela. */
+  .crud-tabela__wrapper:focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  /* Linha vazia que completa a última página: sem destaque ao passar o mouse. */
+  .crud-tabela tbody tr.crud-tabela__linha-vazia:hover > td {
+    background-color: transparent;
+  }
+
+  /* Tabela do "Ver log": a mesma letra monoespaçada pequena do Registro de Chamadas, linhas mais baixas, e cada
+     campo alterado numa linha própria dentro da célula (Campo alterado, De e Para alinhados). */
+  .crud-tabela.tabela-log {
+    font-family: var(--font-mono-dev);
+    font-size: var(--font-size-xs);
+  }
+
+  .crud-tabela.tabela-log th,
+  .crud-tabela.tabela-log td {
+    padding-top: 0.45rem;
+    padding-bottom: 0.45rem;
+    vertical-align: top;
+  }
+
+  .tabela-log__linha,
+  .tabela-log__uma-linha {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .tabela-log__linha {
+    display: block;
+  }
+
+  /* Larguras fixas: as colunas não mudam ao trocar de página (com largura automática, cada página tinha outra). */
+  .crud-tabela.tabela-log {
+    table-layout: fixed;
+  }
+
+  .tabela-log__col-id { width: 4.5rem; }
+  .tabela-log__col-acao { width: 7rem; }
+  .tabela-log__col-campo { width: 20%; }
+  .tabela-log__col-valor { width: 20%; }
+  .tabela-log__col-quem { width: 14%; }
+  .tabela-log__col-quando { width: 11.5rem; }
+
+  .tabela-log__campos {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .tabela-log__campos-lista {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
   /* Coluna de valor curto (id, Sim/Não, status, dinheiro, data) centralizada, cabeçalho e célula: na
      GenericTable quem liga esta classe é o tipo da coluna (components/crud/colunas/); as tabelas manuais
      (bancadas) usam direto. `text-align: center` sozinho já centraliza tanto texto solto quanto o badge
@@ -168,6 +227,42 @@
       --coluna-piso-maximo: 40ch;
       width: 1%;
     }
+  }
+
+  /* TextoResumido: uma linha só; quando não cabe, "ler tudo" ao lado expande a própria linha. Corta em linhas (e não
+     com nowrap) para a largura automática da coluna continuar a mesma de antes. */
+  .texto-resumido {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+  }
+
+  .texto-resumido__uma-linha {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+    overflow: hidden;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  /* Aberto: o texto e o "ler menos" correm juntos, como uma frase, com o botão no fim do texto. */
+  .texto-resumido--aberto {
+    display: block;
+  }
+
+  .texto-resumido__inteiro {
+    white-space: pre-line;
+  }
+
+  .texto-resumido--aberto .texto-resumido__botao {
+    margin-left: 0.5rem;
+  }
+
+  .texto-resumido__botao {
+    flex-shrink: 0;
+    white-space: nowrap;
   }
 
   .crud-tabela__nome {

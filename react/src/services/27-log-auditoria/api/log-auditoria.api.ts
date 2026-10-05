@@ -8,16 +8,17 @@ import type { LogAuditoriaResponse } from '../type/log-auditoria.type';
 // `.dados` aqui (diferente de usuarioApi.listar/configuracoesApi.listar): quem usa isso
 // (log-auditoria-painel.tsx) quer saber o total também.
 export const logAuditoriaApi = {
-  // `pagina`: o backend (log-auditoria.service.findall.ts) já pagina de verdade (LIMIT/OFFSET, 20 por página),
+  // `pagina`: o backend (log-auditoria.service.findall.ts) já pagina de verdade (LIMIT/OFFSET, no tamanho pedido),
   // diferente de usuario/configuracao (que buscam tudo e paginam no navegador); o front só precisa pedir a
   // página certa.
   listarPorTabela: (
     authFetch: AuthFetch,
     tabela: string,
     pagina = 1,
+    tamanho = 10,
   ): Promise<ResultadoPaginado<LogAuditoriaResponse>> =>
     authFetch(
-      `/log-auditoria?tabela=${encodeURIComponent(tabela)}&pagina=${pagina}`,
+      `/log-auditoria?tabela=${encodeURIComponent(tabela)}&pagina=${pagina}&tamanho=${tamanho}`,
     ).then(tratarResposta<ResultadoPaginado<LogAuditoriaResponse>>),
   // Últimas ações do PRÓPRIO usuário logado, de qualquer tabela: usado pelo sino "Atividade recente" do
   // cabeçalho. Já vem como array pronto (sem paginação: o sino só mostra as últimas N).

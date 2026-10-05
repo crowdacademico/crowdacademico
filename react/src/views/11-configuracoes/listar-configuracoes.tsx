@@ -44,7 +44,7 @@ export function ListarConfiguracoes({ auth }: PropsPagina) {
   // 'configuracoes' é o nome FÍSICO da tabela (plural, bate com o CREATE
   // TABLE em 01_extensoes_enums_tabelas.sql), não o nome da rota.
   const buscarLogConfiguracoes = useCallback(
-    (pagina: number) => logAuditoriaApi.listarPorTabela(auth.authFetch, 'configuracoes', pagina),
+    (pagina: number, tamanho: number) => logAuditoriaApi.listarPorTabela(auth.authFetch, 'configuracoes', pagina, tamanho),
     [auth.authFetch],
   );
 
@@ -74,7 +74,7 @@ export function ListarConfiguracoes({ auth }: PropsPagina) {
       {/* "De"/"Para" no VALOR: é a coluna que mais importa aqui: configuracoes existe para tirar regra de
           negócio hardcoded do .sql, então ver o valor antigo/novo de uma mudança (ex.: taxa, limite, prazo)
           é mais útil que "chave"/"descricao"/"ativo" mudaram. */}
-      <BlocoLogAuditoria buscar={buscarLogConfiguracoes} campoRenomeio="valor" />
+      <BlocoLogAuditoria buscar={buscarLogConfiguracoes} />
 
       {alterando && (
         <ModalAlterarConfiguracao

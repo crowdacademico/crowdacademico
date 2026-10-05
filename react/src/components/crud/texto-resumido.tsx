@@ -1,32 +1,38 @@
-import { useState } from 'react';
-import { ModalDetalhe } from './modal-detalhe';
+import { useLayoutEffect, useRef, useState } from 'react';
 
-interface TextoResumidoProps {
-  texto: string | null;
-  // Título do modalzinho que mostra o texto inteiro (ex.: "Comentário de Ana Beatriz").
-  titulo: string;
-  limite?: number;
-}
+// Texto que pode ser longo dentro de uma tabela (alvo, título, relato, comentário): ocupa uma linha só e, quando não
+// cabe, ganha um "ler tudo" que expande a própria linha ("ler menos" recolhe). O corte é medido na tela, não por
+// número de letras, então acompanha a largura da coluna e do aparelho.
+export function TextoResumido({ texto }: { texto: string | null }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const [cortado, setCortado] = useState(false);
+  const [expandido, setExpandido] = useState(false);
 
-// Texto livre dentro de uma tabela (comentário, relato, justificativa): mostra o começo e, se passar do limite, um
-// "ler tudo" que abre o texto inteiro num modal. Assim um texto longo não estica a linha da tabela.
-export function TextoResumido({ texto, titulo, limite = 90 }: TextoResumidoProps) {
-  const [aberto, setAberto] = useState(false);
+  useLayoutEffect(() => {
+    const elemento = ref.current;
+    if (!elemento || expandido) {
+      return;
+    }
+    const medir = () => setCortado(elemento.scrollHeight > elemento.clientHeight + 1);
+    medir();
+    const observador = new ResizeObserver(medir);
+    observador.observe(elemento);
+    return () => observador.disconnect();
+  }, [texto, expandido]);
+
   if (!texto) {
     return <>-</>;
   }
-  if (texto.length <= limite) {
-    return <>{texto}</>;
-  }
   return (
-    <>
-      {texto.slice(0, limite).trimEnd()}...{' '}
-      <button type="button" className="link-texto" onClick={() => setAberto(true)}>
-        ler tudo
-      </button>
-      {aberto && (
-        <ModalDetalhe titulo={titulo} secoes={[{ titulo: 'Texto completo', conteudo: <p className="paragrafo whitespace-pre-line">{texto}</p> }]} aoFechar={() => setAberto(false)} />
+    <span className={expandido ? 'texto-resumido texto-resumido--aberto' : 'texto-resumido'}>
+      <span ref={ref} className={expandido ? 'texto-resumido__inteiro' : 'texto-resumido__uma-linha'}>
+        {texto}
+      </span>
+      {(cortado || expandido) && (
+        <button type="button" className="link-texto texto-resumido__botao" aria-expanded={expandido} onClick={() => setExpandido((atual) => !atual)}>
+          {expandido ? 'ler menos' : 'ler tudo'}
+        </button>
       )}
-    </>
+    </span>
   );
 }

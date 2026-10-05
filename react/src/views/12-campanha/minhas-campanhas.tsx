@@ -123,7 +123,7 @@ export function MinhasCampanhas({ auth }: PropsPagina) {
         }
         colunas={[
           { chave: 'idCampanha', rotulo: 'id', tipo: 'id' },
-          { chave: 'titulo', rotulo: 'título', tipo: 'nome' },
+          { chave: 'titulo', rotulo: 'título', tipo: 'nome', umaLinha: true },
           { chave: 'status', rotulo: 'status', tipo: 'status', renderizar: renderizarStatus },
           { chave: 'metaFinanceira', rotulo: 'meta', tipo: 'dinheiro' },
           { chave: 'valorBrutoArrecadado', rotulo: 'arrecadado', tipo: 'dinheiro' },

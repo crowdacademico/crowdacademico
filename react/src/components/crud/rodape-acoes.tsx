@@ -59,8 +59,9 @@ export function RodapeAcoes({
     );
   }
   return (
-    <div className={'flex gap-3' + CLASSE_LARGURA[largura]}>
-      <button type="button" onClick={aoCancelar} disabled={cancelarDesabilitado} className="btn btn-secondary flex-1">
+    // Texto do botão nunca quebra (o botão ficaria alto); se não couber na tela, o botão desce para a linha de baixo.
+    <div className={'flex flex-wrap gap-3' + CLASSE_LARGURA[largura]}>
+      <button type="button" onClick={aoCancelar} disabled={cancelarDesabilitado} className="btn btn-secondary flex-1 whitespace-nowrap">
         {rotuloCancelar}
       </button>
       {acoes.map((item) => (
@@ -70,7 +71,7 @@ export function RodapeAcoes({
           {...(item.formulario ? { form: item.formulario } : {})}
           onClick={item.aoClicar}
           disabled={item.ocupado || item.desabilitado}
-          className={'btn flex-1 ' + (item.perigo ? 'btn-danger' : 'btn-primary')}
+          className={'btn flex-1 whitespace-nowrap ' + (item.perigo ? 'btn-danger' : 'btn-primary')}
         >
           {item.ocupado && item.rotuloOcupado ? item.rotuloOcupado : item.rotulo}
         </button>
