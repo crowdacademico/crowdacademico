@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { CaixaAviso } from '../../components/crud/caixa-aviso';
+import { ModalConfirmacao } from '../../components/crud/modal-confirmacao';
 import { SecaoFicha } from '../../components/crud/ficha-consulta';
 import { TabelaSolicitacoesEncerramento } from '../../components/crud/tabelas/13-tabela-solicitacoes-encerramento';
 import { Campo } from '../../components/input/campo';
@@ -25,7 +26,7 @@ interface SecaoEncerramentoAntecipadoProps {
 
 // Encerrar a campanha antes do prazo, no Alterar do dono (RF-064). Sem contribuição confirmada, encerra na hora; com
 // contribuição, envia um pedido ao administrador, e a campanha segue recebendo apoio até a decisão. Um pedido
-// pendente pode ser cancelado. Encerrar pede confirmação: não dá para desfazer.
+// pendente pode ser cancelado. Encerrar direto abre a janelinha de confirmação (DS-87): não dá para desfazer.
 export function SecaoEncerramentoAntecipado({ authFetch, idCampanha, valorArrecadado, aoEncerrada }: SecaoEncerramentoAntecipadoProps) {
   const [pedidos, setPedidos] = useState<SolicitacaoEncerramentoResponse[] | null>(null);
   const [justificativa, setJustificativa] = useState('');
@@ -56,6 +57,7 @@ export function SecaoEncerramentoAntecipado({ authFetch, idCampanha, valorArreca
 
   const enviar = async () => {
     if (!erros.tentarEnviar()) return;
+    // Encerrar direto pede o OK na janelinha; o pedido ao administrador não (ele decide, e dá para cancelar).
     if (encerraDireto && !confirmando) {
       setConfirmando(true);
       return;
@@ -73,6 +75,7 @@ export function SecaoEncerramentoAntecipado({ authFetch, idCampanha, valorArreca
         setChaveRecarga((atual) => atual + 1);
       }
     });
+    setConfirmando(false);
   };
 
   const cancelar = async (id: number) => {
@@ -107,26 +110,39 @@ export function SecaoEncerramentoAntecipado({ authFetch, idCampanha, valorArreca
                   {...atributos}
                   rows={3}
                   value={justificativa}
-                  onChange={(evento) => {
-                    setJustificativa(evento.target.value);
-                    setConfirmando(false);
-                  }}
+                  onChange={(evento) => setJustificativa(evento.target.value)}
                   className={'input-padrao' + classeErro}
                 />
                 <ContadorCaracteres texto={justificativa} limite={limite} />
               </>
             )}
           </Campo>
-          {confirmando && (
-            <CaixaAviso tom="erro" icone="fa-triangle-exclamation" titulo="Encerrar a campanha agora">
-              A campanha para de receber apoio na hora e não dá para desfazer.
-            </CaixaAviso>
-          )}
           <div>
-            <button type="button" className={'btn btn-pequeno ' + (confirmando ? 'btn-danger' : 'btn-secondary')} disabled={ocupado} onClick={() => void enviar()}>
-              {encerraDireto ? (confirmando ? 'Confirmar: encerrar agora' : 'Encerrar campanha agora') : 'Enviar pedido ao administrador'}
-            </button>
+            {encerraDireto ? (
+              <button type="button" className="btn btn-danger" disabled={ocupado} onClick={() => void enviar()}>
+                <i className="fa-solid fa-flag-checkered" aria-hidden="true"></i> Encerrar campanha agora
+              </button>
+            ) : (
+              <button type="button" className="btn btn-secondary" disabled={ocupado} onClick={() => void enviar()}>
+                <i className="fa-solid fa-paper-plane" aria-hidden="true"></i> Enviar pedido ao administrador
+              </button>
+            )}
           </div>
+          {confirmando && (
+            <ModalConfirmacao
+              titulo="Encerrar a campanha agora?"
+              rotuloConfirmar="Encerrar campanha"
+              rotuloOcupado="Encerrando..."
+              perigo
+              exigirCiencia
+              ocupado={ocupado}
+              aoConfirmar={() => void enviar()}
+              aoCancelar={() => setConfirmando(false)}
+            >
+              <p>A campanha para de receber apoio na hora e passa a constar como encerrada. Não dá para desfazer.</p>
+              <p>A justificativa fica registrada no histórico de pedidos da campanha.</p>
+            </ModalConfirmacao>
+          )}
         </>
       )}
       {pedidos.length > 0 && <TabelaSolicitacoesEncerramento solicitacoes={pedidos} />}

@@ -55,6 +55,13 @@
   text-align: center;
 }
 
+/* Linha vazia que completa a última página: sem cursor de clique e sem destaque. */
+.registro-chamadas__linha.registro-chamadas__linha--vazia,
+.registro-chamadas__linha.registro-chamadas__linha--vazia:hover {
+  cursor: default;
+  background: none;
+}
+
 .registro-chamadas__linha--cabecalho {
   cursor: default;
   font-weight: 700;

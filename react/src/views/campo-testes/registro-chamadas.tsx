@@ -7,6 +7,7 @@ import { paginarClientSide } from '../../services/constant/util/paginacao.util';
 import { RodapePaginacao } from '../../components/pagination/rodape-paginacao';
 import { BotaoMostrarEsconder } from '../../components/crud/botao-mostrar-esconder';
 import { EstadoVazio } from '../../components/crud/estado-vazio';
+import { quantasLinhasVazias } from '../../components/crud/use-linhas-vazias';
 import { useCampoTestes } from '../../services/campo-testes/hook/use-campo-testes';
 import type { RegistroChamada } from '../../services/campo-testes/context/campo-testes-context';
 
@@ -43,6 +44,9 @@ export function RegistroChamadas() {
   const [tamanhoPagina, setTamanhoPagina] = useState<number | 'todos'>(10);
 
   const { totalPaginas, paginaAtual, itensPagina: registrosPagina } = paginarClientSide(registroChamadas, pagina, tamanhoPagina);
+  // Última página incompleta: linhas vazias até o tamanho escolhido (a mesma regra das tabelas). Aqui toda linha tem a
+  // mesma altura (uma linha só), então a vazia é só uma linha da grade sem conteúdo.
+  const quantasVazias = quantasLinhasVazias(totalPaginas, tamanhoPagina, registrosPagina.length);
 
   return (
     <div className="registro-chamadas">
@@ -119,6 +123,12 @@ export function RegistroChamadas() {
                   </button>
                 </div>
               )}
+            </div>
+          ))}
+
+          {Array.from({ length: quantasVazias }, (_, indice) => (
+            <div key={`vazia-${indice}`} className="registro-chamadas__linha registro-chamadas__linha--vazia" aria-hidden="true">
+              <span>&nbsp;</span>
             </div>
           ))}
 

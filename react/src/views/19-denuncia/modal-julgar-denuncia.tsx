@@ -45,6 +45,8 @@ export function ModalJulgarDenuncia({ authFetch, denuncia, aoFechar, aoJulgada, 
   const [status, setStatus] = useState<StatusDenuncia>(denuncia.status);
   const [justificativa, setJustificativa] = useState(denuncia.justificativaModeracao ?? '');
   const [confirmandoEncerrar, setConfirmandoEncerrar] = useState(false);
+  // Encerramento por moderação esperando o OK na janelinha de confirmação (DS-87).
+  const [janelaEncerrar, setJanelaEncerrar] = useState(false);
   const [justificativaContestacao, setJustificativaContestacao] = useState('');
   // Decisão da contestação esperando o OK na janelinha de confirmação: true = aceitar, false = recusar.
   const [confirmandoContestacao, setConfirmandoContestacao] = useState<boolean | null>(null);
@@ -106,6 +108,12 @@ export function ModalJulgarDenuncia({ authFetch, denuncia, aoFechar, aoJulgada, 
       aoJulgada();
       aoFechar();
     });
+    setJanelaEncerrar(false);
+  };
+
+  // Confere a justificativa antes de abrir a janelinha: o erro aparece no campo.
+  const pedirConfirmacaoEncerrar = () => {
+    if (erros.tentarEnviar()) setJanelaEncerrar(true);
   };
 
   return (
@@ -129,7 +137,7 @@ export function ModalJulgarDenuncia({ authFetch, denuncia, aoFechar, aoJulgada, 
                       { rotulo: 'Aceitar contestação', aoClicar: () => pedirConfirmacaoContestacao(true) },
                     ]
                   : confirmandoEncerrar
-                  ? { rotulo: 'Confirmar encerramento', rotuloOcupado: 'Encerrando...', ocupado, perigo: true, aoClicar: () => void encerrarCampanha() }
+                  ? { rotulo: 'Encerrar campanha', perigo: true, aoClicar: pedirConfirmacaoEncerrar }
                   : { rotulo: 'Salvar decisão', rotuloOcupado: 'Salvando...', ocupado, aoClicar: () => void salvar() }
               }
             />
@@ -243,16 +251,15 @@ export function ModalJulgarDenuncia({ authFetch, denuncia, aoFechar, aoJulgada, 
               {podeEncerrarCampanha &&
                 (confirmandoEncerrar ? (
                   <CaixaAviso tom="erro" icone="fa-triangle-exclamation" titulo="Encerrar a campanha por moderação">
-                    A denúncia fica resolvida e a campanha sai da página pública na hora: não recebe mais apoio, e os
-                    comentários e endossos deixam de aparecer. Não dá para desfazer pela tela.{' '}
+                    Escreva por que a campanha está sendo encerrada e clique em Encerrar campanha, no rodapé.{' '}
                     <button type="button" className="link-texto" onClick={() => setConfirmandoEncerrar(false)}>
                       Voltar
                     </button>
                   </CaixaAviso>
                 ) : (
                   <div>
-                    <button type="button" className="btn btn-pequeno btn-secondary" onClick={() => setConfirmandoEncerrar(true)}>
-                      Procedente: encerrar a campanha
+                    <button type="button" className="btn btn-danger" onClick={() => setConfirmandoEncerrar(true)}>
+                      <i className="fa-solid fa-ban" aria-hidden="true"></i> Procedente: encerrar a campanha
                     </button>
                   </div>
                 ))}
@@ -260,6 +267,21 @@ export function ModalJulgarDenuncia({ authFetch, denuncia, aoFechar, aoJulgada, 
           )}
         </div>
       </ModalFicha>
+      {janelaEncerrar && (
+        <ModalConfirmacao
+          titulo="Encerrar a campanha por moderação?"
+          rotuloConfirmar="Encerrar campanha"
+          rotuloOcupado="Encerrando..."
+          perigo
+          exigirCiencia
+          ocupado={ocupado}
+          aoConfirmar={() => void encerrarCampanha()}
+          aoCancelar={() => setJanelaEncerrar(false)}
+        >
+          <p>A denúncia fica resolvida e a campanha sai da página pública na hora: não recebe mais apoio, e os comentários e endossos deixam de aparecer.</p>
+          <p>Não dá para desfazer pela tela.</p>
+        </ModalConfirmacao>
+      )}
       {confirmandoContestacao !== null && (
         <ModalConfirmacao
           titulo={confirmandoContestacao ? 'Aceitar a contestação?' : 'Recusar a contestação?'}

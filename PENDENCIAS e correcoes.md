@@ -170,6 +170,8 @@ Lucas decide depois se ajudam o CrowdAcadêmico. Contexto em `informacoes/todas 
 
 - **Branch `feat/novas-telas-teste` (02-10-2026):** tem o Dashboard em seções ("Precisa de você") e os links acadêmicos em cartões no celular, feitos antes das regras visuais novas. Decidir se entram no main, refeitos com as regras do `DESIGN_SYSTEM.md`, ou se a branch é descartada.
 
+- **Altura padrão da linha de registro em todas as tabelas (04-10-2026, pedido do Lucas):** a altura de uma linha com uma linha só de informação deve ser a da tabela de **Usuários** (hoje uns 51 px nas linhas do meio), e essa é a altura máxima para esse caso. Em algumas tabelas a linha fica maior ou menor por causa de uma peça (pílula, ícone, botão pequeno, link de ação). **Regra do conserto:** nunca diminuir a peça; reduzir ou zerar a margem ou o espaçamento interno dela. **Precisa de tela:** medir no navegador uma linha de uma linha só em cada tabela (listas, tabelas das fichas, bancadas e log), achar a peça que empurra, ajustar e medir tudo de novo, porque a mesma pílula aparece em várias telas. Médio. Relacionado: DS-47 do `DESIGN_SYSTEM.md` (linhas vazias medem uma linha de verdade, então ficam iguais sozinhas depois do conserto).
+
 - **Gestão de logo e favicon:** a aba Identidade Visual do Dashboard é só um espaço reservado.
 
 ### Estrutura e ferramentas

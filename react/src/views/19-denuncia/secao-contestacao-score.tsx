@@ -143,11 +143,11 @@ export function SecaoContestacaoScore({ authFetch }: SecaoContestacaoScoreProps)
                     <div>
                       <button
                         type="button"
-                        className="btn btn-pequeno btn-secondary"
+                        className="btn btn-secondary"
                         disabled={temEsperando}
                         onClick={() => abrir(denuncia.idDenuncia)}
                       >
-                        Pedir revisão
+                        <i className="fa-solid fa-scale-balanced" aria-hidden="true"></i> Pedir revisão
                       </button>
                     </div>
                   ))}
