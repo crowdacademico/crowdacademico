@@ -922,7 +922,8 @@ $$;
 -- decidir_contestacao: a moderação aceita ou recusa uma contestação esperando análise, sempre com justificativa
 -- (RF-033). Aceitar corrige o dado que causou a penalidade: a denúncia vira improcedente na mesma operação, e a nota
 -- se recalcula sozinha (trg_denuncia_recalcula_score, 05). Nunca mexe na nota nem reabre campanha encerrada por
--- moderação. Quem registrou a denúncia não decide a contestação dela (mesmo conflito de interesse do 92006).
+-- moderação. Quem registrou a denúncia não decide a contestação dela (mesmo conflito de interesse do 92006), e quem
+-- julgou a denúncia também não (92036): o recurso é revisto por outra pessoa, nunca por quem tomou a decisão.
 CREATE OR REPLACE FUNCTION public.decidir_contestacao(p_id_denuncia INT, p_aceitar BOOLEAN, p_justificativa TEXT)
 RETURNS VOID
 LANGUAGE plpgsql
@@ -931,17 +932,22 @@ SET search_path = public
 AS $$
 DECLARE
     v_denunciante INT;
+    v_julgador INT;
     v_contestacao status_contestacao;
 BEGIN
     IF NOT public.tem_permissao('denuncia_responder') THEN
         RAISE EXCEPTION 'Sem permissão para decidir contestações.' USING ERRCODE = '92035';
     END IF;
-    SELECT id_usuario, contestacao_status INTO v_denunciante, v_contestacao FROM denuncia WHERE id_denuncia = p_id_denuncia;
+    SELECT id_usuario, id_julgador, contestacao_status INTO v_denunciante, v_julgador, v_contestacao
+    FROM denuncia WHERE id_denuncia = p_id_denuncia;
     IF v_contestacao IS DISTINCT FROM 'pendente' THEN
         RAISE EXCEPTION 'Só uma contestação esperando análise pode ser decidida.' USING ERRCODE = '91047';
     END IF;
     IF v_denunciante = public.id_usuario_atual() THEN
         RAISE EXCEPTION 'Quem registrou a denúncia não pode julgar a própria denúncia.' USING ERRCODE = '92006';
+    END IF;
+    IF v_julgador = public.id_usuario_atual() THEN
+        RAISE EXCEPTION 'Quem julgou a denúncia não pode decidir a contestação contra a própria decisão.' USING ERRCODE = '92036';
     END IF;
     IF p_justificativa IS NULL OR btrim(p_justificativa) = '' THEN
         RAISE EXCEPTION 'Escreva a justificativa da decisão.' USING ERRCODE = '90033';

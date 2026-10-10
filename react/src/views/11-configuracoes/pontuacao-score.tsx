@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { MensagemErro } from '../../components/crud/mensagem-erro';
+import { ModalConfirmacao } from '../../components/crud/modal-confirmacao';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { CaixaTabela } from '../../components/crud/tabelas/caixa-tabela';
 import { Tooltip } from '../../components/layout/tooltip';
@@ -46,19 +47,38 @@ const formatarPontos = (valor: number): string =>
 function problemaDosPesos(dimensoes: DimensaoEditavel[]): string | null {
   const todos = dimensoes.flatMap((dimensao) => [dimensao, ...dimensao.subitens]);
   if (todos.some((item) => !pesoValido(item.peso))) {
-    return 'Todo peso é um número de 0 a 100, com até 2 casas decimais.';
+    return 'Todo valor é um número de 0 a 100, com até 2 casas decimais.';
   }
   const soma = dimensoes.filter((dimensao) => dimensao.ativo).reduce((total, dimensao) => total + numero(dimensao.peso), 0);
   if (Math.abs(soma - 100) > 0.001) {
-    return `As dimensões somam ${soma.toLocaleString('pt-BR')} pontos e precisam somar 100.`;
+    return `As dimensões somam ${soma.toLocaleString('pt-BR')} pontos; o total precisa ser 100.`;
   }
   const semItem = dimensoes.find(
     (dimensao) => dimensao.ativo && !dimensao.subitens.some((item) => item.ativo && numero(item.peso) > 0),
   );
   if (semItem) {
-    return `"${semItem.descricao ?? semItem.nome}" precisa de pelo menos um item ligado com peso maior que zero.`;
+    return `"${semItem.descricao ?? semItem.nome}" precisa de pelo menos um item em uso com importância maior que zero.`;
   }
   return null;
+}
+
+// O problema de UMA dimensão, para aparecer dentro do cartão dela (a soma das dimensões é mostrada no total).
+function problemaDaDimensao(dimensao: DimensaoEditavel): string | null {
+  if ([dimensao, ...dimensao.subitens].some((item) => !pesoValido(item.peso))) {
+    return 'Todo valor é um número de 0 a 100, com até 2 casas decimais.';
+  }
+  if (dimensao.ativo && !dimensao.subitens.some((item) => item.ativo && numero(item.peso) > 0)) {
+    return 'Deixe pelo menos um item em uso, com importância maior que zero.';
+  }
+  return null;
+}
+
+// "(faltam 5)" ou "(sobram 5)" ao lado do total, para a pessoa não precisar fazer a conta.
+function diferencaDoTotal(soma: number): string {
+  const diferenca = Math.round((soma - 100) * 100) / 100;
+  if (diferenca === 0) return '';
+  const valor = Math.abs(diferenca).toLocaleString('pt-BR');
+  return diferenca < 0 ? ` (faltam ${valor})` : ` (sobram ${valor})`;
 }
 
 function problemaDasFaixas(faixas: FaixaEditavel[]): string | null {
@@ -89,6 +109,7 @@ export function PontuacaoScore({ auth }: PropsPagina) {
   const [original, setOriginal] = useState<ScoreConfigResponse | null>(null);
   const envioPesos = useEnvio(erros.reportarErro, erros.limparErro);
   const envioFaixas = useEnvio(erros.reportarErro, erros.limparErro);
+  const [confirmando, setConfirmando] = useState<'pesos' | 'faixas' | null>(null);
 
   const carregar = (dado: ScoreConfigResponse) => {
     setOriginal(dado);
@@ -118,7 +139,19 @@ export function PontuacaoScore({ auth }: PropsPagina) {
   const pesosMudaram = original !== null && JSON.stringify(dimensoes) !== JSON.stringify(dimensoesEditaveis(original.dimensoes));
   const faixasMudaram = original !== null && JSON.stringify(faixas) !== JSON.stringify(faixasEditaveis(original.faixas));
   const problemaPesos = problemaDosPesos(dimensoes);
+  const somaDimensoes = dimensoes
+    .filter((dimensao) => dimensao.ativo && pesoValido(dimensao.peso))
+    .reduce((total, dimensao) => total + numero(dimensao.peso), 0);
+  const rotuloDistribuicao = `Distribuição da pontuação: ${dimensoes
+    .filter((dimensao) => dimensao.ativo)
+    .map((dimensao) => `${dimensao.descricao ?? dimensao.nome}, ${dimensao.peso}`)
+    .join('; ')}`;
   const problemaFaixas = faixas.length > 0 ? problemaDasFaixas(faixas) : null;
+  const faixasNaRegua = faixas
+    .map((faixa) => ({ faixa, minimo: numero(faixa.scoreMinimo), maximo: numero(faixa.scoreMaximo) }))
+    .filter(({ minimo, maximo }) => Number.isInteger(minimo) && Number.isInteger(maximo) && minimo <= maximo)
+    .sort((a, b) => a.minimo - b.minimo);
+  const rotuloRegua = `Faixas: ${faixasNaRegua.map(({ faixa, minimo, maximo }) => `${faixa.rotulo}, de ${minimo} a ${maximo}`).join('; ')}`;
 
   const salvarPesos = () =>
     envioPesos.executar(async () => {
@@ -155,7 +188,7 @@ export function PontuacaoScore({ auth }: PropsPagina) {
           <div className="flex items-center gap-2">
             <h1 className="titulo-secao">Pontuação (Score)</h1>
             <Tooltip
-              texto="A pontuação de 0 a 100 de cada pesquisador, calculada pelo banco. O peso da dimensão é o máximo dela; cada item vale a sua parte (o peso dele dividido pela soma dos itens ligados). Salvar recalcula a pontuação de todos."
+              texto="A pontuação de 0 a 100 de cada pesquisador é calculada sozinha pelo sistema, com as regras desta tela. Salvar recalcula a pontuação de todos."
               baixo
             />
           </div>
@@ -166,98 +199,153 @@ export function PontuacaoScore({ auth }: PropsPagina) {
           <p className="legenda texto-fraco">carregando...</p>
         ) : (
           <>
-            <h2 className="titulo-bloco titulo-bloco--linha">Pesos</h2>
-            <p className="paragrafo texto-fraco mb-3">
-              As dimensões ligadas somam 100. Desligar um item passa a parte dele para os outros itens da mesma
-              dimensão. Quantas denúncias procedentes zeram a reputação fica em Parâmetros do Sistema
-              (score_denuncias_para_zerar).
-            </p>
-            {/* Uma dimensão por linha: em meia largura o nome do item quebrava e a linha da tabela crescia (DS-100). */}
+            {/* As explicações ficam na dica, não na tela: menos texto à vista (fadiga visual). */}
+            <h2 className="titulo-bloco titulo-bloco--linha flex items-center gap-2">
+              Pesos
+              <Tooltip texto={'A pontuação vai de 0 a 100 e é dividida em 4 dimensões; os máximos das quatro somam 100. Dentro de cada dimensão, os itens dividem os pontos conforme a importância: importância 2 vale o dobro de importância 1. Desmarcar "usar" tira o item da conta, e a parte dele vai para os outros itens da dimensão. Quantas denúncias procedentes zeram a Reputação da Comunidade se ajusta em Parâmetros do Sistema.'} />
+            </h2>
+            {/* Distribuição: como os 100 pontos se dividem entre as dimensões ligadas (padrão de "limite por grupo" das
+                telas de pontuação de mercado), atualizada enquanto a pessoa digita. */}
+            <div className="mb-6">
+              <p className="rotulo-campo">Divisão dos pontos</p>
+              <div className="distribuicao-score__barra" role="img" aria-label={rotuloDistribuicao}>
+                {dimensoes.map((dimensao, indice) =>
+                  dimensao.ativo && pesoValido(dimensao.peso) ? (
+                    <span
+                      key={dimensao.idScoreConfig}
+                      className={`distribuicao-score__parte--${(indice % 4) + 1}`}
+                      style={{ width: `${Math.min(100, numero(dimensao.peso))}%` }}
+                    ></span>
+                  ) : null,
+                )}
+              </div>
+              <ul className="distribuicao-score__legenda">
+                {dimensoes.map((dimensao, indice) => (
+                  <li key={dimensao.idScoreConfig} className="distribuicao-score__item legenda">
+                    <span className={`distribuicao-score__cor distribuicao-score__parte--${(indice % 4) + 1}`}></span>
+                    {dimensao.descricao ?? dimensao.nome}
+                    <span className="enfase">{pesoValido(dimensao.peso) ? formatarPontos(numero(dimensao.peso)) : '-'}</span>
+                  </li>
+                ))}
+                <li className={'distribuicao-score__item legenda-destaque' + (Math.abs(somaDimensoes - 100) < 0.001 ? '' : ' texto-erro')}>
+                  Total: {somaDimensoes.toLocaleString('pt-BR')} de 100 pontos{diferencaDoTotal(somaDimensoes)}
+                </li>
+              </ul>
+            </div>
+            {/* Uma dimensão por cartão, na largura inteira: o nome do item cabe numa linha (DS-100). */}
             <div className="grid gap-4">
-              {dimensoes.map((dimensao) => {
+              {dimensoes.map((dimensao, indice) => {
                 const pesoDimensao = pesoValido(dimensao.peso) ? numero(dimensao.peso) : 0;
                 const somaItens = dimensao.subitens
                   .filter((item) => item.ativo && pesoValido(item.peso))
                   .reduce((total, item) => total + numero(item.peso), 0);
+                const problema = problemaDaDimensao(dimensao);
                 return (
-                  <fieldset key={dimensao.idScoreConfig} className="border borda-padrao rounded-lg p-4 min-w-0">
-                    <legend className="enfase px-1">{dimensao.descricao ?? dimensao.nome}</legend>
-                    <label className="rotulo-campo" htmlFor={`peso-${dimensao.idScoreConfig}`}>
-                      Peso da dimensão (máximo de pontos)
-                    </label>
-                    <input
-                      id={`peso-${dimensao.idScoreConfig}`}
-                      type="text"
-                      inputMode="decimal"
-                      value={dimensao.peso}
-                      onChange={(evento) => mudarItem(dimensao.idScoreConfig, { peso: evento.target.value })}
-                      className={'input-padrao mb-3' + (pesoValido(dimensao.peso) ? '' : ' borda-erro')}
-                    />
-                    <CaixaTabela rotulo={`Itens de "${dimensao.descricao ?? dimensao.nome}"`}>
-                      {/* Larguras fixas: as 4 tabelas ficam com as colunas alinhadas, e "item" fica com o resto. min-w: no
-                          celular, a tabela rola de lado dentro da caixa em vez de espremer o nome do item. */}
-                      <table className="crud-tabela table-fixed min-w-md">
-                        <colgroup>
-                          <col />
-                          {/* Ligado, peso e vale com a mesma largura: centralizados, ficam à mesma distância um do outro.
-                              7rem é o que o "vale" precisa ("9,2 pontos") e cabe o peso com 3 dígitos. */}
-                          <col className="w-28" />
-                          <col className="w-28" />
-                          <col className="w-28" />
-                        </colgroup>
-                        <thead>
-                          <tr>
-                            <th>item</th>
-                            <th className="crud-tabela__celula--centralizada">ligado</th>
-                            <th className="crud-tabela__celula--centralizada">peso</th>
-                            <th className="crud-tabela__celula--centralizada">vale</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {dimensao.subitens.map((item) => {
-                            const vale =
-                              item.ativo && somaItens > 0 && pesoValido(item.peso)
-                                ? (numero(item.peso) / somaItens) * pesoDimensao
-                                : 0;
-                            const rotulo = item.descricao ?? item.nome;
-                            return (
-                              <tr key={item.idScoreConfig}>
-                                <td className="crud-tabela__col--texto">{rotulo}</td>
-                                <td className="crud-tabela__celula--centralizada">
-                                  <input
-                                    type="checkbox"
-                                    aria-label={`Ligar "${rotulo}"`}
-                                    checked={item.ativo}
-                                    onChange={(evento) => mudarItem(item.idScoreConfig, { ativo: evento.target.checked })}
-                                  />
-                                </td>
-                                <td className="crud-tabela__celula--centralizada">
-                                  <input
-                                    type="text"
-                                    inputMode="decimal"
-                                    aria-label={`Peso de "${rotulo}"`}
-                                    value={item.peso}
-                                    onChange={(evento) => mudarItem(item.idScoreConfig, { peso: evento.target.value })}
-                                    className={'input-padrao text-center' + (pesoValido(item.peso) ? '' : ' borda-erro')}
-                                  />
-                                </td>
-                                <td className="crud-tabela__celula--centralizada whitespace-nowrap">{formatarPontos(vale)}</td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </CaixaTabela>
+                  <fieldset
+                    key={dimensao.idScoreConfig}
+                    className={'border rounded-lg p-4 min-w-0 ' + (problema ? 'borda-erro' : 'borda-padrao')}
+                  >
+                    <legend className="enfase px-1 inline-flex items-center gap-2">
+                      <span className={`distribuicao-score__cor distribuicao-score__parte--${(indice % 4) + 1}`}></span>
+                      {dimensao.descricao ?? dimensao.nome}
+                    </legend>
+                    {/* Cabeçalho do cartão: os pontos máximos na mesma linha da explicação, e a tabela embaixo, na largura
+                        inteira (ao lado da tabela, o campo deixava uma coluna quase vazia). */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+                      <p className="legenda texto-fraco">
+                        Os itens abaixo dividem estes {formatarPontos(pesoDimensao)} conforme a importância de cada um.
+                      </p>
+                      <div className="flex items-center gap-3">
+                        <label className="rotulo-campo mb-0" htmlFor={`peso-${dimensao.idScoreConfig}`}>
+                          Pontos máximos da dimensão
+                        </label>
+                        <input
+                          id={`peso-${dimensao.idScoreConfig}`}
+                          type="text"
+                          inputMode="decimal"
+                          value={dimensao.peso}
+                          onChange={(evento) => mudarItem(dimensao.idScoreConfig, { peso: evento.target.value })}
+                          className={'input-padrao text-center w-28' + (pesoValido(dimensao.peso) ? '' : ' borda-erro')}
+                        />
+                      </div>
+                    </div>
+                    {problema && (
+                      <p className="legenda-destaque erro-campo mb-3" role="alert">
+                        {problema}
+                      </p>
+                    )}
+                    <div className="min-w-0">
+                      <CaixaTabela rotulo={`Itens de "${dimensao.descricao ?? dimensao.nome}"`}>
+                        {/* Larguras fixas: as 4 tabelas ficam com as colunas alinhadas, e "item" fica com o resto. min-w: no
+                            celular, a tabela rola de lado dentro da caixa em vez de espremer o nome do item. */}
+                        <table className="crud-tabela table-fixed min-w-md">
+                          <colgroup>
+                            <col />
+                            {/* Usar, importância e pontos com a mesma largura: centralizados, ficam à mesma distância um do outro.
+                                7rem é o que "pontos" precisa ("9,2 pontos") e cabe a importância com 3 dígitos. */}
+                            <col className="w-28" />
+                            <col className="w-28" />
+                            <col className="w-28" />
+                          </colgroup>
+                          <thead>
+                            <tr>
+                              <th>item</th>
+                              <th className="crud-tabela__celula--centralizada">usar</th>
+                              <th className="crud-tabela__celula--centralizada">importância</th>
+                              <th className="crud-tabela__celula--centralizada">pontos</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {dimensao.subitens.map((item) => {
+                              const vale =
+                                item.ativo && somaItens > 0 && pesoValido(item.peso)
+                                  ? (numero(item.peso) / somaItens) * pesoDimensao
+                                  : 0;
+                              const rotulo = item.descricao ?? item.nome;
+                              return (
+                                <tr key={item.idScoreConfig} className={item.ativo ? undefined : 'texto-fraco'}>
+                                  <td className="crud-tabela__col--texto">{rotulo}</td>
+                                  <td className="crud-tabela__celula--centralizada">
+                                    <input
+                                      type="checkbox"
+                                      aria-label={`Usar "${rotulo}" na pontuação`}
+                                      checked={item.ativo}
+                                      onChange={(evento) => mudarItem(item.idScoreConfig, { ativo: evento.target.checked })}
+                                    />
+                                  </td>
+                                  <td className="crud-tabela__celula--centralizada">
+                                    <input
+                                      type="text"
+                                      inputMode="decimal"
+                                      aria-label={`Importância de "${rotulo}"`}
+                                      value={item.peso}
+                                      onChange={(evento) => mudarItem(item.idScoreConfig, { peso: evento.target.value })}
+                                      className={'input-padrao text-center' + (pesoValido(item.peso) ? '' : ' borda-erro')}
+                                    />
+                                  </td>
+                                  <td className="crud-tabela__celula--centralizada whitespace-nowrap">
+                                    {item.ativo ? formatarPontos(vale) : '-'}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </CaixaTabela>
+                    </div>
                   </fieldset>
                 );
               })}
             </div>
-            {problemaPesos && pesosMudaram && (
-              <p className="legenda-destaque erro-campo mt-3" role="alert">
-                {problemaPesos}
-              </p>
-            )}
-            <div className="mt-3 mb-8">
+            <div className={'mt-3 mb-8' + (pesosMudaram ? ' barra-salvar--fixa' : '')}>
+              {pesosMudaram && (
+                <p
+                  className={'legenda-destaque mb-2' + (problemaPesos ? ' erro-campo' : ' texto-fraco')}
+                  role={problemaPesos ? 'alert' : undefined}
+                >
+                  {problemaPesos ?? 'Pesos alterados, ainda não salvos.'}
+                </p>
+              )}
               <RodapeAcoes
                 rotuloCancelar="Desfazer"
                 aoCancelar={() => original && setDimensoes(dimensoesEditaveis(original.dimensoes))}
@@ -267,15 +355,39 @@ export function PontuacaoScore({ auth }: PropsPagina) {
                   rotuloOcupado: 'Salvando...',
                   ocupado: envioPesos.ocupado,
                   desabilitado: !pesosMudaram || problemaPesos !== null,
-                  aoClicar: () => void salvarPesos(),
+                  aoClicar: () => setConfirmando('pesos'),
                 }}
               />
             </div>
 
-            <h2 className="titulo-bloco titulo-bloco--linha">Faixas de reputação</h2>
-            <p className="paragrafo texto-fraco mb-3">
-              Cada pontuação de 0 a 100 cai em uma faixa só: a próxima começa logo depois de onde a anterior termina.
-            </p>
+            <h2 className="titulo-bloco titulo-bloco--linha flex items-center gap-2">
+              Faixas de reputação
+              <Tooltip texto="Cada pontuação de 0 a 100 cai em uma faixa só: a próxima começa logo depois de onde a anterior termina." />
+            </h2>
+            {/* Régua: mostra na hora buraco (parte sem cor) ou sobreposição entre faixas, como a barra dos pesos. */}
+            <div className="mb-6">
+              <p className="rotulo-campo">Divisão das faixas</p>
+              <div className="regua-faixas" role="img" aria-label={rotuloRegua}>
+                {faixasNaRegua.map(({ faixa, minimo, maximo }, indice) => (
+                  <span
+                    key={faixa.idRotulo}
+                    className={`regua-faixas__parte regua-faixas__parte--${(indice % 4) + 1}`}
+                    style={{ left: `${(minimo / 101) * 100}%`, width: `${((maximo - minimo + 1) / 101) * 100}%` }}
+                  ></span>
+                ))}
+              </div>
+              <ul className="distribuicao-score__legenda">
+                {faixasNaRegua.map(({ faixa, minimo, maximo }, indice) => (
+                  <li key={faixa.idRotulo} className="distribuicao-score__item legenda">
+                    <span className={`distribuicao-score__cor regua-faixas__parte--${(indice % 4) + 1}`}></span>
+                    {faixa.rotulo}
+                    <span className="enfase">
+                      de {minimo} a {maximo}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
             <CaixaTabela rotulo="Faixas de reputação">
               {/* Nome só com o espaço de "Em Construção" (o maior rótulo padrão); de e até com 3 dígitos, como o peso;
                   descrição fica com o resto. min-w: no celular, rola de lado dentro da caixa. */}
@@ -342,12 +454,15 @@ export function PontuacaoScore({ auth }: PropsPagina) {
                 </tbody>
               </table>
             </CaixaTabela>
-            {problemaFaixas && faixasMudaram && (
-              <p className="legenda-destaque erro-campo mt-3" role="alert">
-                {problemaFaixas}
-              </p>
-            )}
-            <div className="mt-3">
+            <div className={'mt-3' + (faixasMudaram ? ' barra-salvar--fixa' : '')}>
+              {faixasMudaram && (
+                <p
+                  className={'legenda-destaque mb-2' + (problemaFaixas ? ' erro-campo' : ' texto-fraco')}
+                  role={problemaFaixas ? 'alert' : undefined}
+                >
+                  {problemaFaixas ?? 'Faixas alteradas, ainda não salvas.'}
+                </p>
+              )}
               <RodapeAcoes
                 rotuloCancelar="Desfazer"
                 aoCancelar={() => original && setFaixas(faixasEditaveis(original.faixas))}
@@ -357,13 +472,29 @@ export function PontuacaoScore({ auth }: PropsPagina) {
                   rotuloOcupado: 'Salvando...',
                   ocupado: envioFaixas.ocupado,
                   desabilitado: !faixasMudaram || problemaFaixas !== null,
-                  aoClicar: () => void salvarFaixas(),
+                  aoClicar: () => setConfirmando('faixas'),
                 }}
               />
             </div>
           </>
         )}
       </section>
+      {confirmando && (
+        <ModalConfirmacao
+          titulo={confirmando === 'pesos' ? 'Salvar os novos pesos?' : 'Salvar as novas faixas?'}
+          rotuloConfirmar="Salvar e recalcular"
+          rotuloOcupado="Salvando..."
+          ocupado={envioPesos.ocupado || envioFaixas.ocupado}
+          aoConfirmar={() => void (confirmando === 'pesos' ? salvarPesos() : salvarFaixas()).finally(() => setConfirmando(null))}
+          aoCancelar={() => setConfirmando(null)}
+        >
+          <p>
+            {confirmando === 'pesos'
+              ? 'A pontuação de todos os pesquisadores é recalculada na hora, e a nova pontuação aparece no perfil público de cada um.'
+              : 'A faixa de reputação de todos os pesquisadores é recalculada na hora, e a nova faixa aparece no perfil público de cada um.'}
+          </p>
+        </ModalConfirmacao>
+      )}
     </div>
   );
 }

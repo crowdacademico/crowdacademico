@@ -305,6 +305,74 @@
     background-color: var(--cor-fundo-marca-forte);
   }
 
+  /* Distribuição do score (Pontuação): uma barra só, dividida pelo peso de cada dimensão ligada, com a legenda
+     embaixo. A largura de cada parte é calculada na tela (style); a cor vem do token da posição. */
+  .distribuicao-score__barra {
+    display: flex;
+    height: 0.75rem;
+    border-radius: var(--radius-full);
+    background-color: var(--cor-borda);
+    overflow: hidden;
+  }
+
+  .distribuicao-score__parte--1 { background-color: var(--cor-distribuicao-1); }
+  .distribuicao-score__parte--2 { background-color: var(--cor-distribuicao-2); }
+  .distribuicao-score__parte--3 { background-color: var(--cor-distribuicao-3); }
+  .distribuicao-score__parte--4 { background-color: var(--cor-distribuicao-4); }
+
+  .distribuicao-score__legenda {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+    margin-top: 0.75rem;
+  }
+
+  .distribuicao-score__item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .distribuicao-score__cor {
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: var(--radius-sm);
+    flex-shrink: 0;
+  }
+
+  /* Régua das faixas de reputação: cada faixa ocupa de onde começa até onde termina, numa escala de 0 a 100. O que
+     fica sem cor é buraco entre faixas. Posição e largura calculadas na tela (style). */
+  .regua-faixas {
+    position: relative;
+    height: 0.75rem;
+    border-radius: var(--radius-full);
+    background-color: var(--cor-borda);
+    overflow: hidden;
+  }
+
+  .regua-faixas__parte {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+  }
+
+  .regua-faixas__parte--1 { background-color: var(--cor-faixa-1); }
+  .regua-faixas__parte--2 { background-color: var(--cor-faixa-2); }
+  .regua-faixas__parte--3 { background-color: var(--cor-faixa-3); }
+  .regua-faixas__parte--4 { background-color: var(--cor-faixa-4); }
+
+  /* Barra de salvar que fica presa no pé da tela enquanto há alteração não salva, para o botão não ficar longe
+     do que foi mexido. */
+  .barra-salvar--fixa {
+    position: sticky;
+    bottom: 0;
+    z-index: var(--camada-barra-salvar);
+    padding: 0.75rem 1rem;
+    border-top: 1px solid var(--cor-borda);
+    background-color: var(--cor-fundo-cartao);
+    box-shadow: var(--shadow-md);
+  }
+
   .barra-progresso__porcentagem {
     font-size: var(--font-size-xs);
     font-weight: 700;

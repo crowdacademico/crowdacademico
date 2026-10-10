@@ -23,6 +23,7 @@
   /* Medidas que as telas escreviam entre colchetes: usadas no JSX como `z-(--camada-modal)`, `h-(--altura-modal)`. */
   /* Ordem das camadas, de baixo para cima (a ordem importa: a dica tem de ficar acima do modal e dos avisos). */
   --camada-dica: 20;
+  --camada-barra-salvar: 15;
   --camada-pular-para-conteudo: 100;
   --camada-modal: 200;
   --camada-tela-cheia: 210;

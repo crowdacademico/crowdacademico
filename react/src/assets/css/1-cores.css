@@ -178,6 +178,19 @@
   --cor-avatar-5: #2563eb;
   --cor-avatar-6: #7c3aed;
   --cor-avatar-7: #db2777;
+
+  /* Partes da barra de distribuição da Pontuação (uma cor por dimensão do score). Cor de acento, igual nos dois
+     temas, como a do avatar. */
+  --cor-distribuicao-1: var(--color-emerald-600);
+  --cor-distribuicao-2: var(--color-blue-600);
+  --cor-distribuicao-3: var(--color-amber-600);
+  --cor-distribuicao-4: var(--color-purple-600);
+
+  /* Régua das faixas de reputação (Pontuação), da mais baixa à mais alta: vermelho, âmbar, azul e verde. */
+  --cor-faixa-1: var(--color-red-600);
+  --cor-faixa-2: var(--color-amber-600);
+  --cor-faixa-3: var(--color-blue-600);
+  --cor-faixa-4: var(--color-emerald-600);
 }
 
 /* ========= TEMA ESCURO =========

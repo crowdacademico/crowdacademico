@@ -1,5 +1,5 @@
 
-**Contagem do inventário** (`grep -c` nos `.sql`, para conferir contra as queries acima; **evite repetir estes números em outros documentos**, eles envelhecem, cite a seção "Como conferir este inventário"): **42 tabelas**, **122 policies**, **95 triggers** em `05` (91 comuns e 4 `CONSTRAINT TRIGGER`), **125 funções** (86 em `05`, 37 em `03`, 1 em `08`, 1 em `01`), **52 índices** em `02`, e **117 códigos de ERRCODE** customizado (tabelas em `DOCUMENTACAO_ERRCODE.md`).
+**Contagem do inventário** (`grep -c` nos `.sql`, para conferir contra as queries acima; **evite repetir estes números em outros documentos**, eles envelhecem, cite a seção "Como conferir este inventário"): **42 tabelas**, **122 policies**, **96 triggers** em `05` (92 comuns e 4 `CONSTRAINT TRIGGER`), **126 funções** (87 em `05`, 37 em `03`, 1 em `08`, 1 em `01`), **52 índices** em `02`, e **118 códigos de ERRCODE** customizado (tabelas em `DOCUMENTACAO_ERRCODE.md`).
 
 **Comentários dos `.sql`.** Cabeçalho curto (`Função`, `Assinatura`, `Bloco` e uma `Regra` objetiva, sem datas nem história) e, dentro de função, trigger e policy, só o comentário que explica uma regra difícil. Não há ponteiro para arquivo fora do git: o porquê longo mora aqui, na seção `[NN-Y]` correspondente, e a história (o que mudou, quando, por quê) fica no arquivo de histórico local, que não é versionado. Os comentários do `07` explicam dado de teste; o `ATUALIZAR O SUPABASE.sql` é o registro datado de cada patch e por isso mantém a narrativa.
 # 📚 Documentação Técnica do Banco de Dados - CrowdAcadêmico
@@ -75,6 +75,28 @@ Cada letra tem exatamente um significado, do `01` ao `08`. Se você está procur
 * **Estrutura:** Composta pelas tabelas `papel`, `permissao` e a tabela de ligação `papel_permissao`.
 * **Desvinculação do Banco:** As permissões granulares são checadas dinamicamente na aplicação NestJS e na função `public.tem_permissao()`.
 * 🗑️➡️✅ **`papel.codigo` - coluna nova (03-08-2026, achado de revisão externa):** `papel` só tinha `nome` (o rótulo, editável) - e 3 pontos do banco reconheciam um papel especial pelo TEXTO desse rótulo, sem trava nenhuma: `trg_admin_recebe_toda_permissao()` (`05`, `WHERE p.nome = 'admin'`), `fn_atribuir_papel_pesquisador()` (`05`, `WHERE nome = 'pesquisador'`) e `atribuir_papel_padrao()` (`08`, `WHERE nome = 'usuario'` - roda em todo cadastro real). Renomear qualquer um dos três pelo painel (não existe essa tela ainda, mas está a caminho) pararia essas 3 automações em silêncio, sem erro nenhum - testado e confirmado antes de corrigir. Mesmo padrão já usado em `tipo_link.codigo` (`[01-C]`): `codigo VARCHAR(20) NOT NULL UNIQUE`, estável, nunca exposto pra edição - seedado (`07`, `[07-B-1]`) igual ao `nome` atual dos 7 papéis, então nada muda de comportamento hoje. As 3 funções passaram a ler `WHERE codigo = '...'`. **`papel.nome` (o rótulo) virou editável pelo Painel Admin na mesma rodada** (`PATCH /papel/:id` no Nest, DTO só com `nome` - nunca `codigo`, nem exposto): `pol_papel_update` (`04`) nova, exige `papel_gerenciar`; `GRANT UPDATE (nome) ON papel` (`06`) é por coluna específica, `codigo` sem nenhum `GRANT` - dupla proteção, a coluna que as 3 automações leem não é alcançável nem pela RLS nem pelo GRANT. 🗑️➡️✅ **`motivo_denuncia.codigo` REMOVIDO (18-08-2026):** tinha ganhado o mesmo `codigo` por analogia quando este bloco foi escrito, mas nenhuma trigger/função chegou a lê-lo (diferente de `papel`/`tipo_link`) - era só texto informativo. Removido a pedido do Lucas/Alexia; `descricao` (antes opcional) virou `NOT NULL` e passou a ser o único identificador do catálogo - ver `[01-C]`.
+
+### [01-B-1] O que cada papel faz (10-10-2026)
+
+**Em palavras simples:** o administrador pode tudo. Os outros papéis de gestão dividem as tarefas do dia a dia, cada um com só o que precisa. Mudar permissões e papéis é só do administrador. A lista sai das permissões gravadas em `07_seed_dados.sql` ([07-B-3]).
+
+* **Curador:** faz a curadoria das campanhas e cuida dos catálogos que classificam o conteúdo.
+  * Aprova e rejeita campanhas enviadas para aprovação.
+  * Gerencia as áreas do conhecimento, os tipos de link acadêmico e os motivos de denúncia.
+  * Vê a pontuação dos pesquisadores.
+* **Moderador:** cuida do conteúdo publicado.
+  * Julga denúncias e decide as contestações da pontuação das denúncias julgadas por outra pessoa.
+  * Oculta comentários e atualizações de campanha.
+  * Encerra campanha por moderação (RF-114).
+  * Vê a pontuação dos pesquisadores.
+* **Suporte:** atende problemas de acesso à conta.
+  * Desbloqueia login, encerra sessões, reenvia o e-mail de verificação e cancela pedido de recuperação de senha.
+* **Revisor:** acompanha o funcionamento da plataforma, só lendo.
+  * Vê os relatórios do painel, a pontuação dos pesquisadores, a auditoria financeira e o log, sem dados pessoais.
+* **Pesquisador:** cria e gerencia as próprias campanhas (o que faz é liberado por ser o dono).
+* **Usuário:** papel de toda conta; apoia campanhas e cuida da própria conta.
+
+> Durante o desenvolvimento, toda conta logada vê todas as telas (só leitura), para testar ([07-B-4]); isso sai no deploy.
 
 ---
 
@@ -1165,6 +1187,22 @@ Povoa o banco com dados de demonstração/teste (mínimo 7 registros por tabela 
   - 🗑️ **`campanha_encerrar` removida deste `INSERT` (era permissão órfã, nunca usada por nenhuma policy do `04`)** - detalhamento completo de como era, por que existia e por que foi removida (em vez de implementada) está em `[04-E]` mais acima neste mesmo documento.
 
 * **[07-B-3] `papel_permissao`:** resolvido por nome (não por número fixo), já que os IDs de `papel` não são previsíveis depois do `ON CONFLICT DO NOTHING` de `[07-B-1]`. Como `trg_permissao_auto_admin` (`05_regras_negocio.sql`, executado antes deste arquivo) já dispara em todo `INSERT` em `permissao` e atribui a permissão nova ao papel `'admin'` automaticamente, as linhas `('admin', ...)` deste bloco já seriam preenchidas sozinhas pela trigger - foram mantidas explícitas mesmo assim só por clareza de leitura (documentam a intenção "admin tem tudo" sem depender de abrir outro arquivo para confirmar). `ON CONFLICT DO NOTHING` garante que não há duplicidade.
+  * **Só o admin muda a Pontuação (10-10-2026).**
+    - **Decisão:** `score_editar` (mudar pesos e faixas, regras de acesso de `score_config` e `score_rotulo`) é só do `admin`. O `revisor` ficou só com `score_visualizar`: vê a pontuação de todos, não muda os números.
+    - **Motivo:** os requisitos dizem que pesos e faixas são configurados pelo Administrador; o seed dava `score_editar` também ao revisor.
+    - **Caso-limite:** o revisor que tenta salvar não recebe erro do banco (a regra de acesso filtra: 0 linhas); o Nest transforma 0 linhas em falta de permissão. Provado no PGlite (suíte 41). No Supabase, Grupo AU do `ATUALIZAR`.
+  * **Curador aprova campanhas; Termo de Uso só com o admin (10-10-2026).**
+    - **Decisão:** o curador ganhou `campanha_aprovar`, `campanha_rejeitar` e `relatorio_visualizar` e perdeu `termos_uso_gerenciar`.
+    - **Motivo:** o curador existe para as campanhas (a curadoria), não para os termos. Publicar uma versão nova do Termo obriga todas as contas a aceitar de novo, e documento jurídico fica com o dono do sistema (separação de funções).
+    - **Caso-limite:** sem `relatorio_visualizar`, a fila de campanhas aguardando aprovação ficaria vazia para ele depois do deploy (`pol_campanha_select`, 04).
+  * **Revisor vê tudo do funcionamento, sem dados pessoais (10-10-2026).**
+    - **Decisão:** o revisor tem só leituras: `relatorio_visualizar`, `score_visualizar`, `auditoria_financeira_visualizar` e `log_visualizar`. Não tem nenhuma permissão de alterar.
+    - **Motivo:** papel de visualizador, como o Viewer do Google Cloud, com o menor privilégio: as leituras de dados pessoais (conta, perfil do pesquisador, quem doou) ficam de fora (LGPD).
+    - **Caso-limite:** em desenvolvimento toda conta já lê tudo ([07-B-4]); as leituras do revisor valem depois do deploy.
+  * **Quem julgou a denúncia não decide a contestação dela (10-10-2026).**
+    - **Decisão:** `denuncia.id_julgador` guarda quem julgou (trigger `trg_denuncia_registra_julgador`, 05), e `decidir_contestacao` (03) recusa essa pessoa (92036).
+    - **Motivo:** o recurso é revisto por outra pessoa, nunca por quem tomou a decisão (separação de funções; padrão do Mastodon e de guias de moderação). Os requisitos só proibiam quem fez a denúncia.
+    - **Caso-limite:** decidir a contestação também muda o status, mas não troca quem julgou. Denúncias julgadas antes desta regra têm `id_julgador` vazio e não ganham a trava. Provado no PGlite (suíte 42); no Supabase, Grupo AV.
 * **[07-B-4] DESENVOLVIMENTO: toda conta logada lê tudo (26-09-2026).** O papel `'usuario'` recebe só as 7 permissões de LEITURA (`relatorio_visualizar`, `usuario_visualizar_sensivel`, `perfil_pesquisador_visualizar_sensivel`, `contribuicao_visualizar_sensivel`, `auditoria_financeira_visualizar`, `score_visualizar`, `log_visualizar`), para qualquer papel testar todas as telas. Nenhuma permissão de alterar muda. E toda conta do seed ganha também o papel `'usuario'` (bloco `[07-D-2]`), como no cadastro real (`atribuir_papel_padrao`, `08`): antes, as 22 contas de admin, moderação e pesquisa nasciam sem ele. **Antes do deploy, o bloco "modo produção" tira as 7 permissões do `'usuario'`** (o SQL está na pendência "modo produção" de `PENDENCIAS e correcoes.md`; as suítes de teste do banco rodam as regras de produção sem essas 7 permissões e têm uma suíte própria para este modo de desenvolvimento).
   - 🗑️ **`('admin', 'campanha_encerrar')` removida junto** - consequência direta de `campanha_encerrar` ter saído de `[07-B-2]`; sem a permissão existir, essa atribuição não faria sentido.
 

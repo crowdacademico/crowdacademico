@@ -683,6 +683,9 @@ CREATE TABLE denuncia (
     -- Por que a moderação decidiu (procedente ou improcedente). Quem decidiu e quando ficam no log de auditoria
     -- (trg_log_auditoria_denuncia_status, 05).
     justificativa_moderacao TEXT,
+    -- Quem julgou a denúncia (procedente ou improcedente), gravado pela trigger trg_denuncia_registra_julgador (05).
+    -- Serve para quem julgou não decidir a contestação contra a própria decisão (decidir_contestacao, 03).
+    id_julgador         INT,
     -- Contestação (RF-033): o pesquisador penalizado pede revisão de uma denúncia procedente, uma vez por denúncia.
     -- Na própria linha porque é 1 para 1: cada denúncia tem no máximo uma contestação. Só pelas funções
     -- contestar_denuncia e decidir_contestacao (03).
@@ -700,6 +703,8 @@ CREATE TABLE denuncia (
     CONSTRAINT "FK_DENUNCIA_CAMPANHA_ALVO" FOREIGN KEY (id_campanha_alvo) REFERENCES campanha(id_campanha) ON DELETE RESTRICT,
     CONSTRAINT "FK_DENUNCIA_PESQUISADOR_ALVO" FOREIGN KEY (id_pesquisador_alvo) REFERENCES usuario(id_usuario) ON DELETE RESTRICT,
     CONSTRAINT "FK_DENUNCIA_MOTIVO" FOREIGN KEY (id_motivo) REFERENCES motivo_denuncia(id_motivo),
+    -- SET NULL: a conta de quem julgou pode ser excluída; a denúncia continua, só perde a trava da contestação.
+    CONSTRAINT "FK_DENUNCIA_JULGADOR" FOREIGN KEY (id_julgador) REFERENCES usuario(id_usuario) ON DELETE SET NULL,
     CONSTRAINT "UK_DENUNCIA_USUARIO_CAMPANHA_ALVO" UNIQUE (id_usuario, id_campanha_alvo),
     CONSTRAINT "UK_DENUNCIA_USUARIO_PESQUISADOR_ALVO" UNIQUE (id_usuario, id_pesquisador_alvo),
     -- Nada garantia exatamente um alvo preenchido (dava pra ter os dois ou nenhum).

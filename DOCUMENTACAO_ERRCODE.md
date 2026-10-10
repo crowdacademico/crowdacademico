@@ -152,6 +152,7 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 92033 | `fn_valida_transicao_solicitacao` | `solicitacao_encerramento` | Aprovar ou rejeitar só pela decisão do administrador, nunca por mudança direta de status (03-10-2026) |
 | 92034 | `contestar_denuncia` | `denuncia` | Só o pesquisador penalizado pela denúncia a contesta (03-10-2026) |
 | 92035 | `decidir_contestacao` | `denuncia` | Sem permissão (`denuncia_responder`) para decidir contestação (03-10-2026) |
+| 92036 | `decidir_contestacao` | `denuncia` | Quem julgou a denúncia não decide a contestação contra a própria decisão (10-10-2026) |
 
 ## 93xxx - Limite de taxa (429)
 

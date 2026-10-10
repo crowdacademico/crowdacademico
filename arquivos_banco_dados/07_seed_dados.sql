@@ -234,10 +234,12 @@ WHERE (p.nome, perm.nome) IN (
     -- RF-108: fecha o ciclo de julgar uma denúncia e agir sobre ela sem precisar do admin (ver nota em [07-B-2]).
     ('moderador', 'campanha_encerrar_moderacao'),
     ('moderador', 'score_visualizar'),
-    -- revisor: cuida só do critério/configuração de score - precisa ver o
-    -- score de todo mundo pra calibrar peso/regra com dado real.
-    ('revisor', 'score_editar'),
+    -- revisor: vê tudo do funcionamento (relatórios, pontuação, auditoria financeira e log), sem dados pessoais e sem
+    -- alterar nada. Mudar pesos e faixas da pontuação (score_editar) é só do admin.
+    ('revisor', 'relatorio_visualizar'),
     ('revisor', 'score_visualizar'),
+    ('revisor', 'auditoria_financeira_visualizar'),
+    ('revisor', 'log_visualizar'),
     -- suporte: atendimento de conta, sem acesso a dados sensíveis ou financeiros.
     ('suporte', 'sessao_revogar'),
     ('suporte', 'recuperacao_senha_revogar'),
@@ -247,12 +249,15 @@ WHERE (p.nome, perm.nome) IN (
     -- nenhuma permissão, ver excluir_conta_usuario em 03, [03-O]); suporte abre chamado, não executa. Só o
     -- admin mantém a permissão.
     ('suporte', 'usuario_desbloquear'),
-    -- curador: cuida dos catálogos que dão suporte ao conteúdo da plataforma.
-    -- score_visualizar apoia a curadoria manual de aprovação de campanha.
+    -- curador: aprova e rejeita campanhas (a curadoria) e cuida dos catálogos que classificam o conteúdo.
+    -- relatorio_visualizar: sem ela a fila de campanhas aguardando aprovação fica invisível (pol_campanha_select, 04).
+    -- score_visualizar apoia a decisão. Publicar o Termo de Uso é só do admin.
+    ('curador', 'campanha_aprovar'),
+    ('curador', 'campanha_rejeitar'),
+    ('curador', 'relatorio_visualizar'),
     ('curador', 'tipolink_gerenciar'),
     ('curador', 'area_conhecimento_gerenciar'),
     ('curador', 'motivo_denuncia_gerenciar'),
-    ('curador', 'termos_uso_gerenciar'),
     ('curador', 'score_visualizar')
 )
 ON CONFLICT DO NOTHING;

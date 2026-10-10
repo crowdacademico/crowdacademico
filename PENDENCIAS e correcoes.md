@@ -34,6 +34,9 @@ Quem atualiza os requisitos é o Lucas com a revisão externa; aqui fica só o q
   - **Ponto de negócio, sem pressa:** com 5% de taxa e o cartão custando de 4% a 5%, a plataforma fica perto de zero em cada contribuição por cartão.
   - **Depois da decisão:** refazer a tela de Transparência do protótipo, tirando o "88/7/5".
   - **Fontes:** Catarse (crowdfunding.catarse.com.br/nossa-taxa e /legal/termos-de-uso), Vakinha (vakinha.com.br/taxas-e-prazos), Kickante (kickante.com.br, "Como funciona o crowdfunding"), Benfeitoria (parcerias.benfeitoria.com/faq), Clube de Apoio (clubedeapoio.com.br/taxas), Mercado Pago (blog "Quanto custa receber pagamentos via Pix" e calculadoradetaxas.com.br/mercado-pago/taxas), Asaas (blog.asaas.com/taxas-asaas).
+- **Frases para a próxima versão dos requisitos (anotado em 10-10-2026; já funcionando no sistema, ver `DOCUMENTACAO_BD.md`, [01-B-1] e [07-B-3]):**
+  - **Curador aprova e rejeita campanhas:** os RFs que dizem "aprovação pelo Administrador" podem ganhar "ou outro papel com a permissão correspondente (o Curador)", do mesmo jeito que o RF-114 cita o Moderador.
+  - **Contestação da pontuação:** além de quem registrou a denúncia, quem julgou a denúncia também não decide a contestação dela.
 - **Como o Lucas quer esse pedido escrito:** "pegar no pé" da revisão externa, pedir que olhe sistemas de referência e traga ideias próprias, não só responda a lista.
 
 ---

@@ -3567,6 +3567,45 @@ WHEN (NEW.status IS DISTINCT FROM OLD.status)
 EXECUTE FUNCTION fn_valida_denuncia_sem_autojulgamento();
 
 -- ----------------------------------------------------------------------------
+-- Função:     fn_denuncia_registra_julgador
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-K-3]
+-- Regra:      Grava em id_julgador quem julgou a denúncia (procedente ou improcedente), pelo caminho que for (tela de
+--             julgar ou encerrar_campanha_por_denuncia); voltar para pendente ou em análise apaga. A decisão da
+--             contestação (decidir_contestacao, 03) também muda o status, mas não troca quem julgou: é o que impede
+--             quem julgou de decidir a contestação contra a própria decisão (92036).
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_denuncia_registra_julgador()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+    IF NEW.contestacao_status IS DISTINCT FROM OLD.contestacao_status THEN
+        RETURN NEW;
+    END IF;
+    IF NEW.status IN ('resolvida', 'improcedente') THEN
+        NEW.id_julgador := public.id_usuario_atual();
+    ELSE
+        NEW.id_julgador := NULL;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_denuncia_registra_julgador
+-- Tabela:    denuncia
+-- Momento:   BEFORE UPDATE (só quando status muda)
+-- Função:    fn_denuncia_registra_julgador()
+-- Bloco:     [05-K-3]
+-- Regra:     Guarda quem julgou a denúncia.
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_denuncia_registra_julgador ON denuncia;
+CREATE TRIGGER trg_denuncia_registra_julgador
+BEFORE UPDATE ON denuncia
+FOR EACH ROW
+WHEN (NEW.status IS DISTINCT FROM OLD.status)
+EXECUTE FUNCTION fn_denuncia_registra_julgador();
+
+-- ----------------------------------------------------------------------------
 -- Função:     fn_valida_contestacao_pendente
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-3]

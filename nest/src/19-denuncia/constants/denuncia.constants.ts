@@ -7,6 +7,7 @@ export const DENUNCIA_COLUNAS_SELECT = [
   'relato',
   'status',
   'justificativa_moderacao',
+  'id_julgador',
   'contestacao',
   'contestacao_status',
   'contestada_em',

@@ -197,6 +197,7 @@ export interface Denuncia {
   criado_em: Generated<Timestamp>;
   id_campanha_alvo: number | null;
   id_denuncia: Generated<number>;
+  id_julgador: number | null;
   id_motivo: number;
   id_pesquisador_alvo: number | null;
   id_usuario: number;
