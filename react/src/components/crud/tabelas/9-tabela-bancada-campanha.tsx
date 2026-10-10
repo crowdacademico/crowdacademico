@@ -7,6 +7,7 @@ import { CAMPANHA_BLOQUEADA } from '../../../services/campo-testes/util/registro
 import { BadgeStatusCampanha } from '../badge-status-campanha';
 import { formatarMoeda } from '../../../services/constant/util/formatacao.util';
 import type { CampanhaResponse } from '../../../services/12-campanha/type/campanha.type';
+import { TextoResumido } from '../texto-resumido';
 
 // Campanhas do Campo de Testes (T2, views/campo-testes/bancada-campanha.tsx, que busca e abre os modais). As
 // campanhas da demonstração do seed ficam riscadas; as ações continuam na linha (Consultar é só leitura; Alterar
@@ -24,7 +25,15 @@ interface TabelaBancadaCampanhaProps {
 export function TabelaBancadaCampanha({ campanhas, nomeDe, aoAlterar, aoConsultar, aoExcluir, aoComentar }: TabelaBancadaCampanhaProps) {
   const colunas: ColunaBancada<CampanhaResponse>[] = [
     { rotulo: 'id', tipo: 'id', riscar: true, celula: (campanha) => campanha.idCampanha },
-    { rotulo: 'título', riscar: true, celula: (campanha) => campanha.titulo },
+    {
+      rotulo: 'título',
+      riscar: true,
+      celula: (campanha) => (
+        <span className="crud-tabela__nome">
+          <TextoResumido texto={campanha.titulo} />
+        </span>
+      ),
+    },
     {
       rotulo: 'status',
       tipo: 'centralizada',

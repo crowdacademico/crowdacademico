@@ -45,7 +45,7 @@ interface TabelaBancadaProps<T> {
 
 const CLASSE_TIPO = {
   id: 'crud-tabela__coluna-id crud-tabela__celula--centralizada',
-  centralizada: 'crud-tabela__celula--centralizada',
+  centralizada: 'crud-tabela__celula--centralizada crud-tabela__col--curta',
 };
 
 export function TabelaBancada<T>({
@@ -139,7 +139,7 @@ export function TabelaBancada<T>({
           <thead>
             <tr>
               {colunas.map((coluna) => (
-                <th key={coluna.rotulo} className={coluna.tipo ? CLASSE_TIPO[coluna.tipo] : undefined}>
+                <th key={coluna.rotulo} className={coluna.tipo ? CLASSE_TIPO[coluna.tipo] : 'crud-tabela__col--texto'}>
                   {coluna.rotulo}
                 </th>
               ))}
@@ -163,7 +163,7 @@ export function TabelaBancada<T>({
                     {colunas.map((coluna) => (
                       <td
                         key={coluna.rotulo}
-                        className={coluna.tipo ? CLASSE_TIPO[coluna.tipo] : undefined}
+                        className={coluna.tipo ? CLASSE_TIPO[coluna.tipo] : 'crud-tabela__col--texto'}
                         style={estaBloqueada && coluna.riscar ? { textDecoration: 'line-through' } : undefined}
                       >
                         {coluna.celula(linha)}

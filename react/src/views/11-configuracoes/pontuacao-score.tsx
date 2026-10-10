@@ -172,7 +172,8 @@ export function PontuacaoScore({ auth }: PropsPagina) {
               dimensão. Quantas denúncias procedentes zeram a reputação fica em Parâmetros do Sistema
               (score_denuncias_para_zerar).
             </p>
-            <div className="grid gap-4 md:grid-cols-2">
+            {/* Uma dimensão por linha: em meia largura o nome do item quebrava e a linha da tabela crescia (DS-100). */}
+            <div className="grid gap-4">
               {dimensoes.map((dimensao) => {
                 const pesoDimensao = pesoValido(dimensao.peso) ? numero(dimensao.peso) : 0;
                 const somaItens = dimensao.subitens
@@ -221,7 +222,7 @@ export function PontuacaoScore({ auth }: PropsPagina) {
                             const rotulo = item.descricao ?? item.nome;
                             return (
                               <tr key={item.idScoreConfig}>
-                                <td>{rotulo}</td>
+                                <td className="crud-tabela__col--texto">{rotulo}</td>
                                 <td className="crud-tabela__celula--centralizada">
                                   <input
                                     type="checkbox"

@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { GenericTable } from '../../components/crud/generic-table';
 import { BlocoLogAuditoria } from '../../components/crud/bloco-log-auditoria';
+import { TextoResumido } from '../../components/crud/texto-resumido';
 import { useCrudModais } from '../../services/constant/hook/use-crud-modais';
 import {
   papelApi,
@@ -112,7 +113,7 @@ export function ListarPapeis({ auth }: PropsPagina) {
               chave: 'codigo',
               rotulo: 'para que serve',
               tipo: 'nome',
-              renderizar: (linha) => descricaoPapel(linha.codigo) ?? '-',
+              renderizar: (linha) => <TextoResumido texto={descricaoPapel(linha.codigo) ?? null} />,
             },
           ]}
           chavePrimaria="idPapel"

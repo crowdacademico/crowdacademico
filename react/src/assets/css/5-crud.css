@@ -59,7 +59,13 @@
     overflow-x: auto;
   }
 
+  /* Altura da linha (DS-100): toda linha de uma linha só mede o mesmo, qualquer que seja a peça dentro dela. A célula
+     tem altura fixa e o conteúdo fica centralizado; o respiro vertical é pequeno, então pílula, botão de dica e botão
+     pequeno cabem sem empurrar a linha e sem serem encolhidos. `height` em célula é piso: conteúdo de verdade maior
+     (linha aberta pelo "ler tudo") ainda cresce. */
   .crud-tabela {
+    --altura-linha-tabela: 51px;
+    --respiro-linha-tabela: 0.5rem;
     --padding-celula: clamp(0.6rem, 1.3cqi, 1.1rem);
     border-collapse: collapse;
     width: 100%;
@@ -81,6 +87,18 @@
     text-align: left;
   }
 
+  .crud-tabela td {
+    height: var(--altura-linha-tabela);
+    padding-block: var(--respiro-linha-tabela);
+    vertical-align: middle;
+  }
+
+  /* Campo de formulário dentro da célula (tabelas editáveis): mesma letra e largura, só o espaço interno vertical
+     menor, para caber na altura da linha. */
+  .crud-tabela td .input-padrao {
+    padding-block: 0.25rem;
+  }
+
   /* A caixa da tabela recebe foco para rolar pelo teclado (CaixaTabela): o contorno aparece só pelo teclado, não
      no clique do mouse dentro dela. */
   .crud-tabela__wrapper:focus:not(:focus-visible) {
@@ -95,6 +113,8 @@
   /* Tabela do "Ver log": a mesma letra monoespaçada pequena do Registro de Chamadas, linhas mais baixas, e cada
      campo alterado numa linha própria dentro da célula (Campo alterado, De e Para alinhados). */
   .crud-tabela.tabela-log {
+    --altura-linha-tabela: var(--altura-linha-tabela-compacta);
+    --altura-linha-tabela-compacta: 34px;
     font-family: var(--font-mono-dev);
     font-size: var(--font-size-xs);
   }
@@ -178,8 +198,8 @@
      tem mínimo e máximo próprios. Curtas (Sim/Não, status, número, dinheiro, datas) NUNCA quebram, nem o valor
      nem o cabeçalho: a largura é a do maior valor, e as do mesmo tipo na mesma tabela ficam iguais. Ações ocupa
      só a largura dos botões (`width: 1%` + nowrap), então nunca engole o espaço que sobra numa tela larga.
-     Ao diminuir a tela: primeiro some o espaço extra (as colunas se juntam), depois nome e texto encolhem
-     quebrando a linha, e só então a tabela rola de lado dentro do cartão. */
+     Ao diminuir a tela: primeiro some o espaço extra (as colunas se juntam) e depois a tabela rola de lado
+     dentro do cartão; nome e texto não quebram a linha (DS-100). */
   .crud-tabela {
     --coluna-nome-min: 12rem;
     --coluna-nome-max: 32rem;
@@ -269,6 +289,24 @@
     display: block;
     min-width: var(--coluna-nome-min);
     max-width: var(--coluna-nome-max);
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Nome e texto numa linha só (DS-100): a coluna fica do tamanho do conteúdo e, se a tabela não couber, ela rola de
+     lado. Texto longo de propósito usa o TextoResumido ("ler tudo"), que corta em linhas e por isso volta ao normal. */
+  .crud-tabela .crud-tabela__col--nome,
+  .crud-tabela .crud-tabela__col--texto {
+    white-space: nowrap;
+  }
+
+  .crud-tabela .texto-resumido {
+    white-space: normal;
+  }
+
+  /* Pílula é peça: nunca quebra em duas linhas (ficaria com o dobro da altura). */
+  .crud-tabela .badge {
+    white-space: nowrap;
   }
 
   .crud-tabela .crud-tabela__col--acoes {
