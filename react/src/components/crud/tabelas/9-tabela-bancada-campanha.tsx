@@ -1,6 +1,6 @@
 import { AcaoLinha } from '../acao-linha';
 import { Dica } from '../../layout/tooltip';
-import { STATUS_ACEITA_COMENTARIO } from '../../../services/12-campanha/constants/status-campanha.constants';
+import { STATUS_ACEITA_COMENTARIO, STATUS_ACEITA_SEGUIR } from '../../../services/12-campanha/constants/status-campanha.constants';
 import { TabelaBancada } from './tabela-bancada';
 import type { ColunaBancada } from './tabela-bancada';
 import { CAMPANHA_BLOQUEADA } from '../../../services/campo-testes/util/registros-bloqueados.util';
@@ -20,9 +20,21 @@ interface TabelaBancadaCampanhaProps {
   aoConsultar: (campanha: CampanhaResponse) => void;
   aoExcluir: (campanha: CampanhaResponse) => void;
   aoComentar: (campanha: CampanhaResponse) => void;
+  // Campanhas que a conta logada segue (marca o coração) e o que fazer ao clicar nele.
+  seguidas: ReadonlySet<number>;
+  aoAlternarSeguir: (campanha: CampanhaResponse) => void;
 }
 
-export function TabelaBancadaCampanha({ campanhas, nomeDe, aoAlterar, aoConsultar, aoExcluir, aoComentar }: TabelaBancadaCampanhaProps) {
+export function TabelaBancadaCampanha({
+  campanhas,
+  nomeDe,
+  aoAlterar,
+  aoConsultar,
+  aoExcluir,
+  aoComentar,
+  seguidas,
+  aoAlternarSeguir,
+}: TabelaBancadaCampanhaProps) {
   const colunas: ColunaBancada<CampanhaResponse>[] = [
     { rotulo: 'id', tipo: 'id', riscar: true, celula: (campanha) => campanha.idCampanha },
     {
@@ -54,11 +66,40 @@ export function TabelaBancadaCampanha({ campanhas, nomeDe, aoAlterar, aoConsulta
         const motivo = CAMPANHA_BLOQUEADA(campanha.idCampanha)
           ? 'Campanha da demonstração: não recebe comentário de teste'
           : aceita
-            ? 'Comentar em nome de um pesquisador'
+            ? 'Comentar como a conta logada'
             : 'Só campanha publicada recebe comentário (não rascunho, aguardando, rejeitada ou encerrada por moderação)';
         return (
           <button type="button" onClick={() => aoComentar(campanha)} disabled={!aceita} aria-label={motivo} className="dica">
             <i className={'fa-solid fa-comment ' + (aceita ? 'texto-marca' : 'texto-fraco')} aria-hidden="true"></i>
+            <Dica texto={motivo} />
+          </button>
+        );
+      },
+    },
+    {
+      rotulo: 'seguir',
+      tipo: 'centralizada',
+      // Segue como a conta logada (RF-010 e RF-011): só campanha publicada; as da demonstração ficam sem a ação.
+      celula: (campanha) => {
+        const aceita = STATUS_ACEITA_SEGUIR.has(campanha.status) && !CAMPANHA_BLOQUEADA(campanha.idCampanha);
+        const segue = seguidas.has(campanha.idCampanha);
+        const motivo = CAMPANHA_BLOQUEADA(campanha.idCampanha)
+          ? 'Campanha da demonstração: não recebe seguidor de teste'
+          : !aceita
+            ? 'Só campanha publicada pode ser seguida (não rascunho, aguardando, rejeitada ou encerrada por moderação)'
+            : segue
+              ? 'Deixar de seguir'
+              : 'Seguir como a conta logada';
+        return (
+          <button
+            type="button"
+            onClick={() => aoAlternarSeguir(campanha)}
+            disabled={!aceita}
+            aria-label={motivo}
+            aria-pressed={segue}
+            className="dica"
+          >
+            <i className={(segue ? 'fa-solid' : 'fa-regular') + ' fa-heart ' + (aceita ? 'texto-marca' : 'texto-fraco')} aria-hidden="true"></i>
             <Dica texto={motivo} />
           </button>
         );

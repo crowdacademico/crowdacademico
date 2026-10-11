@@ -180,7 +180,6 @@ REVOKE EXECUTE ON FUNCTION public.alterar_perfil_pesquisador_de_outro(INT, tipo_
 -- criar_campanha_para_outro(...) / forcar_exclusao_campanha(INT): ver [03-S] e [03-T].
 REVOKE EXECUTE ON FUNCTION public.criar_campanha_para_outro(INT, INT, TEXT, modelo_campanha, DECIMAL, TEXT, TIMESTAMPTZ, TIMESTAMPTZ, TEXT) FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.forcar_exclusao_campanha(INT) FROM PUBLIC;
-REVOKE EXECUTE ON FUNCTION public.comentar_campanha_para_outro(INT, INT, TEXT) FROM PUBLIC;
 -- suspender_usuario / revogar_suspensao_usuario / suspender_papel_usuario / revogar_suspensao_papel_usuario: ver [03-N].
 REVOKE EXECUTE ON FUNCTION public.suspender_usuario(INT, TIMESTAMPTZ, TEXT)         FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.revogar_suspensao_usuario(INT)                    FROM PUBLIC;
@@ -205,7 +204,6 @@ GRANT EXECUTE ON FUNCTION public.criar_perfil_pesquisador_para_outro(INT, TEXT, 
 GRANT EXECUTE ON FUNCTION public.alterar_perfil_pesquisador_de_outro(INT, tipo_vinculo, TEXT, titulo_academico) TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.criar_campanha_para_outro(INT, INT, TEXT, modelo_campanha, DECIMAL, TEXT, TIMESTAMPTZ, TIMESTAMPTZ, TEXT) TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.forcar_exclusao_campanha(INT) TO app_nestjs;
-GRANT EXECUTE ON FUNCTION public.comentar_campanha_para_outro(INT, INT, TEXT) TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.suspender_usuario(INT, TIMESTAMPTZ, TEXT)      TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.revogar_suspensao_usuario(INT)                 TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.suspender_papel_usuario(INT, INT, TIMESTAMPTZ, TEXT) TO app_nestjs;

@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { AvisoSoPesquisador } from '../../components/crud/aviso-so-pesquisador';
+import { EstadoVazio } from '../../components/crud/estado-vazio';
 import { SecaoFicha } from '../../components/crud/ficha-consulta';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
@@ -10,49 +12,46 @@ import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
 import { comentarioApi } from '../../services/17-comentario/api/comentario.api';
 import { useRegrasCampanha } from '../../services/12-campanha/hook/use-regras-campanha';
+import { useSituacaoPesquisador } from '../../services/6-perfil-pesquisador/hook/use-situacao-pesquisador';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
 import { contarCaracteres } from '../../services/constant/util/validacao.util';
 import type { AuthFetch } from '../../services/3-auth/type/auth.type';
+import type { UsuarioResponse } from '../../services/1-usuario/type/usuario.type';
 import type { CampanhaResponse } from '../../services/12-campanha/type/campanha.type';
 import type { ComentarioResponse } from '../../services/17-comentario/type/comentario.type';
-import { EstadoVazio } from '../../components/crud/estado-vazio';
 
-interface PesquisadorOpcao {
-  idUsuario: number;
-  nome: string;
-}
-
-interface ModalComentarParaOutroProps {
+interface ModalComentarProps {
   authFetch: AuthFetch;
+  usuario: UsuarioResponse | null;
   campanha: CampanhaResponse;
-  // Pesquisadores ativos (o dono da campanha já vem fora).
-  pesquisadores: PesquisadorOpcao[];
   aoFechar: () => void;
 }
 
-// Comentar uma campanha em nome de um pesquisador (comentar_campanha_para_outro, 03): monta o cenário de comentário
-// e endosso sem trocar de conta. As regras são as do comentário de verdade: só pesquisador, nunca na própria
-// campanha, um por campanha, limite de texto de Parâmetros. Quem já comentou aparece desabilitado na lista.
-export function ModalComentarParaOutro({ authFetch, campanha, pesquisadores, aoFechar }: ModalComentarParaOutroProps) {
+// Comentar uma campanha como a conta logada, com as regras do comentário de verdade: só pesquisador ativo, nunca
+// na própria campanha, um por campanha, limite de texto de Parâmetros. Quem não pode vê o motivo em vez do campo.
+// Endossar fica com o dono da campanha, no T3.
+export function ModalComentar({ authFetch, usuario, campanha, aoFechar }: ModalComentarProps) {
   const [comentarios, setComentarios] = useState<ComentarioResponse[]>([]);
-  const [autor, setAutor] = useState('');
   const [conteudo, setConteudo] = useState('');
   const [chaveRecarga, setChaveRecarga] = useState(0);
   const { erro, reportarErro, limparErro } = useErroToast({ mostraTexto: true });
   const { mostrar } = useToast();
   const { ocupado, executar } = useEnvio(reportarErro, limparErro);
   const limite = useRegrasCampanha().limiteComentario;
+  const situacao = useSituacaoPesquisador(authFetch, usuario);
 
   useEffect(() => {
     comentarioApi.listar(authFetch, campanha.idCampanha).then(setComentarios).catch(reportarErro);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authFetch, campanha.idCampanha, chaveRecarga]);
 
-  const jaComentou = new Set(comentarios.map((comentario) => comentario.idPesquisador));
+  const idUsuario = usuario?.idUsuario ?? null;
+  const ehDono = campanha.idUsuario === idUsuario;
+  const jaComentou = comentarios.some((comentario) => comentario.idPesquisador === idUsuario);
+  const podeComentar = situacao === 'ativo' && !ehDono && !jaComentou;
 
   const erros = useErrosFormulario(() => ({
-    autor: autor === '' && 'Escolha quem comenta.',
     conteudo:
       conteudo.trim() === ''
         ? 'Escreva o comentário.'
@@ -62,20 +61,23 @@ export function ModalComentarParaOutro({ authFetch, campanha, pesquisadores, aoF
   const comentar = async () => {
     if (!erros.tentarEnviar()) return;
     await executar(async () => {
-      await comentarioApi.comentarParaOutro(authFetch, Number(autor), campanha.idCampanha, conteudo.trim());
-      mostrar('Comentário enviado.', `Em nome de ${pesquisadores.find((p) => String(p.idUsuario) === autor)?.nome ?? autor}`);
-      setAutor('');
+      await comentarioApi.criar(authFetch, campanha.idCampanha, conteudo.trim());
+      mostrar('Comentário enviado.', `Por ${usuario?.nome ?? 'você'}`);
       setConteudo('');
       erros.limpar();
       setChaveRecarga((atual) => atual + 1);
     });
   };
 
+  const motivoSemCampo = ehDono
+    ? 'Esta campanha é sua: o pesquisador não comenta a própria campanha.'
+    : jaComentou && 'Você já comentou esta campanha: é um comentário por pesquisador em cada campanha.';
+
   return (
     <ModalFicha
       titulo="Comentar campanha"
       subtitulo={campanha.titulo}
-      ajuda="Comenta em nome de um pesquisador, com as mesmas regras do comentário de verdade. Endossar fica com o dono da campanha, no T3."
+      ajuda="Comenta como a conta logada, com as mesmas regras do comentário de verdade. Endossar fica com o dono da campanha, no T3."
       badges={[<BadgeStatusCampanha key="status" campanha={campanha} />]}
       aoFechar={aoFechar}
       erro={erro}
@@ -83,43 +85,41 @@ export function ModalComentarParaOutro({ authFetch, campanha, pesquisadores, aoF
         <RodapeAcoes
           aoCancelar={aoFechar}
           rotuloCancelar="Fechar"
-          acao={{ rotulo: 'Comentar', rotuloOcupado: 'Enviando...', ocupado, aoClicar: () => void comentar() }}
+          acao={podeComentar ? { rotulo: 'Comentar', rotuloOcupado: 'Enviando...', ocupado, aoClicar: () => void comentar() } : undefined}
         />
       }
     >
       <div className="space-y-6">
-        <SecaoFicha titulo="Novo comentário" colunas={1}>
-          <Campo rotulo="Quem comenta" erro={erros.erroDe('autor')}>
-            {({ atributos, classeErro }) => (
-              <select {...atributos} value={autor} onChange={(evento) => setAutor(evento.target.value)} className={'input-padrao' + classeErro}>
-                <option value="">Escolha um pesquisador...</option>
-                {pesquisadores.map((pesquisador) => (
-                  <option key={pesquisador.idUsuario} value={pesquisador.idUsuario} disabled={jaComentou.has(pesquisador.idUsuario)}>
-                    {pesquisador.nome}
-                    {jaComentou.has(pesquisador.idUsuario) ? ' (já comentou)' : ''}
-                  </option>
-                ))}
-              </select>
-            )}
-          </Campo>
-          <Campo rotulo="Comentário" erro={erros.erroDe('conteudo')}>
-            {({ atributos, classeErro }) => (
-              <>
-                <textarea
-                  {...atributos}
-                  rows={4}
-                  value={conteudo}
-                  onChange={(evento) => setConteudo(evento.target.value)}
-                  className={'input-padrao' + classeErro}
-                />
-                <ContadorCaracteres texto={conteudo} limite={limite} />
-              </>
-            )}
-          </Campo>
-        </SecaoFicha>
+        {situacao !== null && situacao !== 'ativo' && (
+          <AvisoSoPesquisador situacao={situacao} fazem="comentam campanhas" fazer="comentar campanhas" />
+        )}
+        {situacao === 'ativo' && motivoSemCampo && (
+          <div className="paragrafo flex items-start gap-2 rounded-lg fundo-info texto-info p-3">
+            <i className="fa-solid fa-circle-info mt-0.5 shrink-0" aria-hidden="true"></i>
+            <p>{motivoSemCampo}</p>
+          </div>
+        )}
+        {podeComentar && (
+          <SecaoFicha titulo="Novo comentário" colunas={1}>
+            <Campo rotulo="Comentário" erro={erros.erroDe('conteudo')}>
+              {({ atributos, classeErro }) => (
+                <>
+                  <textarea
+                    {...atributos}
+                    rows={4}
+                    value={conteudo}
+                    onChange={(evento) => setConteudo(evento.target.value)}
+                    className={'input-padrao' + classeErro}
+                  />
+                  <ContadorCaracteres texto={conteudo} limite={limite} />
+                </>
+              )}
+            </Campo>
+          </SecaoFicha>
+        )}
         <SecaoFicha titulo={`Comentários desta campanha (${comentarios.length})`} colunas={1}>
           {comentarios.length === 0 ? (
-            <EstadoVazio compacto icone="fa-comments" titulo="Nenhum comentário ainda." texto="Escolha um pesquisador acima e escreva o primeiro." />
+            <EstadoVazio compacto icone="fa-comments" titulo="Nenhum comentário ainda." />
           ) : (
             <TabelaComentarios comentarios={comentarios} ehDono={false} />
           )}

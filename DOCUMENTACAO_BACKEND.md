@@ -1169,7 +1169,6 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | AUTH | DELETE | `/link-atualizacao/:id` |
 | pub | GET | `/comentario` *(filtro `endossado`: só os endossados, na ordem do endosso)* |
 | AUTH | POST | `/comentario` |
-| AUTH | POST | `/comentario/:idPesquisador` |
 | AUTH | PATCH | `/comentario/:id` |
 | AUTH | DELETE | `/comentario/:id` |
 | AUTH | GET · POST | `/seguir-campanha` |

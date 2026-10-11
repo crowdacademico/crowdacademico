@@ -132,3 +132,15 @@ BEGIN
     WHERE id_denuncia = p_id_denuncia;
 END;
 $$;
+
+-- ============================================================================
+-- GRUPO AW (10-10-2026) - sai o "comentar em nome de outro". IDEMPOTENTE (pode colar de novo).
+-- Só apaga uma função e uma permissão: pode colar com o Nest ligado.
+--
+-- O que muda: na Bancada da Campanha, o comentário passa a ser sempre de quem está logado (só pesquisador ativo
+-- comenta, como manda o requisito). A ferramenta de teste que comentava em nome de outro pesquisador sai inteira.
+-- Apagar a permissão tira também o vínculo dela com o admin (papel_permissao apaga em cascata).
+-- ============================================================================
+
+DROP FUNCTION IF EXISTS public.comentar_campanha_para_outro(INT, INT, TEXT);
+DELETE FROM permissao WHERE nome = 'comentario_criar_para_outro';

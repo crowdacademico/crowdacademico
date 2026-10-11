@@ -25,7 +25,8 @@ import { perfilPesquisadorApi } from '../../services/6-perfil-pesquisador/api/pe
 import { formatarMoeda } from '../../services/constant/util/formatacao.util';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import { RegistroChamadas } from './registro-chamadas';
-import { ModalComentarParaOutro } from './modal-comentar-para-outro';
+import { ModalComentar } from './modal-comentar';
+import { seguirCampanhaApi } from '../../services/16-seguir-campanha/api/seguir-campanha.api';
 import { ModalAlterarCampanha } from '../12-campanha/modal-alterar-campanha';
 import { ModalConsultarCampanha } from '../12-campanha/modal-consultar-campanha';
 import { ModalCriarCampanha } from '../12-campanha/modal-criar-campanha';
@@ -69,6 +70,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
   const [idCampanhaEditando, setIdCampanhaEditando] = useState<number | null>(null);
   const [campanhaExcluindo, setCampanhaExcluindo] = useState<CampanhaResponse | null>(null);
   const [campanhaComentando, setCampanhaComentando] = useState<CampanhaResponse | null>(null);
+  const [seguidas, setSeguidas] = useState<ReadonlySet<number>>(new Set());
   const [confirmacaoExclusao, setConfirmacaoExclusao] = useState('');
   const [confirmacaoExclusaoForcada, setConfirmacaoExclusaoForcada] = useState('');
 
@@ -88,6 +90,27 @@ export function BancadaCampanha({ auth }: PropsPagina) {
     campanhaApi.listar(auth.authFetch).then(setCampanhas).catch(() => {});
   };
 
+  const carregarSeguidas = () => {
+    seguirCampanhaApi
+      .listarMinhas(auth.authFetch)
+      .then((lista) => setSeguidas(new Set(lista.map((item) => item.idCampanha))))
+      .catch(() => {});
+  };
+
+  // Seguir e deixar de seguir como a conta logada, num clique (a mesma regra da página pública).
+  const alternarSeguir = (campanha: CampanhaResponse) => {
+    const segue = seguidas.has(campanha.idCampanha);
+    const chamada = segue
+      ? seguirCampanhaApi.deixarDeSeguir(authRegistrado.authFetch, campanha.idCampanha)
+      : seguirCampanhaApi.seguir(authRegistrado.authFetch, campanha.idCampanha);
+    chamada
+      .then(() => {
+        mostrar(segue ? 'Deixou de seguir.' : 'Seguindo a campanha.', campanha.titulo);
+        carregarSeguidas();
+      })
+      .catch(reportarErro);
+  };
+
   // Espera a sessão ser restaurada (`auth.carregando`) antes de buscar: num F5,
   // o authFetch ainda não tem token e a listagem vinha só com as campanhas
   // públicas.
@@ -98,6 +121,7 @@ export function BancadaCampanha({ auth }: PropsPagina) {
     usuarioApi.listar(auth.authFetch).then(setUsuarios).catch(() => {});
     perfilPesquisadorApi.listar(auth.authFetch).then(setPerfisPesquisador).catch(() => {});
     carregarCampanhas();
+    carregarSeguidas();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auth.carregando]);
 
@@ -186,16 +210,15 @@ export function BancadaCampanha({ auth }: PropsPagina) {
         aoConsultar={setCampanhaConsultada}
         aoExcluir={setCampanhaExcluindo}
         aoComentar={setCampanhaComentando}
+        seguidas={seguidas}
+        aoAlternarSeguir={alternarSeguir}
       />
 
       {campanhaComentando && (
-        <ModalComentarParaOutro
+        <ModalComentar
           authFetch={authRegistrado.authFetch}
+          usuario={auth.usuario}
           campanha={campanhaComentando}
-          pesquisadores={perfisPesquisador
-            .filter((perfil) => perfil.statusPesquisador === 'ativo' && perfil.idUsuario !== campanhaComentando.idUsuario)
-            .map((perfil) => ({ idUsuario: perfil.idUsuario, nome: nomeDe(perfil.idUsuario) }))
-            .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))}
           aoFechar={() => setCampanhaComentando(null)}
         />
       )}

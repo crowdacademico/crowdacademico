@@ -703,12 +703,10 @@ ON CONFLICT (chave) DO NOTHING;
 --   perfil_pesquisador_criar_para_outro: criar_perfil_pesquisador_para_outro() (03, [03-R]), Bancada do Pesquisador.
 --   campanha_criar_para_outro e campanha_excluir_forcado: criar campanha em nome de outro pesquisador e excluir
 --   campanha à força, ignorando status (limpeza de dado de teste; nunca oferecida no painel real).
---   comentario_criar_para_outro: comentar_campanha_para_outro() (03), Bancada da Campanha.
 INSERT INTO permissao (nome) VALUES
 ('perfil_pesquisador_criar_para_outro'),
 ('campanha_criar_para_outro'),
-('campanha_excluir_forcado'),
-('comentario_criar_para_outro')
+('campanha_excluir_forcado')
 ON CONFLICT (nome) DO NOTHING;
 
 -- [07-B-4] DESENVOLVIMENTO: toda conta logada VÊ tudo (nunca altera). O papel 'usuario', que todo cadastro

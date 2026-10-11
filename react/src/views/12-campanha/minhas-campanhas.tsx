@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Link, useSearchParams } from 'react-router';
+import { useCallback } from 'react';
+import { useSearchParams } from 'react-router';
+import { AvisoSoPesquisador } from '../../components/crud/aviso-so-pesquisador';
 import { GenericTable } from '../../components/crud/generic-table';
 import { BotaoCriar } from '../../components/crud/botao-criar';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
 import { ORDEM_ROTULOS_STATUS_CAMPANHA, rotuloStatusCampanha } from '../../services/12-campanha/constants/status-campanha.constants';
-import { perfilPesquisadorApi } from '../../services/6-perfil-pesquisador/api/perfil-pesquisador.api';
+import { useSituacaoPesquisador } from '../../services/6-perfil-pesquisador/hook/use-situacao-pesquisador';
 import { useCrudModais } from '../../services/constant/hook/use-crud-modais';
 import { ModalAlterarCampanha } from './modal-alterar-campanha';
 import { ModalConsultarCampanha } from './modal-consultar-campanha';
@@ -13,7 +14,6 @@ import { ModalExcluirCampanha } from './modal-excluir-campanha';
 import { renderizarStatus } from './colunas-campanha';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { CampanhaResponse } from '../../services/12-campanha/type/campanha.type';
-import type { StatusPesquisador } from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
 
 interface MinhaCampanhaLinha extends Omit<CampanhaResponse, 'status'> {
   status: string;
@@ -31,7 +31,7 @@ interface MinhaCampanhaLinha extends Omit<CampanhaResponse, 'status'> {
 // para os outros, a tela explica o porquê em vez de oferecer um botão que o banco recusaria.
 export function MinhasCampanhas({ auth }: PropsPagina) {
   const idUsuario = auth.usuario?.idUsuario ?? null;
-  const [statusBuscado, setStatusPesquisador] = useState<StatusPesquisador | 'sem-perfil' | null>(null);
+  const statusPesquisador = useSituacaoPesquisador(auth.authFetch, auth.usuario);
   const {
     criando,
     abrirCriando,
@@ -46,22 +46,6 @@ export function MinhasCampanhas({ auth }: PropsPagina) {
     recarregar,
     acoesCompletas,
   } = useCrudModais<MinhaCampanhaLinha>();
-
-  const ehPesquisador = auth.usuario?.ehPesquisador;
-  // Quem não é pesquisador nem pede o perfil (seria um 404 certo). `undefined` (sessão antiga) ainda pede.
-  const statusPesquisador = ehPesquisador === false ? 'sem-perfil' : statusBuscado;
-  useEffect(() => {
-    if (idUsuario === null) {
-      return;
-    }
-    if (ehPesquisador === false) {
-      return;
-    }
-    perfilPesquisadorApi
-      .buscar(auth.authFetch, idUsuario)
-      .then((perfil) => setStatusPesquisador(perfil.statusPesquisador))
-      .catch(() => setStatusPesquisador('sem-perfil'));
-  }, [auth.authFetch, idUsuario, ehPesquisador]);
 
   const listar = useCallback(async (): Promise<MinhaCampanhaLinha[]> => {
     if (idUsuario === null) {
@@ -97,20 +81,7 @@ export function MinhasCampanhas({ auth }: PropsPagina) {
   return (
     <div className="admin-content-painel">
       {statusPesquisador !== null && !podeCriar && (
-        <div className="paragrafo flex items-start gap-2 rounded-lg fundo-info texto-info p-3 mb-6">
-          <i className="fa-solid fa-circle-info mt-0.5 shrink-0" aria-hidden="true"></i>
-          {statusPesquisador === 'suspenso' ? (
-            <p>Seu perfil de pesquisador está suspenso: enquanto durar a suspensão, não é possível criar campanhas.</p>
-          ) : (
-            <p>
-              Só pesquisadores criam campanhas.{' '}
-              <Link to="/admin/minha-conta/academico" className="link-texto link-texto--cor-herdada">
-                Tornar-me pesquisador
-              </Link>{' '}
-              (Minha Conta, aba Acadêmico).
-            </p>
-          )}
-        </div>
+        <AvisoSoPesquisador situacao={statusPesquisador} fazem="criam campanhas" fazer="criar campanhas" className="mb-6" />
       )}
 
       <GenericTable<MinhaCampanhaLinha>
