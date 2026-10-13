@@ -26,12 +26,7 @@ Quem atualiza os requisitos é o Lucas com a revisão externa; aqui fica só o q
 - **Taxas e página de Transparência (anotado em 05-10-2026, levar na semana de 12-10-2026; não mexer até lá):**
   - **Problema:** nenhum RF fala da página de Transparência, o RF-060 só define a taxa da plataforma (5% do valor bruto) e não está definido quem paga a tarifa do intermediador de pagamento. O Lucas quer que a página mostre as taxas de cartão, boleto, PIX e plataforma. A tela do protótipo mostra hoje uma divisão "88% / 7% / 5%" e taxas extras de cartão e boleto, nada disso vem de RF.
   - **Mercado (consultado em 05-10-2026):** Catarse 13%, com cerca de 4% para o intermediador (Pagar.me), cobrado do criador; Vakinha 6,4% + R$ 0,50 por doação, já incluindo as tarifas de PIX, boleto e cartão, cobrado do beneficiário; Kickante 10%, já incluindo tributos e tarifas; Benfeitoria com comissão livre (sugere 8%) mais 5% do intermediador, separados; Vaquinhas Online 7% + tarifa por transação, cobrados do doador (exceção). Intermediadores: Mercado Pago PIX 0%, cartão de 3,99% a 4,98% conforme o prazo, boleto R$ 3,49; Asaas PIX R$ 1,99, boleto R$ 1,99, cartão 1,99% + R$ 0,49.
-  - **Opções levantadas:** (a) taxa única "tudo incluído" (padrão do mercado), com a Transparência mostrando a composição por meio de pagamento; (b) taxa da plataforma mais a tarifa do meio descontada do pesquisador; (c) a tarifa do meio paga por quem apoia, somada no pagamento. A sugestão foi (a).
-  - **Textos propostos para os requisitos, se (a) for aprovada:**
-    - **RF-060, acrescentar ao fim:** "A taxa da plataforma já inclui os custos do intermediador de pagamento, qualquer que seja o meio de pagamento, e o contribuinte não paga nenhum valor além da contribuição."
-    - **RF novo:** "O sistema deve exibir uma página pública de transparência financeira, acessível sem login, contendo: a taxa vigente da plataforma; a composição dessa taxa, separando o custo do intermediador de pagamento por meio de pagamento (PIX, cartão de crédito, cartão de débito e boleto) e a parte que fica com a plataforma; e uma simulação do valor líquido que chega ao pesquisador a partir de um valor informado. Os custos de cada meio de pagamento são parâmetros configuráveis pelo Administrador." Origem sugerida: RU-02 e RU-16, ou um RU novo do visitante ("consultar as taxas antes de contribuir").
-    - **RF-090:** acrescentar "custos de cada meio de pagamento" à lista de parâmetros configuráveis.
-  - **Ponto de negócio, sem pressa:** com 5% de taxa e o cartão custando de 4% a 5%, a plataforma fica perto de zero em cada contribuição por cartão.
+  - **Decidido pelo Lucas (12-10-2026): opção (c), quem apoia paga a tarifa do meio, e o Pix não tem acréscimo** (a plataforma não pode correr risco de prejuízo, e a ideia é promover o Pix). A análise completa (as 3 opções com R$ 100, o risco das devoluções, a lei, como a (c) funciona peça por peça) e os textos para levar à revisão externa estão no `PROXIMOS_MODULOS.md`, Grupo 8, "Tarifa do meio de pagamento: quem paga". Os textos antigos, escritos para a opção (a), foram substituídos por esses.
   - **Depois da decisão:** refazer a tela de Transparência do protótipo, tirando o "88/7/5".
   - **Fontes:** Catarse (crowdfunding.catarse.com.br/nossa-taxa e /legal/termos-de-uso), Vakinha (vakinha.com.br/taxas-e-prazos), Kickante (kickante.com.br, "Como funciona o crowdfunding"), Benfeitoria (parcerias.benfeitoria.com/faq), Clube de Apoio (clubedeapoio.com.br/taxas), Mercado Pago (blog "Quanto custa receber pagamentos via Pix" e calculadoradetaxas.com.br/mercado-pago/taxas), Asaas (blog.asaas.com/taxas-asaas).
 - **Frases para a próxima versão dos requisitos (anotado em 10-10-2026; já funcionando no sistema, ver `DOCUMENTACAO_BD.md`, [01-B-1] e [07-B-3]):**
@@ -63,6 +58,8 @@ Falta, e depende do `4-mail`:
 - e-mails do encerramento antecipado: pedido aprovado ou rejeitado (com a justificativa) para o pesquisador, e o aviso aos apoiadores quando a campanha é encerrada (RF-065, RF-066);
 - e-mail do resultado da contestação do score (aceita ou recusada, com a justificativa) para o pesquisador (RF-033); hoje o resultado aparece na Minha Conta;
 - "modo log" no desenvolvimento, em que o e-mail aparece no log em vez de ser enviado (ideia do `.env` do Atlas, grupo 5).
+
+**Levar para a revisão externa quando o `4-mail` estiver pronto (pesquisa de mercado de 12-10-2026):** lembretes para quem segue a campanha ("faltam 48 h" e "faltam 8 h" para o fim, como faz o Kickstarter) e o endosso de colegas antes de enviar a campanha para aprovação (como faz o Experiment.com; este só com requisito novo).
 
 ### Pagamento: `22-contribuicao`, `23-repasse`, `24-auditoria-financeira`, gateway e checkout (por último, de propósito)
 
@@ -101,10 +98,9 @@ Apontado pela revisão externa (resposta de 20-09) como "metade dos modelos não
 
 ### Motor do score (fechado em 03-10-2026; ficaram estes pontos)
 
-#### 🟡 Gravidade por motivo e acúmulo de denúncias (03-10-2026, para discutir depois)
+#### 🟡 Gravidade por motivo de denúncia (03-10-2026, para discutir depois)
 
-- **Gravidade:** cada motivo de denúncia teria um peso de 1 a 3 (ex.: fraude pesa mais que conteúdo impróprio). O Lucas achou interessante, mas talvez um exagero: denúncia grave e verdadeira já encerra a campanha na hora. Detalhes em `ACHADOS_PARA_DISCUTIR.md`.
-- **Acúmulo:** hoje cada denúncia procedente conta, mesmo quando várias pessoas denunciam o mesmo fato na mesma campanha. Opção a discutir: contar campanhas com denúncia procedente, não denúncias.
+- **Gravidade:** cada motivo de denúncia teria um peso de 1 a 3 (ex.: fraude pesa mais que conteúdo impróprio). O Lucas achou interessante, mas talvez um exagero: denúncia grave e verdadeira já encerra a campanha na hora. Detalhes em `ACHADOS_PARA_DISCUTIR.md`. O acúmulo foi resolvido em 12-10-2026 (histórico).
 
 
 ### Arquivos
@@ -203,6 +199,10 @@ Pedido do Lucas: comparar o sistema inteiro com o que os sistemas de referência
 #### 🟡 Anotado (29-09-2026): dispatcher de triggers
 
 Hoje `campanha` tem 17 triggers e `comentario` tem 8. Quando várias rodam no mesmo momento, o Postgres escolhe a ordem pela ordem alfabética do nome; o dispatcher seria uma trigger só por momento, chamando as regras numa ordem escrita. Ganho: ordem explícita e mensagem de erro previsível quando duas regras falhariam juntas. Custo: mexer nas regras mais críticas (aprovação, congelamento, prazo), com risco de regressão; as suítes de caracterização (1.050 casos) são a rede de proteção. Recomendação atual: não fazer. **O Lucas quer, mais para frente, uma documentação completa sobre isto para estudar pessoalmente** (como funciona a ordem hoje, o que mudaria, exemplos com as triggers reais), antes de decidir.
+
+#### 🟡 Anotado (12-10-2026): reorganizar o seed para a demonstração mostrar todas as situações
+
+Sem criar registro novo: reorganizar os dados que já existem para a demonstração ter pelo menos um pesquisador em cada faixa do score (inclusive "Atenção", que ficou vazia com o acúmulo de denúncias), score alto e baixo, denúncias em cada etapa para a moderação julgar, e assim por diante. Antes não dava (os módulos de denúncia, contestação e encerramento não existiam); agora dá. Provavelmente pede recriar o banco do zero, e o Lucas já conta com isso.
 
 ### Protótipo estático (sessão própria)
 

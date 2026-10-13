@@ -74,7 +74,6 @@ export function ListarDenuncias({ auth }: PropsPagina) {
           { chave: 'motivo', rotulo: 'motivo', tipo: 'nome', umaLinha: true },
           { chave: 'tipo', rotulo: 'tipo', tipo: 'status' },
           { chave: 'alvo', rotulo: 'alvo', tipo: 'texto', umaLinha: true },
-          { chave: 'esperandoDesde', rotulo: 'esperando', tipo: 'espera' },
           {
             chave: 'status',
             rotulo: 'situação',
@@ -82,6 +81,7 @@ export function ListarDenuncias({ auth }: PropsPagina) {
             renderizar: (linha: DenunciaLinha) => <BadgeStatusDenuncia status={linha.statusOriginal} />,
           },
           { chave: 'contestacaoSituacao', rotulo: 'contestação', tipo: 'status' },
+          { chave: 'esperandoDesde', rotulo: 'esperando', tipo: 'espera' },
         ]}
         vazio={{ icone: 'fa-flag', titulo: 'Nenhuma denúncia registrada.', texto: 'Quando alguém denunciar uma campanha ou um perfil, a denúncia aparece aqui para julgar.' }}
         chavePrimaria="idDenuncia"

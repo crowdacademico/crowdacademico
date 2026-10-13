@@ -13,9 +13,9 @@ import {
 // muda status são os endpoints de ação (aprovar/rejeitar), nunca este PATCH
 // genérico. trg_campanha_valida_transicao (05) já bloquearia uma tentativa
 // de mudar status por aqui mesmo que o DTO permitisse, mas nem chega a
-// tentar. Sem modelo também: mudar de all-or-nothing pra flexivel (ou o
-// contrário) depois de criada é uma decisão de produto em aberto, não
-// implementada agora.
+// tentar. Sem modelo também, por enquanto: a regra decidida é que o modelo
+// pode mudar até a aprovação (o banco congela depois), mas só o
+// all-or-nothing é aceito até o módulo de pagamento existir.
 export class CampanhaRequestUpdate {
   @IsOptional()
   @IsString()

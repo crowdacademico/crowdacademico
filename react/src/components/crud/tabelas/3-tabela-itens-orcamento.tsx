@@ -80,13 +80,6 @@ export function TabelaItensOrcamento({ itens, podeEditar, metaFinanceira, aoAdic
           return dados ? aoSalvar(item, dados) : Promise.resolve(false);
         }}
         aoExcluir={aoExcluir}
-        consultar={(item) => ({
-          titulo: 'Item de orçamento',
-          secoes: [
-            { titulo: 'Categoria', conteudo: item.categoria },
-            { titulo: 'Valor', conteudo: formatarMoeda(item.valor) },
-          ],
-        })}
       />
     </>
   );

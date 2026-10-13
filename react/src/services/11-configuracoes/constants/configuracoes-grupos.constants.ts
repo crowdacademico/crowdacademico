@@ -6,6 +6,9 @@
 // Se uma chave nova nascer sem entrada aqui, cai no grupo "Outras": nunca quebra a tela, só fica sem
 // organização até alguém lembrar de classificar.
 export const GRUPO_CONFIGURACAO: Record<string, string> = {
+  // Moderação: cor do tempo de espera nas filas (coluna "esperando").
+  espera_atencao_dias: 'Moderação',
+  espera_critica_dias: 'Moderação',
   // Segurança
   limite_tentativas_login: 'Segurança',
   bloqueio_login_minutos: 'Segurança',
@@ -56,7 +59,7 @@ export const GRUPO_CONFIGURACAO: Record<string, string> = {
   notificar_novas_campanhas: 'Geral',
 };
 
-const ORDEM_GRUPOS = ['Segurança', 'Financeiro', 'Campanha', 'Score / Reputação', 'Arquivo', 'Geral', 'Outras'];
+const ORDEM_GRUPOS = ['Segurança', 'Financeiro', 'Campanha', 'Moderação', 'Score / Reputação', 'Arquivo', 'Geral', 'Outras'];
 
 export function grupoConfiguracao(chave: string): string {
   return GRUPO_CONFIGURACAO[chave] ?? 'Outras';

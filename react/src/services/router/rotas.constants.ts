@@ -15,16 +15,12 @@ import { ListarTiposLink } from '../../views/9-tipo-link/listar-tipos-link';
 import { ListarMotivosDenuncia } from '../../views/10-motivo-denuncia/listar-motivos-denuncia';
 import { ListarPesquisadores } from '../../views/6-perfil-pesquisador/listar-pesquisadores';
 import { ListarCampanhas } from '../../views/12-campanha/listar-campanhas';
-import { MinhasCampanhas } from '../../views/12-campanha/minhas-campanhas';
 import { AprovarCampanhas } from '../../views/12-campanha/aprovar-campanhas';
 import { ListarDenuncias } from '../../views/19-denuncia/listar-denuncias';
 import { ListarEncerramentos } from '../../views/20-solicitacao-encerramento/listar-encerramentos';
-import { BancadaPesquisador } from '../../views/campo-testes/bancada-pesquisador';
-import { BancadaCampanha } from '../../views/campo-testes/bancada-campanha';
-import { CampanhasSeguidas } from '../../views/campo-testes/campanhas-seguidas';
-import { GuiaEstilo } from '../../views/campo-testes/guia-estilo/1-guia-estilo';
 import { ListarTermosUso } from '../../views/5-termo-uso/listar-termos-uso';
 import { PontuacaoScore } from '../../views/11-configuracoes/pontuacao-score';
+import { campoTestes } from './campo-testes-opcional';
 
 // Fonte única de verdade para "quais páginas existem": App.tsx monta as <Route> daqui e breadcrumb.tsx monta
 // o rótulo daqui. rotuloBreadcrumb: null = não aparece no breadcrumb.
@@ -245,63 +241,6 @@ export const ROTAS_ADMIN: Rota[] = [
   // Parâmetro do Sistema, Área de Conhecimento, Tipo de Link e Motivo de Denúncia; Alterar de Papel; Consultar
   // de Campanha e de Pesquisador; Criar, Consultar, Alterar e Excluir de Termo de Uso.
 
-  // A área de testes vive só neste trecho e NÃO está nos requisitos funcionais (o arquivo inteiro é a
-  // fonte única de verdade de TODAS as rotas, não só as dele).
-  //
-  // `import.meta.env.DEV`: em build de produção este array fica vazio, a rota nem existe e o grupo some do
-  // menu (admin-menu.constants só mostra o que `itensDoGrupo` acha aqui). Em desenvolvimento é ferramenta,
-  // em produção seria uma porta escancarada.
-  ...(import.meta.env.DEV
-    ? [
-        {
-          caminho: '/admin/campo-testes/pesquisador',
-          caminhoRelativo: 'campo-testes/pesquisador',
-          elemento: BancadaPesquisador,
-          rotuloMenu: 'T1 - Bancada do Pesquisador',
-          rotuloBreadcrumb: 'T1 - Bancada do Pesquisador',
-          grupoMenu: 'CAMPO_TESTES',
-          icone: 'fa-flask',
-        },
-        {
-          caminho: '/admin/campo-testes/campanha',
-          caminhoRelativo: 'campo-testes/campanha',
-          elemento: BancadaCampanha,
-          rotuloMenu: 'T2 - Bancada da Campanha',
-          rotuloBreadcrumb: 'T2 - Bancada da Campanha',
-          grupoMenu: 'CAMPO_TESTES',
-          icone: 'fa-bullhorn',
-        },
-        {
-          // Minhas Campanhas: o pesquisador não usa a área restrita (ele terá a área dele na parte pública);
-          // aqui fica só para testar o fluxo dele (criar, completar, enviar, corrigir).
-          caminho: '/admin/campo-testes/minhas-campanhas',
-          caminhoRelativo: 'campo-testes/minhas-campanhas',
-          elemento: MinhasCampanhas,
-          rotuloMenu: 'T3 - Minhas Campanhas',
-          rotuloBreadcrumb: 'T3 - Minhas Campanhas',
-          grupoMenu: 'CAMPO_TESTES',
-          icone: 'fa-folder-open',
-        },
-        {
-          // Campanhas que a conta logada segue (seguir, deixar de seguir, consultar as atualizações).
-          caminho: '/admin/campo-testes/campanhas-seguidas',
-          caminhoRelativo: 'campo-testes/campanhas-seguidas',
-          elemento: CampanhasSeguidas,
-          rotuloMenu: 'T4 - Campanhas Seguidas',
-          rotuloBreadcrumb: 'T4 - Campanhas Seguidas',
-          grupoMenu: 'CAMPO_TESTES',
-          icone: 'fa-bell',
-        },
-        {
-          // Guia de Estilo: cores nos dois temas, tipografia e componentes reais.
-          caminho: '/admin/campo-testes/guia-estilo',
-          caminhoRelativo: 'campo-testes/guia-estilo',
-          elemento: GuiaEstilo,
-          rotuloMenu: 'Guia de Estilo',
-          rotuloBreadcrumb: 'Guia de Estilo',
-          grupoMenu: 'CAMPO_TESTES',
-          icone: 'fa-palette',
-        },
-      ]
-    : []),
+  // Campo de Testes: só em desenvolvimento e só se a pasta existir (ver campo-testes-opcional.ts).
+  ...(campoTestes?.ROTAS_CAMPO_TESTES ?? []),
 ];

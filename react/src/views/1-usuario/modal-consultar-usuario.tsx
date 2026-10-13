@@ -16,7 +16,11 @@ import {
 import { useBuscar } from '../../services/constant/hook/use-buscar';
 import { formatarCpfOuMotivoOculto, formatarData, formatarDataHora } from '../../services/constant/util/formatacao.util';
 import { BotaoVerFotoPerfil } from './botao-ver-foto-perfil';
-import { PainelScore } from './painel-score';
+import { TabelaDimensoesScore } from '../../components/crud/tabelas/2-tabela-dimensoes-score';
+import { TabelaLinksAcademicos } from '../../components/crud/tabelas/1-tabela-links-academicos';
+import { perfilPesquisadorApi } from '../../services/6-perfil-pesquisador/api/perfil-pesquisador.api';
+import { linkAcademicoApi } from '../../services/7-link-academico/api/link-academico.api';
+import { tipoLinkApi } from '../../services/9-tipo-link/api/tipo-link.api';
 import { SecaoAceitesTermo } from './secao-aceites-termo';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { UsuarioResponseLoginHistory } from '../../services/1-usuario/type/usuario.type';
@@ -41,6 +45,10 @@ export function ModalConsultarUsuario({ auth, idUsuario, aoFechar }: ModalConsul
     () => usuarioApi.listarTermosAceitos(auth.authFetch, idUsuario).catch(() => []),
     [idUsuario],
   );
+  // Do pesquisador: o score (resumo ao lado do Perfil, dimensões embaixo) e os links acadêmicos.
+  const { dado: score } = useBuscar(() => perfilPesquisadorApi.buscarScore(auth.authFetch, idUsuario).catch(() => null), [idUsuario]);
+  const { dado: links } = useBuscar(() => linkAcademicoApi.listarDoUsuario(auth.authFetch, idUsuario), [idUsuario]);
+  const { dado: tiposLink } = useBuscar(() => tipoLinkApi.listar(auth.authFetch, { escopo: 'perfil' }), []);
   const [logins, setLogins] = useState<UsuarioResponseLoginHistory[] | null>(null);
   const [carregandoLogins, setCarregandoLogins] = useState(false);
   const [loginsAbertos, setLoginsAbertos] = useState(false);
@@ -96,8 +104,8 @@ export function ModalConsultarUsuario({ auth, idUsuario, aoFechar }: ModalConsul
         )
       ) : (
         <>
-          {/* Linhas alinhadas: "Dados da conta" ao lado de Papéis, "Acesso" ao lado dos Aceites do Termo; o Perfil de
-              Pesquisador (quando houver) vem embaixo, na largura das duas primeiras colunas. */}
+          {/* Linhas alinhadas: "Dados da conta" ao lado de Papéis, "Acesso" ao lado dos Aceites do Termo e, de quem é
+              pesquisador, o Perfil (duas colunas) ao lado do Score. Embaixo, as dimensões do score e os links acadêmicos. */}
           <div className="grade-ficha gap-x-8 gap-y-10">
             <div className="lg:col-span-2">
               <SecaoFicha titulo="Dados da conta">
@@ -186,7 +194,6 @@ export function ModalConsultarUsuario({ auth, idUsuario, aoFechar }: ModalConsul
                   <CampoFicha rotulo="Título acadêmico" valor={ROTULO_TITULO_ACADEMICO[perfilPesquisador.tituloAcademico]} />
                   <CampoFicha rotulo="Tipo de vínculo" valor={ROTULO_TIPO_VINCULO[perfilPesquisador.tipoVinculo]} />
                   <CampoFicha rotulo="Vínculo institucional" valor={perfilPesquisador.vinculoInstitucional} />
-                  <CampoFicha rotulo="Score atual" valor={perfilPesquisador.scoreAtual} />
                   <CampoFicha
                     rotulo="Ativado em"
                     valor={perfilPesquisador.ativadoEm ? formatarDataHora(perfilPesquisador.ativadoEm) : undefined}
@@ -194,12 +201,32 @@ export function ModalConsultarUsuario({ auth, idUsuario, aoFechar }: ModalConsul
                 </SecaoFicha>
               </div>
             )}
+            {perfilPesquisador && (
+              <SecaoFicha titulo="Score" colunas={1}>
+                <CampoFicha
+                  rotulo="Score atual"
+                  valor={
+                    score ? (
+                      <>
+                        {score.scoreTotal} pontos, <span className="badge badge-sucesso">{score.rotulo}</span>
+                      </>
+                    ) : undefined
+                  }
+                />
+              </SecaoFicha>
+            )}
           </div>
 
           {perfilPesquisador && (
             <>
               <div className="border-t borda-padrao"></div>
-              <PainelScore auth={auth} idUsuario={idUsuario} />
+              {score && <TabelaDimensoesScore dimensoes={score.dimensoes} />}
+              <h3 className="titulo-bloco titulo-bloco--linha">Links acadêmicos</h3>
+              {links && links.length > 0 ? (
+                <TabelaLinksAcademicos links={links} tiposLink={tiposLink ?? []} />
+              ) : (
+                <EstadoVazio compacto icone="fa-link" titulo="Nenhum link acadêmico cadastrado." />
+              )}
             </>
           )}
         </>

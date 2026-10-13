@@ -275,10 +275,11 @@ $$;
 -- Função:     calcular_score_reputacao
 -- Assinatura: (p_id_usuario INT) -> INTEGER
 -- Bloco:      [05-I-2]
--- Regra:      Dimensão 4 - Reputação da Comunidade. Dois subitens: denúncias procedentes contra o PERFIL e contra as
---             CAMPANHAS do pesquisador. Cada um perde a sua parte de forma linear até zerar em
---             score_denuncias_para_zerar denúncias procedentes. Só 'resolvida' (procedente) conta: 'pendente',
---             'em_analise' e 'improcedente' não.
+-- Regra:      Dimensão 4 - Reputação da Comunidade. Dois subitens: denúncias procedentes contra o PERFIL e CAMPANHAS
+--             do pesquisador com pelo menos uma denúncia procedente (várias pessoas denunciando a mesma campanha contam
+--             uma vez: pune a falta, não o número de quem viu). Cada um perde a sua parte de forma linear até zerar em
+--             score_denuncias_para_zerar. Só 'resolvida' (procedente) conta: 'pendente', 'em_analise' e
+--             'improcedente' não.
 CREATE OR REPLACE FUNCTION public.calcular_score_reputacao(p_id_usuario INT)
 RETURNS INTEGER
 LANGUAGE plpgsql
@@ -301,7 +302,7 @@ BEGIN
     SELECT count(*) INTO v_perfil
     FROM denuncia d WHERE d.id_pesquisador_alvo = p_id_usuario AND d.status = 'resolvida';
 
-    SELECT count(*) INTO v_campanhas
+    SELECT count(DISTINCT d.id_campanha_alvo) INTO v_campanhas
     FROM denuncia d JOIN campanha c ON c.id_campanha = d.id_campanha_alvo
     WHERE c.id_usuario = p_id_usuario AND d.status = 'resolvida';
 
@@ -865,7 +866,8 @@ DECLARE
         ['orcamento_min_itens',           'orcamento_max_itens'],
         ['cronograma_min_marcos',         'cronograma_max_marcos'],
         ['arquivo_tamanho_minimo_bytes',  'arquivo_tamanho_maximo_imagem_bytes'],
-        ['arquivo_tamanho_minimo_bytes',  'arquivo_tamanho_maximo_documento_bytes']
+        ['arquivo_tamanho_minimo_bytes',  'arquivo_tamanho_maximo_documento_bytes'],
+        ['espera_atencao_dias',           'espera_critica_dias']
     ];
     v_chave  TEXT;
     v_par    TEXT[];

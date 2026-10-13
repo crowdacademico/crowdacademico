@@ -3,6 +3,8 @@
 // recalcular_score_pesquisador() (05_regras_negocio.sql), nunca pelo Nest.
 export class DimensaoScoreResponse {
   nomeDimensao: string;
+  // O nome para mostrar (score_config.descricao, o mesmo da tela Pontuação); o código, se a descrição faltar.
+  rotuloDimensao: string;
   pontosObtidos: number;
   peso: string;
   calculadoEm: Date;

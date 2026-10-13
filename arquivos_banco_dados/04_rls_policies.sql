@@ -447,10 +447,12 @@ CREATE POLICY pol_marco_cronograma_delete ON marco_cronograma FOR DELETE TO app_
     OR (SELECT public.tem_permissao('campanha_editar'))
 );
 
--- [04-E-3] comentario: regras de visibilidade de comentário não endossado/inativo (ver DOCUMENTACAO_BD.md)
+-- [04-E-3] comentario: regras de visibilidade de comentário não endossado/inativo (ver DOCUMENTACAO_BD.md). O
+-- endossado só aparece para quem enxerga a campanha (a regra de leitura de campanha vale dentro do EXISTS): campanha
+-- encerrada pela moderação some da página pública e leva os comentários junto (RF-098).
 DROP POLICY IF EXISTS pol_comentario_select ON comentario;
 CREATE POLICY pol_comentario_select ON comentario FOR SELECT USING (
-    (ativo = TRUE AND endossado = TRUE)
+    (ativo = TRUE AND endossado = TRUE AND EXISTS (SELECT 1 FROM campanha WHERE id_campanha = comentario.id_campanha))
     OR id_pesquisador = (SELECT public.id_usuario_atual())
     OR EXISTS (
         SELECT 1 FROM campanha

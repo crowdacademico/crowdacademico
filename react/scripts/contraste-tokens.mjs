@@ -84,10 +84,8 @@ const razao = (a, b) => {
   return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
 };
 
-// [texto, fundo]: nomes de token. Mesma lista que o Guia de Estilo (Campo de Testes) mostra na tela.
-const PARES = JSON.parse(
-  fs.readFileSync(path.resolve(pasta, '../../views/campo-testes/guia-estilo/6-pares-contraste.json'), 'utf8'),
-);
+// [texto, fundo]: nomes de token, ao lado dos tokens de cor. O Guia de Estilo (Campo de Testes) mostra a mesma lista.
+const PARES = JSON.parse(fs.readFileSync(path.resolve(pasta, 'pares-contraste.json'), 'utf8'));
 
 let falhas = 0;
 let medidos = 0;

@@ -81,5 +81,8 @@ export const STATUS_ACEITA_ATUALIZACAO: ReadonlySet<StatusCampanha> = new Set<St
 // Onde o banco aceita seguir (fn_valida_seguir_campanha_publicada, 91034): o que pol_campanha_select mostra a todos.
 export const STATUS_ACEITA_SEGUIR: ReadonlySet<StatusCampanha> = new Set<StatusCampanha>(['ativo', 'sucesso', 'nao_atingido', 'encerrado']);
 
+// Onde o banco aceita denúncia de campanha (fn_valida_denuncia_alvo, 91035; RF-106): só campanha ativa.
+export const STATUS_ACEITA_DENUNCIA: ReadonlySet<StatusCampanha> = new Set<StatusCampanha>(['ativo']);
+
 // Campanha que já foi ao ar (aprovada em algum momento): tem comentários e atualizações para mostrar.
 export const STATUS_PUBLICADA: ReadonlySet<StatusCampanha> = new Set<StatusCampanha>(['ativo', 'sucesso', 'nao_atingido', 'encerrado', 'encerrado_moderacao']);

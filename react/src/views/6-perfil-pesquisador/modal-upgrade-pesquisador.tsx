@@ -28,8 +28,7 @@ interface ModalUpgradePesquisadorProps {
   // sempre, para qualquer conta: o aceite fica registrado em nome DESTE `idUsuarioAlvo`, nunca de quem está
   // preenchendo a tela.
   idUsuarioAlvo: number;
-  // Botão "Gerar CPF válido" (mesmo padrão de ModalAlterarUsuario): ausente por padrão; só a Bancada do
-  // Pesquisador passa isso (bancada-pesquisador.tsx), nunca um consumidor de verdade.
+  // Botão "Gerar CPF válido": ausente por padrão; só o T1 do Campo de Testes passa isso, nunca um consumidor de verdade.
   gerarCpfDeTeste?: () => string;
   aoFechar: () => void;
   aoConcluido: (perfil: PerfilPesquisadorResponse) => void;

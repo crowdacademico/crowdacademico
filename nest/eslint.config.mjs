@@ -51,4 +51,23 @@ export default tseslint.config(
       "prettier/prettier": ["error", { endOfLine: "auto" }],
     },
   },
+  // O Campo de Testes (src/campo-testes/) usa o sistema; o sistema nunca importa dele. A única porta é o
+  // app.module.ts, que só o carrega fora de produção. Mesma regra do react/.
+  {
+    files: ['src/**/*.ts'],
+    ignores: ['src/campo-testes/**', 'src/app/app.module.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/campo-testes/**'],
+              message: 'O sistema não depende do Campo de Testes: a única porta é o app.module.ts.',
+            },
+          ],
+        },
+      ],
+    },
+  },
 );

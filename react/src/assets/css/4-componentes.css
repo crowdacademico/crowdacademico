@@ -664,7 +664,8 @@
      qualquer foco: no celular, tocar nele é o único jeito de ler a dica. */
   .dica:hover .dica__bolha,
   .dica--info:focus .dica__bolha,
-  .dica:focus-visible .dica__bolha {
+  .dica:focus-visible .dica__bolha,
+  .dica--aberta .dica__bolha {
     display: block;
     opacity: 1;
   }
@@ -689,9 +690,9 @@
   /* Variante --direita: abre alinhada pela borda direita do gatilho, para o gatilho que fica na última coluna
      de uma tabela (centralizada, a bolha aberta passaria da borda e criaria rolagem lateral enquanto aberta).
      Vale sozinha para o último botão de todo grupo de ações de linha (.crud-tabela__acoes), que fica na borda
-     direita da tabela. */
+     direita da tabela; menos na coluna de ação própria, que fica no meio e mantém a dica centralizada. */
   .dica__bolha--direita,
-  .crud-tabela__acoes > .crud-tabela__acao:last-child .dica__bolha {
+  :not(.crud-tabela__col--acao-propria) > .crud-tabela__acoes > .crud-tabela__acao:last-child .dica__bolha {
     left: auto;
     right: 0;
     transform: none;
@@ -713,6 +714,49 @@
   /* Variante --curta: rótulo de 1 palavra (ações de tabela), sem quebra de linha, padding menor que a versão
      de texto explicativo. */
   /* Sem limite de largura: numa linha só, um rótulo um pouco maior passava dos 16rem da bolha e era cortado. */
+  /* Variante --alerta (com --baixo): o aviso preso a um campo ("Apenas leitura"), no formato do aviso de validação
+     do navegador: balão claro embaixo do campo, alinhado à esquerda, com seta apontando para ele e ícone de alerta.
+     Só abre pelo estado (.dica--aberta), nunca pelo hover. */
+  .dica__bolha--alerta {
+    left: 0.75rem;
+    transform: none;
+    width: max-content;
+    max-width: none;
+    background-color: var(--cor-fundo-cartao);
+    color: var(--cor-texto);
+    border: 1px solid var(--cor-borda-forte);
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .dica--aberta .dica__bolha--alerta {
+    display: flex;
+  }
+
+  .dica__bolha--alerta::before {
+    content: '';
+    position: absolute;
+    top: -0.35rem;
+    left: 0.85rem;
+    width: 0.6rem;
+    height: 0.6rem;
+    background-color: inherit;
+    border-left: 1px solid var(--cor-borda-forte);
+    border-top: 1px solid var(--cor-borda-forte);
+    transform: rotate(45deg);
+  }
+
+  .dica__bolha-icone {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    border-radius: var(--radius-sm);
+    background-color: var(--cor-texto-aviso);
+    color: var(--cor-fundo-cartao);
+  }
+
   .dica__bolha--curta {
     white-space: nowrap;
     max-width: none;

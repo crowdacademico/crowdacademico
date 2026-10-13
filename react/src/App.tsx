@@ -1,9 +1,9 @@
 import { Navigate, Route, Routes } from 'react-router';
 import { Layout } from './components/layout/layout';
 import { useAuth } from './services/3-auth/hook/use-auth';
-import { CampoTestesProvider } from './services/campo-testes/context/campo-testes-provider';
 import { ROTAS, ROTAS_ADMIN } from './services/router/rotas.constants';
 import { AdminLayout } from './views/admin/admin-layout';
+import { campoTestes } from './services/router/campo-testes-opcional';
 
 // useAuth() chamado uma vez só, aqui em cima: Header (dentro de Layout) e cada página recebem o mesmo `auth`
 // por prop, nunca cada um com sua própria sessão. Rotas vêm de services/router/rotas.constants (fonte única,
@@ -48,10 +48,9 @@ function App() {
     </Routes>
   );
 
-  // CampoTestesProvider só existe em build de desenvolvimento - mesmo
-  // raciocínio do `import.meta.env.DEV` em rotas.constants.js. Fora disso,
-  // `rotas` renderiza igual a antes, sem nenhum provider novo por cima.
-  return import.meta.env.DEV ? <CampoTestesProvider>{rotas}</CampoTestesProvider> : rotas;
+  // Provider do Campo de Testes: só em desenvolvimento e só se a pasta existir (campo-testes-opcional.ts).
+  const ProviderCampoTestes = campoTestes?.CampoTestesProvider;
+  return ProviderCampoTestes ? <ProviderCampoTestes>{rotas}</ProviderCampoTestes> : rotas;
 }
 
 export default App;

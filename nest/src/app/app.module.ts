@@ -31,6 +31,7 @@ import { ArquivoModule } from '../25-arquivo/arquivo.module';
 import { HistoricoRejeicaoModule } from '../21-historico-rejeicao/historico-rejeicao.module';
 import { StorageModule } from '../commons/storage/storage.module';
 import { ConfiguracaoValorModule } from '../commons/configuracao/configuracao-valor.module';
+import { CampoTestesModule } from '../campo-testes/campo-testes.module';
 
 @Module({
   imports: [
@@ -86,6 +87,8 @@ import { ConfiguracaoValorModule } from '../commons/configuracao/configuracao-va
     ArquivoModule,
     LogAuditoriaModule,
     DashboardModule,
+    // Campo de Testes (src/campo-testes/): só fora de produção. Último de propósito, como no React.
+    ...(process.env.NODE_ENV === 'production' ? [] : [CampoTestesModule]),
   ],
   controllers: [HealthController],
 })

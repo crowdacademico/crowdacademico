@@ -113,6 +113,7 @@ nest/src/
 │   ├── storage/               ← abstração de armazenamento de arquivo (seção 8)
 │   └── validacao/             ← erro de validação por campo, @TextoLimpo, @BooleanoDaQuery (6.1)
 ├── 1-usuario/ … 28-dashboard/ ← 29 pastas numeradas, uma por domínio
+└── campo-testes/              ← rotas que só o Campo de Testes do painel usa, só fora de produção (7.4)
 ```
 
 📌 **A numeração das pastas é a mesma ordem de dependência de produto usada em `PROXIMOS_MODULOS.md`** - `1-usuario` antes de `3-auth` porque autenticação precisa de conta; `12-campanha` antes de `15-atualizacao-campanha` porque atualização pendura numa campanha. **Ela não é ordem de importância nem de execução**: `25-arquivo` (número alto) é usado por `1-usuario` (número baixo).
@@ -606,6 +607,15 @@ export class CampanhaServiceCreate {
 📌 **Um detalhe de Kysely que vale saber:** `modelo` só entra no `INSERT` se vier no DTO (`...(dto.modelo ? { modelo: dto.modelo } : {})`), em vez do `?? null` usado nas colunas nullable. A coluna é `NOT NULL` com `DEFAULT` - mandar `null` explícito violaria a constraint; **omitir a chave** é o jeito de deixar o banco aplicar o próprio default.
 
 ### 7.4 Casos especiais que valem estudar
+
+**`campo-testes/` - as rotas que só o Campo de Testes usa (12-10-2026).**
+
+> **Em palavras simples:** três rotas existem só para o Campo de Testes do painel: criar perfil de pesquisador e criar campanha em nome de outra conta, e forçar a exclusão de uma campanha. Elas moram numa pasta própria, fora dos módulos do sistema, e em produção nem existem.
+
+- **Decisão:** `CampoTestesModule` (`src/campo-testes/`) reúne `POST /perfil-pesquisador/:id`, `POST /campanha/:idUsuario` e `POST /campanha/:id/forcar-exclusao`, com as mesmas URLs de antes. Usa o sistema (os serviços de leitura de campanha e de perfil, o `TermoUsoModule`); o sistema nunca importa dele, e a regra `no-restricted-imports` do ESLint acusa qualquer tentativa (a única exceção é o `app.module.ts`). O `app.module.ts` só o carrega com `NODE_ENV` diferente de `production`.
+- **Motivo:** dependência de mão única, a mesma regra do `react/src/campo-testes/`. E duas travas independentes para produção: sem o módulo, a rota responde 404; no banco do deploy, o bloco "modo produção" ainda tira do admin as permissões dessas ferramentas. Conferido com o Nest ligado ao banco local: fora de produção as três respondem (201, 201, 204); com `NODE_ENV=production`, as três dão 404.
+- **Caso-limite aceito:** apagar a pasta pede tirar 2 linhas do `app.module.ts` (o import e a entrada na lista), diferente do React, que usa um carregamento opcional. Um carregamento opcional no Nest pediria `require` dinâmico sem tipo, e não vale para 2 linhas. `PATCH /perfil-pesquisador/:id` e `POST /link-academico/:idUsuario` têm "for-other" no nome, mas são do sistema (o Alterar Usuário usa) e ficaram nos módulos deles.
+
 
 **`UsuarioServiceUpdate`** - o service mais denso do projeto, e o que mais ensina:
 
@@ -1126,7 +1136,7 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | **Perfil e links** | | |
 | pub | GET | `/perfil-pesquisador` · `/perfil-pesquisador/:id` · `/perfil-pesquisador/:id/score` |
 | AUTH | POST · PATCH | `/perfil-pesquisador` |
-| AUTH | POST | `/perfil-pesquisador/:id` *(criar em nome de outro, distinta do `POST /perfil-pesquisador` self-service acima)* |
+| AUTH | POST | `/perfil-pesquisador/:id` *(criar em nome de outro, distinta do `POST /perfil-pesquisador` self-service acima; Campo de Testes, só fora de produção)* |
 | AUTH | PATCH | `/perfil-pesquisador/:id` *(alterar o perfil de outro pesquisador; o `PATCH /perfil-pesquisador` sem id é o self-service)* |
 | AUTH | PATCH | `/perfil-pesquisador/:id/cpf` *(ADICIONADA 07-09-2026, RF-017 - correção de CPF, ação de suporte/admin)* |
 | AUTH | GET · POST | `/perfil-pesquisador/:id/suspensao` · `/perfil-pesquisador/:id/suspender` · `/perfil-pesquisador/:id/reativar` *(ADICIONADAS 07-09-2026 - suspende só o PODER de pesquisador, não bloqueia login; `suspender` exige corpo `{ate, motivo}`)* |
@@ -1155,10 +1165,10 @@ O `bootstrap().catch()` no fim imprime a falha e chama `process.exit(1)` - 📌 
 | AUTH | DELETE | `/termos-uso/:id` |
 | **Campanha e satélites** | | |
 | pub | GET | `/campanha` · `/campanha/:id` |
-| AUTH | POST | `/campanha` · `/campanha/:idUsuario` *(criar em nome de outro: a permissão não existe num banco de produção)* |
+| AUTH | POST | `/campanha` · `/campanha/:idUsuario` *(criar em nome de outro: Campo de Testes, só fora de produção)* |
 | AUTH | PATCH · DELETE | `/campanha/:id` |
 | AUTH | POST | `/campanha/:id/enviar` · `/campanha/:id/deslizar-datas` *(21-09-2026, ciclo de vida da campanha)* |
-| AUTH | POST | `/campanha/:id/aprovar` · `/campanha/:id/rejeitar` · `/campanha/:id/forcar-exclusao` |
+| AUTH | POST | `/campanha/:id/aprovar` · `/campanha/:id/rejeitar` · `/campanha/:id/forcar-exclusao` *(a última: Campo de Testes, só fora de produção)* |
 | AUTH | GET | `/historico-rejeicao` |
 | pub | GET | `/orcamento-campanha` · `/marco-cronograma` |
 | AUTH | POST | `/orcamento-campanha` · `/marco-cronograma` |

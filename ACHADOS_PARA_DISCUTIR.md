@@ -46,6 +46,7 @@ Dá para chegar a risco perto de zero, mas são ramos e filtros espalhados por m
 - Opção A (hoje): contar denúncias. Simples, mas pune o volume de denunciantes, não o número de problemas.
 - Opção B: contar campanhas com pelo menos uma denúncia procedente. Uma campanha fraudulenta vale 1, não importa quantos denunciaram.
 - Opção C: B para campanhas, e no perfil contar motivos diferentes.
+- **Resolvido em 12-10-2026: opção B** (`calcular_score_reputacao`, ver `DOCUMENTACAO_BD.md`, decisão "Acúmulo"). No perfil continua contando denúncias.
 
 **Efeito colateral já visível:** pesquisador sem nenhuma campanha fica com os 15 da parte "campanhas" inteiros, então nunca cai abaixo de 25 (faixa "Em Construção"), por mais denúncias procedentes que tenha contra o perfil.
 

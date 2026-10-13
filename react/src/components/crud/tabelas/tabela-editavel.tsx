@@ -1,13 +1,11 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { AcaoLinha } from '../acao-linha';
-import { ModalDetalhe } from '../modal-detalhe';
-import type { SecaoModalDetalhe } from '../modal-detalhe';
 
 // Base das tabelas com edição na própria linha (links acadêmicos, itens de orçamento, marcos de cronograma):
-// cada linha mostra Alterar/Consultar/Excluir; Alterar troca a linha por campos com Salvar/Cancelar; a última
-// linha adiciona um registro novo; Consultar abre um ModalDetalhe. A tabela só mostra e edita: quem busca e
-// salva os dados é quem usa a tabela (`aoAdicionar`/`aoSalvar`/`aoExcluir`).
+// cada linha mostra Alterar/Excluir (sem Consultar: a linha já mostra tudo, e o texto longo tem "ler tudo"); Alterar
+// troca a linha por campos com Salvar/Cancelar; a última linha adiciona um registro novo. A tabela só mostra e edita:
+// quem busca e salva os dados é quem usa a tabela (`aoAdicionar`/`aoSalvar`/`aoExcluir`).
 
 export interface ColunaEditavel<T, F> {
   rotulo: string;
@@ -17,11 +15,9 @@ export interface ColunaEditavel<T, F> {
   // na linha em edição continua mostrando o valor (ex.: o tipo de um link, que não muda depois de criado).
   campo: (form: F, mudar: (parcial: Partial<F>) => void) => ReactNode;
   editavel?: boolean;
-}
-
-export interface ConsultaLinha {
-  titulo: string;
-  secoes: SecaoModalDetalhe[];
+  // A coluna que fica com o espaço que sobra (o texto longo da tabela, ex.: a URL); as outras ficam só com o que o
+  // conteúdo e os campos da linha de adicionar pedem.
+  principal?: boolean;
 }
 
 interface TabelaEditavelProps<T, F> {
@@ -30,14 +26,12 @@ interface TabelaEditavelProps<T, F> {
   colunas: ColunaEditavel<T, F>[];
   formVazio: F;
   paraForm: (linha: T) => F;
-  consultar: (linha: T) => ConsultaLinha;
   // Devolvem `true` quando deu certo: só então a linha de adicionar se limpa / a edição fecha.
   aoAdicionar: (form: F) => Promise<boolean>;
   aoSalvar: (linha: T, form: F) => Promise<boolean>;
   aoExcluir: (linha: T) => void;
   podeEditar?: boolean;
   podeAdicionar?: boolean;
-  classeWrapper?: string;
 }
 
 const classeCelula = (centralizada?: boolean) => (centralizada ? 'crud-tabela__celula--centralizada' : undefined);
@@ -48,18 +42,15 @@ export function TabelaEditavel<T, F>({
   colunas,
   formVazio,
   paraForm,
-  consultar,
   aoAdicionar,
   aoSalvar,
   aoExcluir,
   podeEditar = true,
   podeAdicionar = podeEditar,
-  classeWrapper = 'crud-tabela__wrapper',
 }: TabelaEditavelProps<T, F>) {
   const [novo, setNovo] = useState<F>(formVazio);
   const [idEditando, setIdEditando] = useState<number | null>(null);
   const [edicao, setEdicao] = useState<F>(formVazio);
-  const [consultada, setConsultada] = useState<T | null>(null);
 
   const mudarNovo = (parcial: Partial<F>) => setNovo((atual) => ({ ...atual, ...parcial }));
   const mudarEdicao = (parcial: Partial<F>) => setEdicao((atual) => ({ ...atual, ...parcial }));
@@ -76,16 +67,17 @@ export function TabelaEditavel<T, F>({
     }
   };
 
-  const consulta = consultada ? consultar(consultada) : null;
-
   return (
     <>
-      <div className={classeWrapper}>
-        <table className="crud-tabela mb-3">
+      <div className="crud-tabela__wrapper">
+        <table className={'crud-tabela mb-3' + (colunas.some((coluna) => coluna.principal) ? ' crud-tabela--com-principal' : '')}>
           <thead>
             <tr>
               {colunas.map((coluna) => (
-                <th key={coluna.rotulo} className={classeCelula(coluna.centralizada)}>
+                <th
+                  key={coluna.rotulo}
+                  className={[classeCelula(coluna.centralizada), coluna.principal && 'crud-tabela__col--principal'].filter(Boolean).join(' ') || undefined}
+                >
                   {coluna.rotulo}
                 </th>
               ))}
@@ -121,7 +113,6 @@ export function TabelaEditavel<T, F>({
                                 setEdicao(paraForm(linha));
                               }}
                             />
-                            <AcaoLinha rotulo="Consultar" icone="fa-eye" onClick={() => setConsultada(linha)} />
                             <AcaoLinha rotulo="Excluir" icone="fa-trash" variante="excluir" onClick={() => aoExcluir(linha)} />
                           </>
                         )}
@@ -147,9 +138,6 @@ export function TabelaEditavel<T, F>({
         </table>
       </div>
 
-      {consulta && (
-        <ModalDetalhe rotuloAcao="Consultar" titulo={consulta.titulo} secoes={consulta.secoes} aoFechar={() => setConsultada(null)} />
-      )}
     </>
   );
 }

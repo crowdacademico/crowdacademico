@@ -276,6 +276,39 @@
     white-space: pre-line;
   }
 
+  /* Tabela editável com coluna principal (TabelaEditavel, `principal`): a principal fica com a sobra; os campos da
+     linha de adicionar pedem como mínimo o próprio tamanho (sem isso as outras colunas encolheriam até sumir). */
+  .crud-tabela__col--principal {
+    width: 100%;
+  }
+
+  .crud-tabela--com-principal td > .input-padrao {
+    width: auto;
+    min-width: 100%;
+  }
+
+  /* DS-102: a célula da coluna "esperando" fica com a cor de quanto o item já esperou (TempoEspera). Os mesmos
+     pares de texto e fundo das pílulas de status, conferidos pelo npm run contraste. */
+  .crud-tabela td:has(> .tempo-espera--ok) {
+    background-color: var(--cor-fundo-sucesso);
+    color: var(--cor-texto-sucesso);
+  }
+
+  .crud-tabela td:has(> .tempo-espera--atencao) {
+    background-color: var(--cor-fundo-aviso);
+    color: var(--cor-texto-aviso);
+  }
+
+  .crud-tabela td:has(> .tempo-espera--critico) {
+    background-color: var(--cor-fundo-erro);
+    color: var(--cor-texto-erro);
+  }
+
+  .texto-resumido--sem-espaco .texto-resumido__uma-linha,
+  .texto-resumido--sem-espaco .texto-resumido__inteiro {
+    overflow-wrap: anywhere;
+  }
+
   .texto-resumido--aberto .texto-resumido__botao {
     margin-left: 0.5rem;
   }
@@ -605,6 +638,19 @@
   .crud-tabela__acao--escolher:hover {
     color: var(--cor-texto-sucesso);
     background-color: var(--cor-fundo-sucesso);
+  }
+
+  /* Coluna de ação própria (ColunaAcao, ex.: comentar e seguir do Campo de Testes): ícone sempre na cor da marca. */
+  .crud-tabela__col--acao-propria .crud-tabela__acao:not(.crud-tabela__acao--indisponivel) {
+    color: var(--cor-texto-marca);
+  }
+
+  .crud-tabela__acao--aviso i {
+    color: var(--cor-texto-aviso);
+  }
+
+  .crud-tabela__acao--erro i {
+    color: var(--cor-texto-erro);
   }
 
   /* Ação que não se aplica a esta linha (ex.: excluir a versão vigente do Termo): fica no lugar, apagada, e a dica

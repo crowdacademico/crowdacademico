@@ -8,7 +8,7 @@ import type { ReactNode } from 'react';
 import { useSearchParams } from 'react-router';
 import { TIPOS_COLUNA, type NomeTipoColuna } from './colunas/tipos-coluna';
 import { DISTRIBUICAO_COLUNAS } from './colunas/distribuicao';
-import { CabecalhoAcoes, CelulaAcoes, type AcaoIndisponivel, type AcoesLinha } from './colunas/5-coluna-acoes';
+import { CabecalhoAcoes, CelulaAcoes, type AcaoIndisponivel, type AcoesLinha, type ColunaAcao } from './colunas/5-coluna-acoes';
 import { BarraFiltros } from '../search/barra-filtros';
 import { Tooltip } from '../layout/tooltip';
 import { paginarClientSide } from '../../services/constant/util/paginacao.util';
@@ -46,7 +46,7 @@ interface FiltroFacetado<T extends Linha> {
   rotulos?: Record<string, string>;
 }
 
-interface GenericTableProps<T extends Linha> {
+export interface GenericTableProps<T extends Linha> {
   titulo: string;
   // Na maioria das telas a tabela É a página, então o título dela é o h1 (um por página, o que leitor de tela
   // e axe esperam). Numa página com mais de uma seção (Papéis e Permissões), as seguintes passam `2`. O visual
@@ -64,6 +64,8 @@ interface GenericTableProps<T extends Linha> {
   acoes?: AcoesLinha<T>;
   // Ação que existe na tabela mas não se aplica a uma linha: aparece apagada, com o motivo na dica.
   acaoIndisponivel?: AcaoIndisponivel<T>;
+  // Ações em coluna própria, em vez de na coluna Ações (ver ColunaAcao).
+  acoesEmColuna?: ColunaAcao[];
   filtrosFacetados?: FiltroFacetado<T>[];
   // Lista vazia (sem filtro): o que apareceria aqui e o próximo passo. Sem isto, uma mensagem genérica.
   vazio?: ConteudoEstadoVazio;
@@ -107,8 +109,7 @@ function maiorTexto<T extends Linha>(coluna: Coluna<T>, linhas: T[]): number {
 // SEGUNDO TESTE, complementar (o teste acima só decide ENTRADA, não SAÍDA): se uma tela que NÃO PODE usar este
 // componente ainda assim precisa de algo que hoje mora aqui dentro, isto é um IRMÃO, não um miolo: foi esse
 // critério que fez o `BlocoLogAuditoria` nascer, e o mesmo que tirou o rodapé de paginação e a barra de filtros
-// de dentro daqui (ver `components/pagination/rodape-paginacao.tsx` e `components/search/barra-filtros.tsx`):
-// as bancadas (risco de linha impede usar a tabela) precisavam dos dois mesmo assim.
+// de dentro daqui (ver `components/pagination/rodape-paginacao.tsx` e `components/search/barra-filtros.tsx`).
 
 export function GenericTable<T extends Linha>({
   titulo,
@@ -120,6 +121,7 @@ export function GenericTable<T extends Linha>({
   listar,
   acoes,
   acaoIndisponivel,
+  acoesEmColuna,
   // Filtros por faceta: array de `{ chave, rotulo, ordem? }`. Genérico: funciona para QUALQUER coluna com
   // valores discretos (ex.: papel, impacto), e as opções de cada dropdown são derivadas sozinhas a partir dos
   // valores que já aparecem em `linha[chave]` (célula com vários valores separada por ", ", mesma convenção da
@@ -132,8 +134,10 @@ export function GenericTable<T extends Linha>({
   filtrosFacetados,
   vazio,
 }: GenericTableProps<T>) {
-  // A coluna Ações existe se pelo menos 1 handler foi passado em `acoes`.
-  const temAcoes = Boolean(acoes?.alterar || acoes?.consultar || acoes?.excluir);
+  // A coluna Ações existe se pelo menos 1 handler foi passado em `acoes` fora de `acoesEmColuna`.
+  const emColuna = acoesEmColuna?.flatMap((coluna) => coluna.acoes) ?? [];
+  const temAcoes = Object.keys(acoes ?? {}).some((acao) => !emColuna.some((a) => a === acao));
+  const totalColunas = colunas.length + (acoesEmColuna?.length ?? 0) + (temAcoes ? 1 : 0);
   const { dado, carregando, erro } = useBuscar(listar, [listar], { mostraTexto: true });
   const linhas = useMemo(() => dado ?? [], [dado]);
   // Filtro/página/ordenação/faceta vivem na URL (query string), não em useState local: uma navegação que
@@ -579,6 +583,7 @@ export function GenericTable<T extends Linha>({
                     {rotuloColuna(coluna)}
                   </th>
                 ))}
+                {acoesEmColuna?.map((coluna) => <CabecalhoAcoes key={coluna.rotulo} coluna={coluna} />)}
                 {temAcoes && <CabecalhoAcoes />}
               </tr>
             </thead>
@@ -590,6 +595,7 @@ export function GenericTable<T extends Linha>({
                       <div className="h-3.5 fundo-sutil rounded"></div>
                     </td>
                   ))}
+                  {acoesEmColuna?.map((coluna) => <td key={coluna.rotulo}></td>)}
                   {temAcoes && (
                     <td>
                       <div className="h-3.5 fundo-sutil rounded"></div>
@@ -619,6 +625,7 @@ export function GenericTable<T extends Linha>({
                       {ordenacao.chave === coluna.chave && (ordenacao.direcao === 'asc' ? ' ▲' : ' ▼')}
                     </th>
                   ))}
+                  {acoesEmColuna?.map((coluna) => <CabecalhoAcoes key={coluna.rotulo} coluna={coluna} />)}
                   {temAcoes && <CabecalhoAcoes />}
                 </tr>
               </thead>
@@ -641,13 +648,19 @@ export function GenericTable<T extends Linha>({
                         </td>
                       );
                     })}
-                    {acoes && temAcoes && <CelulaAcoes acoes={acoes} linha={linha} indisponivel={acaoIndisponivel} />}
+                    {acoes &&
+                      acoesEmColuna?.map((coluna) => (
+                        <CelulaAcoes key={coluna.rotulo} acoes={acoes} linha={linha} indisponivel={acaoIndisponivel} coluna={coluna} />
+                      ))}
+                    {acoes && temAcoes && (
+                      <CelulaAcoes acoes={acoes} linha={linha} indisponivel={acaoIndisponivel} emColuna={emColuna} />
+                    )}
                   </tr>
                 ))}
-                <LinhasVazias quantas={quantasVazias} colunas={colunas.length + (temAcoes ? 1 : 0)} alturaDa={alturaDa} />
+                <LinhasVazias quantas={quantasVazias} colunas={totalColunas} alturaDa={alturaDa} />
                 {linhasPagina.length === 0 && !erro && (
                   <tr>
-                    <td colSpan={colunas.length + (temAcoes ? 1 : 0)}>
+                    <td colSpan={totalColunas}>
                       <EstadoVazio {...(filtro || algumaFacetaAtiva ? VAZIO_FILTRO : (vazio ?? VAZIO_PADRAO))} />
                     </td>
                   </tr>

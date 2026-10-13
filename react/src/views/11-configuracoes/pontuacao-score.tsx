@@ -202,7 +202,7 @@ export function PontuacaoScore({ auth }: PropsPagina) {
             {/* As explicações ficam na dica, não na tela: menos texto à vista (fadiga visual). */}
             <h2 className="titulo-bloco titulo-bloco--linha flex items-center gap-2">
               Pesos
-              <Tooltip texto={'A pontuação vai de 0 a 100 e é dividida em 4 dimensões; os máximos das quatro somam 100. Dentro de cada dimensão, os itens dividem os pontos conforme a importância: importância 2 vale o dobro de importância 1. Desmarcar "usar" tira o item da conta, e a parte dele vai para os outros itens da dimensão. Quantas denúncias procedentes zeram a Reputação da Comunidade se ajusta em Parâmetros do Sistema.'} />
+              <Tooltip texto={'A pontuação vai de 0 a 100 e é dividida em 4 dimensões; os máximos das quatro somam 100. Dentro de cada dimensão, os itens dividem os pontos conforme a importância: importância 2 vale o dobro de importância 1. Desmarcar "usar" tira o item da conta, e a parte dele vai para os outros itens da dimensão. Quantas denúncias procedentes contra o perfil, ou quantas campanhas com denúncia procedente, zeram a parte delas da Reputação da Comunidade se ajusta em Parâmetros do Sistema.'} />
             </h2>
             {/* Distribuição: como os 100 pontos se dividem entre as dimensões ligadas (padrão de "limite por grupo" das
                 telas de pontuação de mercado), atualizada enquanto a pessoa digita. */}

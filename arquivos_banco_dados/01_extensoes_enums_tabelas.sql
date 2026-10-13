@@ -352,7 +352,8 @@ CREATE TABLE perfil_pesquisador (
     vinculo_institucional VARCHAR(255),
     titulo_academico      titulo_academico NOT NULL,
     status_pesquisador    status_pesquisador NOT NULL DEFAULT 'ativo',
-    ativado_em            TIMESTAMPTZ,
+    -- Data do upgrade: o padrão grava na hora em qualquer caminho (a própria conta ou o Campo de Testes).
+    ativado_em            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     score_atual           INTEGER    NOT NULL  DEFAULT 0,
     score_atualizado_em   TIMESTAMPTZ,
     -- Suspensão do PODER de pesquisador: mesmo padrão de usuario.suspenso_ate/motivo_suspensao/

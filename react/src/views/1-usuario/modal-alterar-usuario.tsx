@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
+import { useId, useState } from 'react';
+import { SecaoFicha } from '../../components/crud/ficha-consulta';
 import { FiltroPartes } from '../../components/crud/filtro-partes';
 import type { ParteTela } from '../../components/crud/filtro-partes';
 import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
@@ -9,8 +9,11 @@ import { ModalFicha } from '../../components/crud/modal-ficha';
 import { ResumoAlteracoes } from '../../components/crud/resumo-alteracoes';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { TabelaLinksAcademicos } from '../../components/crud/tabelas/1-tabela-links-academicos';
+import { BotaoMostrarEsconder } from '../../components/crud/botao-mostrar-esconder';
+import { EXEMPLO_LINK_POR_TIPO } from '../../services/7-link-academico/constants/exemplos-link.constants';
 import { confirmarSaida, useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
 import { Campo } from '../../components/input/campo';
+import { CaixaSomenteLeitura } from '../../components/input/caixa-somente-leitura';
 import { MedidorSenha } from '../../components/input/medidor-senha';
 import { SeletorFotoPerfil } from '../../components/input/seletor-foto-perfil';
 import { AvatarUsuario } from '../../components/layout/avatar-usuario';
@@ -59,21 +62,11 @@ interface FormPerfil {
 // Foto escolhida e ainda não salva: `undefined` = nenhuma escolha nova; `id: null` = "Remover foto".
 type FotoNova = { id: number | null; url: string | null } | undefined;
 
-// "Vale na hora": as ações destas partes gravam no clique, sem esperar o Salvar.
-function AvisoValeNaHora() {
-  return (
-    <p className="legenda texto-fraco flex items-center gap-2">
-      <i className="fa-solid fa-bolt" aria-hidden="true"></i>
-      As ações abaixo valem na hora do clique, sem botão Salvar.
-    </p>
-  );
-}
-
 // Alterar Usuário: uma tela só, que rola. O filtro fixo no topo mostra tudo ("Geral", o padrão) ou só uma parte
 // (Conta, Papéis, Pesquisador, Moderação): as outras ficam escondidas, não desmontadas, então nada do que está sendo
-// editado se perde. Em cima, o que espera o Salvar do rodapé (foto, nome, senha e, de quem é pesquisador, o perfil); o
-// rodapé diz o que mudou, inclusive numa parte escondida. Embaixo, o que grava na hora do clique (papéis, CPF, links,
-// desbloquear login) e, por último, as suspensões. O cabeçalho mostra a situação da conta (e-mail, suspensões, papéis).
+// editado se perde. Em cima, o que espera o Salvar do rodapé (foto, nome, senha e, de quem é pesquisador, o perfil,
+// que também traz o CPF com o Salvar próprio da correção); o rodapé diz o que mudou, inclusive numa parte escondida.
+// Embaixo, o que grava na hora do clique (papéis, links, desbloquear login) e, por último, as suspensões. O cabeçalho mostra a situação da conta (e-mail, suspensões, papéis).
 // Campos raros (trocar senha, corrigir CPF) só abrem quando alguém clica. O Salvar não fecha o modal. Criar perfil
 // para quem ainda não é pesquisador fica no upgrade (modal-upgrade-pesquisador.tsx), que passa pelo Termo.
 export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }: ModalAlterarUsuarioProps) {
@@ -102,6 +95,7 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
   const [formPerfil, setFormPerfil] = useState<FormPerfil | null>(null);
   const [corrigindoCpf, setCorrigindoCpf] = useState(false);
   const [cpfCorrecao, setCpfCorrecao] = useState('');
+  const idCpfCorreto = useId();
   // Suspensões, lidas pelas seções de moderação: aparecem também no cabeçalho.
   const [suspensaoConta, setSuspensaoConta] = useState<EstadoSuspensao | null>(null);
   const [suspensaoPesquisador, setSuspensaoPesquisador] = useState<EstadoSuspensao | null>(null);
@@ -390,6 +384,40 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
             {formPerfil && perfilPesquisador && (
               <div className="lg:col-span-2">
                 <SecaoFicha titulo="Perfil de Pesquisador">
+                  <CaixaSomenteLeitura rotulo="CPF atual" valor={formatarCpfOuMotivoOculto(perfilPesquisador.cpf)} />
+                  {corrigindoCpf ? (
+                    // Mesma grade de 2 colunas da seção: o campo com a largura dos outros, e os botões na 2ª coluna,
+                    // centralizados na altura do campo (linha 2 da grade).
+                    <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 items-center rounded-lg border borda-forte p-3">
+                      <label htmlFor={idCpfCorreto} className="legenda texto-herdado">
+                        CPF correto (suporte/admin)
+                      </label>
+                      <input
+                        id={idCpfCorreto}
+                        type="text"
+                        value={formatarCpf(cpfCorrecao)}
+                        onChange={(evento) => setCpfCorrecao(evento.target.value.replace(/\D/g, '').slice(0, 11))}
+                        aria-invalid={Boolean(cpf.erroDe('cpf'))}
+                        className={'input-padrao sm:col-start-1' + (cpf.erroDe('cpf') ? ' borda-erro' : '')}
+                        autoFocus
+                      />
+                      <div className="flex justify-end gap-2 sm:col-start-2 sm:row-start-2">
+                        <button type="button" className="btn btn-secondary" onClick={cancelarCorrecaoCpf}>
+                          Cancelar
+                        </button>
+                        <button type="button" className="btn btn-primary" onClick={() => void salvarCorrecaoCpf()}>
+                          Salvar CPF
+                        </button>
+                      </div>
+                      {cpf.erroDe('cpf') && <span className="texto-erro enfase sm:col-span-2">{cpf.erroDe('cpf')}</span>}
+                    </div>
+                  ) : (
+                    <div className="flex items-end">
+                      <button type="button" className="btn btn-secondary" onClick={() => setCorrigindoCpf(true)}>
+                        <i className="fa-solid fa-pen" aria-hidden="true"></i> Corrigir CPF
+                      </button>
+                    </div>
+                  )}
                   <CamposVinculoPerfil
                     tipoVinculo={formPerfil.tipoVinculo}
                     vinculoInstitucional={formPerfil.vinculoInstitucional}
@@ -400,7 +428,7 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
                     aoAlterarTituloAcademico={(titulo) => setFormPerfil({ ...formPerfil, tituloAcademico: titulo })}
                     erroVinculoInstitucional={perfil.erroDe('vinculoInstitucional')}
                   />
-                  <CampoFicha rotulo="Score atual" valor={perfilPesquisador.scoreAtual} />
+                  <CaixaSomenteLeitura rotulo="Score atual" valor={perfilPesquisador.scoreAtual} />
                 </SecaoFicha>
               </div>
             )}
@@ -411,7 +439,6 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
           </div>
 
           {parte === 'geral' && <div className="border-t borda-padrao"></div>}
-          {parte !== 'conta' && <AvisoValeNaHora />}
 
           <div className={ve('papeis')}>
             <SecaoFicha titulo="Papéis" colunas={1}>
@@ -427,43 +454,13 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
 
           {perfilPesquisador && (
             <div className={ve('pesquisador') + ' space-y-6'}>
-              <SecaoFicha titulo="CPF">
-                <CampoFicha rotulo="CPF atual" valor={formatarCpfOuMotivoOculto(perfilPesquisador.cpf)} />
-                {corrigindoCpf ? (
-                  <div className="sm:col-span-2 flex items-end gap-2 rounded-lg border borda-forte p-3">
-                    <label className="legenda flex-1 flex flex-col gap-1 texto-herdado">
-                      CPF correto (suporte/admin)
-                      <input
-                        type="text"
-                        value={formatarCpf(cpfCorrecao)}
-                        onChange={(evento) => setCpfCorrecao(evento.target.value.replace(/\D/g, '').slice(0, 11))}
-                        aria-invalid={Boolean(cpf.erroDe('cpf'))}
-                        className={'input-padrao' + (cpf.erroDe('cpf') ? ' borda-erro' : '')}
-                        autoFocus
-                      />
-                      {cpf.erroDe('cpf') && <span className="texto-erro enfase">{cpf.erroDe('cpf')}</span>}
-                    </label>
-                    <button type="button" className="btn btn-secondary shrink-0" onClick={cancelarCorrecaoCpf}>
-                      Cancelar
-                    </button>
-                    <button type="button" className="btn btn-primary shrink-0" onClick={() => void salvarCorrecaoCpf()}>
-                      Salvar CPF
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex items-end">
-                    <button type="button" className="btn btn-secondary" onClick={() => setCorrigindoCpf(true)}>
-                      <i className="fa-solid fa-pen" aria-hidden="true"></i> Corrigir CPF
-                    </button>
-                  </div>
-                )}
-              </SecaoFicha>
-
               <LinksAcademicosDoUsuario auth={auth} idUsuario={idUsuario} />
             </div>
           )}
 
           <div className={ve('moderacao') + ' space-y-6'}>
+            {/* Moderação: o título do grupo; dentro, o acesso (desbloquear login) e as duas suspensões. */}
+            <h3 className="subtitulo">Moderação</h3>
             <SecaoFicha titulo="Acesso" colunas={1}>
               <div className="flex items-center justify-between gap-3 rounded-lg border borda-forte p-3">
                 <p className="legenda texto-fraco">
@@ -722,6 +719,7 @@ function LinksAcademicosDoUsuario({ auth, idUsuario }: LinksAcademicosDoUsuarioP
   const links = dado ?? [];
   // Só os tipos que podem ir no perfil do pesquisador.
   const { dado: tiposLink } = useBuscar(() => tipoLinkApi.listar(auth.authFetch, { escopo: 'perfil' }), []);
+  const [verExemplos, setVerExemplos] = useState(false);
 
   // Chamadas da tabela (components/crud/tabelas/1-tabela-links-academicos.tsx): devolvem true quando deu certo.
   const executar = async (acao: () => Promise<unknown>, mensagem: string): Promise<boolean> => {
@@ -757,11 +755,26 @@ function LinksAcademicosDoUsuario({ auth, idUsuario }: LinksAcademicosDoUsuarioP
       <TabelaLinksAcademicos
         links={links}
         tiposLink={tiposLink ?? []}
-        podeAdicionar={links.length < limiteLinks}
-        aoAdicionar={adicionarLink}
-        aoSalvar={salvarLink}
-        aoExcluir={(link) => void removerLink(link)}
+        edicao={{
+          podeAdicionar: links.length < limiteLinks,
+          aoAdicionar: adicionarLink,
+          aoSalvar: salvarLink,
+          aoExcluir: (link) => void removerLink(link),
+        }}
       />
+      <BotaoMostrarEsconder aberto={verExemplos} aoAlternar={() => setVerExemplos((v) => !v)} rotulo="exemplos de link" className="mt-3" />
+      {verExemplos && (
+        <ul className="legenda mt-2 space-y-1">
+          {(tiposLink ?? []).map(
+            (tipo) =>
+              EXEMPLO_LINK_POR_TIPO[tipo.codigo] && (
+                <li key={tipo.codigo} className="select-all">
+                  {EXEMPLO_LINK_POR_TIPO[tipo.codigo]}
+                </li>
+              ),
+          )}
+        </ul>
+      )}
     </div>
   );
 }

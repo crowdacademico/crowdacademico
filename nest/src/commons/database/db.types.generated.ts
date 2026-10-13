@@ -305,7 +305,7 @@ export interface PapelPermissao {
 }
 
 export interface PerfilPesquisador {
-  ativado_em: Timestamp | null;
+  ativado_em: Generated<Timestamp>;
   cpf_criptografado: string;
   cpf_hash: string;
   id_usuario: number;

@@ -1,10 +1,8 @@
-// O rodapé "Página X de Y / Mostrar / Anterior / Próxima", compartilhado por `generic-table.tsx`,
-// `bancada-campanha.tsx`, `bancada-pesquisador.tsx` e `registro-chamadas.tsx`: as bancadas
-// não podem usar `GenericTable` (risco de linha), mas precisam do MESMO rodapé; pelo teste-de-prop de
-// `generic-table.tsx`, isso é um IRMÃO, não um miolo.
+// O rodapé "Página X de Y / Mostrar / Anterior / Próxima", compartilhado por `generic-table.tsx` e
+// `registro-chamadas.tsx`: pelo teste-de-prop de `generic-table.tsx`, isso é um IRMÃO, não um miolo.
 //
 // Controlado, sem opinião sobre ONDE o estado de página/tamanho mora: `GenericTable` guarda isso na URL
-// (`useSearchParams`), as bancadas usam `useState` local; `aoMudarPagina`/`aoMudarTamanho` recebem só o valor
+// (`useSearchParams`), o Registro de Chamadas usa `useState` local; `aoMudarPagina`/`aoMudarTamanho` recebem só o valor
 // final (página de destino, tamanho escolhido), cada chamador decide como persistir (ex.: `pagina === 1 ? null
 // : pagina` para manter a URL limpa).
 //

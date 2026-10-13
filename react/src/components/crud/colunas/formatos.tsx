@@ -8,6 +8,7 @@ import {
   formatarMoeda,
   textoSeguro,
 } from '../../../services/constant/util/formatacao.util';
+import { TempoEspera } from '../tempo-espera';
 
 // O FORMATO de um valor (como aparece, como a busca lê, como ordena), separado do ESPAÇO que a coluna ocupa
 // (os arquivos numerados desta pasta). Dinheiro e data chegam crus da API: ordenam pelo valor, e o texto
@@ -78,9 +79,10 @@ export const FORMATOS = {
     texto: (valor) => formatarDataHora(iso(valor)),
     comparar: (a, b) => compararNumero(instante(a), instante(b)),
   },
-  // Tempo de espera ("há 3 dias") a partir de uma data. Ordem crescente = quem espera menos primeiro.
+  // Tempo de espera ("há 3 dias") a partir de uma data, com a cor de quanto já esperou (TempoEspera). Ordem crescente =
+  // quem espera menos primeiro.
   espera: {
-    exibir: (valor) => formatarEspera(iso(valor)),
+    exibir: (valor) => <TempoEspera desde={iso(valor)} />,
     texto: (valor) => formatarEspera(iso(valor)),
     comparar: (a, b) => compararNumero(instante(b), instante(a)),
   },

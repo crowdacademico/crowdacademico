@@ -14,7 +14,7 @@ interface SecaoModeracaoPesquisadorProps {
 export function SecaoModeracaoPesquisador({ auth, idUsuario, aoMudar }: SecaoModeracaoPesquisadorProps) {
   return (
     <SecaoSuspensao
-      titulo="Moderação (Pesquisador)"
+      titulo="Suspensão do pesquisador"
       explicacao="Suspende só o PODER de pesquisador (criar campanha, endossar etc.) pelo prazo escolhido, com motivo obrigatório: a conta continua conseguindo logar normalmente."
       rotuloSuspenso="Poder de pesquisador suspenso até"
       rotuloSuspender="Suspender poder de pesquisador"

@@ -27,7 +27,6 @@ import { useEnvio } from '../../services/constant/hook/use-envio';
 import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import { ModalUpgradePesquisador } from '../6-perfil-pesquisador/modal-upgrade-pesquisador';
-import { gerarCpfValido } from '../../services/campo-testes/util/gerar-cpf-valido.util';
 import { Carregando } from '../../components/layout/carregando';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { AuthResponseSessions } from '../../services/3-auth/type/auth.type';
@@ -795,8 +794,6 @@ function AbaAcademico({ auth }: AbaAcademicoProps) {
               // As outras telas (Perfil, Minhas Campanhas) passam a saber na hora que a conta virou pesquisadora.
               auth.atualizarUsuarioLocal((atual) => (atual ? { ...atual, ehPesquisador: true } : atual));
             }}
-            // Botão "Gerar CPF válido" só em desenvolvimento (some no build de produção), para testar o upgrade.
-            gerarCpfDeTeste={import.meta.env.DEV ? gerarCpfValido : undefined}
           />
         )}
       </div>
