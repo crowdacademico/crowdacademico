@@ -736,19 +736,9 @@ WHERE p.codigo = 'usuario'
   )
 ON CONFLICT DO NOTHING;
 
--- [07-C-4] arquivo (anexos das atualizações de campanha)
--- Ninguém nasce com foto de perfil: o seed não tem as imagens no armazenamento, e uma foto "cadastrada" sem imagem
--- aparecia como "Foto cadastrada" no Consultar. Cada arquivo mora num lugar só (fn_valida_posse_anexo, 05 [05-G]);
--- arquivo_atualizacao ([07-G-1]) acha cada um pela chave, não pelo id.
--- ativo omitido: DEFAULT TRUE aplicado automaticamente
-INSERT INTO arquivo (chave, nome_original, tipo_mime, tamanho_bytes) VALUES
-('publico/seed-relatorio-q1.pdf',     'relatorio_q1.pdf',     'application/pdf', 512000),
-('publico/seed-anexo-atualizacao-1.jpg', 'coleta_campo.jpg',     'image/jpeg',       96000),
-('publico/seed-anexo-atualizacao-2.jpg', 'laboratorio.jpg',      'image/jpeg',       88000),
-('publico/seed-anexo-atualizacao-3.jpg', 'prototipo.jpg',        'image/jpeg',      104000),
-('publico/seed-anexo-atualizacao-4.jpg', 'equipe.jpg',           'image/jpeg',       91000),
-('publico/seed-anexo-atualizacao-5.jpg', 'grafico_parcial.jpg',  'image/jpeg',       77000),
-('publico/seed-anexo-atualizacao-6.jpg', 'trilhas_mapeadas.jpg', 'image/jpeg',      112000);
+-- [07-C-4] arquivo: vazio. O seed não tem imagens nem documentos no armazenamento, e uma linha aqui apontaria
+-- para um arquivo que não existe (foto "cadastrada" sem imagem, anexo que não abre). Ninguém nasce com foto de
+-- perfil e nenhuma atualização nasce com anexo; arquivo só entra pelo envio de verdade.
 
 -- [07-D-1] usuario
 -- senha_hash: hash bcrypt de verdade (custo 10, igual CUSTO_BCRYPT_SENHA em usuario.constants.ts), o MESMO para
@@ -1369,20 +1359,7 @@ INSERT INTO atualizacao_campanha (id_campanha, titulo, conteudo, publicado_em, f
 
 ALTER TABLE atualizacao_campanha ENABLE TRIGGER trg_atualizacao_campanha_status;
 
--- [07-G-1] arquivo_atualizacao
--- Arquivo pela chave (chave natural), não pelo id posicional: tirar ou pôr arquivo no seed não desalinha os anexos.
-INSERT INTO arquivo_atualizacao (id_arquivo, id_atualizacao)
-SELECT a.id_arquivo, v.id_atualizacao
-FROM (VALUES
-    ('publico/seed-anexo-atualizacao-1.jpg', 3),
-    ('publico/seed-relatorio-q1.pdf',        6),
-    ('publico/seed-anexo-atualizacao-2.jpg', 1),
-    ('publico/seed-anexo-atualizacao-3.jpg', 2),
-    ('publico/seed-anexo-atualizacao-4.jpg', 4),
-    ('publico/seed-anexo-atualizacao-5.jpg', 5),
-    ('publico/seed-anexo-atualizacao-6.jpg', 7)
-) AS v(chave, id_atualizacao)
-JOIN arquivo a ON a.chave = v.chave;
+-- [07-G-1] arquivo_atualizacao: vazio (ver [07-C-4]).
 
 -- [07-E-4] repasse
 ALTER TABLE repasse DISABLE TRIGGER trg_valida_repasse;

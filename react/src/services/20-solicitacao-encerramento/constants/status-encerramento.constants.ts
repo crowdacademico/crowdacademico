@@ -7,12 +7,12 @@ export const ROTULO_STATUS_ENCERRAMENTO: Record<StatusEncerramento, string> = {
   cancelado: 'Cancelado',
 };
 
-// Pendente pede ação (aviso); aprovado encerrou a campanha (erro, como os encerramentos); rejeitado e cancelado
-// deixaram a campanha seguir (neutro).
+// Pendente pede ação (aviso); aprovado e rejeitado seguem a resposta ao pedido (sim verde, não vermelho); cancelado
+// foi retirado por quem pediu (neutro).
 export const CLASSE_BADGE_STATUS_ENCERRAMENTO: Record<StatusEncerramento, string> = {
   pendente: 'badge-aviso',
-  aprovado: 'badge-erro',
-  rejeitado: 'badge-neutro',
+  aprovado: 'badge-sucesso',
+  rejeitado: 'badge-erro',
   cancelado: 'badge-neutro',
 };
 
