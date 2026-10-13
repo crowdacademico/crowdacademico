@@ -57,8 +57,7 @@ export function MinhasCampanhas({ auth }: PropsPagina) {
       status: rotuloStatusCampanha(campanha),
       statusOriginal: campanha.status,
     }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [auth.authFetch, idUsuario, chaveRecarga]);
+  }, [auth.authFetch, idUsuario]);
 
   const podeCriar = statusPesquisador === 'ativo';
   // "Submeter Pesquisa" (cabeçalho) chega com ?criar=1: abre o Criar direto para quem pode criar. Para quem não pode,
@@ -109,6 +108,7 @@ export function MinhasCampanhas({ auth }: PropsPagina) {
             : 'Campanhas são criadas por pesquisadores (veja o aviso no topo da página).',
         }}
         listar={listar}
+          chaveRecarga={chaveRecarga}
         acoes={acoesCompletas}
         filtrosFacetados={[
           { chave: 'status', rotulo: 'Status', ordem: ORDEM_ROTULOS_STATUS_CAMPANHA },

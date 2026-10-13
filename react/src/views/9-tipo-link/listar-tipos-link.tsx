@@ -30,8 +30,7 @@ export function ListarTiposLink({ auth }: PropsPagina) {
 
   const listarTipos = useCallback(
     () => tipoLinkApi.listar(auth.authFetch),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [auth.authFetch, chaveRecarga],
+    [auth.authFetch],
   );
   // 'tipo_link' é o nome FÍSICO da tabela (bate com
   // trg_log_auditoria_tipo_link, 05_regras_negocio.sql), não o nome da
@@ -60,6 +59,7 @@ export function ListarTiposLink({ auth }: PropsPagina) {
         ]}
         chavePrimaria="idTipolink"
         listar={listarTipos}
+          chaveRecarga={chaveRecarga}
         acoes={acoesCompletas}
       />
       <BlocoLogAuditoria buscar={buscarLogTipos} />

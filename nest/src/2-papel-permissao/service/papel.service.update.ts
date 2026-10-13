@@ -14,7 +14,7 @@ import { temCodigoPostgres } from '../../commons/database/codigo-postgres.util';
 export class PapelServiceUpdate {
   constructor(private readonly database: DatabaseService) {}
 
-  // Só `nome` é atualizável (GRANT UPDATE (nome) ON papel - 06_grants.sql
+  // Só `nome` e `descricao` são atualizáveis (GRANT UPDATE (nome, descricao) ON papel - 06_grants.sql
   // [06-B] - a coluna `codigo`, que as triggers de RBAC leem, não tem
   // GRANT nenhum: nem chega a ser possível tentar mudá-la por aqui, o DTO
   // nem tem esse campo).
@@ -26,7 +26,7 @@ export class PapelServiceUpdate {
       const linha = await this.database
         .getDb()
         .updateTable('papel')
-        .set({ nome: dto.nome })
+        .set({ nome: dto.nome, descricao: dto.descricao?.trim() || null })
         .where('id_papel', '=', idPapel)
         .returningAll()
         .executeTakeFirst();
@@ -48,6 +48,7 @@ export class PapelServiceUpdate {
         idPapel: linha.id_papel,
         nome: linha.nome,
         codigo: linha.codigo,
+        descricao: linha.descricao,
       };
     } catch (erro) {
       if (

@@ -51,8 +51,7 @@ export function ListarAreasConhecimento({ auth }: PropsPagina) {
           nomePai: area.idPai === null ? `Base, ${area.nome}` : area.nomePai,
         })),
       ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [auth.authFetch, chaveRecarga],
+    [auth.authFetch],
   );
   // 'area_conhecimento' é o nome FÍSICO da tabela (bate com
   // trg_log_auditoria_area_conhecimento, 05_regras_negocio.sql), não o
@@ -88,6 +87,7 @@ export function ListarAreasConhecimento({ auth }: PropsPagina) {
         ]}
         chavePrimaria="idAreaConhecimento"
         listar={listarAreas}
+          chaveRecarga={chaveRecarga}
         acoes={acoesCompletas}
         // Escolher uma grande área de verdade no filtro mostra só as áreas filhas dela. "Base" é a opção
         // especial para as 9 grandes áreas em si (topo da hierarquia, sem pai): sem ela, elas simplesmente

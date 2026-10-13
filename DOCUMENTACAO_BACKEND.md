@@ -606,6 +606,31 @@ export class CampanhaServiceCreate {
 
 📌 **Um detalhe de Kysely que vale saber:** `modelo` só entra no `INSERT` se vier no DTO (`...(dto.modelo ? { modelo: dto.modelo } : {})`), em vez do `?? null` usado nas colunas nullable. A coluna é `NOT NULL` com `DEFAULT` - mandar `null` explícito violaria a constraint; **omitir a chave** é o jeito de deixar o banco aplicar o próprio default.
 
+#### O DTO de "alterar" herda as regras do de "criar" (13-10-2026)
+
+**Em palavras simples:** todo pedido que chega na API passa por uma "ficha de conferência" (o DTO), que diz quais campos podem vir e qual regra cada um segue: o título tem no máximo 255 caracteres, a meta precisa ser positiva, o CPF precisa ser válido, e assim por diante. Cada cadastro tem duas fichas: a do **criar** e a do **alterar**. Até 13-10-2026, a do alterar era uma cópia da do criar, com as mesmas regras escritas de novo. Se alguém mudasse uma regra num lado e esquecesse do outro, o sistema passava a aceitar ao alterar o que recusava ao criar (ou o contrário). Agora a ficha do alterar **não tem regra própria**: ela diz só "sou a ficha do criar, com estas diferenças", e as regras vêm de lá.
+
+**Como se escreve:** o Nest tem quatro ferramentas para montar uma ficha a partir de outra (os "mapped types", importados de `@nestjs/swagger` para a documentação da API, o Swagger, acompanhar junto):
+
+| Ferramenta | O que faz | Exemplo no sistema |
+|---|---|---|
+| `PartialType(Ficha)` | os mesmos campos, mas todos opcionais | alterar campanha: a pessoa manda só o que mudou |
+| `OmitType(Ficha, ['campo'])` | os mesmos campos, menos os listados | alterar item de orçamento: tudo, menos a campanha do item, que não muda |
+| `PickType(Ficha, ['campo'])` | só os campos listados | alterar perfil de pesquisador: só vínculo, instituição e título (o CPF não se altera por aqui) |
+| combinadas | uma dentro da outra | `PartialType(OmitType(CampanhaRequestCreate, ['modelo']))`: tudo opcional, sem o modelo |
+
+Os quatro casos de hoje:
+- `CampanhaRequestUpdate` = `PartialType(OmitType(CampanhaRequestCreate, ['modelo']))`.
+- `OrcamentoCampanhaRequestUpdate` = `OmitType(OrcamentoCampanhaRequestCreate, ['idCampanha'])`.
+- `PerfilPesquisadorRequestUpdate` = `PickType(PerfilPesquisadorRequestCreate, ['tipoVinculo', 'vinculoInstitucional', 'tituloAcademico'])`.
+- `PerfilPesquisadorRequestCreateForOther` (Campo de Testes) = `OmitType(PerfilPesquisadorRequestCreate, ['aceiteTermos'])` mais o aceite como campo opcional: é o único campo com regra diferente (no upgrade de verdade o aceite é obrigatório).
+
+Junto, a lista dos títulos acadêmicos válidos deixou de ser copiada em cada ficha: vem de `db.types.ts` (`TITULOS_ACADEMICOS`, como `TIPOS_VINCULO`), que a suíte de tipos dos testes do banco confere contra o banco de verdade.
+
+- **Decisão:** ficha de alterar (ou qualquer ficha "quase igual" a outra) se monta a partir da original com os mapped types; nunca se copia campo com as regras. Valor de enum do banco vem de `db.types.ts`.
+- **Motivo:** uma regra escrita num lugar só não fica diferente entre criar e alterar. Os mapped types são o recurso oficial do Nest para isso, e levam junto as regras do class-validator e a documentação do Swagger.
+- **Caso-limite aceito:** quando um campo do alterar precisa de uma regra diferente da do criar, ele é declarado de novo dentro da ficha derivada, como o `aceiteTermos` do Campo de Testes, e só ele. Conferido na troca: 16 pedidos de teste, certos e errados, tiveram o mesmo resultado de antes.
+
 ### 7.4 Casos especiais que valem estudar
 
 **`campo-testes/` - as rotas que só o Campo de Testes usa (12-10-2026).**

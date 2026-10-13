@@ -66,8 +66,7 @@ export function ListarDenuncias({ auth }: PropsPagina) {
       esperandoDesde: esperandoDesde(denuncia),
       contestacaoSituacao: denuncia.contestacaoStatus ? ROTULO_STATUS_CONTESTACAO[denuncia.contestacaoStatus] : '-',
     }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [auth.authFetch, chaveRecarga]);
+  }, [auth.authFetch]);
 
   const buscarLog = useCallback(
     (pagina: number, tamanho: number) => logAuditoriaApi.listarPorTabela(auth.authFetch, 'denuncia', pagina, tamanho),
@@ -96,6 +95,7 @@ export function ListarDenuncias({ auth }: PropsPagina) {
         vazio={{ icone: 'fa-flag', titulo: 'Nenhuma denúncia registrada.', texto: 'Quando alguém denunciar uma campanha ou um perfil, a denúncia aparece aqui para julgar.' }}
         chavePrimaria="idDenuncia"
         listar={listar}
+          chaveRecarga={chaveRecarga}
         acoes={{
           alterar: (linha) => setAberta({ denuncia: { ...linha, status: linha.statusOriginal }, somenteLeitura: false }),
           consultar: (linha) => setAberta({ denuncia: { ...linha, status: linha.statusOriginal }, somenteLeitura: true }),

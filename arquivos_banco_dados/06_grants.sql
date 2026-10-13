@@ -51,13 +51,13 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO app_nestjs;
 --  permissao continua só-leitura (GRANT SELECT ON ALL TABLES já cobre): criar uma permissão nova é via
 --  seed/migração direta, de propósito. papel_permissao tem INSERT/DELETE (ver [04-B-1] em 04_rls_policies.sql):
 --  o admin concede ou revoga uma permissão de um papel já existente pelo Painel Admin (matriz Papel × Permissão).
---  papel tem UPDATE só na coluna `nome` (ver [04-B-1b] em 04_rls_policies.sql): renomear um papel é seguro
+--  papel tem UPDATE só nas colunas `nome` e `descricao` (ver [04-B-1b] em 04_rls_policies.sql): renomear um papel é seguro
 --  porque as 3 triggers de RBAC que reconhecem papel especial leem `codigo` (01_extensoes_enums_tabelas.sql
 --  [01-B]), que não tem GRANT nenhum aqui; só `nome` (o rótulo) é coluna que a API pode escrever. CRIAR um
 --  papel novo do zero continua fora de escopo.
 -- ============================================================================
 GRANT INSERT, DELETE ON papel_permissao TO app_nestjs;
-GRANT UPDATE (nome) ON papel TO app_nestjs;
+GRANT UPDATE (nome, descricao) ON papel TO app_nestjs;
 
 -- listar_papeis_usuario (03, [03-B]): usada por login/refresh (03-auth) para saber se mostra "Painel Admin"
 -- no dropdown do cabeçalho.

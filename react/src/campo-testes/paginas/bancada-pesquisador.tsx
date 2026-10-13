@@ -13,9 +13,7 @@ import { useCrudModais } from '../../services/constant/hook/use-crud-modais';
 import { gerarCpfValido } from '../servicos/util/gerar-cpf-valido.util';
 import { ORIGEM_TESTE, origemUsuario } from '../servicos/util/registros-demonstracao.util';
 import { useAuthFetchRegistrado } from '../servicos/hook/use-chamada-registrada';
-import { ModalAlterarUsuario } from '../../views/1-usuario/modal-alterar-usuario';
-import { ModalConsultarUsuario } from '../../views/1-usuario/modal-consultar-usuario';
-import { ModalExcluirUsuario } from '../../views/1-usuario/modal-excluir-usuario';
+import { ModaisUsuario } from '../../views/1-usuario/modais-usuario';
 import { ModalUpgradePesquisador } from '../../views/6-perfil-pesquisador/modal-upgrade-pesquisador';
 import { ModalDenunciar } from '../../views/19-denuncia/modal-denunciar';
 import { RegistroChamadas } from './registro-chamadas';
@@ -78,8 +76,7 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
         origem: origemUsuario(usuario.idUsuario),
       };
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [auth.authFetch, chaveRecarga]);
+  }, [auth.authFetch]);
 
   return (
     <div className="admin-content-painel">
@@ -95,6 +92,7 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
         ]}
         chavePrimaria="idUsuario"
         listar={listar}
+          chaveRecarga={chaveRecarga}
         acoes={{
           alterar: setAlterando,
           consultar: setConsultando,
@@ -120,18 +118,16 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
         ]}
       />
 
-      {consultando && (
-        <ModalConsultarUsuario auth={authRegistrado} idUsuario={consultando.idUsuario} aoFechar={() => setConsultando(null)} />
-      )}
-
-      {alterando && (
-        <ModalAlterarUsuario
-          auth={authRegistrado}
-          idUsuario={alterando.idUsuario}
-          aoFechar={() => setAlterando(null)}
-          aoAtualizado={recarregar}
-        />
-      )}
+      <ModaisUsuario
+        auth={authRegistrado}
+        alterando={alterando}
+        consultando={consultando}
+        excluindo={excluindo && excluindo.usuario}
+        fecharAlterando={() => setAlterando(null)}
+        fecharConsultando={() => setConsultando(null)}
+        fecharExcluindo={() => setExcluindo(null)}
+        aoMudar={recarregar}
+      />
 
       {upgrade !== null && (
         <ModalUpgradePesquisador
@@ -150,18 +146,6 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
           alvo={{ idPesquisadorAlvo: denunciando.idUsuario }}
           nomeAlvo={denunciando.nome}
           aoFechar={() => setDenunciando(null)}
-        />
-      )}
-
-      {excluindo && (
-        <ModalExcluirUsuario
-          auth={authRegistrado}
-          idUsuario={excluindo.idUsuario}
-          nome={excluindo.usuario.nome}
-          email={excluindo.usuario.email}
-          emailVerificado={excluindo.usuario.emailVerificado}
-          aoFechar={() => setExcluindo(null)}
-          aoExcluido={recarregar}
         />
       )}
 

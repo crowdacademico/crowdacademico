@@ -145,6 +145,9 @@ CREATE TABLE papel (
     id_papel SERIAL,
     nome     VARCHAR(50) NOT NULL,
     codigo   VARCHAR(20) NOT NULL,
+    -- Para que serve o papel, em uma frase (lista de Papéis e atribuição de papel no Alterar Usuário). Editável pelo
+    -- painel, como o nome; o que o papel pode de verdade continua sendo a matriz Papel x Permissão.
+    descricao VARCHAR(500),
 
     CONSTRAINT "PK_PAPEL" PRIMARY KEY (id_papel),
     CONSTRAINT "UK_PAPEL_NOME" UNIQUE (nome),

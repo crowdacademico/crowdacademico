@@ -11,7 +11,7 @@ import { CHAVE_LIBERADO_COM_TERMO_PENDENTE } from '../../commons/auth/liberado-c
 import { CHAVE_ROTA_PUBLICA } from '../../commons/auth/publico.decorator';
 
 // Código do 403 de "aceite pendente" (RF-015): a tela reconhece por ele, não pelo texto.
-export const CODIGO_TERMO_PENDENTE = 'TERMO_PENDENTE';
+const CODIGO_TERMO_PENDENTE = 'TERMO_PENDENTE';
 
 // Global (APP_GUARD em auth.module.ts, depois da AuthGuardJwt): toda rota exige login, menos as marcadas com
 // @Publico(). Rota nova nasce fechada; esquecer a marcação deixa a rota fechada, nunca aberta. Bloqueia com 401

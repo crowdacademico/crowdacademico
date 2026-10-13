@@ -20,11 +20,11 @@ export interface Formato {
   comparar: (a: unknown, b: unknown) => number;
 }
 
-export const compararTexto = (a: unknown, b: unknown): number =>
+const compararTexto = (a: unknown, b: unknown): number =>
   textoSeguro(a).localeCompare(textoSeguro(b), 'pt-BR', { numeric: true });
 
 // Vazio (null/undefined) sempre no começo da ordem crescente, em vez de virar 0 e se misturar com um zero real.
-export const compararNumero = (a: unknown, b: unknown): number => {
+const compararNumero = (a: unknown, b: unknown): number => {
   const vazioA = a === null || a === undefined;
   const vazioB = b === null || b === undefined;
   if (vazioA || vazioB) {

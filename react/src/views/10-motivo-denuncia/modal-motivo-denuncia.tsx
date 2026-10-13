@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { BadgeBooleano } from '../../components/crud/badge-booleano';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { ModalFicha } from '../../components/crud/modal-ficha';
-import { confirmarSaida, useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
+import { useFecharComAviso } from '../../components/crud/use-alteracao-nao-salva';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { ModalExcluirItem } from '../../components/crud/modal-excluir-item';
 import { Campo } from '../../components/input/campo';
@@ -71,14 +71,7 @@ export function ModalAlterarMotivoDenuncia({ auth, motivo, aoFechar, aoAtualizad
   const [ativo, setAtivo] = useState(motivo.ativo);
 
   const sujo = descricao !== motivo.descricao || tipo !== motivo.tipo || ativo !== motivo.ativo;
-  useAvisoAlteracaoNaoSalva(sujo);
-
-  const fechar = () => {
-    if (!confirmarSaida(sujo)) {
-      return;
-    }
-    aoFechar();
-  };
+  const fechar = useFecharComAviso(sujo, aoFechar);
 
   // "Salvar" só espera haver alteração; com o campo obrigatório apagado, o erro aparece embaixo dele.
   const { erroDe, tentarEnviar } = useErrosFormulario(() => ({ descricao: descricao.trim() === '' && 'Informe a descrição.' }));

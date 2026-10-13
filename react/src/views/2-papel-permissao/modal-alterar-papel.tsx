@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
 import { ModalFicha } from '../../components/crud/modal-ficha';
-import { confirmarSaida, useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
+import { useFecharComAviso } from '../../components/crud/use-alteracao-nao-salva';
 import { ResumoAlteracoes } from '../../components/crud/resumo-alteracoes';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
 import { Campo } from '../../components/input/campo';
+import { ContadorCaracteres } from '../../components/input/contador-caracteres';
 import {
   papelApi,
   papelPermissaoApi,
@@ -28,7 +29,7 @@ interface ModalAlterarPapelProps {
 // Alterar em modal. Recebe a linha (`papel: PapelResponse`) inteira do chamador, mesmo motivo de
 // modal-motivo-denuncia.tsx: elimina o "busca a lista inteira e filtra pelo id" (não existe `GET /papel/:id`).
 //
-// Só "nome" é editável (`codigo`, ver 01_extensoes_enums_tabelas.sql [01-B], nunca é exposto/editável: as
+// Só "nome" e "descrição" são editáveis (`codigo`, ver 01_extensoes_enums_tabelas.sql [01-B], nunca é exposto/editável: as
 // triggers de RBAC leem `codigo`, não `nome`, então renomear é seguro). Consultar/Excluir têm modal próprio
 // (ver modal-papel.tsx): Consultar mostra as permissões do papel; Excluir é só explicativo, nunca executa (ver
 // comentário completo em modal-papel.tsx sobre o ON DELETE CASCADE).
@@ -37,6 +38,7 @@ export function ModalAlterarPapel({ auth, papel, aoFechar, aoAtualizado }: Modal
   const { erro, reportarErro, limparErro, errosCampo, limparErroCampo } = useErroToast({ mostraTexto: true });
   const { ocupado: enviando, executar: executarEnviando } = useEnvio(reportarErro, limparErro);
   const [nome, setNome] = useState(papel.nome);
+  const [descricao, setDescricao] = useState(papel.descricao ?? '');
 
   // Quantos usuários e permissões o papel tem: aparecem no cabeçalho, para quem renomeia saber o alcance.
   const { dado: alcance } = useBuscar(
@@ -50,15 +52,11 @@ export function ModalAlterarPapel({ auth, papel, aoFechar, aoAtualizado }: Modal
     [papel.idPapel],
   );
 
-  const sujo = nome !== papel.nome;
-  useAvisoAlteracaoNaoSalva(sujo);
-
-  const fechar = () => {
-    if (!confirmarSaida(sujo)) {
-      return;
-    }
-    aoFechar();
-  };
+  const mudancas = [nome !== papel.nome && 'nome', descricao !== (papel.descricao ?? '') && 'descrição'].filter(
+    (item): item is string => Boolean(item),
+  );
+  const sujo = mudancas.length > 0;
+  const fechar = useFecharComAviso(sujo, aoFechar);
 
   // "Salvar" só espera haver alteração; com o campo obrigatório apagado, o erro aparece embaixo dele.
   const { erroDe, tentarEnviar } = useErrosFormulario(() => ({ nome: nome.trim() === '' && 'Informe o nome.' }));
@@ -66,7 +64,7 @@ export function ModalAlterarPapel({ auth, papel, aoFechar, aoAtualizado }: Modal
   const aoSalvar = async () => {
     if (!tentarEnviar()) return;
     await executarEnviando(async () => {
-      await papelApi.atualizar(auth.authFetch, papel.idPapel, { nome });
+      await papelApi.atualizar(auth.authFetch, papel.idPapel, { nome, descricao });
       mostrar('Papel alterado com sucesso.', `ID: ${papel.idPapel} foi alterado`);
       aoAtualizado();
       aoFechar();
@@ -76,7 +74,7 @@ export function ModalAlterarPapel({ auth, papel, aoFechar, aoAtualizado }: Modal
   return (
     <ModalFicha
       titulo={`Alterar "${papel.nome}"`}
-      subtitulo="Só o nome exibido muda, o identificador interno usado pelas regras do sistema nunca é afetado."
+      subtitulo="Só o nome e a descrição mudam, o identificador interno usado pelas regras do sistema nunca é afetado."
       carregando={!alcance}
       badges={
         alcance ? [
@@ -91,7 +89,7 @@ export function ModalAlterarPapel({ auth, papel, aoFechar, aoAtualizado }: Modal
       aoFechar={fechar}
       rodape={
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <ResumoAlteracoes mudancas={sujo ? ['nome'] : []} />
+          <ResumoAlteracoes mudancas={mudancas} />
           <div className="flex-1">
             <RodapeAcoes
               aoCancelar={fechar}
@@ -124,6 +122,22 @@ export function ModalAlterarPapel({ auth, papel, aoFechar, aoAtualizado }: Modal
             maxLength={50}
             className="input-padrao"
           />
+        )}
+      </Campo>
+
+      <Campo rotulo="Descrição">
+        {({ atributos }) => (
+          <>
+            <textarea
+              {...atributos}
+              rows={3}
+              value={descricao}
+              onChange={(evento) => setDescricao(evento.target.value)}
+              maxLength={500}
+              className="input-padrao"
+            />
+            <ContadorCaracteres texto={descricao} limite={500} />
+          </>
         )}
       </Campo>
 

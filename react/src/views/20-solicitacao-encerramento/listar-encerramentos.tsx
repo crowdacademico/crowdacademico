@@ -41,8 +41,7 @@ export function ListarEncerramentos({ auth }: PropsPagina) {
       modelo: pedido.modeloCampanha ? ROTULO_MODELO_CAMPANHA[pedido.modeloCampanha] : '-',
       esperandoDesde: pedido.status === 'pendente' ? pedido.solicitadoEm : null,
     }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [auth.authFetch, chaveRecarga]);
+  }, [auth.authFetch]);
 
   const buscarLog = useCallback(
     (pagina: number, tamanho: number) => logAuditoriaApi.listarPorTabela(auth.authFetch, 'solicitacao_encerramento', pagina, tamanho),
@@ -72,6 +71,7 @@ export function ListarEncerramentos({ auth }: PropsPagina) {
         vazio={{ icone: 'fa-flag-checkered', titulo: 'Nenhum pedido de encerramento.', texto: 'Quando um pesquisador pedir para encerrar uma campanha antes do prazo, o pedido aparece aqui.' }}
         chavePrimaria="idSolicitacao"
         listar={listar}
+          chaveRecarga={chaveRecarga}
         acoes={{
           alterar: (linha) => setAberto({ pedido: { ...linha, status: linha.statusOriginal }, somenteLeitura: false }),
           consultar: (linha) => setAberto({ pedido: { ...linha, status: linha.statusOriginal }, somenteLeitura: true }),

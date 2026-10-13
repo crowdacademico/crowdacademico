@@ -8,7 +8,7 @@ export type { StatusCampanha };
 
 // Ordem do ciclo de vida, não alfabética: o filtro facetado de GenericTable (`ordem`) mostra as opções numa
 // sequência que faz sentido de fluxo. `listaCompleta` faz o compilador acusar se um status do banco faltar aqui.
-export const ORDEM_STATUS_CAMPANHA = listaCompleta<StatusCampanha>()([
+const ORDEM_STATUS_CAMPANHA = listaCompleta<StatusCampanha>()([
   'rascunho',
   'aguardando_aprovacao',
   'ativo',
@@ -52,7 +52,7 @@ export const ROTULO_MODELO_CAMPANHA: Record<ModeloCampanha, string> = {
 
 // "Em breve" (RF-059) não é status do banco: é a campanha aprovada ('ativo') cujo início ainda não chegou. Ela já
 // é pública e já recebe comentários; a contagem regressiva fica para a página pública.
-export const ROTULO_EM_BREVE = 'Em breve';
+const ROTULO_EM_BREVE = 'Em breve';
 
 export function emBreve(campanha: Pick<CampanhaResponse, 'status' | 'dataInicio'>): boolean {
   return campanha.status === 'ativo' && campanha.dataInicio !== null && Date.parse(campanha.dataInicio) > Date.now();

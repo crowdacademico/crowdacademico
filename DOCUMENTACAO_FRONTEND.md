@@ -247,7 +247,7 @@ Cada módulo tem `services/<n>-<nome>/api/<nome>.api.ts` exportando **um objeto*
 | `ficha-consulta.tsx` | `SecaoFicha` e `CampoFicha`: as seções e campos dos modais de Consultar (campo de leitura, não campo desabilitado: desabilitado promete "poderia editar") |
 | `rodape-acoes.tsx` | `RodapeAcoes`: secundário à esquerda (Cancelar, Fechar), ações à direita, com "Salvando..." enquanto `ocupado`; `perigo` usa o botão vermelho; `formulario` submete um `<form>` pelo id; `cancelarDesabilitado` para o secundário que não se aplica (Desfazer sem nada alterado). Sem `largura`, ela sai pelo número de botões (dois ou três); `md` é para rótulo de ação longo. Todo par de ações do sistema passa por ele, também no fim de uma seção (Pontuação, contestação do score) |
 | `resumo-alteracoes.tsx` | a frase do rodapé dos Alterar: o que mudou e ainda não foi salvo |
-| `use-alteracao-nao-salva.ts` | aviso nativo do navegador (`beforeunload`) com alteração não salva; a confirmação ao fechar o modal é da tela |
+| `use-alteracao-nao-salva.ts` | `useFecharComAviso(sujo, aoFechar)`: o que todo modal de criar/alterar usa (aviso nativo do navegador com alteração não salva e o `fechar` que pergunta antes de sair); `confirmarSaida` e `useAvisoAlteracaoNaoSalva` soltos, para quem não é modal (Minha Conta) |
 | `badge-status-campanha.tsx` | o selo de status de uma campanha, igual em todo lugar, com "Em breve" (seção 12) |
 | `badge-status-denuncia.tsx` | o selo da situação de uma denúncia (pendente, em contestação, resolvida, improcedente) |
 | `filtro-partes.tsx` | `FiltroPartes`: filtro fixo no topo do corpo do modal, com cara de aba. "Geral" mostra tudo; cada outra opção mostra só aquela parte, e as outras ficam escondidas (`hidden`), não desmontadas: troca instantânea, nada do que está sendo editado se perde. Usado no Alterar Usuário, no Consultar Campanha e no Alterar Campanha (Geral, Dados, Orçamento e cronograma e, para o dono, Atualizações, Comentários e Encerramento quando existem; avisos do topo e a decisão da Bancada aparecem em todas as partes) |
@@ -281,6 +281,7 @@ Cada módulo tem `services/<n>-<nome>/api/<nome>.api.ts` exportando **um objeto*
 | `caixa-somente-leitura.tsx` | `CaixaSomenteLeitura`: um valor que só se lê (CPF atual, score), na mesma caixa dos campos ao lado, para alinhar com eles; ao tentar escrever, apagar ou colar, mostra a dica "Apenas leitura" (classe `dica--aberta`), que some quando o foco sai. Para mostrar um dado fora de formulário, sem caixa, continua `CampoSomenteLeitura` |
 | `caixa-busca-sugestoes.tsx` | caixa de busca com lista "ID: x  Nome", que fecha ao clicar fora |
 | `caixa-marcacao.tsx`, `campo-cpf.tsx`, `medidor-senha.tsx` | caixa de marcação, CPF com máscara, força da senha |
+| `botao-mostrar-senha.tsx` | o olho dentro da caixa de senha (Cadastro, Redefinir senha, Minha Conta); o estado fica em quem usa, porque vale também para "Confirmar senha" |
 | `seletor-foto-perfil.tsx` | o avatar editável com o fluxo de upload inteiro. Nunca salva sozinho: devolve ao pai (`aoAlterar`), com três estados (foto nova, remoção pedida, nada escolhido) |
 
 ### `components/layout/`
@@ -304,11 +305,25 @@ Cada módulo tem `services/<n>-<nome>/api/<nome>.api.ts` exportando **um objeto*
 | `useEnvio` | o "enviar" de todo formulário: limpa o erro, liga `ocupado`, chama a API, reporta o erro, desliga |
 | `useErrosFormulario` | erro embaixo de cada campo na tentativa de enviar, com o cursor no primeiro (seção 13) |
 | `useBuscar` | buscar dado quando algo muda, descartando resposta atrasada; serve também ao "carregar para editar" (`aoChegar`) |
-| `useCrudModais` | o estado criar/alterar/consultar/excluir/recarregar de toda listagem |
+| `useCrudModais` | o estado criar/alterar/consultar/excluir/recarregar de toda listagem; `chaveRecarga` vai para a `GenericTable` (prop de mesmo nome), que busca de novo quando ela muda |
+| `useAvisoScore` (`6-perfil-pesquisador`) | depois de uma ação que mexe na pontuação: lê a nota antes e depois e mostra "score total +N pontos" (laranja quando perde) |
 | `useFocoPreso` | foco preso na janela aberta, Esc fecha só a de cima, foco volta para quem abriu |
 | `useOpcoesDiasSuspensao` | os prazos de suspensão vindos de Parâmetros |
 | `useRegrasCampanha` | as regras de campanha de Parâmetros (meta mínima, prazos, prazo sugerido, mínimos de orçamento e cronograma, limite da descrição) |
 | `useDecisaoAprovacao` / `usePronta` | aprovar e rejeitar uma campanha, e se ela está pronta para aprovar (seção 12) |
+
+Peças de tela compartilhadas entre módulos: `views/1-usuario/modais-usuario.tsx` (`ModaisUsuario`: Alterar, Consultar e Excluir de uma conta, abertos de Usuários, Pesquisadores e da Bancada do Pesquisador) e `views/7-link-academico/links-academicos-do-usuario.tsx` (a tabela de links de um pesquisador, no Alterar Usuário e no upgrade, travada até o perfil existir).
+
+### Roteiro de um módulo novo (para não refazer o que já existe)
+
+**Em palavras simples:** antes de escrever uma tela nova, usar as peças prontas abaixo. Cada uma já resolve um detalhe que levou tempo para acertar (o modal que não "dança", o erro no lugar certo, o aviso de alteração não salva, a recarga da lista).
+
+1. **API (`services/N-modulo/api/`):** catálogo simples usa `criarApiCatalogo`; o resto segue o padrão da seção 6, sempre com `authFetch`. Valores fixos do banco (enum) vêm de `enums-do-banco.gerado.ts`, nunca escritos à mão.
+2. **Lista:** `GenericTable` com `colunas` tipadas, `acoes` e, se precisar, `filtrosFacetados`; o estado dos modais vem de `useCrudModais`, e a `chaveRecarga` dele vai para a tabela. A função `listar` fica num `useCallback` só com o que ela usa (sem truque de dependência). Abaixo, `BlocoLogAuditoria` com o nome físico da tabela.
+3. **Modais:** casca `ModalFicha`; leitura com `SecaoFicha`/`CampoFicha`; formulário com `Campo`; rodapé com `RodapeAcoes` (e `ResumoAlteracoes` no Alterar); `useFecharComAviso` para o fechar; `useEnvio` para salvar e `useErrosFormulario` para os erros embaixo dos campos.
+4. **Limites e textos de regra:** sempre de Parâmetros (`useConfiguracoes().obterNumero(chave, reserva)`), com a reserva igual ao valor do seed. Tamanho máximo de campo (`maxLength`) igual ao da coluna no banco.
+5. **Cores e tipografia:** só tokens e as classes da seção 11; nada de cor crua do Tailwind nem hexadecimal.
+6. **Selo de situação:** um `badge-status-*.tsx` por entidade, com rótulos e classes num arquivo de constantes do módulo.
 
 ---
 
@@ -357,7 +372,7 @@ Cada módulo tem `services/<n>-<nome>/api/<nome>.api.ts` exportando **um objeto*
 ### Gestão do usuário
 
 - **Usuários:** Alterar é uma tela só, que rola (sem abas): em cima, o que espera o Salvar (foto, nome, senha, perfil de pesquisador); embaixo, o que grava na hora (papéis, moderação, CPF, links acadêmicos). Um filtro no topo mostra uma parte só sem desmontar as outras; o cabeçalho mostra pílulas da situação; o rodapé diz o que mudou. Revogar papel pede confirmação; suspender pede motivo e prazo de Parâmetros.
-- **Papéis & Permissões:** matriz Papel × Permissão e o significado de cada papel e permissão em dicionários (`papel-descricoes.constants.ts`, `permissao-nomes-amigaveis.constants.ts`); quem tem uma permissão é lido ao vivo.
+- **Papéis & Permissões:** matriz Papel × Permissão; a descrição de cada papel vem do banco (`papel.descricao`, editável no Alterar Papel desde 13-10-2026), e o significado de cada permissão, de um dicionário (`permissao-nomes-amigaveis.constants.ts`); quem tem uma permissão é lido ao vivo.
 
 ### Configurações
 

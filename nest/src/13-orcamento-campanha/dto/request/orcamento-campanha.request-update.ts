@@ -1,32 +1,11 @@
-import {
-  IsInt,
-  IsNumber,
-  IsOptional,
-  IsPositive,
-  IsString,
-  Min,
-  MaxLength,
-} from 'class-validator';
+import { OmitType } from '@nestjs/swagger';
+import { OrcamentoCampanhaRequestCreate } from './orcamento-campanha.request-create';
 
 // Sem idCampanha - mover um item de orçamento pra outra campanha não faz
 // sentido de produto (mesmo raciocínio de LinkAcademicoRequestUpdate sem
 // idTipoLink).
-export class OrcamentoCampanhaRequestUpdate {
-  @IsString()
-  @MaxLength(150)
-  categoria: string;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(20000)
-  descricao?: string;
-
-  @IsNumber({ maxDecimalPlaces: 2 })
-  @IsPositive()
-  valor: number;
-
-  @IsOptional()
-  @IsInt()
-  @Min(0)
-  ordem?: number;
-}
+// As regras de cada campo são as do criar (OmitType), escritas uma vez só; a campanha do item não muda.
+export class OrcamentoCampanhaRequestUpdate extends OmitType(
+  OrcamentoCampanhaRequestCreate,
+  ['idCampanha'] as const,
+) {}

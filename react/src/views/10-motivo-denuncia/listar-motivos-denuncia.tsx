@@ -39,8 +39,7 @@ export function ListarMotivosDenuncia({ auth }: PropsPagina) {
 
   const listarMotivos = useCallback(
     () => motivoDenunciaApi.listar(auth.authFetch),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [auth.authFetch, chaveRecarga],
+    [auth.authFetch],
   );
   // 'motivo_denuncia' é o nome FÍSICO da tabela (bate com
   // trg_log_auditoria_motivo_denuncia, 05_regras_negocio.sql), não o nome
@@ -65,6 +64,7 @@ export function ListarMotivosDenuncia({ auth }: PropsPagina) {
         ]}
         chavePrimaria="idMotivo"
         listar={listarMotivos}
+          chaveRecarga={chaveRecarga}
         acoes={acoesCompletas}
         // Filtro por faceta (campanha/perfil) - pensado pro caso de uso
         // concreto de achar rápido, entre os ~12 motivos seedados, só os

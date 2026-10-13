@@ -3,7 +3,7 @@ import { BadgeBooleano } from '../../components/crud/badge-booleano';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
 import { ModalFicha } from '../../components/crud/modal-ficha';
-import { confirmarSaida, useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
+import { useFecharComAviso } from '../../components/crud/use-alteracao-nao-salva';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { ModalExcluirItem } from '../../components/crud/modal-excluir-item';
 import { Campo } from '../../components/input/campo';
@@ -105,17 +105,11 @@ export function ModalAlterarTipoLink({ auth, tipo, aoFechar, aoAtualizado }: Mod
     permitePerfil !== tipo.permitePerfil ||
     permiteAtualizacao !== tipo.permiteAtualizacao ||
     permiteRecompensa !== tipo.permiteRecompensa;
-  useAvisoAlteracaoNaoSalva(sujo);
 
   const regexInvalida = regex.length > 0 && !regexValida(regex);
   const nenhumEscopoMarcado = !permitePerfil && !permiteAtualizacao && !permiteRecompensa;
 
-  const fechar = () => {
-    if (!confirmarSaida(sujo)) {
-      return;
-    }
-    aoFechar();
-  };
+  const fechar = useFecharComAviso(sujo, aoFechar);
 
   // "Salvar" só espera haver alteração; nome apagado, regex inválida e nenhuma opção marcada mostram o erro no campo.
   const { erroDe, tentarEnviar } = useErrosFormulario(() => ({ nome: nome.trim() === '' && 'Informe o nome.' }));

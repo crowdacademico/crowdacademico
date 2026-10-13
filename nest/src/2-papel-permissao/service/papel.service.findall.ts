@@ -18,7 +18,7 @@ export class PapelServiceFindAll {
     const papeis = await this.database
       .getDb()
       .selectFrom('papel')
-      .select(['id_papel', 'nome', 'codigo'])
+      .select(['id_papel', 'nome', 'codigo', 'descricao'])
       .orderBy('id_papel')
       .execute();
 
@@ -26,6 +26,7 @@ export class PapelServiceFindAll {
       idPapel: p.id_papel,
       nome: p.nome,
       codigo: p.codigo,
+      descricao: p.descricao,
     }));
   }
 }

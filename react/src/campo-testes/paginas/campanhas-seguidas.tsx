@@ -20,8 +20,9 @@ export function CampanhasSeguidas({ auth }: PropsPagina) {
     const [seguidas, linhas] = await Promise.all([seguirCampanhaApi.listarMinhas(auth.authFetch), campanhas.buscarLinhas()]);
     const ids = new Set(seguidas.map((item) => item.idCampanha));
     return linhas.filter((linha) => ids.has(linha.idCampanha));
+    // `campanhas` (o hook) é um objeto novo a cada desenho: na lista, a tabela buscaria sem parar.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [auth.carregando, auth.authFetch, chaveRecarga]);
+  }, [auth.carregando, auth.authFetch]);
 
   return (
     <div className="admin-content-painel">
@@ -30,6 +31,7 @@ export function CampanhasSeguidas({ auth }: PropsPagina) {
         titulo="Campanhas Seguidas"
         ajuda="Campanhas que a conta logada segue. Para seguir, use o coração da Bancada da Campanha (T2)."
         listar={listar}
+          chaveRecarga={chaveRecarga}
         acoes={campanhas.acoes}
         vazio={{
           icone: 'fa-bell',

@@ -42,8 +42,7 @@ export function ListarTermosUso({ auth }: PropsPagina) {
   } = useCrudModais<TermoUsoResponse>();
   const listarTermos = useCallback(
     () => termoUsoApi.listar(auth.authFetch),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [auth.authFetch, chaveRecarga],
+    [auth.authFetch],
   );
 
   return (
@@ -67,6 +66,7 @@ export function ListarTermosUso({ auth }: PropsPagina) {
         ]}
         chavePrimaria="idTermo"
         listar={listarTermos}
+          chaveRecarga={chaveRecarga}
         // Filtro por tipo (como em USUARIOS, marcado Todos por padrão): `rotulos` traduz o valor cru do enum
         // para o rótulo amigável só na exibição do dropdown.
         filtrosFacetados={[

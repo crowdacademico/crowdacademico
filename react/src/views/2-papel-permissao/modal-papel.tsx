@@ -4,7 +4,6 @@ import { ModalFicha } from '../../components/crud/modal-ficha';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { papelPermissaoApi, permissaoApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
 import { detalhePermissao } from '../../services/2-papel-permissao/constants/permissao-nomes-amigaveis.constants';
-import { descricaoPapel } from '../../services/2-papel-permissao/constants/papel-descricoes.constants';
 import { ModalDetalhePermissao } from './modal-detalhe-permissao';
 import { Carregando } from '../../components/layout/carregando';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
@@ -18,8 +17,8 @@ interface ModalConsultarPapelProps {
 }
 
 // Consultar: mostra as permissões concedidas ao papel, lidas ao vivo da matriz Papel × Permissão (mesmas 2
-// chamadas de matriz-papel-permissao.tsx/modal-detalhe-permissao.tsx), nunca hardcoded. `PapelResponse` só tem
-// `idPapel`/`nome`/`codigo` (o `codigo` fixo acha a descrição do papel). Cada badge abre o MESMO
+// chamadas de matriz-papel-permissao.tsx/modal-detalhe-permissao.tsx), nunca hardcoded. `PapelResponse` traz
+// `idPapel`/`nome`/`codigo`/`descricao`. Cada badge abre o MESMO
 // `ModalDetalhePermissao` que a tabela de Permissões usa no botão "Saiba mais": zero lógica de detalhe
 // duplicada.
 export function ModalConsultarPapel({ auth, papel, aoFechar }: ModalConsultarPapelProps) {
@@ -49,7 +48,7 @@ export function ModalConsultarPapel({ auth, papel, aoFechar }: ModalConsultarPap
         <SecaoFicha titulo="Dados">
           <CampoFicha rotulo="id" valor={papel.idPapel} />
           <CampoFicha rotulo="Nome" valor={papel.nome} largura="cheia" />
-          <CampoFicha rotulo="Para que serve" valor={descricaoPapel(papel.codigo) ?? '-'} largura="cheia" />
+          <CampoFicha rotulo="Descrição" valor={papel.descricao} largura="cheia" />
         </SecaoFicha>
 
         <SecaoFicha titulo="Permissões deste papel" colunas={1}>

@@ -50,7 +50,7 @@ export function CampoMotivoRejeicao({ decisao }: { decisao: DecisaoAprovacao }) 
   );
 }
 
-export function BotoesDecisao({ decisao, pronta }: { decisao: DecisaoAprovacao; pronta: boolean }) {
+function BotoesDecisao({ decisao, pronta }: { decisao: DecisaoAprovacao; pronta: boolean }) {
   return (
     <>
       <button type="button" onClick={() => void decisao.decidir('rejeitar')} disabled={decisao.ocupado} className="btn btn-danger">

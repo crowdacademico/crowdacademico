@@ -3,7 +3,7 @@ import { BadgeBooleano } from '../../components/crud/badge-booleano';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
 import { ModalFicha } from '../../components/crud/modal-ficha';
-import { confirmarSaida, useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
+import { useFecharComAviso } from '../../components/crud/use-alteracao-nao-salva';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
@@ -96,14 +96,7 @@ export function ModalAlterarConfiguracao({ auth, configuracao, aoFechar, aoAtual
     descricao !== (configuracao.descricao ?? '') ||
     ativo !== configuracao.ativo ||
     publica !== configuracao.publica;
-  useAvisoAlteracaoNaoSalva(sujo);
-
-  const fechar = () => {
-    if (!confirmarSaida(sujo)) {
-      return;
-    }
-    aoFechar();
-  };
+  const fechar = useFecharComAviso(sujo, aoFechar);
 
   // O valor precisa combinar com o tipo; a vírgula dos centavos vira ponto, que é o que o banco guarda.
   const regexValor = REGEX_VALOR[configuracao.tipo];

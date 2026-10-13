@@ -859,6 +859,11 @@ Não existe transição `aguardando_aprovacao -> rascunho` ("recolher") nem esta
 - **Motivo:** o seed grava as campanhas já aprovadas, sem passar pela aprovação; elas apareciam sem nada no orçamento e no cronograma, o que o sistema nunca deixaria acontecer.
 - **Caso-limite aceito:** a campanha 17 continua na fila com 2 marcos, de propósito, para a lista de verificação mostrar o que falta.
 
+📌 **Descrição do papel no banco (13-10-2026).**
+- **Decisão:** `papel.descricao` (VARCHAR(500), opcional), editável pelo Alterar Papel junto com o nome (`GRANT UPDATE (nome, descricao)`); o seed preenche os 7 papéis. Grupo BE do ATUALIZAR.
+- **Motivo:** o texto "para que serve" ficava num dicionário fixo no React, por código do papel, e o admin não conseguia mudá-lo.
+- **Caso-limite aceito:** a descrição é a intenção do papel; o que ele pode de verdade continua sendo a matriz Papel × Permissão, que pode ser mudada sem a descrição acompanhar.
+
 📌 **Perfil Acadêmico: "outro link" vale mais (13-10-2026).**
 - **Decisão:** o subitem `linkedin` passa a se chamar "Link (ResearchGate, LinkedIn, GitHub...)" e vale 6; `instituicao` e `titulo` valem 4 cada (antes 4, 5 e 5; Lattes e ORCID seguem 8; a dimensão segue 30). Na tela Pontuação, instituição e título ganham uma dica dizendo que vêm de um campo do perfil, não de link. Grupo BD do ATUALIZAR.
 - **Motivo:** o nome "LinkedIn ou site acadêmico" escondia que qualquer link fora Lattes/ORCID conta, e dava a impressão de que os três últimos itens eram links.

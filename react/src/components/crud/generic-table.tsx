@@ -60,6 +60,8 @@ export interface GenericTableProps<T extends Linha> {
   colunas: Coluna<T>[];
   chavePrimaria: keyof T & string;
   listar: () => Promise<T[]>;
+  // Muda depois de um modal gravar algo (useCrudModais().chaveRecarga): a tabela busca a lista de novo.
+  chaveRecarga?: number;
   // Contrato das ações (handler dentro da própria chave): ver 5-coluna-acoes.tsx.
   acoes?: AcoesLinha<T>;
   // Ação que existe na tabela mas não se aplica a uma linha: aparece apagada, com o motivo na dica.
@@ -119,6 +121,7 @@ export function GenericTable<T extends Linha>({
   colunas,
   chavePrimaria,
   listar,
+  chaveRecarga,
   acoes,
   acaoIndisponivel,
   acoesEmColuna,
@@ -138,7 +141,7 @@ export function GenericTable<T extends Linha>({
   const emColuna = acoesEmColuna?.flatMap((coluna) => coluna.acoes) ?? [];
   const temAcoes = Object.keys(acoes ?? {}).some((acao) => !emColuna.some((a) => a === acao));
   const totalColunas = colunas.length + (acoesEmColuna?.length ?? 0) + (temAcoes ? 1 : 0);
-  const { dado, carregando, erro } = useBuscar(listar, [listar], { mostraTexto: true });
+  const { dado, carregando, erro } = useBuscar(listar, [listar, chaveRecarga], { mostraTexto: true });
   const linhas = useMemo(() => dado ?? [], [dado]);
   // Filtro/página/ordenação/faceta vivem na URL (query string), não em useState local: uma navegação que
   // desmontasse a página de listagem resetaria o filtro escolhido, e useState não sobrevive a isso. `{ replace:

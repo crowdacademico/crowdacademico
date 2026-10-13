@@ -11,16 +11,16 @@ import { REGRA_POR_CONSTRAINT } from './mensagens-regra-violada.constants';
 
 // Códigos exportados: qualquer service que trata um código específico no próprio `catch` (em vez de deixar cair
 // nesta rede de segurança global) deve importar daqui, nunca redeclarar o literal.
-export const CODIGO_PG_UNIQUE_VIOLATION = '23505';
+const CODIGO_PG_UNIQUE_VIOLATION = '23505';
 export const CODIGO_PG_FOREIGN_KEY_VIOLATION = '23503';
-export const CODIGO_PG_NOT_NULL_VIOLATION = '23502';
-export const CODIGO_PG_CHECK_VIOLATION = '23514';
+const CODIGO_PG_NOT_NULL_VIOLATION = '23502';
+const CODIGO_PG_CHECK_VIOLATION = '23514';
 export const CODIGO_PG_RLS_VIOLATION = '42501';
 // Código padrão que o Postgres usa pra qualquer `RAISE EXCEPTION 'mensagem'`
 // sem ERRCODE customizado. Só sobra pra função de fora de 05_regras_negocio.sql
 // que ainda não ganhou ERRCODE próprio (ex.: excluir_conta_usuario(), em
 // 03_funcoes_seguranca.sql - ver DOCUMENTACAO_ERRCODE.md, seção final).
-export const CODIGO_PG_RAISE_EXCEPTION_SEM_ERRCODE = 'P0001';
+const CODIGO_PG_RAISE_EXCEPTION_SEM_ERRCODE = 'P0001';
 
 // ERRCODE customizado nas RAISE EXCEPTION de 05_regras_negocio.sql (ver DOCUMENTACAO_ERRCODE.md para a tabela
 // completa código -> função -> mensagem, e DOCUMENTACAO_BD.md, seção "05", para o resumo oficial). 4 faixas,

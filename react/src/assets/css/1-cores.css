@@ -56,9 +56,7 @@
   --color-slate-100: #f1f5f9;
   --color-slate-200: #e2e8f0;
   --color-slate-300: #cbd5e1;
-  --color-slate-400: #94a3b8;
   --color-slate-500: #64748b;
-  --color-slate-600: #475569;
   --color-slate-700: #334155;
   --color-slate-800: #1e293b;
 
@@ -290,10 +288,6 @@
     background-color: var(--cor-marca);
   }
 
-  .hover-fundo-marca-escura:hover {
-    background-color: var(--cor-marca-escura);
-  }
-
   .texto-marca {
     color: var(--cor-texto-marca);
   }
@@ -307,10 +301,6 @@
      grande. */
   .fundo-marca-forte {
     background-color: var(--cor-fundo-marca-forte);
-  }
-
-  .hover-fundo-marca-forte-hover:hover {
-    background-color: var(--cor-fundo-marca-forte-hover);
   }
 
   .borda-marca {
@@ -385,7 +375,7 @@
     background-color: var(--cor-fundo-erro);
   }
 
-  /* Hover pastel de sucesso: mesmo espírito de .hover-fundo-sutil/.hover-fundo-marca-escura (acima); usado
+  /* Hover pastel de sucesso: mesmo espírito de .hover-fundo-sutil (acima); usado
      por matriz-papel-permissao.tsx na célula com permissão concedida. */
   .hover-fundo-sucesso:hover {
     background-color: var(--cor-fundo-sucesso);
@@ -399,10 +389,6 @@
      em :root para o porquê). */
   .fundo-erro-forte {
     background-color: var(--cor-fundo-erro-forte);
-  }
-
-  .fundo-sucesso-forte {
-    background-color: var(--cor-fundo-sucesso-forte);
   }
 
   .texto-sobre-cor {

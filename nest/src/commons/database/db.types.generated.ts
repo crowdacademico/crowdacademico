@@ -297,6 +297,7 @@ export interface OrcamentoCampanha {
 
 export interface Papel {
   codigo: string;
+  descricao: string | null;
   id_papel: Generated<number>;
   nome: string;
 }

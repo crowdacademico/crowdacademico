@@ -5,7 +5,7 @@
 //
 // Se uma chave nova nascer sem entrada aqui, cai no grupo "Outras": nunca quebra a tela, só fica sem
 // organização até alguém lembrar de classificar.
-export const GRUPO_CONFIGURACAO: Record<string, string> = {
+const GRUPO_CONFIGURACAO: Record<string, string> = {
   // Moderação: cor do tempo de espera nas filas (coluna "esperando").
   espera_atencao_dias: 'Moderação',
   espera_critica_dias: 'Moderação',

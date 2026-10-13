@@ -8,7 +8,7 @@ import type { EstadoSuspensao } from '../../components/crud/secao-suspensao';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { ResumoAlteracoes } from '../../components/crud/resumo-alteracoes';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
-import { confirmarSaida, useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
+import { useFecharComAviso } from '../../components/crud/use-alteracao-nao-salva';
 import { Campo } from '../../components/input/campo';
 import { CaixaSomenteLeitura } from '../../components/input/caixa-somente-leitura';
 import { MedidorSenha } from '../../components/input/medidor-senha';
@@ -21,7 +21,6 @@ import { useToast } from '../../components/layout/toast/use-toast';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { useDadosUsuario } from '../../services/1-usuario/hook/use-dados-usuario';
 import { papelApi, usuarioPapelApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
-import { descricaoPapel } from '../../services/2-papel-permissao/constants/papel-descricoes.constants';
 import { perfilPesquisadorApi } from '../../services/6-perfil-pesquisador/api/perfil-pesquisador.api';
 import { useAvisoScore } from '../../services/6-perfil-pesquisador/hook/use-aviso-score';
 import { ROTULO_STATUS_PESQUISADOR } from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
@@ -135,15 +134,10 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
   const sujoConta = mudancasConta.length > 0;
   const sujoPerfil = mudancasPerfil.length > 0;
   const mudancas = [...mudancasConta, ...mudancasPerfil];
-  useAvisoAlteracaoNaoSalva(sujoConta || sujoPerfil);
-
-  const fechar = () => {
-    if (!confirmarSaida(sujoConta || sujoPerfil)) {
-      return;
-    }
+  const fechar = useFecharComAviso(sujoConta || sujoPerfil, () => {
     aoAtualizado();
     aoFechar();
-  };
+  });
 
   // Salvar e as ações ficam sempre clicáveis: faltando algo, o erro aparece embaixo do campo.
   const conta = useErrosFormulario(() => ({
@@ -234,7 +228,6 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
   const partes: ParteTela<Parte>[] = [
     { chave: 'geral', rotulo: 'Geral' },
     { chave: 'conta', rotulo: 'Conta' },
-    { chave: 'papeis', rotulo: 'Papéis' },
     ...(perfilPesquisador ? [{ chave: 'pesquisador' as const, rotulo: 'Pesquisador' }] : []),
     { chave: 'moderacao', rotulo: 'Moderação' },
   ];
@@ -309,10 +302,11 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
           <FiltroPartes partes={partes} atual={parte} aoEscolher={setParte} />
           <MensagemErro texto={erro} />
 
-          {/* Duas linhas alinhadas: "Dados da conta" ao lado de Metadados e "Perfil de Pesquisador" ao lado dos
-              Aceites do Termo. Sem perfil de pesquisador, os Aceites continuam na coluna da direita (col-start-3). */}
+          {/* Mesmas linhas do Consultar: "Dados da conta" (com os Metadados embaixo) ao lado de Papéis, e "Perfil de
+              Pesquisador" ao lado dos Aceites do Termo. Sem perfil de pesquisador, os Aceites continuam na coluna da
+              direita (col-start-3). Os papéis fazem parte de "Conta" no filtro. */}
           <div className={ve('conta') + ' grade-ficha gap-x-8 gap-y-10'}>
-            <div className="lg:col-span-2">
+            <div className="lg:col-span-2 space-y-10">
               <SecaoFicha titulo="Dados da conta">
                 <div className="sm:col-span-2 flex items-center gap-4">
                   <SeletorFotoPerfil
@@ -379,13 +373,27 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
                   </div>
                 )}
               </SecaoFicha>
+
+              <SecaoFicha titulo="Metadados">
+                <div className="sm:col-span-2">
+                  <CampoSomenteLeitura rotulo="id" valor={idUsuario} />
+                </div>
+                <CampoSomenteLeitura rotulo="Criado em" valor={usuario.criadoEm && formatarData(usuario.criadoEm)} />
+                <CampoSomenteLeitura rotulo="Último login" valor={usuario.ultimoLoginEm ? formatarData(usuario.ultimoLoginEm) : 'Nunca'} />
+              </SecaoFicha>
             </div>
 
-            <SecaoFicha titulo="Metadados" colunas={1}>
-              <CampoSomenteLeitura rotulo="id" valor={idUsuario} />
-              <CampoSomenteLeitura rotulo="Criado em" valor={usuario.criadoEm && formatarData(usuario.criadoEm)} />
-              <CampoSomenteLeitura rotulo="Último login" valor={usuario.ultimoLoginEm ? formatarData(usuario.ultimoLoginEm) : 'Nunca'} />
-            </SecaoFicha>
+            <div>
+              <SecaoFicha titulo="Papéis" colunas={1}>
+                <PapeisDoUsuario
+                  auth={auth}
+                  idUsuario={idUsuario}
+                  papeis={papeis ?? []}
+                  aoMudarPapeis={setPapeis}
+                  aoAtualizado={aoAtualizado}
+                />
+              </SecaoFicha>
+            </div>
 
             {formPerfil && perfilPesquisador && (
               <div className="lg:col-span-2">
@@ -446,18 +454,6 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
 
           {parte === 'geral' && <div className="border-t borda-padrao"></div>}
 
-          <div className={ve('papeis')}>
-            <SecaoFicha titulo="Papéis" colunas={1}>
-              <PapeisDoUsuario
-                auth={auth}
-                idUsuario={idUsuario}
-                papeis={papeis ?? []}
-                aoMudarPapeis={setPapeis}
-                aoAtualizado={aoAtualizado}
-              />
-            </SecaoFicha>
-          </div>
-
           {perfilPesquisador && (
             <div className={ve('pesquisador') + ' space-y-6'}>
               <LinksAcademicosDoUsuario auth={auth} idUsuario={idUsuario} nomeUsuario={base.nome} aoMudarScore={setScoreNovo} />
@@ -494,7 +490,7 @@ function vigente(suspensao: { suspensoAte: string | null } | null): string | nul
   return suspensao?.suspensoAte && new Date(suspensao.suspensoAte) > new Date() ? suspensao.suspensoAte : null;
 }
 
-type Parte = 'geral' | 'conta' | 'papeis' | 'pesquisador' | 'moderacao';
+type Parte = 'geral' | 'conta' | 'pesquisador' | 'moderacao';
 
 
 interface PapeisDoUsuarioProps {
@@ -519,7 +515,7 @@ function PapeisDoUsuario({ auth, idUsuario, papeis, aoMudarPapeis, aoAtualizado 
 
   const papeisDisponiveis = (catalogo ?? []).filter((papel) => !papeis.some((atual) => atual.idPapel === papel.idPapel));
   const papelEscolhido = (catalogo ?? []).find((papel) => papel.idPapel === Number(idPapelParaAtribuir));
-  const descricaoEscolhido = papelEscolhido ? descricaoPapel(papelEscolhido.codigo) : undefined;
+  const descricaoEscolhido = papelEscolhido?.descricao;
 
   // "Atribuir" fica sempre clicável: sem papel escolhido, o erro aparece embaixo do campo. O motivo da suspensão
   // idem (pelo menos 3 caracteres).

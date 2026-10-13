@@ -14,16 +14,3 @@
 -- vai vir com um aviso bem visível.
 -- ============================================================================
 
--- ============================================================================
--- GRUPO BD (13-10-2026) - Perfil Acadêmico: "outro link" vale mais. IDEMPOTENTE (pode colar de novo).
--- Só muda valores: pode colar com o Nest ligado.
---
--- O que muda: na tela Pontuação, o item "LinkedIn ou site acadêmico" passa a se chamar "Link (ResearchGate, LinkedIn, GitHub...)"
--- (vale qualquer link que não seja Lattes nem ORCID) e vale 6; instituição e título passam a valer 4 cada (antes
--- 4, 5 e 5; o total da dimensão continua 30). As notas de todos os pesquisadores se recalculam sozinhas.
--- Se o admin já tinha mudado esses pesos pela tela, este grupo volta para os valores novos.
--- ============================================================================
-
-UPDATE score_config SET descricao = 'Link (ResearchGate, LinkedIn, GitHub...)', peso = 6
-WHERE nome = 'linkedin' AND (descricao IS DISTINCT FROM 'Link (ResearchGate, LinkedIn, GitHub...)' OR peso <> 6);
-UPDATE score_config SET peso = 4 WHERE nome IN ('instituicao', 'titulo') AND peso <> 4;

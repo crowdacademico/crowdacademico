@@ -51,9 +51,9 @@ export const TAMANHO_MINIMO_BYTES_PADRAO = 100;
 // outro tipo de documento entrar na lista fechada de TIPOS_MIME_
 // PERMITIDOS não precisar de uma chave nova).
 export const CHAVE_CONFIG_TAMANHO_MINIMO = 'arquivo_tamanho_minimo_bytes';
-export const CHAVE_CONFIG_TAMANHO_MAXIMO_IMAGEM =
+const CHAVE_CONFIG_TAMANHO_MAXIMO_IMAGEM =
   'arquivo_tamanho_maximo_imagem_bytes';
-export const CHAVE_CONFIG_TAMANHO_MAXIMO_DOCUMENTO =
+const CHAVE_CONFIG_TAMANHO_MAXIMO_DOCUMENTO =
   'arquivo_tamanho_maximo_documento_bytes';
 
 // Uma imagem (jpeg/png/webp) usa a chave de imagem; o único outro tipo

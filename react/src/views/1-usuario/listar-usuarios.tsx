@@ -10,9 +10,7 @@ import {
   PAPEL_SEM_EXTRA,
 } from '../../services/2-papel-permissao/constants/papel-ordem-poder.constants';
 import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
-import { ModalAlterarUsuario } from './modal-alterar-usuario';
-import { ModalConsultarUsuario } from './modal-consultar-usuario';
-import { ModalExcluirUsuario } from './modal-excluir-usuario';
+import { ModaisUsuario } from './modais-usuario';
 import { ModalCriarUsuario } from './modal-criar-usuario';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { UsuarioResponse } from '../../services/1-usuario/type/usuario.type';
@@ -78,8 +76,7 @@ export function ListarUsuarios({ auth }: PropsPagina) {
       ...usuario,
       papel: papeisPorUsuario.get(usuario.idUsuario)?.join(', ') || PAPEL_SEM_EXTRA,
     }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [auth.authFetch, chaveRecarga]);
+  }, [auth.authFetch]);
   // 'usuario' é o nome FÍSICO da tabela no Postgres (bate com
   // fn_log_auditoria() via TG_TABLE_NAME), não o nome da rota.
   const buscarLogUsuario = useCallback(
@@ -103,6 +100,7 @@ export function ListarUsuarios({ auth }: PropsPagina) {
         ]}
         chavePrimaria="idUsuario"
         listar={listarUsuarios}
+          chaveRecarga={chaveRecarga}
         acoes={acoesCompletas}
         // Botão de filtro por papel, na mesma linha do filtro de texto, padrão "Todos" (nenhum papel marcado);
         // marcar um ou mais esconde o resto. Opções vêm sozinhas dos valores que já aparecem na coluna "papel"
@@ -120,30 +118,16 @@ export function ListarUsuarios({ auth }: PropsPagina) {
         <ModalCriarUsuario auth={auth} aoFechar={fecharCriando} aoCriado={recarregar} />
       )}
 
-      {alterando && (
-        <ModalAlterarUsuario
-          auth={auth}
-          idUsuario={alterando.idUsuario}
-          aoFechar={fecharAlterando}
-          aoAtualizado={recarregar}
-        />
-      )}
-
-      {consultando && (
-        <ModalConsultarUsuario auth={auth} idUsuario={consultando.idUsuario} aoFechar={fecharConsultando} />
-      )}
-
-      {excluindo && (
-        <ModalExcluirUsuario
-          auth={auth}
-          idUsuario={excluindo.idUsuario}
-          nome={excluindo.nome}
-          email={excluindo.email}
-          emailVerificado={excluindo.emailVerificado}
-          aoFechar={fecharExcluindo}
-          aoExcluido={recarregar}
-        />
-      )}
+      <ModaisUsuario
+        auth={auth}
+        alterando={alterando}
+        consultando={consultando}
+        excluindo={excluindo}
+        fecharAlterando={fecharAlterando}
+        fecharConsultando={fecharConsultando}
+        fecharExcluindo={fecharExcluindo}
+        aoMudar={recarregar}
+      />
     </div>
   );
 }

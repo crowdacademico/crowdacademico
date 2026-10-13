@@ -36,6 +36,8 @@ export interface PapelTable {
   // Espelha 01_extensoes_enums_tabelas.sql [01-B]. Estável, nunca editável pela API (diferente de `nome`); ver
   // o comentário completo lá sobre por que existe.
   codigo: string;
+  // Para que serve o papel; editável pelo painel, como o nome.
+  descricao: string | null;
 }
 
 export interface PermissaoTable {

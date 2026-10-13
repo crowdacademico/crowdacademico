@@ -45,7 +45,6 @@
   --largura-rodape-acoes-larga: 40rem;
   --largura-formulario: 28rem; /* coluna de formulário curto: Trocar senha, Atribuir papel */
   --largura-texto-curto: 28rem; /* parágrafo curto centralizado: aviso de espaço reservado */
-  --largura-campo-busca: 24rem; /* caixa de busca solta, fora da barra de filtros */
   --largura-coluna-rodape: 20rem; /* colunas de texto do rodapé do site, em tela larga */
   --largura-legenda-foto: 10rem; /* aviso embaixo da foto de perfil, na largura dela */
   --shadow-cartao-solto: 0 -12px 40px -12px rgba(15, 23, 42, 0.2), 0 25px 50px -12px rgba(15, 23, 42, 0.25);

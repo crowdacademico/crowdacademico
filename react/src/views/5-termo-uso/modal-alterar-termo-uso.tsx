@@ -4,7 +4,7 @@ import { ModalFicha } from '../../components/crud/modal-ficha';
 import { ResumoAlteracoes } from '../../components/crud/resumo-alteracoes';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { CaixaTextoLongo } from '../../components/crud/caixa-texto-longo';
-import { confirmarSaida, useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
+import { useFecharComAviso } from '../../components/crud/use-alteracao-nao-salva';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
 import { Campo } from '../../components/input/campo';
@@ -71,14 +71,7 @@ export function ModalAlterarTermoUso({
   const aoTrocarVersaoSelecionada = (novoId: number) => setIdSelecionado(novoId);
 
   const sujo = termo !== null && conteudo !== termo.conteudo;
-  useAvisoAlteracaoNaoSalva(sujo);
-
-  const fechar = () => {
-    if (!confirmarSaida(sujo)) {
-      return;
-    }
-    aoFechar();
-  };
+  const fechar = useFecharComAviso(sujo, aoFechar);
 
   const aoSalvarTexto = async () => {
     await executarEnviando(async () => {

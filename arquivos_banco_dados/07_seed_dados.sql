@@ -72,14 +72,14 @@ INSERT INTO score_rotulo (rotulo, descricao, score_minimo, score_maximo) VALUES
 -- bonitinhos (1=admin... 7=usuario) num banco novo. Não referenciado por número em nenhum lugar
 -- (papel_permissao e usuario_papel, abaixo, buscam papel por `nome`), então reordenar aqui é seguro e não
 -- quebra nada além do id_papel gerado.
-INSERT INTO papel (nome, codigo) VALUES
-('admin', 'admin'),
-('moderador', 'moderador'),
-('revisor', 'revisor'),
-('suporte', 'suporte'),
-('curador', 'curador'),
-('pesquisador', 'pesquisador'),
-('usuario', 'usuario')
+INSERT INTO papel (nome, codigo, descricao) VALUES
+('admin', 'admin', 'Acesso total ao painel: usuários, papéis e permissões, parâmetros, catálogos, Termo de Uso, aprovação de campanhas, moderação e log.'),
+('moderador', 'moderador', 'Cuida do conteúdo: julga denúncias, decide contestações de denúncias julgadas por outra pessoa, modera comentários e atualizações e pode encerrar uma campanha por moderação.'),
+('revisor', 'revisor', 'Acompanha o funcionamento, só lendo: vê relatórios, a pontuação dos pesquisadores, a auditoria financeira e o log, sem dados pessoais.'),
+('suporte', 'suporte', 'Atende quem tem problema para entrar: desbloqueia login, encerra sessões, reenvia a verificação de e-mail e cancela pedidos de recuperação de senha.'),
+('curador', 'curador', 'Faz a curadoria das campanhas (aprova e rejeita) e cuida dos catálogos: áreas do conhecimento, tipos de link e motivos de denúncia.'),
+('pesquisador', 'pesquisador', 'Recebido no upgrade para pesquisador: cria e gerencia as próprias campanhas. Não dá acesso ao que é de outras pessoas.'),
+('usuario', 'usuario', 'Papel de toda conta cadastrada. Sozinho, não libera nenhuma área de administração.')
 ON CONFLICT (nome) DO NOTHING;
 
 -- [07-B-2] permissao: por que o formato "entidade_acao" (ver DOCUMENTACAO_BD.md)

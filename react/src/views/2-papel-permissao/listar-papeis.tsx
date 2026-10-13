@@ -10,7 +10,6 @@ import {
 } from '../../services/2-papel-permissao/api/papel-permissao.api';
 import { ORDEM_PODER_PAPEL } from '../../services/2-papel-permissao/constants/papel-ordem-poder.constants';
 import { detalhePermissao } from '../../services/2-papel-permissao/constants/permissao-nomes-amigaveis.constants';
-import { descricaoPapel } from '../../services/2-papel-permissao/constants/papel-descricoes.constants';
 import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
 import { MatrizPapelPermissao } from './matriz-papel-permissao';
 import { ModalDetalhePermissao } from './modal-detalhe-permissao';
@@ -50,8 +49,7 @@ export function ListarPapeis({ auth }: PropsPagina) {
 
   const listarPapeis = useCallback(
     () => papelApi.listar(auth.authFetch),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [auth.authFetch, chaveRecarga],
+    [auth.authFetch],
   );
   // Nome amigável + descrição: tradução 100% no frontend (ver permissao-nomes-amigaveis.constants.ts), o `nome` cru do
   // banco não muda em lugar nenhum, só ganha uma 2ª coluna "chave" para quem precisa do valor literal.
@@ -110,19 +108,20 @@ export function ListarPapeis({ auth }: PropsPagina) {
             { chave: 'nome', rotulo: 'nome', tipo: 'texto' },
             // A descrição fica com a coluna larga: é o texto longo da linha.
             {
-              chave: 'codigo',
-              rotulo: 'para que serve',
+              chave: 'descricao',
+              rotulo: 'descrição',
               tipo: 'nome',
-              renderizar: (linha) => <TextoResumido texto={descricaoPapel(linha.codigo) ?? null} />,
+              renderizar: (linha) => <TextoResumido texto={linha.descricao} />,
             },
           ]}
           chavePrimaria="idPapel"
           listar={listarPapeis}
+          chaveRecarga={chaveRecarga}
           // Sem Excluir: apagar um papel tiraria na hora a autoridade de todas as contas que o têm (o banco apaga
           // os vínculos em cascata). Um ícone que não exclui confundia mais do que ajudava.
           acoes={{ alterar: acoesCompletas.alterar, consultar: acoesCompletas.consultar }}
         />
-        {/* "De"/"Para" em vez de "Campos alterados": só "nome" muda em papel (codigo é fixo), mas o recurso
+        {/* "De"/"Para" em vez de "Campos alterados": só nome e descrição mudam em papel (codigo é fixo), mas o recurso
             é genérico (ver LogAuditoriaPainel), não hardcoded aqui além do nome do campo. */}
         <BlocoLogAuditoria buscar={buscarLogPapel} />
       </div>

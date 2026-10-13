@@ -32,8 +32,7 @@ export function AprovarCampanhas({ auth }: PropsPagina) {
       area: campanha.nomeArea ?? `#${campanha.idAreaConhecimento}`,
       atencao: campanha.precisaRevisaoScore ? 'Score baixo' : '',
     }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [auth.authFetch, chaveRecarga]);
+  }, [auth.authFetch]);
 
   return (
     <div className="admin-content-painel">
@@ -55,6 +54,7 @@ export function AprovarCampanhas({ auth }: PropsPagina) {
           texto: 'Tudo em dia. Quando um pesquisador enviar uma campanha, ela aparece aqui.',
         }}
         listar={listarFila}
+          chaveRecarga={chaveRecarga}
         acoes={{ alterar: (linha) => setRevisandoId(linha.idCampanha), consultar: (linha) => setConsultandoId(linha.idCampanha) }}
         filtrosFacetados={[{ chave: 'area', rotulo: 'Área' }]}
       />

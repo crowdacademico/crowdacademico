@@ -7,7 +7,7 @@ export interface RotuloDeUso {
   plural: string;
 }
 
-export const ROTULO_DE_USO_POR_TABELA: Readonly<Record<string, RotuloDeUso>> = {
+const ROTULO_DE_USO_POR_TABELA: Readonly<Record<string, RotuloDeUso>> = {
   campanha: { singular: 'campanha', plural: 'campanhas' },
   denuncia: { singular: 'denúncia', plural: 'denúncias' },
   link_academico: { singular: 'perfil', plural: 'perfis' },

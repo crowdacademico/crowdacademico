@@ -17,7 +17,7 @@ interface PainelTemaProps {
   children: ReactNode;
 }
 
-export function PainelTema({ tema, titulo, children }: PainelTemaProps) {
+function PainelTema({ tema, titulo, children }: PainelTemaProps) {
   return (
     <section data-tema-local={tema} className="fundo-pagina texto-padrao rounded-xl border borda-padrao p-4 min-w-0">
       <p className="titulo-bloco mb-3">{titulo}</p>

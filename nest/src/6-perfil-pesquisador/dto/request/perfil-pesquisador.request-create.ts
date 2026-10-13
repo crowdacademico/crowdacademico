@@ -6,15 +6,14 @@ import {
   ValidateIf,
 } from 'class-validator';
 import { IsCpf } from '../../../commons/seguranca/cpf-valido.decorator';
-import { TIPOS_VINCULO } from '../../../commons/database/db.types';
-import type { TipoVinculo } from '../../../commons/database/db.types';
-
-const TITULOS_ACADEMICOS_VALIDOS = [
-  'graduado',
-  'especialista',
-  'mestre',
-  'doutor',
-] as const;
+import {
+  TIPOS_VINCULO,
+  TITULOS_ACADEMICOS,
+} from '../../../commons/database/db.types';
+import type {
+  TipoVinculo,
+  TituloAcademico,
+} from '../../../commons/database/db.types';
 
 // "Tornar-se pesquisador" - usuário já cadastrado (comum, Grupo 1 do
 // cadastro) upgrada a própria conta. id_usuario NUNCA vem do corpo da
@@ -52,10 +51,10 @@ export class PerfilPesquisadorRequestCreate {
   })
   vinculoInstitucional?: string;
 
-  @IsEnum(TITULOS_ACADEMICOS_VALIDOS, {
-    message: `tituloAcademico precisa ser um de: ${TITULOS_ACADEMICOS_VALIDOS.join(', ')}.`,
+  @IsEnum(TITULOS_ACADEMICOS, {
+    message: `tituloAcademico precisa ser um de: ${TITULOS_ACADEMICOS.join(', ')}.`,
   })
-  tituloAcademico: (typeof TITULOS_ACADEMICOS_VALIDOS)[number];
+  tituloAcademico: TituloAcademico;
 
   // Mesmo padrão de AuthRequestRegister (aceiteTermos): o texto do termo em si nunca chega no corpo desta
   // requisição, o backend sempre resolve sozinho a versão ATIVA do tipo 'upgrade_pesquisador'
