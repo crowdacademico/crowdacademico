@@ -198,9 +198,11 @@ export interface Denuncia {
   id_campanha_alvo: number | null;
   id_denuncia: Generated<number>;
   id_julgador: number | null;
+  id_julgador_contestacao: number | null;
   id_motivo: number;
   id_pesquisador_alvo: number | null;
   id_usuario: number;
+  julgado_em: Timestamp | null;
   justificativa_contestacao: string | null;
   justificativa_moderacao: string | null;
   relato: string | null;

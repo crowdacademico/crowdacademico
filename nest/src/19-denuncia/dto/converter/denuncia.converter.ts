@@ -14,6 +14,8 @@ export type DenunciaComDetalhes = DenunciaEntity & {
   titulo_campanha: string | null;
   status_campanha: StatusCampanha | null;
   nome_pesquisador_alvo: string | null;
+  nome_julgador: string | null;
+  nome_julgador_contestacao: string | null;
 };
 
 export class DenunciaConverter {
@@ -34,10 +36,15 @@ export class DenunciaConverter {
       relato: linha.relato,
       status: linha.status,
       justificativaModeracao: linha.justificativa_moderacao,
+      idJulgador: linha.id_julgador,
+      nomeJulgador: linha.nome_julgador,
+      julgadoEm: linha.julgado_em,
       contestacao: linha.contestacao,
       contestacaoStatus: linha.contestacao_status,
       contestadaEm: linha.contestada_em,
       justificativaContestacao: linha.justificativa_contestacao,
+      idJulgadorContestacao: linha.id_julgador_contestacao,
+      nomeJulgadorContestacao: linha.nome_julgador_contestacao,
       criadoEm: linha.criado_em,
     };
   }

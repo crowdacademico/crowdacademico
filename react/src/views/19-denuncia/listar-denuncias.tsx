@@ -4,11 +4,13 @@ import { BlocoLogAuditoria } from '../../components/crud/bloco-log-auditoria';
 import { BadgeStatusDenuncia } from '../../components/crud/badge-status-denuncia';
 import { denunciaApi } from '../../services/19-denuncia/api/denuncia.api';
 import {
-  ORDEM_STATUS_DENUNCIA,
+  ORDEM_SITUACAO_DENUNCIA,
   ROTULO_STATUS_CONTESTACAO,
   ROTULO_STATUS_DENUNCIA,
   ROTULO_TIPO_DENUNCIA,
   STATUS_DENUNCIA_DECIDIDA,
+  situacaoDenuncia,
+  type SituacaoDenuncia,
 } from '../../services/19-denuncia/constants/status-denuncia.constants';
 import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
 import { ModalJulgarDenuncia } from './modal-julgar-denuncia';
@@ -18,9 +20,10 @@ import type { DenunciaResponse } from '../../services/19-denuncia/type/denuncia.
 interface DenunciaLinha extends Omit<DenunciaResponse, 'status'> {
   status: string;
   statusOriginal: DenunciaResponse['status'];
+  situacao: SituacaoDenuncia;
   tipo: string;
   alvo: string;
-  // Desde quando a denúncia espera julgamento; vazio depois de julgada.
+  // Desde quando espera um moderador (o julgamento ou a contestação); vazio quando não há nada esperando.
   esperandoDesde: string | null;
   contestacaoSituacao: string;
 }
@@ -34,26 +37,33 @@ export function ListarDenuncias({ auth }: PropsPagina) {
 
   const listar = useCallback(async (): Promise<DenunciaLinha[]> => {
     const denuncias = await denunciaApi.listar(auth.authFetch);
-    // Fila: primeiro as que esperam julgamento, a mais antiga no topo (como em Aprovar Campanhas); depois as já
-    // julgadas, a mais nova primeiro.
-    const decidida = (denuncia: DenunciaResponse) => STATUS_DENUNCIA_DECIDIDA.has(denuncia.status);
-    const ordenadas = [...denuncias].sort((a, b) =>
-      decidida(a) !== decidida(b)
-        ? Number(decidida(a)) - Number(decidida(b))
-        : decidida(a)
-          ? b.criadoEm.localeCompare(a.criadoEm)
-          : a.criadoEm.localeCompare(b.criadoEm),
-    );
+    // Fila: primeiro o que espera um moderador, o mais antigo no topo (como em Aprovar Campanhas); depois as já
+    // julgadas, a mais nova primeiro. Uma contestação esperando análise também é pendência: espera desde o dia em que
+    // foi feita, mesmo com a denúncia já julgada.
+    const esperandoDesde = (denuncia: DenunciaResponse) =>
+      denuncia.contestacaoStatus === 'pendente'
+        ? denuncia.contestadaEm
+        : STATUS_DENUNCIA_DECIDIDA.has(denuncia.status)
+          ? null
+          : denuncia.criadoEm;
+    const ordenadas = [...denuncias].sort((a, b) => {
+      const esperaA = esperandoDesde(a);
+      const esperaB = esperandoDesde(b);
+      if (esperaA && esperaB) return esperaA.localeCompare(esperaB);
+      if (esperaA || esperaB) return esperaA ? -1 : 1;
+      return b.criadoEm.localeCompare(a.criadoEm);
+    });
     return ordenadas.map((denuncia) => ({
       ...denuncia,
-      status: ROTULO_STATUS_DENUNCIA[denuncia.status],
+      status: ROTULO_STATUS_DENUNCIA[situacaoDenuncia(denuncia)],
+      situacao: situacaoDenuncia(denuncia),
       statusOriginal: denuncia.status,
       tipo: ROTULO_TIPO_DENUNCIA[denuncia.tipoMotivo],
       alvo:
         denuncia.idCampanhaAlvo !== null
           ? `#${denuncia.idCampanhaAlvo} ${denuncia.tituloCampanha ?? ''}`
           : `#${denuncia.idPesquisadorAlvo} ${denuncia.nomePesquisadorAlvo ?? ''}`,
-      esperandoDesde: STATUS_DENUNCIA_DECIDIDA.has(denuncia.status) ? null : denuncia.criadoEm,
+      esperandoDesde: esperandoDesde(denuncia),
       contestacaoSituacao: denuncia.contestacaoStatus ? ROTULO_STATUS_CONTESTACAO[denuncia.contestacaoStatus] : '-',
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -78,7 +88,7 @@ export function ListarDenuncias({ auth }: PropsPagina) {
             chave: 'status',
             rotulo: 'situação',
             tipo: 'status',
-            renderizar: (linha: DenunciaLinha) => <BadgeStatusDenuncia status={linha.statusOriginal} />,
+            renderizar: (linha: DenunciaLinha) => <BadgeStatusDenuncia status={linha.situacao} />,
           },
           { chave: 'contestacaoSituacao', rotulo: 'contestação', tipo: 'status' },
           { chave: 'esperandoDesde', rotulo: 'esperando', tipo: 'espera' },
@@ -91,7 +101,7 @@ export function ListarDenuncias({ auth }: PropsPagina) {
           consultar: (linha) => setAberta({ denuncia: { ...linha, status: linha.statusOriginal }, somenteLeitura: true }),
         }}
         filtrosFacetados={[
-          { chave: 'status', rotulo: 'Situação', ordem: ORDEM_STATUS_DENUNCIA.map((status) => ROTULO_STATUS_DENUNCIA[status]) },
+          { chave: 'status', rotulo: 'Situação', ordem: ORDEM_SITUACAO_DENUNCIA.map((situacao) => ROTULO_STATUS_DENUNCIA[situacao]) },
           { chave: 'tipo', rotulo: 'Tipo' },
           { chave: 'contestacaoSituacao', rotulo: 'Contestação' },
         ]}

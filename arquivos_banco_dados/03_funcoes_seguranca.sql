@@ -923,7 +923,8 @@ $$;
 -- (RF-033). Aceitar corrige o dado que causou a penalidade: a denúncia vira improcedente na mesma operação, e a nota
 -- se recalcula sozinha (trg_denuncia_recalcula_score, 05). Nunca mexe na nota nem reabre campanha encerrada por
 -- moderação. Quem registrou a denúncia não decide a contestação dela (mesmo conflito de interesse do 92006), e quem
--- julgou a denúncia também não (92036): o recurso é revisto por outra pessoa, nunca por quem tomou a decisão.
+-- julgou a denúncia também não (92036): o recurso é revisto por outra pessoa, nunca por quem tomou a decisão. Grava
+-- quem decidiu (id_julgador_contestacao).
 CREATE OR REPLACE FUNCTION public.decidir_contestacao(p_id_denuncia INT, p_aceitar BOOLEAN, p_justificativa TEXT)
 RETURNS VOID
 LANGUAGE plpgsql
@@ -956,7 +957,8 @@ BEGIN
     UPDATE denuncia
     SET contestacao_status = CASE WHEN p_aceitar THEN 'aceita' ELSE 'recusada' END::status_contestacao,
         justificativa_contestacao = btrim(p_justificativa),
-        status = CASE WHEN p_aceitar THEN 'improcedente'::status_denuncia ELSE status END
+        status = CASE WHEN p_aceitar THEN 'improcedente'::status_denuncia ELSE status END,
+        id_julgador_contestacao = public.id_usuario_atual()
     WHERE id_denuncia = p_id_denuncia;
 END;
 $$;

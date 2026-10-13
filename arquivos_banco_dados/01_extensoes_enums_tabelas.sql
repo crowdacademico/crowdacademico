@@ -119,6 +119,7 @@ CREATE TYPE status_contribuicao   AS ENUM ('pendente', 'confirmado', 'repassado'
 CREATE TYPE meio_pagamento        AS ENUM ('pix', 'cartao_credito', 'cartao_debito', 'boleto');
 CREATE TYPE fase_atualizacao      AS ENUM ('andamento', 'resultado_preliminar', 'resultado_final');
 CREATE TYPE tipo_atualizacao      AS ENUM ('texto', 'imagem', 'pdf', 'linkexterno');
+-- status_denuncia: 'em_analise' fica no tipo, fora de uso (CK_DENUNCIA_SEM_EM_ANALISE na tabela denuncia).
 CREATE TYPE status_denuncia       AS ENUM ('pendente', 'em_analise', 'resolvida', 'improcedente');
 CREATE TYPE status_encerramento   AS ENUM ('pendente', 'aprovado', 'rejeitado', 'cancelado');
 CREATE TYPE status_contestacao    AS ENUM ('pendente', 'aceita', 'recusada');
@@ -687,6 +688,10 @@ CREATE TABLE denuncia (
     -- Quem julgou a denúncia (procedente ou improcedente), gravado pela trigger trg_denuncia_registra_julgador (05).
     -- Serve para quem julgou não decidir a contestação contra a própria decisão (decidir_contestacao, 03).
     id_julgador         INT,
+    -- Quando foi julgada, gravado pela mesma trigger junto com id_julgador.
+    julgado_em          TIMESTAMPTZ,
+    -- Quem decidiu a contestação (aceitou ou recusou), gravado por decidir_contestacao (03).
+    id_julgador_contestacao INT,
     -- Contestação (RF-033): o pesquisador penalizado pede revisão de uma denúncia procedente, uma vez por denúncia.
     -- Na própria linha porque é 1 para 1: cada denúncia tem no máximo uma contestação. Só pelas funções
     -- contestar_denuncia e decidir_contestacao (03).
@@ -706,6 +711,7 @@ CREATE TABLE denuncia (
     CONSTRAINT "FK_DENUNCIA_MOTIVO" FOREIGN KEY (id_motivo) REFERENCES motivo_denuncia(id_motivo),
     -- SET NULL: a conta de quem julgou pode ser excluída; a denúncia continua, só perde a trava da contestação.
     CONSTRAINT "FK_DENUNCIA_JULGADOR" FOREIGN KEY (id_julgador) REFERENCES usuario(id_usuario) ON DELETE SET NULL,
+    CONSTRAINT "FK_DENUNCIA_JULGADOR_CONTESTACAO" FOREIGN KEY (id_julgador_contestacao) REFERENCES usuario(id_usuario) ON DELETE SET NULL,
     CONSTRAINT "UK_DENUNCIA_USUARIO_CAMPANHA_ALVO" UNIQUE (id_usuario, id_campanha_alvo),
     CONSTRAINT "UK_DENUNCIA_USUARIO_PESQUISADOR_ALVO" UNIQUE (id_usuario, id_pesquisador_alvo),
     -- Nada garantia exatamente um alvo preenchido (dava pra ter os dois ou nenhum).
@@ -718,6 +724,8 @@ CREATE TABLE denuncia (
     -- via trigger, ver [05-K-1].
     CONSTRAINT "CK_DENUNCIA_RELATO_TAMANHO" CHECK (relato IS NULL OR char_length(relato) <= 5000),
     CONSTRAINT "CK_DENUNCIA_JUSTIFICATIVA_TAMANHO" CHECK (justificativa_moderacao IS NULL OR char_length(justificativa_moderacao) <= 5000),
+    -- A denúncia vai direto de pendente para resolvida ou improcedente: "em análise" não dizia nada além de pendente.
+    CONSTRAINT "CK_DENUNCIA_SEM_EM_ANALISE" CHECK (status <> 'em_analise'),
     -- Contestação inteira ou nada; a justificativa existe exatamente quando já foi decidida.
     CONSTRAINT "CK_DENUNCIA_CONTESTACAO_COERENTE" CHECK (
         (contestacao IS NULL AND contestacao_status IS NULL AND contestada_em IS NULL AND justificativa_contestacao IS NULL)

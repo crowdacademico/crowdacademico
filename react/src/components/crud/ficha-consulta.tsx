@@ -17,18 +17,21 @@ import type { ReactNode } from 'react';
 // essa prop, comportamento igual ao padrão.
 // `nivel`: dentro de modal (título h2) a seção é h3; numa página (Minha Conta, título h1) é h2, para os
 // títulos não pularem nível. Mesmo visual nos dois.
+// `destaque`: título no tamanho de `.subtitulo` em vez do rótulo pequeno, para ficha dividida em partes grandes
+// (a denúncia: denunciado, denunciante, decisão, contestação).
 interface SecaoFichaProps {
   titulo: string;
   children?: ReactNode;
   colunas?: 1 | 2;
   nivel?: 2 | 3;
+  destaque?: boolean;
 }
 
-export function SecaoFicha({ titulo, children, colunas = 2, nivel = 3 }: SecaoFichaProps) {
+export function SecaoFicha({ titulo, children, colunas = 2, nivel = 3, destaque = false }: SecaoFichaProps) {
   const Titulo = nivel === 2 ? 'h2' : 'h3';
   return (
     <div>
-      <Titulo className="titulo-bloco titulo-bloco--linha">{titulo}</Titulo>
+      <Titulo className={(destaque ? 'subtitulo' : 'titulo-bloco') + ' titulo-bloco--linha'}>{titulo}</Titulo>
       <div
         className={
           'grid gap-x-6 gap-y-4 ' + (colunas === 1 ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2')

@@ -278,7 +278,7 @@ $$;
 -- Regra:      Dimensão 4 - Reputação da Comunidade. Dois subitens: denúncias procedentes contra o PERFIL e CAMPANHAS
 --             do pesquisador com pelo menos uma denúncia procedente (várias pessoas denunciando a mesma campanha contam
 --             uma vez: pune a falta, não o número de quem viu). Cada um perde a sua parte de forma linear até zerar em
---             score_denuncias_para_zerar. Só 'resolvida' (procedente) conta: 'pendente', 'em_analise' e
+--             score_denuncias_para_zerar. Só 'resolvida' (procedente) conta: 'pendente' e
 --             'improcedente' não.
 CREATE OR REPLACE FUNCTION public.calcular_score_reputacao(p_id_usuario INT)
 RETURNS INTEGER
@@ -3572,8 +3572,8 @@ EXECUTE FUNCTION fn_valida_denuncia_sem_autojulgamento();
 -- Função:     fn_denuncia_registra_julgador
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-3]
--- Regra:      Grava em id_julgador quem julgou a denúncia (procedente ou improcedente), pelo caminho que for (tela de
---             julgar ou encerrar_campanha_por_denuncia); voltar para pendente ou em análise apaga. A decisão da
+-- Regra:      Grava em id_julgador quem julgou a denúncia (procedente ou improcedente) e em julgado_em quando, pelo
+--             caminho que for (tela de julgar ou encerrar_campanha_por_denuncia); voltar para pendente apaga os dois. A decisão da
 --             contestação (decidir_contestacao, 03) também muda o status, mas não troca quem julgou: é o que impede
 --             quem julgou de decidir a contestação contra a própria decisão (92036).
 -- ----------------------------------------------------------------------------
@@ -3585,8 +3585,10 @@ BEGIN
     END IF;
     IF NEW.status IN ('resolvida', 'improcedente') THEN
         NEW.id_julgador := public.id_usuario_atual();
+        NEW.julgado_em := NOW();
     ELSE
         NEW.id_julgador := NULL;
+        NEW.julgado_em := NULL;
     END IF;
     RETURN NEW;
 END;

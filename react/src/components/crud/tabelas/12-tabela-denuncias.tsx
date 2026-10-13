@@ -3,6 +3,7 @@
 
 import { BadgeStatusDenuncia } from '../badge-status-denuncia';
 import { formatarData } from '../../../services/constant/util/formatacao.util';
+import { situacaoDenuncia } from '../../../services/19-denuncia/constants/status-denuncia.constants';
 import type { DenunciaResponse } from '../../../services/19-denuncia/type/denuncia.type';
 import { CaixaTabela } from './caixa-tabela';
 import { TextoResumido } from '../texto-resumido';
@@ -17,7 +18,7 @@ export function TabelaDenuncias({ denuncias }: { denuncias: DenunciaResponse[] }
             <th className="crud-tabela__col--curta">Data</th>
             <th className="crud-tabela__col--texto">Denunciante</th>
             <th className="crud-tabela__col--texto">Motivo</th>
-            <th>Relato</th>
+            <th>Detalhes adicionais</th>
             <th className="crud-tabela__col--curta">Situação</th>
             <th>Decisão</th>
           </tr>
@@ -33,7 +34,7 @@ export function TabelaDenuncias({ denuncias }: { denuncias: DenunciaResponse[] }
                 <TextoResumido texto={item.relato} />
               </td>
               <td>
-                <BadgeStatusDenuncia status={item.status} />
+                <BadgeStatusDenuncia status={situacaoDenuncia(item)} />
               </td>
               <td>
                 <TextoResumido texto={item.justificativaModeracao} />

@@ -844,6 +844,26 @@ Não existe transição `aguardando_aprovacao -> rascunho` ("recolher") nem esta
 - **Motivo:** punir a falta, não o número de pessoas que a viram (padrão de mercado em moderação: a penalidade é por infração confirmada). Antes, 10 pessoas denunciando a mesma fraude valiam 10 penalidades.
 - **Caso-limite aceito:** no perfil não há um "fato" para agrupar, então cada denúncia procedente continua contando. No seed, o Vinícius (3 procedentes na campanha 12) sobe de 20 para 30 e sai da faixa "Atenção" para "Em Construção"; a demonstração fica sem pesquisador na faixa "Atenção". Gravidade por motivo continua adiada (`PENDENCIAS`).
 
+📌 **Denúncia sem "em análise" (12-10-2026).**
+- **Decisão:** a denúncia vai direto de pendente para resolvida ou improcedente. `CK_DENUNCIA_SEM_EM_ANALISE` (01) recusa `'em_analise'`; o valor continua no tipo `status_denuncia`, fora de uso. As denúncias em análise voltaram a pendente (seed e Grupo BB do ATUALIZAR). Testado na suíte 45.
+- **Motivo:** "em análise" não guardava quem estava analisando, então não dizia nada além de "pendente": era mais código para a mesma coisa. Nos sistemas de moderação, esse estado só tem valor quando diz quem pegou o caso.
+- **Caso-limite aceito:** tirar um valor de um tipo no Postgres obrigaria a recriar as triggers e as políticas que usam a coluna `status`; a regra na tabela faz o mesmo efeito sem esse risco. O texto do RF-111 ainda lista "em análise" e precisa ser ajustado nos requisitos.
+
+📌 **Data do julgamento e quem decidiu a contestação (12-10-2026).**
+- **Decisão:** a denúncia ganhou `julgado_em` (gravado por `trg_denuncia_registra_julgador` junto com `id_julgador`) e `id_julgador_contestacao` (gravado por `decidir_contestacao`, 03; conta excluída vira vazio). A ficha da denúncia mostra quem julgou, quando, e quem decidiu a contestação. Grupo BC do ATUALIZAR; suíte 46.
+- **Motivo:** a ficha mostrava a decisão sem dizer quem nem quando, e a contestação decidida não guardava quem decidiu.
+- **Caso-limite aceito:** no Supabase, as denúncias julgadas antes do Grupo BC ficam sem data, e as contestações já decididas sem quem decidiu (a ficha mostra "-"); não há como saber esses dados. No seed, o Diego (8) julgou todas e o Admin (1) decidiu a contestação recusada.
+
+📌 **Seed: toda campanha aprovada tem orçamento e cronograma (12-10-2026).**
+- **Decisão:** as campanhas 1 a 12 e 19 a 21 ganharam itens de orçamento (soma igual à meta) e 3 marcos dentro do prazo ([07-E-1e]), como `fn_valida_completude_campanha` exige para aprovar.
+- **Motivo:** o seed grava as campanhas já aprovadas, sem passar pela aprovação; elas apareciam sem nada no orçamento e no cronograma, o que o sistema nunca deixaria acontecer.
+- **Caso-limite aceito:** a campanha 17 continua na fila com 2 marcos, de propósito, para a lista de verificação mostrar o que falta.
+
+📌 **Seed: mais dados que o sistema não deixaria existir (13-10-2026).**
+- **Decisão:** (1) as campanhas que terminaram no prazo (1, 2, 3, 4, 5, 8 e 9) ganharam a data de encerramento, igual ao fim do prazo; (2) a contribuição TXN-PIX-0008 passou para depois do início da campanha 3; (3) a campanha 6 é rascunho, nunca foi enviada: saiu a rejeição dela, e a denúncia improcedente que apontava para ela foi para a campanha 9, na época em que a 9 estava no ar; (4) a Marina (24) volta a ser conta comum zerada (a contribuição na campanha 21 passou para o Marcos, 17); (5) Gabriel (25) e Camila (26), que viraram pesquisadores, confirmaram o e-mail como os outros: só as contas 24, 27 e 28 seguem sem verificar (substitui o "24 a 28" do Seed coerente, 27-09-2026).
+- **Motivo:** uma conferência por regras, nos testes do banco, achou rascunho com rejeição e denúncia, campanha encerrada sem data de encerramento e contribuição antes do início.
+- **Caso-limite aceito:** ficaram de fora, para o módulo de pagamentos, os achados de dinheiro: a campanha 4 (não atingida) tem contribuições "confirmado" misturadas com "a devolver" e um repasse de valor líquido zero; as campanhas 8 e 9 terminaram com sucesso em 2024 e nunca tiveram repasse.
+
 📌 **Sem desconto fixo por "abandono" no histórico.**
 - **Como era:** `calcular_score_historico` chamava de "abandonada" a campanha `nao_atingido` sem nenhum pedido de encerramento e descontava 3 pontos por campanha (`score_penalidade_abandono`); descontava mais 2 por campanha `nao_atingido` cujo pedido de encerramento não tinha justificativa (`score_penalidade_sem_justificativa`). A campanha `encerrado` (encerrada antes do prazo) não entrava na taxa de conclusão.
 - **Por que deixou de fazer sentido (módulo 20):** (1) o pedido de encerramento só existe para campanha **ativa** e termina em `encerrado`, nunca em `nao_atingido`; logo nenhuma campanha `nao_atingido` tem pedido, e **toda** campanha que vencia sem bater a meta perdia 3 pontos como "abandonada", inclusive a de quem atualizou tudo e fez tudo certo; (2) a justificativa do pedido ficou obrigatória, então o desconto de 2 nunca mais acontecia; (3) quem encerrava antes do prazo com dinheiro na mesa (o caso que mais lembra "abandono") não perdia nada.

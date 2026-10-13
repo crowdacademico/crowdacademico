@@ -253,6 +253,10 @@ export interface DenunciaTable {
   justificativa_moderacao: string | null;
   // Quem julgou: só a trigger trg_denuncia_registra_julgador (05) grava; trava a contestação (92036).
   id_julgador: number | null;
+  // Quando foi julgada: a mesma trigger grava junto com id_julgador.
+  julgado_em: Date | null;
+  // Quem decidiu a contestação: só decidir_contestacao (03) grava.
+  id_julgador_contestacao: number | null;
   // Contestação (RF-033): só pelas funções contestar_denuncia e decidir_contestacao (03).
   contestacao: string | null;
   contestacao_status: StatusContestacao | null;

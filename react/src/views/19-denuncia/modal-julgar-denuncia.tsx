@@ -15,8 +15,8 @@ import {
   ORDEM_STATUS_DENUNCIA,
   ROTULO_STATUS_CONTESTACAO,
   ROTULO_STATUS_DENUNCIA,
-  ROTULO_TIPO_DENUNCIA,
   STATUS_DENUNCIA_DECIDIDA,
+  situacaoDenuncia,
 } from '../../services/19-denuncia/constants/status-denuncia.constants';
 import { useConfiguracoes } from '../../services/11-configuracoes/hook/use-configuracoes';
 import { useEnvio } from '../../services/constant/hook/use-envio';
@@ -35,7 +35,7 @@ interface ModalJulgarDenunciaProps {
   somenteLeitura?: boolean;
 }
 
-// Julgar uma denúncia (RF-111): ler o que foi denunciado e decidir. Pendente e em análise só mudam a situação;
+// Julgar uma denúncia (RF-111): ler o que foi denunciado e decidir. Pendente não pede justificativa;
 // resolvida (procedente) e improcedente pedem o porquê. Numa denúncia procedente contra campanha ativa, a moderação
 // pode encerrar a campanha na mesma ação (RF-114): a campanha sai da página pública. Quem denunciou não julga a
 // própria denúncia; o banco recusa e a mensagem aparece aqui. Com uma contestação do pesquisador esperando análise
@@ -120,8 +120,7 @@ export function ModalJulgarDenuncia({ authFetch, denuncia, aoFechar, aoJulgada, 
     <>
       <ModalFicha
         titulo={`Denúncia #${denuncia.idDenuncia}`}
-        subtitulo={`${ROTULO_TIPO_DENUNCIA[denuncia.tipoMotivo]}: ${denuncia.tituloCampanha ?? denuncia.nomePesquisadorAlvo ?? '-'}`}
-        badges={[<BadgeStatusDenuncia key="status" status={denuncia.status} />]}
+        badges={[<BadgeStatusDenuncia key="status" status={situacaoDenuncia(denuncia)} />]}
         aoFechar={aoFechar}
         erro={erro}
         rodape={
@@ -145,12 +144,15 @@ export function ModalJulgarDenuncia({ authFetch, denuncia, aoFechar, aoJulgada, 
         }
       >
         <div className="space-y-6">
-          <SecaoFicha titulo="O que foi denunciado">
+          <SecaoFicha titulo="Denunciado" destaque>
             <CampoFicha rotulo="ID do denunciante" valor={denuncia.idUsuario} />
             <CampoFicha rotulo="Denunciante" valor={denuncia.nomeDenunciante} />
             <CampoFicha rotulo="E-mail" valor={denuncia.emailDenunciante} />
             <CampoFicha rotulo="Data" valor={formatarDataHora(denuncia.criadoEm)} />
             <CampoFicha rotulo="Motivo" valor={denuncia.motivo} largura="cheia" />
+          </SecaoFicha>
+
+          <SecaoFicha titulo="Denunciante" destaque>
             {denuncia.idCampanhaAlvo !== null && (
               <>
                 <CampoFicha rotulo="ID da campanha" valor={denuncia.idCampanhaAlvo} />
@@ -163,12 +165,36 @@ export function ModalJulgarDenuncia({ authFetch, denuncia, aoFechar, aoJulgada, 
                 <CampoFicha rotulo="Pesquisador denunciado" valor={denuncia.nomePesquisadorAlvo} />
               </>
             )}
-            <CampoFicha rotulo="Relato" valor={denuncia.relato} largura="cheia" />
+            <CampoFicha rotulo="Detalhes adicionais" valor={denuncia.relato} largura="cheia" />
           </SecaoFicha>
 
+          {/* A decisão já tomada vem antes da contestação, que é contra ela; aparece também ao decidir a contestação. */}
+          {(somenteLeitura || contestacaoPendente) && (
+            <SecaoFicha titulo="Decisão" destaque>
+              {STATUS_DENUNCIA_DECIDIDA.has(denuncia.status) && (
+                <>
+                  <CampoFicha rotulo="ID de quem julgou" valor={denuncia.idJulgador} />
+                  <CampoFicha rotulo="Quem julgou" valor={denuncia.nomeJulgador ?? 'Não registrado'} />
+                </>
+              )}
+              <CampoFicha rotulo="Situação" valor={<BadgeStatusDenuncia status={denuncia.status} />} />
+              {STATUS_DENUNCIA_DECIDIDA.has(denuncia.status) && (
+                <CampoFicha rotulo="Data" valor={formatarDataHora(denuncia.julgadoEm)} />
+              )}
+              {denuncia.justificativaModeracao && (
+                <CampoFicha rotulo="Justificativa da moderação" valor={denuncia.justificativaModeracao} largura="cheia" />
+              )}
+            </SecaoFicha>
+          )}
+
           {denuncia.contestacao !== null && denuncia.contestacaoStatus !== null && (
-            <SecaoFicha titulo="Contestação do pesquisador">
-              <CampoFicha rotulo="Data" valor={formatarDataHora(denuncia.contestadaEm)} />
+            <SecaoFicha titulo="Contestação do pesquisador" destaque>
+              {denuncia.contestacaoStatus !== 'pendente' && (
+                <>
+                  <CampoFicha rotulo="ID de quem julgou" valor={denuncia.idJulgadorContestacao} />
+                  <CampoFicha rotulo="Quem julgou" valor={denuncia.nomeJulgadorContestacao ?? 'Não registrado'} />
+                </>
+              )}
               <CampoFicha
                 rotulo="Situação"
                 valor={
@@ -177,6 +203,7 @@ export function ModalJulgarDenuncia({ authFetch, denuncia, aoFechar, aoJulgada, 
                   </span>
                 }
               />
+              <CampoFicha rotulo="Data" valor={formatarDataHora(denuncia.contestadaEm)} />
               <CampoFicha rotulo="Por que é injusta" valor={denuncia.contestacao} largura="cheia" />
               {denuncia.justificativaContestacao && (
                 <CampoFicha rotulo="Justificativa da decisão" valor={denuncia.justificativaContestacao} largura="cheia" />
@@ -184,15 +211,8 @@ export function ModalJulgarDenuncia({ authFetch, denuncia, aoFechar, aoJulgada, 
             </SecaoFicha>
           )}
 
-          {somenteLeitura ? (
-            <SecaoFicha titulo="Decisão">
-              <CampoFicha rotulo="Situação" valor={<BadgeStatusDenuncia status={denuncia.status} />} />
-              {denuncia.justificativaModeracao && (
-                <CampoFicha rotulo="Justificativa da moderação" valor={denuncia.justificativaModeracao} largura="cheia" />
-              )}
-            </SecaoFicha>
-          ) : contestacaoPendente ? (
-            <SecaoFicha titulo="Decidir a contestação" colunas={1}>
+          {somenteLeitura ? null : contestacaoPendente ? (
+            <SecaoFicha titulo="Decidir a contestação" colunas={1} destaque>
               <CaixaAviso titulo="O que cada decisão faz">
                 Aceitar torna esta denúncia improcedente, e a pontuação do pesquisador se recalcula sozinha. Uma campanha
                 encerrada por moderação continua encerrada. Recusar mantém a denúncia procedente.
@@ -213,7 +233,7 @@ export function ModalJulgarDenuncia({ authFetch, denuncia, aoFechar, aoJulgada, 
               </Campo>
             </SecaoFicha>
           ) : (
-            <SecaoFicha titulo="Decisão" colunas={1}>
+            <SecaoFicha titulo="Decisão" colunas={1} destaque>
               {!confirmandoEncerrar && (
                 <Campo rotulo="Situação">
                   {({ atributos }) => (
