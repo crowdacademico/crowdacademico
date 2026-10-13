@@ -50,6 +50,22 @@ Dá para chegar a risco perto de zero, mas são ramos e filtros espalhados por m
 
 **Efeito colateral já visível:** pesquisador sem nenhuma campanha fica com os 15 da parte "campanhas" inteiros, então nunca cai abaixo de 25 (faixa "Em Construção"), por mais denúncias procedentes que tenha contra o perfil.
 
+## 📌 Para discutir (13-10-2026): o título acadêmico no score
+
+**Em palavras simples:** hoje o item "Título acadêmico informado" (4 dos 30 pontos do Perfil Acadêmico) só confere se o campo está preenchido. Doutor, mestre, especialista e graduado ganham os mesmos 4 pontos. A ideia é o título pesar conforme o nível. É interessante, mas precisa ser bem feito para os doutores não dominarem a plataforma.
+
+**O risco:** o score aparece para quem apoia e ajuda a decidir em quem confiar. Se o título pesar muito, quem já tem mais titulação começa sempre na frente, e quem está começando (um graduado com um bom projeto) fica para trás antes de mostrar trabalho. A plataforma passaria a premiar o currículo, não o que a pessoa entrega.
+
+**Como fazer bem feito, se for fazer:**
+- **Diferença pequena entre os níveis.** Por exemplo: graduado 2, especialista 3, mestre 3, doutor 4, dentro dos mesmos 4 pontos de hoje. A distância máxima entre um graduado e um doutor fica em 2 pontos de 100.
+- **O peso de verdade continua no que a pessoa faz:** campanhas concluídas, atualizações em dia e nenhuma denúncia procedente já valem 70 dos 100 pontos. É por aí que um graduado passa um doutor.
+- **Os pontos de cada nível viram configuração** na tela Pontuação, como os outros pesos, para o administrador calibrar sem mexer no código.
+- **O título é declarado, não conferido.** Pesar mais aumenta a vontade de declarar um título que a pessoa não tem. O Lattes ajuda a conferir, mas hoje ninguém confere. Se o título pesar mais, a moderação precisa olhar isso, e a denúncia "Perfil com dados acadêmicos falsos" já existe para isso.
+
+**Padrão de mercado:** as plataformas de financiamento de pesquisa (Experiment.com, por exemplo) não ordenam nem destacam projetos pela titulação de quem pede; o que conta é o projeto e o histórico de entregas. O ResearchGate, que tinha uma nota de reputação acadêmica (o RG Score), a retirou em 2022, depois de anos de crítica por medir prestígio mais do que contribuição.
+
+**Decisão em aberto:** manter como está (o título só mostra que o perfil está completo) ou pontuar por nível com uma diferença pequena.
+
 ## 📌 Para a Alexia ler primeiro (03-10-2026): o pagamento que chega depois do fim da campanha
 
 > ✅ **DECIDIDO E FEITO (03-10-2026):** o Lucas escolheu a opção D, com validade de 24 horas para o Pix. Já está no banco (Grupo AM do `ATUALIZAR`) e documentado no `DOCUMENTACAO_BD.md`, [05-K-2-F]. Fica aqui para a Alexia saber o que mudou e por quê.

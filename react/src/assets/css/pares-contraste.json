@@ -10,6 +10,7 @@
   ["--cor-texto-aviso", "--cor-fundo-aviso"],
   ["--cor-fundo-cartao", "--cor-texto-aviso"],
   ["--cor-texto-info", "--cor-fundo-info"],
+  ["--cor-texto-concluido", "--cor-fundo-concluido"],
   ["--cor-texto-sobre-cor", "--cor-fundo-marca-forte"],
   ["--cor-texto-sobre-cor", "--cor-fundo-sucesso-forte"],
   ["--cor-texto-sobre-cor", "--cor-fundo-erro-forte"],

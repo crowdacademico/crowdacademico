@@ -270,6 +270,12 @@
     color: var(--cor-texto-info);
   }
 
+  /* .badge-concluido: terminou e deu certo (campanha "Sucesso"), separado do verde de "no ar" (Ativa). */
+  .badge-concluido {
+    background-color: var(--cor-fundo-concluido);
+    color: var(--cor-texto-concluido);
+  }
+
   /* .badge-erro: utilitário genérico (status rejeitado/encerrado_moderacao das campanhas, entre outros). */
   .badge-erro {
     background-color: var(--cor-fundo-erro);
@@ -645,6 +651,9 @@
        .admin-sidebar__grupo-titulo e sairia gritado em CAIXA ALTA, não só o rótulo do grupo. */
     text-transform: none;
     letter-spacing: normal;
+    /* Mesmo motivo: dentro de uma célula de tabela que não quebra linha (DS-100), a dica herdava o nowrap, saía numa
+       linha só e era cortada pela borda da tabela. A dica sempre quebra dentro do max-width. */
+    white-space: normal;
     width: max-content;
     max-width: 16rem;
     box-shadow: var(--shadow-md);

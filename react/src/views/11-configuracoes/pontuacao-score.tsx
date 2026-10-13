@@ -7,6 +7,7 @@ import { Tooltip } from '../../components/layout/tooltip';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
 import { scoreConfigApi } from '../../services/11-configuracoes/api/score-config.api';
+import { AJUDA_ITEM_SCORE } from '../../services/11-configuracoes/constants/score-itens-ajuda.constants';
 import { useBuscar } from '../../services/constant/hook/use-buscar';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import type { PropsPagina } from '../../services/router/pagina.type';
@@ -304,7 +305,12 @@ export function PontuacaoScore({ auth }: PropsPagina) {
                               const rotulo = item.descricao ?? item.nome;
                               return (
                                 <tr key={item.idScoreConfig} className={item.ativo ? undefined : 'texto-fraco'}>
-                                  <td className="crud-tabela__col--texto">{rotulo}</td>
+                                  <td className="crud-tabela__col--texto">
+                                    <span className="inline-flex items-center gap-2">
+                                      {rotulo}
+                                      {AJUDA_ITEM_SCORE[item.nome] && <Tooltip texto={AJUDA_ITEM_SCORE[item.nome]} />}
+                                    </span>
+                                  </td>
                                   <td className="crud-tabela__celula--centralizada">
                                     <input
                                       type="checkbox"

@@ -859,6 +859,16 @@ Não existe transição `aguardando_aprovacao -> rascunho` ("recolher") nem esta
 - **Motivo:** o seed grava as campanhas já aprovadas, sem passar pela aprovação; elas apareciam sem nada no orçamento e no cronograma, o que o sistema nunca deixaria acontecer.
 - **Caso-limite aceito:** a campanha 17 continua na fila com 2 marcos, de propósito, para a lista de verificação mostrar o que falta.
 
+📌 **Perfil Acadêmico: "outro link" vale mais (13-10-2026).**
+- **Decisão:** o subitem `linkedin` passa a se chamar "Link (ResearchGate, LinkedIn, GitHub...)" e vale 6; `instituicao` e `titulo` valem 4 cada (antes 4, 5 e 5; Lattes e ORCID seguem 8; a dimensão segue 30). Na tela Pontuação, instituição e título ganham uma dica dizendo que vêm de um campo do perfil, não de link. Grupo BD do ATUALIZAR.
+- **Motivo:** o nome "LinkedIn ou site acadêmico" escondia que qualquer link fora Lattes/ORCID conta, e dava a impressão de que os três últimos itens eram links.
+- **Caso-limite aceito:** quem tem instituição e título, mas nenhum outro link, perde 2 pontos (no seed, quase todos); ninguém muda de faixa. O "outro link" conta uma vez só, com um ou com vários.
+
+📌 **Seed: três versões de cada Termo (13-10-2026).**
+- **Decisão:** 6 versões em ordem de id: 1 e 2 são as antigas (v1, de 2024; conta e pesquisador), 3 e 4 as vigentes (v2, de 03-10-2026) e 5 e 6 os rascunhos da próxima versão (v3, sem aceite, feitos a partir da vigente com uma seção nova). As vigentes ficam na parte de referência com id 3 e 4 escritos à mão, e a sequência é acertada logo depois; num banco de produção elas começam no id 3. Os textos "[PLACEHOLDER]" saíram: a v1 da conta é o texto da antiga v4 (sem o item do IP) e a v1 do pesquisador é o da antiga v2 (sem o cálculo da pontuação).
+- **Motivo:** eram 8 versões, 4 delas da conta, várias com texto de preenchimento; a tela de Termos de Uso fica mais fácil de ler com antiga, vigente e rascunho de cada tipo.
+- **Caso-limite aceito:** a contagem de aceites de uma versão soma os aceites das contas e os de cada contribuição (RF-054/RF-055), por isso a v1 da conta mostra mais aceites (28 contas e 52 contribuições) do que o número de usuários.
+
 📌 **Seed: mais dados que o sistema não deixaria existir (13-10-2026).**
 - **Decisão:** (1) as campanhas que terminaram no prazo (1, 2, 3, 4, 5, 8 e 9) ganharam a data de encerramento, igual ao fim do prazo; (2) a contribuição TXN-PIX-0008 passou para depois do início da campanha 3; (3) a campanha 6 é rascunho, nunca foi enviada: saiu a rejeição dela, e a denúncia improcedente que apontava para ela foi para a campanha 9, na época em que a 9 estava no ar; (4) a Marina (24) volta a ser conta comum zerada (a contribuição na campanha 21 passou para o Marcos, 17); (5) Gabriel (25) e Camila (26), que viraram pesquisadores, confirmaram o e-mail como os outros: só as contas 24, 27 e 28 seguem sem verificar (substitui o "24 a 28" do Seed coerente, 27-09-2026).
 - **Motivo:** uma conferência por regras, nos testes do banco, achou rascunho com rejeição e denúncia, campanha encerrada sem data de encerramento e contribuição antes do início.

@@ -8,9 +8,6 @@ import type { EstadoSuspensao } from '../../components/crud/secao-suspensao';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { ResumoAlteracoes } from '../../components/crud/resumo-alteracoes';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
-import { TabelaLinksAcademicos } from '../../components/crud/tabelas/1-tabela-links-academicos';
-import { BotaoMostrarEsconder } from '../../components/crud/botao-mostrar-esconder';
-import { EXEMPLO_LINK_POR_TIPO } from '../../services/7-link-academico/constants/exemplos-link.constants';
 import { confirmarSaida, useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
 import { Campo } from '../../components/input/campo';
 import { CaixaSomenteLeitura } from '../../components/input/caixa-somente-leitura';
@@ -26,10 +23,8 @@ import { useDadosUsuario } from '../../services/1-usuario/hook/use-dados-usuario
 import { papelApi, usuarioPapelApi } from '../../services/2-papel-permissao/api/papel-permissao.api';
 import { descricaoPapel } from '../../services/2-papel-permissao/constants/papel-descricoes.constants';
 import { perfilPesquisadorApi } from '../../services/6-perfil-pesquisador/api/perfil-pesquisador.api';
+import { useAvisoScore } from '../../services/6-perfil-pesquisador/hook/use-aviso-score';
 import { ROTULO_STATUS_PESQUISADOR } from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
-import { linkAcademicoApi } from '../../services/7-link-academico/api/link-academico.api';
-import { tipoLinkApi } from '../../services/9-tipo-link/api/tipo-link.api';
-import { useConfiguracoes } from '../../services/11-configuracoes/hook/use-configuracoes';
 import { SENHA_DEV } from '../../services/constant/constants/senha-dev.constants';
 import { useBuscar } from '../../services/constant/hook/use-buscar';
 import { SecaoAceitesTermo } from './secao-aceites-termo';
@@ -38,12 +33,12 @@ import { useErrosFormulario } from '../../services/constant/hook/use-erros-formu
 import { useOpcoesDiasSuspensao } from '../../services/constant/hook/use-opcoes-dias-suspensao';
 import { formatarCpf, formatarCpfOuMotivoOculto, formatarData, instanteDaquiADias } from '../../services/constant/util/formatacao.util';
 import { CamposVinculoPerfil } from '../6-perfil-pesquisador/campos-vinculo-perfil';
+import { LinksAcademicosDoUsuario } from '../7-link-academico/links-academicos-do-usuario';
 import { SecaoModeracaoPesquisador } from '../6-perfil-pesquisador/secao-moderacao-pesquisador';
 import { SecaoModeracao } from './secao-moderacao';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { UsuarioPapelResponse } from '../../services/2-papel-permissao/type/papel-permissao.type';
 import type { TipoVinculo, TituloAcademico } from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
-import type { LinkAcademicoRequestCreate, LinkAcademicoResponse } from '../../services/7-link-academico/type/link-academico.type';
 import { EstadoVazio } from '../../components/crud/estado-vazio';
 
 interface ModalAlterarUsuarioProps {
@@ -79,6 +74,9 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
     [idUsuario],
   );
   const { ocupado: salvando, executar: executarSalvando } = useEnvio(reportarErro, limparErro);
+  // A nota mostrada vem da busca de quando o modal abriu; depois de salvar vínculo/título ou mexer num link, o banco
+  // a recalcula e esta é a nova.
+  const [scoreNovo, setScoreNovo] = useState<number | null>(null);
   const { ocupado: desbloqueando, executar: executarDesbloqueando } = useEnvio(reportarErro, limparErro);
   const { ocupado: redefinindoSenhaDev, executar: executarRedefinindoSenhaDev } = useEnvio(reportarErro, limparErro);
   const [parte, setParte] = useState<Parte>('geral');
@@ -86,6 +84,7 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
 
   // Conta: o que está gravado (`base`) e o que está sendo editado.
   const [base, setBase] = useState({ nome: '', avatarUrl: null as string | null });
+  const { lerScore, avisarScore } = useAvisoScore(auth.authFetch, idUsuario, base.nome);
   const [nome, setNome] = useState('');
   const [trocandoSenha, setTrocandoSenha] = useState(false);
   const [novaSenha, setNovaSenha] = useState('');
@@ -175,6 +174,8 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
         setFotoNova(undefined);
         conta.limpar();
       }
+      // Vínculo e título contam na pontuação: lida antes e depois, para o aviso dizer quanto mudou.
+      const scoreAntes = sujoPerfil && formPerfil ? await lerScore() : null;
       if (sujoPerfil && formPerfil) {
         await perfilPesquisadorApi.atualizar(auth.authFetch, idUsuario, {
           tipoVinculo: formPerfil.tipoVinculo,
@@ -185,6 +186,11 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
         perfil.limpar();
       }
       mostrar('Usuário alterado com sucesso.', `ID: ${idUsuario} foi alterado`);
+      if (scoreAntes !== null) {
+        const scoreDepois = await lerScore();
+        avisarScore(scoreAntes, scoreDepois);
+        if (scoreDepois !== null) setScoreNovo(scoreDepois);
+      }
       aoAtualizado();
     });
   };
@@ -428,7 +434,7 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
                     aoAlterarTituloAcademico={(titulo) => setFormPerfil({ ...formPerfil, tituloAcademico: titulo })}
                     erroVinculoInstitucional={perfil.erroDe('vinculoInstitucional')}
                   />
-                  <CaixaSomenteLeitura rotulo="Score atual" valor={perfilPesquisador.scoreAtual} />
+                  <CaixaSomenteLeitura rotulo="Score atual" valor={scoreNovo ?? perfilPesquisador.scoreAtual} />
                 </SecaoFicha>
               </div>
             )}
@@ -454,7 +460,7 @@ export function ModalAlterarUsuario({ auth, idUsuario, aoFechar, aoAtualizado }:
 
           {perfilPesquisador && (
             <div className={ve('pesquisador') + ' space-y-6'}>
-              <LinksAcademicosDoUsuario auth={auth} idUsuario={idUsuario} />
+              <LinksAcademicosDoUsuario auth={auth} idUsuario={idUsuario} nomeUsuario={base.nome} aoMudarScore={setScoreNovo} />
             </div>
           )}
 
@@ -699,81 +705,6 @@ function PapeisDoUsuario({ auth, idUsuario, papeis, aoMudarPapeis, aoAtualizado 
             {ocupado === 'atribuir' ? 'Atribuindo...' : 'Atribuir'}
           </button>
         </div>
-      )}
-    </div>
-  );
-}
-
-interface LinksAcademicosDoUsuarioProps {
-  auth: Pick<UseAuthReturn, 'authFetch'>;
-  idUsuario: number;
-}
-
-// Links acadêmicos de outro pesquisador. Cada ação grava na hora; o erro vai no aviso flutuante (a tabela não tem
-// texto de erro próprio).
-function LinksAcademicosDoUsuario({ auth, idUsuario }: LinksAcademicosDoUsuarioProps) {
-  const { mostrar } = useToast();
-  const { reportarErro } = useErroToast();
-  const limiteLinks = useConfiguracoes().obterNumero('limite_links_academicos_perfil', 5);
-  const { dado, recarregar } = useBuscar(() => linkAcademicoApi.listarDoUsuario(auth.authFetch, idUsuario), [idUsuario]);
-  const links = dado ?? [];
-  // Só os tipos que podem ir no perfil do pesquisador.
-  const { dado: tiposLink } = useBuscar(() => tipoLinkApi.listar(auth.authFetch, { escopo: 'perfil' }), []);
-  const [verExemplos, setVerExemplos] = useState(false);
-
-  // Chamadas da tabela (components/crud/tabelas/1-tabela-links-academicos.tsx): devolvem true quando deu certo.
-  const executar = async (acao: () => Promise<unknown>, mensagem: string): Promise<boolean> => {
-    try {
-      await acao();
-      recarregar();
-      mostrar(mensagem);
-      return true;
-    } catch (erroRequisicao) {
-      reportarErro(erroRequisicao);
-      return false;
-    }
-  };
-
-  const adicionarLink = (dados: LinkAcademicoRequestCreate) =>
-    executar(() => linkAcademicoApi.criarParaOutro(auth.authFetch, idUsuario, dados), 'Link acadêmico adicionado com sucesso.');
-
-  const removerLink = (link: LinkAcademicoResponse) =>
-    executar(() => linkAcademicoApi.remover(auth.authFetch, link.idLinkAcademico), 'Link acadêmico excluído com sucesso.');
-
-  // O tipo não muda depois de criado: o PATCH leva url e rótulo (rótulo apagado vai como null; a ordem fica).
-  const salvarLink = (link: LinkAcademicoResponse, { url, rotulo }: LinkAcademicoRequestCreate) =>
-    executar(
-      () => linkAcademicoApi.alterar(auth.authFetch, link.idLinkAcademico, { url, rotulo: rotulo ? rotulo : null }),
-      'Link acadêmico alterado com sucesso.',
-    );
-
-  return (
-    <div>
-      <h3 className="titulo-bloco titulo-bloco--linha">
-        Links acadêmicos ({links.length} de {limiteLinks})
-      </h3>
-      <TabelaLinksAcademicos
-        links={links}
-        tiposLink={tiposLink ?? []}
-        edicao={{
-          podeAdicionar: links.length < limiteLinks,
-          aoAdicionar: adicionarLink,
-          aoSalvar: salvarLink,
-          aoExcluir: (link) => void removerLink(link),
-        }}
-      />
-      <BotaoMostrarEsconder aberto={verExemplos} aoAlternar={() => setVerExemplos((v) => !v)} rotulo="exemplos de link" className="mt-3" />
-      {verExemplos && (
-        <ul className="legenda mt-2 space-y-1">
-          {(tiposLink ?? []).map(
-            (tipo) =>
-              EXEMPLO_LINK_POR_TIPO[tipo.codigo] && (
-                <li key={tipo.codigo} className="select-all">
-                  {EXEMPLO_LINK_POR_TIPO[tipo.codigo]}
-                </li>
-              ),
-          )}
-        </ul>
       )}
     </div>
   );

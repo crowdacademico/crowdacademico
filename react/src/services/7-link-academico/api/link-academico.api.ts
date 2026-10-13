@@ -12,6 +12,9 @@ export const linkAcademicoApi = {
   caminhoListarDoUsuario: (idUsuario: number) => `/link-academico?idUsuario=${idUsuario}`,
   listarDoUsuario: (authFetch: AuthFetch, idUsuario: number): Promise<LinkAcademicoResponse[]> =>
     authFetch(linkAcademicoApi.caminhoListarDoUsuario(idUsuario)).then(tratarResposta<LinkAcademicoResponse[]>),
+  // POST /link-academico: cria o link de quem está logado (o próprio pesquisador).
+  criar: (authFetch: AuthFetch, dados: LinkAcademicoRequestCreate): Promise<LinkAcademicoResponse> =>
+    authFetch('/link-academico', { method: 'POST', body: JSON.stringify(dados) }).then(tratarResposta<LinkAcademicoResponse>),
   // POST /link-academico/:idUsuario: cria o link em nome de outra pessoa (o admin editando um usuário).
   criarParaOutro: (authFetch: AuthFetch, idUsuario: number, dados: LinkAcademicoRequestCreate): Promise<LinkAcademicoResponse> =>
     authFetch(`/link-academico/${idUsuario}`, { method: 'POST', body: JSON.stringify(dados) }).then(

@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { GenericTable } from '../../components/crud/generic-table';
 import { BlocoLogAuditoria } from '../../components/crud/bloco-log-auditoria';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
-import { ORDEM_ROTULOS_STATUS_CAMPANHA, rotuloStatusCampanha } from '../../services/12-campanha/constants/status-campanha.constants';
+import { emBreve, ORDEM_ROTULOS_STATUS_CAMPANHA, rotuloStatusCampanha } from '../../services/12-campanha/constants/status-campanha.constants';
 import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
 import { ModalConsultarCampanha } from './modal-consultar-campanha';
 import { renderizarStatus } from './colunas-campanha';
@@ -28,8 +28,12 @@ export function ListarCampanhas({ auth }: PropsPagina) {
   // ("atenção") fica só na fila de aprovação (aprovar-campanhas.tsx), onde a decisão acontece.
   const listarCampanhas = useCallback(async (): Promise<CampanhaLinha[]> => {
     const campanhas = await campanhaApi.listar(auth.authFetch);
+    // Primeiro as "Em breve", depois as no ar (é o que a gestão mais acompanha); as outras seguem na ordem de antes.
+    // Clicar no título de uma coluna continua ordenando por ela.
+    const prioridade = (campanha: CampanhaResponse) => (emBreve(campanha) ? 0 : campanha.status === 'ativo' ? 1 : 2);
+    const ordenadas = [...campanhas].sort((a, b) => prioridade(a) - prioridade(b));
 
-    return campanhas.map((campanha) => ({
+    return ordenadas.map((campanha) => ({
       ...campanha,
       status: rotuloStatusCampanha(campanha),
       statusOriginal: campanha.status,

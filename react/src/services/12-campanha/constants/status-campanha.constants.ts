@@ -37,7 +37,7 @@ const CLASSE_BADGE_STATUS_CAMPANHA: Record<StatusCampanha, string> = {
   rascunho: 'badge-neutro',
   aguardando_aprovacao: 'badge-aviso',
   ativo: 'badge-sucesso',
-  sucesso: 'badge-sucesso',
+  sucesso: 'badge-concluido',
   nao_atingido: 'badge-neutro',
   rejeitado: 'badge-erro',
   encerrado: 'badge-neutro',

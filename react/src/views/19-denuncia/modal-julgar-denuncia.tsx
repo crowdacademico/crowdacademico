@@ -145,14 +145,7 @@ export function ModalJulgarDenuncia({ authFetch, denuncia, aoFechar, aoJulgada, 
       >
         <div className="space-y-6">
           <SecaoFicha titulo="Denunciado" destaque>
-            <CampoFicha rotulo="ID do denunciante" valor={denuncia.idUsuario} />
-            <CampoFicha rotulo="Denunciante" valor={denuncia.nomeDenunciante} />
-            <CampoFicha rotulo="E-mail" valor={denuncia.emailDenunciante} />
-            <CampoFicha rotulo="Data" valor={formatarDataHora(denuncia.criadoEm)} />
             <CampoFicha rotulo="Motivo" valor={denuncia.motivo} largura="cheia" />
-          </SecaoFicha>
-
-          <SecaoFicha titulo="Denunciante" destaque>
             {denuncia.idCampanhaAlvo !== null && (
               <>
                 <CampoFicha rotulo="ID da campanha" valor={denuncia.idCampanhaAlvo} />
@@ -166,6 +159,13 @@ export function ModalJulgarDenuncia({ authFetch, denuncia, aoFechar, aoJulgada, 
               </>
             )}
             <CampoFicha rotulo="Detalhes adicionais" valor={denuncia.relato} largura="cheia" />
+          </SecaoFicha>
+
+          <SecaoFicha titulo="Denunciante" destaque>
+            <CampoFicha rotulo="ID do denunciante" valor={denuncia.idUsuario} />
+            <CampoFicha rotulo="Denunciante" valor={denuncia.nomeDenunciante} />
+            <CampoFicha rotulo="E-mail" valor={denuncia.emailDenunciante} />
+            <CampoFicha rotulo="Data" valor={formatarDataHora(denuncia.criadoEm)} />
           </SecaoFicha>
 
           {/* A decisão já tomada vem antes da contestação, que é contra ela; aparece também ao decidir a contestação. */}

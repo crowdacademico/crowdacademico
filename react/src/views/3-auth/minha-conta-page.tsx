@@ -788,6 +788,7 @@ function AbaAcademico({ auth }: AbaAcademicoProps) {
           <ModalUpgradePesquisador
             auth={auth}
             idUsuarioAlvo={auth.usuario.idUsuario}
+            nomeAlvo={auth.usuario.nome}
             aoFechar={() => setFazendoUpgrade(false)}
             aoConcluido={(perfilCriado) => {
               setPerfil(perfilCriado);

@@ -36,11 +36,11 @@ SELECT 'lattes',      'Currículo Lattes válido informado',  8, id_score_config
 INSERT INTO score_config (nome, descricao, peso, id_pai)
 SELECT 'orcid',       'ORCID iD informado',                 8, id_score_config FROM score_config WHERE nome = 'perfil_academico';
 INSERT INTO score_config (nome, descricao, peso, id_pai)
-SELECT 'linkedin',    'LinkedIn ou site acadêmico',          4, id_score_config FROM score_config WHERE nome = 'perfil_academico';
+SELECT 'linkedin',    'Link (ResearchGate, LinkedIn, GitHub...)', 6, id_score_config FROM score_config WHERE nome = 'perfil_academico';
 INSERT INTO score_config (nome, descricao, peso, id_pai)
-SELECT 'instituicao', 'Instituição de vínculo preenchida',   5, id_score_config FROM score_config WHERE nome = 'perfil_academico';
+SELECT 'instituicao', 'Instituição de vínculo preenchida',   4, id_score_config FROM score_config WHERE nome = 'perfil_academico';
 INSERT INTO score_config (nome, descricao, peso, id_pai)
-SELECT 'titulo',      'Título acadêmico informado',          5, id_score_config FROM score_config WHERE nome = 'perfil_academico';
+SELECT 'titulo',      'Título acadêmico informado',          4, id_score_config FROM score_config WHERE nome = 'perfil_academico';
 
 INSERT INTO score_config (nome, descricao, peso, id_pai)
 SELECT 'campanhas_concluidas', 'Campanhas concluídas e encerradas', 15, id_score_config FROM score_config WHERE nome = 'historico_plataforma';
@@ -455,10 +455,11 @@ INSERT INTO motivo_denuncia (descricao, tipo) VALUES
 ('Vínculo institucional falso ou não comprovável',           'perfil');
 
 -- [07-D-6] termos_de_uso / usuario_termo
--- Sustentam o RF-011 (aceite obrigatório no cadastro); o texto real dos termos entra quando a equipe/jurídico
--- definir. v1 é a versão vigente durante todo o período em que os usuários deste seed se cadastraram (por isso
--- é ela que aparece em usuario_termo, abaixo). v2 é a versão atual, publicada depois e ainda sem aceite
--- registrado: cenário realista de "termo novo no ar, usuários antigos ainda não foram re-avisados".
+-- Sustentam o RF-011 (aceite obrigatório no cadastro). Três versões de cada termo, em ordem de id: 1 e 2 são as
+-- antigas (v1, de 2024, aceitas por quem se cadastrou ou fez o upgrade antes da v2), 3 e 4 são as vigentes (v2),
+-- e 5 e 6 são rascunhos da próxima versão (v3), sem aceite. Aqui entram só as vigentes, com id 3 e 4 escritos à
+-- mão para deixar o 1 e o 2 às antigas, que são da demonstração ([07-D-6], versões antigas). Nenhum texto é
+-- jurídico validado: precisa de revisão antes de qualquer uso em produção.
 --
 -- PEGADINHA (vale para o NestJS, ao publicar uma versão nova): publicar v2 sem antes desativar v1 quebra com o
 -- erro do índice parcial uq_termos_uso_ativo (02), que só permite 1 linha ativa POR TIPO. O UPDATE que desativa
@@ -467,11 +468,11 @@ INSERT INTO motivo_denuncia (descricao, tipo) VALUES
 -- `tipo` explícito em toda linha abaixo: o sistema sempre tem 1 versão vigente de cada termo, o da conta
 -- ('cadastro', que cobre também as contribuições) e o de pesquisador ('upgrade_pesquisador'), cada um com a
 -- sua PRÓPRIA versão/histórico.
--- v5: o item 5.4 passa a dizer que o IP de onde a contribuição foi feita é registrado (inclusive na anônima) e
--- guardado por 5 anos (configuracoes.ip_aceite_contribuicao_retencao_dias). Versão nova, não edição da v4: versão
--- já aceita não se altera, e toda conta aceita a v5 no próximo login.
-INSERT INTO termos_de_uso (tipo, versao, conteudo, ativo, criado_em) VALUES
-('cadastro', 'v5-2026-10-03', 'TERMOS DE USO E POLÍTICA DE PRIVACIDADE - CROWDACADÊMICO
+-- v2 da conta: em relação à v1, o item 5.4 diz que o IP de onde a contribuição foi feita é registrado (inclusive na
+-- anônima) e guardado por 5 anos (configuracoes.ip_aceite_contribuicao_retencao_dias). Versão nova, não edição da
+-- v1: versão já aceita não se altera, e toda conta aceita a v2 no próximo login.
+INSERT INTO termos_de_uso (id_termo, tipo, versao, conteudo, ativo, criado_em) VALUES
+(3, 'cadastro', 'v2-2026-10-03', 'TERMOS DE USO E POLÍTICA DE PRIVACIDADE - CROWDACADÊMICO
 
 Estes Termos valem para a conta e para todas as contribuições feitas na plataforma. O aceite é registrado no cadastro e novamente a cada contribuição, com a versão vigente naquele momento.
 
@@ -513,11 +514,11 @@ Estes Termos podem ser atualizados periodicamente. A versão vigente é sempre a
 Fica eleito o foro da comarca do domicílio do usuário para dirimir eventuais controvérsias, conforme o Código de Defesa do Consumidor, quando aplicável.', TRUE, '2026-10-03 00:00:00')
 ON CONFLICT (tipo, versao) DO NOTHING;
 
--- v3: a seção 4 explica como a pontuação é calculada (as quatro dimensões, as denúncias procedentes contra o perfil
--- e contra as campanhas, o encerramento direto fora do histórico) e o pedido de revisão (LGPD, art. 20). Versão
--- nova, não edição da v2: versão já aceita não se altera.
-INSERT INTO termos_de_uso (tipo, versao, conteudo, ativo, criado_em) VALUES
-('upgrade_pesquisador', 'v3-2026-10-03', 'TERMOS DE UPGRADE DE PERFIL DE PESQUISADOR - CROWDACADÊMICO
+-- v2 do pesquisador: em relação à v1, a seção 4 explica como a pontuação é calculada (as quatro dimensões, as
+-- denúncias procedentes contra o perfil e contra as campanhas, o encerramento direto fora do histórico) e o pedido
+-- de revisão (LGPD, art. 20). Versão nova, não edição da v1: versão já aceita não se altera.
+INSERT INTO termos_de_uso (id_termo, tipo, versao, conteudo, ativo, criado_em) VALUES
+(4, 'upgrade_pesquisador', 'v2-2026-10-03', 'TERMOS DE UPGRADE DE PERFIL DE PESQUISADOR - CROWDACADÊMICO
 
 1. OBJETO
 Este termo é exibido no momento em que um usuário comum solicita o upgrade de sua conta para perfil de pesquisador, complementando os Termos de Uso gerais aceitos no cadastro.
@@ -541,6 +542,8 @@ O CPF é armazenado de forma cifrada e nunca exibido publicamente em sua forma c
 
 6. ALTERAÇÕES DESTE TERMO
 Este termo pode ser atualizado periodicamente; a versão vigente no momento da solicitação do upgrade é a que se aplica.', TRUE, '2026-10-03 00:00:00');
+-- Com id escrito à mão, a sequência não anda sozinha: a próxima versão criada recebe o id 5.
+SELECT setval(pg_get_serial_sequence('termos_de_uso', 'id_termo'), (SELECT max(id_termo) FROM termos_de_uso));
 
 
 -- [07-C-5] configuracoes: por que este bloco vem depois de usuario (ver DOCUMENTACAO_BD.md)
@@ -841,56 +844,12 @@ JOIN papel p ON p.codigo = 'usuario'
 ON CONFLICT DO NOTHING;
 
 -- [07-D-6] termos_de_uso (versões antigas) / usuario_termo
--- As versões vigentes estão na parte de referência deste arquivo; aqui entram as antigas, já desativadas, que os usuários
--- deste seed aceitaram quando se cadastraram (o histórico de aceites aponta para elas pela data).
-INSERT INTO termos_de_uso (tipo, versao, conteudo, ativo, criado_em) VALUES
-('cadastro', 'v1-2024-01-01', '[PLACEHOLDER] Texto dos Termos de Uso e Política de Privacidade - versão 1. Conteúdo jurídico definitivo entra aqui quando a equipe/jurídico validar.', FALSE, '2024-01-01 00:00:00');
-
-INSERT INTO termos_de_uso (tipo, versao, conteudo, ativo, criado_em) VALUES
-('cadastro', 'v2-2025-01-01', '[PLACEHOLDER] Texto dos Termos de Uso e Política de Privacidade - versão 2 (revisão anual). Conteúdo jurídico definitivo entra aqui quando a equipe/jurídico validar.', FALSE, '2025-01-01 00:00:00');
-
--- v3: primeira versão com texto de rascunho REALISTA (não é lorem ipsum, mas TAMBÉM NÃO é texto jurídico
--- validado: inspirado na LGPD e em termos de plataformas de financiamento coletivo reais, para parar de mostrar
--- "[PLACEHOLDER]" a quem testa o sistema; precisa de revisão jurídica antes de qualquer uso em produção).
--- v1/v2 continuam [PLACEHOLDER] de propósito: são histórico, e texto de versão já substituída não se corrige
--- depois (mesma regra que a tela de administração aplica a qualquer versão nova; ver
--- views/5-termo-uso/criar-termo-uso.tsx).
-INSERT INTO termos_de_uso (tipo, versao, conteudo, ativo, criado_em) VALUES
-('cadastro', 'v3-2026-09-13', 'TERMOS DE USO E POLÍTICA DE PRIVACIDADE - CROWDACADÊMICO
-
-1. OBJETO
-O CrowdAcadêmico é uma plataforma de financiamento coletivo (crowdfunding) dedicada exclusivamente a projetos de pesquisa científica e tecnológica brasileira. Estes Termos regem o uso da plataforma por pesquisadores, apoiadores e demais usuários cadastrados.
-
-2. CADASTRO E CONTA
-O cadastro exige informações verdadeiras, completas e atualizadas. Cada pessoa pode manter apenas uma conta ativa. O usuário é responsável por manter a confidencialidade de sua senha e por toda atividade realizada em sua conta.
-
-3. PERFIL DE PESQUISADOR
-Para submeter e gerenciar campanhas, o usuário deve solicitar o upgrade para perfil de pesquisador, informando CPF, vínculo institucional (quando aplicável) e título acadêmico. Essas informações são usadas exclusivamente para validação e exibição pública do perfil.
-
-4. CAMPANHAS E CONTRIBUIÇÕES
-Toda campanha passa por aprovação administrativa antes de ficar visível ao público. O CrowdAcadêmico não garante o sucesso de nenhuma campanha nem se responsabiliza pelo uso dos recursos arrecadados após o repasse ao pesquisador responsável. Contribuições são voluntárias e, uma vez processadas, seguem a política de reembolso vigente na campanha específica.
-
-5. PROPRIEDADE INTELECTUAL
-O conteúdo publicado por pesquisadores (descrição de projeto, atualizações, materiais anexados) permanece de titularidade do autor. Ao publicar, o pesquisador concede ao CrowdAcadêmico licença não exclusiva para exibição pública do conteúdo na plataforma, pelo tempo em que a campanha ou o perfil permanecerem ativos.
-
-6. PROTEÇÃO DE DADOS PESSOAIS (LGPD)
-O tratamento de dados pessoais nesta plataforma segue a Lei Geral de Proteção de Dados Pessoais (Lei 13.709/2018). Coletamos apenas os dados necessários para cadastro, validação de identidade, processamento de contribuições e cumprimento de obrigações legais. O titular dos dados tem direito a: confirmação da existência de tratamento; acesso aos dados; correção de dados incompletos ou desatualizados; anonimização, bloqueio ou eliminação de dados desnecessários; portabilidade; e revogação do consentimento, a qualquer momento, mediante solicitação pelos canais oficiais da plataforma. Dados sensíveis, como CPF, são armazenados de forma protegida e nunca exibidos publicamente em sua forma completa.
-
-7. MODERAÇÃO E DENÚNCIAS
-A equipe administrativa pode suspender ou encerrar campanhas, perfis ou contas que violem estes Termos, mediante denúncia fundamentada ou verificação própria, assegurado o direito de manifestação do usuário afetado.
-
-8. ENCERRAMENTO DE CONTA
-O usuário pode solicitar o encerramento de sua conta a qualquer momento. Dados vinculados a obrigações legais ou financeiras, como histórico de contribuições, podem ser mantidos pelo prazo exigido pela legislação aplicável, mesmo após o encerramento.
-
-9. ALTERAÇÕES DESTES TERMOS
-Estes Termos podem ser atualizados periodicamente. A versão vigente é sempre a mais recente publicada nesta tela, e o usuário é notificado para revisar e reaceitar o texto atualizado.
-
-10. FORO
-Fica eleito o foro da comarca do domicílio do usuário para dirimir eventuais controvérsias, conforme o Código de Defesa do Consumidor, quando aplicável.', FALSE, '2026-09-13 00:00:00');
-
--- v4 (26-09-2026): o termo da CONTA passou a cobrir também as contribuições. Substituída pela v5, que cita o IP.
-INSERT INTO termos_de_uso (tipo, versao, conteudo, ativo, criado_em) VALUES
-('cadastro', 'v4-2026-09-26', 'TERMOS DE USO E POLÍTICA DE PRIVACIDADE - CROWDACADÊMICO
+-- As versões vigentes (id 3 e 4) estão na parte de referência deste arquivo; aqui entram as antigas, já
+-- desativadas (id 1 e 2), que os usuários deste seed aceitaram quando se cadastraram ou fizeram o upgrade (o
+-- histórico de aceites aponta para elas pela data). Os rascunhos da próxima versão (id 5 e 6) entram depois de
+-- todos os aceites ([07-H-3]).
+INSERT INTO termos_de_uso (id_termo, tipo, versao, conteudo, ativo, criado_em) VALUES
+(1, 'cadastro', 'v1-2024-01-01', 'TERMOS DE USO E POLÍTICA DE PRIVACIDADE - CROWDACADÊMICO
 
 Estes Termos valem para a conta e para todas as contribuições feitas na plataforma. O aceite é registrado no cadastro e novamente a cada contribuição, com a versão vigente naquele momento.
 
@@ -929,17 +888,8 @@ O usuário pode solicitar o encerramento de sua conta a qualquer momento. Dados 
 Estes Termos podem ser atualizados periodicamente. A versão vigente é sempre a mais recente publicada, e o usuário é notificado para revisar e aceitar o texto atualizado.
 
 11. FORO
-Fica eleito o foro da comarca do domicílio do usuário para dirimir eventuais controvérsias, conforme o Código de Defesa do Consumidor, quando aplicável.', FALSE, '2026-09-26 00:00:00')
-ON CONFLICT (tipo, versao) DO NOTHING;
-
--- Termo de quem vira pesquisador. v1 é [PLACEHOLDER] como a v1/v2 do termo da conta: é a que valia quando os
--- pesquisadores do seed fizeram o upgrade (2024), por isso é ela que aparece nos aceites deles. v2 foi o primeiro
--- rascunho REALISTA (substituído pela v3, na parte de referência); nenhum dos dois é texto jurídico validado.
-INSERT INTO termos_de_uso (tipo, versao, conteudo, ativo, criado_em) VALUES
-('upgrade_pesquisador', 'v1-2024-01-01', '[PLACEHOLDER] Texto do Termo de Upgrade de Perfil de Pesquisador - versão 1. Conteúdo jurídico definitivo entra aqui quando a equipe/jurídico validar.', FALSE, '2024-01-01 00:00:00');
-
-INSERT INTO termos_de_uso (tipo, versao, conteudo, ativo, criado_em) VALUES
-('upgrade_pesquisador', 'v2-2026-09-13', 'TERMOS DE UPGRADE DE PERFIL DE PESQUISADOR - CROWDACADÊMICO
+Fica eleito o foro da comarca do domicílio do usuário para dirimir eventuais controvérsias, conforme o Código de Defesa do Consumidor, quando aplicável.', FALSE, '2024-01-01 00:00:00'),
+(2, 'upgrade_pesquisador', 'v1-2024-01-01', 'TERMOS DE UPGRADE DE PERFIL DE PESQUISADOR - CROWDACADÊMICO
 
 1. OBJETO
 Este termo é exibido no momento em que um usuário comum solicita o upgrade de sua conta para perfil de pesquisador, complementando os Termos de Uso gerais aceitos no cadastro.
@@ -957,7 +907,7 @@ O perfil de pesquisador está sujeito ao sistema de pontuação (score) da plata
 O CPF é armazenado de forma cifrada e nunca exibido publicamente em sua forma completa, conforme a Lei 13.709/2018 (LGPD). O vínculo institucional e o título acadêmico são exibidos publicamente no perfil, por serem informações de natureza profissional/acadêmica relevantes para os apoiadores.
 
 6. ALTERAÇÕES DESTE TERMO
-Este termo pode ser atualizado periodicamente; a versão vigente no momento da solicitação do upgrade é a que se aplica.', FALSE, '2026-09-13 00:00:00');
+Este termo pode ser atualizado periodicamente; a versão vigente no momento da solicitação do upgrade é a que se aplica.', FALSE, '2024-01-01 00:00:00');
 
 -- Cada usuário aceitou, no próprio cadastro (aceito_em = pouco depois de usuario.criado_em), a versão do termo
 -- da conta vigente naquele momento.
@@ -1432,6 +1382,17 @@ SELECT c.id_contribuicao,
         ORDER BY t.criado_em DESC LIMIT 1),
        c.criado_em, '187.10.20.30'
 FROM contribuicao c;
+
+-- [07-H-4] termos_de_uso: rascunhos da próxima versão (v3, id 5 e 6), feitos a partir da vigente com uma seção nova.
+-- Ainda não publicados (ativo = FALSE) e sem aceite: a tela mostra "Rascunho" e deixa editar e excluir. Entram
+-- depois de todos os aceites porque um rascunho não muda a versão que valia em cada data. A quebra de linha da
+-- seção nova (\1) é a do próprio texto: o arquivo pode estar salvo com quebra do Windows ou do Linux.
+INSERT INTO termos_de_uso (tipo, versao, conteudo, ativo, criado_em)
+SELECT tipo, 'v3-rascunho', regexp_replace(conteudo, '11\. FORO(\r?\n)', '11. COMUNICAÇÕES\1As comunicações da plataforma (versão nova destes Termos, decisão de denúncia, encerramento de campanha apoiada) são enviadas para o e-mail cadastrado. O usuário é responsável por mantê-lo atualizado.\1\112. FORO\1'), FALSE, NOW()
+FROM termos_de_uso WHERE tipo = 'cadastro' AND ativo;
+INSERT INTO termos_de_uso (tipo, versao, conteudo, ativo, criado_em)
+SELECT tipo, 'v3-rascunho', regexp_replace(conteudo, '6\. ALTERAÇÕES DESTE TERMO(\r?\n)', '6. CONTESTAÇÃO DE DENÚNCIAS\1O pesquisador pode contestar uma vez cada denúncia julgada procedente contra o perfil ou contra uma campanha dele. A contestação é decidida por outra pessoa da moderação, nunca por quem julgou a denúncia.\1\17. ALTERAÇÕES DESTE TERMO\1'), FALSE, NOW()
+FROM termos_de_uso WHERE tipo = 'upgrade_pesquisador' AND ativo;
 
 -- [07-H-2] auditoria_financeira
 INSERT INTO auditoria_financeira (id_contribuicao, valor, status_novo, status_anterior, evento, timestamp) VALUES

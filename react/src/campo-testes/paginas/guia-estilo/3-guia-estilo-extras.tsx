@@ -184,6 +184,9 @@ export function InterativosGlobais() {
           <button type="button" className="btn btn-sucesso" onClick={() => mostrar('Tudo certo', 'Exemplo de aviso de sucesso.', 'sucesso')}>
             Toast de sucesso
           </button>
+          <button type="button" className="btn btn-secondary" onClick={() => mostrar('Deu certo, mas atenção', 'Exemplo de aviso (ex.: pontos perdidos).', 'aviso')}>
+            Toast de aviso
+          </button>
           <button type="button" className="btn btn-danger" onClick={() => mostrar('Algo deu errado', 'Exemplo de aviso de erro.', 'erro')}>
             Toast de erro
           </button>

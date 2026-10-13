@@ -135,10 +135,16 @@
   /* --cor-borda-sucesso: barra lateral do toast de sucesso, equivalente ao `--cor-borda-erro` acima. Mesmo
      padrão: um tom mais claro (500) que o de texto (600), igual o erro já fazia. */
   --cor-borda-sucesso: var(--color-emerald-500);
+  /* --cor-borda-aviso: barra lateral do toast de aviso (deu certo, mas pede atenção: pontos perdidos). */
+  --cor-borda-aviso: var(--color-amber-600);
   --cor-fundo-aviso: var(--color-amber-100);
   --cor-texto-aviso: #92400e; /* amber-800, 6,37:1 sobre amber-100 (o 700 dá 4,51, no limite) */
   --cor-fundo-info: var(--color-blue-100);
   --cor-texto-info: #1d4ed8; /* blue-700, 5,49:1 sobre blue-100 */
+  /* Concluído com sucesso (campanha que bateu a meta): roxo, como o "merged" do GitHub. Mesma família do selo
+     <dev>, que só aparece no Campo de Testes; o texto é um tom mais escuro. */
+  --cor-fundo-concluido: var(--color-purple-100);
+  --cor-texto-concluido: var(--color-purple-700);
   /* --cor-texto-sobre-cor: texto em cima de uma superfície colorida SÓLIDA (.btn-primary, .btn-danger:hover,
      .btn-sucesso:hover, .btn-dev, a bolha de dica). Fica de fora dos 2 blocos de tema, de propósito: o verde
      da marca, o vermelho de perigo e o roxo de dev continuam a MESMA cor sólida no tema escuro, então o
@@ -224,10 +230,13 @@
   --cor-texto-erro-forte: #fca5a5;
   --cor-borda-erro: #f87171;
   --cor-borda-sucesso: #34d399;
+  --cor-borda-aviso: #fbbf24;
   --cor-fundo-aviso: rgba(217, 119, 6, 0.18);
   --cor-texto-aviso: #fbbf24;
   --cor-fundo-info: rgba(37, 99, 235, 0.18);
   --cor-texto-info: #60a5fa;
+  --cor-fundo-concluido: rgba(139, 92, 246, 0.18);
+  --cor-texto-concluido: #c4b5fd;
   /* Verde do texto no tema escuro, decidido em 02-10-2026: o mais perto da marca entre os que passam do 4,5:1
      (WCAG AA) nos três fundos escuros: página 7,49:1, cartão 6,14:1, elevado 5,33:1. */
   --cor-texto-marca: #2fbf71;
@@ -358,6 +367,10 @@
      único. */
   .borda-sucesso {
     border-color: var(--cor-borda-sucesso);
+  }
+
+  .borda-aviso {
+    border-color: var(--cor-borda-aviso);
   }
 
   .fundo-sucesso {

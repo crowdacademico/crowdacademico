@@ -149,6 +149,8 @@ function Componentes() {
         <p className="rotulo-leitura mb-2">Badges</p>
         <div className="flex flex-wrap gap-2">
           <span className="badge badge-sucesso">sucesso</span>
+          <span className="badge badge-concluido">concluído</span>
+          <span className="badge badge-info">info</span>
           <span className="badge badge-neutro">neutro</span>
           <span className="badge badge-aviso">aviso</span>
           <span className="badge badge-erro">erro</span>

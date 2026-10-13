@@ -46,7 +46,7 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
   const authRegistrado = { authFetch: useAuthFetchRegistrado(auth) };
   const { alterando, setAlterando, consultando, setConsultando, excluindo, setExcluindo, chaveRecarga, recarregar } =
     useCrudModais<PesquisadorLinha>();
-  const [idUsuarioUpgrade, setIdUsuarioUpgrade] = useState<number | null>(null);
+  const [upgrade, setUpgrade] = useState<PesquisadorLinha | null>(null);
   const [denunciando, setDenunciando] = useState<PesquisadorLinha | null>(null);
 
   // Facetas pré-marcadas: Papel com usuário/pesquisador (adianta os testes) e Origem com "teste" (esconde a demo).
@@ -98,7 +98,7 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
         acoes={{
           alterar: setAlterando,
           consultar: setConsultando,
-          upgrade: (linha) => setIdUsuarioUpgrade(linha.idUsuario),
+          upgrade: (linha) => setUpgrade(linha),
           denunciar: setDenunciando,
           excluir: setExcluindo,
         }}
@@ -133,12 +133,13 @@ export function BancadaPesquisador({ auth }: PropsPagina) {
         />
       )}
 
-      {idUsuarioUpgrade !== null && (
+      {upgrade !== null && (
         <ModalUpgradePesquisador
           auth={auth}
-          idUsuarioAlvo={idUsuarioUpgrade}
+          idUsuarioAlvo={upgrade.idUsuario}
+          nomeAlvo={upgrade.nome}
           gerarCpfDeTeste={gerarCpfValido}
-          aoFechar={() => setIdUsuarioUpgrade(null)}
+          aoFechar={() => setUpgrade(null)}
           aoConcluido={recarregar}
         />
       )}
