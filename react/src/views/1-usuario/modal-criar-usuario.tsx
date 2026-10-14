@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { SecaoFicha } from '../../components/crud/ficha-consulta';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
-import { confirmarSaida, useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
+import { useFecharComAviso } from '../../components/crud/use-alteracao-nao-salva';
 import { SeletorFotoPerfil } from '../../components/input/seletor-foto-perfil';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
@@ -69,10 +69,7 @@ export function ModalCriarUsuario({ auth, aoFechar, aoCriado }: ModalCriarUsuari
 
   // Criar também pergunta antes de fechar com algo digitado, como o Alterar.
   const sujo = nome !== '' || email !== '' || senha !== '' || idImagemPerfil !== null;
-  useAvisoAlteracaoNaoSalva(sujo);
-  const fechar = () => {
-    if (confirmarSaida(sujo)) aoFechar();
-  };
+  const fechar = useFecharComAviso(sujo, aoFechar);
 
   return (
     <ModalFicha

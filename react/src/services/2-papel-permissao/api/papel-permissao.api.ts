@@ -14,7 +14,7 @@ import type {
 export const papelApi = {
   listar: (authFetch: AuthFetch): Promise<PapelResponse[]> =>
     authFetch('/papel').then(tratarResposta<PapelResponse[]>),
-  // Só `nome` é aceito: o `codigo` estável que o RBAC lê nunca é exposto nem editável por aqui, de propósito.
+  // Só `nome` e `descricao`: o `codigo` estável que o RBAC lê nunca é editável por aqui, de propósito.
   atualizar: (
     authFetch: AuthFetch,
     idPapel: number | string,

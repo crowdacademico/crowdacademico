@@ -8,9 +8,8 @@ interface CampoCpfProps {
   onChange: (digitos: string) => void;
   // Ex.: `errosCampo.cpf` de useErroToast (CPF já cadastrado em outra conta).
   erro?: ReactNode;
-  // Ausente por padrão - só as bancadas de teste passam
-  // isso (mesmo raciocínio de `gerarCpfDeTeste` em ModalAlterarUsuario/
-  // ModalUpgradePesquisador: nunca faz sentido num formulário de verdade).
+  // Botão "Gerar CPF válido": ausente por padrão; só o T1 do Campo de Testes passa isso (via
+  // ModalUpgradePesquisador). Nunca faz sentido num formulário de verdade.
   gerarCpfDeTeste?: () => string;
 }
 

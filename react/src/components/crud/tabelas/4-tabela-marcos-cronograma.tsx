@@ -96,13 +96,6 @@ export function TabelaMarcosCronograma({
           return dados ? aoSalvar(marco, dados) : Promise.resolve(false);
         }}
         aoExcluir={aoExcluir}
-        consultar={(marco) => ({
-          titulo: 'Marco de cronograma',
-          secoes: [
-            { titulo: 'Título', conteudo: marco.titulo },
-            { titulo: 'Data prevista', conteudo: formatarData(marco.dataPrevista) },
-          ],
-        })}
       />
     </>
   );

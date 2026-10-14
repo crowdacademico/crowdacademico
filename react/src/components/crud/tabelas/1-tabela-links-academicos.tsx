@@ -1,4 +1,5 @@
 import { TabelaEditavel } from './tabela-editavel';
+import { TextoResumido } from '../texto-resumido';
 import type { ColunaEditavel } from './tabela-editavel';
 import type { TipoLinkResponse } from '../../../services/9-tipo-link/type/tipo-link.type';
 import type {
@@ -17,12 +18,10 @@ interface FormLink {
 
 const FORM_VAZIO: FormLink = { idTipoLink: '', url: '', rotulo: '' };
 
-// URL longa é cortada na linha (a coluna é estreita); a completa aparece em Consultar.
-const TAMANHO_MAXIMO_URL_NA_LINHA = 40;
-
-function truncarUrl(url: string): string {
-  return url.length > TAMANHO_MAXIMO_URL_NA_LINHA ? `${url.slice(0, TAMANHO_MAXIMO_URL_NA_LINHA)} ...` : url;
-}
+// Textos de exemplo dos campos: cada caixa tem o tamanho do próprio texto, não os 20 caracteres padrão do navegador,
+// que seguravam a coluna larga (o cabeçalho já diz "Rótulo", então o exemplo só diz que é opcional).
+const EXEMPLO_URL = 'URL';
+const EXEMPLO_ROTULO = 'Opcional';
 
 function paraDados(form: FormLink): LinkAcademicoRequestCreate {
   return { idTipoLink: Number(form.idTipoLink), url: form.url, ...(form.rotulo ? { rotulo: form.rotulo } : {}) };
@@ -31,14 +30,19 @@ function paraDados(form: FormLink): LinkAcademicoRequestCreate {
 interface TabelaLinksAcademicosProps {
   links: LinkAcademicoResponse[];
   tiposLink: TipoLinkResponse[];
-  // Falso quando o pesquisador já atingiu o limite de links (configuracoes.limite_links_academicos_perfil).
-  podeAdicionar: boolean;
-  aoAdicionar: (dados: LinkAcademicoRequestCreate) => Promise<boolean>;
-  aoSalvar: (link: LinkAcademicoResponse, dados: LinkAcademicoRequestCreate) => Promise<boolean>;
-  aoExcluir: (link: LinkAcademicoResponse) => void;
+  // Sem `edicao`, a tabela só mostra (Consultar Usuário).
+  edicao?: {
+    // Falso quando o pesquisador já atingiu o limite de links (configuracoes.limite_links_academicos_perfil).
+    podeAdicionar: boolean;
+    aoAdicionar: (dados: LinkAcademicoRequestCreate) => Promise<boolean>;
+    aoSalvar: (link: LinkAcademicoResponse, dados: LinkAcademicoRequestCreate) => Promise<boolean>;
+    aoExcluir: (link: LinkAcademicoResponse) => void;
+  };
 }
 
-export function TabelaLinksAcademicos({ links, tiposLink, podeAdicionar, aoAdicionar, aoSalvar, aoExcluir }: TabelaLinksAcademicosProps) {
+const NAO_EDITA = () => Promise.resolve(false);
+
+export function TabelaLinksAcademicos({ links, tiposLink, edicao }: TabelaLinksAcademicosProps) {
   const nomeTipo = (idTipoLink: number) => tiposLink.find((tipo) => tipo.idTipolink === idTipoLink)?.nome;
 
   const colunas: ColunaEditavel<LinkAcademicoResponse, FormLink>[] = [
@@ -60,20 +64,23 @@ export function TabelaLinksAcademicos({ links, tiposLink, podeAdicionar, aoAdici
     },
     {
       rotulo: 'URL',
-      exibir: (link) => <span className="whitespace-nowrap">{truncarUrl(link.url)}</span>,
+      principal: true,
+      // URL longa: uma linha só, com "ler tudo" (o mesmo das outras tabelas); quebra em qualquer ponto ao abrir.
+      exibir: (link) => <TextoResumido texto={link.url} semEspaco />,
       campo: (form, mudar) => (
-        <input type="text" aria-label="URL do link" placeholder="URL" value={form.url} onChange={(evento) => mudar({ url: evento.target.value })} className="input-padrao" />
+        <input type="text" aria-label="URL do link" placeholder={EXEMPLO_URL} size={EXEMPLO_URL.length} value={form.url} onChange={(evento) => mudar({ url: evento.target.value })} className="input-padrao" />
       ),
     },
     {
       rotulo: 'Rótulo',
       centralizada: true,
-      exibir: (link) => link.rotulo ?? '-',
+      exibir: (link) => <TextoResumido texto={link.rotulo} />,
       campo: (form, mudar) => (
         <input
           type="text"
           aria-label="Rótulo do link (opcional)"
-          placeholder="Rótulo (opcional)"
+          placeholder={EXEMPLO_ROTULO}
+          size={EXEMPLO_ROTULO.length}
           value={form.rotulo}
           onChange={(evento) => mudar({ rotulo: evento.target.value })}
           className="input-padrao"
@@ -89,25 +96,13 @@ export function TabelaLinksAcademicos({ links, tiposLink, podeAdicionar, aoAdici
       colunas={colunas}
       formVazio={FORM_VAZIO}
       paraForm={(link) => ({ idTipoLink: String(link.idTipoLink), url: link.url, rotulo: link.rotulo ?? '' })}
-      podeAdicionar={podeAdicionar}
-      classeWrapper="links-academicos-wrapper"
-      aoAdicionar={(form) => (form.idTipoLink && form.url ? aoAdicionar(paraDados(form)) : Promise.resolve(false))}
-      aoSalvar={(link, form) => (form.url ? aoSalvar(link, paraDados({ ...form, idTipoLink: String(link.idTipoLink) })) : Promise.resolve(false))}
-      aoExcluir={aoExcluir}
-      consultar={(link) => ({
-        titulo: nomeTipo(link.idTipoLink) ?? 'Link acadêmico',
-        secoes: [
-          {
-            titulo: 'URL completa:',
-            conteudo: (
-              <a href={link.url} target="_blank" rel="noreferrer" className="texto-link break-all">
-                {link.url}
-              </a>
-            ),
-          },
-          { titulo: 'Rótulo:', conteudo: link.rotulo ?? '(sem rótulo)' },
-        ],
-      })}
+      podeEditar={Boolean(edicao)}
+      podeAdicionar={edicao?.podeAdicionar ?? false}
+      aoAdicionar={(form) => (edicao && form.idTipoLink && form.url ? edicao.aoAdicionar(paraDados(form)) : NAO_EDITA())}
+      aoSalvar={(link, form) =>
+        edicao && form.url ? edicao.aoSalvar(link, paraDados({ ...form, idTipoLink: String(link.idTipoLink) })) : NAO_EDITA()
+      }
+      aoExcluir={(link) => edicao?.aoExcluir(link)}
     />
   );
 }

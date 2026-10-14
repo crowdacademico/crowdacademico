@@ -2,8 +2,9 @@ import { useLayoutEffect, useRef, useState } from 'react';
 
 // Texto que pode ser longo dentro de uma tabela (alvo, título, relato, comentário): ocupa uma linha só e, quando não
 // cabe, ganha um "ler tudo" que expande a própria linha ("ler menos" recolhe). O corte é medido na tela, não por
-// número de letras, então acompanha a largura da coluna e do aparelho.
-export function TextoResumido({ texto }: { texto: string | null }) {
+// número de letras, então acompanha a largura da coluna e do aparelho. `semEspaco`: texto sem espaço (link, e-mail)
+// pode quebrar em qualquer ponto; sem isso ele não quebra, vaza da coluna e o "ler tudo" nunca aparece.
+export function TextoResumido({ texto, semEspaco }: { texto: string | null; semEspaco?: boolean }) {
   const ref = useRef<HTMLSpanElement>(null);
   const [cortado, setCortado] = useState(false);
   const [expandido, setExpandido] = useState(false);
@@ -24,7 +25,7 @@ export function TextoResumido({ texto }: { texto: string | null }) {
     return <>-</>;
   }
   return (
-    <span className={expandido ? 'texto-resumido texto-resumido--aberto' : 'texto-resumido'}>
+    <span className={'texto-resumido' + (expandido ? ' texto-resumido--aberto' : '') + (semEspaco ? ' texto-resumido--sem-espaco' : '')}>
       <span ref={ref} className={expandido ? 'texto-resumido__inteiro' : 'texto-resumido__uma-linha'}>
         {texto}
       </span>

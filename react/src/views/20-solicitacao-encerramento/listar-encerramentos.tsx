@@ -19,6 +19,8 @@ interface PedidoLinha extends Omit<SolicitacaoEncerramentoResponse, 'status'> {
   campanha: string;
   pesquisador: string;
   modelo: string;
+  // Desde quando o pedido espera decisão; vazio depois de decidido ou cancelado.
+  esperandoDesde: string | null;
 }
 
 // Encerramentos (moderação): os pedidos de encerramento antecipado (RF-065), com pesquisador, campanha, modelo,
@@ -37,9 +39,9 @@ export function ListarEncerramentos({ auth }: PropsPagina) {
       campanha: pedido.tituloCampanha ?? '-',
       pesquisador: pedido.nomePesquisador ?? '-',
       modelo: pedido.modeloCampanha ? ROTULO_MODELO_CAMPANHA[pedido.modeloCampanha] : '-',
+      esperandoDesde: pedido.status === 'pendente' ? pedido.solicitadoEm : null,
     }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [auth.authFetch, chaveRecarga]);
+  }, [auth.authFetch]);
 
   const buscarLog = useCallback(
     (pagina: number, tamanho: number) => logAuditoriaApi.listarPorTabela(auth.authFetch, 'solicitacao_encerramento', pagina, tamanho),
@@ -58,17 +60,18 @@ export function ListarEncerramentos({ auth }: PropsPagina) {
           { chave: 'modelo', rotulo: 'modelo', tipo: 'status' },
           { chave: 'valorArrecadado', rotulo: 'arrecadado', tipo: 'dinheiro' },
           { chave: 'contribuicoesConfirmadas', rotulo: 'contribuições', tipo: 'numero' },
-          { chave: 'solicitadoEm', rotulo: 'pedido em', tipo: 'data' },
           {
             chave: 'status',
             rotulo: 'situação',
             tipo: 'status',
             renderizar: (linha: PedidoLinha) => <BadgeStatusEncerramento status={linha.statusOriginal} />,
           },
+          { chave: 'esperandoDesde', rotulo: 'esperando', tipo: 'espera' },
         ]}
         vazio={{ icone: 'fa-flag-checkered', titulo: 'Nenhum pedido de encerramento.', texto: 'Quando um pesquisador pedir para encerrar uma campanha antes do prazo, o pedido aparece aqui.' }}
         chavePrimaria="idSolicitacao"
         listar={listar}
+          chaveRecarga={chaveRecarga}
         acoes={{
           alterar: (linha) => setAberto({ pedido: { ...linha, status: linha.statusOriginal }, somenteLeitura: false }),
           consultar: (linha) => setAberto({ pedido: { ...linha, status: linha.statusOriginal }, somenteLeitura: true }),

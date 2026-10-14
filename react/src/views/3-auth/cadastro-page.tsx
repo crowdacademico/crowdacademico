@@ -5,6 +5,7 @@ import { ModalTermo } from '../../components/crud/modal-termo';
 import type { FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { Campo } from '../../components/input/campo';
+import { BotaoMostrarSenha } from '../../components/input/botao-mostrar-senha';
 import { MedidorSenha } from '../../components/input/medidor-senha';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { termoUsoApi } from '../../services/5-termo-uso/api/termo-uso.api';
@@ -185,14 +186,7 @@ export function CadastroPage({ auth }: PropsPagina) {
                     placeholder="••••••••"
                     autoComplete="new-password"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setMostrarSenha((atual) => !atual)}
-                    aria-label={mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 texto-fraco hover-texto-forte"
-                  >
-                    <i className={'fa-solid ' + (mostrarSenha ? 'fa-eye-slash' : 'fa-eye')} aria-hidden="true"></i>
-                  </button>
+                  <BotaoMostrarSenha mostrando={mostrarSenha} aoAlternar={() => setMostrarSenha((atual) => !atual)} />
                 </div>
 
                 <MedidorSenha senha={senha} />

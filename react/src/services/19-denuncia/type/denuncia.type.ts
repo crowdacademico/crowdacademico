@@ -1,5 +1,13 @@
-import type { StatusCampanha, StatusContestacao, StatusDenuncia, TipoMotivoDenuncia } from '../../constant/type/enums-do-banco.gerado';
-export type { StatusContestacao, StatusDenuncia };
+import type {
+  StatusCampanha,
+  StatusContestacao,
+  StatusDenuncia as StatusDenunciaBanco,
+  TipoMotivoDenuncia,
+} from '../../constant/type/enums-do-banco.gerado';
+export type { StatusContestacao };
+
+// 'em_analise' continua no tipo do banco, fora de uso: o banco recusa (CK_DENUNCIA_SEM_EM_ANALISE).
+export type StatusDenuncia = Exclude<StatusDenunciaBanco, 'em_analise'>;
 
 // Espelha nest/src/19-denuncia/dto/response/denuncia.response.ts.
 export interface DenunciaResponse {
@@ -18,11 +26,16 @@ export interface DenunciaResponse {
   relato: string | null;
   status: StatusDenuncia;
   justificativaModeracao: string | null;
+  idJulgador: number | null;
+  nomeJulgador: string | null;
+  julgadoEm: string | null;
   // Contestação do pesquisador penalizado (RF-033), quando houver.
   contestacao: string | null;
   contestacaoStatus: StatusContestacao | null;
   contestadaEm: string | null;
   justificativaContestacao: string | null;
+  idJulgadorContestacao: number | null;
+  nomeJulgadorContestacao: string | null;
   criadoEm: string;
 }
 

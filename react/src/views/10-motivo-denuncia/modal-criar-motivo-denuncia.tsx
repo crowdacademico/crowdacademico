@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { SecaoFicha } from '../../components/crud/ficha-consulta';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
-import { confirmarSaida, useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
+import { useFecharComAviso } from '../../components/crud/use-alteracao-nao-salva';
 import { Campo } from '../../components/input/campo';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
@@ -52,10 +52,7 @@ export function ModalCriarMotivoDenuncia({ auth, aoFechar, aoCriado }: ModalCria
 
   // Criar também pergunta antes de fechar com algo digitado, como o Alterar.
   const sujo = descricao !== '' || tipo !== '';
-  useAvisoAlteracaoNaoSalva(sujo);
-  const fechar = () => {
-    if (confirmarSaida(sujo)) aoFechar();
-  };
+  const fechar = useFecharComAviso(sujo, aoFechar);
 
   return (
     <ModalFicha

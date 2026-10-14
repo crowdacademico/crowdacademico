@@ -29,6 +29,7 @@ export class PerfilPesquisadorServiceFindOneScore {
         'sp.calculado_em',
         'sp.motivo',
         'sc.nome as nome_dimensao',
+        'sc.descricao as descricao_dimensao',
         'sc.peso',
         'sr.rotulo',
       ])
@@ -48,6 +49,7 @@ export class PerfilPesquisadorServiceFindOneScore {
       rotulo: linhas[0].rotulo,
       dimensoes: linhas.map((linha) => ({
         nomeDimensao: linha.nome_dimensao,
+        rotuloDimensao: linha.descricao_dimensao ?? linha.nome_dimensao,
         pontosObtidos: linha.pontos_obtidos,
         peso: linha.peso,
         calculadoEm: linha.calculado_em,

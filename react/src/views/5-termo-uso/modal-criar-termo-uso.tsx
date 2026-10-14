@@ -3,7 +3,7 @@ import { CaixaTextoLongo } from '../../components/crud/caixa-texto-longo';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { ResumoAlteracoes } from '../../components/crud/resumo-alteracoes';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
-import { confirmarSaida, useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
+import { useFecharComAviso } from '../../components/crud/use-alteracao-nao-salva';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
 import { Campo } from '../../components/input/campo';
@@ -47,10 +47,7 @@ export function ModalCriarTermoUso({ auth, tipoInicial = 'cadastro', aoFechar, a
 
   const mudancas = [versao !== '' && 'versão', conteudo !== '' && 'texto'].filter((item) => item !== false);
   const sujo = mudancas.length > 0;
-  useAvisoAlteracaoNaoSalva(sujo);
-  const fechar = () => {
-    if (confirmarSaida(sujo)) aoFechar();
-  };
+  const fechar = useFecharComAviso(sujo, aoFechar);
 
   // "Publicar" fica sempre clicável: clicando com algo faltando, cada campo mostra o próprio erro.
   const { erroDe, tentarEnviar } = useErrosFormulario(() => ({

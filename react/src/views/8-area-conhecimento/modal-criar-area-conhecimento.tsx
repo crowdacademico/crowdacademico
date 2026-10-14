@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ModalFicha } from '../../components/crud/modal-ficha';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
-import { confirmarSaida, useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
+import { useFecharComAviso } from '../../components/crud/use-alteracao-nao-salva';
 import { Campo } from '../../components/input/campo';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
@@ -66,10 +66,7 @@ export function ModalCriarAreaConhecimento({ auth, aoFechar, aoCriado }: ModalCr
 
   // Criar também pergunta antes de fechar com algo digitado, como o Alterar.
   const sujo = codigoCnpq !== '' || nome !== '' || idPai !== '';
-  useAvisoAlteracaoNaoSalva(sujo);
-  const fechar = () => {
-    if (confirmarSaida(sujo)) aoFechar();
-  };
+  const fechar = useFecharComAviso(sujo, aoFechar);
 
   return (
     <ModalFicha

@@ -46,8 +46,6 @@ interface ModalAlterarCampanhaProps {
   auth: Pick<UseAuthReturn, 'authFetch'>;
   idCampanha: number;
   subtitulo?: string;
-  // Motivo para a campanha inteira ficar só leitura (as de demonstração do seed, na Bancada da Campanha).
-  motivoBloqueio?: string;
   secaoAdmin?: (contexto: ContextoAdminCampanha) => ReactNode;
   // Aberto pelo dono (Minhas Campanhas): com a campanha já publicada, mostra as atualizações (publicar e ocultar) e
   // os comentários recebidos (endossar e excluir).
@@ -108,7 +106,6 @@ export function ModalAlterarCampanha({
   auth,
   idCampanha,
   subtitulo,
-  motivoBloqueio,
   secaoAdmin,
   ehDono = false,
   aoMudar,
@@ -151,7 +148,7 @@ export function ModalAlterarCampanha({
   const historico = dado?.historico ?? [];
 
   const rejeitadaSomenteLeitura = campanha?.status === 'rejeitado' && campanha.somenteLeitura;
-  const edicaoTravada = Boolean(motivoBloqueio) || rejeitadaSomenteLeitura;
+  const edicaoTravada = rejeitadaSomenteLeitura;
   const camposBloqueados = new Set(campanha?.camposBloqueados ?? []);
   const travado = (campo: string) => edicaoTravada || camposBloqueados.has(campo);
   const descreveBloqueio = (campo: string) => (camposBloqueados.has(campo) ? idAvisoBloqueio : undefined);
@@ -276,12 +273,6 @@ export function ModalAlterarCampanha({
             atual={parte}
             aoEscolher={setParte}
           />
-
-          {motivoBloqueio && (
-            <CaixaAviso titulo="Não dá pra alterar esta campanha" tom="erro" icone="fa-lock">
-              <p>{motivoBloqueio}</p>
-            </CaixaAviso>
-          )}
 
           {campanha.status === 'rejeitado' && (
             <CaixaAviso titulo="Campanha rejeitada" tom="erro" icone="fa-circle-exclamation" espacado>

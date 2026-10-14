@@ -13,8 +13,8 @@ import { SelectQueryBuilder } from 'kysely';
 // tabelas pequenas. Quando um módulo de alto volume existir de verdade (contribuicao, notificacao...), ESSE
 // módulo deve escolher um `tamanho` padrão pequeno (ex.: 20) e o React precisa ganhar controles de página que
 // chamem a API de novo a cada troca; troque o padrão aqui só quando isso acontecer, não antes.
-export const TAMANHO_PAGINA_PADRAO = 500;
-export const TAMANHO_PAGINA_MAXIMO = 500;
+const TAMANHO_PAGINA_PADRAO = 500;
+const TAMANHO_PAGINA_MAXIMO = 500;
 
 export interface ParametrosPaginacao {
   pagina?: number;

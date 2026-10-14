@@ -1,0 +1,147 @@
+import { useState } from 'react';
+import { API_BASE_URL } from '../../services/constant/constants/api.constants';
+import { paginarClientSide } from '../../services/constant/util/paginacao.util';
+import { RodapePaginacao } from '../../components/pagination/rodape-paginacao';
+import { BotaoMostrarEsconder } from '../../components/crud/botao-mostrar-esconder';
+import { EstadoVazio } from '../../components/crud/estado-vazio';
+import { quantasLinhasVazias } from '../../components/crud/use-linhas-vazias';
+import { useCampoTestes } from '../servicos/hook/use-campo-testes';
+import type { RegistroChamada } from '../servicos/context/campo-testes-context';
+
+// Prévia de uma linha só, para comparar retornos direto na lista, sem clicar em cada linha: dois GETs aparecem
+// como duas linhas, cada uma com seu retorno visível.
+function formatarPrevia(corpo: unknown): string {
+  if (corpo === null || corpo === undefined) return '(sem corpo)';
+  const texto = JSON.stringify(corpo);
+  return texto.length > 120 ? `${texto.slice(0, 120)}...` : texto;
+}
+
+function montarCurl(chamada: RegistroChamada): string {
+  const partes = [`curl -X ${chamada.metodo} '${API_BASE_URL}${chamada.caminho}'`, `-H 'Content-Type: application/json'`];
+  if (chamada.corpoEnviado) {
+    partes.push(`-d '${JSON.stringify(chamada.corpoEnviado)}'`);
+  }
+  // Sem o Bearer de propósito: o token do ator não fica gravado no
+  // Registro de Chamadas (só o corpo, método, caminho e resultado), então
+  // não tem como reconstruir o cURL 100% autenticado a partir daqui. É
+  // uma limitação consciente, não um esquecimento: gravar token de sessão
+  // num log que fica na tela o tempo todo seria pior que não ter o cURL
+  // pronto.
+  return partes.join(' \\\n  ');
+}
+
+// Gaveta recolhível, num cartão próprio no fim das telas T1, T2 e T4. Substituto direto do Thunder Client: toda
+// chamada feita via useChamadaRegistrada (qualquer tela) aparece aqui, mais recente primeiro. Sem coluna
+// "Ator": só existe um "ator" possível, a sessão real logada.
+export function RegistroChamadas() {
+  const { registroChamadas, limparRegistro } = useCampoTestes();
+  const [aberto, setAberto] = useState(false);
+  const [linhaExpandida, setLinhaExpandida] = useState<string | null>(null);
+  const [pagina, setPagina] = useState(1);
+  const [tamanhoPagina, setTamanhoPagina] = useState<number | 'todos'>(10);
+
+  const { totalPaginas, paginaAtual, itensPagina: registrosPagina } = paginarClientSide(registroChamadas, pagina, tamanhoPagina);
+  // Última página incompleta: linhas vazias até o tamanho escolhido (a mesma regra das tabelas). Aqui toda linha tem a
+  // mesma altura (uma linha só), então a vazia é só uma linha da grade sem conteúdo.
+  const quantasVazias = quantasLinhasVazias(totalPaginas, tamanhoPagina, registrosPagina.length);
+
+  return (
+    <section className="crud-secao">
+      <BotaoMostrarEsconder
+        aberto={aberto}
+        aoAlternar={() => setAberto((atual) => !atual)}
+        rotulo="registro de chamadas"
+        contador={registroChamadas.length}
+      />
+
+      {aberto && (
+        <div className="mt-2">
+          {registroChamadas.length === 0 && (
+            <EstadoVazio compacto icone="fa-list" titulo="Nenhuma chamada registrada ainda nesta aba." texto="Use a tela acima: cada pedido ao servidor aparece aqui." />
+          )}
+
+          {registroChamadas.length > 0 && (
+            <button
+              type="button"
+              className="btn btn-secondary btn-pequeno mb-2"
+              onClick={() => {
+                limparRegistro();
+                setPagina(1);
+              }}
+            >
+              Limpar registro
+            </button>
+          )}
+
+          {registroChamadas.length > 0 && (
+            <div className="registro-chamadas__linha registro-chamadas__linha--cabecalho">
+              <span>Hora</span>
+              <span>Chamada</span>
+              <span>Status</span>
+              <span>ms</span>
+              <span>Recebido</span>
+            </div>
+          )}
+
+          {registrosPagina.map((chamada) => (
+            <div key={chamada.id}>
+              <div
+                className={'registro-chamadas__linha' + (chamada.ok ? '' : ' registro-chamadas__linha--erro')}
+                onClick={() => setLinhaExpandida((atual) => (atual === chamada.id ? null : chamada.id))}
+              >
+                <span>{chamada.hora.toLocaleTimeString('pt-BR')}</span>
+                <span>
+                  {chamada.metodo} {chamada.caminho}
+                </span>
+                <span>{chamada.status}</span>
+                <span>{chamada.ms}ms</span>
+                <span>{formatarPrevia(chamada.corpoRecebido)}</span>
+              </div>
+
+              {linhaExpandida === chamada.id && (
+                <div className="legenda fundo-sutil rounded-md p-3 my-1 texto-herdado">
+                  <p className="enfase mb-1">Enviado</p>
+                  <pre className="overflow-x-auto">{JSON.stringify(chamada.corpoEnviado, null, 2)}</pre>
+                  <p className="enfase mt-2 mb-1">Recebido</p>
+                  <pre className="overflow-x-auto">{JSON.stringify(chamada.corpoRecebido, null, 2)}</pre>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-pequeno mt-2"
+                    onClick={() => {
+                      // `navigator.clipboard` (`no-unnecessary-condition`): o tipo do lib.dom.d.ts afirma
+                      // sempre presente, mas a Clipboard API de verdade só existe em contexto seguro
+                      // (HTTPS/localhost) e falta em navegador mais antigo: proteção real contra o ambiente,
+                      // não código morto.
+                      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+                      void navigator.clipboard?.writeText(montarCurl(chamada));
+                    }}
+                  >
+                    <i className="fa-solid fa-copy" aria-hidden="true"></i> Copiar como cURL
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+
+          {Array.from({ length: quantasVazias }, (_, indice) => (
+            <div key={`vazia-${indice}`} className="registro-chamadas__linha registro-chamadas__linha--vazia" aria-hidden="true">
+              <span>&nbsp;</span>
+            </div>
+          ))}
+
+          <RodapePaginacao
+            total={registroChamadas.length}
+            paginaAtual={paginaAtual}
+            totalPaginas={totalPaginas}
+            tamanhoPagina={tamanhoPagina}
+            aoMudarPagina={setPagina}
+            aoMudarTamanho={(tamanho) => {
+              setTamanhoPagina(tamanho);
+              setPagina(1);
+            }}
+          />
+        </div>
+      )}
+    </section>
+  );
+}

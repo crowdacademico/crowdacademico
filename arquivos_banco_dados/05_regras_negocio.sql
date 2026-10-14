@@ -275,10 +275,11 @@ $$;
 -- Função:     calcular_score_reputacao
 -- Assinatura: (p_id_usuario INT) -> INTEGER
 -- Bloco:      [05-I-2]
--- Regra:      Dimensão 4 - Reputação da Comunidade. Dois subitens: denúncias procedentes contra o PERFIL e contra as
---             CAMPANHAS do pesquisador. Cada um perde a sua parte de forma linear até zerar em
---             score_denuncias_para_zerar denúncias procedentes. Só 'resolvida' (procedente) conta: 'pendente',
---             'em_analise' e 'improcedente' não.
+-- Regra:      Dimensão 4 - Reputação da Comunidade. Dois subitens: denúncias procedentes contra o PERFIL e CAMPANHAS
+--             do pesquisador com pelo menos uma denúncia procedente (várias pessoas denunciando a mesma campanha contam
+--             uma vez: pune a falta, não o número de quem viu). Cada um perde a sua parte de forma linear até zerar em
+--             score_denuncias_para_zerar. Só 'resolvida' (procedente) conta: 'pendente' e
+--             'improcedente' não.
 CREATE OR REPLACE FUNCTION public.calcular_score_reputacao(p_id_usuario INT)
 RETURNS INTEGER
 LANGUAGE plpgsql
@@ -301,7 +302,7 @@ BEGIN
     SELECT count(*) INTO v_perfil
     FROM denuncia d WHERE d.id_pesquisador_alvo = p_id_usuario AND d.status = 'resolvida';
 
-    SELECT count(*) INTO v_campanhas
+    SELECT count(DISTINCT d.id_campanha_alvo) INTO v_campanhas
     FROM denuncia d JOIN campanha c ON c.id_campanha = d.id_campanha_alvo
     WHERE c.id_usuario = p_id_usuario AND d.status = 'resolvida';
 
@@ -865,7 +866,8 @@ DECLARE
         ['orcamento_min_itens',           'orcamento_max_itens'],
         ['cronograma_min_marcos',         'cronograma_max_marcos'],
         ['arquivo_tamanho_minimo_bytes',  'arquivo_tamanho_maximo_imagem_bytes'],
-        ['arquivo_tamanho_minimo_bytes',  'arquivo_tamanho_maximo_documento_bytes']
+        ['arquivo_tamanho_minimo_bytes',  'arquivo_tamanho_maximo_documento_bytes'],
+        ['espera_atencao_dias',           'espera_critica_dias']
     ];
     v_chave  TEXT;
     v_par    TEXT[];
@@ -5106,6 +5108,47 @@ BEFORE UPDATE ON denuncia
 FOR EACH ROW
 WHEN (NEW.status IS DISTINCT FROM OLD.status)
 EXECUTE FUNCTION fn_valida_denuncia_sem_autojulgamento();
+
+-- ----------------------------------------------------------------------------
+-- Função:     fn_denuncia_registra_julgador
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-K-3]
+-- Regra:      Grava em id_julgador quem julgou a denúncia (procedente ou improcedente) e em julgado_em quando, pelo
+--             caminho que for (tela de julgar ou encerrar_campanha_por_denuncia); voltar para pendente apaga os dois. A decisão da
+--             contestação (decidir_contestacao, 03) também muda o status, mas não troca quem julgou: é o que impede
+--             quem julgou de decidir a contestação contra a própria decisão (92036).
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_denuncia_registra_julgador()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+    IF NEW.contestacao_status IS DISTINCT FROM OLD.contestacao_status THEN
+        RETURN NEW;
+    END IF;
+    IF NEW.status IN ('resolvida', 'improcedente') THEN
+        NEW.id_julgador := public.id_usuario_atual();
+        NEW.julgado_em := NOW();
+    ELSE
+        NEW.id_julgador := NULL;
+        NEW.julgado_em := NULL;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Trigger:   trg_denuncia_registra_julgador
+-- Tabela:    denuncia
+-- Momento:   BEFORE UPDATE (só quando status muda)
+-- Função:    fn_denuncia_registra_julgador()
+-- Bloco:     [05-K-3]
+-- Regra:     Guarda quem julgou a denúncia.
+-- ----------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_denuncia_registra_julgador ON denuncia;
+CREATE TRIGGER trg_denuncia_registra_julgador
+BEFORE UPDATE ON denuncia
+FOR EACH ROW
+WHEN (NEW.status IS DISTINCT FROM OLD.status)
+EXECUTE FUNCTION fn_denuncia_registra_julgador();
 
 -- ----------------------------------------------------------------------------
 -- Função:     fn_valida_contestacao_pendente

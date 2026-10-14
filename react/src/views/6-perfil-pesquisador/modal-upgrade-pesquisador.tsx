@@ -10,6 +10,7 @@ import { useToast } from '../../components/layout/toast/use-toast';
 import { perfilPesquisadorApi } from '../../services/6-perfil-pesquisador/api/perfil-pesquisador.api';
 import { termoUsoApi } from '../../services/5-termo-uso/api/termo-uso.api';
 import { CamposVinculoPerfil } from './campos-vinculo-perfil';
+import { LinksAcademicosDoUsuario } from '../7-link-academico/links-academicos-do-usuario';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
 import { Carregando } from '../../components/layout/carregando';
@@ -28,8 +29,9 @@ interface ModalUpgradePesquisadorProps {
   // sempre, para qualquer conta: o aceite fica registrado em nome DESTE `idUsuarioAlvo`, nunca de quem está
   // preenchendo a tela.
   idUsuarioAlvo: number;
-  // Botão "Gerar CPF válido" (mesmo padrão de ModalAlterarUsuario): ausente por padrão; só a Bancada do
-  // Pesquisador passa isso (bancada-pesquisador.tsx), nunca um consumidor de verdade.
+  // Nome da conta, para o aviso da pontuação dos links acadêmicos.
+  nomeAlvo?: string;
+  // Botão "Gerar CPF válido": ausente por padrão; só o T1 do Campo de Testes passa isso, nunca um consumidor de verdade.
   gerarCpfDeTeste?: () => string;
   aoFechar: () => void;
   aoConcluido: (perfil: PerfilPesquisadorResponse) => void;
@@ -68,6 +70,7 @@ const FORM_VAZIO: FormUpgrade = {
 export function ModalUpgradePesquisador({
   auth,
   idUsuarioAlvo,
+  nomeAlvo,
   gerarCpfDeTeste,
   aoFechar,
   aoConcluido,
@@ -82,6 +85,9 @@ export function ModalUpgradePesquisador({
   const [termoIndisponivel, setTermoIndisponivel] = useState(false);
   const [aceitou, setAceitou] = useState(false);
   const [form, setForm] = useState<FormUpgrade>(FORM_VAZIO);
+  // Depois de salvar, o modal fica aberto para os links acadêmicos (só pesquisador tem link, então eles só destravam
+  // agora); os dados do perfil ficam travados.
+  const [perfilCriado, setPerfilCriado] = useState(false);
   // Botões sempre clicáveis: clicando com algo faltando, o erro aparece no lugar certo (a caixa do aceite, o CPF, a
   // instituição). Só "Aceitar" sem Termo publicado continua travado, com a explicação no corpo.
   const aceite = useErrosFormulario(() => ({ aceite: !aceitou && 'Marque a caixa para aceitar o Termo e continuar.' }));
@@ -124,9 +130,9 @@ export function ModalUpgradePesquisador({
             ...dadosPerfil,
             aceiteTermos: true,
           });
-      mostrar('Perfil de pesquisador criado com sucesso.', 'O upgrade de perfil foi concluído.');
+      mostrar('Perfil de pesquisador criado com sucesso.', 'Agora já dá para adicionar os links acadêmicos.');
       aoConcluido(perfilCriado);
-      aoFechar();
+      setPerfilCriado(true);
     });
   };
 
@@ -153,6 +159,8 @@ export function ModalUpgradePesquisador({
               },
             }}
           />
+        ) : perfilCriado ? (
+          <RodapeAcoes aoCancelar={aoFechar} rotuloCancelar="Concluir" />
         ) : (
           <RodapeAcoes
             aoCancelar={aoFechar}
@@ -198,30 +206,42 @@ export function ModalUpgradePesquisador({
           </>
         )
       ) : (
-        <form id="form-upgrade-pesquisador" onSubmit={(evento) => void aoEnviar(evento)} noValidate>
-          <SecaoFicha titulo="Criar Perfil Pesquisador">
-            <CampoCpf
-              valor={form.cpf}
-              erro={erroDe('cpf') ?? errosCampo.cpf}
-              onChange={(cpf) => {
-                setForm({ ...form, cpf });
-                limparErroCampo('cpf');
-              }}
-              gerarCpfDeTeste={gerarCpfDeTeste}
-            />
+        <div className="space-y-6">
+          <form id="form-upgrade-pesquisador" onSubmit={(evento) => void aoEnviar(evento)} noValidate>
+            <fieldset disabled={perfilCriado}>
+              <SecaoFicha titulo="Criar Perfil Pesquisador">
+                <CampoCpf
+                  valor={form.cpf}
+                  erro={erroDe('cpf') ?? errosCampo.cpf}
+                  onChange={(cpf) => {
+                    setForm({ ...form, cpf });
+                    limparErroCampo('cpf');
+                  }}
+                  gerarCpfDeTeste={gerarCpfDeTeste}
+                />
 
-            <CamposVinculoPerfil
-              tipoVinculo={form.tipoVinculo}
-              vinculoInstitucional={form.vinculoInstitucional}
-              tituloAcademico={form.tituloAcademico}
-              rotuloVinculoInstitucional="Instituição"
-              aoAlterarTipoVinculo={(tipo) => setForm({ ...form, tipoVinculo: tipo })}
-              aoAlterarVinculoInstitucional={(valor) => setForm({ ...form, vinculoInstitucional: valor })}
-              aoAlterarTituloAcademico={(titulo) => setForm({ ...form, tituloAcademico: titulo })}
-              erroVinculoInstitucional={erroDe('vinculoInstitucional') ?? errosCampo.vinculoInstitucional}
-            />
-          </SecaoFicha>
-        </form>
+                <CamposVinculoPerfil
+                  tipoVinculo={form.tipoVinculo}
+                  vinculoInstitucional={form.vinculoInstitucional}
+                  tituloAcademico={form.tituloAcademico}
+                  rotuloVinculoInstitucional="Instituição"
+                  aoAlterarTipoVinculo={(tipo) => setForm({ ...form, tipoVinculo: tipo })}
+                  aoAlterarVinculoInstitucional={(valor) => setForm({ ...form, vinculoInstitucional: valor })}
+                  aoAlterarTituloAcademico={(titulo) => setForm({ ...form, tituloAcademico: titulo })}
+                  erroVinculoInstitucional={erroDe('vinculoInstitucional') ?? errosCampo.vinculoInstitucional}
+                />
+              </SecaoFicha>
+            </fieldset>
+          </form>
+          {/* Fora do <form>: Enter numa caixa da tabela não pode enviar o perfil de novo. */}
+          <LinksAcademicosDoUsuario
+            auth={auth}
+            idUsuario={idUsuarioAlvo}
+            nomeUsuario={nomeAlvo}
+            contaPropria={ehContaPropria}
+            bloqueadoAte={perfilCriado ? undefined : 'Salve o perfil primeiro para adicionar links acadêmicos.'}
+          />
+        </div>
       )}
     </ModalFicha>
   );

@@ -26,6 +26,7 @@ export interface PerfilPesquisadorResponse {
 // Espelha perfil-pesquisador.response-score.ts.
 export interface DimensaoScoreResponse {
   nomeDimensao: string;
+  rotuloDimensao: string;
   pontosObtidos: number;
   peso: string;
   calculadoEm: string;

@@ -86,4 +86,23 @@ export default defineConfig([
       '@typescript-eslint/no-unnecessary-condition': 'error',
     },
   },
+  // O Campo de Testes usa o sistema; o sistema nunca importa o Campo de Testes (a única porta é o glob de
+  // src/services/router/campo-testes-opcional.ts). Apagar src/campo-testes/ não pode quebrar o build.
+  {
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: ['src/campo-testes/**'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/campo-testes/**'],
+              message: 'O sistema não depende do Campo de Testes: use campo-testes-opcional.ts.',
+            },
+          ],
+        },
+      ],
+    },
+  },
 ])

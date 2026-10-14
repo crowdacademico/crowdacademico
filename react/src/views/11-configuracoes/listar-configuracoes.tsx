@@ -38,8 +38,7 @@ export function ListarConfiguracoes({ auth }: PropsPagina) {
       configuracoesApi
         .listar(auth.authFetch)
         .then((lista) => lista.map((linha) => ({ ...linha, assunto: grupoConfiguracao(linha.chave) }))),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [auth.authFetch, chaveRecarga],
+    [auth.authFetch],
   );
   // 'configuracoes' é o nome FÍSICO da tabela (plural, bate com o CREATE
   // TABLE em 01_extensoes_enums_tabelas.sql), não o nome da rota.
@@ -67,6 +66,7 @@ export function ListarConfiguracoes({ auth }: PropsPagina) {
         chavePrimaria="idConfig"
         filtrosFacetados={[{ chave: 'assunto', rotulo: 'Assunto' }]}
         listar={listarConfiguracoes}
+          chaveRecarga={chaveRecarga}
         // Sem Excluir: parâmetro global é contrato do sistema, o banco não deixa apagar (pol_config_delete,
         // 04); para desligar uma regra, muda-se o valor.
         acoes={{ alterar: acoesCompletas.alterar, consultar: acoesCompletas.consultar }}

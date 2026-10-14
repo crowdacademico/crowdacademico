@@ -21,15 +21,18 @@ export function useAvisoAlteracaoNaoSalva(sujo: boolean): void {
   }, [sujo]);
 }
 
-// A confirmação de "sair com alteração não salva?" (window.confirm com o MESMO texto) estava copiada em 7
-// lugares (cada `aoCancelar`/`fechar` de tela Alterar ou modal, ver comentário no topo do arquivo). Não virou
-// um hook novo de propósito: continua sendo o CHAMADOR quem decide fechar ou não, esta função só evita
-// reescrever a mesma frase/condição de novo:
-//
-//   const fechar = () => {
-//     if (!confirmarSaida(sujo)) return;
-//     aoFechar();
-//   };
+// A confirmação de "sair com alteração não salva?" (window.confirm com o MESMO texto). Modal usa
+// `useFecharComAviso` (abaixo), que já chama esta; ela fica solta para quem não é modal, como o "Cancelar" da
+// Minha Conta, que volta para a tela anterior.
 export function confirmarSaida(sujo: boolean): boolean {
   return !sujo || window.confirm('Você tem alterações não salvas. Sair mesmo assim?');
+}
+
+// Os dois juntos, como todo modal de criar/alterar usa: avisa o navegador enquanto houver alteração não salva e
+// devolve o `fechar` que pergunta antes de sair (X, Cancelar, Esc).
+export function useFecharComAviso(sujo: boolean, aoFechar: () => void): () => void {
+  useAvisoAlteracaoNaoSalva(sujo);
+  return () => {
+    if (confirmarSaida(sujo)) aoFechar();
+  };
 }

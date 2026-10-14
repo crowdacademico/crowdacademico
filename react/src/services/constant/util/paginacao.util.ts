@@ -1,7 +1,7 @@
 // A conta de paginação client-side (total de páginas, página atual grudada no teto quando o filtro encolhe a
-// lista, fatiar os itens da página) que aparece em GenericTable, bancada-pesquisador.tsx, bancada-campanha.tsx
-// e registro-chamadas.tsx. Só a CONTA (função pura), não um hook: cada um dos 4 guarda `pagina`/`tamanhoPagina`
-// do seu próprio jeito (GenericTable usa searchParams da URL, os outros 3 usam useState simples); um hook
+// lista, fatiar os itens da página) que aparece em GenericTable
+// e registro-chamadas.tsx. Só a CONTA (função pura), não um hook: cada um guarda `pagina`/`tamanhoPagina`
+// do seu próprio jeito (GenericTable usa searchParams da URL, o registro usa useState simples); um hook
 // "usePaginacaoClientSide" teria que também assumir ONDE mora o estado, o que os 4 chamadores não compartilham:
 // a função pura serve os 4 sem forçar nenhum deles a mudar como guardam `pagina`.
 //

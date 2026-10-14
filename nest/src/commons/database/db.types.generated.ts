@@ -153,6 +153,17 @@ export interface Campanha {
   video_apresentacao_url: string | null;
 }
 
+export interface CartaoTokenizadoUsuario {
+  ativo: Generated<boolean>;
+  bandeira: string | null;
+  criado_em: Generated<Timestamp>;
+  id_cartao: Generated<number>;
+  id_usuario: number;
+  provedor: string;
+  token_cartao: string;
+  ultimos_digitos: string;
+}
+
 export interface Comentario {
   ativo: Generated<boolean>;
   conteudo: string;
@@ -175,17 +186,6 @@ export interface Configuracoes {
   valor: string | null;
 }
 
-export interface CartaoTokenizadoUsuario {
-  ativo: Generated<boolean>;
-  bandeira: string | null;
-  criado_em: Generated<Timestamp>;
-  id_cartao: Generated<number>;
-  id_usuario: number;
-  provedor: string;
-  token_cartao: string;
-  ultimos_digitos: string;
-}
-
 export interface ContaRecebimentoUsuario {
   ativa: Generated<boolean>;
   chave_criptografada: string;
@@ -198,6 +198,7 @@ export interface ContaRecebimentoUsuario {
 
 export interface Contribuicao {
   anonima: Generated<boolean>;
+  cobranca_cancelada_em: Timestamp | null;
   criado_em: Generated<Timestamp>;
   id_campanha: number;
   id_contribuicao: Generated<number>;
@@ -205,7 +206,6 @@ export interface Contribuicao {
   id_usuario: number | null;
   meio_pagamento: MeioPagamento;
   provedor: Generated<string>;
-  cobranca_cancelada_em: Timestamp | null;
   proxima_tentativa_estorno_em: Timestamp | null;
   reconciliada_em: Timestamp | null;
   status: Generated<StatusContribuicao>;
@@ -229,9 +229,12 @@ export interface Denuncia {
   criado_em: Generated<Timestamp>;
   id_campanha_alvo: number | null;
   id_denuncia: Generated<number>;
+  id_julgador: number | null;
+  id_julgador_contestacao: number | null;
   id_motivo: number;
   id_pesquisador_alvo: number | null;
   id_usuario: number;
+  julgado_em: Timestamp | null;
   justificativa_contestacao: string | null;
   justificativa_moderacao: string | null;
   relato: string | null;
@@ -338,6 +341,7 @@ export interface OrcamentoCampanha {
 
 export interface Papel {
   codigo: string;
+  descricao: string | null;
   id_papel: Generated<number>;
   nome: string;
 }
@@ -348,7 +352,7 @@ export interface PapelPermissao {
 }
 
 export interface PerfilPesquisador {
-  ativado_em: Timestamp | null;
+  ativado_em: Generated<Timestamp>;
   cpf_criptografado: string;
   cpf_hash: string;
   id_usuario: number;
@@ -395,8 +399,8 @@ export interface Repasse {
   id_repasse: Generated<number>;
   id_transferencia_api: string | null;
   meta_atingida: Generated<boolean>;
-  proxima_tentativa_em: Timestamp | null;
   provedor: string | null;
+  proxima_tentativa_em: Timestamp | null;
   repassado_em: Timestamp | null;
   status: Generated<StatusRepasse>;
   taxa_relativa: Numeric | null;
@@ -557,9 +561,9 @@ export interface DB {
   atualizacao_campanha: AtualizacaoCampanha;
   auditoria_financeira: AuditoriaFinanceira;
   campanha: Campanha;
+  cartao_tokenizado_usuario: CartaoTokenizadoUsuario;
   comentario: Comentario;
   configuracoes: Configuracoes;
-  cartao_tokenizado_usuario: CartaoTokenizadoUsuario;
   conta_recebimento_usuario: ContaRecebimentoUsuario;
   contribuicao: Contribuicao;
   contribuicao_recompensa: ContribuicaoRecompensa;

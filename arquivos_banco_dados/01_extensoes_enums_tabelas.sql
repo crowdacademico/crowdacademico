@@ -121,6 +121,7 @@ CREATE TYPE tipo_chave_pix       AS ENUM ('cpf', 'cnpj', 'email', 'telefone', 'a
 CREATE TYPE meio_pagamento        AS ENUM ('pix', 'cartao_credito', 'cartao_debito', 'boleto');
 CREATE TYPE fase_atualizacao      AS ENUM ('andamento', 'resultado_preliminar', 'resultado_final');
 CREATE TYPE tipo_atualizacao      AS ENUM ('texto', 'imagem', 'pdf', 'linkexterno');
+-- status_denuncia: 'em_analise' fica no tipo, fora de uso (CK_DENUNCIA_SEM_EM_ANALISE na tabela denuncia).
 CREATE TYPE status_denuncia       AS ENUM ('pendente', 'em_analise', 'resolvida', 'improcedente');
 CREATE TYPE status_encerramento   AS ENUM ('pendente', 'aprovado', 'rejeitado', 'cancelado');
 CREATE TYPE status_contestacao    AS ENUM ('pendente', 'aceita', 'recusada');
@@ -146,6 +147,9 @@ CREATE TABLE papel (
     id_papel SERIAL,
     nome     VARCHAR(50) NOT NULL,
     codigo   VARCHAR(20) NOT NULL,
+    -- Para que serve o papel, em uma frase (lista de Papéis e atribuição de papel no Alterar Usuário). Editável pelo
+    -- painel, como o nome; o que o papel pode de verdade continua sendo a matriz Papel x Permissão.
+    descricao VARCHAR(500),
 
     CONSTRAINT "PK_PAPEL" PRIMARY KEY (id_papel),
     CONSTRAINT "UK_PAPEL_NOME" UNIQUE (nome),
@@ -354,7 +358,8 @@ CREATE TABLE perfil_pesquisador (
     vinculo_institucional VARCHAR(255),
     titulo_academico      titulo_academico NOT NULL,
     status_pesquisador    status_pesquisador NOT NULL DEFAULT 'ativo',
-    ativado_em            TIMESTAMPTZ,
+    -- Data do upgrade: o padrão grava na hora em qualquer caminho (a própria conta ou o Campo de Testes).
+    ativado_em            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     score_atual           INTEGER    NOT NULL  DEFAULT 0,
     score_atualizado_em   TIMESTAMPTZ,
     -- Suspensão do PODER de pesquisador: mesmo padrão de usuario.suspenso_ate/motivo_suspensao/
@@ -739,6 +744,13 @@ CREATE TABLE denuncia (
     -- Por que a moderação decidiu (procedente ou improcedente). Quem decidiu e quando ficam no log de auditoria
     -- (trg_log_auditoria_denuncia_status, 05).
     justificativa_moderacao TEXT,
+    -- Quem julgou a denúncia (procedente ou improcedente), gravado pela trigger trg_denuncia_registra_julgador (05).
+    -- Serve para quem julgou não decidir a contestação contra a própria decisão (decidir_contestacao, 03).
+    id_julgador         INT,
+    -- Quando foi julgada, gravado pela mesma trigger junto com id_julgador.
+    julgado_em          TIMESTAMPTZ,
+    -- Quem decidiu a contestação (aceitou ou recusou), gravado por decidir_contestacao (03).
+    id_julgador_contestacao INT,
     -- Contestação (RF-033): o pesquisador penalizado pede revisão de uma denúncia procedente, uma vez por denúncia.
     -- Na própria linha porque é 1 para 1: cada denúncia tem no máximo uma contestação. Só pelas funções
     -- contestar_denuncia e decidir_contestacao (03).
@@ -756,6 +768,9 @@ CREATE TABLE denuncia (
     CONSTRAINT "FK_DENUNCIA_CAMPANHA_ALVO" FOREIGN KEY (id_campanha_alvo) REFERENCES campanha(id_campanha) ON DELETE RESTRICT,
     CONSTRAINT "FK_DENUNCIA_PESQUISADOR_ALVO" FOREIGN KEY (id_pesquisador_alvo) REFERENCES usuario(id_usuario) ON DELETE RESTRICT,
     CONSTRAINT "FK_DENUNCIA_MOTIVO" FOREIGN KEY (id_motivo) REFERENCES motivo_denuncia(id_motivo),
+    -- SET NULL: a conta de quem julgou pode ser excluída; a denúncia continua, só perde a trava da contestação.
+    CONSTRAINT "FK_DENUNCIA_JULGADOR" FOREIGN KEY (id_julgador) REFERENCES usuario(id_usuario) ON DELETE SET NULL,
+    CONSTRAINT "FK_DENUNCIA_JULGADOR_CONTESTACAO" FOREIGN KEY (id_julgador_contestacao) REFERENCES usuario(id_usuario) ON DELETE SET NULL,
     CONSTRAINT "UK_DENUNCIA_USUARIO_CAMPANHA_ALVO" UNIQUE (id_usuario, id_campanha_alvo),
     CONSTRAINT "UK_DENUNCIA_USUARIO_PESQUISADOR_ALVO" UNIQUE (id_usuario, id_pesquisador_alvo),
     -- Nada garantia exatamente um alvo preenchido (dava pra ter os dois ou nenhum).
@@ -768,6 +783,8 @@ CREATE TABLE denuncia (
     -- via trigger, ver [05-K-1].
     CONSTRAINT "CK_DENUNCIA_RELATO_TAMANHO" CHECK (relato IS NULL OR char_length(relato) <= 5000),
     CONSTRAINT "CK_DENUNCIA_JUSTIFICATIVA_TAMANHO" CHECK (justificativa_moderacao IS NULL OR char_length(justificativa_moderacao) <= 5000),
+    -- A denúncia vai direto de pendente para resolvida ou improcedente: "em análise" não dizia nada além de pendente.
+    CONSTRAINT "CK_DENUNCIA_SEM_EM_ANALISE" CHECK (status <> 'em_analise'),
     -- Contestação inteira ou nada; a justificativa existe exatamente quando já foi decidida.
     CONSTRAINT "CK_DENUNCIA_CONTESTACAO_COERENTE" CHECK (
         (contestacao IS NULL AND contestacao_status IS NULL AND contestada_em IS NULL AND justificativa_contestacao IS NULL)

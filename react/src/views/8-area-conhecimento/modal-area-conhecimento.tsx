@@ -3,7 +3,7 @@ import { BadgeBooleano } from '../../components/crud/badge-booleano';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { CampoSomenteLeitura } from '../../components/crud/campo-somente-leitura';
 import { ModalFicha } from '../../components/crud/modal-ficha';
-import { confirmarSaida, useAvisoAlteracaoNaoSalva } from '../../components/crud/use-alteracao-nao-salva';
+import { useFecharComAviso } from '../../components/crud/use-alteracao-nao-salva';
 import { RodapeAcoes } from '../../components/crud/rodape-acoes';
 import { ModalExcluirItem } from '../../components/crud/modal-excluir-item';
 import { Campo } from '../../components/input/campo';
@@ -79,14 +79,7 @@ export function ModalAlterarAreaConhecimento({ auth, area, aoFechar, aoAtualizad
   const [ativo, setAtivo] = useState(area.ativo);
 
   const sujo = nome !== area.nome || ativo !== area.ativo;
-  useAvisoAlteracaoNaoSalva(sujo);
-
-  const fechar = () => {
-    if (!confirmarSaida(sujo)) {
-      return;
-    }
-    aoFechar();
-  };
+  const fechar = useFecharComAviso(sujo, aoFechar);
 
   // "Salvar" só espera haver alteração; com o campo obrigatório apagado, o erro aparece embaixo dele.
   const { erroDe, tentarEnviar } = useErrosFormulario(() => ({ nome: nome.trim() === '' && 'Informe o nome.' }));

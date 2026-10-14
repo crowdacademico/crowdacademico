@@ -922,7 +922,9 @@ $$;
 -- decidir_contestacao: a moderação aceita ou recusa uma contestação esperando análise, sempre com justificativa
 -- (RF-033). Aceitar corrige o dado que causou a penalidade: a denúncia vira improcedente na mesma operação, e a nota
 -- se recalcula sozinha (trg_denuncia_recalcula_score, 05). Nunca mexe na nota nem reabre campanha encerrada por
--- moderação. Quem registrou a denúncia não decide a contestação dela (mesmo conflito de interesse do 92006).
+-- moderação. Quem registrou a denúncia não decide a contestação dela (mesmo conflito de interesse do 92006), e quem
+-- julgou a denúncia também não (92036): o recurso é revisto por outra pessoa, nunca por quem tomou a decisão. Grava
+-- quem decidiu (id_julgador_contestacao).
 CREATE OR REPLACE FUNCTION public.decidir_contestacao(p_id_denuncia INT, p_aceitar BOOLEAN, p_justificativa TEXT)
 RETURNS VOID
 LANGUAGE plpgsql
@@ -931,17 +933,22 @@ SET search_path = public
 AS $$
 DECLARE
     v_denunciante INT;
+    v_julgador INT;
     v_contestacao status_contestacao;
 BEGIN
     IF NOT public.tem_permissao('denuncia_responder') THEN
         RAISE EXCEPTION 'Sem permissão para decidir contestações.' USING ERRCODE = '92035';
     END IF;
-    SELECT id_usuario, contestacao_status INTO v_denunciante, v_contestacao FROM denuncia WHERE id_denuncia = p_id_denuncia;
+    SELECT id_usuario, id_julgador, contestacao_status INTO v_denunciante, v_julgador, v_contestacao
+    FROM denuncia WHERE id_denuncia = p_id_denuncia;
     IF v_contestacao IS DISTINCT FROM 'pendente' THEN
         RAISE EXCEPTION 'Só uma contestação esperando análise pode ser decidida.' USING ERRCODE = '91047';
     END IF;
     IF v_denunciante = public.id_usuario_atual() THEN
         RAISE EXCEPTION 'Quem registrou a denúncia não pode julgar a própria denúncia.' USING ERRCODE = '92006';
+    END IF;
+    IF v_julgador = public.id_usuario_atual() THEN
+        RAISE EXCEPTION 'Quem julgou a denúncia não pode decidir a contestação contra a própria decisão.' USING ERRCODE = '92036';
     END IF;
     IF p_justificativa IS NULL OR btrim(p_justificativa) = '' THEN
         RAISE EXCEPTION 'Escreva a justificativa da decisão.' USING ERRCODE = '90033';
@@ -950,7 +957,8 @@ BEGIN
     UPDATE denuncia
     SET contestacao_status = CASE WHEN p_aceitar THEN 'aceita' ELSE 'recusada' END::status_contestacao,
         justificativa_contestacao = btrim(p_justificativa),
-        status = CASE WHEN p_aceitar THEN 'improcedente'::status_denuncia ELSE status END
+        status = CASE WHEN p_aceitar THEN 'improcedente'::status_denuncia ELSE status END,
+        id_julgador_contestacao = public.id_usuario_atual()
     WHERE id_denuncia = p_id_denuncia;
 END;
 $$;
@@ -976,40 +984,6 @@ AS $$
     WHERE COALESCE(d.id_pesquisador_alvo, c.id_usuario) = public.id_usuario_atual()
       AND (d.status = 'resolvida' OR d.contestacao_status IS NOT NULL)
     ORDER BY d.criado_em DESC;
-$$;
-
--- comentar_campanha_para_outro: o Admin comenta uma campanha EM NOME de um pesquisador ativo (ferramenta para
--- montar cenários de comentário e endosso sem trocar de conta). Mesma classe de criar_campanha_para_outro: gateada
--- por comentario_criar_para_outro (ver 07), que sai do admin no modo produção. SECURITY DEFINER pula a RLS
--- (pol_comentario_insert), então a função confere sozinha que o autor é pesquisador ativo; as outras regras
--- (campanha publicada, não comentar na própria, limite por hora, um comentário por campanha, tamanho) são triggers
--- e continuam valendo.
-CREATE OR REPLACE FUNCTION public.comentar_campanha_para_outro(p_id_pesquisador INT, p_id_campanha INT, p_conteudo TEXT)
-RETURNS INT
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-    v_id_comentario INT;
-BEGIN
-    IF NOT public.tem_permissao('comentario_criar_para_outro') THEN
-        RAISE EXCEPTION 'Sem permissão para comentar em nome de outro pesquisador.' USING ERRCODE = '92028';
-    END IF;
-
-    IF NOT EXISTS (
-        SELECT 1 FROM perfil_pesquisador
-        WHERE id_usuario = p_id_pesquisador AND status_pesquisador = 'ativo'
-    ) THEN
-        RAISE EXCEPTION 'O usuário escolhido não é um pesquisador ativo.' USING ERRCODE = '90021';
-    END IF;
-
-    INSERT INTO comentario (id_campanha, id_pesquisador, conteudo)
-    VALUES (p_id_campanha, p_id_pesquisador, p_conteudo)
-    RETURNING id_comentario INTO v_id_comentario;
-
-    RETURN v_id_comentario;
-END;
 $$;
 
 -- [03-T] forcar_exclusao_campanha: o Admin precisa poder excluir forçadamente uma campanha (senão os

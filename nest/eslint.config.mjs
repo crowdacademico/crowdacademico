@@ -89,4 +89,25 @@ export default tseslint.config(
       ],
     },
   },
+  // O Campo de Testes (src/campo-testes/) usa o sistema; o sistema nunca importa dele. A única porta é o
+  // app.module.ts, que só o carrega fora de produção. Mesma regra do react/. Usa a versão do typescript-eslint da
+  // regra, e não a no-restricted-imports padrão, de propósito: a padrão já guarda a fronteira do provedor (acima), e
+  // dois blocos ligando a MESMA regra nos mesmos arquivos fazem o último apagar o primeiro.
+  {
+    files: ['src/**/*.ts'],
+    ignores: ['src/campo-testes/**', 'src/app/app.module.ts'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/campo-testes/**'],
+              message: 'O sistema não depende do Campo de Testes: a única porta é o app.module.ts.',
+            },
+          ],
+        },
+      ],
+    },
+  },
 );

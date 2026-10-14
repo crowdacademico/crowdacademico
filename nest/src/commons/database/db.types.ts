@@ -35,6 +35,8 @@ export interface PapelTable {
   // Espelha 01_extensoes_enums_tabelas.sql [01-B]. Estável, nunca editável pela API (diferente de `nome`); ver
   // o comentário completo lá sobre por que existe.
   codigo: string;
+  // Para que serve o papel; editável pelo painel, como o nome.
+  descricao: string | null;
 }
 
 export interface PermissaoTable {
@@ -250,6 +252,12 @@ export interface DenunciaTable {
   relato: string | null;
   status: Generated<StatusDenuncia>;
   justificativa_moderacao: string | null;
+  // Quem julgou: só a trigger trg_denuncia_registra_julgador (05) grava; trava a contestação (92036).
+  id_julgador: number | null;
+  // Quando foi julgada: a mesma trigger grava junto com id_julgador.
+  julgado_em: Date | null;
+  // Quem decidiu a contestação: só decidir_contestacao (03) grava.
+  id_julgador_contestacao: number | null;
   // Contestação (RF-033): só pelas funções contestar_denuncia e decidir_contestacao (03).
   contestacao: string | null;
   contestacao_status: StatusContestacao | null;

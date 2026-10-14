@@ -8,7 +8,7 @@ export type { StatusCampanha };
 
 // Ordem do ciclo de vida, não alfabética: o filtro facetado de GenericTable (`ordem`) mostra as opções numa
 // sequência que faz sentido de fluxo. `listaCompleta` faz o compilador acusar se um status do banco faltar aqui.
-export const ORDEM_STATUS_CAMPANHA = listaCompleta<StatusCampanha>()([
+const ORDEM_STATUS_CAMPANHA = listaCompleta<StatusCampanha>()([
   'rascunho',
   'aguardando_aprovacao',
   'ativo',
@@ -37,7 +37,7 @@ const CLASSE_BADGE_STATUS_CAMPANHA: Record<StatusCampanha, string> = {
   rascunho: 'badge-neutro',
   aguardando_aprovacao: 'badge-aviso',
   ativo: 'badge-sucesso',
-  sucesso: 'badge-sucesso',
+  sucesso: 'badge-concluido',
   nao_atingido: 'badge-neutro',
   rejeitado: 'badge-erro',
   encerrado: 'badge-neutro',
@@ -52,7 +52,7 @@ export const ROTULO_MODELO_CAMPANHA: Record<ModeloCampanha, string> = {
 
 // "Em breve" (RF-059) não é status do banco: é a campanha aprovada ('ativo') cujo início ainda não chegou. Ela já
 // é pública e já recebe comentários; a contagem regressiva fica para a página pública.
-export const ROTULO_EM_BREVE = 'Em breve';
+const ROTULO_EM_BREVE = 'Em breve';
 
 export function emBreve(campanha: Pick<CampanhaResponse, 'status' | 'dataInicio'>): boolean {
   return campanha.status === 'ativo' && campanha.dataInicio !== null && Date.parse(campanha.dataInicio) > Date.now();
@@ -80,6 +80,9 @@ export const STATUS_ACEITA_ATUALIZACAO: ReadonlySet<StatusCampanha> = new Set<St
 
 // Onde o banco aceita seguir (fn_valida_seguir_campanha_publicada, 91034): o que pol_campanha_select mostra a todos.
 export const STATUS_ACEITA_SEGUIR: ReadonlySet<StatusCampanha> = new Set<StatusCampanha>(['ativo', 'sucesso', 'nao_atingido', 'encerrado']);
+
+// Onde o banco aceita denúncia de campanha (fn_valida_denuncia_alvo, 91035; RF-106): só campanha ativa.
+export const STATUS_ACEITA_DENUNCIA: ReadonlySet<StatusCampanha> = new Set<StatusCampanha>(['ativo']);
 
 // Campanha que já foi ao ar (aprovada em algum momento): tem comentários e atualizações para mostrar.
 export const STATUS_PUBLICADA: ReadonlySet<StatusCampanha> = new Set<StatusCampanha>(['ativo', 'sucesso', 'nao_atingido', 'encerrado', 'encerrado_moderacao']);

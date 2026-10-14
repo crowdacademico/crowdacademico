@@ -3,7 +3,6 @@ import { TermoUsoModule } from '../5-termo-uso/termo-uso.module';
 import { PerfilPesquisadorControllerUpdateForOther } from './controllers/perfil-pesquisador.controller.update-for-other';
 import { PerfilPesquisadorControllerFixCpf } from './controllers/perfil-pesquisador.controller.fix-cpf';
 import { PerfilPesquisadorControllerCreate } from './controllers/perfil-pesquisador.controller.create';
-import { PerfilPesquisadorControllerCreateForOther } from './controllers/perfil-pesquisador.controller.create-for-other';
 import { PerfilPesquisadorControllerFindAll } from './controllers/perfil-pesquisador.controller.findall';
 import { PerfilPesquisadorControllerFindOne } from './controllers/perfil-pesquisador.controller.findone';
 import { PerfilPesquisadorControllerReactivate } from './controllers/perfil-pesquisador.controller.reactivate';
@@ -12,7 +11,6 @@ import { PerfilPesquisadorControllerUpdate } from './controllers/perfil-pesquisa
 import { PerfilPesquisadorServiceUpdateForOther } from './service/perfil-pesquisador.service.update-for-other';
 import { PerfilPesquisadorServiceFixCpf } from './service/perfil-pesquisador.service.fix-cpf';
 import { PerfilPesquisadorServiceCreate } from './service/perfil-pesquisador.service.create';
-import { PerfilPesquisadorServiceCreateForOther } from './service/perfil-pesquisador.service.create-for-other';
 import { PerfilPesquisadorServiceFindAll } from './service/perfil-pesquisador.service.findall';
 import { PerfilPesquisadorServiceFindOne } from './service/perfil-pesquisador.service.findone';
 import { PerfilPesquisadorServiceFindOneScore } from './service/perfil-pesquisador.service.findone-score';
@@ -32,7 +30,6 @@ import { PerfilPesquisadorServiceUpdate } from './service/perfil-pesquisador.ser
     PerfilPesquisadorControllerFixCpf,
     PerfilPesquisadorControllerSuspend,
     PerfilPesquisadorControllerReactivate,
-    PerfilPesquisadorControllerCreateForOther,
   ],
   providers: [
     PerfilPesquisadorServiceCreate,
@@ -45,7 +42,6 @@ import { PerfilPesquisadorServiceUpdate } from './service/perfil-pesquisador.ser
     PerfilPesquisadorServiceSuspend,
     PerfilPesquisadorServiceReactivate,
     PerfilPesquisadorServiceReactivateExpired,
-    PerfilPesquisadorServiceCreateForOther,
   ],
 })
 export class PerfilPesquisadorModule {}

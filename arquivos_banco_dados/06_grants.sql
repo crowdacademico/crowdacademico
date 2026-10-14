@@ -51,13 +51,13 @@ GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO app_nestjs;
 --  permissao continua só-leitura (GRANT SELECT ON ALL TABLES já cobre): criar uma permissão nova é via
 --  seed/migração direta, de propósito. papel_permissao tem INSERT/DELETE (ver [04-B-1] em 04_rls_policies.sql):
 --  o admin concede ou revoga uma permissão de um papel já existente pelo Painel Admin (matriz Papel × Permissão).
---  papel tem UPDATE só na coluna `nome` (ver [04-B-1b] em 04_rls_policies.sql): renomear um papel é seguro
+--  papel tem UPDATE só nas colunas `nome` e `descricao` (ver [04-B-1b] em 04_rls_policies.sql): renomear um papel é seguro
 --  porque as 3 triggers de RBAC que reconhecem papel especial leem `codigo` (01_extensoes_enums_tabelas.sql
 --  [01-B]), que não tem GRANT nenhum aqui; só `nome` (o rótulo) é coluna que a API pode escrever. CRIAR um
 --  papel novo do zero continua fora de escopo.
 -- ============================================================================
 GRANT INSERT, DELETE ON papel_permissao TO app_nestjs;
-GRANT UPDATE (nome) ON papel TO app_nestjs;
+GRANT UPDATE (nome, descricao) ON papel TO app_nestjs;
 
 -- listar_papeis_usuario (03, [03-B]): usada por login/refresh (03-auth) para saber se mostra "Painel Admin"
 -- no dropdown do cabeçalho.
@@ -180,7 +180,6 @@ REVOKE EXECUTE ON FUNCTION public.alterar_perfil_pesquisador_de_outro(INT, tipo_
 -- criar_campanha_para_outro(...) / forcar_exclusao_campanha(INT): ver [03-S] e [03-T].
 REVOKE EXECUTE ON FUNCTION public.criar_campanha_para_outro(INT, INT, TEXT, modelo_campanha, DECIMAL, TEXT, TIMESTAMPTZ, TIMESTAMPTZ, TEXT) FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.forcar_exclusao_campanha(INT) FROM PUBLIC;
-REVOKE EXECUTE ON FUNCTION public.comentar_campanha_para_outro(INT, INT, TEXT) FROM PUBLIC;
 -- suspender_usuario / revogar_suspensao_usuario / suspender_papel_usuario / revogar_suspensao_papel_usuario: ver [03-N].
 REVOKE EXECUTE ON FUNCTION public.suspender_usuario(INT, TIMESTAMPTZ, TEXT)         FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.revogar_suspensao_usuario(INT)                    FROM PUBLIC;
@@ -205,7 +204,6 @@ GRANT EXECUTE ON FUNCTION public.criar_perfil_pesquisador_para_outro(INT, TEXT, 
 GRANT EXECUTE ON FUNCTION public.alterar_perfil_pesquisador_de_outro(INT, tipo_vinculo, TEXT, titulo_academico) TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.criar_campanha_para_outro(INT, INT, TEXT, modelo_campanha, DECIMAL, TEXT, TIMESTAMPTZ, TIMESTAMPTZ, TEXT) TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.forcar_exclusao_campanha(INT) TO app_nestjs;
-GRANT EXECUTE ON FUNCTION public.comentar_campanha_para_outro(INT, INT, TEXT) TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.suspender_usuario(INT, TIMESTAMPTZ, TEXT)      TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.revogar_suspensao_usuario(INT)                 TO app_nestjs;
 GRANT EXECUTE ON FUNCTION public.suspender_papel_usuario(INT, INT, TIMESTAMPTZ, TEXT) TO app_nestjs;

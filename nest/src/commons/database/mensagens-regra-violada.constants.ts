@@ -84,6 +84,10 @@ export const REGRA_POR_CONSTRAINT: Readonly<Record<string, RegraConhecida>> = {
     campo: 'justificativa',
     mensagem: TEXTO_LONGO,
   },
+  CK_DENUNCIA_SEM_EM_ANALISE: {
+    campo: 'status',
+    mensagem: 'Escolha a situação da denúncia.',
+  },
   CK_DENUNCIA_ALVO_XOR: {
     campo: 'idCampanhaAlvo',
     mensagem: 'Escolha um alvo só: a campanha ou o perfil do pesquisador.',

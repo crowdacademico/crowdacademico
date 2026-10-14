@@ -8,6 +8,7 @@ import {
   formatarMoeda,
   textoSeguro,
 } from '../../../services/constant/util/formatacao.util';
+import { TempoEspera } from '../tempo-espera';
 
 // O FORMATO de um valor (como aparece, como a busca lê, como ordena), separado do ESPAÇO que a coluna ocupa
 // (os arquivos numerados desta pasta). Dinheiro e data chegam crus da API: ordenam pelo valor, e o texto
@@ -19,11 +20,11 @@ export interface Formato {
   comparar: (a: unknown, b: unknown) => number;
 }
 
-export const compararTexto = (a: unknown, b: unknown): number =>
+const compararTexto = (a: unknown, b: unknown): number =>
   textoSeguro(a).localeCompare(textoSeguro(b), 'pt-BR', { numeric: true });
 
 // Vazio (null/undefined) sempre no começo da ordem crescente, em vez de virar 0 e se misturar com um zero real.
-export const compararNumero = (a: unknown, b: unknown): number => {
+const compararNumero = (a: unknown, b: unknown): number => {
   const vazioA = a === null || a === undefined;
   const vazioB = b === null || b === undefined;
   if (vazioA || vazioB) {
@@ -78,9 +79,10 @@ export const FORMATOS = {
     texto: (valor) => formatarDataHora(iso(valor)),
     comparar: (a, b) => compararNumero(instante(a), instante(b)),
   },
-  // Tempo de espera ("há 3 dias") a partir de uma data. Ordem crescente = quem espera menos primeiro.
+  // Tempo de espera ("há 3 dias") a partir de uma data, com a cor de quanto já esperou (TempoEspera). Ordem crescente =
+  // quem espera menos primeiro.
   espera: {
-    exibir: (valor) => formatarEspera(iso(valor)),
+    exibir: (valor) => <TempoEspera desde={iso(valor)} />,
     texto: (valor) => formatarEspera(iso(valor)),
     comparar: (a, b) => compararNumero(instante(b), instante(a)),
   },

@@ -6,14 +6,15 @@ import {
   MaxLength,
   ValidateIf,
 } from 'class-validator';
-import { STATUS_DENUNCIA } from '../../../commons/database/db.types';
-import type { StatusDenuncia } from '../../../commons/database/db.types';
+import { STATUS_DENUNCIA_JULGAMENTO } from '../../constants/denuncia.constants';
 
 // Julgar uma denúncia (RF-111): o status e, ao decidir (procedente ou improcedente), o porquê. Quem denunciou não
 // julga a própria denúncia (92006, 05) e a regra de acesso só abre a quem tem denuncia_responder.
 export class DenunciaRequestUpdate {
-  @IsIn(STATUS_DENUNCIA, { message: 'Escolha a situação da denúncia.' })
-  status: StatusDenuncia;
+  @IsIn(STATUS_DENUNCIA_JULGAMENTO, {
+    message: 'Escolha a situação da denúncia.',
+  })
+  status: (typeof STATUS_DENUNCIA_JULGAMENTO)[number];
 
   @ValidateIf(
     (dto: DenunciaRequestUpdate) =>

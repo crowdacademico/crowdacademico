@@ -1,6 +1,7 @@
 import { createContext } from 'react';
 
-export type TipoToast = 'sucesso' | 'erro';
+// `aviso`: a ação deu certo, mas pede atenção (ex.: a pontuação caiu). Laranja, não vermelho: não é erro.
+export type TipoToast = 'sucesso' | 'aviso' | 'erro';
 
 export interface ToastContextValue {
   mostrar: (titulo: string, descricao?: string, tipo?: TipoToast) => void;

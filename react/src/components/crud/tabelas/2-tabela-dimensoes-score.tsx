@@ -1,8 +1,7 @@
-import { formatarNomeDimensao } from '../../../services/constant/util/formatacao.util';
 import type { PerfilPesquisadorResponseScore } from '../../../services/6-perfil-pesquisador/type/perfil-pesquisador.type';
 
-// Dimensões que compõem o score de um pesquisador (pontos obtidos e peso de cada uma). Só leitura. Usada no
-// modal de usuário (views/1-usuario/painel-score.tsx), que busca o score.
+// Dimensões que compõem o score de um pesquisador (pontos obtidos e o máximo de cada uma, o mesmo nome da tela Pontuação). Só leitura. Usada no
+// Consultar Usuário (views/1-usuario/modal-consultar-usuario.tsx), que busca o score.
 interface TabelaDimensoesScoreProps {
   dimensoes: PerfilPesquisadorResponseScore['dimensoes'];
 }
@@ -13,16 +12,16 @@ export function TabelaDimensoesScore({ dimensoes }: TabelaDimensoesScoreProps) {
       <thead>
         <tr>
           <th>Dimensão</th>
-          <th>Pontos</th>
-          <th>Peso</th>
+          <th className="crud-tabela__celula--centralizada">Pontos</th>
+          <th className="crud-tabela__celula--centralizada">Máximo</th>
         </tr>
       </thead>
       <tbody>
         {dimensoes.map((dimensao) => (
           <tr key={dimensao.nomeDimensao}>
-            <td>{formatarNomeDimensao(dimensao.nomeDimensao)}</td>
-            <td>{dimensao.pontosObtidos}</td>
-            <td>{dimensao.peso}</td>
+            <td>{dimensao.rotuloDimensao}</td>
+            <td className="crud-tabela__celula--centralizada">{dimensao.pontosObtidos}</td>
+            <td className="crud-tabela__celula--centralizada">{Number(dimensao.peso).toLocaleString('pt-BR')}</td>
           </tr>
         ))}
       </tbody>

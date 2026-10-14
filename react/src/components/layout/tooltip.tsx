@@ -9,21 +9,30 @@
 // controle ("Encerrar sessão"), não uma descrição adicional dele.
 //
 // `direita`: abre alinhada pela borda direita do gatilho (gatilho na última coluna de uma tabela).
+// `alerta`: aviso preso a um campo ("Apenas leitura"), no formato do aviso de validação do navegador: balão claro
+// embaixo do campo, com seta e ícone de alerta.
 interface DicaProps {
   texto: string;
   baixo?: boolean;
   curta?: boolean;
   direita?: boolean;
+  alerta?: boolean;
 }
 
-export function Dica({ texto, baixo, curta, direita }: DicaProps) {
+export function Dica({ texto, baixo, curta, direita, alerta }: DicaProps) {
   const classe =
     'dica__bolha' +
     (baixo ? ' dica__bolha--baixo' : '') +
     (curta ? ' dica__bolha--curta' : '') +
-    (direita ? ' dica__bolha--direita' : '');
+    (direita ? ' dica__bolha--direita' : '') +
+    (alerta ? ' dica__bolha--baixo dica__bolha--alerta' : '');
   return (
     <span className={classe} aria-hidden="true">
+      {alerta && (
+        <span className="dica__bolha-icone">
+          <i className="fa-solid fa-exclamation"></i>
+        </span>
+      )}
       {texto}
     </span>
   );

@@ -22,7 +22,7 @@
 9. [Componentes e hooks reutilizáveis](#9-componentes-e-hooks-reutilizáveis)
 10. [Estado global: os providers](#10-estado-global-os-providers)
 11. [CSS, Tailwind e temas](#11-css-tailwind-e-temas)
-12. [As telas](#12-as-telas)
+12. [As telas](#12-as-telas) (inclui o Campo de Testes)
 13. [Usabilidade e acessibilidade](#13-usabilidade-e-acessibilidade)
 14. [Dependências: o que cada uma faz](#14-dependências-o-que-cada-uma-faz)
 15. [O que não existe ainda e débitos conhecidos](#15-o-que-não-existe-ainda-e-débitos-conhecidos)
@@ -79,7 +79,8 @@ react/
     ├── assets/css/     - CSS numerado + tema do Tailwind
     ├── components/     - peças reutilizáveis entre módulos
     ├── services/       - comunicação com a API, tipos, regras de tela, estado compartilhado
-    └── views/          - as páginas
+    ├── views/          - as páginas
+    └── campo-testes/   - o Campo de Testes inteiro (seção 12): paginas/ e servicos/
 ```
 
 ### `services/` e `views/` usam o número do módulo do Nest
@@ -120,7 +121,9 @@ react/
 
 📌 **A guarda confere se HÁ sessão, não o papel.** O que cada papel lê ou altera é decidido pelo backend (guards do Nest e RLS), a proteção de verdade. **Próximo passo, perto do fim do sistema:** cada rota ganha um campo de permissão, lido pelo menu e por esta mesma guarda.
 
-📌 **O menu é derivado.** `views/admin/admin-menu.constants.ts` filtra `ROTAS_ADMIN` por `grupoMenu` (`itensDoGrupo()`). Grupos: o Dashboard (sem título), `GESTÃO DO USUÁRIO`, `Configurações`, `CAMPANHA` e `MODERAÇÃO`. A chave interna do grupo (ex.: `'CADASTROS'`) não muda quando o título visível muda. Item de módulo que ainda não existe aparece apagado com `aria-disabled` (não `disabled`): continua focável pelo teclado, e a dica "Ainda não implementado" aparece também no Tab. Desde 03-10-2026 a MODERAÇÃO não tem mais nenhum (Aprovar Campanhas, Denúncias e Pedidos de Encerramento).
+📌 **As rotas do Campo de Testes não estão nesta lista:** entram pela porta `services/router/campo-testes-opcional.ts` (seção 12), só em desenvolvimento.
+
+📌 **O menu é derivado.** `views/admin/admin-menu.constants.ts` filtra `ROTAS_ADMIN` por `grupoMenu` (`itensDoGrupo()`). Grupos: o Dashboard (sem título), `GESTÃO DO USUÁRIO`, `Configurações`, `CAMPANHA`, `MODERAÇÃO` e, por último, `CAMPO DE TESTES` (some sozinho quando não há rota dele). A chave interna do grupo (ex.: `'CADASTROS'`) não muda quando o título visível muda. Item de módulo que ainda não existe aparece apagado com `aria-disabled` (não `disabled`): continua focável pelo teclado, e a dica "Ainda não implementado" aparece também no Tab. Desde 03-10-2026 a MODERAÇÃO não tem mais nenhum (Aprovar Campanhas, Denúncias e Pedidos de Encerramento).
 
 📌 **Acessados recentemente.** O `AdminLayout` registra as páginas do menu que a pessoa abre (`services/router/acessados-recentemente.ts`, `localStorage` com o id do usuário na chave); o Dashboard mostra as últimas 5.
 
@@ -202,18 +205,21 @@ Cada módulo tem `services/<n>-<nome>/api/<nome>.api.ts` exportando **um objeto*
 | `colunas` | `{ chave, rotulo, tipo }` + opcionais `renderizar(linha)` e `quebrarRotulo`; o `tipo` é obrigatório |
 | `chavePrimaria` | o campo usado como `key` da linha |
 | `listar` | função já amarrada ao `authFetch` pelo pai |
-| `acoes` | `Partial<Record<'alterar' \| 'consultar' \| 'excluir', (linha) => void>>`: os botões saem das chaves presentes (ação sem função é erro de tipo, não link quebrado) |
-| `acaoIndisponivel` | `(linha, acao) => motivo`: a ação fica no lugar, apagada, com o motivo na dica (`aria-disabled`, continua focável) |
+| `acoes` | `Partial<Record<AcaoPadrao, (linha) => void>>`: os botões saem das chaves presentes (ação sem função é erro de tipo, não link quebrado) |
+| `acaoIndisponivel` | `(linha, acao) => motivo`: com texto, a ação fica no lugar, apagada, com o motivo na dica (`aria-disabled`, continua focável); com `null`, a ação nem aparece naquela linha |
+| `acoesEmColuna` | `{ rotulo, acoes }[]`: ações numa coluna própria, só o ícone (nome no cabeçalho e na dica), antes da coluna Ações e fora dela |
 | `filtrosFacetados` | `{ chave, rotulo, ordem? }`: cada um vira um filtro de múltipla escolha |
 | `vazio`, `nivelTitulo` | o estado vazio (`EstadoVazio`) e o nível do título (`h1` por padrão) |
 
 📌 **Tipos de coluna: formato + espaço.** O formato (como mostra, busca e ordena) mora em `components/crud/colunas/formatos.tsx`: texto, número, Sim/Não, dinheiro, data, data e hora, e espera ("há 3 dias"). O espaço mora nos arquivos numerados: `id` (estreita, presa à esquerda), `nome` (a principal, uma por tabela, com mínimo e máximo), `texto` (largura pelo conteúdo) e `curta` (`numero`, `simNao`, `status`, `codigo`, `dinheiro`, `data`, `dataHora`, `espera`: centralizada, nunca quebra, e as do mesmo tipo ficam com a mesma largura). Ações não é tipo: a tabela monta sozinha, por último. A tela nunca escreve largura nem alinhamento.
 
+📌 **As ações ficam numa lista só** (`components/crud/colunas/5-coluna-acoes.tsx`), em duas seções: as do sistema (`AcaoSistema`: Alterar, Consultar, Excluir) e as do Campo de Testes (`AcaoCampoTestes`: Upgrade, Comentar, Seguir, Deixar de seguir, Denunciar). Cada ação tem rótulo, ícone e variante de cor definidos uma vez; a mesma definição serve para a coluna Ações e para a coluna própria. Variantes do botão (`acao-linha.tsx`): `alterar`, `excluir`, `escolher`, `aviso` (ícone âmbar, o cadeado do Upgrade) e `erro` (ícone vermelho, o coração e a bandeira); `vazado` usa o ícone de contorno (coração de Seguir) e `soIcone` esconde o texto. Seguir e Deixar de seguir dividem a coluna: em cada linha só uma aparece, pelo `null`.
+
 📌 **Comportamento:**
 - **Ordena e busca pelo valor cru, mostra formatado** ("R$ 9.000" não vem depois de "R$ 10.000"). A busca procura no que a pessoa vê e no valor cru, sem acento nem maiúscula (`services/constant/util/busca.util.ts`).
 - **Ordena a lista filtrada inteira antes de paginar**, nunca só a página visível.
 - **Facetas:** E entre facetas, OU dentro da mesma; as opções saem da lista completa; o filtro só aparece com mais de um valor.
-- **Busca, filtro, página e ordem vivem na URL** (`useSearchParams`, sempre com `replace`): voltar de um modal ou dar F5 mantém o filtro. Nomes reservados: `q`, `pagina`, `tamanho`, `ordenar`, `dir`.
+- **Busca, filtro, página e ordem vivem na URL** (`useSearchParams`, sempre com `replace`): voltar de um modal ou dar F5 mantém o filtro. Nomes reservados: `q`, `pagina`, `tamanho`, `ordenar`, `dir`. Uma tela pode pré-marcar uma faceta escrevendo na URL ao abrir, se ela ainda não estiver lá (é o que o Campo de Testes faz com Origem).
 - **Larguras medidas, não estimadas:** as colunas curtas medem o texto de toda a lista (`canvas.measureText`) antes de pintar; nome e texto têm piso pela lista inteira, para não mudar ao virar a página.
 - **Tela estreita:** primeiro some o espaço extra; depois o texto secundário diminui; depois nome e texto quebram (e-mail quebra só depois do `@` ou do `_`); por fim a tabela rola de lado, com id, nome e Ações presos (no celular, só o nome).
 - **Esqueleto de carregamento** com as mesmas colunas, em vez de "Carregando..." que faz a tela pular.
@@ -224,9 +230,9 @@ Cada módulo tem `services/<n>-<nome>/api/<nome>.api.ts` exportando **um objeto*
 
 ⚠️ **Busca, filtro e paginação são no navegador.** Resolve listas de dezenas e centenas de linhas; milhares exigiriam busca no backend (`LIMIT/OFFSET` + `WHERE`).
 
-**Quem usa:** todas as listagens (`listar-*.tsx` de usuários, papéis, pesquisadores, áreas, tipos de link, motivos de denúncia, parâmetros, termos, campanhas e a fila de aprovação).
+**Quem usa:** todas as listagens (`listar-*.tsx` de usuários, papéis, pesquisadores, áreas, tipos de link, motivos de denúncia, parâmetros, termos, campanhas e a fila de aprovação) e as telas T1 a T4 do Campo de Testes.
 
-**Tabelas específicas** (`components/crud/tabelas/`, uma por arquivo, numeradas): 1 links acadêmicos, 2 dimensões do score, 3 itens de orçamento, 4 marcos do cronograma, 5 histórico de alterações, 6 Papel × Permissão, 10 atualizações de campanha, 11 comentários, 12 denúncias, 13 pedidos de encerramento; e a base `tabela-editavel.tsx` (edição na linha, usada por 1, 3 e 4). `CaixaTabela` é a caixa que rola a tabela de lado no celular, com nome e foco de teclado: obrigatória em tabela só de leitura, que não tem botão para o teclado chegar (WCAG 2.1.1; usada por 5, 10 e 11). A tabela mostra e edita; quem busca e grava é a tela, por props (`aoAdicionar`, `aoSalvar`, `aoExcluir`...).
+**Tabelas específicas** (`components/crud/tabelas/`, uma por arquivo, numeradas): 1 links acadêmicos, 2 dimensões do score, 3 itens de orçamento, 4 marcos do cronograma, 5 histórico de alterações, 6 Papel × Permissão, 10 atualizações de campanha, 11 comentários, 12 denúncias, 13 pedidos de encerramento; e a base `tabela-editavel.tsx` (edição na linha, usada por 1, 3 e 4; só Alterar e Excluir, sem Consultar, porque a linha já mostra tudo e o texto longo tem "ler tudo"; as colunas se ajustam ao conteúdo, sem largura escrita; a coluna marcada `principal`, como a URL dos links, fica com o espaço que sobra, e então os campos da linha de adicionar pedem como mínimo o tamanho do próprio texto de exemplo). `CaixaTabela` é a caixa que rola a tabela de lado no celular, com nome e foco de teclado: obrigatória em tabela só de leitura, que não tem botão para o teclado chegar (WCAG 2.1.1; usada por 5, 10 e 11). A tabela mostra e edita; quem busca e grava é a tela, por props (`aoAdicionar`, `aoSalvar`, `aoExcluir`...).
 
 ---
 
@@ -241,9 +247,9 @@ Cada módulo tem `services/<n>-<nome>/api/<nome>.api.ts` exportando **um objeto*
 | `ficha-consulta.tsx` | `SecaoFicha` e `CampoFicha`: as seções e campos dos modais de Consultar (campo de leitura, não campo desabilitado: desabilitado promete "poderia editar") |
 | `rodape-acoes.tsx` | `RodapeAcoes`: secundário à esquerda (Cancelar, Fechar), ações à direita, com "Salvando..." enquanto `ocupado`; `perigo` usa o botão vermelho; `formulario` submete um `<form>` pelo id; `cancelarDesabilitado` para o secundário que não se aplica (Desfazer sem nada alterado). Sem `largura`, ela sai pelo número de botões (dois ou três); `md` é para rótulo de ação longo. Todo par de ações do sistema passa por ele, também no fim de uma seção (Pontuação, contestação do score) |
 | `resumo-alteracoes.tsx` | a frase do rodapé dos Alterar: o que mudou e ainda não foi salvo |
-| `use-alteracao-nao-salva.ts` | aviso nativo do navegador (`beforeunload`) com alteração não salva; a confirmação ao fechar o modal é da tela |
+| `use-alteracao-nao-salva.ts` | `useFecharComAviso(sujo, aoFechar)`: o que todo modal de criar/alterar usa (aviso nativo do navegador com alteração não salva e o `fechar` que pergunta antes de sair); `confirmarSaida` e `useAvisoAlteracaoNaoSalva` soltos, para quem não é modal (Minha Conta) |
 | `badge-status-campanha.tsx` | o selo de status de uma campanha, igual em todo lugar, com "Em breve" (seção 12) |
-| `badge-status-denuncia.tsx` | o selo da situação de uma denúncia (pendente, em análise, resolvida, improcedente) |
+| `badge-status-denuncia.tsx` | o selo da situação de uma denúncia (pendente, em contestação, resolvida, improcedente) |
 | `filtro-partes.tsx` | `FiltroPartes`: filtro fixo no topo do corpo do modal, com cara de aba. "Geral" mostra tudo; cada outra opção mostra só aquela parte, e as outras ficam escondidas (`hidden`), não desmontadas: troca instantânea, nada do que está sendo editado se perde. Usado no Alterar Usuário, no Consultar Campanha e no Alterar Campanha (Geral, Dados, Orçamento e cronograma e, para o dono, Atualizações, Comentários e Encerramento quando existem; avisos do topo e a decisão da Bancada aparecem em todas as partes) |
 | `modal-termo.tsx` | o padrão de todo termo para ler (o do Criar conta): `ModalTermo` (modal largo, título, versão, "Tela cheia" no cabeçalho, texto rolando por dentro), e as peças `TextoTermo` e `BotaoTelaCheia` para o upgrade de pesquisador. Usado no Criar conta, na tela de aceite pendente, no Consultar Termo de Uso e nos aceites do Consultar Usuário. Criar e Alterar Termo continuam com a `CaixaTextoLongo` (é edição) |
 | `badge-status-encerramento.tsx` | o selo da situação de um pedido de encerramento antecipado (pendente, aprovado, rejeitado, cancelado) |
@@ -272,8 +278,10 @@ Cada módulo tem `services/<n>-<nome>/api/<nome>.api.ts` exportando **um objeto*
 | `campo.tsx` | `Campo`: rótulo + campo + dica ou erro. O campo vem por função (`({ atributos, classeErro }) => <input {...atributos} />`), para servir a input, select e textarea; `atributos` liga rótulo, erro e dica para o leitor de tela |
 | `contador-caracteres.tsx` | "120 de 5.000 caracteres", com o limite de Parâmetros; vermelho acima do limite. Conta como o banco (`contarCaracteres`: um emoji vale 1) |
 | `confirmacao-digitada.tsx` + `confirmacao-confere.ts` | "Digite o e-mail para confirmar"; `classeRotulo` para rótulo sobre fundo colorido |
+| `caixa-somente-leitura.tsx` | `CaixaSomenteLeitura`: um valor que só se lê (CPF atual, score), na mesma caixa dos campos ao lado, para alinhar com eles; ao tentar escrever, apagar ou colar, mostra a dica "Apenas leitura" (classe `dica--aberta`), que some quando o foco sai. Para mostrar um dado fora de formulário, sem caixa, continua `CampoSomenteLeitura` |
 | `caixa-busca-sugestoes.tsx` | caixa de busca com lista "ID: x  Nome", que fecha ao clicar fora |
 | `caixa-marcacao.tsx`, `campo-cpf.tsx`, `medidor-senha.tsx` | caixa de marcação, CPF com máscara, força da senha |
+| `botao-mostrar-senha.tsx` | o olho dentro da caixa de senha (Cadastro, Redefinir senha, Minha Conta); o estado fica em quem usa, porque vale também para "Confirmar senha" |
 | `seletor-foto-perfil.tsx` | o avatar editável com o fluxo de upload inteiro. Nunca salva sozinho: devolve ao pai (`aoAlterar`), com três estados (foto nova, remoção pedida, nada escolhido) |
 
 ### `components/layout/`
@@ -282,7 +290,7 @@ Cada módulo tem `services/<n>-<nome>/api/<nome>.api.ts` exportando **um objeto*
 
 📌 **Destaques:**
 - **`LimiteErro`:** um erro de renderização mostra um aviso no lugar do trecho que quebrou (com botão de recarregar), em vez de tela em branco. Em volta do conteúdo de todas as páginas e da área do painel (o menu continua de pé). Recomeça ao trocar de página.
-- **Avisos (toasts, `toast-provider.tsx`):** fila de até 3, sucesso some em 4 s e erro em 8 s, acima dos modais. Aviso igual não empilha: recomeça o tempo com uma pulsada leve. Quem sai encolhe e os de baixo sobem deslizando. Erro é `role="alert"`, sucesso `role="status"`.
+- **Avisos (toasts, `toast-provider.tsx`):** fila de até 3, sucesso some em 6 s e erro em 10 s (desde 13-10-2026; antes 4 e 8), acima dos modais. Com o mouse em cima, ou o foco do teclado dentro do aviso, o tempo para e volta de onde estava ao sair: é o que a WCAG 2.2.1 (tempo ajustável) pede para mensagem que some sozinha, e o que GitHub e Gmail fazem. Aviso igual não empilha: recomeça o tempo com uma pulsada leve. Quem sai encolhe e os de baixo sobem deslizando. Três tipos: sucesso (verde), aviso (laranja, a ação deu certo mas pede atenção, como a pontuação que caiu; mesmo tempo do sucesso) e erro (vermelho). Erro é `role="alert"`; sucesso e aviso, `role="status"`.
 - **Dica (`tooltip.tsx`):** `.dica` + `<Dica texto />` dá nome visível a qualquer controle; abre no `:hover` e no foco de teclado (`:focus-visible`), nunca no foco de clique (senão ficava presa depois de fechar um modal). `Tooltip` é o ⓘ avulso (`baixo`, `aoClicar` para abrir um modal com a explicação longa, `badge`). `<Dica>` é `aria-hidden`: o nome acessível mora no gatilho. `title` nativo só onde o elemento não é interativo.
 - **`AvatarUsuario`:** cor da inicial pelo nome (sempre a mesma, sem guardar nada); foto que não carrega vira a inicial.
 - **Tema e fonte são do dispositivo, não da conta** (`localStorage`): preferência por conta exigiria tabela própria.
@@ -297,11 +305,25 @@ Cada módulo tem `services/<n>-<nome>/api/<nome>.api.ts` exportando **um objeto*
 | `useEnvio` | o "enviar" de todo formulário: limpa o erro, liga `ocupado`, chama a API, reporta o erro, desliga |
 | `useErrosFormulario` | erro embaixo de cada campo na tentativa de enviar, com o cursor no primeiro (seção 13) |
 | `useBuscar` | buscar dado quando algo muda, descartando resposta atrasada; serve também ao "carregar para editar" (`aoChegar`) |
-| `useCrudModais` | o estado criar/alterar/consultar/excluir/recarregar de toda listagem |
+| `useCrudModais` | o estado criar/alterar/consultar/excluir/recarregar de toda listagem; `chaveRecarga` vai para a `GenericTable` (prop de mesmo nome), que busca de novo quando ela muda |
+| `useAvisoScore` (`6-perfil-pesquisador`) | depois de uma ação que mexe na pontuação: lê a nota antes e depois e mostra "score total +N pontos" (laranja quando perde) |
 | `useFocoPreso` | foco preso na janela aberta, Esc fecha só a de cima, foco volta para quem abriu |
 | `useOpcoesDiasSuspensao` | os prazos de suspensão vindos de Parâmetros |
 | `useRegrasCampanha` | as regras de campanha de Parâmetros (meta mínima, prazos, prazo sugerido, mínimos de orçamento e cronograma, limite da descrição) |
 | `useDecisaoAprovacao` / `usePronta` | aprovar e rejeitar uma campanha, e se ela está pronta para aprovar (seção 12) |
+
+Peças de tela compartilhadas entre módulos: `views/1-usuario/modais-usuario.tsx` (`ModaisUsuario`: Alterar, Consultar e Excluir de uma conta, abertos de Usuários, Pesquisadores e da Bancada do Pesquisador) e `views/7-link-academico/links-academicos-do-usuario.tsx` (a tabela de links de um pesquisador, no Alterar Usuário e no upgrade, travada até o perfil existir).
+
+### Roteiro de um módulo novo (para não refazer o que já existe)
+
+**Em palavras simples:** antes de escrever uma tela nova, usar as peças prontas abaixo. Cada uma já resolve um detalhe que levou tempo para acertar (o modal que não "dança", o erro no lugar certo, o aviso de alteração não salva, a recarga da lista).
+
+1. **API (`services/N-modulo/api/`):** catálogo simples usa `criarApiCatalogo`; o resto segue o padrão da seção 6, sempre com `authFetch`. Valores fixos do banco (enum) vêm de `enums-do-banco.gerado.ts`, nunca escritos à mão.
+2. **Lista:** `GenericTable` com `colunas` tipadas, `acoes` e, se precisar, `filtrosFacetados`; o estado dos modais vem de `useCrudModais`, e a `chaveRecarga` dele vai para a tabela. A função `listar` fica num `useCallback` só com o que ela usa (sem truque de dependência). Abaixo, `BlocoLogAuditoria` com o nome físico da tabela.
+3. **Modais:** casca `ModalFicha`; leitura com `SecaoFicha`/`CampoFicha`; formulário com `Campo`; rodapé com `RodapeAcoes` (e `ResumoAlteracoes` no Alterar); `useFecharComAviso` para o fechar; `useEnvio` para salvar e `useErrosFormulario` para os erros embaixo dos campos.
+4. **Limites e textos de regra:** sempre de Parâmetros (`useConfiguracoes().obterNumero(chave, reserva)`), com a reserva igual ao valor do seed. Tamanho máximo de campo (`maxLength`) igual ao da coluna no banco.
+5. **Cores e tipografia:** só tokens e as classes da seção 11; nada de cor crua do Tailwind nem hexadecimal.
+6. **Selo de situação:** um `badge-status-*.tsx` por entidade, com rótulos e classes num arquivo de constantes do módulo.
 
 ---
 
@@ -350,7 +372,7 @@ Cada módulo tem `services/<n>-<nome>/api/<nome>.api.ts` exportando **um objeto*
 ### Gestão do usuário
 
 - **Usuários:** Alterar é uma tela só, que rola (sem abas): em cima, o que espera o Salvar (foto, nome, senha, perfil de pesquisador); embaixo, o que grava na hora (papéis, moderação, CPF, links acadêmicos). Um filtro no topo mostra uma parte só sem desmontar as outras; o cabeçalho mostra pílulas da situação; o rodapé diz o que mudou. Revogar papel pede confirmação; suspender pede motivo e prazo de Parâmetros.
-- **Papéis & Permissões:** matriz Papel × Permissão e o significado de cada papel e permissão em dicionários (`papel-descricoes.constants.ts`, `permissao-nomes-amigaveis.constants.ts`); quem tem uma permissão é lido ao vivo.
+- **Papéis & Permissões:** matriz Papel × Permissão; a descrição de cada papel vem do banco (`papel.descricao`, editável no Alterar Papel desde 13-10-2026), e o significado de cada permissão, de um dicionário (`permissao-nomes-amigaveis.constants.ts`); quem tem uma permissão é lido ao vivo.
 
 ### Configurações
 
@@ -364,15 +386,34 @@ Cada módulo tem `services/<n>-<nome>/api/<nome>.api.ts` exportando **um objeto*
 
 - **Status e "Em breve".** `BadgeStatusCampanha` mostra o status em todo lugar. "Em breve" (RF-059) não é status do banco: é a campanha aprovada (`ativo`) com início no futuro, com selo azul próprio, e o filtro das listas tem a opção. As regras de status ficam num lugar só (`services/12-campanha/constants/status-campanha.constants.ts`): onde o banco aceita comentário novo, onde aceita atualização nova e quais já foram publicadas.
 - **Campanhas:** a lista de todas, para a gestão, com o Consultar completo, só para ler, nesta ordem: dados, datas, financeiro com a barra do arrecadado, histórico de rejeições, orçamento e cronograma, atualizações publicadas, **comentários endossados** (no máximo o limite de endossos, na ordem do endosso: o que a página pública mostra), **denúncias** (só quando há alguma), **pedidos de encerramento** (só quando há algum) e **todos os comentários** (a gestão vê todos pela permissão de moderar). No topo, o `FiltroPartes` (Geral, Dados, Orçamento e cronograma, Atualizações, Comentários e, para a gestão, Moderação, só quando há denúncia ou pedido de encerramento); vale nos quatro lugares que usam o modal. Denúncias e comentários são **paginados pelo servidor** (`usePaginaServidor`): uma campanha pode ter milhares. Endossar e excluir ficam com o dono, em Minhas Campanhas. Contribuições e quantas pessoas seguem entram no Consultar quando os módulos existirem.
-- **Denúncias (`views/19-denuncia`, moderação):** a lista de campanhas e perfis denunciados (tipo, alvo, motivo, há quanto tempo espera julgamento e situação; quem denunciou e a data ficam na ficha), com filtro por situação e por tipo. Consultar abre a ficha só para ler; Alterar abre o julgamento: a situação e, ao decidir (resolvida ou improcedente), a justificativa obrigatória. Numa denúncia contra campanha ativa, "Procedente: encerrar a campanha" pede confirmação e a justificativa, e a campanha sai da página pública. `ModalDenunciar` (motivo só dos ativos do tipo certo, relato opcional) é a peça que a página pública vai usar; no painel, o dono da campanha usa para "Denunciar autor" de um comentário recebido (o comentário vai no relato), e o T4 usa para denunciar uma campanha seguida.
+- **Denúncias (`views/19-denuncia`, moderação):** a lista de campanhas e perfis denunciados (tipo, alvo, motivo, há quanto tempo espera a moderação e situação; quem denunciou e a data ficam na ficha), com filtro por situação e por tipo. A situação "Em contestação" não é gravada: é a denúncia já julgada com a contestação do pesquisador esperando análise (`situacaoDenuncia()`, `status-denuncia.constants.ts`); ela fica no topo com as pendentes e espera desde o dia da contestação. Enquanto isso, a decisão continua valendo (a procedente segue contando na pontuação); por isso não é uma situação nova no banco, que teria de guardar duas vezes o que `contestacao_status` já diz. Consultar abre a ficha só para ler; Alterar abre o julgamento: a situação e, ao decidir (resolvida ou improcedente), a justificativa obrigatória. Numa denúncia contra campanha ativa, "Procedente: encerrar a campanha" pede confirmação e a justificativa, e a campanha sai da página pública. `ModalDenunciar` (motivo só dos ativos do tipo certo, "Detalhes adicionais" opcional, coluna `relato` no banco) é a peça que a página pública vai usar; no painel, o dono da campanha usa para "Denunciar autor" de um comentário recebido (o comentário vai nos detalhes adicionais), e o Campo de Testes usa na coluna "denunciar": perfil de pesquisador no T1, campanha no T2 e no T4.
 - **Contestação do score (RF-033):** na Minha Conta, aba Acadêmico, `SecaoContestacaoScore` (`views/19-denuncia`) lista as denúncias procedentes contra o pesquisador (sem quem denunciou), com "Pedir revisão" (uma por denúncia, uma esperando por vez) e o resultado. Na tela de Denúncias, a coluna e o filtro "contestação"; com uma contestação esperando, o modal de julgamento troca a decisão normal por "Recusar contestação" e "Aceitar: denúncia improcedente", com justificativa.
 - **Pedidos de Encerramento (`views/20-solicitacao-encerramento`, moderação):** os pedidos de encerramento antecipado (campanha, modelo, arrecadado, contribuições confirmadas, quem pediu, data e situação), com filtro por situação. Consultar abre o pedido só para ler; Alterar (só nos pendentes) abre a decisão: Rejeitar pede a justificativa; Aprovar mostra o que acontece com o dinheiro (Tudo ou Nada devolve, Flexível repassa) e pede confirmação. O encerramento direto aparece como aprovado, com "-" em quem decidiu.
 - **Encerrar antes do prazo (Alterar do dono, campanha ativa):** `SecaoEncerramentoAntecipado`, no fim do Alterar em Minhas Campanhas. Sem nada arrecadado, "Encerrar campanha agora" com confirmação; com arrecadado, "Enviar pedido ao administrador", e a campanha continua recebendo apoio até a decisão. Com um pedido pendente, mostra o pedido e "Cancelar pedido". Embaixo, a tabela dos pedidos anteriores.
 - **Aprovar Campanhas (fila):** Consultar abre a campanha só para ler (o mesmo Consultar das outras telas); Alterar abre a revisão com Aprovar e Rejeitar. "Esperando há X dias", contado da última entrada na fila (a mais antiga no topo; um reenvio zera a espera); sinal de score baixo. O modal de revisão mostra tudo o que é preciso ler, a lista "Pronta para aprovar?" e o motivo da rejeição. **Aprovar e rejeitar** vivem em `useDecisaoAprovacao` e nas peças de `views/12-campanha/decisao-aprovacao.tsx`: Rejeitar fica sempre clicável e, sem motivo, mostra o erro embaixo do campo; Aprovar fica apagado enquanto a campanha não está pronta.
 - **Criar Campanha:** passo a passo de 4 etapas no mesmo modal (Dados, Orçamento, Cronograma, Revisão), salvando como rascunho a cada etapa. A data de fim é sugerida com a duração de Parâmetros (`prazo_sugerido_campanha_dias`, RF-069); meta e prazo são conferidos antes de enviar; a descrição tem contador (RF-072). O clique fora não descarta as etapas.
 - **Alterar Campanha:** os campos protegidos depois da aprovação aparecem só para leitura, com o aviso de por quê (a lista vem do banco). Rascunho e rejeitada têm "Enviar para aprovação" ou "Corrigir e reenviar"; datas vencidas oferecem reagendar mantendo a duração (RF-070). Para o **dono** de uma campanha já publicada: **Atualizações** (`SecaoAtualizacoesCampanha`: publicar com título, conteúdo, fase e formato; ocultar e mostrar, RF-051/052) e **Comentários recebidos** (`SecaoComentariosRecebidos`: endossar até o limite de Parâmetros, excluir ou excluir e bloquear, sem avisar o autor, RF-093/094).
-- **Comentar:** no painel só existe o comentário em nome de outro pesquisador (`comentarioApi.comentarParaOutro`, Bancada da Campanha), que é ferramenta de teste e não existe em produção. O comentar da própria conta (`POST /comentario`) entra no serviço junto da página pública, que é quem vai usá-lo.
+- **Comentar:** sempre como a conta logada (`comentarioApi.criar`, `POST /comentario`), na Bancada da Campanha; só pesquisador ativo comenta, e quem não é vê o mesmo aviso de Minhas Campanhas, com o caminho do upgrade (`AvisoSoPesquisador`).
 - **Seguir campanha** tem serviço próprio (`services/16-seguir-campanha`): seguir, deixar de seguir e listar as que a conta segue.
+
+### Campo de Testes (`src/campo-testes/`)
+
+> **Em palavras simples:** o Campo de Testes é a parte do painel onde o administrador faz, com a própria conta, o que um usuário ou pesquisador faria na área pública (comentar, seguir, denunciar, pedir upgrade, criar campanha), usando os mesmos endpoints. Serve para achar problema rápido. Tudo dele mora numa pasta só, e apagar essa pasta não quebra o sistema.
+
+- **Decisão:** o Campo de Testes usa o sistema; o sistema nunca importa o Campo de Testes. Ele entra por uma porta só: `src/campo-testes/plugin.ts` exporta as rotas e o contexto, e `services/router/campo-testes-opcional.ts` carrega esse arquivo com `import.meta.glob`, só em desenvolvimento. A regra `no-restricted-imports` do ESLint acusa qualquer import do sistema para dentro da pasta.
+- **Motivo:** dependência de mão única (o padrão "pasta por funcionalidade" do Bulletproof React). Em produção, nem a rota nem o código do Campo de Testes vão para o build.
+- **Caso-limite aceito:** algumas peças do sistema têm uma opção que hoje só o Campo de Testes usa, sem importar nada dele: as ações da seção `AcaoCampoTestes` e o `gerarCpfDeTeste` do campo de CPF e do modal de upgrade. O CSS dele continua em `assets/css/8-campo-testes.css`, por último na ordem dos estilos.
+
+**As telas** (todas com a `GenericTable` e o Registro de Chamadas, que mostra cada chamada feita à API):
+- **T1, Bancada do Pesquisador:** todos os usuários, com papel, título, status e score; colunas "upgrade" (cadeado, só para quem não é pesquisador, com o botão "Gerar CPF válido" no modal) e "denunciar" (só pesquisador, nunca o próprio perfil); Alterar, Consultar e Excluir abrem os modais reais de Usuário.
+- **T2, Bancada da Campanha:** todas as campanhas; colunas "comentar", "seguir" e "denunciar"; Criar (em nome de um pesquisador), Alterar (com Aprovar e Rejeitar enquanto aguarda) e Excluir (com a exclusão forçada para quem já passou do rascunho).
+- **T3, Minhas Campanhas:** a tela real de `views/12-campanha`, para testar o fluxo do pesquisador.
+- **T4, Campanhas Seguidas:** as campanhas que a conta segue, com as mesmas colunas do T2 e só Consultar na coluna Ações; deixar de seguir tira a campanha da lista na hora.
+- **Guia de Estilo:** cores nos dois temas, tipografia e componentes reais. A lista de pares de contraste que ele mostra é do sistema (`assets/css/pares-contraste.json`, a mesma que o `npm run contraste` confere).
+
+📌 **Peças compartilhadas:** `servicos/hook/use-campanhas-campo-testes.tsx` entrega a toda tela de campanha do Campo de Testes as colunas, as facetas, as ações de quem visita a campanha (Consultar, Comentar, Seguir, Deixar de seguir, Denunciar), as regras de quando cada uma vale e os modais delas. O T2 acrescenta só o que é dele; o T4 só filtra as seguidas. Um "T" novo de campanha começa por esse hook.
+
+📌 **Registros da demonstração:** os pesquisadores 12 a 22 e as campanhas 1 a 10 do seed não são protegidos. A faceta "Origem" (demonstração ou teste, `servicos/util/registros-demonstracao.util.ts`) abre marcada em "teste" no T1 e no T2 e os esconde.
 
 ### Dashboard (`views/admin/dashboard.tsx`)
 
@@ -416,7 +457,7 @@ Quatro abas (`BarraAbasBotoes`): **Visão Geral** (faixa de saúde, cartões de 
 ## 15. O que não existe ainda e débitos conhecidos
 
 - **Área pública** (campanha, home, checkout, painel do doador e do pesquisador). Ver `PROXIMOS_MODULOS.md`. Botões do cabeçalho e do rodapé que levariam a ela ainda não têm destino; "Continuar com Google" é simulado.
-- **Telas dos módulos que faltam:** denúncia, recompensa, pedido de encerramento, notificação, contribuição, repasse.
+- **Telas dos módulos que faltam:** recompensa, notificação, contribuição, repasse.
 - ⚠️ **Nenhum teste automatizado no React.**
 - ⚠️ **`react/.gitignore` não cobre `.env`** (inofensivo hoje: o arquivo só tem a URL da API).
 - ⚠️ **Espelhos manuais do Nest:** tipos dos DTOs, perfil de redução de imagem, lista de tipos de imagem aceitos. Sem import entre os dois projetos, cada mudança no Nest precisa ser repetida aqui.

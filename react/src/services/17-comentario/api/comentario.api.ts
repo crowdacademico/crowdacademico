@@ -7,9 +7,9 @@ import type { ComentarioResponse } from '../type/comentario.type';
 // endossa, exclui (apaga de vez) e bloqueia (inativo: fica guardado e o autor não comenta mais naquela campanha); a
 // lista esconde do dono o comentário bloqueado. O autor não é avisado de nenhuma dessas ações (RF-093).
 export const comentarioApi = {
-  // Ferramenta de teste: comenta em nome de um pesquisador ativo (comentar_campanha_para_outro, 03).
-  comentarParaOutro: (authFetch: AuthFetch, idPesquisador: number, idCampanha: number, conteudo: string): Promise<ComentarioResponse> =>
-    authFetch(`/comentario/${idPesquisador}`, { method: 'POST', body: JSON.stringify({ idCampanha, conteudo }) }).then(
+  // Comenta como a conta logada: só pesquisador ativo, nunca na própria campanha, um por campanha (regras do banco).
+  criar: (authFetch: AuthFetch, idCampanha: number, conteudo: string): Promise<ComentarioResponse> =>
+    authFetch('/comentario', { method: 'POST', body: JSON.stringify({ idCampanha, conteudo }) }).then(
       tratarResposta<ComentarioResponse>,
     ),
   // Uma página da lista (gestão, página pública): `endossado` true traz só os endossados, na ordem do endosso.

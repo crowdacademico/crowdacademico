@@ -21,10 +21,10 @@ export function TabelaSolicitacoesEncerramento({ solicitacoes }: { solicitacoes:
         <thead>
           <tr>
             <th className="crud-tabela__col--id">id</th>
-            <th>Data</th>
+            <th className="crud-tabela__col--curta">Data</th>
             <th>Justificativa</th>
-            <th>Situação</th>
-            <th>Decidido por</th>
+            <th className="crud-tabela__col--curta">Situação</th>
+            <th className="crud-tabela__col--texto">Decidido por</th>
             <th>Decisão</th>
           </tr>
         </thead>
@@ -32,14 +32,14 @@ export function TabelaSolicitacoesEncerramento({ solicitacoes }: { solicitacoes:
           {solicitacoes.map((item) => (
             <tr key={item.idSolicitacao}>
               <td className="crud-tabela__col--id">{item.idSolicitacao}</td>
-              <td>{formatarData(item.solicitadoEm)}</td>
+              <td className="crud-tabela__col--curta">{formatarData(item.solicitadoEm)}</td>
               <td>
                 <TextoResumido texto={item.justificativaPesquisador} />
               </td>
               <td>
                 <BadgeStatusEncerramento status={item.status} />
               </td>
-              <td>{quemDecidiu(item)}</td>
+              <td className="crud-tabela__col--texto">{quemDecidiu(item)}</td>
               <td>
                 <TextoResumido texto={item.justificativaAdmin} />
               </td>

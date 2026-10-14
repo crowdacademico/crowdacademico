@@ -9,9 +9,7 @@ import {
 } from '../../services/6-perfil-pesquisador/constants/status-pesquisador.constants';
 import { usuarioApi } from '../../services/1-usuario/api/usuario.api';
 import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
-import { ModalAlterarUsuario } from '../1-usuario/modal-alterar-usuario';
-import { ModalConsultarUsuario } from '../1-usuario/modal-consultar-usuario';
-import { ModalExcluirUsuario } from '../1-usuario/modal-excluir-usuario';
+import { ModaisUsuario } from '../1-usuario/modais-usuario';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { PerfilPesquisadorResponse } from '../../services/6-perfil-pesquisador/type/perfil-pesquisador.type';
 
@@ -60,8 +58,7 @@ export function ListarPesquisadores({ auth }: PropsPagina) {
         statusPesquisador: ROTULO_STATUS_PESQUISADOR[pesquisador.statusPesquisador],
       };
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [auth.authFetch, chaveRecarga]);
+  }, [auth.authFetch]);
 
   const buscarLogPerfil = useCallback(
     (pagina: number, tamanho: number) => logAuditoriaApi.listarPorTabela(auth.authFetch, 'perfil_pesquisador', pagina, tamanho),
@@ -81,35 +78,22 @@ export function ListarPesquisadores({ auth }: PropsPagina) {
         ]}
         chavePrimaria="idUsuario"
         listar={listarPesquisadores}
+          chaveRecarga={chaveRecarga}
         acoes={acoesCompletas}
         filtrosFacetados={[{ chave: 'statusPesquisador', rotulo: 'Status' }]}
       />
       <BlocoLogAuditoria buscar={buscarLogPerfil} />
 
-      {alterando && (
-        <ModalAlterarUsuario
-          auth={auth}
-          idUsuario={alterando.idUsuario}
-          aoFechar={fecharAlterando}
-          aoAtualizado={recarregar}
-        />
-      )}
-
-      {consultando && (
-        <ModalConsultarUsuario auth={auth} idUsuario={consultando.idUsuario} aoFechar={fecharConsultando} />
-      )}
-
-      {excluindo && (
-        <ModalExcluirUsuario
-          auth={auth}
-          idUsuario={excluindo.idUsuario}
-          nome={excluindo.nome}
-          email={excluindo.email}
-          emailVerificado={excluindo.emailVerificado}
-          aoFechar={fecharExcluindo}
-          aoExcluido={recarregar}
-        />
-      )}
+      <ModaisUsuario
+        auth={auth}
+        alterando={alterando}
+        consultando={consultando}
+        excluindo={excluindo}
+        fecharAlterando={fecharAlterando}
+        fecharConsultando={fecharConsultando}
+        fecharExcluindo={fecharExcluindo}
+        aoMudar={recarregar}
+      />
     </div>
   );
 }

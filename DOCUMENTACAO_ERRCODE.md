@@ -144,7 +144,6 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 92025 | `fn_valida_posse_imagem_perfil` / `fn_valida_posse_anexo` | `usuario` / `arquivo_atualizacao`, `arquivo_recompensa` | Só é possível usar como foto ou anexar um arquivo que você mesmo enviou (28 e 29-09-2026) |
 | 92026 | `trg_valida_escopo_tipolink` | `link_academico` | Só pesquisador tem links acadêmicos (29-09-2026) |
 | 92027 | `suspender_usuario` | `usuario` | Ninguém suspende a própria conta (29-09-2026) |
-| 92028 | `comentar_campanha_para_outro` | `comentario` | Sem permissão para comentar em nome de outro pesquisador (03-10-2026) |
 | 92029 | `fn_valida_denuncia_alvo` | `denuncia` | Não é possível denunciar a própria campanha nem o próprio perfil (03-10-2026) |
 | 92030 | `encerrar_campanha_por_denuncia` | `denuncia`, `campanha` | Sem permissão para julgar a denúncia e encerrar a campanha por moderação (03-10-2026) |
 | 92031 | `encerrar_campanha_sem_contribuicao` | `campanha` | Só o dono da campanha pode encerrá-la antecipadamente (03-10-2026) |
@@ -152,6 +151,7 @@ Nenhuma faixa colide com os SQLSTATE nativos do Postgres já tratados em `postgr
 | 92033 | `fn_valida_transicao_solicitacao` | `solicitacao_encerramento` | Aprovar ou rejeitar só pela decisão do administrador, nunca por mudança direta de status (03-10-2026) |
 | 92034 | `contestar_denuncia` | `denuncia` | Só o pesquisador penalizado pela denúncia a contesta (03-10-2026) |
 | 92035 | `decidir_contestacao` | `denuncia` | Sem permissão (`denuncia_responder`) para decidir contestação (03-10-2026) |
+| 92036 | `decidir_contestacao` | `denuncia` | Quem julgou a denúncia não decide a contestação contra a própria decisão (10-10-2026) |
 
 ## 93xxx - Limite de taxa (429)
 

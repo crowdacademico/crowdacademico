@@ -3,10 +3,11 @@ import type { ReactNode } from 'react';
 import { ToastContext } from './toast-context';
 import type { TipoToast } from './toast-context';
 
-// Os dois somem sozinhos (decisão do Lucas: o erro preso na tela, até alguém fechar, atrapalhava). O erro fica o
-// dobro do tempo, porque costuma ter mais o que ler; o X fecha antes, e o próximo aviso toma o lugar dele.
-const DURACAO_SUCESSO_MS = 4000;
-const DURACAO_ERRO_MS = 8000;
+// Os dois somem sozinhos (decisão do Lucas: o erro preso na tela, até alguém fechar, atrapalhava). O erro fica mais
+// tempo, porque costuma ter mais o que ler; o X fecha antes, e o próximo aviso toma o lugar dele. Com o mouse em
+// cima, ou o foco do teclado dentro, o tempo para e volta de onde estava ao sair (WCAG 2.2.1, tempo ajustável).
+const DURACAO_SUCESSO_MS = 6000;
+const DURACAO_ERRO_MS = 10000;
 const MAXIMO_NA_TELA = 3;
 // Aviso igual chegando dentro desta janela é a chamada dupla do <StrictMode> do desenvolvimento (cada efeito roda
 // duas vezes), não a pessoa repetindo a ação: o tempo recomeça, mas sem a pulsada.
@@ -29,6 +30,11 @@ const CONFIG_TIPO: Record<TipoToast, { corBorda: string; corIcone: string; icone
     corBorda: 'borda-sucesso',
     corIcone: 'texto-sucesso',
     icone: 'fa-solid fa-circle-check',
+  },
+  aviso: {
+    corBorda: 'borda-aviso',
+    corIcone: 'texto-aviso',
+    icone: 'fa-solid fa-triangle-exclamation',
   },
   erro: {
     corBorda: 'borda-erro',
@@ -66,6 +72,9 @@ export function ToastProvider({ children }: ToastProviderProps) {
   // efeito colateral dentro do setState (que o <StrictMode> roda duas vezes).
   const lista = useRef<Toast[]>([]);
   const relogios = useRef(new Map<number, ReturnType<typeof setTimeout>>());
+  // Quando cada relógio termina, e quanto faltava quando ele foi pausado (mouse ou foco em cima do aviso).
+  const prazos = useRef(new Map<number, number>());
+  const restantes = useRef(new Map<number, number>());
   const proximoId = useRef(0);
 
   const trocarLista = useCallback((nova: Toast[]) => {
@@ -84,20 +93,41 @@ export function ToastProvider({ children }: ToastProviderProps) {
 
   const apagar = useCallback(
     (id: number) => {
+      prazos.current.delete(id);
+      restantes.current.delete(id);
       trocarLista(lista.current.filter((toast) => toast.id !== id));
     },
     [trocarLista],
   );
 
   const contarTempo = useCallback(
-    (toast: Toast) => {
+    (toast: Toast, duracao = toast.tipo === 'erro' ? DURACAO_ERRO_MS : DURACAO_SUCESSO_MS) => {
       clearTimeout(relogios.current.get(toast.id));
+      restantes.current.delete(toast.id);
+      prazos.current.set(toast.id, Date.now() + duracao);
       relogios.current.set(
         toast.id,
-        setTimeout(() => iniciarSaida(toast.id), toast.tipo === 'sucesso' ? DURACAO_SUCESSO_MS : DURACAO_ERRO_MS),
+        setTimeout(() => iniciarSaida(toast.id), duracao),
       );
     },
     [iniciarSaida],
+  );
+
+  const pausar = useCallback((toast: Toast) => {
+    const prazo = prazos.current.get(toast.id);
+    if (toast.saindo || prazo === undefined || restantes.current.has(toast.id)) return;
+    clearTimeout(relogios.current.get(toast.id));
+    relogios.current.delete(toast.id);
+    restantes.current.set(toast.id, Math.max(prazo - Date.now(), 0));
+  }, []);
+
+  const retomar = useCallback(
+    (toast: Toast) => {
+      const restante = restantes.current.get(toast.id);
+      if (toast.saindo || restante === undefined) return;
+      contarTempo(toast, restante);
+    },
+    [contarTempo],
   );
 
   const mostrar = useCallback(
@@ -169,6 +199,13 @@ export function ToastProvider({ children }: ToastProviderProps) {
                   // Leitor de tela: erro é anunciado na hora (alerta); sucesso e aviso, sem interromper (status). O
                   // aviso repetido é montado de novo (`key`), então o leitor anuncia outra vez.
                   role={toast.tipo === 'erro' ? 'alert' : 'status'}
+                  onMouseEnter={() => pausar(toast)}
+                  onMouseLeave={() => retomar(toast)}
+                  onFocus={() => pausar(toast)}
+                  onBlur={(evento) => {
+                    // Só sai do aviso de verdade quando o foco vai para fora dele (não do X para o próprio cartão).
+                    if (!evento.currentTarget.contains(evento.relatedTarget)) retomar(toast);
+                  }}
                   className={
                     'pointer-events-auto w-full mb-3 flex fundo-cartao rounded-xl shadow-lg border borda-padrao border-l-4 overflow-hidden ' +
                     config.corBorda +

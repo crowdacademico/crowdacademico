@@ -87,7 +87,7 @@ export function ModalDenunciar({ authFetch, alvo, nomeAlvo, relatoInicial = '', 
             </select>
           )}
         </Campo>
-        <Campo rotulo="Relato (opcional)" erro={erros.erroDe('relato')}>
+        <Campo rotulo="Detalhes adicionais (opcional)" erro={erros.erroDe('relato')}>
           {({ atributos, classeErro }) => (
             <>
               <textarea

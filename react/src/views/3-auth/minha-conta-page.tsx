@@ -11,6 +11,7 @@ import { useToast } from '../../components/layout/toast/use-toast';
 import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
 import { confirmarSaida } from '../../components/crud/use-alteracao-nao-salva';
 import { Campo } from '../../components/input/campo';
+import { BotaoMostrarSenha } from '../../components/input/botao-mostrar-senha';
 import { MedidorSenha } from '../../components/input/medidor-senha';
 import { ConfirmacaoDigitada } from '../../components/input/confirmacao-digitada';
 import { confirmacaoConfere } from '../../components/input/confirmacao-confere';
@@ -27,7 +28,6 @@ import { useEnvio } from '../../services/constant/hook/use-envio';
 import { useErrosFormulario } from '../../services/constant/hook/use-erros-formulario';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import { ModalUpgradePesquisador } from '../6-perfil-pesquisador/modal-upgrade-pesquisador';
-import { gerarCpfValido } from '../../services/campo-testes/util/gerar-cpf-valido.util';
 import { Carregando } from '../../components/layout/carregando';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 import type { AuthResponseSessions } from '../../services/3-auth/type/auth.type';
@@ -550,14 +550,7 @@ function AbaSeguranca({ auth }: AbaSegurancaProps) {
                     className={'input-padrao pr-10' + classeErro}
                     autoComplete="new-password"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setMostrarSenha((atual) => !atual)}
-                    aria-label={mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 texto-fraco hover-texto-forte"
-                  >
-                    <i className={'fa-solid ' + (mostrarSenha ? 'fa-eye-slash' : 'fa-eye')} aria-hidden="true"></i>
-                  </button>
+                  <BotaoMostrarSenha mostrando={mostrarSenha} aoAlternar={() => setMostrarSenha((atual) => !atual)} />
                 </div>
                 <MedidorSenha senha={novaSenha} />
               </>
@@ -789,14 +782,13 @@ function AbaAcademico({ auth }: AbaAcademicoProps) {
           <ModalUpgradePesquisador
             auth={auth}
             idUsuarioAlvo={auth.usuario.idUsuario}
+            nomeAlvo={auth.usuario.nome}
             aoFechar={() => setFazendoUpgrade(false)}
             aoConcluido={(perfilCriado) => {
               setPerfil(perfilCriado);
               // As outras telas (Perfil, Minhas Campanhas) passam a saber na hora que a conta virou pesquisadora.
               auth.atualizarUsuarioLocal((atual) => (atual ? { ...atual, ehPesquisador: true } : atual));
             }}
-            // Botão "Gerar CPF válido" só em desenvolvimento (some no build de produção), para testar o upgrade.
-            gerarCpfDeTeste={import.meta.env.DEV ? gerarCpfValido : undefined}
           />
         )}
       </div>

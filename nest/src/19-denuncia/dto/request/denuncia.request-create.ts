@@ -27,6 +27,8 @@ export class DenunciaRequestCreate {
 
   @IsOptional()
   @IsString()
-  @MaxLength(5000, { message: 'O relato pode ter no máximo 5.000 caracteres.' })
+  @MaxLength(5000, {
+    message: 'Os detalhes adicionais podem ter no máximo 5.000 caracteres.',
+  })
   relato?: string;
 }
