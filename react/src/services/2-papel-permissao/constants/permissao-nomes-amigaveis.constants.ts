@@ -325,6 +325,24 @@ export const DETALHE_PERMISSAO: Partial<Record<string, DetalhePermissao>> = {
     porQueExiste: 'É a trilha de auditoria do dinheiro que passa pela plataforma, só quem responde por isso deveria enxergar tudo.',
     impacto: 'alto',
   },
+  evento_pagamento_visualizar: {
+    nome: 'Ver Eventos de Pagamento',
+    resumo: 'Ver as filas de revisão de pagamento (eventos, reembolsos manuais e repasses).',
+    oQueFaz:
+      'Libera ver os eventos do provedor de pagamento que não terminaram com sucesso, as contribuições esperando devolução manual e os repasses em erro ou esperando a chave Pix. Só leitura: não permite agir.',
+    porQueExiste:
+      'Quem acompanha o dinheiro precisa enxergar o que ficou parado, sem poder mexer. Agir é outra permissão (Resolver Revisão de Pagamento).',
+    impacto: 'alto',
+  },
+  pagamento_revisao_resolver: {
+    nome: 'Resolver Revisão de Pagamento',
+    resumo: 'Dar baixa em eventos, registrar devolução manual e reenfileirar repasse.',
+    oQueFaz:
+      'Permite dar baixa num evento em revisão manual, registrar que uma contribuição foi devolvida por fora do sistema e recolocar na fila um repasse em erro. Nenhuma dessas ações move dinheiro por si, mas reenfileirar faz o sistema tentar a transferência de novo.',
+    porQueExiste:
+      'É o ponto onde uma pessoa assume a decisão sobre dinheiro que o sistema se recusou a decidir sozinho. Toda ação exige uma observação e fica na auditoria financeira, com o nome de quem fez.',
+    impacto: 'alto',
+  },
   // I - SCORE
   score_editar: {
     nome: 'Editar Score',

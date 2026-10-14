@@ -51,4 +51,42 @@ export default tseslint.config(
       "prettier/prettier": ["error", { endOfLine: "auto" }],
     },
   },
+  {
+    // FRONTEIRA DO PROVEDOR (plano de pagamentos, PR-10): o nome do gateway e o formato do JSON dele existem SÓ dentro de
+    // src/29-pagamento/adapters/asaas. Fora dali, nada importa de lá nem escreve o nome numa string (o resto do sistema fala
+    // com as portas, nunca com o provedor). Única exceção: pagamento.module.ts, que escolhe o adapter pela variável
+    // PAYMENT_PROVIDER. Trocar de gateway = criar outra pasta de adapter e um case novo ali. Comentários não contam.
+    files: ['src/**/*.ts'],
+    ignores: [
+      'src/29-pagamento/adapters/asaas/**',
+      'src/29-pagamento/pagamento.module.ts',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/adapters/asaas/**', '**/adapters/asaas'],
+              message:
+                'Só 29-pagamento/adapters/asaas e pagamento.module.ts podem importar o adapter do provedor. Use as portas (COBRANCA_GATEWAY, REPASSE_GATEWAY, WEBHOOK_VERIFIER).',
+            },
+          ],
+        },
+      ],
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'Literal[value=/asaas/i]',
+          message:
+            'O nome do provedor de pagamento só pode aparecer dentro de 29-pagamento/adapters/asaas.',
+        },
+        {
+          selector: 'TemplateElement[value.raw=/asaas/i]',
+          message:
+            'O nome do provedor de pagamento só pode aparecer dentro de 29-pagamento/adapters/asaas.',
+        },
+      ],
+    },
+  },
 );

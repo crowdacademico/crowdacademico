@@ -24,6 +24,8 @@ import { OrcamentoCampanhaModule } from '../13-orcamento-campanha/orcamento-camp
 import { MarcoCronogramaModule } from '../14-marco-cronograma/marco-cronograma.module';
 import { AtualizacaoCampanhaModule } from '../15-atualizacao-campanha/atualizacao-campanha.module';
 import { SeguirCampanhaModule } from '../16-seguir-campanha/seguir-campanha.module';
+import { ContribuicaoModule } from '../22-contribuicao/contribuicao.module';
+import { PagamentoRevisaoModule } from '../32-pagamento-revisao/pagamento-revisao.module';
 import { ComentarioModule } from '../17-comentario/comentario.module';
 import { DenunciaModule } from '../19-denuncia/denuncia.module';
 import { SolicitacaoEncerramentoModule } from '../20-solicitacao-encerramento/solicitacao-encerramento.module';
@@ -79,6 +81,8 @@ import { ConfiguracaoValorModule } from '../commons/configuracao/configuracao-va
     MarcoCronogramaModule,
     AtualizacaoCampanhaModule,
     SeguirCampanhaModule,
+    ContribuicaoModule,
+    PagamentoRevisaoModule,
     ComentarioModule,
     DenunciaModule,
     SolicitacaoEncerramentoModule,

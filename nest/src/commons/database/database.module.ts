@@ -9,6 +9,7 @@ import { DatabaseService } from './database.service';
 import { AutorizacaoService } from '../seguranca/autorizacao.service';
 import { GlobalDbInterceptor } from './global-db.interceptor';
 import { PostgresExceptionFilter } from './postgres-exception.filter';
+import { criarPool } from './opcoes-pool.util';
 
 // Módulo global: qualquer módulo do app pode injetar o Pool com
 // @Inject(PG_POOL), ou (preferível, ver DatabaseService) usar
@@ -42,11 +43,8 @@ import { PostgresExceptionFilter } from './postgres-exception.filter';
     {
       provide: PG_POOL,
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => {
-        return new Pool({
-          connectionString: config.get<string>('DATABASE_URL'),
-        });
-      },
+      // Limites explícitos (max, idle, connectionTimeout) em opcoes-pool.util.ts, ajustáveis por DB_POOL_*.
+      useFactory: (config: ConfigService) => criarPool(config),
     },
     DatabaseService,
     AutorizacaoService,

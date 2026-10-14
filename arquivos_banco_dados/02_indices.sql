@@ -88,6 +88,18 @@ CREATE INDEX idx_atualizacao_campanha       ON atualizacao_campanha(id_campanha)
 CREATE INDEX idx_orcamento_campanha         ON orcamento_campanha(id_campanha);
 CREATE INDEX idx_marco_cronograma_campanha  ON marco_cronograma(id_campanha);
 CREATE INDEX idx_repasse_campanha           ON repasse(id_campanha);
+CREATE INDEX idx_repasse_status             ON repasse(status);
+-- Fila do worker de repasse (reservar_proximo_repasse): só o que ainda pode precisar de trabalho.
+CREATE INDEX idx_repasse_fila               ON repasse(proxima_tentativa_em, id_repasse) WHERE status IN ('pendente', 'processando');
+-- O webhook de repasse acha o registro por (provedor, id da transferência).
+CREATE UNIQUE INDEX uq_repasse_provedor_transferencia ON repasse(provedor, id_transferencia_api) WHERE id_transferencia_api IS NOT NULL;
+CREATE UNIQUE INDEX uq_conta_recebimento_ativa_usuario ON conta_recebimento_usuario(id_usuario) WHERE ativa;
+CREATE INDEX idx_cartao_tokenizado_usuario  ON cartao_tokenizado_usuario(id_usuario) WHERE ativo;
+-- Fila de reconciliação (reservar_contribuicoes_para_reconciliar): só Pix/cartão pendente com cobrança no gateway.
+CREATE INDEX idx_contribuicao_reconciliar   ON contribuicao(criado_em) WHERE status = 'pendente' AND id_transacao_api IS NOT NULL;
+-- Fila de cancelamento de cobrança no provedor (reservar_cobrancas_para_cancelar).
+CREATE INDEX idx_contribuicao_cancelar_cobranca ON contribuicao(criado_em) WHERE status IN ('expirado', 'erro') AND id_transacao_api IS NOT NULL AND cobranca_cancelada_em IS NULL;
+CREATE INDEX idx_auditoria_financeira_repasse ON auditoria_financeira(id_repasse) WHERE id_repasse IS NOT NULL;
 CREATE INDEX idx_sol_encerramento_campanha  ON solicitacao_encerramento(id_campanha);
 -- Um pedido de encerramento pendente por vez em cada campanha (RF-064).
 CREATE UNIQUE INDEX uq_solicitacao_encerramento_pendente ON solicitacao_encerramento(id_campanha) WHERE status = 'pendente';
@@ -134,6 +146,17 @@ CREATE INDEX idx_contrib_recompensa_recompensa ON contribuicao_recompensa(id_rec
 CREATE INDEX idx_aceite_termo_contribuicao_termo        ON aceite_termo_contribuicao(id_termo);
 -- RNF-007 (auditoria financeira): o histórico de eventos de uma contribuição é lido por id_contribuicao.
 CREATE INDEX idx_auditoria_financeira_contribuicao ON auditoria_financeira(id_contribuicao);
+-- Fila de webhooks ainda não processados (reprocessamento/reconciliação lê só o que sobrou).
+CREATE INDEX idx_evento_pagamento_pendente ON evento_pagamento(processado_em) WHERE processado_em IS NULL;
+-- Fila de revisão manual (evento que o sistema deliberadamente NÃO aplicou): separa "precisa de gente" de "vale tentar de novo".
+-- Fila do worker de estorno (proximo_estorno_pendente): só contribuição a devolver, na ordem em que será tentada.
+CREATE INDEX idx_contribuicao_fila_estorno ON contribuicao(proxima_tentativa_estorno_em, id_contribuicao) WHERE status = 'a_devolver';
+CREATE INDEX idx_evento_pagamento_revisao_manual ON evento_pagamento(revisao_manual_em) WHERE revisao_manual_em IS NOT NULL AND processado_em IS NULL;
+-- Mesma transação no mesmo gateway nunca aparece em duas contribuições. Parcial: contribuição 'pendente' ainda não
+-- tem id_transacao_api e não pode competir nesta unicidade.
+CREATE UNIQUE INDEX uq_contribuicao_provedor_transacao ON contribuicao(provedor, id_transacao_api) WHERE id_transacao_api IS NOT NULL;
+-- Os workers de expiração e de estorno só olham estes dois status.
+CREATE INDEX idx_contribuicao_status_aberto ON contribuicao(status) WHERE status IN ('pendente', 'a_devolver');
 
 -- ============================================================
 -- [02-I] SCORE

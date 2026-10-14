@@ -1,5 +1,4 @@
 import { Generated, Selectable } from 'kysely';
-
 // Tipos do Kysely, escritos à mão espelhando arquivos_banco_dados/01_extensoes_enums_tabelas.sql, só das
 // tabelas que os módulos já construídos usam. É este arquivo que a aplicação usa, não o gerado.
 //
@@ -489,6 +488,45 @@ export interface ContribuicaoTable {
   id_transacao_api: string | null;
   criado_em: Generated<Date>;
   token_sessao: Generated<string>;
+  provedor: Generated<string>;
+  tentativas_estorno: Generated<number>;
+  proxima_tentativa_estorno_em: Date | null;
+  reconciliada_em: Date | null;
+  cobranca_cancelada_em: Date | null;
+}
+
+// Chave Pix de recebimento (PR-12). Espelha 01 (tabela conta_recebimento_usuario). A chave é guardada CIFRADA
+// (commons/seguranca/chave-pix-cifra.util.ts) e nunca sai inteira em resposta de API.
+export const TIPOS_CHAVE_PIX = [
+  'cpf',
+  'cnpj',
+  'email',
+  'telefone',
+  'aleatoria',
+] as const;
+export type TipoChavePix = (typeof TIPOS_CHAVE_PIX)[number];
+
+export interface ContaRecebimentoUsuarioTable {
+  id_conta_recebimento: Generated<number>;
+  id_usuario: number;
+  tipo_chave: TipoChavePix;
+  chave_criptografada: string;
+  titularidade_verificada_em: Date | null;
+  ativa: Generated<boolean>;
+  criada_em: Generated<Date>;
+}
+
+// Cartão salvo (PR-12). Espelha 01 (tabela cartao_tokenizado_usuario). NUNCA número/CVV/validade: só o token do provedor
+// e dados de exibição. O token não sai em resposta de API.
+export interface CartaoTokenizadoUsuarioTable {
+  id_cartao: Generated<number>;
+  id_usuario: number;
+  provedor: string;
+  token_cartao: string;
+  bandeira: string | null;
+  ultimos_digitos: string;
+  ativo: Generated<boolean>;
+  criado_em: Generated<Date>;
 }
 
 export interface AtualizacaoCampanhaTable {
@@ -653,6 +691,8 @@ export interface DB {
   seguir_campanha: SeguirCampanhaTable;
   seguir_pesquisador: SeguirPesquisadorTable;
   contribuicao: ContribuicaoTable;
+  conta_recebimento_usuario: ContaRecebimentoUsuarioTable;
+  cartao_tokenizado_usuario: CartaoTokenizadoUsuarioTable;
   atualizacao_campanha: AtualizacaoCampanhaTable;
   orcamento_campanha: OrcamentoCampanhaTable;
   marco_cronograma: MarcoCronogramaTable;
@@ -683,3 +723,7 @@ export type ArquivoAtualizacaoEntity = Selectable<ArquivoAtualizacaoTable>;
 export type LinkAtualizacaoEntity = Selectable<LinkAtualizacaoTable>;
 export type SeguirCampanhaEntity = Selectable<SeguirCampanhaTable>;
 export type ComentarioEntity = Selectable<ComentarioTable>;
+export type ContaRecebimentoUsuarioEntity =
+  Selectable<ContaRecebimentoUsuarioTable>;
+export type CartaoTokenizadoUsuarioEntity =
+  Selectable<CartaoTokenizadoUsuarioTable>;

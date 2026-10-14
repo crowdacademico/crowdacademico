@@ -21,7 +21,7 @@
 --  Inventário Mapeado:
 --  - 1 Role de aplicação (app_nestjs) + 1 Extensão (pgcrypto)
 --  - 14 Tipos ENUM
---  - 42 Tabelas em 9 blocos de domínio
+--  - 43 Tabelas em 9 blocos de domínio
 -- ----------------------------------------------------------------------------
 --  SUMÁRIO DOS BLOCOS DE CÓDIGO
 -- ----------------------------------------------------------------------------
@@ -32,7 +32,7 @@
 --  [01-E] CAMPANHA (11 tabelas)
 --  [01-F] LINK (3 tabelas de associação)
 --  [01-G] ARQUIVO (2 tabelas de associação)
---  [01-H] CONTRIBUIÇÃO (4 tabelas)
+--  [01-H] CONTRIBUIÇÃO (5 tabelas)
 --  [01-I] SCORE (3 tabelas + Bloco DO)
 --  [01-L] LOG DE AUDITORIA (1 tabela)
 -- ============================================================================
@@ -63,7 +63,7 @@ BEGIN
         WHERE rolname = current_user
           AND (rolsuper OR rolbypassrls)
     ) THEN
-        RAISE EXCEPTION 'Bootstrap abortado: o papel "%" nao ignora RLS. Como as 42 tabelas usam FORCE ROW LEVEL SECURITY e a maioria das policies sao TO app_nestjs, o seed falharia em silencio (dezenas de erros espalhados). Rode como superusuario, ou peca BYPASSRLS pro papel, ou use o papel indicado no .Tutorial-rodar-projeto.md.', current_user;
+        RAISE EXCEPTION 'Bootstrap abortado: o papel "%" nao ignora RLS. Como as 43 tabelas usam FORCE ROW LEVEL SECURITY e a maioria das policies sao TO app_nestjs, o seed falharia em silencio (dezenas de erros espalhados). Rode como superusuario, ou peca BYPASSRLS pro papel, ou use o papel indicado no .Tutorial-rodar-projeto.md.', current_user;
     END IF;
 END
 $$;
@@ -116,6 +116,8 @@ CREATE TYPE modelo_campanha       AS ENUM ('all-or-nothing', 'flexivel');
 -- entra na fila por envio explícito. Ver DOCUMENTACAO_BD.md [05-K-2-B].
 CREATE TYPE status_campanha       AS ENUM ('rascunho', 'aguardando_aprovacao', 'ativo', 'sucesso', 'nao_atingido', 'rejeitado', 'encerrado', 'encerrado_moderacao');
 CREATE TYPE status_contribuicao   AS ENUM ('pendente', 'confirmado', 'repassado', 'a_devolver', 'devolvido', 'reembolsado', 'erro', 'expirado', 'reembolso_manual');
+CREATE TYPE status_repasse       AS ENUM ('pendente', 'processando', 'concluido', 'erro');
+CREATE TYPE tipo_chave_pix       AS ENUM ('cpf', 'cnpj', 'email', 'telefone', 'aleatoria');
 CREATE TYPE meio_pagamento        AS ENUM ('pix', 'cartao_credito', 'cartao_debito', 'boleto');
 CREATE TYPE fase_atualizacao      AS ENUM ('andamento', 'resultado_preliminar', 'resultado_final');
 CREATE TYPE tipo_atualizacao      AS ENUM ('texto', 'imagem', 'pdf', 'linkexterno');
@@ -611,10 +613,64 @@ CREATE TABLE repasse (
     meta_atingida BOOLEAN       NOT NULL DEFAULT FALSE,
     repassado_em  TIMESTAMPTZ,
     taxa_relativa DECIMAL(5,2),
-    status        VARCHAR(100),
+    -- pendente (na fila) -> processando (o worker pegou; transferência pedida) -> concluido | erro. Máquina de estados em
+    -- trg_valida_transicao_status_repasse (05). Registro de "nada repassado" não existe: campanha all-or-nothing que não
+    -- bateu a meta não cria repasse, as contribuições vão para a_devolver (ver encerrar_campanhas_vencidas, 05).
+    status        status_repasse NOT NULL DEFAULT 'pendente',
+    -- Gateway que fez a transferência (preenchido quando o worker pega o repasse): trocar/somar gateways não reescreve
+    -- regra de negócio e o webhook de repasse acha o registro por (provedor, id_transferencia_api).
+    provedor             VARCHAR(50),
+    id_transferencia_api TEXT,
+    -- Estável por repasse: repetir o pedido de transferência com a mesma chave NUNCA transfere duas vezes.
+    chave_idempotencia   UUID NOT NULL DEFAULT gen_random_uuid(),
+    -- Controle do worker de repasse (mesma ideia de contribuicao.tentativas_estorno). proxima_tentativa_em vale como
+    -- "tentar de novo a partir de" quando pendente e como "lease" (prazo para outro worker assumir) quando processando.
+    tentativas_transferencia SMALLINT NOT NULL DEFAULT 0,
+    proxima_tentativa_em     TIMESTAMPTZ,
 
     CONSTRAINT "PK_REPASSE" PRIMARY KEY (id_repasse),
+    CONSTRAINT "UK_REPASSE_CHAVE_IDEMPOTENCIA" UNIQUE (chave_idempotencia),
     CONSTRAINT "FK_REPASSE_CAMPANHA" FOREIGN KEY (id_campanha) REFERENCES campanha(id_campanha)
+);
+
+-- Para onde o dinheiro vai: chave Pix de um USUÁRIO (não de perfil_pesquisador: serve também ao reembolso_manual de um
+-- apoiador qualquer). Uma conta ATIVA por usuário (uq_conta_recebimento_ativa_usuario em 02): trocar a chave = desativar a
+-- anterior e cadastrar a nova. Cadastro e verificação de titularidade: POST /conta-recebimento (PR-12).
+-- chave_criptografada: a chave Pix pode ser o CPF, então segue a mesma receita de perfil_pesquisador.cpf_criptografado
+-- (AES-256-GCM no Node, formato "v1:<iv>:<tag>:<ciphertext>"; ver commons/seguranca/chave-pix-cifra.util.ts).
+-- O worker só usa conta ativa COM titularidade verificada: o repasse de quem ainda não tem uma fica na fila.
+CREATE TABLE conta_recebimento_usuario (
+    id_conta_recebimento       SERIAL,
+    id_usuario                 INT          NOT NULL,
+    tipo_chave                 tipo_chave_pix NOT NULL,
+    chave_criptografada        TEXT         NOT NULL,
+    -- NULL = a chave existe mas a titularidade ainda não foi confirmada (o worker de repasse não a usa). Só é preenchida
+    -- depois de o provedor (DICT) confirmar que o titular da chave é a própria pessoa.
+    titularidade_verificada_em TIMESTAMPTZ,
+    ativa                      BOOLEAN      NOT NULL DEFAULT TRUE,
+    criada_em                  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT "PK_CONTA_RECEBIMENTO_USUARIO" PRIMARY KEY (id_conta_recebimento),
+    CONSTRAINT "FK_CONTA_RECEBIMENTO_USUARIO_USUARIO" FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario)
+);
+
+-- Cartão salvo do usuário para contribuir de novo sem digitar tudo. NUNCA guarda número, CVV nem validade: só o TOKEN que
+-- o provedor devolveu (que, sozinho, só funciona para cobranças da nossa conta no provedor) e dados de exibição
+-- (bandeira e 4 últimos dígitos). O token não sai em resposta de API nenhuma.
+CREATE TABLE cartao_tokenizado_usuario (
+    id_cartao       SERIAL,
+    id_usuario      INT          NOT NULL,
+    provedor        VARCHAR(50)  NOT NULL,
+    token_cartao    TEXT         NOT NULL,
+    bandeira        VARCHAR(30),
+    ultimos_digitos CHAR(4)      NOT NULL,
+    ativo           BOOLEAN      NOT NULL DEFAULT TRUE,
+    criado_em       TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT "PK_CARTAO_TOKENIZADO_USUARIO" PRIMARY KEY (id_cartao),
+    CONSTRAINT "UK_CARTAO_TOKENIZADO_USUARIO_TOKEN" UNIQUE (provedor, token_cartao),
+    CONSTRAINT "FK_CARTAO_TOKENIZADO_USUARIO_USUARIO" FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario),
+    CONSTRAINT "CK_CARTAO_TOKENIZADO_USUARIO_ULTIMOS_DIGITOS" CHECK (ultimos_digitos ~ '^[0-9]{4}$')
 );
 
 CREATE TABLE solicitacao_encerramento (
@@ -814,7 +870,7 @@ CREATE TABLE arquivo_recompensa (
 );
 
 -- ============================================================
--- [01-H] CONTRIBUIÇÃO (4 tabelas)
+-- [01-H] CONTRIBUIÇÃO (5 tabelas)
 -- ============================================================
 CREATE TABLE contribuicao (
     id_contribuicao  SERIAL,
@@ -827,6 +883,18 @@ CREATE TABLE contribuicao (
     id_transacao_api VARCHAR(255),
     criado_em        TIMESTAMPTZ           NOT NULL DEFAULT NOW(),
     token_sessao     UUID                DEFAULT gen_random_uuid(),
+    provedor         VARCHAR(50)         NOT NULL DEFAULT 'asaas', -- gateway que processou o pagamento (arquitetura de portas: trocar de gateway não reescreve regra de negócio)
+    -- Controle do worker de estorno (só contribuição 'a_devolver'; ver proximo_estorno_pendente/registrar_falha_estorno em 05).
+    -- Só números e datas, de propósito: o texto do erro do gateway vai para auditoria_financeira (leitura restrita), porque
+    -- quem apoiou e o pesquisador leem esta tabela e não devem ver detalhe interno do provedor.
+    tentativas_estorno           SMALLINT    NOT NULL DEFAULT 0,
+    proxima_tentativa_estorno_em TIMESTAMPTZ,
+    -- Última vez que o job de reconciliação reconsultou a cobrança no gateway (só 'pendente'): evita perguntar a mesma
+    -- cobrança a cada ciclo. Ver reservar_contribuicoes_para_reconciliar (05).
+    reconciliada_em              TIMESTAMPTZ,
+    -- Preenchida quando o provedor cancelou (ou já não tem mais como cancelar) a cobrança de uma contribuição que morreu aqui
+    -- (expirado/erro). Ver reservar_cobrancas_para_cancelar (05).
+    cobranca_cancelada_em        TIMESTAMPTZ,
 
     CONSTRAINT "PK_CONTRIBUICAO" PRIMARY KEY (id_contribuicao),
     CONSTRAINT "FK_CONTRIBUICAO_CAMPANHA" FOREIGN KEY (id_campanha) REFERENCES campanha(id_campanha),
@@ -837,9 +905,34 @@ CREATE TABLE contribuicao (
     CONSTRAINT "CK_CONTRIBUICAO_VALOR_MINIMO" CHECK (valor > 0)
 );
 
+-- Caixa de entrada dos webhooks de pagamento: todo evento recebido é gravado aqui ANTES de qualquer processamento.
+-- UNIQUE (provedor, id_evento_externo) barra o webhook entregue duas vezes. Fica antes de auditoria_financeira
+-- porque ela aponta para esta tabela (ordem de dependência de FK).
+CREATE TABLE evento_pagamento (
+    id_evento_pagamento SERIAL,
+    provedor            VARCHAR(50)  NOT NULL,
+    id_evento_externo   VARCHAR(255) NOT NULL,
+    tipo_evento         VARCHAR(100) NOT NULL,
+    payload             JSONB        NOT NULL,
+    recebido_em         TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    processado_em       TIMESTAMPTZ,
+    erro_processamento  TEXT,
+    -- Estados do evento: RECEBIDO (tudo NULL) | FALHOU, VALE TENTAR DE NOVO (erro_processamento preenchido, processado_em
+    -- NULL) | EM REVISÃO MANUAL (revisao_manual_em preenchido, processado_em NULL, motivo em erro_processamento: o
+    -- gateway diz que o dinheiro se moveu mas o sistema NÃO aplicou, e alguém precisa decidir) | PROCESSADO COM SUCESSO
+    -- (processado_em preenchido, erro_processamento NULL). "Processado + erro" não existe: processado = sucesso.
+    revisao_manual_em   TIMESTAMPTZ,
+
+    CONSTRAINT "PK_EVENTO_PAGAMENTO" PRIMARY KEY (id_evento_pagamento),
+    CONSTRAINT "UK_EVENTO_PAGAMENTO_PROVEDOR_EVENTO_EXTERNO" UNIQUE (provedor, id_evento_externo)
+);
+
 CREATE TABLE auditoria_financeira (
     id_auditoria    SERIAL,
-    id_contribuicao INT          NOT NULL,
+    -- Uma linha de auditoria é de UMA contribuição OU de UM repasse (CK_AUDITORIA_FINANCEIRA_ALVO).
+    id_contribuicao INT,
+    id_repasse      INT,
+    id_evento_pagamento INT,     -- webhook que causou a transição (NULL quando a mudança não veio de webhook)
     id_usuario_responsavel INT,
     valor           DECIMAL(10,2) NOT NULL,
     meio_pagamento  meio_pagamento,
@@ -850,7 +943,28 @@ CREATE TABLE auditoria_financeira (
 
     CONSTRAINT "PK_AUDITORIA_FINANCEIRA" PRIMARY KEY (id_auditoria),
     CONSTRAINT "FK_AUDITORIA_FINANCEIRA_CONTRIBUICAO" FOREIGN KEY (id_contribuicao) REFERENCES contribuicao(id_contribuicao),
+    CONSTRAINT "FK_AUDITORIA_FINANCEIRA_REPASSE" FOREIGN KEY (id_repasse) REFERENCES repasse(id_repasse),
+    CONSTRAINT "CK_AUDITORIA_FINANCEIRA_ALVO" CHECK ((id_contribuicao IS NOT NULL)::int + (id_repasse IS NOT NULL)::int = 1),
+    CONSTRAINT "FK_AUDITORIA_FINANCEIRA_EVENTO_PAGAMENTO" FOREIGN KEY (id_evento_pagamento) REFERENCES evento_pagamento(id_evento_pagamento),
     CONSTRAINT "FK_AUDITORIA_FINANCEIRA_USUARIO_RESPONSAVEL" FOREIGN KEY (id_usuario_responsavel) REFERENCES usuario(id_usuario) ON DELETE SET NULL
+);
+
+-- Junção repasse 1:N contribuição: quais contribuições (e quanto de cada uma) entraram em cada repasse. Preenchida NO
+-- MOMENTO em que o repasse é criado (fechamento da campanha ou pagamento tardio, ver 05), nunca depois.
+-- UNIQUE em id_contribuicao: uma contribuição entra em UM repasse só (barra repasse em duplicidade).
+-- valor_taxa_incluido = valor_bruto_incluido - líquido da contribuição (mesma conta ROUND(valor * (1 - taxa/100), 2)
+-- do estorno), e repasse.valor_liquido é a soma dos líquidos.
+CREATE TABLE repasse_contribuicao (
+    id_repasse           INT           NOT NULL,
+    id_contribuicao      INT           NOT NULL,
+    valor_bruto_incluido DECIMAL(10,2) NOT NULL,
+    valor_taxa_incluido  DECIMAL(10,2) NOT NULL,
+
+    CONSTRAINT "PK_REPASSE_CONTRIBUICAO" PRIMARY KEY (id_repasse, id_contribuicao),
+    CONSTRAINT "UK_REPASSE_CONTRIBUICAO_CONTRIBUICAO" UNIQUE (id_contribuicao),
+    CONSTRAINT "FK_REPASSE_CONTRIBUICAO_REPASSE" FOREIGN KEY (id_repasse) REFERENCES repasse(id_repasse),
+    CONSTRAINT "FK_REPASSE_CONTRIBUICAO_CONTRIBUICAO" FOREIGN KEY (id_contribuicao) REFERENCES contribuicao(id_contribuicao),
+    CONSTRAINT "CK_REPASSE_CONTRIBUICAO_VALORES" CHECK (valor_bruto_incluido > 0 AND valor_taxa_incluido >= 0 AND valor_taxa_incluido <= valor_bruto_incluido)
 );
 
 CREATE TABLE contribuicao_recompensa (

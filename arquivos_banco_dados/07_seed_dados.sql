@@ -158,6 +158,8 @@ INSERT INTO permissao (nome) VALUES
 -- H - CONTRIBUIÇÃO (Apoios, Auditoria e Termos Financeiros)
 ('contribuicao_visualizar_sensivel'),
 ('auditoria_financeira_visualizar'),
+('evento_pagamento_visualizar'),
+('pagamento_revisao_resolver'),
 -- I - SCORE (Parâmetros, Rótulos e motor de cálculo)
 ('score_editar'),
 -- Permissão do catálogo sem uso em policy hoje: pol_score_select (04) é público (o score é a base do segundo
@@ -221,6 +223,8 @@ WHERE (p.nome, perm.nome) IN (
     -- H
     ('admin', 'contribuicao_visualizar_sensivel'),
     ('admin', 'auditoria_financeira_visualizar'),
+    ('admin', 'evento_pagamento_visualizar'),
+    ('admin', 'pagamento_revisao_resolver'),
     -- I
     ('admin', 'score_editar'),
     ('admin', 'score_visualizar'),
@@ -1289,8 +1293,10 @@ INSERT INTO repasse (id_campanha, valor_bruto, valor_liquido, meta_atingida, rep
 (2, 28500.00, 27075.00, FALSE, '2024-05-10 10:00:00', 5.00, 'concluido'),
 (3, 40000.00, 38000.00, TRUE,  '2024-06-10 10:00:00', 5.00, 'concluido'),
 (5, 22000.00, 20900.00, FALSE, '2024-06-10 10:00:00', 5.00, 'concluido'),
-(7, 45000.00, 42750.00, TRUE,  '2024-08-10 10:00:00', 5.00, 'concluido'),
-(4,  8000.00,  0.00,    FALSE, NULL,                   5.00, 'a_devolver');
+(7, 45000.00, 42750.00, TRUE,  '2024-08-10 10:00:00', 5.00, 'concluido');
+-- A campanha 4 (all-or-nothing que não bateu a meta) já teve aqui um repasse de líquido 0 com status 'a_devolver'. Esse
+-- estado não existe em status_repasse (pendente, processando, concluido, erro): campanha que não atinge a meta NÃO gera
+-- repasse, as contribuições dela é que vão para 'a_devolver' (ver encerrar_campanhas_vencidas, 05).
 
 ALTER TABLE repasse ENABLE TRIGGER trg_valida_repasse;
 

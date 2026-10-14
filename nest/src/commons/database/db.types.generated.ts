@@ -45,9 +45,13 @@ export type StatusNotificacao = "cancelado" | "enviado" | "falhou" | "pendente";
 
 export type StatusPesquisador = "ativo" | "suspenso";
 
+export type StatusRepasse = "concluido" | "erro" | "pendente" | "processando";
+
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
 export type TipoAtualizacao = "imagem" | "linkexterno" | "pdf" | "texto";
+
+export type TipoChavePix = "aleatoria" | "cnpj" | "cpf" | "email" | "telefone";
 
 export type TipoConfiguracao = "booleano" | "decimal" | "inteiro" | "texto";
 
@@ -117,7 +121,9 @@ export interface AtualizacaoCampanha {
 export interface AuditoriaFinanceira {
   evento: string | null;
   id_auditoria: Generated<number>;
-  id_contribuicao: number;
+  id_contribuicao: number | null;
+  id_evento_pagamento: number | null;
+  id_repasse: number | null;
   id_usuario_responsavel: number | null;
   meio_pagamento: MeioPagamento | null;
   status_anterior: string | null;
@@ -169,6 +175,27 @@ export interface Configuracoes {
   valor: string | null;
 }
 
+export interface CartaoTokenizadoUsuario {
+  ativo: Generated<boolean>;
+  bandeira: string | null;
+  criado_em: Generated<Timestamp>;
+  id_cartao: Generated<number>;
+  id_usuario: number;
+  provedor: string;
+  token_cartao: string;
+  ultimos_digitos: string;
+}
+
+export interface ContaRecebimentoUsuario {
+  ativa: Generated<boolean>;
+  chave_criptografada: string;
+  criada_em: Generated<Timestamp>;
+  id_conta_recebimento: Generated<number>;
+  id_usuario: number;
+  tipo_chave: TipoChavePix;
+  titularidade_verificada_em: Timestamp | null;
+}
+
 export interface Contribuicao {
   anonima: Generated<boolean>;
   criado_em: Generated<Timestamp>;
@@ -177,7 +204,12 @@ export interface Contribuicao {
   id_transacao_api: string | null;
   id_usuario: number | null;
   meio_pagamento: MeioPagamento;
+  provedor: Generated<string>;
+  cobranca_cancelada_em: Timestamp | null;
+  proxima_tentativa_estorno_em: Timestamp | null;
+  reconciliada_em: Timestamp | null;
   status: Generated<StatusContribuicao>;
+  tentativas_estorno: Generated<number>;
   token_sessao: Generated<string | null>;
   valor: Numeric;
 }
@@ -204,6 +236,18 @@ export interface Denuncia {
   justificativa_moderacao: string | null;
   relato: string | null;
   status: Generated<StatusDenuncia>;
+}
+
+export interface EventoPagamento {
+  erro_processamento: string | null;
+  id_evento_externo: string;
+  id_evento_pagamento: Generated<number>;
+  payload: Json;
+  processado_em: Timestamp | null;
+  provedor: string;
+  recebido_em: Generated<Timestamp>;
+  revisao_manual_em: Timestamp | null;
+  tipo_evento: string;
 }
 
 export interface HistoricoRejeicao {
@@ -346,14 +390,26 @@ export interface RecuperacaoSenha {
 }
 
 export interface Repasse {
+  chave_idempotencia: Generated<string>;
   id_campanha: number;
   id_repasse: Generated<number>;
+  id_transferencia_api: string | null;
   meta_atingida: Generated<boolean>;
+  proxima_tentativa_em: Timestamp | null;
+  provedor: string | null;
   repassado_em: Timestamp | null;
-  status: string | null;
+  status: Generated<StatusRepasse>;
   taxa_relativa: Numeric | null;
+  tentativas_transferencia: Generated<number>;
   valor_bruto: Numeric;
   valor_liquido: Numeric;
+}
+
+export interface RepasseContribuicao {
+  id_contribuicao: number;
+  id_repasse: number;
+  valor_bruto_incluido: Numeric;
+  valor_taxa_incluido: Numeric;
 }
 
 export interface ScoreConfig {
@@ -503,9 +559,12 @@ export interface DB {
   campanha: Campanha;
   comentario: Comentario;
   configuracoes: Configuracoes;
+  cartao_tokenizado_usuario: CartaoTokenizadoUsuario;
+  conta_recebimento_usuario: ContaRecebimentoUsuario;
   contribuicao: Contribuicao;
   contribuicao_recompensa: ContribuicaoRecompensa;
   denuncia: Denuncia;
+  evento_pagamento: EventoPagamento;
   historico_rejeicao: HistoricoRejeicao;
   link_academico: LinkAcademico;
   link_atualizacao: LinkAtualizacao;
@@ -522,6 +581,7 @@ export interface DB {
   recompensa: Recompensa;
   recuperacao_senha: RecuperacaoSenha;
   repasse: Repasse;
+  repasse_contribuicao: RepasseContribuicao;
   score_config: ScoreConfig;
   score_pesquisador: ScorePesquisador;
   score_rotulo: ScoreRotulo;
