@@ -1,4 +1,4 @@
-// Cifra/decifra da chave Pix de conta_recebimento_usuario.chave_criptografada. A chave Pix pode ser o CPF da pessoa, então
+// Cifra/decifra da chave Pix de perfil_pesquisador.chave_pix_criptografada. A chave Pix pode ser o CPF da pessoa, então
 // segue a MESMA receita de perfil_pesquisador.cpf_criptografado (AES-256-GCM no processo do Node, formato
 // "v1:<iv>:<tag>:<ciphertext>", chave em CPF_ENCRYPTION_KEY): quem decide o algoritmo e a versão continua sendo um lugar só,
 // cpf-cifra.util.ts. Estas funções existem para o nome dizer o que está sendo cifrado; o cadastro da chave (PR-12) usa

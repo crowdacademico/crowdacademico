@@ -25,7 +25,7 @@ export class ContaRecebimentoControllerCreate {
   criar(
     @Body() dto: ContaRecebimentoRequestCreate,
     @UsuarioAtual() usuario: UsuarioAutenticado,
-  ): Promise<ContaRecebimentoResponse> {
+  ): Promise<ContaRecebimentoResponse | null> {
     return this.service.executar(dto, usuario.idUsuario);
   }
 }

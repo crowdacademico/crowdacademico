@@ -252,9 +252,9 @@ export class PagamentoServiceWebhook {
           ? { acao: 'aplicar', status: 'expirado' }
           : this.divergente(evento, real.status);
       default:
-        // cobranca_estornada. Estorno TOTAL = contribuição 'reembolsado'. Estorno PARCIAL (cobrança continua
-        // 'confirmada' com valor devolvido) é o que o tudo-ou-nada faz ao reter a taxa: quem muda o status é o worker
-        // de estorno (PR-07), não o webhook.
+        // cobranca_estornada. Estorno TOTAL = contribuição 'reembolsado' (o banco converte em 'devolvido' se ela
+        // estava 'a_devolver'). Estorno PARCIAL (cobrança continua 'confirmada' com valor devolvido) é o tudo-ou-nada
+        // devolvendo o valor sem a tarifa de pagamento: quem muda o status é o worker de estorno (PR-07).
         if (real.status === 'estornada') {
           return {
             acao: 'aplicar',

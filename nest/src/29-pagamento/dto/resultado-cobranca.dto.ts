@@ -7,7 +7,7 @@
 export type MeioPagamentoGateway = 'pix' | 'cartao_credito';
 
 // 'estornada' só quando TODO o valor foi devolvido. Estorno parcial mantém 'confirmada' e preenche
-// `valorEstornado` (é o que o tudo-ou-nada faz ao reter a taxa da plataforma: a cobrança original continua paga).
+// `valorEstornado` (é o que o tudo-ou-nada faz ao devolver o valor sem a tarifa de pagamento: a cobrança original continua paga).
 export type StatusCobrancaGateway =
   'pendente' | 'confirmada' | 'expirada' | 'estornada';
 

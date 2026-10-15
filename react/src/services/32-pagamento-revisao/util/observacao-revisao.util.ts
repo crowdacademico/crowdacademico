@@ -13,7 +13,7 @@ export function erroObservacaoRevisao(observacao: string): string | false {
 
 // Valor devolvido no reembolso manual: em reais, de 0,01 até o valor da contribuição, com no máximo 2 casas (o banco
 // confere de novo, erro 90035). Lê o texto do campo, não um número: `type="number"` devolve sempre ponto como separador.
-export function erroValorDevolvido(texto: string, valorBruto: number): string | false {
+export function erroValorDevolvido(texto: string, valorContribuicao: number): string | false {
   const limpo = texto.trim();
   if (limpo === '') {
     return 'Informe o valor que foi devolvido.';
@@ -25,5 +25,5 @@ export function erroValorDevolvido(texto: string, valorBruto: number): string | 
   if (valor <= 0) {
     return 'O valor devolvido deve ser maior que zero.';
   }
-  return valor > valorBruto && 'O valor devolvido não pode passar do valor da contribuição.';
+  return valor > valorContribuicao && 'O valor devolvido não pode passar do valor da contribuição.';
 }

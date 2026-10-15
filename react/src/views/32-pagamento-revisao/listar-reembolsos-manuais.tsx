@@ -46,7 +46,7 @@ export function ListarReembolsosManuais({ auth }: PropsPagina) {
     <div className="admin-content-painel">
       <GenericTable
         titulo="Reembolsos Manuais"
-        ajuda="Contribuições que o estorno automático não conseguiu devolver. Uma pessoa devolve o dinheiro fora do sistema (painel do provedor ou Pix) e registra aqui o que foi feito. O valor a devolver já desconta a taxa da plataforma, que fica retida."
+        ajuda="Contribuições que o estorno automático não conseguiu devolver. Uma pessoa devolve o dinheiro fora do sistema (painel do provedor ou Pix) e registra aqui o que foi feito. O valor a devolver é o valor inteiro da contribuição (a tarifa de pagamento, paga por cima, não volta)."
         colunas={[
           { chave: 'idContribuicao', rotulo: 'id', tipo: 'id' },
           { chave: 'campanha', rotulo: 'campanha', tipo: 'nome', umaLinha: true },

@@ -112,7 +112,8 @@ GRANT SELECT (
     id_usuario, cpf_criptografado, cpf_hash, tipo_vinculo, vinculo_institucional,
     titulo_academico, status_pesquisador, ativado_em,
     score_atual, score_atualizado_em,
-    suspenso_ate, motivo_suspensao, suspenso_por
+    suspenso_ate, motivo_suspensao, suspenso_por,
+    tipo_chave_pix, chave_pix_criptografada, chave_pix_verificada_em
 ) ON public.perfil_pesquisador TO app_nestjs;
 
 -- Sem DELETE em usuario, perfil_pesquisador e usuario_termo (não há policy de DELETE; ver [06-D] no
@@ -138,10 +139,12 @@ GRANT DELETE ON termos_de_uso TO app_nestjs;
 -- deve se auto-suspender/reativar); cpf_criptografado e cpf_hash (só mudam via corrigir_cpf_pesquisador(),
 -- SECURITY DEFINER, 03: RF-017, correção de CPF só via suporte; cpf_hash nunca entrou aqui porque muda sempre em
 -- conjunto com cpf_criptografado); e suspenso_ate/motivo_suspensao/suspenso_por (só via
--- suspender_pesquisador()/reativar_pesquisador()).
+-- suspender_pesquisador()/reativar_pesquisador()). A chave Pix (tipo, cifra e verificada_em) entra: só a rota
+-- POST/DELETE /conta-recebimento grava, e sempre as 3 juntas, depois de conferir a titularidade no provedor.
 GRANT UPDATE (
     tipo_vinculo, vinculo_institucional,
-    titulo_academico, ativado_em
+    titulo_academico, ativado_em,
+    tipo_chave_pix, chave_pix_criptografada, chave_pix_verificada_em
 ) ON public.perfil_pesquisador TO app_nestjs;
 
 -- usuario: email_verificado, tentativas_login_falhas, bloqueado_ate, ultimo_login_em, ultimo_login_ip e deletado
@@ -407,12 +410,6 @@ TO app_nestjs;
 -- auditoria_financeira é append-only: só INSERT (o UPDATE de tabela inteira saiu junto com pol_auditoria_update em 04).
 GRANT INSERT ON contribuicao TO app_nestjs;
 GRANT INSERT ON auditoria_financeira TO app_nestjs;
--- Conta de recebimento e cartão do usuário (PR-12): cadastra e só pode DESATIVAR (UPDATE só da coluna de ativo); o
--- timestamp de titularidade verificada entra no INSERT, depois de o Nest conferir no provedor.
-GRANT INSERT ON conta_recebimento_usuario TO app_nestjs;
-GRANT UPDATE (ativa) ON conta_recebimento_usuario TO app_nestjs;
-GRANT INSERT ON cartao_tokenizado_usuario TO app_nestjs;
-GRANT UPDATE (ativo) ON cartao_tokenizado_usuario TO app_nestjs;
 
 REVOKE EXECUTE ON FUNCTION public.atualizar_status_contribuicao(INT, status_contribuicao, VARCHAR, INT, DECIMAL) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.atualizar_status_contribuicao(INT, status_contribuicao, VARCHAR, INT, DECIMAL) TO app_nestjs;

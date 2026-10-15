@@ -153,17 +153,6 @@ export interface Campanha {
   video_apresentacao_url: string | null;
 }
 
-export interface CartaoTokenizadoUsuario {
-  ativo: Generated<boolean>;
-  bandeira: string | null;
-  criado_em: Generated<Timestamp>;
-  id_cartao: Generated<number>;
-  id_usuario: number;
-  provedor: string;
-  token_cartao: string;
-  ultimos_digitos: string;
-}
-
 export interface Comentario {
   ativo: Generated<boolean>;
   conteudo: string;
@@ -186,22 +175,13 @@ export interface Configuracoes {
   valor: string | null;
 }
 
-export interface ContaRecebimentoUsuario {
-  ativa: Generated<boolean>;
-  chave_criptografada: string;
-  criada_em: Generated<Timestamp>;
-  id_conta_recebimento: Generated<number>;
-  id_usuario: number;
-  tipo_chave: TipoChavePix;
-  titularidade_verificada_em: Timestamp | null;
-}
-
 export interface Contribuicao {
   anonima: Generated<boolean>;
   cobranca_cancelada_em: Timestamp | null;
   criado_em: Generated<Timestamp>;
   id_campanha: number;
   id_contribuicao: Generated<number>;
+  id_repasse: number | null;
   id_transacao_api: string | null;
   id_usuario: number | null;
   meio_pagamento: MeioPagamento;
@@ -209,6 +189,7 @@ export interface Contribuicao {
   proxima_tentativa_estorno_em: Timestamp | null;
   reconciliada_em: Timestamp | null;
   status: Generated<StatusContribuicao>;
+  taxa_pagamento: Generated<Numeric>;
   tentativas_estorno: Generated<number>;
   token_sessao: Generated<string | null>;
   valor: Numeric;
@@ -353,6 +334,8 @@ export interface PapelPermissao {
 
 export interface PerfilPesquisador {
   ativado_em: Generated<Timestamp>;
+  chave_pix_criptografada: string | null;
+  chave_pix_verificada_em: Timestamp | null;
   cpf_criptografado: string;
   cpf_hash: string;
   id_usuario: number;
@@ -362,6 +345,7 @@ export interface PerfilPesquisador {
   status_pesquisador: Generated<StatusPesquisador>;
   suspenso_ate: Timestamp | null;
   suspenso_por: number | null;
+  tipo_chave_pix: TipoChavePix | null;
   tipo_vinculo: Generated<TipoVinculo>;
   titulo_academico: TituloAcademico;
   vinculo_institucional: string | null;
@@ -407,13 +391,6 @@ export interface Repasse {
   tentativas_transferencia: Generated<number>;
   valor_bruto: Numeric;
   valor_liquido: Numeric;
-}
-
-export interface RepasseContribuicao {
-  id_contribuicao: number;
-  id_repasse: number;
-  valor_bruto_incluido: Numeric;
-  valor_taxa_incluido: Numeric;
 }
 
 export interface ScoreConfig {
@@ -561,10 +538,8 @@ export interface DB {
   atualizacao_campanha: AtualizacaoCampanha;
   auditoria_financeira: AuditoriaFinanceira;
   campanha: Campanha;
-  cartao_tokenizado_usuario: CartaoTokenizadoUsuario;
   comentario: Comentario;
   configuracoes: Configuracoes;
-  conta_recebimento_usuario: ContaRecebimentoUsuario;
   contribuicao: Contribuicao;
   contribuicao_recompensa: ContribuicaoRecompensa;
   denuncia: Denuncia;
@@ -585,7 +560,6 @@ export interface DB {
   recompensa: Recompensa;
   recuperacao_senha: RecuperacaoSenha;
   repasse: Repasse;
-  repasse_contribuicao: RepasseContribuicao;
   score_config: ScoreConfig;
   score_pesquisador: ScorePesquisador;
   score_rotulo: ScoreRotulo;

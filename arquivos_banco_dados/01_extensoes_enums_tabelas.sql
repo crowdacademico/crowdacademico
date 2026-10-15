@@ -372,6 +372,12 @@ CREATE TABLE perfil_pesquisador (
     suspenso_ate          TIMESTAMPTZ,
     motivo_suspensao      TEXT,
     suspenso_por          INT,
+    -- Chave Pix onde o pesquisador recebe o repasse (POST /conta-recebimento). Cifrada como o CPF (a chave pode ser o
+    -- próprio CPF; ver commons/seguranca/chave-pix-cifra.util.ts). chave_pix_verificada_em só é preenchida depois de o
+    -- provedor (DICT) confirmar que o titular da chave tem o CPF deste perfil; sem ela o repasse espera na fila.
+    tipo_chave_pix          tipo_chave_pix,
+    chave_pix_criptografada TEXT,
+    chave_pix_verificada_em TIMESTAMPTZ,
 
     CONSTRAINT "PK_PERFIL_PESQUISADOR" PRIMARY KEY (id_usuario),
     CONSTRAINT "FK_PERFIL_PESQUISADOR_USUARIO" FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE CASCADE,
@@ -389,6 +395,11 @@ CREATE TABLE perfil_pesquisador (
     CONSTRAINT "CK_PERFIL_PESQUISADOR_SUSPENSAO" CHECK (
         (suspenso_ate IS NULL AND motivo_suspensao IS NULL)
         OR (suspenso_ate IS NOT NULL AND motivo_suspensao IS NOT NULL)
+    ),
+    -- Tipo e chave andam juntos; verificada só existe com chave.
+    CONSTRAINT "CK_PERFIL_PESQUISADOR_CHAVE_PIX" CHECK (
+        (tipo_chave_pix IS NULL) = (chave_pix_criptografada IS NULL)
+        AND (chave_pix_verificada_em IS NULL OR chave_pix_criptografada IS NOT NULL)
     )
 );
 
@@ -638,46 +649,6 @@ CREATE TABLE repasse (
     CONSTRAINT "FK_REPASSE_CAMPANHA" FOREIGN KEY (id_campanha) REFERENCES campanha(id_campanha)
 );
 
--- Para onde o dinheiro vai: chave Pix de um USUÁRIO (não de perfil_pesquisador: serve também ao reembolso_manual de um
--- apoiador qualquer). Uma conta ATIVA por usuário (uq_conta_recebimento_ativa_usuario em 02): trocar a chave = desativar a
--- anterior e cadastrar a nova. Cadastro e verificação de titularidade: POST /conta-recebimento (PR-12).
--- chave_criptografada: a chave Pix pode ser o CPF, então segue a mesma receita de perfil_pesquisador.cpf_criptografado
--- (AES-256-GCM no Node, formato "v1:<iv>:<tag>:<ciphertext>"; ver commons/seguranca/chave-pix-cifra.util.ts).
--- O worker só usa conta ativa COM titularidade verificada: o repasse de quem ainda não tem uma fica na fila.
-CREATE TABLE conta_recebimento_usuario (
-    id_conta_recebimento       SERIAL,
-    id_usuario                 INT          NOT NULL,
-    tipo_chave                 tipo_chave_pix NOT NULL,
-    chave_criptografada        TEXT         NOT NULL,
-    -- NULL = a chave existe mas a titularidade ainda não foi confirmada (o worker de repasse não a usa). Só é preenchida
-    -- depois de o provedor (DICT) confirmar que o titular da chave é a própria pessoa.
-    titularidade_verificada_em TIMESTAMPTZ,
-    ativa                      BOOLEAN      NOT NULL DEFAULT TRUE,
-    criada_em                  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-
-    CONSTRAINT "PK_CONTA_RECEBIMENTO_USUARIO" PRIMARY KEY (id_conta_recebimento),
-    CONSTRAINT "FK_CONTA_RECEBIMENTO_USUARIO_USUARIO" FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario)
-);
-
--- Cartão salvo do usuário para contribuir de novo sem digitar tudo. NUNCA guarda número, CVV nem validade: só o TOKEN que
--- o provedor devolveu (que, sozinho, só funciona para cobranças da nossa conta no provedor) e dados de exibição
--- (bandeira e 4 últimos dígitos). O token não sai em resposta de API nenhuma.
-CREATE TABLE cartao_tokenizado_usuario (
-    id_cartao       SERIAL,
-    id_usuario      INT          NOT NULL,
-    provedor        VARCHAR(50)  NOT NULL,
-    token_cartao    TEXT         NOT NULL,
-    bandeira        VARCHAR(30),
-    ultimos_digitos CHAR(4)      NOT NULL,
-    ativo           BOOLEAN      NOT NULL DEFAULT TRUE,
-    criado_em       TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-
-    CONSTRAINT "PK_CARTAO_TOKENIZADO_USUARIO" PRIMARY KEY (id_cartao),
-    CONSTRAINT "UK_CARTAO_TOKENIZADO_USUARIO_TOKEN" UNIQUE (provedor, token_cartao),
-    CONSTRAINT "FK_CARTAO_TOKENIZADO_USUARIO_USUARIO" FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario),
-    CONSTRAINT "CK_CARTAO_TOKENIZADO_USUARIO_ULTIMOS_DIGITOS" CHECK (ultimos_digitos ~ '^[0-9]{4}$')
-);
-
 CREATE TABLE solicitacao_encerramento (
     id_solicitacao_encerramento SERIAL,
     id_campanha                 INT                 NOT NULL,
@@ -901,6 +872,11 @@ CREATE TABLE contribuicao (
     criado_em        TIMESTAMPTZ           NOT NULL DEFAULT NOW(),
     token_sessao     UUID                DEFAULT gen_random_uuid(),
     provedor         VARCHAR(50)         NOT NULL DEFAULT 'asaas', -- gateway que processou o pagamento (arquitetura de portas: trocar de gateway não reescreve regra de negócio)
+    -- Tarifa do provedor paga por quem apoia, por cima de `valor` (cobrança = valor + taxa_pagamento). Só a trigger
+    -- trg_contribuicao_define_taxa_pagamento (05) grava. Fica fora do arrecadado, do repasse e da devolução.
+    taxa_pagamento   DECIMAL(10,2)       NOT NULL DEFAULT 0,
+    -- Repasse em que esta contribuição entrou (só 'confirmado' de campanha encerrada; ver encerrar_campanhas_vencidas em 05).
+    id_repasse       INT,
     -- Controle do worker de estorno (só contribuição 'a_devolver'; ver proximo_estorno_pendente/registrar_falha_estorno em 05).
     -- Só números e datas, de propósito: o texto do erro do gateway vai para auditoria_financeira (leitura restrita), porque
     -- quem apoiou e o pesquisador leem esta tabela e não devem ver detalhe interno do provedor.
@@ -916,6 +892,8 @@ CREATE TABLE contribuicao (
     CONSTRAINT "PK_CONTRIBUICAO" PRIMARY KEY (id_contribuicao),
     CONSTRAINT "FK_CONTRIBUICAO_CAMPANHA" FOREIGN KEY (id_campanha) REFERENCES campanha(id_campanha),
     CONSTRAINT "FK_CONTRIBUICAO_USUARIO" FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE SET NULL,
+    CONSTRAINT "FK_CONTRIBUICAO_REPASSE" FOREIGN KEY (id_repasse) REFERENCES repasse(id_repasse),
+    CONSTRAINT "CK_CONTRIBUICAO_TAXA_PAGAMENTO" CHECK (taxa_pagamento >= 0),
     -- CHECK é só limite técnico largo (`> 0`, barra só erro grosseiro tipo valor zero/negativo); o mínimo
     -- de negócio de verdade (5.00, configurável pelo Painel Admin) mora em
     -- configuracoes.valor_minimo_contribuicao + trigger, ver [05-K-2] em 05_regras_negocio.sql.
@@ -964,24 +942,6 @@ CREATE TABLE auditoria_financeira (
     CONSTRAINT "CK_AUDITORIA_FINANCEIRA_ALVO" CHECK ((id_contribuicao IS NOT NULL)::int + (id_repasse IS NOT NULL)::int = 1),
     CONSTRAINT "FK_AUDITORIA_FINANCEIRA_EVENTO_PAGAMENTO" FOREIGN KEY (id_evento_pagamento) REFERENCES evento_pagamento(id_evento_pagamento),
     CONSTRAINT "FK_AUDITORIA_FINANCEIRA_USUARIO_RESPONSAVEL" FOREIGN KEY (id_usuario_responsavel) REFERENCES usuario(id_usuario) ON DELETE SET NULL
-);
-
--- Junção repasse 1:N contribuição: quais contribuições (e quanto de cada uma) entraram em cada repasse. Preenchida NO
--- MOMENTO em que o repasse é criado (fechamento da campanha ou pagamento tardio, ver 05), nunca depois.
--- UNIQUE em id_contribuicao: uma contribuição entra em UM repasse só (barra repasse em duplicidade).
--- valor_taxa_incluido = valor_bruto_incluido - líquido da contribuição (mesma conta ROUND(valor * (1 - taxa/100), 2)
--- do estorno), e repasse.valor_liquido é a soma dos líquidos.
-CREATE TABLE repasse_contribuicao (
-    id_repasse           INT           NOT NULL,
-    id_contribuicao      INT           NOT NULL,
-    valor_bruto_incluido DECIMAL(10,2) NOT NULL,
-    valor_taxa_incluido  DECIMAL(10,2) NOT NULL,
-
-    CONSTRAINT "PK_REPASSE_CONTRIBUICAO" PRIMARY KEY (id_repasse, id_contribuicao),
-    CONSTRAINT "UK_REPASSE_CONTRIBUICAO_CONTRIBUICAO" UNIQUE (id_contribuicao),
-    CONSTRAINT "FK_REPASSE_CONTRIBUICAO_REPASSE" FOREIGN KEY (id_repasse) REFERENCES repasse(id_repasse),
-    CONSTRAINT "FK_REPASSE_CONTRIBUICAO_CONTRIBUICAO" FOREIGN KEY (id_contribuicao) REFERENCES contribuicao(id_contribuicao),
-    CONSTRAINT "CK_REPASSE_CONTRIBUICAO_VALORES" CHECK (valor_bruto_incluido > 0 AND valor_taxa_incluido >= 0 AND valor_taxa_incluido <= valor_bruto_incluido)
 );
 
 CREATE TABLE contribuicao_recompensa (

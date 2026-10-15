@@ -1,7 +1,6 @@
-// Meios aceitos por POST /contribuicao hoje. O enum do banco tem mais (cartao_debito, boleto), mas a porta de
-// cobrança (CobrancaGatewayPort) só sabe PIX e cartão de crédito. Cartão de crédito aqui cria a cobrança, mas os
-// DADOS do cartão (token) ainda não trafegam: entram junto do adapter real (PR-10 e seguintes do plano).
-export const MEIOS_PAGAMENTO_ACEITOS = ['pix', 'cartao_credito'] as const;
+// Meios aceitos por POST /contribuicao hoje: só PIX. O enum do banco tem mais (cartão, boleto), mas cartão ainda não
+// tem fluxo; pedido com outro meio é recusado na validação (400), antes de gravar a contribuição.
+export const MEIOS_PAGAMENTO_ACEITOS = ['pix'] as const;
 export type MeioPagamentoAceito = (typeof MEIOS_PAGAMENTO_ACEITOS)[number];
 
 // Maior valor que cabe em contribuicao.valor (DECIMAL(10,2)).
@@ -32,10 +31,6 @@ export function calcularExpiracaoPix(
 }
 
 export const MENSAGEM_CAMPANHA_NAO_ENCONTRADA = 'Campanha não encontrada.';
-export const MENSAGEM_CARTAO_EM_ALL_OR_NOTHING =
-  'Campanhas all-or-nothing aceitam apenas contribuições via PIX.';
-export const MENSAGEM_CONTRIBUICAO_INDISPONIVEL =
-  'Esta contribuição não está mais disponível para pagamento.';
 export const MENSAGEM_PAGAMENTO_INDISPONIVEL =
   'O pagamento está temporariamente indisponível. Tente novamente mais tarde.';
 export const MENSAGEM_COBRANCA_FALHOU =

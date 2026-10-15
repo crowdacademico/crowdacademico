@@ -1,7 +1,6 @@
 import { randomUUID } from 'crypto';
 import {
   BadGatewayException,
-  BadRequestException,
   ForbiddenException,
   HttpException,
   Inject,
@@ -24,7 +23,6 @@ import {
 } from '../../29-pagamento/ports/cobranca-gateway.port';
 import {
   MENSAGEM_CAMPANHA_NAO_ENCONTRADA,
-  MENSAGEM_CARTAO_EM_ALL_OR_NOTHING,
   MENSAGEM_COBRANCA_FALHOU,
   MENSAGEM_COBRANCA_RECUSADA,
   MENSAGEM_PAGAMENTO_INDISPONIVEL,
@@ -32,15 +30,14 @@ import {
 } from '../constants/contribuicao.constants';
 import {
   ContribuicaoConverter,
+  valorCobrado,
   type LinhaContribuicao,
 } from '../dto/converter/contribuicao.converter';
 import { ContribuicaoRequestCreate } from '../dto/request/contribuicao.request-create';
 import { ContribuicaoResponseCreate } from '../dto/response/contribuicao.response-create';
-import { exigirContribuicaoPendente } from './contribuicao.guarda-pendente';
 
 interface LinhaCampanha {
   titulo: string;
-  modelo: 'all-or-nothing' | 'flexivel';
   data_fim: Date | null;
   // numeric volta do pg como string; ausente/ilegível cai no padrão (ver calcularExpiracaoPix).
   pix_validade_horas?: string | number | null;
@@ -53,15 +50,13 @@ interface LinhaCampanha {
 //   1. transação curta: grava a contribuição como 'pendente' e COMITA. O comite vem antes do gateway de propósito:
 //      se o processo morrer logo depois, sobra uma 'pendente' (estado válido e recuperável), nunca um pagamento
 //      sem registro nenhum no nosso lado;
-//   1b. guarda curta (exigirContribuicaoPendente): confirma que a contribuição ainda está 'pendente' antes de pedir
-//      cobrança; se não estiver, 410 e o gateway não é chamado;
 //   2. gateway, FORA de qualquer transação (nenhum client do pool está em uso neste momento);
 //   3. transação curta: registra o id da cobrança via atualizar_status_contribuicao() (05, [05-K-2]).
 //
 // Regras de negócio que NÃO são checadas aqui, porque o banco já as garante e o PostgresExceptionFilter as traduz:
 // campanha ativa e dentro do prazo (91016/91017), valor mínimo configurável (90014), all-or-nothing só PIX (90007).
-// O que se checa aqui antes do INSERT é só o que dá para dizer ao usuário antes de gravar lixo (cartão em
-// all-or-nothing, campanha inexistente) e o que o banco não sabe (termo pendente, que é do guard).
+// O que se checa aqui antes do INSERT é só o que dá para dizer ao usuário antes de gravar lixo (campanha
+// inexistente) e o que o banco não sabe (termo pendente, que é do guard).
 @Injectable()
 export class ContribuicaoServiceCreate {
   private readonly logger = new Logger(ContribuicaoServiceCreate.name);
@@ -98,7 +93,7 @@ export class ContribuicaoServiceCreate {
       { idUsuario, tokenSessao },
       async (client) => {
         const resCampanha = await client.query<LinhaCampanha>(
-          "SELECT titulo, modelo, data_fim, public.config_numero('pix_validade_horas', 24) AS pix_validade_horas FROM campanha WHERE id_campanha = $1",
+          "SELECT titulo, data_fim, public.config_numero('pix_validade_horas', 24) AS pix_validade_horas FROM campanha WHERE id_campanha = $1",
           [dto.idCampanha],
         );
         // Campanha que a RLS esconde é indistinguível de campanha inexistente (de propósito).
@@ -106,21 +101,13 @@ export class ContribuicaoServiceCreate {
         if (!campanhaLida) {
           throw new NotFoundException(MENSAGEM_CAMPANHA_NAO_ENCONTRADA);
         }
-        // Checagem de UX; a garantia real é trg_contribuicao_all_or_nothing_pix (90007).
-        if (
-          campanhaLida.modelo === 'all-or-nothing' &&
-          dto.meioPagamento !== 'pix'
-        ) {
-          throw new BadRequestException(MENSAGEM_CARTAO_EM_ALL_OR_NOTHING);
-        }
-
         // `provedor` é obrigatório aqui: o DEFAULT da coluna é 'asaas', e uma contribuição criada pelo Fake
         // ficaria rotulada com o provedor errado.
         const resContribuicao = await client.query<LinhaContribuicao>(
           `INSERT INTO contribuicao
              (id_campanha, id_usuario, valor, meio_pagamento, anonima, token_sessao, provedor)
            VALUES ($1, $2, $3, $4, $5, $6, $7)
-           RETURNING id_contribuicao, id_campanha, valor, meio_pagamento, status, token_sessao, criado_em`,
+           RETURNING id_contribuicao, id_campanha, valor, taxa_pagamento, meio_pagamento, status, token_sessao, criado_em`,
           [
             dto.idCampanha,
             idUsuario,
@@ -138,18 +125,12 @@ export class ContribuicaoServiceCreate {
       },
     );
 
-    // Passo 1b: só gera cobrança para contribuição que ainda está pendente (410 caso contrário).
-    await exigirContribuicaoPendente(this.pool, contribuicao.id_contribuicao, {
-      idUsuario,
-      tokenSessao,
-    });
-
     // Passo 2: nenhum client do pool está em uso daqui até o passo 3.
     let cobranca: ResultadoCobranca;
     try {
       cobranca = await this.gateway.criarCobranca({
         chaveIdempotencia: tokenSessao,
-        valor: Number(contribuicao.valor),
+        valor: valorCobrado(contribuicao),
         meioPagamento: dto.meioPagamento,
         expiraEm: calcularExpiracaoPix(
           campanha.data_fim,

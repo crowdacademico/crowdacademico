@@ -34,8 +34,8 @@ class TimeoutGateway extends Error {}
 // sucesso repassa ao pesquisador; flexível nunca devolve. Estorno individual (contestação, fraude, moderação) NÃO passa
 // por aqui: é outra decisão de negócio.
 //
-// UM estorno por contribuição, nunca em lote (diferente do repasse), no valor LÍQUIDO: a plataforma retém a taxa
-// (ROUND(valor * (1 - taxa_plataforma / 100), 2), calculado pelo banco em proximo_estorno_pendente na hora de estornar).
+// UM estorno por contribuição, nunca em lote (diferente do repasse), do valor INTEIRO da contribuição: quem apoiou
+// pagou valor + tarifa de pagamento e recebe o valor de volta; a tarifa fica com o provedor (proximo_estorno_pendente).
 //
 // Cada contribuição é uma transação curta, na ordem que o plano de pagamentos pede:
 //   BEGIN
@@ -183,7 +183,7 @@ export class PagamentoServiceRefundPending {
     if (!(liquido > 0)) {
       return {
         falha: {
-          mensagem: 'Valor líquido a estornar é zero.',
+          mensagem: 'Valor a estornar é zero.',
           recuperavel: false,
         },
       };

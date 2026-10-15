@@ -17,7 +17,7 @@ interface LinhaRevisao {
 }
 
 // Webhooks que não terminaram com sucesso. A permissão é conferida DENTRO das funções do banco (listar exige
-// evento_pagamento_visualizar; resolver exige pagamento_revisao_resolver; sem ela, 92036 => 403), com a sessão do usuário
+// evento_pagamento_visualizar; resolver exige pagamento_revisao_resolver; sem ela, 92037 => 403), com a sessão do usuário
 // que o interceptor global já montou (SET LOCAL app.id_usuario_atual): este service não decide quem pode.
 @Injectable()
 export class PagamentoRevisaoServiceEventos {

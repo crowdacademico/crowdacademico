@@ -40,7 +40,7 @@ export interface CobrancaGatewayPort {
   consultarCobranca(idCobranca: string): Promise<ResultadoCobranca>;
 
   // `valor` omitido = estorno do que ainda resta (integral). `valor` informado = estorno parcial, devolve
-  // EXATAMENTE esse valor: é como o tudo-ou-nada retém a taxa (PR-06/07 estornam o líquido, nunca o bruto).
+  // EXATAMENTE esse valor: é como o tudo-ou-nada devolve a contribuição sem a tarifa de pagamento (paga por cima).
   // `chaveIdempotencia` opcional: repetir a chamada (retry do worker) não pode estornar duas vezes.
   estornar(
     idCobranca: string,

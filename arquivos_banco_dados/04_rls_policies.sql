@@ -333,12 +333,6 @@ ALTER TABLE historico_rejeicao   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE historico_rejeicao   FORCE ROW LEVEL SECURITY;
 ALTER TABLE repasse              ENABLE ROW LEVEL SECURITY;
 ALTER TABLE repasse              FORCE ROW LEVEL SECURITY;
-ALTER TABLE repasse_contribuicao ENABLE ROW LEVEL SECURITY;
-ALTER TABLE repasse_contribuicao FORCE ROW LEVEL SECURITY;
-ALTER TABLE conta_recebimento_usuario ENABLE ROW LEVEL SECURITY;
-ALTER TABLE conta_recebimento_usuario FORCE ROW LEVEL SECURITY;
-ALTER TABLE cartao_tokenizado_usuario ENABLE ROW LEVEL SECURITY;
-ALTER TABLE cartao_tokenizado_usuario FORCE ROW LEVEL SECURITY;
 
 -- Campanhas públicas expõem apenas os status permitidos, preservando as demais para dono/admin.
 DROP POLICY IF EXISTS pol_campanha_select ON campanha;
@@ -590,43 +584,6 @@ CREATE POLICY pol_repasse_select ON repasse FOR SELECT TO app_nestjs USING (
         SELECT 1 FROM campanha WHERE id_campanha = repasse.id_campanha AND id_usuario = (SELECT public.id_usuario_atual())
     )
 );
-
--- repasse_contribuicao: leitura igual à de repasse (admin com a permissão ou dono da campanha). Sem policy de escrita de
--- propósito: quem grava são as funções SECURITY DEFINER que criam o repasse (05), nunca uma rota.
-DROP POLICY IF EXISTS pol_repasse_contribuicao_select ON repasse_contribuicao;
-CREATE POLICY pol_repasse_contribuicao_select ON repasse_contribuicao FOR SELECT TO app_nestjs USING (
-    (SELECT public.tem_permissao('repasse_aprovar')) OR EXISTS (
-        SELECT 1 FROM repasse r JOIN campanha c ON c.id_campanha = r.id_campanha
-        WHERE r.id_repasse = repasse_contribuicao.id_repasse AND c.id_usuario = (SELECT public.id_usuario_atual())
-    )
-);
-
--- conta_recebimento_usuario: o dono vê a própria conta (a chave sai cifrada) e quem tem a permissão de repasse também.
--- Cada pessoa só cadastra e desativa a PRÓPRIA (a titularidade é conferida pelo Nest no provedor antes de gravar). Sem
--- DELETE: conta usada em repasse não pode sumir, só ficar inativa.
-DROP POLICY IF EXISTS pol_conta_recebimento_select ON conta_recebimento_usuario;
-CREATE POLICY pol_conta_recebimento_select ON conta_recebimento_usuario FOR SELECT TO app_nestjs USING (
-    id_usuario = (SELECT public.id_usuario_atual()) OR (SELECT public.tem_permissao('repasse_aprovar'))
-);
-DROP POLICY IF EXISTS pol_conta_recebimento_insert ON conta_recebimento_usuario;
-CREATE POLICY pol_conta_recebimento_insert ON conta_recebimento_usuario FOR INSERT TO app_nestjs
-    WITH CHECK (id_usuario = (SELECT public.id_usuario_atual()));
-DROP POLICY IF EXISTS pol_conta_recebimento_update ON conta_recebimento_usuario;
-CREATE POLICY pol_conta_recebimento_update ON conta_recebimento_usuario FOR UPDATE TO app_nestjs
-    USING (id_usuario = (SELECT public.id_usuario_atual()))
-    WITH CHECK (id_usuario = (SELECT public.id_usuario_atual()));
-
--- cartao_tokenizado_usuario: estritamente do dono (nem admin lê token de cartão). Sem DELETE: desativar.
-DROP POLICY IF EXISTS pol_cartao_tokenizado_select ON cartao_tokenizado_usuario;
-CREATE POLICY pol_cartao_tokenizado_select ON cartao_tokenizado_usuario FOR SELECT TO app_nestjs
-    USING (id_usuario = (SELECT public.id_usuario_atual()));
-DROP POLICY IF EXISTS pol_cartao_tokenizado_insert ON cartao_tokenizado_usuario;
-CREATE POLICY pol_cartao_tokenizado_insert ON cartao_tokenizado_usuario FOR INSERT TO app_nestjs
-    WITH CHECK (id_usuario = (SELECT public.id_usuario_atual()));
-DROP POLICY IF EXISTS pol_cartao_tokenizado_update ON cartao_tokenizado_usuario;
-CREATE POLICY pol_cartao_tokenizado_update ON cartao_tokenizado_usuario FOR UPDATE TO app_nestjs
-    USING (id_usuario = (SELECT public.id_usuario_atual()))
-    WITH CHECK (id_usuario = (SELECT public.id_usuario_atual()));
 
 -- ============================================================
 -- [04-F] LINK (3 tabelas)

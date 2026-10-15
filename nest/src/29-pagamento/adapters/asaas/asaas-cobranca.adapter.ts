@@ -154,7 +154,7 @@ export class AsaasCobrancaAdapter implements CobrancaGatewayPort {
 
   // Estorno de Pix: POST /payments/{id}/refund, total ou PARCIAL (vários parciais são permitidos desde que a soma não passe
   // do valor). Cuidados:
-  //   - `valor` omitido = o que ainda resta; informado = EXATAMENTE esse valor (é assim que o tudo-ou-nada retém a taxa);
+  //   - `valor` omitido = o que ainda resta; informado = EXATAMENTE esse valor (é assim que o tudo-ou-nada devolve o valor e deixa a tarifa paga por cima);
   //   - IDEMPOTÊNCIA: o Asaas não tem chave de idempotência em estorno. A chave do sistema vai na descrição do estorno
   //     ("ref:<chave>") e, antes de estornar, procura-se um estorno da cobrança com esse marcador. Existindo, devolve o
   //     resultado dele sem estornar de novo (um retry do worker nunca devolve o dinheiro duas vezes);

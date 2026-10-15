@@ -2,16 +2,16 @@ import { Controller, Get } from '@nestjs/common';
 import { UsuarioAtual } from '../../commons/auth/usuario-atual.decorator';
 import type { UsuarioAutenticado } from '../../commons/auth/usuario-autenticado.interface';
 import { ContaRecebimentoResponse } from '../dto/response/conta-recebimento.response';
-import { ContaRecebimentoServiceFindAll } from '../service/conta-recebimento.service.findall';
+import { ContaRecebimentoServiceFindOne } from '../service/conta-recebimento.service.findone';
 
 @Controller('conta-recebimento')
-export class ContaRecebimentoControllerFindAll {
-  constructor(private readonly service: ContaRecebimentoServiceFindAll) {}
+export class ContaRecebimentoControllerFindOne {
+  constructor(private readonly service: ContaRecebimentoServiceFindOne) {}
 
   @Get()
-  listar(
+  buscar(
     @UsuarioAtual() usuario: UsuarioAutenticado,
-  ): Promise<ContaRecebimentoResponse[]> {
+  ): Promise<ContaRecebimentoResponse | null> {
     return this.service.executar(usuario.idUsuario);
   }
 }

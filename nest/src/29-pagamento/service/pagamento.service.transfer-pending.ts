@@ -36,7 +36,7 @@ class TimeoutGateway extends Error {}
 // Worker de repasse (PR-08): transfere ao pesquisador o dinheiro arrecadado. UMA transferência por repasse, e cada repasse
 // já é o lote de UMA campanha (criado no fechamento dela, ou um repasse adicional de uma contribuição que chegou
 // tarde): nunca uma transferência por contribuição (custo de tarifa). O valor é o líquido (a taxa da plataforma já
-// foi descontada, ver repasse_contribuicao).
+// foi descontada; as contribuições do repasse apontam para ele em contribuicao.id_repasse).
 //
 // Diferente do worker de estorno, NÃO segura transação aberta durante a chamada ao gateway: reservar_proximo_repasse() muda
 // o repasse para 'processando' e grava um prazo (lease) numa transação curta; a chamada ao gateway acontece solta; e o

@@ -93,8 +93,8 @@ CREATE INDEX idx_repasse_status             ON repasse(status);
 CREATE INDEX idx_repasse_fila               ON repasse(proxima_tentativa_em, id_repasse) WHERE status IN ('pendente', 'processando');
 -- O webhook de repasse acha o registro por (provedor, id da transferência).
 CREATE UNIQUE INDEX uq_repasse_provedor_transferencia ON repasse(provedor, id_transferencia_api) WHERE id_transferencia_api IS NOT NULL;
-CREATE UNIQUE INDEX uq_conta_recebimento_ativa_usuario ON conta_recebimento_usuario(id_usuario) WHERE ativa;
-CREATE INDEX idx_cartao_tokenizado_usuario  ON cartao_tokenizado_usuario(id_usuario) WHERE ativo;
+-- Contribuições de um repasse (reservar_proximo_repasse e concluir_repasse somam e fecham por aqui).
+CREATE INDEX idx_contribuicao_repasse      ON contribuicao(id_repasse) WHERE id_repasse IS NOT NULL;
 -- Fila de reconciliação (reservar_contribuicoes_para_reconciliar): só Pix/cartão pendente com cobrança no gateway.
 CREATE INDEX idx_contribuicao_reconciliar   ON contribuicao(criado_em) WHERE status = 'pendente' AND id_transacao_api IS NOT NULL;
 -- Fila de cancelamento de cobrança no provedor (reservar_cobrancas_para_cancelar).

@@ -30,7 +30,7 @@ interface ModalConcluirReembolsoProps {
 
 // Registrar que uma contribuição em reembolso manual foi devolvida. O estorno automático desistiu, então uma pessoa
 // devolve o dinheiro FORA do sistema (painel do provedor ou Pix) e só depois registra aqui: o valor que de fato foi
-// devolvido (de R$ 0,01 até o valor pago) e como foi feito. A contribuição passa para "devolvida" e a ação fica na
+// devolvido (de R$ 0,01 até o valor da contribuição) e como foi feito. A contribuição passa para "devolvida" e a ação fica na
 // auditoria financeira, com quem registrou. Este registro NÃO move dinheiro.
 export function ModalConcluirReembolso({ authFetch, reembolso, tituloCampanha, aoFechar, aoConcluido, somenteLeitura = false }: ModalConcluirReembolsoProps) {
   const [valor, setValor] = useState(String(reembolso.valorADevolver));
@@ -41,12 +41,9 @@ export function ModalConcluirReembolso({ authFetch, reembolso, tituloCampanha, a
   const { ocupado, executar } = useEnvio(reportarErro, limparErro);
 
   const erros = useErrosFormulario(() => ({
-    valor: erroValorDevolvido(valor, reembolso.valorBruto),
+    valor: erroValorDevolvido(valor, reembolso.valorADevolver),
     observacao: erroObservacaoRevisao(observacao),
   }));
-
-  // Acima do líquido, mas ainda dentro do que o banco aceita (o valor pago): deixa passar, com um aviso.
-  const acimaDoLiquido = !erroValorDevolvido(valor, reembolso.valorBruto) && Number(valor) > reembolso.valorADevolver;
 
   const pedirConfirmacao = () => {
     if (erros.tentarEnviar()) {
@@ -85,8 +82,8 @@ export function ModalConcluirReembolso({ authFetch, reembolso, tituloCampanha, a
             <CampoFicha rotulo="Campanha" valor={`${tituloCampanha} (#${reembolso.idCampanha})`} largura="cheia" />
             <CampoFicha rotulo="Quem contribuiu" valor={reembolso.idUsuario === null ? 'Sem conta (contribuição sem login)' : `Usuário #${reembolso.idUsuario}`} />
             <CampoFicha rotulo="Meio de pagamento" valor={ROTULO_MEIO_PAGAMENTO[reembolso.meioPagamento]} />
-            <CampoFicha rotulo="Valor pago" valor={formatarMoeda(reembolso.valorBruto)} />
-            <CampoFicha rotulo="Valor a devolver (líquido)" valor={formatarMoeda(reembolso.valorADevolver)} />
+            <CampoFicha rotulo="Valor pago (com a tarifa)" valor={formatarMoeda(reembolso.valorBruto)} />
+            <CampoFicha rotulo="Valor a devolver" valor={formatarMoeda(reembolso.valorADevolver)} />
             <CampoFicha rotulo="Tentativas de estorno automático" valor={reembolso.tentativas} />
             <CampoFicha rotulo="Tem chave Pix verificada" valor={<BadgeBooleano valor={reembolso.contribuinteTemContaVerificada} />} />
             <CampoFicha rotulo="Último motivo" valor={reembolso.ultimoMotivo} largura="cheia" />
@@ -96,18 +93,14 @@ export function ModalConcluirReembolso({ authFetch, reembolso, tituloCampanha, a
             <SecaoFicha titulo="Registrar a devolução" colunas={1}>
               <CaixaAviso titulo="O sistema não devolve o dinheiro" icone="fa-triangle-exclamation" tom="aviso" espacado>
                 <p>
-                  Devolva por fora (painel do provedor ou Pix) e só então registre aqui. O valor a devolver já desconta a taxa da plataforma, que fica
-                  retida. A chave Pix da pessoa não é mostrada neste painel.
+                  Devolva por fora (painel do provedor ou Pix) e só então registre aqui. O valor a devolver é o valor inteiro da contribuição; a tarifa de
+                  pagamento não volta. A chave Pix da pessoa não é mostrada neste painel.
                 </p>
                 <p>Ao registrar, a contribuição passa para &quot;devolvida&quot; e isso não dá para desfazer.</p>
               </CaixaAviso>
               <Campo
                 rotulo="Valor devolvido (R$)"
-                dica={
-                  acimaDoLiquido
-                    ? `Atenção: maior que o líquido a devolver (${formatarMoeda(reembolso.valorADevolver)}). Confira se a taxa da plataforma deveria ficar retida.`
-                    : `De R$ 0,01 até ${formatarMoeda(reembolso.valorBruto)} (o valor pago). Sugerido: o líquido, ${formatarMoeda(reembolso.valorADevolver)}.`
-                }
+                dica={`De R$ 0,01 até ${formatarMoeda(reembolso.valorADevolver)} (o valor da contribuição).`}
                 erro={erros.erroDe('valor')}
               >
                 {({ atributos, classeErro }) => (

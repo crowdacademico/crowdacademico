@@ -12,7 +12,12 @@ export class ContribuicaoResponseCreate {
   // enumerar contribuições de terceiros (01, [01-H]).
   tokenSessao: string;
   idCampanha: number;
+  // O que entra na campanha.
   valor: number;
+  // Tarifa do provedor de pagamento, paga por quem apoia além do valor (0 = sem tarifa).
+  taxaPagamento: number;
+  // O que a cobrança pede: valor + taxaPagamento.
+  valorCobrado: number;
   meioPagamento: string;
   // Sempre 'pendente' na criação: quem confirma é o webhook do gateway (PR-05).
   status: string;

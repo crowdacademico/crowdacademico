@@ -22,6 +22,21 @@ const GRUPO_CONFIGURACAO: Record<string, string> = {
   taxa_plataforma_padrao: 'Financeiro',
   meta_minima_campanha: 'Financeiro',
   valor_minimo_contribuicao: 'Financeiro',
+  taxa_pagamento_pix: 'Financeiro',
+  pix_validade_horas: 'Financeiro',
+  // Pagamentos: ritmo dos processos automáticos de repasse, devolução e conferência com o provedor.
+  repasse_lease_minutos: 'Pagamentos',
+  repasse_max_tentativas: 'Pagamentos',
+  repasse_backoff_base_minutos: 'Pagamentos',
+  repasse_backoff_max_minutos: 'Pagamentos',
+  estorno_prazo_pix_dias: 'Pagamentos',
+  estorno_max_tentativas: 'Pagamentos',
+  estorno_backoff_base_minutos: 'Pagamentos',
+  estorno_backoff_max_minutos: 'Pagamentos',
+  reconciliacao_limite_minutos: 'Pagamentos',
+  reconciliacao_intervalo_minutos: 'Pagamentos',
+  reconciliacao_orfa_minutos: 'Pagamentos',
+  cancelamento_cobranca_intervalo_minutos: 'Pagamentos',
   // Campanha
   prazo_minimo_campanha_dias: 'Campanha',
   prazo_sugerido_campanha_dias: 'Campanha',
@@ -59,7 +74,7 @@ const GRUPO_CONFIGURACAO: Record<string, string> = {
   notificar_novas_campanhas: 'Geral',
 };
 
-const ORDEM_GRUPOS = ['Segurança', 'Financeiro', 'Campanha', 'Moderação', 'Score / Reputação', 'Arquivo', 'Geral', 'Outras'];
+const ORDEM_GRUPOS = ['Segurança', 'Financeiro', 'Pagamentos', 'Campanha', 'Moderação', 'Score / Reputação', 'Arquivo', 'Geral', 'Outras'];
 
 export function grupoConfiguracao(chave: string): string {
   return GRUPO_CONFIGURACAO[chave] ?? 'Outras';

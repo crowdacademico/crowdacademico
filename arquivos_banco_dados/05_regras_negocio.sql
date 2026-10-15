@@ -867,7 +867,9 @@ DECLARE
         ['cronograma_min_marcos',         'cronograma_max_marcos'],
         ['arquivo_tamanho_minimo_bytes',  'arquivo_tamanho_maximo_imagem_bytes'],
         ['arquivo_tamanho_minimo_bytes',  'arquivo_tamanho_maximo_documento_bytes'],
-        ['espera_atencao_dias',           'espera_critica_dias']
+        ['espera_atencao_dias',           'espera_critica_dias'],
+        ['repasse_backoff_base_minutos',  'repasse_backoff_max_minutos'],
+        ['estorno_backoff_base_minutos',  'estorno_backoff_max_minutos']
     ];
     v_chave  TEXT;
     v_par    TEXT[];
@@ -2290,12 +2292,13 @@ EXECUTE FUNCTION fn_carimba_envio_aprovacao();
 --               - 'sucesso' (qualquer modelo) e 'nao_atingido' em campanha FLEXÍVEL: cria UMA linha em repasse
 --                 (valor_bruto = soma das contribuições 'confirmado'; taxa_relativa = campanha.taxa_plataforma, ou a taxa
 --                 padrão se ainda NULL; valor_liquido = soma dos líquidos por contribuição; meta_atingida conforme o
---                 resultado; status 'pendente') e UMA linha por contribuição em repasse_contribuicao. O flexível fica com o que arrecadou mesmo sem a meta (RF-038/RF-063), por isso nunca devolve.
+--                 resultado; status 'pendente'), e cada contribuição 'confirmado' passa a apontar para ele (contribuicao.id_repasse).
+--                 O flexível fica com o que arrecadou mesmo sem a meta (RF-038/RF-063), por isso nunca devolve.
 --                 Sem contribuição confirmada (bruto 0) não há o que repassar e nenhuma linha é criada.
 --                 Quem faz a transferência é o worker de repasse (PR-08), não esta função.
 --               - 'nao_atingido' em campanha ALL-OR-NOTHING: move cada contribuição 'confirmado' para 'a_devolver'. NÃO
---                 calcula valor nenhum: o líquido a estornar (valor menos a taxa retida) é do worker de estorno (PR-07),
---                 no momento em que de fato chama o gateway.
+--                 calcula valor nenhum: quem apoiou recebe de volta o valor inteiro da contribuição (a tarifa de pagamento,
+--                 paga por cima, fica com o provedor), pelo worker de estorno (PR-07).
 --               - contribuição 'pendente' NÃO é tocada aqui: se o pagamento ainda chegar (aviso atrasado do gateway),
 --                 aplicar_evento_pagamento() o confirma e aplica a regra do fechamento (repasse adicional; devolução só em
 --                 all-or-nothing que não bateu a meta). O Pix pendente vence sozinho em expirar_contribuicoes_pendentes.
@@ -2353,7 +2356,7 @@ BEGIN
 
             IF v_novo = 'sucesso' OR v_modelo = 'flexivel' THEN
                 -- O líquido do repasse é a SOMA dos líquidos por contribuição (a mesma conta do estorno), não o
-                -- arredondamento do total: assim repasse.valor_liquido sempre fecha com repasse_contribuicao.
+                -- arredondamento do total: assim repasse.valor_liquido sempre fecha com as contribuições do repasse.
                 SELECT COALESCE(SUM(valor), 0), COALESCE(SUM(ROUND(valor * (1 - v_taxa / 100), 2)), 0)
                 INTO v_bruto, v_liquido
                 FROM contribuicao
@@ -2364,13 +2367,11 @@ BEGIN
                     VALUES (v_id, v_bruto, v_liquido, v_novo = 'sucesso', v_taxa, 'pendente')
                     RETURNING repasse.id_repasse INTO v_id_repasse;
 
-                    INSERT INTO repasse_contribuicao (id_repasse, id_contribuicao, valor_bruto_incluido, valor_taxa_incluido)
-                    SELECT v_id_repasse, ct.id_contribuicao, ct.valor, ct.valor - ROUND(ct.valor * (1 - v_taxa / 100), 2)
-                    FROM contribuicao ct
-                    WHERE ct.id_campanha = v_id AND ct.status = 'confirmado';
+                    UPDATE contribuicao SET id_repasse = v_id_repasse
+                    WHERE id_campanha = v_id AND status = 'confirmado';
                 END IF;
             ELSE
-                -- nao_atingido em all-or-nothing: o dinheiro volta para quem apoiou (o worker de estorno calcula o líquido).
+                -- nao_atingido em all-or-nothing: o dinheiro volta inteiro para quem apoiou (worker de estorno).
                 FOR v_id_contrib IN
                     SELECT id_contribuicao FROM contribuicao
                     WHERE id_campanha = v_id AND status = 'confirmado'
@@ -2399,7 +2400,7 @@ $$;
 --             Cada expiração passa por atualizar_status_contribuicao() (valida a transição e grava auditoria_financeira),
 --             como toda mudança de status de contribuição; antes era um UPDATE em massa que não deixava rastro. Uma
 --             contribuição que o webhook confirmou entre a lista e a expiração é barrada pela máquina de estados
---             (91034), fica como está e não derruba as demais (WARNING, não é contada).
+--             (91050), fica como está e não derruba as demais (WARNING, não é contada).
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.expirar_contribuicoes_pendentes()
 RETURNS INT
@@ -2944,6 +2945,31 @@ FOR EACH ROW
 EXECUTE FUNCTION fn_valida_contribuicao_valor_minimo();
 
 -- ----------------------------------------------------------------------------
+-- Função:     fn_contribuicao_define_taxa_pagamento
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-K-2]
+-- Regra:      A tarifa do provedor de pagamento é paga por quem apoia, POR CIMA do valor: contribui 100, a cobrança é de
+--             100 + tarifa. Grava em taxa_pagamento a tarifa vigente no momento do apoio (configuracoes.taxa_pagamento_pix);
+--             o que vier no INSERT é ignorado. A tarifa não entra no arrecadado, no repasse nem na devolução (o tudo-ou-nada
+--             devolve só `valor`), então a plataforma nunca paga a tarifa do provedor. Meio sem fluxo ainda (cartão) fica 0.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_contribuicao_define_taxa_pagamento()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+    NEW.taxa_pagamento := CASE WHEN NEW.meio_pagamento = 'pix'
+                               THEN public.config_numero('taxa_pagamento_pix', 1.99)
+                               ELSE 0 END;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_contribuicao_define_taxa_pagamento ON contribuicao;
+CREATE TRIGGER trg_contribuicao_define_taxa_pagamento
+BEFORE INSERT ON contribuicao
+FOR EACH ROW
+EXECUTE FUNCTION public.fn_contribuicao_define_taxa_pagamento();
+
+-- ----------------------------------------------------------------------------
 -- Função:     fn_sincroniza_arrecadado_campanha
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-2]
@@ -2993,7 +3019,7 @@ EXECUTE FUNCTION fn_sincroniza_arrecadado_campanha();
 -- Função:     fn_valida_transicao_status_contribuicao
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-2]
--- Regra:      Máquina de estados de contribuicao.status. Só passam as 10 transições abaixo; qualquer outra levanta 91034.
+-- Regra:      Máquina de estados de contribuicao.status. Só passam as 10 transições abaixo; qualquer outra levanta 91050.
 --             pendente         -> confirmado | erro | expirado
 --             confirmado       -> repassado | a_devolver | reembolsado | reembolso_manual
 --             a_devolver       -> devolvido | reembolso_manual
@@ -3021,7 +3047,7 @@ BEGIN
     END IF;
 
     RAISE EXCEPTION 'Transição de status de contribuição não permitida: % -> %.', OLD.status, NEW.status
-        USING ERRCODE = '91034',
+        USING ERRCODE = '91050',
               DETAIL  = json_build_object('de', OLD.status, 'para', NEW.status)::text;
 END;
 $$;
@@ -3119,7 +3145,7 @@ $$;
 --                                             FICA NÃO PROCESSADO com o motivo em erro_processamento: dá para tentar
 --                                             de novo (reentrega do gateway ou reconciliação).
 --               'revisao_manual'              o evento NÃO foi aplicado e a contribuição NÃO mudou de status. Motivos:
---                                             (a) a máquina de estados barrou (91034), ex.: pagamento confirmado para uma
+--                                             (a) a máquina de estados barrou (91050), ex.: pagamento confirmado para uma
 --                                             contribuição já 'expirado'; (b) confirmação para campanha encerrada de um jeito
 --                                             que não é sucesso nem nao_atingido (ex.: encerrada por moderação); (c) o repasse
 --                                             adicional foi barrado por trg_valida_repasse (91003: all-or-nothing em 'sucesso'
@@ -3131,14 +3157,16 @@ $$;
 --             do gateway chegou tarde): o dinheiro é de quem apoiou de boa-fé e o resultado da campanha já está dado, então
 --             não é caso de revisão, e sim de aplicar a regra do fechamento a essa contribuição:
 --               - campanha 'sucesso' (qualquer modelo) ou FLEXÍVEL 'nao_atingido': confirma e cria um REPASSE ADICIONAL só
---                 com o valor dela (e a linha correspondente em repasse_contribuicao) (a campanha fica com o que arrecadou; o repasse do fechamento já saiu ou está na fila).
+--                 com o valor dela, apontado em contribuicao.id_repasse (a campanha fica com o que arrecadou; o repasse do fechamento
+--                 já saiu ou está na fila).
 --               - campanha ALL-OR-NOTHING 'nao_atingido': confirma e já manda para 'a_devolver' (é o único caso em que o
---                 dinheiro volta; o worker de estorno devolve o líquido). Duas linhas de auditoria: confirmado e a_devolver.
+--                 dinheiro volta; o worker de estorno devolve o valor inteiro). Duas linhas de auditoria: confirmado e a_devolver.
 --             Tudo na mesma transação: se o repasse for barrado, a confirmação também volta e o evento vai para revisão.
 --             Contribuição já 'expirado' que recebe pagamento continua em revisão manual (a máquina de estados não a deixa
 --             voltar), e por isso o PIX é gerado já vencendo junto com a contribuição (ver POST /contribuicao).
---             ECO DO PRÓPRIO ESTORNO: estorno TOTAL pedido pelo worker volta como webhook 'reembolsado' quando a contribuição
---             já está 'devolvido' (taxa 0%, líquido = bruto): é o mesmo dinheiro, resultado 'sem_mudanca', não revisão.
+--             ECO DO PRÓPRIO ESTORNO: com a tarifa de pagamento em 0, a devolução do tudo-ou-nada estorna a cobrança inteira e
+--             volta como webhook 'reembolsado'. Se a contribuição já está 'devolvido', é o mesmo dinheiro ('sem_mudanca');
+--             se ainda está 'a_devolver' (o worker estornou mas não chegou a gravar), o evento a conclui como 'devolvido'.
 --               'evento_inexistente'          p_id_evento não existe.
 --             A guarda de campanha mora AQUI e não em atualizar_status_contribuicao() de propósito: este é o único caminho
 --             automático até 'confirmado'; atualizar_status_contribuicao() continua sendo a ferramenta de uma decisão
@@ -3220,6 +3248,11 @@ BEGIN
     WHERE c.id_contribuicao = v_id_contribuicao
     FOR UPDATE;
 
+    -- Estorno total de uma contribuição que o tudo-ou-nada manda devolver é a própria devolução (ver cabeçalho).
+    IF p_novo_status = 'reembolsado' AND v_status = 'a_devolver' THEN
+        p_novo_status := 'devolvido';
+    END IF;
+
     -- Mesmo status que o pedido, ou eco do estorno total que o próprio worker fez (devolvido -> 'reembolsado').
     IF v_status = p_novo_status OR (p_novo_status = 'reembolsado' AND v_status = 'devolvido') THEN
         UPDATE evento_pagamento SET processado_em = NOW(), erro_processamento = NULL
@@ -3248,13 +3281,12 @@ BEGIN
                 INSERT INTO repasse (id_campanha, valor_bruto, valor_liquido, meta_atingida, taxa_relativa, status)
                 VALUES (v_id_campanha, v_valor, v_liquido, v_status_campanha = 'sucesso', v_taxa, 'pendente')
                 RETURNING repasse.id_repasse INTO v_id_repasse;
-                INSERT INTO repasse_contribuicao (id_repasse, id_contribuicao, valor_bruto_incluido, valor_taxa_incluido)
-                VALUES (v_id_repasse, v_id_contribuicao, v_valor, v_valor - v_liquido);
+                UPDATE contribuicao SET id_repasse = v_id_repasse WHERE id_contribuicao = v_id_contribuicao;
             ELSIF v_destino = 'devolucao' THEN
                 PERFORM public.atualizar_status_contribuicao(v_id_contribuicao, 'a_devolver', NULL, p_id_evento);
             END IF;
         EXCEPTION
-            WHEN SQLSTATE '91034' THEN
+            WHEN SQLSTATE '91050' THEN
                 v_motivo := CASE
                     WHEN p_novo_status = 'confirmado' AND v_status = 'expirado' THEN
                         'Pagamento confirmado para uma contribuição que já estava expirada: o valor não entra na arrecadação e precisa de revisão manual.'
@@ -3328,7 +3360,7 @@ $$;
 --             Além do UPDATE, grava uma linha em auditoria_financeira a cada chamada (status anterior/novo, valor, webhook de
 --             origem, usuário da sessão, se houver). p_valor_evento só é usado no estorno (valor líquido devolvido);
 --             sem ele, o valor auditado é contribuicao.valor. A transição em si é validada por
---             trg_valida_transicao_status_contribuicao (91034).
+--             trg_valida_transicao_status_contribuicao (91050).
 -- ----------------------------------------------------------------------------
 -- DROP necessário: CREATE OR REPLACE com parâmetro novo criaria uma SOBRECARGA, e a chamada de 3 argumentos ficaria ambígua.
 DROP FUNCTION IF EXISTS public.atualizar_status_contribuicao(INT, status_contribuicao, VARCHAR);
@@ -3388,7 +3420,7 @@ $$;
 --             pendente = na fila; processando = o worker pegou e pediu a transferência (ou espera o aviso do provedor);
 --             processando -> pendente é a nova tentativa depois de uma falha recuperável (rede); erro -> pendente é uma
 --             pessoa recolocando na fila depois de corrigir a causa. concluido é estado final (dinheiro saiu).
---             Transição fora disso levanta 91039 (mesma família de 91034).
+--             Transição fora disso levanta 91039 (mesma família de 91050).
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_valida_transicao_status_repasse()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
@@ -3495,8 +3527,8 @@ $$;
 --             Reservar = gravar o provedor, e o lease em proxima_tentativa_em (configuracoes.repasse_lease_minutos, padrão
 --             10): enquanto não vence, ninguém mais pega o mesmo repasse. FOR UPDATE SKIP LOCKED garante que duas
 --             instâncias simultâneas não reservem o mesmo.
---             Só entram repasses cujo dono da campanha tem conta de recebimento ATIVA com titularidade VERIFICADA
---             (conta_recebimento_usuario); sem ela o repasse espera na fila, sem gastar tentativa. Só o provedor informado
+--             Só entram repasses cujo dono da campanha tem chave Pix com titularidade VERIFICADA
+--             (perfil_pesquisador.chave_pix_verificada_em); sem ela o repasse espera na fila, sem gastar tentativa. Só o provedor informado
 --             (ou repasse ainda sem provedor).
 --             SECURITY DEFINER, SEM AUTORIZAÇÃO DE PROPÓSITO (job de fundo).
 -- ----------------------------------------------------------------------------
@@ -3516,17 +3548,12 @@ DECLARE
 BEGIN
     LOOP
         SELECT r.id_repasse AS id, r.status AS st, r.id_transferencia_api AS id_trf, r.chave_idempotencia AS chave,
-               r.valor_bruto AS bruto, r.valor_liquido AS liquido, ca.titulo, cr.tipo_chave AS tipo, cr.chave_criptografada AS chave_cifrada
+               r.valor_bruto AS bruto, r.valor_liquido AS liquido, r.taxa_relativa AS taxa, ca.titulo,
+               pp.tipo_chave_pix AS tipo, pp.chave_pix_criptografada AS chave_cifrada
         INTO v
         FROM repasse r
         JOIN campanha ca ON ca.id_campanha = r.id_campanha
-        JOIN LATERAL (
-            SELECT c2.tipo_chave, c2.chave_criptografada
-            FROM conta_recebimento_usuario c2
-            WHERE c2.id_usuario = ca.id_usuario AND c2.ativa AND c2.titularidade_verificada_em IS NOT NULL
-            ORDER BY c2.criada_em DESC, c2.id_conta_recebimento DESC
-            LIMIT 1
-        ) cr ON TRUE
+        JOIN perfil_pesquisador pp ON pp.id_usuario = ca.id_usuario AND pp.chave_pix_verificada_em IS NOT NULL
         WHERE ((r.status = 'pendente'    AND (r.proxima_tentativa_em IS NULL OR r.proxima_tentativa_em <= NOW()))
             OR (r.status = 'processando' AND r.proxima_tentativa_em <= NOW()))
           AND (r.provedor IS NULL OR r.provedor = p_provedor)
@@ -3538,13 +3565,12 @@ BEGIN
         v_liq := v.liquido;
 
         IF v.st = 'pendente' THEN
-            IF EXISTS (SELECT 1 FROM repasse_contribuicao rc WHERE rc.id_repasse = v.id) THEN
-                SELECT COALESCE(SUM(rc.valor_bruto_incluido), 0),
-                       COALESCE(SUM(rc.valor_bruto_incluido - rc.valor_taxa_incluido), 0)
+            IF EXISTS (SELECT 1 FROM contribuicao c WHERE c.id_repasse = v.id) THEN
+                SELECT COALESCE(SUM(c.valor), 0),
+                       COALESCE(SUM(ROUND(c.valor * (1 - COALESCE(v.taxa, 0) / 100), 2)), 0)
                 INTO v_bruto, v_liq
-                FROM repasse_contribuicao rc
-                JOIN contribuicao c ON c.id_contribuicao = rc.id_contribuicao
-                WHERE rc.id_repasse = v.id AND c.status = 'confirmado';
+                FROM contribuicao c
+                WHERE c.id_repasse = v.id AND c.status = 'confirmado';
 
                 IF v_liq <= 0 THEN
                     PERFORM public.falhar_repasse(v.id, 'Nenhuma contribuição do repasse continua confirmada (estornadas?).', FALSE);
@@ -3620,11 +3646,10 @@ BEGIN
     UPDATE repasse SET proxima_tentativa_em = NULL WHERE id_repasse = p_id_repasse;
 
     FOR v_id_contribuicao IN
-        SELECT rc.id_contribuicao
-        FROM repasse_contribuicao rc
-        JOIN contribuicao c ON c.id_contribuicao = rc.id_contribuicao
-        WHERE rc.id_repasse = p_id_repasse AND c.status = 'confirmado'
-        ORDER BY rc.id_contribuicao
+        SELECT c.id_contribuicao
+        FROM contribuicao c
+        WHERE c.id_repasse = p_id_repasse AND c.status = 'confirmado'
+        ORDER BY c.id_contribuicao
     LOOP
         PERFORM public.atualizar_status_contribuicao(v_id_contribuicao, 'repassado', NULL, p_id_evento);
     END LOOP;
@@ -3806,11 +3831,9 @@ $$;
 --             Um estorno por contribuição, nunca em lote (diferente do repasse). Só o caminho a_devolver -> devolvido é
 --             tratado aqui, ou seja, só o lote automático do tudo-ou-nada; estorno individual ('reembolsado': contestação,
 --             fraude, moderação) é outra decisão de negócio e não passa por este worker.
---             valor_liquido é a RETENÇÃO DE TAXA: ROUND(valor * (1 - taxa_plataforma / 100), 2), com a taxa que a campanha
---             tem (ou a padrão, se ainda NULL). É calculado aqui, na hora de estornar, e não no fechamento da campanha: o
---             valor não precisa estar congelado antes da chamada real ao gateway. valor_bruto vem junto só para o worker
---             poder conferir/logar. A taxa retida nunca precisa de coluna própria: é valor - auditoria_financeira.valor do
---             evento de estorno.
+--             valor_liquido é o valor INTEIRO da contribuição: quem apoiou recebe de volta tudo o que contribuiu. valor_bruto
+--             é o que foi cobrado (valor + taxa_pagamento); a diferença é a tarifa do provedor, paga por quem apoiou e que o
+--             provedor não devolve, então a plataforma não perde nada. Com tarifa 0 o estorno é total.
 --             prazo_vencido = o prazo do gateway para estornar um Pix (configuracoes.estorno_prazo_pix_dias, padrão 90) já
 --             passou, contado a partir da confirmação (primeira linha 'confirmado' em auditoria_financeira; se não houver,
 --             a criação). Nesse caso estornar é inútil: o worker vai direto para reembolso_manual, sem chamar o gateway.
@@ -3830,13 +3853,12 @@ BEGIN
     RETURN QUERY
     SELECT c.id_contribuicao,
            c.id_transacao_api,
+           c.valor + c.taxa_pagamento,
            c.valor,
-           ROUND(c.valor * (1 - COALESCE(ca.taxa_plataforma, public.config_numero('taxa_plataforma_padrao', 5.00)) / 100), 2),
            c.tentativas_estorno::INT,
            (COALESCE(conf.confirmado_em, c.criado_em)
                + (public.config_numero('estorno_prazo_pix_dias', 90) * INTERVAL '1 day') <= NOW())
     FROM contribuicao c
-    JOIN campanha ca ON ca.id_campanha = c.id_campanha
     LEFT JOIN LATERAL (
         SELECT MIN(a.timestamp) AS confirmado_em
         FROM auditoria_financeira a
@@ -3856,9 +3878,9 @@ $$;
 -- Assinatura: (p_id INT, p_valor_estornado DECIMAL) -> VOID
 -- Bloco:      [05-K-2]
 -- Regra:      O gateway devolveu o dinheiro: a_devolver -> devolvido, com o valor que o gateway DISSE ter estornado em
---             auditoria_financeira.valor (o líquido, não o bruto) via p_valor_evento de atualizar_status_contribuicao().
+--             auditoria_financeira.valor (o valor da contribuição, sem a tarifa) via p_valor_evento de atualizar_status_contribuicao().
 --             Zera a próxima tentativa. Chamada na MESMA transação em que proximo_estorno_pendente() travou a linha.
---             A transição é validada por trg_valida_transicao_status_contribuicao (91034 se a contribuição já saiu de
+--             A transição é validada por trg_valida_transicao_status_contribuicao (91050 se a contribuição já saiu de
 --             a_devolver). SECURITY DEFINER, sem autorização (job de fundo).
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.concluir_estorno(p_id INT, p_valor_estornado DECIMAL)
@@ -3878,15 +3900,14 @@ $$;
 -- Assinatura: (p_id INT, p_erro TEXT, p_recuperavel BOOLEAN, p_valor_liquido DECIMAL DEFAULT NULL) -> VARCHAR
 -- Bloco:      [05-K-2]
 -- Regra:      O estorno desta contribuição não deu certo agora. Conta a tentativa, grava UMA linha em auditoria_financeira
---             (status a_devolver -> a_devolver, evento 'estorno_falhou (tentativa N): <erro>', valor = o líquido a
---             estornar) e decide:
+--             (status a_devolver -> a_devolver, evento 'estorno_falhou (tentativa N): <erro>', valor = o que seria
+--             devolvido) e decide:
 --               'reagendado'       falha recuperável (rede, saldo insuficiente: o saldo pode ser reposto) e ainda há
 --                                  tentativas: marca proxima_tentativa_estorno_em com espera crescente
 --                                  (estorno_backoff_base_minutos * 2^(tentativa-1), até estorno_backoff_max_minutos).
 --               'reembolso_manual' falha NÃO recuperável, OU tentativas esgotadas (estorno_max_tentativas), OU prazo do Pix
 --                                  vencido (estorno_prazo_pix_dias): a_devolver -> reembolso_manual, com o valor
---                                  auditado ainda sendo o LÍQUIDO (a decisão de reter a taxa não muda por causa de uma
---                                  falha técnica). Quem vai devolver é uma pessoa, fora do sistema.
+--                                  inteiro da contribuição. Quem vai devolver é uma pessoa, fora do sistema.
 --               'ignorado'         a contribuição já não está 'a_devolver'.
 --             O texto do erro só vai para auditoria_financeira (leitura restrita por permissão), nunca para uma coluna de
 --             contribuicao: o contribuinte e o pesquisador leem contribuicao e não devem ver detalhe interno do gateway.
@@ -4149,8 +4170,8 @@ $$;
 --             repasse 'processando' do provedor, achado pelo id da transferência (já guardado) OU, enquanto o id ainda não
 --             foi guardado (o aviso do provedor chega segundos depois do pedido, antes do worker gravar a resposta), pela
 --             referência externa = repasse.chave_idempotencia. Repasse que já tem OUTRO id de transferência não casa:
---             é o que barra uma transferência duplicada do mesmo repasse. Traz o valor e a chave de destino (a conta ativa
---             e verificada do dono da campanha, a mesma que reservar_proximo_repasse usa) para o Nest conferir contra o que o
+--             é o que barra uma transferência duplicada do mesmo repasse. Traz o valor e a chave de destino (a chave Pix
+--             verificada do dono da campanha, a mesma que reservar_proximo_repasse usa) para o Nest conferir contra o que o
 --             provedor vai executar. SECURITY DEFINER, SEM AUTORIZAÇÃO DE PROPÓSITO: a barreira é o token do webhook.
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.dados_autorizacao_repasse(
@@ -4161,16 +4182,10 @@ LANGUAGE sql
 SECURITY DEFINER
 SET search_path = public
 AS $$
-    SELECT r.id_repasse, r.valor_liquido, cr.tipo_chave, cr.chave_criptografada
+    SELECT r.id_repasse, r.valor_liquido, pp.tipo_chave_pix, pp.chave_pix_criptografada
     FROM repasse r
     JOIN campanha ca ON ca.id_campanha = r.id_campanha
-    JOIN LATERAL (
-        SELECT c2.tipo_chave, c2.chave_criptografada
-        FROM conta_recebimento_usuario c2
-        WHERE c2.id_usuario = ca.id_usuario AND c2.ativa AND c2.titularidade_verificada_em IS NOT NULL
-        ORDER BY c2.criada_em DESC, c2.id_conta_recebimento DESC
-        LIMIT 1
-    ) cr ON TRUE
+    JOIN perfil_pesquisador pp ON pp.id_usuario = ca.id_usuario AND pp.chave_pix_verificada_em IS NOT NULL
     WHERE r.status = 'processando'
       AND r.provedor = p_provedor
       AND ((p_id_transferencia IS NOT NULL AND r.id_transferencia_api = p_id_transferencia)
@@ -4189,7 +4204,7 @@ $$;
 -- DIFERENTE das funções dos jobs (que são "sem autorização de propósito" porque rodam sem sessão), estas SÃO chamadas por
 -- uma pessoa logada e por isso conferem a permissão DENTRO da função (SECURITY DEFINER bypassa a RLS, então a checagem
 -- tem que estar aqui): leitura exige 'evento_pagamento_visualizar'; toda ação exige 'pagamento_revisao_resolver'. Sem a
--- permissão: 92036. Toda ação exige uma observação escrita (90034) e deixa linha em auditoria_financeira com quem fez.
+-- permissão: 92037. Toda ação exige uma observação escrita (90034) e deixa linha em auditoria_financeira com quem fez.
 -- Nenhuma delas MOVE DINHEIRO: devolver à mão ou refazer uma transferência continua sendo feito por uma pessoa, no
 -- provedor; aqui se registra o que foi decidido e destrava o que estava parado.
 -- ============================================================================
@@ -4203,7 +4218,7 @@ $$;
 -- Regra:      Webhooks que não terminaram com sucesso, para uma pessoa olhar. p_situacao: 'em_revisao_manual' (o sistema não
 --             aplicou de propósito, alguém precisa decidir), 'vale_tentar_de_novo' (falhou por motivo transitório) ou NULL
 --             (as duas). `id_contribuicao`/`id_repasse` vêm da linha de auditoria que a revisão gravou (NULL num evento que
---             só falhou). Sem o payload. Exige 'evento_pagamento_visualizar' (92036).
+--             só falhou). Sem o payload. Exige 'evento_pagamento_visualizar' (92037).
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.listar_revisoes_pagamento(p_situacao TEXT DEFAULT NULL, p_limite INT DEFAULT 100)
 RETURNS TABLE (
@@ -4216,7 +4231,7 @@ SET search_path = public
 AS $$
 BEGIN
     IF NOT public.tem_permissao('evento_pagamento_visualizar') THEN
-        RAISE EXCEPTION 'Sem permissão para ver os eventos de pagamento.' USING ERRCODE = '92036';
+        RAISE EXCEPTION 'Sem permissão para ver os eventos de pagamento.' USING ERRCODE = '92037';
     END IF;
     IF p_situacao IS NOT NULL AND p_situacao NOT IN ('em_revisao_manual', 'vale_tentar_de_novo') THEN
         RAISE EXCEPTION 'Situação inválida: use em_revisao_manual ou vale_tentar_de_novo.' USING ERRCODE = '90035';
@@ -4253,7 +4268,7 @@ $$;
 --             a observação ao motivo e grava uma linha de auditoria 'revisao_manual_resolvida: <observação>' no mesmo alvo
 --             (contribuição ou repasse) com quem resolveu. NÃO muda contribuição nem repasse nem move dinheiro: o estado
 --             que a revisão deixou intacto continua como está. Só evento em revisão manual (91049); observação obrigatória
---             (90034); exige 'pagamento_revisao_resolver' (92036).
+--             (90034); exige 'pagamento_revisao_resolver' (92037).
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.resolver_revisao_pagamento(p_id_evento INT, p_observacao TEXT)
 RETURNS VOID
@@ -4269,7 +4284,7 @@ DECLARE
     v_alvo          RECORD;
 BEGIN
     IF NOT public.tem_permissao('pagamento_revisao_resolver') THEN
-        RAISE EXCEPTION 'Sem permissão para resolver revisões de pagamento.' USING ERRCODE = '92036';
+        RAISE EXCEPTION 'Sem permissão para resolver revisões de pagamento.' USING ERRCODE = '92037';
     END IF;
     IF v_obs IS NULL THEN
         RAISE EXCEPTION 'Escreva o que foi feito para resolver esta revisão.' USING ERRCODE = '90034';
@@ -4316,11 +4331,11 @@ $$;
 --             ultimo_motivo TEXT, contribuinte_tem_conta_verificada BOOLEAN)
 -- Bloco:      [05-K-2]
 -- Regra:      Contribuições em 'reembolso_manual': o estorno automático desistiu (falha definitiva, tentativas esgotadas ou
---             prazo do Pix vencido) e uma pessoa precisa devolver o dinheiro por fora. valor_a_devolver é o LÍQUIDO (a
---             taxa da plataforma fica retida, mesma conta do estorno automático). `ultimo_motivo` é o texto da última
+--             prazo do Pix vencido) e uma pessoa precisa devolver o dinheiro por fora. valor_a_devolver é o valor inteiro
+--             da contribuição (mesma regra do estorno automático; a tarifa de pagamento não volta). `ultimo_motivo` é o texto da última
 --             linha de auditoria (inclui 'estorno_falhou (tentativa N): ...'). `contribuinte_tem_conta_verificada` diz se quem
---             contribuiu (id_usuario; NULL = contribuição sem conta) tem uma chave Pix de recebimento verificada para onde
---             devolver; a chave em si NÃO sai daqui. Exige 'evento_pagamento_visualizar' (92036).
+--             contribuiu (id_usuario; NULL = contribuição sem conta) tem uma chave Pix verificada (só pesquisador cadastra
+--             chave) para onde devolver; a chave em si NÃO sai daqui. Exige 'evento_pagamento_visualizar' (92037).
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.listar_reembolsos_manuais(p_limite INT DEFAULT 100)
 RETURNS TABLE (
@@ -4333,19 +4348,17 @@ SET search_path = public
 AS $$
 BEGIN
     IF NOT public.tem_permissao('evento_pagamento_visualizar') THEN
-        RAISE EXCEPTION 'Sem permissão para ver os reembolsos manuais.' USING ERRCODE = '92036';
+        RAISE EXCEPTION 'Sem permissão para ver os reembolsos manuais.' USING ERRCODE = '92037';
     END IF;
 
     RETURN QUERY
-    SELECT c.id_contribuicao, c.id_campanha, c.id_usuario, c.valor,
-           ROUND(c.valor * (1 - COALESCE(ca.taxa_plataforma, public.config_numero('taxa_plataforma_padrao', 5.00)) / 100), 2),
+    SELECT c.id_contribuicao, c.id_campanha, c.id_usuario, c.valor + c.taxa_pagamento, c.valor,
            c.meio_pagamento, c.tentativas_estorno::INT, ult.evento::TEXT,
            EXISTS (
-               SELECT 1 FROM conta_recebimento_usuario cr
-               WHERE cr.id_usuario = c.id_usuario AND cr.ativa AND cr.titularidade_verificada_em IS NOT NULL
+               SELECT 1 FROM perfil_pesquisador pp
+               WHERE pp.id_usuario = c.id_usuario AND pp.chave_pix_verificada_em IS NOT NULL
            )
     FROM contribuicao c
-    JOIN campanha ca ON ca.id_campanha = c.id_campanha
     LEFT JOIN LATERAL (
         SELECT a.evento FROM auditoria_financeira a
         WHERE a.id_contribuicao = c.id_contribuicao
@@ -4366,7 +4379,7 @@ $$;
 --             isso foi feito. reembolso_manual -> devolvido, com p_valor (o que de fato foi devolvido, de 0,01 até o valor da
 --             contribuição) em auditoria_financeira.valor, e uma linha extra 'reembolso_manual_concluido: <observação>' com
 --             quem registrou. Só contribuição em 'reembolso_manual' (91049); observação obrigatória (90034); valor
---             inválido (90035); exige 'pagamento_revisao_resolver' (92036). Não move dinheiro. A transição
+--             inválido (90035); exige 'pagamento_revisao_resolver' (92037). Não move dinheiro. A transição
 --             reembolso_manual -> devolvido existe na máquina de estados só para isto.
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.concluir_reembolso_manual(p_id_contribuicao INT, p_valor DECIMAL, p_observacao TEXT)
@@ -4382,7 +4395,7 @@ DECLARE
     v_obs    TEXT := NULLIF(BTRIM(p_observacao), '');
 BEGIN
     IF NOT public.tem_permissao('pagamento_revisao_resolver') THEN
-        RAISE EXCEPTION 'Sem permissão para concluir reembolsos manuais.' USING ERRCODE = '92036';
+        RAISE EXCEPTION 'Sem permissão para concluir reembolsos manuais.' USING ERRCODE = '92037';
     END IF;
     IF v_obs IS NULL THEN
         RAISE EXCEPTION 'Escreva como o reembolso foi feito (data, meio, comprovante).' USING ERRCODE = '90034';
@@ -4419,9 +4432,9 @@ $$;
 --             aguardando_conta BOOLEAN)
 -- Bloco:      [05-K-2]
 -- Regra:      Repasses que pedem olhar humano: os em 'erro' (a transferência falhou de forma definitiva ou as tentativas
---             acabaram) e os 'pendente' cujo dono da campanha ainda NÃO tem conta de recebimento verificada
+--             acabaram) e os 'pendente' cujo dono da campanha ainda NÃO tem chave Pix verificada
 --             (aguardando_conta = TRUE: o worker não os pega até a pessoa cadastrar a chave Pix). `ultimo_motivo` é o texto da
---             última linha de auditoria do repasse. Exige 'evento_pagamento_visualizar' (92036).
+--             última linha de auditoria do repasse. Exige 'evento_pagamento_visualizar' (92037).
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.listar_repasses_atencao(p_limite INT DEFAULT 100)
 RETURNS TABLE (
@@ -4434,15 +4447,15 @@ SET search_path = public
 AS $$
 BEGIN
     IF NOT public.tem_permissao('evento_pagamento_visualizar') THEN
-        RAISE EXCEPTION 'Sem permissão para ver os repasses.' USING ERRCODE = '92036';
+        RAISE EXCEPTION 'Sem permissão para ver os repasses.' USING ERRCODE = '92037';
     END IF;
 
     RETURN QUERY
     SELECT r.id_repasse, r.id_campanha, ca.titulo, r.status, r.valor_liquido, r.tentativas_transferencia::INT,
            r.id_transferencia_api, ult.evento::TEXT,
            NOT EXISTS (
-               SELECT 1 FROM conta_recebimento_usuario cr
-               WHERE cr.id_usuario = ca.id_usuario AND cr.ativa AND cr.titularidade_verificada_em IS NOT NULL
+               SELECT 1 FROM perfil_pesquisador pp
+               WHERE pp.id_usuario = ca.id_usuario AND pp.chave_pix_verificada_em IS NOT NULL
            )
     FROM repasse r
     JOIN campanha ca ON ca.id_campanha = r.id_campanha
@@ -4454,8 +4467,8 @@ BEGIN
     ) ult ON TRUE
     WHERE r.status = 'erro'
        OR (r.status = 'pendente' AND NOT EXISTS (
-               SELECT 1 FROM conta_recebimento_usuario cr
-               WHERE cr.id_usuario = ca.id_usuario AND cr.ativa AND cr.titularidade_verificada_em IS NOT NULL))
+               SELECT 1 FROM perfil_pesquisador pp
+               WHERE pp.id_usuario = ca.id_usuario AND pp.chave_pix_verificada_em IS NOT NULL))
     ORDER BY r.id_repasse
     LIMIT p_limite;
 END;
@@ -4471,7 +4484,7 @@ $$;
 --             (id_transferencia_api preenchido): um novo pedido com a mesma chave devolveria a transferência que falhou. Sem id
 --             de transferência (erro por rede/tentativas), a chave NÃO muda: pode ter existido uma transferência que o
 --             sistema não viu, e é a chave antiga que a busca por referência usa para não pagar duas vezes. Só repasse
---             em 'erro' (91049); observação obrigatória (90034); exige 'pagamento_revisao_resolver' (92036).
+--             em 'erro' (91049); observação obrigatória (90034); exige 'pagamento_revisao_resolver' (92037).
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.reenfileirar_repasse(p_id_repasse INT, p_observacao TEXT)
 RETURNS VOID
@@ -4485,7 +4498,7 @@ DECLARE
     v_obs    TEXT := NULLIF(BTRIM(p_observacao), '');
 BEGIN
     IF NOT public.tem_permissao('pagamento_revisao_resolver') THEN
-        RAISE EXCEPTION 'Sem permissão para reenfileirar repasses.' USING ERRCODE = '92036';
+        RAISE EXCEPTION 'Sem permissão para reenfileirar repasses.' USING ERRCODE = '92037';
     END IF;
     IF v_obs IS NULL THEN
         RAISE EXCEPTION 'Escreva o que foi corrigido antes de reenfileirar o repasse.' USING ERRCODE = '90034';
