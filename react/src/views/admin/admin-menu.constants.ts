@@ -77,6 +77,13 @@ export const GRUPOS_MENU_ADMIN: GrupoMenuAdmin[] = [
     // Aprovar Campanhas, Denúncias e Pedidos de Encerramento (os pedidos de encerramento antecipado).
     itens: itensDoGrupo('MODERACAO'),
   },
+  {
+    // Filas financeiras: o que o sistema não resolve sozinho no dinheiro (evento de webhook em revisão manual,
+    // estorno que desistiu, repasse em erro ou esperando a chave Pix). Vem depois de MODERAÇÃO: é fila de operação,
+    // não de conteúdo. As listagens gerais (contribuições, repasses, auditoria financeira) entram aqui quando existirem.
+    titulo: 'PAGAMENTOS',
+    itens: itensDoGrupo('PAGAMENTOS'),
+  },
   // ESTE BLOCO EXISTE SOLENEMENTE PARA O CAMPO DE TESTES. NÃO ESTÁ NOS REQUISITOS FUNCIONAIS E NEM ESTARÁ.
   //
   // `import.meta.env.DEV` envolve o objeto inteiro, não só `itens`: se só os ITENS estivessem protegidos por

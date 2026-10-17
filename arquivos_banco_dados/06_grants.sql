@@ -112,7 +112,8 @@ GRANT SELECT (
     id_usuario, cpf_criptografado, cpf_hash, tipo_vinculo, vinculo_institucional,
     titulo_academico, status_pesquisador, ativado_em,
     score_atual, score_atualizado_em,
-    suspenso_ate, motivo_suspensao, suspenso_por
+    suspenso_ate, motivo_suspensao, suspenso_por,
+    tipo_chave_pix, chave_pix_criptografada, chave_pix_verificada_em
 ) ON public.perfil_pesquisador TO app_nestjs;
 
 -- Sem DELETE em usuario, perfil_pesquisador e usuario_termo (não há policy de DELETE; ver [06-D] no
@@ -138,10 +139,12 @@ GRANT DELETE ON termos_de_uso TO app_nestjs;
 -- deve se auto-suspender/reativar); cpf_criptografado e cpf_hash (só mudam via corrigir_cpf_pesquisador(),
 -- SECURITY DEFINER, 03: RF-017, correção de CPF só via suporte; cpf_hash nunca entrou aqui porque muda sempre em
 -- conjunto com cpf_criptografado); e suspenso_ate/motivo_suspensao/suspenso_por (só via
--- suspender_pesquisador()/reativar_pesquisador()).
+-- suspender_pesquisador()/reativar_pesquisador()). A chave Pix (tipo, cifra e verificada_em) entra: só a rota
+-- POST/DELETE /conta-recebimento grava, e sempre as 3 juntas, depois de conferir a titularidade no provedor.
 GRANT UPDATE (
     tipo_vinculo, vinculo_institucional,
-    titulo_academico, ativado_em
+    titulo_academico, ativado_em,
+    tipo_chave_pix, chave_pix_criptografada, chave_pix_verificada_em
 ) ON public.perfil_pesquisador TO app_nestjs;
 
 -- usuario: email_verificado, tentativas_login_falhas, bloqueado_ate, ultimo_login_em, ultimo_login_ip e deletado
@@ -301,8 +304,47 @@ GRANT INSERT ON repasse TO app_nestjs;
 -- este GRANT a policy nunca chega a ser avaliada e o DELETE falha com "permission denied").
 GRANT INSERT, UPDATE, DELETE ON orcamento_campanha, marco_cronograma TO app_nestjs;
 
-REVOKE EXECUTE ON FUNCTION public.atualizar_status_repasse(INT, VARCHAR, TIMESTAMP) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.atualizar_status_repasse(INT, VARCHAR, TIMESTAMP) TO app_nestjs;
+REVOKE EXECUTE ON FUNCTION public.atualizar_status_repasse(INT, status_repasse, TIMESTAMPTZ, TEXT, INT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.atualizar_status_repasse(INT, status_repasse, TIMESTAMPTZ, TEXT, INT) TO app_nestjs;
+-- Worker de repasse (PR-08): job de fundo sem sessão; todas SECURITY DEFINER (o app_nestjs não lê repasse nem a conta de
+-- recebimento de ninguém por conta própria).
+-- Reconciliação (PR-11) e leitura da caixa de webhooks pendentes: jobs de fundo, SECURITY DEFINER.
+REVOKE EXECUTE ON FUNCTION public.reservar_contribuicoes_para_reconciliar(VARCHAR, INT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.reservar_contribuicoes_para_reconciliar(VARCHAR, INT) TO app_nestjs;
+REVOKE EXECUTE ON FUNCTION public.reservar_cobrancas_para_cancelar(VARCHAR, INT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.reservar_cobrancas_para_cancelar(VARCHAR, INT) TO app_nestjs;
+REVOKE EXECUTE ON FUNCTION public.marcar_cobranca_cancelada(INT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.marcar_cobranca_cancelada(INT) TO app_nestjs;
+-- Autorização de saque por webhook (PR-10): chamada pelo endpoint que o provedor consulta antes de executar uma transferência.
+REVOKE EXECUTE ON FUNCTION public.dados_autorizacao_repasse(VARCHAR, TEXT, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.dados_autorizacao_repasse(VARCHAR, TEXT, TEXT) TO app_nestjs;
+-- Painel de revisão manual de pagamentos: chamadas por uma pessoa logada; a permissão é conferida DENTRO de cada função.
+REVOKE EXECUTE ON FUNCTION public.listar_revisoes_pagamento(TEXT, INT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.listar_revisoes_pagamento(TEXT, INT) TO app_nestjs;
+REVOKE EXECUTE ON FUNCTION public.resolver_revisao_pagamento(INT, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.resolver_revisao_pagamento(INT, TEXT) TO app_nestjs;
+REVOKE EXECUTE ON FUNCTION public.listar_reembolsos_manuais(INT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.listar_reembolsos_manuais(INT) TO app_nestjs;
+REVOKE EXECUTE ON FUNCTION public.concluir_reembolso_manual(INT, DECIMAL, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.concluir_reembolso_manual(INT, DECIMAL, TEXT) TO app_nestjs;
+REVOKE EXECUTE ON FUNCTION public.listar_repasses_atencao(INT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.listar_repasses_atencao(INT) TO app_nestjs;
+REVOKE EXECUTE ON FUNCTION public.reenfileirar_repasse(INT, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.reenfileirar_repasse(INT, TEXT) TO app_nestjs;
+REVOKE EXECUTE ON FUNCTION public.encerrar_contribuicoes_orfas() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.encerrar_contribuicoes_orfas() TO app_nestjs;
+REVOKE EXECUTE ON FUNCTION public.listar_eventos_nao_processados(INT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.listar_eventos_nao_processados(INT) TO app_nestjs;
+REVOKE EXECUTE ON FUNCTION public.reservar_proximo_repasse(VARCHAR) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.reservar_proximo_repasse(VARCHAR) TO app_nestjs;
+REVOKE EXECUTE ON FUNCTION public.registrar_transferencia_repasse(INT, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.registrar_transferencia_repasse(INT, TEXT) TO app_nestjs;
+REVOKE EXECUTE ON FUNCTION public.concluir_repasse(INT, TEXT, INT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.concluir_repasse(INT, TEXT, INT) TO app_nestjs;
+REVOKE EXECUTE ON FUNCTION public.falhar_repasse(INT, TEXT, BOOLEAN, INT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.falhar_repasse(INT, TEXT, BOOLEAN, INT) TO app_nestjs;
+REVOKE EXECUTE ON FUNCTION public.aplicar_evento_repasse(INT, VARCHAR, TEXT, status_repasse, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.aplicar_evento_repasse(INT, VARCHAR, TEXT, status_repasse, TEXT) TO app_nestjs;
 
 -- Funções chamadas por agendamento (@Cron no NestJS), sem sessão de usuário: encerrar_campanhas_vencidas(),
 -- expirar_campanhas_rascunho(), expirar_campanhas_rejeitadas() e limpar_log_auditoria(). Mesma higiene de [06-D-2b].
@@ -365,13 +407,29 @@ TO app_nestjs;
 -- própria doação (ou a de qualquer um) direto por UPDATE, e a página pública passaria a exibir arrecadação sem
 -- pagamento real. status/id_transacao_api só mudam via atualizar_status_contribuicao() (05, SECURITY DEFINER,
 -- [05-K-2]); ver GRANT EXECUTE mais abaixo.
--- auditoria_financeira continua com GRANT UPDATE de tabela inteira, de propósito: a escrita financeira fica para o
--- módulo de pagamento (ver PENDENCIAS, "Validação de escrevibilidade financeira").
+-- auditoria_financeira é append-only: só INSERT (o UPDATE de tabela inteira saiu junto com pol_auditoria_update em 04).
 GRANT INSERT ON contribuicao TO app_nestjs;
-GRANT INSERT, UPDATE ON auditoria_financeira TO app_nestjs;
+GRANT INSERT ON auditoria_financeira TO app_nestjs;
 
-REVOKE EXECUTE ON FUNCTION public.atualizar_status_contribuicao(INT, status_contribuicao, VARCHAR) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.atualizar_status_contribuicao(INT, status_contribuicao, VARCHAR) TO app_nestjs;
+REVOKE EXECUTE ON FUNCTION public.atualizar_status_contribuicao(INT, status_contribuicao, VARCHAR, INT, DECIMAL) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.atualizar_status_contribuicao(INT, status_contribuicao, VARCHAR, INT, DECIMAL) TO app_nestjs;
+-- evento_pagamento: só leitura direta (a policy de 04 exige permissão). Escrita só por registrar_evento_pagamento().
+GRANT SELECT ON evento_pagamento TO app_nestjs;
+REVOKE EXECUTE ON FUNCTION public.registrar_evento_pagamento(VARCHAR, VARCHAR, VARCHAR, JSONB) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.registrar_evento_pagamento(VARCHAR, VARCHAR, VARCHAR, JSONB) TO app_nestjs;
+-- Processamento do webhook (PR-05): o webhook não tem usuário, então estas funções SECURITY DEFINER são o único caminho
+-- de escrita em evento_pagamento e de leitura de contribuicao a partir dele.
+REVOKE EXECUTE ON FUNCTION public.aplicar_evento_pagamento(INT, VARCHAR, VARCHAR, status_contribuicao, DECIMAL) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.aplicar_evento_pagamento(INT, VARCHAR, VARCHAR, status_contribuicao, DECIMAL) TO app_nestjs;
+REVOKE EXECUTE ON FUNCTION public.registrar_falha_evento_pagamento(INT, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.registrar_falha_evento_pagamento(INT, TEXT) TO app_nestjs;
+-- Worker de estorno (PR-07): job de fundo sem sessão; as três funções são SECURITY DEFINER e o app_nestjs não lê contribuicao.
+REVOKE EXECUTE ON FUNCTION public.proximo_estorno_pendente(VARCHAR) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.proximo_estorno_pendente(VARCHAR) TO app_nestjs;
+REVOKE EXECUTE ON FUNCTION public.concluir_estorno(INT, DECIMAL) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.concluir_estorno(INT, DECIMAL) TO app_nestjs;
+REVOKE EXECUTE ON FUNCTION public.registrar_falha_estorno(INT, TEXT, BOOLEAN, DECIMAL) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.registrar_falha_estorno(INT, TEXT, BOOLEAN, DECIMAL) TO app_nestjs;
 -- contribuicao_recompensa e aceite_termo_contribuicao sem UPDATE: são registro de auditoria/aquisição, não
 -- deveriam ser editáveis depois de criados (04 não tem policy de UPDATE para elas).
 GRANT INSERT ON contribuicao_recompensa, aceite_termo_contribuicao TO app_nestjs;

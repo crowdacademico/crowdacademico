@@ -1,5 +1,4 @@
 import { Generated, Selectable } from 'kysely';
-
 // Tipos do Kysely, escritos à mão espelhando arquivos_banco_dados/01_extensoes_enums_tabelas.sql, só das
 // tabelas que os módulos já construídos usam. É este arquivo que a aplicação usa, não o gerado.
 //
@@ -315,6 +314,10 @@ export interface PerfilPesquisadorTable {
   suspenso_ate: Date | null;
   motivo_suspensao: string | null;
   suspenso_por: number | null;
+  // Chave Pix de recebimento do repasse (POST /conta-recebimento): cifrada, nunca sai inteira em resposta de API.
+  tipo_chave_pix: TipoChavePix | null;
+  chave_pix_criptografada: string | null;
+  chave_pix_verificada_em: Date | null;
 }
 
 // Espelha 01_extensoes_enums_tabelas.sql (tabela link_academico).
@@ -497,7 +500,25 @@ export interface ContribuicaoTable {
   id_transacao_api: string | null;
   criado_em: Generated<Date>;
   token_sessao: Generated<string>;
+  provedor: Generated<string>;
+  tentativas_estorno: Generated<number>;
+  proxima_tentativa_estorno_em: Date | null;
+  reconciliada_em: Date | null;
+  cobranca_cancelada_em: Date | null;
+  // Só a trigger trg_contribuicao_define_taxa_pagamento (05) grava.
+  taxa_pagamento: Generated<string>;
+  id_repasse: number | null;
 }
+
+// Espelha o enum tipo_chave_pix (01), usado em perfil_pesquisador.tipo_chave_pix.
+export const TIPOS_CHAVE_PIX = [
+  'cpf',
+  'cnpj',
+  'email',
+  'telefone',
+  'aleatoria',
+] as const;
+export type TipoChavePix = (typeof TIPOS_CHAVE_PIX)[number];
 
 export interface AtualizacaoCampanhaTable {
   id_atualizacao: Generated<number>;

@@ -158,6 +158,8 @@ INSERT INTO permissao (nome) VALUES
 -- H - CONTRIBUIÇÃO (Apoios, Auditoria e Termos Financeiros)
 ('contribuicao_visualizar_sensivel'),
 ('auditoria_financeira_visualizar'),
+('evento_pagamento_visualizar'),
+('pagamento_revisao_resolver'),
 -- I - SCORE (Parâmetros, Rótulos e motor de cálculo)
 ('score_editar'),
 -- Permissão do catálogo sem uso em policy hoje: pol_score_select (04) é público (o score é a base do segundo
@@ -221,6 +223,8 @@ WHERE (p.nome, perm.nome) IN (
     -- H
     ('admin', 'contribuicao_visualizar_sensivel'),
     ('admin', 'auditoria_financeira_visualizar'),
+    ('admin', 'evento_pagamento_visualizar'),
+    ('admin', 'pagamento_revisao_resolver'),
     -- I
     ('admin', 'score_editar'),
     ('admin', 'score_visualizar'),
@@ -646,6 +650,24 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, pub
 -- de pagamento (o PIX em si não impõe mínimo), é política de negócio da própria plataforma, por isso
 -- configurável.
 (NULL, 'valor_minimo_contribuicao',  '5.00',  'decimal',  'Valor mínimo aceito por contribuição, em R$',                       TRUE, TRUE),
+-- Tarifa do provedor de pagamento: quem apoia paga POR CIMA do valor (contribui 100, paga 100 + tarifa). Gravada na
+-- contribuição no momento do apoio (fn_contribuicao_define_taxa_pagamento, 05); não entra no arrecadado, no repasse
+-- nem na devolução, então a plataforma nunca paga a tarifa do provedor. 0 = sem tarifa.
+(NULL, 'taxa_pagamento_pix',         '1.99',  'decimal',  'Tarifa do provedor por Pix recebido, em R$, paga por quem apoia além do valor da contribuição', TRUE, TRUE),
+-- Workers de pagamento (29-pagamento no Nest; funções em 05, [05-K-2]): repasse ao pesquisador, devolução do
+-- tudo-ou-nada e reconciliação com o provedor.
+(NULL, 'repasse_lease_minutos',                  '10',   'inteiro', 'Minutos que um repasse fica reservado para um worker antes de outro poder tentar',          TRUE, FALSE),
+(NULL, 'repasse_max_tentativas',                 '8',    'inteiro', 'Tentativas de transferência de um repasse antes de ele parar em erro (o admin reenfileira)', TRUE, FALSE),
+(NULL, 'repasse_backoff_base_minutos',           '15',   'inteiro', 'Espera, em minutos, antes da 2ª tentativa de repasse (dobra a cada falha)',                 TRUE, FALSE),
+(NULL, 'repasse_backoff_max_minutos',            '1440', 'inteiro', 'Maior espera, em minutos, entre tentativas de repasse',                                     TRUE, FALSE),
+(NULL, 'estorno_prazo_pix_dias',                 '90',   'inteiro', 'Dias, contados do pagamento, em que o provedor ainda aceita devolver um Pix',               TRUE, FALSE),
+(NULL, 'estorno_max_tentativas',                 '8',    'inteiro', 'Tentativas de devolução de uma contribuição antes de ir para reembolso manual',             TRUE, FALSE),
+(NULL, 'estorno_backoff_base_minutos',           '15',   'inteiro', 'Espera, em minutos, antes da 2ª tentativa de devolução (dobra a cada falha)',              TRUE, FALSE),
+(NULL, 'estorno_backoff_max_minutos',            '1440', 'inteiro', 'Maior espera, em minutos, entre tentativas de devolução',                                   TRUE, FALSE),
+(NULL, 'reconciliacao_limite_minutos',           '30',   'inteiro', 'Minutos que uma contribuição pendente espera o aviso do provedor antes de ser reconsultada', TRUE, FALSE),
+(NULL, 'reconciliacao_intervalo_minutos',        '60',   'inteiro', 'Minutos entre duas reconsultas da mesma contribuição pendente',                             TRUE, FALSE),
+(NULL, 'reconciliacao_orfa_minutos',             '60',   'inteiro', 'Minutos até uma contribuição pendente que nunca ganhou cobrança no provedor ser dada como erro', TRUE, FALSE),
+(NULL, 'cancelamento_cobranca_intervalo_minutos','15',   'inteiro', 'Minutos entre tentativas de cancelar no provedor a cobrança de uma contribuição que venceu ou deu erro', TRUE, FALSE),
 -- I
 -- score_minimo_campanha: o score NUNCA bloqueia a criação de campanha (nem Catarse nem Experiment fazem isso; o
 -- filtro real é a aprovação manual do Admin). Este número é só um sinal para o painel do Admin destacar, na
@@ -1431,8 +1453,10 @@ INSERT INTO repasse (id_campanha, valor_bruto, valor_liquido, meta_atingida, rep
 (2, 28500.00, 27075.00, FALSE, '2024-05-10 10:00:00', 5.00, 'concluido'),
 (3, 40000.00, 38000.00, TRUE,  '2024-06-10 10:00:00', 5.00, 'concluido'),
 (5, 22000.00, 20900.00, FALSE, '2024-06-10 10:00:00', 5.00, 'concluido'),
-(7, 45000.00, 42750.00, TRUE,  '2024-08-10 10:00:00', 5.00, 'concluido'),
-(4,  8000.00,  0.00,    FALSE, NULL,                   5.00, 'a_devolver');
+(7, 45000.00, 42750.00, TRUE,  '2024-08-10 10:00:00', 5.00, 'concluido');
+-- A campanha 4 (all-or-nothing que não bateu a meta) já teve aqui um repasse de líquido 0 com status 'a_devolver'. Esse
+-- estado não existe em status_repasse (pendente, processando, concluido, erro): campanha que não atinge a meta NÃO gera
+-- repasse, as contribuições dela é que vão para 'a_devolver' (ver encerrar_campanhas_vencidas, 05).
 
 ALTER TABLE repasse ENABLE TRIGGER trg_valida_repasse;
 

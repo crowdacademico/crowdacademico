@@ -45,9 +45,13 @@ export type StatusNotificacao = "cancelado" | "enviado" | "falhou" | "pendente";
 
 export type StatusPesquisador = "ativo" | "suspenso";
 
+export type StatusRepasse = "concluido" | "erro" | "pendente" | "processando";
+
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
 export type TipoAtualizacao = "imagem" | "linkexterno" | "pdf" | "texto";
+
+export type TipoChavePix = "aleatoria" | "cnpj" | "cpf" | "email" | "telefone";
 
 export type TipoConfiguracao = "booleano" | "decimal" | "inteiro" | "texto";
 
@@ -117,7 +121,9 @@ export interface AtualizacaoCampanha {
 export interface AuditoriaFinanceira {
   evento: string | null;
   id_auditoria: Generated<number>;
-  id_contribuicao: number;
+  id_contribuicao: number | null;
+  id_evento_pagamento: number | null;
+  id_repasse: number | null;
   id_usuario_responsavel: number | null;
   meio_pagamento: MeioPagamento | null;
   status_anterior: string | null;
@@ -171,13 +177,20 @@ export interface Configuracoes {
 
 export interface Contribuicao {
   anonima: Generated<boolean>;
+  cobranca_cancelada_em: Timestamp | null;
   criado_em: Generated<Timestamp>;
   id_campanha: number;
   id_contribuicao: Generated<number>;
+  id_repasse: number | null;
   id_transacao_api: string | null;
   id_usuario: number | null;
   meio_pagamento: MeioPagamento;
+  provedor: Generated<string>;
+  proxima_tentativa_estorno_em: Timestamp | null;
+  reconciliada_em: Timestamp | null;
   status: Generated<StatusContribuicao>;
+  taxa_pagamento: Generated<Numeric>;
+  tentativas_estorno: Generated<number>;
   token_sessao: Generated<string | null>;
   valor: Numeric;
 }
@@ -207,6 +220,18 @@ export interface Denuncia {
   justificativa_moderacao: string | null;
   relato: string | null;
   status: Generated<StatusDenuncia>;
+}
+
+export interface EventoPagamento {
+  erro_processamento: string | null;
+  id_evento_externo: string;
+  id_evento_pagamento: Generated<number>;
+  payload: Json;
+  processado_em: Timestamp | null;
+  provedor: string;
+  recebido_em: Generated<Timestamp>;
+  revisao_manual_em: Timestamp | null;
+  tipo_evento: string;
 }
 
 export interface HistoricoRejeicao {
@@ -309,6 +334,8 @@ export interface PapelPermissao {
 
 export interface PerfilPesquisador {
   ativado_em: Generated<Timestamp>;
+  chave_pix_criptografada: string | null;
+  chave_pix_verificada_em: Timestamp | null;
   cpf_criptografado: string;
   cpf_hash: string;
   id_usuario: number;
@@ -318,6 +345,7 @@ export interface PerfilPesquisador {
   status_pesquisador: Generated<StatusPesquisador>;
   suspenso_ate: Timestamp | null;
   suspenso_por: number | null;
+  tipo_chave_pix: TipoChavePix | null;
   tipo_vinculo: Generated<TipoVinculo>;
   titulo_academico: TituloAcademico;
   vinculo_institucional: string | null;
@@ -350,12 +378,17 @@ export interface RecuperacaoSenha {
 }
 
 export interface Repasse {
+  chave_idempotencia: Generated<string>;
   id_campanha: number;
   id_repasse: Generated<number>;
+  id_transferencia_api: string | null;
   meta_atingida: Generated<boolean>;
+  provedor: string | null;
+  proxima_tentativa_em: Timestamp | null;
   repassado_em: Timestamp | null;
-  status: string | null;
+  status: Generated<StatusRepasse>;
   taxa_relativa: Numeric | null;
+  tentativas_transferencia: Generated<number>;
   valor_bruto: Numeric;
   valor_liquido: Numeric;
 }
@@ -510,6 +543,7 @@ export interface DB {
   contribuicao: Contribuicao;
   contribuicao_recompensa: ContribuicaoRecompensa;
   denuncia: Denuncia;
+  evento_pagamento: EventoPagamento;
   historico_rejeicao: HistoricoRejeicao;
   link_academico: LinkAcademico;
   link_atualizacao: LinkAtualizacao;

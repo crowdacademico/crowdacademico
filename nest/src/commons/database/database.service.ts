@@ -24,7 +24,9 @@ export class DatabaseService {
       // script solto) - o interceptor é global, toda rota HTTP passa por ele.
       throw new Error(
         'DatabaseService.getDb() chamado fora de uma requisição com ' +
-          'GlobalDbInterceptor já executado - nenhum Kysely disponível no contexto.',
+          'GlobalDbInterceptor já executado - nenhum Kysely disponível no contexto. ' +
+          'Se a rota usa @SemTransacaoGlobal(), isso é esperado: use @Inject(PG_POOL) ' +
+          '(ver sem-transacao-global.decorator.ts).',
       );
     }
     return db;

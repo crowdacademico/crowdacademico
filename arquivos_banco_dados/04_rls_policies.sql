@@ -13,7 +13,7 @@
 --  em vez de um bloco de ENABLE no topo separado das policies.
 --
 --  Inventário Mapeado:
---  - 42 Tabelas com RLS ativada e forçada
+--  - 43 Tabelas com RLS ativada e forçada
 --  - 121 Policies (100% idempotentes - toda CREATE POLICY tem
 --    DROP POLICY IF EXISTS correspondente)
 -- ----------------------------------------------------------------------------
@@ -26,7 +26,7 @@
 --  [04-E] CAMPANHA (11 tabelas)
 --  [04-F] LINK (3 tabelas)
 --  [04-G] ARQUIVO (2 tabelas)
---  [04-H] CONTRIBUIÇÃO (4 tabelas)
+--  [04-H] CONTRIBUIÇÃO (5 tabelas)
 --  [04-I] SCORE (3 tabelas)
 --  [04-L] LOG DE AUDITORIA (1 tabela)
 -- ============================================================================
@@ -761,12 +761,14 @@ CREATE POLICY pol_arqrecompensa_update ON arquivo_recompensa FOR UPDATE TO app_n
 );
 
 -- ============================================================
--- [04-H] CONTRIBUIÇÃO (4 tabelas)
+-- [04-H] CONTRIBUIÇÃO (5 tabelas)
 -- ============================================================
 ALTER TABLE contribuicao         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE contribuicao         FORCE ROW LEVEL SECURITY;
 ALTER TABLE auditoria_financeira ENABLE ROW LEVEL SECURITY;
 ALTER TABLE auditoria_financeira FORCE ROW LEVEL SECURITY;
+ALTER TABLE evento_pagamento     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE evento_pagamento     FORCE ROW LEVEL SECURITY;
 ALTER TABLE contribuicao_recompensa ENABLE ROW LEVEL SECURITY;
 ALTER TABLE contribuicao_recompensa FORCE ROW LEVEL SECURITY;
 ALTER TABLE aceite_termo_contribuicao ENABLE ROW LEVEL SECURITY;
@@ -803,13 +805,28 @@ CREATE POLICY pol_auditoria_select ON auditoria_financeira FOR SELECT TO app_nes
         SELECT 1 FROM contribuicao c
         WHERE c.id_contribuicao = auditoria_financeira.id_contribuicao
           AND c.id_usuario = (SELECT public.id_usuario_atual())
+    ) OR EXISTS (
+        SELECT 1 FROM repasse r JOIN campanha ca ON ca.id_campanha = r.id_campanha
+        WHERE r.id_repasse = auditoria_financeira.id_repasse
+          AND ca.id_usuario = (SELECT public.id_usuario_atual())
     )
 );
 -- [04-H-1] auditoria_financeira: por que existem policies de escrita (ver DOCUMENTACAO_BD.md)
 DROP POLICY IF EXISTS pol_auditoria_insert ON auditoria_financeira;
 CREATE POLICY pol_auditoria_insert ON auditoria_financeira FOR INSERT TO app_nestjs WITH CHECK (true);
+-- Sem policy de UPDATE nem de DELETE (e sem GRANT, ver 06): auditoria financeira é APPEND-ONLY. Fecha o débito técnico
+-- que existia aqui (UPDATE USING (true) + GRANT de tabela inteira); toda escrita é INSERT feito pelas funções SECURITY
+-- DEFINER de 05. A FK de id_usuario_responsavel (ON DELETE SET NULL) continua funcionando: a ação referencial não depende
+-- de GRANT do app_nestjs.
 DROP POLICY IF EXISTS pol_auditoria_update ON auditoria_financeira;
-CREATE POLICY pol_auditoria_update ON auditoria_financeira FOR UPDATE TO app_nestjs USING (true) WITH CHECK (true);
+
+-- evento_pagamento: payload cru de webhook (dado do gateway), só lê quem tem a permissão. Sem policy de INSERT/UPDATE
+-- de propósito: quem grava é registrar_evento_pagamento() (05, SECURITY DEFINER), chamada pelo webhook sem sessão de
+-- usuário; app_nestjs não tem INSERT na tabela (06).
+DROP POLICY IF EXISTS pol_evento_pagamento_select ON evento_pagamento;
+CREATE POLICY pol_evento_pagamento_select ON evento_pagamento FOR SELECT TO app_nestjs USING (
+    (SELECT public.tem_permissao('evento_pagamento_visualizar'))
+);
 
 -- contribuicao_recompensa: quem contribuiu vê e registra as próprias
 -- aquisições; o dono da campanha (ou admin) também pode ver, pra

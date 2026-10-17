@@ -8,6 +8,7 @@ import {
 import { Pool } from 'pg';
 import { PG_POOL } from '../commons/database/database.constants';
 import { Publico } from '../commons/auth/publico.decorator';
+import { SemTransacaoGlobal } from '../commons/database/sem-transacao-global.decorator';
 
 // GET /health: qualquer plataforma de deploy (Render, Railway, Fly) precisa disso para saber se a aplicação
 // está viva. Sem login (@Publico()): precisa responder mesmo antes de qualquer usuário existir/logar,
@@ -18,7 +19,12 @@ import { Publico } from '../commons/auth/publico.decorator';
 // health check tem que testar a fundação (o Pool consegue abrir uma conexão e rodar uma query?), não passar
 // pela maquinaria de transação por requisição do GlobalDbInterceptor (BEGIN/SET app.id_usuario_atual/COMMIT),
 // que é sobre RLS/auditoria de quem fez o quê, irrelevante aqui.
+//
+// `@SemTransacaoGlobal()` (03-10-2026) torna isso verdade de fato: antes, o interceptor ainda pegava um client e
+// abria BEGIN em volta do handler, e o `pool.query()` abaixo pegava um SEGUNDO client - duas conexões por checagem,
+// com a plataforma de deploy chamando a rota a cada poucos segundos. Agora usa uma só, e só a do próprio SELECT 1.
 @Controller('health')
+@SemTransacaoGlobal()
 export class HealthController {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
 

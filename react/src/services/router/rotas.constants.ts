@@ -18,6 +18,9 @@ import { ListarCampanhas } from '../../views/12-campanha/listar-campanhas';
 import { AprovarCampanhas } from '../../views/12-campanha/aprovar-campanhas';
 import { ListarDenuncias } from '../../views/19-denuncia/listar-denuncias';
 import { ListarEncerramentos } from '../../views/20-solicitacao-encerramento/listar-encerramentos';
+import { ListarRevisoesPagamento } from '../../views/32-pagamento-revisao/listar-revisoes-pagamento';
+import { ListarReembolsosManuais } from '../../views/32-pagamento-revisao/listar-reembolsos-manuais';
+import { ListarRepassesAtencao } from '../../views/32-pagamento-revisao/listar-repasses-atencao';
 import { ListarTermosUso } from '../../views/5-termo-uso/listar-termos-uso';
 import { PontuacaoScore } from '../../views/11-configuracoes/pontuacao-score';
 import { campoTestes } from './campo-testes-opcional';
@@ -221,6 +224,39 @@ export const ROTAS_ADMIN: Rota[] = [
     icone: 'fa-flag-checkered',
   },
 
+  // Pagamentos (módulo 32-pagamento-revisao): as filas do que o sistema deliberadamente NÃO resolve sozinho no
+  // dinheiro (webhook em revisão manual, estorno que desistiu, repasse em erro). Grupo próprio ('PAGAMENTOS'): não é
+  // fila de moderação de conteúdo, e é onde vão morar as próximas telas financeiras (contribuições, repasses,
+  // auditoria financeira) quando o Nest expuser as listagens. Quem vê e quem age é decidido pelo banco, por permissão
+  // (evento_pagamento_visualizar para ver, pagamento_revisao_resolver para agir).
+  {
+    caminho: '/admin/eventos-pagamento',
+    caminhoRelativo: 'eventos-pagamento',
+    elemento: ListarRevisoesPagamento,
+    rotuloMenu: 'Eventos de Pagamento',
+    rotuloBreadcrumb: 'Eventos de Pagamento',
+    grupoMenu: 'PAGAMENTOS',
+    icone: 'fa-file-circle-exclamation',
+  },
+  {
+    caminho: '/admin/reembolsos-manuais',
+    caminhoRelativo: 'reembolsos-manuais',
+    elemento: ListarReembolsosManuais,
+    rotuloMenu: 'Reembolsos Manuais',
+    rotuloBreadcrumb: 'Reembolsos Manuais',
+    grupoMenu: 'PAGAMENTOS',
+    icone: 'fa-money-bill-transfer',
+  },
+  {
+    caminho: '/admin/repasses-atencao',
+    caminhoRelativo: 'repasses-atencao',
+    elemento: ListarRepassesAtencao,
+    rotuloMenu: 'Repasses em Atenção',
+    rotuloBreadcrumb: 'Repasses em Atenção',
+    grupoMenu: 'PAGAMENTOS',
+    icone: 'fa-hand-holding-dollar',
+  },
+
   // Minha Conta: dentro do painel (sidebar visível), mas sem rotuloMenu/grupoMenu: não é uma aba clicável
   // do menu (o acesso é pelo dropdown do cabeçalho), só ganha a moldura. Sem paiCaminho: não é filha de
   // nenhuma listagem, o breadcrumb já fica "Início > Minha Conta".
@@ -239,7 +275,8 @@ export const ROTAS_ADMIN: Rota[] = [
 
   // Sem rota própria (são modais abertos direto pela listagem): Criar/Alterar/Consultar/Excluir de Usuário,
   // Parâmetro do Sistema, Área de Conhecimento, Tipo de Link e Motivo de Denúncia; Alterar de Papel; Consultar
-  // de Campanha e de Pesquisador; Criar, Consultar, Alterar e Excluir de Termo de Uso.
+  // de Campanha e de Pesquisador; Criar, Consultar, Alterar e Excluir de Termo de Uso; Consultar e dar baixa
+  // (Eventos de Pagamento), registrar devolução (Reembolsos Manuais) e reenfileirar (Repasses em Atenção).
 
   // Campo de Testes: só em desenvolvimento e só se a pasta existir (ver campo-testes-opcional.ts).
   ...(campoTestes?.ROTAS_CAMPO_TESTES ?? []),

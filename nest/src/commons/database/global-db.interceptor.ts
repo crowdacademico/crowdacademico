@@ -5,6 +5,7 @@ import {
   Injectable,
   NestInterceptor,
 } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
 import { Kysely } from 'kysely';
 import { ClsService } from 'nestjs-cls';
@@ -17,6 +18,7 @@ import {
   PG_SESSION_VAR_ID_USUARIO_ATUAL,
 } from './database.constants';
 import { DB } from './db.types';
+import { CHAVE_SEM_TRANSACAO_GLOBAL } from './sem-transacao-global.decorator';
 import { KyselySingleConnectionDialect } from './kysely-single-connection.dialect';
 
 // GlobalDbInterceptor - o núcleo da correção da Pendência 5 (ver
@@ -38,17 +40,32 @@ import { KyselySingleConnectionDialect } from './kysely-single-connection.dialec
 // 5. Ao final: COMMIT se a rota terminou bem, ROLLBACK se lançou qualquer
 //    erro - e client.release() sempre, nos dois casos (senão o pool esgota
 //    silenciosamente depois de um tempo, não na hora).
+//
+// EXCEÇÃO: rota (ou controller) marcada com @SemTransacaoGlobal() pula tudo isso - não pega client, não abre
+// transação, não seta app.id_usuario_atual, não põe Kysely no contexto. Existe para rota que espera um gateway de
+// pagamento no meio: segurar um client do pool numa transação aberta durante uma chamada externa lenta esgota o
+// pool. Ver sem-transacao-global.decorator.ts para o que muda para quem usa.
 @Injectable()
 export class GlobalDbInterceptor implements NestInterceptor {
   constructor(
     @Inject(PG_POOL) private readonly pool: Pool,
     private readonly cls: ClsService,
+    private readonly reflector: Reflector,
   ) {}
 
   async intercept(
     context: ExecutionContext,
     next: CallHandler,
   ): Promise<Observable<unknown>> {
+    // Decidido ANTES de pedir client ao pool: é o ponto inteiro da exceção (não prender conexão).
+    const semTransacao = this.reflector.getAllAndOverride<boolean | undefined>(
+      CHAVE_SEM_TRANSACAO_GLOBAL,
+      [context.getHandler(), context.getClass()],
+    );
+    if (semTransacao === true) {
+      return next.handle() as Observable<unknown>;
+    }
+
     const request = context.switchToHttp().getRequest<Request>();
     const client = await this.pool.connect();
 
