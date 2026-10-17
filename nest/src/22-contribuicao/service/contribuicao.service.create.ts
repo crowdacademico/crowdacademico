@@ -153,12 +153,19 @@ export class ContribuicaoServiceCreate {
       );
     } catch (erro) {
       // A cobrança EXISTE no gateway mas não conseguimos ligá-la à contribuição: se alguém pagar, o webhook não
-      // acharia a contribuição. Por isso não devolvemos o QR (ninguém deve pagar algo que não rastreamos) e deixamos
-      // o rastro no log com os dois ids para a reconciliação (PR-11) ou o suporte.
+      // acharia a contribuição. Por isso não devolvemos o QR (ninguém deve pagar algo que não rastreamos), cancelamos a
+      // cobrança no gateway e deixamos o rastro no log com os dois ids, para o suporte caso o cancelamento também falhe.
       this.logger.error(
         `Cobrança criada no gateway mas não vinculada: contribuicao=${contribuicao.id_contribuicao} provedor=${this.gateway.provedor} cobranca=${cobranca.idCobranca}`,
         erro instanceof Error ? erro.stack : String(erro),
       );
+      await this.gateway
+        .cancelarCobranca(cobranca.idCobranca)
+        .catch((falha: unknown) =>
+          this.logger.error(
+            `Não foi possível cancelar a cobrança não vinculada ${cobranca.idCobranca}: ${falha instanceof Error ? falha.message : String(falha)}`,
+          ),
+        );
       await this.marcarComoErro(contribuicao.id_contribuicao, idUsuario);
       throw new ServiceUnavailableException(MENSAGEM_COBRANCA_FALHOU);
     }

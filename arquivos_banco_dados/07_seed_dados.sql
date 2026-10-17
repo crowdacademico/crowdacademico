@@ -1389,6 +1389,11 @@ INSERT INTO contribuicao (id_campanha, id_usuario, valor, meio_pagamento, status
 (21, 20, 1000.00, 'pix', 'confirmado', FALSE, 'TXN-PIX-0053', NOW() - INTERVAL '22 days'),
 (21, 17,  500.00, 'pix', 'confirmado', TRUE,  'TXN-PIX-0054', NOW() - INTERVAL '18 days');
 
+-- Provedor próprio do seed: as cobranças 'TXN-...' nunca existiram em provedor nenhum, e os processos automáticos
+-- (devolução, repasse, conferência) só tratam o provedor configurado. Assim, ligar o Asaas não faz o sistema tentar
+-- devolver ou conferir uma contribuição de demonstração.
+UPDATE contribuicao SET provedor = 'seed' WHERE id_transacao_api LIKE 'TXN-%';
+
 ALTER TABLE contribuicao ENABLE TRIGGER trg_valida_status_contribuicao;
 ALTER TABLE contribuicao ENABLE TRIGGER trg_contribuicao_all_or_nothing_pix;
 

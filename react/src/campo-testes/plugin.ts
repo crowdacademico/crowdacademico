@@ -3,6 +3,7 @@ import { MinhasCampanhas } from '../views/12-campanha/minhas-campanhas';
 import { BancadaPesquisador } from './paginas/bancada-pesquisador';
 import { BancadaCampanha } from './paginas/bancada-campanha';
 import { CampanhasSeguidas } from './paginas/campanhas-seguidas';
+import { BancadaPagamento } from './paginas/bancada-pagamento';
 import { GuiaEstilo } from './paginas/guia-estilo/1-guia-estilo';
 
 // Única porta do Campo de Testes para o sistema: services/router/campo-testes-opcional.ts carrega este arquivo
@@ -48,6 +49,16 @@ export const ROTAS_CAMPO_TESTES: Rota[] = [
     rotuloBreadcrumb: 'T4 - Campanhas Seguidas',
     grupoMenu: 'CAMPO_TESTES',
     icone: 'fa-bell',
+  },
+  {
+    // Pagamento: gerar e pagar Pix, rodar repasse e devolução na hora, simular o provedor.
+    caminho: '/admin/campo-testes/pagamento',
+    caminhoRelativo: 'campo-testes/pagamento',
+    elemento: BancadaPagamento,
+    rotuloMenu: 'T5 - Bancada de Pagamento',
+    rotuloBreadcrumb: 'T5 - Bancada de Pagamento',
+    grupoMenu: 'CAMPO_TESTES',
+    icone: 'fa-money-bill-wave',
   },
   {
     // Guia de Estilo: cores nos dois temas, tipografia e componentes reais.

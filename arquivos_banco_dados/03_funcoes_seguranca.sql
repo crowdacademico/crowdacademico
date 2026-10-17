@@ -740,12 +740,12 @@ BEGIN
 END;
 $$;
 
--- encerrar_campanha_sem_contribuicao: o dono encerra direto uma campanha ativa que não tem nenhuma contribuição
--- confirmada (RF-064), sem passar pelo administrador. Registra o encerramento como um pedido já aprovado e sem admin
--- (id_admin vazio = encerrado pelo próprio pesquisador), com a justificativa dele, e encerra a campanha. Também recusa
--- enquanto houver Pix pendente ainda válido: o pagamento pode ser confirmado a qualquer momento. SECURITY DEFINER:
--- o app_nestjs só insere a justificativa (GRANT por coluna, 06); fn_valida_transicao_campanha (05) só deixa o dono
--- encerrar com esse pedido aprovado e sem contribuição confirmada.
+-- encerrar_campanha_sem_contribuicao: "cancelar o projeto". O dono encerra direto uma campanha ativa (RF-064), sem
+-- passar pelo administrador, e TODO o dinheiro já pago volta para quem apoiou (trg_campanha_encerrada_destino_dinheiro,
+-- 05). Não precisa de admin porque ninguém sai prejudicado. Registra o encerramento como um pedido já aprovado e sem
+-- admin (id_admin vazio = encerrado pelo próprio pesquisador), com a justificativa dele. Recusa enquanto houver Pix
+-- pendente ainda válido: quem pagasse depois perderia a tarifa do Pix. SECURITY DEFINER: o app_nestjs só insere a
+-- justificativa (GRANT por coluna, 06); fn_valida_transicao_campanha (05) só deixa o dono encerrar com esse pedido.
 CREATE OR REPLACE FUNCTION public.encerrar_campanha_sem_contribuicao(p_id_campanha INT, p_justificativa TEXT)
 RETURNS INT
 LANGUAGE plpgsql
@@ -767,16 +767,12 @@ BEGIN
     IF v_status IS DISTINCT FROM 'ativo' THEN
         RAISE EXCEPTION 'Só uma campanha ativa pode ser encerrada antecipadamente.' USING ERRCODE = '91038';
     END IF;
-    IF EXISTS (SELECT 1 FROM contribuicao WHERE id_campanha = p_id_campanha AND status IN ('confirmado', 'repassado')) THEN
-        RAISE EXCEPTION 'Esta campanha já tem contribuição confirmada: envie um pedido de encerramento ao administrador.'
-            USING ERRCODE = '91040';
-    END IF;
     IF EXISTS (
         SELECT 1 FROM contribuicao
         WHERE id_campanha = p_id_campanha AND status = 'pendente' AND meio_pagamento = 'pix'
           AND criado_em > NOW() - (public.config_numero('pix_validade_horas', 24) * INTERVAL '1 hour')
     ) THEN
-        RAISE EXCEPTION 'Há um pagamento Pix em andamento nesta campanha. Espere ele ser confirmado ou vencer, ou envie um pedido ao administrador.'
+        RAISE EXCEPTION 'Há um pagamento Pix em andamento nesta campanha. Espere ele ser confirmado ou vencer.'
             USING ERRCODE = '91043';
     END IF;
 
@@ -793,8 +789,8 @@ END;
 $$;
 
 -- decidir_solicitacao_encerramento: o administrador aprova ou rejeita um pedido pendente (RF-065). Rejeitar exige
--- justificativa; aprovar encerra a campanha na mesma operação (RF-066; a devolução ou o repasse do dinheiro entram com
--- o módulo de contribuição). Grava quem decidiu e quando. SECURITY DEFINER pelo mesmo motivo: o app_nestjs só muda
+-- justificativa; aprovar encerra a campanha na mesma operação (RF-066) e o dinheiro vai para o pesquisador
+-- (trg_campanha_encerrada_destino_dinheiro, 05). Grava quem decidiu e quando. SECURITY DEFINER pelo mesmo motivo: o app_nestjs só muda
 -- o status (o dono, para cancelar).
 CREATE OR REPLACE FUNCTION public.decidir_solicitacao_encerramento(p_id_solicitacao INT, p_aprovar BOOLEAN, p_justificativa TEXT)
 RETURNS INT

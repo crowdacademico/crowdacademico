@@ -1986,7 +1986,6 @@ BEGIN
        AND NEW.id_admin IS NOT DISTINCT FROM OLD.id_admin
        AND OLD.status = 'ativo' AND NEW.status = 'encerrado'
        AND NEW.id_usuario = public.id_usuario_atual()
-       AND NOT EXISTS (SELECT 1 FROM contribuicao ct WHERE ct.id_campanha = OLD.id_campanha AND ct.status IN ('confirmado', 'repassado'))
        AND EXISTS (SELECT 1 FROM solicitacao_encerramento se WHERE se.id_campanha = OLD.id_campanha AND se.status = 'aprovado' AND se.id_admin IS NULL)
     THEN
         RETURN NEW;
@@ -2268,6 +2267,148 @@ WHEN (NEW.status IS DISTINCT FROM OLD.status)
 EXECUTE FUNCTION fn_carimba_envio_aprovacao();
 
 -- ----------------------------------------------------------------------------
+-- Função:     criar_repasse_campanha
+-- Assinatura: (p_id_campanha INT, p_meta_atingida BOOLEAN) -> INT
+-- Bloco:      [05-K-2]
+-- Regra:      Cria UM repasse com as contribuições 'confirmado' da campanha que ainda não estão em repasse nenhum
+--             (valor_bruto = soma; taxa_relativa = a da campanha, ou a padrão; valor_liquido = soma dos líquidos por
+--             contribuição, a mesma conta do estorno) e liga cada uma a ele (contribuicao.id_repasse). Sem contribuição
+--             confirmada, não cria nada e devolve NULL. Quem transfere é o worker de repasse. Usada no fechamento pelo
+--             prazo e no encerramento antes do prazo aprovado pelo admin.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.criar_repasse_campanha(p_id_campanha INT, p_meta_atingida BOOLEAN)
+RETURNS INT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_taxa       DECIMAL(5,2);
+    v_bruto      DECIMAL(10,2);
+    v_liquido    DECIMAL(10,2);
+    v_id_repasse INT;
+BEGIN
+    SELECT COALESCE(taxa_plataforma, public.config_numero('taxa_plataforma_padrao', 5.00)) INTO v_taxa
+    FROM campanha WHERE id_campanha = p_id_campanha;
+
+    -- O líquido é a SOMA dos líquidos por contribuição, não o arredondamento do total: assim repasse.valor_liquido
+    -- sempre fecha com as contribuições do repasse.
+    SELECT COALESCE(SUM(valor), 0), COALESCE(SUM(ROUND(valor * (1 - v_taxa / 100), 2)), 0)
+    INTO v_bruto, v_liquido
+    FROM contribuicao
+    WHERE id_campanha = p_id_campanha AND status = 'confirmado' AND id_repasse IS NULL;
+
+    IF v_bruto <= 0 THEN
+        RETURN NULL;
+    END IF;
+
+    INSERT INTO repasse (id_campanha, valor_bruto, valor_liquido, meta_atingida, taxa_relativa, status)
+    VALUES (p_id_campanha, v_bruto, v_liquido, p_meta_atingida, v_taxa, 'pendente')
+    RETURNING repasse.id_repasse INTO v_id_repasse;
+
+    UPDATE contribuicao SET id_repasse = v_id_repasse
+    WHERE id_campanha = p_id_campanha AND status = 'confirmado' AND id_repasse IS NULL;
+    RETURN v_id_repasse;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Função:     devolver_contribuicoes_campanha
+-- Assinatura: (p_id_campanha INT) -> VOID
+-- Bloco:      [05-K-2]
+-- Regra:      Manda cada contribuição 'confirmado' da campanha para 'a_devolver' (via atualizar_status_contribuicao,
+--             auditado). Quem devolve, o valor inteiro, é o worker de estorno. Usada no tudo-ou-nada que fechou sem a
+--             meta, no projeto cancelado pelo pesquisador e no encerramento por moderação.
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.devolver_contribuicoes_campanha(p_id_campanha INT)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_id INT;
+BEGIN
+    FOR v_id IN
+        SELECT id_contribuicao FROM contribuicao
+        WHERE id_campanha = p_id_campanha AND status = 'confirmado'
+        ORDER BY id_contribuicao
+    LOOP
+        PERFORM public.atualizar_status_contribuicao(v_id, 'a_devolver');
+    END LOOP;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Função:     destino_dinheiro_campanha
+-- Assinatura: (p_id_campanha INT) -> TEXT ('repasse' | 'devolucao' | NULL)
+-- Bloco:      [05-K-2]
+-- Regra:      Para onde vai o dinheiro de uma campanha que já não está 'ativo'. Um lugar só para a regra, usada pelo
+--             encerramento antes do prazo (trg_campanha_encerrada_destino_dinheiro) e pelo pagamento que chega depois do
+--             fim (aplicar_evento_pagamento):
+--               sucesso                          -> repasse
+--               nao_atingido                     -> repasse no flexível; devolução no tudo-ou-nada
+--               encerrado_moderacao              -> devolução (campanha derrubada pela moderação)
+--               encerrado com pedido aprovado pelo admin ("encerrar antes do prazo") -> repasse, se a campanha é
+--                                                   flexível ou bateu a meta; senão devolução
+--               encerrado pelo próprio pesquisador, sem admin ("cancelar o projeto") -> devolução
+--               qualquer outro status            -> NULL (revisão manual)
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.destino_dinheiro_campanha(p_id_campanha INT)
+RETURNS TEXT
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT CASE
+        WHEN c.status = 'sucesso' THEN 'repasse'
+        WHEN c.status = 'nao_atingido' THEN CASE WHEN c.modelo = 'flexivel' THEN 'repasse' ELSE 'devolucao' END
+        WHEN c.status = 'encerrado_moderacao' THEN 'devolucao'
+        WHEN c.status = 'encerrado' THEN
+            CASE WHEN (c.modelo = 'flexivel' OR c.valor_bruto_arrecadado >= c.meta_financeira)
+                      AND EXISTS (SELECT 1 FROM solicitacao_encerramento se
+                                  WHERE se.id_campanha = c.id_campanha AND se.status = 'aprovado'
+                                    AND se.id_admin IS NOT NULL)
+                 THEN 'repasse' ELSE 'devolucao' END
+    END
+    FROM campanha c
+    WHERE c.id_campanha = p_id_campanha;
+$$;
+
+-- ----------------------------------------------------------------------------
+-- Função:     fn_campanha_encerrada_destino_dinheiro
+-- Assinatura: () -> TRIGGER
+-- Bloco:      [05-K-2]
+-- Regra:      Campanha que sai de 'ativo' antes do prazo (projeto cancelado pelo pesquisador, encerramento antes do
+--             prazo aprovado pelo admin, ou moderação) leva o dinheiro já pago junto, sem ninguém decidir na mão:
+--             repassa ou devolve conforme destino_dinheiro_campanha(). Roda dentro da mesma transação do encerramento.
+--             Pix ainda pendente segue o mesmo destino quando for pago (aplicar_evento_pagamento).
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_campanha_encerrada_destino_dinheiro()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    IF public.destino_dinheiro_campanha(NEW.id_campanha) = 'repasse' THEN
+        PERFORM public.criar_repasse_campanha(NEW.id_campanha, NEW.valor_bruto_arrecadado >= NEW.meta_financeira);
+    ELSE
+        PERFORM public.devolver_contribuicoes_campanha(NEW.id_campanha);
+    END IF;
+    RETURN NULL;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_campanha_encerrada_destino_dinheiro ON campanha;
+CREATE TRIGGER trg_campanha_encerrada_destino_dinheiro
+AFTER UPDATE OF status ON campanha
+FOR EACH ROW
+WHEN (OLD.status = 'ativo' AND NEW.status IN ('encerrado', 'encerrado_moderacao'))
+EXECUTE FUNCTION public.fn_campanha_encerrada_destino_dinheiro();
+
+-- ----------------------------------------------------------------------------
 -- Função:     encerrar_campanhas_vencidas
 -- Assinatura: () -> INT
 -- Bloco:      [05-K-2]
@@ -2315,13 +2456,8 @@ AS $$
 DECLARE
     v_encerradas INT := 0;
     v_id         INT;
-    v_id_contrib INT;
     v_novo       status_campanha;
     v_modelo     modelo_campanha;
-    v_taxa       DECIMAL(5,2);
-    v_bruto      DECIMAL(10,2);
-    v_liquido    DECIMAL(10,2);
-    v_id_repasse INT;
 BEGIN
     -- Linha a linha: uma campanha que uma trigger recuse não impede as outras de encerrar. A falha vira
     -- WARNING nos logs do Postgres e a campanha é tentada de novo no ciclo seguinte. Ver DOCUMENTACAO_BD.md [05-K-2-E].
@@ -2346,8 +2482,7 @@ BEGIN
                 ELSE 'nao_atingido'
             END)::status_campanha
             WHERE id_campanha = v_id AND status = 'ativo'
-            RETURNING status, modelo, COALESCE(taxa_plataforma, public.config_numero('taxa_plataforma_padrao', 5.00))
-            INTO v_novo, v_modelo, v_taxa;
+            RETURNING status, modelo INTO v_novo, v_modelo;
 
             IF NOT FOUND THEN
                 CONTINUE; -- outra execução já a encerrou entre a lista e o lock
@@ -2355,30 +2490,10 @@ BEGIN
             v_encerradas := v_encerradas + 1;
 
             IF v_novo = 'sucesso' OR v_modelo = 'flexivel' THEN
-                -- O líquido do repasse é a SOMA dos líquidos por contribuição (a mesma conta do estorno), não o
-                -- arredondamento do total: assim repasse.valor_liquido sempre fecha com as contribuições do repasse.
-                SELECT COALESCE(SUM(valor), 0), COALESCE(SUM(ROUND(valor * (1 - v_taxa / 100), 2)), 0)
-                INTO v_bruto, v_liquido
-                FROM contribuicao
-                WHERE id_campanha = v_id AND status = 'confirmado';
-
-                IF v_bruto > 0 THEN
-                    INSERT INTO repasse (id_campanha, valor_bruto, valor_liquido, meta_atingida, taxa_relativa, status)
-                    VALUES (v_id, v_bruto, v_liquido, v_novo = 'sucesso', v_taxa, 'pendente')
-                    RETURNING repasse.id_repasse INTO v_id_repasse;
-
-                    UPDATE contribuicao SET id_repasse = v_id_repasse
-                    WHERE id_campanha = v_id AND status = 'confirmado';
-                END IF;
+                PERFORM public.criar_repasse_campanha(v_id, v_novo = 'sucesso');
             ELSE
                 -- nao_atingido em all-or-nothing: o dinheiro volta inteiro para quem apoiou (worker de estorno).
-                FOR v_id_contrib IN
-                    SELECT id_contribuicao FROM contribuicao
-                    WHERE id_campanha = v_id AND status = 'confirmado'
-                    ORDER BY id_contribuicao
-                LOOP
-                    PERFORM public.atualizar_status_contribuicao(v_id_contrib, 'a_devolver');
-                END LOOP;
+                PERFORM public.devolver_contribuicoes_campanha(v_id);
             END IF;
         EXCEPTION WHEN OTHERS THEN
             RAISE WARNING 'encerrar_campanhas_vencidas: campanha % ignorada neste ciclo (% / %)', v_id, SQLSTATE, SQLERRM;
@@ -2767,7 +2882,8 @@ EXECUTE FUNCTION fn_valida_meta_campanha_negocio();
 -- Função:     fn_valida_solicitacao_encerramento
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-2]
--- Regra:      Pedido de encerramento só de campanha ativa (91038) e sempre com justificativa (90028), RF-064. Um pendente
+-- Regra:      Pedido de encerramento só de campanha ativa (91038) e sempre com justificativa (90028), RF-064. Pedido ao
+--             admin (pendente) só de campanha flexível ou com a meta batida (91051). Um pendente
 --             por vez é o índice uq_solicitacao_encerramento_pendente (02). SECURITY DEFINER: lê a campanha sem depender
 --             do que a RLS mostra.
 -- ----------------------------------------------------------------------------
@@ -2783,6 +2899,16 @@ BEGIN
     END IF;
     IF NOT EXISTS (SELECT 1 FROM campanha WHERE id_campanha = NEW.id_campanha AND status = 'ativo') THEN
         RAISE EXCEPTION 'Só uma campanha ativa pode ser encerrada antecipadamente.' USING ERRCODE = '91038';
+    END IF;
+    -- Pedido ao admin é para encerrar antes do prazo E receber o dinheiro: só cabe se o dinheiro já é do pesquisador
+    -- (flexível, ou tudo-ou-nada com a meta batida). O cancelamento do projeto (devolve tudo) não passa por aqui: o
+    -- pesquisador faz direto (encerrar_campanha_sem_contribuicao, 03), que grava o pedido já aprovado e sem admin.
+    IF NEW.status = 'pendente' AND EXISTS (
+        SELECT 1 FROM campanha
+        WHERE id_campanha = NEW.id_campanha AND modelo = 'all-or-nothing' AND valor_bruto_arrecadado < meta_financeira
+    ) THEN
+        RAISE EXCEPTION 'Esta campanha ainda não bateu a meta. Para encerrar agora, cancele o projeto: todo o dinheiro volta para quem apoiou.'
+            USING ERRCODE = '91051';
     END IF;
     RETURN NEW;
 END;
@@ -3262,11 +3388,8 @@ BEGIN
 
     -- Confirmação de contribuição pendente depois de a campanha fechar: aplica a regra do fechamento (ver cabeçalho).
     IF p_novo_status = 'confirmado' AND v_status = 'pendente' AND v_status_campanha <> 'ativo' THEN
-        IF v_status_campanha = 'sucesso' OR (v_status_campanha = 'nao_atingido' AND v_modelo = 'flexivel') THEN
-            v_destino := 'repasse';
-        ELSIF v_status_campanha = 'nao_atingido' THEN
-            v_destino := 'devolucao';
-        ELSE
+        v_destino := public.destino_dinheiro_campanha(v_id_campanha);
+        IF v_destino IS NULL THEN
             v_motivo := 'Pagamento confirmado para uma campanha encerrada (' || v_status_campanha::text
                         || ') que não segue a regra de repasse/devolução: precisa de revisão manual.';
         END IF;
@@ -3279,7 +3402,7 @@ BEGIN
             IF v_destino = 'repasse' THEN
                 v_liquido := ROUND(v_valor * (1 - v_taxa / 100), 2);
                 INSERT INTO repasse (id_campanha, valor_bruto, valor_liquido, meta_atingida, taxa_relativa, status)
-                VALUES (v_id_campanha, v_valor, v_liquido, v_status_campanha = 'sucesso', v_taxa, 'pendente')
+                VALUES (v_id_campanha, v_valor, v_liquido, (SELECT ca.valor_bruto_arrecadado >= ca.meta_financeira FROM campanha ca WHERE ca.id_campanha = v_id_campanha), v_taxa, 'pendente')
                 RETURNING repasse.id_repasse INTO v_id_repasse;
                 UPDATE contribuicao SET id_repasse = v_id_repasse WHERE id_contribuicao = v_id_contribuicao;
             ELSIF v_destino = 'devolucao' THEN

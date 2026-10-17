@@ -133,10 +133,18 @@ export class AsaasCobrancaAdapter implements CobrancaGatewayPort {
       },
     );
 
-    const qr = await this.http.requisitar<AsaasPixQrCode>(
-      'GET',
-      `/payments/${encodeURIComponent(pagamento.id)}/pixQrCode`,
-    );
+    // A cobrança já existe no Asaas: se o QR falhar, cancela antes de devolver o erro. Sem isso ela ficaria aberta e
+    // pagável sem nenhuma contribuição ligada a ela (ninguém recebe o código, mas o Asaas aceitaria o pagamento).
+    let qr: AsaasPixQrCode;
+    try {
+      qr = await this.http.requisitar<AsaasPixQrCode>(
+        'GET',
+        `/payments/${encodeURIComponent(pagamento.id)}/pixQrCode`,
+      );
+    } catch (erro) {
+      await this.cancelarCobranca(pagamento.id).catch(() => undefined);
+      throw erro;
+    }
 
     return {
       ...this.paraResultado(pagamento),

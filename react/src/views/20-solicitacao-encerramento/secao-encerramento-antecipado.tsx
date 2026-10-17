@@ -7,6 +7,7 @@ import { Campo } from '../../components/input/campo';
 import { ContadorCaracteres } from '../../components/input/contador-caracteres';
 import { useErroToast } from '../../components/layout/toast/use-erro-toast';
 import { useToast } from '../../components/layout/toast/use-toast';
+import { Tooltip } from '../../components/layout/tooltip';
 import { solicitacaoEncerramentoApi } from '../../services/20-solicitacao-encerramento/api/solicitacao-encerramento.api';
 import { useConfiguracoes } from '../../services/11-configuracoes/hook/use-configuracoes';
 import { useEnvio } from '../../services/constant/hook/use-envio';
@@ -15,19 +16,24 @@ import { contarCaracteres } from '../../services/constant/util/validacao.util';
 import { formatarData } from '../../services/constant/util/formatacao.util';
 import type { AuthFetch } from '../../services/3-auth/type/auth.type';
 import type { SolicitacaoEncerramentoResponse } from '../../services/20-solicitacao-encerramento/type/solicitacao-encerramento.type';
+import type { ModeloCampanha } from '../../services/constant/type/enums-do-banco.gerado';
 
 interface SecaoEncerramentoAntecipadoProps {
   authFetch: AuthFetch;
   idCampanha: number;
-  // Arrecadado confirmado: zero = nenhuma contribuição confirmada, o dono encerra sozinho (RF-064).
+  modelo: ModeloCampanha;
+  metaFinanceira: number;
   valorArrecadado: number;
   aoEncerrada: () => void;
 }
 
-// Encerrar a campanha antes do prazo, no Alterar do dono (RF-064). Sem contribuição confirmada, encerra na hora; com
-// contribuição, envia um pedido ao administrador, e a campanha segue recebendo apoio até a decisão. Um pedido
-// pendente pode ser cancelado. Encerrar direto abre a janelinha de confirmação (DS-87): não dá para desfazer.
-export function SecaoEncerramentoAntecipado({ authFetch, idCampanha, valorArrecadado, aoEncerrada }: SecaoEncerramentoAntecipadoProps) {
+// Encerrar a campanha antes do prazo, no Alterar do dono (RF-064). Duas ações, cada uma com o destino do dinheiro fixo:
+// - Cancelar o projeto: encerra na hora, sem administrador, e todo o dinheiro já pago volta para quem apoiou. Abre a
+//   janelinha de confirmação (DS-87): não dá para desfazer.
+// - Encerrar antes do prazo: pedido ao administrador; aprovado, o dinheiro vai para o pesquisador. Só para campanha
+//   flexível ou que já bateu a meta (o banco recusa as outras, 91051). Até a decisão a campanha segue recebendo apoio,
+//   e o pedido pendente pode ser cancelado.
+export function SecaoEncerramentoAntecipado({ authFetch, idCampanha, modelo, metaFinanceira, valorArrecadado, aoEncerrada }: SecaoEncerramentoAntecipadoProps) {
   const [pedidos, setPedidos] = useState<SolicitacaoEncerramentoResponse[] | null>(null);
   const [justificativa, setJustificativa] = useState('');
   const [confirmando, setConfirmando] = useState(false);
@@ -36,7 +42,7 @@ export function SecaoEncerramentoAntecipado({ authFetch, idCampanha, valorArreca
   const { mostrar } = useToast();
   const { ocupado, executar } = useEnvio(reportarErro, limparErro);
   const limite = useConfiguracoes().obterNumero('limite_caracteres_justificativa_encerramento', 2000);
-  const encerraDireto = valorArrecadado <= 0;
+  const podePedir = modelo === 'flexivel' || valorArrecadado >= metaFinanceira;
 
   useEffect(() => {
     solicitacaoEncerramentoApi.listar(authFetch, { idCampanha }).then(setPedidos).catch(reportarErro);
@@ -55,27 +61,29 @@ export function SecaoEncerramentoAntecipado({ authFetch, idCampanha, valorArreca
   }
   const pendente = pedidos.find((pedido) => pedido.status === 'pendente');
 
-  const enviar = async () => {
-    if (!erros.tentarEnviar()) return;
-    // Encerrar direto pede o OK na janelinha; o pedido ao administrador não (ele decide, e dá para cancelar).
-    if (encerraDireto && !confirmando) {
-      setConfirmando(true);
-      return;
-    }
+  // Cancelar pede o OK na janelinha; o pedido ao administrador não (ele decide, e dá para desistir do pedido).
+  const pedirConfirmacaoCancelar = () => {
+    if (erros.tentarEnviar()) setConfirmando(true);
+  };
+
+  const cancelarProjeto = async () => {
     await executar(async () => {
-      if (encerraDireto) {
-        await solicitacaoEncerramentoApi.encerrarDireto(authFetch, idCampanha, justificativa.trim());
-        mostrar('Campanha encerrada.', 'Ela não recebe mais apoio.');
-        aoEncerrada();
-      } else {
-        await solicitacaoEncerramentoApi.pedir(authFetch, idCampanha, justificativa.trim());
-        mostrar('Pedido enviado ao administrador.', 'A campanha continua recebendo apoio até a decisão.');
-        setJustificativa('');
-        erros.limpar();
-        setChaveRecarga((atual) => atual + 1);
-      }
+      await solicitacaoEncerramentoApi.encerrarDireto(authFetch, idCampanha, justificativa.trim());
+      mostrar('Projeto cancelado.', 'A campanha não recebe mais apoio e o dinheiro já pago volta para quem apoiou.');
+      aoEncerrada();
     });
     setConfirmando(false);
+  };
+
+  const pedirEncerramento = async () => {
+    if (!erros.tentarEnviar()) return;
+    await executar(async () => {
+      await solicitacaoEncerramentoApi.pedir(authFetch, idCampanha, justificativa.trim());
+      mostrar('Pedido enviado ao administrador.', 'A campanha continua recebendo apoio até a decisão.');
+      setJustificativa('');
+      erros.limpar();
+      setChaveRecarga((atual) => atual + 1);
+    });
   };
 
   const cancelar = async (id: number) => {
@@ -87,7 +95,7 @@ export function SecaoEncerramentoAntecipado({ authFetch, idCampanha, valorArreca
   };
 
   return (
-    <SecaoFicha titulo="Encerrar antes do prazo" colunas={1}>
+    <SecaoFicha titulo="Encerrar a campanha" colunas={1}>
       {erro && <p className="erro-campo">{erro}</p>}
       {pendente ? (
         <CaixaAviso titulo={`Pedido enviado em ${formatarData(pendente.solicitadoEm)}, esperando o administrador`}>
@@ -98,12 +106,7 @@ export function SecaoEncerramentoAntecipado({ authFetch, idCampanha, valorArreca
         </CaixaAviso>
       ) : (
         <>
-          <p className="legenda texto-fraco">
-            {encerraDireto
-              ? 'A campanha ainda não tem nenhuma contribuição confirmada: você pode encerrá-la agora, sem passar pelo administrador.'
-              : 'A campanha já tem contribuição confirmada: o encerramento passa pelo administrador, que decide. Até lá, ela continua recebendo apoio.'}
-          </p>
-          <Campo rotulo="Por que encerrar antes do prazo" erro={erros.erroDe('justificativa')}>
+          <Campo rotulo="Por que encerrar" erro={erros.erroDe('justificativa')}>
             {({ atributos, classeErro }) => (
               <>
                 <textarea
@@ -117,29 +120,35 @@ export function SecaoEncerramentoAntecipado({ authFetch, idCampanha, valorArreca
               </>
             )}
           </Campo>
-          <div>
-            {encerraDireto ? (
-              <button type="button" className="btn btn-danger" disabled={ocupado} onClick={() => void enviar()}>
-                <i className="fa-solid fa-flag-checkered" aria-hidden="true"></i> Encerrar campanha agora
-              </button>
-            ) : (
-              <button type="button" className="btn btn-secondary" disabled={ocupado} onClick={() => void enviar()}>
-                <i className="fa-solid fa-paper-plane" aria-hidden="true"></i> Enviar pedido ao administrador
-              </button>
-            )}
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              className="btn btn-secondary"
+              disabled={ocupado || !podePedir}
+              title={podePedir ? undefined : 'A campanha ainda não bateu a meta. Para encerrar agora, cancele o projeto.'}
+              onClick={() => void pedirEncerramento()}
+            >
+              <i className="fa-solid fa-paper-plane" aria-hidden="true"></i> Encerrar antes do prazo
+            </button>
+            <Tooltip texto="O administrador decide. Aprovado, o dinheiro arrecadado vai para você. Só para campanha flexível ou que já bateu a meta." />
+            <button type="button" className="btn btn-danger" disabled={ocupado} onClick={pedirConfirmacaoCancelar}>
+              <i className="fa-solid fa-ban" aria-hidden="true"></i> Cancelar o projeto
+            </button>
+            <Tooltip texto="Encerra na hora, sem o administrador. Todo o dinheiro já pago volta para quem apoiou." />
           </div>
           {confirmando && (
             <ModalConfirmacao
-              titulo="Encerrar a campanha agora?"
-              rotuloConfirmar="Encerrar campanha"
-              rotuloOcupado="Encerrando..."
+              titulo="Cancelar o projeto?"
+              rotuloConfirmar="Cancelar o projeto"
+              rotuloOcupado="Cancelando..."
               perigo
               exigirCiencia
               ocupado={ocupado}
-              aoConfirmar={() => void enviar()}
+              aoConfirmar={() => void cancelarProjeto()}
               aoCancelar={() => setConfirmando(false)}
             >
               <p>A campanha para de receber apoio na hora e passa a constar como encerrada. Não dá para desfazer.</p>
+              <p>Todo o dinheiro já pago volta para quem apoiou.</p>
               <p>A justificativa fica registrada no histórico de pedidos da campanha.</p>
             </ModalConfirmacao>
           )}

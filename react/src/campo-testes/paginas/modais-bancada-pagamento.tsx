@@ -1,0 +1,191 @@
+import { useEffect, useState } from 'react';
+import { CampoFicha, SecaoFicha } from '../../components/crud/ficha-consulta';
+import { ModalFicha } from '../../components/crud/modal-ficha';
+import { RodapeAcoes } from '../../components/crud/rodape-acoes';
+import { Campo } from '../../components/input/campo';
+import { useErroToast } from '../../components/layout/toast/use-erro-toast';
+import { useToast } from '../../components/layout/toast/use-toast';
+import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
+import { emBreve } from '../../services/12-campanha/constants/status-campanha.constants';
+import { useEnvio } from '../../services/constant/hook/use-envio';
+import { formatarMoeda } from '../../services/constant/util/formatacao.util';
+import { TIPO_CHAVE_PIX, type TipoChavePix } from '../../services/constant/type/enums-do-banco.gerado';
+import { bancadaPagamentoApi, type ContribuicaoCriada } from '../servicos/api/bancada-pagamento.api';
+import type { AuthFetch } from '../../services/3-auth/type/auth.type';
+import type { CampanhaResponse } from '../../services/12-campanha/type/campanha.type';
+
+type Chamar = <T>(caminho: string, opcoes?: RequestInit) => Promise<T>;
+
+const ROTULO_TIPO_CHAVE: Record<TipoChavePix, string> = {
+  cpf: 'CPF',
+  cnpj: 'CNPJ',
+  email: 'E-mail',
+  telefone: 'Telefone',
+  aleatoria: 'Chave aleatória',
+};
+
+// Campanha que aceita apoio agora: publicada, já começou e o prazo não acabou.
+function aceitaApoio(campanha: CampanhaResponse): boolean {
+  return campanha.status === 'ativo' && !emBreve(campanha) && (campanha.dataFim === null || new Date(campanha.dataFim) > new Date());
+}
+
+interface ModalGerarPixProps {
+  authFetch: AuthFetch;
+  chamar: Chamar;
+  aoFechar: () => void;
+  aoGerado: () => void;
+}
+
+// Contribuir como a conta logada, pela rota de verdade (POST /contribuicao). Mostra o que a pessoa veria: o valor, a
+// tarifa do Pix paga por cima e o código para pagar.
+export function ModalGerarPix({ authFetch, chamar, aoFechar, aoGerado }: ModalGerarPixProps) {
+  const [campanhas, setCampanhas] = useState<CampanhaResponse[] | null>(null);
+  const [idCampanha, setIdCampanha] = useState('');
+  const [valor, setValor] = useState('100');
+  const [gerada, setGerada] = useState<ContribuicaoCriada | null>(null);
+  const { erro, reportarErro, limparErro } = useErroToast({ mostraTexto: true });
+  const { mostrar } = useToast();
+  const { ocupado, executar } = useEnvio(reportarErro, limparErro);
+
+  useEffect(() => {
+    campanhaApi
+      .listar(authFetch)
+      .then((todas) => setCampanhas(todas.filter(aceitaApoio)))
+      .catch(reportarErro);
+  }, [authFetch, reportarErro]);
+
+  const gerar = () =>
+    executar(async () => {
+      setGerada(await bancadaPagamentoApi.contribuir(chamar, Number(idCampanha), Number(valor)));
+      aoGerado();
+    });
+
+  const copiar = async (texto: string) => {
+    await navigator.clipboard.writeText(texto);
+    mostrar('Código Pix copiado.');
+  };
+
+  return (
+    <ModalFicha
+      titulo={gerada ? `Pix da contribuição #${gerada.idContribuicao}` : 'Gerar Pix'}
+      ajuda="Contribui como a conta logada, pela rota de verdade. A tarifa do Pix é paga por quem apoia, por cima do valor."
+      aoFechar={aoFechar}
+      erro={erro}
+      carregando={campanhas === null}
+      rodape={
+        <RodapeAcoes
+          aoCancelar={aoFechar}
+          rotuloCancelar={gerada ? 'Fechar' : 'Cancelar'}
+          acao={gerada ? undefined : { rotulo: 'Gerar Pix', ocupado, aoClicar: () => void gerar() }}
+        />
+      }
+    >
+      {gerada ? (
+        <SecaoFicha titulo="O que a pessoa paga">
+          <CampoFicha rotulo="Contribuição" valor={formatarMoeda(gerada.valor)} />
+          <CampoFicha rotulo="Tarifa do Pix" valor={formatarMoeda(gerada.taxaPagamento)} />
+          <CampoFicha rotulo="Total cobrado" valor={formatarMoeda(gerada.valorCobrado)} />
+          {gerada.pix && (
+            <CampoFicha
+              rotulo="Pix copia e cola"
+              largura="cheia"
+              valor={
+                <span className="flex items-start gap-2">
+                  <code className="break-all">{gerada.pix.copiaECola}</code>
+                  <button type="button" className="btn btn-secondary btn-pequeno shrink-0" onClick={() => void copiar(gerada.pix?.copiaECola ?? '')}>
+                    <i className="fa-solid fa-copy" aria-hidden="true"></i> Copiar
+                  </button>
+                </span>
+              }
+            />
+          )}
+        </SecaoFicha>
+      ) : (
+        <SecaoFicha titulo="Contribuição" colunas={1}>
+          <Campo rotulo="Campanha" dica={campanhas?.length === 0 ? 'Nenhuma campanha recebendo apoio agora.' : undefined}>
+            {({ atributos, classeErro }) => (
+              <select {...atributos} value={idCampanha} onChange={(evento) => setIdCampanha(evento.target.value)} className={'input-padrao' + classeErro}>
+                <option value="">Escolha a campanha</option>
+                {campanhas?.map((campanha) => (
+                  <option key={campanha.idCampanha} value={campanha.idCampanha}>
+                    #{campanha.idCampanha} {campanha.titulo}
+                  </option>
+                ))}
+              </select>
+            )}
+          </Campo>
+          <Campo rotulo="Valor (R$)">
+            {({ atributos, classeErro }) => (
+              <input
+                {...atributos}
+                type="number"
+                inputMode="decimal"
+                step="0.01"
+                min="0.01"
+                value={valor}
+                onChange={(evento) => setValor(evento.target.value)}
+                className={'input-padrao' + classeErro}
+              />
+            )}
+          </Campo>
+        </SecaoFicha>
+      )}
+    </ModalFicha>
+  );
+}
+
+interface ModalChavePixProps {
+  chamar: Chamar;
+  aoFechar: () => void;
+  aoCadastrada: () => void;
+}
+
+// Chave Pix de recebimento da conta logada (o pesquisador dono da campanha), pela rota de verdade. A bancada registra a
+// chave no "diretório Pix" do provedor de teste com o CPF do perfil, para a titularidade ser confirmada.
+export function ModalChavePix({ chamar, aoFechar, aoCadastrada }: ModalChavePixProps) {
+  const [tipoChave, setTipoChave] = useState<TipoChavePix>('email');
+  const [chave, setChave] = useState('');
+  const { erro, reportarErro, limparErro } = useErroToast({ mostraTexto: true });
+  const { mostrar } = useToast();
+  const { ocupado, executar } = useEnvio(reportarErro, limparErro);
+
+  const cadastrar = () =>
+    executar(async () => {
+      const cadastrada = await bancadaPagamentoApi.cadastrarChavePix(chamar, tipoChave, chave);
+      mostrar(
+        'Chave Pix cadastrada.',
+        cadastrada ? `${cadastrada.chaveMascarada}, ${cadastrada.titularidadeVerificada ? 'titularidade confirmada' : 'titularidade não confirmada'}.` : undefined,
+      );
+      aoCadastrada();
+      aoFechar();
+    });
+
+  return (
+    <ModalFicha
+      titulo="Minha chave Pix de teste"
+      ajuda="Só para pesquisador: entre como o dono da campanha (Entrar como) antes. Sem chave confirmada, o repasse fica esperando."
+      aoFechar={aoFechar}
+      erro={erro}
+      rodape={<RodapeAcoes aoCancelar={aoFechar} acao={{ rotulo: 'Cadastrar', ocupado, aoClicar: () => void cadastrar() }} />}
+    >
+      <SecaoFicha titulo="Chave" colunas={1}>
+        <Campo rotulo="Tipo">
+          {({ atributos, classeErro }) => (
+            <select {...atributos} value={tipoChave} onChange={(evento) => setTipoChave(evento.target.value as TipoChavePix)} className={'input-padrao' + classeErro}>
+              {TIPO_CHAVE_PIX.map((tipo) => (
+                <option key={tipo} value={tipo}>
+                  {ROTULO_TIPO_CHAVE[tipo]}
+                </option>
+              ))}
+            </select>
+          )}
+        </Campo>
+        <Campo rotulo="Chave">
+          {({ atributos, classeErro }) => (
+            <input {...atributos} value={chave} onChange={(evento) => setChave(evento.target.value)} className={'input-padrao' + classeErro} />
+          )}
+        </Campo>
+      </SecaoFicha>
+    </ModalFicha>
+  );
+}

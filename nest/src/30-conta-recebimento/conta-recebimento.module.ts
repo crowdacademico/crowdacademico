@@ -19,5 +19,7 @@ import { ContaRecebimentoServiceRemove } from './service/conta-recebimento.servi
     ContaRecebimentoServiceFindOne,
     ContaRecebimentoServiceRemove,
   ],
+  // Para a bancada de pagamento do Campo de Testes cadastrar a chave Pix de teste da conta logada.
+  exports: [ContaRecebimentoServiceCreate],
 })
 export class ContaRecebimentoModule {}

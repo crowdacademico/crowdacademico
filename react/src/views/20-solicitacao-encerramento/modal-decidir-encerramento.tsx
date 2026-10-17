@@ -132,7 +132,7 @@ export function ModalDecidirEncerramento({ authFetch, pedido, aoFechar, aoDecidi
           <SecaoFicha titulo="Decisão">
             <CampoFicha
               rotulo="Decidido por"
-              valor={pedido.status === 'aprovado' && pedido.idAdmin === null ? 'O próprio pesquisador (sem contribuição)' : (pedido.nomeAdmin ?? '-')}
+              valor={pedido.status === 'aprovado' && pedido.idAdmin === null ? 'O próprio pesquisador (projeto cancelado)' : (pedido.nomeAdmin ?? '-')}
             />
             <CampoFicha rotulo="Em" valor={formatarDataHora(pedido.avaliadoEm)} />
             <CampoFicha rotulo="Justificativa" valor={pedido.justificativaAdmin} largura="cheia" />

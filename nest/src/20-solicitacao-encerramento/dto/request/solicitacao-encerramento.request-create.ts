@@ -1,7 +1,7 @@
 import { Type } from 'class-transformer';
 import { IsInt, IsString, Matches, MaxLength } from 'class-validator';
 
-// Pedir o encerramento antecipado (ou encerrar direto, sem contribuição confirmada): a campanha e o porquê
+// Pedir o encerramento antecipado (ou cancelar o projeto, encerrando direto): a campanha e o porquê
 // (RF-064). O banco confere que é o dono, que a campanha está ativa e que não há outro pedido pendente.
 export class SolicitacaoEncerramentoRequestCreate {
   @Type(() => Number)

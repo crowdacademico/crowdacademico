@@ -98,11 +98,18 @@ export function criarAdapter(
     PagamentoServiceTransferPending,
     PagamentoServiceReconcile,
   ],
+  // ADAPTER_PAGAMENTO, o webhook e os workers saem também para a bancada de pagamento do Campo de Testes (T05):
+  // ela usa as MESMAS instâncias (o Fake guarda as cobranças na memória dele) e roda os workers na hora.
   exports: [
     COBRANCA_GATEWAY,
     REPASSE_GATEWAY,
     WEBHOOK_VERIFIER,
     EventoPagamentoService,
+    ADAPTER_PAGAMENTO,
+    PagamentoServiceWebhook,
+    PagamentoServiceTransferPending,
+    PagamentoServiceRefundPending,
+    PagamentoServiceReconcile,
   ],
 })
 export class PagamentoModule {}

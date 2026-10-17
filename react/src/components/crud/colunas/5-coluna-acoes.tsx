@@ -26,7 +26,17 @@ const ACOES_SISTEMA: DefinicaoAcao<AcaoSistema>[] = [
 
 // Ações do Campo de Testes
 
-export type AcaoCampoTestes = 'upgrade' | 'comentar' | 'seguir' | 'deixarDeSeguir' | 'denunciar';
+export type AcaoCampoTestes =
+  | 'upgrade'
+  | 'comentar'
+  | 'seguir'
+  | 'deixarDeSeguir'
+  | 'denunciar'
+  | 'pagar'
+  | 'vencer'
+  | 'repetirAviso'
+  | 'concluirTransferencia'
+  | 'falharTransferencia';
 
 const ACOES_CAMPO_TESTES: DefinicaoAcao<AcaoCampoTestes>[] = [
   { acao: 'upgrade', rotulo: 'Upgrade', icone: 'fa-lock', variante: 'aviso' },
@@ -34,6 +44,12 @@ const ACOES_CAMPO_TESTES: DefinicaoAcao<AcaoCampoTestes>[] = [
   { acao: 'seguir', rotulo: 'Seguir', icone: 'fa-heart', variante: 'erro', vazado: true },
   { acao: 'deixarDeSeguir', rotulo: 'Deixar de seguir', icone: 'fa-heart', variante: 'erro' },
   { acao: 'denunciar', rotulo: 'Denunciar', icone: 'fa-flag', variante: 'erro' },
+  // Bancada de pagamento (T05): o papel do provedor de pagamento.
+  { acao: 'pagar', rotulo: 'Pagar o Pix', icone: 'fa-money-bill-wave', variante: 'alterar' },
+  { acao: 'vencer', rotulo: 'Fazer o Pix vencer', icone: 'fa-hourglass-end', variante: 'aviso' },
+  { acao: 'repetirAviso', rotulo: 'Repetir o último aviso do provedor', icone: 'fa-rotate-right' },
+  { acao: 'concluirTransferencia', rotulo: 'Concluir a transferência', icone: 'fa-check', variante: 'alterar' },
+  { acao: 'falharTransferencia', rotulo: 'Falhar a transferência', icone: 'fa-xmark', variante: 'erro' },
 ];
 
 // Coluna

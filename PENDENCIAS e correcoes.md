@@ -19,6 +19,11 @@ Nada aberto (03-10-2026). O "Aguardando" (pagamento que chega depois do fim da c
 Quem atualiza os requisitos é o Lucas com a revisão externa; aqui fica só o que precisa ir no próximo pedido. A atualização dos requisitos de 29-09-2026 já absorveu o termo único, o 2FA (fica sem RF, como ideia do fim do projeto), o modelo flexível e o Alterar/Excluir do admin. A atualização de 04-10-2026 absorveu os 12 pontos levados naquele dia (validade do Pix, espera do Pix no encerramento, IP do aceite, contestação, re-aceite dos dois termos, exclusão de conta, taxa de conclusão e os parâmetros novos). Os itens abaixo não foram tratados nela e continuam abertos.
 
 - **Tipografia do painel padronizada** (6 classes em `2-tipografia.css`): citar no próximo pedido de revisão de interface, pedindo ideias para enxugar mais sem quebrar.
+- **Destino do dinheiro quando a campanha encerra antes do prazo (17-10-2026, já implementado; Grupos BG e BH colados):** antes, o encerramento antecipado aprovado e o encerramento por moderação deixavam o dinheiro pago parado (nem repasse, nem devolução). A decisão do Lucas separou duas ações, cada uma com destino fixo, aplicado sozinho pelo sistema. Muda o texto de três requisitos (numeração da `MATRIZ-RASTREABILIDADE-RF.md`):
+  - **RF-064.** Hoje: encerrar direto só sem contribuição confirmada; com contribuição, pedido ao Administrador. Novo: o pesquisador pode **cancelar o projeto** direto, sem o Administrador, **mesmo com contribuição confirmada**, e todo o valor já pago é devolvido a quem apoiou (continua bloqueado com Pix pendente ainda válido). O pedido ao Administrador passa a ser só **"encerrar antes do prazo e receber"**, permitido apenas em campanha flexível ou tudo-ou-nada que já bateu a meta.
+  - **RF-066.** Hoje: aprovado o pedido, tudo-ou-nada devolve tudo e flexível repassa. Novo: aprovado o pedido, **repassa** ao pesquisador (flexível, ou tudo-ou-nada com a meta batida). ⚠️ Ponto central para a revisão: pelo texto atual, o pedido do seed da campanha 7 (tudo-ou-nada, meta batida, "objetivos atingidos antes do prazo") devolveria os R$ 45.000; pela decisão nova, repassa. Se a revisão preferir o texto atual, é uma linha em `destino_dinheiro_campanha` (05).
+  - **RF-114.** Hoje: a moderação aplica "as regras de devolução correspondentes ao modelo da campanha", sem prejudicar doadores. Novo: a moderação **devolve tudo, em qualquer modelo**. Vale citar que é a exceção à "ausência de reembolso no modelo flexível" do Termo de Uso.
+  - Pagamento que chega depois do encerramento segue o mesmo destino (antes ia para revisão manual).
 - **Para o Lucas discutir com a revisão externa (29-09-2026; o Lucas acha que alguns pontos do V8 não batem):**
   - **Aceite pendente no próximo login:** vale para versão nova do Termo (RF-015). O V8 tirou a parte da conta criada pelo admin (nascer com senha provisória e aceite pendente), por ser ferramenta de teste; o Lucas quer rediscutir.
   - **Modelo da campanha pode mudar até a aprovação:** o V8 deixou implícito (congelamento na aprovação); hoje o formulário nem envia o modelo.
@@ -62,6 +67,15 @@ Falta, e depende do `4-mail`:
 **Levar para a revisão externa quando o `4-mail` estiver pronto (pesquisa de mercado de 12-10-2026):** lembretes para quem segue a campanha ("faltam 48 h" e "faltam 8 h" para o fim, como faz o Kickstarter) e o endosso de colegas antes de enviar a campanha para aprovação (como faz o Experiment.com; este só com requisito novo).
 
 ### Pagamento: `22-contribuicao`, `23-repasse`, `24-auditoria-financeira`, gateway e checkout (por último, de propósito)
+
+#### 🔴 Pendência aberta (17-10-2026): o túnel (`cloudflared`) nos computadores da escola
+
+- **O problema:** para testar o webhook do Asaas sandbox no computador, é preciso um túnel (ver `.Tutorial-plataforma-pagamento-sandbox.md`, Parte 2). O `cloudflared` é um programa do Windows, não um pacote do projeto: o `npm install` não o traz. Num computador da escola, que apaga tudo todo dia, ele teria de ser instalado de novo a cada vez, e o `winget install --id Cloudflare.cloudflared` pode nem funcionar se o computador bloquear instalação.
+- **A pergunta do Lucas:** vai ser preciso rodar o `winget` toda vez na escola, ou dá para o túnel vir junto do `npm install`?
+- **Opção 1 (recomendada):** acrescentar o pacote npm `cloudflared` ao `nest/` e um atalho `npm run tunel`. O `npm install` de sempre baixa o túnel junto, sem instalar nada no Windows nem pedir administrador. Risco: a rede da escola bloquear o download do programa (o pacote baixa o executável na instalação); aí vale a opção 2.
+- **Opção 2:** o `cloudflared.exe` portátil (um arquivo só, roda sem instalar), baixado uma vez e guardado no Drive ou pendrive, copiado para o computador a cada dia.
+- **Atenuante:** para o teste do dia a dia, o túnel não é obrigatório. A "conferência com o provedor" (Parte 2 do tutorial) confirma o Pix sem aviso nenhum. O túnel só é obrigatório para testar o webhook de verdade e a validação de saque.
+- **Como fechar:** o Lucas testa na escola (semana de 19-10-2026) se o `winget` e o download do pacote npm funcionam lá, e decide entre as opções. Nada foi feito ainda.
 
 #### 🔴 O que o banco do dinheiro ainda deixa passar (sondagem de 03-10-2026)
 

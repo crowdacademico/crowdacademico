@@ -216,7 +216,7 @@ export const STATUS_ENCERRAMENTO = [
 export type StatusEncerramento = (typeof STATUS_ENCERRAMENTO)[number];
 
 // Espelha 01_extensoes_enums_tabelas.sql (tabela solicitacao_encerramento). id_admin vazio num pedido aprovado =
-// encerrado pelo próprio pesquisador, sem contribuição confirmada (encerrar_campanha_sem_contribuicao, 03).
+// encerrado pelo próprio pesquisador, projeto cancelado (encerrar_campanha_sem_contribuicao, 03).
 export interface SolicitacaoEncerramentoTable {
   id_solicitacao_encerramento: Generated<number>;
   id_campanha: number;

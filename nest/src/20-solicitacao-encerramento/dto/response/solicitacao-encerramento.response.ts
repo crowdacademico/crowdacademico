@@ -17,7 +17,7 @@ export class SolicitacaoEncerramentoResponse {
   nomePesquisador: string | null;
   justificativaPesquisador: string | null;
   status: StatusEncerramento;
-  // Vazio num pedido aprovado = encerrado pelo próprio pesquisador, sem contribuição confirmada.
+  // Vazio num pedido aprovado = projeto cancelado pelo próprio pesquisador (o dinheiro já pago volta para quem apoiou).
   idAdmin: number | null;
   nomeAdmin: string | null;
   justificativaAdmin: string | null;

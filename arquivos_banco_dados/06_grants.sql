@@ -350,6 +350,11 @@ GRANT EXECUTE ON FUNCTION public.aplicar_evento_repasse(INT, VARCHAR, TEXT, stat
 -- expirar_campanhas_rascunho(), expirar_campanhas_rejeitadas() e limpar_log_auditoria(). Mesma higiene de [06-D-2b].
 REVOKE EXECUTE ON FUNCTION public.encerrar_campanhas_vencidas() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.encerrar_campanhas_vencidas() TO app_nestjs;
+-- Destino do dinheiro de campanha encerrada (05): só as funções de encerramento e o webhook chamam, por dentro. Nenhuma
+-- rota chama direto, então ninguém recebe EXECUTE.
+REVOKE EXECUTE ON FUNCTION public.criar_repasse_campanha(INT, BOOLEAN) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.devolver_contribuicoes_campanha(INT) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.destino_dinheiro_campanha(INT) FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.expirar_contribuicoes_pendentes() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.expirar_contribuicoes_pendentes() TO app_nestjs;
 REVOKE EXECUTE ON FUNCTION public.expirar_campanhas_rascunho() FROM PUBLIC;

@@ -418,6 +418,8 @@ export function ModalAlterarCampanha({
                   <SecaoEncerramentoAntecipado
                     authFetch={auth.authFetch}
                     idCampanha={idCampanha}
+                    modelo={campanha.modelo}
+                    metaFinanceira={campanha.metaFinanceira}
                     valorArrecadado={campanha.valorBrutoArrecadado}
                     aoEncerrada={() => {
                       aoMudar();
