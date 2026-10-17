@@ -505,9 +505,29 @@ export interface ContribuicaoTable {
   proxima_tentativa_estorno_em: Date | null;
   reconciliada_em: Date | null;
   cobranca_cancelada_em: Date | null;
-  // Só a trigger trg_contribuicao_define_taxa_pagamento (05) grava.
+  // trg_contribuicao_define_taxa_pagamento (05) grava a estimada; ajustar_tarifa_pix (05) corrige para a real.
   taxa_pagamento: Generated<string>;
   id_repasse: number | null;
+}
+
+// Espelha 01_extensoes_enums_tabelas.sql (tabela repasse). Só leitura no Nest: quem cria e muda repasse são as funções
+// SECURITY DEFINER de 05 (fechamento, worker de repasse).
+export type StatusRepasse = 'pendente' | 'processando' | 'concluido' | 'erro';
+
+export interface RepasseTable {
+  id_repasse: Generated<number>;
+  id_campanha: number;
+  valor_bruto: string;
+  valor_liquido: string;
+  meta_atingida: Generated<boolean>;
+  repassado_em: Date | null;
+  taxa_relativa: string | null;
+  status: Generated<StatusRepasse>;
+  provedor: string | null;
+  id_transferencia_api: string | null;
+  chave_idempotencia: Generated<string>;
+  tentativas_transferencia: Generated<number>;
+  proxima_tentativa_em: Date | null;
 }
 
 // Espelha o enum tipo_chave_pix (01), usado em perfil_pesquisador.tipo_chave_pix.
@@ -682,6 +702,7 @@ export interface DB {
   seguir_campanha: SeguirCampanhaTable;
   seguir_pesquisador: SeguirPesquisadorTable;
   contribuicao: ContribuicaoTable;
+  repasse: RepasseTable;
   atualizacao_campanha: AtualizacaoCampanhaTable;
   orcamento_campanha: OrcamentoCampanhaTable;
   marco_cronograma: MarcoCronogramaTable;

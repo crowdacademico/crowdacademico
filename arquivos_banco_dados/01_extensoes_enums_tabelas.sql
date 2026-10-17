@@ -872,8 +872,9 @@ CREATE TABLE contribuicao (
     criado_em        TIMESTAMPTZ           NOT NULL DEFAULT NOW(),
     token_sessao     UUID                DEFAULT gen_random_uuid(),
     provedor         VARCHAR(50)         NOT NULL DEFAULT 'asaas', -- gateway que processou o pagamento (arquitetura de portas: trocar de gateway não reescreve regra de negócio)
-    -- Tarifa do provedor paga por quem apoia, por cima de `valor` (cobrança = valor + taxa_pagamento). Só a trigger
-    -- trg_contribuicao_define_taxa_pagamento (05) grava. Fica fora do arrecadado, do repasse e da devolução.
+    -- Tarifa do provedor paga por quem apoia, por cima de `valor` (cobrança = valor + taxa_pagamento). A trigger
+    -- trg_contribuicao_define_taxa_pagamento (05) grava a estimada e ajustar_tarifa_pix (05) a corrige para a real que o
+    -- provedor informou. Fica fora do arrecadado, do repasse e da devolução.
     taxa_pagamento   DECIMAL(10,2)       NOT NULL DEFAULT 0,
     -- Repasse em que esta contribuição entrou (só 'confirmado' de campanha encerrada; ver encerrar_campanhas_vencidas em 05).
     id_repasse       INT,

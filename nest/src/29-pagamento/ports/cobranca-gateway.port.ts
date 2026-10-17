@@ -19,7 +19,11 @@ export interface CriarCobrancaParams {
   // Mesma chave => mesma cobrança, sem duplicar. Quem chama manda contribuicao.token_sessao (decisão do PR-01,
   // [01-H] em DOCUMENTACAO_BD.md).
   chaveIdempotencia: string;
+  // Total cobrado de quem apoia: a contribuição + a tarifa estimada.
   valor: number;
+  // Parte de `valor` que é a tarifa do provedor (configuracoes.taxa_pagamento_pix). O adapter que souber a tarifa real
+  // na criação corrige o valor da cobrança para contribuição + tarifa real e devolve a real em `tarifaProvedor`.
+  tarifaEstimada?: number;
   meioPagamento: MeioPagamentoGateway;
   // Alinhado a campanha.data_fim: nunca sobra PIX pendente depois do prazo.
   expiraEm: Date;

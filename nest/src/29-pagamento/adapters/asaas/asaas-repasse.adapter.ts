@@ -114,8 +114,8 @@ export class AsaasRepasseAdapter implements RepasseGatewayPort {
       );
       return {
         existe: true,
-        documentoTitular: dados.cpfCnpj,
-        nomeTitular: dados.name ?? dados.ownerName,
+        documentoTitular: dados.owner?.cpfCnpj,
+        nomeTitular: dados.owner?.name,
       };
     } catch (erro) {
       if (

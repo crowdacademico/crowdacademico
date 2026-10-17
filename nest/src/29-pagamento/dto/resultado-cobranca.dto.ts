@@ -29,6 +29,8 @@ export interface ResultadoCobranca {
   pix?: DadosPix;
   // Só quando a cobrança foi criada com split.
   idSplit?: string;
+  // Tarifa real que o provedor vai descontar desta cobrança (valor - líquido), quando ele informa. Só na criação.
+  tarifaProvedor?: number;
 }
 
 export interface ResultadoEstorno {

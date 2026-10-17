@@ -352,6 +352,9 @@ REVOKE EXECUTE ON FUNCTION public.encerrar_campanhas_vencidas() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.encerrar_campanhas_vencidas() TO app_nestjs;
 -- Destino do dinheiro de campanha encerrada (05): só as funções de encerramento e o webhook chamam, por dentro. Nenhuma
 -- rota chama direto, então ninguém recebe EXECUTE.
+-- ajustar_tarifa_pix: o POST /contribuicao grava a tarifa real que o provedor informou ao criar a cobrança.
+REVOKE EXECUTE ON FUNCTION public.ajustar_tarifa_pix(INT, DECIMAL) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.ajustar_tarifa_pix(INT, DECIMAL) TO app_nestjs;
 REVOKE EXECUTE ON FUNCTION public.criar_repasse_campanha(INT, BOOLEAN) FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.devolver_contribuicoes_campanha(INT) FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.destino_dinheiro_campanha(INT) FROM PUBLIC;

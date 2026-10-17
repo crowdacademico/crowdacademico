@@ -23,6 +23,8 @@ export interface AsaasPayment {
   // PENDING, CONFIRMED, RECEIVED, RECEIVED_IN_CASH, OVERDUE, REFUNDED, REFUND_REQUESTED, REFUND_IN_PROGRESS, ...
   status: string;
   value: number;
+  // O que cai na conta: value menos a tarifa do Asaas. Já vem na criação, antes do pagamento.
+  netValue?: number;
   billingType?: string;
   dueDate?: string;
   externalReference?: string | null;
@@ -46,16 +48,17 @@ export interface AsaasTransfer {
   externalReference?: string | null;
   failReason?: string | null;
   pixAddressKey?: string | null;
+  // Na transferência Pix o Asaas devolve a chave aqui dentro (conferido no sandbox), não no nível de cima.
+  bankAccount?: { pixAddressKey?: string | null } | null;
 }
 
 // Resposta da consulta de chave Pix externa (DICT). O nome exato dos campos NÃO está na documentação pública: o que se
 // sabe é que "cpfCnpj" volta mascarado (ex.: ***.202.745-**). Os demais nomes abaixo são tentativas tolerantes.
 // VERIFICAR NO SANDBOX (só a chave 47996515839 é consultável lá) e ajustar aqui se o JSON real for outro.
+// O titular vem em `owner` (resposta do GET /pix/addressKeys/external, conferida no sandbox).
 export interface AsaasChavePixExterna {
-  cpfCnpj?: string;
-  name?: string;
-  ownerName?: string;
   key?: string;
+  owner?: { name?: string; cpfCnpj?: string };
 }
 
 // Corpo de um webhook de cobrança/transferência (e do pedido de validação de saque).

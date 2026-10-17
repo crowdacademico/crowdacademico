@@ -2,7 +2,7 @@ import { GatewayPagamentoErro } from '../../dto/erro-gateway-pagamento';
 import { type ConfiguracaoAsaas } from './asaas.config';
 import { type AsaasErroCorpo } from './asaas.types';
 
-export type MetodoHttp = 'GET' | 'POST' | 'DELETE';
+export type MetodoHttp = 'GET' | 'POST' | 'PUT' | 'DELETE';
 
 export interface OpcoesRequisicao {
   query?: Record<string, string | number | undefined>;

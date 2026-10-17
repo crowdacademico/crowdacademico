@@ -133,10 +133,34 @@ export class AsaasCobrancaAdapter implements CobrancaGatewayPort {
       },
     );
 
-    // A cobrança já existe no Asaas: se o QR falhar, cancela antes de devolver o erro. Sem isso ela ficaria aberta e
-    // pagável sem nenhuma contribuição ligada a ela (ninguém recebe o código, mas o Asaas aceitaria o pagamento).
+    // A cobrança já existe no Asaas: se o ajuste da tarifa ou o QR falharem, cancela antes de devolver o erro. Sem isso
+    // ela ficaria aberta e pagável sem nenhuma contribuição ligada a ela (ninguém recebe o código, mas o Asaas aceitaria).
     let qr: AsaasPixQrCode;
+    let tarifaProvedor: number | undefined;
     try {
+      // Tarifa real = valor - líquido, que o Asaas informa já na criação (promoção, isenção ou tarifa nova). Se for
+      // outra que a estimada, a cobrança passa a ser contribuição + tarifa real, ANTES do QR: quem apoia paga a tarifa
+      // de verdade, nem a mais nem a menos.
+      if (pagamento.netValue !== undefined) {
+        tarifaProvedor = arredondar(pagamento.value - pagamento.netValue);
+        if (
+          params.tarifaEstimada !== undefined &&
+          tarifaProvedor !== arredondar(params.tarifaEstimada)
+        ) {
+          pagamento = await this.http.requisitar<AsaasPayment>(
+            'PUT',
+            `/payments/${encodeURIComponent(pagamento.id)}`,
+            {
+              corpo: {
+                value: arredondar(
+                  valor - params.tarifaEstimada + tarifaProvedor,
+                ),
+                dueDate: dataBrasilia(params.expiraEm),
+              },
+            },
+          );
+        }
+      }
       qr = await this.http.requisitar<AsaasPixQrCode>(
         'GET',
         `/payments/${encodeURIComponent(pagamento.id)}/pixQrCode`,
@@ -148,6 +172,7 @@ export class AsaasCobrancaAdapter implements CobrancaGatewayPort {
 
     return {
       ...this.paraResultado(pagamento),
+      tarifaProvedor,
       pix: {
         copiaECola: qr.payload,
         qrCodeBase64: qr.encodedImage,

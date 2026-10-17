@@ -75,6 +75,7 @@ Falta, e depende do `4-mail`:
 - **Opção 1 (recomendada):** acrescentar o pacote npm `cloudflared` ao `nest/` e um atalho `npm run tunel`. O `npm install` de sempre baixa o túnel junto, sem instalar nada no Windows nem pedir administrador. Risco: a rede da escola bloquear o download do programa (o pacote baixa o executável na instalação); aí vale a opção 2.
 - **Opção 2:** o `cloudflared.exe` portátil (um arquivo só, roda sem instalar), baixado uma vez e guardado no Drive ou pendrive, copiado para o computador a cada dia.
 - **Atenuante:** para o teste do dia a dia, o túnel não é obrigatório. A "conferência com o provedor" (Parte 2 do tutorial) confirma o Pix sem aviso nenhum. O túnel só é obrigatório para testar o webhook de verdade e a validação de saque.
+- **Ideia para depois (17-10-2026):** um comando só (ex.: `npm run tunel`) que abre o túnel, lê o endereço novo (o `cloudflared` informa em `http://127.0.0.1:20241/quicktunnel`) e já atualiza no Asaas, pela API, a URL do webhook e a da validação de saque. Hoje isso é feito à mão a cada vez que o túnel abre.
 - **Como fechar:** o Lucas testa na escola (semana de 19-10-2026) se o `winget` e o download do pacote npm funcionam lá, e decide entre as opções. Nada foi feito ainda.
 
 #### 🔴 O que o banco do dinheiro ainda deixa passar (sondagem de 03-10-2026)

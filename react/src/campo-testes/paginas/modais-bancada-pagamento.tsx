@@ -10,19 +10,12 @@ import { emBreve } from '../../services/12-campanha/constants/status-campanha.co
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import { formatarMoeda } from '../../services/constant/util/formatacao.util';
 import { TIPO_CHAVE_PIX, type TipoChavePix } from '../../services/constant/type/enums-do-banco.gerado';
+import { ROTULO_TIPO_CHAVE_PIX } from '../../services/30-conta-recebimento/constants/conta-recebimento.constants';
 import { bancadaPagamentoApi, type ContribuicaoCriada } from '../servicos/api/bancada-pagamento.api';
 import type { AuthFetch } from '../../services/3-auth/type/auth.type';
 import type { CampanhaResponse } from '../../services/12-campanha/type/campanha.type';
 
 type Chamar = <T>(caminho: string, opcoes?: RequestInit) => Promise<T>;
-
-const ROTULO_TIPO_CHAVE: Record<TipoChavePix, string> = {
-  cpf: 'CPF',
-  cnpj: 'CNPJ',
-  email: 'E-mail',
-  telefone: 'Telefone',
-  aleatoria: 'Chave aleatória',
-};
 
 // Campanha que aceita apoio agora: publicada, já começou e o prazo não acabou.
 function aceitaApoio(campanha: CampanhaResponse): boolean {
@@ -174,7 +167,7 @@ export function ModalChavePix({ chamar, aoFechar, aoCadastrada }: ModalChavePixP
             <select {...atributos} value={tipoChave} onChange={(evento) => setTipoChave(evento.target.value as TipoChavePix)} className={'input-padrao' + classeErro}>
               {TIPO_CHAVE_PIX.map((tipo) => (
                 <option key={tipo} value={tipo}>
-                  {ROTULO_TIPO_CHAVE[tipo]}
+                  {ROTULO_TIPO_CHAVE_PIX[tipo]}
                 </option>
               ))}
             </select>

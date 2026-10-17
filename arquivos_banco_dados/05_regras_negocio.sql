@@ -3096,6 +3096,40 @@ FOR EACH ROW
 EXECUTE FUNCTION public.fn_contribuicao_define_taxa_pagamento();
 
 -- ----------------------------------------------------------------------------
+-- Função:     ajustar_tarifa_pix
+-- Assinatura: (p_id_contribuicao INT, p_tarifa DECIMAL) -> VOID
+-- Bloco:      [05-K-2]
+-- Regra:      O provedor informou, ao criar a cobrança, a tarifa REAL do Pix (promoção, isenção ou tarifa nova) e ela é
+--             diferente da estimada: grava a real na contribuição (ainda 'pendente', Pix) e passa a usá-la como padrão
+--             (configuracoes.taxa_pagamento_pix), para as próximas já nascerem certas. A mudança do parâmetro fica no log
+--             de auditoria, como qualquer outra. Chamada pelo Nest no POST /contribuicao, com o número que o provedor
+--             devolveu; tarifa negativa ou maior que a própria contribuição é recusada (90036).
+-- ----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.ajustar_tarifa_pix(p_id_contribuicao INT, p_tarifa DECIMAL)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_valor DECIMAL(10,2);
+BEGIN
+    SELECT valor INTO v_valor FROM contribuicao
+    WHERE id_contribuicao = p_id_contribuicao AND status = 'pendente' AND meio_pagamento = 'pix';
+    IF NOT FOUND THEN
+        RETURN;
+    END IF;
+    IF p_tarifa IS NULL OR p_tarifa < 0 OR p_tarifa >= v_valor THEN
+        RAISE EXCEPTION 'Tarifa do provedor fora do esperado: %.', p_tarifa USING ERRCODE = '90036';
+    END IF;
+
+    UPDATE contribuicao SET taxa_pagamento = p_tarifa WHERE id_contribuicao = p_id_contribuicao;
+    UPDATE configuracoes SET valor = to_char(p_tarifa, 'FM999999990.00')
+    WHERE chave = 'taxa_pagamento_pix' AND id_usuario IS NULL AND valor::DECIMAL IS DISTINCT FROM p_tarifa;
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
 -- Função:     fn_sincroniza_arrecadado_campanha
 -- Assinatura: () -> TRIGGER
 -- Bloco:      [05-K-2]

@@ -116,7 +116,7 @@ export class AsaasWebhookAdapter implements WebhookVerifierPort {
           : undefined,
       valor: typeof t.value === 'number' ? t.value : undefined,
       chavePixDestino:
-        typeof t.pixAddressKey === 'string' ? t.pixAddressKey : undefined,
+        t.pixAddressKey ?? t.bankAccount?.pixAddressKey ?? undefined,
     };
   }
 

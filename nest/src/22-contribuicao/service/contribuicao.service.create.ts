@@ -131,6 +131,7 @@ export class ContribuicaoServiceCreate {
       cobranca = await this.gateway.criarCobranca({
         chaveIdempotencia: tokenSessao,
         valor: valorCobrado(contribuicao),
+        tarifaEstimada: Number(contribuicao.taxa_pagamento),
         meioPagamento: dto.meioPagamento,
         expiraEm: calcularExpiracaoPix(
           campanha.data_fim,
@@ -143,14 +144,29 @@ export class ContribuicaoServiceCreate {
       throw this.traduzirErroDoGateway(erro, contribuicao.id_contribuicao);
     }
 
-    // Passo 3: vincula a cobrança do gateway à contribuição (o webhook acha a contribuição por este id).
+    // Passo 3: vincula a cobrança do gateway à contribuição (o webhook acha a contribuição por este id). Se o provedor
+    // informou uma tarifa real diferente da estimada (ele já corrigiu o valor da cobrança), grava a real na contribuição
+    // e no parâmetro (ajustar_tarifa_pix, 05): a resposta e as próximas contribuições usam a tarifa de verdade.
+    const tarifaReal = cobranca.tarifaProvedor;
+    const ajustarTarifa =
+      tarifaReal !== undefined &&
+      tarifaReal !== Number(contribuicao.taxa_pagamento);
     try {
-      await executarTransacaoCurta(this.pool, { idUsuario }, (client) =>
-        client.query(
+      await executarTransacaoCurta(this.pool, { idUsuario }, async (client) => {
+        if (ajustarTarifa) {
+          await client.query(
+            'SELECT public.ajustar_tarifa_pix($1::int, $2::numeric)',
+            [contribuicao.id_contribuicao, tarifaReal],
+          );
+        }
+        await client.query(
           `SELECT public.atualizar_status_contribuicao($1::int, 'pendente'::status_contribuicao, $2::varchar)`,
           [contribuicao.id_contribuicao, cobranca.idCobranca],
-        ),
-      );
+        );
+      });
+      if (ajustarTarifa) {
+        contribuicao.taxa_pagamento = tarifaReal.toFixed(2);
+      }
     } catch (erro) {
       // A cobrança EXISTE no gateway mas não conseguimos ligá-la à contribuição: se alguém pagar, o webhook não
       // acharia a contribuição. Por isso não devolvemos o QR (ninguém deve pagar algo que não rastreamos), cancelamos a
