@@ -172,9 +172,13 @@
     text-align: center;
   }
 
-  /* Largura padrão da coluna "id" em TODA tabela (deve suportar 3 ou 4 dígitos sem quebra de linha). `width` é
-     preferência, não trava: ids maiores alargam a coluna sozinhos. `white-space: nowrap`
-     garante que os dígitos nunca quebram linha mesmo numa tela estreita.
+  /* Largura da coluna "id" em TODA tabela: cabe um id de até `--coluna-id-digitos` dígitos MAIS os dois respiros
+     (o da esquerda, `--padding-celula`, e o da direita, o clamp abaixo), então a coluna fica do mesmo tamanho em
+     todas as páginas (de 1 a 999) e o respiro continua encolhendo junto com a tela. Antes era `width: 4rem` com
+     os respiros DENTRO dos 4rem: sobravam uns 15 px para os dígitos, e a coluna crescia 3 px na página em que os
+     ids passavam de 1 para 2 dígitos (medido em 18-10-2026). `width` é preferência, não trava: id maior que o
+     previsto alarga a coluna sozinho. Dígitos de largura igual (`tabular-nums`), para "111" e "888" medirem o
+     mesmo. `white-space: nowrap` garante que os dígitos nunca quebram linha mesmo numa tela estreita.
      `padding-right` extra: a coluna do lado direito de ID precisa ficar naturalmente um pouco mais afastada
      se tiver espaço, e só se aproximar em tela pequena. Próprio `clamp()`, deliberadamente MAIS generoso que
      o padding horizontal padrão de toda th/td (regra base, logo acima): cresce sozinho até 2rem em tela
@@ -185,11 +189,17 @@
      valor_rem_em_px × 100 / coeficiente`; com 2.5vw a faixa de transição é ~704px–1280px (com 4vw seria só
      440px–800px, e ID e nome demorariam a se aproximar). Não muda os limites (1.1rem–2rem) nem o
      comportamento em tela bem larga ou bem estreita, só ADIANTA a transição. */
+  .crud-tabela {
+    --coluna-id-digitos: 3;
+    --coluna-id-respiro-direita: clamp(1.1rem, 2.5vw, 2rem);
+  }
+
   .crud-tabela th.crud-tabela__coluna-id,
   .crud-tabela td.crud-tabela__coluna-id {
-    width: 4rem;
+    width: calc(var(--coluna-id-digitos) * 1ch + var(--padding-celula) + var(--coluna-id-respiro-direita));
     white-space: nowrap;
-    padding-right: clamp(1.1rem, 2.5vw, 2rem);
+    font-variant-numeric: tabular-nums;
+    padding-right: var(--coluna-id-respiro-direita);
   }
 
   /* ===== Tipos de coluna da GenericTable (components/crud/colunas/) =====
