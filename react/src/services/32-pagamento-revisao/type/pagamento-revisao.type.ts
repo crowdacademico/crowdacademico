@@ -19,6 +19,12 @@ export interface RevisaoPagamentoResponse {
   // De onde veio o dinheiro/efeito (só nas revisões que deixaram auditoria).
   idContribuicao: number | null;
   idRepasse: number | null;
+  // Valor do evento (da auditoria) e para onde o dinheiro andou segundo o provedor: 'entrada' (pagamento recebido),
+  // 'saida' (estorno, devolução, transferência concluída) ou null (nada se moveu).
+  valor: number | null;
+  sentido: 'entrada' | 'saida' | null;
+  // Arrecadado ATUAL da campanha da contribuição ou do repasse.
+  arrecadado: number | null;
 }
 
 export interface ReembolsoManualResponse {
@@ -27,7 +33,7 @@ export interface ReembolsoManualResponse {
   // null = contribuição feita sem conta.
   idUsuario: number | null;
   valorBruto: number;
-  // O LÍQUIDO a devolver: a taxa da plataforma fica retida (mesma conta do estorno automático).
+  // O valor da contribuição: a tarifa do provedor, paga por cima, não volta (mesma conta da devolução automática).
   valorADevolver: number;
   meioPagamento: MeioPagamento;
   tentativas: number;

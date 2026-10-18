@@ -88,6 +88,7 @@ export function ListarDenuncias({ auth }: PropsPagina) {
             rotulo: 'situação',
             tipo: 'status',
             renderizar: (linha: DenunciaLinha) => <BadgeStatusDenuncia status={linha.situacao} />,
+            textoExibido: (linha: DenunciaLinha) => ROTULO_STATUS_DENUNCIA[linha.situacao],
           },
           { chave: 'contestacaoSituacao', rotulo: 'contestação', tipo: 'status' },
           { chave: 'esperandoDesde', rotulo: 'esperando', tipo: 'espera' },

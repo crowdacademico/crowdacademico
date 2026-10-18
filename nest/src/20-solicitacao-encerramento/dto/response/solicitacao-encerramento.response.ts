@@ -11,6 +11,8 @@ export class SolicitacaoEncerramentoResponse {
   statusCampanha: StatusCampanha | null;
   modeloCampanha: ModeloCampanha | null;
   valorArrecadado: number | null;
+  // Meta da campanha: com o arrecadado, dá a barra de quanto da meta já foi atingido.
+  metaCampanha: number | null;
   // Contribuições confirmadas (ou já repassadas) da campanha, para quem decide (RF-065).
   contribuicoesConfirmadas: number;
   idPesquisador: number | null;

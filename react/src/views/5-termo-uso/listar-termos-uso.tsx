@@ -60,6 +60,7 @@ export function ListarTermosUso({ auth }: PropsPagina) {
             rotulo: 'tipo',
             tipo: 'texto',
             renderizar: (linha) => ROTULO_TIPO_TERMO[linha.tipo],
+            textoExibido: (linha) => ROTULO_TIPO_TERMO[linha.tipo],
           },
           { chave: 'ativo', rotulo: 'vigente', tipo: 'simNao' },
           { chave: 'criadoEm', rotulo: 'publicado em', tipo: 'data' },

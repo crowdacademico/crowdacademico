@@ -11,6 +11,7 @@ export type SolicitacaoComDetalhes = SolicitacaoEncerramentoEntity & {
   status_campanha: StatusCampanha | null;
   modelo_campanha: ModeloCampanha | null;
   valor_arrecadado: string | number | null;
+  meta_campanha: string | number | null;
   id_pesquisador: number | null;
   nome_pesquisador: string | null;
   nome_admin: string | null;
@@ -29,6 +30,8 @@ export class SolicitacaoEncerramentoConverter {
       modeloCampanha: linha.modelo_campanha,
       valorArrecadado:
         linha.valor_arrecadado === null ? null : Number(linha.valor_arrecadado),
+      metaCampanha:
+        linha.meta_campanha === null ? null : Number(linha.meta_campanha),
       contribuicoesConfirmadas: Number(linha.contribuicoes_confirmadas ?? 0),
       idPesquisador: linha.id_pesquisador,
       nomePesquisador: linha.nome_pesquisador,

@@ -1,5 +1,3 @@
-import { TextoComBarraProgresso } from '../../../components/crud/barra-progresso';
-import { formatarMoeda } from '../../../services/constant/util/formatacao.util';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { BadgeStatusCampanha } from '../../../components/crud/badge-status-campanha';
@@ -10,12 +8,14 @@ import { useToast } from '../../../components/layout/toast/use-toast';
 import { campanhaApi } from '../../../services/12-campanha/api/campanha.api';
 import {
   ROTULO_STATUS_CAMPANHA,
+  rotuloStatusCampanha,
   STATUS_ACEITA_COMENTARIO,
   STATUS_ACEITA_DENUNCIA,
   STATUS_ACEITA_SEGUIR,
 } from '../../../services/12-campanha/constants/status-campanha.constants';
 import { seguirCampanhaApi } from '../../../services/16-seguir-campanha/api/seguir-campanha.api';
 import { usuarioApi } from '../../../services/1-usuario/api/usuario.api';
+import { renderizarArrecadado } from '../../../views/12-campanha/colunas-campanha';
 import { ModalConsultarCampanha } from '../../../views/12-campanha/modal-consultar-campanha';
 import { ModalDenunciar } from '../../../views/19-denuncia/modal-denunciar';
 import { ModalComentar } from '../../paginas/modal-comentar';
@@ -109,19 +109,18 @@ export function useCampanhasCampoTestes(auth: UseAuthReturn, aoMudarSeguidas?: (
     colunas: [
       { chave: 'idCampanha', rotulo: 'id', tipo: 'id' },
       { chave: 'titulo', rotulo: 'título', tipo: 'nome', umaLinha: true },
-      { chave: 'status', rotulo: 'status', tipo: 'status', renderizar: (campanha) => <BadgeStatusCampanha campanha={campanha} /> },
+      {
+        chave: 'status',
+        rotulo: 'status',
+        tipo: 'status',
+        renderizar: (campanha) => <BadgeStatusCampanha campanha={campanha} />,
+        textoExibido: (campanha) => rotuloStatusCampanha(campanha),
+      },
       {
         chave: 'valorBrutoArrecadado',
         rotulo: 'arrecadado',
         tipo: 'dinheiro',
-        renderizar: (campanha) => (
-          <TextoComBarraProgresso
-            texto={formatarMoeda(campanha.valorBrutoArrecadado)}
-            valor={campanha.valorBrutoArrecadado}
-            total={campanha.metaFinanceira}
-            rotulo="Arrecadado em relação à meta"
-          />
-        ),
+        renderizar: renderizarArrecadado,
       },
       { chave: 'metaFinanceira', rotulo: 'meta', tipo: 'dinheiro' },
     ],

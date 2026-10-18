@@ -6,6 +6,12 @@
 // Se uma chave nova nascer sem entrada aqui, cai no grupo "Outras": nunca quebra a tela, só fica sem
 // organização até alguém lembrar de classificar.
 const GRUPO_CONFIGURACAO: Record<string, string> = {
+  // Interruptores das tarefas automáticas (tarefas-automaticas.constants.ts).
+  tarefa_encerrar_campanhas_ligada: 'Tarefas automáticas',
+  tarefa_repasse_ligada: 'Tarefas automáticas',
+  tarefa_devolucao_ligada: 'Tarefas automáticas',
+  tarefa_conferencia_ligada: 'Tarefas automáticas',
+  teste_pagamento_automatico_ligado: 'Tarefas automáticas',
   // Moderação: cor do tempo de espera nas filas (coluna "esperando").
   espera_atencao_dias: 'Moderação',
   espera_critica_dias: 'Moderação',
@@ -86,7 +92,7 @@ const GRUPO_CONFIGURACAO: Record<string, string> = {
   notificar_novas_campanhas: 'Geral',
 };
 
-const ORDEM_GRUPOS = ['Segurança', 'Financeiro', 'Pagamentos', 'Campanha', 'Moderação', 'Score / Reputação', 'Arquivo', 'Geral', 'Outras'];
+const ORDEM_GRUPOS = ['Segurança', 'Financeiro', 'Pagamentos', 'Tarefas automáticas', 'Campanha', 'Moderação', 'Score / Reputação', 'Arquivo', 'Geral', 'Outras'];
 
 export function grupoConfiguracao(chave: string): string {
   return GRUPO_CONFIGURACAO[chave] ?? 'Outras';

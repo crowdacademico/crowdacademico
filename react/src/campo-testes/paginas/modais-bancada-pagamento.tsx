@@ -10,10 +10,11 @@ import { useToast } from '../../components/layout/toast/use-toast';
 import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
 import { emBreve } from '../../services/12-campanha/constants/status-campanha.constants';
 import { useEnvio } from '../../services/constant/hook/use-envio';
-import { formatarMoeda } from '../../services/constant/util/formatacao.util';
+import { formatarDataHora, formatarMoeda } from '../../services/constant/util/formatacao.util';
 import { TIPO_CHAVE_PIX, type TipoChavePix } from '../../services/constant/type/enums-do-banco.gerado';
 import { ROTULO_TIPO_CHAVE_PIX } from '../../services/30-conta-recebimento/constants/conta-recebimento.constants';
-import { bancadaPagamentoApi, type ContribuicaoCriada } from '../servicos/api/bancada-pagamento.api';
+import { bancadaPagamentoApi, type ContribuicaoBancada, type ContribuicaoCriada } from '../servicos/api/bancada-pagamento.api';
+import type { StatusContribuicao } from '../../services/constant/type/enums-do-banco.gerado';
 import type { AuthFetch } from '../../services/3-auth/type/auth.type';
 import type { CampanhaResponse } from '../../services/12-campanha/type/campanha.type';
 
@@ -23,6 +24,37 @@ type MeioContribuicao = 'pix' | 'cartao_credito' | 'boleto';
 // Campanha que aceita apoio agora: publicada, já começou e o prazo não acabou.
 function aceitaApoio(campanha: CampanhaResponse): boolean {
   return campanha.status === 'ativo' && !emBreve(campanha) && (campanha.dataFim === null || new Date(campanha.dataFim) > new Date());
+}
+
+// A campanha da contribuição e a situação dela, igual no "Contribuir" (logo depois de criar) e no "Consultar" da tabela:
+// título, meta, arrecadado até agora com a barra, situação e a data e hora exatas (com segundos) em que foi criada.
+function SecaoCampanhaDaContribuicao({ campanha, status, criadoEm }: { campanha: CampanhaResponse; status: StatusContribuicao; criadoEm: string }) {
+  return (
+    <SecaoFicha titulo="Campanha">
+      <CampoFicha rotulo="Campanha" largura="cheia" valor={`#${campanha.idCampanha} ${campanha.titulo}`} />
+      <CampoFicha rotulo="Meta" valor={formatarMoeda(campanha.metaFinanceira)} />
+      <CampoFicha
+        rotulo="Arrecadado até agora"
+        valor={
+          <span className="block space-y-1.5">
+            <span className="block">{formatarMoeda(campanha.valorBrutoArrecadado)}</span>
+            <BarraProgresso valor={campanha.valorBrutoArrecadado} total={campanha.metaFinanceira} rotulo="Arrecadado em relação à meta" />
+          </span>
+        }
+      />
+      <CampoFicha
+        rotulo="Situação da contribuição"
+        largura="cheia"
+        valor={
+          <span className="flex flex-wrap items-center gap-2">
+            <BadgeStatusContribuicao status={status} />
+            {status === 'pendente' && <span className="texto-fraco">Entra no arrecadado quando for paga (botão Pagar da tabela).</span>}
+          </span>
+        }
+      />
+      <CampoFicha rotulo="Criada em" valor={formatarDataHora(criadoEm)} />
+    </SecaoFicha>
+  );
 }
 
 interface ModalGerarPixProps {
@@ -81,35 +113,7 @@ export function ModalGerarPix({ authFetch, chamar, aoFechar, aoGerado }: ModalGe
     >
       {gerada ? (
         <>
-          {campanhaEscolhida && (
-            <SecaoFicha titulo="Campanha">
-              <CampoFicha rotulo="Campanha" largura="cheia" valor={`#${campanhaEscolhida.idCampanha} ${campanhaEscolhida.titulo}`} />
-              <CampoFicha rotulo="Meta" valor={formatarMoeda(campanhaEscolhida.metaFinanceira)} />
-              <CampoFicha
-                rotulo="Arrecadado até agora"
-                valor={
-                  <span className="block space-y-1.5">
-                    <span className="block">{formatarMoeda(campanhaEscolhida.valorBrutoArrecadado)}</span>
-                    <BarraProgresso
-                      valor={campanhaEscolhida.valorBrutoArrecadado}
-                      total={campanhaEscolhida.metaFinanceira}
-                      rotulo="Arrecadado em relação à meta"
-                    />
-                  </span>
-                }
-              />
-              <CampoFicha
-                rotulo="Situação da contribuição"
-                largura="cheia"
-                valor={
-                  <span className="flex flex-wrap items-center gap-2">
-                    <BadgeStatusContribuicao status={gerada.status} />
-                    <span className="texto-fraco">Entra no arrecadado quando for paga (botão Pagar da tabela).</span>
-                  </span>
-                }
-              />
-            </SecaoFicha>
-          )}
+          {campanhaEscolhida && <SecaoCampanhaDaContribuicao campanha={campanhaEscolhida} status={gerada.status} criadoEm={gerada.criadoEm} />}
           <SecaoFicha titulo="O que a pessoa paga">
             <CampoFicha rotulo="Contribuição" valor={formatarMoeda(gerada.valor)} />
             <CampoFicha rotulo="Tarifa do provedor" valor={formatarMoeda(gerada.taxaPagamento)} />
@@ -264,6 +268,43 @@ export function ModalChavePix({ chamar, aoFechar, aoCadastrada }: ModalChavePixP
             <input {...atributos} value={chave} onChange={(evento) => setChave(evento.target.value)} className={'input-padrao' + classeErro} />
           )}
         </Campo>
+      </SecaoFicha>
+    </ModalFicha>
+  );
+}
+
+interface ModalConsultarContribuicaoProps {
+  authFetch: AuthFetch;
+  contribuicao: ContribuicaoBancada;
+  rotuloMeio: string;
+  aoFechar: () => void;
+}
+
+// Consultar uma contribuição da tabela da T5: a mesma ficha do "Contribuir", com a campanha lida de novo (arrecadado e
+// meta de agora). O código Pix, o link do cartão e o boleto só aparecem no momento de contribuir: a bancada não os guarda.
+export function ModalConsultarContribuicao({ authFetch, contribuicao, rotuloMeio, aoFechar }: ModalConsultarContribuicaoProps) {
+  const [campanha, setCampanha] = useState<CampanhaResponse | null>(null);
+  const { erro, reportarErro } = useErroToast({ mostraTexto: true });
+
+  useEffect(() => {
+    campanhaApi.buscar(authFetch, String(contribuicao.idCampanha)).then(setCampanha).catch(reportarErro);
+  }, [authFetch, contribuicao.idCampanha, reportarErro]);
+
+  return (
+    <ModalFicha
+      titulo={`Contribuição #${contribuicao.idContribuicao}`}
+      aoFechar={aoFechar}
+      erro={erro}
+      carregando={campanha === null && !erro}
+      rodape={<RodapeAcoes aoCancelar={aoFechar} rotuloCancelar="Fechar" />}
+    >
+      {campanha && <SecaoCampanhaDaContribuicao campanha={campanha} status={contribuicao.status} criadoEm={contribuicao.criadoEm} />}
+      <SecaoFicha titulo="O que a pessoa paga">
+        <CampoFicha rotulo="Contribuição" valor={formatarMoeda(contribuicao.valor)} />
+        <CampoFicha rotulo="Tarifa do provedor" valor={formatarMoeda(contribuicao.taxaPagamento)} />
+        <CampoFicha rotulo="Total cobrado" valor={formatarMoeda(contribuicao.valor + contribuicao.taxaPagamento)} />
+        <CampoFicha rotulo="Meio de pagamento" valor={rotuloMeio} />
+        <CampoFicha rotulo="Repasse" valor={contribuicao.idRepasse === null ? 'Ainda não' : `#${contribuicao.idRepasse}`} />
       </SecaoFicha>
     </ModalFicha>
   );

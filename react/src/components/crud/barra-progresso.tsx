@@ -9,14 +9,16 @@ interface BarraProgressoProps {
 // porcentagem continua mostrando o valor real (ex.: 105%). Largura fixa (CSS), para caber numa coluna curta da
 // GenericTable sem entrar na medição de largura dela.
 // Para uma célula da GenericTable: o texto fica onde sempre esteve e a barra fina vem por baixo dele, solta do
-// layout (position: absolute), da mesma largura do texto: não muda a largura da coluna nem a altura da linha. A
+// layout (position: absolute), com a largura da coluna (o mesmo comprimento em todas as linhas, qualquer que seja o
+// valor): não muda a largura da coluna nem a altura da linha. A
 // porcentagem fica no rótulo (leitor de tela) e na dica do mouse.
 export function TextoComBarraProgresso({ texto, valor, total, rotulo }: BarraProgressoProps & { texto: string }) {
   const porcentagem = total > 0 ? Math.round((valor / total) * 100) : 0;
   const preenchido = Math.min(100, Math.max(0, porcentagem));
   return (
     <span className="barra-progresso-sob" title={`${porcentagem}% da meta`}>
-      {texto}
+      {/* `data-medir`: a tabela mede só o texto para a largura da coluna, não a barra (que ocupa a coluna inteira). */}
+      <span data-medir>{texto}</span>
       <span
         className={'barra-progresso-sob__trilho' + (porcentagem >= 100 ? ' barra-progresso__trilho--completo' : '')}
         role="progressbar"

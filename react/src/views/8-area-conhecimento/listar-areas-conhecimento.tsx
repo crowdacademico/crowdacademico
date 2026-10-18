@@ -82,6 +82,7 @@ export function ListarAreasConhecimento({ auth }: PropsPagina) {
             // Célula mostra só "Base" pras 9 raízes - o valor de verdade
             // (com a vírgula, ver listarAreas acima) é só pro filtro.
             renderizar: (linha) => (linha.idPai === null ? 'Base' : linha.nomePai),
+            textoExibido: (linha) => (linha.idPai === null ? 'Base' : (linha.nomePai ?? '')),
           },
           { chave: 'ativo', rotulo: 'ativo', tipo: 'simNao' },
         ]}

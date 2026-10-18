@@ -41,7 +41,26 @@ O sistema não conhece o Asaas: conhece três "tomadas" (ports, em `nest/src/29-
 | Só o cartão | Parâmetro `cartao_habilitado` = `false` no painel | Contribuição com cartão é recusada (91052); o Pix continua |
 | Só o boleto | Parâmetro `boleto_habilitado` (nasce `false`) | Contribuição com boleto é recusada (91053); o Pix continua |
 
-### 2.2 O provedor de teste e o modo rápido (`npm run start:dev:teste`)
+### 2.2 Tarefas automáticas e os interruptores
+
+**Em palavras simples:** quatro trabalhos do dinheiro o sistema faz sozinho, de tempos em tempos. Cada um tem um interruptor (um parâmetro em Parâmetros do Sistema, grupo "Tarefas automáticas"): ligado, ele roda no horário; desligado, fica em pausa. É o "botão de pausa" de todo sistema de pagamento: se o provedor tiver um problema, o admin segura o repasse sem desligar o resto.
+
+| Tarefa | Frequência | Interruptor (parâmetro) | Código |
+|---|---|---|---|
+| Fechar campanhas vencidas (e vencer os Pix pendentes) | 15 min | `tarefa_encerrar_campanhas_ligada` | `campanha.service.close-expired.ts` |
+| Rodar o repasse | 5 min | `tarefa_repasse_ligada` | `pagamento.service.transfer-pending.ts` |
+| Rodar a devolução | 5 min | `tarefa_devolucao_ligada` | `pagamento.service.refund-pending.ts` |
+| Conferir com o provedor | 10 min | `tarefa_conferencia_ligada` | `pagamento.service.reconcile.ts` |
+
+- Os quatro nascem ligados. A tarefa agendada confere o interruptor antes de rodar (`nest/src/commons/agendamento/tarefa-automatica.ts`); desligada, pula a vez. O intervalo de cada uma também mora ali (`INTERVALO_TAREFA_MINUTOS`): é dele que sai o agendamento e o "A cada N minutos" que o card da T5 mostra. O "Rodar agora" da T5 roda na hora, ligada ou não.
+- Enquanto alguma estiver desligada, o **Dashboard mostra um aviso** com o nome dela. Mudar o interruptor fica no log de auditoria (como todo parâmetro).
+- **Pagamento automático (só Campo de Testes):** um quinto interruptor, `teste_pagamento_automatico_ligado`, nasce **desligado** e só age no modo rápido. Ligado, a cada minuto o provedor de teste paga as contribuições pendentes, pelo mesmo caminho do botão Pagar. Como mora no Campo de Testes, não existe em produção (e o parâmetro fica na parte de demonstração do seed).
+
+- **Decisão:** os quatro interruptores valem para o sistema inteiro, inclusive em produção, com o aviso no Dashboard.
+- **Motivo:** pausar uma tarefa do dinheiro sem desligar o servidor é o padrão de operação de sistemas de pagamento; o aviso evita a pausa esquecida.
+- **Caso-limite:** com "Fechar campanhas vencidas" desligado, as campanhas passam do prazo e continuam "ativas" até alguém religar (ou usar o "Rodar agora"); por isso o aviso do Dashboard é obrigatório.
+
+### 2.3 O provedor de teste e o modo rápido (`npm run start:dev:teste`)
 
 **Em palavras simples:** o provedor de teste (`nest/src/29-pagamento/adapters/fake`) é um "Asaas de mentira" que mora dentro do próprio Nest. Ele cumpre as mesmas três tomadas do Asaas (cobrar, transferir, conferir avisos), então o resto do sistema não sabe com qual dos dois está falando: o mesmo código de contribuição, webhook, repasse, devolução e conferência roda nos dois. Nenhum dinheiro existe, não precisa de internet, de conta no Asaas nem de túnel.
 

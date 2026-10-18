@@ -29,6 +29,8 @@ interface PermissaoLinha extends PermissaoResponse {
 // em permissao-nomes-amigaveis.js) - precisa de um valor de verdade pra
 // aparecer no filtro por impacto, "null" bruto viraria uma opção sem
 // rótulo nenhum no dropdown.
+// Texto do botão da coluna descrição de Permissões (a tabela também o usa para medir a largura da coluna).
+const ROTULO_SAIBA_MAIS = 'Saiba mais';
 const IMPACTO_NAO_CLASSIFICADO = 'não classificado';
 const ORDEM_IMPACTO = ['alto', 'médio', 'baixo', IMPACTO_NAO_CLASSIFICADO];
 
@@ -139,15 +141,17 @@ export function ListarPapeis({ auth }: PropsPagina) {
             {
               chave: 'resumo',
               rotulo: 'descrição',
-              // Tipo 'status' (centralizado, largura fixa): o que aparece é um botão curto, não o texto.
+              // Tipo 'status' (centralizado, largura fixa): o que aparece é um botão curto, não o texto, e é ele que
+              // a tabela mede (sem isto media o resumo inteiro e a coluna ficava com mais de 500 px).
               tipo: 'status',
+              textoExibido: () => ROTULO_SAIBA_MAIS,
               renderizar: (linha) => (
                 <button
                   type="button"
                   onClick={() => setPermissaoDetalhada(linha)}
                   className="btn btn-secondary btn-pequeno"
                 >
-                  <i className="fa-solid fa-circle-info" aria-hidden="true"></i> Saiba mais
+                  <i className="fa-solid fa-circle-info" aria-hidden="true"></i> {ROTULO_SAIBA_MAIS}
                 </button>
               ),
             },

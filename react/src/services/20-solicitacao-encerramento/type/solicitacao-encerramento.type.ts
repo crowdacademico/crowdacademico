@@ -9,6 +9,7 @@ export interface SolicitacaoEncerramentoResponse {
   statusCampanha: StatusCampanha | null;
   modeloCampanha: ModeloCampanha | null;
   valorArrecadado: number | null;
+  metaCampanha: number | null;
   contribuicoesConfirmadas: number;
   idPesquisador: number | null;
   nomePesquisador: string | null;

@@ -2,6 +2,12 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron } from '@nestjs/schedule';
 import { Pool } from 'pg';
+import {
+  INTERVALO_TAREFA_MINUTOS,
+  TAREFA_AUTOMATICA,
+  cronACada,
+  tarefaLigada,
+} from '../../commons/agendamento/tarefa-automatica';
 import { PG_POOL } from '../../commons/database/database.constants';
 import { NOME_PROVEDOR_NAO_CONFIGURADO } from '../adapters/nao-configurado/gateway-nao-configurado.adapter';
 import { GatewayPagamentoErro } from '../ports/erro-gateway-pagamento';
@@ -97,7 +103,16 @@ export class PagamentoServiceReconcile {
     private readonly config: ConfigService,
   ) {}
 
-  @Cron('*/10 * * * *')
+  // Agendada: só roda com o interruptor ligado (TAREFA_AUTOMATICA.conferencia). "Rodar agora" da T5 chama executar() direto.
+  @Cron(cronACada(INTERVALO_TAREFA_MINUTOS.conferencia))
+  async aoAgendar(): Promise<void> {
+    if (
+      await tarefaLigada(this.pool, TAREFA_AUTOMATICA.conferencia, this.logger)
+    ) {
+      await this.executar();
+    }
+  }
+
   async executar(): Promise<void> {
     if (this.emExecucao) return;
     this.emExecucao = true;

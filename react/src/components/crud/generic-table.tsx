@@ -32,6 +32,10 @@ interface Coluna<T extends Linha> {
   tipo: NomeTipoColuna;
   quebrarRotulo?: boolean;
   renderizar?: (linha: T) => ReactNode;
+  // Com `renderizar`: o TEXTO que a célula mostra (o rótulo da pílula, "Saiba mais" do botão). É ele que a tabela mede,
+  // em todas as linhas da lista, para a largura da coluna não mudar ao virar a página; sem isto ela mede o valor
+  // guardado (`linha[chave]`), que pode ser bem diferente do que aparece (DS-104).
+  textoExibido?: (linha: T) => string;
   // Texto que pode ser longo (alvo, título de campanha): uma linha só, com "ler tudo" que expande a linha.
   umaLinha?: boolean;
 }
@@ -82,11 +86,23 @@ const VAZIO_FILTRO: ConteudoEstadoVazio = {
 
 // Piso de largura de nome/texto pelo conteúdo: o maior valor da lista inteira em `ch` (+2 de respiro), limitado
 // por `--coluna-piso-maximo` (5-crud.css), que diminui em tela estreita para a coluna poder quebrar a linha.
+// O texto que a coluna mostra numa linha: o `textoExibido` quando a coluna desenha outra coisa, senão o valor formatado.
+// O elemento que desenha o texto de uma célula (o rótulo dentro da pílula ou do botão), para medir na fonte dele.
+function elementoDoTexto(celula: Element): Element {
+  const caminhante = document.createTreeWalker(celula, NodeFilter.SHOW_TEXT, {
+    acceptNode: (no) => (no.textContent?.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP),
+  });
+  return caminhante.nextNode()?.parentElement ?? celula;
+}
+
+function textoDaColuna<T extends Linha>(coluna: Coluna<T>, linha: T): string {
+  return coluna.textoExibido ? coluna.textoExibido(linha) : TIPOS_COLUNA[coluna.tipo].texto(linha[coluna.chave]);
+}
+
 function maiorTexto<T extends Linha>(coluna: Coluna<T>, linhas: T[]): number {
-  const tipo = TIPOS_COLUNA[coluna.tipo];
   let maior = coluna.rotulo.length;
   linhas.forEach((linha) => {
-    maior = Math.max(maior, tipo.texto(linha[coluna.chave]).length);
+    maior = Math.max(maior, textoDaColuna(coluna, linha).length);
   });
   return maior;
 }
@@ -340,7 +356,7 @@ export function GenericTable<T extends Linha>({
     colunas.forEach((coluna) => {
       const tipo = TIPOS_COLUNA[coluna.tipo];
       if (tipo.largura === 'curta' || coluna.tipo === 'nome' || coluna.tipo === 'texto') {
-        resultado[coluna.chave] = linhas.map((linha) => tipo.texto(linha[coluna.chave]));
+        resultado[coluna.chave] = linhas.map((linha) => textoDaColuna(coluna, linha));
       }
     });
     return resultado;
@@ -368,9 +384,11 @@ export function GenericTable<T extends Linha>({
     // com a mesma largura (as 4 Sim/Não de Tipos de Link, meta e arrecadado em Campanhas). Mede o CONTEÚDO, não a
     // célula, então aplicar o resultado não muda a próxima medição.
     const medirCurtas = () => {
+      // `[data-medir]`: a peça da célula diz o que conta para a largura (ex.: o valor, e não a barra embaixo dele, que
+      // ocupa a coluna inteira e, medida, travaria a coluna na largura atual).
       const larguraConteudo = (elemento: Element): number => {
         const intervalo = document.createRange();
-        intervalo.selectNodeContents(elemento);
+        intervalo.selectNodeContents(elemento.querySelector('[data-medir]') ?? elemento);
         return intervalo.getBoundingClientRect().width;
       };
       const contexto = document.createElement('canvas').getContext('2d');
@@ -383,9 +401,23 @@ export function GenericTable<T extends Linha>({
         });
         const primeira = celulas.item(0) as Element | null;
         if (contexto && primeira) {
-          contexto.font = getComputedStyle(primeira).font;
+          // Coluna que desenha outra coisa (pílula, botão): mede o texto na fonte DELE e soma a moldura (o espaço interno,
+          // a borda e o ícone da peça), tirada das células visíveis: largura desenhada menos a do texto dela.
+          const desenhada = th.hasAttribute('data-texto-exibido');
+          const elementoTexto = desenhada ? elementoDoTexto(primeira) : primeira;
+          const estiloTexto = getComputedStyle(elementoTexto);
+          contexto.font = estiloTexto.font;
+          // A pílula pode mostrar o rótulo em maiúsculas pelo CSS: o texto medido segue a mesma transformação.
+          const comoAparece = (texto: string) => (estiloTexto.textTransform === 'uppercase' ? texto.toUpperCase() : texto);
+          let moldura = 0;
+          if (desenhada) {
+            celulas.forEach((td) => {
+              const texto = (td as HTMLElement).innerText.trim();
+              if (texto) moldura = Math.max(moldura, larguraConteudo(td) - contexto.measureText(texto).width);
+            });
+          }
           (textosMedidos[th.dataset.chave ?? ''] ?? []).forEach((texto) => {
-            maior = Math.max(maior, contexto.measureText(texto).width);
+            maior = Math.max(maior, contexto.measureText(comoAparece(texto)).width + moldura);
           });
         }
         const estilo = getComputedStyle(th);
@@ -622,6 +654,7 @@ export function GenericTable<T extends Linha>({
                       style={estiloColuna(coluna)}
                       data-chave={coluna.chave}
                       data-tipo-curta={TIPOS_COLUNA[coluna.tipo].largura === 'curta' ? coluna.tipo : undefined}
+                      data-texto-exibido={coluna.textoExibido ? '' : undefined}
                       onClick={() => aoClicarColuna(coluna.chave)}
                     >
                       {rotuloColuna(coluna)}

@@ -10,6 +10,7 @@ import { useToast } from '../../components/layout/toast/use-toast';
 import { Tooltip } from '../../components/layout/tooltip';
 import { contaRecebimentoApi } from '../../services/30-conta-recebimento/api/conta-recebimento.api';
 import { ORDEM_TIPO_CHAVE_PIX, ROTULO_TIPO_CHAVE_PIX } from '../../services/30-conta-recebimento/constants/conta-recebimento.constants';
+import { rotuloSituacaoRepasse } from '../../services/23-repasse/constants/status-repasse.constants';
 import { useEnvio } from '../../services/constant/hook/use-envio';
 import type { AuthFetch } from '../../services/3-auth/type/auth.type';
 import type { CartaoALiberarResponse, ContaRecebimentoResponse, RepasseResponse } from '../../services/30-conta-recebimento/type/conta-recebimento.type';
@@ -37,6 +38,8 @@ export function SecaoRecebimento({ authFetch }: { authFetch: AuthFetch }) {
     contaRecebimentoApi.listarCartaoALiberar(authFetch).then(setCartaoALiberar).catch(reportarErro);
   }, [authFetch, reportarErro, chaveRecarga]);
 
+  // Repasse pendente sem chave Pix confirmada: espera a conta do pesquisador (a etiqueta diz isso).
+  const aguardandoConta = (linha: RepasseResponse) => linha.status === 'pendente' && !conta?.titularidadeVerificada;
   const listarRepasses = useCallback((): Promise<RepasseResponse[]> => contaRecebimentoApi.listarRepasses(authFetch), [authFetch]);
 
   if (conta === undefined) {
@@ -161,7 +164,8 @@ export function SecaoRecebimento({ authFetch }: { authFetch: AuthFetch }) {
             chave: 'status',
             rotulo: 'status',
             tipo: 'status',
-            renderizar: (linha) => <BadgeStatusRepasse status={linha.status} aguardandoConta={linha.status === 'pendente' && !conta?.titularidadeVerificada} />,
+            renderizar: (linha) => <BadgeStatusRepasse status={linha.status} aguardandoConta={aguardandoConta(linha)} />,
+            textoExibido: (linha) => rotuloSituacaoRepasse(linha.status, aguardandoConta(linha)),
           },
           { chave: 'repassadoEm', rotulo: 'transferido em', tipo: 'dataHora' },
         ]}

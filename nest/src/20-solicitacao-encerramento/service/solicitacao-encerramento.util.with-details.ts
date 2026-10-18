@@ -34,6 +34,7 @@ export function consultaSolicitacaoComDetalhes(db: Kysely<DB>) {
       'campanha.status as status_campanha',
       'campanha.modelo as modelo_campanha',
       'campanha.valor_bruto_arrecadado as valor_arrecadado',
+      'campanha.meta_financeira as meta_campanha',
       'campanha.id_usuario as id_pesquisador',
       'pesquisador.nome as nome_pesquisador',
       'admin.nome as nome_admin',

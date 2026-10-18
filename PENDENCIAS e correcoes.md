@@ -8,6 +8,15 @@
 
 ---
 
+## ⭐ Para discutir (anotado em 18-10-2026, no topo de propósito)
+
+- **Colunas das tabelas, passo seguinte (largura mínima por tipo e respiro maior).** Medido em 18-10-2026 (20 telas, 1400 e 1920 px): a dança entre páginas acabou (coluna id fixa e `textoExibido`, DS-104), mas **6 tabelas rolam de lado a 1400 px** (Campanhas, Parâmetros, Denúncias, Pedidos de Encerramento, T2 e T5) e o respiro entre colunas é de cerca de 27 px. Aumentar o respiro hoje faria mais tabelas rolarem. Opções: um token de largura mínima por tipo de coluna (`--largura-coluna-status`, `-dinheiro`, `-data`...), tirar colunas das listas mais largas (deixar no Consultar) ou aceitar a rolagem. Decidir antes de mexer.
+- **Rótulos longos que alargam a coluna da T5:** "perdida (o Nest reiniciou)" (coluna "no provedor") e "Cartão (a liberar)" (coluna "meio"). Como a coluna reserva o maior rótulo da lista inteira (DS-104), um rótulo mais curto deixaria a tabela menos larga. Ex.: "perdida", com a explicação no ⓘ da tabela.
+- **Reorganizar o `DESIGN_SYSTEM.md` (Lucas, 18-10-2026, para o futuro, não agora):** as regras principais (core), como linha e coluna das tabelas (DS-100, DS-104, DS-105), passam para os números de destaque, para serem achadas primeiro. Junto da reorganização numérica de pastas e arquivos (seção de Pagamento).
+- **Policy sem efeito em `contribuicao`** (`pol_contribuicao_update`, `USING (true)`): sem `GRANT UPDATE`, ela não faz nada. Tirar, como as de `repasse` e `auditoria_financeira` (Grupo BN)? Detalhe na seção de Pagamento.
+
+---
+
 ## 0. 📌 Para a Alexia ler (conversar antes de fazer)
 
 Nada aberto (03-10-2026). O "Aguardando" (pagamento que chega depois do fim da campanha) foi decidido e feito; a explicação continua no topo do `ACHADOS_PARA_DISCUTIR.md`.

@@ -28,6 +28,8 @@ export class PagamentoBancadaRepasse {
 export class PagamentoBancadaEstado {
   provedor: string;
   provedorDeTeste: boolean;
+  // Intervalo (minutos) de cada tarefa automática, pela chave do interruptor.
+  intervalosMinutos: Record<string, number>;
   contribuicoes: PagamentoBancadaContribuicao[];
   repasses: PagamentoBancadaRepasse[];
 }

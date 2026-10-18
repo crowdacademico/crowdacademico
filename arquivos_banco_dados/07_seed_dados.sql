@@ -682,6 +682,12 @@ INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, pub
 (NULL, 'reconciliacao_orfa_minutos',             '60',   'inteiro', 'Minutos até uma contribuição pendente que nunca ganhou cobrança no provedor ser dada como erro', TRUE, FALSE),
 (NULL, 'webhook_reprocessar_espera_minutos',     '5',    'inteiro', 'Minutos que um aviso do provedor não aplicado espera antes de a conferência tentar de novo',   TRUE, FALSE),
 (NULL, 'webhook_reprocessar_horas',              '24',   'inteiro', 'Horas tentando de novo um aviso do provedor sem correspondência antes de mandá-lo para revisão manual', TRUE, FALSE),
+-- Interruptores das tarefas automáticas (nest/src/commons/agendamento/tarefa-automatica.ts): ligadas por padrão;
+-- desligar pausa a execução agendada (o "Rodar agora" da T5 continua).
+(NULL, 'tarefa_encerrar_campanhas_ligada', 'true', 'booleano', 'Tarefa automática: vencer os Pix pendentes e encerrar as campanhas cujo prazo passou. Desligada, a execução agendada fica em pausa', TRUE, FALSE),
+(NULL, 'tarefa_repasse_ligada', 'true', 'booleano', 'Tarefa automática: pedir ao provedor a transferência dos repasses na fila. Desligada, a execução agendada fica em pausa', TRUE, FALSE),
+(NULL, 'tarefa_devolucao_ligada', 'true', 'booleano', 'Tarefa automática: devolver as contribuições a devolver. Desligada, a execução agendada fica em pausa', TRUE, FALSE),
+(NULL, 'tarefa_conferencia_ligada', 'true', 'booleano', 'Tarefa automática: conferir com o provedor os pagamentos sem aviso e os avisos parados. Desligada, a execução agendada fica em pausa', TRUE, FALSE),
 (NULL, 'cancelamento_cobranca_intervalo_minutos','15',   'inteiro', 'Minutos entre tentativas de cancelar no provedor a cobrança de uma contribuição que venceu ou deu erro', TRUE, FALSE),
 -- I
 -- score_minimo_campanha: o score NUNCA bloqueia a criação de campanha (nem Catarse nem Experiment fazem isso; o
@@ -968,6 +974,11 @@ ON CONFLICT (id_usuario, id_termo) DO NOTHING;
 -- Parâmetro de uma conta específica (o admin da demonstração): só existe porque a conta existe.
 INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, publica) VALUES
 (1,   'notificar_novas_campanhas',   'true',  'booleano', 'Admin recebe e-mail sobre novas campanhas',            TRUE, FALSE);
+
+-- Campo de Testes (só desenvolvimento): pagamento automático do provedor de teste, desligado por padrão. Ligado, a
+-- cada minuto o provedor de teste paga as cobranças pendentes (nest/src/campo-testes, CHAVE_PAGAMENTO_AUTOMATICO).
+INSERT INTO configuracoes (id_usuario, chave, valor, tipo, descricao, ativo, publica) VALUES
+(NULL, 'teste_pagamento_automatico_ligado', 'false', 'booleano', 'Campo de Testes: o provedor de teste paga sozinho, a cada minuto, as contribuições pendentes (só no modo rápido)', TRUE, FALSE);
 
 -- [07-D-3] perfil_pesquisador
 -- score_atual e score_atualizado_em não estão no INSERT de propósito: a tabela tem trg_perfil_recalcula_score

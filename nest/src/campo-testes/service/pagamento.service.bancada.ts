@@ -1,3 +1,9 @@
+import { Cron } from '@nestjs/schedule';
+import {
+  INTERVALO_TAREFA_MINUTOS,
+  TAREFA_AUTOMATICA,
+  cronACada,
+} from '../../commons/agendamento/tarefa-automatica';
 import {
   ConflictException,
   Inject,
@@ -40,10 +46,15 @@ export const TAREFAS_BANCADA = [
   'repasse',
   'devolucao',
   'conferir',
+  'pagar',
 ] as const;
 export type TarefaBancada = (typeof TAREFAS_BANCADA)[number];
 
 const LIMITE_LINHAS = 30;
+// Interruptor do pagamento automático (parâmetro booleano em configuracoes, 07; nasce desligado). Ligado, a cada minuto
+// o provedor de teste paga todas as cobranças pendentes, como se quem apoia tivesse pago.
+export const CHAVE_PAGAMENTO_AUTOMATICO = 'teste_pagamento_automatico_ligado';
+const INTERVALO_PAGAMENTO_AUTOMATICO_MINUTOS = 1;
 const MENSAGEM_SO_FAKE =
   'Esta ação só funciona com o provedor de teste (PAYMENT_PROVIDER=fake).';
 const MENSAGEM_COBRANCA_PERDIDA =
@@ -134,6 +145,18 @@ export class PagamentoServiceBancada implements OnModuleInit {
     return {
       provedor: this.adapter.provedor,
       provedorDeTeste: this.adapter instanceof FakeGatewayAdapter,
+      // De quantos em quantos minutos cada tarefa roda, pela chave do interruptor (o card da T5 mostra).
+      intervalosMinutos: {
+        ...Object.fromEntries(
+          (
+            Object.keys(TAREFA_AUTOMATICA) as (keyof typeof TAREFA_AUTOMATICA)[]
+          ).map((tarefa) => [
+            TAREFA_AUTOMATICA[tarefa],
+            INTERVALO_TAREFA_MINUTOS[tarefa],
+          ]),
+        ),
+        [CHAVE_PAGAMENTO_AUTOMATICO]: INTERVALO_PAGAMENTO_AUTOMATICO_MINUTOS,
+      },
       contribuicoes: await Promise.all(
         contribuicoes.rows.map((linha) => this.paraContribuicao(linha)),
       ),
@@ -141,6 +164,40 @@ export class PagamentoServiceBancada implements OnModuleInit {
         repasses.rows.map((linha) => this.paraRepasse(linha)),
       ),
     };
+  }
+
+  // Paga, como quem apoia, todas as cobranças que o provedor de teste tem pendentes, pelo mesmo caminho do botão Pagar
+  // (o aviso passa pelo webhook de verdade). Devolve quantas pagou.
+  async pagarPendentes(): Promise<number> {
+    const fake = this.fake();
+    const pendentes = fake.cobrancasPendentes();
+    pendentes.forEach((idCobranca) => fake.confirmarCobranca(idCobranca));
+    await this.esperarAvisos();
+    return pendentes.length;
+  }
+
+  // Pagamento automático (só com o provedor de teste e com o interruptor ligado). O Campo de Testes não existe em
+  // produção, então esta tarefa também não. try/catch pelo mesmo motivo dos outros crons (exceção solta derruba o processo).
+  @Cron(cronACada(INTERVALO_PAGAMENTO_AUTOMATICO_MINUTOS))
+  async pagamentoAutomatico(): Promise<void> {
+    if (!(this.adapter instanceof FakeGatewayAdapter)) return;
+    try {
+      const resultado = await this.pool.query<{ ligado: boolean }>(
+        'SELECT public.config_booleano($1::text, FALSE) AS ligado',
+        [CHAVE_PAGAMENTO_AUTOMATICO],
+      );
+      if (resultado.rows[0]?.ligado !== true) return;
+      const pagas = await this.pagarPendentes();
+      if (pagas > 0) {
+        this.logger.log(
+          `Pagamento automático (Campo de Testes): ${pagas} cobrança(s) paga(s).`,
+        );
+      }
+    } catch (erro) {
+      this.logger.warn(
+        `Pagamento automático falhou: ${erro instanceof Error ? erro.message : String(erro)}`,
+      );
+    }
   }
 
   async pagar(idContribuicao: number): Promise<void> {
@@ -215,6 +272,9 @@ export class PagamentoServiceBancada implements OnModuleInit {
         break;
       case 'devolucao':
         await this.devolucao.executar();
+        break;
+      case 'pagar':
+        await this.pagarPendentes();
         break;
       default:
         await this.conferencia.executar();

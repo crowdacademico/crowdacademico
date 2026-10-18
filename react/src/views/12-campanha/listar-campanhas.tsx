@@ -5,7 +5,7 @@ import { campanhaApi } from '../../services/12-campanha/api/campanha.api';
 import { emBreve, ORDEM_ROTULOS_STATUS_CAMPANHA, rotuloStatusCampanha } from '../../services/12-campanha/constants/status-campanha.constants';
 import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
 import { ModalConsultarCampanha } from './modal-consultar-campanha';
-import { renderizarStatus } from './colunas-campanha';
+import { renderizarArrecadado, renderizarStatus, textoStatus } from './colunas-campanha';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { CampanhaResponse } from '../../services/12-campanha/type/campanha.type';
 
@@ -55,10 +55,10 @@ export function ListarCampanhas({ auth }: PropsPagina) {
         colunas={[
           { chave: 'idCampanha', rotulo: 'id', tipo: 'id' },
           { chave: 'titulo', rotulo: 'título', tipo: 'nome', umaLinha: true },
-          { chave: 'status', rotulo: 'status', tipo: 'status', renderizar: renderizarStatus },
+          { chave: 'status', rotulo: 'status', tipo: 'status', renderizar: renderizarStatus, textoExibido: textoStatus },
           { chave: 'pesquisador', rotulo: 'pesquisador', tipo: 'texto' },
           { chave: 'metaFinanceira', rotulo: 'meta', tipo: 'dinheiro' },
-          { chave: 'valorBrutoArrecadado', rotulo: 'arrecadado', tipo: 'dinheiro' },
+          { chave: 'valorBrutoArrecadado', rotulo: 'arrecadado', tipo: 'dinheiro', renderizar: renderizarArrecadado },
         ]}
         vazio={{ icone: 'fa-bullhorn', titulo: 'Nenhuma campanha na plataforma ainda.' }}
         chavePrimaria="idCampanha"

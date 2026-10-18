@@ -10,6 +10,7 @@ import {
 } from '../../services/20-solicitacao-encerramento/constants/status-encerramento.constants';
 import { logAuditoriaApi } from '../../services/27-log-auditoria/api/log-auditoria.api';
 import { ModalDecidirEncerramento } from './modal-decidir-encerramento';
+import { celulaArrecadado } from '../12-campanha/colunas-campanha';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { SolicitacaoEncerramentoResponse } from '../../services/20-solicitacao-encerramento/type/solicitacao-encerramento.type';
 
@@ -58,13 +59,19 @@ export function ListarEncerramentos({ auth }: PropsPagina) {
           { chave: 'campanha', rotulo: 'campanha', tipo: 'nome', umaLinha: true },
           { chave: 'pesquisador', rotulo: 'pesquisador', tipo: 'texto' },
           { chave: 'modelo', rotulo: 'modelo', tipo: 'status' },
-          { chave: 'valorArrecadado', rotulo: 'arrecadado', tipo: 'dinheiro' },
           { chave: 'contribuicoesConfirmadas', rotulo: 'contribuições', tipo: 'numero' },
+          {
+            chave: 'valorArrecadado',
+            rotulo: 'arrecadado',
+            tipo: 'dinheiro',
+            renderizar: (linha: PedidoLinha) => celulaArrecadado(linha.valorArrecadado, linha.metaCampanha),
+          },
           {
             chave: 'status',
             rotulo: 'situação',
             tipo: 'status',
             renderizar: (linha: PedidoLinha) => <BadgeStatusEncerramento status={linha.statusOriginal} />,
+            textoExibido: (linha: PedidoLinha) => ROTULO_STATUS_ENCERRAMENTO[linha.statusOriginal],
           },
           { chave: 'esperandoDesde', rotulo: 'esperando', tipo: 'espera' },
         ]}

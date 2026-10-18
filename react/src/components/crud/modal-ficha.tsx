@@ -192,7 +192,7 @@ export function ModalFicha({
           </div>
         </div>
 
-        <div className={'flex-1 px-8 py-6 space-y-6 overflow-y-auto' + (variasTelas ? ' flex flex-col' : '')}>
+        <div className={'flex-1 px-8 py-6 space-y-6 overflow-y-auto rolagem-estavel' + (variasTelas ? ' flex flex-col' : '')}>
           <MensagemErro texto={erro} />
           {children}
         </div>

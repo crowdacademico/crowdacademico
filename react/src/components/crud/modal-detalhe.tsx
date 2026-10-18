@@ -110,7 +110,7 @@ export function ModalDetalhe({
           </div>
         </div>
 
-        <div className="px-6 py-4 overflow-y-auto space-y-4">
+        <div className="px-6 py-4 overflow-y-auto rolagem-estavel space-y-4">
           {secoes.map((secao) => (
             <div key={secao.titulo}>
               <h3 className="titulo-bloco mb-1.5">

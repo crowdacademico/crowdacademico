@@ -1,6 +1,12 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { Pool } from 'pg';
+import {
+  INTERVALO_TAREFA_MINUTOS,
+  TAREFA_AUTOMATICA,
+  cronACada,
+  tarefaLigada,
+} from '../../commons/agendamento/tarefa-automatica';
 import { PG_POOL } from '../../commons/database/database.constants';
 
 // Chama encerrar_campanhas_vencidas() (05_regras_negocio.sql, [05-K-2]) por agendamento (RF-057): sem isso, uma
@@ -30,7 +36,20 @@ export class CampanhaServiceCloseExpired {
   // A cada 15 minutos - intervalo curto o bastante pra uma campanha vencida
   // não ficar "ativo" por muito tempo depois do prazo, sem martelar o banco
   // à toa (a query é uma varredura simples por status+data_fim, barata).
-  @Cron('*/15 * * * *')
+  // Agendada: só roda com o interruptor ligado (TAREFA_AUTOMATICA.encerrarCampanhas). "Rodar agora" da T5 chama executar() direto.
+  @Cron(cronACada(INTERVALO_TAREFA_MINUTOS.encerrarCampanhas))
+  async aoAgendar(): Promise<void> {
+    if (
+      await tarefaLigada(
+        this.pool,
+        TAREFA_AUTOMATICA.encerrarCampanhas,
+        this.logger,
+      )
+    ) {
+      await this.executar();
+    }
+  }
+
   async executar(): Promise<void> {
     // try/catch: sem ele, uma exceção vinda da função SQL vira `unhandledRejection` (o @Cron chama este método
     // sem `await` de ninguém), e o Node moderno derruba o processo inteiro por causa de um job periódico. Mesmo

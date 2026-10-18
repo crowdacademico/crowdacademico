@@ -23,7 +23,7 @@
   }
 
   .btn:disabled {
-    opacity: 0.6;
+    opacity: var(--opacidade-desabilitado);
     cursor: not-allowed;
   }
 
@@ -288,13 +288,13 @@
   .barra-progresso {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: var(--barra-progresso-vao);
   }
 
   .barra-progresso__trilho {
     display: inline-block;
-    width: 5rem;
-    height: 0.375rem;
+    width: var(--barra-progresso-largura);
+    height: var(--barra-progresso-altura);
     border-radius: var(--radius-full);
     background-color: var(--cor-borda);
     overflow: hidden;
@@ -308,18 +308,20 @@
   }
 
   /* Barra por baixo de um texto numa célula de tabela (TextoComBarraProgresso): fora do fluxo, logo abaixo do texto e
-     da mesma largura dele, dentro do respiro da linha. O texto não sai do lugar, a coluna não alarga, a linha não cresce. */
+     com a largura da COLUNA (o bloco ocupa a célula inteira), então tem o mesmo comprimento em todas as linhas, seja o
+     valor R$ 1 ou R$ 100.000: o comprimento representa 0 a 100%, não o tamanho do texto. Fica dentro do respiro da
+     linha: o texto não sai do lugar, a coluna não alarga, a linha não cresce. */
   .barra-progresso-sob {
     position: relative;
-    display: inline-block;
+    display: block;
   }
 
   .barra-progresso-sob__trilho {
     position: absolute;
     left: 0;
     right: 0;
-    top: calc(100% + 0.125rem);
-    height: 0.25rem;
+    top: calc(100% + var(--barra-progresso-sob-distancia));
+    height: var(--barra-progresso-sob-altura);
     border-radius: var(--radius-full);
     background-color: var(--cor-borda);
     overflow: hidden;
@@ -648,6 +650,69 @@
      mesmo z-index, mesma transition). `.dica` vai no GATILHO (qualquer elemento: button, span, Link, não só
      o ⓘ avulso); `.dica__bolha` é o `<Dica>` soltado dentro dele. CSS puro (:hover/:focus), sem JS
      controlando abrir/fechar. */
+  /* Interruptor liga/desliga (components/input/interruptor.tsx): trilho cinza com a bolinha à esquerda (desligado) e
+     na cor da marca com a bolinha à direita (ligado), com o estado escrito ao lado. Medidas em tokens (3-base.css). */
+  .interruptor {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--interruptor-vao);
+    border-radius: var(--radius-full);
+  }
+
+  .interruptor:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--cor-anel-foco);
+  }
+
+  .interruptor:disabled {
+    opacity: var(--opacidade-desabilitado);
+    cursor: not-allowed;
+  }
+
+  .interruptor__trilho {
+    position: relative;
+    display: inline-block;
+    flex-shrink: 0;
+    width: var(--interruptor-largura);
+    height: var(--interruptor-altura);
+    border-radius: var(--radius-full);
+    background-color: var(--cor-borda-forte);
+    transition: background-color 0.15s;
+  }
+
+  .interruptor__bolinha {
+    position: absolute;
+    top: calc((var(--interruptor-altura) - var(--interruptor-bolinha)) / 2);
+    left: calc((var(--interruptor-altura) - var(--interruptor-bolinha)) / 2);
+    width: var(--interruptor-bolinha);
+    height: var(--interruptor-bolinha);
+    border-radius: var(--radius-full);
+    background-color: var(--cor-fundo-cartao);
+    transition: transform 0.15s;
+  }
+
+  .interruptor--ligado .interruptor__trilho {
+    background-color: var(--cor-marca);
+  }
+
+  .interruptor--ligado .interruptor__bolinha {
+    transform: translateX(calc(var(--interruptor-largura) - var(--interruptor-altura)));
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .interruptor__trilho,
+    .interruptor__bolinha {
+      transition: none;
+    }
+  }
+
+  /* Área que rola dentro de um modal: o espaço da barra de rolagem fica SEMPRE reservado (scrollbar-gutter), tenha
+     barra ou não. Assim o conteúdo não pula para a esquerda quando a barra aparece (ex.: trocar de aba num modal
+     que fica mais comprido). Mesma ideia da regra "modal não pode dançar". */
+  .rolagem-estavel {
+    scrollbar-gutter: stable;
+  }
+
   .dica {
     position: relative;
   }

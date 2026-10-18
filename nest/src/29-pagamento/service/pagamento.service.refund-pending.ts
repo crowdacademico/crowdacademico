@@ -2,6 +2,12 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron } from '@nestjs/schedule';
 import { Pool, PoolClient } from 'pg';
+import {
+  INTERVALO_TAREFA_MINUTOS,
+  TAREFA_AUTOMATICA,
+  cronACada,
+  tarefaLigada,
+} from '../../commons/agendamento/tarefa-automatica';
 import { PG_POOL } from '../../commons/database/database.constants';
 import { GatewayPagamentoErro } from '../ports/erro-gateway-pagamento';
 import {
@@ -68,7 +74,16 @@ export class PagamentoServiceRefundPending {
   ) {}
 
   // A cada 5 minutos: devolução não tem pressa de segundos, mas também não deve esperar horas.
-  @Cron('*/5 * * * *')
+  // Agendada: só roda com o interruptor ligado (TAREFA_AUTOMATICA.devolucao). "Rodar agora" da T5 chama executar() direto.
+  @Cron(cronACada(INTERVALO_TAREFA_MINUTOS.devolucao))
+  async aoAgendar(): Promise<void> {
+    if (
+      await tarefaLigada(this.pool, TAREFA_AUTOMATICA.devolucao, this.logger)
+    ) {
+      await this.executar();
+    }
+  }
+
   async executar(): Promise<void> {
     // Sem isto, uma execução lenta (gateway devagar) e a seguinte do cron correriam juntas no mesmo processo.
     if (this.emExecucao) return;

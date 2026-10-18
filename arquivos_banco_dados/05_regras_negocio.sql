@@ -4638,17 +4638,23 @@ $$;
 -- Função:     listar_revisoes_pagamento
 -- Assinatura: (p_situacao TEXT DEFAULT NULL, p_limite INT DEFAULT 100) -> TABLE (id_evento_pagamento INT,
 --             provedor VARCHAR, tipo_evento VARCHAR, recebido_em TIMESTAMPTZ, situacao TEXT, motivo TEXT,
---             revisao_manual_em TIMESTAMPTZ, id_contribuicao INT, id_repasse INT)
+--             revisao_manual_em TIMESTAMPTZ, id_contribuicao INT, id_repasse INT, valor DECIMAL, sentido TEXT,
+--             arrecadado DECIMAL)
 -- Bloco:      [05-K-2]
 -- Regra:      Webhooks que não terminaram com sucesso, para uma pessoa olhar. p_situacao: 'em_revisao_manual' (o sistema não
 --             aplicou de propósito, alguém precisa decidir), 'vale_tentar_de_novo' (falhou por motivo transitório) ou NULL
 --             (as duas). `id_contribuicao`/`id_repasse` vêm da linha de auditoria que a revisão gravou (NULL num evento que
---             só falhou). Sem o payload. Exige 'evento_pagamento_visualizar' (92037).
+--             só falhou). `valor` é o da mesma linha de auditoria; `sentido` diz para onde o dinheiro andou segundo o
+--             provedor: 'entrada' (pagamento recebido), 'saida' (estorno, devolução ou transferência concluída) ou NULL
+--             (nada se moveu, ex.: vencimento, falha). `arrecadado` é o valor ATUAL da campanha da contribuição ou do
+--             repasse. Sem o payload. Exige 'evento_pagamento_visualizar' (92037).
 -- ----------------------------------------------------------------------------
+DROP FUNCTION IF EXISTS public.listar_revisoes_pagamento(TEXT, INT);
 CREATE OR REPLACE FUNCTION public.listar_revisoes_pagamento(p_situacao TEXT DEFAULT NULL, p_limite INT DEFAULT 100)
 RETURNS TABLE (
     id_evento_pagamento INT, provedor VARCHAR, tipo_evento VARCHAR, recebido_em TIMESTAMPTZ, situacao TEXT,
-    motivo TEXT, revisao_manual_em TIMESTAMPTZ, id_contribuicao INT, id_repasse INT
+    motivo TEXT, revisao_manual_em TIMESTAMPTZ, id_contribuicao INT, id_repasse INT, valor DECIMAL, sentido TEXT,
+    arrecadado DECIMAL
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -4665,15 +4671,24 @@ BEGIN
     RETURN QUERY
     SELECT e.id_evento_pagamento, e.provedor, e.tipo_evento, e.recebido_em,
            CASE WHEN e.revisao_manual_em IS NOT NULL THEN 'em_revisao_manual' ELSE 'vale_tentar_de_novo' END,
-           e.erro_processamento, e.revisao_manual_em, alvo.id_contribuicao, alvo.id_repasse
+           e.erro_processamento, e.revisao_manual_em, alvo.id_contribuicao, alvo.id_repasse, alvo.valor,
+           CASE
+               WHEN alvo.evento = 'pagamento_recebido_em_revisao_manual' THEN 'entrada'
+               WHEN alvo.evento IN ('evento_em_revisao_manual: reembolsado', 'evento_em_revisao_manual: devolvido',
+                                    'repasse_evento_em_revisao_manual: concluido') THEN 'saida'
+           END,
+           ca.valor_bruto_arrecadado
     FROM evento_pagamento e
     LEFT JOIN LATERAL (
-        SELECT a.id_contribuicao, a.id_repasse
+        SELECT a.id_contribuicao, a.id_repasse, a.valor, a.evento
         FROM auditoria_financeira a
         WHERE a.id_evento_pagamento = e.id_evento_pagamento
         ORDER BY a.id_auditoria
         LIMIT 1
     ) alvo ON TRUE
+    LEFT JOIN contribuicao c ON c.id_contribuicao = alvo.id_contribuicao
+    LEFT JOIN repasse r ON r.id_repasse = alvo.id_repasse
+    LEFT JOIN campanha ca ON ca.id_campanha = COALESCE(c.id_campanha, r.id_campanha)
     WHERE e.processado_em IS NULL
       AND (p_situacao IS NULL
            OR (p_situacao = 'em_revisao_manual' AND e.revisao_manual_em IS NOT NULL)

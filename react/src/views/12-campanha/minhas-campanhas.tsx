@@ -11,7 +11,7 @@ import { ModalAlterarCampanha } from './modal-alterar-campanha';
 import { ModalConsultarCampanha } from './modal-consultar-campanha';
 import { ModalCriarCampanha } from './modal-criar-campanha';
 import { ModalExcluirCampanha } from './modal-excluir-campanha';
-import { renderizarStatus } from './colunas-campanha';
+import { renderizarArrecadado, renderizarStatus, textoStatus } from './colunas-campanha';
 import type { PropsPagina } from '../../services/router/pagina.type';
 import type { CampanhaResponse } from '../../services/12-campanha/type/campanha.type';
 
@@ -94,9 +94,9 @@ export function MinhasCampanhas({ auth }: PropsPagina) {
         colunas={[
           { chave: 'idCampanha', rotulo: 'id', tipo: 'id' },
           { chave: 'titulo', rotulo: 'título', tipo: 'nome', umaLinha: true },
-          { chave: 'status', rotulo: 'status', tipo: 'status', renderizar: renderizarStatus },
+          { chave: 'status', rotulo: 'status', tipo: 'status', renderizar: renderizarStatus, textoExibido: textoStatus },
           { chave: 'metaFinanceira', rotulo: 'meta', tipo: 'dinheiro' },
-          { chave: 'valorBrutoArrecadado', rotulo: 'arrecadado', tipo: 'dinheiro' },
+          { chave: 'valorBrutoArrecadado', rotulo: 'arrecadado', tipo: 'dinheiro', renderizar: renderizarArrecadado },
           { chave: 'dataFim', rotulo: 'termina em', tipo: 'data' },
         ]}
         chavePrimaria="idCampanha"

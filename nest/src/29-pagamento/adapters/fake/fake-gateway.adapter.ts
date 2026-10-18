@@ -161,6 +161,13 @@ export class FakeGatewayAdapter
     return id;
   }
 
+  // Cobranças que ainda esperam pagamento (o pagamento automático da T5 paga todas, uma por uma).
+  cobrancasPendentes(): string[] {
+    return [...this.cobrancas.values()]
+      .filter((c) => c.status === 'pendente')
+      .map((c) => c.idCobranca);
+  }
+
   // Confirmação manual (ou a automática, se atrasoConfirmacaoMs foi informado). Idempotente: confirmar duas vezes
   // não emite dois eventos.
   confirmarCobranca(idCobranca: string): void {

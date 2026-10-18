@@ -7,7 +7,7 @@ type Chamar = <T>(caminho: string, opcoes?: RequestInit) => Promise<T>;
 const BASE = '/campo-testes/pagamento';
 const POST: RequestInit = { method: 'POST' };
 
-export type TarefaBancada = 'encerrar' | 'repasse' | 'devolucao' | 'conferir';
+export type TarefaBancada = 'encerrar' | 'repasse' | 'devolucao' | 'conferir' | 'pagar';
 
 export interface ContribuicaoBancada {
   idContribuicao: number;
@@ -38,6 +38,8 @@ export interface RepasseBancada {
 export interface EstadoBancada {
   provedor: string;
   provedorDeTeste: boolean;
+  // Intervalo (minutos) de cada tarefa automática, pela chave do interruptor (vem do Nest, que agenda as tarefas).
+  intervalosMinutos: Record<string, number>;
   contribuicoes: ContribuicaoBancada[];
   repasses: RepasseBancada[];
 }
@@ -49,6 +51,7 @@ export interface ContribuicaoCriada {
   taxaPagamento: number;
   valorCobrado: number;
   status: StatusContribuicao;
+  criadoEm: string;
   pix?: { copiaECola: string; qrCodeBase64?: string; expiraEm: string };
   cartao?: { linkPagamento: string };
   boleto?: { link: string; linhaDigitavel: string; venceEm: string };

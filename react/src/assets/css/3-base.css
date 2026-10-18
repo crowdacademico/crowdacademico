@@ -34,6 +34,21 @@
   --altura-modal: 90vh;
   --altura-cartao-solto: calc(100vh - 2rem);
   --largura-sidebar: 260px;
+  /* Barra de progresso (arrecadado em relação à meta, components/crud/barra-progresso.tsx). `--barra-progresso-*`: a
+     barra ao lado do texto (Consultar), trilho de comprimento fixo e o vão até a porcentagem. `--barra-progresso-sob-*`:
+     a barra fina por baixo do valor numa célula de tabela, a espessura e a distância do texto. */
+  --barra-progresso-largura: 5rem;
+  /* Controle que não pode ser usado agora (botão, interruptor): fica apagado nesta medida. */
+  --opacidade-desabilitado: 0.6;
+  /* Interruptor liga/desliga (components/input/interruptor.tsx): trilho, bolinha e o vão até o texto do estado. */
+  --interruptor-largura: 2.25rem;
+  --interruptor-altura: 1.25rem;
+  --interruptor-bolinha: 0.875rem;
+  --interruptor-vao: 0.5rem;
+  --barra-progresso-altura: 0.375rem;
+  --barra-progresso-vao: 0.5rem;
+  --barra-progresso-sob-altura: 0.25rem;
+  --barra-progresso-sob-distancia: 0.125rem;
   /* Larguras máximas por PAPEL (usadas no JSX como `max-w-(--largura-ficha)`): mudar a largura de todos os modais
      é mudar uma linha aqui. Toda largura máxima vira variável, mesmo usada uma vez só: o nome diz o papel, e a
      tela nova (do painel ou da área pública) reaproveita o papel em vez de escolher outro degrau. */

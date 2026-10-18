@@ -14,6 +14,9 @@ interface LinhaRevisao {
   revisao_manual_em: Date | null;
   id_contribuicao: number | null;
   id_repasse: number | null;
+  valor: string | null;
+  sentido: RevisaoPagamentoResponse['sentido'];
+  arrecadado: string | null;
 }
 
 // Webhooks que não terminaram com sucesso. A permissão é conferida DENTRO das funções do banco (listar exige
@@ -40,6 +43,9 @@ export class PagamentoRevisaoServiceEventos {
       revisaoManualEm: linha.revisao_manual_em,
       idContribuicao: linha.id_contribuicao,
       idRepasse: linha.id_repasse,
+      valor: linha.valor === null ? null : Number(linha.valor),
+      sentido: linha.sentido,
+      arrecadado: linha.arrecadado === null ? null : Number(linha.arrecadado),
     }));
   }
 

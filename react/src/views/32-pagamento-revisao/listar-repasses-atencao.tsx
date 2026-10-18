@@ -49,6 +49,7 @@ export function ListarRepassesAtencao({ auth }: PropsPagina) {
             rotulo: 'situação',
             tipo: 'status',
             renderizar: (linha: RepasseLinha) => <BadgeStatusRepasse status={linha.status} aguardandoConta={linha.aguardandoConta} />,
+            textoExibido: (linha: RepasseLinha) => rotuloSituacaoRepasse(linha.status, linha.aguardandoConta),
           },
         ]}
         vazio={{

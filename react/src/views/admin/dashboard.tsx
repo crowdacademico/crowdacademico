@@ -12,6 +12,8 @@ import { DashboardRegrasNegocio } from './dashboard-regras-negocio';
 import { DashboardSaude } from './dashboard-saude';
 import { lerAcessadosRecentemente } from '../../services/router/acessados-recentemente';
 import { MensagemErro } from '../../components/crud/mensagem-erro';
+import { CaixaAviso } from '../../components/crud/caixa-aviso';
+import { useTarefasDesligadas } from '../../services/11-configuracoes/hook/use-tarefas-desligadas';
 import type { UseAuthReturn } from '../../services/3-auth/hook/use-auth';
 
 // Texto do tooltip de "contas ativas": exportado porque a aba Saúde (dashboard-saude.tsx) mostra a MESMA
@@ -121,6 +123,8 @@ export function Dashboard({ auth }: DashboardProps) {
   const [bancoConectado, setBancoConectado] = useState<boolean | null>(null); // null = ainda verificando
   const [abaAtiva, setAbaAtiva] = useState<AbaChave>('visao-geral');
   // Lido uma vez ao abrir: o Dashboard é a página de partida, a lista não muda enquanto ela está na tela.
+  // Tarefas automáticas em pausa: o aviso fica no topo enquanto alguma estiver desligada (pausa esquecida para o sistema).
+  const tarefasDesligadas = useTarefasDesligadas(auth.authFetch);
   const [acessados] = useState(() => (auth.usuario ? lerAcessadosRecentemente(auth.usuario.idUsuario) : []));
 
   useEffect(() => {
@@ -172,6 +176,15 @@ export function Dashboard({ auth }: DashboardProps) {
               )}
             </span>
           </div>
+
+          {tarefasDesligadas.length > 0 && (
+            <CaixaAviso titulo="Tarefas automáticas desligadas" tom="aviso" icone="fa-pause">
+              <p>
+                Em pausa: {tarefasDesligadas.map((tarefa) => tarefa.rotulo).join(', ')}. Enquanto estiverem desligadas, o sistema não as faz
+                sozinho. Religue em Parâmetros do Sistema, grupo Tarefas automáticas.
+              </p>
+            </CaixaAviso>
+          )}
 
           {/* (a) Cards de total */}
           {carregandoResumo ? (
